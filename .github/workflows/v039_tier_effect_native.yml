@@ -1,0 +1,94 @@
+name: v039b Cantrip Head and Mage Tier4 Native (Effect Diagnostic)
+
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - integration_probes/requests/v039_tier_effect_once.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v039b-cantrip-head-four-tier-271874
+  cancel-in-progress: false
+
+jobs:
+  real-bare-item:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    env:
+      BIN: .simc-cache/v035/simc
+    steps:
+      - name: Checkout isolated cache branch
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Fail closed unless exact approved one-shot and hashes match
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p run-output
+          python3 - <<'PY_REQ'
+          import hashlib,json,os,pathlib,subprocess
+          assert os.environ['GITHUB_REF']=='refs/heads/probe/chat-cache-v035-20261024','WRONG_BRANCH'
+          assert os.environ['GITHUB_EVENT_NAME']=='push','WRONG_EVENT'
+          paths=subprocess.check_output(['git','diff-tree','--no-commit-id','--name-only','-r',os.environ['GITHUB_SHA']],text=True).splitlines()
+          assert paths==['integration_probes/requests/v039_tier_effect_once.json'],'UNAPPROVED_CHANGESET'
+          req=json.loads(pathlib.Path(paths[0]).read_text())
+          assert req=={'schema':'v039_tier_effect_probe_v1',
+                      'authorization':'ONE_CANTRIP_4PC_NATIVE_DIAGNOSTIC',
+                      'item_id':271874,'ilevel':334,'tier_gloves_id':271565,
+                      'native_max_calls':1,'iterations':60,'dps_comparison_allowed':False,
+                      'user_selected_item_attested':False,'item_effect_prevalidated':False},'REQUEST_IDENTITY_CHANGED'
+          hashes={'runner/v039_venomkeeper_bare_probe.py':'cdcb15663bda12179d3dfe854ad44d7c9c8f9acb71bd4b8a9b2c5f824cb602d7',
+                  'runner/v039_tier_effect_probe.py':'b4994f5d87966ebe2ad24b3ed0f9dc915ae72f40dee9b2882e180872cd950aa9',
+                  'tests/test_v039_venomkeeper_bare_probe.py':'4746b09637f0edfefd44ac0608ad01f2d6d1feec868793d365d840027ba35981',
+                  'tests/test_v039_tier_effect_probe.py':'16bc2daaee8bb428030517e57fc5b7f7bc175bfbf988ccce446de832c071011d',
+                  'docs/V039_REAL_SPECIAL_ITEM_BARE_ADMISSION.md':'d45d7da60c25302a44b5a159774367f23073a6a92fb41f27fdf85779512bd7ff'}
+          for p,sha in hashes.items():
+            assert hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()==sha, 'SOURCE_HASH_CHANGED:'+p
+          receipt={'schema':'v039_identity','run_id':int(os.environ['GITHUB_RUN_ID']),
+                   'item_id':271874,'ilevel':334,'max_calls':1,
+                   'user_selection_proven':False,'tier4_preserved_proven':False,'effect_implemented_proven':False}
+          pathlib.Path('run-output/V039_WORKFLOW_IDENTITY.json').write_text(json.dumps(receipt,sort_keys=True,indent=2)+'\n')
+          print('V039B_REQUEST_TIER_EFFECT_DIAGNOSTIC_PASS',receipt['run_id'])
+          PY_REQ
+      - name: Restore pinned binary without rebuilding
+        id: simccache
+        uses: actions/cache/restore@v4
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd-cli-release-nonetwork-r1
+      - name: Refuse missing or different binary
+        shell: bash
+        env:
+          CACHE_HIT: ${{ steps.simccache.outputs.cache-hit }}
+        run: |
+          set -euo pipefail
+          test "$CACHE_HIT" = true || { echo V039_CACHE_MISS_NO_COMPILE; exit 3; }
+          test -x "$BIN"
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc-cache/v035/simc' | sha256sum --check
+          sha256sum --check .simc-cache/v035/simc.sha256
+          echo V039_CACHE_PIN_PASS
+      - name: Regression tests and pinned profile shape
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Execute one real head plus tier gloves Native probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v039_tier_effect_probe.py --binary "$GITHUB_WORKSPACE/$BIN" --output "$GITHUB_WORKSPACE/run-output/native"
+      - name: Upload evidence even on BLOCKED
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v039b-venomkeeper-tier-${{ github.run_id }}
+          path: run-output/
+          if-no-files-found: warn
+          retention-days: 7
