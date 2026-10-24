@@ -1,8 +1,1 @@
-{
-  "schema": "v035_bounded_native_cache_probe",
-  "authorization": "ISOLATED_NATIVE_CACHE_EXPERIMENT_ONLY",
-  "round": 1,
-  "rune": "crit",
-  "iterations": 60,
-  "simc_commit": "7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd"
-}
+{"schema":"v035_bounded_native_cache_probe","authorization":"ISOLATED_NATIVE_CACHE_EXPERIMENT_ONLY","round":1,"rune":"crit","iterations":60,"simc_commit":"7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd"}
