@@ -183,3 +183,16 @@ GitHub: 실행 ID/잡 상태/JSON2/로그 Artifact
 - 원본 특수효과의 스탯 증가·다른 스탯 감소량, 보석홈/마법부여 유지, 정확한 실게임 bonus ID, 사용자 선택 장비 귀속, DPS 우열·전역 최적해 모두 **미검증**.
 - ZIP Artifact ID 12565890427; ZIP SHA256 `289dc2b477a8540485b886b0c006e4cf1f992a942514808cae38ec1afcf42acb`. [v040 개발 기록](https://github.com/degong2-code/simc-secondary-optimizer-runner/blob/probe/chat-cache-v035-20261024/docs/V040_CATALYST_SAME_SLOT_PROBE.md) · [독립 JSON2 영수증](https://github.com/degong2-code/simc-secondary-optimizer-runner/blob/probe/chat-cache-v035-20261024/docs/V040_INDEPENDENT_ACCEPTANCE.json).
 - 기존 v032 소스, main v033 워크플로, 공식 Work OS M0, Project Instructions/Sources, immutable v003에 변경/승격 없음. 캐시는 해당 격리 시험 브랜치에서만 검증.
+
+---
+
+## v041 (2026-10-25) — 촉매 변환 머리 원본 보석 보존 Native
+
+- v040는 변환 전 대표 프로필 머리의 `gem_id=240967`을 누락했다. **v041은 이 입력 오류를 발견하고 시험 어댑터에서 교정**했다. 따라서 v040 단독 결과를 '보석까지 보존된 완전 촉매 변환'이라고 보고하면 안 된다.
+- [GitHub Actions Run 40112424280](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40112424280): SUCCESS, 132 tests 중 **130 PASS·2 SKIP**, v035 캐시 HIT, 검증된 Linux 바이너리 재사용, 새 Node24 `actions/cache/restore@v5` 적용, Native 정확히 1회.
+- 334레벨 비전 마법사 장비의 머리 단일 변경: 티어 `id=271564`, 원본 특수장비 `redirected_base_stats=271874`, 시험용 `bonus_id=13846`, **원래 머리 `gem_id=240967` 복원**. Native JSON2에서 네 ID와 고정 특화 `201` 모두 확인. 일반 장갑 `268243`과 나머지 티어 부위 유지.
+- 버프 `cumulative_power` (4pc), `rune_of_critical_power`, `venomcursed_mastery` 세 조건 동시 관측. 발동 시작 평균 7.3729, 가동률 40.5667%, 결과 59 DPS 샘플; **DPS 비교 및 통계적 최적 확정 금지**.
+- 공식 고정 SimC `engine/player/unique_gear_midnight.cpp`는 Venomcursed 양/음 스탯 증감을 다루지만, 실제 게임의 변환 후 보너스 귀속·스탯 증감 scaling은 미확정. 보석 ID 인코딩은 입증됐으나 소켓 유효성/보석 실제 메커니즘 전체는 별도 검증 필요.
+- Artifact ID 12566764251, 원본 ZIP SHA256 `bfd4043596ae722ad96fb94007cdd2388a97530f8c0c602f59e59140429b9598`, 7개 파일 CRC 통과.
+- [v041 개발 기록](https://github.com/degong2-code/simc-secondary-optimizer-runner/blob/probe/chat-cache-v035-20261024/docs/V041_CATALYST_GEM_AND_EFFECT_EVIDENCE.md), [독립 검증 영수증](https://github.com/degong2-code/simc-secondary-optimizer-runner/blob/probe/chat-cache-v035-20261024/docs/V041_INDEPENDENT_ACCEPTANCE.json).
+- 다음 단계는 **게임 촉매 적용 결과의 실제 bonus_id provenance**, 선택 장비의 socket/enchant 실제 효과, 새로운 대표장비 G/T 재산정 및 특수효과 stat-delta 확인. 기존 공식 v1.0 개발자 노트의 `T=G+J+F` 정책을 무단 변경하거나 v1.1/v1.2 후보 정책을 승인한 것으로 처리하지 않음.
