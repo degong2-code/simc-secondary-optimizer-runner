@@ -1,0 +1,15 @@
+{
+  "schema": "v043_venomcursed_spell_query_request_v1",
+  "authorization": "TWO_PINNED_DBC_QUERIES_ONLY_NO_COMBAT",
+  "effect_buff_spell_id": 1307922,
+  "effect_driver_spell_id": 1307923,
+  "query_ilevel": 334,
+  "dbc_calls_max": 2,
+  "combat_calls_max": 0,
+  "real_game_334_bonus_verified": false,
+  "applied_dynamic_delta_verified": false,
+  "actual_G_T_verified": false,
+  "product_code_integrated": false,
+  "official_policy_promoted": false,
+  "dps_comparison_authorized": false
+}
