@@ -1,0 +1,58 @@
+name: v036 Original v032 Source Admission (Fail Closed)
+
+on:
+  push:
+    branches:
+      - feature/v036-source-admission-20261024
+    paths:
+      - integration_probes/requests/v036_gate_once.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v036-original-source-gate
+  cancel-in-progress: false
+
+jobs:
+  source-admission:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout v036 source admission branch
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Test previous v033 and new v036 offline contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Confirm v032 source absent is a safe BLOCKED state
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p run-output
+          set +e
+          python3 runner/v036_source_gate.py --receipt run-output/V036_SOURCE_ADMISSION.json
+          result="$?"
+          set -e
+          test "$result" -eq 3
+          python3 - <<'PY_GATE'
+          import json,pathlib
+          d=json.loads(pathlib.Path('run-output/V036_SOURCE_ADMISSION.json').read_text())
+          assert d['schema']=='v036_source_admission_v1'
+          assert d['status']=='BLOCKED' and d['reason']=='SOURCE_PACKAGE_REQUIRED'
+          assert d['native_simc_run'] is False and d['v032_regression_run'] is False
+          assert d['v032_identity_proven'] is False
+          print('V036_PREFLIGHT_PASS; V032_SOURCE_MISSING_EXPECTED; NO_NATIVE_SIMC')
+          PY_GATE
+      - name: Upload read-only source admission evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v036-source-admission-evidence-${{ github.run_id }}
+          path: run-output/
+          if-no-files-found: warn
+          retention-days: 7
