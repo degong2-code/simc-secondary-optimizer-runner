@@ -1,0 +1,145 @@
+name: v035 Chat Pinned SimC Cache Verification
+
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - integration_probes/requests/v035_cache_round_1.json
+      - integration_probes/requests/v035_cache_round_2.json
+
+permissions:
+  contents: write
+
+concurrency:
+  group: v035-cache-probe-20261024
+  cancel-in-progress: false
+
+jobs:
+  pinned-simc-cached:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      PINNED_SIMC_SHA: 7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd
+      CACHE_BIN: .simc-cache/v035/simc
+    steps:
+      - name: Checkout pinned optimizer runner
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: true
+
+      - name: Validate one-shot request and publish run ID
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p run-output
+          python3 - <<'PY_REQUEST'
+          import json, os, pathlib, subprocess
+          assert os.environ['GITHUB_REF']=='refs/heads/probe/chat-cache-v035-20261024', 'WRONG_BRANCH'
+          assert os.environ['GITHUB_EVENT_NAME']=='push', 'WRONG_EVENT'
+          files=subprocess.check_output(['git','diff-tree','--no-commit-id','--name-only','-r',os.environ['GITHUB_SHA']],text=True).splitlines()
+          assert len(files)==1, 'UNAPPROVED_CHANGESET'
+          allowed={f'integration_probes/requests/v035_cache_round_{r}.json':r for r in (1,2)}
+          assert files[0] in allowed, 'UNAPPROVED_REQUEST_FILE'
+          r=allowed[files[0]]
+          expected=dict(schema='v035_bounded_native_cache_probe',authorization='ISOLATED_NATIVE_CACHE_EXPERIMENT_ONLY',round=r,rune='crit',iterations=60,simc_commit=os.environ['PINNED_SIMC_SHA'])
+          assert json.loads(pathlib.Path(files[0]).read_text())==expected, 'REQUEST_CHANGED'
+          pointer=pathlib.Path(f'integration_probes/results/v035_round_{r}.json')
+          assert not pointer.exists(), 'ROUND_ALREADY_EXECUTED'
+          data=dict(schema='v035_execution_pointer',round=r,run_id=int(os.environ['GITHUB_RUN_ID']),trigger_sha=os.environ['GITHUB_SHA'],status='DISPATCHED_NOT_YET_VERIFIED')
+          pointer.parent.mkdir(parents=True,exist_ok=True)
+          pointer.write_text(json.dumps(data,sort_keys=True,indent=2)+'\n')
+          pathlib.Path('run-output/DISPATCH_RECEIPT_v035.json').write_text(json.dumps(data,sort_keys=True,indent=2)+'\n')
+          print('VALIDATED_ROUND:',r,'RUN_ID:',data['run_id'])
+          PY_REQUEST
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add integration_probes/results/v035_round_*.json
+          git commit -m 'test: record bounded v035 run [skip ci]'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+
+      - name: Verify existing v033 native pilot inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+
+      - name: Restore pinned Linux binary cache
+        id: cache
+        uses: actions/cache@v4
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd-cli-release-nonetwork-r1
+
+      - name: Install build tools on cache miss
+        if: steps.cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake build-essential pkg-config
+
+      - name: Fetch pinned SimC source on cache miss
+        if: steps.cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p _vendor
+          git clone --filter=blob:none --no-checkout https://github.com/simulationcraft/simc.git _vendor/simc 2>&1 | tee run-output/source_checkout.log
+          git -C _vendor/simc checkout --detach "$PINNED_SIMC_SHA" 2>&1 | tee -a run-output/source_checkout.log
+          test "$(git -C _vendor/simc rev-parse HEAD)" = "$PINNED_SIMC_SHA"
+          printf '%s\n' "$PINNED_SIMC_SHA" > run-output/LINUX_SIMC_SOURCE_COMMIT.txt
+
+      - name: Build pinned SimC binary on cache miss
+        if: steps.cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake -S _vendor/simc -B _vendor/simc/build -DBUILD_GUI=OFF -DSC_NO_NETWORKING=ON -DCMAKE_BUILD_TYPE=Release 2>&1 | tee run-output/cmake_configure.log
+          cmake --build _vendor/simc/build --target simc --parallel 2 2>&1 | tee run-output/cmake_build.log
+          SRC_BIN="$(find _vendor/simc/build -type f -name simc -executable | sort | head -1)"
+          test -n "$SRC_BIN" && test -x "$SRC_BIN"
+          mkdir -p .simc-cache/v035
+          cp "$SRC_BIN" "$CACHE_BIN"
+          sha256sum "$CACHE_BIN" > .simc-cache/v035/simc.sha256
+          python3 - <<'PY_MANIFEST'
+          import json,os,pathlib
+          pathlib.Path('.simc-cache/v035/manifest.json').write_text(json.dumps(dict(schema='v035_pinned_binary_cache',simc_commit=os.environ['PINNED_SIMC_SHA'],build_profile='ubuntu-24.04|amd64|Release|BUILD_GUI=OFF|SC_NO_NETWORKING=ON|parallel=2'),sort_keys=True)+'\n')
+          PY_MANIFEST
+
+      - name: Verify cached binary and record cache hit or miss
+        shell: bash
+        env:
+          CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
+        run: |
+          set -euo pipefail
+          test -x "$CACHE_BIN"
+          sha256sum --check .simc-cache/v035/simc.sha256
+          python3 - <<'PY_VERIFY'
+          import hashlib,json,os,pathlib
+          root=pathlib.Path('.simc-cache/v035')
+          meta=json.loads((root/'manifest.json').read_text())
+          assert meta==dict(schema='v035_pinned_binary_cache',simc_commit=os.environ['PINNED_SIMC_SHA'],build_profile='ubuntu-24.04|amd64|Release|BUILD_GUI=OFF|SC_NO_NETWORKING=ON|parallel=2'), 'CACHE_IDENTITY_MISMATCH'
+          binary=root/'simc'
+          sha=hashlib.sha256(binary.read_bytes()).hexdigest()
+          assert os.environ['CACHE_HIT'] in ('','true','false'), 'INVALID_CACHE_RESULT'
+          result=dict(schema='v035_cache_observation',run_id=int(os.environ['GITHUB_RUN_ID']),cache_hit=os.environ['CACHE_HIT']=='true',binary_sha256=sha,binary_bytes=binary.stat().st_size,verified=True,simc_commit=os.environ['PINNED_SIMC_SHA'])
+          pathlib.Path('run-output/BUILD_CACHE_RECEIPT_v035.json').write_text(json.dumps(result,sort_keys=True,indent=2)+'\n')
+          print('CACHE_OBSERVATION:',json.dumps(result,sort_keys=True))
+          PY_VERIFY
+
+      - name: Run native crit profile and verify JSON2
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/pilot.py execute --binary "$GITHUB_WORKSPACE/$CACHE_BIN" --rune crit --iterations 60 --output run-output
+
+      - name: Upload native evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v035-cache-evidence-${{ github.run_id }}
+          path: run-output/
+          if-no-files-found: warn
+          retention-days: 7
