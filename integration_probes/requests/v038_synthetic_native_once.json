@@ -1,0 +1,14 @@
+{
+  "schema": "v038_test_only_locked_floor_probe_v1",
+  "authorization": "BOUNDED_SYNTHETIC_FLOOR_NATIVE_ONLY",
+  "synthetic_special_floor": [
+    150,
+    0,
+    100,
+    0
+  ],
+  "manual_total": 3284,
+  "scout_iterations": 120,
+  "max_simc_invocations": 1,
+  "real_item_effect_attested": false
+}
