@@ -1,0 +1,68 @@
+{
+  "schema": "v040_independent_native_acceptance_v1",
+  "status": "PASS_CATALYST_REDIRECT_STATIC_TIER_PROC_WITH_BONUS13846_TEST_ONLY",
+  "run_id": 40108486179,
+  "artifact_id": 12565890427,
+  "artifact_filename": "simc-v040-catalyst-334-40108486179.zip",
+  "zip_bytes": 158020,
+  "zip_sha256": "289dc2b477a8540485b886b0c006e4cf1f992a942514808cae38ec1afcf42acb",
+  "entry_count": 11,
+  "zip_crc_pass": true,
+  "offline_tests": {
+    "executed": 120,
+    "passed": 118,
+    "skipped": 2
+  },
+  "native_cases": [
+    {
+      "variant": "minimal_334",
+      "item_id": 271564,
+      "original_item_id": 271874,
+      "ilevel": 334,
+      "static_mastery_rating": 201,
+      "tier4": true,
+      "crit_rune": true,
+      "proc_name": null,
+      "proc_start_count": null,
+      "proc_uptime_pct": null,
+      "simc_result_sha256": "76d1491ac4864c8bc5201ef32b953710aaf43a9bf9f8002368da49d44d0580fb",
+      "simc_input_sha256": "dcc8ec11af418e127f8f5c0a3ea003c1b50ba372d81fbd4c1586426a63280205"
+    },
+    {
+      "variant": "bonus_13846_334",
+      "item_id": 271564,
+      "original_item_id": 271874,
+      "ilevel": 334,
+      "static_mastery_rating": 201,
+      "tier4": true,
+      "crit_rune": true,
+      "proc_name": "venomcursed_mastery",
+      "proc_start_count": 7.3559322033898304,
+      "proc_uptime_pct": 37.48607344632769,
+      "simc_result_sha256": "4dc9c1c8626edf4d33ae4780d82964a60d2c83719d27046d2fcd711d13a06f7b",
+      "simc_input_sha256": "2c27b7d1311ec30682a77c0af353dbf89222ce1b2fee6f6ce9e05d15ef59f8b6"
+    }
+  ],
+  "observations": {
+    "redirect_base_stats_alone_preserves_static_and_tier": true,
+    "redirect_base_stats_alone_preserves_proc": false,
+    "bonus13846_variant_preserves_static_tier_and_proc": true
+  },
+  "contract_boundaries": {
+    "simc_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+    "simc_git_commit": "7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd",
+    "item_id": 271564,
+    "source_item_id": 271874,
+    "item_ilevel": 334,
+    "live_game_334_bonus_id_attested": false,
+    "special_proc_stat_delta_fully_verified": false,
+    "socket_gem_enchant_retention_verified": false,
+    "user_selection_attested": false,
+    "dps_comparison_valid": false,
+    "corrected_chmv_gear_budget_established": false,
+    "global_optimum_proven": false,
+    "v032_source_modified": false,
+    "work_os_M0_modified": false
+  },
+  "next_step": "Evidence-gated catalyst variant importer, verify live bonus IDs, dynamic effect stat delta and recompute CHMV budget/floor without double counting."
+}
