@@ -46,3 +46,7 @@ If a required rune buff isn't found or an item is unsupported in the pinned Linu
 ## Scope boundary
 
 Do not upload `.env`, tokens, full prior handoff ZIPs, original WoW player exports beyond the supplied scenario, Project Sources, protected immutable v003, Work OS artifacts, or full v032 source without separately reviewing visibility. This pilot does not run official Work OS M0 and does not promote Project Instructions / CURRENT / Shared State.
+
+## Verified Chat ↔ GitHub Actions operation (2026-10-24)
+
+Read [CHAT_GITHUB_ACTIONS_SIMC_EXECUTION_PLAYBOOK_v1.0.md](docs/CHAT_GITHUB_ACTIONS_SIMC_EXECUTION_PLAYBOOK_v1.0.md) before using the v034/v035 direct-Chat push-trigger workflow, downloading native Artifacts, or extending the cache setup. These were verified on isolated probe branches; this `main` v033 runner remains the manual pilot. This operational document is not a change to Project Sources, Work OS status, or approved product policy.
