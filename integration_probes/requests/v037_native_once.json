@@ -1,0 +1,16 @@
+{
+  "schema": "v037_manual_chmv_scenario_probe_v1",
+  "scenario": "v031r3_dwarf_arcane_fixed_gear",
+  "budget_origin": "MANUAL_TEST_TOTAL_NOT_ITEM_LEVEL_PROVEN",
+  "target_total_rating": 3284,
+  "minimum_target_rating": {
+    "crit_rating": 600,
+    "haste_rating": 200,
+    "mastery_rating": 100,
+    "versatility_rating": 100
+  },
+  "omnium_rune": "crit",
+  "scout_iterations": 120,
+  "confirm_iterations": 320,
+  "maximum_native_calls": 8
+}
