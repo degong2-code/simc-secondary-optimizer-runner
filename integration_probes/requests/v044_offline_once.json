@@ -1,0 +1,9 @@
+{
+  "schema": "v044_offline_static_budget_attribution_request_v1",
+  "authorization": "OFFLINE_REGRESSION_ZERO_NATIVE_ONLY",
+  "test_scope": "ONE_EXISTING_PINNED_V042_ARTIFACT",
+  "native_calls_max": 0,
+  "product_code_integrated": false,
+  "official_policy_promoted": false,
+  "policy_budget_decision_allowed": false
+}
