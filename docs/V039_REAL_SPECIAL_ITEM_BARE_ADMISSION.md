@@ -20,3 +20,19 @@
 - 실제 부위 치환으로 인해 달라지는 장비 `G` 총량, 장비 주능력치, 정적 CHMV 하한, 보석 장착 수, tier 세트와 효과를 모두 재검산한 후에만 같은 제품 시나리오로 사용.
 
 **제품 범위:** 승인된 Developer Notes v1.0 유지. 장비 추천, 장비 탐색 DB, 공식 Work OS M0, main 제품 승격은 이 게이트 범위 밖.
+
+---
+
+## Native verification outcomes
+
+**Test item:** Venomkeeper's Horrific Cowl, item ID `271874`, cloth head, level `334` (development trial, not user's asserted gear selection).
+
+- Native bare head: [Run 40106250971](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40106250971) PASS. Native item stats crit 0/haste 0/**mastery 201**/versatility 0. Crit Omnium rune present, but original head tier was displaced and 4pc `cumulative_power` was absent. This is an intentionally invalid configuration for DPS comparison.
+- Native head with effect options and alternative tier gloves `271565`: [Run 40106614938](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40106614938) PASS. Head mastery **201**, mage tier gloves native haste **50** + mastery **101**, original shoulder/chest/legs retained, `cumulative_power` present. Crit rune remained active.
+- The actual pinned SimC JSON2 buff `venomcursed_mastery` (spell 1307922) appeared with mean start count **7** and reported uptime **35.9402**. This proves the native effect buff *appeared in combat simulation*, not that the gain/loss rating magnitudes, item-level scaling or full DPS correctness have been independently established.
+- The official SimC MID2 item profile's bonus list introduced `avoidance_rating=86` on the head in the equipped effect variant. This tertiary stat is not part of CHMV optimization; compare only the **bare** item +201 static mastery for the fixed CHMV floor.
+- Offline test suite **97 run, 2 skipped** and GitHub Actions cache HIT, native binary SHA `64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e`. Native JSON2 and ZIP CRC independently checked.
+- The first Run 40105954234 used the old reference **haste rune**; its scope error was corrected and the accepted bare item proof is Run 40106250971. Historical run preserved, not presented as default-crit valid.
+- Accepted machine receipt: [V039_REAL_CANTRIP_NATIVE_ACCEPTANCE.json](V039_REAL_CANTRIP_NATIVE_ACCEPTANCE.json).
+- **Remaining:** recompute representative-gear budget `G` and total CHMV after *both* head and gloves replacement; verify the whole Venomcursed dynamic stat gain/loss effect; verify per-slot special item options and consequences for gem/tier/primary budget; retain external user-selected equipment contract.
+- These runs do **not** prove a global CHMV optimum, cross-spec readiness, or official Work OS M0.
