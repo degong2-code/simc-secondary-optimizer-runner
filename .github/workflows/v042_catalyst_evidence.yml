@@ -1,0 +1,107 @@
+name: v042 Catalyst Evidence Firewall (Bounded)
+
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - integration_probes/requests/v042_once.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v042-evidence-one-native
+  cancel-in-progress: false
+
+jobs:
+  evidence-firewall:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    env:
+      SIMC_BIN: .simc-cache/v035/simc
+    steps:
+      - name: Checkout isolated branch with exact request diff
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Validate single-use request and pinned source blob identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p run-output
+          python3 - <<'PY_REQ'
+          import json,os,pathlib,subprocess
+          assert os.environ['GITHUB_EVENT_NAME']=='push'
+          assert os.environ['GITHUB_REF']=='refs/heads/probe/chat-cache-v035-20261024'
+          changed=subprocess.check_output(['git','diff-tree','--no-commit-id','--name-only','-r',os.environ['GITHUB_SHA']],text=True).splitlines()
+          assert changed==['integration_probes/requests/v042_once.json'],'UNAUTHORIZED_CHANGESET'
+          request=json.loads(pathlib.Path(changed[0]).read_text())
+          expected={
+            'schema':'v042_catalyst_evidence_firewall_request_v1',
+            'authorization':'ONE_PINNED_V041_REPLAY_NATIVE_NO_PRODUCT_ADMISSION',
+            'tier_id':271564,'origin_id':271874,'ilevel':334,
+            'diagnostic_bonus_id':13846,'gem_id':240967,'iterations':60,
+            'native_max_calls':1,'actual_live_catalyst_bonus_attested':False,
+            'effect_delta_verified':False,'gear_budget_recalibrated':False,
+            'product_code_integrated':False,'official_policy_promoted':False,
+            'dps_comparison_authorized':False}
+          assert request==expected,'UNAUTHORIZED_REQUEST'
+          blob_shas={
+            'runner/v042_catalyst_evidence_firewall.py':'0caff7b7f3031ed9bb8710f1a978074466a07cb9',
+            'tests/test_v042_catalyst_evidence_firewall.py':'79634f62c74e1de29956938c0dfc9c02f8907f2d',
+            'runner/v041_catalyst_gem_proc_probe.py':'3f38c9c14dd33cb4a937ecdeba35b3275e384cb5',
+            'runner/v040_catalyst_redirect_probe.py':'ac4f6edd6c8f69368392c235fe630c4b0de4784a',
+            'inputs/v031r3_reference.simc':'c5a05d13c17ff3a7a609cd205c4d24d7080fd6ff'
+          }
+          for path,sha in blob_shas.items():
+            actual=subprocess.check_output(['git','hash-object',path],text=True).strip()
+            assert actual==sha,'PINNED_SOURCE_CHANGED:'+path
+          pathlib.Path('run-output/V042_WORKFLOW_IDENTITY.json').write_text(json.dumps({
+            'schema':'v042_one_shot_gate_v1',
+            'status':'TRIGGER_IDENTITY_VERIFIED_ONLY',
+            'run_id':int(os.environ['GITHUB_RUN_ID']),
+            'head_sha':os.environ['GITHUB_SHA'],
+            'native_max_calls':1,
+            'test_success':False,
+            'product_code_integrated':False,
+            'official_policy_promoted':False},indent=2)+'\n')
+          print('V042_TRIGGER_AND_SOURCE_GATE_PASS')
+          PY_REQ
+      - name: Preserve all offline regression and v042 negative guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Restore pinned SimC cache without compilation
+        id: simc_cache
+        uses: actions/cache/restore@v5
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd-cli-release-nonetwork-r1
+      - name: Refuse cache MISS or binary SHA drift
+        shell: bash
+        env:
+          CACHE_HIT: ${{ steps.simc_cache.outputs.cache-hit }}
+        run: |
+          set -euo pipefail
+          test "$CACHE_HIT" = true || { echo V042_CACHE_MISS_NO_REBUILD; exit 3; }
+          test -x "$SIMC_BIN"
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc-cache/v035/simc' | sha256sum --check
+          sha256sum --check .simc-cache/v035/simc.sha256
+          echo V042_PINNED_CACHE_HIT
+      - name: Replay exactly one v041 profile through v042 evidence firewall
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v042_catalyst_evidence_firewall.py --binary "$GITHUB_WORKSPACE/$SIMC_BIN" --output "$GITHUB_WORKSPACE/run-output/v042"
+      - name: Upload bounded proof or failure receipt
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v042-evidence-${{ github.run_id }}
+          path: run-output/
+          if-no-files-found: warn
+          retention-days: 7
