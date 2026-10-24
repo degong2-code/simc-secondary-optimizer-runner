@@ -113,7 +113,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 v036_native_runtime/v036_cloud_bridge.py --mode native-probe --binary "$GITHUB_WORKSPACE/$CACHE_BIN" --scout-iterations 120 --output run-output/native_probe
+          python3 v036_native_runtime/v036_cloud_bridge.py --mode native-probe --binary "$GITHUB_WORKSPACE/$CACHE_BIN" --scout-iterations 120 --output "$GITHUB_WORKSPACE/run-output/native_probe"
 
       - name: Run original v032 bounded adaptive 6 scout plus 2 confirmation
         shell: bash
