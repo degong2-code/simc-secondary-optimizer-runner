@@ -1,0 +1,99 @@
+name: v041 Catalyst Converted Cantrip with Original Head Gem (Bounded)
+
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - integration_probes/requests/v041_gem_once.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v041-catalyst-gem-single-native
+  cancel-in-progress: false
+
+jobs:
+  catalyst-gem:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    env:
+      SIMC_BIN: .simc-cache/v035/simc
+    steps:
+      - name: Checkout exact isolated cached branch
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Fail closed without authorized one-shot request or byte identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p run-output
+          python3 - <<'PY_REQ'
+          import hashlib,json,os,pathlib,subprocess
+          assert os.environ['GITHUB_EVENT_NAME']=='push'
+          assert os.environ['GITHUB_REF']=='refs/heads/probe/chat-cache-v035-20261024'
+          changed=subprocess.check_output(['git','diff-tree','--no-commit-id','--name-only','-r',os.environ['GITHUB_SHA']],text=True).splitlines()
+          assert changed==['integration_probes/requests/v041_gem_once.json'],'UNAUTHORIZED_CHANGESET'
+          request=json.loads(pathlib.Path(changed[0]).read_text())
+          expected={'schema':'v041_catalyst_gem_native_probe_v1',
+              'authorization':'ONE_334_GEM_PRESERVING_NATIVE_CASE_ONLY','tier_id':271564,
+              'original_id':271874,'ilevel':334,'bonus_id':13846,'gem_id':240967,
+              'iterations':60,'native_max_calls':1,'real_game_catalyst_bonus_attested':False,
+              'effect_scale_confirmed':False,'dps_comparison_allowed':False}
+          assert request==expected,'UNAUTHORIZED_REQUEST'
+          sources={
+             'runner/v041_catalyst_gem_proc_probe.py':'7b9fa1ec5a6f56205f2aed957cdee7809955faae759f081a040a2fa12d10f4cc',
+             'tests/test_v041_catalyst_gem_proc_probe.py':'272ef62dd66bd4e00676ff4f83749b00ba46efa48f0dbcba3cb6e0f757550039',
+             'runner/v040_catalyst_redirect_probe.py':'51bbb19f3f8bee8db2eb7d066b4a719a8f67179585e792406f0edddbdc1d430c',
+             'runner/v039_venomkeeper_bare_probe.py':'cdcb15663bda12179d3dfe854ad44d7c9c8f9acb71bd4b8a9b2c5f824cb602d7',
+             'inputs/v031r3_reference.simc':'1bab8b0bc1d03014b99cb38487de0dfce3407c8c465a87020aa40382bf99d86e'
+          }
+          for p,sha in sources.items():
+              assert hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()==sha,'SOURCE_CHANGED:'+p
+          pathlib.Path('run-output/V041_WORKFLOW_IDENTITY.json').write_text(json.dumps(
+              {'schema':'v041_one_shot_identity','status':'TRIGGER_VERIFIED_ONLY',
+               'run_id':int(os.environ['GITHUB_RUN_ID']),'trigger_sha':os.environ['GITHUB_SHA'],
+               'native_max_calls':1,'proven_real_game_bonus':False},indent=2)+'\n')
+          print('V041_ONE_SHOT_GATE_PASS')
+          PY_REQ
+      - name: Regression tests from v033 through v041
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Restore pinned Linux SimC cached binary (Node24)
+        id: simc_cache
+        uses: actions/cache/restore@v5
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd-cli-release-nonetwork-r1
+      - name: Refuse absent cache and altered binary without rebuild
+        shell: bash
+        env:
+          CACHE_HIT: ${{ steps.simc_cache.outputs.cache-hit }}
+        run: |
+          set -euo pipefail
+          test "$CACHE_HIT" = true || { echo V041_CACHE_MISS_NO_REBUILD; exit 3; }
+          test -x "$SIMC_BIN"
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc-cache/v035/simc' | sha256sum --check
+          sha256sum --check .simc-cache/v035/simc.sha256
+          echo V041_CACHE_HIT_PINNED_SHA_PASS
+      - name: One 334 same-slot Native trial preserving gem, tier and cantrip
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v041_catalyst_gem_proc_probe.py \
+             --binary "$GITHUB_WORKSPACE/$SIMC_BIN" \
+             --output "$GITHUB_WORKSPACE/run-output/native"
+      - name: Upload inputs, full native JSON2 and failure receipt
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v041-catalyst-gem-${{ github.run_id }}
+          path: run-output/
+          if-no-files-found: warn
+          retention-days: 7
