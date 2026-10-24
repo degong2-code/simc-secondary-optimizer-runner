@@ -1,10 +1,1 @@
-{
-  "schema": "v036_bounded_native_adaptive_pilot",
-  "authorization": "USER_APPROVED_GENERAL_PRODUCT_TEST_ISOLATED",
-  "rune": "crit",
-  "scouts": 6,
-  "confirmations": 2,
-  "scout_iterations": 120,
-  "confirm_iterations": 320,
-  "source_bundle_sha256": "38d5956ae50965a61abe253b1a3d680a9c5e59bfc322208dc3361cef7b52eac6"
-}
+{"schema":"v036_bounded_native_adaptive_pilot","authorization":"USER_APPROVED_GENERAL_PRODUCT_TEST_ISOLATED","rune":"crit","scouts":6,"confirmations":2,"scout_iterations":120,"confirm_iterations":320,"source_bundle_sha256":"38d5956ae50965a61abe253b1a3d680a9c5e59bfc322208dc3361cef7b52eac6"}
