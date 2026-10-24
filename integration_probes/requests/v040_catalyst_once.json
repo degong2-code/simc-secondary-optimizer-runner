@@ -1,0 +1,17 @@
+{
+  "schema": "v040_catalyst_same_slot_native_request_v1",
+  "authorization": "ISOLATED_TWO_334_CATALYST_NATIVE_CASES_ONLY",
+  "tier_head": 271564,
+  "redirected_source": 271874,
+  "ilevel": 334,
+  "variants": [
+    "minimal_334",
+    "bonus_13846_334"
+  ],
+  "iterations_each": 60,
+  "native_max_calls": 2,
+  "dps_comparison_allowed": false,
+  "user_selected_item_attested": false,
+  "334_bonus_id_game_validated": false,
+  "dynamic_effect_stat_delta_verified": false
+}
