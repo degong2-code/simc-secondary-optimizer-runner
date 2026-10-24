@@ -1,0 +1,74 @@
+name: v044 Offline Static CHMV Attribution
+
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - integration_probes/requests/v044_offline_once.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v044-static-budget-audit
+  cancel-in-progress: false
+
+jobs:
+  offline-budget-attribution:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - name: Checkout exact isolated branch
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Gate exact request and source blobs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p audit-output
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          assert os.environ['GITHUB_EVENT_NAME']=='push'
+          assert os.environ['GITHUB_REF']=='refs/heads/probe/chat-cache-v035-20261024'
+          files=subprocess.check_output(['git','diff-tree','--no-commit-id','--name-only','-r',os.environ['GITHUB_SHA']],text=True).splitlines()
+          assert files==['integration_probes/requests/v044_offline_once.json'],'DIFF_SCOPE_CHANGED'
+          request=json.loads(pathlib.Path(files[0]).read_text())
+          assert request=={
+           'schema':'v044_offline_static_budget_attribution_request_v1',
+           'authorization':'OFFLINE_REGRESSION_ZERO_NATIVE_ONLY',
+           'test_scope':'ONE_EXISTING_PINNED_V042_ARTIFACT',
+           'native_calls_max':0,'product_code_integrated':False,
+           'official_policy_promoted':False,'policy_budget_decision_allowed':False
+          },'REQUEST_SCOPE_CHANGED'
+          for p,sha in {
+           'runner/v044_static_budget_attribution.py':'fbc7754eb6e054286dfd6c8f4134e58af5c58ed8',
+           'tests/test_v044_static_budget_attribution.py':'79aaa4ea441d149d904df1bc8a8e5b96a187bc01'
+          }.items():
+           real=subprocess.check_output(['git','hash-object',p],text=True).strip()
+           assert real==sha,'SOURCE_DRIFT:'+p
+          pathlib.Path('audit-output/V044_GATE.json').write_text(json.dumps({
+            'status':'PASS_OFFLINE_TRIGGER_ONLY',
+            'run_id':int(os.environ['GITHUB_RUN_ID']),
+            'head_sha':os.environ['GITHUB_SHA'],
+            'native_calls':0,'product_code_integrated':False,
+            'official_policy_promoted':False},indent=2)+'\n')
+          print('V044_OFFLINE_TRIGGER_PASS')
+          PY
+      - name: Full regression and v044 static tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+          echo V044_OFFLINE_TESTS_PASS
+      - name: Upload offline receipt
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v044-offline-${{ github.run_id }}
+          path: audit-output/
+          retention-days: 7
+          if-no-files-found: warn
