@@ -1,0 +1,8 @@
+{
+  "schema": "v036_source_admission_probe",
+  "purpose": "verify original v032 archive unavailable and block without running SimC",
+  "expected_status": "BLOCKED",
+  "expected_reason": "SOURCE_PACKAGE_REQUIRED",
+  "native_simc_authorized": false,
+  "iterations_authorized": 0
+}
