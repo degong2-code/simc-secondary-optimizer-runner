@@ -1,0 +1,104 @@
+name: v040 Catalyst Converted Cantrip Head Native Proof
+
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - integration_probes/requests/v040_catalyst_once.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v040-334-catalyst-one-shot
+  cancel-in-progress: false
+
+jobs:
+  catalyst-redirect-bounded:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    env:
+      CACHED_SIMC: .simc-cache/v035/simc
+    steps:
+      - name: Checkout isolated SimC cache branch
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Verify one authorized request and exact source byte identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p run-output
+          python3 - <<'PY_ID'
+          import hashlib,json,os,pathlib,subprocess
+          assert os.environ['GITHUB_REF']=='refs/heads/probe/chat-cache-v035-20261024','UNAUTHORIZED_BRANCH'
+          assert os.environ['GITHUB_EVENT_NAME']=='push','WRONG_TRIGGER'
+          changes=subprocess.check_output(['git','diff-tree','--no-commit-id','--name-only','-r',os.environ['GITHUB_SHA']],text=True).splitlines()
+          assert changes==['integration_probes/requests/v040_catalyst_once.json'],'UNAUTHORIZED_CHANGESET'
+          request=json.loads(pathlib.Path(changes[0]).read_text())
+          assert request=={
+             'schema':'v040_catalyst_same_slot_native_request_v1',
+             'authorization':'ISOLATED_TWO_334_CATALYST_NATIVE_CASES_ONLY',
+             'tier_head':271564,'redirected_source':271874,'ilevel':334,
+             'variants':['minimal_334','bonus_13846_334'],
+             'iterations_each':60,'native_max_calls':2,
+             'dps_comparison_allowed':False,
+             'user_selected_item_attested':False,
+             '334_bonus_id_game_validated':False,
+             'dynamic_effect_stat_delta_verified':False,
+          },'UNAPPROVED_NATIVE_REQUEST'
+          for filename,digest in {
+            'runner/v040_catalyst_redirect_probe.py':'51bbb19f3f8bee8db2eb7d066b4a719a8f67179585e792406f0edddbdc1d430c',
+            'tests/test_v040_catalyst_redirect_probe.py':'24db8d7ca93e444e30b54e83e6557ba545540e2be1e1bcd47e9fc297007e4ede',
+            'runner/v039_venomkeeper_bare_probe.py':'cdcb15663bda12179d3dfe854ad44d7c9c8f9acb71bd4b8a9b2c5f824cb602d7',
+            'inputs/v031r3_reference.simc':'1bab8b0bc1d03014b99cb38487de0dfce3407c8c465a87020aa40382bf99d86e',
+          }.items():
+            assert hashlib.sha256(pathlib.Path(filename).read_bytes()).hexdigest()==digest,'SOURCE_SHA_MISMATCH:'+filename
+          receipt={'schema':'v040_run_identity','run_id':int(os.environ['GITHUB_RUN_ID']),
+                   'head_sha':os.environ['GITHUB_SHA'],'native_max_calls':2,
+                   'source_revision':'7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd',
+                   'all_inferences_bounded_to_334_test':True,
+                   'result_state':'DISPATCHED_NOT_YET_VERIFIED'}
+          pathlib.Path('run-output/V040_WORKFLOW_RECEIPT.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          print('V040_REQUEST_IDENTITY_PASS',receipt['run_id'])
+          PY_ID
+      - name: Offline regression tests and pinned profile contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Restore exact cached pinned SimC binary
+        id: native_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd-cli-release-nonetwork-r1
+      - name: Fail closed if binary missing or altered
+        shell: bash
+        env:
+          CACHE_HIT: ${{ steps.native_cache.outputs.cache-hit }}
+        run: |
+          set -euo pipefail
+          test "$CACHE_HIT" = 'true' || { echo 'V040_CACHE_MISS_NO_COMPILE'; exit 3; }
+          test -x "$CACHED_SIMC"
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc-cache/v035/simc' | sha256sum --check
+          sha256sum --check .simc-cache/v035/simc.sha256
+          echo V040_CACHE_PIN_PASS
+      - name: Run exactly two catalyst head Native 334 tests with old gloves unchanged
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v040_catalyst_redirect_probe.py \
+            --binary "$GITHUB_WORKSPACE/$CACHED_SIMC" \
+            --output "$GITHUB_WORKSPACE/run-output/native"
+      - name: Upload native source and JSON2 receipts, including partial and failure
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v040-catalyst-334-${{ github.run_id }}
+          path: run-output/
+          if-no-files-found: warn
+          retention-days: 7
