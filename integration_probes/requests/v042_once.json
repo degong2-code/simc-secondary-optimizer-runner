@@ -1,0 +1,17 @@
+{
+  "schema": "v042_catalyst_evidence_firewall_request_v1",
+  "authorization": "ONE_PINNED_V041_REPLAY_NATIVE_NO_PRODUCT_ADMISSION",
+  "tier_id": 271564,
+  "origin_id": 271874,
+  "ilevel": 334,
+  "diagnostic_bonus_id": 13846,
+  "gem_id": 240967,
+  "iterations": 60,
+  "native_max_calls": 1,
+  "actual_live_catalyst_bonus_attested": false,
+  "effect_delta_verified": false,
+  "gear_budget_recalibrated": false,
+  "product_code_integrated": false,
+  "official_policy_promoted": false,
+  "dps_comparison_authorized": false
+}
