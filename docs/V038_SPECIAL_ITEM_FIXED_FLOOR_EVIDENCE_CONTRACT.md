@@ -36,3 +36,16 @@
 - 원본 v032 모듈 17개, v036 브리지 원본, v037 어댑터, `main`의 v033 워크플로, Project Sources/Instructions/CURRENT/Shared State, 공식 Work OS M0, 불변 v003 **변경 금지**.
 - `probe/chat-cache-v035-20261024` 시험 브랜치에 v038 **추가 파일만** 기록. 기존 캐시를 재사용하는 구체적인 시험 브랜치 범위 외에는 캐시 HIT를 보장하지 않는다.
 - 민감정보·개인경로·비인가 원본 전체 ZIP을 GitHub에 업로드하지 않는다. 임시 전달 파일은 작업 뒤 삭제한다.
+
+---
+
+## 2026-10-24 Native 결과: 가상 하한 시험만 PASS
+
+- [GitHub Actions #40104213001](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40104213001): SUCCESS; Runner 로그 약 8.7초; v035 캐시 HIT, C++ 재컴파일 없음.
+- 기존 16 + v037 29 + v038 37 = **오프라인 82/82 PASS**. v038 계약 테스트에는 선택 아이템 누락, 누락된 독립 bare-item JSON2, 아이템 ID·레벨 불일치, crafted_stats·gem_id, 장신구 제외, 후보 하한 침범이 포함됨.
+- 가상 L=(150,0,100,0)과 기름 o=(16,16,0,0), 수동 T=3284 ⇒ 최소=(166,16,100,0), 자유분배 U=3002. **실제 특수효과 장비의 L로 승격 불가**.
+- 고정 하한을 적용한 단일 Native 후보 CHMV=(619,1176,1150,339), **JSON2 스탯별 정확히 일치**, 120 iterations 요청/실제 DPS 샘플 119, DPS 198771.0013, 95% 근사 ±1782.516. 치명타 옴니움 룬 버프 확인.
+- Artifact ID 12563816884, ZIP 파일 크기 82475 bytes, SHA256 4dd48b6e35e9bd3ab3ff9842d47a16dae63ede5993e8ef4a1f226c1d2d6e08c2, 8개 entry 전부 ZIP CRC PASS.
+- 기존 v037 Native JSON2 실측에서 back=239656은 crafted_stats로 거부, wrists=239648은 gem_id로 거부, trinket1/2는 최적화 하한 원천에서 제외하도록 실제 코드를 실행해 확인.
+- [독립 검증 영수증](V038_FIXED_FLOOR_NATIVE_ACCEPTANCE_20261024.json)은 synthetic=true·real_item_attested=false·actual_special_effects_proven=false를 보존.
+- **남은 게이트:** 사용자 선택 실존 특수효과 장비의 식별·효과 지원 증거 및 보강하지 않은 순수 네이티브 아이템 스탯 JSON2 확보 후 동일 계약에 투입. 현재 해당 데이터가 없어 실사용 자동 고정 하한 산정은 미완료.
