@@ -1,0 +1,128 @@
+name: v038 Evidence-Gated Fixed-Floor Native Synthetic Pilot
+
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - integration_probes/requests/v038_synthetic_native_once.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v038-fixed-floor-synthetic-once
+  cancel-in-progress: false
+
+jobs:
+  pinned-simc-fixed-floor:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    env:
+      V036_BUNDLE: integration_probes/payloads/V036_SELECTED_V032_RUNTIME_BRIDGE.zip
+      PINNED_BIN: .simc-cache/v035/simc
+    steps:
+      - name: Checkout isolated v038 probe branch
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Validate one-shot request and immutable source fingerprints
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p run-output
+          python3 - <<'PY_GATE'
+          import hashlib,json,os,pathlib,subprocess
+          assert os.environ['GITHUB_EVENT_NAME']=='push'
+          assert os.environ['GITHUB_REF']=='refs/heads/probe/chat-cache-v035-20261024'
+          changed=subprocess.check_output(['git','diff-tree','--no-commit-id','--name-only','-r',os.environ['GITHUB_SHA']],text=True).splitlines()
+          assert changed==['integration_probes/requests/v038_synthetic_native_once.json'], 'UNEXPECTED_TRIGGER_CHANGESET'
+          expected={'schema':'v038_test_only_locked_floor_probe_v1','authorization':'BOUNDED_SYNTHETIC_FLOOR_NATIVE_ONLY',
+                    'synthetic_special_floor':[150,0,100,0],'manual_total':3284,'scout_iterations':120,
+                    'max_simc_invocations':1,'real_item_effect_attested':False}
+          req=json.loads(pathlib.Path(changed[0]).read_text())
+          assert req==expected,'UNAUTHORIZED_SIMC_REQUEST'
+          checks={
+            'runner/v038_fixed_gear_floor.py':'65c94e2df0e497e4b47587cf9ebd62b340513059c43f95fe924737674e0db7f0',
+            'runner/v038_native_floor_probe.py':'9ddb6e55835507511bb7d3bd59e26aacb8aae83e9d573bd434958dcf97bc419a',
+            'tests/test_v038_fixed_gear_floor.py':'be78751533b659b19d03eb2aadf2249d74154e2cc868b14fbb4ece303a57bb4d',
+            'integration_probes/payloads/V036_SELECTED_V032_RUNTIME_BRIDGE.zip':'38d5956ae50965a61abe253b1a3d680a9c5e59bfc322208dc3361cef7b52eac6'}
+          for name,digest in checks.items():
+            assert hashlib.sha256(pathlib.Path(name).read_bytes()).hexdigest()==digest,'BYTES_CHANGED:'+name
+          receipt={'schema':'v038_one_shot_identity','run_id':int(os.environ['GITHUB_RUN_ID']),
+                   'trigger_sha':os.environ['GITHUB_SHA'],'synthetic_only':True,'native_calls_max':1}
+          pathlib.Path('run-output/V038_IDENTITY_RECEIPT.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          print('V038_REQUEST_SAFE_SYNTHETIC_ONLY')
+          PY_GATE
+      - name: Restore pinned existing Linux SimC cache
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd-cli-release-nonetwork-r1
+      - name: Refuse cache miss or altered binary
+        shell: bash
+        env:
+          CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
+        run: |
+          set -euo pipefail
+          test "$CACHE_HIT" = 'true' || { echo 'V038_CACHE_MISS_NO_REBUILD'; exit 3; }
+          test -x "$PINNED_BIN"
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc-cache/v035/simc' | sha256sum --check
+          sha256sum --check .simc-cache/v035/simc.sha256
+          echo V038_CACHE_HIT_SHA_VERIFIED
+      - name: Extract original v032 runtime without executing unknown ZIP scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY_EXTRACT'
+          import pathlib,stat,zipfile
+          bundle=pathlib.Path('integration_probes/payloads/V036_SELECTED_V032_RUNTIME_BRIDGE.zip')
+          root=pathlib.Path('v038_original_runtime');root.mkdir(exist_ok=True)
+          with zipfile.ZipFile(bundle) as z:
+            assert z.testzip() is None and len(z.infolist())==21
+            seen=set()
+            for item in z.infolist():
+              path=pathlib.PurePosixPath(item.filename)
+              assert not path.is_absolute() and '..' not in path.parts and '\\' not in item.filename
+              assert item.filename not in seen
+              seen.add(item.filename)
+              assert not stat.S_ISLNK(item.external_attr>>16)
+              assert item.file_size <= 55000000
+              target=root.joinpath(*path.parts);target.parent.mkdir(parents=True,exist_ok=True)
+              target.write_bytes(z.read(item))
+          print('V038_RUNTIME_EXTRACTED',len(seen))
+          PY_EXTRACT
+      - name: Offline v033 plus v037 plus v038 regressions and source plan
+        shell: bash
+        env:
+          V037_RUNTIME_DIR: ${{ github.workspace }}/v038_original_runtime
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+          python3 runner/v037_manual_budget_adapter.py --mode plan --request runner/v037_request.json --runtime v038_original_runtime --output run-output/v037_plan
+          python3 - <<'PY_CONTRACT'
+          import importlib.util,pathlib
+          p=pathlib.Path('runner/v038_fixed_gear_floor.py');s=importlib.util.spec_from_file_location('v038',p);m=importlib.util.module_from_spec(s);s.loader.exec_module(m)
+          contract=m.enforce_constraints(3284,dict.fromkeys(m.STATS,0),dict(zip(m.STATS,(150,0,100,0))))
+          assert contract['effective_candidate_minimum']==dict(zip(m.STATS,(166,16,100,0)))
+          print('V038_OFFLINE_FLOOR_PASS_SYNTHETIC_ONLY')
+          PY_CONTRACT
+      - name: One synthetic-floor constrained Native SimC case
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v038_native_floor_probe.py \
+            --runtime "$GITHUB_WORKSPACE/v038_original_runtime" \
+            --binary "$GITHUB_WORKSPACE/$PINNED_BIN" \
+            --output "$GITHUB_WORKSPACE/run-output/native"
+      - name: Upload fail-closed results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v038-synthetic-floor-native-${{ github.run_id }}
+          path: run-output/
+          if-no-files-found: warn
+          retention-days: 7
