@@ -1,0 +1,99 @@
+{
+  "schema": "v042_independent_acceptance_v1",
+  "assessed_kst": "2026-10-25",
+  "status": "PASS_BOUNDED_TRIAL_NOT_PRODUCT_ACCEPTANCE",
+  "three_axis_state": {
+    "test_success": "PASS_BOUNDED_NATIVE_ONE",
+    "product_code_integrated": false,
+    "official_policy_promoted": false
+  },
+  "status_corrections": {
+    "v016_v031": "PREVIOUSLY_REPORTED_COMPLETE_CURRENTLY_NOT_INDEPENDENTLY_VERIFIED",
+    "v016_to_github_v032_v041_lineage": "UNVERIFIED",
+    "v016_to_github_feature_inheritance": "UNVERIFIED",
+    "final_product_integration_path": "UNVERIFIED",
+    "policy_budget_formula": "APPROVED_V1_0_RETAINED_CANDIDATE_OIL_FORMULA_NOT_PROMOTED",
+    "calibration_3182_3184": "UNRECONCILED_REQUIRE_NATIVE_ATTRIBUTION",
+    "v042_role": "BOUNDED_TECHNICAL_VALIDATION_ONLY"
+  },
+  "repository": "degong2-code/simc-secondary-optimizer-runner",
+  "branch": "probe/chat-cache-v035-20261024",
+  "trigger_commit": "fdf7293b65f4172a14d5331f7f261e7bf692f7dd",
+  "actions_run_id": 40120755711,
+  "actions_url": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40120755711",
+  "job_id": 120951562197,
+  "workflow_conclusion": "success",
+  "offline_tests": {
+    "executed": 144,
+    "passed": 142,
+    "skipped": 2,
+    "failed": 0
+  },
+  "native_calls": 1,
+  "cache_hit": true,
+  "simc_binary_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+  "simc_revision": "7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd",
+  "artifact": {
+    "id": 12570882092,
+    "name": "simc-v042-evidence-40120755711",
+    "bytes": 80255,
+    "sha256": "eea36762a1d21db5e9ad5bcf72c6c94bff4d122fee28f3ea83cd700120b9dc7f",
+    "entries": 8,
+    "zip_crc_all_pass": true
+  },
+  "native": {
+    "input_sha256": "02f45fb88772ed8fd26b2044866a2d3a7c3417e0ca928ffe460b608cf541f56e",
+    "json2_sha256": "4367cfa9e911190af8e8441f44378cb0efab4d018fd059677e01fa054636ed55",
+    "sample_count": 59,
+    "head": {
+      "tier_id": 271564,
+      "origin_stat_id": 271874,
+      "bonus_id_diagnostic": 13846,
+      "ilevel": 334,
+      "gem_id": 240967,
+      "static_chmv": {
+        "crit": 0,
+        "haste": 0,
+        "mastery": 201,
+        "versatility": 0
+      }
+    },
+    "hands_id": 268243,
+    "tier4_buff": "cumulative_power",
+    "omnium_rune_buff": "rune_of_critical_power",
+    "proc_name": "venomcursed_mastery",
+    "proc_spell": 1307922,
+    "proc_starts_mean": 7.338983050847458,
+    "proc_uptime_pct": 38.83061581920905,
+    "positive_dynamic_delta_rating_verified": false,
+    "negative_dynamic_delta_rating_verified": false,
+    "live_game_catalyst_334_bonus_verified": false,
+    "actual_gear_G_T_recalculated": false,
+    "dps_comparison_allowed": false,
+    "global_optimum_verified": false
+  },
+  "independent_artifact_checks": {
+    "executed": 23,
+    "passed": 23,
+    "failed": 0,
+    "method": "ZIP bytes extracted and JSON2/inputs/receipts separately checked against GitHub artifact SHA and Native identity"
+  },
+  "product_admission": "BLOCKED_MISSING_INDEPENDENT_EVIDENCE",
+  "work_os_m0_executed": false,
+  "protected_scope": {
+    "main_modified": false,
+    "project_sources_modified": false,
+    "project_instructions_modified": false,
+    "current_shared_state_modified": false,
+    "v003_immutable_modified": false
+  },
+  "limitations": [
+    "Only one exact diagnostic Arcane Mage 334 profile Native tested",
+    "Proc positive and negative rating effects are not measured or independently verified",
+    "Real game tier-transformed 334 bonus ownership is unverified",
+    "Physical socket and gem mechanics unverified",
+    "Real G/T calibration and budget/oil disagreement not reconciled",
+    "v016/v031 original source chain remains unverified",
+    "Test success must not be promoted to product integration or official policy"
+  ]
+}
