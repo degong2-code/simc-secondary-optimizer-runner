@@ -1,6 +1,6 @@
 name: v034 Chat Triggered Native One-Shot Probe
 
-oon:
+on:
   push:
     branches:
       - probe/chat-auto-run-20261024
@@ -10,7 +10,7 @@ oon:
 permissions:
   contents: write  # Run ID reporting to the isolated probe branch only.
 
-oncurrency:
+concurrency:
   group: v034-chat-auto-run-20261024
   cancel-in-progress: false
 
