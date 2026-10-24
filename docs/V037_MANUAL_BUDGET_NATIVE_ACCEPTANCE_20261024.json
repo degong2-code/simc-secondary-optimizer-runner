@@ -1,0 +1,138 @@
+{
+  "artifact_bytes": 654532,
+  "artifact_id": 12562804704,
+  "artifact_sha256": "75b03414e8db2d29dfd597cb8e5edf9d98f9ece88b0d40e45bc1d27445a16391",
+  "candidates": [
+    {
+      "chmv": [
+        619,
+        1176,
+        1150,
+        339
+      ],
+      "ci95": 1035.8407479486734,
+      "dps": 197980.39941437493,
+      "samples": 319,
+      "sem": 528.4901775248334,
+      "tag": "CONFIRM_01"
+    },
+    {
+      "chmv": [
+        624,
+        1412,
+        624,
+        624
+      ],
+      "ci95": 1101.1996225874962,
+      "dps": 197808.46695305972,
+      "samples": 319,
+      "sem": 561.8365421364776,
+      "tag": "CONFIRM_02"
+    },
+    {
+      "chmv": [
+        619,
+        1176,
+        1150,
+        339
+      ],
+      "ci95": 1840.878982020173,
+      "dps": 198003.66907645148,
+      "samples": 119,
+      "sem": 939.2239704184557,
+      "tag": "SCOUT_01"
+    },
+    {
+      "chmv": [
+        1412,
+        624,
+        624,
+        624
+      ],
+      "ci95": 1701.6348039526436,
+      "dps": 194275.24132188884,
+      "samples": 119,
+      "sem": 868.1810224248181,
+      "tag": "SCOUT_02"
+    },
+    {
+      "chmv": [
+        624,
+        1412,
+        624,
+        624
+      ],
+      "ci95": 1778.4327494612285,
+      "dps": 197671.03953740463,
+      "samples": 119,
+      "sem": 907.3636476843003,
+      "tag": "SCOUT_03"
+    },
+    {
+      "chmv": [
+        624,
+        624,
+        1412,
+        624
+      ],
+      "ci95": 1731.8432093253368,
+      "dps": 195358.93293556984,
+      "samples": 119,
+      "sem": 883.59347414558,
+      "tag": "SCOUT_04"
+    },
+    {
+      "chmv": [
+        624,
+        624,
+        624,
+        1412
+      ],
+      "ci95": 1618.2997409813372,
+      "dps": 197158.7123953532,
+      "samples": 119,
+      "sem": 825.6631331537435,
+      "tag": "SCOUT_05"
+    },
+    {
+      "chmv": [
+        619,
+        1376,
+        950,
+        339
+      ],
+      "ci95": 1874.7627531300404,
+      "dps": 197989.16334452684,
+      "samples": 119,
+      "sem": 956.5116087398166,
+      "tag": "SCOUT_06"
+    }
+  ],
+  "confirmation_statistically_separated": false,
+  "confirmed_difference_second_minus_first_dps": -171.932461315213,
+  "difference_95pct_halfwidth_approx": 1511.8222990476463,
+  "dps_samples_and_sem_checked": true,
+  "evaluated_utc": "2026-10-24T14:30:16.190235+00:00",
+  "independent_json2_cases_checked": 8,
+  "manual_budget_not_ilvl_verified": true,
+  "minima_rating": {
+    "crit_rating": 600,
+    "haste_rating": 200,
+    "mastery_rating": 100,
+    "versatility_rating": 100
+  },
+  "native_chmv_correct": 8,
+  "no_global_optimum_claim": true,
+  "official_work_os_m0_unmodified_by_this_run": true,
+  "omnium_crit_rune_native_visible": 8,
+  "proof_scope": "bounded manual +100 rating on unchanged v031r3 fixed-items scenario",
+  "rating_transfer_distance": 526.0,
+  "run_id": 40102619339,
+  "same_chmv_same_iterations_repeat_count": 0,
+  "scenario": "v031r3_dwarf_arcane_fixed_gear",
+  "schema": "V037_INDEPENDENT_NATIVE_ACCEPTANCE_V1",
+  "status": "PASS_BOUNDED_MANUAL_CHMV_NATIVE_NOT_GLOBAL_OPTIMUM",
+  "target_total_rating": 3284,
+  "zip_crc": "PASS",
+  "zip_members": 44
+}
