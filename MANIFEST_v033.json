@@ -1,0 +1,54 @@
+{
+  "schema": "SIMCSecondaryRemotePilot-v033",
+  "release_type": "STANDALONE_CLOUD_COMPATIBILITY_PILOT",
+  "offline_regression_tests": 16,
+  "mock_orchestration_test": true,
+  "actual_github_cloud_simc_run": false,
+  "cloud_native_equivalence_verified": false,
+  "prior_v032_adaptive_engine_integrated": false,
+  "source_of_portable_profile": "v031R3 user-native 2026-10-24 result",
+  "prior_work_os_m0_status_unmodified": true,
+  "git_source_ref_short_unresolved": "7bc1071",
+  "files": [
+    {
+      "path": ".github/workflows/remote-simc-v033.yml",
+      "bytes": 3452,
+      "sha256": "46d6d6e3f120cc97000a115d56c845fa3db845c35564d37b6973f8adb2c20291"
+    },
+    {
+      "path": ".gitignore",
+      "bytes": 154,
+      "sha256": "94379c08f9f4125affa43918ecad5bd8faa9fecd48c55c42d459f4167b5e5e94"
+    },
+    {
+      "path": "README.md",
+      "bytes": 3681,
+      "sha256": "0051f500cfa6f6888e2e11735a72d798b249518a5594b1bc70706363823a0df5"
+    },
+    {
+      "path": "SETUP_KO.md",
+      "bytes": 5814,
+      "sha256": "5009ac4230fff3d5c2dc848a81d56ec3d04e8423bef21713884680f477bd2bdc"
+    },
+    {
+      "path": "fixtures/v031r3_reference_summary.json",
+      "bytes": 890,
+      "sha256": "51928f77ef9e9d75b7b6d44d7c7cc26d4d2ad6e9bb110318ae1d11e1d14b0bda"
+    },
+    {
+      "path": "inputs/v031r3_reference.simc",
+      "bytes": 2148,
+      "sha256": "1bab8b0bc1d03014b99cb38487de0dfce3407c8c465a87020aa40382bf99d86e"
+    },
+    {
+      "path": "runner/pilot.py",
+      "bytes": 9281,
+      "sha256": "27008c8369f109e3bf128d9414e427431e6aab5cccf4ba6d126b07785ea77835"
+    },
+    {
+      "path": "tests/test_pilot.py",
+      "bytes": 6150,
+      "sha256": "143e1612b1b7b5180a6231e4ef64adc1e9e117324360a871d1ee277344ac13c8"
+    }
+  ]
+}

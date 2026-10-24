@@ -1,0 +1,46 @@
+mage="V020_Arcane_Standard_Probe"
+source=default
+spec=arcane
+level=90
+race=dwarf
+role=spell
+talents=C4DAAAAAAAAAAAAAAAAAAAAAAYGGLzYmFMzQzMzMAAAGAwMz0sssMDAgNAAAzMDbWmxMLzYMzMzMswMzMzMAADAAwAMzAmBADzMD
+omnium_talents=136822:1/136817:1/136821:1/136814:1
+# No custom action list: SimC default class APL
+# Four tier pieces; v030 native combat JSON2 contains Cumulative Power tier-4pc buff
+# Item-level override is a native lookup experiment, NOT a real drop-level statement
+head=v020_head_271564,id=271564,ilevel=334,source=local,gem_id=240967
+neck=v020_neck_251142,id=251142,ilevel=334,source=local,gem_id=240908
+shoulders=v020_shoulders_271562,id=271562,ilevel=334,source=local
+back=adherents_silken_shroud,id=239656,ilevel=334,source=local,embellishment=arcanoweave_lining,crafted_stats=49/36
+chest=v020_chest_271567,id=271567,ilevel=334,source=local,enchant=mark_of_the_worldsoul_2
+wrists=martyrs_bindings,id=239648,ilevel=334,source=local,gem_id=240892,embellishment=arcanoweave_lining,crafted_stats=49/36
+hands=v020_hands_268243,id=268243,ilevel=334,source=local
+waist=v020_waist_268257,id=268257,ilevel=334,source=local,gem_id=240918
+legs=v020_legs_271563,id=271563,ilevel=334,source=local,enchant=arcanoweave_spellthread_2
+feet=v020_feet_268218,id=268218,ilevel=334,source=local
+finger1=v020_finger1_158366,id=158366,ilevel=334,source=local,gem_id=240900/240908,enchant=eyes_of_the_eagle_2
+finger2=v020_finger2_159459,id=159459,ilevel=334,source=local,gem_id=240892,enchant=eyes_of_the_eagle_2
+trinket1=v030_gebbos_bottomless_bag_270164,id=270164,ilevel=334,source=local
+trinket2=v020_trinket2_281215,id=281215,ilevel=334,source=local
+main_hand=v020_main_hand_268205,id=268205,ilevel=334,source=local,enchant=rite_of_the_hashey_2
+
+item_db_source=local
+desired_targets=1
+fight_style=Patchwerk
+iterations=320
+threads=1
+fixed_time=1
+max_time=300
+vary_combat_length=0
+calculate_scale_factors=0
+flask=flask_of_the_blood_knights_2
+food=royal_roast
+potion=disabled
+augmentation=disabled
+temporary_enchant=main_hand:thalassian_phoenix_oil_2
+optimal_raid=1
+gear_crit_rating=600
+gear_haste_rating=975
+gear_mastery_rating=1115
+gear_versatility_rating=329

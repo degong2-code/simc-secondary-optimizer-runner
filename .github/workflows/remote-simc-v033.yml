@@ -1,0 +1,101 @@
+name: v033 Pinned Linux SimC Compatibility Pilot
+
+on:
+  workflow_dispatch:
+    inputs:
+      rune:
+        description: 'Which Omnium fourth-row rune (both is recommended first)'
+        required: true
+        default: both
+        type: choice
+        options:
+          - both
+          - haste
+          - crit
+      iterations:
+        description: '60 quick smoke; 320 longer comparison'
+        required: true
+        default: '60'
+        type: choice
+        options:
+          - '60'
+          - '320'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v033-simc-pilot
+  cancel-in-progress: false
+
+jobs:
+  pinned-simc-native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout optimizer runner only
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Validate local portable baseline (no SimC yet)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+          mkdir -p run-output
+
+      - name: Install only CLI build tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake build-essential pkg-config
+
+      - name: Fetch exact pinned upstream SimC source (no fallback to latest)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p _vendor
+          git clone --filter=blob:none --no-checkout https://github.com/simulationcraft/simc.git _vendor/simc 2>&1 | tee run-output/source_checkout.log
+          git -C _vendor/simc checkout --detach 7bc1071 2>&1 | tee -a run-output/source_checkout.log
+          REV="$(git -C _vendor/simc rev-parse HEAD)"
+          [[ "$REV" == 7bc1071* ]] || { echo "Pinned SimC revision unavailable!" >&2; exit 32; }
+          printf '%s\n' "$REV" > run-output/LINUX_SIMC_SOURCE_COMMIT.txt
+          git -C _vendor/simc status --short
+
+      - name: Build Linux CLI only at pinned SimC revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake -S _vendor/simc -B _vendor/simc/build \
+            -DBUILD_GUI=OFF -DSC_NO_NETWORKING=ON -DCMAKE_BUILD_TYPE=Release \
+            2>&1 | tee run-output/cmake_configure.log
+          cmake --build _vendor/simc/build --target simc --parallel 2 \
+            2>&1 | tee run-output/cmake_build.log
+          find _vendor/simc/build -type f -name simc -executable -print | sort > run-output/simc_binary_candidates.txt
+          test "$(wc -l < run-output/simc_binary_candidates.txt)" -ge 1
+
+      - name: Run bounded native profiles and verify JSON2
+        shell: bash
+        env:
+          PILOT_RUNE: ${{ inputs.rune }}
+          PILOT_ITERATIONS: ${{ inputs.iterations }}
+        run: |
+          set -euo pipefail
+          SIMC_BIN="$(head -1 run-output/simc_binary_candidates.txt)"
+          sha256sum "$SIMC_BIN" > run-output/LINUX_SIMC_BINARY_SHA256.txt
+          python3 runner/pilot.py execute \
+            --binary "$SIMC_BIN" --rune "$PILOT_RUNE" \
+            --iterations "$PILOT_ITERATIONS" \
+            --output run-output
+
+      - name: Upload complete execution evidence, even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: simc-v033-native-evidence-${{ github.run_id }}
+          path: run-output/
+          if-no-files-found: warn
+          retention-days: 7

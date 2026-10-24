@@ -1,0 +1,13 @@
+# Never publish whole historical backups, credentials, or binaries
+.env
+.env.*
+*.pem
+*.p12
+*.key
+*.exe
+*.7z
+*.zip
+__pycache__/
+_vendor/
+run-output/
+*.pyc

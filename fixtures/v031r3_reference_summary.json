@@ -1,0 +1,22 @@
+{
+  "schema": "v033_reference_evidence_v1",
+  "source": "User PC v031R3 native SimC run (data stripped, no private local path)",
+  "input_sha256": "9d8308eea3d472219d470846cfa316e9613ec42cdba449fba36353ae8448892d",
+  "portable_input_sha256": "1bab8b0bc1d03014b99cb38487de0dfce3407c8c465a87020aa40382bf99d86e",
+  "user_result_zip_sha256": "a84b9c806da8029396b3ab7952f01a5f897cc8eaa3bd919651cc50b4ec9a96f6",
+  "simc_git_revision": "7bc1071",
+  "simc_release": "1210-01",
+  "reference_dps_mean": 194233.2378423735,
+  "reference_dps_sem": 504.08157780376735,
+  "reference_samples": 319,
+  "reference_rating": {
+    "crit_rating": 600,
+    "haste_rating": 1140,
+    "mastery_rating": 1115,
+    "versatility_rating": 329
+  },
+  "reference_total": 3184,
+  "rune_haste_talent_id": 136821,
+  "rune_crit_talent_id": 136815,
+  "guarantee": "Previous Windows reference only; Linux result unverified"
+}
