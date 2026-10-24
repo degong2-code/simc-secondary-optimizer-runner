@@ -158,3 +158,15 @@ GitHub: 실행 ID/잡 상태/JSON2/로그 Artifact
 - 독립 실측 검증: https://github.com/degong2-code/simc-secondary-optimizer-runner/blob/probe/chat-cache-v035-20261024/docs/V037_MANUAL_BUDGET_NATIVE_ACCEPTANCE_20261024.json
 - 경계: 3284는 특정 아이템레벨의 실제 예산 검증이 아닌 수동 시험 입력. 후보 최소치는 특수장비의 고정 스탯 자동 산정과 다름. 범용 전문화·장비·런타임 완성, 전역 최적해와 공식 Work OS M0 통과를 주장하지 않는다.
 - v037 자동화와 바이너리 캐시 사용 범위는 격리 시험 브랜치. 기존 main v033 워크플로는 변경하지 않음.
+
+---
+
+## v038 (2026-10-24) — 선택 특수장비 고정 하한: 가상 Native 검증
+
+- [Run 40104213001](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40104213001) **SUCCESS**; 캐시 HIT, 바이너리 SHA 검증, 재컴파일 없음; Runner 약 8.7초.
+- 오프라인 회귀검사 **82/82 PASS** (기존 v033 16 + v037 29 + 신규 v038 37), 실제 SimC **1/1 PASS** (120 iterations, 유효 DPS 표본 119).
+- 테스트 전용 고정벡터 L=150/0/100/0 및 기름 o=16/16/0/0, 총량 T=3284 → 최소 하한 c=166/16/100/0, 재분배 가능 잔여 U=3002. Native JSON2 후보 619/1176/1150/339 일치, DPS 약 198771 ±1783 (95% 근사).
+- **범위 주의:** 위 L은 가상의 고정 특수장비 검증값이며 실제 장비 아이템스탯 또는 시즌 특수효과 자동 추출 PASS가 아니다. 실존 특수장비 선택 ID·아이템레벨·보강되지 않은 native bare-item JSON2가 없는 경우 fail-closed. 기존 두 제작 장식 부위의 crafted_stats는 잠금으로 오인하지 않는다.
+- Native Artifact ID 12563816884, ZIP SHA256 4dd48b6e35e9bd3ab3ff9842d47a16dae63ede5993e8ef4a1f226c1d2d6e08c2.
+- [v038 계약 및 실측 기록](https://github.com/degong2-code/simc-secondary-optimizer-runner/blob/probe/chat-cache-v035-20261024/docs/V038_SPECIAL_ITEM_FIXED_FLOOR_EVIDENCE_CONTRACT.md), [독립 검증 영수증](https://github.com/degong2-code/simc-secondary-optimizer-runner/blob/probe/chat-cache-v035-20261024/docs/V038_FIXED_FLOOR_NATIVE_ACCEPTANCE_20261024.json).
+- 시험용 v038 코드·Actions는 캐시 격리 브랜치 범위에만 있으며 `main`의 v033 프로그램·공식 Work OS 상태·Developer Notes는 변경하지 않았다.
