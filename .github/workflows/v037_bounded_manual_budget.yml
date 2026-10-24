@@ -1,0 +1,135 @@
+name: v037 Bounded Manual CHMV Budget Native Pilot
+
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - integration_probes/requests/v037_native_once.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v037-bounded-manual-budget-probe
+  cancel-in-progress: false
+
+jobs:
+  user-budget-native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      V036_BUNDLE: integration_probes/payloads/V036_SELECTED_V032_RUNTIME_BRIDGE.zip
+      PINNED_BIN: .simc-cache/v035/simc
+      V037_RUN_REQUEST: integration_probes/requests/v037_native_once.json
+    steps:
+      - name: Checkout exact isolated cached development branch
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+
+      - name: Validate trigger, request, code fingerprint and runtime ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p run-output
+          python3 - <<'PY_REQUEST'
+          import hashlib,json,os,pathlib,subprocess
+          assert os.environ['GITHUB_REF']=='refs/heads/probe/chat-cache-v035-20261024','WRONG_BRANCH'
+          assert os.environ['GITHUB_EVENT_NAME']=='push','WRONG_TRIGGER'
+          changed=subprocess.check_output(['git','diff-tree','--no-commit-id','--name-only','-r',os.environ['GITHUB_SHA']],text=True).splitlines()
+          assert changed==['integration_probes/requests/v037_native_once.json'],'UNAUTHORIZED_CHANGESET'
+          config=json.loads(pathlib.Path(os.environ['V037_RUN_REQUEST']).read_text())
+          original=json.loads(pathlib.Path('runner/v037_request.json').read_text())
+          assert config==original,'UNAUTHORIZED_NATIVE_REQUEST'
+          hashes={
+            'runner/v037_manual_budget_adapter.py':'9fbaf2ed6ecd206abe28d9e23716766026979a6409d984e12a53bcc6abc00ccb',
+            'tests/test_v037_manual_budget_adapter.py':'6b5cf910957274f47b24fb0e18c01d46f9dd4062002bc58eb4941edd69994d55',
+            'integration_probes/payloads/V036_SELECTED_V032_RUNTIME_BRIDGE.zip':'38d5956ae50965a61abe253b1a3d680a9c5e59bfc322208dc3361cef7b52eac6'
+          }
+          for file,sha in hashes.items():
+            assert hashlib.sha256(pathlib.Path(file).read_bytes()).hexdigest()==sha,'UNEXPECTED_BYTES:'+file
+          print('V037_ONE_SHOT_VERIFIED; native_calls_max=8; run_id='+os.environ['GITHUB_RUN_ID'])
+          receipt={'schema':'v037_action_identity_v1','status':'DISPATCHED_ONLY','run_id':int(os.environ['GITHUB_RUN_ID']),
+                   'head_sha':os.environ['GITHUB_SHA'],'manual_total':3284,'native_max_calls':8,
+                   'v036_payload_sha256':hashes['integration_probes/payloads/V036_SELECTED_V032_RUNTIME_BRIDGE.zip']}
+          pathlib.Path('run-output/V037_TRIGGER_RECEIPT.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          PY_REQUEST
+
+      - name: Restore exact cached SimC binary
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd-cli-release-nonetwork-r1
+
+      - name: Fail closed on absent or altered cached binary
+        shell: bash
+        env:
+          CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
+        run: |
+          set -euo pipefail
+          test "$CACHE_HIT" = 'true' || { echo 'V037_CACHE_MISS_NO_REBUILD'; exit 3; }
+          test -x "$PINNED_BIN"
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc-cache/v035/simc' | sha256sum --check
+          sha256sum --check .simc-cache/v035/simc.sha256
+          echo 'V037_CACHE_HIT_SHA_VERIFIED'
+
+      - name: Extract approved selected original v032 runtime only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY_EXTRACT'
+          import pathlib,stat,zipfile
+          archive=pathlib.Path('integration_probes/payloads/V036_SELECTED_V032_RUNTIME_BRIDGE.zip')
+          root=pathlib.Path('v037_original_runtime')
+          root.mkdir(exist_ok=True)
+          with zipfile.ZipFile(archive) as z:
+            assert z.testzip() is None,'CRC_FAIL'
+            assert len(z.infolist())==21,'UNEXPECTED_ZIP_ENTRY_COUNT'
+            seen=set()
+            for entry in z.infolist():
+              name=entry.filename
+              posix=pathlib.PurePosixPath(name)
+              assert not posix.is_absolute() and '..' not in posix.parts and '\\' not in name, 'UNSAFE_ZIP_MEMBER'
+              assert name not in seen,'DUPLICATE_ZIP_PATH'
+              seen.add(name)
+              assert not stat.S_ISLNK(entry.external_attr>>16),'UNSAFE_SYMLINK'
+              assert entry.file_size<=55_000_000,'UNBOUNDED_FILE'
+              target=root.joinpath(*posix.parts)
+              target.parent.mkdir(parents=True,exist_ok=True)
+              target.write_bytes(z.read(entry))
+          print('V037_ORIGINAL_RUNTIME_EXTRACTED',len(seen))
+          PY_EXTRACT
+
+      - name: Run existing v033 plus v037 offline regression
+        shell: bash
+        env:
+          V037_RUNTIME_DIR: ${{ github.workspace }}/v037_original_runtime
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+          python3 runner/v037_manual_budget_adapter.py \
+            --mode plan --request runner/v037_request.json \
+            --runtime v037_original_runtime --output run-output/offline
+
+      - name: Execute exactly bounded native CHMV adaptive comparison
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v037_manual_budget_adapter.py \
+            --mode native --request runner/v037_request.json \
+            --runtime "$GITHUB_WORKSPACE/v037_original_runtime" \
+            --binary "$GITHUB_WORKSPACE/$PINNED_BIN" \
+            --output "$GITHUB_WORKSPACE/run-output/native"
+
+      - name: Upload v037 bounded native evidence even on error
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v037-manual-budget-native-${{ github.run_id }}
+          path: run-output/
+          if-no-files-found: warn
+          retention-days: 7
