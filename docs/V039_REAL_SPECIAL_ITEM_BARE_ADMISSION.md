@@ -6,7 +6,7 @@
 
 ## 엄격한 시험 경계
 
-1. 오리지널 v031r3 참고 프로필의 `head` 한 줄만 `head=venomkeepers_horrific_cowl,id=271874,ilevel=334,source=local`로 교체한다. 해당 장비에 `bonus_id`, `gem_id`, `enchant`, `crafted_stats`를 넣지 않는다. 다른 장비/특성/룬/소모품 변경 금지.
+1. 오리지널 v031r3 참고 프로필의 `head` 한 줄과 **옴니움 4번째 룬(가속→기본 치명타)**만 `head=venomkeepers_horrific_cowl,id=271874,ilevel=334,source=local`로 교체한다. 해당 장비에 `bonus_id`, `gem_id`, `enchant`, `crafted_stats`를 넣지 않는다. 다른 장비/특성/룬/소모품 변경 금지.
 2. **머리는 원래 티어4셋 구성 중 하나**다. 이 단일 교체 시험은 **티어4셋 보존 검증이 아니다**. DPS를 기존 v038 기준과 비교하거나 최적화 후보로 사용하지 않는다.
 3. 60 iterations **최대 1회**, 동일 SHA256의 v035 캐시 바이너리만 사용. 캐시 없음/파일 무결성 실패 시 재컴파일 금지, `BLOCKED`.
 4. 출력 JSON2에서 271874/334, head에 보석/마법부여/제작변형 없음, 고유 특화 201 rating, 나머지 고정 CHMV 0, 다른 세 티어 부위 ID 보존, 캐릭터/룬 출처를 검증한다. 이 검증은 **정적 아이템 스탯**에 한정한다.
