@@ -1,0 +1,7 @@
+{
+  "schema": "v034_native_one_shot",
+  "authorization": "ISOLATED_CLOUD_NATIVE_PROBE_ONLY",
+  "rune": "crit",
+  "iterations": 60,
+  "simc_commit_prefix": "7bc1071"
+}
