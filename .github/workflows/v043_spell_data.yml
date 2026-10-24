@@ -1,0 +1,103 @@
+name: v043 Venomcursed DBC Queries (Bounded)
+
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - integration_probes/requests/v043_once.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v043-spellquery-bounded
+  cancel-in-progress: false
+
+jobs:
+  spell-query:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    env:
+      SIMC_BIN: .simc-cache/v035/simc
+    steps:
+      - name: Checkout isolated cache branch
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Check one-shot request and immutable source blob IDs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p run-output
+          python3 - <<'PY_REQ'
+          import json,os,pathlib,subprocess
+          assert os.environ['GITHUB_EVENT_NAME']=='push'
+          assert os.environ['GITHUB_REF']=='refs/heads/probe/chat-cache-v035-20261024'
+          changed=subprocess.check_output(['git','diff-tree','--no-commit-id','--name-only','-r',os.environ['GITHUB_SHA']],text=True).splitlines()
+          assert changed==['integration_probes/requests/v043_once.json'],'UNAUTHORIZED_CHANGESET'
+          request=json.loads(pathlib.Path(changed[0]).read_text())
+          expected={
+            'schema':'v043_venomcursed_spell_query_request_v1',
+            'authorization':'TWO_PINNED_DBC_QUERIES_ONLY_NO_COMBAT',
+            'effect_buff_spell_id':1307922,'effect_driver_spell_id':1307923,
+            'query_ilevel':334,'dbc_calls_max':2,'combat_calls_max':0,
+            'real_game_334_bonus_verified':False,
+            'applied_dynamic_delta_verified':False,
+            'actual_G_T_verified':False,
+            'product_code_integrated':False,'official_policy_promoted':False,
+            'dps_comparison_authorized':False}
+          assert request==expected,'UNAUTHORIZED_REQUEST'
+          pins={
+            'runner/v043_spell_data_probe.py':'c52eede99e9b06ab64855ba28aae0b4557c24b3e',
+            'tests/test_v043_spell_data_probe.py':'5ac25164f78f2a844ee132822821a6109aa875bb',
+            'runner/v042_catalyst_evidence_firewall.py':'0caff7b7f3031ed9bb8710f1a978074466a07cb9'
+          }
+          for path,sha in pins.items():
+            actual=subprocess.check_output(['git','hash-object',path],text=True).strip()
+            assert actual==sha,'PINNED_SOURCE_CHANGED:'+path
+          pathlib.Path('run-output/V043_WORKFLOW_IDENTITY.json').write_text(json.dumps({
+            'schema':'v043_one_shot_identity','status':'TRIGGER_VERIFIED_ONLY',
+            'run_id':int(os.environ['GITHUB_RUN_ID']),
+            'head_sha':os.environ['GITHUB_SHA'],
+            'test_success':False,
+            'product_code_integrated':False,'official_policy_promoted':False},indent=2)+'\n')
+          print('V043_TRIGGER_GATE_PASS')
+          PY_REQ
+      - name: All offline regression plus query-specific guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Restore pinned cache only
+        id: simc_cache
+        uses: actions/cache/restore@v5
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd-cli-release-nonetwork-r1
+      - name: Refuse cache MISS or binary SHA mismatch
+        shell: bash
+        env:
+          CACHE_HIT: ${{ steps.simc_cache.outputs.cache-hit }}
+        run: |
+          set -euo pipefail
+          test "$CACHE_HIT" = true || { echo V043_CACHE_MISS_NO_BUILD; exit 3; }
+          test -x "$SIMC_BIN"
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc-cache/v035/simc' | sha256sum --check
+          sha256sum --check .simc-cache/v035/simc.sha256
+          echo V043_PINNED_SIMC_PASS
+      - name: Query two pinned spell records no combat simulations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v043_spell_data_probe.py --binary "$GITHUB_WORKSPACE/$SIMC_BIN" --output "$GITHUB_WORKSPACE/run-output/v043"
+      - name: Retain both query outputs and failure receipts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v043-spellquery-${{ github.run_id }}
+          path: run-output/
+          if-no-files-found: warn
+          retention-days: 7
