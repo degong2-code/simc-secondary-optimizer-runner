@@ -1,0 +1,61 @@
+{
+  "schema": "v039_cantrip_native_bounded_acceptance_v1",
+  "status": "PASS_STATIC_ITEM_201_AND_TIER4_AND_PROC_BUFF_OBSERVED_NOT_FULL_PRODUCT",
+  "development_test_item": {
+    "name": "Venomkeeper's Horrific Cowl",
+    "id": 271874,
+    "ilevel": 334,
+    "slot": "head",
+    "user_selected": false
+  },
+  "bare": {
+    "run_id": 40106250971,
+    "artifact_id": 12563769795,
+    "zip_sha256": "14d63f35593d68796ccb39ce445f296f96f8f544c41b04035434eca5113be36b",
+    "crc": true,
+    "static_rating": {
+      "crit": 0,
+      "haste": 0,
+      "mastery": 201,
+      "vers": 0
+    },
+    "crit_rune": true,
+    "tier4": false
+  },
+  "tier_and_proc": {
+    "run_id": 40106614938,
+    "artifact_id": 12564743044,
+    "zip_sha256": "ec41c04c26249d173dab2b0bc2773138ffe48b82b053f29007a9cced2cc7873f",
+    "crc": true,
+    "tier_hands_id": 271565,
+    "tier_hands_haste": 50,
+    "tier_hands_mastery": 101,
+    "tier4_buff": "cumulative_power",
+    "crit_rune_buff": "rune_of_critical_power",
+    "special_buff": "venomcursed_mastery",
+    "spell": 1307922,
+    "reported_uptime": 35.94020903954803,
+    "mean_buff_starts": 7,
+    "bare_mastery_still_201": true,
+    "full_dynamic_secondary_delta_confirmed": false
+  },
+  "tests": {
+    "offline": "97 run (2 skipped)",
+    "native_runs_completed": 2,
+    "linux_cache_hit": true,
+    "simc_binary_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e"
+  },
+  "initial_trial": {
+    "run_id": 40105954234,
+    "issue": "inherited haste rune; superseded by crit-rune rerun"
+  },
+  "scope": {
+    "dps_comparison_allowed": false,
+    "product_chmv_budget_recalculated": false,
+    "effect_full_semantics_proven": false,
+    "user_item_selection_claimed": false,
+    "main_product_code_changed": false,
+    "official_work_os_m0_executed": false
+  },
+  "next": "Measure proc magnitude and negative secondary shifts, recompute representative gear CHMV budget after head and gloves replacements."
+}
