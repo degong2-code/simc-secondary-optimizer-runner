@@ -103,6 +103,25 @@ jobs:
           print('V036_SELECTED_SOURCE_EXTRACTED',len(seen))
           PY_ZIP
 
+      - name: Normalize only adapter Linux git revision after verified binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo 'aa4df65bef0114a7aaafdad8fd866ff602fd454ecf04a80f44704cf847e831a0  v036_native_runtime/v036_cloud_bridge.py' | sha256sum --check
+          python3 - <<'PY_PATCH'
+          from pathlib import Path
+          p=Path('v036_native_runtime/v036_cloud_bridge.py')
+          source=p.read_text()
+          needle='    m.r3.EXPECTED_SIMC_SHA=LINUX_BIN_SHA\n'
+          replacement=(needle+
+              "    assert m.r3.prev.EXPECTED_REV=='7bc1071', 'WINDOWS_REVISION_CONTRACT_CHANGED'\n"+
+              "    m.r3.prev.EXPECTED_REV=SIMC_COMMIT[:10]  # pinned Linux JSON2 revision; exact binary SHA verified\n")
+          assert source.count(needle)==1,'ADAPTER_SOURCE_NOT_EXACT'
+          p.write_text(source.replace(needle,replacement))
+          PY_PATCH
+          echo '09773a617f51141e07159d4c1a6570dcda7388b79578d79cea4a77679df92241  v036_native_runtime/v036_cloud_bridge.py' | sha256sum --check
+          echo V036_LINUX_REVISION_NORMALIZATION_PASS
+
       - name: Original v032 source plus redacted evidence offline plan verification
         shell: bash
         run: |
