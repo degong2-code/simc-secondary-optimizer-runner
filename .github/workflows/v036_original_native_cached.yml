@@ -1,0 +1,131 @@
+name: v036 Exact v032 Adaptive Native Linux Cache Probe
+
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - integration_probes/requests/v036_native_probe_once.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v036-single-bounded-native-adaptive-20261024
+  cancel-in-progress: false
+
+jobs:
+  original-v032-bounded-adaptive:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      CACHE_BIN: .simc-cache/v035/simc
+      V036_ZIP: integration_probes/payloads/V036_SELECTED_V032_RUNTIME_BRIDGE.zip
+    steps:
+      - name: Checkout isolated cached branch
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Validate exact one-shot request and pinned source bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p run-output
+          python3 - <<'PY_REQ'
+          import json,os,pathlib,subprocess,hashlib
+          assert os.environ['GITHUB_EVENT_NAME']=='push'
+          assert os.environ['GITHUB_REF']=='refs/heads/probe/chat-cache-v035-20261024'
+          paths=subprocess.check_output(['git','diff-tree','--no-commit-id','--name-only','-r',os.environ['GITHUB_SHA']],text=True).splitlines()
+          assert paths==['integration_probes/requests/v036_native_probe_once.json'],'UNAUTHORIZED_CHANGESET'
+          req=json.loads(pathlib.Path(paths[0]).read_text())
+          expected={'schema':'v036_bounded_native_adaptive_pilot','authorization':'USER_APPROVED_GENERAL_PRODUCT_TEST_ISOLATED',
+                    'rune':'crit','scouts':6,'confirmations':2,'scout_iterations':120,'confirm_iterations':320,
+                    'source_bundle_sha256':'38d5956ae50965a61abe253b1a3d680a9c5e59bfc322208dc3361cef7b52eac6'}
+          assert req==expected,'UNAUTHORIZED_NATIVE_REQUEST'
+          payload=pathlib.Path(os.environ['V036_ZIP'])
+          assert hashlib.sha256(payload.read_bytes()).hexdigest()==req['source_bundle_sha256'],'SOURCE_BUNDLE_SHA_MISMATCH'
+          receipt={'schema':'V036_WORKFLOW_IDENTITY','status':'DISPATCHED_NOT_YET_VERIFIED','run_id':int(os.environ['GITHUB_RUN_ID']),
+                   'trigger_sha':os.environ['GITHUB_SHA'],'source_bundle_sha256':req['source_bundle_sha256'],'native_max_calls':9}
+          pathlib.Path('run-output/V036_IDENTITY_RECEIPT.json').write_text(json.dumps(receipt,indent=2)+'\n')
+          print('V036_BOUNDED_REQUEST_VERIFIED',receipt['run_id'])
+          PY_REQ
+
+      - name: Validate original v033 runner offline baseline
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+
+      - name: Restore existing pinned Linux SimC cache without rebuilding
+        id: restore
+        uses: actions/cache/restore@v4
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd-cli-release-nonetwork-r1
+
+      - name: Refuse missing or altered Linux binary
+        shell: bash
+        env:
+          CACHE_HIT: ${{ steps.restore.outputs.cache-hit }}
+        run: |
+          set -euo pipefail
+          test "$CACHE_HIT" = "true" || { echo "V036_NO_CACHE_NO_REBUILD"; exit 3; }
+          test -x "$CACHE_BIN"
+          printf '%s  %s\n' '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e' "$CACHE_BIN" | sha256sum --check
+          sha256sum --check .simc-cache/v035/simc.sha256
+          echo "V036_VALIDATED_LINUX_BINARY_SHA; CACHE_HIT"
+
+      - name: Safely unpack exact-source selected v032 runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY_ZIP'
+          import zipfile,pathlib,stat
+          bundle=pathlib.Path('integration_probes/payloads/V036_SELECTED_V032_RUNTIME_BRIDGE.zip')
+          dest=pathlib.Path('v036_native_runtime')
+          dest.mkdir(exist_ok=True)
+          with zipfile.ZipFile(bundle) as z:
+            assert z.testzip() is None,'BUNDLE_CRC_FAILURE'
+            assert len(z.infolist())==21,'UNEXPECTED_SOURCE_BUNDLE_ENTRIES'
+            seen=set()
+            for info in z.infolist():
+              path=pathlib.PurePosixPath(info.filename)
+              assert not path.is_absolute() and '..' not in path.parts and '\\' not in info.filename,'UNSAFE_BUNDLE_PATH'
+              assert info.filename not in seen,'DUPLICATE_ZIP_PATH'
+              seen.add(info.filename)
+              assert info.file_size<=55_000_000,'FILE_OVERSIZE'
+              assert not stat.S_ISLNK(info.external_attr>>16),'SYMLINK_REFUSED'
+              target=dest.joinpath(*path.parts)
+              target.parent.mkdir(parents=True,exist_ok=True)
+              target.write_bytes(z.read(info))
+          print('V036_SELECTED_SOURCE_EXTRACTED',len(seen))
+          PY_ZIP
+
+      - name: Original v032 source plus redacted evidence offline plan verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 v036_native_runtime/v036_cloud_bridge.py --mode plan --scout-iterations 120 --output run-output/offline_plan
+
+      - name: Probe one real native CHMV candidate with crit rune
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 v036_native_runtime/v036_cloud_bridge.py --mode native-probe --binary "$GITHUB_WORKSPACE/$CACHE_BIN" --scout-iterations 120 --output run-output/native_probe
+
+      - name: Run original v032 bounded adaptive 6 scout plus 2 confirmation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 v036_native_runtime/v036_cloud_bridge.py --mode native-full --binary "$GITHUB_WORKSPACE/$CACHE_BIN" --scout-iterations 120 --confirm-iterations 320 --output run-output/native_full
+
+      - name: Upload all original v032 cloud trial evidence on failure or success
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v036-original-v032-native-${{ github.run_id }}
+          path: run-output/
+          if-no-files-found: warn
+          retention-days: 7
