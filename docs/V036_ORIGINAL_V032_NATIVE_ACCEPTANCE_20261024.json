@@ -1,0 +1,58 @@
+{
+  "artifact_id": 12562553738,
+  "artifact_name": "simc-v036-original-v032-native-40101013866",
+  "artifact_zip_bytes": 1434103,
+  "artifact_zip_sha256": "2657caaff2157bdbc6521e9b000034f4ce78171754687002d6193cfafb3b62b9",
+  "cache_hit": true,
+  "chmv_total": 3184,
+  "confirm_native_calls": 2,
+  "confirmations": [
+    {
+      "chmv": {
+        "crit_rating": 600,
+        "haste_rating": 1140,
+        "mastery_rating": 1115,
+        "versatility_rating": 329
+      },
+      "ci95_approx": 1052.6581018976342,
+      "dps": 194635.63605554224,
+      "samples": 319,
+      "sem": 537.0704601518541
+    },
+    {
+      "chmv": {
+        "crit_rating": 605,
+        "haste_rating": 1369,
+        "mastery_rating": 605,
+        "versatility_rating": 605
+      },
+      "ci95_approx": 1025.871778241211,
+      "dps": 195555.29502220027,
+      "samples": 319,
+      "sem": 523.4039684904137
+    }
+  ],
+  "difference_halfwidth_ci95_approx": 1469.8646144739023,
+  "dps_difference_confirm2_minus_confirm1": 919.6589666580257,
+  "evidence_json2_modified": false,
+  "full_rebuild_performed": false,
+  "linux_binary_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+  "native_cases_chmv_exact": 9,
+  "native_cases_rune_buff_verified": 9,
+  "native_cases_validated": 9,
+  "no_global_optimum_claim": true,
+  "official_work_os_m0_unchanged": true,
+  "original_offline_unittest": "429/429 PASS independent",
+  "prefight_native_calls": 1,
+  "privacy_redactions": 8,
+  "run_id": 40101013866,
+  "rune": "crit",
+  "schema": "V036_ORIGINAL_V032_NATIVE_ACCEPTANCE_V1",
+  "scout_native_calls": 6,
+  "source_manifest_verified": "191/191",
+  "source_original_zip_sha256": "072a18d24d37770d454a35ece1cb2a3d1b72624655c32e46dc4f2fc551a6968b",
+  "source_py_modules_unchanged": 17,
+  "statistically_separated_ci95_approx": false,
+  "status": "PASS_BOUNDED_NATIVE_ADAPTIVE_PILOT_NOT_GLOBAL_OPTIMUM",
+  "v036_portable_bundle_sha256": "38d5956ae50965a61abe253b1a3d680a9c5e59bfc322208dc3361cef7b52eac6"
+}
