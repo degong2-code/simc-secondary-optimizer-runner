@@ -1,0 +1,7 @@
+SIMC SECONDARY OPTIMIZER / Chat-to-GitHub isolated write probe
+date: 2026-10-24
+purpose: verify GitHub connector can write a harmless UTF-8 file from ordinary Chat
+branch: probe/chat-write-only-20261024
+scope: test branch only; do not modify main, source, workflows, or artifacts
+no_simc_execution: true
+no_product_state_promotion: true
