@@ -32,3 +32,16 @@
 4. GitHub `actions/cache/restore@v4`는 바이너리 캐시이므로 **동일 Native DPS 결과 재사용을 의미하지 않는다.** v035 시험 브랜치에 한정된 cache key 재사용은 사전에 HIT와 SHA를 검증해야 한다.
 
 GitHub의 `main`·기존 v003 immutable·공식 Work OS M0는 변경하지 않는다. 이 시험은 범용 UI/설치형 제품을 구현한 것으로 표시하지 않는다.
+
+## 실제 Native 실행 결과 — 2026-10-24
+
+- **실행:** [GitHub Actions #40102619339](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40102619339) — SUCCESS, GitHub Runner 로그 약 14초
+- **캐시:** HIT, 바이너리 SHA256 `64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e`; 재컴파일 없음
+- **오프라인 테스트:** 기존 16개 + 신규 29개 = 45/45 PASS
+- **Native SimC:** 6개 scout (120 iterations) + 2개 confirmation (320 iterations) = 8/8 PASS. 실제 JSON2의 CHMV 총량 3284, 후보 하한, 티어·장식·룬 및 DPS 표본 검증
+- **결과 ZIP:** Artifact ID `12562804704`; 44 members, ZIP CRC 정상, 원본 ZIP SHA256 `75b03414e8db2d29dfd597cb8e5edf9d98f9ece88b0d40e45bc1d27445a16391`
+- **확인 1:** 619 / 1176 / 1150 / 339, DPS 197980.3994, SEM 528.4902, 95% 근사 ±1035.8407
+- **확인 2:** 624 / 1412 / 624 / 624, DPS 197808.4670, SEM 561.8365, 95% 근사 ±1101.1996
+- 두 후보 평균 차이(후보2−후보1) −171.9325 DPS, 근사 95% 차이 오차폭 ±1511.8223, rating 재분배 거리 526. **우열 미확정**이며 대안 완전 동등·전역 최적화 확정 아님
+- 검증 영수증: [V037_MANUAL_BUDGET_NATIVE_ACCEPTANCE_20261024.json](V037_MANUAL_BUDGET_NATIVE_ACCEPTANCE_20261024.json)
+- 여전히 **장비별 고정 스탯 자동 하한 산정·모든 전문화 범용 입력·아이템레벨 예산의 일반화는 미완료**. 기존 v032 모듈은 바이트 수정하지 않았으며 `main` 제품 워크플로와 공식 Work OS 상태는 변경하지 않았다.
