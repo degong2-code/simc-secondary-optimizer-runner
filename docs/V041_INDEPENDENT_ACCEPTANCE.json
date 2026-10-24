@@ -1,0 +1,59 @@
+{
+  "schema": "v041_independent_acceptance_v1",
+  "status": "PASS_BOUNDED_CATALYST_NATIVE_GEM_TIER_PROC_NOT_COMPLETE_PRODUCT",
+  "run_id": 40112424280,
+  "github_branch": "probe/chat-cache-v035-20261024",
+  "artifact_id": 12566764251,
+  "archive_size_bytes": 79861,
+  "archive_sha256": "bfd4043596ae722ad96fb94007cdd2388a97530f8c0c602f59e59140429b9598",
+  "archive_entries": 7,
+  "archive_crc_pass": true,
+  "git_commit_sha": "034c23c6159868ad9f836a997f29a430ea682951",
+  "original_v032_modules_modified": false,
+  "v033_main_workflow_modified": false,
+  "native_simc_calls": 1,
+  "simc_binary_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+  "cache_hit": true,
+  "cache_action": "actions/cache/restore@v5 (Node24)",
+  "offline_regression": {
+    "tests_run": 132,
+    "passed": 130,
+    "skipped": 2
+  },
+  "native": {
+    "crit_rune_buff": "rune_of_critical_power",
+    "dps_comparison_allowed": false,
+    "gem_mechanical_effect_independently_proven": false,
+    "head": {
+      "bonus_id": 13846,
+      "fixed_mastery_rating": 201,
+      "gem_id": 240967,
+      "ilevel": 334,
+      "redirected_original_id": 271874,
+      "tier_id": 271564
+    },
+    "native_json2_sha256": "44802458c6606549664d8699b6f35766b76d9fed1af0d7498db0a9b0e1d30a1f",
+    "proc_buff": "venomcursed_mastery",
+    "proc_starts_mean": 7.372881355932203,
+    "proc_uptime_pct": 40.56672316384181,
+    "real_game_catalyzed_334_bonus_proven": false,
+    "sample_count": 59,
+    "special_effect_delta_ratings_proven": false,
+    "status": "PASS_PINNED_334_NATIVE_CATALYST_GEM_TIER_PROC",
+    "tier4_buff": "cumulative_power",
+    "total_budget_recalibrated": false,
+    "user_gear_selection_claimed": false
+  },
+  "input_sha256": "8519a926322103a6e263e3bd250ecc213d05ca359d9b56519a0146403c4aecfb",
+  "json2_sha256": "44802458c6606549664d8699b6f35766b76d9fed1af0d7498db0a9b0e1d30a1f",
+  "head_encoded_item": "crown_of_the_primal_leywarden,id=271564,bonus_id=13846,ilevel=334,gem_id=240967,source=local,redirected_base_stats=271874",
+  "notes": {
+    "game_334_catalyst_bonus_proven": false,
+    "gem_socket_physical_rule_proven": false,
+    "proc_dynamic_secondary_deltas_proven": false,
+    "real_gear_chmv_total_recalculated": false,
+    "confirmed_user_item_selection": false,
+    "dps_comparison_authorized": false,
+    "correct_devnotes_authority": "v1.0; v1.1/v1.2 candidates not promoted"
+  }
+}
