@@ -1,0 +1,14 @@
+{
+  "schema": "v041_catalyst_gem_native_probe_v1",
+  "authorization": "ONE_334_GEM_PRESERVING_NATIVE_CASE_ONLY",
+  "tier_id": 271564,
+  "original_id": 271874,
+  "ilevel": 334,
+  "bonus_id": 13846,
+  "gem_id": 240967,
+  "iterations": 60,
+  "native_max_calls": 1,
+  "real_game_catalyst_bonus_attested": false,
+  "effect_scale_confirmed": false,
+  "dps_comparison_allowed": false
+}
