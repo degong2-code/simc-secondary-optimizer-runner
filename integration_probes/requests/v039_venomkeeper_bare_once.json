@@ -1,0 +1,12 @@
+{
+  "schema": "v039_real_bare_item_probe_v1",
+  "authorization": "ONE_REAL_ITEM_STATIC_STAT_NATIVE_ONLY",
+  "item_id": 271874,
+  "ilevel": 334,
+  "expected_bare_mastery_rating": 201,
+  "native_max_calls": 1,
+  "iterations": 60,
+  "dps_comparison_allowed": false,
+  "user_selected_item_attested": false,
+  "tier4_preserved_attested": false
+}
