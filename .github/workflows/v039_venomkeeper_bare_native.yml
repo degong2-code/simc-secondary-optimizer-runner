@@ -43,9 +43,9 @@ jobs:
                       'item_id':271874,'ilevel':334,'expected_bare_mastery_rating':201,
                       'native_max_calls':1,'iterations':60,'dps_comparison_allowed':False,
                       'user_selected_item_attested':False,'tier4_preserved_attested':False},'REQUEST_IDENTITY_CHANGED'
-          hashes={'runner/v039_venomkeeper_bare_probe.py':'0a63772a98b7dc47c3c82e095606c113ba2ce54b2acd5a063550dd72b31c0e73',
-                  'tests/test_v039_venomkeeper_bare_probe.py':'c32a5c9735ef6839340ab53ed036e0003fa9ba4d09d3dfbe9a1ec7cf9953d75a',
-                  'docs/V039_REAL_SPECIAL_ITEM_BARE_ADMISSION.md':'6ccf04d002a9902b5a69e3294ca7e70aa387749e7a59712590fa138a6bc7f051'}
+          hashes={'runner/v039_venomkeeper_bare_probe.py':'cdcb15663bda12179d3dfe854ad44d7c9c8f9acb71bd4b8a9b2c5f824cb602d7',
+                  'tests/test_v039_venomkeeper_bare_probe.py':'4746b09637f0edfefd44ac0608ad01f2d6d1feec868793d365d840027ba35981',
+                  'docs/V039_REAL_SPECIAL_ITEM_BARE_ADMISSION.md':'d45d7da60c25302a44b5a159774367f23073a6a92fb41f27fdf85779512bd7ff'}
           for p,sha in hashes.items():
             assert hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()==sha, 'SOURCE_HASH_CHANGED:'+p
           receipt={'schema':'v039_identity','run_id':int(os.environ['GITHUB_RUN_ID']),
