@@ -1,0 +1,92 @@
+name: v039 Real Venomkeeper Bare Item Native Probe (No DPS Comparison)
+
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - integration_probes/requests/v039_venomkeeper_bare_once.json
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v039-single-real-bare-item-271874
+  cancel-in-progress: false
+
+jobs:
+  real-bare-item:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    env:
+      BIN: .simc-cache/v035/simc
+    steps:
+      - name: Checkout isolated cache branch
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Fail closed unless exact approved one-shot and hashes match
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p run-output
+          python3 - <<'PY_REQ'
+          import hashlib,json,os,pathlib,subprocess
+          assert os.environ['GITHUB_REF']=='refs/heads/probe/chat-cache-v035-20261024','WRONG_BRANCH'
+          assert os.environ['GITHUB_EVENT_NAME']=='push','WRONG_EVENT'
+          paths=subprocess.check_output(['git','diff-tree','--no-commit-id','--name-only','-r',os.environ['GITHUB_SHA']],text=True).splitlines()
+          assert paths==['integration_probes/requests/v039_venomkeeper_bare_once.json'],'UNAPPROVED_CHANGESET'
+          req=json.loads(pathlib.Path(paths[0]).read_text())
+          assert req=={'schema':'v039_real_bare_item_probe_v1',
+                      'authorization':'ONE_REAL_ITEM_STATIC_STAT_NATIVE_ONLY',
+                      'item_id':271874,'ilevel':334,'expected_bare_mastery_rating':201,
+                      'native_max_calls':1,'iterations':60,'dps_comparison_allowed':False,
+                      'user_selected_item_attested':False,'tier4_preserved_attested':False},'REQUEST_IDENTITY_CHANGED'
+          hashes={'runner/v039_venomkeeper_bare_probe.py':'0a63772a98b7dc47c3c82e095606c113ba2ce54b2acd5a063550dd72b31c0e73',
+                  'tests/test_v039_venomkeeper_bare_probe.py':'c32a5c9735ef6839340ab53ed036e0003fa9ba4d09d3dfbe9a1ec7cf9953d75a',
+                  'docs/V039_REAL_SPECIAL_ITEM_BARE_ADMISSION.md':'6ccf04d002a9902b5a69e3294ca7e70aa387749e7a59712590fa138a6bc7f051'}
+          for p,sha in hashes.items():
+            assert hashlib.sha256(pathlib.Path(p).read_bytes()).hexdigest()==sha, 'SOURCE_HASH_CHANGED:'+p
+          receipt={'schema':'v039_identity','run_id':int(os.environ['GITHUB_RUN_ID']),
+                   'item_id':271874,'ilevel':334,'max_calls':1,
+                   'user_selection_proven':False,'tier4_preserved_proven':False,'effect_implemented_proven':False}
+          pathlib.Path('run-output/V039_WORKFLOW_IDENTITY.json').write_text(json.dumps(receipt,sort_keys=True,indent=2)+'\n')
+          print('V039_REQUEST_STATIC_ONLY_PASS',receipt['run_id'])
+          PY_REQ
+      - name: Restore pinned binary without rebuilding
+        id: simccache
+        uses: actions/cache/restore@v4
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd-cli-release-nonetwork-r1
+      - name: Refuse missing or different binary
+        shell: bash
+        env:
+          CACHE_HIT: ${{ steps.simccache.outputs.cache-hit }}
+        run: |
+          set -euo pipefail
+          test "$CACHE_HIT" = true || { echo V039_CACHE_MISS_NO_COMPILE; exit 3; }
+          test -x "$BIN"
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc-cache/v035/simc' | sha256sum --check
+          sha256sum --check .simc-cache/v035/simc.sha256
+          echo V039_CACHE_PIN_PASS
+      - name: Regression tests and pinned profile shape
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Execute exactly one bare 334 head item Native probe
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v039_venomkeeper_bare_probe.py --binary "$GITHUB_WORKSPACE/$BIN" --output "$GITHUB_WORKSPACE/run-output/native"
+      - name: Upload evidence even on BLOCKED
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v039-venomkeeper-bare-${{ github.run_id }}
+          path: run-output/
+          if-no-files-found: warn
+          retention-days: 7
