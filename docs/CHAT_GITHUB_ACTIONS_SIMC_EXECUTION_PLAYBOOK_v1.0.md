@@ -170,3 +170,16 @@ GitHub: 실행 ID/잡 상태/JSON2/로그 Artifact
 - Native Artifact ID 12563816884, ZIP SHA256 4dd48b6e35e9bd3ab3ff9842d47a16dae63ede5993e8ef4a1f226c1d2d6e08c2.
 - [v038 계약 및 실측 기록](https://github.com/degong2-code/simc-secondary-optimizer-runner/blob/probe/chat-cache-v035-20261024/docs/V038_SPECIAL_ITEM_FIXED_FLOOR_EVIDENCE_CONTRACT.md), [독립 검증 영수증](https://github.com/degong2-code/simc-secondary-optimizer-runner/blob/probe/chat-cache-v035-20261024/docs/V038_FIXED_FLOOR_NATIVE_ACCEPTANCE_20261024.json).
 - 시험용 v038 코드·Actions는 캐시 격리 브랜치 범위에만 있으며 `main`의 v033 프로그램·공식 Work OS 상태·Developer Notes는 변경하지 않았다.
+
+---
+
+## v040 (2026-10-25) — 촉매 변환 특수효과와 티어 4세트 동시 Native 증거
+
+- GitHub Actions [Run 40108486179](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40108486179): SUCCESS, 저장된 Linux SimC cache HIT, C++ 재컴파일 생략, 120개 오프라인 테스트 중 118 PASS·2 SKIP, 334레벨 Native **2/2**.
+- 대상은 시험용 비전 마법사 머리 티어 ID **271564**, 리다이렉트한 실존 특수효과 원본 **271874**, 장갑 일반 장비 **268243** 유지, 기존 어깨/가슴/다리 티어, 치명타 룬 고정.
+- `redirected_base_stats=271874`만 사용: Native 티어머리 **특화 201** 승계, `cumulative_power` 티어4셋, 치명타 룬 PASS; 원본 `venomcursed_mastery` 버프 **관측 실패**. 정적 스탯 재지정 자체가 특수효과 유지의 충분조건이 아니라는 실증.
+- 동일한 334레벨 실험에 `bonus_id=13846`을 추가한 경우: 특화 **201**·티어4셋·치명타 룬·`venomcursed_mastery` 발동을 Native JSON2에서 모두 확인. 버프 평균 start_count 7.356, 가동률 37.486%. 단 `13846`이 실제 게임의 모든 334레벨 촉매 변경 아이템에 부여된다는 외부 증거는 **아직 없음**. 해당 ID는 공식 SimC MID2의 344레벨 예시에서 확인된 시험 후보.
+- 리다이렉트는 원본 고정 CHMV를 티어 장비에 **승계**시키는 것이며, 201을 새 예산에 추가하면 **이중 계산 오류**. 새로운 대표 장비의 총 CHMV 예산·고정 하한 산정은 별도 재검증.
+- 원본 특수효과의 스탯 증가·다른 스탯 감소량, 보석홈/마법부여 유지, 정확한 실게임 bonus ID, 사용자 선택 장비 귀속, DPS 우열·전역 최적해 모두 **미검증**.
+- ZIP Artifact ID 12565890427; ZIP SHA256 `289dc2b477a8540485b886b0c006e4cf1f992a942514808cae38ec1afcf42acb`. [v040 개발 기록](https://github.com/degong2-code/simc-secondary-optimizer-runner/blob/probe/chat-cache-v035-20261024/docs/V040_CATALYST_SAME_SLOT_PROBE.md) · [독립 JSON2 영수증](https://github.com/degong2-code/simc-secondary-optimizer-runner/blob/probe/chat-cache-v035-20261024/docs/V040_INDEPENDENT_ACCEPTANCE.json).
+- 기존 v032 소스, main v033 워크플로, 공식 Work OS M0, Project Instructions/Sources, immutable v003에 변경/승격 없음. 캐시는 해당 격리 시험 브랜치에서만 검증.
