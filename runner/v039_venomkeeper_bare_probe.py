@@ -17,6 +17,8 @@ EXPECTED_BARE_MASTERY = 201  # external in-game tooltip observation; verify nati
 PINNED_BIN_SHA256 = '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e'
 EXACT_OLD_HEAD = 'head=v020_head_271564,id=271564,ilevel=334,source=local,gem_id=240967'
 EXACT_NEW_HEAD = 'head=venomkeepers_horrific_cowl,id=271874,ilevel=334,source=local'
+HASTE_RUNE='omnium_talents=136822:1/136817:1/136821:1/136814:1'
+CRIT_RUNE='omnium_talents=136822:1/136817:1/136815:1/136814:1'
 SCHEMA='v039_real_item_bare_stat_native_v1'
 
 class ProbeBlocked(RuntimeError): pass
@@ -33,8 +35,10 @@ def verify_preconditions(source_text: str, binary: pathlib.Path):
 def make_bare(source_text: str, output: pathlib.Path, iterations:int=60):
     need(type(iterations) is int and iterations==60, 'ITERATIONS_OUT_OF_SCOPE')
     need(source_text.count(EXACT_OLD_HEAD)==1, 'REFERENCE_HEAD_CHANGED')
-    body=source_text.replace(EXACT_OLD_HEAD,EXACT_NEW_HEAD)
+    need(source_text.count(HASTE_RUNE)==1 and source_text.count(CRIT_RUNE)==0, 'RUNE_SOURCE_IDENTITY_CHANGED')
+    body=source_text.replace(EXACT_OLD_HEAD,EXACT_NEW_HEAD).replace(HASTE_RUNE,CRIT_RUNE)
     need(body.count(EXACT_NEW_HEAD)==1, 'ITEM_HEAD_REPLACEMENT_FAILED')
+    need(body.count(CRIT_RUNE)==1 and HASTE_RUNE not in body,'CRIT_RUNE_NOT_SELECTED')
     lines=body.splitlines()
     lines=['iterations=60' if line.startswith('iterations=') else line for line in lines]
     need(sum(line.startswith('iterations=') for line in lines)==1, 'ITERATIONS_NOT_UNIQUE')
@@ -66,6 +70,7 @@ def read_bare_native(json_bytes: bytes):
     dps=p.get('collected_data',{}).get('dps',{})
     need(int(dps.get('count',0))>=50,'INSUFFICIENT_PROBE_SAMPLES')
     buffs=[a.get('name','') for a in p.get('buffs',[])]
+    need('rune_of_critical_power' in buffs and 'rune_of_burning_haste' not in buffs, 'CRIT_RUNE_BUFF_NOT_NATIVE')
     return {'bare_gear_chmv':stats,'item_id':ITEM_ID,'item_ilevel':ITEM_ILVL,
             'dps_diagnostic_not_comparable':dps.get('mean'),
             'dps_samples':dps.get('count'), 'buff_names':buffs,
