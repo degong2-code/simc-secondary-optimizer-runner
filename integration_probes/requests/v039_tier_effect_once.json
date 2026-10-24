@@ -1,0 +1,12 @@
+{
+  "schema": "v039_tier_effect_probe_v1",
+  "authorization": "ONE_CANTRIP_4PC_NATIVE_DIAGNOSTIC",
+  "item_id": 271874,
+  "ilevel": 334,
+  "tier_gloves_id": 271565,
+  "native_max_calls": 1,
+  "iterations": 60,
+  "dps_comparison_allowed": false,
+  "user_selected_item_attested": false,
+  "item_effect_prevalidated": false
+}
