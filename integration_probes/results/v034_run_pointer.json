@@ -1,0 +1,11 @@
+{
+  "artifact_name": "simc-v034-chat-auto-evidence-40093110367",
+  "branch": "probe/chat-auto-run-20261024",
+  "iterations": 60,
+  "run_attempt": 1,
+  "run_id": 40093110367,
+  "rune": "crit",
+  "schema": "v034_chat_automation_run_pointer",
+  "status": "DISPATCHED_NOT_YET_VERIFIED",
+  "trigger_sha": "407f1748d213068d6acd242958b8ca02a58e66ad"
+}
