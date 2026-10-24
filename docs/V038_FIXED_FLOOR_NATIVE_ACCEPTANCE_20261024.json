@@ -1,0 +1,74 @@
+{
+  "actual_chmv": {
+    "crit_rating": 619,
+    "haste_rating": 1176,
+    "mastery_rating": 1150,
+    "versatility_rating": 339
+  },
+  "artifact_bytes": 82475,
+  "artifact_filename": "simc-v038-synthetic-floor-native-40104213001.zip",
+  "artifact_sha256": "4dd48b6e35e9bd3ab3ff9842d47a16dae63ede5993e8ef4a1f226c1d2d6e08c2",
+  "cache_hit_reported_in_github_logs": true,
+  "free_rating_after_locked_and_oil": 3002,
+  "general_itemlevel_calibration_proven": false,
+  "github_actions_conclusion": "success",
+  "github_offline_unittests": {
+    "failed": 0,
+    "total": 82,
+    "v033_existing": 16,
+    "v037_existing": 29,
+    "v038_new": 37
+  },
+  "global_optimum_proven": false,
+  "job_id": 120902422362,
+  "minimum_derived_with_oil": {
+    "crit_rating": 166,
+    "haste_rating": 16,
+    "mastery_rating": 100,
+    "versatility_rating": 0
+  },
+  "native_artifact_id": 12563816884,
+  "native_calls": 1,
+  "native_case_input_sha256": "d6da9448467146bcbe0e29aabcc0de07b68118ff6bab1c5cbef1c2720a86f222",
+  "native_case_result_sha256": "0c152a95b465f429d0db6aca9101f46c50b398e1f51573f2ccec2cd5b682b3fa",
+  "native_dps_95pct_halfwidth_approx": 1782.51583026249,
+  "native_dps_mean": 198771.00129232777,
+  "native_dps_sem": 909.4468521747398,
+  "native_iterations_requested": 120,
+  "native_samples": 119,
+  "native_simc_revision": "7bc10711b5",
+  "next_required_evidence": "User-selected actual special nontrinket item IDs/ilevls and independently verified bare-item native JSON2 for each; selected effects/provenance validation",
+  "no_native_recompile": true,
+  "original_v032_engine_modified": false,
+  "original_v032_source_sha256": "072a18d24d37770d454a35ece1cb2a3d1b72624655c32e46dc4f2fc551a6968b",
+  "pinned_linux_binary_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+  "previous_real_v037_sample_item_rejections": {
+    "back": "BARE_ITEM_NOT_ISOLATED:crafted_stats",
+    "trinket1": "NOT_ELIGIBLE_NONTRINKET_SLOT",
+    "trinket2": "NOT_ELIGIBLE_NONTRINKET_SLOT",
+    "wrists": "BARE_ITEM_NOT_ISOLATED:gem_id"
+  },
+  "profile_rune": "crit",
+  "real_selected_special_gear_proven": false,
+  "real_special_item_effects_proven": false,
+  "run_id": 40104213001,
+  "rune_effect_visible": "rune_of_critical_power",
+  "schema": "v038_independent_admission_and_native_receipt_v1",
+  "simc_native_case_status": "NATIVE_STATS_AND_RUNE_PASS",
+  "special_locked_chmv": {
+    "crit_rating": 150,
+    "haste_rating": 0,
+    "mastery_rating": 100,
+    "versatility_rating": 0
+  },
+  "status": "PASS_SYNTHETIC_FIXED_FLOOR_NATIVE_CONFORMANCE_NOT_REAL_ITEM_PROOF",
+  "target_chmv": {
+    "crit_rating": 619,
+    "haste_rating": 1176,
+    "mastery_rating": 1150,
+    "versatility_rating": 339
+  },
+  "target_total": 3284,
+  "zip_crc_all_pass": true,
+  "zip_entries": 8
+}
