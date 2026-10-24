@@ -1,0 +1,97 @@
+{
+  "schema": "v043_independent_dbc_query_acceptance_v1",
+  "assessed_date_kst": "2026-10-25",
+  "status": "PASS_BOUNDED_PINNED_SPELL_QUERY_NO_LIVE_EFFECT_ATTESTATION",
+  "three_axis": {
+    "test_success": "PASS_TWO_READ_ONLY_SPELL_QUERIES",
+    "product_code_integrated": false,
+    "official_policy_promoted": false
+  },
+  "source": {
+    "repository": "degong2-code/simc-secondary-optimizer-runner",
+    "branch": "probe/chat-cache-v035-20261024",
+    "run_id": 40121991730,
+    "run_url": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40121991730",
+    "trigger_commit": "11ceef28bbee6febe8edba2c2970d6aa4baab1bf",
+    "simc_git_revision": "7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd",
+    "simc_binary_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+    "pinned_cache_hit": true
+  },
+  "actions": {
+    "conclusion": "success",
+    "job_id": 120955366391,
+    "offline_unit_tests": {
+      "executed": 150,
+      "passed": 148,
+      "skipped": 2,
+      "failed": 0
+    },
+    "combat_simc_calls": 0,
+    "native_dbc_query_calls": 2
+  },
+  "artifact": {
+    "id": 12571616882,
+    "name": "simc-v043-spellquery-40121991730",
+    "archive_bytes": 2923,
+    "archive_sha256": "b4b7699f827ebf8c6abf41a2e244959b6e0d97e32b01ac77c81d06b200ddd291",
+    "entries": 6,
+    "crc_all_pass": true
+  },
+  "independent_audit": {
+    "checks_total": 16,
+    "checks_passed": 16,
+    "checks_failed": 0,
+    "read_raw_stdout": true,
+    "compared_sha256": true
+  },
+  "query_evidence": {
+    "query_level_request": 334,
+    "buff_spell_id": 1307922,
+    "driver_spell_id": 1307923,
+    "buff_effect1_id": 1336193,
+    "buff_effect2_id": 1336194,
+    "driver_effect1_id": 1336195,
+    "driver_effect2_id": 1336196,
+    "buff_effect1_stat": "mastery",
+    "buff_effect2_stats": [
+      "crit",
+      "haste",
+      "versatility"
+    ],
+    "pinned_dbc_driver_scaled_value_effect1": 362.9923,
+    "pinned_dbc_driver_scaled_value_effect2": -60.49704,
+    "effect1_coefficient": 1.264787,
+    "effect2_coefficient": -0.210792,
+    "source_type": "SIMC_SPELL_QUERY_AT_334_NOT_COMBAT_EVENT_MEASUREMENT",
+    "buff_effect_scaled_values_at_query": [
+      0,
+      0
+    ],
+    "driver_attributes": [
+      "SCALES_WITH_CASTING_ITEMS_LEVEL"
+    ],
+    "spell_query_output_sha256": {
+      "buff": "7e9f00fa70a1b0a94172dabf033f29e2c6663e7db5bbfac5b4f32721a944571c",
+      "driver": "c042c2ffa8005f9b695d8020b846f5703c260c992f5f25b7c2d5734fa5816663"
+    },
+    "item_effect_in_combat_delta_independently_observed": false,
+    "reconciled_to_actual_catalyzed_item_334": false,
+    "scaling_across_itemlevels_verified": false
+  },
+  "previous_native_static_mastery_rating": 201,
+  "static_mastery_201_is_separate_from_query_dynamic_effect": true,
+  "actual_gear_G_or_T_recalculated": false,
+  "v016_v031": "PREVIOUSLY_REPORTED_COMPLETE_CURRENT_INDEPENDENT_VERIFICATION_MISSING",
+  "v016_to_v032_v043_code_lineage": "UNVERIFIED",
+  "policy_authority": "Developer Notes v1.0; v1.1/v1.2 not promoted",
+  "budget_formula_oil_conflict": "UNRESOLVED_NATIVE_ATTRIBUTION_REQUIRED",
+  "budget_3182_3184": "UNRESOLVED_NATIVE_ATTRIBUTION_REQUIRED",
+  "user_selection_attested": false,
+  "physical_socket_attested": false,
+  "live_game_334_catalyst_bonus_id_attested": false,
+  "dps_comparison_allowed": false,
+  "global_optimum_proven": false,
+  "product_admission": "BLOCKED_MISSING_INDEPENDENT_EVIDENCE",
+  "work_os_m0_not_executed": true,
+  "next_technical_evidence": "Bounded in-combat controlled stat change measurement for the pinned 334 scenario; compare to DBC-query expected signs/values without promoting as real-game catalyst proof."
+}
