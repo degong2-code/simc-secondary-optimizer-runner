@@ -1,0 +1,16 @@
+{
+  "schema": "v047_batch_pilot_request_v1",
+  "authorization": "NATIVE_STATIC_LOOKUP_12_CASES_334_ONLY",
+  "source_395_metadata_records": true,
+  "catalog_seed_records": 407,
+  "selected_unique_items": 126,
+  "levels_14_only_candidates": true,
+  "start_cursor": 0,
+  "max_native_calls": 12,
+  "levels": [
+    334
+  ],
+  "stat_cache_version_invalidation": false,
+  "product_code_integrated": false,
+  "official_policy_promoted": false
+}
