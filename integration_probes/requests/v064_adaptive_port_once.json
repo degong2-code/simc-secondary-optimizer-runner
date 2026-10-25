@@ -1,0 +1,10 @@
+{
+  "schema": "v064_adaptive_port_real_native_replay_v1",
+  "native_new_calls": 0,
+  "reuse_proven_v063_native_run_id": 40165729165,
+  "official_budget": "T=G+J+F",
+  "adapter_does_not_generate_next_candidate": true,
+  "no_proc_or_effect_independent_gate": true,
+  "main_product_v015_v016_integrated": false,
+  "official_project_source_changed": false
+}
