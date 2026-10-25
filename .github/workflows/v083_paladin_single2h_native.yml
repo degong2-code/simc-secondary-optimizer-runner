@@ -1,0 +1,142 @@
+name: v083 Retribution Paladin Plate Single 2H Static CHMV Native
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [integration_probes/requests/v083_paladin_single2h_once.json]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v083-paladin-single-2h-static-native
+  cancel-in-progress: false
+jobs:
+  paladin-single2h:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Exactly one requested input and pinned source blobs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          requested="integration_probes/requests/v083_paladin_single2h_once.json"
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==[requested],changed
+          expect={
+            "schema":"v083_paladin_blood_elf_plate_single2h_static_gjf_v1",
+            "source":"simulationcraft_midnight_MID2_Paladin_Retribution",
+            "upstream_git_blob":"864e857c5d8cdbaa5b03939f077fcb657a4784aa",
+            "race":"blood_elf","spec":"paladin_retribution",
+            "armor":"plate","weapon":"one_twohand_main_no_offhand",
+            "representative_ilvl":334,
+            "exact_four_tier_slots":True,
+            "source_backed_non_tier_plate_legs":271878,
+            "original_simc_APL_preserved":True,
+            "shared_static_native_executor":"v082_generalized_profile_factory",
+            "maximum_new_native_calls":4,
+            "one_firstuse_static_G_native":1,
+            "two_official_static_native":2,
+            "one_existing_v015_adaptive_native":1,
+            "iterations_per_case":35,
+            "F_vector":{"crit_rating":0,"haste_rating":165,"mastery_rating":0,"versatility_rating":0},
+            "O_outside_T":True,
+            "T_formula":"T=G+J+F",
+            "no_effect_proc_talent_gate":True,
+            "no_gear_search_or_global_optimum_claim":True}
+          assert json.loads(pathlib.Path(requested).read_text())==expect
+          files={
+            "integration_probes/fixtures/v083_upstream_mid2_paladin_retribution_reference.simc":"864e857c5d8cdbaa5b03939f077fcb657a4784aa",
+            "runner/v082_fury_plate_dual_twohand_native.py":"80a27e07b3b8daf4b95712c199c0cad2a18cee06",
+            "runner/v083_paladin_single_2h_native.py":"72c006f2217fdae44c13c0fff34d0a17759cde08",
+            "tests/test_v083_paladin_single_2h_native.py":"e7e25d56c9449807649a78aff78b09db271895da"}
+          for path,digest in files.items():
+            value=subprocess.check_output(["git","hash-object",path],text=True).strip()
+            assert value==digest,(path,value,digest)
+          print("V083_SINGLE_TWOHAND_SOURCE_BYTES_AND_REQUEST_PINNED")
+          PY
+      - name: Full source and regression checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Original APL, 15 exact items, four tier, one 2H offline preparation
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v083_paladin_single_2h_native.py --upstream integration_probes/fixtures/v083_upstream_mid2_paladin_retribution_reference.simc --out out/offline
+          python3 - <<'PY'
+          import json
+          r=json.load(open("out/offline/V083_RECEIPT.json"))
+          assert r["status"]=="PASS_PALADIN_SINGLE_2H_EXACT_INPUT_PLAN_ZERO_NATIVE",r
+          assert r["new_native_this_invocation"]==0
+          assert r["origin"]["weapon_form"]=="single_two_handed_no_offhand"
+          assert r["origin"]["main_hand_source_id"]==268213
+          assert r["origin"]["off_hand_source_id"] is None
+          assert r["origin"]["replacement_non_tier_plate_legs_id"]==271878
+          print("V083_PALADIN_SOURCE_BACKED_SINGLE_TWOHAND_OFFLINE_PASS")
+          PY
+      - name: Recover immutable pinned SimC binary
+        uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-40153209773
+          path: .simc
+          run-id: 40153209773
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Native exact static G plus 2 official static c and original guided scout
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc/simc' | sha256sum -c
+          chmod +x .simc/simc
+          python3 runner/v083_paladin_single_2h_native.py --upstream integration_probes/fixtures/v083_upstream_mid2_paladin_retribution_reference.simc --out "$GITHUB_WORKSPACE/out/native" --binary "$GITHUB_WORKSPACE/.simc/simc"
+          python3 - <<'PY'
+          import json,math
+          r=json.load(open("out/native/V083_RECEIPT.json"))
+          assert r["status"]=="PASS_REAL_RETRIBUTION_SINGLE_TWOHAND_STATIC_GENERIC_NATIVE",r
+          assert r["new_native_this_invocation"]==4
+          assert r["native_attempts_total"]==4
+          assert r["G"]+r["J"]+r["F"]==r["T"]
+          assert r["J"]==138 and r["F"]==165
+          assert r["v066_preflight_status"]=="READY_STATIC_CHMV_PROFILE_SCOPED"
+          assert r["v015_scout_order_reused"] and not r["two_weapon_slots_preserved"]
+          assert r["weapon_form"]=="single_two_handed_no_offhand"
+          assert len(r["official_native"])==2
+          for candidate in r["official_native"]+[r["adaptive_result"]]:
+              assert candidate["target_static_c"]==candidate["verified_static_c"]
+              assert sum(candidate["target_static_c"].values())==r["T"]
+              assert candidate["dps_mean"]>0 and math.isfinite(candidate["dps_sem"])
+              assert candidate["dps_samples"]>=20
+          print("V083_REAL_PALADIN_SINGLE_TWOHAND_FULL_GENERIC_NATIVE_PASS",json.dumps(r,sort_keys=True))
+          PY
+          sha256sum out/native/initial_native/result.json out/native/official/candidate_00/result.json out/native/official/candidate_01/result.json out/native/official/adaptive_00/result.json > out/native/NATIVE_FOUR_SHA256.txt
+      - name: Recheck four Native JSON2 from SHA cache; zero new SimC
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v083_paladin_single_2h_native.py --upstream integration_probes/fixtures/v083_upstream_mid2_paladin_retribution_reference.simc --out "$GITHUB_WORKSPACE/out/native" --binary "$GITHUB_WORKSPACE/.simc/simc" --cache-only
+          sha256sum -c out/native/NATIVE_FOUR_SHA256.txt
+          python3 - <<'PY'
+          import json
+          r=json.load(open("out/native/V083_RECEIPT.json"))
+          assert r["status"]=="PASS_REAL_RETRIBUTION_SINGLE_TWOHAND_STATIC_GENERIC_NATIVE",r
+          assert r["new_native_this_invocation"]==0 and r["native_attempts_total"]==4
+          assert r["cache_only_replay"]
+          assert all(x["source"]=="CACHED_VERIFIED_NATIVE"
+              for x in r["official_native"]+[r["adaptive_result"]])
+          print("V083_FOUR_VERIFIED_NATIVE_SHA_CACHED_ZERO_EXTRA_PASS")
+          PY
+      - name: Preserve exact 15 gear item inputs, unedited APL, Native JSON2, and receipts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v083-paladin-single-twohand-${{ github.run_id }}
+          path: out/
+          retention-days: 14
+          if-no-files-found: warn
