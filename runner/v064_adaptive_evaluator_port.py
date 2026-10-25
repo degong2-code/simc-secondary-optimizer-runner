@@ -38,6 +38,7 @@ def stable_case_key(normalized,budget,calibration,reference,binary_sha,target,it
          "simc_binary_sha256":binary_sha,
          "simc_revision":calibration["native_revision"],
          "measured_net_offset":calibration["net_input_to_json2_rating_offset"],
+         "empirical_affine_transfer":calibration.get("empirical_affine_transfer"),
          "profile_normalized_sha":part["stable_sha256"],
          "target_rating":target,
          "iterations":iterations,
