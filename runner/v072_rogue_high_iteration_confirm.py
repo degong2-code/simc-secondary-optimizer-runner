@@ -250,6 +250,9 @@ def run(witness_root, prior_official, prior_scout, out, binary=None,
                       cache_only=cache_only)
                 summary["new_native_calls_this_invocation"] += int(
                     obs.get("source") == "NEW_NATIVE")
+                need(obs["iterations"] == ITERATIONS and obs["dps_samples"] >= 300 and
+                     obs["rating_actual"] == request["target"],
+                     "FRESH_320_SAMPLES_OR_FINAL_RATING_INVALID")
                 findings.append(obs)
                 summary["completed_confirmations"] = len(findings)
                 summary["status"] = "PARTIAL_HIGH_NATIVE_CONFIRMED"
