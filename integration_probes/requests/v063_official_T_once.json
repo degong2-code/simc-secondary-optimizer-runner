@@ -1,0 +1,15 @@
+{
+  "schema": "v063_official_native_two_candidate_once_v1",
+  "native_max_calls": 2,
+  "reference": "EXISTING_V059_TWO_NATIVE_JSON2_FOR_NUMERIC_ONLY",
+  "official_budget_formula": "T=G+J+F",
+  "expected_G": 2849,
+  "expected_J": 138,
+  "expected_F": 165,
+  "official_target_T": 3152,
+  "external_oil_in_T": false,
+  "trinket_static_gate": false,
+  "proc_fidelity_gate": false,
+  "original_product_v016_integrated": false,
+  "official_policy_promoted": false
+}
