@@ -1,0 +1,3241 @@
+{
+  "season": "Midnight Season 2",
+  "source_identity": "v047 WEQUIP 2026-09-20 snapshot + 12.1.5 10-item delta + 2 user-approved profile crafted IDs; metadata only",
+  "scaled_stats_imported": false,
+  "items": {
+    "raid:268230": {
+      "item_id": 268230,
+      "name": "Crown of the Eternal Fang",
+      "slot": "HEAD",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:270162": {
+      "item_id": 270162,
+      "name": "Soulcoiler Ritual Vessel",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:268203": {
+      "item_id": 268203,
+      "name": "Hexing Spiritrender",
+      "slot": "WEAPON",
+      "item_subclass_name": "Dagger",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268236": {
+      "item_id": 268236,
+      "name": "Initiate's Sacrificial Tights",
+      "slot": "LEGS",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268235": {
+      "item_id": 268235,
+      "name": "Vestment of the Awakening",
+      "slot": "ROBE",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268229": {
+      "item_id": 268229,
+      "name": "Skullguard of the Risen Sacrifice",
+      "slot": "HEAD",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268245": {
+      "item_id": 268245,
+      "name": "Entombed Cultist's Sabatons",
+      "slot": "FEET",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268208": {
+      "item_id": 268208,
+      "name": "Strongblood's Ceremonial Cleaver",
+      "slot": "WEAPON",
+      "item_subclass_name": "Axe",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:270930": {
+      "item_id": 270930,
+      "name": "Tomb-Creeper's Claw",
+      "slot": "WEAPON",
+      "item_subclass_name": "Fist Weapon",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268248": {
+      "item_id": 268248,
+      "name": "Amani Summoning Shawl",
+      "slot": "CLOAK",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268218": {
+      "item_id": 268218,
+      "name": "Nek'zali's Spiritwalkers",
+      "slot": "FEET",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268240": {
+      "item_id": 268240,
+      "name": "Restless Spirit Shackles",
+      "slot": "WRIST",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268216": {
+      "item_id": 268216,
+      "name": "Cursed Reliquary Cincture",
+      "slot": "WAIST",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268250": {
+      "item_id": 268250,
+      "name": "Sentinel's Vitriolic Chain",
+      "slot": "NECK",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:270165": {
+      "item_id": 270165,
+      "name": "Keeper's Seething Core",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:268204": {
+      "item_id": 268204,
+      "name": "Ancient Construct's Venomshiv",
+      "slot": "WEAPON",
+      "item_subclass_name": "Dagger",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268198": {
+      "item_id": 268198,
+      "name": "Caustic Keeper-Crusher",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Mace",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268224": {
+      "item_id": 268224,
+      "name": "Venom Warden's Greaves",
+      "slot": "LEGS",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268228": {
+      "item_id": 268228,
+      "name": "Venom-Singed Cuffs",
+      "slot": "WRIST",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268219": {
+      "item_id": 268219,
+      "name": "Shadow Hunter's Warmask",
+      "slot": "HEAD",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268197": {
+      "item_id": 268197,
+      "name": "Spine of the Hissing Abyss",
+      "slot": "HOLDABLE",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:270164": {
+      "item_id": 270164,
+      "name": "Gebbo's Bottomless Bag",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:270160": {
+      "item_id": 270160,
+      "name": "First Mate's Shellward",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:268210": {
+      "item_id": 268210,
+      "name": "Malevolent Spiritcudgel",
+      "slot": "WEAPON",
+      "item_subclass_name": "Mace",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268200": {
+      "item_id": 268200,
+      "name": "Gebbo's Backup Blaster",
+      "slot": "RANGEDRIGHT",
+      "item_subclass_name": "Gun",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268227": {
+      "item_id": 268227,
+      "name": "Unpossessed Skullsash",
+      "slot": "WAIST",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268242": {
+      "item_id": 268242,
+      "name": "Errant Scrollsage's Hood",
+      "slot": "HEAD",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268258": {
+      "item_id": 268258,
+      "name": "Boots of the Reckless Wayfarer",
+      "slot": "FEET",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268239": {
+      "item_id": 268239,
+      "name": "Shellbound Bracers",
+      "slot": "WRIST",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268196": {
+      "item_id": 268196,
+      "name": "Venom-Slashed Scuteward",
+      "slot": "SHIELD",
+      "item_subclass_name": "Shield",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268249": {
+      "item_id": 268249,
+      "name": "Vile Alchemist's Band",
+      "slot": "FINGER",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:268246": {
+      "item_id": 268246,
+      "name": "Frothing Venom Spaulders",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268254": {
+      "item_id": 268254,
+      "name": "Serpentine Mixing Belt",
+      "slot": "WAIST",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268260": {
+      "item_id": 268260,
+      "name": "Scaled Fiend's Warboots",
+      "slot": "FEET",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268214": {
+      "item_id": 268214,
+      "name": "Malignant Toothed Edge",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Sword",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:270166": {
+      "item_id": 270166,
+      "name": "Vashnik's Sanguine Rancor",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:270161": {
+      "item_id": 270161,
+      "name": "Fang of Umbral Malignance",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:268205": {
+      "item_id": 268205,
+      "name": "Venomancer's Winged Channeler",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Staff",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:270163": {
+      "item_id": 270163,
+      "name": "Sszorak's Ferocity",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:270174": {
+      "item_id": 270174,
+      "name": "Idol of the Howling Nexus",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:268206": {
+      "item_id": 268206,
+      "name": "Slithering Savage's Gavel",
+      "slot": "WEAPON",
+      "item_subclass_name": "Mace",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268201": {
+      "item_id": 268201,
+      "name": "Venomous Boneglaive",
+      "slot": "WEAPON",
+      "item_subclass_name": "Warglaives",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268257": {
+      "item_id": 268257,
+      "name": "Caustic Chain-Wrapped Sash",
+      "slot": "WAIST",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268234": {
+      "item_id": 268234,
+      "name": "Ruthless Slaughtergrips",
+      "slot": "HAND",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268233": {
+      "item_id": 268233,
+      "name": "Ferocious Scaleboots",
+      "slot": "FEET",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268252": {
+      "item_id": 268252,
+      "name": "Apex Brute's Claw Ring",
+      "slot": "FINGER",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:270171": {
+      "item_id": 270171,
+      "name": "Preternatural Antivenom",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:270170": {
+      "item_id": 270170,
+      "name": "Vexhul's Everflowing Gland",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:268251": {
+      "item_id": 268251,
+      "name": "Amulet of the Twin Fangs",
+      "slot": "NECK",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:268264": {
+      "item_id": 268264,
+      "name": "Ravenous Feaster's Fang",
+      "slot": "WEAPON",
+      "item_subclass_name": "Dagger",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268241": {
+      "item_id": 268241,
+      "name": "Ornaments of the Eternal Coil",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268261": {
+      "item_id": 268261,
+      "name": "Bespittled Slitherslippers",
+      "slot": "FEET",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268223": {
+      "item_id": 268223,
+      "name": "Ophidian Fangmail",
+      "slot": "CHEST",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268220": {
+      "item_id": 268220,
+      "name": "Scaleplate Strangulators",
+      "slot": "HAND",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268225": {
+      "item_id": 268225,
+      "name": "Coiled Hex Legguards",
+      "slot": "LEGS",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268231": {
+      "item_id": 268231,
+      "name": "Soulslither Spaulders",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268209": {
+      "item_id": 268209,
+      "name": "Aman'muso, Warlord's Vengeance",
+      "slot": "WEAPONMAINHAND",
+      "item_subclass_name": "Axe",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:270173": {
+      "item_id": 270173,
+      "name": "Zul'jin's Guillotine Technique",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:268243": {
+      "item_id": 268243,
+      "name": "Grasps of the Eternal Shadow",
+      "slot": "HAND",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:270169": {
+      "item_id": 270169,
+      "name": "Hex Lord's Dooming Idol",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:268237": {
+      "item_id": 268237,
+      "name": "Cuisses of the Uncoiled Union",
+      "slot": "LEGS",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268222": {
+      "item_id": 268222,
+      "name": "Reckless Spirit Breastplate",
+      "slot": "CHEST",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268213": {
+      "item_id": 268213,
+      "name": "Maze-roa, Warlord's Fury",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Axe",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:268253": {
+      "item_id": 268253,
+      "name": "Silken Voodoo Drape",
+      "slot": "CLOAK",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268255": {
+      "item_id": 268255,
+      "name": "Cackling Soultreads",
+      "slot": "FEET",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268256": {
+      "item_id": 268256,
+      "name": "Sash of the Forlorn Vessel",
+      "slot": "WAIST",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268259": {
+      "item_id": 268259,
+      "name": "Girdle of Toxic Regret",
+      "slot": "WAIST",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268211": {
+      "item_id": 268211,
+      "name": "Baleful Hexblade",
+      "slot": "WEAPON",
+      "item_subclass_name": "Sword",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "raid"
+    },
+    "raid:268202": {
+      "item_id": 268202,
+      "name": "Jaw of the Shackled Goddess",
+      "slot": "WEAPON",
+      "item_subclass_name": "Sword",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:268215": {
+      "item_id": 268215,
+      "name": "Abyssal Broodfiend's Bardiche",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Polearm",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:270168": {
+      "item_id": 270168,
+      "name": "Font of Venomous Rage",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:270175": {
+      "item_id": 270175,
+      "name": "Voracious Heart of Ula'tek",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:268207": {
+      "item_id": 268207,
+      "name": "Caustic Repose Greatbow",
+      "slot": "RANGED",
+      "item_subclass_name": "Bow",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:268265": {
+      "item_id": 268265,
+      "name": "Aqirbane Reliquary",
+      "slot": "NECK",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:271874": {
+      "item_id": 271874,
+      "name": "Venomkeeper's Horrific Cowl",
+      "slot": "HEAD",
+      "item_subclass_name": "Cloth",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:271875": {
+      "item_id": 271875,
+      "name": "Gaze of the Coiled Watcher",
+      "slot": "HEAD",
+      "item_subclass_name": "Leather",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:271876": {
+      "item_id": 271876,
+      "name": "Awoken Dreadfang Cuirass",
+      "slot": "CHEST",
+      "item_subclass_name": "Mail",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:271878": {
+      "item_id": 271878,
+      "name": "Chausses of Unbound Rancor",
+      "slot": "LEGS",
+      "item_subclass_name": "Plate",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:271093": {
+      "item_id": 271093,
+      "name": "Zatha'tek, Breath of Corruption",
+      "slot": "WEAPON",
+      "item_subclass_name": "Dagger",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "raid:271092": {
+      "item_id": 271092,
+      "name": "Jan'thrazet, the Soul Fang",
+      "slot": "WEAPON",
+      "item_subclass_name": "Dagger",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "raid"
+    },
+    "mplus:273796": {
+      "item_id": 273796,
+      "name": "Vile Vial of Volatile Venom",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:273795": {
+      "item_id": 273795,
+      "name": "Coiled Fangstone",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:273785": {
+      "item_id": 273785,
+      "name": "Primordial Robe of Rites",
+      "slot": "ROBE",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:273775": {
+      "item_id": 273775,
+      "name": "Hydra Scale Wristguards",
+      "slot": "WRIST",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:273777": {
+      "item_id": 273777,
+      "name": "Poison-Proof Stompers",
+      "slot": "FEET",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:273780": {
+      "item_id": 273780,
+      "name": "Venom-Etched Crescent",
+      "slot": "WEAPON",
+      "item_subclass_name": "Axe",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:273793": {
+      "item_id": 273793,
+      "name": "Hydraspine Twinblade",
+      "slot": "WEAPON",
+      "item_subclass_name": "Warglaives",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:273781": {
+      "item_id": 273781,
+      "name": "Strand of Warding Fangs",
+      "slot": "NECK",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:273794": {
+      "item_id": 273794,
+      "name": "Knot of Writhing Serpents",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:273786": {
+      "item_id": 273786,
+      "name": "Leggings of Entwined Serpents",
+      "slot": "LEGS",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:273774": {
+      "item_id": 273774,
+      "name": "Snakeskin Spaulders",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:273787": {
+      "item_id": 273787,
+      "name": "Aged Interwoven Scaleplate",
+      "slot": "CHEST",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:273782": {
+      "item_id": 273782,
+      "name": "Vile Writhefang Glaive",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Polearm",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:273783": {
+      "item_id": 273783,
+      "name": "Toxin-Coated Warstaff",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Staff",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:273779": {
+      "item_id": 273779,
+      "name": "Nocuous Focal Fang",
+      "slot": "HOLDABLE",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:273792": {
+      "item_id": 273792,
+      "name": "Band of the Amani Warlord",
+      "slot": "FINGER",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:273797": {
+      "item_id": 273797,
+      "name": "Tattered Amani War Banner",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:273773": {
+      "item_id": 273773,
+      "name": "Handwraps of Blasphemous Rites",
+      "slot": "HAND",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:273791": {
+      "item_id": 273791,
+      "name": "Spare Speaker's Hood",
+      "slot": "HEAD",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:273789": {
+      "item_id": 273789,
+      "name": "Chestguard of Corroded Scales",
+      "slot": "CHEST",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:273776": {
+      "item_id": 273776,
+      "name": "Ancient General's Obsidian Pillars",
+      "slot": "LEGS",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:273778": {
+      "item_id": 273778,
+      "name": "Polished Lightwood Channeler",
+      "slot": "WEAPON",
+      "item_subclass_name": "Dagger",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:273784": {
+      "item_id": 273784,
+      "name": "Ancestral Amani Recurve",
+      "slot": "RANGED",
+      "item_subclass_name": "Bow",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:275070": {
+      "item_id": 275070,
+      "name": "Sharpened Lightwood Slasher",
+      "slot": "WEAPON",
+      "item_subclass_name": "Dagger",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:250243": {
+      "item_id": 250243,
+      "name": "Manaheart's Binding Flame",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:251127": {
+      "item_id": 251127,
+      "name": "Nibbling Armbands",
+      "slot": "WRIST",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251124": {
+      "item_id": 251124,
+      "name": "Gauntlets of Fevered Defense",
+      "slot": "HAND",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251125": {
+      "item_id": 251125,
+      "name": "Felsoaked Soles",
+      "slot": "FEET",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251126": {
+      "item_id": 251126,
+      "name": "Greathelm of Temptation",
+      "slot": "HEAD",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251123": {
+      "item_id": 251123,
+      "name": "Nibbles' Training Rod",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Staff",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:271680": {
+      "item_id": 271680,
+      "name": "Sinseared Repeater",
+      "slot": "RANGEDRIGHT",
+      "item_subclass_name": "Gun",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:250215": {
+      "item_id": 250215,
+      "name": "Freightrunner's Flask",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:251129": {
+      "item_id": 251129,
+      "name": "Counterfeit Clutches",
+      "slot": "HAND",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251132": {
+      "item_id": 251132,
+      "name": "Speakeasy Shroud",
+      "slot": "CLOAK",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251130": {
+      "item_id": 251130,
+      "name": "Breeches of Deft Deals",
+      "slot": "LEGS",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251131": {
+      "item_id": 251131,
+      "name": "Jangling Felpaulets",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251133": {
+      "item_id": 251133,
+      "name": "Overseer's Vambraces",
+      "slot": "WRIST",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251128": {
+      "item_id": 251128,
+      "name": "Bladesorrow",
+      "slot": "WEAPON",
+      "item_subclass_name": "Dagger",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:250228": {
+      "item_id": 250228,
+      "name": "Resonant Bellowstone",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:251136": {
+      "item_id": 251136,
+      "name": "Signet of Snarling Servitude",
+      "slot": "FINGER",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251137": {
+      "item_id": 251137,
+      "name": "Tempestuous Sandals",
+      "slot": "FEET",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251135": {
+      "item_id": 251135,
+      "name": "Fury-fletched Armlets",
+      "slot": "WRIST",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251134": {
+      "item_id": 251134,
+      "name": "Xathuux's Cleave",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Axe",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:250255": {
+      "item_id": 250255,
+      "name": "Unstable Felheart Crystal",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:251142": {
+      "item_id": 251142,
+      "name": "Pendant of Malefic Fury",
+      "slot": "NECK",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251139": {
+      "item_id": 251139,
+      "name": "Summoner's Searing Shirt",
+      "slot": "CHEST",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251140": {
+      "item_id": 251140,
+      "name": "Vilefiend's Guise",
+      "slot": "HEAD",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251141": {
+      "item_id": 251141,
+      "name": "Lithiel's Linked Leggings",
+      "slot": "LEGS",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251138": {
+      "item_id": 251138,
+      "name": "Cinderfury Shoulderguards",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:258045": {
+      "item_id": 258045,
+      "name": "Dawnblade's Glaives",
+      "slot": "WEAPON",
+      "item_subclass_name": "Warglaives",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:250248": {
+      "item_id": 250248,
+      "name": "Mycolic Medicine",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:251148": {
+      "item_id": 251148,
+      "name": "Pilfered Precious Band",
+      "slot": "FINGER",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251147": {
+      "item_id": 251147,
+      "name": "Hoarded Harvest Wrap",
+      "slot": "CHEST",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251146": {
+      "item_id": 251146,
+      "name": "Scavenger's Spaulders",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251145": {
+      "item_id": 251145,
+      "name": "Forgotten Tribe Footguards",
+      "slot": "FEET",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251144": {
+      "item_id": 251144,
+      "name": "Autumn's Boon Belt",
+      "slot": "WAIST",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251143": {
+      "item_id": 251143,
+      "name": "Grim Harvest Gloves",
+      "slot": "WEAPON",
+      "item_subclass_name": "Fist Weapon",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251154": {
+      "item_id": 251154,
+      "name": "Winter's Embrace Bracers",
+      "slot": "WRIST",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251153": {
+      "item_id": 251153,
+      "name": "Arctic Explorer's Legwraps",
+      "slot": "FEET",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251152": {
+      "item_id": 251152,
+      "name": "Season's Turn Gauntlets",
+      "slot": "HAND",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251155": {
+      "item_id": 251155,
+      "name": "Tribal Defender's Cord",
+      "slot": "WAIST",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251151": {
+      "item_id": 251151,
+      "name": "Sentinel Challenger's Prize",
+      "slot": "CHEST",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251150": {
+      "item_id": 251150,
+      "name": "Tempest's Shelter",
+      "slot": "SHIELD",
+      "item_subclass_name": "Shield",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251149": {
+      "item_id": 251149,
+      "name": "Victor's Flashfrozen Blade",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Polearm",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:250244": {
+      "item_id": 250244,
+      "name": "Permafrost Essence",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:271681": {
+      "item_id": 271681,
+      "name": "Perennial Frostbound Charm",
+      "slot": "HOLDABLE",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251160": {
+      "item_id": 251160,
+      "name": "Forest Dream Leg-guards",
+      "slot": "LEGS",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:250229": {
+      "item_id": 250229,
+      "name": "Idol of the War Loa",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:251159": {
+      "item_id": 251159,
+      "name": "War Trial Vestments",
+      "slot": "CHEST",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251158": {
+      "item_id": 251158,
+      "name": "Nalorakk's Nightmare",
+      "slot": "HEAD",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251156": {
+      "item_id": 251156,
+      "name": "Fallen Speaker's Staff",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Staff",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251173": {
+      "item_id": 251173,
+      "name": "Yoke of the Charging Bear",
+      "slot": "NECK",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251214": {
+      "item_id": 251214,
+      "name": "Bonds of the Hash'ura",
+      "slot": "HAND",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251185": {
+      "item_id": 251185,
+      "name": "Lightblossom Cinch",
+      "slot": "WAIST",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251183": {
+      "item_id": 251183,
+      "name": "Rootwarden Wraps",
+      "slot": "WRIST",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251184": {
+      "item_id": 251184,
+      "name": "Ironroot Collar",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251182": {
+      "item_id": 251182,
+      "name": "Bedrock Breeches",
+      "slot": "LEGS",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251180": {
+      "item_id": 251180,
+      "name": "Thornblade",
+      "slot": "WEAPON",
+      "item_subclass_name": "Dagger",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251181": {
+      "item_id": 251181,
+      "name": "Pruning Lance",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Polearm",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:250254": {
+      "item_id": 250254,
+      "name": "Seed of Radiant Hope",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:251190": {
+      "item_id": 251190,
+      "name": "Bloodthorn Burnous",
+      "slot": "CLOAK",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251189": {
+      "item_id": 251189,
+      "name": "Rootwalker Harness",
+      "slot": "WAIST",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251187": {
+      "item_id": 251187,
+      "name": "Amirdrassil's Reach",
+      "slot": "RANGEDRIGHT",
+      "item_subclass_name": "Crossbow",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251186": {
+      "item_id": 251186,
+      "name": "Thorntalon Edge",
+      "slot": "WEAPON",
+      "item_subclass_name": "Fist Weapon",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251188": {
+      "item_id": 251188,
+      "name": "Doompetal",
+      "slot": "RANGEDRIGHT",
+      "item_subclass_name": "Wand",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:250238": {
+      "item_id": 250238,
+      "name": "Seed of the Devouring Wild",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:250214": {
+      "item_id": 250214,
+      "name": "Lightspire Core",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:251194": {
+      "item_id": 251194,
+      "name": "Lightwarden's Bind",
+      "slot": "FINGER",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251191": {
+      "item_id": 251191,
+      "name": "Luminescent Sprout",
+      "slot": "HOLDABLE",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251193": {
+      "item_id": 251193,
+      "name": "Taproot Ribs",
+      "slot": "CHEST",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251192": {
+      "item_id": 251192,
+      "name": "Branch of Pride",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Staff",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251165": {
+      "item_id": 251165,
+      "name": "Pulverizing Pads",
+      "slot": "HAND",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251199": {
+      "item_id": 251199,
+      "name": "Worldroot Canopy",
+      "slot": "HEAD",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251198": {
+      "item_id": 251198,
+      "name": "Lightspore Leggings",
+      "slot": "LEGS",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251200": {
+      "item_id": 251200,
+      "name": "Saptorbane Guards",
+      "slot": "WRIST",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251197": {
+      "item_id": 251197,
+      "name": "Thornspike Gauntlets",
+      "slot": "HAND",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251196": {
+      "item_id": 251196,
+      "name": "Teldrassil's Sacrifice",
+      "slot": "SHIELD",
+      "item_subclass_name": "Shield",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251195": {
+      "item_id": 251195,
+      "name": "Thorned Reply",
+      "slot": "WEAPON",
+      "item_subclass_name": "Sword",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:250259": {
+      "item_id": 250259,
+      "name": "Sapling of the Dawnroot",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:250225": {
+      "item_id": 250225,
+      "name": "Void Execution Mandate",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:251219": {
+      "item_id": 251219,
+      "name": "Riftworn Stompers",
+      "slot": "FEET",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251222": {
+      "item_id": 251222,
+      "name": "Ethereal Netherwrap",
+      "slot": "WAIST",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251223": {
+      "item_id": 251223,
+      "name": "Somber Spaulders",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251220": {
+      "item_id": 251220,
+      "name": "Voidscarred Crown",
+      "slot": "HEAD",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251221": {
+      "item_id": 251221,
+      "name": "Despondent's Gauntlets",
+      "slot": "HAND",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251218": {
+      "item_id": 251218,
+      "name": "Taz'Rah's Cosmic Edge",
+      "slot": "WEAPON",
+      "item_subclass_name": "Sword",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:250245": {
+      "item_id": 250245,
+      "name": "Tumor of the Swarm",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:251227": {
+      "item_id": 251227,
+      "name": "Poisoner's Pauldrons",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251226": {
+      "item_id": 251226,
+      "name": "Hide of Pestilence",
+      "slot": "CHEST",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251228": {
+      "item_id": 251228,
+      "name": "Behemoth Waistband",
+      "slot": "WAIST",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251229": {
+      "item_id": 251229,
+      "name": "Visor of the Predator",
+      "slot": "HEAD",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251225": {
+      "item_id": 251225,
+      "name": "Fang of Contagion",
+      "slot": "WEAPON",
+      "item_subclass_name": "Dagger",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251224": {
+      "item_id": 251224,
+      "name": "Hulking Handaxe",
+      "slot": "WEAPON",
+      "item_subclass_name": "Axe",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:252258": {
+      "item_id": 252258,
+      "name": "Sickening Signet of Atroxus",
+      "slot": "FINGER",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:250224": {
+      "item_id": 250224,
+      "name": "Mindpiercer's Sigil",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:251234": {
+      "item_id": 251234,
+      "name": "Graft of the Domanaar",
+      "slot": "NECK",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251232": {
+      "item_id": 251232,
+      "name": "Overseer's Diadem",
+      "slot": "HEAD",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251235": {
+      "item_id": 251235,
+      "name": "Gravitic Girdle",
+      "slot": "WAIST",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251233": {
+      "item_id": 251233,
+      "name": "Manipulator's Vest",
+      "slot": "CHEST",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251230": {
+      "item_id": 251230,
+      "name": "Charonic Crescent",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Polearm",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:251231": {
+      "item_id": 251231,
+      "name": "Singularity Slicer",
+      "slot": "WEAPON",
+      "item_subclass_name": "Warglaives",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159137": {
+      "item_id": 159137,
+      "name": "Gilded Serpent's Tooth",
+      "slot": "WEAPON",
+      "item_subclass_name": "Dagger",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159234": {
+      "item_id": 159234,
+      "name": "Down-Lined Breeches",
+      "slot": "LEGS",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159413": {
+      "item_id": 159413,
+      "name": "Gauntlets of the Avian Sentinel",
+      "slot": "HAND",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159304": {
+      "item_id": 159304,
+      "name": "Goldfeather Boots",
+      "slot": "FEET",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159617": {
+      "item_id": 159617,
+      "name": "Lustrous Golden Plumage",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:159369": {
+      "item_id": 159369,
+      "name": "Belt of the Consecrated Tomb",
+      "slot": "WAIST",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159412": {
+      "item_id": 159412,
+      "name": "Auric Puddle Stompers",
+      "slot": "FEET",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159313": {
+      "item_id": 159313,
+      "name": "Breeches of the Sacred Hall",
+      "slot": "LEGS",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159618": {
+      "item_id": 159618,
+      "name": "Mchimba's Ritual Bandages",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:159459": {
+      "item_id": 159459,
+      "name": "Ritual Binder's Ring",
+      "slot": "FINGER",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159667": {
+      "item_id": 159667,
+      "name": "Vessel of Last Rites",
+      "slot": "HOLDABLE",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:160213": {
+      "item_id": 160213,
+      "name": "Sepulchral Construct's Gloves",
+      "slot": "HAND",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159312": {
+      "item_id": 159312,
+      "name": "Desiccator's Blessed Gloves",
+      "slot": "HAND",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159642": {
+      "item_id": 159642,
+      "name": "Royal Purifier's Spade",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Polearm",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159409": {
+      "item_id": 159409,
+      "name": "Embalmer's Steadying Bracers",
+      "slot": "WRIST",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:160216": {
+      "item_id": 160216,
+      "name": "Crackling Jade Kilij",
+      "slot": "WEAPON",
+      "item_subclass_name": "Sword",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159300": {
+      "item_id": 159300,
+      "name": "Kula's Butchering Wristwraps",
+      "slot": "WRIST",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159136": {
+      "item_id": 159136,
+      "name": "Jeweled Dagger of Subjugation",
+      "slot": "WEAPON",
+      "item_subclass_name": "Dagger",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159643": {
+      "item_id": 159643,
+      "name": "Crossbow of Forgotten Majesty",
+      "slot": "RANGEDRIGHT",
+      "item_subclass_name": "Crossbow",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159288": {
+      "item_id": 159288,
+      "name": "Cloak of the Restless Tribes",
+      "slot": "CLOAK",
+      "item_subclass_name": "Cloth",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:159243": {
+      "item_id": 159243,
+      "name": "Sandals of Wise Voodoo",
+      "slot": "FEET",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159371": {
+      "item_id": 159371,
+      "name": "Boots of the Headlong Conqueror",
+      "slot": "FEET",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159418": {
+      "item_id": 159418,
+      "name": "Girdle of Pestilent Purification",
+      "slot": "WAIST",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:158344": {
+      "item_id": 158344,
+      "name": "Mantle of Ceremonial Ascension",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159236": {
+      "item_id": 159236,
+      "name": "Headdress of the First Empire",
+      "slot": "HEAD",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159422": {
+      "item_id": 159422,
+      "name": "Helm of the Raptor King",
+      "slot": "HEAD",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159423": {
+      "item_id": 159423,
+      "name": "Pauldrons of the Great Unifier",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159645": {
+      "item_id": 159645,
+      "name": "Headcracker of Supplication",
+      "slot": "WEAPON",
+      "item_subclass_name": "Mace",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:158355": {
+      "item_id": 158355,
+      "name": "Loa-Blessed Chestguard",
+      "slot": "CHEST",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159303": {
+      "item_id": 159303,
+      "name": "Vest of Reverent Adoration",
+      "slot": "CHEST",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159368": {
+      "item_id": 159368,
+      "name": "Spaulders of Prime Emperor",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159301": {
+      "item_id": 159301,
+      "name": "Primal Dinomancer's Belt",
+      "slot": "WAIST",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159644": {
+      "item_id": 159644,
+      "name": "Geti'ikku, Cut of Death",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Sword",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:239047": {
+      "item_id": 239047,
+      "name": "Headdress of the First Empire",
+      "slot": "HEAD",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:239045": {
+      "item_id": 239045,
+      "name": "Mantle of Ceremonial Ascension",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:239048": {
+      "item_id": 239048,
+      "name": "Vest of Reverent Adoration",
+      "slot": "CHEST",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:239046": {
+      "item_id": 239046,
+      "name": "Loa-Blessed Chestguard",
+      "slot": "CHEST",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:239049": {
+      "item_id": 239049,
+      "name": "Spaulders of Prime Emperor",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:239050": {
+      "item_id": 239050,
+      "name": "Helm of the Raptor King",
+      "slot": "HEAD",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:239051": {
+      "item_id": 239051,
+      "name": "Pauldrons of the Great Unifier",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:273649": {
+      "item_id": 273649,
+      "name": "Stormbound Emblem of Dazar",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:159317": {
+      "item_id": 159317,
+      "name": "Whirling Dervish Sash",
+      "slot": "WAIST",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159380": {
+      "item_id": 159380,
+      "name": "Arc-Glass Bindings",
+      "slot": "WRIST",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:158370": {
+      "item_id": 158370,
+      "name": "Twin-Strike Polearm",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Polearm",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159259": {
+      "item_id": 159259,
+      "name": "Sandswept Sandals",
+      "slot": "FEET",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159425": {
+      "item_id": 159425,
+      "name": "Shard-Tipped Vambraces",
+      "slot": "WRIST",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159329": {
+      "item_id": 159329,
+      "name": "Leggings of the Galeforce Viper",
+      "slot": "LEGS",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159636": {
+      "item_id": 159636,
+      "name": "Staff of the Lightning Serpent",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Staff",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159388": {
+      "item_id": 159388,
+      "name": "Sabatons of Coruscating Energy",
+      "slot": "FEET",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159263": {
+      "item_id": 159263,
+      "name": "Bindings of the Slithering Current",
+      "slot": "WRIST",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159435": {
+      "item_id": 159435,
+      "name": "Legplates of Charged Duality",
+      "slot": "LEGS",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159637": {
+      "item_id": 159637,
+      "name": "Snakebite Recurve",
+      "slot": "RANGED",
+      "item_subclass_name": "Bow",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159327": {
+      "item_id": 159327,
+      "name": "Sand-Shined Snakeskin Sandals",
+      "slot": "FEET",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159437": {
+      "item_id": 159437,
+      "name": "Fangproof Gauntlets",
+      "slot": "HAND",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159375": {
+      "item_id": 159375,
+      "name": "Legguards of the Awakening Brood",
+      "slot": "LEGS",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:162544": {
+      "item_id": 162544,
+      "name": "Jade Ophidian Band",
+      "slot": "FINGER",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:158367": {
+      "item_id": 158367,
+      "name": "Merektha's Fang",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:158714": {
+      "item_id": 158714,
+      "name": "Swarm's Edge",
+      "slot": "WEAPON",
+      "item_subclass_name": "Sword",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159255": {
+      "item_id": 159255,
+      "name": "Ouroborial Sash",
+      "slot": "WAIST",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159247": {
+      "item_id": 159247,
+      "name": "Handwraps of Oscillating Polarity",
+      "slot": "HAND",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159442": {
+      "item_id": 159442,
+      "name": "Sand-Scoured Greatbelt",
+      "slot": "WAIST",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:158374": {
+      "item_id": 158374,
+      "name": "Tiny Electromental in a Jar",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:158366": {
+      "item_id": 158366,
+      "name": "Charged Sandstone Band",
+      "slot": "FINGER",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:158369": {
+      "item_id": 158369,
+      "name": "Galvanized Stormcrusher",
+      "slot": "WEAPON",
+      "item_subclass_name": "Mace",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159664": {
+      "item_id": 159664,
+      "name": "Bulwark of Brimming Potential",
+      "slot": "SHIELD",
+      "item_subclass_name": "Shield",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159374": {
+      "item_id": 159374,
+      "name": "Sethraliss' Fanged Helm",
+      "slot": "HEAD",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:158373": {
+      "item_id": 158373,
+      "name": "Resonating Crystal Scimitar",
+      "slot": "WEAPON",
+      "item_subclass_name": "Sword",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159254": {
+      "item_id": 159254,
+      "name": "Brood Cleanser's Amice",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159318": {
+      "item_id": 159318,
+      "name": "Hood of the Slithering Loa",
+      "slot": "HEAD",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:158368": {
+      "item_id": 158368,
+      "name": "Sethraliss' Defiled Relic",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:159370": {
+      "item_id": 159370,
+      "name": "Corrupted Hexxer's Vestments",
+      "slot": "CHEST",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159424": {
+      "item_id": 159424,
+      "name": "Desert Guardian's Breastplate",
+      "slot": "CHEST",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159337": {
+      "item_id": 159337,
+      "name": "Grips of Electrified Defense",
+      "slot": "HAND",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159257": {
+      "item_id": 159257,
+      "name": "Robes of the Reborn Serpent",
+      "slot": "ROBE",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:159439": {
+      "item_id": 159439,
+      "name": "C'thraxxi Binders Pauldrons",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:239032": {
+      "item_id": 239032,
+      "name": "Robes of the Reborn Serpent",
+      "slot": "ROBE",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:239031": {
+      "item_id": 239031,
+      "name": "Brood Cleanser's Amice",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:239033": {
+      "item_id": 239033,
+      "name": "Hood of the Slithering Loa",
+      "slot": "HEAD",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:239034": {
+      "item_id": 239034,
+      "name": "Corrupted Hexxer's Vestments",
+      "slot": "CHEST",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:239035": {
+      "item_id": 239035,
+      "name": "Sethraliss' Fanged Helm",
+      "slot": "HEAD",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:239036": {
+      "item_id": 239036,
+      "name": "Desert Guardian's Breastplate",
+      "slot": "CHEST",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:239037": {
+      "item_id": 239037,
+      "name": "C'thraxxi Binders Pauldrons",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:193759": {
+      "item_id": 193759,
+      "name": "Egg Tender's Leggings",
+      "slot": "LEGS",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:193758": {
+      "item_id": 193758,
+      "name": "Subjugator's Chilling Grips",
+      "slot": "HAND",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:193761": {
+      "item_id": 193761,
+      "name": "Chillworn's Infusion Staff",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Staff",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:193757": {
+      "item_id": 193757,
+      "name": "Ruby Whelp Shell",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:193728": {
+      "item_id": 193728,
+      "name": "Scaleguard's Stalwart Greatboots",
+      "slot": "FEET",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:193762": {
+      "item_id": 193762,
+      "name": "Blazebinder's Hoof",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:193765": {
+      "item_id": 193765,
+      "name": "Blazebound Lieutenant's Helm",
+      "slot": "HEAD",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:193767": {
+      "item_id": 193767,
+      "name": "Havoc Crusher",
+      "slot": "WEAPON",
+      "item_subclass_name": "Mace",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:193763": {
+      "item_id": 193763,
+      "name": "Fireproof Drape",
+      "slot": "CLOAK",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:193764": {
+      "item_id": 193764,
+      "name": "Invader's Firestorm Chestguard",
+      "slot": "CHEST",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:193766": {
+      "item_id": 193766,
+      "name": "Kokia's Burnout Rod",
+      "slot": "HOLDABLE",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:193756": {
+      "item_id": 193756,
+      "name": "Skyferno Rondel",
+      "slot": "WEAPON",
+      "item_subclass_name": "Dagger",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:193752": {
+      "item_id": 193752,
+      "name": "Galerattle Gauntlets",
+      "slot": "HAND",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:193691": {
+      "item_id": 193691,
+      "name": "Sky Saddle Cord",
+      "slot": "WAIST",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:193750": {
+      "item_id": 193750,
+      "name": "Wind Soarer's Breeches",
+      "slot": "LEGS",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:193754": {
+      "item_id": 193754,
+      "name": "Drake Rider's Stecktarge",
+      "slot": "SHIELD",
+      "item_subclass_name": "Shield",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:193755": {
+      "item_id": 193755,
+      "name": "Backdraft Cleaver",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Axe",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:193751": {
+      "item_id": 193751,
+      "name": "Crown of Roaring Storms",
+      "slot": "HEAD",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "mplus:193748": {
+      "item_id": 193748,
+      "name": "Kyrakka's Searing Embers",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "mplus"
+    },
+    "mplus:193753": {
+      "item_id": 193753,
+      "name": "Breastplate of Soaring Terror",
+      "slot": "CHEST",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "mplus"
+    },
+    "delve:249627": {
+      "item_id": 249627,
+      "name": "Arboreal Vine Collar",
+      "slot": "NECK",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:264878": {
+      "item_id": 264878,
+      "name": "Astalor's Anguish Agitator",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "delve"
+    },
+    "delve:249667": {
+      "item_id": 249667,
+      "name": "Barbed Rootwand",
+      "slot": "RANGEDRIGHT",
+      "item_subclass_name": "Wand",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:259896": {
+      "item_id": 259896,
+      "name": "Bark of the Guardian Tree",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "delve"
+    },
+    "delve:249623": {
+      "item_id": 249623,
+      "name": "Blooming Leafcoil",
+      "slot": "FINGER",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249665": {
+      "item_id": 249665,
+      "name": "Blooming Seedpod",
+      "slot": "WEAPON",
+      "item_subclass_name": "Mace",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249676": {
+      "item_id": 249676,
+      "name": "Bramblebarricade",
+      "slot": "SHIELD",
+      "item_subclass_name": "Shield",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:251789": {
+      "item_id": 251789,
+      "name": "Consecrated Chalice",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "delve"
+    },
+    "delve:264701": {
+      "item_id": 264701,
+      "name": "Cosmic Bell",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "delve"
+    },
+    "delve:251790": {
+      "item_id": 251790,
+      "name": "Desecrated Chalice",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "delve"
+    },
+    "delve:248583": {
+      "item_id": 248583,
+      "name": "Drum of Renewed Bonds",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "delve"
+    },
+    "delve:249652": {
+      "item_id": 249652,
+      "name": "Elder Mossbands",
+      "slot": "WRIST",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249651": {
+      "item_id": 249651,
+      "name": "Elder Mosscinch",
+      "slot": "WAIST",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249646": {
+      "item_id": 249646,
+      "name": "Elder Mossclogs",
+      "slot": "FEET",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249647": {
+      "item_id": 249647,
+      "name": "Elder Mossfeelers",
+      "slot": "HAND",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249648": {
+      "item_id": 249648,
+      "name": "Elder Mosshorns",
+      "slot": "HEAD",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249645": {
+      "item_id": 249645,
+      "name": "Elder Mossmail",
+      "slot": "CHEST",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249625": {
+      "item_id": 249625,
+      "name": "Elder Mossveil",
+      "slot": "CLOAK",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249649": {
+      "item_id": 249649,
+      "name": "Elder Mossvein Breeches",
+      "slot": "LEGS",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249650": {
+      "item_id": 249650,
+      "name": "Elder Mossvein Greatleaves",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249672": {
+      "item_id": 249672,
+      "name": "Elderbloom Lantern",
+      "slot": "HOLDABLE",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249670": {
+      "item_id": 249670,
+      "name": "Elderoot Spire",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Staff",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:251786": {
+      "item_id": 251786,
+      "name": "Ever-Collapsing Void Fissure",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "delve"
+    },
+    "delve:265657": {
+      "item_id": 265657,
+      "name": "Fiber of Living Agony",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "delve"
+    },
+    "delve:251788": {
+      "item_id": 251788,
+      "name": "Gift of Light",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "delve"
+    },
+    "delve:251792": {
+      "item_id": 251792,
+      "name": "Glorious Crusader's Keepsake",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "delve"
+    },
+    "delve:249664": {
+      "item_id": 249664,
+      "name": "Gnarled Thornmace",
+      "slot": "WEAPON",
+      "item_subclass_name": "Mace",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249671": {
+      "item_id": 249671,
+      "name": "Gnarlroot Spinecleaver",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Sword",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:262729": {
+      "item_id": 262729,
+      "name": "Hand of the Rootkeeper",
+      "slot": "WEAPON",
+      "item_subclass_name": "Fist Weapon",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:262732": {
+      "item_id": 262732,
+      "name": "Heavy Bramblebolter",
+      "slot": "RANGEDRIGHT",
+      "item_subclass_name": "Crossbow",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:251791": {
+      "item_id": 251791,
+      "name": "Holy Retributor's Order",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "delve"
+    },
+    "delve:251783": {
+      "item_id": 251783,
+      "name": "Lost Idol of the Hash'ey",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "delve"
+    },
+    "delve:249626": {
+      "item_id": 249626,
+      "name": "Nocturnal Thorncharm",
+      "slot": "NECK",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249669": {
+      "item_id": 249669,
+      "name": "Organ Piercer's Briarspear",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Polearm",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249638": {
+      "item_id": 249638,
+      "name": "Osseoclad Bonecrushers",
+      "slot": "FEET",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249641": {
+      "item_id": 249641,
+      "name": "Osseoclad Bonesteppers",
+      "slot": "LEGS",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249644": {
+      "item_id": 249644,
+      "name": "Osseoclad Ivory Wrist",
+      "slot": "WRIST",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249637": {
+      "item_id": 249637,
+      "name": "Osseoclad Marrowvest",
+      "slot": "CHEST",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249624": {
+      "item_id": 249624,
+      "name": "Osseoclad Paledrape",
+      "slot": "CLOAK",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249642": {
+      "item_id": 249642,
+      "name": "Osseoclad Razorspaulders",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249640": {
+      "item_id": 249640,
+      "name": "Osseoclad Saberteeth",
+      "slot": "HEAD",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249639": {
+      "item_id": 249639,
+      "name": "Osseoclad Spinegrapplers",
+      "slot": "HAND",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249643": {
+      "item_id": 249643,
+      "name": "Osseoclad Waistbone",
+      "slot": "WAIST",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249628": {
+      "item_id": 249628,
+      "name": "Rampant Bramblecloak",
+      "slot": "CLOAK",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249657": {
+      "item_id": 249657,
+      "name": "Rampant Bramblegreaves",
+      "slot": "LEGS",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249653": {
+      "item_id": 249653,
+      "name": "Rampant Brambleplate",
+      "slot": "CHEST",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249660": {
+      "item_id": 249660,
+      "name": "Rampant Briarcuffs",
+      "slot": "WRIST",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249656": {
+      "item_id": 249656,
+      "name": "Rampant Briarhelm",
+      "slot": "HEAD",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249655": {
+      "item_id": 249655,
+      "name": "Rampant Creepers",
+      "slot": "HAND",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249654": {
+      "item_id": 249654,
+      "name": "Rampant Thistlestompers",
+      "slot": "FEET",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249658": {
+      "item_id": 249658,
+      "name": "Rampant Thornmantles",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249659": {
+      "item_id": 249659,
+      "name": "Rampant Thornstrap",
+      "slot": "WAIST",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249610": {
+      "item_id": 249610,
+      "name": "Resinous Blossomblade",
+      "slot": "WEAPON",
+      "item_subclass_name": "Dagger",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249661": {
+      "item_id": 249661,
+      "name": "Root Sculptor's Verdaxe",
+      "slot": "WEAPON",
+      "item_subclass_name": "Axe",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:260189": {
+      "item_id": 260189,
+      "name": "Rootkeeper's Dancing Needle",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Staff",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:260188": {
+      "item_id": 260188,
+      "name": "Savage Briaredge",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Axe",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:251787": {
+      "item_id": 251787,
+      "name": "Sealed Chaos Urn",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "delve"
+    },
+    "delve:249622": {
+      "item_id": 249622,
+      "name": "Spiritseal Ring",
+      "slot": "FINGER",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249634": {
+      "item_id": 249634,
+      "name": "Sprawling Fibershells",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249619": {
+      "item_id": 249619,
+      "name": "Sprawling Mycoshroud",
+      "slot": "CLOAK",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249635": {
+      "item_id": 249635,
+      "name": "Sprawling Rhizomecord",
+      "slot": "WAIST",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249630": {
+      "item_id": 249630,
+      "name": "Sprawling Rootpads",
+      "slot": "FEET",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249633": {
+      "item_id": 249633,
+      "name": "Sprawling Rootstockings",
+      "slot": "LEGS",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249629": {
+      "item_id": 249629,
+      "name": "Sprawling Rootunic",
+      "slot": "CHEST",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249632": {
+      "item_id": 249632,
+      "name": "Sprawling Stoloncollar",
+      "slot": "HEAD",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249631": {
+      "item_id": 249631,
+      "name": "Sprawling Tendrils",
+      "slot": "HAND",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249636": {
+      "item_id": 249636,
+      "name": "Sprawling Wristroots",
+      "slot": "WRIST",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:251784": {
+      "item_id": 251784,
+      "name": "Sylvan Wakrapuku",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "delve"
+    },
+    "delve:252957": {
+      "item_id": 252957,
+      "name": "Tangle of Vibrant Vines",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "delve"
+    },
+    "delve:259462": {
+      "item_id": 259462,
+      "name": "Thorneedle",
+      "slot": "RANGED",
+      "item_subclass_name": "Bow",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249677": {
+      "item_id": 249677,
+      "name": "Twinthorn Wildglaive",
+      "slot": "WEAPON",
+      "item_subclass_name": "Warglaives",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:264694": {
+      "item_id": 264694,
+      "name": "Ultradon Cuirass",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "delve"
+    },
+    "delve:260187": {
+      "item_id": 260187,
+      "name": "Underbrush Render",
+      "slot": "WEAPON",
+      "item_subclass_name": "Fist Weapon",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249620": {
+      "item_id": 249620,
+      "name": "Vibrant Wilderloop",
+      "slot": "FINGER",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:251785": {
+      "item_id": 251785,
+      "name": "Void-Reaper's Libram",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "delve"
+    },
+    "delve:249621": {
+      "item_id": 249621,
+      "name": "Voodoo Band",
+      "slot": "FINGER",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:249662": {
+      "item_id": 249662,
+      "name": "Wild Fiberknife",
+      "slot": "WEAPON",
+      "item_subclass_name": "Dagger",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:262731": {
+      "item_id": 262731,
+      "name": "Wildthorn Razorfang",
+      "slot": "WEAPON",
+      "item_subclass_name": "Sword",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "delve"
+    },
+    "delve:251782": {
+      "item_id": 251782,
+      "name": "Withered Saptor's Paw",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "delve"
+    },
+    "lair:268232": {
+      "item_id": 268232,
+      "name": "Cincture of the Abyssal Grotto",
+      "slot": "WAIST",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "lair"
+    },
+    "lair:268221": {
+      "item_id": 268221,
+      "name": "Tidebound Sorcereress's Robes",
+      "slot": "CHEST",
+      "item_subclass_name": "Cloth",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "lair"
+    },
+    "lair:268225": {
+      "item_id": 268225,
+      "name": "Coiled Hex Legguards",
+      "slot": "LEGS",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "lair"
+    },
+    "lair:268247": {
+      "item_id": 268247,
+      "name": "Breakwater Boots",
+      "slot": "FEET",
+      "item_subclass_name": "Leather",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "lair"
+    },
+    "lair:268217": {
+      "item_id": 268217,
+      "name": "Rising Tide Wristguards",
+      "slot": "WRIST",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "lair"
+    },
+    "lair:268238": {
+      "item_id": 268238,
+      "name": "Grips of Swirling Fury",
+      "slot": "HAND",
+      "item_subclass_name": "Mail",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "lair"
+    },
+    "lair:268226": {
+      "item_id": 268226,
+      "name": "Swelling Sea Spaulders",
+      "slot": "SHOULDER",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "lair"
+    },
+    "lair:268244": {
+      "item_id": 268244,
+      "name": "Forgotten Grotto Girdle",
+      "slot": "WAIST",
+      "item_subclass_name": "Plate",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "lair"
+    },
+    "lair:268199": {
+      "item_id": 268199,
+      "name": "Tidepiercer's Bubble Popper",
+      "slot": "TWOHWEAPON",
+      "item_subclass_name": "Staff",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "lair"
+    },
+    "lair:268262": {
+      "item_id": 268262,
+      "name": "Bubblefin Splash Guard",
+      "slot": "SHIELD",
+      "item_subclass_name": "Shield",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "lair"
+    },
+    "lair:268263": {
+      "item_id": 268263,
+      "name": "Frostscale's Mystic Frond",
+      "slot": "HOLDABLE",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "lair"
+    },
+    "lair:268266": {
+      "item_id": 268266,
+      "name": "Alluring Bubbleband",
+      "slot": "FINGER",
+      "item_subclass_name": "Miscellaneous",
+      "category": "UNCLASSIFIED_ORDINARY_OR_EFFECT",
+      "original_source": "lair"
+    },
+    "lair:270167": {
+      "item_id": 270167,
+      "name": "Wavecaller's Seastone",
+      "slot": "TRINKET",
+      "item_subclass_name": "Miscellaneous",
+      "category": "POTENTIAL_SPECIAL_SPELL_BEARING",
+      "original_source": "lair"
+    },
+    "delta1215:281235": {
+      "item_id": 281235,
+      "name": "Voidweaver's Leggings",
+      "slot": "LEGS_CLOTH",
+      "category": "SPECIAL_EFFECT_ARMOR"
+    },
+    "delta1215:281236": {
+      "item_id": 281236,
+      "name": "Chestwrap of Palpable Terror",
+      "slot": "CHEST_LEATHER",
+      "category": "SPECIAL_EFFECT_ARMOR"
+    },
+    "delta1215:281238": {
+      "item_id": 281238,
+      "name": "Aberrant Commander's Gauntlets",
+      "slot": "HANDS_MAIL",
+      "category": "SPECIAL_EFFECT_ARMOR"
+    },
+    "delta1215:281239": {
+      "item_id": 281239,
+      "name": "Corroded Hulk's Skullcap",
+      "slot": "HEAD_PLATE",
+      "category": "SPECIAL_EFFECT_ARMOR"
+    },
+    "delta1215:281029": {
+      "item_id": 281029,
+      "name": "Band of the Swarmcaller",
+      "slot": "FINGER",
+      "category": "SPECIAL_EFFECT_JEWELRY"
+    },
+    "delta1215:280799": {
+      "item_id": 280799,
+      "name": "Lu'selama, Light's Justice",
+      "slot": "TWO_HAND_SWORD",
+      "category": "SPECIAL_EFFECT_WEAPON"
+    },
+    "delta1215:281056": {
+      "item_id": 281056,
+      "name": "Sanctified Knight's Phoenixblade",
+      "slot": "ONE_HAND_SWORD",
+      "category": "SPECIAL_EFFECT_WEAPON"
+    },
+    "delta1215:280617": {
+      "item_id": 280617,
+      "name": "Lightbearer's Shield Fragment",
+      "slot": "TRINKET",
+      "category": "TRINKET"
+    },
+    "delta1215:280835": {
+      "item_id": 280835,
+      "name": "Sigil of the Impending Eclipse",
+      "slot": "TRINKET",
+      "category": "TRINKET"
+    },
+    "delta1215:281215": {
+      "item_id": 281215,
+      "name": "Twisted Horror's Tendril",
+      "slot": "TRINKET",
+      "category": "TRINKET"
+    },
+    "known_crafted:239656": {
+      "item_id": 239656,
+      "name": "Adherent's Silken Shroud",
+      "slot": "CLOAK",
+      "item_subclass_name": "Cloth",
+      "category": "KNOWN_CRAFTED_ITEM_NOT_CRAFTED_POOL"
+    },
+    "known_crafted:239648": {
+      "item_id": 239648,
+      "name": "Martyr's Bindings",
+      "slot": "WRIST",
+      "item_subclass_name": "Cloth",
+      "category": "KNOWN_CRAFTED_ITEM_NOT_CRAFTED_POOL"
+    }
+  }
+}
