@@ -258,7 +258,13 @@ def run(upstream,out,binary=None,cache_only=False,*,
         run_schema=SCHEMA,
         plan_status="PASS_UPSTREAM_TWO_WEAPON_STATIC_PLAN_ZERO_NATIVE",
         success_status="PASS_REAL_FURY_TWO_2H_PLATE_FULL_STATIC_GENERIC_NATIVE",
-        artifact_prefix="V082"): 
+        artifact_prefix="V082",declared_F=None): 
+    if declared_F is None:
+        declared_F=DECLARED_F
+    need(type(declared_F) is dict
+         and set(declared_F)==set(scenario.STATS)
+         and all(type(v) is int and v>=0 for v in declared_F.values()),
+         "DECLARED_STATIC_F_VECTOR_INVALID")
     out=pathlib.Path(out).resolve()
     out.mkdir(parents=True,exist_ok=True)
     target=out/(artifact_prefix+"_RECEIPT.json")
@@ -270,12 +276,14 @@ def run(upstream,out,binary=None,cache_only=False,*,
         source=pathlib.Path(upstream).read_text(encoding="utf8")
         reference,cfg,fillers,origin=profile_factory(source,out)
         normalized=scenario.normalize(cfg)
+        need(sum(declared_F.values())==normalized["budget"]["F"],
+             "STATIC_F_COMPONENT_SUM_NOT_SCENARIO_F")
         summary.update({"status":plan_status,
             "character":cfg["character"],"origin":origin,
             "scenario_digest":normalized["scenario_digest"],
             "profile_sha256":sha(reference.encode("utf8")),
             "exact_source_backed_item_ids":True,
-            "declared_F_vector":DECLARED_F,
+            "declared_F_vector":declared_F,
             "missing_native_static_expected_before_first_use":True})
         if binary is None:
             engine.write_atomic(target,summary)
@@ -288,7 +296,7 @@ def run(upstream,out,binary=None,cache_only=False,*,
             "profile_sha256":sha(reference.encode("utf8")),
             "scenario_digest":normalized["scenario_digest"],
             "simc_binary_sha256":pinned.BIN_SHA,
-            "static_F_vector":DECLARED_F,"max_new_native":NATIVE_MAX}
+            "static_F_vector":declared_F,"max_new_native":NATIVE_MAX}
         if seal.exists():
             need(read(seal)==identity,"V082_SOURCE_OR_BINARY_RESUME_DRIFT")
         else:
@@ -323,7 +331,7 @@ def run(upstream,out,binary=None,cache_only=False,*,
         c1,c2=target_builder.targets(T,static)
         off=out/"official"
         reqs=[port.make_static_chmv_request(normalized,static,reference,
-                 pinned.BIN_SHA,doc["git_revision"],x,DECLARED_F,
+                 pinned.BIN_SHA,doc["git_revision"],x,declared_F,
                  ITERATIONS,off/("candidate_%02d"%i)/"result.json")
                for i,x in enumerate((c1,c2))]
         need(all(sum(req["raw_gear_override"].values())==
@@ -379,7 +387,7 @@ def run(upstream,out,binary=None,cache_only=False,*,
                 "input_sha256":obs["input_sha256"],
                 "native_json_sha256":obs["native_json_sha256"]})
         prepared=preflight.prepare_static(cfg,fillers,exact,reference,attest,
-                           pinned.BIN_SHA,DECLARED_F)
+                           pinned.BIN_SHA,declared_F)
         need(prepared["summary"]["status"]=="READY_STATIC_CHMV_PROFILE_SCOPED"
              and prepared["summary"]["T_official"]==T,
              "COMMON_V066_FURY_STATIC_NATIVE_NOT_READY")
