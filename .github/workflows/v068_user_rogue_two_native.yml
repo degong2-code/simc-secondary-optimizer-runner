@@ -1,0 +1,117 @@
+name: v068 User Rogue Genuine Native Two-Witness Profile Probe
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [integration_probes/requests/v068_user_rogue_native_once.json]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v068-user-rogue-native
+  cancel-in-progress: false
+jobs:
+  rogue-real-native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Verify exact source and once request before Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          assert os.environ["GITHUB_REF"]=="refs/heads/probe/chat-cache-v035-20261024"
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==["integration_probes/requests/v068_user_rogue_native_once.json"]
+          d=json.loads(pathlib.Path(changed[0]).read_text())
+          assert d=={"schema":"v068_user_rogue_native_once_v1",
+           "user_class":"rogue","user_spec":"subtlety",
+           "race":"void_elf","target_ilevel":334,
+           "user_selected_head":271875,"user_selected_main_hand":271093,
+           "trinkets":[270175,281215],
+           "embellishments":{"off_hand":"hunters_ritual_stone",
+                             "wrists":"arcanoweave_lining"},
+           "omnium_ui_fourth":"mastery","special_gem_B":240967,
+           "duration_seconds":300,
+           "native_calls_cap":2,"iterations_each":35,
+           "official_GJF_NOT_GUESSED":True,
+           "independent_effect_proc_gate":False,
+           "historical_v015_v016_tests_not_rerun":True,
+           "project_main_or_Work_OS_modified":False}
+          expected={
+           "integration_probes/fixtures/v068_upstream_mid2_rogue_subtlety_reference.simc":"b704e6326959432a82d14a6b774c79183d5b2af4",
+           "runner/v068_rogue_user_profile.py":"f5a30cf42b455be7334468f31b1bce192b1e7b54",
+           "runner/v068_rogue_two_native_probe.py":"f786370cbc0ab91254173e4c6121821cb70eaf45",
+           "tests/test_v068_rogue_user_profile.py":"3d5ccabdef3d9b69f79c693de35ef5226c95cb32"}
+          for path,sha in expected.items():
+            assert subprocess.check_output(["git","hash-object",path],text=True).strip()==sha,path
+          print("V068_BOUNDED_EXACT_USER_SELECTION_AND_SOURCE_PASS")
+          PY
+      - name: Full current product regressions, not old v015 v016 tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Construct two precise user Rogue profiles without SimC calls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v068_rogue_user_profile.py --probe A --iterations 35 --out .v068_offline/case_00
+          python3 runner/v068_rogue_user_profile.py --probe B --iterations 35 --out .v068_offline/case_01
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          for n in (0,1):
+            p=Path(".v068_offline")/("case_%02d"%n)/"V068_PROFILE_RECEIPT.json"
+            d=json.loads(p.read_text())
+            assert d["status"]=="GENERATED_NOT_NATIVE_TESTED",d
+            assert d["gear_slots"]==16 and d["native_calls"]==0
+            assert d["user"]["omnium_column_4"]=="mastery"
+            assert d["user"]["ilevel"]==334
+          print("V068_ALL_USER_PROFILE_ROWS_PRESERVED_OFFLINE")
+          PY
+      - name: Get existing pinned real SimC binary with known SHA
+        uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-40153209773
+          path: .simc
+          run-id: 40153209773
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Execute up to two real Native user Rogue numerical witnesses
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc/simc' | sha256sum -c
+          chmod +x .simc/simc
+          python3 runner/v068_rogue_two_native_probe.py \
+            --binary "$GITHUB_WORKSPACE/.simc/simc" \
+            --out "$GITHUB_WORKSPACE/out" \
+            --iterations 35
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path("out/V068_PROBE_RECEIPT.json").read_text())
+          assert d["status"]=="PASS_TWO_REAL_ROGUE_NATIVE_JSON2_NUMERIC_WITNESSES",d
+          assert d["native_calls_attempted"]==2
+          assert len(d["native_cases"])==2
+          assert all(x["status"]=="PASS_NATIVE_JSON2_INPUT" and
+                     x["samples"]>=20 for x in d["native_cases"])
+          assert d["official_T"] is None
+          print("V068_GENUINE_ROGUE_TWO_NUMERIC_NATIVE_PROBES_PASS")
+          PY
+      - name: Persist exact profile, raw Native stdout stderr JSON2 and receipt
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v068-real-user-rogue-two-native-${{ github.run_id }}
+          path: |
+            .v068_offline/
+            out/
+          retention-days: 14
+          if-no-files-found: warn
