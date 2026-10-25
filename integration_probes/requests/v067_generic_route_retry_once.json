@@ -1,0 +1,13 @@
+{
+  "schema": "v067_generic_adaptive_route_cache_replay_once_v1",
+  "original_real_native_observations_run": 40165729165,
+  "original_real_native_adaptive_run": 40171473855,
+  "additional_native_simc_calls": 0,
+  "cache_only_fails_closed": true,
+  "max_original_native_attempts": 4,
+  "official_policy": "T=G+J+F",
+  "source_v015_v016_original_tests_not_rerun": true,
+  "special_effect_proc_gate": false,
+  "non_mage_real_native_pass_claimed": false,
+  "product_main_promoted": false
+}
