@@ -1,0 +1,19 @@
+{
+  "schema": "v080_static_CHMV_c_separate_from_talent_buffed_v1",
+  "historical_actual_hunter_native_source_run": 40199924239,
+  "must_preserve_historical_v079_and_v079b_receipts": true,
+  "official_T_equals_G_plus_J_plus_F": true,
+  "declared_F_vector": {
+    "crit_rating": 0,
+    "haste_rating": 165,
+    "mastery_rating": 0,
+    "versatility_rating": 0
+  },
+  "optimization_target": "static_CHMV_c_pre_talents",
+  "observed_output": "SimC_JSON2_buffed_stats_not_equal_static_c",
+  "maximum_new_native_calls": 2,
+  "iterations_per_candidate": 35,
+  "no_new_talent_or_effect_model": true,
+  "no_gear_recommendation_engine": true,
+  "global_optimum_proven": false
+}
