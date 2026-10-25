@@ -1,0 +1,80 @@
+name: v057 Expanded Crafted Recipe Item Selection
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - integration_probes/requests/v057_craft_catalog_once.json
+permissions:
+  contents: read
+concurrency:
+  group: v057-crafted-catalog-offline
+  cancel-in-progress: false
+jobs:
+  catalog:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Exact source and one-shot guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p v057-output
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          assert os.environ["GITHUB_REF"]=="refs/heads/probe/chat-cache-v035-20261024"
+          assert os.environ["GITHUB_EVENT_NAME"]=="push"
+          files=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert files==["integration_probes/requests/v057_craft_catalog_once.json"]
+          req=json.loads(pathlib.Path(files[0]).read_text())
+          assert req=={
+            "schema":"v057_crafted_51_recipe_catalog_admission_v1",
+            "metadata_recipes":51,"native_stat_simulations":0,
+            "trinket_without_static_allowed":True,
+            "manual_crafted_ids_allowed":True,
+            "max_embellishments":2,
+            "simc_effects_owned_by_simc":True,
+            "whole_season_recipe_coverage_proven":False,
+            "product_code_integrated":False,
+            "official_policy_promoted":False}
+          for p,digest in {
+            "runner/v055_simc_item_selection.py":"ad627d796e28216310ea47b455005a35e7acc3c8",
+            "tests/test_v055_simc_item_selection.py":"e2ecd43d1b77cd489a4ef2882462d6e592814b40",
+            "integration_probes/catalog/v057_crafted_gear_51_recipe_ids.json":"2c5e4a689e9f0affd2d71ca0086c4b37b31788b1"
+          }.items():
+            assert subprocess.check_output(["git","hash-object",p],text=True).strip()==digest,"HASH_DRIFT:"+p
+          c=json.loads(pathlib.Path("integration_probes/catalog/v057_crafted_gear_51_recipe_ids.json").read_text())
+          ids={x["item_id"] for x in c["items"]}
+          assert len(ids)==len(c["items"])==51
+          assert {237831,239652,244570,244580,240950,245770}<=ids
+          assert all(x["static_stats_source"] if "static_stats_source" in x else x["native_exact_variant_not_automatically_inferred"] for x in c["items"])
+          pathlib.Path("v057-output/V057_CATALOG_RECEIPT.json").write_text(json.dumps({
+             "status":"PASS_CATALOG_ID_SET_NOT_NATIVE_STATS",
+             "item_count":51,"individual_item_ids_unique":True,
+             "native_calls":0,"source_sha":os.environ["GITHUB_SHA"],
+             "complete_crafting_recipes":False,
+             "product_code_integrated":False,"official_policy_promoted":False
+          },indent=2)+'\n')
+          print("V057_CATALOG_INTEGRITY_PASS")
+          PY
+      - name: Offline full regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+          echo V057_FULL_OFFLINE_TEST_PASS
+      - name: Save receipt and 51 item recipe IDs
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v057-craft-catalog-${{ github.run_id }}
+          path: |
+            v057-output/
+            integration_probes/catalog/v057_crafted_gear_51_recipe_ids.json
+          retention-days: 14
+          if-no-files-found: warn
