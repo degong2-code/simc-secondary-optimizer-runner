@@ -1,0 +1,121 @@
+name: v066 Profile Neutral Native Numeric Preflight
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [integration_probes/requests/v066_generic_preflight_once.json]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v066-profile-neutral-preflight
+  cancel-in-progress: false
+jobs:
+  zero-new-native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Verify exact request and immutable v066 source bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          assert os.environ["GITHUB_REF"]=="refs/heads/probe/chat-cache-v035-20261024"
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==["integration_probes/requests/v066_generic_preflight_once.json"]
+          req=json.loads(pathlib.Path(changed[0]).read_text())
+          assert req=={"schema":"v066_profile_neutral_preflight_once_v1",
+             "new_native_simc_calls":0,
+             "reuse_v063_native_run":40165729165,
+             "official_total_policy":"T=G+J+F",
+             "generic_class_mock_tests_not_native_proof":True,
+             "trinkets_static_gate_required":False,
+             "proc_gate":False,
+             "original_v015_v016_reexecuted":False,
+             "product_all_specs_supported_natively_proven":False,
+             "main_or_workos_modified":False}
+          for path,hashval in {
+            "runner/v066_profile_neutral_preflight.py":"e55a87c6b13bfa64b96399c5d09072ecd3b321c7",
+            "tests/test_v066_profile_neutral_preflight.py":"a31c49dd7a8a8f8962960b6cf0ea7b0e05b7c6d1"
+          }.items():
+            assert subprocess.check_output(["git","hash-object",path],text=True).strip()==hashval
+          print("V066_BOUNDED_INPUT_AND_SOURCE_PASS")
+          PY
+      - name: Full new and existing product regressions
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Read exact previously executed v063 Native results
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v063-official-GJF-two-40165729165
+          path: .v063
+          run-id: 40165729165
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Generate explicit user-format input files from original real v063 witness
+        run: |
+          set -euo pipefail
+          mkdir -p .v066-in out
+          python3 - <<'PY'
+          import json,pathlib,sys
+          sys.path.insert(0,"runner")
+          import v063_official_T_two_native as old
+          import v065_original_scheduler_native_bridge as previous
+          import v046_static_item_cache as static
+          src=pathlib.Path(".v063/out")
+          normalized,budget,cal,ref,obs=previous.integration_plan(src)
+          _,filler=old.scenario_for_bounded_reference(ref)
+          native_doc=json.loads((src/"case_00/result.json").read_text())
+          cache=static.empty_cache()
+          records=static.native_records(json.dumps(native_doc,sort_keys=True).encode(),
+             artifact_id="V066_INPUT_REUSE_V063_REAL_JSON2")
+          static.merge_native(cache,records)
+          dest=pathlib.Path(".v066-in")
+          (dest/"scenario.json").write_text(json.dumps(normalized["scenario"],indent=2)+"\n")
+          (dest/"filler.json").write_text(json.dumps(filler,indent=2)+"\n")
+          (dest/"static_cache.json").write_text(json.dumps(cache,indent=2)+"\n")
+          (dest/"reference.simc").write_text(ref)
+          assert budget["G_if_complete"]==2849
+          assert budget["budget"]["T_official"]==3152
+          print("V066_REAL_WITNESS_INPUT_FILES_CREATED_FROM_OLD_RESULTS")
+          PY
+      - name: Run generic CLI against independently pre-existing real Native records
+        run: |
+          set -euo pipefail
+          python3 runner/v066_profile_neutral_preflight.py \
+            --scenario .v066-in/scenario.json \
+            --filler .v066-in/filler.json \
+            --static-cache .v066-in/static_cache.json \
+            --profile .v066-in/reference.simc \
+            --witness-root .v063/out \
+            --binary-sha256 64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e \
+            --output out/V066_RECEIPT.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open("out/V066_RECEIPT.json"))
+          assert r["status"]=="READY_NEXT_SCOUT_NOT_EXECUTED",r
+          assert r["class"]=="mage" and r["spec"]=="arcane"
+          assert r["G_native"]==2849 and r["T_official"]==3152
+          assert r["new_simc_calls"]==0
+          assert r["measured_net_gear_to_rating_offset"]=={
+              "crit_rating":0,"haste_rating":165,
+              "mastery_rating":0,"versatility_rating":0}
+          assert sum(r["next_target"].values())==3152
+          assert not r["cross_class_native_acceptance_claimed"]
+          assert not r["original_product_v016_integrated"]
+          print("V066_REAL_NATIVE_REPLAY_AND_NEXT_GENERIC_PROPOSAL_PASS")
+          PY
+      - name: Preserve exact offline receipt (no copied unverified source claims)
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v066-profile-neutral-zero-new-native-${{ github.run_id }}
+          path: out/
+          retention-days: 14
+          if-no-files-found: warn
