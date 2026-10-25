@@ -70,8 +70,12 @@ def checked_history(witness, official_root, first_root, high_root,
          and same["gear_override"]==intended["gear_override"]
          and source.decode("utf8").splitlines().count("iterations=320")==1,
          "V074_ORIGINAL_PROFILE_OR_ITERATION_DRIFT")
-    need(sha(source)==req["input_sha256"]==
-         receipt.get("input_sha256")==summary["confirmed_D"]["input_sha256"]
+    # The historical SimC input serializes its ORIGINAL absolute JSON2
+    # destination. On artifact relocation only the stable profile and gear
+    # injection must match a regenerated request; the historical full input
+    # SHA must match its saved Native receipt (not a relocated request).
+    need(sha(source)==receipt.get("input_sha256")==
+         summary["confirmed_D"]["input_sha256"]
          and sha(raw)==receipt.get("native_json_sha256")==
          summary["confirmed_D"]["native_json_sha256"]
          and sha(receipt_raw)==summary["confirmed_D"]["native_receipt_sha256"],
@@ -308,7 +312,8 @@ def run(witness,official_root,first_root,high_root,material_root,confirmed_root,
                 result["progress_unreadable"]=True
     engine.write_atomic(report,result)
     print("V075",result["status"],"new_native",
-          result["new_native_calls_this_invocation"],flush=True)
+          result["new_native_calls_this_invocation"],
+          "error",result.get("error"),flush=True)
     return 0 if result["status"].startswith("PASS") else 3
 
 def main(argv=None):
