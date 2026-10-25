@@ -1,0 +1,330 @@
+{
+  "schema": "v054_grounded_crafted_id_expansion_v1",
+  "season": "midnight_s2",
+  "source_profiles_examined": 47,
+  "source_rows_with_crafted_stats": 74,
+  "source_unique_ids_in_crafted_fields": 18,
+  "observed_crafted_fields_not_equal_verified_craft_recipes": true,
+  "extra_ids_excluded_from_craft_list_due_to_unverified_recipe": [
+    271440,
+    271441,
+    268265
+  ],
+  "complete_crafted_recipe_catalog": false,
+  "item_count": 16,
+  "items": [
+    {
+      "item_id": 237828,
+      "simc_name": "spellbreakers_march",
+      "slot": "feet",
+      "armor_family_hint": null,
+      "kind": "CLASSIFY_AFTER_RECIPE_PROOF",
+      "source_urls": [
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Death_Knight_Unholy.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Death_Knight_Unholy_San'layn.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Paladin_Protection_Templar.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Warrior_Protection.simc"
+      ],
+      "evidence_grade": "SIMC_PROFILE_CRAFTED_STATS_ONLY_RECIPE_UNATTESTED",
+      "example_crafted_stats_tokens": [
+        "32/49",
+        "36/40",
+        "49/32"
+      ],
+      "usage_count": 4
+    },
+    {
+      "item_id": 237832,
+      "simc_name": "spellbreakers_cover",
+      "slot": "head",
+      "armor_family_hint": null,
+      "kind": "CLASSIFY_AFTER_RECIPE_PROOF",
+      "source_urls": [
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Paladin_Protection.simc"
+      ],
+      "evidence_grade": "SIMC_PROFILE_CRAFTED_STATS_ONLY_RECIPE_UNATTESTED",
+      "example_crafted_stats_tokens": [
+        "32/36"
+      ],
+      "usage_count": 1
+    },
+    {
+      "item_id": 237834,
+      "simc_name": "Spellbreaker's Bracers",
+      "slot": "wrists",
+      "armor_family_hint": "plate",
+      "kind": "armor",
+      "source_urls": [
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Paladin_Retribution.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Death_Knight_Blood.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Death_Knight_Blood_Deathbringer.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Death_Knight_Unholy.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Death_Knight_Unholy_San'layn.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Paladin_Protection.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Paladin_Protection_Templar.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Paladin_Retribution_Templar.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Warrior_Protection.simc"
+      ],
+      "evidence_grade": "V053_BOUNDED_NATIVE_OR_EXISTING_REFERENCE_NOT_COMPLETE_RECIPES",
+      "example_crafted_stats_tokens": [
+        "32/49",
+        "32/36",
+        "40/49",
+        "49/40",
+        "49/32"
+      ],
+      "usage_count": 9
+    },
+    {
+      "item_id": 237840,
+      "simc_name": "Spellbreaker's Warglaive",
+      "slot": "off_hand",
+      "armor_family_hint": "weapon",
+      "kind": "weapon",
+      "source_urls": [
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Demon_Hunter_Havoc.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Demon_Hunter_Vengeance.simc"
+      ],
+      "evidence_grade": "V053_BOUNDED_NATIVE_OR_EXISTING_REFERENCE_NOT_COMPLETE_RECIPES",
+      "example_crafted_stats_tokens": [
+        "49/36",
+        "36/40"
+      ],
+      "usage_count": 2
+    },
+    {
+      "item_id": 237850,
+      "simc_name": "Farstrider's Chopper",
+      "slot": "off_hand",
+      "armor_family_hint": "weapon",
+      "kind": "weapon",
+      "source_urls": [
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Shaman_Enhancement.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Shaman_Enhancement_Totemic.simc"
+      ],
+      "evidence_grade": "V053_BOUNDED_NATIVE_OR_EXISTING_REFERENCE_NOT_COMPLETE_RECIPES",
+      "example_crafted_stats_tokens": [
+        "49/36"
+      ],
+      "usage_count": 2
+    },
+    {
+      "item_id": 239648,
+      "simc_name": "Martyr's Bindings",
+      "slot": "wrists",
+      "armor_family_hint": "cloth",
+      "kind": "armor",
+      "source_urls": [
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Mage_Arcane.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Mage_Arcane_Sunfury.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Mage_Fire.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Mage_Fire_Frostfire.simc"
+      ],
+      "evidence_grade": "V053_BOUNDED_NATIVE_OR_EXISTING_REFERENCE_NOT_COMPLETE_RECIPES",
+      "example_crafted_stats_tokens": [
+        "32/40",
+        "36/40"
+      ],
+      "usage_count": 4
+    },
+    {
+      "item_id": 239649,
+      "simc_name": "Martyr's Waistwrap",
+      "slot": "waist",
+      "armor_family_hint": "cloth",
+      "kind": "armor",
+      "source_urls": [
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Mage_Frost.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Mage_Frost_Frostfire.simc"
+      ],
+      "evidence_grade": "V053_BOUNDED_NATIVE_OR_EXISTING_REFERENCE_NOT_COMPLETE_RECIPES",
+      "example_crafted_stats_tokens": [
+        "32/49"
+      ],
+      "usage_count": 2
+    },
+    {
+      "item_id": 239656,
+      "simc_name": "Adherent's Silken Shroud",
+      "slot": "back",
+      "armor_family_hint": "any",
+      "kind": "armor",
+      "source_urls": [
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Druid_Feral.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Rogue_Outlaw.simc"
+      ],
+      "evidence_grade": "V053_BOUNDED_NATIVE_OR_EXISTING_REFERENCE_NOT_COMPLETE_RECIPES",
+      "example_crafted_stats_tokens": [
+        "49/32",
+        "32/40"
+      ],
+      "usage_count": 2
+    },
+    {
+      "item_id": 240949,
+      "simc_name": "masterwork_sindorei_band",
+      "slot": "finger2",
+      "armor_family_hint": null,
+      "kind": "CLASSIFY_AFTER_RECIPE_PROOF",
+      "source_urls": [
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Death_Knight_Blood.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Death_Knight_Blood_Deathbringer.simc"
+      ],
+      "evidence_grade": "SIMC_PROFILE_CRAFTED_STATS_ONLY_RECIPE_UNATTESTED",
+      "example_crafted_stats_tokens": [
+        "32/36",
+        "40/49"
+      ],
+      "usage_count": 2
+    },
+    {
+      "item_id": 244569,
+      "simc_name": "Silvermoon Agent's Sneakers",
+      "slot": "feet",
+      "armor_family_hint": "leather",
+      "kind": "armor",
+      "source_urls": [
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Monk_Windwalker.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Demon_Hunter_Devourer.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Demon_Hunter_Havoc_Aldrachi_Reaver.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Monk_Windwalker_Conduit.simc"
+      ],
+      "evidence_grade": "V053_BOUNDED_NATIVE_OR_EXISTING_REFERENCE_NOT_COMPLETE_RECIPES",
+      "example_crafted_stats_tokens": [
+        "36/49",
+        "32/49"
+      ],
+      "usage_count": 4
+    },
+    {
+      "item_id": 244576,
+      "simc_name": "Silvermoon Agent's Deflectors",
+      "slot": "wrists",
+      "armor_family_hint": "leather",
+      "kind": "armor",
+      "source_urls": [
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Demon_Hunter_Havoc.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Demon_Hunter_Devourer.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Demon_Hunter_Havoc_Aldrachi_Reaver.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Demon_Hunter_Vengeance.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Druid_Feral.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Monk_Windwalker.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Monk_Windwalker_Conduit.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Rogue_Assassination.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Rogue_Assassination_Fatebound.simc"
+      ],
+      "evidence_grade": "V053_BOUNDED_NATIVE_OR_EXISTING_REFERENCE_NOT_COMPLETE_RECIPES",
+      "example_crafted_stats_tokens": [
+        "32/49",
+        "32/36",
+        "36/40",
+        "49/36",
+        "36/49"
+      ],
+      "usage_count": 9
+    },
+    {
+      "item_id": 244577,
+      "simc_name": "farstriders_razor_talons",
+      "slot": "feet",
+      "armor_family_hint": null,
+      "kind": "CLASSIFY_AFTER_RECIPE_PROOF",
+      "source_urls": [
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Shaman_Elemental.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Shaman_Elemental_Stormbringer.simc"
+      ],
+      "evidence_grade": "SIMC_PROFILE_CRAFTED_STATS_ONLY_RECIPE_UNATTESTED",
+      "example_crafted_stats_tokens": [
+        "36/49"
+      ],
+      "usage_count": 2
+    },
+    {
+      "item_id": 244581,
+      "simc_name": "Farstrider's Trophy Belt",
+      "slot": "waist",
+      "armor_family_hint": "mail",
+      "kind": "armor",
+      "source_urls": [
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Hunter_Marksmanship.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Hunter_Beast_Mastery.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Hunter_Survival.simc"
+      ],
+      "evidence_grade": "V053_BOUNDED_NATIVE_OR_EXISTING_REFERENCE_NOT_COMPLETE_RECIPES",
+      "example_crafted_stats_tokens": [
+        "32/49",
+        "32/36",
+        "32/40"
+      ],
+      "usage_count": 3
+    },
+    {
+      "item_id": 244584,
+      "simc_name": "Farstrider's Plated Bracers",
+      "slot": "wrists",
+      "armor_family_hint": "mail",
+      "kind": "armor",
+      "source_urls": [
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Hunter_Marksmanship.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Hunter_Beast_Mastery.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Hunter_Survival.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Shaman_Elemental.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Shaman_Elemental_Stormbringer.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Shaman_Enhancement.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Shaman_Enhancement_Totemic.simc"
+      ],
+      "evidence_grade": "V053_BOUNDED_NATIVE_OR_EXISTING_REFERENCE_NOT_COMPLETE_RECIPES",
+      "example_crafted_stats_tokens": [
+        "32/49",
+        "32/36",
+        "32/40",
+        "36/49",
+        "49/36"
+      ],
+      "usage_count": 7
+    },
+    {
+      "item_id": 245769,
+      "simc_name": "Aln'hara Lantern",
+      "slot": "off_hand",
+      "armor_family_hint": "weapon",
+      "kind": "weapon",
+      "source_urls": [
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Mage_Arcane.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Mage_Arcane_Sunfury.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Mage_Fire.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Mage_Fire_Frostfire.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Mage_Frost.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Mage_Frost_Frostfire.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Warlock_Affliction.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Warlock_Affliction_Hellcaller.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Warlock_Affliction_Soul_Harvester.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Warlock_Demonology.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Warlock_Demonology_Soul_Harvester.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Warlock_Destruction.simc",
+        "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Warlock_Destruction_Diabolist.simc"
+      ],
+      "evidence_grade": "V053_BOUNDED_NATIVE_OR_EXISTING_REFERENCE_NOT_COMPLETE_RECIPES",
+      "example_crafted_stats_tokens": [
+        "32/36",
+        "36/40",
+        "32/49",
+        "49/36"
+      ],
+      "usage_count": 13
+    },
+    {
+      "item_id": 245770,
+      "simc_name": "Aln'hara Cane",
+      "slot": "main_hand",
+      "armor_family_hint": "weapon",
+      "kind": "weapon",
+      "source_urls": [
+        "https://www.wowhead.com/item=245770/alnhara-cane"
+      ],
+      "evidence_grade": "V053_BOUNDED_NATIVE_OR_EXISTING_REFERENCE_NOT_COMPLETE_RECIPES",
+      "example_crafted_stats_tokens": [],
+      "usage_count": 0
+    }
+  ]
+}
