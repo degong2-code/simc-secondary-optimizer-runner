@@ -1,0 +1,181 @@
+name: v074 Rogue Selected D Independent 320 Native Confirmation
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [integration_probes/requests/v074_rogue_D_one_320_confirm.json]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v074-rogue-selected-D-one-native
+  cancel-in-progress: false
+jobs:
+  one-native-confirm:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Validate exact request and two source blob SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          path="integration_probes/requests/v074_rogue_D_one_320_confirm.json"
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==[path],changed
+          request=json.loads(pathlib.Path(path).read_text())
+          assert request=={
+            "schema":"v074_one_selected_D_heldout_320_native_request_v1",
+            "user_profile":"void_elf_rogue_subtlety_334_exact",
+            "prior_v069_run":40181981240,
+            "prior_v070_run":40182313167,
+            "prior_v071_run":40183940144,
+            "prior_v072_run":40185708187,
+            "prior_v073_run":40186754387,
+            "official_total_T":3150,
+            "official_budget_formula":"T=G+J+F",
+            "selected_D":[1163,913,712,362],
+            "candidate_selection_from":"v073_two_new_60_iteration_scouts",
+            "only_new_320_candidate":"D",
+            "reuse_v072_A_320_instead_of_rerunning":True,
+            "maximum_new_native_calls":1,
+            "heldout_320_iterations":320,
+            "cache_replay_required":True,
+            "zero_new_effect_gates":True,
+            "global_optimum_proven":False}
+          expected={
+           "runner/v074_rogue_selected_D_high_confirmation.py":"bbebe1628f223a5a6320a961748a6ce806d2e062",
+           "tests/test_v074_rogue_selected_D_high_confirmation.py":"f9aa17a589c97d58e667d771adfa9eb08c4f8f77"}
+          for file,digest in expected.items():
+            actual=subprocess.check_output(["git","hash-object",file],text=True).strip()
+            assert actual==digest,(file,actual,digest)
+          print("V074_EXACT_REQUEST_AND_CODE_SHA_PASS")
+          PY
+      - name: Current full regression suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Restore historical v069 exact artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v069-user-rogue-real-GJF-one-native-40181981240
+          path: .v069
+          run-id: 40181981240
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Restore historical v070 exact artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v070-rogue-GJF-native-40182313167
+          path: .v070
+          run-id: 40182313167
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Restore historical v071 exact artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v071-rogue-one-adaptive-scout-40183940144
+          path: .v071
+          run-id: 40183940144
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Restore historical v072 exact artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v072-rogue-two-high-confirm-40185708187
+          path: .v072
+          run-id: 40185708187
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Restore historical v073 exact artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v073-material-native-40186754387
+          path: .v073
+          run-id: 40186754387
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Restore historical simc exact artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-40153209773
+          path: .simc
+          run-id: 40153209773
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Offline SHA and v015 v073-selection replay before any Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v074_rogue_selected_D_high_confirmation.py --witness-root .v069/fresh-witness --prior-official .v070/official --prior-scout .v071/native --prior-high .v072/native --prior-material .v073/native --out out/offline
+          python3 - <<'PY'
+          import json
+          x=json.load(open("out/offline/V074_RECEIPT.json"))
+          assert x["status"]=="PASS_SELECTED_D_CONFIRM_PLAN_ZERO_NATIVE",x
+          assert x["historical_native_results_attested"]==8
+          assert x["new_native_calls_this_invocation"]==0
+          assert (x["G"],x["J"],x["F"],x["T"])==(2847,138,165,3150)
+          assert len(x["selected_from_v073_two_60_scouts"])==2
+          assert x["selected_from_v073_two_60_scouts"][1]["target"]=={
+             "crit_rating":1163,"haste_rating":913,
+             "mastery_rating":712,"versatility_rating":362}
+          print("V074_EIGHT_PRIOR_ACTUAL_NATIVE_SHA_AND_D_SELECTION_PASS")
+          PY
+      - name: Execute exactly one new held-out 320 iteration D Native confirmation
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc/simc' | sha256sum -c
+          chmod +x .simc/simc
+          python3 runner/v074_rogue_selected_D_high_confirmation.py --witness-root .v069/fresh-witness --prior-official .v070/official --prior-scout .v071/native --prior-high .v072/native --prior-material .v073/native --out "$GITHUB_WORKSPACE/out/native" --binary "$GITHUB_WORKSPACE/.simc/simc"
+          python3 - <<'PY'
+          import json,math
+          x=json.load(open("out/native/V074_RECEIPT.json"))
+          assert x["status"]=="PASS_ONE_SELECTED_D_FRESH_320_NATIVE_CONFIRMATION",x
+          assert x["new_native_calls_this_invocation"]==1
+          assert x["native_attempts_total_durable"]==1
+          assert x["historical_native_results_attested"]==8
+          d=x["confirmed_D"]
+          assert d["source"]=="NEW_NATIVE"
+          assert d["iterations"]==320 and d["dps_samples"]>=300
+          assert d["target"]==d["rating_actual"]
+          assert sum(d["rating_actual"].values())==3150
+          assert math.isfinite(d["dps_mean"]) and math.isfinite(d["dps_sem"])
+          assert x["comparison"]["distinct_native_seeds"]
+          assert x["comparison"]["v073_scout_data_pooled_with_confirmed_D"] is False
+          assert not x["comparison"]["global_optimum_proven"]
+          print("V074_FRESH_D_320_NATIVE",json.dumps(d,sort_keys=True))
+          print("V074_A_VS_D_320_INDEPENDENT",json.dumps(x["comparison"],sort_keys=True))
+          print("V074_ONE_NEW_320_NATIVE_JSON2_PASS")
+          PY
+          sha256sum out/native/confirm_D/result.json > out/native/CONFIRM_D_SHA256SUMS.txt
+      - name: Verify persistent SHA cache without further Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v074_rogue_selected_D_high_confirmation.py --witness-root .v069/fresh-witness --prior-official .v070/official --prior-scout .v071/native --prior-high .v072/native --prior-material .v073/native --out "$GITHUB_WORKSPACE/out/native" --binary "$GITHUB_WORKSPACE/.simc/simc" --cache-only
+          sha256sum -c out/native/CONFIRM_D_SHA256SUMS.txt
+          python3 - <<'PY'
+          import json
+          x=json.load(open("out/native/V074_RECEIPT.json"))
+          assert x["status"]=="PASS_ONE_SELECTED_D_FRESH_320_NATIVE_CONFIRMATION",x
+          assert x["new_native_calls_this_invocation"]==0
+          assert x["native_attempts_total_durable"]==1
+          assert x["confirmed_D"]["source"]=="CACHED_VERIFIED_NATIVE"
+          assert x["sha_checked_cache_replay"] is True
+          print("V074_ONE_HIGH_NATIVE_SHA_CACHE_REPLAY_ZERO_ADDITIONAL_NATIVE_PASS")
+          PY
+      - name: Preserve v074 Native JSON2, profile, progress and original errors
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v074-D-320-native-${{ github.run_id }}
+          path: out/
+          retention-days: 14
+          if-no-files-found: warn
