@@ -135,7 +135,7 @@ def assemble(reference,output,iterations=35,probe="A"):
         if "gem_id" in CANONICAL_OPTIONS[s]])
     need(special_bag==7 and
          sum(CANONICAL_OPTIONS[s]["gem_id"].count(str(SPECIAL_GEM_B))
-             for s in CANONICAL_OPTIONS)==1,"GEM_COUNT_POLICY")
+             for s in CANONICAL_OPTIONS if "gem_id" in CANONICAL_OPTIONS[s])==1,"GEM_COUNT_POLICY")
     receipt={"schema":SCHEMA,"status":"GENERATED_NOT_NATIVE_TESTED",
         "upstream_git_blob_sha":UPSTREAM_GIT_BLOB_SHA,
         "user":{"class":"rogue","spec":"subtlety","race":"void_elf",
