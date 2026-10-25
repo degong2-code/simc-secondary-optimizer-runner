@@ -1,0 +1,281 @@
+{
+  "schema": "v054_simc_profile_crafted_evidence_batch_v1",
+  "source_rev": "12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7",
+  "part": 1,
+  "profiles_seen": 16,
+  "profiles_with_crafted": 14,
+  "items": [
+    {
+      "profile": "MID2_Death_Knight_Blood.simc",
+      "slot": "wrists",
+      "name": "spellbreakers_bracers",
+      "id": 237834,
+      "crafted_stats": "32/36",
+      "line": "wrists=spellbreakers_bracers,id=237834,bonus_id=8960/13454/13750,ilevel=331,gem_id=240894,crafted_stats=32/36"
+    },
+    {
+      "profile": "MID2_Death_Knight_Blood.simc",
+      "slot": "finger2",
+      "name": "masterwork_sindorei_band",
+      "id": 240949,
+      "crafted_stats": "32/36",
+      "line": "finger2=masterwork_sindorei_band,id=240949,bonus_id=8960/13453,ilevel=331,gem_id=240894,enchant_id=7967,crafted_stats=32/36"
+    },
+    {
+      "profile": "MID2_Death_Knight_Blood_Deathbringer.simc",
+      "slot": "wrists",
+      "name": "spellbreakers_bracers",
+      "id": 237834,
+      "crafted_stats": "40/49",
+      "line": "wrists=spellbreakers_bracers,id=237834,ilevel=331,gem_id=240894,embellishment=stabilizing_gemstone_bandolier,crafted_stats=40/49"
+    },
+    {
+      "profile": "MID2_Death_Knight_Blood_Deathbringer.simc",
+      "slot": "finger2",
+      "name": "masterwork_sindorei_band",
+      "id": 240949,
+      "crafted_stats": "40/49",
+      "line": "finger2=masterwork_sindorei_band,id=240949,ilevel=331,gem_id=240894,enchant=eyes_of_the_eagle_2,embellishment=prismatic_focusing_iris,crafted_stats=40/49"
+    },
+    {
+      "profile": "MID2_Death_Knight_Unholy.simc",
+      "slot": "wrists",
+      "name": "spellbreakers_bracers",
+      "id": 237834,
+      "crafted_stats": "49/40",
+      "line": "wrists=spellbreakers_bracers,id=237834,bonus_id=8791/8960/12214/12384/13667/13750/13751/13836/12497,gem_id=240898,crafted_stats=49/40,content_tuning=3615"
+    },
+    {
+      "profile": "MID2_Death_Knight_Unholy.simc",
+      "slot": "feet",
+      "name": "spellbreakers_march",
+      "id": 237828,
+      "crafted_stats": "32/49",
+      "line": "feet=spellbreakers_march,id=237828,bonus_id=8960/12384/13751/13836/9627,enchant_id=8019,crafted_stats=32/49"
+    },
+    {
+      "profile": "MID2_Death_Knight_Unholy_San'layn.simc",
+      "slot": "wrists",
+      "name": "spellbreakers_bracers",
+      "id": 237834,
+      "crafted_stats": "49/40",
+      "line": "wrists=spellbreakers_bracers,id=237834,bonus_id=8791/8960/12214/12384/13667/13750/13751/13836/12497,gem_id=240898,crafted_stats=49/40,content_tuning=3615"
+    },
+    {
+      "profile": "MID2_Death_Knight_Unholy_San'layn.simc",
+      "slot": "feet",
+      "name": "spellbreakers_march",
+      "id": 237828,
+      "crafted_stats": "32/49",
+      "line": "feet=spellbreakers_march,id=237828,bonus_id=8960/12384/13751/13836/9627,enchant_id=8019,crafted_stats=32/49"
+    },
+    {
+      "profile": "MID2_Demon_Hunter_Devourer.simc",
+      "slot": "wrists",
+      "name": "silvermoon_agents_deflectors",
+      "id": 244576,
+      "crafted_stats": "32/36",
+      "line": "wrists=silvermoon_agents_deflectors,id=244576,ilevel=331,gem_id=240918,embellishment=arcanoweave_lining,crafted_stats=32/36"
+    },
+    {
+      "profile": "MID2_Demon_Hunter_Devourer.simc",
+      "slot": "feet",
+      "name": "silvermoon_agents_sneakers",
+      "id": 244569,
+      "crafted_stats": "36/49",
+      "line": "feet=silvermoon_agents_sneakers,id=244569,ilevel=331,embellishment=arcanoweave_lining,enchant_id=7993,crafted_stats=36/49"
+    },
+    {
+      "profile": "MID2_Demon_Hunter_Havoc.simc",
+      "slot": "wrists",
+      "name": "silvermoon_agents_deflectors",
+      "id": 244576,
+      "crafted_stats": "32/49",
+      "line": "wrists=silvermoon_agents_deflectors,id=244576,bonus_id=8960/12214/12384/13750/13751/13836/9627,gem_id=240908,crafted_stats=32/49"
+    },
+    {
+      "profile": "MID2_Demon_Hunter_Havoc.simc",
+      "slot": "off_hand",
+      "name": "spellbreakers_warglaive",
+      "id": 237840,
+      "crafted_stats": "49/36",
+      "line": "off_hand=spellbreakers_warglaive,id=237840,bonus_id=8791/8960/12214/13751/13771/13836/9627,enchant_id=8689,crafted_stats=49/36"
+    },
+    {
+      "profile": "MID2_Demon_Hunter_Havoc_Aldrachi_Reaver.simc",
+      "slot": "wrists",
+      "name": "silvermoon_agents_deflectors",
+      "id": 244576,
+      "crafted_stats": "32/49",
+      "line": "wrists=silvermoon_agents_deflectors,id=244576,bonus_id=8960/12214/12384/13750/13751/13836/9627,gem_id=240908,crafted_stats=32/49"
+    },
+    {
+      "profile": "MID2_Demon_Hunter_Havoc_Aldrachi_Reaver.simc",
+      "slot": "feet",
+      "name": "silvermoon_agents_sneakers",
+      "id": 244569,
+      "crafted_stats": "32/49",
+      "line": "feet=silvermoon_agents_sneakers,id=244569,bonus_id=8960/12214/12384/13751/13836/9627,enchant_id=7963,crafted_stats=32/49"
+    },
+    {
+      "profile": "MID2_Demon_Hunter_Vengeance.simc",
+      "slot": "wrists",
+      "name": "silvermoon_agents_deflectors",
+      "id": 244576,
+      "crafted_stats": "36/40",
+      "line": "wrists=silvermoon_agents_deflectors,id=244576,ilevel=331,gem_id=240916,embellishment=arcanoweave_lining,crafted_stats=36/40"
+    },
+    {
+      "profile": "MID2_Demon_Hunter_Vengeance.simc",
+      "slot": "off_hand",
+      "name": "spellbreakers_warglaive",
+      "id": 237840,
+      "crafted_stats": "36/40",
+      "line": "off_hand=spellbreakers_warglaive,id=237840,ilevel=331,embellishment=darkmoon_sigil_hunt,enchant_id=8039,crafted_stats=36/40"
+    },
+    {
+      "profile": "MID2_Druid_Feral.simc",
+      "slot": "back",
+      "name": "adherents_silken_shroud",
+      "id": 239656,
+      "crafted_stats": "49/32",
+      "line": "back=adherents_silken_shroud,id=239656,bonus_id=8793/8960/12214/12384/13751/13836/14001/12497,ilevel=331,crafted_stats=49/32,content_tuning=3615"
+    },
+    {
+      "profile": "MID2_Druid_Feral.simc",
+      "slot": "wrists",
+      "name": "silvermoon_agents_deflectors",
+      "id": 244576,
+      "crafted_stats": "49/36",
+      "line": "wrists=silvermoon_agents_deflectors,id=244576,bonus_id=8793/8960/12214/12384/13696/13751/13836/14001/12497,ilevel=331,crafted_stats=49/36,content_tuning=3615"
+    },
+    {
+      "profile": "MID2_Hunter_Beast_Mastery.simc",
+      "slot": "head",
+      "name": "crushing_coiler_coif",
+      "id": 271441,
+      "crafted_stats": "36/49",
+      "line": "head=crushing_coiler_coif,id=271441,bonus_id=12854/13695,ilevel=334,gem_id=240983,enchant_id=7961,crafted_stats=36/49"
+    },
+    {
+      "profile": "MID2_Hunter_Beast_Mastery.simc",
+      "slot": "wrists",
+      "name": "farstriders_plated_bracers",
+      "id": 244584,
+      "crafted_stats": "32/36",
+      "line": "wrists=farstriders_plated_bracers,id=244584,bonus_id=1808/8960/12214/12384/13751/13836/9627,ilevel=331,gem_id=240898,crafted_stats=32/36"
+    },
+    {
+      "profile": "MID2_Hunter_Beast_Mastery.simc",
+      "slot": "waist",
+      "name": "farstriders_trophy_belt",
+      "id": 244581,
+      "crafted_stats": "32/36",
+      "line": "waist=farstriders_trophy_belt,id=244581,bonus_id=1808/8960/12214/12384/13751/13836/9627,ilevel=331,gem_id=240898,crafted_stats=32/36"
+    },
+    {
+      "profile": "MID2_Hunter_Beast_Mastery.simc",
+      "slot": "feet",
+      "name": "greaves_of_the_noxious_depths",
+      "id": 271440,
+      "crafted_stats": "36/32",
+      "line": "feet=greaves_of_the_noxious_depths,id=271440,bonus_id=12854,ilevel=334,enchant_id=7963,crafted_stats=36/32"
+    },
+    {
+      "profile": "MID2_Hunter_Marksmanship.simc",
+      "slot": "head",
+      "name": "crushing_coiler_coif",
+      "id": 271441,
+      "crafted_stats": "40/32",
+      "line": "head=crushing_coiler_coif,id=271441,bonus_id=12854/13695,ilevel=334,gem_id=240967,enchant_id=7961,crafted_stats=40/32"
+    },
+    {
+      "profile": "MID2_Hunter_Marksmanship.simc",
+      "slot": "wrists",
+      "name": "farstriders_plated_bracers",
+      "id": 244584,
+      "crafted_stats": "32/40",
+      "line": "wrists=farstriders_plated_bracers,id=244584,bonus_id=1808/8960/12214/12384/13751/13836/9627,ilevel=331,gem_id=240898,crafted_stats=32/40"
+    },
+    {
+      "profile": "MID2_Hunter_Marksmanship.simc",
+      "slot": "waist",
+      "name": "farstriders_trophy_belt",
+      "id": 244581,
+      "crafted_stats": "32/40",
+      "line": "waist=farstriders_trophy_belt,id=244581,bonus_id=1808/8960/12214/12384/13751/13836/9627,ilevel=331,gem_id=240908,crafted_stats=32/40"
+    },
+    {
+      "profile": "MID2_Hunter_Marksmanship.simc",
+      "slot": "feet",
+      "name": "greaves_of_the_noxious_depths",
+      "id": 271440,
+      "crafted_stats": "32/49",
+      "line": "feet=greaves_of_the_noxious_depths,id=271440,bonus_id=12854,ilevel=334,enchant_id=7993,crafted_stats=32/49"
+    },
+    {
+      "profile": "MID2_Hunter_Survival.simc",
+      "slot": "head",
+      "name": "crushing_coiler_coif",
+      "id": 271441,
+      "crafted_stats": "36/32",
+      "line": "head=crushing_coiler_coif,id=271441,bonus_id=12854/13695,ilevel=334,gem_id=240983,enchant_id=7961,crafted_stats=36/32"
+    },
+    {
+      "profile": "MID2_Hunter_Survival.simc",
+      "slot": "wrists",
+      "name": "farstriders_plated_bracers",
+      "id": 244584,
+      "crafted_stats": "32/36",
+      "line": "wrists=farstriders_plated_bracers,id=244584,bonus_id=1808/8960/12214/12384/13751/13836/9627,ilevel=331,gem_id=240898,crafted_stats=32/36"
+    },
+    {
+      "profile": "MID2_Hunter_Survival.simc",
+      "slot": "waist",
+      "name": "farstriders_trophy_belt",
+      "id": 244581,
+      "crafted_stats": "32/36",
+      "line": "waist=farstriders_trophy_belt,id=244581,bonus_id=1808/8960/12214/12384/13751/13836/9627,ilevel=331,gem_id=240898,crafted_stats=32/36"
+    },
+    {
+      "profile": "MID2_Hunter_Survival.simc",
+      "slot": "feet",
+      "name": "greaves_of_the_noxious_depths",
+      "id": 271440,
+      "crafted_stats": "36/32",
+      "line": "feet=greaves_of_the_noxious_depths,id=271440,bonus_id=12854,ilevel=334,enchant_id=7993,crafted_stats=36/32"
+    },
+    {
+      "profile": "MID2_Mage_Arcane.simc",
+      "slot": "wrists",
+      "name": "martyrs_bindings",
+      "id": 239648,
+      "crafted_stats": "32/40",
+      "line": "wrists=martyrs_bindings,id=239648,bonus_id=8960/12384/13668/13751,ilevel=331,gem_id=240894,crafted_stats=32/40"
+    },
+    {
+      "profile": "MID2_Mage_Arcane.simc",
+      "slot": "off_hand",
+      "name": "alnhara_lantern",
+      "id": 245769,
+      "crafted_stats": "32/36",
+      "line": "off_hand=alnhara_lantern,id=245769,bonus_id=8960/13751/13771,ilevel=331,crafted_stats=32/36"
+    },
+    {
+      "profile": "MID2_Mage_Arcane_Sunfury.simc",
+      "slot": "wrists",
+      "name": "martyrs_bindings",
+      "id": 239648,
+      "crafted_stats": "32/40",
+      "line": "wrists=martyrs_bindings,id=239648,bonus_id=8960/12384/13668/13751,ilevel=331,gem_id=240894,crafted_stats=32/40"
+    },
+    {
+      "profile": "MID2_Mage_Arcane_Sunfury.simc",
+      "slot": "off_hand",
+      "name": "alnhara_lantern",
+      "id": 245769,
+      "crafted_stats": "32/36",
+      "line": "off_hand=alnhara_lantern,id=245769,bonus_id=8960/13751/13771,ilevel=331,crafted_stats=32/36"
+    }
+  ]
+}
