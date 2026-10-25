@@ -1,0 +1,91 @@
+name: v052 Crafted Armor and Weapon Native 331-Stat Samples
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - integration_probes/requests/v052_crafted_native_once.json
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v052-crafted-armor-weapon-sample
+  cancel-in-progress: false
+jobs:
+  crafted-sample:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Approve bounded source and request only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          assert os.environ["GITHUB_EVENT_NAME"]=="push"
+          assert os.environ["GITHUB_REF"]=="refs/heads/probe/chat-cache-v035-20261024"
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==["integration_probes/requests/v052_crafted_native_once.json"]
+          request=json.loads(pathlib.Path(changed[0]).read_text())
+          assert request=={
+            "schema":"v052_exact_crafted_native_stat_request_v1",
+            "authorization":"13_ONE_ITERATION_331_CRAFTED_STATIC_QUERIES",
+            "native_max_calls":13,
+            "four_armor_types_plus_weapons":True,
+            "no_DPS_optimization":True,
+            "no_crafted_full_catalog_claim":True,
+            "product_code_integrated":False,
+            "official_policy_promoted":False}
+          for p,d in {
+            "runner/v051_crafted_embellishment_bridge.py":"6e238caef65a04f1716564f1f7827cd302583ba0",
+            "tests/test_v051_crafted_embellishment_bridge.py":"de113bf8b5c4dc34a007eec867a65f36897761a4",
+            "runner/v052_crafted_native_sample.py":"aa5197014c2f96d61354734167da01c7d4bc81a0",
+            "integration_probes/catalog/v051_crafted_armor_weapon_reference.json":"4283b4804b9e53f2f842c5f38d7350089422cd57"
+          }.items():
+            assert subprocess.check_output(["git","hash-object",p],text=True).strip()==d,"SOURCE_DRIFT:"+p
+          print("V052_GATED_CRAFTED_SOURCE_PASS")
+          PY
+      - name: Python full offline regression and crafted contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Download previously pinned Native binary once; no build
+        uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-40153209773
+          path: .simc-pinned
+          run-id: 40153209773
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Run Native item-only stat probes
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc-pinned/simc' | sha256sum -c
+          chmod +x .simc-pinned/simc
+          python3 runner/v052_crafted_native_sample.py \
+            --binary "$GITHUB_WORKSPACE/.simc-pinned/simc" \
+            --catalog integration_probes/catalog/v051_crafted_armor_weapon_reference.json \
+            --output "$GITHUB_WORKSPACE/output"
+          python3 - <<'PY'
+          import json,pathlib
+          r=json.loads(pathlib.Path('output/V052_RECEIPT.json').read_text())
+          assert r["status"]!="SETUP_BLOCKED"
+          assert r["native_calls"]<=13
+          assert len(r["results"])==13
+          print("V052_CRAFTED_NATIVE",r["status"],r["success"],r["missing"])
+          PY
+      - name: Save reusable Native stat variants and per-item receipt
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v052-crafted-331-native-${{ github.run_id }}
+          path: output/
+          retention-days: 14
+          if-no-files-found: warn
