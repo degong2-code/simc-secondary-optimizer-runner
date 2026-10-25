@@ -11,7 +11,7 @@ from test_v063_numeric_injection import fake_doc
 class RogueV071Bounded(unittest.TestCase):
     def test_v071_receipt_policy_preserves_one_call_cap(self):
         self.assertEqual(runner.SCHEMA,"v071_real_user_rogue_adaptive_first_native_scout_v1")
-        self.assertEqual(runner.probe.BIN_SHA,SIMC_SHA)
+        self.assertEqual(runner.probe.BIN_SHA,"64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e")
     def test_no_globally_optimal_claim_in_one_candidate_plan(self):
         normalized,budget,cal,reference=make_fixture()
         with tempfile.TemporaryDirectory() as tmp:
