@@ -44,6 +44,75 @@ def stable_case_key(normalized,budget,calibration,reference,binary_sha,target,it
          "threads":normalized["scenario"]["runtime"]["threads"]}
     return cache.digest(obj)
 
+def verify_profile_binding(normalized,budget,reference):
+    """Prevent a valid numeric calibration from being paired with other gear/settings.
+
+    Verifies only our own scenario-to-SimC input identity, not the suitability
+    or mechanics of any selected gear/trinket/embellishment effect.
+    """
+    need(type(reference) is str,"PROFILE_TEXT")
+    cfg=normalized["scenario"]
+    parsed={}
+    slots=set()
+    import v055_simc_item_selection as selected
+    for line in reference.splitlines():
+        key,sep,val=line.partition("=")
+        if not sep or line.startswith("#"):continue
+        if key in parsed:need(False,"DUPLICATE_PROFILE_SETTING:"+key)
+        parsed[key]=val
+        if key in selected.SLOTS:slots.add(key)
+    char=cfg["character"]
+    for k,field in (("spec","spec"),("race","race"),("talents","talents"),
+                    ("role","role")):
+        need(parsed.get(k)==char[field],"PROFILE_CHARACTER_DRIFT:"+k)
+    # A standard SimC source starts with a one-word class declaration.
+    need(any(line.startswith(char["class"]+"=") for line in reference.splitlines()),
+         "PROFILE_CLASS_DRIFT")
+    combat=cfg["combat"]; consumables=cfg["consumables"]
+    need(parsed.get("fight_style")==combat["fight_style"],
+         "PROFILE_FIGHT_STYLE_DRIFT")
+    need(parsed.get("desired_targets")==str(combat["targets"]),
+         "PROFILE_TARGETS_DRIFT")
+    need(parsed.get("max_time")==str(combat["duration_seconds"]),
+         "PROFILE_DURATION_DRIFT")
+    need(parsed.get("optimal_raid")==("1" if combat["raid_buffs"] else "0"),
+         "PROFILE_RAID_BUFFS_DRIFT")
+    for name in ("flask","food"):
+        if consumables[name] is not None:
+            need(parsed.get(name)==consumables[name],
+                 "PROFILE_CONSUMABLE_DRIFT:"+name)
+    temp=consumables["weapon_temporary"]
+    if temp is not None:
+        need(parsed.get("temporary_enchant")=="main_hand:"+temp,
+             "PROFILE_TEMPORARY_DRIFT")
+    gear=cfg["equipment"]
+    expected={}
+    for kind in ("tier","special","crafted","trinkets"):
+        for row in gear[kind]:
+            expected[row["slot"]]={"item_id":row["item_id"],
+                "ilevel":row["ilevel"],
+                "options":row["options"]}
+    for slot,row in budget["native_gear_stats"].items():
+        ident=row["identity"]
+        need(slot not in expected or expected[slot]=={
+            "item_id":ident["item_id"],"ilevel":ident["ilevel"],
+            "options":ident["options"]},"PROFILE_SELECTED_GEAR_CONFLICT:"+slot)
+        expected[slot]={"item_id":ident["item_id"],
+            "ilevel":ident["ilevel"],"options":ident["options"]}
+    # The Native gear cache may lack a trinket record, but its exact ID must
+    # still be present in the SimC input.
+    need(slots==set(expected),"PROFILE_GEAR_SLOT_SET_DRIFT")
+    for slot,row in expected.items():
+        _,options=cache.parse_encoded(parsed[slot])
+        actual={"item_id":int(options["id"]),"ilevel":int(options["ilevel"]),
+                "options":{k:v for k,v in options.items()
+                           if k not in ("id","ilevel","source")}}
+        need(actual==row,"PROFILE_GEAR_ID_LEVEL_OPTIONS_DRIFT:"+slot)
+    return {"slots_bound":len(expected),
+            "two_trinkets_bound":all(k in expected for k in ("trinket1","trinket2")),
+            "character_and_combat_bound":True,
+            "no_effect_mechanics_interpreted":True}
+
 def make_request(normalized,budget,calibration,reference,binary_sha,
                  target,iterations,output_json2_path):
     """Validate one externally proposed candidate; no SimC execution."""
@@ -59,6 +128,7 @@ def make_request(normalized,budget,calibration,reference,binary_sha,
          budget["budget"]["oil_stays_OUTSIDE_T"] is True,
          "OFFICIAL_GJF_POLICY_CHANGED")
     numerical.check_target(normalized,budget,target)
+    binding=verify_profile_binding(normalized,budget,reference)
     generated=numerical.render_candidate(
         reference,calibration,target,pathlib.Path(output_json2_path),iterations)
     identity=stable_case_key(normalized,budget,calibration,reference,binary_sha,
@@ -73,6 +143,7 @@ def make_request(normalized,budget,calibration,reference,binary_sha,
        "input":generated["input"],"input_sha256":generated["input_sha256"],
        "raw_gear_override":generated["raw_gear_override"],
        "json2_location":str(pathlib.Path(output_json2_path).resolve()),
+       "profile_binding":binding,
        "global_optimum_proven":False,"item_effects_owned_by":"SimC"}
 
 def ingest_native(request,native_doc,calibration,raw_native_bytes=None):
