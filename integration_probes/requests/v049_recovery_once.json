@@ -1,0 +1,15 @@
+{
+  "schema": "v049_class_compatible_recovery_request_v1",
+  "failed_items_exact": 32,
+  "missing_itemlevels_exact": 448,
+  "class_mappings": "Plate=warrior Leather=druid Mail=hunter Bow=hunter",
+  "maximum_calls_per_batch": 160,
+  "cursors": [
+    0,
+    160,
+    320
+  ],
+  "no_DPS_optimization": true,
+  "no_policy_promotion": true,
+  "no_main_modification": true
+}
