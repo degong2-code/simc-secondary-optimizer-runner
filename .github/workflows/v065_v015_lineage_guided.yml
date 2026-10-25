@@ -1,0 +1,138 @@
+name: v065 Original v015 Lineage Guided Native
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/v065_v015_native_once.json
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v065-v015-guided-once
+  cancel-in-progress: false
+jobs:
+  original-lineage-guided-once:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Exact bounded request and new source hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          assert os.environ["GITHUB_EVENT_NAME"]=="push"
+          assert os.environ["GITHUB_REF"]=="refs/heads/probe/chat-cache-v035-20261024"
+          paths=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert paths==["integration_probes/requests/v065_v015_native_once.json"],paths
+          req=json.loads(pathlib.Path(paths[0]).read_text())
+          assert req=={
+             "schema":"v065_v015_lineage_guided_native_once_v1",
+             "v015_original_source_sha256":"a44f73cf232c8204dbe958e79fe50f111e68654ac583a1170a283f16035c0ec3",
+             "v016_original_source_sha256":"7c49d7ca095e8864b673715d70d9851d676b44aeed99f8d769419492fcd14712",
+             "new_simc_calls_max":1,
+             "historical_simc_observations":2,
+             "step_rating":200,
+             "official_total":"T=G+J+F",
+             "native_candidate_expected":{"crit_rating":400,"haste_rating":1108,
+               "mastery_rating":1115,"versatility_rating":529},
+             "user_originals_modified":False,
+             "independent_proc_or_effect_gate":False,
+             "v015_v016_historical_tests_not_rerun_as_legacy_pass":True,
+             "official_main_promotion":False}
+          for p,sha in {
+            "runner/v065_original_v015_search_adapter.py":"01bf2c753443cb5ab11ef01403857e188776298c",
+            "runner/v065_v015_guided_once.py":"a2f29fa67ff58fbd77ee7a029f7cd7b76a8d9a76",
+            "tests/test_v065_original_v015_search_adapter.py":"de19c11ed8fe9991eea24574852f66596ef1a35e"
+          }.items():
+            assert subprocess.check_output(["git","hash-object",p],text=True).strip()==sha,p
+          print("V065_ORIGINAL_SOURCE_PROVENANCE_AND_EXACT_REQUEST_PASS")
+          PY
+      - name: All current-product regressions only (not archived v015/v016 tests)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Download existing v059 real Native witnesses
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v059-two-candidate-DPS-40157655114
+          path: .v059
+          run-id: 40157655114
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Download existing v063 real Native observations
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v063-official-GJF-two-40165729165
+          path: .v063
+          run-id: 40165729165
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Test original v015 golden CHMV neighbor with 0 new SimC calls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v065_v015_guided_once.py \
+            --previous-v059 "$GITHUB_WORKSPACE/.v059" \
+            --previous-v063 "$GITHUB_WORKSPACE/.v063/out" \
+            --output "$GITHUB_WORKSPACE/offline"
+          python3 - <<'PY'
+          import json
+          a=json.load(open("offline/V065_RECEIPT.json"))
+          assert a["status"]=="PASS_OFFLINE_V015_LINEAGE_TO_V064_PORT",a
+          assert a["new_native_calls"]==0
+          assert a["candidate"]=={
+            "crit_rating":400,"haste_rating":1108,
+            "mastery_rating":1115,"versatility_rating":529}
+          assert a["old_native_reused"]==2
+          print("V065_REUSED_REAL_JSON2_TO_V015_GUIDED_200_PASS")
+          PY
+      - name: Download pinned Native SimC executable
+        uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-40153209773
+          path: .simc
+          run-id: 40153209773
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Run exactly one new CHMV candidate with v063-v064 SimC port
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc/simc' | sha256sum -c
+          chmod +x .simc/simc
+          python3 runner/v065_v015_guided_once.py \
+            --previous-v059 "$GITHUB_WORKSPACE/.v059" \
+            --previous-v063 "$GITHUB_WORKSPACE/.v063/out" \
+            --binary "$GITHUB_WORKSPACE/.simc/simc" \
+            --output "$GITHUB_WORKSPACE/out"
+          python3 - <<'PY'
+          import json
+          r=json.load(open("out/V065_RECEIPT.json"))
+          assert r["status"]=="PASS_ONE_REAL_GUIDED_NATIVE_CHMV_AND_DPS",r
+          assert r["new_native_calls"]==1
+          assert r["old_native_reused"]==2
+          assert r["observation"]["target"]==r["observation"]["rating_actual"]
+          assert sum(r["observation"]["target"].values())==3152
+          assert r["observation"]["dps_mean"]>0
+          assert r["scout_done"]==1
+          assert r["historical_v015_71_of_71_not_reexecuted"]==True
+          assert r["historical_v016_104_of_104_not_reexecuted"]==True
+          print("V065_ONE_ACTUAL_GUIDED_NATIVE_JSON2_PASS")
+          PY
+      - name: Preserve stdout stderr Native JSON2 checkpoint
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v065-v015-guided-once-${{ github.run_id }}
+          path: |
+            offline/
+            out/
+          if-no-files-found: warn
+          retention-days: 14
