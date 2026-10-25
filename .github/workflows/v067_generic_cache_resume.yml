@@ -1,0 +1,169 @@
+name: v067 Generic Route Same Scheduler Cache Only Native Replay
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [integration_probes/requests/v067_generic_route_once.json]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v067-generic-cache-only
+  cancel-in-progress: false
+jobs:
+  source-neutral-replay:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Bound exact request and source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          assert os.environ["GITHUB_EVENT_NAME"]=="push"
+          assert os.environ["GITHUB_REF"]=="refs/heads/probe/chat-cache-v035-20261024"
+          diff=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert diff==["integration_probes/requests/v067_generic_route_once.json"],diff
+          request=json.loads(pathlib.Path(diff[0]).read_text())
+          assert request=={
+           "schema":"v067_generic_adaptive_route_cache_replay_once_v1",
+           "original_real_native_observations_run":40165729165,
+           "original_real_native_adaptive_run":40171473855,
+           "additional_native_simc_calls":0,
+           "cache_only_fails_closed":True,
+           "max_original_native_attempts":4,
+           "official_policy":"T=G+J+F",
+           "source_v015_v016_original_tests_not_rerun":True,
+           "special_effect_proc_gate":False,
+           "non_mage_real_native_pass_claimed":False,
+           "product_main_promoted":False}
+          source={
+            "runner/v065_original_scheduler_native_bridge.py":"1424ac563acdb78cd1ac38fd1a804c68b88d3f3b",
+            "runner/v067_generic_adaptive_native_route.py":"b8a959c53772e1c4548e20a7556331143cbb7300",
+            "tests/test_v067_generic_adaptive_native_route.py":"7aadd1e5885dfa10381659ff220d36942450542a",
+            "runner/v066_profile_neutral_preflight.py":"e55a87c6b13bfa64b96399c5d09072ecd3b321c7"}
+          for name,sha in source.items():
+            assert subprocess.check_output(["git","hash-object",name],text=True).strip()==sha,name
+          print("V067_FROZEN_SOURCE_REQUEST_PASS")
+          PY
+      - name: Full current-code tests (not historical v015-v016 tests)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Retrieve v063 two real Native JSON2 numeric witnesses
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v063-official-GJF-two-40165729165
+          path: .v063
+          run-id: 40165729165
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Retrieve actual v065 four Native adaptive cases and receipts
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v065-original-adaptive-two-scout-two-confirm-40171473855
+          path: .v065
+          run-id: 40171473855
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Generate representative user-input files from the actual prior Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .v067input out
+          cp -a .v065/out/. out/
+          python3 - <<'PY'
+          import sys,json,pathlib,hashlib
+          sys.path.insert(0,"runner")
+          import v063_official_T_two_native as old
+          import v065_original_scheduler_native_bridge as previous
+          import v046_static_item_cache as static
+          src=pathlib.Path(".v063/out")
+          c,b,cal,profile,obs=previous.integration_plan(src)
+          _,filler=old.scenario_for_bounded_reference(profile)
+          doc=json.loads((src/"case_00/result.json").read_text())
+          v=static.empty_cache()
+          static.merge_native(v,static.native_records(json.dumps(doc,sort_keys=True).encode(),
+                             artifact_id="V067_REPLAY_EXISTING_V063_NATIVE"))
+          out=pathlib.Path(".v067input")
+          for filename,obj in (("scenario.json",c["scenario"]),
+                               ("filler.json",filler),
+                               ("static_cache.json",v)):
+            (out/filename).write_text(json.dumps(obj,indent=2)+"\n")
+          (out/"reference.simc").write_text(profile)
+          baseline={}
+          for name in ("scout_00","scout_01","confirm_00","confirm_01"):
+            srcpath=pathlib.Path("out")/name/"result.json"
+            baseline[name]=hashlib.sha256(srcpath.read_bytes()).hexdigest()
+          (out/"original_native_hashes.json").write_text(json.dumps(baseline,indent=2)+"\n")
+          assert b["G_if_complete"]==2849 and b["budget"]["T_official"]==3152
+          print("V067_ARCHIVED_REAL_NATIVE_INPUTS_PREPARED")
+          PY
+      - name: Obtain exactly pinned SimC executable for SHA-only check
+        uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-40153209773
+          path: .simc
+          run-id: 40153209773
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Resume same adaptive scheduler from v065 four real Native cases WITHOUT running SimC
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc/simc' | sha256sum -c
+          chmod +x .simc/simc
+          python3 runner/v067_generic_adaptive_native_route.py \
+            --scenario .v067input/scenario.json \
+            --filler .v067input/filler.json \
+            --static-cache .v067input/static_cache.json \
+            --profile .v067input/reference.simc \
+            --witness-root .v063/out \
+            --binary-sha256 64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e \
+            --binary "$GITHUB_WORKSPACE/.simc/simc" \
+            --cache-only \
+            --output "$GITHUB_WORKSPACE/out"
+          python3 - <<'PY'
+          import json,pathlib,hashlib
+          p=pathlib.Path("out")
+          report=json.loads((p/"V065_RECEIPT.json").read_text())
+          prep=json.loads((p/"V067_PROFILE_PREFLIGHT.json").read_text())
+          assert report["status"]=="PASS_BOUNDED_ADAPTIVE_SCOUT_AND_FRESH_CONFIRM",report
+          assert report["native_attempts"]==4
+          assert report["prior_attempts_recovered"]==4
+          assert len(report["scouts"])==2 and len(report["confirmations"])==2
+          assert all(s["result"]["source"]=="CACHED_VERIFIED_NATIVE" for s in report["scouts"])
+          assert all(c["source"]=="CACHED_VERIFIED_NATIVE" for c in report["confirmations"])
+          assert prep["status"]=="READY_NUMERIC_PROFILE_SCOPED"
+          assert prep["G_native"]==2849 and prep["T_official"]==3152
+          before=json.loads(pathlib.Path(".v067input/original_native_hashes.json").read_text())
+          for name,oldhash in before.items():
+            assert hashlib.sha256((p/name/"result.json").read_bytes()).hexdigest()==oldhash
+          out={"schema":"v067_real_native_cache_only_integration_v1",
+            "status":"PASS_EXACT_V065_ADAPTIVE_CACHE_REPLAY",
+            "new_native_calls":0,"prior_attempt_count":report["native_attempts"],
+            "observed_real_native_reused":6,"real_other_class_tested":False,
+            "main_product_integrated":False,
+            "selected_original_native_hashes_unchanged":True,
+            "original_policy":"v015 adapted into v065 existing scheduler",
+            "official_T":prep["T_official"]}
+          (p/"V067_REPLAY_RECEIPT.json").write_text(json.dumps(out,indent=2)+"\n")
+          print("V067_GENERIC_ROUTE_EXISTING_V065_NATIVE_4_CACHED_PASS")
+          PY
+      - name: Archive only bounded receipt and scenario preflight, not personal profiles
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v067-generic-route-zero-native-${{ github.run_id }}
+          path: |
+            out/V067_PROFILE_PREFLIGHT.json
+            out/V067_REPLAY_RECEIPT.json
+            out/V065_RECEIPT.json
+          retention-days: 14
+          if-no-files-found: warn
