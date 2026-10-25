@@ -1,0 +1,14 @@
+{
+  "schema": "v045_simc_first_oil_floor_request_v1",
+  "authorization": "ONE_PINNED_334_CANDIDATE_WITH_V038_OIL_FLOORS",
+  "source_artifact_run": 40120755711,
+  "max_native_calls": 1,
+  "target_T_diagnostic": 3185,
+  "official_v1_T_observation": 3153,
+  "oil_floor_crit": 16,
+  "oil_floor_haste": 16,
+  "product_code_integrated": false,
+  "official_policy_promoted": false,
+  "real_game_catalyst_bonus_attested": false,
+  "dps_comparison_allowed": false
+}
