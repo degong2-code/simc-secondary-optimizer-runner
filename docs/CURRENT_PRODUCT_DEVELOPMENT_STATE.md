@@ -1,5 +1,9 @@
 # SIMC SECONDARY OPTIMIZER — CURRENT DEVELOPMENT STATE (지속 갱신)
 
+> **2026-10-25 최신 개발 갱신 v063 (P3 Native):** 공식 v1.2 `T=G+J+F`를 사용한 334 Arcane Mage 단일 프로필의 2후보 **실제 SimC 주입 및 DPS 수집 PASS** — [Actions 40165729165](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40165729165), 전체 회귀 **304 PASS / 2 SKIP**, Native 신규 실행 2회. 기존 v059 Native 2후보의 정적 수치 차이로 net gear→JSON2 offset `(0,+165,0,0)`를 같은 프로필에서만 보정했고, 공식 총량 **G2849+J138+F165=T3152**, 무기 기름 `(16,16,0,0)`은 **T 외부**다. 후보 A 600/1108/1115/329 (DPS 192374.47±SEM951.01), 후보 B 750/958/1115/329 (DPS 192109.86±SEM1300.02) 모두 최종 rating 정확히 일치, 통계적 우열 미확정. **9개 gem/enchant 포함 gear 레코드의 정적 수치 출처 완전 분해는 미입증**; 이를 모든 전문화 예산 중복 가산 제거 완료로 승격하지 않는다. 원본 v015~v016 제품 통합도 미완료. [상세 실측·미완료사항](./V063_OFFICIAL_GJF_NATIVE_NUMERIC_RECONCILIATION.md). 다음 작업은 **범용 프로필별 숫자 주입 오프셋 및 실제 제품 적응형 엔진 연결**. 개발은 이 채팅에서 계속.
+
+
+
 > **2026-10-25 최신 개발 갱신 v062:** 사용자는 Project Source v1.2 및 Project Instructions 적용을 완료했다고 보고했다(프로젝트 UI 직접 대조는 별개). **개발은 이 채팅에서 계속한다.** 격리 제품 시험은 [v061 입력 계약 PASS 40162193520](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40162193520) **277 PASS / 2 SKIP**(초기 FAIL 40162112120 보존), [v062 정적 예산 컴파일 PASS 40162455726](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40162455726) **291 PASS / 2 SKIP**. 기존 v059 Native JSON2 증분 재사용으로 334 Mage exact 정적 G=2849, Native cache 1759→1760 (0 신규 SimC 호출·기존 값 교정 0). 공식 v1.2 기본 T=G+J+F=3152 산술 예시이며 v059 기름 포함 실험 T=3184와 구분. **P3 최종 numeric rating 주입 정합/원본 v015–v016 통합은 아직 미완료**. 상세: [V062_SCENARIO_AND_G_L_BUDGET_ACCEPTANCE.md](./V062_SCENARIO_AND_G_L_BUDGET_ACCEPTANCE.md).
 
 
