@@ -1,0 +1,106 @@
+name: v085 Shaman Historical Native Static CHMV Zero-Call Replay
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/v085_shaman_historical_static_once.json
+      - integration_probes/requests/v085_shaman_historical_static_retry.json
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v085-shaman-native-historical-static
+  cancel-in-progress: false
+jobs:
+  shaman-static-historical:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Exact request, code SHA and zero-new-Native guard
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          opts=["integration_probes/requests/v085_shaman_historical_static_once.json",
+                "integration_probes/requests/v085_shaman_historical_static_retry.json"]
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert len(changed)==1 and changed[0] in opts,changed
+          expect={
+             "schema":"v085_shaman_five_historical_native_static_c_replay_v1",
+             "original_first_run":40198642691,
+             "original_official_and_scout_run":40199040044,
+             "actual_original_native_cases_required":5,
+             "full_input_and_json2_sha_verified":True,
+             "original_profile_F_declared":{"crit_rating":165,"haste_rating":0,"mastery_rating":0,"versatility_rating":0},
+             "new_native_calls":0,
+             "legacy_source_receipts_immutable":True,
+             "must_pass_new_v066_static_preflight":True,
+             "must_match_original_v015_static_scout":True,
+             "no_item_effect_talent_proc_gate":True,
+             "official_budget":"T=G+J+F",
+             "no_global_optimum_claim":True}
+          assert json.loads(pathlib.Path(changed[0]).read_text())==expect
+          for path,ref in {
+            "runner/v085_shaman_real_static_replay.py":"869069fb5e01fc690264af5763483ad1f7289da9",
+            "tests/test_v085_shaman_real_static_replay.py":"c34623fd739f25fcd2bd6cf41de7e034ba3a91f9"}.items():
+            got=subprocess.check_output(["git","hash-object",path],text=True).strip()
+            assert got==ref,(path,got,ref)
+          print("V085_REAL_NATIVE_READ_ONLY_REQUEST_PASS")
+          PY
+      - name: Full regression including old legacy and new static input contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Retrieve the 2 original real first-use Shaman Native witnesses
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v078-real-elemental-two-native-40198642691
+          run-id: 40198642691
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+          path: .old_first
+      - name: Retrieve the 3 original real Shaman official and adaptive Native receipts
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v078b-real-elemental-generic-40199040044
+          run-id: 40199040044
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: GITHUB_TOKEN_REPLACE
+          path: .old_official
+      - name: Revalidate all five original Native SHA and static-c under current v066
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v085_shaman_real_static_replay.py --prior-first .old_first/native --prior-official .old_official/native --out out/replay
+          python3 - <<'PY'
+          import json,math
+          r=json.load(open("out/replay/V085_RECEIPT.json"))
+          assert r["status"]=="PASS_THREE_REAL_SHAMAN_STATIC_C_CASES_ZERO_NEW_NATIVE",r
+          assert r["new_native_this_invocation"]==0
+          assert r["total_exact_historical_native_reused"]==5
+          assert r["G"]==2645 and r["J"]==138 and r["F"]==165 and r["T"]==2948
+          assert r["v066_static_preflight"]=="READY_STATIC_CHMV_PROFILE_SCOPED"
+          assert r["v015_derived_static_scout_replay"]
+          assert len(r["replayed_static_official"])==2
+          for row in r["replayed_static_official"]+[r["replayed_static_scout"]]:
+              assert row["target_static_c"]==row["verified_static_c"]
+              assert sum(row["target_static_c"].values())==2948
+              assert row["dps_samples"]>=20 and row["dps_mean"]>0
+              assert math.isfinite(row["dps_sem"])
+          print("V085_SHA_LOCKED_FIVE_REAL_NATIVE_STATIC_C_MIGRATION_PASS",json.dumps(r,sort_keys=True))
+          PY
+      - name: Preserve proof with no new Native data
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v085-shaman-static-readonly-${{ github.run_id }}
+          path: out/
+          if-no-files-found: warn
+          retention-days: 14
