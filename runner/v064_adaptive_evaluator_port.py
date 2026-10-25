@@ -158,6 +158,48 @@ def make_request(normalized,budget,calibration,reference,binary_sha,
        "profile_binding":binding,
        "global_optimum_proven":False,"item_effects_owned_by":"SimC"}
 
+def make_static_chmv_request(normalized,budget,reference,binary_sha,
+                             native_revision,target,flask_vector,
+                             iterations,output_json2_path):
+    """Distinct real-Native static c target, never conflated with buffed_stats."""
+    numerical.check_target(normalized,budget,target)
+    scenario.vector(flask_vector,"FLASK_F_STATIC_COMPONENT")
+    need(sum(flask_vector.values())==normalized["budget"]["F"],
+         "DECLARED_STATIC_FLASK_VECTOR_SUM_NOT_F")
+    need(type(native_revision) is str and len(native_revision)>=7,
+         "NATIVE_REVISION_MISSING")
+    need(type(iterations) is int and
+         normalized["scenario"]["runtime"]["scout_iterations"]<=iterations<=
+         normalized["scenario"]["runtime"]["confirm_iterations"],
+         "ITERATION_OUTSIDE_SCENARIO_POLICY")
+    binding=verify_profile_binding(normalized,budget,reference)
+    generated=numerical.render_static_chmv_candidate(
+        reference,target,flask_vector,output_json2_path,iterations)
+    identity=cache.digest({"schema":SCHEMA,"rating_semantics":"STATIC_CHMV_C_V1",
+        "scenario":normalized["scenario_digest"],
+        "target":target,"static_flask_F_vector":flask_vector,
+        "static_gear_plus_gems_rating":generated["raw_gear_override"],
+        "simc_binary_sha256":binary_sha,
+        "native_revision":native_revision,
+        "stable_profile_sha256":generated["stable_profile_sha256"],
+        "iterations":iterations,
+        "threads":normalized["scenario"]["runtime"]["threads"]})
+    return {"schema":SCHEMA,"status":"PROPOSED_STATIC_C_NO_NATIVE",
+        "rating_semantics":"STATIC_CHMV_C_V1",
+        "case_key":identity,"target":dict(target),"iterations":iterations,
+        "input":generated["input"],"input_sha256":generated["input_sha256"],
+        "raw_gear_override":generated["raw_gear_override"],
+        "static_flask_F_vector":dict(flask_vector),
+        "simc_binary_sha256":binary_sha,
+        "native_revision":native_revision,
+        "scenario_digest":normalized["scenario_digest"],
+        "profile_stable_sha256":generated["stable_profile_sha256"],
+        "json2_location":str(pathlib.Path(output_json2_path).resolve()),
+        "official_total":budget["budget"]["T_official"],
+        "profile_binding":binding,
+        "buffed_rating_exact_target_required":False,
+        "global_optimum_proven":False}
+
 def ingest_native(request,native_doc,calibration,raw_native_bytes=None):
     """Accept an actual JSON2 report; no separate proc-fidelity check."""
     need(request.get("schema")==SCHEMA,"PORT_REQUEST_SCHEMA")
@@ -165,6 +207,31 @@ def ingest_native(request,native_doc,calibration,raw_native_bytes=None):
         need(type(raw_native_bytes) is bytes,"RAW_NATIVE_JSON_BYTES")
         need(json.loads(raw_native_bytes)==native_doc,
              "NATIVE_BYTES_AND_PARSED_JSON_DIFFER")
+    if request.get("rating_semantics")=="STATIC_CHMV_C_V1":
+        output=numerical.validate_static_native(native_doc,{
+          "raw_gear_override":request["raw_gear_override"],
+          "flask_component_in_T":request["static_flask_F_vector"],
+          "expected_static_rating":request["target"]},
+          request["native_revision"])
+        return {"schema":SCHEMA,"status":"PASS_NATIVE_DPS_AND_STATIC_CHMV_INPUT",
+          "rating_semantics":"STATIC_CHMV_C_V1",
+          "case_key":request["case_key"],"target":request["target"],
+          "iterations":request["iterations"],
+          "input_sha256":request["input_sha256"],
+          "simc_binary_sha256":request["simc_binary_sha256"],
+          "scenario_digest":request["scenario_digest"],
+          "native_json_sha256":hashlib.sha256(
+              raw_native_bytes if raw_native_bytes is not None
+              else cache.canonical(native_doc).encode("utf8")).hexdigest(),
+          "native_revision":output["native_revision"],
+          "static_rating_verified":output["verified_static_CHMV_c"],
+          "rating_actual":output["actual_buffed_stats_rating"],
+          "flask_F_component":output["flask_F_component"],
+          "raw_gear_override":output["raw_gear_override"],
+          "dps_mean":output["dps_mean"],"dps_sem":output["dps_sem"],
+          "dps_samples":output["dps_samples"],
+          "no_talent_adjustment_in_injected_static_CHMV":True,
+          "item_effects_owned_by":"SimC"}
     rendered={"expected_json2_rating":request["target"],
               "raw_gear_override":request["raw_gear_override"]}
     result=numerical.validate_native(native_doc,rendered,calibration)
@@ -187,7 +254,9 @@ def ingest_native(request,native_doc,calibration,raw_native_bytes=None):
 
 def verify_disk_cache(request,calibration,receipt,raw_native_bytes):
     need(type(receipt) is dict and
-         receipt.get("status")=="PASS_NATIVE_DPS_AND_RATING",
+         receipt.get("status")==("PASS_NATIVE_DPS_AND_STATIC_CHMV_INPUT"
+             if request.get("rating_semantics")=="STATIC_CHMV_C_V1"
+             else "PASS_NATIVE_DPS_AND_RATING"),
          "CACHE_RECEIPT_NOT_SUCCESS")
     for key in ("case_key","target","iterations","input_sha256",
                 "simc_binary_sha256","scenario_digest"):
