@@ -1,0 +1,141 @@
+name: v046 Light Static Item Cache
+
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - integration_probes/requests/v046_static_cache_once.json
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: v046-light-cache
+  cancel-in-progress: false
+
+jobs:
+  seed-offline-cache:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout isolated code
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Check request and exact code identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p cache-output
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          assert os.environ['GITHUB_EVENT_NAME']=='push'
+          assert os.environ['GITHUB_REF']=='refs/heads/probe/chat-cache-v035-20261024'
+          diff=subprocess.check_output(['git','diff-tree','--no-commit-id','--name-only','-r',os.environ['GITHUB_SHA']],text=True).splitlines()
+          assert diff==['integration_probes/requests/v046_static_cache_once.json'],'UNAPPROVED_DIFF'
+          req=json.loads(pathlib.Path(diff[0]).read_text())
+          assert req=={
+            'schema':'v046_one_shot_static_cache_build_v1',
+            'authorization':'OFFLINE_CACHE_SEED_FROM_PINNED_V045_ONLY',
+            'native_simc_calls_max':0,
+            'v045_artifact_run_id':40149421659,
+            'catalog_patch_delta_count':10,
+            'simc_version_is_not_static_cache_key':True,
+            'manual_correction_only':True,
+            'product_code_integrated':False,
+            'official_policy_promoted':False
+          },'UNAUTHORIZED_REQUEST'
+          for p,sha in {
+            'runner/v046_static_item_cache.py':'1a4e52a036c870385e07c74baddafdcc1ebdd16f',
+            'tests/test_v046_static_item_cache.py':'bf8147b2ee43f3c729d441d8beb980e13326931c',
+            'integration_probes/catalog/v046_mids2_1215_partial_10.json':'c8c8deb46214749cc5a20bfa736350519bb49463'
+          }.items():
+            assert subprocess.check_output(['git','hash-object',p],text=True).strip()==sha,'CODE_OR_CATALOG_DRIFT:'+p
+          pathlib.Path('cache-output/V046_GATE.json').write_text(json.dumps({
+            'status':'PASS_GATED_OFFLINE_ONLY',
+            'run_id':int(os.environ['GITHUB_RUN_ID']),
+            'head_sha':os.environ['GITHUB_SHA'],
+            'native_simc_calls':0,
+            'product_code_integrated':False,
+            'official_policy_promoted':False},indent=2)+'\n')
+          print('V046_GATE_PASS')
+          PY
+      - name: Offline regression including cache invariants
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+          echo V046_OFFLINE_TESTS_PASS
+      - name: Download pinned v045 Native archive contents
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v045-native-40149421659
+          path: .v045-evidence
+          run-id: 40149421659
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Seed ten source-qualified catalog identities and 15 Native variants
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,pathlib
+          src=pathlib.Path('.v045-evidence/native/result.json')
+          assert src.is_file(),'V045_NATIVE_MISSING'
+          assert hashlib.sha256(src.read_bytes()).hexdigest()=='6ce1b02ae56667d023e4e049ad978c64bd52d8094c5795e542c532399eaf79c4','V045_NATIVE_DIGEST_DRIFT'
+          receipt=json.loads(pathlib.Path('.v045-evidence/native/V045_RECEIPT.json').read_text())
+          assert receipt['status']=='PASS_ONE_BOUNDED_NATIVE_OIL_FLOOR_NOT_POLICY'
+          assert receipt['native_calls_attempted']==1
+          print('V045_NATIVE_SOURCE_VERIFIED')
+          PY
+          CACHE=cache-output/midnight_s2_static_cache_v046.json
+          python3 runner/v046_static_item_cache.py --cache "$CACHE" import-catalog \
+            --input integration_probes/catalog/v046_mids2_1215_partial_10.json
+          python3 runner/v046_static_item_cache.py --cache "$CACHE" import-native \
+            --input .v045-evidence/native/result.json --artifact-id 12582147104
+          sha256sum "$CACHE" > cache-output/V046_INITIAL_SHA256.txt
+          python3 runner/v046_static_item_cache.py --cache "$CACHE" import-native \
+            --input .v045-evidence/native/result.json --artifact-id 12582147104
+          sha256sum -c cache-output/V046_INITIAL_SHA256.txt
+          python3 - <<'PY'
+          import json,pathlib
+          p=pathlib.Path('cache-output/midnight_s2_static_cache_v046.json')
+          c=json.loads(p.read_text())
+          assert c['schema']=='simc_static_item_cache_v046'
+          assert c['season']=='midnight_s2'
+          assert len(c['catalog'])==10
+          assert len(c['variants'])==15
+          assert len(c['correction_history'])==0
+          assert any(v['identity']['item_id']==271564 and
+              v['identity']['options'].get('redirected_base_stats')=='271874'
+              for v in c['variants'].values())
+          assert any(v['identity']['slot']=='trinket' for v in c['variants'].values())
+          report={
+            'schema':'v046_independent_seed_acceptance_v1',
+            'status':'PASS_10_CATALOG_15_NATIVE_STATIC_VARIANTS',
+            'catalog_items_with_NO_native_stats':10,
+            'native_static_variants_from_pinned_v045':15,
+            'simc_revision_only_provenance':True,
+            'automatic_simc_version_cache_invalidation':False,
+            'automatic_stat_overwrite':False,
+            'unverified_armor_families_and_other_ilevels_remain':True,
+            'complete_382_item_source_db_imported':False,
+            'native_simc_calls':0,
+            'product_code_integrated':False,
+            'official_policy_promoted':False
+          }
+          pathlib.Path('cache-output/V046_RECEIPT.json').write_text(json.dumps(report,indent=2)+'\n')
+          print('V046_STATIC_CACHE_SEED_PASS')
+          PY
+      - name: Upload lightweight portable cache and receipt
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v046-static-cache-${{ github.run_id }}
+          path: cache-output/
+          retention-days: 14
+          if-no-files-found: warn
