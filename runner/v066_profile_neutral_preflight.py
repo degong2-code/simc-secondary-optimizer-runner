@@ -53,7 +53,8 @@ def load_witnesses(root):
                       "raw_native_json":raw_json})
     return found
 
-def prepare(request,fillers,static_records,reference,witnesses,binary_sha):
+def prepare(request,fillers,static_records,reference,witnesses,binary_sha,
+            calibration_override=None):
     """Return reusable context and small serializable receipt.
 
     A Native witness is genuine only with supplied provenance; this validates
@@ -79,9 +80,20 @@ def prepare(request,fillers,static_records,reference,witnesses,binary_sha):
     need(type(witnesses) is list and len(witnesses)==2,
          "TWO_PROFILE_SCOPED_NATIVE_WITNESSES_REQUIRED")
     part=numeric.input_parts(reference)
-    cal=numeric.calibrate(witnesses)
+    cal=(numeric.calibrate(witnesses) if calibration_override is None
+         else calibration_override)
+    need(cal.get("schema")==numeric.SCHEMA and
+         cal.get("status") in (
+           "TWO_NATIVE_NUMERIC_OFFSET_WITNESSES_AGREE",
+           "EMPIRICAL_PER_PROFILE_NUMERIC_AFFINE_WITNESSES"),
+         "NATIVE_NUMERIC_CALIBRATION_CONTRACT")
     need(part["stable_sha256"]==cal["stable_profile_sha256"],
          "NATIVE_NUMERIC_WITNESSES_FOR_OTHER_PROFILE")
+    if calibration_override is not None:
+        need(cal.get("status")==
+             "EMPIRICAL_PER_PROFILE_NUMERIC_AFFINE_WITNESSES" and
+             cal.get("witnesses",0)>=3,
+             "AFFINE_OVERRIDE_REQUIRES_THREE_NATIVE_WITNESSES")
     bound=port.verify_profile_binding(normalized,static,reference)
     observations=[]
     for idx,ev in enumerate(witnesses):
