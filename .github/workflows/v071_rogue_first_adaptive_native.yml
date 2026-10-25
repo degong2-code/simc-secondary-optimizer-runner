@@ -2,7 +2,9 @@ name: v071 Rogue First Adaptive Official GJF Scout
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
-    paths: [integration_probes/requests/v071_rogue_adaptive_once.json]
+    paths:
+      - integration_probes/requests/v071_rogue_adaptive_once.json
+      - integration_probes/requests/v071_rogue_adaptive_retry_once.json
 permissions:
   contents: read
   actions: read
@@ -25,7 +27,7 @@ jobs:
           python3 - <<'PY'
           import pathlib,json,os,subprocess
           changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
-          assert changed==["integration_probes/requests/v071_rogue_adaptive_once.json"]
+          assert changed==["integration_probes/requests/v071_rogue_adaptive_retry_once.json"]
           request=json.loads(pathlib.Path(changed[0]).read_text())
           assert request=={
             "schema":"v071_single_rogue_real_adaptive_native_request_v1",
@@ -41,7 +43,7 @@ jobs:
             "global_optimum_claimed":False}
           for path,sha in {
             "runner/v071_rogue_adaptive_first_scout.py":"a8a48fe0f4df6203b0f1d34f3409f7c22ba75ded",
-            "tests/test_v071_rogue_adaptive_first_scout.py":"32ef0102ec393306844fc7a5aeaf1a410c396f90"
+            "tests/test_v071_rogue_adaptive_first_scout.py":"3b1ee5c1135fb2b8985d6064c40cf8be0d6248e5"
           }.items():
             assert subprocess.check_output(["git","hash-object",path],text=True).strip()==sha,path
           print("V071_EXACT_ONE_NATIVE_AND_PROFILE_POLICY_PASS")
