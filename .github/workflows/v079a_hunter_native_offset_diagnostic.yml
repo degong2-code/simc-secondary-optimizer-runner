@@ -1,0 +1,60 @@
+name: v079A Offline Native Offset Difference Diagnosis
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [integration_probes/requests/v079a_hunter_offset_diagnostic.json]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  offline-numeric:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: simc-v079-hunter-ranged-native-40199924239
+          run-id: 40199924239
+          path: .v079failed
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Authenticate real JSON2 and explain numeric differences (ZERO Native)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,pathlib,sys
+          sys.path.insert(0,"runner")
+          import v063_numeric_injection as numeric
+          import v046_static_item_cache as cache
+          import v079_hunter_ranged_generic_native as hunter
+          expected=[0,1]
+          found=[]
+          for i in expected:
+              d=pathlib.Path(f".v079failed/native/raw/case_{i:02d}")
+              source=(d/"input.simc").read_bytes()
+              native=(d/"result.json").read_bytes()
+              receipt=json.loads((d/"native_receipt.json").read_text())
+              assert hashlib.sha256(source).hexdigest()==receipt["input_sha256"]
+              assert hashlib.sha256(native).hexdigest()==receipt["native_json_sha256"]
+              observed=numeric.from_native(source.decode(),json.loads(native))
+              found.append(observed)
+              print("V079A_ORIGINAL_REAL_NATIVE",i,
+                 json.dumps({"input":observed["source"]["gear_override"],
+                    "final":observed["final_native"],"offset":observed["offset"],
+                    "revision":observed["native_revision"],
+                    "input_sha":receipt["input_sha256"],
+                    "json_sha":receipt["native_json_sha256"]},sort_keys=True))
+          print("V079A_IDENTICAL_STABLE_PROFILE",found[0]["source"]["stable_sha256"]==found[1]["source"]["stable_sha256"])
+          print("V079A_OFFSET_CHANGE",json.dumps({
+             k:[found[0]["offset"][k],found[1]["offset"][k]]
+             for k in cache.STATS if found[0]["offset"][k]!=found[1]["offset"][k]
+          },sort_keys=True))
+          assert found[0]["source"]["stable_sha256"]==found[1]["source"]["stable_sha256"]
+          assert found[0]["offset"]!=found[1]["offset"]
+          assert found[0]["native_revision"]==found[1]["native_revision"]
+          print("V079A_GENUINE_NONCONSTANT_NUMERIC_OFFSET_FAILCLOSED_CONFIRMED")
+          PY
