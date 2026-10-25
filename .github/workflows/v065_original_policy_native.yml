@@ -1,0 +1,146 @@
+name: v065 Original v015 Policy to v064 Native Adaptive
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [integration_probes/requests/v065_original_adaptive_once.json]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v065-original-policy-adaptive
+  cancel-in-progress: false
+jobs:
+  original-scheduler-adapter:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Verify exact bounded source and request
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          assert os.environ["GITHUB_REF"]=="refs/heads/probe/chat-cache-v035-20261024"
+          assert os.environ["GITHUB_EVENT_NAME"]=="push"
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==["integration_probes/requests/v065_original_adaptive_once.json"],changed
+          request=json.loads(pathlib.Path(changed[0]).read_text())
+          assert request=={"schema":"v065_authentic_v015_policy_adapter_native_v1",
+            "original_v015_sha256":"a44f73cf232c8204dbe958e79fe50f111e68654ac583a1170a283f16035c0ec3",
+            "original_v016_sha256":"7c49d7ca095e8864b673715d70d9851d676b44aeed99f8d769419492fcd14712",
+            "historical_v015_pass":"71_OF_71_RECORDED_NOT_RERUN",
+            "historical_v016_pass":"104_OF_104_RECORDED_NOT_RERUN",
+            "previous_true_native_run":40165729165,
+            "new_native_max":4,
+            "scout_runs":2,"scout_iterations":60,
+            "fresh_confirm_runs":2,"fresh_confirm_iterations":320,
+            "official_budget":"T=G+J+F",
+            "direct_original_executable_replaced":False,
+            "independent_simc_item_effect_proc_gate":False,
+            "product_v015_v016_integrated_completely":False,
+            "main_branch_or_project_source_modified":False}
+          for n,expected in {
+            "runner/v065_v015_scheduler_adapter.py":"a9c2345290adab98ae6f9b2a98cccb1b2469631a",
+            "runner/v065_original_scheduler_native_bridge.py":"4c2b43731eead99a947e45b60f6dd0cd51e756dc",
+            "tests/test_v065_v015_scheduler_adapter.py":"560f56d5a6939d1d1342c4502dbbfdd03bdaa862",
+            "tests/test_v065_native_pipeline_safety.py":"3e5ebc3d96b3a6eee19f9f56500a52279fb74af2"
+          }.items():
+            actual=subprocess.check_output(["git","hash-object",n],text=True).strip()
+            assert actual==expected,(n,actual,expected)
+          print("V065_SOURCE_POLICY_AND_BUDGET_REQUEST_PASS")
+          PY
+      - name: Full current-product regressions; not historical v015-v016
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Get previous actual v063 two Native JSON2 results
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v063-official-GJF-two-40165729165
+          path: .previous_v063
+          run-id: 40165729165
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Offline sequential v015-derived candidate proposal from real previous Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v065_original_scheduler_native_bridge.py \
+            --previous-v063 "$GITHUB_WORKSPACE/.previous_v063/out" \
+            --output "$GITHUB_WORKSPACE/offline"
+          python3 - <<'PY'
+          import json
+          x=json.load(open("offline/V065_RECEIPT.json"))
+          assert x["status"]=="PASS_OFFLINE_SCOUT_PLAN_ONLY",x
+          assert x["native_attempts"]==0
+          assert x["prior_real_native_count"]==2
+          assert x["official_T"]==3152
+          assert x["G"]==2849 and x["J"]==138 and x["F"]==165
+          assert len(x["scouts"])==1 and sum(x["scouts"][0]["target"].values())==3152
+          assert x["scouts"][0]["decision"]["method"]=="V015_LOCAL_MIRROR_FOR_SCOUT_ORDER_ONLY"
+          print("V065_TWO_PRIOR_REAL_NATIVE_TO_NEXT_ADAPTIVE_PROPOSAL_PASS")
+          PY
+      - name: Get pinned Native SimC binary (same reference revision)
+        uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-40153209773
+          path: .simc
+          run-id: 40153209773
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Two sequential real scouts and two fresh SimC confirmations
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc/simc' | sha256sum -c
+          chmod +x .simc/simc
+          python3 runner/v065_original_scheduler_native_bridge.py \
+            --previous-v063 "$GITHUB_WORKSPACE/.previous_v063/out" \
+            --binary "$GITHUB_WORKSPACE/.simc/simc" \
+            --output "$GITHUB_WORKSPACE/out"
+          python3 - <<'PY'
+          import json
+          x=json.load(open("out/V065_RECEIPT.json"))
+          assert x["status"]=="PASS_BOUNDED_ADAPTIVE_SCOUT_AND_FRESH_CONFIRM",x
+          assert 0<=x["native_attempts"]<=4
+          assert len(x["scouts"])==2 and len(x["confirmations"])==2
+          assert all(s["status"]=="PASS_NATIVE" for s in x["scouts"])
+          assert all(sum(s["result"]["rating_actual"].values())==3152 for s in x["scouts"])
+          assert all(sum(c["rating_actual"].values())==3152 for c in x["confirmations"])
+          assert all(c["dps_mean"]>0 and c["dps_sem"]>=0 for c in x["confirmations"])
+          assert not x["fresh_confirmation_judgment"]["global_optimum_proven"]
+          assert not x["product_v015_v016_original_directly_merged"]
+          print("V065_ORIGINAL_ADAPTIVE_POLICY_REAL_NATIVE_2SCOUT_2CONFIRM_PASS")
+          PY
+      - name: Verify cached restart does not call Native again
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v065_original_scheduler_native_bridge.py \
+            --previous-v063 "$GITHUB_WORKSPACE/.previous_v063/out" \
+            --binary "$GITHUB_WORKSPACE/.simc/simc" \
+            --output "$GITHUB_WORKSPACE/out"
+          python3 - <<'PY'
+          import json
+          x=json.load(open("out/V065_RECEIPT.json"))
+          assert x["status"]=="PASS_BOUNDED_ADAPTIVE_SCOUT_AND_FRESH_CONFIRM",x
+          assert all(s["result"]["source"]=="CACHED_VERIFIED_NATIVE" for s in x["scouts"])
+          assert all(c["source"]=="CACHED_VERIFIED_NATIVE" for c in x["confirmations"])
+          print("V065_NATIVE_RESULT_RESTART_CACHE_VERIFIED")
+          PY
+      - name: Persist logs, Native JSON2, individual inputs and receipts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v065-original-adaptive-two-scout-two-confirm-${{ github.run_id }}
+          path: |
+            offline/
+            out/
+          retention-days: 14
+          if-no-files-found: warn
