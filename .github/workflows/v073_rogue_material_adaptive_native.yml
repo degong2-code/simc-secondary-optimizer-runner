@@ -1,0 +1,163 @@
+name: v073 Rogue Material Adaptive Native Two Scouts
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [integration_probes/requests/v073_rogue_material_scout_once.json]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v073-rogue-material-native
+  cancel-in-progress: false
+jobs:
+  material-native-scout:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Verify one request and source SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          p="integration_probes/requests/v073_rogue_material_scout_once.json"
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==[p],changed
+          x=json.loads(pathlib.Path(p).read_text())
+          assert x=={
+            "schema":"v073_rogue_material_two_adaptive_native_scout_request_v1",
+            "user_profile":"void_elf_rogue_subtlety_334_exact",
+            "prior_witness_run":40181981240,
+            "prior_official_run":40182313167,
+            "prior_adaptive_scout_run":40183940144,
+            "prior_high_iteration_run":40185708187,
+            "target_total":3150,
+            "official_budget_formula":"T=G+J+F",
+            "adaptive_engine":"v065_original_v015_policy_scheduler",
+            "material_distance_transfer":350,
+            "max_new_native_scouts":2,
+            "iterations_per_new_scout":60,
+            "new_high_precision_confirmations":0,
+            "cache_replay_required":True,
+            "no_equipment_or_proc_optimizer":True,
+            "original_v015_v016_unchanged":True,
+            "global_optimum_proven":False}
+          for f,s in {
+            "runner/v073_rogue_material_adaptive_scout.py":"40f5b303b8c68f98521e0d323a1a0385a39c0ceb",
+            "tests/test_v073_rogue_material_adaptive_scout.py":"4bf4cbc5c03fccfcfdc79f6889ed24f47f2cf6af"}.items():
+            actual=subprocess.check_output(["git","hash-object",f],text=True).strip()
+            assert actual==s,(f,actual)
+          print("V073_REQUEST_SOURCE_SHA_PASS")
+          PY
+      - name: Full current regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Recover pinned v069 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v069-user-rogue-real-GJF-one-native-40181981240
+          path: .v069
+          run-id: 40181981240
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Recover pinned v070 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v070-rogue-GJF-native-40182313167
+          path: .v070
+          run-id: 40182313167
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Recover pinned v071 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v071-rogue-one-adaptive-scout-40183940144
+          path: .v071
+          run-id: 40183940144
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Recover pinned v072 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v072-rogue-two-high-confirm-40185708187
+          path: .v072
+          run-id: 40185708187
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Recover pinned simc artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-40153209773
+          path: .simc
+          run-id: 40153209773
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Verify historic six cases and plan first material 350 transfer without Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v073_rogue_material_adaptive_scout.py --witness-root .v069/fresh-witness --prior-official .v070/official --prior-scout .v071/native --prior-native .v072/native --out out/offline
+          python3 - <<'PY'
+          import json
+          x=json.load(open("out/offline/V073_RECEIPT.json"))
+          assert x["status"]=="PASS_MATERIAL_DISTANCE_PLAN_READY_ZERO_NATIVE",x
+          assert x["historical_native_reused"]==6 and x["new_native_calls_this_invocation"]==0
+          assert (x["G"],x["J"],x["F"],x["T"])==(2847,138,165,3150)
+          assert x["first_scout_distance"]>=315
+          print("V073_PRIOR_SIX_HASH_PROVENANCE_AND_FIRST_MATERIAL_SCOUT_PASS",x["first_scout_target"])
+          PY
+      - name: Execute at most two 60-iteration material Rogue Native scouts
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc/simc' | sha256sum -c
+          chmod +x .simc/simc
+          python3 runner/v073_rogue_material_adaptive_scout.py --witness-root .v069/fresh-witness --prior-official .v070/official --prior-scout .v071/native --prior-native .v072/native --out "$GITHUB_WORKSPACE/out/native" --binary "$GITHUB_WORKSPACE/.simc/simc"
+          python3 - <<'PY'
+          import json,math
+          x=json.load(open("out/native/V073_RECEIPT.json"))
+          assert x["status"]=="PASS_TWO_MATERIAL_DISTANCE_ROGUE_NATIVE_SCOUTS",x
+          assert x["new_native_calls_this_invocation"]==2 and x["native_attempts_total_durable"]==2
+          assert len(x["scouts"])==2
+          for i,c in enumerate(x["scouts"]):
+            assert c["source"]=="NEW_NATIVE" and c["target"]==c["rating_actual"]
+            assert sum(c["target"].values())==3150
+            assert c["dps_samples"]>=40 and math.isfinite(c["dps_sem"])
+            print("V073_REAL_NATIVE_SCOUT",i,json.dumps(c,sort_keys=True))
+          for c in x["comparison"]["exploratory_results"]:
+            assert c["materially_different_by_rating"]
+            assert not c["statistically_proven_near_best_alternative"]
+          print("V073_ACTUAL_PAIR_EXPLORATION",json.dumps(x["comparison"],sort_keys=True))
+          print("V073_TWO_DISTINCT_NATIVE_JSON2_PASS")
+          PY
+          sha256sum out/native/scout_00/result.json out/native/scout_01/result.json > out/native/SCOUT_SHA256SUMS.txt
+      - name: SHA verified cache replay, no additional SimC
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v073_rogue_material_adaptive_scout.py --witness-root .v069/fresh-witness --prior-official .v070/official --prior-scout .v071/native --prior-native .v072/native --out "$GITHUB_WORKSPACE/out/native" --binary "$GITHUB_WORKSPACE/.simc/simc" --cache-only
+          sha256sum -c out/native/SCOUT_SHA256SUMS.txt
+          python3 - <<'PY'
+          import json
+          x=json.load(open("out/native/V073_RECEIPT.json"))
+          assert x["status"]=="PASS_TWO_MATERIAL_DISTANCE_ROGUE_NATIVE_SCOUTS",x
+          assert x["new_native_calls_this_invocation"]==0 and x["native_attempts_total_durable"]==2
+          assert x["all_cached_sha_verified"]
+          assert all(y["source"]=="CACHED_VERIFIED_NATIVE" for y in x["scouts"])
+          print("V073_TWO_VERIFIED_CACHE_HITS_ZERO_NEW_SIMC_PASS")
+          PY
+      - name: Preserve JSON2, full SimC inputs, stdout stderr, SHA, progress and receipts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v073-material-native-${{ github.run_id }}
+          path: out/
+          retention-days: 14
+          if-no-files-found: warn
