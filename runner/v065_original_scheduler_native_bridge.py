@@ -82,7 +82,7 @@ def integration_plan(previous):
         observations.append(obs)
     return normalized,measured_budget,calibrated,ref,observations
 
-def execute_one(req,calibration,binary,case_folder,progress,cancel_file=None):
+def execute_one(req,calibration,binary,case_folder,progress,cancel_file=None,cache_only=False):
     """Persist before Native call; resume only when receipt and bytes verify."""
     case_folder=pathlib.Path(case_folder)
     case_folder.mkdir(parents=True,exist_ok=True)
@@ -105,6 +105,8 @@ def execute_one(req,calibration,binary,case_folder,progress,cancel_file=None):
         validated["simc_seed"]=expected.get("simc_seed")
         validated["source"]="CACHED_VERIFIED_NATIVE"
         return validated
+    if cache_only:
+        raise PipelineBlocked("CACHE_ONLY_REFUSES_NEW_NATIVE")
     if cancel_file and pathlib.Path(cancel_file).exists():
         raise PipelineBlocked("USER_CANCEL_FILE_PRESENT")
     need(progress["native_attempts"]<NEW_NATIVE_MAX,"NATIVE_CALL_BUDGET_EXCEEDED")
@@ -129,7 +131,7 @@ def execute_one(req,calibration,binary,case_folder,progress,cancel_file=None):
     write_atomic(receipt_file,checked)
     return checked | {"source":"NEW_NATIVE"}
 
-def start(previous,out,binary=None,cancel_file=None,prepared=None):
+def start(previous,out,binary=None,cancel_file=None,prepared=None,cache_only=False):
     out=pathlib.Path(out);out.mkdir(parents=True,exist_ok=True)
     progress={"schema":RUN_SCHEMA,"status":"STARTING","native_attempts":0,
               "new_native_max":NEW_NATIVE_MAX,
@@ -219,7 +221,7 @@ def start(previous,out,binary=None,cancel_file=None,prepared=None):
                 progress["status"]="PASS_OFFLINE_SCOUT_PLAN_ONLY"
                 break
             observed=execute_one(proposal["case"],calibration,binary,folder,
-                                 progress,cancel_file)
+                                 progress,cancel_file,cache_only=cache_only)
             row.update({"status":"PASS_NATIVE","result":observed})
             progress["scouts"].append(row)
             state=scheduler.accept_scout(state,proposal["case"],observed)
@@ -233,7 +235,7 @@ def start(previous,out,binary=None,cancel_file=None,prepared=None):
             fresh={}
             for i,req in enumerate(pair["cases"]):
                 folder=out/("confirm_%02d"%i)
-                obs=execute_one(req,calibration,binary,folder,progress,cancel_file)
+                obs=execute_one(req,calibration,binary,folder,progress,cancel_file,cache_only=cache_only)
                 fresh[scheduler.key(obs["target"])]=obs
                 progress["confirmations"].append(obs)
                 write_atomic(out/"V065_PROGRESS.json",progress)
