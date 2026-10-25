@@ -1,0 +1,12 @@
+{
+  "schema": "v077_generic_first_use_readiness_only_v1",
+  "scope": "six_structural_DPS_archetypes_no_native_proof_yet",
+  "target": "profile_exact_item_variant_readiness_and_two_witness_inputs",
+  "new_native_calls": 0,
+  "no_fake_numeric_offset": true,
+  "no_full_equipment_database": true,
+  "no_item_proc_effect_gate": true,
+  "legacy_v015_v016_untouched": true,
+  "approved_project_source_unchanged": true,
+  "official_formula": "T=G+J+F"
+}
