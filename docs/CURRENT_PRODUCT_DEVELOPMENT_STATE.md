@@ -1,5 +1,8 @@
 # SIMC SECONDARY OPTIMIZER — CURRENT DEVELOPMENT STATE (지속 갱신)
 
+> **2026-10-25 사용자 승인 UX 추가(설계 기록, v068 구현/PASS 아님):** 장식은 **기본 2개 선택**, **장식 1/장식 2 효과를 사용자가 각각 선택**. 백엔드 최대 2개 한도 및 사용자 고급 설정의 0–1 가능성은 보존. **옴니움 장서 4번째 UI 열**은 치명·가속·특화·유연 중 **사용자 명시 1개 선택**. 고정된 해당 선택은 단일 CHMV 탐색의 시나리오와 SimC 입력/DPS 캐시 identity에 포함, 자동 5번째 분배변수나 공식 T=G+J+F 가산 항목으로 승격하지 않음. 옛 `omnium_talents` 문자열의 **4번째 토큰=4번째 UI 열이라고 가정하지 않으며** 네 선택의 정확한 SimC ID 매핑은 구현 전 확인. [사용자 승인 UX 결정 기록](./V068_USER_INPUT_UX_DECISIONS_20261025.md). 공식 Project Sources·Work OS·GitHub main 미변경, 기존 v067 Native PASS 상태 불변.
+
+
 > **2026-10-25 v067 최신 — 프로필 중립 입력 → 단일 기존 v065 적응형 실행기 연결 PASS:** `v066_profile_neutral_preflight.py`는 외부 v061 시나리오·정확한 비장신구 표준장비·v046 Native 정적 캐시·SimC 전체 프로필·해당 프로필의 실제 Native JSON2 두 수치 관측·SimC 바이너리 SHA를 받으며, **마법사 전용 상수 없이 T=G+J+F 및 G/L·오프셋·프로필/아이템 ID·버전 정합을 검사**. [v066 #40174975829](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40174975829) **355 PASS / 2 SKIP**, 신규 Native 0회. `v067_generic_adaptive_native_route.py`는 탐색기를 복제하지 않고 **동일 v065 스케줄러에 준비된 입력을 전달**. [v067 #40175621237](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40175621237) **362 PASS / 2 SKIP**, 과거 실제 v063 2건+v065 4건 재사용, `--cache-only`로 Native 추가 실행 **0회**, 기존 4개 실제 JSON2 바이트 불변 및 누적 4회 예산 유지. 첫 2회 v066 FAIL(테스트 반복설정·예외 예상 클래스)과 v067 첫 FAIL(구형 v065 영수증의 신설 scoped-binary-hash 필드 부재) 보존; 호환은 **4건 전부 SHA 확인되는 cache-only 모드**에 한해 허용. **다른 전문화는 아직 합성 스키마 테스트만 PASS**, 실제 SimC 장비·DPS Native 검증 아님. 자동 신규 프로필용 두 수치 증인 생성 및 전 전문화 연결, 유연한 반복 횟수는 다음 작업. 과거 v015 71/71·v016 104/104는 역사 기록 그대로. [상세 v067 검증](./V067_GENERIC_PREPARED_ADAPTIVE_ROUTE_ACCEPTANCE.md). GitHub main/Work OS/원본 불변, 이 채팅에서 개발 계속.
 
 
