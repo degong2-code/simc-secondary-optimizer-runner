@@ -1,0 +1,92 @@
+name: v064 Adaptive Evaluator Port Real Native Replay
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [integration_probes/requests/v064_adaptive_port_once.json]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v064-adaptive-port-real-native-replay
+  cancel-in-progress: false
+jobs:
+  bounded-zero-native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Verify bounded replay request and exact source bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          assert os.environ["GITHUB_EVENT_NAME"]=="push"
+          assert os.environ["GITHUB_REF"]=="refs/heads/probe/chat-cache-v035-20261024"
+          diff=subprocess.check_output(
+              ["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],
+              text=True).splitlines()
+          assert diff==["integration_probes/requests/v064_adaptive_port_once.json"],diff
+          req=json.loads(pathlib.Path(diff[0]).read_text())
+          assert req=={
+              "schema":"v064_adaptive_port_real_native_replay_v1",
+              "native_new_calls":0,
+              "reuse_proven_v063_native_run_id":40165729165,
+              "official_budget":"T=G+J+F",
+              "adapter_does_not_generate_next_candidate":True,
+              "no_proc_or_effect_independent_gate":True,
+              "main_product_v015_v016_integrated":False,
+              "official_project_source_changed":False}
+          source={
+              "runner/v064_adaptive_evaluator_port.py":"960287788186d09c0f59dfd56af4d4930fc85fd9",
+              "runner/v064_replay_v063_native.py":"b0925787def615f1f91c9907584a3303b8954619",
+              "tests/test_v064_adaptive_evaluator_port.py":"6ac9661286aa54fb98436b47446cea32698a89ea"}
+          for name,expected in source.items():
+              actual=subprocess.check_output(["git","hash-object",name],text=True).strip()
+              assert actual==expected,(name,actual)
+          print("V064_SOURCE_AND_REQUEST_GATE_PASS")
+          PY
+      - name: Full old and new offline regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Retrieve previously executed real Native JSON2 only
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v063-official-GJF-two-40165729165
+          path: .real_v063
+          run-id: 40165729165
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Integrate historical real Native observations via adaptive evaluation port
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v064_replay_v063_native.py \
+            --evidence "$GITHUB_WORKSPACE/.real_v063/out" \
+            --output "$GITHUB_WORKSPACE/out"
+          python3 - <<'PY'
+          import json
+          r=json.load(open("out/V064_REPLAY_RECEIPT.json"))
+          assert r["status"]=="PASS_OFFLINE_REAL_NATIVE_JSON2_REPLAY"
+          assert r["native_calls_new"]==0
+          assert r["G"]==2849 and r["official_T"]==3152
+          assert r["old_real_json2_consumed"]==2
+          assert all(c["dps_mean"]>0 for c in r["per_case"])
+          assert not r["original_product_v015_v016_merged"]
+          assert not r["external_scheduler_attached"]
+          print("V064_ADAPTIVE_EXTERNAL_PORT_REAL_NATIVE_REPLAY_PASS")
+          PY
+      - name: Upload result receipt and two case identities
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v064-adaptive-port-zero-native-${{ github.run_id }}
+          path: out/
+          if-no-files-found: warn
+          retention-days: 14
