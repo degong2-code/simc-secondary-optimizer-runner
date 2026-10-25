@@ -1,0 +1,11 @@
+{
+  "schema": "v058_lazy_missing_crafted_native_once_v1",
+  "selected_item_id": 239652,
+  "selected_item_level": 331,
+  "max_native_calls": 1,
+  "existing_cache_reuse": true,
+  "trinket_cache_miss_not_admission_gate": true,
+  "proc_calculation_delegated_to_simc": true,
+  "original_product_integrated": false,
+  "official_policy_promoted": false
+}
