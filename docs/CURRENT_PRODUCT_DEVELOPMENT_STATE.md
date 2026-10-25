@@ -1,5 +1,9 @@
 # SIMC SECONDARY OPTIMIZER — CURRENT DEVELOPMENT STATE (지속 갱신)
 
+> **2026-10-25 v071 최신 — 사용자 실제 잠행 도적 334 CHMV 적응형 첫 Native 탐색 PASS:** 신규 코드는 기존 [v068~v070 실제 Rogue 증인 2건·공식 GJF 후보 1건](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40182313167)을 **재사용**. `void_elf/subtlety`, 사용자 지정 특성, 장신구 270175/281215, 장식 hunter_ritual_stone/arcanoweave_lining, 특수장비 271093/271875, 옴니움 4열 mastery, 특수보석 B, Patchwerk 300초 원본 프로필 유지. 공식 총량 **G2847+J138+F165=T3150**, 고정 특수 L=(100치명,201가속,0,0), 정확한 프로필 Native 주입 오프셋=(165치명,0,0,0). 이전 공식 후보 (813/913/712/712) DPS **224891.73 ± SEM1006.01**(34 samples); **v015-derived 기존 v065 스케줄러가 신규 후보 (713/913/712/812) 자동 선택**, [v071 실제 Native #40183940144](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40183940144) **386 PASS/2 SKIP**, 새 SimC **1회**, 최종 rating 3150 정확, DPS **223167.25 ± SEM1185.81**(34 samples). 차 -1724.47 DPS, 근사 95% CI 반폭 3047.84로 **우열 미확정**, 전역 최적화 미달. 재호출은 실제 JSON2 SHA 확인된 캐시 HIT(추가 SimC 0). 초기 CI #40183866776의 합성 테스트용 가짜 바이너리 SHA 오비교 FAIL 보존(신규 Native 0). 장신구 static 0 단정 없음; 5개 gem/enchant 장비 레코드 attribution 미확정, 외부 기름 숫자 별도. **v068~v070 출처는 격리 브랜치 실측이며 별도 전 전문화 인증 아님.** 2후보 별도 고반복 재확인, 고정 T 범위 탐색, 근접 대안·UX는 미완료. [자세한 영수증](./V071_ROGUE_FIRST_ADAPTIVE_NATIVE_ACCEPTANCE.md). main/Work OS/Project Source/v015-v016 원본 불변.
+
+
+
 > **2026-10-25 사용자 승인 UX 추가(설계 기록, v068 구현/PASS 아님):** 장식은 **기본 2개 선택**, **장식 1/장식 2 효과를 사용자가 각각 선택**. 백엔드 최대 2개 한도 및 사용자 고급 설정의 0–1 가능성은 보존. **옴니움 장서 4번째 UI 열**은 치명·가속·특화·유연 중 **사용자 명시 1개 선택**. 고정된 해당 선택은 단일 CHMV 탐색의 시나리오와 SimC 입력/DPS 캐시 identity에 포함, 자동 5번째 분배변수나 공식 T=G+J+F 가산 항목으로 승격하지 않음. 옛 `omnium_talents` 문자열의 **4번째 토큰=4번째 UI 열이라고 가정하지 않으며** 네 선택의 정확한 SimC ID 매핑은 구현 전 확인. [사용자 승인 UX 결정 기록](./V068_USER_INPUT_UX_DECISIONS_20261025.md). 공식 Project Sources·Work OS·GitHub main 미변경, 기존 v067 Native PASS 상태 불변.
 
 
