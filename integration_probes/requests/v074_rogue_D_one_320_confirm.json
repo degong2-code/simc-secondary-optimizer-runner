@@ -1,0 +1,25 @@
+{
+  "schema": "v074_one_selected_D_heldout_320_native_request_v1",
+  "user_profile": "void_elf_rogue_subtlety_334_exact",
+  "prior_v069_run": 40181981240,
+  "prior_v070_run": 40182313167,
+  "prior_v071_run": 40183940144,
+  "prior_v072_run": 40185708187,
+  "prior_v073_run": 40186754387,
+  "official_total_T": 3150,
+  "official_budget_formula": "T=G+J+F",
+  "selected_D": [
+    1163,
+    913,
+    712,
+    362
+  ],
+  "candidate_selection_from": "v073_two_new_60_iteration_scouts",
+  "only_new_320_candidate": "D",
+  "reuse_v072_A_320_instead_of_rerunning": true,
+  "maximum_new_native_calls": 1,
+  "heldout_320_iterations": 320,
+  "cache_replay_required": true,
+  "zero_new_effect_gates": true,
+  "global_optimum_proven": false
+}
