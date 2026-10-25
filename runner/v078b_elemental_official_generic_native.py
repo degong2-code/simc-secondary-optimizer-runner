@@ -153,8 +153,8 @@ def run(parent,out,binary=None,cache_only=False):
             observed=[]
             for i,req in enumerate(requests):
                 folder=out/("official_%02d"%i)
-                cached=(folder/"result.json").exists() or
-                       (folder/"native_receipt.json").exists()
+                cached=((folder/"result.json").exists() or
+                        (folder/"native_receipt.json").exists())
                 if not cached:
                     need(not cache_only,"CACHE_ONLY_BLOCKS_NEW_NATIVE")
                     need(progress["native_attempts"]<2,
@@ -188,8 +188,8 @@ def run(parent,out,binary=None,cache_only=False):
             req=first_scout["case"]
             need(req["target"] not in cand,"GENERIC_SCHEDULER_REPEATED_TARGET")
             folder=out/"adaptive_00"
-            cached=(folder/"result.json").exists() or
-                   (folder/"native_receipt.json").exists()
+            cached=((folder/"result.json").exists() or
+                    (folder/"native_receipt.json").exists())
             if not cached:
                 need(not cache_only,"CACHE_ONLY_BLOCKS_NEW_ADAPTIVE")
                 need(progress["native_attempts"]<NATIVE_CAP,
@@ -218,7 +218,7 @@ def run(parent,out,binary=None,cache_only=False):
                      "dps_samples":new["dps_samples"],"source":new["source"],
                      "native_json_sha256":new["native_json_sha256"]},
               "v015_scheduler_hint":first_scout["decision"],
-              "four_targets_real_native_total":5,
+              "five_distinct_targets_real_native_total":5,
               "original_v015_v016_direct_product_integrated":False,
               "global_optimum_proven":False})
         else:
