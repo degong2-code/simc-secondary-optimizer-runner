@@ -1,0 +1,22 @@
+{
+  "schema": "v047_full_native_static_matrix_v1",
+  "authorization": "ALL_126_CANDIDATES_AT_14_PROPOSED_LEVELS",
+  "start_cursors": [
+    0,
+    200,
+    400,
+    600,
+    800,
+    1000,
+    1200,
+    1400,
+    1600
+  ],
+  "max_calls_per_batch": 200,
+  "total_possible_pairs": 1764,
+  "simc_version_does_not_invalidate_static_cache": true,
+  "no_new_combat_dps_optimization": true,
+  "no_wequip_runtime_dependency": true,
+  "product_code_integrated": false,
+  "official_policy_promoted": false
+}
