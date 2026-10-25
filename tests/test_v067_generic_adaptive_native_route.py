@@ -89,6 +89,18 @@ class GenericNativePipeline(unittest.TestCase):
             self.assertEqual(engine.start(None,d,prepared=mutated),3)
             failure=json.loads((pathlib.Path(d)/"V065_RECEIPT.json").read_text())
             self.assertIn("GENERIC_PREPARED_BINDING_MISMATCH",failure["error"])
+    def test_cache_only_cannot_execute_simc_even_with_binary_supplied(self):
+        cfg,fill,static,src,witnesses=fixture()
+        prepared=adapter.prepare(cfg,fill,static,src,witnesses,SIMC_SHA)
+        with tempfile.TemporaryDirectory() as d:
+            root=pathlib.Path(d)
+            case=adapter.propose_next(prepared,60,root/"result.json")
+            with self.assertRaisesRegex(engine.PipelineBlocked,
+                                         "CACHE_ONLY_REFUSES_NEW_NATIVE"):
+                engine.execute_one(case["case"],prepared["calibration"],
+                  ROOT/"runner"/"pilot.py",root,{"native_attempts":0},
+                  cache_only=True)
+            self.assertFalse((root/"input.simc").exists())
     def test_cross_class_simc_effects_remain_simc_owned(self):
         cfg,fill,static,src,witnesses=fixture("warrior","arms","attack")
         prepared=adapter.prepare(cfg,fill,static,src,witnesses,SIMC_SHA)
