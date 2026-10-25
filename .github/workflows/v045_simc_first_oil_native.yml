@@ -1,0 +1,121 @@
+name: v045 SimC-First Gear Budget and Oil Floor (Bounded)
+
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - integration_probes/requests/v045_oil_native_once.json
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: v045-one-native-oil-floor
+  cancel-in-progress: false
+
+jobs:
+  native-injection:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    env:
+      SIMC_BIN: .simc-cache/v035/simc
+    steps:
+      - name: Checkout isolated branch
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: One-request and pinned source identity gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p run-output
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          assert os.environ['GITHUB_EVENT_NAME']=='push'
+          assert os.environ['GITHUB_REF']=='refs/heads/probe/chat-cache-v035-20261024'
+          changed=subprocess.check_output(['git','diff-tree','--no-commit-id','--name-only','-r',os.environ['GITHUB_SHA']],text=True).splitlines()
+          assert changed==['integration_probes/requests/v045_oil_native_once.json'],'DIFF_SCOPE_CHANGED'
+          r=json.loads(pathlib.Path(changed[0]).read_text())
+          expected={'schema':'v045_simc_first_oil_floor_request_v1',
+            'authorization':'ONE_PINNED_334_CANDIDATE_WITH_V038_OIL_FLOORS',
+            'source_artifact_run':40120755711,'max_native_calls':1,
+            'target_T_diagnostic':3185,'official_v1_T_observation':3153,
+            'oil_floor_crit':16,'oil_floor_haste':16,
+            'product_code_integrated':False,'official_policy_promoted':False,
+            'real_game_catalyst_bonus_attested':False,'dps_comparison_allowed':False}
+          assert r==expected,'UNAUTHORIZED_REQUEST'
+          pins={
+           'runner/v045_native_budget_candidate.py':'9545b2a006b9847bb80480074dc70b7932813e57',
+           'tests/test_v045_native_budget_candidate.py':'1af4c0901fb205e51818f5b84113bd9266bb7f5d',
+           'runner/v044_static_budget_attribution.py':'fbc7754eb6e054286dfd6c8f4134e58af5c58ed8',
+           'runner/v041_catalyst_gem_proc_probe.py':'3f38c9c14dd33cb4a937ecdeba35b3275e384cb5'
+          }
+          for path,value in pins.items():
+            assert subprocess.check_output(['git','hash-object',path],text=True).strip()==value,'SOURCE_DRIFT:'+path
+          pathlib.Path('run-output/V045_GATE.json').write_text(json.dumps({
+            'schema':'v045_identity','status':'REQUEST_VERIFIED_ONLY',
+            'head_sha':os.environ['GITHUB_SHA'],'run_id':int(os.environ['GITHUB_RUN_ID']),
+            'max_native_calls':1,'product_code_integrated':False,
+            'official_policy_promoted':False},indent=2)+'\n')
+          print('V045_TRIGGER_GATE_PASS')
+          PY
+      - name: Full offline regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+          echo V045_OFFLINE_REGRESSION_PASS
+      - name: Fetch exact older v042 Native evidence artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v042-evidence-40120755711
+          path: .v045-evidence
+          run-id: 40120755711
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Audit all 15 slots with zero Native calls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v045_native_budget_candidate.py \
+            --evidence-dir "$GITHUB_WORKSPACE/.v045-evidence" \
+            --output "$GITHUB_WORKSPACE/run-output/offline" \
+            --mode offline
+      - name: Restore pinned Linux SimC cache only
+        id: simc_cache
+        uses: actions/cache/restore@v5
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd-cli-release-nonetwork-r1
+      - name: Fail closed on cache MISS and binary SHA drift
+        shell: bash
+        env:
+          CACHE_HIT: ${{ steps.simc_cache.outputs.cache-hit }}
+        run: |
+          set -euo pipefail
+          test "$CACHE_HIT" = true || { echo V045_CACHE_MISS_NO_BUILD; exit 3; }
+          test -x "$SIMC_BIN"
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc-cache/v035/simc' | sha256sum --check
+          sha256sum --check .simc-cache/v035/simc.sha256
+          echo V045_PINNED_CACHE_PASS
+      - name: One oil floor candidate, no optimization claims
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v045_native_budget_candidate.py \
+            --evidence-dir "$GITHUB_WORKSPACE/.v045-evidence" \
+            --output "$GITHUB_WORKSPACE/run-output/native" \
+            --mode native \
+            --binary "$GITHUB_WORKSPACE/$SIMC_BIN"
+      - name: Persist input Native JSON2 and fail-closed receipt
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v045-native-${{ github.run_id }}
+          path: run-output/
+          if-no-files-found: warn
+          retention-days: 7
