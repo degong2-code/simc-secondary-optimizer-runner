@@ -58,7 +58,7 @@ class RogueInputFixture(unittest.TestCase):
         self.assertEqual(a.count("embellishment="),2)
         self.assertEqual(r["user"]["embellishment_1"]["slot"],"off_hand")
         self.assertEqual(r["user"]["embellishment_2"]["slot"],"wrists")
-        self.assertIsNone(r["special_static_L"])
+        self.assertIsNone(r["locked_special_L"])
         self.assertIsNone(r["item_static_G"])
     def test_special_b_one_six_normal_gems(self):
         a,_=self.assembled()
