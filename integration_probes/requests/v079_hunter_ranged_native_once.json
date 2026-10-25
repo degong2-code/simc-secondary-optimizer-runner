@@ -1,0 +1,20 @@
+{
+  "schema": "v079_hunter_ranged_cross_class_five_native_request_v1",
+  "source": "simulationcraft_midnight_MID2_Hunter_Beast_Mastery",
+  "race": "troll",
+  "class": "hunter",
+  "spec": "beast_mastery",
+  "armor": "mail",
+  "weapon": "ranged_mainhand_no_offhand",
+  "representative_ilvl": 334,
+  "preserve_upstream_APL_pet_actions": true,
+  "initial_real_numeric_witnesses": 2,
+  "official_target_native_cases": 2,
+  "adaptive_v015_native_cases": 1,
+  "maximum_new_native_calls": 5,
+  "iterations_each": 35,
+  "official_formula": "T=G+J+F",
+  "simc_effect_authority_only": true,
+  "no_new_item_gear_optimizer_or_APL": true,
+  "all_spec_native_proven": false
+}
