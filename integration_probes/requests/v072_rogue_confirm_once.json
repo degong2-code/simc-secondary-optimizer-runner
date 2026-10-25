@@ -1,0 +1,16 @@
+{
+  "schema": "v072_rogue_two_fresh_high_iter_native_request_v1",
+  "prior_witness_run": 40181981240,
+  "prior_official_run": 40182313167,
+  "prior_scout_run": 40183940144,
+  "selected_profile": "void_elf_rogue_subtlety_334_user_exact",
+  "target_total": 3150,
+  "official_formula": "T=G+J+F",
+  "confirmed_candidates": 2,
+  "iterations_per_candidate": 320,
+  "max_new_native_calls": 2,
+  "use_v065_original_scheduler": true,
+  "no_effect_or_APL_gate": true,
+  "original_v015_v016_immutable": true,
+  "global_optimum_claimed": false
+}
