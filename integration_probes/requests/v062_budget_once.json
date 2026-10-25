@@ -1,0 +1,10 @@
+{
+  "schema": "v062_static_budget_reconciliation_offline_v1",
+  "native_simc_calls": 0,
+  "official_total": "T=G+J+F",
+  "selected_special_floor_already_in_G": true,
+  "trinket_static_absence_blocks_selection": false,
+  "special_item_proc_calibration": false,
+  "full_product_integration": false,
+  "main_policy_promotion": false
+}
