@@ -104,10 +104,11 @@ class ScenarioContract(unittest.TestCase):
         d=mage();d["equipment"]["special"]=[item("head",230000)]
         with self.assertRaisesRegex(s.ScenarioInvalid,"GEAR_SLOT_COLLISION"):
             s.normalize(d)
-    def test_duplicate_item_id_conflict(self):
+    def test_duplicate_item_id_in_separate_slots_is_simc_owned(self):
         d=mage();d["equipment"]["crafted"][1]["item_id"]=239656
-        with self.assertRaisesRegex(s.ScenarioInvalid,"DUPLICATE_EQUIPPED_ITEM_ID"):
-            s.normalize(d)
+        out=s.normalize(d)
+        self.assertEqual(out["equipment_count"],8)
+        # SimC decides unique-equipped and combat rules; no local ruleset.
     def test_max_2_embellishments(self):
         d=mage();d["equipment"]["crafted"].append(item("waist",239649,334,
             {"crafted_stats":"49/36","embellishment":"arcanoweave_lining"}))
