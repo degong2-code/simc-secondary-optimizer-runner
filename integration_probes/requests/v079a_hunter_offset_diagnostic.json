@@ -1,0 +1,7 @@
+{
+  "schema": "v079a_hunter_original_failed_native_input_output_diagnostic_v1",
+  "source_run": 40199924239,
+  "original_native_only": true,
+  "new_simc_calls": 0,
+  "numeric_offsets_only": true
+}
