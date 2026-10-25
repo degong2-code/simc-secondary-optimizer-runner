@@ -91,11 +91,25 @@ class ItemPassThrough(unittest.TestCase):
         self.assertEqual(d["G_contribution"],0)
     def test_catalog_larger_than_original_sampling(self):
         db=p.load_advisory_catalog()
-        self.assertGreater(len(db),12)
+        self.assertEqual(len(db),51)
         self.assertIn(240949,db)
         self.assertIn(237828,db)
+        for x in (239652,244570,244580,237830,237831,237837,240950,245770):
+            self.assertIn(x,db)
         self.assertNotIn(271440,db) # No proof this is a crafted recipe
         self.assertNotIn(271441,db)
+    def test_selected_crafted_pieces_cannot_displace_reserved_four_set(self):
+        with self.assertRaisesRegex(c.CacheBlocked,"CRAFTED_PIECE_REPLACES_RESERVED_TIER_OR_SPECIAL"):
+            p.apply_selection(self.ref,[{"slot":"head","item_id":239652,"ilevel":331,
+                         "options":{"crafted_stats":"49/36","embellishment":"arcanoweave_lining"}}],
+                         reserved_tier_slots=("head","shoulders","chest","legs"))
+    def test_extended_recipe_item_id_is_not_a_gear_budget_claim(self):
+        changed,plan=p.apply_selection(self.ref,[{"slot":"waist","item_id":237830,
+              "ilevel":331,"options":{"crafted_stats":"49/36","embellishment":"arcanoweave_lining"}}])
+        self.assertIn("waist=selected_237830,id=237830,ilevel=331,source=local",changed)
+        self.assertEqual(plan["unlisted_crafted_ids_allowed"],[])
+        with self.assertRaisesRegex(c.CacheBlocked,"NON_TRINKET_G_MISSING_NATIVE_STATIC"):
+            p.static_budget_lookup(c.empty_cache(),"waist",237830,331,{"crafted_stats":"49/36"})
     def test_no_native_proc_gate_claim(self):
         s=p.inspect_selection([{"slot":"trinket1","item_id":250224,
                                 "ilevel":334,"options":{}}])
