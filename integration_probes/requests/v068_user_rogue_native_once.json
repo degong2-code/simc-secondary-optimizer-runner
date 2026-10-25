@@ -1,0 +1,26 @@
+{
+  "schema": "v068_user_rogue_native_once_v1",
+  "user_class": "rogue",
+  "user_spec": "subtlety",
+  "race": "void_elf",
+  "target_ilevel": 334,
+  "user_selected_head": 271875,
+  "user_selected_main_hand": 271093,
+  "trinkets": [
+    270175,
+    281215
+  ],
+  "embellishments": {
+    "off_hand": "hunters_ritual_stone",
+    "wrists": "arcanoweave_lining"
+  },
+  "omnium_ui_fourth": "mastery",
+  "special_gem_B": 240967,
+  "duration_seconds": 300,
+  "native_calls_cap": 2,
+  "iterations_each": 35,
+  "official_GJF_NOT_GUESSED": true,
+  "independent_effect_proc_gate": false,
+  "historical_v015_v016_tests_not_rerun": true,
+  "project_main_or_Work_OS_modified": false
+}
