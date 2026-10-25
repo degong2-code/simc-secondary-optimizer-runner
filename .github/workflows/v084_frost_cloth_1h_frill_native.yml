@@ -1,0 +1,150 @@
+name: v084 Human Frost Cloth 1H Frill Static CHMV Native
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/v084_frost_1h_frill_once.json
+      - integration_probes/requests/v084_frost_1h_frill_retry.json
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v084-frost-1h-frill-static-native
+  cancel-in-progress: false
+jobs:
+  frost-cloth-frill:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Verify exact isolated request and source Git blob identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          choices=["integration_probes/requests/v084_frost_1h_frill_once.json",
+                   "integration_probes/requests/v084_frost_1h_frill_retry.json"]
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert len(changed)==1 and changed[0] in choices,changed
+          actual=json.loads(pathlib.Path(changed[0]).read_text())
+          expected={
+            "schema":"v084_human_frost_cloth_onehand_frill_v1",
+            "source":"simulationcraft_midnight_MID2_Mage_Frost",
+            "frost_profile_git_blob":"b787824a95020a7cdd0934ed5e004695726db138",
+            "non_tier_cloth_head_git_blob":"9fae08d2f1c49f3a964f9415540929723384e6fe",
+            "race":"human","spec":"mage_frost",
+            "armor":"cloth","weapon":"onehand_main_plus_nonweapon_offhand",
+            "main_hand_id":271092,"off_hand_id":245769,
+            "non_tier_head_id":271874,
+            "representative_ilvl":334,
+            "original_frost_APL_preserved":True,
+            "exact_four_tier_slots":True,
+            "reuse_bounded_native_engine":"v082_profile_factory",
+            "F_vector":{"crit_rating":165,"haste_rating":0,"mastery_rating":0,"versatility_rating":0},
+            "maximum_new_native_calls":4,
+            "one_exact_native_static_G":1,
+            "two_official_static_c_native":2,
+            "one_v015_guided_static_scout":1,
+            "iterations_each":35,
+            "T_formula":"T=G+J+F",
+            "oil_O_outside_T":True,
+            "no_effect_APL_or_proc_gate":True,
+            "no_gear_optimization_or_global_optimum_claim":True}
+          assert actual==expected,(actual,expected)
+          files={
+            "runner/v082_fury_plate_dual_twohand_native.py":"c4afd968077799d46db0c3a4ff7eaef90b39664b",
+            "runner/v084_frost_cloth_1h_frill_native.py":"d52806c23ef27a0a5c9db2cdb5012ab73d4cfa9f",
+            "tests/test_v084_frost_cloth_1h_frill_native.py":"1c3c24c4e939a731d9c3710c1d481e8fc54894a4",
+            "integration_probes/fixtures/v084_upstream_mid2_mage_frost_reference.simc":"b787824a95020a7cdd0934ed5e004695726db138",
+            "integration_probes/fixtures/v084_upstream_mid2_mage_fire_nontier_head_source.simc":"9fae08d2f1c49f3a964f9415540929723384e6fe"}
+          for p,sha in files.items():
+              found=subprocess.check_output(["git","hash-object",p],text=True).strip()
+              assert found==sha,(p,found,sha)
+          print("V084_PINNED_FROST_AND_CLOTH_NONTIER_SOURCE_BYTES_PASS")
+          PY
+      - name: Full existing regression and pilot check
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Exact sixteen-slot Human Frost 1H frill offline input
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v084_frost_cloth_1h_frill_native.py --upstream integration_probes/fixtures/v084_upstream_mid2_mage_frost_reference.simc --out out/offline
+          python3 - <<'PY'
+          import json
+          r=json.load(open("out/offline/V084_RECEIPT.json"))
+          assert r["status"]=="PASS_FROST_CLOTH_1H_FRILL_INPUT_ONLY_ZERO_NATIVE",r
+          assert r["new_native_this_invocation"]==0
+          assert r["origin"]["weapon_form"]=="onehand_plus_nonweapon_offhand"
+          assert r["origin"]["main_hand_source_id"]==271092
+          assert r["origin"]["off_hand_source_id"]==245769
+          assert r["origin"]["non_tier_source_backed_head"]==271874
+          assert r["declared_F_vector"]["crit_rating"]==165
+          print("V084_FROST_HUMAN_CLOTH_1H_FRILL_SOURCE_PLAN_PASS")
+          PY
+      - name: Recover SHA-pinned prior Native SimC executable
+        uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-40153209773
+          path: .simc
+          run-id: 40153209773
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: New exact static G and two official c plus v015 mirror native scout
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc/simc' | sha256sum -c
+          chmod +x .simc/simc
+          python3 runner/v084_frost_cloth_1h_frill_native.py --upstream integration_probes/fixtures/v084_upstream_mid2_mage_frost_reference.simc --out "$GITHUB_WORKSPACE/out/native" --binary "$GITHUB_WORKSPACE/.simc/simc"
+          python3 - <<'PY'
+          import json,math
+          r=json.load(open("out/native/V084_RECEIPT.json"))
+          assert r["status"]=="PASS_REAL_FROST_CLOTH_1H_FRILL_FULL_STATIC_GENERIC_NATIVE",r
+          assert r["new_native_this_invocation"]==r["native_attempts_total"]==4
+          assert r["G"]+r["J"]+r["F"]==r["T"]
+          assert r["J"]==138 and r["F"]==165
+          assert r["declared_F_vector"]["crit_rating"]==165
+          assert r["v066_preflight_status"]=="READY_STATIC_CHMV_PROFILE_SCOPED"
+          assert r["v015_scout_order_reused"] and r["two_weapon_slots_preserved"]
+          assert r["weapon_form"]=="onehand_plus_nonweapon_offhand"
+          assert len(r["official_native"])==2
+          for x in r["official_native"]+[r["adaptive_result"]]:
+              assert x["verified_static_c"]==x["target_static_c"]
+              assert sum(x["target_static_c"].values())==r["T"]
+              assert x["dps_samples"]>=20 and x["dps_mean"]>0 and math.isfinite(x["dps_sem"])
+          assert not r["global_optimum_proven"]
+          print("V084_REAL_HUMAN_FROST_CLOTH_1H_FRILL_STATIC_NATIVE_PASS",json.dumps(r,sort_keys=True))
+          PY
+          sha256sum out/native/initial_native/result.json out/native/official/candidate_00/result.json out/native/official/candidate_01/result.json out/native/official/adaptive_00/result.json > out/native/FOUR_NATIVE_SHA256.txt
+      - name: SHA-check all four Native JSON2 cache hits without extra SimC
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v084_frost_cloth_1h_frill_native.py --upstream integration_probes/fixtures/v084_upstream_mid2_mage_frost_reference.simc --out "$GITHUB_WORKSPACE/out/native" --binary "$GITHUB_WORKSPACE/.simc/simc" --cache-only
+          sha256sum -c out/native/FOUR_NATIVE_SHA256.txt
+          python3 - <<'PY'
+          import json
+          r=json.load(open("out/native/V084_RECEIPT.json"))
+          assert r["status"]=="PASS_REAL_FROST_CLOTH_1H_FRILL_FULL_STATIC_GENERIC_NATIVE",r
+          assert r["new_native_this_invocation"]==0 and r["native_attempts_total"]==4
+          assert r["cache_only_replay"]
+          assert all(x["source"]=="CACHED_VERIFIED_NATIVE"
+             for x in r["official_native"]+[r["adaptive_result"]])
+          print("V084_FOUR_NATIVE_SHA_REPLAY_ZERO_ADDITIONAL_SIMC_PASS")
+          PY
+      - name: Preserve exact original APL, item IDs, Native JSON2, stderr and receipts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v084-frost-cloth-1h-frill-native-${{ github.run_id }}
+          path: out/
+          retention-days: 14
+          if-no-files-found: warn
