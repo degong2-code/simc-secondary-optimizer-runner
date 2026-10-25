@@ -82,7 +82,8 @@ def assemble(reference,output,iterations=35,probe="A"):
     equip.update({k:item_line(k,v) for k,v in TIER.items()})
     equip.update({k:item_line(k,v) for k,v in SPECIAL.items()})
     equip.update({k:item_line(k,v,option={"embellishment":eff,
-                                           "crafted_stats":crafted})
+                                           "crafted_stats":crafted,
+                                           **({"gem_id":"240900"} if k=="wrists" else {})})
                   for k,(v,eff,crafted) in CRAFTED.items()})
     equip.update({k:item_line(k,v) for k,v in TRINKETS.items()})
     for slot in sorted(ALL_SLOTS-set(equip)):
