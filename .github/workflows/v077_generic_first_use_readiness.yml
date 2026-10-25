@@ -1,0 +1,89 @@
+name: v077 Generic First-Use Profile and Static Readiness
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [integration_probes/requests/v077_generic_bootstrap_offline_once.json]
+permissions:
+  contents: read
+concurrency:
+  group: v077-generic-readiness-offline
+  cancel-in-progress: false
+jobs:
+  generic-readiness:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Verify exact request and blob SHAs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os,json,pathlib,subprocess
+          p="integration_probes/requests/v077_generic_bootstrap_offline_once.json"
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==[p],changed
+          x=json.loads(pathlib.Path(p).read_text())
+          assert x=={
+            "schema":"v077_generic_first_use_readiness_only_v1",
+            "scope":"six_structural_DPS_archetypes_no_native_proof_yet",
+            "target":"profile_exact_item_variant_readiness_and_two_witness_inputs",
+            "new_native_calls":0,
+            "no_fake_numeric_offset":True,
+            "no_full_equipment_database":True,
+            "no_item_proc_effect_gate":True,
+            "legacy_v015_v016_untouched":True,
+            "approved_project_source_unchanged":True,
+            "official_formula":"T=G+J+F"}
+          for path,blob in {
+            "runner/v077_generic_profile_bootstrap_readiness.py":"97e629633b4236760fd995332538611b08e6cef7",
+            "tests/test_v077_generic_profile_bootstrap_readiness.py":"3cd191b8168ee7a2218cf32fef73763de7d6d7b0"}.items():
+            actual=subprocess.check_output(["git","hash-object",path],text=True).strip()
+            assert actual==blob,(path,actual,blob)
+          print("V077_EXACT_REQUEST_AND_SOURCE_SHA_PASS")
+          PY
+      - name: Full current offline regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: First-use fixture sample and real-input caveat
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,sys,tempfile,pathlib
+          sys.path[:0]=["runner","tests"]
+          import v077_generic_profile_bootstrap_readiness as v077
+          import v046_static_item_cache as cache
+          from test_v066_profile_neutral_preflight import fixture
+          out=pathlib.Path("out");out.mkdir(exist_ok=True)
+          for name,args in (("mage",()),("warrior",("warrior","arms","attack"))):
+              config,filler,native,profile,_=fixture(*args)
+              with tempfile.TemporaryDirectory() as d:
+                  result=v077.prepare(config,filler,native,profile,pathlib.Path(d))
+              assert result["status"]=="READY_FOR_TWO_NATIVE_CALIBRATION_WITNESSES",result
+              assert result["new_native_calls"]==0
+              assert result["native_success_claimed"] is False
+              (out/("V077_SYNTHETIC_"+name+".json")).write_text(json.dumps(result,sort_keys=True,indent=2)+"\n")
+          config,filler,native,profile,_=fixture()
+          with tempfile.TemporaryDirectory() as d:
+              missing=v077.prepare(config,filler,cache.empty_cache(),profile,pathlib.Path(d))
+          assert missing["status"]=="BLOCKED_EXACT_NATIVE_STATIC_VARIANTS_MISSING",missing
+          assert missing["missing_exact_native_variant_count"]>0
+          (out/"V077_MISSING_NATIVE_VARIANTS.json").write_text(json.dumps(missing,sort_keys=True,indent=2)+"\n")
+          print("V077_SYNTHETIC_GENERIC_READINESS_PASS_NATIVE_CALLS_ZERO")
+          print("V077_REAL_PROFILE_ITEMS_AND_NATIVE_WITNESS_EXECUTION_NOT_YET_PROVEN")
+          PY
+      - name: Persist readiness cases no Native
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v077-first-use-offline-${{ github.run_id }}
+          path: out/
+          if-no-files-found: warn
+          retention-days: 14
