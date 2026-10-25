@@ -1,0 +1,11 @@
+{
+  "schema": "v046_one_shot_static_cache_build_v1",
+  "authorization": "OFFLINE_CACHE_SEED_FROM_PINNED_V045_ONLY",
+  "native_simc_calls_max": 0,
+  "v045_artifact_run_id": 40149421659,
+  "catalog_patch_delta_count": 10,
+  "simc_version_is_not_static_cache_key": true,
+  "manual_correction_only": true,
+  "product_code_integrated": false,
+  "official_policy_promoted": false
+}
