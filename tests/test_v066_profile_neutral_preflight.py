@@ -87,7 +87,7 @@ class GenericNumericBoundary(unittest.TestCase):
     def test_changing_profile_class_without_witness_recalibration_fails(self):
         cfg,fill,static,source,witnesses=fixture("warrior","arms","attack")
         wrong=source.replace("role=attack","role=spell",1)
-        with self.assertRaisesRegex(p.numeric.InjectionError,
+        with self.assertRaisesRegex(p.PreflightBlocked,
                                     "NATIVE_NUMERIC_WITNESSES_FOR_OTHER_PROFILE"):
             p.prepare(cfg,fill,static,wrong,witnesses,SIMC_SHA)
     def test_item_identity_mismatch_not_a_proc_gate(self):
