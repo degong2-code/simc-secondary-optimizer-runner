@@ -5,6 +5,7 @@ on:
     paths:
       - integration_probes/requests/v066_generic_preflight_once.json
       - integration_probes/requests/v066_generic_preflight_retry_once.json
+      - integration_probes/requests/v066_generic_preflight_retry2_once.json
 permissions:
   contents: read
   actions: read
@@ -28,7 +29,7 @@ jobs:
           import json,os,pathlib,subprocess
           assert os.environ["GITHUB_REF"]=="refs/heads/probe/chat-cache-v035-20261024"
           changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
-          assert changed==["integration_probes/requests/v066_generic_preflight_retry_once.json"]
+          assert changed==["integration_probes/requests/v066_generic_preflight_retry2_once.json"]
           req=json.loads(pathlib.Path(changed[0]).read_text())
           assert req=={"schema":"v066_profile_neutral_preflight_once_v1",
              "new_native_simc_calls":0,
@@ -42,7 +43,7 @@ jobs:
              "main_or_workos_modified":False}
           for path,hashval in {
             "runner/v066_profile_neutral_preflight.py":"e55a87c6b13bfa64b96399c5d09072ecd3b321c7",
-            "tests/test_v066_profile_neutral_preflight.py":"e54be7108a5f6e65fe682d45ed648dc8396b3201"
+            "tests/test_v066_profile_neutral_preflight.py":"d7fa2ed508c2bdd29efe74f01318a05eb1732de6"
           }.items():
             assert subprocess.check_output(["git","hash-object",path],text=True).strip()==hashval
           print("V066_BOUNDED_INPUT_AND_SOURCE_PASS")
