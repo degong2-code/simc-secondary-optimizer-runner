@@ -1,0 +1,218 @@
+{
+  "schema": "v051_crafted_slots_and_weapon_id_reference_v1",
+  "season": "midnight_s2",
+  "purpose": "user-selected two embellishments and normalized freely movable crafted CHMV; not gear optimisation",
+  "completeness": "PARTIAL_REFERENCED_IDS_NOT_COMPLETE_ALL_CRAFTED_RECIPES",
+  "source_context": "SimC MID2 example character profiles and one WoW item reference; metadata only",
+  "simc_profile_source_sha": "12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7",
+  "slot_template_families": {
+    "cloth": [
+      "head",
+      "shoulders",
+      "chest",
+      "wrists",
+      "hands",
+      "waist",
+      "legs",
+      "feet"
+    ],
+    "leather": [
+      "head",
+      "shoulders",
+      "chest",
+      "wrists",
+      "hands",
+      "waist",
+      "legs",
+      "feet"
+    ],
+    "mail": [
+      "head",
+      "shoulders",
+      "chest",
+      "wrists",
+      "hands",
+      "waist",
+      "legs",
+      "feet"
+    ],
+    "plate": [
+      "head",
+      "shoulders",
+      "chest",
+      "wrists",
+      "hands",
+      "waist",
+      "legs",
+      "feet"
+    ],
+    "shared": [
+      "back"
+    ],
+    "weapon": [
+      "one_hand",
+      "two_hand",
+      "off_hand",
+      "shield",
+      "ranged"
+    ]
+  },
+  "item_records": [
+    {
+      "item_id": 239648,
+      "name": "Martyr's Bindings",
+      "slot": "wrists",
+      "armor_family": "cloth",
+      "kind": "armor",
+      "weapon_role": null,
+      "example_crafted_stats_token": "32/40",
+      "source_url": "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Mage_Arcane.simc",
+      "native_static_status": "ATTESTED_VARIANTS_EXIST_V050",
+      "itemlevel_reachability_attested": false,
+      "embellishment_applicability_to_item_attested": false
+    },
+    {
+      "item_id": 239649,
+      "name": "Martyr's Waistwrap",
+      "slot": "waist",
+      "armor_family": "cloth",
+      "kind": "armor",
+      "weapon_role": null,
+      "example_crafted_stats_token": "32/49",
+      "source_url": "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Mage_Frost.simc",
+      "native_static_status": "NOT_YET_RETRIEVED",
+      "itemlevel_reachability_attested": false,
+      "embellishment_applicability_to_item_attested": false
+    },
+    {
+      "item_id": 239656,
+      "name": "Adherent's Silken Shroud",
+      "slot": "back",
+      "armor_family": "any",
+      "kind": "armor",
+      "weapon_role": null,
+      "example_crafted_stats_token": "49/32",
+      "source_url": "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Druid_Feral.simc",
+      "native_static_status": "ATTESTED_VARIANTS_EXIST_V050",
+      "itemlevel_reachability_attested": false,
+      "embellishment_applicability_to_item_attested": false
+    },
+    {
+      "item_id": 244576,
+      "name": "Silvermoon Agent's Deflectors",
+      "slot": "wrists",
+      "armor_family": "leather",
+      "kind": "armor",
+      "weapon_role": null,
+      "example_crafted_stats_token": "32/49",
+      "source_url": "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Demon_Hunter_Havoc.simc",
+      "native_static_status": "NOT_YET_RETRIEVED",
+      "itemlevel_reachability_attested": false,
+      "embellishment_applicability_to_item_attested": false
+    },
+    {
+      "item_id": 244569,
+      "name": "Silvermoon Agent's Sneakers",
+      "slot": "feet",
+      "armor_family": "leather",
+      "kind": "armor",
+      "weapon_role": null,
+      "example_crafted_stats_token": "36/49",
+      "source_url": "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Monk_Windwalker.simc",
+      "native_static_status": "NOT_YET_RETRIEVED",
+      "itemlevel_reachability_attested": false,
+      "embellishment_applicability_to_item_attested": false
+    },
+    {
+      "item_id": 244584,
+      "name": "Farstrider's Plated Bracers",
+      "slot": "wrists",
+      "armor_family": "mail",
+      "kind": "armor",
+      "weapon_role": null,
+      "example_crafted_stats_token": "32/49",
+      "source_url": "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Hunter_Marksmanship.simc",
+      "native_static_status": "NOT_YET_RETRIEVED",
+      "itemlevel_reachability_attested": false,
+      "embellishment_applicability_to_item_attested": false
+    },
+    {
+      "item_id": 244581,
+      "name": "Farstrider's Trophy Belt",
+      "slot": "waist",
+      "armor_family": "mail",
+      "kind": "armor",
+      "weapon_role": null,
+      "example_crafted_stats_token": "32/49",
+      "source_url": "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Hunter_Marksmanship.simc",
+      "native_static_status": "NOT_YET_RETRIEVED",
+      "itemlevel_reachability_attested": false,
+      "embellishment_applicability_to_item_attested": false
+    },
+    {
+      "item_id": 237834,
+      "name": "Spellbreaker's Bracers",
+      "slot": "wrists",
+      "armor_family": "plate",
+      "kind": "armor",
+      "weapon_role": null,
+      "example_crafted_stats_token": "32/49",
+      "source_url": "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Paladin_Retribution.simc",
+      "native_static_status": "NOT_YET_RETRIEVED",
+      "itemlevel_reachability_attested": false,
+      "embellishment_applicability_to_item_attested": false
+    },
+    {
+      "item_id": 237840,
+      "name": "Spellbreaker's Warglaive",
+      "slot": "off_hand",
+      "armor_family": "weapon",
+      "kind": "weapon",
+      "weapon_role": "one_hand_warglaive",
+      "example_crafted_stats_token": "49/36",
+      "source_url": "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Demon_Hunter_Havoc.simc",
+      "native_static_status": "NOT_YET_RETRIEVED",
+      "itemlevel_reachability_attested": false,
+      "embellishment_applicability_to_item_attested": false
+    },
+    {
+      "item_id": 237850,
+      "name": "Farstrider's Chopper",
+      "slot": "off_hand",
+      "armor_family": "weapon",
+      "kind": "weapon",
+      "weapon_role": "one_hand_axe",
+      "example_crafted_stats_token": "49/36",
+      "source_url": "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Shaman_Enhancement.simc",
+      "native_static_status": "NOT_YET_RETRIEVED",
+      "itemlevel_reachability_attested": false,
+      "embellishment_applicability_to_item_attested": false
+    },
+    {
+      "item_id": 245769,
+      "name": "Aln'hara Lantern",
+      "slot": "off_hand",
+      "armor_family": "weapon",
+      "kind": "weapon",
+      "weapon_role": "offhand",
+      "example_crafted_stats_token": "32/36",
+      "source_url": "https://github.com/simulationcraft/simc/blob/12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7/profiles/MID2/MID2_Mage_Arcane.simc",
+      "native_static_status": "NOT_YET_RETRIEVED",
+      "itemlevel_reachability_attested": false,
+      "embellishment_applicability_to_item_attested": false
+    },
+    {
+      "item_id": 245770,
+      "name": "Aln'hara Cane",
+      "slot": "main_hand",
+      "armor_family": "weapon",
+      "kind": "weapon",
+      "weapon_role": "two_hand_staff",
+      "example_crafted_stats_token": null,
+      "source_url": "https://www.wowhead.com/item=245770/alnhara-cane",
+      "native_static_status": "NOT_YET_RETRIEVED",
+      "itemlevel_reachability_attested": false,
+      "embellishment_applicability_to_item_attested": false
+    }
+  ]
+}
