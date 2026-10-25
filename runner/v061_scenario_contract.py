@@ -102,9 +102,9 @@ def equipment(raw):
     # Item uniqueness/unique-equipped restrictions are SimC-owned; only prevent
     # two rows from occupying the same physical slot in our input.
     emb=sum("embellishment" in i["options"] for i in all_rows)
-    need(emb<=2,"MORE_THAN_TWO_EMBELLISHMENTS")
     need(all("embellishment" not in i["options"] for i in out["special"]),
          "EMBELLISHMENTS_USE_CRAFTED_GEAR")
+    need(emb<=2,"MORE_THAN_TWO_EMBELLISHMENTS")
     return out,emb
 
 def normalize(doc):
