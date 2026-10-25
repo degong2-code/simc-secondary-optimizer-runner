@@ -1,0 +1,15 @@
+{
+  "schema": "v081_existing_real_static_native_to_original_v015_scout_v1",
+  "verified_parent_run": 40204450655,
+  "reuse_two_actual_native_static_c_results_with_SHAs": true,
+  "no_simc_mechanics_or_APL_gate": true,
+  "static_rating_semantics": "STATIC_CHMV_C_V1",
+  "prior_buffed_legacy_records_cannot_mix": true,
+  "existing_search_order": "v065_v015_derived_local_mirror",
+  "maximum_new_native_calls": 1,
+  "native_iterations": 35,
+  "F_vector_caller_declared_not_independently_certified": true,
+  "formula": "T=G+J+F",
+  "legacy_product_v015_v016_integrated": false,
+  "global_optimum_proven": false
+}
