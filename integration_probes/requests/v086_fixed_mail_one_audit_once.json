@@ -1,0 +1,26 @@
+{
+  "schema": "v086_hunter_fix_two_random_stat_representative_filler_items_v1",
+  "item_replacements": {
+    "head": {
+      "from": 271441,
+      "to": 249317
+    },
+    "feet": {
+      "from": 271440,
+      "to": 249320
+    }
+  },
+  "real_native_already_executed_externally": 1,
+  "real_native_json2_sha256": "e55bfa2fa9b255bf2f3b74bb85b255eebf774ba939b43348ab314c7b782f27c2",
+  "real_nontrinket_G": 2845,
+  "J": 138,
+  "F": 165,
+  "T": 3148,
+  "original_hunter_APL_talents_tier_and_trinkets_preserved": true,
+  "unknown_nontrinket_must_fail_closed": true,
+  "unknown_trinket_does_not_block": true,
+  "new_native_calls_in_CI": 0,
+  "no_full_item_database_or_proc_gate": true,
+  "old_original_v079_through_v081_native_evidence_immutable": true,
+  "global_optimum_proven": false
+}
