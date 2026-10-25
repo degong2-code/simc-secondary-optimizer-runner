@@ -1,0 +1,128 @@
+name: v078 Real Elemental Shaman Mail Shield First-Use Native
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/v078_elemental_two_native_once.json
+      - integration_probes/requests/v078_elemental_two_native_retry.json
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v078-elemental-two-native
+  cancel-in-progress: false
+jobs:
+  elemental-first-native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Verify exact request and pinned source bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          options=["integration_probes/requests/v078_elemental_two_native_once.json",
+                   "integration_probes/requests/v078_elemental_two_native_retry.json"]
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert len(changed)==1 and changed[0] in options,changed
+          request=json.loads(pathlib.Path(changed[0]).read_text())
+          assert request=={
+            "schema":"v078_elemental_two_real_native_bootstrap_request_v1",
+            "spec":"shaman_elemental","armor":"mail","weapon":"onehand_shield",
+            "race":"orc","target_ilvl":334,
+            "source":"pinned_upstream_MID2_Elemental_APL",
+            "source_exact_gear_ids_plus_explicit_334_fixture_options":True,
+            "first_witnesses_are_raw_numeric_calibration_not_official_T":True,
+            "maximum_new_native_calls":2,
+            "iterations_per_witness":35,
+            "native_binary_sha256":"64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+            "no_effect_gate_or_new_apl":True,
+            "no_rogue_offset_reuse":True,
+            "no_global_optimum_claim":True,
+            "official_formula":"T=G+J+F"}
+          for path,expected in {
+           "integration_probes/fixtures/v078_upstream_mid2_shaman_elemental_reference.simc":"c92d111e37bd684647e4637dcfef3ccb92864cde",
+           "runner/v078_elemental_first_native.py":"8a24709023bde2fa9f30275e46c3b8e10ce36524",
+           "tests/test_v078_elemental_first_native.py":"a91b43072a509cf3a70ccc73dc6feb1321bc4445"}.items():
+            actual=subprocess.check_output(["git","hash-object",path],text=True).strip()
+            assert actual==expected,(path,actual,expected)
+          print("V078_EXACT_REQUEST_ORIGINAL_SHAMAN_APL_AND_SOURCE_HASH_PASS")
+          PY
+      - name: Full regression suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Offline first-use Shaman profile and first witness input plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v078_elemental_first_native.py --upstream integration_probes/fixtures/v078_upstream_mid2_shaman_elemental_reference.simc --out out/offline
+          python3 - <<'PY'
+          import json
+          x=json.load(open("out/offline/V078_RECEIPT.json"))
+          assert x["status"]=="PASS_NEW_CLASS_TWO_WITNESS_INPUT_PLAN_ONLY",x
+          assert x["new_native_this_invocation"]==0
+          assert x["character"]["class"]=="shaman" and x["character"]["race"]=="orc"
+          assert x["origin"]["target_ilvl"]==334
+          assert len(x["witness_input_sha256"])==2
+          assert x["new_profile_numeric_offset_unknown_before_native"]
+          print("V078_SHAMAN_MAIL_SHIELD_GENERATOR_OFFLINE_PASS")
+          PY
+      - name: Restore pinned SimC binary
+        uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-40153209773
+          path: .simc
+          run-id: 40153209773
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Run two genuine Shaman 35-iteration Numeric Native witnesses
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc/simc' | sha256sum -c
+          chmod +x .simc/simc
+          python3 runner/v078_elemental_first_native.py --upstream integration_probes/fixtures/v078_upstream_mid2_shaman_elemental_reference.simc --out "$GITHUB_WORKSPACE/out/native" --binary "$GITHUB_WORKSPACE/.simc/simc"
+          python3 - <<'PY'
+          import json,math
+          x=json.load(open("out/native/V078_RECEIPT.json"))
+          assert x["status"]=="PASS_TWO_ELEMENTAL_NATIVE_NUMERIC_WITNESSES",x
+          assert x["new_native_this_invocation"]==2 and x["native_attempts_total"]==2
+          assert x["character"]["class"]=="shaman" and x["character"]["spec"]=="elemental"
+          assert x["new_profile_calibration"]["status"]=="TWO_NATIVE_NUMERIC_OFFSET_WITNESSES_AGREE"
+          assert len(x["actual_native_witnesses"])==2
+          assert x["new_profile_calibration"]["offset_transfer_to_other_profiles"] is False
+          assert x["official_budget_formula"]=="T=G+J+F"
+          for record in x["actual_native_witnesses"]:
+            assert record["dps"]>0 and math.isfinite(record["sem"])
+          print("V078_REAL_SHAMAN_PROFILE_NUMERIC_NATIVE_PASS",json.dumps(x,sort_keys=True))
+          PY
+          sha256sum out/native/native/case_00/result.json out/native/native/case_01/result.json > out/native/NATIVE_SHA256.txt
+      - name: Recheck both SHA Native result cases with zero extra calls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v078_elemental_first_native.py --upstream integration_probes/fixtures/v078_upstream_mid2_shaman_elemental_reference.simc --out "$GITHUB_WORKSPACE/out/native" --binary "$GITHUB_WORKSPACE/.simc/simc" --cache-only
+          sha256sum -c out/native/NATIVE_SHA256.txt
+          python3 - <<'PY'
+          import json
+          x=json.load(open("out/native/V078_RECEIPT.json"))
+          assert x["status"]=="PASS_TWO_ELEMENTAL_NATIVE_NUMERIC_WITNESSES",x
+          assert x["new_native_this_invocation"]==0 and x["native_attempts_total"]==2
+          print("V078_TWO_NATIVE_RESULTS_REPLAY_NO_NEW_SIMC_PASS")
+          PY
+      - name: Preserve exact profile, SimC inputs, JSON2, stderr/stdout and receipts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v078-real-elemental-two-native-${{ github.run_id }}
+          path: out/
+          retention-days: 14
+          if-no-files-found: warn
