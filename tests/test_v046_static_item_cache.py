@@ -102,6 +102,24 @@ class V046CacheTest(unittest.TestCase):
         self.assertEqual(d["G_native_static_including_selected_modifiers"],201)
         self.assertEqual(d["T_v1_policy_arithmetic"],504)
         self.assertTrue(d["requires_reconciliation_if_gems_oils_present"])
+    def test_unclassified_nontrinket_is_not_zero_chmv(self):
+        d=json.loads(make_doc(item_id=271441,option="gem_id=240983"))
+        head=d["sim"]["players"][0]["gear"]["head"]
+        head.pop("mastery_rating")
+        head["unknown"]=251
+        with self.assertRaisesRegex(v.CacheBlocked,
+                    "UNCLASSIFIED_NONTRINKET_STATIC_STATS_EXACT_VARIANT_REQUIRED:head:271441"):
+            v.native_records(json.dumps(d).encode())
+
+    def test_unclassified_trinket_still_does_not_block(self):
+        d=json.loads(make_doc(item_id=281215,option="",slot="trinket1"))
+        trinket=d["sim"]["players"][0]["gear"]["trinket1"]
+        trinket.pop("mastery_rating")
+        trinket["unknown"]=251
+        rows=v.native_records(json.dumps(d).encode())
+        self.assertEqual(len(rows),1)
+        self.assertEqual(rows[0]["static"]["secondary"]["crit_rating"],0)
+
     def test_trinket_static_is_external(self):
         cache=v.empty_cache()
         a=record(make_doc(item_id=270164,stat=225,option="",slot="trinket1"))
