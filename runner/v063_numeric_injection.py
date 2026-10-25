@@ -8,6 +8,7 @@ require their own observed numeric offset, not the Mage's +165 assumption.
 """
 from __future__ import annotations
 import hashlib,json,math,pathlib,re
+from fractions import Fraction
 
 import v046_static_item_cache as cache
 import v061_scenario_contract as scenario
@@ -94,6 +95,74 @@ def calibrate(two_evidence):
        "witnesses":2,"no_item_effect_inspection":True,
        "offset_transfer_to_other_profiles":False}
 
+def calibrate_affine(observed):
+    """Empirical INPUT→JSON2 per-stat affine reconciliation, not an item/effect model.
+
+    All four rating dimensions must have at least two DISTINCT native input
+    values. A third (or more) real measured witness can cover previously
+    unvaried dimensions. Actual candidate JSON2 must STILL match exactly;
+    extrapolation never constitutes a Native PASS.
+    """
+    need(type(observed) is list and 3<=len(observed)<=12,
+         "AFFINE_THREE_OR_MORE_REAL_WITNESSES_REQUIRED")
+    evidence=[from_native(z["input"],z["native"]) for z in observed]
+    stable=evidence[0]["source"]["stable_sha256"]
+    revision=evidence[0]["native_revision"]
+    need(type(revision) is str and len(revision)>=7,
+         "NATIVE_REVISION_REQUIRED")
+    need(all(e["source"]["stable_sha256"]==stable for e in evidence),
+         "AFFINE_NOT_SAME_PROFILE")
+    need(all(e["native_revision"]==revision for e in evidence),
+         "AFFINE_NATIVE_REVISION_DRIFT")
+    coefficients={}
+    for stat in STATS:
+        pairs=sorted({(e["source"]["gear_override"][stat],
+                       e["final_native"][stat]) for e in evidence})
+        unique_x=sorted({p[0] for p in pairs})
+        need(len(unique_x)>=2,
+             "AFFINE_UNOBSERVED_STAT_VARIATION:"+stat)
+        lo=min(pairs,key=lambda z:z[0]);hi=max(pairs,key=lambda z:z[0])
+        slope=Fraction(hi[1]-lo[1],hi[0]-lo[0])
+        need(slope>0 and slope<Fraction(5),
+             "AFFINE_NONPOSITIVE_OR_UNREASONABLE_SCALE:"+stat)
+        intercept=Fraction(lo[1])-slope*lo[0]
+        need(all(abs(float(slope*x+intercept-y))<=1.0 for x,y in pairs),
+             "AFFINE_MEASURED_POINTS_NOT_AFFINE:"+stat)
+        coefficients[stat]={"slope_numerator":slope.numerator,
+                 "slope_denominator":slope.denominator,
+                 "intercept_numerator":intercept.numerator,
+                 "intercept_denominator":intercept.denominator,
+                 "measured_input_min":unique_x[0],
+                 "measured_input_max":unique_x[-1]}
+    baseline=evidence[0]
+    return {"schema":SCHEMA,
+        "status":"EMPIRICAL_PER_PROFILE_NUMERIC_AFFINE_WITNESSES",
+        "stable_profile_sha256":stable,"native_revision":revision,
+        "net_input_to_json2_rating_offset":baseline["offset"],
+        "empirical_affine_transfer":coefficients,
+        "baseline_native_sha256s":[e["native_report_sha256"] for e in evidence],
+        "witnesses":len(evidence),
+        "no_item_effect_inspection":True,
+        "offset_transfer_to_other_profiles":False,
+        "affine_extrapolation_is_not_native_proof":True}
+
+def affine_gear_for_target(calibration,target):
+    coefficients=calibration["empirical_affine_transfer"]
+    need(set(coefficients)==set(STATS),"AFFINE_FOUR_DIMENSIONS_REQUIRED")
+    raw={}
+    for stat in STATS:
+        c=coefficients[stat]
+        scale=Fraction(c["slope_numerator"],c["slope_denominator"])
+        intercept=Fraction(c["intercept_numerator"],c["intercept_denominator"])
+        best_center=round((Fraction(target[stat])-intercept)/scale)
+        alternatives=[x for x in range(max(0,best_center-4),best_center+5)]
+        feasible=[x for x in alternatives
+                  if round(scale*x+intercept)==target[stat]]
+        need(bool(feasible),
+             "AFFINE_TARGET_RATING_NOT_REPRESENTABLE:"+stat)
+        raw[stat]=min(feasible,key=lambda x:(abs(x-best_center),x))
+    return raw
+
 def check_target(contract,budget,target):
     need(contract.get("schema")==scenario.SCHEMA and
          budget.get("schema")=="v062_representative_static_budget_v1",
@@ -118,7 +187,9 @@ def check_target(contract,budget,target):
 
 def render_candidate(reference,calibration,target,path,iterations):
     need(calibration.get("schema")==SCHEMA and
-         calibration.get("status")=="TWO_NATIVE_NUMERIC_OFFSET_WITNESSES_AGREE",
+         calibration.get("status") in (
+           "TWO_NATIVE_NUMERIC_OFFSET_WITNESSES_AGREE",
+           "EMPIRICAL_PER_PROFILE_NUMERIC_AFFINE_WITNESSES"),
          "NUMERIC_CALIBRATION_NOT_VALIDATED")
     part=input_parts(reference)
     need(part["stable_sha256"]==calibration["stable_profile_sha256"],
@@ -126,8 +197,11 @@ def render_candidate(reference,calibration,target,path,iterations):
     scenario.vector(target,"CHMV_TARGET")
     need(type(iterations) is int and 30<=iterations<=100000,
          "ITERATIONS_OUT_OF_RANGE")
-    additive=calibration["net_input_to_json2_rating_offset"]
-    raw={k:target[k]-additive[k] for k in STATS}
+    if calibration.get("status")=="EMPIRICAL_PER_PROFILE_NUMERIC_AFFINE_WITNESSES":
+        raw=affine_gear_for_target(calibration,target)
+    else:
+        additive=calibration["net_input_to_json2_rating_offset"]
+        raw={k:target[k]-additive[k] for k in STATS}
     need(all(type(raw[k]) is int and raw[k]>=0 for k in STATS),
          "NEGATIVE_GEAR_RATING_AFTER_RECONCILIATION")
     lines=reference.splitlines()
