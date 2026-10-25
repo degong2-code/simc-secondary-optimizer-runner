@@ -2,7 +2,9 @@ name: v061 General Scenario Input Contract
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
-    paths: [integration_probes/requests/v061_scenario_once.json]
+    paths:
+      - integration_probes/requests/v061_scenario_once.json
+      - integration_probes/requests/v061_scenario_retry_once.json
 permissions:
   contents: read
 concurrency:
@@ -26,7 +28,7 @@ jobs:
           assert os.environ["GITHUB_EVENT_NAME"]=="push"
           assert os.environ["GITHUB_REF"]=="refs/heads/probe/chat-cache-v035-20261024"
           files=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
-          assert files==["integration_probes/requests/v061_scenario_once.json"],files
+          assert files==["integration_probes/requests/v061_scenario_retry_once.json"],files
           req=json.loads(pathlib.Path(files[0]).read_text())
           assert req=={
            "schema":"v061_offline_general_scenario_once_v1",
@@ -41,7 +43,7 @@ jobs:
            "original_v015_v016_product_integrated":False,
            "official_policy_promoted":False}
           for name,sha in {
-            "runner/v061_scenario_contract.py":"27b336ebd03c9f655b45cdd774abfb60bbe5672e",
+            "runner/v061_scenario_contract.py":"31f8419ce3a3e86c04080e7ec3faea2f76a32a17",
             "tests/test_v061_scenario_contract.py":"4f70d718eea187a6129afbddfb46c66ac7c2814c"
           }.items():
             assert subprocess.check_output(["git","hash-object",name],text=True).strip()==sha,name
