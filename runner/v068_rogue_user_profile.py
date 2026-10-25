@@ -33,7 +33,8 @@ TRINKETS={"trinket1":270175,"trinket2":281215}
 ALL_SLOTS=selector.SLOTS
 STAT_ORDER=("crit_rating","haste_rating","mastery_rating","versatility_rating")
 EXPECTED_GEM_SLOTS={"neck":2,"wrists":1,"waist":1,"finger1":2,"finger2":1}
-CANONICAL_OPTIONS={"neck":{"gem_id":"240967/240900"},
+CANONICAL_OPTIONS={"back":{"crafted_stats":"36/49"},
+    "neck":{"gem_id":"240967/240900"},
    "wrists":{"gem_id":"240900"},"waist":{"gem_id":"240900"},
    "finger1":{"gem_id":"240900/240900"},"finger2":{"gem_id":"240900"}}
 EXISTING_DEFAULTS={
