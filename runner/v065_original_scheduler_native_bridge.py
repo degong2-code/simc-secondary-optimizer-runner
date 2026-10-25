@@ -190,16 +190,31 @@ def start(previous,out,binary=None,cancel_file=None,prepared=None,cache_only=Fal
             history_file=receiptpath
         if history_file.exists():
             previous=json.loads(history_file.read_text(encoding="utf8"))
+            old_sha=previous.get("scoped_simc_binary_sha256")
+            # Original v065 PASS receipts predated the scoped binary-SHA
+            # field. A read-only historical replay may recover them ONLY
+            # with the full 4-attempt quota already spent and all four
+            # case receipts subsequently independently revalidated through
+            # v064's binary-keyed JSON2 cache. This migration can never
+            # authorize even one fresh Native call or a new-profile switch.
+            legacy_cache_only=(
+                cache_only is True and old_sha is None
+                and previous.get("native_attempts")==NEW_NATIVE_MAX
+                and previous.get("new_native_max")==NEW_NATIVE_MAX
+                and previous.get("official_budget")=="T=G+J+F")
             need(previous.get("schema")==RUN_SCHEMA and
                  previous.get("scenario_digest")==progress["scenario_digest"]
                  and previous.get("official_T")==progress["official_T"]
-                 and previous.get("scoped_simc_binary_sha256")==scoped_binary_sha
+                 and (old_sha==scoped_binary_sha or legacy_cache_only)
                  and previous.get("source_original_v015_sha256")==progress["source_original_v015_sha256"]
+                 and previous.get("source_original_v016_sha256")==progress["source_original_v016_sha256"]
+                 and previous.get("calibration_offset")==progress["calibration_offset"]
                  and type(previous.get("native_attempts")) is int
                  and 0<=previous["native_attempts"]<=NEW_NATIVE_MAX,
                  "DURABLE_PROGRESS_IDENTITY_OR_BUDGET_CONFLICT")
             progress["native_attempts"]=previous["native_attempts"]
             progress["prior_attempts_recovered"]=previous["native_attempts"]
+            progress["legacy_cache_only_replay_requires_each_native_sha"]=legacy_cache_only
         state=scheduler.initial_state(normalized,static,history,
                     step=100,scout_max=SCOUT_MAX)
         write_atomic(out/"V065_PROGRESS.json",progress)
