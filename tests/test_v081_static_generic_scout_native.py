@@ -65,13 +65,14 @@ class StaticNativeSearch(unittest.TestCase):
             search.observations_by_vector([a],1603,*search.bounds(pilot.c,pilot.b)[1:])
 
     def test_static_preflight_never_uses_legacy_numeric_calibrator(self):
-        pilot=AuthenticatedPolicyAdapter()
-        pilot.setUp()
-        with self.assertRaisesRegex(generic.PreflightBlocked,
-                                   "NATIVE_EXACT_G_STATIC_BUDGET_REQUIRED"):
-            generic.prepare_static(pilot.c["scenario"],[],cache.empty_cache(),
-                   pilot.source,[],SIMC_SHA,
-                   {"crit_rating":0,"haste_rating":0,
-                    "mastery_rating":0,"versatility_rating":0})
+        with tempfile.TemporaryDirectory() as d:
+            profile,cfg,fill,_=hunter.source_profile(
+                UPSTREAM.read_text("utf8"),d)
+            with self.assertRaisesRegex(generic.PreflightBlocked,
+                                       "NATIVE_EXACT_G_STATIC_BUDGET_REQUIRED"):
+                generic.prepare_static(cfg,fill,cache.empty_cache(),
+                       profile,[],SIMC_SHA,
+                       {"crit_rating":0,"haste_rating":165,
+                        "mastery_rating":0,"versatility_rating":0})
 
 if __name__=="__main__":unittest.main()
