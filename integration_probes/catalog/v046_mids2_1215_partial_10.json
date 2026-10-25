@@ -1,0 +1,121 @@
+{
+  "schema_name": "WEQUIPSeasonFarmableItemTransfer",
+  "schema_version": "1.0-partial",
+  "completeness": "PARTIAL_10_ONLY_NOT_WEQUIP_MASTER_EXPORT",
+  "origin": "Project Source WEQUIP_MIDNIGHT_S2_12_1_5_FARMABLE_ITEMS_PARTIAL_20261023_v1.json",
+  "season": "Midnight Season 2",
+  "introduced_patch": "12.1.5",
+  "item_stats_from_source": "NOT_INCLUDED_NOT_SIMC_VERIFIED",
+  "items": [
+    {
+      "item_id": 281235,
+      "name_en": "Voidweaver's Leggings",
+      "slot": "LEGS_CLOTH",
+      "category": "SPECIAL_EFFECT_ARMOR",
+      "acquisition_status": "PUBLIC_20261023_ONLY_NOT_NEWLY_VERIFIED",
+      "source_type": "RAID",
+      "instance": "The Unbinding of Kith'ix",
+      "encounter": "Kith'ix",
+      "simc_static_stats_status": "UNQUERIED"
+    },
+    {
+      "item_id": 281236,
+      "name_en": "Chestwrap of Palpable Terror",
+      "slot": "CHEST_LEATHER",
+      "category": "SPECIAL_EFFECT_ARMOR",
+      "acquisition_status": "PUBLIC_20261023_ONLY_NOT_NEWLY_VERIFIED",
+      "source_type": "RAID",
+      "instance": "The Unbinding of Kith'ix",
+      "encounter": "Kith'ix",
+      "simc_static_stats_status": "UNQUERIED"
+    },
+    {
+      "item_id": 281238,
+      "name_en": "Aberrant Commander's Gauntlets",
+      "slot": "HANDS_MAIL",
+      "category": "SPECIAL_EFFECT_ARMOR",
+      "acquisition_status": "PUBLIC_20261023_ONLY_NOT_NEWLY_VERIFIED",
+      "source_type": "RAID",
+      "instance": "The Unbinding of Kith'ix",
+      "encounter": "Kith'ix",
+      "simc_static_stats_status": "UNQUERIED"
+    },
+    {
+      "item_id": 281239,
+      "name_en": "Corroded Hulk's Skullcap",
+      "slot": "HEAD_PLATE",
+      "category": "SPECIAL_EFFECT_ARMOR",
+      "acquisition_status": "PUBLIC_20261023_ONLY_NOT_NEWLY_VERIFIED",
+      "source_type": "RAID",
+      "instance": "The Unbinding of Kith'ix",
+      "encounter": "Kith'ix",
+      "simc_static_stats_status": "UNQUERIED"
+    },
+    {
+      "item_id": 281029,
+      "name_en": "Band of the Swarmcaller",
+      "slot": "FINGER",
+      "category": "SPECIAL_EFFECT_JEWELRY",
+      "acquisition_status": "PUBLIC_20261023_ONLY_NOT_NEWLY_VERIFIED",
+      "source_type": "RAID",
+      "instance": "The Unbinding of Kith'ix",
+      "encounter": "Kith'ix",
+      "simc_static_stats_status": "UNQUERIED"
+    },
+    {
+      "item_id": 280799,
+      "name_en": "Lu'selama, Light's Justice",
+      "slot": "TWO_HAND_SWORD",
+      "category": "SPECIAL_EFFECT_WEAPON",
+      "acquisition_status": "PUBLIC_20261023_ONLY_NOT_NEWLY_VERIFIED",
+      "source_type": "RAID",
+      "instance": "The Unbinding of Kith'ix",
+      "encounter": "Kith'ix",
+      "simc_static_stats_status": "UNQUERIED"
+    },
+    {
+      "item_id": 281056,
+      "name_en": "Sanctified Knight's Phoenixblade",
+      "slot": "ONE_HAND_SWORD",
+      "category": "SPECIAL_EFFECT_WEAPON",
+      "acquisition_status": "PUBLIC_20261023_ONLY_NOT_NEWLY_VERIFIED",
+      "source_type": "RAID",
+      "instance": "The Unbinding of Kith'ix",
+      "encounter": "Kith'ix",
+      "simc_static_stats_status": "UNQUERIED"
+    },
+    {
+      "item_id": 280617,
+      "name_en": "Lightbearer's Shield Fragment",
+      "slot": "TRINKET",
+      "category": "TRINKET",
+      "acquisition_status": "PUBLIC_20261023_ONLY_NOT_NEWLY_VERIFIED",
+      "source_type": "RAID",
+      "instance": "The Unbinding of Kith'ix",
+      "encounter": "Kith'ix",
+      "simc_static_stats_status": "UNQUERIED"
+    },
+    {
+      "item_id": 280835,
+      "name_en": "Sigil of the Impending Eclipse",
+      "slot": "TRINKET",
+      "category": "TRINKET",
+      "acquisition_status": "PUBLIC_20261023_ONLY_NOT_NEWLY_VERIFIED",
+      "source_type": "RAID",
+      "instance": "The Unbinding of Kith'ix",
+      "encounter": "Kith'ix",
+      "simc_static_stats_status": "UNQUERIED"
+    },
+    {
+      "item_id": 281215,
+      "name_en": "Twisted Horror's Tendril",
+      "slot": "TRINKET",
+      "category": "TRINKET",
+      "acquisition_status": "PUBLIC_20261023_ONLY_NOT_NEWLY_VERIFIED",
+      "source_type": "RAID",
+      "instance": "The Unbinding of Kith'ix",
+      "encounter": "Kith'ix",
+      "simc_static_stats_status": "UNQUERIED"
+    }
+  ]
+}
