@@ -151,6 +151,22 @@ def start(previous,out,binary=None,cancel_file=None):
            "calibration_offset":calibration["net_input_to_json2_rating_offset"],
            "source_original_v015_sha256":scheduler.SOURCE_V015_SHA256,
            "source_original_v016_sha256":scheduler.SOURCE_V016_SHA256})
+        # Preserve bounded Native-call accounting across process restarts.
+        # A pre-existing attempt cannot be silently reset to zero.
+        history_file=out/"V065_PROGRESS.json"
+        if not history_file.exists() and receiptpath.exists():
+            history_file=receiptpath
+        if history_file.exists():
+            previous=json.loads(history_file.read_text(encoding="utf8"))
+            need(previous.get("schema")==RUN_SCHEMA and
+                 previous.get("scenario_digest")==progress["scenario_digest"]
+                 and previous.get("official_T")==progress["official_T"]
+                 and previous.get("source_original_v015_sha256")==progress["source_original_v015_sha256"]
+                 and type(previous.get("native_attempts")) is int
+                 and 0<=previous["native_attempts"]<=NEW_NATIVE_MAX,
+                 "DURABLE_PROGRESS_IDENTITY_OR_BUDGET_CONFLICT")
+            progress["native_attempts"]=previous["native_attempts"]
+            progress["prior_attempts_recovered"]=previous["native_attempts"]
         state=scheduler.initial_state(normalized,static,history,
                     step=100,scout_max=SCOUT_MAX)
         write_atomic(out/"V065_PROGRESS.json",progress)
