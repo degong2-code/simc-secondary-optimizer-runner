@@ -23,6 +23,7 @@ def build_sample(item,token,output):
     role=item["armor_family"]
     item_id=item["item_id"]
     if role in CLASS: player,spec=CLASS[role]
+    elif role=="any": player,spec="mage","arcane"
     else:
         lookup={237840:("demonhunter","havoc"),
                 237850:("shaman","enhancement"),
