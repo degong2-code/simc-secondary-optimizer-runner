@@ -1,0 +1,10 @@
+{
+  "schema": "v053_corrected_crafted_native_stat_request_v1",
+  "authorization": "13_ONE_ITERATION_331_CRAFTED_STATIC_QUERIES",
+  "native_max_calls": 13,
+  "four_armor_types_plus_weapons": true,
+  "no_DPS_optimization": true,
+  "no_crafted_full_catalog_claim": true,
+  "product_code_integrated": false,
+  "official_policy_promoted": false
+}
