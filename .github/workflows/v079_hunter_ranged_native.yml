@@ -1,0 +1,134 @@
+name: v079 Real Hunter Ranged Generic CHMV Native Smoke
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/v079_hunter_ranged_native_once.json
+      - integration_probes/requests/v079_hunter_ranged_native_retry.json
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v079-hunter-ranged-five-native
+  cancel-in-progress: false
+jobs:
+  hunter-ranged-native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Exact request and audited source identities
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          options=["integration_probes/requests/v079_hunter_ranged_native_once.json",
+              "integration_probes/requests/v079_hunter_ranged_native_retry.json"]
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert len(changed)==1 and changed[0] in options,changed
+          request=json.loads(pathlib.Path(changed[0]).read_text())
+          assert request=={
+            "schema":"v079_hunter_ranged_cross_class_five_native_request_v1",
+            "source":"simulationcraft_midnight_MID2_Hunter_Beast_Mastery",
+            "race":"troll","class":"hunter","spec":"beast_mastery",
+            "armor":"mail","weapon":"ranged_mainhand_no_offhand",
+            "representative_ilvl":334,
+            "preserve_upstream_APL_pet_actions":True,
+            "initial_real_numeric_witnesses":2,
+            "official_target_native_cases":2,
+            "adaptive_v015_native_cases":1,
+            "maximum_new_native_calls":5,
+            "iterations_each":35,
+            "official_formula":"T=G+J+F",
+            "simc_effect_authority_only":True,
+            "no_new_item_gear_optimizer_or_APL":True,
+            "all_spec_native_proven":False}
+          files={
+           "integration_probes/fixtures/v079_upstream_mid2_hunter_beast_mastery_reference.simc":"fd9399a7ee0c9c39a362ba31a0d8308e3e000490",
+           "runner/v079_hunter_ranged_generic_native.py":"d171bf4c4aa8a8fed66bc03bec63636f68ea4f06",
+           "tests/test_v079_hunter_ranged_generic_native.py":"a05621328179fc2d00997623fb93ac6a67aaff88"}
+          for path,digest in files.items():
+              actual=subprocess.check_output(["git","hash-object",path],text=True).strip()
+              assert actual==digest,(path,actual,digest)
+          print("V079_EXACT_REQUEST_PINNED_APL_AND_SOURCE_SHAS_PASS")
+          PY
+      - name: Full offline regression and pilot check
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Offline 15-slot ranged no-offhand exact source and raw inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v079_hunter_ranged_generic_native.py --upstream integration_probes/fixtures/v079_upstream_mid2_hunter_beast_mastery_reference.simc --out out/offline
+          python3 - <<'PY'
+          import json
+          s=json.load(open("out/offline/V079_RECEIPT.json"))
+          assert s["status"]=="PASS_SOURCE_BACKED_RANGED_RAW_INPUT_PLAN_ZERO_NATIVE",s
+          assert s["new_native_this_invocation"]==0
+          assert s["character"]["race"]=="troll"
+          assert s["origin"]["weapon_type"]=="ranged_no_offhand"
+          assert s["origin"]["pet_apl_unmodified"] is True
+          print("V079_OFFLINE_RANGED_FIFTEEN_SLOTS_AND_PET_APL_PASS")
+          PY
+      - name: Restore pinned SimC engine
+        uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-40153209773
+          path: .simc
+          run-id: 40153209773
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Exactly two raw + two official + one v015 adaptive real Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc/simc' | sha256sum -c
+          chmod +x .simc/simc
+          python3 runner/v079_hunter_ranged_generic_native.py --upstream integration_probes/fixtures/v079_upstream_mid2_hunter_beast_mastery_reference.simc --out "$GITHUB_WORKSPACE/out/native" --binary "$GITHUB_WORKSPACE/.simc/simc"
+          python3 - <<'PY'
+          import json,math
+          r=json.load(open("out/native/V079_RECEIPT.json"))
+          assert r["status"]=="PASS_HUNTER_RANGED_FULL_GENERIC_NATIVE_PATH",r
+          assert r["new_native_this_invocation"]==5 and r["native_attempts_total_durable"]==5,r
+          assert (r["G"],r["J"],r["F"]) and r["G"]+r["J"]+r["F"]==r["T"]
+          assert r["v066_actual_official_preflight"]=="READY_NUMERIC_PROFILE_SCOPED"
+          assert len(r["official_targets"])==2
+          assert r["v015_adaptive_policy_reused"] and not r["global_optimum_proven"]
+          for obs in r["official_targets"]+[r["adaptive"]]:
+              assert obs["target"]==obs["rating_actual"]
+              assert sum(obs["target"].values())==r["T"]
+              assert obs["dps_samples"]>=20 and math.isfinite(obs["dps_sem"])
+          print("V079_REAL_HUNTER_RANGED_FULL_GENERIC_NATIVE_PASS",json.dumps(r,sort_keys=True))
+          PY
+          sha256sum out/native/raw/case_00/result.json out/native/raw/case_01/result.json out/native/official/candidate_00/result.json out/native/official/candidate_01/result.json out/native/official/adaptive_00/result.json > out/native/NATIVE_FIVE_SHA256SUMS.txt
+      - name: Five Native SHA-cache hits, zero additional SimC
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v079_hunter_ranged_generic_native.py --upstream integration_probes/fixtures/v079_upstream_mid2_hunter_beast_mastery_reference.simc --out "$GITHUB_WORKSPACE/out/native" --binary "$GITHUB_WORKSPACE/.simc/simc" --cache-only
+          sha256sum -c out/native/NATIVE_FIVE_SHA256SUMS.txt
+          python3 - <<'PY'
+          import json
+          r=json.load(open("out/native/V079_RECEIPT.json"))
+          assert r["status"]=="PASS_HUNTER_RANGED_FULL_GENERIC_NATIVE_PATH",r
+          assert r["new_native_this_invocation"]==0 and r["native_attempts_total_durable"]==5
+          assert r["cache_only_replay"]
+          assert all(z["source"]=="CACHED_VERIFIED_NATIVE" for z in
+                 r["official_targets"]+[r["adaptive"]])
+          print("V079_FIVE_NATIVE_CACHE_SHA_REPLAY_ZERO_NEW_SIMC_PASS")
+          PY
+      - name: Preserve actual inputs, JSON2, source, stderr and receipts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v079-hunter-ranged-native-${{ github.run_id }}
+          path: out/
+          if-no-files-found: warn
+          retention-days: 14
