@@ -1,0 +1,128 @@
+name: v063 Official GJF Numeric Rating Reconciliation
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/v063_official_T_once.json
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v063-official-budget-native
+  cancel-in-progress: false
+jobs:
+  numeric-two-native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Verify exact source, request and official formula
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          assert os.environ["GITHUB_EVENT_NAME"]=="push"
+          assert os.environ["GITHUB_REF"]=="refs/heads/probe/chat-cache-v035-20261024"
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==["integration_probes/requests/v063_official_T_once.json"]
+          req=json.loads(pathlib.Path(changed[0]).read_text())
+          assert req=={
+            "schema":"v063_official_native_two_candidate_once_v1",
+            "native_max_calls":2,
+            "reference":"EXISTING_V059_TWO_NATIVE_JSON2_FOR_NUMERIC_ONLY",
+            "official_budget_formula":"T=G+J+F",
+            "expected_G":2849,"expected_J":138,"expected_F":165,
+            "official_target_T":3152,
+            "external_oil_in_T":False,
+            "trinket_static_gate":False,
+            "proc_fidelity_gate":False,
+            "original_product_v016_integrated":False,
+            "official_policy_promoted":False}
+          sources={
+            "runner/v063_numeric_injection.py":"8dc1148dfd32f8bd56262ced5e61bb34df28a1ba",
+            "runner/v063_official_T_two_native.py":"f328695e94f3c4e42bc9934216a1ee84e30753f6",
+            "tests/test_v063_numeric_injection.py":"33014b2a7b4f41e42239852936758f315ddbb427",
+            "runner/v061_scenario_contract.py":"31f8419ce3a3e86c04080e7ec3faea2f76a32a17",
+            "runner/v062_static_budget_bridge.py":"17d5dd3463aa3e77bb1cf0036cba0e3144a12634"}
+          for p,h in sources.items():
+            assert subprocess.check_output(["git","hash-object",p],text=True).strip()==h,"SOURCE_SHA:"+p
+          print("V063_CONTRACT_AND_SOURCES_PASS")
+          PY
+      - name: Full offline regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Load two previous actual Native numeric witnesses
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v059-two-candidate-DPS-40157655114
+          path: .previous
+          run-id: 40157655114
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Reconcile official budget and witness offsets offline first
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v063_official_T_two_native.py \
+            --previous-v059 "$GITHUB_WORKSPACE/.previous" \
+            --out "$GITHUB_WORKSPACE/offline"
+          python3 - <<'PY'
+          import json
+          r=json.load(open("offline/V063_RECEIPT.json"))
+          assert r["status"]=="PASS_OFFLINE_NUMERIC_PLAN_NO_NATIVE_CALLS",r
+          assert r["native_calls_attempted"]==0
+          assert r["G_native"]==2849 and r["T_official"]==3152
+          assert r["measured_net_gear_to_json2_offset"]=={
+           "crit_rating":0,"haste_rating":165,"mastery_rating":0,"versatility_rating":0}
+          print("V063_REAL_OLD_JSON2_OFFICIAL_GJF_PLAN_PASS")
+          PY
+      - name: Retrieve pinned Native binary
+        uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-40153209773
+          path: .simc
+          run-id: 40153209773
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Native exactly two official-T candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc/simc' | sha256sum -c
+          chmod +x .simc/simc
+          python3 runner/v063_official_T_two_native.py \
+            --previous-v059 "$GITHUB_WORKSPACE/.previous" \
+            --binary "$GITHUB_WORKSPACE/.simc/simc" \
+            --out "$GITHUB_WORKSPACE/out" \
+            --iterations 60
+          python3 - <<'PY'
+          import json
+          r=json.load(open("out/V063_RECEIPT.json"))
+          assert r["status"]=="PASS_TWO_REAL_NATIVE_OFFICIAL_T_3152_JSON2_RATING",r
+          assert r["native_calls_attempted"]==2
+          assert r["T_official"]==3152
+          assert sum(r["external_oil_fixed_not_added_to_T"].values())==32
+          assert len(r["candidates"])==2
+          assert all(sum(c["actual_buffed_stats_rating"].values())==3152 for c in r["candidates"])
+          assert all(c["actual_buffed_stats_rating"]==c["requested_json2_rating"] for c in r["candidates"])
+          assert all(c["dps_mean"]>0 for c in r["candidates"])
+          assert r["comparison"]["global_optimum_proven"] is False
+          print("V063_NATIVE_TWO_OFFICIAL_GJF_RATINGS_PASS")
+          PY
+      - name: Preserve receipts and full unmodified SimC execution logs
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v063-official-GJF-two-${{ github.run_id }}
+          path: |
+            offline/
+            out/
+          retention-days: 14
+          if-no-files-found: warn
