@@ -1,0 +1,22 @@
+{
+  "schema": "v069_actual_rogue_static_GJF_one_candidate_once",
+  "native_witnesses": 2,
+  "native_official_candidates": 1,
+  "max_new_native_calls": 3,
+  "user_rogue": "void_elf_subtlety_334",
+  "user_gear_selected": [
+    "head:271875",
+    "main_hand:271093",
+    "trinket1:270175",
+    "trinket2:281215",
+    "wrists:244576_arcanoweave_lining",
+    "off_hand:237837_hunters_ritual_stone"
+  ],
+  "omnium_fourth": "mastery",
+  "special_gem_B": 240967,
+  "unknown_nontrinket_stat_rejected": true,
+  "oil_outside_official_GJF": true,
+  "new_native_effect_proc_gate": false,
+  "original_v015_v016_historical_not_rerun": true,
+  "no_main_workos_modification": true
+}
