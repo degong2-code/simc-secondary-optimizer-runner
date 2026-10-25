@@ -1,0 +1,149 @@
+name: v071 Rogue First Adaptive Official GJF Scout
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [integration_probes/requests/v071_rogue_adaptive_once.json]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v071-rogue-first-official-adaptive
+  cancel-in-progress: false
+jobs:
+  one-real-native-adaptive:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Check bounded request source hashes and product policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib,json,os,subprocess
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==["integration_probes/requests/v071_rogue_adaptive_once.json"]
+          request=json.loads(pathlib.Path(changed[0]).read_text())
+          assert request=={
+            "schema":"v071_single_rogue_real_adaptive_native_request_v1",
+            "user":"void_elf_rogue_subtlety_334",
+            "numeric_native_source":40181981240,
+            "prior_official_native_source":40182313167,
+            "max_new_native_calls":1,
+            "scout_iterations":35,
+            "fixed_L_and_budget":"T=G+J+F",
+            "candidate_generation":"reuse_v065_authentic_v015_policy",
+            "direct_proc_or_APL_gate":False,
+            "original_v015_v016_source_changed":False,
+            "global_optimum_claimed":False}
+          for path,sha in {
+            "runner/v071_rogue_adaptive_first_scout.py":"a8a48fe0f4df6203b0f1d34f3409f7c22ba75ded",
+            "tests/test_v071_rogue_adaptive_first_scout.py":"32ef0102ec393306844fc7a5aeaf1a410c396f90"
+          }.items():
+            assert subprocess.check_output(["git","hash-object",path],text=True).strip()==sha,path
+          print("V071_EXACT_ONE_NATIVE_AND_PROFILE_POLICY_PASS")
+          PY
+      - name: Current full regressions, not v015/v016 historic tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Reuse actual v069 two profile numeric calibration witnesses
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v069-user-rogue-real-GJF-one-native-40181981240
+          path: .v069
+          run-id: 40181981240
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Reuse actual v070 official 3150 single target/JSON2
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v070-rogue-GJF-native-40182313167
+          path: .v070
+          run-id: 40182313167
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Plan a genuine CHMV scout from verified native official seed with 0 new calls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v071_rogue_adaptive_first_scout.py \
+            --witness-root .v069/fresh-witness \
+            --prior-official .v070/official \
+            --out out/offline
+          python3 - <<'PY'
+          import json
+          x=json.load(open("out/offline/V071_RECEIPT.json"))
+          assert x["status"]=="PASS_NEXT_SCOUT_PLAN_NO_NATIVE",x
+          assert x["new_native_calls"]==0
+          assert x["official_T"]==3150
+          assert x["G"]==2847 and x["J"]==138 and x["F"]==165
+          assert x["special_fixed_L"]=={"crit_rating":100,"haste_rating":201,"mastery_rating":0,"versatility_rating":0}
+          assert x["numeric_offset"]=={"crit_rating":165,"haste_rating":0,"mastery_rating":0,"versatility_rating":0}
+          assert x["next_target"]!=x["prior_official_anchor"]["target"]
+          assert sum(x["next_target"].values())==3150
+          print("V071_ONE_REAL_OFFICIAL_SEED_TO_DISTINCT_NEXT_CHMV_PROPOSED_PASS")
+          PY
+      - name: Recover exact pinned binary
+        uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-40153209773
+          path: .simc
+          run-id: 40153209773
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: One and only one new SimC scout chosen by v015-derived scheduler
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc/simc' | sha256sum -c
+          chmod +x .simc/simc
+          python3 runner/v071_rogue_adaptive_first_scout.py \
+            --witness-root .v069/fresh-witness \
+            --prior-official .v070/official \
+            --binary "$GITHUB_WORKSPACE/.simc/simc" \
+            --out "$GITHUB_WORKSPACE/out/native"
+          python3 - <<'PY'
+          import json,math
+          x=json.load(open("out/native/V071_RECEIPT.json"))
+          assert x["status"]=="PASS_ONE_ROGUE_ADAPTIVE_REAL_NATIVE_DPS_AND_CHMV",x
+          assert x["new_native_calls"]==1
+          assert x["one_real_adaptive_step_complete"]
+          assert x["official_T"]==3150 and x["G"]==2847
+          assert x["new_scout"]["target"]==x["new_scout"]["rating_actual"]
+          assert sum(x["new_scout"]["rating_actual"].values())==3150
+          assert x["new_scout"]["dps_samples"]>=20
+          assert x["new_scout"]["dps_mean"]>0 and math.isfinite(x["new_scout"]["dps_sem"])
+          assert x["comparison"]["independent_confirmations_needed"]
+          print("V071_ONE_ADAPTIVE_REAL_ROGUE_NATIVE_AND_CHMV_PARITY_PASS")
+          PY
+      - name: Re-run through true SHA-verified exact cache, zero new SimC calls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v071_rogue_adaptive_first_scout.py \
+            --witness-root .v069/fresh-witness \
+            --prior-official .v070/official \
+            --binary "$GITHUB_WORKSPACE/.simc/simc" \
+            --cache-only \
+            --out "$GITHUB_WORKSPACE/out/native"
+          python3 - <<'PY'
+          import json
+          x=json.load(open("out/native/V071_RECEIPT.json"))
+          assert x["new_native_calls"]==0 and x["new_scout"]["source"]=="CACHED_VERIFIED_NATIVE",x
+          assert x["status"]=="PASS_ONE_ROGUE_ADAPTIVE_REAL_NATIVE_DPS_AND_CHMV"
+          print("V071_ONE_ADAPTIVE_SCOUT_EXACT_CACHE_HIT_ZERO_NEW_SIMC_PASS")
+          PY
+      - name: Upload single Native JSON2 and receipts for independent verification
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v071-rogue-one-adaptive-scout-${{ github.run_id }}
+          path: out/
+          retention-days: 14
+          if-no-files-found: warn
