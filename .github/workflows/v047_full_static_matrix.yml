@@ -1,0 +1,120 @@
+name: v047 Full Scope 126 Items x 14 Proposed Itemlevels
+
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - integration_probes/requests/v047_full_matrix_once.json
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: v047-full-static-census
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    name: batch from cursor ${{ matrix.start }}
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        start: [0, 200, 400, 600, 800, 1000, 1200, 1400, 1600]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Gate manifest and bounded source
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          assert os.environ['GITHUB_EVENT_NAME']=='push'
+          assert os.environ['GITHUB_REF']=='refs/heads/probe/chat-cache-v035-20261024'
+          changed=subprocess.check_output(['git','diff-tree','--no-commit-id','--name-only','-r',os.environ['GITHUB_SHA']],text=True).splitlines()
+          assert changed==['integration_probes/requests/v047_full_matrix_once.json'],'DIFF_SCOPE_CHANGED'
+          req=json.loads(pathlib.Path(changed[0]).read_text())
+          expected={'schema':'v047_full_native_static_matrix_v1',
+            'authorization':'ALL_126_CANDIDATES_AT_14_PROPOSED_LEVELS',
+            'start_cursors':[0,200,400,600,800,1000,1200,1400,1600],
+            'max_calls_per_batch':200,'total_possible_pairs':1764,
+            'simc_version_does_not_invalidate_static_cache':True,
+            'no_new_combat_dps_optimization':True,
+            'no_wequip_runtime_dependency':True,
+            'product_code_integrated':False,
+            'official_policy_promoted':False}
+          assert req==expected,'REQUEST_NOT_APPROVED'
+          pins={'runner/v047_full_scope_collector.py':'9a633e70a6bbb633c30fc89b061267538963d3ce',
+            'integration_probes/requests/v047_full_scope_manifest.json':'80cd941075852354821846d53c7d88e663f3794a',
+            'runner/v046_static_item_cache.py':'1a4e52a036c870385e07c74baddafdcc1ebdd16f'}
+          for p,d in pins.items():
+            assert subprocess.check_output(['git','hash-object',p],text=True).strip()==d,'SOURCE_DRIFT:'+p
+          print('V047_MATRIX_GATE_PASS')
+          PY
+      - name: Restore single pinned SimC binary cache, fail closed if missing
+        id: simc_cache
+        uses: actions/cache/restore@v5
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd-cli-release-nonetwork-r1
+      - name: Fetch previously verified pilot cache (deduplicate)
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v047-full-census-pilot-40152488928
+          path: .pilot
+          run-id: 40152488928
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Verify source cache and binary
+        shell: bash
+        env:
+          CACHE_HIT: ${{ steps.simc_cache.outputs.cache-hit }}
+        run: |
+          set -euo pipefail
+          test "$CACHE_HIT" = true || exit 3
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc-cache/v035/simc' | sha256sum -c
+          cp .pilot/result/midnight_s2_static_cache_v047.json output/seed.json
+          python3 - <<'PY'
+          import json
+          d=json.load(open('output/seed.json'))
+          assert len(d['catalog'])==406 and len(d['variants'])==27
+          assert d['season']=='midnight_s2'
+          print('V047_PILOT_SEED_VERIFIED')
+          PY
+      - name: Scan exact candidates and generate resumable ledger
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v047_full_scope_collector.py \
+            --binary "$GITHUB_WORKSPACE/.simc-cache/v035/simc" \
+            --manifest integration_probes/requests/v047_full_scope_manifest.json \
+            --seed-cache output/seed.json \
+            --out output/collected \
+            --start ${{ matrix.start }} \
+            --max-cases 200 \
+            --levels 292 295 298 302 305 308 311 315 318 321 324 328 331 334
+          python3 - <<'PY'
+          import json,pathlib
+          obj=json.loads(pathlib.Path('output/collected/V047_LEDGER.json').read_text())
+          assert obj['status']!='FAILED_SETUP'
+          assert obj['attempted']<=200
+          assert obj['saved']+obj['cache_reused']+obj['blocked']==len(obj['results'])
+          print('V047_BATCH_RESULT',obj['start_cursor'],obj['attempted'],obj['saved'],
+            obj['cache_reused'],obj['blocked'])
+          PY
+      - name: Archive complete bounded batch
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v047-native-batch-${{ matrix.start }}-${{ github.run_id }}
+          path: output/collected/
+          retention-days: 14
+          if-no-files-found: warn
