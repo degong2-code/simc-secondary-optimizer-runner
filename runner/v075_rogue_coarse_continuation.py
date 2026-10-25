@@ -133,7 +133,9 @@ def report_exploration(high, historical_scouts, fresh, normalized, static):
                "global_near_best_alternative_proven":False})
     # Test/provisional switching rule, NOT a locked product policy. Coarse
     # search remains open while v015 feasible unobserved neighbors exist.
-    all_observed=high+all_scouts
+    high_keys={scheduler.key(x["target"]) for x in high}
+    all_observed=high+[x for x in all_scouts
+                       if scheduler.key(x["target"]) not in high_keys]
     rows=scheduler.observations_by_vector(all_observed,
                  *scheduler.bounds(normalized,static))
     try:
@@ -185,9 +187,13 @@ def run(witness,official_root,first_root,high_root,material_root,confirmed_root,
         anchor=preferred_high(high)
         need(anchor["target"]==v074.EXPECTED_D,
              "CONFIRMED_HIGH_PRECISION_D_NOT_LEADER")
-        need(all(o["target"]!=x["target"] for o in coarse for x in high),
-             "SAME_TARGET_HIGH_AND_HISTORICAL_SCOUT")
-        state=scheduler.initial_state(normalized,static,high+coarse,
+        # v073 exploratory D shares a target with v074 confirmed D.
+        # Keep the 320-iteration measurement as the only scheduler value
+        # for that target; retain scout D's real SHA in provenance/identity.
+        high_keys={scheduler.key(x["target"]) for x in high}
+        coarse_unique=[x for x in coarse
+                       if scheduler.key(x["target"]) not in high_keys]
+        state=scheduler.initial_state(normalized,static,high+coarse_unique,
                            step=COARSE_STEP,scout_max=NATIVE_CAP,
                            confirmation_runs=2)
         result.update({"status":"PASS_COARSE_CONTINUATION_PLAN_ZERO_NATIVE",
