@@ -16,7 +16,7 @@ import v065_original_scheduler_native_bridge as engine
 SCHEMA="v067_generic_v065_execution_route_v1"
 
 def route(scenario_file,filler_file,cache_file,profile_file,witness_dir,
-          binary_sha256,output,binary=None,cancel_file=None):
+          binary_sha256,output,binary=None,cancel_file=None,cache_only=False):
     scenario=json.loads(pathlib.Path(scenario_file).read_text(encoding="utf8"))
     filler=json.loads(pathlib.Path(filler_file).read_text(encoding="utf8"))
     static=cache.load(pathlib.Path(cache_file))
@@ -31,7 +31,7 @@ def route(scenario_file,filler_file,cache_file,profile_file,witness_dir,
        json.dumps(meta,ensure_ascii=False,sort_keys=True,indent=2)+"\n",
        encoding="utf8")
     status=engine.start(None,out,binary=binary,cancel_file=cancel_file,
-                        prepared=prepared)
+                        prepared=prepared,cache_only=cache_only)
     return status
 
 def main(argv=None):
@@ -45,11 +45,12 @@ def main(argv=None):
     ap.add_argument("--binary",type=pathlib.Path)
     ap.add_argument("--output",required=True,type=pathlib.Path)
     ap.add_argument("--cancel-file",type=pathlib.Path)
+    ap.add_argument("--cache-only",action="store_true")
     a=ap.parse_args(argv)
     try:
         return route(a.scenario,a.filler,a.static_cache,a.profile,
                      a.witness_root,a.binary_sha256,a.output,
-                     a.binary,a.cancel_file)
+                     a.binary,a.cancel_file,a.cache_only)
     except Exception as exc:
         a.output.mkdir(parents=True,exist_ok=True)
         receipt={"schema":SCHEMA,"status":"BLOCKED_NO_SILENT_GUESS",
