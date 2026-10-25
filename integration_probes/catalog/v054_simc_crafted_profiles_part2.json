@@ -1,0 +1,185 @@
+{
+  "schema": "v054_simc_profile_crafted_evidence_batch_v1",
+  "source_rev": "12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7",
+  "part": 2,
+  "profiles_seen": 16,
+  "profiles_with_crafted": 14,
+  "items": [
+    {
+      "profile": "MID2_Mage_Fire.simc",
+      "slot": "wrists",
+      "name": "martyrs_bindings",
+      "id": 239648,
+      "crafted_stats": "36/40",
+      "line": "wrists=martyrs_bindings,id=239648,bonus_id=8960/12384/13668/13751,ilevel=331,gem_id=240900,crafted_stats=36/40"
+    },
+    {
+      "profile": "MID2_Mage_Fire.simc",
+      "slot": "off_hand",
+      "name": "alnhara_lantern",
+      "id": 245769,
+      "crafted_stats": "36/40",
+      "line": "off_hand=alnhara_lantern,id=245769,bonus_id=8960/13751/13771/13852,ilevel=338,crafted_stats=36/40"
+    },
+    {
+      "profile": "MID2_Mage_Fire_Frostfire.simc",
+      "slot": "wrists",
+      "name": "martyrs_bindings",
+      "id": 239648,
+      "crafted_stats": "36/40",
+      "line": "wrists=martyrs_bindings,id=239648,bonus_id=8960/12384/13668/13751,ilevel=331,gem_id=240916,crafted_stats=36/40"
+    },
+    {
+      "profile": "MID2_Mage_Fire_Frostfire.simc",
+      "slot": "off_hand",
+      "name": "alnhara_lantern",
+      "id": 245769,
+      "crafted_stats": "36/40",
+      "line": "off_hand=alnhara_lantern,id=245769,bonus_id=8960/13751/13771/13852,ilevel=338,crafted_stats=36/40"
+    },
+    {
+      "profile": "MID2_Mage_Frost.simc",
+      "slot": "waist",
+      "name": "martyrs_waistwrap",
+      "id": 239649,
+      "crafted_stats": "32/49",
+      "line": "waist=martyrs_waistwrap,id=239649,bonus_id=8790/8960/12384/13750/13751/13836/9627,gem_id=240890,crafted_stats=32/49"
+    },
+    {
+      "profile": "MID2_Mage_Frost.simc",
+      "slot": "off_hand",
+      "name": "alnhara_lantern",
+      "id": 245769,
+      "crafted_stats": "32/49",
+      "line": "off_hand=alnhara_lantern,id=245769,bonus_id=8790/8960/13751/13771/13836/9627,crafted_stats=32/49"
+    },
+    {
+      "profile": "MID2_Mage_Frost_Frostfire.simc",
+      "slot": "waist",
+      "name": "martyrs_waistwrap",
+      "id": 239649,
+      "crafted_stats": "32/49",
+      "line": "waist=martyrs_waistwrap,id=239649,bonus_id=8790/8960/12384/13750/13751/13836/9627,gem_id=240890,crafted_stats=32/49"
+    },
+    {
+      "profile": "MID2_Mage_Frost_Frostfire.simc",
+      "slot": "off_hand",
+      "name": "alnhara_lantern",
+      "id": 245769,
+      "crafted_stats": "32/49",
+      "line": "off_hand=alnhara_lantern,id=245769,bonus_id=8790/8960/13751/13771/13836/9627,crafted_stats=32/49"
+    },
+    {
+      "profile": "MID2_Monk_Brewmaster.simc",
+      "slot": "neck",
+      "name": "aqirbane_reliquary",
+      "id": 268265,
+      "crafted_stats": "32/40",
+      "line": "neck=aqirbane_reliquary,id=268265,bonus_id=10835/13708/13848,gem_id=240914/240914,crafted_stats=32/40"
+    },
+    {
+      "profile": "MID2_Monk_Windwalker.simc",
+      "slot": "wrists",
+      "name": "silvermoon_agents_deflectors",
+      "id": 244576,
+      "crafted_stats": "32/49",
+      "line": "wrists=silvermoon_agents_deflectors,id=244576,bonus_id=8791/10835/12384/13751/13836/12497,gem_id=240890,crafted_stats=32/49"
+    },
+    {
+      "profile": "MID2_Monk_Windwalker.simc",
+      "slot": "feet",
+      "name": "silvermoon_agents_sneakers",
+      "id": 244569,
+      "crafted_stats": "36/49",
+      "line": "feet=silvermoon_agents_sneakers,id=244569,bonus_id=8793/12384/13751/13836/12497,enchant_id=7963,crafted_stats=36/49"
+    },
+    {
+      "profile": "MID2_Monk_Windwalker_Conduit.simc",
+      "slot": "wrists",
+      "name": "silvermoon_agents_deflectors",
+      "id": 244576,
+      "crafted_stats": "36/49",
+      "line": "wrists=silvermoon_agents_deflectors,id=244576,bonus_id=8793/10835/12384/13751/13836/12497,gem_id=240908,crafted_stats=36/49"
+    },
+    {
+      "profile": "MID2_Monk_Windwalker_Conduit.simc",
+      "slot": "feet",
+      "name": "silvermoon_agents_sneakers",
+      "id": 244569,
+      "crafted_stats": "36/49",
+      "line": "feet=silvermoon_agents_sneakers,id=244569,bonus_id=8793/12384/13751/13836/12497,enchant_id=7963,crafted_stats=36/49"
+    },
+    {
+      "profile": "MID2_Paladin_Protection.simc",
+      "slot": "head",
+      "name": "spellbreakers_cover",
+      "id": 237832,
+      "crafted_stats": "32/36",
+      "line": "head=spellbreakers_cover,id=237832,bonus_id=8960/12384/13750/13751/13836/9627,gem_id=240983,enchant_id=7961,crafted_stats=32/36"
+    },
+    {
+      "profile": "MID2_Paladin_Protection.simc",
+      "slot": "wrists",
+      "name": "spellbreakers_bracers",
+      "id": 237834,
+      "crafted_stats": "32/36",
+      "line": "wrists=spellbreakers_bracers,id=237834,bonus_id=8960/12384/13750/13751/13836/9627,gem_id=240910,crafted_stats=32/36"
+    },
+    {
+      "profile": "MID2_Paladin_Protection_Templar.simc",
+      "slot": "wrists",
+      "name": "spellbreakers_bracers",
+      "id": 237834,
+      "crafted_stats": "32/36",
+      "line": "wrists=spellbreakers_bracers,id=237834,bonus_id=8960/12384/13751/13836/9627,crafted_stats=32/36"
+    },
+    {
+      "profile": "MID2_Paladin_Protection_Templar.simc",
+      "slot": "feet",
+      "name": "spellbreakers_march",
+      "id": 237828,
+      "crafted_stats": "36/40",
+      "line": "feet=spellbreakers_march,id=237828,bonus_id=8790/8960/12384/13667/13751/13836/12497,enchant_id=8019,crafted_stats=36/40"
+    },
+    {
+      "profile": "MID2_Paladin_Retribution.simc",
+      "slot": "wrists",
+      "name": "spellbreakers_bracers",
+      "id": 237834,
+      "crafted_stats": "32/49",
+      "line": "wrists=spellbreakers_bracers,id=237834,bonus_id=8790/8960/13454/13750/13751/13836/9627,gem_id=240892,crafted_stats=32/49"
+    },
+    {
+      "profile": "MID2_Paladin_Retribution_Templar.simc",
+      "slot": "wrists",
+      "name": "spellbreakers_bracers",
+      "id": 237834,
+      "crafted_stats": "32/49",
+      "line": "wrists=spellbreakers_bracers,id=237834,bonus_id=8790/8960/13454/13750/13751/13836/9627,gem_id=240892,crafted_stats=32/49"
+    },
+    {
+      "profile": "MID2_Rogue_Assassination.simc",
+      "slot": "wrists",
+      "name": "silvermoon_agents_deflectors",
+      "id": 244576,
+      "crafted_stats": "32/49",
+      "line": "wrists=silvermoon_agents_deflectors,id=244576,bonus_id=8790/8960/12214/12384/13750/13751/13836/9627,gem_id=240890,crafted_stats=32/49"
+    },
+    {
+      "profile": "MID2_Rogue_Assassination_Fatebound.simc",
+      "slot": "wrists",
+      "name": "silvermoon_agents_deflectors",
+      "id": 244576,
+      "crafted_stats": "32/49",
+      "line": "wrists=silvermoon_agents_deflectors,id=244576,bonus_id=8790/8960/12214/12384/13750/13751/13836/9627,gem_id=240892,crafted_stats=32/49"
+    },
+    {
+      "profile": "MID2_Rogue_Outlaw.simc",
+      "slot": "back",
+      "name": "adherents_silken_shroud",
+      "id": 239656,
+      "crafted_stats": "32/40",
+      "line": "back=adherents_silken_shroud,id=239656,bonus_id=8960/12384/13751/13836/9627,crafted_stats=32/40"
+    }
+  ]
+}
