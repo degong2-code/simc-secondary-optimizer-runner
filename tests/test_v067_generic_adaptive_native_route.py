@@ -77,8 +77,9 @@ class GenericNativePipeline(unittest.TestCase):
             files=serialized(path/"in")
             out=path/"out"
             self.assertEqual(route.route(*files,SIMC_SHA,out),0)
-            with self.assertRaisesRegex(engine.PipelineBlocked,"DURABLE_PROGRESS_IDENTITY_OR_BUDGET_CONFLICT"):
-                route.route(*files,"b"*64,out)
+            self.assertEqual(route.route(*files,"b"*64,out),3)
+            blocked=json.loads((out/"V065_RECEIPT.json").read_text())
+            self.assertIn("DURABLE_PROGRESS_IDENTITY_OR_BUDGET_CONFLICT",blocked["error"])
     def test_prepared_bundle_immutability_before_scheduling(self):
         cfg,fill,static,src,witnesses=fixture()
         prepared=adapter.prepare(cfg,fill,static,src,witnesses,SIMC_SHA)
