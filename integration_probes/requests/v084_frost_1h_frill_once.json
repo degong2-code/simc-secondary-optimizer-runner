@@ -1,0 +1,32 @@
+{
+  "schema": "v084_human_frost_cloth_onehand_frill_v1",
+  "source": "simulationcraft_midnight_MID2_Mage_Frost",
+  "frost_profile_git_blob": "b787824a95020a7cdd0934ed5e004695726db138",
+  "non_tier_cloth_head_git_blob": "9fae08d2f1c49f3a964f9415540929723384e6fe",
+  "race": "human",
+  "spec": "mage_frost",
+  "armor": "cloth",
+  "weapon": "onehand_main_plus_nonweapon_offhand",
+  "main_hand_id": 271092,
+  "off_hand_id": 245769,
+  "non_tier_head_id": 271874,
+  "representative_ilvl": 334,
+  "original_frost_APL_preserved": true,
+  "exact_four_tier_slots": true,
+  "reuse_bounded_native_engine": "v082_profile_factory",
+  "F_vector": {
+    "crit_rating": 165,
+    "haste_rating": 0,
+    "mastery_rating": 0,
+    "versatility_rating": 0
+  },
+  "maximum_new_native_calls": 4,
+  "one_exact_native_static_G": 1,
+  "two_official_static_c_native": 2,
+  "one_v015_guided_static_scout": 1,
+  "iterations_each": 35,
+  "T_formula": "T=G+J+F",
+  "oil_O_outside_T": true,
+  "no_effect_APL_or_proc_gate": true,
+  "no_gear_optimization_or_global_optimum_claim": true
+}
