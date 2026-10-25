@@ -1,0 +1,18 @@
+{
+  "schema": "v078_elemental_two_real_native_bootstrap_request_v1",
+  "spec": "shaman_elemental",
+  "armor": "mail",
+  "weapon": "onehand_shield",
+  "race": "orc",
+  "target_ilvl": 334,
+  "source": "pinned_upstream_MID2_Elemental_APL",
+  "source_exact_gear_ids_plus_explicit_334_fixture_options": true,
+  "first_witnesses_are_raw_numeric_calibration_not_official_T": true,
+  "maximum_new_native_calls": 2,
+  "iterations_per_witness": 35,
+  "native_binary_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+  "no_effect_gate_or_new_apl": true,
+  "no_rogue_offset_reuse": true,
+  "no_global_optimum_claim": true,
+  "official_formula": "T=G+J+F"
+}
