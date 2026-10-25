@@ -1,0 +1,139 @@
+name: v081 Static CHMV Generic V066 V015 Native Scout
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/v081_static_generic_scout_once.json
+      - integration_probes/requests/v081_static_generic_scout_retry.json
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v081-static-chmv-generic-native
+  cancel-in-progress: false
+jobs:
+  verified-static-generic:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Exact request and source blobs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          options=["integration_probes/requests/v081_static_generic_scout_once.json",
+                   "integration_probes/requests/v081_static_generic_scout_retry.json"]
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert len(changed)==1 and changed[0] in options,changed
+          r=json.loads(pathlib.Path(changed[0]).read_text())
+          assert r=={
+            "schema":"v081_existing_real_static_native_to_original_v015_scout_v1",
+            "verified_parent_run":40204450655,
+            "reuse_two_actual_native_static_c_results_with_SHAs":True,
+            "no_simc_mechanics_or_APL_gate":True,
+            "static_rating_semantics":"STATIC_CHMV_C_V1",
+            "prior_buffed_legacy_records_cannot_mix":True,
+            "existing_search_order":"v065_v015_derived_local_mirror",
+            "maximum_new_native_calls":1,
+            "native_iterations":35,
+            "F_vector_caller_declared_not_independently_certified":True,
+            "formula":"T=G+J+F",
+            "legacy_product_v015_v016_integrated":False,
+            "global_optimum_proven":False}
+          for file,blob in {
+           "runner/v065_v015_scheduler_adapter.py":"519d018a622d94ec240683b2623965eea24b5d21",
+           "runner/v066_profile_neutral_preflight.py":"b0c5f7e65432e05da3a251b5b0e5c329437aa070",
+           "runner/v081_static_generic_scout_native.py":"df39ec0e7829fe14ec180426ddb43b55a0d13a7b",
+           "tests/test_v081_static_generic_scout_native.py":"e62d69cce5143a5d6341e3fc005e0f20ba5a5840"}.items():
+            actual=subprocess.check_output(["git","hash-object",file],text=True).strip()
+            assert actual==blob,(file,actual,blob)
+          print("V081_SOURCE_SHA_ONLY_ONE_BOUNDED_REAL_NATIVE_PASS")
+          PY
+      - name: Full existing regressions plus five static scout tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Download v080 two actual corrected STATIC CHMV Native anchors
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v080-static-rating-talent-separated-40204450655
+          path: .v080
+          run-id: 40204450655
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Download exact pinned SimC ELF
+        uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-40153209773
+          path: .simc
+          run-id: 40153209773
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Verify two v080 actual SHA and generate ONE unseen static proposal, no SimC
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v081_static_generic_scout_native.py --upstream integration_probes/fixtures/v079_upstream_mid2_hunter_beast_mastery_reference.simc --prior-static .v080/native --out out/offline
+          python3 - <<'PY'
+          import json
+          r=json.load(open("out/offline/V081_RECEIPT.json"))
+          assert r["status"]=="PASS_STATIC_PREPARATION_AND_V015_SCOUT_PLAN",r
+          assert r["v066_status"]=="READY_STATIC_CHMV_PROFILE_SCOPED"
+          assert r["T"]==2797 and r["G"]+r["J"]+r["F"]==2797
+          assert r["new_native_this_invocation"]==0
+          assert r["source_flask_vector_independently_proven"] is False
+          assert sum(r["new_proposal_static_CHMV_c"].values())==2797
+          assert sum(r["new_proposal_injected_raw_GJ"].values())==2632
+          assert r["new_proposal_static_CHMV_c"]["crit_rating"]==r["new_proposal_injected_raw_GJ"]["crit_rating"]
+          print("V081_REAL_V080_TWO_STATIC_SHA_ANCHORS_TO_V015_SCOUT_PLAN_PASS")
+          PY
+      - name: Run exactly ONE native static c adaptive proposal
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc/simc' | sha256sum -c
+          chmod +x .simc/simc
+          python3 runner/v081_static_generic_scout_native.py --upstream integration_probes/fixtures/v079_upstream_mid2_hunter_beast_mastery_reference.simc --prior-static .v080/native --out "$GITHUB_WORKSPACE/out/native" --binary "$GITHUB_WORKSPACE/.simc/simc"
+          python3 - <<'PY'
+          import json,math
+          r=json.load(open("out/native/V081_RECEIPT.json"))
+          assert r["status"]=="PASS_STATIC_GENERIC_V066_V015_SCOUT_NATIVE",r
+          assert r["new_native_this_invocation"]==r["new_native_total_durable"]==1
+          assert r["scout_acceptance_status"]=="V015_DERIVED_ORDER_ACCEPTED_STATIC_C"
+          assert r["v066_status"]=="READY_STATIC_CHMV_PROFILE_SCOPED"
+          obs=r["native_observation"]
+          assert obs["static_c"]==obs["verified_static_c"]
+          assert sum(obs["static_c"].values())==2797
+          assert obs["dps_mean"]>0 and math.isfinite(obs["dps_sem"]) and obs["dps_samples"]>=20
+          print("V081_REAL_NATIVE_EXISTING_V066_V015_STATIC_C_GENERIC_PASS",json.dumps(r,sort_keys=True))
+          PY
+          sha256sum out/native/native/adaptive_00/result.json > out/native/NATIVE_SHA256.txt
+      - name: Strict one Native SHA-cache replay; no additional SimC calls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v081_static_generic_scout_native.py --upstream integration_probes/fixtures/v079_upstream_mid2_hunter_beast_mastery_reference.simc --prior-static .v080/native --out "$GITHUB_WORKSPACE/out/native" --binary "$GITHUB_WORKSPACE/.simc/simc" --cache-only
+          sha256sum -c out/native/NATIVE_SHA256.txt
+          python3 - <<'PY'
+          import json
+          r=json.load(open("out/native/V081_RECEIPT.json"))
+          assert r["status"]=="PASS_STATIC_GENERIC_V066_V015_SCOUT_NATIVE",r
+          assert r["new_native_this_invocation"]==0 and r["new_native_total_durable"]==1
+          assert r["native_observation"]["source"]=="CACHED_VERIFIED_NATIVE"
+          print("V081_STATIC_GENERIC_REAL_NATIVE_CACHE_REPLAY_ZERO_EXTRA_SIMC_PASS")
+          PY
+      - name: Preserve real candidate, Native JSON2, stdout/stderr and SHA receipts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v081-static-generic-v015-native-${{ github.run_id }}
+          path: out/
+          if-no-files-found: warn
+          retention-days: 14
