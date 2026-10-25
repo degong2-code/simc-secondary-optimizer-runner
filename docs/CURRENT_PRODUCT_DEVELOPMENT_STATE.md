@@ -1,5 +1,9 @@
 # SIMC SECONDARY OPTIMIZER — CURRENT DEVELOPMENT STATE (지속 갱신)
 
+> **2026-10-25 v064 최신 상태 (P4 평가 포트 검증):** 사용자 적용 공식 Source **v1.2** 기준. `runner/v064_adaptive_evaluator_port.py`에 외부 탐색 엔진의 후보/iterations 제안을 기존 v061 시나리오·v062 정적 예산·v063 프로필별 숫자 주입/JSON2 DPS·SEM 평가와 연결하는 포트를 구현했다. 선택된 **15개 SimC 아이템 ID/레벨/옵션, 소모품, 캐릭터/전투 조건** 일치를 검사하고, SHA 검증된 Native JSON2 영수증만 결과 캐시로 재사용한다. [GitHub Actions #40167043876](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40167043876) **315 PASS / 2 SKIP**; v063 기존 실제 Native 두 결과 독립 재생 PASS, **새 SimC 0회**. 공식 T=3152에서 A192374.47 vs B192109.86 DPS 관측, 차이 통계적 미확정, 후보 간 rating 150 이동은 시범 10% 차이 기준 미달이라 대안 0건. **기존 v015/v016 원본 자동후보 생성 알고리즘·제품 통합은 아직 확인/연결되지 않았다**. [v064 근거·정확한 다음 작업](./V064_ADAPTIVE_EVALUATION_PORT_ACCEPTANCE.md). 새 채팅 이동 없이 이 채팅에서 개발 계속.
+
+
+
 > **2026-10-25 최신 개발 갱신 v063 (P3 Native):** 공식 v1.2 `T=G+J+F`를 사용한 334 Arcane Mage 단일 프로필의 2후보 **실제 SimC 주입 및 DPS 수집 PASS** — [Actions 40165729165](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40165729165), 전체 회귀 **304 PASS / 2 SKIP**, Native 신규 실행 2회. 기존 v059 Native 2후보의 정적 수치 차이로 net gear→JSON2 offset `(0,+165,0,0)`를 같은 프로필에서만 보정했고, 공식 총량 **G2849+J138+F165=T3152**, 무기 기름 `(16,16,0,0)`은 **T 외부**다. 후보 A 600/1108/1115/329 (DPS 192374.47±SEM951.01), 후보 B 750/958/1115/329 (DPS 192109.86±SEM1300.02) 모두 최종 rating 정확히 일치, 통계적 우열 미확정. **9개 gem/enchant 포함 gear 레코드의 정적 수치 출처 완전 분해는 미입증**; 이를 모든 전문화 예산 중복 가산 제거 완료로 승격하지 않는다. 원본 v015~v016 제품 통합도 미완료. [상세 실측·미완료사항](./V063_OFFICIAL_GJF_NATIVE_NUMERIC_RECONCILIATION.md). 다음 작업은 **범용 프로필별 숫자 주입 오프셋 및 실제 제품 적응형 엔진 연결**. 개발은 이 채팅에서 계속.
 
 
@@ -14,8 +18,8 @@
 
 ## 0. 읽는 순서·상태 신분
 
-1. Project Sources의 공식 `SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.0.md`를 제품 정책 최상위 문서로 읽는다.
-2. `docs/DEVELOPER_NOTES_CURRENT_POLICY_ADDENDUM_20261025.md`에서 그 후 사용자가 명시한 **SimC 책임 분리, 장신구·제작장비, 정적 캐시** 결정을 읽는다. 이 부록의 branch 기록만으로 Project Source 승격을 가정하지 않는다.
+1. 사용자가 2026-10-25 적용 완료를 보고한 Project Sources의 공식 **`SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.2_PROJECT_SOURCE_REPLACEMENT.md`**를 제품 정책 최상위 문서로 읽는다. 이 문서의 역사적 v1.0·v1.1_CANDIDATE 언급은 과거 근거와 미승격 충돌의 설명이며 현재 활성 권한을 뜻하지 않는다.
+2. `docs/DEVELOPER_NOTES_CURRENT_POLICY_ADDENDUM_20261025.md`는 **v1.2 생성 전 이력 및 충돌 기록용**으로 참조한다. 현재 실제 사용자 적용된 v1.2 Source와 충돌할 경우 사용자가 승인한 v1.2가 우선하며, 자동 정책 변경 없이 충돌을 보고한다.
 3. 이 문서에서 최신 개발/시험 사실 및 정확한 다음 구현 지점을 복원한다.
 4. `docs/V059_NATIVE_CANDIDATE_BRIDGE_ACCEPTANCE.md`와 [실제 GitHub Actions #40157655114](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40157655114)를 대조한다. 각 후속 버전은 그 버전의 증거를 추가한다.
 5. `Developer_Notes_v1.1_CANDIDATE.md`는 **후보**이고 전체 승격 불가. 개발자 노트 v1.0, v003 immutable, MAIN 운영 계약을 기계적으로 덮어쓰지 않는다.
