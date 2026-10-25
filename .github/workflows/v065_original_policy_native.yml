@@ -2,7 +2,9 @@ name: v065 Original v015 Policy to v064 Native Adaptive
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
-    paths: [integration_probes/requests/v065_original_adaptive_once.json]
+    paths:
+      - integration_probes/requests/v065_original_adaptive_once.json
+      - integration_probes/requests/v065_original_adaptive_retry_once.json
 permissions:
   contents: read
   actions: read
@@ -27,7 +29,7 @@ jobs:
           assert os.environ["GITHUB_REF"]=="refs/heads/probe/chat-cache-v035-20261024"
           assert os.environ["GITHUB_EVENT_NAME"]=="push"
           changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
-          assert changed==["integration_probes/requests/v065_original_adaptive_once.json"],changed
+          assert changed==["integration_probes/requests/v065_original_adaptive_retry_once.json"],changed
           request=json.loads(pathlib.Path(changed[0]).read_text())
           assert request=={"schema":"v065_authentic_v015_policy_adapter_native_v1",
             "original_v015_sha256":"a44f73cf232c8204dbe958e79fe50f111e68654ac583a1170a283f16035c0ec3",
@@ -45,9 +47,9 @@ jobs:
             "main_branch_or_project_source_modified":False}
           for n,expected in {
             "runner/v065_v015_scheduler_adapter.py":"a9c2345290adab98ae6f9b2a98cccb1b2469631a",
-            "runner/v065_original_scheduler_native_bridge.py":"4c2b43731eead99a947e45b60f6dd0cd51e756dc",
+            "runner/v065_original_scheduler_native_bridge.py":"30b38903e3060c2904da34ea50fdee828070a646",
             "tests/test_v065_v015_scheduler_adapter.py":"560f56d5a6939d1d1342c4502dbbfdd03bdaa862",
-            "tests/test_v065_native_pipeline_safety.py":"3e5ebc3d96b3a6eee19f9f56500a52279fb74af2"
+            "tests/test_v065_native_pipeline_safety.py":"d9d6c282138d4e846c7301bad8784301e63bdacb"
           }.items():
             actual=subprocess.check_output(["git","hash-object",n],text=True).strip()
             assert actual==expected,(n,actual,expected)
