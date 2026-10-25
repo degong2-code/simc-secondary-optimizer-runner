@@ -2,7 +2,9 @@ name: v067 Generic Route Same Scheduler Cache Only Native Replay
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
-    paths: [integration_probes/requests/v067_generic_route_once.json]
+    paths:
+      - integration_probes/requests/v067_generic_route_once.json
+      - integration_probes/requests/v067_generic_route_retry_once.json
 permissions:
   contents: read
   actions: read
@@ -27,7 +29,7 @@ jobs:
           assert os.environ["GITHUB_EVENT_NAME"]=="push"
           assert os.environ["GITHUB_REF"]=="refs/heads/probe/chat-cache-v035-20261024"
           diff=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
-          assert diff==["integration_probes/requests/v067_generic_route_once.json"],diff
+          assert diff==["integration_probes/requests/v067_generic_route_retry_once.json"],diff
           request=json.loads(pathlib.Path(diff[0]).read_text())
           assert request=={
            "schema":"v067_generic_adaptive_route_cache_replay_once_v1",
@@ -42,7 +44,7 @@ jobs:
            "non_mage_real_native_pass_claimed":False,
            "product_main_promoted":False}
           source={
-            "runner/v065_original_scheduler_native_bridge.py":"1424ac563acdb78cd1ac38fd1a804c68b88d3f3b",
+            "runner/v065_original_scheduler_native_bridge.py":"7cd34fc51faf57cc8f572d20d6255deee27d1da4",
             "runner/v067_generic_adaptive_native_route.py":"b8a959c53772e1c4548e20a7556331143cbb7300",
             "tests/test_v067_generic_adaptive_native_route.py":"7aadd1e5885dfa10381659ff220d36942450542a",
             "runner/v066_profile_neutral_preflight.py":"e55a87c6b13bfa64b96399c5d09072ecd3b321c7"}
