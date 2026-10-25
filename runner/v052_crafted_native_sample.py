@@ -37,18 +37,10 @@ def build_sample(item,token,output):
       "vary_combat_length=0","optimal_raid=0","calculate_scale_factors=0",
       "actions=wait,sec=1"
     ]
-    if item_id==237840:
-        lines.append("main_hand=v052_main_warglaive,id=237840,ilevel=331,source=local,crafted_stats="+token)
-    elif item_id==237850:
+    if item_id in (237840,237850):
         lines.append("main_hand=v052_anchor,id=268209,ilevel=331,source=local")
     elif item_id==245769:
         lines.append("main_hand=v052_anchor,id=268205,ilevel=331,source=local")
-    if item_id==237840:
-        # Test same physical crafted warglaive in an offhand slot.
-        # Avoid the duplicate same-ID two-hand configuration: the first
-        # main-hand record may be sufficient, and the chosen report slot
-        # is kept explicit.
-        pass
     lines.append(f"{slot}=v052_crafted_{item_id},id={item_id},ilevel=331,source=local,crafted_stats={token}")
     lines.append("json2="+str(output.resolve()))
     return "\n".join(lines)+"\n"
