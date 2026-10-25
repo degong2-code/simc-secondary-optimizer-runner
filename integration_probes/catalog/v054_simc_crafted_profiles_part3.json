@@ -1,0 +1,153 @@
+{
+  "schema": "v054_simc_profile_crafted_evidence_batch_v1",
+  "source_rev": "12aa5dc041b03bf9f9fdd1db00dbc8d3ec0cebb7",
+  "part": 3,
+  "profiles_seen": 15,
+  "profiles_with_crafted": 12,
+  "items": [
+    {
+      "profile": "MID2_Shaman_Elemental.simc",
+      "slot": "wrists",
+      "name": "farstriders_plated_bracers",
+      "id": 244584,
+      "crafted_stats": "36/49",
+      "line": "wrists=farstriders_plated_bracers,id=244584,bonus_id=8790/8960/12214/12384/13750/13751/13836/9627,gem_id=240906,crafted_stats=36/49"
+    },
+    {
+      "profile": "MID2_Shaman_Elemental.simc",
+      "slot": "feet",
+      "name": "farstriders_razor_talons",
+      "id": 244577,
+      "crafted_stats": "36/49",
+      "line": "feet=farstriders_razor_talons,id=244577,bonus_id=8790/8960/12214/12384/13751/13836/9627,enchant_id=8019,crafted_stats=36/49"
+    },
+    {
+      "profile": "MID2_Shaman_Elemental_Stormbringer.simc",
+      "slot": "wrists",
+      "name": "farstriders_plated_bracers",
+      "id": 244584,
+      "crafted_stats": "36/49",
+      "line": "wrists=farstriders_plated_bracers,id=244584,bonus_id=8790/8960/12214/12384/13750/13751/13836/9627,gem_id=240906,crafted_stats=36/49"
+    },
+    {
+      "profile": "MID2_Shaman_Elemental_Stormbringer.simc",
+      "slot": "feet",
+      "name": "farstriders_razor_talons",
+      "id": 244577,
+      "crafted_stats": "36/49",
+      "line": "feet=farstriders_razor_talons,id=244577,bonus_id=8790/8960/12214/12384/13751/13836/9627,enchant_id=8019,crafted_stats=36/49"
+    },
+    {
+      "profile": "MID2_Shaman_Enhancement.simc",
+      "slot": "wrists",
+      "name": "farstriders_plated_bracers",
+      "id": 244584,
+      "crafted_stats": "49/36",
+      "line": "wrists=farstriders_plated_bracers,id=244584,bonus_id=8790/8960/12384/13750/13751/13836/9627,gem_id=240900,crafted_stats=49/36"
+    },
+    {
+      "profile": "MID2_Shaman_Enhancement.simc",
+      "slot": "feet",
+      "name": "greaves_of_the_noxious_depths",
+      "id": 271440,
+      "crafted_stats": "32/36",
+      "line": "feet=greaves_of_the_noxious_depths,id=271440,bonus_id=12854/13662,enchant_id=7963,crafted_stats=32/36"
+    },
+    {
+      "profile": "MID2_Shaman_Enhancement.simc",
+      "slot": "off_hand",
+      "name": "farstriders_chopper",
+      "id": 237850,
+      "crafted_stats": "49/36",
+      "line": "off_hand=farstriders_chopper,id=237850,bonus_id=8790/8960/13751/13771/13836/9627/13852,enchant_id=8689,crafted_stats=49/36"
+    },
+    {
+      "profile": "MID2_Shaman_Enhancement_Totemic.simc",
+      "slot": "wrists",
+      "name": "farstriders_plated_bracers",
+      "id": 244584,
+      "crafted_stats": "49/36",
+      "line": "wrists=farstriders_plated_bracers,id=244584,bonus_id=8960/12384/13750/13751/13836/9627,gem_id=240908,crafted_stats=49/36"
+    },
+    {
+      "profile": "MID2_Shaman_Enhancement_Totemic.simc",
+      "slot": "off_hand",
+      "name": "farstriders_chopper",
+      "id": 237850,
+      "crafted_stats": "49/36",
+      "line": "off_hand=farstriders_chopper,id=237850,bonus_id=8960/13751/13771/13836/12497,enchant_id=8689,crafted_stats=49/36"
+    },
+    {
+      "profile": "MID2_Warlock_Affliction.simc",
+      "slot": "off_hand",
+      "name": "alnhara_lantern",
+      "id": 245769,
+      "crafted_stats": "32/36",
+      "line": "off_hand=alnhara_lantern,id=245769,bonus_id=8960/13751/13771/13836/9627,crafted_stats=32/36"
+    },
+    {
+      "profile": "MID2_Warlock_Affliction_Hellcaller.simc",
+      "slot": "off_hand",
+      "name": "alnhara_lantern",
+      "id": 245769,
+      "crafted_stats": "32/36",
+      "line": "off_hand=alnhara_lantern,id=245769,bonus_id=8960/13751/13771/13836/9627,crafted_stats=32/36"
+    },
+    {
+      "profile": "MID2_Warlock_Affliction_Soul_Harvester.simc",
+      "slot": "off_hand",
+      "name": "alnhara_lantern",
+      "id": 245769,
+      "crafted_stats": "32/36",
+      "line": "off_hand=alnhara_lantern,id=245769,bonus_id=8960/13751/13771/13836/9627,crafted_stats=32/36"
+    },
+    {
+      "profile": "MID2_Warlock_Demonology.simc",
+      "slot": "off_hand",
+      "name": "alnhara_lantern",
+      "id": 245769,
+      "crafted_stats": "49/36",
+      "line": "off_hand=alnhara_lantern,id=245769,bonus_id=8795/8960/12214/13751/13771/13836/9627,crafted_stats=49/36"
+    },
+    {
+      "profile": "MID2_Warlock_Demonology_Soul_Harvester.simc",
+      "slot": "off_hand",
+      "name": "alnhara_lantern",
+      "id": 245769,
+      "crafted_stats": "49/36",
+      "line": "off_hand=alnhara_lantern,id=245769,bonus_id=8795/8960/12214/13751/13771/13836/9627,crafted_stats=49/36"
+    },
+    {
+      "profile": "MID2_Warlock_Destruction.simc",
+      "slot": "off_hand",
+      "name": "alnhara_lantern",
+      "id": 245769,
+      "crafted_stats": "32/36",
+      "line": "off_hand=alnhara_lantern,id=245769,bonus_id=8791/8960/12214/13751/13771/13836/9627,crafted_stats=32/36"
+    },
+    {
+      "profile": "MID2_Warlock_Destruction_Diabolist.simc",
+      "slot": "off_hand",
+      "name": "alnhara_lantern",
+      "id": 245769,
+      "crafted_stats": "32/36",
+      "line": "off_hand=alnhara_lantern,id=245769,bonus_id=8791/8960/12214/13751/13771/13836/9627,crafted_stats=32/36"
+    },
+    {
+      "profile": "MID2_Warrior_Protection.simc",
+      "slot": "wrists",
+      "name": "spellbreakers_bracers",
+      "id": 237834,
+      "crafted_stats": "49/32",
+      "line": "wrists=spellbreakers_bracers,id=237834,bonus_id=8793/8960/12214/12384/13750/13751/13836/9627,ilevel=331,gem_id=240983,crafted_stats=49/32"
+    },
+    {
+      "profile": "MID2_Warrior_Protection.simc",
+      "slot": "feet",
+      "name": "spellbreakers_march",
+      "id": 237828,
+      "crafted_stats": "49/32",
+      "line": "feet=spellbreakers_march,id=237828,bonus_id=8793/8960/12214/12384/13751/13836/9627,enchant_id=7963,crafted_stats=49/32"
+    }
+  ]
+}
