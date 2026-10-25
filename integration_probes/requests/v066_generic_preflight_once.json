@@ -1,0 +1,12 @@
+{
+  "schema": "v066_profile_neutral_preflight_once_v1",
+  "new_native_simc_calls": 0,
+  "reuse_v063_native_run": 40165729165,
+  "official_total_policy": "T=G+J+F",
+  "generic_class_mock_tests_not_native_proof": true,
+  "trinkets_static_gate_required": false,
+  "proc_gate": false,
+  "original_v015_v016_reexecuted": false,
+  "product_all_specs_supported_natively_proven": false,
+  "main_or_workos_modified": false
+}
