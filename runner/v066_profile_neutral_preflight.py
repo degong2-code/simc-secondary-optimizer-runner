@@ -158,6 +158,115 @@ def prepare(request,fillers,static_records,reference,witnesses,binary_sha,
             "profile":reference,"prior_observations":observations,
             "summary":summary}
 
+def prepare_static(request,fillers,static_records,reference,witnesses,
+                   binary_sha,declared_F_vector):
+    """Static-c two-Native preflight; talent-buffed stats are observations only.
+
+    The F vector is an explicit scenario-scoped, caller-supplied static
+    attribution. This verifies its declared sum and exact input application;
+    does not independently certify a consumable's in-game effect.
+    """
+    need(type(binary_sha) is str and scenario.HASH_RE.fullmatch(binary_sha),
+         "BINARY_SHA256_REQUIRED")
+    normalized=scenario.normalize(request)
+    static=budget.compile_static_budget(normalized,fillers,static_records)
+    need(not static["missing_nontrinket_static"] and
+         not static["missing_special_fixed_static"] and
+         static["G_if_complete"] is not None and
+         static["budget"]["T_official"] is not None,
+         "NATIVE_EXACT_G_STATIC_BUDGET_REQUIRED")
+    scenario.vector(declared_F_vector,"EXPLICIT_F_STATIC_VECTOR")
+    need(sum(declared_F_vector.values())==normalized["budget"]["F"],
+         "DECLARED_F_STATIC_SUM_DOES_NOT_MATCH_BUDGET")
+    if request["source"]["kind"]=="user_supplied":
+        need(digest_bytes(reference.encode("utf8"))==
+             request["source"]["profile_sha256"],
+             "STATIC_PROFILE_SOURCE_SHA_DRIFT")
+    binding=port.verify_profile_binding(normalized,static,reference)
+    need(type(witnesses) is list and len(witnesses)==2,
+         "TWO_REAL_STATIC_NATIVE_WITNESSES_REQUIRED")
+    stable=numeric.input_parts(reference)["stable_sha256"]
+    revision=None
+    observations=[]
+    for i,ev in enumerate(witnesses):
+        input_text=ev["input"]
+        source_parts=numeric.input_parts(input_text)
+        need(source_parts["stable_sha256"]==stable,
+             "STATIC_WITNESS_OTHER_PROFILE")
+        doc=ev["native"]
+        need(doc.get("report_version")=="2.0.0",
+             "NATIVE_JSON2_REPORT_REQUIRED")
+        cur_revision=doc.get("git_revision")
+        need(type(cur_revision) is str and len(cur_revision)>=7,
+             "NATIVE_REVISION_REQUIRED")
+        if revision is None:revision=cur_revision
+        need(cur_revision==revision,"STATIC_WITNESSES_SIMC_REVISION_DRIFT")
+        need(ev.get("input_sha256")==digest_bytes(input_text.encode("utf8")),
+             "STATIC_WITNESS_INPUT_SHA_MISMATCH")
+        raw_bytes=ev.get("raw_native_json")
+        need(type(raw_bytes) is bytes and json.loads(raw_bytes)==doc and
+             digest_bytes(raw_bytes)==ev.get("native_json_sha256"),
+             "STATIC_WITNESS_JSON2_BYTES_SHA_MISMATCH")
+        lines=[line.partition("=")[2] for line in input_text.splitlines()
+               if line.startswith("iterations=")]
+        destinations=[line.partition("=")[2] for line in input_text.splitlines()
+                      if line.startswith("json2=")]
+        need(len(lines)==len(destinations)==1 and lines[0].isdigit(),
+             "WITNESS_ITERATIONS_OR_JSON2_REQUIRED")
+        target={k:source_parts["gear_override"][k]+declared_F_vector[k]
+                for k in scenario.STATS}
+        path=pathlib.Path(destinations[0])
+        proposal=port.make_static_chmv_request(
+            normalized,static,reference,binary_sha,revision,target,
+            declared_F_vector,int(lines[0]),path)
+        need(proposal["input_sha256"]==ev["input_sha256"] and
+             proposal["input"]==input_text and
+             proposal["raw_gear_override"]==source_parts["gear_override"],
+             "STATIC_NATIVE_WITNESS_INPUT_CANNOT_REPRODUCE")
+        observation=port.ingest_native(proposal,doc,
+                 {"native_revision":revision},raw_bytes)
+        need(observation["status"]=="PASS_NATIVE_DPS_AND_STATIC_CHMV_INPUT"
+             and observation["static_rating_verified"]==target,
+             "STATIC_NATIVE_C_NOT_VERIFIED")
+        observations.append(observation)
+    need(observations[0]["target"]!=observations[1]["target"],
+         "TWO_DISTINCT_STATIC_C_WITNESSES_REQUIRED")
+    total,low,high=scheduler.bounds(normalized,static)
+    need(total==static["budget"]["T_official"],
+         "STATIC_TO_V015_SCHEDULER_TOTAL_CHANGED")
+    summary={"schema":SCHEMA,"status":"READY_STATIC_CHMV_PROFILE_SCOPED",
+        "class":normalized["scenario"]["character"]["class"],
+        "spec":normalized["scenario"]["character"]["spec"],
+        "rating_semantics":"STATIC_CHMV_C_V1",
+        "T_official":total,"G_native":static["G_if_complete"],
+        "J":normalized["budget"]["J"],"F":normalized["budget"]["F"],
+        "declared_F_vector":dict(declared_F_vector),
+        "F_vector_attribution_independently_verified":False,
+        "simc_binary_sha256":binary_sha,"simc_revision":revision,
+        "profile_stable_sha256":stable,
+        "two_native_static_witnesses":"REAL_JSON2_SHA_AND_INPUT_REPLAYED",
+        "talent_inflated_buffed_stats_are_separate_observations":True,
+        "item_effects_and_APL_owned_by":"SimC",
+        "new_native_calls":0,
+        "original_product_v016_integrated":False}
+    return {"normalized":normalized,"budget":static,
+        "calibration":{"native_revision":revision},
+        "static_flask_vector":dict(declared_F_vector),
+        "profile":reference,"prior_observations":observations,"summary":summary}
+
+def propose_next_static(prepared,iterations,output_json2_path,step=100):
+    """Same existing v015-derived order, now with explicit static-c semantics."""
+    need(prepared.get("summary",{}).get("status")==
+         "READY_STATIC_CHMV_PROFILE_SCOPED",
+         "STATIC_NATIVE_PREFLIGHT_REQUIRED")
+    state=scheduler.initial_state(prepared["normalized"],prepared["budget"],
+            prepared["prior_observations"],step=step,scout_max=2)
+    return scheduler.next_scout(state,prepared["normalized"],
+         prepared["budget"],prepared["calibration"],
+         prepared["profile"],prepared["summary"]["simc_binary_sha256"],
+         output_json2_path,iterations,
+         static_flask_vector=prepared["static_flask_vector"])
+
 def propose_next(prepared,iterations,output_json2_path,step=100):
     """Reuse exactly v065 search policy, do not fork another scheduler."""
     normalized=prepared["normalized"]
