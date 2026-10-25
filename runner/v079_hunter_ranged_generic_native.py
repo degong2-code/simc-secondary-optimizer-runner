@@ -228,9 +228,12 @@ def execute(upstream_file,out,binary=None,cache_only=False):
     try:
         upstream=pathlib.Path(upstream_file).read_text(encoding="utf8")
         reference,cfg,fillers,origin=source_profile(upstream,out)
-        need(sha(upstream.encode("utf8"))=="d4f61c1a2339ee8bbf06b8fe63b3f5b32993b7ca695a365e0d2b0b6a23e2a8abbb" or
-             len(upstream)>8000,
-             "UPSTREAM_TEXT_ABSENT")
+        raw_source=upstream.encode("utf8")
+        upstream_git_blob=hashlib.sha1(
+            ("blob "+str(len(raw_source))+"\\0").encode("ascii")+raw_source
+        ).hexdigest()
+        need(upstream_git_blob==UPSTREAM_BLOB,
+             "UPSTREAM_GIT_BLOB_CHANGED")
         pre=readiness.prepare(cfg,fillers,static_cache.empty_cache(),reference,
                               out/"raw")
         need(pre["status"]=="BLOCKED_EXACT_NATIVE_STATIC_VARIANTS_MISSING",
