@@ -99,8 +99,8 @@ def equipment(raw):
     all_rows=sum((out[k] for k in ("tier","special","crafted","trinkets")),[])
     used=[i["slot"] for i in all_rows]
     need(len(set(used))==len(used),"GEAR_SLOT_COLLISION")
-    need(len({i["item_id"] for i in all_rows})==len(all_rows),
-         "DUPLICATE_EQUIPPED_ITEM_ID")
+    # Item uniqueness/unique-equipped restrictions are SimC-owned; only prevent
+    # two rows from occupying the same physical slot in our input.
     emb=sum("embellishment" in i["options"] for i in all_rows)
     need(emb<=2,"MORE_THAN_TWO_EMBELLISHMENTS")
     need(all("embellishment" not in i["options"] for i in out["special"]),
