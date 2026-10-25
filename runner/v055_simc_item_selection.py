@@ -24,7 +24,7 @@ GEAR_PREFIX=("gear_crit_rating=","gear_haste_rating=","gear_mastery_rating=","ge
 OPTIONS={"gem_id","bonus_id","enchant","enchant_id","crafted_stats",
          "embellishment","content_tuning","context"}
 EXCLUDED_DEFAULT={250244} # opt-in can still be passed by explicit user id
-ADVISORY_CRAFTED_IDS=pathlib.Path(__file__).resolve().parents[1]/"integration_probes/catalog/v054_grounded_crafted_reference_expanded.json"
+ADVISORY_CRAFTED_IDS=pathlib.Path(__file__).resolve().parents[1]/"integration_probes/catalog/v057_crafted_gear_51_recipe_ids.json"
 
 def require(ok,reason):
     if not ok:raise cache.CacheBlocked(reason)
@@ -62,13 +62,15 @@ def equipment_line(slot,item_id,ilevel,options=None):
 
 def load_advisory_catalog(path=ADVISORY_CRAFTED_IDS):
     doc=json.loads(pathlib.Path(path).read_text(encoding="utf-8"))
-    require(doc.get("schema")=="v054_grounded_crafted_id_expansion_v1" and
+    require(doc.get("schema")=="v057_midnight_s2_crafted_equipment_ids_v1" and
             doc.get("season")==cache.SEASON,"CRAFT_CATALOG_CHANGED")
     return {x["item_id"]:x for x in doc["items"]}
 
-def inspect_selection(changes,selected_craft_ids=(),excluded_default=EXCLUDED_DEFAULT):
+def inspect_selection(changes,reserved_tier_slots=(),reserved_special_slots=(),excluded_default=EXCLUDED_DEFAULT):
     """No DBC/stat-gate. Enforce bounded profile slots and <=2 embellishments."""
     require(type(changes) is list and 1<=len(changes)<=len(SLOTS),"SELECTION_COUNT_INVALID")
+    blocked=set(reserved_tier_slots)|set(reserved_special_slots)
+    require(blocked<=SLOTS,"RESERVED_SLOT_INVALID")
     seen=set();effect_count=0;unlisted=[]
     catalog=load_advisory_catalog()
     checked=[]
@@ -79,6 +81,8 @@ def inspect_selection(changes,selected_craft_ids=(),excluded_default=EXCLUDED_DE
         require(slot in SLOTS and slot not in seen,"SLOT_DUPLICATE_OR_UNSUPPORTED")
         seen.add(slot);checked_level(item["ilevel"])
         opts=checked_options(item["options"])
+        if "crafted_stats" in opts or "embellishment" in opts:
+            require(slot not in blocked,"CRAFTED_PIECE_REPLACES_RESERVED_TIER_OR_SPECIAL")
         # A non-catalogued crafted ID may still be used: SimC will resolve it.
         if id_ not in catalog and "crafted_stats" in opts:unlisted.append(id_)
         effect_count+=int("embellishment" in opts)
@@ -101,13 +105,13 @@ def inspect_selection(changes,selected_craft_ids=(),excluded_default=EXCLUDED_DE
       "gear_optimization_not_performed":True,
       "product_code_integrated":False,"official_policy_promoted":False}
 
-def apply_selection(reference,changes):
+def apply_selection(reference,changes,reserved_tier_slots=(),reserved_special_slots=()):
     """Replace only equipment rows named in changes; leave APL/other gear alone.
 
     This adapter does not modify candidate gear_rating overrides; the separate
     CHMV injection stage must still reconcile budget and actual SimC output.
     """
-    summary=inspect_selection(changes)
+    summary=inspect_selection(changes,reserved_tier_slots,reserved_special_slots)
     replacements={a["slot"]:equipment_line(a["slot"],a["item_id"],a["ilevel"],
                                            a["options"]) for a in changes}
     source=reference.splitlines()
