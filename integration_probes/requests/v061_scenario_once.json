@@ -1,0 +1,13 @@
+{
+  "schema": "v061_offline_general_scenario_once_v1",
+  "execution": "OFFLINE_REGRESSION_ONLY",
+  "max_native_simc_calls": 0,
+  "official_chmv_budget": "T=G+J+F",
+  "trinket_proc_gate": false,
+  "manual_item_id_allowed": true,
+  "four_tier_items_required": true,
+  "trinket_slots": 2,
+  "max_embellishments": 2,
+  "original_v015_v016_product_integrated": false,
+  "official_policy_promoted": false
+}
