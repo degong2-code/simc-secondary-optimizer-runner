@@ -6,6 +6,7 @@ on:
       - integration_probes/requests/v069_rogue_official_once.json
       - integration_probes/requests/v069_rogue_official_retry_once.json
       - integration_probes/requests/v069_rogue_official_retry2_once.json
+      - integration_probes/requests/v069_rogue_official_retry3_once.json
 permissions:
   contents: read
   actions: read
@@ -29,7 +30,7 @@ jobs:
           import os,json,pathlib,subprocess
           assert os.environ["GITHUB_REF"]=="refs/heads/probe/chat-cache-v035-20261024"
           changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
-          assert changed==["integration_probes/requests/v069_rogue_official_retry2_once.json"],changed
+          assert changed==["integration_probes/requests/v069_rogue_official_retry3_once.json"],changed
           q=json.loads(pathlib.Path(changed[0]).read_text())
           assert q=={"schema":"v069_actual_rogue_static_GJF_one_candidate_once",
            "native_witnesses":2,"native_official_candidates":1,
@@ -48,7 +49,7 @@ jobs:
           sources={
             "runner/v068_rogue_user_profile.py":"54bf101d02c3cef36cb892574c533ee08035b2c1",
             "runner/v064_adaptive_evaluator_port.py":"189e0c3ba33d661c7ea1eec70bfc6f211343a0d9",
-            "runner/v069_rogue_official_budget_native.py":"48b171fb6d0309271d8a74b5a508154dbff5a017",
+            "runner/v069_rogue_official_budget_native.py":"1708b76991e10e104ddc59e495a3cc2f7d573b81",
             "tests/test_v069_official_rogue_budget.py":"29d0b87f61c2c3ad2af681e806c7b4cfe472c9a9",
             "integration_probes/fixtures/v068_upstream_mid2_rogue_subtlety_reference.simc":"b704e6326959432a82d14a6b774c79183d5b2af4"}
           for p,digest in sources.items():
