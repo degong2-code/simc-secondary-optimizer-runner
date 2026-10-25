@@ -1,0 +1,119 @@
+name: v047 Native Item Census and Batch Collection
+
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - integration_probes/requests/v047_first_batch_once.json
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: v047-native-static-collect
+  cancel-in-progress: false
+
+jobs:
+  pilot-static-lookup:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Guard approved manifest and probe bounds
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p output
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          assert os.environ['GITHUB_EVENT_NAME']=='push'
+          assert os.environ['GITHUB_REF']=='refs/heads/probe/chat-cache-v035-20261024'
+          changes=subprocess.check_output(['git','diff-tree','--no-commit-id','--name-only','-r',os.environ['GITHUB_SHA']],text=True).splitlines()
+          assert changes==['integration_probes/requests/v047_first_batch_once.json'],'UNAPPROVED_DIFF'
+          request=json.loads(pathlib.Path(changes[0]).read_text())
+          assert request=={
+              'schema':'v047_batch_pilot_request_v1',
+              'authorization':'NATIVE_STATIC_LOOKUP_12_CASES_334_ONLY',
+              'source_395_metadata_records':True,'catalog_seed_records':407,
+              'selected_unique_items':126,'levels_14_only_candidates':True,
+              'start_cursor':0,'max_native_calls':12,'levels':[334],
+              'stat_cache_version_invalidation':False,
+              'product_code_integrated':False,
+              'official_policy_promoted':False},'REQUEST_CHANGED'
+          pins={
+              'runner/v047_full_scope_collector.py':'9a633e70a6bbb633c30fc89b061267538963d3ce',
+              'tests/test_v047_full_scope_collector.py':'15b9dfbbc6a708702b2ff6f48fe8fbcc1e428a18',
+              'integration_probes/requests/v047_full_scope_manifest.json':'80cd941075852354821846d53c7d88e663f3794a',
+              'integration_probes/catalog/v047_catalog_import_407_rows.json':'7223b2afe7c60199b8b5011140742885ce93543e'
+          }
+          for p,digest in pins.items():
+              assert subprocess.check_output(['git','hash-object',p],text=True).strip()==digest,'PIN_DRIFT_'+p
+          print('V047_MANIFEST_GATE_PASS')
+          PY
+      - name: Full offline Python regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Download verified v046 portable cache
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v046-static-cache-40151392965
+          path: .seed
+          run-id: 40151392965
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Restore pinned SimC binary (no building)
+        id: simc_cache
+        uses: actions/cache/restore@v5
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd-cli-release-nonetwork-r1
+      - name: Integrity check and import full source catalog
+        shell: bash
+        env:
+          CACHE_HIT: ${{ steps.simc_cache.outputs.cache-hit }}
+        run: |
+          set -euo pipefail
+          test "$CACHE_HIT" = true || { echo V047_CACHE_MISSING; exit 3; }
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc-cache/v035/simc' | sha256sum -c
+          cp .seed/midnight_s2_static_cache_v046.json output/seed.json
+          python3 runner/v046_static_item_cache.py --cache output/seed.json \
+            import-catalog --input integration_probes/catalog/v047_catalog_import_407_rows.json
+          python3 - <<'PY'
+          import json
+          j=json.load(open('output/seed.json'))
+          assert len(j['catalog'])>=394 and len(j['variants'])==15
+          print('V047_FULL_CATALOG_IMPORTED',len(j['catalog']))
+          PY
+      - name: Native bare static sample, bounded 12 one-level requests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v047_full_scope_collector.py \
+            --binary "$GITHUB_WORKSPACE/.simc-cache/v035/simc" \
+            --manifest integration_probes/requests/v047_full_scope_manifest.json \
+            --seed-cache output/seed.json \
+            --out output/result \
+            --levels 334 --start 0 --max-cases 12
+          python3 - <<'PY'
+          import json,pathlib
+          receipt=json.loads(pathlib.Path('output/result/V047_LEDGER.json').read_text())
+          assert receipt['status']!='FAILED_SETUP'
+          assert receipt['attempted']<=12
+          print('V047_NATIVE_BATCH',receipt['status'],receipt['attempted'],receipt['saved'],receipt['blocked'])
+          PY
+      - name: Upload evidence and full catalog
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v047-full-census-pilot-${{ github.run_id }}
+          path: output/
+          retention-days: 14
+          if-no-files-found: warn
