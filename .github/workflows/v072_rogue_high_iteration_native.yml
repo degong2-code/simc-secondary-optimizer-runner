@@ -1,0 +1,181 @@
+name: v072 Rogue Two Fresh High Iteration Native Confirmations
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/v072_rogue_confirm_once.json
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v072-rogue-two-fresh-320
+  cancel-in-progress: false
+jobs:
+  two-fresh-native-confirmations:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Verify one bounded request, sources, and protected assumptions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, pathlib, subprocess
+          p = "integration_probes/requests/v072_rogue_confirm_once.json"
+          changed = subprocess.check_output(["git", "diff-tree", "--no-commit-id",
+                    "--name-only", "-r", os.environ["GITHUB_SHA"]], text=True).splitlines()
+          assert changed == [p], changed
+          assert json.loads(pathlib.Path(p).read_text()) == {
+            "schema": "v072_rogue_two_fresh_high_iter_native_request_v1",
+            "prior_witness_run": 40181981240,
+            "prior_official_run": 40182313167,
+            "prior_scout_run": 40183940144,
+            "selected_profile": "void_elf_rogue_subtlety_334_user_exact",
+            "target_total": 3150,
+            "official_formula": "T=G+J+F",
+            "confirmed_candidates": 2,
+            "iterations_per_candidate": 320,
+            "max_new_native_calls": 2,
+            "use_v065_original_scheduler": True,
+            "no_effect_or_APL_gate": True,
+            "original_v015_v016_immutable": True,
+            "global_optimum_claimed": False
+          }
+          for path, expected in {
+            "runner/v072_rogue_high_iteration_confirm.py":
+                "4aac13bf18b89b49b291b60e5bb7f14b2786acd0",
+            "tests/test_v072_rogue_high_iteration_confirm.py":
+                "9ccbb4bcb63573089754f586d51fbf448d099a4d"
+          }.items():
+            actual = subprocess.check_output(["git", "hash-object", path],
+                                             text=True).strip()
+            assert actual == expected, (path, actual, expected)
+          print("V072_EXACT_TWO_BOUND_NATIVE_POLICY_AND_SOURCE_PIN_PASS")
+          PY
+      - name: Current full regressions plus baseline pilot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Restore v069 user Rogue two actual numeric witnesses
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v069-user-rogue-real-GJF-one-native-40181981240
+          path: .v069
+          run-id: 40181981240
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Restore v070 real official 3150 target
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v070-rogue-GJF-native-40182313167
+          path: .v070
+          run-id: 40182313167
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Restore v071 one v015-selected adaptive scout
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v071-rogue-one-adaptive-scout-40183940144
+          path: .v071
+          run-id: 40183940144
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Recover pinned SimC binary
+        uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-40153209773
+          path: .simc
+          run-id: 40153209773
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Offline SHA-verified historical pair and high-repeat plan (zero Native)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v072_rogue_high_iteration_confirm.py \
+            --witness-root .v069/fresh-witness \
+            --prior-official .v070/official \
+            --prior-scout .v071/native \
+            --out out/offline
+          python3 - <<'PY'
+          import json
+          x=json.load(open("out/offline/V072_RECEIPT.json"))
+          assert x["status"]=="PASS_HIGH_ITERATION_PAIR_PLAN_ZERO_NATIVE",x
+          assert x["new_native_calls_this_invocation"]==0
+          assert x["historical_native_results_reused"]==4
+          assert (x["G"],x["J"],x["F"],x["T"])==(2847,138,165,3150)
+          assert x["special_L"]=={"crit_rating":100,"haste_rating":201,
+                                  "mastery_rating":0,"versatility_rating":0}
+          assert x["offset"]=={"crit_rating":165,"haste_rating":0,
+                               "mastery_rating":0,"versatility_rating":0}
+          assert {tuple(v.values()) for v in x["confirmed_pair_targets"]}=={
+                 (813,913,712,712),(713,913,712,812)}
+          print("V072_REUSE_FOUR_REAL_SOURCES_AND_SELECT_PAIR_ZERO_NATIVE_PASS")
+          PY
+      - name: Two fresh 320-iteration Native SimC confirmations
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc/simc' | sha256sum -c
+          chmod +x .simc/simc
+          python3 runner/v072_rogue_high_iteration_confirm.py \
+            --witness-root .v069/fresh-witness \
+            --prior-official .v070/official \
+            --prior-scout .v071/native \
+            --out "$GITHUB_WORKSPACE/out/native" \
+            --binary "$GITHUB_WORKSPACE/.simc/simc"
+          python3 - <<'PY'
+          import json,math
+          x=json.load(open("out/native/V072_RECEIPT.json"))
+          assert x["status"]=="PASS_TWO_ROGUE_FRESH_320_NATIVE_CONFIRMATIONS",x
+          assert x["new_native_calls_this_invocation"]==2
+          assert x["native_attempts_total_durable"]==2
+          assert len(x["fresh"])==2
+          for i,r in enumerate(x["fresh"]):
+              assert r["source"]=="NEW_NATIVE"
+              assert r["rating_actual"]==r["target"]
+              assert sum(r["target"].values())==3150
+              assert r["dps_samples"]>=300 and r["dps_mean"]>0
+              assert math.isfinite(r["dps_sem"]) and r["dps_sem"]>=0
+              print("V072_NATIVE_RESULT", i, json.dumps(r,sort_keys=True))
+          print("V072_COMPARISON",json.dumps(x["comparison"],sort_keys=True))
+          assert not x["comparison"]["global_optimum_proven"]
+          print("V072_TWO_FRESH_320_NATIVE_AND_FINAL_JSON2_RATING_PASS")
+          PY
+          sha256sum out/native/confirm_00/result.json out/native/confirm_01/result.json > out/native/CONFIRM_NATIVE_SHA256SUMS.txt
+      - name: Exact restart and two SHA-verified cache hits, zero Native calls
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v072_rogue_high_iteration_confirm.py \
+            --witness-root .v069/fresh-witness \
+            --prior-official .v070/official \
+            --prior-scout .v071/native \
+            --out "$GITHUB_WORKSPACE/out/native" \
+            --binary "$GITHUB_WORKSPACE/.simc/simc" \
+            --cache-only
+          sha256sum -c out/native/CONFIRM_NATIVE_SHA256SUMS.txt
+          python3 - <<'PY'
+          import json
+          x=json.load(open("out/native/V072_RECEIPT.json"))
+          assert x["status"]=="PASS_TWO_ROGUE_FRESH_320_NATIVE_CONFIRMATIONS",x
+          assert x["new_native_calls_this_invocation"]==0
+          assert x["native_attempts_total_durable"]==2
+          assert x["cache_replay_all_verified"]
+          assert all(r["source"]=="CACHED_VERIFIED_NATIVE" for r in x["fresh"])
+          print("V072_SHA_VERIFIED_TWO_CACHE_HITS_NO_ADDITIONAL_SIMC_PASS")
+          PY
+      - name: Keep full inputs, native JSON2, stdout/stderr, progress and receipts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v072-rogue-two-high-confirm-${{ github.run_id }}
+          path: out/
+          retention-days: 14
+          if-no-files-found: warn
