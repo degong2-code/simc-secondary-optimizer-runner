@@ -1,0 +1,138 @@
+name: v082 Fury Dwarf Plate Dual Two-Handed Static CHMV Native
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [integration_probes/requests/v082_fury_dual_twohand_once.json]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v082-fury-dual-twohand-native
+  cancel-in-progress: false
+jobs:
+  fury-dual-twohand:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Exact isolated request and pinned source SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          path="integration_probes/requests/v082_fury_dual_twohand_once.json"
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==[path],changed
+          expected={
+            "schema":"v082_fury_plate_dual_twohand_static_gjf_v1",
+            "source":"simulationcraft_midnight_MID2_Warrior_Fury",
+            "source_git_blob":"3225992ed5b754ad5d61e8b785d9d859f1eed1be",
+            "race":"dwarf","spec":"warrior_fury",
+            "armor":"plate","weapon":"dual_two_handed_main_and_off_hand",
+            "representative_ilvl":334,
+            "original_simc_APL_preserved":True,
+            "maximum_native_calls":4,
+            "first_new_static_native":1,
+            "two_real_official_static_witnesses":2,
+            "one_original_v015_guided_native_scout":1,
+            "iterations_per_case":35,
+            "F_vector":{"crit_rating":0,"haste_rating":165,"mastery_rating":0,"versatility_rating":0},
+            "O_outside_T":True,
+            "T_formula":"T=G+J+F",
+            "no_independent_item_or_talent_effect_gate":True,
+            "global_optimum_proven":False}
+          assert json.loads(pathlib.Path(path).read_text())==expected
+          files={
+           "integration_probes/fixtures/v082_upstream_mid2_warrior_fury_reference.simc":"3225992ed5b754ad5d61e8b785d9d859f1eed1be",
+           "runner/v082_fury_plate_dual_twohand_native.py":"7ace526deac3b5932784d94e4c4858d3877d6354",
+           "tests/test_v082_fury_plate_dual_twohand_native.py":"1a41de32942f90eba077fb0d15de87070c2b514c"}
+          for file,sha in files.items():
+              got=subprocess.check_output(["git","hash-object",file],text=True).strip()
+              assert got==sha,(file,got,sha)
+          print("V082_FURY_TWO_2H_PLATE_EXACT_SOURCE_AND_REQUEST_PASS")
+          PY
+      - name: Full existing regressions plus Fury first-use structural cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Source-backed 16-slot Fury profile offline plan (zero SimC)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v082_fury_plate_dual_twohand_native.py --upstream integration_probes/fixtures/v082_upstream_mid2_warrior_fury_reference.simc --out out/offline
+          python3 - <<'PY'
+          import json
+          x=json.load(open("out/offline/V082_RECEIPT.json"))
+          assert x["status"]=="PASS_UPSTREAM_TWO_WEAPON_STATIC_PLAN_ZERO_NATIVE",x
+          assert x["origin"]["armor"]=="plate"
+          assert x["origin"]["weapon_form"]=="dual_two_handed"
+          assert x["origin"]["main_hand_source_id"]==268213
+          assert x["origin"]["off_hand_source_id"]==237847
+          assert x["new_native_this_invocation"]==0
+          print("V082_FURY_TWO_2H_SOURCE_INPUT_ONLY_PASS_ZERO_NATIVE")
+          PY
+      - name: Retrieve identical pinned SimC ELF
+        uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-40153209773
+          path: .simc
+          run-id: 40153209773
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Run one actual Fury static G, two official c, one v015 static scout
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc/simc' | sha256sum -c
+          chmod +x .simc/simc
+          python3 runner/v082_fury_plate_dual_twohand_native.py --upstream integration_probes/fixtures/v082_upstream_mid2_warrior_fury_reference.simc --out "$GITHUB_WORKSPACE/out/native" --binary "$GITHUB_WORKSPACE/.simc/simc"
+          python3 - <<'PY'
+          import json,math
+          x=json.load(open("out/native/V082_RECEIPT.json"))
+          assert x["status"]=="PASS_REAL_FURY_TWO_2H_PLATE_FULL_STATIC_GENERIC_NATIVE",x
+          assert x["new_native_this_invocation"]==4
+          assert x["native_attempts_total"]==4
+          assert x["G"]+x["J"]+x["F"]==x["T"]
+          assert x["J"]==138 and x["F"]==165
+          assert x["v066_preflight_status"]=="READY_STATIC_CHMV_PROFILE_SCOPED"
+          assert x["v015_scout_order_reused"] and x["two_weapon_slots_preserved"]
+          assert len(x["official_native"])==2
+          for item in x["official_native"]+[x["adaptive_result"]]:
+              assert item["verified_static_c"]==item["target_static_c"]
+              assert sum(item["target_static_c"].values())==x["T"]
+              assert item["dps_mean"]>0 and math.isfinite(item["dps_sem"])
+              assert item["dps_samples"]>=20
+          assert not x["global_optimum_proven"]
+          print("V082_REAL_FURY_PLATE_DUAL_2H_STATIC_GENERIC_NATIVE_PASS",json.dumps(x,sort_keys=True))
+          PY
+          sha256sum out/native/initial_native/result.json out/native/official/candidate_00/result.json out/native/official/candidate_01/result.json out/native/official/adaptive_00/result.json > out/native/NATIVE_FOUR_SHA256.txt
+      - name: Preserve all four exact Native SHA replay with zero more SimC
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v082_fury_plate_dual_twohand_native.py --upstream integration_probes/fixtures/v082_upstream_mid2_warrior_fury_reference.simc --out "$GITHUB_WORKSPACE/out/native" --binary "$GITHUB_WORKSPACE/.simc/simc" --cache-only
+          sha256sum -c out/native/NATIVE_FOUR_SHA256.txt
+          python3 - <<'PY'
+          import json
+          x=json.load(open("out/native/V082_RECEIPT.json"))
+          assert x["status"]=="PASS_REAL_FURY_TWO_2H_PLATE_FULL_STATIC_GENERIC_NATIVE",x
+          assert x["new_native_this_invocation"]==0
+          assert x["native_attempts_total"]==4 and x["cache_only_replay"]
+          assert all(item["source"]=="CACHED_VERIFIED_NATIVE"
+                 for item in x["official_native"]+[x["adaptive_result"]])
+          print("V082_FURY_ALL_FOUR_JSON2_NATIVE_SHA_CACHE_HIT_ZERO_EXTRA_PASS")
+          PY
+      - name: Preserve exact source, 16 equipment inputs, real JSON2, stderr/stdout and receipts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v082-fury-plate-dual2h-native-${{ github.run_id }}
+          path: out/
+          retention-days: 14
+          if-no-files-found: warn
