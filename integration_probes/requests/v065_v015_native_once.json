@@ -1,0 +1,19 @@
+{
+  "schema": "v065_v015_lineage_guided_native_once_v1",
+  "v015_original_source_sha256": "a44f73cf232c8204dbe958e79fe50f111e68654ac583a1170a283f16035c0ec3",
+  "v016_original_source_sha256": "7c49d7ca095e8864b673715d70d9851d676b44aeed99f8d769419492fcd14712",
+  "new_simc_calls_max": 1,
+  "historical_simc_observations": 2,
+  "step_rating": 200,
+  "official_total": "T=G+J+F",
+  "native_candidate_expected": {
+    "crit_rating": 400,
+    "haste_rating": 1108,
+    "mastery_rating": 1115,
+    "versatility_rating": 529
+  },
+  "user_originals_modified": false,
+  "independent_proc_or_effect_gate": false,
+  "v015_v016_historical_tests_not_rerun_as_legacy_pass": true,
+  "official_main_promotion": false
+}
