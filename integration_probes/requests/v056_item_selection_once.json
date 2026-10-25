@@ -1,0 +1,10 @@
+{
+  "schema": "v056_one_native_item_selection_once_v1",
+  "requested_trinket_item_id": 250224,
+  "itemlevel": 334,
+  "native_max_calls": 1,
+  "no_proc_eligibility_gate": true,
+  "crafted_full_census_not_attested": true,
+  "product_code_integrated": false,
+  "official_policy_promoted": false
+}
