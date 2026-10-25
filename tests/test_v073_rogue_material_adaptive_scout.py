@@ -33,9 +33,10 @@ class V073MaterialScoutSafety(unittest.TestCase):
         a={"target":{"crit_rating":813,"haste_rating":913,
                      "mastery_rating":712,"versatility_rating":712},
            "dps_mean":223489.67,"dps_sem":367.88,"dps_samples":319}
-        b=dict(a,target={"crit_rating":463,"haste_rating":913,
-                         "mastery_rating":712,"versatility_rating":1062},
-               dps_mean=222000,"dps_sem":1050,"dps_samples":59)
+        b=dict(a)
+        b.update({"target":{"crit_rating":463,"haste_rating":913,
+                            "mastery_rating":712,"versatility_rating":1062},
+                  "dps_mean":222000,"dps_sem":1050,"dps_samples":59})
         res=v073.scout_summary([a],[b],3150)
         self.assertTrue(res["exploratory_results"][0]["may_warrant_fresh_confirmation"])
         self.assertFalse(res["material_alternative_proven"])
