@@ -1,0 +1,24 @@
+{
+  "schema": "v075_rogue_two_more_coarse_native_request_v1",
+  "exact_profile": "void_elf_rogue_subtlety_334",
+  "historical_runs": [
+    40181981240,
+    40182313167,
+    40183940144,
+    40185708187,
+    40186754387,
+    40188874909
+  ],
+  "official_T": 3150,
+  "formula": "T=G+J+F",
+  "existing_high_precision_targets": 3,
+  "preserve_confirmed_D_over_low_scout_D": true,
+  "coarse_transfer_step": 350,
+  "fine_step_only_if_coarse_saturated": 100,
+  "max_new_scouts": 2,
+  "iterations_per_scout": 60,
+  "no_new_high_confirmations": true,
+  "cache_replay_required": true,
+  "no_new_effect_gates": true,
+  "global_optimum_proven": false
+}
