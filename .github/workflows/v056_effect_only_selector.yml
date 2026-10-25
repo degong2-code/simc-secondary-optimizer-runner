@@ -1,0 +1,78 @@
+name: v056 Item Selection Without Proc Gate
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - integration_probes/requests/v056_item_selection_once.json
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v056-effect-only-selector
+  cancel-in-progress: false
+jobs:
+  selected-item:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Enforce exact isolated request and selector source hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          assert os.environ["GITHUB_EVENT_NAME"]=="push"
+          assert os.environ["GITHUB_REF"]=="refs/heads/probe/chat-cache-v035-20261024"
+          paths=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert paths==["integration_probes/requests/v056_item_selection_once.json"]
+          req=json.loads(pathlib.Path(paths[0]).read_text())
+          assert req=={"schema":"v056_one_native_item_selection_once_v1",
+            "requested_trinket_item_id":250224,"itemlevel":334,
+            "native_max_calls":1,"no_proc_eligibility_gate":True,
+            "crafted_full_census_not_attested":True,
+            "product_code_integrated":False,
+            "official_policy_promoted":False}
+          pins={
+            "runner/v055_simc_item_selection.py":"bacbedfdb2a090d1d5c78361d9c5d640a6df473e",
+            "runner/v056_selected_mindpiercer_native.py":"d472d38a28240a0a5184e067b5c16cd8869aa89a",
+            "tests/test_v055_simc_item_selection.py":"18a4641bd8a32a9dd57e565e6b64cb06ade99024",
+            "integration_probes/catalog/v054_grounded_crafted_reference_expanded.json":"07898d95cc890eedc9a787300b43160403ab3046"}
+          for path,sha in pins.items():
+            assert subprocess.check_output(["git","hash-object",path],text=True).strip()==sha,"INPUT_DRIFT:"+path
+          print("V056_EXACT_SELECTION_GATE_PASS")
+          PY
+      - name: Entire offline regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Reuse pinned 7bc1071 SimC binary
+        uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-40153209773
+          path: .simc-binary
+          run-id: 40153209773
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Run selected Mindpiercer in full SimC profile
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc-binary/simc' | sha256sum -c
+          chmod +x .simc-binary/simc
+          python3 runner/v056_selected_mindpiercer_native.py \
+            --binary "$GITHUB_WORKSPACE/.simc-binary/simc" --out "$GITHUB_WORKSPACE/out"
+      - name: Save input and execution receipt only (no proc-effect gate)
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v056-selected-mindpiercer-${{ github.run_id }}
+          path: out/
+          retention-days: 14
+          if-no-files-found: warn
