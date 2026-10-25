@@ -2,7 +2,9 @@ name: v068 User Rogue Genuine Native Two-Witness Profile Probe
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
-    paths: [integration_probes/requests/v068_user_rogue_native_once.json]
+    paths:
+      - integration_probes/requests/v068_user_rogue_native_once.json
+      - integration_probes/requests/v068_user_rogue_native_retry_once.json
 permissions:
   contents: read
   actions: read
@@ -26,7 +28,7 @@ jobs:
           import json,os,pathlib,subprocess
           assert os.environ["GITHUB_REF"]=="refs/heads/probe/chat-cache-v035-20261024"
           changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
-          assert changed==["integration_probes/requests/v068_user_rogue_native_once.json"]
+          assert changed==["integration_probes/requests/v068_user_rogue_native_retry_once.json"]
           d=json.loads(pathlib.Path(changed[0]).read_text())
           assert d=={"schema":"v068_user_rogue_native_once_v1",
            "user_class":"rogue","user_spec":"subtlety",
@@ -44,9 +46,9 @@ jobs:
            "project_main_or_Work_OS_modified":False}
           expected={
            "integration_probes/fixtures/v068_upstream_mid2_rogue_subtlety_reference.simc":"b704e6326959432a82d14a6b774c79183d5b2af4",
-           "runner/v068_rogue_user_profile.py":"f5a30cf42b455be7334468f31b1bce192b1e7b54",
+           "runner/v068_rogue_user_profile.py":"17c854b391ae447167b01179c7e8fad483b13d09",
            "runner/v068_rogue_two_native_probe.py":"f786370cbc0ab91254173e4c6121821cb70eaf45",
-           "tests/test_v068_rogue_user_profile.py":"3d5ccabdef3d9b69f79c693de35ef5226c95cb32"}
+           "tests/test_v068_rogue_user_profile.py":"4babaef8c258ab1852ddbf15cc2f8ff89de305fd"}
           for path,sha in expected.items():
             assert subprocess.check_output(["git","hash-object",path],text=True).strip()==sha,path
           print("V068_BOUNDED_EXACT_USER_SELECTION_AND_SOURCE_PASS")
