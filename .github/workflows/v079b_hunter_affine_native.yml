@@ -1,0 +1,141 @@
+name: v079B Hunter Measured Affine Rating Native Recovery
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/v079b_hunter_affine_native_once.json
+      - integration_probes/requests/v079b_hunter_affine_native_retry.json
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v079b-hunter-affine-native
+  cancel-in-progress: false
+jobs:
+  affine-native-recovery:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Validate exact recovery request and all changed numeric core SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          opts=["integration_probes/requests/v079b_hunter_affine_native_once.json",
+             "integration_probes/requests/v079b_hunter_affine_native_retry.json"]
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert len(changed)==1 and changed[0] in opts,changed
+          x=json.loads(pathlib.Path(changed[0]).read_text())
+          assert x=={
+            "schema":"v079b_hunter_actual_nonconstant_offset_empirical_recovery_v1",
+            "reuse_original_failed_run":40199924239,
+            "original_two_native_never_rerun":True,
+            "additional_raw_witnesses":1,
+            "new_official_candidates":2,
+            "new_adaptive_candidate":1,
+            "maximum_new_native_calls":4,
+            "measure_all_four_rating_axes":True,
+            "must_confirm_exact_final_json2_rating":True,
+            "no_new_simc_item_proc_or_APL_model":True,
+            "preserve_T_equals_G_plus_J_plus_F":True,
+            "global_optimum_proven":False}
+          expected={
+            "runner/v063_numeric_injection.py":"9a115de580be66a2dbe958506bce0bb4191809d9",
+            "runner/v064_adaptive_evaluator_port.py":"d09f5d12c98441923f9033dfb7d96bfa83b7442d",
+            "runner/v066_profile_neutral_preflight.py":"ad7ff8979b0816d5f3d415bc9e8f12c768e48e35",
+            "runner/v079b_hunter_empirical_affine_recovery.py":"101adf8ae0ff517f7a04fb966657c4b7cab45170",
+            "tests/test_v079b_hunter_empirical_affine_recovery.py":"2e011ba3f29e10081a27529c899d210f627169d4"}
+          for p,expected_sha in expected.items():
+              got=subprocess.check_output(["git","hash-object",p],text=True).strip()
+              assert got==expected_sha,(p,got,expected_sha)
+          print("V079B_EXACT_REQUEST_AFFINE_CORE_AND_RECOVERY_SHA_PASS")
+          PY
+      - name: Existing constant-offset regression plus new affine unit tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Recover the ORIGINAL two genuine Hunter Native JSON2 (failed v079)
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v079-hunter-ranged-native-40199924239
+          path: .v079failed
+          run-id: 40199924239
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Restore exact pinned SimC
+        uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-40153209773
+          path: .simc
+          run-id: 40153209773
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Offline replay original Native bytes; plan third witness (no Native)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v079b_hunter_empirical_affine_recovery.py --upstream integration_probes/fixtures/v079_upstream_mid2_hunter_beast_mastery_reference.simc --original-failed-native .v079failed/native --out out/offline
+          python3 - <<'PY'
+          import json
+          x=json.load(open("out/offline/V079B_RECEIPT.json"))
+          assert x["status"]=="PASS_OLD_TWO_NATIVE_SHA_AND_AFFINE_BOOT_PLAN",x
+          assert x["historical_original_real_native_reused"]==2
+          assert x["fresh_native_calls_this_invocation"]==0
+          print("V079B_TWO_OLD_ACTUAL_HUNTER_NATIVE_REUSED_EXACT_NO_NEW_SIMC")
+          PY
+      - name: 1 additional numeric witness + 2 official + 1 original adaptive Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc/simc' | sha256sum -c
+          chmod +x .simc/simc
+          python3 runner/v079b_hunter_empirical_affine_recovery.py --upstream integration_probes/fixtures/v079_upstream_mid2_hunter_beast_mastery_reference.simc --original-failed-native .v079failed/native --out "$GITHUB_WORKSPACE/out/native" --binary "$GITHUB_WORKSPACE/.simc/simc"
+          python3 - <<'PY'
+          import json,math
+          x=json.load(open("out/native/V079B_RECEIPT.json"))
+          assert x["status"]=="PASS_HUNTER_EMPIRICAL_AFFINE_FULL_GENERIC_NATIVE",x
+          assert x["historical_original_real_native_reused"]==2
+          assert x["fresh_native_calls_this_invocation"]==4
+          assert x["new_native_attempts_total_durable"]==4
+          assert x["G"]+x["J"]+x["F"]==x["T"]
+          assert x["v066_preflight"]=="READY_NUMERIC_PROFILE_SCOPED"
+          for n in x["official_results"]+[x["adaptive_result"]]:
+              assert n["target"]==n["rating_actual"]
+              assert sum(n["target"].values())==x["T"]
+              assert n["dps_samples"]>=20 and math.isfinite(n["dps_sem"])
+          assert not x["global_optimum_proven"]
+          print("V079B_HUNTER_EMPIRICAL_AFFINE_REAL_NATIVE_PASS",json.dumps(x,sort_keys=True))
+          PY
+          sha256sum out/native/extra_witness/result.json out/native/official/case_00/result.json out/native/official/case_01/result.json out/native/official/adaptive/result.json > out/native/NATIVE_FOUR_SHA256.txt
+      - name: Four exact JSON2 SHA-verified cache hits with zero extra Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v079b_hunter_empirical_affine_recovery.py --upstream integration_probes/fixtures/v079_upstream_mid2_hunter_beast_mastery_reference.simc --original-failed-native .v079failed/native --out "$GITHUB_WORKSPACE/out/native" --binary "$GITHUB_WORKSPACE/.simc/simc" --cache-only
+          sha256sum -c out/native/NATIVE_FOUR_SHA256.txt
+          python3 - <<'PY'
+          import json
+          x=json.load(open("out/native/V079B_RECEIPT.json"))
+          assert x["status"]=="PASS_HUNTER_EMPIRICAL_AFFINE_FULL_GENERIC_NATIVE",x
+          assert x["fresh_native_calls_this_invocation"]==0
+          assert x["new_native_attempts_total_durable"]==4
+          assert x["cache_only_replay"]
+          assert all(r["source"]=="CACHED_VERIFIED_NATIVE" for r in
+              x["official_results"]+[x["adaptive_result"]])
+          print("V079B_FOUR_JSON2_SHA_CACHE_HITS_ZERO_MORE_NATIVE_PASS")
+          PY
+      - name: Preserve actual inputs JSON2 raw SimC stderr and progress after failures
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v079b-hunter-affine-native-${{ github.run_id }}
+          path: out/
+          retention-days: 14
+          if-no-files-found: warn
