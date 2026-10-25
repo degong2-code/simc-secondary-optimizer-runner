@@ -1,0 +1,14 @@
+{
+  "schema": "v079b_hunter_actual_nonconstant_offset_empirical_recovery_v1",
+  "reuse_original_failed_run": 40199924239,
+  "original_two_native_never_rerun": true,
+  "additional_raw_witnesses": 1,
+  "new_official_candidates": 2,
+  "new_adaptive_candidate": 1,
+  "maximum_new_native_calls": 4,
+  "measure_all_four_rating_axes": true,
+  "must_confirm_exact_final_json2_rating": true,
+  "no_new_simc_item_proc_or_APL_model": true,
+  "preserve_T_equals_G_plus_J_plus_F": true,
+  "global_optimum_proven": false
+}
