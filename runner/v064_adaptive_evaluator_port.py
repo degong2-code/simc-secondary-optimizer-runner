@@ -1,0 +1,175 @@
+#!/usr/bin/env python3
+"""v064: adaptive-scheduler-neutral candidate evaluation port.
+
+A scheduler proposes (CHMV, iterations); this class only checks against the
+v061/v062 official rating contract, feeds the v063 measured-input adapter,
+accepts native JSON2 and returns DPS/SEM. No item/proc/APL internals, no new
+search optimizer. The absent v015/v016 original source is NOT claimed merged.
+
+Native result receipts are keyed by full profile/SimC binary/version/scenario/
+candidate/iterations. Reusing a receipt requires actual native JSON2 bytes,
+matching SHA256 and numerical rating validation; no guessed cache HIT.
+"""
+from __future__ import annotations
+import hashlib,json,math,pathlib
+
+import v046_static_item_cache as cache
+import v061_scenario_contract as scenario
+import v063_numeric_injection as numerical
+
+SCHEMA="v064_external_adaptive_evaluator_port_v1"
+STATS=scenario.STATS
+BINARY_HASH_LEN=64
+class PortBlocked(ValueError):pass
+
+def need(ok,reason):
+    if not ok: raise PortBlocked(reason)
+
+def stable_case_key(normalized,budget,calibration,reference,binary_sha,target,iterations):
+    need(type(binary_sha) is str and len(binary_sha)==BINARY_HASH_LEN
+         and all(ch in "0123456789abcdef" for ch in binary_sha),
+         "SIMC_BINARY_SHA_REQUIRED")
+    # Exclude variable json2 file path, include relevant input and runtime values.
+    part=numerical.input_parts(reference)
+    obj={"contract_schema":SCHEMA,
+         "scenario":normalized["scenario_digest"],
+         "total_rating":budget["budget"]["T_official"],
+         "calibrated_stable_profile":calibration["stable_profile_sha256"],
+         "simc_binary_sha256":binary_sha,
+         "simc_revision":calibration["native_revision"],
+         "measured_net_offset":calibration["net_input_to_json2_rating_offset"],
+         "profile_normalized_sha":part["stable_sha256"],
+         "target_rating":target,
+         "iterations":iterations,
+         "threads":normalized["scenario"]["runtime"]["threads"]}
+    return cache.digest(obj)
+
+def make_request(normalized,budget,calibration,reference,binary_sha,
+                 target,iterations,output_json2_path):
+    """Validate one externally proposed candidate; no SimC execution."""
+    need(normalized.get("schema")==scenario.SCHEMA,"SCENARIO_SCHEMA")
+    need(budget.get("schema")=="v062_representative_static_budget_v1",
+         "BUDGET_SCHEMA")
+    need(calibration.get("schema")==numerical.SCHEMA,"CALIBRATION_SCHEMA")
+    need(type(iterations) is int and
+         normalized["scenario"]["runtime"]["scout_iterations"]<=iterations<=
+         normalized["scenario"]["runtime"]["confirm_iterations"],
+         "ITERATION_OUTSIDE_SCENARIO_POLICY")
+    need(budget["budget"]["official_formula"]=="T=G+J+F" and
+         budget["budget"]["oil_stays_OUTSIDE_T"] is True,
+         "OFFICIAL_GJF_POLICY_CHANGED")
+    numerical.check_target(normalized,budget,target)
+    generated=numerical.render_candidate(
+        reference,calibration,target,pathlib.Path(output_json2_path),iterations)
+    identity=stable_case_key(normalized,budget,calibration,reference,binary_sha,
+                             target,iterations)
+    return {"schema":SCHEMA,"status":"PROPOSED_VALID_NO_NATIVE_YET",
+       "case_key":identity,"target":dict(target),"iterations":iterations,
+       "simc_binary_sha256":binary_sha,
+       "native_revision":calibration["native_revision"],
+       "profile_stable_sha256":calibration["stable_profile_sha256"],
+       "scenario_digest":normalized["scenario_digest"],
+       "official_total":budget["budget"]["T_official"],
+       "input":generated["input"],"input_sha256":generated["input_sha256"],
+       "raw_gear_override":generated["raw_gear_override"],
+       "json2_location":str(pathlib.Path(output_json2_path).resolve()),
+       "global_optimum_proven":False,"item_effects_owned_by":"SimC"}
+
+def ingest_native(request,native_doc,calibration,raw_native_bytes=None):
+    """Accept an actual JSON2 report; no separate proc-fidelity check."""
+    need(request.get("schema")==SCHEMA,"PORT_REQUEST_SCHEMA")
+    if raw_native_bytes is not None:
+        need(type(raw_native_bytes) is bytes,"RAW_NATIVE_JSON_BYTES")
+        need(json.loads(raw_native_bytes)==native_doc,
+             "NATIVE_BYTES_AND_PARSED_JSON_DIFFER")
+    rendered={"expected_json2_rating":request["target"],
+              "raw_gear_override":request["raw_gear_override"]}
+    result=numerical.validate_native(native_doc,rendered,calibration)
+    return {"schema":SCHEMA,"status":"PASS_NATIVE_DPS_AND_RATING",
+      "case_key":request["case_key"],
+      "target":request["target"],
+      "iterations":request["iterations"],
+      "input_sha256":request["input_sha256"],
+      "simc_binary_sha256":request["simc_binary_sha256"],
+      "scenario_digest":request["scenario_digest"],
+      "native_json_sha256":hashlib.sha256(
+          raw_native_bytes if raw_native_bytes is not None
+          else cache.canonical(native_doc).encode("utf8")).hexdigest(),
+      "native_revision":result["native_revision"],
+      "rating_actual":result["actual_buffed_stats_rating"],
+      "dps_mean":result["dps_mean"],"dps_sem":result["dps_sem"],
+      "dps_samples":result["dps_samples"],
+      "no_simc_effect_independent_validation":True,
+      "original_v015_v016_merged":False}
+
+def verify_disk_cache(request,calibration,receipt,raw_native_bytes):
+    need(type(receipt) is dict and
+         receipt.get("status")=="PASS_NATIVE_DPS_AND_RATING",
+         "CACHE_RECEIPT_NOT_SUCCESS")
+    for key in ("case_key","target","iterations","input_sha256",
+                "simc_binary_sha256","scenario_digest"):
+        need(receipt.get(key)==request[key],"CACHE_IDENTITY_MISMATCH:"+key)
+    need(type(raw_native_bytes) is bytes and
+         hashlib.sha256(raw_native_bytes).hexdigest()==receipt.get("native_json_sha256"),
+         "CACHE_NATIVE_BYTES_DIGEST_MISMATCH")
+    native=json.loads(raw_native_bytes)
+    new=ingest_native(request,native,calibration,raw_native_bytes)
+    need(all(receipt.get(k)==new[k] for k in new),"CACHE_RESULT_CHANGED")
+    return new
+
+def plan_queue(proposals,normalized,budget,calibration,reference,binary_sha,
+               output_dir):
+    """Pure proposed work list; scheduler policy and guided-choice algorithm external."""
+    need(type(proposals) is list and
+         1<=len(proposals)<=normalized["scenario"]["runtime"]["max_native_calls"],
+         "PROPOSALS_EXCEED_CONFIGURED_NATIVE_BUDGET")
+    out=[];seen=set()
+    for i,proposal in enumerate(proposals):
+        need(type(proposal) is dict and set(proposal)=={"target","iterations"},
+             "SCHEDULER_PROPOSAL_FIELDS")
+        path=pathlib.Path(output_dir)/("case_%02d"%i)/"result.json"
+        req=make_request(normalized,budget,calibration,reference,binary_sha,
+                         proposal["target"],proposal["iterations"],path)
+        need(req["case_key"] not in seen,"DUPLICATE_PROPOSED_EVALUATION")
+        seen.add(req["case_key"]);out.append(req)
+    return out
+
+def summarize(observations,official_total,material_distance_fraction=0.10,
+              near_loss_fraction=0.01):
+    """Observed ranking only. No global-optimum or statistically-proven-best label."""
+    need(type(observations) is list and len(observations)>0,"NO_NATIVE_RESULTS")
+    need(type(official_total) is int and official_total>0,"INVALID_TOTAL")
+    need(0<=material_distance_fraction<=1 and 0<=near_loss_fraction<=1,
+         "INVALID_NEARBY_THRESHOLDS")
+    seen=set()
+    for x in observations:
+        need(x.get("status")=="PASS_NATIVE_DPS_AND_RATING","INVALID_OBSERVATION")
+        need(sum(x["target"].values())==official_total,"OBSERVATION_TOTAL_MISMATCH")
+        need(x["case_key"] not in seen,"DUPLICATE_NATIVE_OBSERVATION")
+        seen.add(x["case_key"])
+    ranked=sorted(observations,key=lambda x:(-x["dps_mean"],x["case_key"]))
+    leader=ranked[0];alts=[]
+    for cand in ranked[1:]:
+        # Half L1 is number of rating points transferred among stats.
+        moved=sum(abs(leader["target"][k]-cand["target"][k])
+                  for k in STATS)/2
+        relative_drop=(leader["dps_mean"]-cand["dps_mean"])/leader["dps_mean"]
+        diff=leader["dps_mean"]-cand["dps_mean"]
+        half=1.96*math.hypot(leader["dps_sem"],cand["dps_sem"])
+        if moved>=official_total*material_distance_fraction and \
+           relative_drop<=near_loss_fraction:
+            alts.append({"case_key":cand["case_key"],"target":cand["target"],
+                "dps_mean":cand["dps_mean"],"dps_sem":cand["dps_sem"],
+                "rating_moved":moved,"observed_loss_fraction":relative_drop,
+                "difference_95pct_halfwidth_approx":half,
+                "statistically_separated_approx95":diff>half})
+    return {"schema":"v064_observed_statistical_summary_v1",
+       "status":"BOUNDED_OBSERVED_RANKING_NOT_GLOBAL_OPTIMUM",
+       "evaluated":len(ranked),"observed_best_case_key":leader["case_key"],
+       "observed_best_target":leader["target"],
+       "observed_best_dps":leader["dps_mean"],
+       "observed_best_dps_sem":leader["dps_sem"],
+       "materially_distinct_near_performing":alts,
+       "global_optimum_proven":False,
+       "selection_engine_connected":False,
+       "uncertain_pairwise_dps_must_not_be_declared_optimal":True}
