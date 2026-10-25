@@ -1,0 +1,10 @@
+{
+  "schema": "v050_restore_binary_for_failed_v049_v1",
+  "source_git_commit": "7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd",
+  "binary_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+  "recovery_scope": 448,
+  "max_parallel_batches": 3,
+  "no_new_stat_policy": true,
+  "product_code_integrated": false,
+  "official_policy_promoted": false
+}
