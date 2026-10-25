@@ -38,6 +38,9 @@ def fixture(character="mage",spec="arcane",role="spell"):
     cfg["character"]["class"]=character
     cfg["character"]["spec"]=spec
     cfg["character"]["role"]=role
+    # Legacy reference source uses iterations=320; both witness and scout
+    # repetition counts must be within the supplied scenario policy.
+    cfg["runtime"]["confirm_iterations"]=320
     if character!="mage":
         profile=profile.replace('mage="V031R3','warrior="V031R3',1)
         # Exact profile line is intentionally a synthetic harness;
