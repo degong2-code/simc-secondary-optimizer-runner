@@ -1,0 +1,136 @@
+name: v078B Elemental Official GJF Native Generic Route
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/v078b_elemental_official_native_once.json
+      - integration_probes/requests/v078b_elemental_official_native_retry.json
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v078b-elemental-real-official-generic
+  cancel-in-progress: false
+jobs:
+  generic-real-native:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Verify explicit request, source hash, call budget
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          paths=["integration_probes/requests/v078b_elemental_official_native_once.json",
+            "integration_probes/requests/v078b_elemental_official_native_retry.json"]
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert len(changed)==1 and changed[0] in paths,changed
+          request=json.loads(pathlib.Path(changed[0]).read_text())
+          assert request=={
+            "schema":"v078b_elemental_official_GJF_three_native_once_v1",
+            "source_v078_actual_native_run":40198642691,
+            "actual_nonrogue_profile":"orc_shaman_elemental_334_mail_1h_shield",
+            "prior_two_numeric_real_witnesses_required":True,
+            "official_G":2645,"J":138,"F":165,"T":2948,
+            "new_official_35_iteration_cases":2,
+            "new_v015_guided_35_iteration_scouts":1,
+            "maximum_new_native_calls":3,
+            "cache_replay_required":True,
+            "shared_generic_route":"v064_v065_v066",
+            "no_new_effect_APL_or_gear_optimizer":True,
+            "global_optimum_proven":False}
+          for path,blob in {
+            "runner/v078b_elemental_official_generic_native.py":"761e7c724d3d93cb8b260f6730eb5c7f9bad391d",
+            "tests/test_v078b_elemental_official_generic_native.py":"5e6015b30b523bbbb9cf8ee3eeef24ff5233d701"}.items():
+            actual=subprocess.check_output(["git","hash-object",path],text=True).strip()
+            assert actual==blob,(path,actual,blob)
+          print("V078B_REQUEST_SOURCE_CAP_SHA_PASS")
+          PY
+      - name: Full regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Recover exact original v078 actual Elemental Native
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v078-real-elemental-two-native-40198642691
+          path: .v078
+          run-id: 40198642691
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Recover pinned exact SimC binary
+        uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-40153209773
+          path: .simc
+          run-id: 40153209773
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Replay historical exact 2 Native SHA and plan two official GJF targets
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v078b_elemental_official_generic_native.py --prior-native .v078/native --out out/offline
+          python3 - <<'PY'
+          import json
+          r=json.load(open("out/offline/V078B_RECEIPT.json"))
+          assert r["status"]=="PASS_OFFLINE_OFFICIAL_NATIVE_PLAN_ZERO_NEW_SIMC",r
+          assert r["historical_two_native_sha_verified"]
+          assert (r["G"],r["J"],r["F"],r["T"])==(2645,138,165,2948)
+          assert len(r["targets"])==2
+          assert all(sum(t.values())==2948 for t in r["targets"])
+          assert r["new_native_this_invocation"]==0
+          print("V078B_ORIGINAL_JSON2_SHA_AND_GJF_CANDIDATE_PLAN_PASS")
+          PY
+      - name: Native two new official targets plus one original v015 adaptive candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc/simc' | sha256sum -c
+          chmod +x .simc/simc
+          python3 runner/v078b_elemental_official_generic_native.py --prior-native .v078/native --out "$GITHUB_WORKSPACE/out/native" --binary "$GITHUB_WORKSPACE/.simc/simc"
+          python3 - <<'PY'
+          import json,math
+          r=json.load(open("out/native/V078B_RECEIPT.json"))
+          assert r["status"]=="PASS_REAL_ELEMENTAL_OFFICIAL_NATIVE_AND_GENERIC_V015_SCOUT",r
+          assert r["new_native_this_invocation"]==3
+          assert r["native_attempts_total"]==3
+          assert r["v066_real_profile_status"]=="READY_NUMERIC_PROFILE_SCOPED"
+          assert len(r["two_real_official_witnesses"])==2
+          for x in r["two_real_official_witnesses"]+[r["adaptive_new_candidate"]]:
+            assert x["target"]==x["rating_actual"] and sum(x["target"].values())==2948
+            assert x["dps_samples"]>=20 and x["dps_mean"]>0 and math.isfinite(x["dps_sem"])
+          assert not r["global_optimum_proven"]
+          print("V078B_REAL_GENERIC_SHAMAN_OFFICIAL_AND_SCOUT_PASS",json.dumps(r,sort_keys=True))
+          PY
+          sha256sum out/native/official_00/result.json out/native/official_01/result.json out/native/adaptive_00/result.json > out/native/JSON2_SHA256.txt
+      - name: SHA verified cache replay no extra Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v078b_elemental_official_generic_native.py --prior-native .v078/native --out "$GITHUB_WORKSPACE/out/native" --binary "$GITHUB_WORKSPACE/.simc/simc" --cache-only
+          sha256sum -c out/native/JSON2_SHA256.txt
+          python3 - <<'PY'
+          import json
+          x=json.load(open("out/native/V078B_RECEIPT.json"))
+          assert x["status"]=="PASS_REAL_ELEMENTAL_OFFICIAL_NATIVE_AND_GENERIC_V015_SCOUT",x
+          assert x["new_native_this_invocation"]==0 and x["native_attempts_total"]==3
+          assert x["adaptive_new_candidate"]["source"]=="CACHED_VERIFIED_NATIVE"
+          assert all(y["source"]=="CACHED_VERIFIED_NATIVE" for y in x["two_real_official_witnesses"])
+          print("V078B_THREE_REAL_NATIVE_SHA_CACHE_REPLAY_NO_NEW_SIMC_PASS")
+          PY
+      - name: Preserve full native JSON2, exact source, stdout stderr and receipts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v078b-real-elemental-generic-${{ github.run_id }}
+          path: out/
+          retention-days: 14
+          if-no-files-found: warn
