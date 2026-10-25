@@ -1,0 +1,83 @@
+name: v062 Native Static Gear Budget Offline
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [integration_probes/requests/v062_budget_once.json]
+permissions:
+  contents: read
+concurrency:
+  group: v062-static-gear-budget
+  cancel-in-progress: false
+jobs:
+  static-budget:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Exact bounded request and source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          assert os.environ["GITHUB_REF"]=="refs/heads/probe/chat-cache-v035-20261024"
+          assert os.environ["GITHUB_EVENT_NAME"]=="push"
+          diff=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert diff==["integration_probes/requests/v062_budget_once.json"]
+          q=json.loads(pathlib.Path(diff[0]).read_text())
+          assert q=={"schema":"v062_static_budget_reconciliation_offline_v1",
+             "native_simc_calls":0,
+             "official_total":"T=G+J+F",
+             "selected_special_floor_already_in_G":True,
+             "trinket_static_absence_blocks_selection":False,
+             "special_item_proc_calibration":False,
+             "full_product_integration":False,
+             "main_policy_promotion":False}
+          for p,h in {
+            "runner/v062_static_budget_bridge.py":"17d5dd3463aa3e77bb1cf0036cba0e3144a12634",
+            "tests/test_v062_static_budget_bridge.py":"fbb653e491dad7ec0373f6ddb0dedf2403f064b1"
+          }.items():
+            assert subprocess.check_output(["git","hash-object",p],text=True).strip()==h
+          print("V062_EXACT_REQUEST_PASS")
+          PY
+      - name: Entire old and new regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Create deterministic P2 demonstration evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          python3 - <<'PY'
+          import json,pathlib,sys,os
+          sys.path[:0]=["tests","runner"]
+          from test_v062_static_budget_bridge import fixture
+          import v062_static_budget_bridge as s
+          c,f,cache=fixture()
+          x=s.compile_static_budget(c,f,cache)
+          assert x["budget"]["T_official"]==1603
+          assert x["G_if_complete"]==1300
+          assert x["native_simc_calls"]==0
+          pathlib.Path("out/V062_TEST_ONLY_SYNTHETIC_BUDGET.json").write_text(json.dumps(x,indent=2,sort_keys=True)+"\n")
+          pathlib.Path("out/V062_RECEIPT.json").write_text(json.dumps({
+             "status":"PASS_OFFLINE_SYNTHETIC_STATIC_BUDGET_CONTRACT",
+             "all_native_static_values_in_demo":"SYNTHETIC_FOR_TESTING_NOT_REAL_GEAR",
+             "native_simc_calls":0,"main_product_integrated":False,
+             "official_T_formula":"G+J+F","source_commit":os.environ["GITHUB_SHA"]
+          },indent=2)+"\n")
+          print("V062_G_L_E_RULES_OFFLINE_PASS")
+          PY
+      - name: Upload bounded output
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v062-static-budget-${{ github.run_id }}
+          path: out/
+          if-no-files-found: warn
+          retention-days: 14
