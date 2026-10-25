@@ -1,0 +1,93 @@
+name: v059 Selected Equipment to Two Native CHMV Candidates
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - integration_probes/requests/v059_candidate_bridge_once.json
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v059-candidate-adapter-bounded
+  cancel-in-progress: false
+jobs:
+  native-two:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Ensure approved static source and bounded request
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          assert os.environ["GITHUB_EVENT_NAME"]=="push"
+          assert os.environ["GITHUB_REF"]=="refs/heads/probe/chat-cache-v035-20261024"
+          changes=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changes==["integration_probes/requests/v059_candidate_bridge_once.json"]
+          req=json.loads(pathlib.Path(changes[0]).read_text())
+          assert req=={"schema":"v059_bounded_native_2_candidate_bridge_v1",
+            "scenario":"PINNED_V031R3_MAGE_334_G2849_WITH_SELECTED_250224",
+            "native_max_calls":2,"iterations_per_candidate":60,
+            "candidate_total":3184,"independent_proc_analysis":False,
+            "special_fixed_gear_from_this_pilot":0,
+            "no_adaptive_global_optimum_claim":True,
+            "original_product_v015_v016_integrated":False,
+            "official_policy_promoted":False}
+          for p,sha in {
+            "runner/v059_candidate_runner_bridge.py":"4f285fafe70b5ebf0ee2862f6297284efbd2ea41",
+            "tests/test_v059_candidate_runner_bridge.py":"680790f4f53526a8db9db9af9dc02c2a7dabdd95",
+            "runner/v055_simc_item_selection.py":"ad627d796e28216310ea47b455005a35e7acc3c8",
+            "inputs/v031r3_reference.simc":"c5a05d13c17ff3a7a609cd205c4d24d7080fd6ff"
+          }.items():
+            assert subprocess.check_output(["git","hash-object",p],text=True).strip()==sha,"SOURCE_SHA_CHANGED:"+p
+          print("V059_BOUNDED_GATE_PASS")
+          PY
+      - name: Full offline tests (native not yet invoked)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Retrieve pinned Native binary
+        uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-40153209773
+          path: .simc
+          run-id: 40153209773
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Evaluate two bounded candidate ratings through original SimC class APL
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc/simc' | sha256sum -c
+          chmod +x .simc/simc
+          python3 runner/v059_candidate_runner_bridge.py \
+            --binary "$GITHUB_WORKSPACE/.simc/simc" \
+            --iterations 60 --out "$GITHUB_WORKSPACE/out"
+          python3 - <<'PY'
+          import json
+          r=json.load(open('out/V059_RECEIPT.json'))
+          assert r['status']=="PASS_BOUNDED_TWO_CANDIDATES_WITHOUT_PROC_GATE"
+          assert r['native_calls']==2
+          assert len(r['cases'])==2
+          assert r['budget']['T']==3184
+          assert all(x['actual_rating']==x['target'] for x in r['cases'])
+          assert all(x['dps_mean']>0 for x in r['cases'])
+          assert r['comparison']['status']=="PAIRWISE_STATISTIC_ONLY_NOT_GLOBAL_OPTIMUM"
+          print("V059_TWO_CHMV_WITH_REAL_SIMC_DPS_PASS")
+          PY
+      - name: Upload input/results and receipt
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v059-two-candidate-DPS-${{ github.run_id }}
+          path: out/
+          retention-days: 14
+          if-no-files-found: warn
