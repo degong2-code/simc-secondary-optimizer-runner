@@ -58,6 +58,13 @@ def verify_profile_binding(normalized,budget,reference):
     for line in reference.splitlines():
         key,sep,val=line.partition("=")
         if not sep or line.startswith("#"):continue
+        # SimC APL contains intentionally repeated actions.list+= lines.
+        # They are action append commands, not duplicate top-level settings.
+        # Entire APL bytes are already protected by the profile stable hash.
+        if key=="actions" or key.startswith("actions."):
+            continue
+        if key.endswith("+") and key.startswith("actions"):
+            continue
         if key in parsed:need(False,"DUPLICATE_PROFILE_SETTING:"+key)
         parsed[key]=val
         if key in selected.SLOTS:slots.add(key)
