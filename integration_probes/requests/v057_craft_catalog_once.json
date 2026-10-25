@@ -1,0 +1,12 @@
+{
+  "schema": "v057_crafted_51_recipe_catalog_admission_v1",
+  "metadata_recipes": 51,
+  "native_stat_simulations": 0,
+  "trinket_without_static_allowed": true,
+  "manual_crafted_ids_allowed": true,
+  "max_embellishments": 2,
+  "simc_effects_owned_by_simc": true,
+  "whole_season_recipe_coverage_proven": false,
+  "product_code_integrated": false,
+  "official_policy_promoted": false
+}
