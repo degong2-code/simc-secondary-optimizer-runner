@@ -1,0 +1,26 @@
+{
+  "schema": "v082_fury_plate_dual_twohand_static_gjf_v1",
+  "source": "simulationcraft_midnight_MID2_Warrior_Fury",
+  "source_git_blob": "3225992ed5b754ad5d61e8b785d9d859f1eed1be",
+  "race": "dwarf",
+  "spec": "warrior_fury",
+  "armor": "plate",
+  "weapon": "dual_two_handed_main_and_off_hand",
+  "representative_ilvl": 334,
+  "original_simc_APL_preserved": true,
+  "maximum_native_calls": 4,
+  "first_new_static_native": 1,
+  "two_real_official_static_witnesses": 2,
+  "one_original_v015_guided_native_scout": 1,
+  "iterations_per_case": 35,
+  "F_vector": {
+    "crit_rating": 0,
+    "haste_rating": 165,
+    "mastery_rating": 0,
+    "versatility_rating": 0
+  },
+  "O_outside_T": true,
+  "T_formula": "T=G+J+F",
+  "no_independent_item_or_talent_effect_gate": true,
+  "global_optimum_proven": false
+}
