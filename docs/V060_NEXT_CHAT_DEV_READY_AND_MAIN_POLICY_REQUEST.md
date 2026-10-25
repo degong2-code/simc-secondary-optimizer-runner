@@ -1,3 +1,5 @@
+> **2026-10-25 사용자 정정:** 이 문서의 'next-chat' 표현은 **지금 새 채팅으로 이동하라는 의미가 아니다**. 현재 개발은 기존 채팅에서 계속 수행한다. 새 일반 채팅에서도 정확히 복원할 수 있게 개발 상태를 **지속 보존**한다는 뜻이다. 최신 상태는 [CURRENT_PRODUCT_DEVELOPMENT_STATE.md](./CURRENT_PRODUCT_DEVELOPMENT_STATE.md), 현재 사용자 승인 정책 보충은 [DEVELOPER_NOTES_CURRENT_POLICY_ADDENDUM_20261025.md](./DEVELOPER_NOTES_CURRENT_POLICY_ADDENDUM_20261025.md)를 우선 참조한다. Project Instructions/Sources 공식 갱신은 **미적용**이고 MAIN 적용 절차가 필요하다.
+
 # v060 handoff: development-ready, MAIN application separately pending
 
 **Date:** 2026-10-25 KST. **Owner boundary:** isolated development branch only. This file is not an official MAIN, Work OS, Project Source or CURRENT promotion.
