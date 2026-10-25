@@ -58,7 +58,8 @@ def prepare(witness_root,binary_sha):
              "WITNESS_JSON2_INVALID")
         need(player[0].get("race")=="void_elf" and
              player[0].get("talents")==rogue.USER_TALENTS and
-             player[0].get("specialization")=="subtlety",
+             player[0].get("specialization")=="Subtlety Rogue" and
+             "spec=subtlety" in reference.splitlines(),
              "USER_SPEC_RACE_TALENT_NOT_NATIVE_MATCHED")
         statgear=player[0].get("gear") or {}
         need(set(statgear)==selector.SLOTS,"WITNESS_GEAR_MISSING_SLOTS")
