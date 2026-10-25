@@ -1,0 +1,13 @@
+{
+  "schema": "v071_single_rogue_real_adaptive_native_request_v1",
+  "user": "void_elf_rogue_subtlety_334",
+  "numeric_native_source": 40181981240,
+  "prior_official_native_source": 40182313167,
+  "max_new_native_calls": 1,
+  "scout_iterations": 35,
+  "fixed_L_and_budget": "T=G+J+F",
+  "candidate_generation": "reuse_v065_authentic_v015_policy",
+  "direct_proc_or_APL_gate": false,
+  "original_v015_v016_source_changed": false,
+  "global_optimum_claimed": false
+}
