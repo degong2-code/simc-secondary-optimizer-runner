@@ -4,6 +4,7 @@ on:
     branches: [probe/chat-cache-v035-20261024]
     paths:
       - integration_probes/requests/v065_v015_native_once.json
+      - integration_probes/requests/v065_v015_native_retry_once.json
 permissions:
   contents: read
   actions: read
@@ -28,7 +29,7 @@ jobs:
           assert os.environ["GITHUB_EVENT_NAME"]=="push"
           assert os.environ["GITHUB_REF"]=="refs/heads/probe/chat-cache-v035-20261024"
           paths=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
-          assert paths==["integration_probes/requests/v065_v015_native_once.json"],paths
+          assert paths==["integration_probes/requests/v065_v015_native_retry_once.json"],paths
           req=json.loads(pathlib.Path(paths[0]).read_text())
           assert req=={
              "schema":"v065_v015_lineage_guided_native_once_v1",
