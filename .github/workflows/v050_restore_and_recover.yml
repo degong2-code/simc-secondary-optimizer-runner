@@ -1,0 +1,160 @@
+name: v050 Restore Pinned Native Binary and Recover Armor Stats
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - integration_probes/requests/v050_recover_once.json
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v050-pinned-recovery
+  cancel-in-progress: false
+env:
+  PINNED_SOURCE: 7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd
+  EXPECTED_BIN_SHA: 64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Validate exact one-shot request and source identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          assert os.environ['GITHUB_EVENT_NAME']=='push'
+          assert os.environ['GITHUB_REF']=='refs/heads/probe/chat-cache-v035-20261024'
+          paths=subprocess.check_output(['git','diff-tree','--no-commit-id','--name-only','-r',os.environ['GITHUB_SHA']],text=True).splitlines()
+          assert paths==['integration_probes/requests/v050_recover_once.json']
+          req=json.loads(pathlib.Path(paths[0]).read_text())
+          assert req=={
+             'schema':'v050_restore_binary_for_failed_v049_v1',
+             'source_git_commit':'7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd',
+             'binary_sha256':'64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e',
+             'recovery_scope':448,'max_parallel_batches':3,
+             'no_new_stat_policy':True,'product_code_integrated':False,
+             'official_policy_promoted':False}
+          for p,sha in {
+            'runner/v049_class_compatible_recovery.py':'5ea988a966a595668e5a65cbe57480ac6cffea83',
+            'integration_probes/requests/v047_full_scope_manifest.json':'80cd941075852354821846d53c7d88e663f3794a'
+          }.items():
+            assert subprocess.check_output(['git','hash-object',p],text=True).strip()==sha,'PIN_DRIFT:'+p
+          print('V050_REQUEST_GATE_PASS')
+          PY
+      - name: Restore old pinned cache if possible
+        uses: actions/cache/restore@v5
+        id: pinned
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd-cli-release-nonetwork-r1
+      - name: Install tools only if cache missing
+        if: steps.pinned.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake build-essential pkg-config
+      - name: Checkout exact SimC source on miss
+        if: steps.pinned.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p _vendor
+          git clone --filter=blob:none --no-checkout https://github.com/simulationcraft/simc.git _vendor/simc
+          git -C _vendor/simc checkout --detach "$PINNED_SOURCE"
+          test "$(git -C _vendor/simc rev-parse HEAD)" = "$PINNED_SOURCE"
+      - name: Build exactly pinned Native binary once
+        if: steps.pinned.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cmake -S _vendor/simc -B _vendor/simc/build \
+            -DBUILD_GUI=OFF -DSC_NO_NETWORKING=ON -DCMAKE_BUILD_TYPE=Release
+          cmake --build _vendor/simc/build --target simc --parallel 2
+          BINARY="$(find _vendor/simc/build -type f -name simc -executable | sort | head -1)"
+          test -x "$BINARY"
+          mkdir -p .simc-cache/v035
+          cp "$BINARY" .simc-cache/v035/simc
+      - name: Strict SHA256 gate and durable binary artifact for this run
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f .simc-cache/v035/simc
+          echo "$EXPECTED_BIN_SHA  .simc-cache/v035/simc" | sha256sum -c
+          mkdir -p portable
+          cp .simc-cache/v035/simc portable/simc
+          printf '%s  %s\n' "$EXPECTED_BIN_SHA" "simc" > portable/SHA256SUMS.txt
+          python3 - <<'PY'
+          import json,os,pathlib
+          pathlib.Path('portable/PROVENANCE.json').write_text(json.dumps({
+            'source_commit':os.environ['PINNED_SOURCE'],
+            'binary_sha256':os.environ['EXPECTED_BIN_SHA'],
+            'static_cache_revision_invalidation':False,
+            'tool_only_not_current_game_version_claim':True},indent=2)+'\n')
+          PY
+      - name: Upload pinned binary for three recovery jobs
+        uses: actions/upload-artifact@v6
+        with:
+          name: v050-exact-native-binary-${{ github.run_id }}
+          path: portable/
+          retention-days: 3
+  recover:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        start: [0, 160, 320]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-${{ github.run_id }}
+          path: .binary
+      - uses: actions/download-artifact@v4
+        with:
+          name: simc-v047-full-census-pilot-40152488928
+          path: .seed
+          run-id: 40152488928
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Verify source and binary, recover exact class variants
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "$EXPECTED_BIN_SHA  .binary/simc" | sha256sum -c
+          chmod +x .binary/simc
+          python3 -m unittest discover -s tests -q
+          python3 runner/v049_class_compatible_recovery.py \
+            --binary "$GITHUB_WORKSPACE/.binary/simc" \
+            --manifest integration_probes/requests/v047_full_scope_manifest.json \
+            --seed "$GITHUB_WORKSPACE/.seed/result/midnight_s2_static_cache_v047.json" \
+            --out "$GITHUB_WORKSPACE/output" \
+            --start ${{ matrix.start }} --max-cases 160
+          python3 - <<'PY'
+          import json
+          obj=json.load(open('output/V049_LEDGER.json'))
+          assert obj['status']!='SETUP_BLOCKED'
+          assert len(obj['items'])<=160
+          print('V050_RECOVERY',obj['start'],obj['saved'],obj['blocked'])
+          PY
+      - name: Upload class-corrected Static Native output
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v050-native-recovery-${{ matrix.start }}-${{ github.run_id }}
+          path: output/
+          retention-days: 14
+          if-no-files-found: warn
