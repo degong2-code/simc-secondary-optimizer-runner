@@ -1,0 +1,101 @@
+name: v058 One Missing Crafted Variant Native-on-Demand
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - integration_probes/requests/v058_lazy_native_once.json
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v058-one-lazy-native
+  cancel-in-progress: false
+jobs:
+  lazy-one:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Request and source scope gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          assert os.environ["GITHUB_EVENT_NAME"]=="push"
+          assert os.environ["GITHUB_REF"]=="refs/heads/probe/chat-cache-v035-20261024"
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==["integration_probes/requests/v058_lazy_native_once.json"]
+          req=json.loads(pathlib.Path(changed[0]).read_text())
+          assert req=={
+            "schema":"v058_lazy_missing_crafted_native_once_v1",
+            "selected_item_id":239652,"selected_item_level":331,
+            "max_native_calls":1,"existing_cache_reuse":True,
+            "trinket_cache_miss_not_admission_gate":True,
+            "proc_calculation_delegated_to_simc":True,
+            "original_product_integrated":False,"official_policy_promoted":False}
+          for p,sha in {
+           "runner/v058_lazy_crafted_native.py":"d32ad86a190e55b5c24218081d6df9ad6f2d0236",
+           "tests/test_v058_lazy_crafted_native.py":"75562da5944a96cea8e6f9f988438c8e06b9cc03",
+           "runner/v055_simc_item_selection.py":"ad627d796e28216310ea47b455005a35e7acc3c8",
+           "integration_probes/catalog/v057_crafted_gear_51_recipe_ids.json":"2c5e4a689e9f0affd2d71ca0086c4b37b31788b1"
+          }.items():
+           assert subprocess.check_output(["git","hash-object",p],text=True).strip()==sha,"SOURCE_SHA_DRIFT:"+p
+          print("V058_GATE_PASS")
+          PY
+      - name: Offline full regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Restore existing v046 cache
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v046-static-cache-40151392965
+          path: .seed
+          run-id: 40151392965
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Get same pinned Native binary, no rebuild
+        uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-40153209773
+          path: .binary
+          run-id: 40153209773
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Exactly one cache miss and Native hydration
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .binary/simc' | sha256sum -c
+          chmod +x .binary/simc
+          mkdir -p out
+          cat > out/item_request.json <<'JSON'
+          {"item_id":239652,"slot":"head","ilevel":331,"options":{"crafted_stats":"49/36"},"compatible_profile":null}
+          JSON
+          python3 runner/v058_lazy_crafted_native.py \
+            --request out/item_request.json --binary "$GITHUB_WORKSPACE/.binary/simc" \
+            --seed "$GITHUB_WORKSPACE/.seed/midnight_s2_static_cache_v046.json" \
+            --out "$GITHUB_WORKSPACE/out"
+          python3 - <<'PY'
+          import json
+          rec=json.load(open('out/V058_RECEIPT.json'))
+          assert rec["status"]=="PASS_ONE_MISSING_NONTRINKET_NATIVE_VARIANT_ADDED"
+          assert rec["native_attempts"]==1
+          assert rec["G_contribution"]>0
+          print("V058_EXACT_ONE_NATIVE_G_PASS",rec["G_contribution"])
+          PY
+      - name: Save one source Native JSON2 and cache
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v058-lazy-craft-331-${{ github.run_id }}
+          path: out/
+          retention-days: 14
+          if-no-files-found: warn
