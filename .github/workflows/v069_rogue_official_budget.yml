@@ -1,0 +1,142 @@
+name: v069 User Rogue Exact GJF Budget and Official One Native Candidate
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [integration_probes/requests/v069_rogue_official_once.json]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v069-user-rogue-official
+  cancel-in-progress: false
+jobs:
+  real-native-gjf:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Exact request/source hashes and execution cap
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os,json,pathlib,subprocess
+          assert os.environ["GITHUB_REF"]=="refs/heads/probe/chat-cache-v035-20261024"
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==["integration_probes/requests/v069_rogue_official_once.json"],changed
+          q=json.loads(pathlib.Path(changed[0]).read_text())
+          assert q=={"schema":"v069_actual_rogue_static_GJF_one_candidate_once",
+           "native_witnesses":2,"native_official_candidates":1,
+           "max_new_native_calls":3,
+           "user_rogue":"void_elf_subtlety_334",
+           "user_gear_selected":["head:271875","main_hand:271093",
+            "trinket1:270175","trinket2:281215",
+            "wrists:244576_arcanoweave_lining",
+            "off_hand:237837_hunters_ritual_stone"],
+           "omnium_fourth":"mastery","special_gem_B":240967,
+           "unknown_nontrinket_stat_rejected":True,
+           "oil_outside_official_GJF":True,
+           "new_native_effect_proc_gate":False,
+           "original_v015_v016_historical_not_rerun":True,
+           "no_main_workos_modification":True}
+          sources={
+            "runner/v068_rogue_user_profile.py":"869f82c0dd2724a210e5df609325a7fd7d2c8e4e",
+            "runner/v064_adaptive_evaluator_port.py":"189e0c3ba33d661c7ea1eec70bfc6f211343a0d9",
+            "runner/v069_rogue_official_budget_native.py":"48b171fb6d0309271d8a74b5a508154dbff5a017",
+            "tests/test_v069_official_rogue_budget.py":"29d0b87f61c2c3ad2af681e806c7b4cfe472c9a9",
+            "integration_probes/fixtures/v068_upstream_mid2_rogue_subtlety_reference.simc":"b704e6326959432a82d14a6b774c79183d5b2af4"}
+          for p,digest in sources.items():
+            assert subprocess.check_output(["git","hash-object",p],text=True).strip()==digest,p
+          print("V069_REQUEST_PINNED_POLICY_SOURCE_PASS")
+          PY
+      - name: Full current-product tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Download previous real v068 numeric witnesses (immutable error evidence)
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v068-real-user-rogue-two-native-40181018874
+          path: .old
+          run-id: 40181018874
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Reproduce old positive unknown=142 as explicit offline budget BLOCKED
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out/old-blocked
+          set +e
+          python3 runner/v069_rogue_official_budget_native.py \
+            --witness-root .old/out --out out/old-blocked
+          code=$?
+          set -e
+          test "$code" -eq 3
+          python3 - <<'PY'
+          import json
+          r=json.load(open("out/old-blocked/V069_RECEIPT.json"))
+          assert r["status"]=="BLOCKED_STATIC_OR_WITNESS"
+          assert "NATIVE_STATIC_UNALLOCATED_UNKNOWN:back=142" in r["error"],r
+          print("V069_PRIOR_NATIVE_UNKNOWN_142_NOT_MISCOUNTED_AS_ZERO_PASS")
+          PY
+      - name: Download pinned actual SimC binary
+        uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-40153209773
+          path: .simc
+          run-id: 40153209773
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Exactly 2 fresh Rogue numeric witnesses for allocated cloak stat
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc/simc' | sha256sum -c
+          chmod +x .simc/simc
+          python3 runner/v068_rogue_two_native_probe.py \
+            --binary "$GITHUB_WORKSPACE/.simc/simc" \
+            --out "$GITHUB_WORKSPACE/out/fresh-witness" --iterations 35
+          python3 - <<'PY'
+          import json
+          r=json.load(open("out/fresh-witness/V068_PROBE_RECEIPT.json"))
+          assert r["status"]=="PASS_TWO_REAL_ROGUE_NATIVE_JSON2_NUMERIC_WITNESSES",r
+          assert r["native_calls_attempted"]==2
+          print("V069_TWO_REVISED_NATIVE_WITNESSES_PASS")
+          PY
+      - name: Official G/J/F, special L and exactly one real Native 334 Subtlety DPS candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v069_rogue_official_budget_native.py \
+            --witness-root out/fresh-witness \
+            --binary "$GITHUB_WORKSPACE/.simc/simc" \
+            --out "$GITHUB_WORKSPACE/out/official"
+          python3 - <<'PY'
+          import json
+          r=json.load(open("out/official/V069_RECEIPT.json"))
+          assert r["status"]=="PASS_ONE_ROGUE_OFFICIAL_T_NATIVE_DPS_RATING",r
+          assert r["new_native_calls"]==1
+          assert r["T_official"]==r["G"]+r["J"]+r["F"]
+          assert r["J"]==138 and r["F"]==165
+          assert r["fixed_special_L"]["crit_rating"]>0
+          assert r["fixed_special_L"]["haste_rating"]>0
+          assert r["result"]["target"]==r["result"]["rating_actual"]
+          assert sum(r["result"]["rating_actual"].values())==r["T_official"]
+          assert r["result"]["dps_mean"]>0 and r["result"]["dps_sem"]>=0
+          assert r["external_oil_not_added_to_T"] and r["external_oil_numeric_rating_unattributed"]
+          assert not r["global_optimum_proven"]
+          print("V069_EXACT_CHMV_BUDGET_AND_REAL_NATIVE_FINAL_RATING_PASS")
+          PY
+      - name: Preserve distinct Native evidence and raw stderr
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v069-user-rogue-real-GJF-one-native-${{ github.run_id }}
+          path: out/
+          retention-days: 14
+          if-no-files-found: warn
