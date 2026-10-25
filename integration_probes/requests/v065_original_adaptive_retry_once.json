@@ -1,0 +1,18 @@
+{
+  "schema": "v065_authentic_v015_policy_adapter_native_v1",
+  "original_v015_sha256": "a44f73cf232c8204dbe958e79fe50f111e68654ac583a1170a283f16035c0ec3",
+  "original_v016_sha256": "7c49d7ca095e8864b673715d70d9851d676b44aeed99f8d769419492fcd14712",
+  "historical_v015_pass": "71_OF_71_RECORDED_NOT_RERUN",
+  "historical_v016_pass": "104_OF_104_RECORDED_NOT_RERUN",
+  "previous_true_native_run": 40165729165,
+  "new_native_max": 4,
+  "scout_runs": 2,
+  "scout_iterations": 60,
+  "fresh_confirm_runs": 2,
+  "fresh_confirm_iterations": 320,
+  "official_budget": "T=G+J+F",
+  "direct_original_executable_replaced": false,
+  "independent_simc_item_effect_proc_gate": false,
+  "product_v015_v016_integrated_completely": false,
+  "main_branch_or_project_source_modified": false
+}
