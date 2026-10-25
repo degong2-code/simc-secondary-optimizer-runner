@@ -129,7 +129,7 @@ def execute_one(req,calibration,binary,case_folder,progress,cancel_file=None):
     write_atomic(receipt_file,checked)
     return checked | {"source":"NEW_NATIVE"}
 
-def start(previous,out,binary=None,cancel_file=None):
+def start(previous,out,binary=None,cancel_file=None,prepared=None):
     out=pathlib.Path(out);out.mkdir(parents=True,exist_ok=True)
     progress={"schema":RUN_SCHEMA,"status":"STARTING","native_attempts":0,
               "new_native_max":NEW_NATIVE_MAX,
@@ -141,13 +141,43 @@ def start(previous,out,binary=None,cancel_file=None):
               "owns_item_effects":"SIMC","scouts":[],"confirmations":[]}
     receiptpath=out/"V065_RECEIPT.json"
     try:
-        normalized,static,calibration,reference,history=integration_plan(previous)
+        if prepared is None:
+            normalized,static,calibration,reference,history=integration_plan(previous)
+            scoped_binary_sha=BINARY_SHA
+        else:
+            # Explicit external scenario bundle from v066. Do not import
+            # any Mage-only v063 profile builder or calibrate a new class
+            # with another character's numeric offset.
+            need(type(prepared) is dict and set(prepared)=={
+                "normalized","budget","calibration","profile",
+                "prior_observations","summary"},"GENERIC_PREPARED_FIELDS")
+            normalized=prepared["normalized"]
+            static=prepared["budget"]
+            calibration=prepared["calibration"]
+            reference=prepared["profile"]
+            history=prepared["prior_observations"]
+            meta=prepared["summary"]
+            scoped_binary_sha=meta["simc_binary_sha256"]
+            need(meta["status"]=="READY_NUMERIC_PROFILE_SCOPED"
+                 and meta["scenario_digest"]==normalized["scenario_digest"]
+                 and meta["T_official"]==static["budget"]["T_official"]
+                 and meta["profile_sha256"]==hashlib.sha256(
+                     reference.encode("utf8")).hexdigest()
+                 and meta["simc_revision"]==calibration["native_revision"]
+                 and type(scoped_binary_sha) is str
+                 and len(scoped_binary_sha)==64
+                 and all(ch in "0123456789abcdef" for ch in scoped_binary_sha),
+                 "GENERIC_PREPARED_BINDING_MISMATCH")
+            # An externally supplied context must have been normalized
+            # from our active v061 contract; exact gear and combat binding
+            # remains v064's responsibility for each proposed evaluation.
         progress.update({"status":"PLAN_READY",
            "prior_real_native_count":len(history),
            "scenario_digest":normalized["scenario_digest"],
            "official_T":static["budget"]["T_official"],
            "G":static["G_if_complete"],"J":normalized["budget"]["J"],
            "F":normalized["budget"]["F"],
+           "scoped_simc_binary_sha256":scoped_binary_sha,
            "calibration_offset":calibration["net_input_to_json2_rating_offset"],
            "source_original_v015_sha256":scheduler.SOURCE_V015_SHA256,
            "source_original_v016_sha256":scheduler.SOURCE_V016_SHA256})
@@ -161,6 +191,7 @@ def start(previous,out,binary=None,cancel_file=None):
             need(previous.get("schema")==RUN_SCHEMA and
                  previous.get("scenario_digest")==progress["scenario_digest"]
                  and previous.get("official_T")==progress["official_T"]
+                 and previous.get("scoped_simc_binary_sha256")==scoped_binary_sha
                  and previous.get("source_original_v015_sha256")==progress["source_original_v015_sha256"]
                  and type(previous.get("native_attempts")) is int
                  and 0<=previous["native_attempts"]<=NEW_NATIVE_MAX,
@@ -172,12 +203,12 @@ def start(previous,out,binary=None,cancel_file=None):
         write_atomic(out/"V065_PROGRESS.json",progress)
         if binary is not None:
             binary=pathlib.Path(binary).resolve()
-            need(binary.is_file() and hashlib.sha256(binary.read_bytes()).hexdigest()==BINARY_SHA,
+            need(binary.is_file() and hashlib.sha256(binary.read_bytes()).hexdigest()==scoped_binary_sha,
                  "NATIVE_BINARY_SHA_NOT_PINNED")
         for i in range(SCOUT_MAX):
             folder=out/("scout_%02d"%i)
             proposal=scheduler.next_scout(state,normalized,static,calibration,
-               reference,BINARY_SHA,folder/"result.json",SCOUT_ITERATIONS)
+               reference,scoped_binary_sha,folder/"result.json",SCOUT_ITERATIONS)
             row={"target":proposal["case"]["target"],
                  "anchor":proposal["anchor"],
                  "case_key":proposal["case"]["case_key"],
@@ -195,7 +226,7 @@ def start(previous,out,binary=None,cancel_file=None):
             write_atomic(out/"V065_PROGRESS.json",progress)
         if binary is not None:
             pair=scheduler.pair_to_confirm(state,normalized,static,calibration,
-                  reference,BINARY_SHA,out,CONFIRM_ITERATIONS)
+                  reference,scoped_binary_sha,out,CONFIRM_ITERATIONS)
             progress["confirmation_selected_from_scout_means"]=[
                 c["target"] for c in pair["cases"]]
             write_atomic(out/"V065_PROGRESS.json",progress)
