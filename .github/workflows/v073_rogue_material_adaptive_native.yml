@@ -2,7 +2,9 @@ name: v073 Rogue Material Adaptive Native Two Scouts
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
-    paths: [integration_probes/requests/v073_rogue_material_scout_once.json]
+    paths:
+      - integration_probes/requests/v073_rogue_material_scout_once.json
+      - integration_probes/requests/v073_rogue_material_retry_once.json
 permissions:
   contents: read
   actions: read
@@ -26,7 +28,8 @@ jobs:
           import json,os,pathlib,subprocess
           p="integration_probes/requests/v073_rogue_material_scout_once.json"
           changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
-          assert changed==[p],changed
+          assert changed in ([p],["integration_probes/requests/v073_rogue_material_retry_once.json"]),changed
+          p=changed[0]
           x=json.loads(pathlib.Path(p).read_text())
           assert x=={
             "schema":"v073_rogue_material_two_adaptive_native_scout_request_v1",
@@ -48,7 +51,7 @@ jobs:
             "global_optimum_proven":False}
           for f,s in {
             "runner/v073_rogue_material_adaptive_scout.py":"40f5b303b8c68f98521e0d323a1a0385a39c0ceb",
-            "tests/test_v073_rogue_material_adaptive_scout.py":"4bf4cbc5c03fccfcfdc79f6889ed24f47f2cf6af"}.items():
+            "tests/test_v073_rogue_material_adaptive_scout.py":"3c1e2d61516863d2c77102d367366704784fea22"}.items():
             actual=subprocess.check_output(["git","hash-object",f],text=True).strip()
             assert actual==s,(f,actual)
           print("V073_REQUEST_SOURCE_SHA_PASS")
