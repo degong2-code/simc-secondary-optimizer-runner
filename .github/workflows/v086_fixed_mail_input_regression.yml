@@ -1,0 +1,83 @@
+name: v086 Fixed Hunter Mail No-Unknown Gear Input Regression
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/v086_fixed_mail_one_audit_once.json
+permissions:
+  contents: read
+concurrency:
+  group: v086-fixed-mail-input-audit
+  cancel-in-progress: false
+jobs:
+  offline-input:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Verify exact request and source bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os,json,pathlib,subprocess
+          p="integration_probes/requests/v086_fixed_mail_one_audit_once.json"
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==[p],changed
+          req=json.loads(pathlib.Path(p).read_text())
+          assert req=={
+            "schema":"v086_hunter_fix_two_random_stat_representative_filler_items_v1",
+            "item_replacements":{"head":{"from":271441,"to":249317},"feet":{"from":271440,"to":249320}},
+            "real_native_already_executed_externally":1,
+            "real_native_json2_sha256":"e55bfa2fa9b255bf2f3b74bb85b255eebf774ba939b43348ab314c7b782f27c2",
+            "real_nontrinket_G":2845,"J":138,"F":165,"T":3148,
+            "original_hunter_APL_talents_tier_and_trinkets_preserved":True,
+            "unknown_nontrinket_must_fail_closed":True,
+            "unknown_trinket_does_not_block":True,
+            "new_native_calls_in_CI":0,
+            "no_full_item_database_or_proc_gate":True,
+            "old_original_v079_through_v081_native_evidence_immutable":True,
+            "global_optimum_proven":False}
+          pins={
+            "runner/v046_static_item_cache.py":"80d763260071e0baf771b7e04412356db0d36094",
+            "runner/v086_hunter_fixed_mail_representative.py":"1f4811eeff15e3b92851e7edbe9fcc275dc2d1b7",
+            "tests/test_v046_static_item_cache.py":"00b3ddcd197e4342c17573802776b841883a7d8e",
+            "tests/test_v086_hunter_fixed_mail_representative.py":"cee8a0e3b014a16e872320567def4acc659492af"}
+          for path,digest in pins.items():
+              got=subprocess.check_output(["git","hash-object",path],text=True).strip()
+              assert got==digest,(path,got,digest)
+          print("V086_HUNTER_EXACT_REPLACEMENT_AND_UNKNOWN_NONTRINKET_CONTRACT_PINNED")
+          PY
+      - name: Full historical regressions and new source inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Emit corrected representative profile without new SimC
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v086_hunter_fixed_mail_representative.py --upstream integration_probes/fixtures/v079_upstream_mid2_hunter_beast_mastery_reference.simc --out out/v086
+          python3 - <<'PY'
+          import json,pathlib
+          p=pathlib.Path("out/v086")
+          meta=json.loads((p/"V086_PROFILE_META.json").read_text())
+          sc=json.loads((p/"V086_SCENARIO.json").read_text())
+          fillers=json.loads((p/"V086_FILLERS.json").read_text())
+          assert meta["verified_T_with_declared_J138_F165"]==3148
+          assert meta["nontrinket_unclassified_unknown_items"]==0
+          assert {x["item_id"] for x in fillers if x["slot"] in ("head","feet")}=={249317,249320}
+          assert len(sc["equipment"]["tier"])==4 and len(sc["equipment"]["trinkets"])==2
+          print("V086_CORRECT_HUNTER_FIXED_MAIL_334_INPUT_PASS_NO_NEW_NATIVE")
+          PY
+      - name: Preserve exact corrected scenario/input for later Native use
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v086-fixed-mail-hunter-input-${{ github.run_id }}
+          path: out/
+          if-no-files-found: error
+          retention-days: 14
