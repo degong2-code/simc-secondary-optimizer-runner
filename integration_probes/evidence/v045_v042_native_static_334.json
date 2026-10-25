@@ -1,0 +1,131 @@
+{
+  "artifact_sha256": "eea36762a1d21db5e9ad5bcf72c6c94bff4d122fee28f3ea83cd700120b9dc7f",
+  "fixed_nontrinket_slots": {
+    "back": {
+      "crit_rating": 0,
+      "haste_rating": 57,
+      "mastery_rating": 57,
+      "versatility_rating": 0
+    },
+    "chest": {
+      "crit_rating": 130,
+      "haste_rating": 71,
+      "mastery_rating": 0,
+      "versatility_rating": 0
+    },
+    "feet": {
+      "crit_rating": 104,
+      "haste_rating": 0,
+      "mastery_rating": 46,
+      "versatility_rating": 0
+    },
+    "finger1": {
+      "crit_rating": 232,
+      "haste_rating": 0,
+      "mastery_rating": 174,
+      "versatility_rating": 0
+    },
+    "finger2": {
+      "crit_rating": 0,
+      "haste_rating": 266,
+      "mastery_rating": 0,
+      "versatility_rating": 139
+    },
+    "hands": {
+      "crit_rating": 45,
+      "haste_rating": 106,
+      "mastery_rating": 0,
+      "versatility_rating": 0
+    },
+    "head": {
+      "crit_rating": 0,
+      "haste_rating": 0,
+      "mastery_rating": 201,
+      "versatility_rating": 0
+    },
+    "legs": {
+      "crit_rating": 62,
+      "haste_rating": 0,
+      "mastery_rating": 0,
+      "versatility_rating": 139
+    },
+    "main_hand": {
+      "crit_rating": 0,
+      "haste_rating": 63,
+      "mastery_rating": 138,
+      "versatility_rating": 0
+    },
+    "neck": {
+      "crit_rating": 0,
+      "haste_rating": 127,
+      "mastery_rating": 278,
+      "versatility_rating": 0
+    },
+    "shoulders": {
+      "crit_rating": 102,
+      "haste_rating": 48,
+      "mastery_rating": 0,
+      "versatility_rating": 0
+    },
+    "waist": {
+      "crit_rating": 0,
+      "haste_rating": 102,
+      "mastery_rating": 49,
+      "versatility_rating": 0
+    },
+    "wrists": {
+      "crit_rating": 0,
+      "haste_rating": 57,
+      "mastery_rating": 57,
+      "versatility_rating": 0
+    }
+  },
+  "flask_budget": 165,
+  "flask_injection_stat": "haste_rating",
+  "flask_name": "flask_of_the_blood_knights_2",
+  "general_gem_budget": 138,
+  "head_diagnostic_bonus_id": 13846,
+  "head_fixed_mastery_rating": 201,
+  "head_special_gem_id": 240967,
+  "input_sha256": "02f45fb88772ed8fd26b2044866a2d3a7c3417e0ca928ffe460b608cf541f56e",
+  "item_ids": {
+    "back": 239656,
+    "chest": 271567,
+    "feet": 268218,
+    "finger1": 158366,
+    "finger2": 159459,
+    "hands": 268243,
+    "head": 271564,
+    "legs": 271563,
+    "main_hand": 268205,
+    "neck": 251142,
+    "shoulders": 271562,
+    "trinket1": 270164,
+    "trinket2": 281215,
+    "waist": 268257,
+    "wrists": 239648
+  },
+  "item_level": 334,
+  "legacy_budget_3184_not_adopted": true,
+  "native_git_revision": "7bc10711b5",
+  "native_json2_sha256": "4367cfa9e911190af8e8441f44378cb0efab4d018fd059677e01fa054636ed55",
+  "origin_trial": "RUN_40120755711_NOT_USER_GEAR",
+  "product_integrated": false,
+  "schema": "v045_pinned_v042_static_334_v1",
+  "temporary_enchant": "main_hand:thalassian_phoenix_oil_2",
+  "trinket_static_external": {
+    "trinket1": {
+      "crit_rating": 0,
+      "haste_rating": 0,
+      "mastery_rating": 0,
+      "versatility_rating": 0
+    },
+    "trinket2": {
+      "crit_rating": 0,
+      "haste_rating": 0,
+      "mastery_rating": 0,
+      "versatility_rating": 0
+    }
+  },
+  "user_selected_item_attested": false
+}
