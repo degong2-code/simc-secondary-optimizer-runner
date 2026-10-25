@@ -1,0 +1,19 @@
+{
+  "schema": "v073_rogue_material_two_adaptive_native_scout_request_v1",
+  "user_profile": "void_elf_rogue_subtlety_334_exact",
+  "prior_witness_run": 40181981240,
+  "prior_official_run": 40182313167,
+  "prior_adaptive_scout_run": 40183940144,
+  "prior_high_iteration_run": 40185708187,
+  "target_total": 3150,
+  "official_budget_formula": "T=G+J+F",
+  "adaptive_engine": "v065_original_v015_policy_scheduler",
+  "material_distance_transfer": 350,
+  "max_new_native_scouts": 2,
+  "iterations_per_new_scout": 60,
+  "new_high_precision_confirmations": 0,
+  "cache_replay_required": true,
+  "no_equipment_or_proc_optimizer": true,
+  "original_v015_v016_unchanged": true,
+  "global_optimum_proven": false
+}
