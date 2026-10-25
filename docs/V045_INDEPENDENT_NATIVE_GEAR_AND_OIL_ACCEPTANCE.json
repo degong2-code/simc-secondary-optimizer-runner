@@ -1,0 +1,114 @@
+{
+  "schema": "v045_independent_simc_first_inventory_and_oil_trial_v1",
+  "assessed_kst": "2026-10-25",
+  "status": "PASS_ONE_BOUND_NATIVE_OIL_FLOOR_NOT_PRODUCT",
+  "development_branch": "probe/chat-cache-v035-20261024",
+  "native_run_id": 40149421659,
+  "run_url": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40149421659",
+  "trigger_sha": "65991a18fd82b7b4e343d670ad6f9f529f43de8b",
+  "offline_regression": {
+    "tests_total": 171,
+    "passed": 169,
+    "skipped": 2,
+    "failed": 0
+  },
+  "native_calls": 1,
+  "artifact": {
+    "id": 12582147104,
+    "bytes": 88158,
+    "zip_entries": 10,
+    "crc_pass": true,
+    "sha256": "dbdce96020e2977717cd19aa00a3bb8dc089dc71b86a5165507599108a1ed33e"
+  },
+  "provenance": {
+    "prior_v042_run_id": 40120755711,
+    "prior_v042_zip_sha256": "eea36762a1d21db5e9ad5bcf72c6c94bff4d122fee28f3ea83cd700120b9dc7f",
+    "input_sha256": "873f63ecfb2bb4e03daf4187c3abb4bf2b05bae5a3a7cd00a26fd2f837edb065",
+    "native_json2_sha256": "6ce1b02ae56667d023e4e049ad978c64bd52d8094c5795e542c532399eaf79c4"
+  },
+  "native_inventory": {
+    "items_compared": 15,
+    "missing_slots": 0,
+    "name_id_level_option_drift": 0,
+    "static_item_rating_drift": 0,
+    "item_display_names_source": "SimC local aliases; not independently verified official game display names",
+    "item_id_source": "pinned real SimC native JSON2",
+    "trinkets_excluded_from_G": true,
+    "G_vector": {
+      "crit": 675,
+      "haste": 897,
+      "mastery": 1000,
+      "versatility": 278
+    },
+    "G": 2850,
+    "manual_stat_json_not_authoritative": true,
+    "hint_json_stat_vectors_removed": true
+  },
+  "budget": {
+    "approved_v1_total_formula": "T=G+J+F",
+    "G": 2850,
+    "J": 138,
+    "F": 165,
+    "approved_formula_total_for_pinned_trial_G": 3153,
+    "existing_v037_v038_oil_floors": {
+      "crit": 16,
+      "haste": 16,
+      "mastery": 0,
+      "versatility": 0
+    },
+    "oil_inclusive_bounded_trial_T": 3185,
+    "oil_inclusion_official_policy_promoted": false,
+    "chosen_test_candidate": {
+      "crit": 600,
+      "haste": 1140,
+      "mastery": 1115,
+      "versatility": 330
+    },
+    "injected_simc_gear_override": {
+      "crit": 600,
+      "haste": 975,
+      "mastery": 1115,
+      "versatility": 330
+    },
+    "final_native_observed": {
+      "crit": 600,
+      "haste": 1140,
+      "mastery": 1115,
+      "versatility": 330
+    },
+    "final_minus_injected": {
+      "crit": 0,
+      "haste": 165,
+      "mastery": 0,
+      "versatility": 0
+    },
+    "static_special_head_mastery_locked": 201,
+    "final_total_matches_trial": true,
+    "full_dps_optimizer_result_attested": false,
+    "oil_effect_real_game_scaling_independently_proven": false
+  },
+  "input_diff_v042_to_v045": [
+    "gear_versatility_rating 329→330",
+    "json2 output file path changed"
+  ],
+  "three_axis": {
+    "trial_test_success": "PASS",
+    "product_code_integrated": false,
+    "official_policy_promoted": false
+  },
+  "caveats": [
+    "This is one pinned 334 Arcane Mage scenario; the head bonus_id=13846 is diagnostic not attested live-game catalyst assignment.",
+    "Manual stat JSON has been removed from hint snapshot; all rating totals derive from Native JSON2.",
+    "Do not promote oil-inclusive bounded trial as v1.0 amendment without separate policy decision.",
+    "v016→GitHub lineage and general itemlevel budgets are unverified.",
+    "Item names reported from input/local source are not official display-name provenance."
+  ],
+  "native_effects_delegated_to_simc": true,
+  "protected_scope": {
+    "main_modified": false,
+    "project_sources_modified": false,
+    "work_os_modified": false,
+    "current_shared_state_modified": false,
+    "v003_immutable_modified": false
+  }
+}
