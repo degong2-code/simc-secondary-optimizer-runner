@@ -47,11 +47,13 @@ def fixture(character="mage",spec="arcane",role="spell"):
         profile=profile.replace("spec=arcane","spec="+spec,1)
         profile=profile.replace("role=spell","role="+role,1)
     rows=[]
-    for crit,haste in [(600,975),(650,925)]:
-        source=profile.replace("gear_crit_rating=600",
-                              "gear_crit_rating="+str(crit),1).replace(
-                               "gear_haste_rating=975",
-                               "gear_haste_rating="+str(haste),1)
+    for crit,haste in [(400,235),(430,205)]:
+        source=profile
+        for stat,value in (("crit",crit),("haste",haste),
+                           ("mastery",400),("versatility",403)):
+            import re
+            source=re.sub(r"(?m)^gear_"+stat+r"_rating=[0-9]+$",
+                          "gear_"+stat+"_rating="+str(value),source)
         rows.append({"input":source,"native":fake_doc(source)})
     return cfg,fillers,cache,profile,rows
 
