@@ -1,0 +1,1680 @@
+{
+  "schema": "v047_bounded_collection_scope_v1",
+  "purpose": "Static item metadata+Native stat hydration for representative armor, crafted known, spell-bearing special candidates, all source trinkets, 12.1.5 additions",
+  "season": "midnight_s2",
+  "user_approved_scope": true,
+  "source_inventory": {
+    "original_master_record_count": 395,
+    "old_distinct_item_ids": 394,
+    "source_patch_date": "2026-09-20",
+    "patch_delta_count": 10,
+    "known_crafted_count": 2
+  },
+  "lookup_policy": {
+    "source_static": "SimC Native only",
+    "wequip_scaled_stats": "NOT_USED_FOR_CACHE",
+    "item_levels_are_proposed_NOT_acquisition_attested": true,
+    "eligible_levels_require_validation": true,
+    "season_key_not_simc_revision": true,
+    "old_static_data_change_only_explicit_review": true
+  },
+  "target_level_candidates": [
+    292,
+    295,
+    298,
+    302,
+    305,
+    308,
+    311,
+    315,
+    318,
+    321,
+    324,
+    328,
+    331,
+    334
+  ],
+  "selected_unique_count": 126,
+  "possible_variant_pairs": 1764,
+  "roles": {
+    "representative": "PROVISIONAL",
+    "special": "SPELL_BEARING_CANDIDATE",
+    "trinket": "MASTER_CENSUS_PLUS_PATCH",
+    "crafted": "ONLY_2_KNOWN_NOT_COMPLETE"
+  },
+  "complete_season_catalog_attested": false,
+  "all_crafted_ids_attested": false,
+  "newer_patch_items_may_be_missing": true,
+  "items": [
+    {
+      "item_id": 158367,
+      "name": "Merektha's Fang",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:158367"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 158368,
+      "name": "Sethraliss' Defiled Relic",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:158368"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 158374,
+      "name": "Tiny Electromental in a Jar",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:158374"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 159288,
+      "name": "Cloak of the Restless Tribes",
+      "slot": "CLOAK",
+      "armor_type": "Cloth",
+      "category_roles": [
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:159288"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 159617,
+      "name": "Lustrous Golden Plumage",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:159617"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 159618,
+      "name": "Mchimba's Ritual Bandages",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:159618"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 159644,
+      "name": "Geti'ikku, Cut of Death",
+      "slot": "TWOHWEAPON",
+      "armor_type": "Sword",
+      "category_roles": [
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:159644"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 193748,
+      "name": "Kyrakka's Searing Embers",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:193748"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 193757,
+      "name": "Ruby Whelp Shell",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:193757"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 193762,
+      "name": "Blazebinder's Hoof",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:193762"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 239648,
+      "name": "Martyr's Bindings",
+      "slot": "WRIST",
+      "armor_type": "Cloth",
+      "category_roles": [
+        "CRAFTED_KNOWN_ONLY"
+      ],
+      "origin_ids": [
+        "v031r3:wrists"
+      ],
+      "source_type": "crafting"
+    },
+    {
+      "item_id": 239656,
+      "name": "Adherent's Silken Shroud",
+      "slot": "CLOAK",
+      "armor_type": "Cloth",
+      "category_roles": [
+        "CRAFTED_KNOWN_ONLY"
+      ],
+      "origin_ids": [
+        "v031r3:back"
+      ],
+      "source_type": "crafting"
+    },
+    {
+      "item_id": 248583,
+      "name": "Drum of Renewed Bonds",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "delve:248583"
+      ],
+      "source_type": "delve"
+    },
+    {
+      "item_id": 250214,
+      "name": "Lightspire Core",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:250214"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 250215,
+      "name": "Freightrunner's Flask",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:250215"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 250224,
+      "name": "Mindpiercer's Sigil",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:250224"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 250225,
+      "name": "Void Execution Mandate",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:250225"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 250228,
+      "name": "Resonant Bellowstone",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:250228"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 250229,
+      "name": "Idol of the War Loa",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:250229"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 250238,
+      "name": "Seed of the Devouring Wild",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:250238"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 250243,
+      "name": "Manaheart's Binding Flame",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:250243"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 250244,
+      "name": "Permafrost Essence",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:250244"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 250245,
+      "name": "Tumor of the Swarm",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:250245"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 250248,
+      "name": "Mycolic Medicine",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:250248"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 250254,
+      "name": "Seed of Radiant Hope",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:250254"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 250255,
+      "name": "Unstable Felheart Crystal",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:250255"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 250259,
+      "name": "Sapling of the Dawnroot",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:250259"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 251138,
+      "name": "Cinderfury Shoulderguards",
+      "slot": "SHOULDER",
+      "armor_type": "Plate",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 251139,
+      "name": "Summoner's Searing Shirt",
+      "slot": "CHEST",
+      "armor_type": "Cloth",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 251152,
+      "name": "Season's Turn Gauntlets",
+      "slot": "HAND",
+      "armor_type": "Mail",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 251159,
+      "name": "War Trial Vestments",
+      "slot": "CHEST",
+      "armor_type": "Leather",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 251782,
+      "name": "Withered Saptor's Paw",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "delve:251782"
+      ],
+      "source_type": "delve"
+    },
+    {
+      "item_id": 251783,
+      "name": "Lost Idol of the Hash'ey",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "delve:251783"
+      ],
+      "source_type": "delve"
+    },
+    {
+      "item_id": 251784,
+      "name": "Sylvan Wakrapuku",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "delve:251784"
+      ],
+      "source_type": "delve"
+    },
+    {
+      "item_id": 251785,
+      "name": "Void-Reaper's Libram",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "delve:251785"
+      ],
+      "source_type": "delve"
+    },
+    {
+      "item_id": 251786,
+      "name": "Ever-Collapsing Void Fissure",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "delve:251786"
+      ],
+      "source_type": "delve"
+    },
+    {
+      "item_id": 251787,
+      "name": "Sealed Chaos Urn",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "delve:251787"
+      ],
+      "source_type": "delve"
+    },
+    {
+      "item_id": 251788,
+      "name": "Gift of Light",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "delve:251788"
+      ],
+      "source_type": "delve"
+    },
+    {
+      "item_id": 251789,
+      "name": "Consecrated Chalice",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "delve:251789"
+      ],
+      "source_type": "delve"
+    },
+    {
+      "item_id": 251790,
+      "name": "Desecrated Chalice",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "delve:251790"
+      ],
+      "source_type": "delve"
+    },
+    {
+      "item_id": 251791,
+      "name": "Holy Retributor's Order",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "delve:251791"
+      ],
+      "source_type": "delve"
+    },
+    {
+      "item_id": 251792,
+      "name": "Glorious Crusader's Keepsake",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "delve:251792"
+      ],
+      "source_type": "delve"
+    },
+    {
+      "item_id": 252957,
+      "name": "Tangle of Vibrant Vines",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "delve:252957"
+      ],
+      "source_type": "delve"
+    },
+    {
+      "item_id": 259896,
+      "name": "Bark of the Guardian Tree",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "delve:259896"
+      ],
+      "source_type": "delve"
+    },
+    {
+      "item_id": 264694,
+      "name": "Ultradon Cuirass",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "delve:264694"
+      ],
+      "source_type": "delve"
+    },
+    {
+      "item_id": 264701,
+      "name": "Cosmic Bell",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "delve:264701"
+      ],
+      "source_type": "delve"
+    },
+    {
+      "item_id": 264878,
+      "name": "Astalor's Anguish Agitator",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "delve:264878"
+      ],
+      "source_type": "delve"
+    },
+    {
+      "item_id": 265657,
+      "name": "Fiber of Living Agony",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "delve:265657"
+      ],
+      "source_type": "delve"
+    },
+    {
+      "item_id": 268202,
+      "name": "Jaw of the Shackled Goddess",
+      "slot": "WEAPON",
+      "armor_type": "Sword",
+      "category_roles": [
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:268202"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 268207,
+      "name": "Caustic Repose Greatbow",
+      "slot": "RANGED",
+      "armor_type": "Bow",
+      "category_roles": [
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:268207"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 268209,
+      "name": "Aman'muso, Warlord's Vengeance",
+      "slot": "WEAPONMAINHAND",
+      "armor_type": "Axe",
+      "category_roles": [
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:268209"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 268213,
+      "name": "Maze-roa, Warlord's Fury",
+      "slot": "TWOHWEAPON",
+      "armor_type": "Axe",
+      "category_roles": [
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:268213"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 268215,
+      "name": "Abyssal Broodfiend's Bardiche",
+      "slot": "TWOHWEAPON",
+      "armor_type": "Polearm",
+      "category_roles": [
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:268215"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 268216,
+      "name": "Cursed Reliquary Cincture",
+      "slot": "WAIST",
+      "armor_type": "Mail",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268218,
+      "name": "Nek'zali's Spiritwalkers",
+      "slot": "FEET",
+      "armor_type": "Cloth",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268219,
+      "name": "Shadow Hunter's Warmask",
+      "slot": "HEAD",
+      "armor_type": "Leather",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268220,
+      "name": "Scaleplate Strangulators",
+      "slot": "HAND",
+      "armor_type": "Plate",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268222,
+      "name": "Reckless Spirit Breastplate",
+      "slot": "CHEST",
+      "armor_type": "Plate",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268223,
+      "name": "Ophidian Fangmail",
+      "slot": "CHEST",
+      "armor_type": "Mail",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268224,
+      "name": "Venom Warden's Greaves",
+      "slot": "LEGS",
+      "armor_type": "Plate",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268225,
+      "name": "Coiled Hex Legguards",
+      "slot": "LEGS",
+      "armor_type": "Leather",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268227,
+      "name": "Unpossessed Skullsash",
+      "slot": "WAIST",
+      "armor_type": "Leather",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268228,
+      "name": "Venom-Singed Cuffs",
+      "slot": "WRIST",
+      "armor_type": "Cloth",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268229,
+      "name": "Skullguard of the Risen Sacrifice",
+      "slot": "HEAD",
+      "armor_type": "Plate",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268230,
+      "name": "Crown of the Eternal Fang",
+      "slot": "HEAD",
+      "armor_type": "Mail",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268231,
+      "name": "Soulslither Spaulders",
+      "slot": "SHOULDER",
+      "armor_type": "Mail",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268234,
+      "name": "Ruthless Slaughtergrips",
+      "slot": "HAND",
+      "armor_type": "Leather",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268235,
+      "name": "Vestment of the Awakening",
+      "slot": "ROBE",
+      "armor_type": "Leather",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268236,
+      "name": "Initiate's Sacrificial Tights",
+      "slot": "LEGS",
+      "armor_type": "Cloth",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268237,
+      "name": "Cuisses of the Uncoiled Union",
+      "slot": "LEGS",
+      "armor_type": "Mail",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268239,
+      "name": "Shellbound Bracers",
+      "slot": "WRIST",
+      "armor_type": "Plate",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268240,
+      "name": "Restless Spirit Shackles",
+      "slot": "WRIST",
+      "armor_type": "Leather",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268241,
+      "name": "Ornaments of the Eternal Coil",
+      "slot": "SHOULDER",
+      "armor_type": "Cloth",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268242,
+      "name": "Errant Scrollsage's Hood",
+      "slot": "HEAD",
+      "armor_type": "Cloth",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268243,
+      "name": "Grasps of the Eternal Shadow",
+      "slot": "HAND",
+      "armor_type": "Cloth",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268245,
+      "name": "Entombed Cultist's Sabatons",
+      "slot": "FEET",
+      "armor_type": "Plate",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268246,
+      "name": "Frothing Venom Spaulders",
+      "slot": "SHOULDER",
+      "armor_type": "Leather",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268249,
+      "name": "Vile Alchemist's Band",
+      "slot": "FINGER",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:268249"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 268250,
+      "name": "Sentinel's Vitriolic Chain",
+      "slot": "NECK",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:268250"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 268251,
+      "name": "Amulet of the Twin Fangs",
+      "slot": "NECK",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:268251"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 268252,
+      "name": "Apex Brute's Claw Ring",
+      "slot": "FINGER",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:268252"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 268257,
+      "name": "Caustic Chain-Wrapped Sash",
+      "slot": "WAIST",
+      "armor_type": "Cloth",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268258,
+      "name": "Boots of the Reckless Wayfarer",
+      "slot": "FEET",
+      "armor_type": "Mail",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268259,
+      "name": "Girdle of Toxic Regret",
+      "slot": "WAIST",
+      "armor_type": "Plate",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268261,
+      "name": "Bespittled Slitherslippers",
+      "slot": "FEET",
+      "armor_type": "Leather",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 268265,
+      "name": "Aqirbane Reliquary",
+      "slot": "NECK",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:268265"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 270160,
+      "name": "First Mate's Shellward",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:270160"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 270161,
+      "name": "Fang of Umbral Malignance",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:270161"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 270162,
+      "name": "Soulcoiler Ritual Vessel",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:270162"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 270163,
+      "name": "Sszorak's Ferocity",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:270163"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 270164,
+      "name": "Gebbo's Bottomless Bag",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:270164"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 270165,
+      "name": "Keeper's Seething Core",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:270165"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 270166,
+      "name": "Vashnik's Sanguine Rancor",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:270166"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 270167,
+      "name": "Wavecaller's Seastone",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "lair:270167"
+      ],
+      "source_type": "lair"
+    },
+    {
+      "item_id": 270168,
+      "name": "Font of Venomous Rage",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:270168"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 270169,
+      "name": "Hex Lord's Dooming Idol",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:270169"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 270170,
+      "name": "Vexhul's Everflowing Gland",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:270170"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 270171,
+      "name": "Preternatural Antivenom",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:270171"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 270173,
+      "name": "Zul'jin's Guillotine Technique",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:270173"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 270174,
+      "name": "Idol of the Howling Nexus",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:270174"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 270175,
+      "name": "Voracious Heart of Ula'tek",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:270175"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 271092,
+      "name": "Jan'thrazet, the Soul Fang",
+      "slot": "WEAPON",
+      "armor_type": "Dagger",
+      "category_roles": [
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:271092"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 271093,
+      "name": "Zatha'tek, Breath of Corruption",
+      "slot": "WEAPON",
+      "armor_type": "Dagger",
+      "category_roles": [
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:271093"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 271874,
+      "name": "Venomkeeper's Horrific Cowl",
+      "slot": "HEAD",
+      "armor_type": "Cloth",
+      "category_roles": [
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:271874"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 271875,
+      "name": "Gaze of the Coiled Watcher",
+      "slot": "HEAD",
+      "armor_type": "Leather",
+      "category_roles": [
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:271875"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 271876,
+      "name": "Awoken Dreadfang Cuirass",
+      "slot": "CHEST",
+      "armor_type": "Mail",
+      "category_roles": [
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:271876"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 271878,
+      "name": "Chausses of Unbound Rancor",
+      "slot": "LEGS",
+      "armor_type": "Plate",
+      "category_roles": [
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "raid:271878"
+      ],
+      "source_type": "raid"
+    },
+    {
+      "item_id": 273649,
+      "name": "Stormbound Emblem of Dazar",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:273649"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 273775,
+      "name": "Hydra Scale Wristguards",
+      "slot": "WRIST",
+      "armor_type": "Mail",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 273778,
+      "name": "Polished Lightwood Channeler",
+      "slot": "WEAPON",
+      "armor_type": "Dagger",
+      "category_roles": [
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:273778"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 273785,
+      "name": "Primordial Robe of Rites",
+      "slot": "ROBE",
+      "armor_type": "Cloth",
+      "category_roles": [
+        "PROVISIONAL_ARMOR_REPRESENTATIVE"
+      ],
+      "origin_ids": [],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 273794,
+      "name": "Knot of Writhing Serpents",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:273794"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 273795,
+      "name": "Coiled Fangstone",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:273795"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 273796,
+      "name": "Vile Vial of Volatile Venom",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:273796"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 273797,
+      "name": "Tattered Amani War Banner",
+      "slot": "TRINKET",
+      "armor_type": "Miscellaneous",
+      "category_roles": [
+        "ALL_MASTER_TRINKETS",
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:273797"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 275070,
+      "name": "Sharpened Lightwood Slasher",
+      "slot": "WEAPON",
+      "armor_type": "Dagger",
+      "category_roles": [
+        "SPELL_BEARING_CANDIDATE_REQUIRES_SIMC_CHECK"
+      ],
+      "origin_ids": [
+        "mplus:275070"
+      ],
+      "source_type": "mplus"
+    },
+    {
+      "item_id": 280617,
+      "name": "Lightbearer's Shield Fragment",
+      "slot": "TRINKET",
+      "armor_type": null,
+      "category_roles": [
+        "PATCH_1215_DELTA"
+      ],
+      "origin_ids": [
+        "delta1215:280617"
+      ],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 280799,
+      "name": "Lu'selama, Light's Justice",
+      "slot": "TWO_HAND_SWORD",
+      "armor_type": null,
+      "category_roles": [
+        "PATCH_1215_DELTA"
+      ],
+      "origin_ids": [
+        "delta1215:280799"
+      ],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 280835,
+      "name": "Sigil of the Impending Eclipse",
+      "slot": "TRINKET",
+      "armor_type": null,
+      "category_roles": [
+        "PATCH_1215_DELTA"
+      ],
+      "origin_ids": [
+        "delta1215:280835"
+      ],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 281029,
+      "name": "Band of the Swarmcaller",
+      "slot": "FINGER",
+      "armor_type": null,
+      "category_roles": [
+        "PATCH_1215_DELTA"
+      ],
+      "origin_ids": [
+        "delta1215:281029"
+      ],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 281056,
+      "name": "Sanctified Knight's Phoenixblade",
+      "slot": "ONE_HAND_SWORD",
+      "armor_type": null,
+      "category_roles": [
+        "PATCH_1215_DELTA"
+      ],
+      "origin_ids": [
+        "delta1215:281056"
+      ],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 281215,
+      "name": "Twisted Horror's Tendril",
+      "slot": "TRINKET",
+      "armor_type": null,
+      "category_roles": [
+        "PATCH_1215_DELTA"
+      ],
+      "origin_ids": [
+        "delta1215:281215"
+      ],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 281235,
+      "name": "Voidweaver's Leggings",
+      "slot": "LEGS_CLOTH",
+      "armor_type": null,
+      "category_roles": [
+        "PATCH_1215_DELTA"
+      ],
+      "origin_ids": [
+        "delta1215:281235"
+      ],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 281236,
+      "name": "Chestwrap of Palpable Terror",
+      "slot": "CHEST_LEATHER",
+      "armor_type": null,
+      "category_roles": [
+        "PATCH_1215_DELTA"
+      ],
+      "origin_ids": [
+        "delta1215:281236"
+      ],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 281238,
+      "name": "Aberrant Commander's Gauntlets",
+      "slot": "HANDS_MAIL",
+      "armor_type": null,
+      "category_roles": [
+        "PATCH_1215_DELTA"
+      ],
+      "origin_ids": [
+        "delta1215:281238"
+      ],
+      "source_type": "patch1215"
+    },
+    {
+      "item_id": 281239,
+      "name": "Corroded Hulk's Skullcap",
+      "slot": "HEAD_PLATE",
+      "armor_type": null,
+      "category_roles": [
+        "PATCH_1215_DELTA"
+      ],
+      "origin_ids": [
+        "delta1215:281239"
+      ],
+      "source_type": "patch1215"
+    }
+  ]
+}
