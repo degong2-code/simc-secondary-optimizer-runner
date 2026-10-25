@@ -1,0 +1,29 @@
+{
+  "schema": "v083_paladin_blood_elf_plate_single2h_static_gjf_v1",
+  "source": "simulationcraft_midnight_MID2_Paladin_Retribution",
+  "upstream_git_blob": "864e857c5d8cdbaa5b03939f077fcb657a4784aa",
+  "race": "blood_elf",
+  "spec": "paladin_retribution",
+  "armor": "plate",
+  "weapon": "one_twohand_main_no_offhand",
+  "representative_ilvl": 334,
+  "exact_four_tier_slots": true,
+  "source_backed_non_tier_plate_legs": 271878,
+  "original_simc_APL_preserved": true,
+  "shared_static_native_executor": "v082_generalized_profile_factory",
+  "maximum_new_native_calls": 4,
+  "one_firstuse_static_G_native": 1,
+  "two_official_static_native": 2,
+  "one_existing_v015_adaptive_native": 1,
+  "iterations_per_case": 35,
+  "F_vector": {
+    "crit_rating": 0,
+    "haste_rating": 165,
+    "mastery_rating": 0,
+    "versatility_rating": 0
+  },
+  "O_outside_T": true,
+  "T_formula": "T=G+J+F",
+  "no_effect_proc_talent_gate": true,
+  "no_gear_search_or_global_optimum_claim": true
+}
