@@ -253,19 +253,24 @@ def execute_initial_native(reference,folder,binary,cache_only,summary):
     summary["first_native_sem"]=dps["mean_std_dev"]
     return raw,doc
 
-def run(upstream,out,binary=None,cache_only=False):
+def run(upstream,out,binary=None,cache_only=False,*,
+        profile_factory=source_profile, expected_slots=16,
+        run_schema=SCHEMA,
+        plan_status="PASS_UPSTREAM_TWO_WEAPON_STATIC_PLAN_ZERO_NATIVE",
+        success_status="PASS_REAL_FURY_TWO_2H_PLATE_FULL_STATIC_GENERIC_NATIVE",
+        artifact_prefix="V082"): 
     out=pathlib.Path(out).resolve()
     out.mkdir(parents=True,exist_ok=True)
-    target=out/"V082_RECEIPT.json"
-    summary={"schema":SCHEMA,"status":"BLOCKED_OR_PARTIAL",
+    target=out/(artifact_prefix+"_RECEIPT.json")
+    summary={"schema":run_schema,"status":"BLOCKED_OR_PARTIAL",
        "new_native_this_invocation":0,"maximum_new_native":NATIVE_MAX,
        "global_optimum_proven":False,"new_native_stat_effect_gate":False,
        "official_formula":"T=G+J+F"}
     try:
         source=pathlib.Path(upstream).read_text(encoding="utf8")
-        reference,cfg,fillers,origin=source_profile(source,out)
+        reference,cfg,fillers,origin=profile_factory(source,out)
         normalized=scenario.normalize(cfg)
-        summary.update({"status":"PASS_UPSTREAM_TWO_WEAPON_STATIC_PLAN_ZERO_NATIVE",
+        summary.update({"status":plan_status,
             "character":cfg["character"],"origin":origin,
             "scenario_digest":normalized["scenario_digest"],
             "profile_sha256":sha(reference.encode("utf8")),
@@ -278,8 +283,8 @@ def run(upstream,out,binary=None,cache_only=False):
         binary=pathlib.Path(binary).resolve()
         need(binary.is_file() and sha(binary.read_bytes())==pinned.BIN_SHA,
              "EXACT_SIMC_NATIVE_BINARY_CHANGED")
-        seal=out/"V082_IDENTITY.json"
-        identity={"schema":SCHEMA,"source_sha256":sha(source.encode("utf8")),
+        seal=out/(artifact_prefix+"_IDENTITY.json")
+        identity={"schema":run_schema,"source_sha256":sha(source.encode("utf8")),
             "profile_sha256":sha(reference.encode("utf8")),
             "scenario_digest":normalized["scenario_digest"],
             "simc_binary_sha256":pinned.BIN_SHA,
@@ -308,7 +313,7 @@ def run(upstream,out,binary=None,cache_only=False):
         need(T==G+normalized["budget"]["J"]+normalized["budget"]["F"],
              "FURY_OFFICIAL_T_SUM_OR_POLICY_CHANGED")
         ref_detail=port.verify_profile_binding(normalized,static,reference)
-        need(ref_detail["slots_bound"]==16 and ref_detail["two_trinkets_bound"],
+        need(ref_detail["slots_bound"]==expected_slots and ref_detail["two_trinkets_bound"],
              "DUAL_TWOHANDED_SLOTS_OR_TRINKETS_NOT_BOUND")
         summary.update({"status":"PASS_FIRST_REAL_FURY_NATIVE_GJF",
             "G":G,"J":normalized["budget"]["J"],"F":normalized["budget"]["F"],
@@ -400,7 +405,7 @@ def run(upstream,out,binary=None,cache_only=False):
         need(progress["native_attempts"]+1<=NATIVE_MAX,
              "FOUR_NATIVE_CAP_EXCEEDED")
         summary.update({
-          "status":"PASS_REAL_FURY_TWO_2H_PLATE_FULL_STATIC_GENERIC_NATIVE",
+          "status":success_status,
           "native_attempts_total":progress["native_attempts"]+1,
           "cache_only_replay":cache_only,
           "official_native":[{"target_static_c":x["target"],
@@ -417,20 +422,21 @@ def run(upstream,out,binary=None,cache_only=False):
                "dps_mean":result["dps_mean"],"dps_sem":result["dps_sem"],
                "dps_samples":result["dps_samples"],"source":result["source"],
                "native_json_sha256":result["native_json_sha256"]},
-          "two_weapon_slots_preserved":True,
+          "two_weapon_slots_preserved":expected_slots==16,
+          "weapon_form":origin.get("weapon_form"),
           "v066_preflight_status":prepared["summary"]["status"],
           "v015_scout_order_reused":True,
           "original_v015_v016_merged":False,
           "global_optimum_proven":False})
-        engine.write_atomic(out/"V082_STATIC_CACHE.json",exact)
-        engine.write_atomic(out/"V082_SCENARIO.json",cfg)
-        engine.write_atomic(out/"V082_FILLERS.json",fillers)
-        persist_if_unchanged(out/"V082_REFERENCE.simc",reference.encode("utf8"))
+        engine.write_atomic(out/(artifact_prefix+"_STATIC_CACHE.json"),exact)
+        engine.write_atomic(out/(artifact_prefix+"_SCENARIO.json"),cfg)
+        engine.write_atomic(out/(artifact_prefix+"_FILLERS.json"),fillers)
+        persist_if_unchanged(out/(artifact_prefix+"_REFERENCE.simc"),reference.encode("utf8"))
     except Exception as exc:
         summary["status"]="BLOCKED_OR_PARTIAL"
         summary["error"]=type(exc).__name__+":"+str(exc)
     engine.write_atomic(target,summary)
-    print("V082",summary["status"],"new_native",
+    print(artifact_prefix,summary["status"],"new_native",
           summary["new_native_this_invocation"],"error",
           summary.get("error"),flush=True)
     return 0 if summary["status"].startswith("PASS") else 3
