@@ -1,0 +1,12 @@
+{
+  "schema": "v059_bounded_native_2_candidate_bridge_v1",
+  "scenario": "PINNED_V031R3_MAGE_334_G2849_WITH_SELECTED_250224",
+  "native_max_calls": 2,
+  "iterations_per_candidate": 60,
+  "candidate_total": 3184,
+  "independent_proc_analysis": false,
+  "special_fixed_gear_from_this_pilot": 0,
+  "no_adaptive_global_optimum_claim": true,
+  "original_product_v015_v016_integrated": false,
+  "official_policy_promoted": false
+}
