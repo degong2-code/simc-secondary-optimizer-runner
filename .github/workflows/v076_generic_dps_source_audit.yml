@@ -1,0 +1,81 @@
+name: v076 Generic DPS Scope and Six Archetype Source Audit
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [integration_probes/requests/v076_generic_dps_scope_audit_once.json]
+permissions:
+  contents: read
+concurrency:
+  group: v076-generic-dps-readonly-audit
+  cancel-in-progress: false
+jobs:
+  readonly-source-audit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Exact single request and source blobs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          f="integration_probes/requests/v076_generic_dps_scope_audit_once.json"
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==[f],changed
+          assert json.loads(pathlib.Path(f).read_text())=={
+            "schema":"v076_one_source_contract_and_six_archetype_audit_v1",
+            "goal":"generic_dps_engine_not_another_rogue_optimum",
+            "armor_types":4,"weapon_archetypes":6,
+            "different_races":6,"different_primary_stats":3,
+            "required_new_native_calls":0,
+            "historical_rogue_mage_proof_not_promoted_to_all_specs":True,
+            "tank_heal_excluded_from_this_test_matrix":True,
+            "approved_product_source_untouched":True,
+            "original_v015_v016_untouched":True,
+            "no_extra_simc_effect_gates":True}
+          for path,sha in {
+            "runner/v076_generic_dps_scope_audit.py":"ed780b753164fc6fc7c8b1a889fdceb3fa9db0c1",
+            "tests/test_v076_generic_dps_scope_audit.py":"16939b7ba38885b5074d53a771b8b84a9d8ef72a"
+            }.items():
+            actual=subprocess.check_output(["git","hash-object",path],text=True).strip()
+            assert actual==sha,(path,actual,sha)
+          print("V076_REQUEST_EXACT_SOURCE_PINNED_ZERO_NATIVE")
+          PY
+      - name: Full offline Python regression suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Execute bounded read-only six-factor source audit
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v076_generic_dps_scope_audit.py --out out/V076_GENERIC_DPS_SCOPE_AUDIT.json
+          python3 - <<'PY'
+          import json
+          x=json.load(open("out/V076_GENERIC_DPS_SCOPE_AUDIT.json"))
+          assert x["status"]=="PASS_READ_ONLY_SOURCE_AUDIT_WITH_OPEN_GENERIC_GAPS"
+          assert x["new_native_calls"]==x["core_native_dps_calls"]==0
+          c=x["matrix_cover"]
+          assert (c["cases"],len(c["armors"]),len(c["weapon_forms"]),len(c["primary_stats"]),c["unique_races"])==(6,4,6,3,6)
+          assert len(x["open_gaps"])>=6
+          assert c["new_profile_native_tests_completed"]==0
+          assert x["formula"]=="T=G+J+F" and x["oil_added_to_T"] is False
+          assert not x["original_v015_v016_merged"] and not x["global_optimum_proven"]
+          print("V076_REPRODUCIBLE_AUDIT_PASS_SIX_CASES_OPEN_GAPS",len(x["open_gaps"]))
+          for gap in x["open_gaps"]:
+            print("V076_OPEN_GAP",gap["id"],gap["severity"])
+          PY
+      - name: Preserve read-only source audit and regression receipts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v076-genericity-offline-${{ github.run_id }}
+          path: out/
+          retention-days: 14
+          if-no-files-found: warn
