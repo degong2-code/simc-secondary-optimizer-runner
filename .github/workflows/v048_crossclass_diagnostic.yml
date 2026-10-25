@@ -1,0 +1,60 @@
+name: v048 Cross-Class Item Static Query Diagnosis
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - integration_probes/requests/v048_cross_class_once.json
+permissions:
+  contents: read
+concurrency:
+  group: v048-crossclass-evidence
+  cancel-in-progress: false
+jobs:
+  cross-class-8:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Verify bounded request and source SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          assert os.environ['GITHUB_EVENT_NAME']=='push'
+          assert os.environ['GITHUB_REF']=='refs/heads/probe/chat-cache-v035-20261024'
+          diff=subprocess.check_output(['git','diff-tree','--no-commit-id','--name-only','-r',os.environ['GITHUB_SHA']],text=True).splitlines()
+          assert diff==['integration_probes/requests/v048_cross_class_once.json']
+          req=json.loads(pathlib.Path(diff[0]).read_text())
+          assert req=={'schema':'v048_cross_class_diagnosis_request_v1','maximum_native_calls':8,
+           'target_only_v047_failed_items':True,'native_static_not_dps':True,
+           'official_policy_promoted':False,'product_code_integrated':False}
+          assert subprocess.check_output(['git','hash-object','runner/v048_class_compatible_probe.py'],text=True).strip()=='d28a21b79adc40106ac12e9fdeb2abfe153762a3'
+          print('V048_GUARD_PASS')
+          PY
+      - uses: actions/cache/restore@v5
+        id: cache
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd-cli-release-nonetwork-r1
+      - name: Native class compatibility diagnosis
+        shell: bash
+        env:
+          CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
+        run: |
+          set -euo pipefail
+          test "$CACHE_HIT" = true || exit 3
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc-cache/v035/simc' | sha256sum -c
+          python3 runner/v048_class_compatible_probe.py --binary "$GITHUB_WORKSPACE/.simc-cache/v035/simc" --out "$GITHUB_WORKSPACE/output"
+      - name: Save all native input, output, and errors
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v048-class-diagnostic-${{ github.run_id }}
+          path: output/
+          retention-days: 14
+          if-no-files-found: warn
