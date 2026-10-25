@@ -1,0 +1,142 @@
+name: v080 Correct Static CHMV Before Talents Native
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/v080_static_chmv_once.json
+      - integration_probes/requests/v080_static_chmv_retry.json
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v080-correct-static-c-native
+  cancel-in-progress: false
+jobs:
+  static-semantics:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Exact source contract and request identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          allowed=["integration_probes/requests/v080_static_chmv_once.json",
+                   "integration_probes/requests/v080_static_chmv_retry.json"]
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert len(changed)==1 and changed[0] in allowed,changed
+          r=json.loads(pathlib.Path(changed[0]).read_text())
+          assert r=={
+           "schema":"v080_static_CHMV_c_separate_from_talent_buffed_v1",
+           "historical_actual_hunter_native_source_run":40199924239,
+           "must_preserve_historical_v079_and_v079b_receipts":True,
+           "official_T_equals_G_plus_J_plus_F":True,
+           "declared_F_vector":{"crit_rating":0,"haste_rating":165,"mastery_rating":0,"versatility_rating":0},
+           "optimization_target":"static_CHMV_c_pre_talents",
+           "observed_output":"SimC_JSON2_buffed_stats_not_equal_static_c",
+           "maximum_new_native_calls":2,
+           "iterations_per_candidate":35,
+           "no_new_talent_or_effect_model":True,
+           "no_gear_recommendation_engine":True,
+           "global_optimum_proven":False}
+          sha={
+           "runner/v063_numeric_injection.py":"3faf55d2b5ba55982cf9a8580c85d76fb906e5a0",
+           "runner/v064_adaptive_evaluator_port.py":"6d9c8996c2cbb446211f1111d1f5dfe99959d881",
+           "runner/v080_static_chmv_corrected_native.py":"2a5b2d5722f1769c6aa5828fae978efaa9b8bdff",
+           "tests/test_v080_static_chmv_corrected_native.py":"c92d94d46e601bfc9866409525d3f7a9f5846827"}
+          for p,v in sha.items():
+              actual=subprocess.check_output(["git","hash-object",p],text=True).strip()
+              assert actual==v,(p,actual,v)
+          print("V080_PINNED_APPROVED_STATIC_CONTRACT_AND_INPUT_SOURCE_PASS")
+          PY
+      - name: All original and corrected offline regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Reuse original real Hunter two raw JSON2, not incorrect v079B target claims
+        uses: actions/download-artifact@v4
+        with:
+          name: simc-v079-hunter-ranged-native-40199924239
+          path: .prior
+          run-id: 40199924239
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Exact SimC binary
+        uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-40153209773
+          path: .simc
+          run-id: 40153209773
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Read-only original Native SHA and correct static target candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v080_static_chmv_corrected_native.py --upstream integration_probes/fixtures/v079_upstream_mid2_hunter_beast_mastery_reference.simc --prior-failed-native .prior/native --out out/offline
+          python3 - <<'PY'
+          import json
+          r=json.load(open("out/offline/V080_RECEIPT.json"))
+          assert r["status"]=="PASS_STATIC_CHMV_SOURCE_PROOF_AND_NEW_INPUT_PLAN",r
+          assert r["G"]==2494 and r["J"]==138 and r["F"]==165 and r["T"]==2797
+          assert r["old_native_reused_with_exact_SHA"]==2
+          assert r["new_native_this_invocation"]==0
+          assert len(r["candidate_static_targets"])==2
+          for target,raw in zip(r["candidate_static_targets"],r["candidate_raw_gear_plus_gems"]):
+              assert sum(target.values())==2797 and sum(raw.values())==2632
+              assert raw["crit_rating"]==target["crit_rating"]
+              assert raw["haste_rating"]+165==target["haste_rating"]
+          print("V080_STATIC_CHMV_C_AND_FLASK_F_PROVENANCE_OFFLINE_PASS")
+          PY
+      - name: Evaluate two real 35-iteration STATIC CHMV candidates; do not invert Hunter talent
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc/simc' | sha256sum -c
+          chmod +x .simc/simc
+          python3 runner/v080_static_chmv_corrected_native.py --upstream integration_probes/fixtures/v079_upstream_mid2_hunter_beast_mastery_reference.simc --prior-failed-native .prior/native --out "$GITHUB_WORKSPACE/out/native" --binary "$GITHUB_WORKSPACE/.simc/simc"
+          python3 - <<'PY'
+          import json,math
+          r=json.load(open("out/native/V080_RECEIPT.json"))
+          assert r["status"]=="PASS_TWO_REAL_HUNTER_STATIC_CHMV_NATIVE",r
+          assert r["new_native_this_invocation"]==2 and r["new_native_total_durable"]==2
+          assert r["T"]==2797 and len(r["official_results"])==2
+          for z in r["official_results"]:
+              assert z["verified_static_c"]==z["target_static_c"]
+              assert sum(z["target_static_c"].values())==2797
+              assert z["simc_buffed_rating_observed"]["crit_rating"]!=z["target_static_c"]["crit_rating"]
+              assert z["raw_input_gear_plus_gems"]["crit_rating"]==z["target_static_c"]["crit_rating"]
+              assert z["dps_mean"]>0 and math.isfinite(z["dps_sem"]) and z["dps_samples"]>=20
+          print("V080_CORRECT_STATIC_C_DISTINCT_FROM_TALENT_BUFFED_NATIVE_PASS",json.dumps(r,sort_keys=True))
+          PY
+          sha256sum out/native/static_00/result.json out/native/static_01/result.json > out/native/NATIVE_SHA256.txt
+      - name: Exact SHA-verified replay with zero extra Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v080_static_chmv_corrected_native.py --upstream integration_probes/fixtures/v079_upstream_mid2_hunter_beast_mastery_reference.simc --prior-failed-native .prior/native --out "$GITHUB_WORKSPACE/out/native" --binary "$GITHUB_WORKSPACE/.simc/simc" --cache-only
+          sha256sum -c out/native/NATIVE_SHA256.txt
+          python3 - <<'PY'
+          import json
+          r=json.load(open("out/native/V080_RECEIPT.json"))
+          assert r["status"]=="PASS_TWO_REAL_HUNTER_STATIC_CHMV_NATIVE",r
+          assert r["new_native_this_invocation"]==0
+          assert r["new_native_total_durable"]==2 and r["cache_only_replay"]
+          assert all(z["source"]=="CACHED_VERIFIED_NATIVE" for z in r["official_results"])
+          print("V080_STATIC_NATIVE_EXACT_SHA_TWO_CACHE_HITS_ZERO_EXTRA_PASS")
+          PY
+      - name: Preserve real static target, raw SimC input and buffed separate JSON2, receipts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v080-static-rating-talent-separated-${{ github.run_id }}
+          path: out/
+          if-no-files-found: warn
+          retention-days: 14
