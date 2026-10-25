@@ -249,6 +249,71 @@ def validate_native(native,rendered,calibration):
         "external_component_source_attribution_not_claimed":True,
         "item_effects_owned_by_simc":True}
 
+def render_static_chmv_candidate(reference,target,flask_vector,path,iterations):
+    """Inject STATIC c=G+J+F, without inverting talent-inflated buffed_stats.
+
+    gear_* encodes the controllable G+J vector; the caller's externally
+    established flask vector F is subtracted ONCE from c. No attribution
+    from buffed_stats and no subclass/talent effects model.
+    """
+    scenario.vector(target,"STATIC_CHMV_C")
+    scenario.vector(flask_vector,"STATIC_FLASK_F_VECTOR")
+    need(type(iterations) is int and 30<=iterations<=100000,
+         "ITERATIONS_OUT_OF_RANGE")
+    raw={k:target[k]-flask_vector[k] for k in STATS}
+    need(all(type(raw[k]) is int and raw[k]>=0 for k in STATS),
+         "STATIC_TARGET_BELOW_DECLARED_FLASK_VECTOR")
+    parts=input_parts(reference)
+    lines=reference.splitlines()
+    output=pathlib.Path(path).resolve()
+    for i,line in enumerate(lines):
+        for k in STATS:
+            if line.startswith(GEAR_PREFIX+k+"="):
+                lines[i]=GEAR_PREFIX+k+"="+str(raw[k])
+        if line.startswith("iterations="):
+            lines[i]="iterations="+str(iterations)
+        if line.startswith("json2="):
+            lines[i]="json2="+str(output)
+    content="\n".join(lines)+"\n"
+    rewritten=input_parts(content)
+    need(rewritten["stable_sha256"]==parts["stable_sha256"]
+         and rewritten["gear_override"]==raw,
+         "STATIC_C_SOURCE_OR_GEAR_OVERRIDE_DRIFT")
+    return {"input":content,"input_sha256":sha(content),
+        "raw_gear_override":raw,"expected_static_rating":dict(target),
+        "flask_component_in_T":dict(flask_vector),
+        "stable_profile_sha256":parts["stable_sha256"],
+        "buffed_stats_target_parity_required":False}
+
+def validate_static_native(native,rendered,revision):
+    """Check stat injection *before talents*, observe buffed output separately."""
+    need(native.get("report_version")=="2.0.0","SIMC_REPORT_VERSION")
+    need(native.get("git_revision")==revision,"SIMC_REVISION_CHANGED")
+    players=(native.get("sim") or {}).get("players") or []
+    need(len(players)==1,"SIMC_SINGLE_PLAYER_REQUIRED")
+    raw=rendered["raw_gear_override"]
+    fixed=rendered["flask_component_in_T"]
+    target=rendered["expected_static_rating"]
+    need(all(raw[k]+fixed[k]==target[k] for k in STATS),
+         "STATIC_C_COMPONENT_SUM_MISMATCH")
+    observed=read_rating(players[0])
+    dps=(players[0].get("collected_data") or {}).get("dps",{})
+    count=dps.get("count");mean=dps.get("mean");sem=dps.get("mean_std_dev")
+    need(type(count) is int and count>=20,"DPS_SAMPLE_COUNT")
+    need(type(mean) in (int,float) and type(sem) in (int,float)
+         and math.isfinite(mean) and mean>0 and math.isfinite(sem) and sem>=0,
+         "DPS_MEAN_SEM_MISSING")
+    return {"status":"PASS_NATIVE_DPS_AND_STATIC_CHMV_INPUT",
+        "target_static_CHMV_c":dict(target),
+        "verified_static_CHMV_c":{k:raw[k]+fixed[k] for k in STATS},
+        "actual_buffed_stats_rating":observed,
+        "flask_F_component":dict(fixed),
+        "raw_gear_override":dict(raw),
+        "dps_mean":mean,"dps_sem":sem,"dps_samples":count,
+        "native_revision":revision,
+        "simc_talents_procs_APL_and_DPS_owned_by":"SimC",
+        "buffed_rating_is_not_static_target":True}
+
 def compare_pair(results):
     need(len(results)==2,"TWO_RESULT_COMPARISON")
     x,y=results
