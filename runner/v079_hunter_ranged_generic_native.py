@@ -230,7 +230,7 @@ def execute(upstream_file,out,binary=None,cache_only=False):
         reference,cfg,fillers,origin=source_profile(upstream,out)
         raw_source=upstream.encode("utf8")
         upstream_git_blob=hashlib.sha1(
-            ("blob "+str(len(raw_source))+"\\0").encode("ascii")+raw_source
+            ("blob "+str(len(raw_source))+"\0").encode("ascii")+raw_source
         ).hexdigest()
         need(upstream_git_blob==UPSTREAM_BLOB,
              "UPSTREAM_GIT_BLOB_CHANGED")
