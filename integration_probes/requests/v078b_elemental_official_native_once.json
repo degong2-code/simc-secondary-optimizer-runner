@@ -1,0 +1,17 @@
+{
+  "schema": "v078b_elemental_official_GJF_three_native_once_v1",
+  "source_v078_actual_native_run": 40198642691,
+  "actual_nonrogue_profile": "orc_shaman_elemental_334_mail_1h_shield",
+  "prior_two_numeric_real_witnesses_required": true,
+  "official_G": 2645,
+  "J": 138,
+  "F": 165,
+  "T": 2948,
+  "new_official_35_iteration_cases": 2,
+  "new_v015_guided_35_iteration_scouts": 1,
+  "maximum_new_native_calls": 3,
+  "cache_replay_required": true,
+  "shared_generic_route": "v064_v065_v066",
+  "no_new_effect_APL_or_gear_optimizer": true,
+  "global_optimum_proven": false
+}
