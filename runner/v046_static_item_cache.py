@@ -192,9 +192,12 @@ def merge_native(cache,records):
     return {"added_variants":changed,"reused_variants":reused,
             "total_variants":len(staged),"native_simc_calls":0}
 
-def catalog_rows(payload):
+def catalog_rows(payload,season=SEASON):
     doc=json.loads(payload)
     need(type(doc) is dict and type(doc.get("items")) in (dict,list),"CATALOG_SHAPE")
+    stated=doc.get("season")
+    if stated is not None and season==SEASON:
+        need(stated=="Midnight Season 2","CATALOG_SEASON_CONFLICT")
     source=doc["items"]
     if isinstance(source,dict):
         entries=list(source.items());source_type="WEQUIP_MASTER_METADATA_ONLY"
@@ -349,7 +352,7 @@ def main(argv=None):
                                    args.season,args.artifact_id)
             result=merge_native(cache,records)
         elif args.action=="import-catalog":
-            result=merge_catalog(cache,catalog_rows(args.input.read_bytes()))
+            result=merge_catalog(cache,catalog_rows(args.input.read_bytes(),args.season))
         elif args.action=="correct":
             result=request_correction(cache,json.loads(args.request.read_text()))
         else:
