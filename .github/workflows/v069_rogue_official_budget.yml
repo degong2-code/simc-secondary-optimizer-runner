@@ -2,7 +2,9 @@ name: v069 User Rogue Exact GJF Budget and Official One Native Candidate
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
-    paths: [integration_probes/requests/v069_rogue_official_once.json]
+    paths:
+      - integration_probes/requests/v069_rogue_official_once.json
+      - integration_probes/requests/v069_rogue_official_retry_once.json
 permissions:
   contents: read
   actions: read
@@ -26,7 +28,7 @@ jobs:
           import os,json,pathlib,subprocess
           assert os.environ["GITHUB_REF"]=="refs/heads/probe/chat-cache-v035-20261024"
           changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
-          assert changed==["integration_probes/requests/v069_rogue_official_once.json"],changed
+          assert changed==["integration_probes/requests/v069_rogue_official_retry_once.json"],changed
           q=json.loads(pathlib.Path(changed[0]).read_text())
           assert q=={"schema":"v069_actual_rogue_static_GJF_one_candidate_once",
            "native_witnesses":2,"native_official_candidates":1,
@@ -43,7 +45,7 @@ jobs:
            "original_v015_v016_historical_not_rerun":True,
            "no_main_workos_modification":True}
           sources={
-            "runner/v068_rogue_user_profile.py":"869f82c0dd2724a210e5df609325a7fd7d2c8e4e",
+            "runner/v068_rogue_user_profile.py":"a2d8427b63bf2542da23b68fc219faa5ec4d3a58",
             "runner/v064_adaptive_evaluator_port.py":"189e0c3ba33d661c7ea1eec70bfc6f211343a0d9",
             "runner/v069_rogue_official_budget_native.py":"48b171fb6d0309271d8a74b5a508154dbff5a017",
             "tests/test_v069_official_rogue_budget.py":"29d0b87f61c2c3ad2af681e806c7b4cfe472c9a9",
