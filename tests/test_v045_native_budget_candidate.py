@@ -1,83 +1,79 @@
-"""v045 bounded candidate: static G, approved J/F, no duplicate and fail-closed tests."""
-import hashlib,json,pathlib,sys,unittest
+"""v045: Native equipment and oil-floor constraints; no product promotion."""
+import json,pathlib,sys,unittest
 from unittest.mock import patch
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'runner'))
 import pilot
+import v044_static_budget_attribution as v044
 import v045_native_budget_candidate as v
-EVIDENCE=ROOT/'integration_probes/evidence/v045_v042_native_static_334.json'
+import test_v044_static_budget_attribution as f
 
-class V045Contract(unittest.TestCase):
+def inventory_fixture():
+    doc=f.fixture(); gear=doc['sim']['players'][0]['gear']
+    for g in gear.values():g['name']=g['encoded_item'].split(',')[0]
+    inp='\n'.join(slot+'='+gear[slot]['encoded_item'] for slot in v044.SLOTS).encode()
+    base={'static_nontrinket_gear_sum_all_stats':2850,
+          'trinket_gear_secondary_external':dict.fromkeys(v.STATS,0),
+          'final_minus_gear_override':dict(zip(v.STATS,(0,165,0,0)))}
+    return inp,json.dumps(doc).encode(),base
+
+class V045Tests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.data=EVIDENCE.read_bytes()
-        cls.case=v.plan(cls.data)
-    def test_approved_budget_from_native(self):
-        self.assertEqual([self.case[k] for k in ('G','J','F','T')],[2850,138,165,3153])
-        self.assertEqual(sum(self.case['gear_override'].values()),2988)
-        self.assertEqual(sum(self.case['target'].values()),3153)
-        self.assertEqual(self.case['target']['haste_rating'],1125)
-        self.assertEqual(self.case['gear_override']['haste_rating'],960)
-    def test_no_oil_budget_promotion(self):
-        self.assertTrue(self.case['oil_preserved_outside_T'])
-        self.assertEqual(self.case['T'],2850+138+165)
-        self.assertFalse(self.case['product_code_integrated'])
-        self.assertFalse(self.case['official_policy_promoted'])
-    def test_target_total_rejection(self):
-        with self.assertRaisesRegex(v.Blocked,'TARGET_TOTAL_MISMATCH'):
-            v.plan(self.data,(600,1125,1100,329))
-    def test_special_head_floor_rejection(self):
-        with self.assertRaisesRegex(v.Blocked,'LOCKED_FIXED_HEAD_BREACH'):
-            v.plan(self.data,(600,1330,200,1023))
-    def test_trial_cap_rejection(self):
-        with self.assertRaisesRegex(v.Blocked,'TRIAL_STAT_CAP'):
-            v.plan(self.data,(600,1700,525,328))
-    def test_flask_double_subtraction_guard(self):
-        with self.assertRaisesRegex(v.Blocked,'FLASK_SUBTRACTION_NEGATIVE'):
-            v.plan(self.data,(1500,100,1200,353))
-    def test_tampered_evidence_blocked(self):
-        raw=bytearray(self.data);raw[14]^=1
-        with self.assertRaisesRegex(v.Blocked,'EVIDENCE_BYTES_DRIFT'):
-            v.plan(bytes(raw))
-    def test_unapproved_selection_claim_blocked(self):
-        d=json.loads(self.data);d['user_selected_item_attested']=True
-        raw=json.dumps(d).encode()
-        with patch.object(v,'EVIDENCE_SHA256',hashlib.sha256(raw).hexdigest()):
-            with self.assertRaisesRegex(v.Blocked,'AUTHORITY_ESCALATION'):
-                v.load_evidence(raw)
-    def test_changed_head_mastery_blocked(self):
-        d=json.loads(self.data);d['fixed_nontrinket_slots']['head']['mastery_rating']=402
-        raw=json.dumps(d).encode()
-        with patch.object(v,'EVIDENCE_SHA256',hashlib.sha256(raw).hexdigest()):
-            with self.assertRaisesRegex(v.Blocked,'LOCKED_HEAD_CHANGED'):
-                v.load_evidence(raw)
-    def test_profile_items_unchanged(self):
-        old,_=pilot.source()
-        new=v.build_profile(old,pathlib.Path('/tmp/v045_unittest.json'),self.case)
-        before=old.splitlines();after=new.splitlines()
-        for slot in ('neck','shoulders','chest','waist','legs','feet','wrists',
-                     'hands','finger1','finger2','trinket1','trinket2','back','main_hand'):
-            self.assertEqual([l for l in before if l.startswith(slot+'=')],
-                             [l for l in after if l.startswith(slot+'=')])
-        self.assertIn('head='+v.v041.HEAD.split('=',1)[1],after)
-        self.assertIn('flask=flask_of_the_blood_knights_2',after)
-        self.assertIn('temporary_enchant=main_hand:thalassian_phoenix_oil_2',after)
-    def test_one_override_line_per_stat(self):
-        old,_=pilot.source()
-        lines=v.build_profile(old,pathlib.Path('/tmp/v045_unittest.json'),self.case).splitlines()
-        for stat,amount in self.case['gear_override'].items():
-            self.assertEqual([l for l in lines if l.startswith('gear_'+stat+'=')],
-                             ['gear_'+stat+'='+str(amount)])
-    def test_wrong_native_rating_rejected(self):
-        wrong={'sim':{'players':[{'collected_data':{'buffed_stats':{
-             'stats':{**self.case['target'],'haste_rating':1126}}},'gear':{}}]}}
-        with patch.object(v.v041,'audit_native',return_value={
-               'head':{'fixed_mastery_rating':201}}):
-            with self.assertRaisesRegex(v.Blocked,'FINAL_CHMV_MISMATCH'):
-                v.audit_native(json.dumps(wrong).encode(),self.case)
-    def test_plans_not_successful_native_evidence(self):
-        self.assertEqual(self.case['status'],'PASS_BOUNDED_PLAN_NOT_PRODUCT')
-        self.assertFalse(self.case['real_bonus_attested'])
-        self.assertFalse(self.case['all_flasks_generalized'])
+        x,y,z=inventory_fixture()
+        with patch.object(v044,'analyze',return_value=z):
+            cls.inv=v.audit_inventory(x,y)
+        cls.case=v.make_plan(cls.inv)
+    def test_native_all_slots(self):
+        self.assertEqual(self.inv['slots_checked'],15)
+        self.assertEqual(len(self.inv['items']),15)
+        self.assertFalse(self.inv['json_item_hints_used_for_identity_only'])
+        self.assertTrue(all(not x['external_name_canonicality_verified'] for x in self.inv['items']))
+    def test_oil_and_policy_separate(self):
+        c=self.case
+        self.assertEqual([c[k] for k in ('G','J','F','v1_0_official_T','bounded_trial_T')],[2850,138,165,3153,3185])
+        self.assertEqual([c['required_static_floor'][k] for k in v.STATS],[16,16,201,0])
+        self.assertEqual(sum(c['candidate'].values()),3185)
+        self.assertEqual(sum(c['gear_override'].values()),3020)
+        self.assertEqual(c['gear_override']['haste_rating'],975)
+        self.assertFalse(c['official_policy_promoted'])
+        self.assertFalse(c['product_code_integrated'])
+    def test_stat_total_fail_closed(self):
+        with self.assertRaisesRegex(v.Blocked,'CHMV_TOTAL_MISMATCH'):
+            v.make_plan(self.inv,(600,1140,1115,329))
+    def test_floor_fail_closed(self):
+        with self.assertRaisesRegex(v.Blocked,'CANDIDATE_FIXED_FLOOR_OR_CAP_BREACH'):
+            v.make_plan(self.inv,(700,1200,200,1085))
+    def test_cap_fail_closed(self):
+        with self.assertRaisesRegex(v.Blocked,'CANDIDATE_FIXED_FLOOR_OR_CAP_BREACH'):
+            v.make_plan(self.inv,(1700,600,600,285))
+    def test_native_item_id_drift_fail_closed(self):
+        src,raw,m=inventory_fixture()
+        data=json.loads(raw)
+        data['sim']['players'][0]['gear']['neck']['encoded_item']=data['sim']['players'][0]['gear']['neck']['encoded_item'].replace('id=210001','id=999999')
+        with patch.object(v044,'analyze',return_value=m):
+            with self.assertRaisesRegex(v.Blocked,'SIMC_OPTION_MISMATCH:neck:id'):
+                v.audit_inventory(src,json.dumps(data).encode())
+    def test_native_name_drift_fail_closed(self):
+        src,raw,m=inventory_fixture()
+        data=json.loads(raw);data['sim']['players'][0]['gear']['neck']['name']='wrong'
+        with patch.object(v044,'analyze',return_value=m):
+            with self.assertRaisesRegex(v.Blocked,'NATIVE_ITEM_NAME_FIELD_DRIFT:neck'):
+                v.audit_inventory(src,json.dumps(data).encode())
+    def test_native_static_drift_fail_closed(self):
+        src,raw,m=inventory_fixture()
+        data=json.loads(raw);data['sim']['players'][0]['gear']['head']['mastery_rating']=202
+        with patch.object(v044,'analyze',return_value=m):
+            with self.assertRaisesRegex(v.Blocked,'HEAD_FIXED_MASTERY_CHANGED'):
+                v.audit_inventory(src,json.dumps(data).encode())
+    def test_candidate_changes_only_overrides(self):
+        source,_=pilot.source()
+        old=v.v041.build_source(source,pathlib.Path('/tmp/v045-test.json'))
+        new=v.build_profile(source,pathlib.Path('/tmp/v045-test.json'),self.case)
+        for slot in v044.SLOTS:
+            self.assertEqual(v.parse_slots(old)[slot],v.parse_slots(new)[slot])
+        for k,val in self.case['gear_override'].items():
+            self.assertIn('gear_'+k+'='+str(val),new)
+        self.assertEqual(sum(x.startswith('json2=') for x in new.splitlines()),1)
 
-if __name__=='__main__': unittest.main()
+if __name__=='__main__':unittest.main()
