@@ -30,7 +30,7 @@ class BoundedPipeline(unittest.TestCase):
             progress={"native_attempts":0,"status":"PLAN"}
             with self.assertRaisesRegex(runner.PipelineBlocked,
                                        "USER_CANCEL_FILE_PRESENT"):
-                runner.execute_one(request,self.k,root,ROOT/"runner"/"pilot.py",
+                runner.execute_one(request,self.k,ROOT/"runner"/"pilot.py",root,
                       progress,cancel)
             self.assertEqual(progress["native_attempts"],0)
             self.assertFalse((root/"input.simc").exists())
@@ -41,7 +41,7 @@ class BoundedPipeline(unittest.TestCase):
             (root/"result.json").write_text("{}")
             with self.assertRaisesRegex(runner.PipelineBlocked,
                                        "PARTIAL_NATIVE_OUTPUT_REQUIRES_EXPLICIT_RECOVERY"):
-                runner.execute_one(request,self.k,root,ROOT/"runner"/"pilot.py",
+                runner.execute_one(request,self.k,ROOT/"runner"/"pilot.py",root,
                     {"native_attempts":0})
     def test_native_bounded_count_refuses_before_invocation(self):
         with tempfile.TemporaryDirectory() as d:
@@ -49,7 +49,7 @@ class BoundedPipeline(unittest.TestCase):
             request=self.request(root)
             with self.assertRaisesRegex(runner.PipelineBlocked,
                                        "NATIVE_CALL_BUDGET_EXCEEDED"):
-                runner.execute_one(request,self.k,root,ROOT/"runner"/"pilot.py",
+                runner.execute_one(request,self.k,ROOT/"runner"/"pilot.py",root,
                     {"native_attempts":4})
     def test_actual_result_verified_cache_can_be_reused_without_binary_run(self):
         with tempfile.TemporaryDirectory() as d:
@@ -63,7 +63,7 @@ class BoundedPipeline(unittest.TestCase):
             receipt["simc_seed"]=None
             runner.write_atomic(root/"native_receipt.json",receipt)
             progress={"native_attempts":4}
-            observed=runner.execute_one(request,self.k,root,ROOT/"runner"/"pilot.py",
+            observed=runner.execute_one(request,self.k,ROOT/"runner"/"pilot.py",root,
                                progress)
             self.assertEqual(observed["source"],"CACHED_VERIFIED_NATIVE")
             self.assertEqual(progress["native_attempts"],4)
@@ -79,7 +79,7 @@ class BoundedPipeline(unittest.TestCase):
             receipt["dps_mean"]+=1
             runner.write_atomic(root/"native_receipt.json",receipt)
             with self.assertRaisesRegex(evaluation.PortBlocked,"CACHE_RESULT_CHANGED"):
-                runner.execute_one(request,self.k,root,ROOT/"runner"/"pilot.py",
+                runner.execute_one(request,self.k,ROOT/"runner"/"pilot.py",root,
                                    {"native_attempts":0})
     def test_result_parser_does_not_import_original_executables(self):
         self.assertEqual(policy.SOURCE_V015_SHA256,
