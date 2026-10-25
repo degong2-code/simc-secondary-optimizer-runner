@@ -132,6 +132,17 @@ def native_records(payload,season=SEASON,artifact_id=None):
         need(type(item) is dict,"INVALID_GEAR_SLOT")
         name,options=parse_encoded(item.get("encoded_item"))
         need(item.get("ilevel")==int(options["ilevel"]),"NATIVE_ILEVEL_CONFLICT")
+        # A nontrinket with SimC JSON2 'unknown' static item budget MUST NOT
+        # be silently treated as a 0-secondary representative item. This is
+        # input/stat attribution validation, NOT effect or proc certification.
+        # Trinkets deliberately remain outside free G and can have missing
+        # or unclassified static rows without blocking equipment selection.
+        normalized_slot=normalize_slot(slot)
+        if normalized_slot!="trinket" and "unknown" in item:
+            unknown=read_number(item,"unknown")
+            need(unknown==0,
+                 "UNCLASSIFIED_NONTRINKET_STATIC_STATS_EXACT_VARIANT_REQUIRED:"+
+                 slot+":"+str(options["id"]))
         # Variants include ALL relevant item modifiers, including gemstones,
         # enchant, crafted stats, redirect and bonus IDs. Source and display
         # alias are intentionally not part of the static-stats identity.
