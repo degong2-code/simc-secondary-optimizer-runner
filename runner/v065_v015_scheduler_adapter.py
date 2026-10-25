@@ -79,9 +79,14 @@ def observations_by_vector(records,total,lower,upper):
     need(type(records) is list,"OBSERVATION_ROWS")
     rows=defaultdict(list)
     for r in records:
-        need(type(r) is dict and
-             r.get("status")=="PASS_NATIVE_DPS_AND_RATING",
+        need(type(r) is dict and r.get("status") in (
+             "PASS_NATIVE_DPS_AND_RATING",
+             "PASS_NATIVE_DPS_AND_STATIC_CHMV_INPUT"),
              "UNVERIFIED_NATIVE_STAT_RESULT")
+        if r["status"]=="PASS_NATIVE_DPS_AND_STATIC_CHMV_INPUT":
+            need(r.get("rating_semantics")=="STATIC_CHMV_C_V1" and
+                 r.get("static_rating_verified")==r["target"],
+                 "STATIC_C_OBSERVATION_NOT_VERIFIED")
         vector=key(r["target"])
         need(eligible(vector,total,lower,upper),
              "OBSERVATION_OUTSIDE_OFFICIAL_T_OR_L")
@@ -190,7 +195,7 @@ def initial_state(normalized,budget,prior_observations,step=100,
         "new_native_attempts":0}
 
 def next_scout(state,normalized,budget,calibration,reference,binary_sha,
-               output_path,iterations):
+               output_path,iterations,static_flask_vector=None):
     need(state.get("schema")==SCHEMA and
          state["scenario_digest"]==normalized["scenario_digest"],
          "SCOUT_STATE_OTHER_SCENARIO")
@@ -200,9 +205,21 @@ def next_scout(state,normalized,budget,calibration,reference,binary_sha,
     need(total==state["official_total"],"CHMV_BUDGET_CHANGED")
     rows=observations_by_vector(state["observations"],total,lo,hi)
     anchor,chosen,hint=choose_next(rows,state["step"],total,lo,hi)
-    proposal=evaluator.make_request(normalized,budget,calibration,reference,
-                                    binary_sha,to_target(chosen),iterations,
-                                    output_path)
+    if static_flask_vector is not None:
+        need(all(r.get("status")=="PASS_NATIVE_DPS_AND_STATIC_CHMV_INPUT"
+                 for r in state["observations"]),
+             "STATIC_SCOUT_REQUIRES_STATIC_NATIVE_ANCHORS")
+        proposal=evaluator.make_static_chmv_request(
+            normalized,budget,reference,binary_sha,
+            calibration["native_revision"],to_target(chosen),
+            static_flask_vector,iterations,output_path)
+    else:
+        need(all(r.get("status")=="PASS_NATIVE_DPS_AND_RATING"
+                 for r in state["observations"]),
+             "LEGACY_SCOUT_REQUIRES_LEGACY_NATIVE_ANCHORS")
+        proposal=evaluator.make_request(normalized,budget,calibration,reference,
+                                       binary_sha,to_target(chosen),iterations,
+                                       output_path)
     return {"status":"PROPOSED_SCOUT_NOT_RUN","anchor":to_target(anchor),
        "case":proposal,"decision":hint,
        "remaining_scour_runs_after_this":state["scout_max"]-state["completed_new_scouts"]-1}
@@ -210,9 +227,14 @@ def next_scout(state,normalized,budget,calibration,reference,binary_sha,
 def accept_scout(state,request,observation):
     """One successful v064-validated Native result, then plan anew."""
     need(state["completed_new_scouts"]<state["scout_max"],"SCOUT_BUDGET_EXHAUSTED")
-    need(observation["status"]=="PASS_NATIVE_DPS_AND_RATING" and
+    need(observation.get("status") in (
+           "PASS_NATIVE_DPS_AND_RATING",
+           "PASS_NATIVE_DPS_AND_STATIC_CHMV_INPUT") and
          request["case_key"]==observation["case_key"],
          "SCOUT_IDENTITY_OR_NATIVE_RESULT_MISMATCH")
+    need(all(x.get("status")==observation["status"]
+             for x in state["observations"]),
+         "SCOUT_MIXED_STATIC_AND_BUFFED_SEMANTICS")
     need(request["scenario_digest"]==state["scenario_digest"],
          "SCOUT_SCENARIO_MISMATCH")
     prior={key(x["target"]) for x in state["observations"]}
