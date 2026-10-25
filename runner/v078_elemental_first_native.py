@@ -89,7 +89,7 @@ def spec_profile(upstream,out):
       "max_time":"300","vary_combat_length":"0","fixed_time":"1",
       "optimal_raid":"1","threads":"1","iterations":str(ITERATIONS),
       "json2":str((pathlib.Path(out)/"reference.json").resolve()),
-      "temporary_enchant":"main_hand:thalassian_phoenix_oil_2"}
+      "temporary_enchant":None}
     canonical.update({"gear_"+k:str(v) for k,v in
        zip(scenario.STATS,INITIAL_RAW)})
     source=[]
@@ -100,7 +100,7 @@ def spec_profile(upstream,out):
             continue
         source.append(line)
     source.extend("")
-    source.extend(k+"="+v for k,v in canonical.items())
+    source.extend(k+"="+v for k,v in canonical.items() if v is not None)
     source.extend(items.equipment_line(x,gear[x]["item_id"],334,gear[x]["options"])
                   for x in SLOTS)
     reference="\n".join(source).rstrip()+"\n"
@@ -123,7 +123,7 @@ def spec_profile(upstream,out):
         "flask":"flask_of_the_shattered_sun_2",
         "food":"harandar_celebration",
         "potion":"lights_potential_2",
-        "weapon_temporary":"thalassian_phoenix_oil_2",
+        "weapon_temporary":None,
         "weapon_temporary_fixed_rating":{k:0 for k in scenario.STATS}},
       "combat":{"fight_style":"Patchwerk","targets":1,"duration_seconds":300,
          "vary_combat_length_pct":0.0,"raid_buffs":True,
