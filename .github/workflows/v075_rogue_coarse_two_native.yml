@@ -2,7 +2,9 @@ name: v075 Rogue Coarse Region Continuation Two Native Scouts
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
-    paths: [integration_probes/requests/v075_rogue_coarse_two_native.json]
+    paths:
+      - integration_probes/requests/v075_rogue_coarse_two_native.json
+      - integration_probes/requests/v075_rogue_coarse_retry_native.json
 permissions:
   contents: read
   actions: read
@@ -26,7 +28,8 @@ jobs:
           import json,os,pathlib,subprocess
           p="integration_probes/requests/v075_rogue_coarse_two_native.json"
           changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
-          assert changed==[p],changed
+          assert changed in ([p],["integration_probes/requests/v075_rogue_coarse_retry_native.json"]),changed
+          p=changed[0]
           r=json.loads(pathlib.Path(p).read_text())
           assert r=={
             "schema":"v075_rogue_two_more_coarse_native_request_v1",
@@ -43,7 +46,7 @@ jobs:
             "no_new_effect_gates":True,
             "global_optimum_proven":False}
           files={
-            "runner/v075_rogue_coarse_continuation.py":"2071b829374a3215be33521e92b69a5465ca076c",
+            "runner/v075_rogue_coarse_continuation.py":"a77736f3fde73930e97bc194740bf31e2f36624a",
             "tests/test_v075_rogue_coarse_continuation.py":"494c7e138d8e4f8e356af66d71fde425cba1cbc5"}
           for path,expected in files.items():
             actual=subprocess.check_output(["git","hash-object",path],text=True).strip()
