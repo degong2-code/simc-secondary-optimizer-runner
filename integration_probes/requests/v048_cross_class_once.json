@@ -1,0 +1,8 @@
+{
+  "schema": "v048_cross_class_diagnosis_request_v1",
+  "maximum_native_calls": 8,
+  "target_only_v047_failed_items": true,
+  "native_static_not_dps": true,
+  "official_policy_promoted": false,
+  "product_code_integrated": false
+}
