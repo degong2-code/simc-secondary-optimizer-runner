@@ -1,0 +1,20 @@
+{
+  "schema": "v085_shaman_five_historical_native_static_c_replay_v1",
+  "original_first_run": 40198642691,
+  "original_official_and_scout_run": 40199040044,
+  "actual_original_native_cases_required": 5,
+  "full_input_and_json2_sha_verified": true,
+  "original_profile_F_declared": {
+    "crit_rating": 165,
+    "haste_rating": 0,
+    "mastery_rating": 0,
+    "versatility_rating": 0
+  },
+  "new_native_calls": 0,
+  "legacy_source_receipts_immutable": true,
+  "must_pass_new_v066_static_preflight": true,
+  "must_match_original_v015_static_scout": true,
+  "no_item_effect_talent_proc_gate": true,
+  "official_budget": "T=G+J+F",
+  "no_global_optimum_claim": true
+}
