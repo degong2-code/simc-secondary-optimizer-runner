@@ -1,0 +1,96 @@
+name: v049 Class-compatible Recovery of 448 Native Static Itemlevels
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - integration_probes/requests/v049_recovery_once.json
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v049-static-item-recovery
+  cancel-in-progress: false
+jobs:
+  recover:
+    name: retry class-compatible items from cursor ${{ matrix.start }}
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        start: [0,160,320]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Gate exact recovery request and original source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          assert os.environ['GITHUB_EVENT_NAME']=='push'
+          assert os.environ['GITHUB_REF']=='refs/heads/probe/chat-cache-v035-20261024'
+          paths=subprocess.check_output(['git','diff-tree','--no-commit-id','--name-only','-r',os.environ['GITHUB_SHA']],text=True).splitlines()
+          assert paths==['integration_probes/requests/v049_recovery_once.json']
+          req=json.loads(pathlib.Path(paths[0]).read_text())
+          assert req=={'schema':'v049_class_compatible_recovery_request_v1',
+             'failed_items_exact':32,'missing_itemlevels_exact':448,'class_mappings':'Plate=warrior Leather=druid Mail=hunter Bow=hunter',
+             'maximum_calls_per_batch':160,'cursors':[0,160,320],
+             'no_DPS_optimization':True,'no_policy_promotion':True,'no_main_modification':True}
+          pins={'runner/v049_class_compatible_recovery.py':'5ea988a966a595668e5a65cbe57480ac6cffea83',
+            'tests/test_v049_class_compatible_recovery.py':'e13da73a905035b79884a8664476bcc624d1ef64',
+            'runner/v047_full_scope_collector.py':'9a633e70a6bbb633c30fc89b061267538963d3ce'}
+          for p,sha in pins.items():
+            assert subprocess.check_output(['git','hash-object',p],text=True).strip()==sha,'SOURCE_CHANGED:'+p
+          print('V049_RECOVERY_GATE_PASS')
+          PY
+      - name: Check all offline regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+      - uses: actions/cache/restore@v5
+        id: simc
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9dd-cli-release-nonetwork-r1
+      - uses: actions/download-artifact@v4
+        with:
+          name: simc-v047-full-census-pilot-40152488928
+          path: .seed
+          run-id: 40152488928
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Recover exact class-dependent variants
+        shell: bash
+        env:
+          CACHE_HIT: ${{ steps.simc.outputs.cache-hit }}
+        run: |
+          set -euo pipefail
+          test "$CACHE_HIT" = true || exit 3
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc-cache/v035/simc' | sha256sum -c
+          python3 runner/v049_class_compatible_recovery.py \
+            --binary "$GITHUB_WORKSPACE/.simc-cache/v035/simc" \
+            --manifest integration_probes/requests/v047_full_scope_manifest.json \
+            --seed "$GITHUB_WORKSPACE/.seed/result/midnight_s2_static_cache_v047.json" \
+            --out "$GITHUB_WORKSPACE/output" \
+            --start ${{ matrix.start }} --max-cases 160
+          python3 - <<'PY'
+          import json
+          r=json.load(open('output/V049_LEDGER.json'))
+          assert r['status']!='SETUP_BLOCKED'
+          assert len(r['items'])<=160
+          print('V049_CLASS_RECOVERED',r['start'],r['saved'],r['blocked'])
+          PY
+      - name: Upload exact recovery ledger and cache
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v049-native-recovery-${{ matrix.start }}-${{ github.run_id }}
+          path: output/
+          retention-days: 14
+          if-no-files-found: warn
