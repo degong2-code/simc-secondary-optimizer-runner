@@ -1,0 +1,97 @@
+name: v061 General Scenario Input Contract
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [integration_probes/requests/v061_scenario_once.json]
+permissions:
+  contents: read
+concurrency:
+  group: v061-scenario-contract
+  cancel-in-progress: false
+jobs:
+  general-scenario-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Verify exact one-time request and audited source hashes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os,pathlib,json,subprocess
+          assert os.environ["GITHUB_EVENT_NAME"]=="push"
+          assert os.environ["GITHUB_REF"]=="refs/heads/probe/chat-cache-v035-20261024"
+          files=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert files==["integration_probes/requests/v061_scenario_once.json"],files
+          req=json.loads(pathlib.Path(files[0]).read_text())
+          assert req=={
+           "schema":"v061_offline_general_scenario_once_v1",
+           "execution":"OFFLINE_REGRESSION_ONLY",
+           "max_native_simc_calls":0,
+           "official_chmv_budget":"T=G+J+F",
+           "trinket_proc_gate":False,
+           "manual_item_id_allowed":True,
+           "four_tier_items_required":True,
+           "trinket_slots":2,
+           "max_embellishments":2,
+           "original_v015_v016_product_integrated":False,
+           "official_policy_promoted":False}
+          for name,sha in {
+            "runner/v061_scenario_contract.py":"27b336ebd03c9f655b45cdd774abfb60bbe5672e",
+            "tests/test_v061_scenario_contract.py":"4f70d718eea187a6129afbddfb46c66ac7c2814c"
+          }.items():
+            assert subprocess.check_output(["git","hash-object",name],text=True).strip()==sha,name
+          print("V061_EXACT_OFFLINE_GATE_PASS")
+          PY
+      - name: Full regression (no Native SimC calls)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Build portable canonical scenario evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          python3 - <<'PY'
+          import os,sys,json,pathlib,hashlib
+          sys.path.insert(0,"runner")
+          sys.path.insert(0,"tests")
+          import v061_scenario_contract as module
+          from test_v061_scenario_contract import mage,manual
+          out=pathlib.Path("out")
+          native_count=0
+          for name,request in [("ilev334_mage",mage()),("manual331_mage",manual())]:
+              (out/(name+"_input.json")).write_text(json.dumps(request,indent=2,ensure_ascii=False)+"\n")
+              result=module.normalize(request)
+              (out/(name+"_contract.json")).write_text(json.dumps(result,indent=2,ensure_ascii=False,sort_keys=True)+"\n")
+              (out/(name+"_selected_items.simc")).write_text("\n".join(module.selected_lines(result))+"\n")
+              assert result["budget"]["G"] is None
+              assert result["status"]=="VALID_SCENARIO_INPUT_NO_SIMC_EFFECT_GATE"
+              assert result["embellishment_count"]==2
+          receipt={"schema":"v061_scenario_offline_acceptance_v1",
+             "status":"PASS_INPUT_ONLY_NO_NATIVE_G_ASSUMED",
+             "scenarios":2,
+             "native_simc_calls":native_count,
+             "source_head":os.environ["GITHUB_SHA"],
+             "official_policy":"T=G+J+F",
+             "trinket_static_gate":False,
+             "simc_effects_owned_by_simc":True,
+             "product_v016_integrated":False,
+             "project_source_promoted":False}
+          (out/"V061_RECEIPT.json").write_text(json.dumps(receipt,indent=2,sort_keys=True)+"\n")
+          print("V061_TWO_SCENARIO_INPUTS_PASS")
+          PY
+      - name: Preserve evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v061-general-scenario-${{ github.run_id }}
+          path: out/
+          retention-days: 14
+          if-no-files-found: warn
