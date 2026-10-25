@@ -131,7 +131,8 @@ def assemble(reference,output,iterations=35,probe="A"):
     for k,v in equip.items():
         need(rendered.count(k+"=")==1,"EQUIPMENT_SLOT_COLLISION:"+k)
     special_bag=sum(len(x.split("/")) for x in [
-        CANONICAL_OPTIONS[s]["gem_id"] for s in CANONICAL_OPTIONS])
+        CANONICAL_OPTIONS[s]["gem_id"] for s in CANONICAL_OPTIONS
+        if "gem_id" in CANONICAL_OPTIONS[s]])
     need(special_bag==7 and
          sum(CANONICAL_OPTIONS[s]["gem_id"].count(str(SPECIAL_GEM_B))
              for s in CANONICAL_OPTIONS)==1,"GEM_COUNT_POLICY")
