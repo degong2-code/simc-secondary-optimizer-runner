@@ -83,7 +83,10 @@ def verify_profile_binding(normalized,budget,reference):
                  "PROFILE_CONSUMABLE_DRIFT:"+name)
     temp=consumables["weapon_temporary"]
     if temp is not None:
-        need(parsed.get("temporary_enchant")=="main_hand:"+temp,
+        single="main_hand:"+temp
+        dual=single+"/off_hand:"+temp
+        need(parsed.get("temporary_enchant") in ({single,dual} if
+             "off_hand" in slots else {single}),
              "PROFILE_TEMPORARY_DRIFT")
     gear=cfg["equipment"]
     expected={}
