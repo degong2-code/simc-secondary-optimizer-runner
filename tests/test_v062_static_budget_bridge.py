@@ -141,7 +141,7 @@ class NativeBudget(unittest.TestCase):
         cfg=mage();cfg["equipment"]["special"]=[item("neck",251001)]
         filler=[x for x in FILLER if x["slot"]!="neck"]
         plan,fill,cache=fixture(cfg,filler)
-        lock={"crit_rating":0,"haste_rating":0,"mastery_rating":900,"versatility_rating":0}
+        lock={"crit_rating":0,"haste_rating":0,"mastery_rating":2200,"versatility_rating":0}
         record(cache,cfg["equipment"]["special"][0],lock)
         with self.assertRaisesRegex(p.BudgetBlocked,"SELECTED_SPECIAL_FLOOR_UNFEASIBLE"):
             p.compile_static_budget(plan,fill,cache)
