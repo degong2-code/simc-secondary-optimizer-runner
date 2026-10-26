@@ -33,7 +33,9 @@ jobs:
         shell: pwsh
         run: |
           python -m unittest -q tests.test_v109_windows_readiness_offline tests.test_v106_user_session_controller tests.test_v108_user_consumables
+          if ($LASTEXITCODE -ne 0) { throw "Windows Python unittest FAILED (exit=$LASTEXITCODE)" }
           python runner/pilot.py check
+          if ($LASTEXITCODE -ne 0) { throw "Windows baseline pilot FAILED (exit=$LASTEXITCODE)" }
       - name: Document exact proof boundary
         shell: pwsh
         run: |
