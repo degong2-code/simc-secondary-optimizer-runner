@@ -241,6 +241,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
     cfg["equipment"]={g:[copy.deepcopy(r) for s,r in rows.items()
                           if groups.get(s)==g]
                       for g in ("tier","special","crafted","trinkets")}
+    if catalyst_origin_rows:
+        cfg["equipment"]["catalyst_special_tier_slots"]=sorted(
+            row["slot"] for row in catalyst_origin_rows)
     fillers=[copy.deepcopy(r) for s,r in rows.items() if s not in groups]
     cfg["character"].update({"race":ch["race"],"talents":ch["talents"]})
     cfg["target"]={"mode":"derived_ilevel","ilevel":ilvl,
