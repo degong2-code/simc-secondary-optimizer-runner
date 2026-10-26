@@ -1,0 +1,169 @@
+#!/usr/bin/env python3
+"""v091: explicit per-weapon Thalassian Phoenix Oil input identity.
+
+Small adapter around existing v089/v090/v064.  Never models the oil effect.
+SimC handles the mechanic.  Declared external fixed vector O is provenance,
+not a second gear_* injection and not an assertion that buffed_stats expose O.
+"""
+from __future__ import annotations
+import copy,hashlib,pathlib
+import v061_scenario_contract as scenario
+import v064_adaptive_evaluator_port as port
+import v089_ilvl_chmv_budget_selector as chooser
+import v090_reference_total_native_candidate as reference_path
+
+SCHEMA="v091_oil_per_actual_weapon_external_v1"
+OIL="thalassian_phoenix_oil_2"
+HANDS=frozenset(("main_hand","off_hand"))
+SINGLE_LAYOUTS=frozenset(("single_one_hand","single_two_hand",
+                          "one_hand_shield","one_hand_frill","ranged","other"))
+DUAL_LAYOUTS=frozenset(("dual_one_hand","dual_two_hand"))
+PER_WEAPON={"crit_rating":16,"haste_rating":16,
+            "mastery_rating":0,"versatility_rating":0}
+
+class OilInputBlocked(ValueError):pass
+def need(ok,reason):
+    if not ok:raise OilInputBlocked(reason)
+
+def _profile_slots(profile):
+    result={}
+    for line in profile.splitlines():
+        name,sep,val=line.partition("=")
+        if sep and name in ("main_hand","off_hand"):
+            need(name not in result,"DUPLICATE_WEAPON_SLOT:"+name)
+            result[name]=val
+    need("main_hand" in result,"MAIN_HAND_ITEM_REQUIRED")
+    return result
+
+def configure(profile,doc,weapon_layout,applied_hands):
+    """Return exact selected oil input + updated user-supplied SHA v061 doc.
+
+    Crucial: never rely on the absence of temporary_enchant. SimC supplies
+    a class-specific default oil if it is omitted, even when requested O=0.
+    Use explicit 'disabled' for no oil.
+    """
+    need(type(profile) is str and type(doc) is dict,"PROFILE_AND_SCENARIO")
+    normalized=scenario.normalize(doc)
+    need(weapon_layout in SINGLE_LAYOUTS|DUAL_LAYOUTS,"WEAPON_LAYOUT_UNKNOWN")
+    need(type(applied_hands) in (tuple,list)
+         and len(applied_hands)<=2
+         and all(type(x) is str and x in HANDS for x in applied_hands)
+         and len(set(applied_hands))==len(applied_hands),
+         "OIL_HAND_SET_INVALID")
+    applied=frozenset(applied_hands)
+    original_slots=_profile_slots(profile)
+    need("main_hand" in original_slots,"MAIN_WEAPON_REQUIRED")
+    if weapon_layout in SINGLE_LAYOUTS:
+        need("off_hand" not in applied,"NONWEAPON_OFFHAND_CANNOT_RECEIVE_OIL")
+    if weapon_layout in DUAL_LAYOUTS:
+        need("off_hand" in original_slots,
+             "DUAL_WIELD_OFFHAND_ITEM_ABSENT")
+    # Strong user-provided source provenance; profile can only change
+    # temporary_enchant once, not arbitrary equipment/APL/consumables.
+    source=normalized["scenario"]["source"]
+    if source["kind"]=="user_supplied":
+        need(hashlib.sha256(profile.encode("utf8")).hexdigest()==
+             source["profile_sha256"],
+             "USER_SOURCE_PROFILE_SHA_MISMATCH")
+    need(len([l for l in profile.splitlines()
+              if l.startswith("temporary_enchant=")])<=1,
+         "MULTIPLE_TEMPORARY_ENCHANT_ASSIGNMENTS")
+    ordered=[s for s in ("main_hand","off_hand") if s in applied]
+    declared_O={k:PER_WEAPON[k]*len(ordered) for k in scenario.STATS}
+    literal=("/".join(s+":"+OIL for s in ordered) if ordered else "disabled")
+    token="temporary_enchant="+literal
+    out=[]
+    replaced=False
+    for line in profile.splitlines():
+        if line.startswith("temporary_enchant="):
+            need(not replaced,"MULTIPLE_TEMPORARY_ENCHANT_ASSIGNMENTS")
+            out.append(token)
+            replaced=True
+        else:
+            out.append(line)
+    if not replaced:out.append(token)
+    new_profile="\n".join(out).rstrip()+"\n"
+    need(sum(x.startswith("temporary_enchant=")
+             for x in new_profile.splitlines())==1,
+         "OIL_MUST_BE_EXPLICIT_ONCE")
+    cfg=copy.deepcopy(doc)
+    cfg["consumables"]["weapon_temporary"]=OIL if ordered else None
+    cfg["consumables"]["weapon_temporary_fixed_rating"]=declared_O
+    if cfg["source"]["kind"]=="user_supplied":
+        cfg["source"]["profile_sha256"]=hashlib.sha256(
+            new_profile.encode("utf8")).hexdigest()
+    effective=scenario.normalize(cfg)
+    need(effective["budget"]["T"]==normalized["budget"]["T"],
+         "OIL_ALTERED_OFFICIAL_T")
+    need(effective["budget"]["external_temporary_rating"]==declared_O,
+         "OIL_EXTERNAL_VECTOR_DRIFT")
+    return {"schema":SCHEMA,"status":"EXPLICIT_OIL_INPUT_CONFIGURED",
+        "profile":new_profile,"scenario":cfg,
+        "original_sha256":hashlib.sha256(profile.encode("utf8")).hexdigest(),
+        "profile_sha256":hashlib.sha256(new_profile.encode("utf8")).hexdigest(),
+        "weapon_layout":weapon_layout,"applied_hands":ordered,
+        "oil_token":OIL if ordered else None,
+        "expected_simc_temporary_enchant":literal,
+        "declared_O":declared_O,"oil_outside_T":True,
+        "T_unchanged":True,"native_calls":0,
+        "mechanics_owner":"SimC",
+        "buffed_O_addition_independently_proven":False}
+
+def prepare(profile,doc,fillers,static_cache,weapon_layout,applied_hands):
+    oil=configure(profile,doc,weapon_layout,applied_hands)
+    selection=chooser.resolve(oil["scenario"],mode=chooser.REFERENCE_MODE,
+                              weapon_layout=weapon_layout)
+    prepared=reference_path.prepare(selection,fillers,static_cache,oil["profile"])
+    need(prepared["T"]==selection["resolved_T"] and
+         prepared["scenario"]["budget"]["external_temporary_rating"]==
+         oil["declared_O"],
+         "OIL_TOTAL_OR_EXTERNAL_VECTOR_MISMATCH")
+    # A source-locked full exact ID/ilevel/option profile with all selected
+    # fixed L and no ordinary G cache is required via existing v090.
+    return {"schema":SCHEMA,"status":"READY_V091_STATIC_C_CANDIDATE",
+        "oil":oil,"prepared":prepared,
+        "native_calls":0,"original_v015_v016_integrated":False}
+
+def propose(bundle,target,flask_vector,binary_sha,revision,iterations,path):
+    need(bundle.get("schema")==SCHEMA and
+         bundle.get("status")=="READY_V091_STATIC_C_CANDIDATE",
+         "V091_PREPARED_BUNDLE_REQUIRED")
+    oil=bundle["oil"]
+    out=reference_path.propose(bundle["prepared"],oil["profile"],
+            target,flask_vector,binary_sha,revision,iterations,path)
+    need(out["official_total"]==bundle["prepared"]["T"] and
+         out["external_oil_only"]==oil["declared_O"] and
+         all(out["raw_gear_override"][s]+flask_vector[s]==target[s]
+             for s in scenario.STATS),
+         "OIL_WAS_DOUBLE_INJECTED_INTO_GEAR_RATING")
+    out["v091_oil_hands"]=oil["applied_hands"]
+    out["v091_expected_temporary_enchant"]=(oil["expected_simc_temporary_enchant"])
+    out["v091_declaration_O"]=oil["declared_O"]
+    out["v091_stat_effect_simc_owned"]=True
+    return out
+
+def ingest_native(request,native,raw_bytes=None):
+    """Native acceptance: exact parsed oil selection + existing static c DPS.
+
+    Does NOT claim that post-talent buffed_stats necessarily equals c+O.
+    """
+    need(type(request) is dict and
+         "v091_expected_temporary_enchant" in request,
+         "V091_REQUEST_REQUIRED")
+    need(native.get("report_version")=="2.0.0",
+         "V091_NATIVE_REPORT_REQUIRED")
+    players=(native.get("sim") or {}).get("players") or []
+    need(len(players)==1,"V091_SINGLE_NATIVE_PLAYER_REQUIRED")
+    got=players[0].get("temporary_enchant")
+    expected=request["v091_expected_temporary_enchant"]
+    need(got==expected,"NATIVE_OIL_SETTING_DIFFERENT_FROM_USER_CHOICE")
+    # v064 uses existing numeric.static-c and DPS/SEM acceptance.
+    actual=port.ingest_native(request,native,
+                            {"native_revision":request["native_revision"]},
+                            raw_bytes)
+    actual["oil_reported_by_native"]=got
+    actual["oil_hands_declared"]=request["v091_oil_hands"]
+    actual["O_external_declared_not_double_injected"]=request["v091_declaration_O"]
+    actual["native_oil_static_addition_observed_in_buffed_rating"]=False
+    actual["independent_proc_effect_certification"]=False
+    return actual
