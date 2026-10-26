@@ -1,5 +1,8 @@
 # v104 — Source-pinned Rogue/Subtlety + Shaman/Elemental user-flow enablement
 
+**Final latest code-only documentation cleanup:** [Actions #40330142812](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40330142812) SUCCESS on code commit `49e99780b1ee738c7af65865cf5f023a67ed59e6`; **179 offline tests PASS / 0 FAIL**, compile/pilot PASS, Native 0. This only synchronizes the source comments to the actual six supported input cases and does not change their code behavior.
+
+
 **Date:** 2026-10-26 KST. **Scope:** isolated GitHub branch; code+offline input-plan validation. **Native SimC executions this step: 0.** Never infer product-wide acceptance from this.
 
 ## Delivered P1 code
