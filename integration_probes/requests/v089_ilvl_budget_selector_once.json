@@ -1,0 +1,13 @@
+{
+  "schema": "v089_ilevel_total_opt_in_reference_bridge_v1",
+  "reference_mode": "reference_rounded_opt_in",
+  "native_mode": "exact_native_G",
+  "user_manual_total_overrides_both": true,
+  "common_334": 3150,
+  "fury_dual2h_334": 3350,
+  "official_formula_unchanged": "T=G+J+F",
+  "oil_external": true,
+  "special_L_exact_not_synthetic": true,
+  "new_simc_calls": 0,
+  "original_v015_v016_integrated": false
+}
