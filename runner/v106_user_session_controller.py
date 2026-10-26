@@ -79,6 +79,37 @@ def validated_selected_gear(entries,group,limit):
          "DUPLICATE_SELECTED_GEAR_SLOT")
     return out
 
+def selected_rows_from_form(special_rows,crafted_rows):
+    """Thin form-data serializer: only ID/slot/SimC-native option tokens.
+
+    Empty rows are ignored. Partial rows fail before any Native request.
+    Original item effects and crafted stat mechanics stay in SimC, not here.
+    """
+    need(type(special_rows) is list and len(special_rows)<=2
+         and type(crafted_rows) is list and len(crafted_rows)<=2,
+         "ADVANCED_FORM_MAX_TWO_ROWS_PER_GROUP")
+    converted={}
+    layouts=(
+        ("special_items",special_rows,("bonus_id","redirected_base_stats")),
+        ("embellishments",crafted_rows,
+         ("crafted_stats","embellishment","bonus_id")))
+    for group,rows,option_keys in layouts:
+        result=[]
+        for raw in rows:
+            need(type(raw) is dict
+                 and set(raw)=={"slot","item_id"}|set(option_keys),
+                 "ADVANCED_FORM_FIELDS")
+            text={k:str(v).strip() for k,v in raw.items()}
+            if not any(text.values()):continue
+            need(text["slot"] and text["item_id"] and
+                 text["item_id"].isdigit(),
+                 "ADVANCED_FORM_SLOT_AND_ITEM_REQUIRED")
+            result.append({
+                "slot":text["slot"],"item_id":int(text["item_id"]),
+                "options":{k:text[k] for k in option_keys if text[k]}})
+        converted[group]=result
+    return converted
+
 def user_scenario(controls):
     """Only approved v098 user fields; do not expose manifest/filler/seed."""
     required={"class","spec","race","talents","ilevel","final_T",
