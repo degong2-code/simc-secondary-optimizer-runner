@@ -105,8 +105,11 @@ class LocalJobs:
         child = self.children.get(key)
         if child is not None and child.poll() is None:
             return True
-        # A worker can survive an HTTP server restart; OS lock, not the
-        # persisted RUNNING string, is authoritative for live activity.
+        # Never CREATE lock files during GET/status; status is read-only.
+        # A worker can survive an HTTP server restart: check an existing
+        # OS lock rather than trusting the persisted RUNNING status.
+        if not (folder / "V106_WORKER.lock").is_file():
+            return False
         try:
             with sessions.worker_lock(folder):
                 return False
