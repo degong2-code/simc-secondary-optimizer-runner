@@ -1,0 +1,14 @@
+{
+  "schema": "v094_durable_approved_T_native_runner_once_v1",
+  "official_total_formula": "T=G+J+F+O",
+  "internal_scheduler_budget": "B=G+J+F",
+  "external_oil_fixed_not_fungible": true,
+  "scout_uses_existing_v065": true,
+  "resume_checks_original_native_JSON2_SHA": true,
+  "cancel_and_strict_native_budget": true,
+  "confidence97_comparison_only": true,
+  "confidence95_existing_decision": true,
+  "all_existing_regressions": true,
+  "new_simc_calls_in_CI": 0,
+  "original_v015_v016_product_merged": false
+}
