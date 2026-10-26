@@ -10,6 +10,7 @@ from __future__ import annotations
 import copy,hashlib,json,pathlib
 import v046_static_item_cache as itemcache
 import v061_scenario_contract as scenario
+import v063_numeric_injection as numerical
 import v065_v015_scheduler_adapter as policy
 import v091_weapon_oil_external_adapter as oilpath
 import v092_approved_inclusive_CHMV_policy as totals
@@ -81,7 +82,8 @@ def request(context,base_target,flask_vector,json2_path,phase="scout"):
          and req["v091_expected_temporary_enchant"]==bound["oil_temporary_enchant"],
          "ADAPTIVE_FINAL_T_O_PROFILE_IDENTITY")
     need(req["scenario_digest"]==bound["scenario_digest"] and
-         req["profile_stable_sha256"]==bound["source_profile_sha256"],
+         req["profile_stable_sha256"]==numerical.input_parts(
+             context["bundle"]["oil"]["profile"])["stable_sha256"],
          "ADAPTIVE_SOURCE_PROFILE_IDENTITY")
     req["v093_phase"]=phase
     req["v093_session_digest"]=itemcache.digest(bound)
