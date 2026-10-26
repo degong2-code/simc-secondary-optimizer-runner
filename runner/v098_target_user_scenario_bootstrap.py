@@ -15,6 +15,7 @@ import v065_v015_scheduler_adapter as scheduler
 import v101_common_representative_equipment as common
 import v091_weapon_oil_external_adapter as oil_mod
 import v096_unified_product_entry as entry
+import v108_native_consumable_inputs as consumer
 
 SCHEMA="v098_target_ilevel_user_scenario_v1"
 FIELDS={"schema","character","target","trinkets","special_items",
@@ -23,6 +24,7 @@ FIELDS={"schema","character","target","trinkets","special_items",
 ARCHETYPES=common.ARCHETYPES
 FIXTURES=common.FIXTURES
 IMPORT_FIELD="import_simc_profile"
+CONSUME_FIELD="consumable_choices"
 TIER_FIVE=common.TIER_FIVE
 FIFTH_TIER=common.FIFTH_TIER
 
@@ -125,7 +127,9 @@ def initial_seeds(B,lower,upper):
 def build(user,folder,binary,revision,static_cache_path=None,
           imported_profile_text=None):
     """Return an already validated internal manifest and v096 plan; no Native."""
-    need(type(user) is dict and set(user) in (FIELDS,FIELDS|{IMPORT_FIELD})
+    need(type(user) is dict and set(user) in (
+        FIELDS,FIELDS|{IMPORT_FIELD},FIELDS|{CONSUME_FIELD},
+        FIELDS|{IMPORT_FIELD,CONSUME_FIELD})
          and user.get("schema")==SCHEMA,"USER_SCENARIO_FIELDS")
     using_import=IMPORT_FIELD in user
     if using_import:
@@ -187,6 +191,14 @@ def build(user,folder,binary,revision,static_cache_path=None,
               "max_time":str(combat["duration_seconds"]),
               "optimal_raid":"1" if combat["raid_buffs"] else "0"}
     profile=replace_assignments(base_profile,settings,rows)
+    # Profile-native consumables and primary-only diamond are applied to
+    # existing full source-backed gear BEFORE oil recalculates SHA and B/O.
+    selected=consumer.apply(profile,cfg,rows,
+                            user.get(CONSUME_FIELD))
+    profile=consumer.set_head_gem(selected["profile"],rows["head"])
+    cfg=selected["scenario"]
+    cfg["equipment"],fillers=common.physical_gear_groups(
+        rows,groups,catalyst_origin_rows)
     cfg["source"]={"kind":"user_supplied",
                    "profile_sha256":hashlib.sha256(profile.encode("utf8")).hexdigest()}
     scenario.normalize(cfg)
@@ -232,7 +244,11 @@ def build(user,folder,binary,revision,static_cache_path=None,
             "restored_tier_slots":restored_tier_slots,
             "effective_four_tier_slots":sorted(
                  slot for slot,g in groups.items() if g=="tier"),
-            "all_specs_ready":False}
+            "all_specs_ready":False,
+            "consumables_selected":selected["selected"],
+            "gem_secondary_budget_J_fixed_138":True,
+            "flask_F_fixed_165":True,
+            "omnium_folio_user_input_ready":False}
 
 def run(user_path,folder,binary,revision,static_cache_path=None,
         execute=False,cache_only=False):
