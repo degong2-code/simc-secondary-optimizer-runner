@@ -66,7 +66,8 @@ def _candidate_summary(observations, B, O, near_loss=0.01, material=0.10):
                  'observed_relative_dps_loss':loss,
                  'diff_95_halfwidth_approx':Z95*combined,
                  'difference_95_separated':delta>Z95*combined,
-                 'label':'BOUNDED_OBSERVED_ALTERNATIVE_NOT_STATISTICALLY_PROVEN'})
+                 'label':('OBSERVED_NEAR_BUT_LOWER_AT_95' if delta>Z95*combined
+                          else 'OBSERVED_NEAR_UNRESOLVED_AT_95')})
     return {'schema':'v094_observed_candidates_nonoptimal_v1',
         'official_formula':'T=G+J+F+O','underlying_B':B,
         'fixed_O':dict(O),'final_T':B+sum(O.values()),
@@ -184,6 +185,7 @@ def run(context, seed_targets, flask_vector, binary, output, *,
             full['v092_base_target']=req['v092_base_target']
             full['v092_fixed_O']=req['v092_fixed_O']
             full['v092_final_T']=req['v092_final_T']
+            full['v093_phase']=phase
             full['source']=direct['source']
             if direct['source']=='CACHED_VERIFIED_NATIVE':
                 progress['cache_verified_hits']+=1
