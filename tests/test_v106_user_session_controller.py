@@ -157,6 +157,35 @@ class UserSessionControls(unittest.TestCase):
         self.assertNotIn("result.json",list(x.name for x in folder.glob("*.json")))
         self.assertTrue((folder/"generated"/"simc_results"/"V094_RESULT.json").exists())
 
+    def test_cache_only_missing_six_results_refuses_runner_before_any_native(self):
+        root,binary,user=self.fixture()
+        folder=ux.store_session(user,root/"sessions",binary,"7bc10711b5")
+        with mock.patch.object(ux.bootstrap,"run") as mocked:
+            self.assertEqual(ux.worker(folder,binary,"7bc10711b5",
+                                       cache_only=True),3)
+            mocked.assert_not_called()
+        self.assertFalse((folder/"V112_CACHE_REPLAY_RECEIPT.json").exists())
+        self.assertFalse(ux.paths(folder)["progress"].exists())
+
+    def test_cache_only_rejects_modified_native_json2_even_with_fake_runner_pass(self):
+        root,binary,user=self.fixture()
+        folder=ux.store_session(user,root/"sessions",binary,"7bc10711b5")
+        with mock.patch.object(ux.bootstrap,"run",
+                               return_value={"native_result":fake_native(0)}):
+            self.assertEqual(ux.worker(folder,binary,"7bc10711b5"),0)
+        synthetic_completed_cache(folder)
+        case=(ux.paths(folder)["native_result"].parent/
+              "search"/"case_00"/"result.json")
+        def fake_replay(*_args,**_kwargs):
+            case.write_text(json.dumps({"fake_case":0,"tampered":True}))
+            return {"native_result":fake_native(6)}
+        with mock.patch.object(ux.bootstrap,"run",side_effect=fake_replay):
+            self.assertEqual(ux.worker(folder,binary,"7bc10711b5",
+                                       cache_only=True),3)
+        self.assertIn("CACHE_ONLY_NATIVE_BYTES_OR_ATTEMPTS_DRIFT",
+                      json.loads(ux.paths(folder)["state"].read_text())["reason"])
+        self.assertFalse((folder/"V112_CACHE_REPLAY_RECEIPT.json").exists())
+
     def test_replay_semantic_drift_blocks_even_if_worker_is_mocked(self):
         root,binary,user=self.fixture()
         folder=ux.store_session(user,root,binary,"7bc10711b5")
