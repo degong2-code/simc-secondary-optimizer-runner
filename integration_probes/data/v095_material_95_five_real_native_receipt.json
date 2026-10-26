@@ -1,0 +1,171 @@
+{
+  "schema": "v095_material_near_alternative_real_native_v1",
+  "date": "2026-10-26",
+  "user_decision": {
+    "confidence_percent": 95,
+    "percent97_display_removed": true,
+    "percent97_policy": false
+  },
+  "formula": "T=G+J+F+O",
+  "scenario": "Fury Warrior 334, dual two-hand, two Phoenix oils",
+  "base_B": 3350,
+  "fixed_O": {
+    "crit_rating": 32,
+    "haste_rating": 32,
+    "mastery_rating": 0,
+    "versatility_rating": 0
+  },
+  "final_T": 3414,
+  "source_profile_sha256": "cc12e349eb1630ad06eede974cff204fc52164f26e5ff95f7638e1944f5a4872",
+  "simc_binary_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+  "simc_revision": "7bc10711b5",
+  "execution": {
+    "actual_new_native_calls": 5,
+    "seed_calls": 2,
+    "material_scout_calls": 1,
+    "fresh_confirmation_calls": 2,
+    "typed_new_native_limit": 5,
+    "cache_only_replay_hits": 5,
+    "cache_only_replay_new_calls": 0,
+    "source": "final GitHub CI-pinned v095 source and unchanged original scenario gear/APL with only typed native_limit=5"
+  },
+  "CI": {
+    "initial_run": 40268201579,
+    "final_run": 40268656884,
+    "conclusion": "SUCCESS",
+    "tests": 540,
+    "passed": 538,
+    "skipped": 2,
+    "failed": 0,
+    "CI_native_calls": 0,
+    "artifact_id": 12627632078,
+    "artifact_digest_sha256": "543aa5d35302933f5b654cac87e6082a536c520552fab17b627d9876e434bbae"
+  },
+  "cases": [
+    {
+      "phase": "seed_00",
+      "B": [
+        838,
+        838,
+        837,
+        837
+      ],
+      "T": [
+        870,
+        870,
+        837,
+        837
+      ],
+      "iterations": 35,
+      "samples": 34,
+      "dps": 203297.2421698316,
+      "SEM": 786.7638151191376,
+      "json2_sha256": "70ea13ad29234f1d4a054d7b2cec9315df0496d652aed3c8c619bdae2018560e"
+    },
+    {
+      "phase": "seed_01",
+      "B": [
+        938,
+        738,
+        837,
+        837
+      ],
+      "T": [
+        970,
+        770,
+        837,
+        837
+      ],
+      "iterations": 35,
+      "samples": 34,
+      "dps": 201328.47567963443,
+      "SEM": 870.968424717286,
+      "json2_sha256": "306d2c7ed8f66a4a39c3ee6bb96197e78a190a9f36ac02461fca88aef6342e07"
+    },
+    {
+      "phase": "material_00",
+      "B": [
+        503,
+        838,
+        837,
+        1172
+      ],
+      "T": [
+        535,
+        870,
+        837,
+        1172
+      ],
+      "iterations": 35,
+      "samples": 34,
+      "dps": 202391.94795685116,
+      "SEM": 975.3916557787941,
+      "json2_sha256": "04e2c496c14c55c7946209888cbf35cd6977d8c7cbde6174e972b669718be6ac"
+    },
+    {
+      "phase": "confirm_00",
+      "B": [
+        838,
+        838,
+        837,
+        837
+      ],
+      "T": [
+        870,
+        870,
+        837,
+        837
+      ],
+      "iterations": 80,
+      "samples": 79,
+      "dps": 203286.63762639198,
+      "SEM": 534.8979083510652,
+      "json2_sha256": "aef604ea84a381d5a41b0af9c6188f6f7c52828c040f756bd8cdf7e4df359f46"
+    },
+    {
+      "phase": "confirm_01",
+      "B": [
+        503,
+        838,
+        837,
+        1172
+      ],
+      "T": [
+        535,
+        870,
+        837,
+        1172
+      ],
+      "iterations": 80,
+      "samples": 79,
+      "dps": 201534.15392683193,
+      "SEM": 530.0851873867797,
+      "json2_sha256": "38d5536999ab9a635d91ba2ced6a282ae303e190216e1ca3596d4e8c798f4bb6"
+    }
+  ],
+  "measured_alternative": {
+    "base_rating_transferred": 335,
+    "fraction_of_B": 0.1,
+    "dps_loss_fraction": 0.008620752057401978,
+    "dps_difference": 1752.483699560049,
+    "confidence95_halfwidth_approx": 1475.9792168103293,
+    "observed95_statistical_difference": true,
+    "label": "OBSERVED_NEAR_BUT_LOWER_AT_95",
+    "truly_equal_performance_claim": false
+  },
+  "precision": {
+    "decision": "95_PERCENT_ALREADY_SEPARATED",
+    "extra_calls_required": false,
+    "existing_confirm_iterations": 80,
+    "higher_iteration_auto_executed": false,
+    "user_configured_native_budget_must_allow_additional_repeats": true
+  },
+  "boundaries": {
+    "no_global_optimum_proven": true,
+    "no_all_specializations_supported_claim": true,
+    "original_v015_v016_not_merged": true,
+    "official_workOS_and_Project_Source_apply_not_verified": true,
+    "main_branch_unchanged": true
+  },
+  "full_proof_archive_pending_user_delivery": true
+}
