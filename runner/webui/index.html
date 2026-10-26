@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>SIMC Secondary Optimizer — 로컬 웹앱</title>
+  <link rel="stylesheet" href="/assets/styles.css">
+  <script src="/assets/app.js" defer></script>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <div class="brand"><div class="brand-mark" aria-hidden="true">S<span>✦</span></div><div><strong>SIMC SECONDARY</strong><small>LOCAL OPTIMIZER · PRIVATE BETA</small></div></div>
+      <div class="local-indicator"><span class="dot"></span> 로컬 실행 · 계산은 내 PC에서</div>
+    </header>
+    <main>
+      <div class="intro">
+        <div><p class="eyebrow">TARGET-LEVEL SECONDARY STATS</p><h1>내 목표 장비의 <em>최적 스탯</em>을 찾아보세요.</h1><p class="intro-desc">현재 장비를 재분배하지 않습니다. 목표 아이템레벨의 대표 장비를 내부 구성하고, SimC로 미래의 치명·가속·특화·유연 절대 rating을 탐색합니다.</p></div>
+        <div class="callout"><strong>SimC는 내 컴퓨터에서 실행</strong><span>프로필과 계산 결과는 로컬 세션에 저장됩니다.<br>관측 1순위는 전역 최적해의 증명이 아닙니다.</span></div>
+      </div>
+      <div id="notice" class="notice" role="status" aria-live="polite">로컬 서버에 연결 중…</div>
+      <div class="columns">
+        <section class="panel inputs" aria-labelledby="input-title">
+          <div class="section-head"><div><p class="eyebrow">STEP 01 · CHARACTER & TARGET</p><h2 id="input-title">최적화 조건</h2></div><span class="micro">현재 6개 전문화 베타</span></div>
+          <form id="optimizer-form" autocomplete="off">
+            <div class="field full"><label for="spec">직업 · 전문화</label><select id="spec" required disabled><option value="">지원 정보 조회 중…</option></select></div>
+            <div class="two">
+              <div class="field"><label for="race">종족 (SimC 토큰)</label><input id="race" required spellcheck="false"></div>
+              <div class="field"><label for="ilevel">목표 아이템레벨</label><input id="ilevel" type="number" min="266" max="344" step="1" value="334" required></div>
+            </div>
+            <div class="field"><label for="talents">특성 코드 <small>원본 기본 특성 자동 입력</small></label><textarea id="talents" rows="2" required spellcheck="false"></textarea></div>
+            <div class="two">
+              <div class="field"><label for="trinket1">장신구 1 · 아이템 ID</label><input id="trinket1" type="number" min="1" required></div>
+              <div class="field"><label for="trinket2">장신구 2 · 아이템 ID</label><input id="trinket2" type="number" min="1" required></div>
+            </div>
+            <div class="field"><label for="final_T">수동 최종 CHMV T <small>선택 · 비우면 목표 ilvl 예산</small></label><input id="final_T" type="number" min="1" max="100000" placeholder="자동 산정"></div>
+            <div class="two"><div class="field"><label for="targets">대상 수</label><input id="targets" type="number" min="1" max="40" value="1" required></div><div class="field"><label for="duration">전투 길이 (초)</label><input id="duration" type="number" min="1" max="3600" value="300" required></div></div>
+            <div class="check-row"><label><input id="raid_buffs" type="checkbox" checked> 공대 버프</label><label><input id="oil_main" type="checkbox" checked> 주무기 기름</label><label><input id="oil_off" type="checkbox"> 보조무기 기름</label></div>
+            <details class="fold"><summary><span>선택 특수효과 장비 · 장식</span><small>각 최대 2개, 정확한 ID/SimC 옵션 필요</small></summary><p class="hint">일반 장비·티어4세트는 자동 구성됩니다. 선택 특수장비의 정확한 Native 정적 L 캐시가 없으면 실행 전에 차단합니다.</p><div id="special-rows"></div><div id="crafted-rows"></div></details>
+            <details class="fold"><summary><span>소모품 · 다이아몬드 · Omnium</span><small>소스 관측 선택지만 제공</small></summary><div class="two">
+              <div class="field"><label for="food">음식</label><select id="food"></select></div>
+              <div class="field"><label for="potion">물약</label><select id="potion"></select></div>
+              <div class="field"><label for="augmentation">증강 룬</label><select id="augmentation"></select></div>
+              <div class="field"><label for="diamond">에버송 다이아몬드</label><select id="diamond"></select></div>
+            </div><div class="field"><label for="omnium">Omnium Folio 룬 조합</label><select id="omnium"></select></div><p class="hint">영약은 검증된 원본 고정치 F=165를 유지합니다. Omnium은 증강 룬과 별도 효과이며, 임의 룬 재조합은 지원하지 않습니다.</p></details>
+            <div class="rule"></div>
+            <p class="eyebrow">STEP 02 · LOCAL SIMC</p>
+            <div class="field"><label for="binary">simc.exe 경로 <small>실행 파일은 서버로 업로드하지 않습니다</small></label><input id="binary" placeholder="C:\SimC\simc.exe" required spellcheck="false"></div>
+            <div class="two"><div class="field"><label for="revision">SimC Git revision</label><input id="revision" required pattern="[a-fA-F0-9]{7,40}" placeholder="7bc1071" spellcheck="false"></div><div class="field"><label for="static_cache">정적 캐시 JSON 경로 <small>선택</small></label><input id="static_cache" spellcheck="false" placeholder="특수장비 사용 시 필요"></div></div>
+            <div class="actions"><button type="button" id="plan-btn" class="btn secondary" disabled>예산 미리 확인 · Native 0회</button><button type="button" id="start-btn" class="btn primary" disabled>SimC 최적화 실행</button></div>
+          </form>
+        </section>
+        <aside class="workspace">
+          <section class="panel run-card" aria-labelledby="run-title">
+            <div class="section-head"><div><p class="eyebrow">STEP 03 · SESSION</p><h2 id="run-title">실행 현황</h2></div><span id="run-label" class="pill">대기</span></div>
+            <div class="session-meta"><span>세션 ID</span><code id="session-id">없음</code></div>
+            <div class="progress-info"><strong id="progress-label">0 / 6 후보</strong><span id="progress-pct">0%</span></div><div class="progress-track"><div id="progress-bar"></div></div>
+            <p id="stage-text" class="subtle">기존 세션이나 새 조건을 선택해 주세요.</p>
+            <div class="two-button"><button class="btn secondary" id="resume-btn" type="button" disabled>같은 세션 재개</button><button class="btn secondary" id="cache-btn" type="button" disabled>캐시 6/6 재검증</button></div><button class="btn danger" id="cancel-btn" type="button" disabled>취소 요청 · 현재 SimC 계산 종료 후 중단</button>
+            <details class="restore"><summary>기존 세션 ID로 열기</summary><div class="restore-controls"><input id="restore-id" aria-label="기존 세션 ID" maxlength="20" placeholder="20자리 세션 ID" spellcheck="false"><button id="restore-btn" type="button" class="btn tiny">열기</button></div><p class="hint">브라우저를 새로고침해도 기존 세션은 PC에 보존됩니다. 세션 ID를 알고 있다면 실행 없이 결과만 불러올 수 있습니다.</p></details>
+          </section>
+          <section class="panel results" id="result-panel" aria-labelledby="result-title">
+            <div class="section-head"><div><p class="eyebrow">STEP 04 · OBSERVED RESULT</p><h2 id="result-title">관측 결과</h2></div><span class="pill">95% 판정</span></div>
+            <div id="empty-result" class="empty">아직 표시할 결과가 없습니다.<br>완료된 기존 세션을 불러오거나 새 계산을 실행해 주세요.</div>
+            <div id="filled-result" hidden>
+              <p class="result-warning">관측 1순위 · 전역 최적해 입증 아님</p>
+              <div class="metrics"><div><span>관측 DPS</span><strong id="dps">–</strong></div><div><span>SimC SEM</span><strong id="sem">–</strong></div></div>
+              <p class="budget" id="budget">–</p>
+              <div id="stat-bars" class="stat-bars"></div>
+              <div class="result-footer"><div><span>확인 후보 95% 방향 지지</span><strong id="conf95">–</strong></div><div><span>관측된 근접 대안</span><strong id="alt-count">–</strong></div></div>
+              <div id="alt-list" class="alt-list"></div><p class="hint">미관측은 대안이 없다는 뜻이 아닙니다. DPS·효과는 SimC가 계산합니다.</p>
+            </div>
+          </section>
+          <div class="footnote">SIMC SECONDARY OPTIMIZER · 개인용 로컬 웹앱 베타<br>지원하지 않는 전문화와 검증되지 않은 입력은 실행 전에 차단합니다.</div>
+        </aside>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
