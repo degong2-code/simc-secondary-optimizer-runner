@@ -1,0 +1,113 @@
+name: v095 Material Alternative and 95 Percent Precision
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/v095_material_95_once.json
+      - integration_probes/requests/v095_material_95_retry.json
+permissions:
+  contents: read
+concurrency:
+  group: v095-material-95-ci
+  cancel-in-progress: false
+jobs:
+  bounded:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Validate source pins and user preference
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os,json,pathlib,subprocess
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          permitted={"integration_probes/requests/v095_material_95_once.json",
+                     "integration_probes/requests/v095_material_95_retry.json"}
+          assert len(changed)==1 and changed[0] in permitted, changed
+          expected={"schema":"v095_confirmed_95_only_material_scout",
+            "selected_confidence_percent":95,
+            "display_97_percent":False,
+            "material_transfer_B_fraction":0.10,
+            "near_observed_dps_loss_max_fraction":0.01,
+            "material_scout_reuses_v065_neighbors":True,
+            "optional_precision_sem_based_on_95":True,
+            "fixed_O_not_fungible":True,
+            "T":"G+J+F+O",
+            "native_call_limit_fail_closed":True,
+            "full_regression":True,
+            "ci_simc_calls":0,
+            "original_v015_v016_product_merged":False}
+          assert json.loads(pathlib.Path(changed[0]).read_text())==expected
+          pins={
+            "runner/v094_durable_inclusive_adaptive_runner.py":"f9cd3ca9af7281d70a664ebdba586b8e84fec647",
+            "runner/v095_material_precision_policy.py":"5c3d5d2f180025e7aa9f3782b8d87ff4c0ce1ea8",
+            "tests/test_v094_durable_inclusive_adaptive_runner.py":"a185ff885cc61d1fe8be35edd76d246e4fab1d12",
+            "tests/test_v095_material_precision_policy.py":"959766a2918966a8b2229d26384e8caddb32ba75"}
+          for p,sha in pins.items():
+              got=subprocess.check_output(["git","hash-object",p],text=True).strip()
+              assert sha==got,(p,sha,got)
+          print("V095_EXPLICIT_95_ONLY_USER_POLICY_AND_SOURCE_PIN_PASS")
+          PY
+      - name: Full offline regression and pilot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Generate source-backed broad scout candidate offline
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out/v095
+          python3 - <<'PY'
+          import json,pathlib,sys
+          sys.path[:0]=["runner","tests"]
+          import v046_static_item_cache as cache
+          import v091_weapon_oil_external_adapter as oil
+          import v093_inclusive_adaptive_scheduler_bridge as bridge
+          import v095_material_precision_policy as policy
+          import v082_fury_plate_dual_twohand_native as fury_engine
+          from test_v091_weapon_oil_external_adapter import fury,FURY_TARGET,BIN,REV
+          from test_v093_inclusive_adaptive_scheduler_bridge import OTHER, simulated_result
+          root=pathlib.Path("out/v095").resolve()
+          source,document,fillers=fury(root)
+          bundle=oil.prepare(source,document,fillers,cache.empty_cache(),
+                "dual_two_hand",["main_hand","off_hand"])
+          context=bridge.prepare(bundle,BIN,REV,35,80)
+          seed=[]
+          for idx,t in enumerate([FURY_TARGET,OTHER]):
+              req=bridge.request(context,t,fury_engine.DECLARED_F,
+                                 root/("seed_%02d.json"%idx),"seed")
+              seed.append(bridge.project_native_for_v065(req,
+                  simulated_result(req,200000+idx*100,500,seed=idx+1)))
+          choice=policy.material_neighbor(bundle["prepared"]["scenario"],
+                  bundle["prepared"]["static_budget"],seed,0.10)
+          req=bridge.request(context,choice["candidate_B"],
+                  fury_engine.DECLARED_F,root/"material"/"result.json","scout")
+          d=root/"material";d.mkdir(exist_ok=True)
+          (d/"input.simc").write_text(req["input"])
+          (d/"request.json").write_text(json.dumps({k:v for k,v in req.items()
+                if k!="input"},indent=2,sort_keys=True)+"\n")
+          (root/"material_plan.json").write_text(json.dumps(choice,indent=2,sort_keys=True)+"\n")
+          assert sum(req["target"].values())==3414
+          assert choice["rating_transferred"]>=335
+          print("V095_BOUNDED_MATERIAL_SCOUT_INPUT_READY_ZERO_NATIVE")
+          PY
+      - name: Portable exact source for optional local Native
+        shell: bash
+        run: |
+          tar -czf out/v095/SOURCE_BUNDLE.tgz runner/ tests/ integration_probes/fixtures/v082_upstream_mid2_warrior_fury_reference.simc integration_probes/data/midnight_s2_ilvl_chmv_reference_v1.json
+          sha256sum out/v095/SOURCE_BUNDLE.tgz > out/v095/SOURCE_BUNDLE.sha256
+          python3 runner/v094_durable_inclusive_adaptive_runner.py --help > out/v095/CLI_HELP.txt
+          grep -q -- '--material-scouts' out/v095/CLI_HELP.txt
+      - uses: actions/upload-artifact@v6
+        with:
+          name: simc-v095-95-only-material-planner-${{ github.run_id }}
+          path: out/v095/
+          if-no-files-found: error
+          retention-days: 14
