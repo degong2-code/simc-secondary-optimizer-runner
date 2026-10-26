@@ -329,11 +329,13 @@ class UserWindow:
                 p=progress(self.folder)
                 self.bar["value"]=p["progress_percent"]
                 running=self.proc is not None and self.proc.poll() is None
-                self.status.set(
-                    ("실행 중" if running else p["status"])+
-                    f" · {p['completed_jobs']}/{p['planned_jobs']} 후보"
-                    f" · Native 누적 {p['native_attempts']}"
-                    f" · 캐시 {p['cache_hits']}")
+                if running:
+                    self.status.set(
+                        f"실행 중 · {p['completed_jobs']}/{p['planned_jobs']} 후보"
+                        f" · Native 누적 {p['native_attempts']}"
+                        f" · 캐시 {p['cache_hits']}")
+                # When idle, retain the PASS / BLOCKED message instead of
+                # erasing it every 450 ms with old durable progress.
                 log=paths(self.folder)["log"]
                 if log.is_file():
                     with log.open("rb") as f:
