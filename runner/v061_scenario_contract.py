@@ -84,8 +84,11 @@ def entry(data,kind):
             "ilevel":data["ilevel"],"options":options}
 
 def equipment(raw):
-    keys_exact(raw,("tier","special","crafted","trinkets"),"EQUIPMENT")
-    need(all(type(raw[k]) is list for k in raw),"EQUIPMENT_LISTS")
+    groups=("tier","special","crafted","trinkets")
+    opt_tag="catalyst_special_tier_slots"
+    need(type(raw) is dict and set(raw) in
+         (set(groups),set(groups)|{opt_tag}),"EQUIPMENT_FIELDS")
+    need(all(type(raw[k]) is list for k in groups),"EQUIPMENT_LISTS")
     need(len(raw["tier"])==4,"TIER_MUST_BE_FOUR")
     need(len(raw["trinkets"])==2,"TWO_TRINKETS_REQUIRED")
     need(len(raw["special"])<=8 and len(raw["crafted"])<=12,
@@ -105,6 +108,19 @@ def equipment(raw):
     need(all("embellishment" not in i["options"] for i in out["special"]),
          "EMBELLISHMENTS_USE_CRAFTED_GEAR")
     need(emb<=2,"MORE_THAN_TWO_EMBELLISHMENTS")
+    if opt_tag in raw:
+        tagged=raw[opt_tag]
+        need(type(tagged) is list and len(tagged)<=4
+             and all(type(x) is str for x in tagged)
+             and len(set(tagged))==len(tagged),
+             "CATALYST_SPECIAL_TIER_SLOT_TAGS_INVALID")
+        tiers={r["slot"]:r for r in out["tier"]}
+        need(all(slot in tiers and
+                 "redirected_base_stats" in tiers[slot]["options"]
+                 and int(tiers[slot]["options"]["redirected_base_stats"])!=
+                     tiers[slot]["item_id"] for slot in tagged),
+             "CATALYST_LOCK_MUST_REFERENCE_EXACT_TIER_ORIGIN")
+        out[opt_tag]=sorted(tagged)
     return out,emb
 
 def normalize(doc):
@@ -218,7 +234,8 @@ def normalize(doc):
     ).hexdigest()
     return {"schema":SCHEMA,"status":"VALID_SCENARIO_INPUT_NO_SIMC_EFFECT_GATE",
         "scenario":canonical,"scenario_digest":scenario_key,
-        "equipment_count":sum(len(v) for v in gear.values()),
+        "equipment_count":sum(len(gear[k]) for k in
+                              ("tier","special","crafted","trinkets")),
         "embellishment_count":emb_count,
         "fixed_four_tier_slots":sorted(x["slot"] for x in gear["tier"]),
         "user_trinkets_included_in_simc":True,
