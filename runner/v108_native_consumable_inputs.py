@@ -40,7 +40,7 @@ def source_tokens(profile):
     out={}
     for line in profile.splitlines():
         key,sep,value=line.partition("=")
-        if sep and key in ASSIGNMENTS+("omnium_talents",):
+        if sep and key in ASSIGNMENTS:
             need(key not in out,"DUPLICATE_CONSUMABLE_SOURCE:"+key)
             need(bool(re.fullmatch(r"[a-z0-9_]{1,90}",value)),
                  "SOURCE_CONSUMABLE_TOKEN_INVALID:"+key)
@@ -100,7 +100,7 @@ def apply(profile,cfg,rows,chosen=None):
     seen=set();out=[]
     for line in profile.splitlines():
         key,sep,_=line.partition("=")
-        if sep and key in ASSIGNMENTS:
+        if sep and key in ASSIGNMENTS+("omnium_talents",):
             need(key not in seen,"DUPLICATE_PROFILE_CONSUMABLE:"+key)
             seen.add(key)
             out.append(key+"="+raw[key])
