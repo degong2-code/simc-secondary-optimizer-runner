@@ -7,7 +7,7 @@ revision and optional exact static-cache bytes. The SAME key resumes cached
 Native calls; changed settings always create a different session.
 """
 from __future__ import annotations
-import argparse, hashlib, json, os, pathlib, re, sys
+import argparse, contextlib, hashlib, json, os, pathlib, re, sys
 sys.path.insert(0,str(pathlib.Path(__file__).resolve().parent))
 import v098_target_user_scenario_bootstrap as bootstrap
 
@@ -196,9 +196,46 @@ def format_result(data):
             str(v["pairwise_95_label"]))
     return "\n".join(lines)
 
+@contextlib.contextmanager
+def worker_lock(folder):
+    """OS-owned lock: concurrent workers refuse, crash auto-unlocks.
+
+    File remains for inspection; we lock the descriptor, not its existence.
+    Windows msvcrt byte lock and Unix flock both release on process exit.
+    """
+    target=pathlib.Path(folder)/"V106_WORKER.lock"
+    target.parent.mkdir(parents=True,exist_ok=True)
+    with target.open("a+b") as fd:
+        fd.seek(0);fd.write(b"1");fd.flush();fd.seek(0)
+        try:
+            if os.name=="nt":
+                import msvcrt
+                msvcrt.locking(fd.fileno(),msvcrt.LK_NBLCK,1)
+            else:
+                import fcntl
+                fcntl.flock(fd.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
+        except OSError as e:
+            raise SessionBlocked("V106_SAME_SESSION_ALREADY_RUNNING") from e
+        try:
+            yield
+        finally:
+            fd.seek(0)
+            if os.name=="nt":
+                msvcrt.locking(fd.fileno(),msvcrt.LK_UNLCK,1)
+            else:
+                fcntl.flock(fd.fileno(),fcntl.LOCK_UN)
+
 def worker(folder,binary,revision,static_cache=None,cache_only=False):
     """Exclusive child process. GUI owns launch/cancel, existing runner owns DPS."""
     folder=pathlib.Path(folder).resolve()
+    try:
+        with worker_lock(folder):
+            return _worker_locked(folder,binary,revision,static_cache,cache_only)
+    except SessionBlocked as e:
+        print("V106_BLOCKED:",str(e),file=sys.stderr,flush=True)
+        return 3
+
+def _worker_locked(folder,binary,revision,static_cache,cache_only):
     p=paths(folder)
     def write_state(status,reason=None):
         data={"schema":SCHEMA,"status":status}
@@ -218,10 +255,19 @@ def worker(folder,binary,revision,static_cache=None,cache_only=False):
         actual=result["native_result"]
         need(actual["status"].startswith("PASS"),"NATIVE_NOT_PASSED")
         # Do not rewrite result for an unrelated cache identity.
-        raw=canonical(actual)+"\n"
-        need(not p["final"].exists() or p["final"].read_text("utf8")==raw,
-             "EXISTING_USER_RESULT_CHANGED")
-        if not p["final"].exists():p["final"].write_text(raw,encoding="utf8")
+        # Cache-only replay changes cache_hit counters, not the observed
+        # Native bytes or 95% user result. Compare the durable semantic
+        # result and then refresh the presentation atomically.
+        if p["final"].is_file():
+            old=json.loads(p["final"].read_text("utf8"))
+            need(old["user_result"]==actual["user_result"] and
+                 old["base_B"]==actual["base_B"] and
+                 old["final_T"]==actual["final_T"] and
+                 old["result_path"]==actual["result_path"],
+                 "CACHED_USER_RESULT_SEMANTICS_CHANGED")
+        stage=p["final"].with_suffix(".tmp")
+        stage.write_text(canonical(actual)+"\n",encoding="utf8")
+        stage.replace(p["final"])
         write_state("PASS")
         print(format_result(actual),flush=True)
         print("RESULT_DIR:",str(folder),flush=True)
