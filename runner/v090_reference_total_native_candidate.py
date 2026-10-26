@@ -114,8 +114,8 @@ def propose(prepared,reference,target,declared_F_vector,binary_sha,revision,
     need(sum(declared_F_vector.values())==normalized["budget"]["F"],
          "FLASK_F_VECTOR_SUM_MISMATCH")
     total,lower,upper=search.bounds(normalized,budget)
-    need(sum(target.values())==total and
-         all(lower[k]<=target[k]<=upper[k] for k in scenario.STATS),
+    need(search.eligible(tuple(target[k] for k in scenario.STATS),
+                         total,lower,upper),
          "REFERENCE_CANDIDATE_T_OR_LOCKED_L_CONSTRAINT")
     need(type(binary_sha) is str and
          scenario.HASH_RE.fullmatch(binary_sha) is not None,
