@@ -7,6 +7,8 @@ on:
       - runner/v109_windows_readiness_diagnostic.py
       - tests/test_v109_windows_readiness_offline.py
       - runner/v106_windows_simple_gui.py
+      - runner/v106_user_session_controller.py
+      - tests/test_v106_user_session_controller.py
       - runner/v065_original_scheduler_native_bridge.py
       - tests/test_v110_windows_exact_simc_input_bytes.py
 permissions:
