@@ -62,7 +62,7 @@ class SourceBackedTwoSpecComposer(unittest.TestCase):
         self.assertNotIn("crafted_stats",source["head"]["options"])
         self.assertNotIn("crafted_stats",source["wrists"]["options"])
         self.assertEqual(len(cfg["equipment"]["tier"]),4)
-        self.assertIn("shield",str(target.PROFILES[key]["filename"])+" shield" )  # source form checked by v103
+        self.assertEqual(source["off_hand"]["item_id"],268262)
 
     def test_source_tampering_rejected_and_all_other_specs_not_enabled(self):
         for key in target.PROFILES:
