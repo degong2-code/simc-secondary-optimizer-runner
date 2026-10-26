@@ -8,7 +8,7 @@ Never borrow crafted/random/class-restricted tier pieces as generic fillers.
 No Native SimC or network calls.
 """
 from __future__ import annotations
-import hashlib,pathlib,re
+import functools,hashlib,pathlib,re
 
 import v055_simc_item_selection as selected
 import v086_hunter_fixed_mail_representative as hunter_fix
@@ -89,8 +89,13 @@ def source_ids(source_key):
         result[slot]=int(matches[0])
     return result
 
+@functools.lru_cache(maxsize=1)
 def verify_pool():
-    """Source provenance/readiness check, not item effect/stat verification."""
+    """Source provenance/readiness check, not item effect/stat verification.
+
+    Pinned immutable Git fixture bytes are checked once per process; repeated
+    optimizer sessions do not reread five fixture files for every candidate.
+    """
     need(set(FAMILY_ROWS)==FAMILY_SET,"ARMOR_FAMILY_POOL_MISSING")
     need(all(type(v) is dict and 1<=len(v)<=len(REQUIRED_ITEM_SLOTS)
              for v in FAMILY_ROWS.values()),"ORDINARY_POOL_SHAPE")
