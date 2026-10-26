@@ -69,10 +69,11 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertNotIn("https://",css.text)
         self.assertIn('"/api/v1/bootstrap"',js.text)
         self.assertIn('"/api/v1/options"',js.text)
-        self.assertIn('"localStorage"',js.text.replace("localStorage.",'"localStorage".'))
+        self.assertIn('localStorage.setItem("simc_secondary_session_id"',js.text)
         self.assertIn("cache-only",js.text)
         self.assertIn("result",js.text)
-        self.assertIn("new_native",js.text if "new_native" in js.text else "new_native")
+        self.assertIn('"/api/v1/sessions/start"',js.text)
+        self.assertIn('window.confirm("이 PC에서 실제 SimC',js.text)
         self.assertEqual(self.client.get("/assets/missing.js").status_code,403)
 
     def test_source_observed_options_are_official_contract_not_user_invented(self):
