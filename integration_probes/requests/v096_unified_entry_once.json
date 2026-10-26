@@ -1,0 +1,15 @@
+{
+  "schema": "v096_unified_entry_user_approved_product_priority_v1",
+  "use_previously_verified_specializations": true,
+  "avoid_repeating_native_archetypes": true,
+  "single_manifest_to_existing_091_093_094": true,
+  "official_total": "T=G+J+F+O",
+  "B": "G+J+F",
+  "95_percent_only": true,
+  "experimental_v095_convergence_not_next_priority": true,
+  "project_source_v13_UI_APPLIED": false,
+  "workOS_shared_state_APPLIED": false,
+  "original_v015_v016_direct_integrated": false,
+  "native_calls_in_CI": 0,
+  "run_full_regression": true
+}
