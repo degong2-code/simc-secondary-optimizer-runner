@@ -11,66 +11,22 @@ import v046_static_item_cache as cache_mod
 import v055_simc_item_selection as item_mod
 import v061_scenario_contract as scenario
 import v065_v015_scheduler_adapter as scheduler
-import v082_fury_plate_dual_twohand_native as fury
-import v083_paladin_single_2h_native as paladin
-import v084_frost_cloth_1h_frill_native as frost
-import v086_hunter_fixed_mail_representative as hunter
+import v101_common_representative_equipment as common
 import v091_weapon_oil_external_adapter as oil_mod
 import v096_unified_product_entry as entry
 
 SCHEMA="v098_target_ilevel_user_scenario_v1"
 FIELDS={"schema","character","target","trinkets","special_items",
         "embellishments","oil_hands","combat"}
-ARCHETYPES={
-    ("warrior","fury"):("v082_upstream_mid2_warrior_fury_reference.simc",
-        fury.source_profile,"dual_two_hand",fury.DECLARED_F),
-    ("mage","frost"):("v084_upstream_mid2_mage_frost_reference.simc",
-        frost.source_profile,"one_hand_frill",frost.F_DECLARED),
-    ("paladin","retribution"):("v083_upstream_mid2_paladin_retribution_reference.simc",
-        paladin.source_profile,"single_two_hand",paladin.DECLARED_F),
-    ("hunter","beast_mastery"):("v079_upstream_mid2_hunter_beast_mastery_reference.simc",
-        hunter.source_profile,"ranged",{"crit_rating":0,"haste_rating":165,
-                                       "mastery_rating":0,"versatility_rating":0})}
-FIXTURES=pathlib.Path(__file__).resolve().parents[1]/"integration_probes/fixtures"
+# Backward-compatible public source metadata; ownership moved to v101.
+ARCHETYPES=common.ARCHETYPES
+FIXTURES=common.FIXTURES
 IMPORT_FIELD="import_simc_profile"
-TIER_FIVE=("head","shoulders","chest","hands","legs")
-# Pinned exact class-tier fifth slot; current ordinary source ID is checked
-# so any unverified upstream change fails before creating a Native request.
-# Fury/Hunter fifth class tier from published Season 2 item identities;
-# Paladin/Mage fifth tier IDs are in their pinned upstream SimC fixtures.
-FIFTH_TIER={
-    ("warrior","fury"):("legs",271455,271878),
-    ("paladin","retribution"):("legs",271464,271878),
-    ("mage","frost"):("head",271564,271874),
-    ("hunter","beast_mastery"):("head",271492,249317)}
+TIER_FIVE=common.TIER_FIVE
+FIFTH_TIER=common.FIFTH_TIER
 
 def reconcile_four_tier(key,rows,groups,taken,ilevel):
-    """Preserve four class-tier slots after a selected crafted replacement.
-
-    One missing default tier is restored using only its verified fifth slot;
-    never invent ordinary replacement items or change user-selected pieces.
-    """
-    need(key in FIFTH_TIER,"FIFTH_CLASS_TIER_ID_UNAVAILABLE")
-    original_count=sum(groups.get(k)=="tier" for k in TIER_FIVE)
-    need(original_count<=4,"FIVE_TIER_LAYOUT_OUTSIDE_FOUR_ROW_CONTRACT")
-    added=[]
-    if original_count<4:
-        slot,tier_id,ordinary_id=FIFTH_TIER[key]
-        need(slot not in taken and groups.get(slot) is None
-             and rows[slot]["item_id"]==ordinary_id,
-             "FOUR_TIER_UNAVAILABLE_SELECTED_FIFTH_OR_UNKNOWN_SOURCE")
-        # Preserve currently declared socket/enchant identity (J), but
-        # never carry source item's crafted_stats/embellishment/bonus_id
-        # or special proc identity into an ordinary class tier.
-        options={k:v for k,v in rows[slot]["options"].items()
-                 if k in ("gem_id","enchant","enchant_id")}
-        rows[slot]={"slot":slot,"item_id":tier_id,"ilevel":ilevel,
-                    "options":options}
-        groups[slot]="tier"
-        added.append(slot)
-    need(sum(groups.get(k)=="tier" for k in TIER_FIVE)==4,
-         "FOUR_TIER_NOT_SATISFIED")
-    return added
+    return common.reconcile_four_tier(key,rows,groups,taken,ilevel,need)
 
 def character_from_uploaded_simc(text):
     """Only four character fields are imported; ALL worn-gear rows are ignored.
@@ -206,89 +162,18 @@ def build(user,folder,binary,revision,static_cache_path=None,
     need(type(user["special_items"]) is list and len(user["special_items"])<=8
          and type(user["embellishments"]) is list
          and len(user["embellishments"])<=2,"USER_SELECTED_GEAR_LISTS")
-    filename,producer,weapon_layout,F=ARCHETYPES[key]
     folder=pathlib.Path(folder).resolve()
     binary=pathlib.Path(binary).resolve()
     need(binary.is_file(),"SIMC_BINARY_NOT_PRESENT")
     need(type(revision) is str and len(revision)>=7,"SIMC_REVISION_REQUIRED")
-    # Internal source template, NOT user's current uploaded gear.
-    template=(FIXTURES/filename).read_text(encoding="utf8")
-    base_profile,cfg,fillers,_=producer(template,folder)
-    need(cfg["character"]["class"]==ch["class"] and
-         cfg["character"]["spec"]==ch["spec"],"TEMPLATE_CHARACTER_DRIFT")
-    rows={r["slot"]:copy.deepcopy(r) for g in
-          (cfg["equipment"]["tier"],cfg["equipment"]["crafted"],
-           cfg["equipment"]["trinkets"],fillers) for r in g}
-    need(len(rows) in (15,16),"TEMPLATE_EXPECTED_FIFTEEN_OR_SIXTEEN_SLOTS")
-    groups={r["slot"]:group for group in ("tier","crafted","trinkets")
-            for r in cfg["equipment"][group]}
-    for row in rows.values():row["ilevel"]=ilvl
-    taken=set()
-    for group,selection in (("trinkets",user["trinkets"]),
-                            ("special",user["special_items"]),
-                            ("crafted",user["embellishments"])):
-        for raw in selection:
-            need(type(raw) is dict and set(raw)=={"slot","item_id","options"},
-                 "SELECTED_ITEM_FIELDS")
-            slot=raw["slot"]
-            need(slot in rows and slot not in taken,
-                 "SELECTED_SLOT_INVALID_OR_DUPLICATE")
-            taken.add(slot)
-            opts=item_mod.checked_options(raw["options"])
-            item_mod.checked_id(raw["item_id"])
-            slot_group=group
-            if group=="trinkets":
-                need(slot in ("trinket1","trinket2") and not
-                     (set(opts)&{"crafted_stats","embellishment",
-                                  "redirected_base_stats"}),
-                     "INVALID_TRINKET_SELECTION")
-            elif group=="special":
-                need(not slot.startswith("trinket") and
-                     not (set(opts)&{"crafted_stats","embellishment"}),
-                     "SPECIAL_NOT_VALID_NONCRAFTED_SLOT")
-                if groups.get(slot)=="tier":
-                    # One physical converted piece is both class tier and
-                    # fixed source special; keep the exact original ID.
-                    need(raw["item_id"]==rows[slot]["item_id"] and
-                         "redirected_base_stats" in opts and
-                         int(opts["redirected_base_stats"])!=raw["item_id"],
-                         "CATALYST_CLASS_TIER_ID_AND_ORIGIN_REQUIRED")
-                    slot_group="tier"
-                elif (slot==FIFTH_TIER[key][0] and
-                      "redirected_base_stats" in opts):
-                    need(raw["item_id"]==FIFTH_TIER[key][1] and
-                         int(opts["redirected_base_stats"])!=raw["item_id"],
-                         "CATALYST_FIFTH_CLASS_TIER_ID_OR_ORIGIN")
-                    slot_group="tier"
-                else:
-                    need("redirected_base_stats" not in opts,
-                         "CATALYST_REQUIRES_CLASS_TIER_SLOT")
-            else:
-                need(not slot.startswith("trinket") and
-                     "embellishment" in opts and
-                     "redirected_base_stats" not in opts,
-                     "EMBELLISHMENT_NOT_ON_CRAFTED_EQUIPMENT")
-            rows[slot]={"slot":slot,"item_id":raw["item_id"],
-                        "ilevel":ilvl,"options":opts}
-            groups[slot]=slot_group
-    need({r["slot"] for r in user["trinkets"]}=={"trinket1","trinket2"},
-         "USER_TRINKET_SLOTS_NOT_EXACT")
-    # Only change necessary class-tier slots, without a gear recommender.
-    # If a user replaces one of the original four with crafted equipment,
-    # restore 4-piece from the exact known fifth class-tier slot.
-    restored_tier_slots=reconcile_four_tier(key,rows,groups,taken,ilvl)
-    catalyst_origin_rows=[{"slot":slot,"tier_item_id":row["item_id"],
-                           "source_item_id":int(row["options"]["redirected_base_stats"])}
-                          for slot,row in rows.items()
-                          if groups.get(slot)=="tier" and
-                             "redirected_base_stats" in row["options"]]
-    cfg["equipment"]={g:[copy.deepcopy(r) for s,r in rows.items()
-                          if groups.get(s)==g]
-                      for g in ("tier","special","crafted","trinkets")}
-    if catalyst_origin_rows:
-        cfg["equipment"]["catalyst_special_tier_slots"]=sorted(
-            row["slot"] for row in catalyst_origin_rows)
-    fillers=[copy.deepcopy(r) for s,r in rows.items() if s not in groups]
+    # SimC APL and original item IDs stay in pinned source factory; v101 owns
+    # the material/weapon/tier representative gear assembly thereafter.
+    base_profile,cfg,rows,groups,weapon_layout,F=common.source_backed_gear(
+        key,folder,ilvl,need)
+    restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
+        key,rows,groups,user,ilvl,need)
+    cfg["equipment"],fillers=common.physical_gear_groups(
+        rows,groups,catalyst_origin_rows)
     cfg["character"].update({"race":ch["race"],"talents":ch["talents"]})
     cfg["target"]={"mode":"derived_ilevel","ilevel":ilvl,
                    "manual_total":None,"manual_total_scope":None}
@@ -336,6 +221,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
             "generated_manifest":str(folder/"manifest.json"),
             "output_dir":str(folder/"simc_results"),"plan":plan,
             "native_calls":0,"supported_archetypes_now":len(ARCHETYPES),
+            "armor_family":common.CLASS_ARMOR[key[0]],
+            "weapon_form":weapon_layout,
             "catalyst_origin_items":catalyst_origin_rows,
             "restored_tier_slots":restored_tier_slots,
             "effective_four_tier_slots":sorted(
