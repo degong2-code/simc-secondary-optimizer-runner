@@ -1,0 +1,71 @@
+name: v096 Unified Product Entry and Development Baseline Audit
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/v096_unified_entry_once.json
+      - integration_probes/requests/v096_unified_entry_retry.json
+permissions:
+  contents: read
+concurrency:
+  group: v096-unified-entry
+  cancel-in-progress: false
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Check bounded trigger and pinned code
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          path=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          good={"integration_probes/requests/v096_unified_entry_once.json",
+                "integration_probes/requests/v096_unified_entry_retry.json"}
+          assert len(path)==1 and path[0] in good,path
+          expected={"schema":"v096_unified_entry_user_approved_product_priority_v1",
+            "use_previously_verified_specializations":True,
+            "avoid_repeating_native_archetypes":True,
+            "single_manifest_to_existing_091_093_094":True,
+            "official_total":"T=G+J+F+O","B":"G+J+F",
+            "95_percent_only":True,
+            "experimental_v095_convergence_not_next_priority":True,
+            "project_source_v13_UI_APPLIED":False,
+            "workOS_shared_state_APPLIED":False,
+            "original_v015_v016_direct_integrated":False,
+            "native_calls_in_CI":0,
+            "run_full_regression":True}
+          assert json.loads(pathlib.Path(path[0]).read_text())==expected
+          pins={
+            "runner/v096_unified_product_entry.py":"e7c54d0a868d37ef471dcdca008e215f7b6edb44",
+            "tests/test_v096_unified_product_entry.py":"a0c93e9d62dbad94aa5a3ca8d01b93e458a36070"}
+          for p,sha in pins.items():
+              assert subprocess.check_output(["git","hash-object",p],text=True).strip()==sha,(p,sha)
+          print("V096_PINNED_SOURCE_AND_USER_BASELINE_GUARDS_PASS")
+          PY
+      - name: Full unit and pilot regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Single CLI entry smoke without SimC
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 runner/v096_unified_product_entry.py --help > V096_UNIFIED_ENTRY_HELP.txt
+          grep -q -- '--manifest' V096_UNIFIED_ENTRY_HELP.txt
+          grep -q -- '--plan-only' V096_UNIFIED_ENTRY_HELP.txt
+          grep -q -- '--cache-only' V096_UNIFIED_ENTRY_HELP.txt
+          echo V096_ONE_MANIFEST_TWO_REAL_SOURCE_FIXTURES_NO_NATIVE_PASS
+      - uses: actions/upload-artifact@v6
+        with:
+          name: v096-unified-entry-proof-${{ github.run_id }}
+          path: V096_UNIFIED_ENTRY_HELP.txt
+          retention-days: 14
