@@ -224,7 +224,8 @@ class UserWindow:
             self.proc=subprocess.Popen(
                 cmd,
                 stdout=self.log_handle,stderr=subprocess.STDOUT,
-                creationflags=flags)
+                creationflags=flags,
+                env={**os.environ,"PYTHONIOENCODING":"utf-8"})
             self.start_btn.configure(state="disabled")
             self.cancel_btn.configure(state="normal")
             self.status.set("Native 실행 시작 / 재개: "+folder.name)
