@@ -325,6 +325,45 @@ def worker_lock(folder):
             else:
                 fcntl.flock(fd.fileno(),fcntl.LOCK_UN)
 
+CACHE_PROOF_SCHEMA="v112_completed_user_cache_replay_v1"
+
+def native_json2_hashes(folder):
+    """Six real Native JSON2 outputs, already guarded by v064 disk receipts.
+
+    Do not parse effects or trust naked JSON without a companion Native
+    receipt; actual byte/identity checks are performed by cache_only replay.
+    """
+    cases=pathlib.Path(folder)/"generated"/"simc_results"
+    out={}
+    for file in sorted(cases.rglob("result.json")):
+        need((file.parent/"native_receipt.json").is_file(),
+             "CACHE_ONLY_NATIVE_RECEIPT_MISSING")
+        out[str(file.relative_to(cases)).replace("\\","/")]=sha(file.read_bytes())
+    need(len(out)==6,"CACHE_ONLY_REQUIRES_SIX_JSON2_RESULTS")
+    return out
+
+def cache_only_preflight(folder):
+    """Fail BEFORE touching v094 progress if any Native case is missing."""
+    p=paths(folder)
+    need(p["final"].is_file() and p["native_result"].is_file()
+         and p["progress"].is_file(),
+         "CACHE_ONLY_REQUIRES_COMPLETED_REAL_SESSION")
+    final=json.loads(p["final"].read_text("utf8"))
+    progress=json.loads(p["progress"].read_text("utf8"))
+    report=json.loads(p["native_result"].read_text("utf8"))
+    need(final["status"].startswith("PASS") and
+         report["status"].startswith("PASS") and
+         progress["status"].startswith("PASS") and
+         progress["completed_jobs"]==6 and
+         progress["new_native_attempts"]==6 and
+         final["native_calls_cumulative"]==6,
+         "CACHE_ONLY_REQUIRES_SIX_COMPLETED_NATIVE")
+    need(final["user_result"]["confidence_level"]==0.95
+         and final["user_result"]["global_optimum_proven"] is False,
+         "CACHE_ONLY_95_RESULT_REQUIRED")
+    return {"result":final,"progress":progress,
+            "native_sha256":native_json2_hashes(folder)}
+
 def print_user_result(message):
     """Windows cp1252 console fallback: preserve UTF-8 bytes for GUI logs."""
     try:
@@ -362,11 +401,23 @@ def _worker_locked(folder,binary,revision,static_cache,cache_only):
         identity=json.loads((folder/"V106_SESSION_IDENTITY.json").read_text(encoding="utf8"))
         _,now=session_key(user,binary,revision,static_cache)
         need(identity==now,"SESSION_BINARY_REVISION_OR_CACHE_DRIFT")
-        write_state("RUNNING")
+        cached_before=cache_only_preflight(folder) if cache_only else None
+        write_state("RUNNING_CACHE_ONLY" if cache_only else "RUNNING")
         result=bootstrap.run(folder/"user.json",folder/"generated",
              binary,revision,static_cache,execute=True,cache_only=cache_only)
         actual=result["native_result"]
         need(actual["status"].startswith("PASS"),"NATIVE_NOT_PASSED")
+        if cache_only:
+            need(actual["cache_hits_this_run"]==6 and
+                 actual["native_calls_cumulative"]==6,
+                 "CACHE_ONLY_SIX_OF_SIX_NOT_VERIFIED")
+            need(actual["user_result"]==cached_before["result"]["user_result"],
+                 "CACHE_ONLY_DPS_SEM_OR_95_RESULT_DRIFT")
+            after=cache_only_preflight(folder)
+            need(after["native_sha256"]==cached_before["native_sha256"]
+                 and after["progress"]["new_native_attempts"]==
+                     cached_before["progress"]["new_native_attempts"],
+                 "CACHE_ONLY_NATIVE_BYTES_OR_ATTEMPTS_DRIFT")
         # Do not rewrite result for an unrelated cache identity.
         # Cache-only replay changes cache_hit counters, not the observed
         # Native bytes or 95% user result. Compare the durable semantic
@@ -381,7 +432,26 @@ def _worker_locked(folder,binary,revision,static_cache,cache_only):
         stage=p["final"].with_suffix(".tmp")
         stage.write_text(canonical(actual)+"\n",encoding="utf8")
         stage.replace(p["final"])
-        write_state("PASS")
+        if cache_only:
+            proof={"schema":CACHE_PROOF_SCHEMA,
+                   "status":"PASS_SIX_VERIFIED_CACHE_RESULTS_ZERO_NEW_NATIVE",
+                   "cache_hits_this_run":actual["cache_hits_this_run"],
+                   "native_calls_cumulative":actual["native_calls_cumulative"],
+                   "additional_native_calls":0,
+                   "native_json2_sha256":cached_before["native_sha256"],
+                   "final_T":actual["final_T"],
+                   "observed_dps_mean":
+                     actual["user_result"]["observed_first_choice"]["observed_dps_mean"],
+                   "observed_sem":
+                     actual["user_result"]["observed_first_choice"]["simc_sem"],
+                   "confidence_level":0.95,"global_optimum_proven":False}
+            proof_file=folder/"V112_CACHE_REPLAY_RECEIPT.json"
+            tmp=proof_file.with_suffix(".tmp")
+            tmp.write_text(canonical(proof)+"\n",encoding="utf8")
+            tmp.replace(proof_file)
+        write_state("PASS_CACHE_ONLY" if cache_only else "PASS")
+        if cache_only:
+            print_user_result("검증된 캐시 6/6 · 추가 Native 0회")
         print_user_result(format_result(actual))
         print_user_result("RESULT_DIR: "+str(folder))
         if os.name=="nt":
