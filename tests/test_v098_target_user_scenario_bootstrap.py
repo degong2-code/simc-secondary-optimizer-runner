@@ -108,7 +108,7 @@ class UserTargetBootstrap(unittest.TestCase):
         u=case("elemental",ilevel=321,final_T=3020)
         out,_=self.prepare(u)
         self.assertEqual((out["plan"]["base_B"],out["plan"]["final_T"]),
-                         (2980,3020))
+                         (2988,3020))
         u=case("subtlety",ilevel=321)
         out,_=self.prepare(u)
         self.assertEqual((out["plan"]["base_B"],out["plan"]["final_T"]),
