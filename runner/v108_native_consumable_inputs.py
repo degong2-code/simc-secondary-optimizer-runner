@@ -48,14 +48,21 @@ def default_choice(profile,head):
 def validate_choice(raw,base):
     need(type(raw) is dict and set(raw)==CHOICE_FIELDS,"CHOICE_FIELDS")
     need(type(base) is dict and set(base)==CHOICE_FIELDS,"DEFAULT_CHOICES_FIELDS")
-    need(raw["flask"]==base["flask"],
+    result={}
+    need(raw["flask"] in ("source_default",base["flask"]),
          "ALTERNATE_FLASK_F_VECTOR_NOT_NATIVE_VERIFIED")
+    result["flask"]=base["flask"]
     for key in ("food","potion","augmentation"):
-        need(type(raw[key]) is str and raw[key] in SUPPORTED[key],
+        v=raw[key]
+        if v=="source_default":v=base[key]
+        need(type(v) is str and v in SUPPORTED[key],
              "UNVERIFIED_SIMC_TOKEN:"+key)
-    need(type(raw["diamond_id"]) is int and raw["diamond_id"] in DIAMONDS,
+        result[key]=v
+    diamond=base["diamond_id"] if raw["diamond_id"]==0 else raw["diamond_id"]
+    need(type(diamond) is int and diamond in DIAMONDS,
          "DIAMOND_SECONDARY_BUDGET_NOT_VERIFIED")
-    return dict(raw)
+    result["diamond_id"]=diamond
+    return result
 
 def apply(profile,cfg,rows,chosen=None):
     """Profile/cfg are already assembled from exact user gear rows.
