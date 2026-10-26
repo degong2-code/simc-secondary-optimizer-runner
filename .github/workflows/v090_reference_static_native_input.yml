@@ -1,0 +1,96 @@
+name: v090 Reference Total Without Ordinary G Regression
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/v090_reference_native_path_once.json
+permissions:
+  contents: read
+concurrency:
+  group: v090-reference-native-preparation
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Verify bounded request and pinned code bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          p="integration_probes/requests/v090_reference_native_path_once.json"
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==[p],changed
+          expected={"schema":"v090_reference_native_missing_ordinary_G_once_v1",
+             "reference_total_334":3150,"native_G_required":False,
+             "all_exact_gear_slots_required":True,
+             "exact_special_L_required":True,
+             "external_oil_in_T":False,
+             "full_regressions":True,
+             "candidate_count":2,
+             "new_native_calls_in_CI":0,
+             "old_v015_v016_product_integrated":False}
+          assert json.loads(pathlib.Path(p).read_text())==expected
+          pins={
+             "runner/v064_adaptive_evaluator_port.py":"10dd3d382a82d6a71bdd44e6d8244b5b60920b54",
+             "runner/v090_reference_total_native_candidate.py":"b287b3104e6fc8f5da7860d863c5360f25a439cd",
+             "tests/test_v090_reference_total_native_candidate.py":"bc9c45066d4b1f79a1f597d7d1a61bf8f4f4c8e0",
+             "integration_probes/data/midnight_s2_ilvl_chmv_reference_v1.json":"44f08eac17b3316c3edfe4c17f29ea3b7bcd2de2"}
+          for path,pin in pins.items():
+              actual=subprocess.check_output(["git","hash-object",path],text=True).strip()
+              assert actual==pin,(path,actual,pin)
+          print("V090_GEAR_ID_REF_TOTAL_SOURCE_HASH_PINNED_PASS")
+          PY
+      - name: Full offline regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Emit two exact candidate input.simc files for bounded real Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import sys,os,json,pathlib,tempfile
+          sys.path[:0]=["runner","tests"]
+          import v046_static_item_cache as cache
+          import v090_reference_total_native_candidate as v90
+          from test_v090_reference_total_native_candidate import fixture,A,B,BIN,REV,FLASK
+          root=pathlib.Path("out/v090").resolve()
+          root.mkdir(parents=True,exist_ok=True)
+          profile,cfg,fill,selected=fixture(root)
+          prepared=v90.prepare(selected,fill,cache.empty_cache(),profile)
+          assert prepared["T"]==3150
+          assert prepared["missing_ordinary_G_observed_not_zero"]==14
+          for key,stats in (("a",A),("b",B)):
+              sub=root/key;sub.mkdir(parents=True,exist_ok=True)
+              p=v90.propose(prepared,profile,stats,FLASK,BIN,REV,35,
+                            sub/"result.json")
+              (sub/"input.simc").write_text(p["input"])
+              p.pop("input")
+              (sub/"proposal.json").write_text(json.dumps(p,sort_keys=True,indent=2)+"\n")
+          (root/"REFERENCE_SOURCE.simc").write_text(profile)
+          meta={"T":3150,"ordinary_G_native_required":False,
+                "ordinary_G_observed":False,
+                "full_items_bound":prepared["items_bound"],
+                "F":165,"special_L":prepared["floor_L"],
+                "oil_external":True,
+                "simc_binary_sha256":BIN,"revision":REV,
+                "new_native_calls":0}
+          (root/"OFFLINE_PREPARE.json").write_text(json.dumps(meta,sort_keys=True,indent=2)+"\n")
+          print("V090_REFERENCE_3150_TWO_EXACT_NATIVE_INPUTS_OFFLINE_PASS")
+          PY
+      - name: Preserve bounded Native input files and input hashes
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v090-reference-static-input-${{ github.run_id }}
+          path: out/v090/
+          if-no-files-found: error
+          retention-days: 14
