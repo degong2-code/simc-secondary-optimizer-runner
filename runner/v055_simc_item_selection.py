@@ -22,7 +22,7 @@ SLOTS={"head","neck","shoulders","back","chest","wrists","hands",
 CRAFT_SLOTS=SLOTS-{"trinket1","trinket2"} # restricted by caller's actual item type/recipe
 GEAR_PREFIX=("gear_crit_rating=","gear_haste_rating=","gear_mastery_rating=","gear_versatility_rating=")
 OPTIONS={"gem_id","bonus_id","enchant","enchant_id","crafted_stats",
-         "embellishment","content_tuning","context"}
+         "embellishment","content_tuning","context","redirected_base_stats"}
 EXCLUDED_DEFAULT={250244} # opt-in can still be passed by explicit user id
 ADVISORY_CRAFTED_IDS=pathlib.Path(__file__).resolve().parents[1]/"integration_probes/catalog/v057_crafted_gear_51_recipe_ids.json"
 
@@ -43,6 +43,9 @@ def checked_options(options):
     for name,value in sorted(options.items()):
         require(type(value) is str and bool(re.fullmatch(r"[a-zA-Z0-9_/:]{1,140}",value)),
                 "ITEM_OPTION_VALUE_INVALID:"+name)
+        if name=="redirected_base_stats":
+            require(bool(re.fullmatch(r"[1-9][0-9]{0,9}",value)),
+                    "CATALYST_ORIGIN_ITEM_ID_INVALID")
         if name=="crafted_stats":
             a=value.split("/")
             require(len(a)==2 and all(x.isdigit() for x in a) and
