@@ -113,6 +113,85 @@ class UserTargetBootstrap(unittest.TestCase):
                                  result["plan"]["item_slots"])
                 self.assertFalse((root/"generated"/"simc_results").exists())
 
+    def test_four_tier_recovers_fifth_with_one_crafted_tier_replacement(self):
+        examples={"fury":(237835,"legs",271455,16),
+                  "retribution":(237835,"legs",271464,15),
+                  "frost":(239650,"head",271564,16),
+                  "beast_mastery":(244580,"head",271492,15)}
+        for kind,(crafted_id,fifth,tier_id,slots) in examples.items():
+            with self.subTest(archetype=kind):
+                user=case(kind)
+                user["embellishments"]=[
+                    {"slot":"shoulders","item_id":crafted_id,
+                     "options":{"crafted_stats":"49/36",
+                                "embellishment":"arcanoweave_lining"}}]
+                result,root=self.prepare(user)
+                self.assertEqual(result["restored_tier_slots"],[fifth])
+                self.assertEqual(result["plan"]["item_slots"],slots)
+                self.assertEqual(len(result["effective_four_tier_slots"]),4)
+                self.assertNotIn("shoulders",result["effective_four_tier_slots"])
+                self.assertIn(fifth,result["effective_four_tier_slots"])
+                cfg=json.loads((root/"generated"/"scenario.json").read_text())
+                self.assertEqual(len(cfg["equipment"]["tier"]),4)
+                self.assertEqual(len(cfg["equipment"]["crafted"]),
+                                 3 if kind in ("fury","frost","beast_mastery") else 2)
+                fifth_row=next(x for x in cfg["equipment"]["tier"]
+                               if x["slot"]==fifth)
+                self.assertEqual(fifth_row["item_id"],tier_id)
+                profile=(root/"generated"/"profile.simc").read_text()
+                self.assertEqual(sum(x.startswith(fifth+"=")
+                                     for x in profile.splitlines()),1)
+                self.assertIn("id="+str(tier_id),next(x for x
+                                  in profile.splitlines() if x.startswith(fifth+"=")))
+                self.assertFalse((root/"generated"/"simc_results").exists())
+
+    def test_two_crafted_tier_positions_cannot_preserve_four_set(self):
+        user=case("frost")
+        user["embellishments"]=[
+           {"slot":"shoulders","item_id":239650,
+            "options":{"crafted_stats":"49/36",
+                       "embellishment":"arcanoweave_lining"}},
+           {"slot":"head","item_id":239652,
+            "options":{"crafted_stats":"32/49",
+                       "embellishment":"arcanoweave_lining"}}]
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td);binary=root/"dummy";binary.write_bytes(b"NO_NATIVE")
+            with self.assertRaisesRegex(boot.UserScenarioBlocked,
+                  "FOUR_TIER_UNAVAILABLE_SELECTED_FIFTH_OR_UNKNOWN_SOURCE"):
+                boot.build(user,root/"output",binary,"7bc10711b5")
+            self.assertFalse((root/"output"/"manifest.json").exists())
+
+    def test_catalyzed_fifth_tier_and_crafted_existing_tier_are_counted_once(self):
+        user=case("fury")
+        user["special_items"]=[
+          {"slot":"legs","item_id":271455,
+           "options":{"redirected_base_stats":"271878"}}]
+        user["embellishments"]=[
+          {"slot":"shoulders","item_id":237835,
+           "options":{"crafted_stats":"49/36",
+                      "embellishment":"arcanoweave_lining"}}]
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td);binary=root/"dummy";binary.write_bytes(b"NO_NATIVE")
+            cache=boot.cache_mod.empty_cache()
+            row={"slot":"legs","item_id":271455,"ilevel":334,
+                 "options":{"redirected_base_stats":"271878"}}
+            offline_record(cache,row,
+                {"crit_rating":0,"haste_rating":140,
+                 "mastery_rating":0,"versatility_rating":0})
+            path=root/"cache.json";boot.cache_mod.write_atomic(path,cache)
+            result=boot.build(user,root/"out",binary,"7bc10711b5",
+                              static_cache_path=path)
+            self.assertEqual(result["restored_tier_slots"],[])
+            self.assertEqual(result["effective_four_tier_slots"],
+                             ["chest","hands","head","legs"])
+            self.assertEqual(result["catalyst_origin_items"],
+                [{"slot":"legs","tier_item_id":271455,"source_item_id":271878}])
+            cfg=json.loads((root/"out"/"scenario.json").read_text())
+            self.assertEqual(cfg["equipment"]["catalyst_special_tier_slots"],["legs"])
+            self.assertEqual(len(cfg["equipment"]["tier"]),4)
+            self.assertNotIn("shoulders",result["effective_four_tier_slots"])
+            self.assertFalse((root/"out"/"simc_results").exists())
+
     def test_frost_target_user_manual_final_T(self):
         user=case("frost",final_T=3182)
         result,root=self.prepare(user)
