@@ -232,6 +232,7 @@ def run(context, seed_targets, flask_vector, binary, output, *,
         ceiling=cfg['scenario']['runtime']['confirm_iterations']
         precision=extended.precision_plan(confirmed[0],confirmed[1],ceiling)
         status=('PASS_BOUNDED_GENERIC_NATIVE_SEARCH_AND_CACHE' if scouts else
+                'PASS_MATERIAL_SCOUT_AND_FRESH_CONFIRM' if material_scouts else
                 'PASS_BOUNDED_SEEDS_AND_FRESH_CONFIRM_NO_SCOUT')
         report={'schema':SCHEMA,'status':status,
                 'policy_source':'v065_v015_derived_in_B',
