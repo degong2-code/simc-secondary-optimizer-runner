@@ -86,8 +86,23 @@ class V090ReferenceToStaticNative(unittest.TestCase):
             plan=tested.prepare(selection,fillers,cache.empty_cache(),profile)
             with self.assertRaisesRegex(port.PortBlocked,
                     "PROFILE_GEAR_ID_LEVEL_OPTIONS_DRIFT"):
+                port.verify_profile_binding(plan["scenario"],plan["static_budget"],changed)
+            with self.assertRaisesRegex(tested.ReferenceNativeBlocked,
+                    "SOURCE_PROFILE_CHANGED_AFTER_REFERENCE_PREPARATION"):
                 tested.propose(plan,changed,A,FLASK,BIN,REV,35,
                                pathlib.Path(directory)/"tampered.json")
+
+    def test_apl_bytes_change_after_prepare_is_refused(self):
+        with tempfile.TemporaryDirectory() as directory:
+            profile,cfg,fillers,selection=fixture(directory)
+            plan=tested.prepare(selection,fillers,cache.empty_cache(),profile)
+            changed=profile.replace(
+                "actions.precombat=arcane_intellect",
+                "actions.precombat=snapshot_stats",1)
+            with self.assertRaisesRegex(tested.ReferenceNativeBlocked,
+                    "SOURCE_PROFILE_CHANGED_AFTER_REFERENCE_PREPARATION"):
+                tested.propose(plan,changed,A,FLASK,BIN,REV,35,
+                               pathlib.Path(directory)/"bad_apl.json")
 
     def test_source_sha_protects_user_supplied_profile(self):
         with tempfile.TemporaryDirectory() as directory:
