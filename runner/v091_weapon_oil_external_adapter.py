@@ -11,6 +11,7 @@ import v061_scenario_contract as scenario
 import v064_adaptive_evaluator_port as port
 import v089_ilvl_chmv_budget_selector as chooser
 import v090_reference_total_native_candidate as reference_path
+import v092_approved_inclusive_CHMV_policy as total_policy
 
 SCHEMA="v091_oil_per_actual_weapon_external_v1"
 OIL="thalassian_phoenix_oil_2"
@@ -118,10 +119,11 @@ def prepare(profile,doc,fillers,static_cache,weapon_layout,applied_hands):
          prepared["scenario"]["budget"]["external_temporary_rating"]==
          oil["declared_O"],
          "OIL_TOTAL_OR_EXTERNAL_VECTOR_MISMATCH")
+    accounting=total_policy.calculate(prepared["T"],oil["declared_O"])
     # A source-locked full exact ID/ilevel/option profile with all selected
     # fixed L and no ordinary G cache is required via existing v090.
     return {"schema":SCHEMA,"status":"READY_V091_STATIC_C_CANDIDATE",
-        "oil":oil,"prepared":prepared,
+        "oil":oil,"prepared":prepared,"approved_total":accounting,
         "native_calls":0,"original_v015_v016_integrated":False}
 
 def propose(bundle,target,flask_vector,binary_sha,revision,iterations,path):
@@ -135,7 +137,16 @@ def propose(bundle,target,flask_vector,binary_sha,revision,iterations,path):
          out["external_oil_only"]==oil["declared_O"] and
          all(out["raw_gear_override"][s]+flask_vector[s]==target[s]
              for s in scenario.STATS),
-         "OIL_WAS_DOUBLE_INJECTED_INTO_GEAR_RATING")
+         "LEGACY_BASE_STATIC_C_REFERENCE_DRIFT")
+    # Authoritative user-approved final total. SimC gear_* overrides the
+    # oil's rating contribution; add its fixed vector exactly once to that
+    # override, not to the scheduler's freely distributed B.
+    out=total_policy.adjust_native_request(
+        out,bundle["approved_total"],target)
+    need(out["official_total"]==bundle["approved_total"]["final_T"] and
+         all(out["raw_gear_override"][s]+flask_vector[s]==
+             out["target"][s] for s in scenario.STATS),
+         "FINAL_OIL_INCLUSIVE_STATIC_C_DRIFT")
     out["v091_oil_hands"]=oil["applied_hands"]
     out["v091_expected_temporary_enchant"]=(oil["expected_simc_temporary_enchant"])
     out["v091_declaration_O"]=oil["declared_O"]
@@ -143,7 +154,7 @@ def propose(bundle,target,flask_vector,binary_sha,revision,iterations,path):
     return out
 
 def ingest_native(request,native,raw_bytes=None):
-    """Native acceptance: exact parsed oil selection + existing static c DPS.
+    """Native acceptance: oil-inclusive static c, parsed oil selection, DPS.
 
     Does NOT claim that post-talent buffed_stats necessarily equals c+O.
     """
@@ -166,6 +177,9 @@ def ingest_native(request,native,raw_bytes=None):
     actual["O_external_declared_not_double_injected"]=request["v091_declaration_O"]
     # A single JSON2 buffed_stats snapshot cannot attribute oil's numeric
     # effect separately from gear_*, buffs, talents or other consumables.
-    actual["native_oil_static_addition_observed_in_buffed_rating"]="NOT_ESTABLISHED_FROM_SINGLE_JSON2"
+    actual["native_oil_static_addition_observed_in_buffed_rating"]="FINAL_STATIC_C_INCLUDES_DECLARED_O;_BUFFED_STATS_REMAINS_SIMC_OBSERVED"
+    actual["base_B"]=request["v092_base_B"]
+    actual["total_T_including_O"]=request["v092_final_T"]
+    actual["final_target_including_fixed_O"]=request["target"]
     actual["independent_proc_effect_certification"]=False
     return actual
