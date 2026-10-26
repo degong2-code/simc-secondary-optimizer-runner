@@ -1,0 +1,76 @@
+name: v094 Durable B-Search Final T+O Native Runner Regression
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/v094_durable_runner_once.json
+      - integration_probes/requests/v094_durable_runner_retry.json
+permissions:
+  contents: read
+concurrency:
+  group: v094-durable-generic-bridge
+  cancel-in-progress: false
+jobs:
+  regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Verify only bounded trigger and source objects
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          accepted={"integration_probes/requests/v094_durable_runner_once.json",
+                    "integration_probes/requests/v094_durable_runner_retry.json"}
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert len(changed)==1 and changed[0] in accepted,changed
+          expected={"schema":"v094_durable_approved_T_native_runner_once_v1",
+            "official_total_formula":"T=G+J+F+O",
+            "internal_scheduler_budget":"B=G+J+F",
+            "external_oil_fixed_not_fungible":True,
+            "scout_uses_existing_v065":True,
+            "resume_checks_original_native_JSON2_SHA":True,
+            "cancel_and_strict_native_budget":True,
+            "confidence97_comparison_only":True,
+            "confidence95_existing_decision":True,
+            "all_existing_regressions":True,"new_simc_calls_in_CI":0,
+            "original_v015_v016_product_merged":False}
+          assert json.loads(pathlib.Path(changed[0]).read_text())==expected
+          pins={
+            "runner/v094_durable_inclusive_adaptive_runner.py":"2fc61d680aeb4035b2ab5f1ef47bff91924835ac",
+            "tests/test_v094_durable_inclusive_adaptive_runner.py":"36ed66f3b5ef83e052d86596100778f7b365a0e3"}
+          for path,sha in pins.items():
+              assert subprocess.check_output(["git","hash-object",path],text=True).strip()==sha,path
+          print("V094_SOURCE_OBJECT_AND_USER_APPROVED_B_PLUS_FIXED_O_CONTRACT_PASS")
+          PY
+      - name: Full suite and pilot check
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Verify portable CLI, no Native
+        shell: bash
+        run: |
+          python3 runner/v094_durable_inclusive_adaptive_runner.py --help > v094_cli_help.txt
+          grep -q -- '--cache-only' v094_cli_help.txt
+          grep -q -- '--cancel-file' v094_cli_help.txt
+          grep -q -- '--max-native' v094_cli_help.txt
+          python3 - <<'PY'
+          import ast,pathlib
+          code=pathlib.Path("runner/v094_durable_inclusive_adaptive_runner.py").read_text()
+          names=[n.name for n in ast.parse(code).body if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef))]
+          assert {"run","_recover_attempts","_candidate_summary","main"}<=set(names)
+          print("V094_BOUNDED_CLI_CANCELLATION_CACHE_AND_STATUS_CONTRACT_PASS")
+          PY
+      - uses: actions/upload-artifact@v6
+        with:
+          name: simc-v094-durable-runner-regression-${{ github.run_id }}
+          path: v094_cli_help.txt
+          if-no-files-found: error
+          retention-days: 14
