@@ -1,0 +1,101 @@
+{
+  "schema": "v092_user_approved_final_CHMV_T_native_receipt_v1",
+  "date": "2026-10-26",
+  "user_approved": true,
+  "official_formula": "T=G+J+F+O",
+  "legacy_base_B": "B=G+J+F",
+  "reference_334_common_B": 3150,
+  "reference_334_fury_B": 3350,
+  "oil_per_weapon": {
+    "crit_rating": 16,
+    "haste_rating": 16,
+    "mastery_rating": 0,
+    "versatility_rating": 0
+  },
+  "fixed_not_fungible": true,
+  "source_v13_filename": "SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.3_APPROVED_OIL_INCLUSIVE_PROJECT_SOURCE_REPLACEMENT.md",
+  "source_v13_sha256": "3dc258d59acd286dc6a2b79755b57712054238d08d5f3c9fd19679b3d6630bc9",
+  "source_project_UI_applied": "UNVERIFIED_NOT_APPLIED_BY_AVAILABLE_TOOLS",
+  "WorkOS_official_mutation": "NOT_PERFORMED_OR_VERIFIED_NO_SOURCE_ACCESS",
+  "CI": {
+    "run": 40259913081,
+    "status": "SUCCESS",
+    "tests": 524,
+    "passed": 522,
+    "skipped": 2,
+    "failed": 0,
+    "simc_calls_in_CI": 0,
+    "artifact_id": 12623632220,
+    "artifact_sha256": "1188d55f3ec334f2c81e22871d2b594468e6897c5ee11a60dda8fe33018d73bc"
+  },
+  "native_binary_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+  "SimC_revision": "7bc10711b5",
+  "native_numeric_iterations": 1,
+  "native_numeric_cases": [
+    {
+      "name": "none",
+      "B": 3350,
+      "O": 0,
+      "T": 3350,
+      "actual_rating": [
+        838,
+        838,
+        837,
+        837
+      ],
+      "json2_sha256": "5b25aa74eca2e09a85732a8a8fb6ca43ba1d7b6fd3d4693f188b7a400ee32941"
+    },
+    {
+      "name": "one",
+      "B": 3350,
+      "O": 32,
+      "T": 3382,
+      "actual_rating": [
+        854,
+        854,
+        837,
+        837
+      ],
+      "json2_sha256": "05dbf67afaeaf16009c4a243c4f55e8db1eb1448a8237a60c827d6c8571decf1"
+    },
+    {
+      "name": "two",
+      "B": 3350,
+      "O": 64,
+      "T": 3414,
+      "actual_rating": [
+        870,
+        870,
+        837,
+        837
+      ],
+      "json2_sha256": "3921828da9851fc4018dd0fd0334c5f404d130ff18363d35c17d4b2eb85a7e04"
+    }
+  ],
+  "native_dps_confirmations": [
+    {
+      "name": "one",
+      "iterations": 35,
+      "samples": 34,
+      "T": 3382,
+      "dps_mean": 202448.38628271697,
+      "SEM": 882.0408009278954,
+      "real_json2_sha256": "e09398b7176e33a0620c487a0143f39f7f48eacb2fb7d919482f8e216d02196b"
+    },
+    {
+      "name": "two",
+      "iterations": 35,
+      "samples": 34,
+      "T": 3414,
+      "dps_mean": 202815.69868243285,
+      "SEM": 877.338574814106,
+      "real_json2_sha256": "8bb2f65d11c4e5d228b98f2a9ec51ef6a84fae618722471ecc1caf35893a6bee"
+    }
+  ],
+  "global_dps_optimum_proven": false,
+  "full_v015_v016_integration_proven": false,
+  "github_main_modified": false,
+  "isolated_repo_branch": "probe/chat-cache-v035-20261024",
+  "local_proof_zip": "SIMC_SECONDARY_OPTIMIZER_V092_APPROVED_T_GJF_O_IMPLEMENTATION_AND_PROOF.zip",
+  "local_proof_zip_sha256": "3c5e3dc49f07e30f9c6c6e2ccc57cf8ac705c4d9c43bc9578fe4753c73d35170"
+}
