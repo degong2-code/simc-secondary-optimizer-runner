@@ -4,6 +4,7 @@ on:
     branches: [probe/chat-cache-v035-20261024]
     paths:
       - integration_probes/requests/v107_windows_controls_once.json
+      - integration_probes/requests/v107_windows_controls_retry.json
 permissions:
   contents: read
 concurrency:
@@ -14,6 +15,11 @@ jobs:
     runs-on: windows-2022
     timeout-minutes: 12
     steps:
+      - name: Preserve exact Git source fixture bytes on Windows
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
@@ -24,7 +30,7 @@ jobs:
       - name: Require one explicitly bounded Windows platform request
         shell: pwsh
         run: |
-          python -c "import json,os,pathlib,subprocess; p='integration_probes/requests/v107_windows_controls_once.json'; changed=subprocess.check_output(['git','diff-tree','--no-commit-id','--name-only','-r',os.environ['GITHUB_SHA']],text=True).splitlines(); assert changed==[p],changed; expected={'schema':'v107_windows_user_controls_offline_once_v1','one_windows_platform_run':True,'native_simc_calls':0,'no_new_optimizer':True,'assert_tk_tcl_headless':True,'assert_windows_lock_cancel_cache_contract':True,'do_not_claim_interactive_tk_or_windows_native':True,'main_or_work_os_mutation':False}; assert json.loads(pathlib.Path(p).read_text())==expected; print('V107_WINDOWS_OFFLINE_BOUNDED_SCOPE_PASS')"
+          python -c "import json,os,pathlib,subprocess; p='integration_probes/requests/v107_windows_controls_once.json'; changed=subprocess.check_output(['git','diff-tree','--no-commit-id','--name-only','-r',os.environ['GITHUB_SHA']],text=True).splitlines(); assert len(changed)==1 and changed[0] in [p,'integration_probes/requests/v107_windows_controls_retry.json'],changed; expected={'schema':'v107_windows_user_controls_offline_once_v1','one_windows_platform_run':True,'native_simc_calls':0,'no_new_optimizer':True,'assert_tk_tcl_headless':True,'assert_windows_lock_cancel_cache_contract':True,'do_not_claim_interactive_tk_or_windows_native':True,'main_or_work_os_mutation':False}; expected.update({'schema':'v107_windows_user_controls_offline_retry_v1','checkout_lf_preserved':True}) if changed[0].endswith('retry.json') else None; assert json.loads(pathlib.Path(changed[0]).read_text())==expected; print('V107_WINDOWS_OFFLINE_BOUNDED_SCOPE_PASS')"
       - name: Windows Python Tk runtime without interactive desktop
         shell: pwsh
         run: |
