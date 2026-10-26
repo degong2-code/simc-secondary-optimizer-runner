@@ -83,9 +83,11 @@ class V090ReferenceToStaticNative(unittest.TestCase):
             changed=profile.replace(
                 "head=selected_271874,id=271874",
                 "head=selected_271874,id=271999",1)
+            plan=tested.prepare(selection,fillers,cache.empty_cache(),profile)
             with self.assertRaisesRegex(port.PortBlocked,
                     "PROFILE_GEAR_ID_LEVEL_OPTIONS_DRIFT"):
-                tested.prepare(selection,fillers,cache.empty_cache(),changed)
+                tested.propose(plan,changed,A,FLASK,BIN,REV,35,
+                               pathlib.Path(directory)/"tampered.json")
 
     def test_source_sha_protects_user_supplied_profile(self):
         with tempfile.TemporaryDirectory() as directory:
