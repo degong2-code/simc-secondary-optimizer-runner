@@ -16,6 +16,7 @@ from v106_user_session_controller import (
     request_cancel, progress, format_result, selected_rows_from_form)
 from v107_optional_items_dialog import select_items
 from v108_user_consumable_dialog import select_consumables
+from v109_windows_readiness_diagnostic import safe_receipt,archive_receipt
 
 DISPLAY={
     ("warrior","fury"):"전사 — 분노",
@@ -107,7 +108,8 @@ class UserWindow:
         self.start_btn=ttk.Button(outer,text="실행 / 동일 설정 재개",
                                   command=self.start)
         self.start_btn.grid(row=14,column=0,columnspan=2,sticky="ew",pady=9,padx=3)
-        self.cancel_btn=ttk.Button(outer,text="취소",command=self.cancel,
+        self.cancel_btn=ttk.Button(outer,text="취소 요청 (현재 SimC 1건 완료 후)",
+                                   command=self.cancel,
                                    state="disabled")
         self.cancel_btn.grid(row=14,column=2,sticky="ew",pady=9,padx=3)
         ttk.Button(outer,text="결과 폴더",command=self.open_folder).grid(
@@ -126,6 +128,9 @@ class UserWindow:
                    row=19,column=0,columnspan=4,sticky="ew",pady=4)
         ttk.Label(outer,text="영약 F=165는 고정. Omnium Folio는 검증된 원본 전체 조합만 선택 가능.",
                   wraplength=850).grid(row=20,column=0,columnspan=4,sticky="w")
+        ttk.Button(outer,text="Windows 실행 환경 진단 (Native 0회) · ZIP 생성",
+                   command=self._readiness).grid(
+                   row=21,column=0,columnspan=4,sticky="ew",pady=4)
         outer.grid_rowconfigure(18,weight=1)
         for i in (1,3):outer.grid_columnconfigure(i,weight=1)
 
@@ -172,6 +177,34 @@ class UserWindow:
                 "장비 선택: 특수 "+str(len(rows["special_items"]))+
                 "개, 장식 "+str(len(rows["embellishments"]))+
                 "개 · Native 정확한 정적 L 정책 유지")
+
+    def _readiness(self):
+        try:
+            user=self._user()
+            binary=self.vars["binary"].get().strip()
+            revision=self.vars["revision"].get().strip()
+            cache=self.vars["static_cache"].get().strip() or None
+            receipt=safe_receipt(user,binary,revision,cache)
+        except Exception as exc:
+            # No Native is ever requested by diagnostics.
+            receipt={"schema":"v109_windows_p1_readiness_no_native_v1",
+                     "status":"BLOCKED_NO_NATIVE","new_native_calls":0,
+                     "blocker_class":type(exc).__name__,
+                     "blocker_code":str(exc).split(":",1)[0]}
+        bundle=archive_receipt(receipt,open_folder=True)
+        if receipt["status"]=="PASS_ZERO_NATIVE_PLAN_ONLY":
+            self.status.set("진단 PASS (Native 0회) · 실제 Windows SimC는 아직 미검증")
+            messagebox.showinfo("실행 준비 점검",
+                "내부 프로필·CHMV·6회 상한 점검 통과.\n"
+                "단, 바이너리의 실제 revision과 Windows SimC 실행 가능 여부는"
+                " 아직 검증하지 않았습니다.\n\n"
+                "진단 ZIP을 이 채팅에 첨부해 주세요.\n"+str(bundle))
+        else:
+            self.status.set("환경 진단 BLOCKED · Native 0회")
+            messagebox.showwarning("실행 준비 점검",
+                "실행 전 차단: "+receipt.get("blocker_code","UNKNOWN")+
+                "\n\n민감 설정을 제외한 진단 ZIP을 이 채팅에 첨부해 주세요.\n"+
+                str(bundle))
 
     def _browse_cache(self):
         p=filedialog.askopenfilename(title="Native 정적 아이템 캐시 선택",
@@ -253,7 +286,7 @@ class UserWindow:
     def cancel(self):
         if self.proc is None or self.proc.poll() is not None:return
         request_cancel(self.folder)
-        self.status.set("취소 요청됨 — 진행 중 Native 취소 처리를 기다리는 중")
+        self.status.set("취소 요청됨 — 진행 중인 SimC 1건은 끝까지 실행 후 다음 후보부터 중단")
         self.cancel_btn.configure(state="disabled")
 
     def _poll(self):
