@@ -1,0 +1,15 @@
+{
+  "schema": "v095_confirmed_95_only_material_scout",
+  "selected_confidence_percent": 95,
+  "display_97_percent": false,
+  "material_transfer_B_fraction": 0.1,
+  "near_observed_dps_loss_max_fraction": 0.01,
+  "material_scout_reuses_v065_neighbors": true,
+  "optional_precision_sem_based_on_95": true,
+  "fixed_O_not_fungible": true,
+  "T": "G+J+F+O",
+  "native_call_limit_fail_closed": true,
+  "full_regression": true,
+  "ci_simc_calls": 0,
+  "original_v015_v016_product_merged": false
+}
