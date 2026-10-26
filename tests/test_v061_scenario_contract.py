@@ -104,6 +104,32 @@ class ScenarioContract(unittest.TestCase):
         d=mage();d["equipment"]["special"]=[item("head",230000)]
         with self.assertRaisesRegex(s.ScenarioInvalid,"GEAR_SLOT_COLLISION"):
             s.normalize(d)
+    def test_explicit_catalyst_special_tier_tag_is_valid_and_count_neutral(self):
+        doc=mage()
+        doc["equipment"]["tier"][0]["options"]={"redirected_base_stats":"268222"}
+        doc["equipment"]["catalyst_special_tier_slots"]=["head"]
+        actual=s.normalize(doc)
+        self.assertEqual(actual["equipment_count"],8)
+        self.assertEqual(actual["scenario"]["equipment"]
+                         ["catalyst_special_tier_slots"],["head"])
+        self.assertEqual(actual["fixed_four_tier_slots"],
+                         ["chest","head","legs","shoulders"])
+
+    def test_catalyst_special_tag_requires_real_tier_with_origin(self):
+        for tag,options in [
+          (["feet"],{"redirected_base_stats":"268222"}),
+          (["head"],{}),
+          (["head","head"],{"redirected_base_stats":"268222"}),
+          (["head"],{"redirected_base_stats":"271564"})]:
+            doc=mage()
+            doc["equipment"]["tier"][0]["options"]=options
+            doc["equipment"]["catalyst_special_tier_slots"]=tag
+            with self.subTest(tag=tag,options=options):
+                with self.assertRaisesRegex(s.ScenarioInvalid,
+                            "CATALYST_SPECIAL_TIER_SLOT_TAGS_INVALID|"
+                            "CATALYST_LOCK_MUST_REFERENCE_EXACT_TIER_ORIGIN"):
+                    s.normalize(doc)
+
     def test_duplicate_item_id_in_separate_slots_is_simc_owned(self):
         d=mage();d["equipment"]["crafted"][1]["item_id"]=239656
         out=s.normalize(d)
