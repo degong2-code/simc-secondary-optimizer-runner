@@ -319,7 +319,7 @@ class UserTargetBootstrap(unittest.TestCase):
                 with self.subTest(case=selected):
                     with self.assertRaisesRegex(boot.UserScenarioBlocked,
                             "CATALYST_CLASS_TIER_ID_AND_ORIGIN_REQUIRED|" +
-                            "CATALYST_REQUIRES_EXISTING_CLASS_TIER_SLOT"):
+                            "CATALYST_REQUIRES_CLASS_TIER_SLOT"):
                         boot.build(user,root/"generated",fake,"7bc10711b5")
             self.assertFalse((root/"generated"/"manifest.json").exists())
 
