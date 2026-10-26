@@ -32,3 +32,16 @@ The local desktop itself is inaccessible to this chat. Windows Actions can valid
 The next authorization is merely **user readiness ZIP with Native 0**, not a request to run repeated full DPS. Keep J138/F165/O/T exact, catalysts L fail-closed, user-selected Omnium existing source whole-loadouts only, and all 95% versus global-optimum distinctions.
 
 **Authority:** isolated branch only; main, immutable v003, official Work OS/M0, Project UI, product origin v016 and main development-chat ownership remain unchanged.
+
+## Actual user Windows receipt review — 2026-10-27
+
+The user submitted `V109_READINESS_df589e7693.zip` with exactly two entries and valid ZIP CRCs. SHA256 of the received ZIP: `60d2aa749e0bb9a67f4bf6c8d78de977b454aba8c469e7cf7c87cff91ec76480`.
+
+- Receipt `status=BLOCKED_NO_NATIVE`, `blocker_class=SessionBlocked`, `blocker_code=V106_SIMC_REVISION_MUST_BE_VERIFIED_HEX`. Windows and Python **3.14.5** detected.
+- `new_native_calls=0`, `Windows_real_SimC_executed=false`, `revision_binary_match_verified=false`, `cancel_during_native_tested=false`, `resume_after_cancel_tested=false`.
+- The reported error is only that the revision field was **not 7–40 hexadecimal characters**; the sanitized receipt deliberately does not contain the user's original typed value, original archive label, or binary. Therefore it is **not possible to infer which revision or executable was selected, or that the binary is faulty** from this ZIP alone. Do **not** treat this as a source-profile, CHMV B/O/T or SimC DPS failure.
+- Minimal user assistance: report the **original official nightly `.7z` filename**, or the 7–40 digit Git commit SHA from the build provenance. The official SimC download instructions document archive naming such as `simc-901-01-win64-7bd7371.7z`. Do not copy the unrelated historical Linux revision `7bc10711b5` unless that was truly the Windows binary's source commit.
+- Added convenience feature to `runner/v109_windows_readiness_diagnostic.py` and `runner/v106_windows_simple_gui.py`: **“배포 .7z에서 SHA 읽기”** file chooser extracts only a SHA from an official-style Windows nightly archive basename. Notarization, archive signature, actual executable byte identity, and the binary's real embedded version **are not verified** by naming. No automatic SimC run.
+- [Linux focused Actions #40350931548](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40350931548): **209 offline PASS/0 FAIL** including 1 new archival filename parsing test and all previous v109 preflight cases. **New Native 0.** Windows final follow-up evidence is recorded in CURRENT once its true exit-code-checked run completes.
+
+Next: user supplies archive filename / provenance SHA; populate matching revision, repeat **Native-zero** readiness once, then request the **single** actual Windows GUI cancel/resume smoke rather than a multi-spec Native sweep.
