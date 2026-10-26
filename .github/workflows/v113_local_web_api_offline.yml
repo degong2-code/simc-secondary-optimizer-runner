@@ -8,6 +8,10 @@ on:
       - requirements-web-test.txt
       - runner/v113_local_web_api.py
       - tests/test_v113_local_web_api_offline.py
+      - tests/test_v114_local_web_ui_offline.py
+      - runner/webui/index.html
+      - runner/webui/styles.css
+      - runner/webui/app.js
       - runner/v106_user_session_controller.py
       - runner/v098_target_user_scenario_bootstrap.py
       - runner/v096_unified_product_entry.py
@@ -47,7 +51,10 @@ jobs:
       - name: Offline FastAPI HTTP tests, including security and zero Native
         shell: bash
         run: |
-          python -m unittest -q tests.test_v113_local_web_api_offline tests.test_v106_user_session_controller tests.test_v109_windows_readiness_offline tests.test_v110_windows_exact_simc_input_bytes
+          python -m unittest -q tests.test_v113_local_web_api_offline tests.test_v114_local_web_ui_offline tests.test_v106_user_session_controller tests.test_v109_windows_readiness_offline tests.test_v110_windows_exact_simc_input_bytes
+      - name: Browser script parse check (Node without dependency install)
+        shell: bash
+        run: node --check runner/webui/app.js
       - name: Existing original source contract pilot
         shell: bash
         run: python runner/pilot.py check
