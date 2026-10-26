@@ -2,6 +2,7 @@
 import json,pathlib,re,sys,tempfile,unittest
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"runner"))
+sys.path.insert(0,str(ROOT/"tests"))
 import v098_target_user_scenario_bootstrap as boot
 import v096_unified_product_entry as old
 import v062_static_budget_bridge as native_budget
