@@ -73,7 +73,12 @@ def compile_static_budget(contract,standard_filler,cache):
     all_items=chosen+standard
     nontrinket=[r for r in all_items if not r["slot"].startswith("trinket")]
     observed={};missing=[];modified=[]
-    specials={r["slot"] for r in eq["special"]}
+    # A catalyst-converted tier item is simultaneously ONE tier slot and
+    # ONE source-special fixed-secondary floor, not two overlapping pieces.
+    # The exact Native static cache identity includes redirected_base_stats.
+    specials=({r["slot"] for r in eq["special"]} |
+              {r["slot"] for r in eq["tier"]
+               if "redirected_base_stats" in r["options"]})
     locked=zero();G_components=zero()
     missing_special=[]
     for row in nontrinket:
