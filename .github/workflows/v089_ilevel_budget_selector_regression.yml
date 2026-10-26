@@ -4,6 +4,7 @@ on:
     branches: [probe/chat-cache-v035-20261024]
     paths:
       - integration_probes/requests/v089_ilvl_budget_selector_once.json
+      - integration_probes/requests/v089_ilvl_budget_selector_retry.json
 permissions:
   contents: read
 concurrency:
@@ -24,9 +25,10 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           import json,subprocess,os,pathlib
-          p="integration_probes/requests/v089_ilvl_budget_selector_once.json"
+          expected_paths={"integration_probes/requests/v089_ilvl_budget_selector_once.json","integration_probes/requests/v089_ilvl_budget_selector_retry.json"}
           changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
-          assert changed==[p],changed
+          assert len(changed)==1 and changed[0] in expected_paths,changed
+          p=changed[0]
           expected={
             "schema":"v089_ilevel_total_opt_in_reference_bridge_v1",
             "reference_mode":"reference_rounded_opt_in",
@@ -39,7 +41,7 @@ jobs:
           assert json.loads(pathlib.Path(p).read_text())==expected
           pinned={
             "runner/v089_ilvl_chmv_budget_selector.py":"74d22357d2e6077a75bd3d82c7bf2a9389a313b5",
-            "tests/test_v089_ilvl_chmv_budget_selector.py":"64602912563775c0ea55e680e06e54a1329ba3b9",
+            "tests/test_v089_ilvl_chmv_budget_selector.py":"3b84629cbd13d91473951ad453d5172f48b877a4",
             "integration_probes/data/midnight_s2_ilvl_chmv_reference_v1.json":"44f08eac17b3316c3edfe4c17f29ea3b7bcd2de2"}
           for name,sha in pinned.items():
               actual=subprocess.check_output(["git","hash-object",name],text=True).strip()
