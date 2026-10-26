@@ -3,7 +3,7 @@
 
 Four armor-family mapping + weapon-slot forms + CLASS-tier item IDs are
 separate from per-spec SimC APL/profile producers. The four existing producers
-remain the only executable source-backed cases. No new gear catalog, effect
+and the two v104 shared fixtures are the six source-backed input cases. No gear catalog, effect
 model, rebalancing engine, source-profile rewrite, or Native SimC calls.
 """
 from __future__ import annotations
