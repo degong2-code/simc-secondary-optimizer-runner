@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER — Product-Purpose Self-Audit v1 (working note)
 
+> **HISTORICAL / SUPERSEDED — DO NOT TREAT AS CURRENT USER POLICY.** The following is a dated working document preserved for evidence. Its old v1.0/v1.2 precedence, O-outside-T or efficacy-gate statements are superseded by user's approved v1.3 `T=G+J+F+O`/95%-only design and 2026-10-26 target-level farming-goal clarification. The user's v1.4 Source replacement and Instructions are **prepared for manual UI application**, not asserted applied. Current product meaning and next P1: [CURRENT_PRODUCT_PURPOSE_AND_USER_ENTRY_20261026.md](./CURRENT_PRODUCT_PURPOSE_AND_USER_ENTRY_20261026.md). Moving development state: [CURRENT_PRODUCT_DEVELOPMENT_STATE.md](./CURRENT_PRODUCT_DEVELOPMENT_STATE.md).
+
 **Status:** NON-AUTHORITATIVE WORKING CHECKLIST. This is not a new approved product policy, not the official roadmap, not Project Sources, not Work OS M0, and not a product promotion. Its sole purpose is to prevent future Chat/GitHub development from losing the approved purpose. Official reference: `SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.0.md` (sections 1–5, 11–13, 15–17). The user's later clarified scope regarding **delegating equipment proc computations to SimC** is reflected here as an implementation interpretation, not an amendment to Developer Notes.
 
 ## Immutable purpose until separately changed by the user
