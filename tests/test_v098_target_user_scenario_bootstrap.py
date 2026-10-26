@@ -176,6 +176,66 @@ class UserTargetBootstrap(unittest.TestCase):
             with self.assertRaisesRegex(Exception,"NONWEAPON_OFFHAND_CANNOT_RECEIVE_OIL"):
                 boot.build(user,pathlib.Path(td)/"build",fake,"7bc10711b5")
 
+    def test_optional_simc_import_reads_character_only_ignores_current_gear(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            fake=root/"dummy";fake.write_bytes(b"NOT_NATIVE")
+            raw=case("fury")
+            original=(boot.FIXTURES/boot.ARCHETYPES[("warrior","fury")][0]
+                      ).read_text("utf8")
+            # Imported currently worn head is an arbitrary non-target item.
+            changed=re.sub(r"^head=.*$", "head=current_worn,id=999999,ilevel=280",
+                           original,count=1,flags=re.MULTILINE)
+            self.assertNotEqual(changed,original)
+            (root/"current.simc").write_text(changed,encoding="utf8")
+            raw["character"]=None
+            raw["import_simc_profile"]="current.simc"
+            (root/"user.json").write_text(json.dumps(raw),encoding="utf8")
+            result=boot.run(root/"user.json",root/"generated",fake,"7bc10711b5")
+            self.assertEqual(result["plan"]["class"],"warrior")
+            self.assertEqual(result["plan"]["spec"],"fury")
+            output=(root/"generated"/"profile.simc").read_text("utf8")
+            self.assertNotIn("id=999999",output)
+            self.assertNotIn("ilevel=280",output)
+            self.assertEqual(result["plan"]["item_slots"],16)
+            self.assertFalse((root/"generated"/"simc_results").exists())
+            self.assertNotIn("import_simc_profile",
+                             (root/"generated"/"manifest.json").read_text())
+
+    def test_optional_import_ambiguity_and_incomplete_character_block(self):
+        user=case("frost")
+        source=(boot.FIXTURES/boot.ARCHETYPES[("mage","frost")][0]
+                ).read_text("utf8")
+        with tempfile.TemporaryDirectory() as td:
+            fake=pathlib.Path(td)/"dummy";fake.write_bytes(b"NO_NATIVE")
+            user["import_simc_profile"]="some.simc"
+            with self.assertRaisesRegex(boot.UserScenarioBlocked,
+                                        "SIMC_IMPORT_AND_MANUAL_CHARACTER_AMBIGUOUS"):
+                boot.build(user,pathlib.Path(td)/"generate",fake,
+                           "7bc10711b5",imported_profile_text=source)
+            user["character"]=None
+            for bad in (source+"\nrace=human\n",
+                        re.sub(r"^talents=.*$", "",source,count=1,flags=re.MULTILINE),
+                        source+"\nwarrior=another\n"):
+                with self.subTest(bad=bad[-30:]):
+                    with self.assertRaisesRegex(boot.UserScenarioBlocked,
+                                   "SIMC_IMPORT_CHARACTER_INCOMPLETE_OR_AMBIGUOUS"):
+                        boot.build(user,pathlib.Path(td)/"generate",fake,
+                                   "7bc10711b5",imported_profile_text=bad)
+            self.assertFalse((pathlib.Path(td)/"generate"/"manifest.json").exists())
+
+    def test_import_character_missing_file_fails_without_internal_output(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            fake=root/"dummy";fake.write_bytes(b"NO_NATIVE")
+            user=case("fury");user["character"]=None
+            user["import_simc_profile"]="missing.simc"
+            (root/"user.json").write_text(json.dumps(user))
+            with self.assertRaisesRegex(boot.UserScenarioBlocked,
+                                        "SIMC_IMPORT_NOT_FOUND"):
+                boot.run(root/"user.json",root/"generate",fake,"7bc10711b5")
+            self.assertFalse((root/"generate").exists())
+
     def test_generated_plan_replay_without_new_native_or_replacement(self):
         result,root=self.prepare(case("fury"))
         ready=old.run_manifest(result["generated_manifest"],plan_only=True)
