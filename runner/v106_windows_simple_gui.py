@@ -16,7 +16,8 @@ from v106_user_session_controller import (
     request_cancel, progress, format_result, selected_rows_from_form)
 from v107_optional_items_dialog import select_items
 from v108_user_consumable_dialog import select_consumables
-from v109_windows_readiness_diagnostic import safe_receipt,archive_receipt
+from v109_windows_readiness_diagnostic import (
+    safe_receipt,archive_receipt,revision_from_official_nightly_archive_name)
 
 DISPLAY={
     ("warrior","fury"):"전사 — 분노",
@@ -97,8 +98,11 @@ class UserWindow:
                     default=self.cfg.get("binary",""))
         ttk.Button(outer,text="찾기",command=self._browse).grid(
                    row=10,column=3,sticky="e")
-        self._entry(outer,11,0,"SimC revision","revision",
+        self._entry(outer,11,0,"SimC Git SHA (7~40자리)","revision",
                     default=self.cfg.get("revision",""))
+        ttk.Button(outer,text="배포 .7z에서 SHA 읽기",
+                   command=self._revision_archive).grid(
+                   row=11,column=3,sticky="e")
         self._entry(outer,12,0,"정적 캐시 (특수장비)","static_cache",
                     default=self.cfg.get("static_cache",""))
         ttk.Button(outer,text="찾기",command=self._browse_cache).grid(
@@ -205,6 +209,20 @@ class UserWindow:
                 "실행 전 차단: "+receipt.get("blocker_code","UNKNOWN")+
                 "\n\n민감 설정을 제외한 진단 ZIP을 이 채팅에 첨부해 주세요.\n"+
                 str(bundle))
+
+    def _revision_archive(self):
+        archive=filedialog.askopenfilename(
+            title="선택한 simc.exe를 추출한 공식 nightly .7z 압축파일",
+            filetypes=[("Official SimC nightly","*.7z"),("All files","*.*")])
+        if not archive:return
+        try:
+            revision=revision_from_official_nightly_archive_name(archive)
+        except ValueError as exc:
+            messagebox.showerror("빌드 파일명 형식 확인",str(exc))
+            return
+        self.vars["revision"].set(revision)
+        self.status.set("revision 파일명에서 추출: "+revision+
+                        " · 선택한 simc.exe가 같은 압축파일에서 나온 것인지 확인 필요")
 
     def _browse_cache(self):
         p=filedialog.askopenfilename(title="Native 정적 아이템 캐시 선택",
