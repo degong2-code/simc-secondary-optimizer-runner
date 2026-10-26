@@ -1,0 +1,109 @@
+name: v105 P1 One Paladin User -> Real Native -> 95% -> Cached Replay
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/v105_paladin_real_once.json
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v105-paladin-one-real-user-journey
+  cancel-in-progress: false
+jobs:
+  one-user-journey:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Require one explicit bounded Native request on isolated branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          required="integration_probes/requests/v105_paladin_real_once.json"
+          changed=subprocess.check_output(
+              ["git","diff-tree","--no-commit-id","--name-only","-r",
+               os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==[required],changed
+          request=json.loads(pathlib.Path(required).read_text())
+          expected={
+            "schema":"v105_single_existing_paladin_user_real_e2e_once_v1",
+            "archetype":"paladin/retribution",
+            "target_ilevel":334,
+            "reference_B":3150,
+            "one_weapon_O":32,
+            "final_T":3182,
+            "new_native_max":6,
+            "exact_simc_bin_sha256":"64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+            "expected_native_revision":"7bc10711b5",
+            "uses_existing_v098_v096_v094":True,
+            "replay_cached_results_without_new_native":True,
+            "not_a_new_optimizer":True,
+            "not_a_global_optimum_proof":True,
+            "main_or_work_os_mutation":False}
+          assert request==expected,(request,expected)
+          print("V105_USER_NATIVE_ONCE_SCOPE_AND_MAX_SIX_GUARD_PASS")
+          PY
+      - name: Focused Python offline prerequisite and pilot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile integration_probes/v105_paladin_user_e2e.py
+          python3 -m unittest -q \
+            tests.test_v105_paladin_user_e2e_contract \
+            tests.test_v098_target_user_scenario_bootstrap \
+            tests.test_v096_unified_product_entry \
+            tests.test_v096_manual_final_inclusive_entry \
+            tests.test_v097_user_result_offline \
+            tests.test_v094_durable_inclusive_adaptive_runner
+          python3 runner/pilot.py check
+      - name: Recover already SHA-pinned exact Native SimC binary
+        uses: actions/download-artifact@v4
+        with:
+          name: v050-exact-native-binary-40153209773
+          path: .simc
+          run-id: 40153209773
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Real user profile -> 6 bounded Native -> result + SHA-based cache replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc/simc' | sha256sum -c
+          chmod +x .simc/simc
+          python3 integration_probes/v105_paladin_user_e2e.py \
+            --out "${GITHUB_WORKSPACE}/out/paladin" \
+            --binary "${GITHUB_WORKSPACE}/.simc/simc" \
+            --execute --cache-replay
+      - name: Report verified receipt fields only
+        if: success()
+        run: |
+          python3 - <<'PY'
+          import json,math,pathlib
+          p=pathlib.Path("out/paladin/V105_REAL_E2E_RECEIPT.json")
+          r=json.loads(p.read_text())
+          assert r["stage"]=="PASS_REAL_USER_TO_NATIVE_TO_95_RESULT"
+          assert r["native_calls_completed_here"]==6
+          assert r["native_cache_verified_hits_in_replay"]==6
+          assert r["replay_verified_no_new_native"] is True
+          assert r["base_B"]==3150 and r["final_T"]==3182
+          assert r["observed_dps_mean"]>0 and math.isfinite(r["observed_sem"])
+          assert r["progress_percent"]==100.0
+          print("V105_SINGLE_USER_REAL_SIMC_NATIVE_95_AND_CACHE_PASS")
+          print("observed DPS",r["observed_dps_mean"],"SEM",r["observed_sem"],
+                "95 pairwise",r["observed_95_pairwise_supported"],
+                "near alternatives",r["alternatives_count"])
+          PY
+      - name: Retain input, actual JSON2, cache and error/progress evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v105-paladin-user-native-once-${{ github.run_id }}
+          path: out/
+          if-no-files-found: warn
+          retention-days: 14
