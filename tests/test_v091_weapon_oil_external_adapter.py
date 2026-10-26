@@ -98,11 +98,14 @@ class V091OilInputs(unittest.TestCase):
             with self.assertRaisesRegex(tested.OilInputBlocked,
                          "OIL_HAND_SET_INVALID"):
                 tested.configure(p,c,"dual_two_hand",["main_hand","main_hand"])
+            mutated=p+"temporary_enchant=disabled\n"+"temporary_enchant=disabled\n"
+            intentional=copy.deepcopy(c)
+            intentional["source"]["profile_sha256"]=hashlib.sha256(
+                 mutated.encode("utf8")).hexdigest()
             with self.assertRaisesRegex(tested.OilInputBlocked,
                          "MULTIPLE_TEMPORARY_ENCHANT_ASSIGNMENTS"):
-                tested.configure(p+"temporary_enchant=disabled\n"
-                                   +"temporary_enchant=disabled\n",c,
-                                   "dual_two_hand",["main_hand"])
+                tested.configure(mutated,intentional,
+                                 "dual_two_hand",["main_hand"])
 
     def test_profile_source_sha_protected_and_no_talent_apl_changes(self):
         with tempfile.TemporaryDirectory() as d:
