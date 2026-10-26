@@ -31,6 +31,22 @@ def fake_native(hits=0):
                 "confirmation_pair_direction_supported_at_95":True,
                 "global_optimum_proven":False}}
 
+def synthetic_completed_cache(folder):
+    """Offline-only six fake files; NOT observed SimC Native evidence."""
+    p=ux.paths(folder);p["progress"].parent.mkdir(parents=True,exist_ok=True)
+    p["progress"].write_text(json.dumps({
+        "status":"PASS_BOUNDED_GENERIC_NATIVE_SEARCH_AND_CACHE",
+        "completed_jobs":6,"planned_jobs":6,
+        "new_native_attempts":6,"cache_verified_hits":0}))
+    p["native_result"].write_text(json.dumps({
+        "status":"PASS_BOUNDED_GENERIC_NATIVE_SEARCH_AND_CACHE"}))
+    for k in range(6):
+        sub=(p["native_result"].parent/
+             ("confirmations" if k>=4 else "search")/("case_%02d"%k))
+        sub.mkdir(parents=True)
+        (sub/"result.json").write_text(json.dumps({"fake_case":k}))
+        (sub/"native_receipt.json").write_text(json.dumps({"fake_case":k}))
+
 class UserSessionControls(unittest.TestCase):
     def fixture(self):
         td=tempfile.TemporaryDirectory();self.addCleanup(td.cleanup)
@@ -128,15 +144,18 @@ class UserSessionControls(unittest.TestCase):
         with mock.patch.object(ux.bootstrap,"run",
                                side_effect=[fake1,fake2]) as mocked:
             self.assertEqual(ux.worker(folder,binary,"7bc10711b5"),0)
+            synthetic_completed_cache(folder)
             self.assertEqual(ux.worker(folder,binary,"7bc10711b5",
                                        cache_only=True),0)
             self.assertEqual(mocked.call_count,2)
         p=ux.paths(folder)
         self.assertEqual(json.loads(p["final"].read_text())
                          ["cache_hits_this_run"],6)
-        self.assertEqual(json.loads(p["state"].read_text())["status"],"PASS")
+        self.assertEqual(json.loads(p["state"].read_text())["status"],"PASS_CACHE_ONLY")
+        self.assertEqual(json.loads((folder/"V112_CACHE_REPLAY_RECEIPT.json")
+                                   .read_text())["cache_hits_this_run"],6)
         self.assertNotIn("result.json",list(x.name for x in folder.glob("*.json")))
-        self.assertFalse((folder/"generated"/"simc_results"/"V094_RESULT.json").exists())
+        self.assertTrue((folder/"generated"/"simc_results"/"V094_RESULT.json").exists())
 
     def test_replay_semantic_drift_blocks_even_if_worker_is_mocked(self):
         root,binary,user=self.fixture()
@@ -146,9 +165,10 @@ class UserSessionControls(unittest.TestCase):
         with mock.patch.object(ux.bootstrap,"run",side_effect=[
                 {"native_result":fake_native(0)},{"native_result":changed}]):
             self.assertEqual(ux.worker(folder,binary,"7bc10711b5"),0)
+            synthetic_completed_cache(folder)
             self.assertEqual(ux.worker(folder,binary,"7bc10711b5",
                                        cache_only=True),3)
-        self.assertIn("CACHED_USER_RESULT_SEMANTICS_CHANGED",
+        self.assertIn("CACHE_ONLY_DPS_SEM_OR_95_RESULT_DRIFT",
                       json.loads(ux.paths(folder)["state"].read_text())["reason"])
 
 if __name__=="__main__":unittest.main()
