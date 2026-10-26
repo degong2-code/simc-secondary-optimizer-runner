@@ -49,10 +49,10 @@ class V091OilInputs(unittest.TestCase):
             x=tested.prepare(p,c,f,cache.empty_cache(),"one_hand_frill",["main_hand"])
             z=tested.propose(x,FROST_TARGET,mage.F_DECLARED,BIN,REV,35,
                               pathlib.Path(d)/"one"/"result.json")
-            self.assertEqual(z["raw_gear_override"]["crit_rating"],735)
+            self.assertEqual(z["raw_gear_override"]["crit_rating"],751)
             self.assertEqual(z["v091_declaration_O"]["crit_rating"],16)
             self.assertEqual(z["v091_declaration_O"]["haste_rating"],16)
-            self.assertEqual(z["official_total"],3150)
+            self.assertEqual(z["official_total"],3182)
             self.assertEqual(z["v091_expected_temporary_enchant"],
                              "main_hand:thalassian_phoenix_oil_2")
 
@@ -68,14 +68,17 @@ class V091OilInputs(unittest.TestCase):
                                    BIN,REV,35,pathlib.Path(d)/str(len(hands))/
                                    ("x_"+("_".join(hands) or "none")+".json"))
                 ref.append(req)
-                self.assertEqual(req["official_total"],3350)
-                self.assertEqual(sum(req["raw_gear_override"].values()),3185)
-                self.assertEqual(req["raw_gear_override"]["haste_rating"],673)
+                self.assertEqual(req["official_total"],3350+32*len(hands))
+                self.assertEqual(sum(req["raw_gear_override"].values()),3185+32*len(hands))
+                self.assertEqual(req["raw_gear_override"]["haste_rating"],673+16*len(hands))
                 self.assertEqual(req["v091_declaration_O"]["crit_rating"],
                                  16*len(hands))
                 self.assertEqual(req["v091_declaration_O"]["haste_rating"],
                                  16*len(hands))
                 self.assertEqual(req["profile_binding"]["slots_bound"],16)
+                self.assertEqual(sum(req["target"].values()),3350+32*len(hands))
+                self.assertEqual(req["v092_base_B"],3350)
+                self.assertEqual(req["v092_formula"],"T=G+J+F+O")
             self.assertEqual(len({r["case_key"] for r in ref}),4)
             self.assertEqual(ref[0]["v091_expected_temporary_enchant"],"disabled")
             self.assertEqual(ref[2]["v091_expected_temporary_enchant"],
