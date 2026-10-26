@@ -177,10 +177,14 @@ def format_result(data):
     need(r["confidence_level"]==0.95 and
          r["global_optimum_proven"] is False,"ONLY_95_ALLOWED")
     ratings=first["absolute_rating_T"]
+    ratio=first["percent_of_final_T"]
+    need(all(k in ratings and k in ratio for k in names),
+         "FOUR_ABSOLUTE_RATINGS_AND_PERCENT_REQUIRED")
     lines=["관측 1순위 · 전역 최적해 입증 아님",
            "최종 CHMV T = "+str(r["final_T"])+" (B="+str(r["base_B"])
            +", 고정 기름 O="+str(sum(r["fixed_O"].values()))+")",
-           " / ".join(names[k]+" "+str(ratings[k])
+           " / ".join(names[k]+" "+str(ratings[k])+
+                      " ("+format(ratio[k],".2f")+"%)"
                       for k in names),
            "관측 DPS: "+format(first["observed_dps_mean"],",.1f")+
            "   SimC SEM: "+format(first["simc_sem"],",.2f"),
@@ -206,7 +210,9 @@ def worker_lock(folder):
     target=pathlib.Path(folder)/"V106_WORKER.lock"
     target.parent.mkdir(parents=True,exist_ok=True)
     with target.open("a+b") as fd:
-        fd.seek(0);fd.write(b"1");fd.flush();fd.seek(0)
+        fd.seek(0,2)
+        if fd.tell()==0:fd.write(b"1");fd.flush()
+        fd.seek(0)
         try:
             if os.name=="nt":
                 import msvcrt
