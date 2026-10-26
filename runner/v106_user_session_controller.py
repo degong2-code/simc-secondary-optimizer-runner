@@ -14,6 +14,9 @@ import v098_target_user_scenario_bootstrap as bootstrap
 SCHEMA="v106_dps_user_session_v1"
 DEFAULT_ROOT=pathlib.Path.home()/"SIMC_Secondary_Optimizer"/"runs"
 SUPPORTED=tuple(sorted(bootstrap.ARCHETYPES))
+# Extended UI selected equipment is a pass-through to v098's exact
+# source-backed item/tier/native-L checks, not a second selector.
+OPTIONAL_CONTROLS=frozenset(("special_items","embellishments"))
 DUAL_FORMS=frozenset(("dual_two_hand","dual_one_hand"))
 
 class SessionBlocked(ValueError):pass
@@ -48,12 +51,42 @@ def source_defaults(key):
             "weapon_form":weapon,"oil_hands":["main_hand","off_hand"]
              if weapon in DUAL_FORMS else ["main_hand"]}
 
+def validated_selected_gear(entries,group,limit):
+    """Validate only user input shape. v098 + SimC own identity and effects."""
+    need(type(entries) is list and len(entries)<=limit,
+         "SELECTED_GEAR_COUNT_OR_TYPE")
+    out=[]
+    for item in entries:
+        need(type(item) is dict and
+             set(item)=={"slot","item_id","options"},
+             "SELECTED_GEAR_FIELDS")
+        slot=item["slot"]
+        need(type(slot) is str and slot in bootstrap.item_mod.SLOTS and
+             slot not in ("trinket1","trinket2"),
+             "SELECTED_GEAR_NONTRINKET_SLOT_REQUIRED")
+        bootstrap.item_mod.checked_id(item["item_id"])
+        options=bootstrap.item_mod.checked_options(item["options"])
+        if group=="special":
+            need(not(set(options)&{"embellishment","crafted_stats"}),
+                 "SPECIAL_CANNOT_BE_CRAFTED")
+        else:
+            need("embellishment" in options and
+                 "redirected_base_stats" not in options,
+                 "CRAFTED_NEEDS_EMBELLISHMENT_NOT_CATALYST")
+        out.append({"slot":slot,"item_id":item["item_id"],
+                    "options":options})
+    need(len({v["slot"] for v in out})==len(out),
+         "DUPLICATE_SELECTED_GEAR_SLOT")
+    return out
+
 def user_scenario(controls):
     """Only approved v098 user fields; do not expose manifest/filler/seed."""
-    need(type(controls) is dict and set(controls)=={
-         "class","spec","race","talents","ilevel","final_T",
-         "trinket_ids","oil_hands","targets","duration_seconds",
-         "raid_buffs"},"USER_INPUT_FIELDS")
+    required={"class","spec","race","talents","ilevel","final_T",
+              "trinket_ids","oil_hands","targets","duration_seconds",
+              "raid_buffs"}
+    need(type(controls) is dict and
+         required<=set(controls)<=required|OPTIONAL_CONTROLS,
+         "USER_INPUT_FIELDS")
     key=(controls["class"],controls["spec"])
     need(key in bootstrap.ARCHETYPES,"DPS_ARCHETYPE_NOT_READY")
     for x in ("race","talents"):
@@ -77,13 +110,20 @@ def user_scenario(controls):
          type(duration) is int and 1<=duration<=3600 and
          type(controls["raid_buffs"]) is bool,
          "COMBAT_USER_SETTING_INVALID")
+    specials=validated_selected_gear(
+        controls.get("special_items",[]),"special",8)
+    crafted=validated_selected_gear(
+        controls.get("embellishments",[]),"crafted",2)
+    occupied=[r["slot"] for r in specials+crafted]
+    need(len(occupied)==len(set(occupied)),
+         "SELECTED_SPECIAL_AND_CRAFTED_SLOT_CONFLICT")
     return {"schema":bootstrap.SCHEMA,
             "character":{k:controls[k] for k in
                          ("class","spec","race","talents")},
             "target":{"ilevel":ilvl,"final_T":final},
             "trinkets":[{"slot":slot,"item_id":id_,"options":{}}
                 for slot,id_ in zip(("trinket1","trinket2"),trinkets)],
-            "special_items":[],"embellishments":[],
+            "special_items":specials,"embellishments":crafted,
             "oil_hands":list(hands),
             "combat":{"targets":targets,"duration_seconds":duration,
                       "raid_buffs":controls["raid_buffs"]}}
@@ -93,7 +133,8 @@ def standard_controls(key=("paladin","retribution")):
     return {k:v for k,v in d.items()
             if k in ("class","spec","race","talents","oil_hands")} | {
             "ilevel":334,"final_T":None,"trinket_ids":d["trinket_ids"],
-            "targets":1,"duration_seconds":300,"raid_buffs":True}
+            "targets":1,"duration_seconds":300,"raid_buffs":True,
+            "special_items":[],"embellishments":[]}
 
 def session_key(user,binary,revision,static_cache=None):
     binary=pathlib.Path(binary).expanduser().resolve()
@@ -103,6 +144,10 @@ def session_key(user,binary,revision,static_cache=None):
     cache_path=(pathlib.Path(static_cache).expanduser().resolve()
                 if static_cache else None)
     need(cache_path is None or cache_path.is_file(),"STATIC_CACHE_NOT_FOUND")
+    # Specials require an exact Native static L variant in the selected
+    # cache. Don't invite an expensive Native job then invent/zero missing L.
+    need(not user.get("special_items") or cache_path is not None,
+         "SPECIAL_EQUIPMENT_REQUIRES_EXACT_STATIC_CACHE")
     identity={"schema":SCHEMA,"user":user,
               "simc_binary_sha256":sha(binary.read_bytes()),
               "simc_revision":revision,
