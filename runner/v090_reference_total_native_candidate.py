@@ -41,18 +41,32 @@ def _exact_rows(normalized,fillers):
 def prepare(selection, fillers, native_cache, reference):
     """Reuse v062 on a v089 opt-in selection. Never invent missing gear G."""
     need(type(selection) is dict and selection.get("schema")==selected.SCHEMA
-         and selection.get("source_mode")==selected.REFERENCE_MODE
-         and selection.get("status")=="READY_OPT_IN_REFERENCE_TOTAL_NOT_FULL_P3"
          and selection.get("native_G_required_for_T") is False,
-         "REFERENCE_SELECTION_REQUIRED")
-    reference_level=selection["scenario"]["target"]["ilevel"]
-    track=selection["selected_track"]
-    reg,live_sha=selected.load_registry()
-    need(selection["reference_sha256"]==live_sha
-         and type(selection.get("reference_row")) is dict
-         and selection["reference_row"]==reg["values"][reference_level-266]
-         and selection["resolved_T"]==selection["reference_row"][track],
-         "REFERENCE_PROVENANCE_TAMPERED")
+         "REFERENCE_OR_MANUAL_SELECTION_REQUIRED")
+    is_reference=(selection.get("source_mode")==selected.REFERENCE_MODE
+                  and selection.get("status")=="READY_OPT_IN_REFERENCE_TOTAL_NOT_FULL_P3")
+    is_manual=(selection.get("source_mode")=="user_manual_total"
+               and selection.get("status")=="READY_USER_MANUAL_TOTAL")
+    need(is_reference or is_manual,"REFERENCE_SELECTION_REQUIRED")
+    if is_reference:
+        reference_level=selection["scenario"]["target"]["ilevel"]
+        track=selection["selected_track"]
+        reg,live_sha=selected.load_registry()
+        need(266<=reference_level<=344
+             and selection["reference_sha256"]==live_sha
+             and type(selection.get("reference_row")) is dict
+             and selection["reference_row"]==reg["values"][reference_level-266]
+             and selection["resolved_T"]==selection["reference_row"][track],
+             "REFERENCE_PROVENANCE_TAMPERED")
+    else:
+        live_sha=None
+        track=None
+        need(selection.get("reference_sha256") is None
+             and selection.get("reference_row") is None
+             and selection.get("selected_track") is None
+             and selection["scenario"]["target"]["mode"]=="manual_total"
+             and selection["scenario"]["target"]["manual_total"]==selection["resolved_T"],
+             "MANUAL_BASE_B_SELECTION_DRIFT")
     normalized=scenario.normalize(selection["scenario"])
     need(normalized["scenario_digest"]==
          selection["scenario_plan"]["scenario_digest"],
@@ -60,9 +74,10 @@ def prepare(selection, fillers, native_cache, reference):
     need(normalized["budget"]["T"]==selection["resolved_T"]
          and normalized["scenario"]["target"]["mode"]=="manual_total",
          "REFERENCE_TYPED_TOTAL_DRIFT")
-    need(normalized["budget"]["J"]==reg["J"]
-         and normalized["budget"]["F"]==reg["F"],
-         "REFERENCE_CONSUMABLE_CONTRACT_DRIFT")
+    if is_reference:
+        need(normalized["budget"]["J"]==reg["J"]
+             and normalized["budget"]["F"]==reg["F"],
+             "REFERENCE_CONSUMABLE_CONTRACT_DRIFT")
     if normalized["scenario"]["source"]["kind"]=="user_supplied":
         require_hash=normalized["scenario"]["source"]["profile_sha256"]
         need(hashlib.sha256(reference.encode("utf8")).hexdigest()==require_hash,
@@ -84,6 +99,7 @@ def prepare(selection, fillers, native_cache, reference):
         "schema":PROVENANCE,"source":selected.REFERENCE_MODE,
         "reference_sha256":live_sha,"reference_row":selection["reference_row"],
         "reference_track":track,"total_T":selection["resolved_T"],
+        "budget_entry_mode":"OPT_IN_REFERENCE_B" if is_reference else "USER_MANUAL_FINAL_T_CONVERTED_TO_B",
         "G_is_not_required_for_reference_T":True,
         "ordinary_missing_G_records_not_fabricated":True}
     inventory=port.verify_profile_binding(normalized,native_budget,reference)

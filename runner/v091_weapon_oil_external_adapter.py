@@ -112,8 +112,20 @@ def configure(profile,doc,weapon_layout,applied_hands):
         "mechanics_owner":"SimC",
         "buffed_O_addition_independently_proven":False}
 
-def prepare(profile,doc,fillers,static_cache,weapon_layout,applied_hands):
+def prepare(profile,doc,fillers,static_cache,weapon_layout,applied_hands,
+            *,manual_final_T=None):
+    # Source-locked oil is configured ONCE. A final-inclusive user T is
+    # converted explicitly to legacy free B by the approved v092 policy.
+    if manual_final_T is not None:
+        need(type(manual_final_T) is int and 1<=manual_final_T<=100000,
+             "MANUAL_FINAL_T_REQUIRED")
+        need(doc["target"]["mode"]=="derived_ilevel",
+             "MANUAL_FINAL_T_REQUIRES_UNSET_LEGACY_TARGET")
     oil=configure(profile,doc,weapon_layout,applied_hands)
+    if manual_final_T is not None:
+        converted=total_policy.approved_manual_total_to_legacy_B(
+            oil["scenario"],manual_final_T,oil["declared_O"])
+        oil["scenario"]=converted["scenario"]
     selection=chooser.resolve(oil["scenario"],mode=chooser.REFERENCE_MODE,
                               weapon_layout=weapon_layout)
     prepared=reference_path.prepare(selection,fillers,static_cache,oil["profile"])
@@ -122,6 +134,9 @@ def prepare(profile,doc,fillers,static_cache,weapon_layout,applied_hands):
          oil["declared_O"],
          "OIL_TOTAL_OR_EXTERNAL_VECTOR_MISMATCH")
     accounting=total_policy.calculate(prepared["T"],oil["declared_O"])
+    if manual_final_T is not None:
+        need(accounting["final_T"]==manual_final_T,
+             "MANUAL_FINAL_T_B_O_MISMATCH")
     # A source-locked full exact ID/ilevel/option profile with all selected
     # fixed L and no ordinary G cache is required via existing v090.
     return {"schema":SCHEMA,"status":"READY_V091_STATIC_C_CANDIDATE",

@@ -2,7 +2,8 @@
 """v096 single manifest -> existing v091/093/094/095 source-locked product path.
 
 No new solver, simulation mechanics, gear selection or Native gate.
-Reference B is explicitly opt-in; exact-G and inclusive manual T remain open.
+Reference B is explicitly opt-in. Inclusive user manual T uses approved v092
+conversion to legacy B. Exact Native G remains open.
 """
 from __future__ import annotations
 import argparse,hashlib,json,pathlib,sys
@@ -18,6 +19,7 @@ FIELDS={"schema","profile_simc","scenario_json","fillers_json",
         "static_cache_json","weapon_layout","oil_hands","flask_F",
         "seed_targets_B","native_binary","native_revision","output_dir",
         "scouts","material_scouts","native_limit","step","cancel_file"}
+MANUAL_FIELD="manual_final_T"
 class EntryBlocked(ValueError):pass
 def need(ok,reason):
     if not ok:raise EntryBlocked(reason)
@@ -34,8 +36,12 @@ def source(manifest_path):
     """Build the existing typed and SHA-locked Native context; zero SimC calls."""
     manifest_path=pathlib.Path(manifest_path).resolve()
     user=read_object(manifest_path)
-    need(type(user) is dict and set(user)==FIELDS
+    need(type(user) is dict and set(user) in (FIELDS,FIELDS|{MANUAL_FIELD})
          and user.get("schema")==SCHEMA,"ENTRY_SCHEMA_OR_FIELDS")
+    manual_T=user.get(MANUAL_FIELD)
+    if MANUAL_FIELD in user:
+        need(type(manual_T) is int and 1<=manual_T<=100000,
+             "MANUAL_FINAL_T_REQUIRED")
     paths={k:path_for(manifest_path.parent,user[k],
                      nullable=k in ("static_cache_json","cancel_file"))
            for k in ("profile_simc","scenario_json","fillers_json",
@@ -62,7 +68,8 @@ def source(manifest_path):
     need(paths["native_binary"].is_file(),"SIMC_BINARY_NOT_PRESENT")
     binary_sha=hashlib.sha256(paths["native_binary"].read_bytes()).hexdigest()
     prepared=oil_adapter.prepare(profile,doc,fillers,cache,
-                                 user["weapon_layout"],user["oil_hands"])
+                                 user["weapon_layout"],user["oil_hands"],
+                                 manual_final_T=manual_T)
     context=adaptive.prepare(prepared,binary_sha,user["native_revision"])
     normalized=prepared["prepared"]["scenario"]
     B,lo,hi=scheduler.bounds(normalized,
@@ -76,11 +83,17 @@ def source(manifest_path):
          "SCENARIO_NATIVE_LIMIT_PRECHECK")
     need(sum(user["flask_F"].values())==normalized["budget"]["F"],
          "FLASK_F_TOTAL_MISMATCH")
-    # The existing v090 reference track is a bounded, opt-in scenario path.
-    # Do not silently call this proof the whole product's exact-G/manual-T route.
-    need(prepared["prepared"]["static_budget"]["reference_budget_provenance"]
-         ["schema"]=="v090_reference_budget_provenance_v1",
-         "REFERENCE_B_ONLY_UNTIL_EXACT_G_AND_MANUAL_T_MERGE")
+    provenance=prepared["prepared"]["static_budget"]["reference_budget_provenance"]
+    need(provenance["schema"]=="v090_reference_budget_provenance_v1",
+         "SOURCE_BUDGET_PROVENANCE_REQUIRED")
+    if manual_T is None:
+        need(provenance["source"]=="reference_rounded_opt_in",
+             "REFERENCE_B_ONLY_UNTIL_EXACT_G_MERGE")
+    else:
+        need(provenance["source"]=="user_manual_total"
+             and provenance["budget_entry_mode"]=="USER_MANUAL_FINAL_T_CONVERTED_TO_B"
+             and context["identity"]["approved_final_T"]==manual_T,
+             "MANUAL_FINAL_T_SOURCE_OR_TOTAL_DRIFT")
     plan={"schema":SCHEMA,
           "status":"READY_SOURCE_LOCKED_NATIVE_ENTRY_NOT_EXECUTED",
           "official_formula":"T=G+J+F+O","base_B":B,
@@ -98,7 +111,11 @@ def source(manifest_path):
           "scouts":user["scouts"],"material_scouts":user["material_scouts"],
           "native_called":False,
           "original_product_v015_v016_merged":False,
-          "budget_source":"OPT_IN_ILVL_REFERENCE_BASE_B"}
+          "budget_source":"USER_MANUAL_FINAL_INCLUDING_OIL" if manual_T is not None
+                          else "OPT_IN_ILVL_REFERENCE_BASE_B"}
+    if manual_T is not None:
+        plan["user_manual_final_T"]=manual_T
+        plan["legacy_v061_base_B"]=B
     return {"manifest":user,"context":context,"seeds":seeds,
             "flask":user["flask_F"],"paths":paths,"plan":plan}
 
@@ -117,6 +134,7 @@ def run_manifest(manifest_path,*,plan_only=False,cache_only=False):
         "native_calls_cumulative":result["new_native_attempts_cumulative"],
         "cache_hits_this_run":result["verified_cache_hits_this_run"],
         "base_B":result["B"],"final_T":result["official_final_T"],
+        "budget_source":ready["plan"]["budget_source"],
         "original_product_v015_v016_merged":False}
 
 def main(argv=None):
