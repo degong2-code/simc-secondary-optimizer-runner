@@ -11,6 +11,7 @@ import copy,pathlib
 
 import v055_simc_item_selection as items
 import v102_ordinary_armor_seed_pool as ordinary_pool
+import v103_source_observed_weapon_types as weapon_types
 import v082_fury_plate_dual_twohand_native as fury
 import v083_paladin_single_2h_native as paladin
 import v084_frost_cloth_1h_frill_native as frost
@@ -102,6 +103,9 @@ def source_backed_gear(key,folder,ilevel,need):
     need(len(rows) in (15,16),"TEMPLATE_EXPECTED_FIFTEEN_OR_SIXTEEN_SLOTS")
     need(set(rows)&{"main_hand","off_hand"}==set(WEAPON_FORMS[form]),
          "SOURCE_WEAPON_TOPOLOGY_DRIFT")
+    # Source-observed EXACT weapon subtypes and IDs, no imagined
+    # alternate class/spec skill permissions or changed weapon DPS.
+    weapon_types.validate_existing(key,rows,form)
     expected_tier=CLASS_TIER_ITEMS[key[0]]
     need(len(cfg["equipment"]["tier"])==4
          and all(slot in TIER_FIVE and row["item_id"]==expected_tier[slot]
