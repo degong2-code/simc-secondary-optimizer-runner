@@ -1,0 +1,16 @@
+{
+  "schema": "v105_single_existing_paladin_user_real_e2e_once_v1",
+  "archetype": "paladin/retribution",
+  "target_ilevel": 334,
+  "reference_B": 3150,
+  "one_weapon_O": 32,
+  "final_T": 3182,
+  "new_native_max": 6,
+  "exact_simc_bin_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+  "expected_native_revision": "7bc10711b5",
+  "uses_existing_v098_v096_v094": true,
+  "replay_cached_results_without_new_native": true,
+  "not_a_new_optimizer": true,
+  "not_a_global_optimum_proof": true,
+  "main_or_work_os_mutation": false
+}
