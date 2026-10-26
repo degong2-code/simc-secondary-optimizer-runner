@@ -90,36 +90,3 @@ def precision_plan(first,second,max_iterations,confidence=0.95):
         "reason":reason,"global_optimum_proven":False,
         "accuracy_claim":"ESTIMATED_EXTRA_SAMPLES_NOT_GUARANTEED"}
 
-def comparator(observations,base_B,fixed_o,material_fraction=0.10,
-               near_loss=0.01):
-    """Observed relative performance only, best-first even if unresolved."""
-    need(type(observations) is list and bool(observations),"NO_OBSERVATIONS")
-    need(type(base_B) is int and base_B>0,"BASE_B")
-    contract.vector(fixed_o,"FIXED_O")
-    ranks=sorted(observations,key=lambda r:(-r["dps_mean"],r["case_key"]))
-    # Selected best is the max observed mean; a small difference is not
-    # promoted to statistical superiority.
-    best=ranks[0]; eligible=[]
-    for cand in ranks[1:]:
-        moved=sum(abs(cand["v092_base_target"][s]-
-                      best["v092_base_target"][s]) for s in contract.STATS)/2
-        delta=best["dps_mean"]-cand["dps_mean"]
-        half=Z95*math.hypot(best["dps_sem"],cand["dps_sem"])
-        if moved>=base_B*material_fraction and
-           delta/max(best["dps_mean"],1)<=near_loss:
-            eligible.append({"target_B":cand["v092_base_target"],
-                 "target_T":cand["target"],
-                 "dps_mean":cand["dps_mean"],
-                 "sem":cand["dps_sem"],"moved_rating":moved,
-                 "observed_dps_loss":delta,
-                 "confidence95_halfwidth":half,
-                 "difference_95_separated":delta>half,
-                 "statistical_label":"OBSERVED_ALTERNATIVE_NOT_PROVEN_EQUAL"})
-    return {"schema":SCHEMA,"best_observed_B":best["v092_base_target"],
-        "best_observed_T":best["target"],
-        "best_observed_dps":best["dps_mean"],
-        "best_sem":best["dps_sem"],
-        "near_distinct_measured_alternatives":eligible,
-        "no_distinct_measured_near_alternative":not bool(eligible),
-        "decision_confidence":0.95,
-        "global_optimum_proven":False}
