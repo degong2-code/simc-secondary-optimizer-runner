@@ -17,7 +17,7 @@ def ob(base,mean,sem,iteration=80):
             'dps_mean':mean,'dps_sem':sem}
 
 class V094Durable(unittest.TestCase):
-    def test_95_default_97_comparison_only_and_material_alternatives(self):
+    def test_95_only_and_material_alternatives(self):
         a={'crit_rating':838,'haste_rating':838,'mastery_rating':837,'versatility_rating':837}
         b={'crit_rating':438,'haste_rating':1238,'mastery_rating':837,'versatility_rating':837}
         o={'crit_rating':32,'haste_rating':32,'mastery_rating':0,'versatility_rating':0}
@@ -27,8 +27,10 @@ class V094Durable(unittest.TestCase):
         self.assertEqual(len(summary['material_alternatives']),1)
         q=summary['material_alternatives'][0]
         self.assertEqual(q['base_rating_moved'],400)
-        self.assertLess(q['diff_95_halfwidth_approx'],q['diff_97_halfwidth_approx'])
-        self.assertFalse(summary['confidence_97_changes_decision'])
+        self.assertGreater(q['diff_95_halfwidth_approx'],0)
+        self.assertNotIn('diff_97_halfwidth_approx',q)
+        self.assertEqual(summary['confidence_for_decision_and_display'],0.95)
+        self.assertFalse(any('97' in k for k in summary))
         self.assertFalse(summary['global_optimum_proven'])
 
     def test_not_claim_material_alt_for_only_100_move(self):
