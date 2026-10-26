@@ -37,7 +37,7 @@ class UserRequest(BaseModel):
 
 def blocked(exc):
     """Return stable codes, not private absolute paths, talent strings, or tracebacks."""
-    if isinstance(exc, (sessions.SessionBlocked, bootstrap.UserBlocked)):
+    if isinstance(exc, (sessions.SessionBlocked, bootstrap.UserScenarioBlocked)):
         code = str(exc).split(":", 1)[0].split("\n", 1)[0]
         return HTTPException(422, detail={"code": code})
     return HTTPException(409, detail={"code": "LOCAL_SESSION_PRECHECK_BLOCKED",
@@ -221,9 +221,14 @@ def create_app(*,root=None, token=None):
             ct=request.headers.get("content-type","").split(";",1)[0].strip().lower()
             if ct!="application/json":
                 return JSONResponse({"detail":{"code":"JSON_CONTENT_TYPE_REQUIRED"}},415)
-            if request.headers.get("content-length") and int(
-                    request.headers["content-length"])>131072:
-                return JSONResponse({"detail":{"code":"PAYLOAD_TOO_LARGE"}},413)
+            length=request.headers.get("content-length")
+            if length:
+                try:
+                    large=int(length)>131072
+                except ValueError:
+                    return JSONResponse({"detail":{"code":"CONTENT_LENGTH_INVALID"}},400)
+                if large:
+                    return JSONResponse({"detail":{"code":"PAYLOAD_TOO_LARGE"}},413)
         return await call_next(request)
 
     @app.get("/api/v1/health")
