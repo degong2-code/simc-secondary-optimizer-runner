@@ -84,6 +84,7 @@ class NativeBudget(unittest.TestCase):
         cfg=mage()
         source=cfg["equipment"]["tier"][0]
         source["options"]={"redirected_base_stats":"268222"}
+        cfg["equipment"]["catalyst_special_tier_slots"]=["head"]
         plan,fill,c=fixture(cfg)
         stats={"crit_rating":0,"haste_rating":0,
                "mastery_rating":170,"versatility_rating":0}
@@ -97,10 +98,20 @@ class NativeBudget(unittest.TestCase):
         self.assertEqual(out["effective_floor_if_possible"]["mastery_rating"],170)
         self.assertEqual(out["gear_items_total"],15)
 
+    def test_unselected_redirected_tier_does_not_lock_any_L(self):
+        cfg=mage()
+        cfg["equipment"]["tier"][0]["options"]={"redirected_base_stats":"268222"}
+        plan,fill,c=fixture(cfg)
+        result=p.compile_static_budget(plan,fill,c)
+        self.assertEqual(sum(result["locked_L_when_all_specials_observed"].values()),0)
+        self.assertEqual(result["G_if_complete"],1300)
+        self.assertEqual(result["budget"]["T_official"],1603)
+
     def test_catalyzed_tier_missing_exact_source_variant_is_not_zero(self):
         cfg=mage()
         source=cfg["equipment"]["tier"][0]
         source["options"]={"redirected_base_stats":"268222"}
+        cfg["equipment"]["catalyst_special_tier_slots"]=["head"]
         plan,fill,c=fixture(cfg)
         del c["variants"][native.digest(p.exact_identity(source))]
         out=p.compile_static_budget(plan,fill,c)
