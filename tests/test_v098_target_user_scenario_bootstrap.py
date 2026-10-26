@@ -4,6 +4,9 @@ ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"runner"))
 import v098_target_user_scenario_bootstrap as boot
 import v096_unified_product_entry as old
+import v062_static_budget_bridge as native_budget
+import v061_scenario_contract as scenario
+from test_v062_static_budget_bridge import record as offline_record
 
 def case(which,*,ilevel=334,final_T=None):
     options={"fury":("warrior","fury"),
@@ -158,7 +161,7 @@ class UserTargetBootstrap(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             fake=pathlib.Path(td)/"binary";fake.write_bytes(b"NO_NATIVE")
             with self.assertRaisesRegex(boot.UserScenarioBlocked,
-                                        "SPECIAL_OVERWRITES_TIER_OR_TRINKET"):
+                                        "CATALYST_CLASS_TIER_ID_AND_ORIGIN_REQUIRED"):
                 boot.build(user,pathlib.Path(td)/"build",fake,"7bc10711b5")
         user=case("fury")
         user["character"]["class"]="shaman"
@@ -167,6 +170,77 @@ class UserTargetBootstrap(unittest.TestCase):
                                         "REPRESENTATIVE_ARCHETYPE_NOT_READY"):
                 boot.build(user,pathlib.Path(td)/"build",pathlib.Path(td)/"none",
                            "7bc10711b5")
+
+    def test_catalyst_special_tier_preserves_origin_and_one_physical_slot(self):
+        # Synthetic cache variant tests code accounting, not actual Native item
+        # effects or a new same-season canonical static measurement.
+        user=case("fury")
+        user["special_items"]=[{"slot":"chest","item_id":271459,
+            "options":{"redirected_base_stats":"268222","bonus_id":"13848"}}]
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            fake=root/"dummy";fake.write_bytes(b"NO_NATIVE_CALLED")
+            c=boot.cache_mod.empty_cache()
+            converted={"slot":"chest","item_id":271459,"ilevel":334,
+               "options":{"redirected_base_stats":"268222","bonus_id":"13848"}}
+            fixed={"crit_rating":0,"haste_rating":0,
+                   "mastery_rating":170,"versatility_rating":0}
+            offline_record(c,converted,fixed)
+            cachefile=root/"synth_static.json"
+            boot.cache_mod.write_atomic(cachefile,c)
+            result=boot.build(user,root/"generated",fake,"7bc10711b5",
+                              static_cache_path=cachefile)
+            self.assertEqual(result["plan"]["item_slots"],16)
+            self.assertEqual((result["plan"]["base_B"],result["plan"]["final_T"]),
+                             (3350,3414))
+            self.assertEqual(result["catalyst_origin_items"],
+                [{"slot":"chest","tier_item_id":271459,"source_item_id":268222}])
+            profile=(root/"generated"/"profile.simc").read_text()
+            chest=[l for l in profile.splitlines() if l.startswith("chest=")]
+            self.assertEqual(len(chest),1)
+            self.assertIn("id=271459",chest[0])
+            self.assertIn("redirected_base_stats=268222",chest[0])
+            self.assertIn("bonus_id=13848",chest[0])
+            cfg=json.loads((root/"generated"/"scenario.json").read_text())
+            self.assertEqual(len(cfg["equipment"]["tier"]),4)
+            self.assertEqual(cfg["equipment"]["special"],[])
+            self.assertIn(271459,[r["item_id"] for r in cfg["equipment"]["tier"]])
+            fillers=json.loads((root/"generated"/"fillers.json").read_text())
+            budget=native_budget.compile_static_budget(scenario.normalize(cfg),
+                                                        fillers,c)
+            self.assertEqual(budget["locked_L_when_all_specials_observed"],fixed)
+            self.assertEqual(len(budget["missing_special_fixed_static"]),0)
+            self.assertFalse((root/"generated"/"simc_results").exists())
+
+    def test_catalyst_tier_fails_closed_without_exact_native_static(self):
+        user=case("fury")
+        user["special_items"]=[{"slot":"chest","item_id":271459,
+           "options":{"redirected_base_stats":"268222"}}]
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td);fake=root/"dummy";fake.write_bytes(b"NO_NATIVE")
+            with self.assertRaisesRegex(Exception,
+                       "SPECIAL_L_REQUIRES_EXACT_NATIVE_STATIC_VARIANT"):
+                boot.build(user,root/"generated",fake,"7bc10711b5")
+            self.assertFalse((root/"generated"/"manifest.json").exists())
+
+    def test_catalyst_wrong_tier_id_or_non_tier_slot_refused(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td);fake=root/"dummy";fake.write_bytes(b"NO_NATIVE")
+            cases=[
+              {"slot":"chest","item_id":271465,
+               "options":{"redirected_base_stats":"268222"}},
+              {"slot":"chest","item_id":271459,
+               "options":{"redirected_base_stats":"271459"}},
+              {"slot":"feet","item_id":271459,
+               "options":{"redirected_base_stats":"268222"}}]
+            for selected in cases:
+                user=case("fury");user["special_items"]=[selected]
+                with self.subTest(case=selected):
+                    with self.assertRaisesRegex(boot.UserScenarioBlocked,
+                            "CATALYST_CLASS_TIER_ID_AND_ORIGIN_REQUIRED|" +
+                            "CATALYST_REQUIRES_EXISTING_CLASS_TIER_SLOT"):
+                        boot.build(user,root/"generated",fake,"7bc10711b5")
+            self.assertFalse((root/"generated"/"manifest.json").exists())
 
     def test_offhand_oil_not_accepted_for_frost_frill(self):
         user=case("frost")
