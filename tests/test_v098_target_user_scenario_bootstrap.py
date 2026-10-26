@@ -67,6 +67,19 @@ class UserTargetBootstrap(unittest.TestCase):
         self.assertEqual(sum(a.values()),3350)
         self.assertEqual(sum(b.values()),3350)
 
+    def test_registered_ordinary_material_seed_coverage_reported_not_full_profile(self):
+        for name,material,count in (
+            ("fury","plate",2),("retribution","plate",2),
+            ("frost","cloth",3),("beast_mastery","mail",3)):
+            with self.subTest(spec=name):
+                result,_=self.prepare(case(name))
+                self.assertEqual(result["armor_family"],material)
+                self.assertEqual(len(result["ordinary_armor_seed_slots_available"]),count)
+                self.assertTrue(result["ordinary_armor_seed_pool_partial_not_full_set"])
+                self.assertEqual(result["plan"]["base_B"],
+                                 3350 if name=="fury" else 3150)
+                self.assertEqual(result["native_calls"],0)
+
     def test_retribution_source_backed_fifteen_slots_no_offhand(self):
         result,root=self.prepare(case("retribution"))
         self.assertEqual((result["plan"]["class"],result["plan"]["spec"]),
