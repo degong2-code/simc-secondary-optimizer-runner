@@ -39,13 +39,16 @@ FAMILY_ROWS={
     "feet":("frost",268255,"ordinary","Cackling Soultreads")},
  "leather":{
     "chest":("rogue",251159,"ordinary","War Trial Vestments"),
+    "wrists":("web_live",268240,"ordinary","Restless Spirit Shackles"),
     "waist":("rogue",268256,"ordinary","Sash of the Forlorn Vessel"),
     "feet":("rogue",159304,"legacy_reference","Goldfeather Boots")},
  "mail":{
     "head":("hunter_v086",249317,"legacy_fixed","Frenzy's Rebuke"),
+    "wrists":("web_live",273775,"ordinary","Hydra Scale Wristguards"),
     "waist":("shaman",268254,"ordinary","Serpentine Mixing Belt"),
     "feet":("hunter_v086",249320,"legacy_fixed","Sabatons of Obscurement")},
  "plate":{
+    "wrists":("web_live",268239,"ordinary","Shellbound Bracers"),
     "waist":("warrior",268259,"ordinary","Girdle of Toxic Regret"),
     "feet":("warrior",268260,"ordinary","Scaled Fiend's Warboots")}}
 FAMILY_SET=frozenset(("cloth","leather","mail","plate"))
@@ -58,6 +61,9 @@ ITEM_URLS={
  268257:"https://www.wowhead.com/item=268257",
  268255:"https://www.wowhead.com/item=268255",
  251159:"https://www.wowhead.com/item=251159",
+ 268240:"https://www.wowhead.com/item=268240",
+ 273775:"https://www.wowhead.com/item=273775",
+ 268239:"https://www.wowhead.com/item=268239",
  268256:"https://www.wowhead.com/item=268256",
  159304:"https://www.wowhead.com/item=159304",
  249317:"https://www.wowhead.com/item=249317",
@@ -66,6 +72,15 @@ ITEM_URLS={
  268259:"https://www.wowhead.com/item=268259",
  268260:"https://www.wowhead.com/item=268260"}
 
+# Live season item pages were reviewed for material, equipment slot and
+# fixed secondaries. This is item identity evidence, NOT Native JSON2 stats.
+WEB_SOURCE_DETAILS={
+    268240:("leather","wrists","crit/haste",
+            "https://www.wowhead.com/item=268240"),
+    273775:("mail","wrists","vers/mastery",
+            "https://www.wowhead.com/ptr/item=273775"),
+    268239:("plate","wrists","crit/mastery",
+            "https://www.wowhead.com/ptr/item=268239")}
 class PoolBlocked(ValueError):pass
 def need(ok,reason):
     if not ok:raise PoolBlocked(reason)
@@ -109,7 +124,12 @@ def verify_pool():
                  "ORDINARY_POOL_DUPLICATE_OR_UNGROUNDED:"+family+":"+slot)
             used_ids.add(id_);entries+=1
             selected.checked_id(id_)
-            if source=="hunter_v086":
+            if source=="web_live":
+                need(kind=="ordinary" and
+                     WEB_SOURCE_DETAILS.get(id_,())[:2]==(family,slot)
+                     and WEB_SOURCE_DETAILS[id_][3].startswith("https://www.wowhead.com/"),
+                     "PUBLIC_SEASON_ITEM_ID_MATERIAL_SLOT_DRIFT")
+            elif source=="hunter_v086":
                 need(kind=="legacy_fixed" and
                      slot in hunter_fix.REPLACEMENTS and
                      hunter_fix.REPLACEMENTS[slot][1]==id_,
@@ -121,7 +141,7 @@ def verify_pool():
                 need(sources[source].get(slot)==id_,
                      "ORDINARY_SOURCE_ITEM_SLOT_ID_DRIFT:"+family+":"+slot)
             # No crafted/tier subclass substitutions are taken from source.
-    need(entries==11,"ORDINARY_SEED_COUNT_DRIFT")
+    need(entries==14,"ORDINARY_SEED_COUNT_DRIFT")
     return {"schema":SCHEMA,"status":"FOUR_FAMILY_PARTIAL_ORDINARY_POOL",
             "family_slot_counts":{x:len(FAMILY_ROWS[x])
                                   for x in sorted(FAMILY_ROWS)},
@@ -148,8 +168,9 @@ def provenance(family,slot):
     need(family in FAMILY_SET and slot in FAMILY_ROWS[family],
          "ORDINARY_ITEM_NOT_REGISTERED")
     source,item_id,kind,name=FAMILY_ROWS[family][slot]
-    fixture=SOURCE[source][0] if source in SOURCE else (
-        "runner/v086_hunter_fixed_mail_representative.py")
+    fixture=(SOURCE[source][0] if source in SOURCE else
+             "LIVE_WOWHEAD_12_1_ITEM_ID_AND_MATERIAL" if source=="web_live" else
+             "runner/v086_hunter_fixed_mail_representative.py")
     return {"armor_family":family,"slot":slot,"item_id":item_id,
             "name":name,"source_kind":kind,
             "source_file":fixture,"item_reference":ITEM_URLS[item_id],
