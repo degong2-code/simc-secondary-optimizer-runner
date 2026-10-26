@@ -307,6 +307,19 @@ def worker_lock(folder):
             else:
                 fcntl.flock(fd.fileno(),fcntl.LOCK_UN)
 
+def print_user_result(message):
+    """Windows cp1252 console fallback: preserve UTF-8 bytes for GUI logs."""
+    try:
+        print(message,flush=True)
+    except UnicodeEncodeError:
+        binary=getattr(sys.stdout,"buffer",None)
+        if binary is not None:
+            binary.write((message+"\n").encode("utf-8"))
+            binary.flush()
+        else:
+            print(message.encode("ascii","backslashreplace").decode("ascii"),
+                  flush=True)
+
 def worker(folder,binary,revision,static_cache=None,cache_only=False):
     """Exclusive child process. GUI owns launch/cancel, existing runner owns DPS."""
     folder=pathlib.Path(folder).resolve()
@@ -351,8 +364,8 @@ def _worker_locked(folder,binary,revision,static_cache,cache_only):
         stage.write_text(canonical(actual)+"\n",encoding="utf8")
         stage.replace(p["final"])
         write_state("PASS")
-        print(format_result(actual),flush=True)
-        print("RESULT_DIR:",str(folder),flush=True)
+        print_user_result(format_result(actual))
+        print_user_result("RESULT_DIR: "+str(folder))
         if os.name=="nt":
             try:os.startfile(str(folder))
             except Exception:pass
