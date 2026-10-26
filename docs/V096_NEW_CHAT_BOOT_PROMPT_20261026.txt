@@ -1,0 +1,22 @@
+SIMC SECONDARY OPTIMIZER — 새로운 프로젝트 채팅의 개발 연속성 복원 요청 (2026-10-26)
+
+당신은 SSfindout 프로젝트의 SIMC SECONDARY OPTIMIZER 주 제품 개발을 이 채팅에서 계속 담당한다. 이 요청은 과거 채팅의 길이 제한으로 인한 이동이며, 개발 재시작·새 제품 기획·다른 최적화기 제작 지시가 아니다.
+
+우선 GitHub 저장소 degong2-code/simc-secondary-optimizer-runner, 격리 브랜치 probe/chat-cache-v035-20261024 의 다음 문서를 실제로 읽어라.
+1. docs/V096_NEW_CHAT_CONTINUITY_20261026.md — 이번 새 채팅의 인계 우선 문서
+2. docs/CURRENT_PRODUCT_DEVELOPMENT_STATE.md — 최신 개발 상태
+3. docs/V096_PRODUCT_BASELINE_DRIFT_ROOT_CAUSE_AND_UNIFIED_ENTRY_ACCEPTANCE.md — 개발 혼선의 원인과 통합 현황
+4. runner/v096_unified_product_entry.py 및 tests/test_v096_unified_product_entry.py
+5. GitHub Actions #40271512368과 실제 이전 v071-v095 Native 영수증
+
+사용자 승인 제품 설계 계약은 첨부/Project Source의 SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.3_APPROVED_OIL_INCLUSIVE_PROJECT_SOURCE_REPLACEMENT.md다(SHA256 3dc258d59acd286dc6a2b79755b57712054238d08d5f3c9fd19679b3d6630bc9). 아직 Project UI의 Source/Instructions 실제 교체 영수증이 없으므로, 구형 v1.2 지침이 보이더라도 사용자가 2026-10-26 명시 승인한 신규 공식 정책 T=G+J+F+O, B=G+J+F와 고정·비자유분배 O, 최종 c=c_base+o를 우선한다. 95% 신뢰수준만 유지하고 97% 비교표시는 제거된 상태로 보존한다. v1.3 개발 이력 일부는 오래된 정적 기록이므로 최신 상태는 CURRENT와 실제 Actions에서 검증한다.
+
+v096 마지막 확인된 코드 기준 커밋은 acaba244d925bf38a8e84526cf9164d14a914648이며, 이후 인계 문서만 추가되었다. v096 Actions #40271512368 SUCCESS: 전체 545건 중 543 PASS, 2 SKIP, 0 FAIL, 신규 Native0회. 이 증거를 인계 채팅의 새로운 독립 실험 성공으로 재표기하지 말고 재확인한다. 이미 실제 SimC Native 실험을 한 잠행 도적·정기 주술사·야수 사냥꾼·분노 전사·징벌 성기사·냉기 마법사 결과를 그대로 재사용한다. 전체 전문화 미검증과 이전의 실측 다전문화 PASS를 동시에 정확히 구분한다.
+
+이번 개발 최우선 목표(P1)는 '이미 검증된 기능들을 실제 제품의 단일 사용자 입력 → 정확한 장비/전투/CHMV 총량과 L·O → 기존 v015-derived 후보 탐색 → SimC DPS·SEM → 95% 결과 판단 → 캐시/재개 → 사용자 결과'로 통합하는 것이다. v096 단일 manifest 진입점을 재사용하며, 새 전문화 대규모 재검증과 Fury 특정 후보의 반복횟수 미세조정·SEM 97% 실험은 지금 우선 과제가 아니다. SimC 효과/proc/APL 연구 Gate, 장비 추천 DB, 독립 최적화 엔진을 추가하지 않는다.
+
+초기 확인 때 정확한 GitHub HEAD/기존 PASS/진짜 Native/미검증·미적용 항목/즉시 해야 할 제품 통합 작업을 짧게 보고하라. 이후 별도 확인 질문으로 멈추지 말고 기존 코드를 최소 수정하여 P1 구현을 진행하라. GitHub main, v003 immutable, 원본 v015-v016은 보호한다. 사용자 승인 없는 Work OS 운영 M0 PASS나 실제 Project UI Source 수정 완료를 주장하지 않는다. 단, 2026-10-26 공식 승인된 formula 정책의 Source/Work OS 업데이트에 추가 MAIN 승인을 반복 요청할 필요는 없다. 접근 가능한 공식 원본을 확인한 경우에만 증거를 남기고 정확하게 적용하며, 접근 불가라면 미적용으로 기록한다.
+
+효율: 새 Native 호출과 중복 작업 최소화, 영속 캐시, 코드 경량화·단순화·속도, 정확한 SHA/재개/오류 그대로 보고. 기존 95%는 유지. 개발은 이 새 채팅이 소유하며 이전 채팅으로 돌아가도록 요구하지 마라. 각 구현 시 실제 코드·Actions·Native PASS/FAIL과 단순 계획/가정을 구분해 CURRENT와 변경 영수증을 갱신하라.
+
+사용자가 이 채팅에 SIMC_SECONDARY_OPTIMIZER_CHAT_HANDOFF_V096_20261026.zip을 첨부했다면 ZIP 내부 START_HERE.md, NEW_CHAT_BOOT_PROMPT.txt, MANIFEST_SHA256.json을 먼저 확인하라. GitHub가 더 최신이고 SHA로 검증되면 실제 브랜치 소스를 기준으로 이어가라.
