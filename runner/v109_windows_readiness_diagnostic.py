@@ -34,6 +34,8 @@ def safe_receipt(user,binary,revision,static_cache=None,*,root=None):
         need_user=isinstance(user,dict)
         if not need_user:raise ValueError("V109_USER_JSON_REQUIRED")
         file=pathlib.Path(binary).expanduser().resolve()
+        if not file.is_file():
+            raise ValueError("V106_SIMC_BINARY_NOT_FOUND")
         if os.name=="nt":
             if file.suffix.lower()!=".exe":
                 raise ValueError("V109_WINDOWS_EXECUTABLE_EXE_REQUIRED")
