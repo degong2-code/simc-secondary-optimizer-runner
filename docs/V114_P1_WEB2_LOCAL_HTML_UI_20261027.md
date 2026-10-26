@@ -35,7 +35,7 @@ SimC 새 작업 실행을 직접 요청해야만 Native 호출이 일어난다. 
 
 ## 품질·검증 증거와 한계
 
-- [P1-WEB-2 Linux/Windows CI #40414515436](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40414515436): **Linux Python3.12 HTTP/UI 30 PASS/0 FAIL, Windows Python3.14 HTTP/UI 30 PASS/0 FAIL**, Node JS syntax PASS, 파일/코드 컴파일과 pilot PASS. 모든 브라우저 관련 테스트는 **HTML 정적/API HTTP 검사**이며 실제 Chrome·Edge 인터랙션 실기는 미실시. 신규 Native0회.
+- [P1-WEB-2 Linux/Windows CI #40414515436](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40415052508): **Linux Python3.12 HTTP/UI 30 PASS/0 FAIL, Windows Python3.14 HTTP/UI 30 PASS/0 FAIL**, Node JS syntax PASS, 파일/코드 컴파일과 pilot PASS. 모든 브라우저 관련 테스트는 **HTML 정적/API HTTP 검사**이며 실제 Chrome·Edge 인터랙션 실기는 미실시. 신규 Native0회.
 - 심각한 배포 기능을 아직 구현했다고 주장하지 않으며, 현재는 개발자용 Python 의존성 설치와 콘솔 실행이 필요하다. 미래 호환성을 위해 UI→로컬 API→엔진 분리 유지. 클라우드 호스팅/Windows main branch 통합/공식 v003/Work OS M0/Project Sources/UI 적용 **없음**.
 
 **다음:** 사용자 Windows Edge/Chrome에서 기존 ID 복구 확인(추가 Native0회); P1-WEB-3에서 UI·HTTP 동작/실패 경로·동시성/보안/브라우저 리로드를 통합 검증. 그다음 WEB-4에서 사용자 관점 원클릭 실행 및 배포.
