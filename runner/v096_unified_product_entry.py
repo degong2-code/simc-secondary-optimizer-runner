@@ -130,7 +130,9 @@ def user_facing_result(report):
     summary=report["alternatives"]
     confidence=report["confirmation"]
     need(type(B) is int and B>0 and T==B+sum(fixed.values())
-         and summary["confidence_for_decision_and_display"]==0.95,
+         and summary["confidence_for_decision_and_display"]==0.95
+         and summary["underlying_B"]==B
+         and summary["final_T"]==T and summary["fixed_O"]==fixed,
          "RESULT_B_T_OR_CONFIDENCE_DRIFT")
     def candidate(base,final):
         b=contract.vector(base,"RESULT_BASE_TARGET")
@@ -181,6 +183,7 @@ def run_manifest(manifest_path,*,plan_only=False,cache_only=False):
         "result_path":str(paths["output_dir"]/"V094_RESULT.json"),
         "native_calls_cumulative":result["new_native_attempts_cumulative"],
         "cache_hits_this_run":result["verified_cache_hits_this_run"],
+        "base_B":result["B"],"final_T":result["official_final_T"],
         "budget_source":ready["plan"]["budget_source"],
         "user_result":user_facing_result(result),
         "original_product_v015_v016_merged":False}

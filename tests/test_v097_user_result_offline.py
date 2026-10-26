@@ -16,6 +16,7 @@ def report():
         "official_formula":"T=G+J+F+O","B":3350,"fixed_O":dict(O),
         "official_final_T":3414,"alternatives":{
             "confidence_for_decision_and_display":0.95,
+            "underlying_B":3350,"final_T":3414,"fixed_O":dict(O),
             "observed_unique_targets":3,"observed_best_B":dict(B),
             "observed_best_T":dict(T),"observed_best_dps":203286.6376,
             "observed_best_sem":534.8979,
@@ -62,5 +63,9 @@ class V097UserResult(unittest.TestCase):
             entry.user_facing_result(r)
         r=report();r["status"]="PARTIAL_OR_BLOCKED"
         with self.assertRaisesRegex(entry.EntryBlocked,"NATIVE_RESULT_NOT_ACCEPTED"):
+            entry.user_facing_result(r)
+    def test_drifted_alternatives_summary_does_not_render(self):
+        r=report();r["alternatives"]["final_T"]=3478
+        with self.assertRaisesRegex(entry.EntryBlocked,"RESULT_B_T_OR_CONFIDENCE_DRIFT"):
             entry.user_facing_result(r)
 if __name__=="__main__":unittest.main()
