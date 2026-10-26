@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """v098 target-level USER inputs -> internally generated v096 source-locked manifest.
 
-Bounded first two source-backed archetypes: Fury Warrior and Frost Mage.
+Bounded source-backed archetypes: Fury, Frost Mage, Retribution, Beast Mastery.
 Not a new item DB, equipment optimizer, SimC effect evaluator or general class
 coverage claim. Planning invokes ZERO Native SimC calls.
 """
@@ -12,7 +12,10 @@ import v055_simc_item_selection as item_mod
 import v061_scenario_contract as scenario
 import v065_v015_scheduler_adapter as scheduler
 import v082_fury_plate_dual_twohand_native as fury
+import v083_paladin_single_2h_native as paladin
 import v084_frost_cloth_1h_frill_native as frost
+import v086_hunter_fixed_mail_representative as hunter
+import v079_hunter_ranged_generic_native as hunter_base
 import v091_weapon_oil_external_adapter as oil_mod
 import v096_unified_product_entry as entry
 
@@ -23,7 +26,12 @@ ARCHETYPES={
     ("warrior","fury"):("v082_upstream_mid2_warrior_fury_reference.simc",
         fury.source_profile,"dual_two_hand",fury.DECLARED_F),
     ("mage","frost"):("v084_upstream_mid2_mage_frost_reference.simc",
-        frost.source_profile,"one_hand_frill",frost.F_DECLARED)}
+        frost.source_profile,"one_hand_frill",frost.F_DECLARED),
+    ("paladin","retribution"):("v083_upstream_mid2_paladin_retribution_reference.simc",
+        paladin.source_profile,"single_two_hand",paladin.DECLARED_F),
+    ("hunter","beast_mastery"):("v079_upstream_mid2_hunter_beast_mastery_reference.simc",
+        hunter.source_profile,"ranged",{"crit_rating":0,"haste_rating":165,
+                                       "mastery_rating":0,"versatility_rating":0})}
 FIXTURES=pathlib.Path(__file__).resolve().parents[1]/"integration_probes/fixtures"
 class UserScenarioBlocked(ValueError):pass
 def need(ok,why):
@@ -139,7 +147,7 @@ def build(user,folder,binary,revision,static_cache_path=None):
     rows={r["slot"]:copy.deepcopy(r) for g in
           (cfg["equipment"]["tier"],cfg["equipment"]["crafted"],
            cfg["equipment"]["trinkets"],fillers) for r in g}
-    need(len(rows)==16,"TEMPLATE_EXPECTED_SIXTEEN_SLOTS")
+    need(len(rows) in (15,16),"TEMPLATE_EXPECTED_FIFTEEN_OR_SIXTEEN_SLOTS")
     groups={r["slot"]:group for group in ("tier","crafted","trinkets")
             for r in cfg["equipment"][group]}
     for row in rows.values():row["ilevel"]=ilvl
@@ -216,7 +224,7 @@ def build(user,folder,binary,revision,static_cache_path=None):
     put_once(folder/"fillers.json",canonical(fillers)+"\n")
     put_once(folder/"manifest.json",canonical(manifest)+"\n")
     plan=entry.run_manifest(folder/"manifest.json",plan_only=True)
-    need(plan["base_B"]==B and plan["item_slots"]==16,
+    need(plan["base_B"]==B and plan["item_slots"]==len(rows),
          "BOOTSTRAP_TO_V096_BUDGET_OR_SLOT_DRIFT")
     return {"schema":SCHEMA,"status":"READY_INTERNAL_MANIFEST_ZERO_NATIVE",
             "user_does_not_supply_full_gear_or_simc_profile":True,
