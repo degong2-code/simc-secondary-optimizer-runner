@@ -75,15 +75,20 @@ def initial_seeds(B,lower,upper):
                     a[k]+=1;left-=1;moved=True
             need(moved,"SEED_CAP_EXHAUSTED")
         return tuple(a)
-    first=fill((0,1,2,3));second=fill((1,0,3,2))
-    if first==second:
-        for i in range(4):
-            for j in range(4):
-                if i!=j and first[i]>lower[i] and first[j]<upper[j]:
-                    a=list(first);a[i]-=1;a[j]+=1
-                    second=tuple(a)
-                    break
-            if first!=second:break
+    first=fill((0,1,2,3))
+    # Start meaningfully apart where allowed (about 10% of B moved).
+    # This is only seed diversification, NOT a new search/optimizer.
+    second=first
+    desired=max(1,(B+9)//10)
+    for i in range(4):
+        if second!=first:break
+        for j in range(4):
+            if i==j:continue
+            transferable=min(desired,first[i]-lower[i],upper[j]-first[j])
+            if transferable>0:
+                a=list(first);a[i]-=transferable;a[j]+=transferable
+                second=tuple(a)
+                break
     need(first!=second and all(scheduler.eligible(x,B,lower,upper)
                              for x in (first,second)),
          "TWO_DISTINCT_ELIGIBLE_SEEDS_UNAVAILABLE")
