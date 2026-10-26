@@ -69,8 +69,8 @@ class UserTargetBootstrap(unittest.TestCase):
 
     def test_registered_ordinary_material_seed_coverage_reported_not_full_profile(self):
         for name,material,count in (
-            ("fury","plate",2),("retribution","plate",2),
-            ("frost","cloth",3),("beast_mastery","mail",3)):
+            ("fury","plate",3),("retribution","plate",3),
+            ("frost","cloth",3),("beast_mastery","mail",4)):
             with self.subTest(spec=name):
                 result,_=self.prepare(case(name))
                 self.assertEqual(result["armor_family"],material)
