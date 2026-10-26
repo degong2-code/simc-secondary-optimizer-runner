@@ -13,7 +13,8 @@ from tkinter import filedialog,messagebox,scrolledtext,ttk
 from v106_user_session_controller import (
     SCHEMA, DEFAULT_ROOT, SUPPORTED, canonical, source_defaults,
     user_scenario, store_session, paths, clear_cancel,
-    request_cancel, progress, format_result)
+    request_cancel, progress, format_result, selected_rows_from_form)
+from v107_optional_items_dialog import select_items
 
 DISPLAY={
     ("warrior","fury"):"전사 — 분노",
@@ -42,6 +43,7 @@ class UserWindow:
         self.proc=None;self.log_handle=None;self.folder=None
         self.last_progress=None;self.last_log=None
         self.ui={}
+        self.advanced_rows={"special_items":[],"embellishments":[]}
         self.cfg=remembered_settings()
         self._draw()
         self._defaults()
@@ -62,7 +64,7 @@ class UserWindow:
         combo=ttk.Combobox(outer,textvariable=self.spec,state="readonly",
                            values=[DISPLAY[x] for x in SUPPORTED],width=30)
         combo.grid(row=2,column=1,columnspan=3,sticky="ew",padx=6,pady=4)
-        combo.bind("<<ComboboxSelected>>",lambda _e:self._defaults())
+        combo.bind("<<ComboboxSelected>>",lambda _e:self._new_specialization())
 
         self._entry(outer,3,0,"종족","race",rowspan=1)
         self._entry(outer,4,0,"특성 코드","talents")
@@ -81,6 +83,8 @@ class UserWindow:
                         ).grid(row=8,column=1,sticky="w",pady=4)
         ttk.Checkbutton(outer,text="공대 버프",variable=self.raid
                         ).grid(row=8,column=2,sticky="w",pady=4)
+        ttk.Button(outer,text="특수장비·장식 선택…",command=self._advanced
+                   ).grid(row=8,column=3,sticky="ew",padx=3)
         ttk.Separator(outer,orient="horizontal").grid(row=9,column=0,
                         columnspan=4,sticky="ew",pady=8)
         self._entry(outer,10,0,"SimC 실행 파일","binary",
@@ -89,28 +93,32 @@ class UserWindow:
                    row=10,column=3,sticky="e")
         self._entry(outer,11,0,"SimC revision","revision",
                     default=self.cfg.get("revision",""))
-        ttk.Label(outer,text="SimC 바이너리와 revision은 최초 한 번만 등록. 변경 시 별도 세션으로 보관.",
-                  wraplength=850).grid(row=12,column=0,columnspan=4,sticky="w")
+        self._entry(outer,12,0,"정적 캐시 (특수장비)","static_cache",
+                    default=self.cfg.get("static_cache",""))
+        ttk.Button(outer,text="찾기",command=self._browse_cache).grid(
+            row=12,column=3,sticky="e")
+        ttk.Label(outer,text="SimC 바이너리와 revision은 최초 한 번만 등록. 선택 특수장비에는 정확한 Native 고정 L 캐시가 필요.",
+                  wraplength=850).grid(row=13,column=0,columnspan=4,sticky="w")
         self.start_btn=ttk.Button(outer,text="실행 / 동일 설정 재개",
                                   command=self.start)
-        self.start_btn.grid(row=13,column=0,columnspan=2,sticky="ew",pady=9,padx=3)
+        self.start_btn.grid(row=14,column=0,columnspan=2,sticky="ew",pady=9,padx=3)
         self.cancel_btn=ttk.Button(outer,text="취소",command=self.cancel,
                                    state="disabled")
-        self.cancel_btn.grid(row=13,column=2,sticky="ew",pady=9,padx=3)
+        self.cancel_btn.grid(row=14,column=2,sticky="ew",pady=9,padx=3)
         ttk.Button(outer,text="결과 폴더",command=self.open_folder).grid(
-                   row=13,column=3,sticky="ew",pady=9,padx=3)
+                   row=14,column=3,sticky="ew",pady=9,padx=3)
         self.status=tk.StringVar(value="준비 — 기본 6회 Native 탐색, 동일 설정은 캐시 재사용")
         ttk.Label(outer,textvariable=self.status,wraplength=850).grid(
-                   row=14,column=0,columnspan=4,sticky="w")
+                   row=15,column=0,columnspan=4,sticky="w")
         self.bar=ttk.Progressbar(outer,maximum=100,mode="determinate")
-        self.bar.grid(row=15,column=0,columnspan=4,sticky="ew",pady=(6,6))
+        self.bar.grid(row=16,column=0,columnspan=4,sticky="ew",pady=(6,6))
         ttk.Label(outer,text="진행 로그 / 관측 결과",font=("",10,"bold")
-                  ).grid(row=16,column=0,columnspan=4,sticky="w")
+                  ).grid(row=17,column=0,columnspan=4,sticky="w")
         self.display=scrolledtext.ScrolledText(outer,height=17,wrap="word")
-        self.display.grid(row=17,column=0,columnspan=4,sticky="nsew",pady=5)
-        ttk.Label(outer,text="베타 범위: 기본 대표 장비·기본 소모품 사용. 특수장비·장식·소모품 자유 선택 UI는 후속 단계.",
-                  wraplength=850).grid(row=18,column=0,columnspan=4,sticky="w")
-        outer.grid_rowconfigure(17,weight=1)
+        self.display.grid(row=18,column=0,columnspan=4,sticky="nsew",pady=5)
+        ttk.Label(outer,text="베타: 특수장비·장식은 정확한 ID/옵션 선택. 보석·영약·음식·물약·Omnium 자유 선택 UI는 미완료.",
+                  wraplength=850).grid(row=19,column=0,columnspan=4,sticky="w")
+        outer.grid_rowconfigure(18,weight=1)
         for i in (1,3):outer.grid_columnconfigure(i,weight=1)
 
     def _label(self,area,row,col,text):
@@ -136,12 +144,32 @@ class UserWindow:
         self.status.set("기본 대표 무기 구성: "+source["weapon_form"]+
                         " · 캐시 보존을 위해 동일 설정은 동일 세션 사용")
 
+    def _new_specialization(self):
+        self.advanced_rows={"special_items":[],"embellishments":[]}
+        self._defaults()
+
+    def _advanced(self):
+        result=select_items(self.root,self.advanced_rows,self._base_controls)
+        if result is not None:
+            self.advanced_rows=result
+            rows=selected_rows_from_form(
+                result["special_items"],result["embellishments"])
+            self.status.set(
+                "장비 선택: 특수 "+str(len(rows["special_items"]))+
+                "개, 장식 "+str(len(rows["embellishments"]))+
+                "개 · Native 정확한 정적 L 정책 유지")
+
+    def _browse_cache(self):
+        p=filedialog.askopenfilename(title="Native 정적 아이템 캐시 선택",
+          filetypes=[("JSON","*.json"),("All files","*.*")])
+        if p:self.vars["static_cache"].set(p)
+
     def _browse(self):
         p=filedialog.askopenfilename(title="SimC 실행 파일 선택",
           filetypes=[("SimulationCraft executable","*.exe"),("All files","*.*")])
         if p:self.vars["binary"].set(p)
 
-    def _user(self):
+    def _base_controls(self):
         cl,sp=self._selected()
         raw={"class":cl,"spec":sp,"race":self.vars["race"].get().strip(),
              "talents":self.vars["talents"].get().strip(),
@@ -155,7 +183,13 @@ class UserWindow:
              "targets":int(self.vars["targets"].get()),
              "duration_seconds":int(self.vars["duration"].get()),
              "raid_buffs":self.raid.get()}
-        return user_scenario(raw)
+        return raw
+
+    def _user(self):
+        chosen=selected_rows_from_form(
+            self.advanced_rows.get("special_items",[]),
+            self.advanced_rows.get("embellishments",[]))
+        return user_scenario({**self._base_controls(),**chosen})
 
     def _write(self,value):
         self.display.delete("1.0","end")
@@ -170,19 +204,25 @@ class UserWindow:
             user=self._user()
             binary=pathlib.Path(self.vars["binary"].get()).expanduser().resolve()
             revision=self.vars["revision"].get().strip()
-            folder=store_session(user,DEFAULT_ROOT,binary,revision)
+            static_text=self.vars["static_cache"].get().strip()
+            static_cache=(pathlib.Path(static_text).expanduser().resolve()
+                          if static_text else None)
+            folder=store_session(user,DEFAULT_ROOT,binary,revision,static_cache)
             self.folder=folder
             clear_cancel(folder)
-            save_settings({"binary":str(binary),"revision":revision})
+            save_settings({"binary":str(binary),"revision":revision,
+                           "static_cache":str(static_cache) if static_cache else ""})
             log=paths(folder)["log"]
             self.log_handle=open(log,"a",encoding="utf8",buffering=1)
             self.log_handle.write("\n=== V106 USER RUN / RESUME ===\n")
             flags=subprocess.CREATE_NO_WINDOW if os.name=="nt" else 0
-            self.proc=subprocess.Popen(
-                [sys.executable,str(pathlib.Path(__file__).resolve().parent/
-                   "v106_user_session_controller.py"),
+            cmd=[sys.executable,str(pathlib.Path(__file__).resolve().parent/
+                 "v106_user_session_controller.py"),
                  "--session",str(folder),"--binary",str(binary),
-                 "--revision",revision],
+                 "--revision",revision]
+            if static_cache:cmd.extend(["--static-cache",str(static_cache)])
+            self.proc=subprocess.Popen(
+                cmd,
                 stdout=self.log_handle,stderr=subprocess.STDOUT,
                 creationflags=flags)
             self.start_btn.configure(state="disabled")
