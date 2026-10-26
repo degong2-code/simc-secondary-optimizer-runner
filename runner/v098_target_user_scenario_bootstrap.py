@@ -254,8 +254,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
                          int(opts["redirected_base_stats"])!=raw["item_id"],
                          "CATALYST_CLASS_TIER_ID_AND_ORIGIN_REQUIRED")
                     slot_group="tier"
-                elif slot==FIFTH_TIER[key][0] and
-                     "redirected_base_stats" in opts:
+                elif (slot==FIFTH_TIER[key][0] and
+                      "redirected_base_stats" in opts):
                     need(raw["item_id"]==FIFTH_TIER[key][1] and
                          int(opts["redirected_base_stats"])!=raw["item_id"],
                          "CATALYST_FIFTH_CLASS_TIER_ID_OR_ORIGIN")
