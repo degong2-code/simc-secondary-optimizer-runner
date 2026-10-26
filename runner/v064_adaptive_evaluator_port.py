@@ -94,7 +94,11 @@ def verify_profile_binding(normalized,budget,reference):
     if temp is not None:
         single="main_hand:"+temp
         dual=single+"/off_hand:"+temp
-        need(parsed.get("temporary_enchant") in ({single,dual} if
+        off="off_hand:"+temp
+        # v091 may deliberately apply oil only to the off-hand weapon.
+        # Weapon eligibility itself is checked by the v091 exact layout
+        # adapter, not by the mere presence of an off_hand slot.
+        need(parsed.get("temporary_enchant") in ({single,off,dual} if
              "off_hand" in slots else {single}),
              "PROFILE_TEMPORARY_DRIFT")
     gear=cfg["equipment"]
