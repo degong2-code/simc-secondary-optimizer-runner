@@ -167,5 +167,11 @@
     "official_workOS_and_Project_Source_apply_not_verified": true,
     "main_branch_unchanged": true
   },
-  "full_proof_archive_pending_user_delivery": true
+  "portable_full_native_proof": {
+    "file": "SIMC_SECONDARY_OPTIMIZER_V095_MATERIAL_95_NATIVE_PROOF.zip",
+    "sha256": "6c3d213eab5b4b98ea0be11971c2231f41e59df788acb4740f99d6a7749d21da",
+    "entries": 38,
+    "all_entry_sha256_verified": true,
+    "local_only_not_committed_to_git": true
+  }
 }
