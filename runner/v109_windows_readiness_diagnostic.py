@@ -21,7 +21,7 @@ def revision_from_official_nightly_archive_name(filename):
     """
     name=pathlib.Path(filename).name
     match=re.fullmatch(
-        r"simc-[0-9]{3,5}-[0-9]{2,3}-win64-([0-9a-fA-F]{7,40})\\.7z",
+        r"simc-[0-9]{3,5}-[0-9]{2,3}-win64-([0-9a-fA-F]{7,40})\.7z",
         name,re.IGNORECASE)
     if match is None:
         raise ValueError("V109_OFFICIAL_NIGHTLY_ARCHIVE_FILENAME_NOT_RECOGNIZED")
