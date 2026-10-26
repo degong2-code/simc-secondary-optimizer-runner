@@ -13,10 +13,10 @@ import v065_original_scheduler_native_bridge as engine
 import v065_v015_scheduler_adapter as policy
 import v091_weapon_oil_external_adapter as oil
 import v093_inclusive_adaptive_scheduler_bridge as adaptive
+import v095_material_precision_policy as extended
 
 SCHEMA='v094_generic_durable_inclusive_adaptive_v1'
 Z95=1.959963984540054
-Z97=2.17009037758456
 class DurableBlocked(ValueError): pass
 def need(ok,reason):
     if not ok: raise DurableBlocked(reason)
@@ -35,7 +35,7 @@ def _recover_attempts(path,limit):
          'DURABLE_NATIVE_ATTEMPTS_INVALID')
     return value['native_attempts']
 def _candidate_summary(observations, B, O, near_loss=0.01, material=0.10):
-    """Report only actually observed samples; 97% is informative, not policy."""
+    """Report only actually observed samples at the user-selected 95%."""
     need(type(observations) is list and bool(observations),'NO_NATIVE_OBSERVATIONS')
     need(type(B) is int and B>0 and type(O) is dict,'BAD_B_O')
     # Repeated high-iteration confirmation supersedes lower-iteration scout
@@ -65,9 +65,7 @@ def _candidate_summary(observations, B, O, near_loss=0.01, material=0.10):
                  'base_rating_moved':moved,'fraction_B_moved':distance,
                  'observed_relative_dps_loss':loss,
                  'diff_95_halfwidth_approx':Z95*combined,
-                 'diff_97_halfwidth_approx':Z97*combined,
                  'difference_95_separated':delta>Z95*combined,
-                 'difference_97_separated':delta>Z97*combined,
                  'label':'BOUNDED_OBSERVED_ALTERNATIVE_NOT_STATISTICALLY_PROVEN'})
     return {'schema':'v094_observed_candidates_nonoptimal_v1',
         'official_formula':'T=G+J+F+O','underlying_B':B,
@@ -77,16 +75,14 @@ def _candidate_summary(observations, B, O, near_loss=0.01, material=0.10):
         'observed_best_T':best['target'],
         'observed_best_dps':best['dps_mean'],
         'observed_best_sem':best['dps_sem'],
-        'confidence_95_existing_decision':True,
-        'confidence_97_informational_only':True,
-        'confidence_97_changes_decision':False,
+        'confidence_for_decision_and_display':0.95,
         'material_alternatives':alts,'material_threshold_B_fraction':material,
         'near_loss_threshold':near_loss,
         'no_material_alt_found':not bool(alts),
         'global_optimum_proven':False}
 
 def run(context, seed_targets, flask_vector, binary, output, *,
-        step=100, scouts=1, native_limit=None, cache_only=False,
+        step=100, scouts=1, material_scouts=0, native_limit=None, cache_only=False,
         cancel_file=None, open_folder=False):
     """One bounded deterministic session, resumable by same identity.
 
@@ -99,6 +95,8 @@ def run(context, seed_targets, flask_vector, binary, output, *,
     need(type(seed_targets) in (tuple,list) and len(seed_targets)==2,
          'TWO_DISTINCT_SEED_TARGETS_REQUIRED')
     need(type(scouts) is int and 0<=scouts<=2,'BOUNDED_SCOUT_COUNT_0_TO_2')
+    need(type(material_scouts) is int and 0<=material_scouts<=2,
+         'BOUNDED_MATERIAL_SCOUT_COUNT_0_TO_2')
     need(type(step) is int and step>0,'SCOUT_STEP_REQUIRED')
     cfg=context['bundle']['prepared']['scenario']
     runtime=cfg['scenario']['runtime']
@@ -122,13 +120,13 @@ def run(context, seed_targets, flask_vector, binary, output, *,
     B=context['identity']['base_B'];O=context['identity']['oil_vector']
     seed_identity={'schema':SCHEMA,'policy_context':context['identity'],
        'seed_base_targets':seeds,'flask_F_vector':dict(flask_vector),
-       'step':step,'scout_limit':scouts,'native_limit':budget,
-       'stat_confidence_for_decision':0.95,
-       'comparison_confidence_97_only':True}
+       'step':step,'scout_limit':scouts,
+       'material_scout_limit':material_scouts,'native_limit':budget,
+       'stat_confidence_for_decision':0.95}
     # Fail before any SimC attempt if a brand-new session lacks enough
     # permitted calls for two seeds, requested scouts and confirmations.
     if not output.exists() or not any(output.iterdir()):
-        need(2+scouts+2<=budget,
+        need(2+scouts+material_scouts+2<=budget,
              'NATIVE_LIMIT_TOO_SMALL_FOR_SEEDS_SCOUTS_CONFIRMATIONS')
     output.mkdir(parents=True,exist_ok=True)
     seal=output/'V094_SESSION_IDENTITY.json'
@@ -158,8 +156,8 @@ def run(context, seed_targets, flask_vector, binary, output, *,
             progress['status']=status
             progress['new_native_attempts']=_recover_attempts(main_folder,4)+_recover_attempts(confirm_folder,4)
             progress['completed_jobs']=len(all_observations)
-            progress['planned_jobs']=2+scouts+2
-            progress['progress_percent']=round(100*len(all_observations)/(2+scouts+2),1)
+            progress['planned_jobs']=2+scouts+material_scouts+2
+            progress['progress_percent']=round(100*len(all_observations)/(2+scouts+material_scouts+2),1)
             save(progress_path,progress)
             print('[v094]',status,'native',progress['new_native_attempts'],'/',budget,
                   'cache',progress['cache_verified_hits'],flush=True)
@@ -204,6 +202,23 @@ def run(context, seed_targets, flask_vector, binary, output, *,
             plan=adaptive.next_scout(context,state,flask_vector,folder/'result.json')
             obs=native(plan['request'],folder,'SCOUT_%02d'%i)
             state=adaptive.accept_scout(context,state,plan['request'],obs)
+        # Material candidates are deliberately farther in CHMV-space.
+        # Selection itself is v065.neighbors with a larger user-visible step;
+        # do not declare a near-DPS alternative until Native measurement.
+        material_proposals=[]
+        for i in range(material_scouts):
+            pp=extended.material_neighbor(cfg,context['bundle']['prepared']['static_budget'],
+                 state['observations'],fraction=0.10)
+            folder=main_folder/('material_%02d'%i)
+            req=adaptive.request(context,pp['candidate_B'],flask_vector,
+                 folder/'result.json','scout')
+            obs=native(req,folder,'MATERIAL_%02d'%i)
+            projected_native=adaptive.project_native_for_v065(req,obs)
+            state['observations'].append(projected_native)
+            material_proposals.append({
+                'base_B':pp['candidate_B'], 'native_T':req['target'],
+                'rating_transferred':pp['rating_transferred'],
+                'measured_dps':obs['dps_mean'], 'measured_sem':obs['dps_sem']})
         pair=adaptive.confirmation_plan(context,state,flask_vector,confirm_folder)
         confirmed=[]
         for i,req in enumerate(pair['cases']):
@@ -212,12 +227,10 @@ def run(context, seed_targets, flask_vector, binary, output, *,
             confirmed.append(obs)
         confidence=adaptive.fresh_judgment(pair['cases'],confirmed)
         summary=_candidate_summary(all_observations,B,O)
-        # Comparison-only; the 97% line never alters the established 95% rule.
-        stats=math.hypot(confirmed[0]['dps_sem'],confirmed[1]['dps_sem'])
-        diff=abs(confirmed[0]['dps_mean']-confirmed[1]['dps_mean'])
-        confidence['approx_ci97_halfwidth']=Z97*stats
-        confidence['statistically_separated_approx97']=diff>Z97*stats
-        confidence['confidence_97_informational_only']=True
+        # 95% alone: more precision can be requested only within explicitly
+        # typed scenario iteration ceiling and separately authorized calls.
+        ceiling=cfg['scenario']['runtime']['confirm_iterations']
+        precision=extended.precision_plan(confirmed[0],confirmed[1],ceiling)
         status=('PASS_BOUNDED_GENERIC_NATIVE_SEARCH_AND_CACHE' if scouts else
                 'PASS_BOUNDED_SEEDS_AND_FRESH_CONFIRM_NO_SCOUT')
         report={'schema':SCHEMA,'status':status,
@@ -232,10 +245,13 @@ def run(context, seed_targets, flask_vector, binary, output, *,
                       'case_key':r['case_key'],'source':r['source']}
                      for r in all_observations],
                 'confirmation':confidence,'alternatives':summary,
+                'precision_next_step':precision,
+                'material_scouts_measured':material_proposals,
                 'new_native_attempts_cumulative':_recover_attempts(main_folder,4)+_recover_attempts(confirm_folder,4),
                 'verified_cache_hits_this_run':progress['cache_verified_hits'],
                 'global_optimum_proven':False,
                 'scouts_completed':scouts,
+                'material_scouts_completed':material_scouts,
                 'original_v015_v016_product_integrated':False}
         save(report_path,report)
         progress.pop('error',None)
@@ -258,6 +274,7 @@ def main(argv=None):
     ap.add_argument('--simc',required=True)
     ap.add_argument('--output',required=True)
     ap.add_argument('--scouts',type=int,default=1)
+    ap.add_argument('--material-scouts',type=int,default=0)
     ap.add_argument('--step',type=int,default=100)
     ap.add_argument('--max-native',type=int)
     ap.add_argument('--cancel-file')
@@ -266,7 +283,8 @@ def main(argv=None):
     try:
         result=run(read_json(args.context_json),read_json(args.seeds_json),
               read_json(args.flask_json),args.simc,args.output,
-              scouts=args.scouts,step=args.step,native_limit=args.max_native,
+              scouts=args.scouts,material_scouts=args.material_scouts,
+              step=args.step,native_limit=args.max_native,
               cancel_file=args.cancel_file,cache_only=args.cache_only,open_folder=True)
         print(json.dumps({'status':result['status'],'result':str(pathlib.Path(args.output).resolve()/'V094_RESULT.json')},ensure_ascii=False))
         return 0
