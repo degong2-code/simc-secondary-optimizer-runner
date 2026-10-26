@@ -6,7 +6,11 @@ import v098_target_user_scenario_bootstrap as boot
 import v096_unified_product_entry as old
 
 def case(which,*,ilevel=334,final_T=None):
-    key=("warrior","fury") if which=="fury" else ("mage","frost")
+    options={"fury":("warrior","fury"),
+             "frost":("mage","frost"),
+             "retribution":("paladin","retribution"),
+             "beast_mastery":("hunter","beast_mastery")}
+    key=options[which]
     filename=boot.ARCHETYPES[key][0]
     src=(boot.FIXTURES/filename).read_text(encoding="utf8")
     talents=[r.partition("=")[2] for r in src.splitlines()
@@ -20,7 +24,9 @@ def case(which,*,ilevel=334,final_T=None):
                          "options":{}})
     return {"schema":boot.SCHEMA,
         "character":{"class":key[0],"spec":key[1],
-                     "race":"dwarf" if which=="fury" else "human",
+                     "race":{"fury":"dwarf","frost":"human",
+                             "retribution":"blood_elf",
+                             "beast_mastery":"troll"}[which],
                      "talents":talents},
         "target":{"ilevel":ilevel,"final_T":final_T},
         "trinkets":trinkets,"special_items":[],"embellishments":[],
@@ -56,6 +62,52 @@ class UserTargetBootstrap(unittest.TestCase):
         self.assertGreaterEqual(moved,335)  # 10% of B, when unconstrained
         self.assertEqual(sum(a.values()),3350)
         self.assertEqual(sum(b.values()),3350)
+
+    def test_retribution_source_backed_fifteen_slots_no_offhand(self):
+        result,root=self.prepare(case("retribution"))
+        self.assertEqual((result["plan"]["class"],result["plan"]["spec"]),
+                         ("paladin","retribution"))
+        self.assertEqual(result["plan"]["item_slots"],15)
+        self.assertEqual(result["plan"]["base_B"],3150)
+        self.assertEqual(result["plan"]["final_T"],3182)
+        profile=(root/"generated"/"profile.simc").read_text()
+        self.assertNotIn("\noff_hand=",profile)
+        self.assertIn("\nrace=blood_elf\n",profile)
+        self.assertEqual(len([x for x in profile.splitlines()
+                              if re.match(r"^(?:head|shoulders|chest|hands)=",x)]),4)
+
+    def test_beast_mastery_corrected_head_feet_and_pet_apl_retained(self):
+        result,root=self.prepare(case("beast_mastery"))
+        self.assertEqual((result["plan"]["class"],result["plan"]["spec"]),
+                         ("hunter","beast_mastery"))
+        self.assertEqual(result["plan"]["item_slots"],15)
+        self.assertEqual((result["plan"]["base_B"],result["plan"]["final_T"]),
+                         (3150,3182))
+        profile=(root/"generated"/"profile.simc").read_text()
+        self.assertIn("head=selected_249317,id=249317,ilevel=334",profile)
+        self.assertIn("feet=selected_249320,id=249320,ilevel=334",profile)
+        self.assertNotIn("head=selected_271441",profile)
+        self.assertNotIn("feet=selected_271440",profile)
+        self.assertNotIn("\noff_hand=",profile)
+        self.assertGreater(sum(x.startswith("actions.") for x in
+                               profile.splitlines()),1)
+
+    def test_cross_archetype_level_321_manual_and_oil_no_native(self):
+        for kind in ("fury","frost","retribution","beast_mastery"):
+            with self.subTest(kind=kind):
+                user=case(kind,ilevel=321)
+                result,root=self.prepare(user)
+                expected=3170 if kind=="fury" else 2980
+                self.assertEqual(result["plan"]["base_B"],expected)
+                self.assertEqual(result["plan"]["final_T"],
+                                 expected+64 if kind=="fury" else expected+32)
+                self.assertEqual(result["plan"]["item_slots"],
+                                 16 if kind in ("fury","frost") else 15)
+                profile=(root/"generated"/"profile.simc").read_text()
+                self.assertEqual(len([x for x in profile.splitlines()
+                                      if ",ilevel=321" in x]),
+                                 result["plan"]["item_slots"])
+                self.assertFalse((root/"generated"/"simc_results").exists())
 
     def test_frost_target_user_manual_final_T(self):
         user=case("frost",final_T=3182)
