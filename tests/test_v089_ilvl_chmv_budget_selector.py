@@ -99,7 +99,7 @@ class V089OptInTargetBudget(unittest.TestCase):
         reg,_=z.load_registry()
         with tempfile.TemporaryDirectory() as temp:
             f=pathlib.Path(temp)/"ref.json"
-            reg["values"][334-266]["general"]=3200
+            reg["values"][334-266]["general"]=3140
             f.write_text(json.dumps(reg))
             with self.assertRaisesRegex(z.BudgetSelectionBlocked,
                                      "REFERENCE_334_ANCHOR_CHANGED"):
