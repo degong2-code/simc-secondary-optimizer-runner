@@ -15,7 +15,6 @@ import v082_fury_plate_dual_twohand_native as fury
 import v083_paladin_single_2h_native as paladin
 import v084_frost_cloth_1h_frill_native as frost
 import v086_hunter_fixed_mail_representative as hunter
-import v079_hunter_ranged_generic_native as hunter_base
 import v091_weapon_oil_external_adapter as oil_mod
 import v096_unified_product_entry as entry
 
@@ -33,6 +32,32 @@ ARCHETYPES={
         hunter.source_profile,"ranged",{"crit_rating":0,"haste_rating":165,
                                        "mastery_rating":0,"versatility_rating":0})}
 FIXTURES=pathlib.Path(__file__).resolve().parents[1]/"integration_probes/fixtures"
+IMPORT_FIELD="import_simc_profile"
+
+def character_from_uploaded_simc(text):
+    """Only four character fields are imported; ALL worn-gear rows are ignored.
+
+    Duplicate/ambiguous SimC character assignments fail closed. This is a
+    narrow selector, not a generic SimC parser or profile-equipment import.
+    """
+    need(type(text) is str and bool(text.strip()),"SIMC_IMPORT_TEXT_REQUIRED")
+    found={name:[] for name in ("spec","race","talents")}
+    classes=[]
+    for line in text.splitlines():
+        line=line.strip()
+        if not line or line.startswith("#") or "=" not in line:continue
+        key,_,value=line.partition("=")
+        if key in scenario.CLASSES:
+            need(bool(value.strip()),"SIMC_IMPORT_EMPTY_CLASS_DECLARATION")
+            classes.append(key)
+        if key in found:found[key].append(value)
+    need(len(classes)==1 and all(len(found[k])==1 for k in found),
+         "SIMC_IMPORT_CHARACTER_INCOMPLETE_OR_AMBIGUOUS")
+    for name,rows in found.items():
+        scenario.text_token(rows[0],"IMPORTED_"+name.upper())
+    return {"class":classes[0],"spec":found["spec"][0],
+            "race":found["race"][0],"talents":found["talents"][0]}
+
 class UserScenarioBlocked(ValueError):pass
 def need(ok,why):
     if not ok:raise UserScenarioBlocked(why)
@@ -102,11 +127,20 @@ def initial_seeds(B,lower,upper):
          "TWO_DISTINCT_ELIGIBLE_SEEDS_UNAVAILABLE")
     return [dict(zip(scenario.STATS,v)) for v in (first,second)]
 
-def build(user,folder,binary,revision,static_cache_path=None):
+def build(user,folder,binary,revision,static_cache_path=None,
+          imported_profile_text=None):
     """Return an already validated internal manifest and v096 plan; no Native."""
-    need(type(user) is dict and set(user)==FIELDS and user.get("schema")==SCHEMA,
-         "USER_SCENARIO_FIELDS")
-    ch=user["character"]
+    need(type(user) is dict and set(user) in (FIELDS,FIELDS|{IMPORT_FIELD})
+         and user.get("schema")==SCHEMA,"USER_SCENARIO_FIELDS")
+    using_import=IMPORT_FIELD in user
+    if using_import:
+        need(type(user[IMPORT_FIELD]) is str and bool(user[IMPORT_FIELD].strip()),
+             "SIMC_IMPORT_PATH_REQUIRED")
+        need(user["character"] is None,"SIMC_IMPORT_AND_MANUAL_CHARACTER_AMBIGUOUS")
+        ch=character_from_uploaded_simc(imported_profile_text)
+    else:
+        need(imported_profile_text is None,"UNREQUESTED_IMPORTED_PROFILE")
+        ch=user["character"]
     need(type(ch) is dict and set(ch)=={"class","spec","race","talents"},
          "USER_CHARACTER_FIELDS")
     key=(ch["class"],ch["spec"])
@@ -236,8 +270,16 @@ def build(user,folder,binary,revision,static_cache_path=None):
 
 def run(user_path,folder,binary,revision,static_cache_path=None,
         execute=False,cache_only=False):
-    user=json.loads(pathlib.Path(user_path).read_text(encoding="utf8"))
-    prepared=build(user,folder,binary,revision,static_cache_path)
+    path=pathlib.Path(user_path).resolve()
+    user=json.loads(path.read_text(encoding="utf8"))
+    imported=None
+    if type(user) is dict and IMPORT_FIELD in user:
+        relative=pathlib.Path(user[IMPORT_FIELD]).expanduser()
+        resolved=(relative if relative.is_absolute() else path.parent/relative).resolve()
+        need(resolved.is_file(),"SIMC_IMPORT_NOT_FOUND")
+        imported=resolved.read_text(encoding="utf8")
+    prepared=build(user,folder,binary,revision,static_cache_path,
+                   imported_profile_text=imported)
     if not execute:return prepared
     actual=entry.run_manifest(prepared["generated_manifest"],cache_only=cache_only)
     return {"input_preparation":prepared,"native_result":actual}
