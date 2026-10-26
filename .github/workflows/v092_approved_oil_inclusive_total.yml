@@ -1,0 +1,98 @@
+name: v092 User Approved CHMV Total Oil Inclusive
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/v092_approved_formula_once.json
+      - integration_probes/requests/v092_approved_formula_retry.json
+permissions:
+  contents: read
+concurrency:
+  group: v092-approved-oil-inclusive-policy
+  cancel-in-progress: false
+jobs:
+  contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Bounded explicit approval request and pinned source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          paths={"integration_probes/requests/v092_approved_formula_once.json",
+                 "integration_probes/requests/v092_approved_formula_retry.json"}
+          modified=subprocess.check_output(
+             ["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],
+             text=True).splitlines()
+          assert len(modified)==1 and modified[0] in paths,modified
+          expected={
+             "schema":"v092_user_approved_inclusive_CHMV_v1",
+             "approved_formula":"T=G+J+F+O",
+             "legacy_runtime_base_B_formula":"B=G+J+F",
+             "oil_per_weapon_crit":16,"oil_per_weapon_haste":16,
+             "reference_base_common_334":3150,
+             "reference_base_fury_334":3350,
+             "reference_common_one_oil_T":3182,
+             "reference_common_dual_oil_T":3214,
+             "reference_fury_dual_oil_T":3414,
+             "O_is_fixed_not_fungible":True,
+             "verify_final_gear_override":True,
+             "full_offline_regression":True,
+             "new_native_calls_in_CI":0,
+             "original_v015_v016_integrated":False}
+          assert json.loads(pathlib.Path(modified[0]).read_text())==expected
+          pins={
+            "runner/v091_weapon_oil_external_adapter.py":"11f856ca5814377847e2559d2db0488d1c8f8976",
+            "runner/v092_approved_inclusive_CHMV_policy.py":"a200ab6f0218952fa9af215cc5d02b2c3a69805d",
+            "tests/test_v091_weapon_oil_external_adapter.py":"eba7fa29d9247c2f4f0acda3518f82e4c219ffde",
+            "tests/test_v092_approved_inclusive_CHMV_policy.py":"b2f26994d4d3671d7dd76416548a7e0407dd2fff"}
+          for path,sha in pins.items():
+              got=subprocess.check_output(["git","hash-object",path],text=True).strip()
+              assert got==sha,(path,got,sha)
+          print("V092_USER_APPROVAL_GJF_PLUS_O_AND_PINNED_BYTES_PASS")
+          PY
+      - name: Full existing + v092 offline regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Generate correct final inclusive T SimC input files without Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,sys,pathlib
+          sys.path[:0]=["runner","tests"]
+          import v046_static_item_cache as cache
+          import v091_weapon_oil_external_adapter as oil
+          import v082_fury_plate_dual_twohand_native as fury
+          from test_v091_weapon_oil_external_adapter import fury as source,BIN,REV,FURY_TARGET
+          root=pathlib.Path("out/v092").resolve();root.mkdir(parents=True,exist_ok=True)
+          profile,doc,fill=source(root)
+          for key,hands in [("none",[]),("one",["main_hand"]),
+                            ("two",["main_hand","off_hand"])]:
+              prep=oil.prepare(profile,doc,fill,cache.empty_cache(),"dual_two_hand",hands)
+              out=root/key;out.mkdir(exist_ok=True)
+              req=oil.propose(prep,FURY_TARGET,fury.DECLARED_F,BIN,REV,35,
+                              out/"result.json")
+              (out/"input.simc").write_text(req["input"],encoding="utf8")
+              src=req.pop("input")
+              (out/"proposal.json").write_text(json.dumps(req,indent=2,sort_keys=True)+"\n")
+              assert req["official_total"]==3350+32*len(hands)
+              assert sum(req["target"].values())==req["official_total"]
+              assert sum(req["raw_gear_override"].values())+165==req["official_total"]
+          print("V092_USER_APPROVED_B_PLUS_FIXED_O_3_NATIVE_INPUTS_PASS")
+          PY
+      - uses: actions/upload-artifact@v6
+        with:
+          name: v092-approved-inclusive-total-inputs-${{ github.run_id }}
+          path: out/v092/
+          if-no-files-found: error
+          retention-days: 14
