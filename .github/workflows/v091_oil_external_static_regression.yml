@@ -4,6 +4,7 @@ on:
     branches: [probe/chat-cache-v035-20261024]
     paths:
       - integration_probes/requests/v091_oil_external_once.json
+      - integration_probes/requests/v091_oil_external_retry.json
 permissions:
   contents: read
 concurrency:
@@ -24,9 +25,10 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           import json,os,pathlib,subprocess
-          p="integration_probes/requests/v091_oil_external_once.json"
+          accepted={"integration_probes/requests/v091_oil_external_once.json","integration_probes/requests/v091_oil_external_retry.json"}
           changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
-          assert changed==[p],changed
+          assert len(changed)==1 and changed[0] in accepted,changed
+          p=changed[0]
           expected={"schema":"v091_explicit_oil_two_weapon_external_static_v1",
               "per_weapon_crit":16,"per_weapon_haste":16,
               "0_weapon_requires_explicit_disabled":True,
@@ -40,7 +42,7 @@ jobs:
           pins={
               "runner/v064_adaptive_evaluator_port.py":"4733d6e98c32840dac551ca82045cff560af99e1",
               "runner/v091_weapon_oil_external_adapter.py":"0d984490600678f50f4eac152daa2a92a27f828a",
-              "tests/test_v091_weapon_oil_external_adapter.py":"9d3a71f5700f2ec44c6e532fd01227c8dbcf2f25"}
+              "tests/test_v091_weapon_oil_external_adapter.py":"59011cc2b6f134348d301dc21207ec8293ad9049"}
           for file,sha in pins.items():
               got=subprocess.check_output(["git","hash-object",file],text=True).strip()
               assert got==sha,(file,got,sha)
