@@ -198,23 +198,46 @@ def build(user,folder,binary,revision,static_cache_path=None,
             taken.add(slot)
             opts=item_mod.checked_options(raw["options"])
             item_mod.checked_id(raw["item_id"])
+            slot_group=group
             if group=="trinkets":
                 need(slot in ("trinket1","trinket2") and not
-                     (set(opts)&{"crafted_stats","embellishment"}),
+                     (set(opts)&{"crafted_stats","embellishment",
+                                  "redirected_base_stats"}),
                      "INVALID_TRINKET_SELECTION")
             elif group=="special":
-                need(groups.get(slot)!="tier" and not slot.startswith("trinket")
-                     and "embellishment" not in opts,
-                     "SPECIAL_OVERWRITES_TIER_OR_TRINKET")
+                need(not slot.startswith("trinket") and
+                     not (set(opts)&{"crafted_stats","embellishment"}),
+                     "SPECIAL_NOT_VALID_NONCRAFTED_SLOT")
+                if groups.get(slot)=="tier":
+                    # Same physical item is both the class-tier piece and a
+                    # catalyst-origin special. Never write a second slot row.
+                    need(raw["item_id"]==rows[slot]["item_id"] and
+                         "redirected_base_stats" in opts and
+                         int(opts["redirected_base_stats"])!=raw["item_id"],
+                         "CATALYST_CLASS_TIER_ID_AND_ORIGIN_REQUIRED")
+                    slot_group="tier"
+                else:
+                    need("redirected_base_stats" not in opts,
+                         "CATALYST_REQUIRES_EXISTING_CLASS_TIER_SLOT")
             else:
                 need(groups.get(slot)!="tier" and not slot.startswith("trinket")
-                     and "embellishment" in opts,
+                     and "embellishment" in opts and
+                     "redirected_base_stats" not in opts,
                      "EMBELLISHMENT_NOT_ON_CRAFTED_EQUIPMENT")
             rows[slot]={"slot":slot,"item_id":raw["item_id"],
                         "ilevel":ilvl,"options":opts}
-            groups[slot]=group
+            groups[slot]=slot_group
     need({r["slot"] for r in user["trinkets"]}=={"trinket1","trinket2"},
          "USER_TRINKET_SLOTS_NOT_EXACT")
+    # Four functioning tier slots are retained; one converted tier slot
+    # counts once, including all SimC-owned source cantrip/effect identity.
+    need(len([slot for slot,g in groups.items() if g=="tier"])==4,
+         "FOUR_FUNCTIONAL_TIER_SLOTS_REQUIRED")
+    catalyst_origin_rows=[{"slot":slot,"tier_item_id":row["item_id"],
+                           "source_item_id":int(row["options"]["redirected_base_stats"])}
+                          for slot,row in rows.items()
+                          if groups.get(slot)=="tier" and
+                             "redirected_base_stats" in row["options"]]
     cfg["equipment"]={g:[copy.deepcopy(r) for s,r in rows.items()
                           if groups.get(s)==g]
                       for g in ("tier","special","crafted","trinkets")}
@@ -266,6 +289,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
             "generated_manifest":str(folder/"manifest.json"),
             "output_dir":str(folder/"simc_results"),"plan":plan,
             "native_calls":0,"supported_archetypes_now":len(ARCHETYPES),
+            "catalyst_origin_items":catalyst_origin_rows,
             "all_specs_ready":False}
 
 def run(user_path,folder,binary,revision,static_cache_path=None,
