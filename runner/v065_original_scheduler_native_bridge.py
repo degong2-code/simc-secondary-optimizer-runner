@@ -110,7 +110,10 @@ def execute_one(req,calibration,binary,case_folder,progress,cancel_file=None,cac
     if cancel_file and pathlib.Path(cancel_file).exists():
         raise PipelineBlocked("USER_CANCEL_FILE_PRESENT")
     need(progress["native_attempts"]<NEW_NATIVE_MAX,"NATIVE_CALL_BUDGET_EXCEEDED")
-    source_file.write_text(req["input"],encoding="utf8")
+    # Windows Path.write_text() converts LF to CRLF, violating the exact
+    # Native request SHA. Recreate only the pre-Native input in byte mode;
+    # retain the existing hash verification and reject any bad cache output.
+    source_file.write_bytes(req["input"].encode("utf8"))
     need(hashlib.sha256(source_file.read_bytes()).hexdigest()==req["input_sha256"],
          "WRITTEN_SIMC_INPUT_SHA_CHANGED")
     progress["native_attempts"]+=1
