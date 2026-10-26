@@ -38,7 +38,7 @@ jobs:
         run: |
           git config --local core.autocrlf true
           git -c core.autocrlf=true checkout-index -f -a
-          python -c "import hashlib,pathlib; p=pathlib.Path('integration_probes/fixtures/v082_upstream_mid2_warrior_fury_reference.simc'); b=p.read_bytes(); h=hashlib.sha1(b'blob '+str(len(b)).encode()+b'\\0'+b).hexdigest(); assert h=='3225992ed5b754ad5d61e8b785d9d859f1eed1be',(h,len(b)); print('WINDOWS_AUTOCRLF_TRUE_FIXED_SOURCE_SHA_PASS')"
+          python -c "import hashlib,pathlib; p=pathlib.Path('integration_probes/fixtures/v082_upstream_mid2_warrior_fury_reference.simc'); b=p.read_bytes(); h=hashlib.sha1(b'blob '+str(len(b)).encode()+b'\0'+b).hexdigest(); assert h=='3225992ed5b754ad5d61e8b785d9d859f1eed1be',(h,len(b)); print('WINDOWS_AUTOCRLF_TRUE_FIXED_SOURCE_SHA_PASS')"
           python -c "import sys;sys.path.insert(0,'runner'); import v103_source_observed_weapon_types as w; assert w.verify_observed()['executable_source_shapes']==6; print('WINDOWS_ALL_SIX_PINNED_WEAPONS_SOURCE_SHA_PASS')"
       - name: Windows Python Tk runtime without interactive desktop
         shell: pwsh
