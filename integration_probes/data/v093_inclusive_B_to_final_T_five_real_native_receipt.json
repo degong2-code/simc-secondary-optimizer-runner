@@ -1,0 +1,152 @@
+{
+  "schema": "v093_real_native_inclusive_adaptive_v015_policy_v1",
+  "date": "2026-10-26",
+  "scope": "ISOLATED_FURY_334_TWO_HANDED_TWO_OILS_BOUND_ADAPTIVE",
+  "product_v015_v016_source_merged": false,
+  "official_formula": "T=G+J+F+O",
+  "scheduler_base_B": 3350,
+  "fixed_o": {
+    "crit_rating": 32,
+    "haste_rating": 32,
+    "mastery_rating": 0,
+    "versatility_rating": 0
+  },
+  "native_final_T": 3414,
+  "binary_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+  "revision": "7bc10711b5",
+  "CI": {
+    "run_id": 40262903998,
+    "status": "SUCCESS",
+    "tests": 529,
+    "passed": 527,
+    "skipped": 2,
+    "failed": 0,
+    "native_calls_in_CI": 0,
+    "artifact_id": 12625181317,
+    "artifact_sha256": "3b5d2e4e1a75e2368cc7d27c0e1ab5d1878e4b3dd3a47c91431aa0b50a3da25c"
+  },
+  "Native": {
+    "fresh_calls": 5,
+    "cached_replay_verified": 5,
+    "replay_new_calls": 0,
+    "scout_policy": "v065 original v015-derived choose_next",
+    "fresh_pair_policy": "v065 confirmation_pair and fresh_confirmation_judgment",
+    "cases": [
+      {
+        "phase": "seed_A",
+        "base": [
+          838,
+          838,
+          837,
+          837
+        ],
+        "final": [
+          870,
+          870,
+          837,
+          837
+        ],
+        "iterations": 35,
+        "samples": 34,
+        "dps": 203205.4959580463,
+        "sem": 977.0482555316555,
+        "json2_sha256": "c9611b9ed4ced671c84c25ecc07437486360e301a2661a7cc5728250af7ba840"
+      },
+      {
+        "phase": "seed_B",
+        "base": [
+          938,
+          738,
+          837,
+          837
+        ],
+        "final": [
+          970,
+          770,
+          837,
+          837
+        ],
+        "iterations": 35,
+        "samples": 34,
+        "dps": 201614.12750331097,
+        "sem": 820.0785587562597,
+        "json2_sha256": "78371b1a4dd2b930e8eb697ea799d759b06c22ad1fd86743a92e950c21f182d6"
+      },
+      {
+        "phase": "adaptive_scout",
+        "base": [
+          738,
+          938,
+          837,
+          837
+        ],
+        "final": [
+          770,
+          970,
+          837,
+          837
+        ],
+        "iterations": 35,
+        "samples": 34,
+        "dps": 203372.060465383,
+        "sem": 791.8601071776444,
+        "json2_sha256": "932bac23cdfddca5886c773ce9268b6b0fea99e2414775fcf0cc156a9c338fad"
+      },
+      {
+        "phase": "confirmation_of_scout",
+        "base": [
+          738,
+          938,
+          837,
+          837
+        ],
+        "final": [
+          770,
+          970,
+          837,
+          837
+        ],
+        "iterations": 80,
+        "samples": 79,
+        "dps": 204529.641581821,
+        "sem": 522.1589047784349,
+        "seed": "12254340863700678618",
+        "json2_sha256": "3d4ffde697686e27f2b60b0252a85710abb0538d4a35b663ef8ce2e02695a1e5"
+      },
+      {
+        "phase": "confirmation_of_seed_A",
+        "base": [
+          838,
+          838,
+          837,
+          837
+        ],
+        "final": [
+          870,
+          870,
+          837,
+          837
+        ],
+        "iterations": 80,
+        "samples": 79,
+        "dps": 203842.9981608903,
+        "sem": 486.50106030048954,
+        "seed": "6473655917403621565",
+        "json2_sha256": "01989ee1f88e295cc9db0d54925211a39fdd6b9938e473a5831bbadb3f318bdd"
+      }
+    ],
+    "two_fresh_confirmations_distinct_seeds": true,
+    "observed_diff_dps": 686.6434209306899,
+    "approx95_halfwidth": 1398.7789421577695,
+    "statistically_separated": false,
+    "global_optimum_proven": false,
+    "materially_distinct_near_optimal_alternative_proven": false
+  },
+  "full_portable_zip": "SIMC_SECONDARY_OPTIMIZER_V093_ADAPTIVE_5_NATIVE_PROOF.zip",
+  "full_portable_zip_sha256": "8fec906c756ef37eccbebe0f960cbedff7191f46b93ac00bcac7af821e1f3382",
+  "native_first_run_receipt_sha256": "e71a8a19fbbcc7ec3f358352f7957f773fc5822ab1cec3cca5ed6c6f5cc8f331",
+  "native_confirmation_receipt_sha256": "43df42ed176748e9ce7f478d795ec7ed32f6cadbbad6efbe1722fc07ea4e2005",
+  "official_Project_Source_apply_verified": false,
+  "official_WorkOS_apply_verified": false,
+  "github_main_changed": false
+}
