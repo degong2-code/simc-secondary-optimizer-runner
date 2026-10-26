@@ -1,0 +1,152 @@
+#!/usr/bin/env python3
+"""v102: minimal four-armor-family, actual-ID representative ordinary seed pool.
+
+READINESS DATA, not a new item database or a full representative profile.
+Pinned source-ID/slot, armor-material corroboration and source corrections are
+separate from Native exact rating, item-proc mechanics and gear recommendations.
+Never borrow crafted/random/class-restricted tier pieces as generic fillers.
+No Native SimC or network calls.
+"""
+from __future__ import annotations
+import hashlib,pathlib,re
+
+import v055_simc_item_selection as selected
+import v086_hunter_fixed_mail_representative as hunter_fix
+
+ROOT=pathlib.Path(__file__).resolve().parents[1]
+SCHEMA="v102_armor_family_ordinary_seed_v1"
+# Pinned original Git blobs (not SimC target variant/cache identities).
+SOURCE={
+ "frost":("integration_probes/fixtures/v084_upstream_mid2_mage_frost_reference.simc",
+          "b787824a95020a7cdd0934ed5e004695726db138"),
+ "fire":("integration_probes/fixtures/v084_upstream_mid2_mage_fire_nontier_head_source.simc",
+         "9fae08d2f1c49f3a964f9415540929723384e6fe"),
+ "rogue":("integration_probes/fixtures/v068_upstream_mid2_rogue_subtlety_reference.simc",
+          "b704e6326959432a82d14a6b774c79183d5b2af4"),
+ "shaman":("integration_probes/fixtures/v078_upstream_mid2_shaman_elemental_reference.simc",
+           "c92d111e37bd684647e4637dcfef3ccb92864cde"),
+ "warrior":("integration_probes/fixtures/v082_upstream_mid2_warrior_fury_reference.simc",
+            "3225992ed5b754ad5d61e8b785d9d859f1eed1be")}
+# Site corroboration confirms physical equipment ARMOR TYPE and SLOT.
+# These are selected representative candidates, not a season-wide DB.
+# 'legacy_fixed' refers to old v086 Native-corrected first-season mail
+# representative item; do not advertise as NEW S2 loot / exact Native data.
+# Each tuple: (source nickname, real item_id, origin_type, user-visible name).
+FAMILY_ROWS={
+ "cloth":{
+    "wrists":("frost",251154,"ordinary","Winter's Embrace Bracers"),
+    "waist":("fire",268257,"ordinary","Caustic Chain-Wrapped Sash"),
+    "feet":("frost",268255,"ordinary","Cackling Soultreads")},
+ "leather":{
+    "chest":("rogue",251159,"ordinary","War Trial Vestments"),
+    "waist":("rogue",268256,"ordinary","Sash of the Forlorn Vessel"),
+    "feet":("rogue",159304,"legacy_reference","Goldfeather Boots")},
+ "mail":{
+    "head":("hunter_v086",249317,"legacy_fixed","Frenzy's Rebuke"),
+    "waist":("shaman",268254,"ordinary","Serpentine Mixing Belt"),
+    "feet":("hunter_v086",249320,"legacy_fixed","Sabatons of Obscurement")},
+ "plate":{
+    "waist":("warrior",268259,"ordinary","Girdle of Toxic Regret"),
+    "feet":("warrior",268260,"ordinary","Scaled Fiend's Warboots")}}
+FAMILY_SET=frozenset(("cloth","leather","mail","plate"))
+REQUIRED_ITEM_SLOTS=frozenset(("head","shoulders","chest","wrists",
+                               "hands","waist","legs","feet"))
+# References are metadata only. Static rating is always from exact Native
+# cache identity, not from these URLs or current equipment at another level.
+ITEM_URLS={
+ 251154:"https://www.wowhead.com/item=251154",
+ 268257:"https://www.wowhead.com/item=268257",
+ 268255:"https://www.wowhead.com/item=268255",
+ 251159:"https://www.wowhead.com/item=251159",
+ 268256:"https://www.wowhead.com/item=268256",
+ 159304:"https://www.wowhead.com/item=159304",
+ 249317:"https://www.wowhead.com/item=249317",
+ 268254:"https://www.wowhead.com/item=268254",
+ 249320:"https://www.wowhead.com/item=249320",
+ 268259:"https://www.wowhead.com/item=268259",
+ 268260:"https://www.wowhead.com/item=268260"}
+
+class PoolBlocked(ValueError):pass
+def need(ok,reason):
+    if not ok:raise PoolBlocked(reason)
+
+def git_blob(raw):
+    return hashlib.sha1(b"blob "+str(len(raw)).encode("ascii")+b"\0"+raw).hexdigest()
+
+def source_ids(source_key):
+    """Read only the pinned data; original bonus/options are not copied."""
+    rel,sha=SOURCE[source_key]
+    raw=(ROOT/rel).read_bytes()
+    need(git_blob(raw)==sha,"ORDINARY_SOURCE_GIT_BLOB_DRIFT:"+source_key)
+    result={}
+    for line in raw.decode("utf8").splitlines():
+        if line.startswith("# Gear Summary"):break
+        slot,sep,value=line.partition("=")
+        if not sep or slot not in REQUIRED_ITEM_SLOTS:continue
+        matches=re.findall(r"(?:^|,)id=([1-9][0-9]*)(?:,|$)",value)
+        need(slot not in result and len(matches)==1,
+             "ORDINARY_SOURCE_EQUIPMENT_ID_AMBIGUOUS:"+source_key+":"+slot)
+        result[slot]=int(matches[0])
+    return result
+
+def verify_pool():
+    """Source provenance/readiness check, not item effect/stat verification."""
+    need(set(FAMILY_ROWS)==FAMILY_SET,"ARMOR_FAMILY_POOL_MISSING")
+    need(all(type(v) is dict and 1<=len(v)<=len(REQUIRED_ITEM_SLOTS)
+             for v in FAMILY_ROWS.values()),"ORDINARY_POOL_SHAPE")
+    used_ids=set();sources={}
+    entries=0
+    for family,items in FAMILY_ROWS.items():
+        for slot,(source,id_,kind,name) in items.items():
+            need(slot in REQUIRED_ITEM_SLOTS and
+                 type(id_) is int and id_>0 and
+                 name and ITEM_URLS.get(id_) and id_ not in used_ids,
+                 "ORDINARY_POOL_DUPLICATE_OR_UNGROUNDED:"+family+":"+slot)
+            used_ids.add(id_);entries+=1
+            selected.checked_id(id_)
+            if source=="hunter_v086":
+                need(kind=="legacy_fixed" and
+                     slot in hunter_fix.REPLACEMENTS and
+                     hunter_fix.REPLACEMENTS[slot][1]==id_,
+                     "V086_FIXED_MAIL_NATIVE_CORRECTION_DRIFT")
+            else:
+                need(source in SOURCE and kind in ("ordinary","legacy_reference"),
+                     "ORDINARY_SOURCE_CLASSIFICATION")
+                if source not in sources:sources[source]=source_ids(source)
+                need(sources[source].get(slot)==id_,
+                     "ORDINARY_SOURCE_ITEM_SLOT_ID_DRIFT:"+family+":"+slot)
+            # No crafted/tier subclass substitutions are taken from source.
+    need(entries==11,"ORDINARY_SEED_COUNT_DRIFT")
+    return {"schema":SCHEMA,"status":"FOUR_FAMILY_PARTIAL_ORDINARY_POOL",
+            "family_slot_counts":{x:len(FAMILY_ROWS[x])
+                                  for x in sorted(FAMILY_ROWS)},
+            "source_backed_item_ids":entries,"fully_equipped_profiles":0,
+            "not_a_full_armor_pool":True,"native_calls":0,
+            "new_variant_stats_native_verified":False}
+
+def row(family,slot,ilevel):
+    """Source-verified ID in correct family/slot, options empty by design.
+
+    Do not claim the exact item variant is in Native static cache: changed
+    target ilvl and source modifiers produce distinct digest identities.
+    """
+    need(type(family) is str and family in FAMILY_SET,"ARMOR_FAMILY_UNSUPPORTED")
+    need(type(slot) is str and slot in FAMILY_ROWS[family],
+         "ORDINARY_SLOT_NOT_SOURCE_READY:"+str(family)+":"+str(slot))
+    need(type(ilevel) is int and 266<=ilevel<=344,
+         "ORDINARY_ILVL_OUTSIDE_APPROVED_REFERENCE")
+    source,item_id,kind,name=FAMILY_ROWS[family][slot]
+    selected.checked_id(item_id)
+    return {"slot":slot,"item_id":item_id,"ilevel":ilevel,"options":{}}
+
+def provenance(family,slot):
+    need(family in FAMILY_SET and slot in FAMILY_ROWS[family],
+         "ORDINARY_ITEM_NOT_REGISTERED")
+    source,item_id,kind,name=FAMILY_ROWS[family][slot]
+    fixture=SOURCE[source][0] if source in SOURCE else (
+        "runner/v086_hunter_fixed_mail_representative.py")
+    return {"armor_family":family,"slot":slot,"item_id":item_id,
+            "name":name,"source_kind":kind,
+            "source_file":fixture,"item_reference":ITEM_URLS[item_id],
+            "not_verified_native_exact_target_variant":True,
+            "not_an_item_acquisition_recommendation":True}
