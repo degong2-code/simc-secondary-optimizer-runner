@@ -41,9 +41,9 @@ def source_tokens(profile):
 def default_choice(profile,head):
     tokens=source_tokens(profile)
     gem=head.get("options",{}).get("gem_id")
-    need(gem and gem.isdigit() and int(gem) in DIAMONDS,
+    need(gem is None or gem.isdigit() and int(gem) in DIAMONDS,
          "SOURCE_PRIMARY_ONLY_DIAMOND_NOT_READY")
-    return {**tokens,"diamond_id":int(gem)}
+    return {**tokens,"diamond_id":int(gem) if gem else 0}
 
 def validate_choice(raw,base):
     need(type(raw) is dict and set(raw)==CHOICE_FIELDS,"CHOICE_FIELDS")
@@ -93,11 +93,13 @@ def apply(profile,cfg,rows,chosen=None):
     # v061 consumable schema has no separate augmentation: the SimC line
     # and final profile_sha256 are the exact Native ownership boundary.
     head=rows["head"]
-    need("gem_id" in head["options"] and
-         str(head["options"]["gem_id"])==str(initial["diamond_id"]),
-         "DIAMOND_SOURCE_ROW_CHANGED")
-    head["options"]["gem_id"]=str(raw["diamond_id"])
-    updated["consumables"]["special_gem_id"]=raw["diamond_id"]
+    need((str(head["options"].get("gem_id","0"))==
+          str(initial["diamond_id"])),"DIAMOND_SOURCE_ROW_CHANGED")
+    if raw["diamond_id"]:
+        head["options"]["gem_id"]=str(raw["diamond_id"])
+    else:
+        head["options"].pop("gem_id",None)
+    updated["consumables"]["special_gem_id"]=raw["diamond_id"] or None
     new_profile="\n".join(out).rstrip()+"\n"
     updated["source"]["profile_sha256"]=hashlib.sha256(
         new_profile.encode("utf8")).hexdigest()
