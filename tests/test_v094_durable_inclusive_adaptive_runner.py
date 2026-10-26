@@ -28,6 +28,7 @@ class V094Durable(unittest.TestCase):
         q=summary['material_alternatives'][0]
         self.assertEqual(q['base_rating_moved'],400)
         self.assertGreater(q['diff_95_halfwidth_approx'],0)
+        self.assertEqual(q['label'],'OBSERVED_NEAR_UNRESOLVED_AT_95')
         self.assertNotIn('diff_97_halfwidth_approx',q)
         self.assertEqual(summary['confidence_for_decision_and_display'],0.95)
         self.assertFalse(any('97' in k for k in summary))
