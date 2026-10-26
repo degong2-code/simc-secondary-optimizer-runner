@@ -42,7 +42,7 @@ jobs:
             "original_v015_v016_product_merged":False}
           assert json.loads(pathlib.Path(changed[0]).read_text())==expected
           pins={
-            "runner/v094_durable_inclusive_adaptive_runner.py":"2fc61d680aeb4035b2ab5f1ef47bff91924835ac",
+            "runner/v094_durable_inclusive_adaptive_runner.py":"23d7443c94031d5640f74a03269d25cb6d76a3a3",
             "tests/test_v094_durable_inclusive_adaptive_runner.py":"36ed66f3b5ef83e052d86596100778f7b365a0e3"}
           for path,sha in pins.items():
               assert subprocess.check_output(["git","hash-object",path],text=True).strip()==sha,path
