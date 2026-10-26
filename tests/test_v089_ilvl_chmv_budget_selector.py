@@ -105,7 +105,7 @@ class V089OptInTargetBudget(unittest.TestCase):
                                      "REFERENCE_334_ANCHOR_CHANGED"):
                 z.load_registry(f)
             reg["values"][334-266]["general"]=3150
-            reg["values"][340-266]["general"]=3
+            reg["values"][340-266]["general"]=3000
             f.write_text(json.dumps(reg))
             with self.assertRaisesRegex(z.BudgetSelectionBlocked,
                                       "REFERENCE_STATS_NOT_MONOTONIC"):
