@@ -150,11 +150,16 @@ def run(context, seed_targets, flask_vector, binary, output, *,
              and prev.get('native_limit')==budget,
              'DURABLE_PROGRESS_IDENTITY_CHANGED')
         progress=prev
+    # Per-invocation cache count, not an accumulating historical total.
+    progress['cache_verified_hits']=0
     all_observations=[];projected=[]
     try:
         def checkpoint(status):
             progress['status']=status
             progress['new_native_attempts']=_recover_attempts(main_folder,4)+_recover_attempts(confirm_folder,4)
+            progress['completed_jobs']=len(all_observations)
+            progress['planned_jobs']=2+scouts+2
+            progress['progress_percent']=round(100*len(all_observations)/(2+scouts+2),1)
             save(progress_path,progress)
             print('[v094]',status,'native',progress['new_native_attempts'],'/',budget,
                   'cache',progress['cache_verified_hits'],flush=True)
@@ -213,7 +218,9 @@ def run(context, seed_targets, flask_vector, binary, output, *,
         confidence['approx_ci97_halfwidth']=Z97*stats
         confidence['statistically_separated_approx97']=diff>Z97*stats
         confidence['confidence_97_informational_only']=True
-        report={'schema':SCHEMA,'status':'PASS_BOUNDED_GENERIC_NATIVE_SEARCH_AND_CACHE',
+        status=('PASS_BOUNDED_GENERIC_NATIVE_SEARCH_AND_CACHE' if scouts else
+                'PASS_BOUNDED_SEEDS_AND_FRESH_CONFIRM_NO_SCOUT')
+        report={'schema':SCHEMA,'status':status,
                 'policy_source':'v065_v015_derived_in_B',
                 'official_formula':'T=G+J+F+O','B':B,'fixed_O':O,
                 'official_final_T':B+sum(O.values()),
@@ -228,9 +235,11 @@ def run(context, seed_targets, flask_vector, binary, output, *,
                 'new_native_attempts_cumulative':_recover_attempts(main_folder,4)+_recover_attempts(confirm_folder,4),
                 'verified_cache_hits_this_run':progress['cache_verified_hits'],
                 'global_optimum_proven':False,
+                'scouts_completed':scouts,
                 'original_v015_v016_product_integrated':False}
         save(report_path,report)
-        checkpoint('PASS_BOUNDED_GENERIC_NATIVE_SEARCH_AND_CACHE')
+        progress.pop('error',None)
+        checkpoint(status)
         return report
     except Exception as exc:
         progress['error']=type(exc).__name__+':'+str(exc)
