@@ -12,7 +12,8 @@ from tkinter import filedialog,messagebox,scrolledtext,ttk
 
 from v106_user_session_controller import (
     SCHEMA, DEFAULT_ROOT, SUPPORTED, canonical, source_defaults,
-    user_scenario, store_session, paths, clear_cancel,
+    user_scenario, store_session, session_path, cache_only_preflight,
+    paths, clear_cancel,
     request_cancel, progress, format_result, selected_rows_from_form)
 from v107_optional_items_dialog import select_items
 from v108_user_consumable_dialog import select_consumables
@@ -44,6 +45,7 @@ class UserWindow:
         self.root=root;root.title("SimC CHMV 최적화 — DPS 6개 전문화 베타")
         root.geometry("890x760")
         self.proc=None;self.log_handle=None;self.folder=None
+        self.running_cache_only=False
         self.last_progress=None;self.last_log=None
         self.ui={}
         self.advanced_rows={"special_items":[],"embellishments":[]}
@@ -135,6 +137,10 @@ class UserWindow:
         ttk.Button(outer,text="Windows 실행 환경 진단 (Native 0회) · ZIP 생성",
                    command=self._readiness).grid(
                    row=21,column=0,columnspan=4,sticky="ew",pady=4)
+        self.cache_btn=ttk.Button(outer,
+            text="완료된 결과 캐시 검증 (Native 0회 · 6/6 재사용)",
+            command=lambda:self.start(cache_only=True))
+        self.cache_btn.grid(row=22,column=0,columnspan=4,sticky="ew",pady=4)
         outer.grid_rowconfigure(18,weight=1)
         for i in (1,3):outer.grid_columnconfigure(i,weight=1)
 
@@ -262,7 +268,7 @@ class UserWindow:
         self.display.insert("end",value)
         self.display.see("end")
 
-    def start(self):
+    def start(self,cache_only=False):
         if self.proc is not None and self.proc.poll() is None:
             messagebox.showwarning("진행 중","기존 실행을 먼저 취소하거나 완료해야 해.")
             return
@@ -273,28 +279,38 @@ class UserWindow:
             static_text=self.vars["static_cache"].get().strip()
             static_cache=(pathlib.Path(static_text).expanduser().resolve()
                           if static_text else None)
-            folder=store_session(user,DEFAULT_ROOT,binary,revision,static_cache)
+            if cache_only:
+                folder,_=session_path(user,DEFAULT_ROOT,binary,revision,static_cache)
+                cache_only_preflight(folder)
+            else:
+                folder=store_session(user,DEFAULT_ROOT,binary,revision,static_cache)
             self.folder=folder
             clear_cancel(folder)
             save_settings({"binary":str(binary),"revision":revision,
                            "static_cache":str(static_cache) if static_cache else ""})
             log=paths(folder)["log"]
             self.log_handle=open(log,"a",encoding="utf8",buffering=1)
-            self.log_handle.write("\n=== V106 USER RUN / RESUME ===\n")
+            self.log_handle.write("\n=== V112 CACHE ONLY / NO NEW NATIVE ===\n"
+                                  if cache_only else
+                                  "\n=== V106 USER RUN / RESUME ===\n")
             flags=subprocess.CREATE_NO_WINDOW if os.name=="nt" else 0
             cmd=[sys.executable,str(pathlib.Path(__file__).resolve().parent/
                  "v106_user_session_controller.py"),
                  "--session",str(folder),"--binary",str(binary),
                  "--revision",revision]
             if static_cache:cmd.extend(["--static-cache",str(static_cache)])
+            if cache_only:cmd.append("--cache-only")
             self.proc=subprocess.Popen(
                 cmd,
                 stdout=self.log_handle,stderr=subprocess.STDOUT,
                 creationflags=flags,
                 env={**os.environ,"PYTHONIOENCODING":"utf-8"})
+            self.running_cache_only=bool(cache_only)
             self.start_btn.configure(state="disabled")
-            self.cancel_btn.configure(state="normal")
-            self.status.set("Native 실행 시작 / 재개: "+folder.name)
+            self.cache_btn.configure(state="disabled")
+            self.cancel_btn.configure(state="disabled" if cache_only else "normal")
+            self.status.set(("완료된 Native 캐시 6건 검증 (새 Native 0회): " if cache_only
+                             else "Native 실행 시작 / 재개: ")+folder.name)
         except Exception as exc:
             self.status.set("실행 전 차단: "+str(exc))
             messagebox.showerror("입력 또는 환경 확인",str(exc))
@@ -330,6 +346,7 @@ class UserWindow:
                     exitcode=self.proc.returncode
                     self.proc=None
                     self.start_btn.configure(state="normal")
+                    self.cache_btn.configure(state="normal")
                     self.cancel_btn.configure(state="disabled")
                     if self.log_handle:
                         self.log_handle.close();self.log_handle=None
@@ -338,7 +355,9 @@ class UserWindow:
                         data=json.loads(out.read_text("utf8"))
                         self._write(format_result(data)+
                            "\n\n결과 폴더: "+str(self.folder))
-                        self.status.set("완료 · 기존 SimC Native 및 95% 결과 확인")
+                        self.status.set("캐시 6/6 검증 · 신규 Native 0회"
+                                        if self.running_cache_only else
+                                        "완료 · 기존 SimC Native 및 95% 결과 확인")
                     else:
                         self.status.set("부분 중단 또는 오류 · 로그 확인 후 동일 설정으로 재개 가능")
                         if log.is_file():
