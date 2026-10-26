@@ -44,10 +44,10 @@ jobs:
             "original_v015_v016_product_merged":False}
           assert json.loads(pathlib.Path(changed[0]).read_text())==expected
           pins={
-            "runner/v094_durable_inclusive_adaptive_runner.py":"f9cd3ca9af7281d70a664ebdba586b8e84fec647",
+            "runner/v094_durable_inclusive_adaptive_runner.py":"687e2509cb8780972c4c931bfdb4b1f902435dcc",
             "runner/v095_material_precision_policy.py":"5c3d5d2f180025e7aa9f3782b8d87ff4c0ce1ea8",
-            "tests/test_v094_durable_inclusive_adaptive_runner.py":"a185ff885cc61d1fe8be35edd76d246e4fab1d12",
-            "tests/test_v095_material_precision_policy.py":"959766a2918966a8b2229d26384e8caddb32ba75"}
+            "tests/test_v094_durable_inclusive_adaptive_runner.py":"b4eba3c3b1678d0355d39abc93505af3001993f3",
+            "tests/test_v095_material_precision_policy.py":"075249cd82a976e13d7d67d61cb78664daae2f67"}
           for p,sha in pins.items():
               got=subprocess.check_output(["git","hash-object",p],text=True).strip()
               assert sha==got,(p,sha,got)
