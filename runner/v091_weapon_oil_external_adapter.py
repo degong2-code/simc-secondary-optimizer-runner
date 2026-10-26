@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """v091: explicit per-weapon Thalassian Phoenix Oil input identity.
 
-Small adapter around existing v089/v090/v064.  Never models the oil effect.
-SimC handles the mechanic.  Declared external fixed vector O is provenance,
-not a second gear_* injection and not an assertion that buffed_stats expose O.
+Small adapter around v089/v090/v064 and approved v092 inclusive-T policy.
+SimC handles oil mechanics. Fixed O adds once to gear_* override because that
+numeric override replaces the oil's natural secondary rating; O is not a
+freely distributable stat budget, and is not separately added to JSON2 again.
 """
 from __future__ import annotations
 import copy,hashlib,pathlib
@@ -105,8 +106,9 @@ def configure(profile,doc,weapon_layout,applied_hands):
         "weapon_layout":weapon_layout,"applied_hands":ordered,
         "oil_token":OIL if ordered else None,
         "expected_simc_temporary_enchant":literal,
-        "declared_O":declared_O,"oil_outside_T":True,
-        "T_unchanged":True,"native_calls":0,
+        "declared_O":declared_O,"oil_outside_legacy_B":True,
+        "oil_in_approved_final_T":True,
+        "legacy_B_unchanged":True,"native_calls":0,
         "mechanics_owner":"SimC",
         "buffed_O_addition_independently_proven":False}
 
