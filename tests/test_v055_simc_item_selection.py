@@ -65,6 +65,19 @@ class ItemPassThrough(unittest.TestCase):
         x={"slot":"trinket1","item_id":250224,"ilevel":334,"options":{}}
         with self.assertRaisesRegex(c.CacheBlocked,"SLOT_DUPLICATE_OR_UNSUPPORTED"):
             p.inspect_selection([x,x])
+    def test_catalyst_origin_id_survives_exact_item_serialization(self):
+        item=p.equipment_line("chest",271459,334,
+               {"bonus_id":"13848","redirected_base_stats":"268222"})
+        self.assertIn(",id=271459,ilevel=334,source=local,",item)
+        self.assertIn("redirected_base_stats=268222",item)
+        self.assertIn("bonus_id=13848",item)
+        for invalid in ("0","-1","abc","12/34","",str(10**10)):
+            with self.subTest(invalid=invalid):
+                with self.assertRaisesRegex(c.CacheBlocked,
+                        "CATALYST_ORIGIN_ITEM_ID_INVALID|ITEM_OPTION_VALUE_INVALID"):
+                    p.equipment_line("chest",271459,334,
+                                     {"redirected_base_stats":invalid})
+
     def test_malformed_options_refused(self):
         with self.assertRaisesRegex(c.CacheBlocked,"ITEM_OPTION_VALUE_INVALID"):
             p.equipment_line("trinket1",250224,334,{"bonus_id":"11;delete_all"})
