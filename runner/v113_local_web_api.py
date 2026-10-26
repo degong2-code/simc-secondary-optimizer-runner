@@ -18,15 +18,18 @@ import threading
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 import v106_user_session_controller as sessions
 import v098_target_user_scenario_bootstrap as bootstrap
+import v108_native_consumable_inputs as consumables
 
 SCHEMA = "v113_local_web_api_p1_v1"
 KEY = re.compile(r"[a-f0-9]{20}\Z")
 LOCAL_HOST = "127.0.0.1"
+WEB_ASSETS = pathlib.Path(__file__).resolve().parent / "webui"
+PUBLIC_STATIC = frozenset(("/", "/assets/app.js", "/assets/styles.css"))
 
 class UserRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -217,7 +220,7 @@ def create_app(*,root=None, token=None):
             return JSONResponse({"detail":{"code":"FOREIGN_ORIGIN_BLOCKED"}},403)
         if request.headers.get("sec-fetch-site")=="cross-site":
             return JSONResponse({"detail":{"code":"CROSS_SITE_BLOCKED"}},403)
-        if request.url.path not in ("/api/v1/health","/api/v1/bootstrap"):
+        if request.url.path not in ("/api/v1/health","/api/v1/bootstrap") and request.url.path not in PUBLIC_STATIC:
             if not secrets.compare_digest(
                 request.headers.get("x-simc-local-token",""), key):
                 return JSONResponse({"detail":{"code":"LOCAL_TOKEN_REQUIRED"}},403)
@@ -233,7 +236,40 @@ def create_app(*,root=None, token=None):
                     return JSONResponse({"detail":{"code":"CONTENT_LENGTH_INVALID"}},400)
                 if large:
                     return JSONResponse({"detail":{"code":"PAYLOAD_TOO_LARGE"}},413)
-        return await call_next(request)
+        response = await call_next(request)
+        # No inline scripts, remote resources, or browser-side file/network APIs.
+        # Token and local user output should not be cached by browser/proxy.
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'none'; script-src 'self'; style-src 'self'; "
+            "connect-src 'self'; img-src 'self' data:; "
+            "base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
+        return response
+
+    @app.get("/")
+    def index():
+        return FileResponse(WEB_ASSETS / "index.html",media_type="text/html")
+
+    @app.get("/assets/app.js")
+    def browser_js():
+        return FileResponse(WEB_ASSETS / "app.js",media_type="text/javascript")
+
+    @app.get("/assets/styles.css")
+    def browser_styles():
+        return FileResponse(WEB_ASSETS / "styles.css",media_type="text/css")
+
+    @app.get("/api/v1/options")
+    def options():
+        return {
+            "food":["source_default",*sorted(consumables.SUPPORTED["food"])],
+            "potion":["source_default",*sorted(consumables.SUPPORTED["potion"])],
+            "augmentation":["source_default",*sorted(consumables.SUPPORTED["augmentation"])],
+            "diamond_id":[0,*sorted(consumables.DIAMONDS)],
+            "omnium_talents":["source_default",*sorted(consumables.OMNIUM_PRESETS)]
+        }
 
     @app.get("/api/v1/health")
     def health():
@@ -286,14 +322,14 @@ def create_app(*,root=None, token=None):
 
 def main(argv=None):
     import argparse
-    p=argparse.ArgumentParser(description="P1-WEB-1 local HTTP API, no UI yet")
+    p=argparse.ArgumentParser(description="P1-WEB-2 local HTML webapp with existing SimC engine")
     p.add_argument("--host",default=LOCAL_HOST,choices=[LOCAL_HOST])
     p.add_argument("--port",type=int,default=8765)
     args=p.parse_args(argv)
     if not 1024<=args.port<=65535:
         p.error("PORT_MUST_BE_1024_TO_65535")
     import uvicorn
-    print(f"SIMC_LOCAL_API http://{LOCAL_HOST}:{args.port}/api/v1/health",
+    print(f"SIMC_LOCAL_WEB http://{LOCAL_HOST}:{args.port}/",
           flush=True)
     uvicorn.run(create_app(),host=LOCAL_HOST,port=args.port,
                 proxy_headers=False,access_log=False)
