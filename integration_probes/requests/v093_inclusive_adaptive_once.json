@@ -1,0 +1,10 @@
+{
+  "schema": "v093_existing_v015_scheduler_inclusive_T_bridge_v1",
+  "user_approved_final_formula": "T=G+J+F+O",
+  "scheduler_allocation_budget": "B=G+J+F",
+  "fixed_O_is_not_fungible": true,
+  "native_uses_final_T": true,
+  "do_not_claim_full_product_v015_v016_integration": true,
+  "full_offline_regression": true,
+  "new_simc_calls_in_CI": 0
+}
