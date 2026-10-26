@@ -5,6 +5,8 @@ on:
     paths:
       - .github/workflows/v098_target_user_scenario_offline.yml
       - runner/v101_common_representative_equipment.py
+      - runner/v102_ordinary_armor_seed_pool.py
+      - tests/test_v102_ordinary_armor_seed_pool.py
       - tests/test_v101_common_representative_equipment.py
       - runner/v098_target_user_scenario_bootstrap.py
       - runner/v055_simc_item_selection.py
@@ -28,7 +30,7 @@ jobs:
           persist-credentials: false
       - name: Compile product entry and targeted bootstrap
         run: |
-          python3 -m py_compile runner/v055_simc_item_selection.py runner/v061_scenario_contract.py runner/v062_static_budget_bridge.py runner/v101_common_representative_equipment.py runner/v098_target_user_scenario_bootstrap.py runner/v096_unified_product_entry.py
+          python3 -m py_compile runner/v055_simc_item_selection.py runner/v061_scenario_contract.py runner/v062_static_budget_bridge.py runner/v101_common_representative_equipment.py runner/v102_ordinary_armor_seed_pool.py runner/v098_target_user_scenario_bootstrap.py runner/v096_unified_product_entry.py
       - name: Test user entry / old source-locked bridge offline (NO Native SimC)
         run: |
           python3 -m unittest -q \
@@ -46,6 +48,7 @@ jobs:
             tests.test_v096_manual_final_inclusive_entry \
             tests.test_v097_user_result_offline \
             tests.test_v098_target_user_scenario_bootstrap \
-            tests.test_v101_common_representative_equipment
+            tests.test_v101_common_representative_equipment \
+            tests.test_v102_ordinary_armor_seed_pool
       - name: Baseline pilot
         run: python3 runner/pilot.py check
