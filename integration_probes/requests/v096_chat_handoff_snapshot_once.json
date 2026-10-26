@@ -1,0 +1,10 @@
+{
+  "schema": "v096_newchat_portable_source_snapshot_v1",
+  "intent": "exact tracked GitHub branch bytes and SHA for cross-chat continuity",
+  "policy": "95pct only and T=G+J+F+fixed O",
+  "previous_verified_ci": 40271512368,
+  "previous_verified_status": "SUCCESS_543_PASS_2_SKIP",
+  "new_native_calls": 0,
+  "changes_main": false,
+  "changes_Project_Source_or_WorkOS": false
+}
