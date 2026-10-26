@@ -3,6 +3,10 @@
 **2026-10-26 · isolated development only · actual Native 2 runs.**
 This completes **one scoped Frost 334 reference-T static-c DPS evaluation connection**. It is NOT an original v015/v016 optimizer merge, a full adaptive search, a globally optimal DPS conclusion, a new proc/effect Gate, an unapproved modification to formal T=G+J+F, or a Work OS promotion.
 
+
+> **v091 후속 교정 — v090의 ‘기름 없음’ 표기를 정정 (2026-10-26):** v090 프로필에는 `temporary_enchant=` 지시문이 없었으나, 당시 실제 보존한 JSON2 두 건의 `sim.players[0].temporary_enchant`는 **`main_hand:thalassian_phoenix_oil_2`**로 보고됐다. SimC는 생략된 기름에 기본 소모품을 채울 수 있다. 그러므로 v090 Native의 DPS/SEM, 입력 및 정적 T3150 실측은 **그 당시 입력의 진짜 실행 결과로 유효**하나, 이를 **기름이 꺼진 시나리오의 DPS**라고 서술한 기존 내용은 **철회**한다. 정확히 무기 기름을 끄려면 `temporary_enchant=disabled`를 사용해야 한다. 공식 T=G+J+F는 그대로이며, v090에서 O=0이라고 기록했던 사용자 의도와 실제 SimC 기본 소모품 적용 사이에 불일치가 있었다. 이 문제는 [v091 기름 입력·Native 교정](./V091_WEAPON_OIL_EXPLICIT_0_1_2_NATIVE_ACCEPTANCE.md)에서 해결/보고하며, 기존 v090 원본 영수증 SHA나 Native JSON2는 수정하지 않는다.
+
+
 ## 1. Source contracts and lightweight route
 
 Approved developer notes v1.2 and user direction are applied narrowly: ordinary representative items retain precise ID, ilvl334, options, 4 tiers, two trinkets, profile APL, primary stats and weapons, but **their individual static G variant cache is not required** to establish a chosen **reference T=3150**. Selected **special-item fixed L** remains exact Native-only, subtracted as an already-in-T floor, never fabricated. Out-of-T oil O is not added. Source provenance remains `reference_rounded_opt_in`; manually specified totals still take priority in v089 and old native-exact G route remains intact.
