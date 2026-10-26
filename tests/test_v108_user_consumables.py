@@ -41,7 +41,11 @@ class NativeConsumableUserFlow(unittest.TestCase):
                 self.assertEqual(result["consumables_selected"]["flask"],
                                  cfg["consumables"]["flask"])
                 self.assertIn("augmentation=",source)
-                self.assertIn("temporary_enchant=",source)
+                self.assertEqual(sum(line.startswith("omnium_talents=")
+                                      for line in source.splitlines()),1)
+                self.assertEqual(result["consumables_selected"]["omnium_talents"],
+                                 next(line.partition("=")[2] for line in source.splitlines()
+                                      if line.startswith("omnium_talents=")))
                 self.assertFalse((root/"out"/"simc_results").exists())
 
     def test_potion_food_augmentation_user_choice_is_exactly_once_in_simc_and_cache(self):
@@ -49,7 +53,7 @@ class NativeConsumableUserFlow(unittest.TestCase):
         controls["consumable_choices"]={
             "flask":"source_default","food":"royal_roast",
             "potion":"lights_potential_2","augmentation":"disabled",
-            "diamond_id":0}
+            "diamond_id":0,"omnium_talents":"source_default"}
         u=session.user_scenario(controls)
         a=session.store_session(u,root/"sessions",binary,"7bc10711b5")
         output=boot.build(u,a/"generated",binary,"7bc10711b5")
@@ -101,6 +105,30 @@ class NativeConsumableUserFlow(unittest.TestCase):
         with self.assertRaisesRegex(consumer.ConsumableBlocked,
                 "UNVERIFIED_SIMC_TOKEN:augmentation"):
             boot.build(session.user_scenario(controls),root/"folio",
+                       binary,"7bc10711b5")
+
+    def test_observed_whole_omnium_loadout_is_serialized_once_and_changes_session(self):
+        root,binary,controls=self.setup()
+        target="136822:1/136823:1/136817:1/136818:1/136814:1"
+        controls["consumable_choices"]["omnium_talents"]=target
+        user=session.user_scenario(controls)
+        result=boot.build(user,root/"out",binary,"7bc10711b5")
+        profile=(root/"out"/"profile.simc").read_text()
+        self.assertEqual(sum(line=="omnium_talents="+target
+                             for line in profile.splitlines()),1)
+        self.assertEqual(result["consumables_selected"]["omnium_talents"],target)
+        self.assertEqual(result["plan"]["base_B"],3150)
+        self.assertEqual(result["plan"]["final_T"],3182)
+        controls["consumable_choices"]["omnium_talents"]="source_default"
+        self.assertNotEqual(
+            session.session_path(user,root,binary,"7bc10711b5")[0],
+            session.session_path(session.user_scenario(controls),root,binary,
+                                 "7bc10711b5")[0])
+        bad=controls["consumable_choices"]
+        bad["omnium_talents"]="136822:99"
+        with self.assertRaisesRegex(consumer.ConsumableBlocked,
+                                     "OMNIUM_LOADOUT_NOT_SOURCE_OBSERVED"):
+            boot.build(session.user_scenario(controls),root/"invalid",
                        binary,"7bc10711b5")
 
     def test_legacy_v098_without_choices_still_supported(self):
