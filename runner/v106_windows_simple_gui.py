@@ -15,6 +15,7 @@ from v106_user_session_controller import (
     user_scenario, store_session, paths, clear_cancel,
     request_cancel, progress, format_result, selected_rows_from_form)
 from v107_optional_items_dialog import select_items
+from v108_user_consumable_dialog import select_consumables
 
 DISPLAY={
     ("warrior","fury"):"전사 — 분노",
@@ -44,6 +45,10 @@ class UserWindow:
         self.last_progress=None;self.last_log=None
         self.ui={}
         self.advanced_rows={"special_items":[],"embellishments":[]}
+        self.consumable_choices={
+            "flask":"source_default","food":"source_default",
+            "potion":"source_default","augmentation":"source_default",
+            "diamond_id":0}
         self.cfg=remembered_settings()
         self._draw()
         self._defaults()
@@ -116,8 +121,11 @@ class UserWindow:
                   ).grid(row=17,column=0,columnspan=4,sticky="w")
         self.display=scrolledtext.ScrolledText(outer,height=17,wrap="word")
         self.display.grid(row=18,column=0,columnspan=4,sticky="nsew",pady=5)
-        ttk.Label(outer,text="베타: 특수장비·장식은 정확한 ID/옵션 선택. 보석·영약·음식·물약·Omnium 자유 선택 UI는 미완료.",
-                  wraplength=850).grid(row=19,column=0,columnspan=4,sticky="w")
+        ttk.Button(outer,text="음식·물약·증강 룬·다이아몬드 선택…",
+                   command=self._consumables).grid(
+                   row=19,column=0,columnspan=4,sticky="ew",pady=4)
+        ttk.Label(outer,text="영약 F=165는 검증된 전문화별 기본값 고정. Omnium Folio는 별도 미지원.",
+                  wraplength=850).grid(row=20,column=0,columnspan=4,sticky="w")
         outer.grid_rowconfigure(18,weight=1)
         for i in (1,3):outer.grid_columnconfigure(i,weight=1)
 
@@ -147,6 +155,12 @@ class UserWindow:
     def _new_specialization(self):
         self.advanced_rows={"special_items":[],"embellishments":[]}
         self._defaults()
+
+    def _consumables(self):
+        result=select_consumables(self.root,self.consumable_choices)
+        if result is not None:
+            self.consumable_choices=result
+            self.status.set("소모품·다이아몬드 선택 반영 · 영약 F=165/보석 J=138 불변")
 
     def _advanced(self):
         result=select_items(self.root,self.advanced_rows,self._base_controls)
@@ -189,7 +203,8 @@ class UserWindow:
         chosen=selected_rows_from_form(
             self.advanced_rows.get("special_items",[]),
             self.advanced_rows.get("embellishments",[]))
-        return user_scenario({**self._base_controls(),**chosen})
+        return user_scenario({**self._base_controls(),**chosen,
+                              "consumable_choices":self.consumable_choices})
 
     def _write(self,value):
         self.display.delete("1.0","end")
