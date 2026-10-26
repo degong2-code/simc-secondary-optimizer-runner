@@ -22,6 +22,8 @@ def fake_native(hits=0):
                                           "mastery_rating":787,"versatility_rating":887},
                     "base_rating_B":{"crit_rating":688,"haste_rating":788,
                                      "mastery_rating":787,"versatility_rating":887},
+                    "percent_of_final_T":{"crit_rating":22.12,"haste_rating":25.27,
+                                          "mastery_rating":24.73,"versatility_rating":27.88},
                     "observed_dps_mean":179171.785,
                     "simc_sem":275.80,
                     "rank_basis":"HIGHEST_OBSERVED_MEAN_NOT_GLOBAL_OPTIMUM"},
@@ -102,7 +104,7 @@ class UserSessionControls(unittest.TestCase):
     def test_format_only_proven_95_result_never_claim_global(self):
         msg=ux.format_result(fake_native())
         self.assertIn("179,171.8",msg)
-        self.assertIn("치명 704",msg)
+        self.assertIn("치명 704 (22.12%)",msg)
         self.assertIn("특화 787",msg)
         self.assertIn("전역 최적해 입증 아님",msg)
         bad=fake_native();bad["user_result"]["confidence_level"]=0.97
@@ -115,6 +117,7 @@ class UserSessionControls(unittest.TestCase):
             with self.assertRaisesRegex(ux.SessionBlocked,
                                         "SAME_SESSION_ALREADY_RUNNING"):
                 with ux.worker_lock(root):pass
+        self.assertEqual((root/"V106_WORKER.lock").stat().st_size,1)
         with ux.worker_lock(root):pass
 
     def test_offline_mock_native_result_resume_changes_hit_count_only(self):
