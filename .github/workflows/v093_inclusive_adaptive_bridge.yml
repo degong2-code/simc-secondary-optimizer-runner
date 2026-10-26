@@ -1,0 +1,93 @@
+name: v093 Inclusive Oil Adaptive Search B to Native T
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/v093_inclusive_adaptive_once.json
+      - integration_probes/requests/v093_inclusive_adaptive_retry.json
+permissions:
+  contents: read
+concurrency:
+  group: v093-oil-adaptive-regression
+  cancel-in-progress: false
+jobs:
+  regression:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Bounded request and source lock
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          expected_files={"integration_probes/requests/v093_inclusive_adaptive_once.json",
+                         "integration_probes/requests/v093_inclusive_adaptive_retry.json"}
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert len(changed)==1 and changed[0] in expected_files,changed
+          approved={
+            "schema":"v093_existing_v015_scheduler_inclusive_T_bridge_v1",
+            "user_approved_final_formula":"T=G+J+F+O",
+            "scheduler_allocation_budget":"B=G+J+F",
+            "fixed_O_is_not_fungible":True,
+            "native_uses_final_T":True,
+            "do_not_claim_full_product_v015_v016_integration":True,
+            "full_offline_regression":True,
+            "new_simc_calls_in_CI":0}
+          assert json.loads(pathlib.Path(changed[0]).read_text())==approved
+          pinned={
+            "runner/v093_inclusive_adaptive_scheduler_bridge.py":"c2544a56180d458935b0c419931cc4e6d9acfa45",
+            "runner/v065_v015_scheduler_adapter.py":"d89404b69ef6ff155aacf56949432ee8f51b7b3c",
+            "tests/test_v093_inclusive_adaptive_scheduler_bridge.py":"c77374fa02b821503cc3ac31bb9c17512c5672f5"}
+          for path,sha in pinned.items():
+              got=subprocess.check_output(["git","hash-object",path],text=True).strip()
+              assert got==sha,(path,got,sha)
+          print("V093_APPROVED_FORMULA_EXISTING_V015_POLICY_SOURCE_PIN_PASS")
+          PY
+      - name: Full regression and existing pilot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Produce pinned source bundle and bounded two anchor inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out/v093/anchors
+          python3 - <<'PY'
+          import json,pathlib,sys
+          sys.path[:0]=["runner","tests"]
+          import v046_static_item_cache as cache
+          import v082_fury_plate_dual_twohand_native as fury_mod
+          import v091_weapon_oil_external_adapter as oil
+          import v093_inclusive_adaptive_scheduler_bridge as v93
+          from test_v091_weapon_oil_external_adapter import fury,FURY_TARGET,BIN,REV
+          from test_v093_inclusive_adaptive_scheduler_bridge import OTHER
+          out=pathlib.Path("out/v093").resolve()
+          profile,doc,fill=fury(out)
+          prepared=oil.prepare(profile,doc,fill,cache.empty_cache(),
+                 "dual_two_hand",["main_hand","off_hand"])
+          ctx=v93.prepare(prepared,BIN,REV,35,80)
+          for i,target in enumerate([FURY_TARGET,OTHER]):
+              d=out/"anchors"/("seed_%02d"%i);d.mkdir(parents=True,exist_ok=True)
+              req=v93.request(ctx,target,fury_mod.DECLARED_F,d/"result.json","seed")
+              (d/"input.simc").write_text(req["input"])
+              q=dict(req);q.pop("input")
+              (d/"request.json").write_text(json.dumps(q,sort_keys=True,indent=2)+"\n")
+              assert sum(req["target"].values())==3414
+          (out/"session_identity.json").write_text(json.dumps(ctx["identity"],sort_keys=True,indent=2)+"\n")
+          print("V093_TWO_INITIAL_FURY_TWO_OIL_NATIVE_INPUTS_PINNED_NO_EXECUTION")
+          PY
+          tar -czf out/v093/SOURCE_BUNDLE.tgz runner/*.py tests/*.py integration_probes/fixtures/v082_upstream_mid2_warrior_fury_reference.simc integration_probes/data/midnight_s2_ilvl_chmv_reference_v1.json
+          sha256sum out/v093/SOURCE_BUNDLE.tgz > out/v093/SOURCE_BUNDLE.sha256
+      - uses: actions/upload-artifact@v6
+        with:
+          name: simc-v093-adaptive-bridge-source-seed-input-${{ github.run_id }}
+          path: out/v093/
+          if-no-files-found: error
+          retention-days: 14
