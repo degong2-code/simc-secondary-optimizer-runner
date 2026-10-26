@@ -32,7 +32,7 @@
 ## Tests and accounting
 
 - [CI v102 #40325800900](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40325800900) **SUCCESS**, code/workflow head `1ac234d9bd4a5f3580c2ea01912ad0b9ef458691`, 161 offline tests / 0 fail, Python compile and existing pilot PASS, **Native 0**.
-- Follow-up user-visible report test on `v098` checks that four existing classes report correct partial material slot coverage and unchanged 334 B; its CI is separate and must be checked before claiming its test success.
+- [Final follow-up CI #40325983537](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40325983537) **SUCCESS: 162 offline tests / 0 fail**, Python compile and pilot PASS, **0 new Native**; tested code/test head `e544ed694c56366fdfc69fa5b02d41b0bf62d657`. One additional user-visible v098 test confirms each active class returns correct partial material slot coverage while ilvl334 reference B is unchanged.
 - Source validation verifies actual original Git blob SHA and item ID/slot, corrected mail IDs against the v086 `REPLACEMENTS` declaration, duplicate item exclusion, target-ilvl bounds, non-existent slots failing closed, and different source variant/cache keys for same ID at changed target ilvl. Synthetic tests **do not** populate production caches and do not re-audit historical Native effects.
 
 ## Exact next P1
