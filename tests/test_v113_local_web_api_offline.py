@@ -13,7 +13,7 @@ ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"runner"))
 import v113_local_web_api as web
 import v106_user_session_controller as sessions
-from test_v106_user_session_controller import fake_native
+from tests.test_v106_user_session_controller import fake_native
 
 class LocalWebAPIOffline(unittest.TestCase):
     def setUp(self):
