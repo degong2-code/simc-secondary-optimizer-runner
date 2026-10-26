@@ -341,7 +341,8 @@ async function initialize() {
     }else if(state.defaults.length)fillDefault(state.defaults[0]);
     buttonState();
     beginPolling();
-    const previous=localStorage.getItem("simc_secondary_session_id");
+    let previous=null;
+    try{previous=localStorage.getItem("simc_secondary_session_id");}catch{}
     if(previous&&/^[a-f0-9]{20}$/.test(previous)){
       try{await restore(previous);}catch{
         // Do not erase user's old session: stale localStorage is nonauthoritative.
