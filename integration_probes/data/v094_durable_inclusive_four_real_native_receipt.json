@@ -1,0 +1,135 @@
+{
+  "schema": "v094_generic_durable_4_native_receipt_v1",
+  "date": "2026-10-26",
+  "scope": "isolated_Fury334_dual_twohand_two_oils_2_seed_0_scout_2_fresh_confirm",
+  "authoritative_formula": "T=G+J+F+O",
+  "scheduler_B": 3350,
+  "fixed_O": {
+    "crit_rating": 32,
+    "haste_rating": 32,
+    "mastery_rating": 0,
+    "versatility_rating": 0
+  },
+  "final_T": 3414,
+  "source_gear_16_exact": true,
+  "real_native_binary_sha": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+  "simc_revision": "7bc10711b5",
+  "CI": {
+    "run": 40266278968,
+    "first_success": true,
+    "final_run": 40266550555,
+    "final_status": "SUCCESS",
+    "tests": 534,
+    "passed": 532,
+    "skipped": 2,
+    "failed": 0,
+    "ci_native_calls": 0,
+    "final_artifact_id": 12627030127,
+    "final_artifact_zip_sha256": "1bdb4e3c9f8cb492672725c07d1481e24c6950dde9b06b960c4de286d2abc92e"
+  },
+  "real_native": {
+    "fresh_calls": 4,
+    "replay_cache_hit": 4,
+    "replay_new_calls": 0,
+    "session_max_native_calls": 4,
+    "scout_max_executed": 0,
+    "preflight_rejects_1_scout_with_total_limit_4": true,
+    "confirmed_seeds_distinct": true,
+    "cases": [
+      {
+        "phase": "seed_A",
+        "base": [
+          838,
+          838,
+          837,
+          837
+        ],
+        "final": [
+          870,
+          870,
+          837,
+          837
+        ],
+        "iterations": 35,
+        "dps": 202770.64331853,
+        "sem": 843.7581594839212,
+        "json2_sha": "15b91ec2f52798acdc9c76a795a1a7afbf64e73249bec0c18995a7b72fe2eb8a"
+      },
+      {
+        "phase": "seed_B",
+        "base": [
+          938,
+          738,
+          837,
+          837
+        ],
+        "final": [
+          970,
+          770,
+          837,
+          837
+        ],
+        "iterations": 35,
+        "dps": 202668.12862235354,
+        "sem": 870.8211753924153,
+        "json2_sha": "26a0ea071a70ebcfca56942a052f07f18332dbce5229ce240994c38c38091ce4"
+      },
+      {
+        "phase": "confirmation_A",
+        "base": [
+          838,
+          838,
+          837,
+          837
+        ],
+        "final": [
+          870,
+          870,
+          837,
+          837
+        ],
+        "iterations": 80,
+        "dps": 202725.6223002318,
+        "sem": 544.7713062719193,
+        "json2_sha": "7b36c9cb5255eebe8a1c4f562ba63ec6b3791bc6096ac37c098354757ed084a3"
+      },
+      {
+        "phase": "confirmation_B",
+        "base": [
+          938,
+          738,
+          837,
+          837
+        ],
+        "final": [
+          970,
+          770,
+          837,
+          837
+        ],
+        "iterations": 80,
+        "dps": 200681.01307614634,
+        "sem": 579.5518029495936,
+        "json2_sha": "6b63cd73accbe3f950984c0125489f0c617b833e79934b820b8d5bd5f42d8c4d"
+      }
+    ],
+    "observed_pair_difference": 2044.6092240854632,
+    "approx95_halfwidth": 1558.9490808569078,
+    "approx97_halfwidth": 1726.0829406625228,
+    "observed_separation_at_95": true,
+    "observed_separation_at_97": true,
+    "global_optimum_proven": false,
+    "material_alt_proven": false
+  },
+  "new_offline_v094_tests": 5,
+  "run_mode": "source_profile_locked_cli_or_programmatic",
+  "supports": "cache_only, cancellation_before_native, session_seal, typed_native_budget, progress_percent, 95decision_97comparison, exact JSON2 replay",
+  "not_supported": "in-process SimC interruption, full GUI, exhaustive specialization coverage",
+  "local_portable_proof": "SIMC_SECONDARY_OPTIMIZER_V094_DURABLE_NATIVE_4_PROOF.zip",
+  "local_zip_sha256": "a1607620f9f8d82ceeb4829b3aaacbe88cf0a40e69471e39716efdbdb837140a",
+  "note": "User considered 97 percent; comparison only, no approved default replacement.",
+  "original_v015_v016_product_merged": false,
+  "official_project_source_v13_applied_confirmed": false,
+  "official_WorkOS_shared_state_applied_confirmed": false,
+  "main_changed": false
+}
