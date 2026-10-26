@@ -1,0 +1,85 @@
+name: v089 Opt In Season2 CHMV Total Selector Regression
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/v089_ilvl_budget_selector_once.json
+permissions:
+  contents: read
+concurrency:
+  group: v089-reference-total-selector
+  cancel-in-progress: false
+jobs:
+  selector:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Exact source and user request gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,subprocess,os,pathlib
+          p="integration_probes/requests/v089_ilvl_budget_selector_once.json"
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==[p],changed
+          expected={
+            "schema":"v089_ilevel_total_opt_in_reference_bridge_v1",
+            "reference_mode":"reference_rounded_opt_in",
+            "native_mode":"exact_native_G",
+            "user_manual_total_overrides_both":True,
+            "common_334":3150,"fury_dual2h_334":3350,
+            "official_formula_unchanged":"T=G+J+F",
+            "oil_external":True,"special_L_exact_not_synthetic":True,
+            "new_simc_calls":0,"original_v015_v016_integrated":False}
+          assert json.loads(pathlib.Path(p).read_text())==expected
+          pinned={
+            "runner/v089_ilvl_chmv_budget_selector.py":"74d22357d2e6077a75bd3d82c7bf2a9389a313b5",
+            "tests/test_v089_ilvl_chmv_budget_selector.py":"64602912563775c0ea55e680e06e54a1329ba3b9",
+            "integration_probes/data/midnight_s2_ilvl_chmv_reference_v1.json":"44f08eac17b3316c3edfe4c17f29ea3b7bcd2de2"}
+          for name,sha in pinned.items():
+              actual=subprocess.check_output(["git","hash-object",name],text=True).strip()
+              assert actual==sha,(name,actual,sha)
+          print("V089_EXACT_SOURCE_AND_TABLE_BLOB_PINNED_PASS")
+          PY
+      - name: Full existing and v089 typed-budget regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Save actual typed scenario selection receipts, no Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          python3 - <<'PY'
+          import sys,json,pathlib
+          sys.path.insert(0,"runner")
+          sys.path.insert(0,"tests")
+          import v089_ilvl_chmv_budget_selector as z
+          from test_v089_ilvl_chmv_budget_selector import at_level
+          out=pathlib.Path("out")
+          for level in (266,321,334,344):
+              for label,spec,layout in (
+                  ("general","mage","one_hand_frill"),
+                  ("fury","warrior","dual_two_hand")):
+                  d=at_level(level)
+                  if spec=="warrior":
+                      d["character"].update({"class":"warrior","spec":"fury","role":"attack"})
+                  r=z.resolve(d,mode=z.REFERENCE_MODE,weapon_layout=layout)
+                  assert r["native_calls"]==0 and r["official_formula_unchanged"]=="T=G+J+F"
+                  (out/(f"{label}_{level}.json")).write_text(json.dumps(r,ensure_ascii=False,sort_keys=True,indent=2)+"\n")
+          print("V089_REFERENCE_OPT_IN_TYPED_SCENARIOS_EIGHT_PASS_ZERO_SIMC")
+          PY
+      - name: Preserve selector scenario receipts
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v089-ilevel-budget-selector-${{ github.run_id }}
+          path: out/
+          if-no-files-found: error
+          retention-days: 14
