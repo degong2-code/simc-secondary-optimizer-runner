@@ -1,0 +1,14 @@
+{
+  "schema": "v091_explicit_oil_two_weapon_external_static_v1",
+  "per_weapon_crit": 16,
+  "per_weapon_haste": 16,
+  "0_weapon_requires_explicit_disabled": true,
+  "single_weapon_O_total": 32,
+  "two_weapon_O_total": 64,
+  "T_formula_unchanged": "T=G+J+F",
+  "no_oil_rating_double_injection": true,
+  "SimC_mechanics_owned_by_SimC": true,
+  "all_regressions": true,
+  "new_native_calls_in_CI": 0,
+  "original_product_v015_v016_integrated": false
+}
