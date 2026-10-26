@@ -1,0 +1,40 @@
+name: v109 Windows Real Platform Readiness Before One Native Smoke
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/v109_windows_zero_native_readiness.yml
+      - runner/v109_windows_readiness_diagnostic.py
+      - tests/test_v109_windows_readiness_offline.py
+      - runner/v106_windows_simple_gui.py
+permissions:
+  contents: read
+jobs:
+  windows-preflight:
+    runs-on: windows-2022
+    timeout-minutes: 12
+    steps:
+      - name: Preserve exact pinned source profile bytes
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Windows Tk runtime and diagnostic import (headless only)
+        shell: pwsh
+        run: |
+          python -c "import os,tkinter,sys; assert os.name=='nt';print('V109_WIN_TCL:',tkinter.Tcl().eval('info patchlevel')); sys.path.insert(0,'runner'); import v106_windows_simple_gui,v109_windows_readiness_diagnostic; print('V109_WIN_GUI_MODULE_IMPORT_PASS')"
+      - name: Full v109 six-source diagnosis and existing Windows lock/session tests (no SimC execution)
+        shell: pwsh
+        run: |
+          python -m unittest -q tests.test_v109_windows_readiness_offline tests.test_v106_user_session_controller tests.test_v108_user_consumables
+          python runner/pilot.py check
+      - name: Document exact proof boundary
+        shell: pwsh
+        run: |
+          python -c "print('V109_WINDOWS_READY_PLAN_ONLY_NO_NATIVE_NO_GUI_CLICKS_NO_REAL_CANCEL_TEST')"
