@@ -6,6 +6,7 @@ on:
       - integration_probes/requests/v107_windows_controls_once.json
       - integration_probes/requests/v107_windows_controls_retry.json
       - integration_probes/requests/v107_windows_checkout_attr_once.json
+      - integration_probes/requests/v108_windows_consumables_once.json
 permissions:
   contents: read
 concurrency:
@@ -31,7 +32,7 @@ jobs:
       - name: Require one explicitly bounded Windows platform request
         shell: pwsh
         run: |
-          python -c "import json,os,pathlib,subprocess; p='integration_probes/requests/v107_windows_controls_once.json'; changed=subprocess.check_output(['git','diff-tree','--no-commit-id','--name-only','-r',os.environ['GITHUB_SHA']],text=True).splitlines(); assert len(changed)==1 and changed[0] in [p,'integration_probes/requests/v107_windows_controls_retry.json','integration_probes/requests/v107_windows_checkout_attr_once.json'],changed; expected={'schema':'v107_windows_user_controls_offline_once_v1','one_windows_platform_run':True,'native_simc_calls':0,'no_new_optimizer':True,'assert_tk_tcl_headless':True,'assert_windows_lock_cancel_cache_contract':True,'do_not_claim_interactive_tk_or_windows_native':True,'main_or_work_os_mutation':False}; expected.update({'schema':'v107_windows_user_controls_offline_retry_v1','checkout_lf_preserved':True}) if changed[0].endswith('retry.json') else None; expected.update({'schema':'v107_windows_default_autocrlf_attr_once_v1','checkout_lf_preserved':True,'test_default_windows_autocrlf':True}) if changed[0].endswith('attr_once.json') else None; assert json.loads(pathlib.Path(changed[0]).read_text())==expected; print('V107_WINDOWS_OFFLINE_BOUNDED_SCOPE_PASS')"
+          python -c "import json,os,pathlib,subprocess; p='integration_probes/requests/v107_windows_controls_once.json'; changed=subprocess.check_output(['git','diff-tree','--no-commit-id','--name-only','-r',os.environ['GITHUB_SHA']],text=True).splitlines(); assert len(changed)==1 and changed[0] in [p,'integration_probes/requests/v107_windows_controls_retry.json','integration_probes/requests/v107_windows_checkout_attr_once.json','integration_probes/requests/v108_windows_consumables_once.json'],changed; expected={'schema':'v107_windows_user_controls_offline_once_v1','one_windows_platform_run':True,'native_simc_calls':0,'no_new_optimizer':True,'assert_tk_tcl_headless':True,'assert_windows_lock_cancel_cache_contract':True,'do_not_claim_interactive_tk_or_windows_native':True,'main_or_work_os_mutation':False}; expected.update({'schema':'v107_windows_user_controls_offline_retry_v1','checkout_lf_preserved':True}) if changed[0].endswith('retry.json') else None; expected.update({'schema':'v107_windows_default_autocrlf_attr_once_v1','checkout_lf_preserved':True,'test_default_windows_autocrlf':True}) if changed[0].endswith('attr_once.json') else None; expected.update({'schema':'v108_windows_native_consumables_omnium_once_v1','validate_new_consumables':True}) if changed[0].endswith('consumables_once.json') else None; assert json.loads(pathlib.Path(changed[0]).read_text())==expected; print('V107_WINDOWS_OFFLINE_BOUNDED_SCOPE_PASS')"
       - name: Force default Windows CRLF checkout and assert pinned source bytes still intact
         if: contains(github.event.head_commit.message, 'checkout attr')
         shell: pwsh
@@ -44,11 +45,11 @@ jobs:
         shell: pwsh
         run: |
           python -c "import os,sys,tkinter; assert os.name=='nt'; print('WINDOWS_TCL',tkinter.Tcl().eval('info patchlevel'))"
-          python -c "import sys;sys.path.insert(0,'runner'); import v106_windows_simple_gui as gui; import v107_optional_items_dialog as items; assert len(gui.DISPLAY)==6; print('V107_WINDOWS_TK_AND_SIX_DPS_DIALOG_IMPORT_PASS')"
+          python -c "import sys;sys.path.insert(0,'runner'); import v106_windows_simple_gui as gui; import v107_optional_items_dialog as items; import v108_user_consumable_dialog as consumables; assert len(gui.DISPLAY)==6; print('V107_WINDOWS_TK_AND_SIX_DPS_DIALOG_IMPORT_PASS')"
       - name: Windows real msvcrt lock, user cancel marker and exact input/Native cache contract
         shell: pwsh
         run: |
-          python -m unittest -q tests.test_v106_user_session_controller tests.test_v107_optional_equipment_inputs
+          python -m unittest -q tests.test_v106_user_session_controller tests.test_v107_optional_equipment_inputs tests.test_v108_user_consumables
           python runner/pilot.py check
       - name: Verify product Windows starter exists (do not open a display)
         shell: pwsh
