@@ -10,6 +10,7 @@ from __future__ import annotations
 import copy,pathlib
 
 import v055_simc_item_selection as items
+import v102_ordinary_armor_seed_pool as ordinary_pool
 import v082_fury_plate_dual_twohand_native as fury
 import v083_paladin_single_2h_native as paladin
 import v084_frost_cloth_1h_frill_native as frost
@@ -64,6 +65,20 @@ FIFTH_TIER={
     ("mage","frost"):("head",271564,271874),
     ("hunter","beast_mastery"):("head",271492,249317)}
 
+def ordinary_armor_seed(family,slot,ilevel):
+    """Explicitly source-backed ordinary candidate for a future class build.
+
+    The returned row is NOT automatically injected into current four already
+    source-validated archetypes; missing ordinary family slots fail closed.
+    """
+    ordinary_pool.verify_pool()
+    return ordinary_pool.row(family,slot,ilevel)
+
+def available_ordinary_seed_slots(family):
+    """Coverage is partial; no promise of an entire season armor set."""
+    if family not in ordinary_pool.FAMILY_ROWS:return ()
+    return tuple(sorted(ordinary_pool.FAMILY_ROWS[family]))
+
 def source_backed_gear(key,folder,ilevel,need):
     """Factory APL is source-owned; ALL subsequent gear assembly is shared."""
     need(key in ARCHETYPES,"REPRESENTATIVE_ARCHETYPE_NOT_READY")
@@ -75,6 +90,10 @@ def source_backed_gear(key,folder,ilevel,need):
          "SOURCE_CHARACTER_DRIFT")
     need(key[0] in CLASS_ARMOR and key[0] in CLASS_TIER_ITEMS,
          "CLASS_ARMOR_OR_TIER_SOURCE_NOT_READY")
+    # The minimum four-armor-family seed catalog has independent, pinned
+    # source ID/slot provenance. It does not replace this builder's already
+    # checked equipment or claim complete target-ilvl Native stat records.
+    ordinary_pool.verify_pool()
     rows={r["slot"]:copy.deepcopy(r) for group in
           (cfg["equipment"]["tier"],cfg["equipment"]["crafted"],
            cfg["equipment"]["trinkets"],fillers) for r in group}
