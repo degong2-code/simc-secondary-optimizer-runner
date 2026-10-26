@@ -51,6 +51,11 @@ class UserTargetBootstrap(unittest.TestCase):
         self.assertEqual(m["material_scouts"],1)
         self.assertNotIn("manual_final_T",m)
         self.assertEqual(m["seed_targets_B"][0].keys(),m["seed_targets_B"][1].keys())
+        a,b=m["seed_targets_B"]
+        moved=sum(abs(a[k]-b[k]) for k in a)//2
+        self.assertGreaterEqual(moved,335)  # 10% of B, when unconstrained
+        self.assertEqual(sum(a.values()),3350)
+        self.assertEqual(sum(b.values()),3350)
 
     def test_frost_target_user_manual_final_T(self):
         user=case("frost",final_T=3182)
