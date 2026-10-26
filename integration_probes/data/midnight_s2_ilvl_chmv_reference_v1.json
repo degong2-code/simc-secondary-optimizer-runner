@@ -1,0 +1,510 @@
+{
+  "schema": "midnight_s2_native_ilvl_chmv_reference_v1",
+  "source_kind": "SIMC_NATIVE_REPRESENTATIVE_STAT_BUDGET_REFERENCE",
+  "status": "REFERENCE_ONLY_NOT_APPROVED_AS_AUTOMATIC_PRODUCT_DEFAULT",
+  "season": "midnight_s2",
+  "rating_semantics": "STATIC_CHMV_C_V1",
+  "provenance_binary_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+  "simc_revision": "7bc10711b5",
+  "base_334": {
+    "general_reference": 3150,
+    "fury_dual_2h_reference": 3350
+  },
+  "formula": "T=G+J+F",
+  "J": 138,
+  "F": 165,
+  "O": "external excluded",
+  "rounding": "nearest 10 rating (difference <= 5)",
+  "source_general": "actual v084 Human Frost Mage profile; 79 levels measured",
+  "source_fury": "actual v082 Dwarf Fury Warrior dual-twohand profile; 79 levels measured",
+  "source_anchor_action_runs": {
+    "general": 40240772747,
+    "fury": 40209200603
+  },
+  "validation": {
+    "native_stat_probes": 158,
+    "additional_general_spot_checks": 10,
+    "max_abs_general_cross_spec_difference_from_native": 5,
+    "all_gear_ilevel_exact": true,
+    "nontrinket_unknown_positive": 0
+  },
+  "nontrack_levels_note": "Native technically scaled reference only, no claim these are official upgrade ranks",
+  "user_manual_override": true,
+  "product_v015_v016_integrated": false,
+  "values": [
+    {
+      "ilvl": 266,
+      "general": 2240,
+      "fury_dual_2h": 2390,
+      "is_season_track": true
+    },
+    {
+      "ilvl": 267,
+      "general": 2250,
+      "fury_dual_2h": 2400,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 268,
+      "general": 2270,
+      "fury_dual_2h": 2420,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 269,
+      "general": 2280,
+      "fury_dual_2h": 2430,
+      "is_season_track": true
+    },
+    {
+      "ilvl": 270,
+      "general": 2300,
+      "fury_dual_2h": 2450,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 271,
+      "general": 2310,
+      "fury_dual_2h": 2460,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 272,
+      "general": 2320,
+      "fury_dual_2h": 2470,
+      "is_season_track": true
+    },
+    {
+      "ilvl": 273,
+      "general": 2340,
+      "fury_dual_2h": 2490,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 274,
+      "general": 2350,
+      "fury_dual_2h": 2500,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 275,
+      "general": 2360,
+      "fury_dual_2h": 2520,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 276,
+      "general": 2370,
+      "fury_dual_2h": 2520,
+      "is_season_track": true
+    },
+    {
+      "ilvl": 277,
+      "general": 2390,
+      "fury_dual_2h": 2540,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 278,
+      "general": 2400,
+      "fury_dual_2h": 2560,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 279,
+      "general": 2410,
+      "fury_dual_2h": 2570,
+      "is_season_track": true
+    },
+    {
+      "ilvl": 280,
+      "general": 2430,
+      "fury_dual_2h": 2590,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 281,
+      "general": 2440,
+      "fury_dual_2h": 2600,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 282,
+      "general": 2460,
+      "fury_dual_2h": 2610,
+      "is_season_track": true
+    },
+    {
+      "ilvl": 283,
+      "general": 2470,
+      "fury_dual_2h": 2630,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 284,
+      "general": 2480,
+      "fury_dual_2h": 2650,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 285,
+      "general": 2490,
+      "fury_dual_2h": 2650,
+      "is_season_track": true
+    },
+    {
+      "ilvl": 286,
+      "general": 2510,
+      "fury_dual_2h": 2670,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 287,
+      "general": 2520,
+      "fury_dual_2h": 2690,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 288,
+      "general": 2530,
+      "fury_dual_2h": 2700,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 289,
+      "general": 2550,
+      "fury_dual_2h": 2710,
+      "is_season_track": true
+    },
+    {
+      "ilvl": 290,
+      "general": 2560,
+      "fury_dual_2h": 2730,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 291,
+      "general": 2580,
+      "fury_dual_2h": 2740,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 292,
+      "general": 2590,
+      "fury_dual_2h": 2750,
+      "is_season_track": true
+    },
+    {
+      "ilvl": 293,
+      "general": 2600,
+      "fury_dual_2h": 2770,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 294,
+      "general": 2620,
+      "fury_dual_2h": 2790,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 295,
+      "general": 2630,
+      "fury_dual_2h": 2800,
+      "is_season_track": true
+    },
+    {
+      "ilvl": 296,
+      "general": 2650,
+      "fury_dual_2h": 2820,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 297,
+      "general": 2650,
+      "fury_dual_2h": 2820,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 298,
+      "general": 2670,
+      "fury_dual_2h": 2840,
+      "is_season_track": true
+    },
+    {
+      "ilvl": 299,
+      "general": 2680,
+      "fury_dual_2h": 2860,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 300,
+      "general": 2700,
+      "fury_dual_2h": 2870,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 301,
+      "general": 2710,
+      "fury_dual_2h": 2880,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 302,
+      "general": 2720,
+      "fury_dual_2h": 2900,
+      "is_season_track": true
+    },
+    {
+      "ilvl": 303,
+      "general": 2740,
+      "fury_dual_2h": 2910,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 304,
+      "general": 2750,
+      "fury_dual_2h": 2930,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 305,
+      "general": 2760,
+      "fury_dual_2h": 2940,
+      "is_season_track": true
+    },
+    {
+      "ilvl": 306,
+      "general": 2780,
+      "fury_dual_2h": 2950,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 307,
+      "general": 2790,
+      "fury_dual_2h": 2970,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 308,
+      "general": 2810,
+      "fury_dual_2h": 2990,
+      "is_season_track": true
+    },
+    {
+      "ilvl": 309,
+      "general": 2820,
+      "fury_dual_2h": 3000,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 310,
+      "general": 2830,
+      "fury_dual_2h": 3010,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 311,
+      "general": 2840,
+      "fury_dual_2h": 3020,
+      "is_season_track": true
+    },
+    {
+      "ilvl": 312,
+      "general": 2860,
+      "fury_dual_2h": 3040,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 313,
+      "general": 2870,
+      "fury_dual_2h": 3050,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 314,
+      "general": 2880,
+      "fury_dual_2h": 3070,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 315,
+      "general": 2900,
+      "fury_dual_2h": 3090,
+      "is_season_track": true
+    },
+    {
+      "ilvl": 316,
+      "general": 2910,
+      "fury_dual_2h": 3100,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 317,
+      "general": 2920,
+      "fury_dual_2h": 3110,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 318,
+      "general": 2940,
+      "fury_dual_2h": 3120,
+      "is_season_track": true
+    },
+    {
+      "ilvl": 319,
+      "general": 2950,
+      "fury_dual_2h": 3140,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 320,
+      "general": 2960,
+      "fury_dual_2h": 3150,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 321,
+      "general": 2980,
+      "fury_dual_2h": 3170,
+      "is_season_track": true
+    },
+    {
+      "ilvl": 322,
+      "general": 2990,
+      "fury_dual_2h": 3190,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 323,
+      "general": 3000,
+      "fury_dual_2h": 3200,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 324,
+      "general": 3020,
+      "fury_dual_2h": 3210,
+      "is_season_track": true
+    },
+    {
+      "ilvl": 325,
+      "general": 3030,
+      "fury_dual_2h": 3220,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 326,
+      "general": 3050,
+      "fury_dual_2h": 3240,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 327,
+      "general": 3060,
+      "fury_dual_2h": 3250,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 328,
+      "general": 3070,
+      "fury_dual_2h": 3270,
+      "is_season_track": true
+    },
+    {
+      "ilvl": 329,
+      "general": 3080,
+      "fury_dual_2h": 3280,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 330,
+      "general": 3100,
+      "fury_dual_2h": 3300,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 331,
+      "general": 3110,
+      "fury_dual_2h": 3310,
+      "is_season_track": true
+    },
+    {
+      "ilvl": 332,
+      "general": 3120,
+      "fury_dual_2h": 3320,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 333,
+      "general": 3140,
+      "fury_dual_2h": 3340,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 334,
+      "general": 3150,
+      "fury_dual_2h": 3350,
+      "is_season_track": true
+    },
+    {
+      "ilvl": 335,
+      "general": 3170,
+      "fury_dual_2h": 3370,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 336,
+      "general": 3180,
+      "fury_dual_2h": 3380,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 337,
+      "general": 3190,
+      "fury_dual_2h": 3400,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 338,
+      "general": 3210,
+      "fury_dual_2h": 3410,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 339,
+      "general": 3220,
+      "fury_dual_2h": 3420,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 340,
+      "general": 3230,
+      "fury_dual_2h": 3440,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 341,
+      "general": 3240,
+      "fury_dual_2h": 3450,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 342,
+      "general": 3260,
+      "fury_dual_2h": 3470,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 343,
+      "general": 3270,
+      "fury_dual_2h": 3480,
+      "is_season_track": false
+    },
+    {
+      "ilvl": 344,
+      "general": 3290,
+      "fury_dual_2h": 3500,
+      "is_season_track": true
+    }
+  ]
+}
