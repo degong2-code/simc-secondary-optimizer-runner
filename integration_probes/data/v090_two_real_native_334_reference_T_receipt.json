@@ -1,0 +1,115 @@
+{
+  "schema": "v090_reference_total_two_real_native_receipt_v1",
+  "date": "2026-10-26",
+  "scope": "isolated_branch_v090_S1_to_single_native_DPS_candidates",
+  "product_v015_v016_integrated": false,
+  "official_T_formula": "T=G+J+F",
+  "scenario": {
+    "spec": "mage_frost",
+    "race": "human",
+    "ilevel": 334,
+    "reference_T": 3150,
+    "reference_track": "general",
+    "J": 138,
+    "F": 165,
+    "oil_O": 0,
+    "actual_equipped_slot_count": 16,
+    "ordinary_G_prepopulated_cache_records": 0,
+    "user_selected_special_fixed_L_in_this_two_case_run": 0
+  },
+  "binary": {
+    "sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+    "revision": "7bc10711b5",
+    "source": "v050 pinned GitHub ELF artifact, SHA independently checked"
+  },
+  "CI": {
+    "original_failure_run": 40254864745,
+    "original_failure": "scheduler bounds tuple used as dict in new v090, fixed via existing scheduler.eligible()",
+    "first_passing_run": 40254982702,
+    "final_hardened_run": 40255443827,
+    "final_unittest_total": 509,
+    "final_pass": 507,
+    "final_skip": 2,
+    "final_fail": 0,
+    "native_calls_in_actions": 0,
+    "final_input_artifact_id": 12622083234,
+    "final_input_artifact_sha256": "eae51dae726eec45f12ed4a875e4c8159906538cc4110c465fa4d085d7357f5e"
+  },
+  "real_native": {
+    "new_native_calls": 2,
+    "iterations_each": 35,
+    "dps_samples_each": 34,
+    "host": "working Linux execution environment (NOT GitHub Actions workflow)",
+    "input_change_after_CI": "json2 output destination path only, other full profile bytes unchanged",
+    "all_16_selected_gear_id_ilevel_options_verified": true,
+    "APL_and_talents_same": true,
+    "verified_static_c_mechanism": "gear override + separately declared F equals target; talent/buffed rating observed separately",
+    "static_G_from_gear_cache_not_required": true,
+    "cases": [
+      {
+        "id": "A",
+        "target": {
+          "crit_rating": 900,
+          "haste_rating": 800,
+          "mastery_rating": 800,
+          "versatility_rating": 650
+        },
+        "raw_gear": {
+          "crit_rating": 735,
+          "haste_rating": 800,
+          "mastery_rating": 800,
+          "versatility_rating": 650
+        },
+        "artifact_original_input_sha256": "763cc348e7bb321f89af184ba37879be2adc3295318d67da8b8c181a105e8ecc",
+        "local_real_input_sha256": "6e77585ea92a383479628a1fe8639062b3c1bed5262133e337d69dce1fdc7d7f",
+        "real_native_json2_sha256": "56ecfc627a2c6aa819c4cc24d76cfb73a82b4c94ec8b5e294e4667efbcf5e841",
+        "dps": 182187.45473983398,
+        "SEM": 784.0212877751167,
+        "buffed_rating": {
+          "crit_rating": 918,
+          "haste_rating": 857,
+          "mastery_rating": 816,
+          "versatility_rating": 663
+        }
+      },
+      {
+        "id": "B",
+        "target": {
+          "crit_rating": 800,
+          "haste_rating": 900,
+          "mastery_rating": 800,
+          "versatility_rating": 650
+        },
+        "raw_gear": {
+          "crit_rating": 635,
+          "haste_rating": 900,
+          "mastery_rating": 800,
+          "versatility_rating": 650
+        },
+        "artifact_original_input_sha256": "a4066814e71f961ebb446fe162f8ff9df0a3c022149d79c1125a6e594c272ef0",
+        "real_native_json2_sha256": "476a36d8f4877bc8d29cd52390f45195fd32796b7edc14479b86492355ebe3c0",
+        "dps": 178882.06682677637,
+        "SEM": 892.3192832978318,
+        "buffed_rating": {
+          "crit_rating": 816,
+          "haste_rating": 964,
+          "mastery_rating": 816,
+          "versatility_rating": 663
+        }
+      }
+    ],
+    "difference_A_minus_B_dps": 3305.3879130576097,
+    "approx_95_difference_halfwidth": 2328.1327530377057,
+    "observed_approx95_separated": true,
+    "global_optimum_proven": false,
+    "SimC_stderr_contains_implementation_not_yet_verified_advisories": true,
+    "SimC_effects_independently_gated": false
+  },
+  "portable_local_native_proof": {
+    "filename": "V090_REFERENCE_TOTAL_3150_TWO_REAL_NATIVE_PROOF.zip",
+    "sha256": "737fc55fb32b8259a64d274e13787da1d95dc04283c9b52ac258938fc257e664",
+    "description": "Includes real Native JSON2+stderr+stdout, actual local input, original GitHub CI inputs, CSV and byte-verified report; not pushed into git"
+  },
+  "no_governance_state_change": true,
+  "implementation_gap": "User-selected special L validated offline using controlled exact-cache fixture, not tested with a real special-item Native in this v090 run. Original v066.require all G and all-spec full adaptive loop remain unintegrated. Per-hand oil 0/1/2 follow-up."
+}
