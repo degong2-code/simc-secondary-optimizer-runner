@@ -1,5 +1,7 @@
 # v096 — 개발 기준선 혼선 원인 감사 및 공통 제품 진입점 통합
 
+> **HISTORICAL SNAPSHOT — DO NOT REUSE AS CURRENT NEXT-P1 INSTRUCTION.** This dated v088/v096 report and its CI/Native evidence are preserved. Later user clarification states that the product optimizes **future target-ilvl CHMV rating goals** with internally generated representative equipment and optional imported SimC character information, **not** users' entire currently equipped gear. The latest base budget may use the native-derived rounded ilvl table or manual final T; exact representative Native G is an optional precise path, not a prerequisite for the standard user entry. See [current user-flow policy](./CURRENT_PRODUCT_PURPOSE_AND_USER_ENTRY_20261026.md) and [current development state](./CURRENT_PRODUCT_DEVELOPMENT_STATE.md). This annotation does not retroactively change historical evidence.
+
 **2026-10-26 KST · 사용자 요청: 기능 중복 검증보다 제품 통합 우선.**
 
 ## 1. 혼선 원인: 권한 문제가 아니라 다층 문서 및 해석 불일치
