@@ -59,7 +59,7 @@ def check_plan(plan):
          "CLASS_OR_SPEC_DRIFT")
     need((plan["base_B"],plan["final_T"])==(3150,3182),
          "DEFAULT_334_B_O_T_DRIFT")
-    need(plan["fixed_O"]=={"crit_rating":32,"haste_rating":0,
+    need(plan["fixed_O"]=={"crit_rating":16,"haste_rating":16,
                            "mastery_rating":0,"versatility_rating":0},
          "OIL_FIXED_VECTOR_DRIFT")
     need(plan["item_slots"]==15,"PALADIN_PHYSICAL_SLOTS_DRIFT")
@@ -82,7 +82,9 @@ def check_user_result(data):
     need(sum(best["absolute_rating_T"].values())==3182 and
          sum(best["base_rating_B"].values())==3150 and
          best["absolute_rating_T"]["crit_rating"]-
-         best["base_rating_B"]["crit_rating"]==32,
+         best["base_rating_B"]["crit_rating"]==16 and
+         best["absolute_rating_T"]["haste_rating"]-
+         best["base_rating_B"]["haste_rating"]==16,
          "OBSERVED_ABSOLUTE_RATING_O_DRIFT")
     need(best["observed_dps_mean"]>0 and best["simc_sem"]>=0,
          "NATIVE_DPS_SEM_MISSING")
