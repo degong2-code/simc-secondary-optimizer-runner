@@ -6,12 +6,26 @@ Does not execute, discover, or assert the real SimC revision, nor prove DPS.
 Keep raw binary path, talents, player settings and profile out of the export.
 """
 from __future__ import annotations
-import hashlib,json,os,pathlib,platform,sys,uuid,zipfile
+import hashlib,json,os,pathlib,platform,re,sys,uuid,zipfile
 import v098_target_user_scenario_bootstrap as bootstrap
 import v106_user_session_controller as sessions
 
 SCHEMA="v109_windows_p1_readiness_no_native_v1"
 ROOT=pathlib.Path.home()/"SIMC_Secondary_Optimizer"/"diagnostics"
+
+def revision_from_official_nightly_archive_name(filename):
+    """Extract the git SHA from an official-style SimC Windows .7z label.
+
+    Naming itself is NOT proof the selected simc.exe came from this archive;
+    it only avoids manual non-hex revision typos. No binary execution.
+    """
+    name=pathlib.Path(filename).name
+    match=re.fullmatch(
+        r"simc-[0-9]{3,5}-[0-9]{2,3}-win64-([0-9a-fA-F]{7,40})\\.7z",
+        name,re.IGNORECASE)
+    if match is None:
+        raise ValueError("V109_OFFICIAL_NIGHTLY_ARCHIVE_FILENAME_NOT_RECOGNIZED")
+    return match.group(1).lower()
 
 def _filename(reason):
     return str(reason).split(":",1)[0].split("\n",1)[0][:100]
