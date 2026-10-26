@@ -119,6 +119,54 @@ def source(manifest_path):
     return {"manifest":user,"context":context,"seeds":seeds,
             "flask":user["flask_F"],"paths":paths,"plan":plan}
 
+
+def user_facing_result(report):
+    """Expose existing v094 observations and 95%-only decisions; zero SimC."""
+    need(type(report) is dict and report.get("status","").startswith("PASS")
+         and report.get("official_formula")=="T=G+J+F+O",
+         "NATIVE_RESULT_NOT_ACCEPTED")
+    B=report["B"];T=report["official_final_T"]
+    fixed=contract.vector(report["fixed_O"],"RESULT_FIXED_O")
+    summary=report["alternatives"]
+    confidence=report["confirmation"]
+    need(type(B) is int and B>0 and T==B+sum(fixed.values())
+         and summary["confidence_for_decision_and_display"]==0.95,
+         "RESULT_B_T_OR_CONFIDENCE_DRIFT")
+    def candidate(base,final):
+        b=contract.vector(base,"RESULT_BASE_TARGET")
+        f=contract.vector(final,"RESULT_FINAL_TARGET")
+        need(sum(b.values())==B and sum(f.values())==T
+             and all(f[s]==b[s]+fixed[s] for s in contract.STATS),
+             "RESULT_BASE_O_FINAL_RATING_DRIFT")
+        return {"absolute_rating_T":f,
+                "base_rating_B":b,
+                "percent_of_final_T":{s:round(100*f[s]/T,2) for s in contract.STATS}}
+    first=candidate(summary["observed_best_B"],summary["observed_best_T"])
+    first.update({"observed_dps_mean":summary["observed_best_dps"],
+                  "simc_sem":summary["observed_best_sem"],
+                  "rank_basis":"HIGHEST_OBSERVED_MEAN_NOT_GLOBAL_OPTIMUM"})
+    alternatives=[]
+    for row in summary["material_alternatives"]:
+        item=candidate(row["B"],row["T"])
+        item.update({"observed_dps_mean":row["dps_mean"],
+                     "simc_sem":row["dps_sem"],
+                     "observed_dps_loss_pct":round(
+                         100*row["observed_relative_dps_loss"],3),
+                     "rating_moved_fraction_B":row["fraction_B_moved"],
+                     "pairwise_95_label":row["label"]})
+        alternatives.append(item)
+    need(type(confidence["pairwise_direction_supported"]) is bool,
+         "RESULT_95_PAIRWISE_STATUS_REQUIRED")
+    return {"confidence_level":0.95,"official_formula":"T=G+J+F+O",
+            "base_B":B,"fixed_O":fixed,"final_T":T,
+            "observed_first_choice":first,
+            "material_near_alternatives":alternatives,
+            "observed_unique_candidates":summary["observed_unique_targets"],
+            "confirmation_pair_direction_supported_at_95":
+                confidence["pairwise_direction_supported"],
+            "confirmation_scope":"TWO_FRESH_SELECTED_CANDIDATES_ONLY_NOT_GLOBAL",
+            "global_optimum_proven":False}
+
 def run_manifest(manifest_path,*,plan_only=False,cache_only=False):
     ready=source(manifest_path)
     if plan_only:return ready["plan"]
@@ -133,8 +181,8 @@ def run_manifest(manifest_path,*,plan_only=False,cache_only=False):
         "result_path":str(paths["output_dir"]/"V094_RESULT.json"),
         "native_calls_cumulative":result["new_native_attempts_cumulative"],
         "cache_hits_this_run":result["verified_cache_hits_this_run"],
-        "base_B":result["B"],"final_T":result["official_final_T"],
         "budget_source":ready["plan"]["budget_source"],
+        "user_result":user_facing_result(result),
         "original_product_v015_v016_merged":False}
 
 def main(argv=None):

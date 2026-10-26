@@ -31,6 +31,7 @@ jobs:
             tests.test_v094_durable_inclusive_adaptive_runner \
             tests.test_v095_material_precision_policy \
             tests.test_v096_unified_product_entry \
-            tests.test_v096_manual_final_inclusive_entry
+            tests.test_v096_manual_final_inclusive_entry \
+            tests.test_v097_user_result_offline
       - name: Pilot contract
         run: python3 runner/pilot.py check
