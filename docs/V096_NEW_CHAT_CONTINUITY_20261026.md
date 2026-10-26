@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER — v096 new-chat verified continuity (2026-10-26 KST)
 
+> **HISTORICAL SNAPSHOT — DO NOT REUSE AS CURRENT NEXT-P1 INSTRUCTION.** This dated v088/v096 report and its CI/Native evidence are preserved. Later user clarification states that the product optimizes **future target-ilvl CHMV rating goals** with internally generated representative equipment and optional imported SimC character information, **not** users' entire currently equipped gear. The latest base budget may use the native-derived rounded ilvl table or manual final T; exact representative Native G is an optional precise path, not a prerequisite for the standard user entry. See [current user-flow policy](./CURRENT_PRODUCT_PURPOSE_AND_USER_ENTRY_20261026.md) and [current development state](./CURRENT_PRODUCT_DEVELOPMENT_STATE.md). This annotation does not retroactively change historical evidence.
+
 **Purpose:** Resume the same user-authorized product development in a NEW ChatGPT chat inside project SSfindout. **Not** a new branch, a new optimizer, a Work OS M0 pass, or a product release. This file was authored after the original chat hit its length limit. It is not itself an executable validation receipt.
 
 ## Exact GitHub baseline
