@@ -1,0 +1,48 @@
+name: Portable New Chat Handoff v096 Source Snapshot
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/v096_chat_handoff_snapshot_once.json
+permissions:
+  contents: read
+concurrency:
+  group: v096-newchat-source-snapshot
+  cancel-in-progress: false
+jobs:
+  archive:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Create exact commit source snapshot; no SimC execution
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p handoff-out
+          git archive --format=tar HEAD | gzip -n -9 > handoff-out/GITHUB_EXACT_TRACKED_SOURCE_TREE.tgz
+          printf "%s\n" "$GITHUB_SHA" > handoff-out/GITHUB_HEAD_SHA.txt
+          cat > handoff-out/BOOT_EXPECTED_STATE.txt <<'EOF'
+          SIMC SECONDARY OPTIMIZER / new chat handoff
+          AUTHORITY: GitHub isolated branch docs/CURRENT_PRODUCT_DEVELOPMENT_STATE.md and actual CI/Native receipts
+          APPROVED FORMULA: B=G+J+F, T=B+fixed O
+          CONFIDENCE: 95% ONLY; DO NOT DISPLAY 97%
+          v096: 543 PASS / 2 SKIP / 0 FAIL; full suite Actions 40271512368; source-only, Native=0
+          SIX ARCHETYPES HISTORICALLY NATIVE-TESTED: Rogue, Elemental Shaman, BM Hunter(corrected), Fury, Retribution, Frost Mage
+          SOURCE POLICY v1.3 user-approved; ChatGPT Project UI application NOT confirmed
+          WORK OS official Windows Shared State update NOT confirmed, M0 status unchanged
+          NEXT: genuine product integration: exact G and manual final T through v096 manifest; avoid redundant specialization/SEM tests
+          NO MODIFICATION of original v015/v016, immutable v003, GitHub main
+          EOF
+          (cd handoff-out && sha256sum GITHUB_EXACT_TRACKED_SOURCE_TREE.tgz GITHUB_HEAD_SHA.txt BOOT_EXPECTED_STATE.txt > SHA256SUMS.txt)
+          git ls-files | wc -l > handoff-out/TRACKED_FILE_COUNT.txt
+          echo PORTABLE_HANDOFF_SOURCE_TREE_CREATED_WITHOUT_NATIVE
+      - uses: actions/upload-artifact@v6
+        with:
+          name: v096-new-chat-exact-source-HEAD-${{ github.run_id }}
+          path: handoff-out/
+          retention-days: 30
+          if-no-files-found: error
