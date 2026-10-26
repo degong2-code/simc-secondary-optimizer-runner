@@ -164,6 +164,8 @@ def ingest_native(request,native,raw_bytes=None):
     actual["oil_reported_by_native"]=got
     actual["oil_hands_declared"]=request["v091_oil_hands"]
     actual["O_external_declared_not_double_injected"]=request["v091_declaration_O"]
-    actual["native_oil_static_addition_observed_in_buffed_rating"]=False
+    # A single JSON2 buffed_stats snapshot cannot attribute oil's numeric
+    # effect separately from gear_*, buffs, talents or other consumables.
+    actual["native_oil_static_addition_observed_in_buffed_rating"]="NOT_ESTABLISHED_FROM_SINGLE_JSON2"
     actual["independent_proc_effect_certification"]=False
     return actual
