@@ -1,0 +1,11 @@
+{
+  "schema": "v107_windows_user_controls_offline_retry_v1",
+  "one_windows_platform_run": true,
+  "native_simc_calls": 0,
+  "no_new_optimizer": true,
+  "assert_tk_tcl_headless": true,
+  "assert_windows_lock_cancel_cache_contract": true,
+  "do_not_claim_interactive_tk_or_windows_native": true,
+  "main_or_work_os_mutation": false,
+  "checkout_lf_preserved": true
+}
