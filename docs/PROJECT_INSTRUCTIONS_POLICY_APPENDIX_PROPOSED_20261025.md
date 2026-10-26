@@ -1,5 +1,7 @@
 # Project Instructions — 추가 반영 제안 (MAIN 공식 적용 대기)
 
+> **HISTORICAL / SUPERSEDED — DO NOT TREAT AS CURRENT USER POLICY.** The following is a dated working document preserved for evidence. Its old v1.0/v1.2 precedence, O-outside-T or efficacy-gate statements are superseded by user's approved v1.3 `T=G+J+F+O`/95%-only design and 2026-10-26 target-level farming-goal clarification. The user's v1.4 Source replacement and Instructions are **prepared for manual UI application**, not asserted applied. Current product meaning and next P1: [CURRENT_PRODUCT_PURPOSE_AND_USER_ENTRY_20261026.md](./CURRENT_PRODUCT_PURPOSE_AND_USER_ENTRY_20261026.md). Moving development state: [CURRENT_PRODUCT_DEVELOPMENT_STATE.md](./CURRENT_PRODUCT_DEVELOPMENT_STATE.md).
+
 > **상태: PROPOSED / NOT APPLIED.** 아래는 기존 SSfindout Project Instructions의 SIMC SECONDARY OPTIMIZER 항목 끝에 보충하기 위한 **정확한 문구**다. 이 GitHub 문서가 존재한다는 사실은 ChatGPT Project Instructions/Sources의 설정 변경을 뜻하지 않는다. 공식 변경은 기존 MAIN 사용자 승인·검증·기록 절차에서만 수행한다. 기존 지침/Developer Notes v1.0를 삭제하거나 아래 내용으로 대체하지 않는다.
 
 ## 삽입할 텍스트
