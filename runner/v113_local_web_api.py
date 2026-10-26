@@ -160,7 +160,8 @@ class LocalJobs:
                 raise blocked(exc) from None
         return {"session_id":folder.name,
                 "status":"CACHE_ONLY_WORKER_STARTED" if cache_only else "WORKER_STARTED",
-                "new_native_limit":0 if cache_only else 6}
+                "native_attempt_ceiling_cumulative":6,
+                "new_native_execution_permitted":not cache_only}
 
     def cancel(self, folder):
         with self.lock:
