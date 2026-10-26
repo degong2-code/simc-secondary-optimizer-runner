@@ -23,7 +23,7 @@ jobs:
       - name: Offline source-locked manual final T and adjacent regressions (no Native)
         run: |
           python3 -m unittest -q \
-            tests.test_v089_ilevel_budget_selector \
+            tests.test_v089_ilvl_chmv_budget_selector \
             tests.test_v090_reference_total_native_candidate \
             tests.test_v091_weapon_oil_external_adapter \
             tests.test_v092_approved_inclusive_CHMV_policy \

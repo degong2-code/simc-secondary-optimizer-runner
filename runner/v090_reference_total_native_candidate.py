@@ -42,7 +42,7 @@ def prepare(selection, fillers, native_cache, reference):
     """Reuse v062 on a v089 opt-in selection. Never invent missing gear G."""
     need(type(selection) is dict and selection.get("schema")==selected.SCHEMA
          and selection.get("native_G_required_for_T") is False,
-         "REFERENCE_OR_MANUAL_SELECTION_REQUIRED")
+         "REFERENCE_SELECTION_REQUIRED")
     is_reference=(selection.get("source_mode")==selected.REFERENCE_MODE
                   and selection.get("status")=="READY_OPT_IN_REFERENCE_TOTAL_NOT_FULL_P3")
     is_manual=(selection.get("source_mode")=="user_manual_total"
@@ -96,7 +96,7 @@ def prepare(selection, fillers, native_cache, reference):
     native_budget=copy.deepcopy(native_budget)
     native_budget["reference_exact_slot_identity"]=exact
     native_budget["reference_budget_provenance"]={
-        "schema":PROVENANCE,"source":selected.REFERENCE_MODE,
+        "schema":PROVENANCE,"source":selection["source_mode"],
         "reference_sha256":live_sha,"reference_row":selection["reference_row"],
         "reference_track":track,"total_T":selection["resolved_T"],
         "budget_entry_mode":"OPT_IN_REFERENCE_B" if is_reference else "USER_MANUAL_FINAL_T_CONVERTED_TO_B",
@@ -163,7 +163,8 @@ def propose(prepared,reference,target,declared_F_vector,binary_sha,revision,
         "iterations":iterations,
         "threads":normalized["scenario"]["runtime"]["threads"]})
     return {"schema":port.SCHEMA,"status":"PROPOSED_STATIC_C_NO_NATIVE",
-        "v090_reference_budget":True,"v090_schema":SCHEMA,
+        "v090_reference_budget":prepared["reference_source"]==selected.REFERENCE_MODE,
+        "v090_schema":SCHEMA,
         "rating_semantics":"STATIC_CHMV_C_V1",
         "case_key":key,"target":dict(target),"iterations":iterations,
         "input":generated["input"],
