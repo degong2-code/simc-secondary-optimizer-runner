@@ -1,0 +1,36 @@
+name: v097 Manual Inclusive T Focused Regression
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/v097_manual_final_inclusive_focused.yml
+      - runner/v090_reference_total_native_candidate.py
+      - runner/v091_weapon_oil_external_adapter.py
+      - runner/v096_unified_product_entry.py
+      - tests/test_v096_manual_final_inclusive_entry.py
+permissions:
+  contents: read
+jobs:
+  focused:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Compile touched product code
+        run: python3 -m py_compile runner/v090_reference_total_native_candidate.py runner/v091_weapon_oil_external_adapter.py runner/v096_unified_product_entry.py
+      - name: Offline source-locked manual final T and adjacent regressions (no Native)
+        run: |
+          python3 -m unittest -q \
+            tests.test_v089_ilevel_budget_selector \
+            tests.test_v090_reference_total_native_candidate \
+            tests.test_v091_weapon_oil_external_adapter \
+            tests.test_v092_approved_inclusive_CHMV_policy \
+            tests.test_v093_inclusive_adaptive_scheduler_bridge \
+            tests.test_v094_durable_inclusive_adaptive_runner \
+            tests.test_v095_material_precision_policy \
+            tests.test_v096_unified_product_entry \
+            tests.test_v096_manual_final_inclusive_entry
+      - name: Pilot contract
+        run: python3 runner/pilot.py check
