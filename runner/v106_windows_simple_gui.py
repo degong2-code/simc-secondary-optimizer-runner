@@ -48,7 +48,7 @@ class UserWindow:
         self.consumable_choices={
             "flask":"source_default","food":"source_default",
             "potion":"source_default","augmentation":"source_default",
-            "diamond_id":0}
+            "diamond_id":0,"omnium_talents":"source_default"}
         self.cfg=remembered_settings()
         self._draw()
         self._defaults()
@@ -121,10 +121,10 @@ class UserWindow:
                   ).grid(row=17,column=0,columnspan=4,sticky="w")
         self.display=scrolledtext.ScrolledText(outer,height=17,wrap="word")
         self.display.grid(row=18,column=0,columnspan=4,sticky="nsew",pady=5)
-        ttk.Button(outer,text="음식·물약·증강 룬·다이아몬드 선택…",
+        ttk.Button(outer,text="음식·물약·증강 룬·다이아몬드·Omnium 선택…",
                    command=self._consumables).grid(
                    row=19,column=0,columnspan=4,sticky="ew",pady=4)
-        ttk.Label(outer,text="영약 F=165는 검증된 전문화별 기본값 고정. Omnium Folio는 별도 미지원.",
+        ttk.Label(outer,text="영약 F=165는 고정. Omnium Folio는 검증된 원본 전체 조합만 선택 가능.",
                   wraplength=850).grid(row=20,column=0,columnspan=4,sticky="w")
         outer.grid_rowconfigure(18,weight=1)
         for i in (1,3):outer.grid_columnconfigure(i,weight=1)
@@ -160,7 +160,7 @@ class UserWindow:
         result=select_consumables(self.root,self.consumable_choices)
         if result is not None:
             self.consumable_choices=result
-            self.status.set("소모품·다이아몬드 선택 반영 · 영약 F=165/보석 J=138 불변")
+            self.status.set("소모품·Omnium·다이아몬드 선택 반영 · 영약 F=165/보석 J=138 불변")
 
     def _advanced(self):
         result=select_items(self.root,self.advanced_rows,self._base_controls)
