@@ -1,0 +1,90 @@
+name: v091 Explicit Weapon Oil External CHMV Regression
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/v091_oil_external_once.json
+permissions:
+  contents: read
+concurrency:
+  group: v091-oil-external-regression
+  cancel-in-progress: false
+jobs:
+  oil:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Bound v091 request and source SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          p="integration_probes/requests/v091_oil_external_once.json"
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==[p],changed
+          expected={"schema":"v091_explicit_oil_two_weapon_external_static_v1",
+              "per_weapon_crit":16,"per_weapon_haste":16,
+              "0_weapon_requires_explicit_disabled":True,
+              "single_weapon_O_total":32,"two_weapon_O_total":64,
+              "T_formula_unchanged":"T=G+J+F",
+              "no_oil_rating_double_injection":True,
+              "SimC_mechanics_owned_by_SimC":True,
+              "all_regressions":True,"new_native_calls_in_CI":0,
+              "original_product_v015_v016_integrated":False}
+          assert json.loads(pathlib.Path(p).read_text())==expected
+          pins={
+              "runner/v064_adaptive_evaluator_port.py":"4733d6e98c32840dac551ca82045cff560af99e1",
+              "runner/v091_weapon_oil_external_adapter.py":"0d984490600678f50f4eac152daa2a92a27f828a",
+              "tests/test_v091_weapon_oil_external_adapter.py":"9d3a71f5700f2ec44c6e532fd01227c8dbcf2f25"}
+          for file,sha in pins.items():
+              got=subprocess.check_output(["git","hash-object",file],text=True).strip()
+              assert got==sha,(file,got,sha)
+          print("V091_SOURCE_AND_REQUEST_SHA_PIN_PASS")
+          PY
+      - name: All previous + v091 bounded oil regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s tests -q
+          python3 runner/pilot.py check
+      - name: Output exact three Fury 0 1 2 oil candidate inputs and scenarios
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib,sys
+          sys.path[:0]=["runner","tests"]
+          import v046_static_item_cache as cache
+          import v091_weapon_oil_external_adapter as oil
+          import v082_fury_plate_dual_twohand_native as warrior
+          from test_v091_weapon_oil_external_adapter import fury,FURY_TARGET,BIN,REV
+          root=pathlib.Path("out/v091").resolve()
+          root.mkdir(parents=True,exist_ok=True)
+          source,doc,fill=fury(root)
+          for name,hands in [("none",[]),("one_main",["main_hand"]),
+                             ("two",["main_hand","off_hand"])]:
+              pp=oil.prepare(source,doc,fill,cache.empty_cache(),
+                             "dual_two_hand",hands)
+              target_dir=root/name;target_dir.mkdir(parents=True,exist_ok=True)
+              req=oil.propose(pp,FURY_TARGET,warrior.DECLARED_F,BIN,REV,35,
+                              target_dir/"result.json")
+              (target_dir/"input.simc").write_text(req["input"],encoding="utf8")
+              inp=req.pop("input")
+              req["input_text_sha256"]=__import__("hashlib").sha256(inp.encode()).hexdigest()
+              (target_dir/"proposal.json").write_text(json.dumps(req,sort_keys=True,indent=2)+"\n")
+              assert req["official_total"]==3350
+              assert sum(req["v091_declaration_O"].values())==32*len(hands)
+          print("V091_FURY_INPUTS_NONE_MAIN_BOTH_T3350_SOURCE_LOCKED_3_PASS")
+          PY
+      - name: Preserve exact input proof no Native performed by CI
+        uses: actions/upload-artifact@v6
+        with:
+          name: simc-v091-oil-external-static-input-${{ github.run_id }}
+          path: out/v091/
+          if-no-files-found: error
+          retention-days: 14
