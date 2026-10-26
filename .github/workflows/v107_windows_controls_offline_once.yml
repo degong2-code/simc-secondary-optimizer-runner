@@ -1,0 +1,41 @@
+name: v107 Windows Native-platform User Controls Offline Once
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/v107_windows_controls_once.json
+permissions:
+  contents: read
+concurrency:
+  group: v107-windows-user-controls-offline
+  cancel-in-progress: false
+jobs:
+  windows-subprocess-controls:
+    runs-on: windows-2022
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Require one explicitly bounded Windows platform request
+        shell: pwsh
+        run: |
+          python -c "import json,os,pathlib,subprocess; p='integration_probes/requests/v107_windows_controls_once.json'; changed=subprocess.check_output(['git','diff-tree','--no-commit-id','--name-only','-r',os.environ['GITHUB_SHA']],text=True).splitlines(); assert changed==[p],changed; expected={'schema':'v107_windows_user_controls_offline_once_v1','one_windows_platform_run':True,'native_simc_calls':0,'no_new_optimizer':True,'assert_tk_tcl_headless':True,'assert_windows_lock_cancel_cache_contract':True,'do_not_claim_interactive_tk_or_windows_native':True,'main_or_work_os_mutation':False}; assert json.loads(pathlib.Path(p).read_text())==expected; print('V107_WINDOWS_OFFLINE_BOUNDED_SCOPE_PASS')"
+      - name: Windows Python Tk runtime without interactive desktop
+        shell: pwsh
+        run: |
+          python -c "import os,sys,tkinter; assert os.name=='nt'; print('WINDOWS_TCL',tkinter.Tcl().eval('info patchlevel'))"
+          python -c "import sys;sys.path.insert(0,'runner'); import v106_windows_simple_gui as gui; import v107_optional_items_dialog as items; assert len(gui.DISPLAY)==6; print('V107_WINDOWS_TK_AND_SIX_DPS_DIALOG_IMPORT_PASS')"
+      - name: Windows real msvcrt lock, user cancel marker and exact input/Native cache contract
+        shell: pwsh
+        run: |
+          python -m unittest -q tests.test_v106_user_session_controller tests.test_v107_optional_equipment_inputs
+          python runner/pilot.py check
+      - name: Verify product Windows starter exists (do not open a display)
+        shell: pwsh
+        run: |
+          python -c "import pathlib; p=pathlib.Path('START_SIMC_OPTIMIZER_WINDOWS.cmd'); c=p.read_text(); assert 'v106_windows_simple_gui.py' in c and 'py -3' in c; print('V107_WINDOWS_BETA_LAUNCHER_FILE_PRESENT')"
