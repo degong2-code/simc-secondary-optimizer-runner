@@ -1,0 +1,5 @@
+# Preserve exact source Git-blob provenance on Windows checkouts, even when
+# the user's system Git has core.autocrlf=true. Do not normalize Python or
+# JSON caches globally; only the seven pinned original SimC fixtures require
+# byte-identical worktree materialization across Windows/Linux.
+integration_probes/fixtures/*.simc text eol=lf
