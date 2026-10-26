@@ -34,6 +34,8 @@ on:
       - tests/test_v098_target_user_scenario_bootstrap.py
       - runner/v096_unified_product_entry.py
       - runner/v091_weapon_oil_external_adapter.py
+      - runner/v065_original_scheduler_native_bridge.py
+      - tests/test_v110_windows_exact_simc_input_bytes.py
 permissions:
   contents: read
 jobs:
@@ -72,6 +74,7 @@ jobs:
             tests.test_v106_user_session_controller \
             tests.test_v107_optional_equipment_inputs \
             tests.test_v108_user_consumables \
-            tests.test_v109_windows_readiness_offline
+            tests.test_v109_windows_readiness_offline \
+            tests.test_v110_windows_exact_simc_input_bytes
       - name: Baseline pilot
         run: python3 runner/pilot.py check
