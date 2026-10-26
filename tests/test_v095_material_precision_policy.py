@@ -87,6 +87,23 @@ class V095MaterialAndPrecision(unittest.TestCase):
             self.assertEqual(bounded["reason"],"TYPED_ITERATION_LIMIT_REACHED")
             self.assertFalse(bounded["requires_two_fresh_simc_runs"])
 
+    def test_observed_close_alternative_can_be_statistically_lower(self):
+        base={"crit_rating":838,"haste_rating":838,
+              "mastery_rating":837,"versatility_rating":837}
+        far={"crit_rating":503,"haste_rating":838,
+             "mastery_rating":837,"versatility_rating":1172}
+        from test_v094_durable_inclusive_adaptive_runner import ob
+        rows=runtime._candidate_summary(
+            [ob(base,203286.6376,534.898),
+             ob(far,201534.1539,530.085)],3350,
+            {"crit_rating":32,"haste_rating":32,
+             "mastery_rating":0,"versatility_rating":0})
+        self.assertEqual(len(rows["material_alternatives"]),1)
+        alt=rows["material_alternatives"][0]
+        self.assertTrue(alt["difference_95_separated"])
+        self.assertEqual(alt["label"],"OBSERVED_NEAR_BUT_LOWER_AT_95")
+        self.assertLess(alt["observed_relative_dps_loss"],0.01)
+
     def test_new_material_scout_must_be_authorized_by_native_limit(self):
         with tempfile.TemporaryDirectory() as td:
             p,rows,a,b=self.make(td)
