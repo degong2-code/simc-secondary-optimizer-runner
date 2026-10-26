@@ -104,6 +104,62 @@ class UserTargetBootstrap(unittest.TestCase):
                 self.assertEqual(next(x for x in cfg["equipment"]["tier"]
                                       if x["slot"]==fifth)["item_id"],fifth_id)
 
+    def test_new_source_shaman_catalyst_fifth_and_crafted_tier_lock_once(self):
+        user=case("elemental")
+        user["special_items"]=[
+          {"slot":"head","item_id":271483,
+           "options":{"redirected_base_stats":"268231","bonus_id":"13848"}}]
+        user["embellishments"]=[
+          {"slot":"shoulders","item_id":244580,
+           "options":{"crafted_stats":"49/36",
+                      "embellishment":"arcanoweave_lining"}}]
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td);binary=root/"dummy";binary.write_bytes(b"NO_NATIVE")
+            cache=boot.cache_mod.empty_cache()
+            catalyst={"slot":"head","item_id":271483,"ilevel":334,
+                      "options":{"redirected_base_stats":"268231",
+                                 "bonus_id":"13848"}}
+            fixed={"crit_rating":0,"haste_rating":175,
+                   "mastery_rating":0,"versatility_rating":0}
+            offline_record(cache,catalyst,fixed)
+            fp=root/"static.json";boot.cache_mod.write_atomic(fp,cache)
+            result=boot.build(user,root/"profile",binary,"7bc10711b5",
+                              static_cache_path=fp)
+            self.assertEqual(result["plan"]["base_B"],3150)
+            self.assertEqual(result["plan"]["final_T"],3182)
+            self.assertEqual(result["effective_four_tier_slots"],
+                             ["chest","hands","head","legs"])
+            self.assertEqual(result["catalyst_origin_items"],[
+                {"slot":"head","tier_item_id":271483,"source_item_id":268231}])
+            cfg=json.loads((root/"profile"/"scenario.json").read_text())
+            self.assertEqual(cfg["equipment"]["catalyst_special_tier_slots"],
+                             ["head"])
+            fill=json.loads((root/"profile"/"fillers.json").read_text())
+            budget=native_budget.compile_static_budget(scenario.normalize(cfg),
+                                                        fill,cache)
+            self.assertEqual(budget["locked_L_when_all_specials_observed"],fixed)
+            self.assertEqual(budget["missing_special_fixed_static"],[])
+            lines=(root/"profile"/"profile.simc").read_text().splitlines()
+            head=[x for x in lines if x.startswith("head=")]
+            self.assertEqual(len(head),1)
+            self.assertIn("redirected_base_stats=268231",head[0])
+            self.assertIn("bonus_id=13848",head[0])
+            self.assertNotIn("temporary_enchant=main_hand:thalassian_phoenix_oil_2",
+                             head[0])
+            self.assertFalse((root/"profile"/"simc_results").exists())
+
+    def test_new_source_rogue_catalyst_without_exact_L_not_falsely_zero(self):
+        user=case("subtlety")
+        user["special_items"]=[
+            {"slot":"head","item_id":271510,
+             "options":{"redirected_base_stats":"271875"}}]
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td);binary=root/"dummy";binary.write_bytes(b"NO_NATIVE")
+            with self.assertRaisesRegex(Exception,
+                    "SPECIAL_L_REQUIRES_EXACT_NATIVE_STATIC_VARIANT"):
+                boot.build(user,root/"profile",binary,"7bc10711b5")
+            self.assertFalse((root/"profile"/"manifest.json").exists())
+
     def test_new_specs_target_level_manual_final_and_unknown_spec_block(self):
         u=case("elemental",ilevel=321,final_T=3020)
         out,_=self.prepare(u)
