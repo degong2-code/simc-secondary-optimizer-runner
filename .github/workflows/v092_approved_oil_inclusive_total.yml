@@ -5,6 +5,7 @@ on:
     paths:
       - integration_probes/requests/v092_approved_formula_once.json
       - integration_probes/requests/v092_approved_formula_retry.json
+      - integration_probes/requests/v092_approved_formula_final.json
 permissions:
   contents: read
 concurrency:
@@ -26,7 +27,8 @@ jobs:
           python3 - <<'PY'
           import json,os,pathlib,subprocess
           paths={"integration_probes/requests/v092_approved_formula_once.json",
-                 "integration_probes/requests/v092_approved_formula_retry.json"}
+                 "integration_probes/requests/v092_approved_formula_retry.json",
+                 "integration_probes/requests/v092_approved_formula_final.json"}
           modified=subprocess.check_output(
              ["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],
              text=True).splitlines()
@@ -48,7 +50,7 @@ jobs:
              "original_v015_v016_integrated":False}
           assert json.loads(pathlib.Path(modified[0]).read_text())==expected
           pins={
-            "runner/v091_weapon_oil_external_adapter.py":"11f856ca5814377847e2559d2db0488d1c8f8976",
+            "runner/v091_weapon_oil_external_adapter.py":"6b98227e4911c4f7bc273a2f1a02211c392414f8",
             "runner/v092_approved_inclusive_CHMV_policy.py":"a200ab6f0218952fa9af215cc5d02b2c3a69805d",
             "tests/test_v091_weapon_oil_external_adapter.py":"eba7fa29d9247c2f4f0acda3518f82e4c219ffde",
             "tests/test_v092_approved_inclusive_CHMV_policy.py":"b2f26994d4d3671d7dd76416548a7e0407dd2fff"}
