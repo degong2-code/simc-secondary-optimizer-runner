@@ -61,6 +61,25 @@ class ReadinessOffline(unittest.TestCase):
         self.assertFalse(result["revision_binary_match_verified"])
         self.assertTrue(result["blocker_code"].startswith("V106_"))
 
+    def test_archive_filename_is_only_source_hash_suggestion_not_binary_proof(self):
+        self.assertEqual(
+            doctor.revision_from_official_nightly_archive_name(
+                "simc-1210-01-win64-7bd7371.7z"),"7bd7371")
+        self.assertEqual(
+            doctor.revision_from_official_nightly_archive_name(
+                "simc-1215-02-win64-7BC10711B5.7z"),"7bc10711b5")
+        for invalid in (
+            "simc.exe","SimulationCraft.exe","12.1.5",
+            "simc-1215-02-win64-notahash.7z",
+            "simc-1215-02-win64-7bd7371.zip",
+            "simc-1215-02-win64-7bd7371.7z.exe",
+            "simc-1215-02-win64-7bd737.7z",
+        ):
+            with self.subTest(label=invalid):
+                with self.assertRaisesRegex(
+                    ValueError,"ARCHIVE_FILENAME_NOT_RECOGNIZED"):
+                    doctor.revision_from_official_nightly_archive_name(invalid)
+
     def test_binary_missing_no_native_no_personal_path_in_blocker(self):
         root,binary=self.fixture()
         binary.unlink()
