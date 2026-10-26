@@ -222,6 +222,10 @@ def build(user,folder,binary,revision,static_cache_path=None,
             "output_dir":str(folder/"simc_results"),"plan":plan,
             "native_calls":0,"supported_archetypes_now":len(ARCHETYPES),
             "armor_family":common.CLASS_ARMOR[key[0]],
+            "ordinary_armor_seed_slots_available":list(
+                common.available_ordinary_seed_slots(
+                    common.CLASS_ARMOR[key[0]])),
+            "ordinary_armor_seed_pool_partial_not_full_set":True,
             "weapon_form":weapon_layout,
             "catalyst_origin_items":catalyst_origin_rows,
             "restored_tier_slots":restored_tier_slots,
