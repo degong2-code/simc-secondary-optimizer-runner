@@ -1,0 +1,12 @@
+{
+  "schema": "v090_reference_native_missing_ordinary_G_once_v1",
+  "reference_total_334": 3150,
+  "native_G_required": false,
+  "all_exact_gear_slots_required": true,
+  "exact_special_L_required": true,
+  "external_oil_in_T": false,
+  "full_regressions": true,
+  "candidate_count": 2,
+  "new_native_calls_in_CI": 0,
+  "old_v015_v016_product_integrated": false
+}
