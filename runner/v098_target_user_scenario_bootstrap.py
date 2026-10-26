@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """v098 target-level USER inputs -> internally generated v096 source-locked manifest.
 
-Bounded source-backed archetypes: Fury, Frost Mage, Retribution, Beast Mastery.
+Bounded source-backed archetypes: Fury, Frost Mage, Retribution, Beast Mastery,
+Subtlety Rogue, and Elemental Shaman.
 Not a new item DB, equipment optimizer, SimC effect evaluator or general class
 coverage claim. Planning invokes ZERO Native SimC calls.
 """
