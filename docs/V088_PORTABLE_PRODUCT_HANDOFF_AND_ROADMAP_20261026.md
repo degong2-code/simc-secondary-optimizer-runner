@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER — v088 portable new-chat handoff, verified progress and roadmap
 
+> **HISTORICAL SNAPSHOT — DO NOT REUSE AS CURRENT NEXT-P1 INSTRUCTION.** This dated v088/v096 report and its CI/Native evidence are preserved. Later user clarification states that the product optimizes **future target-ilvl CHMV rating goals** with internally generated representative equipment and optional imported SimC character information, **not** users' entire currently equipped gear. The latest base budget may use the native-derived rounded ilvl table or manual final T; exact representative Native G is an optional precise path, not a prerequisite for the standard user entry. See [current user-flow policy](./CURRENT_PRODUCT_PURPOSE_AND_USER_ENTRY_20261026.md) and [current development state](./CURRENT_PRODUCT_DEVELOPMENT_STATE.md). This annotation does not retroactively change historical evidence.
+
 **Prepared:** 2026-10-26 KST · **scope:** documentation/continuity only · **work ownership:** current primary product-development chat remains owner until user explicitly changes it. This file is NOT a command to immediately change chat, pause development or promote Work OS status.
 
 ## 0. Immediately reconstruct the environment (read before making changes)
