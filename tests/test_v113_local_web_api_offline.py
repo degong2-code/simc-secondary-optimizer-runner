@@ -116,6 +116,8 @@ class LocalWebAPIOffline(unittest.TestCase):
             r=self.post("/api/v1/sessions/"+sid+"/resume")
             self.assertEqual(r.status_code,200,r.text)
             self.assertEqual(r.json()["status"],"WORKER_STARTED")
+            self.assertEqual(r.json()["native_attempt_ceiling_cumulative"],6)
+            self.assertTrue(r.json()["new_native_execution_permitted"])
             argv=spawn.call_args.args[0]
             self.assertEqual(argv[0],sys.executable)
             self.assertIn("v106_user_session_controller.py",argv[1])
