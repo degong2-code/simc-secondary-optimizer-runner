@@ -1,0 +1,108 @@
+{
+  "schema": "v091_oil_0_1_2_real_native_compact_receipt_v1",
+  "date": "2026-10-26",
+  "product_lineage": "isolated development; original v015-v016 not integrated",
+  "SimC_binary_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+  "revision": "7bc10711b5",
+  "native_invocations_from_v091_input_artifact": 3,
+  "iterations_per_input": 35,
+  "dps_samples_per_input": 34,
+  "explicit_oil_disabled_when_none": true,
+  "static_T_mode": "reference_rounded_opt_in",
+  "reference_T_334_Fury": 3350,
+  "formula": "T=G+J+F",
+  "oil_external": true,
+  "per_weapon_user_and_item_declared_vector": {
+    "crit_rating": 16,
+    "haste_rating": 16,
+    "mastery_rating": 0,
+    "versatility_rating": 0
+  },
+  "raw_gear_star": {
+    "crit_rating": 838,
+    "haste_rating": 673,
+    "mastery_rating": 837,
+    "versatility_rating": 837
+  },
+  "declared_flask_F": {
+    "crit_rating": 0,
+    "haste_rating": 165,
+    "mastery_rating": 0,
+    "versatility_rating": 0
+  },
+  "target_c": {
+    "crit_rating": 838,
+    "haste_rating": 838,
+    "mastery_rating": 837,
+    "versatility_rating": 837
+  },
+  "all_16_item_ID_ilevel_options_parity": true,
+  "native_json2_buffed_rating_same_across_all_three": true,
+  "buffed_rating": {
+    "crit_rating": 838,
+    "haste_rating": 838,
+    "mastery_rating": 837,
+    "versatility_rating": 837
+  },
+  "native_reports_oil_input_parity": true,
+  "O_addition_to_JSON2_buffed_rating_independently_observed": false,
+  "do_not_claim_effect_absent_or_unsupported": true,
+  "no_independent_proc_gate": true,
+  "CI": {
+    "first_run": 40256980718,
+    "first_status": "FAIL one corrupted test fixture reaching upstream SHA guard before duplicate-temp validator; source accepted no corrupted input",
+    "final_run": 40257524161,
+    "final_status": "SUCCESS",
+    "passed": 515,
+    "skipped": 2,
+    "failed": 0,
+    "new_native_calls_in_CI": 0,
+    "final_input_artifact_id": 12623381668,
+    "final_input_artifact_sha256": "b2e6fe49886478ba76ebabbd549653e9abf6989f2254c4ca5b3da20dc92e9b29"
+  },
+  "cases": [
+    {
+      "name": "none",
+      "oil_count": 0,
+      "setting": "disabled",
+      "O_crit": 0,
+      "O_haste": 0,
+      "original_CI_input_sha256": "7147f15e63ce4d87bfb6a34c724b236fc113e38a5cdfafc0ebcb02d02c9af8ae",
+      "real_json2_sha256": "b41f0fa3f1a990faea549178b516590e50fb0e2c4c2c521993a0e097fde4652d",
+      "dps_mean": 201005.21822125843,
+      "dps_sem": 935.8740433850992
+    },
+    {
+      "name": "one_main",
+      "oil_count": 1,
+      "setting": "main_hand:thalassian_phoenix_oil_2",
+      "O_crit": 16,
+      "O_haste": 16,
+      "original_CI_input_sha256": "aebd03b299c24054ef401170c4f1936c1e90371ccf15c6e5b1fb5cd393ef3590",
+      "real_json2_sha256": "a745953b8ae37445c95f446428a8e2e85fbf80310d0408a823c633d5b3af4f7a",
+      "dps_mean": 200281.50819978735,
+      "dps_sem": 704.0136213807226
+    },
+    {
+      "name": "two",
+      "oil_count": 2,
+      "setting": "main_hand:thalassian_phoenix_oil_2/off_hand:thalassian_phoenix_oil_2",
+      "O_crit": 32,
+      "O_haste": 32,
+      "original_CI_input_sha256": "bbdc847b2fdb75351a7da9259b127ba3f6836f67a23ef9de81e8799897d88152",
+      "real_json2_sha256": "0685cb4bec70ed969e2acfd3cb943cf786b722a83c5022d5778bd735fa6d02dc",
+      "dps_mean": 200352.40878806027,
+      "dps_sem": 753.2520961198917
+    }
+  ],
+  "prior_v090_correction": {
+    "v090_original_no_temporary_enchant_line": true,
+    "actual_v090_JSON2_reported": "main_hand:thalassian_phoenix_oil_2",
+    "v090_original_T_input_and_DPS_evidence_still_actual": true,
+    "v090_cannot_be_described_as_oil_free": true
+  },
+  "local_zip": "V091_WEAPON_OIL_0_1_2_REAL_NATIVE_PROOF.zip",
+  "local_zip_sha256": "f7d1e47963f9e62e40e78bcfd8fb7ac792c811cc04bf11f294b283121f7aafc3",
+  "local_json_receipt_sha256": "b60df6115b469d3f3e417d82e1c61fb0657bb26baf90ddab7090061a3eb41609",
+  "open_scope": "Native JSON2 buffed_stats does not show isolated per-oil +16/+16 increments with gear_* override. Preserve O separately declared, do not inject twice or claim numeric +O independently observed; SimC owns mechanical effect. This is bounded input acceptance only."
+}
