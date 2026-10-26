@@ -94,6 +94,7 @@ def prepare(selection, fillers, native_cache, reference):
         "scenario":normalized,"static_budget":native_budget,
         "reference_source":selection["source_mode"],
         "reference_sha256":live_sha,"reference_track":track,
+        "prepared_profile_sha256":hashlib.sha256(reference.encode("utf8")).hexdigest(),
         "T":total,"floor_L":native_budget["locked_L_when_all_specials_observed"],
         "minimum":low,"maximum":high,
         "items_bound":inventory["slots_bound"],
@@ -111,6 +112,9 @@ def propose(prepared,reference,target,declared_F_vector,binary_sha,revision,
     scenario.vector(declared_F_vector,"DECLARED_STATIC_F")
     normalized=prepared["scenario"]
     budget=prepared["static_budget"]
+    need(hashlib.sha256(reference.encode("utf8")).hexdigest()==
+         prepared["prepared_profile_sha256"],
+         "SOURCE_PROFILE_CHANGED_AFTER_REFERENCE_PREPARATION")
     need(sum(declared_F_vector.values())==normalized["budget"]["F"],
          "FLASK_F_VECTOR_SUM_MISMATCH")
     total,lower,upper=search.bounds(normalized,budget)
