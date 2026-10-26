@@ -2,9 +2,9 @@
 """v103: source-observed weapon TYPES, not invented spec-wide skill legality.
 
 Exact weapon subtype and hand identity from pinned original SimC fixtures +
-item pages. Only the existing four v098 profiles are executable here. Rogue
-and Elemental Shaman are observed source shapes for future expansion, NOT
-newly enabled whole character/APL/gear profiles.
+item pages. Six pinned profile weapon forms are source-bound. Rogue and Elemental
+Shaman use the bounded shared v104 input builder; all other legal weapon
+forms remain unassessed, and Native DPS for the new input is not yet proven.
 
 No weapon effect simulation, general equipment catalogue or Native calls.
 """
@@ -66,8 +66,9 @@ TYPE_SOURCES={
  271093:"https://www.wowhead.com/item=271093",
  237837:"https://www.wowhead.com/item=237837",
  268262:"https://www.wowhead.com/item=268262"}
-EXECUTABLE_SOURCES=frozenset((("warrior","fury"),("paladin","retribution"),
-                             ("mage","frost"),("hunter","beast_mastery")))
+# Two formerly source-only shapes now have a bounded shared v104
+# representative producer; this does not authorize other weapon types.
+EXECUTABLE_SOURCES=frozenset(SOURCE)
 
 class WeaponSourceBlocked(ValueError):pass
 def need(ok,reason):
