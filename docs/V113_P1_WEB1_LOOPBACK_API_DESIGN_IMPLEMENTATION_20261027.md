@@ -13,7 +13,7 @@
 - `runner/v113_local_web_api.py`: FastAPI 단일 로컬 API. 이미 설치된 사용자 세션 저장소(`%USERPROFILE%\\SIMC_Secondary_Optimizer\\runs`)와 기존 `runner/v106_user_session_controller.py` worker를 호출하는 **얇은** 어댑터. `GET/status`, `GET/result`는 기존 디스크 파일로 복원, 브라우저 새로고침으로 프로세스·캐시 제거하지 않음.
 - `requirements-web.txt`: `fastapi>=0.115,<1.0`, `uvicorn>=0.30,<1.0`. 테스트는 `requirements-web-test.txt`의 `httpx`를 별도 추가.
 - `tests/test_v113_local_web_api_offline.py`: 실제 FastAPI HTTP TestClient를 이용한 8개 신규 함수 테스트(기존 18개 사용자 세션·Windows SHA 테스트와 총 26). 포트·Host / Origin / 로컬 세션 토큰 / CSRF / 요청 Content-Type / traversal, 6개 기본 전문화, 실제 기존 소스 프로필 B/O/T 3150/32/3182 zero Native 준비, 세션 완료 결과 95% 표시, 중복 실행·취소 신호, 캐시 미완성 선차단, 상태 조회 파일 무수정. `subprocess.Popen` mock만; 실제 Native 호출 0.
-- `.github/workflows/v113_local_web_api_offline.yml`: [Linux Ubuntu 24.04 / Python 3.12와 Windows 2022 / Python 3.14 CI #40359841345](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40359841345) 각 **26 PASS/0 FAIL**. 외부 서버나 SimC Native 시험 없음.
+- `.github/workflows/v113_local_web_api_offline.yml`: [Linux Ubuntu 24.04 / Python 3.12와 Windows 2022 / Python 3.14 CI #40359841345](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40360495612) 각 **26 PASS/0 FAIL**. 외부 서버나 SimC Native 시험 없음.
 
 ## HTTP 계약 (v113 · 로컬 사용자만)
 
