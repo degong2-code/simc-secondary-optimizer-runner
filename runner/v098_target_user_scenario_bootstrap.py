@@ -33,6 +33,44 @@ ARCHETYPES={
                                        "mastery_rating":0,"versatility_rating":0})}
 FIXTURES=pathlib.Path(__file__).resolve().parents[1]/"integration_probes/fixtures"
 IMPORT_FIELD="import_simc_profile"
+TIER_FIVE=("head","shoulders","chest","hands","legs")
+# Pinned exact class-tier fifth slot; current ordinary source ID is checked
+# so any unverified upstream change fails before creating a Native request.
+# Fury/Hunter fifth class tier from published Season 2 item identities;
+# Paladin/Mage fifth tier IDs are in their pinned upstream SimC fixtures.
+FIFTH_TIER={
+    ("warrior","fury"):("legs",271455,271878),
+    ("paladin","retribution"):("legs",271464,271878),
+    ("mage","frost"):("head",271564,271874),
+    ("hunter","beast_mastery"):("head",271492,249317)}
+
+def reconcile_four_tier(key,rows,groups,taken,ilevel):
+    """Preserve four class-tier slots after a selected crafted replacement.
+
+    One missing default tier is restored using only its verified fifth slot;
+    never invent ordinary replacement items or change user-selected pieces.
+    """
+    need(key in FIFTH_TIER,"FIFTH_CLASS_TIER_ID_UNAVAILABLE")
+    original_count=sum(groups.get(k)=="tier" for k in TIER_FIVE)
+    need(original_count<=4,"FIVE_TIER_LAYOUT_OUTSIDE_FOUR_ROW_CONTRACT")
+    added=[]
+    if original_count<4:
+        slot,tier_id,ordinary_id=FIFTH_TIER[key]
+        need(slot not in taken and groups.get(slot) is None
+             and rows[slot]["item_id"]==ordinary_id,
+             "FOUR_TIER_UNAVAILABLE_SELECTED_FIFTH_OR_UNKNOWN_SOURCE")
+        # Preserve currently declared socket/enchant identity (J), but
+        # never carry source item's crafted_stats/embellishment/bonus_id
+        # or special proc identity into an ordinary class tier.
+        options={k:v for k,v in rows[slot]["options"].items()
+                 if k in ("gem_id","enchant","enchant_id")}
+        rows[slot]={"slot":slot,"item_id":tier_id,"ilevel":ilevel,
+                    "options":options}
+        groups[slot]="tier"
+        added.append(slot)
+    need(sum(groups.get(k)=="tier" for k in TIER_FIVE)==4,
+         "FOUR_TIER_NOT_SATISFIED")
+    return added
 
 def character_from_uploaded_simc(text):
     """Only four character fields are imported; ALL worn-gear rows are ignored.
@@ -209,19 +247,25 @@ def build(user,folder,binary,revision,static_cache_path=None,
                      not (set(opts)&{"crafted_stats","embellishment"}),
                      "SPECIAL_NOT_VALID_NONCRAFTED_SLOT")
                 if groups.get(slot)=="tier":
-                    # Same physical item is both the class-tier piece and a
-                    # catalyst-origin special. Never write a second slot row.
+                    # One physical converted piece is both class tier and
+                    # fixed source special; keep the exact original ID.
                     need(raw["item_id"]==rows[slot]["item_id"] and
                          "redirected_base_stats" in opts and
                          int(opts["redirected_base_stats"])!=raw["item_id"],
                          "CATALYST_CLASS_TIER_ID_AND_ORIGIN_REQUIRED")
                     slot_group="tier"
+                elif slot==FIFTH_TIER[key][0] and
+                     "redirected_base_stats" in opts:
+                    need(raw["item_id"]==FIFTH_TIER[key][1] and
+                         int(opts["redirected_base_stats"])!=raw["item_id"],
+                         "CATALYST_FIFTH_CLASS_TIER_ID_OR_ORIGIN")
+                    slot_group="tier"
                 else:
                     need("redirected_base_stats" not in opts,
-                         "CATALYST_REQUIRES_EXISTING_CLASS_TIER_SLOT")
+                         "CATALYST_REQUIRES_CLASS_TIER_SLOT")
             else:
-                need(groups.get(slot)!="tier" and not slot.startswith("trinket")
-                     and "embellishment" in opts and
+                need(not slot.startswith("trinket") and
+                     "embellishment" in opts and
                      "redirected_base_stats" not in opts,
                      "EMBELLISHMENT_NOT_ON_CRAFTED_EQUIPMENT")
             rows[slot]={"slot":slot,"item_id":raw["item_id"],
@@ -229,10 +273,10 @@ def build(user,folder,binary,revision,static_cache_path=None,
             groups[slot]=slot_group
     need({r["slot"] for r in user["trinkets"]}=={"trinket1","trinket2"},
          "USER_TRINKET_SLOTS_NOT_EXACT")
-    # Four functioning tier slots are retained; one converted tier slot
-    # counts once, including all SimC-owned source cantrip/effect identity.
-    need(len([slot for slot,g in groups.items() if g=="tier"])==4,
-         "FOUR_FUNCTIONAL_TIER_SLOTS_REQUIRED")
+    # Only change necessary class-tier slots, without a gear recommender.
+    # If a user replaces one of the original four with crafted equipment,
+    # restore 4-piece from the exact known fifth class-tier slot.
+    restored_tier_slots=reconcile_four_tier(key,rows,groups,taken,ilvl)
     catalyst_origin_rows=[{"slot":slot,"tier_item_id":row["item_id"],
                            "source_item_id":int(row["options"]["redirected_base_stats"])}
                           for slot,row in rows.items()
@@ -293,6 +337,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
             "output_dir":str(folder/"simc_results"),"plan":plan,
             "native_calls":0,"supported_archetypes_now":len(ARCHETYPES),
             "catalyst_origin_items":catalyst_origin_rows,
+            "restored_tier_slots":restored_tier_slots,
+            "effective_four_tier_slots":sorted(
+                 slot for slot,g in groups.items() if g=="tier"),
             "all_specs_ready":False}
 
 def run(user_path,folder,binary,revision,static_cache_path=None,
