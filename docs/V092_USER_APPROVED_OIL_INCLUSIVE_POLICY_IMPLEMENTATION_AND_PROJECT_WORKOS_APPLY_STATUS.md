@@ -38,3 +38,15 @@ Official state mutation pending access/actual apply. Do NOT modify v003 immutabl
 3. Ensure any future v092+ adaptive scheduler consumes B for free allocation but reports T and c_final with O locked; preserve existing cache split and SimC effect ownership.
 
 **Approval status: APPROVED. GitHub code status: implemented + scoped CI/Native numeric PASS. Project UI / official Work OS apply: not independently performed/verified.**
+
+## Additional full-sample Native rating + DPS/SEM confirmation (2026-10-26)
+
+Using the **same v092-generated real source-backed Fury 334 input** and pinned SimC ELF, two separate **35 iterations each** (34 JSON2 DPS samples each) successfully completed with only the `json2` destination changed. The actual Native final rating matched the approved inclusive target:
+- One oiled weapon: final **T=3382**, JSON2 rating **(854,854,837,837)**, DPS **202448.3863**, SEM **882.0408**, actual JSON2 SHA **`e09398b7176e33a0620c487a0143f39f7f48eacb2fb7d919482f8e216d02196b`**.
+- Both weapons oiled: final **T=3414**, JSON2 rating **(870,870,837,837)**, DPS **202815.6987**, SEM **877.3386**, actual JSON2 SHA **`8bb2f65d11c4e5d228b98f2a9ec51ef6a84fae618722471ecc1caf35893a6bee`**.
+
+**The difference is too small relative to SEM to rank the oils' DPS performance.** It verifies exact input accounting and the existing SimC DPS/SEM output, **not global optimum**. The earlier three 1-iteration Native numeric checks are separately preserved, including zero oil.
+
+**Portable files:** full v1.3 approved replacement Source + current Work OS application instructions + byte-identical v092 CI Native inputs and actual local JSON2/stdout/stderr/receipts ZIP `SIMC_SECONDARY_OPTIMIZER_V092_APPROVED_T_GJF_O_IMPLEMENTATION_AND_PROOF.zip`, SHA256 `3c5e3dc49f07e30f9c6c6e2ccc57cf8ac705c4d9c43bc9578fe4753c73d35170`. A compact GitHub receipt with explicit approval, hashes, test counts and application-status caveats is [`integration_probes/data/v092_approved_T_GJF_plus_O_native_compact_receipt.json`](../integration_probes/data/v092_approved_T_GJF_plus_O_native_compact_receipt.json).
+
+**Important compatibility caveat:** The historical v061–v090 Python field labels `T`/`T_official` still internally represent **B** to preserve existing typed contract hashes and adapters; the authoritative v092 inclusive policy module and revised v091 proposal/ingestion own the **final T** output. This is an intentional bounded integration adapter, not proof all original product/UI surfaces are already migrated. User-facing new results must show **B, fixed O, final T** separately.
