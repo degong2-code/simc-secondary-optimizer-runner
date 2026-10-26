@@ -111,6 +111,26 @@ def verify_profile_binding(normalized,budget,reference):
             "options":ident["options"]},"PROFILE_SELECTED_GEAR_CONFLICT:"+slot)
         expected[slot]={"item_id":ident["item_id"],
             "ilevel":ident["ilevel"],"options":ident["options"]}
+    # v090 reference-T input path: ordinary gear's static CHMV may remain
+    # UNOBSERVED, but its exact item/ilevel/option identity is NEVER optional.
+    # Do not manufacture Native gear stat records to bypass this identity gate.
+    optional=budget.get("reference_exact_slot_identity")
+    if optional is not None:
+        need(budget.get("reference_budget_provenance",{}).get("schema")==
+             "v090_reference_budget_provenance_v1",
+             "REFERENCE_SLOT_IDENTITIES_WITHOUT_PROVENANCE")
+        need(type(optional) is dict and 13<=len(optional)<=16,
+             "REFERENCE_EXACT_SLOT_IDENTITY_COUNT")
+        for slot,identity in optional.items():
+            need(type(identity) is dict and
+                 set(identity)=={"item_id","ilevel","options"} and
+                 type(identity["item_id"]) is int and
+                 type(identity["ilevel"]) is int and
+                 type(identity["options"]) is dict,
+                 "REFERENCE_SLOT_IDENTITY_INVALID:"+str(slot))
+            need(slot not in expected or expected[slot]==identity,
+                 "REFERENCE_SELECTED_SLOT_IDENTITY_DRIFT:"+str(slot))
+            expected[slot]=identity
     # The Native gear cache may lack a trinket record, but its exact ID must
     # still be present in the SimC input.
     need(slots==set(expected),"PROFILE_GEAR_SLOT_SET_DRIFT")
