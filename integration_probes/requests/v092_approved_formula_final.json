@@ -1,0 +1,17 @@
+{
+  "schema": "v092_user_approved_inclusive_CHMV_v1",
+  "approved_formula": "T=G+J+F+O",
+  "legacy_runtime_base_B_formula": "B=G+J+F",
+  "oil_per_weapon_crit": 16,
+  "oil_per_weapon_haste": 16,
+  "reference_base_common_334": 3150,
+  "reference_base_fury_334": 3350,
+  "reference_common_one_oil_T": 3182,
+  "reference_common_dual_oil_T": 3214,
+  "reference_fury_dual_oil_T": 3414,
+  "O_is_fixed_not_fungible": true,
+  "verify_final_gear_override": true,
+  "full_offline_regression": true,
+  "new_native_calls_in_CI": 0,
+  "original_v015_v016_integrated": false
+}
