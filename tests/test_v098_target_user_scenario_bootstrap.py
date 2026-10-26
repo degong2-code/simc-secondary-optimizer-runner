@@ -203,6 +203,7 @@ class UserTargetBootstrap(unittest.TestCase):
             self.assertIn("bonus_id=13848",chest[0])
             cfg=json.loads((root/"generated"/"scenario.json").read_text())
             self.assertEqual(len(cfg["equipment"]["tier"]),4)
+            self.assertEqual(cfg["equipment"]["catalyst_special_tier_slots"],["chest"])
             self.assertEqual(cfg["equipment"]["special"],[])
             self.assertIn(271459,[r["item_id"] for r in cfg["equipment"]["tier"]])
             fillers=json.loads((root/"generated"/"fillers.json").read_text())
