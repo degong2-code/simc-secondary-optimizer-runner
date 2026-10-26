@@ -10,13 +10,15 @@ from __future__ import annotations
 import argparse, contextlib, hashlib, json, os, pathlib, re, sys
 sys.path.insert(0,str(pathlib.Path(__file__).resolve().parent))
 import v098_target_user_scenario_bootstrap as bootstrap
+import v108_native_consumable_inputs as consumer
 
 SCHEMA="v106_dps_user_session_v1"
 DEFAULT_ROOT=pathlib.Path.home()/"SIMC_Secondary_Optimizer"/"runs"
 SUPPORTED=tuple(sorted(bootstrap.ARCHETYPES))
 # Extended UI selected equipment is a pass-through to v098's exact
 # source-backed item/tier/native-L checks, not a second selector.
-OPTIONAL_CONTROLS=frozenset(("special_items","embellishments"))
+OPTIONAL_CONTROLS=frozenset(("special_items","embellishments",
+                             "consumable_choices"))
 DUAL_FORMS=frozenset(("dual_two_hand","dual_one_hand"))
 
 class SessionBlocked(ValueError):pass
@@ -145,10 +147,19 @@ def user_scenario(controls):
         controls.get("special_items",[]),"special",8)
     crafted=validated_selected_gear(
         controls.get("embellishments",[]),"crafted",2)
+    choice=controls.get("consumable_choices")
+    if choice is not None:
+        need(type(choice) is dict and
+             set(choice)==consumer.CHOICE_FIELDS,
+             "CONSUMABLE_CHOICES_FIELDS")
+        need(all(type(choice[k]) is str for k in
+                 ("flask","food","potion","augmentation")) and
+             type(choice["diamond_id"]) is int,
+             "CONSUMABLE_CHOICES_TYPES")
     occupied=[r["slot"] for r in specials+crafted]
     need(len(occupied)==len(set(occupied)),
          "SELECTED_SPECIAL_AND_CRAFTED_SLOT_CONFLICT")
-    return {"schema":bootstrap.SCHEMA,
+    output={"schema":bootstrap.SCHEMA,
             "character":{k:controls[k] for k in
                          ("class","spec","race","talents")},
             "target":{"ilevel":ilvl,"final_T":final},
@@ -158,6 +169,8 @@ def user_scenario(controls):
             "oil_hands":list(hands),
             "combat":{"targets":targets,"duration_seconds":duration,
                       "raid_buffs":controls["raid_buffs"]}}
+    if choice is not None:output["consumable_choices"]=dict(choice)
+    return output
 
 def standard_controls(key=("paladin","retribution")):
     d=source_defaults(key)
@@ -165,7 +178,11 @@ def standard_controls(key=("paladin","retribution")):
             if k in ("class","spec","race","talents","oil_hands")} | {
             "ilevel":334,"final_T":None,"trinket_ids":d["trinket_ids"],
             "targets":1,"duration_seconds":300,"raid_buffs":True,
-            "special_items":[],"embellishments":[]}
+            "special_items":[],"embellishments":[],
+            "consumable_choices":{
+                "flask":"source_default","food":"source_default",
+                "potion":"source_default","augmentation":"source_default",
+                "diamond_id":0}}
 
 def session_key(user,binary,revision,static_cache=None):
     binary=pathlib.Path(binary).expanduser().resolve()
