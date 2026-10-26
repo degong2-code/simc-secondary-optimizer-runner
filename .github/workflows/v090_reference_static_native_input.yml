@@ -5,6 +5,7 @@ on:
     paths:
       - integration_probes/requests/v090_reference_native_path_once.json
       - integration_probes/requests/v090_reference_native_path_retry.json
+      - integration_probes/requests/v090_reference_native_path_final.json
 permissions:
   contents: read
 concurrency:
@@ -25,7 +26,7 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           import json,os,pathlib,subprocess
-          expected_paths={"integration_probes/requests/v090_reference_native_path_once.json","integration_probes/requests/v090_reference_native_path_retry.json"}
+          expected_paths={"integration_probes/requests/v090_reference_native_path_once.json","integration_probes/requests/v090_reference_native_path_retry.json","integration_probes/requests/v090_reference_native_path_final.json"}
           changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
           assert len(changed)==1 and changed[0] in expected_paths,changed
           p=changed[0]
@@ -41,8 +42,8 @@ jobs:
           assert json.loads(pathlib.Path(p).read_text())==expected
           pins={
              "runner/v064_adaptive_evaluator_port.py":"10dd3d382a82d6a71bdd44e6d8244b5b60920b54",
-             "runner/v090_reference_total_native_candidate.py":"502183d73366c40b0f04cce91d2c69965a56c456",
-             "tests/test_v090_reference_total_native_candidate.py":"bc9c45066d4b1f79a1f597d7d1a61bf8f4f4c8e0",
+             "runner/v090_reference_total_native_candidate.py":"1ca08508684e6407469e9ebe22cb5eae801754ff",
+             "tests/test_v090_reference_total_native_candidate.py":"4cf206b795a461c6f4934004b47ac0551dd59d12",
              "integration_probes/data/midnight_s2_ilvl_chmv_reference_v1.json":"44f08eac17b3316c3edfe4c17f29ea3b7bcd2de2"}
           for path,pin in pins.items():
               actual=subprocess.check_output(["git","hash-object",path],text=True).strip()
