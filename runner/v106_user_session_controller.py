@@ -154,7 +154,8 @@ def user_scenario(controls):
              "CONSUMABLE_CHOICES_FIELDS")
         need(all(type(choice[k]) is str for k in
                  ("flask","food","potion","augmentation")) and
-             type(choice["diamond_id"]) is int,
+             type(choice["diamond_id"]) is int and
+             type(choice["omnium_talents"]) is str,
              "CONSUMABLE_CHOICES_TYPES")
     occupied=[r["slot"] for r in specials+crafted]
     need(len(occupied)==len(set(occupied)),
@@ -182,7 +183,7 @@ def standard_controls(key=("paladin","retribution")):
             "consumable_choices":{
                 "flask":"source_default","food":"source_default",
                 "potion":"source_default","augmentation":"source_default",
-                "diamond_id":0}}
+                "diamond_id":0,"omnium_talents":"source_default"}}
 
 def session_key(user,binary,revision,static_cache=None):
     binary=pathlib.Path(binary).expanduser().resolve()
