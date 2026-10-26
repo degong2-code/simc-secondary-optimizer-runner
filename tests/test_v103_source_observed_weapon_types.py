@@ -10,10 +10,10 @@ class WeaponTypeSources(unittest.TestCase):
     def need(ok,reason):
         if not ok:raise ValueError(reason)
 
-    def test_six_pinned_weapon_shapes_but_only_four_executable(self):
+    def test_six_pinned_weapon_shapes_and_six_source_enabled(self):
         doc=weapons.verify_observed()
         self.assertEqual(doc["source_profile_shapes"],6)
-        self.assertEqual(doc["executable_source_shapes"],4)
+        self.assertEqual(doc["executable_source_shapes"],6)
         self.assertEqual(doc["unique_item_ids"],8)
         self.assertTrue(doc["not_full_spec_weapon_legality"])
         self.assertEqual(doc["native_calls"],0)
@@ -29,7 +29,7 @@ class WeaponTypeSources(unittest.TestCase):
                     self.assertEqual(desc["weapons"][hand]["subtype"],kind)
                     self.assertIn("item_reference",desc["weapons"][hand])
 
-    def test_current_four_source_factories_keep_actual_exact_weapons(self):
+    def test_six_common_source_factories_keep_actual_exact_weapons(self):
         for key in core.ARCHETYPES:
             with self.subTest(key=key),tempfile.TemporaryDirectory() as td:
                 _,_,rows,_,form,_=core.source_backed_gear(
@@ -37,13 +37,14 @@ class WeaponTypeSources(unittest.TestCase):
                 self.assertTrue(weapons.validate_existing(key,rows,form))
                 self.assertTrue(weapons.source_shape(key)["is_currently_executable"])
 
-    def test_rogue_shaman_have_observed_source_but_not_current_user_boot(self):
+    def test_rogue_shaman_are_now_source_enabled_but_no_other_weapons_inferred(self):
         for key in (("rogue","subtlety"),("shaman","elemental")):
             with self.subTest(key=key):
                 desc=weapons.source_shape(key)
-                self.assertFalse(desc["is_currently_executable"])
+                self.assertTrue(desc["is_currently_executable"])
+                self.assertTrue(desc["all_other_weapon_forms_unassessed"])
                 with self.assertRaisesRegex(weapons.WeaponSourceBlocked,
-                                           "EXECUTABLE_WEAPON_FORM_NOT_SOURCE_BACKED"):
+                                           "EXECUTABLE_SOURCE_WEAPON_ITEM_CHANGED"):
                     weapons.validate_existing(key,{},desc["form"])
 
     def test_wrong_source_weapon_item_and_form_are_refused(self):
@@ -64,6 +65,7 @@ class WeaponTypeSources(unittest.TestCase):
                                     "WEAPON_SPEC_SOURCE_NOT_AVAILABLE"):
             weapons.source_shape(("mage","arcane"))
         self.assertNotIn(("mage","arcane"),weapons.OBSERVED)
-        self.assertNotIn(("shaman","elemental"),core.ARCHETYPES)
+        self.assertIn(("shaman","elemental"),core.ARCHETYPES)
+        self.assertNotIn(("priest","shadow"),core.ARCHETYPES)
 
 if __name__=="__main__":unittest.main()
