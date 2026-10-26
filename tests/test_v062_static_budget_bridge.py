@@ -80,6 +80,35 @@ class NativeBudget(unittest.TestCase):
         self.assertEqual(r["budget"]["T_official"],1673)
         self.assertEqual(r["locked_L_when_all_specials_observed"],lock)
         self.assertEqual(r["effective_floor_if_possible"]["mastery_rating"],170)
+    def test_catalyzed_tier_is_one_slot_and_locked_original_fixed_L(self):
+        cfg=mage()
+        source=cfg["equipment"]["tier"][0]
+        source["options"]={"redirected_base_stats":"268222"}
+        plan,fill,c=fixture(cfg)
+        stats={"crit_rating":0,"haste_rating":0,
+               "mastery_rating":170,"versatility_rating":0}
+        record(c,source,stats)
+        out=p.compile_static_budget(plan,fill,c)
+        self.assertEqual(len(cfg["equipment"]["tier"]),4)
+        self.assertEqual(len(cfg["equipment"]["special"]),0)
+        self.assertEqual(out["locked_L_when_all_specials_observed"],stats)
+        self.assertEqual(out["G_if_complete"],1370)
+        self.assertEqual(out["budget"]["T_official"],1673)
+        self.assertEqual(out["effective_floor_if_possible"]["mastery_rating"],170)
+        self.assertEqual(out["gear_items_total"],15)
+
+    def test_catalyzed_tier_missing_exact_source_variant_is_not_zero(self):
+        cfg=mage()
+        source=cfg["equipment"]["tier"][0]
+        source["options"]={"redirected_base_stats":"268222"}
+        plan,fill,c=fixture(cfg)
+        del c["variants"][native.digest(p.exact_identity(source))]
+        out=p.compile_static_budget(plan,fill,c)
+        self.assertEqual(out["status"],"NEEDS_NATIVE_SPECIAL_FIXED_L")
+        self.assertEqual(len(out["missing_special_fixed_static"]),1)
+        self.assertIsNone(out["locked_L_when_all_specials_observed"])
+        self.assertIsNone(out["effective_floor_if_possible"])
+
     def test_missing_selected_special_requires_exact_native_floor(self):
         cfg=mage();cfg["equipment"]["special"]=[item("neck",251001)]
         filler=[x for x in FILLER if x["slot"]!="neck"]
