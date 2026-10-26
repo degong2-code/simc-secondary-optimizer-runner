@@ -20,7 +20,17 @@ SUPPORTED={
 # Both are PRIMARY or effect-only Midnight diamonds; they contribute
 # zero secondary rating, so they do not alter legacy fixed J=138.
 DIAMONDS=frozenset((240983,240967))
-CHOICE_FIELDS=frozenset(("flask","food","potion","augmentation","diamond_id"))
+# Whole loadouts from six pinned MID2 fixtures. Mixing rune choices between
+# independently sourced rows is NOT enabled until checked on real SimC.
+OMNIUM_PRESETS=frozenset((
+ "136822:1/136816:1/136817:1/136818:1/136814:1",
+ "136822:1/136819:1/136817:1/136815:1/136814:1",
+ "136822:1/136819:1/136817:1/136821:1/136814:1",
+ "136822:1/136823:1/136817:1/136818:1/136814:1",
+ "136822:1/136816:1/136817:1/136821:1/136814:1",
+ "136822:1/136816:1/136817:1/136815:1/136814:1"))
+CHOICE_FIELDS=frozenset(("flask","food","potion","augmentation",
+                         "diamond_id","omnium_talents"))
 
 class ConsumableBlocked(ValueError):pass
 def need(ok,why):
@@ -30,7 +40,7 @@ def source_tokens(profile):
     out={}
     for line in profile.splitlines():
         key,sep,value=line.partition("=")
-        if sep and key in ASSIGNMENTS:
+        if sep and key in ASSIGNMENTS+("omnium_talents",):
             need(key not in out,"DUPLICATE_CONSUMABLE_SOURCE:"+key)
             need(bool(re.fullmatch(r"[a-z0-9_]{1,90}",value)),
                  "SOURCE_CONSUMABLE_TOKEN_INVALID:"+key)
@@ -43,7 +53,12 @@ def default_choice(profile,head):
     gem=head.get("options",{}).get("gem_id")
     need(gem is None or gem.isdigit() and int(gem) in DIAMONDS,
          "SOURCE_PRIMARY_ONLY_DIAMOND_NOT_READY")
-    return {**tokens,"diamond_id":int(gem) if gem else 0}
+    folio=[line.partition("=")[2] for line in profile.splitlines()
+           if line.startswith("omnium_talents=")]
+    need(len(folio)==1 and folio[0] in OMNIUM_PRESETS,
+         "SOURCE_OMNIUM_LOADOUT_NOT_PINNED")
+    return {**tokens,"diamond_id":int(gem) if gem else 0,
+            "omnium_talents":folio[0]}
 
 def validate_choice(raw,base):
     need(type(raw) is dict and set(raw)==CHOICE_FIELDS,"CHOICE_FIELDS")
@@ -59,9 +74,14 @@ def validate_choice(raw,base):
              "UNVERIFIED_SIMC_TOKEN:"+key)
         result[key]=v
     diamond=base["diamond_id"] if raw["diamond_id"]==0 else raw["diamond_id"]
-    need(type(diamond) is int and diamond in DIAMONDS,
+    need(type(diamond) is int and diamond in (DIAMONDS|{0}),
          "DIAMOND_SECONDARY_BUDGET_NOT_VERIFIED")
     result["diamond_id"]=diamond
+    folio=raw["omnium_talents"]
+    if folio=="source_default":folio=base["omnium_talents"]
+    need(type(folio) is str and folio in OMNIUM_PRESETS,
+         "OMNIUM_LOADOUT_NOT_SOURCE_OBSERVED")
+    result["omnium_talents"]=folio
     return result
 
 def apply(profile,cfg,rows,chosen=None):
@@ -86,7 +106,8 @@ def apply(profile,cfg,rows,chosen=None):
             out.append(key+"="+raw[key])
         else:
             out.append(line)
-    need(seen==set(ASSIGNMENTS),"INCOMPLETE_CONSUMABLE_ASSIGNMENTS")
+    need(seen==set(ASSIGNMENTS)|{"omnium_talents"},
+         "INCOMPLETE_CONSUMABLE_OR_OMNIUM_ASSIGNMENTS")
     updated=copy.deepcopy(cfg)
     for key in ("flask","food","potion"):
         updated["consumables"][key]=raw[key]
@@ -110,7 +131,8 @@ def apply(profile,cfg,rows,chosen=None):
             "selected":raw,"changed":raw!=initial,
             "gem_secondary_J_unchanged":True,
             "flask_F_unchanged":True,
-            "omnium_folio_not_augmentation":True}
+            "omnium_folio_not_augmentation":True,
+            "omnium_whole_source_preset_only":True}
 
 def set_head_gem(profile,head):
     """Replace ONLY existing head equipment line, preserving other options."""
