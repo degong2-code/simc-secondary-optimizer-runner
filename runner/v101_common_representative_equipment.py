@@ -16,6 +16,7 @@ import v082_fury_plate_dual_twohand_native as fury
 import v083_paladin_single_2h_native as paladin
 import v084_frost_cloth_1h_frill_native as frost
 import v086_hunter_fixed_mail_representative as hunter
+import v104_shared_pinned_rogue_shaman_composer as first_use
 
 ARMOR_CLASSES={
     "cloth":frozenset(("mage","priest","warlock")),
@@ -34,7 +35,9 @@ CLASS_TIER_ITEMS={
     "mage":{"head":271564,"shoulders":271562,"chest":271567,
             "hands":271565,"legs":271563},
     "hunter":{"head":271492,"shoulders":271490,"chest":271495,
-              "hands":271493,"legs":271491}}
+              "hands":271493,"legs":271491},
+    "rogue":dict(first_use.TIERS["rogue"]),
+    "shaman":dict(first_use.TIERS["shaman"])}
 # Slot topology, not a promise that any given class can wield every subtype.
 WEAPON_FORMS={
     "dual_two_hand":("main_hand","off_hand"),
@@ -56,7 +59,15 @@ ARCHETYPES={
         "v079_upstream_mid2_hunter_beast_mastery_reference.simc",
         hunter.source_profile,"ranged",
         {"crit_rating":0,"haste_rating":165,"mastery_rating":0,
-         "versatility_rating":0})}
+         "versatility_rating":0}),
+    ("rogue","subtlety"):(
+        first_use.PROFILES[("rogue","subtlety")]["filename"],
+        first_use.producer(("rogue","subtlety")),"dual_one_hand",
+        first_use.F_DECLARED),
+    ("shaman","elemental"):(
+        first_use.PROFILES[("shaman","elemental")]["filename"],
+        first_use.producer(("shaman","elemental")),"one_hand_shield",
+        first_use.F_DECLARED)}
 FIXTURES=pathlib.Path(__file__).resolve().parents[1]/"integration_probes/fixtures"
 # Fifth item is class-specific; previous representative ordinary item is
 # source-specific (the v086 Hunter head differs from v079).
@@ -64,7 +75,9 @@ FIFTH_TIER={
     ("warrior","fury"):("legs",271455,271878),
     ("paladin","retribution"):("legs",271464,271878),
     ("mage","frost"):("head",271564,271874),
-    ("hunter","beast_mastery"):("head",271492,249317)}
+    ("hunter","beast_mastery"):("head",271492,249317),
+    ("rogue","subtlety"):("chest",271513,251159),
+    ("shaman","elemental"):("head",271483,249317)}
 
 def ordinary_armor_seed(family,slot,ilevel):
     """Explicitly source-backed ordinary candidate for a future class build.
