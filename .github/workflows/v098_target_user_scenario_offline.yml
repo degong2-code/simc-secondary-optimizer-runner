@@ -5,6 +5,10 @@ on:
     paths:
       - .github/workflows/v098_target_user_scenario_offline.yml
       - runner/v098_target_user_scenario_bootstrap.py
+      - runner/v055_simc_item_selection.py
+      - runner/v062_static_budget_bridge.py
+      - tests/test_v055_simc_item_selection.py
+      - tests/test_v062_static_budget_bridge.py
       - tests/test_v098_target_user_scenario_bootstrap.py
       - runner/v096_unified_product_entry.py
       - runner/v091_weapon_oil_external_adapter.py
@@ -20,10 +24,13 @@ jobs:
           persist-credentials: false
       - name: Compile product entry and targeted bootstrap
         run: |
-          python3 -m py_compile runner/v098_target_user_scenario_bootstrap.py runner/v096_unified_product_entry.py
+          python3 -m py_compile runner/v055_simc_item_selection.py runner/v062_static_budget_bridge.py runner/v098_target_user_scenario_bootstrap.py runner/v096_unified_product_entry.py
       - name: Test user entry / old source-locked bridge offline (NO Native SimC)
         run: |
           python3 -m unittest -q \
+            tests.test_v055_simc_item_selection \
+            tests.test_v061_scenario_contract \
+            tests.test_v062_static_budget_bridge \
             tests.test_v089_ilvl_chmv_budget_selector \
             tests.test_v090_reference_total_native_candidate \
             tests.test_v091_weapon_oil_external_adapter \
