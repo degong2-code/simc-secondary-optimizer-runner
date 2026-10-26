@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER — 제품 설계 정책 보충 / 지속 개발 기준 (2026-10-25)
 
+> **HISTORICAL / SUPERSEDED — DO NOT TREAT AS CURRENT USER POLICY.** The following is a dated working document preserved for evidence. Its old v1.0/v1.2 precedence, O-outside-T or efficacy-gate statements are superseded by user's approved v1.3 `T=G+J+F+O`/95%-only design and 2026-10-26 target-level farming-goal clarification. The user's v1.4 Source replacement and Instructions are **prepared for manual UI application**, not asserted applied. Current product meaning and next P1: [CURRENT_PRODUCT_PURPOSE_AND_USER_ENTRY_20261026.md](./CURRENT_PRODUCT_PURPOSE_AND_USER_ENTRY_20261026.md). Moving development state: [CURRENT_PRODUCT_DEVELOPMENT_STATE.md](./CURRENT_PRODUCT_DEVELOPMENT_STATE.md).
+
 > **문서 신분:** 사용자 승인 발언에 근거한 정책 보충안을 개발 브랜치에 **기록**한 것. Project Sources의 `SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.0.md`를 수정하거나 v1.1 CANDIDATE 전체를 승인·승격한 것이 아니다. 공식 Project Instructions/Sources 적용은 MAIN 승인 계약에 따라 별도 수행·영수증이 필요하다.
 >
 > **사용 중인 대화는 그대로 진행한다.** 이 문서는 채팅 전환 요청이 아니라, 개발 중 계속 갱신하고 향후 어느 일반 채팅에서도 동일한 기준을 읽기 위한 지속 상태 문서다.
