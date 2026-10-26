@@ -151,7 +151,14 @@ def fresh_confirmation_judgment(pair,independent):
     need(type(pair) in (list,tuple) and len(pair)==2 and
          set(pair)==set(independent),"FRESH_CONFIRMATION_PAIR_REQUIRED")
     a,b=pair; r1,r2=independent[a],independent[b]
-    need(all(r.get("status")=="PASS_NATIVE_DPS_AND_RATING"
+    # Both legacy buffed-rating and validated static-c Native observations
+    # carry real DPS+SEM. The latter uses a projected B target only after
+    # v093 verifies the exact final T=B+fixed O Native evidence.
+    need(all(r.get("status") in ("PASS_NATIVE_DPS_AND_RATING",
+                      "PASS_NATIVE_DPS_AND_STATIC_CHMV_INPUT")
+             and (r.get("status")!="PASS_NATIVE_DPS_AND_STATIC_CHMV_INPUT"
+                  or (r.get("rating_semantics")=="STATIC_CHMV_C_V1"
+                      and r.get("static_rating_verified")==r.get("target")))
              for r in (r1,r2)),"CONFIRM_NOT_NATIVE_VALIDATED")
     diff=r1["dps_mean"]-r2["dps_mean"]
     half=1.9599639854*math.hypot(r1["dps_sem"],r2["dps_sem"])
