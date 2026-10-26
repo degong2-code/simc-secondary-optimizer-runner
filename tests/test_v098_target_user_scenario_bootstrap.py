@@ -13,7 +13,9 @@ def case(which,*,ilevel=334,final_T=None):
     options={"fury":("warrior","fury"),
              "frost":("mage","frost"),
              "retribution":("paladin","retribution"),
-             "beast_mastery":("hunter","beast_mastery")}
+             "beast_mastery":("hunter","beast_mastery"),
+             "subtlety":("rogue","subtlety"),
+             "elemental":("shaman","elemental")}
     key=options[which]
     filename=boot.ARCHETYPES[key][0]
     src=(boot.FIXTURES/filename).read_text(encoding="utf8")
@@ -30,11 +32,12 @@ def case(which,*,ilevel=334,final_T=None):
         "character":{"class":key[0],"spec":key[1],
                      "race":{"fury":"dwarf","frost":"human",
                              "retribution":"blood_elf",
-                             "beast_mastery":"troll"}[which],
+                             "beast_mastery":"troll",
+                             "subtlety":"dwarf","elemental":"tauren"}[which],
                      "talents":talents},
         "target":{"ilevel":ilevel,"final_T":final_T},
         "trinkets":trinkets,"special_items":[],"embellishments":[],
-        "oil_hands":["main_hand","off_hand"] if which=="fury"
+        "oil_hands":["main_hand","off_hand"] if which in ("fury","subtlety")
                     else ["main_hand"],
         "combat":{"targets":1,"duration_seconds":300,"raid_buffs":True}}
 
@@ -46,6 +49,76 @@ class UserTargetBootstrap(unittest.TestCase):
         binary=root/"dummy"
         binary.write_bytes(b"NOT_SIMC_EXECUTED")
         return boot.build(user,root/"generated",binary,"7bc10711b5"),root
+
+    def test_rogue_and_shaman_user_boot_produce_normalized_full_profiles(self):
+        for name,role,weapon_form,secondary in (
+            ("subtlety","attack","dual_one_hand",64),
+            ("elemental","spell","one_hand_shield",32)):
+            with self.subTest(spec=name):
+                user=case(name)
+                result,root=self.prepare(user)
+                self.assertEqual(result["native_calls"],0)
+                self.assertEqual(result["supported_archetypes_now"],6)
+                self.assertEqual(result["plan"]["item_slots"],16)
+                self.assertEqual(result["plan"]["base_B"],3150)
+                self.assertEqual(result["plan"]["final_T"],3150+secondary)
+                self.assertEqual(result["weapon_form"],weapon_form)
+                self.assertEqual(len(result["effective_four_tier_slots"]),4)
+                self.assertFalse(result["restored_tier_slots"])
+                cfg=json.loads((root/"generated"/"scenario.json").read_text())
+                self.assertEqual(cfg["character"]["role"],role)
+                self.assertEqual(len(cfg["equipment"]["tier"]),4)
+                self.assertEqual(len(cfg["equipment"]["trinkets"]),2)
+                self.assertEqual(cfg["equipment"]["special"],[])
+                p=(root/"generated"/"profile.simc").read_text()
+                reference=(boot.FIXTURES/boot.ARCHETYPES[
+                    (user["character"]["class"],user["character"]["spec"])][0]
+                    ).read_text("utf8")
+                self.assertEqual([x for x in p.splitlines()
+                                  if x.startswith("actions")],
+                                 [x for x in reference.splitlines()
+                                  if x.startswith("actions")])
+                self.assertNotIn("omitted_gear",p)
+                self.assertEqual(sum(x.startswith("main_hand=") for x in p.splitlines()),1)
+                self.assertEqual(sum(x.startswith("off_hand=") for x in p.splitlines()),1)
+                self.assertEqual(sum(",ilevel=334" in x for x in p.splitlines()),16)
+                self.assertFalse((root/"generated"/"simc_results").exists())
+
+    def test_rogue_and_shaman_crafted_replaces_tier_and_restores_fifth(self):
+        for name,fifth,fifth_id,crafted_id in (
+            ("subtlety","chest",271513,244572),
+            ("elemental","head",271483,244580)):
+            with self.subTest(spec=name):
+                user=case(name)
+                user["embellishments"]=[{
+                    "slot":"shoulders","item_id":crafted_id,
+                    "options":{"crafted_stats":"49/36",
+                               "embellishment":"arcanoweave_lining"}}]
+                result,root=self.prepare(user)
+                self.assertEqual(result["restored_tier_slots"],[fifth])
+                self.assertIn(fifth,result["effective_four_tier_slots"])
+                self.assertNotIn("shoulders",result["effective_four_tier_slots"])
+                self.assertEqual(result["plan"]["item_slots"],16)
+                cfg=json.loads((root/"generated"/"scenario.json").read_text())
+                self.assertEqual(len(cfg["equipment"]["tier"]),4)
+                self.assertEqual(next(x for x in cfg["equipment"]["tier"]
+                                      if x["slot"]==fifth)["item_id"],fifth_id)
+
+    def test_new_specs_target_level_manual_final_and_unknown_spec_block(self):
+        u=case("elemental",ilevel=321,final_T=3020)
+        out,_=self.prepare(u)
+        self.assertEqual((out["plan"]["base_B"],out["plan"]["final_T"]),
+                         (2980,3020))
+        u=case("subtlety",ilevel=321)
+        out,_=self.prepare(u)
+        self.assertEqual((out["plan"]["base_B"],out["plan"]["final_T"]),
+                         (2980,3044))
+        u["character"]["spec"]="outlaw"
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td);binary=root/"dummy";binary.write_bytes(b"NO_NATIVE")
+            with self.assertRaisesRegex(boot.UserScenarioBlocked,
+                                        "REPRESENTATIVE_ARCHETYPE_NOT_READY"):
+                boot.build(u,root/"output",binary,"7bc10711b5")
 
     def test_fury_target_334_user_without_full_equipment_or_simc_profile(self):
         result,root=self.prepare(case("fury"))
