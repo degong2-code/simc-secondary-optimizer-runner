@@ -177,6 +177,13 @@ def build(user,folder,binary,revision,static_cache_path=None,
         key,folder,ilvl,need)
     restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
         key,rows,groups,user,ilvl,need)
+    # 240967 requires four distinct ordinary Midnight gem colors for its
+    # crit-effectiveness bonus. These are real SimC gem IDs, not locked CHMV.
+    # Existing 240983 profiles and already-four-color source rows stay intact.
+    choice=user.get(CONSUME_FIELD) or {}
+    gem_choice=choice.get("diamond_id") or int(
+        rows["head"]["options"].get("gem_id","0"))
+    common.ensure_representative_gem_colors(rows,gem_choice,need)
     cfg["equipment"],fillers=common.physical_gear_groups(
         rows,groups,catalyst_origin_rows)
     cfg["character"].update({"race":ch["race"],"talents":ch["talents"]})
