@@ -17,6 +17,7 @@ import v083_paladin_single_2h_native as paladin
 import v084_frost_cloth_1h_frill_native as frost
 import v086_hunter_fixed_mail_representative as hunter
 import v104_shared_pinned_rogue_shaman_composer as first_use
+import v127_dps_source_metadata as metadata
 
 ARMOR_CLASSES={
     "cloth":frozenset(("mage","priest","warlock")),
@@ -25,20 +26,10 @@ ARMOR_CLASSES={
     "plate":frozenset(("deathknight","paladin","warrior"))}
 CLASS_ARMOR={cl:armor for armor,classes in ARMOR_CLASSES.items() for cl in classes}
 TIER_FIVE=("head","shoulders","chest","hands","legs")
-# Exact identity for the four source-backed class sets ONLY.
-# No unverified item identities for the other nine classes.
-CLASS_TIER_ITEMS={
-    "warrior":{"head":271456,"shoulders":271454,"chest":271459,
-               "hands":271457,"legs":271455},
-    "paladin":{"head":271465,"shoulders":271463,"chest":271468,
-               "hands":271466,"legs":271464},
-    "mage":{"head":271564,"shoulders":271562,"chest":271567,
-            "hands":271565,"legs":271563},
-    "hunter":{"head":271492,"shoulders":271490,"chest":271495,
-              "hands":271493,"legs":271491},
-    "rogue":dict(first_use.TIERS["rogue"]),
-    "shaman":dict(first_use.TIERS["shaman"])}
-# Slot topology, not a promise that any given class can wield every subtype.
+# v127 source-backed metadata supplies per-spec tier, F, fixture, weapon and
+# fifth ordinary selection. Legacy producers remain exact APL adapters.
+CLASS_TIER_ITEMS={entry.character_class:entry.tier_ids()
+                  for entry in metadata.SOURCE_BACKED}
 WEAPON_FORMS={
     "dual_two_hand":("main_hand","off_hand"),
     "dual_one_hand":("main_hand","off_hand"),
@@ -47,37 +38,58 @@ WEAPON_FORMS={
     "single_one_hand":("main_hand",),
     "single_two_hand":("main_hand",),
     "ranged":("main_hand",)}
+
+PRODUCERS={
+    "v082_fury":fury.source_profile,
+    "v083_retribution":paladin.source_profile,
+    "v084_frost":frost.source_profile,
+    "v086_fixed_mail":hunter.source_profile}
+
+def resolved_producer(entry):
+    if entry.producer_id=="v104_shared":
+        return first_use.producer(entry.key)
+    if entry.producer_id not in PRODUCERS:
+        raise metadata.SourceMetadataBlocked(
+            "UNRESOLVED_SOURCE_PRODUCER:"+entry.producer_id)
+    return PRODUCERS[entry.producer_id]
+
 ARCHETYPES={
-    ("warrior","fury"):("v082_upstream_mid2_warrior_fury_reference.simc",
-                        fury.source_profile,"dual_two_hand",fury.DECLARED_F),
-    ("mage","frost"):("v084_upstream_mid2_mage_frost_reference.simc",
-                      frost.source_profile,"one_hand_frill",frost.F_DECLARED),
-    ("paladin","retribution"):("v083_upstream_mid2_paladin_retribution_reference.simc",
-                               paladin.source_profile,"single_two_hand",
-                               paladin.DECLARED_F),
-    ("hunter","beast_mastery"):(
-        "v079_upstream_mid2_hunter_beast_mastery_reference.simc",
-        hunter.source_profile,"ranged",
-        {"crit_rating":0,"haste_rating":165,"mastery_rating":0,
-         "versatility_rating":0}),
-    ("rogue","subtlety"):(
-        first_use.PROFILES[("rogue","subtlety")]["filename"],
-        first_use.producer(("rogue","subtlety")),"dual_one_hand",
-        first_use.F_DECLARED),
-    ("shaman","elemental"):(
-        first_use.PROFILES[("shaman","elemental")]["filename"],
-        first_use.producer(("shaman","elemental")),"one_hand_shield",
-        first_use.F_DECLARED)}
+    entry.key:(entry.source_fixture,resolved_producer(entry),
+               entry.weapon_form,entry.flask_vector())
+    for entry in metadata.SOURCE_BACKED}
 FIXTURES=pathlib.Path(__file__).resolve().parents[1]/"integration_probes/fixtures"
-# Fifth item is class-specific; previous representative ordinary item is
-# source-specific (the v086 Hunter head differs from v079).
-FIFTH_TIER={
-    ("warrior","fury"):("legs",271455,271878),
-    ("paladin","retribution"):("legs",271464,271878),
-    ("mage","frost"):("head",271564,271874),
-    ("hunter","beast_mastery"):("head",271492,249317),
-    ("rogue","subtlety"):("chest",271513,251159),
-    ("shaman","elemental"):("head",271483,249317)}
+FIFTH_TIER={entry.key:entry.fifth_replacement()
+            for entry in metadata.SOURCE_BACKED}
+
+def validate_source_registry():
+    """Fail closed on changes to six prior source-pinned contracts."""
+    metadata.validate()
+    for entry in metadata.SOURCE_BACKED:
+        key=entry.key
+        if CLASS_ARMOR.get(key[0])!=entry.armor_family:
+            raise metadata.SourceMetadataBlocked(
+                "REGISTERED_ARMOR_FAMILY_DRIFT:"+"/".join(key))
+        if entry.producer_id=="v104_shared":
+            source=first_use.PROFILES[key]
+            if not (entry.source_fixture==source["filename"] and
+                    entry.source_git_blob==source["source_sha"] and
+                    entry.tier_ids()==first_use.TIERS[key[0]] and
+                    entry.fifth_ordinary==source["fifth"] and
+                    entry.flask_vector()==first_use.F_DECLARED):
+                raise metadata.SourceMetadataBlocked(
+                    "V104_LEGACY_PRODUCER_METADATA_DRIFT:"+"/".join(key))
+        else:
+            old_F={
+                "v082_fury":fury.DECLARED_F,
+                "v083_retribution":paladin.DECLARED_F,
+                "v084_frost":frost.F_DECLARED,
+                "v086_fixed_mail":{"crit_rating":0,"haste_rating":165,
+                                  "mastery_rating":0,"versatility_rating":0}
+            }[entry.producer_id]
+            if entry.flask_vector()!=old_F:
+                raise metadata.SourceMetadataBlocked(
+                    "REGISTERED_SOURCE_FLASK_F_DRIFT:"+"/".join(key))
+    return True
 
 def ordinary_armor_seed(family,slot,ilevel):
     """Explicitly source-backed ordinary candidate for a future class build.
@@ -168,6 +180,7 @@ def ensure_representative_gem_colors(rows,diamond_id,need):
 def source_backed_gear(key,folder,ilevel,need):
     """Factory APL is source-owned; ALL subsequent gear assembly is shared."""
     need(key in ARCHETYPES,"REPRESENTATIVE_ARCHETYPE_NOT_READY")
+    validate_source_registry()
     filename,producer,form,F=ARCHETYPES[key]
     need(form in WEAPON_FORMS,"WEAPON_FORM_NOT_MAPPED")
     template=(FIXTURES/filename).read_text(encoding="utf8")
