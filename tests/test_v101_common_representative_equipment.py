@@ -29,7 +29,7 @@ class RepresentativeCatalog(unittest.TestCase):
 
     def test_weapon_topologies_separate_from_class_identity(self):
         self.assertEqual(len(core.WEAPON_FORMS),7)
-        self.assertEqual(len(core.ARCHETYPES),6)
+        self.assertEqual(len(core.ARCHETYPES),7)
         self.assertEqual(set(core.WEAPON_FORMS["dual_two_hand"]),
                          {"main_hand","off_hand"})
         self.assertEqual(core.WEAPON_FORMS["ranged"],("main_hand",))
@@ -52,7 +52,7 @@ class RepresentativeCatalog(unittest.TestCase):
                                  {s:id_ for s,id_ in
                                   core.CLASS_TIER_ITEMS[key[0]].items()
                                   if s!=core.FIFTH_TIER[key][0]})
-                self.assertEqual(len(rows),16 if key[1] in ("fury","frost","subtlety","elemental") else 15)
+                self.assertEqual(len(rows),16 if len(core.WEAPON_FORMS[form])==2 else 15)
                 self.assertIn("actions=",base)
                 self.assertEqual(sum(F.values()),165)
                 self.assertTrue(all(r["ilevel"]==334 for r in rows.values()))
