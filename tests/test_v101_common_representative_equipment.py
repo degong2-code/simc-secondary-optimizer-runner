@@ -25,7 +25,7 @@ class RepresentativeCatalog(unittest.TestCase):
         self.assertEqual(core.CLASS_ARMOR["hunter"],"mail")
         # No unverified tier item IDs generated for other classes.
         self.assertEqual(set(core.CLASS_TIER_ITEMS),
-                         set(core.CLASS_ARMOR)-{"evoker"})
+                         set(core.CLASS_ARMOR)-{"evoker","druid"})
 
     def test_weapon_topologies_separate_from_class_identity(self):
         self.assertEqual(len(core.WEAPON_FORMS),7)

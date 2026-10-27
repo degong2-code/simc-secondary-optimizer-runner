@@ -22,7 +22,7 @@ class SourceRegistry(unittest.TestCase):
         self.assertEqual(len(data.BY_SPEC),7)
         self.assertEqual(set(data.BY_SPEC),set(common.ARCHETYPES)-set(common.GENERIC_PENDING))
         self.assertEqual(set(common.CLASS_TIER_ITEMS),
-                         set(common.CLASS_ARMOR)-{"evoker"})
+                         set(common.CLASS_ARMOR)-{"evoker","druid"})
         for record in data.SOURCE_BACKED:
             with self.subTest(key=record.key):
                 full=ROOT/"integration_probes"/"fixtures"/record.source_fixture
