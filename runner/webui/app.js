@@ -283,6 +283,7 @@ function renderProgress(data) {
   $("stage-text").textContent=status+" · Native 누적 "+(p.native_attempts||0)+
                        " · 캐시 "+(p.cache_hits||0);
   $("run-label").textContent=data.active?"진행 중":
+    worker==="BLOCKED_OR_PARTIAL"?"실행 차단":
     data.result_ready&&worker.startsWith("PASS")?"완료":
     data.cancel_requested?"취소 요청":"대기";
   buttonState(Boolean(data.active),Boolean(data.result_ready));
