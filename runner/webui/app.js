@@ -68,10 +68,9 @@ function fillDefault(item) {
   $("oil_main").checked=item.oil_hands.includes("main_hand");
   $("oil_off").checked=item.oil_hands.includes("off_hand");
   for (const id of ["food","potion","augmentation","diamond","omnium"]) $(id).selectedIndex=0;
-  // Never carry other specialization's optional equipment into a new plan.
-  for (const row of document.querySelectorAll(".gear-row")) {
-    for (const input of row.querySelectorAll("input,select")) input.value="";
-  }
+  // Reset optional slots on specialization changes, including hidden extra rows.
+  fillGearRows("special-rows",[]);
+  fillGearRows("crafted-rows",[]);
 }
 function gearInputs(nodeId, config) {
   const parent=$(nodeId);
@@ -116,6 +115,52 @@ function gearInputs(nodeId, config) {
     group.appendChild(add);
   }
   parent.appendChild(group);
+}
+function fillGearRows(nodeId, entries) {
+  const group=$(nodeId);
+  const rows=Array.from(group.querySelectorAll(".gear-row"));
+  if(entries.length>rows.length)throw Error("SESSION_GEAR_ROWS_OUT_OF_RANGE");
+  for(const [index,row] of rows.entries()) {
+    const entry=entries[index]||null;
+    row.hidden=nodeId==="special-rows"&&index>=Math.max(2,entries.length);
+    for(const input of row.querySelectorAll("[data-field]")) {
+      const name=input.dataset.field;
+      input.value=!entry?"":name==="slot"?entry.slot:
+        name==="item_id"?String(entry.item_id):
+        String(entry.options?.[name]??"");
+    }
+  }
+  const add=group.querySelector(".gear-group > button");
+  if(add)add.disabled=!rows.some(row=>row.hidden);
+}
+function fillSessionInputs(payload) {
+  const u=payload.user,c=u.character,t=u.target,b=u.combat;
+  const spec=c.class+"/"+c.spec;
+  if(!state.defaults.some(item=>item.class+"/"+item.spec===spec))
+    throw Error("SESSION_SPEC_NOT_SUPPORTED");
+  $("spec").value=spec;
+  $("race").value=c.race;
+  $("talents").value=c.talents;
+  $("ilevel").value=t.ilevel;
+  $("final_T").value=t.final_T??"";
+  $("trinket1").value=u.trinkets[0].item_id;
+  $("trinket2").value=u.trinkets[1].item_id;
+  $("targets").value=b.targets;
+  $("duration").value=b.duration_seconds;
+  $("raid_buffs").checked=b.raid_buffs;
+  $("oil_main").checked=u.oil_hands.includes("main_hand");
+  $("oil_off").checked=u.oil_hands.includes("off_hand");
+  const choices=u.consumable_choices||{};
+  for(const key of ["food","potion","augmentation","omnium"])
+    $(key).value=choices[key==="omnium"?"omnium_talents":key]??"source_default";
+  $("diamond").value=String(choices.diamond_id??0);
+  fillGearRows("special-rows",u.special_items||[]);
+  fillGearRows("crafted-rows",u.embellishments||[]);
+  // Recover the exact local inputs from this machine's saved session only.
+  // No talent strings or OS file paths are stored in browser localStorage.
+  $("binary").value=payload.binary;
+  $("revision").value=payload.revision;
+  $("static_cache").value=payload.static_cache??"";
 }
 function selectedGear(nodeId, group) {
   const result=[];
@@ -318,14 +363,17 @@ function beginPolling() {
 async function restore(id) {
   if(!/^[a-f0-9]{20}$/.test(id))
     throw Error("세션 ID는 20자리 해시여야 합니다.");
-  // Check server existence/result BEFORE saving the ID or showing success.
-  const snapshot=await readSession(id);
+  // Check existence, result and stored inputs BEFORE marking success.
+  const [snapshot,inputs]=await Promise.all([
+    readSession(id),api("/api/v1/sessions/"+id+"/inputs")
+  ]);
+  fillSessionInputs(inputs);
   markSession(id);
   state.pollFailures=0;state.nextPollAt=0;
   $("filled-result").hidden=true;$("empty-result").hidden=false;
   renderProgress(snapshot.progress);
   if(snapshot.result)renderResult(snapshot.result);
-  setNotice("기존 세션 조회 성공 · "+id+" · 새 Native 계산 0회");
+  setNotice("기존 세션·입력 복원 성공 · "+id+" · 새 Native 계산 0회");
 }
 function installOptions(options) {
   for(const name of ["food","potion","augmentation"]){
