@@ -1,6 +1,6 @@
 """v122 common profile output for ALL connected DPS archetypes; offline."""
 from __future__ import annotations
-import pathlib,sys,unittest
+import pathlib,sys,tempfile,unittest
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"runner"))
 import v063_numeric_injection as numeric
@@ -30,6 +30,21 @@ class CommonProfileFormat(unittest.TestCase):
         numeric.input_parts(modern)
         self.assertEqual(common.finalize(modern,legacy=False),modern)
         self.assertEqual(common.finalize(old,legacy=True),old)
+
+    def test_replay_detection_distinguishes_v122_from_legacy_saved_profiles(self):
+        with tempfile.TemporaryDirectory() as td:
+            path=pathlib.Path(td)/"profile.simc"
+            self.assertFalse(common.existing_profile_uses_legacy_format(path))
+            path.write_text(SAMPLE,encoding="utf8")
+            self.assertTrue(common.existing_profile_uses_legacy_format(path))
+            path.write_text(SAMPLE+"json2=/old/legacy/native.json\\n",
+                            encoding="utf8")
+            self.assertTrue(common.existing_profile_uses_legacy_format(path))
+            modern=common.finalize(SAMPLE,legacy=False)
+            path.write_text(modern,encoding="utf8")
+            self.assertFalse(common.existing_profile_uses_legacy_format(path))
+            # Second build must still choose the v122 output format.
+            self.assertEqual(common.finalize(SAMPLE,legacy=False),modern)
 
     def test_sorts_equipment_by_same_slot_order_for_any_specialization(self):
         rows={slot:{"slot":slot,"item_id":i,"ilevel":334,"options":{}}
