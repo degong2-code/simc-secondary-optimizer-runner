@@ -48,6 +48,19 @@ def synthetic_completed_cache(folder):
         (sub/"native_receipt.json").write_text(json.dumps({"fake_case":k}))
 
 class UserSessionControls(unittest.TestCase):
+    def setUp(self):
+        # The real Windows worker opens a successful result folder for users.
+        # Offline fixtures live under TemporaryDirectory and disappear at
+        # tearDown: letting Explorer open them races with cleanup and raises
+        # "Location is not available" dialogs despite an OK unittest run.
+        # Mock only the external GUI side effect; exercise the real worker,
+        # result, cache, state and failure branches without a Native call.
+        self.mock_folder_open=None
+        if ux.os.name=="nt":
+            patch=mock.patch.object(ux.os,"startfile")
+            self.mock_folder_open=patch.start()
+            self.addCleanup(patch.stop)
+
     def fixture(self):
         td=tempfile.TemporaryDirectory();self.addCleanup(td.cleanup)
         root=pathlib.Path(td.name);binary=root/"simc.fake"
@@ -148,6 +161,9 @@ class UserSessionControls(unittest.TestCase):
             self.assertEqual(ux.worker(folder,binary,"7bc10711b5",
                                        cache_only=True),0)
             self.assertEqual(mocked.call_count,2)
+        if self.mock_folder_open is not None:
+            self.assertEqual(self.mock_folder_open.call_count,2)
+            self.mock_folder_open.assert_any_call(str(folder))
         p=ux.paths(folder)
         self.assertEqual(json.loads(p["final"].read_text())
                          ["cache_hits_this_run"],6)
