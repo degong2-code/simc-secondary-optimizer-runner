@@ -120,13 +120,17 @@ class Mid2TargetDraft(unittest.TestCase):
     def test_feral_candidate_fails_if_source_item_or_socket_layout_drifts(self):
         feral=source.validate_source("druid/feral")["source"]
         ids,mods=fields.equipment(feral,preview.item.SLOTS,
-                                  need=preview.need,include_gem_enchant=True)
+                                  need=preview.need,include_gem_enchant=True,
+                                  duplicate_prefix="V133_SOURCE_DUPLICATE_SLOT:",
+                                  missing_id_prefix="V133_SOURCE_ITEM_ID_MISSING:")
         with self.assertRaisesRegex(preview.PreviewBlocked,
                                     "V133_FERAL_SOCKET_REFERENCE_ITEM_DRIFT"):
             preview.feral_candidate_sockets("druid/feral",
                                             dict(ids,neck=1),mods)
         ids,mods=fields.equipment(feral,preview.item.SLOTS,
-                                  need=preview.need,include_gem_enchant=True)
+                                  need=preview.need,include_gem_enchant=True,
+                                  duplicate_prefix="V133_SOURCE_DUPLICATE_SLOT:",
+                                  missing_id_prefix="V133_SOURCE_ITEM_ID_MISSING:")
         with self.assertRaisesRegex(preview.PreviewBlocked,
                                     "V133_FERAL_ORIGINAL_SOCKET_LAYOUT_DRIFT"):
             mods["head"]["gem_id"]="240967"
