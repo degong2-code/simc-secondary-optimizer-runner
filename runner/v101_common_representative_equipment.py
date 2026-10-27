@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""v101 shared representative-equipment assembly for existing source-backed profiles.
+"""Shared source-backed representative-equipment assembly.
 
-Four armor-family mapping + weapon-slot forms + CLASS-tier item IDs are
-separate from per-spec SimC APL/profile producers. The four existing producers
-and the two v104 shared fixtures are the six source-backed input cases. No gear catalog, effect
-model, rebalancing engine, source-profile rewrite, or Native SimC calls.
+v127 owns declarative six-specialization source, tier, weapon, F and fifth-item
+metadata. The v082/v083/v084/v086/v104 producers remain immutable source/APL
+adapters while all downstream gear, CHMV and Native execution logic is shared.
+No seasonal equipment DB, proc engine, or general 27-spec readiness claim.
 """
 from __future__ import annotations
 import copy,pathlib
@@ -94,7 +94,7 @@ def validate_source_registry():
 def ordinary_armor_seed(family,slot,ilevel):
     """Explicitly source-backed ordinary candidate for a future class build.
 
-    The returned row is NOT automatically injected into current four already
+    The returned row is NOT automatically injected into the six already
     source-validated archetypes; missing ordinary family slots fail closed.
     """
     ordinary_pool.verify_pool()
