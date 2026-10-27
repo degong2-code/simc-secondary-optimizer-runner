@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Shared source-backed representative-equipment assembly.
 
-v127 owns declarative six-specialization source, tier, weapon, F and fifth-item
+v127 owns declarative specialization source, tier, weapon, F and fifth-item
 metadata. The v082/v083/v084/v086/v104 producers remain immutable source/APL
 adapters while all downstream gear, CHMV and Native execution logic is shared.
 No seasonal equipment DB, proc engine, or general 27-spec readiness claim.
