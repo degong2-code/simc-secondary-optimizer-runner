@@ -66,6 +66,13 @@ def prepare(bundle,binary_sha,revision,scout_iterations=None,confirm_iterations=
         "identity":bound,"bundle":bundle,"native_calls":0,
         "original_product_v015_v016_fully_integrated":False}
 
+def feasible_budget(context,flask_vector):
+    """Only search constraints change: B+O must cover F on every stat."""
+    prepared=context["bundle"]["prepared"]
+    return policy.budget_with_fixed_components(
+        prepared["scenario"],prepared["static_budget"],
+        flask_vector,context["identity"]["oil_vector"])
+
 def request(context,base_target,flask_vector,json2_path,phase="scout"):
     """v091 owns request, including oil selection and final static T."""
     need(context.get("schema")==SCHEMA and
@@ -74,6 +81,11 @@ def request(context,base_target,flask_vector,json2_path,phase="scout"):
     bound=context["identity"]
     need(phase in ("seed","scout","confirm"),"PHASE_IDENTITY_INVALID")
     iterations=bound["confirm_iterations"] if phase=="confirm" else bound["scout_iterations"]
+    normalized=context["bundle"]["prepared"]["scenario"]
+    feasible=feasible_budget(context,flask_vector)
+    B,lo,hi=policy.bounds(normalized,feasible)
+    need(policy.eligible(policy.key(base_target),B,lo,hi),
+         "BASE_TARGET_BELOW_FIXED_COMPONENT_FLOOR")
     req=oilpath.propose(context["bundle"],base_target,flask_vector,
          bound["binary_sha256"],bound["revision"],iterations,json2_path)
     need(req["v092_base_B"]==bound["base_B"]
@@ -131,12 +143,14 @@ def project_native_for_v065(req,native_observation):
     projected["v093_full_native_json_sha256"]=obs["native_json_sha256"]
     return projected
 
-def start_scout(context,anchors,step=100,scout_max=1):
+def start_scout(context,anchors,step=100,scout_max=1,flask_vector=None):
     need(type(anchors) is list and len(anchors)>=1,
          "NATIVE_ANCHORS_REQUIRED")
     bound=context["identity"]
+    feasible=(feasible_budget(context,flask_vector) if flask_vector is not None
+              else context["bundle"]["prepared"]["static_budget"])
     state=policy.initial_state(context["bundle"]["prepared"]["scenario"],
-         context["bundle"]["prepared"]["static_budget"],anchors,
+         feasible,anchors,
          step=step,scout_max=scout_max,confirmation_runs=2)
     need(state["official_total"]==bound["base_B"],
          "SCHEDULER_MUST_USE_BASE_B")
@@ -149,7 +163,7 @@ def next_scout(context,state,flask_vector,json2_path):
          "SCOUT_STATE_IDENTITY_OR_CAP")
     B,lower,upper=policy.bounds(
          context["bundle"]["prepared"]["scenario"],
-         context["bundle"]["prepared"]["static_budget"])
+         feasible_budget(context,flask_vector))
     rows=policy.observations_by_vector(state["observations"],B,lower,upper)
     anchor,candidate,hint=policy.choose_next(rows,state["step"],B,lower,upper)
     chosen=policy.to_target(candidate)
@@ -172,7 +186,8 @@ def confirmation_plan(context,state,flask_vector,outdir):
     need(state["completed_new_scouts"]==state["scout_max"],
          "SCOUTS_NOT_COMPLETE")
     prepared=context["bundle"]["prepared"]
-    total,low,high=policy.bounds(prepared["scenario"],prepared["static_budget"])
+    total,low,high=policy.bounds(
+        prepared["scenario"],feasible_budget(context,flask_vector))
     rows=policy.observations_by_vector(state["observations"],total,low,high)
     pair=policy.confirmation_pair(rows,total,low,high)
     requests=[request(context,policy.to_target(candidate),flask_vector,
