@@ -1,0 +1,42 @@
+name: v132 17 Official MID2 DPS Sources Offline Audit (NO Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/v132_mid2_sources_batch_offline.yml
+      - runner/v132_dps_source_batch_smoke.py
+      - tests/test_v132_dps_source_batch_smoke.py
+      - 'integration_probes/fixtures/v132_MID2_*.simc'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pinned-mid2-source-audit:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            python: '3.12'
+          - os: windows-2022
+            python: '3.14'
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 8
+    steps:
+      - name: Preserve exact official LF source bytes on Windows
+        shell: bash
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Compile only batch source checker
+        shell: bash
+        run: python -m py_compile runner/v132_dps_source_batch_smoke.py tests/test_v132_dps_source_batch_smoke.py
+      - name: Verify all 17 official source fixture blobs and resumable one-native mock
+        shell: bash
+        run: python -m unittest -q tests.test_v132_dps_source_batch_smoke
