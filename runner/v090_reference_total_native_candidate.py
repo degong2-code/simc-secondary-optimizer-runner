@@ -119,8 +119,14 @@ def prepare(selection, fillers, native_cache, reference):
         "native_calls":0,"original_product_integrated":False}
 
 def propose(prepared,reference,target,declared_F_vector,binary_sha,revision,
-            iterations,output_json2_path):
-    """One offline candidate proposal; existing v064 JSON2 ingest owns DPS/SEM."""
+            iterations,output_json2_path,*,oil_precredit=None):
+    """One offline candidate proposal; existing v064 JSON2 ingest owns DPS/SEM.
+
+    Only the oil-inclusive adapter may opt in to a precredited intermediate
+    request when B < F on a stat but B + fixed O >= F. This prevents creating
+    an impossible negative temporary gear override; actual final input is
+    still validated by the same strict v063 renderer and v092 bridge.
+    """
     need(prepared.get("schema")==SCHEMA and
          prepared.get("status")=="READY_TO_PROPOSE_REFERENCE_STATIC_NATIVE_CANDIDATE",
          "REFERENCE_BUDGET_NOT_PREPARED")
@@ -147,8 +153,19 @@ def propose(prepared,reference,target,declared_F_vector,binary_sha,revision,
          normalized["scenario"]["runtime"]["confirm_iterations"],
          "ITERATIONS_OUTSIDE_SCENARIO_BOUNDS")
     binding=port.verify_profile_binding(normalized,budget,reference)
+    precredit=None
+    render_target=target
+    if oil_precredit is not None:
+        precredit=scenario.vector(oil_precredit,"EXACT_FIXED_O_PRE_CREDIT")
+        need(precredit==normalized["budget"]["external_temporary_rating"]
+             and any(target[k]<declared_F_vector[k] for k in scenario.STATS),
+             "OIL_PRECREDIT_ONLY_WHEN_BASE_TARGET_BELOW_F")
+        render_target={k:target[k]+precredit[k] for k in scenario.STATS}
+        need(all(render_target[k]>=declared_F_vector[k]
+                 for k in scenario.STATS),
+             "OIL_PRECREDIT_FINAL_TARGET_BELOW_F")
     generated=numeric.render_static_chmv_candidate(
-        reference,target,declared_F_vector,output_json2_path,iterations)
+        reference,render_target,declared_F_vector,output_json2_path,iterations)
     key=items.digest({"schema":SCHEMA,
         "rating_semantics":"STATIC_CHMV_C_V1",
         "scenario":normalized["scenario_digest"],
@@ -162,7 +179,7 @@ def propose(prepared,reference,target,declared_F_vector,binary_sha,revision,
         "binary_sha256":binary_sha,"revision":revision,
         "iterations":iterations,
         "threads":normalized["scenario"]["runtime"]["threads"]})
-    return {"schema":port.SCHEMA,"status":"PROPOSED_STATIC_C_NO_NATIVE",
+    result={"schema":port.SCHEMA,"status":"PROPOSED_STATIC_C_NO_NATIVE",
         "v090_reference_budget":prepared["reference_source"]==selected.REFERENCE_MODE,
         "v090_schema":SCHEMA,
         "rating_semantics":"STATIC_CHMV_C_V1",
@@ -183,3 +200,6 @@ def propose(prepared,reference,target,declared_F_vector,binary_sha,revision,
         "external_oil_only":normalized["budget"]["external_temporary_rating"],
         "buffed_rating_exact_target_required":False,
         "global_optimum_proven":False}
+    if precredit is not None:
+        result["v090_oil_precredit"]=dict(precredit)
+    return result
