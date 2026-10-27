@@ -80,7 +80,7 @@ class UserTargetBootstrap(unittest.TestCase):
 
     def test_v104_240967_plan_generates_json2_native_request_without_mutating_seal(self):
         # Integrated source -> seeded v093 Native INPUT only, no SimC execution.
-        # Rogue and Elemental share the original v104 json2-less profile.
+        # Source v104 lacked json2; all NEW sessions now use v122 canonical output.
         for spec in ("subtlety","elemental"):
             with self.subTest(spec=spec),tempfile.TemporaryDirectory() as td:
                 root=pathlib.Path(td)
