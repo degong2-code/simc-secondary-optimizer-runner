@@ -105,6 +105,21 @@ class UserTargetBootstrap(unittest.TestCase):
             self.assertIn("gem_id=240967",profile)
             self.assertIn("main_hand=selected_268209",profile)
             self.assertIn("off_hand=selected_275070",profile)
+            import v101_common_representative_equipment as common
+            ordinary=[]
+            for line in profile.splitlines():
+                slot,sep,value=line.partition("=")
+                if sep and slot in numeric.STATS:
+                    continue
+                if sep and slot in boot.item_mod.SLOTS and slot!="head":
+                    for token in value.split(","):
+                        if token.startswith("gem_id="):
+                            ordinary.extend(int(x) for x in
+                                            token.partition("=")[2].split("/"))
+            self.assertEqual(len(ordinary),6)
+            self.assertEqual(set(common.SOURCE_GEM_COLOR[x]
+                                 for x in ordinary),
+                             set(common.FOUR_COLOR_GEMS))
             self.assertEqual(sum(1 for line in profile.splitlines()
                                  if line.startswith("json2=")),1)
             numeric.input_parts(profile)
