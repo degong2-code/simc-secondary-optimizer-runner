@@ -16,6 +16,7 @@ import v101_common_representative_equipment as common
 import v091_weapon_oil_external_adapter as oil_mod
 import v096_unified_product_entry as entry
 import v108_native_consumable_inputs as consumer
+import v122_common_profile_format as profile_format
 
 SCHEMA="v098_target_ilevel_user_scenario_v1"
 FIELDS={"schema","character","target","trinkets","special_items",
@@ -206,9 +207,11 @@ def build(user,folder,binary,revision,static_cache_path=None,
     gem_choice=choice.get("diamond_id") or int(
         rows["head"]["options"].get("gem_id","0"))
     common.ensure_representative_gem_colors(rows,gem_choice,need)
-    # A v104 plan made by an older process may have arbitrary slot-line order.
-    # Honor only that existing order; byte-equality and SHA gates stay strict.
+    # New plans use ONE common slot order for all archetypes. Existing sealed
+    # sessions replay the old order exactly, avoiding a forced recalculation.
+    legacy=(folder/"profile.simc").is_file()
     rows=preserve_existing_v104_gear_order(key,rows,folder)
+    rows=profile_format.order_rows(rows,legacy=legacy)
     cfg["equipment"],fillers=common.physical_gear_groups(
         rows,groups,catalyst_origin_rows)
     cfg["character"].update({"race":ch["race"],"talents":ch["talents"]})
@@ -228,6 +231,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
     selected=consumer.apply(profile,cfg,rows,
                             user.get(CONSUME_FIELD))
     profile=consumer.set_head_gem(selected["profile"],rows["head"])
+    # This runtime serializer is now shared by all current archetypes;
+    # per-spec producer APL/items are data inputs, never output-format forks.
+    profile=profile_format.finalize(profile,legacy=legacy)
     cfg=selected["scenario"]
     cfg["equipment"],fillers=common.physical_gear_groups(
         rows,groups,catalyst_origin_rows)
