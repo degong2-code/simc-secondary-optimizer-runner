@@ -99,7 +99,7 @@ class RealHTTPPageOffline(unittest.TestCase):
 
     def test_missing_session_is_not_saved_as_verified_and_polling_backs_off(self):
         js=self.client.get("/assets/app.js").text
-        self.assertIn('const snapshot=await readSession(id);\\n  markSession(id);'.replace('\\n', '\\n'),js)
+        self.assertIn('const snapshot=await readSession(id);\\n  markSession(id);',js)
         self.assertIn('if(err.message==="SESSION_NOT_FOUND")',js)
         self.assertIn('localStorage.removeItem("simc_secondary_session_id")',js)
         self.assertIn('return; // Stop polling this missing ID.',js)
