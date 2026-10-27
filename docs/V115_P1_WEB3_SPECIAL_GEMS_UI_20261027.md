@@ -10,7 +10,7 @@
 
 ## 변경 범위
 
-- `runner/webui/app.js`: 특수효과 장비 2개는 기본 표시, 추가 6행은 필요한 경우 버튼으로 순차 개방; 전체 최대 8개. 장식 최대 2개. HTML DOM API로 구성하고 실행/재개 호출 경로는 불변.
+- `runner/webui/app.js` 및 `runner/webui/index.html`: 특수효과 장비 2개는 기본 표시, 추가 6행은 필요한 경우 버튼으로 순차 개방; 전체 최대 8개라고 실제 화면에 표시. 장식 최대 2개. HTML DOM API로 구성하고 실행/재개 호출 경로는 불변.
 - `runner/v101_common_representative_equipment.py`: 기존 장비의 `gem_id`가 있으면 선택 특수/제작장비의 동일 슬롯에 기본 상속. `240967`일 때 일반 보석 6개의 실제 `gem_id` 슬롯을 열거해 누락된 보석 색상만 기존 관측 고품질 (+16/+7) 4색 ID에서 보충. 이미 4색이면 프로필 무변경; `240983`와 같은 색상 조건 없는 다이아몬드는 원본 구성 유지. 물리 슬롯에 실제 소켓을 확보할 수 없는 경우 `REPRESENTATIVE_SIX_ORDINARY_GEMS_REQUIRED`로 Native 이전에 차단.
 - `runner/v098_target_user_scenario_bootstrap.py`: 변경 보석 구성을 **Native 실행 프로필 생성 전에** 확정해 프로필 해시·조건 identity가 추적되도록 함.
 - `tests/test_v101_common_representative_equipment.py`: 기존 6개 소스 조합 4색/6보석, 240983 비변경, 특수장비 교체 슬롯 보존 검증 추가.
