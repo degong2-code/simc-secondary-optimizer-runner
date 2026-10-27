@@ -8,6 +8,16 @@ on:
       - runner/v102_ordinary_armor_seed_pool.py
       - runner/v103_source_observed_weapon_types.py
       - runner/v104_shared_pinned_rogue_shaman_composer.py
+      - runner/v127_dps_source_metadata.py
+      - runner/v128_common_source_profile_emitter.py
+      - runner/v129_common_source_fields.py
+      - runner/v130_source_identity_contract.py
+      - integration_probes/fixtures/v131_upstream_mid2_rogue_outlaw_reference.simc
+      - tests/test_v127_dps_source_metadata.py
+      - tests/test_v128_common_source_profile_emitter.py
+      - tests/test_v129_common_source_fields.py
+      - tests/test_v130_source_identity_contract.py
+      - tests/test_v131_rogue_outlaw_source_candidate.py
       - integration_probes/v105_paladin_user_e2e.py
       - tests/test_v105_paladin_user_e2e_contract.py
       - runner/v106_user_session_controller.py
@@ -70,6 +80,11 @@ jobs:
             tests.test_v102_ordinary_armor_seed_pool \
             tests.test_v103_source_observed_weapon_types \
             tests.test_v104_shared_pinned_rogue_shaman_composer \
+            tests.test_v127_dps_source_metadata \
+            tests.test_v128_common_source_profile_emitter \
+            tests.test_v129_common_source_fields \
+            tests.test_v130_source_identity_contract \
+            tests.test_v131_rogue_outlaw_source_candidate \
             tests.test_v105_paladin_user_e2e_contract \
             tests.test_v106_user_session_controller \
             tests.test_v107_optional_equipment_inputs \
