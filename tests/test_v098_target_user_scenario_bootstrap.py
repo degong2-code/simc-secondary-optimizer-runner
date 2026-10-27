@@ -70,6 +70,8 @@ class UserTargetBootstrap(unittest.TestCase):
                 self.assertEqual(sum(l.startswith("json2=") for l in lines),1)
                 self.assertEqual(sum(l.startswith("iterations=") for l in lines),1)
                 self.assertIn("json2="+fmt.JSON2_PLACEHOLDER,source)
+                self.assertFalse(fmt.existing_profile_uses_legacy_format(
+                    folder/"profile.simc"))
                 self.assertEqual(len(slot_order),output["plan"]["item_slots"])
                 num.input_parts(source)
                 self.assertFalse((folder/"simc_results").exists())
