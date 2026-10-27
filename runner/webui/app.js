@@ -14,6 +14,7 @@ const specLabels = {
   "mage/frost":"마법사 · 냉기",
   "hunter/beast_mastery":"사냥꾼 · 야수",
   "rogue/subtlety":"도적 · 잠행",
+  "rogue/outlaw":"도적 · 무법",
   "shaman/elemental":"주술사 · 정기"
 };
 const statOptions = ["head","neck","shoulders","back","chest","wrists","hands",
