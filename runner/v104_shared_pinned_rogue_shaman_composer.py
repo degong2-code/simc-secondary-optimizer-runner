@@ -50,7 +50,7 @@ PROFILES={
         "race":"dwarf","role":"attack",
         "tier":("head","shoulders","hands","legs"),
         "fifth":("chest",251159),
-        "replace":{"back":268253,"wrists":268240},
+        "replace":{"chest":251159,"back":268253,"wrists":268240},
         "source_socket_on_ordinary":{"wrists":"240890"},
         "gem":"240967","F":"crit_rating"},
     ("shaman","elemental"):{
