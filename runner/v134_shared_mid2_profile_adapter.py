@@ -13,7 +13,6 @@ import re
 
 import v055_simc_item_selection as items
 import v061_scenario_contract as scenario
-import v101_common_representative_equipment as legacy
 import v132_dps_source_batch_smoke as pins
 import v133_mid2_target_representative_preview as draft
 
