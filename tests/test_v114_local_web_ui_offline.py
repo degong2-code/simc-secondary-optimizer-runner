@@ -76,6 +76,14 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('window.confirm("이 PC에서 실제 SimC',js.text)
         self.assertEqual(self.client.get("/assets/missing.js").status_code,403)
 
+    def test_special_effect_gear_has_eight_dynamic_rows_not_two(self):
+        js=self.client.get("/assets/app.js").text
+        self.assertIn('const limit=isSpecial?8:2;',js)
+        self.assertIn('add.textContent="+ 특수효과 장비 추가"',js)
+        self.assertIn('if(isSpecial&&i>=2)row.hidden=true',js)
+        self.assertIn('group==="special_items"?8:2',js)
+        self.assertIn('for (let i=0;i<limit;i++)',js)
+
     def test_source_observed_options_are_official_contract_not_user_invented(self):
         self.assertEqual(self.client.get("/api/v1/options").status_code,403)
         r=self.client.get("/api/v1/options",headers=self.head)
