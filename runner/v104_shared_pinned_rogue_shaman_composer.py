@@ -19,7 +19,9 @@ import v102_ordinary_armor_seed_pool as ordinary
 import v103_source_observed_weapon_types as weapons
 
 STATS=scenario.STATS
-ALL_SLOTS=tuple(item_mod.SLOTS)
+# A set has process-specific iteration order under Python hash randomization.
+# v106 replays a plan in a different Python process; byte-stable gear rows are mandatory.
+ALL_SLOTS=tuple(sorted(item_mod.SLOTS))
 TIER_ORDER=("head","shoulders","chest","hands","legs")
 # Source class IDs are independently validated by the existing original
 # fixture, original v068 Rogue class-tier contract and v078 Shaman fixture.
