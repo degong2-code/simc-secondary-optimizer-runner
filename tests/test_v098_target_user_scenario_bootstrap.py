@@ -287,7 +287,7 @@ class UserTargetBootstrap(unittest.TestCase):
                 user=case(name)
                 result,root=self.prepare(user)
                 self.assertEqual(result["native_calls"],0)
-                self.assertEqual(result["supported_archetypes_now"],7)
+                self.assertEqual(result["supported_archetypes_now"],23)
                 self.assertEqual(result["plan"]["item_slots"],16)
                 self.assertEqual(result["plan"]["base_B"],3150)
                 self.assertEqual(result["plan"]["final_T"],3150+secondary)
@@ -398,9 +398,10 @@ class UserTargetBootstrap(unittest.TestCase):
         out,_=self.prepare(u)
         self.assertEqual((out["plan"]["base_B"],out["plan"]["final_T"]),
                          (2980,3044))
-        # Outlaw now has an exact pinned source (v131); Assassination
-        # remains unsupported until it receives the same source evidence.
-        u["character"]["spec"]="assassination"
+        # Assassination now enters through v134; Feral has no validated
+        # source-backed primary diamond and remains outside the user UI.
+        u["character"]["class"]="druid"
+        u["character"]["spec"]="feral"
         with tempfile.TemporaryDirectory() as td:
             root=pathlib.Path(td);binary=root/"dummy";binary.write_bytes(b"NO_NATIVE")
             with self.assertRaisesRegex(boot.UserScenarioBlocked,
