@@ -7,6 +7,7 @@ optimizer, no talent/item/APL mechanics. Existing original v082 defaults stay.
 """
 from __future__ import annotations
 import v128_common_source_profile_emitter as common_emitter
+import v129_common_source_fields as common_fields
 import argparse,hashlib,pathlib,re,sys
 import v055_simc_item_selection as items
 import v061_scenario_contract as scenario
@@ -45,23 +46,16 @@ def source_profile(original,folder):
     need(git_blob(fury_bytes)==FURY_GIT_BLOB and
          "legs=chausses_of_unbound_rancor,id=271878," in fury_bytes.decode("utf8"),
          "NON_TIER_PLATE_LEGS_SOURCE_PROVENANCE_CHANGED")
-    initial_actions=[line for line in original.splitlines()
-                     if line.startswith("actions")]
+    initial_actions=common_fields.matching_lines(original,"actions")
     need(len(initial_actions)>=35 and
          sum(x.startswith("actions=") for x in initial_actions)==1,
          "ORIGINAL_PALADIN_APL_MISSING")
-    talents=[x.partition("=")[2] for x in original.splitlines()
-             if x.startswith("talents=")]
+    talents=[x.partition("=")[2] for x in
+             common_fields.matching_lines(original,"talents=")]
     need(len(talents)==1,"SINGLE_PALADIN_TALENT_STRING_REQUIRED")
-    ids={}
-    for line in original.splitlines():
-        if line.startswith("# Gear Summary"):break
-        slot,sep,value=line.partition("=")
-        if sep and slot in ALL_SLOTS:
-            need(slot not in ids,"DUPLICATE_EQUIPMENT_SLOT:"+slot)
-            m=re.search(r"(?:^|,)id=(\d+)(?:,|$)",value)
-            need(m is not None,"UPSTREAM_ITEM_ID_MISSING:"+slot)
-            ids[slot]=int(m.group(1))
+    ids,_=common_fields.equipment(original,ALL_SLOTS,need=need,
+        duplicate_prefix="DUPLICATE_EQUIPMENT_SLOT:",
+        missing_id_prefix="UPSTREAM_ITEM_ID_MISSING:")
     need(set(ids)==set(ALL_SLOTS) and "off_hand=" not in original,
          "PALADIN_MUST_HAVE_FIFTEEN_SLOTS_NO_OFFHAND")
     need(ids["main_hand"]==MAIN_HAND_ID,
