@@ -91,6 +91,28 @@ def replace_assignments(profile,settings,slots):
                       row["ilevel"],row["options"]))
     return "\n".join(result).rstrip()+"\n"
 
+def preserve_existing_v104_gear_order(key,rows,folder):
+    """Read-only replay compatibility for a previously sealed v104 plan.
+
+    Earlier v104 used tuple(set_of_slots); separately spawned Python workers
+    could emit the SAME item lines in a different order. The existing profile
+    is never edited or trusted as replacement content: only slot order is
+    recovered, and put_once still requires the complete bytes to match.
+    """
+    if key not in (("rogue","subtlety"),("shaman","elemental")):
+        return rows
+    prior=folder/"profile.simc"
+    if not prior.is_file():
+        return rows
+    order=[]
+    for line in prior.read_text(encoding="utf8").splitlines():
+        slot,sep,_=line.partition("=")
+        if sep and slot in item_mod.SLOTS:
+            order.append(slot)
+    need(len(order)==len(rows) and set(order)==set(rows),
+         "EXISTING_BOOTSTRAP_GEAR_SLOT_ORDER_INVALID")
+    return {slot:rows[slot] for slot in order}
+
 def initial_seeds(B,lower,upper):
     """Only two feasible deterministic start vectors for existing scheduler."""
     need(type(B) is int and all(type(n) is int for n in lower+upper),
@@ -184,6 +206,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
     gem_choice=choice.get("diamond_id") or int(
         rows["head"]["options"].get("gem_id","0"))
     common.ensure_representative_gem_colors(rows,gem_choice,need)
+    # A v104 plan made by an older process may have arbitrary slot-line order.
+    # Honor only that existing order; byte-equality and SHA gates stay strict.
+    rows=preserve_existing_v104_gear_order(key,rows,folder)
     cfg["equipment"],fillers=common.physical_gear_groups(
         rows,groups,catalyst_origin_rows)
     cfg["character"].update({"race":ch["race"],"talents":ch["talents"]})
