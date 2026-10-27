@@ -253,6 +253,27 @@ def build(user,folder,binary,revision,static_cache_path=None,
         normalized,budget,F,prepared["oil"]["declared_O"])
     B,lo,hi=scheduler.bounds(normalized,feasible)
     seeds=initial_seeds(B,lo,hi)
+    # The tightened F/O feasibility floor must NOT reseed an already sealed
+    # session. Reconstruct the two known deterministic seed policies rather
+    # than trusting arbitrary mutable manifest contents: pre-v124 L-only and
+    # current unified L/F/O. Admit the old pair only if both remain feasible.
+    prior_manifest=folder/"manifest.json"
+    if prior_manifest.is_file():
+        old=json.loads(prior_manifest.read_text(encoding="utf8"))
+        sealed=old.get("seed_targets_B")
+        old_B,old_lo,old_hi=scheduler.bounds(normalized,budget)
+        need(old_B==B,"EXISTING_SESSION_SEED_TOTAL_DRIFT")
+        pre_v124_seeds=initial_seeds(old_B,old_lo,old_hi)
+        if sealed==seeds:
+            pass
+        elif sealed==pre_v124_seeds:
+            need(all(scheduler.eligible(
+                 tuple(v[k] for k in scenario.STATS),B,lo,hi)
+                 for v in sealed),
+                 "EXISTING_SESSION_SEEDS_BELOW_FIXED_COMPONENT_FLOOR")
+            seeds=pre_v124_seeds
+        else:
+            need(False,"EXISTING_SESSION_SEEDS_UNRECOGNIZED_OR_CHANGED")
     manifest={"schema":entry.SCHEMA,
               "profile_simc":"profile.simc","scenario_json":"scenario.json",
               "fillers_json":"fillers.json",
