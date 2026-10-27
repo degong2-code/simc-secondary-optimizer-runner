@@ -99,13 +99,75 @@ class RealHTTPPageOffline(unittest.TestCase):
 
     def test_missing_session_is_not_saved_as_verified_and_polling_backs_off(self):
         js=self.client.get("/assets/app.js").text
-        self.assertIn('const snapshot=await readSession(id);\\n  markSession(id);',js)
+        self.assertIn('fillSessionInputs(inputs);\\n  markSession(id);',js)
+        self.assertIn('api("/api/v1/sessions/"+id+"/inputs")',js)
+        self.assertIn('function fillGearRows(nodeId, entries)',js)
+        self.assertIn('fillGearRows("special-rows",u.special_items||[])',js)
+        self.assertIn('fillGearRows("crafted-rows",u.embellishments||[])',js)
+        self.assertIn('$("binary").value=payload.binary;',js)
+        self.assertIn('$("revision").value=payload.revision;',js)
+        self.assertIn('$("static_cache").value=payload.static_cache??"";',js)
+        self.assertNotIn('localStorage.setItem("simc_binary',js)
         self.assertIn('if(err.message==="SESSION_NOT_FOUND")',js)
         self.assertIn('localStorage.removeItem("simc_secondary_session_id")',js)
         self.assertIn('return; // Stop polling this missing ID.',js)
         self.assertIn('state.nextPollAt=Date.now()+Math.min(30000',js)
         self.assertIn('state.pollBusy=true;',js)
         self.assertIn('setNotice("기존 세션 조회 성공',js)
+
+    def test_session_inputs_restore_requires_token_and_is_read_only(self):
+        import json,tempfile
+        with tempfile.TemporaryDirectory() as td:
+            home=pathlib.Path(td)
+            root=home/"runs"
+            binary=home/"simc.exe"
+            binary.write_bytes(b"fake native, never executed")
+            controls=api.sessions.standard_controls(("paladin","retribution"))
+            user=api.sessions.user_scenario(controls)
+            folder=api.sessions.store_session(user,root,binary,"7bc1071")
+            generated=folder/"generated"
+            generated.mkdir()
+            manifest={"native_binary":str(binary),"native_revision":"7bc1071",
+                      "static_cache_json":None}
+            (generated/"manifest.json").write_text(json.dumps(manifest),
+                                                   encoding="utf8")
+            client=TestClient(api.create_app(root=root,token="local-form"),
+                base_url="http://127.0.0.1:8765")
+            url="/api/v1/sessions/"+folder.name+"/inputs"
+            self.assertEqual(client.get(url).status_code,403)
+            resp=client.get(url,headers={"x-simc-local-token":"local-form"})
+            self.assertEqual(resp.status_code,200)
+            payload=resp.json()
+            self.assertEqual(payload["user"],user)
+            self.assertEqual(payload["binary"],str(binary))
+            self.assertEqual(payload["revision"],"7bc1071")
+            self.assertIsNone(payload["static_cache"])
+            self.assertIs(payload["native_called"],False)
+            self.assertFalse((folder/"V106_WORKER_STATE.json").exists())
+            self.assertFalse((folder/"generated"/"simc_results").exists())
+            self.assertFalse((folder/"V106_WORKER.log").exists())
+
+    def test_session_input_manifest_drift_fails_closed(self):
+        import json,tempfile
+        with tempfile.TemporaryDirectory() as td:
+            home=pathlib.Path(td)
+            binary=home/"simc.exe"
+            binary.write_bytes(b"fake")
+            user=api.sessions.user_scenario(
+                api.sessions.standard_controls(("paladin","retribution")))
+            folder=api.sessions.store_session(user,home/"runs",binary,"7bc1071")
+            generated=folder/"generated"
+            generated.mkdir()
+            (generated/"manifest.json").write_text(json.dumps({
+                "native_binary":str(binary),"native_revision":"wrong",
+                "static_cache_json":None}),encoding="utf8")
+            client=TestClient(api.create_app(root=home/"runs",token="drift"),
+                base_url="http://127.0.0.1:8765")
+            resp=client.get("/api/v1/sessions/"+folder.name+"/inputs",
+                            headers={"x-simc-local-token":"drift"})
+            self.assertEqual(resp.status_code,422)
+            self.assertEqual(resp.json()["detail"]["code"],
+                             "SESSION_INPUTS_OR_MANIFEST_DRIFT")
 
     def test_source_observed_options_are_official_contract_not_user_invented(self):
         self.assertEqual(self.client.get("/api/v1/options").status_code,403)
