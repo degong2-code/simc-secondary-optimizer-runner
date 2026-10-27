@@ -18,6 +18,9 @@ import v084_frost_cloth_1h_frill_native as frost
 import v086_hunter_fixed_mail_representative as hunter
 import v104_shared_pinned_rogue_shaman_composer as first_use
 import v127_dps_source_metadata as metadata
+import v134_shared_mid2_profile_adapter as generic
+import v133_mid2_target_representative_preview as target_preview
+import v132_dps_source_batch_smoke as mid2_pins
 
 ARMOR_CLASSES={
     "cloth":frozenset(("mage","priest","warlock")),
@@ -30,6 +33,18 @@ TIER_FIVE=("head","shoulders","chest","hands","legs")
 # fifth ordinary selection. Legacy producers remain exact APL adapters.
 CLASS_TIER_ITEMS={entry.character_class:entry.tier_ids()
                   for entry in metadata.SOURCE_BACKED}
+# The newly pinned 17 MID2 input sources reuse ONE v134 adapter rather than
+# cloning the seven historical source factories. Feral remains staged: its
+# original head has no source diamond and only three ordinary gems.
+GENERIC_PENDING=frozenset(
+    tuple(k.split("/")) for k in mid2_pins.NEW if k!="druid/feral")
+for _key in GENERIC_PENDING:
+    _cls=_key[0]
+    _tier=dict(zip(TIER_FIVE,target_preview.FIVE_TIER[_cls]))
+    if _cls not in CLASS_TIER_ITEMS:
+        CLASS_TIER_ITEMS[_cls]=_tier
+    else:
+        assert CLASS_TIER_ITEMS[_cls]==_tier, "MID2_CLASS_TIER_DATA_DRIFT"
 WEAPON_FORMS={
     "dual_two_hand":("main_hand","off_hand"),
     "dual_one_hand":("main_hand","off_hand"),
@@ -57,9 +72,17 @@ ARCHETYPES={
     entry.key:(entry.source_fixture,resolved_producer(entry),
                entry.weapon_form,entry.flask_vector())
     for entry in metadata.SOURCE_BACKED}
+for _key in sorted(GENERIC_PENDING):
+    _info=generic.source_metadata("/".join(_key))
+    ARCHETYPES[_key]=(_info["fixture"],generic.producer(_key),
+                      _info["form"],_info["F"])
 FIXTURES=pathlib.Path(__file__).resolve().parents[1]/"integration_probes/fixtures"
 FIFTH_TIER={entry.key:entry.fifth_replacement()
             for entry in metadata.SOURCE_BACKED}
+for _key in GENERIC_PENDING:
+    _info=generic.source_metadata("/".join(_key))
+    _slot,_ordinary=_info["fifth"]
+    FIFTH_TIER[_key]=(_slot,_info["tier"][_slot],_ordinary)
 
 def validate_source_registry():
     """Fail closed on changes to six prior source-pinned contracts."""
@@ -203,7 +226,18 @@ def source_backed_gear(key,folder,ilevel,need):
          "SOURCE_WEAPON_TOPOLOGY_DRIFT")
     # Source-observed EXACT weapon subtypes and IDs, no imagined
     # alternate class/spec skill permissions or changed weapon DPS.
-    weapon_types.validate_existing(key,rows,form)
+    if key in GENERIC_PENDING:
+        # All new weapon item IDs were accepted by original-source SimC
+        # smoke; preserve exactly those hand IDs on representative profiles.
+        _source=mid2_pins.validate_source("/".join(key))["source"]
+        _ids,_=generic.draft.fields.equipment(_source,items.SLOTS,need=need,
+            duplicate_prefix="MID2_SOURCE_DUPLICATE_WEAPON_OR_GEAR:",
+            missing_id_prefix="MID2_SOURCE_MISSING_ID:")
+        need(all(rows[hand]["item_id"]==_ids[hand]
+                 for hand in WEAPON_FORMS[form]),
+             "MID2_SOURCE_WEAPON_ITEM_DRIFT")
+    else:
+        weapon_types.validate_existing(key,rows,form)
     expected_tier=CLASS_TIER_ITEMS[key[0]]
     need(len(cfg["equipment"]["tier"])==4
          and all(slot in TIER_FIVE and row["item_id"]==expected_tier[slot]
