@@ -83,7 +83,8 @@ def request(context,base_target,flask_vector,json2_path,phase="scout"):
          "ADAPTIVE_FINAL_T_O_PROFILE_IDENTITY")
     need(req["scenario_digest"]==bound["scenario_digest"] and
          req["profile_stable_sha256"]==numerical.input_parts(
-             context["bundle"]["oil"]["profile"])["stable_sha256"],
+             context["bundle"]["oil"]["profile"],
+             allow_missing_json2_template=True)["stable_sha256"],
          "ADAPTIVE_SOURCE_PROFILE_IDENTITY")
     req["v093_phase"]=phase
     req["v093_session_digest"]=itemcache.digest(bound)
