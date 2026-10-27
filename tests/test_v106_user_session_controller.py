@@ -69,7 +69,7 @@ class UserSessionControls(unittest.TestCase):
         return root,binary,user
 
     def test_six_existing_source_specializations_fill_defaults_without_full_gear(self):
-        self.assertEqual(len(ux.SUPPORTED),23)
+        self.assertEqual(len(ux.SUPPORTED),24)
         for key in ux.SUPPORTED:
             with self.subTest(key=key):
                 c=ux.standard_controls(key)
