@@ -15,6 +15,7 @@ def case(which,*,ilevel=334,final_T=None):
              "retribution":("paladin","retribution"),
              "beast_mastery":("hunter","beast_mastery"),
              "subtlety":("rogue","subtlety"),
+             "outlaw":("rogue","outlaw"),
              "elemental":("shaman","elemental")}
     key=options[which]
     filename=boot.ARCHETYPES[key][0]
@@ -33,11 +34,12 @@ def case(which,*,ilevel=334,final_T=None):
                      "race":{"fury":"dwarf","frost":"human",
                              "retribution":"blood_elf",
                              "beast_mastery":"troll",
-                             "subtlety":"dwarf","elemental":"tauren"}[which],
+                             "subtlety":"dwarf","outlaw":"dwarf",
+                             "elemental":"tauren"}[which],
                      "talents":talents},
         "target":{"ilevel":ilevel,"final_T":final_T},
         "trinkets":trinkets,"special_items":[],"embellishments":[],
-        "oil_hands":["main_hand","off_hand"] if which in ("fury","subtlety")
+        "oil_hands":["main_hand","off_hand"] if which in ("fury","subtlety","outlaw")
                     else ["main_hand"],
         "combat":{"targets":1,"duration_seconds":300,"raid_buffs":True}}
 
@@ -78,6 +80,42 @@ class UserTargetBootstrap(unittest.TestCase):
                 self.assertEqual((folder/"manifest.json").read_bytes(),
                                  sealed_manifest)
                 self.assertFalse((folder/"simc_results").exists())
+
+    def test_new_rogue_outlaw_plan_uses_existing_common_native_free_pipeline(self):
+        import v122_common_profile_format as fmt
+        import v063_numeric_injection as numeric
+        import v096_unified_product_entry as entry
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            binary=root/"simc_not_executed.exe"
+            binary.write_bytes(b"OFFLINE_NOT_A_SIMC_BINARY")
+            user=case("outlaw")
+            user["consumable_choices"]={
+                "flask":"source_default","food":"source_default",
+                "potion":"source_default","augmentation":"source_default",
+                "diamond_id":240967,"omnium_talents":"source_default"}
+            folder=root/"generated"
+            result=boot.build(user,folder,binary,"7bc1071")
+            raw=(folder/"profile.simc").read_bytes()
+            profile=raw.decode("utf8")
+            self.assertEqual(result["native_calls"],0)
+            self.assertEqual((result["plan"]["base_B"],
+                              result["plan"]["final_T"]),(3150,3214))
+            self.assertIn("json2="+fmt.JSON2_PLACEHOLDER,profile)
+            self.assertIn("gem_id=240967",profile)
+            self.assertIn("main_hand=amanmuso_warlords_vengeance",profile)
+            self.assertIn("off_hand=sharpened_lightwood_slasher",profile)
+            self.assertEqual(sum(1 for line in profile.splitlines()
+                                 if line.startswith("json2=")),1)
+            numeric.input_parts(profile)
+            sealed=entry.source(folder/"manifest.json")
+            self.assertEqual(len(sealed["seeds"]),2)
+            self.assertTrue(all(seed["crit_rating"]>=133
+                                for seed in sealed["seeds"]))
+            again=boot.build(user,folder,binary,"7bc1071")
+            self.assertEqual(again["plan"],result["plan"])
+            self.assertEqual((folder/"profile.simc").read_bytes(),raw)
+            self.assertFalse((folder/"simc_results").exists())
 
     def test_all_six_new_sessions_share_canonical_profile_and_runtime_format(self):
         import v122_common_profile_format as fmt
