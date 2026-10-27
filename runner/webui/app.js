@@ -28,7 +28,8 @@ const names = {
   embellishment:"장식 토큰"
 };
 const state = { token:"", defaults:[], session:"", running:false,
-                busy:false, options:null, pollTimer:null };
+                busy:false, options:null, pollTimer:null, pollBusy:false,
+                pollFailures:0, nextPollAt:0 };
 const number = (value,decimals=0) =>
   typeof value==="number" && Number.isFinite(value) ?
     value.toLocaleString("ko-KR",{minimumFractionDigits:decimals,
@@ -196,7 +197,11 @@ function buttonState(active=false,ready=false) {
 async function withBusy(fn) {
   if(state.busy) return;
   state.busy=true;buttonState(state.running,false);
-  try{await fn();}catch(err){setNotice("요청 차단 또는 오류: "+err.message,true);}
+  try{await fn();}catch(err){
+    if(err.message==="SESSION_NOT_FOUND")
+      setNotice("현재 PC에는 해당 세션이 없습니다. 다른 컴퓨터에서 실행했다면 그 PC에서 조회해야 합니다.",true);
+    else setNotice("요청 차단 또는 오류: "+err.message,true);
+  }
   finally{state.busy=false;buttonState(state.running,$("filled-result").hidden===false);}
 }
 function showPlan(plan) {
@@ -262,30 +267,65 @@ function renderResult(payload) {
   }
   $("empty-result").hidden=true;$("filled-result").hidden=false;
 }
+async function readSession(id) {
+  // GET only: no SimC Native or session file writes.
+  const progress=await api("/api/v1/sessions/"+id+"/status");
+  const worker=progress.progress?.worker?.status||progress.progress?.status||"";
+  const result=progress.result_ready && !progress.active && worker.startsWith("PASS")
+    ? await api("/api/v1/sessions/"+id+"/result") : null;
+  return {progress,result};
+}
 async function pollOnce() {
   if(!state.session)return;
   const id=state.session;
-  const p=await api("/api/v1/sessions/"+id+"/status");
+  const snapshot=await readSession(id);
   if(id!==state.session)return;
-  renderProgress(p);
-  if(p.result_ready && !p.active &&
-     (p.progress?.worker?.status||p.progress?.status||"").startsWith("PASS")){
-    const result=await api("/api/v1/sessions/"+id+"/result");
-    if(id===state.session) renderResult(result);
+  renderProgress(snapshot.progress);
+  if(snapshot.result)renderResult(snapshot.result);
+}
+function handlePollFailure(err,id) {
+  if(id!==state.session)return;
+  if(err.message==="SESSION_NOT_FOUND") {
+    // A remembered ID from another PC is not evidence of a local session.
+    state.session="";
+    $("session-id").textContent="없음";
+    $("run-label").textContent="기록 없음";
+    $("progress-label").textContent="– / – 후보";
+    $("progress-pct").textContent="–";
+    $("progress-bar").style.width="0%";
+    $("stage-text").textContent="현재 PC에 세션 파일이 없습니다.";
+    $("filled-result").hidden=true;$("empty-result").hidden=false;
+    try{localStorage.removeItem("simc_secondary_session_id");}catch{}
+    buttonState(false,false);
+    setNotice("현재 PC에 해당 세션이 없습니다. 다른 컴퓨터에서 만든 세션일 수 있습니다.",true);
+    return; // Stop polling this missing ID.
   }
+  state.pollFailures=Math.min(state.pollFailures+1,5);
+  state.nextPollAt=Date.now()+Math.min(30000,1400*Math.pow(2,state.pollFailures));
+  setNotice("로컬 서버 상태 조회 오류 · 연결을 확인하는 동안 재시도 간격을 늘립니다.",true);
 }
 function beginPolling() {
   if(state.pollTimer!==null)clearInterval(state.pollTimer);
   state.pollTimer=setInterval(()=>{
-    if(!state.busy&&state.session)pollOnce().catch(
-      ()=>setNotice("상태 조회가 실패했습니다. 로컬 서버 연결을 확인해 주세요.",true));
+    if(state.busy||state.pollBusy||!state.session||Date.now()<state.nextPollAt)return;
+    state.pollBusy=true;
+    const id=state.session;
+    pollOnce().then(()=>{
+      if(id===state.session){state.pollFailures=0;state.nextPollAt=0;}
+    }).catch(err=>handlePollFailure(err,id)).finally(()=>{state.pollBusy=false;});
   },1400);
 }
 async function restore(id) {
+  if(!/^[a-f0-9]{20}$/.test(id))
+    throw Error("세션 ID는 20자리 해시여야 합니다.");
+  // Check server existence/result BEFORE saving the ID or showing success.
+  const snapshot=await readSession(id);
   markSession(id);
+  state.pollFailures=0;state.nextPollAt=0;
   $("filled-result").hidden=true;$("empty-result").hidden=false;
-  await pollOnce();
-  setNotice("기존 세션 연결 · "+id+" · 상태/결과 조회에는 새 Native 계산이 없습니다.");
+  renderProgress(snapshot.progress);
+  if(snapshot.result)renderResult(snapshot.result);
+  setNotice("기존 세션 조회 성공 · "+id+" · 새 Native 계산 0회");
 }
 function installOptions(options) {
   for(const name of ["food","potion","augmentation"]){
@@ -358,9 +398,13 @@ async function initialize() {
     let previous=null;
     try{previous=localStorage.getItem("simc_secondary_session_id");}catch{}
     if(previous&&/^[a-f0-9]{20}$/.test(previous)){
-      try{await restore(previous);}catch{
-        // Do not erase user's old session: stale localStorage is nonauthoritative.
-        setNotice("로컬 UI 연결됨. 이전 세션은 조회되지 않아 새 조건을 입력할 수 있습니다.");
+      try{await restore(previous);}catch(err){
+        if(err.message==="SESSION_NOT_FOUND") {
+          try{localStorage.removeItem("simc_secondary_session_id");}catch{}
+          setNotice("현재 PC에 이전 세션이 없습니다. 다른 컴퓨터에 저장된 기록일 수 있습니다.",true);
+        } else {
+          setNotice("이전 세션 조회 오류: "+err.message,true);
+        }
       }
     }else setNotice("로컬 서버 연결됨 · 새 최적화는 실행 버튼을 눌러야만 시작됩니다.");
   }catch(e){
