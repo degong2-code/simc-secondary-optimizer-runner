@@ -113,7 +113,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('return; // Stop polling this missing ID.',js)
         self.assertIn('state.nextPollAt=Date.now()+Math.min(30000',js)
         self.assertIn('state.pollBusy=true;',js)
-        self.assertIn('setNotice("기존 세션 조회 성공',js)
+        self.assertIn('setNotice("기존 세션·입력 복원 성공',js)
 
     def test_session_inputs_restore_requires_token_and_is_read_only(self):
         import json,tempfile
