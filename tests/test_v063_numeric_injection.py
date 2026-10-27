@@ -39,6 +39,45 @@ class NumericInjection(unittest.TestCase):
             p.input_parts(BASE+"gear_crit_rating=200\n")
         with self.assertRaisesRegex(p.InjectionError,"FOUR_GEAR_RATINGS_REQUIRED"):
             p.input_parts(BASE.replace("gear_mastery_rating=1115\n",""))
+    def test_legacy_template_without_json2_emits_one_strict_native_destination(self):
+        template=BASE.replace("json2=/tmp/report.json\\n","")
+        self.assertNotIn("json2=",template)
+        with self.assertRaisesRegex(p.InjectionError,
+                                    "MISSING_OR_DUPLICATE_INPUT:json2="):
+            p.input_parts(template)
+        bare=p.input_parts(template,allow_missing_json2_template=True)
+        pinned=p.input_parts(BASE)
+        self.assertEqual(bare["stable_sha256"],pinned["stable_sha256"])
+        target={"crit_rating":600,"haste_rating":1140,
+                "mastery_rating":1115,"versatility_rating":329}
+        flask={"crit_rating":0,"haste_rating":165,
+               "mastery_rating":0,"versatility_rating":0}
+        with tempfile.TemporaryDirectory() as td:
+            folder=pathlib.Path(td)
+            generated=p.render_static_chmv_candidate(
+                template,target,flask,folder/"static.json",35)
+            self.assertEqual(sum(s.startswith("json2=")
+                                 for s in generated["input"].splitlines()),1)
+            self.assertIn("json2="+str((folder/"static.json").resolve()),
+                          generated["input"])
+            self.assertEqual(p.input_parts(generated["input"])["stable_sha256"],
+                             bare["stable_sha256"])
+            cal=p.calibrate(witness())
+            result=p.render_candidate(template,cal,target,
+                                      folder/"candidate.json",60)
+            self.assertEqual(sum(s.startswith("json2=")
+                                 for s in result["input"].splitlines()),1)
+            self.assertEqual(p.input_parts(result["input"])["stable_sha256"],
+                             bare["stable_sha256"])
+
+    def test_template_output_duplicate_and_missing_iterations_still_block(self):
+        for source in (BASE+"json2=/tmp/another.json\\n",
+                       BASE.replace("iterations=60\\n","")):
+            with self.subTest(case=source[-40:]):
+                with self.assertRaisesRegex(
+                    p.InjectionError,"MISSING_OR_DUPLICATE_INPUT"):
+                    p.input_parts(source,allow_missing_json2_template=True)
+
     def test_numeric_offset_from_two_independent_settings(self):
         cal=p.calibrate(witness())
         self.assertEqual(cal["net_input_to_json2_rating_offset"],OFFSET)
