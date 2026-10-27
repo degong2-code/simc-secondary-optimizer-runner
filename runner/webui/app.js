@@ -74,10 +74,13 @@ function fillDefault(item) {
 }
 function gearInputs(nodeId, config) {
   const parent=$(nodeId);
-  const title=document.createElement("h3");title.textContent=config.title+" · 최대 2개";
+  const isSpecial=nodeId==="special-rows";
+  const limit=isSpecial?8:2;
+  const title=document.createElement("h3");title.textContent=config.title+" · 최대 "+limit+"개";
   const group=document.createElement("div");group.className="gear-group";group.appendChild(title);
-  for (let i=0;i<2;i++) {
+  for (let i=0;i<limit;i++) {
     const row=document.createElement("div");row.className="gear-row";
+    if(isSpecial&&i>=2)row.hidden=true;
     row.dataset.group=nodeId; row.dataset.index=String(i);
     const heading=document.createElement("p");heading.className="gear-row-title";
     heading.textContent=config.title+" "+(i+1);
@@ -100,6 +103,17 @@ function gearInputs(nodeId, config) {
     }
     row.appendChild(grid);group.appendChild(row);
   }
+  if(isSpecial) {
+    const add=document.createElement("button");
+    add.type="button";add.className="btn secondary";
+    add.textContent="+ 특수효과 장비 추가";
+    add.addEventListener("click",()=>{
+      const next=Array.from(group.querySelectorAll(".gear-row")).find(r=>r.hidden);
+      if(next)next.hidden=false;
+      add.disabled=!Array.from(group.querySelectorAll(".gear-row")).some(r=>r.hidden);
+    });
+    group.appendChild(add);
+  }
   parent.appendChild(group);
 }
 function selectedGear(nodeId, group) {
@@ -117,7 +131,7 @@ function selectedGear(nodeId, group) {
     }
     result.push({slot:fields.slot,item_id:Number(fields.item_id),options});
   }
-  if(result.length>2) throw Error(group+" 최대 2개");
+  if(result.length>(group==="special_items"?8:2)) throw Error(group+" 허용 개수 초과");
   return result;
 }
 function buildRequest() {
