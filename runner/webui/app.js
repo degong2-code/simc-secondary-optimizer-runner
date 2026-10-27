@@ -185,7 +185,7 @@ function buildRequest() {
   if(!$("optimizer-form").reportValidity()) throw Error("필수 입력과 수치 범위를 확인해 주세요.");
   const spec=field("spec");
   const source=state.defaults.find(d=>d.class+"/"+d.spec===spec);
-  if(!source) throw Error("지원되는 6개 전문화에서 선택해 주세요.");
+  if(!source) throw Error("지원되는 전문화를 선택해 주세요.");
   const controls={
     class:source.class,spec:source.spec,
     race:field("race"),talents:field("talents"),
