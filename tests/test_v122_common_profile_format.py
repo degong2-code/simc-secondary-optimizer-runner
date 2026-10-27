@@ -43,8 +43,8 @@ class CommonProfileFormat(unittest.TestCase):
             common.order_rows({"head":dict(rows["waist"])},legacy=False)
 
     def test_duplicates_and_missing_iterations_never_normalized_away(self):
-        for bad in (SAMPLE+"json2=a\\njson2=b\\n",
-                    SAMPLE.replace("iterations=35\\n","")):
+        for bad in (SAMPLE+"json2=a\njson2=b\n",
+                    SAMPLE.replace("iterations=35\n","")):
             with self.subTest(bad=bad[-25:]):
                 for legacy in (False,True):
                     with self.assertRaises(
