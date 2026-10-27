@@ -37,7 +37,7 @@ class CommonProfileFormat(unittest.TestCase):
             self.assertFalse(common.existing_profile_uses_legacy_format(path))
             path.write_text(SAMPLE,encoding="utf8")
             self.assertTrue(common.existing_profile_uses_legacy_format(path))
-            path.write_text(SAMPLE+"json2=/old/legacy/native.json\\n",
+            path.write_text(SAMPLE+"json2=/old/legacy/native.json\n",
                             encoding="utf8")
             self.assertTrue(common.existing_profile_uses_legacy_format(path))
             modern=common.finalize(SAMPLE,legacy=False)
