@@ -15,7 +15,7 @@ const specLabels = {
   "hunter/beast_mastery":"사냥꾼 · 야수",
   "rogue/subtlety":"도적 · 잠행",
   "rogue/outlaw":"도적 · 무법 (목표 프로필 Native 시험 전)",
-  "deathknight/frost":"죽음의 기사 · 냉기 (기본334 단발 Native PASS · 최적화 미검증)",
+  "deathknight/frost":"죽음의 기사 · 냉기 (기본334 조건 6후보·95% 실기 PASS)",
   "deathknight/unholy":"죽음의 기사 · 부정 (기본334 단발 Native PASS · 최적화 미검증)",
   "demonhunter/devourer":"악마사냥꾼 · 포식 (기본334 단발 Native PASS · 최적화 미검증)",
   "demonhunter/havoc":"악마사냥꾼 · 파멸 (기본334 단발 Native PASS · 최적화 미검증)",
@@ -72,6 +72,17 @@ function valueInt(id) {
   if (!/^[0-9]+$/.test(text)) throw Error(id.toUpperCase()+"_POSITIVE_INTEGER_REQUIRED");
   return Number(text);
 }
+function showRepresentativeScope() {
+  // The 16 new source-to-target profiles have actual one-shot Native proof,
+  // but keep some original non-tier gear. Do not call them fully standardized.
+  const item=state.defaults.find(d=>d.class+"/"+d.spec===field("spec"));
+  const note=$("gear-scope-note");
+  note.hidden=!item;
+  if(!item)return;
+  note.textContent=item.representative_scope==="SOURCE_NON_TIER_NOT_ALL_STANDARDIZED" ?
+    "대표 장비 범위: 티어 4세트와 목표 ilvl을 구성했지만 일부 비티어 장비는 공식 원본 프로필에서 유지됩니다. 완전 표준 일반장비 구성은 아직 검증되지 않았으며 DPS·CHMV는 이 대표 프로필 조건부 결과입니다." :
+    "대표 장비 범위: 기존 소스 기반 구성입니다. 모든 일반 장비의 완전한 표준화까지 검증된 것은 아니며 DPS·CHMV는 실제 생성된 프로필 조건부 결과입니다.";
+}
 function fillDefault(item) {
   $("race").value=item.race;
   $("talents").value=item.talents;
@@ -88,6 +99,7 @@ function fillDefault(item) {
   // Reset optional slots on specialization changes, including hidden extra rows.
   fillGearRows("special-rows",[]);
   fillGearRows("crafted-rows",[]);
+  showRepresentativeScope();
 }
 function gearInputs(nodeId, config) {
   const parent=$(nodeId);
@@ -178,6 +190,7 @@ function fillSessionInputs(payload) {
   $("binary").value=payload.binary;
   $("revision").value=payload.revision;
   $("static_cache").value=payload.static_cache??"";
+  showRepresentativeScope();
 }
 function selectedGear(nodeId, group) {
   const result=[];
