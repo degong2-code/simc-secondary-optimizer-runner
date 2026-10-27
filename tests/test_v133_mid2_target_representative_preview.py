@@ -19,7 +19,7 @@ class Mid2TargetDraft(unittest.TestCase):
         self.assertEqual(results["native_calls"],0)
         self.assertEqual(results["ready_for_user_optimizer"],0)
         self.assertEqual(len(results["specs"]),17)
-        self.assertEqual(results["missing_exact_fifth_tier"],3)
+        self.assertEqual(results["missing_exact_fifth_tier"],5)
         for key in source.NEW:
             with self.subTest(key=key):
                 data,profile=preview.draft(key,334)
