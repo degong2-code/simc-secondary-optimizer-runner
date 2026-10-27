@@ -6,6 +6,7 @@ Native runner, existing v066 static witness preflight and v015 mirror.
 No per-Mage DPS solver, loot database, APL/item effect/proc reimplementation.
 """
 from __future__ import annotations
+import v128_common_source_profile_emitter as common_emitter
 import argparse,hashlib,pathlib,re,sys
 
 import v055_simc_item_selection as items
@@ -83,19 +84,9 @@ def source_profile(original,folder):
           "iterations":str(shared.ITERATIONS),
           "json2":str(folder/"initial_native"/"result.json")}
     fixed.update({"gear_"+k:"700" for k in scenario.STATS})
-    lines=[]
-    for line in original.splitlines():
-        if line.startswith("# Gear Summary"):break
-        k,sep,_=line.partition("=")
-        if sep and not line.startswith("#") and (
-            k in ALL_SLOTS or k in fixed or k=="temporary_enchant"):
-            continue
-        lines.append(line)
-    lines.append("")
-    lines.extend(k+"="+v for k,v in fixed.items())
-    lines.extend(items.equipment_line(k,eq[k]["item_id"],334,eq[k]["options"])
-                 for k in ALL_SLOTS)
-    profile="\n".join(lines).rstrip()+"\n"
+    profile=common_emitter.emit(
+        original,fixed,eq,ALL_SLOTS,
+        blank_before_overrides=True)
     need([line for line in profile.splitlines() if line.startswith("actions")]==actions,
          "FROST_SIMC_APL_CHANGED")
     need("off_hand=selected_245769,id=245769,ilevel=334" in profile
