@@ -19,7 +19,7 @@ class Mid2TargetDraft(unittest.TestCase):
         self.assertEqual(results["native_calls"],0)
         self.assertEqual(results["ready_for_user_optimizer"],0)
         self.assertEqual(len(results["specs"]),17)
-        self.assertEqual(results["missing_exact_fifth_tier"],5)
+        self.assertEqual(results["missing_exact_fifth_tier"],0)
         for key in source.NEW:
             with self.subTest(key=key):
                 data,profile=preview.draft(key,334)
@@ -45,19 +45,18 @@ class Mid2TargetDraft(unittest.TestCase):
                 self.assertEqual(sum(",ilevel=334" in line
                                      for line in profile.splitlines()),
                                  old["slot_count"])
-    def test_tiers_are_unambiguously_source_observed_not_guessed(self):
-        expected={"monk/windwalker":"hands","priest/shadow":"shoulders",
-                  "warlock/affliction":"head",
-                  "warlock/demonology":"head",
-                  "warlock/destruction":"head"}
+    def test_full_five_tier_identity_for_all_eleven_source_classes(self):
         for key in source.NEW:
             with self.subTest(key=key):
                 data,_=preview.draft(key)
-                missing=data["missing_fifth_tier_id"]
-                if key in expected:
-                    self.assertEqual(missing,[expected[key]])
-                else:
-                    self.assertEqual(missing,[])
+                self.assertEqual(data["missing_fifth_tier_id"],[])
+                cls=key.split("/")[0]
+                self.assertEqual(len(preview.FIVE_TIER[cls]),5)
+                self.assertTrue(all(type(id_) is int and id_>0
+                                    for id_ in preview.FIVE_TIER[cls]))
+        self.assertEqual(preview.FIVE_TIER["monk"][3],271520)
+        self.assertEqual(preview.FIVE_TIER["priest"][1],271553)
+        self.assertEqual(preview.FIVE_TIER["warlock"][0],271546)
     def test_target_ilvl_is_only_a_physical_preview_not_source_native_input(self):
         before=source.validate_source("deathknight/frost")["source"]
         at334,profile334=preview.draft("deathknight/frost",334)
