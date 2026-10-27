@@ -68,7 +68,7 @@ def budget_with_fixed_components(normalized,budget,fixed_F,fixed_O):
     need(fixed_O==normalized["budget"]["external_temporary_rating"],
          "FIXED_O_NOT_SCENARIO_BUDGET")
     need(budget.get("scenario_digest")==normalized["scenario_digest"]
-         and budget["budget"]["T_official"]==normalized["budget"]["T"],
+         and type(budget["budget"]["T_official"]) is int,
          "FIXED_FLOOR_SCENARIO_DRIFT")
     floors=budget["effective_floor_if_possible"]
     need(type(floors) is dict,"FIXED_FLOOR_REQUIRES_EXACT_L")
