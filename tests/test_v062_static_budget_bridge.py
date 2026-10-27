@@ -156,6 +156,52 @@ class NativeBudget(unittest.TestCase):
         self.assertEqual(sum(r["locked_L_when_all_specials_observed"].values()),0)
         self.assertEqual(r["native_gear_stats"]["wrists"]["sum"],100)
         self.assertEqual(r["native_gear_stats"]["back"]["sum"],100)
+    def test_exact_native_fixed_L_with_primary_only_head_diamond(self):
+        # 240983 and 240967 have zero flat secondary rating (v108).
+        # The exact undecorated item Native variant may carry fixed L only.
+        # No SimC binary or proc-effect emulation in this offline test.
+        for diamond in ("240983","240967"):
+            with self.subTest(diamond=diamond):
+                cfg=mage()
+                head=cfg["equipment"]["tier"][0]
+                head["options"]={"redirected_base_stats":"268222",
+                                 "gem_id":diamond}
+                cfg["equipment"]["catalyst_special_tier_slots"]=["head"]
+                plan,fill,c=fixture(cfg)
+                keyed=native.digest(p.exact_identity(head))
+                del c["variants"][keyed]
+                ungemmed=copy.deepcopy(head)
+                ungemmed["options"].pop("gem_id")
+                fixed={"crit_rating":0,"haste_rating":175,
+                       "mastery_rating":0,"versatility_rating":0}
+                record(c,ungemmed,fixed)
+                output=p.compile_static_budget(plan,fill,c)
+                self.assertEqual(output["missing_special_fixed_static"],[])
+                self.assertEqual(output["locked_L_when_all_specials_observed"],
+                                 fixed)
+                self.assertEqual(output["effective_floor_if_possible"]
+                                 ["haste_rating"],175)
+
+    def test_unobserved_or_nonprimary_diamond_head_does_not_bypass_exact_L(self):
+        for diamond in ("240983","240967","240900"):
+            with self.subTest(diamond=diamond):
+                cfg=mage()
+                head=cfg["equipment"]["tier"][0]
+                head["options"]={"redirected_base_stats":"268222",
+                                 "gem_id":diamond}
+                cfg["equipment"]["catalyst_special_tier_slots"]=["head"]
+                plan,fill,c=fixture(cfg)
+                del c["variants"][native.digest(p.exact_identity(head))]
+                if diamond=="240900":
+                    # A known ungemmed record is insufficient for a
+                    # regular secondary gem; unknown variants fail closed.
+                    bare=copy.deepcopy(head)
+                    bare["options"].pop("gem_id")
+                    record(c,bare)
+                result=p.compile_static_budget(plan,fill,c)
+                self.assertEqual(len(result["missing_special_fixed_static"]),1)
+                self.assertIsNone(result["locked_L_when_all_specials_observed"])
+
     def test_special_with_gem_modifier_needs_numeric_separation_not_proc_gate(self):
         cfg=mage();cfg["equipment"]["special"]=[item("neck",251001,
                                            options={"gem_id":"240967"})]
