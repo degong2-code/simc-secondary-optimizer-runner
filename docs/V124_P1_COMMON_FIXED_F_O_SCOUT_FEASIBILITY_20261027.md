@@ -29,7 +29,7 @@ In the observed Rogue profile, **B_crit >= 165-32 = 133**. The first two seed jo
 ## Validation/continuation
 
 - Prior v123 **Windows focused 106/106 PASS** precedes the v124 code. Never relabel as v124 PASS.
-- **New v124 Windows/CI focused test PASS pending; code and tests are committed but not executed on user's Windows.** Expected relevant regression **110 tests** (prior 106 + new 4).
+- **New v124 Windows/CI focused test PASS pending; code and tests are committed but not executed on user's Windows.** Expected original focused regression **110 tests** (prior 106 + new 4); **recommended broader P1 run is 137 tests**, adding the directly affected v065 scheduler (11), v094 durable runner (5), v095 material policy (6) and v096 product entry (5). No new Native calls by these offline tests.
 - Existing Rogue 3/6 session can be resumed *without clearing caches or changing session identity* after focused offline tests pass. The runner revisits the two seeds and scout through verified Native cache, and then chooses a newly feasible material target; if no other blocker, at most 3 new Native candidates complete the 6-call bounded session. Do not claim success before actual receipt.
 - Final verify physical six ordinary gems/four colors and SimC Native socket/input/JSON2 acceptance separately; avoid independent proc-activation gate.
 - Main, v003 immutable, formal Work OS/Shared State, Project UI, existing three Native result bytes, cache policy and 95% statistical policy remain unchanged.
