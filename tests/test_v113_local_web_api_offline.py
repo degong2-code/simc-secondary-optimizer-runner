@@ -49,10 +49,21 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(len(boot["supported"]),23)
         defaults=self.client.get("/api/v1/defaults",headers=self.headers)
         self.assertEqual(defaults.status_code,200)
+        status_counts={}
         for row in defaults.json()["archetypes"]:
             self.assertEqual(len(row["trinket_ids"]),2)
             self.assertEqual(row["ilevel"],334)
             self.assertEqual(len(row["consumable_choices"]),6)
+            scope=row["representative_scope"]
+            status_counts[scope]=status_counts.get(scope,0)+1
+            expected=("SOURCE_NON_TIER_NOT_ALL_STANDARDIZED"
+                      if (row["class"],row["spec"]) in
+                          web.bootstrap.common.GENERIC_PENDING
+                      else "SOURCE_BACKED_PARTIAL_ORDINARY_POOL")
+            self.assertEqual(scope,expected)
+        self.assertEqual(status_counts,{
+            "SOURCE_NON_TIER_NOT_ALL_STANDARDIZED":16,
+            "SOURCE_BACKED_PARTIAL_ORDINARY_POOL":7})
         self.assertFalse((self.root/"runs").exists())
 
     def test_host_rebinding_foreign_origin_token_and_cross_site_all_denied(self):
