@@ -1,7 +1,7 @@
-"""v131: official MID2 Rogue Outlaw pinned source, STAGED NOT EXECUTABLE.
+"""v131: official MID2 Rogue Outlaw pinned source, newly source-connected.
 
 Checks source completeness and validates exact existing Rogue tier compatibility.
-No simulation, no new UI enabled, no user session/cache mutation.
+No simulation, no cache mutation; Native acceptance still pending.
 """
 from __future__ import annotations
 import hashlib,pathlib,sys,unittest
@@ -56,12 +56,14 @@ class OutlawStagedSource(unittest.TestCase):
         self.assertEqual(ids["trinket1"],270175)
         self.assertEqual(ids["trinket2"],270173)
 
-    def test_staged_source_does_not_enable_unvalidated_spec(self):
-        self.assertNotIn(("rogue","outlaw"),registry.BY_SPEC)
+    def test_new_spec_uses_same_registry_without_new_optimizer(self):
+        record=registry.get(("rogue","outlaw"))
+        self.assertEqual(record.source_git_blob,BLOB)
+        self.assertEqual(record.weapon_form,"dual_one_hand")
+        self.assertEqual(record.fifth_replacement(),("chest",271513,251159))
+        self.assertEqual(record.flask_vector()["crit_rating"],165)
         self.assertIn(("rogue","subtlety"),registry.BY_SPEC)
-        with self.assertRaisesRegex(registry.SourceMetadataBlocked,
-                                    "REGISTERED_ARCHETYPE_NOT_SOURCE_BACKED"):
-            registry.get(("rogue","outlaw"))
+        self.assertNotIn(("priest","shadow"),registry.BY_SPEC)
 
 if __name__=="__main__":
     unittest.main()
