@@ -7,7 +7,7 @@ on:
       - runner/v132_dps_source_batch_smoke.py
       - tests/test_v132_dps_source_batch_smoke.py
       - runner/v133_mid2_target_representative_preview.py
-      - tests/test_v133_mid2_target_representative_preview.py tests/test_v134_shared_mid2_profile_adapter.py
+      - tests/test_v133_mid2_target_representative_preview.py
       - runner/v134_shared_mid2_profile_adapter.py
       - tests/test_v134_shared_mid2_profile_adapter.py
       - 'integration_probes/fixtures/v132_MID2_*.simc'
@@ -40,7 +40,7 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Compile only batch source checker
         shell: bash
-        run: python -m py_compile runner/v132_dps_source_batch_smoke.py tests/test_v132_dps_source_batch_smoke.py runner/v133_mid2_target_representative_preview.py tests/test_v133_mid2_target_representative_preview.py
+        run: python -m py_compile runner/v132_dps_source_batch_smoke.py tests/test_v132_dps_source_batch_smoke.py runner/v133_mid2_target_representative_preview.py tests/test_v133_mid2_target_representative_preview.py runner/v134_shared_mid2_profile_adapter.py tests/test_v134_shared_mid2_profile_adapter.py
       - name: Verify all 17 official source fixture blobs and resumable one-native mock
         shell: bash
         run: python -m unittest -q tests.test_v132_dps_source_batch_smoke tests.test_v133_mid2_target_representative_preview tests.test_v134_shared_mid2_profile_adapter
