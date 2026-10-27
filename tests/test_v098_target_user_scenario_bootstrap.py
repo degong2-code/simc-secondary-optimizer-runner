@@ -96,6 +96,30 @@ class UserTargetBootstrap(unittest.TestCase):
         import v104_shared_pinned_rogue_shaman_composer as v104
         self.assertEqual(v104.ALL_SLOTS,tuple(sorted(v104.ALL_SLOTS)))
 
+    def test_v104_existing_profile_content_drift_is_never_overwritten(self):
+        user=case("subtlety")
+        user["consumable_choices"]={
+            "flask":"source_default","food":"source_default",
+            "potion":"source_default","augmentation":"source_default",
+            "diamond_id":240967,"omnium_talents":"source_default"}
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            binary=root/"dummy_simc.exe"
+            binary.write_bytes(b"NEVER EXECUTE")
+            folder=root/"generated"
+            boot.build(user,folder,binary,"7bc1071")
+            profile=folder/"profile.simc"
+            original=profile.read_bytes()
+            self.assertIn(b"desired_targets=1",original)
+            changed=original.replace(b"desired_targets=1",
+                                     b"desired_targets=2",1)
+            profile.write_bytes(changed)
+            with self.assertRaisesRegex(boot.UserScenarioBlocked,
+                                        "EXISTING_BOOTSTRAP_FILE_CHANGED:profile.simc"):
+                boot.build(user,folder,binary,"7bc1071")
+            self.assertEqual(profile.read_bytes(),changed)
+            self.assertFalse((folder/"simc_results").exists())
+
     def test_rogue_and_shaman_user_boot_produce_normalized_full_profiles(self):
         for name,role,weapon_form,secondary in (
             ("subtlety","attack","dual_one_hand",64),
