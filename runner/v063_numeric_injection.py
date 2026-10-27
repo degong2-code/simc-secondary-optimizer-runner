@@ -33,7 +33,12 @@ def read_rating(player):
          "NATIVE_RATING_UNOBSERVED")
     return {k:int(round(s[k])) for k in STATS}
 
-def input_parts(source):
+def input_parts(source,*,allow_missing_json2_template=False):
+    """Allow missing json2= only for stored templates, never Native inputs.
+
+    This explicit mode leaves duplicate rejection and 1-output Native
+    candidate enforcement intact, even for legacy v104 source profiles.
+    """
     need(type(source) is str,"INPUT_SOURCE_NOT_TEXT")
     lines=source.splitlines()
     collected={}; locations={}
@@ -48,7 +53,9 @@ def input_parts(source):
                 collected[stat]=int(part)
     need(set(locations)==set(STATS),"FOUR_GEAR_RATINGS_REQUIRED")
     for prefix in EXCLUDE_PREFIXES:
-        need(sum(s.startswith(prefix) for s in lines)==1,
+        found=sum(s.startswith(prefix) for s in lines)
+        need(found in ((0,1) if allow_missing_json2_template and
+                       prefix=="json2=" else (1,)),
              "MISSING_OR_DUPLICATE_INPUT:"+prefix)
     # The only mutable bytes are gear_* numeric targets, iterations and
     # JSON2 destination. In particular ALL selected IDs/options, gems,
@@ -191,7 +198,7 @@ def render_candidate(reference,calibration,target,path,iterations):
            "TWO_NATIVE_NUMERIC_OFFSET_WITNESSES_AGREE",
            "EMPIRICAL_PER_PROFILE_NUMERIC_AFFINE_WITNESSES"),
          "NUMERIC_CALIBRATION_NOT_VALIDATED")
-    part=input_parts(reference)
+    part=input_parts(reference,allow_missing_json2_template=True)
     need(part["stable_sha256"]==calibration["stable_profile_sha256"],
          "CANDIDATE_PROFILE_DIFFERS_FROM_CALIBRATION")
     scenario.vector(target,"CHMV_TARGET")
@@ -214,6 +221,8 @@ def render_candidate(reference,calibration,target,path,iterations):
             lines[i]="iterations="+str(iterations)
         if s.startswith("json2="):
             lines[i]="json2="+str(output)
+    if not any(line.startswith("json2=") for line in lines):
+        lines.append("json2="+str(output))
     written="\n".join(lines)+"\n"
     need(input_parts(written)["stable_sha256"]==
          calibration["stable_profile_sha256"],
@@ -263,7 +272,7 @@ def render_static_chmv_candidate(reference,target,flask_vector,path,iterations):
     raw={k:target[k]-flask_vector[k] for k in STATS}
     need(all(type(raw[k]) is int and raw[k]>=0 for k in STATS),
          "STATIC_TARGET_BELOW_DECLARED_FLASK_VECTOR")
-    parts=input_parts(reference)
+    parts=input_parts(reference,allow_missing_json2_template=True)
     lines=reference.splitlines()
     output=pathlib.Path(path).resolve()
     for i,line in enumerate(lines):
@@ -274,6 +283,8 @@ def render_static_chmv_candidate(reference,target,flask_vector,path,iterations):
             lines[i]="iterations="+str(iterations)
         if line.startswith("json2="):
             lines[i]="json2="+str(output)
+    if not any(line.startswith("json2=") for line in lines):
+        lines.append("json2="+str(output))
     content="\n".join(lines)+"\n"
     rewritten=input_parts(content)
     need(rewritten["stable_sha256"]==parts["stable_sha256"]
