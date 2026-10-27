@@ -12,6 +12,8 @@ class TargetSmoke(unittest.TestCase):
             home=pathlib.Path(td)
             binary=home/"fake.exe";binary.write_bytes(b"synthetic no real Native")
             self.assertEqual(len(runner.keys()),16)
+            self.assertNotIn(("druid","feral"),runner.keys())
+            self.assertIn(("druid","feral"),runner.gear.GENERIC_PENDING)
             with mock.patch.object(runner.subprocess,"run",
                                    side_effect=AssertionError("NATIVE_FORBIDDEN")):
                 result=runner.run(binary,home/"output",max_new=0)
