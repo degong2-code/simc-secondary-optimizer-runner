@@ -30,7 +30,7 @@ class WeaponTypeSources(unittest.TestCase):
                     self.assertIn("item_reference",desc["weapons"][hand])
 
     def test_six_common_source_factories_keep_actual_exact_weapons(self):
-        for key in core.ARCHETYPES:
+        for key in weapons.EXECUTABLE_SOURCES:
             with self.subTest(key=key),tempfile.TemporaryDirectory() as td:
                 _,_,rows,_,form,_=core.source_backed_gear(
                     key,pathlib.Path(td),334,self.need)
@@ -66,6 +66,7 @@ class WeaponTypeSources(unittest.TestCase):
             weapons.source_shape(("mage","arcane"))
         self.assertNotIn(("mage","arcane"),weapons.OBSERVED)
         self.assertIn(("shaman","elemental"),core.ARCHETYPES)
-        self.assertNotIn(("priest","shadow"),core.ARCHETYPES)
+        self.assertIn(("priest","shadow"),core.ARCHETYPES)
+        self.assertNotIn(("druid","feral"),core.ARCHETYPES)
 
 if __name__=="__main__":unittest.main()
