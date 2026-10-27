@@ -6,6 +6,7 @@ v015-derived scout execution uses the SAME bounded v082 runner—no new per-spec
 optimizer, no talent/item/APL mechanics. Existing original v082 defaults stay.
 """
 from __future__ import annotations
+import v128_common_source_profile_emitter as common_emitter
 import argparse,hashlib,pathlib,re,sys
 import v055_simc_item_selection as items
 import v061_scenario_contract as scenario
@@ -88,19 +89,9 @@ def source_profile(original,folder):
         "flask":"flask_of_the_blood_knights_2",
         "food":"harandar_celebration"}
     overrides.update({"gear_"+stat:"700" for stat in scenario.STATS})
-    stripped=[]
-    for line in original.splitlines():
-        if line.startswith("# Gear Summary"):break
-        k,sep,_=line.partition("=")
-        if sep and not line.startswith("#") and (
-                k in overrides or k in ALL_SLOTS or k=="temporary_enchant"):
-            continue
-        stripped.append(line)
-    stripped.append("")
-    stripped.extend(k+"="+v for k,v in overrides.items())
-    stripped.extend(items.equipment_line(slot,equipment[slot]["item_id"],
-                    334,equipment[slot]["options"]) for slot in ALL_SLOTS)
-    reference="\n".join(stripped).rstrip()+"\n"
+    reference=common_emitter.emit(
+        original,overrides,equipment,ALL_SLOTS,
+        blank_before_overrides=True)
     need(initial_actions==[x for x in reference.splitlines()
                 if x.startswith("actions")],
          "PALADIN_SIMC_APL_LINES_CHANGED")
