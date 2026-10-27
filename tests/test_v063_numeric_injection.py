@@ -40,7 +40,7 @@ class NumericInjection(unittest.TestCase):
         with self.assertRaisesRegex(p.InjectionError,"FOUR_GEAR_RATINGS_REQUIRED"):
             p.input_parts(BASE.replace("gear_mastery_rating=1115\n",""))
     def test_legacy_template_without_json2_emits_one_strict_native_destination(self):
-        template=BASE.replace("json2=/tmp/report.json\\n","")
+        template=BASE.replace("json2=/tmp/report.json\n","")
         self.assertNotIn("json2=",template)
         with self.assertRaisesRegex(p.InjectionError,
                                     "MISSING_OR_DUPLICATE_INPUT:json2="):
@@ -71,8 +71,8 @@ class NumericInjection(unittest.TestCase):
                              bare["stable_sha256"])
 
     def test_template_output_duplicate_and_missing_iterations_still_block(self):
-        for source in (BASE+"json2=/tmp/another.json\\n",
-                       BASE.replace("iterations=60\\n","")):
+        for source in (BASE+"json2=/tmp/another.json\n",
+                       BASE.replace("iterations=60\n","")):
             with self.subTest(case=source[-40:]):
                 with self.assertRaisesRegex(
                     p.InjectionError,"MISSING_OR_DUPLICATE_INPUT"):
