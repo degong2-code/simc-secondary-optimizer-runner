@@ -39,11 +39,12 @@ class SharedTargetAdapter(unittest.TestCase):
                                  len(fillers),original["slot_count"])
                 self.assertFalse((pathlib.Path(td)/"simc_results").exists())
         # Feral now has a staged candidate with the witnessed six physical
-        # ordinary gems and head diamond. No Native has been run for it.
+        # ordinary gems and head diamond. A physical-only preview Native
+        # passed on Windows, but the v098 CHMV target full run is unverified.
         self.assertEqual(held,{})
         self.assertEqual(len(good),17)
         import v101_common_representative_equipment as representative
-        self.assertNotIn(("druid","feral"),representative.GENERIC_PENDING)
+        self.assertIn(("druid","feral"),representative.GENERIC_PENDING)
 
     def test_new_adapter_source_integrity_fail_closed(self):
         key=("warlock","destruction")
