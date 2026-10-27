@@ -27,8 +27,12 @@ class SmokeBlocked(ValueError):pass
 def require(ok,why):
     if not ok:raise SmokeBlocked(why)
 
+# Historical v136 receipt contract: exactly the ORIGINAL 16 source-to-target
+# specialists accepted on Windows. The later Feral addition has separate
+# Native evidence and must not change this 16/16 aggregate or rerun its cache.
+V136_ACCEPTED_SPECS=frozenset(gear.GENERIC_PENDING-{("druid","feral")})
 def keys():
-    return tuple(sorted(gear.GENERIC_PENDING))
+    return tuple(sorted(V136_ACCEPTED_SPECS))
 
 def plan(binary,out,key):
     require(key in keys(),"NOT_V134_CONNECTED_SPEC")
