@@ -74,6 +74,16 @@ class UserTargetBootstrap(unittest.TestCase):
                     folder/"profile.simc"))
                 self.assertEqual(len(slot_order),output["plan"]["item_slots"])
                 num.input_parts(source)
+                # Universal F/O feasibility is enforced at seed creation,
+                # not introduced as a rogue-specific material workaround.
+                manifest=json.loads((folder/"manifest.json").read_text())
+                cfg=json.loads((folder/"scenario.json").read_text())
+                fixed_F=boot.ARCHETYPES[
+                    (user["character"]["class"],user["character"]["spec"])][3]
+                fixed_O=cfg["consumables"]["weapon_temporary_fixed_rating"]
+                for seed in manifest["seed_targets_B"]:
+                    self.assertTrue(all(seed[k]+fixed_O[k]>=fixed_F[k]
+                                        for k in num.STATS))
                 self.assertFalse((folder/"simc_results").exists())
                 self.assertEqual(boot.build(user,folder,binary,"7bc1071")
                                  ["plan"]["base_B"],output["plan"]["base_B"])
