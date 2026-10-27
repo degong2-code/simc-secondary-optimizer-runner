@@ -50,6 +50,34 @@ class UserTargetBootstrap(unittest.TestCase):
         binary.write_bytes(b"NOT_SIMC_EXECUTED")
         return boot.build(user,root/"generated",binary,"7bc10711b5"),root
 
+    def test_all_six_new_sessions_share_canonical_profile_and_runtime_format(self):
+        import v122_common_profile_format as fmt
+        import v063_numeric_injection as num
+        for which in ("fury","frost","retribution",
+                      "beast_mastery","subtlety","elemental"):
+            with self.subTest(spec=which),tempfile.TemporaryDirectory() as td:
+                root=pathlib.Path(td)
+                binary=root/"dummy"
+                binary.write_bytes(b"NO_NATIVE")
+                folder=root/"generated"
+                user=case(which)
+                output=boot.build(user,folder,binary,"7bc1071")
+                source=(folder/"profile.simc").read_text(encoding="utf8")
+                lines=source.splitlines()
+                slot_order=[s.partition("=")[0] for s in lines
+                            if s.partition("=")[0] in fmt.SLOT_ORDER]
+                self.assertEqual(slot_order,sorted(slot_order))
+                self.assertEqual(sum(l.startswith("json2=") for l in lines),1)
+                self.assertEqual(sum(l.startswith("iterations=") for l in lines),1)
+                self.assertIn("json2="+fmt.JSON2_PLACEHOLDER,source)
+                self.assertEqual(len(slot_order),output["plan"]["item_slots"])
+                num.input_parts(source)
+                self.assertFalse((folder/"simc_results").exists())
+                self.assertEqual(boot.build(user,folder,binary,"7bc1071")
+                                 ["plan"]["base_B"],output["plan"]["base_B"])
+                self.assertEqual((folder/"profile.simc").read_text(
+                    encoding="utf8"),source)
+
     def test_v104_240967_plan_generates_json2_native_request_without_mutating_seal(self):
         # Integrated source -> seeded v093 Native INPUT only, no SimC execution.
         # Rogue and Elemental share the original v104 json2-less profile.
@@ -66,7 +94,8 @@ class UserTargetBootstrap(unittest.TestCase):
                 folder=root/"generated"
                 plan=boot.build(user,folder,binary,"7bc1071")
                 original=(folder/"profile.simc").read_bytes()
-                self.assertNotIn(b"json2=",original)
+                self.assertEqual(sum(line.startswith(b"json2=")
+                                     for line in original.splitlines()),1)
                 self.assertEqual((plan["plan"]["base_B"],
                                   plan["plan"]["final_T"]),
                                  (3150,3214 if spec=="subtlety" else 3182))
@@ -92,7 +121,10 @@ class UserTargetBootstrap(unittest.TestCase):
             "sys.path.insert(0,sys.argv[1]);"
             "import v104_shared_pinned_rogue_shaman_composer as v104;"
             "import v098_target_user_scenario_bootstrap as v098;"
+            "import v122_common_profile_format as v122;"
             "v104.ALL_SLOTS=tuple(reversed(v104.ALL_SLOTS));"
+            "v122.order_rows=lambda rows,legacy: rows;"
+            "v122.finalize=lambda profile,legacy: profile;"
             "v098.run(pathlib.Path(sys.argv[2]),pathlib.Path(sys.argv[3]),"
             "pathlib.Path(sys.argv[4]),sys.argv[5])"
         )
