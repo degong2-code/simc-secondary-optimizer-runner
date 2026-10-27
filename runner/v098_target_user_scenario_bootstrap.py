@@ -261,6 +261,15 @@ def build(user,folder,binary,revision,static_cache_path=None,
     if prior_manifest.is_file():
         old=json.loads(prior_manifest.read_text(encoding="utf8"))
         sealed=old.get("seed_targets_B")
+        # If any Native run has started, its durable session identity is the
+        # stronger immutable witness for the ORIGINAL pair, not merely the
+        # current manifest bytes. A changed-but-recognized manifest cannot
+        # repoint completed Native receipts to other seeds.
+        native_seal=folder/"simc_results"/"V094_SESSION_IDENTITY.json"
+        if native_seal.is_file():
+            native_identity=json.loads(native_seal.read_text(encoding="utf8"))
+            need(native_identity.get("seed_base_targets")==sealed,
+                 "EXISTING_MANIFEST_SEEDS_DISAGREE_WITH_NATIVE_IDENTITY")
         old_B,old_lo,old_hi=scheduler.bounds(normalized,budget)
         need(old_B==B,"EXISTING_SESSION_SEED_TOTAL_DRIFT")
         pre_v124_seeds=initial_seeds(old_B,old_lo,old_hi)
