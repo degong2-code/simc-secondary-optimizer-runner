@@ -223,7 +223,18 @@ async function api(path,{method="GET",payload=null,publicRoute=false}={}) {
 }
 function markSession(id) {
   if (!/^[a-f0-9]{20}$/.test(id)) throw Error("세션 ID는 20자리 해시여야 합니다.");
+  const changed=id!==state.session;
   state.session=id;
+  if(changed) {
+    // A new plan is not the result of the previously selected session.
+    $("filled-result").hidden=true;
+    $("empty-result").hidden=false;
+    $("run-label").textContent="대기";
+    $("progress-label").textContent="0 / 6 후보";
+    $("progress-pct").textContent="0%";
+    $("progress-bar").style.width="0%";
+    $("stage-text").textContent="이 세션의 상태를 조회 중입니다.";
+  }
   $("session-id").textContent=id;
   $("restore-id").value=id;
   // Only the opaque ID (not talents, paths or other personal details) persists.
@@ -258,6 +269,10 @@ function showPlan(plan) {
 }
 function renderProgress(data) {
   const p=data?.progress||{};
+  if(!data?.result_ready) {
+    $("filled-result").hidden=true;
+    $("empty-result").hidden=false;
+  }
   const n=Number(p.completed_jobs)||0,limit=Number(p.planned_jobs)||6;
   const pct=Number(p.progress_percent)||0;
   $("progress-label").textContent=n+" / "+limit+" 후보";
