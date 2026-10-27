@@ -148,11 +148,20 @@ def propose(bundle,target,flask_vector,binary_sha,revision,iterations,path):
          bundle.get("status")=="READY_V091_STATIC_C_CANDIDATE",
          "V091_PREPARED_BUNDLE_REQUIRED")
     oil=bundle["oil"]
+    # The B-only legacy intermediate requires B>=F before oil can be
+    # credited. For valid boundary candidates F-O<=B<F, construct the
+    # intermediate from final B+O in v090; v092 will not add oil a second
+    # time. Typical historical candidates take the unchanged code path
+    # and retain their exact Native input/cache case identities.
+    boundary=any(target[s]<flask_vector[s] for s in scenario.STATS)
+    precredit=oil["declared_O"] if boundary else None
     out=reference_path.propose(bundle["prepared"],oil["profile"],
-            target,flask_vector,binary_sha,revision,iterations,path)
+            target,flask_vector,binary_sha,revision,iterations,path,
+            oil_precredit=precredit)
     need(out["official_total"]==bundle["prepared"]["T"] and
          out["external_oil_only"]==oil["declared_O"] and
-         all(out["raw_gear_override"][s]+flask_vector[s]==target[s]
+         all(out["raw_gear_override"][s]+flask_vector[s]==
+             target[s]+(precredit[s] if precredit is not None else 0)
              for s in scenario.STATS),
          "LEGACY_BASE_STATIC_C_REFERENCE_DRIFT")
     # Authoritative user-approved final total. SimC gear_* overrides the
