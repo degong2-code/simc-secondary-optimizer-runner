@@ -93,6 +93,11 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('markSession(p.session_id);showPlan(p);await pollOnce();',js)
         self.assertIn('if(snapshot.result)renderResult(snapshot.result);',js)
 
+    def test_blocked_worker_is_not_shown_as_idle_waiting(self):
+        js=self.client.get("/assets/app.js").text
+        self.assertIn('worker==="BLOCKED_OR_PARTIAL"?"실행 차단"',js)
+        self.assertIn('p.worker?.reason||worker',js)
+
     def test_missing_session_returns_read_only_404_with_precise_code(self):
         import tempfile
         with tempfile.TemporaryDirectory() as td:
