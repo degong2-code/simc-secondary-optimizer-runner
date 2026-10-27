@@ -92,7 +92,17 @@ def draft(key,ilevel=LEVEL):
             # source modifiers; gems are dealt with separately at product
             # completion, not silently transferred to another item.
             if slot!=UNRESOLVED_FIFTH.get(cls):
-                mods[slot]={}
+                # Two exact replacement head item IDs have prior
+                # source-backed socket witnesses in the existing v127
+                # representative pipeline. Preserve ONLY a source-observed
+                # diamond there, never an unproven socket on new armor.
+                diamond=mods[slot].get("gem_id")
+                if (slot=="head" and diamond in ("240983","240967")
+                    and (family,ordinary) in
+                       {("cloth",271874),("mail",249317)}):
+                    mods[slot]={"gem_id":diamond}
+                else:
+                    mods[slot]={}
         else:
             need(tier[slot] is not None,"V133_FOUR_TIER_ID_UNAVAILABLE")
             ids[slot]=tier[slot]
