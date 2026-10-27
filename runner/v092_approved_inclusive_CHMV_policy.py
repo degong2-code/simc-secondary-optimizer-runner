@@ -65,10 +65,23 @@ def adjust_native_request(request,accounting,base):
     declared_F=request["static_flask_F_vector"]
     scenario.vector(declared_F,"DECLARED_STATIC_FLASK_F")
     prior=request["raw_gear_override"]
-    need(all(prior[s]+declared_F[s]==base[s] for s in scenario.STATS),
+    precredit=request.get("v090_oil_precredit")
+    if precredit is not None:
+        need(precredit==accounting["fixed_O"]
+             and all(base[s]<declared_F[s]
+                     or prior[s]+declared_F[s]==base[s]+precredit[s]
+                     for s in scenario.STATS)
+             and any(base[s]<declared_F[s] for s in scenario.STATS),
+             "OIL_PRECREDIT_IDENTITY_OR_STAGE_DRIFT")
+    need(all(prior[s]+declared_F[s]==
+             base[s]+(precredit[s] if precredit is not None else 0)
+             for s in scenario.STATS),
          "BASE_GEARRATING_AND_F_MISMATCH")
-    raw={s:prior[s]+accounting["fixed_O"][s] for s in scenario.STATS}
-    need(all(raw[s]+declared_F[s]==final[s] for s in scenario.STATS),
+    raw={s:prior[s]+accounting["fixed_O"][s]-
+         (precredit[s] if precredit is not None else 0)
+         for s in scenario.STATS}
+    need(all(raw[s]>=0 and raw[s]+declared_F[s]==final[s]
+             for s in scenario.STATS),
          "OIL_INCLUSION_NUMERIC_DUPLICATION_OR_MISSING")
     lines=request["input"].splitlines()
     seen={s:0 for s in scenario.STATS}
