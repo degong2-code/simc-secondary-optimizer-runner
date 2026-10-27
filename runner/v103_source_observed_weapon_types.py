@@ -24,6 +24,8 @@ SOURCE={
                    "b787824a95020a7cdd0934ed5e004695726db138","one_hand_frill"),
  ("hunter","beast_mastery"):("integration_probes/fixtures/v079_upstream_mid2_hunter_beast_mastery_reference.simc",
                              "fd9399a7ee0c9c39a362ba31a0d8308e3e000490","ranged"),
+ ("rogue","outlaw"):("integration_probes/fixtures/v131_upstream_mid2_rogue_outlaw_reference.simc",
+                    "738f7fe64c1d75159b86ecc2e8064dc29c69c203","dual_one_hand"),
  ("rogue","subtlety"):("integration_probes/fixtures/v068_upstream_mid2_rogue_subtlety_reference.simc",
                        "b704e6326959432a82d14a6b774c79183d5b2af4","dual_one_hand"),
  ("shaman","elemental"):("integration_probes/fixtures/v078_upstream_mid2_shaman_elemental_reference.simc",
@@ -43,6 +45,9 @@ OBSERVED={
      "off_hand":(245769,"held_offhand","intellect")},
  ("hunter","beast_mastery"):{
      "main_hand":(268207,"bow_ranged","agility")},
+ ("rogue","outlaw"):{
+     "main_hand":(268209,"axe_1h","strength_or_agility"),
+     "off_hand":(275070,"dagger_1h","agility")},
  ("rogue","subtlety"):{
      "main_hand":(271093,"dagger_1h","agility"),
      "off_hand":(237837,"dagger_1h","agility")},
@@ -64,6 +69,8 @@ TYPE_SOURCES={
  245769:"https://www.wowhead.com/item=245769",
  268207:"https://www.wowhead.com/item=268207",
  271093:"https://www.wowhead.com/item=271093",
+ 268209:"https://www.wowhead.com/item=268209",
+ 275070:"https://www.wowhead.com/item=275070",
  237837:"https://www.wowhead.com/item=237837",
  268262:"https://www.wowhead.com/item=268262"}
 # Two formerly source-only shapes now have a bounded shared v104
@@ -98,7 +105,7 @@ def verify_observed():
             parsed[slot]=int(m[0])
         for slot,(id_,type_,primary) in OBSERVED[key].items():
             need(parsed[slot]==id_ and id_ in TYPE_SOURCES
-                 and type_ in {"axe_2h","polearm_2h","dagger_1h",
+                 and type_ in {"axe_2h","polearm_2h","axe_1h","dagger_1h",
                                "held_offhand","bow_ranged","shield_offhand"}
                  and primary in ("strength_or_agility","intellect","agility"),
                  "SOURCE_WEAPON_SUBTYPE_OR_ID_DRIFT:"+"/".join(key)+":"+slot)
