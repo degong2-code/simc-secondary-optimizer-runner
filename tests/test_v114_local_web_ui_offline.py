@@ -85,6 +85,28 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('group==="special_items"?8:2',js)
         self.assertIn('for (let i=0;i<limit;i++)',js)
 
+    def test_missing_session_returns_read_only_404_with_precise_code(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)/"runs"
+            client=TestClient(api.create_app(root=root,token="offline"),
+                base_url="http://127.0.0.1:8765")
+            r=client.get("/api/v1/sessions/abca493c00d6ee2599f1/status",
+                headers={"x-simc-local-token":"offline"})
+            self.assertEqual(r.status_code,404)
+            self.assertEqual(r.json()["detail"]["code"],"SESSION_NOT_FOUND")
+            self.assertFalse(root.exists())
+
+    def test_missing_session_is_not_saved_as_verified_and_polling_backs_off(self):
+        js=self.client.get("/assets/app.js").text
+        self.assertIn('const snapshot=await readSession(id);\\n  markSession(id);'.replace('\\n', '\\n'),js)
+        self.assertIn('if(err.message==="SESSION_NOT_FOUND")',js)
+        self.assertIn('localStorage.removeItem("simc_secondary_session_id")',js)
+        self.assertIn('return; // Stop polling this missing ID.',js)
+        self.assertIn('state.nextPollAt=Date.now()+Math.min(30000',js)
+        self.assertIn('state.pollBusy=true;',js)
+        self.assertIn('setNotice("기존 세션 조회 성공',js)
+
     def test_source_observed_options_are_official_contract_not_user_invented(self):
         self.assertEqual(self.client.get("/api/v1/options").status_code,403)
         r=self.client.get("/api/v1/options",headers=self.head)
