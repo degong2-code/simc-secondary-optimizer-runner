@@ -111,10 +111,25 @@ def run(binary,out,max_new=2,iterations=35,timeout=180):
         receipts.atomic_json(receipt,note)
         cases.append({"spec":"/".join(key),"status":status,"error":error})
         print("/".join(key),status,flush=True)
+    # A partial two-spec pilot must never look like 16/16 Native acceptance.
+    # These counts are derived from the recorded cases: no added SimC calls,
+    # no altered profile/input identity, and NOT_RUN_LIMIT is not a PASS.
+    accepted=sum(x["status"] in ("PASS_NATIVE_SMOKE","CACHED_VERIFIED_NATIVE")
+                 for x in cases)
+    deferred=sum(x["status"]=="NOT_RUN_LIMIT" for x in cases)
+    failed=sum(x["status"] in ("FAIL_NATIVE","PRIOR_FAILED_NOT_RETRIED")
+               for x in cases)
+    require(accepted+deferred+failed==len(cases),"SMOKE_UNKNOWN_CASE_STATUS")
+    complete=accepted==len(keys()) and failed==0
     report={"schema":SCHEMA,"new_native_calls":used,"total_connected":len(keys()),
-            "cases":cases,"all_attempted_pass":all(
-             x["status"] in ("PASS_NATIVE_SMOKE","CACHED_VERIFIED_NATIVE","NOT_RUN_LIMIT")
-             for x in cases),"raw_original_sources_not_rerun":True,
+            "cases":cases,"native_accepted_total":accepted,
+            "not_run_limit_total":deferred,"failed_total":failed,
+            "all_16_native_accepted":complete,
+            "coverage_status":("ALL_16_NATIVE_ACCEPTED" if complete else
+                               "FAILED_NATIVE_PRESENT" if failed else
+                               "PARTIAL_NOT_RUN"),
+            "all_attempted_pass":failed==0,
+            "raw_original_sources_not_rerun":True,
             "not_an_adaptive_optimizer":True}
     receipts.atomic_json(out/"V136_TARGET_NATIVE_SMOKE_SUMMARY.json",report)
     return report
@@ -130,7 +145,11 @@ def main():
     try:
         result=run(a.simc,a.out,a.max_new,a.iterations)
         print("NATIVE_CALLS",result["new_native_calls"],
-              "ATTEMPTED_PASS",result["all_attempted_pass"])
+              "ATTEMPTED_PASS",result["all_attempted_pass"],
+              "ACCEPTED",result["native_accepted_total"],
+              "DEFERRED",result["not_run_limit_total"],
+              "FAILED",result["failed_total"],
+              "ALL_16_ACCEPTED",result["all_16_native_accepted"])
         code=0 if result["all_attempted_pass"] else 3
     except Exception as exc:
         print("V136_BLOCKED",type(exc).__name__,str(exc),file=sys.stderr)
