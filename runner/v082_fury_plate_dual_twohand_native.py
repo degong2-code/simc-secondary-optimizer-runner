@@ -9,6 +9,7 @@ ONE original v015-derived adaptive scout (at most four NEW Native calls).
 A talent-adjusted buffed_stats field NEVER replaces the target static c.
 """
 from __future__ import annotations
+import v128_common_source_profile_emitter as common_emitter
 
 import argparse
 import hashlib
@@ -124,19 +125,9 @@ def source_profile(source,folder):
            "json2":str(folder/"initial_native"/"result.json"),
            "flask":"flask_of_the_blood_knights_2"}
     fixed.update({"gear_"+key:"700" for key in scenario.STATS})
-    lines=[]
-    for line in source.splitlines():
-        if line.startswith("# Gear Summary"):break
-        key,sep,_=line.partition("=")
-        if (sep and not line.startswith("#")
-              and (key in fixed or key in ALL_SLOTS or key=="temporary_enchant")):
-            continue
-        lines.append(line)
-    lines.append("")
-    lines.extend(key+"="+value for key,value in fixed.items())
-    lines.extend(items.equipment_line(slot,eq[slot]["item_id"],334,
-                 eq[slot]["options"]) for slot in ALL_SLOTS)
-    reference="\n".join(lines).rstrip()+"\n"
+    reference=common_emitter.emit(
+        source,fixed,eq,ALL_SLOTS,
+        blank_before_overrides=True)
     need(initial_actions==[line for line in reference.splitlines()
                   if line.startswith("actions")],
          "FURY_ORIGINAL_SIMC_APL_CHANGED")
