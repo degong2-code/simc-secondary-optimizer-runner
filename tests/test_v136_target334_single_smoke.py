@@ -17,6 +17,11 @@ class TargetSmoke(unittest.TestCase):
                 result=runner.run(binary,home/"output",max_new=0)
             self.assertEqual(result["new_native_calls"],0)
             self.assertEqual(len(result["cases"]),16)
+            self.assertEqual(result["native_accepted_total"],0)
+            self.assertEqual(result["not_run_limit_total"],16)
+            self.assertEqual(result["failed_total"],0)
+            self.assertFalse(result["all_16_native_accepted"])
+            self.assertEqual(result["coverage_status"],"PARTIAL_NOT_RUN")
             self.assertTrue(all(x["status"]=="NOT_RUN_LIMIT"
                                 for x in result["cases"]))
             self.assertFalse(list((home/"output").rglob("native_input.simc")))
@@ -40,14 +45,41 @@ class TargetSmoke(unittest.TestCase):
                 first=runner.run(binary,home/"out",max_new=1)
                 self.assertEqual(first["new_native_calls"],1)
                 self.assertEqual(first["cases"][0]["status"],"PASS_NATIVE_SMOKE")
+                self.assertEqual(first["native_accepted_total"],1)
+                self.assertEqual(first["not_run_limit_total"],15)
+                self.assertFalse(first["all_16_native_accepted"])
                 second=runner.run(binary,home/"out",max_new=0)
                 self.assertEqual(second["new_native_calls"],0)
                 self.assertEqual(second["cases"][0]["status"],"CACHED_VERIFIED_NATIVE")
+                self.assertEqual(second["native_accepted_total"],1)
+                self.assertEqual(second["not_run_limit_total"],15)
             self.assertEqual(len(invoked),1)
             with self.assertRaisesRegex(runner.SmokeBlocked,"SMOKE_OUTPUT_DRIFT"):
                 jsonpath=home/"out"/("__".join(runner.keys()[0]))/"result.json"
                 jsonpath.write_text("{}",encoding="utf8")
                 runner.run(binary,home/"out",max_new=0)
+    def test_failed_native_never_counts_as_accepted_or_retries(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            binary=root/"fake.exe"; binary.write_bytes(b"synthetic failed Native")
+            class Failure:
+                returncode=2
+                stdout=b"original SimC failure text"
+            with mock.patch.object(runner.subprocess,"run",return_value=Failure()) as call:
+                first=runner.run(binary,root/"out",max_new=1)
+                second=runner.run(binary,root/"out",max_new=0)
+            self.assertEqual(call.call_count,1)
+            self.assertEqual(first["native_accepted_total"],0)
+            self.assertEqual(first["not_run_limit_total"],15)
+            self.assertEqual(first["failed_total"],1)
+            self.assertEqual(first["coverage_status"],"FAILED_NATIVE_PRESENT")
+            self.assertFalse(first["all_attempted_pass"])
+            self.assertFalse(first["all_16_native_accepted"])
+            self.assertEqual(second["cases"][0]["status"],"PRIOR_FAILED_NOT_RETRIED")
+            self.assertEqual(second["failed_total"],1)
+            log=root/"out"/("__".join(runner.keys()[0]))/"simc.log"
+            self.assertIn("original SimC failure text",log.read_text("utf8"))
+
     def test_errors_and_scope(self):
         with tempfile.TemporaryDirectory() as td:
             root=pathlib.Path(td)
