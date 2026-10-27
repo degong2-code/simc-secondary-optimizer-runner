@@ -93,6 +93,60 @@ def available_ordinary_seed_slots(family):
     if family not in ordinary_pool.FAMILY_ROWS:return ()
     return tuple(sorted(ordinary_pool.FAMILY_ROWS[family]))
 
+# P1-WEB-3: representative 23-rating gem examples, with source-observed
+# colors. This is NOT a second gem/stat effect engine; SimC owns color effects.
+SOURCE_GEM_COLOR={
+    240908:"garnet", 240906:"garnet",
+    240900:"amethyst", 240898:"amethyst",
+    240918:"lapis",
+    240892:"peridot", 240890:"peridot"}
+FOUR_COLOR_GEMS={
+    "garnet":240908,"amethyst":240900,
+    "lapis":240918,"peridot":240892}
+
+def ensure_representative_gem_colors(rows,diamond_id,need):
+    """Keep six real ordinary gems; for 240967 cover all four colors.
+
+    Fixes only missing colors, leaving a source profile unchanged if its
+    socketed gems already cover all colors. Existing 240983 source scenarios
+    are byte-preserved. The optimizer may overwrite secondary rating via
+    gear_*; actual gem IDs remain on the physical items for SimC effects.
+    """
+    if diamond_id!=240967:
+        return False
+    slots=[]
+    for slot in sorted(rows):
+        if slot=="head" or slot.startswith("trinket"):
+            continue
+        gem_ids=rows[slot]["options"].get("gem_id")
+        if gem_ids is None:
+            continue
+        tokens=gem_ids.split("/")
+        need(all(t.isdigit() and int(t) not in (240967,240983) for t in tokens),
+             "REPRESENTATIVE_ORDINARY_GEM_INVALID")
+        for idx,token in enumerate(tokens):
+            slots.append((slot,idx,int(token)))
+    need(len(slots)==6,"REPRESENTATIVE_SIX_ORDINARY_GEMS_REQUIRED")
+    present=set()
+    replaceable=[]
+    for slot,idx,gem_id in slots:
+        color=SOURCE_GEM_COLOR.get(gem_id)
+        if color is None or color in present:
+            replaceable.append((slot,idx))
+        else:
+            present.add(color)
+    missing=[color for color in FOUR_COLOR_GEMS if color not in present]
+    need(len(replaceable)>=len(missing),"REPRESENTATIVE_GEM_COLORS_NOT_FEASIBLE")
+    if not missing:
+        return False
+    slot_tokens={slot:rows[slot]["options"]["gem_id"].split("/")
+                 for slot,_,_ in slots}
+    for (slot,idx),color in zip(replaceable,missing):
+        slot_tokens[slot][idx]=str(FOUR_COLOR_GEMS[color])
+    for slot,tokens in slot_tokens.items():
+        rows[slot]["options"]["gem_id"]="/".join(tokens)
+    return True
+
 def source_backed_gear(key,folder,ilevel,need):
     """Factory APL is source-owned; ALL subsequent gear assembly is shared."""
     need(key in ARCHETYPES,"REPRESENTATIVE_ARCHETYPE_NOT_READY")
@@ -173,6 +227,12 @@ def apply_user_equipment(key,rows,groups,user,ilevel,need):
             taken.add(slot)
             opts=items.checked_options(raw["options"])
             items.checked_id(raw["item_id"])
+            # Retain the existing representative socket layout when a user
+            # swaps special/crafted gear. SimC must still accept the exact item.
+            if group in ("special","crafted") and "gem_id" not in opts:
+                source_gems=rows[slot]["options"].get("gem_id")
+                if source_gems:
+                    opts["gem_id"]=source_gems
             slot_group=group
             if group=="trinkets":
                 need(slot in ("trinket1","trinket2") and not
