@@ -1,0 +1,34 @@
+SIMC SECONDARY OPTIMIZER — 후속 주 제품 개발 채팅 재개 요청 (2026-10-27)
+
+이 채팅은 이전 제품 개발 채팅이 최대 길이에 도달해 사용자 직접 지시로 이어지는 후속 채팅이다. 새로운 프로젝트를 시작하거나 별도 MAIN/WORK/Work OS 권한을 주장하지 말고, 같은 P1 개발을 기존 GitHub 격리 브랜치에서 계속 수행하라.
+
+[가장 먼저 읽을 기준]
+GitHub: https://github.com/degong2-code/simc-secondary-optimizer-runner
+개발 브랜치: probe/chat-cache-v035-20261024
+인계 문서: docs/HANDOFF_P1_V136_SUCCESSOR_20261027.md
+실제 CURRENT: docs/CURRENT_PRODUCT_DEVELOPMENT_STATE.md (최신 기록부터)
+제품 목표: docs/CURRENT_PRODUCT_PURPOSE_AND_USER_ENTRY_20261026.md
+v136 제품 코드 기준(인계 문서 커밋 전): 145fd51329f50bf76285c2236498630bf3cead68
+첨부/프로젝트에 v1.4 승인 설계 문서가 있으면 제품 설계 기준으로 참조하되, 최신 사용자 결정인 '딜러 전문화 27개(증강 포함), 탱커/힐러 제외'가 해당 문서의 과거 '전 전문화' 범위를 대체한다. GitHub 문서 작성 ≠ ChatGPT Project UI 적용 완료.
+
+[반드시 이해할 목표]
+현재 장비 스탯 재분배가 아니라, 목표 ilvl 기본334 또는 사용자가 지정한 최종 CHMV 총량에 대한 미래 파밍 목표 **치명·가속·특화·유연의 최적 절대 rating**을 실제 SimC DPS로 찾는다. 일반 사용자는 전체 착용 장비를 입력하지 않는다. 공통 대표 일반장비·무기·티어4·원본 APL은 내부 생성; 사용자 입력은 직업/전문화/종족/특성·목표·장신구2·특수장비·장식 최대2·소모품/보석/기름·전투조건. 결과는 관측 DPS, SEM, 95% 통계적 판정, 관측 1순위, 실질적으로 다른 근접 대안, 절대 rating과 비율이다. 전역 최적 입증과 관측 최고는 구분. 총량 T=G+J+F+O, 내부 B=G+J+F, T=B+O, 고정 O는 gear_* 한 번, 선택 장비 L은 B 안에서 floor 보호, 장신구 정적 스탯은 G 외부. v087 기본 B3150(334 일반)·B3350(분노 양손2개)는 10-rating 반올림 참조이지 모든 전문화의 exact G가 아니다. SimC가 아이템 효과/APL/proc/DPS를 책임진다. 별도 최적화 엔진/효과 인증 Gate/시즌 장비 DB/파밍 경로 추천 금지.
+
+[현 시점의 정확한 개발·검증 상태]
+v127~v130 공통 데이터·파서·APL/신원·프로필 직렬화. v132 공식 MID2 원본 24/27 확보, 새 원본17개는 집 PC 실제 SimC 단발 Native17/17 PASS (제품 변환 프로필 PASS 아님). v133 17개 공통 대표4티어 초안. v134 기존7 + 신규16 = **23/27개 v098 사용자 계획 경로 연결**, v135 gem-color 정합. 야성 드루이드는 실제 머리 다이아몬드/일반 보석6개 근거 부족으로 아직 비활성. 조화 드루이드·황폐 기원사·증강 기원사 MID2 기본 원본 미확보. 기존 징벌·잠행·정기 3전문화 Windows 실제 적응형 Native6/6 역사 증거 있음.
+최신 v136 runner/v136_target334_single_smoke.py 구현 및 GitHub Actions #40518262941 Windows·Ubuntu 오프라인17/17씩 PASS, **v136 신규16 target334 실제 Native는 아직 결과가 전달되지 않았음**. 이전 raw 원본17/17 Native로 대체 판정 불가. v134 source/user 계획 Actions #40515149689 14/14 각OS, full Actions #40515947512 252/252, web Actions #40515474814 40/40 각OS 모두 완료된 별도 증거로 재사용.
+
+[즉시 업무]
+먼저 live GitHub HEAD/CURRENT와 인계 문서, v134/v136 코드, 해당 CI 상태만 확인. v136 실제 2전문화 Native 파일/로그가 사용자 후속 메시지에 이미 있으면 판독해 결과를 적용하고, 없다면 필요한 경우에 한하여 집 PC용 아래 **1개 명령**을 정확하게 안내:
+py -3 runner/v136_target334_single_smoke.py --simc "C:\Users\degong2\Desktop\Wow\SSfindout\SIMC\simc-1210.01.7bc1071-win64\simc.exe" --max-new 2
+집 PC SimC 바이너리 SHA256 b0ea12ee3ac233a4a590609e2a5bd4c4db45c5f8ae6f8994b1b8d0de4d5acff4. 출력은 사용자 HOME의 SIMC_Secondary_Optimizer/target_smoke_v136 폴더. v136은 35 iterations/spec, 성공하면 SHA 영수증·캐시를 재사용하며 재호출 비용0. 2개 PASS면 나머지 14개를 조건 동일하게 --max-new 14로 확장 가능. 실패는 해당 원본 SimC 오류·프로필·receipt를 확인해 **공통 어댑터**를 교정; 기존 완료본 재실행·실패 은폐 금지. all_attempted_pass=True여도 NOT_RUN_LIMIT 14개는 성공이 아니다. v136에는 자동 실패 재시도 옵션이 없으므로 영수증 삭제나 임의 변경 금지.
+
+사용자 Native를 기다리는 동안에도 v134의 일반장비 아닌 source BIS 잔여·보석/다이아몬드 실물 소켓·flask F·기름 O·manual T·선택 특수 L의 공통 P1 통합을 개발하되, 기존 v098/v101/v122/v094 적응형 엔진을 재구현하지 말라. 코드 변경은 격리 브랜치에만, push CI 자동 실행·결과 확인 후 오류 교정. 사용자에게 GitHub Actions 수동 실행 버튼 반복 요구 금지.
+
+[재작업·낭비 금지]
+이전 17개 raw 원본 Native, 3전문화 기존 Native6/6, v130 Windows92 PASS, v134/v136 오프라인 CI 등을 같은 이유로 다시 돌리지 마라. 바뀐 부분이 실제 무효화한 최소 계약만 검증. 신규 Native·캐시·메모리·파일 I/O·중복 계산·구조 단순화를 매 수정 시 검토. 일단 v136 2회, 필요시 나머지 14회(6후보×16 금지). 관련 없는 미세 SEM 개선·새 Gate·과거 전체 감사·별도 장비 DB 금지. 구현 완료/이번 신규 PASS·FAIL/역사 증거 재사용/미구현을 항상 구분해서 보고.
+
+[권한]
+기존 GitHub 격리 probe 브랜치에서 일반 제품 P1 코딩 계속 허용. main 병합, immutable v003 변경, ChatGPT Project Sources/Instructions 실제 적용, 공식 Work OS M0·Shared State·MAIN 소유권 이전·WEQUIP runtime 종속은 별도 사용자 승인이 없으면 금지. Work OS M0 미통과가 일반 제품 개발/시험 정지 이유는 아님.
+
+바로 실행 가능한 코드/CI 작업이 있다면 다음 질문으로 책임을 돌리지 말고 기존 코드·자료를 재사용해 진행하라. 다음 응답에는 이번에 실제 확인한 HEAD/변경한 파일·커밋·CI·Native0 또는 Native 횟수·다음 한 가지 로컬 작업만 명확히 적어라.
