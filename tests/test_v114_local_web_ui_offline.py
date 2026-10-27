@@ -85,6 +85,14 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('group==="special_items"?8:2',js)
         self.assertIn('for (let i=0;i<limit;i++)',js)
 
+    def test_new_plan_does_not_display_previous_specialization_dps(self):
+        js=self.client.get("/assets/app.js").text
+        self.assertIn("const changed=id!==state.session;",js)
+        self.assertIn('if(changed) {\\n    // A new plan is not the result',js)
+        self.assertIn('if(!data?.result_ready) {\\n    $("filled-result").hidden=true;',js)
+        self.assertIn('markSession(p.session_id);showPlan(p);await pollOnce();',js)
+        self.assertIn('if(snapshot.result)renderResult(snapshot.result);',js)
+
     def test_missing_session_returns_read_only_404_with_precise_code(self):
         import tempfile
         with tempfile.TemporaryDirectory() as td:
