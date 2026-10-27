@@ -11,6 +11,7 @@ A talent-adjusted buffed_stats field NEVER replaces the target static c.
 from __future__ import annotations
 import v128_common_source_profile_emitter as common_emitter
 import v129_common_source_fields as common_fields
+import v130_source_identity_contract as source_identity
 
 import argparse
 import hashlib
@@ -81,27 +82,20 @@ def source_profile(source,folder):
     Test fixture normalizes ilvl to 334 and declares fresh options. Does not
     infer full item compatibility, set mechanics, trinket procs or a recipe DB.
     """
-    source_bytes=source.encode("utf8")
-    actual_blob=hashlib.sha1(
-        ("blob "+str(len(source_bytes))+"\0").encode("ascii")+source_bytes
-    ).hexdigest()
-    need(actual_blob==UPSTREAM_GIT_BLOB,"UPSTREAM_FURY_SOURCE_BLOB_DRIFT")
-    need(UPSTREAM_CLASS_LINE in source and "spec=fury" in source
-         and "race=dwarf" in source and "role=attack" in source,
-         "FURY_CLASS_RACE_SPEC_ROLE_DRIFT")
-    initial_actions=common_fields.matching_lines(source,"actions")
-    need(len(initial_actions)>35 and
-         sum(line.startswith("actions=") for line in initial_actions)==1,
-         "FURY_UPSTREAM_APL_MISSING")
+    initial_actions,talents=source_identity.verify(
+        source,("warrior","fury"),UPSTREAM_GIT_BLOB,
+        (UPSTREAM_CLASS_LINE,"spec=fury","race=dwarf","role=attack"),
+        min_actions=35,strict_greater=True,
+        hash_error="UPSTREAM_FURY_SOURCE_BLOB_DRIFT",
+        identity_error="FURY_CLASS_RACE_SPEC_ROLE_DRIFT",
+        apl_error="FURY_UPSTREAM_APL_MISSING",
+        talents_error="FURY_ONE_TALENT_STRING_REQUIRED",fail=need)
     ids,_=common_fields.equipment(source,ALL_SLOTS,need=need,
         duplicate_prefix="FURY_SOURCE_DUPLICATE_SLOT:",
         missing_id_prefix="FURY_SOURCE_ID_MISSING:")
     need(set(ids)==set(ALL_SLOTS),"FURY_SOURCE_SIXTEEN_SLOTS_REQUIRED")
     need(all(ids[k]==v for k,v in SOURCE_WEAPON_IDS.items()),
          "FURY_SOURCE_DUAL_WEAPON_ID_CHANGED")
-    talents=[line.partition("=")[2] for line in
-             common_fields.matching_lines(source,"talents=")]
-    need(len(talents)==1,"FURY_ONE_TALENT_STRING_REQUIRED")
     eq={}
     for slot in ALL_SLOTS:
         options={}
