@@ -43,10 +43,10 @@ class LocalWebAPIOffline(unittest.TestCase):
     def test_bootstrap_health_and_all_six_source_defaults_no_simc(self):
         health=self.client.get("/api/v1/health")
         self.assertEqual(health.status_code,200)
-        self.assertEqual(health.json()["supported_dps"],7)
+        self.assertEqual(health.json()["supported_dps"],23)
         boot=self.client.get("/api/v1/bootstrap").json()
         self.assertEqual(boot["session_token"],"offline-only-token")
-        self.assertEqual(len(boot["supported"]),7)
+        self.assertEqual(len(boot["supported"]),23)
         defaults=self.client.get("/api/v1/defaults",headers=self.headers)
         self.assertEqual(defaults.status_code,200)
         for row in defaults.json()["archetypes"]:
