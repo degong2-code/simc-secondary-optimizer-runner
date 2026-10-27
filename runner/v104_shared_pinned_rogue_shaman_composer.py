@@ -51,6 +51,7 @@ PROFILES={
         "tier":("head","shoulders","hands","legs"),
         "fifth":("chest",251159),
         "replace":{"back":268253,"wrists":268240},
+        "source_socket_on_ordinary":{"wrists":"240890"},
         "gem":"240967","F":"crit_rating"},
     ("shaman","elemental"):{
         "filename":"v078_upstream_mid2_shaman_elemental_reference.simc",
@@ -122,9 +123,18 @@ def create_from_source(source,folder,key):
         else:
             need(ordinary.row(material,slot,334)["item_id"]==id_,
                  "REPLACEMENT_ARMOR_MATERIAL_OR_SLOT_MISMATCH:"+slot)
+        # An ordinary wrist socket is retained only when the same exact
+        # replacement item was already Native-accepted with a wrist socket
+        # (Rogue Subtlety 268240). The source gem must match the pinned new
+        # specialization's *own* original socket; never invent a socket or
+        # preserve discarded bonus/crafted/random-stat modifiers.
+        socket=spec.get("source_socket_on_ordinary",{}).get(slot)
+        if socket is not None:
+            need(slot=="wrists" and id_==268240
+                 and mods[slot].get("gem_id")==socket,
+                 "SOURCE_ORDINARY_WRIST_SOCKET_PROVENANCE_DRIFT")
         ids[slot]=id_
-        # Do not copy bonus/random-stat modifiers from a discarded item.
-        mods[slot]={}
+        mods[slot]={"gem_id":socket} if socket is not None else {}
     # Standardized representative items: preserve source-proven gem/enchant
     # only for unchanged items; no source bonus_id/proc redirect leakage.
     # Item after a substitution has no inherited crafted/random modifiers.
