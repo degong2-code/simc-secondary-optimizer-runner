@@ -59,6 +59,36 @@ class PreviewBlocked(ValueError):pass
 def need(ok,code):
     if not ok:raise PreviewBlocked(code)
 
+# Feral's pinned MID2 source has a head without an equipped diamond and
+# only three ordinary gems (the special 240983 is placed in the neck).
+# Same-ID MID2 Rogue/Monk source witnesses establish these neck/wrist/waist
+# physical positions. Head 271528 is the actual Druid tier item; its head
+# socket is additionally witnessed in a public live-character gear record,
+# but the exact 334 variant STILL requires real SimC acceptance.
+# Candidate preview ONLY: do not register Feral as user-ready before Native.
+FERAL_SOCKET_ROWS={
+    "head":(271528,"240983"),
+    "neck":(268265,"240914/240890"),
+    "wrists":(244576,"240890"),
+    "waist":(268256,"240908")}
+FERAL_RING_ROWS={"finger1":(268249,"240898"),
+                 "finger2":(268252,"240900")}
+
+def feral_candidate_sockets(key,ids,mods):
+    if key!="druid/feral":return False
+    need(all(ids.get(slot)==item_id for slot,(item_id,_) in
+             {**FERAL_SOCKET_ROWS,**FERAL_RING_ROWS}.items()),
+         "V133_FERAL_SOCKET_REFERENCE_ITEM_DRIFT")
+    need(mods["neck"].get("gem_id")=="240983" and
+         "gem_id" not in mods["head"] and
+         all("gem_id" not in mods[slot] for slot in ("wrists","waist")) and
+         all(mods[slot].get("gem_id")==gem for slot,(_,gem)
+             in FERAL_RING_ROWS.items()),
+         "V133_FERAL_ORIGINAL_SOCKET_LAYOUT_DRIFT")
+    for slot,(_,gems) in FERAL_SOCKET_ROWS.items():
+        mods[slot]["gem_id"]=gems
+    return True
+
 def draft(key,ilevel=LEVEL):
     need(key in sources.NEW,"V133_SOURCE_KEY_NOT_PINNED")
     need(isinstance(ilevel,int) and 266<=ilevel<=344,"V133_LEVEL_INVALID")
@@ -108,6 +138,9 @@ def draft(key,ilevel=LEVEL):
             ids[slot]=tier[slot]
             mods[slot]={k:v for k,v in mods[slot].items()
                         if k in ("gem_id","enchant","enchant_id")}
+    # Reposition only ID-/source-witnessed physical gems on the staged
+    # Feral representative. The original official source bytes stay pinned.
+    feral_candidate_sockets(key,ids,mods)
     rows={slot:{"slot":slot,"item_id":id_,"ilevel":ilevel,
                "options":item.checked_options(mods.get(slot,{}))}
           for slot,id_ in ids.items()}
