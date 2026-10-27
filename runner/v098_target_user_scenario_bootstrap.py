@@ -209,7 +209,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
     common.ensure_representative_gem_colors(rows,gem_choice,need)
     # New plans use ONE common slot order for all archetypes. Existing sealed
     # sessions replay the old order exactly, avoiding a forced recalculation.
-    legacy=(folder/"profile.simc").is_file()
+    legacy=profile_format.existing_profile_uses_legacy_format(
+        folder/"profile.simc")
     rows=preserve_existing_v104_gear_order(key,rows,folder)
     rows=profile_format.order_rows(rows,legacy=legacy)
     cfg["equipment"],fillers=common.physical_gear_groups(
