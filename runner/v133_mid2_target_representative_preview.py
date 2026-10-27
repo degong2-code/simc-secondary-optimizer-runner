@@ -33,9 +33,14 @@ FIVE_TIER={
  "deathknight":(271474,271472,271477,271475,271473),
  "demonhunter":(271537,271535,271540,271538,271536),
  "druid":(271528,271526,271531,271529,271527),
- "monk":(271519,271517,271522,None,271518),
- "priest":(271555,None,271558,271556,271554),
- "warlock":(None,271544,271549,271547,271545)}
+ # Three previously missing tier IDs independently grounded against
+ # MID2 tier-set item identity: 271520 Monk gloves (WoWTopGear),
+ # 271553 Priest shoulders (WoWDB/Wowhead), 271546 Warlock head
+ # (TransmogDB source set). They remain *item-ID* evidence, not a new
+ # Native exact-rating/proc receipt.
+ "monk":(271519,271517,271522,271520,271518),
+ "priest":(271555,271553,271558,271556,271554),
+ "warlock":(271546,271544,271549,271547,271545)}
 for _e in registry.SOURCE_BACKED:
     FIVE_TIER.setdefault(_e.character_class,
                           tuple(_e.tier_ids()[slot] for slot in FIVE))
@@ -45,9 +50,10 @@ for _e in registry.SOURCE_BACKED:
 # mail head 249317 comes from the existing corrected v086 source.
 ORDINARY_OFF={"plate":("legs",271878),"leather":("chest",251159),
               "mail":("head",249317),"cloth":("head",271874)}
-# For classes with no exact fifth tier ID, preserve their source's four
-# observed tier slots; do not invent the missing class tier ID.
-UNRESOLVED_FIFTH={"monk":"hands","priest":"shoulders","warlock":"head"}
+# The complete 5-tier IDs are now item-identity sourced; leave the
+# fallback mechanism in place for any future source with genuinely unknown
+# fifth-tier evidence, rather than guessing a contiguous numeric ID.
+UNRESOLVED_FIFTH={}
 class PreviewBlocked(ValueError):pass
 
 def need(ok,code):
