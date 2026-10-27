@@ -82,6 +82,54 @@ class Mid2TargetDraft(unittest.TestCase):
                 self.assertIn("gem_id="+gem,head)
                 self.assertEqual(data["diamond_id"],gem)
 
+    def test_staged_feral_six_ordinary_gems_and_head_diamond_are_source_witnessed(self):
+        feral=source.validate_source("druid/feral")["source"]
+        monk=source.validate_source("monk/windwalker")["source"]
+        self.assertIn("head=enigmatic_dreamwatchers_somnolent_stare,id=271528",feral)
+        self.assertIn("neck=aqirbane_reliquary,id=268265",feral)
+        self.assertIn("gem_id=240983",feral)
+        self.assertIn("neck=aqirbane_reliquary,id=268265",monk)
+        self.assertIn("gem_id=240914/240890",monk)
+        self.assertIn("wrists=silvermoon_agents_deflectors,id=244576",monk)
+        self.assertIn("waist=sash_of_the_forlorn_vessel,id=268256",monk)
+        self.assertIn("gem_id=240908",monk)
+        data,profile=preview.draft("druid/feral",334)
+        self.assertEqual(data["diamond_id"],"240983")
+        self.assertEqual(data["ordinary_gem_count"],6)
+        self.assertNotIn("REPRESENTATIVE_HEAD_DIAMOND_NOT_READY",
+                         data["open_product_conditions"])
+        self.assertNotIn("SIX_PHYSICAL_ORDINARY_GEMS_NOT_READY",
+                         data["open_product_conditions"])
+        self.assertIn("NON_TIER_SOURCE_GEAR_NOT_ALL_STANDARDIZED",
+                      data["open_product_conditions"])
+        self.assertFalse(data["ready_for_user_optimizer"])
+        self.assertEqual(data["native_calls"],0)
+        for slot,(id_,gems) in preview.FERAL_SOCKET_ROWS.items():
+            row=next(line for line in profile.splitlines()
+                     if line.startswith(slot+"="))
+            self.assertIn("id="+str(id_),row)
+            self.assertIn("gem_id="+gems,row)
+        # The preview must not rewrite its SHA-pinned original source/APl.
+        self.assertEqual(fields.matching_lines(profile,"actions"),
+                         fields.matching_lines(feral,"actions"))
+        self.assertNotIn("gem_id=240983",next(
+            line for line in profile.splitlines() if line.startswith("neck=")))
+
+    def test_feral_candidate_fails_if_source_item_or_socket_layout_drifts(self):
+        feral=source.validate_source("druid/feral")["source"]
+        ids,mods=fields.equipment(feral,preview.item.SLOTS,
+                                  need=preview.need,include_gem_enchant=True)
+        with self.assertRaisesRegex(preview.PreviewBlocked,
+                                    "V133_FERAL_SOCKET_REFERENCE_ITEM_DRIFT"):
+            preview.feral_candidate_sockets("druid/feral",
+                                            dict(ids,neck=1),mods)
+        ids,mods=fields.equipment(feral,preview.item.SLOTS,
+                                  need=preview.need,include_gem_enchant=True)
+        with self.assertRaisesRegex(preview.PreviewBlocked,
+                                    "V133_FERAL_ORIGINAL_SOCKET_LAYOUT_DRIFT"):
+            mods["head"]["gem_id"]="240967"
+            preview.feral_candidate_sockets("druid/feral",ids,mods)
+
     def test_no_17_native_or_product_ui_mutation(self):
         with tempfile.TemporaryDirectory() as td:
             root=pathlib.Path(td)
