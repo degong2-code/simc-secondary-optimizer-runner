@@ -17,6 +17,7 @@ const specLabels = {
   "rogue/outlaw":"도적 · 무법 (목표 프로필 Native 시험 전)",
   "deathknight/frost":"죽음의 기사 · 냉기 (기본334 조건 6후보·95% 실기 PASS)",
   "deathknight/unholy":"죽음의 기사 · 부정 (기본334 단발 Native PASS · 최적화 미검증)",
+  "druid/feral":"드루이드 · 야성 (대표 프로필 단발 Native PASS · 목표 CHMV 최적화 미검증)",
   "demonhunter/devourer":"악마사냥꾼 · 포식 (기본334 단발 Native PASS · 최적화 미검증)",
   "demonhunter/havoc":"악마사냥꾼 · 파멸 (기본334 단발 Native PASS · 최적화 미검증)",
   "hunter/marksmanship":"사냥꾼 · 사격 (기본334 단발 Native PASS · 최적화 미검증)",
