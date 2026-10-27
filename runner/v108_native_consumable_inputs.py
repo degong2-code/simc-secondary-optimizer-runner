@@ -20,7 +20,7 @@ SUPPORTED={
 # Both are PRIMARY or effect-only Midnight diamonds; they contribute
 # zero secondary rating, so they do not alter legacy fixed J=138.
 DIAMONDS=frozenset((240983,240967))
-# Whole loadouts from six pinned MID2 fixtures. Mixing rune choices between
+# Whole loadouts from source-pinned MID2 fixtures, including v131 Outlaw. Mixing rune choices between
 # independently sourced rows is NOT enabled until checked on real SimC.
 OMNIUM_PRESETS=frozenset((
  "136822:1/136816:1/136817:1/136818:1/136814:1",
@@ -28,7 +28,8 @@ OMNIUM_PRESETS=frozenset((
  "136822:1/136819:1/136817:1/136821:1/136814:1",
  "136822:1/136823:1/136817:1/136818:1/136814:1",
  "136822:1/136816:1/136817:1/136821:1/136814:1",
- "136822:1/136816:1/136817:1/136815:1/136814:1"))
+ "136822:1/136816:1/136817:1/136815:1/136814:1",
+ "136822:1/136823:1/136817:1/136820:1/136814:1"))
 CHOICE_FIELDS=frozenset(("flask","food","potion","augmentation",
                          "diamond_id","omnium_talents"))
 
