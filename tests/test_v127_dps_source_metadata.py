@@ -19,7 +19,7 @@ class SourceRegistry(unittest.TestCase):
         self.assertTrue(data.validate())
         self.assertTrue(common.validate_source_registry())
         self.assertEqual(set(data.BY_SPEC),set(weapon.EXECUTABLE_SOURCES))
-        self.assertEqual(len(data.BY_SPEC),6)
+        self.assertEqual(len(data.BY_SPEC),7)
         self.assertEqual(set(common.ARCHETYPES),set(data.BY_SPEC))
         self.assertEqual(set(common.CLASS_TIER_ITEMS),
                          {"warrior","paladin","mage","hunter","rogue","shaman"})
