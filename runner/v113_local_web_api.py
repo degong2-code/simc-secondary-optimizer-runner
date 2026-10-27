@@ -127,6 +127,34 @@ class LocalJobs:
                 "progress":item,
                 "result_ready":p["final"].is_file()}
 
+    def inputs(self, folder):
+        """Restore locally sealed user form/SimC paths, read-only and without Native.
+
+        No binary hashing on every page refresh: actual identity and executable
+        checks still belong to start/resume and the v106 session controller.
+        """
+        try:
+            recorded = json.loads((folder / "V106_SESSION_IDENTITY.json").read_text(
+                encoding="utf8"))
+            user = json.loads((folder / "user.json").read_text(encoding="utf8"))
+            manifest = json.loads((folder / "generated" / "manifest.json").read_text(
+                encoding="utf8"))
+            if (recorded.get("schema") != sessions.SCHEMA or
+                user != recorded.get("user") or
+                manifest.get("native_revision") != recorded.get("simc_revision") or
+                not isinstance(manifest.get("native_binary"), str) or
+                not manifest["native_binary"] or
+                not isinstance(manifest.get("static_cache_json"), (str, type(None)))):
+                raise sessions.SessionBlocked("SESSION_INPUTS_OR_MANIFEST_DRIFT")
+            return {"schema": "v116_local_session_inputs_read_only_v1",
+                    "session_id": folder.name, "user": user,
+                    "binary": manifest["native_binary"],
+                    "revision": recorded["simc_revision"],
+                    "static_cache": manifest["static_cache_json"],
+                    "native_called": False}
+        except Exception as exc:
+            raise blocked(exc) from None
+
     def launch(self, folder, *, cache_only=False):
         with self.lock:
             if self.is_active(folder):
@@ -314,6 +342,10 @@ def create_app(*,root=None, token=None):
     @app.get("/api/v1/sessions/{session_id}/status")
     def status(session_id: str):
         return jobs.status(jobs.folder(session_id))
+
+    @app.get("/api/v1/sessions/{session_id}/inputs")
+    def inputs(session_id: str):
+        return jobs.inputs(jobs.folder(session_id))
 
     @app.get("/api/v1/sessions/{session_id}/result")
     def result(session_id: str):
