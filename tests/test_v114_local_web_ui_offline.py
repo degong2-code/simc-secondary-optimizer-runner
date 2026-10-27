@@ -84,12 +84,26 @@ class RealHTTPPageOffline(unittest.TestCase):
         exact=" (기본334 단발 Native PASS · 최적화 미검증)"
         generic=api.sessions.bootstrap.common.GENERIC_PENDING
         self.assertEqual(len(generic),16)
-        self.assertEqual(js.count(exact),len(generic))
+        self.assertEqual(js.count(exact),len(generic)-1)
+        self.assertIn('"deathknight/frost":"죽음의 기사 · 냉기 (기본334 조건 6후보·95% 실기 PASS)"',js)
         self.assertNotIn(" (목표 Native 미검증)",js)
         for cl,sp in generic:
             self.assertIn('"'+cl+'/'+sp+'":"',js)
         # Outlaw and the seven historical adapters keep independent evidence.
         self.assertIn('"rogue/outlaw":"도적 · 무법 (목표 프로필 Native 시험 전)"',js)
+
+    def test_representative_gear_limit_is_permanent_on_form_and_restore(self):
+        # Expose the source-backed scope, never claim all non-tier ordinary
+        # pieces are completely standardized just because Native passes.
+        page=self.client.get("/").text
+        js=self.client.get("/assets/app.js").text
+        self.assertIn('id="gear-scope-note"',page)
+        self.assertIn("SOURCE_NON_TIER_NOT_ALL_STANDARDIZED",js)
+        self.assertIn("완전 표준 일반장비 구성은 아직 검증되지 않았으며",js)
+        self.assertIn("완전한 표준화까지 검증된 것은 아니며",js)
+        self.assertIn('  showRepresentativeScope();\n}',js)
+        self.assertIn('function fillSessionInputs(payload)',js)
+        self.assertNotIn("innerHTML",js)
 
     def test_special_effect_gear_has_eight_dynamic_rows_not_two(self):
         js=self.client.get("/assets/app.js").text
