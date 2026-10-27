@@ -19,6 +19,10 @@ REQUIRED_NONTRINKET={"head","neck","shoulders","back","chest","wrists",
                      "hands","waist","legs","feet","finger1","finger2","main_hand"}
 EXTRA_ALLOWED={"off_hand"}
 MODIFIERS_WITH_BUDGET_AMBIGUITY={"gem_id","enchant","enchant_id"}
+# v108 permits these PRIMARY/effect-only head diamonds; neither adds a
+# flat secondary rating. The exact undecorated Native item variant may supply
+# only its fixed L, never an inferred gem/proc effect or a forged item record.
+PRIMARY_ONLY_HEAD_DIAMONDS=frozenset(("240983","240967"))
 NATIVE_SOURCES={"NATIVE_JSON2_RESOLVED_VARIANT","USER_REQUESTED_MANUAL_CORRECTION"}
 
 class BudgetBlocked(ValueError):pass
@@ -60,6 +64,13 @@ def get_native_secondary(cache,raw):
     scenario.vector(stat,"NATIVE_SECONDARY")
     return stat
 
+def primary_only_head_gem(row):
+    """True only for a head diamond whose flat secondary rating is zero."""
+    return (row["slot"]=="head"
+            and row["options"].get("gem_id") in PRIMARY_ONLY_HEAD_DIAMONDS
+            and not (set(row["options"]) &
+                     (MODIFIERS_WITH_BUDGET_AMBIGUITY-{"gem_id"})))
+
 def compile_static_budget(contract,standard_filler,cache):
     need(type(contract) is dict and contract.get("schema")==scenario.SCHEMA
          and contract.get("status")=="VALID_SCENARIO_INPUT_NO_SIMC_EFFECT_GATE",
@@ -82,6 +93,15 @@ def compile_static_budget(contract,standard_filler,cache):
     missing_special=[]
     for row in nontrinket:
         stat=get_native_secondary(cache,row)
+        # The two v108 head diamonds add zero flat secondary rating. If the
+        # exact gemmed variant is absent, a Native-observed EXACT base variant
+        # of the same special item/ilvl/all OTHER options can still supply L.
+        # No analogous fallback is allowed for arbitrary gems or gear slots.
+        if (stat is None and row["slot"] in specials and
+            primary_only_head_gem(row)):
+            bare={**row,"options":{k:v for k,v in row["options"].items()
+                                   if k!="gem_id"}}
+            stat=get_native_secondary(cache,bare)
         if stat is None:
             entry={"slot":row["slot"],"item_id":row["item_id"],
                    "ilevel":row["ilevel"],"identity":exact_identity(row)}
@@ -93,7 +113,9 @@ def compile_static_budget(contract,standard_filler,cache):
               "sum":sum(stat.values())}
         for k in STATS:G_components[k]+=stat[k]
         if row["slot"] in specials:
-            need(not MODIFIERS_WITH_BUDGET_AMBIGUITY.intersection(row["options"]),
+            modifiers=MODIFIERS_WITH_BUDGET_AMBIGUITY.intersection(row["options"])
+            need(not modifiers or
+                 (modifiers=={"gem_id"} and primary_only_head_gem(row)),
                  "SPECIAL_LOCK_NEEDS_UNDECORATED_NUMERIC_VARIANT")
             for k in STATS:locked[k]+=stat[k]
         if MODIFIERS_WITH_BUDGET_AMBIGUITY.intersection(row["options"]):
