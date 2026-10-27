@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""v104: two NEW source-pinned generic representative input builders, no Native.
+"""v104: shared source-pinned representative input builder; no Native.
 
-Subtlety Rogue / Elemental Shaman share ONE composer. Original SimC APL and
+Subtlety/Outlaw Rogue and Elemental Shaman share ONE composer. Original SimC APL and
 character scripts remain untouched; currently equipped source items are NOT
 copied as a user's target baseline. Only explicitly pinned season IDs plus
 corrected ordinary armor and verified source weapon layouts are retained.
