@@ -191,7 +191,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         options=r.json()
         self.assertEqual(set(options),{"food","potion","augmentation","diamond_id","omnium_talents"})
         self.assertEqual(options["diamond_id"],[0,240967,240983])
-        self.assertEqual(len(options["omnium_talents"]),8)
+        self.assertEqual(len(options["omnium_talents"]),16)
         self.assertIn("136822:1/136823:1/136817:1/136820:1/136814:1",
                       options["omnium_talents"])
         self.assertEqual(options["food"][0],"source_default")
