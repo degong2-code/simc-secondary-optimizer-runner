@@ -124,6 +124,12 @@ def build(source,folder,key):
         k,sep,_=line.partition("=")
         output.append("flask="+info["flask"]
                       if sep and k=="flask" else line)
+    # v098/v122 require exactly four numeric gear_* placeholders before
+    # the original v094 Native scheduler replaces them per CHMV candidate.
+    # The source's worn-gear secondary total must never become the budget.
+    need(not any(line.startswith("gear_"+stat+"=") for line in output
+                 for stat in STATS),"V134_SOURCE_GEAR_STAT_OVERRIDE_UNEXPECTED")
+    output.extend("gear_"+stat+"=700" for stat in STATS)
     new_profile="\n".join(output).rstrip()+"\n"
     gem=slots["head"]["options"].get("gem_id")
     need(gem is not None and gem.isdigit(),
