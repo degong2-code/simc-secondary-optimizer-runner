@@ -14,8 +14,10 @@ SCHEMA="v108_source_native_consumable_overrides_v1"
 ASSIGNMENTS=("flask","food","potion","augmentation")
 # Exact spellings witnessed in pinned six MID2 SimC source fixtures.
 SUPPORTED={
- "food":frozenset(("harandar_celebration","silvermoon_parade","royal_roast","disabled")),
- "potion":frozenset(("potion_of_recklessness_2","lights_potential_2","disabled")),
+ "food":frozenset(("harandar_celebration","silvermoon_parade",
+                    "royal_roast","blooming_feast","disabled")),
+ "potion":frozenset(("potion_of_recklessness_2","lights_potential_2",
+                      "liquid_luster_2","disabled")),
  "augmentation":frozenset(("void_touched","void_touched_augment_rune","disabled"))}
 # Both are PRIMARY or effect-only Midnight diamonds; they contribute
 # zero secondary rating, so they do not alter legacy fixed J=138.
@@ -29,7 +31,15 @@ OMNIUM_PRESETS=frozenset((
  "136822:1/136823:1/136817:1/136818:1/136814:1",
  "136822:1/136816:1/136817:1/136821:1/136814:1",
  "136822:1/136816:1/136817:1/136815:1/136814:1",
- "136822:1/136823:1/136817:1/136820:1/136814:1"))
+ "136822:1/136823:1/136817:1/136820:1/136814:1",
+ # The following are copied verbatim from exact v132 official MID2 sources,
+ # each with actual original-source SimC Native smoke PASS (user home PC).
+ "136822:1/136819:1/136817:1/136818:1/136814:1",
+ "136822:1/136817:1/136821:1/136814:1",
+ "136814:1/136821:1/136817:1/136823:1/136822:1",
+ "rune_of_unleashed_fire/rune_of_lynxlike_reflexes/rune_of_lingering/rune_of_burning_haste/rune_of_overload",
+ "rune_of_unleashed_fire/rune_of_lynxlike_reflexes/rune_of_lingering/rune_of_masterful_cunning/rune_of_overload",
+ "rune_of_unleashed_fire/rune_of_selfmending/rune_of_lingering/rune_of_critical_power/rune_of_overload"))
 CHOICE_FIELDS=frozenset(("flask","food","potion","augmentation",
                          "diamond_id","omnium_talents"))
 
