@@ -247,7 +247,11 @@ def build(user,folder,binary,revision,static_cache_path=None,
                              user["oil_hands"],manual_final_T=final_T)
     normalized=prepared["prepared"]["scenario"]
     budget=prepared["prepared"]["static_budget"]
-    B,lo,hi=scheduler.bounds(normalized,budget)
+    # Shared floor B >= F-O, with selected exact L protected.
+    # Candidate seeds must be viable BEFORE a Native call is even planned.
+    feasible=scheduler.budget_with_fixed_components(
+        normalized,budget,F,prepared["oil"]["declared_O"])
+    B,lo,hi=scheduler.bounds(normalized,feasible)
     seeds=initial_seeds(B,lo,hi)
     manifest={"schema":entry.SCHEMA,
               "profile_simc":"profile.simc","scenario_json":"scenario.json",
