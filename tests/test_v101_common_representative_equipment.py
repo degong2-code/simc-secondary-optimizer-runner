@@ -110,6 +110,45 @@ class RepresentativeCatalog(unittest.TestCase):
                 self.assertFalse(again)
                 self.assertIsInstance(changed,bool)
 
+    def test_v104_wrist_source_gem_is_recovered_only_for_240967(self):
+        expected={("rogue","subtlety"):(268240,240900),
+                  ("shaman","elemental"):(273775,240906)}
+        for key,(wrist_id,gem_id) in expected.items():
+            with self.subTest(key=key),tempfile.TemporaryDirectory() as td:
+                _,_,rows,_,_,_=core.source_backed_gear(
+                    key,pathlib.Path(td),334,self.need)
+                before={slot:dict(row["options"]) for slot,row in rows.items()}
+                self.assertEqual(rows["wrists"]["item_id"],wrist_id)
+                self.assertNotIn("gem_id",rows["wrists"]["options"])
+                ordinary=[g for slot,row in rows.items()
+                          if slot!="head"
+                          for g in row["options"].get("gem_id","").split("/")
+                          if g]
+                self.assertEqual(ordinary,[str(gem_id)]*5)
+                self.assertFalse(core.ensure_representative_gem_colors(
+                    rows,240983,self.need))
+                self.assertEqual(before,{slot:row["options"]
+                                         for slot,row in rows.items()})
+                self.assertTrue(core.ensure_representative_gem_colors(
+                    rows,240967,self.need))
+                self.assertIn("gem_id",rows["wrists"]["options"])
+                self.assertEqual(len([g for slot,row in rows.items()
+                                      if slot!="head"
+                                      for g in row["options"].get("gem_id","").split("/")
+                                      if g]),6)
+
+    def test_unknown_five_gem_layout_still_fails_closed(self):
+        key=("rogue","subtlety")
+        with tempfile.TemporaryDirectory() as td:
+            _,_,rows,_,_,_=core.source_backed_gear(
+                key,pathlib.Path(td),334,self.need)
+            rows["wrists"]["item_id"]=999999
+            with self.assertRaisesRegex(ValueError,
+                                        "REPRESENTATIVE_SIX_ORDINARY_GEMS_REQUIRED"):
+                core.ensure_representative_gem_colors(
+                    rows,240967,self.need)
+            self.assertNotIn("gem_id",rows["wrists"]["options"])
+
     def test_non_color_diamond_does_not_rewrite_existing_windows_profile(self):
         key=("paladin","retribution")
         with tempfile.TemporaryDirectory() as td:
