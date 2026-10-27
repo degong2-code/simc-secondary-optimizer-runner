@@ -10,6 +10,7 @@ A talent-adjusted buffed_stats field NEVER replaces the target static c.
 """
 from __future__ import annotations
 import v128_common_source_profile_emitter as common_emitter
+import v129_common_source_fields as common_fields
 
 import argparse
 import hashlib
@@ -88,26 +89,18 @@ def source_profile(source,folder):
     need(UPSTREAM_CLASS_LINE in source and "spec=fury" in source
          and "race=dwarf" in source and "role=attack" in source,
          "FURY_CLASS_RACE_SPEC_ROLE_DRIFT")
-    initial_actions=[line for line in source.splitlines()
-                     if line.startswith("actions")]
+    initial_actions=common_fields.matching_lines(source,"actions")
     need(len(initial_actions)>35 and
          sum(line.startswith("actions=") for line in initial_actions)==1,
          "FURY_UPSTREAM_APL_MISSING")
-    tier=source.splitlines()
-    ids={}
-    for line in tier:
-        if line.startswith("# Gear Summary"):break
-        slot,sep,value=line.partition("=")
-        if sep and slot in ALL_SLOTS:
-            need(slot not in ids,"FURY_SOURCE_DUPLICATE_SLOT:"+slot)
-            result=re.search(r"(?:^|,)id=(\d+)(?:,|$)",value)
-            need(result is not None,"FURY_SOURCE_ID_MISSING:"+slot)
-            ids[slot]=int(result.group(1))
+    ids,_=common_fields.equipment(source,ALL_SLOTS,need=need,
+        duplicate_prefix="FURY_SOURCE_DUPLICATE_SLOT:",
+        missing_id_prefix="FURY_SOURCE_ID_MISSING:")
     need(set(ids)==set(ALL_SLOTS),"FURY_SOURCE_SIXTEEN_SLOTS_REQUIRED")
     need(all(ids[k]==v for k,v in SOURCE_WEAPON_IDS.items()),
          "FURY_SOURCE_DUAL_WEAPON_ID_CHANGED")
-    talents=[line.partition("=")[2] for line in source.splitlines()
-             if line.startswith("talents=")]
+    talents=[line.partition("=")[2] for line in
+             common_fields.matching_lines(source,"talents=")]
     need(len(talents)==1,"FURY_ONE_TALENT_STRING_REQUIRED")
     eq={}
     for slot in ALL_SLOTS:
