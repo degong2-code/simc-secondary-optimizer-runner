@@ -7,6 +7,7 @@ No per-Mage DPS solver, loot database, APL/item effect/proc reimplementation.
 """
 from __future__ import annotations
 import v128_common_source_profile_emitter as common_emitter
+import v129_common_source_fields as common_fields
 import argparse,hashlib,pathlib,re,sys
 
 import v055_simc_item_selection as items
@@ -46,22 +47,16 @@ def source_profile(original,folder):
     need(git_sha(fire)==NONTIER_GIT_BLOB
          and "head=venomkeepers_horrific_cowl,id=271874," in fire.decode("utf8"),
          "FIRE_CLOTH_NONTIER_HEAD_SOURCE_CHANGED")
-    actions=[line for line in original.splitlines() if line.startswith("actions")]
+    actions=common_fields.matching_lines(original,"actions")
     need(len(actions)>=60 and
          sum(line.startswith("actions=") for line in actions)==1,
          "FROST_ORIGINAL_APL_MISSING")
-    talents=[line.partition("=")[2] for line in original.splitlines()
-             if line.startswith("talents=")]
+    talents=[line.partition("=")[2] for line in
+             common_fields.matching_lines(original,"talents=")]
     need(len(talents)==1,"FROST_TALENT_STRING_MISSING")
-    ids={}
-    for line in original.splitlines():
-        if line.startswith("# Gear Summary"):break
-        key,sep,v=line.partition("=")
-        if sep and key in ALL_SLOTS:
-            need(key not in ids,"DUPLICATE_FROST_EQUIPMENT_SLOT:"+key)
-            m=re.search(r"(?:^|,)id=(\d+)(?:,|$)",v)
-            need(m is not None,"FROST_SOURCE_ID_NOT_FOUND:"+key)
-            ids[key]=int(m.group(1))
+    ids,_=common_fields.equipment(original,ALL_SLOTS,need=need,
+        duplicate_prefix="DUPLICATE_FROST_EQUIPMENT_SLOT:",
+        missing_id_prefix="FROST_SOURCE_ID_NOT_FOUND:")
     need(set(ids)==set(ALL_SLOTS),"FROST_SIXTEEN_SLOTS_REQUIRED")
     need(ids["main_hand"]==MAIN_ID and ids["off_hand"]==OFFHAND_ID,
          "FROST_ORIGINAL_ONEHAND_FRILL_ID_CHANGED")
