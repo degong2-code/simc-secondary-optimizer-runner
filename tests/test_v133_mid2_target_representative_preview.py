@@ -67,6 +67,21 @@ class Mid2TargetDraft(unittest.TestCase):
         self.assertIn("ilevel=321",profile321)
         self.assertNotIn("gear_crit_rating=700",profile334)
         self.assertEqual(before,source.validate_source("deathknight/frost")["source"])
+    def test_original_diamond_retained_only_on_source_supported_head(self):
+        cases={"mage/arcane":("240983",271874),
+               "mage/fire":("240967",271874),
+               "hunter/marksmanship":("240967",249317),
+               "hunter/survival":("240983",249317),
+               "warlock/affliction":("240967",271874)}
+        for key,(gem,id_) in cases.items():
+            with self.subTest(key=key):
+                data,profile=preview.draft(key)
+                head=next(line for line in profile.splitlines()
+                          if line.startswith("head="))
+                self.assertIn("id="+str(id_),head)
+                self.assertIn("gem_id="+gem,head)
+                self.assertEqual(data["diamond_id"],gem)
+
     def test_no_17_native_or_product_ui_mutation(self):
         with tempfile.TemporaryDirectory() as td:
             root=pathlib.Path(td)
