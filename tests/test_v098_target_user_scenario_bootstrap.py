@@ -16,7 +16,8 @@ def case(which,*,ilevel=334,final_T=None):
              "beast_mastery":("hunter","beast_mastery"),
              "subtlety":("rogue","subtlety"),
              "outlaw":("rogue","outlaw"),
-             "elemental":("shaman","elemental")}
+             "elemental":("shaman","elemental"),
+             "feral":("druid","feral")}
     key=options[which]
     filename=boot.ARCHETYPES[key][0]
     src=(boot.FIXTURES/filename).read_text(encoding="utf8")
@@ -35,7 +36,7 @@ def case(which,*,ilevel=334,final_T=None):
                              "retribution":"blood_elf",
                              "beast_mastery":"troll",
                              "subtlety":"dwarf","outlaw":"dwarf",
-                             "elemental":"tauren"}[which],
+                             "elemental":"tauren","feral":"night_elf"}[which],
                      "talents":talents},
         "target":{"ilevel":ilevel,"final_T":final_T},
         "trinkets":trinkets,"special_items":[],"embellishments":[],
@@ -287,7 +288,7 @@ class UserTargetBootstrap(unittest.TestCase):
                 user=case(name)
                 result,root=self.prepare(user)
                 self.assertEqual(result["native_calls"],0)
-                self.assertEqual(result["supported_archetypes_now"],23)
+                self.assertEqual(result["supported_archetypes_now"],24)
                 self.assertEqual(result["plan"]["item_slots"],16)
                 self.assertEqual(result["plan"]["base_B"],3150)
                 self.assertEqual(result["plan"]["final_T"],3150+secondary)
@@ -398,15 +399,32 @@ class UserTargetBootstrap(unittest.TestCase):
         out,_=self.prepare(u)
         self.assertEqual((out["plan"]["base_B"],out["plan"]["final_T"]),
                          (2980,3044))
-        # Assassination now enters through v134; Feral has no validated
-        # source-backed primary diamond and remains outside the user UI.
-        u["character"]["class"]="druid"
-        u["character"]["spec"]="feral"
+        # Evoker remains unpinned despite Feral joining the beta route.
+        u["character"]["class"]="evoker"
+        u["character"]["spec"]="devastation"
         with tempfile.TemporaryDirectory() as td:
             root=pathlib.Path(td);binary=root/"dummy";binary.write_bytes(b"NO_NATIVE")
             with self.assertRaisesRegex(boot.UserScenarioBlocked,
                                         "REPRESENTATIVE_ARCHETYPE_NOT_READY"):
                 boot.build(u,root/"output",binary,"7bc10711b5")
+
+    def test_feral_user_target334_connects_without_native_or_original_gear_budget(self):
+        u=case("feral")
+        result,root=self.prepare(u)
+        self.assertEqual(result["native_calls"],0)
+        self.assertEqual(result["supported_archetypes_now"],24)
+        self.assertEqual(result["plan"]["base_B"],3150)
+        self.assertEqual(result["plan"]["final_T"],3182)
+        self.assertEqual(result["plan"]["item_slots"],15)
+        self.assertEqual(len(result["effective_four_tier_slots"]),4)
+        profile=(root/"generated"/"profile.simc").read_text(encoding="utf8")
+        self.assertIn("head=selected_271528,id=271528,ilevel=334",profile)
+        self.assertIn("gem_id=240983",next(x for x in profile.splitlines()
+                                               if x.startswith("head=")))
+        self.assertIn("gem_id=240914/240890",next(
+            x for x in profile.splitlines() if x.startswith("neck=")))
+        self.assertFalse((root/"generated"/"simc_results").exists())
+        self.assertFalse((root/"generated"/"V094_RESULT.json").exists())
 
     def test_fury_target_334_user_without_full_equipment_or_simc_profile(self):
         result,root=self.prepare(case("fury"))
