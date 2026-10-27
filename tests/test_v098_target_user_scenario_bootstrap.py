@@ -680,6 +680,67 @@ class UserTargetBootstrap(unittest.TestCase):
                 boot.run(root/"user.json",root/"generate",fake,"7bc10711b5")
             self.assertFalse((root/"generate").exists())
 
+    def test_pre_v124_sealed_seed_pair_replays_without_native_or_manifest_rewrite(self):
+        # Simulate a real user's historical plan: seed policies changed when
+        # fixed F/O floors were introduced, but saved candidate identity did
+        # not. Only deterministic old seeds which satisfy NEW bounds can replay.
+        import copy
+        from unittest import mock
+        for name in ("subtlety","elemental"):
+            with self.subTest(spec=name),tempfile.TemporaryDirectory() as td:
+                root=pathlib.Path(td)
+                binary=root/"fake.exe";binary.write_bytes(b"OFFLINE_ONLY")
+                user=case(name)
+                user["consumable_choices"]={
+                    "flask":"source_default","food":"source_default",
+                    "potion":"source_default","augmentation":"source_default",
+                    "diamond_id":240967,"omnium_talents":"source_default"}
+                folder=root/"generated"
+                with mock.patch.object(
+                    boot.scheduler,"budget_with_fixed_components",
+                    side_effect=lambda norm,budget,F,O: copy.deepcopy(budget)):
+                    first=boot.build(user,folder,binary,"7bc1071")
+                sealed=(folder/"manifest.json").read_bytes()
+                old_seeds=json.loads(sealed)["seed_targets_B"]
+                plan=old.source(folder/"manifest.json")
+                context=plan["context"]
+                normalized=context["bundle"]["prepared"]["scenario"]
+                static=context["bundle"]["prepared"]["static_budget"]
+                new=boot.scheduler.budget_with_fixed_components(
+                    normalized,static,plan["flask"],
+                    context["identity"]["oil_vector"])
+                B,lo,hi=boot.scheduler.bounds(normalized,new)
+                new_seeds=boot.initial_seeds(B,lo,hi)
+                self.assertNotEqual(new_seeds,old_seeds)
+                again=boot.build(user,folder,binary,"7bc1071")
+                self.assertEqual(again["plan"]["base_B"],first["plan"]["base_B"])
+                self.assertEqual((folder/"manifest.json").read_bytes(),sealed)
+                self.assertFalse((folder/"simc_results").exists())
+
+    def test_modified_legacy_seed_pair_remains_fail_closed(self):
+        import copy
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            binary=root/"fake.exe";binary.write_bytes(b"OFFLINE_ONLY")
+            folder=root/"generated"
+            user=case("subtlety")
+            with mock.patch.object(
+                boot.scheduler,"budget_with_fixed_components",
+                side_effect=lambda norm,budget,F,O: copy.deepcopy(budget)):
+                boot.build(user,folder,binary,"7bc1071")
+            manifest=folder/"manifest.json"
+            altered=json.loads(manifest.read_text(encoding="utf8"))
+            altered["seed_targets_B"][0]["crit_rating"]+=1
+            altered["seed_targets_B"][0]["mastery_rating"]-=1
+            manifest.write_text(json.dumps(altered),encoding="utf8")
+            original=manifest.read_bytes()
+            with self.assertRaisesRegex(
+                boot.UserScenarioBlocked,
+                "EXISTING_SESSION_SEEDS_UNRECOGNIZED_OR_CHANGED"):
+                boot.build(user,folder,binary,"7bc1071")
+            self.assertEqual(manifest.read_bytes(),original)
+
     def test_generated_plan_replay_without_new_native_or_replacement(self):
         result,root=self.prepare(case("fury"))
         ready=old.run_manifest(result["generated_manifest"],plan_only=True)
