@@ -50,6 +50,35 @@ class UserTargetBootstrap(unittest.TestCase):
         binary.write_bytes(b"NOT_SIMC_EXECUTED")
         return boot.build(user,root/"generated",binary,"7bc10711b5"),root
 
+    def test_six_user_plans_keep_exact_seal_under_shared_source_emitter(self):
+        # Full P1 user->source->gear->runtime->manifest parity. The first
+        # build uses the pre-v128 source-emission algorithm and the second
+        # invokes v128. The same immutable plan/identity must replay with
+        # absolutely no new Native invocation or profile byte replacement.
+        from unittest import mock
+        import v128_common_source_profile_emitter as emitter
+        from tests.test_v128_common_source_profile_emitter import prior_serializer
+        for spec in ("fury","retribution","frost","beast_mastery",
+                     "subtlety","elemental"):
+            with self.subTest(spec=spec),tempfile.TemporaryDirectory() as td:
+                root=pathlib.Path(td)
+                binary=root/"dummy_simc.exe"
+                binary.write_bytes(b"FAKE_NO_NATIVE")
+                folder=root/"generated"
+                user=case(spec)
+                with mock.patch.object(emitter,"emit",
+                                       side_effect=prior_serializer):
+                    old=boot.build(user,folder,binary,"7bc1071")
+                sealed_profile=(folder/"profile.simc").read_bytes()
+                sealed_manifest=(folder/"manifest.json").read_bytes()
+                fresh=boot.build(user,folder,binary,"7bc1071")
+                self.assertEqual(fresh["plan"],old["plan"])
+                self.assertEqual((folder/"profile.simc").read_bytes(),
+                                 sealed_profile)
+                self.assertEqual((folder/"manifest.json").read_bytes(),
+                                 sealed_manifest)
+                self.assertFalse((folder/"simc_results").exists())
+
     def test_all_six_new_sessions_share_canonical_profile_and_runtime_format(self):
         import v122_common_profile_format as fmt
         import v063_numeric_injection as num
