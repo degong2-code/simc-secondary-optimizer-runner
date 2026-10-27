@@ -25,11 +25,11 @@ class RepresentativeCatalog(unittest.TestCase):
         self.assertEqual(core.CLASS_ARMOR["hunter"],"mail")
         # No unverified tier item IDs generated for other classes.
         self.assertEqual(set(core.CLASS_TIER_ITEMS),
-                         set(core.CLASS_ARMOR)-{"evoker","druid"})
+                         set(core.CLASS_ARMOR)-{"evoker"})
 
     def test_weapon_topologies_separate_from_class_identity(self):
         self.assertEqual(len(core.WEAPON_FORMS),7)
-        self.assertEqual(len(core.ARCHETYPES),23)
+        self.assertEqual(len(core.ARCHETYPES),24)
         self.assertEqual(set(core.WEAPON_FORMS["dual_two_hand"]),
                          {"main_hand","off_hand"})
         self.assertEqual(core.WEAPON_FORMS["ranged"],("main_hand",))
@@ -181,7 +181,7 @@ class RepresentativeCatalog(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             with self.assertRaisesRegex(ValueError,
                                         "REPRESENTATIVE_ARCHETYPE_NOT_READY"):
-                core.source_backed_gear(("druid","feral"),
+                core.source_backed_gear(("evoker","devastation"),
                     pathlib.Path(td),334,self.need)
 
 if __name__=="__main__":unittest.main()
