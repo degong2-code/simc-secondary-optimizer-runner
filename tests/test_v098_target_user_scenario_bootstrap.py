@@ -50,6 +50,39 @@ class UserTargetBootstrap(unittest.TestCase):
         binary.write_bytes(b"NOT_SIMC_EXECUTED")
         return boot.build(user,root/"generated",binary,"7bc10711b5"),root
 
+    def test_v104_240967_plan_generates_json2_native_request_without_mutating_seal(self):
+        # Integrated source -> seeded v093 Native INPUT only, no SimC execution.
+        # Rogue and Elemental share the original v104 json2-less profile.
+        for spec in ("subtlety","elemental"):
+            with self.subTest(spec=spec),tempfile.TemporaryDirectory() as td:
+                root=pathlib.Path(td)
+                binary=root/"dummy.exe"
+                binary.write_bytes(b"NO_NATIVE")
+                user=case(spec)
+                user["consumable_choices"]={
+                    "flask":"source_default","food":"source_default",
+                    "potion":"source_default","augmentation":"source_default",
+                    "diamond_id":240967,"omnium_talents":"source_default"}
+                folder=root/"generated"
+                plan=boot.build(user,folder,binary,"7bc1071")
+                original=(folder/"profile.simc").read_bytes()
+                self.assertNotIn(b"json2=",original)
+                self.assertEqual((plan["plan"]["base_B"],
+                                  plan["plan"]["final_T"]),
+                                 (3150,3214 if spec=="subtlety" else 3182))
+                sealed=old.source(folder/"manifest.json")
+                req=old.adaptive.request(
+                    sealed["context"],sealed["seeds"][0],sealed["flask"],
+                    root/"out"/"result.json",phase="seed")
+                self.assertEqual(req["status"],"PROPOSED_STATIC_C_NO_NATIVE")
+                self.assertEqual(sum(line.startswith("json2=")
+                                     for line in req["input"].splitlines()),1)
+                self.assertEqual(sum(line.startswith("iterations=")
+                                     for line in req["input"].splitlines()),1)
+                self.assertIn("gem_id=240967",req["input"])
+                self.assertEqual((folder/"profile.simc").read_bytes(),original)
+                self.assertFalse((folder/"simc_results").exists())
+
     def test_v104_old_and_new_processes_replay_same_immutable_240967_plan(self):
         # Simulate the OLD set-derived equipment order, then execute the
         # identical plan in a different Python process with a new hash seed.
