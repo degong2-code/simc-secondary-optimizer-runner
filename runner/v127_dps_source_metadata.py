@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """v127 source-backed DPS metadata registry — data, never a DPS engine.
 
-Exactly six existing, SHA-pinned archetypes; not a gear DB or a claim of
+Seven source-pinned archetypes (six prior, one newly sourced); not a gear DB or a claim of
 coverage for the other 21 DPS specs. All effects/APL/DPS remain in SimC.
 Source-specific fixture PRODUCERS are legacy adapters until source parsing
 can be unified without changing the pinned source or existing Native bytes.
@@ -74,6 +74,13 @@ SOURCE_BACKED=(
        (("head",271492),("shoulders",271490),("chest",271495),
         ("hands",271493),("legs",271491)),
        ("head",249317),(0,165,0,0)),
+    Archetype("rogue","outlaw","leather",
+       "v131_upstream_mid2_rogue_outlaw_reference.simc",
+       "738f7fe64c1d75159b86ecc2e8064dc29c69c203",
+       "v104_shared","dual_one_hand",
+       (("head",271510),("shoulders",271508),("chest",271513),
+        ("hands",271511),("legs",271509)),
+       ("chest",251159),(165,0,0,0)),
     Archetype("rogue","subtlety","leather",
        "v068_upstream_mid2_rogue_subtlety_reference.simc",
        "b704e6326959432a82d14a6b774c79183d5b2af4",
@@ -98,7 +105,7 @@ def need(value,reason):
 
 def validate():
     """Strict read-only source scope: no invented 27-spec coverage."""
-    need(len(SOURCE_BACKED)==len(BY_SPEC)==6 and
+    need(len(SOURCE_BACKED)==len(BY_SPEC)==7 and
          set(BY_SPEC)==set(observed.EXECUTABLE_SOURCES),
          "REGISTERED_SOURCE_SPEC_SCOPE_DRIFT")
     for entry in SOURCE_BACKED:
