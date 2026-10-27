@@ -102,7 +102,7 @@ class Mid2TargetDraft(unittest.TestCase):
                          data["open_product_conditions"])
         self.assertIn("NON_TIER_SOURCE_GEAR_NOT_ALL_STANDARDIZED",
                       data["open_product_conditions"])
-        self.assertIn("FERAL_REPRESENTATIVE_SOCKET_NATIVE_NOT_YET_VERIFIED",
+        self.assertIn("FERAL_TARGET_CHMV_NATIVE_NOT_YET_VERIFIED",
                       data["open_product_conditions"])
         self.assertFalse(data["ready_for_user_optimizer"])
         self.assertEqual(data["native_calls"],0)
