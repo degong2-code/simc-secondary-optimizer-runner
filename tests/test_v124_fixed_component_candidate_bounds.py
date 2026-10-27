@@ -11,6 +11,9 @@ import v065_v015_scheduler_adapter as policy
 import v093_inclusive_adaptive_scheduler_bridge as adaptive
 import v095_material_precision_policy as extended
 import v082_fury_plate_dual_twohand_native as warrior
+import v098_target_user_scenario_bootstrap as bootstrap
+import v096_unified_product_entry as entry
+from test_v098_target_user_scenario_bootstrap import case
 from test_v093_inclusive_adaptive_scheduler_bridge import V093InclusiveAdaptive
 
 STATS=("crit_rating","haste_rating","mastery_rating","versatility_rating")
@@ -18,6 +21,42 @@ STATS=("crit_rating","haste_rating","mastery_rating","versatility_rating")
 class FixedComponentsFeasibility(unittest.TestCase):
     def setup_context(self,folder):
         return V093InclusiveAdaptive().make(folder)
+
+    def test_actual_rogue_240967_preflight_applies_same_crit_floor(self):
+        # The user's blocked Rogue path has Fcrit165 and two oils Ocrit32.
+        # Exercise its real v098->v096->v093 plan using a non-executable fake
+        # binary; no SimC JSON2 or new Native evidence is manufactured.
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            fake=root/"simc.exe"
+            fake.write_bytes(b"NO_NATIVE_EXECUTION")
+            user=case("subtlety")
+            user["consumable_choices"]={
+                "flask":"source_default","food":"source_default",
+                "potion":"source_default","augmentation":"source_default",
+                "diamond_id":240967,"omnium_talents":"source_default"}
+            folder=root/"generated"
+            bootstrap.build(user,folder,fake,"7bc1071")
+            sealed=entry.source(folder/"manifest.json")
+            ctx=sealed["context"]
+            F=sealed["flask"]
+            O=ctx["identity"]["oil_vector"]
+            self.assertEqual((F["crit_rating"],O["crit_rating"]),(165,32))
+            adjusted=adaptive.feasible_budget(ctx,F)
+            _,lo,hi=policy.bounds(ctx["bundle"]["prepared"]["scenario"],
+                                  adjusted)
+            self.assertGreaterEqual(lo[0],133)
+            for seed in sealed["seeds"]:
+                self.assertGreaterEqual(seed["crit_rating"],lo[0])
+            # 132 crit is feasible under old L-only bounds, but cannot be
+            # a physically valid candidate after the fixed flask subtraction.
+            impossible=dict(zip(STATS,(132,1000,1009,1009)))
+            self.assertEqual(sum(impossible.values()),3150)
+            with self.assertRaisesRegex(adaptive.AdaptiveBridgeBlocked,
+                                        "BASE_TARGET_BELOW_FIXED_COMPONENT_FLOOR"):
+                adaptive.request(ctx,impossible,F,root/"no.json","scout")
+            self.assertFalse((root/"no.json").exists())
+            self.assertFalse((folder/"simc_results").exists())
 
     def test_fixed_F_and_O_raise_common_floor_without_changing_budget_or_identity(self):
         with tempfile.TemporaryDirectory() as td:
