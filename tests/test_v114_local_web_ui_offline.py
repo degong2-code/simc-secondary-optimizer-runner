@@ -83,9 +83,10 @@ class RealHTTPPageOffline(unittest.TestCase):
         js=self.client.get("/assets/app.js").text
         exact=" (기본334 단발 Native PASS · 최적화 미검증)"
         generic=api.sessions.bootstrap.common.GENERIC_PENDING
-        self.assertEqual(len(generic),16)
-        self.assertEqual(js.count(exact),len(generic)-1)
+        self.assertEqual(len(generic),17)
+        self.assertEqual(js.count(exact),len(generic)-2)
         self.assertIn('"deathknight/frost":"죽음의 기사 · 냉기 (기본334 조건 6후보·95% 실기 PASS)"',js)
+        self.assertIn('"druid/feral":"드루이드 · 야성 (대표 프로필 단발 Native PASS · 목표 CHMV 최적화 미검증)"',js)
         self.assertNotIn(" (목표 Native 미검증)",js)
         for cl,sp in generic:
             self.assertIn('"'+cl+'/'+sp+'":"',js)
