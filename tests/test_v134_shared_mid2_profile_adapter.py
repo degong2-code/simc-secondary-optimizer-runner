@@ -38,9 +38,12 @@ class SharedTargetAdapter(unittest.TestCase):
                                  len(cfg["equipment"]["trinkets"])+
                                  len(fillers),original["slot_count"])
                 self.assertFalse((pathlib.Path(td)/"simc_results").exists())
-        self.assertEqual(held,{"druid/feral":
-                               "V134_HEAD_DIAMOND_NEEDS_SOURCE_BACKED_SOCKET"})
-        self.assertEqual(len(good),16)
+        # Feral now has a staged candidate with the witnessed six physical
+        # ordinary gems and head diamond. No Native has been run for it.
+        self.assertEqual(held,{})
+        self.assertEqual(len(good),17)
+        import v101_common_representative_equipment as representative
+        self.assertNotIn(("druid","feral"),representative.GENERIC_PENDING)
 
     def test_new_adapter_source_integrity_fail_closed(self):
         key=("warlock","destruction")
