@@ -20,9 +20,9 @@ class SourceRegistry(unittest.TestCase):
         self.assertTrue(common.validate_source_registry())
         self.assertEqual(set(data.BY_SPEC),set(weapon.EXECUTABLE_SOURCES))
         self.assertEqual(len(data.BY_SPEC),7)
-        self.assertEqual(set(common.ARCHETYPES),set(data.BY_SPEC))
+        self.assertEqual(set(data.BY_SPEC),set(common.ARCHETYPES)-set(common.GENERIC_PENDING))
         self.assertEqual(set(common.CLASS_TIER_ITEMS),
-                         {"warrior","paladin","mage","hunter","rogue","shaman"})
+                         set(common.CLASS_ARMOR)-{"evoker"})
         for record in data.SOURCE_BACKED:
             with self.subTest(key=record.key):
                 full=ROOT/"integration_probes"/"fixtures"/record.source_fixture
@@ -66,7 +66,8 @@ class SourceRegistry(unittest.TestCase):
         with self.assertRaisesRegex(data.SourceMetadataBlocked,
                                     "REGISTERED_ARCHETYPE_NOT_SOURCE_BACKED"):
             data.get(("priest","shadow"))
-        self.assertNotIn(("priest","shadow"),common.ARCHETYPES)
+        self.assertIn(("priest","shadow"),common.ARCHETYPES)
+        self.assertNotIn(("druid","feral"),common.ARCHETYPES)
         self.assertNotIn(("evoker","devastation"),common.ARCHETYPES)
 
     def test_metadata_provenance_and_weapon_change_fail_closed(self):

@@ -181,7 +181,7 @@ class RepresentativeCatalog(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             with self.assertRaisesRegex(ValueError,
                                         "REPRESENTATIVE_ARCHETYPE_NOT_READY"):
-                core.source_backed_gear(("priest","shadow"),
+                core.source_backed_gear(("druid","feral"),
                     pathlib.Path(td),334,self.need)
 
 if __name__=="__main__":unittest.main()
