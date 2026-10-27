@@ -30,7 +30,7 @@ def stable_case_key(normalized,budget,calibration,reference,binary_sha,target,it
          and all(ch in "0123456789abcdef" for ch in binary_sha),
          "SIMC_BINARY_SHA_REQUIRED")
     # Exclude variable json2 file path, include relevant input and runtime values.
-    part=numerical.input_parts(reference)
+    part=numerical.input_parts(reference,allow_missing_json2_template=True)
     obj={"contract_schema":SCHEMA,
          "scenario":normalized["scenario_digest"],
          "total_rating":budget["budget"]["T_official"],
