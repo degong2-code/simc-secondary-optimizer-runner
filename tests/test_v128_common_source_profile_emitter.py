@@ -68,8 +68,8 @@ class SharedSourceEmission(unittest.TestCase):
                 self.assertIn("actions=",text)
                 self.assertEqual(form,item.weapon_form)
                 self.assertEqual(F,item.flask_vector())
-                self.assertEqual(
-                    set(rows),set(k for k in rows if k in groups))
+                self.assertTrue(set(groups).issubset(rows))
+                self.assertEqual(sum(kind=="tier" for kind in groups.values()),4)
                 self.assertEqual(cfg["source"]["profile_sha256"],
                     __import__("hashlib").sha256(text.encode("utf8")).hexdigest())
                 self.assertFalse((folder/"initial_native").exists())
