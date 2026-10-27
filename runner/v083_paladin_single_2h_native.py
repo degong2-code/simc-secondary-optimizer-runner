@@ -8,6 +8,7 @@ optimizer, no talent/item/APL mechanics. Existing original v082 defaults stay.
 from __future__ import annotations
 import v128_common_source_profile_emitter as common_emitter
 import v129_common_source_fields as common_fields
+import v130_source_identity_contract as source_identity
 import argparse,hashlib,pathlib,re,sys
 import v055_simc_item_selection as items
 import v061_scenario_contract as scenario
@@ -35,24 +36,19 @@ def git_blob(raw):
         ("blob "+str(len(raw))+"\0").encode("ascii")+raw).hexdigest()
 
 def source_profile(original,folder):
-    raw=original.encode("utf8")
-    need(git_blob(raw)==UPSTREAM_GIT_BLOB,
-         "PALADIN_UPSTREAM_SOURCE_BLOB_CHANGED")
-    need('paladin="MID2_Paladin_Retribution_Herald"' in original
-         and "spec=retribution" in original
-         and "role=attack" in original and "race=dwarf" in original,
-         "PALADIN_ORIGINAL_CLASS_ROLE_IDENTITY_CHANGED")
+    initial_actions,talents=source_identity.verify(
+        original,("paladin","retribution"),UPSTREAM_GIT_BLOB,
+        ('paladin="MID2_Paladin_Retribution_Herald"',
+         "spec=retribution","role=attack","race=dwarf"),
+        min_actions=35,
+        hash_error="PALADIN_UPSTREAM_SOURCE_BLOB_CHANGED",
+        identity_error="PALADIN_ORIGINAL_CLASS_ROLE_IDENTITY_CHANGED",
+        apl_error="ORIGINAL_PALADIN_APL_MISSING",
+        talents_error="SINGLE_PALADIN_TALENT_STRING_REQUIRED",fail=need)
     fury_bytes=FURY_SOURCE.read_bytes()
     need(git_blob(fury_bytes)==FURY_GIT_BLOB and
          "legs=chausses_of_unbound_rancor,id=271878," in fury_bytes.decode("utf8"),
          "NON_TIER_PLATE_LEGS_SOURCE_PROVENANCE_CHANGED")
-    initial_actions=common_fields.matching_lines(original,"actions")
-    need(len(initial_actions)>=35 and
-         sum(x.startswith("actions=") for x in initial_actions)==1,
-         "ORIGINAL_PALADIN_APL_MISSING")
-    talents=[x.partition("=")[2] for x in
-             common_fields.matching_lines(original,"talents=")]
-    need(len(talents)==1,"SINGLE_PALADIN_TALENT_STRING_REQUIRED")
     ids,_=common_fields.equipment(original,ALL_SLOTS,need=need,
         duplicate_prefix="DUPLICATE_EQUIPMENT_SLOT:",
         missing_id_prefix="UPSTREAM_ITEM_ID_MISSING:")
