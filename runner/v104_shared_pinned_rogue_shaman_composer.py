@@ -11,6 +11,7 @@ every default ordinary item has no proc or that all target-level variants are
 Native tested). All effects and DPS belong to SimC.
 """
 from __future__ import annotations
+import v128_common_source_profile_emitter as common_emitter
 import hashlib,pathlib,re
 
 import v055_simc_item_selection as item_mod
@@ -156,22 +157,9 @@ def create_from_source(source,folder,key):
               "iterations":"35","vary_combat_length":"0",
               "fixed_time":"1","race":spec["race"]}
     settings.update({"gear_"+stat:"700" for stat in STATS})
-    output=[];seen=set()
-    for line in lines:
-        if line.startswith("# Gear Summary"):break
-        k,sep,_=line.partition("=")
-        if sep and (k in ALL_SLOTS or k=="temporary_enchant"):
-            continue
-        if sep and k in settings:
-            need(k not in seen,"DUPLICATE_SOURCE_OVERRIDE:"+k)
-            seen.add(k)
-            continue
-        output.append(line)
-    output.extend(k+"="+v for k,v in settings.items())
-    output.extend(item_mod.equipment_line(
-         slot,eq[slot]["item_id"],334,eq[slot]["options"])
-         for slot in ALL_SLOTS)
-    profile="\n".join(output).rstrip()+"\n"
+    profile=common_emitter.emit(
+        source,settings,eq,ALL_SLOTS,
+        blank_before_overrides=False,need=need,check_duplicate_overrides=True)
     need([s for s in profile.splitlines() if s.startswith("actions")]==actions,
          "ORIGINAL_APL_CONTENT_CHANGED")
     need("temporary_enchant=" not in profile,
