@@ -12,6 +12,7 @@ Original v015/v016 bytes are untouched and stored only in user handoff ZIP.
 """
 from __future__ import annotations
 import math
+import copy
 from collections import defaultdict
 import v061_scenario_contract as contract
 import v063_numeric_injection as injection
@@ -52,6 +53,31 @@ def bounds(normalized,budget):
     need(all(0<=a<=b for a,b in zip(lower,upper)) and
          sum(lower)<=total<=sum(upper),"BOUNDS_NOT_FEASIBLE")
     return total,lower,upper
+
+def budget_with_fixed_components(normalized,budget,fixed_F,fixed_O):
+    """P1 candidate feasibility: c=B+O, c>=F and selected L protection.
+
+    The v062 budget identity remains unchanged: this is only a private view
+    of the search floor, shared by seeds, scouts, material and confirmations.
+    It does not change B/O/T or add any ratings to output or SimC twice.
+    """
+    contract.vector(fixed_F,"STATIC_FLASK_F")
+    contract.vector(fixed_O,"FIXED_NONALLOCATABLE_O")
+    need(sum(fixed_F.values())==normalized["budget"]["F"],
+         "FIXED_F_NOT_SCENARIO_BUDGET")
+    need(fixed_O==normalized["budget"]["external_temporary_rating"],
+         "FIXED_O_NOT_SCENARIO_BUDGET")
+    need(budget.get("scenario_digest")==normalized["scenario_digest"]
+         and budget["budget"]["T_official"]==normalized["budget"]["T"],
+         "FIXED_FLOOR_SCENARIO_DRIFT")
+    floors=budget["effective_floor_if_possible"]
+    need(type(floors) is dict,"FIXED_FLOOR_REQUIRES_EXACT_L")
+    result=copy.deepcopy(budget)
+    result["effective_floor_if_possible"]={
+        stat:max(floors[stat],fixed_F[stat]-fixed_O[stat],0)
+        for stat in STATS}
+    bounds(normalized,result)  # Early infeasible floor is an explicit error.
+    return result
 
 def eligible(vector,total,lower,upper):
     return (type(vector) is tuple and len(vector)==4
