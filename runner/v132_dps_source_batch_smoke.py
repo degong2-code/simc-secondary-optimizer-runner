@@ -154,13 +154,17 @@ def run(binary,out,iterations=35,timeout_seconds=180,max_new=17,retry_failed=Fal
             if not retry_failed:
                 cases.append({"key":key,"status":"PRIOR_FAILED_NOT_RETRIED"})
                 continue
-        else:
-            if profile.exists() or json2.exists():
-                raise SmokeBlocked("PREEXISTING_UNRECEIPTED_NATIVE_FILES:"+key)
-            profile.write_text(lines,encoding="utf8",newline="\n")
+        elif profile.exists() or json2.exists():
+            raise SmokeBlocked("PREEXISTING_UNRECEIPTED_NATIVE_FILES:"+key)
         if native>=max_new:
             cases.append({"key":key,"status":"NOT_RUN_LIMIT"})
             continue
+        if current is not None and json2.exists():
+            # A failed attempt may have emitted an incomplete JSON2 file.
+            # Only explicit --retry-failed permits discarding it.
+            json2.unlink()
+        if current is None:
+            profile.write_text(lines,encoding="utf8",newline="\n")
         native+=1
         try:
             cmd=subprocess.run([str(binary.resolve()),str(profile.resolve())],
