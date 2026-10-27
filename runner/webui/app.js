@@ -279,7 +279,12 @@ function renderProgress(data) {
   $("progress-pct").textContent=number(pct,0)+"%";
   $("progress-bar").style.width=Math.max(0,Math.min(100,pct))+"%";
   const worker=p.worker?.status||p.status||"NOT_STARTED";
-  const status=p.error||p.worker?.reason||worker;
+  // A failed resumed worker may stop before v094 overwrites old progress.
+  // Show its NEW reason, rather than repeating an older Native error forever.
+  const status=data.active?worker:
+    worker==="BLOCKED_OR_PARTIAL"?
+      (p.worker?.reason||p.error||worker):
+      (p.error||p.worker?.reason||worker);
   $("stage-text").textContent=status+" · Native 누적 "+(p.native_attempts||0)+
                        " · 캐시 "+(p.cache_hits||0);
   $("run-label").textContent=data.active?"진행 중":
