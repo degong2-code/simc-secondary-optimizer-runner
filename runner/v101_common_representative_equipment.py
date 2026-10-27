@@ -103,6 +103,13 @@ SOURCE_GEM_COLOR={
 FOUR_COLOR_GEMS={
     "garnet":240908,"amethyst":240900,
     "lapis":240918,"peridot":240892}
+# v104 pins these two original source wrist slots as socketed, but its
+# ordinary wrist replacements discard the source options. For 240967 ONLY,
+# recover that one source-observed gem position before four-color adjustment.
+# This is not proof the replacement item accepts a socket in Native SimC.
+SOURCE_SOCKETED_WRIST_REPLACEMENTS={
+    268240:240900,   # Subtlety: original wrist 271506 carried 240900
+    273775:240906}  # Elemental: original wrist 244584 carried 240906
 
 def ensure_representative_gem_colors(rows,diamond_id,need):
     """Keep six real ordinary gems; for 240967 cover all four colors.
@@ -126,6 +133,17 @@ def ensure_representative_gem_colors(rows,diamond_id,need):
              "REPRESENTATIVE_ORDINARY_GEM_INVALID")
         for idx,token in enumerate(tokens):
             slots.append((slot,idx,int(token)))
+    if len(slots)==5:
+        wrist=rows.get("wrists")
+        prior=(SOURCE_SOCKETED_WRIST_REPLACEMENTS.get(wrist["item_id"])
+               if wrist else None)
+        # Fail closed on arbitrary five-gem layouts; only the two source-
+        # pinned v104 substitutions are allowed to regain the one wrist gem.
+        if (prior is not None and
+            "gem_id" not in wrist["options"] and
+            all(gem_id==prior for _,_,gem_id in slots)):
+            wrist["options"]["gem_id"]=str(prior)
+            slots.append(("wrists",0,prior))
     need(len(slots)==6,"REPRESENTATIVE_SIX_ORDINARY_GEMS_REQUIRED")
     present=set()
     replaceable=[]
