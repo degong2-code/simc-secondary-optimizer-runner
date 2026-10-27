@@ -198,7 +198,8 @@ def run(context, seed_targets, flask_vector, binary, output, *,
             req=adaptive.request(context,t,flask_vector,folder/'result.json','seed')
             obs=native(req,folder,'SEED_%02d'%i)
             projected.append(adaptive.project_native_for_v065(req,obs))
-        state=adaptive.start_scout(context,projected,step=step,scout_max=scouts)
+        state=adaptive.start_scout(context,projected,step=step,
+                                   scout_max=scouts,flask_vector=flask_vector)
         for i in range(scouts):
             folder=main_folder/('scout_%02d'%i)
             plan=adaptive.next_scout(context,state,flask_vector,folder/'result.json')
@@ -209,7 +210,7 @@ def run(context, seed_targets, flask_vector, binary, output, *,
         # do not declare a near-DPS alternative until Native measurement.
         material_proposals=[]
         for i in range(material_scouts):
-            pp=extended.material_neighbor(cfg,context['bundle']['prepared']['static_budget'],
+            pp=extended.material_neighbor(cfg,adaptive.feasible_budget(context,flask_vector),
                  state['observations'],fraction=0.10)
             folder=main_folder/('material_%02d'%i)
             req=adaptive.request(context,pp['candidate_B'],flask_vector,
