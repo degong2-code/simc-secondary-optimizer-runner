@@ -2,7 +2,7 @@
 """v103: source-observed weapon TYPES, not invented spec-wide skill legality.
 
 Exact weapon subtype and hand identity from pinned original SimC fixtures +
-item pages. Six pinned profile weapon forms are source-bound. Rogue and Elemental
+item pages. The source-pinned profile weapon forms are source-bound. Rogue and Elemental
 Shaman use the bounded shared v104 input builder; all other legal weapon
 forms remain unassessed, and Native DPS for the new input is not yet proven.
 
