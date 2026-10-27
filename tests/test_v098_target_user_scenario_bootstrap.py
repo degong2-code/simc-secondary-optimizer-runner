@@ -398,7 +398,9 @@ class UserTargetBootstrap(unittest.TestCase):
         out,_=self.prepare(u)
         self.assertEqual((out["plan"]["base_B"],out["plan"]["final_T"]),
                          (2980,3044))
-        u["character"]["spec"]="outlaw"
+        # Outlaw now has an exact pinned source (v131); Assassination
+        # remains unsupported until it receives the same source evidence.
+        u["character"]["spec"]="assassination"
         with tempfile.TemporaryDirectory() as td:
             root=pathlib.Path(td);binary=root/"dummy";binary.write_bytes(b"NO_NATIVE")
             with self.assertRaisesRegex(boot.UserScenarioBlocked,
