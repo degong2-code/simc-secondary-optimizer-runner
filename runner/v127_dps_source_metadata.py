@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """v127 source-backed DPS metadata registry — data, never a DPS engine.
 
-Seven source-pinned archetypes (six prior, one newly sourced); not a gear DB or a claim of
+Source-pinned archetypes (six prior, expanding only with exact evidence); not a gear DB or a claim of
 coverage for the other 21 DPS specs. All effects/APL/DPS remain in SimC.
 Source-specific fixture PRODUCERS are legacy adapters until source parsing
 can be unified without changing the pinned source or existing Native bytes.
@@ -105,7 +105,7 @@ def need(value,reason):
 
 def validate():
     """Strict read-only source scope: no invented 27-spec coverage."""
-    need(len(SOURCE_BACKED)==len(BY_SPEC)==7 and
+    need(len(SOURCE_BACKED)==len(BY_SPEC) and len(SOURCE_BACKED)>=6 and
          set(BY_SPEC)==set(observed.EXECUTABLE_SOURCES),
          "REGISTERED_SOURCE_SPEC_SCOPE_DRIFT")
     for entry in SOURCE_BACKED:
