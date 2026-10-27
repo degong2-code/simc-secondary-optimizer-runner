@@ -122,14 +122,7 @@ def available_ordinary_seed_slots(family):
 
 # P1-WEB-3: representative 23-rating gem examples, with source-observed
 # colors. This is NOT a second gem/stat effect engine; SimC owns color effects.
-SOURCE_GEM_COLOR={
-    240908:"garnet", 240906:"garnet",
-    240900:"amethyst", 240898:"amethyst",
-    240918:"lapis",
-    240892:"peridot", 240890:"peridot"}
-FOUR_COLOR_GEMS={
-    "garnet":240908,"amethyst":240900,
-    "lapis":240918,"peridot":240892}
+from v135_source_gem_colors import SOURCE_GEM_COLOR, FOUR_COLOR_GEMS
 # Source drafts inspect the common gem-color data. Register 16 new source
 # adapters only after the shared constants are initialized, avoiding an
 # import-time v101 -> v134 -> v133 -> v101 initialization cycle.
