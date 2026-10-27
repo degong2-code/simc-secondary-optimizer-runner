@@ -14,7 +14,7 @@ import os
 import pathlib
 import sys
 import v055_simc_item_selection as item
-import v101_common_representative_equipment as common
+import v135_source_gem_colors as common
 import v127_dps_source_metadata as registry
 import v128_common_source_profile_emitter as emitter
 import v129_common_source_fields as fields
