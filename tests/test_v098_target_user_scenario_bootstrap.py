@@ -1,5 +1,5 @@
 """v098 target-level USER controls -> full internal v096 plan, offline only."""
-import json,pathlib,re,sys,tempfile,unittest
+import json,os,pathlib,re,subprocess,sys,tempfile,unittest
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"runner"))
 sys.path.insert(0,str(ROOT/"tests"))
@@ -49,6 +49,52 @@ class UserTargetBootstrap(unittest.TestCase):
         binary=root/"dummy"
         binary.write_bytes(b"NOT_SIMC_EXECUTED")
         return boot.build(user,root/"generated",binary,"7bc10711b5"),root
+
+    def test_v104_old_and_new_processes_replay_same_immutable_240967_plan(self):
+        # Simulate the OLD set-derived equipment order, then execute the
+        # identical plan in a different Python process with a new hash seed.
+        # No Native SimC binary is executed (fake executable file only).
+        older=(
+            "import pathlib,sys;"
+            "sys.path.insert(0,sys.argv[1]);"
+            "import v104_shared_pinned_rogue_shaman_composer as v104;"
+            "import v098_target_user_scenario_bootstrap as v098;"
+            "v104.ALL_SLOTS=tuple(reversed(v104.ALL_SLOTS));"
+            "v098.run(pathlib.Path(sys.argv[2]),pathlib.Path(sys.argv[3]),"
+            "pathlib.Path(sys.argv[4]),sys.argv[5])"
+        )
+        for spec in ("subtlety","elemental"):
+            with self.subTest(spec=spec),tempfile.TemporaryDirectory() as td:
+                root=pathlib.Path(td)
+                data=case(spec)
+                data["consumable_choices"]={
+                    "flask":"source_default","food":"source_default",
+                    "potion":"source_default","augmentation":"source_default",
+                    "diamond_id":240967,"omnium_talents":"source_default"}
+                src=root/"user.json"
+                src.write_text(json.dumps(data),encoding="utf8")
+                fake=root/"simc.exe"
+                fake.write_bytes(b"do not run")
+                generated=root/"generated"
+                args=[str(src),str(generated),str(fake),"7bc1071"]
+                env={**os.environ,"PYTHONHASHSEED":"23"}
+                old=subprocess.run(
+                    [sys.executable,"-c",older,str(ROOT/"runner"),*args],
+                    cwd=str(ROOT),env=env,capture_output=True,text=True)
+                self.assertEqual(old.returncode,0,old.stderr)
+                sealed=(generated/"profile.simc").read_bytes()
+                other=subprocess.run(
+                    [sys.executable,str(ROOT/"runner"/
+                                   "v098_target_user_scenario_bootstrap.py"),
+                     "--input",str(src),"--out",str(generated),
+                     "--binary",str(fake),"--revision","7bc1071"],
+                    cwd=str(ROOT),env={**os.environ,"PYTHONHASHSEED":"137"},
+                    capture_output=True,text=True)
+                self.assertEqual(other.returncode,0,other.stderr)
+                self.assertEqual((generated/"profile.simc").read_bytes(),sealed)
+                self.assertFalse((generated/"simc_results").exists())
+        import v104_shared_pinned_rogue_shaman_composer as v104
+        self.assertEqual(v104.ALL_SLOTS,tuple(sorted(v104.ALL_SLOTS)))
 
     def test_rogue_and_shaman_user_boot_produce_normalized_full_profiles(self):
         for name,role,weapon_form,secondary in (
