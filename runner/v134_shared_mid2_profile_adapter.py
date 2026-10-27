@@ -62,7 +62,7 @@ def source_metadata(key):
     family=preview["material"]
     tier=dict(zip(draft.FIVE,draft.FIVE_TIER[key.split("/")[0]]))
     flask,F,old=flask_for(original["source"])
-    return {"key":tuple(key.split("/")),"fixture":original["path"].split("/")[-1],
+    return {"key":tuple(key.split("/")),"fixture":original["path"].replace("\\","/").rsplit("/",1)[-1],
             "source_git_blob":original["git_blob"],
             "family":family,"tier":tier,"fifth":(preview["offslot"],
                preview["offslot_item"]),"form":form_for(key,
