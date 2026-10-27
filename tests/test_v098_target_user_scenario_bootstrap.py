@@ -287,7 +287,7 @@ class UserTargetBootstrap(unittest.TestCase):
                 user=case(name)
                 result,root=self.prepare(user)
                 self.assertEqual(result["native_calls"],0)
-                self.assertEqual(result["supported_archetypes_now"],6)
+                self.assertEqual(result["supported_archetypes_now"],7)
                 self.assertEqual(result["plan"]["item_slots"],16)
                 self.assertEqual(result["plan"]["base_B"],3150)
                 self.assertEqual(result["plan"]["final_T"],3150+secondary)
