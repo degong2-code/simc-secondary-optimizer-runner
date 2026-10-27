@@ -180,6 +180,10 @@ def draft(key,ilevel=LEVEL):
             reserved_flags.append("FOUR_GEM_COLORS_NOT_READY")
     if len({row["item_id"] for row in rows.values()})!=len(rows):
         reserved_flags.append("REPEATED_REPRESENTATIVE_ITEM_IDS_REVIEW")
+    # A cross-source socket witness does not prove this exact Feral
+    # target-334 variant's Native acceptance. Keep product/UI disabled.
+    if key=="druid/feral":
+        reserved_flags.append("FERAL_REPRESENTATIVE_SOCKET_NATIVE_NOT_YET_VERIFIED")
     # The season source is not a guaranteed plain-ordinary armor set:
     # source leftovers still require the common P1 source/ordinary policy.
     reserved_flags.append("NON_TIER_SOURCE_GEAR_NOT_ALL_STANDARDIZED")
