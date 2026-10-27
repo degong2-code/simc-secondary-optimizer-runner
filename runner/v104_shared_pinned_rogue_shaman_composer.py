@@ -12,6 +12,7 @@ Native tested). All effects and DPS belong to SimC.
 """
 from __future__ import annotations
 import v128_common_source_profile_emitter as common_emitter
+import v129_common_source_fields as common_fields
 import hashlib,pathlib,re
 
 import v055_simc_item_selection as item_mod
@@ -59,23 +60,11 @@ def need(ok,why):
 def git_blob(data):
     return hashlib.sha1(b"blob "+str(len(data)).encode("ascii")+b"\0"+data).hexdigest()
 def extract_gear(raw):
-    ids={};options={}
-    for line in raw.splitlines():
-        if line.startswith("# Gear Summary"):break
-        slot,sep,body=line.partition("=")
-        if not sep or slot not in ALL_SLOTS:continue
-        need(slot not in ids,"SOURCE_DUPLICATE_GEAR_SLOT:"+slot)
-        fields=body.split(",")
-        identifiers=[x[3:] for x in fields[1:] if x.startswith("id=")]
-        need(len(identifiers)==1 and identifiers[0].isdigit(),
-             "SOURCE_ITEM_ID_ABSENT:"+slot)
-        ids[slot]=int(identifiers[0])
-        options[slot]={}
-        for field in fields[1:]:
-            k,_,v=field.partition("=")
-            if k in ("gem_id","enchant","enchant_id") and v:
-                options[slot][k]=v
-    return ids,options
+    """Compat shape and diagnostics, shared with all source-backed specs."""
+    return common_fields.equipment(raw,ALL_SLOTS,need=need,
+         duplicate_prefix="SOURCE_DUPLICATE_GEAR_SLOT:",
+         missing_id_prefix="SOURCE_ITEM_ID_ABSENT:",
+         include_gem_enchant=True)
 
 def create_from_source(source,folder,key):
     need(key in PROFILES,"NEW_SOURCE_SPEC_UNSUPPORTED")
@@ -88,16 +77,13 @@ def create_from_source(source,folder,key):
          "role="+spec["role"] in source,
          "SOURCE_CHARACTER_APL_IDENTITY_MISMATCH")
     lines=source.splitlines()
-    names={}
-    for line in lines:
-        k,sep,v=line.partition("=")
-        if sep and k in ("race","role","spec","talents","flask",
-                         "food","potion","augmentation"):
-            need(k not in names,"SOURCE_DUPLICATE_SETTING:"+k)
-            names[k]=v
+    names=common_fields.settings(source,(
+        "race","role","spec","talents","flask","food",
+        "potion","augmentation"),need=need,
+        duplicate_prefix="SOURCE_DUPLICATE_SETTING:")
     need(all(k in names for k in ("race","role","spec","talents","flask",
                                   "food","potion")),"SOURCE_REQUIRED_CHARACTER_OR_BUFF_MISSING")
-    actions=[l for l in lines if l.startswith("actions")]
+    actions=common_fields.matching_lines(source,"actions")
     need(len(actions)>=15 and sum(l.startswith("actions=") for l in actions)==1,
          "SOURCE_APL_MISSING_OR_CHANGED")
     ids,mods=extract_gear(source)
