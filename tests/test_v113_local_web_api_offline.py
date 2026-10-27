@@ -43,10 +43,10 @@ class LocalWebAPIOffline(unittest.TestCase):
     def test_bootstrap_health_and_all_six_source_defaults_no_simc(self):
         health=self.client.get("/api/v1/health")
         self.assertEqual(health.status_code,200)
-        self.assertEqual(health.json()["supported_dps"],23)
+        self.assertEqual(health.json()["supported_dps"],24)
         boot=self.client.get("/api/v1/bootstrap").json()
         self.assertEqual(boot["session_token"],"offline-only-token")
-        self.assertEqual(len(boot["supported"]),23)
+        self.assertEqual(len(boot["supported"]),24)
         defaults=self.client.get("/api/v1/defaults",headers=self.headers)
         self.assertEqual(defaults.status_code,200)
         status_counts={}
@@ -62,7 +62,7 @@ class LocalWebAPIOffline(unittest.TestCase):
                       else "SOURCE_BACKED_PARTIAL_ORDINARY_POOL")
             self.assertEqual(scope,expected)
         self.assertEqual(status_counts,{
-            "SOURCE_NON_TIER_NOT_ALL_STANDARDIZED":16,
+            "SOURCE_NON_TIER_NOT_ALL_STANDARDIZED":17,
             "SOURCE_BACKED_PARTIAL_ORDINARY_POOL":7})
         self.assertFalse((self.root/"runs").exists())
 
