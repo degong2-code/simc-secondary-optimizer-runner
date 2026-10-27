@@ -44,6 +44,14 @@ PROFILES={
         "fifth":("chest",251159),
         "replace":{"back":268253,"wrists":268240},
         "gem":"240983","F":"crit_rating"},
+    ("rogue","outlaw"):{
+        "filename":"v131_upstream_mid2_rogue_outlaw_reference.simc",
+        "source_sha":"738f7fe64c1d75159b86ecc2e8064dc29c69c203",
+        "race":"dwarf","role":"attack",
+        "tier":("head","shoulders","hands","legs"),
+        "fifth":("chest",251159),
+        "replace":{"back":268253,"wrists":268240},
+        "gem":"240967","F":"crit_rating"},
     ("shaman","elemental"):{
         "filename":"v078_upstream_mid2_shaman_elemental_reference.simc",
         "source_sha":"c92d111e37bd684647e4637dcfef3ccb92864cde",
