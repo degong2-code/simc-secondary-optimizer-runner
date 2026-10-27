@@ -36,6 +36,8 @@ OMNIUM_PRESETS=frozenset((
  # each with actual original-source SimC Native smoke PASS (user home PC).
  "136822:1/136819:1/136817:1/136818:1/136814:1",
  "136822:1/136817:1/136821:1/136814:1",
+ "136822:1/136816:1/136817:1/136820:1/136814:1",
+ "136822:1/136823:1/136817:1/136821:1/136814:1",
  "136814:1/136821:1/136817:1/136823:1/136822:1",
  "rune_of_unleashed_fire/rune_of_lynxlike_reflexes/rune_of_lingering/rune_of_burning_haste/rune_of_overload",
  "rune_of_unleashed_fire/rune_of_lynxlike_reflexes/rune_of_lingering/rune_of_masterful_cunning/rune_of_overload",
