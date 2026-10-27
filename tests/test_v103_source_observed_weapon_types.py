@@ -12,9 +12,9 @@ class WeaponTypeSources(unittest.TestCase):
 
     def test_six_pinned_weapon_shapes_and_six_source_enabled(self):
         doc=weapons.verify_observed()
-        self.assertEqual(doc["source_profile_shapes"],6)
-        self.assertEqual(doc["executable_source_shapes"],6)
-        self.assertEqual(doc["unique_item_ids"],8)
+        self.assertEqual(doc["source_profile_shapes"],7)
+        self.assertEqual(doc["executable_source_shapes"],7)
+        self.assertEqual(doc["unique_item_ids"],10)
         self.assertTrue(doc["not_full_spec_weapon_legality"])
         self.assertEqual(doc["native_calls"],0)
 
