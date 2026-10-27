@@ -314,7 +314,11 @@ def create_app(*,root=None, token=None):
     @app.get("/api/v1/defaults")
     def defaults():
         return {"archetypes":[{"class":cl,"spec":sp,
-                               **sessions.standard_controls((cl,sp))}
+                               **sessions.standard_controls((cl,sp)),
+                               "representative_scope":(
+                                   "SOURCE_NON_TIER_NOT_ALL_STANDARDIZED"
+                                   if (cl,sp) in bootstrap.common.GENERIC_PENDING
+                                   else "SOURCE_BACKED_PARTIAL_ORDINARY_POOL")}
                               for cl,sp in sessions.SUPPORTED]}
 
     @app.post("/api/v1/sessions/plan")
