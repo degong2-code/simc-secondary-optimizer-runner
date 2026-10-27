@@ -14,6 +14,12 @@ on:
       - runner/webui/app.js
       - runner/v106_user_session_controller.py
       - runner/v098_target_user_scenario_bootstrap.py
+      - runner/v103_source_observed_weapon_types.py
+      - runner/v104_shared_pinned_rogue_shaman_composer.py
+      - runner/v108_native_consumable_inputs.py
+      - runner/v127_dps_source_metadata.py
+      - integration_probes/fixtures/v131_upstream_mid2_rogue_outlaw_reference.simc
+      - tests/test_v131_rogue_outlaw_source_candidate.py
       - runner/v096_unified_product_entry.py
 permissions:
   contents: read
@@ -51,7 +57,7 @@ jobs:
       - name: Offline FastAPI HTTP tests, including security and zero Native
         shell: bash
         run: |
-          python -m unittest -q tests.test_v113_local_web_api_offline tests.test_v114_local_web_ui_offline tests.test_v106_user_session_controller tests.test_v109_windows_readiness_offline tests.test_v110_windows_exact_simc_input_bytes
+          python -m unittest -q tests.test_v113_local_web_api_offline tests.test_v114_local_web_ui_offline tests.test_v106_user_session_controller tests.test_v109_windows_readiness_offline tests.test_v110_windows_exact_simc_input_bytes tests.test_v131_rogue_outlaw_source_candidate
       - name: Browser script parse check (Node without dependency install)
         shell: bash
         run: node --check runner/webui/app.js
