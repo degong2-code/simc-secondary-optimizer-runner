@@ -186,12 +186,23 @@ def ensure_representative_gem_colors(rows,diamond_id,need):
             present.add(color)
     missing=[color for color in FOUR_COLOR_GEMS if color not in present]
     need(len(replaceable)>=len(missing),"REPRESENTATIVE_GEM_COLORS_NOT_FEASIBLE")
-    if not missing:
+    # For the 240967 physical color-set contract, source gems with no
+    # validated color mapping cannot be counted as one of the four colors.
+    # Replace only those unknown-color IDs with previously source-seen gems;
+    # keep original IDs otherwise. The existing seven 240967 plans contain
+    # no such unknown IDs, so their sealed bytes remain unchanged.
+    unknown={(slot,idx) for slot,idx,gem_id in slots
+             if SOURCE_GEM_COLOR.get(gem_id) is None}
+    replacement={(slot,idx):FOUR_COLOR_GEMS[color]
+                 for (slot,idx),color in zip(replaceable,missing)}
+    for slot,idx in unknown:
+        replacement.setdefault((slot,idx),FOUR_COLOR_GEMS["garnet"])
+    if not replacement:
         return False
     slot_tokens={slot:rows[slot]["options"]["gem_id"].split("/")
                  for slot,_,_ in slots}
-    for (slot,idx),color in zip(replaceable,missing):
-        slot_tokens[slot][idx]=str(FOUR_COLOR_GEMS[color])
+    for (slot,idx),gem_id in replacement.items():
+        slot_tokens[slot][idx]=str(gem_id)
     for slot,tokens in slot_tokens.items():
         rows[slot]["options"]["gem_id"]="/".join(tokens)
     return True
