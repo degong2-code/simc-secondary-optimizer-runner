@@ -13,6 +13,8 @@ import v095_material_precision_policy as extended
 import v082_fury_plate_dual_twohand_native as warrior
 import v098_target_user_scenario_bootstrap as bootstrap
 import v096_unified_product_entry as entry
+import v090_reference_total_native_candidate as reference
+import v092_approved_inclusive_CHMV_policy as approved
 from test_v098_target_user_scenario_bootstrap import case
 from test_v093_inclusive_adaptive_scheduler_bridge import V093InclusiveAdaptive
 
@@ -55,6 +57,14 @@ class FixedComponentsFeasibility(unittest.TestCase):
             with self.assertRaisesRegex(adaptive.AdaptiveBridgeBlocked,
                                         "BASE_TARGET_BELOW_FIXED_COMPONENT_FLOOR"):
                 adaptive.request(ctx,impossible,F,root/"no.json","scout")
+            feasible=dict(zip(STATS,(133,1000,1008,1009)))
+            self.assertEqual(sum(feasible.values()),3150)
+            candidate=adaptive.request(ctx,feasible,F,
+                                       root/"edge.json","scout")
+            self.assertEqual(candidate["raw_gear_override"]["crit_rating"],0)
+            self.assertEqual(candidate["target"]["crit_rating"],165)
+            self.assertEqual(candidate["v090_oil_precredit"],O)
+            self.assertFalse((root/"edge.json").exists())
             self.assertFalse((root/"no.json").exists())
             self.assertFalse((folder/"simc_results").exists())
 
@@ -103,9 +113,33 @@ class FixedComponentsFeasibility(unittest.TestCase):
             req=adaptive.request(ctx,valid,f,pathlib.Path(td)/"good.json","seed")
             self.assertEqual(req["raw_gear_override"]["haste_rating"],0)
             self.assertEqual(req["target"]["haste_rating"],165)
+            self.assertEqual(req["v090_oil_precredit"]["haste_rating"],32)
+            self.assertIn("gear_haste_rating=0",req["input"])
             self.assertEqual(req["v092_base_B"],3350)
             self.assertEqual(req["v092_final_T"],3414)
             self.assertFalse((pathlib.Path(td)/"good.json").exists())
+
+    def test_ordinary_preexisting_candidate_input_and_case_key_unchanged(self):
+        # v091 normal candidates must still be byte-for-byte identical to
+        # the historical v090+v092 pipeline, preserving three real caches.
+        with tempfile.TemporaryDirectory() as td:
+            ctx=self.setup_context(td)
+            bundle=ctx["bundle"]
+            f=warrior.DECLARED_F
+            base=dict(zip(STATS,(838,838,837,837)))
+            out=pathlib.Path(td)/"normal.json"
+            direct=reference.propose(
+                bundle["prepared"],bundle["oil"]["profile"],base,f,
+                ctx["identity"]["binary_sha256"],ctx["identity"]["revision"],
+                ctx["identity"]["scout_iterations"],out)
+            expected=approved.adjust_native_request(
+                direct,bundle["approved_total"],base)
+            actual=adaptive.request(ctx,base,f,out,"seed")
+            self.assertEqual(actual["input"],expected["input"])
+            self.assertEqual(actual["input_sha256"],expected["input_sha256"])
+            self.assertEqual(actual["case_key"],expected["case_key"])
+            self.assertNotIn("v090_oil_precredit",actual)
+            self.assertFalse(out.exists())
 
     def test_material_scout_excludes_observed_leader_unfeasible_transfer(self):
         with tempfile.TemporaryDirectory() as td:
