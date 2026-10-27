@@ -96,7 +96,9 @@ class RealHTTPPageOffline(unittest.TestCase):
     def test_blocked_worker_is_not_shown_as_idle_waiting(self):
         js=self.client.get("/assets/app.js").text
         self.assertIn('worker==="BLOCKED_OR_PARTIAL"?"실행 차단"',js)
-        self.assertIn('p.worker?.reason||worker',js)
+        self.assertIn('p.worker?.reason||p.error||worker',js)
+        self.assertIn('worker==="BLOCKED_OR_PARTIAL"?',js)
+        self.assertIn('const status=data.active?worker:',js)
 
     def test_missing_session_returns_read_only_404_with_precise_code(self):
         import tempfile
