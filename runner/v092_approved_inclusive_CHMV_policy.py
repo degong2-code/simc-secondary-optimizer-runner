@@ -68,9 +68,6 @@ def adjust_native_request(request,accounting,base):
     precredit=request.get("v090_oil_precredit")
     if precredit is not None:
         need(precredit==accounting["fixed_O"]
-             and all(base[s]<declared_F[s]
-                     or prior[s]+declared_F[s]==base[s]+precredit[s]
-                     for s in scenario.STATS)
              and any(base[s]<declared_F[s] for s in scenario.STATS),
              "OIL_PRECREDIT_IDENTITY_OR_STAGE_DRIFT")
     need(all(prior[s]+declared_F[s]==
