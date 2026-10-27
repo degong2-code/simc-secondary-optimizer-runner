@@ -717,6 +717,25 @@ class UserTargetBootstrap(unittest.TestCase):
                 self.assertEqual((folder/"manifest.json").read_bytes(),sealed)
                 self.assertFalse((folder/"simc_results").exists())
 
+    def test_native_session_seed_identity_prevents_manifest_repointing(self):
+        # Synthetic sealed identity only; no Native calls or forged PASS.
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            binary=root/"fake.exe";binary.write_bytes(b"NO_NATIVE")
+            folder=root/"generated"
+            user=case("subtlety")
+            boot.build(user,folder,binary,"7bc1071")
+            original=(folder/"manifest.json").read_bytes()
+            native=folder/"simc_results"
+            native.mkdir()
+            (native/"V094_SESSION_IDENTITY.json").write_text(
+                json.dumps({"seed_base_targets":[]}),encoding="utf8")
+            with self.assertRaisesRegex(boot.UserScenarioBlocked,
+                 "EXISTING_MANIFEST_SEEDS_DISAGREE_WITH_NATIVE_IDENTITY"):
+                boot.build(user,folder,binary,"7bc1071")
+            self.assertEqual((folder/"manifest.json").read_bytes(),original)
+            self.assertFalse((native/"V094_RESULT.json").exists())
+
     def test_modified_legacy_seed_pair_remains_fail_closed(self):
         import copy
         from unittest import mock
