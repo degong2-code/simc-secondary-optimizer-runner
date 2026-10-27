@@ -8,6 +8,7 @@ No per-Mage DPS solver, loot database, APL/item effect/proc reimplementation.
 from __future__ import annotations
 import v128_common_source_profile_emitter as common_emitter
 import v129_common_source_fields as common_fields
+import v130_source_identity_contract as source_identity
 import argparse,hashlib,pathlib,re,sys
 
 import v055_simc_item_selection as items
@@ -38,22 +39,19 @@ def git_sha(raw):
     return hashlib.sha1(("blob "+str(len(raw))+"\0").encode("ascii")+raw).hexdigest()
 
 def source_profile(original,folder):
-    raw=original.encode("utf8")
-    need(git_sha(raw)==UPSTREAM_GIT_BLOB,"FROST_UPSTREAM_GIT_BLOB_CHANGED")
-    need('mage="MID2_Mage_Frost_Spellslinger"' in original
-         and "spec=frost" in original and "race=tauren" in original
-         and "role=spell" in original,"FROST_CLASS_SPECIALIZATION_SOURCE_CHANGED")
+    actions,talents=source_identity.verify(
+        original,("mage","frost"),UPSTREAM_GIT_BLOB,
+        ('mage="MID2_Mage_Frost_Spellslinger"',
+         "spec=frost","race=tauren","role=spell"),
+        min_actions=60,
+        hash_error="FROST_UPSTREAM_GIT_BLOB_CHANGED",
+        identity_error="FROST_CLASS_SPECIALIZATION_SOURCE_CHANGED",
+        apl_error="FROST_ORIGINAL_APL_MISSING",
+        talents_error="FROST_TALENT_STRING_MISSING",fail=need)
     fire=FIRE_SOURCE.read_bytes()
     need(git_sha(fire)==NONTIER_GIT_BLOB
          and "head=venomkeepers_horrific_cowl,id=271874," in fire.decode("utf8"),
          "FIRE_CLOTH_NONTIER_HEAD_SOURCE_CHANGED")
-    actions=common_fields.matching_lines(original,"actions")
-    need(len(actions)>=60 and
-         sum(line.startswith("actions=") for line in actions)==1,
-         "FROST_ORIGINAL_APL_MISSING")
-    talents=[line.partition("=")[2] for line in
-             common_fields.matching_lines(original,"talents=")]
-    need(len(talents)==1,"FROST_TALENT_STRING_MISSING")
     ids,_=common_fields.equipment(original,ALL_SLOTS,need=need,
         duplicate_prefix="DUPLICATE_FROST_EQUIPMENT_SLOT:",
         missing_id_prefix="FROST_SOURCE_ID_NOT_FOUND:")
