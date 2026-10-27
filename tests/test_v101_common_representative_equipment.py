@@ -91,6 +91,53 @@ class RepresentativeCatalog(unittest.TestCase):
                                  ("tier","special","crafted","trinkets"))+len(fill),
                              before)
 
+    def test_powerful_diamond_representative_gems_cover_all_four_colors(self):
+        # No real SimC call; assert only physical socketed IDs passed to SimC.
+        for key in core.ARCHETYPES:
+            with self.subTest(key=key),tempfile.TemporaryDirectory() as td:
+                _,_,rows,_,_,_=core.source_backed_gear(
+                    key,pathlib.Path(td),334,self.need)
+                changed=core.ensure_representative_gem_colors(
+                    rows,240967,self.need)
+                ids=[int(v) for slot,row in rows.items()
+                     if slot!="head" and "gem_id" in row["options"]
+                     for v in row["options"]["gem_id"].split("/")]
+                self.assertEqual(len(ids),6)
+                colors={core.SOURCE_GEM_COLOR[g] for g in ids}
+                self.assertEqual(colors,set(core.FOUR_COLOR_GEMS))
+                again=core.ensure_representative_gem_colors(
+                    rows,240967,self.need)
+                self.assertFalse(again)
+                self.assertIsInstance(changed,bool)
+
+    def test_non_color_diamond_does_not_rewrite_existing_windows_profile(self):
+        key=("paladin","retribution")
+        with tempfile.TemporaryDirectory() as td:
+            _,_,rows,_,_,_=core.source_backed_gear(
+                key,pathlib.Path(td),334,self.need)
+            old={slot:dict(row["options"]) for slot,row in rows.items()}
+            self.assertFalse(core.ensure_representative_gem_colors(
+                rows,240983,self.need))
+            self.assertEqual(old,{slot:row["options"]
+                                  for slot,row in rows.items()})
+            self.assertTrue(core.ensure_representative_gem_colors(
+                rows,240967,self.need))
+            self.assertEqual(rows["head"]["options"],old["head"])
+
+    def test_special_swap_preserves_existing_real_socket_gems(self):
+        key=("paladin","retribution")
+        with tempfile.TemporaryDirectory() as td:
+            _,_,rows,groups,_,_=core.source_backed_gear(
+                key,pathlib.Path(td),334,self.need)
+            old_gems=rows["wrists"]["options"]["gem_id"]
+            user={"trinkets":[{"slot":slot,"item_id":rows[slot]["item_id"],
+                               "options":{}} for slot in ("trinket1","trinket2")],
+                  "special_items":[{"slot":"wrists","item_id":239652,
+                                    "options":{}}],
+                  "embellishments":[]}
+            core.apply_user_equipment(key,rows,groups,user,334,self.need)
+            self.assertEqual(rows["wrists"]["options"]["gem_id"],old_gems)
+
     def test_unsupported_source_only_fails_before_any_archetype_inference(self):
         with tempfile.TemporaryDirectory() as td:
             with self.assertRaisesRegex(ValueError,
