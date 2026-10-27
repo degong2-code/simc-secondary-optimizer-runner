@@ -73,7 +73,7 @@ def source(manifest_path):
     context=adaptive.prepare(prepared,binary_sha,user["native_revision"])
     normalized=prepared["prepared"]["scenario"]
     B,lo,hi=scheduler.bounds(normalized,
-                          prepared["prepared"]["static_budget"])
+                          adaptive.feasible_budget(context,user["flask_F"]))
     need(all(scheduler.eligible(tuple(x[s] for s in contract.STATS),
                                 B,lo,hi) for x in seeds)
          and seeds[0]!=seeds[1],"SEEDS_FAIL_BASE_B_L_BOUNDS")
