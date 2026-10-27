@@ -72,17 +72,9 @@ ARCHETYPES={
     entry.key:(entry.source_fixture,resolved_producer(entry),
                entry.weapon_form,entry.flask_vector())
     for entry in metadata.SOURCE_BACKED}
-for _key in sorted(GENERIC_PENDING):
-    _info=generic.source_metadata("/".join(_key))
-    ARCHETYPES[_key]=(_info["fixture"],generic.producer(_key),
-                      _info["form"],_info["F"])
 FIXTURES=pathlib.Path(__file__).resolve().parents[1]/"integration_probes/fixtures"
 FIFTH_TIER={entry.key:entry.fifth_replacement()
             for entry in metadata.SOURCE_BACKED}
-for _key in GENERIC_PENDING:
-    _info=generic.source_metadata("/".join(_key))
-    _slot,_ordinary=_info["fifth"]
-    FIFTH_TIER[_key]=(_slot,_info["tier"][_slot],_ordinary)
 
 def validate_source_registry():
     """Fail closed on changes to six prior source-pinned contracts."""
@@ -138,6 +130,17 @@ SOURCE_GEM_COLOR={
 FOUR_COLOR_GEMS={
     "garnet":240908,"amethyst":240900,
     "lapis":240918,"peridot":240892}
+# Source drafts inspect the common gem-color data. Register 16 new source
+# adapters only after the shared constants are initialized, avoiding an
+# import-time v101 -> v134 -> v133 -> v101 initialization cycle.
+for _key in sorted(GENERIC_PENDING):
+    _info=generic.source_metadata("/".join(_key))
+    ARCHETYPES[_key]=(_info["fixture"],generic.producer(_key),
+                      _info["form"],_info["F"])
+for _key in GENERIC_PENDING:
+    _info=generic.source_metadata("/".join(_key))
+    _slot,_ordinary=_info["fifth"]
+    FIFTH_TIER[_key]=(_slot,_info["tier"][_slot],_ordinary)
 # v104 pins these two original source wrist slots as socketed, but its
 # ordinary wrist replacements discard the source options. For 240967 ONLY,
 # recover that one source-observed gem position before four-color adjustment.
