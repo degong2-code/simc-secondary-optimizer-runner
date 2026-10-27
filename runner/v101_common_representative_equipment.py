@@ -33,11 +33,12 @@ TIER_FIVE=("head","shoulders","chest","hands","legs")
 # fifth ordinary selection. Legacy producers remain exact APL adapters.
 CLASS_TIER_ITEMS={entry.character_class:entry.tier_ids()
                   for entry in metadata.SOURCE_BACKED}
-# The newly pinned 17 MID2 input sources reuse ONE v134 adapter rather than
-# cloning the seven historical source factories. Feral remains staged: its
-# original head has no source diamond and only three ordinary gems.
+# The 17 MID2 pinned sources reuse the same v134 adapter. Feral joins the
+# user-input beta only after its v133 physical six-gem/head-diamond candidate
+# passed one real Windows native smoke. This does NOT assert its target-CHMV
+# adaptive run has passed. v136's historical accepted 16 stay separately frozen.
 GENERIC_PENDING=frozenset(
-    tuple(k.split("/")) for k in mid2_pins.NEW if k!="druid/feral")
+    tuple(k.split("/")) for k in mid2_pins.NEW)
 for _key in GENERIC_PENDING:
     _cls=_key[0]
     _tier=dict(zip(TIER_FIVE,target_preview.FIVE_TIER[_cls]))
