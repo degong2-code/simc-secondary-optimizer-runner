@@ -13,6 +13,7 @@ Native tested). All effects and DPS belong to SimC.
 from __future__ import annotations
 import v128_common_source_profile_emitter as common_emitter
 import v129_common_source_fields as common_fields
+import v130_source_identity_contract as source_identity
 import hashlib,pathlib,re
 
 import v055_simc_item_selection as item_mod
@@ -69,13 +70,13 @@ def extract_gear(raw):
 def create_from_source(source,folder,key):
     need(key in PROFILES,"NEW_SOURCE_SPEC_UNSUPPORTED")
     spec=PROFILES[key]
-    raw=source.encode("utf8")
-    need(git_blob(raw)==spec["source_sha"],
-         "SOURCE_PROFILE_GIT_BLOB_MISMATCH:"+"/".join(key))
-    need(''+key[0]+'="' in source and
-         "spec="+key[1] in source and
-         "role="+spec["role"] in source,
-         "SOURCE_CHARACTER_APL_IDENTITY_MISMATCH")
+    actions,_=source_identity.verify(
+        source,key,spec["source_sha"],
+        (key[0]+'="',"spec="+key[1],"role="+spec["role"]),
+        min_actions=15,
+        hash_error="SOURCE_PROFILE_GIT_BLOB_MISMATCH:"+"/".join(key),
+        identity_error="SOURCE_CHARACTER_APL_IDENTITY_MISMATCH",
+        apl_error="SOURCE_APL_MISSING_OR_CHANGED",fail=need)
     lines=source.splitlines()
     names=common_fields.settings(source,(
         "race","role","spec","talents","flask","food",
@@ -83,9 +84,6 @@ def create_from_source(source,folder,key):
         duplicate_prefix="SOURCE_DUPLICATE_SETTING:")
     need(all(k in names for k in ("race","role","spec","talents","flask",
                                   "food","potion")),"SOURCE_REQUIRED_CHARACTER_OR_BUFF_MISSING")
-    actions=common_fields.matching_lines(source,"actions")
-    need(len(actions)>=15 and sum(l.startswith("actions=") for l in actions)==1,
-         "SOURCE_APL_MISSING_OR_CHANGED")
     ids,mods=extract_gear(source)
     need(set(ids)==set(ALL_SLOTS),"SOURCE_SIXTEEN_PHYSICAL_GEAR_ITEMS_REQUIRED")
     observed=weapons.source_shape(key)
