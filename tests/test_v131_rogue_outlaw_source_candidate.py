@@ -1,6 +1,6 @@
 """v131: official MID2 Rogue Outlaw pinned source, newly source-connected.
 
-Checks source completeness and validates exact existing Rogue tier compatibility.
+Checks source completeness, shared Rogue tier and planned first-use output.
 No simulation, no cache mutation; Native acceptance still pending.
 """
 from __future__ import annotations
