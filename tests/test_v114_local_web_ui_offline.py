@@ -38,6 +38,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertEqual(result.headers["x-content-type-options"],"nosniff")
         page=PageParser();page.feed(result.text)
         self.assertEqual(page.forms,1)
+        self.assertIn("특수장비 최대 8개 · 장식 최대 2개",result.text)
         self.assertEqual(page.scripts,[{"src":"/assets/app.js","defer":None}])
         self.assertEqual(page.links,[{"rel":"stylesheet","href":"/assets/styles.css"}])
         required=("optimizer-form","spec","race","talents","trinket1",
