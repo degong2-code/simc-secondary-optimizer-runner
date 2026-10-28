@@ -318,15 +318,31 @@ def create_app(*,root=None, token=None):
 
     @app.get("/api/v1/defaults")
     def defaults():
-        return {"archetypes":[{"class":cl,"spec":sp,
-                               **sessions.standard_controls((cl,sp)),
-                               "representative_scope":(
-                                   "SOURCE_INDEPENDENT_SEASON_CATALOG"
-                                   if (cl,sp) in bootstrap.PURE_PRODUCT_SPECS
-                                   else "SOURCE_NON_TIER_NOT_ALL_STANDARDIZED"
-                                   if (cl,sp) in bootstrap.common.GENERIC_PENDING
-                                   else "SOURCE_BACKED_PARTIAL_ORDINARY_POOL")}
-                              for cl,sp in sessions.SUPPORTED]}
+        # Do not make the two genuinely source-independent product choices
+        # depend on having every legacy official .simc fixture installed.
+        # An unavailable legacy default is omitted, never synthesized from
+        # arbitrary race/talents/trinkets. Existing present fixtures retain
+        # identical user defaults and are still validated on actual use.
+        archetypes=[]
+        missing_legacy=[]
+        for cl,sp in sessions.SUPPORTED:
+            pair=(cl,sp)
+            try:
+                controls=sessions.standard_controls(pair)
+            except FileNotFoundError:
+                if pair in bootstrap.PURE_PRODUCT_SPECS:
+                    raise
+                missing_legacy.append({"class":cl,"spec":sp})
+                continue
+            archetypes.append({"class":cl,"spec":sp,**controls,
+                 "representative_scope":(
+                     "SOURCE_INDEPENDENT_SEASON_CATALOG"
+                     if pair in bootstrap.PURE_PRODUCT_SPECS
+                     else "SOURCE_NON_TIER_NOT_ALL_STANDARDIZED"
+                     if pair in bootstrap.common.GENERIC_PENDING
+                     else "SOURCE_BACKED_PARTIAL_ORDINARY_POOL")})
+        return {"archetypes":archetypes,
+                "unavailable_missing_legacy_fixtures":missing_legacy}
 
     @app.post("/api/v1/sessions/plan")
     def plan(request: UserRequest):
