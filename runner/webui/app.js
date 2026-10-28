@@ -599,7 +599,7 @@ async function initialize() {
     $("spec").replaceChildren(...state.defaults.map(item=>
       option(item.class+"/"+item.spec,
              (specLabels[item.class+"/"+item.spec]||
-               item.class+" · "+item.spec).replace(/\\s*\\([^)]*\\)$/, ""))));
+               item.class+" · "+item.spec).split(" (")[0])));
     $("spec").disabled=false;
     installOptions(opt);
     try{await loadAvailableNativeBatches();}
