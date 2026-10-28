@@ -86,7 +86,7 @@ def run(binary,out,revision,*,specs=None,execute=False,
          type(max_new_physical) is int and
          0<=max_new_physical<=len(selected) and
          type(max_adaptive_specs) is int and
-         0<=max_adaptive_specs<=len(selected) and
+         0<=max_adaptive_specs<=EXPECTED_SPECS and
          type(timeout_seconds) is int and 1<=timeout_seconds<=900,
          "BATCH_EXECUTION_LIMITS_INVALID")
     need(execute or (max_new_physical==0 and not optimize_accepted),
@@ -111,6 +111,7 @@ def run(binary,out,revision,*,specs=None,execute=False,
              "selected_specs":list(selected),
              "binary_sha256":binary_sha,"revision":revision,
              "physical_new_native_calls":0,
+             "physical_native_permits_reserved":0,
              "adaptive_specs_attempted_this_run":0,
              "adaptive_calls_existing_runner_limit_per_spec":
                  MAX_NATIVE_PER_ADAPTIVE,
@@ -146,15 +147,24 @@ def run(binary,out,revision,*,specs=None,execute=False,
                     physical_case=physical_root/(key.replace("/","__")+"__"+token)
                     row["physical_output"]=str(physical_case)
                     may_run=bool(execute and physical_used<max_new_physical)
+                    if may_run:
+                        # Reserve capacity BEFORE entering the Native call.
+                        # Even an interrupted/unknown outcome cannot cause
+                        # the batch to overshoot the user's explicit cap.
+                        physical_used+=1
+                        current["physical_native_permits_reserved"]=physical_used
+                        save()
                     probe=physical.run(user,binary,physical_root,revision,
                                        iterations=1,timeout_seconds=timeout_seconds,
                                        max_new=int(may_run))
                     n=probe["new_native_calls"]
                     need(type(n) is int and n in (0,1),
                          "PHYSICAL_CALL_COUNT_INVALID")
-                    physical_used+=n
+                    if may_run and n==0:
+                        physical_used-=1
                     row["physical_native_calls_this_run"]=n
-                    current["physical_new_native_calls"]=physical_used
+                    current["physical_new_native_calls"]+=n
+                    current["physical_native_permits_reserved"]=physical_used
                     row["physical_status"]=probe["status"]
                     if probe["status"]=="PREPARED_NO_NATIVE":
                         row["status"]="PENDING_PHYSICAL_NATIVE"
