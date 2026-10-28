@@ -94,7 +94,12 @@ class LocalJobs:
             binary = pathlib.Path(manifest["native_binary"]).resolve()
             rev = manifest["native_revision"]
             static = manifest["static_cache_json"]
-            key, check = sessions.session_key(user,binary,rev,static)
+            # A manually staged, internal ordinary-gear variant may be
+            # resumed under its own sealed identity. Browser planning still
+            # creates DEFAULT variants only; never infer one from user gear.
+            variant = recorded.get("ordinary_variant")
+            key, check = sessions.session_key(
+                user,binary,rev,static,ordinary_variant=variant)
             if key != folder.name or check != recorded:
                 raise sessions.SessionBlocked("SESSION_BINARY_REVISION_OR_CACHE_DRIFT")
             return binary,rev,static
