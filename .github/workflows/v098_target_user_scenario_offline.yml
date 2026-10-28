@@ -20,6 +20,7 @@ on:
       - tests/test_v131_rogue_outlaw_source_candidate.py
       - integration_probes/v105_paladin_user_e2e.py
       - tests/test_v105_paladin_user_e2e_contract.py
+      - integration_probes/catalog/v146_character_starter_examples.json
       - runner/v106_user_session_controller.py
       - runner/v106_windows_simple_gui.py
       - runner/v107_optional_items_dialog.py
