@@ -82,7 +82,8 @@ def integration_plan(previous):
         observations.append(obs)
     return normalized,measured_budget,calibrated,ref,observations
 
-def execute_one(req,calibration,binary,case_folder,progress,cancel_file=None,cache_only=False):
+def execute_one(req,calibration,binary,case_folder,progress,cancel_file=None,
+                cache_only=False,*,recover_verified_partial=False):
     """Persist before Native call; resume only when receipt and bytes verify."""
     case_folder=pathlib.Path(case_folder)
     case_folder.mkdir(parents=True,exist_ok=True)
@@ -92,6 +93,24 @@ def execute_one(req,calibration,binary,case_folder,progress,cancel_file=None,cac
     need(pathlib.Path(req["json2_location"]).resolve()==native_file.resolve(),
          "RESULT_DESTINATION_NOT_EQUAL_CASE")
     if native_file.exists() or receipt_file.exists():
+        if native_file.is_file() and not receipt_file.exists() and recover_verified_partial:
+            # Only the explicitly receipt-authorized source-free pilot opts in.
+            # Salvage a previously executed SimC output by applying ALL normal
+            # Native validators to unchanged input bytes + original JSON2.
+            # No subprocess, JSON2 rewriting or fabricated SimC observation.
+            need(source_file.is_file() and
+                 hashlib.sha256(source_file.read_bytes()).hexdigest()==req["input_sha256"]
+                 and source_file.read_bytes()==req["input"].encode("utf8"),
+                 "PARTIAL_NATIVE_INPUT_IDENTITY_MISMATCH")
+            need(0<native_file.stat().st_size<50_000_000,
+                 "PARTIAL_NATIVE_JSON2_INVALID_SIZE")
+            raw=native_file.read_bytes()
+            parsed=json.loads(raw)
+            validated=evaluator.ingest_native(req,parsed,calibration,raw)
+            validated["simc_seed"]=(parsed.get("sim") or {}).get("options",{}).get("seed")
+            write_atomic(receipt_file,validated)
+            return validated | {"source":"CACHED_VERIFIED_NATIVE",
+                                "recovered_partial_validated_without_native":True}
         need(native_file.is_file() and receipt_file.is_file(),
              "PARTIAL_NATIVE_OUTPUT_REQUIRES_EXPLICIT_RECOVERY")
         expected=json.loads(receipt_file.read_text(encoding="utf8"))
