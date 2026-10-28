@@ -83,5 +83,16 @@
         "off_hand": 268197
       }
     }
+  },
+  "character_level": 90,
+  "default_consumables": {
+    "flask": "flask_of_the_shattered_sun_2",
+    "food": "royal_roast",
+    "potion": "liquid_luster_2",
+    "augmentation": "void_touched",
+    "omnium_talents": "136822:1/136819:1/136817:1/136815:1/136814:1",
+    "gem_budget_J": 138,
+    "flask_budget_F": 165,
+    "flask_fixed_stat": "crit_rating"
   }
 }
