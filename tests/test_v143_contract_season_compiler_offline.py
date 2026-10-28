@@ -42,6 +42,54 @@ class IndependentSeasonCompiler(unittest.TestCase):
             self.assertNotIn("main_hand",contract)
         self.assertIsNone(specs.lookup("evoker","augmentation"))
 
+    def test_frost_mage_legacy_evidence_is_preview_only(self):
+        # Existing source-backed default stays source-backed: no re-keying
+        # of the 24 established Native/95% cache identities.
+        import v106_user_session_controller as sessions
+        controls=sessions.standard_controls(("mage","frost"))
+        user=sessions.user_scenario(controls)
+        self.assertIn(("mage","frost"),bootstrap.ARCHETYPES)
+        self.assertNotIn(("mage","frost"),bootstrap.PURE_PRODUCT_SPECS)
+        self.assertEqual(set(sessions.SUPPORTED),
+                         set(bootstrap.ARCHETYPES)|bootstrap.PURE_PRODUCT_SPECS)
+        # Source fixture may verify provenance, but the NEW pure generator
+        # never opens the old completed source profile at runtime.
+        from v102_ordinary_armor_seed_pool import FAMILY_ROWS
+        cloth=FAMILY_ROWS["cloth"]
+        cat=pure.catalog()["specializations"]["mage/frost"]
+        for slot in ("wrists","waist","feet"):
+            self.assertEqual(cat["ordinary"][slot],cloth[slot][1])
+        self.assertEqual(cat["weapons"],
+                         {"main_hand":271092,"off_hand":245769})
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            binary=root/"simc.mock"
+            binary.write_bytes(b"OFFLINE_NO_SIMC_EXECUTABLE")
+            folder=root/"frost_pure_stage"
+            result=bootstrap.build(user,folder,binary,"7bc10711b5",
+                                   pure_stage=True)
+            self.assertEqual(result["status"],
+                "STAGED_INTERNAL_MANIFEST_NATIVE_NOT_AUTHORIZED")
+            self.assertEqual(result["native_calls"],0)
+            self.assertFalse(result["user_optimizer_ready"])
+            self.assertEqual(result["plan"]["item_slots"],16)
+            self.assertEqual(result["plan"]["base_B"],3150)
+            self.assertEqual(set(result["effective_four_tier_slots"]),
+                             {"shoulders","chest","hands","legs"})
+            rendered=(folder/"profile.simc").read_text()
+            self.assertIn("default_actions=1\n",rendered)
+            self.assertNotIn("actions.",rendered)
+            with unittest.mock.patch.object(
+                bootstrap.entry,"run_manifest") as native:
+                with self.assertRaisesRegex(bootstrap.UserScenarioBlocked,
+                                            "PURE_STAGE_NATIVE_NOT_AUTHORIZED"):
+                    input_file=root/"user.json"
+                    input_file.write_text(bootstrap.canonical(user)+"\n")
+                    bootstrap.run(input_file,root/"no_native",
+                                  binary,"7bc10711b5",execute=True,
+                                  pure_stage=True)
+                native.assert_not_called()
+
     def test_no_rewrite_of_native_proven_source_profile_bytes(self):
         for key,sha in VERIFIED_SOURCE_SHA.items():
             with self.subTest(key=key):
