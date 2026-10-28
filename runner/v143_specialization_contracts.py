@@ -66,6 +66,21 @@ CONTRACTS={
         "primary":"agility","role":"attack","position":"ranged_back",
         "weapon_form":"ranged","allowed_races":None,
     },
+    "rogue/outlaw":{
+        "simc_class":"rogue","simc_spec":"outlaw","family":"leather",
+        "primary":"agility","role":"attack","position":"back",
+        "weapon_form":"dual_one_hand","allowed_races":None,
+    },
+    "rogue/subtlety":{
+        "simc_class":"rogue","simc_spec":"subtlety","family":"leather",
+        "primary":"agility","role":"attack","position":"back",
+        "weapon_form":"dual_one_hand","allowed_races":None,
+    },
+    "shaman/elemental":{
+        "simc_class":"shaman","simc_spec":"elemental","family":"mail",
+        "primary":"intellect","role":"spell","position":"back",
+        "weapon_form":"one_hand_shield","allowed_races":None,
+    },
 }
 
 def lookup(class_name,specialization):
