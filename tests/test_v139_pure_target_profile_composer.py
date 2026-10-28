@@ -65,7 +65,11 @@ class PureProfileComposer(unittest.TestCase):
                "rogue/outlaw","rogue/subtlety","shaman/elemental",
                "mage/arcane","mage/fire","priest/shadow",
                "warlock/affliction","warlock/demonology",
-               "warlock/destruction"})
+               "warlock/destruction","deathknight/frost",
+               "deathknight/unholy","demonhunter/devourer",
+               "demonhunter/havoc","druid/feral","hunter/marksmanship",
+               "hunter/survival","monk/windwalker","rogue/assassination",
+               "shaman/enhancement","warrior/arms"})
 
     def test_frost_mage_third_pure_catalog_staging_is_not_native_promotion(self):
         profile,meta,rows,tier=self.build("mage/frost","human")
@@ -236,6 +240,57 @@ class PureProfileComposer(unittest.TestCase):
                                  {"crafted_stats":craft} if craft else {})
                 self.assertIn("default_actions=1\n",profile)
                 self.assertNotIn("actions.",profile)
+                self.assertFalse(meta["source_profile_read"])
+                self.assertFalse(meta["user_optimizer_ready"])
+                self.assertEqual(meta["native_calls"],0)
+
+    def test_remaining_eleven_specs_use_only_contract_and_season_data(self):
+        # IDs are witnesses from pinned v132 source, v133 class tier table,
+        # and v102 ordinary seed; NOT full-profile import or Native proof.
+        cases={
+          "deathknight/frost":("human","plate","strength","attack",
+              "dual_one_hand",(268209,268202),{}),
+          "deathknight/unholy":("troll","plate","strength","attack",
+              "single_two_hand",(268213,None),{}),
+          "demonhunter/devourer":("void_elf","leather","intellect","spell",
+              "dual_one_hand",(271092,268211),{}),
+          "demonhunter/havoc":("blood_elf","leather","agility","attack",
+              "dual_one_hand",(268209,237840),{"crafted_stats":"49/36"}),
+          "druid/feral":("night_elf","leather","agility","attack",
+              "single_two_hand",(268215,None),{}),
+          "hunter/marksmanship":("dwarf","mail","agility","attack",
+              "ranged",(268207,None),{}),
+          "hunter/survival":("dwarf","mail","agility","attack",
+              "single_two_hand",(268213,None),{}),
+          "monk/windwalker":("troll","leather","agility","attack",
+              "single_two_hand",(268215,None),{}),
+          "rogue/assassination":("troll","leather","agility","attack",
+              "dual_one_hand",(271093,275070),{}),
+          "shaman/enhancement":("troll","mail","agility","attack",
+              "dual_one_hand",(268209,237850),{"crafted_stats":"49/36"}),
+          "warrior/arms":("dwarf","plate","strength","attack",
+              "single_two_hand",(268213,None),{}),
+        }
+        for key,(race,family,primary,role,form,weapons,off_opts) in cases.items():
+            with self.subTest(key=key):
+                profile,meta,rows,tier=self.build(key,race)
+                expected_fifth={"plate":"legs","leather":"chest",
+                                "mail":"head"}[family]
+                self.assertEqual((meta["family"],meta["primary"],
+                                  meta["weapon_form"]),(family,primary,form))
+                self.assertEqual(set(tier),set(pure.TIER_SLOTS)-{expected_fifth})
+                self.assertEqual(len(rows),16 if weapons[1] else 15)
+                self.assertEqual((rows["main_hand"]["item_id"],
+                                 rows["off_hand"]["item_id"]
+                                 if "off_hand" in rows else None),weapons)
+                if weapons[1] is not None:
+                    self.assertEqual(rows["off_hand"]["options"],off_opts)
+                else:
+                    self.assertNotIn("off_hand=",profile)
+                self.assertIn("role="+role+"\\n",profile)
+                self.assertIn("default_actions=1\\n",profile)
+                self.assertNotIn("actions.",profile)
+                self.assertEqual(meta["status"],"STAGED_NOT_USER_READY")
                 self.assertFalse(meta["source_profile_read"])
                 self.assertFalse(meta["user_optimizer_ready"])
                 self.assertEqual(meta["native_calls"],0)
