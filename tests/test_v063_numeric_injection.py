@@ -147,6 +147,32 @@ class NumericInjection(unittest.TestCase):
             native["sim"]["players"][0]["collected_data"]["buffed_stats"]["stats"]["crit_rating"]+=1
             with self.assertRaisesRegex(p.InjectionError,"FINAL_NUMERIC_RATING_MISMATCH"):
                 p.validate_native(native,rendered,cal)
+    def test_native_static_revision_short_git_hash_matches_declared_commit_only(self):
+        target={"crit_rating":600,"haste_rating":1140,
+                "mastery_rating":1115,"versatility_rating":329}
+        with tempfile.TemporaryDirectory() as temp:
+            req=p.render_static_chmv_candidate(BASE,target,
+                 {"crit_rating":0,"haste_rating":165,
+                  "mastery_rating":0,"versatility_rating":0},
+                 pathlib.Path(temp)/"report.json",35)
+            native=fake_doc(req["input"],revision="7bc1071")
+            rendered={"raw_gear_override":req["raw_gear_override"],
+                      "expected_static_rating":target,
+                      "flask_component_in_T":{"crit_rating":0,
+                                             "haste_rating":165,
+                                             "mastery_rating":0,
+                                             "versatility_rating":0}}
+            accepted=p.validate_static_native(native,rendered,"7bc10711b5")
+            self.assertEqual(accepted["native_revision"],"7bc10711b5")
+            for rev in ("7bc1072","7bc107","abcdef0"):
+                native["git_revision"]=rev
+                with self.subTest(reported=rev):
+                    with self.assertRaisesRegex(p.InjectionError,
+                                                "SIMC_REVISION_CHANGED"):
+                        p.validate_static_native(native,rendered,"7bc10711b5")
+            self.assertTrue(p.same_simc_commit_revision("7bc10711b5","7bc1071"))
+            self.assertFalse(p.same_simc_commit_revision("7bc1071","8bc10711b5"))
+
     def test_separate_result_statistical_uncertainty(self):
         r=p.compare_pair([{"dps_mean":190000,"dps_sem":700},
                           {"dps_mean":190050,"dps_sem":800}])
