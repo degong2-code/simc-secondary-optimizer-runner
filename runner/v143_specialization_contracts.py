@@ -34,6 +34,13 @@ CONTRACTS={
         "weapon_form":"one_hand_frill",
         "allowed_races":("dracthyr","dracthyr_visage"),
     },
+    # Migrating first legacy source-backed case. The default v098/v106
+    # execution and existing 24-spec Native caches are NOT promoted/changed.
+    "mage/frost":{
+        "simc_class":"mage","simc_spec":"frost","family":"cloth",
+        "primary":"intellect","role":"spell","position":"back",
+        "weapon_form":"one_hand_frill","allowed_races":None,
+    },
 }
 
 def lookup(class_name,specialization):
