@@ -61,7 +61,7 @@ class PureProfileComposer(unittest.TestCase):
         self.assertEqual(e["off_hand"]["item_id"],268197)
         self.assertEqual(pure.catalog()["specializations"].keys(),
               {"druid/balance","evoker/devastation","mage/frost",
-               "paladin/retribution"})
+               "paladin/retribution","warrior/fury","hunter/beast_mastery"})
 
     def test_frost_mage_third_pure_catalog_staging_is_not_native_promotion(self):
         profile,meta,rows,tier=self.build("mage/frost","human")
@@ -104,6 +104,44 @@ class PureProfileComposer(unittest.TestCase):
         self.assertIn("default_actions=1\n",profile)
         self.assertNotIn("actions.",profile)
         self.assertEqual(len(rows),15)
+        self.assertFalse(meta["source_profile_read"])
+        self.assertFalse(meta["user_optimizer_ready"])
+        self.assertEqual(meta["native_calls"],0)
+
+    def test_fury_dual_twohand_season_item_options_not_class_exception(self):
+        profile,meta,rows,tier=self.build("warrior/fury","dwarf")
+        self.assertEqual((meta["family"],meta["primary"],meta["weapon_form"]),
+                         ("plate","strength","dual_two_hand"))
+        self.assertEqual((len(rows),len(tier)),(16,4))
+        self.assertEqual(tier,{"head","shoulders","chest","hands"})
+        self.assertEqual(rows["legs"]["item_id"],271878)
+        self.assertEqual((rows["main_hand"]["item_id"],
+                          rows["off_hand"]["item_id"]),(268213,237847))
+        self.assertEqual(rows["off_hand"]["options"],
+                         {"crafted_stats":"49/36"})
+        self.assertIn("off_hand=selected_237847,id=237847,ilevel=334,"
+                      "source=local,crafted_stats=49/36\n",profile)
+        self.assertIn("role=attack\n",profile)
+        self.assertIn("default_actions=1\n",profile)
+        self.assertFalse(meta["source_profile_read"])
+        self.assertFalse(meta["user_optimizer_ready"])
+        self.assertEqual(meta["native_calls"],0)
+
+    def test_bm_ranged_agility_compiles_fifteen_slots(self):
+        profile,meta,rows,tier=self.build(
+            "hunter/beast_mastery","dwarf")
+        self.assertEqual((meta["family"],meta["primary"],meta["weapon_form"]),
+                         ("mail","agility","ranged"))
+        self.assertEqual((len(rows),len(tier)),(15,4))
+        self.assertEqual(tier,{"shoulders","chest","hands","legs"})
+        self.assertEqual(rows["head"]["item_id"],249317)
+        self.assertEqual(rows["feet"]["item_id"],249320)
+        self.assertEqual(rows["main_hand"]["item_id"],268207)
+        self.assertNotIn("off_hand",rows)
+        self.assertNotIn("off_hand=",profile)
+        self.assertIn("position=ranged_back\n",profile)
+        self.assertIn("role=attack\n",profile)
+        self.assertIn("default_actions=1\n",profile)
         self.assertFalse(meta["source_profile_read"])
         self.assertFalse(meta["user_optimizer_ready"])
         self.assertEqual(meta["native_calls"],0)
