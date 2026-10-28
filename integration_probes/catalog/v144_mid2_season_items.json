@@ -2,7 +2,7 @@
   "schema": "v144_representative_season_items_v1",
   "season": "midnight_s2",
   "target_ilevel": 334,
-  "status": "TWO_PURE_WINDOWS_ADAPTIVE_ACCEPTED_FOUR_LEGACY_PREVIEWS_NOT_NATIVE_ACCEPTED",
+  "status": "TWO_PURE_WINDOWS_ADAPTIVE_ACCEPTED_SEVEN_LEGACY_CATALOG_PREVIEWS_UNVERIFIED",
   "provenance": {
     "druid_tier": "v132 official Feral item IDs (271528/271526/271531/271529/271527)",
     "evoker_tier": "Wowhead 12.1 Echo of Calamity IDs 271501/271499/271504/271502/271500",
@@ -12,7 +12,9 @@
     "mage_frost_staged": "v084 pinned Frost 5-tier 271564/271562/271567/271565/271563; ordinary cloth head 271874 from v084 cross-source, wrists/waist/feet from existing v102 source-verified ordinary seed pool; main_hand 271092 and NON-WEAPON off_hand 245769 from v084; catalog candidate is NOT Frost pure Native accepted",
     "paladin_retribution_staged": "v127/v083 five MID2 paladin tier IDs; 271878 fifth ordinary plate legs from v083/v082; 268239/268259/268260 ordinary plate wrists/waist/feet from v102; 268213 two-handed main weapon from v083; NOT a Native-accepted source-free profile",
     "warrior_fury_staged": "MID2 v082/v127 original tier IDs, Fury main 268213 and original source observed crafted 2H offhand 237847 (crafted_stats 49/36); v102 ordinary plate wrists 268239/waist268259/feet268260, fifth ordinary legs 271878. Common profile is NOT yet Fury pure Native accepted.",
-    "hunter_beast_mastery_staged": "MID2 v079/v086/v127 original Hunter tier IDs and ranged bow 268207; fixed head249317 and feet249320 were observed in historical v086 native with its own profile identity (not transferable as proof for this new combination); v102 mail wrists273775/waist268254. New pure profile remains Native unverified."
+    "hunter_beast_mastery_staged": "MID2 v079/v086/v127 original Hunter tier IDs and ranged bow 268207; fixed head249317 and feet249320 were observed in historical v086 native with its own profile identity (not transferable as proof for this new combination); v102 mail wrists273775/waist268254. New pure profile remains Native unverified.",
+    "rogue_dual_1h_staged": "v104/v127 Rogue tier 271510/271508/271513/271511/271509, fifth non-tier chest251159, v102 ordinary leather wrists268240/waist268256/feet268261, v103 exact observed Outlaw weapons268209+275070 and Subtlety271093+237837; v104 Subtlety crafted offhand 36/49; not native acceptance of pure catalog profile",
+    "shaman_elemental_staged": "v104/v127 Shaman tier 271483/271481/271486/271484/271482, fifth ordinary head249317 and feet249320 from v104 original representative, v102 mail wrists273775/waist268254; v103 source-observed dagger271092 + shield268262; new pure profile has no native acceptance"
   },
   "common_gear": {
     "neck": 268265,
@@ -180,6 +182,86 @@
       },
       "weapons": {
         "main_hand": 268207
+      }
+    },
+    "rogue/outlaw": {
+      "tier_ids": {
+        "head": 271510,
+        "shoulders": 271508,
+        "chest": 271513,
+        "hands": 271511,
+        "legs": 271509
+      },
+      "four_tier_slots": [
+        "head",
+        "shoulders",
+        "hands",
+        "legs"
+      ],
+      "ordinary": {
+        "chest": 251159,
+        "wrists": 268240,
+        "waist": 268256,
+        "feet": 268261
+      },
+      "weapons": {
+        "main_hand": 268209,
+        "off_hand": 275070
+      }
+    },
+    "rogue/subtlety": {
+      "tier_ids": {
+        "head": 271510,
+        "shoulders": 271508,
+        "chest": 271513,
+        "hands": 271511,
+        "legs": 271509
+      },
+      "four_tier_slots": [
+        "head",
+        "shoulders",
+        "hands",
+        "legs"
+      ],
+      "ordinary": {
+        "chest": 251159,
+        "wrists": 268240,
+        "waist": 268256,
+        "feet": 268261
+      },
+      "weapons": {
+        "main_hand": 271093,
+        "off_hand": 237837
+      },
+      "item_options": {
+        "off_hand": {
+          "crafted_stats": "36/49"
+        }
+      }
+    },
+    "shaman/elemental": {
+      "tier_ids": {
+        "head": 271483,
+        "shoulders": 271481,
+        "chest": 271486,
+        "hands": 271484,
+        "legs": 271482
+      },
+      "four_tier_slots": [
+        "shoulders",
+        "chest",
+        "hands",
+        "legs"
+      ],
+      "ordinary": {
+        "head": 249317,
+        "wrists": 273775,
+        "waist": 268254,
+        "feet": 249320
+      },
+      "weapons": {
+        "main_hand": 271092,
+        "off_hand": 268262
       }
     }
   },
