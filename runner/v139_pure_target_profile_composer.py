@@ -48,7 +48,13 @@ def catalog(path=DEFAULT_CATALOG):
          type(doc.get("common_gear")) is dict and
          type(doc.get("gems")) is dict and
          type(doc.get("target_ilevel")) is int and
-         type(doc.get("season")) is str,
+         type(doc.get("season")) is str and
+         type(doc.get("character_level")) is int and
+         1<=doc["character_level"]<=100 and
+         type(doc.get("default_consumables")) is dict and
+         set(doc["default_consumables"])=={
+            "flask","food","potion","augmentation","omnium_talents",
+            "gem_budget_J","flask_budget_F","flask_fixed_stat"},
          "SEASON_DATA_SCHEMA")
     return doc
 
@@ -135,18 +141,15 @@ def compose(character,trinkets,*,target_ilevel=334,
     # no season profile, copied class action list or proprietary rotation.
     settings=[
       cl+"=target_"+spec,
-      "level=90",
+      "level="+str(season["character_level"]),
       "spec="+spec,
       "race="+character["race"],
       "talents="+character["talents"],
       "role=spell",
       "position=back",
       "default_actions=1",
-      "flask=flask_of_the_shattered_sun_2",
-      "food=royal_roast",
-      "potion=liquid_luster_2",
-      "augmentation=void_touched",
-      "omnium_talents=136822:1/136819:1/136817:1/136815:1/136814:1",
+      *(name+"="+season["default_consumables"][name] for name in
+        ("flask","food","potion","augmentation","omnium_talents")),
       "fight_style=Patchwerk",
       "desired_targets="+str(combat["targets"]),
       "max_time="+str(combat["duration_seconds"]),
@@ -187,13 +190,23 @@ def v098_inputs(character,trinkets,*,target_ilevel=334,combat=None):
     profile,receipt,rows,tier=compose(
         character,trinkets,target_ilevel=target_ilevel,combat=combat)
     cl,spec=character["class"],character["spec"]
-    info=catalog()["specializations"][cl+"/"+spec]
+    season=catalog()
+    info=season["specializations"][cl+"/"+spec]
+    defaults=season["default_consumables"]
     gem=int(rows["head"]["options"]["gem_id"])
     need(gem in consumer.DIAMONDS,"STAGED_PRIMARY_DIAMOND_REQUIRED")
     # v108 consumes these exact SimC-native settings, not another effect model.
     consumer.default_choice(profile,rows["head"])
     fields=("crit_rating","haste_rating","mastery_rating","versatility_rating")
-    flask_F={stat:(165 if stat=="crit_rating" else 0) for stat in fields}
+    need(defaults["flask_fixed_stat"] in fields and
+         type(defaults["flask_budget_F"]) is int and
+         defaults["flask_budget_F"]>=0 and
+         type(defaults["gem_budget_J"]) is int and
+         defaults["gem_budget_J"]>=0,
+         "SEASON_CONSUMABLE_BUDGET_INVALID")
+    flask_F={stat:(defaults["flask_budget_F"]
+                   if stat==defaults["flask_fixed_stat"] else 0)
+             for stat in fields}
     groups={slot:"tier" for slot in tier}
     groups.update({"trinket1":"trinkets","trinket2":"trinkets"})
     fifth=next(slot for slot in TIER_SLOTS if slot not in tier)
@@ -208,10 +221,11 @@ def v098_inputs(character,trinkets,*,target_ilevel=334,combat=None):
          "equipment":{"tier":[rows[slot] for slot in TIER_SLOTS if slot in tier],
                       "special":[],"crafted":[],
                       "trinkets":[rows[slot] for slot in ("trinket1","trinket2")]},
-         "consumables":{"gem_budget_J":138,"flask_budget_F":165,
+         "consumables":{"gem_budget_J":defaults["gem_budget_J"],
+                        "flask_budget_F":defaults["flask_budget_F"],
                         "special_gem_id":gem,
-                        "flask":"flask_of_the_shattered_sun_2",
-                        "food":"royal_roast","potion":"liquid_luster_2",
+                        "flask":defaults["flask"],
+                        "food":defaults["food"],"potion":defaults["potion"],
                         "weapon_temporary":None,
                         "weapon_temporary_fixed_rating":{stat:0 for stat in fields}},
          "combat":{"fight_style":"Patchwerk","targets":1,"duration_seconds":300,
