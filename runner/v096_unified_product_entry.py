@@ -20,6 +20,8 @@ FIELDS={"schema","profile_simc","scenario_json","fillers_json",
         "seed_targets_B","native_binary","native_revision","output_dir",
         "scouts","material_scouts","native_limit","step","cancel_file"}
 MANUAL_FIELD="manual_final_T"
+# Optional internal stage seal: no Native until physical SimC acceptance.
+STAGE_FIELD="unverified_pure_profile_plan_only"
 class EntryBlocked(ValueError):pass
 def need(ok,reason):
     if not ok:raise EntryBlocked(reason)
@@ -36,8 +38,12 @@ def source(manifest_path):
     """Build the existing typed and SHA-locked Native context; zero SimC calls."""
     manifest_path=pathlib.Path(manifest_path).resolve()
     user=read_object(manifest_path)
-    need(type(user) is dict and set(user) in (FIELDS,FIELDS|{MANUAL_FIELD})
+    allowed=(FIELDS,FIELDS|{MANUAL_FIELD},FIELDS|{STAGE_FIELD},
+             FIELDS|{MANUAL_FIELD,STAGE_FIELD})
+    need(type(user) is dict and set(user) in allowed
          and user.get("schema")==SCHEMA,"ENTRY_SCHEMA_OR_FIELDS")
+    if STAGE_FIELD in user:
+        need(user[STAGE_FIELD] is True,"STAGED_PROFILE_SEAL_INVALID")
     manual_T=user.get(MANUAL_FIELD)
     if MANUAL_FIELD in user:
         need(type(manual_T) is int and 1<=manual_T<=100000,
@@ -172,6 +178,8 @@ def user_facing_result(report):
 def run_manifest(manifest_path,*,plan_only=False,cache_only=False):
     ready=source(manifest_path)
     if plan_only:return ready["plan"]
+    need(not ready["manifest"].get(STAGE_FIELD),
+         "UNVERIFIED_PURE_PROFILE_NATIVE_EXECUTION_BLOCKED")
     user=ready["manifest"];paths=ready["paths"]
     result=durable.run(ready["context"],ready["seeds"],ready["flask"],
            paths["native_binary"],paths["output_dir"],
