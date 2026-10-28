@@ -61,7 +61,8 @@ class PureProfileComposer(unittest.TestCase):
         self.assertEqual(e["off_hand"]["item_id"],268197)
         self.assertEqual(pure.catalog()["specializations"].keys(),
               {"druid/balance","evoker/devastation","mage/frost",
-               "paladin/retribution","warrior/fury","hunter/beast_mastery"})
+               "paladin/retribution","warrior/fury","hunter/beast_mastery",
+               "rogue/outlaw","rogue/subtlety","shaman/elemental"})
 
     def test_frost_mage_third_pure_catalog_staging_is_not_native_promotion(self):
         profile,meta,rows,tier=self.build("mage/frost","human")
@@ -142,6 +143,61 @@ class PureProfileComposer(unittest.TestCase):
         self.assertIn("position=ranged_back\n",profile)
         self.assertIn("role=attack\n",profile)
         self.assertIn("default_actions=1\n",profile)
+        self.assertFalse(meta["source_profile_read"])
+        self.assertFalse(meta["user_optimizer_ready"])
+        self.assertEqual(meta["native_calls"],0)
+
+    def test_rogue_dual_onehand_same_compiler_two_specs(self):
+        variants={
+            "rogue/outlaw":((268209,275070),{}),
+            "rogue/subtlety":((271093,237837),
+                              {"crafted_stats":"36/49"}),
+        }
+        for key,(weapons,offhand_options) in variants.items():
+            with self.subTest(key=key):
+                profile,meta,rows,tier=self.build(key,"dwarf")
+                self.assertEqual((meta["family"],meta["primary"],
+                                  meta["weapon_form"]),
+                                 ("leather","agility","dual_one_hand"))
+                self.assertEqual((len(rows),len(tier)),(16,4))
+                self.assertEqual(tier,{"head","shoulders","hands","legs"})
+                self.assertEqual({s:rows[s]["item_id"] for s in tier},
+                         {"head":271510,"shoulders":271508,
+                          "hands":271511,"legs":271509})
+                self.assertEqual((rows["chest"]["item_id"],
+                                  rows["wrists"]["item_id"],
+                                  rows["waist"]["item_id"],
+                                  rows["feet"]["item_id"]),
+                                 (251159,268240,268256,268261))
+                self.assertEqual((rows["main_hand"]["item_id"],
+                                  rows["off_hand"]["item_id"]),weapons)
+                self.assertEqual(rows["off_hand"]["options"],offhand_options)
+                self.assertIn("role=attack\n",profile)
+                self.assertIn("default_actions=1\n",profile)
+                self.assertNotIn("actions.",profile)
+                self.assertFalse(meta["source_profile_read"])
+                self.assertFalse(meta["user_optimizer_ready"])
+                self.assertEqual(meta["native_calls"],0)
+
+    def test_elemental_onehand_shield_uses_same_generator(self):
+        profile,meta,rows,tier=self.build("shaman/elemental","tauren")
+        self.assertEqual((meta["family"],meta["primary"],
+                          meta["weapon_form"]),
+                         ("mail","intellect","one_hand_shield"))
+        self.assertEqual((len(rows),len(tier)),(16,4))
+        self.assertEqual(tier,{"shoulders","chest","hands","legs"})
+        self.assertEqual({s:rows[s]["item_id"] for s in tier},
+              {"shoulders":271481,"chest":271486,"hands":271484,
+               "legs":271482})
+        self.assertEqual((rows["head"]["item_id"],rows["feet"]["item_id"]),
+                         (249317,249320))
+        self.assertEqual((rows["wrists"]["item_id"],rows["waist"]["item_id"]),
+                         (273775,268254))
+        self.assertEqual((rows["main_hand"]["item_id"],
+                          rows["off_hand"]["item_id"]),(271092,268262))
+        self.assertIn("role=spell\n",profile)
+        self.assertIn("default_actions=1\n",profile)
+        self.assertNotIn("actions.",profile)
         self.assertFalse(meta["source_profile_read"])
         self.assertFalse(meta["user_optimizer_ready"])
         self.assertEqual(meta["native_calls"],0)
