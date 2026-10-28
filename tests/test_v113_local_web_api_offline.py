@@ -40,13 +40,13 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(r.status_code,200,r.text)
         return r.json()
 
-    def test_bootstrap_health_and_all_six_source_defaults_no_simc(self):
+    def test_bootstrap_health_and_all_26_dps_defaults_no_simc(self):
         health=self.client.get("/api/v1/health")
         self.assertEqual(health.status_code,200)
-        self.assertEqual(health.json()["supported_dps"],24)
+        self.assertEqual(health.json()["supported_dps"],26)
         boot=self.client.get("/api/v1/bootstrap").json()
         self.assertEqual(boot["session_token"],"offline-only-token")
-        self.assertEqual(len(boot["supported"]),24)
+        self.assertEqual(len(boot["supported"]),26)
         defaults=self.client.get("/api/v1/defaults",headers=self.headers)
         self.assertEqual(defaults.status_code,200)
         status_counts={}
@@ -56,15 +56,37 @@ class LocalWebAPIOffline(unittest.TestCase):
             self.assertEqual(len(row["consumable_choices"]),6)
             scope=row["representative_scope"]
             status_counts[scope]=status_counts.get(scope,0)+1
-            expected=("SOURCE_NON_TIER_NOT_ALL_STANDARDIZED"
+            expected=("SOURCE_INDEPENDENT_SEASON_CATALOG"
+                      if (row["class"],row["spec"]) in
+                          web.bootstrap.PURE_PRODUCT_SPECS
+                      else "SOURCE_NON_TIER_NOT_ALL_STANDARDIZED"
                       if (row["class"],row["spec"]) in
                           web.bootstrap.common.GENERIC_PENDING
                       else "SOURCE_BACKED_PARTIAL_ORDINARY_POOL")
             self.assertEqual(scope,expected)
         self.assertEqual(status_counts,{
             "SOURCE_NON_TIER_NOT_ALL_STANDARDIZED":17,
-            "SOURCE_BACKED_PARTIAL_ORDINARY_POOL":7})
+            "SOURCE_BACKED_PARTIAL_ORDINARY_POOL":7,
+            "SOURCE_INDEPENDENT_SEASON_CATALOG":2})
         self.assertFalse((self.root/"runs").exists())
+
+    def test_two_pure_local_web_plans_reuse_normal_session_without_native(self):
+        for key in sorted(web.bootstrap.PURE_PRODUCT_SPECS):
+            with self.subTest(spec=key):
+                params={**self.payload,"controls":sessions.standard_controls(key)}
+                with mock.patch.object(web.subprocess,"Popen") as spawn:
+                    response=self.post("/api/v1/sessions/plan",params)
+                    spawn.assert_not_called()
+                self.assertEqual(response.status_code,200,response.text)
+                body=response.json()
+                self.assertEqual(body["plan"]["final_T"],3150)
+                folder=self.root/"runs"/body["session_id"]/"generated"
+                self.assertIn("default_actions=1",
+                              (folder/"profile.simc").read_text())
+                self.assertNotIn(web.bootstrap.entry.STAGE_FIELD,
+                         json.loads((folder/"manifest.json").read_text()))
+                again=self.post("/api/v1/sessions/plan",params)
+                self.assertEqual(again.json()["session_id"],body["session_id"])
 
     def test_host_rebinding_foreign_origin_token_and_cross_site_all_denied(self):
         for host in ("attacker.example:8765","localhost:8765",
