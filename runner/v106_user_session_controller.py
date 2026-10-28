@@ -185,7 +185,7 @@ def standard_controls(key=("paladin","retribution")):
                 "potion":"source_default","augmentation":"source_default",
                 "diamond_id":0,"omnium_talents":"source_default"}}
 
-def session_key(user,binary,revision,static_cache=None):
+def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None):
     binary=pathlib.Path(binary).expanduser().resolve()
     need(binary.is_file(),"SIMC_BINARY_NOT_FOUND")
     need(type(revision) is str and re.fullmatch(r"[0-9a-fA-F]{7,40}",revision),
@@ -197,18 +197,41 @@ def session_key(user,binary,revision,static_cache=None):
     # cache. Don't invite an expensive Native job then invent/zero missing L.
     need(not user.get("special_items") or cache_path is not None,
          "SPECIAL_EQUIPMENT_REQUIRES_EXACT_STATIC_CACHE")
+    if ordinary_variant is not None:
+        # Developer-only representative experiment. A profile identity change
+        # MUST produce a different durable session, never reuse old DPS JSON2.
+        need(type(ordinary_variant) is str
+             and ordinary_variant in bootstrap.common.ORDINARY_VARIANTS,
+             "ORDINARY_VARIANT_NOT_PINNED")
+        variant=bootstrap.common.ORDINARY_VARIANTS[ordinary_variant]
+        character=user.get("character") if type(user) is dict else None
+        target=user.get("target") if type(user) is dict else None
+        need(type(character) is dict and type(target) is dict
+             and (character.get("class"),character.get("spec"))==variant["key"]
+             and target.get("ilevel")==334,
+             "ORDINARY_VARIANT_CHARACTER_OR_LEVEL_MISMATCH")
+        need(all(r.get("slot")!=variant["slot"] for group in
+                 ("special_items","embellishments")
+                 for r in user.get(group,[])),
+             "ORDINARY_VARIANT_CONFLICTS_WITH_SELECTED_GEAR")
     identity={"schema":SCHEMA,"user":user,
               "simc_binary_sha256":sha(binary.read_bytes()),
               "simc_revision":revision,
               "static_cache_sha256":sha(cache_path.read_bytes()) if cache_path else None}
+    if ordinary_variant is not None:
+        identity["ordinary_variant"]=ordinary_variant
     return sha(canonical(identity).encode("utf8"))[:20],identity
 
-def session_path(user,root,binary,revision,static_cache=None):
-    key,identity=session_key(user,binary,revision,static_cache)
+def session_path(user,root,binary,revision,static_cache=None,*,
+                 ordinary_variant=None):
+    key,identity=session_key(user,binary,revision,static_cache,
+                             ordinary_variant=ordinary_variant)
     return pathlib.Path(root).expanduser().resolve()/key,identity
 
-def store_session(user,root,binary,revision,static_cache=None):
-    folder,identity=session_path(user,root,binary,revision,static_cache)
+def store_session(user,root,binary,revision,static_cache=None,*,
+                  ordinary_variant=None):
+    folder,identity=session_path(user,root,binary,revision,static_cache,
+                                 ordinary_variant=ordinary_variant)
     folder.mkdir(parents=True,exist_ok=True)
     target=folder/"user.json"
     raw=canonical(user)+"\n"
@@ -399,12 +422,21 @@ def _worker_locked(folder,binary,revision,static_cache,cache_only):
              "STORED_USER_SESSION_REQUIRED")
         user=json.loads((folder/"user.json").read_text(encoding="utf8"))
         identity=json.loads((folder/"V106_SESSION_IDENTITY.json").read_text(encoding="utf8"))
-        _,now=session_key(user,binary,revision,static_cache)
-        need(identity==now,"SESSION_BINARY_REVISION_OR_CACHE_DRIFT")
+        variant=identity.get("ordinary_variant")
+        actual_key,now=session_key(user,binary,revision,static_cache,
+                                   ordinary_variant=variant)
+        need(actual_key==folder.name and identity==now,
+             "SESSION_BINARY_REVISION_OR_CACHE_DRIFT")
         cached_before=cache_only_preflight(folder) if cache_only else None
         write_state("RUNNING_CACHE_ONLY" if cache_only else "RUNNING")
-        result=bootstrap.run(folder/"user.json",folder/"generated",
-             binary,revision,static_cache,execute=True,cache_only=cache_only)
+        if variant is None:
+            # Preserve historical worker call shape and sealed default input.
+            result=bootstrap.run(folder/"user.json",folder/"generated",
+                 binary,revision,static_cache,execute=True,cache_only=cache_only)
+        else:
+            result=bootstrap.run(folder/"user.json",folder/"generated",
+                 binary,revision,static_cache,execute=True,cache_only=cache_only,
+                 ordinary_variant=variant)
         actual=result["native_result"]
         need(actual["status"].startswith("PASS"),"NATIVE_NOT_PASSED")
         if cache_only:
