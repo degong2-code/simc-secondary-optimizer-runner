@@ -26,7 +26,10 @@ SOURCE={
  "shaman":("integration_probes/fixtures/v078_upstream_mid2_shaman_elemental_reference.simc",
            "c92d111e37bd684647e4637dcfef3ccb92864cde"),
  "warrior":("integration_probes/fixtures/v082_upstream_mid2_warrior_fury_reference.simc",
-            "3225992ed5b754ad5d61e8b785d9d859f1eed1be")}
+            "3225992ed5b754ad5d61e8b785d9d859f1eed1be"),
+ # Official v132 MID2 Feral gear already accepted in physical target334 Native.
+ "feral_mid2":("integration_probes/fixtures/v132_MID2_Druid_Feral.simc",
+               "29c4bd2329114bbdcbf36f4bc330d52e39349e72")}
 # Site corroboration confirms physical equipment ARMOR TYPE and SLOT.
 # These are selected representative candidates, not a season-wide DB.
 # 'legacy_fixed' refers to old v086 Native-corrected first-season mail
@@ -41,7 +44,7 @@ FAMILY_ROWS={
     "chest":("rogue",251159,"ordinary","War Trial Vestments"),
     "wrists":("web_live",268240,"ordinary","Restless Spirit Shackles"),
     "waist":("rogue",268256,"ordinary","Sash of the Forlorn Vessel"),
-    "feet":("rogue",159304,"legacy_reference","Goldfeather Boots")},
+    "feet":("feral_mid2",268261,"ordinary","Bespittled Slitherslippers")},
  "mail":{
     "head":("hunter_v086",249317,"legacy_fixed","Frenzy's Rebuke"),
     "wrists":("web_live",273775,"ordinary","Hydra Scale Wristguards"),
@@ -65,7 +68,7 @@ ITEM_URLS={
  273775:"https://www.wowhead.com/item=273775",
  268239:"https://www.wowhead.com/item=268239",
  268256:"https://www.wowhead.com/item=268256",
- 159304:"https://www.wowhead.com/item=159304",
+ 268261:"https://www.wowhead.com/item=268261",
  249317:"https://www.wowhead.com/item=249317",
  268254:"https://www.wowhead.com/item=268254",
  249320:"https://www.wowhead.com/item=249320",
