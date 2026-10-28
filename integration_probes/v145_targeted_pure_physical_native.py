@@ -23,6 +23,7 @@ sys.path.insert(0,str(ROOT/"integration_probes"))
 import v140_pure_profile_physical_native_smoke as physical
 import v063_numeric_injection as numeric
 import v098_target_user_scenario_bootstrap as bootstrap
+import v106_user_session_controller as session_controls
 import v143_specialization_contracts as specs
 
 SCHEMA="v145_one_spec_source_free_physical_diagnostic_v1"
@@ -85,8 +86,8 @@ def summary_from_json2(raw,revision):
          "SIMC_DPS_NOT_POSITIVE_OR_APL_INACTIVE")
     return {"json2":result,"observed_git_revision":observed}
 
-def run(user,binary,out,revision,*,iterations=1,timeout_seconds=180,
-        max_new=1):
+def _run_unlocked(user,binary,out,revision,*,iterations=1,timeout_seconds=180,
+                  max_new=0):
     key=user_key(user)
     need(type(iterations) is int and 1<=iterations<=35,
          "PHYSICAL_ITERATIONS_OUT_OF_BOUNDS")
@@ -211,6 +212,30 @@ def run(user,binary,out,revision,*,iterations=1,timeout_seconds=180,
     # immutable. Do not create a second log, history store, or cache index.
     (folder/"SUMMARY.json").write_text(canonical(summary),encoding="utf8")
     return summary
+
+def run(user,binary,out,revision,*,iterations=1,timeout_seconds=180,
+        max_new=0):
+    """Reuse the existing Windows/POSIX OS-owned v106 same-session lock.
+
+    Two local processes with identical user inputs cannot both launch an
+    expensive SimC physical probe. Crashes release the descriptor, not the
+    immutable physical receipt or original SimC error log.
+    """
+    key=user_key(user)
+    need(type(max_new) is int and max_new in (0,1),
+         "ONE_NATIVE_CALL_CAP_ONLY")
+    need(type(iterations) is int and 1<=iterations<=35,
+         "PHYSICAL_ITERATIONS_OUT_OF_BOUNDS")
+    need(type(timeout_seconds) is int and 1<=timeout_seconds<=900,
+         "NATIVE_TIMEOUT_OUT_OF_BOUNDS")
+    user_sha=sha(canonical(user).encode("utf8"))
+    folder=pathlib.Path(out).resolve()/(key.replace("/","__")+
+                                        "__"+user_sha[:16])
+    with session_controls.worker_lock(folder):
+        return _run_unlocked(user,binary,out,revision,
+                             iterations=iterations,
+                             timeout_seconds=timeout_seconds,
+                             max_new=max_new)
 
 def main(argv=None):
     p=argparse.ArgumentParser(description="One selected DPS source-independent physical SimC smoke; 0 or 1 new Native")
