@@ -14,6 +14,10 @@ on:
       - runner/webui/app.js
       - integration_probes/catalog/v146_character_starter_examples.json
       - runner/v106_user_session_controller.py
+      - integration_probes/v145_targeted_pure_physical_native.py
+      - integration_probes/v147_all_dps_targeted_native_batch.py
+      - integration_probes/RUN_ALL_24_SIMC_NATIVE.cmd
+      - tests/test_v147_all_dps_targeted_native_batch_offline.py
       - tests/test_v106_user_session_controller.py
       - runner/v098_target_user_scenario_bootstrap.py
       - runner/v103_source_observed_weapon_types.py
@@ -55,11 +59,11 @@ jobs:
       - name: Compile and check actual HTTP adapter and existing session code
         shell: bash
         run: |
-          python -m py_compile runner/v113_local_web_api.py runner/v106_user_session_controller.py runner/v098_target_user_scenario_bootstrap.py
+          python -m py_compile runner/v113_local_web_api.py runner/v106_user_session_controller.py runner/v098_target_user_scenario_bootstrap.py integration_probes/v147_all_dps_targeted_native_batch.py
       - name: Offline FastAPI HTTP tests, including security and zero Native
         shell: bash
         run: |
-          python -m unittest -q tests.test_v113_local_web_api_offline tests.test_v114_local_web_ui_offline tests.test_v106_user_session_controller tests.test_v109_windows_readiness_offline tests.test_v110_windows_exact_simc_input_bytes tests.test_v131_rogue_outlaw_source_candidate
+          python -m unittest -q tests.test_v113_local_web_api_offline tests.test_v114_local_web_ui_offline tests.test_v106_user_session_controller tests.test_v109_windows_readiness_offline tests.test_v110_windows_exact_simc_input_bytes tests.test_v131_rogue_outlaw_source_candidate tests.test_v147_all_dps_targeted_native_batch_offline
       - name: Browser script parse check (Node without dependency install)
         shell: bash
         run: node --check runner/webui/app.js
