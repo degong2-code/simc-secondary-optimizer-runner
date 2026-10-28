@@ -38,6 +38,7 @@ on:
       - runner/v139_pure_target_profile_composer.py
       - integration_probes/catalog/v139_mid2_pure_profile_season_catalog.json
       - tests/test_v139_pure_target_profile_composer.py
+      - tests/test_v139_v098_pure_plan_bridge.py
       - runner/v055_simc_item_selection.py
       - runner/v061_scenario_contract.py
       - runner/v062_static_budget_bridge.py
@@ -80,6 +81,7 @@ jobs:
             tests.test_v097_user_result_offline \
             tests.test_v098_target_user_scenario_bootstrap \
             tests.test_v139_pure_target_profile_composer \
+            tests.test_v139_v098_pure_plan_bridge \
             tests.test_v101_common_representative_equipment \
             tests.test_v102_ordinary_armor_seed_pool \
             tests.test_v103_source_observed_weapon_types \
