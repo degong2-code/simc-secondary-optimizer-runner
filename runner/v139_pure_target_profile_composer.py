@@ -143,7 +143,7 @@ def compose(character,trinkets,*,target_ilevel=334,
     need(set(options)<=set(ids) and
          "head" in options and
          sum(len(v["gem_id"].split("/")) for slot,v in options.items()
-             if slot!="head")==6,
+             if slot!="head" and "gem_id" in v)==6,
          "PHYSICAL_GEM_LAYOUT_NOT_STAGED")
     rows={slot:{"slot":slot,"item_id":item_id,
                 "ilevel":target_ilevel,
