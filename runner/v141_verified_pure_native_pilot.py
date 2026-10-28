@@ -23,7 +23,7 @@ def need(ok,code):
     if not ok:raise AcceptanceBlocked("V141_"+code)
 def sha(raw):return hashlib.sha256(raw).hexdigest()
 
-def verify(profile,binary,revision,spec,physical_root):
+def verify(profile,binary_sha256,revision,spec,physical_root):
     """Check the prior local Native receipt against *this exact* staged profile.
 
     Receipts are local reproducibility evidence, not signed attestations;
@@ -54,9 +54,9 @@ def verify(profile,binary,revision,spec,physical_root):
          and 1<=identity["iterations"]<=35
          and identity.get("simc_revision")==revision,
          "RECEIPT_IDENTITY_OR_REVISION_DRIFT")
-    binary=pathlib.Path(binary).resolve()
-    need(binary.is_file()
-         and sha(binary.read_bytes())==identity.get("binary_sha256"),
+    # v096 already checked the real binary and calculated its SHA once.
+    need(type(binary_sha256) is str and
+         binary_sha256==identity.get("binary_sha256"),
          "PHYSICAL_BINARY_SHA256_CHANGED")
     # Compare all user inputs and physical rows to the original v140 plan,
     # not just the specialization. Different trinkets/gems/talents/oil or
