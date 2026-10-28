@@ -60,7 +60,30 @@ class PureProfileComposer(unittest.TestCase):
         self.assertEqual(e["main_hand"]["item_id"],271092)
         self.assertEqual(e["off_hand"]["item_id"],268197)
         self.assertEqual(pure.catalog()["specializations"].keys(),
-              {"druid/balance","evoker/devastation"})
+              {"druid/balance","evoker/devastation","mage/frost"})
+
+    def test_frost_mage_third_pure_catalog_staging_is_not_native_promotion(self):
+        profile,meta,rows,tier=self.build("mage/frost","human")
+        self.assertEqual(meta["status"],"STAGED_NOT_USER_READY")
+        self.assertEqual(meta["family"],"cloth")
+        self.assertEqual(meta["primary"],"intellect")
+        self.assertEqual(meta["weapon_form"],"one_hand_frill")
+        self.assertEqual(tier,{"shoulders","chest","hands","legs"})
+        self.assertEqual({slot:rows[slot]["item_id"] for slot in tier},
+                         {"shoulders":271562,"chest":271567,
+                          "hands":271565,"legs":271563})
+        self.assertEqual(rows["head"]["item_id"],271874)
+        self.assertEqual((rows["wrists"]["item_id"],
+                          rows["waist"]["item_id"],
+                          rows["feet"]["item_id"]),(251154,268257,268255))
+        self.assertEqual((rows["main_hand"]["item_id"],
+                          rows["off_hand"]["item_id"]),(271092,245769))
+        self.assertEqual(len(rows),16)
+        self.assertIn("default_actions=1\n",profile)
+        self.assertNotIn("actions.",profile)
+        self.assertFalse(meta["source_profile_read"])
+        self.assertFalse(meta["user_optimizer_ready"])
+        self.assertEqual(meta["native_calls"],0)
 
     def test_user_race_talents_trinkets_and_combat_affect_output(self):
         a,_,_,_=self.build("druid/balance","night_elf")
