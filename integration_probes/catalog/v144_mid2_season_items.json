@@ -2,14 +2,15 @@
   "schema": "v144_representative_season_items_v1",
   "season": "midnight_s2",
   "target_ilevel": 334,
-  "status": "TWO_CASES_WINDOWS_ADAPTIVE_PASSED_ONE_LEGACY_CATALOG_PREVIEW_UNVERIFIED",
+  "status": "TWO_CASES_WINDOWS_ADAPTIVE_PASSED_TWO_LEGACY_CATALOG_PREVIEWS_UNVERIFIED",
   "provenance": {
     "druid_tier": "v132 official Feral item IDs (271528/271526/271531/271529/271527)",
     "evoker_tier": "Wowhead 12.1 Echo of Calamity IDs 271501/271499/271504/271502/271500",
     "common_items": "same-season observed item IDs from v132 source fixtures; no runtime dependence",
     "gems": "same-season observed socket examples; exact cross-class 334 compatibility still requires SimC",
     "weapons": "same-season caster weapon IDs 271092 and 268197, physical compatibility unverified for both new specs",
-    "mage_frost_staged": "v084 pinned Frost 5-tier 271564/271562/271567/271565/271563; ordinary cloth head 271874 from v084 cross-source, wrists/waist/feet from existing v102 source-verified ordinary seed pool; main_hand 271092 and NON-WEAPON off_hand 245769 from v084; catalog candidate is NOT Frost pure Native accepted"
+    "mage_frost_staged": "v084 pinned Frost 5-tier 271564/271562/271567/271565/271563; ordinary cloth head 271874 from v084 cross-source, wrists/waist/feet from existing v102 source-verified ordinary seed pool; main_hand 271092 and NON-WEAPON off_hand 245769 from v084; catalog candidate is NOT Frost pure Native accepted",
+    "paladin_retribution_staged": "v127/v083 five MID2 paladin tier IDs; 271878 fifth ordinary plate legs from v083/v082; 268239/268259/268260 ordinary plate wrists/waist/feet from v102; 268213 two-handed main weapon from v083; NOT a Native-accepted source-free profile"
   },
   "common_gear": {
     "neck": 268265,
@@ -99,6 +100,30 @@
       "weapons": {
         "main_hand": 271092,
         "off_hand": 245769
+      }
+    },
+    "paladin/retribution": {
+      "tier_ids": {
+        "head": 271465,
+        "shoulders": 271463,
+        "chest": 271468,
+        "hands": 271466,
+        "legs": 271464
+      },
+      "four_tier_slots": [
+        "head",
+        "shoulders",
+        "chest",
+        "hands"
+      ],
+      "ordinary": {
+        "legs": 271878,
+        "wrists": 268239,
+        "waist": 268259,
+        "feet": 268260
+      },
+      "weapons": {
+        "main_hand": 268213
       }
     }
   },
