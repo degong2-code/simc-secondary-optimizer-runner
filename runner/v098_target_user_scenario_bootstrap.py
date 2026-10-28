@@ -148,7 +148,7 @@ def initial_seeds(B,lower,upper):
     return [dict(zip(scenario.STATS,v)) for v in (first,second)]
 
 def build(user,folder,binary,revision,static_cache_path=None,
-          imported_profile_text=None):
+          imported_profile_text=None,*,ordinary_variant=None):
     """Return an already validated internal manifest and v096 plan; no Native."""
     need(type(user) is dict and set(user) in (
         FIELDS,FIELDS|{IMPORT_FIELD},FIELDS|{CONSUME_FIELD},
@@ -196,8 +196,19 @@ def build(user,folder,binary,revision,static_cache_path=None,
     need(type(revision) is str and len(revision)>=7,"SIMC_REVISION_REQUIRED")
     # SimC APL and original item IDs stay in pinned source factory; v101 owns
     # the material/weapon/tier representative gear assembly thereafter.
-    base_profile,cfg,rows,groups,weapon_layout,F=common.source_backed_gear(
-        key,folder,ilvl,need)
+    if ordinary_variant is None:
+        # Preserve the historical exact call shape and all default receipts.
+        base_profile,cfg,rows,groups,weapon_layout,F=common.source_backed_gear(
+            key,folder,ilvl,need)
+    else:
+        need(ordinary_variant in common.ORDINARY_VARIANTS,
+             "REPRESENTATIVE_ORDINARY_VARIANT_NOT_PINNED")
+        slot=common.ORDINARY_VARIANTS[ordinary_variant]["slot"]
+        need(not any(r["slot"]==slot for r in
+                     user["special_items"]+user["embellishments"]),
+             "ORDINARY_VARIANT_CONFLICTS_WITH_USER_SELECTED_ITEM")
+        base_profile,cfg,rows,groups,weapon_layout,F=common.source_backed_gear(
+            key,folder,ilvl,need,ordinary_variant=ordinary_variant)
     restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
         key,rows,groups,user,ilvl,need)
     # 240967 requires four distinct ordinary Midnight gem colors for its
@@ -321,10 +332,12 @@ def build(user,folder,binary,revision,static_cache_path=None,
             "consumables_selected":selected["selected"],
             "gem_secondary_budget_J_fixed_138":True,
             "flask_F_fixed_165":True,
-            "omnium_folio_user_input_ready":False}
+            "omnium_folio_user_input_ready":False,
+            **({"internal_ordinary_variant":ordinary_variant}
+               if ordinary_variant is not None else {})}
 
 def run(user_path,folder,binary,revision,static_cache_path=None,
-        execute=False,cache_only=False):
+        execute=False,cache_only=False,*,ordinary_variant=None):
     path=pathlib.Path(user_path).resolve()
     user=json.loads(path.read_text(encoding="utf8"))
     imported=None
@@ -334,7 +347,8 @@ def run(user_path,folder,binary,revision,static_cache_path=None,
         need(resolved.is_file(),"SIMC_IMPORT_NOT_FOUND")
         imported=resolved.read_text(encoding="utf8")
     prepared=build(user,folder,binary,revision,static_cache_path,
-                   imported_profile_text=imported)
+                   imported_profile_text=imported,
+                   ordinary_variant=ordinary_variant)
     if not execute:return prepared
     actual=entry.run_manifest(prepared["generated_manifest"],cache_only=cache_only)
     return {"input_preparation":prepared,"native_result":actual}
@@ -348,10 +362,14 @@ def main(argv=None):
     p.add_argument("--static-cache",type=pathlib.Path)
     p.add_argument("--execute",action="store_true")
     p.add_argument("--cache-only",action="store_true")
+    p.add_argument("--ordinary-variant",
+                   choices=sorted(common.ORDINARY_VARIANTS),
+                   help="Internal source-pinned representative test only; default unchanged")
     a=p.parse_args(argv)
     try:
         result=run(a.input,a.out,a.binary,a.revision,a.static_cache,
-                   execute=a.execute,cache_only=a.cache_only)
+                   execute=a.execute,cache_only=a.cache_only,
+                   ordinary_variant=a.ordinary_variant)
         print(json.dumps(result,ensure_ascii=False,sort_keys=True,indent=2))
         return 0
     except Exception as e:
