@@ -49,13 +49,28 @@ class SourceBoundArmorSeeds(unittest.TestCase):
                 self.assertEqual(pool.WEB_SOURCE_DETAILS[item_id][2],stats)
         self.assertNotIn("web_live",pool.SOURCE)
 
-    def test_hunter_v086_fixes_are_not_an_old_unknown_random_secondary_placeholder(self):
-        self.assertEqual(pool.row("mail","head",334)["item_id"],249317)
-        self.assertEqual(pool.row("mail","feet",334)["item_id"],249320)
-        self.assertEqual(pool.provenance("mail","head")["source_kind"],
-                         "legacy_fixed")
-        self.assertNotIn(271441, [r[1] for r in pool.FAMILY_ROWS["mail"].values()])
-        self.assertNotIn(271440, [r[1] for r in pool.FAMILY_ROWS["mail"].values()])
+    def test_mail_head_and_feet_use_same_season_target334_mid2_hunter_ids(self):
+        # These are ordinary S2 mail drops with random secondaries. The seed
+        # deliberately carries no crafted_stats/gems: exact target variant
+        # static rating remains a later Native/static-cache identity.
+        self.assertEqual(pool.row("mail","head",334),
+                         {"slot":"head","item_id":271441,
+                          "ilevel":334,"options":{}})
+        self.assertEqual(pool.row("mail","feet",334),
+                         {"slot":"feet","item_id":271440,
+                          "ilevel":334,"options":{}})
+        for slot,item_id in (("head",271441),("feet",271440)):
+            meta=pool.provenance("mail",slot)
+            self.assertEqual(meta["source_kind"],"ordinary")
+            self.assertEqual(meta["item_id"],item_id)
+            self.assertEqual(meta["source_file"],
+                "integration_probes/fixtures/v132_MID2_Hunter_Marksmanship.simc")
+            self.assertTrue(meta["not_verified_native_exact_target_variant"])
+        source=pool.source_ids("marksman_mid2")
+        self.assertEqual((source["head"],source["feet"]),(271441,271440))
+        ids=[r[1] for r in pool.FAMILY_ROWS["mail"].values()]
+        self.assertNotIn(249317,ids)
+        self.assertNotIn(249320,ids)
 
     def test_leather_feet_now_use_same_season_pinned_ordinary_item_only_in_seed_pool(self):
         # Previously the seed pool used legacy Goldfeather Boots 159304.
