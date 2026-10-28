@@ -376,7 +376,7 @@ class IndependentSeasonCompiler(unittest.TestCase):
                     slot,sep,val=line.partition("=")
                     if not sep or slot not in ("main_hand","off_hand"):
                         continue
-                    id_match=re.search(r"(?:^|,)id=(\\d+)(?:,|$)",val)
+                    id_match=re.search(r"(?:^|,)id=(\d+)(?:,|$)",val)
                     self.assertIsNotNone(id_match)
                     source_weapons[slot]=int(id_match.group(1))
                     if slot=="off_hand":
