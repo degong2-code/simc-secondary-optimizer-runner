@@ -60,7 +60,8 @@ class PureProfileComposer(unittest.TestCase):
         self.assertEqual(e["main_hand"]["item_id"],271092)
         self.assertEqual(e["off_hand"]["item_id"],268197)
         self.assertEqual(pure.catalog()["specializations"].keys(),
-              {"druid/balance","evoker/devastation","mage/frost"})
+              {"druid/balance","evoker/devastation","mage/frost",
+               "paladin/retribution"})
 
     def test_frost_mage_third_pure_catalog_staging_is_not_native_promotion(self):
         profile,meta,rows,tier=self.build("mage/frost","human")
@@ -81,6 +82,28 @@ class PureProfileComposer(unittest.TestCase):
         self.assertEqual(len(rows),16)
         self.assertIn("default_actions=1\n",profile)
         self.assertNotIn("actions.",profile)
+        self.assertFalse(meta["source_profile_read"])
+        self.assertFalse(meta["user_optimizer_ready"])
+        self.assertEqual(meta["native_calls"],0)
+
+    def test_retribution_single_twohand_shared_compiler_fifteen_slots(self):
+        profile,meta,rows,tier=self.build("paladin/retribution","blood_elf")
+        self.assertEqual(meta["status"],"STAGED_NOT_USER_READY")
+        self.assertEqual((meta["family"],meta["primary"],meta["weapon_form"]),
+                         ("plate","strength","single_two_hand"))
+        self.assertEqual(tier,{"head","shoulders","chest","hands"})
+        self.assertEqual({s:rows[s]["item_id"] for s in tier},
+             {"head":271465,"shoulders":271463,"chest":271468,"hands":271466})
+        self.assertEqual((rows["legs"]["item_id"],rows["wrists"]["item_id"],
+                         rows["waist"]["item_id"],rows["feet"]["item_id"]),
+                         (271878,268239,268259,268260))
+        self.assertEqual(rows["main_hand"]["item_id"],268213)
+        self.assertNotIn("off_hand",rows)
+        self.assertNotIn("off_hand=",profile)
+        self.assertIn("role=attack\n",profile)
+        self.assertIn("default_actions=1\n",profile)
+        self.assertNotIn("actions.",profile)
+        self.assertEqual(len(rows),15)
         self.assertFalse(meta["source_profile_read"])
         self.assertFalse(meta["user_optimizer_ready"])
         self.assertEqual(meta["native_calls"],0)
