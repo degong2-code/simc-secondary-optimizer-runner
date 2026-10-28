@@ -69,13 +69,48 @@ def resolved_producer(entry):
             "UNRESOLVED_SOURCE_PRODUCER:"+entry.producer_id)
     return PRODUCERS[entry.producer_id]
 
-ARCHETYPES={
+class _LazySourceRegistry(dict):
+    """Keep all 24 legacy keys visible without reading 17 source fixtures.
+
+    A legacy value is resolved and source-validated only on first access.
+    The existing source producer performs its original checks on execution.
+    This registry is NOT part of the source-independent season compiler.
+    """
+    def __getitem__(self,key):
+        value=dict.__getitem__(self,key)
+        if value is None:
+            _resolve_generic_source(key)
+            value=dict.__getitem__(self,key)
+        return value
+
+    def get(self,key,default=None):
+        return self[key] if key in self else default
+
+    def _resolve_all(self):
+        for key in self:
+            self[key]
+
+    def items(self):
+        self._resolve_all()
+        return dict.items(self)
+
+    def values(self):
+        self._resolve_all()
+        return dict.values(self)
+
+    def copy(self):
+        self._resolve_all()
+        return dict.copy(self)
+
+
+ARCHETYPES=_LazySourceRegistry({
     entry.key:(entry.source_fixture,resolved_producer(entry),
                entry.weapon_form,entry.flask_vector())
-    for entry in metadata.SOURCE_BACKED}
+    for entry in metadata.SOURCE_BACKED})
 FIXTURES=pathlib.Path(__file__).resolve().parents[1]/"integration_probes/fixtures"
-FIFTH_TIER={entry.key:entry.fifth_replacement()
-            for entry in metadata.SOURCE_BACKED}
+FIFTH_TIER=_LazySourceRegistry({
+    entry.key:entry.fifth_replacement()
+    for entry in metadata.SOURCE_BACKED})
 
 def validate_source_registry():
     """Fail closed on changes to six prior source-pinned contracts."""
@@ -124,18 +159,28 @@ def available_ordinary_seed_slots(family):
 # P1-WEB-3: representative 23-rating gem examples, with source-observed
 # colors. This is NOT a second gem/stat effect engine; SimC owns color effects.
 from v135_source_gem_colors import SOURCE_GEM_COLOR, FOUR_COLOR_GEMS
-# Source drafts inspect the common gem-color data. Register 16 new source
-# adapters only after the shared constants are initialized, avoiding an
-# import-time v101 -> v134 -> v133 -> v101 initialization cycle.
-# A single pinned-source metadata read builds both registries. Previously
-# the 17 source previews/fixture hashes were redundantly reread in two loops
-# during each fresh server process startup, without adding integrity evidence.
-for _key in sorted(GENERIC_PENDING):
-    _info=generic.source_metadata("/".join(_key))
-    ARCHETYPES[_key]=(_info["fixture"],generic.producer(_key),
-                      _info["form"],_info["F"])
-    _slot,_ordinary=_info["fifth"]
-    FIFTH_TIER[_key]=(_slot,_info["tier"][_slot],_ordinary)
+# Publish all 24 supported legacy keys without opening complete official
+# SimC fixture files at import.  For old 17-source execution (or legacy
+# defaults), resolve the same v134 metadata and validate the same source
+# bytes only when that particular spec is accessed.  New v139/v144 pure
+# profile construction can therefore start independently of those fixtures.
+for _key in GENERIC_PENDING:
+    dict.__setitem__(ARCHETYPES,_key,None)
+    dict.__setitem__(FIFTH_TIER,_key,None)
+
+def _resolve_generic_source(key):
+    if key not in GENERIC_PENDING:
+        raise KeyError(key)
+    info=generic.source_metadata("/".join(key))
+    slot,ordinary=info["fifth"]
+    need_tier=CLASS_TIER_ITEMS[key[0]]
+    assert info["tier"]==need_tier and info["tier"][slot]>0, (
+        "MID2_CLASS_TIER_DATA_DRIFT")
+    dict.__setitem__(ARCHETYPES,key,
+                     (info["fixture"],generic.producer(key),
+                      info["form"],info["F"]))
+    dict.__setitem__(FIFTH_TIER,key,
+                     (slot,info["tier"][slot],ordinary))
 # v104 pins these two original source wrist slots as socketed, but its
 # ordinary wrist replacements discard the source options. For 240967 ONLY,
 # recover that one source-observed gem position before four-color adjustment.
