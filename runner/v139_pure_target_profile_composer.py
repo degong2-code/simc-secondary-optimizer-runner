@@ -59,7 +59,7 @@ def validate_season(doc):
     for key,info in doc["specializations"].items():
         need(contracts.lookup(*key.split("/")) is not None,
              "SEASON_SPEC_HAS_NO_STABLE_CONTRACT")
-        need(type(info) is dict and set(info)==allowed,
+        need(type(info) is dict and set(info) in (allowed,allowed|{"item_options"}),
              "SEASON_CONTAINS_STABLE_CONTRACT_FIELDS")
     return doc
 
@@ -129,6 +129,17 @@ def compose(character,trinkets,*,target_ilevel=334,
          "INTERNAL_REPRESENTATIVE_SLOT_OR_ITEM_ID")
     options={slot:{"gem_id":value}
              for slot,value in season["gems"].items()}
+    # Only item-specific serialization options belong in the replaceable
+    # season record (e.g., an observed crafted 2H offhand secondary pair).
+    # Reject overlapping gem settings instead of silently double applying.
+    seasonal_options=info.get("item_options",{})
+    need(type(seasonal_options) is dict and
+         set(seasonal_options)<=set(ids) and
+         all(type(v) is dict and not (set(v)&set(options.get(k,{})))
+             for k,v in seasonal_options.items()),
+         "SEASON_ITEM_OPTIONS_INVALID_OR_DUPLICATED")
+    for slot,opts in seasonal_options.items():
+        options.setdefault(slot,{}).update(items.checked_options(opts))
     need(set(options)<=set(ids) and
          "head" in options and
          sum(len(v["gem_id"].split("/")) for slot,v in options.items()
