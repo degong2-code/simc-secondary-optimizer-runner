@@ -11,7 +11,6 @@ from __future__ import annotations
 import functools,hashlib,pathlib,re
 
 import v055_simc_item_selection as selected
-import v086_hunter_fixed_mail_representative as hunter_fix
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 SCHEMA="v102_armor_family_ordinary_seed_v1"
@@ -29,11 +28,11 @@ SOURCE={
             "3225992ed5b754ad5d61e8b785d9d859f1eed1be"),
  # Official v132 MID2 Feral gear already accepted in physical target334 Native.
  "feral_mid2":("integration_probes/fixtures/v132_MID2_Druid_Feral.simc",
-               "29c4bd2329114bbdcbf36f4bc330d52e39349e72")}
+               "29c4bd2329114bbdcbf36f4bc330d52e39349e72"),
+ "marksman_mid2":("integration_probes/fixtures/v132_MID2_Hunter_Marksmanship.simc",
+                  "87582489548939934be9bb2c5e74709ea74363b3")}
 # Site corroboration confirms physical equipment ARMOR TYPE and SLOT.
 # These are selected representative candidates, not a season-wide DB.
-# 'legacy_fixed' refers to old v086 Native-corrected first-season mail
-# representative item; do not advertise as NEW S2 loot / exact Native data.
 # Each tuple: (source nickname, real item_id, origin_type, user-visible name).
 FAMILY_ROWS={
  "cloth":{
@@ -46,10 +45,10 @@ FAMILY_ROWS={
     "waist":("rogue",268256,"ordinary","Sash of the Forlorn Vessel"),
     "feet":("feral_mid2",268261,"ordinary","Bespittled Slitherslippers")},
  "mail":{
-    "head":("hunter_v086",249317,"legacy_fixed","Frenzy's Rebuke"),
+    "head":("marksman_mid2",271441,"ordinary","Crushing Coiler Coif"),
     "wrists":("web_live",273775,"ordinary","Hydra Scale Wristguards"),
     "waist":("shaman",268254,"ordinary","Serpentine Mixing Belt"),
-    "feet":("hunter_v086",249320,"legacy_fixed","Sabatons of Obscurement")},
+    "feet":("marksman_mid2",271440,"ordinary","Greaves of the Noxious Depths")},
  "plate":{
     "wrists":("web_live",268239,"ordinary","Shellbound Bracers"),
     "waist":("warrior",268259,"ordinary","Girdle of Toxic Regret"),
@@ -69,9 +68,9 @@ ITEM_URLS={
  268239:"https://www.wowhead.com/item=268239",
  268256:"https://www.wowhead.com/item=268256",
  268261:"https://www.wowhead.com/item=268261",
- 249317:"https://www.wowhead.com/item=249317",
+ 271441:"https://www.wowhead.com/item=271441",
  268254:"https://www.wowhead.com/item=268254",
- 249320:"https://www.wowhead.com/item=249320",
+ 271440:"https://www.wowhead.com/item=271440",
  268259:"https://www.wowhead.com/item=268259",
  268260:"https://www.wowhead.com/item=268260"}
 
@@ -112,7 +111,7 @@ def verify_pool():
     """Source provenance/readiness check, not item effect/stat verification.
 
     Pinned immutable Git fixture bytes are checked once per process; repeated
-    optimizer sessions do not reread five fixture files for every candidate.
+    optimizer sessions do not reread source fixture files for every candidate.
     """
     need(set(FAMILY_ROWS)==FAMILY_SET,"ARMOR_FAMILY_POOL_MISSING")
     need(all(type(v) is dict and 1<=len(v)<=len(REQUIRED_ITEM_SLOTS)
@@ -132,11 +131,6 @@ def verify_pool():
                      WEB_SOURCE_DETAILS.get(id_,())[:2]==(family,slot)
                      and WEB_SOURCE_DETAILS[id_][3].startswith("https://www.wowhead.com/"),
                      "PUBLIC_SEASON_ITEM_ID_MATERIAL_SLOT_DRIFT")
-            elif source=="hunter_v086":
-                need(kind=="legacy_fixed" and
-                     slot in hunter_fix.REPLACEMENTS and
-                     hunter_fix.REPLACEMENTS[slot][1]==id_,
-                     "V086_FIXED_MAIL_NATIVE_CORRECTION_DRIFT")
             else:
                 need(source in SOURCE and kind in ("ordinary","legacy_reference"),
                      "ORDINARY_SOURCE_CLASSIFICATION")
@@ -172,8 +166,7 @@ def provenance(family,slot):
          "ORDINARY_ITEM_NOT_REGISTERED")
     source,item_id,kind,name=FAMILY_ROWS[family][slot]
     fixture=(SOURCE[source][0] if source in SOURCE else
-             "LIVE_WOWHEAD_12_1_ITEM_ID_AND_MATERIAL" if source=="web_live" else
-             "runner/v086_hunter_fixed_mail_representative.py")
+             "LIVE_WOWHEAD_12_1_ITEM_ID_AND_MATERIAL")
     return {"armor_family":family,"slot":slot,"item_id":item_id,
             "name":name,"source_kind":kind,
             "source_file":fixture,"item_reference":ITEM_URLS[item_id],
