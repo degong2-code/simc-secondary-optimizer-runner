@@ -141,6 +141,7 @@ def run(binary,out,revision,*,specs=None,execute=False,
                      "adaptive_started_this_run":False}
                 current["results"].append(row)
                 save()
+                physical_outcome_uncertain=False
                 try:
                     user=starter_user(key)
                     token=physical.sha(physical.canonical(user).encode("utf8"))[:16]
@@ -153,10 +154,12 @@ def run(binary,out,revision,*,specs=None,execute=False,
                         # the batch to overshoot the user's explicit cap.
                         physical_used+=1
                         current["physical_native_permits_reserved"]=physical_used
+                        physical_outcome_uncertain=True
                         save()
                     probe=physical.run(user,binary,physical_root,revision,
                                        iterations=1,timeout_seconds=timeout_seconds,
                                        max_new=int(may_run))
+                    physical_outcome_uncertain=False
                     n=probe["new_native_calls"]
                     need(type(n) is int and n in (0,1),
                          "PHYSICAL_CALL_COUNT_INVALID")
@@ -210,11 +213,19 @@ def run(binary,out,revision,*,specs=None,execute=False,
                     else:
                         raise BatchBlocked("UNEXPECTED_PHYSICAL_STATUS:"+
                                            str(probe["status"]))
+                except KeyboardInterrupt:
+                    # Native may have returned before its receipt was sealed.
+                    # Never label the attempt as a confirmed zero call.
+                    row["status"]="INTERRUPTED_NATIVE_OUTCOME_UNVERIFIED"
+                    row["physical_outcome_uncertain"]=physical_outcome_uncertain
+                    raise
                 except Exception as exc:
                     # One bad specialization must not stop the other 23.
                     # Original SimC logs remain at per-spec v145/v094 paths.
                     row["status"]="SPEC_FAILED"
                     row["error"]=type(exc).__name__+":"+str(exc)
+                    if physical_outcome_uncertain:
+                        row["physical_outcome_uncertain"]=True
                 finally:
                     save()
             else:
