@@ -4,6 +4,7 @@ import copy
 import hashlib
 import json
 import pathlib
+import re
 import subprocess
 import sys
 import tempfile
@@ -330,6 +331,79 @@ class IndependentSeasonCompiler(unittest.TestCase):
                 self.assertNotIn("actions.",profile)
                 self.assertEqual(profile.count("main_hand="),1)
                 self.assertEqual(profile.count("off_hand="),1)
+
+    def test_last_eleven_catalog_ids_match_pinned_source_witnesses(self):
+        # Focused provenance comparison of the newly migrated 11 records.
+        # This is a TEST-ONLY read of historical exact Git-pinned fixtures.
+        # No fixture becomes a production profile-generator dependency.
+        import v132_dps_source_batch_smoke as witness
+        import v133_mid2_target_representative_preview as reference
+        import v102_ordinary_armor_seed_pool as ordinary
+        from v086_hunter_fixed_mail_representative import REPLACEMENTS
+        migrated={
+            "deathknight/frost","deathknight/unholy",
+            "demonhunter/devourer","demonhunter/havoc",
+            "druid/feral","hunter/marksmanship","hunter/survival",
+            "monk/windwalker","rogue/assassination",
+            "shaman/enhancement","warrior/arms"}
+        self.assertEqual(len(migrated),11)
+        season=pure.catalog()
+        self.assertEqual(set(season["specializations"]),
+                         set(witness.NEW)|{
+                           "druid/balance","evoker/devastation",
+                           "warrior/fury","paladin/retribution",
+                           "mage/frost","hunter/beast_mastery",
+                           "rogue/outlaw","rogue/subtlety",
+                           "shaman/elemental"})
+        for key in sorted(migrated):
+            with self.subTest(key=key):
+                cl,sp=key.split("/")
+                record=witness.validate_source(key)
+                source=record["source"]
+                data=season["specializations"][key]
+                contract=specs.lookup(cl,sp)
+                expected_tiers=dict(zip(reference.FIVE,
+                                         reference.FIVE_TIER[cl]))
+                self.assertEqual(data["tier_ids"],expected_tiers)
+                for name in ("spec","role","position"):
+                    match=re.findall(r"^"+name+r"=(.+)$",source,re.M)
+                    self.assertEqual(len(match),1)
+                    self.assertEqual(match[0],contract[
+                        "simc_spec" if name=="spec" else name])
+                source_weapons={}
+                offhand_crafted=None
+                for line in source.splitlines():
+                    slot,sep,val=line.partition("=")
+                    if not sep or slot not in ("main_hand","off_hand"):
+                        continue
+                    id_match=re.search(r"(?:^|,)id=(\\d+)(?:,|$)",val)
+                    self.assertIsNotNone(id_match)
+                    source_weapons[slot]=int(id_match.group(1))
+                    if slot=="off_hand":
+                        crafted=re.search(
+                            r"(?:^|,)crafted_stats=(\\d+/\\d+)(?:,|$)",val)
+                        if crafted:offhand_crafted=crafted.group(1)
+                self.assertEqual(data["weapons"],source_weapons)
+                self.assertEqual(set(data["weapons"]),
+                                 set(specs.WEAPON_FORMS[contract["weapon_form"]]))
+                opts=data.get("item_options",{}).get("off_hand",{})
+                self.assertEqual(opts.get("crafted_stats"),offhand_crafted)
+                family=contract["family"]
+                fifth={"plate":"legs","leather":"chest","mail":"head"}[family]
+                self.assertEqual(set(data["four_tier_slots"]),
+                                 set(specs.TIER_SLOTS)-{fifth})
+                if fifth=="legs":self.assertEqual(
+                    data["ordinary"]["legs"],271878)
+                if fifth=="chest":self.assertEqual(
+                    data["ordinary"]["chest"],
+                    ordinary.FAMILY_ROWS["leather"]["chest"][1])
+                if fifth=="head":self.assertEqual(
+                    data["ordinary"]["head"],REPLACEMENTS["head"][1])
+                for slot in ("wrists","waist","feet"):
+                    expected=(REPLACEMENTS["feet"][1]
+                        if family=="mail" and slot=="feet"
+                        else ordinary.FAMILY_ROWS[family][slot][1])
+                    self.assertEqual(data["ordinary"][slot],expected)
 
     def test_last_eleven_native_blocked_legacy_runs_still_selected(self):
         import v106_user_session_controller as sessions
