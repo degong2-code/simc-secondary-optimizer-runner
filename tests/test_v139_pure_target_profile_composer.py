@@ -62,7 +62,10 @@ class PureProfileComposer(unittest.TestCase):
         self.assertEqual(pure.catalog()["specializations"].keys(),
               {"druid/balance","evoker/devastation","mage/frost",
                "paladin/retribution","warrior/fury","hunter/beast_mastery",
-               "rogue/outlaw","rogue/subtlety","shaman/elemental"})
+               "rogue/outlaw","rogue/subtlety","shaman/elemental",
+               "mage/arcane","mage/fire","priest/shadow",
+               "warlock/affliction","warlock/demonology",
+               "warlock/destruction"})
 
     def test_frost_mage_third_pure_catalog_staging_is_not_native_promotion(self):
         profile,meta,rows,tier=self.build("mage/frost","human")
@@ -201,6 +204,41 @@ class PureProfileComposer(unittest.TestCase):
         self.assertFalse(meta["source_profile_read"])
         self.assertFalse(meta["user_optimizer_ready"])
         self.assertEqual(meta["native_calls"],0)
+
+    def test_six_more_cloth_casters_reuse_same_source_free_compiler(self):
+        options={
+          "mage/arcane":(245769,"32/36",(271564,271562,271567,271565,271563)),
+          "mage/fire":(245769,"36/40",(271564,271562,271567,271565,271563)),
+          "priest/shadow":(268197,None,(271555,271553,271558,271556,271554)),
+          "warlock/affliction":(245769,"32/36",(271546,271544,271549,271547,271545)),
+          "warlock/demonology":(245769,"49/36",(271546,271544,271549,271547,271545)),
+          "warlock/destruction":(245769,"32/36",(271546,271544,271549,271547,271545)),
+        }
+        for key,(offhand,craft,tier_ids) in options.items():
+            with self.subTest(spec=key):
+                profile,meta,rows,tiers=self.build(key,"dwarf")
+                self.assertEqual((meta["family"],meta["primary"],
+                                  meta["weapon_form"]),
+                                 ("cloth","intellect","one_hand_frill"))
+                self.assertEqual((len(rows),len(tiers)),(16,4))
+                self.assertEqual(tiers,{"shoulders","chest","hands","legs"})
+                for slot,expected in zip(pure.TIER_SLOTS,tier_ids):
+                    if slot=="head":
+                        self.assertEqual(rows[slot]["item_id"],271874)
+                    else:
+                        self.assertEqual(rows[slot]["item_id"],expected)
+                self.assertEqual((rows["wrists"]["item_id"],
+                                  rows["waist"]["item_id"],
+                                  rows["feet"]["item_id"]),(251154,268257,268255))
+                self.assertEqual((rows["main_hand"]["item_id"],
+                                  rows["off_hand"]["item_id"]),(271092,offhand))
+                self.assertEqual(rows["off_hand"]["options"],
+                                 {"crafted_stats":craft} if craft else {})
+                self.assertIn("default_actions=1\n",profile)
+                self.assertNotIn("actions.",profile)
+                self.assertFalse(meta["source_profile_read"])
+                self.assertFalse(meta["user_optimizer_ready"])
+                self.assertEqual(meta["native_calls"],0)
 
     def test_user_race_talents_trinkets_and_combat_affect_output(self):
         a,_,_,_=self.build("druid/balance","night_elf")
