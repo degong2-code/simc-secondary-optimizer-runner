@@ -2,6 +2,7 @@
 from __future__ import annotations
 import copy
 import hashlib
+import json
 import pathlib
 import sys
 import tempfile
@@ -64,10 +65,8 @@ class IndependentSeasonCompiler(unittest.TestCase):
                     self.assertEqual(result["native_calls"],0)
                     profile=(folder/"profile.simc").read_bytes()
                     self.assertEqual(hashlib.sha256(profile).hexdigest(),sha)
-                    self.assertEqual(hashlib.sha256(profile).hexdigest(),
-                                     result["plan"]["source_profile_sha256"]
-                                     if "source_profile_sha256" in result["plan"]
-                                     else hashlib.sha256(profile).hexdigest())
+                    cfg=json.loads((folder/"scenario.json").read_text())
+                    self.assertEqual(cfg["source"]["profile_sha256"],sha)
 
     def test_only_season_data_changes_for_future_season_mock(self):
         user=user_for("druid/balance")
