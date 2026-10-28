@@ -327,6 +327,12 @@ def create_app(*,root=None, token=None):
         missing_legacy=[]
         for cl,sp in sessions.SUPPORTED:
             pair=(cl,sp)
+            # Input starter examples are fixture-independent; availability
+            # of the UNPROMOTED legacy execution path is a separate fact.
+            if (pair not in bootstrap.PURE_PRODUCT_SPECS and
+                    not sessions.legacy_fixture_path(pair).is_file()):
+                missing_legacy.append({"class":cl,"spec":sp})
+                continue
             try:
                 controls=sessions.standard_controls(pair)
             except FileNotFoundError:
