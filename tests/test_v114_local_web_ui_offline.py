@@ -50,7 +50,8 @@ class RealHTTPPageOffline(unittest.TestCase):
           "cancel-btn","restore-btn","restore-id","notice","session-id",
           "stage-text","progress-label","progress-pct","progress-bar",
           "filled-result","empty-result","dps","sem","budget","stat-bars",
-          "conf95","alt-count","alt-list")
+          "conf95","alt-count","alt-list","batch-id","batch-open-btn",
+          "batch-table","batch-status")
         self.assertTrue(set(required)<=page.ids,set(required)-page.ids)
         for path in ("/","/assets/app.js","/assets/styles.css"):
             self.assertEqual(self.client.get(path,headers={"host":"evil.test:8765"}).status_code,403)
@@ -71,6 +72,9 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertNotIn("https://",css.text)
         self.assertIn('"/api/v1/bootstrap"',js.text)
         self.assertIn('"/api/v1/options"',js.text)
+        self.assertIn('"/api/v1/native-batches"',js.text)
+        self.assertIn('async function showNativeBatch()',js.text)
+        self.assertNotIn("fetch(\"file://",js.text)
         self.assertIn('localStorage.setItem("simc_secondary_session_id"',js.text)
         self.assertIn("cache-only",js.text)
         self.assertIn("result",js.text)
