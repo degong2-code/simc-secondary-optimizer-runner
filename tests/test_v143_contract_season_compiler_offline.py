@@ -91,20 +91,20 @@ class IndependentSeasonCompiler(unittest.TestCase):
             # must likewise generate from character + catalog with zero
             # complete source-profile access. No legacy UI defaults here.
             import v139_pure_target_profile_composer as pure
-            for cl,sp,race,slots in (
-                ("mage","frost","human",16),
-                ("paladin","retribution","blood_elf",15),
-                ("warrior","fury","dwarf",16),
-                ("hunter","beast_mastery","dwarf",15),
-                ("rogue","outlaw","dwarf",16),
-                ("rogue","subtlety","dwarf",16),
-                ("shaman","elemental","tauren",16),
-                ("mage","arcane","void_elf",16),
-                ("mage","fire","dwarf",16),
-                ("priest","shadow","void_elf",16),
-                ("warlock","affliction","troll",16),
-                ("warlock","demonology","orc",16),
-                ("warlock","destruction","dwarf",16)):
+            season_specs=pure.catalog()["specializations"]
+            assert len(season_specs)==26
+            preview_keys=set(season_specs)-{"druid/balance","evoker/devastation"}
+            assert len(preview_keys)==24
+            races={"deathknight":"human","demonhunter":"void_elf",
+                   "druid":"night_elf","hunter":"dwarf",
+                   "mage":"human","monk":"troll","paladin":"blood_elf",
+                   "priest":"void_elf","rogue":"dwarf",
+                   "shaman":"tauren","warlock":"orc","warrior":"dwarf"}
+            for key in sorted(preview_keys):
+                cl,sp=key.split("/")
+                contract=pure.contracts.lookup(cl,sp)
+                race=races[cl]
+                slots=14+len(pure.contracts.WEAPON_FORMS[contract["weapon_form"]])
                 user={"class":cl,"spec":sp,"race":race,
                       "talents":"CAAAABBB11122"}
                 trinkets=[{"slot":slot,"item_id":item,"options":{}}
@@ -330,6 +330,53 @@ class IndependentSeasonCompiler(unittest.TestCase):
                 self.assertNotIn("actions.",profile)
                 self.assertEqual(profile.count("main_hand="),1)
                 self.assertEqual(profile.count("off_hand="),1)
+
+    def test_last_eleven_native_blocked_legacy_runs_still_selected(self):
+        import v106_user_session_controller as sessions
+        cases={
+            ("deathknight","frost"),("deathknight","unholy"),
+            ("demonhunter","devourer"),("demonhunter","havoc"),
+            ("druid","feral"),("hunter","marksmanship"),
+            ("hunter","survival"),("monk","windwalker"),
+            ("rogue","assassination"),("shaman","enhancement"),
+            ("warrior","arms")}
+        self.assertEqual(len(cases),11)
+        for key in sorted(cases):
+            with self.subTest(key=key),tempfile.TemporaryDirectory() as td:
+                self.assertIn(key,bootstrap.ARCHETYPES)
+                self.assertNotIn(key,bootstrap.PURE_PRODUCT_SPECS)
+                controls=sessions.standard_controls(key)
+                user=sessions.user_scenario(controls)
+                binary=pathlib.Path(td)/"simc_placeholder"
+                binary.write_bytes(b"NO_SIMC_NATIVE")
+                folder=pathlib.Path(td)/"stage"
+                report=bootstrap.build(user,folder,binary,"7bc10711b5",
+                                       pure_stage=True)
+                self.assertEqual(report["status"],
+                    "STAGED_INTERNAL_MANIFEST_NATIVE_NOT_AUTHORIZED")
+                self.assertEqual(report["native_calls"],0)
+                self.assertFalse(report["user_optimizer_ready"])
+                self.assertEqual(report["plan"]["base_B"],3150)
+                self.assertEqual(len(report["effective_four_tier_slots"]),4)
+                form=pure.contracts.lookup(*key)["weapon_form"]
+                self.assertEqual(report["weapon_form"],form)
+                self.assertEqual(report["plan"]["item_slots"],
+                    14+len(pure.contracts.WEAPON_FORMS[form]))
+                profile=(folder/"profile.simc").read_text()
+                self.assertIn("default_actions=1\n",profile)
+                self.assertNotIn("actions.",profile)
+                self.assertEqual(profile.count("main_hand="),1)
+                self.assertEqual(profile.count("off_hand="),
+                    1 if "off_hand" in pure.contracts.WEAPON_FORMS[form] else 0)
+                with mock.patch.object(bootstrap.entry,"run_manifest") as run:
+                    with self.assertRaisesRegex(bootstrap.UserScenarioBlocked,
+                                                "PURE_STAGE_NATIVE_NOT_AUTHORIZED"):
+                        user_file=pathlib.Path(td)/"user.json"
+                        user_file.write_text(bootstrap.canonical(user)+"\n")
+                        bootstrap.run(user_file,pathlib.Path(td)/"blocked",
+                                      binary,"7bc10711b5",execute=True,
+                                      pure_stage=True)
+                    run.assert_not_called()
 
     def test_season_item_option_can_not_override_existing_gem(self):
         actor={"class":"warrior","spec":"fury","race":"dwarf",
