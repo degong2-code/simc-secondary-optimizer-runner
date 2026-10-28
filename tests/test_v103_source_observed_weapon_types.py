@@ -67,6 +67,10 @@ class WeaponTypeSources(unittest.TestCase):
         self.assertNotIn(("mage","arcane"),weapons.OBSERVED)
         self.assertIn(("shaman","elemental"),core.ARCHETYPES)
         self.assertIn(("priest","shadow"),core.ARCHETYPES)
-        self.assertNotIn(("druid","feral"),core.ARCHETYPES)
+        # v103 covers seven historical subtype witnesses; the newer
+        # source-backed beta can still enable a spec without a v103 row.
+        self.assertIn(("druid","feral"),core.ARCHETYPES)
+        self.assertNotIn(("druid","balance"),core.ARCHETYPES)
+        self.assertNotIn(("evoker","devastation"),core.ARCHETYPES)
 
 if __name__=="__main__":unittest.main()
