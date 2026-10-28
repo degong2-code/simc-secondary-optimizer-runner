@@ -598,7 +598,8 @@ async function initialize() {
     state.defaults=d.archetypes;
     $("spec").replaceChildren(...state.defaults.map(item=>
       option(item.class+"/"+item.spec,
-             specLabels[item.class+"/"+item.spec]||item.class+" · "+item.spec)));
+             (specLabels[item.class+"/"+item.spec]||
+               item.class+" · "+item.spec).replace(/\\s*\\([^)]*\\)$/, ""))));
     $("spec").disabled=false;
     installOptions(opt);
     try{await loadAvailableNativeBatches();}
