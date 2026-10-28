@@ -1,0 +1,87 @@
+{
+  "schema": "v139_pure_profile_season_catalog_v1",
+  "season": "midnight_s2",
+  "target_ilevel": 334,
+  "status": "STAGED_PHYSICAL_VARIANTS_NOT_NATIVE_CERTIFIED",
+  "provenance": {
+    "druid_tier": "v132 official Feral item IDs (271528/271526/271531/271529/271527)",
+    "evoker_tier": "Wowhead 12.1 Echo of Calamity IDs 271501/271499/271504/271502/271500",
+    "common_items": "same-season observed item IDs from v132 source fixtures; no runtime dependence",
+    "gems": "same-season observed socket examples; exact cross-class 334 compatibility still requires SimC",
+    "weapons": "same-season caster weapon IDs 271092 and 268197, physical compatibility unverified for both new specs"
+  },
+  "common_gear": {
+    "neck": 268265,
+    "back": 268253,
+    "finger1": 268249,
+    "finger2": 268252
+  },
+  "gems": {
+    "head": "240983",
+    "neck": "240900/240900",
+    "wrists": "240900",
+    "waist": "240900",
+    "finger1": "240900",
+    "finger2": "240900"
+  },
+  "specializations": {
+    "druid/balance": {
+      "family": "leather",
+      "role": "spell",
+      "primary": "intellect",
+      "weapon_form": "one_hand_frill",
+      "tier_ids": {
+        "head": 271528,
+        "shoulders": 271526,
+        "chest": 271531,
+        "hands": 271529,
+        "legs": 271527
+      },
+      "four_tier_slots": [
+        "head",
+        "shoulders",
+        "hands",
+        "legs"
+      ],
+      "ordinary": {
+        "chest": 251159,
+        "wrists": 268240,
+        "waist": 268256,
+        "feet": 268261
+      },
+      "weapons": {
+        "main_hand": 271092,
+        "off_hand": 268197
+      }
+    },
+    "evoker/devastation": {
+      "family": "mail",
+      "role": "spell",
+      "primary": "intellect",
+      "weapon_form": "one_hand_frill",
+      "tier_ids": {
+        "head": 271501,
+        "shoulders": 271499,
+        "chest": 271504,
+        "hands": 271502,
+        "legs": 271500
+      },
+      "four_tier_slots": [
+        "shoulders",
+        "chest",
+        "hands",
+        "legs"
+      ],
+      "ordinary": {
+        "head": 271441,
+        "wrists": 273775,
+        "waist": 268254,
+        "feet": 271440
+      },
+      "weapons": {
+        "main_hand": 271092,
+        "off_hand": 268197
+      }
+    }
+  }
+}
