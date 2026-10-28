@@ -111,6 +111,63 @@ CONTRACTS={
         "primary":"intellect","role":"spell","position":"back",
         "weapon_form":"one_hand_frill","allowed_races":None,
     },
+    # Remaining 11 legacy source-backed DPS specs; data-only preview.
+    # No default-route promotion and no claim of new Native acceptance.
+    "deathknight/frost":{
+        "simc_class":"deathknight","simc_spec":"frost","family":"plate",
+        "primary":"strength","role":"attack","position":"back",
+        "weapon_form":"dual_one_hand","allowed_races":None,
+    },
+    "deathknight/unholy":{
+        "simc_class":"deathknight","simc_spec":"unholy","family":"plate",
+        "primary":"strength","role":"attack","position":"back",
+        "weapon_form":"single_two_hand","allowed_races":None,
+    },
+    "demonhunter/devourer":{
+        "simc_class":"demonhunter","simc_spec":"devourer","family":"leather",
+        "primary":"intellect","role":"spell","position":"back",
+        "weapon_form":"dual_one_hand","allowed_races":None,
+    },
+    "demonhunter/havoc":{
+        "simc_class":"demonhunter","simc_spec":"havoc","family":"leather",
+        "primary":"agility","role":"attack","position":"back",
+        "weapon_form":"dual_one_hand","allowed_races":None,
+    },
+    "druid/feral":{
+        "simc_class":"druid","simc_spec":"feral","family":"leather",
+        "primary":"agility","role":"attack","position":"back",
+        "weapon_form":"single_two_hand","allowed_races":None,
+    },
+    "hunter/marksmanship":{
+        "simc_class":"hunter","simc_spec":"marksmanship","family":"mail",
+        "primary":"agility","role":"attack","position":"ranged_back",
+        "weapon_form":"ranged","allowed_races":None,
+    },
+    "hunter/survival":{
+        "simc_class":"hunter","simc_spec":"survival","family":"mail",
+        "primary":"agility","role":"attack","position":"back",
+        "weapon_form":"single_two_hand","allowed_races":None,
+    },
+    "monk/windwalker":{
+        "simc_class":"monk","simc_spec":"windwalker","family":"leather",
+        "primary":"agility","role":"attack","position":"back",
+        "weapon_form":"single_two_hand","allowed_races":None,
+    },
+    "rogue/assassination":{
+        "simc_class":"rogue","simc_spec":"assassination","family":"leather",
+        "primary":"agility","role":"attack","position":"back",
+        "weapon_form":"dual_one_hand","allowed_races":None,
+    },
+    "shaman/enhancement":{
+        "simc_class":"shaman","simc_spec":"enhancement","family":"mail",
+        "primary":"agility","role":"attack","position":"back",
+        "weapon_form":"dual_one_hand","allowed_races":None,
+    },
+    "warrior/arms":{
+        "simc_class":"warrior","simc_spec":"arms","family":"plate",
+        "primary":"strength","role":"attack","position":"back",
+        "weapon_form":"single_two_hand","allowed_races":None,
+    },
 }
 
 def lookup(class_name,specialization):
