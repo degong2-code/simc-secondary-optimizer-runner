@@ -106,7 +106,7 @@ class UserSessionControls(unittest.TestCase):
                 for slot in ("trinket1","trinket2"):
                     vals=[line for line in lines if line.startswith(slot+"=")]
                     self.assertEqual(len(vals),1)
-                    m=re.search(r"(?:^|,)id=(\\d+)(?:,|$)",vals[0])
+                    m=re.search(r"(?:^|,)id=(\d+)(?:,|$)",vals[0])
                     self.assertIsNotNone(m)
                     ids.append(int(m.group(1)))
                 self.assertEqual(ids,compact["trinket_ids"])
