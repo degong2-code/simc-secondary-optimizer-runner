@@ -24,6 +24,7 @@ from pydantic import BaseModel, ConfigDict, Field
 import v106_user_session_controller as sessions
 import v098_target_user_scenario_bootstrap as bootstrap
 import v108_native_consumable_inputs as consumables
+import v148_local_batch_results as batch_view
 
 SCHEMA = "v113_local_web_api_p1_v1"
 KEY = re.compile(r"[a-f0-9]{20}\Z")
@@ -224,8 +225,10 @@ class LocalJobs:
         except Exception as exc:
             raise blocked(exc) from None
 
-def create_app(*,root=None, token=None):
+def create_app(*,root=None, token=None, batch_root=None):
     jobs=LocalJobs(root or sessions.DEFAULT_ROOT)
+    snapshots=(pathlib.Path(batch_root).expanduser().resolve() if batch_root
+               else pathlib.Path.home()/"SIMC_Secondary_Optimizer"/"v147_batch")
     key=token or secrets.token_urlsafe(32)
     app=FastAPI(title="SIMC Secondary Optimizer LOCAL API",
                 version="113.0",openapi_url=None,docs_url=None,redoc_url=None)
@@ -303,6 +306,21 @@ def create_app(*,root=None, token=None):
             "diamond_id":[0,*sorted(consumables.DIAMONDS)],
             "omnium_talents":["source_default",*sorted(consumables.OMNIUM_PRESETS)]
         }
+
+    @app.get("/api/v1/native-batches")
+    def native_batches():
+        return {"schema":batch_view.SCHEMA,
+                "batches":batch_view.find_batches(snapshots),
+                "native_calls_now":0,
+                "mode":"LOCAL_COPIED_REPORT_READ_ONLY"}
+
+    @app.get("/api/v1/native-batches/{batch_id}/results")
+    def native_batch_results(batch_id: str):
+        try:
+            return batch_view.view_batch(snapshots,batch_id)
+        except batch_view.BatchViewBlocked as exc:
+            # Do not return original path, source profile or raw SimC JSON.
+            raise HTTPException(422,detail={"code":str(exc).split(":",1)[0]}) from None
 
     @app.get("/api/v1/health")
     def health():
@@ -390,13 +408,15 @@ def main(argv=None):
     p=argparse.ArgumentParser(description="P1-WEB-2 local HTML webapp with existing SimC engine")
     p.add_argument("--host",default=LOCAL_HOST,choices=[LOCAL_HOST])
     p.add_argument("--port",type=int,default=8765)
+    p.add_argument("--batch-root",type=pathlib.Path,
+                   help="Optional relocated v147_batch directory; read-only Native results, never cache relocation")
     args=p.parse_args(argv)
     if not 1024<=args.port<=65535:
         p.error("PORT_MUST_BE_1024_TO_65535")
     import uvicorn
     print(f"SIMC_LOCAL_WEB http://{LOCAL_HOST}:{args.port}/",
           flush=True)
-    uvicorn.run(create_app(),host=LOCAL_HOST,port=args.port,
+    uvicorn.run(create_app(batch_root=args.batch_root),host=LOCAL_HOST,port=args.port,
                 proxy_headers=False,access_log=False)
 
 if __name__=="__main__":
