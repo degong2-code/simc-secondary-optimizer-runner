@@ -62,20 +62,50 @@ class PurePlanBridge(unittest.TestCase):
                                pure_stage=True)["plan"]["base_B"],
                     output["plan"]["base_B"])
 
-    def test_default_user_path_remains_strictly_24_and_aug_is_excluded(self):
-        root,binary,user=self.fixture()
+    def test_default_product_path_is_source_independent_only_for_native_proven_two(self):
+        for spec,cl,race in (
+            ("balance","druid","night_elf"),
+            ("devastation","evoker","dracthyr")):
+            with self.subTest(spec=spec):
+                root,binary,user=self.fixture(spec,cl,race)
+                folder=root/"product"
+                plan=boot.build(user,folder,binary,"7bc10711b5")
+                self.assertEqual(plan["status"],
+                                 "READY_INTERNAL_MANIFEST_ZERO_NATIVE")
+                self.assertEqual(plan["plan"]["item_slots"],16)
+                self.assertEqual(plan["native_calls"],0)
+                manifest=json.loads((folder/"manifest.json").read_text())
+                self.assertNotIn(boot.entry.STAGE_FIELD,manifest)
+                profile=(folder/"profile.simc").read_text()
+                self.assertIn("default_actions=1",profile)
+                self.assertNotIn("actions.",profile)
+                # Direct normal production entry, no v140 local witness needed:
+                # verify existing v094 bridge is reached, with mocked Native.
+                mocked={"status":"PASS_OFFLINE_MOCK","B":3150,
+                        "official_final_T":3150,
+                        "new_native_attempts_cumulative":0,
+                        "verified_cache_hits_this_run":0}
+                with mock.patch.object(boot.entry.durable,"run",
+                        return_value=mocked) as native, mock.patch.object(
+                        boot.entry,"user_facing_result",return_value={"fake":True}):
+                    result=boot.entry.run_manifest(folder/"manifest.json")
+                native.assert_called_once()
+                self.assertEqual(result["status"],"PASS_OFFLINE_MOCK")
+                self.assertNotIn("internal_pure_physical_acceptance",result)
+                self.assertFalse((folder/"simc_results"/"V094_RESULT.json").exists())
+        self.assertEqual(len(boot.PURE_PRODUCT_SPECS),2)
+
+    def test_augmentation_remains_excluded_from_all_product_paths(self):
+        root,binary,user=self.fixture("augmentation","evoker","dracthyr")
         with self.assertRaisesRegex(boot.UserScenarioBlocked,
                                     "REPRESENTATIVE_ARCHETYPE_NOT_READY"):
-            boot.build(user,root/"default",binary,"7bc10711b5")
-        user["character"]["class"]="evoker"
-        user["character"]["spec"]="augmentation"
-        user["character"]["race"]="dracthyr"
+            boot.build(user,root/"aug",binary,"7bc10711b5")
         with self.assertRaisesRegex(boot.UserScenarioBlocked,
                                     "REPRESENTATIVE_ARCHETYPE_NOT_READY"):
-            boot.build(user,root/"aug",binary,"7bc10711b5",
+            boot.build(user,root/"aug_stage",binary,"7bc10711b5",
                        pure_stage=True)
-        self.assertFalse((root/"default").exists())
         self.assertFalse((root/"aug").exists())
+        self.assertFalse((root/"aug_stage").exists())
 
     def test_pure_stage_native_executable_entry_is_rejected_before_any_simc(self):
         root,binary,user=self.fixture()
