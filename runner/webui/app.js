@@ -17,7 +17,7 @@ const specLabels = {
   "rogue/outlaw":"도적 · 무법 (목표 프로필 Native 시험 전)",
   "deathknight/frost":"죽음의 기사 · 냉기 (기본334 조건 6후보·95% 실기 PASS)",
   "deathknight/unholy":"죽음의 기사 · 부정 (기본334 단발 Native PASS · 최적화 미검증)",
-  "druid/feral":"드루이드 · 야성 (대표 프로필 단발 Native PASS · 목표 CHMV 최적화 미검증)",
+  "druid/feral":"드루이드 · 야성 (기본334 조건 6후보·95% 실기 PASS)",
   "demonhunter/devourer":"악마사냥꾼 · 포식 (기본334 단발 Native PASS · 최적화 미검증)",
   "demonhunter/havoc":"악마사냥꾼 · 파멸 (기본334 단발 Native PASS · 최적화 미검증)",
   "hunter/marksmanship":"사냥꾼 · 사격 (기본334 단발 Native PASS · 최적화 미검증)",
@@ -72,6 +72,54 @@ function valueInt(id) {
   const text=field(id);
   if (!/^[0-9]+$/.test(text)) throw Error(id.toUpperCase()+"_POSITIVE_INTEGER_REQUIRED");
   return Number(text);
+}
+// Import ONLY a single character's identity/talents. Never read worn gear,
+// gear_* totals, socket/rating values, APL, trinkets or consumable settings.
+// Parsing happens entirely in this browser; no upload, persistence or Native.
+function parseSimcCharacter(source) {
+  if(typeof source!=="string"||!source.trim()||source.length>250000)
+    throw Error("SimC 프로필 텍스트는 1~250,000자여야 합니다.");
+  const classes=new Set(state.defaults.map(x=>x.class));
+  const actors=[];
+  const info={};
+  for(const raw of source.split(/\r?\n/)) {
+    const line=raw.trim();
+    if(!line||line.startsWith("#"))continue;
+    const matched=/^([a-z_]+)\s*=\s*(.*)$/i.exec(line);
+    if(!matched)continue;
+    const name=matched[1].toLowerCase(),value=matched[2].trim();
+    if(classes.has(name))actors.push(name);
+    if(["spec","race","talents"].includes(name)) {
+      if(Object.hasOwn(info,name))throw Error("SimC 프로필에 중복된 "+name+" 항목이 있습니다.");
+      info[name]=value;
+    }
+    if(name==="copy")throw Error("여러 캐릭터/복제 프로필은 가져올 수 없습니다.");
+  }
+  if(actors.length!==1||!info.spec||!info.race||!info.talents)
+    throw Error("한 캐릭터의 직업·전문화·종족·talents가 모두 필요합니다.");
+  const race=info.race.toLowerCase(),spec=info.spec.toLowerCase();
+  if(!/^[a-z_]{2,40}$/.test(race)||
+     !/^[a-z_]{2,60}$/.test(spec)||
+     !/^[A-Za-z0-9+/_=-]{10,2048}$/.test(info.talents))
+    throw Error("SimC 종족·전문화·특성 코드 형식이 올바르지 않습니다.");
+  const key=actors[0]+"/"+spec;
+  const matched=state.defaults.find(x=>x.class+"/"+x.spec===key);
+  if(!matched)throw Error("아직 지원하지 않는 전문화: "+key);
+  return {key,race,talents:info.talents,defaults:matched};
+}
+async function importSimcCharacter() {
+  const file=$("simc-import-file").files?.[0];
+  if(file&&file.size>250000)throw Error("SimC 프로필 파일은 250KB 이하여야 합니다.");
+  const source=file?await file.text():$("simc-import-text").value;
+  const parsed=parseSimcCharacter(source);
+  if(field("spec")!==parsed.key) {
+    $("spec").value=parsed.key;
+    // Same reset behavior as a manual specialization change.
+    fillDefault(parsed.defaults);
+  }
+  $("race").value=parsed.race;
+  $("talents").value=parsed.talents;
+  setNotice("SimC 캐릭터 정보만 적용됨 · 현재 장비·스탯은 가져오지 않았고 Native 0회");
 }
 function showRepresentativeScope() {
   // The 16 new source-to-target profiles have actual one-shot Native proof,
@@ -437,6 +485,7 @@ function installOptions(options) {
     v==="source_default"?"원본 5룬 조합":v);
 }
 function registerHandlers() {
+  $("simc-import-btn").addEventListener("click",()=>withBusy(importSimcCharacter));
   $("spec").addEventListener("change",()=>{
     const selected=state.defaults.find(d=>d.class+"/"+d.spec===field("spec"));
     if(selected)fillDefault(selected);
