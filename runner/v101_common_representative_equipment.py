@@ -293,14 +293,15 @@ def source_backed_gear(key,folder,ilevel,need,*,ordinary_variant=None):
         rows[slot]={**candidate,"options":dict(spec["options"])}
     return base,cfg,rows,groups,form,F
 
-def reconcile_four_tier(key,rows,groups,taken,ilevel,need):
+def reconcile_four_tier(key,rows,groups,taken,ilevel,need,*,fifth_override=None):
     """Restore an exact source-backed fifth tier when one of four is displaced."""
-    need(key in FIFTH_TIER,"FIFTH_CLASS_TIER_ID_UNAVAILABLE")
+    fifth_data=FIFTH_TIER.get(key) if fifth_override is None else fifth_override
+    need(fifth_data is not None,"FIFTH_CLASS_TIER_ID_UNAVAILABLE")
     count=sum(groups.get(k)=="tier" for k in TIER_FIVE)
     need(count<=4,"FIVE_TIER_LAYOUT_OUTSIDE_FOUR_ROW_CONTRACT")
     added=[]
     if count<4:
-        slot,tier_id,ordinary_id=FIFTH_TIER[key]
+        slot,tier_id,ordinary_id=fifth_data
         need(slot not in taken and groups.get(slot) is None
              and rows[slot]["item_id"]==ordinary_id,
              "FOUR_TIER_UNAVAILABLE_SELECTED_FIFTH_OR_UNKNOWN_SOURCE")
@@ -314,12 +315,17 @@ def reconcile_four_tier(key,rows,groups,taken,ilevel,need):
          "FOUR_TIER_NOT_SATISFIED")
     return added
 
-def apply_user_equipment(key,rows,groups,user,ilevel,need):
+def apply_user_equipment(key,rows,groups,user,ilevel,need,*,
+                         tier_override=None,fifth_override=None):
     """Overlay selected items and reassign tier 4pc without item-combo search.
 
     Mutates only its private rows/groups objects. Selected catalyst specials
     are represented as ONE tier row plus optional typed fixed-L metadata.
     """
+    tier_map=(CLASS_TIER_ITEMS[key[0]] if tier_override is None
+              else tier_override)
+    fifth_data=(FIFTH_TIER[key] if fifth_override is None
+                else fifth_override)
     taken=set()
     for group,selection in (("trinkets",user["trinkets"]),
                             ("special",user["special_items"]),
@@ -350,14 +356,14 @@ def apply_user_equipment(key,rows,groups,user,ilevel,need):
                      not (set(opts)&{"crafted_stats","embellishment"}),
                      "SPECIAL_NOT_VALID_NONCRAFTED_SLOT")
                 if groups.get(slot)=="tier":
-                    need(raw["item_id"]==CLASS_TIER_ITEMS[key[0]][slot]
+                    need(raw["item_id"]==tier_map[slot]
                          and "redirected_base_stats" in opts
                          and int(opts["redirected_base_stats"])!=raw["item_id"],
                          "CATALYST_CLASS_TIER_ID_AND_ORIGIN_REQUIRED")
                     slot_group="tier"
-                elif (slot==FIFTH_TIER[key][0] and
+                elif (slot==fifth_data[0] and
                       "redirected_base_stats" in opts):
-                    need(raw["item_id"]==CLASS_TIER_ITEMS[key[0]][slot] and
+                    need(raw["item_id"]==tier_map[slot] and
                          int(opts["redirected_base_stats"])!=raw["item_id"],
                          "CATALYST_FIFTH_CLASS_TIER_ID_OR_ORIGIN")
                     slot_group="tier"
@@ -374,7 +380,8 @@ def apply_user_equipment(key,rows,groups,user,ilevel,need):
             groups[slot]=slot_group
     need({r["slot"] for r in user["trinkets"]}=={"trinket1","trinket2"},
          "USER_TRINKET_SLOTS_NOT_EXACT")
-    restored=reconcile_four_tier(key,rows,groups,taken,ilevel,need)
+    restored=reconcile_four_tier(key,rows,groups,taken,ilevel,need,
+                                  fifth_override=fifth_data)
     catalyst=[{"slot":slot,"tier_item_id":row["item_id"],
                "source_item_id":int(row["options"]["redirected_base_stats"])}
               for slot,row in rows.items()
