@@ -287,8 +287,8 @@ class PureProfileComposer(unittest.TestCase):
                     self.assertEqual(rows["off_hand"]["options"],off_opts)
                 else:
                     self.assertNotIn("off_hand=",profile)
-                self.assertIn("role="+role+"\\n",profile)
-                self.assertIn("default_actions=1\\n",profile)
+                self.assertIn("role="+role+"\n",profile)
+                self.assertIn("default_actions=1\n",profile)
                 self.assertNotIn("actions.",profile)
                 self.assertEqual(meta["status"],"STAGED_NOT_USER_READY")
                 self.assertFalse(meta["source_profile_read"])
