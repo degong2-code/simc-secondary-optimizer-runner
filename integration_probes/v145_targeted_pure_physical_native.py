@@ -19,7 +19,7 @@ import sys
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"runner"))
-from integration_probes import v140_pure_profile_physical_native_smoke as physical
+import v140_pure_profile_physical_native_smoke as physical
 import v063_numeric_injection as numeric
 import v098_target_user_scenario_bootstrap as bootstrap
 import v143_specialization_contracts as specs
@@ -198,7 +198,7 @@ def run(user,binary,out,revision,*,iterations=1,timeout_seconds=180,
             receipt["json2_sha256"]=sha(output_json.read_bytes())
         put_once(receipt_file,canonical(receipt))
         attempted=1
-    summary={"schema":SCHEMA,"spec":key,
+    summary={"schema":SCHEMA,"spec":key,"output_dir":str(folder),
              "status":status,"new_native_calls":attempted,
              "physical_input":str(input_file) if input_file.exists() else None,
              "raw_log":str(folder/"simc.log") if (folder/"simc.log").exists() else None,
@@ -206,9 +206,9 @@ def run(user,binary,out,revision,*,iterations=1,timeout_seconds=180,
              "receipt":str(receipt_file) if receipt_file.exists() else None,
              "user_optimizer_ready":False,
              "next_step":"REVIEW_PHYSICAL_JSON2_BEFORE_ANY_ADAPTIVE_PROMOTION"}
-    put_once(folder/"SUMMARY.json",canonical(summary)) if not (
-        (folder/"SUMMARY.json").is_file()) else (folder/"SUMMARY.json").write_text(
-        canonical(summary),encoding="utf8")
+    # SUMMARY is an ephemeral latest-status view; evidence files above are
+    # immutable. Do not create a second log, history store, or cache index.
+    (folder/"SUMMARY.json").write_text(canonical(summary),encoding="utf8")
     return summary
 
 def main(argv=None):
@@ -228,10 +228,10 @@ def main(argv=None):
                    iterations=a.iterations,timeout_seconds=a.timeout_seconds,
                    max_new=a.max_new)
         print(json.dumps(result,indent=2,ensure_ascii=False,sort_keys=True))
-        print("OUTPUT_DIR:",str(a.out.resolve()))
+        print("OUTPUT_DIR:",result["output_dir"])
         if os.name=="nt":
             try:
-                os.startfile(str(a.out.resolve()))
+                os.startfile(result["output_dir"])
             except OSError:
                 pass
         return 0 if result["status"] in ("PREPARED_NO_NATIVE",
