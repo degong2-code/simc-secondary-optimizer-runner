@@ -200,7 +200,8 @@ def run_manifest(manifest_path,*,plan_only=False,cache_only=False,
            scouts=user["scouts"],material_scouts=user["material_scouts"],
            step=user["step"],native_limit=user["native_limit"],
            cache_only=cache_only,cancel_file=paths["cancel_file"],
-           open_folder=True)
+           open_folder=True,
+           recover_verified_partial=bool(witness))
     return {"schema":SCHEMA,"status":result["status"],
         **({"internal_pure_physical_acceptance":witness} if witness else {}),
         "result_path":str(paths["output_dir"]/"V094_RESULT.json"),
