@@ -3,6 +3,7 @@ import copy,pathlib,sys,tempfile,unittest
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"runner"))
 import v061_scenario_contract as scenario
+import v102_ordinary_armor_seed_pool as future_pool
 import v104_shared_pinned_rogue_shaman_composer as target
 
 class SourceBackedTwoSpecComposer(unittest.TestCase):
@@ -63,6 +64,20 @@ class SourceBackedTwoSpecComposer(unittest.TestCase):
         self.assertNotIn("crafted_stats",source["wrists"]["options"])
         self.assertEqual(len(cfg["equipment"]["tier"]),4)
         self.assertEqual(source["off_hand"]["item_id"],268262)
+
+    def test_historical_shaman_baseline_is_decoupled_from_future_mail_seed_pool(self):
+        self.assertEqual(target.HISTORICAL_ORDINARY[("mail","head")],249317)
+        self.assertEqual(target.HISTORICAL_ORDINARY[("mail","feet")],249320)
+        self.assertEqual(future_pool.row("mail","head",334)["item_id"],271441)
+        self.assertEqual(future_pool.row("mail","feet",334)["item_id"],271440)
+        profile,cfg,fill,_=target.create_from_source(
+            self.source(("shaman","elemental")),pathlib.Path("."),
+            ("shaman","elemental"))
+        rows={r["slot"]:r for r in cfg["equipment"]["tier"]+fill}
+        self.assertEqual(rows["head"]["item_id"],249317)
+        self.assertEqual(rows["feet"]["item_id"],249320)
+        self.assertNotIn("selected_271441,id=271441",profile)
+        self.assertNotIn("selected_271440,id=271440",profile)
 
     def test_source_tampering_rejected_and_all_other_specs_not_enabled(self):
         for key in target.PROFILES:
