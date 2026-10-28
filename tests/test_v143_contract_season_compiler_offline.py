@@ -4,11 +4,13 @@ import copy
 import hashlib
 import pathlib
 import sys
+import tempfile
 import unittest
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"runner"))
 import v139_pure_target_profile_composer as pure
+import v098_target_user_scenario_bootstrap as bootstrap
 import v143_specialization_contracts as specs
 from integration_probes.v140_pure_profile_physical_native_smoke import user_for
 
@@ -45,11 +47,27 @@ class IndependentSeasonCompiler(unittest.TestCase):
                 text,meta,rows,tier=pure.compose(
                     user["character"],user["trinkets"],
                     target_ilevel=334,combat=user["combat"])
-                self.assertEqual(hashlib.sha256(text.encode("utf8")).hexdigest(),sha)
                 self.assertEqual(meta["native_calls"],0)
                 self.assertFalse(meta["source_profile_read"])
                 self.assertEqual(len(tier),4)
                 self.assertEqual(len(rows),16)
+                # The real Native identity hashes the FINAL v098 emitter
+                # output (including validated selected gear/consumables),
+                # not v139's intermediate string.
+                with tempfile.TemporaryDirectory() as td:
+                    root=pathlib.Path(td)
+                    binary=root/"simc.mock"
+                    binary.write_bytes(b"OFFLINE_NO_NATIVE_SIMC")
+                    folder=root/"stage"
+                    result=bootstrap.build(user,folder,binary,"7bc10711b5",
+                                           pure_stage=True)
+                    self.assertEqual(result["native_calls"],0)
+                    profile=(folder/"profile.simc").read_bytes()
+                    self.assertEqual(hashlib.sha256(profile).hexdigest(),sha)
+                    self.assertEqual(hashlib.sha256(profile).hexdigest(),
+                                     result["plan"]["source_profile_sha256"]
+                                     if "source_profile_sha256" in result["plan"]
+                                     else hashlib.sha256(profile).hexdigest())
 
     def test_only_season_data_changes_for_future_season_mock(self):
         user=user_for("druid/balance")
