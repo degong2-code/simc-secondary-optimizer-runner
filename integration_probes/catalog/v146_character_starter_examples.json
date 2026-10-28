@@ -1,0 +1,102 @@
+{
+  "schema": "v146_user_character_starter_examples_v1",
+  "purpose": "Editable race/talents/trinket examples only, never source profiles, worn gear, Native evidence or runtime optimizer templates",
+  "entries": {
+    "warrior/fury": {
+      "race": "dwarf",
+      "talents": "CgEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgGDzMmZ2MzMzMDjZmZGzMzsMzMmZmZzYmBAAixy2ALgJYGmAzwGwMDjNAAYmhxYYMYM",
+      "trinket_ids": [
+        270175,
+        270173
+      ]
+    },
+    "paladin/retribution": {
+      "race": "dwarf",
+      "talents": "CYEAAAAAAAAAAAAAAAAAAAAAAAAAAAANbbzMzywMDAAAAAAjyYGmZsNmthZ2mxYMGmxCbDDYWmtZmZrBBAAsAYAwYGmBzYmZDYmZYMjBD",
+      "trinket_ids": [
+        270173,
+        270175
+      ]
+    },
+    "mage/frost": {
+      "race": "tauren",
+      "talents": "CAEAAAAAAAAAAAAAAAAAAAAAAYGGLzMzsMmZmYmZGjZMziZmZmZMDEAAYmZmllZm2AAAAAAgNA2WGzMzAbzYmZYBAAgZ2AmBGwADD",
+      "trinket_ids": [
+        281215,
+        270168
+      ]
+    },
+    "hunter/beast_mastery": {
+      "race": "dwarf",
+      "talents": "C0PAAAAAAAAAAAAAAAAAAAAAAAMmxwCsAzwQDbAAYGGzsMzwMmZYYmxYmxMzYGzsYmZMjZwYaGAAAAwMAAAMmZGgZ2IbwsA2GAGA",
+      "trinket_ids": [
+        281215,
+        270175
+      ]
+    },
+    "rogue/outlaw": {
+      "race": "dwarf",
+      "talents": "CQQAAAAAAAAAAAAAAAAAAAAAAAgx2MMzMmZmtZmZmZMmF4BmZbaZw2MAAAAAALLzMzwMzMziZmZbAAAAYmBAjZxwQGYWYhWYjBYmBDMA",
+      "trinket_ids": [
+        270175,
+        270173
+      ]
+    },
+    "rogue/subtlety": {
+      "race": "dwarf",
+      "talents": "CUQAAAAAAAAAAAAAAAAAAAAAAAgx2MAAAAAwsMGLTMbbjxMDDzMzMzw8AbzYGbbzMzMzMjBjZ2GAAAAGMmFzyADYBsMMhMLYGmZAmxA",
+      "trinket_ids": [
+        270175,
+        270173
+      ]
+    },
+    "shaman/elemental": {
+      "race": "tauren",
+      "talents": "CYQAAAAAAAAAAAAAAAAAAAAAAAAAAAzMbbzMmZmZZbZMMjBAAAAsYmNYADY2YCZWAgZbmZGjtFTYmxYxMzMmZWsMjFzMMzyAAGGAzMGGGA",
+      "trinket_ids": [
+        270164,
+        273796
+      ]
+    },
+    "deathknight/frost": {
+      "race": "human",
+      "talents": "CsPAAAAAAAAAAAAAAAAAAAAAAMAGAADYYYMiBjhZGDmZmZmZmZmBAAAAAAAAgxYgBAsMMhMWwMjhBGAGmBAwA",
+      "trinket_ids": [
+        270175,
+        270173
+      ]
+    },
+    "deathknight/unholy": {
+      "race": "troll",
+      "talents": "CwPAAAAAAAAAAAAAAAAAAAAAAAwMjZMDDz2MzMTzmZmZMjBAAAAAAAgZGmZAwyMmZ2mZGjZAbmFDDZgZjhGLAYGAGzMjZAmZmxYA",
+      "trinket_ids": [
+        270175,
+        270173
+      ]
+    },
+    "demonhunter/devourer": {
+      "race": "void_elf",
+      "talents": "CgcBAAAAAAAAAAAAAAAAAAAAAAAWMzMzMzMzMwMAAAAAAALzYMYGAAAAAAAAmxMMmZmZYmZGzsNzYsptFAEwAMjZmZbmZa2mZbmZMjBA",
+      "trinket_ids": [
+        250215,
+        270164
+      ]
+    },
+    "demonhunter/havoc": {
+      "race": "blood_elf",
+      "talents": "CEkAAAAAAAAAAAAAAAAAAAAAAYAzMzmxMzMmZmMmZAAAAAAAzyDMmtZYmxyMzYZm5BmZWmZWGjBWmFzYY200wMjhNAAAAAAAAmZwAAAAwA",
+      "trinket_ids": [
+        270168,
+        270173
+      ]
+    },
+    "druid/feral": {
+      "race": "night_elf",
+      "talents": "CcGADBD3hSPCL9Y9gz68WcKvMAAAAAAwYMjHwYmZMmtFPwyYbmZGzMDAAAALBzmhxMjaGzyYmZmtxMAAAAAAwADAAAgmZZ2mZmZ2mZpZZmlNwMDwiZwAAYmBzshB",
+      "trinket_ids": [
+        270175,
+        270173
+      ]
+    }
+  }
+}
