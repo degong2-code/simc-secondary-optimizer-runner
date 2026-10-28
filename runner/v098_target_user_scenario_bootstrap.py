@@ -360,8 +360,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
 def run(user_path,folder,binary,revision,static_cache_path=None,
         execute=False,cache_only=False,*,ordinary_variant=None,pure_stage=False,
         physical_acceptance_root=None):
-    # Source-free profiles are currently offline-only: no path through
-    # v096 Native must be reachable until SimC itself accepts their items.
+    # Existing v140 physical acceptance authorizes only an exact-matching
+    # internal pilot. v096 independently verifies its original JSON2 receipt
+    # before allowing the established adaptive runner to make Native calls.
     need(not (pure_stage and execute and physical_acceptance_root is None),
          "PURE_STAGE_NATIVE_NOT_AUTHORIZED")
     need(pure_stage or physical_acceptance_root is None,
