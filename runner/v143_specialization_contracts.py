@@ -19,6 +19,15 @@ RATING_STATS=("crit_rating","haste_rating","mastery_rating",
               "versatility_rating")
 NON_TIER_ORDINARY=frozenset(("wrists","waist","feet"))
 WEAPON_SLOTS=frozenset(("main_hand","off_hand"))
+WEAPON_FORMS={
+    "one_hand_frill":("main_hand","off_hand"),
+    "one_hand_shield":("main_hand","off_hand"),
+    "dual_one_hand":("main_hand","off_hand"),
+    "dual_two_hand":("main_hand","off_hand"),
+    "single_one_hand":("main_hand",),
+    "single_two_hand":("main_hand",),
+    "ranged":("main_hand",),
+}
 
 # Explicitly product-proven source-independent P1 cases; not yet 26 native-
 # verified profile compiler contracts. Season IDs must not appear here.
@@ -41,6 +50,11 @@ CONTRACTS={
         "primary":"intellect","role":"spell","position":"back",
         "weapon_form":"one_hand_frill","allowed_races":None,
     },
+    "paladin/retribution":{
+        "simc_class":"paladin","simc_spec":"retribution","family":"plate",
+        "primary":"strength","role":"attack","position":"back",
+        "weapon_form":"single_two_hand","allowed_races":None,
+    },
 }
 
 def lookup(class_name,specialization):
@@ -57,6 +71,5 @@ def validate_contracts():
         assert info["family"] in ("leather","mail","plate","cloth")
         assert info["primary"] in ("intellect","strength","agility")
         assert info["role"] in ("spell","attack","tank","heal")
-        assert info["weapon_form"] in ("one_hand_frill","dual_one_hand",
-                                       "dual_two_hand","two_hand")
+        assert info["weapon_form"] in WEAPON_FORMS
     return True
