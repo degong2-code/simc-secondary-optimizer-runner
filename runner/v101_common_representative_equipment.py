@@ -33,10 +33,10 @@ TIER_FIVE=("head","shoulders","chest","hands","legs")
 # fifth ordinary selection. Legacy producers remain exact APL adapters.
 CLASS_TIER_ITEMS={entry.character_class:entry.tier_ids()
                   for entry in metadata.SOURCE_BACKED}
-# The 17 MID2 pinned sources reuse the same v134 adapter. Feral joins the
-# user-input beta only after its v133 physical six-gem/head-diamond candidate
-# passed one real Windows native smoke. This does NOT assert its target-CHMV
-# adaptive run has passed. v136's historical accepted 16 stay separately frozen.
+# The 17 MID2 pinned sources reuse the same v134 adapter. Feral entered
+# beta after v133 physical Native acceptance and subsequently completed
+# its own target334 adaptive 6/6 Native/selected-pair 95% user receipt.
+# Keep v136's separate historical accepted sixteen source receipts frozen.
 GENERIC_PENDING=frozenset(
     tuple(k.split("/")) for k in mid2_pins.NEW)
 for _key in GENERIC_PENDING:
