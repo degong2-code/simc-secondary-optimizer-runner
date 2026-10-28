@@ -17,6 +17,7 @@ import v091_weapon_oil_external_adapter as oil_mod
 import v096_unified_product_entry as entry
 import v108_native_consumable_inputs as consumer
 import v122_common_profile_format as profile_format
+import v139_pure_target_profile_composer as pure
 
 SCHEMA="v098_target_ilevel_user_scenario_v1"
 FIELDS={"schema","character","target","trinkets","special_items",
@@ -148,7 +149,7 @@ def initial_seeds(B,lower,upper):
     return [dict(zip(scenario.STATS,v)) for v in (first,second)]
 
 def build(user,folder,binary,revision,static_cache_path=None,
-          imported_profile_text=None,*,ordinary_variant=None):
+          imported_profile_text=None,*,ordinary_variant=None,pure_stage=False):
     """Return an already validated internal manifest and v096 plan; no Native."""
     need(type(user) is dict and set(user) in (
         FIELDS,FIELDS|{IMPORT_FIELD},FIELDS|{CONSUME_FIELD},
@@ -166,7 +167,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
     need(type(ch) is dict and set(ch)=={"class","spec","race","talents"},
          "USER_CHARACTER_FIELDS")
     key=(ch["class"],ch["spec"])
-    need(key in ARCHETYPES,"REPRESENTATIVE_ARCHETYPE_NOT_READY:"+"/".join(key))
+    need(key in ARCHETYPES or (pure_stage and
+         "/".join(key) in pure.catalog()["specializations"]),
+         "REPRESENTATIVE_ARCHETYPE_NOT_READY:"+"/".join(key))
     for name in ("race","talents"):
         scenario.text_token(ch[name],"USER_"+name.upper())
     tgt=user["target"]
@@ -196,7 +199,13 @@ def build(user,folder,binary,revision,static_cache_path=None,
     need(type(revision) is str and len(revision)>=7,"SIMC_REVISION_REQUIRED")
     # SimC APL and original item IDs stay in pinned source factory; v101 owns
     # the material/weapon/tier representative gear assembly thereafter.
-    if ordinary_variant is None:
+    if pure_stage:
+        need(ordinary_variant is None and ilvl==334,
+             "PURE_STAGE_TARGET_OR_VARIANT_NOT_READY")
+        base_profile,cfg,rows,groups,weapon_layout,F,tier_data,fifth_data=(
+            pure.v098_inputs(ch,user["trinkets"],target_ilevel=ilvl,
+                             combat=combat))
+    elif ordinary_variant is None:
         # Preserve the historical exact call shape and all default receipts.
         base_profile,cfg,rows,groups,weapon_layout,F=common.source_backed_gear(
             key,folder,ilvl,need)
@@ -209,8 +218,13 @@ def build(user,folder,binary,revision,static_cache_path=None,
              "ORDINARY_VARIANT_CONFLICTS_WITH_USER_SELECTED_ITEM")
         base_profile,cfg,rows,groups,weapon_layout,F=common.source_backed_gear(
             key,folder,ilvl,need,ordinary_variant=ordinary_variant)
-    restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
-        key,rows,groups,user,ilvl,need)
+    if pure_stage:
+        restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
+            key,rows,groups,user,ilvl,need,
+            tier_override=tier_data,fifth_override=fifth_data)
+    else:
+        restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
+            key,rows,groups,user,ilvl,need)
     # 240967 requires four distinct ordinary Midnight gem colors for its
     # crit-effectiveness bonus. These are real SimC gem IDs, not locked CHMV.
     # Existing 240983 profiles and already-four-color source rows stay intact.
@@ -312,7 +326,13 @@ def build(user,folder,binary,revision,static_cache_path=None,
     plan=entry.run_manifest(folder/"manifest.json",plan_only=True)
     need(plan["base_B"]==B and plan["item_slots"]==len(rows),
          "BOOTSTRAP_TO_V096_BUDGET_OR_SLOT_DRIFT")
-    return {"schema":SCHEMA,"status":"READY_INTERNAL_MANIFEST_ZERO_NATIVE",
+    return {"schema":SCHEMA,
+            "status":("STAGED_INTERNAL_MANIFEST_NATIVE_NOT_AUTHORIZED"
+                      if pure_stage else "READY_INTERNAL_MANIFEST_ZERO_NATIVE"),
+            **({"pure_source_independent_stage":True,
+                "physical_socket_weapon_native_verified":False,
+                "user_optimizer_ready":False}
+               if pure_stage else {}),
             "user_does_not_supply_full_gear_or_simc_profile":True,
             "template_archetype":"/".join(key),"target_ilevel":ilvl,
             "generated_manifest":str(folder/"manifest.json"),
@@ -337,7 +357,10 @@ def build(user,folder,binary,revision,static_cache_path=None,
                if ordinary_variant is not None else {})}
 
 def run(user_path,folder,binary,revision,static_cache_path=None,
-        execute=False,cache_only=False,*,ordinary_variant=None):
+        execute=False,cache_only=False,*,ordinary_variant=None,pure_stage=False):
+    # Source-free profiles are currently offline-only: no path through
+    # v096 Native must be reachable until SimC itself accepts their items.
+    need(not (pure_stage and execute),"PURE_STAGE_NATIVE_NOT_AUTHORIZED")
     path=pathlib.Path(user_path).resolve()
     user=json.loads(path.read_text(encoding="utf8"))
     imported=None
@@ -348,7 +371,7 @@ def run(user_path,folder,binary,revision,static_cache_path=None,
         imported=resolved.read_text(encoding="utf8")
     prepared=build(user,folder,binary,revision,static_cache_path,
                    imported_profile_text=imported,
-                   ordinary_variant=ordinary_variant)
+                   ordinary_variant=ordinary_variant,pure_stage=pure_stage)
     if not execute:return prepared
     actual=entry.run_manifest(prepared["generated_manifest"],cache_only=cache_only)
     return {"input_preparation":prepared,"native_result":actual}
@@ -361,6 +384,8 @@ def main(argv=None):
     p.add_argument("--revision",required=True)
     p.add_argument("--static-cache",type=pathlib.Path)
     p.add_argument("--execute",action="store_true")
+    p.add_argument("--pure-stage",action="store_true",
+                   help="Internal source-independent plan-only experiment; no Native")
     p.add_argument("--cache-only",action="store_true")
     p.add_argument("--ordinary-variant",
                    choices=sorted(common.ORDINARY_VARIANTS),
@@ -369,7 +394,7 @@ def main(argv=None):
     try:
         result=run(a.input,a.out,a.binary,a.revision,a.static_cache,
                    execute=a.execute,cache_only=a.cache_only,
-                   ordinary_variant=a.ordinary_variant)
+                   ordinary_variant=a.ordinary_variant,pure_stage=a.pure_stage)
         print(json.dumps(result,ensure_ascii=False,sort_keys=True,indent=2))
         return 0
     except Exception as e:
