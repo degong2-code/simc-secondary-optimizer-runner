@@ -33,7 +33,7 @@ class ExactReceiptReuseTests(unittest.TestCase):
     def fake_native(self,cmd,*,cwd,stdout,stderr,timeout,check):
         path=pathlib.Path(cwd)
         (path/"physical.json").write_text(
-            json.dumps({"report_version":"2.0.0",
+            json.dumps({"report_version":"2.0.0","git_revision":"7bc1071",
                         "sim":{"players":[{
                              "name":"fake_only",
                              "collected_data":{"dps":{"mean":1.0}}}]} }),
@@ -139,6 +139,26 @@ class ExactReceiptReuseTests(unittest.TestCase):
                     self.revision,execute=True,pure_stage=True,
                     physical_acceptance_root=self.witness)
             native.assert_not_called()
+
+    def test_v140_observed_git_revision_must_match_before_adaptive_native(self):
+        self.accepted()
+        native_path=self.witness/"druid__balance"/"physical.json"
+        receipt_path=self.witness/"druid__balance"/"receipt.json"
+        parsed=json.loads(native_path.read_text())
+        parsed["git_revision"]="ffffffff"
+        changed=json.dumps(parsed)
+        native_path.write_text(changed,encoding="utf8")
+        receipt=json.loads(receipt_path.read_text())
+        receipt["json2_sha256"]=pilot.sha(changed.encode("utf8"))
+        receipt_path.write_text(json.dumps(receipt),encoding="utf8")
+        with mock.patch.object(bootstrap.entry.durable,"run") as runner:
+            with self.assertRaisesRegex(pilot.AcceptanceBlocked,
+                     "V140_JSON2_REPORTED_SIMC_REVISION_DRIFT"):
+                bootstrap.run(self.userfile("druid/balance"),
+                    self.root/"wrong_native_git",self.binary,self.revision,
+                    execute=True,pure_stage=True,
+                    physical_acceptance_root=self.witness)
+            runner.assert_not_called()
 
     def test_different_revision_is_not_authorized_by_same_physical_receipt(self):
         self.accepted()
