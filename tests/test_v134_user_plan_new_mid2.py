@@ -55,12 +55,18 @@ class NewMid2ProductEntry(unittest.TestCase):
         self.assertTrue(common.validate_source_registry())
         self.assertEqual(controller.standard_controls(("druid","feral"))["spec"],
                          "feral")
-        for absent in (("druid","balance"),("evoker","devastation"),
-                       ("evoker","augmentation")):
-            with self.subTest(absent=absent):
-                with self.assertRaisesRegex(controller.SessionBlocked,
-                                             "V106_DPS_ARCHETYPE_NOT_READY"):
-                    controller.standard_controls(absent)
+        # Balance/Devastation were subsequently independently generated
+        # and each passed actual bounded Windows Native 6/6; they are user-
+        # supported pure paths, not members of the old 7+17 source registry.
+        for pure in (("druid","balance"),("evoker","devastation")):
+            with self.subTest(pure=pure):
+                self.assertIn(pure,bootstrap.PURE_PRODUCT_SPECS)
+                self.assertNotIn(pure,common.ARCHETYPES)
+                self.assertEqual(controller.standard_controls(pure)["spec"],
+                                 pure[1])
+        with self.assertRaisesRegex(controller.SessionBlocked,
+                                     "V106_DPS_ARCHETYPE_NOT_READY"):
+            controller.standard_controls(("evoker","augmentation"))
 
 if __name__=="__main__":
     unittest.main()
