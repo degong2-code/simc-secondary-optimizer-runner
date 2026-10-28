@@ -11,8 +11,11 @@ A future season replaces catalog data. The algorithm has no MID2 fixture,
 v132 profile or v133 draft dependency and calls no SimC executable.
 """
 from __future__ import annotations
+import hashlib
 import json
 import pathlib
+
+import v108_native_consumable_inputs as consumer
 
 import v055_simc_item_selection as items
 import v061_scenario_contract as scenario
@@ -139,6 +142,11 @@ def compose(character,trinkets,*,target_ilevel=334,
       "role=spell",
       "position=back",
       "default_actions=1",
+      "flask=flask_of_the_shattered_sun_2",
+      "food=royal_roast",
+      "potion=liquid_luster_2",
+      "augmentation=void_touched",
+      "omnium_talents=136822:1/136819:1/136817:1/136815:1/136814:1",
       "fight_style=Patchwerk",
       "desired_targets="+str(combat["targets"]),
       "max_time="+str(combat["duration_seconds"]),
@@ -168,3 +176,52 @@ def compose(character,trinkets,*,target_ilevel=334,
              "physical_socket_and_weapon_compatibility_verified":False,
              "chmv_budget_ready":False,"user_optimizer_ready":False}
     return profile,receipt,rows,set(info["four_tier_slots"])
+
+def v098_inputs(character,trinkets,*,target_ilevel=334,combat=None):
+    """Translate season-built profile to the established v061/v098 tuple.
+
+    No v132/v133 fixture, no per-spec APL, no second budget algorithm.
+    The caller retains strict plan-only execution status until Native accepts
+    the physical item/socket/weapon choices.
+    """
+    profile,receipt,rows,tier=compose(
+        character,trinkets,target_ilevel=target_ilevel,combat=combat)
+    cl,spec=character["class"],character["spec"]
+    info=catalog()["specializations"][cl+"/"+spec]
+    gem=int(rows["head"]["options"]["gem_id"])
+    need(gem in consumer.DIAMONDS,"STAGED_PRIMARY_DIAMOND_REQUIRED")
+    # v108 consumes these exact SimC-native settings, not another effect model.
+    consumer.default_choice(profile,rows["head"])
+    fields=("crit_rating","haste_rating","mastery_rating","versatility_rating")
+    flask_F={stat:(165 if stat=="crit_rating" else 0) for stat in fields}
+    groups={slot:"tier" for slot in tier}
+    groups.update({"trinket1":"trinkets","trinket2":"trinkets"})
+    fifth=next(slot for slot in TIER_SLOTS if slot not in tier)
+    tier_map=info["tier_ids"]
+    cfg={"schema":scenario.SCHEMA,
+         "character":{"class":cl,"spec":spec,"race":character["race"],
+                      "role":"spell","talents":character["talents"]},
+         "source":{"kind":"user_supplied",
+                   "profile_sha256":hashlib.sha256(profile.encode("utf8")).hexdigest()},
+         "target":{"mode":"derived_ilevel","ilevel":target_ilevel,
+                   "manual_total":None,"manual_total_scope":None},
+         "equipment":{"tier":[rows[slot] for slot in TIER_SLOTS if slot in tier],
+                      "special":[],"crafted":[],
+                      "trinkets":[rows[slot] for slot in ("trinket1","trinket2")]},
+         "consumables":{"gem_budget_J":138,"flask_budget_F":165,
+                        "special_gem_id":gem,
+                        "flask":"flask_of_the_shattered_sun_2",
+                        "food":"royal_roast","potion":"liquid_luster_2",
+                        "weapon_temporary":None,
+                        "weapon_temporary_fixed_rating":{stat:0 for stat in fields}},
+         "combat":{"fight_style":"Patchwerk","targets":1,"duration_seconds":300,
+                   "vary_combat_length_pct":0.0,"raid_buffs":True,
+                   "bloodlust":"on_pull","external_buffs":[],"events":[]},
+         "constraints":{"min_fraction":{stat:0.0 for stat in fields},
+                        "max_fraction":{stat:1.0 for stat in fields},
+                        "minimum_rating":{stat:0 for stat in fields}},
+         "runtime":{"scout_iterations":35,"confirm_iterations":320,
+                    "max_native_calls":6,"threads":1,"resume":True,"seed":1}}
+    scenario.normalize(cfg)
+    return (profile,cfg,rows,groups,info["weapon_form"],flask_F,
+            tier_map,(fifth,tier_map[fifth],rows[fifth]["item_id"]))
