@@ -358,10 +358,14 @@ def build(user,folder,binary,revision,static_cache_path=None,
                if ordinary_variant is not None else {})}
 
 def run(user_path,folder,binary,revision,static_cache_path=None,
-        execute=False,cache_only=False,*,ordinary_variant=None,pure_stage=False):
+        execute=False,cache_only=False,*,ordinary_variant=None,pure_stage=False,
+        physical_acceptance_root=None):
     # Source-free profiles are currently offline-only: no path through
     # v096 Native must be reachable until SimC itself accepts their items.
-    need(not (pure_stage and execute),"PURE_STAGE_NATIVE_NOT_AUTHORIZED")
+    need(not (pure_stage and execute and physical_acceptance_root is None),
+         "PURE_STAGE_NATIVE_NOT_AUTHORIZED")
+    need(pure_stage or physical_acceptance_root is None,
+         "PURE_PHYSICAL_ACCEPTANCE_NOT_FOR_SOURCE_PROFILES")
     path=pathlib.Path(user_path).resolve()
     user=json.loads(path.read_text(encoding="utf8"))
     imported=None
@@ -374,7 +378,12 @@ def run(user_path,folder,binary,revision,static_cache_path=None,
                    imported_profile_text=imported,
                    ordinary_variant=ordinary_variant,pure_stage=pure_stage)
     if not execute:return prepared
-    actual=entry.run_manifest(prepared["generated_manifest"],cache_only=cache_only)
+    if pure_stage:
+        actual=entry.run_manifest(prepared["generated_manifest"],
+            cache_only=cache_only,
+            physical_acceptance_root=physical_acceptance_root)
+    else:
+        actual=entry.run_manifest(prepared["generated_manifest"],cache_only=cache_only)
     return {"input_preparation":prepared,"native_result":actual}
 
 def main(argv=None):
@@ -386,7 +395,9 @@ def main(argv=None):
     p.add_argument("--static-cache",type=pathlib.Path)
     p.add_argument("--execute",action="store_true")
     p.add_argument("--pure-stage",action="store_true",
-                   help="Internal source-independent plan-only experiment; no Native")
+                   help="Internal source-independent stage; execute requires v140 receipt")
+    p.add_argument("--physical-acceptance-root",type=pathlib.Path,
+                   help="Internal v140 physical smoke root for exact reuse")
     p.add_argument("--cache-only",action="store_true")
     p.add_argument("--ordinary-variant",
                    choices=sorted(common.ORDINARY_VARIANTS),
@@ -395,7 +406,8 @@ def main(argv=None):
     try:
         result=run(a.input,a.out,a.binary,a.revision,a.static_cache,
                    execute=a.execute,cache_only=a.cache_only,
-                   ordinary_variant=a.ordinary_variant,pure_stage=a.pure_stage)
+                   ordinary_variant=a.ordinary_variant,pure_stage=a.pure_stage,
+                   physical_acceptance_root=a.physical_acceptance_root)
         print(json.dumps(result,ensure_ascii=False,sort_keys=True,indent=2))
         return 0
     except Exception as e:
