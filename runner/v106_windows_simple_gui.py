@@ -26,7 +26,12 @@ DISPLAY={
     ("mage","frost"):"마법사 — 냉기",
     ("hunter","beast_mastery"):"사냥꾼 — 야수",
     ("rogue","subtlety"):"도적 — 잠행",
-    ("shaman","elemental"):"주술사 — 정기"}
+    ("shaman","elemental"):"주술사 — 정기",
+    ("druid","balance"):"드루이드 — 조화",
+    ("evoker","devastation"):"기원사 — 황폐"}
+# Preserve all 24 existing beta entries; use readable fallbacks for others.
+for _key in SUPPORTED:
+    DISPLAY.setdefault(_key," / ".join(_key))
 SETTINGS=pathlib.Path.home()/"SIMC_Secondary_Optimizer"/"v106_gui_settings.json"
 
 def remembered_settings():
@@ -42,7 +47,7 @@ def save_settings(data):
 
 class UserWindow:
     def __init__(self,root):
-        self.root=root;root.title("SimC CHMV 최적화 — DPS 6개 전문화 베타")
+        self.root=root;root.title("SimC CHMV 최적화 — DPS 26개 경로 베타")
         root.geometry("890x760")
         self.proc=None;self.log_handle=None;self.folder=None
         self.running_cache_only=False
@@ -65,7 +70,7 @@ class UserWindow:
         ttk.Label(outer,text="목표 레벨 CHMV 최적화",
                   font=("",16,"bold")).grid(row=0,column=0,columnspan=4,
                   sticky="w",pady=(0,8))
-        ttk.Label(outer,text="현재 지원: 딜러 6개 전문화 · 대표 장비 내부 자동 생성 · 결과는 관측상 최고와 95% 비교",
+        ttk.Label(outer,text="DPS 26개 경로(기존 24개 소스 기반 베타 + 조화·황폐 독립 생성) · 목표 CHMV 절댓값 · 95% 비교",
                   wraplength=840).grid(row=1,column=0,columnspan=4,sticky="w")
         self.spec=tk.StringVar(value=DISPLAY[("paladin","retribution")])
         self.vars={}
