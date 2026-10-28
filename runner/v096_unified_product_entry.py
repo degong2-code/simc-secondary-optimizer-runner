@@ -13,6 +13,7 @@ import v065_v015_scheduler_adapter as scheduler
 import v091_weapon_oil_external_adapter as oil_adapter
 import v093_inclusive_adaptive_scheduler_bridge as adaptive
 import v094_durable_inclusive_adaptive_runner as durable
+import v141_verified_pure_native_pilot as pure_pilot
 
 SCHEMA="v096_user_scenario_unified_entry_v1"
 FIELDS={"schema","profile_simc","scenario_json","fillers_json",
@@ -175,11 +176,24 @@ def user_facing_result(report):
             "confirmation_scope":"TWO_FRESH_SELECTED_CANDIDATES_ONLY_NOT_GLOBAL",
             "global_optimum_proven":False}
 
-def run_manifest(manifest_path,*,plan_only=False,cache_only=False):
+def run_manifest(manifest_path,*,plan_only=False,cache_only=False,
+                 physical_acceptance_root=None):
     ready=source(manifest_path)
     if plan_only:return ready["plan"]
-    need(not ready["manifest"].get(STAGE_FIELD),
-         "UNVERIFIED_PURE_PROFILE_NATIVE_EXECUTION_BLOCKED")
+    staged=ready["manifest"].get(STAGE_FIELD) is True
+    witness=None
+    if staged:
+        need(physical_acceptance_root is not None,
+             "UNVERIFIED_PURE_PROFILE_NATIVE_EXECUTION_BLOCKED")
+        witness=pure_pilot.verify(
+            ready["paths"]["profile_simc"].read_text(encoding="utf8"),
+            ready["plan"]["binary_sha256"],
+            ready["manifest"]["native_revision"],
+            ready["plan"]["class"]+"/"+ready["plan"]["spec"],
+            physical_acceptance_root)
+    else:
+        need(physical_acceptance_root is None,
+             "PURE_PHYSICAL_ACCEPTANCE_NOT_FOR_DEFAULT_PROFILES")
     user=ready["manifest"];paths=ready["paths"]
     result=durable.run(ready["context"],ready["seeds"],ready["flask"],
            paths["native_binary"],paths["output_dir"],
@@ -188,6 +202,7 @@ def run_manifest(manifest_path,*,plan_only=False,cache_only=False):
            cache_only=cache_only,cancel_file=paths["cancel_file"],
            open_folder=True)
     return {"schema":SCHEMA,"status":result["status"],
+        **({"internal_pure_physical_acceptance":witness} if witness else {}),
         "result_path":str(paths["output_dir"]/"V094_RESULT.json"),
         "native_calls_cumulative":result["new_native_attempts_cumulative"],
         "cache_hits_this_run":result["verified_cache_hits_this_run"],
@@ -201,10 +216,13 @@ def main(argv=None):
     p.add_argument("--manifest",required=True)
     p.add_argument("--plan-only",action="store_true")
     p.add_argument("--cache-only",action="store_true")
+    p.add_argument("--physical-acceptance-root",type=pathlib.Path,
+                   help="Internal v140 exact physical acceptance reuse; staged profiles only")
     a=p.parse_args(argv)
     try:
         print(json.dumps(run_manifest(a.manifest,plan_only=a.plan_only,
-                         cache_only=a.cache_only),ensure_ascii=False,
+                         cache_only=a.cache_only,
+                         physical_acceptance_root=a.physical_acceptance_root),ensure_ascii=False,
                          sort_keys=True,indent=2))
         return 0
     except Exception as e:
