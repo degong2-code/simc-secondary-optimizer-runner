@@ -49,6 +49,12 @@ class PurePlanBridge(unittest.TestCase):
                 self.assertIn("omnium_talents=",prof)
                 manifest=json.loads((folder/"manifest.json").read_text())
                 self.assertEqual(manifest["native_limit"],6)
+                self.assertIs(manifest[boot.entry.STAGE_FIELD],True)
+                with mock.patch.object(boot.entry.durable,"run") as native:
+                    with self.assertRaisesRegex(boot.entry.EntryBlocked,
+                                                "UNVERIFIED_PURE_PROFILE_NATIVE_EXECUTION_BLOCKED"):
+                        boot.entry.run_manifest(folder/"manifest.json")
+                    native.assert_not_called()
                 self.assertTrue((folder/"fillers.json").is_file())
                 # Must not silently rewrite sealed plan/output on replay.
                 self.assertEqual(
