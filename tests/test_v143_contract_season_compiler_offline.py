@@ -91,6 +91,43 @@ class IndependentSeasonCompiler(unittest.TestCase):
                                   pure_stage=True)
                 native.assert_not_called()
 
+    def test_retribution_legacy_2h_stays_default_source_backed(self):
+        import v106_user_session_controller as sessions
+        controls=sessions.standard_controls(("paladin","retribution"))
+        user=sessions.user_scenario(controls)
+        self.assertIn(("paladin","retribution"),bootstrap.ARCHETYPES)
+        self.assertNotIn(("paladin","retribution"),
+                         bootstrap.PURE_PRODUCT_SPECS)
+        self.assertEqual(controls["oil_hands"],["main_hand"])
+        self.assertEqual(specs.lookup("paladin","retribution")["primary"],
+                         "strength")
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            binary=root/"simc.mock"
+            binary.write_bytes(b"OFFLINE_NO_NATIVE_SIMC")
+            path=root/"ret_stage"
+            result=bootstrap.build(user,path,binary,"7bc10711b5",
+                                   pure_stage=True)
+            self.assertEqual(result["status"],
+                             "STAGED_INTERNAL_MANIFEST_NATIVE_NOT_AUTHORIZED")
+            self.assertEqual(result["native_calls"],0)
+            self.assertEqual(result["plan"]["item_slots"],15)
+            self.assertEqual(len(result["effective_four_tier_slots"]),4)
+            text=(path/"profile.simc").read_text()
+            self.assertIn("role=attack\n",text)
+            self.assertNotIn("off_hand=",text)
+            self.assertIn("default_actions=1\n",text)
+            self.assertNotIn("actions.",text)
+            with mock.patch.object(bootstrap.entry,"run_manifest") as native:
+                with self.assertRaisesRegex(bootstrap.UserScenarioBlocked,
+                                            "PURE_STAGE_NATIVE_NOT_AUTHORIZED"):
+                    input_file=root/"user.json"
+                    input_file.write_text(bootstrap.canonical(user)+"\n")
+                    bootstrap.run(input_file,root/"blocked",
+                                  binary,"7bc10711b5",execute=True,
+                                  pure_stage=True)
+                native.assert_not_called()
+
     def test_no_rewrite_of_native_proven_source_profile_bytes(self):
         for key,sha in VERIFIED_SOURCE_SHA.items():
             with self.subTest(key=key):
