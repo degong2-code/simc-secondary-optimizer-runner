@@ -65,9 +65,11 @@ def verify_v145(profile,binary_sha256,revision,spec,physical_root):
          folder.name==spec.replace("/","__")+"__"+user_sha[:16],
          "V145_USER_INPUT_IDENTITY_OR_FOLDER_DRIFT")
     user=json.loads(user_raw)
-    need(type(user) is dict and
-         type(user.get("character")) is dict and
-         user["character"].get("class")+"/"+user["character"].get("spec")==spec and
+    character=user.get("character") if type(user) is dict else None
+    need(type(character) is dict and
+         type(character.get("class")) is str and
+         type(character.get("spec")) is str and
+         character["class"]+"/"+character["spec"]==spec and
          user.get("target")=={"ilevel":334,"final_T":None} and
          user.get("oil_hands")==[] and
          "import_simc_profile" not in user,
