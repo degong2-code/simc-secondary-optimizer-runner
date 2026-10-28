@@ -106,8 +106,7 @@ def compose(character,trinkets,*,target_ilevel=334,
          type(combat["raid_buffs"]) is bool,"COMBAT_FIELDS_OR_LIMITS")
     info=season["specializations"][cl+"/"+spec]
     need(contracts.validate_contracts() and
-         contract["weapon_form"]=="one_hand_frill" and
-         contract["role"]=="spell" and contract["primary"]=="intellect",
+         contract["weapon_form"] in contracts.WEAPON_FORMS,
          "CLASS_PHYSICAL_CONTRACT")
     need(set(info["tier_ids"])==set(TIER_SLOTS) and
          len(info["four_tier_slots"])==4 and
@@ -121,8 +120,11 @@ def compose(character,trinkets,*,target_ilevel=334,
     ids={**season["common_gear"],**info["ordinary"],**info["weapons"]}
     ids.update({slot:info["tier_ids"][slot]
                 for slot in info["four_tier_slots"]})
-    need(set(ids)==set(SLOT_ORDER)-{"trinket1","trinket2"} and
-         set(info["weapons"])==contracts.WEAPON_SLOTS and
+    weapon_slots=set(contracts.WEAPON_FORMS[contract["weapon_form"]])
+    physical_slots=(set(SLOT_ORDER)-{"trinket1","trinket2"}-
+                    (contracts.WEAPON_SLOTS-weapon_slots))
+    need(set(ids)==physical_slots and
+         set(info["weapons"])==weapon_slots and
          all(type(v) is int and v>0 for v in ids.values()),
          "INTERNAL_REPRESENTATIVE_SLOT_OR_ITEM_ID")
     options={slot:{"gem_id":value}
@@ -145,8 +147,9 @@ def compose(character,trinkets,*,target_ilevel=334,
             "slot":raw["slot"],"item_id":items.checked_id(raw["item_id"]),
             "ilevel":target_ilevel,
             "options":items.checked_options(raw["options"])}
-    need(set(rows)==set(SLOT_ORDER) and len(rows)==16,
-         "FULL_SIXTEEN_PHYSICAL_SLOTS")
+    required_slots=physical_slots|{"trinket1","trinket2"}
+    need(set(rows)==required_slots and len(rows) in (15,16),
+         "COMPLETE_FIFTEEN_OR_SIXTEEN_PHYSICAL_SLOTS")
     # Explicit default_actions lets SimulationCraft select its built-in APL;
     # no season profile, copied class action list or proprietary rotation.
     settings=[
@@ -174,7 +177,7 @@ def compose(character,trinkets,*,target_ilevel=334,
     ]
     profile="\n".join(settings+[items.equipment_line(
         slot,rows[slot]["item_id"],rows[slot]["ilevel"],
-        rows[slot]["options"]) for slot in SLOT_ORDER])+"\n"
+        rows[slot]["options"]) for slot in SLOT_ORDER if slot in rows])+"\n"
     receipt={"schema":SCHEMA,"status":"STAGED_NOT_USER_READY",
              "season":season["season"],"spec":cl+"/"+spec,
              "primary":contract["primary"],"family":contract["family"],
@@ -227,7 +230,7 @@ def v098_inputs(character,trinkets,*,target_ilevel=334,combat=None):
     tier_map=info["tier_ids"]
     cfg={"schema":scenario.SCHEMA,
          "character":{"class":cl,"spec":spec,"race":character["race"],
-                      "role":"spell","talents":character["talents"]},
+                      "role":contract["role"],"talents":character["talents"]},
          "source":{"kind":"user_supplied",
                    "profile_sha256":hashlib.sha256(profile.encode("utf8")).hexdigest()},
          "target":{"mode":"derived_ilevel","ilevel":target_ilevel,
