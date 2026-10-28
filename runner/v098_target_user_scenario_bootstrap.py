@@ -319,6 +319,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
               "scouts":1,"material_scouts":1,"native_limit":6,
               "step":100,"cancel_file":"CANCEL"}
     if final_T is not None:manifest["manual_final_T"]=final_T
+    if pure_stage:manifest[entry.STAGE_FIELD]=True
     put_once(folder/"profile.simc",profile)
     put_once(folder/"scenario.json",canonical(cfg)+"\n")
     put_once(folder/"fillers.json",canonical(fillers)+"\n")
