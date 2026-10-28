@@ -25,6 +25,12 @@
           <div class="section-head"><div><p class="eyebrow">STEP 01 · CHARACTER & TARGET</p><h2 id="input-title">최적화 조건</h2></div><span class="micro">지원 전문화 베타</span></div>
           <form id="optimizer-form" autocomplete="off">
             <div class="field full"><label for="spec">직업 · 전문화</label><select id="spec" required disabled><option value="">지원 정보 조회 중…</option></select><p id="gear-scope-note" class="hint" role="note" hidden></p></div>
+            <details class="fold"><summary><span>SimC 프로필에서 캐릭터 정보 가져오기 (선택)</span><small>현재 장비·스탯은 가져오지 않음</small></summary>
+              <div class="field"><label for="simc-import-text">SimC 프로필 텍스트 붙여넣기</label><textarea id="simc-import-text" rows="4" spellcheck="false" maxlength="250000" placeholder="druid=character&#10;spec=feral&#10;race=night_elf&#10;talents=..."></textarea></div>
+              <div class="field"><label for="simc-import-file">또는 로컬 SimC 프로필 파일 선택</label><input id="simc-import-file" type="file" accept=".simc,.txt,text/plain"></div>
+              <button type="button" id="simc-import-btn" class="btn secondary">직업·전문화·종족·특성만 적용</button>
+              <p class="hint">프로필은 이 브라우저에서만 읽습니다. 전체 장비·장신구·보석·현재 CHMV는 읽거나 서버에 전송하지 않습니다. 전문화가 변경되면 해당 전문화 기본 입력으로 전환됩니다.</p>
+            </details>
             <div class="two">
               <div class="field"><label for="race">종족 (SimC 토큰)</label><input id="race" required spellcheck="false"></div>
               <div class="field"><label for="ilevel">목표 아이템레벨</label><input id="ilevel" type="number" min="266" max="344" step="1" value="334" required></div>
