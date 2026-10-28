@@ -162,10 +162,13 @@ def run(binary,out,*,revision,iterations=1,timeout_seconds=180,
         else:
             need(not input_path.exists() and not json2_path.exists(),
                  "PREEXISTING_UNRECEIPTED_NATIVE_FILES:"+key)
-            put_once(input_path,text)
         if new_calls>=max_new:
+            # Dry-run/call-cap must not create an unreceipted physical input:
+            # a later actual smoke needs to be able to start immediately.
             cases.append({"spec":key,"status":"NOT_RUN_NEW_CALL_LIMIT"})
             continue
+        if prior is None:
+            put_once(input_path,text)
         if prior is not None and json2_path.exists():
             # Explicit retry is the only permitted replacement of a failed JSON2.
             json2_path.unlink()
