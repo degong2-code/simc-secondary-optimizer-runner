@@ -55,6 +55,17 @@ CONTRACTS={
         "primary":"strength","role":"attack","position":"back",
         "weapon_form":"single_two_hand","allowed_races":None,
     },
+    # Catalog-only migration previews; NOT source-free Native-approved.
+    "warrior/fury":{
+        "simc_class":"warrior","simc_spec":"fury","family":"plate",
+        "primary":"strength","role":"attack","position":"back",
+        "weapon_form":"dual_two_hand","allowed_races":None,
+    },
+    "hunter/beast_mastery":{
+        "simc_class":"hunter","simc_spec":"beast_mastery","family":"mail",
+        "primary":"agility","role":"attack","position":"ranged_back",
+        "weapon_form":"ranged","allowed_races":None,
+    },
 }
 
 def lookup(class_name,specialization):
