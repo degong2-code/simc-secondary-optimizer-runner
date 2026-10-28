@@ -35,8 +35,8 @@ class IndependentSeasonCompiler(unittest.TestCase):
         self.assertEqual(season["schema"],"v144_representative_season_items_v1")
         self.assertEqual(season["target_ilevel"],334)
         for key,item in season["specializations"].items():
-            self.assertEqual(set(item),{"tier_ids","four_tier_slots",
-                                        "ordinary","weapons"})
+            expected={"tier_ids","four_tier_slots","ordinary","weapons"}
+            self.assertIn(set(item),(expected,expected|{"item_options"}))
             cl,sp=key.split("/")
             contract=specs.lookup(cl,sp)
             self.assertEqual(contract["simc_class"],cl)
@@ -188,6 +188,59 @@ class IndependentSeasonCompiler(unittest.TestCase):
                                   binary,"7bc10711b5",execute=True,
                                   pure_stage=True)
                 native.assert_not_called()
+
+    def test_fury_and_bm_pure_stage_preview_only_keep_legacy_default(self):
+        import v106_user_session_controller as sessions
+        trials=[
+            (("warrior","fury"),16,"dual_two_hand",3350),
+            (("hunter","beast_mastery"),15,"ranged",3150),
+        ]
+        for key,expected_slots,form,expected_B in trials:
+            with self.subTest(key=key),tempfile.TemporaryDirectory() as td:
+                self.assertIn(key,bootstrap.ARCHETYPES)
+                self.assertNotIn(key,bootstrap.PURE_PRODUCT_SPECS)
+                controls=sessions.standard_controls(key)
+                user=sessions.user_scenario(controls)
+                binary=pathlib.Path(td)/"fake_simc"
+                binary.write_bytes(b"NO_NATIVE")
+                stage=pathlib.Path(td)/"only_preview"
+                plan=bootstrap.build(user,stage,binary,"7bc10711b5",
+                                     pure_stage=True)
+                self.assertEqual(plan["status"],
+                    "STAGED_INTERNAL_MANIFEST_NATIVE_NOT_AUTHORIZED")
+                self.assertEqual(plan["native_calls"],0)
+                self.assertFalse(plan["user_optimizer_ready"])
+                self.assertEqual(plan["plan"]["item_slots"],expected_slots)
+                self.assertEqual(plan["plan"]["base_B"],expected_B)
+                self.assertEqual(plan["weapon_form"],form)
+                profile=(stage/"profile.simc").read_text()
+                self.assertIn("default_actions=1\n",profile)
+                self.assertNotIn("actions.",profile)
+                self.assertEqual(profile.count("main_hand="),1)
+                self.assertEqual(profile.count("off_hand="),
+                                 1 if expected_slots==16 else 0)
+                self.assertEqual(len(plan["effective_four_tier_slots"]),4)
+                with mock.patch.object(bootstrap.entry,"run_manifest") as native:
+                    with self.assertRaisesRegex(bootstrap.UserScenarioBlocked,
+                                                "PURE_STAGE_NATIVE_NOT_AUTHORIZED"):
+                        input_file=pathlib.Path(td)/"user.json"
+                        input_file.write_text(bootstrap.canonical(user)+"\n")
+                        bootstrap.run(input_file,pathlib.Path(td)/"blocked",
+                                      binary,"7bc10711b5",
+                                      execute=True,pure_stage=True)
+                    native.assert_not_called()
+
+    def test_season_item_option_can_not_override_existing_gem(self):
+        actor={"class":"warrior","spec":"fury","race":"dwarf",
+               "talents":"CAAAABBB11122"}
+        trinkets=[{"slot":s,"item_id":i,"options":{}}
+                  for s,i in (("trinket1",270175),("trinket2",270173))]
+        broken=copy.deepcopy(pure.catalog())
+        broken["specializations"]["warrior/fury"]["item_options"]["head"]={
+            "gem_id":"240900"}
+        with self.assertRaisesRegex(pure.ProfileStageBlocked,
+                                    "SEASON_ITEM_OPTIONS_INVALID_OR_DUPLICATED"):
+            pure.compose(actor,trinkets,season=broken)
 
     def test_no_rewrite_of_native_proven_source_profile_bytes(self):
         for key,sha in VERIFIED_SOURCE_SHA.items():
