@@ -141,9 +141,15 @@ class UserSessionControls(unittest.TestCase):
                         ordinary_variant="mid2_havoc_leather_feet_v1")
         special=copy.deepcopy(user)
         special["special_items"]=[{"slot":"feet","item_id":268261,"options":{}}]
+        # The existing v106 special-L policy requires a static-cache file
+        # before the internal ordinary-variant collision check is reachable.
+        # This is an offline identity fixture, NOT a measured Native cache.
+        static=root/"synthetic_static_cache.json"
+        static.write_bytes(b"OFFLINE_NOT_NATIVE_STATIC_DATA")
         with self.assertRaisesRegex(ux.SessionBlocked,
                                     "ORDINARY_VARIANT_CONFLICTS_WITH_SELECTED_GEAR"):
             ux.store_session(special,root/"sessions",binary,"7bc10711b5",
+                 static_cache=static,
                  ordinary_variant="mid2_havoc_leather_feet_v1")
         with self.assertRaisesRegex(ux.SessionBlocked,"ORDINARY_VARIANT_NOT_PINNED"):
             ux.store_session(user,root/"sessions",binary,"7bc10711b5",
