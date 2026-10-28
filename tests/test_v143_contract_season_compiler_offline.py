@@ -4,8 +4,10 @@ import copy
 import hashlib
 import json
 import pathlib
+import subprocess
 import sys
 import tempfile
+import textwrap
 import unittest
 from unittest import mock
 
@@ -42,6 +44,65 @@ class IndependentSeasonCompiler(unittest.TestCase):
             self.assertNotIn("tier_ids",contract)
             self.assertNotIn("main_hand",contract)
         self.assertIsNone(specs.lookup("evoker","augmentation"))
+
+    def test_import_and_two_pure_plans_without_any_legacy_full_profile_files(self):
+        # Execute in a CLEAN Python process: tests in this main process
+        # may already have memoized legacy registries. Block all attempted
+        # reads of old complete .simc fixtures before importing the runner.
+        script=textwrap.dedent(r"""
+            import pathlib,sys,tempfile
+            root=pathlib.Path(sys.argv[1])
+            sys.path.insert(0,str(root/"runner"))
+            original_text=pathlib.Path.read_text
+            original_bytes=pathlib.Path.read_bytes
+            attempted=[]
+            def blocked(path):
+                loc=str(path).replace(chr(92),"/")
+                if "/integration_probes/fixtures/" in loc and loc.endswith(".simc"):
+                    attempted.append(loc)
+                    raise RuntimeError("LEGACY_COMPLETE_SIMC_PROFILE_REQUIRED:"+loc)
+            def read_text(self,*args,**kwargs):
+                blocked(self)
+                return original_text(self,*args,**kwargs)
+            def read_bytes(self,*args,**kwargs):
+                blocked(self)
+                return original_bytes(self,*args,**kwargs)
+            pathlib.Path.read_text=read_text
+            pathlib.Path.read_bytes=read_bytes
+            import v098_target_user_scenario_bootstrap as boot
+            import v101_common_representative_equipment as common
+            from integration_probes.v140_pure_profile_physical_native_smoke import user_for
+            assert len(boot.ARCHETYPES)==24
+            assert len(common.FIFTH_TIER)==24
+            assert not attempted
+            with tempfile.TemporaryDirectory() as t:
+                directory=pathlib.Path(t)
+                binary=directory/"fake_simc"
+                binary.write_bytes(b"NO_NATIVE")
+                for key in ("druid/balance","evoker/devastation"):
+                    user=user_for(key)
+                    result=boot.build(user,directory/key.replace("/","_"),
+                                      binary,"7bc10711b5")
+                    assert result["status"]=="READY_INTERNAL_MANIFEST_ZERO_NATIVE"
+                    assert result["native_calls"]==0
+                    assert result["plan"]["item_slots"]==16
+            assert not attempted, attempted
+            # Existing legacy source-backed path MUST still require its
+            # checked fixture when actually selected.
+            try:
+                common.ARCHETYPES[("druid","feral")]
+            except RuntimeError as exc:
+                assert "LEGACY_COMPLETE_SIMC_PROFILE_REQUIRED" in str(exc)
+            else:
+                raise AssertionError("LEGACY_SOURCE_CHECK_BYPASSED")
+            assert len(attempted)==1
+            print("PURE_NO_FULL_SIMC_FIXTURE_IMPORT_OR_PLAN_PASS")
+        """)
+        result=subprocess.run([sys.executable,"-c",script,str(ROOT)],
+                              capture_output=True,text=True,timeout=30)
+        self.assertEqual(result.returncode,0,result.stdout+result.stderr)
+        self.assertIn("PURE_NO_FULL_SIMC_FIXTURE_IMPORT_OR_PLAN_PASS",
+                      result.stdout)
 
     def test_frost_mage_legacy_evidence_is_preview_only(self):
         # Existing source-backed default stays source-backed: no re-keying
