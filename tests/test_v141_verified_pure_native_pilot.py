@@ -140,6 +140,17 @@ class ExactReceiptReuseTests(unittest.TestCase):
                     physical_acceptance_root=self.witness)
             native.assert_not_called()
 
+    def test_different_revision_is_not_authorized_by_same_physical_receipt(self):
+        self.accepted()
+        source=self.userfile("druid/balance")
+        with mock.patch.object(bootstrap.entry.durable,"run") as native:
+            with self.assertRaisesRegex(pilot.AcceptanceBlocked,
+                                        "RECEIPT_IDENTITY_OR_REVISION_DRIFT"):
+                bootstrap.run(source,self.root/"revision_changed",self.binary,
+                    "another_revision123",execute=True,pure_stage=True,
+                    physical_acceptance_root=self.witness)
+            native.assert_not_called()
+
     def test_unrelated_default_profile_rejects_physical_root(self):
         source=self.userfile("druid/balance")
         with self.assertRaisesRegex(bootstrap.UserScenarioBlocked,
