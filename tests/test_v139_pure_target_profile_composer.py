@@ -93,8 +93,8 @@ class PureProfileComposer(unittest.TestCase):
         self.assertEqual(rows["feet"]["ilevel"],321)
         self.assertEqual(rows["feet"]["item_id"],268240)
         self.assertIn("ilevel=321",profile)
-        self.assertIn("level=91\\n",profile)
-        self.assertIn("food=disabled\\n",profile)
+        self.assertIn("level=91\n",profile)
+        self.assertIn("food=disabled\n",profile)
         # This is a serialization test, not evidence that a future item
         # exists or that two slots accept the same model in real SimC.
         self.assertFalse(meta["user_optimizer_ready"])
