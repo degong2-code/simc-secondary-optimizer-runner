@@ -84,7 +84,7 @@ def _candidate_summary(observations, B, O, near_loss=0.01, material=0.10):
 
 def run(context, seed_targets, flask_vector, binary, output, *,
         step=100, scouts=1, material_scouts=0, native_limit=None, cache_only=False,
-        cancel_file=None, open_folder=False):
+        cancel_file=None, open_folder=False,recover_verified_partial=False):
     """One bounded deterministic session, resumable by same identity.
 
     Native limit is enforced across seeds+scouts+fresh confirmations. Caller
@@ -175,7 +175,8 @@ def run(context, seed_targets, flask_vector, binary, output, *,
                  'status':'RUNNING','phase':phase}
             direct=engine.execute_one(req,{'native_revision':context['identity']['revision']},
                    binary,folder,phase_progress,cancel_file=cancel_file,
-                   cache_only=cache_only)
+                   cache_only=cache_only,
+                   recover_verified_partial=recover_verified_partial)
             raw=(folder/'result.json').read_bytes()
             full=oil.ingest_native(req,json.loads(raw),raw)
             need(direct['native_json_sha256']==full['native_json_sha256']
