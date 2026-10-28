@@ -364,7 +364,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
 
 def run(user_path,folder,binary,revision,static_cache_path=None,
         execute=False,cache_only=False,*,ordinary_variant=None,pure_stage=False,
-        physical_acceptance_root=None):
+        physical_acceptance_root=None,open_folder=True):
     # An exact v140 (historical 2 specs) or v145 (single preview profile)
     # physical Native receipt authorizes ONLY its identical internal profile.
     # v096 verifies original JSON2 bytes before any adaptive Native call.
@@ -387,7 +387,8 @@ def run(user_path,folder,binary,revision,static_cache_path=None,
     if pure_stage:
         actual=entry.run_manifest(prepared["generated_manifest"],
             cache_only=cache_only,
-            physical_acceptance_root=physical_acceptance_root)
+            physical_acceptance_root=physical_acceptance_root,
+            open_folder=open_folder)
     else:
         actual=entry.run_manifest(prepared["generated_manifest"],cache_only=cache_only)
     return {"input_preparation":prepared,"native_result":actual}
