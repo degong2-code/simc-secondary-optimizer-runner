@@ -213,7 +213,11 @@ def run(user,binary,out,revision,*,iterations=1,timeout_seconds=180,
 
 def main(argv=None):
     p=argparse.ArgumentParser(description="One selected DPS source-independent physical SimC smoke; 0 or 1 new Native")
-    p.add_argument("--user-json",type=pathlib.Path,required=True)
+    user_source=p.add_mutually_exclusive_group(required=True)
+    user_source.add_argument("--user-json",type=pathlib.Path,
+        help="Real v098 user.json with chosen class/race/talents/trinkets")
+    user_source.add_argument("--starter-spec",
+        help="One of the 24 preview specs, e.g. rogue/subtlety; editable compact starter inputs, NO official full SimC")
     p.add_argument("--simc",type=pathlib.Path,required=True)
     p.add_argument("--revision",required=True)
     p.add_argument("--out",type=pathlib.Path,default=DEFAULT_OUT)
@@ -223,7 +227,18 @@ def main(argv=None):
                    help="0: build/inspect only (default); 1: at most one actual SimC call")
     a=p.parse_args(argv)
     try:
-        user=json.loads(a.user_json.read_text(encoding="utf8"))
+        if a.user_json is not None:
+            user=json.loads(a.user_json.read_text(encoding="utf8"))
+        else:
+            import v106_user_session_controller as sessions
+            parts=a.starter_spec.split("/")
+            need(len(parts)==2 and tuple(parts) in bootstrap.ARCHETYPES,
+                 "STARTER_SPEC_MUST_BE_ONE_OF_24_UNPROMOTED_DPS")
+            controls=sessions.standard_controls(tuple(parts))
+            # An oil changes gear_* but is NOT a physical item acceptance
+            # observation. Remove it from this exact one-shot scenario.
+            controls["oil_hands"]=[]
+            user=sessions.user_scenario(controls)
         result=run(user,a.simc,a.out,a.revision,
                    iterations=a.iterations,timeout_seconds=a.timeout_seconds,
                    max_new=a.max_new)
