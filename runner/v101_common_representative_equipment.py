@@ -127,12 +127,13 @@ from v135_source_gem_colors import SOURCE_GEM_COLOR, FOUR_COLOR_GEMS
 # Source drafts inspect the common gem-color data. Register 16 new source
 # adapters only after the shared constants are initialized, avoiding an
 # import-time v101 -> v134 -> v133 -> v101 initialization cycle.
+# A single pinned-source metadata read builds both registries. Previously
+# the 17 source previews/fixture hashes were redundantly reread in two loops
+# during each fresh server process startup, without adding integrity evidence.
 for _key in sorted(GENERIC_PENDING):
     _info=generic.source_metadata("/".join(_key))
     ARCHETYPES[_key]=(_info["fixture"],generic.producer(_key),
                       _info["form"],_info["F"])
-for _key in GENERIC_PENDING:
-    _info=generic.source_metadata("/".join(_key))
     _slot,_ordinary=_info["fifth"]
     FIFTH_TIER[_key]=(_slot,_info["tier"][_slot],_ordinary)
 # v104 pins these two original source wrist slots as socketed, but its
