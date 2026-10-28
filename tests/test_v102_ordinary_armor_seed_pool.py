@@ -57,10 +57,20 @@ class SourceBoundArmorSeeds(unittest.TestCase):
         self.assertNotIn(271441, [r[1] for r in pool.FAMILY_ROWS["mail"].values()])
         self.assertNotIn(271440, [r[1] for r in pool.FAMILY_ROWS["mail"].values()])
 
-    def test_legacy_rogue_feet_still_accepted_only_as_reference_seed(self):
-        self.assertEqual(pool.row("leather","feet",334)["item_id"],159304)
-        self.assertEqual(pool.provenance("leather","feet")["source_kind"],
-                         "legacy_reference")
+    def test_leather_feet_now_use_same_season_pinned_ordinary_item_only_in_seed_pool(self):
+        # Previously the seed pool used legacy Goldfeather Boots 159304.
+        # 268261 is source-observed Feral feet in official MID2 fixture,
+        # corroborated externally as a plain leather crit/haste foot item.
+        row=pool.row("leather","feet",334)
+        self.assertEqual(row,{"slot":"feet","item_id":268261,
+                              "ilevel":334,"options":{}})
+        meta=pool.provenance("leather","feet")
+        self.assertEqual(meta["source_kind"],"ordinary")
+        self.assertEqual(meta["source_file"],
+                         "integration_probes/fixtures/v132_MID2_Druid_Feral.simc")
+        self.assertTrue(meta["not_verified_native_exact_target_variant"])
+        self.assertEqual(pool.source_ids("feral_mid2")["feet"],268261)
+        self.assertNotIn(159304,[r[1] for r in pool.FAMILY_ROWS["leather"].values()])
         self.assertEqual(pool.row("leather","waist",334)["item_id"],268256)
         self.assertEqual(pool.row("cloth","waist",334)["item_id"],268257)
 
