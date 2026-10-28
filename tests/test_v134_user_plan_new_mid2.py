@@ -15,11 +15,11 @@ import v132_dps_source_batch_smoke as sources
 import v122_common_profile_format as profile_format
 
 class NewMid2ProductEntry(unittest.TestCase):
-    def test_sixteen_pinned_new_specs_use_exact_same_v098_plan_and_resume(self):
+    def test_seventeen_pinned_new_specs_use_exact_same_v098_plan_and_resume(self):
         self.assertEqual(set(common.GENERIC_PENDING),
-                         {tuple(x.split("/")) for x in sources.NEW
-                          if x!="druid/feral"})
-        self.assertNotIn(("druid","feral"),common.ARCHETYPES)
+                         {tuple(x.split("/")) for x in sources.NEW})
+        self.assertIn(("druid","feral"),common.ARCHETYPES)
+        self.assertEqual(len(common.GENERIC_PENDING),17)
         for key in sorted(common.GENERIC_PENDING):
             with self.subTest(key=key),tempfile.TemporaryDirectory() as td:
                 base=pathlib.Path(td)
@@ -34,7 +34,7 @@ class NewMid2ProductEntry(unittest.TestCase):
                 self.assertEqual(result["weapon_form"],
                                  common.ARCHETYPES[key][2])
                 self.assertEqual(len(result["effective_four_tier_slots"]),4)
-                self.assertEqual(result["supported_archetypes_now"],23)
+                self.assertEqual(result["supported_archetypes_now"],24)
                 self.assertEqual(result["plan"]["base_B"],3150)
                 self.assertEqual(result["plan"]["final_T"],
                                  3150+32*len(controls["oil_hands"]))
@@ -51,11 +51,16 @@ class NewMid2ProductEntry(unittest.TestCase):
         self.assertEqual(len(registry.BY_SPEC),7)
         self.assertEqual(set(registry.BY_SPEC),
                          set(common.ARCHETYPES)-set(common.GENERIC_PENDING))
-        self.assertEqual(len(common.ARCHETYPES),23)
+        self.assertEqual(len(common.ARCHETYPES),24)
         self.assertTrue(common.validate_source_registry())
-        with self.assertRaisesRegex(controller.SessionBlocked,
-                                     "V106_DPS_ARCHETYPE_NOT_READY"):
-            controller.standard_controls(("druid","feral"))
+        self.assertEqual(controller.standard_controls(("druid","feral"))["spec"],
+                         "feral")
+        for absent in (("druid","balance"),("evoker","devastation"),
+                       ("evoker","augmentation")):
+            with self.subTest(absent=absent):
+                with self.assertRaisesRegex(controller.SessionBlocked,
+                                             "V106_DPS_ARCHETYPE_NOT_READY"):
+                    controller.standard_controls(absent)
 
 if __name__=="__main__":
     unittest.main()
