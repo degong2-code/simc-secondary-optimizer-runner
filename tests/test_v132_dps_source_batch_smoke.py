@@ -14,6 +14,18 @@ class SourceBatchSmoke(unittest.TestCase):
         self.assertEqual(info["new_source_count"]+len(info["already_source_connected"]),24)
         self.assertEqual(info["missing_mid2"],
             ["druid/balance","evoker/devastation","evoker/augmentation"])
+        ready=info["missing_source_readiness"]
+        self.assertEqual(set(ready),set(info["missing_mid2"]))
+        self.assertTrue(ready["druid/balance"]["ci_default_actor"])
+        self.assertEqual(ready["druid/balance"]["generator_draft_ilevel"],289)
+        self.assertTrue(ready["evoker/devastation"]["ci_default_actor"])
+        self.assertEqual(ready["evoker/devastation"]["generator_draft_ilevel"],289)
+        self.assertFalse(ready["evoker/augmentation"]["ci_default_actor"])
+        self.assertFalse(ready["evoker/augmentation"]["generator_draft_present"])
+        self.assertTrue(all(not v["mid2_profile_enabled"] for v in ready.values()))
+        evidence=info["upstream_missing_evidence"]
+        self.assertEqual(len(evidence),4)
+        self.assertTrue(all(len(v)==40 for v in evidence.values()))
         for item in info["new_sources"]:
             with self.subTest(spec=item["key"]):
                 self.assertIn(item["slot_count"],(15,16))
