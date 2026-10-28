@@ -72,7 +72,7 @@ class UserWindow:
                   sticky="w",pady=(0,8))
         ttk.Label(outer,text="DPS 26개 경로(기존 24개 소스 기반 베타 + 조화·황폐 독립 생성) · 목표 CHMV 절댓값 · 95% 비교",
                   wraplength=840).grid(row=1,column=0,columnspan=4,sticky="w")
-        self.spec=tk.StringVar(value=DISPLAY[("paladin","retribution")])
+        self.spec=tk.StringVar(value=DISPLAY[("druid","balance")])
         self.vars={}
         self._label(outer,2,0,"직업 / 전문화")
         combo=ttk.Combobox(outer,textvariable=self.spec,state="readonly",
@@ -167,7 +167,7 @@ class UserWindow:
         self.vars["talents"].set(source["talents"])
         self.vars["trinket1"].set(str(source["trinket_ids"][0]))
         self.vars["trinket2"].set(str(source["trinket_ids"][1]))
-        self.oil_main.set(True)
+        self.oil_main.set("main_hand" in source["oil_hands"])
         self.oil_off.set("off_hand" in source["oil_hands"])
         self.status.set("기본 대표 무기 구성: "+source["weapon_form"]+
                         " · 캐시 보존을 위해 동일 설정은 동일 세션 사용")
