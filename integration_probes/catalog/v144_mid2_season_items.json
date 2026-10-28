@@ -2,7 +2,7 @@
   "schema": "v144_representative_season_items_v1",
   "season": "midnight_s2",
   "target_ilevel": 334,
-  "status": "TWO_PURE_WINDOWS_ADAPTIVE_ACCEPTED_SEVEN_LEGACY_CATALOG_PREVIEWS_UNVERIFIED",
+  "status": "TWO_PURE_WINDOWS_ADAPTIVE_ACCEPTED_THIRTEEN_LEGACY_CATALOG_PREVIEWS_UNVERIFIED",
   "provenance": {
     "druid_tier": "v132 official Feral item IDs (271528/271526/271531/271529/271527)",
     "evoker_tier": "Wowhead 12.1 Echo of Calamity IDs 271501/271499/271504/271502/271500",
@@ -14,7 +14,8 @@
     "warrior_fury_staged": "MID2 v082/v127 original tier IDs, Fury main 268213 and original source observed crafted 2H offhand 237847 (crafted_stats 49/36); v102 ordinary plate wrists 268239/waist268259/feet268260, fifth ordinary legs 271878. Common profile is NOT yet Fury pure Native accepted.",
     "hunter_beast_mastery_staged": "MID2 v079/v086/v127 original Hunter tier IDs and ranged bow 268207; fixed head249317 and feet249320 were observed in historical v086 native with its own profile identity (not transferable as proof for this new combination); v102 mail wrists273775/waist268254. New pure profile remains Native unverified.",
     "rogue_dual_1h_staged": "v104/v127 Rogue tier 271510/271508/271513/271511/271509, fifth non-tier chest251159, v102 ordinary leather wrists268240/waist268256/feet268261, v103 exact observed Outlaw weapons268209+275070 and Subtlety271093+237837; v104 Subtlety crafted offhand 36/49; not native acceptance of pure catalog profile",
-    "shaman_elemental_staged": "v104/v127 Shaman tier 271483/271481/271486/271484/271482, fifth ordinary head249317 and feet249320 from v104 original representative, v102 mail wrists273775/waist268254; v103 source-observed dagger271092 + shield268262; new pure profile has no native acceptance"
+    "shaman_elemental_staged": "v104/v127 Shaman tier 271483/271481/271486/271484/271482, fifth ordinary head249317 and feet249320 from v104 original representative, v102 mail wrists273775/waist268254; v103 source-observed dagger271092 + shield268262; new pure profile has no native acceptance",
+    "cloth_six_spell_preview": "v132 2026-10-28 pinned MID2 Mage Arcane/Fire, Priest Shadow, Warlock Affliction/Demonology/Destruction item witness; five tier IDs from v133, ordinary cloth head 271874 (v084/v133), wrists251154/waist268257/feet268255 (v102); mainhand271092 and 1H offhand 245769 for Mage/Warlock or 268197 for Shadow; source-specific observed crafted offhands only in season item_options. This catalog sample is NOT Native-tested nor full future-season license."
   },
   "common_gear": {
     "neck": 268265,
@@ -262,6 +263,181 @@
       "weapons": {
         "main_hand": 271092,
         "off_hand": 268262
+      }
+    },
+    "mage/arcane": {
+      "tier_ids": {
+        "head": 271564,
+        "shoulders": 271562,
+        "chest": 271567,
+        "hands": 271565,
+        "legs": 271563
+      },
+      "four_tier_slots": [
+        "shoulders",
+        "chest",
+        "hands",
+        "legs"
+      ],
+      "ordinary": {
+        "head": 271874,
+        "wrists": 251154,
+        "waist": 268257,
+        "feet": 268255
+      },
+      "weapons": {
+        "main_hand": 271092,
+        "off_hand": 245769
+      },
+      "item_options": {
+        "off_hand": {
+          "crafted_stats": "32/36"
+        }
+      }
+    },
+    "mage/fire": {
+      "tier_ids": {
+        "head": 271564,
+        "shoulders": 271562,
+        "chest": 271567,
+        "hands": 271565,
+        "legs": 271563
+      },
+      "four_tier_slots": [
+        "shoulders",
+        "chest",
+        "hands",
+        "legs"
+      ],
+      "ordinary": {
+        "head": 271874,
+        "wrists": 251154,
+        "waist": 268257,
+        "feet": 268255
+      },
+      "weapons": {
+        "main_hand": 271092,
+        "off_hand": 245769
+      },
+      "item_options": {
+        "off_hand": {
+          "crafted_stats": "36/40"
+        }
+      }
+    },
+    "priest/shadow": {
+      "tier_ids": {
+        "head": 271555,
+        "shoulders": 271553,
+        "chest": 271558,
+        "hands": 271556,
+        "legs": 271554
+      },
+      "four_tier_slots": [
+        "shoulders",
+        "chest",
+        "hands",
+        "legs"
+      ],
+      "ordinary": {
+        "head": 271874,
+        "wrists": 251154,
+        "waist": 268257,
+        "feet": 268255
+      },
+      "weapons": {
+        "main_hand": 271092,
+        "off_hand": 268197
+      }
+    },
+    "warlock/affliction": {
+      "tier_ids": {
+        "head": 271546,
+        "shoulders": 271544,
+        "chest": 271549,
+        "hands": 271547,
+        "legs": 271545
+      },
+      "four_tier_slots": [
+        "shoulders",
+        "chest",
+        "hands",
+        "legs"
+      ],
+      "ordinary": {
+        "head": 271874,
+        "wrists": 251154,
+        "waist": 268257,
+        "feet": 268255
+      },
+      "weapons": {
+        "main_hand": 271092,
+        "off_hand": 245769
+      },
+      "item_options": {
+        "off_hand": {
+          "crafted_stats": "32/36"
+        }
+      }
+    },
+    "warlock/demonology": {
+      "tier_ids": {
+        "head": 271546,
+        "shoulders": 271544,
+        "chest": 271549,
+        "hands": 271547,
+        "legs": 271545
+      },
+      "four_tier_slots": [
+        "shoulders",
+        "chest",
+        "hands",
+        "legs"
+      ],
+      "ordinary": {
+        "head": 271874,
+        "wrists": 251154,
+        "waist": 268257,
+        "feet": 268255
+      },
+      "weapons": {
+        "main_hand": 271092,
+        "off_hand": 245769
+      },
+      "item_options": {
+        "off_hand": {
+          "crafted_stats": "49/36"
+        }
+      }
+    },
+    "warlock/destruction": {
+      "tier_ids": {
+        "head": 271546,
+        "shoulders": 271544,
+        "chest": 271549,
+        "hands": 271547,
+        "legs": 271545
+      },
+      "four_tier_slots": [
+        "shoulders",
+        "chest",
+        "hands",
+        "legs"
+      ],
+      "ordinary": {
+        "head": 271874,
+        "wrists": 251154,
+        "waist": 268257,
+        "feet": 268255
+      },
+      "weapons": {
+        "main_hand": 271092,
+        "off_hand": 245769
+      },
+      "item_options": {
+        "off_hand": {
+          "crafted_stats": "32/36"
+        }
       }
     }
   },
