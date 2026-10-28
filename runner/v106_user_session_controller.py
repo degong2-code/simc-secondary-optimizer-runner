@@ -39,7 +39,7 @@ def sha(data):
 def source_defaults(key):
     if key in bootstrap.PURE_PRODUCT_SPECS:
         race,talents=PURE_STARTERS[key]
-        spec=bootstrap.pure.catalog()["specializations"]["/".join(key)]
+        spec=bootstrap.pure.contracts.lookup(*key)
         return {"class":key[0],"spec":key[1],"race":race,
                 "talents":talents,"trinket_ids":list(PURE_TRINKET_IDS),
                 "weapon_form":spec["weapon_form"],"oil_hands":[]}
@@ -145,7 +145,7 @@ def user_scenario(controls):
     need(type(trinkets) is list and len(trinkets)==2
          and all(type(i) is int and i>0 for i in trinkets),
          "TWO_REAL_TRINKET_IDS_REQUIRED")
-    weapons=(bootstrap.pure.catalog()["specializations"]["/".join(key)]["weapon_form"]
+    weapons=(bootstrap.pure.contracts.lookup(*key)["weapon_form"]
              if key in bootstrap.PURE_PRODUCT_SPECS else bootstrap.ARCHETYPES[key][2])
     hands=controls["oil_hands"]
     need(type(hands) is list and len(hands)==len(set(hands))
