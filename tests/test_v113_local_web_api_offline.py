@@ -107,6 +107,25 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(status.json()["progress"]["completed_jobs"],0)
         self.assertFalse(status.json()["active"])
 
+    def test_internal_variant_resume_uses_sealed_identity_not_browser_defaults(self):
+        # Developer stage only: browser plan/defaults still expose no variant.
+        user=sessions.user_scenario(sessions.standard_controls(
+             ("demonhunter","havoc")))
+        folder=sessions.store_session(user,self.root/"runs",self.binary,
+            "7bc1071",ordinary_variant="mid2_havoc_leather_feet_v1")
+        web.bootstrap.build(user,folder/"generated",self.binary,"7bc1071",
+            ordinary_variant="mid2_havoc_leather_feet_v1")
+        jobs=web.LocalJobs(self.root/"runs")
+        binary,rev,static=jobs.args_for_existing(folder)
+        self.assertEqual(binary,self.binary.resolve())
+        self.assertEqual(rev,"7bc1071")
+        self.assertIsNone(static)
+        self.assertFalse((folder/"generated"/"simc_results").exists())
+        browser=self.client.get("/api/v1/defaults",headers=self.headers).json()
+        self.assertTrue(all("ordinary_variant" not in r
+                            for r in browser["archetypes"]))
+        self.assertNotIn("ordinary_variant",self.controls)
+
     def test_invalid_user_rejected_without_new_native_or_extra_session(self):
         data=copy.deepcopy(self.payload)
         data["controls"]["spec"]="protection"
