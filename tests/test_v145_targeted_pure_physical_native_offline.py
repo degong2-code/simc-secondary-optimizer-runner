@@ -185,6 +185,25 @@ class OneSpecDiagnosticOffline(unittest.TestCase):
                 target.run(u,self.binary,self.out,REVISION,max_new=1)
             no_simc.assert_not_called()
 
+    def test_existing_os_lock_prevents_concurrent_identical_native_attempt(self):
+        u=user_for("mage/frost")
+        key=target.user_key(u)
+        folder=self.out/(key.replace("/","__")+"__"+
+                         target.sha(target.canonical(u).encode("utf8"))[:16])
+        with target.session_controls.worker_lock(folder):
+            with mock.patch.object(target.subprocess,"run") as native:
+                with self.assertRaisesRegex(
+                    target.session_controls.SessionBlocked,
+                    "V106_SAME_SESSION_ALREADY_RUNNING"):
+                    target.run(u,self.binary,self.out,REVISION,max_new=1)
+                native.assert_not_called()
+        # Lock file remains as audit marker but is no longer locked.
+        with mock.patch.object(target.subprocess,"run") as native:
+            prepared=target.run(u,self.binary,self.out,REVISION,max_new=0)
+            native.assert_not_called()
+        self.assertEqual(prepared["status"],"PREPARED_NO_NATIVE")
+        self.assertTrue((folder/"V106_WORKER.lock").exists())
+
     def test_unverified_spec_can_not_be_silently_promoted_or_oiled(self):
         u=user_for("druid/balance")
         with self.assertRaisesRegex(target.TargetedSmokeBlocked,
