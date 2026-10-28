@@ -96,8 +96,7 @@ class CopiedWindowsNativeEvidenceOffline(unittest.TestCase):
         self.row={"spec":self.key,"status":"ADAPTIVE_PASS",
                   "physical_status":"PASS_PHYSICAL_SIMC",
                   "adaptive_status":"PASS_BOUNDED_GENERIC_NATIVE_SEARCH_AND_CACHE",
-                  "physical_output":r"C:\OldPC\Home\v147_batch\physical\"
-                     +self.basename,
+                  "physical_output":str(pathlib.PureWindowsPath("C:/OldPC/Home/v147_batch/physical")/self.basename),
                   "user_result":self.result}
         self.summary={"schema":"v147_24_dps_source_free_batch_v1",
                       "status":"FINISHED_WITH_PER_SPEC_RESULTS",
