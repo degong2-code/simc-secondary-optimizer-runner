@@ -78,6 +78,14 @@
               <div id="alt-list" class="alt-list"></div><p class="hint">미관측은 대안이 없다는 뜻이 아닙니다. DPS·효과는 SimC가 계산합니다.</p>
             </div>
           </section>
+          <section class="panel batch-evidence" aria-labelledby="batch-title">
+            <div class="section-head"><div><p class="eyebrow">PREVIOUS LOCAL NATIVE RUNS · READ ONLY</p><h2 id="batch-title">24개 전문화 실측 결과</h2></div><span class="pill">추가 SimC 0회</span></div>
+            <p class="hint">이 PC 또는 복사한 v147_batch의 원본 JSON2·영수증과 기존 v094 보고서를 대조해 표시합니다. 복사한 결과를 새 PC의 실행 캐시로 자동 승인하지 않습니다.</p>
+            <div class="field"><label for="batch-id">로컬 실측 배치</label><select id="batch-id"><option value="">실측 결과 조회 중…</option></select></div>
+            <button type="button" id="batch-open-btn" class="btn secondary" disabled>저장된 24개 결과 보기 · Native 0회</button>
+            <p id="batch-status" class="hint" role="status" aria-live="polite">저장된 배치를 조회하지 않았습니다.</p>
+            <div id="batch-table" class="batch-table" hidden></div>
+          </section>
           <div class="footnote">SIMC SECONDARY OPTIMIZER · 개인용 로컬 웹앱 베타<br>지원하지 않는 전문화와 검증되지 않은 입력은 실행 전에 차단합니다.</div>
         </aside>
       </div>
