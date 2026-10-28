@@ -42,6 +42,29 @@ NEW={
 ALREADY_SOURCE_CONNECTED=("warrior/fury","paladin/retribution","mage/frost",
  "hunter/beast_mastery","rogue/subtlety","shaman/elemental","rogue/outlaw")
 MISSING_MID2=("druid/balance","evoker/devastation","evoker/augmentation")
+# Current official SimulationCraft midnight branch evidence, reviewed
+# 2026-10-28. These are upstream *readiness facts*, not copied profiles.
+# Balance/Devastation have active CI default actors but their seasonal MID2
+# profile entries remain commented and only ilvl289 generator drafts exist.
+# Augmentation remains commented in CI and has no MID2 generator profile.
+UPSTREAM_MISSING_EVIDENCE={
+ "simulationcraft_ci_blob":"5abef61dacb12f079617fcf1865bea32a35d2b01",
+ "mid2_raid_blob":"a02b49a05c484948ce632b3fd2ee27a6f200078a",
+ "druid_generator_blob":"99fec56a6c139f0e5cdeedc14a3e677ead965add",
+ "evoker_generator_blob":"70dac232a9b7d65a5ca17438471c9ffbcee8645f"}
+MISSING_SOURCE_READINESS={
+ "druid/balance":{
+   "ci_default_actor":True,"mid2_profile_enabled":False,
+   "generator_draft_present":True,"generator_draft_ilevel":289,
+   "reason":"NO_CURRENT_ENABLED_MID2_SOURCE_PROFILE"},
+ "evoker/devastation":{
+   "ci_default_actor":True,"mid2_profile_enabled":False,
+   "generator_draft_present":True,"generator_draft_ilevel":289,
+   "reason":"NO_CURRENT_ENABLED_MID2_SOURCE_PROFILE"},
+ "evoker/augmentation":{
+   "ci_default_actor":False,"mid2_profile_enabled":False,
+   "generator_draft_present":False,"generator_draft_ilevel":None,
+   "reason":"NO_CURRENT_SIMC_SOURCE_PROFILE"}}
 SLOTS=("head","neck","shoulders","back","chest","wrists","hands","waist",
        "legs","feet","finger1","finger2","trinket1","trinket2","main_hand","off_hand")
 RUNTIME=("iterations","json2","threads")
@@ -103,6 +126,8 @@ def scan():
             "upstream_commit":UPSTREAM_COMMIT,
             "new_source_count":len(found),"already_source_connected":list(ALREADY_SOURCE_CONNECTED),
             "missing_mid2":list(MISSING_MID2),
+            "missing_source_readiness":MISSING_SOURCE_READINESS,
+            "upstream_missing_evidence":UPSTREAM_MISSING_EVIDENCE,
             "new_sources":[{k:v for k,v in item.items() if k!="source"} for item in found],
             "native_calls":0,"all_27_executable":False,
             "source_readiness_not_target_profile_readiness":True}
