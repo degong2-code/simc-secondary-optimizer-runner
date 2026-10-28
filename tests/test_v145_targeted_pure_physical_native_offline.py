@@ -37,6 +37,41 @@ class OneSpecDiagnosticOffline(unittest.TestCase):
         self.binary.write_bytes(b"FAKE_NO_NATIVE")
         self.out=self.root/"runs"
 
+    def test_starter_spec_command_reads_no_complete_simc_and_defaults_to_zero_calls(self):
+        original_text=pathlib.Path.read_text
+        original_bytes=pathlib.Path.read_bytes
+        attempts=[]
+        def deny_fixture(path,*args,**kw):
+            if ("/integration_probes/fixtures/" in
+                str(path).replace(chr(92),"/") and str(path).endswith(".simc")):
+                attempts.append(str(path))
+                raise AssertionError("LEGACY_COMPLETE_PROFILE_WAS_READ")
+        def text_read(path,*args,**kw):
+            deny_fixture(path)
+            return original_text(path,*args,**kw)
+        def bytes_read(path,*args,**kw):
+            deny_fixture(path)
+            return original_bytes(path,*args,**kw)
+        with mock.patch.object(pathlib.Path,"read_text",text_read), \
+             mock.patch.object(pathlib.Path,"read_bytes",bytes_read), \
+             mock.patch.object(target.subprocess,"run") as proc, \
+             mock.patch.object(target.os,"startfile",create=True):
+            result=target.main([
+                "--starter-spec","mage/frost",
+                "--simc",str(self.binary),
+                "--revision",REVISION,
+                "--out",str(self.out)])
+            proc.assert_not_called()
+        self.assertEqual(result,0)
+        self.assertEqual(attempts,[])
+        cases=list(self.out.glob("mage__frost__*"))
+        self.assertEqual(len(cases),1)
+        generated=json.loads((cases[0]/"user.json").read_text())
+        self.assertEqual(generated["character"]["spec"],"frost")
+        self.assertEqual(generated["oil_hands"],[])
+        self.assertEqual(len(generated["trinkets"]),2)
+        self.assertFalse((cases[0]/"physical.simc").exists())
+
     def test_default_zero_calls_and_no_unreceipted_profile_files(self):
         u=user_for("mage/frost")
         with mock.patch.object(target.subprocess,"run") as proc:
