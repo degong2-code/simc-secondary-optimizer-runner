@@ -16,6 +16,7 @@ import re
 
 import v096_unified_product_entry as entry
 import v098_target_user_scenario_bootstrap as bootstrap
+import v063_numeric_injection as numeric
 
 SCHEMA="v148_read_only_native_batch_results_v1"
 BATCH=re.compile(r"simc_([0-9a-f]{16})_([0-9a-f]{7,40})\Z")
@@ -124,7 +125,9 @@ def _read_pass(folder,summary,row):
     user=json.loads(user_raw)
     ch=user.get("character") if type(user) is dict else None
     need(type(ch) is dict and
-         ch.get("class")+"/"+ch.get("spec")==spec and
+         type(ch.get("class")) is str and
+         type(ch.get("spec")) is str and
+         ch["class"]+"/"+ch["spec"]==spec and
          user.get("target")=={"ilevel":334,"final_T":None} and
          user.get("oil_hands")==[] and
          "import_simc_profile" not in user,
@@ -147,15 +150,16 @@ def _read_pass(folder,summary,row):
     need(profile.is_file() and sha(profile.read_bytes())==
          ident.get("profile_sha256"),
          "PHYSICAL_STAGE_PROFILE_DRIFT")
-    native_raw=_source_path(physical,"physical.json").read_bytes()
+    native_path=_source_path(physical,"physical.json")
+    need(native_path.is_file() and native_path.stat().st_size<=MAX_JSON_BYTES,
+         "PHYSICAL_JSON2_FILE_MISSING_OR_TOO_LARGE")
+    native_raw=native_path.read_bytes()
     need(sha(native_raw)==receipt.get("json2_sha256"),
          "PHYSICAL_JSON2_SHA_DRIFT")
     native=json.loads(native_raw)
     need(native.get("report_version")=="2.0.0" and
-         type(native.get("git_revision")) is str and
-         native["git_revision"].lower().startswith(summary["revision"].lower()) or
-         (type(native.get("git_revision")) is str and
-          summary["revision"].lower().startswith(native["git_revision"].lower())),
+         numeric.same_simc_commit_revision(native.get("git_revision"),
+                                           summary["revision"]),
          "PHYSICAL_NATIVE_GIT_REVISION_MISMATCH")
     players=(native.get("sim") or {}).get("players") or []
     need(len(players)==1 and type(players[0]) is dict,
