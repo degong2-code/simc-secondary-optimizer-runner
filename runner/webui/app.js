@@ -484,7 +484,71 @@ function installOptions(options) {
   populateSelect("omnium",options.omnium_talents,(v,i)=>
     v==="source_default"?"원본 5룬 조합":v);
 }
+async function loadAvailableNativeBatches() {
+  // Only local batch directory IDs; NEVER browser-provided filesystem paths.
+  const data=await api("/api/v1/native-batches");
+  const list=Array.isArray(data.batches)?data.batches:[];
+  $("batch-id").replaceChildren(option("","실측 결과 선택"));
+  for(const item of list) {
+    if(typeof item.batch_id!=="string"||!/^simc_[a-f0-9]{16}_[a-f0-9]{7,40}$/.test(item.batch_id))
+      continue;
+    $("batch-id").appendChild(option(item.batch_id,
+      item.revision+" · 기존 PASS "+number(item.reported_adaptive_pass)+
+      "/"+number(item.selected_specs)+" · 원본 결과"));
+  }
+  if(list.length===1)$("batch-id").value=list[0].batch_id;
+  $("batch-open-btn").disabled=!$("batch-id").value;
+  $("batch-status").textContent=list.length?
+    "원본 폴더 "+number(list.length)+"개 발견 · 결과 보기는 Native 0회":
+    "이 PC에 v147_batch 결과가 없습니다. 이전 PC에서 원본 폴더 전체를 복사하거나 서버 실행 시 --batch-root를 지정하세요.";
+}
+async function showNativeBatch() {
+  const id=field("batch-id");
+  if(!/^simc_[a-f0-9]{16}_[a-f0-9]{7,40}$/.test(id))
+    throw Error("BATCH_ID_INVALID");
+  const data=await api("/api/v1/native-batches/"+id+"/results");
+  if(data.native_calls_now!==0||data.execution_ready_from_relocated_cache!==false)
+    throw Error("BATCH_READ_ONLY_CONTRACT");
+  const container=$("batch-table");
+  container.replaceChildren();
+  const table=document.createElement("table");
+  const thead=document.createElement("thead");
+  const head=document.createElement("tr");
+  for(const label of ["전문화","관측 DPS ± SEM","치명 / 가속 / 특화 / 유연","95% 두 후보","증거"]) {
+    const cell=document.createElement("th");cell.textContent=label;head.appendChild(cell);
+  }
+  thead.appendChild(head);table.appendChild(thead);
+  const tbody=document.createElement("tbody");
+  for(const item of data.results||[]) {
+    const tr=document.createElement("tr");
+    const title=specLabels[item.spec]?.split(" (")[0]??item.spec;
+    const matched=item.status==="LOCAL_NATIVE_REPORT_HASHES_AND_95_RESULT_MATCH";
+    const best=matched?item.user_result?.observed_first_choice:null;
+    const cells=[
+      title,
+      best?number(best.observed_dps_mean,1)+" ± "+number(best.simc_sem,2):"–",
+      best?statOrder.map(([key])=>number(best.absolute_rating_T?.[key])).join(" / "):"–",
+      matched?(item.user_result?.confirmation_pair_direction_supported_at_95?
+        "방향 지지":"미확정"):"–",
+      matched?"로컬 원본 대조":"미확인 · "+(item.status||"")
+    ];
+    for(const value of cells){
+      const td=document.createElement("td");td.textContent=value;tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);container.appendChild(table);
+  container.hidden=false;
+  $("batch-status").textContent="로컬 원본 대조 "+
+    number(data.matched_read_only_results)+"/"+number(data.total_specs)+
+    " · 신규 Native 0회 · 다른 PC 실행 캐시 자동 승인 없음 · 전역 최적해 입증 아님";
+}
 function registerHandlers() {
+  $("batch-id").addEventListener("change",()=>{
+    $("batch-open-btn").disabled=!field("batch-id");
+    $("batch-table").hidden=true;
+  });
+  $("batch-open-btn").addEventListener("click",()=>withBusy(showNativeBatch));
   $("simc-import-btn").addEventListener("click",()=>withBusy(importSimcCharacter));
   $("spec").addEventListener("change",()=>{
     const selected=state.defaults.find(d=>d.class+"/"+d.spec===field("spec"));
@@ -537,6 +601,8 @@ async function initialize() {
              specLabels[item.class+"/"+item.spec]||item.class+" · "+item.spec)));
     $("spec").disabled=false;
     installOptions(opt);
+    try{await loadAvailableNativeBatches();}
+    catch(err){$("batch-status").textContent="실측 배치 조회 오류: "+err.message;}
     const paladin=state.defaults.find(v=>v.class==="paladin"&&v.spec==="retribution");
     if(paladin) {
       $("spec").value=paladin.class+"/"+paladin.spec;
