@@ -44,6 +44,92 @@ def case(which,*,ilevel=334,final_T=None):
                     else ["main_hand"],
         "combat":{"targets":1,"duration_seconds":300,"raid_buffs":True}}
 
+class InternalOrdinaryVariantPipeline(unittest.TestCase):
+    """One source-grounded product plan opt-in; existing user defaults untouched."""
+
+    def fixture(self,root,which=("demonhunter","havoc")):
+        import v106_user_session_controller as sessions
+        binary=root/"simc_not_executed.exe"
+        binary.write_bytes(b"OFFLINE_ONLY_NO_SIMC_CALLS")
+        user=sessions.user_scenario(sessions.standard_controls(which))
+        return user,binary
+
+    def test_havoc_v137_accepted_feet_flows_through_existing_v098_manifest(self):
+        import v137_leather_feet_isolated_variant as staged
+        with tempfile.TemporaryDirectory() as temp:
+            root=pathlib.Path(temp)
+            user,binary=self.fixture(root)
+            ordinary=boot.build(user,root/"default",binary,"7bc1071")
+            opted=boot.build(user,root/"opted",binary,"7bc1071",
+                  ordinary_variant="mid2_havoc_leather_feet_v1")
+            before=(root/"default"/"profile.simc").read_text("utf8")
+            after=(root/"opted"/"profile.simc").read_text("utf8")
+            old="feet=selected_159327,id=159327,ilevel=334,source=local,enchant_id=7963"
+            new="feet=selected_268261,id=268261,ilevel=334,source=local,enchant_id=7963"
+            self.assertEqual(before.count(old),1)
+            self.assertEqual(after.count(new),1)
+            self.assertEqual(after.replace(new,old),before)
+            self.assertEqual(staged.NEW_ID,268261)
+            self.assertEqual(ordinary["native_calls"],0)
+            self.assertEqual(opted["native_calls"],0)
+            self.assertNotIn("internal_ordinary_variant",ordinary)
+            self.assertEqual(opted["internal_ordinary_variant"],
+                             "mid2_havoc_leather_feet_v1")
+            self.assertEqual(ordinary["plan"]["base_B"],opted["plan"]["base_B"])
+            self.assertEqual(ordinary["plan"]["final_T"],opted["plan"]["final_T"])
+            self.assertEqual(ordinary["effective_four_tier_slots"],
+                             opted["effective_four_tier_slots"])
+            self.assertFalse((root/"default"/"simc_results").exists())
+            self.assertFalse((root/"opted"/"simc_results").exists())
+            a=json.loads((root/"default"/"scenario.json").read_text("utf8"))
+            b=json.loads((root/"opted"/"scenario.json").read_text("utf8"))
+            self.assertNotEqual(a["source"]["profile_sha256"],
+                                b["source"]["profile_sha256"])
+            self.assertEqual(a["character"],b["character"])
+            self.assertEqual(a["target"],b["target"])
+            self.assertEqual(a["combat"],b["combat"])
+            self.assertEqual([r["item_id"] for r in
+                json.loads((root/"opted"/"fillers.json").read_text("utf8"))
+                if r["slot"]=="feet"],[268261])
+            # Reuse identical bytes without attempting any Native simulation.
+            self.assertEqual(boot.build(user,root/"opted",binary,"7bc1071",
+                  ordinary_variant="mid2_havoc_leather_feet_v1")["plan"],
+                  opted["plan"])
+
+    def test_unverified_spec_level_and_unknown_optin_are_blocked(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=pathlib.Path(temp)
+            user,binary=self.fixture(root)
+            for label,variant,level in (
+                ("unknown","other_item",334),
+                ("wrong_level","mid2_havoc_leather_feet_v1",321)):
+                with self.subTest(label=label):
+                    user["target"]["ilevel"]=level
+                    with self.assertRaisesRegex(ValueError,
+                           "ORDINARY_VARIANT_NOT_PINNED|"
+                           "ORDINARY_VARIANT_SPEC_OR_TARGET_LEVEL_NOT_VERIFIED|"
+                           "REPRESENTATIVE_ORDINARY_VARIANT_NOT_PINNED"):
+                        boot.build(user,root/label,binary,"7bc1071",
+                                   ordinary_variant=variant)
+            frost,_=self.fixture(root,("deathknight","frost"))
+            with self.assertRaisesRegex(ValueError,
+                    "ORDINARY_VARIANT_SPEC_OR_TARGET_LEVEL_NOT_VERIFIED"):
+                boot.build(frost,root/"wrong_spec",binary,"7bc1071",
+                           ordinary_variant="mid2_havoc_leather_feet_v1")
+
+    def test_user_selected_special_feet_cannot_silently_override_optin(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=pathlib.Path(temp)
+            user,binary=self.fixture(root)
+            user["special_items"]=[{"slot":"feet","item_id":268261,
+                                    "options":{}}]
+            with self.assertRaisesRegex(
+                boot.UserScenarioBlocked,
+                "ORDINARY_VARIANT_CONFLICTS_WITH_USER_SELECTED_ITEM"):
+                boot.build(user,root/"special",binary,"7bc1071",
+                           ordinary_variant="mid2_havoc_leather_feet_v1")
+
+
 class UserTargetBootstrap(unittest.TestCase):
     def prepare(self,user):
         self.tmp=tempfile.TemporaryDirectory()
