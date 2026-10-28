@@ -45,7 +45,8 @@ class PurePhysicalPilotOffline(unittest.TestCase):
         for key in v140.ACTORS:
             root=self.out/key.replace("/","__")
             stage=(root/"stage"/"profile.simc").read_text(encoding="utf8")
-            physical=(root/"physical.simc").read_text(encoding="utf8")
+            self.assertFalse((root/"physical.simc").exists())
+            physical=v140.physical_input(stage,root/"physical.json",1)
             self.assertIn("gear_crit_rating=",stage)
             self.assertNotIn("gear_crit_rating=",physical)
             self.assertNotIn("gear_haste_rating=",physical)
