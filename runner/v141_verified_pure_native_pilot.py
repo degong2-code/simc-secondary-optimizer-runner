@@ -12,6 +12,7 @@ import json
 import pathlib
 
 import v122_common_profile_format as profile_format
+import v063_numeric_injection as numeric
 
 SCHEMA="v140_pure_profile_physical_smoke_v1"
 PILOT_SPECS=frozenset(("druid/balance","evoker/devastation"))
@@ -89,6 +90,12 @@ def verify(profile,binary_sha256,revision,spec,physical_root):
     need(sha(raw)==witness.get("json2_sha256"),
          "PHYSICAL_NATIVE_JSON2_SHA256_DRIFT")
     native=json.loads(raw)
+    # v140's old receipt recorded the caller-declared revision, but did
+    # not compare it with the actual SimC git_revision. Read the already
+    # hashed original JSON2 now, before ANY adaptive candidate runs.
+    need(numeric.same_simc_commit_revision(native.get("git_revision"),revision),
+         "V140_JSON2_REPORTED_SIMC_REVISION_DRIFT:reported="+
+         str(native.get("git_revision"))+";declared="+str(revision))
     players=(native.get("sim") or {}).get("players") or []
     need(len(players)==1 and type(players[0]) is dict,
          "PHYSICAL_JSON2_SINGLE_PLAYER_REQUIRED")
