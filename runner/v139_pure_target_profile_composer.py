@@ -1,0 +1,170 @@
+#!/usr/bin/env python3
+"""P1 source-independent SimC representative PROFILE composer.
+
+The SEASON CATALOG (not a downloaded, complete BiS/SimC profile) provides
+item IDs and four-tier choices. User data provides character/trinkets/combat.
+SimC owns default_actions, primary stat/item effects and DPS; there is NO
+class-specific APL implementation here. This is an *internal stage*, NOT
+v098 production readiness, exact CHMV B, 95% DPS or Native acceptance.
+
+A future season replaces catalog data. The algorithm has no MID2 fixture,
+v132 profile or v133 draft dependency and calls no SimC executable.
+"""
+from __future__ import annotations
+import json
+import pathlib
+
+import v055_simc_item_selection as items
+import v061_scenario_contract as scenario
+
+ROOT=pathlib.Path(__file__).resolve().parents[1]
+DEFAULT_CATALOG=(ROOT/"integration_probes/catalog/"
+                 "v139_mid2_pure_profile_season_catalog.json")
+SCHEMA="v139_source_independent_representative_stage_v1"
+CLASS_ARMOR={"druid":"leather","evoker":"mail"}
+TIER_SLOTS=("head","shoulders","chest","hands","legs")
+SLOT_ORDER=("head","neck","shoulders","back","chest","wrists",
+            "hands","waist","legs","feet","finger1","finger2",
+            "trinket1","trinket2","main_hand","off_hand")
+FIXED_STATES=("crit_rating","haste_rating","mastery_rating",
+              "versatility_rating")
+
+class ProfileStageBlocked(ValueError):
+    pass
+
+def need(ok,why):
+    if not ok:
+        raise ProfileStageBlocked(why)
+
+def catalog(path=DEFAULT_CATALOG):
+    """Season data only; never read an upstream SimC source profile."""
+    doc=json.loads(pathlib.Path(path).read_text(encoding="utf8"))
+    need(type(doc) is dict and
+         doc.get("schema")=="v139_pure_profile_season_catalog_v1" and
+         type(doc.get("specializations")) is dict and
+         type(doc.get("common_gear")) is dict and
+         type(doc.get("gems")) is dict and
+         type(doc.get("target_ilevel")) is int and
+         type(doc.get("season")) is str,
+         "SEASON_DATA_SCHEMA")
+    return doc
+
+def compose(character,trinkets,*,target_ilevel=334,
+            combat=None,season=None):
+    """Return (profile text, stage metadata, rows, tier group) without Native.
+
+    This is deliberately independent of the 24 source-backed ARCHETYPES.
+    It is NOT registered as user-ready until actual SimC acceptance and the
+    existing v098 CHMV budget/consumable/cache/95% path are verified.
+    """
+    season=catalog() if season is None else season
+    need(type(character) is dict and
+         set(character)=={"class","spec","race","talents"},
+         "CHARACTER_FIELDS")
+    cl=character["class"];spec=character["spec"]
+    need(type(cl) is str and type(spec) is str and
+         cl+"/"+spec in season["specializations"] and
+         cl in CLASS_ARMOR,
+         "SOURCE_INDEPENDENT_SPEC_NOT_STAGED")
+    need(type(target_ilevel) is int and
+         target_ilevel==season["target_ilevel"],
+         "SEASON_TARGET_LEVEL_NOT_GROUNDED")
+    need(type(trinkets) is list and len(trinkets)==2 and
+         {x.get("slot") for x in trinkets if type(x) is dict}==
+         {"trinket1","trinket2"},
+         "EXACT_TWO_USER_TRINKETS")
+    for name in ("race","talents"):
+        scenario.text_token(character[name],"USER_"+name.upper())
+    if cl=="evoker":
+        need(character["race"] in ("dracthyr","dracthyr_visage"),
+             "EVOKER_RACE_NOT_VERIFIED")
+    combat={"targets":1,"duration_seconds":300,"raid_buffs":True} if combat is None else combat
+    need(type(combat) is dict and
+         set(combat)=={"targets","duration_seconds","raid_buffs"} and
+         type(combat["targets"]) is int and 1<=combat["targets"]<=40 and
+         type(combat["duration_seconds"]) is int and
+         1<=combat["duration_seconds"]<=3600 and
+         type(combat["raid_buffs"]) is bool,"COMBAT_FIELDS_OR_LIMITS")
+    info=season["specializations"][cl+"/"+spec]
+    need(info["family"]==CLASS_ARMOR[cl] and info["role"]=="spell"
+         and info["primary"]=="intellect"
+         and info["weapon_form"]=="one_hand_frill",
+         "CLASS_PHYSICAL_CONTRACT")
+    need(set(info["tier_ids"])==set(TIER_SLOTS) and
+         len(info["four_tier_slots"])==4 and
+         set(info["four_tier_slots"])<=set(TIER_SLOTS) and
+         set(info["ordinary"])==set(TIER_SLOTS)-set(info["four_tier_slots"]) |
+             ({"wrists","waist","feet"} if cl=="evoker" else
+              {"wrists","waist","feet"}),
+         "FOUR_TIER_LAYOUT_OR_ORDINARY_MISSING")
+    # First four-piece is selected from actual current-season class-tier IDs;
+    # the fifth can be swapped later without changing the engine.
+    ids={**season["common_gear"],**info["ordinary"],**info["weapons"]}
+    ids.update({slot:info["tier_ids"][slot]
+                for slot in info["four_tier_slots"]})
+    need(set(ids)==set(SLOT_ORDER)-{"trinket1","trinket2"} and
+         set(info["weapons"])=={"main_hand","off_hand"} and
+         all(type(v) is int and v>0 for v in ids.values()),
+         "INTERNAL_REPRESENTATIVE_SLOT_OR_ITEM_ID")
+    options={slot:{"gem_id":value}
+             for slot,value in season["gems"].items()}
+    need(set(options)<=set(ids) and
+         "head" in options and
+         sum(len(v["gem_id"].split("/")) for slot,v in options.items()
+             if slot!="head")==6,
+         "PHYSICAL_GEM_LAYOUT_NOT_STAGED")
+    rows={slot:{"slot":slot,"item_id":item_id,
+                "ilevel":target_ilevel,
+                "options":items.checked_options(options.get(slot,{}))}
+          for slot,item_id in ids.items()}
+    for raw in trinkets:
+        need(type(raw) is dict and
+             set(raw)=={"slot","item_id","options"} and
+             raw["slot"] in ("trinket1","trinket2"),
+             "USER_TRINKET_FIELDS")
+        rows[raw["slot"]]={
+            "slot":raw["slot"],"item_id":items.checked_id(raw["item_id"]),
+            "ilevel":target_ilevel,
+            "options":items.checked_options(raw["options"])}
+    need(set(rows)==set(SLOT_ORDER) and len(rows)==16,
+         "FULL_SIXTEEN_PHYSICAL_SLOTS")
+    # Explicit default_actions lets SimulationCraft select its built-in APL;
+    # no season profile, copied class action list or proprietary rotation.
+    settings=[
+      cl+"=target_"+spec,
+      "level=90",
+      "spec="+spec,
+      "race="+character["race"],
+      "talents="+character["talents"],
+      "role=spell",
+      "position=back",
+      "default_actions=1",
+      "fight_style=Patchwerk",
+      "desired_targets="+str(combat["targets"]),
+      "max_time="+str(combat["duration_seconds"]),
+      "vary_combat_length=0",
+      "fixed_time=1",
+      "optimal_raid="+("1" if combat["raid_buffs"] else "0"),
+      "iterations=35",
+      "threads=1",
+      # v098 will replace these preliminary placeholders when the path
+      # is integrated; do not interpret them as the target's true B/T.
+      *( "gear_"+stat+"=700" for stat in FIXED_STATES)
+    ]
+    profile="\n".join(settings+[items.equipment_line(
+        slot,rows[slot]["item_id"],rows[slot]["ilevel"],
+        rows[slot]["options"]) for slot in SLOT_ORDER])+"\n"
+    receipt={"schema":SCHEMA,"status":"STAGED_NOT_USER_READY",
+             "season":season["season"],"spec":cl+"/"+spec,
+             "primary":"intellect","family":info["family"],
+             "weapon_form":info["weapon_form"],
+             "four_tier_slots":list(info["four_tier_slots"]),
+             "four_tier_item_ids":{s:rows[s]["item_id"]
+                                   for s in info["four_tier_slots"]},
+             "physical_slots":len(rows),
+             "ordinary_gems":6,"source_profile_read":False,
+             "simc_default_apl":True,"native_calls":0,
+             "exact_static_rating_verified":False,
+             "physical_socket_and_weapon_compatibility_verified":False,
+             "chmv_budget_ready":False,"user_optimizer_ready":False}
+    return profile,receipt,rows,set(info["four_tier_slots"])
