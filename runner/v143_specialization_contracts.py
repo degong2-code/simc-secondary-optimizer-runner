@@ -81,6 +81,36 @@ CONTRACTS={
         "primary":"intellect","role":"spell","position":"back",
         "weapon_form":"one_hand_shield","allowed_races":None,
     },
+    "mage/arcane":{
+        "simc_class":"mage","simc_spec":"arcane","family":"cloth",
+        "primary":"intellect","role":"spell","position":"back",
+        "weapon_form":"one_hand_frill","allowed_races":None,
+    },
+    "mage/fire":{
+        "simc_class":"mage","simc_spec":"fire","family":"cloth",
+        "primary":"intellect","role":"spell","position":"ranged_back",
+        "weapon_form":"one_hand_frill","allowed_races":None,
+    },
+    "priest/shadow":{
+        "simc_class":"priest","simc_spec":"shadow","family":"cloth",
+        "primary":"intellect","role":"spell","position":"ranged_back",
+        "weapon_form":"one_hand_frill","allowed_races":None,
+    },
+    "warlock/affliction":{
+        "simc_class":"warlock","simc_spec":"affliction","family":"cloth",
+        "primary":"intellect","role":"spell","position":"ranged_back",
+        "weapon_form":"one_hand_frill","allowed_races":None,
+    },
+    "warlock/demonology":{
+        "simc_class":"warlock","simc_spec":"demonology","family":"cloth",
+        "primary":"intellect","role":"spell","position":"ranged_back",
+        "weapon_form":"one_hand_frill","allowed_races":None,
+    },
+    "warlock/destruction":{
+        "simc_class":"warlock","simc_spec":"destruction","family":"cloth",
+        "primary":"intellect","role":"spell","position":"back",
+        "weapon_form":"one_hand_frill","allowed_races":None,
+    },
 }
 
 def lookup(class_name,specialization):
