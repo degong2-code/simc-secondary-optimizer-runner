@@ -197,10 +197,13 @@ def v098_inputs(character,trinkets,*,target_ilevel=334,combat=None):
     The caller retains strict plan-only execution status until Native accepts
     the physical item/socket/weapon choices.
     """
-    profile,receipt,rows,tier=compose(
-        character,trinkets,target_ilevel=target_ilevel,combat=combat)
-    cl,spec=character["class"],character["spec"]
+    # One immutable season snapshot per build: avoid duplicate disk JSON
+    # reads and prevent a mixed-season profile if data changes mid-run.
     season=catalog()
+    profile,receipt,rows,tier=compose(
+        character,trinkets,target_ilevel=target_ilevel,combat=combat,
+        season=season)
+    cl,spec=character["class"],character["spec"]
     info=season["specializations"][cl+"/"+spec]
     contract=contracts.lookup(cl,spec)
     defaults=season["default_consumables"]
