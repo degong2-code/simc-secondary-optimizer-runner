@@ -7,6 +7,7 @@ import pathlib
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"runner"))
@@ -79,7 +80,7 @@ class IndependentSeasonCompiler(unittest.TestCase):
             rendered=(folder/"profile.simc").read_text()
             self.assertIn("default_actions=1\n",rendered)
             self.assertNotIn("actions.",rendered)
-            with unittest.mock.patch.object(
+            with mock.patch.object(
                 bootstrap.entry,"run_manifest") as native:
                 with self.assertRaisesRegex(bootstrap.UserScenarioBlocked,
                                             "PURE_STAGE_NATIVE_NOT_AUTHORIZED"):
