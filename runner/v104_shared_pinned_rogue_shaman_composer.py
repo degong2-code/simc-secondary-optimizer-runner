@@ -18,7 +18,6 @@ import hashlib,pathlib,re
 
 import v055_simc_item_selection as item_mod
 import v061_scenario_contract as scenario
-import v102_ordinary_armor_seed_pool as ordinary
 import v103_source_observed_weapon_types as weapons
 
 STATS=scenario.STATS
@@ -34,7 +33,8 @@ TIERS={
     "shaman":{"head":271483,"shoulders":271481,"chest":271486,
               "hands":271484,"legs":271482}}
 # Per-spec minimal profile input blueprint only, no copied full equipment
-# file, no optimizer, no parallel DPS driver. The 5th is ordinary gear.
+# file, no optimizer, no parallel DPS driver. These IDs are the historical
+# v104 representative baseline and MUST NOT follow later mutable seed pools.
 PROFILES={
     ("rogue","subtlety"):{
         "filename":"v068_upstream_mid2_rogue_subtlety_reference.simc",
@@ -61,6 +61,12 @@ PROFILES={
         "fifth":("head",249317),
         "replace":{"head":249317,"wrists":273775,"feet":249320},
         "gem":"240983","F":"crit_rating"}}
+HISTORICAL_ORDINARY={
+    ("leather","chest"):251159,
+    ("leather","wrists"):268240,
+    ("mail","head"):249317,
+    ("mail","wrists"):273775,
+    ("mail","feet"):249320}
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 FIXTURES=ROOT/"integration_probes"/"fixtures"
 
@@ -108,10 +114,9 @@ def create_from_source(source,folder,key):
     need(fifth not in spec["tier"] and fifth in TIER_ORDER
          and set(spec["tier"])|{fifth}==set(TIER_ORDER),
          "FIFTH_CLASS_TIER_LAYOUT_DRIFT")
-    need(ordinary_id==ordinary.row(
-          "leather" if key[0]=="rogue" else "mail",fifth,334)["item_id"],
-         "FIFTH_ORDINARY_MATERIAL_SLOT_ID_NOT_READY")
     material="leather" if key[0]=="rogue" else "mail"
+    need(HISTORICAL_ORDINARY.get((material,fifth))==ordinary_id,
+         "FIFTH_ORDINARY_HISTORICAL_ID_DRIFT")
     for slot,id_ in spec["replace"].items():
         # Ordinary replacements must be precisely from the source-checked pool,
         # except the independently source-shared cloak (cross-class back).
@@ -121,8 +126,8 @@ def create_from_source(source,folder,key):
                  (FIXTURES/"v078_upstream_mid2_shaman_elemental_reference.simc").read_text("utf8"),
                  "SHARED_CLOAK_SOURCE_MISSING")
         else:
-            need(ordinary.row(material,slot,334)["item_id"]==id_,
-                 "REPLACEMENT_ARMOR_MATERIAL_OR_SLOT_MISMATCH:"+slot)
+            need(HISTORICAL_ORDINARY.get((material,slot))==id_,
+                 "REPLACEMENT_ARMOR_HISTORICAL_ID_DRIFT:"+slot)
         # An ordinary wrist socket is retained only when the same exact
         # replacement item was already Native-accepted with a wrist socket
         # (Rogue Subtlety 268240). The source gem must match the pinned new
