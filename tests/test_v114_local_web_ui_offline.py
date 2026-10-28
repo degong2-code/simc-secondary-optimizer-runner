@@ -41,7 +41,8 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn("특수장비 최대 8개 · 장식 최대 2개",result.text)
         self.assertEqual(page.scripts,[{"src":"/assets/app.js","defer":None}])
         self.assertEqual(page.links,[{"rel":"stylesheet","href":"/assets/styles.css"}])
-        required=("optimizer-form","spec","race","talents","trinket1",
+        required=("optimizer-form","spec","simc-import-text","simc-import-file",
+          "simc-import-btn","race","talents","trinket1",
           "trinket2","ilevel","final_T","targets","duration",
           "raid_buffs","oil_main","oil_off","binary","revision","static_cache",
           "special-rows","crafted-rows","food","potion","augmentation",
@@ -86,12 +87,33 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertEqual(len(generic),17)
         self.assertEqual(js.count(exact),len(generic)-2)
         self.assertIn('"deathknight/frost":"죽음의 기사 · 냉기 (기본334 조건 6후보·95% 실기 PASS)"',js)
-        self.assertIn('"druid/feral":"드루이드 · 야성 (대표 프로필 단발 Native PASS · 목표 CHMV 최적화 미검증)"',js)
+        self.assertIn('"druid/feral":"드루이드 · 야성 (기본334 조건 6후보·95% 실기 PASS)"',js)
         self.assertNotIn(" (목표 Native 미검증)",js)
         for cl,sp in generic:
             self.assertIn('"'+cl+'/'+sp+'":"',js)
         # Outlaw and the seven historical adapters keep independent evidence.
         self.assertIn('"rogue/outlaw":"도적 · 무법 (목표 프로필 Native 시험 전)"',js)
+
+    def test_optional_simc_import_only_extracts_identity_and_talents(self):
+        page=self.client.get("/").text
+        js=self.client.get("/assets/app.js").text
+        self.assertIn('id="simc-import-text"',page)
+        self.assertIn('id="simc-import-file"',page)
+        self.assertIn('id="simc-import-btn"',page)
+        self.assertIn("현재 장비·스탯은 가져오지 않음",page)
+        self.assertIn("function parseSimcCharacter(source)",js)
+        self.assertIn('["spec","race","talents"]',js)
+        self.assertIn('const source=file?await file.text()',js)
+        self.assertIn('if(actors.length!==1',js)
+        self.assertIn('if(name==="copy")',js)
+        self.assertIn('if(field("spec")!==parsed.key)',js)
+        self.assertIn('fillDefault(parsed.defaults);',js)
+        self.assertIn('  $("race").value=parsed.race;',js)
+        self.assertIn('  $("talents").value=parsed.talents;',js)
+        self.assertIn('withBusy(importSimcCharacter)',js)
+        self.assertNotIn("FormData(",js)
+        self.assertNotIn("FileReader(",js)
+        self.assertNotIn("innerHTML",js)
 
     def test_representative_gear_limit_is_permanent_on_form_and_restore(self):
         # Expose the source-backed scope, never claim all non-tier ordinary
