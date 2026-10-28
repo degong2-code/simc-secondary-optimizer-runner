@@ -296,10 +296,28 @@ def render_static_chmv_candidate(reference,target,flask_vector,path,iterations):
         "stable_profile_sha256":parts["stable_sha256"],
         "buffed_stats_target_parity_required":False}
 
+def same_simc_commit_revision(reported,declared):
+    """Accept Git's 7+ hex short hash for the SAME declared commit only.
+
+    The enclosing v096/v094 call separately pins the exact binary SHA256.
+    No branch/tag/version wildcard, nonhex strings or unrelated commit aliases.
+    """
+    if type(reported) is not str or type(declared) is not str:
+        return False
+    if not all(7<=len(x)<=40 and
+               all(c in "0123456789abcdef" for c in x.lower())
+               for x in (reported,declared)):
+        return reported==declared
+    short,long=(reported,declared) if len(reported)<=len(declared) else (declared,reported)
+    return long.lower().startswith(short.lower())
+
 def validate_static_native(native,rendered,revision):
     """Check stat injection *before talents*, observe buffed output separately."""
     need(native.get("report_version")=="2.0.0","SIMC_REPORT_VERSION")
-    need(native.get("git_revision")==revision,"SIMC_REVISION_CHANGED")
+    observed_revision=native.get("git_revision")
+    need(same_simc_commit_revision(observed_revision,revision),
+         "SIMC_REVISION_CHANGED:reported="+str(observed_revision)+
+         ";declared="+str(revision))
     players=(native.get("sim") or {}).get("players") or []
     need(len(players)==1,"SIMC_SINGLE_PLAYER_REQUIRED")
     raw=rendered["raw_gear_override"]
