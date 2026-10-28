@@ -70,6 +70,38 @@ class LocalWebAPIOffline(unittest.TestCase):
             "SOURCE_INDEPENDENT_SEASON_CATALOG":2})
         self.assertFalse((self.root/"runs").exists())
 
+    def test_web_remains_usable_with_no_legacy_complete_simc_fixtures(self):
+        # In a package without the old 24 full SimC source fixtures, the
+        # ready/default UI list must still expose both Native-proven pure
+        # paths, but may not claim the unavailable legacy paths work.
+        original=pathlib.Path.read_text
+        seen=[]
+        def absent_legacy(path,*args,**kwargs):
+            loc=str(path).replace(chr(92),"/")
+            if "/integration_probes/fixtures/" in loc and loc.endswith(".simc"):
+                seen.append(loc)
+                raise FileNotFoundError("LEGACY_SOURCE_PROFILE_NOT_INSTALLED")
+            return original(path,*args,**kwargs)
+        with mock.patch.object(pathlib.Path,"read_text",absent_legacy):
+            response=self.client.get("/api/v1/defaults",headers=self.headers)
+            self.assertEqual(response.status_code,200,response.text)
+            data=response.json()
+            visible={(r["class"],r["spec"]) for r in data["archetypes"]}
+            self.assertEqual(visible,web.bootstrap.PURE_PRODUCT_SPECS)
+            missing={(r["class"],r["spec"]) for r in
+                     data["unavailable_missing_legacy_fixtures"]}
+            self.assertEqual(missing,set(sessions.SUPPORTED)-visible)
+            self.assertEqual(len(seen),24)
+            for spec in sorted(visible):
+                with self.subTest(spec=spec):
+                    payload={**self.payload,
+                             "controls":sessions.standard_controls(spec)}
+                    with mock.patch.object(web.subprocess,"Popen") as spawn:
+                        plan=self.post("/api/v1/sessions/plan",payload)
+                        self.assertEqual(plan.status_code,200,plan.text)
+                        self.assertEqual(plan.json()["native_calls"],0)
+                        spawn.assert_not_called()
+
     def test_two_pure_local_web_plans_reuse_normal_session_without_native(self):
         for key in sorted(web.bootstrap.PURE_PRODUCT_SPECS):
             with self.subTest(spec=key):
