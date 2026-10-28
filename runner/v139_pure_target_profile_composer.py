@@ -19,18 +19,18 @@ import v108_native_consumable_inputs as consumer
 
 import v055_simc_item_selection as items
 import v061_scenario_contract as scenario
+import v143_specialization_contracts as contracts
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 DEFAULT_CATALOG=(ROOT/"integration_probes/catalog/"
-                 "v139_mid2_pure_profile_season_catalog.json")
+                 "v144_mid2_season_items.json")
 SCHEMA="v139_source_independent_representative_stage_v1"
-CLASS_ARMOR={"druid":"leather","evoker":"mail"}
-TIER_SLOTS=("head","shoulders","chest","hands","legs")
-SLOT_ORDER=("head","neck","shoulders","back","chest","wrists",
-            "hands","waist","legs","feet","finger1","finger2",
-            "trinket1","trinket2","main_hand","off_hand")
-FIXED_STATES=("crit_rating","haste_rating","mastery_rating",
-              "versatility_rating")
+# Backward-compatible constants; these are stable contracts, not season IDs.
+CLASS_ARMOR={info["simc_class"]:info["family"]
+             for info in contracts.CONTRACTS.values()}
+TIER_SLOTS=contracts.TIER_SLOTS
+SLOT_ORDER=contracts.SLOT_ORDER
+FIXED_STATES=contracts.RATING_STATS
 
 class ProfileStageBlocked(ValueError):
     pass
@@ -39,11 +39,10 @@ def need(ok,why):
     if not ok:
         raise ProfileStageBlocked(why)
 
-def catalog(path=DEFAULT_CATALOG):
-    """Season data only; never read an upstream SimC source profile."""
-    doc=json.loads(pathlib.Path(path).read_text(encoding="utf8"))
+def validate_season(doc):
+    """No stable class/spec contract fields may leak into replaceable data."""
     need(type(doc) is dict and
-         doc.get("schema")=="v139_pure_profile_season_catalog_v1" and
+         doc.get("schema")=="v144_representative_season_items_v1" and
          type(doc.get("specializations")) is dict and
          type(doc.get("common_gear")) is dict and
          type(doc.get("gems")) is dict and
@@ -56,7 +55,17 @@ def catalog(path=DEFAULT_CATALOG):
             "flask","food","potion","augmentation","omnium_talents",
             "gem_budget_J","flask_budget_F","flask_fixed_stat"},
          "SEASON_DATA_SCHEMA")
+    allowed={"tier_ids","four_tier_slots","ordinary","weapons"}
+    for key,info in doc["specializations"].items():
+        need(contracts.lookup(*key.split("/")) is not None,
+             "SEASON_SPEC_HAS_NO_STABLE_CONTRACT")
+        need(type(info) is dict and set(info)==allowed,
+             "SEASON_CONTAINS_STABLE_CONTRACT_FIELDS")
     return doc
+
+def catalog(path=DEFAULT_CATALOG):
+    """Replaceable season IDs/levels/consumables; NO official profile read."""
+    return validate_season(json.loads(pathlib.Path(path).read_text(encoding="utf8")))
 
 def compose(character,trinkets,*,target_ilevel=334,
             combat=None,season=None):
@@ -66,14 +75,14 @@ def compose(character,trinkets,*,target_ilevel=334,
     It is NOT registered as user-ready until actual SimC acceptance and the
     existing v098 CHMV budget/consumable/cache/95% path are verified.
     """
-    season=catalog() if season is None else season
+    season=catalog() if season is None else validate_season(season)
     need(type(character) is dict and
          set(character)=={"class","spec","race","talents"},
          "CHARACTER_FIELDS")
     cl=character["class"];spec=character["spec"]
-    need(type(cl) is str and type(spec) is str and
-         cl+"/"+spec in season["specializations"] and
-         cl in CLASS_ARMOR,
+    contract=(contracts.lookup(cl,spec)
+              if type(cl) is str and type(spec) is str else None)
+    need(contract is not None and cl+"/"+spec in season["specializations"],
          "SOURCE_INDEPENDENT_SPEC_NOT_STAGED")
     need(type(target_ilevel) is int and
          target_ilevel==season["target_ilevel"],
@@ -84,9 +93,10 @@ def compose(character,trinkets,*,target_ilevel=334,
          "EXACT_TWO_USER_TRINKETS")
     for name in ("race","talents"):
         scenario.text_token(character[name],"USER_"+name.upper())
-    if cl=="evoker":
-        need(character["race"] in ("dracthyr","dracthyr_visage"),
-             "EVOKER_RACE_NOT_VERIFIED")
+    if contract["allowed_races"] is not None:
+        need(character["race"] in contract["allowed_races"],
+             "EVOKER_RACE_NOT_VERIFIED" if cl=="evoker" else
+             "SPEC_RACE_NOT_VERIFIED")
     combat={"targets":1,"duration_seconds":300,"raid_buffs":True} if combat is None else combat
     need(type(combat) is dict and
          set(combat)=={"targets","duration_seconds","raid_buffs"} and
@@ -95,16 +105,16 @@ def compose(character,trinkets,*,target_ilevel=334,
          1<=combat["duration_seconds"]<=3600 and
          type(combat["raid_buffs"]) is bool,"COMBAT_FIELDS_OR_LIMITS")
     info=season["specializations"][cl+"/"+spec]
-    need(info["family"]==CLASS_ARMOR[cl] and info["role"]=="spell"
-         and info["primary"]=="intellect"
-         and info["weapon_form"]=="one_hand_frill",
+    need(contracts.validate_contracts() and
+         contract["weapon_form"]=="one_hand_frill" and
+         contract["role"]=="spell" and contract["primary"]=="intellect",
          "CLASS_PHYSICAL_CONTRACT")
     need(set(info["tier_ids"])==set(TIER_SLOTS) and
          len(info["four_tier_slots"])==4 and
          set(info["four_tier_slots"])<=set(TIER_SLOTS) and
-         set(info["ordinary"])==set(TIER_SLOTS)-set(info["four_tier_slots"]) |
-             ({"wrists","waist","feet"} if cl=="evoker" else
-              {"wrists","waist","feet"}),
+         set(info["ordinary"])==
+           ((set(TIER_SLOTS)-set(info["four_tier_slots"])) |
+            contracts.NON_TIER_ORDINARY),
          "FOUR_TIER_LAYOUT_OR_ORDINARY_MISSING")
     # First four-piece is selected from actual current-season class-tier IDs;
     # the fifth can be swapped later without changing the engine.
@@ -112,7 +122,7 @@ def compose(character,trinkets,*,target_ilevel=334,
     ids.update({slot:info["tier_ids"][slot]
                 for slot in info["four_tier_slots"]})
     need(set(ids)==set(SLOT_ORDER)-{"trinket1","trinket2"} and
-         set(info["weapons"])=={"main_hand","off_hand"} and
+         set(info["weapons"])==contracts.WEAPON_SLOTS and
          all(type(v) is int and v>0 for v in ids.values()),
          "INTERNAL_REPRESENTATIVE_SLOT_OR_ITEM_ID")
     options={slot:{"gem_id":value}
@@ -140,13 +150,13 @@ def compose(character,trinkets,*,target_ilevel=334,
     # Explicit default_actions lets SimulationCraft select its built-in APL;
     # no season profile, copied class action list or proprietary rotation.
     settings=[
-      cl+"=target_"+spec,
+      contract["simc_class"]+"=target_"+contract["simc_spec"],
       "level="+str(season["character_level"]),
-      "spec="+spec,
+      "spec="+contract["simc_spec"],
       "race="+character["race"],
       "talents="+character["talents"],
-      "role=spell",
-      "position=back",
+      "role="+contract["role"],
+      "position="+contract["position"],
       "default_actions=1",
       *(name+"="+season["default_consumables"][name] for name in
         ("flask","food","potion","augmentation","omnium_talents")),
@@ -167,8 +177,8 @@ def compose(character,trinkets,*,target_ilevel=334,
         rows[slot]["options"]) for slot in SLOT_ORDER])+"\n"
     receipt={"schema":SCHEMA,"status":"STAGED_NOT_USER_READY",
              "season":season["season"],"spec":cl+"/"+spec,
-             "primary":"intellect","family":info["family"],
-             "weapon_form":info["weapon_form"],
+             "primary":contract["primary"],"family":contract["family"],
+             "weapon_form":contract["weapon_form"],
              "four_tier_slots":list(info["four_tier_slots"]),
              "four_tier_item_ids":{s:rows[s]["item_id"]
                                    for s in info["four_tier_slots"]},
@@ -192,6 +202,7 @@ def v098_inputs(character,trinkets,*,target_ilevel=334,combat=None):
     cl,spec=character["class"],character["spec"]
     season=catalog()
     info=season["specializations"][cl+"/"+spec]
+    contract=contracts.lookup(cl,spec)
     defaults=season["default_consumables"]
     gem=int(rows["head"]["options"]["gem_id"])
     need(gem in consumer.DIAMONDS,"STAGED_PRIMARY_DIAMOND_REQUIRED")
@@ -237,5 +248,5 @@ def v098_inputs(character,trinkets,*,target_ilevel=334,combat=None):
          "runtime":{"scout_iterations":35,"confirm_iterations":320,
                     "max_native_calls":6,"threads":1,"resume":True,"seed":1}}
     scenario.normalize(cfg)
-    return (profile,cfg,rows,groups,info["weapon_form"],flask_F,
+    return (profile,cfg,rows,groups,contract["weapon_form"],flask_F,
             tier_map,(fifth,tier_map[fifth],rows[fifth]["item_id"]))
