@@ -24,6 +24,9 @@ FIELDS={"schema","character","target","trinkets","special_items",
         "embellishments","oil_hands","combat"}
 # Backward-compatible public source metadata; ownership moved to v101.
 ARCHETYPES=common.ARCHETYPES
+# Two source-independent specs now have real Windows adaptive Native 6/6
+# receipts each. Do not infer readiness for arbitrary catalog additions.
+PURE_PRODUCT_SPECS=frozenset((("druid","balance"),("evoker","devastation")))
 FIXTURES=common.FIXTURES
 IMPORT_FIELD="import_simc_profile"
 CONSUME_FIELD="consumable_choices"
@@ -167,8 +170,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
     need(type(ch) is dict and set(ch)=={"class","spec","race","talents"},
          "USER_CHARACTER_FIELDS")
     key=(ch["class"],ch["spec"])
-    need(key in ARCHETYPES or (pure_stage and
-         "/".join(key) in pure.catalog()["specializations"]),
+    source_free=(key in PURE_PRODUCT_SPECS and
+                 "/".join(key) in pure.catalog()["specializations"])
+    need(key in ARCHETYPES or source_free,
          "REPRESENTATIVE_ARCHETYPE_NOT_READY:"+"/".join(key))
     for name in ("race","talents"):
         scenario.text_token(ch[name],"USER_"+name.upper())
@@ -197,9 +201,10 @@ def build(user,folder,binary,revision,static_cache_path=None,
     binary=pathlib.Path(binary).resolve()
     need(binary.is_file(),"SIMC_BINARY_NOT_PRESENT")
     need(type(revision) is str and len(revision)>=7,"SIMC_REVISION_REQUIRED")
-    # SimC APL and original item IDs stay in pinned source factory; v101 owns
-    # the material/weapon/tier representative gear assembly thereafter.
-    if pure_stage:
+    # Source-independent P1 production specs compile from the season catalog.
+    # Existing 24 source-backed default paths remain unchanged; explicit
+    # pure_stage=True preserves the older v140 witness-only pilot contract.
+    if pure_stage or source_free:
         need(ordinary_variant is None and ilvl==334,
              "PURE_STAGE_TARGET_OR_VARIANT_NOT_READY")
         base_profile,cfg,rows,groups,weapon_layout,F,tier_data,fifth_data=(
