@@ -321,7 +321,9 @@ def create_app(*,root=None, token=None):
         return {"archetypes":[{"class":cl,"spec":sp,
                                **sessions.standard_controls((cl,sp)),
                                "representative_scope":(
-                                   "SOURCE_NON_TIER_NOT_ALL_STANDARDIZED"
+                                   "SOURCE_INDEPENDENT_SEASON_CATALOG"
+                                   if (cl,sp) in bootstrap.PURE_PRODUCT_SPECS
+                                   else "SOURCE_NON_TIER_NOT_ALL_STANDARDIZED"
                                    if (cl,sp) in bootstrap.common.GENERIC_PENDING
                                    else "SOURCE_BACKED_PARTIAL_ORDINARY_POOL")}
                               for cl,sp in sessions.SUPPORTED]}
