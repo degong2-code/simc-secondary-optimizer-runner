@@ -95,7 +95,10 @@ class IndependentSeasonCompiler(unittest.TestCase):
                 ("mage","frost","human",16),
                 ("paladin","retribution","blood_elf",15),
                 ("warrior","fury","dwarf",16),
-                ("hunter","beast_mastery","dwarf",15)):
+                ("hunter","beast_mastery","dwarf",15),
+                ("rogue","outlaw","dwarf",16),
+                ("rogue","subtlety","dwarf",16),
+                ("shaman","elemental","tauren",16)):
                 user={"class":cl,"spec":sp,"race":race,
                       "talents":"CAAAABBB11122"}
                 trinkets=[{"slot":slot,"item_id":item,"options":{}}
@@ -247,6 +250,47 @@ class IndependentSeasonCompiler(unittest.TestCase):
                         bootstrap.run(input_file,pathlib.Path(td)/"blocked",
                                       binary,"7bc10711b5",
                                       execute=True,pure_stage=True)
+                    native.assert_not_called()
+
+    def test_three_legacy_v104_shapes_have_source_free_stage_only(self):
+        import v106_user_session_controller as sessions
+        cases=(
+            (("rogue","outlaw"),"dual_one_hand"),
+            (("rogue","subtlety"),"dual_one_hand"),
+            (("shaman","elemental"),"one_hand_shield"),
+        )
+        for key,form in cases:
+            with self.subTest(key=key),tempfile.TemporaryDirectory() as td:
+                self.assertIn(key,bootstrap.ARCHETYPES)
+                self.assertNotIn(key,bootstrap.PURE_PRODUCT_SPECS)
+                controls=sessions.standard_controls(key)
+                user=sessions.user_scenario(controls)
+                binary=pathlib.Path(td)/"fake_simc"
+                binary.write_bytes(b"NOT_NATIVE")
+                folder=pathlib.Path(td)/"preview"
+                report=bootstrap.build(user,folder,binary,"7bc10711b5",
+                                       pure_stage=True)
+                self.assertEqual(report["status"],
+                                 "STAGED_INTERNAL_MANIFEST_NATIVE_NOT_AUTHORIZED")
+                self.assertEqual(report["native_calls"],0)
+                self.assertFalse(report["user_optimizer_ready"])
+                self.assertEqual(report["weapon_form"],form)
+                self.assertEqual(report["plan"]["item_slots"],16)
+                self.assertEqual(report["plan"]["base_B"],3150)
+                self.assertEqual(len(report["effective_four_tier_slots"]),4)
+                rendered=(folder/"profile.simc").read_text()
+                self.assertEqual(rendered.count("main_hand="),1)
+                self.assertEqual(rendered.count("off_hand="),1)
+                self.assertIn("default_actions=1\n",rendered)
+                self.assertNotIn("actions.",rendered)
+                with mock.patch.object(bootstrap.entry,"run_manifest") as native:
+                    with self.assertRaisesRegex(bootstrap.UserScenarioBlocked,
+                                               "PURE_STAGE_NATIVE_NOT_AUTHORIZED"):
+                        inp=pathlib.Path(td)/"user.json"
+                        inp.write_text(bootstrap.canonical(user)+"\n")
+                        bootstrap.run(inp,pathlib.Path(td)/"blocked",
+                                      binary,"7bc10711b5",execute=True,
+                                      pure_stage=True)
                     native.assert_not_called()
 
     def test_season_item_option_can_not_override_existing_gem(self):
