@@ -143,6 +143,43 @@ class BatchOffline(unittest.TestCase):
         self.assertIn("SimC real error text",
                       pathlib.Path(failures[0]["simc_raw_log"]).read_text())
 
+    def test_mocked_full_24_end_to_end_one_physical_plus_adaptive_each(self):
+        # Exercise all 24 v145 -> v141 exact receipts -> existing v096
+        # adapters, with NO actual Native subprocess anywhere in CI.
+        attempts=[]
+        def physical_only(cmd,*,cwd,stdout,stderr,timeout,check):
+            attempts.append(str(cwd))
+            (pathlib.Path(cwd)/"physical.json").write_text(json.dumps({
+                "report_version":"2.0.0","git_revision":REV,
+                "sim":{"players":[{
+                    "collected_data":{"dps":{"mean":9876.0}}}]}}))
+            return subprocess.CompletedProcess(cmd,0)
+        outcome={"status":"PASS_BOUNDED_GENERIC_NATIVE_SEARCH_AND_CACHE",
+                 "new_native_attempts_cumulative":6,
+                 "verified_cache_hits_this_run":0,
+                 "B":3150,"official_final_T":3150}
+        with mock.patch.object(batch.physical.subprocess,"run",
+                               side_effect=physical_only) as physical_exec, \
+             mock.patch.object(batch.bootstrap.entry.durable,"run",
+                               return_value=outcome) as adaptive, \
+             mock.patch.object(batch.bootstrap.entry,"user_facing_result",
+                               return_value={"confidence_level":0.95}):
+            report=batch.run(self.binary,self.out,REV,execute=True,
+                             max_new_physical=24,optimize_accepted=True)
+            self.assertEqual(physical_exec.call_count,24)
+            self.assertEqual(adaptive.call_count,24)
+            self.assertTrue(all(call.kwargs["native_limit"]==6 and
+                                call.kwargs["open_folder"] is False
+                                for call in adaptive.call_args_list))
+        self.assertEqual(len(attempts),24)
+        self.assertEqual(report["physical_new_native_calls"],24)
+        self.assertEqual(report["adaptive_specs_attempted_this_run"],24)
+        self.assertEqual(report["counts"],{"ADAPTIVE_PASS":24})
+        self.assertEqual({r["spec"] for r in report["results"]},
+                         set(batch.ALL_SPECS))
+        self.assertTrue(all(r["user_result"]["confidence_level"]==0.95
+                            for r in report["results"]))
+
     def test_global_cancel_then_resume_uses_identical_starter_identities(self):
         root=self.scoped()
         root.mkdir(parents=True)
