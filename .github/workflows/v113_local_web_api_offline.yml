@@ -13,6 +13,7 @@ on:
       - runner/webui/styles.css
       - runner/webui/app.js
       - runner/v106_user_session_controller.py
+      - tests/test_v106_user_session_controller.py
       - runner/v098_target_user_scenario_bootstrap.py
       - runner/v103_source_observed_weapon_types.py
       - runner/v104_shared_pinned_rogue_shaman_composer.py
