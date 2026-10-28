@@ -1,4 +1,4 @@
-"""P1 v127 declarative six-spec source registry. Offline, Native 0."""
+"""P1 v127 pinned seven-source registry vs current 24-spec beta. Offline; SimC 0."""
 from __future__ import annotations
 import dataclasses,hashlib,pathlib,sys,tempfile,unittest
 from unittest import mock
@@ -15,14 +15,20 @@ class SourceRegistry(unittest.TestCase):
     def need(valid,code):
         if not valid:raise ValueError(code)
 
-    def test_exact_six_spec_source_metadata_and_pinned_git_blobs(self):
+    def test_seven_pinned_legacy_sources_and_current_beta_class_coverage(self):
         self.assertTrue(data.validate())
         self.assertTrue(common.validate_source_registry())
         self.assertEqual(set(data.BY_SPEC),set(weapon.EXECUTABLE_SOURCES))
         self.assertEqual(len(data.BY_SPEC),7)
         self.assertEqual(set(data.BY_SPEC),set(common.ARCHETYPES)-set(common.GENERIC_PENDING))
+        # v127 owns only the seven older source contracts; the shared
+        # v101 registry now also includes 17 pinned MID2 beta sources.
+        # All supported beta classes (including Feral Druid) need tier IDs.
+        self.assertEqual(len(common.ARCHETYPES),24)
+        self.assertEqual(len(common.GENERIC_PENDING),17)
         self.assertEqual(set(common.CLASS_TIER_ITEMS),
-                         set(common.CLASS_ARMOR)-{"evoker","druid"})
+                         {key[0] for key in common.ARCHETYPES})
+        self.assertNotIn("evoker",common.CLASS_TIER_ITEMS)
         for record in data.SOURCE_BACKED:
             with self.subTest(key=record.key):
                 full=ROOT/"integration_probes"/"fixtures"/record.source_fixture
@@ -62,13 +68,15 @@ class SourceRegistry(unittest.TestCase):
                 self.assertEqual(sum(F.values()),165)
                 self.assertIn("actions=",text)
 
-    def test_unknown_specialization_remains_not_enabled(self):
+    def test_old_registry_scope_and_truly_missing_beta_specializations(self):
         with self.assertRaisesRegex(data.SourceMetadataBlocked,
                                     "REGISTERED_ARCHETYPE_NOT_SOURCE_BACKED"):
             data.get(("priest","shadow"))
         self.assertIn(("priest","shadow"),common.ARCHETYPES)
-        self.assertNotIn(("druid","feral"),common.ARCHETYPES)
+        self.assertIn(("druid","feral"),common.ARCHETYPES)
+        self.assertNotIn(("druid","balance"),common.ARCHETYPES)
         self.assertNotIn(("evoker","devastation"),common.ARCHETYPES)
+        self.assertNotIn(("evoker","augmentation"),common.ARCHETYPES)
 
     def test_metadata_provenance_and_weapon_change_fail_closed(self):
         existing=data.SOURCE_BACKED[0]
