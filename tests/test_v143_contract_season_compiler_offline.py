@@ -15,12 +15,13 @@ import v098_target_user_scenario_bootstrap as bootstrap
 import v143_specialization_contracts as specs
 from integration_probes.v140_pure_profile_physical_native_smoke import user_for
 
-# Observed user Windows V094_SESSION_IDENTITY source-profile fingerprints for
-# the two 2026-10-28 real 6/6 Native adaptive trials. These are evidence
-# anchors, never loaded as runtime templates or complete user profiles.
+# Actual prior user Windows v140 physical receipt 'profile_sha256' values.
+# These hash the final v098 profile.simc bytes (NOT V094 session source SHA).
+# Both v140 physical trials PASS and their same inputs fed v141 adaptive Native.
+# Evidence fingerprints are only test constants, never runtime templates.
 VERIFIED_SOURCE_SHA={
-    "druid/balance":"a00d8241d5bda2f07b5486a50c29edc9befb4b1853bbdc0ecffd3a73f1f77548",
-    "evoker/devastation":"60b669d15ff1ef950debd447ed7af5a8d8b5829d441c52638b46c8b5d43c0d06",
+    "druid/balance":"4dca36b5aad03e3cb8f7d0a3c2368c5c194e54c053224ca0c251de9ab8bfb5bc",
+    "evoker/devastation":"14d951bd1b423a20dbf8e75cf5e8fd5e2ac654bd22aa5a7eb445dc1a583c192c",
 }
 
 class IndependentSeasonCompiler(unittest.TestCase):
