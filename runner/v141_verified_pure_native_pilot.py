@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Reuse existing v140 physical receipts for an explicitly selected v096 pilot.
+"""Reuse exact v140 or v145 physical receipts for a selected v096 stage.
 
-NO new Native test or effect/proc certification. An exact v140 source-free
-profile, unchanged user gear/inputs, identical SimC binary/revision, and its
-previous actual JSON2 are required before activating the EXISTING adaptive
-runner. No unverified or default user session can use the witness.
+NO new Native test, automatic spec promotion or effects/proc certification.
+A v140 witness still applies only to two historical exact cases; a v145 witness
+applies only to ONE staged profile with identical user, binary and JSON2 bytes.
+The EXISTING v096/v094 adaptive runner alone does candidate DPS statistics.
 """
 from __future__ import annotations
 import hashlib
