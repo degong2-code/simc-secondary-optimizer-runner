@@ -76,20 +76,31 @@ class LocalWebAPIOffline(unittest.TestCase):
         # paths, but may not claim the unavailable legacy paths work.
         original_text=pathlib.Path.read_text
         original_bytes=pathlib.Path.read_bytes
+        original_is_file=pathlib.Path.is_file
         seen=[]
-        def forbid_source(path):
-            loc=str(path).replace(chr(92),"/")
-            if "/integration_probes/fixtures/" in loc and loc.endswith(".simc"):
-                seen.append(loc)
-                raise FileNotFoundError("LEGACY_SOURCE_PROFILE_NOT_INSTALLED")
+        checked=[]
+        def is_legacy(path):
+            return ("/integration_probes/fixtures/" in
+                    str(path).replace(chr(92),"/") and
+                    str(path).endswith(".simc"))
         def absent_text(path,*args,**kwargs):
-            forbid_source(path)
+            if is_legacy(path):
+                seen.append(str(path))
+                raise FileNotFoundError("LEGACY_SOURCE_PROFILE_NOT_INSTALLED")
             return original_text(path,*args,**kwargs)
         def absent_bytes(path,*args,**kwargs):
-            forbid_source(path)
+            if is_legacy(path):
+                seen.append(str(path))
+                raise FileNotFoundError("LEGACY_SOURCE_PROFILE_NOT_INSTALLED")
             return original_bytes(path,*args,**kwargs)
+        def absent_is_file(path,*args,**kwargs):
+            if is_legacy(path):
+                checked.append(str(path))
+                return False
+            return original_is_file(path,*args,**kwargs)
         with mock.patch.object(pathlib.Path,"read_text",absent_text), \
-             mock.patch.object(pathlib.Path,"read_bytes",absent_bytes):
+             mock.patch.object(pathlib.Path,"read_bytes",absent_bytes), \
+             mock.patch.object(pathlib.Path,"is_file",absent_is_file):
             response=self.client.get("/api/v1/defaults",headers=self.headers)
             self.assertEqual(response.status_code,200,response.text)
             data=response.json()
@@ -98,7 +109,15 @@ class LocalWebAPIOffline(unittest.TestCase):
             missing={(r["class"],r["spec"]) for r in
                      data["unavailable_missing_legacy_fixtures"]}
             self.assertEqual(missing,set(sessions.SUPPORTED)-visible)
-            self.assertEqual(len(seen),24)
+            self.assertEqual(len(checked),24)
+            self.assertEqual(seen,[])
+            # Character/talent/trinket defaults for all 26 are now
+            # available independently; only actual legacy EXECUTION is
+            # unavailable when those complete historical files are absent.
+            for key in sessions.SUPPORTED:
+                source=sessions.standard_controls(key)
+                self.assertEqual((source["class"],source["spec"]),key)
+            self.assertEqual(seen,[])
             for spec in sorted(visible):
                 with self.subTest(spec=spec):
                     payload={**self.payload,
