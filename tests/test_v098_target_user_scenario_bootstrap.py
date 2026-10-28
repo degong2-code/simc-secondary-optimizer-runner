@@ -485,13 +485,14 @@ class UserTargetBootstrap(unittest.TestCase):
         out,_=self.prepare(u)
         self.assertEqual((out["plan"]["base_B"],out["plan"]["final_T"]),
                          (2980,3044))
-        # Evoker remains unpinned despite Feral joining the beta route.
+        # Devastation now has a Native-proven, season-catalog pure route at
+        # 334 only. Its 321 path must NOT invent an unmeasured gear budget.
         u["character"]["class"]="evoker"
         u["character"]["spec"]="devastation"
         with tempfile.TemporaryDirectory() as td:
             root=pathlib.Path(td);binary=root/"dummy";binary.write_bytes(b"NO_NATIVE")
             with self.assertRaisesRegex(boot.UserScenarioBlocked,
-                                        "REPRESENTATIVE_ARCHETYPE_NOT_READY"):
+                                        "PURE_STAGE_TARGET_OR_VARIANT_NOT_READY"):
                 boot.build(u,root/"output",binary,"7bc10711b5")
 
     def test_feral_user_target334_connects_without_native_or_original_gear_budget(self):
