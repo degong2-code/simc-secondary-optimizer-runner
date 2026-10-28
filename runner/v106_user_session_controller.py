@@ -14,7 +14,14 @@ import v108_native_consumable_inputs as consumer
 
 SCHEMA="v106_dps_user_session_v1"
 DEFAULT_ROOT=pathlib.Path.home()/"SIMC_Secondary_Optimizer"/"runs"
-SUPPORTED=tuple(sorted(bootstrap.ARCHETYPES))
+SUPPORTED=tuple(sorted(set(bootstrap.ARCHETYPES)|bootstrap.PURE_PRODUCT_SPECS))
+# User-editable starter talents from the already verified v140 Windows
+# source-free inputs; not a runtime dependency on official full SimC profiles.
+PURE_STARTERS={
+    ("druid","balance"):("night_elf","CYGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWoMbNjxMDwsYmZmZhBjZZmlZYmZswyMLzMGzshhBYstMzgxsNCMBAAAYxMzMzgNDjxAAwMDMA"),
+    ("evoker","devastation"):("dracthyr","CsbBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAzMDMDzgBmZGjZaYmpZMWmxMzMz8AzMzAmxMGzMLzMDMwYwCsMGN2GQmBBbYGMzghB")}
+PURE_TRINKET_IDS=(250215,281215)
+
 # Extended UI selected equipment is a pass-through to v098's exact
 # source-backed item/tier/native-L checks, not a second selector.
 OPTIONAL_CONTROLS=frozenset(("special_items","embellishments",
@@ -30,6 +37,12 @@ def canonical(obj):
 def sha(data):
     return hashlib.sha256(data).hexdigest()
 def source_defaults(key):
+    if key in bootstrap.PURE_PRODUCT_SPECS:
+        race,talents=PURE_STARTERS[key]
+        spec=bootstrap.pure.catalog()["specializations"]["/".join(key)]
+        return {"class":key[0],"spec":key[1],"race":race,
+                "talents":talents,"trinket_ids":list(PURE_TRINKET_IDS),
+                "weapon_form":spec["weapon_form"],"oil_hands":[]}
     need(key in bootstrap.ARCHETYPES,"DPS_ARCHETYPE_NOT_READY")
     name,_,weapon,_=bootstrap.ARCHETYPES[key]
     text=(bootstrap.FIXTURES/name).read_text(encoding="utf8")
@@ -121,7 +134,7 @@ def user_scenario(controls):
          required<=set(controls)<=required|OPTIONAL_CONTROLS,
          "USER_INPUT_FIELDS")
     key=(controls["class"],controls["spec"])
-    need(key in bootstrap.ARCHETYPES,"DPS_ARCHETYPE_NOT_READY")
+    need(key in SUPPORTED,"DPS_ARCHETYPE_NOT_READY")
     for x in ("race","talents"):
         bootstrap.scenario.text_token(controls[x],"USER_"+x.upper())
     ilvl=controls["ilevel"];final=controls["final_T"]
@@ -132,7 +145,8 @@ def user_scenario(controls):
     need(type(trinkets) is list and len(trinkets)==2
          and all(type(i) is int and i>0 for i in trinkets),
          "TWO_REAL_TRINKET_IDS_REQUIRED")
-    weapons=bootstrap.ARCHETYPES[key][2]
+    weapons=(bootstrap.pure.catalog()["specializations"]["/".join(key)]["weapon_form"]
+             if key in bootstrap.PURE_PRODUCT_SPECS else bootstrap.ARCHETYPES[key][2])
     hands=controls["oil_hands"]
     need(type(hands) is list and len(hands)==len(set(hands))
          and set(hands)<={"main_hand","off_hand"} and
