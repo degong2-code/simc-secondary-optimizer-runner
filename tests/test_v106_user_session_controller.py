@@ -68,8 +68,11 @@ class UserSessionControls(unittest.TestCase):
         user=ux.user_scenario(ux.standard_controls())
         return root,binary,user
 
-    def test_six_existing_source_specializations_fill_defaults_without_full_gear(self):
-        self.assertEqual(len(ux.SUPPORTED),24)
+    def test_all_26_dps_user_defaults_require_no_full_gear(self):
+        self.assertEqual(len(ux.SUPPORTED),26)
+        self.assertEqual(len(ux.bootstrap.ARCHETYPES),24)
+        self.assertEqual(set(ux.SUPPORTED)-set(ux.bootstrap.ARCHETYPES),
+                         ux.bootstrap.PURE_PRODUCT_SPECS)
         for key in ux.SUPPORTED:
             with self.subTest(key=key):
                 c=ux.standard_controls(key)
@@ -82,6 +85,21 @@ class UserSessionControls(unittest.TestCase):
                 self.assertNotIn("seed",u)
                 self.assertEqual(u["embellishments"],[])
                 self.assertEqual(u["special_items"],[])
+
+    def test_two_pure_dps_default_sessions_preserve_existing_identity_contract(self):
+        root,binary,_=self.fixture()
+        for key in sorted(ux.bootstrap.PURE_PRODUCT_SPECS):
+            with self.subTest(spec=key):
+                source=ux.standard_controls(key)
+                self.assertEqual(source["oil_hands"],[])
+                user=ux.user_scenario(source)
+                self.assertEqual(len(user["trinkets"]),2)
+                folder=ux.store_session(user,root/"runs",binary,"7bc10711b5")
+                self.assertEqual(ux.store_session(user,root/"runs",binary,
+                                                  "7bc10711b5"),folder)
+                self.assertNotIn("ordinary_variant",
+                      json.loads((folder/"V106_SESSION_IDENTITY.json").read_text()))
+        self.assertEqual(len(list((root/"runs").iterdir())),2)
 
     def test_deterministic_session_resume_and_binary_revision_identity(self):
         root,binary,user=self.fixture()
