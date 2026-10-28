@@ -403,7 +403,7 @@ def main(argv=None):
     p.add_argument("--pure-stage",action="store_true",
                    help="Internal source-independent stage; execute requires exact v140/v145 physical Native receipt")
     p.add_argument("--physical-acceptance-root",type=pathlib.Path,
-                   help="Internal v140 physical smoke root for exact reuse")
+                   help="Internal v140 root (two historical specs), or exact v145 per-user physical output folder")
     p.add_argument("--cache-only",action="store_true")
     p.add_argument("--ordinary-variant",
                    choices=sorted(common.ORDINARY_VARIANTS),
