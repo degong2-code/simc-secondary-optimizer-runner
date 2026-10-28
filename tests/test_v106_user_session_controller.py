@@ -86,6 +86,33 @@ class UserSessionControls(unittest.TestCase):
                 self.assertEqual(u["embellishments"],[])
                 self.assertEqual(u["special_items"],[])
 
+    def test_24_compact_starter_examples_exactly_reproduce_legacy_defaults(self):
+        # Pinned complete source profiles are ONLY offline comparison fixtures.
+        # Runtime starter lookup cannot require those full .simc files.
+        import re
+        records=ux.starter_examples()
+        self.assertEqual(set(records),
+                         {"/".join(key) for key in ux.bootstrap.ARCHETYPES})
+        for key in sorted(ux.bootstrap.ARCHETYPES):
+            with self.subTest(key=key):
+                compact=ux.source_defaults(key)
+                original=ux.legacy_fixture_path(key).read_text(encoding="utf8")
+                lines=original.splitlines()
+                for field in ("race","talents"):
+                    vals=[line.split("=",1)[1] for line in lines
+                          if line.startswith(field+"=")]
+                    self.assertEqual(vals,[compact[field]])
+                ids=[]
+                for slot in ("trinket1","trinket2"):
+                    vals=[line for line in lines if line.startswith(slot+"=")]
+                    self.assertEqual(len(vals),1)
+                    m=re.search(r"(?:^|,)id=(\\d+)(?:,|$)",vals[0])
+                    self.assertIsNotNone(m)
+                    ids.append(int(m.group(1)))
+                self.assertEqual(ids,compact["trinket_ids"])
+                self.assertEqual(
+                    compact["weapon_form"],ux.bootstrap.ARCHETYPES[key][2])
+
     def test_two_pure_dps_default_sessions_preserve_existing_identity_contract(self):
         root,binary,_=self.fixture()
         for key in sorted(ux.bootstrap.PURE_PRODUCT_SPECS):
