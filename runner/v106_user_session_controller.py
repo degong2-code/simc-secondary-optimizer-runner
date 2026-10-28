@@ -7,7 +7,7 @@ revision and optional exact static-cache bytes. The SAME key resumes cached
 Native calls; changed settings always create a different session.
 """
 from __future__ import annotations
-import argparse, contextlib, hashlib, json, os, pathlib, re, sys
+import argparse, contextlib, functools, hashlib, json, os, pathlib, re, sys
 sys.path.insert(0,str(pathlib.Path(__file__).resolve().parent))
 import v098_target_user_scenario_bootstrap as bootstrap
 import v108_native_consumable_inputs as consumer
@@ -36,35 +36,63 @@ def canonical(obj):
                       separators=(",",":"),allow_nan=False)
 def sha(data):
     return hashlib.sha256(data).hexdigest()
+STARTER_CATALOG=(pathlib.Path(__file__).resolve().parents[1]/
+    "integration_probes/catalog/v146_character_starter_examples.json")
+
+@functools.lru_cache(maxsize=1)
+def starter_examples():
+    """Compact user-editable examples; never load source equipment/APL files.
+
+    Original complete SimC fixtures remain required on the legacy execution
+    route, not for class/spec/race/talents/trinket INPUT controls.
+    """
+    doc=json.loads(STARTER_CATALOG.read_text(encoding="utf8"))
+    need(type(doc) is dict and
+         doc.get("schema")=="v146_user_character_starter_examples_v1" and
+         type(doc.get("entries")) is dict,
+         "USER_STARTER_CATALOG_SCHEMA")
+    records=doc["entries"]
+    need(set(records)=={"/".join(key) for key in bootstrap.ARCHETYPES},
+         "USER_STARTER_CATALOG_24_SPEC_COVERAGE")
+    for key,row in records.items():
+        need(type(row) is dict and
+             set(row)=={"race","talents","trinket_ids"} and
+             type(row["trinket_ids"]) is list and
+             len(row["trinket_ids"])==2 and
+             all(type(i) is int and i>0 for i in row["trinket_ids"]),
+             "USER_STARTER_CATALOG_ENTRY:"+key)
+        bootstrap.scenario.text_token(row["race"],"STARTER_RACE")
+        bootstrap.scenario.text_token(row["talents"],"STARTER_TALENTS")
+    return records
+
+def legacy_fixture_path(key):
+    """Readiness locator only. No fixture contents or source metadata load."""
+    need(key in bootstrap.ARCHETYPES,"DPS_ARCHETYPE_NOT_READY")
+    first=bootstrap.common.metadata.BY_SPEC.get(key)
+    if first is not None:
+        name=first.source_fixture
+    else:
+        actor=bootstrap.common.mid2_pins.NEW.get("/".join(key))
+        need(actor is not None,"LEGACY_SOURCE_FIXTURE_NOT_REGISTERED")
+        name="v132_MID2_"+actor[0]+".simc"
+    return bootstrap.FIXTURES/name
+
 def source_defaults(key):
+    need(key in SUPPORTED,"DPS_ARCHETYPE_NOT_READY")
+    spec=bootstrap.pure.contracts.lookup(*key)
+    need(spec is not None,"STABLE_USER_SPEC_CONTRACT_MISSING")
     if key in bootstrap.PURE_PRODUCT_SPECS:
         race,talents=PURE_STARTERS[key]
-        spec=bootstrap.pure.contracts.lookup(*key)
-        return {"class":key[0],"spec":key[1],"race":race,
-                "talents":talents,"trinket_ids":list(PURE_TRINKET_IDS),
-                "weapon_form":spec["weapon_form"],"oil_hands":[]}
-    need(key in bootstrap.ARCHETYPES,"DPS_ARCHETYPE_NOT_READY")
-    name,_,weapon,_=bootstrap.ARCHETYPES[key]
-    text=(bootstrap.FIXTURES/name).read_text(encoding="utf8")
-    fields={}
-    for line in text.splitlines():
-        field,sep,val=line.partition("=")
-        if sep and field in ("spec","race","talents"):
-            need(field not in fields,"SOURCE_DUPLICATE_CHARACTER_FIELD")
-            fields[field]=val
-    need(set(fields)=={"spec","race","talents"} and fields["spec"]==key[1],
-         "SOURCE_CHARACTER_NOT_READY")
-    trinkets=[]
-    for slot in ("trinket1","trinket2"):
-        found=[x for x in text.splitlines() if x.startswith(slot+"=")]
-        need(len(found)==1,"SOURCE_TRINKET_NOT_UNIQUE:"+slot)
-        m=re.search(r"(?:^|,)id=([1-9][0-9]*)(?:,|$)",found[0])
-        need(m is not None,"SOURCE_TRINKET_ID_MISSING:"+slot)
-        trinkets.append(int(m.group(1)))
-    return {"class":key[0],"spec":key[1],"race":fields["race"],
-            "talents":fields["talents"],"trinket_ids":trinkets,
-            "weapon_form":weapon,"oil_hands":["main_hand","off_hand"]
-             if weapon in DUAL_FORMS else ["main_hand"]}
+        trinkets=list(PURE_TRINKET_IDS)
+        oil=[]
+    else:
+        row=starter_examples()["/".join(key)]
+        race,talents,trinkets=row["race"],row["talents"],list(row["trinket_ids"])
+        oil=(["main_hand","off_hand"]
+             if spec["weapon_form"] in DUAL_FORMS else ["main_hand"])
+    return {"class":key[0],"spec":key[1],"race":race,
+            "talents":talents,"trinket_ids":trinkets,
+            "weapon_form":spec["weapon_form"],"oil_hands":oil}
 
 def validated_selected_gear(entries,group,limit):
     """Validate only user input shape. v098 + SimC own identity and effects."""
@@ -145,8 +173,9 @@ def user_scenario(controls):
     need(type(trinkets) is list and len(trinkets)==2
          and all(type(i) is int and i>0 for i in trinkets),
          "TWO_REAL_TRINKET_IDS_REQUIRED")
-    weapons=(bootstrap.pure.contracts.lookup(*key)["weapon_form"]
-             if key in bootstrap.PURE_PRODUCT_SPECS else bootstrap.ARCHETYPES[key][2])
+    # Input validation is source-free for all 26 contracts. Execution of an
+    # unpromoted legacy spec STILL uses its old source-backed route.
+    weapons=bootstrap.pure.contracts.lookup(*key)["weapon_form"]
     hands=controls["oil_hands"]
     need(type(hands) is list and len(hands)==len(set(hands))
          and set(hands)<={"main_hand","off_hand"} and
