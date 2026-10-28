@@ -101,3 +101,14 @@ summary small{font-size:10px;color:var(--muted);font-weight:450}
 .footnote{text-align:center;color:#a0aca4;font-size:11px;line-height:1.8;padding:12px 0}
 @media(max-width:920px){.intro{grid-template-columns:1fr}.columns{grid-template-columns:minmax(0,1fr)}.workspace{grid-row:auto}.callout{max-width:100%}}
 @media(max-width:540px){.shell{padding:0 12px 35px}.topbar{gap:12px}.local-indicator{font-size:0;padding:8px}.dot{margin-right:0}.panel{padding:17px}.intro{padding-top:23px}.section-head{margin-bottom:15px}.two,.gear-fields{grid-template-columns:1fr}.actions,.two-button{flex-direction:column}.fold summary{align-items:start;flex-direction:column;gap:2px}.metrics strong{font-size:23px}}
+
+/* Copied Windows Native evidence is a separate READ-ONLY surface. */
+.batch-evidence .hint{margin:0 0 13px}
+.batch-evidence .field{margin-top:12px}
+#batch-open-btn{width:100%}
+#batch-status{margin:12px 0}
+.batch-table{overflow:auto;max-width:100%;border-top:1px solid var(--line)}
+.batch-table table{width:100%;border-collapse:collapse;font-size:11px;min-width:580px}
+.batch-table th,.batch-table td{padding:9px 7px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.batch-table th{font-size:10px;color:var(--muted);font-weight:750}
+.batch-table td:first-child{font-weight:700}
