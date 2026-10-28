@@ -82,6 +82,8 @@ class PureProfileComposer(unittest.TestCase):
         data=copy.deepcopy(pure.catalog())
         data["season"]="future_test_only"
         data["target_ilevel"]=321
+        data["character_level"]=91
+        data["default_consumables"]["food"]="disabled"
         data["specializations"]["druid/balance"]["ordinary"]["feet"]=268240
         actor={"class":"druid","spec":"balance","race":"night_elf",
                "talents":"CAAAABBB11122"}
@@ -91,6 +93,8 @@ class PureProfileComposer(unittest.TestCase):
         self.assertEqual(rows["feet"]["ilevel"],321)
         self.assertEqual(rows["feet"]["item_id"],268240)
         self.assertIn("ilevel=321",profile)
+        self.assertIn("level=91\\n",profile)
+        self.assertIn("food=disabled\\n",profile)
         # This is a serialization test, not evidence that a future item
         # exists or that two slots accept the same model in real SimC.
         self.assertFalse(meta["user_optimizer_ready"])
