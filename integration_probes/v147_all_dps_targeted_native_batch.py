@@ -260,7 +260,15 @@ def main(argv=None):
                    optimize_accepted=args.optimize_accepted,
                    max_adaptive_specs=args.max_adaptive_specs,
                    timeout_seconds=args.timeout_seconds)
-        print(canonical(report))
+        print("BATCH_STATUS:",report["status"])
+        print("SPEC_STATUS_COUNTS:",json.dumps(
+            report["counts"],ensure_ascii=False,sort_keys=True))
+        print("PHYSICAL_NATIVE_NEW:",report["physical_new_native_calls"])
+        print("ADAPTIVE_SPECS_ATTEMPTED:",
+              report["adaptive_specs_attempted_this_run"])
+        for row in report["results"]:
+            print(row["spec"],row["status"],
+                  row.get("error") or row.get("simc_raw_log") or "")
         result_folder=pathlib.Path(args.out).expanduser().resolve()/(
             "simc_"+report["binary_sha256"][:16]+"_"+report["revision"].lower())
         print("OUTPUT_DIR:",result_folder)
