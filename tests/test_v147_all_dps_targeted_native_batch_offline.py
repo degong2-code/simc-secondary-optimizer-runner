@@ -160,6 +160,42 @@ class BatchOffline(unittest.TestCase):
             native.assert_not_called()
         self.assertEqual(continued["counts"],{"PENDING_PHYSICAL_NATIVE":2})
 
+    def test_bounded_one_call_per_launch_auto_resumes_next_spec(self):
+        selected=["mage/frost","rogue/outlaw","warrior/fury"]
+        calls=[]
+        def simc(cmd,*,cwd,stdout,stderr,timeout,check):
+            calls.append(str(cwd))
+            native={"report_version":"2.0.0","git_revision":REV,
+                    "sim":{"players":[{"collected_data":{
+                        "dps":{"mean":5500.0}}}]}}
+            (pathlib.Path(cwd)/"physical.json").write_text(json.dumps(native))
+            return subprocess.CompletedProcess(cmd,0)
+        with mock.patch.object(batch.physical.subprocess,"run",
+                               side_effect=simc):
+            for expected in (1,2,3):
+                report=batch.run(self.binary,self.out,REV,specs=selected,
+                                 execute=True,max_new_physical=1)
+                self.assertEqual(len(calls),expected)
+                self.assertEqual(report["physical_new_native_calls"],1)
+                self.assertEqual(report["counts"].get(
+                    "PHYSICAL_PASS_ADAPTIVE_PENDING"),expected)
+                self.assertEqual(report["counts"].get(
+                    "PENDING_PHYSICAL_NATIVE",0),3-expected)
+            cached=batch.run(self.binary,self.out,REV,specs=selected,
+                             execute=True,max_new_physical=1)
+        self.assertEqual(len(calls),3)
+        self.assertEqual(cached["physical_new_native_calls"],0)
+        self.assertEqual(cached["counts"],{
+            "PHYSICAL_PASS_ADAPTIVE_PENDING":3})
+
+    def test_batch_root_os_lock_blocks_second_concurrent_worker(self):
+        with batch.sessions.worker_lock(self.scoped()):
+            with mock.patch.object(batch.physical.subprocess,"run") as native:
+                with self.assertRaisesRegex(batch.sessions.SessionBlocked,
+                                           "V106_SAME_SESSION_ALREADY_RUNNING"):
+                    batch.run(self.binary,self.out,REV,specs=["mage/frost"])
+                native.assert_not_called()
+
     def test_no_adaptive_when_only_prepared_and_adaptive_subset_cap(self):
         with mock.patch.object(batch.physical.subprocess,"run") as simc, \
              mock.patch.object(batch.bootstrap.entry.durable,"run") as adaptive:
