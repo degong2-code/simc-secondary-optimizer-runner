@@ -74,6 +74,17 @@ class SourceBoundArmorSeeds(unittest.TestCase):
         self.assertEqual(pool.row("leather","waist",334)["item_id"],268256)
         self.assertEqual(pool.row("cloth","waist",334)["item_id"],268257)
 
+    def test_new_ordinary_seed_does_not_rewrite_existing_havoc_native_profile(self):
+        # Source-backed candidate metadata is separate from the v133 builder.
+        import v133_mid2_target_representative_preview as preview
+        data,profile=preview.draft("demonhunter/havoc",334)
+        feet=next(line for line in profile.splitlines()
+                  if line.startswith("feet="))
+        self.assertIn("id=159327",feet)
+        self.assertNotIn("id=268261",feet)
+        self.assertEqual(pool.row("leather","feet",334)["item_id"],268261)
+        self.assertEqual(data["native_calls"],0)
+
     def test_material_and_unverified_slot_cannot_cross_fill(self):
         for family,slot in (("leather","head"),("plate","head"),
                             ("mail","chest"),("cloth","legs"),
