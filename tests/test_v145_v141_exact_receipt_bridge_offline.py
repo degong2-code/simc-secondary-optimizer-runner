@@ -36,6 +36,7 @@ class ExactV145ReceiptBridge(unittest.TestCase):
         self.user_path.write_text(bootstrap.canonical(self.user)+"\n",
                                   encoding="utf8")
         self.calls=[]
+        self.blocked_serial=0
 
     def mocked_simc(self,cmd,*,cwd,stdout,stderr,timeout,check):
         self.calls.append(cmd)
@@ -76,11 +77,12 @@ class ExactV145ReceiptBridge(unittest.TestCase):
 
     def expect_blocked(self,folder,pattern,*,user_path=None,
                        binary=None,revision=REVISION):
+        self.blocked_serial+=1
         with mock.patch.object(bootstrap.entry.durable,"run") as native:
             with self.assertRaisesRegex(verifier.AcceptanceBlocked,pattern):
                 bootstrap.run(
                     user_path or self.user_path,
-                    self.root/("blocked_"+str(len(self.calls))),
+                    self.root/("blocked_"+str(self.blocked_serial)),
                     binary or self.binary,revision,execute=True,
                     pure_stage=True,physical_acceptance_root=folder)
             native.assert_not_called()
