@@ -381,7 +381,7 @@ class IndependentSeasonCompiler(unittest.TestCase):
                     source_weapons[slot]=int(id_match.group(1))
                     if slot=="off_hand":
                         crafted=re.search(
-                            r"(?:^|,)crafted_stats=(\\d+/\\d+)(?:,|$)",val)
+                            r"(?:^|,)crafted_stats=(\d+/\d+)(?:,|$)",val)
                         if crafted:offhand_crafted=crafted.group(1)
                 self.assertEqual(data["weapons"],source_weapons)
                 self.assertEqual(set(data["weapons"]),
