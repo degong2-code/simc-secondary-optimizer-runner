@@ -19,6 +19,7 @@ import sys
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"runner"))
+sys.path.insert(0,str(ROOT/"integration_probes"))
 import v140_pure_profile_physical_native_smoke as physical
 import v063_numeric_injection as numeric
 import v098_target_user_scenario_bootstrap as bootstrap
