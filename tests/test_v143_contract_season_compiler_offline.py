@@ -98,7 +98,13 @@ class IndependentSeasonCompiler(unittest.TestCase):
                 ("hunter","beast_mastery","dwarf",15),
                 ("rogue","outlaw","dwarf",16),
                 ("rogue","subtlety","dwarf",16),
-                ("shaman","elemental","tauren",16)):
+                ("shaman","elemental","tauren",16),
+                ("mage","arcane","void_elf",16),
+                ("mage","fire","dwarf",16),
+                ("priest","shadow","void_elf",16),
+                ("warlock","affliction","troll",16),
+                ("warlock","demonology","orc",16),
+                ("warlock","destruction","dwarf",16)):
                 user={"class":cl,"spec":sp,"race":race,
                       "talents":"CAAAABBB11122"}
                 trinkets=[{"slot":slot,"item_id":item,"options":{}}
@@ -292,6 +298,38 @@ class IndependentSeasonCompiler(unittest.TestCase):
                                       binary,"7bc10711b5",execute=True,
                                       pure_stage=True)
                     native.assert_not_called()
+
+    def test_six_cloth_source_backed_defaults_stay_legacy_and_pure_stage_zero_native(self):
+        import v106_user_session_controller as sessions
+        specs=(
+            ("mage","arcane"),("mage","fire"),("priest","shadow"),
+            ("warlock","affliction"),("warlock","demonology"),
+            ("warlock","destruction"),
+        )
+        for key in specs:
+            with self.subTest(key=key),tempfile.TemporaryDirectory() as td:
+                self.assertIn(key,bootstrap.ARCHETYPES)
+                self.assertNotIn(key,bootstrap.PURE_PRODUCT_SPECS)
+                controls=sessions.standard_controls(key)
+                user=sessions.user_scenario(controls)
+                binary=pathlib.Path(td)/"fake_simc"
+                binary.write_bytes(b"NO_NATIVE")
+                folder=pathlib.Path(td)/"preview"
+                result=bootstrap.build(user,folder,binary,"7bc10711b5",
+                                       pure_stage=True)
+                self.assertEqual(result["status"],
+                    "STAGED_INTERNAL_MANIFEST_NATIVE_NOT_AUTHORIZED")
+                self.assertEqual(result["native_calls"],0)
+                self.assertFalse(result["user_optimizer_ready"])
+                self.assertEqual(result["plan"]["item_slots"],16)
+                self.assertEqual(result["plan"]["base_B"],3150)
+                self.assertEqual(result["weapon_form"],"one_hand_frill")
+                self.assertEqual(len(result["effective_four_tier_slots"]),4)
+                profile=(folder/"profile.simc").read_text()
+                self.assertIn("default_actions=1\n",profile)
+                self.assertNotIn("actions.",profile)
+                self.assertEqual(profile.count("main_hand="),1)
+                self.assertEqual(profile.count("off_hand="),1)
 
     def test_season_item_option_can_not_override_existing_gem(self):
         actor={"class":"warrior","spec":"fury","race":"dwarf",
