@@ -74,15 +74,22 @@ class LocalWebAPIOffline(unittest.TestCase):
         # In a package without the old 24 full SimC source fixtures, the
         # ready/default UI list must still expose both Native-proven pure
         # paths, but may not claim the unavailable legacy paths work.
-        original=pathlib.Path.read_text
+        original_text=pathlib.Path.read_text
+        original_bytes=pathlib.Path.read_bytes
         seen=[]
-        def absent_legacy(path,*args,**kwargs):
+        def forbid_source(path):
             loc=str(path).replace(chr(92),"/")
             if "/integration_probes/fixtures/" in loc and loc.endswith(".simc"):
                 seen.append(loc)
                 raise FileNotFoundError("LEGACY_SOURCE_PROFILE_NOT_INSTALLED")
-            return original(path,*args,**kwargs)
-        with mock.patch.object(pathlib.Path,"read_text",absent_legacy):
+        def absent_text(path,*args,**kwargs):
+            forbid_source(path)
+            return original_text(path,*args,**kwargs)
+        def absent_bytes(path,*args,**kwargs):
+            forbid_source(path)
+            return original_bytes(path,*args,**kwargs)
+        with mock.patch.object(pathlib.Path,"read_text",absent_text), \
+             mock.patch.object(pathlib.Path,"read_bytes",absent_bytes):
             response=self.client.get("/api/v1/defaults",headers=self.headers)
             self.assertEqual(response.status_code,200,response.text)
             data=response.json()
