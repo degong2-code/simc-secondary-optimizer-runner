@@ -1,0 +1,36 @@
+SIMC SECONDARY OPTIMIZER — 2026-10-28 P1 주 제품 개발 채팅 후속 시작 프롬프트
+
+이전 주 제품 개발 채팅이 최대 길이에 도달했다. 이 채팅에서 동일 제품의 P1 구현·일반 SimC 시험을 계속 소유하고, 저장소 최신 실제 상태에서 이어서 개발하라. 프로젝트를 처음부터 재시작하거나 불필요한 Native/Actions/API 검증을 반복하지 말라.
+
+[우선 읽을 GitHub 정보]
+Repository: degong2-code/simc-secondary-optimizer-runner
+Branch: probe/chat-cache-v035-20261024
+필수 인계 문서: docs/HANDOFF_P1_20261028_SOURCE_INDEPENDENT_NATIVE_RECOVERY_SUCCESSOR.md
+현재 상태: docs/CURRENT_PRODUCT_DEVELOPMENT_STATE.md (상단 최신 정보부터)
+인계 준비시 코드/CURRENT HEAD: 4ab16fbb6791b66690ed03f1afa5c2833b193f68 (이후 인계 문서 커밋이 있으므로 최신 HEAD를 새로 확인)
+최신 검증된 P1 CI: GitHub Actions 40644565733, 301/301 PASS (Ubuntu offline), 신규 SimC 0회.
+최상위 승인 설계: Project Source SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4_TARGET_LEVEL_USER_FLOW_PROJECT_SOURCE_REPLACEMENT.md. 최근 사용자 직접 결정이 우선하고, Project UI 적용 여부를 GitHub 문서로 추측하지 마라.
+
+[원래 제품 목적을 가장 우선적으로 지켜라]
+목표 아이템레벨(기본334) 또는 수동 최종 CHMV 총량 T을 기준으로 미래 파밍 목표 치명/가속/특화/유연의 최적 절대 rating을 SimC DPS로 탐색한다. 현재 장비 총량의 단순 재분배가 아니다. 사용자 입력은 직업/전문화/종족/특성, 목표 ilvl 또는 최종 T, 장신구2, 선택 특수장비, 장식 최대2, 보석/영약/소모품/기름/전투조건이다. 전체 일반장비/원본 SimC 실행 프로필은 사용자에게 요구하지 않는다. 프로그램이 시즌 데이터 및 범용 전문화 계약을 통해 대표 장비, 주능력치, 무기 성능, 4세트, SimC 기본 APL 실행 프로필을 직접 생성한다. 완성된 공식 MID2/BiS 프로필은 검증 fixture이지 필수 runtime 의존성이 아니다. 이 원칙이 개발의 중심이다.
+
+최종 대상은 사용자 최신 결정에 따라 증강을 완전 제외한 26개 DPS 전문화. 기존 24개 source-backed beta + 조화 드루이드와 황폐 기원사 신규 source-independent. 과거 27 DPS·증강 포함 문서는 폐기된 범위다. T=G+J+F+O, B=G+J+F, T=B+O, oil O 한번만 고정, L은 G/B 내 보호, 트링켓 고정치는 자유 G 밖, 수동 최종 T 우선. SimC가 APL/proc/효과/DPS를 계산하며 우리 코드는 후보·정적 JSON2·DPS/SEM·95%만 다룬다. 관측 1순위는 글로벌 최적 증명이 아니다.
+
+[지금까지 확정 증거]
+v139 source-independent composer+시즌 JSON이 조화/황폐 16부위+티어4 프로필을 생성하며 v098/v096/v094 기존 CHMV 적응형 경로에 연결돼 있다. 기본 24개 경로/캐시는 보존.
+사용자 Windows v140 실제 물리시험: druid/balance PASS_PHYSICAL_SIMC, evoker/devastation PASS_PHYSICAL_SIMC. 두 전문화 합계 신규 Native 2회, user_optimizer_ready=false. 바이너리 SHA256 b0ea12ee3ac233a4a590609e2a5bd4c4db45c5f8ae6f8994b1b8d0de4d5acff4, 선언 revision 7bc10711b5.
+이후 사용자 Windows에서 조화 adaptive 첫 실행: native 1/6 시도, completed_jobs=0, error InjectionError:SIMC_REVISION_CHANGED, V094 상태 PARTIAL_OR_BLOCKED. 현재 최대 6회 전부 끝난 것이 아니다.
+오류 대응 신규 코드: v063은 실제 JSON2와 선언 revision이 동일 Git SHA(7자리 이상 hex prefix)일 때만 동등 판정. v141은 기존 물리 JSON2의 실제 revision을 사전에 확인. v065/v094/v096은 정확 입력/JSON2를 다시 검증해 기존 미영수증 첫 후보를 0 추가 Native로 복구하도록 제한적 수정. 실제 seed_00 JSON2의 git_revision 원문은 아직 미확인; 수정된 Windows 실측 재개 역시 아직 미완료. 오프라인 CI 301 PASS를 Native 성공으로 말하지 말라.
+
+[가장 먼저 할 일]
+(1) GitHub 새 HEAD, 인계 파일, CURRENT 상단, v063/v065/v094/v096/v141의 변경 부분과 Actions 40644565733만 확인한다. 과거 모든 코드를 읽거나 Native를 전수 재검사하지 않는다.
+(2) 이미 실행한 기존 조화 첫 후보 결과 파일을 보존한다. 사용자 로컬의 %USERPROFILE%/SIMC_Secondary_Optimizer/v141_balance_adaptive/simc_results/search/seed_00/result.json 에서 git_revision을 확인하고, 기존 v140_pure_physical_smoke/druid__balance/physical.json 의 git_revision도 최소 확인한다. 필요한 경우 두 값만 출력하는 작은 PowerShell 명령 하나를 안내한다. 전체 JSON/개인정보 업로드를 습관적으로 요구하지 마라.
+(3) 실제 reported revision이 선언 7bc10711b5와 동일 commit이면 GitHub 최신 ZIP, 동일 바이너리, 동일 v140 물리 영수증 root, 동일 원본 user.json, **같은 v141_balance_adaptive output 폴더**를 유지해 제한된 적응형 실행을 재개한다. 첫 seed_00을 무조건 새 Native로 재실행하지 않고 원본 result.json을 정합 검증해 native_receipt.json을 복구하도록 한다. 다르면 즉시 차단하고 실측 오류 원문을 보고 최소 수정한다.
+(4) 실제 조화 CHMV 후보 결과/SEM/95% 검증 성공 후에만 황폐의 적응형 실행을 시작한다. 현재 사용자 기능 완료 24/26; 26/26으로 과장하지 않는다.
+(5) 그 뒤 시즌 교체가능 범용 프로필 생성기와 사용자 입력→캐시→취소/재개→결과 UI를 완성한다. 24개 전부를 지금 당장 재작성하거나 비효율적인 새 엔진을 만들지 말라.
+
+[자가점검·권한]
+동일 Native/캐시/입력을 반복하는가? 이미 검증된 역사 증거 재사용 가능한가? 변화 때문에 무효화된 범위만 시험하는가? CPU·메모리·I/O·코드 복잡도가 커지는가? 사용자에게 개발용 filler/seed/SHA를 잘못 요구하는가? 실측/모의시험/미구현을 구분하는가? 항상 95% 통계만 사용하는가?
+개발은 위 격리 브랜치에서만 계속한다. main merge, v003 immutable 변경, Project Sources/Instructions UI 실제 적용, Work OS M0/Shared State, 공식 승격, WEQUIP 종속성, MAIN/WORK 개발 주도권 이관은 별도 사용자 권한이 필요하다. 소스 문서 작성만으로 Project UI 적용을 주장하지 마라. 같은 시즌 정적 아이템 캐시는 SimC revision 단독 변경으로 폐기하지 말고 DPS 캐시는 바이너리·revision·프로필·장비·후보·전투조건·iterations identity를 보존하라.
+
+처음에는 전체 목적·현재 HEAD·정확한 증거·현재 오류·다음 한 작업을 간결하게 복원하고, 그 다음 실제 좁은 작업을 바로 수행하라. 사용자가 이미 준 정보를 다시 물어보거나 새로운 대규모 설계 회의를 열지 마라.
