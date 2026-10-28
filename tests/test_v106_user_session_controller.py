@@ -101,6 +101,79 @@ class UserSessionControls(unittest.TestCase):
         with self.assertRaisesRegex(ux.SessionBlocked,"SIMC_REVISION"):
             ux.store_session(user,root,binary,"not-a-known-revision")
 
+    def test_internal_ordinary_variant_gets_new_session_without_default_identity_drift(self):
+        root,binary,_=self.fixture()
+        user=ux.user_scenario(ux.standard_controls(("demonhunter","havoc")))
+        ordinary=ux.store_session(user,root/"sessions",binary,"7bc10711b5")
+        variant=ux.store_session(user,root/"sessions",binary,"7bc10711b5",
+              ordinary_variant="mid2_havoc_leather_feet_v1")
+        self.assertNotEqual(ordinary,variant)
+        self.assertEqual((ordinary/"user.json").read_bytes(),
+                         (variant/"user.json").read_bytes())
+        original=json.loads((ordinary/"V106_SESSION_IDENTITY.json").read_text())
+        selected=json.loads((variant/"V106_SESSION_IDENTITY.json").read_text())
+        self.assertNotIn("ordinary_variant",original)
+        self.assertEqual(selected["ordinary_variant"],"mid2_havoc_leather_feet_v1")
+        self.assertEqual({k:v for k,v in selected.items()
+                          if k!="ordinary_variant"},original)
+        self.assertEqual(ux.sha(ux.canonical(original).encode("utf8"))[:20],
+                         ordinary.name)
+        self.assertEqual(ux.sha(ux.canonical(selected).encode("utf8"))[:20],
+                         variant.name)
+        self.assertEqual(ux.store_session(user,root/"sessions",binary,
+              "7bc10711b5",ordinary_variant="mid2_havoc_leather_feet_v1"),
+              variant)
+
+    def test_variant_rejects_unverified_level_spec_and_user_foot_conflict(self):
+        root,binary,_=self.fixture()
+        user=ux.user_scenario(ux.standard_controls(("demonhunter","havoc")))
+        for key,changed,error in [
+            ("wrong-level",{"ilevel":321},"ORDINARY_VARIANT_CHARACTER_OR_LEVEL"),
+            ("wrong-spec",{"class":"druid","spec":"feral"},
+             "ORDINARY_VARIANT_CHARACTER_OR_LEVEL")]:
+            with self.subTest(key=key):
+                item=copy.deepcopy(user)
+                item["target"]["ilevel"]=changed.get("ilevel",334)
+                item["character"]["class"]=changed.get("class","demonhunter")
+                item["character"]["spec"]=changed.get("spec","havoc")
+                with self.assertRaisesRegex(ux.SessionBlocked,error):
+                    ux.store_session(item,root/"sessions",binary,"7bc10711b5",
+                        ordinary_variant="mid2_havoc_leather_feet_v1")
+        special=copy.deepcopy(user)
+        special["special_items"]=[{"slot":"feet","item_id":268261,"options":{}}]
+        with self.assertRaisesRegex(ux.SessionBlocked,
+                                    "ORDINARY_VARIANT_CONFLICTS_WITH_SELECTED_GEAR"):
+            ux.store_session(special,root/"sessions",binary,"7bc10711b5",
+                 ordinary_variant="mid2_havoc_leather_feet_v1")
+        with self.assertRaisesRegex(ux.SessionBlocked,"ORDINARY_VARIANT_NOT_PINNED"):
+            ux.store_session(user,root/"sessions",binary,"7bc10711b5",
+                 ordinary_variant="unknown")
+        self.assertFalse((root/"sessions").exists())
+
+    def test_variant_worker_routes_to_existing_bootstrap_and_refuses_tampered_identity(self):
+        root,binary,_=self.fixture()
+        user=ux.user_scenario(ux.standard_controls(("demonhunter","havoc")))
+        ordinary=ux.store_session(user,root/"sessions",binary,"7bc10711b5")
+        variant=ux.store_session(user,root/"sessions",binary,"7bc10711b5",
+              ordinary_variant="mid2_havoc_leather_feet_v1")
+        with mock.patch.object(ux.bootstrap,"run",
+             return_value={"native_result":fake_native(0)}) as run:
+            self.assertEqual(ux.worker(variant,binary,"7bc10711b5"),0)
+            self.assertEqual(run.call_args.kwargs["ordinary_variant"],
+                             "mid2_havoc_leather_feet_v1")
+            self.assertEqual(run.call_count,1)
+            self.assertEqual(ux.worker(ordinary,binary,"7bc10711b5"),0)
+            self.assertNotIn("ordinary_variant",run.call_args.kwargs)
+            self.assertEqual(run.call_count,2)
+        self.assertNotEqual(ux.paths(variant)["final"],ux.paths(ordinary)["final"])
+        identity_path=variant/"V106_SESSION_IDENTITY.json"
+        seal=json.loads(identity_path.read_text())
+        seal["ordinary_variant"]="invalid_candidate"
+        identity_path.write_text(ux.canonical(seal)+"\\n",encoding="utf8")
+        with mock.patch.object(ux.bootstrap,"run") as run:
+            self.assertEqual(ux.worker(variant,binary,"7bc10711b5"),3)
+            run.assert_not_called()
+
     def test_cancel_flag_and_progress_expose_existing_durable_runner(self):
         root,binary,user=self.fixture()
         folder=ux.store_session(user,root,binary,"7bc10711b5")
