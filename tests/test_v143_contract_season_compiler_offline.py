@@ -87,6 +87,25 @@ class IndependentSeasonCompiler(unittest.TestCase):
                     assert result["native_calls"]==0
                     assert result["plan"]["item_slots"]==16
             assert not attempted, attempted
+            # The other four are preview-only, but their common compiler
+            # must likewise generate from character + catalog with zero
+            # complete source-profile access. No legacy UI defaults here.
+            import v139_pure_target_profile_composer as pure
+            for cl,sp,race,slots in (
+                ("mage","frost","human",16),
+                ("paladin","retribution","blood_elf",15),
+                ("warrior","fury","dwarf",16),
+                ("hunter","beast_mastery","dwarf",15)):
+                user={"class":cl,"spec":sp,"race":race,
+                      "talents":"CAAAABBB11122"}
+                trinkets=[{"slot":slot,"item_id":item,"options":{}}
+                          for slot,item in
+                          (("trinket1",270175),("trinket2",270173))]
+                profile,meta,rows,tier=pure.compose(user,trinkets)
+                assert len(rows)==slots and len(tier)==4
+                assert "default_actions=1" in profile
+                assert meta["native_calls"]==0 and not meta["source_profile_read"]
+            assert not attempted, attempted
             # Existing legacy source-backed path MUST still require its
             # checked fixture when actually selected.
             try:
