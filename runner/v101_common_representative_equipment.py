@@ -209,9 +209,26 @@ def ensure_representative_gem_colors(rows,diamond_id,need):
         rows[slot]["options"]["gem_id"]="/".join(tokens)
     return True
 
-def source_backed_gear(key,folder,ilevel,need):
-    """Factory APL is source-owned; ALL subsequent gear assembly is shared."""
+# Opt-in only. A 35-iteration physical Native smoke accepted this precise
+# season-2 Havoc feet replacement; target CHMV/native gear_* is NOT certified.
+# Never rewrite the 24 existing default profiles or historical DPS identities.
+ORDINARY_VARIANTS={
+    "mid2_havoc_leather_feet_v1":{
+        "key":("demonhunter","havoc"),"family":"leather","slot":"feet",
+        "source_item_id":159327,"item_id":268261,
+        "options":{"enchant_id":"7963"}}
+}
+
+def source_backed_gear(key,folder,ilevel,need,*,ordinary_variant=None):
+    """Factory APL is source-owned; gear assembly is shared; variant opt-in."""
     need(key in ARCHETYPES,"REPRESENTATIVE_ARCHETYPE_NOT_READY")
+    if ordinary_variant is not None:
+        need(type(ordinary_variant) is str
+             and ordinary_variant in ORDINARY_VARIANTS,
+             "ORDINARY_VARIANT_NOT_PINNED")
+        spec=ORDINARY_VARIANTS[ordinary_variant]
+        need(key==spec["key"] and ilevel==334,
+             "ORDINARY_VARIANT_SPEC_OR_TARGET_LEVEL_NOT_VERIFIED")
     validate_source_registry()
     filename,producer,form,F=ARCHETYPES[key]
     need(form in WEAPON_FORMS,"WEAPON_FORM_NOT_MAPPED")
@@ -259,6 +276,21 @@ def source_backed_gear(key,folder,ilevel,need):
          "SOURCE_FIFTH_CLASS_TIER_OR_ORDINARY_ID_DRIFT")
     for row in rows.values():
         row["ilevel"]=ilevel
+    if ordinary_variant is not None:
+        spec=ORDINARY_VARIANTS[ordinary_variant]
+        slot=spec["slot"]
+        need(groups.get(slot) is None
+             and rows[slot]["item_id"]==spec["source_item_id"]
+             and rows[slot]["options"]==spec["options"],
+             "ORDINARY_VARIANT_SOURCE_SLOT_OR_OPTIONS_CHANGED")
+        candidate=ordinary_pool.row(spec["family"],slot,ilevel)
+        need(candidate["item_id"]==spec["item_id"]
+             and candidate["options"]=={}
+             and ordinary_pool.provenance(spec["family"],slot)["source_kind"]=="ordinary",
+             "ORDINARY_VARIANT_PROVENANCE_CHANGED")
+        # Keep exactly the separately source-observed original enchant.
+        # No sockets, proc reimplementation, primary/rating guess or gear_DB.
+        rows[slot]={**candidate,"options":dict(spec["options"])}
     return base,cfg,rows,groups,form,F
 
 def reconcile_four_tier(key,rows,groups,taken,ilevel,need):
