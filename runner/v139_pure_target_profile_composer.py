@@ -234,7 +234,7 @@ def current_season_ordinary_candidates(character, *, season_product_db=None):
 
 
 def v098_inputs(character,trinkets,*,target_ilevel=334,combat=None,
-                level_preview=False):
+                level_preview=False,season_override=None):
     """Translate season-built profile to the established v061/v098 tuple.
 
     No v132/v133 fixture, no per-spec APL, no second budget algorithm.
@@ -243,7 +243,8 @@ def v098_inputs(character,trinkets,*,target_ilevel=334,combat=None,
     """
     # One immutable season snapshot per build: avoid duplicate disk JSON
     # reads and prevent a mixed-season profile if data changes mid-run.
-    season=catalog()
+    season=(catalog() if season_override is None
+            else validate_season(season_override))
     need(type(level_preview) is bool,"LEVEL_PREVIEW_BOOL_REQUIRED")
     if level_preview:
         # Same-season candidate roster, but SimC must accept its IDs at
