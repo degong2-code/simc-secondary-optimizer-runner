@@ -162,7 +162,8 @@ def ingest(reports):
                 "provider_names":report.get("names_in_source"),
                 "verified_ids":len(values),"unresolved":len(gaps),
                 "vendor":"Zah'ran",
-                "one_time_wowhead_validation":"79/79 names on 2026-10-29"})
+                "historical_initial_adoption_audit":
+                    "2026-10-29 79/79 Wowhead Zah'ran names; not a future-season recheck"})
         elif schema=="v157_source_first_blizzard_profession_recipes_v2":
             profession=report.get("profession_id")
             tier=report.get("skill_tier_id")

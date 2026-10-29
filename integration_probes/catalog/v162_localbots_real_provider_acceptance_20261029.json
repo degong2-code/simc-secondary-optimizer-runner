@@ -1,0 +1,33 @@
+{
+  "schema": "v162_localbots_real_provider_acceptance_receipt_20261029",
+  "test_run_id": 40839426417,
+  "offline": "PASS",
+  "live_opt_in": "SUCCESS",
+  "actual_data": {
+    "source": "balovich-matje/localbots/data/delve-loot.json",
+    "source_sha256": "3694f1b536c99d161f3bc8d2d4b124c97ffadf5765ea015536fa0a8c0f6f6d8a",
+    "database": "wago.tools DB2 ItemSparse",
+    "retail_build": "12.1.5.70575",
+    "names_in_source": 79,
+    "explicit_id_entries": 57,
+    "name_only_entries": 22,
+    "resolved_with_db2": 79,
+    "unresolved": 0,
+    "preexisting_wequip_items_used": false,
+    "new_simc_native": 0
+  },
+  "wowhead_one_time_name_comparison": {
+    "source": "https://www.wowhead.com/npc=256670/zahran",
+    "type": "Lazey user maintained vendor inventory table",
+    "localbots_unique_names": 79,
+    "wowhead_unique_names": 79,
+    "exact_normalized_name_matches": 79,
+    "localbots_not_in_wowhead": [],
+    "wowhead_not_in_localbots": [],
+    "official_blizzard_server_loot_export": false,
+    "future_season_recheck_required": false
+  },
+  "policy": "TRUST_LOCALBOTS_PUBLIC_SOURCE_FOR_DELVES_IN_FUTURE_SEASONS_WITHOUT_WOWHEAD_RECHECK",
+  "scope": "Collector adapter + v158 source-first index; product P1 runtime integration not claimed",
+  "notes": "79 is historical verified count only, never a future season count invariant."
+}
