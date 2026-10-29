@@ -105,12 +105,9 @@ def build_index(folder, report, *, raid_zone, mplus_zone, build, expansion_id):
             continue
         mapped_raid.append((wcl,number(match['ID']), number(match['JournalInstanceID'])))
     tier = defaultdict(set)
-    availability = defaultdict(list)
     for r in read_rows(folder, 'JournalTierXInstance'):
         iid = number(r['JournalInstanceID']); tid = number(r['JournalTierID'])
         tier[tid].add(iid)
-        availability[iid].append({'tier_id':tid,
-            'availability_condition':number(r['AvailabilityCondition'])})
     required_instances = {x[2] for x in mapped_raid}
     matching_tiers = sorted(t for t,s in tier.items() if required_instances and required_instances <= s)
     # Unrelated old tiers can duplicate an instance; don't guess from largest ID.
@@ -195,7 +192,7 @@ def build_index(folder, report, *, raid_zone, mplus_zone, build, expansion_id):
             for t in ('raid_journal','mplus_journal','selectable_stat_craft')}
     return {'schema':SCHEMA,'source_provider':'WAGO_TOOLS_PINNED_DB2_WCL_LIVE',
         'status':'SOURCE_CANDIDATES_WITH_UNRESOLVED_SEASON_CONDITIONS',
-        'build':build,'locale':'enUS','snapshot_receipt_sha256':hashlib.sha256(
+        'build':build,'db2_expansion_id':expansion_id,'locale':'enUS','snapshot_receipt_sha256':hashlib.sha256(
            (folder/'receipt.json').read_bytes()).hexdigest(),
         'blizzard_keystone_season_id':((report.get('blizzard') or {}).get('endpoints') or {}).get('keystone_season_index',{}).get('data',{}).get('current_season_id'),
         'db2_display_season_id':season_id,'raid_journal_tier_id':selected_tier,
