@@ -209,6 +209,71 @@ class Non334SourceIndependentProductOffline(unittest.TestCase):
             spawn.assert_not_called()
         self.assertEqual(len(seen),2)
 
+    def test_crafted_consumables_diamond_cross_26_dps_one_level_offline(self):
+        # One cross-spec P1 user-input integration matrix, not another
+        # itemlevel sweep or a physical SimC item-compatibility assertion.
+        # The representative crafted item is a serializer fixture only.
+        import v089_ilvl_chmv_budget_selector as reference
+        registry,_=reference.load_registry()
+        self.assertEqual(len(sessions.SUPPORTED),26)
+        keys=set()
+        with mock.patch.object(web.subprocess,"Popen") as native:
+            for key in sessions.SUPPORTED:
+                with self.subTest(spec=key):
+                    controls=sessions.standard_controls(key)
+                    controls["ilevel"]=331
+                    controls["embellishments"]=[{
+                        "slot":"waist","item_id":244580,
+                        "options":{"crafted_stats":"49/36",
+                                   "embellishment":"arcanoweave_lining"}}]
+                    choices=dict(controls["consumable_choices"])
+                    choices.update({"food":"royal_roast",
+                                    "potion":"lights_potential_2",
+                                    "augmentation":"disabled",
+                                    "diamond_id":240967})
+                    controls["consumable_choices"]=choices
+                    response=self.client.post("/api/v1/sessions/plan",
+                        json={"controls":controls,"binary":str(self.binary),
+                              "revision":self.revision},headers=self.headers)
+                    self.assertEqual(response.status_code,200,response.text)
+                    data=response.json()
+                    self.assertEqual(data["native_calls"],0)
+                    self.assertEqual(data["plan"]["base_B"],
+                         registry["values"][331-266]["fury_dual_2h"
+                         if key==("warrior","fury") else "general"])
+                    self.assertEqual(data["plan"]["final_T"],
+                         data["plan"]["base_B"]+
+                         sum(data["plan"]["fixed_O"].values()))
+                    sid=data["session_id"]
+                    self.assertNotIn(sid,keys)
+                    keys.add(sid)
+                    folder=self.root/"runs"/sid
+                    profile=(folder/"generated"/"profile.simc").read_text("utf8")
+                    waist=[line for line in profile.splitlines()
+                           if line.startswith("waist=")]
+                    self.assertEqual(len(waist),1)
+                    self.assertIn("id=244580",waist[0])
+                    self.assertIn("crafted_stats=49/36",waist[0])
+                    self.assertIn("embellishment=arcanoweave_lining",waist[0])
+                    self.assertIn(",ilevel=331",waist[0])
+                    self.assertIn("gem_id=240967",next(
+                        line for line in profile.splitlines()
+                        if line.startswith("head=")))
+                    for line in ("food=royal_roast","potion=lights_potential_2",
+                                 "augmentation=disabled"):
+                        self.assertEqual(profile.splitlines().count(line),1)
+                    scenario=json.loads((folder/"generated"/"scenario.json")
+                                        .read_text("utf8"))
+                    self.assertEqual(len(scenario["equipment"]["crafted"]),1)
+                    self.assertEqual(scenario["equipment"]["special"],[])
+                    self.assertEqual(scenario["consumables"]["gem_budget_J"],138)
+                    self.assertEqual(scenario["consumables"]["flask_budget_F"],165)
+                    self.assertEqual(json.loads((folder/
+                       "V106_SESSION_IDENTITY.json").read_text("utf8"))
+                       ["independent_target_level"],True)
+            native.assert_not_called()
+        self.assertEqual(len(keys),26)
+
     def test_same_user_333_and_334_have_distinct_seals_and_old_334_unchanged(self):
         key=("mage","fire")
         ordinary=sessions.user_scenario(sessions.standard_controls(key))

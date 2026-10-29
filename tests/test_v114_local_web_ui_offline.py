@@ -102,6 +102,19 @@ class RealHTTPPageOffline(unittest.TestCase):
         # Outlaw and the seven historical adapters keep independent evidence.
         self.assertIn('"rogue/outlaw":"도적 · 무법 (목표 프로필 Native 시험 전)"',js)
 
+    def test_all_26_spec_labels_are_neutral_not_historical_native_claims(self):
+        js=self.client.get("/assets/app.js").text
+        labels=js.split("const specLabels = {",1)[1].split("};",1)[0]
+        for cl,sp in api.sessions.SUPPORTED:
+            self.assertIn('"'+cl+'/'+sp+'":"',labels)
+        self.assertEqual(labels.count('":"'),26)
+        self.assertNotIn("최적화 미검증",labels)
+        self.assertNotIn("목표 프로필 Native 시험 전",labels)
+        self.assertNotIn("기본334 단발",labels)
+        self.assertIn('"demonhunter/havoc":"악마사냥꾼 · 파멸"',labels)
+        self.assertIn('"druid/balance":"드루이드 · 조화"',labels)
+        self.assertIn('"evoker/devastation":"기원사 · 황폐"',labels)
+
     def test_optional_simc_import_only_extracts_identity_and_talents(self):
         page=self.client.get("/").text
         js=self.client.get("/assets/app.js").text
