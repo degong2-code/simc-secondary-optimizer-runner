@@ -63,7 +63,7 @@ def build(pool,item_file,sparse_file):
              "ITEM_SLOT_MISMATCH")
         cl=integer(raw["ClassID"]);subcl=integer(raw["SubclassID"])
         need(cl in (2,4),"NON_EQUIPMENT_ITEM_IN_GEAR_POOL")
-        raw_stats=[integer(extra.get(f"StatModifier_bonusStat_{i}","0"))
+        raw_stats=[integer(extra.get(f"StatModifier_bonusStat_{i}","0") or "0")
                    for i in range(10)]
         data={"item_id":iid,"name":v["name"],"slot":slot,"class_id":cl,
             "subclass_id":subcl,"allowed_class_mask":integer(extra["AllowableClass"]),
