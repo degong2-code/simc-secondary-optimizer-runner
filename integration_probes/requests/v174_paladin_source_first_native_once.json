@@ -1,0 +1,15 @@
+{
+  "schema": "v174_current_season_source_first_physical_once_v1",
+  "spec": "paladin/retribution",
+  "target_ilevel": 334,
+  "source_first_stage": true,
+  "iterations": 35,
+  "max_new_native": 1,
+  "simc_git_revision": "7bc10711b5",
+  "simc_binary_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+  "reused_existing_simc_binary_only": true,
+  "production_default_unchanged": true,
+  "full_dps_optimization_completed": false,
+  "no_gear_recommendation": true,
+  "no_main_or_project_ui_mutation": true
+}
