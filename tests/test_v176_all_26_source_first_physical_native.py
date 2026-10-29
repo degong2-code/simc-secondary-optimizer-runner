@@ -35,9 +35,11 @@ class FullDpsSeasonPhysicalOffline(unittest.TestCase):
         with self.assertRaisesRegex(batch.BatchBlocked,
                                     "PHYSICAL_ONLY_NATIVE_BOUNDS"):
             batch.run(self.binary,self.out,max_new=25)
-        with self.assertRaisesRegex(batch.BatchBlocked,
-                                    "EXACT_25_NEW_WITH_V174_PALADIN_REPLAY_REQUIRED"):
-            batch.run(self.binary,self.out,execute=True,max_new=26)
+        with mock.patch.object(batch,"BINARY_SHA",
+                batch.physical.sha(self.binary.read_bytes())):
+            with self.assertRaisesRegex(batch.BatchBlocked,
+                       "EXACT_25_NEW_WITH_V174_PALADIN_REPLAY_REQUIRED"):
+                batch.run(self.binary,self.out,execute=True,max_new=26)
         with self.assertRaisesRegex(batch.BatchBlocked,
                                     "PINNED_SIMC_BINARY_SHA_CHANGED"):
             batch.run(self.binary,self.out,execute=True,max_new=25)
