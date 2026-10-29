@@ -20,4 +20,10 @@ jobs:
       - name: Bounded reference and saved journal reconciliation NO network or SimC
         run: |
           python -m unittest -v tests.test_v154_blizzard_season_loot_index_offline
-          python runner/v154_blizzard_season_loot_index.py
+          python runner/v154_blizzard_season_loot_index.py --out v154-existing-reference-report.json
+      - name: Preserve actual existing-reference ID extraction as a downloadable report
+        uses: actions/upload-artifact@v4
+        with:
+          name: v154-existing-reference-report
+          path: v154-existing-reference-report.json
+          retention-days: 14
