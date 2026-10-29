@@ -59,14 +59,10 @@ class LocalWebAPIOffline(unittest.TestCase):
             expected=("SOURCE_INDEPENDENT_SEASON_CATALOG"
                       if (row["class"],row["spec"]) in
                           web.bootstrap.PURE_PRODUCT_SPECS
-                      else "SOURCE_NON_TIER_NOT_ALL_STANDARDIZED"
-                      if (row["class"],row["spec"]) in
-                          web.bootstrap.common.GENERIC_PENDING
-                      else "SOURCE_BACKED_PARTIAL_ORDINARY_POOL")
+                      else "SOURCE_INDEPENDENT_TARGET334_VALIDATED_BATCH")
             self.assertEqual(scope,expected)
         self.assertEqual(status_counts,{
-            "SOURCE_NON_TIER_NOT_ALL_STANDARDIZED":17,
-            "SOURCE_BACKED_PARTIAL_ORDINARY_POOL":7,
+            "SOURCE_INDEPENDENT_TARGET334_VALIDATED_BATCH":24,
             "SOURCE_INDEPENDENT_SEASON_CATALOG":2})
         self.assertFalse((self.root/"runs").exists())
 
@@ -105,11 +101,11 @@ class LocalWebAPIOffline(unittest.TestCase):
             self.assertEqual(response.status_code,200,response.text)
             data=response.json()
             visible={(r["class"],r["spec"]) for r in data["archetypes"]}
-            self.assertEqual(visible,web.bootstrap.PURE_PRODUCT_SPECS)
+            self.assertEqual(visible,set(sessions.SUPPORTED))
             missing={(r["class"],r["spec"]) for r in
                      data["unavailable_missing_legacy_fixtures"]}
-            self.assertEqual(missing,set(sessions.SUPPORTED)-visible)
-            self.assertEqual(len(checked),24)
+            self.assertEqual(missing,set())
+            self.assertEqual(len(checked),0)
             self.assertEqual(seen,[])
             # Character/talent/trinket defaults for all 26 are now
             # available independently; only actual legacy EXECUTION is
