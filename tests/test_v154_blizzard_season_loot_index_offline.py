@@ -33,6 +33,17 @@ class BlizzardSeasonEvidenceOffline(unittest.TestCase):
         self.assertEqual(report["loot_coverage"],
                          "NOT_EVALUATED_NO_BLIZZARD_RESPONSE")
 
+    def test_optional_read_only_registry_checks_known_id_without_static_L(self):
+        # Local metadata-only input. No source registry transferred into repo.
+        registry = {"items": [{"item_id": 271874},
+                               {"item_id": 281235}, {"item_id": 999999}]}
+        report = discovery.crosscheck_optional_registry(self.ref, registry)
+        self.assertEqual(report["matched_existing_metadata_count"], 2)
+        self.assertEqual(report["unmatched_existing_metadata_ids"], [999999])
+        self.assertEqual(report["matched_effect_candidate_hints"], 1)
+        self.assertFalse(report["simc_effect_or_static_L_verified"])
+        self.assertFalse(report["blizzard_loot_recovery_proven"])
+
     def test_mock_journal_response_matches_existing_ids_and_unknowns(self):
         # Fabricated provider JSON strictly verifies parser wiring, never
         # claims real Blizzard loot acceptance or 2026 current drop lists.

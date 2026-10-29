@@ -77,6 +77,30 @@ def existing_reference(master, delta):
             master["distinct_item_ids"], "delta_rows": len(delta["items"]),
             "known": by_id}
 
+def crosscheck_optional_registry(reference, export):
+    """Read-only overlap of user-supplied metadata, NEVER trust it for L."""
+    need(type(export) is dict and type(export.get("items")) is list,
+         "SPECIAL_REGISTRY_EXPORT_SHAPE")
+    entries = export["items"]
+    need(0 < len(entries) <= 1000, "SPECIAL_REGISTRY_EXPORT_LIMIT")
+    ids = []
+    for item in entries:
+        need(type(item) is dict and type(item.get("item_id")) is int
+             and item["item_id"] > 0, "SPECIAL_REGISTRY_ITEM_ID")
+        ids.append(item["item_id"])
+    need(len(ids) == len(set(ids)), "SPECIAL_REGISTRY_DUPLICATE_ID")
+    known = reference["known"]
+    matched = sorted(set(ids) & set(known))
+    effect_hints = sorted(i for i in matched
+                          if known[i]["known_effect_candidate"])
+    return {"provided_rows": len(ids),
+            "matched_existing_metadata_count": len(matched),
+            "matched_existing_metadata_ids": matched,
+            "unmatched_existing_metadata_ids": sorted(set(ids) - set(known)),
+            "matched_effect_candidate_hints": len(effect_hints),
+            "simc_effect_or_static_L_verified": False,
+            "blizzard_loot_recovery_proven": False}
+
 def selected_encounters(selection):
     need(type(selection) is dict and type(selection.get("encounters")) is list,
          "ENCOUNTER_SELECTION_REQUIRED")
@@ -229,6 +253,8 @@ def main(argv=None):
     p = argparse.ArgumentParser(description="Blizzard encounter ID vs existing MID2 reference; NO SimC")
     p.add_argument("--master", type=Path, default=MASTER)
     p.add_argument("--delta", type=Path, default=DELTA)
+    p.add_argument("--special-registry", type=Path,
+                   help="Optional read-only existing partial special export")
     p.add_argument("--encounters", type=Path,
                    help="Explicit bounded season encounter IDs and kinds JSON")
     p.add_argument("--journal-dir", type=Path,
@@ -262,6 +288,10 @@ def main(argv=None):
                 "blizzard_authenticated_live" if args.live else
                 "saved_blizzard_json_unverified_provenance"))
             result["blizzard_requests"] = len(rows) if args.live else 0
+        if args.special_registry:
+            result["existing_special_registry_crosscheck"] = (
+                crosscheck_optional_registry(
+                    ref, read_json(args.special_registry)))
         output = json.dumps(result, ensure_ascii=False, sort_keys=True,
                             indent=2) + "\n"
         if args.out:

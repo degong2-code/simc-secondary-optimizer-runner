@@ -65,3 +65,17 @@ in a separate opt-in successor, without touching DPS cache or engine.
 No SimC calls, no per-level Native gate. An optional selected provider
 response can verify acquisition ID coverage but **does not certify item
 effects, availability of modifier variants, or current-season completeness**.
+
+## Optional existing special-effect registry (read-only)
+
+When the original partial WEQUIP export is available locally, do NOT copy
+the entire export or archive into the GitHub repository. Add the path to the
+existing-file or provider comparison command:
+
+```powershell
+py -3 runner/v154_blizzard_season_loot_index.py --special-registry "SPECIAL_EQUIPMENT_EXPORT.json" --out comparison.json
+```
+
+The output field `existing_special_registry_crosscheck` counts overlapping
+ID metadata. It **does not** turn historical effect metadata into SimC Native
+effect support or accurate L, nor does it mean Blizzard recovered the IDs.
