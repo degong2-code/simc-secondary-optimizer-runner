@@ -22,7 +22,7 @@ SCHEMA="v151_season_catalog_change_impact_v1"
 # These are annotations / provenance, NOT the actual gear or numeric budget.
 ANNOTATIONS=frozenset(("schema","status","provenance","provenance_note"))
 GLOBAL_PHYSICAL=frozenset(("season","target_ilevel","character_level",
-                           "common_gear","gems"))
+                           "common_gear","gems","simc_item_db_source"))
 GLOBAL_DPS=frozenset(("default_consumables",))
 PER_SPEC_PHYSICAL=frozenset(("tier_ids","four_tier_slots","ordinary",
                              "weapons","item_options"))
@@ -120,7 +120,12 @@ def compare(before,after):
         "native_calls_performed":0,
         "native_calls_auto_authorized":0,
         "product_support_for_new_level_or_season_granted":False,
-        "scope":"CATALOG_ONLY_NOT_BINARY_APL_STATIC_ITEM_CACHE_OR_REFERENCE_B",
+        "scope":"CATALOG_SELECTION_ONLY_NOT_SIMC_BINARY_APL_OR_REFERENCE_B",
+        "simc_is_authority_for_item_stats_and_effects":True,
+        "item_roster_selection_requires_grounded_ids":True,
+        "bundled_simc_item_source_policy":
+            after.get("simc_item_db_source","SIMC_DEFAULT_COMPATIBILITY"),
+        "automatic_item_roster_discovery_implemented":False,
         "next_action":(
             "REVIEW_UNCLASSIFIED_FIELDS_BEFORE_RELEASE" if unknown else
             "REVIEW_CHANGED_SPEC_CATALOG_AND_RUN_SCOPED_NATIVE_ONLY_IF_NEEDED"
