@@ -1,0 +1,137 @@
+name: v175 One v093 Static CHMV Seed on v174 Physical PASS (max 1 Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/v175_first_rating_native.py
+      - tests/test_v175_first_rating_native.py
+      - integration_probes/requests/v175_one_rating_seed_once.json
+      - .github/workflows/v175_first_rating_native.yml
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v175-first-static-rating-one-native
+  cancel-in-progress: false
+jobs:
+  focused-offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Existing v093/v091/v092/v065 stage, one seed and cache test, no Native
+        run: |
+          set -euo pipefail
+          python3 -m py_compile integration_probes/v175_first_rating_native.py
+          python3 -m unittest -v tests.test_v175_first_rating_native tests.test_v172_current_season_v098_stage
+  one-existing-seed:
+    needs: focused-offline
+    if: ${{ contains(github.event.head_commit.message, '[v175-one-native]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Exactly one immutable user-approved static rating request
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os,subprocess,json,pathlib
+          filename="integration_probes/requests/v175_one_rating_seed_once.json"
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",
+                         os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==[filename],changed
+          req=json.loads(pathlib.Path(filename).read_text())
+          expected={
+           "schema":"v175_first_static_rating_on_v174_physical_v1",
+           "spec":"paladin/retribution","target_ilevel":334,
+           "v174_physical_run":40967207274,
+           "use_v093_seed_index":0,"iterations":35,
+           "base_B":3150,"final_T":3150,"fixed_oil_O":0,
+           "max_new_native":1,
+           "simc_revision":"7bc10711b5",
+           "simc_binary_sha256":"64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+           "source_first_season_gear_unchanged":True,
+           "old_v174_physical_native_rerun":False,
+           "no_new_optimizer":True,"no_product_promotion":True}
+          assert req==expected,(req,expected)
+          print("V175_EXACT_ONE_EXISTING_SEED_REQUEST_PASS")
+          PY
+      - name: Recover v174 proven real physical profile and sealed JSON2
+        uses: actions/download-artifact@v4
+        with:
+          name: v174-source-first-single-native-40967207274
+          path: out/prior
+          run-id: 40967207274
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Reuse SHA-pinned v035 Linux SimC binary from existing cache
+        uses: actions/cache/restore@v5
+        id: simc
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd-cli-release-nonetwork-r1
+      - name: Reject any changed binary or absent physical proof without Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.simc.outputs.cache-hit }}" = "true" || {
+            echo 'BLOCKED_PINNED_SIMC_CACHE_MISSING'; exit 3; }
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc-cache/v035/simc' | sha256sum -c
+          chmod +x .simc-cache/v035/simc
+          test "$(find out/prior -name receipt.json -path '*paladin__retribution__source_first_v172__*' | wc -l)" -eq 1
+      - name: First seed of original v093 policy, exactly one Native; no new optimizer
+        shell: bash
+        run: |
+          set -euo pipefail
+          PREVIOUS="$(dirname "$(find out/prior -name receipt.json -path '*paladin__retribution__source_first_v172__*')")"
+          python3 integration_probes/v175_first_rating_native.py \
+            --v174-physical "$PREVIOUS" \
+            --simc "$GITHUB_WORKSPACE/.simc-cache/v035/simc" \
+            --out "$GITHUB_WORKSPACE/out/rating" --max-new 1 \
+            | tee out/V175_NATIVE_SUMMARY.txt
+          python3 - <<'PY'
+          import json,pathlib,math,hashlib
+          base=pathlib.Path("out/rating")
+          x=json.loads((base/"V175_RESULT.json").read_text())
+          assert x["status"]=="PASS_ONE_STATIC_RATING_NATIVE",x
+          assert x["new_native_calls"]==1
+          assert x["base_B"]==3150 and x["final_T"]==3150
+          assert sum(x["fixed_O"].values())==0 and sum(x["flask_F"].values())==165
+          assert x["target_static_CHMV"]==x["native_verified_static_CHMV"]
+          assert sum(x["target_static_CHMV"].values())==3150
+          assert x["dps_samples"]>=20
+          assert math.isfinite(x["dps_sem"]) and x["dps_sem"]>=0
+          assert x["user_optimizer_ready"] is False
+          assert x["95_percent_winner_proven"] is False
+          result=(base/"seed_00"/"result.json").read_bytes()
+          assert hashlib.sha256(result).hexdigest()==x["native_json_sha256"]
+          print("V175_ONE_REAL_SIMC_STATIC_C_AND_DPS_SEM_PASS")
+          PY
+      - name: Replay existing verified JSON2 with zero additional Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          PREVIOUS="$(dirname "$(find out/prior -name receipt.json -path '*paladin__retribution__source_first_v172__*')")"
+          python3 integration_probes/v175_first_rating_native.py \
+            --v174-physical "$PREVIOUS" \
+            --simc "$GITHUB_WORKSPACE/.simc-cache/v035/simc" \
+            --out "$GITHUB_WORKSPACE/out/rating" --max-new 0 \
+            | tee out/V175_CACHE_REPLAY.txt
+          grep -q CACHED_VERIFIED_STATIC_RATING_NATIVE out/V175_CACHE_REPLAY.txt
+          grep -q '"new_native_calls": 0' out/V175_CACHE_REPLAY.txt
+          echo V175_VERIFIED_NATIVE_CACHE_REPLAY_ZERO_EXTRA
+      - name: Retain old proof, new Native JSON2, raw stdout/stderr, immutable receipt and summaries
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v175-one-current-season-static-seed-${{ github.run_id }}
+          path: out/
+          if-no-files-found: warn
+          retention-days: 7
