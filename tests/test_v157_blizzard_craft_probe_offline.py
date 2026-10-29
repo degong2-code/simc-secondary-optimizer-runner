@@ -15,6 +15,12 @@ class CraftedProbeOffline(unittest.TestCase):
             "crafted_item":{"id":239648}}),[239648])
         self.assertEqual(probe.output_item_ids({
             "crafted_items":[{"id":1},{"id":1},{"id":2}]}),[1,2])
+    def test_reference_name_matching_never_implies_recipe_proof(self):
+        ids,names=probe.source_reference()
+        self.assertIn(239656,ids)
+        for n in ("Adherent's Silken Shroud","Martyr's Crown","Martyr's Gloves"):
+            self.assertIn(n,names)
+
     def test_actual_sample_shape_contract(self):
         d={"categories":[{"name":"Armor","recipes":[
             {"id":9,"name":"Martyr's Crown"},

@@ -28,11 +28,11 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - name: Bounded authenticated Midnight Tailoring recipe output probe
+      - name: Three official item-ID identity checks, separate from recipe outputs
         env:
           BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
           BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
-        run: python runner/v157_blizzard_craft_probe.py --out v157-crafting-real-api.json
+        run: python runner/v157_blizzard_craft_probe.py --verify-existing-item-ids --out v157-crafting-real-api.json
       - uses: actions/upload-artifact@v4
         if: success()
         with:

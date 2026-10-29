@@ -24,3 +24,13 @@ collection. Blizzard authenticated field discovery is primary, v057 historical
 - User-directed provenance authority: Blizzard live official drop/result IDs
   first, SimC data/effects/stats next, older v047/v057/WEQUIP information
   reference-only for comparison, never overwrite observed official IDs.
+
+## Follow-up official item-identity check (no repeated profession traversal)
+
+The first authenticated v157 run discovered Tailoring profession 197, its
+Midnight skill tier 2918, 92 recipe references, and recipe IDs 52181/52173/52174.
+Those three individual recipe details did **not** expose crafted output
+item IDs. To avoid another six-call traversal, the follow-up uses three
+`item/{id}` endpoints for old v057 item IDs 239656, 239652, 239653.
+Matching official item names confirms item identity, not that a particular
+recipe crafts it. Neither result provides an exact CHMV L or SimC effect.

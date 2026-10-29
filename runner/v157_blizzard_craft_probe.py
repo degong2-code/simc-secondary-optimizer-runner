@@ -145,19 +145,60 @@ def gather(client_id,client_secret,*,transport=auth.urlopen):
     result["status"]="BOUNDED_CRAFT_RECIPE_SAMPLE_COMPLETE"
     return result
 
+def verify_reference_item_ids(client_id,client_secret,*,transport=auth.urlopen):
+    """Revalidate three old ID/name pairs with official Item API only.
+
+    Item detail name identity is not proof of a recipe producing that item.
+    It is intentionally a separate evidence tier from explicit crafted_item.
+    """
+    ref=json.loads(EXISTING.read_text(encoding="utf8"))
+    need(ref.get("schema")=="v057_midnight_s2_crafted_equipment_ids_v1",
+         "REFERENCE_SCHEMA")
+    targets=("Adherent's Silken Shroud","Martyr's Crown","Martyr's Gloves")
+    index={row["name_en"]:row["item_id"] for row in ref["items"]}
+    need(all(k in index for k in targets),"REFERENCE_CRAFT_TARGET_MISSING")
+    token=auth.oauth_token(auth.BLIZZARD_TOKEN_URL,client_id,client_secret,
+                          transport=transport)
+    out=[]
+    for name in targets:
+        item_id=index[name]
+        data=auth.request_json(auth.BLIZZARD_BASE+"/data/wow/item/"+str(item_id)+
+             "?"+urlencode({"namespace":"static-kr","locale":"en_US"}),
+             headers={"Authorization":"Bearer "+token},transport=transport)
+        need(data.get("id")==item_id,"OFFICIAL_ITEM_ID_MISMATCH")
+        official=data.get("name")
+        need(type(official) is str,"OFFICIAL_ITEM_NAME_MISSING")
+        out.append({"item_id":item_id,"existing_reference_name":name,
+                    "blizzard_item_name":official,
+                    "names_equal_casefold":name.casefold()==official.casefold(),
+                    "item_class":data.get("item_class",{}).get("name")
+                        if type(data.get("item_class")) is dict else None,
+                    "inventory_type":data.get("inventory_type",{}).get("name")
+                        if type(data.get("inventory_type")) is dict else None,
+                    "official_recipe_output_link_verified":False})
+    return {"schema":"v157_blizzard_item_reference_crosscheck_v1",
+            "status":"THREE_OFFICIAL_ITEM_IDS_QUERIED",
+            "oauth_requests":1,"blizzard_game_data_requests":len(out),
+            "reference_is_prior_guide_not_api_truth":True,
+            "crafting_recipe_output_link_verified":False,
+            "simc_native_calls":0,"items":out}
+
 def main(argv=None):
     p=argparse.ArgumentParser(description="Up to 6 Blizzard Game Data queries, no SimC")
     p.add_argument("--out",type=Path,required=True)
+    p.add_argument("--verify-existing-item-ids",action="store_true")
     args=p.parse_args(argv)
     try:
-        r=gather(os.environ.get("BLIZZARD_CLIENT_ID",""),
+        r=(verify_reference_item_ids if args.verify_existing_item_ids else gather)(
+                 os.environ.get("BLIZZARD_CLIENT_ID",""),
                  os.environ.get("BLIZZARD_CLIENT_SECRET",""))
         args.out.parent.mkdir(parents=True,exist_ok=True)
         args.out.write_text(json.dumps(r,sort_keys=True,ensure_ascii=False,indent=2)+"\n",
                             encoding="utf8")
         print(json.dumps({"status":r["status"],
                           "api_requests":r["blizzard_game_data_requests"],
-                          "recipe_samples":len(r["sampled_recipe_results"]),
+                          "sample_count":len(r.get("sampled_recipe_results",
+                                                r.get("items",[]))),
                           "native":0}))
         return 0
     except auth.ProbeBlocked as e:
