@@ -18,6 +18,7 @@ ACCEPTED={
     "v157_source_first_blizzard_profession_recipes_v2",
     "v155_season_discovery_provider_probe_v1",
     "v162_localbots_delve_source_v1",
+    "v163_zero_seed_db2_join_v1",
 }
 MAX_INPUTS=100
 MAX_ITEM_IDS=30000
@@ -164,6 +165,66 @@ def ingest(reports):
                 "vendor":"Zah'ran",
                 "historical_initial_adoption_audit":
                     "2026-10-29 79/79 Wowhead Zah'ran names; not a future-season recheck"})
+        elif schema=="v163_zero_seed_db2_join_v1":
+            # DB2 source-first item candidates, not verified current loot.
+            need(report.get("source_provider")=="WAGO_TOOLS_PINNED_DB2_WCL_LIVE"
+                 and report.get("old_item_catalog_imported") is False
+                 and report.get("full_season_completeness_confirmed") is False
+                 and report.get("simc_native_calls")==0,
+                 "DB2_PROVIDER_IDENTITY_INVALID")
+            need(type(report.get("build")) is str and
+                 type(report.get("db2_expansion_id")) is int and
+                 report["db2_expansion_id"]>0, "DB2_BUILD_EXPANSION_INVALID")
+            need(type(report.get("db2_display_season_id")) is int
+                 and report["db2_display_season_id"]>0,
+                 "DB2_DISPLAY_SEASON_MISSING")
+            rows=report.get("items")
+            need(type(rows) is list and len(rows)<=MAX_ITEM_IDS,
+                 "DB2_ITEM_ROWS_INVALID")
+            for row in rows:
+                need(type(row) is dict, "DB2_ITEM_ROW_INVALID")
+                iid=valid_id(row.get("item_id"))
+                slot=row.get("slot")
+                need(type(slot) is int and 0<=slot<=255,
+                     "DB2_SLOT_INVALID")
+                provenances=row.get("acquisition_sources")
+                need(type(provenances) is list and 1<=len(provenances)<=128,
+                     "DB2_SOURCE_LIST_INVALID")
+                for source in provenances:
+                    need(type(source) is dict and
+                         source.get("source") in
+                         ("raid_journal","mplus_journal","selectable_stat_craft"),
+                         "DB2_SOURCE_INVALID")
+                    kind=source["source"]
+                    evidence=source.get("season_evidence",
+                                        source.get("classification"))
+                    need(type(evidence) is str and bool(evidence),
+                         "DB2_SEASON_EVIDENCE_REQUIRED")
+                    store(iid,{"source":"wago_db2_"+kind,
+                       "authority":"CLIENT_DB2_WITH_WCL_SEASON_CONTEXT",
+                       "kind":kind,"slot":slot,"name":row.get("name"),
+                       "season_evidence":evidence,
+                       "journal_encounter_id":source.get("journal_encounter_id"),
+                       "journal_instance_id":source.get("journal_instance_id"),
+                       "world_state_expression_id":source.get("world_state_expression_id"),
+                       "db2_display_season_id":report["db2_display_season_id"]})
+            issues=report.get("unknown")
+            need(type(issues) is list and len(issues)<=1000,
+                 "DB2_UNKNOWNS_INVALID")
+            for issue in issues:
+                need(type(issue) is dict and type(issue.get("kind")) is str,
+                     "DB2_UNKNOWN_ROW_INVALID")
+                unknown.append({"type":"wago_db2_join_unknown",
+                                "detail":issue})
+            metadata["wago_db2_display_season_id"]=report["db2_display_season_id"]
+            metadata["wago_db2_build"]=report["build"]
+            metadata["wago_db2_expansion_id"]=report["db2_expansion_id"]
+            collections.append({"type":"wago_db2_source_first_candidates",
+                "build":report["build"],
+                "counts":report.get("collection_counts"),
+                "raid_bosses_mapped":report.get("mapped_raid_bosses"),
+                "mplus_dungeons_mapped":report.get("mapped_mplus_dungeons"),
+                "season_filter":"UNKNOWN_WORLD_STATE_RETAINED"})
         elif schema=="v157_source_first_blizzard_profession_recipes_v2":
             profession=report.get("profession_id")
             tier=report.get("skill_tier_id")
@@ -202,6 +263,12 @@ def ingest(reports):
                 "recipe_details_queried":len(details),
                 "recipe_details_with_explicit_outputs":sum(
                     x.get("crafted_output_item_ids") is not None for x in details)})
+    builds={r.get("build") if r.get("schema")=="v163_zero_seed_db2_join_v1"
+            else r.get("db2_build") for r in reports
+            if r.get("schema") in ("v163_zero_seed_db2_join_v1",
+                                   "v162_localbots_delve_source_v1")}
+    builds.discard(None)
+    need(len(builds)<=1,"CROSS_PROVIDER_DB2_BUILD_MISMATCH")
     for item in items.values():
         item["acquisition_sources"].sort(
             key=lambda source:json.dumps(source,sort_keys=True))
