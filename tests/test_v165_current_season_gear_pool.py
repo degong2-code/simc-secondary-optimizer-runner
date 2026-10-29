@@ -45,8 +45,8 @@ class Roles(unittest.TestCase):
                   ItemSet=0,OverallQualityID=4)
              for i,slot,ex in ((1001,5,11),(1002,13,11),(1003,6,11),(1004,12,7),(1005,12,11))])
         fx=root/"ItemEffect.csv"
-        self.writecsv(fx,["ID","ParentItemID","SpellID","TriggerType"],[
-              dict(ID=1,ParentItemID=1002,SpellID=12345,TriggerType=1)])
+        self.writecsv(fx,["ID","ItemID","ItemEffectID"],[
+              dict(ID=1,ItemID=1002,ItemEffectID=12345)])
         return sparse,fx if with_effects else None
 
     def test_roles_and_current_selection(self):
@@ -88,7 +88,7 @@ class Roles(unittest.TestCase):
     def test_missing_effect_columns_fail_closed(self):
         with tempfile.TemporaryDirectory() as d:
             sparse,effect=self.make(Path(d))
-            effect.write_text("ID,SpellID\n1,12345\n")
+            effect.write_text("ID,ItemEffectID\n1,12345\n")
             with self.assertRaises(gear.CatalogBlocked):
                 gear.compile_pool(*fixture(),sparse,effect)
 
@@ -103,7 +103,7 @@ class Roles(unittest.TestCase):
         pool=gear.compile_pool(gear.read_json(p),gear.read_json(q),Path(r),Path(e))
         self.assertEqual(pool["item_count"],513)
         self.assertEqual(pool["build"],"12.1.5.70575")
-        self.assertTrue(pool["item_effect_csv_sha256"])
+        self.assertTrue(pool["item_x_item_effect_csv_sha256"])
         self.assertEqual(pool["new_native_calls"],0)
         self.assertTrue(any(x["season_selection"]==
              "CONDITIONAL_SEASON_NOT_ESTABLISHED" for x in pool["items"]))
