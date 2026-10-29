@@ -26,8 +26,6 @@ import v098_target_user_scenario_bootstrap as bootstrap
 import v108_native_consumable_inputs as consumables
 import v148_local_batch_results as batch_view
 import v167_product_season_gear_adapter as season_gear
-import v169_source_first_representative_stage as season_physical
-import v139_pure_target_profile_composer as representative
 
 SCHEMA = "v113_local_web_api_p1_v1"
 KEY = re.compile(r"[a-f0-9]{20}\Z")
@@ -446,54 +444,18 @@ def create_app(*,root=None, token=None, batch_root=None):
 
     @app.get("/api/v1/season-gear")
     def current_season_gear():
-        """Read-only same-build product catalog; user may still enter exact IDs."""
+        """User-facing seasonal effect choices; plain items stay internal."""
         try:
             return season_gear.public_options(season_gear.read())
         except (season_gear.GearBlocked, ValueError, OSError, KeyError) as exc:
             return {"schema":season_gear.SCHEMA,
                     "status":"SEASON_GEAR_CATALOG_UNAVAILABLE",
-                    "choices":{k:[] for k in season_gear.CATEGORIES},
-                    "count":0,"manual_exact_id_allowed":True,
+                    "choices":{k:[] for k in ("trinket","special_effect_gear_candidate","selectable_stat_craft")},
+                    "count":0,"manual_exact_id_allowed":False,
+                    "manual_exact_id_exception":"CRAFTED_EQUIPMENT_VARIANTS_ONLY",
+                    "ordinary_equipment_user_selectable":False,
                     "full_season_completeness_confirmed":False,
                     "native_calls_now":0}
-
-    @app.get("/api/v1/season-gear/representative/{class_token}/{spec_token}")
-    def current_representative_preview(class_token: str, spec_token: str):
-        """Only observed ordinary armor/neck/back candidates, not a profile."""
-        if (class_token,spec_token) not in sessions.SUPPORTED:
-            raise HTTPException(404, detail={"code":"REPRESENTATIVE_SPEC_UNSUPPORTED"})
-        try:
-            return representative.current_season_ordinary_candidates(
-                {"class":class_token,"spec":spec_token})
-        except (season_gear.GearBlocked, representative.ProfileStageBlocked,
-                ValueError, OSError, KeyError):
-            raise HTTPException(409,detail={"code":"SEASON_REPRESENTATIVE_PREVIEW_UNAVAILABLE"}) from None
-
-    @app.get("/api/v1/season-gear/physical-preview/{class_token}/{spec_token}")
-    def current_physical_preview(class_token: str, spec_token: str):
-        """New-season tier 4pc + armor + weapon SHAPE. Never promotes v098."""
-        if (class_token,spec_token) not in sessions.SUPPORTED:
-            raise HTTPException(404,detail={"code":"REPRESENTATIVE_SPEC_UNSUPPORTED"})
-        try:
-            item=season_physical.select_class_spec(
-                season_gear.read(),season_physical.load_tier(),
-                class_token,spec_token)
-            return {
-                "schema":season_physical.SCHEMA,
-                "status":"P1_SOURCE_FIRST_PHYSICAL_PREVIEW_NOT_NATIVE_ACCEPTED",
-                "class":class_token,"spec":spec_token,
-                "four_tier_slots":item["four_tier_slots"],
-                "tier_ids":item["tier_ids"],
-                "ordinary":item["ordinary"],
-                "common_gear":item["common_gear"],
-                "weapons":item["weapons"],
-                "weapon_subclass_proficiency_native_unverified":True,
-                "original_profile_unchanged":True,
-                "native_calls_now":0}
-        except (season_physical.RepresentativeBlocked,
-                season_gear.GearBlocked,ValueError,OSError,KeyError,TypeError):
-            raise HTTPException(409,detail={
-                "code":"SEASON_PHYSICAL_PREVIEW_UNAVAILABLE"}) from None
 
     @app.get("/api/v1/native-batches")
     def native_batches():
