@@ -202,6 +202,82 @@ class LocalWebAPIOffline(unittest.TestCase):
                             for r in browser["archetypes"]))
         self.assertNotIn("ordinary_variant",self.controls)
 
+    def test_existing_app_local_exact_static_cache_auto_used_only_for_specials(self):
+        # Synthetic exact record tests local cache discovery only. This is
+        # NOT SimC-validated stat authority or item-effect certification.
+        from tests.test_v062_static_budget_bridge import record
+        cache=web.bootstrap.cache_mod.empty_cache()
+        item={"slot":"chest","item_id":271486,"ilevel":331,
+              "options":{"bonus_id":"13848",
+                         "redirected_base_stats":"268231"}}
+        record(cache,item,{"crit_rating":0,"haste_rating":175,
+                           "mastery_rating":0,"versatility_rating":0})
+        default=self.root/"static-item-cache.json"
+        web.bootstrap.cache_mod.write_atomic(default,cache)
+        controls=sessions.standard_controls(("shaman","elemental"))
+        controls["ilevel"]=331
+        controls["special_items"]=[{k:v for k,v in item.items()
+                                   if k!="ilevel"}]
+        payload={**self.payload,"controls":controls}
+        with mock.patch.object(web.subprocess,"Popen") as launch:
+            result=self.post("/api/v1/sessions/plan",payload)
+            launch.assert_not_called()
+        self.assertEqual(result.status_code,200,result.text)
+        data=result.json()
+        self.assertTrue(data["static_cache_auto_used"])
+        self.assertEqual(data["native_calls"],0)
+        folder=self.root/"runs"/data["session_id"]
+        manifest=json.loads((folder/"generated"/"manifest.json").read_text())
+        self.assertEqual(manifest["static_cache_json"],str(default))
+        seal=json.loads((folder/"V106_SESSION_IDENTITY.json").read_text())
+        self.assertEqual(seal["static_cache_sha256"],
+                         sessions.sha(default.read_bytes()))
+        self.assertEqual(self.post("/api/v1/sessions/plan",payload)
+                         .json()["session_id"],data["session_id"])
+        restored=self.client.get("/api/v1/sessions/"+
+            data["session_id"]+"/inputs",headers=self.headers)
+        self.assertEqual(restored.status_code,200,restored.text)
+        self.assertEqual(restored.json()["static_cache"],str(default))
+        # Manual override remains the exact prior contract.
+        explicit=self.root/"explicit-cache.json"
+        web.bootstrap.cache_mod.write_atomic(explicit,cache)
+        override=self.post("/api/v1/sessions/plan",
+                    {**payload,"static_cache":str(explicit)})
+        self.assertEqual(override.status_code,200,override.text)
+        self.assertFalse(override.json()["static_cache_auto_used"])
+        self.assertNotEqual(data["session_id"],
+                            override.json()["session_id"])
+        # If no special was selected, NEVER inject any cache / alter the
+        # ordinary user's historical sealed session identity.
+        ordinary=self.post("/api/v1/sessions/plan",
+                    {**payload,"controls":{**controls,"special_items":[]}})
+        self.assertEqual(ordinary.status_code,200,ordinary.text)
+        self.assertFalse(ordinary.json()["static_cache_auto_used"])
+        self.assertIsNone(json.loads((self.root/"runs"/
+            ordinary.json()["session_id"]/"generated"/"manifest.json")
+            .read_text())["static_cache_json"])
+
+    def test_default_static_cache_missing_exact_L_fails_closed_without_native(self):
+        from tests.test_v062_static_budget_bridge import record
+        cache=web.bootstrap.cache_mod.empty_cache()
+        record(cache,{"slot":"chest","item_id":271486,"ilevel":331,
+            "options":{"bonus_id":"13848","redirected_base_stats":"268231"}},
+            {"crit_rating":0,"haste_rating":175,
+             "mastery_rating":0,"versatility_rating":0})
+        web.bootstrap.cache_mod.write_atomic(
+            self.root/"static-item-cache.json",cache)
+        controls=sessions.standard_controls(("shaman","elemental"))
+        controls["ilevel"]=344
+        controls["special_items"]=[{"slot":"chest","item_id":271486,
+            "options":{"bonus_id":"13848","redirected_base_stats":"268231"}}]
+        with mock.patch.object(web.subprocess,"Popen") as launch:
+            response=self.post("/api/v1/sessions/plan",
+                {**self.payload,"controls":controls})
+            launch.assert_not_called()
+        self.assertEqual(response.status_code,422,response.text)
+        self.assertEqual(response.json()["detail"]["code"],
+                         "SPECIAL_L_REQUIRES_EXACT_NATIVE_STATIC_VARIANT")
+
     def test_exact_special_L_precheck_returns_only_known_safe_codes(self):
         reference=web.bootstrap.oil_mod.reference_path
         expected=(

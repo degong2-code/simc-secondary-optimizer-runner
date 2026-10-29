@@ -64,6 +64,18 @@ class LocalJobs:
         self.lock = threading.Lock()
         self.children = {}
 
+    def default_static_cache(self, user, requested):
+        """Reuse an existing same-PC static cache; never create L or call SimC.
+
+        Optional user-specified paths retain prior behavior and identity.
+        The stable app-local file is used only for selected specials; normal
+        sessions and old sealed caches are unchanged.
+        """
+        if requested is not None or not user.get("special_items"):
+            return requested
+        candidate=self.root.parent/"static-item-cache.json"
+        return str(candidate) if candidate.is_file() else None
+
     def recent_sessions(self, limit=48):
         """Read-only local session index; no binary hashing, Native or writes.
 
@@ -153,6 +165,7 @@ class LocalJobs:
         try:
             user = sessions.user_scenario(params.controls)
             binary = pathlib.Path(params.binary).expanduser().resolve()
+            resolved_static=self.default_static_cache(user,params.static_cache)
             # 24 source-independent v147-proven representative archetypes:
             # user-selected target334 gets its own sealed product identity.
             # Legacy sessions and non-334 plans keep the original route.
@@ -163,15 +176,18 @@ class LocalJobs:
             independent_level=(user["target"]["ilevel"]!=334 and
                                key in sessions.SUPPORTED)
             folder = sessions.store_session(user,self.root,binary,params.revision,
-                                            params.static_cache,
+                                            resolved_static,
                                             independent_334=independent,
                                             independent_target_level=independent_level)
             plan = bootstrap.build(user,folder / "generated",binary,
-                                   params.revision,params.static_cache,
+                                   params.revision,resolved_static,
                                    independent_334=independent,
                                    independent_target_level=independent_level)["plan"]
             return {"session_id":folder.name,"status":"READY_ZERO_NATIVE",
-                    "native_calls":0,"plan":{
+                    "native_calls":0,
+                    "static_cache_auto_used":bool(
+                        resolved_static and params.static_cache is None),
+                    "plan":{
                       "class":plan["class"],"spec":plan["spec"],
                       "base_B":plan["base_B"],
                       "fixed_O":plan["fixed_O"],"final_T":plan["final_T"],

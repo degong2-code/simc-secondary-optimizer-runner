@@ -120,6 +120,15 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertNotIn("FileReader(",js)
         self.assertNotIn("innerHTML",js)
 
+    def test_local_cache_is_optional_and_auto_use_is_explained(self):
+        html=self.client.get("/").text
+        js=self.client.get("/assets/app.js").text
+        self.assertIn("기본 로컬 정적 캐시가 있으면 자동 사용",html)
+        self.assertIn("이미 저장된 로컬 정적 캐시는 자동으로 찾아 사용",html)
+        self.assertIn("plan.static_cache_auto_used",js)
+        self.assertIn("저장된 정적 캐시 자동 적용",js)
+        self.assertNotIn("innerHTML",js)
+
     def test_special_cache_and_five_tier_errors_have_actionable_ui_guidance(self):
         js=self.client.get("/assets/app.js").text
         self.assertIn('SPECIAL_L_REQUIRES_EXACT_NATIVE_STATIC_VARIANT',js)

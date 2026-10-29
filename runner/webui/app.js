@@ -369,7 +369,8 @@ function showPlan(plan) {
   const o=Object.values(plan.plan.fixed_O).reduce((a,n)=>a+n,0);
   setNotice("계산 준비 확인 · B "+number(plan.plan.base_B)+
     " + 고정 기름 O "+number(o)+" = 최종 T "+number(plan.plan.final_T)+
-    " · 계획 Native 최대 "+plan.plan.native_limit+"회 (지금 실행 0회)");
+    " · 계획 Native 최대 "+plan.plan.native_limit+"회 (지금 실행 0회)"+
+    (plan.static_cache_auto_used?" · 저장된 정적 캐시 자동 적용":""));
 }
 function renderProgress(data) {
   const p=data?.progress||{};
