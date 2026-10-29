@@ -26,12 +26,12 @@ class WindowsLocalWebLauncherOffline(unittest.TestCase):
         self.assertNotIn("--execute",text)
         self.assertNotIn("--max-new-physical",text)
         self.assertNotIn("git pull",text)
-        self.assertNotIn("pip install -r requirements-web.txt\n",text)
+        self.assertNotIn("\npy -3 -m pip install -r requirements-web.txt",text)
 
     def test_original_cli_without_open_browser_keeps_original_uvicorn_entry(self):
-        with mock.patch.object(web,"create_app",return_value="local_app") as make, \\
-             mock.patch("uvicorn.run") as run, \\
-             mock.patch("uvicorn.Server") as server, \\
+        with mock.patch.object(web,"create_app",return_value="local_app") as make, \
+             mock.patch("uvicorn.run") as run, \
+             mock.patch("uvicorn.Server") as server, \
              mock.patch.object(web.threading,"Thread") as thread:
             web.main(["--port","8766"])
             make.assert_called_once_with(batch_root=None)
@@ -42,11 +42,11 @@ class WindowsLocalWebLauncherOffline(unittest.TestCase):
             thread.assert_not_called()
 
     def test_browser_only_opens_for_own_server_after_started(self):
-        with mock.patch.object(web,"create_app",return_value="local_app") as make, \\
-             mock.patch("uvicorn.Server") as klass, \\
-             mock.patch("uvicorn.Config") as config, \\
-             mock.patch("uvicorn.run") as old_run, \\
-             mock.patch.object(web.threading,"Thread") as thread, \\
+        with mock.patch.object(web,"create_app",return_value="local_app") as make, \
+             mock.patch("uvicorn.Server") as klass, \
+             mock.patch("uvicorn.Config") as config, \
+             mock.patch("uvicorn.run") as old_run, \
+             mock.patch.object(web.threading,"Thread") as thread, \
              mock.patch("webbrowser.open") as browse:
             srv=klass.return_value
             srv.started=False
