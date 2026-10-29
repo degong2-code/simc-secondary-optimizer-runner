@@ -66,6 +66,53 @@ class Non334SourceIndependentProductOffline(unittest.TestCase):
             spawn.assert_not_called()
         self.assertEqual(len(list((self.root/"runs").iterdir())),26)
 
+    def test_four_more_levels_all_26_share_one_profile_pipeline_no_native(self):
+        # One bounded matrix catches per-level profile, budget and identity
+        # regressions in every supported DPS spec. No 26x Native campaign.
+        import v089_ilvl_chmv_budget_selector as budget
+        registry,_=budget.load_registry()
+        levels=(266,310,331,344)
+        seen=set()
+        with mock.patch.object(web.subprocess,"Popen") as spawn:
+            for level in levels:
+                row=registry["values"][level-266]
+                for key in sessions.SUPPORTED:
+                    with self.subTest(level=level,spec=key):
+                        response=self.post(key,level)
+                        self.assertEqual(response.status_code,200,response.text)
+                        obj=response.json()
+                        self.assertEqual(obj["native_calls"],0)
+                        plan=obj["plan"]
+                        self.assertTrue(plan["independent_non334_profile"])
+                        self.assertTrue(plan["non334_physical_native_not_yet_observed"])
+                        self.assertEqual(plan["native_limit"],6)
+                        expected_B=row["fury_dual_2h"
+                                       if key==("warrior","fury") else "general"]
+                        self.assertEqual(plan["base_B"],expected_B)
+                        self.assertEqual(plan["final_T"],
+                                         expected_B+sum(plan["fixed_O"].values()))
+                        sid=obj["session_id"]
+                        self.assertNotIn(sid,seen)
+                        seen.add(sid)
+                        folder=self.root/"runs"/sid
+                        seal=json.loads((folder/"V106_SESSION_IDENTITY.json")
+                                        .read_text("utf8"))
+                        self.assertTrue(seal["independent_target_level"])
+                        self.assertNotIn("independent_334",seal)
+                        manifest=json.loads((folder/"generated"/"manifest.json")
+                                            .read_text("utf8"))
+                        self.assertEqual(manifest["native_limit"],6)
+                        profile=(folder/"generated"/"profile.simc").read_text("utf8")
+                        lines=[line for line in profile.splitlines()
+                               if ",ilevel=" in line]
+                        self.assertGreaterEqual(len(lines),15)
+                        self.assertTrue(all(",ilevel="+str(level) in line
+                                            for line in lines))
+                        self.assertIn("default_actions=1",profile)
+            spawn.assert_not_called()
+        self.assertEqual(len(seen),26*len(levels))
+        self.assertEqual(len(list((self.root/"runs").iterdir())),len(seen))
+
     def test_same_user_333_and_334_have_distinct_seals_and_old_334_unchanged(self):
         key=("mage","fire")
         ordinary=sessions.user_scenario(sessions.standard_controls(key))
