@@ -1,0 +1,47 @@
+{
+  "schema": "v165_current_season_chmv_consumables_v1",
+  "retail_build": "12.1.5.70575",
+  "scope": "CHMV_BUDGET_ONLY_NOT_CONSUMABLE_EFFECT_REIMPLEMENTATION",
+  "ordinary_gem": {
+    "highest_quality_bonus": [
+      16,
+      7
+    ],
+    "slots": 6,
+    "total_J": 138,
+    "example_item_id": 240898,
+    "example_name": "Flawless Deadly Amethyst",
+    "evidence_url": "https://www.wowhead.com/item=240898/flawless-deadly-amethyst"
+  },
+  "flasks": {
+    "single_secondary_highest_quality_rating": 165,
+    "total_F": 165,
+    "by_stat": {
+      "crit": {
+        "item_id": 241326,
+        "rating": 165
+      },
+      "haste": {
+        "item_id": 241324,
+        "rating": 165
+      },
+      "mastery": {
+        "item_id": 241322,
+        "rating": 165
+      },
+      "versatility": {
+        "item_id": 241320,
+        "rating": 165
+      }
+    },
+    "evidence_urls": [
+      "https://www.wowhead.com/item=241326/flask-of-the-shattered-sun",
+      "https://www.wowhead.com/item=241324/flask-of-the-blood-knights",
+      "https://www.wowhead.com/item=241322/flask-of-the-magisters",
+      "https://www.wowhead.com/item=241320/flask-of-thalassian-resistance"
+    ]
+  },
+  "oil_accounting": "FIXED_O_PER_APPLIED_WEAPON_CRIT16_HASTE16_NO_DOUBLE_COUNT",
+  "source_status": "PUBLIC_ITEM_PAGES_MATCH_APPROVED_CHMV_BUDGET",
+  "native_simc_reconciled_in_this_stage": false
+}
