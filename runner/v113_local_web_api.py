@@ -346,40 +346,20 @@ def create_app(*,root=None, token=None, batch_root=None):
 
     @app.get("/api/v1/defaults")
     def defaults():
-        # Do not make the two genuinely source-independent product choices
-        # depend on having every legacy official .simc fixture installed.
-        # An unavailable legacy default is omitted, never synthesized from
-        # arbitrary race/talents/trinkets. Existing present fixtures retain
-        # identical user defaults and are still validated on actual use.
+        # Compact v146 starters and season representative catalog now serve
+        # all 26 DPS without legacy complete source .simc fixtures.
+        # A plan for the 24 new cases selects the independent path only at
+        # target334; non-334 retains a separate historical source-backed route.
         archetypes=[]
-        missing_legacy=[]
-        for cl,sp in sessions.SUPPORTED:
-            pair=(cl,sp)
-            # Input starter examples are fixture-independent; availability
-            # of the UNPROMOTED legacy execution path is a separate fact.
-            if (pair not in bootstrap.PURE_PRODUCT_SPECS and
-                    pair not in bootstrap.ARCHETYPES and
-                    not sessions.legacy_fixture_path(pair).is_file()):
-                missing_legacy.append({"class":cl,"spec":sp})
-                continue
-            try:
-                controls=sessions.standard_controls(pair)
-            except FileNotFoundError:
-                if pair in bootstrap.PURE_PRODUCT_SPECS:
-                    raise
-                missing_legacy.append({"class":cl,"spec":sp})
-                continue
-            archetypes.append({"class":cl,"spec":sp,**controls,
-                 "representative_scope":(
-                     "SOURCE_INDEPENDENT_SEASON_CATALOG"
-                     if pair in bootstrap.PURE_PRODUCT_SPECS
-                     else "SOURCE_INDEPENDENT_TARGET334_VALIDATED_BATCH"
-                     if pair in bootstrap.ARCHETYPES
-                     else "SOURCE_NON_TIER_NOT_ALL_STANDARDIZED"
-                     if pair in bootstrap.common.GENERIC_PENDING
-                     else "SOURCE_BACKED_PARTIAL_ORDINARY_POOL")})
+        for pair in sessions.SUPPORTED:
+            controls=sessions.standard_controls(pair)
+            scope=("SOURCE_INDEPENDENT_SEASON_CATALOG"
+                   if pair in bootstrap.PURE_PRODUCT_SPECS else
+                   "SOURCE_INDEPENDENT_TARGET334_VALIDATED_BATCH")
+            archetypes.append({"class":pair[0],"spec":pair[1],**controls,
+                               "representative_scope":scope})
         return {"archetypes":archetypes,
-                "unavailable_missing_legacy_fixtures":missing_legacy}
+                "unavailable_missing_legacy_fixtures":[]}
 
     @app.post("/api/v1/sessions/plan")
     def plan(request: UserRequest):
