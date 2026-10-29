@@ -221,5 +221,86 @@ class OneSpecDiagnosticOffline(unittest.TestCase):
             target.run(u,self.binary,self.out,REVISION,max_new=0)
         self.assertFalse(self.out.exists())
 
+class SourceFirstCurrentSeasonPhysicalOptIn(unittest.TestCase):
+    """One real current gear stage in its own receipt namespace; zero Native."""
+
+    def setUp(self):
+        tmp=tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.root=pathlib.Path(tmp.name)
+        self.binary=self.root/"fake_simc"
+        self.binary.write_bytes(b"NO_REAL_SIMC")
+        self.out=self.root/"runs"
+
+    def test_current_season_plan_and_old_v145_receipt_namespace_are_disjoint(self):
+        u=user_for("mage/frost")
+        with mock.patch.object(target.subprocess,"run") as native:
+            old=target.run(u,self.binary,self.out,REVISION,max_new=0)
+            new=target.run(u,self.binary,self.out,REVISION,max_new=0,
+                           source_first_stage=True)
+            native.assert_not_called()
+        self.assertEqual(old["status"],"PREPARED_NO_NATIVE")
+        self.assertEqual(new["status"],"PREPARED_NO_NATIVE")
+        self.assertEqual(old["new_native_calls"],0)
+        self.assertEqual(new["new_native_calls"],0)
+        self.assertNotEqual(old["output_dir"],new["output_dir"])
+        self.assertIn("__source_first_v172__",new["output_dir"])
+        first=pathlib.Path(old["output_dir"])
+        second=pathlib.Path(new["output_dir"])
+        a=(first/"stage"/"profile.simc").read_bytes()
+        b=(second/"stage"/"profile.simc").read_bytes()
+        self.assertNotEqual(a,b)
+        self.assertEqual((first/"stage"/"profile.simc").read_bytes(),a)
+        self.assertIs(json.loads((second/"stage"/"manifest.json").read_text())
+                      [bootstrap.entry.STAGE_FIELD],True)
+        self.assertFalse((second/"receipt.json").exists())
+        self.assertFalse((second/"physical.simc").exists())
+        self.assertFalse((second/"physical.json").exists())
+
+    def test_current_source_first_case_can_differ_from_old_two_verified_specs(self):
+        u=user_for("druid/balance")
+        u["character"]["race"]="night_elf"
+        with mock.patch.object(target.subprocess,"run") as native:
+            with self.assertRaisesRegex(target.TargetedSmokeBlocked,
+                                        "ALREADY_NATIVE_WITNESSED"):
+                target.run(u,self.binary,self.out,REVISION,max_new=0)
+            new=target.run(u,self.binary,self.out,REVISION,max_new=0,
+                           source_first_stage=True)
+            native.assert_not_called()
+        self.assertEqual(new["status"],"PREPARED_NO_NATIVE")
+        self.assertIn("__source_first_v172__",new["output_dir"])
+
+    def test_current_season_one_mocked_native_and_hash_checked_reuse(self):
+        called=[]
+        def fake(cmd,*,cwd,stdout,stderr,timeout,check):
+            called.append(cmd)
+            raw=pathlib.Path(cmd[1]).read_text()
+            self.assertNotIn("gear_crit_rating=",raw)
+            self.assertIn("default_actions=1",raw)
+            self.assertIn("json2=",raw)
+            stdout.write(b"SimC synthetic one-shot stdout\n")
+            (pathlib.Path(cwd)/"physical.json").write_text(json.dumps({
+              "report_version":"2.0.0","git_revision":REVISION,
+              "sim":{"players":[{"name":"target",
+                     "collected_data":{"dps":{"mean":10123.0}}}]}}))
+            return subprocess.CompletedProcess(cmd,0)
+        u=user_for("mage/frost")
+        with mock.patch.object(target.subprocess,"run",side_effect=fake):
+            first=target.run(u,self.binary,self.out,REVISION,max_new=1,
+                             source_first_stage=True)
+            again=target.run(u,self.binary,self.out,REVISION,max_new=1,
+                             source_first_stage=True)
+        self.assertEqual(len(called),1)
+        self.assertEqual(first["status"],"PASS_PHYSICAL_SIMC")
+        self.assertEqual(again["status"],"CACHED_VERIFIED_PHYSICAL_SIMC")
+        self.assertEqual(again["new_native_calls"],0)
+        receipt=json.loads((pathlib.Path(first["output_dir"])/"receipt.json").read_text())
+        self.assertIs(receipt["identity"]["source_first_current_season_stage"],True)
+        self.assertEqual(len(receipt["identity"]["current_season_gear_snapshot_sha256"]),64)
+        self.assertEqual(len(receipt["identity"]["current_season_tier_snapshot_sha256"]),64)
+        self.assertIs(receipt["CHMV_optimization_completed"],False)
+        self.assertIs(receipt["APL_proc_4pc_effect_certified"],False)
+
+
 if __name__=="__main__":
     unittest.main()
