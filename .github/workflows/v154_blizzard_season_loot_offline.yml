@@ -1,4 +1,4 @@
-name: v154 Blizzard Season Loot ID Boundary (OFFLINE ONLY)
+name: v154 Source-First Encounter Loot ID Contract (NO Native)
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
@@ -17,13 +17,6 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - name: Bounded reference and saved journal reconciliation NO network or SimC
+      - name: Source-first provider JSON collection without legacy records or SimC
         run: |
           python -m unittest -v tests.test_v154_blizzard_season_loot_index_offline
-          python runner/v154_blizzard_season_loot_index.py --out v154-existing-reference-report.json
-      - name: Preserve actual existing-reference ID extraction as a downloadable report
-        uses: actions/upload-artifact@v4
-        with:
-          name: v154-existing-reference-report
-          path: v154-existing-reference-report.json
-          retention-days: 14
