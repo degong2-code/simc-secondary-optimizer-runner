@@ -1,0 +1,14 @@
+{
+  "schema": "v177_single_current_season_product_v094_v1",
+  "spec": "paladin/retribution",
+  "target_ilevel": 334,
+  "existing_v094_native_candidates_max": 6,
+  "use_current_season_product": true,
+  "simc_revision": "7bc10711b5",
+  "simc_binary_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+  "new_optimizer": false,
+  "reuse_v176_physical_proof_without_rerun": true,
+  "single_spec_only": true,
+  "no_main_merge": true,
+  "no_project_ui_mutation": true
+}
