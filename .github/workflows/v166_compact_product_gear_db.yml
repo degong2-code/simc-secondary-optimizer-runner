@@ -1,0 +1,55 @@
+name: v166 Compact Season Gear DB From Saved Evidence (offline)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v166_compact_product_gear_db.py
+      - tests/test_v166_compact_product_gear_db.py
+      - .github/workflows/v166_compact_product_gear_db.yml
+  workflow_dispatch:
+jobs:
+  offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m unittest -v tests.test_v166_compact_product_gear_db
+  saved-evidence:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[v166-catalog]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Reuse v165 compact result and original v161 metadata only
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p out/v165 out/v161 out/db2
+          gh run download 40854766850 -n v165-current-season-compact-gear-db -D out/v165
+          gh run download 40836955761 -n v161-db2-csv-snapshot-20261029 -D out/v161
+          unzip -q out/v161/db2-snapshot.zip -d out/db2
+      - name: Convert to product current roles and minimal conditional ID backlog
+        run: |
+          python runner/v166_compact_product_gear_db.py \
+            --pool out/v165/current-season-gear.json \
+            --item out/db2/Item.csv --item-sparse out/db2/ItemSparse.csv \
+            --out out/current-season-product-gear-db.json
+      - name: Focused regression, no Native or season provider API
+        run: python -m unittest -v tests.test_v166_compact_product_gear_db
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: v166-current-season-product-gear-db
+          path: out/current-season-product-gear-db.json
+          retention-days: 14
