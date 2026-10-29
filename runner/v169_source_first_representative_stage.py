@@ -201,14 +201,15 @@ def build_all(db,tier):
        "all_items_physical_simc_accepted":False,
        "profile_activated_in_v098":False,"simc_native_calls":0}
 
-def compose_stage(character,trinkets,*,db=None,tier=None,settings=None):
-    """Build a NEW-SOURCE preview via existing v139 pure formatter ONLY.
+def season_scope(*,db=None,tier=None,settings=None):
+    """One opt-in, same-season equipment catalog for internal v098 stage only.
 
-    V139 standalone profile text has staging gear_* placeholders; do not feed
-    it to DPS or count its physical compatibility as Native PASS.
+    The stable v139 serializer, gem/consumable declarations, and 26 contracts
+    remain unchanged. No v144 equipment ID is copied; v171 + v168 supply
+    every ordinary/weapon/tier item ID. Never alter pure.catalog() on disk.
     """
     import v139_pure_target_profile_composer as pure
-    db=gear.read() if db is None else db
+    db=gear.read() if db is None else gear.validate(db)
     tier=load_tier() if tier is None else tier
     candidate=build_all(db,tier)
     config=pure.catalog() if settings is None else pure.validate_season(settings)
@@ -219,10 +220,8 @@ def compose_stage(character,trinkets,*,db=None,tier=None,settings=None):
          config["default_consumables"]["flask_budget_F"]==
             budget["flasks"]["total_F"],
          "P1_J_F_BUDGET_NOT_ALIGNED")
-    # The same-season v139 configuration contributes ONLY level, sockets
-    # and SimC-native consumable tokens; ALL physical IDs use new evidence.
     scope={k:config[k] for k in ("schema","season","target_ilevel",
-                                 "character_level","gems","default_consumables")}
+                                "character_level","gems","default_consumables")}
     if config.get("simc_item_db_source") is not None:
         scope["simc_item_db_source"]=config["simc_item_db_source"]
     scope.update({"common_gear":candidate["common_gear"],
@@ -232,6 +231,17 @@ def compose_stage(character,trinkets,*,db=None,tier=None,settings=None):
              "ordinary":v["ordinary"],
              "weapons":v["weapons"]}
              for k,v in candidate["specializations"].items()}})
+    return pure.validate_season(scope)
+
+
+def compose_stage(character,trinkets,*,db=None,tier=None,settings=None):
+    """Build a NEW-SOURCE preview via existing v139 pure formatter ONLY.
+
+    V139 standalone profile text has staging gear_* placeholders; do not feed
+    it to DPS or count its physical compatibility as Native PASS.
+    """
+    import v139_pure_target_profile_composer as pure
+    scope=season_scope(db=db,tier=tier,settings=settings)
     # If no more than four unchanged tier pieces, pure v139 retains default
     # SimC APL and no source character profile read.
     profile,proof,rows,tier_slots=pure.compose(
