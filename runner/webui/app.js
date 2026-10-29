@@ -129,7 +129,7 @@ function showRepresentativeScope() {
   note.hidden=!item;
   if(!item)return;
   if(Number(field("ilevel"))!==334) {
-    note.textContent="334 이외 목표 ilvl: 같은 시즌 대표 아이템 ID를 선택 레벨로 지정하여 별도 SimC 사용자 프로필과 참조 B를 구성합니다. 계획 조회는 Native 0회이며 해당 레벨 장비·효과의 실제 SimC 실행 성공은 아직 미확인입니다. 실행은 본인이 선택한 조건에서만 진행되며 기존 334 캐시는 재사용하지 않습니다.";
+    note.textContent="334 이외 목표 ilvl: 같은 시즌 대표 아이템 ID를 선택 레벨로 지정하여 별도 SimC 사용자 프로필과 참조 B를 구성합니다. 계획 조회는 Native 0회입니다. 실제 SimC 수용 여부는 이 세션의 실행 결과로 판단하며, 한 레벨·조건의 성공을 다른 레벨로 확대하지 않습니다. 기존 334 캐시는 재사용하지 않습니다.";
   } else if(item.representative_scope==="SOURCE_INDEPENDENT_TARGET334_VALIDATED_BATCH") {
     note.textContent="목표 334: 내부 시즌 대표 장비·티어 4세트·SimC 기본 APL로 독립 생성합니다. 24개 기본 프로필은 실제 SimC 배치에서 물리·6후보 PASS. 입력 변경·기름·특수장비 효과의 성능은 각 실행 결과로만 판단합니다. 기존 캐시와 분리된 새 세션입니다.";
   } else if(item.representative_scope==="SOURCE_INDEPENDENT_SEASON_CATALOG") {
@@ -341,7 +341,22 @@ async function withBusy(fn) {
   try{await fn();}catch(err){
     if(err.message==="SESSION_NOT_FOUND")
       setNotice("현재 PC에는 해당 세션이 없습니다. 다른 컴퓨터에서 실행했다면 그 PC에서 조회해야 합니다.",true);
-    else setNotice("요청 차단 또는 오류: "+err.message,true);
+    else {
+      // Never treat missing exact L as zero or run Native to guess it.
+      const guidance={
+        "V106_SPECIAL_EQUIPMENT_REQUIRES_EXACT_STATIC_CACHE":
+          "특수효과 장비에 필요한 정확한 Native 정적 캐시 JSON 경로를 입력하세요.",
+        "V106_STATIC_CACHE_NOT_FOUND":
+          "지정한 정적 캐시 JSON 파일을 찾을 수 없습니다. 경로를 확인하세요.",
+        "SPECIAL_L_REQUIRES_EXACT_NATIVE_STATIC_VARIANT":
+          "선택 장비의 아이템 ID·목표 ilvl·옵션과 일치하는 Native 정적 스탯 L이 캐시에 없습니다. 다른 레벨의 레코드를 대신 적용하지 않습니다.",
+        "REFERENCE_FIXED_L_CONSTRAINT_UNRESOLVED":
+          "선택 장비의 정확한 고정 스탯 L 하한을 확인할 수 없습니다.",
+        "SELECTED_SPECIAL_FLOOR_UNFEASIBLE":
+          "선택 장비의 고정 스탯 하한 L과 입력 총량 T가 충돌합니다."
+      };
+      setNotice("요청 차단 또는 오류: "+(guidance[err.message]||err.message),true);
+    }
   }
   finally{state.busy=false;buttonState(state.running,$("filled-result").hidden===false);}
 }

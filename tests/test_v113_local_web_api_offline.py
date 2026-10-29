@@ -202,6 +202,28 @@ class LocalWebAPIOffline(unittest.TestCase):
                             for r in browser["archetypes"]))
         self.assertNotIn("ordinary_variant",self.controls)
 
+    def test_exact_special_L_precheck_returns_only_known_safe_codes(self):
+        reference=web.bootstrap.oil_mod.reference_path
+        expected=(
+            reference.ReferenceNativeBlocked(
+                "SPECIAL_L_REQUIRES_EXACT_NATIVE_STATIC_VARIANT"),
+            reference.ReferenceNativeBlocked(
+                "REFERENCE_FIXED_L_CONSTRAINT_UNRESOLVED"),
+            reference.statics.BudgetBlocked(
+                "SELECTED_SPECIAL_FLOOR_UNFEASIBLE"),
+        )
+        for exc in expected:
+            with self.subTest(code=str(exc)):
+                response=web.blocked(exc)
+                self.assertEqual(response.status_code,422)
+                self.assertEqual(response.detail,{"code":str(exc)})
+        secret=reference.ReferenceNativeBlocked(
+            "UNEXPECTED_PATH_C:/private/profile.simc")
+        safe=web.blocked(secret)
+        self.assertEqual(safe.status_code,409)
+        self.assertEqual(safe.detail["code"],"LOCAL_SESSION_PRECHECK_BLOCKED")
+        self.assertNotIn("private",str(safe.detail))
+
     def test_invalid_user_rejected_without_new_native_or_extra_session(self):
         data=copy.deepcopy(self.payload)
         data["controls"]["spec"]="protection"

@@ -44,6 +44,17 @@ def blocked(exc):
     if isinstance(exc, (sessions.SessionBlocked, bootstrap.UserScenarioBlocked)):
         code = str(exc).split(":", 1)[0].split("\n", 1)[0]
         return HTTPException(422, detail={"code": code})
+    # Exact special L is a user-actionable, pre-Native input mismatch.
+    # Only these fixed codes escape; arbitrary exception text can expose
+    # private paths, options or SimC content and must remain generic.
+    reference = bootstrap.oil_mod.reference_path
+    if isinstance(exc, reference.ReferenceNativeBlocked):
+        if str(exc) in ("SPECIAL_L_REQUIRES_EXACT_NATIVE_STATIC_VARIANT",
+                        "REFERENCE_FIXED_L_CONSTRAINT_UNRESOLVED"):
+            return HTTPException(422, detail={"code": str(exc)})
+    if isinstance(exc, reference.statics.BudgetBlocked):
+        if str(exc) == "SELECTED_SPECIAL_FLOOR_UNFEASIBLE":
+            return HTTPException(422, detail={"code": str(exc)})
     return HTTPException(409, detail={"code": "LOCAL_SESSION_PRECHECK_BLOCKED",
                                        "kind":type(exc).__name__})
 

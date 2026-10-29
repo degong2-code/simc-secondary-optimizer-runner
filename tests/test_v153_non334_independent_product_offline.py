@@ -113,6 +113,87 @@ class Non334SourceIndependentProductOffline(unittest.TestCase):
         self.assertEqual(len(seen),26*len(levels))
         self.assertEqual(len(list((self.root/"runs").iterdir())),len(seen))
 
+    def test_non334_manual_T_consumables_and_exact_special_L_reuse_one_path(self):
+        # Two different levels, exact slot/ilevel/options and a primary-only
+        # diamond switch: synthetic Native-static cache for OFFLINE testing.
+        # Never claim these synthetic records prove real SimC item support.
+        from tests.test_v062_static_budget_bridge import record
+        import v061_scenario_contract as contract
+        import v062_static_budget_bridge as static_budget
+        import v089_ilvl_chmv_budget_selector as budget
+        reference,_=budget.load_registry()
+        fixed={"crit_rating":0,"haste_rating":175,
+               "mastery_rating":0,"versatility_rating":0}
+        item={"slot":"head","item_id":271483,
+              "options":{"bonus_id":"13848",
+                         "redirected_base_stats":"268231"}}
+        cache_paths={}
+        seen=set()
+        with mock.patch.object(web.subprocess,"Popen") as spawn:
+            for level in (331,344):
+                with self.subTest(level=level):
+                    cache=boot.cache_mod.empty_cache()
+                    record(cache,{**item,"ilevel":level},fixed)
+                    cache_path=self.root/("synthetic_L_"+str(level)+".json")
+                    boot.cache_mod.write_atomic(cache_path,cache)
+                    cache_paths[level]=cache_path
+                    controls=sessions.standard_controls(("shaman","elemental"))
+                    controls["ilevel"]=level
+                    controls["final_T"]=reference["values"][level-266]["general"]+100
+                    controls["special_items"]=[item]
+                    choices=controls["consumable_choices"].copy()
+                    choices.update({"food":"royal_roast",
+                                    "potion":"lights_potential_2",
+                                    "augmentation":"disabled","diamond_id":240967})
+                    controls["consumable_choices"]=choices
+                    response=self.client.post("/api/v1/sessions/plan",json={
+                        "controls":controls,"binary":str(self.binary),
+                        "revision":self.revision,
+                        "static_cache":str(cache_path)},headers=self.headers)
+                    self.assertEqual(response.status_code,200,response.text)
+                    output=response.json()
+                    self.assertEqual(output["native_calls"],0)
+                    self.assertEqual(output["plan"]["final_T"],controls["final_T"])
+                    self.assertEqual(output["plan"]["base_B"]+
+                                     sum(output["plan"]["fixed_O"].values()),
+                                     controls["final_T"])
+                    sid=output["session_id"]
+                    self.assertNotIn(sid,seen)
+                    seen.add(sid)
+                    folder=self.root/"runs"/sid
+                    cfg=json.loads((folder/"generated"/"scenario.json")
+                                   .read_text("utf8"))
+                    fillers=json.loads((folder/"generated"/"fillers.json")
+                                       .read_text("utf8"))
+                    measured=static_budget.compile_static_budget(
+                        contract.normalize(cfg),fillers,cache)
+                    self.assertEqual(measured["locked_L_when_all_specials_observed"],
+                                     fixed)
+                    self.assertFalse(measured["missing_special_fixed_static"])
+                    profile=(folder/"generated"/"profile.simc").read_text("utf8")
+                    self.assertIn("head=",profile)
+                    self.assertIn("gem_id=240967",profile)
+                    self.assertIn(",ilevel="+str(level),profile)
+                    for line in ("food=royal_roast","potion=lights_potential_2",
+                                 "augmentation=disabled"):
+                        self.assertEqual(profile.splitlines().count(line),1)
+                    self.assertTrue(json.loads(
+                        (folder/"V106_SESSION_IDENTITY.json").read_text("utf8"))
+                        ["independent_target_level"])
+            # A valid but WRONG-LEVEL exact cache cannot supply this item L.
+            wrong=sessions.standard_controls(("shaman","elemental"))
+            wrong["ilevel"]=344
+            wrong["special_items"]=[item]
+            response=self.client.post("/api/v1/sessions/plan",json={
+                "controls":wrong,"binary":str(self.binary),
+                "revision":self.revision,
+                "static_cache":str(cache_paths[331])},headers=self.headers)
+            self.assertEqual(response.status_code,422,response.text)
+            self.assertEqual(response.json()["detail"]["code"],
+                             "SPECIAL_L_REQUIRES_EXACT_NATIVE_STATIC_VARIANT")
+            spawn.assert_not_called()
+        self.assertEqual(len(seen),2)
+
     def test_same_user_333_and_334_have_distinct_seals_and_old_334_unchanged(self):
         key=("mage","fire")
         ordinary=sessions.user_scenario(sessions.standard_controls(key))
