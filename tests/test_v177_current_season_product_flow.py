@@ -146,8 +146,11 @@ class CurrentSeasonProductIntegration(unittest.TestCase):
         self.assertEqual(invalid.json()["detail"]["code"],
                          "V106_CURRENT_SEASON_PRODUCT_SCOPE_334_ONLY")
         html=client.get("/",headers=headers).text
-        self.assertIn('id="current_season_product"',html)
+        self.assertIn('id="current_season_product" type="checkbox" checked',html)
         script=client.get("/assets/app.js",headers=headers).text
         self.assertIn("current_season_product:currentSeason",script)
+        self.assertIn('$("current_season_product").checked=Number(item.ilevel)===334',script)
+        self.assertIn('$("current_season_product").checked=payload.current_season_product===true',script)
+        self.assertIn('if(Number(field("ilevel"))!==334)$("current_season_product").checked=false',script)
 
 if __name__=="__main__":unittest.main()
