@@ -1,0 +1,37 @@
+name: v162 Localbots Delve Provider (offline + explicit live)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v162_localbots_delve_provider.py
+      - tests/test_v162_localbots_delve_provider_offline.py
+      - .github/workflows/v162_localbots_delve_provider.yml
+  workflow_dispatch:
+jobs:
+  offline:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m unittest -v tests.test_v162_localbots_delve_provider_offline
+  live-opt-in:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[localbots-probe]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Fetch new Localbots source + exact-build Wago ItemSparse (two requests)
+        run: python runner/v162_localbots_delve_provider.py --build 12.1.5.70575 --expansion-id 11 --out v162-localbots-delve-report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: v162-localbots-delve-report
+          path: v162-localbots-delve-report.json
+          retention-days: 14
