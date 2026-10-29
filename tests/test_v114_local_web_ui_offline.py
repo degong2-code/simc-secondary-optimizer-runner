@@ -86,22 +86,6 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('window.confirm("이 PC에서 실제 SimC',js.text)
         self.assertEqual(self.client.get("/assets/missing.js").status_code,403)
 
-    def test_new_sixteen_ui_native_labels_have_precise_verified_scope(self):
-        # User Windows v136: target334 one-shot Native accepted 16/16,
-        # NOT sixteen successful 6-candidate optimizations.
-        js=self.client.get("/assets/app.js").text
-        exact=" (기본334 단발 Native PASS · 최적화 미검증)"
-        generic=api.sessions.bootstrap.common.GENERIC_PENDING
-        self.assertEqual(len(generic),17)
-        self.assertEqual(js.count(exact),len(generic)-2)
-        self.assertIn('"deathknight/frost":"죽음의 기사 · 냉기 (기본334 조건 6후보·95% 실기 PASS)"',js)
-        self.assertIn('"druid/feral":"드루이드 · 야성 (기본334 조건 6후보·95% 실기 PASS)"',js)
-        self.assertNotIn(" (목표 Native 미검증)",js)
-        for cl,sp in generic:
-            self.assertIn('"'+cl+'/'+sp+'":"',js)
-        # Outlaw and the seven historical adapters keep independent evidence.
-        self.assertIn('"rogue/outlaw":"도적 · 무법 (목표 프로필 Native 시험 전)"',js)
-
     def test_all_26_spec_labels_are_neutral_not_historical_native_claims(self):
         js=self.client.get("/assets/app.js").text
         labels=js.split("const specLabels = {",1)[1].split("};",1)[0]
