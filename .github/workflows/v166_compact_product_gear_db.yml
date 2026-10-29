@@ -20,6 +20,7 @@ jobs:
           python-version: '3.12'
       - run: python -m unittest -v tests.test_v166_compact_product_gear_db
   saved-evidence:
+    # Reuses immutable retained GitHub artifacts; never recontacts WoW providers.
     if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[v166-catalog]') }}
     runs-on: ubuntu-24.04
     timeout-minutes: 5
