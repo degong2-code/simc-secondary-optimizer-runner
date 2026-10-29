@@ -1,0 +1,20 @@
+name: v165 Focused Gear Metadata (offline + optional one-table lookup)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v165_current_season_gear_pool.py
+      - tests/test_v165_current_season_gear_pool.py
+      - .github/workflows/v165_current_season_gear_catalog.yml
+  workflow_dispatch:
+jobs:
+  offline:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m unittest -v tests.test_v165_current_season_gear_pool
