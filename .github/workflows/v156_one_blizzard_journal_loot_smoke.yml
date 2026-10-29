@@ -17,7 +17,7 @@ jobs:
           python-version: '3.12'
       - run: python -m unittest -v tests.test_v156_one_blizzard_journal_loot_smoke_offline
   live-opt-in:
-    if: ${{ vars.SIMC_ALLOW_SEASON_API_PROBE == 'true' }}
+    if: ${{ vars.SIMC_ALLOW_SEASON_API_PROBE == 'true' && (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[api-probe]')) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 3
     permissions:
