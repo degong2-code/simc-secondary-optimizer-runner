@@ -51,7 +51,7 @@ def put_once(path,data):
     else:
         path.write_bytes(data)
 
-def user_key(user):
+def user_key(user,*,source_first_stage=False):
     need(type(user) is dict and
          "import_simc_profile" not in user and
          type(user.get("character")) is dict,
@@ -64,7 +64,9 @@ def user_key(user):
          "NO_INDEPENDENT_COMPILER_CONTRACT")
     # The two existing source-free Native proofs have a separate v140 cache.
     # Do not spend another physical call on them without a changed purpose.
-    need((ch["class"],ch["spec"]) not in bootstrap.PURE_PRODUCT_SPECS,
+    need(type(source_first_stage) is bool,"SOURCE_FIRST_STAGE_FLAG")
+    need(source_first_stage or
+         (ch["class"],ch["spec"]) not in bootstrap.PURE_PRODUCT_SPECS,
          "ALREADY_NATIVE_WITNESSED_USE_V140_EVIDENCE")
     need(user.get("target")=={"ilevel":334,"final_T":None} and
          user.get("oil_hands")==[],
@@ -72,6 +74,14 @@ def user_key(user):
     need(len(user.get("trinkets",[]))==2,
          "EXACTLY_TWO_USER_TRINKETS_REQUIRED")
     return key
+
+def output_folder(user,out,*,source_first_stage=False):
+    """Opt-in revision gets separate physical receipts and worker lock."""
+    key=user_key(user,source_first_stage=source_first_stage)
+    sha16=sha(canonical(user).encode("utf8"))[:16]
+    suffix="__source_first_v172__" if source_first_stage else "__"
+    return pathlib.Path(out).resolve()/(key.replace("/","__")+suffix+sha16)
+
 
 def summary_from_json2(raw,revision):
     native=json.loads(raw)
@@ -87,8 +97,8 @@ def summary_from_json2(raw,revision):
     return {"json2":result,"observed_git_revision":observed}
 
 def _run_unlocked(user,binary,out,revision,*,iterations=1,timeout_seconds=180,
-                  max_new=0):
-    key=user_key(user)
+                  max_new=0,source_first_stage=False):
+    key=user_key(user,source_first_stage=source_first_stage)
     need(type(iterations) is int and 1<=iterations<=35,
          "PHYSICAL_ITERATIONS_OUT_OF_BOUNDS")
     need(type(timeout_seconds) is int and 1<=timeout_seconds<=900,
@@ -103,11 +113,12 @@ def _run_unlocked(user,binary,out,revision,*,iterations=1,timeout_seconds=180,
     user_bytes=canonical(user).encode("utf8")
     user_sha=sha(user_bytes)
     # Distinct user inputs cannot silently repoint an existing Native receipt.
-    folder=out/(key.replace("/","__")+"__"+user_sha[:16])
+    folder=output_folder(user,out,source_first_stage=source_first_stage)
     stage=folder/"stage"
     folder.mkdir(parents=True,exist_ok=True)
     put_once(folder/"user.json",user_bytes)
-    planned=bootstrap.build(user,stage,binary,revision,pure_stage=True)
+    planned=bootstrap.build(user,stage,binary,revision,pure_stage=True,
+                            source_first_stage=source_first_stage)
     need(planned["status"]=="STAGED_INTERNAL_MANIFEST_NATIVE_NOT_AUTHORIZED" and
          planned["native_calls"]==0 and
          planned["template_archetype"]==key and
@@ -127,6 +138,12 @@ def _run_unlocked(user,binary,out,revision,*,iterations=1,timeout_seconds=180,
               "profile_sha256":sha((stage/"profile.simc").read_bytes()),
               "physical_sha256":sha(raw),"iterations":iterations,
               "CHMV_numeric_overrides_removed":True}
+    if source_first_stage:
+        identity["source_first_current_season_stage"]=True
+        identity["current_season_gear_snapshot_sha256"]=sha(
+            bootstrap.source_first.gear.DEFAULT.read_bytes())
+        identity["current_season_tier_snapshot_sha256"]=sha(
+            bootstrap.source_first.TIER_PATH.read_bytes())
     previous=(json.loads(receipt_file.read_text(encoding="utf8"))
               if receipt_file.is_file() else None)
     if previous is not None:
@@ -214,28 +231,27 @@ def _run_unlocked(user,binary,out,revision,*,iterations=1,timeout_seconds=180,
     return summary
 
 def run(user,binary,out,revision,*,iterations=1,timeout_seconds=180,
-        max_new=0):
+        max_new=0,source_first_stage=False):
     """Reuse the existing Windows/POSIX OS-owned v106 same-session lock.
 
     Two local processes with identical user inputs cannot both launch an
     expensive SimC physical probe. Crashes release the descriptor, not the
     immutable physical receipt or original SimC error log.
     """
-    key=user_key(user)
+    key=user_key(user,source_first_stage=source_first_stage)
     need(type(max_new) is int and max_new in (0,1),
          "ONE_NATIVE_CALL_CAP_ONLY")
     need(type(iterations) is int and 1<=iterations<=35,
          "PHYSICAL_ITERATIONS_OUT_OF_BOUNDS")
     need(type(timeout_seconds) is int and 1<=timeout_seconds<=900,
          "NATIVE_TIMEOUT_OUT_OF_BOUNDS")
-    user_sha=sha(canonical(user).encode("utf8"))
-    folder=pathlib.Path(out).resolve()/(key.replace("/","__")+
-                                        "__"+user_sha[:16])
+    folder=output_folder(user,out,source_first_stage=source_first_stage)
     with session_controls.worker_lock(folder):
         return _run_unlocked(user,binary,out,revision,
                              iterations=iterations,
                              timeout_seconds=timeout_seconds,
-                             max_new=max_new)
+                             max_new=max_new,
+                             source_first_stage=source_first_stage)
 
 def main(argv=None):
     p=argparse.ArgumentParser(description="One selected DPS source-independent physical SimC smoke; 0 or 1 new Native")
@@ -247,6 +263,8 @@ def main(argv=None):
     p.add_argument("--simc",type=pathlib.Path,required=True)
     p.add_argument("--revision",required=True)
     p.add_argument("--out",type=pathlib.Path,default=DEFAULT_OUT)
+    p.add_argument("--source-first-stage",action="store_true",
+                   help="Opt-in new v171/v168 internal gear at target334; separate receipt from old v145 sources")
     p.add_argument("--iterations",type=int,default=1)
     p.add_argument("--timeout-seconds",type=int,default=180)
     p.add_argument("--max-new",type=int,choices=(0,1),default=0,
@@ -258,8 +276,10 @@ def main(argv=None):
         else:
             import v106_user_session_controller as sessions
             parts=a.starter_spec.split("/")
-            need(len(parts)==2 and tuple(parts) in bootstrap.ARCHETYPES,
-                 "STARTER_SPEC_MUST_BE_ONE_OF_24_UNPROMOTED_DPS")
+            need(len(parts)==2 and
+                 (specs.lookup(*parts) is not None if a.source_first_stage
+                  else tuple(parts) in bootstrap.ARCHETYPES),
+                 "STARTER_SPEC_NOT_IN_DPS_CONTRACT")
             controls=sessions.standard_controls(tuple(parts))
             # An oil changes gear_* but is NOT a physical item acceptance
             # observation. Remove it from this exact one-shot scenario.
@@ -267,7 +287,8 @@ def main(argv=None):
             user=sessions.user_scenario(controls)
         result=run(user,a.simc,a.out,a.revision,
                    iterations=a.iterations,timeout_seconds=a.timeout_seconds,
-                   max_new=a.max_new)
+                   max_new=a.max_new,
+                   source_first_stage=a.source_first_stage)
         print(json.dumps(result,indent=2,ensure_ascii=False,sort_keys=True))
         print("OUTPUT_DIR:",result["output_dir"])
         if os.name=="nt":
