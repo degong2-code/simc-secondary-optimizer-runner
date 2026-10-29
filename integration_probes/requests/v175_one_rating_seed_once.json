@@ -1,0 +1,18 @@
+{
+  "schema": "v175_first_static_rating_on_v174_physical_v1",
+  "spec": "paladin/retribution",
+  "target_ilevel": 334,
+  "v174_physical_run": 40967207274,
+  "use_v093_seed_index": 0,
+  "iterations": 35,
+  "base_B": 3150,
+  "final_T": 3150,
+  "fixed_oil_O": 0,
+  "max_new_native": 1,
+  "simc_revision": "7bc10711b5",
+  "simc_binary_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+  "source_first_season_gear_unchanged": true,
+  "old_v174_physical_native_rerun": false,
+  "no_new_optimizer": true,
+  "no_product_promotion": true
+}
