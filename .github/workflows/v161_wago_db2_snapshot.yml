@@ -1,0 +1,28 @@
+name: v161 One-time Full Wago DB2 Snapshot (10 CSV, NO Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v161_wago_db2_snapshot.py
+      - .github/workflows/v161_wago_db2_snapshot.yml
+  workflow_dispatch:
+jobs:
+  snapshot-opt-in:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[wago-full]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Download only 10 exact DB2 tables from pinned Retail build
+        run: python runner/v161_wago_db2_snapshot.py --out v161-output
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: v161-db2-csv-snapshot-20261029
+          path: v161-output/db2-snapshot.zip
+          retention-days: 2
