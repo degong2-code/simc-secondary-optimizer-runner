@@ -19,23 +19,11 @@ MAX_CSV_BYTES=210_000_000
 MAX_ROWS=1_000_000
 # Separate CHMV accounting facts: one quality-two (highest) example and 4
 # top-tier flask item IDs verified from public item pages. Not effect code.
-CONSUMABLES={
- "ordinary_gem":{"highest_quality_bonus":[16,7],"slots":6,
-   "total_J":138,"example_item_id":240898,
-   "example_name":"Flawless Deadly Amethyst",
-   "evidence_url":"https://www.wowhead.com/item=240898/flawless-deadly-amethyst"},
- "flasks":{"single_secondary_highest_quality_rating":165,
-   "total_F":165,"by_stat":{"crit":{"item_id":241326,"rating":165},
-      "haste":{"item_id":241324,"rating":165},
-      "mastery":{"item_id":241322,"rating":165},
-      "versatility":{"item_id":241320,"rating":165}},
-   "evidence_urls":[
-      "https://www.wowhead.com/item=241326/flask-of-the-shattered-sun",
-      "https://www.wowhead.com/item=241324/flask-of-the-blood-knights",
-      "https://www.wowhead.com/item=241322/flask-of-the-magisters",
-      "https://www.wowhead.com/item=241320/flask-of-thalassian-resistance"]},
- "source_status":"PUBLIC_ITEM_PAGES_MATCH_APPROVED_CHMV_BUDGET",
- "native_simc_reconciled_in_this_stage":False}
+ROOT=Path(__file__).resolve().parents[1]
+# One replaceable CURRENT-season data file; not persistent Wago/raw history.
+CONSUMABLES=json.loads((ROOT/"data/current_season_chmv_consumables.json")
+                      .read_text(encoding="utf8"))
+
 class CatalogBlocked(ValueError):pass
 def need(test,code):
     if not test:raise CatalogBlocked(code)
@@ -82,6 +70,16 @@ def compile_pool(db2,delve,sparse_path,effect_path=None):
          and db2.get("db2_expansion_id")==delve.get("db2_expansion_id")
          and type(db2.get("db2_expansion_id")) is int,
          "SEASON_BUILD_EXPANSION_MISMATCH")
+    need(CONSUMABLES.get("retail_build")==db2["build"],
+         "CONSUMABLE_BUDGET_BUILD_MISMATCH")
+    gem=CONSUMABLES.get("ordinary_gem",{})
+    flask=CONSUMABLES.get("flasks",{})
+    need(type(gem.get("highest_quality_bonus")) is list and
+         gem.get("slots")*sum(gem["highest_quality_bonus"])==gem.get("total_J") and
+         flask.get("total_F")==flask.get("single_secondary_highest_quality_rating") and
+         len(flask.get("by_stat",{}))==4 and
+         all(x.get("rating")==flask["total_F"] for x in flask["by_stat"].values()),
+         "CONSUMABLE_BUDGET_DATA_INCONSISTENT")
     originals={}
     for src,rows in (("wago",db2.get("items")),("localbots",delve.get("items"))):
         need(type(rows) is list and len(rows)<=30000,"SOURCE_ROWS_INVALID")
