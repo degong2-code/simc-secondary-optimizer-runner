@@ -155,7 +155,7 @@ def initial_seeds(B,lower,upper):
 def build(user,folder,binary,revision,static_cache_path=None,
           imported_profile_text=None,*,ordinary_variant=None,pure_stage=False,
           independent_334=False,independent_target_level=False,
-          source_first_stage=False):
+          source_first_stage=False,current_season_product=False):
     """Return an already validated internal manifest and v096 plan; no Native."""
     need(type(user) is dict and set(user) in (
         FIELDS,FIELDS|{IMPORT_FIELD},FIELDS|{CONSUME_FIELD},
@@ -181,6 +181,18 @@ def build(user,folder,binary,revision,static_cache_path=None,
     # production route at ilvl 334 only. Historic v147/v145 probes remain
     # unpromoted and their unchanged pure_stage semantics are preserved.
     need(type(source_first_stage) is bool,"SOURCE_FIRST_STAGE_BOOL_REQUIRED")
+    need(type(current_season_product) is bool,"CURRENT_SEASON_PRODUCT_BOOL_REQUIRED")
+    # Separate opt-in product session: NO physical-proof-only stage seal.
+    # v176 physically accepted all 26 source-first archetypes. Different
+    # user-selected talents/trinkets are evaluated by actual SimC at runtime.
+    need(not (current_season_product and source_first_stage),
+         "SOURCE_FIRST_STAGE_AND_PRODUCT_ARE_EXCLUSIVE")
+    need(not current_season_product or
+         (not pure_stage and not independent_334 and
+          not independent_target_level and ordinary_variant is None and
+          type(ilvl) is int and ilvl==334 and
+          key in (set(ARCHETYPES)|PURE_PRODUCT_SPECS)),
+         "CURRENT_SEASON_PRODUCT_SCOPE_334_ONLY")
     # Developer-only v171+v168 representative equipment. Never activate in
     # ordinary web/v106 sessions or reuse existing v098 production receipts.
     need(not source_first_stage or
@@ -203,7 +215,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
           ordinary_variant is None and not pure_stage),
          "INDEPENDENT_NON334_USER_SCOPE_NOT_SUPPORTED")
     source_free=((key in PURE_PRODUCT_SPECS or independent_334 or
-                  independent_target_level) and
+                  independent_target_level or current_season_product) and
                  "/".join(key) in pure.catalog()["specializations"])
     need(key in ARCHETYPES or source_free,
          "REPRESENTATIVE_ARCHETYPE_NOT_READY:"+"/".join(key))
@@ -242,7 +254,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
                              combat=combat,
                              level_preview=independent_target_level,
                              season_override=(source_first.season_scope()
-                                              if source_first_stage else None)))
+                                              if (source_first_stage or current_season_product) else None)))
     elif ordinary_variant is None:
         # Preserve the historical exact call shape and all default receipts.
         base_profile,cfg,rows,groups,weapon_layout,F=common.source_backed_gear(
@@ -400,12 +412,18 @@ def build(user,folder,binary,revision,static_cache_path=None,
             **({"source_first_stage":True,
                 "new_season_equipment_not_native_accepted":True,
                 "v098_user_default_unchanged":True}
-               if source_first_stage else {})}
+               if source_first_stage else {}),
+            **({"current_season_product":True,
+                "v176_base_physical_26_of_26_verified":True,
+                "current_user_selected_options_verified_only_by_native":True,
+                "default_legacy_sessions_unchanged":True}
+               if current_season_product else {})}
 
 def run(user_path,folder,binary,revision,static_cache_path=None,
         execute=False,cache_only=False,*,ordinary_variant=None,pure_stage=False,
         physical_acceptance_root=None,open_folder=True,independent_334=False,
-        independent_target_level=False,source_first_stage=False):
+        independent_target_level=False,source_first_stage=False,
+        current_season_product=False):
     # An exact v140 (historical 2 specs) or v145 (single preview profile)
     # physical Native receipt authorizes ONLY its identical internal profile.
     # v096 verifies original JSON2 bytes before any adaptive Native call.
@@ -428,7 +446,8 @@ def run(user_path,folder,binary,revision,static_cache_path=None,
                    ordinary_variant=ordinary_variant,pure_stage=pure_stage,
                    independent_334=independent_334,
                    independent_target_level=independent_target_level,
-                   source_first_stage=source_first_stage)
+                   source_first_stage=source_first_stage,
+                   current_season_product=current_season_product)
     if not execute:return prepared
     if pure_stage:
         actual=entry.run_manifest(prepared["generated_manifest"],
