@@ -1,0 +1,19 @@
+SIMC SECONDARY OPTIMIZER — P1 후속 제품 개발 채팅 시작 (2026-10-29 인계)
+
+너는 기존 주 제품 개발 채팅의 후속 담당자다. 절대로 프로젝트를 재시작하거나 오래된 Native·CI 증거를 전수 재검증하지 말고, 이미 개발된 GitHub 격리 브랜치를 그대로 이어가라.
+
+[즉시 확인할 source of truth]
+1. repo: degong2-code/simc-secondary-optimizer-runner
+   branch: probe/chat-cache-v035-20261024
+   이전 채팅 마지막 확인 HEAD: b41a620d14453c3e1056ae688b6ec72a359d4b32
+   현재 최신 HEAD가 변경됐는지 확인한 뒤 docs/CURRENT_PRODUCT_DEVELOPMENT_STATE.md 최상단과 docs/HANDOFF_P1_20261029_DPS26_NON334.md를 전부 읽어라.
+2. 최상위 사용자 최신 확정: **DPS 26개 전문화만 지원**, 증강 기원사·탱커·힐러 완전 제외. v1.4.1 Project Source에 증강 포함 27개 문구가 있어도 2026-10-29 직접 결정으로 덮어쓴다. Project UI 등록/교체 완료를 추정하지 마라.
+3. 목표: 현재 착용 장비 재분배 아닌, 미래 목표 ilvl(기본334) 또는 수동 최종 T 기준 CHMV 치명/가속/특화/유연의 최적 절대 rating을 SimC DPS로 찾고 SEM·95% 판정·관측 1순위·실질적 대안·비율 제시. T=B+O, B=G+J+F, L은 예산 내 이미 포함, O는 고정 기름으로 한 번만 반영; 95% 확정과 전역 최적해를 구분. 장비 추천/파밍 경로/시즌 전체 아이템 DB/효과 재구현·APL 개발 금지.
+4. P1 우선: 사용자 입력→내부 대표 장비/예산→기존 v098→v096→v094 SimC 적응형 실행→DPS·통계·캐시·취소·재개·UI. 신형 엔진/추가 Gate/시즌 자동 수집 파이프라인은 후순위; 변경된 코드만 최소 검증. 업데이트는 SimC 내부 데이터와 최소 대표 ID 선택표 활용.
+5. 핵심 최근 코드: v139 대표 프로필 생성기, v089 ilvl 266~344 참조 B, v153 non334 level_preview/독립 session identity, v106 세션 컨트롤러, v113 로컬 웹앱 + START_SIMC_OPTIMIZER_WEB_WINDOWS.cmd.
+6. 증거: Windows v147 24개 전문화 물리24+adaptive144=168 실제 Native PASS; target334 havoc 새 사용자 Native6/6 PASS, cache-only6/6 추가 Native0, 로컬 결과 복원 PASS. 이들은 기존 증거 보존/재사용. 최신 신규 non334는 26개 전문화 **target333 계획만 오프라인 PASS, 실제 Windows Native 미실측**. GitHub CI 제품 358/358 PASS (#40804235550), 웹 Windows92/92·Ubuntu92/92 PASS (#40804235499), 마지막 변경 새 Native0. 테스트 결과를 모든 레벨 Native PASS로 과장하지 마라.
+7. 바로 다음: 최신 GitHub가 이미 구현한 v153을 다시 만들지 말 것. 회사 PC 웹앱에서 우선 demonhunter/havoc ilvl333 '예산 미리 확인 · Native0회'로 새 session_id/B/O/T/최대6 및 기존334 분리 확인. 해당 실측 확인 전 333 전 전문화 Native 실행 금지. 새 Native가 필요하면 변경된 한 조건 1개만 사용자 승인 하에 계획하고, 취소·재개와 과거 334 cache를 건드리지 마라. 사용자에게 이전에 이미 제공한 세션 ID/실측/경로를 재질문하지 마라.
+8. 회사 repo C:\Users\yesfprop\Desktop\새 폴더\simc-secondary-optimizer-runner, 그 옆 v147_batch, 루트 START_SIMC_OPTIMIZER_WEB_WINDOWS.cmd 더블클릭, localhost 127.0.0.1:8765, 다른 PC에서 read-only batch 복사를 실행 캐시로 승격하지 마라. 바이너리/프로필 SHA의 기존 identity를 보존.
+9. 모든 코드 수정마다 캐시, Native 비용·중복 실행, 구조 경량화, 메모리, I/O, 실행시간을 검토. 새 변경 CI PASS/FAIL, 과거 Native 재사용, 실제 신규 Native 호출 수, 미검증 항목을 구분 보고. main 병합·v003 immutable 수정·Project Sources/Instructions 실제 UI 변경·공식 Work OS M0 승격 금지.
+
+이 인계의 전체 내용과 GitHub CURRENT를 숙지한 뒤, 가능한 부분은 바로 개발을 이어가라. 필요하지 않은 확인 질문·새 채팅/Work OS 이동 요구·과거 전수 검증 반복 금지. 현재 Windows 최신 한 조건의 실제 확인이 필요하면 최소 실행 명령만 제시하라. 매 보고에 진척/효율/로컬 주의/다음 단계 포함.
