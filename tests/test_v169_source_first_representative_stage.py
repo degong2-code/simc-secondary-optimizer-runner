@@ -50,6 +50,30 @@ class SourceFirstRepresentative(unittest.TestCase):
         self.assertFalse(proof["full_profile_native_accepted"])
         self.assertTrue(proof["new_current_season_equipment_only"])
 
+    def test_all_26_stage_as_v139_profile_text_without_old_item_ids(self):
+        from v143_specialization_contracts import CONTRACTS
+        trinkets=[{"slot":slot,"item_id":iid,"options":{}}
+                  for slot,iid in zip(("trinket1","trinket2"),
+                   [r["item_id"] for r in self.db["items"]
+                    if r["category"]=="trinket"][:2])]
+        for name,contract in sorted(CONTRACTS.items()):
+            with self.subTest(spec=name):
+                cls,spec=name.split("/")
+                races=contract["allowed_races"]
+                character={"class":cls,"spec":spec,
+                           "race":races[0] if races else "human",
+                           "talents":"abc123456789"}
+                proof=stage.compose_stage(character,trinkets,
+                                          db=self.db,tier=self.tier)
+                self.assertEqual(proof["profile_receipt"]["spec"],name)
+                self.assertEqual(proof["profile_receipt"]["physical_slots"],
+                                 15 if contract["weapon_form"] in (
+                                     "single_one_hand","single_two_hand","ranged") else 16)
+                self.assertEqual(len(proof["profile_receipt"]["four_tier_item_ids"]),4)
+                self.assertFalse(proof["full_profile_native_accepted"])
+                self.assertIn("default_actions=1",proof["profile_text"])
+                self.assertEqual(proof["native_calls"],0)
+
     def test_build_mismatch_rejected_not_implicit_repair(self):
         snapshot=copy.deepcopy(self.db)
         snapshot["season_build"]="12.1.5.70576"
