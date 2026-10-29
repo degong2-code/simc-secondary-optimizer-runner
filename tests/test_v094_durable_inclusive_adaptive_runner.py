@@ -145,18 +145,18 @@ class V094Durable(unittest.TestCase):
                 return {'cases':[request(context,vec,flask,
                     pathlib.Path(directory)/('confirm_%02d'%i)/'result.json',
                     'confirm') for i,vec in enumerate((FURY_TARGET,OTHER))]}
-            with mock.patch.object(runner.engine,'execute_one',side_effect=execute), \\
-                 mock.patch.object(runner.oil,'ingest_native',side_effect=ingest), \\
-                 mock.patch.object(runner.adaptive,'request',side_effect=request), \\
+            with mock.patch.object(runner.engine,'execute_one',side_effect=execute), \
+                 mock.patch.object(runner.oil,'ingest_native',side_effect=ingest), \
+                 mock.patch.object(runner.adaptive,'request',side_effect=request), \
                  mock.patch.object(runner.adaptive,'project_native_for_v065',
-                     side_effect=lambda req,obs:{'target':dict(req['v092_base_target'])}), \\
+                     side_effect=lambda req,obs:{'target':dict(req['v092_base_target'])}), \
                  mock.patch.object(runner.adaptive,'start_scout',
                      return_value={'observations':[],
-                                   'completed_new_scouts':0,'scout_max':0}), \\
+                                   'completed_new_scouts':0,'scout_max':0}), \
                  mock.patch.object(runner.adaptive,'confirmation_plan',
-                                   side_effect=confirmations), \\
+                                   side_effect=confirmations), \
                  mock.patch.object(runner.adaptive,'fresh_judgment',
-                     return_value={'pairwise_direction_supported':True}), \\
+                     return_value={'pairwise_direction_supported':True}), \
                  mock.patch.object(runner.extended,'precision_plan',
                      return_value={'confidence':0.95}):
                 opts={'scouts':0,'material_scouts':0,'native_limit':4,
