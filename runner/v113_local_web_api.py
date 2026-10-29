@@ -481,14 +481,37 @@ def main(argv=None):
     p.add_argument("--port",type=int,default=8765)
     p.add_argument("--batch-root",type=pathlib.Path,
                    help="Optional relocated v147_batch directory; read-only Native results, never cache relocation")
+    p.add_argument("--open-browser",action="store_true",
+                   help="Open local browser only after this own Uvicorn server starts")
     args=p.parse_args(argv)
     if not 1024<=args.port<=65535:
         p.error("PORT_MUST_BE_1024_TO_65535")
     import uvicorn
-    print(f"SIMC_LOCAL_WEB http://{LOCAL_HOST}:{args.port}/",
-          flush=True)
-    uvicorn.run(create_app(batch_root=args.batch_root),host=LOCAL_HOST,port=args.port,
-                proxy_headers=False,access_log=False)
+    url=f"http://{LOCAL_HOST}:{args.port}/"
+    print("SIMC_LOCAL_WEB "+url,flush=True)
+    app=create_app(batch_root=args.batch_root)
+    if not args.open_browser:
+        # Preserve original CLI behavior, sockets and Native/session inputs.
+        uvicorn.run(app,host=LOCAL_HOST,port=args.port,
+                    proxy_headers=False,access_log=False)
+        return
+    # Check THIS server's started flag; never open a different process's
+    # occupant of port 8765 if our bind fails. No network or Native checks.
+    import time
+    import webbrowser
+    server=uvicorn.Server(uvicorn.Config(
+        app,host=LOCAL_HOST,port=args.port,
+        proxy_headers=False,access_log=False))
+    def open_when_started():
+        for _ in range(150):
+            if server.started:
+                webbrowser.open(url,new=2)
+                return
+            if server.should_exit:
+                return
+            time.sleep(0.1)
+    threading.Thread(target=open_when_started,daemon=True).start()
+    server.run()
 
 if __name__=="__main__":
     main()
