@@ -68,7 +68,30 @@ def run_probe(client_id, client_secret, *, transport=api.urlopen):
     raid_id=unique_named(idx.get("instances"),RAID_NAME,"INSTANCE")
     raid=get("journal-instance/"+str(raid_id))
     api.need(raid.get("id")==raid_id,"JOURNAL_INSTANCE_ID_DRIFT")
-    boss_id=unique_named(raid.get("encounters"),ENCOUNTER_NAME,"ENCOUNTER")
+    entries=raid.get("encounters")
+    api.need(type(entries) is list and len(entries)<=80,
+             "JOURNAL_ENCOUNTERS_SHAPE")
+    candidates=[]
+    for row in entries:
+        api.need(type(row) is dict and type(row.get("id")) is int
+                 and type(row.get("name")) is str,
+                 "JOURNAL_ENCOUNTER_METADATA_INVALID")
+        candidates.append({"id":row["id"],"name":row["name"][:150]})
+    exact=[row for row in candidates
+           if row["name"].casefold()==ENCOUNTER_NAME.casefold()]
+    if len(exact)!=1:
+        return {"schema":SCHEMA,"status":"BOSS_NAME_UNMATCHED_NO_LOOT_QUERY",
+            "source":"BLIZZARD_GAME_DATA_AUTHENTICATED_KR",
+            "selection_basis":"WCL_V155_ACTIVE_MIDNIGHT_RAID_NAME",
+            "raid":{"name":RAID_NAME,"journal_instance_id":raid_id},
+            "requested_boss_name":ENCOUNTER_NAME,
+            "blizzard_journal_encounter_candidates":candidates,
+            "oauth_requests":1,"blizzard_game_data_requests":reqs,
+            "simc_native_calls":0,"season_complete":False,
+            "delve_coverage":False,"mplus_coverage":False,
+            "selected_item_effects_certified":False,
+            "static_L_generated":False}
+    boss_id=exact[0]["id"]
     boss=get("journal-encounter/"+str(boss_id))
     ref=existing.existing_reference(existing.read_json(existing.MASTER),
                                     existing.read_json(existing.DELTA))
