@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""v158: create a fresh seasonal acquisition-ID index from API reports alone.
+"""v158: new-season acquisition index from live provider reports only.
 
-All item IDs must originate from new Blizzard item/loot/recipe fields.
-Prior WEQUIP/v047/v057 data, seeded item ID lists, and old SimC profiles
-are neither read nor required. This is acquisition metadata, not gear stats.
+Sources: Blizzard/WCL, or explicitly approved Localbots public GitHub
+Delve provider with exact-build DB2 ID verification. No WEQUIP/old DB.
+This is acquisition metadata, not gear stats or item-effect authority.
 """
 from __future__ import annotations
 import argparse
@@ -17,6 +17,7 @@ ACCEPTED={
     "v156_one_blizzard_journal_raid_loot_smoke_v1",
     "v157_source_first_blizzard_profession_recipes_v2",
     "v155_season_discovery_provider_probe_v1",
+    "v162_localbots_delve_source_v1",
 }
 MAX_INPUTS=100
 MAX_ITEM_IDS=30000
@@ -117,6 +118,51 @@ def ingest(reports):
                                    "encounter_id":eid,"instance_id":iid})
             collections.append({"type":"single_raid_boss",
                 "journal_encounter_id":eid,"loot_field_exposed":ids is not None})
+        elif schema=="v162_localbots_delve_source_v1":
+            # Explicitly trusted NEW-season public publisher. Not Blizzard's
+            # server loot table; every ID has been verified in same-build DB2.
+            need(report.get("source_provider")=="Localbots / balovich-matje/localbots"
+                 and report.get("source_url")==
+                 "https://raw.githubusercontent.com/balovich-matje/localbots/main/data/delve-loot.json"
+                 and report.get("prior_wequip_or_past_item_db_used") is False,
+                 "LOCALBOTS_PROVIDER_IDENTITY_INVALID")
+            values=report.get("items")
+            gaps=report.get("unresolved")
+            need(type(values) is list and type(gaps) is list
+                 and len(values)+len(gaps)<=1000,
+                 "LOCALBOTS_POOL_ROWS_INVALID")
+            need(report.get("resolved_count")==len(values)
+                 and report.get("unresolved_count")==len(gaps),
+                 "LOCALBOTS_COUNTS_MISMATCH")
+            seen_names=set()
+            for row in values:
+                need(type(row) is dict and type(row.get("name")) is str,
+                     "LOCALBOTS_ITEM_ROW_INVALID")
+                iid=valid_id(row.get("item_id"))
+                name=row["name"]
+                need(name.casefold() not in seen_names,
+                     "LOCALBOTS_DUPLICATE_NAME")
+                seen_names.add(name.casefold())
+                need(row.get("resolution") in
+                     ("LOCALBOTS_EXPLICIT_ID_DB2_VERIFIED",
+                      "LOCALBOTS_NAME_DB2_RESOLVED"),
+                     "LOCALBOTS_ITEM_UNVERIFIED")
+                store(iid,{"source":"localbots_delve_pool",
+                           "authority":"COMMUNITY_CURATED_GITHUB_DB2_VERIFIED",
+                           "kind":"delve","item_name":name})
+            for row in gaps:
+                need(type(row) is dict and type(row.get("name")) is str,
+                     "LOCALBOTS_UNRESOLVED_ROW_INVALID")
+                unknown.append({"type":"localbots_delve_name_unresolved",
+                                "name":row["name"],"reason":row.get("reason")})
+            collections.append({"type":"localbots_delve_pool",
+                "provider":"balovich-matje/localbots",
+                "source_content_sha256":report.get("source_content_sha256"),
+                "db2_build":report.get("db2_build"),
+                "provider_names":report.get("names_in_source"),
+                "verified_ids":len(values),"unresolved":len(gaps),
+                "vendor":"Zah'ran",
+                "one_time_wowhead_validation":"79/79 names on 2026-10-29"})
         elif schema=="v157_source_first_blizzard_profession_recipes_v2":
             profession=report.get("profession_id")
             tier=report.get("skill_tier_id")

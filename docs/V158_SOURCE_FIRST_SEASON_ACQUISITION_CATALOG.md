@@ -35,3 +35,24 @@ DB는 **획득 가능성/출처에 관한 경량 ID 인덱스**이지 장비 조
 획득 추천, SimC 스탯/effect/DPS의 재구현이 아니다. Native 호출 0.
 기존 동일 시즌 static item cache는 제품에 보존되며 이 수집
 파이프라인이 덮어쓰거나 그 데이터를 수집 입력으로 사용하지 않는다.
+
+## User-approved Localbots source (2026-10-29)
+
+The external GitHub Localbots file `data/delve-loot.json` is now a
+**first-class, trusted season data provider** for the Delve gear pool.
+Its 79 item names matched the Wowhead Zah'ran public community list 79/79
+in a one-time audit. The match is between a publisher list and a
+user-maintained vendor table, not an official server drop-table export.
+Future seasons import the **new Localbots source file** without mandatory
+Wowhead revalidation. `v162` resolves names/IDs against the same-build
+Wago ItemSparse, emits a provider receipt, and `v158` can ingest it.
+This is not importing historical WEQUIP/other project gear DBs.
+The item count **must not** be hardcoded to 79 for a new season.
+
+Example:
+```bash
+python runner/v162_localbots_delve_provider.py --build 12.1.5.70575 --expansion-id 11 --out delve-provider.json
+python runner/v158_source_first_season_catalog.py --report delve-provider.json --out season-index.json
+```
+The importer performs a bounded refresh of Localbots and ItemSparse only
+when invoked. The P1 runtime has no remote provider requirement.

@@ -173,17 +173,12 @@ def assemble(source_bytes,db2_bytes,*,build,expansion_id=None):
         "unresolved":unresolved,
         "acquisition_kind":"delve",
         "vendor":"Zah'ran",
-        "validated_vendor_names_on":"2026-10-29",
-        "validated_vendor_names_count":79 if len(entries)==79 and
-            set(canonical(e["name"]) for e in entries)==ONE_TIME_20261029 else None,
+        "one_time_wowhead_audit_document":
+            "docs/V162_LOCALBOTS_DELVE_SOURCE_ACCEPTANCE_20261029.md",
         "vendor_validation_not_repeated":True,
         "current_season_pool_from_provider_not_proven_server_complete":True,
         "prior_wequip_or_past_item_db_used":False,
         "simc_native_calls":0}
-
-# One-time comparison is historical evidence, not an engine membership gate:
-# Source count/hash should NEVER be restricted to the 2026-10-29 79.
-ONE_TIME_20261029=set()  # Set is intentionally EMPTY; see docs for 79/79 audit.
 
 def main(argv=None):
     p=argparse.ArgumentParser(description="Localbots → Wago DB2 Delve Item IDs")

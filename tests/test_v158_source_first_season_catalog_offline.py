@@ -75,6 +75,28 @@ class EmptySeasonAssembly(unittest.TestCase):
         with self.assertRaises(catalog.CatalogBlocked):
             catalog.ingest([{"schema":"v047_wequip_snapshot_identity_census_v1"}])
 
+    def test_localbots_trusted_provider_is_additive_and_not_old_db(self):
+        provider={"schema":"v162_localbots_delve_source_v1",
+          "source_provider":"Localbots / balovich-matje/localbots",
+          "source_url":"https://raw.githubusercontent.com/balovich-matje/localbots/main/data/delve-loot.json",
+          "prior_wequip_or_past_item_db_used":False,
+          "resolved_count":2,"unresolved_count":1,"names_in_source":3,
+          "source_content_sha256":"a"*64,"db2_build":"15.0.0.90000",
+          "items":[{"item_id":990001,"name":"Fresh Delve Ring",
+                    "resolution":"LOCALBOTS_NAME_DB2_RESOLVED"},
+                   {"item_id":990002,"name":"Fresh Delve Trinket",
+                    "resolution":"LOCALBOTS_EXPLICIT_ID_DB2_VERIFIED"}],
+          "unresolved":[{"name":"Fresh Delve Chest","reason":"DB2_EXACT_NAME_NOT_FOUND"}]}
+        result=catalog.ingest([provider])
+        self.assertEqual(result["item_ids"],[990001,990002])
+        self.assertEqual(result["collection_receipts"][0]["type"],
+                         "localbots_delve_pool")
+        self.assertEqual(result["unresolved_provider_fields"][0]["type"],
+                         "localbots_delve_name_unresolved")
+        self.assertFalse(result["old_item_catalog_imported"])
+        self.assertFalse(result["legacy_comparison_performed"])
+        self.assertFalse(result["full_season_completeness_confirmed"])
+
     def test_real_v156_shape_is_ingested_without_reference_data(self):
         record={"schema":"v156_one_blizzard_journal_raid_loot_smoke_v1",
                 "status":"BOUNDED_JOURNAL_SMOKE_COMPLETE",
