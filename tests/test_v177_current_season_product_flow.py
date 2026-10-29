@@ -14,6 +14,7 @@ import v106_user_session_controller as sessions
 import v113_local_web_api as web
 import v096_unified_product_entry as entry
 import v169_source_first_representative_stage as first
+from tests.test_v106_user_session_controller import fake_native
 
 class CurrentSeasonProductIntegration(unittest.TestCase):
     def setUp(self):
@@ -67,8 +68,10 @@ class CurrentSeasonProductIntegration(unittest.TestCase):
                   "current_season_budget_sha256","source_first_base_catalog_sha256"):
             self.assertEqual(len(changed[k]),64)
         # A different season DB identity must produce a new session, no cache alias.
-        with mock.patch.object(sessions.bootstrap.source_first.gear.DEFAULT,
-                               "read_bytes",return_value=b"changed-season-bytes"):
+        changed_db=self.root/"changed_season_db.json"
+        changed_db.write_bytes(b"NEW_SEASON_BYTES")
+        with mock.patch.object(sessions.bootstrap.source_first.gear,
+                               "DEFAULT",changed_db):
             other,_=sessions.session_path(u,self.root/"runs",
                         self.binary,self.rev,current_season_product=True)
         self.assertNotEqual(other,first_folder)
@@ -97,12 +100,7 @@ class CurrentSeasonProductIntegration(unittest.TestCase):
         u=self.user()
         folder=sessions.store_session(u,self.root/"runs",self.binary,self.rev,
                                      current_season_product=True)
-        simulated={
-            "native_result":{"status":"PASS_BOUNDED_GENERIC_NATIVE_SEARCH_AND_CACHE",
-               "user_result": {"confidence_level":0.95},
-               "base_B":3150,"final_T":3182,
-               "result_path":str(folder/"generated"/"simc_results"/"V094_RESULT.json"),
-               "cache_hits_this_run":0,"native_calls_cumulative":6}}
+        simulated={"native_result":fake_native()}
         with mock.patch.object(sessions.bootstrap,"run",return_value=simulated) as executor:
             self.assertEqual(sessions.worker(folder,self.binary,self.rev),0)
             self.assertEqual(executor.call_count,1)
