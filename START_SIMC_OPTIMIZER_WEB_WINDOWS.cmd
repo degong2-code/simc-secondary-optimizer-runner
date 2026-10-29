@@ -29,19 +29,22 @@ echo Press Ctrl+C in this window to stop the server.
 echo.
 
 where py >nul 2>&1
-if not errorlevel 1 goto :using_py
+if not errorlevel 1 (
+  py -3 -c "import sys,fastapi,uvicorn; assert sys.version_info >= (3,12)" >nul 2>&1
+  if not errorlevel 1 goto :using_py
+)
 where python >nul 2>&1
-if not errorlevel 1 goto :using_python
-echo ERROR: Python launcher not found. Install Python 3.12+.
+if not errorlevel 1 (
+  python -c "import sys,fastapi,uvicorn; assert sys.version_info >= (3,12)" >nul 2>&1
+  if not errorlevel 1 goto :using_python
+)
+echo ERROR: No Python 3.12+ installation with FastAPI and Uvicorn was found.
+echo Install packages in the Python used by this application:
+echo    py -3 -m pip install -r requirements-web.txt
+echo OR python -m pip install -r requirements-web.txt
 goto :failed
 
 :using_py
-py -3 -c "import sys,fastapi,uvicorn; assert sys.version_info >= (3,12)" >nul 2>&1
-if errorlevel 1 (
-  echo ERROR: Python 3.12+ with FastAPI and Uvicorn required.
-  echo Run: py -3 -m pip install -r requirements-web.txt
-  goto :failed
-)
 if /I "%~1"=="--check" goto :check
 if defined BATCH_ROOT (
   py -3 "runner\v113_local_web_api.py" --open-browser --batch-root "%BATCH_ROOT%"
@@ -51,12 +54,6 @@ if defined BATCH_ROOT (
 goto :finished
 
 :using_python
-python -c "import sys,fastapi,uvicorn; assert sys.version_info >= (3,12)" >nul 2>&1
-if errorlevel 1 (
-  echo ERROR: Python 3.12+ with FastAPI and Uvicorn required.
-  echo Run: python -m pip install -r requirements-web.txt
-  goto :failed
-)
 if /I "%~1"=="--check" goto :check
 if defined BATCH_ROOT (
   python "runner\v113_local_web_api.py" --open-browser --batch-root "%BATCH_ROOT%"
