@@ -1,0 +1,25 @@
+{
+  "schema": "v168_season_tier_source_anchors_v1",
+  "season": "midnight_s2",
+  "retail_build": "12.1.5.70575",
+  "expansion_id": 11,
+  "source_url": "https://guildloot.de/en/set/retail/",
+  "source_description": "Season 2 class set names, published Blizzard Game Data API October 23 2026; matching actual pinned DB2 ItemSparse ItemSet & Item armor metadata",
+  "classes": {
+    "deathknight": "Baleful Grave-Knight",
+    "demonhunter": "Abyssal Doomhound",
+    "druid": "Enigmatic Dreamwatcher",
+    "evoker": "Calamitous Echo",
+    "hunter": "Skulking Viper",
+    "mage": "Primal Leywarden",
+    "monk": "Monkey King",
+    "paladin": "Consecrated Flame",
+    "priest": "Cosmic Penitent",
+    "rogue": "Chosen Bloodslayer",
+    "shaman": "Ophidian Oracle",
+    "warlock": "Damned Necrolyte",
+    "warrior": "Jade Warlord"
+  },
+  "policy": "SOURCE_FIRST_SAME_BUILD_MATCH_CLASS_NAME_AND_ITEMSET_NOT_OLD_PROFILE_IDS",
+  "native_item_set_effect_certified": false
+}
