@@ -1,0 +1,123 @@
+name: v174 One Source-First Paladin Physical Native (max 1)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/v174_paladin_source_first_native_once.json
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v174-paladin-source-first-one-native
+  cancel-in-progress: false
+jobs:
+  one-new-source-first-profile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Exact one-shot request only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,subprocess,pathlib
+          filename="integration_probes/requests/v174_paladin_source_first_native_once.json"
+          changed=subprocess.check_output(
+              ["git","diff-tree","--no-commit-id","--name-only","-r",
+               os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==[filename],changed
+          req=json.loads(pathlib.Path(filename).read_text())
+          expected={
+            "schema":"v174_current_season_source_first_physical_once_v1",
+            "spec":"paladin/retribution",
+            "target_ilevel":334,
+            "source_first_stage":True,
+            "iterations":35,
+            "max_new_native":1,
+            "simc_git_revision":"7bc10711b5",
+            "simc_binary_sha256":"64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+            "reused_existing_simc_binary_only":True,
+            "production_default_unchanged":True,
+            "full_dps_optimization_completed":False,
+            "no_gear_recommendation":True,
+            "no_main_or_project_ui_mutation":True}
+          assert req==expected,(req,expected)
+          print("V174_EXACT_ONE_PHYSICAL_NATIVE_REQUEST_PASS")
+          PY
+      - name: Focused original v098 staging and v145 physical lock/receipt regressions
+        run: |
+          set -euo pipefail
+          python3 -m unittest -q \
+            tests.test_v172_current_season_v098_stage \
+            tests.test_v145_targeted_pure_physical_native_offline
+          python3 runner/pilot.py check
+      - name: Restore exact pinned SimC CLI from existing GitHub cache
+        uses: actions/cache/restore@v5
+        id: native
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd-cli-release-nonetwork-r1
+      - name: Verify binary identity before any native process
+        shell: bash
+        run: |
+          set -euo pipefail
+          if test "${{ steps.native.outputs.cache-hit }}" != "true"; then
+            echo "BLOCKED_PINNED_SIMC_CACHE_MISSING; no Native attempted"
+            exit 3
+          fi
+          echo "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc-cache/v035/simc" | sha256sum -c
+          chmod +x .simc-cache/v035/simc
+      - name: One fresh physical SimC of current-season tier/weapon representative
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          python3 integration_probes/v145_targeted_pure_physical_native.py \
+            --starter-spec paladin/retribution \
+            --source-first-stage \
+            --simc "$GITHUB_WORKSPACE/.simc-cache/v035/simc" \
+            --revision 7bc10711b5 \
+            --iterations 35 --timeout-seconds 180 \
+            --max-new 1 --out "$GITHUB_WORKSPACE/out" | tee out/V174_NATIVE_SUMMARY.txt
+          python3 - <<'PY'
+          import hashlib,json,pathlib
+          paths=list(pathlib.Path("out").glob("paladin__retribution__source_first_v172__*/receipt.json"))
+          assert len(paths)==1,paths
+          receipt=json.loads(paths[0].read_text())
+          raw=paths[0].parent.joinpath("physical.json").read_bytes()
+          assert receipt["status"]=="PASS_PHYSICAL_SIMC",receipt
+          assert receipt["new_native_calls_this_run"]==1
+          assert receipt["native_returncode"]==0
+          assert receipt["json2_sha256"]==hashlib.sha256(raw).hexdigest()
+          assert receipt["identity"]["source_first_current_season_stage"] is True
+          assert receipt["identity"]["simc_binary_sha256"]=="64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e"
+          assert receipt["native_json2"]["json2"]["dps_mean"]>0
+          assert receipt["CHMV_optimization_completed"] is False
+          assert receipt["APL_proc_4pc_effect_certified"] is False
+          print("V174_SOURCE_FIRST_ONE_REAL_PHYSICAL_PASS")
+          PY
+      - name: Reuse exactly same receipt without one more Native subprocess
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 integration_probes/v145_targeted_pure_physical_native.py \
+            --starter-spec paladin/retribution --source-first-stage \
+            --simc "$GITHUB_WORKSPACE/.simc-cache/v035/simc" \
+            --revision 7bc10711b5 \
+            --iterations 35 --max-new 0 --out "$GITHUB_WORKSPACE/out" \
+            > out/V174_CACHE_REPLAY_SUMMARY.txt
+          grep -q CACHED_VERIFIED_PHYSICAL_SIMC out/V174_CACHE_REPLAY_SUMMARY.txt
+          grep -q '"new_native_calls": 0' out/V174_CACHE_REPLAY_SUMMARY.txt
+          echo "V174_VERIFIED_CACHE_REPLAY_ZERO_ADDITIONAL_NATIVE"
+      - name: Save raw SimC error, JSON2, immutable receipt and generated stage
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v174-source-first-single-native-${{ github.run_id }}
+          path: out/
+          if-no-files-found: warn
+          retention-days: 7
