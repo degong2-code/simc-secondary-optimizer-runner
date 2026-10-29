@@ -55,13 +55,15 @@ def discover(anchors,sparse_csv,item_csv,*,receipt=None):
          and type(anchors.get("expansion_id")) is int
          and anchors.get("native_item_set_effect_certified") is False,
          "TIER_SOURCE_ANCHORS_INVALID")
+    source_sha={}
     if receipt is not None:
         need(receipt.get("build")==anchors["retail_build"] and
              receipt.get("locale")=="enUS", "TIER_SNAPSHOT_BUILD_MISMATCH")
         for name,path in (("Item",item_csv),("ItemSparse",sparse_csv)):
             row=receipt.get("tables",{}).get(name,{})
+            source_sha[name]=hash_file(path)
             need(row.get("bytes")==Path(path).stat().st_size
-                 and row.get("sha256")==hash_file(path),
+                 and row.get("sha256")==source_sha[name],
                  "TIER_DB2_SNAPSHOT_SHA_MISMATCH_"+name)
     # One scan: find nonzero set groups with current expansion, including
     # names not containing the marketing name (notably Evoker's chest/legs).
@@ -122,8 +124,8 @@ def discover(anchors,sparse_csv,item_csv,*,receipt=None):
       "expansion_id":anchors["expansion_id"],"class_count":len(assigned),
       "item_count":len(needed),"classes":assigned,
       "evidence":{"publisher_url":anchors["source_url"],
-        "db2_item_sparse_sha256":hash_file(sparse_csv),
-        "db2_item_sha256":hash_file(item_csv),
+        "db2_item_sparse_sha256":source_sha.get("ItemSparse") or hash_file(sparse_csv),
+        "db2_item_sha256":source_sha.get("Item") or hash_file(item_csv),
         "name_anchor_is_not_item_id_seed":True},
       "native_calls":0,"api_calls":0,
       "simc_tier_bonus_mechanics_verified":False,
