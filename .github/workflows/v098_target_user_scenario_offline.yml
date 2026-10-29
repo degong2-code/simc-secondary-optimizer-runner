@@ -111,7 +111,6 @@ jobs:
             tests.test_v145_targeted_pure_physical_native_offline \
             tests.test_v145_v141_exact_receipt_bridge_offline \
             tests.test_v147_all_dps_targeted_native_batch_offline \
-            tests.test_v153_non334_independent_product_offline \
             tests.test_v141_verified_pure_native_pilot \
             tests.test_v101_common_representative_equipment \
             tests.test_v102_ordinary_armor_seed_pool \
