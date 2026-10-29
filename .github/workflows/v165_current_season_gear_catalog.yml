@@ -18,3 +18,62 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m unittest -v tests.test_v165_current_season_gear_pool
+
+  one-time-saved-sources:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[v165-effects]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Reuse existing season snapshots without repeating game provider requests
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p out/v155 out/v161 out/v162 out/csv
+          gh run download 40826278881 -n v155-live-season-api-evidence -D out/v155
+          gh run download 40836955761 -n v161-db2-csv-snapshot-20261029 -D out/v161
+          gh run download 40839426417 -n v162-localbots-delve-report -D out/v162
+          unzip -q out/v161/db2-snapshot.zip -d out/csv
+      - name: Join cached source-first data
+        run: |
+          python runner/v163_zero_seed_db2_join.py \
+            --csv-dir out/csv \
+            --season-report out/v155/v155-live-season-api-evidence.json \
+            --raid-zone "The Venomous Abyss" \
+            --mplus-zone "Mythic+ Season 2" \
+            --expansion-id 11 --out out/v163-real.json
+      - name: Only one extra same-build ItemEffect CSV request
+        shell: bash
+        run: |
+          set -euo pipefail
+          BUILD="$(python -c "import json,re; v=json.load(open('out/v163-real.json'))['build']; assert re.fullmatch(r'[0-9]+(?:\.[0-9]+){3}',v); print(v)")"
+          curl --fail --location --silent --show-error --connect-timeout 15 \
+            --max-time 100 --max-filesize 150000000 \
+            "https://wago.tools/db2/ItemEffect/csv?build=${BUILD}&locale=enUS" \
+            --output out/ItemEffect.csv
+      - name: Build compact current-season DB and test actual saved reports
+        env:
+          SIMC_V163_JOIN_REPORT: out/v163-real.json
+          SIMC_V162_REPORT: out/v162/v162-localbots-delve-report.json
+          SIMC_V161_ITEMSPARSE: out/csv/ItemSparse.csv
+          SIMC_V165_ITEM_EFFECT: out/ItemEffect.csv
+        run: |
+          python runner/v165_current_season_gear_pool.py \
+            --db2 out/v163-real.json \
+            --delve out/v162/v162-localbots-delve-report.json \
+            --item-sparse out/csv/ItemSparse.csv \
+            --item-effect out/ItemEffect.csv \
+            --out out/current-season-gear.json
+          python -m unittest -v tests.test_v165_current_season_gear_pool
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: v165-current-season-compact-gear-db
+          path: out/current-season-gear.json
+          retention-days: 2
