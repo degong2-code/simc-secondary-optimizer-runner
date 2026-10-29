@@ -153,7 +153,7 @@ def initial_seeds(B,lower,upper):
 
 def build(user,folder,binary,revision,static_cache_path=None,
           imported_profile_text=None,*,ordinary_variant=None,pure_stage=False,
-          independent_334=False):
+          independent_334=False,independent_target_level=False):
     """Return an already validated internal manifest and v096 plan; no Native."""
     need(type(user) is dict and set(user) in (
         FIELDS,FIELDS|{IMPORT_FIELD},FIELDS|{CONSUME_FIELD},
@@ -179,11 +179,21 @@ def build(user,folder,binary,revision,static_cache_path=None,
     # production route at ilvl 334 only. Historic v147/v145 probes remain
     # unpromoted and their unchanged pure_stage semantics are preserved.
     need(type(independent_334) is bool,"INDEPENDENT_334_MODE_BOOL_REQUIRED")
+    need(type(independent_target_level) is bool,
+         "INDEPENDENT_TARGET_LEVEL_MODE_BOOL_REQUIRED")
+    need(not (independent_334 and independent_target_level),
+         "ONLY_ONE_INDEPENDENT_PROFILE_MODE")
     need(not independent_334 or
          (key in ARCHETYPES and ilvl==334 and ordinary_variant is None and
           not pure_stage),
          "INDEPENDENT_334_USER_SCOPE_NOT_SUPPORTED")
-    source_free=((key in PURE_PRODUCT_SPECS or independent_334) and
+    need(not independent_target_level or
+         (key in (set(ARCHETYPES)|PURE_PRODUCT_SPECS) and
+          type(ilvl) is int and 266<=ilvl<=344 and ilvl!=334 and
+          ordinary_variant is None and not pure_stage),
+         "INDEPENDENT_NON334_USER_SCOPE_NOT_SUPPORTED")
+    source_free=((key in PURE_PRODUCT_SPECS or independent_334 or
+                  independent_target_level) and
                  "/".join(key) in pure.catalog()["specializations"])
     need(key in ARCHETYPES or source_free,
          "REPRESENTATIVE_ARCHETYPE_NOT_READY:"+"/".join(key))
@@ -214,11 +224,13 @@ def build(user,folder,binary,revision,static_cache_path=None,
     # Existing 24 source-backed default paths remain unchanged; explicit
     # pure_stage=True preserves the older v140 witness-only pilot contract.
     if pure_stage or source_free:
-        need(ordinary_variant is None and ilvl==334,
+        need(ordinary_variant is None and
+             (ilvl==334 or independent_target_level),
              "PURE_STAGE_TARGET_OR_VARIANT_NOT_READY")
         base_profile,cfg,rows,groups,weapon_layout,F,tier_data,fifth_data=(
             pure.v098_inputs(ch,user["trinkets"],target_ilevel=ilvl,
-                             combat=combat))
+                             combat=combat,
+                             level_preview=independent_target_level))
     elif ordinary_variant is None:
         # Preserve the historical exact call shape and all default receipts.
         base_profile,cfg,rows,groups,weapon_layout,F=common.source_backed_gear(
@@ -350,6 +362,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
                if pure_stage else {}),
             "user_does_not_supply_full_gear_or_simc_profile":True,
             "source_independent_334_user_session":bool(independent_334),
+            "source_independent_non334_user_session":bool(independent_target_level),
+            "non334_physical_simc_not_yet_observed":bool(independent_target_level),
             "template_archetype":"/".join(key),"target_ilevel":ilvl,
             "generated_manifest":str(folder/"manifest.json"),
             "output_dir":str(folder/"simc_results"),"plan":plan,
@@ -374,7 +388,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
 
 def run(user_path,folder,binary,revision,static_cache_path=None,
         execute=False,cache_only=False,*,ordinary_variant=None,pure_stage=False,
-        physical_acceptance_root=None,open_folder=True,independent_334=False):
+        physical_acceptance_root=None,open_folder=True,independent_334=False,
+        independent_target_level=False):
     # An exact v140 (historical 2 specs) or v145 (single preview profile)
     # physical Native receipt authorizes ONLY its identical internal profile.
     # v096 verifies original JSON2 bytes before any adaptive Native call.
@@ -393,7 +408,8 @@ def run(user_path,folder,binary,revision,static_cache_path=None,
     prepared=build(user,folder,binary,revision,static_cache_path,
                    imported_profile_text=imported,
                    ordinary_variant=ordinary_variant,pure_stage=pure_stage,
-                   independent_334=independent_334)
+                   independent_334=independent_334,
+                   independent_target_level=independent_target_level)
     if not execute:return prepared
     if pure_stage:
         actual=entry.run_manifest(prepared["generated_manifest"],
