@@ -25,6 +25,33 @@ FOUR=("head","shoulders","hands","legs")
 ORDINARY=("chest","wrists","waist","feet")
 COMMON=("neck","back","finger1","finger2")
 
+# Conservative stable weapon-type preferences, NOT a certification of SimC
+# proficiency, skill usage, weapon main-stat compatibility or exact option.
+# Subclass values are retail Item.ClassID=2 weapon subclasses. Prefer
+# sensible archetype shapes instead of blindly picking the lowest item ID
+# (which could otherwise choose a dagger for Frost DK).
+FORM_SUBCLASS_PREFS={
+    "one_hand_frill":(15,7,4),
+    "one_hand_shield":(4,15,0),
+    "dual_one_hand":(7,0,4,13),
+    "single_one_hand":(7,0,4),
+    "dual_two_hand":(8,1,5),
+    "single_two_hand":(8,1,5,6,10),
+    "ranged":(2,3,18)
+}
+SPEC_SUBCLASS_PREFS={
+    "deathknight/frost":(7,0,4),
+    "demonhunter/havoc":(9,7,0,13),
+    "demonhunter/devourer":(9,7,0,13),
+    "druid/feral":(10,6,5),
+    "hunter/survival":(6,10),
+    "monk/windwalker":(10,6),
+    "rogue/assassination":(15,13),
+    "rogue/subtlety":(15,13),
+    "rogue/outlaw":(7,13,0,4),
+    "shaman/enhancement":(4,0,13),
+}
+
 class RepresentativeBlocked(ValueError):pass
 def need(v,code):
     if not v:raise RepresentativeBlocked(code)
@@ -59,7 +86,7 @@ def available_plain(db,*,slot,family=None,class_mask=None,used=()):
         candidates.append(item["item_id"])
     return sorted(candidates)
 
-def shape_weapons(db,weapon_form,class_mask):
+def shape_weapons(db,weapon_form,class_mask,*,spec_key):
     """Inventory form, not class weapon-subclass proficiency certification."""
     need(weapon_form in contracts.WEAPON_FORMS,"WEAPON_FORM_UNKNOWN")
     main_one=[x for x in db["items"]
@@ -80,11 +107,21 @@ def shape_weapons(db,weapon_form,class_mask):
         if x["category"]=="plain_representative_candidate"
         and x["class_id"]==4 and x["inventory_type"]==23
         and x["subclass_id"]==0]
+    prefs=SPEC_SUBCLASS_PREFS.get(
+        spec_key,FORM_SUBCLASS_PREFS[weapon_form])
     def candidates(rows):
-        return sorted(x["item_id"] for x in rows if
-                      x.get("allowed_class_mask") is None or
-                      type(x["allowed_class_mask"]) is int and
-                      (x["allowed_class_mask"]&class_mask)==class_mask)
+        valid=[x for x in rows if x["subclass_id"] in prefs and (
+            x.get("allowed_class_mask") is None or
+            type(x["allowed_class_mask"]) is int and
+            (x["allowed_class_mask"]&class_mask)==class_mask)]
+        return [x["item_id"] for x in sorted(valid,key=lambda x:(
+            prefs.index(x["subclass_id"]),x["item_id"]))]
+    def support(rows):
+        # A shield/frill is armor, NOT one of the weapon subclasses above.
+        return sorted(x["item_id"] for x in rows if (
+            x.get("allowed_class_mask") is None or
+            type(x["allowed_class_mask"]) is int and
+            (x["allowed_class_mask"]&class_mask)==class_mask))
     if weapon_form=="ranged":pool=candidates(ranged); need(pool,"NO_RANGED_BASE_WEAPON");return {"main_hand":pool[0]}
     if weapon_form in ("dual_two_hand","single_two_hand"):
         pool=candidates(two_hand)
@@ -97,10 +134,10 @@ def shape_weapons(db,weapon_form,class_mask):
     weapon={"main_hand":pool[0]}
     if weapon_form=="dual_one_hand":weapon["off_hand"]=pool[1]
     if weapon_form=="one_hand_frill":
-        values=candidates(frill); need(values,"NO_NON_WEAPON_OFFHAND_BASE")
+        values=support(frill); need(values,"NO_NON_WEAPON_OFFHAND_BASE")
         weapon["off_hand"]=values[0]
     if weapon_form=="one_hand_shield":
-        values=candidates(shield); need(values,"NO_SHIELD_BASE")
+        values=support(shield); need(values,"NO_SHIELD_BASE")
         weapon["off_hand"]=values[0]
     return weapon
 
@@ -132,7 +169,8 @@ def select_class_spec(db,tier,cls,spec):
         need(matches,"PLAIN_COMMON_NOT_AVAILABLE_"+slot)
         result.setdefault("common_gear",{})[slot]=matches[0]
         used.add(matches[0])
-    result["weapons"]=shape_weapons(db,contract["weapon_form"],class_mask)
+    result["weapons"]=shape_weapons(db,contract["weapon_form"],class_mask,\
+                                     spec_key=cls+"/"+spec)
     need(len(set(result["weapons"].values()))==len(result["weapons"]),
          "DUPLICATE_WEAPON_IDS")
     return {"class":cls,"spec":spec,"armor_family":family,
