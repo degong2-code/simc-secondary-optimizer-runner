@@ -64,7 +64,7 @@ class EmptySeasonAssembly(unittest.TestCase):
                             ["unresolved_provider_fields"],[])
         report=self.samples()[1]
         report["encounter_sources"][2]["observed_item_ids"]=[]
-        newer=catalog.ingest(self.samples())
+        newer=catalog.ingest(data)
         self.assertEqual(len(newer["unresolved_provider_fields"]),1)
 
     def test_invalid_recipe_id_and_unsupported_report_fail_closed(self):
