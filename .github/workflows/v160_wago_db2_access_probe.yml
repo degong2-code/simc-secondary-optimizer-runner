@@ -1,0 +1,35 @@
+name: v160 Wago DB2 Access Probe (9 small GET, NO Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v160_wago_db2_access_probe.py
+      - tests/test_v160_wago_db2_access_probe_offline.py
+      - .github/workflows/v160_wago_db2_access_probe.yml
+  workflow_dispatch:
+jobs:
+  offline:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m unittest -v tests.test_v160_wago_db2_access_probe_offline
+  live-opt-in:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[wago-probe]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python runner/v160_wago_db2_access_probe.py --out v160-wago-db2-probe-evidence.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v160-wago-db2-probe-evidence
+          path: v160-wago-db2-probe-evidence.json
+          retention-days: 14
