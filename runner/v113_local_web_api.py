@@ -179,6 +179,21 @@ class LocalJobs:
                                             resolved_static,
                                             independent_334=independent,
                                             independent_target_level=independent_level)
+            # Session identity binds CACHE CONTENT, not its user-visible
+            # path. If the same bytes are passed via a different path later,
+            # honor the already-sealed manifest path rather than rewriting
+            # immutable generated files or causing a needless new session.
+            prior=folder/"generated"/"manifest.json"
+            if resolved_static and prior.is_file():
+                previous=json.loads(prior.read_text(encoding="utf8"))
+                saved=previous.get("static_cache_json")
+                if (type(saved) is str and saved!=str(
+                        pathlib.Path(resolved_static).resolve())):
+                    old=pathlib.Path(saved)
+                    if (old.is_file() and
+                        sessions.sha(old.read_bytes())==
+                        sessions.sha(pathlib.Path(resolved_static).read_bytes())):
+                        resolved_static=saved
             plan = bootstrap.build(user,folder / "generated",binary,
                                    params.revision,resolved_static,
                                    independent_334=independent,

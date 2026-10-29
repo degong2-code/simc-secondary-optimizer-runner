@@ -228,7 +228,8 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(data["native_calls"],0)
         folder=self.root/"runs"/data["session_id"]
         manifest=json.loads((folder/"generated"/"manifest.json").read_text())
-        self.assertEqual(manifest["static_cache_json"],str(default))
+        self.assertTrue(pathlib.Path(manifest["static_cache_json"])
+                        .samefile(default))
         seal=json.loads((folder/"V106_SESSION_IDENTITY.json").read_text())
         self.assertEqual(seal["static_cache_sha256"],
                          sessions.sha(default.read_bytes()))
@@ -237,7 +238,8 @@ class LocalWebAPIOffline(unittest.TestCase):
         restored=self.client.get("/api/v1/sessions/"+
             data["session_id"]+"/inputs",headers=self.headers)
         self.assertEqual(restored.status_code,200,restored.text)
-        self.assertEqual(restored.json()["static_cache"],str(default))
+        self.assertTrue(pathlib.Path(restored.json()["static_cache"])
+                        .samefile(default))
         # Manual override remains the exact prior contract.
         explicit=self.root/"explicit-cache.json"
         web.bootstrap.cache_mod.write_atomic(explicit,cache)
@@ -245,8 +247,13 @@ class LocalWebAPIOffline(unittest.TestCase):
                     {**payload,"static_cache":str(explicit)})
         self.assertEqual(override.status_code,200,override.text)
         self.assertFalse(override.json()["static_cache_auto_used"])
-        self.assertNotEqual(data["session_id"],
-                            override.json()["session_id"])
+        # Same bytes use the exact same sealed identity; a changed PATH
+        # must not silently create a new run or rewrite its manifest.
+        self.assertEqual(data["session_id"],
+                         override.json()["session_id"])
+        self.assertEqual(json.loads((folder/"generated"/"manifest.json")
+                         .read_text())["static_cache_json"],
+                         manifest["static_cache_json"])
         # If no special was selected, NEVER inject any cache / alter the
         # ordinary user's historical sealed session identity.
         ordinary=self.post("/api/v1/sessions/plan",
