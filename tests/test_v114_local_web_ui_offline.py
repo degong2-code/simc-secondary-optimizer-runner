@@ -160,6 +160,20 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('worker==="BLOCKED_OR_PARTIAL"?',js)
         self.assertIn('const status=data.active?worker:',js)
 
+    def test_near_alternative_presentation_reuses_native_result_statistics(self):
+        # No new SimC calculations: existing v096 user_result fields only.
+        js=self.client.get("/assets/app.js").text
+        self.assertIn('number(r.observed_unique_candidates)',js)
+        self.assertIn('if(!alts.length)',js)
+        self.assertIn('number(alt.simc_sem,2)',js)
+        self.assertIn('number(alt.observed_dps_loss_pct,3)',js)
+        self.assertIn('number(100*alt.rating_moved_fraction_B,1)',js)
+        self.assertIn('number(alt.percent_of_final_T[key],2)',js)
+        self.assertIn('OBSERVED_NEAR_BUT_LOWER_AT_95',js)
+        self.assertIn('OBSERVED_NEAR_UNRESOLVED_AT_95',js)
+        self.assertIn('미탐색 분배의 성능은 알 수 없습니다.',js)
+        self.assertNotIn('Math.random(',js)
+
     def test_missing_session_returns_read_only_404_with_precise_code(self):
         import tempfile
         with tempfile.TemporaryDirectory() as td:

@@ -406,14 +406,28 @@ function renderResult(payload) {
     line.appendChild(fill);container.append(head,line);bars.appendChild(container);
   }
   $("conf95").textContent=r.confirmation_pair_direction_supported_at_95?"방향 지지":"미확정";
+  // Reuse the result adapter's existing observations; never infer new
+  // candidates, confidence decisions, or approximate DPS in the browser.
   const alts=r.material_near_alternatives||[];
-  $("alt-count").textContent=alts.length+"개 관측";
+  $("alt-count").textContent=alts.length+"개 / 관측 "+number(r.observed_unique_candidates)+"분배";
   const list=$("alt-list");list.replaceChildren();
+  if(!alts.length) {
+    const row=document.createElement("div");row.className="alt-row";
+    row.textContent="관측된 분배 중 조건에 맞는 근접 대안이 없습니다. 미탐색 분배의 성능은 알 수 없습니다.";
+    list.appendChild(row);
+  }
   for(const [index,alt] of alts.entries()) {
     const row=document.createElement("div");row.className="alt-row";
-    row.textContent="대안 "+(index+1)+" · DPS "+number(alt.observed_dps_mean,1)+" · "+
-       statOrder.map(([key,label])=>label+" "+number(alt.absolute_rating_T[key])).join(" / ")+
-       " · "+(alt.pairwise_95_label||"95% 비교 미확정");
+    const pairLabel=alt.pairwise_95_label==="OBSERVED_NEAR_BUT_LOWER_AT_95"
+      ?"95% 기준 낮음":alt.pairwise_95_label==="OBSERVED_NEAR_UNRESOLVED_AT_95"
+      ?"95% 우열 미확정":"95% 비교 미확인";
+    row.textContent="대안 "+(index+1)+" · DPS "+number(alt.observed_dps_mean,1)+
+       " · SEM ±"+number(alt.simc_sem,2)+
+       " · 관측 DPS 손실 "+number(alt.observed_dps_loss_pct,3)+"%"+
+       " · 분배 이동 "+number(100*alt.rating_moved_fraction_B,1)+"%"+
+       " · "+statOrder.map(([key,label])=>label+" "+number(alt.absolute_rating_T[key])+
+       " ("+number(alt.percent_of_final_T[key],2)+"%)").join(" / ")+
+       " · "+pairLabel;
     list.appendChild(row);
   }
   $("empty-result").hidden=true;$("filled-result").hidden=false;
