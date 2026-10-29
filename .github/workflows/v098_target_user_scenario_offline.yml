@@ -68,6 +68,7 @@ on:
       - runner/v065_original_scheduler_native_bridge.py
       - runner/v063_numeric_injection.py
       - runner/v094_durable_inclusive_adaptive_runner.py
+      - tests/test_v094_durable_inclusive_adaptive_runner.py
       - tests/test_v063_numeric_injection.py
       - tests/test_v142_verified_partial_native_recovery.py
       - tests/test_v110_windows_exact_simc_input_bytes.py
