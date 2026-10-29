@@ -4,6 +4,7 @@ on:
     branches: [probe/chat-cache-v035-20261024]
     paths:
       - runner/v165_current_season_gear_pool.py
+      - data/current_season_chmv_consumables.json
       - tests/test_v165_current_season_gear_pool.py
       - .github/workflows/v165_current_season_gear_catalog.yml
   workflow_dispatch:
