@@ -68,17 +68,26 @@ class LocalJobs:
         try:
             user = sessions.user_scenario(params.controls)
             binary = pathlib.Path(params.binary).expanduser().resolve()
+            # 24 source-independent v147-proven representative archetypes:
+            # user-selected target334 gets its own sealed product identity.
+            # Legacy sessions and non-334 plans keep the original route.
+            ch=user["character"]
+            independent=(user["target"]["ilevel"]==334 and
+                         (ch["class"],ch["spec"]) in bootstrap.ARCHETYPES)
             folder = sessions.store_session(user,self.root,binary,params.revision,
-                                            params.static_cache)
+                                            params.static_cache,
+                                            independent_334=independent)
             plan = bootstrap.build(user,folder / "generated",binary,
-                                   params.revision,params.static_cache)["plan"]
+                                   params.revision,params.static_cache,
+                                   independent_334=independent)["plan"]
             return {"session_id":folder.name,"status":"READY_ZERO_NATIVE",
                     "native_calls":0,"plan":{
                       "class":plan["class"],"spec":plan["spec"],
                       "base_B":plan["base_B"],
                       "fixed_O":plan["fixed_O"],"final_T":plan["final_T"],
                       "native_limit":plan["native_limit"],
-                      "native_called":False}}
+                      "native_called":False,
+                      "independent_target334_profile":independent}}
         except Exception as exc:
             raise blocked(exc) from None
 
@@ -100,7 +109,8 @@ class LocalJobs:
             # creates DEFAULT variants only; never infer one from user gear.
             variant = recorded.get("ordinary_variant")
             key, check = sessions.session_key(
-                user,binary,rev,static,ordinary_variant=variant)
+                user,binary,rev,static,ordinary_variant=variant,
+                independent_334=recorded.get("independent_334",False))
             if key != folder.name or check != recorded:
                 raise sessions.SessionBlocked("SESSION_BINARY_REVISION_OR_CACHE_DRIFT")
             return binary,rev,static
@@ -348,6 +358,7 @@ def create_app(*,root=None, token=None, batch_root=None):
             # Input starter examples are fixture-independent; availability
             # of the UNPROMOTED legacy execution path is a separate fact.
             if (pair not in bootstrap.PURE_PRODUCT_SPECS and
+                    pair not in bootstrap.ARCHETYPES and
                     not sessions.legacy_fixture_path(pair).is_file()):
                 missing_legacy.append({"class":cl,"spec":sp})
                 continue
@@ -362,6 +373,8 @@ def create_app(*,root=None, token=None, batch_root=None):
                  "representative_scope":(
                      "SOURCE_INDEPENDENT_SEASON_CATALOG"
                      if pair in bootstrap.PURE_PRODUCT_SPECS
+                     else "SOURCE_INDEPENDENT_TARGET334_VALIDATED_BATCH"
+                     if pair in bootstrap.ARCHETYPES
                      else "SOURCE_NON_TIER_NOT_ALL_STANDARDIZED"
                      if pair in bootstrap.common.GENERIC_PENDING
                      else "SOURCE_BACKED_PARTIAL_ORDINARY_POOL")})
