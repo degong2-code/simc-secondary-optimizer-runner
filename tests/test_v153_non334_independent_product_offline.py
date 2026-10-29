@@ -124,7 +124,7 @@ class Non334SourceIndependentProductOffline(unittest.TestCase):
         reference,_=budget.load_registry()
         fixed={"crit_rating":0,"haste_rating":175,
                "mastery_rating":0,"versatility_rating":0}
-        item={"slot":"head","item_id":271483,
+        item={"slot":"chest","item_id":271486,
               "options":{"bonus_id":"13848",
                          "redirected_base_stats":"268231"}}
         cache_paths={}
@@ -171,8 +171,10 @@ class Non334SourceIndependentProductOffline(unittest.TestCase):
                                      fixed)
                     self.assertFalse(measured["missing_special_fixed_static"])
                     profile=(folder/"generated"/"profile.simc").read_text("utf8")
-                    self.assertIn("head=",profile)
-                    self.assertIn("gem_id=240967",profile)
+                    self.assertIn("chest=",profile)
+                    self.assertIn("gem_id=240967",
+                                  next(x for x in profile.splitlines()
+                                       if x.startswith("head=")))
                     self.assertIn(",ilevel="+str(level),profile)
                     for line in ("food=royal_roast","potion=lights_potential_2",
                                  "augmentation=disabled"):
@@ -191,6 +193,19 @@ class Non334SourceIndependentProductOffline(unittest.TestCase):
             self.assertEqual(response.status_code,422,response.text)
             self.assertEqual(response.json()["detail"]["code"],
                              "SPECIAL_L_REQUIRES_EXACT_NATIVE_STATIC_VARIANT")
+            # A fifth catalyst tier is a true 4pc conflict, not missing L.
+            fifth=sessions.standard_controls(("shaman","elemental"))
+            fifth["ilevel"]=331
+            fifth["special_items"]=[{"slot":"head","item_id":271483,
+                                    "options":{"bonus_id":"13848",
+                                     "redirected_base_stats":"268231"}}]
+            no_fifth=self.client.post("/api/v1/sessions/plan",json={
+                "controls":fifth,"binary":str(self.binary),
+                "revision":self.revision,
+                "static_cache":str(cache_paths[331])},headers=self.headers)
+            self.assertEqual(no_fifth.status_code,422,no_fifth.text)
+            self.assertEqual(no_fifth.json()["detail"]["code"],
+                             "FIVE_TIER_LAYOUT_OUTSIDE_FOUR_ROW_CONTRACT")
             spawn.assert_not_called()
         self.assertEqual(len(seen),2)
 

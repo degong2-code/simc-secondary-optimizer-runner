@@ -123,6 +123,16 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertNotIn("FileReader(",js)
         self.assertNotIn("innerHTML",js)
 
+    def test_special_cache_and_five_tier_errors_have_actionable_ui_guidance(self):
+        js=self.client.get("/assets/app.js").text
+        self.assertIn('SPECIAL_L_REQUIRES_EXACT_NATIVE_STATIC_VARIANT',js)
+        self.assertIn('REFERENCE_FIXED_L_CONSTRAINT_UNRESOLVED',js)
+        self.assertIn('SELECTED_SPECIAL_FLOOR_UNFEASIBLE',js)
+        self.assertIn('FIVE_TIER_LAYOUT_OUTSIDE_FOUR_ROW_CONTRACT',js)
+        self.assertIn('다섯 번째 티어 아이템',js)
+        self.assertIn('다른 레벨의 레코드를 대신 적용하지 않습니다.',js)
+        self.assertNotIn('innerHTML',js)
+
     def test_representative_gear_limit_is_permanent_on_form_and_restore(self):
         # Expose the source-backed scope, never claim all non-tier ordinary
         # pieces are completely standardized just because Native passes.

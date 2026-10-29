@@ -353,7 +353,9 @@ async function withBusy(fn) {
         "REFERENCE_FIXED_L_CONSTRAINT_UNRESOLVED":
           "선택 장비의 정확한 고정 스탯 L 하한을 확인할 수 없습니다.",
         "SELECTED_SPECIAL_FLOOR_UNFEASIBLE":
-          "선택 장비의 고정 스탯 하한 L과 입력 총량 T가 충돌합니다."
+          "선택 장비의 고정 스탯 하한 L과 입력 총량 T가 충돌합니다.",
+        "FIVE_TIER_LAYOUT_OUTSIDE_FOUR_ROW_CONTRACT":
+          "기본 티어 4세트에 다섯 번째 티어 아이템이 추가되었습니다. 이미 포함된 티어 부위로 선택하거나 다른 특수장비 슬롯을 사용하세요."
       };
       setNotice("요청 차단 또는 오류: "+(guidance[err.message]||err.message),true);
     }
