@@ -1,0 +1,66 @@
+name: v168 Season Tier ItemSet 13x5 (source-first offline)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - data/current_season_tier_source_anchors.json
+      - runner/v168_current_season_tier_discovery.py
+      - tests/test_v168_current_season_tier_discovery.py
+      - .github/workflows/v168_source_first_tier.yml
+  workflow_dispatch:
+jobs:
+  focused:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m unittest -v tests.test_v168_current_season_tier_discovery
+  pinned-snapshot:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[v168-real]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    permissions:
+      actions: read
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Reuse SHA-sealed DB2 snapshot from existing run (no new Wago requests)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p out/v161 out/csv data
+          gh run download 40836955761 -n v161-db2-csv-snapshot-20261029 -D out/v161
+          unzip -q out/v161/db2-snapshot.zip -d out/csv
+      - name: Compile independent current-season class tier ItemSet IDs
+        run: |
+          python runner/v168_current_season_tier_discovery.py \
+            --anchors data/current_season_tier_source_anchors.json \
+            --csv-dir out/csv \
+            --out data/current_season_tier_itemsets.json
+          python -c "import json; d=json.load(open('data/current_season_tier_itemsets.json')); assert d['class_count']==13 and d['item_count']==65"
+      - name: Actual pinned snapshot regression
+        env:
+          SIMC_V161_SNAPSHOT_DIR: out/csv
+        run: python -m unittest -v tests.test_v168_current_season_tier_discovery
+      - name: Persist only small current season tier roster on isolated branch
+        run: |
+          set -eu
+          test "$GITHUB_REF_NAME" = "probe/chat-cache-v035-20261024"
+          test "$(stat -c%s data/current_season_tier_itemsets.json)" -lt 30000
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/current_season_tier_itemsets.json
+          git commit -m "data(v168): same-build independent current-season 13-class 5pc tier roster"
+          git push origin "HEAD:refs/heads/$GITHUB_REF_NAME"
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: v168-s2-tier-13x5-receipt
+          path: data/current_season_tier_itemsets.json
+          retention-days: 2
