@@ -153,10 +153,13 @@ def validate(payload):
     return payload
 
 def public_options(payload):
-    """UI labels only. Manual item ID input remains accepted outside this list."""
+    """Selection-only public roles. Plain equipment remains an internal DB input."""
     db = validate(payload)
-    choices = {key: [] for key in CATEGORIES}
+    visible = ("trinket","special_effect_gear_candidate","selectable_stat_craft")
+    choices = {key: [] for key in visible}
     for x in db["items"]:
+        if x["category"] not in choices:
+            continue
         choices[x["category"]].append({
             "item_id": x["item_id"],
             "name": x["name"],
@@ -171,7 +174,9 @@ def public_options(payload):
         "season_build": db["season_build"],
         "choices": choices,
         "count": db["item_count"],
-        "manual_exact_id_allowed": True,
+        "manual_exact_id_allowed": False,
+        "manual_exact_id_exception": "CRAFTED_EQUIPMENT_VARIANTS_ONLY",
+        "ordinary_equipment_user_selectable": False,
         "full_season_completeness_confirmed": False,
         "native_calls_now": 0,
     }
