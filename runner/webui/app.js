@@ -128,12 +128,12 @@ function showRepresentativeScope() {
   const note=$("gear-scope-note");
   note.hidden=!item;
   if(!item)return;
-  if(item.representative_scope==="SOURCE_INDEPENDENT_TARGET334_VALIDATED_BATCH") {
-    note.textContent=Number(field("ilevel"))===334 ?
-      "목표 334: 내부 시즌 대표 장비·티어 4세트·SimC 기본 APL로 독립 생성합니다. 이 경로의 24개 기본 프로필은 실제 SimC 배치에서 물리·6후보 PASS. 입력 변경·기름·특수장비 효과의 성능은 각 실행 결과로만 판단합니다. 기존 캐시와 분리된 새 세션입니다." :
-      "목표 334 외: 아직 검증된 독립 대표 장비 경로가 아닙니다. 기존 소스 기반 대표 장비 구성만 사용하며, 완전 표준화나 최신 시즌 지원을 의미하지 않습니다.";
+  if(Number(field("ilevel"))!==334) {
+    note.textContent="334 이외 목표 ilvl: 같은 시즌 대표 아이템 ID를 선택 레벨로 지정하여 별도 SimC 사용자 프로필과 참조 B를 구성합니다. 계획 조회는 Native 0회이며 해당 레벨 장비·효과의 실제 SimC 실행 성공은 아직 미확인입니다. 실행은 본인이 선택한 조건에서만 진행되며 기존 334 캐시는 재사용하지 않습니다.";
+  } else if(item.representative_scope==="SOURCE_INDEPENDENT_TARGET334_VALIDATED_BATCH") {
+    note.textContent="목표 334: 내부 시즌 대표 장비·티어 4세트·SimC 기본 APL로 독립 생성합니다. 24개 기본 프로필은 실제 SimC 배치에서 물리·6후보 PASS. 입력 변경·기름·특수장비 효과의 성능은 각 실행 결과로만 판단합니다. 기존 캐시와 분리된 새 세션입니다.";
   } else if(item.representative_scope==="SOURCE_INDEPENDENT_SEASON_CATALOG") {
-    note.textContent="독립 시즌 대표 장비·티어 4세트·SimC 기본 APL을 사용합니다. 현재 검증된 목표는 334이며, 변경 조건은 실행 결과 범위에서만 판정합니다.";
+    note.textContent="독립 시즌 대표 장비·티어 4세트·SimC 기본 APL을 사용합니다. 목표 334의 기존 실측 범위와 다른 사용자 조건은 실행 결과에서만 판단합니다.";
   } else {
     note.textContent="기존 소스 기반 대표 장비 구성입니다. 모든 일반 장비의 완전한 표준화까지 검증된 것은 아니며 결과는 실제 생성된 프로필 조건부입니다.";
   }
