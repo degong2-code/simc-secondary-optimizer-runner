@@ -18,6 +18,7 @@ import v096_unified_product_entry as entry
 import v108_native_consumable_inputs as consumer
 import v122_common_profile_format as profile_format
 import v139_pure_target_profile_composer as pure
+import v169_source_first_representative_stage as source_first
 
 SCHEMA="v098_target_ilevel_user_scenario_v1"
 FIELDS={"schema","character","target","trinkets","special_items",
@@ -153,7 +154,8 @@ def initial_seeds(B,lower,upper):
 
 def build(user,folder,binary,revision,static_cache_path=None,
           imported_profile_text=None,*,ordinary_variant=None,pure_stage=False,
-          independent_334=False,independent_target_level=False):
+          independent_334=False,independent_target_level=False,
+          source_first_stage=False):
     """Return an already validated internal manifest and v096 plan; no Native."""
     need(type(user) is dict and set(user) in (
         FIELDS,FIELDS|{IMPORT_FIELD},FIELDS|{CONSUME_FIELD},
@@ -178,6 +180,14 @@ def build(user,folder,binary,revision,static_cache_path=None,
     # Explicit v106 session identity selects the independently compiled 24-DPS
     # production route at ilvl 334 only. Historic v147/v145 probes remain
     # unpromoted and their unchanged pure_stage semantics are preserved.
+    need(type(source_first_stage) is bool,"SOURCE_FIRST_STAGE_BOOL_REQUIRED")
+    # Developer-only v171+v168 representative equipment. Never activate in
+    # ordinary web/v106 sessions or reuse existing v098 production receipts.
+    need(not source_first_stage or
+         (pure_stage and not independent_334 and
+          not independent_target_level and ordinary_variant is None and
+          ilvl==334),
+         "SOURCE_FIRST_STAGE_ONLY_334_PURE_PLAN")
     need(type(independent_334) is bool,"INDEPENDENT_334_MODE_BOOL_REQUIRED")
     need(type(independent_target_level) is bool,
          "INDEPENDENT_TARGET_LEVEL_MODE_BOOL_REQUIRED")
@@ -230,7 +240,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
         base_profile,cfg,rows,groups,weapon_layout,F,tier_data,fifth_data=(
             pure.v098_inputs(ch,user["trinkets"],target_ilevel=ilvl,
                              combat=combat,
-                             level_preview=independent_target_level))
+                             level_preview=independent_target_level,
+                             season_override=(source_first.season_scope()
+                                              if source_first_stage else None)))
     elif ordinary_variant is None:
         # Preserve the historical exact call shape and all default receipts.
         base_profile,cfg,rows,groups,weapon_layout,F=common.source_backed_gear(
@@ -384,15 +396,21 @@ def build(user,folder,binary,revision,static_cache_path=None,
             "flask_F_fixed_165":True,
             "omnium_folio_user_input_ready":False,
             **({"internal_ordinary_variant":ordinary_variant}
-               if ordinary_variant is not None else {})}
+               if ordinary_variant is not None else {}),
+            **({"source_first_stage":True,
+                "new_season_equipment_not_native_accepted":True,
+                "v098_user_default_unchanged":True}
+               if source_first_stage else {})}
 
 def run(user_path,folder,binary,revision,static_cache_path=None,
         execute=False,cache_only=False,*,ordinary_variant=None,pure_stage=False,
         physical_acceptance_root=None,open_folder=True,independent_334=False,
-        independent_target_level=False):
+        independent_target_level=False,source_first_stage=False):
     # An exact v140 (historical 2 specs) or v145 (single preview profile)
     # physical Native receipt authorizes ONLY its identical internal profile.
     # v096 verifies original JSON2 bytes before any adaptive Native call.
+    need(not (source_first_stage and execute),
+         "SOURCE_FIRST_STAGE_NATIVE_NOT_AUTHORIZED")
     need(not (pure_stage and execute and physical_acceptance_root is None),
          "PURE_STAGE_NATIVE_NOT_AUTHORIZED")
     need(pure_stage or physical_acceptance_root is None,
@@ -409,7 +427,8 @@ def run(user_path,folder,binary,revision,static_cache_path=None,
                    imported_profile_text=imported,
                    ordinary_variant=ordinary_variant,pure_stage=pure_stage,
                    independent_334=independent_334,
-                   independent_target_level=independent_target_level)
+                   independent_target_level=independent_target_level,
+                   source_first_stage=source_first_stage)
     if not execute:return prepared
     if pure_stage:
         actual=entry.run_manifest(prepared["generated_manifest"],
@@ -430,6 +449,8 @@ def main(argv=None):
     p.add_argument("--execute",action="store_true")
     p.add_argument("--pure-stage",action="store_true",
                    help="Internal source-independent stage; execute requires exact v140/v145 physical Native receipt")
+    p.add_argument("--source-first-stage",action="store_true",
+                   help="Internal only: use current v171 gear + v168 tier in existing v098 plan. Requires --pure-stage, never executes Native")
     p.add_argument("--physical-acceptance-root",type=pathlib.Path,
                    help="Internal v140 root (two historical specs), or exact v145 per-user physical output folder")
     p.add_argument("--cache-only",action="store_true")
@@ -441,6 +462,7 @@ def main(argv=None):
         result=run(a.input,a.out,a.binary,a.revision,a.static_cache,
                    execute=a.execute,cache_only=a.cache_only,
                    ordinary_variant=a.ordinary_variant,pure_stage=a.pure_stage,
+                   source_first_stage=a.source_first_stage,
                    physical_acceptance_root=a.physical_acceptance_root)
         print(json.dumps(result,ensure_ascii=False,sort_keys=True,indent=2))
         return 0
