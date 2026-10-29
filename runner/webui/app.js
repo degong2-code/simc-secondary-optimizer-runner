@@ -237,7 +237,9 @@ function gearInputs(nodeId, config) {
     const grid=document.createElement("div");grid.className="gear-fields";
     for (const name of config.fields) {
       const label=document.createElement("label");
-      label.textContent=names[name]||name;
+      label.textContent=name==="item_id" ?
+        (isSpecial?"시즌 특수효과 장비":"제작장비 ID · 정확 ID 예외") :
+        (names[name]||name);
       const input=(name==="slot"||(isSpecial&&name==="item_id")) ?
           document.createElement("select") : document.createElement("input");
       input.dataset.field=name;
@@ -245,7 +247,8 @@ function gearInputs(nodeId, config) {
         input.appendChild(option("","이번 시즌 특수효과 장비 선택"));
         input.addEventListener("change",()=>suggestGearSlot(row,nodeId));
       }
-      input.setAttribute("aria-label",config.title+" "+(i+1)+" "+names[name]);
+      input.setAttribute("aria-label",config.title+" "+(i+1)+" "+
+                         label.textContent);
       if (name==="slot") {
         input.appendChild(option("","미선택"));
         for(const slot of statOptions) input.appendChild(option(slot,slot));
