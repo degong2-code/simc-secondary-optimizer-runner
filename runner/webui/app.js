@@ -130,6 +130,9 @@ function seasonChoice(group,id) {
 }
 function setTrinketSelection(fieldId,itemId,restored=false) {
   const node=$(fieldId),value=String(itemId??"");
+  // Remove historical-only choices when switching specializations.
+  for(const opt of Array.from(node.options))
+    if(opt.dataset.historic==="true")opt.remove();
   if(seasonChoice("trinket",value)) {
     node.value=value;
     return;
@@ -137,7 +140,9 @@ function setTrinketSelection(fieldId,itemId,restored=false) {
   // Show an earlier session's exact identity without silently substituting
   // another trinket. A NEW plan will require an eligible current-season pair.
   if(restored&&/^[0-9]+$/.test(value)) {
-    node.appendChild(option(value,"이전 세션 장신구 #"+value+" · 새 계획은 재선택"));
+    const old=option(value,"이전 세션 장신구 #"+value+" · 새 계획은 재선택");
+    old.dataset.historic="true";
+    node.appendChild(old);
     node.value=value;
     return;
   }
@@ -276,10 +281,14 @@ function fillGearRows(nodeId, entries) {
       const value=!entry?"":name==="slot"?entry.slot:
         name==="item_id"?String(entry.item_id):
         String(entry.options?.[name]??"");
-      if(nodeId==="special-rows"&&name==="item_id"&&value&&
-         !seasonChoice("special_effect_gear_candidate",value) &&
-         !Array.from(input.options).some(v=>v.value===value)) {
-        input.appendChild(option(value,"이전 세션 특수장비 #"+value+" · 새 계획은 재선택"));
+      if(nodeId==="special-rows"&&name==="item_id") {
+        for(const opt of Array.from(input.options))
+          if(opt.dataset.historic==="true")opt.remove();
+        if(value&&!seasonChoice("special_effect_gear_candidate",value)) {
+          const old=option(value,"이전 세션 특수장비 #"+value+" · 새 계획은 재선택");
+          old.dataset.historic="true";
+          input.appendChild(old);
+        }
       }
       input.value=value;
     }
