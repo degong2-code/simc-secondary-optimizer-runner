@@ -329,6 +329,7 @@ function fillSessionInputs(payload) {
   $("binary").value=payload.binary;
   $("revision").value=payload.revision;
   $("static_cache").value=payload.static_cache??"";
+  $("current_season_product").checked=payload.current_season_product===true;
   showRepresentativeScope();
 }
 function selectedGear(nodeId, group) {
@@ -377,8 +378,12 @@ function buildRequest() {
       diamond_id:Number(field("diamond")),omnium_talents:field("omnium")
     }
   };
+  const currentSeason=$("current_season_product").checked;
+  if(currentSeason&&controls.ilevel!==334)
+    throw Error("새 시즌 대표장비 경로는 현재 목표 334에서만 지원합니다.");
   return {controls,binary:field("binary"),revision:field("revision"),
-          static_cache:field("static_cache")||null};
+          static_cache:field("static_cache")||null,
+          current_season_product:currentSeason};
 }
 async function api(path,{method="GET",payload=null,publicRoute=false}={}) {
   const headers={"Accept":"application/json"};
@@ -458,6 +463,7 @@ function showPlan(plan) {
   setNotice("계산 준비 확인 · B "+number(plan.plan.base_B)+
     " + 고정 기름 O "+number(o)+" = 최종 T "+number(plan.plan.final_T)+
     " · 계획 Native 최대 "+plan.plan.native_limit+"회 (지금 실행 0회)"+
+    (plan.plan.current_season_product?" · 새 시즌 대표장비 별도 세션":"")+
     (plan.static_cache_auto_used?" · 저장된 정적 캐시 자동 적용":""));
 }
 function renderProgress(data) {
