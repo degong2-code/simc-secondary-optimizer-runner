@@ -54,15 +54,17 @@ class SeasonGearUserScope(unittest.TestCase):
             self.assertEqual(d["manual_exact_id_exception"],
                              "CRAFTED_EQUIPMENT_VARIANTS_ONLY")
 
-    def test_actual_288_catalog_only_156_user_selectable_effect_options(self):
+    def test_inclusive_511_catalog_has_all_63_season_mplus_trinkets(self):
         r=self.client.get("/api/v1/season-gear",headers=self.headers)
         self.assertEqual(r.status_code,200,r.text)
         d=r.json()
-        self.assertEqual(d["count"],288)
-        self.assertEqual(len(d["choices"]["trinket"]),36)
-        self.assertEqual(len(d["choices"]["special_effect_gear_candidate"]),10)
+        self.assertEqual(d["count"],511)
+        self.assertEqual(len(d["choices"]["trinket"]),63)
+        self.assertEqual(len(d["choices"]["special_effect_gear_candidate"]),14)
         self.assertEqual(len(d["choices"]["selectable_stat_craft"]),106)
-        self.assertEqual(sum(map(len,d["choices"].values())),152)
+        self.assertEqual(sum(map(len,d["choices"].values())),183)
+        self.assertTrue({250215,273796,273649} <= {
+            x["item_id"] for x in d["choices"]["trinket"]})
         self.assertFalse(d["manual_exact_id_allowed"])
         self.assertEqual(d["native_calls_now"],0)
 
