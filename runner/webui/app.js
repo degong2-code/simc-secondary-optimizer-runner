@@ -466,6 +466,32 @@ function beginPolling() {
     }).catch(err=>handlePollFailure(err,id)).finally(()=>{state.pollBusy=false;});
   },1400);
 }
+async function loadRecentSessions() {
+  // Existing local v106 sessions only, never a remote or GitHub search.
+  // GET is read-only: no Native, user input contents or executable hashing.
+  const selected=$("recent-session-id").value;
+  const data=await api("/api/v1/sessions");
+  if(data.read_only!==true||data.native_calls_now!==0||
+     !Array.isArray(data.sessions))throw Error("SESSION_LIST_READ_ONLY_CONTRACT");
+  const list=$("recent-session-id");
+  list.replaceChildren(option("","이 PC의 저장된 세션 선택"));
+  for(const item of data.sessions) {
+    if(typeof item.session_id!=="string"||
+       !/^[a-f0-9]{20}$/.test(item.session_id))continue;
+    const label=(specLabels[item.class+"/"+item.spec]||
+      item.class+" · "+item.spec).split(" (")[0];
+    const status=item.result_saved?"결과 저장":item.recorded_status;
+    const stamp=Number.isFinite(item.updated_unix)?
+      new Date(item.updated_unix*1000).toLocaleString("ko-KR"):"";
+    list.appendChild(option(item.session_id,
+      label+" · 목표 "+item.target_ilevel+" · "+status+" · "+stamp));
+  }
+  if(Array.from(list.options).some(x=>x.value===selected))list.value=selected;
+  $("recent-open-btn").disabled=!list.value;
+  $("recent-session-note").textContent=
+    "현재 PC의 기록 "+(list.options.length-1)+"개 · Native 0회 · "+
+    "특성·장비·로컬 경로는 목록에 포함되지 않음";
+}
 async function restore(id) {
   if(!/^[a-f0-9]{20}$/.test(id))
     throw Error("세션 ID는 20자리 해시여야 합니다.");
@@ -592,6 +618,12 @@ function registerHandlers() {
     setNotice("취소 요청됨 · 현재 SimC 한 건의 완료 후 다음 후보부터 중단.");
     await pollOnce();
   }));
+  $("recent-session-id").addEventListener("change",()=>{
+    $("recent-open-btn").disabled=!field("recent-session-id");
+  });
+  $("recent-open-btn").addEventListener("click",()=>withBusy(
+    ()=>restore(field("recent-session-id"))));
+  $("recent-refresh-btn").addEventListener("click",()=>withBusy(loadRecentSessions));
   $("restore-btn").addEventListener("click",()=>withBusy(
     ()=>restore(field("restore-id"))));
 }
@@ -611,6 +643,8 @@ async function initialize() {
     installOptions(opt);
     try{await loadAvailableNativeBatches();}
     catch(err){$("batch-status").textContent="실측 배치 조회 오류: "+err.message;}
+    try{await loadRecentSessions();}
+    catch(err){$("recent-session-note").textContent="세션 목록 조회 오류: "+err.message;}
     const paladin=state.defaults.find(v=>v.class==="paladin"&&v.spec==="retribution");
     if(paladin) {
       $("spec").value=paladin.class+"/"+paladin.spec;
