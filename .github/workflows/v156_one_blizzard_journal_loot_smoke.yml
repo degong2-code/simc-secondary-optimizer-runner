@@ -1,0 +1,39 @@
+name: v156 One Blizzard Raid Loot Smoke (opt-in NO Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v156_one_blizzard_journal_loot_smoke.py
+      - tests/test_v156_one_blizzard_journal_loot_smoke_offline.py
+      - .github/workflows/v156_one_blizzard_journal_loot_smoke.yml
+  workflow_dispatch:
+jobs:
+  offline:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m unittest -v tests.test_v156_one_blizzard_journal_loot_smoke_offline
+  live-opt-in:
+    if: ${{ vars.SIMC_ALLOW_SEASON_API_PROBE == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: One WCL-observed raid journal instance and one boss item list
+        env:
+          BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+          BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+        run: python runner/v156_one_blizzard_journal_loot_smoke.py --out v156-one-boss-real-loot.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: v156-one-boss-real-loot
+          path: v156-one-boss-real-loot.json
+          retention-days: 14
