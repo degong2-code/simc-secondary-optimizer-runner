@@ -48,27 +48,27 @@ jobs:
             --raid-zone "The Venomous Abyss" \
             --mplus-zone "Mythic+ Season 2" \
             --expansion-id 11 --out out/v163-real.json
-      - name: Only one extra same-build ItemEffect CSV request
+      - name: Fetch correct Retail ItemXItemEffect relation table once
         shell: bash
         run: |
           set -euo pipefail
           BUILD="$(python -c "import json,re; v=json.load(open('out/v163-real.json'))['build']; assert re.fullmatch(r'[0-9]+(?:\.[0-9]+){3}',v); print(v)")"
           curl --fail --location --silent --show-error --connect-timeout 15 \
             --max-time 100 --max-filesize 150000000 \
-            "https://wago.tools/db2/ItemEffect/csv?build=${BUILD}&locale=enUS" \
-            --output out/ItemEffect.csv
+            "https://wago.tools/db2/ItemXItemEffect/csv?build=${BUILD}&locale=enUS" \
+            --output out/ItemXItemEffect.csv
       - name: Build compact current-season DB and test actual saved reports
         env:
           SIMC_V163_JOIN_REPORT: out/v163-real.json
           SIMC_V162_REPORT: out/v162/v162-localbots-delve-report.json
           SIMC_V161_ITEMSPARSE: out/csv/ItemSparse.csv
-          SIMC_V165_ITEM_EFFECT: out/ItemEffect.csv
+          SIMC_V165_ITEM_EFFECT: out/ItemXItemEffect.csv
         run: |
           python runner/v165_current_season_gear_pool.py \
             --db2 out/v163-real.json \
             --delve out/v162/v162-localbots-delve-report.json \
             --item-sparse out/csv/ItemSparse.csv \
-            --item-effect out/ItemEffect.csv \
+            --item-effect out/ItemXItemEffect.csv \
             --out out/current-season-gear.json
           python -m unittest -v tests.test_v165_current_season_gear_pool
       - uses: actions/upload-artifact@v4
