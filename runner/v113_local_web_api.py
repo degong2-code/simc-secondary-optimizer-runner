@@ -39,6 +39,7 @@ class UserRequest(BaseModel):
     binary: str = Field(min_length=1, max_length=4096)
     revision: str = Field(min_length=7, max_length=40)
     static_cache: str | None = Field(default=None, max_length=4096)
+    current_season_product: bool = False
 
 def blocked(exc):
     """Return stable codes, not private absolute paths, talent strings, or tracebacks."""
@@ -172,14 +173,16 @@ class LocalJobs:
             # Legacy sessions and non-334 plans keep the original route.
             ch=user["character"]
             key=(ch["class"],ch["spec"])
-            independent=(user["target"]["ilevel"]==334 and
+            current_season=params.current_season_product
+            independent=(not current_season and user["target"]["ilevel"]==334 and
                          key in bootstrap.ARCHETYPES)
-            independent_level=(user["target"]["ilevel"]!=334 and
+            independent_level=(not current_season and user["target"]["ilevel"]!=334 and
                                key in sessions.SUPPORTED)
             folder = sessions.store_session(user,self.root,binary,params.revision,
                                             resolved_static,
                                             independent_334=independent,
-                                            independent_target_level=independent_level)
+                                            independent_target_level=independent_level,
+                                            current_season_product=current_season)
             # Session identity binds CACHE CONTENT, not its user-visible
             # path. If the same bytes are passed via a different path later,
             # honor the already-sealed manifest path rather than rewriting
@@ -198,7 +201,8 @@ class LocalJobs:
             plan = bootstrap.build(user,folder / "generated",binary,
                                    params.revision,resolved_static,
                                    independent_334=independent,
-                                   independent_target_level=independent_level)["plan"]
+                                   independent_target_level=independent_level,
+                                   current_season_product=current_season)["plan"]
             return {"session_id":folder.name,"status":"READY_ZERO_NATIVE",
                     "native_calls":0,
                     "static_cache_auto_used":bool(
@@ -211,7 +215,9 @@ class LocalJobs:
                       "native_called":False,
                       "independent_target334_profile":independent,
                       "independent_non334_profile":independent_level,
-                      "non334_physical_native_not_yet_observed":independent_level}}
+                      "non334_physical_native_not_yet_observed":independent_level,
+                      "current_season_product":current_season,
+                      "v176_26_of_26_base_physical_native":current_season}}
         except Exception as exc:
             raise blocked(exc) from None
 
@@ -235,7 +241,8 @@ class LocalJobs:
             key, check = sessions.session_key(
                 user,binary,rev,static,ordinary_variant=variant,
                 independent_334=recorded.get("independent_334",False),
-                independent_target_level=recorded.get("independent_target_level",False))
+                independent_target_level=recorded.get("independent_target_level",False),
+                current_season_product=bool(recorded.get("current_season_product",False)))
             if key != folder.name or check != recorded:
                 raise sessions.SessionBlocked("SESSION_BINARY_REVISION_OR_CACHE_DRIFT")
             return binary,rev,static
@@ -292,6 +299,8 @@ class LocalJobs:
                     "binary": manifest["native_binary"],
                     "revision": recorded["simc_revision"],
                     "static_cache": manifest["static_cache_json"],
+                    "current_season_product":bool(
+                        recorded.get("current_season_product",False)),
                     "native_called": False}
         except Exception as exc:
             raise blocked(exc) from None
