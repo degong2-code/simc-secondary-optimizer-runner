@@ -23,3 +23,11 @@ GitHub Actions의 실제 API 작업은 `SIMC_ALLOW_SEASON_API_PROBE=true`와
 
 구렁 보상은 레시피나 보스 저널 데이터의 의미와 다르며, 별도
 공식 보상 ID 출처가 확인될 때까지 획득 목록은 UNKNOWN이다.
+
+## One-time 2026-10-29 source-first live acceptance
+
+After removing previous item-list sampling, run one explicitly authorized
+`[api-probe]` push, up to six Blizzard Game Data reads, to confirm
+that the new source-first recipe reference index returns actual names and
+IDs. A passing job or three recipe details is **not** full craftable gear
+coverage. No second job is scheduled; ordinary subsequent pushes skip live.
