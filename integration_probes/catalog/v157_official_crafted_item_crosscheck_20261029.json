@@ -1,0 +1,53 @@
+{
+  "schema": "v157_crafted_provider_minimal_live_20261029",
+  "status": "OFFICIAL_ITEM_IDS_3_OF_3_NAME_MATCH_RECIPE_OUTPUT_UNATTESTED",
+  "source": "BLIZZARD_GAME_DATA_KR_REAL_GITHUB_ACTIONS",
+  "initial_recipe_run": 40829207761,
+  "item_id_validation_run": 40829501363,
+  "profession": {
+    "name": "Tailoring",
+    "id": 197,
+    "skill_tier_name": "Midnight Tailoring",
+    "skill_tier_id": 2918,
+    "recipe_count_in_tier": 92
+  },
+  "sampled_recipes": [
+    {
+      "recipe_id": 52181,
+      "name": "Adherent's Silken Shroud",
+      "output_item_id_in_recipe_response": null
+    },
+    {
+      "recipe_id": 52173,
+      "name": "Martyr's Crown",
+      "output_item_id_in_recipe_response": null
+    },
+    {
+      "recipe_id": 52174,
+      "name": "Martyr's Gloves",
+      "output_item_id_in_recipe_response": null
+    }
+  ],
+  "official_items": [
+    {
+      "item_id": 239656,
+      "name": "Adherent's Silken Shroud",
+      "inventory_type": "Back"
+    },
+    {
+      "item_id": 239652,
+      "name": "Martyr's Crown",
+      "inventory_type": "Head"
+    },
+    {
+      "item_id": 239653,
+      "name": "Martyr's Gloves",
+      "inventory_type": "Hands"
+    }
+  ],
+  "does_not_prove_recipe_to_item_output": true,
+  "does_not_prove_all_craftable_items": true,
+  "does_not_prove_delves_item_drops": true,
+  "simc_native_calls": 0,
+  "static_L_generated": false
+}
