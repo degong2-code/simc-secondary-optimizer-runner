@@ -53,6 +53,80 @@ class LocalJobs:
         self.lock = threading.Lock()
         self.children = {}
 
+    def recent_sessions(self, limit=48):
+        """Read-only local session index; no binary hashing, Native or writes.
+
+        A session is listed only when its copied user bytes and sealed v106
+        identity agree with its directory hash. No talents, paths, options
+        or trinket IDs leave this endpoint; list is advisory, not authorization.
+        Start/resume still performs complete current-binary/cache verification.
+        """
+        if not self.root.is_dir():
+            return {"sessions":[],"read_only":True,"native_calls_now":0}
+        candidates=[]
+        for folder in self.root.iterdir():
+            if (not KEY.fullmatch(folder.name) or folder.is_symlink()
+                    or not folder.is_dir()):
+                continue
+            try:
+                seal=folder/"V106_SESSION_IDENTITY.json"
+                user_file=folder/"user.json"
+                if not seal.is_file() or not user_file.is_file():
+                    continue
+                # An adversarial or corrupted local file must not force
+                # unbounded parsing on a frequently visited UI screen.
+                if seal.stat().st_size>524288 or user_file.stat().st_size>524288:
+                    continue
+                identity=json.loads(seal.read_text(encoding="utf8"))
+                user=json.loads(user_file.read_text(encoding="utf8"))
+                if (type(identity) is not dict or type(user) is not dict
+                        or identity.get("schema")!=sessions.SCHEMA
+                        or identity.get("user")!=user
+                        or sessions.sha(sessions.canonical(identity).encode("utf8"))[:20]
+                           !=folder.name):
+                    continue
+                character=user.get("character")
+                target=user.get("target")
+                if (type(character) is not dict or type(target) is not dict
+                        or type(character.get("class")) is not str
+                        or type(character.get("spec")) is not str
+                        or (character["class"],character["spec"]) not in
+                           sessions.SUPPORTED
+                        or type(target.get("ilevel")) is not int
+                        or type(identity.get("simc_revision")) is not str
+                        or re.fullmatch(r"[0-9a-fA-F]{7,40}",
+                                        identity["simc_revision"]) is None
+                        or type(identity.get("independent_334",False)) is not bool):
+                    continue
+                state_file=folder/"V106_WORKER_STATE.json"
+                result_file=folder/"V106_USER_RESULT.json"
+                status="NOT_STARTED"
+                if state_file.is_file():
+                    if state_file.stat().st_size>16384:
+                        continue
+                    recorded=json.loads(state_file.read_text(encoding="utf8"))
+                    if (type(recorded) is not dict or
+                            recorded.get("schema")!=sessions.SCHEMA or
+                            type(recorded.get("status")) is not str):
+                        continue
+                    status=recorded["status"]
+                source=(state_file if state_file.is_file() else seal)
+                candidates.append((source.stat().st_mtime,{
+                    "session_id":folder.name,
+                    "class":character["class"],"spec":character["spec"],
+                    "target_ilevel":target["ilevel"],
+                    "recorded_status":status,
+                    "result_saved":result_file.is_file(),
+                    "independent_target334_profile":
+                        identity.get("independent_334",False),
+                    "updated_unix":int(source.stat().st_mtime)}))
+            except (OSError,ValueError,TypeError,KeyError,OverflowError):
+                # Corrupt single session is ignored; other sessions survive.
+                continue
+        candidates.sort(key=lambda item:(-item[0],item[1]["session_id"]))
+        return {"sessions":[item for _,item in candidates[:limit]],
+                "read_only":True,"native_calls_now":0}
+
     def folder(self, key):
         if not KEY.fullmatch(key):
             raise HTTPException(404, detail={"code":"SESSION_ID_INVALID"})
@@ -331,6 +405,10 @@ def create_app(*,root=None, token=None, batch_root=None):
         except batch_view.BatchViewBlocked as exc:
             # Do not return original path, source profile or raw SimC JSON.
             raise HTTPException(422,detail={"code":str(exc).split(":",1)[0]}) from None
+
+    @app.get("/api/v1/sessions")
+    def recent_sessions():
+        return jobs.recent_sessions()
 
     @app.get("/api/v1/health")
     def health():
