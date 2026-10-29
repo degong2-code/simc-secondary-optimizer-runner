@@ -157,13 +157,15 @@ function installSeasonGearHints(catalog) {
     const node=$(fieldId);
     node.replaceChildren(option("","이번 시즌 장신구 선택"));
     for(const item of current.trinket||[])
-      node.appendChild(option(item.item_id,item.name+" · #"+item.item_id));
+      node.appendChild(option(item.item_id,item.name+" · #"+item.item_id+
+        (item.season_list_basis?" · 시즌 신화+ 후보":"")));
   }
   for(const row of $("special-rows").querySelectorAll(".gear-row")) {
     const element=row.querySelector('[data-field="item_id"]');
     element.replaceChildren(option("","이번 시즌 특수효과 장비 선택"));
     for(const item of current.special_effect_gear_candidate||[])
-      element.appendChild(option(item.item_id,item.name+" · #"+item.item_id));
+      element.appendChild(option(item.item_id,item.name+" · #"+item.item_id+
+        (item.season_list_basis?" · 시즌 신화+ 후보":"")));
   }
   if(!state.seasonGear) {
     node.textContent="시즌 선택 목록이 없습니다. 새 장신구·특수효과 선택은 보류됩니다. 기존 세션 조회는 가능합니다.";
@@ -171,7 +173,7 @@ function installSeasonGearHints(catalog) {
   }
   node.textContent="장신구 "+(current.trinket?.length||0)+"개 · 특수효과 "+
     (current.special_effect_gear_candidate?.length||0)+
-    "개를 시즌 목록에서 선택 · 일반장비 자동 구성 · 정확 ID 직접 입력은 제작장비만 예외";
+    "개를 시즌 목록에서 선택 · 신화+ 후보 포함(드롭 조건 미확정) · 일반장비 자동 구성 · 정확 ID 직접 입력은 제작장비만 예외";
 }
 function suggestGearSlot(row, group) {
   const id=row.querySelector('[data-field="item_id"]');
