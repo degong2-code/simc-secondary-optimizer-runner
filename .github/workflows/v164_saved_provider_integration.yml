@@ -1,0 +1,72 @@
+name: v164 Saved Provider Integration (offline and artifact-only)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v164_saved_evidence_season_acceptance.py
+      - tests/test_v164_saved_evidence_acceptance.py
+      - .github/workflows/v164_saved_provider_integration.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  focused-offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m unittest -v tests.test_v164_saved_evidence_acceptance
+
+  real-saved-evidence:
+    # No new Blizzard/WCL/Wago/Localbots API, no Native SimC.
+    # Bounded re-use of existing, short-retention Actions artifacts, opt-in.
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[v164-real]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Reuse existing v161, v155, v162 artifacts without contacting game providers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p out/v161 out/v155 out/v162 out/csv
+          gh run download 40836955761 -n v161-db2-csv-snapshot-20261029 -D out/v161
+          gh run download 40826278881 -n v155-live-season-api-evidence -D out/v155
+          gh run download 40839426417 -n v162-localbots-delve-report -D out/v162
+          unzip -q out/v161/db2-snapshot.zip -d out/csv
+      - name: Rebuild actual v163 from pinned original CSV and saved WCL season
+        run: |
+          python runner/v163_zero_seed_db2_join.py \
+            --csv-dir out/csv \
+            --season-report out/v155/v155-live-season-api-evidence.json \
+            --raid-zone "The Venomous Abyss" --mplus-zone "Mythic+ Season 2" \
+            --expansion-id 11 --out out/v163-real.json
+      - name: Compose actual season index (source provenance, unknown preserved)
+        run: |
+          python runner/v164_saved_evidence_season_acceptance.py \
+            --season out/v155/v155-live-season-api-evidence.json \
+            --db2 out/v163-real.json \
+            --delve out/v162/v162-localbots-delve-report.json \
+            --out-index out/season-index.json --out-receipt out/v164-receipt.json
+      - name: Run real saved-evidence acceptance tests
+        env:
+          SIMC_V161_SNAPSHOT_DIR: out/csv
+          SIMC_V155_SEASON_REPORT: out/v155/v155-live-season-api-evidence.json
+          SIMC_V163_JOIN_REPORT: out/v163-real.json
+          SIMC_V162_REPORT: out/v162/v162-localbots-delve-report.json
+        run: python -m unittest -v tests.test_v163_db2_zero_seed tests.test_v163_index_bridge tests.test_v164_saved_evidence_acceptance
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: v164-saved-evidence-receipt
+          path: out/v164-receipt.json
+          retention-days: 2
