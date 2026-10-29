@@ -1,0 +1,141 @@
+name: v176 All 26 DPS New-Season Physical SimC (one per spec, no optimizer)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/v176_all_26_source_first_physical_native.py
+      - tests/test_v176_all_26_source_first_physical_native.py
+      - integration_probes/requests/v176_all_26_physical_once.json
+      - .github/workflows/v176_all_26_source_first_physical.yml
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v176-all-26-physical-season-once
+  cancel-in-progress: false
+jobs:
+  offline-26:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: 26 current-season profiles in existing v098 staging, NO Native
+        run: |
+          set -euo pipefail
+          python3 -m py_compile integration_probes/v176_all_26_source_first_physical_native.py
+          python3 -m unittest -v tests.test_v176_all_26_source_first_physical_native
+  native-all-26:
+    needs: offline-26
+    if: ${{ contains(github.event.head_commit.message, '[v176-physical-26]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: One approved fixed request, 26 DPS, zero adaptive, 25 new max
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          path="integration_probes/requests/v176_all_26_physical_once.json"
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",
+                os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==[path],changed
+          document=json.loads(pathlib.Path(path).read_text())
+          expected={
+           "schema":"v176_all_26_dps_current_season_physical_once_v1",
+           "spec_count":26,"target_ilevel":334,"iterations_per_spec":35,
+           "max_new_native":25,"v174_paladin_receipt_must_reuse":40967207274,
+           "simc_revision":"7bc10711b5",
+           "simc_binary_sha256":"64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+           "all_items_from_current_season_db":True,
+           "tier_four_piece_for_every_spec":True,
+           "one_physical_native_per_other_spec":True,
+           "no_stat_optimization":True,"no_95_percent_comparison":True,
+           "no_product_promotion":True,"no_main_or_project_ui_mutation":True}
+          assert document==expected,(document,expected)
+          print("V176_EXACT_26_PHYSICAL_SCOPE_USER_REQUEST_PASS")
+          PY
+      - name: Restore exact v174 Paladin physical receipt, SHA and input to SAME path
+        uses: actions/download-artifact@v4
+        with:
+          name: v174-source-first-single-native-40967207274
+          path: out
+          run-id: 40967207274
+          repository: degong2-code/simc-secondary-optimizer-runner
+          github-token: ${{ github.token }}
+      - name: Restore previous SHA-pinned Linux SimC binary from cache; NO build
+        uses: actions/cache/restore@v5
+        id: binary
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd-cli-release-nonetwork-r1
+      - name: Verify exact executable and existing previous receipt before new Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.binary.outputs.cache-hit }}" = "true" || {
+            echo "V176_BLOCKED_PINNED_BINARY_CACHE_MISS"; exit 3; }
+          echo "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc-cache/v035/simc" | sha256sum -c
+          chmod +x .simc-cache/v035/simc
+          test "$(find out -name receipt.json -path '*paladin__retribution__source_first_v172__*' | wc -l)" -eq 1
+          echo V176_EXACT_V174_PHYSICAL_RECEIPT_AVAILABLE
+      - name: Zero-new-Native preflight, all 26 season profiles and Paladin SHA replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 integration_probes/v176_all_26_source_first_physical_native.py \
+            --simc "$GITHUB_WORKSPACE/.simc-cache/v035/simc" \
+            --out "$GITHUB_WORKSPACE/out" --iterations 35 \
+            | tee out/V176_PREFLIGHT.log
+          cp out/V176_ALL_26_SUMMARY.json out/V176_PREFLIGHT_SUMMARY.json
+          python3 - <<'PY'
+          import json
+          r=json.load(open("out/V176_PREFLIGHT_SUMMARY.json"))
+          assert r["status"]=="PREFLIGHT_26_READY",r["counts"]
+          assert r["new_native_calls_confirmed"]==0
+          assert r["counts"]=={"PLAN_READY_ZERO_NATIVE":25,"PASS_PHYSICAL_NATIVE":1},r["counts"]
+          print("V176_26_PLAN_ONE_PRIOR_CACHED_PASS_ZERO_NEW_NATIVE")
+          PY
+      - name: One physical Native for every other DPS, no optimization or retries
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 integration_probes/v176_all_26_source_first_physical_native.py \
+            --simc "$GITHUB_WORKSPACE/.simc-cache/v035/simc" \
+            --out "$GITHUB_WORKSPACE/out" --iterations 35 \
+            --execute --max-new 25 | tee out/V176_EXECUTE.log
+          python3 - <<'PY'
+          import json,pathlib,hashlib
+          r=json.load(open("out/V176_ALL_26_SUMMARY.json"))
+          assert r["status"]=="FINISHED_ALL_26_PHYSICAL_PASS",r["counts"]
+          assert r["spec_count"]==26 and len(r["results"])==26
+          assert r["new_native_calls_confirmed"]==25
+          assert r["new_native_permits_reserved"]==25
+          assert r["adaptive_optimizer_native_calls"]==0
+          assert r["v174_paladin_reused"] is True
+          assert all(s["status"]=="PASS_PHYSICAL_NATIVE" and s["dps_mean"]>0
+                     for s in r["results"])
+          assert sum(s["native_calls_confirmed"] for s in r["results"])==25
+          assert sum(s["source"]=="v174_SHA_REUSED" for s in r["results"])==1
+          for s in r["results"]:
+              folder=pathlib.Path(s["output_dir"])
+              receipt=json.loads((folder/"receipt.json").read_text())
+              actual=(folder/"physical.json").read_bytes()
+              assert receipt["json2_sha256"]==hashlib.sha256(actual).hexdigest()
+          print("V176_ALL_26_REAL_NATIVE_PROFILE_PASS_25_NEW_ONE_REUSED")
+          PY
+      - name: Save per-specialization original SimC errors, input, JSON2 and SHA receipts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v176-all-26-physical-real-receipts-${{ github.run_id }}
+          path: out/
+          retention-days: 7
+          if-no-files-found: warn
