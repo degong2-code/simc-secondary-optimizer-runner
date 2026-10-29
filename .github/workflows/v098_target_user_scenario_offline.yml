@@ -37,6 +37,8 @@ on:
       - tests/test_v101_common_representative_equipment.py
       - runner/v098_target_user_scenario_bootstrap.py
       - runner/v139_pure_target_profile_composer.py
+      - runner/v151_season_catalog_impact.py
+      - tests/test_v151_season_catalog_impact_offline.py
       - runner/v143_specialization_contracts.py
       - integration_probes/catalog/v144_mid2_season_items.json
       - tests/test_v143_contract_season_compiler_offline.py
@@ -80,7 +82,7 @@ jobs:
           persist-credentials: false
       - name: Compile product entry and targeted bootstrap
         run: |
-          python3 -m py_compile runner/v055_simc_item_selection.py runner/v061_scenario_contract.py runner/v062_static_budget_bridge.py runner/v101_common_representative_equipment.py runner/v102_ordinary_armor_seed_pool.py runner/v103_source_observed_weapon_types.py runner/v104_shared_pinned_rogue_shaman_composer.py integration_probes/v105_paladin_user_e2e.py runner/v106_user_session_controller.py runner/v106_windows_simple_gui.py runner/v107_optional_items_dialog.py runner/v108_native_consumable_inputs.py runner/v108_user_consumable_dialog.py runner/v109_windows_readiness_diagnostic.py runner/v098_target_user_scenario_bootstrap.py runner/v096_unified_product_entry.py runner/v139_pure_target_profile_composer.py runner/v143_specialization_contracts.py integration_probes/v140_pure_profile_physical_native_smoke.py integration_probes/v145_targeted_pure_physical_native.py integration_probes/v147_all_dps_targeted_native_batch.py runner/v141_verified_pure_native_pilot.py runner/v063_numeric_injection.py runner/v065_original_scheduler_native_bridge.py runner/v094_durable_inclusive_adaptive_runner.py
+          python3 -m py_compile runner/v055_simc_item_selection.py runner/v061_scenario_contract.py runner/v062_static_budget_bridge.py runner/v101_common_representative_equipment.py runner/v102_ordinary_armor_seed_pool.py runner/v103_source_observed_weapon_types.py runner/v104_shared_pinned_rogue_shaman_composer.py integration_probes/v105_paladin_user_e2e.py runner/v106_user_session_controller.py runner/v106_windows_simple_gui.py runner/v107_optional_items_dialog.py runner/v108_native_consumable_inputs.py runner/v108_user_consumable_dialog.py runner/v109_windows_readiness_diagnostic.py runner/v098_target_user_scenario_bootstrap.py runner/v096_unified_product_entry.py runner/v139_pure_target_profile_composer.py runner/v151_season_catalog_impact.py runner/v143_specialization_contracts.py integration_probes/v140_pure_profile_physical_native_smoke.py integration_probes/v145_targeted_pure_physical_native.py integration_probes/v147_all_dps_targeted_native_batch.py runner/v141_verified_pure_native_pilot.py runner/v063_numeric_injection.py runner/v065_original_scheduler_native_bridge.py runner/v094_durable_inclusive_adaptive_runner.py
       - name: Test user entry / old source-locked bridge offline (NO Native SimC)
         run: |
           python3 -m unittest -q \
@@ -101,6 +103,7 @@ jobs:
             tests.test_v097_user_result_offline \
             tests.test_v098_target_user_scenario_bootstrap \
             tests.test_v139_pure_target_profile_composer \
+            tests.test_v151_season_catalog_impact_offline \
             tests.test_v143_contract_season_compiler_offline \
             tests.test_v139_v098_pure_plan_bridge \
             tests.test_v140_pure_profile_physical_native_smoke \
