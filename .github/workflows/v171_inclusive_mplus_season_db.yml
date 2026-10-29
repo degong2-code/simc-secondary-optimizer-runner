@@ -1,0 +1,68 @@
+name: v171 Include All Current-Season M+ Equipment (NO Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v171_current_mplus_inclusive_gear.py
+      - tests/test_v171_current_mplus_inclusive_gear.py
+      - data/current_season_product_gear_db.json
+      - .github/workflows/v171_inclusive_mplus_season_db.yml
+jobs:
+  focused-offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: |
+          python -m py_compile runner/v171_current_mplus_inclusive_gear.py
+          python -m unittest -v tests.test_v171_current_mplus_inclusive_gear
+  real-saved-season:
+    if: ${{ contains(github.event.head_commit.message, '[v171-real]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 9
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Reuse saved current season v166 role evidence and v161 SHA-pinned DB2 (NO API)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p out/v166 out/v161 out/csv data
+          gh run download 40855495150 -n v166-current-season-product-gear-db -D out/v166
+          gh run download 40836955761 -n v161-db2-csv-snapshot-20261029 -D out/v161
+          unzip -q out/v161/db2-snapshot.zip -d out/csv
+      - name: Replace one small active-season DB including 223 current-season M+ candidates
+        run: |
+          python runner/v171_current_mplus_inclusive_gear.py \
+            --source-v166 out/v166/current-season-product-gear-db.json \
+            --csv-dir out/csv \
+            --out data/current_season_product_gear_db.json
+          test "$(stat -c%s data/current_season_product_gear_db.json)" -lt 250000
+      - name: Validate inclusive source and all known previous missing default trinkets
+        env:
+          SIMC_V166_PRODUCT_GEAR_DB: out/v166/current-season-product-gear-db.json
+          SIMC_V161_SNAPSHOT_DIR: out/csv
+        run: python -m unittest -v tests.test_v171_current_mplus_inclusive_gear
+      - name: Commit only replacement current-season compact DB (NO raw snapshots)
+        run: |
+          set -eu
+          test "$GITHUB_REF_NAME" = "probe/chat-cache-v035-20261024"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/current_season_product_gear_db.json
+          git commit -m "data(v171): include 223 current-season dungeon items; user 63 trinkets and 14 effects"
+          git push origin "HEAD:refs/heads/$GITHUB_REF_NAME"
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: v171-current-season-mplus-inclusive-small-roster
+          path: data/current_season_product_gear_db.json
+          retention-days: 2
