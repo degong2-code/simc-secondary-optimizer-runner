@@ -28,7 +28,7 @@ def example():
                   "journal_encounter_id":79,"journal_instance_id":90,
                   "season_evidence":"UNKNOWN_WORLD_STATE_EXPRESSION",
                   "world_state_expression_id":52104}]}],
-        "unknown":[{"kind":"raid_tier_not_unique","candidates":[505,516]}]
+        "unknown":[{"kind":"raid_tier_not_unique","candidates":[505,516]}]}
     delve = {"schema":"v162_localbots_delve_source_v1",
         "source_provider":"Localbots / balovich-matje/localbots",
         "source_url":"https://raw.githubusercontent.com/balovich-matje/localbots/main/data/delve-loot.json",
