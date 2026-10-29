@@ -1,0 +1,24 @@
+{
+  "schema": "v156_live_single_boss_api_accepted_summary_v1",
+  "observed_date_utc": "2026-10-29",
+  "status": "BLIZZARD_AUTHENTICATED_EXPLICIT_LOOT_ITEMS",
+  "data_provenance": {
+    "blizzard_region": "kr",
+    "journal_instance_id": 1320,
+    "instance_name": "The Venomous Abyss",
+    "journal_encounter_id": 2888,
+    "encounter_name": "Nek'zali the Soulcoiler",
+    "github_actions_run": 40827019159,
+    "github_actions_artifact": "v156-one-boss-real-loot",
+    "artifact_json_sha256": "2ff1a0c94a76d872f636e22fa4c272aad7a206bf7dac3d81a750c078d18fbd59"
+  },
+  "item_ids_observed": [268203,268208,268216,268218,268229,268230,268235,268236,268240,268245,268248,270162,270930,279115,280305,281227],
+  "prior_metadata_matches": [268203,268208,268216,268218,268229,268230,268235,268236,268240,268245,268248,270162,270930],
+  "new_vs_existing_v047_plus_partial10": [279115,280305,281227],
+  "prior_spell_bearing_candidate_matches": [270162],
+  "native_simc_calls": 0,
+  "static_L_generated": false,
+  "simc_effect_support_confirmed": false,
+  "whole_season_loot_complete": false,
+  "raid_scope": "ONE_BOSS_ONLY"
+}
