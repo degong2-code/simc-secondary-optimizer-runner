@@ -5,6 +5,8 @@ on:
     paths:
       - runner/v163_zero_seed_db2_join.py
       - tests/test_v163_db2_zero_seed.py
+      - tests/test_v163_index_bridge.py
+      - runner/v158_source_first_season_catalog.py
       - .github/workflows/v163_zero_seed_db2_join.yml
   workflow_dispatch:
 jobs:
@@ -19,4 +21,4 @@ jobs:
         with:
           python-version: '3.12'
       - name: Bounded synthetic source-first join, no API, no Native
-        run: python -m unittest -v tests.test_v163_db2_zero_seed
+        run: python -m unittest -v tests.test_v163_db2_zero_seed tests.test_v163_index_bridge
