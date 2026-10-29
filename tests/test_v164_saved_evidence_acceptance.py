@@ -1,5 +1,7 @@
 """No-network v164 composition and failure boundaries."""
 import copy
+import os
+from pathlib import Path
 import unittest
 from runner import v164_saved_evidence_season_acceptance as v164
 
@@ -86,6 +88,24 @@ class AcceptanceTests(unittest.TestCase):
         a,b,c=example();a["mode"]="OFFLINE_FIXTURE"
         with self.assertRaises(v164.AcceptanceBlocked):
             v164.compose(a,b,c)
+
+
+    def test_saved_real_reports_when_mounted(self):
+        paths=[os.getenv(k) for k in ("SIMC_V155_SEASON_REPORT",
+             "SIMC_V163_JOIN_REPORT","SIMC_V162_REPORT")]
+        if not all(paths):
+            self.skipTest("saved provider reports not mounted in offline CI")
+        inputs=[v164.load(Path(p))[0] for p in paths]
+        index,receipt=v164.compose(*inputs)
+        self.assertEqual(index["observed_unique_item_ids"],
+                         receipt["integrated_unique_item_ids"])
+        self.assertEqual(receipt["db2_build"],inputs[1]["build"])
+        self.assertEqual(receipt["source_unique_item_ids"]["localbots_delve"],
+                         inputs[2]["resolved_count"])
+        self.assertTrue(receipt["db2_season_evidence_records"].get(
+                         "UNKNOWN_WORLD_STATE_EXPRESSION",0)>0)
+        self.assertFalse(receipt["full_season_completeness_confirmed"])
+        self.assertEqual((receipt["new_api_calls"],receipt["simc_native_calls"]),(0,0))
 
 
 if __name__ == "__main__":unittest.main()
