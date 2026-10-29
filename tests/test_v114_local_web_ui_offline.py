@@ -125,8 +125,9 @@ class RealHTTPPageOffline(unittest.TestCase):
         page=self.client.get("/").text
         js=self.client.get("/assets/app.js").text
         self.assertIn('id="gear-scope-note"',page)
-        self.assertIn("SOURCE_NON_TIER_NOT_ALL_STANDARDIZED",js)
-        self.assertIn("완전 표준 일반장비 구성은 아직 검증되지 않았으며",js)
+        self.assertIn("SOURCE_INDEPENDENT_TARGET334_VALIDATED_BATCH",js)
+        self.assertIn("목표 334: 내부 시즌 대표 장비",js)
+        self.assertIn("목표 334 외: 아직 검증된 독립 대표 장비",js)
         self.assertIn("완전한 표준화까지 검증된 것은 아니며",js)
         self.assertIn('  showRepresentativeScope();\n}',js)
         self.assertIn('function fillSessionInputs(payload)',js)
