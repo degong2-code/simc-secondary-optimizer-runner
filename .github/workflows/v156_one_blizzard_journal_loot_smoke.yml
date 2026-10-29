@@ -33,6 +33,7 @@ jobs:
           BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
         run: python runner/v156_one_blizzard_journal_loot_smoke.py --out v156-one-boss-real-loot.json
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: v156-one-boss-real-loot
           path: v156-one-boss-real-loot.json

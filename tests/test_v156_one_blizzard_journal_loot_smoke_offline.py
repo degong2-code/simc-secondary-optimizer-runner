@@ -50,6 +50,29 @@ class JournalLootSmokeOffline(unittest.TestCase):
         self.assertNotIn("DUMMY_SECRET_NOT_OUTPUT",json.dumps(data))
         self.assertEqual(len(requests),4)
 
+    def test_real_boss_name_mismatch_preserves_safe_candidates(self):
+        class Resp:
+            status=200
+            def __init__(self,v):self.raw=json.dumps(v).encode()
+            def __enter__(self):return self
+            def __exit__(self,*args):pass
+            def read(self,n):return self.raw
+        urls=[]
+        def transport(req,timeout):
+            urls.append(req.full_url)
+            if req.full_url.endswith("/token"):
+                return Resp({"access_token":"DUMMY"})
+            if "journal-instance/index" in req.full_url:
+                return Resp({"instances":[{"id":42,"name":smoke.RAID_NAME}]})
+            return Resp({"id":42,"encounters":[
+                {"id":11,"name":"Another encounter"}]})
+        result=smoke.run_probe("id","secret",transport=transport)
+        self.assertEqual(result["status"],"BOSS_NAME_UNMATCHED_NO_LOOT_QUERY")
+        self.assertEqual(result["blizzard_game_data_requests"],2)
+        self.assertEqual(result["blizzard_journal_encounter_candidates"],
+                         [{"id":11,"name":"Another encounter"}])
+        self.assertEqual(len(urls),3)
+
     def test_no_loot_field_is_unknown_not_zero(self):
         ref=smoke.existing.existing_reference(
              smoke.existing.read_json(smoke.existing.MASTER),

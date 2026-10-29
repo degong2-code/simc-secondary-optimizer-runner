@@ -120,7 +120,7 @@ def main(argv=None):
         args.out.write_text(json.dumps(result,sort_keys=True,ensure_ascii=False,
                                       indent=2)+"\n",encoding="utf8")
         print(json.dumps({"status":result["status"],
-              "loot_status":result["loot"]["status"],
+              "loot_status":result.get("loot",{}).get("status","NOT_QUERIED"),
               "game_data_requests":result["blizzard_game_data_requests"],
               "simc_native_calls":0},sort_keys=True))
         return 0
