@@ -1,0 +1,19 @@
+name: v158 Source-First Empty Season Catalog (OFFLINE ONLY)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v158_source_first_season_catalog.py
+      - tests/test_v158_source_first_season_catalog_offline.py
+      - .github/workflows/v158_source_first_season_catalog_offline.yml
+  workflow_dispatch:
+jobs:
+  offline:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Assemble new-season index only from provider JSON; NO Native
+        run: python -m unittest -v tests.test_v158_source_first_season_catalog_offline
