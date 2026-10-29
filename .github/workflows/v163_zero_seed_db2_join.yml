@@ -1,0 +1,22 @@
+name: v163 Zero-Seed DB2 Join (offline, no Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v163_zero_seed_db2_join.py
+      - tests/test_v163_db2_zero_seed.py
+      - .github/workflows/v163_zero_seed_db2_join.yml
+  workflow_dispatch:
+jobs:
+  focused-offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Bounded synthetic source-first join, no API, no Native
+        run: python -m unittest -v tests.test_v163_db2_zero_seed
