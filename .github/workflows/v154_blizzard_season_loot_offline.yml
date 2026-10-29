@@ -1,0 +1,23 @@
+name: v154 Blizzard Season Loot ID Boundary (OFFLINE ONLY)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v154_blizzard_season_loot_index.py
+      - tests/test_v154_blizzard_season_loot_index_offline.py
+      - integration_probes/catalog/v047_wequip_20260920_395_metadata_only.json
+      - integration_probes/catalog/v046_mids2_1215_partial_10.json
+      - .github/workflows/v154_blizzard_season_loot_offline.yml
+  workflow_dispatch:
+jobs:
+  offline:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Bounded reference and saved journal reconciliation NO network or SimC
+        run: |
+          python -m unittest -v tests.test_v154_blizzard_season_loot_index_offline
+          python runner/v154_blizzard_season_loot_index.py
