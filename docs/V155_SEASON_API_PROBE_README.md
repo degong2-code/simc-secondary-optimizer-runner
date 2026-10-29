@@ -70,3 +70,11 @@ GitHub Secrets+허용 변수 등록 후 격리 Actions에서 한 번 실행한�
 필요한 경우 두 번째 단계에서 딱 1개 실제
 `journal-encounter/{journalID}` 조회로 item ID field를 확인한다.
 작동 확인 전 레이드×던전×구렁 전체 호출·SimC Native 반복 실행 금지.
+
+## 2026-10-29 사용자 등록 완료에 따른 첫 opt-in 실조회
+
+사용자가 GitHub Actions Secrets 및 허용 Variable 등록 완료를 보고하여,
+본 **문서 변경 push 1회**로 기존 workflow의 정확한 opt-in 조건을 평가한다.
+실제 Secrets 값/조회 성공 여부는 Actions 결과로만 판정한다.
+실패하거나 live job이 skipped되면 재시도 자동화 없이 멈추어 확인한다.
+기존 제품 최적화 엔진과 Native 사용은 변경하지 않는다.
