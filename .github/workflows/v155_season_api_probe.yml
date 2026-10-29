@@ -1,0 +1,44 @@
+name: v155 Season API Probe (opt-in live, NO Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v155_season_api_probe.py
+      - tests/test_v155_season_api_probe_offline.py
+      - .github/workflows/v155_season_api_probe.yml
+      - docs/V155_SEASON_API_PROBE_README.md
+  workflow_dispatch:
+jobs:
+  offline:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: API shape contracts without any HTTP
+        run: python -m unittest -v tests.test_v155_season_api_probe_offline
+  live-opt-in:
+    if: ${{ vars.SIMC_ALLOW_SEASON_API_PROBE == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Exactly bounded Blizzard and optional WCL provider discovery
+        env:
+          BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+          BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+          WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+          WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+        run: python runner/v155_season_api_probe.py --out v155-live-season-api-evidence.json
+      - name: Preserve sanitized noncredential response evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: v155-live-season-api-evidence
+          path: v155-live-season-api-evidence.json
+          retention-days: 14
