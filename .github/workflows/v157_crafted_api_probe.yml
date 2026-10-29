@@ -1,4 +1,4 @@
-name: v157 Crafted Item Discovery (opt-in 6 GET max, NO Native)
+name: v157 Source-First Profession Recipe Discovery (NO Native)
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
@@ -15,7 +15,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - name: Contracts and existing 51 IDs without HTTP
+      - name: API-only recipe/outputs and zero-prior-data regression
         run: python -m unittest -v tests.test_v157_blizzard_craft_probe_offline
   live-opt-in:
     if: ${{ vars.SIMC_ALLOW_SEASON_API_PROBE == 'true' && (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[api-probe]')) }}
@@ -28,11 +28,11 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - name: Three official item-ID identity checks, separate from recipe outputs
+      - name: API-derived crafting recipe references and bounded output discovery
         env:
           BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
           BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
-        run: python runner/v157_blizzard_craft_probe.py --verify-existing-item-ids --out v157-crafting-real-api.json
+        run: python runner/v157_blizzard_craft_probe.py --out v157-crafting-real-api.json
       - uses: actions/upload-artifact@v4
         if: success()
         with:
