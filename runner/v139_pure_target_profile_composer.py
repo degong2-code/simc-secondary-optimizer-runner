@@ -55,6 +55,13 @@ def validate_season(doc):
             "flask","food","potion","augmentation","omnium_talents",
             "gem_budget_J","flask_budget_F","flask_fixed_stat"},
          "SEASON_DATA_SCHEMA")
+    # On future season snapshots, explicitly ask the *same SimC binary*
+    # to resolve item ID/ilevel/options from its bundled local item DB.
+    # Optional to keep established 334 profile bytes and Native caches stable.
+    # No fallback to external item sources or homemade stat/effect model.
+    need("simc_item_db_source" not in doc or
+         doc["simc_item_db_source"]=="local",
+         "ONLY_SIMC_LOCAL_ITEM_DATA_SOURCE_SUPPORTED")
     allowed={"tier_ids","four_tier_slots","ordinary","weapons"}
     for key,info in doc["specializations"].items():
         need(contracts.lookup(*key.split("/")) is not None,
@@ -164,6 +171,9 @@ def compose(character,trinkets,*,target_ilevel=334,
     # Explicit default_actions lets SimulationCraft select its built-in APL;
     # no season profile, copied class action list or proprietary rotation.
     settings=[
+      # Absent on legacy v144: preserve byte-identical input/cache identity.
+      *(["item_db_source=local"] if
+        season.get("simc_item_db_source")=="local" else []),
       contract["simc_class"]+"=target_"+contract["simc_spec"],
       "level="+str(season["character_level"]),
       "spec="+contract["simc_spec"],
