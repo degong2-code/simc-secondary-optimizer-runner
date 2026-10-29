@@ -146,14 +146,19 @@ class LocalJobs:
             # user-selected target334 gets its own sealed product identity.
             # Legacy sessions and non-334 plans keep the original route.
             ch=user["character"]
+            key=(ch["class"],ch["spec"])
             independent=(user["target"]["ilevel"]==334 and
-                         (ch["class"],ch["spec"]) in bootstrap.ARCHETYPES)
+                         key in bootstrap.ARCHETYPES)
+            independent_level=(user["target"]["ilevel"]!=334 and
+                               key in sessions.SUPPORTED)
             folder = sessions.store_session(user,self.root,binary,params.revision,
                                             params.static_cache,
-                                            independent_334=independent)
+                                            independent_334=independent,
+                                            independent_target_level=independent_level)
             plan = bootstrap.build(user,folder / "generated",binary,
                                    params.revision,params.static_cache,
-                                   independent_334=independent)["plan"]
+                                   independent_334=independent,
+                                   independent_target_level=independent_level)["plan"]
             return {"session_id":folder.name,"status":"READY_ZERO_NATIVE",
                     "native_calls":0,"plan":{
                       "class":plan["class"],"spec":plan["spec"],
@@ -161,7 +166,9 @@ class LocalJobs:
                       "fixed_O":plan["fixed_O"],"final_T":plan["final_T"],
                       "native_limit":plan["native_limit"],
                       "native_called":False,
-                      "independent_target334_profile":independent}}
+                      "independent_target334_profile":independent,
+                      "independent_non334_profile":independent_level,
+                      "non334_physical_native_not_yet_observed":independent_level}}
         except Exception as exc:
             raise blocked(exc) from None
 
@@ -184,7 +191,8 @@ class LocalJobs:
             variant = recorded.get("ordinary_variant")
             key, check = sessions.session_key(
                 user,binary,rev,static,ordinary_variant=variant,
-                independent_334=recorded.get("independent_334",False))
+                independent_334=recorded.get("independent_334",False),
+                independent_target_level=recorded.get("independent_target_level",False))
             if key != folder.name or check != recorded:
                 raise sessions.SessionBlocked("SESSION_BINARY_REVISION_OR_CACHE_DRIFT")
             return binary,rev,static
