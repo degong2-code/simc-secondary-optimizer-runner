@@ -152,7 +152,8 @@ def initial_seeds(B,lower,upper):
     return [dict(zip(scenario.STATS,v)) for v in (first,second)]
 
 def build(user,folder,binary,revision,static_cache_path=None,
-          imported_profile_text=None,*,ordinary_variant=None,pure_stage=False):
+          imported_profile_text=None,*,ordinary_variant=None,pure_stage=False,
+          independent_334=False):
     """Return an already validated internal manifest and v096 plan; no Native."""
     need(type(user) is dict and set(user) in (
         FIELDS,FIELDS|{IMPORT_FIELD},FIELDS|{CONSUME_FIELD},
@@ -170,7 +171,15 @@ def build(user,folder,binary,revision,static_cache_path=None,
     need(type(ch) is dict and set(ch)=={"class","spec","race","talents"},
          "USER_CHARACTER_FIELDS")
     key=(ch["class"],ch["spec"])
-    source_free=(key in PURE_PRODUCT_SPECS and
+    # Explicit v106 session identity selects the independently compiled 24-DPS
+    # production route at ilvl 334 only. Historic v147/v145 probes remain
+    # unpromoted and their unchanged pure_stage semantics are preserved.
+    need(type(independent_334) is bool,"INDEPENDENT_334_MODE_BOOL_REQUIRED")
+    need(not independent_334 or
+         (key in ARCHETYPES and ilvl==334 and ordinary_variant is None and
+          not pure_stage),
+         "INDEPENDENT_334_USER_SCOPE_NOT_SUPPORTED")
+    source_free=((key in PURE_PRODUCT_SPECS or independent_334) and
                  "/".join(key) in pure.catalog()["specializations"])
     need(key in ARCHETYPES or source_free,
          "REPRESENTATIVE_ARCHETYPE_NOT_READY:"+"/".join(key))
@@ -340,6 +349,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
                 "user_optimizer_ready":False}
                if pure_stage else {}),
             "user_does_not_supply_full_gear_or_simc_profile":True,
+            "source_independent_334_user_session":bool(independent_334),
             "template_archetype":"/".join(key),"target_ilevel":ilvl,
             "generated_manifest":str(folder/"manifest.json"),
             "output_dir":str(folder/"simc_results"),"plan":plan,
@@ -364,7 +374,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
 
 def run(user_path,folder,binary,revision,static_cache_path=None,
         execute=False,cache_only=False,*,ordinary_variant=None,pure_stage=False,
-        physical_acceptance_root=None,open_folder=True):
+        physical_acceptance_root=None,open_folder=True,independent_334=False):
     # An exact v140 (historical 2 specs) or v145 (single preview profile)
     # physical Native receipt authorizes ONLY its identical internal profile.
     # v096 verifies original JSON2 bytes before any adaptive Native call.
@@ -382,7 +392,8 @@ def run(user_path,folder,binary,revision,static_cache_path=None,
         imported=resolved.read_text(encoding="utf8")
     prepared=build(user,folder,binary,revision,static_cache_path,
                    imported_profile_text=imported,
-                   ordinary_variant=ordinary_variant,pure_stage=pure_stage)
+                   ordinary_variant=ordinary_variant,pure_stage=pure_stage,
+                   independent_334=independent_334)
     if not execute:return prepared
     if pure_stage:
         actual=entry.run_manifest(prepared["generated_manifest"],
