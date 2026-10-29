@@ -171,6 +171,10 @@ def build(user,folder,binary,revision,static_cache_path=None,
     need(type(ch) is dict and set(ch)=={"class","spec","race","talents"},
          "USER_CHARACTER_FIELDS")
     key=(ch["class"],ch["spec"])
+    tgt=user["target"]
+    need(type(tgt) is dict and set(tgt)=={"ilevel","final_T"},
+         "USER_TARGET_FIELDS")
+    ilvl=tgt["ilevel"];final_T=tgt["final_T"]
     # Explicit v106 session identity selects the independently compiled 24-DPS
     # production route at ilvl 334 only. Historic v147/v145 probes remain
     # unpromoted and their unchanged pure_stage semantics are preserved.
@@ -185,10 +189,6 @@ def build(user,folder,binary,revision,static_cache_path=None,
          "REPRESENTATIVE_ARCHETYPE_NOT_READY:"+"/".join(key))
     for name in ("race","talents"):
         scenario.text_token(ch[name],"USER_"+name.upper())
-    tgt=user["target"]
-    need(type(tgt) is dict and set(tgt)=={"ilevel","final_T"},
-         "USER_TARGET_FIELDS")
-    ilvl=tgt["ilevel"];final_T=tgt["final_T"]
     need(type(ilvl) is int and 266<=ilvl<=344,
          "TARGET_ILVL_OUTSIDE_VERIFIED_REFERENCE")
     need(final_T is None or
