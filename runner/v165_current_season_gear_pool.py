@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""v165: small CURRENT-season candidate catalog, from v163/v162 + same-build DB2.
+"""v165: small CURRENT-season candidate catalog, from v163/v162 + same-build Retail DB2 ItemXItemEffect.
 
 No old item seed, SimC process, DPS query, or effect emulation.
 Effect presence comes from DB2 ItemEffect.ParentItemID; absence only proves
@@ -59,12 +59,18 @@ def read_csv(path, columns):
             yield row
 def effects(path,ids):
     if path is None:return None,None
+    # RETAIL: ItemXItemEffect(ItemID, ItemEffectID) is the relation.
+    # ItemEffect.ParentItemID is Classic-only and cannot classify Retail gear.
     observed=set()
-    for row in read_csv(path,("ParentItemID","SpellID")):
-        iid=integer(row["ParentItemID"])
-        if iid in ids and integer(row["SpellID"],0)>0:observed.add(iid)
-    sha=hashlib.sha256(Path(path).read_bytes()).hexdigest()
-    return observed,sha
+    for row in read_csv(path,("ItemID","ItemEffectID")):
+        iid=integer(row["ItemID"])
+        if iid in ids and integer(row["ItemEffectID"],0)>0:
+            observed.add(iid)
+    digest=hashlib.sha256()
+    with Path(path).open("rb") as source:
+        for chunk in iter(lambda:source.read(1024*1024),b""):
+            digest.update(chunk)
+    return observed,digest.hexdigest()
 def compile_pool(db2,delve,sparse_path,effect_path=None):
     need(db2.get("schema")=="v163_zero_seed_db2_join_v1"
          and db2.get("source_provider")=="WAGO_TOOLS_PINNED_DB2_WCL_LIVE",
@@ -155,8 +161,8 @@ def compile_pool(db2,delve,sparse_path,effect_path=None):
        "items":output,"item_count":len(output),
        "counts_by_category":dict(sorted(count.items())),
        "counts_by_season_status":dict(sorted(selection.items())),
-       "item_effect_csv_sha256":fx_sha,
-       "effect_classification_meaning":"DIRECT_DB2_ITEM_EFFECT_ONLY_NOT_SIMC_PROC_CERTIFICATION",
+       "item_x_item_effect_csv_sha256":fx_sha,
+       "effect_classification_meaning":"RETAIL_ITEMXITEMEFFECT_RELATION_ONLY_NOT_SIMC_PROC_CERTIFICATION",
        "usable_four_piece_roster_certified":False,
        "fully_implemented_special_item_list_certified":False,
        "full_season_completeness_confirmed":False,
