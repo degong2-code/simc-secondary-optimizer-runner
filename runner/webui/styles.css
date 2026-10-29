@@ -112,3 +112,10 @@ summary small{font-size:10px;color:var(--muted);font-weight:450}
 .batch-table th,.batch-table td{padding:9px 7px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
 .batch-table th{font-size:10px;color:var(--muted);font-weight:750}
 .batch-table td:first-child{font-weight:700}
+
+/* Existing local sessions: compact selection, no new run semantics. */
+.recent-session-controls{margin:8px 12px 9px}
+.recent-session-controls select{font-size:11px}
+#recent-open-btn,#recent-refresh-btn{min-width:0;flex:1}
+#recent-session-note{margin:10px 12px}
+@media(max-width:540px){.restore-controls:has(#recent-open-btn){flex-direction:column}}
