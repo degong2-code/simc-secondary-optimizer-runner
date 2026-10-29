@@ -214,6 +214,25 @@ def compose(character,trinkets,*,target_ilevel=334,
              "chmv_budget_ready":False,"user_optimizer_ready":False}
     return profile,receipt,rows,set(info["four_tier_slots"])
 
+
+def current_season_ordinary_candidates(character, *, season_product_db=None):
+    """Read-only v167 family/slot preview, NOT a substitute for the v144
+    four-piece/weapons profile or any supported v098 execution mode.
+
+    The product can inspect candidate choices without importing a historical
+    gear seed, changing user controls, generating gear_*, or calling SimC.
+    """
+    import v167_product_season_gear_adapter as current_gear
+    need(type(character) is dict and type(character.get("class")) is str
+         and type(character.get("spec")) is str,
+         "REPRESENTATIVE_CHARACTER_FIELDS")
+    contract=contracts.lookup(character["class"],character["spec"])
+    need(contract is not None,"REPRESENTATIVE_SPEC_CONTRACT_MISSING")
+    data=(current_gear.read() if season_product_db is None
+          else current_gear.validate(season_product_db))
+    return current_gear.ordinary_candidates(data,contract["family"])
+
+
 def v098_inputs(character,trinkets,*,target_ilevel=334,combat=None,
                 level_preview=False):
     """Translate season-built profile to the established v061/v098 tuple.
