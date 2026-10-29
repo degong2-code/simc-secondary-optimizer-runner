@@ -40,12 +40,9 @@ class JournalLootSmokeOffline(unittest.TestCase):
         data=smoke.run_probe("client","secret",transport=transport)
         self.assertEqual(data["blizzard_game_data_requests"],3)
         self.assertEqual(data["loot"]["observed_unique_ids"],3)
-        self.assertEqual(data["loot"]["existing_reference_matches"],
-                         [271874,281235])
-        self.assertEqual(data["loot"]["existing_effect_hint_matches"],
-                         [271874])
-        self.assertEqual(data["loot"]["existing_delta_special_armor_matches"],
-                         [281235])
+        self.assertEqual(data["loot"]["observed_item_ids"],
+                         [271874,281235,987654])
+        self.assertNotIn("existing_reference_matches",data["loot"])
         self.assertFalse(data["season_complete"])
         self.assertNotIn("DUMMY_SECRET_NOT_OUTPUT",json.dumps(data))
         self.assertEqual(len(requests),4)
@@ -74,13 +71,10 @@ class JournalLootSmokeOffline(unittest.TestCase):
         self.assertEqual(len(urls),3)
 
     def test_no_loot_field_is_unknown_not_zero(self):
-        ref=smoke.existing.existing_reference(
-             smoke.existing.read_json(smoke.existing.MASTER),
-             smoke.existing.read_json(smoke.existing.DELTA))
-        data=smoke.summarize_loot({"id":777,"spells":[{"id":123}]},777,ref)
+        data=smoke.summarize_loot({"id":777,"spells":[{"id":123}]},777)
         self.assertEqual(data["status"],"LOOT_FIELD_MISSING_UNKNOWN")
         self.assertIsNone(data["observed_item_ids"])
-        self.assertIsNone(data["existing_reference_matches"])
+        self.assertIsNone(data["observed_unique_ids"])
 
 if __name__=="__main__":
     unittest.main()

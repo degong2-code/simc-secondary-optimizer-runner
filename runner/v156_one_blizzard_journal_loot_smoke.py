@@ -29,26 +29,17 @@ def unique_named(rows, name, field):
     api.need(len(matches)==1,"JOURNAL_"+field+"_NOT_UNIQUE_OR_MISSING")
     return matches[0]
 
-def summarize_loot(doc,encounter_id,reference):
+def summarize_loot(doc,encounter_id):
     api.need(type(doc) is dict and doc.get("id")==encounter_id,
              "ENCOUNTER_DOCUMENT_ID_MISMATCH")
-    # Reuse exactly the existing v154 parser, don't invent item IDs from
-    # spell, ability or zone references.
+    # Entirely source-derived IDs: never search previous-season reference DBs.
     loot=existing.encounter_loot(doc,encounter_id)
-    present=sorted(loot) if loot is not None else None
-    if present is None:
+    if loot is None:
         return {"status":"LOOT_FIELD_MISSING_UNKNOWN",
-                "observed_item_ids":None,
-                "existing_reference_matches":None}
-    source=reference["known"]
+                "observed_item_ids":None,"observed_unique_ids":None}
     return {"status":"EXPLICIT_JOURNAL_LOOT_ITEMS",
-            "observed_item_ids":present,
-            "observed_unique_ids":len(present),
-            "existing_reference_matches":sorted(i for i in present if i in source),
-            "existing_effect_hint_matches":sorted(i for i in present
-                      if i in source and source[i]["known_effect_candidate"]),
-            "existing_delta_special_armor_matches":sorted(i for i in present
-                      if i in source and source[i]["delta_special_armor"]),
+            "observed_item_ids":loot,
+            "observed_unique_ids":len(loot),
             "no_static_L_or_simc_effect_certification":True}
 
 def run_probe(client_id, client_secret, *, transport=api.urlopen):
@@ -93,9 +84,7 @@ def run_probe(client_id, client_secret, *, transport=api.urlopen):
             "static_L_generated":False}
     boss_id=exact[0]["id"]
     boss=get("journal-encounter/"+str(boss_id))
-    ref=existing.existing_reference(existing.read_json(existing.MASTER),
-                                    existing.read_json(existing.DELTA))
-    loot=summarize_loot(boss,boss_id,ref)
+    loot=summarize_loot(boss,boss_id)
     return {"schema":SCHEMA,"status":"BOUNDED_JOURNAL_SMOKE_COMPLETE",
             "source":"BLIZZARD_GAME_DATA_AUTHENTICATED_KR",
             "selection_basis":"WCL_V155_ACTIVE_MIDNIGHT_RAID_NAME_AND_BOSS_NAME",
