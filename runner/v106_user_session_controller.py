@@ -229,7 +229,7 @@ def standard_controls(key=("paladin","retribution")):
                 "diamond_id":0,"omnium_talents":"source_default"}}
 
 def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
-                independent_334=False):
+                independent_334=False,independent_target_level=False):
     binary=pathlib.Path(binary).expanduser().resolve()
     need(binary.is_file(),"SIMC_BINARY_NOT_FOUND")
     need(type(revision) is str and re.fullmatch(r"[0-9a-fA-F]{7,40}",revision),
@@ -242,6 +242,8 @@ def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
     need(not user.get("special_items") or cache_path is not None,
          "SPECIAL_EQUIPMENT_REQUIRES_EXACT_STATIC_CACHE")
     need(type(independent_334) is bool,"INDEPENDENT_334_MODE_BOOL_REQUIRED")
+    need(type(independent_target_level) is bool,"INDEPENDENT_TARGET_LEVEL_MODE_BOOL_REQUIRED")
+    need(not (independent_334 and independent_target_level),"ONLY_ONE_INDEPENDENT_PROFILE_MODE")
     if independent_334:
         ch=user.get("character") if type(user) is dict else None
         target=user.get("target") if type(user) is dict else None
@@ -249,6 +251,15 @@ def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
              (ch.get("class"),ch.get("spec")) in bootstrap.ARCHETYPES and
              target.get("ilevel")==334 and ordinary_variant is None,
              "INDEPENDENT_334_USER_SCOPE_NOT_SUPPORTED")
+    if independent_target_level:
+        ch=user.get("character") if type(user) is dict else None
+        target=user.get("target") if type(user) is dict else None
+        need(type(ch) is dict and type(target) is dict and
+             (ch.get("class"),ch.get("spec")) in SUPPORTED and
+             type(target.get("ilevel")) is int and
+             266<=target["ilevel"]<=344 and target["ilevel"]!=334 and
+             ordinary_variant is None,
+             "INDEPENDENT_NON334_USER_SCOPE_NOT_SUPPORTED")
     if ordinary_variant is not None:
         # Developer-only representative experiment. A profile identity change
         # MUST produce a different durable session, never reuse old DPS JSON2.
@@ -274,20 +285,24 @@ def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
         identity["ordinary_variant"]=ordinary_variant
     if independent_334:
         identity["independent_334"]=True
+    if independent_target_level:
+        identity["independent_target_level"]=True
     return sha(canonical(identity).encode("utf8"))[:20],identity
 
 def session_path(user,root,binary,revision,static_cache=None,*,
-                 ordinary_variant=None,independent_334=False):
+                 ordinary_variant=None,independent_334=False,independent_target_level=False):
     key,identity=session_key(user,binary,revision,static_cache,
                              ordinary_variant=ordinary_variant,
-                             independent_334=independent_334)
+                             independent_334=independent_334,
+                             independent_target_level=independent_target_level)
     return pathlib.Path(root).expanduser().resolve()/key,identity
 
 def store_session(user,root,binary,revision,static_cache=None,*,
-                  ordinary_variant=None,independent_334=False):
+                  ordinary_variant=None,independent_334=False,independent_target_level=False):
     folder,identity=session_path(user,root,binary,revision,static_cache,
                                  ordinary_variant=ordinary_variant,
-                                 independent_334=independent_334)
+                                 independent_334=independent_334,
+                                 independent_target_level=independent_target_level)
     folder.mkdir(parents=True,exist_ok=True)
     target=folder/"user.json"
     raw=canonical(user)+"\n"
@@ -480,16 +495,22 @@ def _worker_locked(folder,binary,revision,static_cache,cache_only):
         identity=json.loads((folder/"V106_SESSION_IDENTITY.json").read_text(encoding="utf8"))
         variant=identity.get("ordinary_variant")
         independent=identity.get("independent_334",False)
+        independent_level=identity.get("independent_target_level",False)
         actual_key,now=session_key(user,binary,revision,static_cache,
                                    ordinary_variant=variant,
-                                   independent_334=independent)
+                                   independent_334=independent,
+                                   independent_target_level=independent_level)
         need(actual_key==folder.name and identity==now,
              "SESSION_BINARY_REVISION_OR_CACHE_DRIFT")
         cached_before=cache_only_preflight(folder) if cache_only else None
         write_state("RUNNING_CACHE_ONLY" if cache_only else "RUNNING")
         if variant is None:
             # Preserve historical worker call shape and sealed default input.
-            if independent:
+            if independent_level:
+                result=bootstrap.run(folder/"user.json",folder/"generated",
+                     binary,revision,static_cache,execute=True,
+                     cache_only=cache_only,independent_target_level=True)
+            elif independent:
                 result=bootstrap.run(folder/"user.json",folder/"generated",
                      binary,revision,static_cache,execute=True,
                      cache_only=cache_only,independent_334=True)
