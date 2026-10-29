@@ -115,7 +115,7 @@ class SeasonCatalogUpdatePlanOffline(unittest.TestCase):
         with mock.patch("subprocess.run") as external_simc:
             profile,meta,_,_=composer.compose(actor,trinkets,season=selected)
             external_simc.assert_not_called()
-        self.assertTrue(profile.startswith("item_db_source=local\\n"))
+        self.assertTrue(profile.startswith("item_db_source=local\n"))
         self.assertEqual(profile.count("item_db_source=local"),1)
         self.assertIn("default_actions=1",profile)
         self.assertIn("ilevel=334",profile)
