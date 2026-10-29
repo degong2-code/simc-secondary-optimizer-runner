@@ -229,7 +229,8 @@ def standard_controls(key=("paladin","retribution")):
                 "diamond_id":0,"omnium_talents":"source_default"}}
 
 def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
-                independent_334=False,independent_target_level=False):
+                independent_334=False,independent_target_level=False,
+                current_season_product=False):
     binary=pathlib.Path(binary).expanduser().resolve()
     need(binary.is_file(),"SIMC_BINARY_NOT_FOUND")
     need(type(revision) is str and re.fullmatch(r"[0-9a-fA-F]{7,40}",revision),
@@ -241,6 +242,16 @@ def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
     # cache. Don't invite an expensive Native job then invent/zero missing L.
     need(not user.get("special_items") or cache_path is not None,
          "SPECIAL_EQUIPMENT_REQUIRES_EXACT_STATIC_CACHE")
+    need(type(current_season_product) is bool,
+         "CURRENT_SEASON_PRODUCT_MODE_BOOL_REQUIRED")
+    need(not current_season_product or (
+         not independent_334 and not independent_target_level and
+         ordinary_variant is None and
+         type(user) is dict and type(user.get("character")) is dict and
+         type(user.get("target")) is dict and
+         (user["character"].get("class"),user["character"].get("spec")) in SUPPORTED and
+         user["target"].get("ilevel")==334),
+         "CURRENT_SEASON_PRODUCT_SCOPE_334_ONLY")
     need(type(independent_334) is bool,"INDEPENDENT_334_MODE_BOOL_REQUIRED")
     need(type(independent_target_level) is bool,"INDEPENDENT_TARGET_LEVEL_MODE_BOOL_REQUIRED")
     need(not (independent_334 and independent_target_level),"ONLY_ONE_INDEPENDENT_PROFILE_MODE")
@@ -287,22 +298,36 @@ def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
         identity["independent_334"]=True
     if independent_target_level:
         identity["independent_target_level"]=True
+    if current_season_product:
+        # These additions affect opt-in sessions only. Old session identity
+        # bytes are IDENTICAL to existing v106 across all prior modes.
+        stage=bootstrap.source_first
+        identity["current_season_product"]="v177_source_first_26_dps_v1"
+        identity["current_season_gear_sha256"]=sha(stage.gear.DEFAULT.read_bytes())
+        identity["current_season_tier_sha256"]=sha(stage.TIER_PATH.read_bytes())
+        identity["current_season_budget_sha256"]=sha(stage.BUDGET_PATH.read_bytes())
+        identity["source_first_base_catalog_sha256"]=sha(
+            bootstrap.pure.DEFAULT_CATALOG.read_bytes())
     return sha(canonical(identity).encode("utf8"))[:20],identity
 
 def session_path(user,root,binary,revision,static_cache=None,*,
-                 ordinary_variant=None,independent_334=False,independent_target_level=False):
+                 ordinary_variant=None,independent_334=False,independent_target_level=False,
+                 current_season_product=False):
     key,identity=session_key(user,binary,revision,static_cache,
                              ordinary_variant=ordinary_variant,
                              independent_334=independent_334,
-                             independent_target_level=independent_target_level)
+                             independent_target_level=independent_target_level,
+                             current_season_product=current_season_product)
     return pathlib.Path(root).expanduser().resolve()/key,identity
 
 def store_session(user,root,binary,revision,static_cache=None,*,
-                  ordinary_variant=None,independent_334=False,independent_target_level=False):
+                  ordinary_variant=None,independent_334=False,independent_target_level=False,
+                  current_season_product=False):
     folder,identity=session_path(user,root,binary,revision,static_cache,
                                  ordinary_variant=ordinary_variant,
                                  independent_334=independent_334,
-                                 independent_target_level=independent_target_level)
+                                 independent_target_level=independent_target_level,
+                                 current_season_product=current_season_product)
     folder.mkdir(parents=True,exist_ok=True)
     target=folder/"user.json"
     raw=canonical(user)+"\n"
@@ -496,17 +521,23 @@ def _worker_locked(folder,binary,revision,static_cache,cache_only):
         variant=identity.get("ordinary_variant")
         independent=identity.get("independent_334",False)
         independent_level=identity.get("independent_target_level",False)
+        current_season=bool(identity.get("current_season_product",False))
         actual_key,now=session_key(user,binary,revision,static_cache,
                                    ordinary_variant=variant,
                                    independent_334=independent,
-                                   independent_target_level=independent_level)
+                                   independent_target_level=independent_level,
+                                   current_season_product=current_season)
         need(actual_key==folder.name and identity==now,
              "SESSION_BINARY_REVISION_OR_CACHE_DRIFT")
         cached_before=cache_only_preflight(folder) if cache_only else None
         write_state("RUNNING_CACHE_ONLY" if cache_only else "RUNNING")
         if variant is None:
             # Preserve historical worker call shape and sealed default input.
-            if independent_level:
+            if current_season:
+                result=bootstrap.run(folder/"user.json",folder/"generated",
+                     binary,revision,static_cache,execute=True,
+                     cache_only=cache_only,current_season_product=True)
+            elif independent_level:
                 result=bootstrap.run(folder/"user.json",folder/"generated",
                      binary,revision,static_cache,execute=True,
                      cache_only=cache_only,independent_target_level=True)
