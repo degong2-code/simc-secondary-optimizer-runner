@@ -228,7 +228,8 @@ def standard_controls(key=("paladin","retribution")):
                 "potion":"source_default","augmentation":"source_default",
                 "diamond_id":0,"omnium_talents":"source_default"}}
 
-def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None):
+def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
+                independent_334=False):
     binary=pathlib.Path(binary).expanduser().resolve()
     need(binary.is_file(),"SIMC_BINARY_NOT_FOUND")
     need(type(revision) is str and re.fullmatch(r"[0-9a-fA-F]{7,40}",revision),
@@ -240,6 +241,14 @@ def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None):
     # cache. Don't invite an expensive Native job then invent/zero missing L.
     need(not user.get("special_items") or cache_path is not None,
          "SPECIAL_EQUIPMENT_REQUIRES_EXACT_STATIC_CACHE")
+    need(type(independent_334) is bool,"INDEPENDENT_334_MODE_BOOL_REQUIRED")
+    if independent_334:
+        ch=user.get("character") if type(user) is dict else None
+        target=user.get("target") if type(user) is dict else None
+        need(type(ch) is dict and type(target) is dict and
+             (ch.get("class"),ch.get("spec")) in bootstrap.ARCHETYPES and
+             target.get("ilevel")==334 and ordinary_variant is None,
+             "INDEPENDENT_334_USER_SCOPE_NOT_SUPPORTED")
     if ordinary_variant is not None:
         # Developer-only representative experiment. A profile identity change
         # MUST produce a different durable session, never reuse old DPS JSON2.
@@ -263,18 +272,22 @@ def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None):
               "static_cache_sha256":sha(cache_path.read_bytes()) if cache_path else None}
     if ordinary_variant is not None:
         identity["ordinary_variant"]=ordinary_variant
+    if independent_334:
+        identity["independent_334"]=True
     return sha(canonical(identity).encode("utf8"))[:20],identity
 
 def session_path(user,root,binary,revision,static_cache=None,*,
-                 ordinary_variant=None):
+                 ordinary_variant=None,independent_334=False):
     key,identity=session_key(user,binary,revision,static_cache,
-                             ordinary_variant=ordinary_variant)
+                             ordinary_variant=ordinary_variant,
+                             independent_334=independent_334)
     return pathlib.Path(root).expanduser().resolve()/key,identity
 
 def store_session(user,root,binary,revision,static_cache=None,*,
-                  ordinary_variant=None):
+                  ordinary_variant=None,independent_334=False):
     folder,identity=session_path(user,root,binary,revision,static_cache,
-                                 ordinary_variant=ordinary_variant)
+                                 ordinary_variant=ordinary_variant,
+                                 independent_334=independent_334)
     folder.mkdir(parents=True,exist_ok=True)
     target=folder/"user.json"
     raw=canonical(user)+"\n"
@@ -466,16 +479,23 @@ def _worker_locked(folder,binary,revision,static_cache,cache_only):
         user=json.loads((folder/"user.json").read_text(encoding="utf8"))
         identity=json.loads((folder/"V106_SESSION_IDENTITY.json").read_text(encoding="utf8"))
         variant=identity.get("ordinary_variant")
+        independent=identity.get("independent_334",False)
         actual_key,now=session_key(user,binary,revision,static_cache,
-                                   ordinary_variant=variant)
+                                   ordinary_variant=variant,
+                                   independent_334=independent)
         need(actual_key==folder.name and identity==now,
              "SESSION_BINARY_REVISION_OR_CACHE_DRIFT")
         cached_before=cache_only_preflight(folder) if cache_only else None
         write_state("RUNNING_CACHE_ONLY" if cache_only else "RUNNING")
         if variant is None:
             # Preserve historical worker call shape and sealed default input.
-            result=bootstrap.run(folder/"user.json",folder/"generated",
-                 binary,revision,static_cache,execute=True,cache_only=cache_only)
+            if independent:
+                result=bootstrap.run(folder/"user.json",folder/"generated",
+                     binary,revision,static_cache,execute=True,
+                     cache_only=cache_only,independent_334=True)
+            else:
+                result=bootstrap.run(folder/"user.json",folder/"generated",
+                     binary,revision,static_cache,execute=True,cache_only=cache_only)
         else:
             result=bootstrap.run(folder/"user.json",folder/"generated",
                  binary,revision,static_cache,execute=True,cache_only=cache_only,
