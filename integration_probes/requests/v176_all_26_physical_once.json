@@ -1,0 +1,17 @@
+{
+  "schema": "v176_all_26_dps_current_season_physical_once_v1",
+  "spec_count": 26,
+  "target_ilevel": 334,
+  "iterations_per_spec": 35,
+  "max_new_native": 25,
+  "v174_paladin_receipt_must_reuse": 40967207274,
+  "simc_revision": "7bc10711b5",
+  "simc_binary_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+  "all_items_from_current_season_db": true,
+  "tier_four_piece_for_every_spec": true,
+  "one_physical_native_per_other_spec": true,
+  "no_stat_optimization": true,
+  "no_95_percent_comparison": true,
+  "no_product_promotion": true,
+  "no_main_or_project_ui_mutation": true
+}
