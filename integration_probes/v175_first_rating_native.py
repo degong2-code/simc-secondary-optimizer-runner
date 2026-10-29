@@ -101,7 +101,11 @@ def prepared_request(physical_folder,binary,out,revision):
          and request["v092_base_target"]==plan["seeds"][0]
          and all(x==0 for x in request["v092_fixed_O"].values()),
          "EXACT_FIRST_SEED_NOT_V175_SCOPE")
-    bound=numeric.input_parts((stage/"profile.simc").read_text(encoding="utf8"),
+    # v091 is responsible for the EXACT oil choice (even when disabled).
+    # The v093 candidate is derived from that configured source profile, not
+    # the pre-oil v098 profile.simc. Comparing pre-oil falsely flags the
+    # legitimate temporary_enchant=disabled assignment as input drift.
+    bound=numeric.input_parts(plan["context"]["bundle"]["oil"]["profile"],
                               allow_missing_json2_template=True)
     actual=numeric.input_parts(request["input"])
     need(actual["stable_sha256"]==bound["stable_sha256"]
