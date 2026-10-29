@@ -1,81 +1,39 @@
-# v154 — Blizzard boss-loot ID → existing MID2 item evidence (bounded pilot)
+# v154 — API만으로 시작하는 보스 드롭 아이템 ID 수집
 
-This is a **season-data discovery adapter**, not a new optimizer, a full farmable
-item database, a SimC effect evaluator, or a requirement to Native-test every
-itemlevel or specialization. Existing v046 static cache, v151 impact advisor,
-v094 optimizer and user-session identities are unchanged.
+현재 `runner/v154_blizzard_season_loot_index.py`는 과거 WEQUIP,
+v047/v057, 이전 시즌 아이템 목록 **어느 것도 읽지 않는다**.
+오직 시즌 콘텐츠 탐색에서 발견한 공식 encounter ID 목록과
+Blizzard `journal-encounter/{id}` 응답만 수집 입력이다.
 
-## What this actually proves
-- Read the repository's real v047 WEQUIP-derived 395 source records / 394
-  distinct item IDs and the separately collected v046 partial-10 patch list.
-- Reconcile *explicit* Blizzard Journal encounter item references to those IDs
-  without trusting unknown responses as an empty loot pool.
-- Preserve known effect-bearing or special-armor tags solely as **candidates**;
-  SimC decides actual effects, ilvl scaling, and DPS.
-- Count recovered candidate IDs, gaps, and unknown loot endpoints. Never
-  turn a missing ID from a selected boss query into evidence that it is not
-  season-loot.
-- No automatic discovery of the entire active season, Delves, trash drops,
-  crafting or BoEs. Do not imply an off-line mock is genuine Blizzard data.
+## 입력
 
-## Commands (standard library only)
+`--encounters`: 아래와 같은 **API에서 발견한** encounter ID,
+instance ID 및 콘텐츠 출처 형태의 JSON. 예시 숫자는 가상 ID다.
 
-To inspect **actual existing data**, no API or secrets:
-```powershell
-py -3 runner/v154_blizzard_season_loot_index.py --out existing_reference.json
-```
-The report status is `EXISTING_REFERENCE_ONLY_BLIZZARD_UNQUERIED`.
-
-To compare **saved actual Journal JSON** obtained legitimately from the
-Blizzard API, supply a local manifest with exact encounter IDs and types
-(`raid`, `mplus`, `delve`). Example:
 ```json
-{"encounters":[{"encounter_id":1234,"instance_id":5678,"kind":"raid"}]}
+{"encounters":[
+  {"encounter_id":987,"instance_id":432,"kind":"raid"}
+]}
 ```
-Put a matching `encounter_1234.json` in a chosen directory:
-```powershell
-py -3 runner/v154_blizzard_season_loot_index.py --encounters selected.json --journal-dir journal --out comparison.json
-```
-Do **not** present fabricated test examples as real Blizzard IDs.
 
-To attempt live Blizzard Game Data lookups, only with a user-provided
-environment `BLIZZARD_ACCESS_TOKEN` from the official authorized OAuth
-workflow (never check credentials into GitHub):
-```powershell
-py -3 runner/v154_blizzard_season_loot_index.py --encounters selected.json --live --region us --out comparison.json
-```
-At most 48 explicitly selected encounters, once each, 15s timeout each.
-No automatic OAuth requests; missing/expired token fails. Ensure encounter
-IDs in the manifest are genuinely in the target season before calling.
-If `items`/`loot` are absent or API payload changes, report UNKNOWN or
-fail closed. Blizzard Journal supports boss-level loot to some extent but
-does not guarantee all gear sources, option variants or Dungeon/Delve loot.
-Live verification of the response shape is a **remaining evidence gap**.
-
-## Output and cache boundary
-
-`observed_items` references IDs and existing candidate hints; it is not
-imported as a new authoritative `v046` static variant. No item or static
-L is invented. A candidate with no SimC-native static variant remains a
-missing exact L, not zero. When live provider support is confirmed,
-the existing `v046.merge_catalog` may be used for metadata-only entries
-in a separate opt-in successor, without touching DPS cache or engine.
-
-## Native and acceptance interpretation
-No SimC calls, no per-level Native gate. An optional selected provider
-response can verify acquisition ID coverage but **does not certify item
-effects, availability of modifier variants, or current-season completeness**.
-
-## Optional existing special-effect registry (read-only)
-
-When the original partial WEQUIP export is available locally, do NOT copy
-the entire export or archive into the GitHub repository. Add the path to the
-existing-file or provider comparison command:
+`--live`: GitHub Secrets/환경변수의 Blizzard Client ID+Secret을 통해
+OAuth token을 얻고, 공식 Journal을 최대 48개만 조회한다.
+`--journal-dir`: 별도로 받은 `encounter_<id>.json`을 오프라인 파싱하되
+그 입력의 진짜 API 출처를 독립 검증했다고 주장하지 않는다.
 
 ```powershell
-py -3 runner/v154_blizzard_season_loot_index.py --special-registry "SPECIAL_EQUIPMENT_EXPORT.json" --out comparison.json
+py -3 runner/v154_blizzard_season_loot_index.py --encounters season-encounters.json --journal-dir journal --out season-loot-ids.json
 ```
 
-The output field `existing_special_registry_crosscheck` counts overlapping
-ID metadata. It **does not** turn historical effect metadata into SimC Native
-effect support or accurate L, nor does it mean Blizzard recovered the IDs.
+## 출력·한계
+
+`unique_item_ids`와 각 아이템의 `source_encounter_ids/source_kinds`,
+보스별 `loot_state`, `encounters_missing_loot_field`를 제공한다.
+실제 `items`가 빈 배열인 것과 필드가 없어 `UNKNOWN`인 경우를
+구별한다. 기존 DB 일치율과 비교 결과는 **전혀 출력하지 않는다**.
+
+현재는 encounter manifest를 구성하는 콘텐츠 자동 탐색/매핑이 완전
+연결되지 않았으며, 이 문서의 예시 ID로 실제 API를 조회해서는 안 된다.
+수집된 ID를 `v158` 새 인덱스에 전달할 수 있다. 특정 보스의 실제
+조회 증거는 `v156` 역사 JSON을 보존하되 입력 우선권으로 사용하지
+않는다. 전체 시즌 완전성 보증·정적 L·SimC proc/DPS 계산 없음.
