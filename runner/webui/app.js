@@ -383,13 +383,16 @@ function renderProgress(data) {
   const worker=p.worker?.status||p.status||"NOT_STARTED";
   // A failed resumed worker may stop before v094 overwrites old progress.
   // Show its NEW reason, rather than repeating an older Native error forever.
+  const cancelled=!data.active && worker==="CANCELLED_PARTIAL";
   const status=data.active?worker:
+    cancelled?"사용자 요청으로 중단 · 완료한 후보 보존 · 같은 세션 재개 가능":
     worker==="BLOCKED_OR_PARTIAL"?
       (p.worker?.reason||p.error||worker):
       (p.error||p.worker?.reason||worker);
   $("stage-text").textContent=status+" · Native 누적 "+(p.native_attempts||0)+
                        " · 캐시 "+(p.cache_hits||0);
   $("run-label").textContent=data.active?"진행 중":
+    cancelled?"취소됨 · 재개 가능":
     worker==="BLOCKED_OR_PARTIAL"?"실행 차단":
     data.result_ready&&worker.startsWith("PASS")?"완료":
     data.cancel_requested?"취소 요청":"대기";

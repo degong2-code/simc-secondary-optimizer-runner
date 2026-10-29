@@ -169,6 +169,9 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('p.worker?.reason||p.error||worker',js)
         self.assertIn('worker==="BLOCKED_OR_PARTIAL"?',js)
         self.assertIn('const status=data.active?worker:',js)
+        self.assertIn('worker==="CANCELLED_PARTIAL"',js)
+        self.assertIn('cancelled?"취소됨 · 재개 가능"',js)
+        self.assertIn('완료한 후보 보존 · 같은 세션 재개 가능',js)
 
     def test_near_alternative_presentation_reuses_native_result_statistics(self):
         # No new SimC calculations: existing v096 user_result fields only.

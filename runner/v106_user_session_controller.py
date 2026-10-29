@@ -575,9 +575,23 @@ def _worker_locked(folder,binary,revision,static_cache,cache_only):
             except Exception:pass
         return 0
     except Exception as exc:
-        write_state("BLOCKED_OR_PARTIAL",type(exc).__name__+":"+str(exc))
-        print("V106_BLOCKED:",type(exc).__name__,str(exc),file=sys.stderr,
-              flush=True)
+        # Distinguish an intentional stop between candidate Native runs from
+        # an actual failure. Only the two existing bounded-runner cancellation
+        # exception types with the EXACT marker qualify, and only while the
+        # local cancel flag still exists. Never convert arbitrary errors to
+        # success or alter Native/cache receipts.
+        cancelled=(not cache_only and p["cancel"].is_file()
+                   and type(exc) in (bootstrap.entry.durable.DurableBlocked,
+                                     bootstrap.entry.durable.engine.PipelineBlocked)
+                   and str(exc)=="USER_CANCEL_FILE_PRESENT")
+        if cancelled:
+            write_state("CANCELLED_PARTIAL","USER_CANCEL_FILE_PRESENT")
+            print("V106_CANCELLED: USER_CANCEL_FILE_PRESENT",file=sys.stderr,
+                  flush=True)
+        else:
+            write_state("BLOCKED_OR_PARTIAL",type(exc).__name__+":"+str(exc))
+            print("V106_BLOCKED:",type(exc).__name__,str(exc),file=sys.stderr,
+                  flush=True)
         print("RESULT_DIR:",str(folder),file=sys.stderr,flush=True)
         return 3
 

@@ -244,6 +244,38 @@ class UserSessionControls(unittest.TestCase):
         self.assertEqual((p["native_attempts"],p["cache_hits"]),(3,1))
         self.assertEqual(p["progress_percent"],50.0)
 
+    def test_intentional_cancel_is_distinct_from_actual_failure(self):
+        # No Native: exercise real sealed worker and its exact exception
+        # boundary, not a mocked application status response.
+        root,binary,user=self.fixture()
+        folder=ux.store_session(user,root,binary,"7bc10711b5")
+        state=ux.paths(folder)["state"]
+        cancel=ux.request_cancel(folder)
+        variants=(ux.bootstrap.entry.durable.DurableBlocked,
+                  ux.bootstrap.entry.durable.engine.PipelineBlocked)
+        for kind in variants:
+            with self.subTest(cancel_type=kind.__name__):
+                with mock.patch.object(ux.bootstrap,"run",
+                        side_effect=kind("USER_CANCEL_FILE_PRESENT")) as run:
+                    self.assertEqual(ux.worker(folder,binary,"7bc10711b5"),3)
+                    run.assert_called_once()
+                self.assertEqual(json.loads(state.read_text())["status"],
+                                 "CANCELLED_PARTIAL")
+                self.assertFalse(ux.paths(folder)["final"].exists())
+        # Same marker in an unexpected exception type must NOT be relabeled.
+        with mock.patch.object(ux.bootstrap,"run",
+                side_effect=RuntimeError("USER_CANCEL_FILE_PRESENT")):
+            self.assertEqual(ux.worker(folder,binary,"7bc10711b5"),3)
+        self.assertEqual(json.loads(state.read_text())["status"],
+                         "BLOCKED_OR_PARTIAL")
+        # Without the cancel file, even the expected class is a real error.
+        cancel.unlink()
+        with mock.patch.object(ux.bootstrap,"run",
+                side_effect=variants[0]("USER_CANCEL_FILE_PRESENT")):
+            self.assertEqual(ux.worker(folder,binary,"7bc10711b5"),3)
+        self.assertEqual(json.loads(state.read_text())["status"],
+                         "BLOCKED_OR_PARTIAL")
+
     def test_wrong_oil_hand_rejected_and_tank_not_enabled(self):
         c=ux.standard_controls(("paladin","retribution"))
         c["oil_hands"]=["main_hand","off_hand"]
