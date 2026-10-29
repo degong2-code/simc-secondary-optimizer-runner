@@ -214,7 +214,8 @@ def compose(character,trinkets,*,target_ilevel=334,
              "chmv_budget_ready":False,"user_optimizer_ready":False}
     return profile,receipt,rows,set(info["four_tier_slots"])
 
-def v098_inputs(character,trinkets,*,target_ilevel=334,combat=None):
+def v098_inputs(character,trinkets,*,target_ilevel=334,combat=None,
+                level_preview=False):
     """Translate season-built profile to the established v061/v098 tuple.
 
     No v132/v133 fixture, no per-spec APL, no second budget algorithm.
@@ -224,6 +225,16 @@ def v098_inputs(character,trinkets,*,target_ilevel=334,combat=None):
     # One immutable season snapshot per build: avoid duplicate disk JSON
     # reads and prevent a mixed-season profile if data changes mid-run.
     season=catalog()
+    need(type(level_preview) is bool,"LEVEL_PREVIEW_BOOL_REQUIRED")
+    if level_preview:
+        # Same-season candidate roster, but SimC must accept its IDs at
+        # this selected ilvl. The 79-row reference B does not prove gear
+        # compatibility. Never mutate the approved 334 catalog or cache.
+        need(type(target_ilevel) is int and
+             266<=target_ilevel<=344 and
+             target_ilevel!=season["target_ilevel"],
+             "NONDEFAULT_LEVEL_PREVIEW_OUTSIDE_REFERENCE")
+        season={**season,"target_ilevel":target_ilevel}
     profile,receipt,rows,tier=compose(
         character,trinkets,target_ilevel=target_ilevel,combat=combat,
         season=season)
