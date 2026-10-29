@@ -164,7 +164,8 @@ def public_options(payload):
             "item_id": x["item_id"],
             "name": x["name"],
             "inventory_type": x["inventory_type"],
-            "slot_hint": x["slot_hint"]
+            "slot_hint": x["slot_hint"],
+            "season_list_basis": x.get("season_list_basis")
         })
     for rows in choices.values():
         rows.sort(key=lambda x:(x["name"].casefold(), x["item_id"]))
