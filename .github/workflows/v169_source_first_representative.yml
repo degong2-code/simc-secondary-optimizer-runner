@@ -1,0 +1,31 @@
+name: v169 26 DPS Source-First Physical Preview (NO Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v169_source_first_representative_stage.py
+      - runner/v168_current_season_tier_discovery.py
+      - data/current_season_tier_itemsets.json
+      - data/current_season_product_gear_db.json
+      - data/current_season_chmv_consumables.json
+      - runner/v139_pure_target_profile_composer.py
+      - tests/test_v169_source_first_representative_stage.py
+      - .github/workflows/v169_source_first_representative.yml
+jobs:
+  focused-stage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Offline 26-spec physical candidate stage and v139 text-only profile
+        run: |
+          python -m unittest -v tests.test_v169_source_first_representative_stage
+          python -m py_compile runner/v169_source_first_representative_stage.py
+          python runner/v169_source_first_representative_stage.py \
+            --out /tmp/current-s2-26-spec-physical-preview.json
+          test "$(stat -c%s /tmp/current-s2-26-spec-physical-preview.json)" -lt 60000
