@@ -14,6 +14,10 @@ class SourceFirstRepresentative(unittest.TestCase):
 
     def test_all_26_classes_four_real_tier_without_source_profile_copy(self):
         plan=stage.build_all(self.db,self.tier)
+        # Returning dungeons enlarge the INTERNAL plain gear pool only.
+        # They never add user-selectable ordinary equipment controls.
+        self.assertEqual(self.db["item_count"],511)
+        self.assertEqual(self.db["role_counts"]["plain_representative_candidate"],328)
         self.assertEqual(plan["dps_specs"],26)
         self.assertEqual(plan["tier_classes"],13)
         self.assertEqual(plan["simc_native_calls"],0)
