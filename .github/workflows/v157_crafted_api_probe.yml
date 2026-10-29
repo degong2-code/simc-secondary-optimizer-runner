@@ -5,6 +5,7 @@ on:
     paths:
       - runner/v157_blizzard_craft_probe.py
       - tests/test_v157_blizzard_craft_probe_offline.py
+      - docs/V157_CRAFT_AND_DELVE_DISCOVERY_SCOPE.md
       - .github/workflows/v157_crafted_api_probe.yml
   workflow_dispatch:
 jobs:
