@@ -124,7 +124,7 @@ class Non334SourceIndependentProductOffline(unittest.TestCase):
 
     def test_out_of_range_and_aug_never_promote_or_invoke_native(self):
         for level in (265,345):
-            self.assertEqual(self.post(("mage","frost"),level).status_code,409)
+            self.assertEqual(self.post(("mage","frost"),level).status_code,422)
         controls=sessions.standard_controls(("evoker","devastation"))
         controls["spec"]="augmentation"
         response=self.client.post("/api/v1/sessions/plan",
