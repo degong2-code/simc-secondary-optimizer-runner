@@ -31,14 +31,16 @@ def source():
 
 
 class ProductAdapterTests(unittest.TestCase):
-    def test_role_options_are_names_and_manual_ids_remain_allowed(self):
+    def test_only_user_effect_choices_and_craft_id_exception(self):
         c=adapter.from_v166(source())
         options=adapter.public_options(c)
         self.assertEqual(c["item_count"],5)
-        self.assertTrue(options["manual_exact_id_allowed"])
+        self.assertFalse(options["manual_exact_id_allowed"])
+        self.assertEqual(options["manual_exact_id_exception"],"CRAFTED_EQUIPMENT_VARIANTS_ONLY")
         self.assertEqual(len(options["choices"]["trinket"]),1)
         self.assertEqual(options["choices"]["trinket"][0]["name"],"Delve Trinket")
-        self.assertEqual(options["choices"]["plain_representative_candidate"][0]["slot_hint"],"wrists")
+        self.assertNotIn("plain_representative_candidate",options["choices"])
+        self.assertFalse(options["ordinary_equipment_user_selectable"])
         self.assertEqual(c["conditional_ids_excluded"],2)
         self.assertEqual(c["new_native_calls"],0)
 
