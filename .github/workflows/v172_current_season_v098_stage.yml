@@ -1,0 +1,28 @@
+name: v172 Source-First Season P1 Stage (NO Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v098_target_user_scenario_bootstrap.py
+      - runner/v139_pure_target_profile_composer.py
+      - runner/v169_source_first_representative_stage.py
+      - data/current_season_tier_itemsets.json
+      - data/current_season_product_gear_db.json
+      - data/current_season_chmv_consumables.json
+      - tests/test_v172_current_season_v098_stage.py
+      - .github/workflows/v172_current_season_v098_stage.yml
+jobs:
+  current-season-v098-stage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Actual 511 candidate snapshot with 26 specs and 4 v098 plan-only preflights
+        run: |
+          python -m py_compile runner/v098_target_user_scenario_bootstrap.py runner/v139_pure_target_profile_composer.py runner/v169_source_first_representative_stage.py
+          python -m unittest -v tests.test_v172_current_season_v098_stage
