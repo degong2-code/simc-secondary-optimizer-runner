@@ -47,7 +47,7 @@ const names = {
   redirected_base_stats:"촉매 원본 ID",crafted_stats:"제작 스탯",
   embellishment:"장식 토큰"
 };
-const state = { token:"", defaults:[], session:"", running:false,
+const state = { token:"", defaults:[], seasonGear:null, session:"", running:false,
                 busy:false, options:null, pollTimer:null, pollBusy:false,
                 pollFailures:0, nextPollAt:0 };
 const number = (value,decimals=0) =>
@@ -123,6 +123,56 @@ async function importSimcCharacter() {
   $("talents").value=parsed.talents;
   setNotice("SimC 캐릭터 정보만 적용됨 · 현재 장비·스탯은 가져오지 않았고 Native 0회");
 }
+// Candidates are UI hints, never a whitelist or SimC validation result.
+// Keep exact manually entered item IDs and sealed v106 session bytes unchanged.
+function installSeasonGearHints(catalog) {
+  state.seasonGear=catalog?.status==="CURRENT_SEASON_CANDIDATE_SELECTION_ONLY"
+    ? catalog : null;
+  const node=$("season-gear-note");
+  if(!state.seasonGear) {
+    node.textContent="시즌 장비 목록 미확보 · 정확한 아이템 ID 수동 입력은 계속 가능합니다.";
+    return;
+  }
+  const choices=state.seasonGear.choices;
+  function addList(id, items) {
+    let list=$(id);
+    if(!list) {
+      list=document.createElement("datalist");
+      list.id=id;
+      $("optimizer-form").appendChild(list);
+    }
+    list.replaceChildren();
+    for(const item of items) {
+      const itemOption=document.createElement("option");
+      itemOption.value=String(item.item_id);
+      itemOption.label=item.name+" · #"+item.item_id;
+      list.appendChild(itemOption);
+    }
+  }
+  addList("season-trinket-ids",choices.trinket||[]);
+  addList("season-special-ids",choices.special_effect_gear_candidate||[]);
+  addList("season-crafted-ids",choices.selectable_stat_craft||[]);
+  $("trinket1").setAttribute("list","season-trinket-ids");
+  $("trinket2").setAttribute("list","season-trinket-ids");
+  node.textContent="이번 시즌 후보 "+state.seasonGear.count+"개 · 장신구 "+
+    (choices.trinket?.length||0)+" / 특수효과 "+
+    (choices.special_effect_gear_candidate?.length||0)+" / 제작 "+
+    (choices.selectable_stat_craft?.length||0)+
+    " · 목록 밖 정확 ID도 직접 입력 가능 · 효과·획득 완전성 미인증";
+}
+function suggestGearSlot(row, group) {
+  const id=row.querySelector('[data-field="item_id"]');
+  const slot=row.querySelector('[data-field="slot"]');
+  const key=group==="special-rows"?"special_effect_gear_candidate":"selectable_stat_craft";
+  const value=Number(id?.value);
+  if(!Number.isSafeInteger(value)||value<=0||!state.seasonGear||!slot)return;
+  const selected=(state.seasonGear.choices[key]||[]).find(x=>x.item_id===value);
+  // Ring, weapon and offhand can map to more than one SimC slot.
+  // Never guess them; even a known item needs real SimC options.
+  if(selected?.slot_hint&&statOptions.includes(selected.slot_hint)&&!slot.value)
+    slot.value=selected.slot_hint;
+}
+
 function showRepresentativeScope() {
   // The 16 new source-to-target profiles have actual one-shot Native proof,
   // but keep some original non-tier gear. Do not call them fully standardized.
@@ -178,6 +228,10 @@ function gearInputs(nodeId, config) {
       const input=name==="slot" ? document.createElement("select") :
                                    document.createElement("input");
       input.dataset.field=name;
+      if(name==="item_id") {
+        input.setAttribute("list",isSpecial?"season-special-ids":"season-crafted-ids");
+        input.addEventListener("change",()=>suggestGearSlot(row,nodeId));
+      }
       input.setAttribute("aria-label",config.title+" "+(i+1)+" "+names[name]);
       if (name==="slot") {
         input.appendChild(option("","미선택"));
@@ -670,7 +724,8 @@ async function initialize() {
   try {
     const boot=await api("/api/v1/bootstrap",{publicRoute:true});
     state.token=boot.session_token;
-    const [d,opt]=await Promise.all([api("/api/v1/defaults"),api("/api/v1/options")]);
+    const [d,opt,gear]=await Promise.all([api("/api/v1/defaults"),api("/api/v1/options"),
+      api("/api/v1/season-gear").catch(()=>null)]);
     state.defaults=d.archetypes;
     $("spec").replaceChildren(...state.defaults.map(item=>
       option(item.class+"/"+item.spec,
@@ -678,6 +733,7 @@ async function initialize() {
                item.class+" · "+item.spec).split(" (")[0])));
     $("spec").disabled=false;
     installOptions(opt);
+    installSeasonGearHints(gear);
     try{await loadAvailableNativeBatches();}
     catch(err){$("batch-status").textContent="실측 배치 조회 오류: "+err.message;}
     try{await loadRecentSessions();}
