@@ -30,7 +30,7 @@ class JournalLootSmokeOffline(unittest.TestCase):
                 return Resp({"instances":[{"id":1234,
                          "name":"The Venomous Abyss"}]})
             if "journal-instance/1234" in req.full_url:
-                return Resp({"id":1234,"encounters":[{"id":999,"name":"Kith'ix"}]})
+                return Resp({"id":1234,"encounters":[{"id":999,"name":smoke.ENCOUNTER_NAME}]})
             if "journal-encounter/999" in req.full_url:
                 return Resp({"id":999,"items":[
                     {"item":{"id":281235}},

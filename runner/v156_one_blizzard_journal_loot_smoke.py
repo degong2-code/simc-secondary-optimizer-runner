@@ -13,7 +13,7 @@ import v154_blizzard_season_loot_index as existing
 
 SCHEMA="v156_one_blizzard_journal_raid_loot_smoke_v1"
 RAID_NAME="The Venomous Abyss"
-ENCOUNTER_NAME="Kith'ix"
+ENCOUNTER_NAME="Nek'zali the Soulcoiler"
 MAX_ROWS=400
 
 def unique_named(rows, name, field):
