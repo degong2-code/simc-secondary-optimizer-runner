@@ -56,5 +56,44 @@ class ReadOnlyWebCatalog(unittest.TestCase):
                               headers=self.headers)
             self.assertEqual(p.status_code,409)
 
+
+    def test_actual_persisted_288_ids_and_all_26_family_previews(self):
+        choices=self.client.get("/api/v1/season-gear",headers=self.headers)
+        self.assertEqual(choices.status_code,200,choices.text)
+        body=choices.json()
+        self.assertEqual(body["count"],288)
+        self.assertEqual(len(body["choices"]["trinket"]),36)
+        self.assertEqual(len(body["choices"]["special_effect_gear_candidate"]),10)
+        self.assertEqual(len(body["choices"]["selectable_stat_craft"]),106)
+        self.assertTrue(body["manual_exact_id_allowed"])
+        self.assertEqual(body["native_calls_now"],0)
+        for cl,spec in api.sessions.SUPPORTED:
+            with self.subTest(spec=cl+"/"+spec):
+                r=self.client.get(
+                    "/api/v1/season-gear/representative/"+cl+"/"+spec,
+                    headers=self.headers)
+                self.assertEqual(r.status_code,200,r.text)
+                preview=r.json()
+                self.assertEqual(preview["status"],"PREVIEW_ONLY_NOT_A_PROFILE")
+                self.assertFalse(preview["tier_four_piece_id_confirmed"])
+                self.assertFalse(preview["weapon_profile_confirmed"])
+                self.assertEqual(preview["native_calls_now"],0)
+                self.assertTrue(all(preview["candidate_slots"].get(slot)
+                                    for slot in ("neck","back","wrists","waist","feet")))
+
+    def test_web_hints_do_not_replace_exact_user_item_id_inputs(self):
+        html=self.client.get("/").text
+        js=self.client.get("/assets/app.js").text
+        self.assertIn('id="season-gear-note"',html)
+        self.assertIn("function installSeasonGearHints(catalog)",js)
+        self.assertIn('addList("season-trinket-ids"',js)
+        self.assertIn('addList("season-special-ids"',js)
+        self.assertIn('addList("season-crafted-ids"',js)
+        self.assertIn('selected?.slot_hint&&statOptions.includes',js)
+        self.assertIn('trinket_ids:[valueInt("trinket1"),valueInt("trinket2")]',js)
+        self.assertIn('special_items:selectedGear("special-rows","special_items")',js)
+        self.assertIn('embellishments:selectedGear("crafted-rows","embellishments")',js)
+        self.assertNotIn("innerHTML",js)
+
 if __name__=="__main__":
     unittest.main()
