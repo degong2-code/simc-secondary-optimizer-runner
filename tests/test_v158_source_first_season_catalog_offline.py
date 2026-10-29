@@ -62,8 +62,8 @@ class EmptySeasonAssembly(unittest.TestCase):
                          catalog.ingest(self.samples()))
         self.assertNotEqual(catalog.ingest(self.samples())
                             ["unresolved_provider_fields"],[])
-        report=self.samples()[1]
-        report["encounter_sources"][2]["observed_item_ids"]=[]
+        data=self.samples()
+        data[1]["encounter_sources"][2]["observed_item_ids"]=[]
         newer=catalog.ingest(data)
         self.assertEqual(len(newer["unresolved_provider_fields"]),1)
 
