@@ -1,0 +1,40 @@
+name: v159 Delve REST API Evidence (OFFLINE + opt-in)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v159_blizzard_delve_rest_probe.py
+      - tests/test_v159_blizzard_delve_rest_probe_offline.py
+      - .github/workflows/v159_delve_rest_probe.yml
+  workflow_dispatch:
+jobs:
+  offline:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: python -m unittest -v tests.test_v159_blizzard_delve_rest_probe_offline
+  live-opt-in:
+    if: ${{ vars.SIMC_ALLOW_SEASON_API_PROBE == 'true' && (github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[api-probe]')) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Check official Journal and two candidate Delve REST endpoints once
+        env:
+          BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+          BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+        run: python runner/v159_blizzard_delve_rest_probe.py --out v159-delve-rest-evidence.json
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: v159-delve-rest-evidence
+          path: v159-delve-rest-evidence.json
+          retention-days: 14
