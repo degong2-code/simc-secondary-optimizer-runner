@@ -25,6 +25,8 @@ import v106_user_session_controller as sessions
 import v098_target_user_scenario_bootstrap as bootstrap
 import v108_native_consumable_inputs as consumables
 import v148_local_batch_results as batch_view
+import v167_product_season_gear_adapter as season_gear
+import v139_pure_target_profile_composer as representative
 
 SCHEMA = "v113_local_web_api_p1_v1"
 KEY = re.compile(r"[a-f0-9]{20}\Z")
@@ -440,6 +442,31 @@ def create_app(*,root=None, token=None, batch_root=None):
             "diamond_id":[0,*sorted(consumables.DIAMONDS)],
             "omnium_talents":["source_default",*sorted(consumables.OMNIUM_PRESETS)]
         }
+
+    @app.get("/api/v1/season-gear")
+    def current_season_gear():
+        """Read-only same-build product catalog; user may still enter exact IDs."""
+        try:
+            return season_gear.public_options(season_gear.read())
+        except (season_gear.GearBlocked, ValueError, OSError, KeyError) as exc:
+            return {"schema":season_gear.SCHEMA,
+                    "status":"SEASON_GEAR_CATALOG_UNAVAILABLE",
+                    "choices":{k:[] for k in season_gear.CATEGORIES},
+                    "count":0,"manual_exact_id_allowed":True,
+                    "full_season_completeness_confirmed":False,
+                    "native_calls_now":0}
+
+    @app.get("/api/v1/season-gear/representative/{class_token}/{spec_token}")
+    def current_representative_preview(class_token: str, spec_token: str):
+        """Only observed ordinary armor/neck/back candidates, not a profile."""
+        if (class_token,spec_token) not in sessions.SUPPORTED:
+            raise HTTPException(404, detail={"code":"REPRESENTATIVE_SPEC_UNSUPPORTED"})
+        try:
+            return representative.current_season_ordinary_candidates(
+                {"class":class_token,"spec":spec_token})
+        except (season_gear.GearBlocked, representative.ProfileStageBlocked,
+                ValueError, OSError, KeyError):
+            raise HTTPException(409,detail={"code":"SEASON_REPRESENTATIVE_PREVIEW_UNAVAILABLE"}) from None
 
     @app.get("/api/v1/native-batches")
     def native_batches():
