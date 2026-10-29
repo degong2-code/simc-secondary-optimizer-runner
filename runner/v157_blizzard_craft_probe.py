@@ -43,8 +43,8 @@ def categories_with_recipes(tier):
             need(type(recipes) is list and len(recipes)<=1000,
                  "RECIPE_LIST_LIMIT")
             for rr in recipes:
-                if type(rr) is dict and type(rr.get("id")) is int and
-                        type(rr.get("name")) is str:
+                if (type(rr) is dict and type(rr.get("id")) is int
+                        and type(rr.get("name")) is str):
                     out.append({"id":rr["id"],"name":rr["name"]})
             sub=row.get("sub_categories",row.get("subcategories",[]))
             need(type(sub) is list,"SUBCATEGORY_SHAPE")
