@@ -130,6 +130,6 @@ class Non334SourceIndependentProductOffline(unittest.TestCase):
         response=self.client.post("/api/v1/sessions/plan",
             json={"controls":controls,"binary":str(self.binary),
                   "revision":self.revision},headers=self.headers)
-        self.assertEqual(response.status_code,409)
+        self.assertEqual(response.status_code,422)
 
 if __name__=="__main__":unittest.main()
