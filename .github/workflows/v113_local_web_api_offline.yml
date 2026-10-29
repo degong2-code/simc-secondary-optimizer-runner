@@ -14,6 +14,8 @@ on:
       - runner/v151_season_catalog_impact.py
       - tests/test_v151_season_catalog_impact_offline.py
       - tests/test_v149_target334_independent_product_offline.py
+      - tests/test_v153_non334_independent_product_offline.py
+      - runner/v139_pure_target_profile_composer.py
       - tests/test_v150_local_saved_session_index_offline.py
       - tests/test_v113_local_web_api_offline.py
       - tests/test_v114_local_web_ui_offline.py
@@ -71,7 +73,7 @@ jobs:
       - name: Offline FastAPI HTTP tests, including security and zero Native
         shell: bash
         run: |
-          python -m unittest -q tests.test_v113_local_web_api_offline tests.test_v114_local_web_ui_offline tests.test_v106_user_session_controller tests.test_v109_windows_readiness_offline tests.test_v110_windows_exact_simc_input_bytes tests.test_v131_rogue_outlaw_source_candidate tests.test_v147_all_dps_targeted_native_batch_offline tests.test_v148_local_batch_results_offline tests.test_v149_target334_independent_product_offline tests.test_v150_local_saved_session_index_offline tests.test_v151_season_catalog_impact_offline tests.test_v152_windows_local_web_launcher_offline
+          python -m unittest -q tests.test_v113_local_web_api_offline tests.test_v114_local_web_ui_offline tests.test_v106_user_session_controller tests.test_v109_windows_readiness_offline tests.test_v110_windows_exact_simc_input_bytes tests.test_v131_rogue_outlaw_source_candidate tests.test_v147_all_dps_targeted_native_batch_offline tests.test_v148_local_batch_results_offline tests.test_v149_target334_independent_product_offline tests.test_v153_non334_independent_product_offline tests.test_v150_local_saved_session_index_offline tests.test_v151_season_catalog_impact_offline tests.test_v152_windows_local_web_launcher_offline
       - name: Windows one-click local web launcher zero-Native preflight
         if: runner.os == 'Windows'
         shell: cmd
