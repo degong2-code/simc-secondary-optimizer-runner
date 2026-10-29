@@ -102,6 +102,43 @@ class SeasonCatalogUpdatePlanOffline(unittest.TestCase):
         self.assertEqual(meta["status"],"STAGED_NOT_USER_READY")
         self.assertEqual(rows["main_hand"]["ilevel"],321)
 
+    def test_future_catalog_can_use_simc_local_item_db_without_second_source(self):
+        # Existing v144's profile is left unchanged (hash/cache compatible).
+        actor={"class":"druid","spec":"balance","race":"night_elf",
+               "talents":"CYGAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWoMbNjxMDwsYmZmZhBjZZmlZYmZswyMLzMGzshhBYstMzgxsNCMBAAAYxMzMzgNDjxAAwMDMA"}
+        trinkets=[{"slot":x,"item_id":y,"options":{}}
+                  for x,y in [("trinket1",250215),("trinket2",281215)]]
+        original,_,_,_=composer.compose(actor,trinkets,season=self.old)
+        self.assertNotIn("item_db_source=",original)
+        selected=copy.deepcopy(self.old)
+        selected["simc_item_db_source"]="local"
+        with mock.patch("subprocess.run") as external_simc:
+            profile,meta,_,_=composer.compose(actor,trinkets,season=selected)
+            external_simc.assert_not_called()
+        self.assertTrue(profile.startswith("item_db_source=local\\n"))
+        self.assertEqual(profile.count("item_db_source=local"),1)
+        self.assertIn("default_actions=1",profile)
+        self.assertIn("ilevel=334",profile)
+        self.assertEqual(meta["status"],"STAGED_NOT_USER_READY")
+        changed=updater.compare(self.old,selected)
+        self.assertEqual(changed["needs_physical_acceptance_review"],self.specs)
+        self.assertEqual(changed["needs_adaptive_dps_review"],self.specs)
+        self.assertEqual(changed["bundled_simc_item_source_policy"],"local")
+        self.assertFalse(changed["automatic_item_roster_discovery_implemented"])
+        self.assertFalse(changed["product_support_for_new_level_or_season_granted"])
+        self.assertEqual(changed["native_calls_performed"],0)
+
+    def test_simc_item_source_does_not_silently_allow_network_fallback(self):
+        candidate=copy.deepcopy(self.old)
+        candidate["simc_item_db_source"]="local|wowhead"
+        with self.assertRaisesRegex(composer.ProfileStageBlocked,
+                                     "ONLY_SIMC_LOCAL_ITEM_DATA_SOURCE_SUPPORTED"):
+            composer.validate_season(candidate)
+        candidate["simc_item_db_source"]="wowhead"
+        with self.assertRaisesRegex(composer.ProfileStageBlocked,
+                                     "ONLY_SIMC_LOCAL_ITEM_DATA_SOURCE_SUPPORTED"):
+            updater.compare(self.old,candidate)
+
     def test_unknown_new_field_requires_human_review_not_silent_acceptance(self):
         changed=self.diff(lambda d:d.update(new_damage_formula={"x":1}))
         self.assertEqual(changed["needs_physical_acceptance_review"],self.specs)
