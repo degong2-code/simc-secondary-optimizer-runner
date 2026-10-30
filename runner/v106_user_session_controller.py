@@ -304,6 +304,10 @@ def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
         # bytes are IDENTICAL to existing v106 across all prior modes.
         stage=bootstrap.source_first
         identity["current_season_product"]="v177_source_first_26_dps_v1"
+        # A code-only weapon rule change alters the generated profile even
+        # when the 511/65 season catalog byte SHA stays exactly the same.
+        # Make NEW corrected user sessions disjoint from pre-v184 Native.
+        identity["current_season_weapon_selection_policy"]=stage.WEAPON_SELECTION_POLICY
         identity["current_season_gear_sha256"]=sha(stage.gear.DEFAULT.read_bytes())
         identity["current_season_tier_sha256"]=sha(stage.TIER_PATH.read_bytes())
         identity["current_season_budget_sha256"]=sha(stage.BUDGET_PATH.read_bytes())
@@ -523,6 +527,13 @@ def _worker_locked(folder,binary,revision,static_cache,cache_only):
         independent=identity.get("independent_334",False)
         independent_level=identity.get("independent_target_level",False)
         current_season=bool(identity.get("current_season_product",False))
+        # Existing pre-v184 sessions are read-only evidence after the
+        # representative weapons change. Do not recompute or overwrite their
+        # physical.simc/JSON2, or replay their old DPS as a corrected profile.
+        if current_season:
+            need(identity.get("current_season_weapon_selection_policy")==
+                 bootstrap.source_first.WEAPON_SELECTION_POLICY,
+                 "OLD_WEAPON_POLICY_SESSION_START_NEW_CORRECTED_SESSION")
         actual_key,now=session_key(user,binary,revision,static_cache,
                                    ordinary_variant=variant,
                                    independent_334=independent,
