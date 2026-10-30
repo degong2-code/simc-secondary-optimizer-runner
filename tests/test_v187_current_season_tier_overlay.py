@@ -118,15 +118,43 @@ class CurrentSeasonTierReconciliation(unittest.TestCase):
                              "CATALYST_CLASS_TIER_ID_AND_ORIGIN_REQUIRED"):
             self.apply(u,rows,groups)
 
-    def test_non_catalyst_special_on_default_tier_is_one_non_tier(self):
-        # Synthetic future-season same-slot special: tests counting only,
-        # NOT support of a particular real item/proc in this season.
+    def test_only_real_season_special_role_can_overlay_tier(self):
         u,rows,groups=self.setup_rows()
+        # 159236 is plain cloth head, NOT user-selectable special effect.
         u["special_items"]=[{"slot":"head","item_id":159236,"options":{}}]
-        restored,catalyst=self.apply(u,rows,groups)
-        self.assertEqual(restored,["chest"])
-        self.assertEqual(catalyst,[])
-        self.assertEqual(groups["head"],"special")
-        self.assert_four(rows,groups)
+        with self.assertRaisesRegex(AssertionError,
+                  "CURRENT_SEASON_SELECTED_ITEM_NOT_IN_APPROVED_ROLE:head"):
+            self.apply(u,rows,groups)
+
+    def test_special_item_wrong_slot_and_wrong_primary_rejected(self):
+        u,rows,groups=self.setup_rows()
+        # Current-season special cloak 159288 must not be slotted as head.
+        u["special_items"]=[{"slot":"head","item_id":159288,"options":{}}]
+        with self.assertRaisesRegex(AssertionError,
+                  "CURRENT_SEASON_SELECTED_ITEM_WRONG_PHYSICAL_SLOT:head"):
+            self.apply(u,rows,groups)
+        u,rows,groups=self.setup_rows()
+        # Agility dagger 271093 is not a mage intellect weapon.
+        u["special_items"]=[{"slot":"main_hand","item_id":271093,"options":{}}]
+        with self.assertRaisesRegex(AssertionError,
+                  "CURRENT_SEASON_SPECIAL_WEAPON_WRONG_PRIMARY:main_hand"):
+            self.apply(u,rows,groups)
+
+    def test_selected_crafted_wrong_family_and_slot_rejected(self):
+        u,rows,groups=self.setup_rows()
+        u["embellishments"]=[{"slot":"head","item_id":237832,
+           "options":{"crafted_stats":"32/36",
+                      "embellishment":"arcanoweave_lining"}}]
+        # 237832 is plate head; mage requires cloth.
+        with self.assertRaisesRegex(AssertionError,
+                  "CURRENT_SEASON_SELECTED_ITEM_WRONG_ARMOR_FAMILY:head"):
+            self.apply(u,rows,groups)
+        u,rows,groups=self.setup_rows()
+        u["embellishments"]=[{"slot":"legs","item_id":239652,
+           "options":{"crafted_stats":"32/36",
+                      "embellishment":"arcanoweave_lining"}}]
+        with self.assertRaisesRegex(AssertionError,
+                  "CURRENT_SEASON_SELECTED_ITEM_WRONG_PHYSICAL_SLOT:legs"):
+            self.apply(u,rows,groups)
 
 if __name__=="__main__":unittest.main()
