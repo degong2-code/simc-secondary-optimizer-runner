@@ -769,6 +769,47 @@ async function restore(id) {
   if(snapshot.result)renderResult(snapshot.result);
   setNotice("기존 세션·입력 복원 성공 · "+id+" · 새 Native 계산 0회");
 }
+function renderSeasonOptionCatalog(catalog) {
+  const status=$("season-option-catalog-status");
+  const host=$("season-enchant-groups");
+  host.replaceChildren();
+  if(catalog?.schema!=="v196_current_season_ui_catalog_v1" ||
+     catalog?.status!=="SOURCE_COMBINED_WITH_CLEAR_APPROVAL_BOUNDARY") {
+    status.textContent="이번 시즌 마법부여 출처 자료가 준비되지 않았습니다. 기존 승인 선택은 그대로 유지됩니다.";
+    return;
+  }
+  const enchants=catalog.enchant_candidates||{};
+  if(enchants.selectable_count!==0||enchants.total!==(enchants.items||[]).length) {
+    status.textContent="마법부여 선택 승인 상태가 일치하지 않아 목록을 차단했습니다.";
+    return;
+  }
+  status.textContent="게임 빌드 "+catalog.season_build+
+    " · SimC "+catalog.simc_revision.slice(0,10)+
+    " · 최고 소스 품질 마부 "+enchants.total+
+    "개 (전부 정보 확인 중 · 아직 직접 선택 불가)";
+  const names={boots:"장화",chest:"가슴",helm:"머리",ring:"반지",
+               shoulders:"어깨",weapon:"무기"};
+  for(const kind of ["helm","shoulders","chest","boots","ring","weapon"]) {
+    const rows=enchants.items.filter(x=>x.kind===kind);
+    if(!rows.length)continue;
+    const detail=document.createElement("details");
+    detail.className="catalog-source-group";
+    const head=document.createElement("summary");
+    head.textContent=(names[kind]||kind)+" · "+rows.length+
+      "종 · 가장 높은 등록 품질 · 선택 기능 준비 중";
+    detail.appendChild(head);
+    const list=document.createElement("ul");
+    for(const entry of rows) {
+      const li=document.createElement("li");
+      li.textContent=entry.token+" · enchant ID "+entry.enchant_id+
+        " · 등급 "+entry.highest_source_quality_rank+
+        " · 효과/CHMV 반영 검증 필요";
+      list.appendChild(li);
+    }
+    detail.appendChild(list);
+    host.appendChild(detail);
+  }
+}
 function installOptions(options) {
   state.options=options;
   const label=(key,value)=>options.display_labels?.[key]?.[String(value)]??
@@ -996,6 +1037,11 @@ async function initialize() {
     $("spec").disabled=false;
     installOptions(opt);
     installSeasonGearHints(gear);
+    try{renderSeasonOptionCatalog(await api("/api/v1/season-option-catalog"));}
+    catch(err){
+      $("season-option-catalog-status").textContent=
+        "시즌 마법부여 데이터 조회 실패 · 기존 승인 선택을 유지합니다: "+err.message;
+    }
     // Read-only local status. No remote release lookup on page load.
     try{await refreshSimcUpdater(false);}catch(err){
       $("simc-update-status").textContent="SimC 관리 상태 조회 오류: "+err.message;
