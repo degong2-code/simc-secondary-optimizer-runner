@@ -16,6 +16,7 @@ import v094_durable_inclusive_adaptive_runner as durable
 import v141_verified_pure_native_pilot as pure_pilot
 import v202_one_enchant_admission as verified_enchant
 import v204_selected_enchant_reference_budget as enchant_reference
+import v206_nonchmv_eagle_selection as nonchmv_enchant
 
 SCHEMA="v096_user_scenario_unified_entry_v1"
 FIELDS={"schema","profile_simc","scenario_json","fillers_json",
@@ -24,6 +25,7 @@ FIELDS={"schema","profile_simc","scenario_json","fillers_json",
         "scouts","material_scouts","native_limit","step","cancel_file"}
 MANUAL_FIELD="manual_final_T"
 NATIVE_ENCHANT_FIELD="v202_verified_enchant_choice"
+NONCHMV_ENCHANT_FIELD="v206_source_classified_nonchmv_enchant_choice"
 # Optional internal stage seal: no Native until physical SimC acceptance.
 STAGE_FIELD="unverified_pure_profile_plan_only"
 class EntryBlocked(ValueError):pass
@@ -42,9 +44,11 @@ def source(manifest_path):
     """Build the existing typed and SHA-locked Native context; zero SimC calls."""
     manifest_path=pathlib.Path(manifest_path).resolve()
     user=read_object(manifest_path)
-    allowed=(FIELDS,FIELDS|{MANUAL_FIELD},FIELDS|{STAGE_FIELD},
-             FIELDS|{MANUAL_FIELD,STAGE_FIELD})
-    allowed=tuple(x|{NATIVE_ENCHANT_FIELD} for x in allowed)+allowed
+    base_allowed=(FIELDS,FIELDS|{MANUAL_FIELD},FIELDS|{STAGE_FIELD},
+                  FIELDS|{MANUAL_FIELD,STAGE_FIELD})
+    allowed=(base_allowed+
+             tuple(x|{NATIVE_ENCHANT_FIELD} for x in base_allowed)+
+             tuple(x|{NONCHMV_ENCHANT_FIELD} for x in base_allowed))
     need(type(user) is dict and set(user) in allowed
          and user.get("schema")==SCHEMA,"ENTRY_SCHEMA_OR_FIELDS")
     if STAGE_FIELD in user:
@@ -84,6 +88,14 @@ def source(manifest_path):
                                  user["weapon_layout"],user["oil_hands"],
                                  manual_final_T=manual_T,
                                  verified_enchant_E=selected_fixed_E)
+    if NONCHMV_ENCHANT_FIELD in user:
+        # Source and exact Windows E=0 comparison have separate provenance;
+        # neither creates new B/T nor certifies effect mechanics in every spec.
+        approved_nonchmv=nonchmv_enchant.admit(
+            user[NONCHMV_ENCHANT_FIELD],prepared["oil"]["profile"],
+            prepared["prepared"]["scenario"])
+    else:
+        approved_nonchmv=None
     if NATIVE_ENCHANT_FIELD in user:
         # Internal-only opt-in, exact item/revision/binary and immutable v200/
         # v201 witness; no new numeric gear_* contribution is injected.
@@ -141,6 +153,10 @@ def source(manifest_path):
                           else ("OPT_IN_ILVL_REFERENCE_PLUS_VERIFIED_FIXED_E"
                                 if NATIVE_ENCHANT_FIELD in user
                                 else "OPT_IN_ILVL_REFERENCE_BASE_B")}
+    if approved_nonchmv is not None:
+        need(enchant_reference.KEY not in provenance,
+             "NONCHMV_EFFECT_MUST_NOT_ADD_REFERENCE_B")
+        plan["selected_nonchmv_enchant"]=approved_nonchmv
     if NATIVE_ENCHANT_FIELD in user:
         plan["selected_fixed_enchant_E"]=dict(selected_fixed_E)
         plan["selected_enchant_budget_policy"]=(
