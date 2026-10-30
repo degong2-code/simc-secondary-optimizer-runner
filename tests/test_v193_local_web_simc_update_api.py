@@ -1,5 +1,5 @@
 """v193: existing loopback security applies to updater, zero Native or HTTP."""
-import pathlib,sys,tempfile,unittest
+import pathlib,ssl,sys,tempfile,unittest,urllib.error
 from unittest import mock
 from fastapi.testclient import TestClient
 ROOT=pathlib.Path(__file__).resolve().parents[1]
@@ -44,6 +44,24 @@ class SimCUpdateWeb(unittest.TestCase):
         self.assertEqual(response.json()["detail"]["code"],
                          "EXPLICIT_RECENT_OFFICIAL_OFFER_REQUIRED")
         self.assertFalse((self.root/"managed"/"installed.json").exists())
+    def test_https_certificate_problem_has_specific_code_and_manual_fallback(self):
+        fail=urllib.error.URLError(ssl.SSLCertVerificationError("self-signed certificate"))
+        alt={"source":"OFFICIAL_SIMC_GITHUB_ACTIONS",
+             "run_id":40999844143,"artifact_id":12953786078,
+             "artifact_zip_url":"https://github.com/simulationcraft/simc-publish/actions/runs/40999844143/artifacts/12953786078"}
+        with mock.patch.object(update,"fetch_index",side_effect=fail),\
+             mock.patch.object(update,"fetch_github_nightly",return_value=alt):
+            response=self.client.post("/api/v1/simc-updates/check",
+                                      json={},headers=self.h)
+        self.assertEqual(response.status_code,200,response.text)
+        payload=response.json()
+        self.assertEqual(payload["official_index_problem"],
+                         "OFFICIAL_NIGHTLY_TLS_CERTIFICATE_INVALID")
+        self.assertFalse(payload["direct_install_available"])
+        self.assertEqual(payload["github_alternative"]["artifact_id"],12953786078)
+        self.assertIsNone(payload["candidate"])
+        self.assertFalse((self.root/"managed"/"installed.json").exists())
+
     def test_local_install_endpoint_is_token_gated_and_bad_path_fails_closed(self):
         path="/api/v1/simc-updates/install-local"
         data={"archive_path":str(self.root/"not-official.zip")}
