@@ -13,6 +13,7 @@ import v064_adaptive_evaluator_port as port
 import v089_ilvl_chmv_budget_selector as chooser
 import v090_reference_total_native_candidate as reference_path
 import v092_approved_inclusive_CHMV_policy as total_policy
+import v204_selected_enchant_reference_budget as selected_enchant
 
 SCHEMA="v091_oil_per_actual_weapon_external_v1"
 OIL="thalassian_phoenix_oil_2"
@@ -113,7 +114,7 @@ def configure(profile,doc,weapon_layout,applied_hands):
         "buffed_O_addition_independently_proven":False}
 
 def prepare(profile,doc,fillers,static_cache,weapon_layout,applied_hands,
-            *,manual_final_T=None):
+            *,manual_final_T=None,verified_enchant_E=None):
     # Source-locked oil is configured ONCE. A final-inclusive user T is
     # converted explicitly to legacy free B by the approved v092 policy.
     if manual_final_T is not None:
@@ -128,6 +129,10 @@ def prepare(profile,doc,fillers,static_cache,weapon_layout,applied_hands,
         oil["scenario"]=converted["scenario"]
     selection=chooser.resolve(oil["scenario"],mode=chooser.REFERENCE_MODE,
                               weapon_layout=weapon_layout)
+    # Only an explicitly selected, exact Native-proven E can extend the
+    # unenchanted ilvl reference. Manual final T is authoritative and fixed.
+    selection=selected_enchant.selected_reference(
+        selection,verified_enchant_E,manual_final_T=manual_final_T)
     prepared=reference_path.prepare(selection,fillers,static_cache,oil["profile"])
     need(prepared["T"]==selection["resolved_T"] and
          prepared["scenario"]["budget"]["external_temporary_rating"]==
