@@ -28,8 +28,11 @@ COMMON=("neck","back","finger1","finger2")
 # Conservative stable weapon-type preferences, NOT a certification of SimC
 # proficiency, skill usage, weapon main-stat compatibility or exact option.
 # Subclass values are retail Item.ClassID=2 weapon subclasses. Prefer
-# sensible archetype shapes instead of blindly picking the lowest item ID
-# (which could otherwise choose a dagger for Frost DK).
+# sensible archetype shapes instead of blindly picking the lowest item ID.
+# Same-build ItemSparse.StatModifier_bonusStat codes; the public source may
+# also contain -1/secondary codes and duplicates. The REQUIRED primary code
+# must be explicit; missing/unknown/other-primary-only means NOT eligible.
+PRIMARY_STAT_CODES={"agility":3,"strength":4,"intellect":5}
 FORM_SUBCLASS_PREFS={
     "one_hand_frill":(15,7,4),
     "one_hand_shield":(4,15,0),
@@ -87,8 +90,27 @@ def available_plain(db,*,slot,family=None,class_mask=None,used=()):
     return sorted(candidates)
 
 def shape_weapons(db,weapon_form,class_mask,*,spec_key):
-    """Inventory form, not class weapon-subclass proficiency certification."""
+    """Select source-backed compatible weapons; reject wrong primary stats.
+
+    ItemSparse gives item *candidate* primary stat codes. The actual stat
+    amount/weapon damage and SimC proficiency still belong to Native.
+    """
     need(weapon_form in contracts.WEAPON_FORMS,"WEAPON_FORM_UNKNOWN")
+    need(type(class_mask) is int and class_mask>0 and
+         class_mask&(class_mask-1)==0,"WEAPON_CLASS_MASK_INVALID")
+    cls,spec=spec_key.split("/")
+    contract=contracts.lookup(cls,spec)
+    need(contract is not None and contract["weapon_form"]==weapon_form,
+         "WEAPON_SPEC_CONTRACT_MISMATCH")
+    primary=PRIMARY_STAT_CODES[contract["primary"]]
+    def allowed(x):
+        mask=x.get("allowed_class_mask")
+        return mask is None or (
+            type(mask) is int and (mask&class_mask)==class_mask)
+    def correct_primary(x):
+        codes=x.get("stat_modifier_codes")
+        return type(codes) is list and all(type(c) is int for c in codes) and (
+            primary in codes)
     main_one=[x for x in db["items"]
         if x["category"]=="plain_representative_candidate"
         and x["class_id"]==2 and x["inventory_type"]==13]
@@ -110,34 +132,35 @@ def shape_weapons(db,weapon_form,class_mask,*,spec_key):
     prefs=SPEC_SUBCLASS_PREFS.get(
         spec_key,FORM_SUBCLASS_PREFS[weapon_form])
     def candidates(rows):
-        valid=[x for x in rows if x["subclass_id"] in prefs and (
-            x.get("allowed_class_mask") is None or
-            type(x["allowed_class_mask"]) is int and
-            (x["allowed_class_mask"]&class_mask)==class_mask)]
+        valid=[x for x in rows if x["subclass_id"] in prefs
+               and allowed(x) and correct_primary(x)]
         return [x["item_id"] for x in sorted(valid,key=lambda x:(
             prefs.index(x["subclass_id"]),x["item_id"]))]
     def support(rows):
-        # A shield/frill is armor, NOT one of the weapon subclasses above.
-        return sorted(x["item_id"] for x in rows if (
-            x.get("allowed_class_mask") is None or
-            type(x["allowed_class_mask"]) is int and
-            (x["allowed_class_mask"]&class_mask)==class_mask))
-    if weapon_form=="ranged":pool=candidates(ranged); need(pool,"NO_RANGED_BASE_WEAPON");return {"main_hand":pool[0]}
+        # A shield/frill is armor, but must still supply the spec's primary.
+        return sorted(x["item_id"] for x in rows
+                      if allowed(x) and correct_primary(x))
+    if weapon_form=="ranged":
+        pool=candidates(ranged)
+        need(pool,"NO_COMPATIBLE_RANGED_PRIMARY_WEAPON")
+        return {"main_hand":pool[0]}
     if weapon_form in ("dual_two_hand","single_two_hand"):
         pool=candidates(two_hand)
         count=2 if weapon_form=="dual_two_hand" else 1
-        need(len(pool)>=count,"NO_TWO_HAND_BASE_WEAPON_PAIR")
+        need(len(pool)>=count,"NO_COMPATIBLE_TWO_HAND_PRIMARY_WEAPON_PAIR")
         return dict(zip(contracts.WEAPON_FORMS[weapon_form],pool[:count]))
     pool=candidates(main_one)
     count=2 if weapon_form=="dual_one_hand" else 1
-    need(len(pool)>=count,"NO_ONE_HAND_BASE_WEAPON")
+    need(len(pool)>=count,"NO_COMPATIBLE_ONE_HAND_PRIMARY_WEAPON_PAIR")
     weapon={"main_hand":pool[0]}
     if weapon_form=="dual_one_hand":weapon["off_hand"]=pool[1]
     if weapon_form=="one_hand_frill":
-        values=support(frill); need(values,"NO_NON_WEAPON_OFFHAND_BASE")
+        values=support(frill)
+        need(values,"NO_COMPATIBLE_PRIMARY_OFFHAND_FRILL")
         weapon["off_hand"]=values[0]
     if weapon_form=="one_hand_shield":
-        values=support(shield); need(values,"NO_SHIELD_BASE")
+        values=support(shield)
+        need(values,"NO_COMPATIBLE_PRIMARY_SHIELD")
         weapon["off_hand"]=values[0]
     return weapon
 
