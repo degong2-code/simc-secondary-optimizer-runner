@@ -137,7 +137,8 @@ def fetch_index():
     req=urllib.request.Request(BASE,headers={"User-Agent":"SIMC-Secondary-Local-Update/1.0",
                                              "Accept":"text/html"})
     with urllib.request.urlopen(req,timeout=20) as res:
-        need(res.status==200 and urllib.parse.urlsplit(res.geturl()).hostname==
+        target=urllib.parse.urlsplit(res.geturl())
+        need(res.status==200 and target.scheme=="https" and target.hostname==
              "download.simulationcraft.org","OFFICIAL_INDEX_SOURCE_INVALID")
         raw=res.read(MAX_INDEX+1)
     need(0<len(raw)<=MAX_INDEX,"OFFICIAL_INDEX_SIZE_INVALID")
@@ -149,7 +150,8 @@ def fetch_archive(url,target):
     req=urllib.request.Request(url,headers={"User-Agent":"SIMC-Secondary-Local-Update/1.0"})
     h=hashlib.sha256();size=0
     with urllib.request.urlopen(req,timeout=60) as src,open(target,"wb") as dst:
-        need(src.status==200 and urllib.parse.urlsplit(src.geturl()).hostname==
+        endpoint=urllib.parse.urlsplit(src.geturl())
+        need(src.status==200 and endpoint.scheme=="https" and endpoint.hostname==
              "download.simulationcraft.org",
              "OFFICIAL_ARCHIVE_REDIRECT_REFUSED")
         while True:
@@ -229,7 +231,7 @@ class SimCManager:
         finally:tmp.unlink(missing_ok=True)
 
     def install(self,filename,*,downloader=fetch_archive,extractor=extract_safe,
-                sevenzip=None):
+                sevenzip=None,archive_source="OFFICIAL_HTTPS_NIGHTLY"):
         need(self.platform=="win32","SIMC_UPDATER_WINDOWS_ONLY")
         with self.lock:
             offered=self.offer
@@ -263,7 +265,9 @@ class SimCManager:
                 entry={"filename":offered["filename"],
                        "revision_short":offered["revision_short"],
                        "sha256":bin_sha,"archive_sha256":proof["sha256"],
-                       "archive_bytes":proof["bytes"]}
+                       "archive_bytes":proof["bytes"],
+                       "archive_source":archive_source,
+                       "upstream_signature_verified":False}
                 self._write_state({"schema":SCHEMA,"active":entry,
                                    "previous":state["active"]})
                 self.offer=None
@@ -271,6 +275,39 @@ class SimCManager:
                 result["status"]="NEW_MANAGED_SIMC_ACTIVATED"
                 result["hash_kind"]="LOCAL_SHA256_OF_DOWNLOADED_BYTES_NOT_UPSTREAM_SIGNATURE"
                 return result
+
+    def install_local(self,archive_path,*,extractor=extract_safe,sevenzip=None):
+        """User-selected local archive fallback for unavailable TLS nightlies.
+
+        An archive renamed to an official-looking file is NOT provenance:
+        do not claim the user file came from SimC's server or was signed.
+        """
+        need(self.platform=="win32","SIMC_UPDATER_WINDOWS_ONLY")
+        need(type(archive_path) is str and len(archive_path)<=4096,
+             "LOCAL_ARCHIVE_PATH_INVALID")
+        path=pathlib.Path(archive_path).expanduser()
+        need(not path.is_symlink() and path.is_file()
+             and NIGHTLY.fullmatch(path.name) is not None
+             and 100000<path.stat().st_size<=MAX_ARCHIVE,
+             "LOCAL_WIN64_NIGHTLY_ARCHIVE_INVALID")
+        resolved=path.resolve()
+        with self.lock:
+            match=NIGHTLY.fullmatch(resolved.name)
+            self.offer={"filename":resolved.name,
+                        "revision_short":match.group(2).lower(),
+                        "series":match.group(1),"url":"LOCAL_ARCHIVE_SELECTED"}
+            self.offered_at=time.monotonic()
+            def local_copy(_url,dest):
+                shutil.copyfile(resolved,dest)
+                need(pathlib.Path(dest).stat().st_size==resolved.stat().st_size,
+                     "LOCAL_ARCHIVE_COPY_SIZE_CHANGED")
+                need(pathlib.Path(dest).open("rb").read(6)==MAGIC,
+                     "LOCAL_ARCHIVE_MAGIC_INVALID")
+                return {"sha256":sha256(dest),
+                        "bytes":pathlib.Path(dest).stat().st_size}
+            return self.install(resolved.name,downloader=local_copy,
+                       extractor=extractor,sevenzip=sevenzip,
+                       archive_source="USER_LOCAL_FILE_ORIGIN_NOT_AUTHENTICATED")
 
     def rollback(self):
         need(self.platform=="win32","SIMC_UPDATER_WINDOWS_ONLY")
