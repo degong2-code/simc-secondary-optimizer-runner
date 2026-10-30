@@ -147,7 +147,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('id="gear-scope-note"',page)
         self.assertIn("SOURCE_INDEPENDENT_TARGET334_VALIDATED_BATCH",js)
         self.assertIn("목표 334: 내부 시즌 대표 장비",js)
-        self.assertIn("334 이외 목표 ilvl: 같은 시즌 대표 아이템 ID",js)
+        self.assertIn("334 이외 목표 ilvl: 최신 시즌 대표 장비·티어·무기를 선택 레벨",js)
         self.assertIn("완전한 표준화까지 검증된 것은 아니며",js)
         self.assertIn('  showRepresentativeScope();\n}',js)
         self.assertIn('function fillSessionInputs(payload)',js)
