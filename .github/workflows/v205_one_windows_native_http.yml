@@ -1,0 +1,65 @@
+name: v205 one real Windows user Native and cached replay
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/v205_one_windows_native_http.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v205-one-windows-real-native-once
+  cancel-in-progress: false
+jobs:
+  one-real-windows-user:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install current local-web test dependencies
+        run: python -m pip install -r requirements-web-test.txt
+      - name: Recover existing official SimC-publish Windows archive, not rebuild SimC
+        uses: actions/download-artifact@v4
+        with:
+          repository: simulationcraft/simc-publish
+          run-id: 40999844143
+          name: simc-nightly-win64-midnight
+          path: .simc-windows
+          github-token: ${{ github.token }}
+      - name: Verify exact existing archive SHA and extract with existing 7-Zip
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $src = Join-Path $PWD '.simc-windows/simc-1210.01.710c240-win64.7z'
+          if (!(Test-Path $src)) { throw 'OFFICIAL_PINNED_ARCHIVE_NAME_NOT_PRESENT' }
+          $hash = (Get-FileHash -Algorithm SHA256 $src).Hash.ToLowerInvariant()
+          if ($hash -ne '386b2827c537a0447ac09a158e14c63b1d71d73e8e29f6e8ab404416861aab89') {
+            throw 'OFFICIAL_PINNED_ARCHIVE_SHA_MISMATCH'
+          }
+          $seven = 'C:\Program Files\7-Zip\7z.exe'
+          if (!(Test-Path $seven)) { throw 'EXISTING_7ZIP_NOT_AVAILABLE' }
+          New-Item -ItemType Directory -Force -Path .simc-win-extracted | Out-Null
+          & $seven x "-o.simc-win-extracted" -y -bd $src | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'PINNED_ARCHIVE_7Z_EXTRACTION_FAILED' }
+          $exes = @(Get-ChildItem -Path '.simc-win-extracted' -Filter simc.exe -Recurse -File)
+          if ($exes.Count -ne 1) { throw 'OFFICIAL_ARCHIVE_MUST_CONTAIN_ONE_SIMC_EXE' }
+          $exehash = (Get-FileHash -Algorithm SHA256 $exes[0].FullName).Hash.ToLowerInvariant()
+          Write-Host ('V205_OFFICIAL_WINDOWS_EXECUTABLE_SHA256 ' + $exehash)
+          "SIMC_WINDOWS_PATH=$($exes[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: One physical Windows local API plan, real six Native, result and six cache hits
+        shell: pwsh
+        run: |
+          python integration_probes/v205_one_windows_user_native_http.py --simc "$env:SIMC_WINDOWS_PATH" --revision 710c2408bf --out out/v205
+          if ($LASTEXITCODE -ne 0) { throw 'ONE_WINDOWS_NATIVE_USER_E2E_FAILED' }
+      - name: Retain only compact version-bound result and Native SHA receipts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v205-one-windows-real-native-compact
+          path: out/v205/V205_WINDOWS_ONE_USER_NATIVE_RECEIPT.json
+          retention-days: 2
+          if-no-files-found: warn
