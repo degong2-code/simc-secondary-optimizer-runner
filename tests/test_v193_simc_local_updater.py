@@ -28,7 +28,7 @@ class SimCUpdateUnit(unittest.TestCase):
         self.assertEqual(selected[0]["revision_short"],"710c240")
         for html in ['<a href="https://attacker.example/simc-1215-01-win64-710c240.7z">',
                      '<a href="simc-1215-01-win64-710c240.7z?evil=1">',
-                     '<a href="http://downloads.simulationcraft.org/nightly/simc-1215-01-win64-710c240.7z">']:
+                     '<a href="http://download.simulationcraft.org/nightly/simc-1215-01-win64-710c240.7z">']:
             with self.subTest(html=html):
                 self.assertEqual(mod.candidate_urls(html),[])
 
