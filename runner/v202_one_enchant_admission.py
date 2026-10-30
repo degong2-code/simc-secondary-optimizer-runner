@@ -75,8 +75,11 @@ def apply_verified_ring(rows,user_choice,key,ilevel,need_user):
     need_user("enchant" not in opts and
               "enchant_id" not in opts,
               "V202_WOULD_OVERWRITE_PREEXISTING_ENCHANT")
+    # Fail before mutating source gear when the Native proof is absent,
+    # stale or tampered. Keep caller data untouched on failed admission.
+    verified,_=read()
     opts["enchant_id"]="8025"
-    return read()[0]["static_enchant_E"]
+    return dict(verified["static_enchant_E"])
 def admit(manifest_choice,profile,normalized,binary_sha,revision):
     need(type(manifest_choice) is dict and manifest_choice==CHOICE,
          "V202_DEVELOPER_ONLY_EXACT_CHOICE")
