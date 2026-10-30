@@ -1,0 +1,60 @@
+{
+  "schema": "v207_one_selected_nonchmv_windows_native_verified_successor_v1",
+  "status": "PASS_EXACT_EAGLE_SELECTED_B_T_UNCHANGED_SIX_NATIVE_AND_CACHE",
+  "scope": "paladin/retribution current season ilvl334 finger1 enchant_id=7967, official Windows SimC",
+  "authoritative_original": {
+    "actions_run": 41109265120,
+    "job_id": 124247140107,
+    "source_commit": "c92cfa06341b237617b137191201a418e5f6742a",
+    "artifact_id": 13003341874,
+    "archive_sha256": "a53257540435bcf576b465a8f44c94029d20f94c406ef9f491c7ec6b5b36a651",
+    "receipt_sha256": "a972751aee1f27b159d42ef8f81af22579422f3abb7911fafb094d432ce82924",
+    "native_binary_sha256": "0ad16368cd1effb19c793dbce63518ccb72fec89c72f6ef75d9afca239a039e8",
+    "source_profile_sha256": "e4f7b685ddaffb169b358dcb98df4a0c79e771d8bcbf3f9c26acb4f9eaab654d",
+    "original_artifact_immutable": true
+  },
+  "corrected_metadata": {
+    "historical_original_field": "no_enchant_selection_promotion=true",
+    "cause": "v205 generic unchanged-benchmark metadata carried into v207 selected-Eagle probe",
+    "precise_reading": "No general/37-other-enchant promotion; Eagle 7967 is explicitly selectable in isolated user UI after one Windows static E0 comparison",
+    "one_exact_nonchmv_option_7967_user_selectable": true,
+    "other_37_enchant_options_locked": true,
+    "normal_user_input_and_cache_changed_only_when_selected": true,
+    "source_probe_metadata_fix_commit": "4ad9341abaea97973d9a2a1ec77550ca5dd324c5",
+    "new_native_calls_for_metadata_correction": 0
+  },
+  "budget": {
+    "base_B": 3150,
+    "oil_O": 32,
+    "final_T": 3182,
+    "fixed_CHMV_eagle_E": 0,
+    "default_no_enchant_B_T_unchanged": true
+  },
+  "native": {
+    "first_session_new_native_calls": 6,
+    "verified_cache_only_hits": 6,
+    "replay_additional_native_calls": 0,
+    "native_json2_sha256": {
+      "confirmations/confirm_00/result.json": "860be9fbee77210fe3d92c97d965cceb86bc7dcf07a56035631144e7e6d8dafb",
+      "confirmations/confirm_01/result.json": "3c85ffcaa306447d7ebfcdeddfeebd931a88786e67d4cdb71f6ac07702f40e3f",
+      "search/material_00/result.json": "6889109ab1a2f7949ca1264f7ceefcf529406ba8d7f582f881f36b198293f6cd",
+      "search/scout_00/result.json": "0be1a216a395b708c23b8e4a333629c1498c3d45e0d77ca6e261efd06e296e19",
+      "search/seed_00/result.json": "91cc06ac5a12b459d74450890139026686d8849380513fe6358e17dca84cddbc",
+      "search/seed_01/result.json": "5d06a768c2af91289844656179057dac7a3287412d9bf82f913f4362ec59f6d5"
+    }
+  },
+  "observed": {
+    "dps_mean": 185221.06034702563,
+    "sem": 270.9787148736912,
+    "confidence_level": 0.95,
+    "global_optimum_proven": false
+  },
+  "limits": [
+    "Eagle effect semantics supplied by SimC, not independently reimplemented",
+    "Windows static E0 evidence is one Paladin 334 scope, not 26-spec certification",
+    "No paired 95% comparison against no-enchant baseline, so no measured DPS gain claim",
+    "No browser GUI click or user PC native evidence",
+    "37 other enchants remain locked; 8025 fixed-E Linux proof not generalized",
+    "No main/original v016/Project UI promotion"
+  ]
+}
