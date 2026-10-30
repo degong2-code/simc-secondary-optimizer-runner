@@ -1,0 +1,21 @@
+{
+  "schema": "v185_frost_primary_corrected_single_334_request_v1",
+  "spec": "mage/frost",
+  "target_ilevel": 334,
+  "execute_once": true,
+  "current_season_product": true,
+  "native_max_total": 6,
+  "cache_only_replay_six": true,
+  "required_corrected_main_hand_id": 159137,
+  "tier_four_ids": [
+    271564,
+    271562,
+    271565,
+    271563
+  ],
+  "simc_revision": "7bc10711b5",
+  "simc_binary_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+  "no_new_optimizer": true,
+  "no_26_spec_native_rerun": true,
+  "no_main_or_project_ui_mutation": true
+}
