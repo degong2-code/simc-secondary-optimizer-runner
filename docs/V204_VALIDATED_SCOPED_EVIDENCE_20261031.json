@@ -1,0 +1,70 @@
+{
+  "schema": "v204_selected_enchant_additive_budget_validated_receipt_v1",
+  "scope": "exact mage/frost ilvl334 finger1 item158366 enchant8025 Linux binary + pinned complete profile",
+  "accounting": {
+    "reference_B": 3150,
+    "selected_E": {
+      "crit_rating": 0,
+      "haste_rating": 30,
+      "mastery_rating": 0,
+      "versatility_rating": 0
+    },
+    "derived_effective_B": 3180,
+    "oil_O_total": 32,
+    "derived_effective_T": 3212,
+    "manual_final_T_adjustment": 0
+  },
+  "offline": {
+    "actions_run": 41099416253,
+    "source_commit": "b6b40c8f72a0bfe14bff37a6adcd65d12ab99044",
+    "ubuntu": {
+      "job_id": 124213570121,
+      "pass": 36,
+      "fail": 0
+    },
+    "windows": {
+      "job_id": 124213569621,
+      "pass": 36,
+      "fail": 0
+    },
+    "new_native_calls": 0
+  },
+  "actual_native": {
+    "actions_run": 41099779751,
+    "job_id": 124214807797,
+    "source_commit": "91c9d1c05cb715828f92e5f26837599353014f69",
+    "simc_binary_sha256": "f105b8a34fd911c340e735f0440e0d1eadf0d0dbc25f18923c048810cf69095d",
+    "source_profile_sha256": "8305a811137db6f557f8076dfa44a4a1a359111d60bb7452225e1573bf72a401",
+    "new_native_calls": 6,
+    "cache_replay_hits": 6,
+    "cache_replay_new_native_calls": 0,
+    "unique_ratings": 4,
+    "confidence_level": 0.95,
+    "global_optimum_proven": false
+  },
+  "artifact": {
+    "id": 12997053018,
+    "zip_sha256": "7b8eb66e22c8932ff4d88f07da5cf080c0dd9b1c03d3ffcc8cc9a6176f20fdfb",
+    "zip_bytes": 1256,
+    "unpacked_file": "audit_receipt.json",
+    "sha256_json2_outputs": {
+      "confirmations/confirm_00/result.json": "36ec97abb09ff16df8655a103ab918dfe03cbf1636e24d62e02874458febaa96",
+      "confirmations/confirm_01/result.json": "1b1464a3f59a6512bfccb2e24c9d56ad74975371c12b1ea605441c31d62c4fc8",
+      "search/material_00/result.json": "b68295c71654eeed8586f2eb126ee63054a59bccec1d14221f7d09d598a08c12",
+      "search/scout_00/result.json": "18f5e28680e3e506e5335bf3a27e887d6c9066d088754762c12a29d201553d6f",
+      "search/seed_00/result.json": "bcdbbed43a8283a873296200dca500d4e7066db597c4021ebb0b1faacf880a59",
+      "search/seed_01/result.json": "d9a210df1ab7c77fb7666b9405ba06c4385bad4ea5a022cca627cf597f893a86"
+    }
+  },
+  "historical_fail": {
+    "actions_run": 41099272753,
+    "cause": "new fixture passed oil O=16 into no-oil normalized test, corrected before passing run; not a native execution failure"
+  },
+  "limitations": [
+    "Windows SimC Native enchant not tested",
+    "37 other enchants not evidenced",
+    "normal UI enchant selection remains locked",
+    "additional latest-head and three-mode plan results pending",
+    "original full project integration not asserted"
+  ]
+}
