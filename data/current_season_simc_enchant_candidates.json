@@ -357,5 +357,17 @@
       "item_subclass_mask": 966655,
       "approved": false
     }
-  ]
+  ],
+  "related_source_counts": {
+    "gear_item_candidates": 511,
+    "tier_piece_ids": 65,
+    "food_raw_item_candidates": 192,
+    "potion_raw_item_candidates": 61,
+    "food_handler_registrations": 37,
+    "potion_handler_registrations": 5,
+    "embellishment_darkmoon_registrations": 20,
+    "temporary_enchant_entries": 117,
+    "gem_property_records": 2409
+  },
+  "related_source_status": "EVIDENCE_ONLY_NO_NEW_USER_OPTIONS"
 }
