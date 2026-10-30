@@ -233,6 +233,20 @@ class CurrentSeasonTierReconciliation(unittest.TestCase):
                   "CURRENT_SEASON_SPECIAL_WEAPON_WRONG_PRIMARY:main_hand"):
             self.apply(u,rows,groups)
 
+    def test_v188_armor_lining_rejected_on_real_ring_neck_and_weapon_crafts(self):
+        # SimC's embellishment parser is intentionally permissive; our
+        # product must respect optional-reagent recipe slot restrictions.
+        for slot,item_id in (("finger1",240947),("neck",240948),
+                             ("main_hand",237838)):
+            with self.subTest(slot=slot):
+                u,rows,groups=self.setup_rows()
+                u["embellishments"]=[{"slot":slot,"item_id":item_id,
+                    "options":{"crafted_stats":"32/36",
+                               "embellishment":"arcanoweave_lining"}}]
+                with self.assertRaisesRegex(AssertionError,
+                      "CURRENT_SEASON_EMBELLISHMENT_WRONG_EQUIPMENT_CATEGORY:"+slot):
+                    self.apply(u,rows,groups)
+
     def test_selected_crafted_wrong_family_and_slot_rejected(self):
         u,rows,groups=self.setup_rows()
         u["embellishments"]=[{"slot":"head","item_id":237832,
