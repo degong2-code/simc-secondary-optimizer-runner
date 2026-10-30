@@ -42,7 +42,7 @@ def identity(bundle,binary_sha,revision,scout_iterations,confirm_iterations):
          scenario.HASH_RE.fullmatch(binary_sha) is not None
          and type(revision) is str and len(revision)>=7,
          "NATIVE_BINARY_VERSION_IDENTITY")
-    return {"schema":SCHEMA,"scenario_digest":normalized["scenario_digest"],
+    result={"schema":SCHEMA,"scenario_digest":normalized["scenario_digest"],
         "source_profile_sha256":o["profile_sha256"],
         "reference_source_sha256":prepared["reference_sha256"],
         "exact_slots_digest":itemcache.digest(prepared["static_budget"]["reference_exact_slot_identity"]),
@@ -56,6 +56,16 @@ def identity(bundle,binary_sha,revision,scout_iterations,confirm_iterations):
         "threads":runtime["threads"],
         "simc_mechanics_owner":"SimC",
         "policy_v065_original_v015_source_sha":policy.SOURCE_V015_SHA256}
+    if "v202_verified_enchant" in o:
+        proof=o["v202_verified_enchant"]
+        need(proof.get("schema")=="v202_one_exact_enchant_source_evidence_v1"
+             and proof.get("choice")=={"finger1":8025}
+             and proof.get("fixed_E")=={"crit_rating":0,"haste_rating":30,
+                                        "mastery_rating":0,"versatility_rating":0}
+             and proof.get("gear_override_does_not_add_E_twice") is True,
+             "ENCHANT_E_PROOF_NOT_VERIFIED")
+        result["v202_verified_enchant"]=proof
+    return result
 
 def prepare(bundle,binary_sha,revision,scout_iterations=None,confirm_iterations=None):
     runtime=bundle["prepared"]["scenario"]["scenario"]["runtime"]
@@ -69,9 +79,15 @@ def prepare(bundle,binary_sha,revision,scout_iterations=None,confirm_iterations=
 def feasible_budget(context,flask_vector):
     """Only search constraints change: B+O must cover F on every stat."""
     prepared=context["bundle"]["prepared"]
+    bound=context["identity"]
+    if "v202_verified_enchant" in bound:
+        return policy.budget_with_fixed_components(
+            prepared["scenario"],prepared["static_budget"],
+            flask_vector,bound["oil_vector"],
+            fixed_enchant_E=bound["v202_verified_enchant"]["fixed_E"])
     return policy.budget_with_fixed_components(
         prepared["scenario"],prepared["static_budget"],
-        flask_vector,context["identity"]["oil_vector"])
+        flask_vector,bound["oil_vector"])
 
 def request(context,base_target,flask_vector,json2_path,phase="scout"):
     """v091 owns request, including oil selection and final static T."""
