@@ -19,6 +19,7 @@ import v108_native_consumable_inputs as consumer
 import v122_common_profile_format as profile_format
 import v139_pure_target_profile_composer as pure
 import v169_source_first_representative_stage as source_first
+import v202_one_enchant_admission as verified_enchant
 
 SCHEMA="v098_target_ilevel_user_scenario_v1"
 FIELDS={"schema","character","target","trinkets","special_items",
@@ -31,6 +32,7 @@ PURE_PRODUCT_SPECS=frozenset((("druid","balance"),("evoker","devastation")))
 FIXTURES=common.FIXTURES
 IMPORT_FIELD="import_simc_profile"
 CONSUME_FIELD="consumable_choices"
+ENCHANT_FIELD="verified_enchant"
 TIER_FIVE=common.TIER_FIVE
 FIFTH_TIER=common.FIFTH_TIER
 
@@ -157,9 +159,10 @@ def build(user,folder,binary,revision,static_cache_path=None,
           independent_334=False,independent_target_level=False,
           source_first_stage=False,current_season_product=False):
     """Return an already validated internal manifest and v096 plan; no Native."""
-    need(type(user) is dict and set(user) in (
-        FIELDS,FIELDS|{IMPORT_FIELD},FIELDS|{CONSUME_FIELD},
-        FIELDS|{IMPORT_FIELD,CONSUME_FIELD})
+    accepted=(FIELDS,FIELDS|{IMPORT_FIELD},FIELDS|{CONSUME_FIELD},
+              FIELDS|{IMPORT_FIELD,CONSUME_FIELD})
+    accepted=accepted+tuple(x|{ENCHANT_FIELD} for x in accepted)
+    need(type(user) is dict and set(user) in accepted
          and user.get("schema")==SCHEMA,"USER_SCENARIO_FIELDS")
     using_import=IMPORT_FIELD in user
     if using_import:
@@ -284,6 +287,11 @@ def build(user,folder,binary,revision,static_cache_path=None,
     gem_choice=choice.get("diamond_id") or int(
         rows["head"]["options"].get("gem_id","0"))
     common.ensure_representative_gem_colors(rows,gem_choice,need)
+    if ENCHANT_FIELD in user:
+        # Narrow internal evidence path; ordinary v106/web controls DO NOT
+        # accept this field until product-specific Native release tests.
+        verified_enchant.apply_verified_ring(
+            rows,user[ENCHANT_FIELD],key,ilvl,need)
     # New plans use ONE common slot order for all archetypes. Existing sealed
     # sessions replay the old order exactly, avoiding a forced recalculation.
     legacy=profile_format.existing_profile_uses_legacy_format(
@@ -326,8 +334,15 @@ def build(user,folder,binary,revision,static_cache_path=None,
     budget=prepared["prepared"]["static_budget"]
     # Shared floor B >= F-O, with selected exact L protected.
     # Candidate seeds must be viable BEFORE a Native call is even planned.
-    feasible=scheduler.budget_with_fixed_components(
-        normalized,budget,F,prepared["oil"]["declared_O"])
+    if ENCHANT_FIELD in user:
+        # E is allocated INSIDE existing G and never added to T/gear_*.
+        e_vector=verified_enchant.read()[0]["static_enchant_E"]
+        feasible=scheduler.budget_with_fixed_components(
+            normalized,budget,F,prepared["oil"]["declared_O"],
+            fixed_enchant_E=e_vector)
+    else:
+        feasible=scheduler.budget_with_fixed_components(
+            normalized,budget,F,prepared["oil"]["declared_O"])
     B,lo,hi=scheduler.bounds(normalized,feasible)
     seeds=initial_seeds(B,lo,hi)
     # The tightened F/O feasibility floor must NOT reseed an already sealed
@@ -371,6 +386,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
               "scouts":1,"material_scouts":1,"native_limit":6,
               "step":100,"cancel_file":"CANCEL"}
     if final_T is not None:manifest["manual_final_T"]=final_T
+    if ENCHANT_FIELD in user:
+        manifest[entry.NATIVE_ENCHANT_FIELD]=dict(user[ENCHANT_FIELD])
     if pure_stage:manifest[entry.STAGE_FIELD]=True
     put_once(folder/"profile.simc",profile)
     put_once(folder/"scenario.json",canonical(cfg)+"\n")
