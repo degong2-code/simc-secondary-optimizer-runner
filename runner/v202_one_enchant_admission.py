@@ -88,6 +88,15 @@ def admit(manifest_choice,profile,normalized,binary_sha,revision):
     need((ch["class"],ch["spec"])==("mage","frost") and
          normalized["scenario"]["target"]["ilevel"]==334,
          "V202_SOURCE_SPEC_OR_ILVL_NOT_EVIDENCED")
+    # A direct developer v096 manifest may bypass v098's selected-slot
+    # preflight. Protect the same invariant at this independent entry.
+    equipment=normalized["scenario"].get("equipment")
+    need(type(equipment) is dict and
+         all(type(equipment.get(g)) is list for g in ("special","crafted"))
+         and not any(row.get("slot")=="finger1"
+                     for g in ("special","crafted")
+                     for row in equipment[g]),
+         "V203_ENCHANT_E_OVERLAPS_NATIVE_L_OR_CRAFTED_SLOT")
     need(binary_sha==data["linux_binary_sha256"] and
          type(revision) is str and len(revision)>=7 and
          data["revision"].startswith(revision),
