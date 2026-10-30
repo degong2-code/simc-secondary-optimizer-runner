@@ -181,6 +181,56 @@ class UserSessionControls(unittest.TestCase):
                          standard_identity)
         self.assertNotEqual(standard_key,key)
 
+    def test_v187_tier_slot_only_rekeys_affected_season_sessions(self):
+        root,binary,_=self.fixture()
+        revision="7bc10711b5"
+        base=ux.user_scenario(ux.standard_controls(("mage","frost")))
+        baseline_key,baseline=ux.session_key(
+            base,binary,revision,current_season_product=True)
+        self.assertNotIn("current_season_tier_layout_policy",baseline)
+        # A crafted cloak does not displace any of the 4 original tier
+        # slots. Do not invalidate its valid historical DPS cache.
+        outside=copy.deepcopy(base)
+        outside["embellishments"]=[{
+            "slot":"back","item_id":239656,
+            "options":{"crafted_stats":"32/36",
+                       "embellishment":"arcanoweave_lining"}}]
+        _,identity_out=ux.session_key(
+            outside,binary,revision,current_season_product=True)
+        self.assertNotIn("current_season_tier_layout_policy",identity_out)
+        selected=copy.deepcopy(base)
+        selected["embellishments"]=[{
+            "slot":"head","item_id":239652,
+            "options":{"crafted_stats":"32/36",
+                       "embellishment":"arcanoweave_lining"}}]
+        key,identity=ux.session_key(
+            selected,binary,revision,current_season_product=True)
+        self.assertNotEqual(key,baseline_key)
+        self.assertEqual(identity["current_season_tier_layout_policy"],
+                         ux.bootstrap.common.CURRENT_SEASON_TIER_LAYOUT_POLICY)
+        prior=dict(identity)
+        prior.pop("current_season_tier_layout_policy")
+        old_key=ux.sha(ux.canonical(prior).encode("utf8"))[:20]
+        self.assertNotEqual(key,old_key)
+        old=root/"sessions"/old_key
+        old.mkdir(parents=True)
+        (old/"user.json").write_text(
+            ux.canonical(selected)+"\n",encoding="utf8")
+        (old/"V106_SESSION_IDENTITY.json").write_text(
+            ux.canonical(prior)+"\n",encoding="utf8")
+        with mock.patch.object(ux.bootstrap,"run",
+                               side_effect=AssertionError("NO_NATIVE_ALLOWED")):
+            self.assertEqual(ux.worker(old,binary,revision),3)
+        self.assertFalse((old/"generated").exists())
+        fresh=ux.store_session(
+            selected,root/"sessions",binary,revision,
+            current_season_product=True)
+        self.assertEqual(fresh.name,key)
+        self.assertNotEqual(fresh,old)
+        self.assertEqual(ux.store_session(
+            selected,root/"sessions",binary,revision,
+            current_season_product=True),fresh)
+
     def test_internal_ordinary_variant_gets_new_session_without_default_identity_drift(self):
         root,binary,_=self.fixture()
         user=ux.user_scenario(ux.standard_controls(("demonhunter","havoc")))
