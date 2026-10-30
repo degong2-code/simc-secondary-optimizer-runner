@@ -18,6 +18,15 @@ on:
       - tests/test_v197_enchant_effect_families.py
       - integration_probes/v198_targeted_enchant_native_rating.py
       - tests/test_v198_targeted_enchant_native_rating.py
+      - runner/v065_v015_scheduler_adapter.py
+      - runner/v093_inclusive_adaptive_scheduler_bridge.py
+      - runner/v096_unified_product_entry.py
+      - runner/v098_target_user_scenario_bootstrap.py
+      - runner/v202_one_enchant_admission.py
+      - data/v202_verified_enchant_8025_source.json
+      - tests/test_v202_one_enchant_admission.py
+      - tests/test_v202_enchant_scheduler_floor.py
+      - integration_probes/v202_existing_planner_no_native.py
       - runner/webui/index.html
       - runner/webui/app.js
       - runner/webui/styles.css
@@ -75,7 +84,7 @@ jobs:
       - name: Existing Windows local web, session, SHA/cache, security offline regressions
         shell: pwsh
         run: |
-          python -m unittest -q tests.test_v152_windows_local_web_launcher_offline tests.test_v113_local_web_api_offline tests.test_v114_local_web_ui_offline tests.test_v106_user_session_controller tests.test_v177_current_season_product_flow tests.test_v180_multilevel_current_season_product_offline tests.test_v193_simc_local_updater tests.test_v193_local_web_simc_update_api tests.test_v196_current_season_ui_catalog tests.test_v197_verified_effect_budget tests.test_v197_enchant_effect_families tests.test_v198_targeted_enchant_native_rating
+          python -m unittest -q tests.test_v152_windows_local_web_launcher_offline tests.test_v113_local_web_api_offline tests.test_v114_local_web_ui_offline tests.test_v106_user_session_controller tests.test_v177_current_season_product_flow tests.test_v180_multilevel_current_season_product_offline tests.test_v193_simc_local_updater tests.test_v193_local_web_simc_update_api tests.test_v196_current_season_ui_catalog tests.test_v197_verified_effect_budget tests.test_v197_enchant_effect_families tests.test_v198_targeted_enchant_native_rating tests.test_v202_one_enchant_admission tests.test_v202_enchant_scheduler_floor
           if ($LASTEXITCODE -ne 0) { throw "Existing local web or session regression failed" }
           node --check runner/webui/app.js
           if ($LASTEXITCODE -ne 0) { throw "Browser JS syntax failed" }
