@@ -15,6 +15,7 @@ import v108_native_consumable_inputs as v108
 import v188_user_choice_metadata as v188
 import v197_enchant_effect_families as effect_groups
 import v197_verified_effect_budget as fixed_budget
+import v202_one_enchant_admission as observed_enchant
 
 SCHEMA="v196_current_season_ui_catalog_v1"
 SOURCE_SCHEMA="v196_source_first_enchant_candidates_v1"
@@ -100,6 +101,14 @@ def read(path=DEFAULT):
 def public_options(path=DEFAULT):
     source,enchants,counts=read(path)
     enchants=effect_groups.decorate(enchants)
+    data,proof_sha=observed_enchant.read()
+    matching=[r for r in enchants if r["enchant_id"]==data["enchant_id"]]
+    need(len(matching)==1 and matching[0]["ui_selectable"] is False,
+         "NATIVE_EVIDENCE_ENCHANT_CATALOG_MISMATCH")
+    matching[0]["measured_E_in_one_simc_native_scope"]=dict(data["static_enchant_E"])
+    matching[0]["native_scope"]="mage/frost ilvl334 Linux 710c240 finger1"
+    matching[0]["same_gear_override_delta_zero"]=True
+    matching[0]["evidence_sha256"]=proof_sha
     labels=v188.labels()
     # The only actual user choices in this first stage are exactly the
     # legacy Native/source-verified tokens. Do not enable 192/61 raw DB2
