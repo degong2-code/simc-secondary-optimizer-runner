@@ -123,7 +123,9 @@ def run(profile,binary,revision,slot,enchant_id,out,*,iterations=35,max_new=2,
         target=folder/(name+".json")
         if target.is_file():continue
         need(calls<max_new,"NATIVE_CALL_CAP_REACHED")
-        with (folder/(name+".log")).open("wb") as log:
+        # Append instead of truncating previous failure diagnostics on retry.
+        with (folder/(name+".log")).open("ab") as log:
+            log.write(b"\n=== V198 NEW EXACT-SAME-IDENTITY NATIVE ATTEMPT ===\n")
             try:
                 r=subprocess.run([str(exe),str(folder/(name+".simc"))],
                        cwd=folder,stdout=log,stderr=subprocess.STDOUT,
