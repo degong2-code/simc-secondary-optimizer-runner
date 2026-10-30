@@ -15,6 +15,7 @@ import v063_numeric_injection as numeric
 import v064_adaptive_evaluator_port as port
 import v065_v015_scheduler_adapter as search
 import v089_ilvl_chmv_budget_selector as selected
+import v204_selected_enchant_reference_budget as enchant_reference
 
 SCHEMA="v090_reference_total_native_candidate_v1"
 PROVENANCE="v090_reference_budget_provenance_v1"
@@ -56,7 +57,8 @@ def prepare(selection, fillers, native_cache, reference):
              and selection["reference_sha256"]==live_sha
              and type(selection.get("reference_row")) is dict
              and selection["reference_row"]==reg["values"][reference_level-266]
-             and selection["resolved_T"]==selection["reference_row"][track],
+             and selection["resolved_T"]==enchant_reference.expected_reference_B(
+                 selection,selection["reference_row"][track]),
              "REFERENCE_PROVENANCE_TAMPERED")
     else:
         live_sha=None
@@ -102,6 +104,11 @@ def prepare(selection, fillers, native_cache, reference):
         "budget_entry_mode":"OPT_IN_REFERENCE_B" if is_reference else "USER_MANUAL_FINAL_T_CONVERTED_TO_B",
         "G_is_not_required_for_reference_T":True,
         "ordinary_missing_G_records_not_fabricated":True}
+    # No-enchant reference provenance remains byte-identical. Only a selected
+    # Native-evidenced E has a separate additive receipt.
+    if enchant_reference.KEY in selection:
+        native_budget["reference_budget_provenance"][enchant_reference.KEY]=(
+            copy.deepcopy(selection[enchant_reference.KEY]))
     inventory=port.verify_profile_binding(normalized,native_budget,reference)
     total,low,high=search.bounds(normalized,native_budget)
     need(total==selection["resolved_T"],"SCHEDULER_REFERENCE_TOTAL_DRIFT")
