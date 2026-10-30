@@ -1,0 +1,93 @@
+name: v191 Unified Season Data Catalog (Request Only, No Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v191_unified_season_data_update.py
+      - tests/test_v191_unified_season_data_update.py
+      - .github/workflows/v191_unified_season_data_update.yml
+  workflow_dispatch:
+    inputs:
+      event:
+        description: User-requested type of game update
+        required: true
+        type: choice
+        options: [mid_patch, season_change, expansion_change]
+        default: mid_patch
+permissions:
+  contents: read
+  actions: read
+jobs:
+  unified-candidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    env:
+      SIMC_COMMIT: 7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd
+      UPDATE_EVENT: ${{ inputs.event || 'mid_patch' }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Offline source contract and quality reduction regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile runner/v191_unified_season_data_update.py
+          python -m unittest -v tests.test_v191_unified_season_data_update
+      - name: Reuse exact existing SimC + DB2 source receipts (no new DB snapshot)
+        uses: actions/download-artifact@v4
+        with:
+          name: v190-simc-db2-consumable-candidates-41014544715
+          run-id: 41014544715
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: source
+      - name: Fetch exact immutable SimC generated enchant + gem tables (no Native)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p simc-generated out
+          python - <<'PY'
+          import pathlib,urllib.request,hashlib
+          commit='7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd'
+          for name in ('permanent_enchant.inc','temporary_enchant.inc','gem_data.inc'):
+              url=f'https://raw.githubusercontent.com/simulationcraft/simc/{commit}/engine/dbc/generated/{name}'
+              req=urllib.request.Request(url,headers={'User-Agent':'SIMC-Secondary-v191-source-pinned/1.0'})
+              with urllib.request.urlopen(req,timeout=40) as f:
+                  if f.status!=200:raise RuntimeError(f'REMOTE_SIMC_SOURCE_HTTP_{f.status}')
+                  raw=f.read(5_000_001)
+              if not 0<len(raw)<5_000_000:raise RuntimeError('SIMC_SOURCE_FILE_SIZE_INVALID')
+              pathlib.Path('simc-generated',name).write_bytes(raw)
+              print('SOURCE',name,len(raw),hashlib.sha256(raw).hexdigest())
+          PY
+          python runner/v191_unified_season_data_update.py \
+            --gear data/current_season_product_gear_db.json \
+            --tier data/current_season_tier_itemsets.json \
+            --budget data/current_season_chmv_consumables.json \
+            --v189 source/v189_source_handler_candidates.json \
+            --v190 source/v190_source_first_food_potion_item_candidates.json \
+            --simc-generated-folder simc-generated \
+            --event "$UPDATE_EVENT" \
+            --out out/v191_unified_source_first_catalog.json
+          python - <<'PY'
+          import json
+          x=json.load(open('out/v191_unified_source_first_catalog.json'))
+          assert x['gear']['count']==511 and x['tier']['piece_count']==65
+          assert x['native_calls']==0 and x['automatic_ui_promotion'] is False
+          assert len(x['consumables']['food']['candidates'])==192
+          assert len(x['consumables']['potion']['candidates'])==61
+          assert x['enchants']['permanent']['source_rows']>1000
+          assert x['enchants']['temporary']['source_rows']>100
+          assert x['gem_properties']['source_count']>2000
+          print('V191_UNIFIED_SEASON_CANDIDATE_PASS_UNPUBLISHED_NATIVE_ZERO')
+          PY
+      - name: Archive just source-provenance receipt and small candidate catalog
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v191-unified-candidate-catalog-${{ github.run_id }}
+          path: out/
+          retention-days: 7
+          if-no-files-found: warn
