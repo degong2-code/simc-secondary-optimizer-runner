@@ -1,0 +1,39 @@
+name: v204 exactly one changed-budget Native evidence
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - '.github/workflows/v204_selected_enchant_native_once.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  pinned-frost334-once:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Reuse the exact existing v192 Linux SimC binary, no download or build
+        uses: actions/cache/restore@v4
+        with:
+          path: .simc-cache/v192/
+          key: v192-ubuntu2404-710c2408bfd3ae4df71b8cd55cdf01f63fd6c926-cli-r1
+          fail-on-cache-miss: true
+      - name: Verify exact binary, changed B3180/T3212 six Native, then six cache hits
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x .simc-cache/v192/simc
+          sha256sum -c .simc-cache/v192/simc.sha256
+          python -m unittest -q tests.test_v204_selected_enchant_reference_budget
+          python integration_probes/v204_selected_enchant_additive_native_cache_audit.py .simc-cache/v192/simc out/
+      - name: Preserve only compact B/T scope, output hashes and Native/cache counts
+        uses: actions/upload-artifact@v6
+        with:
+          name: v204-enchant-additive-6-native-6-cache
+          path: out/audit_receipt.json
+          retention-days: 2
+          if-no-files-found: error
