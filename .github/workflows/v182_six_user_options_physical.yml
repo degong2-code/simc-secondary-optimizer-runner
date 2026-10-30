@@ -1,0 +1,83 @@
+name: v182 Actual Four Omnium Stat Runes + Two Crafted Linings (6 Native Max)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/v182_omnium_crafted_six_physical.py
+      - integration_probes/requests/v182_four_runes_two_linings_once.json
+      - .github/workflows/v182_six_user_options_physical.yml
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v182-six-one-shot-physical-option-checks
+  cancel-in-progress: false
+jobs:
+  offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r requirements-web-test.txt
+      - run: |
+          python -m py_compile integration_probes/v182_omnium_crafted_six_physical.py
+          python -m unittest -q tests.test_v182_simple_user_inputs_offline
+  native-options:
+    needs: offline
+    if: ${{ contains(github.event.head_commit.message, '[v182-six-native-options]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Require only exact one six-option request changed
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,pathlib,subprocess,os
+          p="integration_probes/requests/v182_four_runes_two_linings_once.json"
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==[p],changed
+          d=json.loads(pathlib.Path(p).read_text())
+          assert d=={"schema":"v182_one_six_user_option_native_v1",
+              "class":"mage","spec":"frost","ilevel":334,"one_shot_only":True,
+              "omnium_row_four":["crit","haste","mastery","vers"],
+              "craft_armor_linings":["arcanoweave_lining","sunfire_silk_lining"],
+              "native_call_cap":6,"iterations_each":35,
+              "simc_revision":"7bc10711b5",
+              "simc_binary_sha256":"64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+              "new_optimizer":False,"no_main_merge":True},d
+          print("V182_EXACT_SIX_NATIVE_USER_OPTION_REQUEST_PASS")
+          PY
+      - uses: actions/cache/restore@v5
+        id: simc
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd-cli-release-nonetwork-r1
+      - name: Enforce exact pinned SimC binary
+        shell: bash
+        run: |
+          test "${{ steps.simc.outputs.cache-hit }}" = true
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc-cache/v035/simc' | sha256sum -c
+          chmod +x .simc-cache/v035/simc
+      - name: Six isolated one-shot profile checks, retain ALL native error logs
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 integration_probes/v182_omnium_crafted_six_physical.py
+      - name: Upload raw SimC JSON2, logs and summary (including failures)
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v182-six-input-option-native-receipts-${{ github.run_id }}
+          path: out/v182/
+          retention-days: 7
+          if-no-files-found: warn
