@@ -78,17 +78,20 @@ class CurrentSeasonProductIntegration(unittest.TestCase):
         self.assertEqual(json.loads((default/"V106_SESSION_IDENTITY.json").read_text()),
                          original)
 
-    def test_product_not_permitted_for_non334_and_never_unseals_old_pure_stage(self):
+    def test_non334_season_is_separate_and_never_unseals_old_pure_stage(self):
         u=self.user()
+        default,_=sessions.session_path(u,self.root,self.binary,self.rev,
+                                        current_season_product=True)
         u["target"]["ilevel"]=333
-        with self.assertRaisesRegex(sessions.SessionBlocked,
-                                    "CURRENT_SEASON_PRODUCT_SCOPE_334_ONLY"):
-            sessions.store_session(u,self.root,self.binary,self.rev,
+        new=sessions.store_session(u,self.root,self.binary,self.rev,
                                    current_season_product=True)
-        with self.assertRaisesRegex(bootstrap.UserScenarioBlocked,
-                                    "CURRENT_SEASON_PRODUCT_SCOPE_334_ONLY"):
-            bootstrap.build(u,self.root/"bad",self.binary,self.rev,
-                            current_season_product=True)
+        self.assertNotEqual(new,default)
+        result=bootstrap.build(u,self.root/"new333",self.binary,self.rev,
+                               current_season_product=True)
+        self.assertEqual(result["plan"]["native_limit"],6)
+        self.assertTrue(result["non334_physical_simc_not_yet_observed"])
+        self.assertNotIn(entry.STAGE_FIELD,
+                         json.loads((self.root/"new333"/"manifest.json").read_text()))
         u["target"]["ilevel"]=334
         with self.assertRaisesRegex(bootstrap.UserScenarioBlocked,
                                     "SOURCE_FIRST_STAGE_AND_PRODUCT_ARE_EXCLUSIVE"):
@@ -140,17 +143,18 @@ class CurrentSeasonProductIntegration(unittest.TestCase):
         self.assertIs(restored.json()["current_season_product"],True)
         restored_default=client.get("/api/v1/sessions/"+original_id+"/inputs",headers=headers)
         self.assertIs(restored_default.json()["current_season_product"],False)
-        bad=dict(enabled,controls={**user,"ilevel":333})
-        invalid=client.post("/api/v1/sessions/plan",headers=headers,json=bad)
-        self.assertEqual(invalid.status_code,422,invalid.text)
-        self.assertEqual(invalid.json()["detail"]["code"],
-                         "V106_CURRENT_SEASON_PRODUCT_SCOPE_334_ONLY")
+        non334=dict(enabled,controls={**user,"ilevel":333})
+        valid=client.post("/api/v1/sessions/plan",headers=headers,json=non334)
+        self.assertEqual(valid.status_code,200,valid.text)
+        self.assertNotEqual(valid.json()["session_id"],new_id)
+        self.assertTrue(valid.json()["plan"]["non334_physical_native_not_yet_observed"])
+        self.assertFalse(valid.json()["plan"]["v176_26_of_26_base_physical_native"])
         html=client.get("/",headers=headers).text
         self.assertIn('id="current_season_product" type="checkbox" checked',html)
         script=client.get("/assets/app.js",headers=headers).text
         self.assertIn("current_season_product:currentSeason",script)
-        self.assertIn('$("current_season_product").checked=Number(item.ilevel)===334',script)
+        self.assertIn('$("current_season_product").checked=true',script)
         self.assertIn('$("current_season_product").checked=payload.current_season_product===true',script)
-        self.assertIn('if(Number(field("ilevel"))!==334)$("current_season_product").checked=false',script)
+        self.assertIn('$("ilevel").addEventListener("change",showRepresentativeScope)',script)
 
 if __name__=="__main__":unittest.main()
