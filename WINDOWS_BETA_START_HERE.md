@@ -1,5 +1,9 @@
 # SIMC Secondary Optimizer — Windows 로컬 베타 시작
 
+> **v193 SimC 업데이트 관리자 (2026-10-30):** 웹앱 `설정 · SimulationCraft 관리`에서 **공식 Windows x64 nightly 조회/확인 후 설치**, **PC에 직접 다운로드한 공식 형태 `.7z` 파일 설치**, **기존 관리 버전으로 복원** 기능을 추가했습니다. 다운로드는 사용자가 버튼을 눌렀을 때만 수행하며, 시즌 DB 갱신/Native DPS 계산은 호출하지 않습니다. 새 SimC는 `SIMC_Secondary_Optimizer/simc-managed/versions/<실행 파일 SHA prefix>/simc.exe`에 **별도 저장**하고 원래 `simc.exe`는 수정하지 않습니다. ZIP에는 SimC 바이너리를 포함하지 않으며, 사용자 PC에 별도로 **7-Zip**이 설치되어 있어야 합니다.
+>
+> **공식 자동 목록 확인의 알려진 장애:** 2026-10-30 GitHub Actions의 `downloads.simulationcraft.org`/ `download.simulationcraft.org` 접속에서 인증서 오류가 발생했습니다. 인증서 검증을 우회하지 않으므로, 해당 환경에서는 자동 조회가 명시적인 오류로 중단됩니다. `https://www.simulationcraft.org/download.html`에서 직접 `.7z`를 받은 뒤 로컬 경로를 복사해 **내 PC의 .7z 파일 설치**를 사용하세요. 이 경우 파일의 출처/배포 서명은 독립 검증 불가하며 사용자가 직접 공식 출처를 확인해야 합니다. 확장자·Windows x64 형식·압축경로·용량·파일 SHA는 검사합니다. 업데이트를 설치해도 **새 SimC Windows 실제 Native 시뮬레이션이 통과했다고 주장하지 않으며**, 첫 신규 최적화 결과를 확인해야 합니다. 구버전의 DPS 캐시는 SHA/revision identity로 분리됩니다.
+
 **대상:** Windows 10/11, Python 3.12 이상, 사용자 PC의 SimC CLI (`simc.exe`).
 
 
