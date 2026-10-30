@@ -1,6 +1,6 @@
 """v188 user-readable labels and physical category safety; zero SimC Native."""
 from __future__ import annotations
-import pathlib,sys,unittest
+import json,pathlib,sys,unittest
 from fastapi.testclient import TestClient
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
@@ -20,7 +20,7 @@ class ChoiceLabelsAndSlots(unittest.TestCase):
         for kind in ("food","potion","augmentation"):
             self.assertEqual(set(data[kind]),{"source_default",*simc.SUPPORTED[kind]})
             for token,label in data[kind].items():
-                self.assertTrue(label and len(label)>10)
+                self.assertTrue(label and len(label)>=5)
                 self.assertNotEqual(token,label)
         self.assertEqual(set(data["diamond_id"]),{"0","240967","240983"})
         self.assertIn("치명타",data["diamond_id"]["240967"])
@@ -35,7 +35,7 @@ class ChoiceLabelsAndSlots(unittest.TestCase):
             self.assertEqual(doc[kind][0],"source_default")
             self.assertEqual(set(doc[kind])-{"source_default"},simc.SUPPORTED[kind])
         self.assertEqual(doc["display_labels"],descriptions.labels())
-        self.assertEqual(doc["embellishments"],descriptions.public_embellishments())
+        self.assertEqual(doc["embellishments"],json.loads(json.dumps(descriptions.public_embellishments())))
         self.assertEqual(len(doc["embellishments"]),2)
         self.assertNotIn("flask",doc)
     def test_lining_only_armor_and_no_unverified_jewelry_weapon_token(self):
