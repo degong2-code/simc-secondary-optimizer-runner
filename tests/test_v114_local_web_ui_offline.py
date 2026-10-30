@@ -38,7 +38,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertEqual(result.headers["x-content-type-options"],"nosniff")
         page=PageParser();page.feed(result.text)
         self.assertEqual(page.forms,1)
-        self.assertIn("특수효과 장비는 시즌 목록에서 선택 · 장식은 부위·종류·제작 스탯만 선택",result.text)
+        self.assertIn("특수효과 장비 부위 자동 결정 · 장식 종류별 적용 부위 제한",result.text)
         self.assertEqual(page.scripts,[{"src":"/assets/app.js","defer":None}])
         self.assertEqual(page.links,[{"rel":"stylesheet","href":"/assets/styles.css"}])
         required=("optimizer-form","spec","simc-import-text","simc-import-file",
@@ -50,8 +50,7 @@ class RealHTTPPageOffline(unittest.TestCase):
           "cancel-btn","restore-btn","restore-id","notice","session-id",
           "stage-text","progress-label","progress-pct","progress-bar",
           "filled-result","empty-result","dps","sem","budget","stat-bars",
-          "conf95","alt-count","alt-list","batch-id","batch-open-btn",
-          "batch-table","batch-status","recent-session-id","recent-open-btn",
+          "conf95","alt-count","alt-list","recent-session-id","recent-open-btn",
           "recent-refresh-btn","recent-session-note")
         self.assertTrue(set(required)<=page.ids,set(required)-page.ids)
         for path in ("/","/assets/app.js","/assets/styles.css"):
@@ -73,7 +72,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertNotIn("https://",css.text)
         self.assertIn('"/api/v1/bootstrap"',js.text)
         self.assertIn('"/api/v1/options"',js.text)
-        self.assertIn('"/api/v1/native-batches"',js.text)
+        self.assertNotIn('"/api/v1/native-batches"',js.text)
         self.assertIn('"/api/v1/sessions"',js.text)
         self.assertIn("async function loadRecentSessions()",js.text)
         self.assertIn('withBusy(loadRecentSessions)',js.text)
@@ -145,10 +144,9 @@ class RealHTTPPageOffline(unittest.TestCase):
         page=self.client.get("/").text
         js=self.client.get("/assets/app.js").text
         self.assertIn('id="gear-scope-note"',page)
-        self.assertIn("SOURCE_INDEPENDENT_TARGET334_VALIDATED_BATCH",js)
-        self.assertIn("목표 334: 내부 시즌 대표 장비",js)
+        self.assertIn("최신 시즌 대표 장비·직업별 티어 4세트를 내부 생성",js)
         self.assertIn("334 이외 목표 ilvl: 최신 시즌 대표 장비·티어·무기를 선택 레벨",js)
-        self.assertIn("완전한 표준화까지 검증된 것은 아니며",js)
+        self.assertNotIn('id="current_season_product"',page)
         self.assertIn('  showRepresentativeScope();\n}',js)
         self.assertIn('function fillSessionInputs(payload)',js)
         self.assertNotIn("innerHTML",js)
@@ -282,7 +280,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         r=self.client.get("/api/v1/options",headers=self.head)
         self.assertEqual(r.status_code,200)
         options=r.json()
-        self.assertEqual(set(options),{"food","potion","augmentation","diamond_id","omnium_talents"})
+        self.assertEqual(set(options),{"food","potion","augmentation","diamond_id","omnium_talents","display_labels","embellishments"})
         self.assertEqual(options["diamond_id"],[0,240967,240983])
         self.assertEqual(len(options["omnium_talents"]),16)
         self.assertIn("136822:1/136823:1/136817:1/136820:1/136814:1",
