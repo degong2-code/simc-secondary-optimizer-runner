@@ -39,6 +39,17 @@ def read(path=DEFAULT):
          document.get("user_selectable") is False and
          document.get("source_artifact_id")==12961140046,
          "SOURCE_FIRST_ENCHANT_PROVENANCE_INVALID")
+    related=document.get("related_source_counts")
+    need(type(related) is dict and
+         related=={
+           "gear_item_candidates":511,"tier_piece_ids":65,
+           "food_raw_item_candidates":192,"potion_raw_item_candidates":61,
+           "food_handler_registrations":37,"potion_handler_registrations":5,
+           "embellishment_darkmoon_registrations":20,
+           "temporary_enchant_entries":117,"gem_property_records":2409}
+         and document.get("related_source_status")==
+             "EVIDENCE_ONLY_NO_NEW_USER_OPTIONS",
+         "PINNED_SEASON_SOURCE_COUNTS_MISMATCH")
     rows=document.get("rows")
     need(type(rows) is list and len(rows)==38,
          "CURRENT_SEASON_ENCHANT_COUNT_INVALID")
@@ -106,6 +117,8 @@ def public_options(path=DEFAULT):
         "season_build":source["season_game_build"],
         "simc_revision":source["simc_commit"],
         "source_artifact_id":source["source_artifact_id"],
+        "related_source_counts":dict(source["related_source_counts"]),
+        "related_source_status":source["related_source_status"],
         "existing_allowed_input_choices":approved,
         "proven_armor_embellishments":v188.public_embellishments(),
         "enchant_candidates":{"total":len(enchants),"groups":counts,
