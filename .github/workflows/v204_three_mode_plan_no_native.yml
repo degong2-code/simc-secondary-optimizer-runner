@@ -1,0 +1,37 @@
+name: v204 three-budget-mode profile plan only
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/v204_three_mode_plan_no_native.yml]
+permissions:
+  contents: read
+jobs:
+  frozen-binary-plan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Restore already evidenced binary; no new compilation or SimC execution
+        uses: actions/cache/restore@v4
+        with:
+          path: .simc-cache/v192/
+          key: v192-ubuntu2404-710c2408bfd3ae4df71b8cd55cdf01f63fd6c926-cli-r1
+          fail-on-cache-miss: true
+      - name: Verify exact executable and three full profile/plan variants, zero Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum -c .simc-cache/v192/simc.sha256
+          python integration_probes/v204_three_mode_budget_plan_no_native.py .simc-cache/v192/simc out/v204_three_modes
+      - name: Record compact plan receipt only
+        uses: actions/upload-artifact@v6
+        with:
+          name: v204-three-budget-modes-plan-zero-native
+          path: out/v204_three_modes/plan_receipt.json
+          retention-days: 2
+          if-no-files-found: error
