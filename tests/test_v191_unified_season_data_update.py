@@ -38,6 +38,27 @@ class UnifiedCatalogTest(unittest.TestCase):
         self.assertEqual(u.inventory_options(cloth_chest),[5,20])
         self.assertNotIn(11,u.inventory_options(cloth_chest))
         self.assertEqual(u.inventory_options({"inventory_type_mask":0}),[])
+    def test_midnight_named_enchants_keep_only_best_quality_and_skip_tools(self):
+        src=u.parse_generated("permanent_enchant",PERM)
+        rows=[dict(x) for x in src["rows"]]
+        rows.extend([
+          {"enchant_id":8018,"quality_rank":1,"item_class":4,
+           "inventory_type_mask":1<<8,"item_subclass_mask":31,
+           "simc_token":"enchant_boots__farstriders_hunt"},
+          {"enchant_id":8019,"quality_rank":2,"item_class":4,
+           "inventory_type_mask":1<<8,"item_subclass_mask":31,
+           "simc_token":"enchant_boots__farstriders_hunt"},
+          {"enchant_id":7975,"quality_rank":2,"item_class":19,
+           "inventory_type_mask":1<<29,"item_subclass_mask":0,
+           "simc_token":"enchant_tool__amani_perception"}
+        ])
+        src["rows"]=rows
+        selected=u.current_season_enchant_candidates(src)
+        self.assertEqual(len(selected),1)
+        self.assertEqual(selected[0]["enchant_id"],8019)
+        self.assertEqual(selected[0]["inventory_type_options"],[8])
+        self.assertFalse(selected[0]["user_selectable"])
+
     def test_temporary_and_gem_data_not_confused_with_item_ids(self):
         tmp=u.parse_generated("temporary_enchant",TEMP)
         rows=u.highest_known_quality(tmp["rows"],"temporary_enchant")
