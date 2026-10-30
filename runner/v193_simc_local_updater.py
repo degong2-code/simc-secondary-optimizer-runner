@@ -24,7 +24,7 @@ import urllib.parse
 import urllib.request
 
 SCHEMA="v193_explicit_local_simc_nightly_manager_v1"
-BASE="https://downloads.simulationcraft.org/nightly/"
+BASE="https://download.simulationcraft.org/nightly/"
 NIGHTLY=re.compile(r"simc-(\d{3,5}(?:-\d{1,3})?)-win64-([a-f0-9]{7,12})\.7z\Z",re.I)
 MAX_ARCHIVE=250*1024*1024
 MAX_EXPANDED=1100*1024*1024
@@ -54,7 +54,7 @@ def candidate_urls(html):
     for href in p.urls:
         url=urllib.parse.urljoin(BASE,href)
         parts=urllib.parse.urlsplit(url)
-        if (parts.scheme!="https" or parts.hostname!="downloads.simulationcraft.org"
+        if (parts.scheme!="https" or parts.hostname!="download.simulationcraft.org"
             or parts.username or parts.password or parts.query or parts.fragment
             or parts.port not in (None,443)
             or not parts.path.startswith("/nightly/")):
@@ -138,7 +138,7 @@ def fetch_index():
                                              "Accept":"text/html"})
     with urllib.request.urlopen(req,timeout=20) as res:
         need(res.status==200 and urllib.parse.urlsplit(res.geturl()).hostname==
-             "downloads.simulationcraft.org","OFFICIAL_INDEX_SOURCE_INVALID")
+             "download.simulationcraft.org","OFFICIAL_INDEX_SOURCE_INVALID")
         raw=res.read(MAX_INDEX+1)
     need(0<len(raw)<=MAX_INDEX,"OFFICIAL_INDEX_SIZE_INVALID")
     return raw.decode("utf8","replace")
@@ -150,7 +150,7 @@ def fetch_archive(url,target):
     h=hashlib.sha256();size=0
     with urllib.request.urlopen(req,timeout=60) as src,open(target,"wb") as dst:
         need(src.status==200 and urllib.parse.urlsplit(src.geturl()).hostname==
-             "downloads.simulationcraft.org",
+             "download.simulationcraft.org",
              "OFFICIAL_ARCHIVE_REDIRECT_REFUSED")
         while True:
             block=src.read(1024*1024)
