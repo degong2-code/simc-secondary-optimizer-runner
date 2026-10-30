@@ -56,6 +56,8 @@ def run(archive_path):
              "EXTRACTED_LAUNCHER_MISSING")
         need((root/"runner/v113_local_web_api.py").is_file(),
              "EXTRACTED_SERVER_MISSING")
+        need((root/"runner/v193_simc_local_updater.py").is_file(),
+             "EXTRACTED_SIMC_UPDATER_MISSING")
         check=subprocess.run(["cmd","/d","/c",str(root/"START_SIMC_OPTIMIZER_WEB_WINDOWS.cmd"),
                               "--check"],cwd=root,stdin=subprocess.DEVNULL,
                              stdout=subprocess.PIPE,stderr=subprocess.STDOUT,
@@ -96,7 +98,8 @@ def run(archive_path):
                 need(status==200 and
                      b'id="current_season_product"' not in html and
                      b"simc-import-file" in html and
-                     b"craft-compatibility-note" in html,
+                     b"craft-compatibility-note" in html and
+                     b"simc-update-panel" in html,
                      "BROWSER_UI_NOT_SERVED")
                 status,js=http(base,"/assets/app.js")
                 need(status==200 and b"current_season_product" in js,
@@ -108,6 +111,14 @@ def run(archive_path):
                 status,defaults=http(base,"/api/v1/defaults",token=token)
                 need(status==200 and len(defaults["archetypes"])==26,
                      "USER_DEFAULTS_26_DPS_FAILED")
+                status,installer=http(base,"/api/v1/simc-updates/status",token=token)
+                need(status==200 and installer["windows_supported"] and
+                     installer["native_calls_now"]==0 and
+                     installer["active_binary"] is None,
+                     "REAL_WINDOWS_UPDATER_STATUS_INVALID")
+                status,unauth=http(base,"/api/v1/simc-updates/status")
+                need(status==403,"UPDATER_STATUS_TOKEN_NOT_REQUIRED")
+                print("V193_WINDOWS_MANAGED_SIMC_STATUS_NO_NATIVE_PASS",flush=True)
                 status,gear=http(base,"/api/v1/season-gear",token=token)
                 need(status==200 and gear.get("status")==
                      "CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
