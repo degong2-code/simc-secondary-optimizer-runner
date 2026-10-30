@@ -29,10 +29,16 @@ COMMON=("neck","back","finger1","finger2")
 # proficiency, skill usage, weapon main-stat compatibility or exact option.
 # Subclass values are retail Item.ClassID=2 weapon subclasses. Prefer
 # sensible archetype shapes instead of blindly picking the lowest item ID.
-# Same-build ItemSparse.StatModifier_bonusStat codes; the public source may
-# also contain -1/secondary codes and duplicates. The REQUIRED primary code
-# must be explicit; missing/unknown/other-primary-only means NOT eligible.
-PRIMARY_STAT_CODES={"agility":3,"strength":4,"intellect":5}
+# Same-build ItemSparse.StatModifier_bonusStat values: 3=AGI, 4=STR,
+# 5=INT, 71=STR/AGI/INT, 72=STR/AGI, 73=AGI/INT, 74=STR/INT.
+# Source: SimulationCraft engine/dbc/data_enums.hh item_mod_type.
+# Other stats (-1/secondary), duplicate codes and unknown variants do not
+# establish primary compatibility; NEVER infer it from subclass/low item ID.
+PRIMARY_STAT_CODES={
+    "agility":frozenset((3,71,72,73)),
+    "strength":frozenset((4,71,72,74)),
+    "intellect":frozenset((5,71,73,74))
+}
 FORM_SUBCLASS_PREFS={
     "one_hand_frill":(15,7,4),
     "one_hand_shield":(4,15,0),
@@ -110,7 +116,7 @@ def shape_weapons(db,weapon_form,class_mask,*,spec_key):
     def correct_primary(x):
         codes=x.get("stat_modifier_codes")
         return type(codes) is list and all(type(c) is int for c in codes) and (
-            primary in codes)
+            any(c in primary for c in codes))
     main_one=[x for x in db["items"]
         if x["category"]=="plain_representative_candidate"
         and x["class_id"]==2 and x["inventory_type"]==13]
