@@ -52,7 +52,7 @@ class NativeEnchantmentLockedBudget(unittest.TestCase):
         with self.assertRaisesRegex(e.RatingEvidenceBlocked,
                                     "FIXED_L_AND_ENCHANT_E_EXCEED"):
             e.plan_locked_fixed_enchant_T(
-                3182,vec(h=138),vec(c=165),vec(h=32),vec(h=2810),
+                3182,vec(h=138),vec(c=165),vec(h=32),vec(h=2830),
                 [evidence()])
         with self.assertRaisesRegex(e.RatingEvidenceBlocked,"UNDER_NATIVELY"):
             p=e.plan_locked_fixed_enchant_T(
