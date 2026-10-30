@@ -173,11 +173,16 @@ def public_options(payload):
         })
     for rows in choices.values():
         rows.sort(key=lambda x:(x["name"].casefold(), x["item_id"]))
+    # Stable contract metadata, not a new equipment recommendation.
+    import v143_specialization_contracts as specs
+    weapon_forms={"/".join(key.split("/")):specs.lookup(*key.split("/"))["weapon_form"]
+                  for key in sorted(specs.CONTRACTS)}
     return {
         "schema": SCHEMA,
         "status": db["status"],
         "season_build": db["season_build"],
         "choices": choices,
+        "weapon_forms": weapon_forms,
         "count": db["item_count"],
         "manual_exact_id_allowed": False,
         "manual_exact_id_exception": "CRAFTED_EQUIPMENT_VARIANTS_ONLY",
