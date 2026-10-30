@@ -53,7 +53,7 @@ class SourceSeasonUiCatalog(unittest.TestCase):
                                         "SOURCE_FIRST_ENCHANT_ROW_INVALID"):
                 catalog.public_options(p)
             bad["rows"][0]["approved"]=False
-            bad["rows"][0]["inventory_type_mask"]=2
+            bad["rows"][0]["inventory_type_mask"]=1<<29
             p.write_text(json.dumps(bad))
             with self.assertRaisesRegex(catalog.CatalogBlocked,
                                         "CURRENT_SEASON_ENCHANT_CATEGORY_COUNTS_INVALID|UNRECOGNIZED"):
