@@ -47,10 +47,10 @@ const classArmor={mage:1,warlock:1,priest:1,
   rogue:2,druid:2,monk:2,demonhunter:2,
   hunter:3,shaman:3,evoker:3,
   warrior:4,paladin:4,deathknight:4};
-const embellishmentChoices=[
-  ["arcanoweave_lining","비전직조 안감"],
-  ["sunfire_silk_lining","태양불꽃 비단 안감"]
-];
+// Embellishment compatibility comes from the same server metadata used
+// by Python validation. No client-side assumptions about jewelry/weapons.
+const armorCraftSlots = new Set(["head","shoulders","back","chest",
+ "wrists","hands","waist","legs","feet"]);
 const gearGroups = {
   "special-rows":{title:"특수효과 장비",fields:["slot","item_id","bonus_id","redirected_base_stats"]},
   "crafted-rows":{title:"장식 제작장비",fields:["slot","embellishment","stat_a","stat_b","item_id","bonus_id"]}
@@ -188,47 +188,87 @@ function installSeasonGearHints(catalog) {
     (current.special_effect_gear_candidate?.length||0)+
     "개를 시즌 목록에서 선택 · 신화+ 후보 포함(드롭 조건 미확정) · 일반장비 자동 구성 · 정확 ID 직접 입력은 제작장비만 예외";
 }
-function suggestGearSlot(row, group) {
-  const id=row.querySelector('[data-field="item_id"]');
+// Item.InventoryType determines special equipment slot. Ring and dual
+// weapons have equivalent hands, so select the next free valid slot.
+function specialAllowedSlots(item) {
+  if(!item)return [];
+  const form=state.seasonGear?.weapon_forms?.[field("spec")];
+  const fixed={1:"head",2:"neck",3:"shoulders",5:"chest",20:"chest",
+    6:"waist",7:"legs",8:"feet",9:"wrists",10:"hands",16:"back"};
+  if(Object.hasOwn(fixed,item.inventory_type))return [fixed[item.inventory_type]];
+  if(item.inventory_type===11)return ["finger1","finger2"];
+  if(item.inventory_type===13) {
+    if(["dual_one_hand"].includes(form))return ["main_hand","off_hand"];
+    if(["one_hand_frill","one_hand_shield","single_one_hand"].includes(form))
+      return ["main_hand"];
+    return [];
+  }
+  if(item.inventory_type===17)return form==="dual_two_hand"?
+    ["main_hand","off_hand"]:form==="single_two_hand"?["main_hand"]:[];
+  if([15,26].includes(item.inventory_type))return form==="ranged"?["main_hand"]:[];
+  if(item.inventory_type===14)return form==="one_hand_shield"?["off_hand"]:[];
+  if(item.inventory_type===23)return form==="one_hand_frill"?["off_hand"]:[];
+  return [];
+}
+function refreshSpecialSlots() {
+  const used=new Set(),ids=new Set();
+  for(const row of $("special-rows").querySelectorAll(".gear-row")) {
+    const id=row.querySelector('[data-field="item_id"]');
+    const slot=row.querySelector('[data-field="slot"]');
+    const note=row.querySelector(".auto-slot-note");
+    slot.value="";
+    if(!id?.value){note.textContent="장비를 선택하면 부위가 자동 지정됩니다.";continue;}
+    const item=state.seasonGear?.choices?.special_effect_gear_candidate
+      ?.find(x=>x.item_id===Number(id.value));
+    if(!item) {note.textContent="이전 세션 장비 또는 시즌 목록에 없는 ID · 재선택 필요";continue;}
+    const valid=specialAllowedSlots(item);
+    const chosen=valid.find(x=>!used.has(x));
+    if(!chosen||ids.has(item.item_id)) {
+      note.textContent="이 전문화에서 장착할 수 없거나 중복된 장비입니다.";
+      continue;
+    }
+    slot.value=chosen;used.add(chosen);ids.add(item.item_id);
+    note.textContent="자동 부위: "+slotNames[chosen]+
+      (valid.length>1?" (동일 유형의 다른 장비는 남는 칸으로 배정)":"");
+  }
+}
+function syncCraftRow(row,restored=false) {
+  const kind=row.querySelector('[data-field="embellishment"]');
   const slot=row.querySelector('[data-field="slot"]');
-  const key=group==="special-rows"?"special_effect_gear_candidate":"selectable_stat_craft";
-  const value=Number(id?.value);
-  if(!Number.isSafeInteger(value)||value<=0||!state.seasonGear||!slot)return;
-  const selected=(state.seasonGear.choices[key]||[]).find(x=>x.item_id===value);
-  // Ring, weapon and offhand can map to more than one SimC slot.
-  // Never guess them; even a known item needs real SimC options.
-  if(selected?.slot_hint&&statOptions.includes(selected.slot_hint)&&!slot.value)
-    slot.value=selected.slot_hint;
+  const previous=slot.value;
+  const meta=state.options?.embellishments?.[kind.value];
+  const slots=(meta?.slots||[]).filter(x=>armorCraftSlots.has(x)&&!!chosenCraft(x));
+  slot.replaceChildren(option("","적용 부위 선택"));
+  for(const x of statOptions)if(slots.includes(x))
+    slot.appendChild(option(x,slotNames[x]));
+  if(previous&&slots.includes(previous))slot.value=previous;
+  else if(restored&&previous) {
+    const optionOld=option(previous,slotNames[previous]||previous);
+    optionOld.dataset.historic="true";slot.appendChild(optionOld);slot.value=previous;
+  }
+  const note=row.querySelector(".craft-slot-note");
+  note.textContent=!kind.value?"장식 종류를 먼저 선택하면 호환 부위가 표시됩니다.":
+    !meta?"검증되지 않은 이전 장식 · 새 계획은 재선택 필요":
+    slots.length?"지원 유형: 방어구 전용 · 목걸이/반지/무기에는 적용 불가":
+    "이 직업에서 선택 가능한 제작 방어구가 없습니다.";
 }
 
 function showRepresentativeScope() {
-  // The 16 new source-to-target profiles have actual one-shot Native proof,
-  // but keep some original non-tier gear. Do not call them fully standardized.
   const item=state.defaults.find(d=>d.class+"/"+d.spec===field("spec"));
   const note=$("gear-scope-note");
   note.hidden=!item;
   if(!item)return;
-  if(Number(field("ilevel"))!==334) {
-    note.textContent=$("current_season_product").checked
-      ?"334 이외 목표 ilvl: 최신 시즌 대표 장비·티어·무기를 선택 레벨로 구성하고 해당 참조 B 또는 사용자 수동 T로 SimC를 실행합니다. 334에서 검증한 Native 결과를 다른 레벨로 확대하거나 캐시를 공유하지 않습니다. 실제 현재 레벨·조건의 적합성은 해당 SimC 실행으로 판정합니다."
-      :"334 이외 목표 ilvl: 기존 독립 대표 프로필 경로를 사용합니다. 최신 시즌 장비 경로를 쓰려면 위 선택을 켜세요. 같은 시즌 대표 아이템 ID를 선택 레벨로 지정하여 별도 SimC 사용자 프로필과 참조 B를 구성합니다.";
-  } else if($("current_season_product").checked) {
-    note.textContent="새 시즌 대표장비: 26개 DPS 기본 프로필 모두 실제 SimC 수용 PASS, 징벌 성기사 신규 장비 6후보 최적화·95% 결과·캐시 재사용 PASS. 이 실행은 별도 세션으로 저장하며 특성·장신구·특수효과·기름 등 변경한 입력의 결과는 SimC 실행으로 판단합니다.";
-  } else if(item.representative_scope==="SOURCE_INDEPENDENT_TARGET334_VALIDATED_BATCH") {
-    note.textContent="목표 334: 내부 시즌 대표 장비·티어 4세트·SimC 기본 APL로 독립 생성합니다. 24개 기본 프로필은 실제 SimC 배치에서 물리·6후보 PASS. 입력 변경·기름·특수장비 효과의 성능은 각 실행 결과로만 판단합니다. 기존 캐시와 분리된 새 세션입니다.";
-  } else if(item.representative_scope==="SOURCE_INDEPENDENT_SEASON_CATALOG") {
-    note.textContent="독립 시즌 대표 장비·티어 4세트·SimC 기본 APL을 사용합니다. 목표 334의 기존 실측 범위와 다른 사용자 조건은 실행 결과에서만 판단합니다.";
-  } else {
-    note.textContent="기존 소스 기반 대표 장비 구성입니다. 모든 일반 장비의 완전한 표준화까지 검증된 것은 아니며 결과는 실제 생성된 프로필 조건부입니다.";
-  }
+  note.textContent=Number(field("ilevel"))===334?
+    "최신 시즌 대표 장비·직업별 티어 4세트를 내부 생성합니다. 26개 전문화 기본 프로필은 실제 SimC 수용 확인. 사용자 선택 옵션은 실제 SimC 입력으로 평가하며 결과는 세션마다 다릅니다.":
+    "334 이외 목표 ilvl: 최신 시즌 대표 장비·티어·무기를 선택 레벨로 구성합니다. 기존 334 Native 결과를 다른 레벨로 확대하지 않으며, 해당 조건의 수용 여부는 실제 SimC 실행으로 판정합니다.";
 }
+
 function fillDefault(item) {
   $("race").value=item.race;
   $("talents").value=item.talents;
   setTrinketSelection("trinket1",item.trinket_ids[0]);
   setTrinketSelection("trinket2",item.trinket_ids[1]);
   $("ilevel").value=item.ilevel;
-  $("current_season_product").checked=true;
   $("final_T").value=item.final_T??"";
   $("targets").value=item.targets;
   $("duration").value=item.duration_seconds;
@@ -240,6 +280,7 @@ function fillDefault(item) {
   // Reset optional slots on specialization changes, including hidden extra rows.
   fillGearRows("special-rows",[]);
   fillGearRows("crafted-rows",[]);
+  for(const row of $("crafted-rows").querySelectorAll(".gear-row"))syncCraftRow(row);
   showRepresentativeScope();
 }
 function oilCompatibility() {
