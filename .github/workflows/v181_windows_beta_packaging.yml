@@ -7,6 +7,13 @@ on:
       - integration_probes/v181_windows_beta_live_http.py
       - tests/test_v181_windows_beta_package_offline.py
       - WINDOWS_BETA_START_HERE.md
+      - runner/v193_simc_local_updater.py
+      - runner/v113_local_web_api.py
+      - runner/webui/index.html
+      - runner/webui/app.js
+      - runner/webui/styles.css
+      - tests/test_v193_simc_local_updater.py
+      - tests/test_v193_local_web_simc_update_api.py
       - START_SIMC_OPTIMIZER_WEB_WINDOWS.cmd
       - .github/workflows/v181_windows_beta_packaging.yml
 permissions:
@@ -59,7 +66,7 @@ jobs:
       - name: Existing Windows local web, session, SHA/cache, security offline regressions
         shell: pwsh
         run: |
-          python -m unittest -q tests.test_v152_windows_local_web_launcher_offline tests.test_v113_local_web_api_offline tests.test_v114_local_web_ui_offline tests.test_v106_user_session_controller tests.test_v177_current_season_product_flow tests.test_v180_multilevel_current_season_product_offline
+          python -m unittest -q tests.test_v152_windows_local_web_launcher_offline tests.test_v113_local_web_api_offline tests.test_v114_local_web_ui_offline tests.test_v106_user_session_controller tests.test_v177_current_season_product_flow tests.test_v180_multilevel_current_season_product_offline tests.test_v193_simc_local_updater tests.test_v193_local_web_simc_update_api
           if ($LASTEXITCODE -ne 0) { throw "Existing local web or session regression failed" }
           node --check runner/webui/app.js
           if ($LASTEXITCODE -ne 0) { throw "Browser JS syntax failed" }
