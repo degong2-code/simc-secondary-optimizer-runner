@@ -38,9 +38,22 @@ const specLabels = {
 };
 const statOptions = ["head","neck","shoulders","back","chest","wrists","hands",
                      "waist","legs","feet","finger1","finger2","main_hand","off_hand"];
+const slotNames={head:"머리",neck:"목",shoulders:"어깨",back:"등",chest:"가슴",
+  wrists:"손목",hands:"손",waist:"허리",legs:"다리",feet:"발",
+  finger1:"반지 1",finger2:"반지 2",main_hand:"주무기",off_hand:"보조무기"};
+const craftStats={crit:"32",haste:"36",mastery:"49",vers:"40"};
+const statNames={crit:"치명",haste:"가속",mastery:"특화",vers:"유연"};
+const classArmor={mage:1,warlock:1,priest:1,
+  rogue:2,druid:2,monk:2,demonhunter:2,
+  hunter:3,shaman:3,evoker:3,
+  warrior:4,paladin:4,deathknight:4};
+const embellishmentChoices=[
+  ["arcanoweave_lining","비전직조 안감"],
+  ["darkmoon_sigil_hunt","다크문 인장: 사냥"]
+];
 const gearGroups = {
   "special-rows":{title:"특수효과 장비",fields:["slot","item_id","bonus_id","redirected_base_stats"]},
-  "crafted-rows":{title:"장식 제작장비",fields:["slot","item_id","crafted_stats","embellishment","bonus_id"]}
+  "crafted-rows":{title:"장식 제작장비",fields:["slot","embellishment","stat_a","stat_b","item_id","bonus_id"]}
 };
 const names = {
   slot:"부위",item_id:"아이템 ID",bonus_id:"bonus_id",
@@ -222,54 +235,93 @@ function fillDefault(item) {
   $("raid_buffs").checked=item.raid_buffs;
   $("oil_main").checked=item.oil_hands.includes("main_hand");
   $("oil_off").checked=item.oil_hands.includes("off_hand");
+  oilCompatibility();
   for (const id of ["food","potion","augmentation","diamond","omnium"]) $(id).selectedIndex=0;
   // Reset optional slots on specialization changes, including hidden extra rows.
   fillGearRows("special-rows",[]);
   fillGearRows("crafted-rows",[]);
   showRepresentativeScope();
 }
+function oilCompatibility() {
+  const key=field("spec");
+  const form=state.seasonGear?.weapon_forms?.[key];
+  const supportsOff=form==="dual_one_hand"||form==="dual_two_hand";
+  $("oil_off").disabled=!supportsOff;
+  if(!supportsOff)$("oil_off").checked=false;
+  $("oil_off").title=supportsOff?"두 무기에 기름 적용 가능":"이 전문화의 보조무기에는 기름을 사용할 수 없습니다.";
+}
+function craftSlot(item) {
+  if(item.slot_hint)return item.slot_hint;
+  if(item.inventory_type===11)return "finger1";
+  if(item.inventory_type===20)return "chest";
+  return null;
+}
+function chosenCraft(slot) {
+  const family=classArmor[field("spec").split("/")[0]];
+  const rows=state.seasonGear?.choices?.selectable_stat_craft||[];
+  const valid=rows.filter(item=>{
+    if(item.class_id!==4)return false;
+    const actual=craftSlot(item);
+    if(slot==="finger2") {
+      if(actual!=="finger1")return false;
+    } else if(actual!==slot)return false;
+    return item.subclass_id===family ||
+      (["back","finger1","finger2","neck"].includes(slot) &&
+       (item.subclass_id===0||slot==="back"&&item.subclass_id===1));
+  }).sort((a,b)=>a.item_id-b.item_id);
+  return valid[0]||null;
+}
 function gearInputs(nodeId, config) {
-  const parent=$(nodeId);
-  const isSpecial=nodeId==="special-rows";
+  const parent=$(nodeId),isSpecial=nodeId==="special-rows";
   const limit=isSpecial?8:2;
-  const title=document.createElement("h3");title.textContent=config.title+" · 최대 "+limit+"개";
-  const group=document.createElement("div");group.className="gear-group";group.appendChild(title);
-  for (let i=0;i<limit;i++) {
+  const title=document.createElement("h3");
+  title.textContent=config.title+" · 최대 "+limit+"개";
+  const group=document.createElement("div");
+  group.className="gear-group";group.appendChild(title);
+  for(let i=0;i<limit;i++) {
     const row=document.createElement("div");row.className="gear-row";
     if(isSpecial&&i>=2)row.hidden=true;
-    row.dataset.group=nodeId; row.dataset.index=String(i);
+    row.dataset.group=nodeId;row.dataset.index=String(i);
     const heading=document.createElement("p");heading.className="gear-row-title";
-    heading.textContent=config.title+" "+(i+1);
-    row.appendChild(heading);
+    heading.textContent=config.title+" "+(i+1);row.appendChild(heading);
     const grid=document.createElement("div");grid.className="gear-fields";
-    for (const name of config.fields) {
+    for(const name of config.fields) {
       const label=document.createElement("label");
-      label.textContent=name==="item_id" ?
-        (isSpecial?"시즌 특수효과 장비":"제작장비 ID · 정확 ID 예외") :
-        (names[name]||name);
-      const input=(name==="slot"||(isSpecial&&name==="item_id")) ?
-          document.createElement("select") : document.createElement("input");
+      const isPrivate=["bonus_id","redirected_base_stats"].includes(name)||
+                      (!isSpecial&&name==="item_id");
+      label.hidden=isPrivate;
+      label.textContent=name==="item_id"?"이번 시즌 장비":
+        name==="stat_a"?"제작 스탯 1":
+        name==="stat_b"?"제작 스탯 2":
+        name==="embellishment"?"장식 종류":(names[name]||name);
+      const input=(name==="slot"||name==="embellishment"||
+                   ["stat_a","stat_b"].includes(name)||
+                   isSpecial&&name==="item_id") ?
+        document.createElement("select"):document.createElement("input");
       input.dataset.field=name;
       if(name==="item_id"&&isSpecial) {
         input.appendChild(option("","이번 시즌 특수효과 장비 선택"));
         input.addEventListener("change",()=>suggestGearSlot(row,nodeId));
-      }
-      input.setAttribute("aria-label",config.title+" "+(i+1)+" "+
-                         label.textContent);
-      if (name==="slot") {
+      }else if(name==="slot") {
         input.appendChild(option("","미선택"));
-        for(const slot of statOptions) input.appendChild(option(slot,slot));
-      } else if(name!=="item_id"||!isSpecial) input.type="text";
-      input.autocomplete="off";
-      label.appendChild(input);
-      grid.appendChild(label);
+        for(const slot of statOptions)input.appendChild(option(slot,slotNames[slot]));
+      }else if(name==="embellishment") {
+        input.appendChild(option("","장식 종류 선택"));
+        for(const [value,labelName] of embellishmentChoices)
+          input.appendChild(option(value,labelName));
+      }else if(name==="stat_a"||name==="stat_b") {
+        input.appendChild(option("","스탯 선택"));
+        for(const [value,labelName] of Object.entries(statNames))
+          input.appendChild(option(value,labelName));
+      }else input.type="hidden";
+      input.setAttribute("aria-label",config.title+" "+(i+1)+" "+label.textContent);
+      input.autocomplete="off";label.appendChild(input);grid.appendChild(label);
     }
     row.appendChild(grid);group.appendChild(row);
   }
   if(isSpecial) {
-    const add=document.createElement("button");
-    add.type="button";add.className="btn secondary";
-    add.textContent="+ 특수효과 장비 추가";
+    const add=document.createElement("button");add.type="button";
+    add.className="btn secondary";add.textContent="+ 특수효과 장비 추가";
     add.addEventListener("click",()=>{
       const next=Array.from(group.querySelectorAll(".gear-row")).find(r=>r.hidden);
       if(next)next.hidden=false;
@@ -280,24 +332,26 @@ function gearInputs(nodeId, config) {
   parent.appendChild(group);
 }
 function fillGearRows(nodeId, entries) {
-  const group=$(nodeId);
-  const rows=Array.from(group.querySelectorAll(".gear-row"));
+  const group=$(nodeId),rows=Array.from(group.querySelectorAll(".gear-row"));
   if(entries.length>rows.length)throw Error("SESSION_GEAR_ROWS_OUT_OF_RANGE");
+  const byCode={32:"crit",36:"haste",49:"mastery",40:"vers"};
   for(const [index,row] of rows.entries()) {
     const entry=entries[index]||null;
     row.hidden=nodeId==="special-rows"&&index>=Math.max(2,entries.length);
+    const stats=(entry?.options?.crafted_stats||"").split("/");
     for(const input of row.querySelectorAll("[data-field]")) {
       const name=input.dataset.field;
       const value=!entry?"":name==="slot"?entry.slot:
         name==="item_id"?String(entry.item_id):
+        name==="stat_a"?byCode[stats[0]]||"":
+        name==="stat_b"?byCode[stats[1]]||"":
         String(entry.options?.[name]??"");
       if(nodeId==="special-rows"&&name==="item_id") {
         for(const opt of Array.from(input.options))
           if(opt.dataset.historic==="true")opt.remove();
         if(value&&!seasonChoice("special_effect_gear_candidate",value)) {
           const old=option(value,"이전 세션 특수장비 #"+value+" · 새 계획은 재선택");
-          old.dataset.historic="true";
-          input.appendChild(old);
+          old.dataset.historic="true";input.appendChild(old);
         }
       }
       input.value=value;
@@ -323,9 +377,19 @@ function fillSessionInputs(payload) {
   $("raid_buffs").checked=b.raid_buffs;
   $("oil_main").checked=u.oil_hands.includes("main_hand");
   $("oil_off").checked=u.oil_hands.includes("off_hand");
+  oilCompatibility();
   const choices=u.consumable_choices||{};
-  for(const key of ["food","potion","augmentation","omnium"])
-    $(key).value=choices[key==="omnium"?"omnium_talents":key]??"source_default";
+  for(const key of ["food","potion","augmentation"])
+    $(key).value=choices[key]??"source_default";
+  const oldOmnium=choices.omnium_talents??"source_default";
+  const omni=$("omnium");
+  for(const x of Array.from(omni.options))
+    if(x.dataset.historic==="true")x.remove();
+  if(!Array.from(omni.options).some(x=>x.value===oldOmnium)){
+    const historical=option(oldOmnium,"기존 세션 4열 선택 유지");
+    historical.dataset.historic="true";omni.appendChild(historical);
+  }
+  omni.value=oldOmnium;
   $("diamond").value=String(choices.diamond_id??0);
   fillGearRows("special-rows",u.special_items||[]);
   fillGearRows("crafted-rows",u.embellishments||[]);
@@ -338,24 +402,37 @@ function fillSessionInputs(payload) {
   showRepresentativeScope();
 }
 function selectedGear(nodeId, group) {
-  const result=[];
-  for (const row of $(nodeId).querySelectorAll(".gear-row")) {
+  const result=[],isCraft=group==="embellishments";
+  for(const row of $(nodeId).querySelectorAll(".gear-row")) {
     const fields={};
-    for (const input of row.querySelectorAll("[data-field]"))
+    for(const input of row.querySelectorAll("[data-field]"))
       fields[input.dataset.field]=input.value.trim();
-    if (!Object.values(fields).some(Boolean)) continue;
-    if (!fields.slot|| !/^[0-9]+$/.test(fields.item_id))
-      throw Error("특수장비/장식은 부위와 양의 정수 아이템 ID가 모두 필요합니다.");
-    const options={};
-    for(const [key,value] of Object.entries(fields)) {
-      if(key!=="slot" && key!=="item_id" && value) options[key]=value;
+    if(!Object.values(fields).some(Boolean))continue;
+    if(isCraft) {
+      if(!fields.slot||!fields.embellishment||!fields.stat_a||!fields.stat_b)
+        throw Error("장식 제작장비는 부위·장식 종류·제작 스탯 2개를 선택해 주세요.");
+      if(fields.stat_a===fields.stat_b)
+        throw Error("제작 스탯은 서로 다른 두 가지를 선택해야 합니다.");
+      const resolved=chosenCraft(fields.slot);
+      if(!resolved)throw Error("이 직업·부위에 사용할 시즌 제작장비가 없습니다.");
+      const raw={"crafted_stats":craftStats[fields.stat_a]+"/"+
+                  craftStats[fields.stat_b],"embellishment":fields.embellishment};
+      // Existing restored bonus IDs are kept only for the EXACT same item.
+      if(fields.bonus_id&&Number(fields.item_id)===resolved.item_id)
+        raw.bonus_id=fields.bonus_id;
+      result.push({slot:fields.slot,item_id:resolved.item_id,options:raw});
+    }else {
+      if(!fields.slot||!/^[0-9]+$/.test(fields.item_id))
+        throw Error("특수장비의 부위와 시즌 장비를 선택해 주세요.");
+      if(!seasonChoice("special_effect_gear_candidate",fields.item_id))
+        throw Error("이번 시즌 특수효과 장비 목록에서 선택해야 합니다.");
+      const options={};
+      for(const k of ["bonus_id","redirected_base_stats"])
+        if(fields[k])options[k]=fields[k];
+      result.push({slot:fields.slot,item_id:Number(fields.item_id),options});
     }
-    if(group==="special_items"&&
-       !seasonChoice("special_effect_gear_candidate",fields.item_id))
-      throw Error("이번 시즌 특수효과 장비 목록에서 선택해야 합니다.");
-    result.push({slot:fields.slot,item_id:Number(fields.item_id),options});
   }
-  if(result.length>(group==="special_items"?8:2)) throw Error(group+" 허용 개수 초과");
+  if(result.length>(isCraft?2:8))throw Error("선택한 장비 수가 제한을 초과했습니다.");
   return result;
 }
 function buildRequest() {
@@ -650,8 +727,11 @@ function installOptions(options) {
   }
   populateSelect("diamond",options.diamond_id,
     v=>Number(v)===0?"원본 기본값":String(v));
-  populateSelect("omnium",options.omnium_talents,(v,i)=>
-    v==="source_default"?"원본 5룬 조합":v);
+  populateSelect("omnium",["source_default","row4_crit","row4_haste",
+                            "row4_mastery","row4_vers"],v=>({
+     source_default:"기본 4열 유지",row4_crit:"치명",row4_haste:"가속",
+     row4_mastery:"특화",row4_vers:"유연"
+  })[v]);
 }
 async function loadAvailableNativeBatches() {
   // Only local batch directory IDs; NEVER browser-provided filesystem paths.
