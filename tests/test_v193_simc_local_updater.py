@@ -109,6 +109,43 @@ class SimCUpdateUnit(unittest.TestCase):
             self.m.install(NAME,downloader=broken,sevenzip="fake")
         self.assertFalse((self.path/"managed"/"installed.json").exists())
 
+    def test_local_7z_install_explicit_origin_not_authenticated(self):
+        f=self.path/NAME
+        f.write_bytes(mod.MAGIC+b"x"*150000)
+        def extractor(archive,stage,sevenzip):
+            exe=stage/"simc.exe"
+            exe.write_bytes(b"MZ"+b"portable_fake_pe"*11000)
+            return exe
+        result=self.m.install_local(str(f),extractor=extractor,sevenzip="mock7z")
+        self.assertEqual(result["installed"]["archive_source"],
+                         "USER_LOCAL_FILE_ORIGIN_NOT_AUTHENTICATED")
+        self.assertFalse(result["installed"]["upstream_signature_verified"])
+        self.assertTrue(result["active_binary"])
+        # An attacker can't inject remote URLs or arbitrary extensions.
+        with self.assertRaisesRegex(mod.UpdateBlocked,
+                                    "LOCAL_WIN64_NIGHTLY_ARCHIVE_INVALID"):
+            self.m.install_local(str(self.path/"evil.exe"),sevenzip="mock7z")
+
+    def test_pe64_header_validation_blocks_mz_only_and_untrusted_architecture(self):
+        with mock.patch.object(mod.subprocess,"run") as command:
+            command.return_value=mock.Mock(returncode=0,stdout=LIST)
+            root=self.path/"extract";root.mkdir()
+            archive=self.path/"simc.7z";archive.write_bytes(mod.MAGIC)
+            def fake_extract(*_args,**_kwargs):
+                exe=root/"simc.exe"
+                exe.write_bytes(b"MZ"+b"0"*199999)
+                return mock.Mock(returncode=0,stdout="")
+            command.side_effect=[
+                mock.Mock(returncode=0,stdout=LIST),
+                mock.Mock(returncode=0,stdout="")
+            ]
+            # Real archive parsing succeeds but the extracted invalid MZ
+            # must fail before install and cannot touch the previous binary.
+            (root/"simc.exe").write_bytes(b"MZ"+b"0"*199999)
+            with self.assertRaisesRegex(mod.UpdateBlocked,"PE_OFFSET"):
+                mod.extract_safe(archive,root,"mock7z")
+            self.assertFalse((self.path/"managed").exists())
+
     def test_linux_platform_install_not_supported(self):
         linux=mod.SimCManager(self.path/"linux",platform="linux")
         self.assertFalse(linux.status()["windows_supported"])
