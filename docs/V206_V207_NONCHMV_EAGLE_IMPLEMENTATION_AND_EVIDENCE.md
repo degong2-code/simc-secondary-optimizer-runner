@@ -78,3 +78,14 @@ marshalling of all 38 enchant families, extend the existing v191 source
 import with SimC native effect registration details and strict unknown type
 fallback; preserve unverified effects locked and do not require 38×26 Native
 recalculation or duplicate source collection.
+
+## v207 actual selected-Eagle Windows user/native/cache — independently verified SUCCESS
+
+[Actions #41109265120](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41109265120), job `124247140107`, original source commit `c92cfa06341b237617b137191201a418e5f6742a`, **SUCCESS**. The already-verified official Win64 binary SHA `0ad16368cd1effb19c793dbce63518ccb72fec89c72f6ef75d9afca239a039e8` was used with the one source-generated **paladin/retribution ilvl334, finger1 enchant_id=7967** user case.
+
+- Confirmed from the actual job's complete log and original receipt artifact `13003341874`: `B=3150`, fixed oil `O=32`, `T=3182`, **6 new Windows Native** calls, **6/6 SHA-validated cache-only hits**, **0 additional Native** during replay. Observed best mean DPS `185221.06034702563`, SimC SEM `270.9787148736912`, confidence `0.95`, `global_optimum_proven=false`.
+- Original artifact ZIP SHA `a53257540435bcf576b465a8f44c94029d20f94c406ef9f491c7ec6b5b36a651`. Its six individual Native JSON2 case SHA witnesses and original immutable provenance are preserved in [v207 successor receipt](V207_EAGLE_SELECTED_NATIVE_VALIDATED_SUCCESSOR_20261031.json); original ZIP was also downloaded and parsed. A generic field `no_enchant_selection_promotion=true` in the original v205-reused probe had been inherited into the v207 output incorrectly: this **does not mean Eagle was unselected**. A separate metadata-only source fix and successor receipt identify the sole enabled Eagle choice and leave other 37 locked, **without re-running Native** or mutating the original receipt.
+- Reused v205 no-enchant Windows sample is a separate session and has different source/profile/cache identity. **No paired 95% statistical DPS gain claim** between v205 and v207. The current product merely accepts the user's single Eagle option, renders the selected SimC effect through the existing calculation, and leaves CHMV budget constant. No effect model or second solver was added.
+- Native/scope limit: a single Windows Ret Paladin 334 loadout; not all 26, not Windows GUI mouse-click E2E, not all 38 enchants. General user-selected Eagle field exists only in the isolated branch and requires updated source deployment; previous downloaded Windows ZIPs are not patched in place.
+
+**P1 next:** cache-first internal exact static `L` acquisition when the user selects a special-effect item; do not require user-managed profile/filler/cache, do not assume missing `L=0`, and do not re-run completed v207 or v204 Native evidence.
