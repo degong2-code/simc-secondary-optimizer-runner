@@ -49,7 +49,7 @@ const classArmor={mage:1,warlock:1,priest:1,
   warrior:4,paladin:4,deathknight:4};
 const embellishmentChoices=[
   ["arcanoweave_lining","비전직조 안감"],
-  ["darkmoon_sigil_hunt","다크문 인장: 사냥"]
+  ["sunfire_silk_lining","태양불꽃 비단 안감"]
 ];
 const gearGroups = {
   "special-rows":{title:"특수효과 장비",fields:["slot","item_id","bonus_id","redirected_base_stats"]},
