@@ -20,6 +20,7 @@ import v122_common_profile_format as profile_format
 import v139_pure_target_profile_composer as pure
 import v169_source_first_representative_stage as source_first
 import v202_one_enchant_admission as verified_enchant
+import v206_nonchmv_eagle_selection as nonchmv_enchant
 
 SCHEMA="v098_target_ilevel_user_scenario_v1"
 FIELDS={"schema","character","target","trinkets","special_items",
@@ -33,6 +34,7 @@ FIXTURES=common.FIXTURES
 IMPORT_FIELD="import_simc_profile"
 CONSUME_FIELD="consumable_choices"
 ENCHANT_FIELD="verified_enchant"
+SEASON_ENCHANT_FIELD=nonchmv_enchant.FIELD
 TIER_FIVE=common.TIER_FIVE
 FIFTH_TIER=common.FIFTH_TIER
 
@@ -159,9 +161,13 @@ def build(user,folder,binary,revision,static_cache_path=None,
           independent_334=False,independent_target_level=False,
           source_first_stage=False,current_season_product=False):
     """Return an already validated internal manifest and v096 plan; no Native."""
-    accepted=(FIELDS,FIELDS|{IMPORT_FIELD},FIELDS|{CONSUME_FIELD},
-              FIELDS|{IMPORT_FIELD,CONSUME_FIELD})
-    accepted=accepted+tuple(x|{ENCHANT_FIELD} for x in accepted)
+    base_accepted=(FIELDS,FIELDS|{IMPORT_FIELD},FIELDS|{CONSUME_FIELD},
+                   FIELDS|{IMPORT_FIELD,CONSUME_FIELD})
+    # Existing Linux-pinned fixed-E pilot and one source-classified nonCHMV
+    # user choice are separate; never combine them in one stage.
+    accepted=(base_accepted+
+              tuple(x|{ENCHANT_FIELD} for x in base_accepted)+
+              tuple(x|{SEASON_ENCHANT_FIELD} for x in base_accepted))
     need(type(user) is dict and set(user) in accepted
          and user.get("schema")==SCHEMA,"USER_SCENARIO_FIELDS")
     using_import=IMPORT_FIELD in user
@@ -289,6 +295,11 @@ def build(user,folder,binary,revision,static_cache_path=None,
     gem_choice=choice.get("diamond_id") or int(
         rows["head"]["options"].get("gem_id","0"))
     common.ensure_representative_gem_colors(rows,gem_choice,need)
+    selected_nonchmv=None
+    if SEASON_ENCHANT_FIELD in user:
+        selected_nonchmv=nonchmv_enchant.apply(
+            rows,user[SEASON_ENCHANT_FIELD],user,
+            current_season_product=current_season_product,need_user=need)
     selected_fixed_E=None
     if ENCHANT_FIELD in user:
         # The same selected ring cannot be counted both as the exact
@@ -396,6 +407,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
     if final_T is not None:manifest["manual_final_T"]=final_T
     if ENCHANT_FIELD in user:
         manifest[entry.NATIVE_ENCHANT_FIELD]=dict(user[ENCHANT_FIELD])
+    if SEASON_ENCHANT_FIELD in user:
+        manifest[entry.NONCHMV_ENCHANT_FIELD]=dict(user[SEASON_ENCHANT_FIELD])
     if pure_stage:manifest[entry.STAGE_FIELD]=True
     put_once(folder/"profile.simc",profile)
     put_once(folder/"scenario.json",canonical(cfg)+"\n")
@@ -405,6 +418,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
     need(plan["base_B"]==B and plan["item_slots"]==len(rows),
          "BOOTSTRAP_TO_V096_BUDGET_OR_SLOT_DRIFT")
     return {"schema":SCHEMA,
+            **({"selected_nonchmv_enchant":selected_nonchmv}
+               if selected_nonchmv is not None else {}),
             "status":("STAGED_INTERNAL_MANIFEST_NATIVE_NOT_AUTHORIZED"
                       if pure_stage else "READY_INTERNAL_MANIFEST_ZERO_NATIVE"),
             **({"pure_source_independent_stage":True,
