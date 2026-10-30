@@ -1,0 +1,81 @@
+name: v189 On-Demand SimC Consumable + Embellishment Handler Discovery (No Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v189_simc_consumable_embellishment_discovery.py
+      - tests/test_v189_simc_choice_discovery.py
+      - .github/workflows/v189_simc_consumable_embellishment_discovery.yml
+  workflow_dispatch:
+    inputs:
+      simc_commit:
+        description: Exact 40-hex SimC commit to inspect (no 'latest' auto-resolve)
+        type: string
+        required: true
+        default: 7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd
+permissions:
+  contents: read
+concurrency:
+  group: v189-source-discovery-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  offline-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Safe parser, old user contract and exact revision tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile runner/v189_simc_consumable_embellishment_discovery.py
+          python3 -m unittest -v tests.test_v189_simc_choice_discovery
+  pinned-source:
+    needs: offline-tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      USER_SELECTED_COMMIT: ${{ inputs.simc_commit }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Discover registrations from exact official SimC commit; zero Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          commit="${USER_SELECTED_COMMIT:-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd}"
+          [[ "$commit" =~ ^[0-9a-f]{40}$ ]]
+          mkdir -p out
+          python3 runner/v189_simc_consumable_embellishment_discovery.py \
+            --simc-commit "$commit" --out out/v189_source_handler_candidates.json
+          python3 - <<'PY'
+          import json,pathlib
+          x=json.loads(pathlib.Path("out/v189_source_handler_candidates.json").read_text())
+          assert x["schema"]=="v189_pinned_simc_effect_registration_candidates_v1"
+          assert x["new_native_calls"]==0 and x["auto_promote_to_user_ui"] is False
+          assert x["source"]["bytes"]>100_000
+          if x["source"]["commit"]=="7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd":
+              assert x["counts"]["food_handler_registrations"]==37
+              assert x["counts"]["potion_handler_registrations"]==5
+              assert x["counts"]["embellishment_and_darkmoon_registrations"]==20
+              assert x["counts"]["disabled_embellishment_registrations"]==1
+          print("V189_PINNED_SOURCE_PARSER_PASS_NATIVE_0_NOT_UI_PROMOTED")
+          print("V189_COUNTS",x["counts"])
+          PY
+      - name: Preserve exact source hash and candidate receipt, not unverified UI items
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v189-source-handler-discovery-${{ github.run_id }}
+          path: out/v189_source_handler_candidates.json
+          if-no-files-found: warn
+          retention-days: 7
