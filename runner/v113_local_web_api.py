@@ -25,6 +25,7 @@ import v106_user_session_controller as sessions
 import v098_target_user_scenario_bootstrap as bootstrap
 import v108_native_consumable_inputs as consumables
 import v188_user_choice_metadata as choice_labels
+import v196_current_season_user_catalog as ui_catalog
 import v193_simc_local_updater as simc_updates
 import v148_local_batch_results as batch_view
 import v167_product_season_gear_adapter as season_gear
@@ -490,6 +491,21 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
     @app.post("/api/v1/simc-updates/rollback")
     def simc_update_rollback():
         return updates_action(updater.rollback)
+
+    @app.get("/api/v1/season-option-catalog")
+    def season_option_catalog():
+        """Local, read-only versioned source catalogue; no Native or approvals."""
+        try:
+            return ui_catalog.public_options()
+        except (ui_catalog.CatalogBlocked, OSError, ValueError, KeyError,
+                AssertionError) as exc:
+            return {"schema":ui_catalog.SCHEMA,
+                    "status":"SOURCE_OPTION_CATALOG_UNAVAILABLE",
+                    "detail_code":type(exc).__name__,
+                    "proven_native_input_choices":{},
+                    "enchant_candidates":{"total":0,"groups":{},
+                                          "items":[],"selectable_count":0},
+                    "native_calls_now":0,"new_approval_granted":False}
 
     @app.get("/api/v1/options")
     def options():
