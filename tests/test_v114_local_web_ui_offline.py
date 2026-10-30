@@ -158,7 +158,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('const limit=isSpecial?8:2;',js)
         self.assertIn('add.textContent="+ 특수효과 장비 추가"',js)
         self.assertIn('if(isSpecial&&i>=2)row.hidden=true',js)
-        self.assertIn('group==="special_items"?8:2',js)
+        self.assertIn('if(result.length>(isCraft?2:8))',js)
         self.assertIn('for (let i=0;i<limit;i++)',js)
 
     def test_new_plan_does_not_display_previous_specialization_dps(self):
