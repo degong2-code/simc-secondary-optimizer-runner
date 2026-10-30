@@ -1,0 +1,83 @@
+name: v199 Single Ring Enchant Static Native Delta (2 Calls Max)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/v199_one_enchant_native_delta.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v199-single-native-matched-frost-ring
+  cancel-in-progress: false
+jobs:
+  targeted-one-ring:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      SIMC_COMMIT: 710c2408bfd3ae4df71b8cd55cdf01f63fd6c926
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Restore existing v192 SimC binary only, no rebuild
+        id: simc
+        uses: actions/cache/restore@v4
+        with:
+          path: .simc-cache/v192/
+          key: v192-ubuntu2404-710c2408bfd3ae4df71b8cd55cdf01f63fd6c926-cli-r1
+      - name: Require exact previous SimC binary and verify SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.simc.outputs.cache-hit }}" = "true"
+          sha256sum -c .simc-cache/v192/simc.sha256
+          test "$(cat .simc-cache/v192/source_revision.txt)" = "$SIMC_COMMIT"
+          test -x .simc-cache/v192/simc
+      - name: Reuse existing 2026-10-30 generic Frost stage input only
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 41017578894
+          name: v192-updated-simc-one-native-41017578894
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: source-native-v192
+      - name: Validate generic representative profile and run at most two Native JSON2 inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          profile="$(find source-native-v192 -type f -path '*/stage/profile.simc')"
+          test "$(find source-native-v192 -type f -path '*/stage/profile.simc' | wc -l)" -eq 1
+          grep -q '^mage=target_frost$' "$profile"
+          grep -q '^finger1=selected_158366,id=158366,ilevel=334,source=local' "$profile"
+          grep -q '^gear_crit_rating=700$' "$profile"
+          python -m unittest -q tests.test_v198_targeted_enchant_native_rating
+          python integration_probes/v198_targeted_enchant_native_rating.py \
+            --profile "$profile" \
+            --binary .simc-cache/v192/simc \
+            --revision 710c2408bf \
+            --slot finger1 --enchant-id 8025 \
+            --iterations 35 --max-new 2 \
+            --out out/
+          python - <<'PY'
+          import json,pathlib
+          files=list(pathlib.Path("out").rglob("receipt.json"))
+          assert len(files)==1,files
+          proof=json.loads(files[0].read_text())
+          assert proof["identity"]["enchant_id"]==8025
+          assert proof["comparison"]["slot"]=="finger1"
+          assert proof["native_new_calls"]==2
+          assert proof["budget_E_input_allowed_automatically"] is False
+          assert proof["identity"]["revision"]=="710c2408bf"
+          print("V199_REAL_TWO_MATCHED_NATIVE_RECONCILIATION",proof["comparison"],flush=True)
+          PY
+      - name: Archive only this generic representative Native proof and exact matching inputs
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v199-one-ring-matched-native-${{ github.run_id }}
+          path: out/
+          retention-days: 3
+          if-no-files-found: warn
