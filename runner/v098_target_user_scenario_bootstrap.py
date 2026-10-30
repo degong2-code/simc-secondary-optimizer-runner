@@ -289,13 +289,14 @@ def build(user,folder,binary,revision,static_cache_path=None,
     gem_choice=choice.get("diamond_id") or int(
         rows["head"]["options"].get("gem_id","0"))
     common.ensure_representative_gem_colors(rows,gem_choice,need)
+    selected_fixed_E=None
     if ENCHANT_FIELD in user:
         # The same selected ring cannot be counted both as the exact
         # special-item L slot and a separate enchant E contribution.
         verified_enchant.reject_selected_L_overlap(user,need)
         # Internal exact-evidence path only. Normal v106/web controls
         # continue to reject this developer-only field.
-        verified_enchant.apply_verified_ring(
+        selected_fixed_E=verified_enchant.apply_verified_ring(
             rows,user[ENCHANT_FIELD],key,ilvl,need)
     # New plans use ONE common slot order for all archetypes. Existing sealed
     # sessions replay the old order exactly, avoiding a forced recalculation.
@@ -334,14 +335,16 @@ def build(user,folder,binary,revision,static_cache_path=None,
     static=(cache_mod.empty_cache() if static_cache_path is None
             else cache_mod.load(pathlib.Path(static_cache_path)))
     prepared=oil_mod.prepare(profile,cfg,fillers,static,weapon_layout,
-                             user["oil_hands"],manual_final_T=final_T)
+                             user["oil_hands"],manual_final_T=final_T,
+                             verified_enchant_E=selected_fixed_E)
     normalized=prepared["prepared"]["scenario"]
     budget=prepared["prepared"]["static_budget"]
     # Shared floor B >= F-O, with selected exact L protected.
     # Candidate seeds must be viable BEFORE a Native call is even planned.
     if ENCHANT_FIELD in user:
-        # E is allocated INSIDE existing G and never added to T/gear_*.
-        e_vector=verified_enchant.read()[0]["static_enchant_E"]
+        # E is fixed within effective G: auto reference B includes the
+        # selected incremental rating, manual final T stays authoritative.
+        e_vector=selected_fixed_E
         feasible=scheduler.budget_with_fixed_components(
             normalized,budget,F,prepared["oil"]["declared_O"],
             fixed_enchant_E=e_vector)
