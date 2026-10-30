@@ -150,11 +150,11 @@ class CurrentSeasonProductIntegration(unittest.TestCase):
         self.assertTrue(valid.json()["plan"]["non334_physical_native_not_yet_observed"])
         self.assertFalse(valid.json()["plan"]["v176_26_of_26_base_physical_native"])
         html=client.get("/",headers=headers).text
-        self.assertIn('id="current_season_product" type="checkbox" checked',html)
+        self.assertNotIn('id="current_season_product"',html)
         script=client.get("/assets/app.js",headers=headers).text
-        self.assertIn("current_season_product:currentSeason",script)
-        self.assertIn('$("current_season_product").checked=true',script)
-        self.assertIn('$("current_season_product").checked=payload.current_season_product===true',script)
+        self.assertIn("current_season_product:true",script)
+        self.assertNotIn('$("current_season_product").checked',script)
+        self.assertIn('function showRepresentativeScope()',script)
         self.assertIn('$("ilevel").addEventListener("change",showRepresentativeScope)',script)
 
 if __name__=="__main__":unittest.main()
