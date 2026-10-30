@@ -106,7 +106,7 @@ def public_options(path=DEFAULT):
         "season_build":source["season_game_build"],
         "simc_revision":source["simc_commit"],
         "source_artifact_id":source["source_artifact_id"],
-        "proven_native_input_choices":approved,
+        "existing_allowed_input_choices":approved,
         "proven_armor_embellishments":v188.public_embellishments(),
         "enchant_candidates":{"total":len(enchants),"groups":counts,
                               "items":enchants,"selectable_count":0},
