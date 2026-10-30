@@ -196,7 +196,9 @@ function showRepresentativeScope() {
   note.hidden=!item;
   if(!item)return;
   if(Number(field("ilevel"))!==334) {
-    note.textContent="334 이외 목표 ilvl: 같은 시즌 대표 아이템 ID를 선택 레벨로 지정하여 별도 SimC 사용자 프로필과 참조 B를 구성합니다. 계획 조회는 Native 0회입니다. 실제 SimC 수용 여부는 이 세션의 실행 결과로 판단하며, 한 레벨·조건의 성공을 다른 레벨로 확대하지 않습니다. 기존 334 캐시는 재사용하지 않습니다.";
+    note.textContent=$("current_season_product").checked
+      ?"334 이외 목표 ilvl: 최신 시즌 대표 장비·티어·무기를 선택 레벨로 구성하고 해당 참조 B 또는 사용자 수동 T로 SimC를 실행합니다. 334에서 검증한 Native 결과를 다른 레벨로 확대하거나 캐시를 공유하지 않습니다. 실제 현재 레벨·조건의 적합성은 해당 SimC 실행으로 판정합니다."
+      :"334 이외 목표 ilvl: 기존 독립 대표 프로필 경로를 사용합니다. 최신 시즌 장비 경로를 쓰려면 위 선택을 켜세요. 같은 시즌 대표 아이템 ID를 선택 레벨로 지정하여 별도 SimC 사용자 프로필과 참조 B를 구성합니다.";
   } else if($("current_season_product").checked) {
     note.textContent="새 시즌 대표장비: 26개 DPS 기본 프로필 모두 실제 SimC 수용 PASS, 징벌 성기사 신규 장비 6후보 최적화·95% 결과·캐시 재사용 PASS. 이 실행은 별도 세션으로 저장하며 특성·장신구·특수효과·기름 등 변경한 입력의 결과는 SimC 실행으로 판단합니다.";
   } else if(item.representative_scope==="SOURCE_INDEPENDENT_TARGET334_VALIDATED_BATCH") {
@@ -213,7 +215,7 @@ function fillDefault(item) {
   setTrinketSelection("trinket1",item.trinket_ids[0]);
   setTrinketSelection("trinket2",item.trinket_ids[1]);
   $("ilevel").value=item.ilevel;
-  $("current_season_product").checked=Number(item.ilevel)===334;
+  $("current_season_product").checked=true;
   $("final_T").value=item.final_T??"";
   $("targets").value=item.targets;
   $("duration").value=item.duration_seconds;
@@ -382,8 +384,9 @@ function buildRequest() {
     }
   };
   const currentSeason=$("current_season_product").checked;
-  if(currentSeason&&controls.ilevel!==334)
-    throw Error("새 시즌 대표장비 경로는 현재 목표 334에서만 지원합니다.");
+  if(currentSeason&&(!Number.isInteger(controls.ilevel)||
+                     controls.ilevel<266||controls.ilevel>344))
+    throw Error("새 시즌 대표장비 경로의 목표 ilvl은 266~344입니다.");
   return {controls,binary:field("binary"),revision:field("revision"),
           static_cache:field("static_cache")||null,
           current_season_product:currentSeason};
@@ -720,10 +723,7 @@ function registerHandlers() {
     const selected=state.defaults.find(d=>d.class+"/"+d.spec===field("spec"));
     if(selected)fillDefault(selected);
   });
-  $("ilevel").addEventListener("change",()=>{
-    if(Number(field("ilevel"))!==334)$("current_season_product").checked=false;
-    showRepresentativeScope();
-  });
+  $("ilevel").addEventListener("change",showRepresentativeScope);
   $("current_season_product").addEventListener("change",showRepresentativeScope);
   $("plan-btn").addEventListener("click",()=>withBusy(async()=>{
     const p=await api("/api/v1/sessions/plan",{method:"POST",payload:buildRequest()});
