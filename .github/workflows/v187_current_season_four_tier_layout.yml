@@ -1,0 +1,34 @@
+name: v187 Current Season Selected 4-of-5 Tier Equipment Offline
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v101_common_representative_equipment.py
+      - runner/v098_target_user_scenario_bootstrap.py
+      - runner/v106_user_session_controller.py
+      - tests/test_v187_current_season_tier_overlay.py
+      - tests/test_v106_user_session_controller.py
+      - .github/workflows/v187_current_season_four_tier_layout.yml
+permissions:
+  contents: read
+jobs:
+  tier-overlays:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Selected armor, exact class tier and immutable current-season sessions (no Native)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile runner/v101_common_representative_equipment.py \
+            runner/v098_target_user_scenario_bootstrap.py runner/v106_user_session_controller.py
+          python3 -m unittest -v tests.test_v187_current_season_tier_overlay
+          python3 -m unittest -q tests.test_v106_user_session_controller \
+            tests.test_v169_source_first_representative_stage \
+            tests.test_v172_current_season_v098_stage
