@@ -127,6 +127,12 @@ def prepare(profile,doc,fillers,static_cache,weapon_layout,applied_hands,
         converted=total_policy.approved_manual_total_to_legacy_B(
             oil["scenario"],manual_final_T,oil["declared_O"])
         oil["scenario"]=converted["scenario"]
+    if verified_enchant_E is not None:
+        # Even the lower-level budget helper must not admit an E for an
+        # arbitrary profile. v096 additionally checks the exact binary/revision.
+        need(oil["profile_sha256"]==
+             selected_enchant.evidence.EXACT_SOURCE_PROFILE_SHA256,
+             "SELECTED_ENCHANT_FULL_PROFILE_SHA_NOT_VERIFIED")
     selection=chooser.resolve(oil["scenario"],mode=chooser.REFERENCE_MODE,
                               weapon_layout=weapon_layout)
     # Only an explicitly selected, exact Native-proven E can extend the
