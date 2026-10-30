@@ -92,8 +92,9 @@ def discover(data,commit):
          "SOURCE_BYTES_INVALID")
     try:s=data.decode("utf8")
     except UnicodeError as exc:raise DiscoveryBlocked("SOURCE_NOT_UTF8") from exc
-    root=bounds(s,"void register_special_effects()\n{",
-                "  // Trinkets") if False else s[s.index("void register_special_effects()"):]
+    need(s.count("void register_special_effects()")==1,
+         "SOURCE_REGISTRY_FUNCTION_MISSING_OR_AMBIGUOUS")
+    root=s[s.index("void register_special_effects()"):]
     # Anchors define unambiguous, mutually disjoint registrations in pinned
     # Midnight C++. If any move or disappear, require explicit parser review.
     food=extract_region(bounds(root,"  // Food\n","  // Flasks\n"),"food")
@@ -137,6 +138,8 @@ def main(argv=None):
     p.add_argument("--source-sha256",help="Optional required source-byte sha256")
     p.add_argument("--out",required=True,type=Path)
     a=p.parse_args(argv)
+    need(a.source is None or a.source_sha256 is not None,
+         "LOCAL_SOURCE_REQUIRES_EXACT_SOURCE_SHA")
     raw=read_source(a.source,a.simc_commit)
     if a.source_sha256:
         need(a.source_sha256==sha(raw),"SOURCE_SHA_MISMATCH")
