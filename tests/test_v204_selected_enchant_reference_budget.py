@@ -54,7 +54,7 @@ class SelectedEnchantReferenceBudget(unittest.TestCase):
             n=ready["scenario"]
             f={"crit_rating":165,"haste_rating":0,"mastery_rating":0,"versatility_rating":0}
             floored=scheduler.budget_with_fixed_components(
-                n,ready["static_budget"],f,O,fixed_enchant_E=E)
+                n,ready["static_budget"],f,dict.fromkeys(O,0),fixed_enchant_E=E)
             self.assertGreaterEqual(floored["effective_floor_if_possible"]["haste_rating"],30)
             self.assertEqual(floored["budget"]["T_official"],3180)
 
