@@ -60,7 +60,7 @@ const names = {
   redirected_base_stats:"촉매 원본 ID",crafted_stats:"제작 스탯",
   embellishment:"장식 토큰"
 };
-const state = { token:"", defaults:[], seasonGear:null, session:"", running:false,
+const state = { token:"", defaults:[], seasonGear:null, eagleApproved:false, session:"", running:false,
                 busy:false, options:null, pollTimer:null, pollBusy:false,
                 pollFailures:0, nextPollAt:0 };
 const number = (value,decimals=0) =>
@@ -278,6 +278,7 @@ function fillDefault(item) {
   $("oil_off").checked=item.oil_hands.includes("off_hand");
   oilCompatibility();
   for (const id of ["food","potion","augmentation","diamond","omnium"]) $(id).selectedIndex=0;
+  $("season_enchant_finger1").value="";
   // Reset optional slots on specialization changes, including hidden extra rows.
   fillGearRows("special-rows",[]);
   fillGearRows("crafted-rows",[]);
@@ -441,6 +442,10 @@ function fillSessionInputs(payload) {
   $("diamond").value=String(choices.diamond_id??0);
   fillGearRows("special-rows",u.special_items||[]);
   fillGearRows("crafted-rows",u.embellishments||[]);
+  const restoredEagle=u.selected_season_enchants?.finger1===7967;
+  if(restoredEagle&&!state.eagleApproved)
+    throw Error("SAVED_EAGLE_SEASON_EVIDENCE_UNAVAILABLE");
+  $("season_enchant_finger1").value=restoredEagle?"7967":"";
   // Recover the exact local inputs from this machine's saved session only.
   // No talent strings or OS file paths are stored in browser localStorage.
   $("binary").value=payload.binary;
@@ -510,6 +515,11 @@ function buildRequest() {
       diamond_id:Number(field("diamond")),omnium_talents:field("omnium")
     }
   };
+  if(field("season_enchant_finger1")) {
+    if(!state.eagleApproved||field("season_enchant_finger1")!=="7967")
+      throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
+    controls.enchant_choices={finger1:7967};
+  }
   if(!Number.isInteger(controls.ilevel)||controls.ilevel<266||controls.ilevel>344)
     throw Error("최신 시즌 대표장비의 목표 ilvl은 266~344입니다.");
   return {controls,binary:field("binary"),revision:field("revision"),
@@ -772,6 +782,10 @@ async function restore(id) {
 function renderSeasonOptionCatalog(catalog) {
   const status=$("season-option-catalog-status");
   const host=$("season-enchant-groups");
+  const selector=$("season_enchant_finger1");
+  state.eagleApproved=false;
+  selector.replaceChildren(option("","마법부여 없음 (기존 설정)"));
+  selector.disabled=true;
   host.replaceChildren();
   if(catalog?.schema!=="v196_current_season_ui_catalog_v1" ||
      catalog?.status!=="SOURCE_COMBINED_WITH_CLEAR_APPROVAL_BOUNDARY") {
@@ -779,9 +793,20 @@ function renderSeasonOptionCatalog(catalog) {
     return;
   }
   const enchants=catalog.enchant_candidates||{};
-  if(enchants.selectable_count!==0||enchants.total!==(enchants.items||[]).length) {
+  const selectable=(enchants.items||[]).filter(x=>x.ui_selectable===true);
+  if(enchants.total!==(enchants.items||[]).length ||
+     selectable.length!==enchants.selectable_count ||
+     selectable.length>1 ||
+     selectable.some(x=>x.enchant_id!==7967 ||
+       x.effect_family!=="crit_effectiveness" ||
+       x.static_CHMV_budget_impact!=="NO_INCREMENT_FROM_NONCHMV_EFFECT")) {
     status.textContent="마법부여 선택 승인 상태가 일치하지 않아 목록을 차단했습니다.";
     return;
+  }
+  state.eagleApproved=selectable.length===1;
+  if(state.eagleApproved) {
+    selector.appendChild(option("7967","독수리의 눈 · 치명타 효과 증가 (CHMV 변동 없음)"));
+    selector.disabled=false;
   }
   const raw=catalog.related_source_counts||{};
   status.textContent="게임 빌드 "+catalog.season_build+
@@ -793,7 +818,8 @@ function renderSeasonOptionCatalog(catalog) {
     " · SimC 장식/다크문 효과 등록 "+(raw.embellishment_darkmoon_registrations??"?")+
     " · 보석 속성 기록 "+(raw.gem_property_records??"?")+
     " · 최고 품질 마부 후보 "+enchants.total+
-    "개 (승인 전 자료 · 신규 사용자 선택은 잠금)"+
+    "개 (독수리의 눈 "+(state.eagleApproved?"1종 선택 가능":"미검증 잠금")+
+    " · 나머지 마부는 잠금)"+
     (catalog.one_enchant_native_evidence_status==="EXACT_SCOPE_OBSERVED_READ_ONLY"?
       " · 조건부 마부 Native 증거 1건 관측":
       " · 조건부 마부 Native 증거 확인 불가, 수치 표시 생략");
@@ -826,7 +852,8 @@ function renderSeasonOptionCatalog(catalog) {
         " · "+(entry.effect_description||"효과 원본 연결 필요")+
         qualifier+" · enchant ID "+entry.enchant_id+
         " · 최고 관측 등급 "+entry.highest_source_quality_rank+
-        observed+" · 사용자 선택은 아직 비활성";
+        observed+(entry.ui_selectable?" · 사용자 선택 가능 (고정 CHMV B/T 불변)":
+                  " · 사용자 선택은 아직 비활성");
       list.appendChild(li);
     }
     detail.appendChild(list);
