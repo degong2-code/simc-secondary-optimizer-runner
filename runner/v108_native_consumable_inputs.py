@@ -42,6 +42,31 @@ OMNIUM_PRESETS=frozenset((
  "rune_of_unleashed_fire/rune_of_lynxlike_reflexes/rune_of_lingering/rune_of_burning_haste/rune_of_overload",
  "rune_of_unleashed_fire/rune_of_lynxlike_reflexes/rune_of_lingering/rune_of_masterful_cunning/rune_of_overload",
  "rune_of_unleashed_fire/rune_of_selfmending/rune_of_lingering/rune_of_critical_power/rune_of_overload"))
+# User-facing row-four stat choice only. The other source rune rows are
+# unchanged; the exact trait name is delegated to SimC, not reimplemented.
+# New combinations are Native acceptance scope (not historic v132 evidence).
+OMNIUM_ROW4_BY_STAT={
+    "row4_crit":"rune_of_critical_power",
+    "row4_haste":"rune_of_burning_haste",
+    "row4_mastery":"rune_of_masterful_cunning",
+    "row4_vers":"rune_of_versatile_warrior",
+}
+OMNIUM_ROW4_SOURCE_IDS=frozenset(("136818:1","136815:1","136821:1","136820:1"))
+OMNIUM_ROW4_SOURCE_NAMES=frozenset((
+    "rune_of_critical_power","rune_of_burning_haste",
+    "rune_of_masterful_cunning","rune_of_versatile_warrior",
+    "rune_of_the_versatile_warrior",
+))
+def change_row_four(base,choice):
+    """Replace only the source row-four rune. Other row choices are preserved."""
+    need(choice in OMNIUM_ROW4_BY_STAT,"OMNIUM_ROW4_CHOICE_INVALID")
+    parts=base.split("/")
+    indices=[i for i,v in enumerate(parts)
+             if v in OMNIUM_ROW4_SOURCE_IDS|OMNIUM_ROW4_SOURCE_NAMES]
+    need(len(indices)==1,"OMNIUM_SOURCE_ROW4_AMBIGUOUS")
+    parts[indices[0]]=OMNIUM_ROW4_BY_STAT[choice]
+    return "/".join(parts)
+
 CHOICE_FIELDS=frozenset(("flask","food","potion","augmentation",
                          "diamond_id","omnium_talents"))
 
@@ -91,9 +116,14 @@ def validate_choice(raw,base):
          "DIAMOND_SECONDARY_BUDGET_NOT_VERIFIED")
     result["diamond_id"]=diamond
     folio=raw["omnium_talents"]
-    if folio=="source_default":folio=base["omnium_talents"]
-    need(type(folio) is str and folio in OMNIUM_PRESETS,
-         "OMNIUM_LOADOUT_NOT_SOURCE_OBSERVED")
+    if folio=="source_default":
+        folio=base["omnium_talents"]
+    elif type(folio) is str and folio in OMNIUM_ROW4_BY_STAT:
+        # User changes ONLY row four; all other source tokens are immutable.
+        folio=change_row_four(base["omnium_talents"],folio)
+    else:
+        need(type(folio) is str and folio in OMNIUM_PRESETS,
+             "OMNIUM_LOADOUT_NOT_SOURCE_OBSERVED")
     result["omnium_talents"]=folio
     return result
 
