@@ -1,5 +1,8 @@
 # SIMC SECONDARY OPTIMIZER — 사용자 승인 장비 엔진 및 입력 정책 (2026-10-29)
 
+> **2026-10-30 최신 사용자 직접 결정 — v182 사용자 입력 UI 교정 (이 문서의 2026-10-29 '제작장비 정확 ID 수동 입력 예외' 표기에 우선).** 일반 사용자 UI에서는 **제작장비 item ID/bonus_id를 직접 입력받지 않고**, **제작 부위·장식 유형·두 제작 스탯**을 선택하면 시즌 자료에서 정확한 제작 아이템/옵션을 내부 결정한다. 특수효과 장비도 bonus_id·촉매 원본 ID를 일반 사용자가 입력하게 하지 않는다. 옴니움은 **4열 치명·가속·특화·유연 중 하나만** 선택하고 다른 행은 내부 보존, 유연 source token은 실측 확인된 `136820:1`로 교정. 부무기에 기름을 바를 수 없는 전문화(예: 마법사)에서는 해당 체크를 사용자가 켤 수 없게 처리한다. v182 기존 UI/Native 결과 [정확한 개발자 보충노트](./DEVELOPER_NOTES_v1.4.2_LATEST_USER_POLICY_ADDENDUM_20261030.md), [CURRENT](./CURRENT_PRODUCT_DEVELOPMENT_STATE.md) 참조. `v167` 등 내부 CLI 또는 과거 세션의 ID/option 구조를 소급 삭제하지 않으며 `main`·Project UI 변경을 의미하지 않는다.
+
+
 **상태:** 최신 사용자 직접 결정. `docs/CURRENT_PRODUCT_DEVELOPMENT_STATE.md`와 함께 참조. 2026-10-29 v167~v169의 광범위한 아이템 ID 자유입력·일반장비 후보 조회 노출 설계에 우선한다. 동일 취지와 충돌하는 구형 문서는 역사적 구현 기록이다. 이 문서가 Project Sources/Instructions UI에 실제 등록됐다는 뜻은 아니다.
 
 ## 제품 목표
