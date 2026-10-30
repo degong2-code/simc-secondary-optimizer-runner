@@ -1,0 +1,40 @@
+name: v203 Ring 8025 Full Adaptive and Cache Replay
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/v203_full_enchant_adaptive_audit.yml]
+permissions:
+  contents: read
+jobs:
+  one-scope:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Restore immutable existing SimC Linux binary
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .simc-cache/v192/
+          key: v192-ubuntu2404-710c2408bfd3ae4df71b8cd55cdf01f63fd6c926-cli-r1
+      - name: Verify binary identity and run only 6+0 SimC
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x .simc-cache/v192/simc
+          sha256sum -c .simc-cache/v192/simc.sha256
+          python -m unittest -q tests.test_v202_one_enchant_admission tests.test_v202_enchant_scheduler_floor
+          python integration_probes/v203_full_enchant_adaptive_cache_audit.py .simc-cache/v192/simc out/
+      - name: Preserve compact summary and scope only
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v203-frost8025-6-native-cache-replay
+          path: out/audit_receipt.json
+          retention-days: 2
+          if-no-files-found: warn
