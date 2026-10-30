@@ -101,14 +101,23 @@ def read(path=DEFAULT):
 def public_options(path=DEFAULT):
     source,enchants,counts=read(path)
     enchants=effect_groups.decorate(enchants)
-    data,proof_sha=observed_enchant.read()
-    matching=[r for r in enchants if r["enchant_id"]==data["enchant_id"]]
-    need(len(matching)==1 and matching[0]["ui_selectable"] is False,
-         "NATIVE_EVIDENCE_ENCHANT_CATALOG_MISMATCH")
-    matching[0]["measured_E_in_one_simc_native_scope"]=dict(data["static_enchant_E"])
-    matching[0]["native_scope"]="mage/frost ilvl334 Linux 710c240 finger1"
-    matching[0]["same_gear_override_delta_zero"]=True
-    matching[0]["evidence_sha256"]=proof_sha
+    # Optional v202 observation must never make the *existing* 38-entry
+    # read-only catalog disappear if its separate evidence file is absent
+    # or mismatched. Missing proof never unlocks any enchant.
+    try:
+        data,proof_sha=observed_enchant.read()
+    except (observed_enchant.EnchantAdmissionBlocked,OSError,
+            ValueError,KeyError):
+        data=None
+        proof_sha=None
+    if data is not None:
+        matching=[r for r in enchants if r["enchant_id"]==data["enchant_id"]]
+        need(len(matching)==1 and matching[0]["ui_selectable"] is False,
+             "NATIVE_EVIDENCE_ENCHANT_CATALOG_MISMATCH")
+        matching[0]["measured_E_in_one_simc_native_scope"]=dict(data["static_enchant_E"])
+        matching[0]["native_scope"]="mage/frost ilvl334 Linux 710c240 finger1"
+        matching[0]["same_gear_override_delta_zero"]=True
+        matching[0]["evidence_sha256"]=proof_sha
     labels=v188.labels()
     # The only actual user choices in this first stage are exactly the
     # legacy Native/source-verified tokens. Do not enable 192/61 raw DB2
@@ -127,6 +136,9 @@ def public_options(path=DEFAULT):
     return {
         "schema":SCHEMA,"status":"SOURCE_COMBINED_WITH_CLEAR_APPROVAL_BOUNDARY",
         "season_build":source["season_game_build"],
+        "one_enchant_native_evidence_status":(
+            "EXACT_SCOPE_OBSERVED_READ_ONLY" if data is not None
+            else "OPTIONAL_EVIDENCE_UNAVAILABLE_ALL_ENCHANT_CHOICES_LOCKED"),
         "simc_revision":source["simc_commit"],
         "source_artifact_id":source["source_artifact_id"],
         "related_source_counts":dict(source["related_source_counts"]),
