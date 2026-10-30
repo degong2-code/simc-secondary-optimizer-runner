@@ -71,6 +71,14 @@ def expected_reference_B(selection, reference_B):
     proof=selection.get(KEY)
     if proof is None:
         return reference_B
+    need(type(proof) is dict,
+         "ENCHANT_REFERENCE_PROVENANCE_DRIFT")
+    need(selection.get("source_mode")==reference.REFERENCE_MODE and
+         selection.get("selected_track")==reference.TRACK_COMMON and
+         selection["scenario"]["target"]["ilevel"]==334 and
+         (selection["scenario"]["character"]["class"],
+          selection["scenario"]["character"]["spec"])==("mage","frost"),
+         "ENCHANT_ADDITIVE_REFERENCE_SCOPE_DRIFT")
     E,digest=verified_vector(proof.get("additive_E"))
     need(type(proof) is dict and
          set(proof)=={"base_reference_B","additive_E",
