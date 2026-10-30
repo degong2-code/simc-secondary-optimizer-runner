@@ -1,0 +1,29 @@
+name: v202 Proof-Gated Enchant Floor (No Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v065_v015_scheduler_adapter.py
+      - tests/test_v202_enchant_scheduler_floor.py
+      - .github/workflows/v202_verified_enchant_floor_offline.yml
+permissions:
+  contents: read
+jobs:
+  proof-floors:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Verify no double-added E and legacy 4-arg floor contract
+        run: python -m unittest -v tests.test_v202_enchant_scheduler_floor tests.test_v197_verified_effect_budget tests.test_v197_enchant_effect_families
+      - name: Confirm no SimC binary or user profile invoked
+        run: python -c "print('V202_OFFLINE_ONLY_NATIVE_ZERO')"
