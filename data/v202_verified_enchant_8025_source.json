@@ -1,0 +1,34 @@
+{
+  "schema": "v202_one_exact_enchant_source_evidence_v1",
+  "status": "VERIFIED_IN_TWO_NATIVE_PAIR_PROFILES_NOT_UI_PROMOTED",
+  "source_spec": "mage/frost",
+  "source_ilvl": 334,
+  "ring_item_id": 158366,
+  "slot": "finger1",
+  "enchant_id": 8025,
+  "revision": "710c2408bfd3ae4df71b8cd55cdf01f63fd6c926",
+  "linux_binary_sha256": "f105b8a34fd911c340e735f0440e0d1eadf0d0dbc25f18923c048810cf69095d",
+  "static_enchant_E": {
+    "crit_rating": 0,
+    "haste_rating": 30,
+    "mastery_rating": 0,
+    "versatility_rating": 0
+  },
+  "unmodified_v199_native_run": 41075851509,
+  "v199_artifact_id": 12986044543,
+  "v200_reconcile_run": 41076597270,
+  "v200_artifact_id": 12987312399,
+  "v201_gear_override_native_run": 41078102843,
+  "v201_artifact_id": 12988042331,
+  "v201_same_override_rating_delta": {
+    "crit_rating": 0,
+    "haste_rating": 0,
+    "mastery_rating": 0,
+    "versatility_rating": 0
+  },
+  "v200_before_native_sha256": "6fdbb14ec3404ab59dc95d3078c58811d0323810e74cc8cf2b647cd7e27557d5",
+  "v200_after_native_sha256": "63d47320423ff75969d7d4c2302ced854d6ceb0dfba254572e4cc2d91cd08e2d",
+  "v201_before_native_sha256": "29228e6fb402952f90a4b62a9bcd193133eb5386f7469ab01c28dd6b37e04973",
+  "v201_after_native_sha256": "2f25c842207dd67aa9c02345798d24468649c895c12fb45a8bf6d5f1ef1112d0",
+  "product_ui_selectable": false
+}
