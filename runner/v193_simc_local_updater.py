@@ -121,8 +121,17 @@ def extract_safe(archive,folder,sevenzip):
             files.append(sub)
     need(len(files)==1,"EXACTLY_ONE_SIMC_CLI_REQUIRED")
     exe=files[0]
-    need(exe.stat().st_size>=100000 and exe.open("rb").read(2)==b"MZ",
-         "SIMC_WINDOWS_BINARY_NOT_PE")
+    need(exe.stat().st_size>=100000,"SIMC_WINDOWS_BINARY_TOO_SMALL")
+    with exe.open("rb") as binary:
+        header=binary.read(64)
+        need(len(header)==64 and header[:2]==b"MZ",
+             "SIMC_WINDOWS_BINARY_NOT_PE")
+        offset=int.from_bytes(header[0x3c:0x40],"little")
+        need(64<=offset<exe.stat().st_size-6 and offset<65536,
+             "SIMC_WINDOWS_BINARY_PE_OFFSET_INVALID")
+        binary.seek(offset)
+        need(binary.read(6)==b"PE\\0\\0\\x64\\x86".decode("unicode_escape").encode("latin1"),
+             "SIMC_WINDOWS_BINARY_NOT_AMD64")
     return exe
 
 def find_sevenzip():
