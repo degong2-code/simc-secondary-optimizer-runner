@@ -33,10 +33,10 @@ class SourceSeasonUiCatalog(unittest.TestCase):
     def test_existing_real_user_options_unchanged(self):
         c=catalog.public_options()
         for kind in ("food","potion","augmentation"):
-            tokens={x["value"] for x in c["proven_native_input_choices"][kind]}
+            tokens={x["value"] for x in c["existing_allowed_input_choices"][kind]}
             self.assertEqual(tokens,native.SUPPORTED[kind]|{"source_default"})
         diamond={x["value"] for x in
-                 c["proven_native_input_choices"]["diamond_id"]}
+                 c["existing_allowed_input_choices"]["diamond_id"]}
         self.assertEqual(diamond,{"0","240967","240983"})
         self.assertEqual(set(c["proven_armor_embellishments"]),{
                          "arcanoweave_lining","sunfire_silk_lining"})
