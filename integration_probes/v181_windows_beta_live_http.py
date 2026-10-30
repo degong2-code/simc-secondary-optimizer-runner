@@ -119,6 +119,14 @@ def run(archive_path):
                 status,unauth=http(base,"/api/v1/simc-updates/status")
                 need(status==403,"UPDATER_STATUS_TOKEN_NOT_REQUIRED")
                 print("V193_WINDOWS_MANAGED_SIMC_STATUS_NO_NATIVE_PASS",flush=True)
+                status,season_options=http(base,"/api/v1/season-option-catalog",token=token)
+                need(status==200 and
+                     season_options["schema"]=="v196_current_season_ui_catalog_v1" and
+                     season_options["enchant_candidates"]["total"]==38 and
+                     season_options["enchant_candidates"]["selectable_count"]==0 and
+                     season_options["native_calls_now"]==0,
+                     "V196_WINDOWS_UNAPPROVED_ENCHANT_CATALOG_CONTRACT")
+                print("V196_WINDOWS_SOURCE_OPTIONS_READONLY_38_NATIVE_ZERO_PASS",flush=True)
                 status,gear=http(base,"/api/v1/season-gear",token=token)
                 need(status==200 and gear.get("status")==
                      "CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
