@@ -4,7 +4,9 @@ on:
     branches: [probe/chat-cache-v035-20261024]
     paths:
       - runner/v189_simc_consumable_embellishment_discovery.py
+      - runner/v190_consumable_item_snapshot_join.py
       - tests/test_v189_simc_choice_discovery.py
+      - tests/test_v190_consumable_item_snapshot_join.py
       - .github/workflows/v189_simc_consumable_embellishment_discovery.yml
   workflow_dispatch:
     inputs:
@@ -33,8 +35,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m py_compile runner/v189_simc_consumable_embellishment_discovery.py
-          python3 -m unittest -v tests.test_v189_simc_choice_discovery
+          python3 -m py_compile runner/v189_simc_consumable_embellishment_discovery.py runner/v190_consumable_item_snapshot_join.py
+          python3 -m unittest -v tests.test_v189_simc_choice_discovery tests.test_v190_consumable_item_snapshot_join
   pinned-source:
     needs: offline-tests
     runs-on: ubuntu-24.04
