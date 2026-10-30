@@ -1,4 +1,5 @@
 name: v203 Enchant Compatibility Matrix Offline
+# Final full-profile and direct-manifest L/E collision regression.
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
