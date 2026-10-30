@@ -16,6 +16,15 @@ on:
       - tests/test_v197_enchant_effect_families.py
       - integration_probes/v198_targeted_enchant_native_rating.py
       - tests/test_v198_targeted_enchant_native_rating.py
+      - runner/v065_v015_scheduler_adapter.py
+      - runner/v093_inclusive_adaptive_scheduler_bridge.py
+      - runner/v096_unified_product_entry.py
+      - runner/v098_target_user_scenario_bootstrap.py
+      - runner/v202_one_enchant_admission.py
+      - data/v202_verified_enchant_8025_source.json
+      - tests/test_v202_one_enchant_admission.py
+      - tests/test_v202_enchant_scheduler_floor.py
+      - integration_probes/v202_existing_planner_no_native.py
       - runner/v101_common_representative_equipment.py
       - tests/test_v188_user_choice_labels_and_slots.py
       - tests/test_v187_current_season_tier_overlay.py
@@ -57,7 +66,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m unittest -v tests.test_v182_simple_user_inputs_offline tests.test_v188_user_choice_labels_and_slots tests.test_v196_current_season_ui_catalog tests.test_v197_verified_effect_budget tests.test_v197_enchant_effect_families tests.test_v198_targeted_enchant_native_rating tests.test_v187_current_season_tier_overlay
+          python -m unittest -v tests.test_v182_simple_user_inputs_offline tests.test_v188_user_choice_labels_and_slots tests.test_v196_current_season_ui_catalog tests.test_v197_verified_effect_budget tests.test_v197_enchant_effect_families tests.test_v198_targeted_enchant_native_rating tests.test_v202_one_enchant_admission tests.test_v202_enchant_scheduler_floor tests.test_v187_current_season_tier_overlay
           python -m unittest -q tests.test_v108_user_consumables tests.test_v114_local_web_ui_offline tests.test_v113_local_web_api_offline tests.test_v177_current_season_product_flow tests.test_v179_current_season_input_paths_offline tests.test_v167_local_gear_catalog_api
           node --check runner/webui/app.js
       - name: Package updated Windows UX and verify reproducible runtime sources
