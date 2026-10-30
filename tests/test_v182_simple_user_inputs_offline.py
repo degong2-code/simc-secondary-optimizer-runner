@@ -101,11 +101,11 @@ class SimpleUserInputs(unittest.TestCase):
         html=(ROOT/"runner/webui/index.html").read_text("utf8")
         for marker in ('function oilCompatibility()','function chosenCraft(slot)',
             'function selectedGear(nodeId, group)','row4_crit','row4_vers',
-            '["arcanoweave_lining","비전직조 안감"]',
-            '["sunfire_silk_lining","태양불꽃 비단 안감"]'):
+            'refreshSpecialSlots()', 'syncCraftRow(row)'):
+
             self.assertIn(marker,js)
         self.assertIn("label.hidden=isPrivate",js)
-        self.assertIn("장식은 부위·종류·제작 스탯만 선택",html)
+        self.assertIn("장식 종류별 적용 부위 제한",html)
         self.assertIn("Omnium Folio · 4열 스탯",html)
 
 if __name__=="__main__":unittest.main()
