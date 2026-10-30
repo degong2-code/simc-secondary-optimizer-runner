@@ -54,7 +54,8 @@ class UserRequest(BaseModel):
 
 def blocked(exc):
     """Return stable codes, not private absolute paths, talent strings, or tracebacks."""
-    if isinstance(exc, (sessions.SessionBlocked, bootstrap.UserScenarioBlocked)):
+    if isinstance(exc, (sessions.SessionBlocked, bootstrap.UserScenarioBlocked,
+                        sessions.nonchmv_enchant.EnchantChoiceBlocked)):
         code = str(exc).split(":", 1)[0].split("\n", 1)[0]
         return HTTPException(422, detail={"code": code})
     # Exact special L is a user-actionable, pre-Native input mismatch.
