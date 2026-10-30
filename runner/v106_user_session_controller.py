@@ -250,8 +250,9 @@ def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
          type(user) is dict and type(user.get("character")) is dict and
          type(user.get("target")) is dict and
          (user["character"].get("class"),user["character"].get("spec")) in SUPPORTED and
-         user["target"].get("ilevel")==334),
-         "CURRENT_SEASON_PRODUCT_SCOPE_334_ONLY")
+         type(user["target"].get("ilevel")) is int and
+         266<=user["target"]["ilevel"]<=344),
+         "CURRENT_SEASON_PRODUCT_SCOPE_TARGET_RANGE")
     need(type(independent_334) is bool,"INDEPENDENT_334_MODE_BOOL_REQUIRED")
     need(type(independent_target_level) is bool,"INDEPENDENT_TARGET_LEVEL_MODE_BOOL_REQUIRED")
     need(not (independent_334 and independent_target_level),"ONLY_ONE_INDEPENDENT_PROFILE_MODE")
