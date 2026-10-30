@@ -33,7 +33,7 @@ class UnifiedCatalogTest(unittest.TestCase):
         rows=u.highest_known_quality(src["rows"],"permanent_enchant")
         self.assertEqual(src["source_build"],"12.1.5.70448")
         self.assertEqual(len(rows),3)
-        self.assertEqual([x["enchant_id"] for x in rows],[7777,6616,8765])
+        self.assertEqual([x["enchant_id"] for x in rows],[6616,7777,8765])
         cloth_chest=next(x for x in rows if x["enchant_id"]==6616)
         self.assertEqual(u.inventory_options(cloth_chest),[5,20])
         self.assertNotIn(11,u.inventory_options(cloth_chest))
@@ -60,7 +60,6 @@ class UnifiedCatalogTest(unittest.TestCase):
     def test_bad_incomplete_enchant_source_fails_not_silent(self):
         with self.assertRaisesRegex(u.CatalogBlocked,"ROW_COUNT_MISMATCH"):
             u.parse_generated("permanent_enchant",
-                PERM.replace(b"<not-there>",b"") if False else
                 PERM.replace(b"array<permanent_enchant_entry_t, 5>",
                              b"array<permanent_enchant_entry_t, 6>"))
         with self.assertRaisesRegex(u.CatalogBlocked,"UNPARSED"):
