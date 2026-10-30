@@ -152,7 +152,8 @@ def run(binary,revision,out,*,selected_eagle=False):
           "local_http_plan_start_status_result_verified":True,
           "existing_v094_optimizer_only":True,
           "generalized_to_other_26_specs":False,
-          "no_enchant_selection_promotion":True
+          "no_enchant_selection_promotion":not selected_eagle,
+          "only_exact_nonchmv_eagle_enabled":bool(selected_eagle)
         }
         dest=out/("V207_EAGLE_SELECTED_NATIVE_RECEIPT.json" if selected_eagle
                   else "V205_WINDOWS_ONE_USER_NATIVE_RECEIPT.json")
