@@ -36,7 +36,7 @@ def prepare(root):
 class ConsumableDb2Join(unittest.TestCase):
     def test_real_class_subclass_and_expansion_filter_without_simc_claims(self):
         with tempfile.TemporaryDirectory() as td:
-            out=join.build(SOURCE,pathlib.Path(td) if False else self.create(td),
+            out=join.build(SOURCE,self.create(td),
                expected_build="12.1.5.70575",expansion_id=11)
             self.assertEqual(out["counts"],{
                "food_items":1,"potion_items":1,
