@@ -1,0 +1,17 @@
+{
+  "schema": "v178_one_real_product_cancel_resume_once_v1",
+  "spec": "paladin/retribution",
+  "target_ilevel": 334,
+  "current_season_product": true,
+  "cancel_after_completed_new_native": 2,
+  "resume_max_additional_native": 4,
+  "total_new_native_max": 6,
+  "same_session_sha_verified_cache_hits_on_resume": 2,
+  "cache_only_final_verified_six": true,
+  "simc_revision": "7bc10711b5",
+  "simc_binary_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+  "old_26_spec_physical_evidence_reused": true,
+  "no_optimizer_changes": true,
+  "no_main_merge": true,
+  "no_project_ui_promotion": true
+}
