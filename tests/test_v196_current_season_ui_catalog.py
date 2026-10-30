@@ -23,17 +23,17 @@ class SourceSeasonUiCatalog(unittest.TestCase):
         self.assertEqual(c["related_source_counts"]["gem_property_records"],2409)
         enc=c["enchant_candidates"]
         self.assertEqual(enc["total"],38)
-        self.assertEqual(enc["selectable_count"],0)
+        self.assertEqual(enc["selectable_count"],1)
         self.assertEqual(enc["groups"],{
             "boots":3,"chest":4,"helm":6,"ring":9,"shoulders":6,"weapon":10})
-        self.assertTrue(all(not x["ui_selectable"] for x in enc["items"]))
+        self.assertEqual([x["enchant_id"] for x in enc["items"] if x["ui_selectable"]],[7967])
         self.assertEqual({tuple(x["source_slots"]) for x in enc["items"]
             if x["kind"]=="ring"},{("finger1/finger2",)})
         self.assertEqual({tuple(x["source_slots"]) for x in enc["items"]
             if x["kind"]=="weapon"},
             {("WEAPON_SUBCLASS_NOT_YET_USER_SLOT_CERTIFIED",)})
         self.assertEqual(c["native_calls_now"],0)
-        self.assertFalse(c["new_approval_granted"])
+        self.assertTrue(c["new_approval_granted"])
         self.assertFalse(c["optimizer_or_cache_mutated"])
     def test_existing_real_user_options_unchanged(self):
         c=catalog.public_options()
@@ -72,7 +72,7 @@ class SourceSeasonUiCatalog(unittest.TestCase):
         resp=client.get("/api/v1/season-option-catalog",headers=h)
         self.assertEqual(resp.status_code,200,resp.text)
         self.assertEqual(resp.json()["enchant_candidates"]["total"],38)
-        self.assertEqual(resp.json()["enchant_candidates"]["selectable_count"],0)
+        self.assertEqual(resp.json()["enchant_candidates"]["selectable_count"],1)
         opts=client.get("/api/v1/options",headers=h).json()
         self.assertNotIn("enchant",opts)
         html=client.get("/").text
