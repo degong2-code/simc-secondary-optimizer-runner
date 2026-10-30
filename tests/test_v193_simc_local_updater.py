@@ -7,6 +7,7 @@ sys.path.insert(0,str(ROOT/"runner"))
 import v193_simc_local_updater as mod
 
 NAME="simc-1215-01-win64-710c240.7z"
+OFFICIAL_GITHUB_NAME="simc-1210.01.710c240-win64.7z"
 INDEX="""<html><a href="simc-1210-03-win64-7bc1071.7z">old</a>
 <a href="simc-1215-01-win64-710c240.7z">latest</a>
 <a href="https://evil.example/simc-9999-win64-fdef789.7z">bad</a>
@@ -82,6 +83,43 @@ class SimCUpdateUnit(unittest.TestCase):
         self.assertIsNone(response["github_alternative"])
         self.assertTrue(response["github_actions_url"].startswith("https://github.com/"))
         self.assertFalse(response["direct_install_available"])
+
+    def test_real_official_github_actions_cpack_filename_is_accepted(self):
+        # Grounded in real simc-publish Nightly Win64 artifact 12953786078:
+        # simc-version + simc-1210.01.710c240-win64.7z (120946271 bytes).
+        identity=mod.nightly_identity(OFFICIAL_GITHUB_NAME)
+        self.assertEqual(identity,{"filename":OFFICIAL_GITHUB_NAME,
+                                 "series":"1210.01",
+                                 "revision_short":"710c240"})
+        cases=[(NAME,"1215-01","710c240"),
+               (OFFICIAL_GITHUB_NAME,"1210.01","710c240")]
+        for name,series,revision in cases:
+            with self.subTest(name=name):
+                self.assertEqual(mod.nightly_identity(name)["series"],series)
+                self.assertEqual(mod.nightly_identity(name)["revision_short"],revision)
+        self.assertEqual(mod.candidate_urls(
+            '<a href="'+OFFICIAL_GITHUB_NAME+'">official nightly</a>')[0]["filename"],
+            OFFICIAL_GITHUB_NAME)
+        for invalid in ("simc-1210.01.710c240-winarm64.7z",
+                        "simc-1210.01.710c240-win64.zip",
+                        "../simc-1210.01.710c240-win64.7z",
+                        "simc-1210.01.not-a-hash-win64.7z"):
+            if "/" not in invalid:
+                self.assertIsNone(mod.nightly_identity(invalid))
+
+    def test_local_install_accepts_real_github_7z_filename_without_rename(self):
+        archive=self.path/OFFICIAL_GITHUB_NAME
+        archive.write_bytes(mod.MAGIC+b"nightly"*20000)
+        def extractor(source,stage,tool):
+            exe=stage/"simc.exe"
+            exe.write_bytes(b"MZ"+b"portable_fake_pe"*11000)
+            return exe
+        result=self.m.install_local(str(archive),extractor=extractor,
+                                    sevenzip="mock7z")
+        self.assertEqual(result["installed"]["filename"],OFFICIAL_GITHUB_NAME)
+        self.assertEqual(result["installed"]["revision_short"],"710c240")
+        self.assertTrue(result["active_binary"])
+        self.assertTrue(result["manual_binary_never_modified"])
 
     def test_inventory_blocks_absolute_traversal_duplicates_links_and_bombs(self):
         self.assertEqual(mod.verify_inventory(LIST),["simc.exe","profiles"])
