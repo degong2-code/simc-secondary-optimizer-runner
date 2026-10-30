@@ -391,6 +391,8 @@ class SimCManager:
         path=pathlib.Path(archive_path).expanduser()
         need(path.is_file() and not path.is_symlink(),
              "LOCAL_NIGHTLY_FILE_NOT_FOUND")
+        need(path.suffix.lower()!=".zip",
+             "LOCAL_GITHUB_ARTIFACT_ZIP_EXTRACT_7Z_FIRST")
         identity=nightly_identity(path.name)
         need(identity is not None,"LOCAL_NIGHTLY_FILENAME_UNSUPPORTED")
         need(100000<path.stat().st_size<=MAX_ARCHIVE,
