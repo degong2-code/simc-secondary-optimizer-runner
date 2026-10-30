@@ -64,3 +64,11 @@
 - **변경 영향:** 예산 소스/참조 증거, L/E/O 중복, candidate bounds, 시나리오 digest, profile/case/cache key, 강제 종료·부분 재개, 구형 세션 보존, Web/Windows 마부 선택 잠금, CI 비용·메모리/I/O·정적 캐시 불변을 한꺼번에 검토한다. 상세 `docs/V204_SELECTED_ENCHANT_BUDGET_IMPACT_AND_EVIDENCE.md`.
 
 본 보충은 GitHub 격리 코드·문서에만 적용됐다. 공식 v1.4.1 원문·ChatGPT Project Sources/Instructions·Work OS·main·v003 immutable 승격과 무관하다.
+
+### v204 검증 영수증 (2026-10-31)
+
+- 오프라인 양 OS [#41099416253](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41099416253) Ubuntu/Windows 각 36 PASS/0 FAIL; 테스트 대상은 자동 일회 증가, 수동 T 불변, 원본 참조표 불변, 기존 v089/v091/v096, E 하한, 미관측 마부 잠금/특수 L 슬롯 중복 차단. 초기 [#41099272753](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41099272753)에서 신규 오프라인 fixture가 기름 없는 정규화 시나리오에 O=16을 넘긴 **테스트 구성 오류**로 1 FAIL; 수정 후 36/36 PASS. 역사 FAIL 삭제 금지.
+- 신규 Linux Native [#41099779751](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41099779751), Source HEAD `91c9d1c05cb715828f92e5f26837599353014f69`: 정확한 SimC 바이너리 SHA`f105b8a34fd911c340e735f0440e0d1eadf0d0dbc25f18923c048810cf69095d` 확인. `B=3180,T=3212,E_haste=30`, **신규 Native6 PASS, 4개 고유 rating**, 동일 결과 6/6 Native JSON2 SHA-검증 캐시 replay, 추가 Native0, 신뢰수준 95%, 전역최적해 입증하지 않음. 원본 artifact **12997053018** `audit_receipt.json` 실제 다운로드 확인. 이것은 v203의 B3150/T3182 Native6와 **독립적인 신규 결과**이다.
+- 추가 최신 HEAD 범위 제한 `f1f1387...`의 후속 양 OS CI [#41100357780](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41100357780) 및 정확 동일 프로필로 '미선택/자동선택/수동 T' 세 경로를 계획만 생성하는 **0 Native** [#41101150249](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41101150249)는 상태 확인이 끝나기 전까지 PASS 주장하지 않는다.
+
+이 영수증은 마부 8025를 실제 선택한 정해진 Linux 냉법 334 범위의 **개발용 기능 검증**이며, 일반 사용자가 고를 수 있는 마부 목록 승격이나 Windows Native 결과를 의미하지 않는다.
