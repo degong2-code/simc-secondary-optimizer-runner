@@ -437,6 +437,72 @@ def reconcile_current_season_five_tier(key,rows,groups,taken,ilevel,
     return restored
 
 
+def validate_current_season_selected_slots(key,user,tier_map,need):
+    """Source catalog item/slot consistency; not proc/effect certification."""
+    if not user["special_items"] and not user["embellishments"]:
+        return
+    import v143_specialization_contracts as contracts
+    import v167_product_season_gear_adapter as product_gear
+    import v169_source_first_representative_stage as source_stage
+    db=product_gear.read()
+    indexed={x["item_id"]:x for x in db["items"]}
+    spec=contracts.lookup(*key)
+    need(spec is not None,"CURRENT_SEASON_EQUIPMENT_SPEC_REQUIRED")
+    armor_type=product_gear.ARMOR_SUBCLASS[spec["family"]]
+    core={"head":(1,),"shoulders":(3,),"chest":(5,20),
+          "hands":(10,),"legs":(7,),"wrists":(9,),
+          "waist":(6,),"feet":(8,),"neck":(2,),"back":(16,),
+          "finger1":(11,),"finger2":(11,)}
+    form=spec["weapon_form"]
+    weapon_slots=contracts.WEAPON_FORMS[form]
+    weapon_inventory={
+        "one_hand_frill":{"main_hand":(13,),"off_hand":(23,)},
+        "one_hand_shield":{"main_hand":(13,),"off_hand":(14,)},
+        "dual_one_hand":{"main_hand":(13,),"off_hand":(13,)},
+        "dual_two_hand":{"main_hand":(17,),"off_hand":(17,)},
+        "single_one_hand":{"main_hand":(13,)},
+        "single_two_hand":{"main_hand":(17,)},
+        "ranged":{"main_hand":(15,26)}}
+    expected_primary=source_stage.PRIMARY_STAT_CODES[spec["primary"]]
+    mask=source_stage.load_tier()["classes"][key[0]]["allowed_class_mask"]
+    for group,selection in (("special",user["special_items"]),
+                             ("crafted",user["embellishments"])):
+        for raw in selection:
+            slot,item_id=raw["slot"],raw["item_id"]
+            options=raw["options"]
+            # A catalyst piece uses the class-specific tier ID instead of a
+            # separately catalogued seasonal item. SimC owns inheritance.
+            catalyst=group=="special" and (
+                "redirected_base_stats" in options and slot in tier_map
+                and item_id==tier_map[slot])
+            if catalyst:continue
+            row=indexed.get(item_id)
+            expected="special_effect_gear_candidate" if group=="special" else "selectable_stat_craft"
+            need(row is not None and row["category"]==expected,
+                 "CURRENT_SEASON_SELECTED_ITEM_NOT_IN_APPROVED_ROLE:"+slot)
+            allowed_slots=core if slot in core else weapon_inventory[form]
+            need(slot in allowed_slots and
+                 row["inventory_type"] in allowed_slots[slot],
+                 "CURRENT_SEASON_SELECTED_ITEM_WRONG_PHYSICAL_SLOT:"+slot)
+            if slot in product_gear.ARMOR_SLOTS:
+                need(row["class_id"]==4 and
+                     row["subclass_id"]==armor_type,
+                     "CURRENT_SEASON_SELECTED_ITEM_WRONG_ARMOR_FAMILY:"+slot)
+            class_mask=row.get("allowed_class_mask")
+            need(class_mask is None or (
+                 type(class_mask) is int and (class_mask&mask)==mask),
+                 "CURRENT_SEASON_SELECTED_ITEM_CLASS_NOT_ALLOWED:"+slot)
+            if row["class_id"]==2:
+                need(slot in weapon_slots,"CURRENT_SEASON_WEAPON_WRONG_SLOT")
+                # Crafted primary may be supplied by crafted_stats. Fixed
+                # special weapons must include the requested primary code.
+                if group=="special":
+                    codes=row.get("stat_modifier_codes")
+                    need(type(codes) is list and
+                         any(x in expected_primary for x in codes),
+                         "CURRENT_SEASON_SPECIAL_WEAPON_WRONG_PRIMARY:"+slot)
+
+
 def apply_user_equipment(key,rows,groups,user,ilevel,need,*,
                          tier_override=None,fifth_override=None,
                          flexible_current_tier=False):
@@ -452,6 +518,8 @@ def apply_user_equipment(key,rows,groups,user,ilevel,need,*,
               else tier_override)
     fifth_data=(FIFTH_TIER[key] if fifth_override is None
                 else fifth_override)
+    if flexible_current_tier:
+        validate_current_season_selected_slots(key,user,tier_map,need)
     taken=set()
     for group,selection in (("trinkets",user["trinkets"]),
                             ("special",user["special_items"]),
