@@ -95,7 +95,7 @@ class SimpleUserInputs(unittest.TestCase):
         for marker in ('function oilCompatibility()','function chosenCraft(slot)',
             'function selectedGear(nodeId, group)','row4_crit','row4_vers',
             '["arcanoweave_lining","비전직조 안감"]',
-            '["darkmoon_sigil_hunt","다크문 인장: 사냥"]'):
+            '["sunfire_silk_lining","태양불꽃 비단 안감"]'):
             self.assertIn(marker,js)
         self.assertIn("label.hidden=isPrivate",js)
         self.assertIn("장식은 부위·종류·제작 스탯만 선택",html)
