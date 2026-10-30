@@ -1,0 +1,64 @@
+name: v206 one Eagle 7967 non-CHMV static Windows Native
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/v206_eagle_nonchmv_windows_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v206-exact-eagle-static-native-two
+  cancel-in-progress: false
+jobs:
+  one-eagle-two-native:
+    runs-on: windows-2022
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install only current runtime dependencies
+        run: python -m pip install -r requirements-web-test.txt
+      - name: Reuse SHA-pinned official Windows SimulationCraft artifact
+        uses: actions/download-artifact@v4
+        with:
+          repository: simulationcraft/simc-publish
+          run-id: 40999844143
+          name: simc-nightly-win64-midnight
+          path: .simc-windows
+          github-token: ${{ github.token }}
+      - name: Exact 7z archive check and unpack
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $src=Join-Path $PWD '.simc-windows/simc-1210.01.710c240-win64.7z'
+          if (!(Test-Path $src)) { throw 'PINNED_WINDOWS_ARCHIVE_NOT_FOUND' }
+          if ((Get-FileHash -Algorithm SHA256 $src).Hash.ToLowerInvariant() -ne '386b2827c537a0447ac09a158e14c63b1d71d73e8e29f6e8ab404416861aab89') {
+            throw 'PINNED_WINDOWS_ARCHIVE_CHANGED'
+          }
+          New-Item -Path .simc-win-extracted -ItemType Directory -Force | Out-Null
+          & 'C:\Program Files\7-Zip\7z.exe' x '-o.simc-win-extracted' -y -bd $src | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'EXTRACTION_FAILED' }
+          $exes=@(Get-ChildItem .simc-win-extracted -Recurse -Filter simc.exe -File)
+          if ($exes.Count -ne 1) { throw 'NOT_EXACTLY_ONE_WINDOWS_SIMC' }
+          $sha=(Get-FileHash -Algorithm SHA256 $exes[0].FullName).Hash.ToLowerInvariant()
+          if ($sha -ne '0ad16368cd1effb19c793dbce63518ccb72fec89c72f6ef75d9afca239a039e8') {
+            throw 'PINNED_SIMC_EXE_CHANGED'
+          }
+          "SIMC_EXE=$($exes[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: One generated real user profile; exactly two actual SimC static Native
+        shell: pwsh
+        run: |
+          python integration_probes/v206_eyes_eagle_nonchmv_windows_once.py --simc "$env:SIMC_EXE" --out out/v206
+          if ($LASTEXITCODE -ne 0) { throw 'NON_CHMV_NATIVE_EAGLE_COMPARISON_FAILED' }
+      - name: Save one compact native comparison proof, no full profile/JSON2
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v206-eagle-7967-static-native-comparison
+          path: out/v206/V206_EAGLE_EFFECT_STATIC_RECEIPT.json
+          if-no-files-found: warn
+          retention-days: 2
