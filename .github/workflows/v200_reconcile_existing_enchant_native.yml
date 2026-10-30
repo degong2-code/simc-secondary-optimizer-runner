@@ -1,0 +1,99 @@
+name: v200 Reconcile Existing v199 Enchant Native Receipt (Zero New Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/v200_reconcile_existing_enchant_native.yml]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  reconcile-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: 41075851509
+          name: v199-one-ring-matched-native-41075851509
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: v199-prior-evidence
+      - name: Verify original SHA, single controlled enchant input, and precombat +30 haste
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          python - <<'PY'
+          import hashlib,json,pathlib,sys
+          sys.path[:0]=["runner","integration_probes"]
+          import v198_targeted_enchant_native_rating as probe
+          import v197_verified_effect_budget as budget
+          dirs=list(pathlib.Path("v199-prior-evidence").rglob("receipt.json"))
+          assert len(dirs)==1,dirs
+          folder=dirs[0].parent
+          data={n:(folder/n).read_bytes() for n in
+               ("before.simc","after.simc","before.json","after.json","receipt.json")}
+          old=json.loads(data["receipt.json"])
+          assert old["schema"]=="v198_native_two_profile_enchant_rating_v1"
+          assert old["identity"]["revision"]=="710c2408bf"
+          assert old["identity"]["slot"]=="finger1"
+          assert old["identity"]["enchant_id"]==8025
+          assert old["native_new_calls"]==2
+          assert old["budget_E_input_allowed_automatically"] is False
+          for name,field in [
+             ("before.simc","base_input_sha256"),
+             ("after.simc","enchant_input_sha256"),
+             ("before.json","before_native_sha256"),
+             ("after.json","after_native_sha256")]:
+            assert hashlib.sha256(data[name]).hexdigest()==old[field],name
+          rows_before=[x for x in data["before.simc"].decode().splitlines()
+                         if not x.startswith("json2=")]
+          rows_after=[x for x in data["after.simc"].decode().splitlines()
+                         if not x.startswith("json2=")]
+          assert len(rows_before)==len(rows_after)
+          changes=[(a,b) for a,b in zip(rows_before,rows_after) if a!=b]
+          assert len(changes)==1 and changes[0][0].startswith("finger1=")
+          assert changes[0][1]==changes[0][0]+",enchant_id=8025"
+          corrected=probe.compare_native(data["before.json"],data["after.json"],
+                                          "finger1",8025,"710c2408bf")
+          vec={"crit_rating":0,"haste_rating":30,"mastery_rating":0,
+               "versatility_rating":0}
+          assert corrected["static_secondary"]==vec,corrected
+          assert all(x==0 for x in corrected["observed_item_slot_rating_delta"].values())
+          rec={"enchant_id":8025,"slot":"finger1","static_secondary":vec,
+               "proof_kind":"MATCHED_SIMC_NATIVE_JSON2_STATIC_SECONDARY_DELTA_VERIFIED",
+               "profile_before_sha256":old["base_input_sha256"],
+               "profile_after_sha256":old["enchant_input_sha256"],
+               "native_before_sha256":old["before_native_sha256"],
+               "native_after_sha256":old["after_native_sha256"],
+               "verified_receipt_sha256":hashlib.sha256(data["receipt.json"]).hexdigest()}
+          assert budget.complete_native_evidence(rec)==vec
+          conclusion={
+            "schema":"v200_existing_v199_native_rating_reconciliation_v1",
+            "status":"SOURCE_SHA_RECONCILED_PRECOMBAT_RATING_DELTA",
+            "source_run":41075851509,
+            "source_artifact_id":12986044543,
+            "source_simc_rev":"710c2408bf",
+            "native_calls_this_run":0,
+            "exactly_one_enchant_input_changed":True,
+            "comparison":corrected,
+            "v197_native_evidence":rec,
+            "product_UI_auto_promoted":False,
+            "old_v199_receipt_unmodified":True
+          }
+          pathlib.Path("out/v200_reconciled_existing_native.json").write_text(
+            json.dumps(conclusion,indent=2,ensure_ascii=False)+"\n",encoding="utf8")
+          print("V200_EXISTING_NATIVE_PROOF_DELTA_30_HASTE_PASS",corrected,flush=True)
+          PY
+      - if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v200-reconciled-existing-native-${{ github.run_id }}
+          path: out/
+          retention-days: 3
+          if-no-files-found: warn
