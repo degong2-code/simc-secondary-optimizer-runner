@@ -119,3 +119,10 @@ summary small{font-size:10px;color:var(--muted);font-weight:450}
 #recent-open-btn,#recent-refresh-btn{min-width:0;flex:1}
 #recent-session-note{margin:10px 12px}
 @media(max-width:540px){.restore-controls:has(#recent-open-btn){flex-direction:column}}
+
+/* v193: user-consented local SimC version management. */
+.simc-update-panel{margin-top:14px}
+.simc-update-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px}
+.simc-update-actions .btn{flex:1 1 145px}
+.simc-update-panel .hint{overflow-wrap:anywhere}
+.simc-update-panel a{color:var(--accent);text-decoration:underline}
