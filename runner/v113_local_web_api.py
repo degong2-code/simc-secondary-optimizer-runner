@@ -39,6 +39,10 @@ class UpdateInstallRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     filename: str = Field(min_length=12,max_length=140)
 
+class UpdateLocalArchiveRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    archive_path: str = Field(min_length=8,max_length=4096)
+
 class UserRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     controls: dict
@@ -478,6 +482,10 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
     @app.post("/api/v1/simc-updates/install")
     def simc_update_install(request:UpdateInstallRequest):
         return updates_action(lambda:updater.install(request.filename))
+
+    @app.post("/api/v1/simc-updates/install-local")
+    def simc_update_install_local(request:UpdateLocalArchiveRequest):
+        return updates_action(lambda:updater.install_local(request.archive_path))
 
     @app.post("/api/v1/simc-updates/rollback")
     def simc_update_rollback():
