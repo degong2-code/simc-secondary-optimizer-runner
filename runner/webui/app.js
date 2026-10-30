@@ -278,7 +278,7 @@ function gearInputs(nodeId, config) {
   title.textContent=config.title+" · 최대 "+limit+"개";
   const group=document.createElement("div");
   group.className="gear-group";group.appendChild(title);
-  for(let i=0;i<limit;i++) {
+  for (let i=0;i<limit;i++) {
     const row=document.createElement("div");row.className="gear-row";
     if(isSpecial&&i>=2)row.hidden=true;
     row.dataset.group=nodeId;row.dataset.index=String(i);
