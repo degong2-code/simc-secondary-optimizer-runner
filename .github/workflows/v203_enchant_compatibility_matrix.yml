@@ -1,0 +1,28 @@
+name: v203 Enchant Compatibility Matrix Offline
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/v203_enchant_compatibility_matrix.yml]
+permissions:
+  contents: read
+jobs:
+  boundary:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install minimum existing web-test modules
+        run: python -m pip install -r requirements-web-test.txt
+      - name: Check E and all previously accepted feature boundaries
+        run: python -m unittest -v tests.test_v203_enchant_cross_feature_policy tests.test_v196_current_season_ui_catalog tests.test_v202_one_enchant_admission tests.test_v202_enchant_scheduler_floor tests.test_v197_verified_effect_budget tests.test_v198_targeted_enchant_native_rating
+      - name: Review source-only package and no user profile/caches included
+        run: python -m unittest -v tests.test_v181_windows_beta_packaging
