@@ -16,7 +16,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - name: Fetch official nightly HTML index only and parse a real Windows x64 archive
+      - name: Fetch official TLS-correct nightly HTML index and parse Windows x64 archive
         shell: bash
         run: |
           set -euo pipefail
