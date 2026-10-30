@@ -17,6 +17,11 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 12
     steps:
+      - name: Keep exact authored LF text on Windows (same v181 source-checkout policy)
+        shell: bash
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
