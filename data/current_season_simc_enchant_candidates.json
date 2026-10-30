@@ -1,0 +1,361 @@
+{
+  "schema": "v196_source_first_enchant_candidates_v1",
+  "status": "SOURCE_OBSERVED_NOT_NATIVE_BUDGET_VERIFIED",
+  "season_game_build": "12.1.5.70575",
+  "simc_commit": "710c2408bfd3ae4df71b8cd55cdf01f63fd6c926",
+  "source_run_id": 41018700283,
+  "source_artifact_id": 12961140046,
+  "source_entry": "v191_unified_source_first_catalog.json:enchants.current_season_midnight.highest_rank_candidates",
+  "quality_policy": "HIGHEST_SOURCE_RECORDED_RANK_PER_EXACT_TOKEN_AND_COMPATIBILITY",
+  "unverified": [
+    "ITEM_RECIPE_AND_KOKR_NAME",
+    "EFFECT_MAGNITUDE",
+    "CHMV_J_F_O_L_BUDGET_EFFECT",
+    "NATIVE_SCOPED_INPUT_ACCEPTANCE"
+  ],
+  "user_selectable": false,
+  "rows": [
+    {
+      "token": "enchant_boots__farstriders_hunt",
+      "enchant_id": 8019,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 256,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_boots__lynxs_dexterity",
+      "enchant_id": 7963,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 256,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_boots__shaladrassils_roots",
+      "enchant_id": 7993,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 256,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_chest__mark_of_nalorakk",
+      "enchant_id": 7957,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 1048608,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_chest__mark_of_the_magister",
+      "enchant_id": 8013,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 1048608,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_chest__mark_of_the_rootwarden",
+      "enchant_id": 7985,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 1048608,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_chest__mark_of_the_worldsoul",
+      "enchant_id": 7987,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 1048608,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_helm__blessing_of_speed",
+      "enchant_id": 7989,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 2,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_helm__empowered_blessing_of_speed",
+      "enchant_id": 7991,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 2,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_helm__empowered_hex_of_leeching",
+      "enchant_id": 7961,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 2,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_helm__empowered_rune_of_avoidance",
+      "enchant_id": 8017,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 2,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_helm__hex_of_leeching",
+      "enchant_id": 7959,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 2,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_helm__rune_of_avoidance",
+      "enchant_id": 8015,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 2,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_ring__amani_mastery",
+      "enchant_id": 7965,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 2048,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_ring__eyes_of_the_eagle",
+      "enchant_id": 7967,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 2048,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_ring__natures_fury",
+      "enchant_id": 7997,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 2048,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_ring__natures_wrath",
+      "enchant_id": 7995,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 2048,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_ring__silvermoons_alacrity",
+      "enchant_id": 8025,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 2048,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_ring__silvermoons_tenacity",
+      "enchant_id": 8027,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 2048,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_ring__thalassian_haste",
+      "enchant_id": 8021,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 2048,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_ring__thalassian_versatility",
+      "enchant_id": 8023,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 2048,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_ring__zuljins_mastery",
+      "enchant_id": 7969,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 2048,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_shoulders__akilzons_swiftness",
+      "enchant_id": 7973,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 8,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_shoulders__amirdrassils_grace",
+      "enchant_id": 8001,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 8,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_shoulders__flight_of_the_eagle",
+      "enchant_id": 7971,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 8,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_shoulders__natures_grace",
+      "enchant_id": 7999,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 8,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_shoulders__silvermoons_mending",
+      "enchant_id": 8031,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 8,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_shoulders__thalassian_recovery",
+      "enchant_id": 8029,
+      "quality_rank": 2,
+      "item_class": 4,
+      "inventory_type_mask": 8,
+      "item_subclass_mask": 31,
+      "approved": false
+    },
+    {
+      "token": "enchant_weapon__acuity_of_the_rendorei",
+      "enchant_id": 8039,
+      "quality_rank": 2,
+      "item_class": 2,
+      "inventory_type_mask": 0,
+      "item_subclass_mask": 966655,
+      "approved": false
+    },
+    {
+      "token": "enchant_weapon__arcane_mastery",
+      "enchant_id": 8041,
+      "quality_rank": 2,
+      "item_class": 2,
+      "inventory_type_mask": 0,
+      "item_subclass_mask": 966655,
+      "approved": false
+    },
+    {
+      "token": "enchant_weapon__berserkers_rage",
+      "enchant_id": 7983,
+      "quality_rank": 2,
+      "item_class": 2,
+      "inventory_type_mask": 0,
+      "item_subclass_mask": 966655,
+      "approved": false
+    },
+    {
+      "token": "enchant_weapon__flames_of_the_sindorei",
+      "enchant_id": 8037,
+      "quality_rank": 2,
+      "item_class": 2,
+      "inventory_type_mask": 0,
+      "item_subclass_mask": 966655,
+      "approved": false
+    },
+    {
+      "token": "enchant_weapon__janalais_precision",
+      "enchant_id": 7981,
+      "quality_rank": 2,
+      "item_class": 2,
+      "inventory_type_mask": 0,
+      "item_subclass_mask": 966655,
+      "approved": false
+    },
+    {
+      "token": "enchant_weapon__rite_of_the_hashey",
+      "enchant_id": 8689,
+      "quality_rank": 2,
+      "item_class": 2,
+      "inventory_type_mask": 0,
+      "item_subclass_mask": 966655,
+      "approved": false
+    },
+    {
+      "token": "enchant_weapon__strength_of_halazzi",
+      "enchant_id": 7979,
+      "quality_rank": 2,
+      "item_class": 2,
+      "inventory_type_mask": 0,
+      "item_subclass_mask": 966655,
+      "approved": false
+    },
+    {
+      "token": "enchant_weapon__worldsoul_aegis",
+      "enchant_id": 8009,
+      "quality_rank": 2,
+      "item_class": 2,
+      "inventory_type_mask": 0,
+      "item_subclass_mask": 966655,
+      "approved": false
+    },
+    {
+      "token": "enchant_weapon__worldsoul_cradle",
+      "enchant_id": 8007,
+      "quality_rank": 2,
+      "item_class": 2,
+      "inventory_type_mask": 0,
+      "item_subclass_mask": 966655,
+      "approved": false
+    },
+    {
+      "token": "enchant_weapon__worldsoul_tenacity",
+      "enchant_id": 8011,
+      "quality_rank": 2,
+      "item_class": 2,
+      "inventory_type_mask": 0,
+      "item_subclass_mask": 966655,
+      "approved": false
+    }
+  ]
+}
