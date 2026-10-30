@@ -12,6 +12,11 @@ import v197_verified_effect_budget as fixed
 
 DEFAULT=pathlib.Path(__file__).resolve().parents[1]/"data/v202_verified_enchant_8025_source.json"
 CHOICE={"finger1":8025}
+# Full source profile SHA of the completed v203 six-Native Frost334 sample,
+# after exactly one oil application. Character/talents/trinkets/consumables/
+# fight conditions/other gear must be byte-identical in this developer pilot.
+# Do not extrapolate one Native ring effect to arbitrary user loadouts.
+EXACT_SOURCE_PROFILE_SHA256="8305a811137db6f557f8076dfa44a4a1a359111d60bb7452225e1573bf72a401"
 SCHEMA="v202_one_exact_enchant_source_evidence_v1"
 # SHA-confirmed v200/v201 raw Native JSON2, not just four plausible hex strings.
 EXPECTED_NATIVE_JSON_SHA={
@@ -84,6 +89,9 @@ def admit(manifest_choice,profile,normalized,binary_sha,revision):
          type(revision) is str and len(revision)>=7 and
          data["revision"].startswith(revision),
          "V202_ONLY_PINNED_LINUX_SIMC_BINARY_AND_REVISION")
+    need(type(profile) is str and
+         hashlib.sha256(profile.encode("utf8")).hexdigest()==EXACT_SOURCE_PROFILE_SHA256,
+         "V203_FULL_PROFILE_TALENTS_CONSUMABLES_GEAR_COMBAT_SHA_NOT_EVIDENCED")
     ring=[s.partition("=")[2] for s in profile.splitlines()
           if s.startswith("finger1=")]
     need(len(ring)==1,"V202_EXACT_ONE_FINGER1_ROW")
