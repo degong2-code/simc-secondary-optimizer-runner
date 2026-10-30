@@ -25,4 +25,24 @@ jobs:
       - name: Check E and all previously accepted feature boundaries
         run: python -m unittest -v tests.test_v203_enchant_cross_feature_policy tests.test_v196_current_season_ui_catalog tests.test_v202_one_enchant_admission tests.test_v202_enchant_scheduler_floor tests.test_v197_verified_effect_budget tests.test_v198_targeted_enchant_native_rating
       - name: Review source-only package and no user profile/caches included
-        run: python -m unittest -v tests.test_v181_windows_beta_packaging
+        run: python -m unittest -v tests.test_v181_windows_beta_package_offline
+  full-evidence-scope:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/cache/restore@v4
+        with:
+          path: .simc-cache/v192/
+          key: v192-ubuntu2404-710c2408bfd3ae4df71b8cd55cdf01f63fd6c926-cli-r1
+      - name: Verify full user-source SHA with unchanged B/T, separate Native cache, zero SimC
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum -c .simc-cache/v192/simc.sha256
+          python integration_probes/v202_existing_planner_no_native.py .simc-cache/v192/simc out/
