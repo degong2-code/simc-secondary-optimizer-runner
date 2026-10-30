@@ -790,7 +790,87 @@ function installOptions(options) {
   }
 }
 
+// Settings: user-triggered official SimC download, separate from season DB.
+// The existing manually supplied binary remains usable and is never overwritten.
+let simcOffer=null;
+let manualSimcBeforeUpdate=null;
+function applyManagedSimc(data) {
+  if(!data?.active_binary||!data?.installed)return false;
+  $("binary").value=data.active_binary;
+  $("revision").value=data.installed.revision_short;
+  return true;
+}
+function displaySimcUpdater(data) {
+  const supported=Boolean(data.windows_supported);
+  $("simc-check-btn").disabled=!supported;
+  $("simc-rollback-btn").disabled=!supported||!data.installed;
+  const current=data.installed;
+  $("simc-update-status").textContent=!supported?
+    "SimC 업데이트 관리는 Windows x64에서 지원합니다. 직접 지정한 경로는 유지됩니다.":
+    current?"관리 중: "+current.filename+" · "+current.revision_short+
+      " · SHA256 "+current.sha256.slice(0,16)+"…":
+    "앱 관리 SimC 없음 · 직접 지정한 실행 파일은 변경하지 않습니다.";
+  if(supported&&!data.archive_extractor_available)
+    $("simc-update-status").textContent+=" · 설치하려면 7-Zip이 필요합니다.";
+}
+async function refreshSimcUpdater(preferManaged=false) {
+  const status=await api("/api/v1/simc-updates/status");
+  displaySimcUpdater(status);
+  if(status.active_binary&&(preferManaged||!field("binary")))applyManagedSimc(status);
+  return status;
+}
+async function checkSimcUpdater() {
+  simcOffer=null;
+  $("simc-install-btn").disabled=true;
+  const result=await api("/api/v1/simc-updates/check",
+     {method:"POST",payload:{}});
+  simcOffer=result.candidate?.filename||null;
+  $("simc-update-candidate").textContent=simcOffer?
+    "공식 Windows x64 후보: "+simcOffer+
+    " · revision "+result.candidate.revision_short+
+    (result.archive_extractor_available?"":" · 7-Zip 필요"):
+    "공식 배포 후보를 찾지 못했습니다.";
+  $("simc-install-btn").disabled=!simcOffer||!result.archive_extractor_available;
+}
+async function installSimcUpdater() {
+  if(!simcOffer)throw Error("먼저 공식 업데이트를 확인해 주세요.");
+  if(!window.confirm("공식 SimulationCraft Windows x64 패키지를 다운로드하고 앱 전용 폴더에 설치할까요? 기존 실행 파일과 세션은 변경하지 않습니다."))return;
+  if(!manualSimcBeforeUpdate&&field("binary"))
+    manualSimcBeforeUpdate={binary:field("binary"),revision:field("revision")};
+  const candidate=simcOffer;
+  $("simc-install-btn").disabled=true;
+  try{
+    const result=await api("/api/v1/simc-updates/install",
+       {method:"POST",payload:{filename:candidate}});
+    simcOffer=null;
+    displaySimcUpdater(result);
+    applyManagedSimc(result);
+    $("simc-update-candidate").textContent="설치 완료 · 신규 최적화에만 새 SimC가 적용됩니다. 시즌 DB와 과거 캐시는 그대로입니다.";
+    setNotice("SimC 설치 완료 · 바이너리 SHA에 따라 새 최적화 세션이 분리됩니다.");
+  }catch(err){
+    $("simc-install-btn").disabled=false;
+    throw err;
+  }
+}
+async function rollbackSimcUpdater() {
+  if(!window.confirm("관리 중인 SimC를 이전 버전으로 되돌릴까요? 기존 사용자 파일은 변경하지 않습니다."))return;
+  const result=await api("/api/v1/simc-updates/rollback",
+       {method:"POST",payload:{}});
+  displaySimcUpdater(result);
+  if(result.active_binary)applyManagedSimc(result);
+  else if(manualSimcBeforeUpdate) {
+    $("binary").value=manualSimcBeforeUpdate.binary;
+    $("revision").value=manualSimcBeforeUpdate.revision;
+  }else {
+    $("binary").value="";$("revision").value="";
+  }
+  $("simc-update-candidate").textContent="복원 완료. 기존 세션과 계산 결과는 그대로 보존됩니다.";
+  setNotice("SimC 관리 버전 복원 완료 · 사용자 원본 설치는 유지됩니다.");
+}
 function registerHandlers() {
+  $("simc-check-btn").addEventListener("click",()=>withBusy(checkSimcUpdater));
+  $("simc-install-btn").addEventListener("click",()=>withBusy(installSimcUpdater));
+  $("simc-rollback-btn").addEventListener("click",()=>withBusy(rollbackSimcUpdater));
   $("simc-import-btn").addEventListener("click",()=>withBusy(importSimcCharacter));
   $("spec").addEventListener("change",()=>{
     const selected=state.defaults.find(d=>d.class+"/"+d.spec===field("spec"));
@@ -853,6 +933,10 @@ async function initialize() {
     $("spec").disabled=false;
     installOptions(opt);
     installSeasonGearHints(gear);
+    // Read-only local status. No remote release lookup on page load.
+    try{await refreshSimcUpdater(false);}catch(err){
+      $("simc-update-status").textContent="SimC 관리 상태 조회 오류: "+err.message;
+    }
     try{await loadRecentSessions();}
     catch(err){$("recent-session-note").textContent="세션 목록 조회 오류: "+err.message;}
     const paladin=state.defaults.find(v=>v.class==="paladin"&&v.spec==="retribution");
