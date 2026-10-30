@@ -1,0 +1,68 @@
+name: v207 one selected Eagle Windows real Native and cache
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/v207_one_selected_eagle_windows_native.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v207-one-selected-eagle-six-native
+  cancel-in-progress: false
+jobs:
+  eagle-user-native-six:
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - name: Preserve repo LF text on Windows
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r requirements-web-test.txt
+      - name: Reuse v205 SHA-pinned official Windows SimC artifact, no build
+        uses: actions/download-artifact@v4
+        with:
+          repository: simulationcraft/simc-publish
+          run-id: 40999844143
+          name: simc-nightly-win64-midnight
+          path: .simc-windows
+          github-token: ${{ github.token }}
+      - name: Verify exact package and executable SHA before any Native
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $src=Join-Path $PWD '.simc-windows/simc-1210.01.710c240-win64.7z'
+          if (!(Test-Path $src)) { throw 'OFFICIAL_WINDOWS_ARCHIVE_MISSING' }
+          if ((Get-FileHash -Algorithm SHA256 $src).Hash.ToLowerInvariant() -ne '386b2827c537a0447ac09a158e14c63b1d71d73e8e29f6e8ab404416861aab89') {
+            throw 'OFFICIAL_WINDOWS_ARCHIVE_SHA_DRIFT'
+          }
+          New-Item -Path .simc-win-extracted -ItemType Directory -Force | Out-Null
+          & 'C:\Program Files\7-Zip\7z.exe' x '-o.simc-win-extracted' -y -bd $src | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'SIMC_ARCHIVE_EXTRACTION_FAILED' }
+          $exes=@(Get-ChildItem .simc-win-extracted -Recurse -Filter simc.exe -File)
+          if ($exes.Count -ne 1) { throw 'SIMC_EXE_NOT_UNIQUE' }
+          if ((Get-FileHash -Algorithm SHA256 $exes[0].FullName).Hash.ToLowerInvariant() -ne '0ad16368cd1effb19c793dbce63518ccb72fec89c72f6ef75d9afca239a039e8') {
+            throw 'SIMC_EXECUTABLE_SHA_DRIFT'
+          }
+          "SIMC_EXE=$($exes[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Real HTTP -> selected Eagle profile -> 6 Native -> 6 SHA replay, B/T unchanged
+        shell: pwsh
+        run: |
+          python integration_probes/v205_one_windows_user_native_http.py --simc "$env:SIMC_EXE" --revision 710c2408bf --selected-eagle --out out/v207
+          if ($LASTEXITCODE -ne 0) { throw 'EAGLE_WINDOWS_NATIVE_USER_RESULT_FAILED' }
+          python -c "import json,pathlib; d=json.loads(pathlib.Path('out/v207/V207_EAGLE_SELECTED_NATIVE_RECEIPT.json').read_text()); assert d['status']=='PASS_WINDOWS_EAGLE_7967_SIX_NATIVE_AND_SIX_CACHE'; assert d['selected_nonchmv_enchant_id']==7967; assert (d['base_B'],d['final_T'],d['native_calls'],d['cached_replay_verified_hits'],d['additional_native_calls_on_replay'])==(3150,3182,6,6,0); assert d['confidence_level']==0.95 and d['global_optimum_proven'] is False"
+      - name: Preserve compact evidence only, not full SimC JSON2
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v207-one-eagle-selected-windows-native-cache
+          path: out/v207/V207_EAGLE_SELECTED_NATIVE_RECEIPT.json
+          retention-days: 2
+          if-no-files-found: warn
