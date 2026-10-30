@@ -1,0 +1,23 @@
+{
+  "binary_sha256": "0ad16368cd1effb19c793dbce63518ccb72fec89c72f6ef75d9afca239a039e8",
+  "native_after_json2_sha256": "55a411f8c0424d2496230880a11777c2a05143086de87aefae189b39f87b9b34",
+  "native_before_json2_sha256": "b8573662ebb14e2760942667a09b66e1126e685ba3e2a1e91809de20773c1424",
+  "native_new_calls": 2,
+  "not_general_26_specs_proof": true,
+  "not_mechanics_or_DPS_proof": true,
+  "original_optimizer_not_rewritten": true,
+  "profile_after_sha256": "25a84d90fe0d8cdb39386c41f091253e7735d1847518a5d0b4a9f39d83d304fa",
+  "profile_before_sha256": "b22dcc5c2f5ecdcabab52de784b04c92265f2d58d6ae07854fe35450b0bc4925",
+  "schema": "v206_one_eyes_of_eagle_nonchmv_native_rating_scope_v1",
+  "scope": "paladin/retribution 334 v098 current season one ring finger1",
+  "source_profile_sha256": "284f22abd98c900d6474d6e9eb2f483d2262be39c78e4ac4af9bf56791a315bb",
+  "source_quality": "pinned_simc_generated_7967_rank2",
+  "source_revision": "710c2408bf",
+  "static_CHMV_E": {
+    "crit_rating": 0,
+    "haste_rating": 0,
+    "mastery_rating": 0,
+    "versatility_rating": 0
+  },
+  "status": "PASS_EAGLE_7967_ONE_WINDOWS_PROFILE_STATIC_E_ZERO"
+}
