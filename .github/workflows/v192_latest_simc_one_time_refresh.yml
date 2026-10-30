@@ -1,0 +1,137 @@
+name: v192 One-Time Latest SimC and Unified Catalog Smoke
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/v192_latest_simc_one_time_refresh.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v192-once-new-simc-710c2408
+  cancel-in-progress: false
+env:
+  SIMC_COMMIT: 710c2408bfd3ae4df71b8cd55cdf01f63fd6c926
+  GAME_BUILD: 12.1.5.70575
+jobs:
+  catalog:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Existing source-first parser tests
+        run: |
+          set -euo pipefail
+          python3 -m unittest -q tests.test_v189_simc_choice_discovery tests.test_v190_consumable_item_snapshot_join tests.test_v191_unified_season_data_update
+      - name: Reuse one archived DB2 snapshot only
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 40836955761
+          name: v161-db2-csv-snapshot-20261029
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: db2
+      - name: Rebuild candidate catalog for exact updated SimC SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out new-generated db2/exact
+          unzip -q db2/db2-snapshot.zip -d db2/exact
+          python3 runner/v189_simc_consumable_embellishment_discovery.py --simc-commit "$SIMC_COMMIT" --out out/v189_latest.json
+          python3 runner/v190_consumable_item_snapshot_join.py --v189 out/v189_latest.json --db2-folder db2/exact --expected-build "$GAME_BUILD" --expansion-id 11 --out out/v190_latest.json
+          python3 - <<'PY'
+          import os,pathlib,urllib.request,hashlib
+          rev=os.environ["SIMC_COMMIT"]
+          for name in ("permanent_enchant.inc","temporary_enchant.inc","gem_data.inc"):
+            req=urllib.request.Request(f"https://raw.githubusercontent.com/simulationcraft/simc/{rev}/engine/dbc/generated/{name}",headers={"User-Agent":"SimC-secondary-v192/1.0"})
+            with urllib.request.urlopen(req,timeout=45) as res:
+              if res.status!=200:raise RuntimeError("HTTP_FAIL")
+              data=res.read(5_000_001)
+            if not 0<len(data)<5_000_000:raise RuntimeError("INVALID_SOURCE_SIZE")
+            pathlib.Path("new-generated",name).write_bytes(data)
+            print("V192_FILE",name,hashlib.sha256(data).hexdigest(),flush=True)
+          PY
+          python3 runner/v191_unified_season_data_update.py --gear data/current_season_product_gear_db.json --tier data/current_season_tier_itemsets.json --budget data/current_season_chmv_consumables.json --v189 out/v189_latest.json --v190 out/v190_latest.json --simc-generated-folder new-generated --event mid_patch --out out/v192_latest_catalog.json
+          python3 - <<'PY'
+          import json,os,pathlib
+          x=json.loads(pathlib.Path("out/v192_latest_catalog.json").read_text())
+          assert x["simc_revision"]==os.environ["SIMC_COMMIT"]
+          assert set(x["simc_generated_builds"].values())=={os.environ["GAME_BUILD"]}
+          assert x["gear"]["count"]==511 and x["tier"]["piece_count"]==65
+          assert x["native_calls"]==0 and x["automatic_ui_promotion"] is False
+          assert len(x["consumables"]["food"]["candidates"])==192
+          assert len(x["consumables"]["potion"]["candidates"])==61
+          print("V192_UPDATED_SOURCE_BUILD_MATCH_PASS",flush=True)
+          PY
+      - if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v192-updated-simc-catalog-${{ github.run_id }}
+          path: out/
+          retention-days: 7
+          if-no-files-found: warn
+  native:
+    needs: catalog
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Restore or construct exact updated SimC CLI
+        id: binary-cache
+        uses: actions/cache@v4
+        with:
+          path: .simc-cache/v192/
+          key: v192-ubuntu2404-710c2408bfd3ae4df71b8cd55cdf01f63fd6c926-cli-r1
+      - name: Only on miss, build exact pinned upstream source
+        if: steps.binary-cache.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake build-essential pkg-config
+          mkdir -p _vendor out
+          git clone --filter=blob:none --no-checkout https://github.com/simulationcraft/simc.git _vendor/simc
+          git -C _vendor/simc checkout --detach "$SIMC_COMMIT"
+          test "$(git -C _vendor/simc rev-parse HEAD)" = "$SIMC_COMMIT"
+          cmake -S _vendor/simc -B _vendor/simc/build -DBUILD_GUI=OFF -DSC_NO_NETWORKING=ON -DCMAKE_BUILD_TYPE=Release >out/cmake_configure.log 2>&1
+          cmake --build _vendor/simc/build --target simc --parallel 2 >out/cmake_build.log 2>&1
+          bin="$(find _vendor/simc/build -type f -name simc -executable | sort | head -1)"
+          test -x "$bin"
+          mkdir -p .simc-cache/v192/
+          cp "$bin" .simc-cache/v192/simc
+          sha256sum .simc-cache/v192/simc > .simc-cache/v192/simc.sha256
+          printf '%s\n' "$SIMC_COMMIT" > .simc-cache/v192/source_revision.txt
+      - name: Check binary SHA and one real physical mage/frost Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum -c .simc-cache/v192/simc.sha256
+          test "$(cat .simc-cache/v192/source_revision.txt)" = "$SIMC_COMMIT"
+          mkdir -p out/physical
+          python3 - <<'PY'
+          import os,pathlib,hashlib,json,sys
+          root=pathlib.Path.cwd()
+          sys.path[:0]=[str(root/"runner"),str(root/"integration_probes")]
+          import v106_user_session_controller as session
+          import v145_targeted_pure_physical_native as physical
+          binary=root/".simc-cache/v192/simc"
+          controls=session.standard_controls(("mage","frost"))
+          controls["oil_hands"]=[]
+          user=session.user_scenario(controls)
+          report=physical.run(user,binary,root/"out/physical",os.environ["SIMC_COMMIT"][:10],iterations=35,max_new=1,source_first_stage=True)
+          summary={"schema":"v192_updated_binary_one_physical_v1","revision":os.environ["SIMC_COMMIT"],"binary_sha256":hashlib.sha256(binary.read_bytes()).hexdigest(),"native_calls":report["new_native_calls"],"status":report["status"],"receipt":report["receipt"]}
+          pathlib.Path("out/V192_ONE_NATIVE.json").write_text(json.dumps(summary,indent=2)+"\n")
+          print("V192_REAL_NATIVE",summary,flush=True)
+          assert report["new_native_calls"]==1 and report["status"]=="PASS_PHYSICAL_SIMC",report
+          PY
+      - if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v192-updated-simc-one-native-${{ github.run_id }}
+          path: out/
+          retention-days: 7
+          if-no-files-found: warn
