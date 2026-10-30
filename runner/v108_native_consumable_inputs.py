@@ -44,7 +44,10 @@ OMNIUM_PRESETS=frozenset((
  "rune_of_unleashed_fire/rune_of_selfmending/rune_of_lingering/rune_of_critical_power/rune_of_overload"))
 # User-facing row-four stat choice only. The other source rune rows are
 # unchanged; the exact trait name is delegated to SimC, not reimplemented.
-# 136820:1 is source-observed in the pinned MID2 profile. The descriptive\n# rune_of_versatile_warrior spelling was REJECTED by actual SimC v182 exit80;\n# use the already native-recognized ID for the Versatility choice.\n# New whole combinations still require actual Native acceptance.
+# 136820:1 is source-observed in the pinned MID2 profile. The descriptive
+# rune_of_versatile_warrior spelling was REJECTED by actual SimC v182 exit80;
+# use the already native-recognized ID for the Versatility choice.
+# New whole combinations still require actual Native acceptance.
 OMNIUM_ROW4_BY_STAT={
     "row4_crit":"rune_of_critical_power",
     "row4_haste":"rune_of_burning_haste",
