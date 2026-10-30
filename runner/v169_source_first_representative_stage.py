@@ -19,6 +19,9 @@ ROOT=Path(__file__).resolve().parents[1]
 TIER_PATH=ROOT/"data/current_season_tier_itemsets.json"
 BUDGET_PATH=ROOT/"data/current_season_chmv_consumables.json"
 SCHEMA="v169_source_first_physical_representative_preview_v1"
+# Bump only if season-profile weapon-selection semantics change. v106 uses
+# this to segregate corrected sessions from pre-v184 immutable Native caches.
+WEAPON_SELECTION_POLICY="v184_db2_primary_with_hybrid_71_74_v1"
 SLOT_TO_INV={"chest":{5,20},"wrists":{9},"waist":{6},"feet":{8},
              "neck":{2},"back":{16},"finger1":{11},"finger2":{11}}
 FOUR=("head","shoulders","hands","legs")
