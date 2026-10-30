@@ -852,6 +852,21 @@ async function installSimcUpdater() {
     throw err;
   }
 }
+async function installLocalSimcUpdater() {
+  const path=field("simc-local-archive");
+  if(!path.toLowerCase().endsWith(".7z"))
+    throw Error("공식 Windows x64 SimC .7z 파일의 로컬 경로를 입력해 주세요.");
+  if(!window.confirm("이 PC의 파일을 SimC 관리 폴더에 설치할까요? 사용자가 직접 내려받은 파일은 공식 서명을 독립 확인할 수 없습니다."))return;
+  if(!manualSimcBeforeUpdate&&field("binary"))
+    manualSimcBeforeUpdate={binary:field("binary"),revision:field("revision")};
+  const result=await api("/api/v1/simc-updates/install-local",
+    {method:"POST",payload:{archive_path:path}});
+  displaySimcUpdater(result);
+  applyManagedSimc(result);
+  simcOffer=null;$("simc-install-btn").disabled=true;
+  $("simc-update-candidate").textContent="로컬 파일 설치 완료. 출처는 독립 인증되지 않았으며 기존 사용자 실행 파일과 세션은 유지됩니다.";
+  setNotice("로컬 SimC 설치 완료 · 신규 계산은 다른 바이너리 SHA의 세션으로 분리됩니다.");
+}
 async function rollbackSimcUpdater() {
   if(!window.confirm("관리 중인 SimC를 이전 버전으로 되돌릴까요? 기존 사용자 파일은 변경하지 않습니다."))return;
   const result=await api("/api/v1/simc-updates/rollback",
@@ -870,6 +885,7 @@ async function rollbackSimcUpdater() {
 function registerHandlers() {
   $("simc-check-btn").addEventListener("click",()=>withBusy(checkSimcUpdater));
   $("simc-install-btn").addEventListener("click",()=>withBusy(installSimcUpdater));
+  $("simc-install-local-btn").addEventListener("click",()=>withBusy(installLocalSimcUpdater));
   $("simc-rollback-btn").addEventListener("click",()=>withBusy(rollbackSimcUpdater));
   $("simc-import-btn").addEventListener("click",()=>withBusy(importSimcCharacter));
   $("spec").addEventListener("change",()=>{
