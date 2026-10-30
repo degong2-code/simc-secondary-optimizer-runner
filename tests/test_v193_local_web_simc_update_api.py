@@ -44,6 +44,16 @@ class SimCUpdateWeb(unittest.TestCase):
         self.assertEqual(response.json()["detail"]["code"],
                          "EXPLICIT_RECENT_OFFICIAL_OFFER_REQUIRED")
         self.assertFalse((self.root/"managed"/"installed.json").exists())
+    def test_local_install_endpoint_is_token_gated_and_bad_path_fails_closed(self):
+        path="/api/v1/simc-updates/install-local"
+        data={"archive_path":str(self.root/"not-official.zip")}
+        self.assertEqual(self.client.post(path,json=data).status_code,403)
+        res=self.client.post(path,json=data,headers=self.h)
+        self.assertEqual(res.status_code,422,res.text)
+        self.assertEqual(res.json()["detail"]["code"],
+                         "LOCAL_WIN64_NIGHTLY_ARCHIVE_INVALID")
+        self.assertFalse((self.root/"managed").exists())
+
     def test_native_worker_running_blocks_manage_actions(self):
         fake=mock.Mock();fake.poll.return_value=None
         self.app.state.jobs.children["a"*20]=fake
