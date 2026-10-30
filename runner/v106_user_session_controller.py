@@ -11,6 +11,7 @@ import argparse, contextlib, functools, hashlib, json, os, pathlib, re, sys
 sys.path.insert(0,str(pathlib.Path(__file__).resolve().parent))
 import v098_target_user_scenario_bootstrap as bootstrap
 import v108_native_consumable_inputs as consumer
+import v206_nonchmv_eagle_selection as nonchmv_enchant
 
 SCHEMA="v106_dps_user_session_v1"
 DEFAULT_ROOT=pathlib.Path.home()/"SIMC_Secondary_Optimizer"/"runs"
@@ -25,7 +26,7 @@ PURE_TRINKET_IDS=(250215,281215)
 # Extended UI selected equipment is a pass-through to v098's exact
 # source-backed item/tier/native-L checks, not a second selector.
 OPTIONAL_CONTROLS=frozenset(("special_items","embellishments",
-                             "consumable_choices"))
+                             "consumable_choices","enchant_choices"))
 DUAL_FORMS=frozenset(("dual_two_hand","dual_one_hand"))
 
 class SessionBlocked(ValueError):pass
@@ -214,6 +215,9 @@ def user_scenario(controls):
             "combat":{"targets":targets,"duration_seconds":duration,
                       "raid_buffs":controls["raid_buffs"]}}
     if choice is not None:output["consumable_choices"]=dict(choice)
+    if "enchant_choices" in controls:
+        nonchmv_enchant.check_choice(controls["enchant_choices"])
+        output[nonchmv_enchant.FIELD]=dict(controls["enchant_choices"])
     return output
 
 def standard_controls(key=("paladin","retribution")):
