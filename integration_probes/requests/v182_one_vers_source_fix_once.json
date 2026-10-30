@@ -1,0 +1,14 @@
+{
+  "schema": "v182_one_corrected_vers_native_v1",
+  "spec": "mage/frost",
+  "level": 334,
+  "target": "row4_vers",
+  "source_verified_rune_id": "136820:1",
+  "actual_previous_failed_name": "rune_of_versatile_warrior",
+  "max_new_native": 1,
+  "iterations": 35,
+  "simc_revision": "7bc10711b5",
+  "simc_binary_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+  "reuse_previous_five_native_passes": true,
+  "no_main_merge": true
+}
