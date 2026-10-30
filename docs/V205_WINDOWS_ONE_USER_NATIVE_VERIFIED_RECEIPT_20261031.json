@@ -1,0 +1,66 @@
+{
+  "schema": "v205_windows_real_local_user_native_verified_scope_v1",
+  "status": "VERIFIED_EXACT_ONE_WINDOWS_PALADIN_NATIVE_CACHE_AND_HTTP",
+  "source": {
+    "actions_run": 41104719130,
+    "job_id": 124231140970,
+    "source_commit": "c2af7302e1cb99d6124ae34644638d4b41de9658",
+    "official_simc_archive": {
+      "repo": "simulationcraft/simc-publish",
+      "run_id": 40999844143,
+      "artifact_id": 12953786078,
+      "archive_file": "simc-1210.01.710c240-win64.7z",
+      "archive_sha256": "386b2827c537a0447ac09a158e14c63b1d71d73e8e29f6e8ab404416861aab89",
+      "nightly_overall_run_failed_but_windows_artifact_available": true
+    },
+    "windows_executable_sha256": "0ad16368cd1effb19c793dbce63518ccb72fec89c72f6ef75d9afca239a039e8",
+    "simc_revision": "710c2408bf",
+    "source_profile_sha256": "284f22abd98c900d6474d6e9eb2f483d2262be39c78e4ac4af9bf56791a315bb"
+  },
+  "scope": {
+    "class": "paladin",
+    "spec": "retribution",
+    "target_ilevel": 334,
+    "permanent_enchant_selected": false,
+    "base_B": 3150,
+    "oil_O_total": 32,
+    "final_T": 3182,
+    "source": "current_season_product",
+    "runtime": "windows-2022",
+    "user_browser_gui_clicked": false,
+    "local_FastAPI_TestClient_and_real_subprocess": true
+  },
+  "native": {
+    "new_native_calls": 6,
+    "cached_replay_hits": 6,
+    "cache_replay_new_native_calls": 0,
+    "json2_sha256": {
+      "confirmations/confirm_00/result.json": "5feab98bd96346286129b82c67c589f0d46a6977d77757cf25044de613465917",
+      "confirmations/confirm_01/result.json": "70bc6cc72c004ff8ebe020e5f550a5c56f34694777d35e944d5555ef45ae51a0",
+      "search/material_00/result.json": "5cf1daf4cedc70a93b46df0f17930baf2b824612e5213870724f497524c11d54",
+      "search/scout_00/result.json": "5ac2a4ae3f6cfb30054f74ba4d8be4486ce2d52f4859f1650d0062e589ef2b23",
+      "search/seed_00/result.json": "cc2d66b85c3eb7765de43bf18955f79be9b4e5d318d9a7d33c163f44dd35e301",
+      "search/seed_01/result.json": "f54bfed63ad96c69e2dc237ef5b2dce37accab48b4a483f0fc3ff533daba048d"
+    }
+  },
+  "observed": {
+    "dps_mean": 182585.8140396792,
+    "sem": 273.08219278948366,
+    "confidence_level": 0.95,
+    "global_optimum_proven": false
+  },
+  "artifact": {
+    "id": 13000372344,
+    "zip_sha256": "20eb3cbb1b52e339d6c4c106bbbe44b52d5a1a22e79ae5af7a0d836bb4dfca90",
+    "zip_bytes": 1070,
+    "unpacked_file": "V205_WINDOWS_ONE_USER_NATIVE_RECEIPT.json",
+    "source_git_commit": "c2af7302e1cb99d6124ae34644638d4b41de9658"
+  },
+  "limits": [
+    "No Windows permanent enchant acceptance",
+    "No 26-spec real Windows all-user-options proof",
+    "No user PC or browser GUI click evidence",
+    "No globally optimal CHMV proof",
+    "Different previous DPS profiles must not be compared as a performance delta"
+  ]
+}
