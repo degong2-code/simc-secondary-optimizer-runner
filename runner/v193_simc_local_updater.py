@@ -130,7 +130,7 @@ def extract_safe(archive,folder,sevenzip):
         need(64<=offset<exe.stat().st_size-6 and offset<65536,
              "SIMC_WINDOWS_BINARY_PE_OFFSET_INVALID")
         binary.seek(offset)
-        need(binary.read(6)==b"PE\\0\\0\\x64\\x86".decode("unicode_escape").encode("latin1"),
+        need(binary.read(6)==b"PE"+bytes((0,0,0x64,0x86)),
              "SIMC_WINDOWS_BINARY_NOT_AMD64")
     return exe
 
