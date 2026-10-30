@@ -146,6 +146,41 @@ class UserSessionControls(unittest.TestCase):
         with self.assertRaisesRegex(ux.SessionBlocked,"SIMC_REVISION"):
             ux.store_session(user,root,binary,"not-a-known-revision")
 
+    def test_v184_weapon_policy_rekeys_current_season_without_touching_legacy(self):
+        root,binary,_=self.fixture()
+        user=ux.user_scenario(ux.standard_controls(("mage","frost")))
+        rev="7bc10711b5"
+        fresh=ux.store_session(user,root/"runs",binary,rev,
+                               current_season_product=True)
+        key,identity=ux.session_key(user,binary,rev,
+                                    current_season_product=True)
+        policy=ux.bootstrap.source_first.WEAPON_SELECTION_POLICY
+        self.assertEqual(fresh.name,key)
+        self.assertEqual(identity["current_season_weapon_selection_policy"],policy)
+        self.assertEqual(ux.store_session(user,root/"runs",binary,rev,
+                                         current_season_product=True),fresh)
+        # Reconstruct the immutable pre-v184 identity without rewriting
+        # any actual user cache or inventing a different item DB snapshot.
+        historical=dict(identity)
+        historical.pop("current_season_weapon_selection_policy")
+        old_key=ux.sha(ux.canonical(historical).encode("utf8"))[:20]
+        self.assertNotEqual(old_key,key)
+        old=root/"runs"/old_key
+        old.mkdir()
+        (old/"user.json").write_text(ux.canonical(user)+"\n",encoding="utf8")
+        (old/"V106_SESSION_IDENTITY.json").write_text(
+            ux.canonical(historical)+"\n",encoding="utf8")
+        # Prior results are inspectable, but must not be resumed with new
+        # gear IDs or admitted as the new corrected Native result.
+        with mock.patch.object(ux.bootstrap,"run",
+                               side_effect=AssertionError("NATIVE_NOT_AUTHORIZED")):
+            self.assertEqual(ux.worker(old,binary,rev),3)
+        self.assertFalse((old/"generated").exists())
+        standard_key,standard_identity=ux.session_key(user,binary,rev)
+        self.assertNotIn("current_season_weapon_selection_policy",
+                         standard_identity)
+        self.assertNotEqual(standard_key,key)
+
     def test_internal_ordinary_variant_gets_new_session_without_default_identity_drift(self):
         root,binary,_=self.fixture()
         user=ux.user_scenario(ux.standard_controls(("demonhunter","havoc")))
