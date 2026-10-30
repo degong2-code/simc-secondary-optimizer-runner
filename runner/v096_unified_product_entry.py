@@ -14,6 +14,7 @@ import v091_weapon_oil_external_adapter as oil_adapter
 import v093_inclusive_adaptive_scheduler_bridge as adaptive
 import v094_durable_inclusive_adaptive_runner as durable
 import v141_verified_pure_native_pilot as pure_pilot
+import v202_one_enchant_admission as verified_enchant
 
 SCHEMA="v096_user_scenario_unified_entry_v1"
 FIELDS={"schema","profile_simc","scenario_json","fillers_json",
@@ -21,6 +22,7 @@ FIELDS={"schema","profile_simc","scenario_json","fillers_json",
         "seed_targets_B","native_binary","native_revision","output_dir",
         "scouts","material_scouts","native_limit","step","cancel_file"}
 MANUAL_FIELD="manual_final_T"
+NATIVE_ENCHANT_FIELD="v202_verified_enchant_choice"
 # Optional internal stage seal: no Native until physical SimC acceptance.
 STAGE_FIELD="unverified_pure_profile_plan_only"
 class EntryBlocked(ValueError):pass
@@ -41,6 +43,7 @@ def source(manifest_path):
     user=read_object(manifest_path)
     allowed=(FIELDS,FIELDS|{MANUAL_FIELD},FIELDS|{STAGE_FIELD},
              FIELDS|{MANUAL_FIELD,STAGE_FIELD})
+    allowed=tuple(x|{NATIVE_ENCHANT_FIELD} for x in allowed)+allowed
     need(type(user) is dict and set(user) in allowed
          and user.get("schema")==SCHEMA,"ENTRY_SCHEMA_OR_FIELDS")
     if STAGE_FIELD in user:
@@ -77,6 +80,13 @@ def source(manifest_path):
     prepared=oil_adapter.prepare(profile,doc,fillers,cache,
                                  user["weapon_layout"],user["oil_hands"],
                                  manual_final_T=manual_T)
+    if NATIVE_ENCHANT_FIELD in user:
+        # Internal-only opt-in, exact item/revision/binary and immutable v200/
+        # v201 witness; no new numeric gear_* contribution is injected.
+        verified=verified_enchant.admit(user[NATIVE_ENCHANT_FIELD],
+                  prepared["oil"]["profile"],prepared["prepared"]["scenario"],
+                  binary_sha,user["native_revision"])
+        prepared["oil"]["v202_verified_enchant"]=verified
     context=adaptive.prepare(prepared,binary_sha,user["native_revision"])
     normalized=prepared["prepared"]["scenario"]
     B,lo,hi=scheduler.bounds(normalized,
