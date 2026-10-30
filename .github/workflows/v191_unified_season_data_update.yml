@@ -95,7 +95,7 @@ jobs:
             --event "$UPDATE_EVENT" \
             --out out/v191_unified_source_first_catalog.json
           python - <<'PY'
-          import json
+          import json,os
           x=json.load(open('out/v191_unified_source_first_catalog.json'))
           assert x['gear']['count']==511 and x['tier']['piece_count']==65
           assert x['native_calls']==0 and x['automatic_ui_promotion'] is False
