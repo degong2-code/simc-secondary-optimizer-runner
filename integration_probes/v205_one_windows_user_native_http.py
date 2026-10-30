@@ -36,7 +36,7 @@ def request_ok(response,phase):
           str(response.json().get("detail",{}).get("code","UNKNOWN")))
     return response.json()
 
-def run(binary,revision,out):
+def run(binary,revision,out,*,selected_eagle=False):
     check(sys.platform=="win32","REAL_WINDOWS_ONLY")
     binary=binary.resolve()
     check(binary.is_file() and binary.name.casefold()=="simc.exe",
@@ -53,6 +53,8 @@ def run(binary,revision,out):
         client=TestClient(app,base_url="http://127.0.0.1:8765")
         h={"x-simc-local-token":key,"origin":"http://127.0.0.1:8765"}
         controls=sessions.standard_controls(("paladin","retribution"))
+        if selected_eagle:
+            controls["enchant_choices"]={"finger1":7967}
         check(controls["ilevel"]==334 and controls["final_T"] is None,
               "EXACT_DEFAULT_ILVL_B_REQUIRED")
         payload={"controls":controls,"binary":str(binary),
@@ -72,6 +74,13 @@ def run(binary,revision,out):
         check(restored["current_season_product"] is True and
               restored["user"]["target"]["ilevel"]==334,
               "SEALED_INPUT_RESTORE_DRIFT")
+        check((restored["user"].get("selected_season_enchants")==
+               {"finger1":7967}) if selected_eagle else
+              "selected_season_enchants" not in restored["user"],
+              "NONCHMV_ENCHANT_SELECTION_NOT_PRESERVED")
+        prof=(root/"runs"/sid/"generated"/"profile.simc").read_text("utf8")
+        check(("enchant_id=7967" in prof)==selected_eagle,
+              "NONCHMV_ENCHANT_PROFILE_INPUT_DRIFT")
         started=request_ok(client.post("/api/v1/sessions/start",
                          headers=h,json=payload),"START")
         check(started["status"]=="WORKER_STARTED" and
@@ -120,8 +129,16 @@ def run(binary,revision,out):
               len(proof["native_json2_sha256"])==6,
               "CACHE_JSON2_HASH_REPLAY_MISMATCH")
         receipt={
-          "schema":SCHEMA,"status":"PASS_WINDOWS_REAL_USER_SIX_NATIVE_AND_SIX_CACHE",
-          "scope":"paladin/retribution current-season 334, no selected enchant",
+          "schema":("v207_eagle_selected_windows_real_native_http_cache_v1"
+                    if selected_eagle else SCHEMA),
+          "status":("PASS_WINDOWS_EAGLE_7967_SIX_NATIVE_AND_SIX_CACHE"
+                    if selected_eagle else
+                    "PASS_WINDOWS_REAL_USER_SIX_NATIVE_AND_SIX_CACHE"),
+          "scope":("paladin/retribution current-season 334 finger1 enchant_id=7967"
+                   if selected_eagle else
+                   "paladin/retribution current-season 334, no selected enchant"),
+          "selected_nonchmv_enchant_id":7967 if selected_eagle else None,
+          "fixed_CHMV_enchant_E_total":0,
           "binary_sha256":digest(binary),"revision":revision,
           "source_profile_sha256":sessions.sha(
               (root/"runs"/sid/"generated"/"profile.simc").read_bytes()),
@@ -137,7 +154,8 @@ def run(binary,revision,out):
           "generalized_to_other_26_specs":False,
           "no_enchant_selection_promotion":True
         }
-        dest=out/"V205_WINDOWS_ONE_USER_NATIVE_RECEIPT.json"
+        dest=out/("V207_EAGLE_SELECTED_NATIVE_RECEIPT.json" if selected_eagle
+                  else "V205_WINDOWS_ONE_USER_NATIVE_RECEIPT.json")
         dest.write_text(json.dumps(receipt,sort_keys=True,indent=2)+"\n",
                         encoding="utf8")
         print("V205_WINDOWS_LOCAL_HTTP_REAL_NATIVE_AND_CACHE_PASS",json.dumps(
@@ -151,5 +169,7 @@ if __name__=="__main__":
     p.add_argument("--simc",type=pathlib.Path,required=True)
     p.add_argument("--revision",default="710c2408bf")
     p.add_argument("--out",type=pathlib.Path,required=True)
+    p.add_argument("--selected-eagle",action="store_true",
+                   help="v207: same one-user proof with source-classified E0 enchant")
     opts=p.parse_args()
-    raise SystemExit(run(opts.simc,opts.revision,opts.out))
+    raise SystemExit(run(opts.simc,opts.revision,opts.out,selected_eagle=opts.selected_eagle))
