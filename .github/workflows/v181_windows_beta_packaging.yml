@@ -12,6 +12,10 @@ on:
       - runner/v196_current_season_user_catalog.py
       - data/current_season_simc_enchant_candidates.json
       - tests/test_v196_current_season_ui_catalog.py
+      - runner/v197_verified_effect_budget.py
+      - runner/v197_enchant_effect_families.py
+      - tests/test_v197_verified_effect_budget.py
+      - tests/test_v197_enchant_effect_families.py
       - runner/webui/index.html
       - runner/webui/app.js
       - runner/webui/styles.css
@@ -69,7 +73,7 @@ jobs:
       - name: Existing Windows local web, session, SHA/cache, security offline regressions
         shell: pwsh
         run: |
-          python -m unittest -q tests.test_v152_windows_local_web_launcher_offline tests.test_v113_local_web_api_offline tests.test_v114_local_web_ui_offline tests.test_v106_user_session_controller tests.test_v177_current_season_product_flow tests.test_v180_multilevel_current_season_product_offline tests.test_v193_simc_local_updater tests.test_v193_local_web_simc_update_api tests.test_v196_current_season_ui_catalog
+          python -m unittest -q tests.test_v152_windows_local_web_launcher_offline tests.test_v113_local_web_api_offline tests.test_v114_local_web_ui_offline tests.test_v106_user_session_controller tests.test_v177_current_season_product_flow tests.test_v180_multilevel_current_season_product_offline tests.test_v193_simc_local_updater tests.test_v193_local_web_simc_update_api tests.test_v196_current_season_ui_catalog tests.test_v197_verified_effect_budget tests.test_v197_enchant_effect_families
           if ($LASTEXITCODE -ne 0) { throw "Existing local web or session regression failed" }
           node --check runner/webui/app.js
           if ($LASTEXITCODE -ne 0) { throw "Browser JS syntax failed" }
