@@ -55,7 +55,7 @@ class MatchedEnchantProbe(unittest.TestCase):
                              "finger1",8025,"710c240")
         with self.assertRaisesRegex(p.ProbeBlocked,"NEGATIVE"):
             p.compare_native(native(40,False),native(39),"finger1",8025,"710c240")
-        with self.assertRaisesRegex(p.ProbeBlocked,"ONLY"):
+        with self.assertRaisesRegex(p.ProbeBlocked,"PROBE_SLOT_NOT_APPROVED"):
             p.swap_slot_enchant(SAMPLE,"off_hand",8025)
     def test_extra_gear_difference_cannot_generate_static_receipt(self):
         a=json.loads(native(69))
