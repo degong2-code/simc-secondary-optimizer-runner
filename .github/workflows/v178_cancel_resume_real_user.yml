@@ -1,0 +1,118 @@
+name: v178 Real Product Cancel At 2 -> Resume 4 -> Cache 6 (one session)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/v178_real_user_cancel_resume.py
+      - tests/test_v178_real_user_cancel_resume_offline.py
+      - integration_probes/requests/v178_cancel_resume_one_real_session.json
+      - .github/workflows/v178_cancel_resume_real_user.yml
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v178-one-current-season-user-cancel-resume
+  cancel-in-progress: false
+jobs:
+  offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: No Native, P1 A offline regression and script compile
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile integration_probes/v178_real_user_cancel_resume.py
+          python -m unittest -v tests.test_v178_real_user_cancel_resume_offline
+          python -m unittest -q tests.test_v106_user_session_controller \
+            tests.test_v172_current_season_v098_stage
+  native:
+    needs: offline
+    if: ${{ contains(github.event.head_commit.message, '[v178-one-real-cancel-resume]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 13
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Exact one-session real user request and strict six-Native cumulative cap
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          path="integration_probes/requests/v178_cancel_resume_one_real_session.json"
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",
+              os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==[path],changed
+          got=json.loads(pathlib.Path(path).read_text())
+          expected={
+            "schema":"v178_one_real_product_cancel_resume_once_v1",
+            "spec":"paladin/retribution",
+            "target_ilevel":334,
+            "current_season_product":True,
+            "cancel_after_completed_new_native":2,
+            "resume_max_additional_native":4,
+            "total_new_native_max":6,
+            "same_session_sha_verified_cache_hits_on_resume":2,
+            "cache_only_final_verified_six":True,
+            "simc_revision":"7bc10711b5",
+            "simc_binary_sha256":"64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+            "old_26_spec_physical_evidence_reused":True,
+            "no_optimizer_changes":True,
+            "no_main_merge":True,
+            "no_project_ui_promotion":True}
+          assert got==expected,(got,expected)
+          print("V178_EXACT_ONE_CANCEL_RESUME_NATIVE_APPROVAL_PASS")
+          PY
+      - name: Reuse exact SHA-pinned SimC binary from GitHub cache
+        uses: actions/cache/restore@v5
+        id: simc
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd-cli-release-nonetwork-r1
+      - name: SimC SHA identity required; no build, no other specialization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.simc.outputs.cache-hit }}" = "true" || {
+            echo V178_BLOCKED_PINNED_SIMC_CACHE_MISSING; exit 3; }
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc-cache/v035/simc' | sha256sum -c
+          chmod +x .simc-cache/v035/simc
+      - name: Actual existing v094 two-Native cancel, two cached plus four new resume, final cache-only 6
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          python3 integration_probes/v178_real_user_cancel_resume.py \
+            --simc "$GITHUB_WORKSPACE/.simc-cache/v035/simc" \
+            --out "$GITHUB_WORKSPACE/out" | tee out/V178_NATIVE_SUMMARY.log
+          python3 - <<'PY'
+          import pathlib,json
+          receipts=list(pathlib.Path("out").glob("*/V178_NATIVE_CANCEL_RESUME_RECEIPT.json"))
+          assert len(receipts)==1,receipts
+          v=json.loads(receipts[0].read_text())
+          assert v["status"]=="PASS_REAL_NATIVE_CANCEL_RESUME_CACHE"
+          assert v["first_new_native"]==2 and v["resume_new_native"]==4
+          assert v["resume_existing_SHA_verified_native"]==2
+          assert v["total_new_native"]==6
+          assert v["cache_only_verified"]==6 and v["cache_only_additional_native"]==0
+          assert v["global_optimum_proven"] is False
+          assert v["observed_first_choice"]["observed_dps_mean"]>0
+          print("V178_ONE_REAL_USER_INTERRUPTED_AND_RESUMED_2_PLUS_4_PASS")
+          PY
+      - name: Preserve same session, SHA receipts, actual Native JSON2 and logs
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v178-real-cancel-resume-current-season-${{ github.run_id }}
+          path: out/
+          retention-days: 7
+          if-no-files-found: warn
