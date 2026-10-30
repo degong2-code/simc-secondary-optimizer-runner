@@ -48,6 +48,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # This workflow is intentionally wired to the CURRENT pinned
+          # source snapshot. A new season/expansion must supply matching NEW
+          # source artifacts, not just relabel the existing 2026 snapshot.
+          if [ "$UPDATE_EVENT" != "mid_patch" ]; then
+            echo "V191_NEW_SEASON_SOURCES_REQUIRED_NOT_OLD_PINNED_SNAPSHOT"
+            exit 3
+          fi
           mkdir -p simc-generated out
           python - <<'PY'
           import pathlib,urllib.request,hashlib
