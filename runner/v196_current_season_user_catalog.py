@@ -101,6 +101,28 @@ def read(path=DEFAULT):
 def public_options(path=DEFAULT):
     source,enchants,counts=read(path)
     enchants=effect_groups.decorate(enchants)
+    # A single source-classified nonCHMV choice has a separate two-Native
+    # Windows E=0 witness. Do not generalize its rating classification to
+    # unknown enchants, nor unlock the numeric rating-family choices.
+    eagle_selectable=False
+    try:
+        import v206_nonchmv_eagle_selection as eagle
+        eagle.evidence()
+        eagle.source()
+        matching=[r for r in enchants
+                  if r["token"]=="enchant_ring__eyes_of_the_eagle"
+                  and r["enchant_id"]==7967
+                  and r["effect_family"]=="crit_effectiveness"]
+        need(len(matching)==1,"EAGLE_SOURCE_EFFECT_CATALOG_DRIFT")
+        matching[0]["ui_selectable"]=True
+        matching[0]["blocked_reason"]=None
+        matching[0]["static_CHMV_budget_impact"]="NO_INCREMENT_FROM_NONCHMV_EFFECT"
+        matching[0]["native_E_zero_scope"]="WINDOWS_PALADIN_334_2_NATIVE_ONLY"
+        eagle_selectable=True
+    except (OSError,ValueError,KeyError):
+        # Degraded catalog still lists the same 38 items without claiming
+        # independent acceptance, budget numbers or broader Native proof.
+        eagle_selectable=False
     # Optional v202 observation must never make the *existing* 38-entry
     # read-only catalog disappear if its separate evidence file is absent
     # or mismatched. Missing proof never unlocks any enchant.
@@ -146,7 +168,7 @@ def public_options(path=DEFAULT):
         "existing_allowed_input_choices":approved,
         "proven_armor_embellishments":v188.public_embellishments(),
         "enchant_candidates":{"total":len(enchants),"groups":counts,
-                              "items":enchants,"selectable_count":0,
+                              "items":enchants,"selectable_count":int(eagle_selectable),
                               "same_effect_stronger_ring_enchants":sum(
                                x["preferred_if_same_effect_source"]==
                                   "STRONGER_VARIANT_REPORTED" for x in enchants),
@@ -168,6 +190,6 @@ def public_options(path=DEFAULT):
             "food_potions_expanded":"DB2_RAW_192_FOOD_61_POTION_NOT_NATIVE_MATCHED",
         },
         "native_calls_now":0,"game_db_recollection_now":0,
-        "new_approval_granted":False,
+        "new_approval_granted":eagle_selectable,
         "optimizer_or_cache_mutated":False
     }
