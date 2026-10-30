@@ -93,7 +93,9 @@ class SourceFirstRepresentative(unittest.TestCase):
         # the selected dagger/staff/sword has the WRONG primary stat.
         plan=stage.build_all(self.db,self.tier)
         by_id={x["item_id"]:x for x in self.db["items"]}
-        expected={"strength":4,"agility":3,"intellect":5}
+        expected={"strength":{4,71,72,74},
+                  "agility":{3,71,72,73},
+                  "intellect":{5,71,73,74}}
         self.assertEqual(len(plan["specializations"]),26)
         checked=0
         for key,info in plan["specializations"].items():
@@ -106,7 +108,7 @@ class SourceFirstRepresentative(unittest.TestCase):
                     item=by_id[item_id]
                     self.assertEqual(item["category"],"plain_representative_candidate")
                     self.assertIs(type(item.get("stat_modifier_codes")),list)
-                    self.assertIn(primary,item["stat_modifier_codes"])
+                    self.assertTrue(primary.intersection(item["stat_modifier_codes"]))
                     mask=item.get("allowed_class_mask")
                     if mask is not None:
                         self.assertEqual(mask&class_mask,class_mask)
@@ -167,15 +169,32 @@ class SourceFirstRepresentative(unittest.TestCase):
                                     "NO_COMPATIBLE_PRIMARY_OFFHAND_FRILL"):
             stage.shape_weapons(broken,"one_hand_frill",mage_mask,
                                 spec_key="mage/frost")
-        # Stat code 73 without a known primary code is NOT proof of INT.
+        # Code 73 is AGI/INT, so only an unknown code must fail closed.
         broken=copy.deepcopy(self.db)
         for x in broken["items"]:
             if x["category"]=="plain_representative_candidate" and (
                 x["class_id"]==2 and x["inventory_type"]==13):
-                x["stat_modifier_codes"]=[73]
+                x["stat_modifier_codes"]=[75]
         with self.assertRaises(stage.RepresentativeBlocked):
             stage.shape_weapons(broken,"one_hand_frill",mage_mask,
                                 spec_key="mage/frost")
+
+    def test_hybrid_primary_codes_preserve_valid_demonhunter_glaives(self):
+        # ITEM_MOD_AGI_INT=73 is shared by AGI Havoc and INT Devourer.
+        # Filtering only 3/4/5 would silently replace legitimate glaives.
+        expected={"strength":frozenset((4,71,72,74)),
+                  "agility":frozenset((3,71,72,73)),
+                  "intellect":frozenset((5,71,73,74))}
+        self.assertEqual(stage.PRIMARY_STAT_CODES,expected)
+        plan=stage.build_all(self.db,self.tier)["specializations"]
+        for key in ("demonhunter/havoc","demonhunter/devourer"):
+            with self.subTest(spec=key):
+                self.assertEqual(
+                    plan[key]["weapons"],
+                    {"main_hand":249677,"off_hand":251231})
+        by_id={x["item_id"]:x for x in self.db["items"]}
+        self.assertIn(73,by_id[249677]["stat_modifier_codes"])
+        self.assertIn(73,by_id[251231]["stat_modifier_codes"])
 
     def test_profile_serializes_corrected_mage_primary_weapon(self):
         import v139_pure_target_profile_composer as pure
