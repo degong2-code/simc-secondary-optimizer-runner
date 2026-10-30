@@ -54,8 +54,12 @@ def bounds(normalized,budget):
          sum(lower)<=total<=sum(upper),"BOUNDS_NOT_FEASIBLE")
     return total,lower,upper
 
-def budget_with_fixed_components(normalized,budget,fixed_F,fixed_O):
-    """P1 candidate feasibility: c=B+O, c>=F and selected L protection.
+def budget_with_fixed_components(normalized,budget,fixed_F,fixed_O,*,fixed_enchant_E=None):
+    """P1 candidate feasibility: c=B+O, c>=F, selected L and proven enchant E.
+
+    When supplied, a Native-verified static enchant E is part of G and must
+    be reserved in B. It is NOT appended to B/T or the numeric gear_* output.
+    The existing four-argument contract is byte-for-byte unchanged.
 
     The v062 budget identity remains unchanged: this is only a private view
     of the search floor, shared by seeds, scouts, material and confirmations.
@@ -73,9 +77,26 @@ def budget_with_fixed_components(normalized,budget,fixed_F,fixed_O):
     floors=budget["effective_floor_if_possible"]
     need(type(floors) is dict,"FIXED_FLOOR_REQUIRES_EXACT_L")
     result=copy.deepcopy(budget)
-    result["effective_floor_if_possible"]={
-        stat:max(floors[stat],fixed_F[stat]-fixed_O[stat],0)
-        for stat in STATS}
+    if fixed_enchant_E is None:
+        result["effective_floor_if_possible"]={
+            stat:max(floors[stat],fixed_F[stat]-fixed_O[stat],0)
+            for stat in STATS}
+    else:
+        import v197_verified_effect_budget as exact
+        e=exact.vector(fixed_enchant_E,"NATIVE_ENCHANT_E")
+        locked=budget["locked_L_when_all_specials_observed"]
+        need(type(locked) is dict and set(locked)==set(STATS),
+             "ENCHANT_E_REQUIRES_EXACT_LOCKED_L")
+        need(sum(e.values())+sum(locked.values())<=
+             budget["budget"]["T_official"]-
+                normalized["budget"]["F"]-normalized["budget"]["J"],
+             "ENCHANT_E_EXCEEDS_AVAILABLE_G")
+        result["effective_floor_if_possible"]={
+            stat:max(floors[stat],locked[stat]+e[stat]+
+                     max(0,fixed_F[stat]-fixed_O[stat]))
+            for stat in STATS}
+        result["fixed_enchant_E_in_G_only"]=e
+        result["enchant_E_not_added_to_B_or_T"]=True
     bounds(normalized,result)  # Early infeasible floor is an explicit error.
     return result
 
