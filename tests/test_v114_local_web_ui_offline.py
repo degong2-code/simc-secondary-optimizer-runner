@@ -76,7 +76,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('"/api/v1/sessions"',js.text)
         self.assertIn("async function loadRecentSessions()",js.text)
         self.assertIn('withBusy(loadRecentSessions)',js.text)
-        self.assertIn('async function showNativeBatch()',js.text)
+        self.assertNotIn('async function showNativeBatch()',js.text)
         self.assertNotIn("fetch(\"file://",js.text)
         self.assertIn('localStorage.setItem("simc_secondary_session_id"',js.text)
         self.assertIn("cache-only",js.text)
