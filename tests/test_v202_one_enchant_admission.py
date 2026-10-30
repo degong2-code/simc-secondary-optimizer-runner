@@ -13,13 +13,22 @@ class OneExactRing(unittest.TestCase):
         self.assertEqual(fixed["haste_rating"],30)
         self.assertEqual(rings["finger1"]["options"]["enchant_id"],"8025")
         profile="finger1=selected_158366,id=158366,ilevel=334,source=local,gem_id=240900,enchant_id=8025\n"
-        norm={"scenario":{"character":{"class":"mage","spec":"frost"},"target":{"ilevel":334}}}
+        norm={"scenario":{"character":{"class":"mage","spec":"frost"},"target":{"ilevel":334},"equipment":{"special":[],"crafted":[]}}}
         # Synthetic unit fixture explicitly patches the independent exact
         # profile seal. Production is separately checked against actual v203.
         with patch.object(v,"EXACT_SOURCE_PROFILE_SHA256",
                           hashlib.sha256(profile.encode("utf8")).hexdigest()):
             x=v.admit({"finger1":8025},profile,norm,proof["linux_binary_sha256"],"710c2408bf")
         self.assertEqual(x["fixed_E"],fixed)
+        with patch.object(v,"EXACT_SOURCE_PROFILE_SHA256",
+                          hashlib.sha256(profile.encode("utf8")).hexdigest()):
+            conflicting={"scenario":{**norm["scenario"],
+                "equipment":{"special":[{"slot":"finger1","item_id":158366}],
+                             "crafted":[]}}}
+            with self.assertRaisesRegex(v.EnchantAdmissionBlocked,
+                                       "OVERLAPS_NATIVE_L"):
+                v.admit({"finger1":8025},profile,conflicting,
+                        proof["linux_binary_sha256"],"710c2408bf")
         with self.assertRaisesRegex(v.EnchantAdmissionBlocked,
                                     "FULL_PROFILE_TALENTS_CONSUMABLES"):
             v.admit({"finger1":8025},profile,norm,proof["linux_binary_sha256"],"710c2408bf")
