@@ -21,9 +21,12 @@ def native(rating,with_enchant=True,revision="710c2408bf"):
     if with_enchant:item+=",enchant_id=8025"
     return json.dumps({
         "report_version":"2.0.0","git_revision":revision,
-        "sim":{"players":[{"gear":{
+        "sim":{"players":[{"collected_data":{"buffed_stats":{"stats":{
+           "crit_rating":922,"haste_rating":rating,
+           "mastery_rating":665,"versatility_rating":581}}},
+           "gear":{
           "finger1":{"encoded_item":item,"crit_rating":0,
-                     "haste_rating":rating},
+                     "haste_rating":40},
           "finger2":{"encoded_item":
              "selected_159459,id=159459,ilevel=334,source=local",
              "haste_rating":7},
@@ -42,10 +45,16 @@ class MatchedEnchantProbe(unittest.TestCase):
         self.assertIn("gem_id=240900",new)
         self.assertNotIn("enchant_id=",base)
         self.assertIn("enchant_id=8025",new)
-        self.assertEqual(p.compare_native(native(40,False),native(69),
-                        "finger1",8025,"710c240")["static_secondary"],
-                        {"crit_rating":0,"haste_rating":29,
-                         "mastery_rating":0,"versatility_rating":0})
+        compared=p.compare_native(native(40,False),native(69),
+                                  "finger1",8025,"710c240")
+        self.assertEqual(compared["static_secondary"],
+                         {"crit_rating":0,"haste_rating":29,
+                          "mastery_rating":0,"versatility_rating":0})
+        self.assertEqual(compared["observed_item_slot_rating_delta"],
+                         {"crit_rating":0,"haste_rating":0,
+                          "mastery_rating":0,"versatility_rating":0})
+        self.assertEqual(compared["rating_source"],
+            "sim.players[0].collected_data.buffed_stats.stats")
     def test_wrong_enchant_revision_item_and_negative_static_fail_closed(self):
         with self.assertRaisesRegex(p.ProbeBlocked,"ENCHANT_NOT_OBSERVED"):
             p.compare_native(native(40,False),native(40,False),
@@ -57,6 +66,12 @@ class MatchedEnchantProbe(unittest.TestCase):
             p.compare_native(native(40,False),native(39),"finger1",8025,"710c240")
         with self.assertRaisesRegex(p.ProbeBlocked,"PROBE_SLOT_NOT_APPROVED"):
             p.swap_slot_enchant(SAMPLE,"off_hand",8025)
+    def test_missing_character_rating_is_not_a_verified_static_enchant(self):
+        bad=json.loads(native(69))
+        del bad["sim"]["players"][0]["collected_data"]["buffed_stats"]["stats"]["haste_rating"]
+        with self.assertRaisesRegex(p.ProbeBlocked,"CHARACTER_BUFFED_RATING_MISSING"):
+            p.compare_native(native(40,False),json.dumps(bad).encode(),
+                             "finger1",8025,"710c240")
     def test_extra_gear_difference_cannot_generate_static_receipt(self):
         a=json.loads(native(69))
         a["sim"]["players"][0]["gear"]["finger2"]["haste_rating"]=8
