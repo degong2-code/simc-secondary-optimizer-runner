@@ -1,0 +1,105 @@
+name: v190 On-Demand Existing DB2 Snapshot + Pinned SimC Consumables (No Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/v190_consumable_db2_reused_snapshot.yml
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Existing v161 DB2 snapshot run ID (must still be retained)
+        type: string
+        required: true
+        default: '40836955761'
+      game_build:
+        description: Exact existing DB2 build; no implicit latest
+        type: string
+        required: true
+        default: '12.1.5.70575'
+      expansion_id:
+        description: DBC expansion id (Midnight=11)
+        type: string
+        required: true
+        default: '11'
+      simc_commit:
+        description: Exact 40-char SHA of currently selected SimC binary revision
+        type: string
+        required: true
+        default: '7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd'
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v190-requested-snapshot-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  reuse-exact-snapshot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      SOURCE_RUN_ID: ${{ inputs.source_run_id || '40836955761' }}
+      GAME_BUILD: ${{ inputs.game_build || '12.1.5.70575' }}
+      EXPANSION_ID: ${{ inputs.expansion_id || '11' }}
+      SIMC_COMMIT: ${{ inputs.simc_commit || '7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd' }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Restrict user-selected source identity and verify pure offline join
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_RUN_ID" =~ ^[0-9]{5,15}$ ]]
+          [[ "$GAME_BUILD" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$EXPANSION_ID" =~ ^[0-9]{1,2}$ ]]
+          [[ "$SIMC_COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          python3 -m unittest -q tests.test_v190_consumable_item_snapshot_join
+          python3 -m py_compile runner/v189_simc_consumable_embellishment_discovery.py runner/v190_consumable_item_snapshot_join.py
+      - name: Reuse exact existing archived v161 DB2 snapshot (no DB2 network)
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ inputs.source_run_id || '40836955761' }}
+          name: v161-db2-csv-snapshot-20261029
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: source-db2
+      - name: Extract archived snapshot only and verify original sha receipts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f source-db2/db2-snapshot.zip
+          unzip -q source-db2/db2-snapshot.zip -d source-db2/exact
+          test -f source-db2/exact/receipt.json
+          test -f source-db2/exact/Item.csv
+          test -f source-db2/exact/ItemSparse.csv
+          mkdir -p out
+          python3 runner/v189_simc_consumable_embellishment_discovery.py \
+            --simc-commit "$SIMC_COMMIT" --out out/v189_source_handler_candidates.json
+          python3 runner/v190_consumable_item_snapshot_join.py \
+            --v189 out/v189_source_handler_candidates.json \
+            --db2-folder source-db2/exact \
+            --expected-build "$GAME_BUILD" \
+            --expansion-id "$EXPANSION_ID" \
+            --out out/v190_source_first_food_potion_item_candidates.json
+          python3 - <<'PY'
+          import json,pathlib
+          p=pathlib.Path("out/v190_source_first_food_potion_item_candidates.json")
+          x=json.loads(p.read_text("utf8"))
+          assert x["counts"]["food_items"]>0 and x["counts"]["potion_items"]>0
+          assert x["automatic_ui_promotion"] is False
+          assert x["simc_native_calls"]==0
+          assert all(v["ui_selectable"] is False for v in x["items"])
+          assert x["source"]["tables"]["Item"]["sha256"]
+          assert x["source"]["tables"]["ItemSparse"]["sha256"]
+          print("V190_REUSED_SAME_BUILD_DB2_ITEMS_DISCOVERED_NO_NATIVE_NO_UI_PROMOTION")
+          print("V190_COUNTS",x["counts"])
+          PY
+      - if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v190-simc-db2-consumable-candidates-${{ github.run_id }}
+          path: out/
+          retention-days: 7
+          if-no-files-found: warn
