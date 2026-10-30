@@ -14,6 +14,8 @@ import json
 import os
 import pathlib
 import re
+import ssl
+import urllib.error
 import shutil
 import subprocess
 import sys
@@ -25,6 +27,9 @@ import urllib.request
 
 SCHEMA="v193_explicit_local_simc_nightly_manager_v1"
 BASE="https://download.simulationcraft.org/nightly/"
+GITHUB_RUNS="https://api.github.com/repos/simulationcraft/simc-publish/actions/runs?per_page=8"
+GITHUB_HOME="https://github.com/simulationcraft/simc-publish/actions"
+MAX_GITHUB_JSON=500_000
 NIGHTLY=re.compile(r"simc-(\d{3,5}(?:-\d{1,3})?)-win64-([a-f0-9]{7,12})\.7z\Z",re.I)
 MAX_ARCHIVE=250*1024*1024
 MAX_EXPANDED=1100*1024*1024
@@ -46,6 +51,61 @@ class Links(HTMLParser):
         if tag=="a":
             dest=dict(attrs).get("href")
             if dest:self.urls.append(dest)
+
+
+def index_error_code(exc):
+    """No SSL bypass, no private paths or arbitrary exception text in UI."""
+    reason=getattr(exc,"reason",exc)
+    if isinstance(reason,(ssl.SSLCertVerificationError,ssl.CertificateError)):
+        return "OFFICIAL_NIGHTLY_TLS_CERTIFICATE_INVALID"
+    if isinstance(reason,TimeoutError):
+        return "OFFICIAL_NIGHTLY_CONNECTION_TIMEOUT"
+    if isinstance(exc,urllib.error.HTTPError):
+        return "OFFICIAL_NIGHTLY_HTTP_"+str(exc.code)
+    if isinstance(exc,urllib.error.URLError):
+        return "OFFICIAL_NIGHTLY_CONNECTION_UNAVAILABLE"
+    return "OFFICIAL_NIGHTLY_INDEX_UNAVAILABLE"
+
+def fetch_github_json(url):
+    """Query *public metadata only* over verified TLS, never a binary URL."""
+    assert url.startswith("https://api.github.com/repos/simulationcraft/simc-publish/actions/")
+    req=urllib.request.Request(url,headers={
+        "Accept":"application/vnd.github+json",
+        "User-Agent":"SIMC-Secondary-Official-GitHub-Discovery/1.0"})
+    with urllib.request.urlopen(req,timeout=12) as response:
+        actual=urllib.parse.urlsplit(response.geturl())
+        need(response.status==200 and actual.scheme=="https" and
+             actual.hostname=="api.github.com",
+             "OFFICIAL_GITHUB_METADATA_SOURCE_INVALID")
+        raw=response.read(MAX_GITHUB_JSON+1)
+    need(0<len(raw)<=MAX_GITHUB_JSON,"OFFICIAL_GITHUB_METADATA_SIZE_INVALID")
+    return json.loads(raw)
+
+def fetch_github_nightly():
+    """Official SimC-publish artifact *discovery*, no auto download or token."""
+    response=fetch_github_json(GITHUB_RUNS)
+    runs=response.get("workflow_runs",[])
+    need(type(runs) is list,"OFFICIAL_GITHUB_RUNS_SCHEMA_INVALID")
+    for run in runs[:8]:
+        rid=run.get("id")
+        if type(rid) is not int or rid<=0 or run.get("name")!="Nightly":
+            continue
+        data=fetch_github_json(
+            f"https://api.github.com/repos/simulationcraft/simc-publish/actions/runs/{rid}/artifacts")
+        artifacts=data.get("artifacts",[])
+        need(type(artifacts) is list,"OFFICIAL_GITHUB_ARTIFACT_SCHEMA_INVALID")
+        for entry in artifacts:
+            aid=entry.get("id")
+            if (entry.get("name")=="simc-nightly-win64-midnight" and
+                entry.get("expired") is False and type(aid) is int and aid>0):
+                return {"source":"OFFICIAL_SIMC_GITHUB_ACTIONS",
+                    "run_id":rid,"artifact_id":aid,
+                    "name":"simc-nightly-win64-midnight",
+                    "artifact_zip_url":f"https://github.com/simulationcraft/simc-publish/actions/runs/{rid}/artifacts/{aid}",
+                    "run_url":f"https://github.com/simulationcraft/simc-publish/actions/runs/{rid}",
+                    "created_at":run.get("created_at",""),
+                    "direct_install_available":False}
+    return None
 
 def candidate_urls(html):
     """Accept only official same-host Windows 64bit .7z entries."""
@@ -217,13 +277,37 @@ class SimCManager:
 
     def check(self,index=None):
         need(self.platform=="win32","SIMC_UPDATER_WINDOWS_ONLY")
-        candidates=candidate_urls(index if index is not None else fetch_index())
-        need(candidates,"NO_OFFICIAL_WIN64_NIGHTLY_FOUND")
+        # Prefer the publisher's own HTTPS index. If TLS fails, use the
+        # upstream-owned GitHub Actions *metadata* as a safe manual fallback.
+        try:
+            candidates=candidate_urls(index if index is not None else fetch_index())
+            need(candidates,"NO_OFFICIAL_WIN64_NIGHTLY_FOUND")
+        except (urllib.error.URLError,TimeoutError,OSError,UpdateBlocked) as exc:
+            reason=str(exc) if isinstance(exc,UpdateBlocked) else index_error_code(exc)
+            try:
+                alternative=fetch_github_nightly()
+            except (urllib.error.URLError,TimeoutError,OSError,ValueError,
+                    UpdateBlocked,KeyError,TypeError):
+                alternative=None
+            with self.lock:
+                self.offer=None
+                return {"schema":SCHEMA,"candidate":None,
+                    "direct_install_available":False,
+                    "official_index_problem":reason,
+                    "github_alternative":alternative,
+                    "github_actions_url":GITHUB_HOME,
+                    "manual_archive_required":True,
+                    "installation_requires_confirmation":True,
+                    "archive_extractor_available":bool(find_sevenzip()),
+                    "native_calls_now":0}
         with self.lock:
             self.offer=candidates[0];self.offered_at=time.monotonic()
             return {"schema":SCHEMA,"candidate":{"filename":self.offer["filename"],
                     "revision_short":self.offer["revision_short"],
                     "official_download_url":self.offer["url"]},
+                    "direct_install_available":True,
+                    "github_alternative":None,
+                    "official_index_problem":None,
                     "installation_requires_confirmation":True,
                     "archive_extractor_available":bool(find_sevenzip()),
                     "native_calls_now":0}
