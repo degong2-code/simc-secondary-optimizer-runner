@@ -57,6 +57,17 @@
             <p class="eyebrow">STEP 02 · LOCAL SIMC</p>
             <div class="field"><label for="binary">simc.exe 경로 <small>실행 파일은 서버로 업로드하지 않습니다</small></label><input id="binary" placeholder="C:\SimC\simc.exe" required spellcheck="false"></div>
             <div class="two"><div class="field"><label for="revision">SimC Git revision</label><input id="revision" required pattern="[a-fA-F0-9]{7,40}" placeholder="7bc1071" spellcheck="false"></div><div class="field"><label for="static_cache">정적 캐시 JSON 경로 <small>고급 · 선택</small></label><input id="static_cache" spellcheck="false" placeholder="기본 로컬 정적 캐시가 있으면 자동 사용"></div></div>
+            <details class="fold simc-update-panel" id="simc-update-panel"><summary><span>설정 · SimulationCraft 관리</span><small>사용자 승인 후에만 다운로드·설치</small></summary>
+              <p class="hint">공식 Windows x64 nightly만 사용합니다. 현재 지정한 simc.exe는 덮어쓰지 않고, 앱 전용 폴더에 새 버전을 보관합니다. 버전 변경은 시즌 DB 재조사를 자동 실행하지 않습니다.</p>
+              <p class="hint" id="simc-update-status" role="status" aria-live="polite">관리 중인 SimC 조회 전 · 기존 직접 지정 경로도 계속 사용할 수 있습니다.</p>
+              <p class="hint" id="simc-update-candidate">새 버전 확인은 버튼을 누른 경우에만 인터넷에 접속합니다.</p>
+              <div class="simc-update-actions">
+                <button type="button" class="btn secondary" id="simc-check-btn">공식 업데이트 확인</button>
+                <button type="button" class="btn primary" id="simc-install-btn" disabled>확인한 버전 설치</button>
+                <button type="button" class="btn secondary" id="simc-rollback-btn" disabled>이전 버전 복원</button>
+              </div>
+              <p class="hint">공식 배포가 .7z이므로 PC에 7-Zip이 설치되어 있어야 합니다. 아카이브 서명 검증은 제공되지 않으며, HTTPS 공식 배포 출처·형식·다운로드 SHA 및 실행 파일 SHA를 검사합니다. <a href="https://www.simulationcraft.org/download.html" target="_blank" rel="noopener noreferrer">공식 다운로드 안내</a></p>
+            </details>
             <div class="actions"><button type="button" id="plan-btn" class="btn secondary" disabled>예산 미리 확인 · Native 0회</button><button type="button" id="start-btn" class="btn primary" disabled>SimC 최적화 실행</button></div>
           </form>
         </section>
