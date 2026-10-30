@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 7
     env:
-      SIMC_COMMIT: 7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd
+      SIMC_COMMIT: 710c2408bfd3ae4df71b8cd55cdf01f63fd6c926
       UPDATE_EVENT: ${{ inputs.event || 'mid_patch' }}
     steps:
       - uses: actions/checkout@v5
@@ -40,8 +40,8 @@ jobs:
       - name: Reuse exact existing SimC + DB2 source receipts (no new DB snapshot)
         uses: actions/download-artifact@v4
         with:
-          name: v190-simc-db2-consumable-candidates-41014544715
-          run-id: 41014544715
+          name: v192-updated-simc-catalog-41017578894
+          run-id: 41017578894
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: source
       - name: Fetch exact immutable SimC generated enchant + gem tables (no Native)
@@ -58,7 +58,7 @@ jobs:
           mkdir -p simc-generated out
           python - <<'PY'
           import pathlib,urllib.request,hashlib
-          commit='7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd'
+          commit='710c2408bfd3ae4df71b8cd55cdf01f63fd6c926'
           for name in ('permanent_enchant.inc','temporary_enchant.inc','gem_data.inc'):
               url=f'https://raw.githubusercontent.com/simulationcraft/simc/{commit}/engine/dbc/generated/{name}'
               req=urllib.request.Request(url,headers={'User-Agent':'SIMC-Secondary-v191-source-pinned/1.0'})
@@ -73,8 +73,8 @@ jobs:
             --gear data/current_season_product_gear_db.json \
             --tier data/current_season_tier_itemsets.json \
             --budget data/current_season_chmv_consumables.json \
-            --v189 source/v189_source_handler_candidates.json \
-            --v190 source/v190_source_first_food_potion_item_candidates.json \
+            --v189 source/v189_latest.json \
+            --v190 source/v190_latest.json \
             --simc-generated-folder simc-generated \
             --event "$UPDATE_EVENT" \
             --out out/v191_unified_source_first_catalog.json
@@ -88,6 +88,10 @@ jobs:
           assert x['enchants']['permanent']['source_rows']>1000
           assert x['enchants']['temporary']['source_rows']>100
           assert x['gem_properties']['source_count']>2000
+          assert set(x['simc_generated_builds'].values())=={'12.1.5.70575'}
+          assert x['enchants']['current_season_midnight']['count']==38
+          assert x['simc_revision']=='710c2408bfd3ae4df71b8cd55cdf01f63fd6c926'
+          print('V191_UPDATED_SIMC_CURRENT_SEASON_38_ENCHANTS_HIGHEST_RANK')
           print('V191_UNIFIED_SEASON_CANDIDATE_PASS_UNPUBLISHED_NATIVE_ZERO')
           PY
       - name: Archive just source-provenance receipt and small candidate catalog
