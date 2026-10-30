@@ -1,0 +1,73 @@
+name: v181 P1-D Windows Source Beta ZIP + Actual Loopback HTTP (No Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/v181_windows_beta_packager.py
+      - integration_probes/v181_windows_beta_live_http.py
+      - tests/test_v181_windows_beta_package_offline.py
+      - WINDOWS_BETA_START_HERE.md
+      - START_SIMC_OPTIMIZER_WEB_WINDOWS.cmd
+      - .github/workflows/v181_windows_beta_packaging.yml
+permissions:
+  contents: read
+concurrency:
+  group: v181-windows-beta-one-source-package
+  cancel-in-progress: false
+jobs:
+  windows-beta:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-2022
+            py: "3.12"
+          - os: windows-2022
+            py: "3.14"
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    steps:
+      - name: Preserve exact source text on Windows
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.py }}
+      - name: Install only current Windows web-test dependencies, no SimC
+        shell: pwsh
+        run: |
+          python -m pip install -r requirements-web-test.txt
+          if ($LASTEXITCODE -ne 0) { throw "Python web dependencies could not be installed" }
+      - name: Reproducible source ZIP all SHA checks with zero Native
+        shell: pwsh
+        run: |
+          python -m unittest -v tests.test_v181_windows_beta_package_offline
+          if ($LASTEXITCODE -ne 0) { throw "Source archive unit tests failed" }
+          New-Item -Path dist -ItemType Directory -Force | Out-Null
+          python integration_probes/v181_windows_beta_packager.py --out dist/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip
+          if ($LASTEXITCODE -ne 0) { throw "Beta packaging failed" }
+      - name: Actual extracted Windows CMD launcher preflight + local HTTP server + 3 plans
+        shell: pwsh
+        run: |
+          python integration_probes/v181_windows_beta_live_http.py --zip dist/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip
+          if ($LASTEXITCODE -ne 0) { throw "Real Windows process and HTTP integration failed" }
+      - name: Existing Windows local web, session, SHA/cache, security offline regressions
+        shell: pwsh
+        run: |
+          python -m unittest -q tests.test_v152_windows_local_web_launcher_offline tests.test_v113_local_web_api_offline tests.test_v114_local_web_ui_offline tests.test_v106_user_session_controller tests.test_v177_current_season_product_flow tests.test_v180_multilevel_current_season_product_offline
+          if ($LASTEXITCODE -ne 0) { throw "Existing local web or session regression failed" }
+          node --check runner/webui/app.js
+          if ($LASTEXITCODE -ne 0) { throw "Browser JS syntax failed" }
+      - name: Retain one small Windows beta ZIP; no SimC executable or session cache
+        if: matrix.py == '3.12'
+        uses: actions/upload-artifact@v6
+        with:
+          name: v181-windows-source-beta-${{ github.run_id }}
+          path: dist/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip
+          retention-days: 7
+          if-no-files-found: error
