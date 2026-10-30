@@ -272,7 +272,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
     if pure_stage or source_free:
         restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
             key,rows,groups,user,ilvl,need,
-            tier_override=tier_data,fifth_override=fifth_data)
+            tier_override=tier_data,fifth_override=fifth_data,
+            flexible_current_tier=current_season_product)
     else:
         restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
             key,rows,groups,user,ilvl,need)
