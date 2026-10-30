@@ -18,6 +18,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+      - name: Install existing local web-test dependencies for v177 regression
+        run: python3 -m pip install -r requirements-web-test.txt
       - name: P1-B target T, O, trinkets, consumables, combat, selected L
         shell: bash
         run: |
