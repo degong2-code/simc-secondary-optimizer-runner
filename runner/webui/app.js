@@ -783,10 +783,17 @@ function renderSeasonOptionCatalog(catalog) {
     status.textContent="마법부여 선택 승인 상태가 일치하지 않아 목록을 차단했습니다.";
     return;
   }
+  const raw=catalog.related_source_counts||{};
   status.textContent="게임 빌드 "+catalog.season_build+
     " · SimC "+catalog.simc_revision.slice(0,10)+
-    " · 최고 소스 품질 마부 "+enchants.total+
-    "개 (전부 정보 확인 중 · 아직 직접 선택 불가)";
+    " · 일반장비 후보 "+(raw.gear_item_candidates??"?")+
+    " · 티어 ID "+(raw.tier_piece_ids??"?")+
+    " · 음식 원시 후보 "+(raw.food_raw_item_candidates??"?")+
+    " · 물약 원시 후보 "+(raw.potion_raw_item_candidates??"?")+
+    " · SimC 장식/다크문 효과 등록 "+(raw.embellishment_darkmoon_registrations??"?")+
+    " · 보석 속성 기록 "+(raw.gem_property_records??"?")+
+    " · 최고 품질 마부 후보 "+enchants.total+
+    "개 (승인 전 자료 · 신규 사용자 선택은 잠금)";
   const names={boots:"장화",chest:"가슴",helm:"머리",ring:"반지",
                shoulders:"어깨",weapon:"무기"};
   for(const kind of ["helm","shoulders","chest","boots","ring","weapon"]) {
