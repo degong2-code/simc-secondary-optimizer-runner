@@ -115,7 +115,7 @@ class CurrentSeasonTierReconciliation(unittest.TestCase):
         u["special_items"]=[{"slot":"head","item_id":271555,
                              "options":{"redirected_base_stats":"159236"}}]
         with self.assertRaisesRegex(AssertionError,
-                             "CATALYST_CLASS_TIER_ID_AND_ORIGIN_REQUIRED"):
+                             "CURRENT_SEASON_SELECTED_ITEM_NOT_IN_APPROVED_ROLE:head"):
             self.apply(u,rows,groups)
 
     def test_only_real_season_special_role_can_overlay_tier(self):
