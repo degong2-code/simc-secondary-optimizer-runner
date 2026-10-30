@@ -308,9 +308,12 @@ def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
         # when the 511/65 season catalog byte SHA stays exactly the same.
         # Make NEW corrected user sessions disjoint from pre-v184 Native.
         identity["current_season_weapon_selection_policy"]=stage.WEAPON_SELECTION_POLICY
-        # Default unselected 4pc remains byte-identical to v185: do NOT
-        # invalidate good no-overlay Native caches for a selected-gear fix.
-        if user.get("special_items") or user.get("embellishments"):
+        # Only an occupied tier-functional slot can change its 4-of-5
+        # physical layout. Preserve good v185 baseline and neck/ring/back
+        # selected-gear Native caches when their equipment is unchanged.
+        if any(row["slot"] in bootstrap.common.TIER_FIVE
+               for group in ("special_items","embellishments")
+               for row in user.get(group,[])):
             identity["current_season_tier_layout_policy"]=bootstrap.common.CURRENT_SEASON_TIER_LAYOUT_POLICY
         identity["current_season_gear_sha256"]=sha(stage.gear.DEFAULT.read_bytes())
         identity["current_season_tier_sha256"]=sha(stage.TIER_PATH.read_bytes())
@@ -538,7 +541,9 @@ def _worker_locked(folder,binary,revision,static_cache,cache_only):
             need(identity.get("current_season_weapon_selection_policy")==
                  bootstrap.source_first.WEAPON_SELECTION_POLICY,
                  "OLD_WEAPON_POLICY_SESSION_START_NEW_CORRECTED_SESSION")
-            if user.get("special_items") or user.get("embellishments"):
+            if any(row["slot"] in bootstrap.common.TIER_FIVE
+                   for group in ("special_items","embellishments")
+                   for row in user.get(group,[])):
                 need(identity.get("current_season_tier_layout_policy")==
                      bootstrap.common.CURRENT_SEASON_TIER_LAYOUT_POLICY,
                      "OLD_TIER_LAYOUT_SESSION_START_NEW_CORRECTED_SESSION")
