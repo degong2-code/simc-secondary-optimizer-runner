@@ -29,6 +29,8 @@ ARMOR_CLASSES={
     "plate":frozenset(("deathknight","paladin","warrior"))}
 CLASS_ARMOR={cl:armor for armor,classes in ARMOR_CLASSES.items() for cl in classes}
 TIER_FIVE=("head","shoulders","chest","hands","legs")
+# Current-season code-only tier placement changes must rekey new v106 sessions.
+CURRENT_SEASON_TIER_LAYOUT_POLICY="v187_selected_4_of_5_and_catalyst_overflow_v1"
 # v127 source-backed metadata supplies per-spec tier, F, fixture, weapon and
 # fifth ordinary selection. Legacy producers remain exact APL adapters.
 CLASS_TIER_ITEMS={entry.character_class:entry.tier_ids()
