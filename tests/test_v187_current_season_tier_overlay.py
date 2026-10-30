@@ -118,6 +118,54 @@ class CurrentSeasonTierReconciliation(unittest.TestCase):
                              "CURRENT_SEASON_SELECTED_ITEM_NOT_IN_APPROVED_ROLE:head"):
             self.apply(u,rows,groups)
 
+    def test_all_26_specs_crafted_head_reassigns_fifth_tier_without_native(self):
+        import v143_specialization_contracts as contracts
+        import v167_product_season_gear_adapter as catalog
+        items=catalog.read()["items"]
+        source=season.season_scope()
+        sets=season.load_tier()["classes"]
+        self.assertEqual(len(contracts.CONTRACTS),26)
+        for key,contract in sorted(contracts.CONTRACTS.items()):
+            with self.subTest(spec=key):
+                cls,sp=key.split("/")
+                control=sessions.standard_controls((cls,sp))
+                user=sessions.user_scenario(control)
+                _,_,rows,groups,form,F,tier_map,fifth=pure.v098_inputs(
+                    user["character"],user["trinkets"],
+                    target_ilevel=334,combat=user["combat"],
+                    season_override=source)
+                family=catalog.ARMOR_SUBCLASS[contract["family"]]
+                head_craft=sorted(x["item_id"] for x in items
+                   if x["category"]=="selectable_stat_craft"
+                   and x["class_id"]==4 and x["subclass_id"]==family
+                   and x["inventory_type"]==1)
+                self.assertTrue(head_craft)
+                chosen=head_craft[0]
+                user["embellishments"]=[{"slot":"head","item_id":chosen,
+                     "options":{"crafted_stats":"32/36",
+                                "embellishment":"arcanoweave_lining"}}]
+                def require(ok,code):
+                    if not ok:raise AssertionError(code)
+                restored,catalyst=common.apply_user_equipment(
+                    (cls,sp),rows,groups,user,334,require,
+                    tier_override=tier_map,fifth_override=fifth,
+                    flexible_current_tier=True)
+                self.assertEqual(restored,["chest"])
+                self.assertEqual(catalyst,[])
+                self.assertEqual(groups["head"],"crafted")
+                self.assertEqual(rows["head"]["item_id"],chosen)
+                actual_tiers={slot for slot in common.TIER_FIVE
+                              if groups.get(slot)=="tier"}
+                self.assertEqual(actual_tiers,
+                                 {"shoulders","chest","hands","legs"})
+                self.assertEqual(tier_map,sets[cls]["pieces"])
+                self.assertEqual(len({v["item_id"] for v in rows.values()}),
+                                 len(rows))
+                equipment,fillers=common.physical_gear_groups(
+                    rows,groups,catalyst)
+                self.assertEqual(len(equipment["tier"]),4)
+                self.assertEqual(len(equipment["crafted"]),1)
+
     def test_actual_v098_product_head_craft_rebuilds_four_tier_zero_native(self):
         import v098_target_user_scenario_bootstrap as bootstrap
         with tempfile.TemporaryDirectory() as td:
