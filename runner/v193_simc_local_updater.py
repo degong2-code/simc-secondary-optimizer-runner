@@ -200,7 +200,7 @@ class SimCManager:
                     "archive_extractor_available":bool(find_sevenzip()) if
                        self.platform=="win32" else False,
                     "installed":data["active"],"active_binary":active,
-                    "previous":data["previous"],"can_rollback":bool(previous),
+                    "previous":data["previous"],"can_rollback":bool(active),
                     "manual_binary_never_modified":True,
                     "native_calls_now":0,"season_database_unchanged":True}
 
@@ -276,9 +276,11 @@ class SimCManager:
         need(self.platform=="win32","SIMC_UPDATER_WINDOWS_ONLY")
         with self.lock:
             old=self._read()
-            need(old["previous"] is not None,"NO_PREVIOUS_MANAGED_SIMC")
-            self._binary(old["previous"])
+            need(old["active"] is not None,"NO_MANAGED_SIMC_TO_ROLL_BACK")
+            if old["previous"] is not None:self._binary(old["previous"])
             self._write_state({"schema":SCHEMA,"active":old["previous"],
                                "previous":old["active"]})
-            result=self.status();result["status"]="PREVIOUS_MANAGED_SIMC_RESTORED"
+            result=self.status();result["status"]=(
+                "PREVIOUS_MANAGED_SIMC_RESTORED" if old["previous"] is not None
+                else "MANAGED_SIMC_DEACTIVATED_USE_PREVIOUS_MANUAL_BINARY")
             return result
