@@ -1,0 +1,26 @@
+name: v179 Current-season user inputs P1-B offline (NO Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - tests/test_v179_current_season_input_paths_offline.py
+      - .github/workflows/v179_current_season_input_offline.yml
+permissions:
+  contents: read
+jobs:
+  one-user-input-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: P1-B target T, O, trinkets, consumables, combat, selected L
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m unittest -v tests.test_v179_current_season_input_paths_offline
+          python3 -m unittest -q tests.test_v177_current_season_product_flow tests.test_v098_target_user_scenario_bootstrap
