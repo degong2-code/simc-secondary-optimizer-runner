@@ -180,6 +180,7 @@ function installSeasonGearHints(catalog) {
       element.appendChild(option(item.item_id,item.name+" · #"+item.item_id+
         (item.season_list_basis?" · 시즌 신화+ 후보":"")));
   }
+  refreshSpecialSlots();
   if(!state.seasonGear) {
     node.textContent="시즌 선택 목록이 없습니다. 새 장신구·특수효과 선택은 보류됩니다. 기존 세션 조회는 가능합니다.";
     return;
@@ -329,7 +330,7 @@ function gearInputs(nodeId, config) {
     for(const name of config.fields) {
       const label=document.createElement("label");
       const isPrivate=["bonus_id","redirected_base_stats"].includes(name)||
-                      (!isSpecial&&name==="item_id");
+                      (!isSpecial&&name==="item_id")||(isSpecial&&name==="slot");
       label.hidden=isPrivate;
       label.textContent=name==="item_id"?"이번 시즌 장비":
         name==="stat_a"?"제작 스탯 1":
@@ -342,14 +343,13 @@ function gearInputs(nodeId, config) {
       input.dataset.field=name;
       if(name==="item_id"&&isSpecial) {
         input.appendChild(option("","이번 시즌 특수효과 장비 선택"));
-        input.addEventListener("change",()=>suggestGearSlot(row,nodeId));
+        input.addEventListener("change",refreshSpecialSlots);
       }else if(name==="slot") {
         input.appendChild(option("","미선택"));
         for(const slot of statOptions)input.appendChild(option(slot,slotNames[slot]));
       }else if(name==="embellishment") {
         input.appendChild(option("","장식 종류 선택"));
-        for(const [value,labelName] of embellishmentChoices)
-          input.appendChild(option(value,labelName));
+        input.addEventListener("change",()=>syncCraftRow(row));
       }else if(name==="stat_a"||name==="stat_b") {
         input.appendChild(option("","스탯 선택"));
         for(const [value,labelName] of Object.entries(statNames))
@@ -358,7 +358,12 @@ function gearInputs(nodeId, config) {
       input.setAttribute("aria-label",config.title+" "+(i+1)+" "+label.textContent);
       input.autocomplete="off";label.appendChild(input);grid.appendChild(label);
     }
-    row.appendChild(grid);group.appendChild(row);
+    row.appendChild(grid);
+    const note=document.createElement("p");
+    note.className="hint "+(isSpecial?"auto-slot-note":"craft-slot-note");
+    note.textContent=isSpecial?"장비를 선택하면 부위가 자동 지정됩니다.":
+      "장식 종류를 먼저 선택하면 호환 부위가 표시됩니다.";
+    row.appendChild(note);group.appendChild(row);
   }
   if(isSpecial) {
     const add=document.createElement("button");add.type="button";
@@ -400,6 +405,8 @@ function fillGearRows(nodeId, entries) {
   }
   const add=group.querySelector(".gear-group > button");
   if(add)add.disabled=!rows.some(row=>row.hidden);
+  if(nodeId==="special-rows")refreshSpecialSlots();
+  else for(const row of rows)syncCraftRow(row,!!entries.length);
 }
 function fillSessionInputs(payload) {
   const u=payload.user,c=u.character,t=u.target,b=u.combat;
@@ -439,11 +446,11 @@ function fillSessionInputs(payload) {
   $("binary").value=payload.binary;
   $("revision").value=payload.revision;
   $("static_cache").value=payload.static_cache??"";
-  $("current_season_product").checked=payload.current_season_product===true;
   showRepresentativeScope();
 }
 function selectedGear(nodeId, group) {
   const result=[],isCraft=group==="embellishments";
+  if(!isCraft)refreshSpecialSlots();
   for(const row of $(nodeId).querySelectorAll(".gear-row")) {
     const fields={};
     for(const input of row.querySelectorAll("[data-field]"))
@@ -451,7 +458,9 @@ function selectedGear(nodeId, group) {
     if(!Object.values(fields).some(Boolean))continue;
     if(isCraft) {
       if(!fields.slot||!fields.embellishment||!fields.stat_a||!fields.stat_b)
-        throw Error("장식 제작장비는 부위·장식 종류·제작 스탯 2개를 선택해 주세요.");
+        throw Error("장식 종류·호환 부위·제작 스탯 2개를 선택해 주세요.");
+      if(!state.options?.embellishments?.[fields.embellishment]?.slots?.includes(fields.slot))
+        throw Error("이 장식은 선택 부위에 사용할 수 없습니다.");
       if(fields.stat_a===fields.stat_b)
         throw Error("제작 스탯은 서로 다른 두 가지를 선택해야 합니다.");
       const resolved=chosenCraft(fields.slot);
@@ -464,7 +473,7 @@ function selectedGear(nodeId, group) {
       result.push({slot:fields.slot,item_id:resolved.item_id,options:raw});
     }else {
       if(!fields.slot||!/^[0-9]+$/.test(fields.item_id))
-        throw Error("특수장비의 부위와 시즌 장비를 선택해 주세요.");
+        throw Error("시즌 특수장비를 선택해 주세요. 부위가 불가능하거나 중복됐을 수 있습니다.");
       if(!seasonChoice("special_effect_gear_candidate",fields.item_id))
         throw Error("이번 시즌 특수효과 장비 목록에서 선택해야 합니다.");
       const options={};
@@ -501,13 +510,11 @@ function buildRequest() {
       diamond_id:Number(field("diamond")),omnium_talents:field("omnium")
     }
   };
-  const currentSeason=$("current_season_product").checked;
-  if(currentSeason&&(!Number.isInteger(controls.ilevel)||
-                     controls.ilevel<266||controls.ilevel>344))
-    throw Error("새 시즌 대표장비 경로의 목표 ilvl은 266~344입니다.");
+  if(!Number.isInteger(controls.ilevel)||controls.ilevel<266||controls.ilevel>344)
+    throw Error("최신 시즌 대표장비의 목표 ilvl은 266~344입니다.");
   return {controls,binary:field("binary"),revision:field("revision"),
           static_cache:field("static_cache")||null,
-          current_season_product:currentSeason};
+          current_season_product:true};
 }
 async function api(path,{method="GET",payload=null,publicRoute=false}={}) {
   const headers={"Accept":"application/json"};
