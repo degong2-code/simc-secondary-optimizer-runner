@@ -815,11 +815,15 @@ function renderSeasonOptionCatalog(catalog) {
         " · 같은 효과의 더 강한 후보 존재":
         kind==="DISTINCT_EFFECT_NO_DOMINANCE"?
         " · 별개의 효과이므로 유지":"";
+      const proof=entry.measured_E_in_one_simc_native_scope;
+      const observed=proof?
+        " · Native 관측: 가속 +"+proof.haste_rating+
+        " (냉법 334·Linux SimC 한정, gear_* 중복 가산 없음)":"";
       li.textContent=(entry.display_name||entry.token)+
         " · "+(entry.effect_description||"효과 원본 연결 필요")+
         qualifier+" · enchant ID "+entry.enchant_id+
         " · 최고 관측 등급 "+entry.highest_source_quality_rank+
-        " · SimC 정적 rating 확인 전 선택 불가";
+        observed+" · 사용자 선택은 아직 비활성";
       list.appendChild(li);
     }
     detail.appendChild(list);
