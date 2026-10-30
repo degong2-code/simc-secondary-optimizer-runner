@@ -136,6 +136,28 @@ def highest_effect_variants(rows):
                     if (v["quality_rank"],v["effect_strength"])==best)
     return kept
 
+def current_season_enchant_candidates(generated_permanent):
+    """Source-observed Midnight enchant_ names, not historical 772 entries.
+
+    These new-enchant tokens are tied to a real built-in SimC slot mask and
+    each exact token retains only highest quality; profession tools (class19)
+    are excluded. No game item ID, DPS strength, Native acceptance or UI
+    publication is inferred from these generated tables alone.
+    """
+    observed=[x for x in generated_permanent["rows"]
+              if x["simc_token"].startswith("enchant_")
+              and x["item_class"] in (2,4)]
+    winners=highest_known_quality(observed,"permanent_enchant")
+    need(len({x["simc_token"] for x in winners})==len(winners),
+         "SAME_ENCHANT_TOKEN_CONFLICTING_EQUIPMENT_CLASS")
+    for row in winners:
+        row["inventory_type_options"]=inventory_options(row)
+        need(row["inventory_type_options"] or row["item_class"]==2,
+             "CURRENT_SEASON_ENCHANT_SLOT_MASK_UNRESOLVED")
+        row["user_selectable"]=False
+        row["season_basis"]="SIMC_MIDNIGHT_ENCHANT_TOKEN_PREFIX_NOT_ITEM_RECIPE_CERTIFIED"
+    return winners
+
 def inventory_options(entry):
     mask=entry["inventory_type_mask"]
     # SimC find() evaluates (1 << inventory_type), not a human-readable
@@ -181,6 +203,8 @@ def compile_catalog(gear,tier,budget,effects,consumables,generated,*,event):
         generated["permanent_enchant"]["rows"],"permanent_enchant")
     temporary=highest_known_quality(
         generated["temporary_enchant"]["rows"],"temporary_enchant")
+    season_enchants=current_season_enchant_candidates(
+        generated["permanent_enchant"])
     for item in permanent:
         item["inventory_type_options"]=inventory_options(item)
         item["user_selectable"]=False
@@ -214,7 +238,10 @@ def compile_catalog(gear,tier,budget,effects,consumables,generated,*,event):
       "embellishments":{"registered_effects":
             effects["candidates"]["embellishment_or_darkmoon"],
             "stage":"SIMC_IMPLEMENTED_EFFECT_DISCOVERY_RECIPE_TYPE_AND_SLOT_LINK_PENDING"},
-      "enchants":{"permanent":{"source_rows":generated["permanent_enchant"]["declared_rows"],
+      "enchants":{"current_season_midnight":{"highest_rank_candidates":season_enchants,
+                    "count":len(season_enchants),
+                    "stage":"SIMC_MIDNIGHT_TOKEN_AND_SLOT_MASK_CANDIDATE_NOT_NATIVE_UI"},
+                  "permanent":{"source_rows":generated["permanent_enchant"]["declared_rows"],
                     "highest_rank_candidates":permanent,
                     "stage":"SIMC_ENCHANT_SLOT_MASK_KNOWN_SEASON_EFFECT_UNVERIFIED"},
                   "temporary":{"source_rows":generated["temporary_enchant"]["declared_rows"],
