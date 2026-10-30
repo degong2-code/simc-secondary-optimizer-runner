@@ -41,12 +41,12 @@
               <div class="field"><label for="trinket2">장신구 2 · 이번 시즌 목록</label><select id="trinket2" required><option value="">시즌 목록 확인 중…</option></select></div>
             </div>
             <p class="hint" id="season-gear-note">이번 시즌 장신구·특수효과 선택 목록 확인 중 · 일반장비·티어·무기는 내부 자동 구성</p>
-            <div class="check-row"><label><input id="current_season_product" type="checkbox" checked> 최신 시즌 대표장비 사용 (목표 ilvl 266~344 · 신규 세션 기본값)</label></div>
+            <p class="hint">최신 시즌 대표 장비·직업별 티어 4세트·무기는 항상 내부 구성합니다. 목표 아이템레벨 266~344에 맞춘 독립 세션입니다.</p>
             <p class="hint">실제 SimC 대표 프로필 26/26 수용 검증. 기본 경로의 기존 세션·캐시는 유지하며, 새 선택은 별도 캐시에서 기존 6후보 최적화를 실행합니다. 다른 특성·장신구·특수효과 조합의 성공 여부는 각 SimC 실행으로 판단합니다.</p>
             <div class="field"><label for="final_T">수동 최종 CHMV T <small>선택 · 비우면 목표 ilvl 예산</small></label><input id="final_T" type="number" min="1" max="100000" placeholder="자동 산정"></div>
             <div class="two"><div class="field"><label for="targets">대상 수</label><input id="targets" type="number" min="1" max="40" value="1" required></div><div class="field"><label for="duration">전투 길이 (초)</label><input id="duration" type="number" min="1" max="3600" value="300" required></div></div>
             <div class="check-row"><label><input id="raid_buffs" type="checkbox" checked> 공대 버프</label><label><input id="oil_main" type="checkbox" checked> 주무기 기름</label><label><input id="oil_off" type="checkbox"> 보조무기 기름</label></div>
-            <details class="fold"><summary><span>선택 특수효과 장비 · 장식</span><small>특수효과 장비는 시즌 목록에서 선택 · 장식은 부위·종류·제작 스탯만 선택</small></summary><p class="hint">일반 장비·티어4세트와 선택한 장식 제작장비의 정확한 ID는 내부에서 구성합니다. 특수장비의 보너스·촉매 원본 ID도 일반 사용자에게 입력받지 않습니다. 이미 저장된 로컬 정적 캐시는 자동으로 찾아 사용하며, 선택 특수장비의 정확한 Native 정적 L이 없으면 추정하지 않고 계획 단계에서 차단합니다. 장식 유형은 현재 정확한 SimC 토큰을 확인한 항목부터 제공합니다.</p><div id="special-rows"></div><div id="crafted-rows"></div></details>
+            <details class="fold"><summary><span>선택 특수효과 장비 · 장식</span><small>특수효과 장비 부위 자동 결정 · 장식 종류별 적용 부위 제한</small></summary><p class="hint">일반 장비·티어4세트와 선택한 장식 제작장비의 정확한 ID는 내부에서 구성합니다. 특수장비의 보너스·촉매 원본 ID도 일반 사용자에게 입력받지 않습니다. 이미 저장된 로컬 정적 캐시는 자동으로 찾아 사용하며, 선택 특수장비의 정확한 Native 정적 L이 없으면 추정하지 않고 계획 단계에서 차단합니다. 현재 검증된 장식은 일반 방어구용 안감 2종입니다. 목걸이·반지·무기용 장식은 별도의 실제 호환 토큰이 검증되기 전까지 선택할 수 없습니다.</p><div id="special-rows"></div><p id="craft-compatibility-note" class="hint" role="note">장식별 장착 가능한 부위만 표시됩니다. 장신구·무기 장식은 검증된 선택지가 아직 없습니다.</p><div id="crafted-rows"></div></details>
             <details class="fold"><summary><span>소모품 · 다이아몬드 · Omnium</span><small>소스 관측 선택지만 제공</small></summary><div class="two">
               <div class="field"><label for="food">음식</label><select id="food"></select></div>
               <div class="field"><label for="potion">물약</label><select id="potion"></select></div>
@@ -86,14 +86,6 @@
               <div class="result-footer"><div><span>확인 후보 95% 방향 지지</span><strong id="conf95">–</strong></div><div><span>관측된 근접 대안</span><strong id="alt-count">–</strong></div></div>
               <div id="alt-list" class="alt-list"></div><p class="hint">미관측은 대안이 없다는 뜻이 아닙니다. DPS·효과는 SimC가 계산합니다.</p>
             </div>
-          </section>
-          <section class="panel batch-evidence" aria-labelledby="batch-title">
-            <div class="section-head"><div><p class="eyebrow">PREVIOUS LOCAL NATIVE RUNS · READ ONLY</p><h2 id="batch-title">24개 전문화 실측 결과</h2></div><span class="pill">추가 SimC 0회</span></div>
-            <p class="hint">이 PC 또는 복사한 v147_batch의 원본 JSON2·영수증과 기존 v094 보고서를 대조해 표시합니다. 복사한 결과를 새 PC의 실행 캐시로 자동 승인하지 않습니다.</p>
-            <div class="field"><label for="batch-id">로컬 실측 배치</label><select id="batch-id"><option value="">실측 결과 조회 중…</option></select></div>
-            <button type="button" id="batch-open-btn" class="btn secondary" disabled>저장된 24개 결과 보기 · Native 0회</button>
-            <p id="batch-status" class="hint" role="status" aria-live="polite">저장된 배치를 조회하지 않았습니다.</p>
-            <div id="batch-table" class="batch-table" hidden></div>
           </section>
           <div class="footnote">SIMC SECONDARY OPTIMIZER · 개인용 로컬 웹앱 베타<br>지원하지 않는 전문화와 검증되지 않은 입력은 실행 전에 차단합니다.</div>
         </aside>
