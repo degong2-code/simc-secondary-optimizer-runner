@@ -1,3 +1,5 @@
+> **2026-10-30 Windows 로컬 웹 베타 v181:** [다운로드/실행 안내](WINDOWS_BETA_START_HERE.md) · [실제 Windows 3.12/3.14 ZIP/HTTP PASS 증거](docs/V181_P1D_WINDOWS_LOCAL_BETA_PACKAGE_REAL_HTTP_20261030.md). 설치형 EXE가 아닌 **소스 ZIP**이며 사용자 Windows SimC CLI가 필요합니다. 계획/복원/보안은 Windows 실측, 새 시즌 사용자 SimC Native 계산은 기존 Linux v180 증거와 구분합니다.
+
 > **2026-10-29 제품 개발 현재 기준 (격리 브랜치):** 아래 v033 기록은 역사적 호환성 파일이며 최신 사용자 제품 설계가 아닙니다. 최신 사용자 승인 입력 기준은 [장비 엔진/사용자 선택 정책](docs/APPROVED_PRODUCT_GEAR_USER_FLOW_20261029.md), 실제 검증·미완료는 [CURRENT](docs/CURRENT_PRODUCT_DEVELOPMENT_STATE.md)를 우선 확인하십시오. **DPS 26개 (증강 제외), 목표 ilvl 266~344 기본334, 절대 CHMV rating 최적화.** 사용자는 **이번 시즌 목록의 장신구 2개·선택 특수효과 장비** 및 **장식 제작장비 최대 2개의 정확 ID 예외**만 장비로 입력합니다. 일반 대표 방어구·무기·티어 4세트는 내부 고정 구성하고 사용자에게 ID 자유입력·후보 선택·조회 기능을 제공하지 않습니다. 내부 검증 로직은 유지, SimC 효과/DPS 및 기존 캐시/중단·재개를 재사용. 신규 Native 검증이 없으면 제품 완성이라고 주장하지 않습니다. GitHub에 문서를 썼다고 Project UI의 Instructions/Sources가 변경된 것은 아닙니다.
 
 ---
