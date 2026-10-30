@@ -1,4 +1,5 @@
 name: v182 User-Friendly Equipment, Oil and Omnium UI (Offline)
+# Recheck current isolated HEAD on standard public-hosted Ubuntu/Windows runners.
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
