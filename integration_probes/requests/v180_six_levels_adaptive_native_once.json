@@ -1,0 +1,46 @@
+{
+  "schema": "v180_one_six_case_current_season_non334_adaptive_v1",
+  "cases": [
+    [
+      "warrior/fury",
+      266,
+      "titan_grip_low"
+    ],
+    [
+      "hunter/beast_mastery",
+      300,
+      "ranged_mid"
+    ],
+    [
+      "paladin/retribution",
+      321,
+      "two_hand_manual_T"
+    ],
+    [
+      "rogue/outlaw",
+      330,
+      "dual_one_hand_two_targets"
+    ],
+    [
+      "evoker/devastation",
+      340,
+      "caster_no_oil"
+    ],
+    [
+      "mage/frost",
+      344,
+      "caster_upper_edge"
+    ]
+  ],
+  "current_season_product": true,
+  "max_cases": 6,
+  "native_max_each": 6,
+  "new_native_max_total": 36,
+  "cache_only_verified_each": 6,
+  "simc_revision": "7bc10711b5",
+  "simc_binary_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+  "no_optimizer_rebuild": true,
+  "no_26_specs_native_rerun": true,
+  "no_main_merge": true,
+  "no_project_ui_edit": true
+}
