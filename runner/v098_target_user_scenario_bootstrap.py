@@ -190,9 +190,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
     need(not current_season_product or
          (not pure_stage and not independent_334 and
           not independent_target_level and ordinary_variant is None and
-          type(ilvl) is int and ilvl==334 and
+          type(ilvl) is int and 266<=ilvl<=344 and
           key in (set(ARCHETYPES)|PURE_PRODUCT_SPECS)),
-         "CURRENT_SEASON_PRODUCT_SCOPE_334_ONLY")
+         "CURRENT_SEASON_PRODUCT_SCOPE_TARGET_RANGE")
     # Developer-only v171+v168 representative equipment. Never activate in
     # ordinary web/v106 sessions or reuse existing v098 production receipts.
     need(not source_first_stage or
@@ -247,12 +247,13 @@ def build(user,folder,binary,revision,static_cache_path=None,
     # pure_stage=True preserves the older v140 witness-only pilot contract.
     if pure_stage or source_free:
         need(ordinary_variant is None and
-             (ilvl==334 or independent_target_level),
+             (ilvl==334 or independent_target_level or current_season_product),
              "PURE_STAGE_TARGET_OR_VARIANT_NOT_READY")
         base_profile,cfg,rows,groups,weapon_layout,F,tier_data,fifth_data=(
             pure.v098_inputs(ch,user["trinkets"],target_ilevel=ilvl,
                              combat=combat,
-                             level_preview=independent_target_level,
+                             level_preview=(independent_target_level or
+                                            (current_season_product and ilvl!=334)),
                              season_override=(source_first.season_scope()
                                               if (source_first_stage or current_season_product) else None)))
     elif ordinary_variant is None:
@@ -387,7 +388,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
             "user_does_not_supply_full_gear_or_simc_profile":True,
             "source_independent_334_user_session":bool(independent_334),
             "source_independent_non334_user_session":bool(independent_target_level),
-            "non334_physical_simc_not_yet_observed":bool(independent_target_level),
+            "non334_physical_simc_not_yet_observed":bool(independent_target_level or
+                    (current_season_product and ilvl!=334)),
             "template_archetype":"/".join(key),"target_ilevel":ilvl,
             "generated_manifest":str(folder/"manifest.json"),
             "output_dir":str(folder/"simc_results"),"plan":plan,
@@ -414,7 +416,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
                 "v098_user_default_unchanged":True}
                if source_first_stage else {}),
             **({"current_season_product":True,
-                "v176_base_physical_26_of_26_verified":True,
+                "v176_base_physical_26_of_26_verified":ilvl==334,
                 "current_user_selected_options_verified_only_by_native":True,
                 "default_legacy_sessions_unchanged":True}
                if current_season_product else {})}
