@@ -1,0 +1,70 @@
+name: v182 Recheck ONE Omnium Versatility Source ID (Native 1 Max)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/v182_one_vers_rune_fix.py
+      - integration_probes/requests/v182_one_vers_source_fix_once.json
+      - .github/workflows/v182_one_vers_native.yml
+permissions:
+  contents: read
+  actions: read
+jobs:
+  native:
+    if: ${{ contains(github.event.head_commit.message, '[v182-just-vers-native]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: One exact request only, no repeated five successful cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,os,subprocess,pathlib
+          f="integration_probes/requests/v182_one_vers_source_fix_once.json"
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only","-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==[f],changed
+          doc=json.loads(pathlib.Path(f).read_text())
+          assert doc=={"schema":"v182_one_corrected_vers_native_v1",
+             "spec":"mage/frost","level":334,"target":"row4_vers",
+             "source_verified_rune_id":"136820:1","actual_previous_failed_name":"rune_of_versatile_warrior",
+             "max_new_native":1,"iterations":35,
+             "simc_revision":"7bc10711b5",
+             "simc_binary_sha256":"64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+             "reuse_previous_five_native_passes":True,"no_main_merge":True},doc
+          print("V182_ONE_NATIVE_CORRECTION_APPROVED")
+          PY
+      - uses: actions/cache/restore@v5
+        id: simc
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd-cli-release-nonetwork-r1
+      - name: Verify exact previously used SimC
+        shell: bash
+        run: |
+          test "${{ steps.simc.outputs.cache-hit }}" = true
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc-cache/v035/simc' | sha256sum -c
+          chmod +x .simc-cache/v035/simc
+      - name: Execute only corrected versatility physical profile
+        shell: bash
+        run: |
+          python integration_probes/v182_one_vers_rune_fix.py
+          python - <<'PY'
+          import json,pathlib
+          d=json.loads(pathlib.Path("out/v182/V182_OMNIUM_AND_CRAFT_NATIVE_SUMMARY.json").read_text())
+          assert d["passed"]==1 and len(d["cases"])==1
+          assert d["cases"][0]["status"]=="PASS_ONE_REAL_SIMC"
+          assert d["cases"][0]["native_attempted"]
+          print("V182_CORRECTED_FOURTH_ROW_VERS_NATIVE_PASS")
+          PY
+      - if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v182-corrected-one-vers-native-${{ github.run_id }}
+          path: out/v182/
+          retention-days: 7
+          if-no-files-found: warn
