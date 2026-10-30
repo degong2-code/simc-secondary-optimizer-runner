@@ -8,6 +8,8 @@ on:
       - runner/webui/app.js
       - runner/webui/index.html
       - tests/test_v182_simple_user_inputs_offline.py
+      - tests/test_v114_local_web_ui_offline.py
+      - tests/test_v167_local_gear_catalog_api.py
       - .github/workflows/v182_simple_user_input_ui.yml
 permissions:
   contents: read
@@ -41,7 +43,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m unittest -v tests.test_v182_simple_user_inputs_offline
-          python -m unittest -q tests.test_v108_user_consumables tests.test_v114_local_web_ui_offline tests.test_v113_local_web_api_offline tests.test_v177_current_season_product_flow tests.test_v179_current_season_input_paths_offline
+          python -m unittest -q tests.test_v108_user_consumables tests.test_v114_local_web_ui_offline tests.test_v113_local_web_api_offline tests.test_v177_current_season_product_flow tests.test_v179_current_season_input_paths_offline tests.test_v167_local_gear_catalog_api
           node --check runner/webui/app.js
       - name: Package updated Windows UX and verify reproducible runtime sources
         shell: bash
