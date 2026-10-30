@@ -118,6 +118,51 @@ class CurrentSeasonTierReconciliation(unittest.TestCase):
                              "CURRENT_SEASON_SELECTED_ITEM_NOT_IN_APPROVED_ROLE:head"):
             self.apply(u,rows,groups)
 
+    def test_actual_v098_product_head_craft_rebuilds_four_tier_zero_native(self):
+        import v098_target_user_scenario_bootstrap as bootstrap
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            fake=root/"simc-not-executed"
+            fake.write_bytes(b"NO_SIMC_EXECUTION")
+            u,_,_=self.setup_rows()
+            u["embellishments"]=[{"slot":"head","item_id":239652,
+                "options":{"crafted_stats":"32/36",
+                           "embellishment":"arcanoweave_lining"}}]
+            result=bootstrap.build(u,root/"valid",fake,"7bc10711b5",
+                                   current_season_product=True)
+            self.assertEqual(result["native_calls"],0)
+            self.assertEqual(result["restored_tier_slots"],["chest"])
+            self.assertEqual(set(result["effective_four_tier_slots"]),
+                             {"shoulders","chest","hands","legs"})
+            scenario=__import__("json").loads(
+                     (root/"valid"/"scenario.json").read_text("utf8"))
+            self.assertEqual(len(scenario["equipment"]["tier"]),4)
+            self.assertEqual(len(scenario["equipment"]["crafted"]),1)
+            profile=(root/"valid"/"profile.simc").read_text("utf8")
+            self.assertIn("head=selected_239652,id=239652",profile)
+            self.assertIn("chest=selected_"+str(self.map["chest"])+
+                          ",id="+str(self.map["chest"]),profile)
+
+    def test_actual_v098_product_two_tier_crafts_block_before_simc(self):
+        import v098_target_user_scenario_bootstrap as bootstrap
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            fake=root/"simc-not-executed"
+            fake.write_bytes(b"NO_SIMC_EXECUTION")
+            u,_,_=self.setup_rows()
+            u["embellishments"]=[
+                {"slot":"head","item_id":239652,
+                 "options":{"crafted_stats":"32/36",
+                            "embellishment":"arcanoweave_lining"}},
+                {"slot":"shoulders","item_id":239650,
+                 "options":{"crafted_stats":"32/36",
+                            "embellishment":"arcanoweave_lining"}}]
+            with self.assertRaisesRegex(
+                ValueError,"FOUR_TIER_IMPOSSIBLE_USER_OCCUPIES_TOO_MANY_SLOTS"):
+                bootstrap.build(u,root/"invalid",fake,"7bc10711b5",
+                                current_season_product=True)
+            self.assertFalse((root/"invalid"/"manifest.json").exists())
+
     def test_only_real_season_special_role_can_overlay_tier(self):
         u,rows,groups=self.setup_rows()
         # 159236 is plain cloth head, NOT user-selectable special effect.
