@@ -29,9 +29,9 @@ class EnchantCrossFeatureContract(unittest.TestCase):
                           side_effect=evidence.EnchantAdmissionBlocked("INVALID_EVIDENCE")):
             result=catalog.public_options()
         self.assertEqual(result["one_enchant_native_evidence_status"],
-                         "OPTIONAL_EVIDENCE_UNAVAILABLE_ALL_ENCHANT_CHOICES_LOCKED")
+                         "OPTIONAL_RATING_EVIDENCE_UNAVAILABLE_EAGLE_SEPARATE")
         self.assertEqual(result["enchant_candidates"]["total"],38)
-        self.assertEqual(result["enchant_candidates"]["selectable_count"],0)
+        self.assertEqual(result["enchant_candidates"]["selectable_count"],1)
         self.assertEqual(len(result["existing_allowed_input_choices"]["food"]),6)
         self.assertFalse(any("measured_E_in_one_simc_native_scope" in x
                              for x in result["enchant_candidates"]["items"]))
