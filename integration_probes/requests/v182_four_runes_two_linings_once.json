@@ -1,0 +1,23 @@
+{
+  "schema": "v182_one_six_user_option_native_v1",
+  "class": "mage",
+  "spec": "frost",
+  "ilevel": 334,
+  "one_shot_only": true,
+  "omnium_row_four": [
+    "crit",
+    "haste",
+    "mastery",
+    "vers"
+  ],
+  "craft_armor_linings": [
+    "arcanoweave_lining",
+    "sunfire_silk_lining"
+  ],
+  "native_call_cap": 6,
+  "iterations_each": 35,
+  "simc_revision": "7bc10711b5",
+  "simc_binary_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+  "new_optimizer": false,
+  "no_main_merge": true
+}
