@@ -30,7 +30,18 @@ BASE="https://download.simulationcraft.org/nightly/"
 GITHUB_RUNS="https://api.github.com/repos/simulationcraft/simc-publish/actions/runs?per_page=8"
 GITHUB_HOME="https://github.com/simulationcraft/simc-publish/actions"
 MAX_GITHUB_JSON=500_000
-NIGHTLY=re.compile(r"simc-(\d{3,5}(?:-\d{1,3})?)-win64-([a-f0-9]{7,12})\.7z\Z",re.I)
+# The official GitHub CPack archive uses `simc-1210.01.710c240-win64.7z`.
+# Older standalone nightly archives may use `simc-1210-01-win64-710c240.7z`.
+NIGHTLY=re.compile(
+    r"simc-(?:(?P<legacy_series>\d{3,5}(?:-\d{1,3})?)-win64-(?P<legacy_revision>[a-f0-9]{7,12})|"
+    r"(?P<official_series>\d{3,5}\.\d{1,3})\.(?P<official_revision>[a-f0-9]{7,12})-win64)\.7z\Z",re.I)
+def nightly_identity(filename):
+    match=NIGHTLY.fullmatch(filename)
+    if match is None:return None
+    series=match.group("official_series") or match.group("legacy_series")
+    revision=match.group("official_revision") or match.group("legacy_revision")
+    return {"filename":filename,"series":series,"revision_short":revision.lower()}
+
 MAX_ARCHIVE=250*1024*1024
 MAX_EXPANDED=1100*1024*1024
 MAX_ENTRIES=5000
@@ -120,12 +131,11 @@ def candidate_urls(html):
             or not parts.path.startswith("/nightly/")):
             continue
         name=pathlib.PurePosixPath(parts.path).name
-        m=NIGHTLY.fullmatch(name)
-        if m and urllib.parse.unquote(parts.path).endswith("/"+name):
-            choices[name]={"filename":name,"revision_short":m.group(2).lower(),
-               "series":m.group(1),"url":url}
+        identity=nightly_identity(name)
+        if identity and urllib.parse.unquote(parts.path).endswith("/"+name):
+            choices[name]={**identity,"url":url}
     return sorted(choices.values(),key=lambda x:
-        (tuple(int(p) for p in x["series"].split("-")),x["filename"]),reverse=True)
+        (tuple(int(p) for p in re.split(r"[.\-]",x["series"])),x["filename"]),reverse=True)
 
 def verify_inventory(listing):
     """Parse 7z -slt records, fail closed before any extraction."""
@@ -379,16 +389,15 @@ class SimCManager:
         need(type(archive_path) is str and len(archive_path)<=4096,
              "LOCAL_ARCHIVE_PATH_INVALID")
         path=pathlib.Path(archive_path).expanduser()
-        need(not path.is_symlink() and path.is_file()
-             and NIGHTLY.fullmatch(path.name) is not None
-             and 100000<path.stat().st_size<=MAX_ARCHIVE,
-             "LOCAL_WIN64_NIGHTLY_ARCHIVE_INVALID")
+        need(path.is_file() and not path.is_symlink(),
+             "LOCAL_NIGHTLY_FILE_NOT_FOUND")
+        identity=nightly_identity(path.name)
+        need(identity is not None,"LOCAL_NIGHTLY_FILENAME_UNSUPPORTED")
+        need(100000<path.stat().st_size<=MAX_ARCHIVE,
+             "LOCAL_NIGHTLY_ARCHIVE_SIZE_INVALID")
         resolved=path.resolve()
         with self.lock:
-            match=NIGHTLY.fullmatch(resolved.name)
-            self.offer={"filename":resolved.name,
-                        "revision_short":match.group(2).lower(),
-                        "series":match.group(1),"url":"LOCAL_ARCHIVE_SELECTED"}
+            self.offer={**identity,"url":"LOCAL_ARCHIVE_SELECTED"}
             self.offered_at=time.monotonic()
             def local_copy(_url,dest):
                 shutil.copyfile(resolved,dest)
