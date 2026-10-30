@@ -35,6 +35,13 @@ class SimpleUserInputs(unittest.TestCase):
                     sessions.user_scenario(controls)
 
     def test_four_stat_runes_leave_source_rows_except_fourth(self):
+        # An actual pinned-SimC execution rejected the invented name
+        # rune_of_versatile_warrior; the source-observed numeric token
+        # 136820:1 passed in a one-case corrective Native measurement.
+        self.assertEqual(consumables.OMNIUM_ROW4_BY_STAT["row4_vers"],
+                         "136820:1")
+        self.assertNotIn("rune_of_versatile_warrior",
+                         consumables.OMNIUM_ROW4_BY_STAT.values())
         for base in (
           "136822:1/136816:1/136817:1/136815:1/136814:1",
           "136822:1/136817:1/136821:1/136814:1",
