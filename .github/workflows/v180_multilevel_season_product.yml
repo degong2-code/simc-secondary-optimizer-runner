@@ -1,0 +1,130 @@
+name: v180 P1-C Season Gear Multi-level 26 x 5 + Six Actual Adaptive Native
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v098_target_user_scenario_bootstrap.py
+      - runner/v106_user_session_controller.py
+      - runner/v113_local_web_api.py
+      - runner/webui/app.js
+      - runner/webui/index.html
+      - tests/test_v177_current_season_product_flow.py
+      - tests/test_v180_multilevel_current_season_product_offline.py
+      - integration_probes/v180_multilevel_current_season_native_batch.py
+      - integration_probes/requests/v180_six_levels_adaptive_native_once.json
+      - .github/workflows/v180_multilevel_season_product.yml
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v180-one-six-case-multilevel-adaptive-season-native
+  cancel-in-progress: false
+jobs:
+  offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r requirements-web-test.txt
+      - name: 130 source-first plans and prior v153/v177/v179 regressions, zero SimC
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile integration_probes/v180_multilevel_current_season_native_batch.py \
+            runner/v098_target_user_scenario_bootstrap.py runner/v106_user_session_controller.py \
+            runner/v113_local_web_api.py
+          python3 -m unittest -v tests.test_v180_multilevel_current_season_product_offline
+          python3 -m unittest -q tests.test_v177_current_season_product_flow \
+            tests.test_v153_non334_independent_product_offline \
+            tests.test_v179_current_season_input_paths_offline
+          node --check runner/webui/app.js
+  native-six-cases:
+    needs: offline
+    if: ${{ contains(github.event.head_commit.message, '[v180-six-level-natives]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Require exact user-requested one-time six-case test matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          p="integration_probes/requests/v180_six_levels_adaptive_native_once.json"
+          changed=subprocess.check_output(["git","diff-tree","--no-commit-id","--name-only",
+            "-r",os.environ["GITHUB_SHA"]],text=True).splitlines()
+          assert changed==[p],changed
+          actual=json.loads(pathlib.Path(p).read_text())
+          expected={
+            "schema":"v180_one_six_case_current_season_non334_adaptive_v1",
+            "cases":[
+              ["warrior/fury",266,"titan_grip_low"],
+              ["hunter/beast_mastery",300,"ranged_mid"],
+              ["paladin/retribution",321,"two_hand_manual_T"],
+              ["rogue/outlaw",330,"dual_one_hand_two_targets"],
+              ["evoker/devastation",340,"caster_no_oil"],
+              ["mage/frost",344,"caster_upper_edge"]
+            ],
+            "current_season_product":True,
+            "max_cases":6,"native_max_each":6,"new_native_max_total":36,
+            "cache_only_verified_each":6,
+            "simc_revision":"7bc10711b5",
+            "simc_binary_sha256":"64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+            "no_optimizer_rebuild":True,"no_26_specs_native_rerun":True,
+            "no_main_merge":True,"no_project_ui_edit":True}
+          assert actual==expected,(actual,expected)
+          print("V180_EXACT_ONE_SIX_CASE_NATIVE_BATCH_APPROVED")
+          PY
+      - name: Restore existing pinned SimC binary; no new build
+        uses: actions/cache/restore@v5
+        id: simc
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd-cli-release-nonetwork-r1
+      - name: Enforce exact real SimC bytes
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.simc.outputs.cache-hit }}" = true
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc-cache/v035/simc' | sha256sum -c
+          chmod +x .simc-cache/v035/simc
+      - name: Six real new season non334 user adaptive sessions, 95%, six cache SHA replays
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          python3 integration_probes/v180_multilevel_current_season_native_batch.py \
+             --simc "$GITHUB_WORKSPACE/.simc-cache/v035/simc" \
+             --out "$GITHUB_WORKSPACE/out" | tee out/V180_BATCH_NATIVE.log
+          python3 - <<'PY'
+          import json,pathlib
+          r=json.loads(pathlib.Path("out/V180_MULTILEVEL_ADAPTIVE_SUMMARY.json").read_text())
+          assert r["status"]=="PASS_SIX_DIVERSE_NON334_FULL_ADAPTIVE_NATIVE",r
+          assert r["passed"]==6 and r["failed"]==0
+          assert r["new_native_calls_confirmed"]==36
+          assert r["new_native_attempts_reserved"]==36
+          assert all(x["status"]=="PASS_REAL_NATIVE_6_AND_CACHE_6" and
+                     x["verified_cache_hits"]==6 and
+                     x["cache_only_new_native"]==0 and
+                     x["observed_dps"]>0 and
+                     len(x["original_six_json2_sha256"])==6
+                     for x in r["cases"])
+          print("V180_6_SPECS_6_LEVELS_36_REAL_NATIVE_PLUS_6X6_CACHED_SHA_PASS")
+          PY
+      - name: Preserve all real output, successful and failed per-case SimC logs and receipts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v180-six-non334-source-first-adaptive-receipts-${{ github.run_id }}
+          path: out/
+          retention-days: 7
+          if-no-files-found: warn
