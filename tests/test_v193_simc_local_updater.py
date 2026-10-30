@@ -1,5 +1,5 @@
 """v193: offline official-nightly checks, safe 7z and management lifecycle."""
-import hashlib,json,pathlib,subprocess,sys,tempfile,time,unittest
+import hashlib,json,pathlib,ssl,subprocess,sys,tempfile,time,unittest,urllib.error
 from unittest import mock
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
@@ -31,6 +31,57 @@ class SimCUpdateUnit(unittest.TestCase):
                      '<a href="http://download.simulationcraft.org/nightly/simc-1215-01-win64-710c240.7z">']:
             with self.subTest(html=html):
                 self.assertEqual(mod.candidate_urls(html),[])
+
+    def test_invalid_tls_is_reported_and_github_alternative_does_not_install(self):
+        failure=urllib.error.URLError(ssl.SSLCertVerificationError("self-signed certificate"))
+        self.assertEqual(mod.index_error_code(failure),
+                         "OFFICIAL_NIGHTLY_TLS_CERTIFICATE_INVALID")
+        alternative={"source":"OFFICIAL_SIMC_GITHUB_ACTIONS",
+                     "run_id":40999844143,"artifact_id":12953786078,
+                     "artifact_zip_url":"https://github.com/simulationcraft/simc-publish/actions/runs/40999844143/artifacts/12953786078"}
+        with mock.patch.object(mod,"fetch_index",side_effect=failure),\
+             mock.patch.object(mod,"fetch_github_nightly",return_value=alternative) as github:
+            result=self.m.check()
+        github.assert_called_once()
+        self.assertIsNone(result["candidate"])
+        self.assertFalse(result["direct_install_available"])
+        self.assertTrue(result["manual_archive_required"])
+        self.assertEqual(result["official_index_problem"],
+                         "OFFICIAL_NIGHTLY_TLS_CERTIFICATE_INVALID")
+        self.assertEqual(result["github_alternative"],alternative)
+        self.assertIsNone(self.m.offer)
+        self.assertFalse((self.path/"managed").exists())
+
+    def test_official_github_artifact_found_even_if_nightly_run_failed(self):
+        calls=[]
+        def fake(url):
+            calls.append(url)
+            if url==mod.GITHUB_RUNS:
+                return {"workflow_runs":[{"id":40999844143,"name":"Nightly",
+                       "conclusion":"failure","created_at":"2026-10-30T03:53:23Z"}]}
+            return {"artifacts":[{"id":12953786078,
+                "name":"simc-nightly-win64-midnight","expired":False},
+                {"id":12953786079,"name":"simc-nightly-winarm64-midnight",
+                 "expired":False}]}
+        with mock.patch.object(mod,"fetch_github_json",side_effect=fake):
+            result=mod.fetch_github_nightly()
+        self.assertEqual(result["artifact_id"],12953786078)
+        self.assertIn("/40999844143/artifacts/12953786078",
+                      result["artifact_zip_url"])
+        self.assertFalse(result["direct_install_available"])
+        self.assertEqual(len(calls),2)
+
+    def test_official_and_github_network_failures_return_manual_instructions(self):
+        with mock.patch.object(mod,"fetch_index",
+                               side_effect=urllib.error.URLError("network down")),\
+             mock.patch.object(mod,"fetch_github_nightly",
+                               side_effect=urllib.error.URLError("network down")):
+            response=self.m.check()
+        self.assertEqual(response["official_index_problem"],
+                         "OFFICIAL_NIGHTLY_CONNECTION_UNAVAILABLE")
+        self.assertIsNone(response["github_alternative"])
+        self.assertTrue(response["github_actions_url"].startswith("https://github.com/"))
+        self.assertFalse(response["direct_install_available"])
 
     def test_inventory_blocks_absolute_traversal_duplicates_links_and_bombs(self):
         self.assertEqual(mod.verify_inventory(LIST),["simc.exe","profiles"])
