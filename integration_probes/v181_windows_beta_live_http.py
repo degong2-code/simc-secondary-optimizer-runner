@@ -94,8 +94,9 @@ def run(archive_path):
                      "REAL_SERVER_HEALTH_INVALID")
                 status,html=http(base,"/")
                 need(status==200 and
-                     b'id="current_season_product"' in html and
-                     b"simc-import-file" in html,
+                     b'id="current_season_product"' not in html and
+                     b"simc-import-file" in html and
+                     b"craft-compatibility-note" in html,
                      "BROWSER_UI_NOT_SERVED")
                 status,js=http(base,"/assets/app.js")
                 need(status==200 and b"current_season_product" in js,
