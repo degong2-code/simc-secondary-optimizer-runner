@@ -1,0 +1,17 @@
+{
+  "schema": "v186_exact_four_corrected_weapon_smoke_once_v1",
+  "specs": [
+    "deathknight/frost",
+    "rogue/assassination",
+    "shaman/enhancement",
+    "druid/feral"
+  ],
+  "iterations_each": 35,
+  "native_calls_max": 4,
+  "simc_revision": "7bc10711b5",
+  "simc_binary_sha256": "64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e",
+  "reuse_existing_v145_physical": true,
+  "new_optimizer": false,
+  "no_other_specs": true,
+  "no_main_or_project_ui_mutation": true
+}
