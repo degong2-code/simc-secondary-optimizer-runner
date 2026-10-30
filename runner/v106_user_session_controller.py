@@ -308,6 +308,7 @@ def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
         # when the 511/65 season catalog byte SHA stays exactly the same.
         # Make NEW corrected user sessions disjoint from pre-v184 Native.
         identity["current_season_weapon_selection_policy"]=stage.WEAPON_SELECTION_POLICY
+        identity["current_season_tier_layout_policy"]=bootstrap.common.CURRENT_SEASON_TIER_LAYOUT_POLICY
         identity["current_season_gear_sha256"]=sha(stage.gear.DEFAULT.read_bytes())
         identity["current_season_tier_sha256"]=sha(stage.TIER_PATH.read_bytes())
         identity["current_season_budget_sha256"]=sha(stage.BUDGET_PATH.read_bytes())
@@ -534,6 +535,9 @@ def _worker_locked(folder,binary,revision,static_cache,cache_only):
             need(identity.get("current_season_weapon_selection_policy")==
                  bootstrap.source_first.WEAPON_SELECTION_POLICY,
                  "OLD_WEAPON_POLICY_SESSION_START_NEW_CORRECTED_SESSION")
+            need(identity.get("current_season_tier_layout_policy")==
+                 bootstrap.common.CURRENT_SEASON_TIER_LAYOUT_POLICY,
+                 "OLD_TIER_LAYOUT_SESSION_START_NEW_CORRECTED_SESSION")
         actual_key,now=session_key(user,binary,revision,static_cache,
                                    ordinary_variant=variant,
                                    independent_334=independent,
