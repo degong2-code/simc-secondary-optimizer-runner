@@ -215,9 +215,12 @@ class LocalJobs:
                       "native_called":False,
                       "independent_target334_profile":independent,
                       "independent_non334_profile":independent_level,
-                      "non334_physical_native_not_yet_observed":independent_level,
+                      "non334_physical_native_not_yet_observed":(
+                          independent_level or
+                          (current_season and user["target"]["ilevel"]!=334)),
                       "current_season_product":current_season,
-                      "v176_26_of_26_base_physical_native":current_season}}
+                      "v176_26_of_26_base_physical_native":(
+                          current_season and user["target"]["ilevel"]==334)}}
         except Exception as exc:
             raise blocked(exc) from None
 
