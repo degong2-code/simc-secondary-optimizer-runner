@@ -9,6 +9,10 @@ on:
       - runner/v196_current_season_user_catalog.py
       - data/current_season_simc_enchant_candidates.json
       - tests/test_v196_current_season_ui_catalog.py
+      - runner/v197_verified_effect_budget.py
+      - runner/v197_enchant_effect_families.py
+      - tests/test_v197_verified_effect_budget.py
+      - tests/test_v197_enchant_effect_families.py
       - runner/v101_common_representative_equipment.py
       - tests/test_v188_user_choice_labels_and_slots.py
       - tests/test_v187_current_season_tier_overlay.py
@@ -50,7 +54,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python -m unittest -v tests.test_v182_simple_user_inputs_offline tests.test_v188_user_choice_labels_and_slots tests.test_v196_current_season_ui_catalog tests.test_v187_current_season_tier_overlay
+          python -m unittest -v tests.test_v182_simple_user_inputs_offline tests.test_v188_user_choice_labels_and_slots tests.test_v196_current_season_ui_catalog tests.test_v197_verified_effect_budget tests.test_v197_enchant_effect_families tests.test_v187_current_season_tier_overlay
           python -m unittest -q tests.test_v108_user_consumables tests.test_v114_local_web_ui_offline tests.test_v113_local_web_api_offline tests.test_v177_current_season_product_flow tests.test_v179_current_season_input_paths_offline tests.test_v167_local_gear_catalog_api
           node --check runner/webui/app.js
       - name: Package updated Windows UX and verify reproducible runtime sources
