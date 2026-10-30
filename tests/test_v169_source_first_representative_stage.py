@@ -88,6 +88,114 @@ class SourceFirstRepresentative(unittest.TestCase):
         with self.assertRaises(stage.RepresentativeBlocked):
             stage.build_all(self.db,scope)
 
+    def test_all_26_weapon_and_offhand_primary_stats_are_compatible(self):
+        # Prevent regression to v176: Native may execute successfully while
+        # the selected dagger/staff/sword has the WRONG primary stat.
+        plan=stage.build_all(self.db,self.tier)
+        by_id={x["item_id"]:x for x in self.db["items"]}
+        expected={"strength":4,"agility":3,"intellect":5}
+        self.assertEqual(len(plan["specializations"]),26)
+        checked=0
+        for key,info in plan["specializations"].items():
+            contract=stage.contracts.CONTRACTS[key]
+            cls=key.split("/")[0]
+            class_mask=self.tier["classes"][cls]["allowed_class_mask"]
+            primary=expected[contract["primary"]]
+            for slot,item_id in info["weapons"].items():
+                with self.subTest(spec=key,slot=slot,item_id=item_id):
+                    item=by_id[item_id]
+                    self.assertEqual(item["category"],"plain_representative_candidate")
+                    self.assertIs(type(item.get("stat_modifier_codes")),list)
+                    self.assertIn(primary,item["stat_modifier_codes"])
+                    mask=item.get("allowed_class_mask")
+                    if mask is not None:
+                        self.assertEqual(mask&class_mask,class_mask)
+                    if item["class_id"]==4:
+                        self.assertEqual(slot,"off_hand")
+                        self.assertIn(item["inventory_type"],(14,23))
+                    else:
+                        self.assertEqual(item["class_id"],2)
+                        self.assertIn(item["subclass_id"],
+                          stage.SPEC_SUBCLASS_PREFS.get(
+                            key,stage.FORM_SUBCLASS_PREFS[contract["weapon_form"]]))
+                        if contract["weapon_form"]=="ranged":
+                            self.assertIn(item["inventory_type"],(15,26))
+                        elif contract["weapon_form"] in ("dual_two_hand","single_two_hand"):
+                            self.assertEqual(item["inventory_type"],17)
+                        else:
+                            self.assertEqual(item["inventory_type"],13)
+                    checked+=1
+            self.assertEqual(
+                set(info["weapons"]),set(
+                    stage.contracts.WEAPON_FORMS[contract["weapon_form"]]))
+            self.assertEqual(
+                info["tier_ids"],self.tier["classes"][cls]["pieces"])
+        self.assertEqual(checked,44)
+
+    def test_historical_wrong_primary_choices_are_not_reused(self):
+        plan=stage.build_all(self.db,self.tier)["specializations"]
+        wrong={("mage/frost","main_hand"):159136,
+               ("druid/feral","main_hand"):159636,
+               ("deathknight/frost","off_hand"):158714,
+               ("rogue/assassination","off_hand"):159137,
+               ("shaman/enhancement","main_hand"):158369,
+               ("rogue/outlaw","main_hand"):158373}
+        for (key,slot),id in wrong.items():
+            with self.subTest(spec=key,slot=slot):
+                self.assertNotEqual(plan[key]["weapons"][slot],id)
+        self.assertEqual(plan["mage/frost"]["weapons"]["main_hand"],159137)
+
+    def test_missing_primary_or_malformed_codes_fail_closed(self):
+        broken=copy.deepcopy(self.db)
+        # There ARE many one-handed daggers, but none may be accepted as
+        # a mage weapon after their explicit INT code is removed.
+        for x in broken["items"]:
+            if x["category"]=="plain_representative_candidate" and (
+                x["class_id"]==2 and x["inventory_type"]==13):
+                x["stat_modifier_codes"]=[3]
+        mage_mask=self.tier["classes"]["mage"]["allowed_class_mask"]
+        with self.assertRaisesRegex(stage.RepresentativeBlocked,
+                                    "NO_COMPATIBLE_ONE_HAND_PRIMARY_WEAPON_PAIR"):
+            stage.shape_weapons(broken,"one_hand_frill",mage_mask,
+                                spec_key="mage/frost")
+        broken=copy.deepcopy(self.db)
+        for x in broken["items"]:
+            if x["category"]=="plain_representative_candidate" and (
+                x["class_id"]==4 and x["inventory_type"]==23):
+                x["stat_modifier_codes"]=[3]
+        with self.assertRaisesRegex(stage.RepresentativeBlocked,
+                                    "NO_COMPATIBLE_PRIMARY_OFFHAND_FRILL"):
+            stage.shape_weapons(broken,"one_hand_frill",mage_mask,
+                                spec_key="mage/frost")
+        # Stat code 73 without a known primary code is NOT proof of INT.
+        broken=copy.deepcopy(self.db)
+        for x in broken["items"]:
+            if x["category"]=="plain_representative_candidate" and (
+                x["class_id"]==2 and x["inventory_type"]==13):
+                x["stat_modifier_codes"]=[73]
+        with self.assertRaises(stage.RepresentativeBlocked):
+            stage.shape_weapons(broken,"one_hand_frill",mage_mask,
+                                spec_key="mage/frost")
+
+    def test_profile_serializes_corrected_mage_primary_weapon(self):
+        import v139_pure_target_profile_composer as pure
+        preset=pure.catalog()
+        ch={"class":"mage","spec":"frost",
+            "race":"human","talents":"abc123456789"}
+        trinkets=[{"slot":slot,"item_id":iid,"options":{}}
+                  for slot,iid in zip(("trinket1","trinket2"),
+                   [r["item_id"] for r in self.db["items"]
+                    if r["category"]=="trinket"][:2])]
+        result=stage.compose_stage(ch,trinkets,db=self.db,tier=self.tier,
+                                   settings=preset)
+        line=next(x for x in result["profile_text"].splitlines()
+                  if x.startswith("main_hand="))
+        self.assertIn("id=159137",line)
+        self.assertNotIn("id=159136",line)
+        self.assertEqual(result["profile_receipt"]["four_tier_item_ids"],
+              {k:self.tier["classes"]["mage"]["pieces"][k]
+               for k in stage.FOUR})
+
     def test_weapon_inventory_form_only_not_class_proficiency(self):
         plan=stage.build_all(self.db,self.tier)["specializations"]
         self.assertEqual(len(plan["warrior/fury"]["weapons"]),2)
