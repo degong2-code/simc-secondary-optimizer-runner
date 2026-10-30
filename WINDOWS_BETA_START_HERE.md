@@ -17,6 +17,8 @@
 >
 > **2026-10-31 v203 마부 8025 호환성 감사:** 이번 시즌 마부 38종은 계속 **목록 열람 전용**입니다. Silvermoon's Alacrity (`enchant_id=8025`)의 **가속 +30**은 정확한 대표 냉법334·Linux SimC `710c240` 한 조건에서만 실측된 기록입니다. 일반 사용자의 Windows UI에서 직접 선택하거나 DPS 계산 예산에 가산할 수 **없습니다**. 이 값은 이미 있는 `G`의 **비자유분배 고정 하한 E**일 뿐, `T=G+J+F+O`를 바꾸거나 기름 `O` 또는 `gear_*`에 추가하는 수치가 아닙니다. 같은 반지에 특수장비 고정 `L`을 적용하는 중복도 내부 개발 경로에서 차단합니다. 검증한 개발용 정확 프로필의 기존 적응형 SimC **6/6 Native PASS + 캐시 6/6 HIT**는 사용자가 임의로 바꾼 장비·특성·종족·전투조건/Windows 바이너리의 검증을 의미하지 않습니다. 시즌 데이터 관측 증거가 누락되거나 손상되면 해당 실측값 표시는 생략하되 기존 음식·물약/38종 목록은 보존하고 마부 직접 선택은 잠근 상태입니다. 상세 [GitHub 감사·정책 부록](https://github.com/degong2-code/simc-secondary-optimizer-runner/blob/probe/chat-cache-v035-20261024/docs/V203_ENCHANT_8025_CROSS_FEATURE_AUDIT_AND_POLICY_ADDENDUM.md).
 >
+> **v204 개발용 선택 마부 예산 교정 (Windows 사용자 기능 미승격):** 검증된 마부를 실제 선택한 *개발용 정확 프로필*에 한하여 목표 ilvl 참조 B와 최종 T에 해당 고정 rating을 한 번 포함시키도록 격리 브랜치의 계산 계약을 교정했습니다. 마부를 선택하지 않은 일반 Windows 실행·수동 최종 T·기존 Native 캐시는 그대로입니다. 현재 일반 사용자 마부 38종은 **읽기 전용**이며, Linux v203의 예전 B3150/T3182 Native 결과는 변경된 새 예산 B3180/T3212의 DPS 결과로 재사용하지 않습니다. 새 v204 Actions PASS와 Windows 실제 Native 확인 전까지 마부 선택을 켜거나 Windows 결과가 검증됐다고 주장하지 않습니다. [변경 영향·검증 상세](https://github.com/degong2-code/simc-secondary-optimizer-runner/blob/probe/chat-cache-v035-20261024/docs/V204_SELECTED_ENCHANT_BUDGET_IMPACT_AND_EVIDENCE.md).
+
 ## 시작하기
 
 1. `SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip`을 **압축 해제**합니다. 압축파일 내부에서 직접 CMD를 실행하지 않습니다.
