@@ -1,0 +1,102 @@
+name: v201 One Enchant Under Gear Override (2 Native Max)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/v201_enchant_gear_override_native.yml]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  exact-two:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Restore exact existing v192 Native binary
+        id: cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .simc-cache/v192/
+          key: v192-ubuntu2404-710c2408bfd3ae4df71b8cd55cdf01f63fd6c926-cli-r1
+      - name: Download sealed v199 physical samples
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 41075851509
+          name: v199-one-ring-matched-native-41075851509
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: baseline
+      - name: Compare same enchant with four explicit gear rating overrides
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.cache.outputs.cache-hit }}" = "true"
+          sha256sum -c .simc-cache/v192/simc.sha256
+          python - <<'PY'
+          import hashlib,json,pathlib,subprocess
+          files=list(pathlib.Path("baseline").rglob("receipt.json"))
+          assert len(files)==1
+          d=files[0].parent
+          proof=json.loads(files[0].read_text())
+          assert proof["comparison"]["enchant_id"]==8025 and proof["identity"]["revision"]=="710c2408bf"
+          h=lambda x:hashlib.sha256(x).hexdigest()
+          assert h((d/"before.simc").read_bytes())==proof["base_input_sha256"]
+          assert h((d/"after.simc").read_bytes())==proof["enchant_input_sha256"]
+          out=pathlib.Path("v201-results");out.mkdir(exist_ok=True)
+          override={"crit_rating":700,"haste_rating":700,"mastery_rating":700,"versatility_rating":700}
+          rawinputs={}
+          for name in ("before","after"):
+            source=(d/(name+".simc")).read_text()
+            assert not any(x.startswith("gear_") for x in source.splitlines())
+            # Insert overrides before json2. Existing foods, buffs, gear are unchanged.
+            insert="".join("gear_"+k+"="+str(v)+"\n" for k,v in override.items())
+            source=source.replace("json2=",insert+"json2=",1)
+            output=(out/(name+".json")).resolve()
+            lines=[("json2="+str(output) if x.startswith("json2=") else x)
+                   for x in source.splitlines()]
+            content="\n".join(lines)+"\n"
+            (out/(name+".simc")).write_text(content)
+            rawinputs[name]=h(content.encode())
+            with (out/(name+".log")).open("wb") as log:
+              done=subprocess.run([".simc-cache/v192/simc",str((out/(name+".simc")).resolve())],
+                  stdout=log,stderr=subprocess.STDOUT,timeout=150)
+            assert done.returncode==0 and output.exists(),(name,done.returncode)
+          a=json.loads((out/"before.json").read_text())
+          b=json.loads((out/"after.json").read_text())
+          def rated(x):
+            assert x["report_version"]=="2.0.0"
+            assert str(x["git_revision"]).startswith("710c240")
+            v=x["sim"]["players"][0]["collected_data"]["buffed_stats"]["stats"]
+            return {k:round(v[k]) for k in override}
+          before=rated(a);after=rated(b)
+          diff={k:after[k]-before[k] for k in before}
+          print("V201_GEAR_OVERRIDE_WITH_ENCHANT_EXACT_NATIVE_DELTA",before,after,diff,flush=True)
+          assert all(isinstance(v,int) for v in diff.values())
+          for label in ("before","after"):
+            x=a if label=="before" else b
+            finger=x["sim"]["players"][0]["gear"]["finger1"]["encoded_item"]
+            assert ("enchant_id=8025" in finger)==(label=="after"),finger
+          receipt={"schema":"v201_gear_override_enchant_compatibility_v1",
+              "source_v199_run":41075851509,"new_native_calls":2,
+              "binary_sha256":h(pathlib.Path(".simc-cache/v192/simc").read_bytes()),
+              "scenario":"same_generic_frost_334_exact_profile_plus_four_gear_700_overrides",
+              "finger1_enchant_id":8025,"override_vector":override,
+              "input_sha256":rawinputs,
+              "native_json_sha256":{x:h((out/(x+".json")).read_bytes()) for x in ("before","after")},
+              "buffed_precombat_before":before,"buffed_precombat_after":after,
+              "observed_delta":diff,
+              "product_planner_changed":False,"user_cache_changed":False}
+          (out/"receipt.json").write_text(json.dumps(receipt,indent=2)+"\n")
+          PY
+      - name: Store v201 native proof
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v201-two-native-with-gear-override-${{ github.run_id }}
+          path: v201-results/
+          retention-days: 3
+          if-no-files-found: warn
