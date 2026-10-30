@@ -1,5 +1,5 @@
 """v193: offline official-nightly checks, safe 7z and management lifecycle."""
-import hashlib,json,pathlib,sys,tempfile,time,unittest
+import hashlib,json,pathlib,subprocess,sys,tempfile,time,unittest
 from unittest import mock
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
@@ -145,6 +145,25 @@ class SimCUpdateUnit(unittest.TestCase):
             with self.assertRaisesRegex(mod.UpdateBlocked,"PE_OFFSET"):
                 mod.extract_safe(archive,root,"mock7z")
             self.assertFalse((self.path/"managed").exists())
+
+    @unittest.skipUnless(sys.platform=="win32","Windows actual 7-Zip subprocess required")
+    def test_real_windows_7z_roundtrip_synthetic_pe_only(self):
+        sevenzip=mod.find_sevenzip()
+        if not sevenzip:self.skipTest("7-Zip executable not installed on runner")
+        source=self.path/"input";source.mkdir()
+        body=bytearray(b"MZ"+b"x"*200000)
+        body[0x3c:0x40]=(0x80).to_bytes(4,"little")
+        body[0x80:0x86]=b"PE"+bytes((0,0,0x64,0x86))
+        (source/"simc.exe").write_bytes(body)
+        archive=self.path/NAME
+        created=subprocess.run([sevenzip,"a","-t7z",str(archive),"simc.exe"],
+               cwd=source,capture_output=True,text=True,timeout=30)
+        self.assertEqual(created.returncode,0,created.stderr[-300:])
+        result=self.m.install_local(str(archive),sevenzip=sevenzip)
+        self.assertTrue(pathlib.Path(result["active_binary"]).is_file())
+        self.assertEqual(result["installed"]["archive_source"],
+                         "USER_LOCAL_FILE_ORIGIN_NOT_AUTHENTICATED")
+        self.assertIsNone(self.m.rollback()["active_binary"])
 
     def test_linux_platform_install_not_supported(self):
         linux=mod.SimCManager(self.path/"linux",platform="linux")
