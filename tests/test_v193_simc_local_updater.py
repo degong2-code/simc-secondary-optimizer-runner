@@ -151,7 +151,7 @@ class SimCUpdateUnit(unittest.TestCase):
         sevenzip=mod.find_sevenzip()
         if not sevenzip:self.skipTest("7-Zip executable not installed on runner")
         source=self.path/"input";source.mkdir()
-        body=bytearray(b"MZ"+b"x"*200000)
+        body=bytearray(b"MZ"+hashlib.shake_256(b"simc-v193-safe-test").digest(200000))
         body[0x3c:0x40]=(0x80).to_bytes(4,"little")
         body[0x80:0x86]=b"PE"+bytes((0,0,0x64,0x86))
         (source/"simc.exe").write_bytes(body)
