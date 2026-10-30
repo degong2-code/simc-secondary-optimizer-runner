@@ -46,3 +46,13 @@ no new solver, no external secrets. Windows real Native is newly unverified unti
 finishes; early stage artifact download or environment failure must be reported separately
 from SimC calculation failure. Preserve v204 and original user/native/cache receipts.
 Keep repository visibility and main authority unchanged.
+
+## Actual v205 Windows Native result — VERIFIED, bounded to one scope
+
+[GitHub Actions #41104719130](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41104719130), job `124231140970`, commit `c2af7302e1cb99d6124ae34644638d4b41de9658`: **SUCCESS**. Actual Windows Server 2022 runner extracted previously published official SimC-publish Windows artifact #12953786078 (archive SHA `386b2827...`, executable SHA `0ad16368cd1effb19c793dbce63518ccb72fec89c72f6ef75d9afca239a039e8`) and ran the real Python worker spawned by the localhost FastAPI session endpoint. The upstream `simc-publish` overall nightly workflow had failed, but its individual Windows archive artifact passed the exact SHA check and ran successfully; do not describe the entire upstream nightly run as PASS.
+
+**Live bounded result:** current-season **paladin/retribution ilvl334**, no selected permanent enchant; `B=3150,O=32,T=3182`; actual SimC **new Native6**, local HTTP `plan→start→status→result` success, best observed DPS **182585.8140396792**, SEM **273.08219278948366**, confidence **95%**, global optimum **not proven**. Same sealed session `cache-only` replay verified **6/6 HIT, zero additional Native, identical DPS/SEM/95% results**. Six original Native JSON2 SHA-256 witnesses recorded in [v205 compact receipt](V205_WINDOWS_ONE_USER_NATIVE_VERIFIED_RECEIPT_20261031.json). Evidence artifact ZIP #13000372344 downloaded and its outer SHA `20eb3cbb1b52e339d6c4c106bbbe44b52d5a1a22e79ae5af7a0d836bb4dfca90` confirmed; no personal user data or full JSON2 committed.
+
+**Not proven:** Windows user physical computer/GUI click, all 26 specializations or optional item combinations, Windows permanent enchant, 95%-certified global optimum, mid-Native interruption on this exact Windows worker, or the original v016 immutable source integration. Historical Windows DPS numbers with different profiles are not comparable as performance gains/losses. No second solver, full season refetch or 26×6 Native run.
+
+**P1 next:** reliable self-service exact static L for user-selected special equipment without asking users to prepare Native caches; cache-first, reuse exact item/ilvl/options records, acquire only truly missing variant via a bounded SimC Native static item probe using the existing v046 parser, and preserve no-special legacy identity and no-L=0 guarantee. This is a product usability gap, not a reason to rerun completed v205 or v204.
