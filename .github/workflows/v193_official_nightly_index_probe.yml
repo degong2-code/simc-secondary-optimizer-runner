@@ -25,19 +25,23 @@ jobs:
           import json,pathlib,sys
           sys.path.insert(0,"runner")
           import v193_simc_local_updater as u
-          html=u.fetch_index()
-          found=u.candidate_urls(html)
-          summary={"schema":"v193_official_index_network_smoke_v1",
-                   "status":"OFFICIAL_NIGHTLY_INDEX_PARSED" if found else "NO_WINDOWS_NIGHTLY",
+          manager=u.SimCManager(pathlib.Path("unused-no-install"),platform="win32")
+          result=manager.check()
+          summary={"schema":"v194_official_simc_release_source_diagnostic_v1",
+                   "status":"OFFICIAL_DIRECT_READY" if result["candidate"] else
+                       "OFFICIAL_GITHUB_MANUAL_READY" if result.get("github_alternative") else
+                       "MANUAL_ONLY_METADATA_UNAVAILABLE",
                    "index":u.BASE,
-                   "candidates_count":len(found),
-                   "candidates":[{"filename":x["filename"],"revision_short":x["revision_short"]} for x in found[:8]],
-                   "archive_downloaded":False,
+                   "official_index_problem":result.get("official_index_problem"),
+                   "github_alternative":result.get("github_alternative"),
+                   "direct_candidate":result["candidate"],
+                   "download_performed":False,
                    "executable_installed":False,
                    "native_calls":0}
-          pathlib.Path("out/v193_official_index_receipt.json").write_text(json.dumps(summary,indent=2)+"\n")
+          pathlib.Path("out/v194_source_fallback_receipt.json").write_text(json.dumps(summary,indent=2)+"\n")
           print(json.dumps(summary,indent=2))
-          assert found,"OFFICIAL_WINDOWS_7Z_CANDIDATE_NOT_FOUND"
+          assert result["candidate"] or result.get("github_alternative"),"NO_OFFICIAL_DISCOVERY_SOURCE"
+          assert not pathlib.Path("unused-no-install").exists()
           PY
       - if: always()
         uses: actions/upload-artifact@v6
