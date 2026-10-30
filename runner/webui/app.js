@@ -793,7 +793,10 @@ function renderSeasonOptionCatalog(catalog) {
     " · SimC 장식/다크문 효과 등록 "+(raw.embellishment_darkmoon_registrations??"?")+
     " · 보석 속성 기록 "+(raw.gem_property_records??"?")+
     " · 최고 품질 마부 후보 "+enchants.total+
-    "개 (승인 전 자료 · 신규 사용자 선택은 잠금)";
+    "개 (승인 전 자료 · 신규 사용자 선택은 잠금)"+
+    (catalog.one_enchant_native_evidence_status==="EXACT_SCOPE_OBSERVED_READ_ONLY"?
+      " · 조건부 마부 Native 증거 1건 관측":
+      " · 조건부 마부 Native 증거 확인 불가, 수치 표시 생략");
   const names={boots:"장화",chest:"가슴",helm:"머리",ring:"반지",
                shoulders:"어깨",weapon:"무기"};
   for(const kind of ["helm","shoulders","chest","boots","ring","weapon"]) {
