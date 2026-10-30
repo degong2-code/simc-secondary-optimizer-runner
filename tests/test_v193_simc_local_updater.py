@@ -212,7 +212,7 @@ class SimCUpdateUnit(unittest.TestCase):
         self.assertTrue(result["active_binary"])
         # An attacker can't inject remote URLs or arbitrary extensions.
         with self.assertRaisesRegex(mod.UpdateBlocked,
-                                    "LOCAL_WIN64_NIGHTLY_ARCHIVE_INVALID"):
+                                    "LOCAL_NIGHTLY_FILE_NOT_FOUND"):
             self.m.install_local(str(self.path/"evil.exe"),sevenzip="mock7z")
 
     def test_pe64_header_validation_blocks_mz_only_and_untrusted_architecture(self):
