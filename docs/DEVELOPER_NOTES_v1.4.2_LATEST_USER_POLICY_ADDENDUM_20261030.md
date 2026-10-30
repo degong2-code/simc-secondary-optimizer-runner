@@ -51,3 +51,16 @@
 - **제품 효율:** 기존 시즌/정적 item 캐시를 SimC revision만으로 버리지 않는다. DPS 캐시는 바이너리·프로필/마부/옵션·전투조건·iterations identity로 구별한다. 독립 작업은 묶어 검증, 변경으로 무효화한 조건만 최소 Native 시험. 제품 코드/원본 v015/v016 직접 병합/공식 main·v003·Work OS·Project Sources/Instructions UI 승격은 별도 권한.
 
 **증거 확장 상세:** [v203 감사와 정책 부록](V203_ENCHANT_8025_CROSS_FEATURE_AUDIT_AND_POLICY_ADDENDUM.md). **최신 상태는 항상 GitHub 브랜치 HEAD와 CURRENT 상단 우선**. 이번 GitHub 개발자 보충 갱신으로 ChatGPT Project Source에 실제 등록됐다고 판단하지 않는다.
+
+## 6. 2026-10-31 사용자 직접 교정 — 선택한 정적 마부만 자동 참조 B/T 증가
+
+**이 절은 §5의 'E는 항상 기존 G 내부이고 자동 B/T에 가산하지 않는다'는 결론을 정확히 한 부분만 교정한다.** 사용자가 실제 정적 2차스탯 마부를 고른 경우, 마부 없는 대표 프로필의 ilvl 참조 B에 해당 마부의 Native 검증 E를 한 번만 추가하는 것이 제품의 미래 파밍 목표와 일치한다. 마부를 선택하지 않은 경우 기존 79×2 참조 B·G/T·시뮬레이션/캐시/세션 정체성은 불변이다.
+
+- **자동 ilvl 기준:** `B_effective=B_reference+sum(E)`, `G_effective=G_reference+sum(E)`, `T_effective=B_effective+O`. E는 새로 발생한 G 내의 **고정 스탯**, 재분배 금지. 기존 J/F/O/L 산술과 자유분배 floor를 유지한다. 기준표 값은 수정하지 않는다.
+- **사용자 수동 최종 T:** 입력 T는 이미 기름과 실제 선택 마부를 포함한 공식 최종 총량이다. `B=T-O`, E는 B 내 잠긴 하한일 뿐 **T/B를 다시 증가시키지 않는다**. 작은 수동 총량이 E/L/F 등 고정치에 못 미치면 Native 전 차단.
+- **숫자 주입:** 기존 SimC `gear_*` 덮어쓰기 특성상 후보에서 이미 포함된 E를 별도 더하지 않는다. 오직 후보의 변경된 `B_effective`와 `O`를 기존 한 번씩 적용하며 Native JSON2 최종 rating 정합을 확인한다.
+- **엄격한 범위:** 지금 구현은 원본 v202/v203 증거의 **Linux 냉법334, 정확 전체 프로필·바이너리 SHA, finger1 item158366/enchant8025, E=가속30**이라는 개발용 선택 경로 한정. 다른 37종·Windows 사용자 마부 UI는 계속 미승격. 일반 사용자 `v106`에서 개발용 마부 필드 거부 유지.
+- **검증 지위:** 코드/오프라인 검사 경로 추가는 새 PASS가 아니다. 과거 v203 `B3150/T3182` Native6·캐시6은 역사 증거이며 새 `B3180/T3212` 결과 증거가 될 수 없다. v204 오프라인 Ubuntu/Windows 및 최대 Native6+cache6의 새 영수증은 정확한 Actions 실물로 확인 후 별도 기록한다.
+- **변경 영향:** 예산 소스/참조 증거, L/E/O 중복, candidate bounds, 시나리오 digest, profile/case/cache key, 강제 종료·부분 재개, 구형 세션 보존, Web/Windows 마부 선택 잠금, CI 비용·메모리/I/O·정적 캐시 불변을 한꺼번에 검토한다. 상세 `docs/V204_SELECTED_ENCHANT_BUDGET_IMPACT_AND_EVIDENCE.md`.
+
+본 보충은 GitHub 격리 코드·문서에만 적용됐다. 공식 v1.4.1 원문·ChatGPT Project Sources/Instructions·Work OS·main·v003 immutable 승격과 무관하다.
