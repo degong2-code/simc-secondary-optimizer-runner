@@ -39,3 +39,15 @@
 - 모든 코드 변경마다 속도/Native 중복/API·CSV I/O/메모리/캐시 identity를 점검. 완료 구현/새 PASS·FAIL/재사용 역사 증거/미구현 구분. 제품 개발이 Work OS M0에 의해 막히지 않으나 `main`, v003 immutable, 원본 v016, Project Sources/Instructions UI 적용, Work OS 공식 승격은 **별도 사용자 승인**. GitHub CURRENT 수정 ≠ Project UI 적용.
 
 **이 보충본과 최신 인계 문서는 프로젝트 UI 변경을 자동 수행하지 않는다. 사용자 직접 승인된 설계 해석에만 우선하며, v1.4.1 원본의 비충돌 정책은 계속 유효하다.**
+
+## 5. 2026-10-31 v203 마부 회계 및 기존 기능 충돌 방지 — 후속 증거 보충
+
+**현행 사용자 정책을 재확인:** 오직 **DPS 26개 전문화**, 증강 기원사·탱커·힐러 제외. 본문에 인용된 v1.4.1의 27개/증강 포함은 구형 역사 정책이며 이 v1.4.2와 최근 사용자 직접 결정을 덮어쓰지 않는다. 이 단락은 v1.4.1 원문·공식 Project UI를 수정하거나 새 승인 규칙을 발명하는 것이 아니다.
+
+- **E의 위치:** 마부의 Native 관측 고정 rating `E`는 이미 목표 총량 안에 있는 `G`의 **비자유분배 스탯별 하한**이다. `T=G+J+F+O`, `B=G+J+F`는 불변. 기름 `O`, 특수장비 `L`, 보석 `J`, 영약 `F`와 별도 소유권을 지킨다. `E`를 총량이나 `gear_*` 숫자에 추가하면 이중 계산된다. 선택 특수장비/장식의 동일 슬롯 `L`·`E` 중복 잠금은 원자적으로 거부한다. 기존 후보 탐색·SimC APL/proc/DPS/95%·캐시/취소/재개 코드를 재발명하지 않는다.
+- **정확한 증거/적용 범위:** [v199 #41075851509](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41075851509) Native2, [v200 #41076597270](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41076597270) 기존 JSON2 SHA 정정·Native0: `finger1 item158366/enchant8025` 가속 **1004→1034(+30)**. [v201 #41078102843](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41078102843) Native2: 동일 `gear_*` override 시 가속 **735→735(추가0)**. [v203 전체 적응형 #41083301873](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41083301873) Linux exact SimC rev `710c2408bf`/SHA·냉법334 대표 전체 프로필 SHA `8305a811137db6f557f8076dfa44a4a1a359111d60bb7452225e1573bf72a401`에서 **Native6 PASS, 캐시 재실행 6/6 HIT, 신규0, B3150/T3182, 고유후보4, 95% 비교**. 이 SHA 조건 외의 특성·종족·장신구·장비·전투·Windows SimC에는 E30 자동 재사용 금지.
+- **v203 교정 네 경계:** 동일 반지 특수 `L`/제작장식 충돌 차단, Native v200/v201 원본 SHA와 artifact ID 고정·이상 시 원자적 거부, 전체 프로필 SHA 적용 범위 잠금, E 증거 누락/손상 시에도 기존 38종 마부 read-only 목록과 음식·물약 기능 보존. 사용자 Web/v106의 마부 선택은 **미승격**. Native 6+6 캐시 성공은 모든 선택 조합과 Windows 실측을 증명하지 않는다. 실제 마부 세션 **중간 강제 종료/부분 재개**, Windows exact binary, 다른 37종 마부는 별도 미완료.
+- **검증:** [v203 Ubuntu/Windows 감사 #41084413183](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41084413183) 각 OS 21 단위 + 2 패키징 PASS; 이후 최신 HEAD `b2d727c7…`의 [Windows 소스 ZIP #41085651541](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41085651541), [UI #41085651522](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41085651522), [Web API #41085651503](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41085651503) PASS. 해당 HEAD의 v180 등 Native jobs는 **SKIPPED**이며 이전 실측을 재사용한 것; 신규 Native 실행으로 계산하지 않는다.
+- **제품 효율:** 기존 시즌/정적 item 캐시를 SimC revision만으로 버리지 않는다. DPS 캐시는 바이너리·프로필/마부/옵션·전투조건·iterations identity로 구별한다. 독립 작업은 묶어 검증, 변경으로 무효화한 조건만 최소 Native 시험. 제품 코드/원본 v015/v016 직접 병합/공식 main·v003·Work OS·Project Sources/Instructions UI 승격은 별도 권한.
+
+**증거 확장 상세:** [v203 감사와 정책 부록](V203_ENCHANT_8025_CROSS_FEATURE_AUDIT_AND_POLICY_ADDENDUM.md). **최신 상태는 항상 GitHub 브랜치 HEAD와 CURRENT 상단 우선**. 이번 GitHub 개발자 보충 갱신으로 ChatGPT Project Source에 실제 등록됐다고 판단하지 않는다.
