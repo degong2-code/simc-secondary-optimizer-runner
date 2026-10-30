@@ -288,8 +288,14 @@ def build(user,folder,binary,revision,static_cache_path=None,
         rows["head"]["options"].get("gem_id","0"))
     common.ensure_representative_gem_colors(rows,gem_choice,need)
     if ENCHANT_FIELD in user:
-        # Narrow internal evidence path; ordinary v106/web controls DO NOT
-        # accept this field until product-specific Native release tests.
+        # The same selected ring cannot be counted both as the exact
+        # special-item L slot and a separate enchant E contribution.
+        need(not any(r["slot"]=="finger1" for group in
+                     ("special_items","embellishments")
+                     for r in user[group]),
+             "V203_ENCHANT_E_OVERLAPS_SELECTED_L_OR_CRAFTED_SLOT")
+        # Internal exact-evidence path only. Normal v106/web controls
+        # continue to reject this developer-only field.
         verified_enchant.apply_verified_ring(
             rows,user[ENCHANT_FIELD],key,ilvl,need)
     # New plans use ONE common slot order for all archetypes. Existing sealed
