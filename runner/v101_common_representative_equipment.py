@@ -360,13 +360,92 @@ def reconcile_four_tier(key,rows,groups,taken,ilevel,need,*,fifth_override=None)
          "FOUR_TIER_NOT_SATISFIED")
     return added
 
+def reconcile_current_season_five_tier(key,rows,groups,taken,ilevel,
+                                       need,*,tier_map):
+    """Deterministic 4-of-5 layout after user items, not gear-combo search.
+
+    User-selected occupied slots are immutable. Native/catalyzed tier rows
+    count once, crafted and ordinary specials do not. Only unoccupied tier
+    slots can be internally promoted/demoted. Never invent an item ID.
+    """
+    import v143_specialization_contracts as contracts
+    import v167_product_season_gear_adapter as product_gear
+    import v169_source_first_representative_stage as source_stage
+    need(set(tier_map)==set(TIER_FIVE),
+         "CURRENT_SEASON_FIVE_CLASS_TIER_IDS_REQUIRED")
+    need(all(slot in rows for slot in TIER_FIVE),
+         "CURRENT_SEASON_FIVE_PHYSICAL_TIER_SLOTS_REQUIRED")
+    restored=[]
+    tier_count=sum(groups.get(slot)=="tier" for slot in TIER_FIVE)
+    # The user may freely place ONE crafted/non-catalyst special on a tier
+    # position; a second one inside these five makes four tiers impossible.
+    if tier_count<4:
+        for slot in TIER_FIVE:
+            if groups.get(slot) is None and slot not in taken:
+                options={k:v for k,v in rows[slot]["options"].items()
+                         if k in ("gem_id","enchant","enchant_id")}
+                rows[slot]={"slot":slot,"item_id":tier_map[slot],
+                            "ilevel":ilevel,"options":options}
+                groups[slot]="tier"
+                restored.append(slot)
+                tier_count+=1
+                if tier_count==4:break
+        need(tier_count==4,"FOUR_TIER_IMPOSSIBLE_USER_OCCUPIES_TOO_MANY_SLOTS")
+    # An eligible catalyst special in the original fifth (chest) is a tier
+    # contributor, so exactly ONE other unselected native tier must become
+    # an ordinary *same-season, same-armor, correct-primary* representative.
+    if tier_count>4:
+        spec=contracts.lookup(*key)
+        need(spec is not None,"CURRENT_SEASON_SPEC_UNKNOWN")
+        product=product_gear.read()
+        family=product_gear.ARMOR_SUBCLASS[spec["family"]]
+        codes=source_stage.PRIMARY_STAT_CODES[spec["primary"]]
+        tier=source_stage.load_tier()
+        mask=tier["classes"][key[0]]["allowed_class_mask"]
+        inventory={"head":(1,),"shoulders":(3,),"chest":(5,20),
+                   "hands":(10,),"legs":(7,)}
+        used={r["item_id"] for r in rows.values()}
+        for slot in ("legs","hands","shoulders","head","chest"):
+            if slot in taken or groups.get(slot)!="tier":continue
+            candidates=sorted(x["item_id"] for x in product["items"]
+                if x["category"]=="plain_representative_candidate"
+                and x["class_id"]==4 and x["subclass_id"]==family
+                and x["inventory_type"] in inventory[slot]
+                and x["item_id"] not in used
+                and type(x.get("stat_modifier_codes")) is list
+                and any(code in codes for code in x["stat_modifier_codes"])
+                and (x["allowed_class_mask"] is None or
+                     (type(x["allowed_class_mask"]) is int and
+                      (x["allowed_class_mask"]&mask)==mask)))
+            if not candidates:continue
+            options={k:v for k,v in rows[slot]["options"].items()
+                     if k in ("gem_id","enchant","enchant_id")}
+            rows[slot]={"slot":slot,"item_id":candidates[0],
+                        "ilevel":ilevel,"options":options}
+            del groups[slot]
+            tier_count-=1
+            if tier_count==4:break
+        need(tier_count==4,
+             "FOUR_TIER_UNAVAILABLE_ORDINARY_REPLACEMENT_FOR_FIFTH_CATALYST")
+    need(sum(groups.get(slot)=="tier" for slot in TIER_FIVE)==4,
+         "FOUR_TIER_CURRENT_SEASON_NOT_SATISFIED")
+    need(all(rows[slot]["item_id"]==tier_map[slot]
+             for slot in TIER_FIVE if groups.get(slot)=="tier"),
+         "FOUR_TIER_CLASS_ITEM_ID_MISMATCH")
+    return restored
+
+
 def apply_user_equipment(key,rows,groups,user,ilevel,need,*,
-                         tier_override=None,fifth_override=None):
+                         tier_override=None,fifth_override=None,
+                         flexible_current_tier=False):
     """Overlay selected items and reassign tier 4pc without item-combo search.
 
     Mutates only its private rows/groups objects. Selected catalyst specials
     are represented as ONE tier row plus optional typed fixed-L metadata.
     """
+    need(type(flexible_current_tier) is bool,"FLEXIBLE_TIER_FLAG_BOOL")
+    need(not flexible_current_tier or tier_override is not None,
+         "CURRENT_SEASON_TIER_SOURCE_REQUIRED")
     tier_map=(CLASS_TIER_ITEMS[key[0]] if tier_override is None
               else tier_override)
     fifth_data=(FIFTH_TIER[key] if fifth_override is None
@@ -401,11 +480,17 @@ def apply_user_equipment(key,rows,groups,user,ilevel,need,*,
                      not (set(opts)&{"crafted_stats","embellishment"}),
                      "SPECIAL_NOT_VALID_NONCRAFTED_SLOT")
                 if groups.get(slot)=="tier":
-                    need(raw["item_id"]==tier_map[slot]
-                         and "redirected_base_stats" in opts
-                         and int(opts["redirected_base_stats"])!=raw["item_id"],
-                         "CATALYST_CLASS_TIER_ID_AND_ORIGIN_REQUIRED")
-                    slot_group="tier"
+                    if ("redirected_base_stats" in opts or
+                        not flexible_current_tier):
+                        need(raw["item_id"]==tier_map[slot]
+                             and "redirected_base_stats" in opts
+                             and int(opts["redirected_base_stats"])!=raw["item_id"],
+                             "CATALYST_CLASS_TIER_ID_AND_ORIGIN_REQUIRED")
+                        slot_group="tier"
+                    else:
+                        need(raw["item_id"]!=tier_map[slot],
+                             "NONCATALYST_SPECIAL_CANNOT_IMPERSONATE_TIER")
+                        slot_group="special"
                 elif (slot==fifth_data[0] and
                       "redirected_base_stats" in opts):
                     need(raw["item_id"]==tier_map[slot] and
@@ -425,8 +510,12 @@ def apply_user_equipment(key,rows,groups,user,ilevel,need,*,
             groups[slot]=slot_group
     need({r["slot"] for r in user["trinkets"]}=={"trinket1","trinket2"},
          "USER_TRINKET_SLOTS_NOT_EXACT")
-    restored=reconcile_four_tier(key,rows,groups,taken,ilevel,need,
-                                  fifth_override=fifth_data)
+    if flexible_current_tier:
+        restored=reconcile_current_season_five_tier(
+            key,rows,groups,taken,ilevel,need,tier_map=tier_map)
+    else:
+        restored=reconcile_four_tier(key,rows,groups,taken,ilevel,need,
+                                     fifth_override=fifth_data)
     catalyst=[{"slot":slot,"tier_item_id":row["item_id"],
                "source_item_id":int(row["options"]["redirected_base_stats"])}
               for slot,row in rows.items()
