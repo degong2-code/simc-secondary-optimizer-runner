@@ -50,8 +50,8 @@ def decorate(enchant_rows):
         if token in observed:raise ValueError("ENCHANT_TOKEN_DUPLICATE")
         observed.add(token)
         data=dict(row)
-        data["display_name"]="Enchant "+prefix.replace("enchant_","").title()+
-            " — "+name.replace("_"," ").title()
+        data["display_name"]=("Enchant "+prefix.replace("enchant_","").title()+
+                              " — "+name.replace("_"," ").title())
         data["effect_family"]="UNRESOLVED_FROM_CURRENT_SIMC_GENERATED_ROW"
         data["effect_description"]="효과 종류·정적 rating은 추가 원본 연결 필요"
         data["superseded_by_stronger_same_effect"]=False
