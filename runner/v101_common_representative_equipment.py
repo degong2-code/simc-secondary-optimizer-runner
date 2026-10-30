@@ -444,6 +444,7 @@ def validate_current_season_selected_slots(key,user,tier_map,need):
     import v143_specialization_contracts as contracts
     import v167_product_season_gear_adapter as product_gear
     import v169_source_first_representative_stage as source_stage
+    import v188_user_choice_metadata as choice_metadata
     db=product_gear.read()
     indexed={x["item_id"]:x for x in db["items"]}
     spec=contracts.lookup(*key)
@@ -470,6 +471,9 @@ def validate_current_season_selected_slots(key,user,tier_map,need):
         for raw in selection:
             slot,item_id=raw["slot"],raw["item_id"]
             options=raw["options"]
+            if group=="crafted":
+                choice_metadata.check_embellishment(
+                    options.get("embellishment"),slot,need)
             # A catalyst piece uses the class-specific tier ID instead of a
             # separately catalogued seasonal item. SimC owns inheritance.
             catalyst=group=="special" and (
