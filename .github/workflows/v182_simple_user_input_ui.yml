@@ -1,0 +1,65 @@
+name: v182 User-Friendly Equipment, Oil and Omnium UI (Offline)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v167_product_season_gear_adapter.py
+      - runner/v108_native_consumable_inputs.py
+      - runner/webui/app.js
+      - runner/webui/index.html
+      - tests/test_v182_simple_user_inputs_offline.py
+      - .github/workflows/v182_simple_user_input_ui.yml
+permissions:
+  contents: read
+concurrency:
+  group: v182-user-input-batch
+  cancel-in-progress: false
+jobs:
+  focused-ui:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    steps:
+      - name: Preserve input/source bytes on Windows
+        shell: bash
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r requirements-web-test.txt
+        shell: bash
+      - name: New form contract, old user consumables and 26 spec/5 level regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m unittest -v tests.test_v182_simple_user_inputs_offline
+          python -m unittest -q tests.test_v108_user_consumables tests.test_v114_local_web_ui_offline tests.test_v113_local_web_api_offline tests.test_v177_current_season_product_flow tests.test_v179_current_season_input_paths_offline
+          node --check runner/webui/app.js
+      - name: Package updated Windows UX and verify reproducible runtime sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m unittest -q tests.test_v181_windows_beta_package_offline
+          mkdir -p dist
+          python integration_probes/v181_windows_beta_packager.py --out dist/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip
+      - if: matrix.os == 'windows-2022'
+        name: Actual Windows extracted CMD, HTTP three plans and restore
+        shell: pwsh
+        run: |
+          python integration_probes/v181_windows_beta_live_http.py --zip dist/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip
+          if ($LASTEXITCODE -ne 0) { throw "Windows beta live HTTP regression failed" }
+      - if: matrix.os == 'windows-2022'
+        uses: actions/upload-artifact@v6
+        with:
+          name: v182-windows-beta-user-friendly-form-${{ github.run_id }}
+          path: dist/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip
+          retention-days: 7
+          if-no-files-found: error
