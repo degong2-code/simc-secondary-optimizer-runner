@@ -1,0 +1,120 @@
+name: v185 ONE Frost Mage 334 Corrected Weapon Native (max six)
+
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/v185_frost_corrected_primary_native_once.py
+      - integration_probes/requests/v185_frost_corrected_primary_native_once.json
+      - .github/workflows/v185_frost_corrected_primary_native.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v185-one-frost-334-corrected-primary
+  cancel-in-progress: false
+
+jobs:
+  offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Verify corrected source, stage 26 DPS, and Native probe syntax (NO SimC)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile integration_probes/v185_frost_corrected_primary_native_once.py
+          python3 -m unittest -q tests.test_v169_source_first_representative_stage tests.test_v172_current_season_v098_stage
+          python3 - <<'PY'
+          import json,pathlib
+          p=pathlib.Path('integration_probes/requests/v185_frost_corrected_primary_native_once.json')
+          if p.exists():
+              x=json.loads(p.read_text())
+              assert x['spec']=='mage/frost' and x['target_ilevel']==334
+              assert x['simc_binary_sha256']=='64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e'
+              assert x['native_max_total']==6
+          print('V185_OFFLINE_CORRECTED_FROST_READY_ZERO_NATIVE')
+          PY
+
+  native-one-frost:
+    needs: offline
+    if: ${{ contains(github.event.head_commit.message, '[v185-frost-primary-native]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Strict one-request-only commit and one authorized scenario
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          p='integration_probes/requests/v185_frost_corrected_primary_native_once.json'
+          changed=subprocess.check_output(
+              ['git','diff-tree','--no-commit-id','--name-only','-r',
+               os.environ['GITHUB_SHA']],text=True).splitlines()
+          assert changed==[p],changed
+          actual=json.loads(pathlib.Path(p).read_text())
+          expected={
+            'schema':'v185_frost_primary_corrected_single_334_request_v1',
+            'spec':'mage/frost',
+            'target_ilevel':334,
+            'execute_once':True,
+            'current_season_product':True,
+            'native_max_total':6,
+            'cache_only_replay_six':True,
+            'required_corrected_main_hand_id':159137,
+            'tier_four_ids':[271564,271562,271565,271563],
+            'simc_revision':'7bc10711b5',
+            'simc_binary_sha256':'64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e',
+            'no_new_optimizer':True,
+            'no_26_spec_native_rerun':True,
+            'no_main_or_project_ui_mutation':True
+          }
+          assert actual==expected,(actual,expected)
+          print('V185_SINGLE_FROST_334_USER_REQUEST_AUTHORIZED_MAX_SIX')
+          PY
+      - name: Restore pinned SimC binary (no rebuild)
+        uses: actions/cache/restore@v5
+        id: simc
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd-cli-release-nonetwork-r1
+      - name: Enforce exact Native CLI SHA and execute corrected frost six candidates
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.simc.outputs.cache-hit }}" = true
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc-cache/v035/simc' | sha256sum -c
+          chmod +x .simc-cache/v035/simc
+          mkdir -p out
+          python3 integration_probes/v185_frost_corrected_primary_native_once.py \
+              --simc "$GITHUB_WORKSPACE/.simc-cache/v035/simc" \
+              --out "$GITHUB_WORKSPACE/out" | tee out/V185_FROST_EXECUTION.log
+          python3 - <<'PY'
+          import json,pathlib
+          x=json.loads(pathlib.Path('out/V185_FROST_PRIMARY_RETEST_SUMMARY.json').read_text())
+          assert x['status']=='PASS_FROST_334_CORRECTED_SIX_NATIVE_SIX_CACHE',x
+          assert x['new_native_calls_confirmed']==6
+          assert len(x['json2_physical'])==6 and x['verified_cache_hits']==6
+          assert x['cache_only_new_native_calls']==0
+          print('V185_FROST_CORRECTED_PRIMARY_NATIVE_6_SHA_CACHE_6_PASS')
+          PY
+      - name: Preserve all real JSON2, SimC input, logs, results, and failed evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v185-frost-corrected-primary-native-${{ github.run_id }}
+          path: out/
+          retention-days: 7
+          if-no-files-found: warn
