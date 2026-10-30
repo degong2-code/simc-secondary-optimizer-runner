@@ -241,6 +241,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
     need(type(user["special_items"]) is list and len(user["special_items"])<=8
          and type(user["embellishments"]) is list
          and len(user["embellishments"])<=2,"USER_SELECTED_GEAR_LISTS")
+    if ENCHANT_FIELD in user:
+        verified_enchant.reject_selected_L_overlap(user,need)
     folder=pathlib.Path(folder).resolve()
     binary=pathlib.Path(binary).resolve()
     need(binary.is_file(),"SIMC_BINARY_NOT_PRESENT")
@@ -290,10 +292,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
     if ENCHANT_FIELD in user:
         # The same selected ring cannot be counted both as the exact
         # special-item L slot and a separate enchant E contribution.
-        need(not any(r["slot"]=="finger1" for group in
-                     ("special_items","embellishments")
-                     for r in user[group]),
-             "V203_ENCHANT_E_OVERLAPS_SELECTED_L_OR_CRAFTED_SLOT")
+        verified_enchant.reject_selected_L_overlap(user,need)
         # Internal exact-evidence path only. Normal v106/web controls
         # continue to reject this developer-only field.
         verified_enchant.apply_verified_ring(
