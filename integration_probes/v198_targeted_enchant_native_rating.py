@@ -67,8 +67,19 @@ def parse_native(raw,revision,slot):
     stats={s:gear[slot].get(s,0) for s in STATS}
     need(all(type(v) in (int,float) and v>=0 and float(v).is_integer()
              for v in stats.values()),
-         "SIMC_GEAR_STATIC_RATING_NOT_INTEGER")
-    return {"gear":gear,"stats":{k:int(v) for k,v in stats.items()},
+         "SIMC_GEAR_SLOT_STATIC_RATING_NOT_INTEGER")
+    # Permanent enchants may NOT be item-local JSON2 gear[slot] fields.
+    # The actual precombat character total in collected_data.buffed_stats
+    # includes the enchant: v199 Native 8025 observed haste 1004 -> 1034
+    # although gear.finger1.haste_rating stayed unchanged.
+    rated=((players[0].get("collected_data") or {}).get("buffed_stats") or
+           {}).get("stats") or {}
+    need(all(k in rated and type(rated[k]) in (int,float) and
+             float(rated[k]).is_integer() and rated[k]>=0 for k in STATS),
+         "SIMC_CHARACTER_BUFFED_RATING_MISSING")
+    return {"gear":gear,
+            "slot_stats":{k:int(v) for k,v in stats.items()},
+            "character_stats":{k:int(rated[k]) for k in STATS},
             "encoded_item":gear[slot].get("encoded_item",""),
             "simc_revision":obj["git_revision"]}
 
@@ -87,13 +98,21 @@ def compare_native(before,after,slot,enchant_id,revision):
         x=pat.search(p["encoded_item"]);y=pat.search(q["encoded_item"])
         need(x is not None and y is not None and x.group(1)==y.group(1),
              "BASE_ITEM_ID_OR_ILVL_CHANGED")
-    delta={k:q["stats"][k]-p["stats"][k] for k in STATS}
+    delta={k:q["character_stats"][k]-p["character_stats"][k]
+           for k in STATS}
+    gear_delta={k:q["slot_stats"][k]-p["slot_stats"][k] for k in STATS}
     need(all(v>=0 for v in delta.values()),
-         "ENCHANT_NEGATIVE_OR_NON_MONOTONIC_STATIC_DIFF")
+         "ENCHANT_NEGATIVE_CHARACTER_RATING_DELTA")
+    need(all(v>=0 for v in gear_delta.values()),
+         "ENCHANT_NEGATIVE_GEAR_SLOT_RATING_DELTA")
     return {"enchant_id":enchant_id,"slot":slot,"static_secondary":delta,
-            "classification":"POSITIVE_STATIC_SECONDARY_OBSERVED" if
-                sum(delta.values())>0 else
-                "NO_STATIC_DELTA_OBSERVED_PROC_OR_UNSUPPORTED",
+            "observed_character_rating_before":p["character_stats"],
+            "observed_character_rating_after":q["character_stats"],
+            "observed_item_slot_rating_delta":gear_delta,
+            "rating_source":"sim.players[0].collected_data.buffed_stats.stats",
+            "classification":"POSITIVE_PRECOMBAT_SECONDARY_RATING_OBSERVED"
+                if sum(delta.values())>0 else
+                "NO_PRECOMBAT_SECONDARY_RATING_DELTA_OBSERVED",
             "source_revision":q["simc_revision"]}
 
 def run(profile,binary,revision,slot,enchant_id,out,*,iterations=35,max_new=2,
