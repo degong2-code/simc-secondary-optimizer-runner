@@ -21,6 +21,12 @@ class ProbeBlocked(ValueError):pass
 def need(ok,code):
     if not ok:raise ProbeBlocked(code)
 def sha(data):return hashlib.sha256(data).hexdigest()
+def file_sha(path):
+    h=hashlib.sha256()
+    with pathlib.Path(path).open("rb") as f:
+        for chunk in iter(lambda:f.read(1024*1024),b""):
+            h.update(chunk)
+    return h.hexdigest()
 def canonical(x):return json.dumps(x,sort_keys=True,separators=(",",":"),
                                   ensure_ascii=False).encode("utf8")
 def put_once(path,raw):
@@ -104,7 +110,7 @@ def run(profile,binary,revision,slot,enchant_id,out,*,iterations=35,max_new=2,
          "IMPORTED_CURRENT_EQUIPMENT_PROFILE_REFUSED")
     plain,enchanted=swap_slot_enchant(source,slot,enchant_id)
     identity={"base_sha256":sha(source.encode("utf8")),
-              "simc_bin_sha256":sha(exe.read_bytes()),
+              "simc_bin_sha256":file_sha(exe),
               "revision":revision,"slot":slot,"enchant_id":enchant_id,
               "iterations":iterations}
     folder=pathlib.Path(out).resolve()/sha(canonical(identity))[:24]
@@ -141,11 +147,19 @@ def run(profile,binary,revision,slot,enchant_id,out,*,iterations=35,max_new=2,
         "comparison":diff,
         "budget_E_input_allowed_automatically":False,
         "reason":"MATCHED_NATIVE_RATING_DELTA_REQUIRES_COMPANION_RECEIPT_REVIEW"}
-    put_once(folder/"receipt.json",canonical(proof)+b"\n")
-    print(json.dumps({"status":proof["status"],"new_native":calls,
+    receipt=folder/"receipt.json"
+    if receipt.is_file():
+        sealed=json.loads(receipt.read_text("utf8"))
+        same={k:v for k,v in proof.items() if k!="native_new_calls"}
+        prior={k:v for k,v in sealed.items() if k!="native_new_calls"}
+        need(prior==same,"IMMUTABLE_NATIVE_COMPARISON_RECEIPT_CHANGED")
+    else:
+        put_once(receipt,canonical(proof)+b"\n")
+        sealed=proof
+    print(json.dumps({"status":proof["status"],"new_native_this_request":calls,
                       "E":diff["static_secondary"],"folder":str(folder)},
                      ensure_ascii=False))
-    return proof
+    return {**sealed,"native_new_calls_this_request":calls}
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
