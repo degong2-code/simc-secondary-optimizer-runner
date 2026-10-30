@@ -15,6 +15,7 @@ import v093_inclusive_adaptive_scheduler_bridge as adaptive
 import v094_durable_inclusive_adaptive_runner as durable
 import v141_verified_pure_native_pilot as pure_pilot
 import v202_one_enchant_admission as verified_enchant
+import v204_selected_enchant_reference_budget as enchant_reference
 
 SCHEMA="v096_user_scenario_unified_entry_v1"
 FIELDS={"schema","profile_simc","scenario_json","fillers_json",
@@ -77,9 +78,12 @@ def source(manifest_path):
          and type(user["step"]) is int and user["step"]>0,"RUN_BOUNDS_INVALID")
     need(paths["native_binary"].is_file(),"SIMC_BINARY_NOT_PRESENT")
     binary_sha=hashlib.sha256(paths["native_binary"].read_bytes()).hexdigest()
+    selected_fixed_E=(verified_enchant.read()[0]["static_enchant_E"]
+                      if NATIVE_ENCHANT_FIELD in user else None)
     prepared=oil_adapter.prepare(profile,doc,fillers,cache,
                                  user["weapon_layout"],user["oil_hands"],
-                                 manual_final_T=manual_T)
+                                 manual_final_T=manual_T,
+                                 verified_enchant_E=selected_fixed_E)
     if NATIVE_ENCHANT_FIELD in user:
         # Internal-only opt-in, exact item/revision/binary and immutable v200/
         # v201 witness; no new numeric gear_* contribution is injected.
@@ -106,10 +110,15 @@ def source(manifest_path):
     if manual_T is None:
         need(provenance["source"]=="reference_rounded_opt_in",
              "REFERENCE_B_ONLY_UNTIL_EXACT_G_MERGE")
+        if NATIVE_ENCHANT_FIELD in user:
+            need(provenance.get(enchant_reference.KEY,{}).get("additional_B")
+                 ==sum(selected_fixed_E.values()),
+                 "VERIFIED_ENCHANT_REFERENCE_ADDITION_MISSING")
     else:
         need(provenance["source"]=="user_manual_total"
              and provenance["budget_entry_mode"]=="USER_MANUAL_FINAL_T_CONVERTED_TO_B"
-             and context["identity"]["approved_final_T"]==manual_T,
+             and context["identity"]["approved_final_T"]==manual_T
+             and enchant_reference.KEY not in provenance,
              "MANUAL_FINAL_T_SOURCE_OR_TOTAL_DRIFT")
     plan={"schema":SCHEMA,
           "status":"READY_SOURCE_LOCKED_NATIVE_ENTRY_NOT_EXECUTED",
@@ -129,7 +138,14 @@ def source(manifest_path):
           "native_called":False,
           "original_product_v015_v016_merged":False,
           "budget_source":"USER_MANUAL_FINAL_INCLUDING_OIL" if manual_T is not None
-                          else "OPT_IN_ILVL_REFERENCE_BASE_B"}
+                          else ("OPT_IN_ILVL_REFERENCE_PLUS_VERIFIED_FIXED_E"
+                                if NATIVE_ENCHANT_FIELD in user
+                                else "OPT_IN_ILVL_REFERENCE_BASE_B")}
+    if NATIVE_ENCHANT_FIELD in user:
+        plan["selected_fixed_enchant_E"]=dict(selected_fixed_E)
+        plan["selected_enchant_budget_policy"]=(
+            "MANUAL_FINAL_T_UNCHANGED_FIXED_E" if manual_T is not None
+            else "DERIVED_REFERENCE_B_PLUS_E_ONCE")
     if manual_T is not None:
         plan["user_manual_final_T"]=manual_T
         plan["legacy_v061_base_B"]=B
