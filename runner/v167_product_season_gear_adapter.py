@@ -165,6 +165,10 @@ def public_options(payload):
             "name": x["name"],
             "inventory_type": x["inventory_type"],
             "slot_hint": x["slot_hint"],
+            # ItemClass and subclass are current-season source metadata;
+            # UI selects a deterministic compatible crafted base privately.
+            "class_id": x["class_id"],
+            "subclass_id": x["subclass_id"],
             "season_list_basis": x.get("season_list_basis")
         })
     for rows in choices.values():
