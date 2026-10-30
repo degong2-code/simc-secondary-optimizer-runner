@@ -1,0 +1,87 @@
+name: v186 FOUR Corrected Weapon Types Physical Native (max 4)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/v186_corrected_weapon_four_specs_physical_native.py
+      - integration_probes/requests/v186_four_corrected_weapons_once.json
+      - .github/workflows/v186_four_corrected_weapons_native.yml
+permissions:
+  contents: read
+concurrency:
+  group: v186-four-corrected-weapons
+  cancel-in-progress: false
+jobs:
+  offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Syntax and existing complete 26 spec weapon regression, NO Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile integration_probes/v186_corrected_weapon_four_specs_physical_native.py
+          python3 -m unittest -q tests.test_v169_source_first_representative_stage
+  native-four:
+    needs: offline
+    if: ${{ contains(github.event.head_commit.message, '[v186-4-native]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Exact one request file commit, immutable 4 Native maximum
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,subprocess
+          p='integration_probes/requests/v186_four_corrected_weapons_once.json'
+          changed=subprocess.check_output(['git','diff-tree','--no-commit-id',
+             '--name-only','-r',os.environ['GITHUB_SHA']],text=True).splitlines()
+          assert changed==[p],changed
+          doc=json.loads(pathlib.Path(p).read_text())
+          assert doc=={
+            'schema':'v186_exact_four_corrected_weapon_smoke_once_v1',
+            'specs':['deathknight/frost','rogue/assassination',
+                     'shaman/enhancement','druid/feral'],
+            'iterations_each':35,'native_calls_max':4,
+            'simc_revision':'7bc10711b5',
+            'simc_binary_sha256':'64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e',
+            'reuse_existing_v145_physical':True,'new_optimizer':False,
+            'no_other_specs':True,'no_main_or_project_ui_mutation':True}
+          print('V186_EXACT_USER_SCOPE_4_NATIVE')
+          PY
+      - name: Reuse exact pinned SimC from existing Linux cache
+        uses: actions/cache/restore@v5
+        id: simc
+        with:
+          path: .simc-cache/v035/
+          key: v035-ubuntu2404-x64-7bc10711b5a4514066fa402ca0a71c9ba4b7c9dd-cli-release-nonetwork-r1
+      - name: Four existing v145 physical executions, no optimization
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${{ steps.simc.outputs.cache-hit }}" = true
+          echo '64089f2f917d552ab392ba311d128aa1b7ec559ead52b3546e2cc328ab479b8e  .simc-cache/v035/simc' | sha256sum -c
+          chmod +x .simc-cache/v035/simc
+          mkdir -p out
+          python3 integration_probes/v186_corrected_weapon_four_specs_physical_native.py \
+             --simc "$GITHUB_WORKSPACE/.simc-cache/v035/simc" \
+             --out "$GITHUB_WORKSPACE/out" --execute | tee out/V186_LOG.txt
+      - name: Archive original Native JSON2 and SimC inputs, successes and failures
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v186-corrected-four-weapon-native-${{ github.run_id }}
+          path: out/
+          retention-days: 7
+          if-no-files-found: warn
