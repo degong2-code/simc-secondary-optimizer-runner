@@ -808,9 +808,18 @@ function renderSeasonOptionCatalog(catalog) {
     const list=document.createElement("ul");
     for(const entry of rows) {
       const li=document.createElement("li");
-      li.textContent=entry.token+" · enchant ID "+entry.enchant_id+
-        " · 등급 "+entry.highest_source_quality_rank+
-        " · 효과/CHMV 반영 검증 필요";
+      const kind=entry.preferred_if_same_effect_source;
+      const qualifier=kind==="STRONGER_VARIANT_REPORTED"?
+        " · 동일 효과 상위형 후보":
+        kind==="WEAKER_VARIANT_REPORTED"?
+        " · 같은 효과의 더 강한 후보 존재":
+        kind==="DISTINCT_EFFECT_NO_DOMINANCE"?
+        " · 별개의 효과이므로 유지":"";
+      li.textContent=(entry.display_name||entry.token)+
+        " · "+(entry.effect_description||"효과 원본 연결 필요")+
+        qualifier+" · enchant ID "+entry.enchant_id+
+        " · 최고 관측 등급 "+entry.highest_source_quality_rank+
+        " · SimC 정적 rating 확인 전 선택 불가";
       list.appendChild(li);
     }
     detail.appendChild(list);
