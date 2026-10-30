@@ -25,6 +25,7 @@ import v106_user_session_controller as sessions
 import v098_target_user_scenario_bootstrap as bootstrap
 import v108_native_consumable_inputs as consumables
 import v188_user_choice_metadata as choice_labels
+import v193_simc_local_updater as simc_updates
 import v148_local_batch_results as batch_view
 import v167_product_season_gear_adapter as season_gear
 
@@ -33,6 +34,10 @@ KEY = re.compile(r"[a-f0-9]{20}\Z")
 LOCAL_HOST = "127.0.0.1"
 WEB_ASSETS = pathlib.Path(__file__).resolve().parent / "webui"
 PUBLIC_STATIC = frozenset(("/", "/assets/app.js", "/assets/styles.css"))
+
+class UpdateInstallRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    filename: str = Field(min_length=12,max_length=140)
 
 class UserRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -373,14 +378,18 @@ class LocalJobs:
         except Exception as exc:
             raise blocked(exc) from None
 
-def create_app(*,root=None, token=None, batch_root=None):
+def create_app(*,root=None, token=None, batch_root=None, update_root=None,
+               update_platform=None):
     jobs=LocalJobs(root or sessions.DEFAULT_ROOT)
+    updater=simc_updates.SimCManager(
+        update_root or (jobs.root.parent/"simc-managed"),platform=update_platform)
     snapshots=(pathlib.Path(batch_root).expanduser().resolve() if batch_root
                else pathlib.Path.home()/"SIMC_Secondary_Optimizer"/"v147_batch")
     key=token or secrets.token_urlsafe(32)
     app=FastAPI(title="SIMC Secondary Optimizer LOCAL API",
                 version="113.0",openapi_url=None,docs_url=None,redoc_url=None)
     app.state.jobs=jobs
+    app.state.simc_updates=updater
 
     @app.middleware("http")
     async def localhost_firewall(request: Request, call_next):
@@ -444,6 +453,35 @@ def create_app(*,root=None, token=None, batch_root=None):
     @app.get("/assets/styles.css")
     def browser_styles():
         return FileResponse(WEB_ASSETS / "styles.css",media_type="text/css")
+
+    def updates_action(operation):
+        # Downloads and managed-pointer changes require explicit browser POST.
+        # A currently running SimC worker must not switch the UI's active binary.
+        if any(jobs.is_active(jobs.root/sid) for sid in tuple(jobs.children)):
+            raise HTTPException(409,detail={"code":"ACTIVE_SIMC_JOB_UPDATE_BLOCKED"})
+        try:
+            return operation()
+        except simc_updates.UpdateBlocked as exc:
+            raise HTTPException(422,detail={"code":str(exc)}) from None
+        except (OSError,TimeoutError,ValueError,subprocess.SubprocessError) as exc:
+            raise HTTPException(409,detail={"code":"OFFICIAL_SIMC_UPDATE_UNAVAILABLE",
+                                           "kind":type(exc).__name__}) from None
+
+    @app.get("/api/v1/simc-updates/status")
+    def simc_update_status():
+        return updates_action(updater.status)
+
+    @app.post("/api/v1/simc-updates/check")
+    def simc_update_check():
+        return updates_action(updater.check)
+
+    @app.post("/api/v1/simc-updates/install")
+    def simc_update_install(request:UpdateInstallRequest):
+        return updates_action(lambda:updater.install(request.filename))
+
+    @app.post("/api/v1/simc-updates/rollback")
+    def simc_update_rollback():
+        return updates_action(updater.rollback)
 
     @app.get("/api/v1/options")
     def options():
