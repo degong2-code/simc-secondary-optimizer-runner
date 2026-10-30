@@ -28,7 +28,7 @@ class SourceRingEffectFamilies(unittest.TestCase):
                           "enchant_ring__silvermoons_tenacity",
                           "enchant_ring__zuljins_mastery"})
         for x in rings:
-            self.assertFalse(x["ui_selectable"])
+            self.assertEqual(x["ui_selectable"],x["enchant_id"]==7967)
             self.assertFalse(x["simc_static_rating_verified"])
             self.assertTrue(x["display_name"].startswith("Enchant"))
             self.assertIn("rating",x["effect_description"]
@@ -53,6 +53,6 @@ class SourceRingEffectFamilies(unittest.TestCase):
         self.assertEqual(item["preferred_if_same_effect_source"],
                          "DISTINCT_EFFECT_NO_DOMINANCE")
         self.assertFalse(item["superseded_by_stronger_same_effect"])
-        self.assertFalse(item["ui_selectable"])
+        self.assertTrue(item["ui_selectable"])
 
 if __name__=="__main__":unittest.main()
