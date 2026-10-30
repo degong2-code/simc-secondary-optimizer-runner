@@ -1,5 +1,7 @@
 # v197–v198: 정확한 마법부여 rating과 현재 G 예산 연결
 
+> **2026-10-30 v199/v200 후속 실측 교정 — 이 문서의 기존 '신규 Native 0'과 'Actions step0 FAIL'은 v198 도구 작성 당시 이력에 한정됨.** Public 전환 후 [v182 Ubuntu/Windows PASS #41076260375](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41076260375)와 [v181 Windows Python3.12·3.14 PASS #41076260407](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41076260407) 확인. 기존 일반 냉법 334 대표 프로필과 SimC `710c2408bf`로 `enchant_id=8025` 반지1 전/후 **Native 2회** [v199 #41075851509](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41075851509) 완료. v198 초기 비교의 장비 슬롯 JSON2 통계 0은 **오판**: 원본 `collected_data.buffed_stats.stats.haste_rating`은 **1004 → 1034 (+30)**, 다른 세 rating은 불변. v198 파서를 캐릭터 precombat rating에서 관측하도록 교정, 동일한 두 원본 Native SHA/15개 비대상 장비 불변 검증으로 [v200 재분석 #41076597270](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41076597270) **SUCCESS, 신규 Native 0**. v199 원본 0 결과는 실패 이력으로 보존하고 v200 정정 영수증으로 사용. v197 E=+30은 **이 정확한 SimC 리비전·마부·대표 장비 조건에서만** 관측된 정적 precombat rating이며, 전체 사용자 UI 마부 선택·제품 후보/캐시 identity 통합은 미완료. 현재 개발 상태는 [CURRENT](CURRENT_PRODUCT_DEVELOPMENT_STATE.md) 최신 상단 참조.
+>
 **권위:** 2026-10-30 사용자 승인 방향. 실제 프로필·Native 결과·현재 시즌 DB가 정한 값만 사용. SimC의 발동 효과는 재구현하지 않음.
 
 ## 현재 확보한 결과와 한계
