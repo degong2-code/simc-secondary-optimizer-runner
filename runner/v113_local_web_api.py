@@ -24,6 +24,7 @@ from pydantic import BaseModel, ConfigDict, Field
 import v106_user_session_controller as sessions
 import v098_target_user_scenario_bootstrap as bootstrap
 import v108_native_consumable_inputs as consumables
+import v188_user_choice_metadata as choice_labels
 import v148_local_batch_results as batch_view
 import v167_product_season_gear_adapter as season_gear
 
@@ -451,7 +452,9 @@ def create_app(*,root=None, token=None, batch_root=None):
             "potion":["source_default",*sorted(consumables.SUPPORTED["potion"])],
             "augmentation":["source_default",*sorted(consumables.SUPPORTED["augmentation"])],
             "diamond_id":[0,*sorted(consumables.DIAMONDS)],
-            "omnium_talents":["source_default",*sorted(consumables.OMNIUM_PRESETS)]
+            "omnium_talents":["source_default",*sorted(consumables.OMNIUM_PRESETS)],
+            "display_labels":choice_labels.labels(),
+            "embellishments":choice_labels.public_embellishments()
         }
 
     @app.get("/api/v1/season-gear")
