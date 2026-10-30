@@ -69,8 +69,8 @@ class CurrentSeasonTierReconciliation(unittest.TestCase):
                       ("hands","legs")):
             with self.subTest(slots=slots):
                 u,rows,groups=self.setup_rows()
-                source={"head":239652,"shoulders":239653,"chest":239651,
-                        "hands":239655,"legs":239650}
+                source={"head":239652,"shoulders":239650,"chest":239655,
+                        "hands":239653,"legs":239651}
                 u["embellishments"]=[{"slot":slot,"item_id":source[slot],
                     "options":{"crafted_stats":"32/36",
                                "embellishment":"arcanoweave_lining"}}
@@ -102,7 +102,7 @@ class CurrentSeasonTierReconciliation(unittest.TestCase):
         u,rows,groups=self.setup_rows()
         u["special_items"]=[{"slot":"head","item_id":self.map["head"],
                              "options":{"redirected_base_stats":"159236"}}]
-        u["embellishments"]=[{"slot":"chest","item_id":239651,
+        u["embellishments"]=[{"slot":"chest","item_id":239655,
           "options":{"crafted_stats":"32/36","embellishment":"arcanoweave_lining"}}]
         restored,catalyst=self.apply(u,rows,groups)
         self.assertEqual(restored,[])
