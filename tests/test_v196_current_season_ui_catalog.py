@@ -16,6 +16,11 @@ class SourceSeasonUiCatalog(unittest.TestCase):
         self.assertEqual(c["simc_revision"],
                          "710c2408bfd3ae4df71b8cd55cdf01f63fd6c926")
         self.assertEqual(c["source_artifact_id"],12961140046)
+        self.assertEqual(c["related_source_status"],
+                         "EVIDENCE_ONLY_NO_NEW_USER_OPTIONS")
+        self.assertEqual(c["related_source_counts"]["food_raw_item_candidates"],192)
+        self.assertEqual(c["related_source_counts"]["potion_raw_item_candidates"],61)
+        self.assertEqual(c["related_source_counts"]["gem_property_records"],2409)
         enc=c["enchant_candidates"]
         self.assertEqual(enc["total"],38)
         self.assertEqual(enc["selectable_count"],0)
