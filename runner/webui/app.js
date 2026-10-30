@@ -794,6 +794,22 @@ function installOptions(options) {
 // The existing manually supplied binary remains usable and is never overwritten.
 let simcOffer=null;
 let manualSimcBeforeUpdate=null;
+function rememberPreManagedBinary() {
+  if(manualSimcBeforeUpdate||!field("binary"))return;
+  manualSimcBeforeUpdate={binary:field("binary"),revision:field("revision")};
+  try{localStorage.setItem("simc_secondary_manual_simc_before_update",
+                           JSON.stringify(manualSimcBeforeUpdate));}catch{}
+}
+function savedPreManagedBinary() {
+  if(manualSimcBeforeUpdate)return manualSimcBeforeUpdate;
+  try{
+    const parsed=JSON.parse(localStorage.getItem("simc_secondary_manual_simc_before_update"));
+    if(parsed&&typeof parsed.binary==="string"&&typeof parsed.revision==="string"
+       &&parsed.binary.length<=4096&&/^[a-f0-9]{7,40}$/i.test(parsed.revision))
+      return parsed;
+  }catch{}
+  return null;
+}
 function applyManagedSimc(data) {
   if(!data?.active_binary||!data?.installed)return false;
   $("binary").value=data.active_binary;
@@ -835,8 +851,7 @@ async function checkSimcUpdater() {
 async function installSimcUpdater() {
   if(!simcOffer)throw Error("먼저 공식 업데이트를 확인해 주세요.");
   if(!window.confirm("공식 SimulationCraft Windows x64 패키지를 다운로드하고 앱 전용 폴더에 설치할까요? 기존 실행 파일과 세션은 변경하지 않습니다."))return;
-  if(!manualSimcBeforeUpdate&&field("binary"))
-    manualSimcBeforeUpdate={binary:field("binary"),revision:field("revision")};
+  rememberPreManagedBinary();
   const candidate=simcOffer;
   $("simc-install-btn").disabled=true;
   try{
@@ -857,8 +872,7 @@ async function installLocalSimcUpdater() {
   if(!path.toLowerCase().endsWith(".7z"))
     throw Error("공식 Windows x64 SimC .7z 파일의 로컬 경로를 입력해 주세요.");
   if(!window.confirm("이 PC의 파일을 SimC 관리 폴더에 설치할까요? 사용자가 직접 내려받은 파일은 공식 서명을 독립 확인할 수 없습니다."))return;
-  if(!manualSimcBeforeUpdate&&field("binary"))
-    manualSimcBeforeUpdate={binary:field("binary"),revision:field("revision")};
+  rememberPreManagedBinary();
   const result=await api("/api/v1/simc-updates/install-local",
     {method:"POST",payload:{archive_path:path}});
   displaySimcUpdater(result);
@@ -873,9 +887,10 @@ async function rollbackSimcUpdater() {
        {method:"POST",payload:{}});
   displaySimcUpdater(result);
   if(result.active_binary)applyManagedSimc(result);
-  else if(manualSimcBeforeUpdate) {
-    $("binary").value=manualSimcBeforeUpdate.binary;
-    $("revision").value=manualSimcBeforeUpdate.revision;
+  else if(savedPreManagedBinary()) {
+    const previous=savedPreManagedBinary();
+    $("binary").value=previous.binary;
+    $("revision").value=previous.revision;
   }else {
     $("binary").value="";$("revision").value="";
   }
