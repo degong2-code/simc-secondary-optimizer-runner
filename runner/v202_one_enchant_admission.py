@@ -13,6 +13,13 @@ import v197_verified_effect_budget as fixed
 DEFAULT=pathlib.Path(__file__).resolve().parents[1]/"data/v202_verified_enchant_8025_source.json"
 CHOICE={"finger1":8025}
 SCHEMA="v202_one_exact_enchant_source_evidence_v1"
+# SHA-confirmed v200/v201 raw Native JSON2, not just four plausible hex strings.
+EXPECTED_NATIVE_JSON_SHA={
+    "v200_before_native_sha256": "6fdbb14ec3404ab59dc95d3078c58811d0323810e74cc8cf2b647cd7e27557d5",
+    "v200_after_native_sha256": "63d47320423ff75969d7d4c2302ced854d6ceb0dfba254572e4cc2d91cd08e2d",
+    "v201_before_native_sha256": "29228e6fb402952f90a4b62a9bcd193133eb5386f7469ab01c28dd6b37e04973",
+    "v201_after_native_sha256": "2f25c842207dd67aa9c02345798d24468649c895c12fb45a8bf6d5f1ef1112d0"
+}
 class EnchantAdmissionBlocked(ValueError):pass
 def need(ok,code):
     if not ok:raise EnchantAdmissionBlocked(code)
@@ -35,10 +42,11 @@ def read():
              {"crit_rating":0,"haste_rating":0,"mastery_rating":0,"versatility_rating":0}
          and data.get("product_ui_selectable") is False,
          "PINNED_NATIVE_ENCHANT_EVIDENCE_DRIFT")
-    for k in ("v200_before_native_sha256","v200_after_native_sha256",
-              "v201_before_native_sha256","v201_after_native_sha256"):
-        need(type(data.get(k)) is str and bool(re.fullmatch("[a-f0-9]{64}",data[k])),
-             "PINNED_NATIVE_EVIDENCE_SHA_MISSING")
+    need(all(data.get(k)==v for k,v in EXPECTED_NATIVE_JSON_SHA.items())
+         and data.get("v199_artifact_id")==12986044543
+         and data.get("v200_artifact_id")==12987312399
+         and data.get("v201_artifact_id")==12988042331,
+         "PINNED_NATIVE_EVIDENCE_BYTES_OR_ARTIFACT_DRIFT")
     return data,hashlib.sha256(raw).hexdigest()
 def apply_verified_ring(rows,user_choice,key,ilevel,need_user):
     """Mutate only one generated internal representative item option."""
