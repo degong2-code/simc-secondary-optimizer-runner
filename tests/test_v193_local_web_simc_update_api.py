@@ -69,7 +69,14 @@ class SimCUpdateWeb(unittest.TestCase):
         res=self.client.post(path,json=data,headers=self.h)
         self.assertEqual(res.status_code,422,res.text)
         self.assertEqual(res.json()["detail"]["code"],
-                         "LOCAL_WIN64_NIGHTLY_ARCHIVE_INVALID")
+                         "LOCAL_NIGHTLY_FILE_NOT_FOUND")
+        archive=self.root/"simc-nightly-win64-midnight.zip"
+        archive.write_bytes(b"PK"+b"x"*110000)
+        zip_response=self.client.post(path,headers=self.h,
+                         json={"archive_path":str(archive)})
+        self.assertEqual(zip_response.status_code,422)
+        self.assertEqual(zip_response.json()["detail"]["code"],
+                         "LOCAL_GITHUB_ARTIFACT_ZIP_EXTRACT_7Z_FIRST")
         self.assertFalse((self.root/"managed").exists())
 
     def test_native_worker_running_blocks_manage_actions(self):
