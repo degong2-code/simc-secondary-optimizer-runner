@@ -13,6 +13,8 @@ from pathlib import Path
 
 import v108_native_consumable_inputs as v108
 import v188_user_choice_metadata as v188
+import v197_enchant_effect_families as effect_groups
+import v197_verified_effect_budget as fixed_budget
 
 SCHEMA="v196_current_season_ui_catalog_v1"
 SOURCE_SCHEMA="v196_source_first_enchant_candidates_v1"
@@ -97,6 +99,7 @@ def read(path=DEFAULT):
 
 def public_options(path=DEFAULT):
     source,enchants,counts=read(path)
+    enchants=effect_groups.decorate(enchants)
     labels=v188.labels()
     # The only actual user choices in this first stage are exactly the
     # legacy Native/source-verified tokens. Do not enable 192/61 raw DB2
@@ -122,7 +125,19 @@ def public_options(path=DEFAULT):
         "existing_allowed_input_choices":approved,
         "proven_armor_embellishments":v188.public_embellishments(),
         "enchant_candidates":{"total":len(enchants),"groups":counts,
-                              "items":enchants,"selectable_count":0},
+                              "items":enchants,"selectable_count":0,
+                              "same_effect_stronger_ring_enchants":sum(
+                               x["preferred_if_same_effect_source"]==
+                                  "STRONGER_VARIANT_REPORTED" for x in enchants),
+                              "effect_family_sources":list(
+                                  effect_groups.SOURCE_REFERENCES),
+                              "effect_classification_status":
+                                  "SOURCE_DESCRIPTION_NOT_NATIVE_CHMV_VERIFIED"},
+        "budget_effect_contract":{"schema":fixed_budget.SCHEMA,
+              "fixed_enchant_E_part_of":"GEAR_G_ALREADY_INSIDE_FINAL_T",
+              "requires_exact_companion_native_receipt":True,
+              "no_extra_T_or_O_increment":True,
+              "status":"NO_VERIFIED_ENCHANT_E_VECTOR_PROVIDED"},
         "future_categories":{
             "flask":"CURRENT_F_165_FIXED_NOT_ALTERNATIVE_VALIDATED",
             "ordinary_gems":"CURRENT_J_138_FIXED_NOT_ALTERNATIVE_VALIDATED",
