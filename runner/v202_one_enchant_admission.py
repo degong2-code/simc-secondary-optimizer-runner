@@ -48,6 +48,14 @@ def read():
          and data.get("v201_artifact_id")==12988042331,
          "PINNED_NATIVE_EVIDENCE_BYTES_OR_ARTIFACT_DRIFT")
     return data,hashlib.sha256(raw).hexdigest()
+def reject_selected_L_overlap(user,need_user):
+    """E is already inside G; one selected special/crafted slot must not lock it twice."""
+    need_user(type(user) is dict and
+              not any(r.get("slot")=="finger1"
+                      for group in ("special_items","embellishments")
+                      for r in user.get(group,[])),
+              "V203_ENCHANT_E_OVERLAPS_SELECTED_L_OR_CRAFTED_SLOT")
+
 def apply_verified_ring(rows,user_choice,key,ilevel,need_user):
     """Mutate only one generated internal representative item option."""
     need_user(type(user_choice) is dict and user_choice==CHOICE,
