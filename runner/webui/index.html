@@ -53,6 +53,12 @@
               <div class="field"><label for="augmentation">증강 룬</label><select id="augmentation"></select></div>
               <div class="field"><label for="diamond">에버송 다이아몬드</label><select id="diamond"></select></div>
             </div><div class="field"><label for="omnium">Omnium Folio · 4열 스탯</label><select id="omnium"></select></div><p class="hint">영약은 검증된 원본 고정치 F=165를 유지합니다. Omnium은 기존 다른 열을 유지하고 4열의 치명·가속·특화·유연만 선택합니다. 새 조합의 SimC 수용 여부는 실행 결과로 확인합니다.</p></details>
+            <details class="fold" id="season-option-catalog-panel"><summary><span>이번 시즌 선택 데이터 · 마법부여</span><small>SimC 최신 소스와 승인된 선택 분리</small></summary>
+              <p class="hint">확인된 음식·물약·증강룬·다이아몬드와 방어구 안감은 위 선택 항목에 이미 연결되어 있습니다. 최고 품질 마법부여는 부위별 목록을 확보했지만, 선택 시 CHMV 예산에 반영될 정확한 정적 수치와 Native 수용 확인 전까지 잠금 상태로 표시합니다.</p>
+              <p class="hint" id="season-option-catalog-status" role="status" aria-live="polite">시즌 데이터와 SimC 출처를 확인하는 중…</p>
+              <div id="season-enchant-groups"></div>
+              <p class="hint">영약 F, 일반 보석 J 및 무기 기름 O의 기존 예산은 그대로 유지됩니다. 원시 DB2 후보를 임의로 유효한 SimC 선택으로 표시하지 않습니다.</p>
+            </details>
             <div class="rule"></div>
             <p class="eyebrow">STEP 02 · LOCAL SIMC</p>
             <div class="field"><label for="binary">simc.exe 경로 <small>실행 파일은 서버로 업로드하지 않습니다</small></label><input id="binary" placeholder="C:\SimC\simc.exe" required spellcheck="false"></div>
