@@ -841,11 +841,43 @@ async function checkSimcUpdater() {
   const result=await api("/api/v1/simc-updates/check",
      {method:"POST",payload:{}});
   simcOffer=result.candidate?.filename||null;
-  $("simc-update-candidate").textContent=simcOffer?
-    "공식 Windows x64 후보: "+simcOffer+
-    " · revision "+result.candidate.revision_short+
-    (result.archive_extractor_available?"":" · 7-Zip 필요"):
-    "공식 배포 후보를 찾지 못했습니다.";
+  const line=$("simc-update-candidate");
+  if(simcOffer) {
+    line.textContent="공식 Windows x64 후보: "+simcOffer+
+      " · revision "+result.candidate.revision_short+
+      (result.archive_extractor_available?"":" · 설치에는 7-Zip 필요");
+  }else{
+    const reasons={
+      OFFICIAL_NIGHTLY_TLS_CERTIFICATE_INVALID:"공식 nightly 다운로드 서버의 HTTPS 인증서를 검증할 수 없습니다.",
+      OFFICIAL_NIGHTLY_CONNECTION_TIMEOUT:"공식 nightly 다운로드 서버 연결 시간이 초과됐습니다.",
+      OFFICIAL_NIGHTLY_CONNECTION_UNAVAILABLE:"공식 nightly 다운로드 서버에 연결할 수 없습니다.",
+      NO_OFFICIAL_WIN64_NIGHTLY_FOUND:"공식 nightly 목록에서 Windows x64 패키지를 찾지 못했습니다."
+    };
+    line.replaceChildren(document.createTextNode(
+      (reasons[result.official_index_problem]||
+        "공식 nightly 직접 조회에 실패했습니다 ("+
+        (result.official_index_problem||"원인 미상")+").")+
+      " 인증서 검증을 우회하지 않습니다. "));
+    const alt=result.github_alternative;
+    if(alt?.source==="OFFICIAL_SIMC_GITHUB_ACTIONS"&&
+       /^https:\/\/github\.com\/simulationcraft\/simc-publish\/actions\/runs\/\d+\/artifacts\/\d+$/.test(alt.artifact_zip_url)){
+      const link=document.createElement("a");
+      link.href=alt.artifact_zip_url;
+      link.target="_blank";link.rel="noopener noreferrer";
+      link.textContent="SimC 공식 GitHub Windows nightly 받기";
+      line.appendChild(link);
+      line.appendChild(document.createTextNode(
+        " · GitHub 로그인이 필요할 수 있습니다. 받은 artifact ZIP에서 .7z를 꺼낸 뒤 아래 '내 PC의 .7z 파일 설치'를 사용하세요."));
+    }else{
+      const link=document.createElement("a");
+      link.href="https://github.com/simulationcraft/simc-publish/actions";
+      link.target="_blank";link.rel="noopener noreferrer";
+      link.textContent="공식 GitHub nightly 기록 열기";
+      line.appendChild(link);
+      line.appendChild(document.createTextNode(
+        " · Windows x64 artifact에서 .7z를 찾아 아래에서 설치하세요."));
+    }
+  }
   $("simc-install-btn").disabled=!simcOffer||!result.archive_extractor_available;
 }
 async function installSimcUpdater() {
