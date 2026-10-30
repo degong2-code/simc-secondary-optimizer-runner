@@ -1,0 +1,48 @@
+name: v193 Once Official SimC Windows Nightly Index Discovery (No Download)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/v193_official_nightly_index_probe.yml]
+permissions:
+  contents: read
+jobs:
+  official-index-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Fetch official nightly HTML index only and parse a real Windows x64 archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          python - <<'PY'
+          import json,pathlib,sys
+          sys.path.insert(0,"runner")
+          import v193_simc_local_updater as u
+          html=u.fetch_index()
+          found=u.candidate_urls(html)
+          summary={"schema":"v193_official_index_network_smoke_v1",
+                   "status":"OFFICIAL_NIGHTLY_INDEX_PARSED" if found else "NO_WINDOWS_NIGHTLY",
+                   "index":u.BASE,
+                   "candidates_count":len(found),
+                   "candidates":[{"filename":x["filename"],"revision_short":x["revision_short"]} for x in found[:8]],
+                   "archive_downloaded":False,
+                   "executable_installed":False,
+                   "native_calls":0}
+          pathlib.Path("out/v193_official_index_receipt.json").write_text(json.dumps(summary,indent=2)+"\n")
+          print(json.dumps(summary,indent=2))
+          assert found,"OFFICIAL_WINDOWS_7Z_CANDIDATE_NOT_FOUND"
+          PY
+      - if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v193-official-nightly-index-only-${{ github.run_id }}
+          path: out/
+          retention-days: 7
+          if-no-files-found: warn
