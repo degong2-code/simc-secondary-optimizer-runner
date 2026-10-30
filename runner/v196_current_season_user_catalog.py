@@ -160,7 +160,9 @@ def public_options(path=DEFAULT):
         "season_build":source["season_game_build"],
         "one_enchant_native_evidence_status":(
             "EXACT_SCOPE_OBSERVED_READ_ONLY" if data is not None
-            else "OPTIONAL_EVIDENCE_UNAVAILABLE_ALL_ENCHANT_CHOICES_LOCKED"),
+            else ("OPTIONAL_RATING_EVIDENCE_UNAVAILABLE_EAGLE_SEPARATE"
+                  if eagle_selectable else
+                  "OPTIONAL_EVIDENCE_UNAVAILABLE_ALL_ENCHANT_CHOICES_LOCKED")),
         "simc_revision":source["simc_commit"],
         "source_artifact_id":source["source_artifact_id"],
         "related_source_counts":dict(source["related_source_counts"]),
