@@ -29,6 +29,7 @@ import v196_current_season_user_catalog as ui_catalog
 import v193_simc_local_updater as simc_updates
 import v148_local_batch_results as batch_view
 import v167_product_season_gear_adapter as season_gear
+import v208_internal_exact_special_L_hydrator as exact_L
 
 SCHEMA = "v113_local_web_api_p1_v1"
 KEY = re.compile(r"[a-f0-9]{20}\Z")
@@ -55,7 +56,8 @@ class UserRequest(BaseModel):
 def blocked(exc):
     """Return stable codes, not private absolute paths, talent strings, or tracebacks."""
     if isinstance(exc, (sessions.SessionBlocked, bootstrap.UserScenarioBlocked,
-                        sessions.nonchmv_enchant.EnchantChoiceBlocked)):
+                        sessions.nonchmv_enchant.EnchantChoiceBlocked,
+                        exact_L.StaticLBlocked)):
         code = str(exc).split(":", 1)[0].split("\n", 1)[0]
         return HTTPException(422, detail={"code": code})
     # Exact special L is a user-actionable, pre-Native input mismatch.
@@ -77,6 +79,7 @@ class LocalJobs:
         self.root = pathlib.Path(root).expanduser().resolve()
         self.lock = threading.Lock()
         self.children = {}
+        self.static_lock = threading.Lock()
 
     def default_static_cache(self, user, requested):
         """Reuse an existing same-PC static cache; never create L or call SimC.
@@ -87,8 +90,8 @@ class LocalJobs:
         """
         if requested is not None or not user.get("special_items"):
             return requested
-        candidate=self.root.parent/"static-item-cache.json"
-        return str(candidate) if candidate.is_file() else None
+        candidate=exact_L.source_cache(self.root,None)
+        return str(candidate) if candidate is not None else None
 
     def recent_sessions(self, limit=48):
         """Read-only local session index; no binary hashing, Native or writes.
@@ -235,6 +238,37 @@ class LocalJobs:
                           current_season and user["target"]["ilevel"]==334)}}
         except Exception as exc:
             raise blocked(exc) from None
+
+    def start_with_internal_special_L(self, params):
+        """Explicit /start only: one cached, exact static Native on missing L.
+
+        Never modify an already sealed old static cache/session. The one
+        physical SimC probe is separate from the six DPS optimizer calls.
+        The ordinary /plan endpoint remains strictly zero Native.
+        """
+        user=sessions.user_scenario(params.controls)
+        hydrated=None
+        prepared_params=params
+        if params.current_season_product and user["special_items"]:
+            binary=pathlib.Path(params.binary).expanduser().resolve()
+            with self.static_lock:
+                source=self.default_static_cache(user,params.static_cache)
+                try:
+                    hydrated=exact_L.hydrate(
+                        user,self.root,binary,params.revision,
+                        existing=source)
+                except Exception as exc:
+                    raise blocked(exc) from None
+                prepared_params=params.model_copy(update={
+                    "static_cache":hydrated["static_cache_path"]})
+        prepared=self.plan(prepared_params)
+        folder=self.folder(prepared["session_id"])
+        response=self.launch(folder)
+        response["static_L_native_calls_this_start"]=(
+            hydrated["native_new_calls"] if hydrated else 0)
+        response["static_L_reused_exact_variants"]=(
+            hydrated["cache_reused"] if hydrated else 0)
+        return response
 
     def args_for_existing(self, folder):
         """Recover binary/options from self-generated manifest, verify v106 identity."""
@@ -589,9 +623,7 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
 
     @app.post("/api/v1/sessions/start")
     def start(request: UserRequest):
-        prepared=jobs.plan(request)
-        folder=jobs.folder(prepared["session_id"])
-        return jobs.launch(folder)
+        return jobs.start_with_internal_special_L(request)
 
     @app.post("/api/v1/sessions/{session_id}/resume")
     def resume(session_id: str):
