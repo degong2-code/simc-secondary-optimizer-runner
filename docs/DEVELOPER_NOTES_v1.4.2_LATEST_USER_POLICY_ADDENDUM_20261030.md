@@ -143,3 +143,12 @@
 - **P3-D:** Windows 원클릭 Build/Start, progress, cancel/resume, incremental refresh, cache/evidence diagnostics.
 - 현재 v191은 source-pinned candidate aggregator이며 automatic UI promotion=false; v196은 고정 source candidate JSON과 별도 approval boundary를 읽는다; v211은 38 마부 분류만 수행한다; v098은 source-backed archetype subset만 지원한다. 따라서 **통합 Environment Builder, end-to-end manifest, 26 DPS 전체 프로필 공급, 최종 Windows one-click UX는 미완료**다.
 - 설계 상세 및 최초 통합 단위: `docs/P3_ENVIRONMENT_BUILDER_TARGET_ARCHITECTURE_20261031.md`. 이번 반영은 아키텍처/정책 문서화이며 코드 통합 완료나 사용자 배포 승격을 뜻하지 않는다.
+
+
+#### P3-A 구현 진척 — v212 Environment Manifest (2026-10-31)
+
+- `runner/v212_environment_manifest.py` 추가. 기존 v191 season aggregation, v211 enchant classification, v196 approved UI catalog, v098 target-profile preparation 결과를 입력받아 **하나의 결정적 Environment Manifest**로 참조 결합한다. 수집·API·SimC Native·최적화 실행을 하지 않는 얇은 provenance/readiness join이다.
+- exact schema/build/SimC revision 일치, 마부 38행/현재 UI 선택 1개 경계, source 단계 Native0/no auto-promotion, v098 READY plan, target profile files, SimC binary SHA, 선택 static-cache SHA를 검증한다. 프로필 파일 변경은 환경 digest를 변경하고, source/build/revision/approval/path mismatch는 fail-closed.
+- 결과는 절대 로컬 경로와 전체 사용자 프로필 내용을 복제하지 않고 SHA·상대 profile file identity만 보존한다. 현재 26 DPS 프로필 공급 및 단일 source-to-catalog handoff가 미완료이므로 READY_WITH_LIMITATIONS가 정상 결과다.
+- 신규 `tests/test_v212_environment_manifest.py` **8 tests**; [Ubuntu/Windows Actions #41159726342](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41159726342) 각각 **8/8 PASS**, compile PASS, Native0/network0. v210/v211 기존 Native/캐시 증거는 재실행하지 않았고 무효화하지 않았다.
+- 이 단계는 P3-A의 artifact manifest/readiness 핵심만 구현했다. v191/v211/v196/v098을 자동 실행하는 production command, Build UI/API, 모든 26 DPS profile supplier, Windows one-click progress/cancel/resume는 미완료. 상세 `docs/P3_ENVIRONMENT_BUILDER_TARGET_ARCHITECTURE_20261031.md` §8.
