@@ -56,7 +56,7 @@ The categories overlap: four items have both static non-CHMV stats and an additi
 - Haste: 8021 Thalassian Haste; 8025 Silvermoon's Alacrity.
 - Versatility: 8023 Thalassian Versatility; 8027 Silvermoon's Tenacity.
 
-These are direct DBC static rating components, not temporary procs. The six IDs other than 8025 have **no exact Native E measurement**. 8025's haste E=30 is reused only for the existing Linux Frost ilvl334 / finger1 / item158366 / exact-profile developer evidence; it remains non-selectable in the normal user UI.
+These are direct DBC static rating components, not temporary procs. The seven IDs other than 8025 have **no exact Native E measurement**. 8025's haste E=30 is reused only for the existing Linux Frost ilvl334 / finger1 / item158366 / exact-profile developer evidence; it remains non-selectable in the normal user UI.
 
 ### Static non-CHMV components
 
@@ -97,7 +97,7 @@ A missing dedicated custom registration is **not** proof of unsupported or indep
 
 - 7967: E={crit:0, haste:0, mastery:0, vers:0}, one Windows Retribution Paladin ilvl334 / finger1 profile. Existing v206/v207 user choice remains exactly that one-scope admission.
 - 8025: E={crit:0, haste:30, mastery:0, vers:0}, one Linux Frost ilvl334 / finger1 item158366 exact-profile scope. Developer-only; not general user UI.
-- The other six static CHMV ring enchants have source classification but no exact Native E.
+- The other seven static CHMV ring enchants have source classification but no exact Native E.
 - Dynamic weapon CHMV procs are never treated as permanent fixed E. SimC computes their timing and effect during DPS.
 - No new Native execution, no 38×26 matrix, no full-season re-collection, no new DPS cache invalidation.
 
@@ -113,6 +113,6 @@ A missing dedicated custom registration is **not** proof of unsupported or indep
 
 The existing v196 season catalog now attaches a source effect summary to all 38 entries. The existing UI reads effect_description for its read-only list. It still permits **only Eyes of the Eagle 7967** in the current one-scope user path; 8025 is developer-only and all other 36 remain locked. No general permanent-enchant selection or new E budget path is promoted by this work.
 
-Next useful work is **not** a 26-specialization Native rerun. If the user wants additional permanent rating enchants admitted, first select the exact ring ID/slot/profile conditions and perform the minimum exact Native E measurement for the six unmeasured static CHMV variants. Any non-CHMV or spell-only enchant admission requires a separate explicit scope and only the specific acceptance check that is genuinely missing. No blanket 38×26 matrix.
+Next useful work is **not** a 26-specialization Native rerun. If the user wants additional permanent rating enchants admitted, first select the exact ring ID/slot/profile conditions and perform the minimum exact Native E measurement for the seven unmeasured static CHMV variants. Any non-CHMV or spell-only enchant admission requires a separate explicit scope and only the specific acceptance check that is genuinely missing. No blanket 38×26 matrix.
 
 All changes remain on probe/chat-cache-v035-20261024. No main, immutable v003, original v016, Project Sources/Instructions UI, or Work OS promotion.
