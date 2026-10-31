@@ -47,6 +47,10 @@ class V211SourceClassification(unittest.TestCase):
         texts={1236708:"$@spelldesc445322",
                445322:"Permanently enchants chestpiece to increase Intellect and mana pool."}
         self.assertEqual(v.resolve_spelltext(1236708,texts),texts[445322])
+        duplicates='''{ 9, "Human-readable effect description", 0, 0 },
+{ 9, "$rolemult=helper expression", 0, 0 },'''
+        parsed=v.parse_spelltexts(duplicates)
+        self.assertEqual(parsed[9],"Human-readable effect description")
         src="""
 register_special_effect( { 1236741, 1236742 }, enchants::stat_weapon_enchant );
 register_special_effect( { 1236733, 1236734 }, enchants::strength_of_halazzi );
