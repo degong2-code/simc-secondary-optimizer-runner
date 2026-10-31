@@ -1,0 +1,40 @@
+name: v208 exact special L internal Native-on-start offline
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/v208_special_L_user_start_offline.yml]
+permissions:
+  contents: read
+concurrency:
+  group: v208-exact-L-focused-offline
+  cancel-in-progress: false
+jobs:
+  exact-static-L-user-boundary:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 12
+    steps:
+      - name: Preserve literal source LF on Windows
+        shell: bash
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r requirements-web-test.txt
+      - name: Check Python bytecode and browser code
+        run: |
+          python -m compileall -q runner/v098_target_user_scenario_bootstrap.py runner/v208_internal_exact_special_L_hydrator.py runner/v113_local_web_api.py tests/test_v208_special_L_hydration_offline.py
+          node --check runner/webui/app.js
+      - name: Exact selected-special cache miss and reuse + old local web API regressions
+        run: |
+          python -m unittest -v tests.test_v208_special_L_hydration_offline tests.test_v113_local_web_api_offline tests.test_v106_user_session_controller tests.test_v098_target_user_scenario_bootstrap tests.test_v114_local_web_ui_offline tests.test_v177_current_season_product_flow tests.test_v179_current_season_input_paths_offline tests.test_v196_current_season_ui_catalog tests.test_v206_nonchmv_eagle_user_path
+      - name: No real Native or network/data collection used in focused matrix
+        run: python -c "from pathlib import Path; assert not Path('out').exists(); print('V208_FOCUSED_OFFLINE_NO_NATIVE_PASS')"
