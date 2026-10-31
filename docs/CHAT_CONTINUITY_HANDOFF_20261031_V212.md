@@ -14,6 +14,7 @@
 - P3-A 최종 검증 Actions: [#41160002104](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41160002104), 실행 commit `475768bf91531e76e3ad06eda624b3979d8e9145`, SUCCESS. Ubuntu 24.04와 Windows 2022 job 각각 **9/9 tests PASS**, 모듈 compile PASS, `V212_ENVIRONMENT_MANIFEST_NATIVE0_PASS`.
 - #41160002104 실행 이후 당시 HEAD `59eb71b09c414648b114e0b5ec10401cf2d8832e`까지는 3개 문서만 변경되었다. 그 뒤 이번 인계 준비도 CURRENT, Developer Notes, P3 설계, Windows guide의 문서 변경만 했다. 실행 commit과 현재 branch HEAD 사이 compare에서 변경 파일은 문서 4개뿐이며 v212 코드·테스트·workflow는 변경되지 않았다.
 - #41160002104에는 업로드 artifact가 없다. job logs를 직접 확인했으며 양 OS 모두 `Ran 9 tests ... OK` 및 Native0 marker가 남아 있다.
+- 최신 branch Actions는 [Windows source beta #41161740839](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41161740839): Windows Server 2022 Python 3.12/3.14 각각 101 tests PASS, ZIP 2 tests PASS, extracted launcher check, localhost HTTP security 및 징벌334/분노321/냉법344 3개 plan PASS, 기존 cache-only 6/6 HIT, 신규 Native0. Artifact [#13027326887](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41161740839/artifacts/13027326887), ZIP SHA256 `08c56925e0520e17d78392ef2740e00b09f67b6005acc6a9021b462da2ca66d0`, expiry `2026-11-07T02:50:50Z`. This is source beta packaging/HTTP plan evidence, not user-PC GUI, actual SimC Native, or Environment Build UI acceptance.
 - **주의:** 위 9×2 테스트는 synthetic JSON fixtures와 dummy binary를 사용한 계약 테스트다. 실제 운영 v191/v211/v196/v098 산출물을 연결한 종단 간 제품 실행이 아니다.
 
 ## 1. 새 채팅의 필수 읽는 순서
@@ -207,7 +208,7 @@ v212는 이미 생성된 v191 season-candidate JSON, v211 enchant-classification
 **갱신하지 않은 것 / 미승격:**
 - v212/v191/v211/v196/v098/v208 실행 코드와 tests/workflows: 변경 없음.
 - v211 script/runtime manifest의 “other six” 문구: 이번에는 코드/data 수정 및 CI를 하지 않았으며 P3-B 작업 때 7로 교정할 항목으로 기록.
-- Windows beta ZIP: 이번 문서 변경 이후 재패키징하지 않았다. 기존 artifact #13025173397이 이 최신 handoff 문서를 포함한다고 주장하지 않는다.
+- Windows beta ZIP: Windows guide 9/9 범위 교정으로 workflow가 자동 실행되어 [#41161740839](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41161740839)에서 새 artifact #13027326887이 생성됐다. SHA256은 `08c56925e0520e17d78392ef2740e00b09f67b6005acc6a9021b462da2ca66d0`; 2026-11-07T02:50:50Z까지 보관된다. 이 ZIP은 최신 Windows guide와 소스 베타를 포함하지만 Environment Build 버튼/API/원클릭 통합을 제공하지 않는다. 이 handoff doc 자체가 ZIP에 포함됐다고 주장하지 않는다.
 - GitHub `main`, immutable v003, 원본 v016, repository visibility: 변경 없음. Repository는 확인 당시 Public.
 - ChatGPT Project Sources/Instructions UI 및 공식 Work OS/M0/Shared State: 실제 적용/승격하지 않았다.
 - 실제 production artifacts를 넣은 v212 E2E, v191→v211→v196 자동 연결, v208 receipt manifest 통합, 26 DPS 전체 profile supplier, Windows Environment Build 버튼/one-click UX: 미완료.
