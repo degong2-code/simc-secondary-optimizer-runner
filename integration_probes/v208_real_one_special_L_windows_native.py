@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """v208 one Windows official SimC user-selected special-L hydration check.
 
-One current-season source-listed neck special, 1 real physical Native maximum,
+One current-season source-listed cloak special, 1 real physical Native maximum,
 then exact cached v098/v096 plan (no DPS Native). Other special items/26 specs
 are outside this audit.
 """
@@ -25,14 +25,14 @@ def run(binary,out):
     need(binary.is_file() and binary.name.lower()=="simc.exe","EXACT_BINARY")
     need(hydrator.sha_file(binary)=="0ad16368cd1effb19c793dbce63518ccb72fec89c72f6ef75d9afca239a039e8",
          "OFFICIAL_EXE_SHA_CHANGED")
-    found=[x for x in gear_db.read()["items"] if x["item_id"]==268250]
+    found=[x for x in gear_db.read()["items"] if x["item_id"]==159288]
     need(len(found)==1 and
          found[0]["category"]=="special_effect_gear_candidate" and
-         found[0]["slot_hint"]=="neck",
+         found[0]["slot_hint"]=="back",
          "SOURCE_SEASON_NECK_NOT_VERIFIED")
     c=session.standard_controls(("shaman","elemental"))
     c["ilevel"]=331
-    c["special_items"]=[{"slot":"neck","item_id":268250,"options":{}}]
+    c["special_items"]=[{"slot":"back","item_id":159288,"options":{}}]
     user=session.user_scenario(c)
     result=hydrator.hydrate(user,out/"runs",binary,"710c2408bf")
     need(result["native_new_calls"]==1 and
@@ -46,8 +46,8 @@ def run(binary,out):
                            current_season_product=True,
                            static_special_probe_only=True)
     need(len(staged["special_rows"])==1 and
-         staged["special_rows"][0]["item_id"]==268250,
-         "INTERNAL_EXACT_SELECTED_NECK_ID_CHANGED")
+         staged["special_rows"][0]["item_id"]==159288,
+         "INTERNAL_EXACT_SELECTED_CLOAK_ID_CHANGED")
     actual=budget.exact_identity(staged["special_rows"][0])
     record=cache_data["variants"].get(cache.digest(actual))
     need(record is not None and
@@ -69,7 +69,7 @@ def run(binary,out):
          "SECOND_STATIC_NATIVE_MUST_NOT_REEXECUTE")
     receipt={"schema":"v208_real_windows_one_selected_static_L_v1",
         "status":"PASS_EXACT_ONE_NATIVE_SPECIAL_L_INTERNAL_AND_REUSED",
-        "scope":"shaman/elemental 331 special neck item268250 no options",
+        "scope":"shaman/elemental 331 special cloak item159288 no options",
         "source_gear_category":"special_effect_gear_candidate",
         "actual_native_variant_identity":actual,
         "source_profile_sha256":staged["source_profile_sha256"],
