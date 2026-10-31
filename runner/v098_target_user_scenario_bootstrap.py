@@ -159,7 +159,8 @@ def initial_seeds(B,lower,upper):
 def build(user,folder,binary,revision,static_cache_path=None,
           imported_profile_text=None,*,ordinary_variant=None,pure_stage=False,
           independent_334=False,independent_target_level=False,
-          source_first_stage=False,current_season_product=False):
+          source_first_stage=False,current_season_product=False,
+          static_special_probe_only=False):
     """Return an already validated internal manifest and v096 plan; no Native."""
     base_accepted=(FIELDS,FIELDS|{IMPORT_FIELD},FIELDS|{CONSUME_FIELD},
                    FIELDS|{IMPORT_FIELD,CONSUME_FIELD})
@@ -343,6 +344,26 @@ def build(user,folder,binary,revision,static_cache_path=None,
     cfg["source"]={"kind":"user_supplied",
                    "profile_sha256":hashlib.sha256(profile.encode("utf8")).hexdigest()}
     scenario.normalize(cfg)
+    if static_special_probe_only:
+        # v208 internal on-demand static-L source, never a product plan.
+        # Reuses exactly the real user/gear/consumables profile composition
+        # above, before v062 rejects a cache-missing selected L. Nothing is
+        # written, no SimC is executed, and no optimizer or result is seeded.
+        need(current_season_product and bool(user["special_items"])
+             and static_cache_path is None,
+             "STATIC_SPECIAL_PROBE_ONLY_EXACT_CURRENT_USER")
+        oil=oil_mod.configure(profile,cfg,weapon_layout,user["oil_hands"])
+        chosen_slots=({r["slot"] for r in cfg["equipment"]["special"]} |
+                      set(cfg["equipment"].get("catalyst_special_tier_slots",[])))
+        need(chosen_slots and
+             chosen_slots=={r["slot"] for r in user["special_items"]},
+             "STATIC_SPECIAL_PROBE_SLOTS_NOT_SOURCE_BOUND")
+        return {"schema":"v208_exact_current_special_static_source_v1",
+                "profile":oil["profile"],
+                "special_rows":[copy.deepcopy(rows[s]) for s in sorted(chosen_slots)],
+                "source_profile_sha256":hashlib.sha256(
+                    oil["profile"].encode("utf8")).hexdigest(),
+                "native_calls":0,"no_optimization_or_budget_produced":True}
     static=(cache_mod.empty_cache() if static_cache_path is None
             else cache_mod.load(pathlib.Path(static_cache_path)))
     prepared=oil_mod.prepare(profile,cfg,fillers,static,weapon_layout,
