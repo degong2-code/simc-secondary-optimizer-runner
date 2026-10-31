@@ -1,0 +1,931 @@
+{
+  "schema": "v211_current_season_enchant_effect_classification_v1",
+  "status": "SOURCE_CLASSIFIED_NOT_GENERAL_NATIVE_ACCEPTANCE_OR_UI_PROMOTION",
+  "season_game_build": "12.1.5.70575",
+  "simc_commit": "710c2408bfd3ae4df71b8cd55cdf01f63fd6c926",
+  "candidate_source_artifact_id": 12961140046,
+  "source_files": {
+    "data_enums.hh": {
+      "path": "engine/dbc/data_enums.hh",
+      "size_bytes": 75791,
+      "git_blob_sha1": "23e5af4d5c407aef6092225030019757c9fa3354",
+      "sha256": "25a88c629f3d4ebb4ac966f3927307b28f756cf9cef9482dc77a79b197873ea4"
+    },
+    "enchants.cpp": {
+      "path": "engine/item/enchants.cpp",
+      "size_bytes": 19322,
+      "git_blob_sha1": "4876fc816c275844ad6da9be3ca026cdb4a52090",
+      "sha256": "e4b4cb85c4f74896f3a330d3932aaa5e32b67a1ab7f48d0fd8b9f0fa2fb92ff0"
+    },
+    "permanent_enchant.inc": {
+      "path": "engine/dbc/generated/permanent_enchant.inc",
+      "size_bytes": 86347,
+      "git_blob_sha1": "2321ad985ab4ee960a5a3a80d41b25db9fb2b8af",
+      "sha256": "1d836f16acfa812c9fe39fe30185910595c6b813c9e8c2c87691bc2c47fd586a"
+    },
+    "spell_item_enchantment.inc": {
+      "path": "engine/dbc/generated/spell_item_enchantment.inc",
+      "size_bytes": 1093702,
+      "git_blob_sha1": "7262db77d57d3c041a561de4d3d404431685a7ff",
+      "sha256": "dad56ceec265431ea9abbca80f6ce426bf316ac3d0ba12dce80ed6d28701f080"
+    },
+    "spelltext_data.inc": {
+      "path": "engine/dbc/generated/spelltext_data.inc",
+      "size_bytes": 3971792,
+      "git_blob_sha1": "0197c596fd5dfddbe04a1d7284ec9025d51d3bf3",
+      "sha256": "f4f124ff41b13f18512c7b10ef56b9a5f744150938b3d37b9528ed4d51d09f23"
+    },
+    "unique_gear_midnight.cpp": {
+      "path": "engine/player/unique_gear_midnight.cpp",
+      "size_bytes": 243844,
+      "git_blob_sha1": "9bb01bff903f22c3332f9cb6464ed72c0cae27ea",
+      "sha256": "80393730af429f225610a0c65399c65289117eccc9faaaa63ba685a72e0d4987"
+    }
+  },
+  "simc_item_enchant_pipeline": {
+    "static_stat_path": "ITEM_ENCHANTMENT_STAT",
+    "spell_effect_path": "ITEM_ENCHANTMENT_EQUIP_SPELL",
+    "passive_spell_path": "passive_enchant",
+    "owner": "SIMC",
+    "source_file": "engine/item/enchants.cpp"
+  },
+  "counts": {
+    "total": 38,
+    "static_chmv_rating": 8,
+    "static_nonchmv_only_or_mixed": 19,
+    "spell_effects": 15,
+    "native_E_measured": 2,
+    "user_selectable_existing_scope": 1,
+    "developer_only_exact_scope": 1,
+    "locked": 36
+  },
+  "native_calls": 0,
+  "automatic_ui_promotion": false,
+  "simc_effect_reimplemented": false,
+  "limitations": [
+    "DBC static component classification is not a generalized exact Native E measurement.",
+    "enchant_id 8025 E=haste30 is one Linux Frost ilvl334 finger1 profile only.",
+    "enchant_id 7967 E=0 is one Windows Retribution Paladin ilvl334 finger1 profile only.",
+    "The other six static CHMV ring enchants have no exact Native E measurement.",
+    "Spell descriptions and custom registration identify SimC-owned effect semantics, not independent proof of all proc acceptance or mechanics.",
+    "Weapon subclass mask zero does not certify exact hand/weapon eligibility.",
+    "All 37 choices other than existing one-scope Eagle remain non-user-selectable; 8025 remains developer-only."
+  ],
+  "rows": [
+    {
+      "enchant_id": 7957,
+      "token": "enchant_chest__mark_of_nalorakk",
+      "effect_family": "static_nonchmv_item_mod",
+      "effect_summary": "정적 주능력치·체력: 힘, 체력",
+      "static_components": [
+        "strength",
+        "stamina"
+      ],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [],
+      "spell_effect_roles": [],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 7959,
+      "token": "enchant_helm__hex_of_leeching",
+      "effect_family": "static_nonchmv_item_mod",
+      "effect_summary": "정적 3차 스탯: 생기흡수",
+      "static_components": [
+        "leech_rating"
+      ],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [],
+      "spell_effect_roles": [],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 7961,
+      "token": "enchant_helm__empowered_hex_of_leeching",
+      "effect_family": "static_nonchmv_plus_simc_spell",
+      "effect_summary": "정적 생기흡수 + 야외 처치 시 회복 효과",
+      "static_components": [
+        "leech_rating"
+      ],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [
+        1242755
+      ],
+      "spell_effect_roles": [
+        "OUTDOOR_HEAL_UTILITY"
+      ],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 7963,
+      "token": "enchant_boots__lynxs_dexterity",
+      "effect_family": "static_nonchmv_item_mod",
+      "effect_summary": "정적 3차 스탯·체력: 회피, 체력",
+      "static_components": [
+        "avoidance_rating",
+        "stamina"
+      ],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [],
+      "spell_effect_roles": [],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 7965,
+      "token": "enchant_ring__amani_mastery",
+      "effect_family": "static_chmv_rating_mastery_rating",
+      "effect_summary": "정적 특화 rating",
+      "static_components": [
+        "mastery_rating"
+      ],
+      "static_chmv_rating_present": true,
+      "static_chmv_stats": [
+        "mastery_rating"
+      ],
+      "driver_spell_ids": [],
+      "spell_effect_roles": [],
+      "dynamic_chmv_proc_roles": [
+        "mastery_rating"
+      ],
+      "dynamic_chmv_proc_present": true,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 7967,
+      "token": "enchant_ring__eyes_of_the_eagle",
+      "effect_family": "crit_effectiveness",
+      "effect_summary": "치명타 효과 강화; 치명타 rating 증가와 별개",
+      "static_components": [],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [
+        1236701
+      ],
+      "spell_effect_roles": [
+        "CRIT_EFFECTIVENESS_PASSIVE"
+      ],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "MEASURED_ZERO_ONE_WINDOWS_PALADIN_334_PROFILE",
+      "native_E": {
+        "crit_rating": 0,
+        "haste_rating": 0,
+        "mastery_rating": 0,
+        "versatility_rating": 0
+      },
+      "selection_status": "EXISTING_EAGLE_ONE_SCOPE_USER_CHOICE",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 7969,
+      "token": "enchant_ring__zuljins_mastery",
+      "effect_family": "static_chmv_rating_mastery_rating",
+      "effect_summary": "정적 특화 rating",
+      "static_components": [
+        "mastery_rating"
+      ],
+      "static_chmv_rating_present": true,
+      "static_chmv_stats": [
+        "mastery_rating"
+      ],
+      "driver_spell_ids": [],
+      "spell_effect_roles": [],
+      "dynamic_chmv_proc_roles": [
+        "mastery_rating"
+      ],
+      "dynamic_chmv_proc_present": true,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 7971,
+      "token": "enchant_shoulders__flight_of_the_eagle",
+      "effect_family": "static_nonchmv_item_mod",
+      "effect_summary": "정적 3차 스탯: 속도",
+      "static_components": [
+        "speed_rating"
+      ],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [],
+      "spell_effect_roles": [],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 7973,
+      "token": "enchant_shoulders__akilzons_swiftness",
+      "effect_family": "static_nonchmv_item_mod",
+      "effect_summary": "정적 3차 스탯: 속도",
+      "static_components": [
+        "speed_rating"
+      ],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [],
+      "spell_effect_roles": [],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 7979,
+      "token": "enchant_weapon__strength_of_halazzi",
+      "effect_family": "simc_spell_effect",
+      "effect_summary": "무기 발동 피해·출혈 효과",
+      "static_components": [],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [
+        1236734
+      ],
+      "spell_effect_roles": [
+        "DAMAGE_PROC"
+      ],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 7981,
+      "token": "enchant_weapon__janalais_precision",
+      "effect_family": "simc_spell_effect",
+      "effect_summary": "발동 시 일시적 치명 rating 증가",
+      "static_components": [],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [
+        1236725
+      ],
+      "spell_effect_roles": [
+        "TEMPORARY_CRIT_RATING_PROC"
+      ],
+      "dynamic_chmv_proc_roles": [
+        "TEMPORARY_CRIT_RATING_PROC"
+      ],
+      "dynamic_chmv_proc_present": true,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 7983,
+      "token": "enchant_weapon__berserkers_rage",
+      "effect_family": "simc_spell_effect",
+      "effect_summary": "발동 시 일시적 가속 rating 증가",
+      "static_components": [],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [
+        1236728
+      ],
+      "spell_effect_roles": [
+        "TEMPORARY_HASTE_RATING_PROC"
+      ],
+      "dynamic_chmv_proc_roles": [
+        "TEMPORARY_HASTE_RATING_PROC"
+      ],
+      "dynamic_chmv_proc_present": true,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 7985,
+      "token": "enchant_chest__mark_of_the_rootwarden",
+      "effect_family": "static_nonchmv_item_mod",
+      "effect_summary": "정적 주능력치·3차 스탯: 민첩, 속도",
+      "static_components": [
+        "agility",
+        "speed_rating"
+      ],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [],
+      "spell_effect_roles": [],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 7987,
+      "token": "enchant_chest__mark_of_the_worldsoul",
+      "effect_family": "static_nonchmv_item_mod",
+      "effect_summary": "정적 복합 주능력치",
+      "static_components": [
+        "strength_agility_intellect"
+      ],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [],
+      "spell_effect_roles": [],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 7989,
+      "token": "enchant_helm__blessing_of_speed",
+      "effect_family": "static_nonchmv_item_mod",
+      "effect_summary": "정적 3차 스탯: 속도",
+      "static_components": [
+        "speed_rating"
+      ],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [],
+      "spell_effect_roles": [],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 7991,
+      "token": "enchant_helm__empowered_blessing_of_speed",
+      "effect_family": "static_nonchmv_plus_simc_spell",
+      "effect_summary": "정적 속도 + 야외 처치 시 비행 편의 효과",
+      "static_components": [
+        "speed_rating"
+      ],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [
+        1242800
+      ],
+      "spell_effect_roles": [
+        "TRAVEL_UTILITY"
+      ],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 7993,
+      "token": "enchant_boots__shaladrassils_roots",
+      "effect_family": "static_nonchmv_item_mod",
+      "effect_summary": "정적 3차 스탯·체력: 생기흡수, 체력",
+      "static_components": [
+        "leech_rating",
+        "stamina"
+      ],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [],
+      "spell_effect_roles": [],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 7995,
+      "token": "enchant_ring__natures_wrath",
+      "effect_family": "static_chmv_rating_crit_rating",
+      "effect_summary": "정적 치명 rating",
+      "static_components": [
+        "crit_rating"
+      ],
+      "static_chmv_rating_present": true,
+      "static_chmv_stats": [
+        "crit_rating"
+      ],
+      "driver_spell_ids": [],
+      "spell_effect_roles": [],
+      "dynamic_chmv_proc_roles": [
+        "crit_rating"
+      ],
+      "dynamic_chmv_proc_present": true,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 7997,
+      "token": "enchant_ring__natures_fury",
+      "effect_family": "static_chmv_rating_crit_rating",
+      "effect_summary": "정적 치명 rating",
+      "static_components": [
+        "crit_rating"
+      ],
+      "static_chmv_rating_present": true,
+      "static_chmv_stats": [
+        "crit_rating"
+      ],
+      "driver_spell_ids": [],
+      "spell_effect_roles": [],
+      "dynamic_chmv_proc_roles": [
+        "crit_rating"
+      ],
+      "dynamic_chmv_proc_present": true,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 7999,
+      "token": "enchant_shoulders__natures_grace",
+      "effect_family": "static_nonchmv_item_mod",
+      "effect_summary": "정적 3차 스탯: 회피",
+      "static_components": [
+        "avoidance_rating"
+      ],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [],
+      "spell_effect_roles": [],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 8001,
+      "token": "enchant_shoulders__amirdrassils_grace",
+      "effect_family": "static_nonchmv_item_mod",
+      "effect_summary": "정적 3차 스탯: 회피",
+      "static_components": [
+        "avoidance_rating"
+      ],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [],
+      "spell_effect_roles": [],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 8007,
+      "token": "enchant_weapon__worldsoul_cradle",
+      "effect_family": "simc_spell_effect",
+      "effect_summary": "치유 행동에 반응하는 대상 보호막 발동",
+      "static_components": [],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [
+        1236736
+      ],
+      "spell_effect_roles": [
+        "ABSORB_OR_DEFENSIVE_PROC"
+      ],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 8009,
+      "token": "enchant_weapon__worldsoul_aegis",
+      "effect_family": "simc_spell_effect",
+      "effect_summary": "피격 시 보호막 및 소진 시 주변 피해 발동",
+      "static_components": [],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [
+        1236738
+      ],
+      "spell_effect_roles": [
+        "ABSORB_OR_DEFENSIVE_PROC"
+      ],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 8011,
+      "token": "enchant_weapon__worldsoul_tenacity",
+      "effect_family": "simc_spell_effect",
+      "effect_summary": "발동 시 일시적 유연 rating 증가",
+      "static_components": [],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [
+        1236730
+      ],
+      "spell_effect_roles": [
+        "TEMPORARY_VERSATILITY_RATING_PROC"
+      ],
+      "dynamic_chmv_proc_roles": [
+        "TEMPORARY_VERSATILITY_RATING_PROC"
+      ],
+      "dynamic_chmv_proc_present": true,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 8013,
+      "token": "enchant_chest__mark_of_the_magister",
+      "effect_family": "static_nonchmv_plus_simc_spell",
+      "effect_summary": "정적 지능 + 마나 최대치 효과",
+      "static_components": [
+        "intellect"
+      ],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [
+        1236708
+      ],
+      "spell_effect_roles": [
+        "MANA_UTILITY"
+      ],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 8015,
+      "token": "enchant_helm__rune_of_avoidance",
+      "effect_family": "static_nonchmv_item_mod",
+      "effect_summary": "정적 3차 스탯: 회피",
+      "static_components": [
+        "avoidance_rating"
+      ],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [],
+      "spell_effect_roles": [],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 8017,
+      "token": "enchant_helm__empowered_rune_of_avoidance",
+      "effect_family": "static_nonchmv_plus_simc_spell",
+      "effect_summary": "정적 회피 + 야외 처치 시 이동속도 효과",
+      "static_components": [
+        "avoidance_rating"
+      ],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [
+        1242773
+      ],
+      "spell_effect_roles": [
+        "OUTDOOR_MOVEMENT_UTILITY"
+      ],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 8019,
+      "token": "enchant_boots__farstriders_hunt",
+      "effect_family": "static_nonchmv_item_mod",
+      "effect_summary": "정적 3차 스탯·체력: 속도, 체력",
+      "static_components": [
+        "speed_rating",
+        "stamina"
+      ],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [],
+      "spell_effect_roles": [],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 8021,
+      "token": "enchant_ring__thalassian_haste",
+      "effect_family": "static_chmv_rating_haste_rating",
+      "effect_summary": "정적 가속 rating",
+      "static_components": [
+        "haste_rating"
+      ],
+      "static_chmv_rating_present": true,
+      "static_chmv_stats": [
+        "haste_rating"
+      ],
+      "driver_spell_ids": [],
+      "spell_effect_roles": [],
+      "dynamic_chmv_proc_roles": [
+        "haste_rating"
+      ],
+      "dynamic_chmv_proc_present": true,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 8023,
+      "token": "enchant_ring__thalassian_versatility",
+      "effect_family": "static_chmv_rating_versatility_rating",
+      "effect_summary": "정적 유연 rating",
+      "static_components": [
+        "versatility_rating"
+      ],
+      "static_chmv_rating_present": true,
+      "static_chmv_stats": [
+        "versatility_rating"
+      ],
+      "driver_spell_ids": [],
+      "spell_effect_roles": [],
+      "dynamic_chmv_proc_roles": [
+        "versatility_rating"
+      ],
+      "dynamic_chmv_proc_present": true,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 8025,
+      "token": "enchant_ring__silvermoons_alacrity",
+      "effect_family": "static_chmv_rating_haste_rating",
+      "effect_summary": "정적 가속 rating; Linux 냉법 334 한 프로필 E=+30",
+      "static_components": [
+        "haste_rating"
+      ],
+      "static_chmv_rating_present": true,
+      "static_chmv_stats": [
+        "haste_rating"
+      ],
+      "driver_spell_ids": [],
+      "spell_effect_roles": [],
+      "dynamic_chmv_proc_roles": [
+        "haste_rating"
+      ],
+      "dynamic_chmv_proc_present": true,
+      "native_E_status": "MEASURED_ONE_LINUX_FROST_334_PROFILE",
+      "native_E": {
+        "crit_rating": 0,
+        "haste_rating": 30,
+        "mastery_rating": 0,
+        "versatility_rating": 0
+      },
+      "selection_status": "DEVELOPER_ONLY_EXACT_SCOPE",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 8027,
+      "token": "enchant_ring__silvermoons_tenacity",
+      "effect_family": "static_chmv_rating_versatility_rating",
+      "effect_summary": "정적 유연 rating",
+      "static_components": [
+        "versatility_rating"
+      ],
+      "static_chmv_rating_present": true,
+      "static_chmv_stats": [
+        "versatility_rating"
+      ],
+      "driver_spell_ids": [],
+      "spell_effect_roles": [],
+      "dynamic_chmv_proc_roles": [
+        "versatility_rating"
+      ],
+      "dynamic_chmv_proc_present": true,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 8029,
+      "token": "enchant_shoulders__thalassian_recovery",
+      "effect_family": "static_nonchmv_item_mod",
+      "effect_summary": "정적 3차 스탯: 생기흡수",
+      "static_components": [
+        "leech_rating"
+      ],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [],
+      "spell_effect_roles": [],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 8031,
+      "token": "enchant_shoulders__silvermoons_mending",
+      "effect_family": "static_nonchmv_item_mod",
+      "effect_summary": "정적 3차 스탯: 생기흡수",
+      "static_components": [
+        "leech_rating"
+      ],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [],
+      "spell_effect_roles": [],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 8037,
+      "token": "enchant_weapon__flames_of_the_sindorei",
+      "effect_family": "simc_spell_effect",
+      "effect_summary": "발동 시 화염 지속 피해 및 주변 광역 피해",
+      "static_components": [],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [
+        1236740
+      ],
+      "spell_effect_roles": [
+        "DAMAGE_PROC"
+      ],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 8039,
+      "token": "enchant_weapon__acuity_of_the_rendorei",
+      "effect_family": "simc_spell_effect",
+      "effect_summary": "발동 시 일시적 주능력치 증가",
+      "static_components": [],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [
+        1236742
+      ],
+      "spell_effect_roles": [
+        "TEMPORARY_PRIMARY_STAT_PROC"
+      ],
+      "dynamic_chmv_proc_roles": [],
+      "dynamic_chmv_proc_present": false,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 8041,
+      "token": "enchant_weapon__arcane_mastery",
+      "effect_family": "simc_spell_effect",
+      "effect_summary": "발동 시 일시적 특화 rating 증가",
+      "static_components": [],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [
+        1236721
+      ],
+      "spell_effect_roles": [
+        "TEMPORARY_MASTERY_RATING_PROC"
+      ],
+      "dynamic_chmv_proc_roles": [
+        "TEMPORARY_MASTERY_RATING_PROC"
+      ],
+      "dynamic_chmv_proc_present": true,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    },
+    {
+      "enchant_id": 8689,
+      "token": "enchant_weapon__rite_of_the_hashey",
+      "effect_family": "simc_spell_effect",
+      "effect_summary": "발동 시 무작위 2차 rating; 체력 80% 초과 시 최고 2차 스탯 선호",
+      "static_components": [],
+      "static_chmv_rating_present": false,
+      "static_chmv_stats": [],
+      "driver_spell_ids": [
+        1297652
+      ],
+      "spell_effect_roles": [
+        "ADAPTIVE_TEMPORARY_SECONDARY_RATING_PROC"
+      ],
+      "dynamic_chmv_proc_roles": [
+        "ADAPTIVE_TEMPORARY_SECONDARY_RATING_PROC"
+      ],
+      "dynamic_chmv_proc_present": true,
+      "native_E_status": "NOT_MEASURED",
+      "native_E": null,
+      "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
+      "simc_effect_owner": "SIMC",
+      "simc_effect_reimplemented": false
+    }
+  ]
+}
