@@ -2,7 +2,7 @@ name: v208 exact special L internal Native-on-start offline
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
-    paths: [.github/workflows/v208_special_L_user_start_offline.yml]
+    paths: [.github/workflows/v208_special_L_user_start_offline.yml, tests/test_v208_special_L_hydration_offline.py]
 permissions:
   contents: read
 concurrency:
