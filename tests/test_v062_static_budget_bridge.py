@@ -221,7 +221,9 @@ class NativeBudget(unittest.TestCase):
         self.assertEqual(result["G_if_complete"],1300)
         self.assertEqual(result["budget"]["T_official"],1603)
         self.assertEqual(result["native_gear_stats"]["neck"]["identity"],
-                         p.exact_identity(base))
+                         p.exact_identity(full))
+        self.assertEqual(result["native_gear_stats"]["neck"]
+                         ["numeric_source_identity"],p.exact_identity(base))
         self.assertEqual(result["native_gear_stats"]["neck"]["base_item_L_excludes"],
                          ["enchant_id","gem_id"])
         self.assertEqual(result["effective_floor_if_possible"]["mastery_rating"],80)
