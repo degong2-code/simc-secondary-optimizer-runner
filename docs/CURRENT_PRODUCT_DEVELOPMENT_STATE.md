@@ -1,20 +1,19 @@
-# 2026-10-31 P3-D v216 — 최신 검증 상태 (code baseline 547811e8; 이후 docs-only handoff commits)
+# 2026-10-31 P3-D dependency DAG engine — 최신 검증 상태 (code HEAD 0583d22a)
 
-> **최신 상태가 아래 v215 기록을 대체한다.** v216 code baseline은 547811e8ffb7d25eb9ad45bb416b0b75dd5458c3이며, 그 뒤 인계/정책 정합성 보완을 위한 docs-only commits가 추가됐다. 따라서 이 문서의 code baseline을 현재 branch HEAD로 간주하지 말고 실제 branch ref를 매번 다시 조회한다. 후속 문서 커밋은 코드/테스트를 변경하지 않았다. 저장소는 Public, main HEAD는 07133e0aaf738d6e4816a6486057b1cd49c018de로 불변이다. 최신 Actions #41200816574/#41200816595/#41200816597/#41200816611 및 v169/v177/v180 회귀는 성공했다.
+> **현재 격리 브랜치:** `probe/chat-cache-v035-20261024`. 제품 코드 변경 commit `0583d22a0623495521193ffca0da14bbaf09565b`; 이 문서 갱신 후 branch HEAD는 다시 조회한다. `main`은 `07133e0aaf738d6e4816a6486057b1cd49c018de`로 유지되며 merge하지 않았다. Repository visibility는 Public으로 확인됐고 변경하지 않았다.
 >
-> **v216 구현 범위:** 설치된 versioned v213 artifact를 재사용하는 request-driven Environment Build coordinator, user-scenario scope identity, 이전 세션의 검증된 receipt/manifest 검색(최근 128 세션 제한), v212 dependency graph 비교, Environment Build Receipt, v113 POST/GET API, 사용자 UI Build 버튼/상태 표시, Windows package inclusion이 구현됐다. 이것은 설치된 artifact로 환경 manifest를 구성·검증하는 첫 P3-D slice다. **새 시즌 source refresh를 실행하거나 v191/v211/v213 collector를 호출하는 기능은 아니다.** source mode는 INSTALLED_VERSIONED_ARTIFACT_ONLY, refresh_performed=false이며 Network/Native/optimizer-cache mutation은 0이다.
+> **핵심 설계:** 기능별 특례를 늘리는 대신, 입력 fingerprint → 선언형 dependency DAG → 전이 무효화 → 위상 실행 계획을 계산하는 범용 dependency engine을 v212에 추가했다. v216 receipt는 실제 재사용, 재계산 후 동일 결과, 변경 산출물 기록을 구분한다. 이 엔진은 현재 실행 계획/무효화 evaluator이며 아직 전체 단계의 실행을 직접 orchestrate하지 않는다.
 >
-> **최신 검증:** v212 Ubuntu/Windows 각각 36/36 PASS; v113 Ubuntu/Windows 각각 150/150 PASS; v181 Windows Python 3.12/3.14 각각 118 regression tests + 2 package tests PASS 및 추출 후 HTTP/3 Plan/restore PASS; v182 Ubuntu/Windows 각각 76 focused + 68 compatibility + 2 package tests PASS. v169 13 PASS; v177 12+85 PASS; v180 3+64 PASS. v177 Native-one-product와 v180 Native-six-cases는 SKIPPED. 신규 SimC Native 0, SimC binary build 0, optimizer/DPS cache mutation 0.
+> **두 세션 E2E:** 동일 사용자 조건의 v106 session identity 두 개를 생성하고 v213 artifact의 정확한 바이트 identity 변경을 주입했다. changed_inputs는 v213_source_catalog 하나로 검출됐고 downstream invalidation, 새 session identity, 이전 세션의 전체 파일 byte preservation, static cache 및 DPS cache 보존을 확인했다. 다만 두 artifact의 parsed JSON 의미는 같고 serialization bytes만 달라진 시험이다. semantic source-field 변경을 이용한 finer-grained E2E는 아직 남아 있다.
 >
-> **Windows artifacts:** v181 #41200816597 artifact #13042157651, 750,209 bytes, expires 2026-11-07T12:23:22Z. v182 #41200816611 artifact #13042686292, 750,209 bytes, expires 2026-11-07T12:23:10Z. 내부 beta ZIP은 189 files이며 SimC binary/user cache를 포함하지 않는다.
+> **Actions:** [v212 #41212843019](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41212843019) Ubuntu/Windows 각각 40 tests PASS; [v113 #41212842892](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41212842892) Ubuntu/Windows 각각 154 tests PASS; [v181 #41212842914](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41212842914) Windows Python 3.12/3.14 package·HTTP·session regressions PASS, extracted CMD/HTTP 3 Plans/restore PASS; [v182 #41212842959](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41212842959) Ubuntu/Windows focused UI/package regressions PASS. 신규 Native 0, SimC binary build 0, cache mutation 0.
 >
-> **아직 미완료:** 실제 시즌 source refresh, changed dependency에 따른 cross-session end-to-end invalidation/rebuild proof, Environment Build→existing adaptive v093/v094/v095 Start의 전체 사용자 acceptance, Windows 사용자 PC GUI 클릭/취소/재개 확인, exact unresolved embellishment/temp-enchant/gem joins, 26 DPS 전체 adaptive Native/DPS acceptance. v216의 동일 세션 재요청은 manifest bytes reuse를 확인하지만 dependency_change는 INITIAL_ENVIRONMENT로 남는다. cross-session lookup은 별도 단위시험으로만 검증됐고, 변경 source가 새 세션을 만들고 이전 manifest에서 실제 invalidation되는 전체 경로는 추가 focused test가 필요하다.
+> **Windows artifacts:** v181 [#13047266358](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41212842914/artifacts/13047266358), 751,484 bytes, SHA256 `37f6e975dbfdc829c10348b4e7e20814ab895567d2107e811e357160ac6d2595`; v182 [#13045859674](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41212842959/artifacts/13045859674), 751,484 bytes, SHA256 `6b35814d5f980b20cbce01d688d4625a0f41792a21795d4ffb275c4f377b8c8f`. Both contain the 189-file Windows beta source package, without SimC binary or user cache; both expire 2026-11-07.
 >
-> **정책:** 정확히 26 DPS, Augmentation Evoker/tank/healer 제외. T=G+J+F+O, B=G+J+F, oil once, special L floor, SimC owns effects/APL/procs/DPS, 95% only, 7967 only user-selectable. 아래 과거 27/증강 포함 문구는 무효. 업로드된 v1.4.1 사본(SHA 752641f0...)은 27/증강 포함 오기가 있어 corrected replacement를 docs에 포함했다(SHA e4513776f1a225394e404601532dfea61f066dd5e7f23149c7af355d6e43e0d3). Project Sources/Instructions UI는 여전히 수동 적용 대기다.
+> **아직 미완료:** v113은 v216 dependency comparison 전에 v098 bootstrap/profile build를 수행한다. 따라서 `COMPUTED_IDENTICAL`은 실제 profile 생성 생략이 아니다. reusable_candidates는 후보 계획이지 실행된 재사용의 증거가 아니다. 다음 엔진 작업은 fingerprint preflight를 기존 v098 stage 앞에 연결해, 검증된 profile artifact가 동일할 때만 생성 작업을 실제 생략하는 것이다. 이후 semantic source-change E2E, 요청 기반 기존 source refresh, 기존 v093/v094/v095 handoff, Windows 사용자 PC acceptance가 남아 있다.
 >
-> **다음 작업:** (1) v216의 cross-session dependency-change path와 session immutability/cache preservation을 실제 두 세션 API regression으로 검증, (2) profile/manifest 동일 입력 재사용이 실제로 불필요한 build/I/O를 줄이는지 점검하고 labels를 사실에 맞춤, (3) source refresh는 새 시즌/patch 요청 시에만 v191→v211→v213을 호출하도록 기존 collectors에 연결, (4) sealed v098/v208 environment를 기존 adaptive worker에 넘기는 Start end-to-end를 검증, (5) Windows 사용자 PC acceptance. 신규 optimizer/collector/effect engine은 만들지 않는다.
->
-> **권한:** 격리 브랜치만 변경. main, v003 immutable, original v016, Project Sources/Instructions UI, repository visibility, official Work OS/M0 authority는 변경하지 않았다.
+> **제품/권한:** 정확히 26 DPS 전문화만 지원하고 증강 기원사·탱커·힐러는 제외한다. 목표 ilvl/수동 최종 T 기준 절대 CHMV 최적화, T=G+J+F+O, 기름 1회, 특수장비 L 하한, SimC effects/APL/procs/DPS 책임, 95% 통계, 7967만 사용자 선택 가능을 유지한다. 새 optimizer/collector/profile generator/effect engine을 만들지 않는다. main, v003 immutable, original v016, Project Sources/Instructions UI, repository visibility, official Work OS 권한은 변경하지 않는다.
+
 
 ---
 
@@ -741,3 +740,38 @@ v181 artifact #13042157651 / 750,209 bytes / expires 2026-11-07T12:23:22Z. v182 
 3. Request-driven source refresh via existing v191→v211→v213 pipeline; reuse unchanged versioned artifacts and never poll continuously.
 4. Prove the sealed v098/v208 environment is the exact profile consumed by existing v093/v094/v095 Start/worker.
 5. Windows user-PC acceptance of Build, Start, progress, cancel, resume. No blanket 26×N Native matrix.
+
+
+
+## 2026-10-31 P3-D — 범용 dependency DAG evaluator 및 두 세션 E2E
+
+### 구현 commit
+- Code commit: `0583d22a0623495521193ffca0da14bbaf09565b`.
+- `runner/v212_environment_manifest.py`: dependency graph schema v2. Product dependency는 upstream→downstream edge로 선언하고 generic evaluator가 graph validation, cycle rejection, transitive invalidation, topological execution order, reusable candidates를 계산한다.
+- Dependency rules 자체가 달라지면 전체 downstream component를 fail-closed invalidation한다. 이 계산은 read-only이며 Native/cache/session을 수정하지 않는다.
+- `runner/v216_environment_build_coordinator.py`: `v196`/ `v098`를 `COMPUTED_IDENTICAL` 또는 `COMPUTED_CHANGED`, manifest를 `COMPILED_IDENTICAL_NO_WRITE` 또는 `COMPILED_CHANGED_WRITTEN`으로 기록한다. 동일 결과 재계산을 실제 재사용으로 표시하지 않는다.
+- 새 optimizer, collector, profile generator, effect engine은 추가하지 않았다.
+
+### 새 검증
+- `tests/test_v212_environment_manifest.py`: generic transitive DAG/위상순서, cycle rejection, dependency rule change, two-session cross-source artifact E2E 추가.
+- 두 session은 같은 user scenario이며 v106 session key가 source artifact raw SHA 변화로 달라진다. 이전 session의 manifest/receipt/profile/bootstrap/user identity 및 기존 DPS cache sentinel, 외부 static cache의 byte snapshot이 두 번째 Build 뒤에도 동일함을 확인한다.
+- 정확한 changed input은 `v213_source_catalog`; downstream `environment_manifest`, `optimizer_session`, `adaptive_dps_cache` invalidation을 확인한다. Native 0, network 0, cache mutation 0.
+- 제한: source JSON은 같은 parsed document를 다른 serialization bytes로 기록했다. artifact-byte identity invalidation은 증명했지만 semantic source-field change와 component별 최소 invalidation을 증명한 것은 아니다.
+
+### Actions 및 Windows artifacts
+| Run | 검증 결과 |
+|---|---|
+| [v212 #41212843019](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41212843019) | Ubuntu/Windows 각각 40 tests PASS, Native0 |
+| [v113 #41212842892](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41212842892) | Ubuntu/Windows 각각 154 tests PASS |
+| [v181 #41212842914](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41212842914) | Windows Python 3.12/3.14 PASS; extracted launcher, local HTTP/security, 3 Plans, restore, 118 regressions PASS |
+| [v182 #41212842959](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41212842959) | Ubuntu/Windows PASS; Windows 80 focused + 68 compatibility + 2 package tests PASS |
+
+- v181 artifact `13047266358`: 751,484 bytes; SHA256 `37f6e975dbfdc829c10348b4e7e20814ab895567d2107e811e357160ac6d2595`.
+- v182 artifact `13045859674`: 751,484 bytes; SHA256 `6b35814d5f980b20cbce01d688d4625a0f41792a21795d4ffb275c4f377b8c8f`.
+- 두 ZIP은 189-file Windows beta source package이며 SimC binary와 user cache는 제외한다. Artifact 만료는 2026-11-07.
+
+### 완료와 미완료 구분
+- 완료: 범용 DAG evaluator, cycle/rule-change 방어, 계획 순서 산출, 두 session 간 artifact identity invalidation, 이전 session/cache byte preservation, v212/v113/v181/v182 CI.
+- 미완료: DAG를 실제 stage execution에 연결하는 task adapter, v098 profile generation 사전 생략, semantic source-field change E2E, request-driven v191→v211→v213 refresh, exact v098/v208→existing v093/v094/v095 handoff, Windows user-PC Build/Start/progress/cancel/resume.
+- 특히 v113은 아직 dependency compare 전에 v098 profile을 생성한다. `COMPUTED_IDENTICAL`은 재계산 후 동일함이며 `REUSED`가 아니다. 다음 구현은 기존 v098 generator를 그대로 사용하면서 fingerprint preflight와 verified artifact reuse를 stage boundary에 연결한다.
+
