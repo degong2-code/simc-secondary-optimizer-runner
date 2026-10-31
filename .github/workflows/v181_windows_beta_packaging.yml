@@ -10,11 +10,15 @@ on:
       - runner/v193_simc_local_updater.py
       - runner/v113_local_web_api.py
       - runner/v196_current_season_user_catalog.py
+      - runner/v208_internal_exact_special_L_hydrator.py
+      - runner/v212_environment_manifest.py
       - runner/v213_source_to_catalog.py
       - data/current_season_source_to_catalog.json
       - integration_probes/v181_windows_beta_live_http.py
       - integration_probes/v181_windows_beta_packager.py
       - tests/test_v113_local_web_api_offline.py
+      - tests/test_v208_special_L_hydration_offline.py
+      - tests/test_v212_environment_manifest.py
       - data/current_season_simc_enchant_candidates.json
       - tests/test_v196_current_season_ui_catalog.py
       - runner/v197_verified_effect_budget.py
@@ -45,12 +49,12 @@ on:
         description: Successful v213 source-to-catalog workflow run ID
         type: string
         required: true
-        default: "41172423986"
+        default: "41178704794"
       source_artifact:
         description: Exact v213 source-to-catalog artifact name
         type: string
         required: true
-        default: "v213-source-to-catalog-41172423986"
+        default: "v213-source-to-catalog-41178704794"
 permissions:
   contents: read
   actions: read
@@ -84,8 +88,8 @@ jobs:
       - name: Reuse exact source-backed v213 catalog artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.source_artifact || 'v213-source-to-catalog-41172423986' }}
-          run-id: ${{ inputs.source_run_id || '41172423986' }}
+          name: ${{ inputs.source_artifact || 'v213-source-to-catalog-41178704794' }}
+          run-id: ${{ inputs.source_run_id || '41178704794' }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: p3c-source
       - name: Bind v213 catalog bytes into the Windows package workspace

@@ -35,6 +35,17 @@ class WindowsBetaPackageOffline(unittest.TestCase):
                                      for s in names))
                 stored=json.loads(archive.read(pack.PREFIX+"/V181_PACKAGE_MANIFEST.json"))
                 self.assertEqual(stored,manifest)
+                required_p3c={
+                    "runner/v208_internal_exact_special_L_hydrator.py",
+                    "runner/v212_environment_manifest.py",
+                }
+                packaged_paths={row["path"] for row in stored["files"]}
+                self.assertTrue(required_p3c.issubset(packaged_paths))
+                for rel in required_p3c:
+                    payload=archive.read(pack.PREFIX+"/"+rel)
+                    record=next(row for row in stored["files"] if row["path"]==rel)
+                    self.assertEqual(hashlib.sha256(payload).hexdigest(),
+                                     record["sha256"],rel)
                 source_raw=archive.read(
                     pack.PREFIX+"/data/current_season_source_to_catalog.json")
                 source_doc=json.loads(source_raw)
