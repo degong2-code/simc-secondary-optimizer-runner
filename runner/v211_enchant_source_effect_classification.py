@@ -428,8 +428,10 @@ def verify_runtime_manifest(compiled,runtime):
           "selection_status":source["selection_status"],
           "simc_effect_owner":source["simc_effect_owner"],
           "simc_effect_reimplemented":source["simc_effect_reimplemented"]}
-        need(all(target.get(k)==v for k,v in expected.items()),
-             "V211_RUNTIME_MANIFEST_CLASSIFICATION_DRIFT:"+str(source["enchant_id"]))
+        mismatches=[k for k,v in expected.items() if target.get(k)!=v]
+        need(not mismatches,
+             "V211_RUNTIME_MANIFEST_CLASSIFICATION_DRIFT:"+
+             str(source["enchant_id"])+":"+",".join(mismatches))
     return True
 
 def main(argv=None):
