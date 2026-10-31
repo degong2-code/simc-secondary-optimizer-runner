@@ -13,6 +13,7 @@ import v098_target_user_scenario_bootstrap as bootstrap
 import v108_native_consumable_inputs as consumer
 import v206_nonchmv_eagle_selection as nonchmv_enchant
 import v213_source_to_catalog as source_catalog_bridge
+import v218_v098_profile_stage_adapter as profile_stage
 
 SCHEMA="v106_dps_user_session_v1"
 DEFAULT_ROOT=pathlib.Path.home()/"SIMC_Secondary_Optimizer"/"runs"
@@ -372,6 +373,11 @@ def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
             source_catalog_path,revision,package_manifest_path)
         if source_identity is not None:
             identity["current_season_source_catalog"]=source_identity
+    identity["profile_stage"]=profile_stage.session_identity(
+        user,independent_334=independent_334,
+        independent_target_level=independent_target_level,
+        current_season_product=current_season_product,
+        source_catalog_path=source_catalog_path)
     return sha(canonical(identity).encode("utf8"))[:20],identity
 
 def session_path(user,root,binary,revision,static_cache=None,*,

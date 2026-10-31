@@ -33,6 +33,7 @@ import v167_product_season_gear_adapter as season_gear
 import v208_internal_exact_special_L_hydrator as exact_L
 import v212_environment_manifest as environment_manifest
 import v216_environment_build_coordinator as environment_build
+import v218_v098_profile_stage_adapter as profile_stage
 
 SCHEMA = "v113_local_web_api_p1_v1"
 KEY = re.compile(r"[a-f0-9]{20}\Z")
@@ -84,6 +85,7 @@ class LocalJobs:
         self.lock = threading.Lock()
         self.children = {}
         self.static_lock = threading.Lock()
+        self.profile_stage_lock = threading.Lock()
 
     def default_static_cache(self, user, requested):
         """Reuse an existing same-PC static cache; never create L or call SimC.
@@ -248,7 +250,7 @@ class LocalJobs:
         self._write_atomic(pathlib.Path(folder)/"V208_START_RECEIPT_REF.json",encoded)
 
     def _seal_environment_manifest(self, folder, bootstrap_result,
-                                   receipt_path=None):
+                                   receipt_path=None, profile_stage_receipt=None):
         generated=pathlib.Path(folder)/"generated"
         bootstrap_path=generated/"v098_bootstrap_result.json"
         encoded_bootstrap=json.dumps(bootstrap_result,sort_keys=True,
@@ -281,7 +283,8 @@ class LocalJobs:
             static_cache=target_manifest.get("static_cache_json"),
             source_catalog_path=source_path,bootstrap_result=bootstrap_result,
             v208_start_receipt_path=receipt_path,
-            package_manifest_path=self.package_manifest_path())
+            package_manifest_path=self.package_manifest_path(),
+            profile_stage_receipt=profile_stage_receipt)
         return self._environment_summary(built["manifest"])
 
     def _read_environment_build_summary(self, folder):
@@ -418,14 +421,17 @@ class LocalJobs:
                         sessions.sha(old.read_bytes())==
                         sessions.sha(pathlib.Path(resolved_static).read_bytes())):
                         resolved_static=saved
-            bootstrap_result = bootstrap.build(
-                user,folder / "generated",binary,params.revision,resolved_static,
-                independent_334=independent,
-                independent_target_level=independent_level,
-                current_season_product=current_season,
-                source_catalog_path=source_catalog_path)
+            with self.profile_stage_lock:
+                bootstrap_result, profile_stage_receipt = profile_stage.build_or_reuse(
+                    user=user,session_folder=folder,binary=binary,
+                    revision=params.revision,static_cache=resolved_static,
+                    independent_334=independent,
+                    independent_target_level=independent_level,
+                    current_season_product=current_season,
+                    source_catalog_path=source_catalog_path)
             plan=bootstrap_result["plan"]
-            environment=(self._seal_environment_manifest(folder,bootstrap_result)
+            environment=(self._seal_environment_manifest(
+                folder,bootstrap_result,profile_stage_receipt=profile_stage_receipt)
                          if current_season else None)
             environment_build_receipt=(
                 self._read_environment_build_summary(folder)
@@ -433,6 +439,7 @@ class LocalJobs:
             return {"session_id":folder.name,"status":"READY_ZERO_NATIVE",
                     "environment_manifest":environment,
                     "environment_build":environment_build_receipt,
+                    "profile_stage":profile_stage_receipt,
                     "native_calls":0,
                     "static_cache_auto_used":bool(
                         resolved_static and params.static_cache is None),
@@ -485,7 +492,8 @@ class LocalJobs:
             bootstrap_path=folder/"generated"/"v098_bootstrap_result.json"
             bootstrap_result=json.loads(bootstrap_path.read_text(encoding="utf8"))
             environment=self._seal_environment_manifest(
-                folder,bootstrap_result,folder/receipt_info["path"])
+                folder,bootstrap_result,folder/receipt_info["path"],
+                prepared.get("profile_stage"))
         else:
             environment=prepared.get("environment_manifest")
         # The environment manifest is sealed before the optimizer worker is
@@ -517,13 +525,29 @@ class LocalJobs:
             # resumed under its own sealed identity. Browser planning still
             # creates DEFAULT variants only; never infer one from user gear.
             variant = recorded.get("ordinary_variant")
+            current_season=bool(recorded.get("current_season_product",False))
+            has_source=("current_season_source_catalog" in recorded)
+            source_path=(self.source_catalog_path()
+                         if current_season and has_source else None)
+            source_record=recorded.get("current_season_source_catalog") or {}
+            package_path=(self.package_manifest_path()
+                          if type(source_record) is dict and
+                             source_record.get("package_manifest_sha256") else None)
             key, check = sessions.session_key(
                 user,binary,rev,static,ordinary_variant=variant,
                 independent_334=recorded.get("independent_334",False),
                 independent_target_level=recorded.get("independent_target_level",False),
-                current_season_product=bool(recorded.get("current_season_product",False)))
-            if key != folder.name or check != recorded:
+                current_season_product=current_season,
+                source_catalog_path=source_path,
+                package_manifest_path=package_path)
+            recorded_base={k:v for k,v in recorded.items() if k!="profile_stage"}
+            current_base={k:v for k,v in check.items() if k!="profile_stage"}
+            recorded_key=sessions.sha(
+                sessions.canonical(recorded).encode("utf8"))[:20]
+            if recorded_key != folder.name or current_base != recorded_base:
                 raise sessions.SessionBlocked("SESSION_BINARY_REVISION_OR_CACHE_DRIFT")
+            if "profile_stage" in recorded:
+                profile_stage.verify_existing(folder,recorded)
             return binary,rev,static
         except HTTPException:
             raise

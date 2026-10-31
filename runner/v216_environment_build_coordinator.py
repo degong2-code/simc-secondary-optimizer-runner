@@ -179,7 +179,8 @@ def _step(name, status, **details):
 
 def build_environment(*, sessions_root, session_folder, user, binary, revision,
                       static_cache, source_catalog_path, bootstrap_result,
-                      v208_start_receipt_path=None, package_manifest_path=None):
+                      v208_start_receipt_path=None, package_manifest_path=None,
+                      profile_stage_receipt=None):
     """Reconcile existing inputs and seal one incremental, auditable build.
 
     Source acquisition is intentionally outside this local coordinator:
@@ -268,9 +269,13 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
               "COMPUTED_IDENTICAL" if same_ui else "COMPUTED_CHANGED",
               normalized_sha256=ui.get("normalized_sha256")),
         _step("v098_target_profile",
-              "COMPUTED_IDENTICAL" if same_profile else "COMPUTED_CHANGED",
+              ("REUSED_VERIFIED_ARTIFACTS" if (profile_stage_receipt or {}).get("reused")
+               else "RECOVERED_VERIFIED_ARTIFACTS" if (profile_stage_receipt or {}).get("recovered")
+               else "EXECUTED_AND_SEALED" if (profile_stage_receipt or {}).get("executed")
+               else "COMPUTED_IDENTICAL" if same_profile else "COMPUTED_CHANGED"),
               normalized_result_sha256=profile.get("normalized_result_sha256"),
-              profile_files=profile.get("profile_files")),
+              profile_files=profile.get("profile_files"),
+              stage_receipt_sha256=(profile_stage_receipt or {}).get("receipt_sha256")),
         _step("v212_environment_manifest",
               "COMPILED_IDENTICAL_NO_WRITE" if manifest_reused else
               "COMPILED_CHANGED_WRITTEN",
@@ -283,7 +288,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                          if row["status"].startswith("REUSED")]
     rebuilt_components = [row["component"] for row in steps
                           if row["status"] in
-                          ("COMPUTED_CHANGED","COMPILED_CHANGED_WRITTEN")]
+                          ("COMPUTED_CHANGED","COMPILED_CHANGED_WRITTEN",
+                           "EXECUTED_AND_SEALED")]
     computed_components = [row["component"] for row in steps
                            if row["status"].startswith(("COMPUTED_","COMPILED_"))]
     computed_identical_components = [row["component"] for row in steps
@@ -316,6 +322,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 "v191_v211_v213_refresh_requires_a_separately_verified_source_package",
         },
         "steps": steps,
+        "profile_stage": profile_stage_receipt,
         "dependency_change": {
             "status": dependency_change.get("status", "INITIAL_ENVIRONMENT"),
             "previous_session_id": previous.get("session_id") if previous else None,
@@ -400,6 +407,7 @@ def public_summary(receipt):
             "simc_revision": receipt["source"]["simc_revision"],
         },
         "steps": receipt["steps"],
+        "profile_stage": receipt.get("profile_stage"),
         "dependency_change": receipt["dependency_change"],
         "cache_reuse": receipt["cache_reuse"],
         "readiness": receipt["readiness"],
