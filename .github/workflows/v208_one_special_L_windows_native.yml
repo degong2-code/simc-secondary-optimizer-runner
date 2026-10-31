@@ -1,0 +1,63 @@
+name: v208 one real Windows exact special L Native (not DPS)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/v208_one_special_L_windows_native.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v208-exact-one-real-static-L-native
+  cancel-in-progress: false
+jobs:
+  one-static-L-native:
+    runs-on: windows-2022
+    timeout-minutes: 18
+    steps:
+      - name: Exact authored LF checkout
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m pip install -r requirements-web-test.txt
+      - name: Use prior official, exact SHA pinned Windows SimC archive
+        uses: actions/download-artifact@v4
+        with:
+          repository: simulationcraft/simc-publish
+          run-id: 40999844143
+          name: simc-nightly-win64-midnight
+          path: .simc-windows
+          github-token: ${{ github.token }}
+      - name: Verify official Windows archive and executable integrity
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $src=Join-Path $PWD '.simc-windows/simc-1210.01.710c240-win64.7z'
+          if (!(Test-Path $src)) { throw 'PINNED_ARCHIVE_MISSING' }
+          if ((Get-FileHash -Algorithm SHA256 $src).Hash.ToLowerInvariant() -ne '386b2827c537a0447ac09a158e14c63b1d71d73e8e29f6e8ab404416861aab89') { throw 'PINNED_ARCHIVE_SHA_MISMATCH' }
+          New-Item -Path .simc-win-extracted -ItemType Directory -Force | Out-Null
+          & 'C:\Program Files\7-Zip\7z.exe' x '-o.simc-win-extracted' -y -bd $src | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'EXTRACTION_FAILED' }
+          $exe=@(Get-ChildItem .simc-win-extracted -Recurse -Filter simc.exe -File)
+          if ($exe.Count -ne 1) { throw 'EXPECTED_ONE_SIMC_BINARY' }
+          if ((Get-FileHash -Algorithm SHA256 $exe[0].FullName).Hash.ToLowerInvariant() -ne '0ad16368cd1effb19c793dbce63518ccb72fec89c72f6ef75d9afca239a039e8') { throw 'EXE_SHA_MISMATCH' }
+          "SIMC_EXE=$($exe[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: One source-listed current-season special L, one Native, exact plan and zero-Native replay
+        shell: pwsh
+        run: |
+          python integration_probes/v208_real_one_special_L_windows_native.py --simc "$env:SIMC_EXE" --out out/v208
+          if ($LASTEXITCODE -ne 0) { throw 'ONE_EXACT_SPECIAL_L_NATIVE_BLOCKED' }
+      - name: Compact SHA receipt only (no source profile or full JSON2)
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v208-exact-one-static-L-native-proof
+          path: out/v208/V208_REAL_ONE_L_RECEIPT.json
+          if-no-files-found: warn
+          retention-days: 2
