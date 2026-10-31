@@ -8,12 +8,11 @@
 
 - Repository: degong2-code/simc-secondary-optimizer-runner
 - Branch: probe/chat-cache-v035-20261024
-- Verified branch HEAD after docs handoff commit: 636b7f9636cf1653f2b8b3a90e4f069d9cfbdb3e
-- Latest docs commit: docs(handoff): record v216 environment build and corrected 26-DPS policy
-- Latest code HEAD: 547811e8ffb7d25eb9ad45bb416b0b75dd5458c3
+- Branch HEAD: always re-fetch the live ref; subsequent handoff commits are documentation-only.
+- Code baseline: 547811e8ffb7d25eb9ad45bb416b0b75dd5458c3
 - Code commit: feat(p3): add incremental environment build coordinator and local API
 - Code commit parent: 0af0955e25d599487210dfa19fe18f424bb462d4
-- Docs commit parent: 547811e8ffb7d25eb9ad45bb416b0b75dd5458c3
+- Latest docs-only change: docs(handoff): clarify code and documentation HEADs
 - Visibility: Public
 - main HEAD: 07133e0aaf738d6e4816a6486057b1cd49c018de (unchanged)
 - No merge to main; no v003 immutable or original v016 change; no Project Sources/Instructions UI update; no official Work OS/M0 authority change.
@@ -132,7 +131,7 @@ Windows artifacts:
 
 You are continuing the existing SIMC SECONDARY OPTIMIZER project. Do not restart or rebuild old work.
 
-First, read docs/CHAT_CONTINUITY_HANDOFF_20261031_V216.md in full. Then verify actual GitHub branch HEAD, visibility, main HEAD and latest Actions; read CURRENT top, v1.4.2 policy addendum, corrected v1.4.1 full note, DPS26 scope correction, P3 architecture §12 and P3-C §7. The known baseline at handoff time is branch probe/chat-cache-v035-20261024, HEAD 636b7f9636cf1653f2b8b3a90e4f069d9cfbdb3e (docs-only handoff commit), latest code HEAD 547811e8ffb7d25eb9ad45bb416b0b75dd5458c3, main 07133e0aaf738d6e4816a6486057b1cd49c018de, repository Public. If actual state differs, report the difference and use actual GitHub evidence.
+First, read docs/CHAT_CONTINUITY_HANDOFF_20261031_V216.md in full. Then verify actual GitHub branch HEAD, visibility, main HEAD and latest Actions; read CURRENT top, v1.4.2 policy addendum, corrected v1.4.1 full note, DPS26 scope correction, P3 architecture §12 and P3-C §7. The known code baseline is branch probe/chat-cache-v035-20261024 at code commit 547811e8ffb7d25eb9ad45bb416b0b75dd5458c3; subsequent commits in the handoff sequence are documentation-only. Re-fetch the live branch HEAD before any work. main was 07133e0aaf738d6e4816a6486057b1cd49c018de and repository visibility Public at handoff verification. If actual state differs, report the difference and use actual GitHub evidence.
 
 Restore the exact product purpose and policy: 26 DPS only, Augmentation/tanks/healers excluded; target-level absolute CHMV; T=G+J+F+O; oil once; special bare L floor; SimC owns effects/procs/APL/DPS; 95% only; 7967 only selectable; UNKNOWN/PENDING not zero.
 
