@@ -48,7 +48,7 @@
 - Actual counts: 511 gear rows, zero unknown current gear slot groups; 13 classes/65 tier IDs; 192 food and 61 potion candidates; 38/38 current-season enchant classifications; 20 embellishment/effect registrations (actual item ID/slot unresolved); 117 temporary-enchant source rows; 2,409 gem-property rows (actual gem item IDs unresolved).
 - Exact gear slot groups: back12, chest40, feet35, finger18, hands33, head40, legs32, neck11, shoulders33, trinket63, waist34, weapon_off_hand10, weapon_one_hand60, weapon_ranged15, weapon_shield10, weapon_two_hand37, wrists28.
 - Enchant groups: boots3, chest4, helm6, ring9, shoulders6, weapon10.
-- [Cross-platform catalog integration #41169754402](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41169754402): Ubuntu 24.04 **62/62 PASS**, Windows 2022 **62/62 PASS**, including six v213 contract tests.
+- [Cross-platform catalog integration #41169754402](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41170184299): Ubuntu 24.04 **62/62 PASS**, Windows 2022 **62/62 PASS**, including six v213 contract tests.
 - #41169754323: v191 focused **6 tests PASS**, integrated Ubuntu stage **22 tests PASS**, real v191→v211→v213→v196 handoff PASS, existing 7967-only approval boundary PASS.
 - New SimC Native calls 0; SimC binary builds 0; optimizer/cache mutation 0. The Actions workflow downloads the existing v189/v190 source artifact and exact pinned SimC source files. v191/v211/v213 compilers themselves are network0.
 
