@@ -581,11 +581,11 @@ async function withBusy(fn) {
       // Never treat missing exact L as zero or run Native to guess it.
       const guidance={
         "V106_SPECIAL_EQUIPMENT_REQUIRES_EXACT_STATIC_CACHE":
-          "특수효과 장비에 필요한 정확한 Native 정적 캐시 JSON 경로를 입력하세요.",
+          "선택 특수장비의 정적 캐시가 없습니다. 최신 시즌 경로에서 ‘SimC 최적화 실행’을 누르면 내부에서 정확한 L을 먼저 조회합니다.",
         "V106_STATIC_CACHE_NOT_FOUND":
           "지정한 정적 캐시 JSON 파일을 찾을 수 없습니다. 경로를 확인하세요.",
         "SPECIAL_L_REQUIRES_EXACT_NATIVE_STATIC_VARIANT":
-          "선택 장비의 아이템 ID·목표 ilvl·옵션과 일치하는 Native 정적 스탯 L이 캐시에 없습니다. 다른 레벨의 레코드를 대신 적용하지 않습니다.",
+          "정확한 L이 없어 예산 미리 확인은 차단됐습니다. 직접 캐시를 준비할 필요는 없습니다. ‘SimC 최적화 실행’을 누르면 로컬 SimC가 누락된 선택 특수장비의 정적 L을 최대 1회 조회한 뒤 DPS 계산을 진행합니다.",
         "REFERENCE_FIXED_L_CONSTRAINT_UNRESOLVED":
           "선택 장비의 정확한 고정 스탯 L 하한을 확인할 수 없습니다.",
         "SELECTED_SPECIAL_FLOOR_UNFEASIBLE":
