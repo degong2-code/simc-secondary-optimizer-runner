@@ -129,7 +129,13 @@ def parse_spelltexts(text):
         if not m:continue
         try:value=json.loads(m.group(2))
         except ValueError as e:raise SourceBlocked("SIMC_SPELLTEXT_STRING_INVALID") from e
-        out[int(m.group(1))]=value
+        spell_id=int(m.group(1))
+        # SpellTextData can contain both a human-facing description and a
+        # helper expression for the same ID. Keep the descriptive row.
+        if spell_id not in out or (
+            isinstance(out[spell_id],str) and out[spell_id].startswith("$")
+            and not value.startswith("$")):
+            out[spell_id]=value
     return out
 def resolve_spelltext(spell_id,spelltexts):
     value=spelltexts.get(spell_id)
@@ -328,6 +334,11 @@ def compile_catalog(candidates,source_dir,proof_8025,proof_7967):
     enums=parse_enums(sources["data_enums.hh"])
     spelltexts=parse_spelltexts(sources["spelltext_data.inc"])
     handlers=parse_custom_handlers(sources["unique_gear_midnight.cpp"])
+    enchant_pipeline=sources["enchants.cpp"]
+    need("case ITEM_ENCHANTMENT_STAT:" in enchant_pipeline
+         and "case ITEM_ENCHANTMENT_EQUIP_SPELL:" in enchant_pipeline
+         and "passive_enchant" in enchant_pipeline,
+         "SIMC_ITEM_ENCHANT_PIPELINE_SOURCE_CONTRACT_DRIFT")
     evidence={
       8025:verify_evidence(proof_8025,"8025"),
       7967:verify_evidence(proof_7967,"7967")}
@@ -349,6 +360,13 @@ def compile_catalog(candidates,source_dir,proof_8025,proof_7967):
       "season_game_build":candidates["season_game_build"],
       "simc_commit":SIMC_COMMIT,
       "source_files":source_receipt,
+      "simc_item_enchant_pipeline":{
+        "static_stat_path":"ITEM_ENCHANTMENT_STAT",
+        "spell_effect_path":"ITEM_ENCHANTMENT_EQUIP_SPELL",
+        "passive_spell_path":"passive_enchant",
+        "owner":"SIMC",
+        "source_file":"engine/item/enchants.cpp"
+      },
       "candidate_source_artifact_id":candidates["source_artifact_id"],
       "counts":{"total":38,"static_chmv_rating":8,
                 "static_nonchmv_only_or_mixed":sum(
