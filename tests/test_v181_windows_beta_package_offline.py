@@ -38,6 +38,8 @@ class WindowsBetaPackageOffline(unittest.TestCase):
                 required_p3c={
                     "runner/v208_internal_exact_special_L_hydrator.py",
                     "runner/v212_environment_manifest.py",
+                    "runner/v217_stage_execution_engine.py",
+                    "runner/v218_v098_profile_stage_adapter.py",
                 }
                 packaged_paths={row["path"] for row in stored["files"]}
                 self.assertTrue(required_p3c.issubset(packaged_paths))
