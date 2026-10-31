@@ -211,7 +211,8 @@ jobs:
             tests.test_v211_enchant_source_effect_classification \
             tests.test_v213_source_to_catalog \
             tests.test_v196_current_season_ui_catalog \
-            tests.test_v197_enchant_effect_families
+            tests.test_v197_enchant_effect_families \
+            tests.test_v208_special_L_hydration_offline
           python - <<'PY'
           import pathlib,sys
           sys.path.insert(0,"runner")
