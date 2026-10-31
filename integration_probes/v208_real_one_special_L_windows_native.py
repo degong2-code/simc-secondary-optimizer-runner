@@ -40,8 +40,15 @@ def run(binary,out):
          "ONE_EXACT_STATIC_NATIVE_REQUIRED")
     path=pathlib.Path(result["static_cache_path"])
     cache_data=cache.load(path)
-    actual={"season":cache.SEASON,"item_id":268250,"ilevel":331,
-            "slot":"neck","options":{}}
+    # The exact internal v098 selected row may include source-verified
+    # item options even when the user-facing selector is only an ID.
+    staged=bootstrap.build(user,out/"pure-source-no-write",binary,"710c2408bf",
+                           current_season_product=True,
+                           static_special_probe_only=True)
+    need(len(staged["special_rows"])==1 and
+         staged["special_rows"][0]["item_id"]==268250,
+         "INTERNAL_EXACT_SELECTED_NECK_ID_CHANGED")
+    actual=budget.exact_identity(staged["special_rows"][0])
     record=cache_data["variants"].get(cache.digest(actual))
     need(record is not None and
          record["source_kind"]=="NATIVE_JSON2_RESOLVED_VARIANT" and
@@ -64,10 +71,11 @@ def run(binary,out):
         "status":"PASS_EXACT_ONE_NATIVE_SPECIAL_L_INTERNAL_AND_REUSED",
         "scope":"shaman/elemental 331 special neck item268250 no options",
         "source_gear_category":"special_effect_gear_candidate",
+        "actual_native_variant_identity":actual,
+        "source_profile_sha256":staged["source_profile_sha256"],
         "binary_sha256":hydrator.sha_file(binary),"revision":"710c2408bf",
         "native_json2_sha256":result["native_json2_sha256"],
         "observed_static_L":record["static"]["secondary"],
-        "original_profile_sha256":record["metadata"]["native_json_sha256"],
         "new_static_native_calls":1,"cache_replay_static_native_calls":0,
         "post_static_plan_native_calls":0,
         "B":3150,"T":3182,
