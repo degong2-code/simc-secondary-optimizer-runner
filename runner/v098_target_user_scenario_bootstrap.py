@@ -160,7 +160,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
           imported_profile_text=None,*,ordinary_variant=None,pure_stage=False,
           independent_334=False,independent_target_level=False,
           source_first_stage=False,current_season_product=False,
-          static_special_probe_only=False):
+          static_special_probe_only=False,source_catalog_path=None):
     """Return an already validated internal manifest and v096 plan; no Native."""
     base_accepted=(FIELDS,FIELDS|{IMPORT_FIELD},FIELDS|{CONSUME_FIELD},
                    FIELDS|{IMPORT_FIELD,CONSUME_FIELD})
@@ -300,7 +300,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
     if SEASON_ENCHANT_FIELD in user:
         selected_nonchmv=nonchmv_enchant.apply(
             rows,user[SEASON_ENCHANT_FIELD],user,
-            current_season_product=current_season_product,need_user=need)
+            current_season_product=current_season_product,need_user=need,
+            catalog_path=source_catalog_path)
     selected_fixed_E=None
     if ENCHANT_FIELD in user:
         # The same selected ring cannot be counted both as the exact
@@ -487,7 +488,7 @@ def run(user_path,folder,binary,revision,static_cache_path=None,
         execute=False,cache_only=False,*,ordinary_variant=None,pure_stage=False,
         physical_acceptance_root=None,open_folder=True,independent_334=False,
         independent_target_level=False,source_first_stage=False,
-        current_season_product=False):
+        current_season_product=False,source_catalog_path=None):
     # An exact v140 (historical 2 specs) or v145 (single preview profile)
     # physical Native receipt authorizes ONLY its identical internal profile.
     # v096 verifies original JSON2 bytes before any adaptive Native call.
@@ -511,7 +512,8 @@ def run(user_path,folder,binary,revision,static_cache_path=None,
                    independent_334=independent_334,
                    independent_target_level=independent_target_level,
                    source_first_stage=source_first_stage,
-                   current_season_product=current_season_product)
+                   current_season_product=current_season_product,
+                   source_catalog_path=source_catalog_path)
     if not execute:return prepared
     if pure_stage:
         actual=entry.run_manifest(prepared["generated_manifest"],
@@ -537,6 +539,8 @@ def main(argv=None):
     p.add_argument("--physical-acceptance-root",type=pathlib.Path,
                    help="Internal v140 root (two historical specs), or exact v145 per-user physical output folder")
     p.add_argument("--cache-only",action="store_true")
+    p.add_argument("--source-to-catalog",type=pathlib.Path,
+                   help="Optional exact v213 source-to-catalog artifact for current-season approval")
     p.add_argument("--ordinary-variant",
                    choices=sorted(common.ORDINARY_VARIANTS),
                    help="Internal source-pinned representative test only; default unchanged")
@@ -546,7 +550,8 @@ def main(argv=None):
                    execute=a.execute,cache_only=a.cache_only,
                    ordinary_variant=a.ordinary_variant,pure_stage=a.pure_stage,
                    source_first_stage=a.source_first_stage,
-                   physical_acceptance_root=a.physical_acceptance_root)
+                   physical_acceptance_root=a.physical_acceptance_root,
+                   source_catalog_path=a.source_to_catalog)
         print(json.dumps(result,ensure_ascii=False,sort_keys=True,indent=2))
         return 0
     except Exception as e:

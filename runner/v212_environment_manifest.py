@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""v212: deterministic, no-Native Environment Manifest assembler.
+"""v212: deterministic, Native0 Environment Manifest from the real v213 catalog.
 
-This is a narrow artifact/provenance join, not a collector, profile generator,
-UI publisher, or optimizer. It references existing v191/v211/v196/v098 outputs.
+Consumes the exact source-to-catalog artifact, the existing v196 approval
+projection, and a v098 current-season target profile. It does not collect,
+generate profiles, run SimC, or execute the optimizer.
 """
 from __future__ import annotations
 import argparse
@@ -10,11 +11,16 @@ import hashlib
 import json
 from pathlib import Path
 
-SCHEMA = "v212_simc_environment_manifest_v1"
-V191 = "v191_unified_patch_season_expansion_data_candidates_v1"
-V211 = "v211_current_season_enchant_effect_classification_v1"
-V196 = "v196_current_season_ui_catalog_v1"
+import v143_specialization_contracts as specs
+import v196_current_season_user_catalog as ui_catalog
+import v206_nonchmv_eagle_selection as eagle
+import v213_source_to_catalog as source_bridge
+
+SCHEMA = "v212_simc_environment_manifest_v2"
 V098 = "v098_target_ilevel_user_scenario_v1"
+EXPECTED_APPROVED_ENCHANT_IDS = [7967]
+EXPECTED_ENCHANT_COUNT = 38
+EXPECTED_SIMC_REVISION_LENGTH = 40
 
 
 class EnvironmentBlocked(ValueError):
@@ -33,6 +39,11 @@ def canonical(value):
 
 def sha(raw):
     return hashlib.sha256(raw).hexdigest()
+
+
+def valid_sha(value):
+    return (type(value) is str and len(value) == 64 and
+            all(ch in "0123456789abcdef" for ch in value))
 
 
 def read_json(path, max_bytes=25_000_000):
@@ -71,41 +82,196 @@ def file_identity(path, root):
     return {"path": relative, "size_bytes": len(raw), "sha256": sha(raw)}
 
 
-def compile_manifest(season, season_sha, enchants, enchants_sha,
-                     ui, ui_sha, bootstrap, bootstrap_sha, target_root):
-    need(season.get("schema") == V191 and season.get("source_first") is True
-         and season.get("automatic_ui_promotion") is False
-         and season.get("native_calls") == 0,
-         "V191_SOURCE_CANDIDATE_CONTRACT_INVALID")
-    need(enchants.get("schema") == V211
-         and enchants.get("automatic_ui_promotion") is False
-         and enchants.get("native_calls") == 0
-         and enchants.get("simc_effect_reimplemented") is False,
-         "V211_SOURCE_CLASSIFICATION_CONTRACT_INVALID")
-    need(ui.get("schema") == V196,
-         "V196_APPROVED_CATALOG_SCHEMA_INVALID")
+def _source_identity(source_catalog, source_catalog_sha):
+    source_bridge.verify_catalog(source_catalog)
+    need(valid_sha(source_catalog_sha), "V213_ARTIFACT_FILE_SHA256_INVALID")
+    need(source_catalog.get("schema") == source_bridge.SCHEMA
+         and source_catalog.get("native_calls") == 0
+         and source_catalog.get("network_calls") == 0
+         and source_catalog.get("automatic_ui_promotion") is False
+         and source_catalog.get("selection_state_mutated") is False
+         and source_catalog.get("simc_effect_reimplemented") is False,
+         "V213_SOURCE_CATALOG_CONTRACT_INVALID")
+    provenance = source_catalog.get("source_provenance")
+    need(type(provenance) is dict and
+         type(provenance.get("v191")) is dict and
+         type(provenance.get("v211")) is dict,
+         "V213_SOURCE_PROVENANCE_MISSING")
+    v191 = provenance["v191"]
+    v211 = provenance["v211"]
+    need(v191.get("schema") == "v191_unified_patch_season_expansion_data_candidates_v1"
+         and valid_sha(v191.get("sha256"))
+         and v211.get("schema") ==
+             "v211_current_season_enchant_effect_classification_v1"
+         and valid_sha(v211.get("sha256")),
+         "V213_COMPONENT_SOURCE_IDENTITY_INVALID")
+    build = source_catalog.get("game_build")
+    revision = source_catalog.get("simc_revision")
+    need(type(build) is str and bool(build) and
+         type(revision) is str and
+         len(revision) == EXPECTED_SIMC_REVISION_LENGTH and
+         all(ch in "0123456789abcdef" for ch in revision),
+         "V213_GAME_BUILD_OR_SIMC_REVISION_INVALID")
+    need(type(v191.get("sha256_by_input")) is dict and
+         set(v191["sha256_by_input"]) ==
+             {"gear", "tier", "budget", "v189", "v190"} and
+         all(valid_sha(x) for x in v191["sha256_by_input"].values()),
+         "V213_V191_INPUT_SOURCE_SHA256_INVALID")
+    generated = v191.get("simc_generated_sources")
+    need(type(generated) is dict and set(generated) ==
+         {"permanent_enchant", "temporary_enchant", "gem_property"} and
+         all(type(row) is dict and row.get("source_build") == build and
+             type(row.get("declared_rows")) is int and
+             row["declared_rows"] > 0 and valid_sha(row.get("sha256"))
+             for row in generated.values()),
+         "V213_SIMC_GENERATED_SOURCE_SHA256_INVALID")
+    need(v211.get("candidate_source_schema") == v191["schema"] and
+         v211.get("candidate_source_artifact_id") is None,
+         "V213_V211_CANDIDATE_SOURCE_IDENTITY_INVALID")
+    return build, revision, v191, v211
+
+
+def _approved_enchants(source_catalog, ui):
+    items = ui.get("enchant_candidates", {}).get("items")
+    need(type(items) is list and len(items) == EXPECTED_ENCHANT_COUNT
+         and ui.get("enchant_candidates", {}).get("total") ==
+             EXPECTED_ENCHANT_COUNT,
+         "V196_ENCHANT_CATALOG_COVERAGE_MISMATCH")
+    selectable = [row for row in items if row.get("ui_selectable") is True]
+    approved_ids = sorted(row.get("enchant_id") for row in selectable)
+    need(approved_ids == EXPECTED_APPROVED_ENCHANT_IDS,
+         "V196_EXACT_APPROVED_ENCHANT_ID_MISMATCH")
+    approved = selectable[0]
+    need(approved.get("token") == "enchant_ring__eyes_of_the_eagle"
+         and approved.get("effect_family") == "crit_effectiveness",
+         "V196_APPROVED_ENCHANT_IDENTITY_MISMATCH")
+    joined = source_catalog["catalog"]["enchants"]["items"]
+    by_id = {row["enchant_id"]: row for row in joined}
+    need(len(by_id) == EXPECTED_ENCHANT_COUNT and 7967 in by_id
+         and 8025 in by_id,
+         "V213_ENCHANT_SOURCE_ID_SET_INVALID")
+    need(by_id[7967].get("selection_status") ==
+             "EXISTING_EAGLE_ONE_SCOPE_USER_CHOICE"
+         and by_id[8025].get("selection_status") ==
+             "DEVELOPER_ONLY_EXACT_SCOPE"
+         and by_id[7967].get("ui_selectable") is False
+         and by_id[8025].get("ui_selectable") is False,
+         "V213_EXISTING_APPROVAL_SOURCE_BOUNDARY_INVALID")
+    need(all(row.get("ui_selectable") is False for row in joined),
+         "V213_CLASSIFIER_GRANTED_USER_SELECTION")
+    need(source_catalog["catalog"]["enchants"]["selection_policy"].get(
+             "only_existing_native_scoped_choice") == 7967
+         and source_catalog["catalog"]["enchants"]["selection_policy"].get(
+             "developer_only") == [8025]
+         and source_catalog["catalog"]["enchants"]["selection_policy"].get(
+             "all_other_candidates_remain_locked") is True,
+         "V213_ENCHANT_SELECTION_POLICY_DRIFT")
+    return approved_ids, by_id
+
+
+def _selected_enchant(bootstrap, profile_text, approved_ids):
+    selected = bootstrap.get("selected_nonchmv_enchant")
+    profile_ring = [line for line in profile_text.splitlines()
+                    if line.startswith("finger1=")]
+    need(len(profile_ring) == 1, "V098_PROFILE_FINGER1_ASSIGNMENT_INVALID")
+    if selected is None:
+        need("enchant_id=7967" not in profile_ring[0],
+             "V098_UNDECLARED_EAGLE_ENCHANT_IN_PROFILE")
+        return {"selected_id": None, "slot": None,
+                "static_CHMV_E": None,
+                "budget_increment": 0,
+                "status": "NO_OPTIONAL_ENCHANT_SELECTED"}
+    need(approved_ids == EXPECTED_APPROVED_ENCHANT_IDS
+         and type(selected) is dict
+         and selected.get("schema") == eagle.SCHEMA
+         and selected.get("choice") == eagle.CHOICE
+         and selected.get("effect_family") == "crit_effectiveness"
+         and selected.get("static_CHMV_E") == eagle.E_ZERO
+         and selected.get("budget_policy") ==
+             "NON_CHMV_NO_CHANGE_TO_REFERENCE_B_OR_FINAL_T",
+         "V098_SELECTED_ENCHANT_NOT_EXACT_EXISTING_APPROVAL")
+    need(profile_ring[0].count("enchant_id=7967") == 1,
+         "V098_APPROVED_ENCHANT_NOT_PRESENT_EXACTLY_ONCE")
+    return {"selected_id": 7967, "slot": "finger1",
+            "static_CHMV_E": dict(eagle.E_ZERO),
+            "budget_increment": 0,
+            "evidence_scope": "ONE_WINDOWS_PALADIN334_STATIC_E_ZERO_NOT_ALL_DPS",
+            "status": "EXISTING_7967_APPROVAL_PRESERVED"}
+
+
+def _selected_special_L(scenario, static_cache_identity):
+    equipment = scenario.get("equipment")
+    need(type(equipment) is dict and
+         type(equipment.get("special")) is list,
+         "V098_SCENARIO_SPECIAL_EQUIPMENT_INVALID")
+    rows = equipment["special"]
+    normalized = []
+    for row in rows:
+        need(type(row) is dict and type(row.get("slot")) is str and
+             type(row.get("item_id")) is int and
+             type(row.get("ilevel")) is int and
+             type(row.get("options")) is dict,
+             "V098_SELECTED_SPECIAL_IDENTITY_INVALID")
+        normalized.append({
+            "slot": row["slot"], "item_id": row["item_id"],
+            "ilevel": row["ilevel"], "options": row["options"],
+        })
+    normalized.sort(key=lambda x: (x["slot"], x["item_id"], x["ilevel"]))
+    need(not normalized or static_cache_identity is not None,
+         "SELECTED_SPECIAL_STATIC_L_CACHE_SNAPSHOT_MISSING")
+    return {
+        "selected_count": len(normalized),
+        "selected_identity_sha256": sha(
+            canonical(normalized).encode("utf8")),
+        "static_cache": static_cache_identity,
+        "verification": (
+            "V098_PLAN_ACCEPTED_WITH_STATIC_CACHE_SNAPSHOT"
+            if normalized else "NO_SELECTED_SPECIAL_L"),
+        "native_calls_in_manifest_build": 0,
+        "v208_policy": "EXISTING_SELECTED_ONLY_ONE_NATIVE_ON_MISS_CACHE_REUSED",
+    }
+
+
+def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
+                     bootstrap, target_root):
+    build, revision, v191, v211 = _source_identity(
+        source_catalog, source_catalog_sha)
+    need(ui.get("schema") == ui_catalog.SCHEMA
+         and ui.get("season_build") == build
+         and ui.get("simc_revision") == revision,
+         "V196_APPROVED_CATALOG_BUILD_OR_REVISION_MISMATCH")
+    need(valid_sha(ui_sha), "V196_NORMALIZED_UI_CATALOG_SHA256_INVALID")
+    source_ui = ui.get("source_catalog")
+    need(type(source_ui) is dict and
+         source_ui.get("schema") == source_catalog["schema"] and
+         source_ui.get("manifest_sha256") ==
+             source_catalog.get("manifest_sha256"),
+         "V196_UI_NOT_DERIVED_FROM_EXACT_V213_ARTIFACT")
+    approved_ids, source_enchants = _approved_enchants(source_catalog, ui)
+
     need(bootstrap.get("schema") == V098
          and bootstrap.get("native_calls") == 0
-         and bootstrap.get("status") == "READY_INTERNAL_MANIFEST_ZERO_NATIVE",
-         "V098_TARGET_PROFILE_NOT_PLAN_READY")
-    build = season.get("game_build")
-    revision = season.get("simc_revision")
-    need(type(build) is str and bool(build)
-         and enchants.get("season_game_build") == build
-         and ui.get("season_build") == build,
-         "ENVIRONMENT_GAME_BUILD_MISMATCH")
-    need(type(revision) is str and len(revision) == 40
-         and enchants.get("simc_commit") == revision
-         and ui.get("simc_revision") == revision,
-         "ENVIRONMENT_SIMC_REVISION_MISMATCH")
-    need(enchants.get("counts", {}).get("total") == 38
-         and len(enchants.get("rows", [])) == 38
-         and ui.get("enchant_candidates", {}).get("total") == 38,
-         "ENVIRONMENT_ENCHANT_CATALOG_COVERAGE_MISMATCH")
-    need(ui.get("enchant_candidates", {}).get("selectable_count") == 1,
-         "ENVIRONMENT_UI_APPROVAL_BOUNDARY_CHANGED")
-    need(bootstrap.get("all_specs_ready") is False,
+         and bootstrap.get("status") == "READY_INTERNAL_MANIFEST_ZERO_NATIVE"
+         and bootstrap.get("current_season_product") is True,
+         "V098_CURRENT_SEASON_TARGET_PROFILE_NOT_PLAN_READY")
+    need(bootstrap.get("all_specs_ready") is False or
+         bootstrap.get("all_specs_ready") is True,
          "V098_ARCHETYPE_SCOPE_FLAG_MISSING")
+    archetype = bootstrap.get("template_archetype")
+    target_ilevel = bootstrap.get("target_ilevel")
+    need(type(archetype) is str and archetype in specs.CONTRACTS
+         and len(specs.CONTRACTS) == 26
+         and "evoker/augmentation" not in specs.CONTRACTS
+         and all(row.get("role") in ("attack", "spell")
+                 for row in specs.CONTRACTS.values()),
+         "PRODUCT_DPS_26_SPECIALIZATION_CONTRACT_DRIFT")
+    need(type(target_ilevel) is int,
+         "V098_TARGET_IDENTITY_MISSING")
+    plan = bootstrap.get("plan")
+    need(type(plan) is dict and type(plan.get("base_B")) is int
+         and type(plan.get("final_T")) is int,
+         "V098_TARGET_BUDGET_PLAN_MISSING")
+
     target_root = Path(target_root).resolve()
     generated = Path(bootstrap.get("generated_manifest", "")).resolve()
     need(generated.parent == target_root and generated.name == "manifest.json",
@@ -113,7 +279,7 @@ def compile_manifest(season, season_sha, enchants, enchants_sha,
     profile_files = {}
     for name in ("manifest.json", "profile.simc", "scenario.json", "fillers.json"):
         profile_files[name] = file_identity(target_root / name, target_root)
-    target_manifest, target_manifest_sha = read_json(generated)
+    target_manifest, _ = read_json(generated)
     need(target_manifest.get("profile_simc") == "profile.simc"
          and target_manifest.get("scenario_json") == "scenario.json"
          and target_manifest.get("fillers_json") == "fillers.json",
@@ -123,8 +289,12 @@ def compile_manifest(season, season_sha, enchants, enchants_sha,
          "V098_ADAPTIVE_LIMIT_OR_SIMC_REVISION_CHANGED")
     binary = sha_file(target_manifest.get("native_binary", ""))
     static_cache = target_manifest.get("static_cache_json")
-    static_cache_identity = (sha_file(static_cache)
-                             if static_cache else None)
+    static_cache_identity = sha_file(static_cache) if static_cache else None
+    profile_text = (target_root / "profile.simc").read_text(encoding="utf8")
+    selected_enchant = _selected_enchant(bootstrap, profile_text, approved_ids)
+    scenario, scenario_sha = read_json(target_root / "scenario.json")
+    special_L = _selected_special_L(scenario, static_cache_identity)
+
     # Hash a machine-independent projection; do not leak local absolute paths.
     target_manifest_identity = {
         "profile_simc": target_manifest["profile_simc"],
@@ -136,19 +306,11 @@ def compile_manifest(season, season_sha, enchants, enchants_sha,
         "oil_hands": target_manifest.get("oil_hands"),
         "flask_F": target_manifest.get("flask_F"),
         "seed_targets_B": target_manifest.get("seed_targets_B"),
-        "static_cache_sha256": (static_cache_identity["sha256"]
-                                if static_cache_identity else None),
+        "static_cache_sha256": (
+            static_cache_identity["sha256"] if static_cache_identity else None),
     }
     target_manifest_identity_sha = sha(
         canonical(target_manifest_identity).encode("utf8"))
-    plan = bootstrap.get("plan")
-    need(type(plan) is dict and type(plan.get("base_B")) is int
-         and type(plan.get("final_T")) is int,
-         "V098_TARGET_BUDGET_PLAN_MISSING")
-    archetype = bootstrap.get("template_archetype")
-    target_ilevel = bootstrap.get("target_ilevel")
-    need(type(archetype) is str and type(target_ilevel) is int,
-         "V098_TARGET_IDENTITY_MISSING")
     bootstrap_identity = {
         "schema": bootstrap["schema"],
         "status": bootstrap["status"],
@@ -157,78 +319,126 @@ def compile_manifest(season, season_sha, enchants, enchants_sha,
         "base_B": plan["base_B"],
         "final_T": plan["final_T"],
         "native_calls": bootstrap["native_calls"],
+        "current_season_product": bootstrap["current_season_product"],
+        "all_specs_ready": bootstrap["all_specs_ready"],
+        "source_independent_334_user_session":
+            bootstrap.get("source_independent_334_user_session"),
+        "source_independent_non334_user_session":
+            bootstrap.get("source_independent_non334_user_session"),
+        "selected_nonchmv_enchant": selected_enchant,
+        "selected_special_identity_sha256":
+            special_L["selected_identity_sha256"],
+        "plan_identity": {
+            key: plan[key] for key in (
+                "class", "spec", "item_slots", "fixed_O", "budget_source",
+                "scenario_digest", "source_profile_sha256")
+            if key in plan
+        },
     }
     bootstrap_identity_sha = sha(canonical(bootstrap_identity).encode("utf8"))
-    limitations = []
+    limitations = list(source_catalog.get("readiness_limitations", []))
     if bootstrap.get("all_specs_ready") is not True:
         limitations.append("V098_REPRESENTATIVE_ARCHETYPE_COVERAGE_INCOMPLETE")
-    if ui.get("enchant_candidates", {}).get("selectable_count") != 38:
-        limitations.append("ENCHANT_CATALOG_DISCOVERY_EXCEEDS_USER_APPROVAL")
     if ui.get("enchant_candidates", {}).get("source_classification_counts", {}).get(
-            "native_E_measured", 0) < 38:
+            "native_E_measured", 0) < EXPECTED_ENCHANT_COUNT:
         limitations.append("ENCHANT_SOURCE_CLASSIFICATION_IS_NOT_GENERAL_NATIVE_E")
+    limitations.extend([
+        "V213_ARTIFACT_NOT_YET_PACKAGED_IN_DEFAULT_WINDOWS_DATA_PATH",
+        "WINDOWS_ONE_CLICK_BUILD_START_PROGRESS_CANCEL_RESUME",
+    ])
+    limitations = list(dict.fromkeys(limitations))
+    unresolved = []
+    if bootstrap.get("all_specs_ready") is not True:
+        unresolved.append("ALL_26_DPS_REPRESENTATIVE_PROFILE_SUPPLIERS")
+    unresolved.extend([
+        "V208_SELECTED_SPECIAL_L_START_RECEIPT_NOT_YET_SERIALIZED_IN_ENVIRONMENT_MANIFEST",
+        "WINDOWS_ONE_CLICK_BUILD_START_PROGRESS_CANCEL_RESUME",
+    ])
     payload = {
         "schema": SCHEMA,
-        "status": "READY_WITH_LIMITATIONS" if limitations else "READY",
+        "status": "READY_WITH_LIMITATIONS" if limitations or unresolved else "READY",
         "native_calls": 0,
         "network_calls": 0,
         "automatic_ui_promotion": False,
-        "season_source": {
-            "schema": season["schema"], "game_build": build,
-            "simc_revision": revision, "sha256": season_sha,
-            "native_calls": season["native_calls"],
+        "product_scope": {
+            "supported_specializations": 26,
+            "excluded": ["evoker/augmentation", "all_tanks", "all_healers"],
+            "current_profile_archetype": archetype,
+            "all_specs_ready": bootstrap.get("all_specs_ready"),
         },
-        "enchant_source_classification": {
-            "schema": enchants["schema"], "season_game_build": build,
-            "simc_commit": revision, "sha256": enchants_sha,
-            "source_files": enchants.get("source_files"),
-            "counts": enchants.get("counts"),
-            "native_calls": enchants["native_calls"],
+        "source_catalog": {
+            "schema": source_catalog["schema"],
+            "artifact_sha256": source_catalog_sha,
+            "manifest_sha256": source_catalog["manifest_sha256"],
+            "game_build": build,
+            "simc_revision": revision,
+            "v191": {
+                "sha256": v191["sha256"],
+                "sha256_by_input": v191["sha256_by_input"],
+                "simc_generated_sources": v191["simc_generated_sources"],
+            },
+            "v211": {
+                "sha256": v211["sha256"],
+                "source_files": v211.get("source_files"),
+                "candidate_source_schema": v211["candidate_source_schema"],
+            },
+            "catalog_summary": source_catalog.get("catalog_summary"),
+            "related_source_counts": source_catalog.get("related_source_counts"),
         },
         "approved_ui_catalog": {
-            "schema": ui["schema"], "season_build": build,
-            "simc_revision": revision, "sha256": ui_sha,
-            "selectable_enchant_count":
-                ui["enchant_candidates"]["selectable_count"],
+            "schema": ui["schema"],
+            "normalized_sha256": ui_sha,
+            "source_catalog_manifest_sha256": source_ui["manifest_sha256"],
+            "season_build": build,
+            "simc_revision": revision,
             "enchant_count": ui["enchant_candidates"]["total"],
+            "selectable_enchant_ids": approved_ids,
+            "developer_only_enchant_ids": [8025],
+            "all_other_enchants_locked": True,
         },
+        "selected_nonchmv_enchant": selected_enchant,
         "target_profile": {
             "schema": bootstrap["schema"],
             "normalized_result_sha256": bootstrap_identity_sha,
             "template_archetype": archetype,
             "target_ilevel": target_ilevel,
-            "base_B": plan["base_B"], "final_T": plan["final_T"],
+            "base_B": plan["base_B"],
+            "final_T": plan["final_T"],
             "generated_manifest_sha256": target_manifest_identity_sha,
             "runtime_binary": binary,
             "static_cache": static_cache_identity,
+            "selected_special_L": special_L,
             "profile_files": profile_files,
+            "scenario_sha256": scenario_sha,
             "native_calls": bootstrap["native_calls"],
         },
         "readiness_limitations": limitations,
-        "unresolved_dependencies": [
-            "V191_TO_V196_SINGLE_VERSIONED_ARTIFACT_HANDOFF",
-            "ALL_26_DPS_REPRESENTATIVE_PROFILE_SUPPLIERS",
-            "WINDOWS_ONE_CLICK_BUILD_START_PROGRESS_CANCEL_RESUME",
-        ],
+        "unresolved_dependencies": unresolved,
     }
     digest = sha(canonical(payload).encode("utf8"))
     return {**payload, "manifest_sha256": digest}
 
 
+def compile_from_paths(source_catalog_path, bootstrap_path, target_root):
+    source_catalog_path = Path(source_catalog_path).resolve()
+    source_catalog, source_catalog_sha = read_json(source_catalog_path)
+    bootstrap, _ = read_json(bootstrap_path)
+    ui = ui_catalog.public_options(source_catalog_path)
+    ui_sha = sha(canonical(ui).encode("utf8"))
+    return compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
+                             bootstrap, target_root)
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    for name in ("season-catalog", "enchant-classification",
-                 "ui-catalog", "bootstrap-result", "target-root", "out"):
-        parser.add_argument("--" + name, required=True, type=Path)
+    parser.add_argument("--source-to-catalog", required=True, type=Path)
+    parser.add_argument("--bootstrap-result", required=True, type=Path)
+    parser.add_argument("--target-root", required=True, type=Path)
+    parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args(argv)
     try:
-        season, season_sha = read_json(args.season_catalog)
-        enchants, enchants_sha = read_json(args.enchant_classification)
-        ui, ui_sha = read_json(args.ui_catalog)
-        bootstrap, bootstrap_sha = read_json(args.bootstrap_result)
-        result = compile_manifest(
-            season, season_sha, enchants, enchants_sha, ui, ui_sha,
-            bootstrap, bootstrap_sha, args.target_root)
+        result = compile_from_paths(args.source_to_catalog,
+                                    args.bootstrap_result, args.target_root)
     except (OSError, ValueError, KeyError, TypeError) as exc:
         print("V212_ENVIRONMENT_BUILD_BLOCKED", type(exc).__name__, str(exc))
         return 3

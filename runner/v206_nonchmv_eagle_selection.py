@@ -43,8 +43,8 @@ def evidence():
          "EAGLE_WINDOWS_NATIVE_E_ZERO_PROOF_MISSING_OR_DRIFT")
     return p
 
-def source():
-    raw,rows,_=catalog.read()
+def source(catalog_path=None):
+    raw,rows,_=catalog.read(catalog_path or catalog.DEFAULT)
     selected=[r for r in rows if r["enchant_id"]==7967]
     need(len(selected)==1 and
          selected[0]["token"]=="enchant_ring__eyes_of_the_eagle"
@@ -56,10 +56,10 @@ def source():
          "EAGLE_SOURCE_FAMILY_OR_ID_NOT_VERIFIED")
     return selected[0]
 
-def check_choice(choice):
+def check_choice(choice,catalog_path=None):
     need(type(choice) is dict and choice==CHOICE,
          "ONLY_VERIFIED_EAGLE_FINGER1_NONCHMV_SELECTION")
-    source();evidence()
+    source(catalog_path);evidence()
     return {"schema":SCHEMA,"choice":dict(CHOICE),
             "effect_family":"crit_effectiveness",
             "static_CHMV_E":dict(E_ZERO),
@@ -67,8 +67,9 @@ def check_choice(choice):
             "native_static_scope":"ONE_WINDOWS_PALADIN334_STATIC_E_ZERO_NOT_ALL_DPS",
             "mechanics_owner":"SimC"}
 
-def apply(rows,choice,user,*,current_season_product,need_user):
-    result=check_choice(choice)
+def apply(rows,choice,user,*,current_season_product,need_user,
+          catalog_path=None):
+    result=check_choice(choice,catalog_path)
     need_user(current_season_product is True,
               "V206_ENCHANT_ONLY_CURRENT_SEASON_USER_ROUTE")
     need_user(not any(r.get("slot")=="finger1" for group in
@@ -85,8 +86,8 @@ def apply(rows,choice,user,*,current_season_product,need_user):
     ring["options"]["enchant_id"]="7967"
     return result
 
-def admit(choice,profile,normalized):
-    result=check_choice(choice)
+def admit(choice,profile,normalized,catalog_path=None):
+    result=check_choice(choice,catalog_path)
     need(type(profile) is str and type(normalized) is dict,
          "EAGLE_MANIFEST_SOURCE_REQUIRED")
     ring=[line.split("=",1)[1] for line in profile.splitlines()

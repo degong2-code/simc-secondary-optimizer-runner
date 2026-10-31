@@ -137,7 +137,7 @@ def public_options(path=DEFAULT):
     try:
         import v206_nonchmv_eagle_selection as eagle
         eagle.evidence()
-        eagle.source()
+        eagle.source(path)
         matching=[r for r in enchants
                   if r["token"]=="enchant_ring__eyes_of_the_eagle"
                   and r["enchant_id"]==7967

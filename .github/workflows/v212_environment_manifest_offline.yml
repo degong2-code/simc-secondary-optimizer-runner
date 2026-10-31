@@ -4,7 +4,12 @@ on:
     branches: [probe/chat-cache-v035-20261024]
     paths:
       - runner/v212_environment_manifest.py
+      - runner/v213_source_to_catalog.py
+      - runner/v196_current_season_user_catalog.py
+      - runner/v206_nonchmv_eagle_selection.py
+      - runner/v143_specialization_contracts.py
       - tests/test_v212_environment_manifest.py
+      - tests/test_v213_source_to_catalog.py
       - .github/workflows/v212_environment_manifest_offline.yml
 permissions:
   contents: read
@@ -26,9 +31,9 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - name: Compile only new manifest module
-        run: python -m py_compile runner/v212_environment_manifest.py tests/test_v212_environment_manifest.py
-      - name: Deterministic provenance, exact build/revision, approval and path checks
-        run: python -m unittest -v tests.test_v212_environment_manifest
+      - name: Compile source catalog, approval adapter and manifest modules
+        run: python -m py_compile runner/v143_specialization_contracts.py runner/v196_current_season_user_catalog.py runner/v206_nonchmv_eagle_selection.py runner/v213_source_to_catalog.py runner/v212_environment_manifest.py tests/test_v213_source_to_catalog.py tests/test_v212_environment_manifest.py
+      - name: Deterministic v213 provenance, exact 7967 approval, v098 profile and relocation checks
+        run: python -m unittest -v tests.test_v213_source_to_catalog tests.test_v212_environment_manifest
       - name: Assert no Native output was created
         run: python -c "from pathlib import Path; assert not Path('out').exists(); print('V212_ENVIRONMENT_MANIFEST_NATIVE0_PASS')"

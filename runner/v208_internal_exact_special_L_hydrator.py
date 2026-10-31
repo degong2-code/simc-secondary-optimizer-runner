@@ -187,7 +187,8 @@ def snapshot(root,cache):
         if os.path.exists(temp):os.unlink(temp)
     return target
 
-def hydrate(user,root,binary,revision,existing=None,*,timeout=MAX_SECONDS):
+def hydrate(user,root,binary,revision,existing=None,*,timeout=MAX_SECONDS,
+            source_catalog_path=None):
     """Return snapshot path and Native count; NEVER mutate earlier cache bytes."""
     root=pathlib.Path(root).expanduser().resolve()
     binary=pathlib.Path(binary).expanduser().resolve()
@@ -198,7 +199,8 @@ def hydrate(user,root,binary,revision,existing=None,*,timeout=MAX_SECONDS):
     need(type(timeout) is int and 1<=timeout<=MAX_SECONDS,"STATIC_NATIVE_TIMEOUT_BOUND")
     staged=bootstrap.build(user,root.parent/"static-item-prebudget-no-write",
                            binary,revision,static_special_probe_only=True,
-                           current_season_product=True)
+                           current_season_product=True,
+                           source_catalog_path=source_catalog_path)
     initial=item_cache.load(pathlib.Path(existing)) if existing else item_cache.empty_cache()
     missing=missing_specials(initial,staged)
     if not missing:

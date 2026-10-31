@@ -93,6 +93,11 @@ class LocalJobs:
         candidate=exact_L.source_cache(self.root,None)
         return str(candidate) if candidate is not None else None
 
+    def source_catalog_path(self):
+        """Use the packaged v213 artifact when present; legacy source remains fallback."""
+        candidate=pathlib.Path(__file__).resolve().parents[1]/"data"/"current_season_source_to_catalog.json"
+        return candidate if candidate.is_file() else None
+
     def recent_sessions(self, limit=48):
         """Read-only local session index; no binary hashing, Native or writes.
 
@@ -217,7 +222,8 @@ class LocalJobs:
                                    params.revision,resolved_static,
                                    independent_334=independent,
                                    independent_target_level=independent_level,
-                                   current_season_product=current_season)["plan"]
+                                   current_season_product=current_season,
+                                   source_catalog_path=self.source_catalog_path())["plan"]
             return {"session_id":folder.name,"status":"READY_ZERO_NATIVE",
                     "native_calls":0,
                     "static_cache_auto_used":bool(
@@ -256,7 +262,8 @@ class LocalJobs:
                 try:
                     hydrated=exact_L.hydrate(
                         user,self.root,binary,params.revision,
-                        existing=source)
+                        existing=source,
+                        source_catalog_path=self.source_catalog_path())
                 except Exception as exc:
                     raise blocked(exc) from None
                 prepared_params=params.model_copy(update={
@@ -531,7 +538,8 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
     def season_option_catalog():
         """Local, read-only versioned source catalogue; no Native or approvals."""
         try:
-            return ui_catalog.public_options()
+            source_path=jobs.source_catalog_path()
+            return ui_catalog.public_options(source_path) if source_path else ui_catalog.public_options()
         except (ui_catalog.CatalogBlocked, OSError, ValueError, KeyError,
                 AssertionError) as exc:
             return {"schema":ui_catalog.SCHEMA,
