@@ -1,5 +1,7 @@
 # SIMC Secondary Optimizer — Windows 로컬 베타 시작
 
+> **2026-10-31 v211 시즌 마부 효과 목록 — 원본 분류 정보(read-only):** 이번 시즌 영구 마부 후보 38종의 ID·부위 mask·정적 DBC 스탯·주문 설명·SimC custom handler를 고정 revision source에서 분류해 기존 카탈로그 설명에 표시합니다. 이는 **효과 출처 설명**이지 38종 모두의 Native 수치 인증이나 사용자 선택 허용이 아닙니다. 실제 UI 선택은 기존과 동일하게 **독수리의 눈 7967 한 조건만** 유지합니다. 8025는 Linux 냉법334/finger1/item158366의 개발용 가속+30 관측만 있고 일반 UI에서는 잠금, 나머지 36종도 잠금입니다. 정적 CHMV rating이 DBC에 존재한다고 확인된 8종(반지 7965/7969 특화, 7995/7997 치명, 8021/8025 가속, 8023/8027 유연) 중 6종은 정확 Native E 측정이 없습니다. 무기 마부의 일시적 rating proc는 고정 E가 아니며 SimC가 DPS 중 계산합니다. **마부를 선택했다는 사실만으로 B/T가 변하지 않고**, 정확히 측정된 영구 정적 CHMV E만 기존 회계 규칙에 따라 반영됩니다. [v211 분류·검증 범위](docs/V211_ENCHANT_EFFECT_SOURCE_CLASSIFICATION_AND_EVIDENCE_20261031.md). 이전 ZIP은 자동 갱신되지 않습니다.
+>
 > **2026-10-31 v210 최신 격리 소스 베타 — 선택 특수장비에 보석이 있어도 기본 L만 별도 실측:** 일반 Windows 제품의 사용자 **최적화 실행(Start)** 시 선택 장비의 원래 보석·마부는 실제 DPS 프로필에 그대로 보존합니다. 필요한 정확 L 캐시가 없는 경우, 일시적인 **아이템 기본 변형**을 별도 SimC Native **최대 1회** 측정하고 B/T에 중복 가산하지 않으며 기존 적응형 DPS 최대6회를 실행합니다. [실제 v210 Windows #41152171198](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41152171198)에서 **정기 주술사331·특수 목걸이268250·보석240900/240900**의 정적 L(치명93/가속305)을 정확히 보호하고 **L Native1+DPS Native6+캐시6/6**을 확인했습니다. 기존 v208/v209 문단의 '보석 포함 특수장비 BLOCK'는 *과거 상태*로 보존된 설명입니다. 그러나 **고정 rating 마부의 모든 조합을 일반 선택 가능하도록 인증한 것은 아니며**, Windows PC 실제 GUI 클릭·전문화를 모두 검증하지 않았습니다. 구형 ZIP·사용자 설치본이 자동 업데이트되지 않으며 본 코드는 GitHub 격리 브랜치에만 있습니다. [v210 상세](docs/P1_V210_BARE_SPECIAL_L_GEM_J_ENCHANT_E_WINDOWS_VERIFIED_20261031.md).
 >
 
