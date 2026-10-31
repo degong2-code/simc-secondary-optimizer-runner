@@ -192,23 +192,45 @@ class NativeBudget(unittest.TestCase):
                 cfg["equipment"]["catalyst_special_tier_slots"]=["head"]
                 plan,fill,c=fixture(cfg)
                 del c["variants"][native.digest(p.exact_identity(head))]
-                if diamond=="240900":
-                    # A known ungemmed record is insufficient for a
-                    # regular secondary gem; unknown variants fail closed.
-                    bare=copy.deepcopy(head)
-                    bare["options"].pop("gem_id")
-                    record(c,bare)
+                # Without a Native-observed bare row (including identical
+                # redirect/bonus/ilvl) none of these gems can invent L.
                 result=p.compile_static_budget(plan,fill,c)
                 self.assertEqual(len(result["missing_special_fixed_static"]),1)
                 self.assertIsNone(result["locked_L_when_all_specials_observed"])
 
-    def test_special_with_gem_modifier_needs_numeric_separation_not_proc_gate(self):
+    def test_decorated_special_requires_exact_native_bare_and_never_locks_J_E(self):
         cfg=mage();cfg["equipment"]["special"]=[item("neck",251001,
-                                           options={"gem_id":"240967"})]
+            options={"gem_id":"240900","enchant_id":"8025","bonus_id":"13848"})]
         filler=[x for x in FILLER if x["slot"]!="neck"]
         plan,fill,cache=fixture(cfg,filler)
-        with self.assertRaisesRegex(p.BudgetBlocked,"SPECIAL_LOCK_NEEDS_UNDECORATED_NUMERIC_VARIANT"):
-            p.compile_static_budget(plan,fill,cache)
+        full=cfg["equipment"]["special"][0]
+        base=p.undecorated_special(full)
+        self.assertEqual(base["options"],{"bonus_id":"13848"})
+        # A full gemmed + enchanted variant can be present in cache, but
+        # that must NEVER qualify as the special's protected base L.
+        pending=p.compile_static_budget(plan,fill,cache)
+        self.assertEqual(pending["status"],"NEEDS_NATIVE_SPECIAL_FIXED_L")
+        self.assertEqual(pending["missing_special_fixed_static"][0]
+                         ["identity"],p.exact_identity(base))
+        self.assertIsNone(pending["locked_L_when_all_specials_observed"])
+        base_L={"crit_rating":0,"haste_rating":0,
+                "mastery_rating":80,"versatility_rating":20}
+        record(cache,base,base_L)
+        result=p.compile_static_budget(plan,fill,cache)
+        self.assertEqual(result["locked_L_when_all_specials_observed"],base_L)
+        self.assertEqual(result["G_if_complete"],1300)
+        self.assertEqual(result["budget"]["T_official"],1603)
+        self.assertEqual(result["native_gear_stats"]["neck"]["identity"],
+                         p.exact_identity(base))
+        self.assertEqual(result["native_gear_stats"]["neck"]["base_item_L_excludes"],
+                         ["enchant_id","gem_id"])
+        self.assertEqual(result["effective_floor_if_possible"]["mastery_rating"],80)
+        self.assertEqual(result["effective_floor_if_possible"]["versatility_rating"],20)
+        # Source identity controls L: different bonus/ilvl cannot borrow it.
+        wrong=copy.deepcopy(base)
+        wrong["options"]["bonus_id"]="13849"
+        self.assertIsNone(p.get_native_secondary(cache,wrong))
+
     def test_filler_with_gem_option_marks_pending_p3(self):
         cfg=mage();filler=copy.deepcopy(FILLER)
         filler[0]["options"]={"gem_id":"240967"}
