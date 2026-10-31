@@ -88,11 +88,12 @@ def parse_dbc_rows(text,target_ids):
     rows={}
     for line in text.splitlines():
         if not line.lstrip().startswith("{"):continue
+        first=re.match(r'^\s*\{\s*(\d+)\s*,',line)
+        if first is None or int(first.group(1)) not in target_ids:continue
         m=DBC_ROW.fullmatch(line)
-        need(m is not None,"SIMC_ITEM_ENCHANTMENT_ROW_UNPARSED")
+        need(m is not None,"SIMC_ITEM_ENCHANTMENT_TARGET_ROW_UNPARSED:"+first.group(1))
         vals=m.groups()
         eid=int(vals[0])
-        if eid not in target_ids:continue
         row={"id":eid,"id_gem":int(vals[1]),"id_scaling":int(vals[2]),
              "min_scaling_level":int(vals[3]),"max_scaling_level":int(vals[4]),
              "min_ilevel":int(vals[5]),"max_ilevel":int(vals[6]),
