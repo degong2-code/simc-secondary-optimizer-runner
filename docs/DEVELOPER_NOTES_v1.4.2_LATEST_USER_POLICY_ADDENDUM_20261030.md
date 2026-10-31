@@ -145,6 +145,9 @@
 - 설계 상세 및 최초 통합 단위: `docs/P3_ENVIRONMENT_BUILDER_TARGET_ARCHITECTURE_20261031.md`. 이번 반영은 아키텍처/정책 문서화이며 코드 통합 완료나 사용자 배포 승격을 뜻하지 않는다.
 
 
+> **2026-10-31 최신 Windows source beta 재패키징 #41161740839:** Windows Server 2022 Python 3.12·3.14 모두 SUCCESS, 각 101 tests PASS 및 ZIP 2 tests PASS, 추출된 CMD launcher check·localhost HTTP security·징벌334/분노321/냉법344 3개 plan PASS, 기존 cache-only 6/6 HIT, 신규 Native0. Artifact [#13027326887](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41161740839/artifacts/13027326887), ZIP SHA256 `08c56925e0520e17d78392ef2740e00b09f67b6005acc6a9021b462da2ca66d0`, 보존기한 2026-11-07T02:50:50Z. 이는 소스 베타 패키징·HTTP plan 검증이며 사용자 PC 직접 GUI 클릭, 실제 Native, Environment Build UI/원클릭 통합 검증이 아니다. v212는 내부 manifest assembler이고 사용자 Build 버튼/API에 연결되지 않았다.
+>
+
 #### P3-A 구현 진척 — v212 Environment Manifest (2026-10-31)
 
 - `runner/v212_environment_manifest.py` 추가. 기존 v191 season aggregation, v211 enchant classification, v196 approved UI catalog, v098 target-profile preparation 결과를 입력받아 **하나의 결정적 Environment Manifest**로 참조 결합한다. 수집·API·SimC Native·최적화 실행을 하지 않는 얇은 provenance/readiness join이다.
