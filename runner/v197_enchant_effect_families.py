@@ -115,7 +115,7 @@ def decorate(enchant_rows):
                 "STRONGER_VARIANT_REPORTED" if strength=="stronger" else
                 "DISTINCT_EFFECT_NO_DOMINANCE" if strength=="distinct" else
                 "WEAKER_VARIANT_REPORTED")
-        if source_rows is not None:
+        if source_rows is not None and "enchant_id" in row:
             source=source_rows.get(token)
             if source is None or source["enchant_id"]!=row.get("enchant_id"):
                 raise ValueError("V211_ENCHANT_SOURCE_CLASSIFICATION_IDENTITY_MISMATCH")
@@ -137,8 +137,10 @@ def decorate(enchant_rows):
             if prefix!="enchant_ring":
                 data["effect_family"]=source["effect_family"]
                 data["effect_description"]=source["effect_summary"]
-        else:
+        elif source_rows is None:
             data["source_effect_classification_status"]="SOURCE_MANIFEST_UNAVAILABLE"
+        else:
+            data["source_effect_classification_status"]="SOURCE_IDENTITY_NOT_SUPPLIED_FOR_PARTIAL_TEST_ROW"
         result.append(data)
     observed_ring={x.split("__",1)[1] for x in observed
                    if x.startswith("enchant_ring__")}
