@@ -46,6 +46,55 @@ class SourceRingEffectFamilies(unittest.TestCase):
                 {"token":"enchant_ring__silvermoons_alacrity"},
                 {"token":"enchant_ring__silvermoons_alacrity"}])
 
+    def test_all_38_source_effects_are_classified_without_generalizing_native_or_ui(self):
+        c=catalog.public_options()
+        enc=c["enchant_candidates"]
+        rows=enc["items"]
+        self.assertEqual(enc["source_classified_count"],38)
+        self.assertEqual(enc["effect_classification_status"],
+            "PINNED_SIMC_DBC_SPELLTEXT_AND_HANDLER_CLASSIFIED_NOT_NATIVE_GENERALIZED")
+        self.assertEqual(enc["source_classification_counts"],{
+            "static_chmv_rating":8,"static_nonchmv_only_or_mixed":19,
+            "spell_effects":15,"native_E_measured":2})
+        self.assertEqual(sum(x["ui_selectable"] for x in rows),1)
+        self.assertEqual({x["enchant_id"] for x in rows if x["ui_selectable"]},{7967})
+        by_id={x["enchant_id"]:x for x in rows}
+        # Lynx's Dexterity is source DBC avoidance+stamina, not agility.
+        lynx=by_id[7963]["source_effect_classification"]
+        self.assertEqual(lynx["static_components"],["avoidance_rating","stamina"])
+        # A weapon mastery enchant is a dynamic SimC proc, not fixed E.
+        arcane=by_id[8041]
+        self.assertFalse(arcane["source_static_chmv_rating_present"])
+        self.assertEqual(arcane["source_dynamic_chmv_proc_roles"],
+                         ["TEMPORARY_MASTERY_RATING_PROC"])
+        self.assertEqual(arcane["source_simc_custom_handlers"],
+                         ["stat_weapon_enchant"])
+        # Cradle's effect text is a healing-triggered target barrier.
+        cradle=by_id[8007]["source_effect_classification"]
+        self.assertEqual(cradle["spell_effect_roles"],["ABSORB_OR_DEFENSIVE_PROC"])
+        # The two existing Native facts remain strictly scope-limited.
+        eagle=by_id[7967]
+        self.assertEqual(eagle["source_native_E_status"],
+                         "MEASURED_ZERO_ONE_WINDOWS_PALADIN_334_PROFILE")
+        haste=by_id[8025]
+        self.assertEqual(haste["source_native_E_one_scope"]["haste_rating"],30)
+        self.assertEqual(haste["source_native_E_status"],
+                         "MEASURED_ONE_LINUX_FROST_334_PROFILE")
+        self.assertFalse(haste["ui_selectable"])
+        self.assertTrue(all(x["simc_static_rating_verified"] is False for x in rows))
+
+    def test_source_classification_manifest_tamper_fails_closed(self):
+        import json,tempfile
+        source=families.read_source_classification()
+        self.assertEqual(len(source),38)
+        doc=json.loads(families.SOURCE_CLASSIFICATION_PATH.read_text("utf8"))
+        doc["simc_commit"]="0"*40
+        with tempfile.TemporaryDirectory() as td:
+            p=pathlib.Path(td)/"bad.json"
+            p.write_text(json.dumps(doc),encoding="utf8")
+            with self.assertRaisesRegex(ValueError,"PROVENANCE_INVALID"):
+                families.read_source_classification(p)
+
     def test_distinct_crit_effectiveness_does_not_get_dropped(self):
         c=catalog.public_options()
         item=next(x for x in c["enchant_candidates"]["items"]
