@@ -123,8 +123,11 @@ class CurrentSeasonProductIntegration(unittest.TestCase):
                  "origin":"http://127.0.0.1:8765",
                  "content-type":"application/json"}
         user=sessions.standard_controls()
+        source_path=app.state.jobs.source_catalog_path()
+        revision=(json.loads(source_path.read_text(encoding="utf8"))["simc_revision"]
+                  if source_path is not None else self.rev)
         payload={"controls":user,"binary":str(self.binary),
-                 "revision":self.rev,"static_cache":None}
+                 "revision":revision,"static_cache":None}
         p=client.post("/api/v1/sessions/plan",headers=headers,json=payload)
         self.assertEqual(p.status_code,200,p.text)
         original_id=p.json()["session_id"]
