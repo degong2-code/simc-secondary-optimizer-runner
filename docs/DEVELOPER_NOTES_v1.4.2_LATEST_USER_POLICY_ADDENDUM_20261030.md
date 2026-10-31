@@ -1,13 +1,13 @@
 # SIMC SECONDARY OPTIMIZER — 개발자 노트 v1.4.2 보충본 (2026-10-30)
 ## 사용자 최신 결정·실제 v182 구현 증거·차기 작업
 
-**지위:** v1.4.1 전체를 무단 대체하지 않는 **최신 사용자 직접 결정의 버전형 보충본**. 승인된 CHMV/SimC 책임 원칙 유지. GitHub 개발 브랜치에 기록한 것이며 **ChatGPT Project Sources/Instructions UI 실제 적용이 아님**. v1.4.1에 남은 27 DPS/증강 포함 문구는 구형 역사 표기다.
+**지위:** v1.4.1 전체를 무단 대체하지 않는 **최신 사용자 직접 결정의 버전형 보충본**. 승인된 CHMV/SimC 책임 원칙 유지. GitHub 개발 브랜치에 기록한 것이며 **ChatGPT Project Sources/Instructions UI 실제 적용이 아님**. 최초 업로드된 v1.4.1 사본의 27 DPS/증강 포함 문구는 범위 오기였으며, 2026-10-31 사용자 직접 결정에 따라 26 DPS/증강 제외로 교정한 대체본을 생성했다.
 
 ### 1. 결정 우선순위 / 제품 목적
 
 **최신 직접 사용자 결정 > 승인 설계 기준(충돌 없는 부분) > 이 격리 브랜치 최신 CURRENT·HEAD 및 실제 Actions/Native 원본 > 기존 역사 인계/실험 문서.**
 
-- **26개 DPS 전문화(증강 기원사 제외)**만 지원. 탱커/힐러도 제외한다. 사용자가 이후 직접 바꾸기 전까지 27개로 복귀하지 않는다.
+- **26개 DPS 전문화(증강 기원사 제외)**만 지원한다. 탱커·힐러도 제외한다. 27개/증강 포함 표기는 잘못된 이전 초안의 오기이며 현행 목표로 사용하지 않는다.
 - 목표 **ilvl 266–344, 기본 334** 또는 **사용자가 입력한 기름 포함 최종 CHMV T**에서 향후 파밍 목표가 될 **치명·가속·특화·유연의 최적 절대 rating**을 실제 SimC DPS로 찾는다. 현재 착용 장비 스탯 재분배기, 아이템 조합·획득 경로 추천기가 아니다.
 - 일반 사용자는 직업·전문화·종족·특성, 목표 ilvl 또는 수동 T, 시즌 **장신구 2개**, 선택 **특수효과 장비**, **장식 제작장비 최대 2개(부위·장식 유형·제작 스탯 선택)**, 보석/영약/물약/기름/전투조건만 고른다. **일반 방어구·무기·티어 4세트·대표 프로필과 시즌 예산은 내부 생성**. SimC 프로필 업로드는 캐릭터/특성 읽기 선택 기능이며 장비 스냅샷을 목표로 복사하지 않는다.
 - **`T=G+J+F+O`, `B=G+J+F`, `T=B+O`, `c_final=c_base+o`.** 기름 O는 정확한 적용 무기마다 고정·gear_*에 한 번만. 선택 특수장비 정확 정적 L은 B/G 내부에 이미 있으므로 스탯별 하한으로만 보호하고 재가산하지 않는다. 장신구 정적 수치는 자유 G 밖, JSON2 record 미출력은 0 단정 아님. 제작 초기 50:50은 L 잠금이 아니다. 참조 B(시즌 79×2 Native 기반 10 단위 근사) 또는 수동 최종 T가 기본; 선택 exact Native G는 기본 경로 필수 Gate가 아니다.
@@ -42,7 +42,7 @@
 
 ## 5. 2026-10-31 v203 마부 회계 및 기존 기능 충돌 방지 — 후속 증거 보충
 
-**현행 사용자 정책을 재확인:** 오직 **DPS 26개 전문화**, 증강 기원사·탱커·힐러 제외. 본문에 인용된 v1.4.1의 27개/증강 포함은 구형 역사 정책이며 이 v1.4.2와 최근 사용자 직접 결정을 덮어쓰지 않는다. 이 단락은 v1.4.1 원문·공식 Project UI를 수정하거나 새 승인 규칙을 발명하는 것이 아니다.
+**현행 사용자 정책을 재확인:** 오직 **DPS 26개 전문화**, 증강 기원사·탱커·힐러 제외. 최초 업로드된 v1.4.1 사본의 27개/증강 포함은 승인된 정책이 아니라 범위 오기였으며, 2026-10-31 교정본은 26개/증강 제외로 수정했다. Project Sources/Instructions UI의 실제 교체 여부는 여전히 별도 확인 사항이다.
 
 - **E의 위치:** 마부의 Native 관측 고정 rating `E`는 이미 목표 총량 안에 있는 `G`의 **비자유분배 스탯별 하한**이다. `T=G+J+F+O`, `B=G+J+F`는 불변. 기름 `O`, 특수장비 `L`, 보석 `J`, 영약 `F`와 별도 소유권을 지킨다. `E`를 총량이나 `gear_*` 숫자에 추가하면 이중 계산된다. 선택 특수장비/장식의 동일 슬롯 `L`·`E` 중복 잠금은 원자적으로 거부한다. 기존 후보 탐색·SimC APL/proc/DPS/95%·캐시/취소/재개 코드를 재발명하지 않는다.
 - **정확한 증거/적용 범위:** [v199 #41075851509](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41075851509) Native2, [v200 #41076597270](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41076597270) 기존 JSON2 SHA 정정·Native0: `finger1 item158366/enchant8025` 가속 **1004→1034(+30)**. [v201 #41078102843](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41078102843) Native2: 동일 `gear_*` override 시 가속 **735→735(추가0)**. [v203 전체 적응형 #41083301873](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41083301873) Linux exact SimC rev `710c2408bf`/SHA·냉법334 대표 전체 프로필 SHA `8305a811137db6f557f8076dfa44a4a1a359111d60bb7452225e1573bf72a401`에서 **Native6 PASS, 캐시 재실행 6/6 HIT, 신규0, B3150/T3182, 고유후보4, 95% 비교**. 이 SHA 조건 외의 특성·종족·장신구·장비·전투·Windows SimC에는 E30 자동 재사용 금지.
@@ -159,3 +159,12 @@
 - **v212 코드 리뷰 결손:** `bootstrap_sha` 인자는 전달되지만 사용되지 않으며, raw v098 result SHA 대신 정규화한 일부 identity와 생성 파일 SHA가 결과에 반영된다. 또한 UI approval 경계는 selectable count 1만 검사하고 정확한 ID 7967을 v212 자체에서 확인하지 않는다. 현재 38 rows/1 selectable은 현 시즌 고정 상수다. v208 선택 L 영수증도 별도 manifest 입력이 아니다.
 - **P3-B의 실제 접합 지점:** v191 workflow는 `out/v191_unified_source_first_catalog.json`을 생성하지만 v211과 v196은 현재 고정 파일 `data/current_season_simc_enchant_candidates.json`(source artifact `12961140046`)을 읽는다. v196은 이 파일의 artifact ID 및 관련 source counts도 고정 검증한다. 따라서 v191 결과가 v211→v196으로 자동 전달되는 파이프라인은 아직 없다. P3-B에서 정확한 source SHA/build/revision/mask를 보존하는 adapter/artifact contract로 연결하되, 7967 외 선택을 자동 승격하지 않는다.
 - **소규모 분류 문구 결손:** v211 생성 코드와 runtime manifest의 limitations 문구가 'other six static CHMV ring enchants'라고 적혀 있다. 정적 CHMV 8종 중 8025만 E 실측됐으므로 미측정은 7종이다. 숫자/선택 경계/Native 결과에는 영향 없는 설명 오류이며, 후속 분류 산출물 갱신 때 7로 교정한다.
+
+
+## 8. 2026-10-31 사용자 직접 정정 — DPS 26개, 증강 기원사 제외
+
+- **최종 범위:** DPS 26개 전문화만 지원한다. 증강 기원사·탱커·힐러는 제외한다. 이전 27개/증강 포함 문구는 승인된 제품 범위가 아니라 문서/인계 요약의 오기다.
+- **v1.4.1 교정본:** `SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.1_DPS_ONLY_SCOPE_CORRECTION_20261031.md`를 생성했다. SHA256: `d85ada7d20cb91730cad532d8d31908e2452e8700205ee46af136f2e5712a6d7`. 이 파일은 수동 Project Source 교체용이며, GitHub 문서 갱신만으로 Project UI가 바뀌었다고 간주하지 않는다.
+- **코드 범위 대조:** `runner/v143_specialization_contracts.py`의 현재 계약은 26개다. `integration_probes/v176_all_26_source_first_physical_native.py`는 26개 및 `sessions.SUPPORTED`와의 정확한 집합 일치를 강제한다. `tests/test_v176_all_26_source_first_physical_native.py`는 `evoker/augmentation`이 목록에 없음을 확인한다.
+- **기존 물리 증거 재사용:** [Actions #40972829357](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40972829357) 실제 로그의 `FINISHED_ALL_26_PHYSICAL_PASS`, `26 PASS_PHYSICAL_NATIVE`, 신규 Native 25회와 기존 v174 성기사 영수증 1회 재사용을 확인했다. 이는 ilvl334/35 iterations의 물리 프로필 smoke이며, 26개 모두의 적응형 CHMV 최적화 E2E를 증명하지 않는다.
+- **이번 정정에서 코드·Native·Actions 재실행은 없다.** 기존 소스·테스트·실제 Native 영수증을 재사용한다. `main`, immutable v003, 원본 v016, repository visibility, Project Sources/Instructions UI 및 공식 Work OS는 변경하지 않았다.

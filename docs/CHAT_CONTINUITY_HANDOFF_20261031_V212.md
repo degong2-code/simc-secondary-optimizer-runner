@@ -2,7 +2,7 @@
 
 **문서 목적:** 삭제된 직전 채팅의 첨부 `LAST-CHAT(3).txt`를 시작 자료로 삼되, 그 안의 보고를 실제 격리 브랜치·최신 CURRENT·Developer Notes·코드·Actions 로그와 대조하여 다음 일반 채팅이 프로젝트를 재시작하지 않고 정확히 이어가게 한다.
 
-**인계 상태:** 문서/상태 보강 완료. 제품 기능 추가·Native 실행·새 Actions 실행·main 병합·배포·Project UI/Work OS 승격은 수행하지 않았다. 다음 채팅의 첫 응답은 복원·검증 보고만 하고 사용자의 **`진행`** 전까지 중단해야 한다.
+**인계 상태:** 문서/상태 보강 완료. 2026-10-31 DPS 26개/증강 제외 범위 교정도 문서 전용으로 반영했다. 제품 코드 변경·Native 실행·새 Actions 실행·main 병합·배포·Project UI/Work OS 승격은 수행하지 않았다. 다음 채팅의 첫 응답은 복원·검증 보고만 하고 사용자의 **`진행`** 전까지 중단해야 한다.
 
 ## 0. 실제 저장소 스냅샷과 증거의 기준
 
@@ -24,7 +24,7 @@
 1. GitHub에서 repository visibility, 지정 branch, 실제 최신 HEAD, 최신 branch Actions, main HEAD를 읽기 전용으로 확인한다. public/private 상태를 변경하지 않는다.
 2. 이 문서 전체를 읽는다.
 3. `docs/CURRENT_PRODUCT_DEVELOPMENT_STATE.md` 최상단 P3-A/v212, P3 장기 목표, v211/v210 최신 상태를 읽는다. 아래쪽의 오래된 버전 이력은 현재 상태로 재해석하지 않는다.
-4. `docs/DEVELOPER_NOTES_v1.4.2_LATEST_USER_POLICY_ADDENDUM_20261030.md` §1 및 §7을 읽는다. **v1.4.2가 현재 승인 정책 보충본**이다. v1.4.1의 27 DPS/증강 포함은 역사적 오류로만 취급한다.
+4. `docs/DEVELOPER_NOTES_v1.4.2_LATEST_USER_POLICY_ADDENDUM_20261030.md` §1, §7, §8 및 `docs/DPS26_SCOPE_CORRECTION_20261031.md`를 읽는다. **v1.4.2와 2026-10-31 직접 정정이 현재 승인 범위**다. 최초 업로드 v1.4.1 사본의 27 DPS/증강 포함은 오기이며, 교정된 v1.4.1 교체본은 26 DPS/증강 제외다.
 5. `docs/P3_ENVIRONMENT_BUILDER_TARGET_ARCHITECTURE_20261031.md` 전체를 읽는다. 특히 §7 roadmap과 §8 v212 실제 구현/제한을 함께 본다.
 6. `WINDOWS_BETA_START_HERE.md`의 상단 P3-A/v211/v210 안내와 사용자 시작 절차를 읽는다. 이 guide 및 현재 ZIP은 원클릭 Environment Build가 배포되었다는 뜻이 아니다.
 7. P3-A를 확인할 때만 다음을 읽고 실제 Actions #41160002104 로그와 대조한다.
@@ -47,7 +47,8 @@
 
 **DPS 26개 전문화만 지원한다. 증강 기원사, 탱커, 힐러는 제외한다.**
 
-- v1.4.1 및 과거 handoff에 남은 27 DPS/증강 포함은 역사적 오류다.
+- 최초 업로드 v1.4.1 사본 및 과거 handoff에 남은 27 DPS/증강 포함은 범위 오기다. 2026-10-31 v1.4.1 교정본과 v1.4.2 §8은 26 DPS/증강 제외를 명시한다.
+- **26개 범위의 코드·실증 대조:** `runner/v143_specialization_contracts.py`는 26개 specialization contract를 보유한다. `integration_probes/v176_all_26_source_first_physical_native.py`는 `len(ALL)==26`과 `ALL == sessions.SUPPORTED`를 강제하고, `tests/test_v176_all_26_source_first_physical_native.py`는 `evoker/augmentation` 부재를 확인한다. 기존 [#40972829357](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40972829357) 로그는 `FINISHED_ALL_26_PHYSICAL_PASS` 및 26 PASS, 신규 Native 25회+기존 성기사 영수증 1회 재사용을 확인한다. 물리 smoke 범위이며 26개 전부의 적응형 최적화 E2E 증거는 아니다. 이번 교정에서 이를 재실행하지 않는다.
 - 지원 전문화의 목적함수는 SimC DPS 최대화다.
 - 기본 목표 ilvl은 334이며, 목표 ilvl 또는 사용자가 직접 입력한 기름 포함 최종 CHMV 총량 T를 기준으로 미래 파밍 목표가 될 치명·가속·특화·유연의 **최적 절대 rating**을 찾는다.
 - 현재 착용 장비를 재분배하는 도구가 아니며, 전체 장비 조합 추천·아이템 획득 경로 추천·전 시즌 loot DB 탐색기로 범위를 넓히지 않는다.
@@ -233,7 +234,7 @@ GitHub 저장소 `degong2-code/simc-secondary-optimizer-runner`의 격리 브랜
 5. `WINDOWS_BETA_START_HERE.md` 상단과 현재 사용자 실행 절차
 6. 필요한 경우에만 v212 code/test/workflow, v191/v211/v196/v197의 실제 source handoff 계약과 Actions logs
 
-최신 사용자 승인 제품 범위는 **증강 기원사·탱커·힐러를 제외한 DPS 26개 전문화**다. v1.4.1 및 과거 문서의 27 DPS/증강 포함은 역사적 오류로 취급한다.
+최신 사용자 승인 제품 범위는 **증강 기원사·탱커·힐러를 제외한 DPS 26개 전문화**다. 최초 업로드된 v1.4.1 사본과 과거 문서의 27 DPS/증강 포함은 범위 오기이며, 교정된 v1.4.1 교체본은 26개로 일치한다.
 
 최종 제품은 목표 ilvl 또는 수동 최종 T를 기준으로 미래 파밍 목표가 될 CHMV 최적 절대 rating을 기존 SimC DPS 엔진으로 찾는다. 예상 DPS·SEM·95% 판정·실질적으로 다른 대안·캐시·취소·재개를 제공한다. 최종 장기 목표는 **장비 수집 DB + SimC 원본 기반 자동 발견/분류/자가검증 엔진 + 기존 profile/budget/optimizer를 결합한 원클릭 Environment Builder**다. 개별 마부 목록/장비 DB가 목적이 아니며, 장비 조합 추천이나 별도 효과/proc 계산 엔진으로 확대하지 않는다.
 
