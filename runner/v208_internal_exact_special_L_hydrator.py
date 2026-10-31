@@ -12,6 +12,7 @@ import v046_static_item_cache as item_cache
 import v062_static_budget_bridge as budget
 import v098_target_user_scenario_bootstrap as bootstrap
 import v122_common_profile_format as profile_format
+import v055_simc_item_selection as selector
 
 SCHEMA="v208_one_bounded_native_special_L_snapshot_v1"
 MAX_SECONDS=180
@@ -74,17 +75,25 @@ def missing_specials(saved,staged):
     for row in rows:
         need(type(row) is dict and type(row.get("options")) is dict,
              "PREBUDGET_SPECIAL_ROW_INVALID")
-        stat=budget.get_native_secondary(saved,row)
-        if stat is None and budget.primary_only_head_gem(row):
-            bare={**row,"options":{k:v for k,v in row["options"].items()
-                                  if k!="gem_id"}}
-            stat=budget.get_native_secondary(saved,bare)
-        if stat is None:missing.append(row)
+        bare=budget.undecorated_special(row)
+        stat=budget.get_native_secondary(saved,bare)
+        if stat is None:missing.append(bare)
     return missing
 
-def physical_input(profile,json_path):
-    """Equivalent narrow physical-input transformation to existing v140."""
+def physical_input(profile,json_path,source_rows=None,query_rows=None):
+    """One real physical profile; strip ONLY selected special J/E for L.
+
+    All other gear/consumables remain the exact user's selected inputs.
+    This temporary Native source is never the DPS execution profile.
+    """
     lines=profile.splitlines()
+    originals={r["slot"]:r for r in (source_rows or [])}
+    queries={r["slot"]:r for r in (query_rows or [])}
+    need(len(originals)==len(source_rows or []) and
+         len(queries)==len(query_rows or []) and
+         set(queries)<=set(originals),
+         "SOURCE_AND_BARE_SPECIAL_SLOTS_MISMATCH")
+    observed=set()
     for prefix in REMOVABLE:
         need(sum(x.startswith(prefix) for x in lines)==1,
              "EXACT_ONE_GEAR_OVERRIDE_REQUIRED")
@@ -97,7 +106,27 @@ def physical_input(profile,json_path):
         if line.startswith("json2="):out.append("json2="+str(json_path.resolve()))
         elif line.startswith("iterations="):out.append("iterations=1")
         elif line.startswith("max_time="):out.append("max_time=2")
+        elif line.split("=",1)[0] in queries:
+            slot=line.split("=",1)[0]
+            name,encoded=item_cache.parse_encoded(line.split("=",1)[1])
+            orig=originals[slot]
+            need(slot not in observed and
+                 int(encoded["id"])==orig["item_id"] and
+                 int(encoded["ilevel"])==orig["ilevel"] and
+                 {k:v for k,v in encoded.items()
+                  if k not in ("id","ilevel","source")}==orig["options"],
+                 "SPECIAL_PHYSICAL_SOURCE_NOT_EXACT_USER_VARIANT")
+            observed.add(slot)
+            bare=queries[slot]
+            need(bare==budget.undecorated_special(orig),
+                 "SPECIAL_BARE_VARIANT_NOT_EXACT_PROJECTION")
+            if bare==orig:
+                out.append(line)
+            else:
+                out.append(selector.equipment_line(slot,bare["item_id"],
+                               bare["ilevel"],bare["options"]))
         else:out.append(line)
+    need(observed==set(queries),"SELECTED_BARE_SLOTS_NOT_IN_PROFILE")
     need(any(x.startswith("default_actions=1") for x in out)
          and not any(x.startswith("load_default_gear=") for x in out),
          "PHYSICAL_GEAR_OR_APL_NOT_INTERNAL")
@@ -170,10 +199,6 @@ def hydrate(user,root,binary,revision,existing=None,*,timeout=MAX_SECONDS):
     staged=bootstrap.build(user,root.parent/"static-item-prebudget-no-write",
                            binary,revision,static_special_probe_only=True,
                            current_season_product=True)
-    for row in staged["special_rows"]:
-        modifiers=set(row["options"]) & budget.MODIFIERS_WITH_BUDGET_AMBIGUITY
-        need(not modifiers or (modifiers=={"gem_id"} and budget.primary_only_head_gem(row)),
-             "SPECIAL_L_DECORATED_NUMERIC_VARIANT_NOT_YET_ATTRIBUTABLE")
     initial=item_cache.load(pathlib.Path(existing)) if existing else item_cache.empty_cache()
     missing=missing_specials(initial,staged)
     if not missing:
@@ -189,7 +214,8 @@ def hydrate(user,root,binary,revision,existing=None,*,timeout=MAX_SECONDS):
     probe_dir=root.parent/"static-item-probes"/sha(canonical(ident))[:24]
     probe_dir.mkdir(parents=True,exist_ok=True)
     case=probe_dir/"native.json"
-    native_input=physical_input(staged["profile"],case)
+    native_input=physical_input(staged["profile"],case,
+                                staged["special_rows"],missing)
     source_file=probe_dir/"physical.simc"
     if source_file.is_file():
         need(source_file.read_bytes()==native_input.encode("utf8"),
