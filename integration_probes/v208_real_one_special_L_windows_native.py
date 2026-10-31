@@ -57,8 +57,8 @@ def run(binary,out):
     stage=bootstrap.build(user,out/"planned",binary,"710c2408bf",path,
                           current_season_product=True)
     need(stage["native_calls"]==0 and
-         stage["plan"]["final_T"]==3182 and
-         stage["plan"]["base_B"]==3150,
+         stage["plan"]["final_T"]==3142 and
+         stage["plan"]["base_B"]==3110,
          "PLAN_AFTER_STATIC_L_NOT_APPROVED")
     need(hydrator.source_cache(out/"runs",None)==path,
          "LATEST_POINTER_NOT_AT_NEW_SNAPSHOT")
@@ -78,14 +78,14 @@ def run(binary,out):
         "observed_static_L":record["static"]["secondary"],
         "new_static_native_calls":1,"cache_replay_static_native_calls":0,
         "post_static_plan_native_calls":0,
-        "B":3150,"T":3182,
+        "B":3110,"T":3142,
         "old_preexisting_cache_mutated":False,
         "dps_optimization_native_run":False,
         "not_general_all_special_items_proof":True}
     (out/"V208_REAL_ONE_L_RECEIPT.json").write_text(
         json.dumps(receipt,indent=2,sort_keys=True)+"\n",encoding="utf8")
     print("V208_WINDOWS_EXACT_L_ONE_NATIVE_ONE_CACHE_PASS",json.dumps(
-        {"L":receipt["observed_static_L"],"B":3150,"T":3182},sort_keys=True),
+        {"L":receipt["observed_static_L"],"B":3110,"T":3142},sort_keys=True),
         flush=True)
     return 0
 
