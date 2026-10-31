@@ -2,7 +2,7 @@ name: v210 bare selected L separates gem J and enchant E
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
-    paths: [.github/workflows/v210_bare_special_L_offline.yml, tests/test_v208_special_L_hydration_offline.py]
+    paths: [.github/workflows/v210_bare_special_L_offline.yml, tests/test_v208_special_L_hydration_offline.py, tests/test_v062_static_budget_bridge.py]
 permissions:
   contents: read
 concurrency:
