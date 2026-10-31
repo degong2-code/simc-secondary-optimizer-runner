@@ -271,6 +271,9 @@ class LocalJobs:
         prepared=self.plan(prepared_params)
         folder=self.folder(prepared["session_id"])
         response=self.launch(folder)
+        if hydrated:
+            response["static_L_start_receipt"]=exact_L.write_start_receipt(
+                folder,hydrated["start_receipt"])
         response["static_L_native_calls_this_start"]=(
             hydrated["native_new_calls"] if hydrated else 0)
         response["static_L_reused_exact_variants"]=(

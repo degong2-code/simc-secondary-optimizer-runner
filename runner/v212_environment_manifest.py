@@ -12,6 +12,8 @@ import json
 from pathlib import Path
 
 import v143_specialization_contracts as specs
+import v046_static_item_cache as item_cache
+import v062_static_budget_bridge as budget
 import v196_current_season_user_catalog as ui_catalog
 import v206_nonchmv_eagle_selection as eagle
 import v213_source_to_catalog as source_bridge
@@ -232,8 +234,132 @@ def _selected_special_L(scenario, static_cache_identity):
     }
 
 
+def _verify_v208_start_receipt(receipt, scenario, source_catalog,
+                                source_catalog_sha, revision, binary,
+                                static_cache_identity, special_L):
+    if special_L["selected_count"] == 0:
+        need(receipt is None, "V208_RECEIPT_WITHOUT_SELECTED_SPECIAL")
+        return {"status":"NOT_REQUIRED_NO_SELECTED_SPECIAL"}
+    if receipt is None:
+        return {"status":"NOT_PROVIDED"}
+    need(type(receipt) is dict and
+         receipt.get("schema")=="v208_selected_special_start_receipt_v1" and
+         receipt.get("status")=="VERIFIED",
+         "V208_START_RECEIPT_SCHEMA_OR_STATUS_INVALID")
+    receipt_payload={k:v for k,v in receipt.items() if k!="receipt_sha256"}
+    need(valid_sha(receipt.get("receipt_sha256")) and
+         receipt["receipt_sha256"]==
+         sha(canonical(receipt_payload).encode("utf8")),
+         "V208_START_RECEIPT_DIGEST_MISMATCH")
+    selected=scenario["equipment"]["special"]
+    expected=[budget.exact_identity(row) for row in selected]
+    actual=[row.get("selected_identity")
+            for row in receipt.get("selected_specials",[])
+            if type(row) is dict]
+    expected.sort(key=lambda x:(x["slot"],x["item_id"],x["ilevel"]))
+    actual.sort(key=lambda x:(x.get("slot",""),x.get("item_id",0),
+                              x.get("ilevel",0)) if type(x) is dict else ("",0,0))
+    need(len(actual)==special_L["selected_count"] and actual==expected,
+         "V208_RECEIPT_SELECTED_SPECIAL_IDENTITY_MISMATCH")
+    rows=receipt["selected_specials"]
+    need(receipt.get("selected_special_count")==len(rows),
+         "V208_RECEIPT_SELECTED_SPECIAL_COUNT_MISMATCH")
+    hits=0
+    misses=0
+    new_misses=0
+    native_hashes=set()
+    for row in rows:
+        selected_identity=row["selected_identity"]
+        bare_raw={"slot":selected_identity["slot"],
+                  "item_id":selected_identity["item_id"],
+                  "ilevel":selected_identity["ilevel"],
+                  "options":selected_identity["options"]}
+        expected_bare=budget.exact_identity(budget.undecorated_special(bare_raw))
+        need(row.get("selected_identity_sha256")==
+             sha(canonical(selected_identity).encode("utf8")) and
+             row.get("bare_identity")==expected_bare and
+             row.get("bare_identity_sha256")==
+             sha(canonical(expected_bare).encode("utf8")),
+             "V208_RECEIPT_BARE_SPECIAL_IDENTITY_MISMATCH")
+        need(row.get("cache_status") in
+             ("HIT","MISS_NEW_NATIVE_JSON2","MISS_REUSED_NATIVE_JSON2"),
+             "V208_RECEIPT_CACHE_STATUS_INVALID")
+        if row["cache_status"]=="HIT":
+            hits+=1
+        else:
+            misses+=1
+            if row["cache_status"]=="MISS_NEW_NATIVE_JSON2":
+                new_misses+=1
+        need(valid_sha(row.get("static_digest")),
+             "V208_RECEIPT_STATIC_DIGEST_INVALID")
+        measured=row.get("measured_L")
+        need(type(measured) is dict and set(measured)==set(item_cache.STATS)
+             and all(type(value) is int and 0<=value<=100000
+                     for value in measured.values()),
+             "V208_RECEIPT_MEASURED_L_INVALID")
+        source_kind=row.get("source_kind")
+        native=row.get("native_json2")
+        need(type(native) is dict,
+             "V208_RECEIPT_NATIVE_JSON2_RECORD_MISSING")
+        if source_kind=="NATIVE_JSON2_RESOLVED_VARIANT":
+            need(valid_sha(native.get("sha256")) and
+                 type(native.get("revision")) is str and
+                 native["revision"].startswith(revision[:7]) and
+                 type(native.get("source")) is str and bool(native["source"]),
+                 "V208_RECEIPT_NATIVE_JSON2_PROVENANCE_INVALID")
+            native_hashes.add(native["sha256"])
+        else:
+            need(source_kind=="USER_REQUESTED_MANUAL_CORRECTION" and
+                 native.get("sha256") is None and
+                 native.get("revision") is None,
+                 "V208_RECEIPT_STATIC_SOURCE_UNSUPPORTED")
+        if row["cache_status"] in (
+                "MISS_NEW_NATIVE_JSON2","MISS_REUSED_NATIVE_JSON2"):
+            need(source_kind=="NATIVE_JSON2_RESOLVED_VARIANT",
+                 "V208_RECEIPT_NEW_MISS_NOT_NATIVE_RESOLVED")
+    summary=receipt.get("cache_summary")
+    need(type(summary) is dict and
+         summary.get("hits")==hits and summary.get("misses")==misses and
+         type(receipt.get("native_calls_this_start")) is int and
+         summary.get("native_calls_this_start")==
+             receipt.get("native_calls_this_start") and
+         receipt.get("native_calls_this_start")== (1 if new_misses else 0),
+         "V208_RECEIPT_CACHE_OR_NATIVE_COUNT_MISMATCH")
+    need(receipt.get("native_json2_sha256s")==sorted(native_hashes),
+         "V208_RECEIPT_NATIVE_JSON2_SHA_LIST_MISMATCH")
+    simc=receipt.get("simc")
+    need(type(simc) is dict and simc.get("revision")==revision and
+         simc.get("binary_sha256")==binary.get("sha256"),
+         "V208_RECEIPT_SIMC_BINARY_IDENTITY_MISMATCH")
+    cache=receipt.get("static_cache")
+    need(type(cache) is dict and static_cache_identity is not None and
+         cache.get("sha256")==static_cache_identity.get("sha256") and
+         cache.get("size_bytes")==static_cache_identity.get("size_bytes") and
+         cache.get("basename")==static_cache_identity.get("basename"),
+         "V208_RECEIPT_STATIC_CACHE_IDENTITY_MISMATCH")
+    source=receipt.get("source_catalog")
+    need(type(source) is dict and
+         source.get("schema")==source_catalog["schema"] and
+         source.get("artifact_sha256")==source_catalog_sha and
+         source.get("manifest_sha256")==source_catalog["manifest_sha256"] and
+         source.get("game_build")==source_catalog["game_build"] and
+         source.get("simc_revision")==revision,
+         "V208_RECEIPT_SOURCE_CATALOG_IDENTITY_MISMATCH")
+    return {
+        "status":"VERIFIED",
+        "schema":receipt["schema"],
+        "receipt_sha256":receipt["receipt_sha256"],
+        "selected_special_count":len(rows),
+        "selected_identity_sha256":special_L["selected_identity_sha256"],
+        "static_cache_sha256":static_cache_identity["sha256"],
+        "cache_hits":hits,"cache_misses":misses,
+        "native_calls_this_start":receipt["native_calls_this_start"],
+        "native_json2_sha256s":sorted(native_hashes),
+    }
+
+
 def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
-                     bootstrap, target_root):
+                     bootstrap, target_root, v208_start_receipt=None):
     build, revision, v191, v211 = _source_identity(
         source_catalog, source_catalog_sha)
     need(ui.get("schema") == ui_catalog.SCHEMA
@@ -294,6 +420,9 @@ def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
     selected_enchant = _selected_enchant(bootstrap, profile_text, approved_ids)
     scenario, scenario_sha = read_json(target_root / "scenario.json")
     special_L = _selected_special_L(scenario, static_cache_identity)
+    v208_receipt_identity = _verify_v208_start_receipt(
+        v208_start_receipt, scenario, source_catalog, source_catalog_sha,
+        revision, binary, static_cache_identity, special_L)
 
     # Hash a machine-independent projection; do not leak local absolute paths.
     target_manifest_identity = {
@@ -342,6 +471,10 @@ def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
     if ui.get("enchant_candidates", {}).get("source_classification_counts", {}).get(
             "native_E_measured", 0) < EXPECTED_ENCHANT_COUNT:
         limitations.append("ENCHANT_SOURCE_CLASSIFICATION_IS_NOT_GENERAL_NATIVE_E")
+    if (special_L["selected_count"] and
+            v208_receipt_identity["status"]!="VERIFIED"):
+        limitations.append(
+            "V208_SELECTED_SPECIAL_L_START_RECEIPT_NOT_YET_SERIALIZED_IN_ENVIRONMENT_MANIFEST")
     limitations.extend([
         "V213_ARTIFACT_NOT_YET_PACKAGED_IN_DEFAULT_WINDOWS_DATA_PATH",
         "WINDOWS_ONE_CLICK_BUILD_START_PROGRESS_CANCEL_RESUME",
@@ -350,10 +483,11 @@ def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
     unresolved = []
     if bootstrap.get("all_specs_ready") is not True:
         unresolved.append("ALL_26_DPS_REPRESENTATIVE_PROFILE_SUPPLIERS")
-    unresolved.extend([
-        "V208_SELECTED_SPECIAL_L_START_RECEIPT_NOT_YET_SERIALIZED_IN_ENVIRONMENT_MANIFEST",
-        "WINDOWS_ONE_CLICK_BUILD_START_PROGRESS_CANCEL_RESUME",
-    ])
+    if (special_L["selected_count"] and
+            v208_receipt_identity["status"]!="VERIFIED"):
+        unresolved.append(
+            "V208_SELECTED_SPECIAL_L_START_RECEIPT_NOT_YET_SERIALIZED_IN_ENVIRONMENT_MANIFEST")
+    unresolved.append("WINDOWS_ONE_CLICK_BUILD_START_PROGRESS_CANCEL_RESUME")
     payload = {
         "schema": SCHEMA,
         "status": "READY_WITH_LIMITATIONS" if limitations or unresolved else "READY",
@@ -397,6 +531,7 @@ def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
             "all_other_enchants_locked": True,
         },
         "selected_nonchmv_enchant": selected_enchant,
+        "v208_start_receipt": v208_receipt_identity,
         "target_profile": {
             "schema": bootstrap["schema"],
             "normalized_result_sha256": bootstrap_identity_sha,
@@ -419,14 +554,18 @@ def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
     return {**payload, "manifest_sha256": digest}
 
 
-def compile_from_paths(source_catalog_path, bootstrap_path, target_root):
+def compile_from_paths(source_catalog_path, bootstrap_path, target_root,
+                      v208_start_receipt_path=None):
     source_catalog_path = Path(source_catalog_path).resolve()
     source_catalog, source_catalog_sha = read_json(source_catalog_path)
     bootstrap, _ = read_json(bootstrap_path)
+    receipt=None
+    if v208_start_receipt_path is not None:
+        receipt,_=read_json(v208_start_receipt_path)
     ui = ui_catalog.public_options(source_catalog_path)
     ui_sha = sha(canonical(ui).encode("utf8"))
     return compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
-                             bootstrap, target_root)
+                             bootstrap, target_root, receipt)
 
 
 def main(argv=None):
@@ -434,11 +573,13 @@ def main(argv=None):
     parser.add_argument("--source-to-catalog", required=True, type=Path)
     parser.add_argument("--bootstrap-result", required=True, type=Path)
     parser.add_argument("--target-root", required=True, type=Path)
+    parser.add_argument("--v208-start-receipt", type=Path)
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args(argv)
     try:
         result = compile_from_paths(args.source_to_catalog,
-                                    args.bootstrap_result, args.target_root)
+                                    args.bootstrap_result, args.target_root,
+                                    args.v208_start_receipt)
     except (OSError, ValueError, KeyError, TypeError) as exc:
         print("V212_ENVIRONMENT_BUILD_BLOCKED", type(exc).__name__, str(exc))
         return 3

@@ -63,6 +63,22 @@ class OneExactSpecialHydration(unittest.TestCase):
             self.assertEqual(first["native_new_calls"],1)
             self.assertEqual(first["observed_selected_variants"],1)
             self.assertEqual(self.calls,1)
+            receipt=first["start_receipt"]
+            self.assertEqual(receipt["schema"],
+                             "v208_selected_special_start_receipt_v1")
+            self.assertEqual(receipt["native_calls_this_start"],1)
+            self.assertEqual(receipt["cache_summary"],
+                             {"hits":0,"misses":1,"native_calls_this_start":1})
+            self.assertEqual(receipt["selected_specials"][0]["cache_status"],
+                             "MISS_NEW_NATIVE_JSON2")
+            self.assertEqual(receipt["selected_specials"][0]["measured_L"],
+                             {"crit_rating":0,"haste_rating":175,
+                              "mastery_rating":0,"versatility_rating":0})
+            self.assertEqual(receipt["selected_specials"][0]["native_json2"]["sha256"],
+                             first["native_json2_sha256"])
+            self.assertEqual(receipt["receipt_sha256"],
+                hydrate.sha(hydrate.canonical({k:v for k,v in receipt.items()
+                                               if k!="receipt_sha256"})))
             path=pathlib.Path(first["static_cache_path"])
             saved=cache.load(path)
             self.assertEqual(len(saved["variants"]),1)
@@ -76,6 +92,13 @@ class OneExactSpecialHydration(unittest.TestCase):
             self.assertEqual(self.calls,1)
             self.assertEqual(oldbytes,path.read_bytes())
             self.assertEqual(again["static_cache_path"],str(path))
+            self.assertEqual(again["start_receipt"]["cache_summary"],
+                             {"hits":1,"misses":0,"native_calls_this_start":0})
+            self.assertEqual(again["start_receipt"]["selected_specials"][0]
+                             ["cache_status"],"HIT")
+            self.assertEqual(again["start_receipt"]["selected_specials"][0]
+                             ["native_json2"]["sha256"],
+                             receipt["selected_specials"][0]["native_json2"]["sha256"])
 
     def test_explicit_old_cache_unmodified_one_native_then_new_snapshot(self):
         before=cache.empty_cache()
@@ -111,6 +134,14 @@ class OneExactSpecialHydration(unittest.TestCase):
             self.assertEqual(started.json()["native_attempt_ceiling_cumulative"],6)
             self.assertEqual(self.calls,1)
             sid=started.json()["session_id"]
+            receipt_ref=started.json()["static_L_start_receipt"]
+            self.assertEqual(receipt_ref["schema"],
+                             "v208_selected_special_start_receipt_v1")
+            receipt_path=self.root/"runs"/sid/receipt_ref["path"]
+            receipt=json.loads(receipt_path.read_text("utf8"))
+            self.assertEqual(receipt["receipt_sha256"],
+                             receipt_ref["receipt_sha256"])
+            self.assertEqual(receipt["native_calls_this_start"],1)
             manifest=json.loads((self.root/"runs"/sid/"generated"/"manifest.json")
                                .read_text("utf8"))
             self.assertTrue(manifest["static_cache_json"])
@@ -123,6 +154,11 @@ class OneExactSpecialHydration(unittest.TestCase):
             self.assertEqual(second.status_code,200,second.text)
             self.assertEqual(second.json()["static_L_native_calls_this_start"],0)
             self.assertEqual(second.json()["session_id"],sid)
+            second_receipt=second.json()["static_L_start_receipt"]
+            self.assertEqual(second_receipt["native_calls_this_start"],0)
+            self.assertNotEqual(second_receipt["receipt_sha256"],
+                                receipt_ref["receipt_sha256"])
+            self.assertTrue((self.root/"runs"/sid/second_receipt["path"]).is_file())
             self.assertEqual(self.calls,1)
 
     def test_source_listed_cloak_is_unmodified_special_L_variant(self):

@@ -13,8 +13,10 @@ import v062_static_budget_bridge as budget
 import v098_target_user_scenario_bootstrap as bootstrap
 import v122_common_profile_format as profile_format
 import v055_simc_item_selection as selector
+import v213_source_to_catalog as source_bridge
 
 SCHEMA="v208_one_bounded_native_special_L_snapshot_v1"
+START_RECEIPT_SCHEMA="v208_selected_special_start_receipt_v1"
 MAX_SECONDS=180
 MAX_SPECIALS=8
 REMOVABLE=("gear_crit_rating=","gear_haste_rating=",
@@ -163,6 +165,162 @@ def selected_records(raw,missing,revision):
     need(set(found)==set(expected),"NATIVE_ALL_MISSING_SPECIAL_VARIANTS_REQUIRED")
     return list(found.values())
 
+def valid_sha(value):
+    return (type(value) is str and len(value)==64 and
+            all(ch in "0123456789abcdef" for ch in value))
+
+def source_catalog_identity(path):
+    if path is None:
+        return None
+    path=pathlib.Path(path).resolve()
+    need(path.is_file(),"V213_SOURCE_CATALOG_MISSING_FOR_START_RECEIPT")
+    raw=path.read_bytes()
+    try:
+        document=json.loads(raw.decode("utf8"))
+        source_bridge.verify_catalog(document)
+    except Exception as exc:
+        raise StaticLBlocked("V213_SOURCE_CATALOG_INVALID_FOR_START_RECEIPT:"+
+                             type(exc).__name__) from exc
+    return {"schema":document["schema"],
+            "artifact_sha256":sha(raw),
+            "manifest_sha256":document["manifest_sha256"],
+            "game_build":document["game_build"],
+            "simc_revision":document["simc_revision"]}
+
+def build_start_receipt(staged,before_cache,after_cache,result,cache_path,
+                        binary,revision,source_catalog_path=None):
+    """Seal exact selected bare-L identities, cache evidence and Native JSON2 provenance."""
+    item_cache.check_cache(before_cache)
+    item_cache.check_cache(after_cache)
+    rows=staged.get("special_rows")
+    need(type(rows) is list and 1<=len(rows)<=MAX_SPECIALS,
+         "V208_RECEIPT_SELECTED_SPECIAL_ROWS_INVALID")
+    selected=[]
+    hits=0
+    misses=0
+    native_calls=result.get("native_new_calls")
+    need(type(native_calls) is int and 0<=native_calls<=1,
+         "V208_RECEIPT_NATIVE_CALL_COUNT_INVALID")
+    for row in rows:
+        selected_identity=budget.exact_identity(row)
+        bare_identity=budget.exact_identity(budget.undecorated_special(row))
+        key=item_cache.digest(bare_identity)
+        was_hit=key in before_cache["variants"]
+        record=after_cache["variants"].get(key)
+        need(type(record) is dict and record.get("identity")==bare_identity,
+             "V208_RECEIPT_EXACT_BARE_VARIANT_MISSING")
+        need(record.get("static_digest")==item_cache.digest(record.get("static")),
+             "V208_RECEIPT_STATIC_DIGEST_INVALID")
+        source_kind=record.get("source_kind")
+        need(source_kind in ("NATIVE_JSON2_RESOLVED_VARIANT",
+                             "USER_REQUESTED_MANUAL_CORRECTION"),
+             "V208_RECEIPT_STATIC_SOURCE_INVALID")
+        metadata=record.get("metadata") or {}
+        native_sha=metadata.get("native_json_sha256")
+        native_revision=metadata.get("native_revision")
+        artifact=metadata.get("artifact")
+        if source_kind=="NATIVE_JSON2_RESOLVED_VARIANT":
+            need(valid_sha(native_sha) and type(native_revision) is str and
+                 native_revision.startswith(revision[:7]),
+                 "V208_RECEIPT_NATIVE_JSON2_PROVENANCE_MISSING")
+        else:
+            native_sha=None
+            native_revision=None
+            artifact=None
+        measured=record.get("static",{}).get("secondary")
+        need(type(measured) is dict and set(measured)==set(item_cache.STATS)
+             and all(type(v) is int and 0<=v<=100000
+                     for v in measured.values()),
+             "V208_RECEIPT_MEASURED_L_INVALID")
+        if was_hit:
+            hits+=1
+            cache_status="HIT"
+        else:
+            misses+=1
+            cache_status=("MISS_NEW_NATIVE_JSON2" if native_calls
+                          else "MISS_REUSED_NATIVE_JSON2")
+            need(source_kind=="NATIVE_JSON2_RESOLVED_VARIANT",
+                 "V208_RECEIPT_MISS_WITHOUT_NATIVE_JSON2")
+        selected.append({
+            "selected_identity":selected_identity,
+            "selected_identity_sha256":item_cache.digest(selected_identity),
+            "bare_identity":bare_identity,
+            "bare_identity_sha256":key,
+            "cache_status":cache_status,
+            "source_kind":source_kind,
+            "static_digest":record["static_digest"],
+            "measured_L":dict(measured),
+            "native_json2":{
+                "sha256":native_sha,
+                "revision":native_revision,
+                "source":artifact,
+            },
+        })
+    new_misses=sum(row["cache_status"]=="MISS_NEW_NATIVE_JSON2"
+                    for row in selected)
+    need(native_calls==(1 if new_misses else 0) and
+         not (native_calls and new_misses!=misses),
+         "V208_RECEIPT_NATIVE_CALL_COUNT_MISMATCH")
+    need(result.get("cache_reused")==hits,
+         "V208_RECEIPT_CACHE_HIT_COUNT_MISMATCH")
+    if misses:
+        fresh_hash=result.get("native_json2_sha256")
+        need(valid_sha(fresh_hash) and all(
+            row["native_json2"]["sha256"]==fresh_hash
+            for row in selected if row["cache_status"] in (
+                "MISS_NEW_NATIVE_JSON2","MISS_REUSED_NATIVE_JSON2")),
+            "V208_RECEIPT_FRESH_NATIVE_JSON2_SHA_MISMATCH")
+    cache_path=pathlib.Path(cache_path).resolve()
+    need(cache_path.is_file(),"V208_RECEIPT_STATIC_CACHE_MISSING")
+    cache_raw=cache_path.read_bytes()
+    payload={
+        "schema":START_RECEIPT_SCHEMA,
+        "status":"VERIFIED",
+        "source_catalog":source_catalog_identity(source_catalog_path),
+        "simc":{"revision":revision,"binary_sha256":sha_file(binary)},
+        "static_cache":{"basename":cache_path.name,
+                        "size_bytes":len(cache_raw),"sha256":sha(cache_raw)},
+        "selected_special_count":len(selected),
+        "selected_specials":selected,
+        "cache_summary":{"hits":hits,"misses":misses,
+                         "native_calls_this_start":native_calls},
+        "native_calls_this_start":native_calls,
+        "native_json2_sha256s":sorted({row["native_json2"]["sha256"]
+                                       for row in selected
+                                       if row["native_json2"]["sha256"]}),
+    }
+    payload["receipt_sha256"]=sha(canonical(payload))
+    return payload
+
+def write_start_receipt(session_folder,receipt):
+    need(type(receipt) is dict and receipt.get("schema")==START_RECEIPT_SCHEMA
+         and valid_sha(receipt.get("receipt_sha256")),
+         "V208_START_RECEIPT_INVALID")
+    payload={k:v for k,v in receipt.items() if k!="receipt_sha256"}
+    need(receipt["receipt_sha256"]==sha(canonical(payload)),
+         "V208_START_RECEIPT_DIGEST_INVALID")
+    path=pathlib.Path(session_folder).resolve()/"start-receipts"/(
+        "v208-start-"+receipt["receipt_sha256"]+".json")
+    path.parent.mkdir(parents=True,exist_ok=True)
+    encoded=json.dumps(receipt,sort_keys=True,ensure_ascii=False,
+                       indent=2,allow_nan=False)+"\n"
+    if path.exists():
+        need(path.read_text(encoding="utf8")==encoded,
+             "V208_START_RECEIPT_CONTENT_DRIFT")
+    else:
+        fd,temp=tempfile.mkstemp(prefix=".v208-start-",dir=path.parent)
+        try:
+            with os.fdopen(fd,"w",encoding="utf8") as out:
+                out.write(encoded);out.flush();os.fsync(out.fileno())
+            os.replace(temp,path)
+        finally:
+            if os.path.exists(temp):os.unlink(temp)
+    return {"schema":START_RECEIPT_SCHEMA,
+            "receipt_sha256":receipt["receipt_sha256"],
+            "path":path.relative_to(pathlib.Path(session_folder).resolve()).as_posix(),
+            "native_calls_this_start":receipt["native_calls_this_start"],
+            "selected_special_count":receipt["selected_special_count"]}
+
 def snapshot(root,cache):
     """Append-only immutable content-addressed snapshots, old session files stable."""
     folder=pathlib.Path(root).resolve().parent/"static-item-caches"
@@ -206,9 +364,13 @@ def hydrate(user,root,binary,revision,existing=None,*,timeout=MAX_SECONDS,
     if not missing:
         # Reuse proven historical file path/content, not gratuitous snapshot.
         need(existing is not None,"NATIVE_L_CACHE_HIT_PATH_REQUIRED")
-        return {"static_cache_path":str(pathlib.Path(existing).resolve()),
+        result={"static_cache_path":str(pathlib.Path(existing).resolve()),
                 "native_new_calls":0,"cache_reused":len(staged["special_rows"]),
                 "source":"EXACT_STATIC_CACHE_REUSED"}
+        result["start_receipt"]=build_start_receipt(
+            staged,initial,initial,result,existing,binary,revision,
+            source_catalog_path)
+        return result
     ident={"schema":SCHEMA,
            "source_profile_sha256":staged["source_profile_sha256"],
            "binary_sha256":sha_file(binary),"revision":revision,
@@ -245,8 +407,12 @@ def hydrate(user,root,binary,revision,existing=None,*,timeout=MAX_SECONDS,
     merged=copy.deepcopy(initial)
     item_cache.merge_native(merged,records)
     target=snapshot(root,merged)
-    return {"static_cache_path":str(target),"native_new_calls":calls,
+    result={"static_cache_path":str(target),"native_new_calls":calls,
             "cache_reused":len(staged["special_rows"])-len(missing),
             "native_json2_sha256":sha(raw),
             "observed_selected_variants":len(records),
             "source":"EXACT_SIMC_NATIVE_L_RESOLVED_WITHOUT_USER_CACHE"}
+    result["start_receipt"]=build_start_receipt(
+        staged,initial,merged,result,target,binary,revision,
+        source_catalog_path)
+    return result

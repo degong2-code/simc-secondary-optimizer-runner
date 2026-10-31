@@ -4,6 +4,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from runner import v046_static_item_cache as item_cache
+from runner import v062_static_budget_bridge as budget
 from runner import v143_specialization_contracts as specs
 from runner import v196_current_season_user_catalog as ui_catalog
 from runner import v206_nonchmv_eagle_selection as eagle
@@ -100,10 +102,101 @@ class EnvironmentManifestTests(unittest.TestCase):
             "selected_nonchmv_enchant": self.selected,
         }
 
-    def compile(self):
+    def compile(self, receipt=None):
         return p.compile_manifest(
             self.source_catalog, self.source_catalog_sha,
-            self.ui, self.ui_sha, self.bootstrap, self.target)
+            self.ui, self.ui_sha, self.bootstrap, self.target, receipt)
+
+    def add_selected_special(self):
+        row={"slot":"back","item_id":159288,"ilevel":334,"options":{}}
+        scenario={
+            "equipment":{"special":[row]},
+            "character":{"class":"paladin","spec":"retribution"},
+            "target":{"ilevel":334},
+        }
+        (self.target/"scenario.json").write_text(
+            json.dumps(scenario),encoding="utf8")
+        cache_path=self.root/"selected-static-cache.json"
+        cache=item_cache.empty_cache()
+        identity=budget.exact_identity(budget.undecorated_special(row))
+        static={
+            "secondary":{"crit_rating":0,"haste_rating":175,
+                         "mastery_rating":0,"versatility_rating":0},
+            "primary_other":{"strength":0,"agility":0,"intellect":0,
+                             "stragiint":0,"stamina":0,"armor":0},
+            "weapon_if_native":{},
+        }
+        record={
+            "identity":identity,"static":static,
+            "static_digest":item_cache.digest(static),
+            "source_kind":"NATIVE_JSON2_RESOLVED_VARIANT",
+            "item_name_observed":"Test Special",
+            "observed_slot":"back","modifiers_present":False,
+            "bare_item_stats_independently_attested":False,
+            "metadata":{
+                "native_revision":self.source_catalog["simc_revision"][:10],
+                "native_json_sha256":"d"*64,
+                "artifact":"V208_USER_LOCAL_EXACT_STATIC_L",
+                "item_db_source":"test-fixture",
+            },
+            "not_user_selection":True,
+            "dynamic_effect_values_cached":False,
+            "eligible_for_gear_sum_only_in_exact_same_variant":True,
+        }
+        cache["variants"][item_cache.digest(identity)]=record
+        item_cache.write_atomic(cache_path,cache)
+        target_manifest=json.loads(
+            (self.target/"manifest.json").read_text("utf8"))
+        target_manifest["static_cache_json"]=str(cache_path)
+        (self.target/"manifest.json").write_text(
+            json.dumps(target_manifest),encoding="utf8")
+        return row,cache_path,record
+
+    def make_v208_receipt(self,row,cache_path,record):
+        selected_identity=budget.exact_identity(row)
+        bare_identity=budget.exact_identity(budget.undecorated_special(row))
+        raw=cache_path.read_bytes()
+        payload={
+            "schema":"v208_selected_special_start_receipt_v1",
+            "status":"VERIFIED",
+            "source_catalog":{
+                "schema":self.source_catalog["schema"],
+                "artifact_sha256":self.source_catalog_sha,
+                "manifest_sha256":self.source_catalog["manifest_sha256"],
+                "game_build":self.source_catalog["game_build"],
+                "simc_revision":self.source_catalog["simc_revision"],
+            },
+            "simc":{
+                "revision":self.source_catalog["simc_revision"],
+                "binary_sha256":p.sha(self.binary.read_bytes()),
+            },
+            "static_cache":{
+                "basename":cache_path.name,"size_bytes":len(raw),
+                "sha256":p.sha(raw),
+            },
+            "selected_special_count":1,
+            "selected_specials":[{
+                "selected_identity":selected_identity,
+                "selected_identity_sha256":item_cache.digest(selected_identity),
+                "bare_identity":bare_identity,
+                "bare_identity_sha256":item_cache.digest(bare_identity),
+                "cache_status":"HIT",
+                "source_kind":"NATIVE_JSON2_RESOLVED_VARIANT",
+                "static_digest":record["static_digest"],
+                "measured_L":record["static"]["secondary"],
+                "native_json2":{
+                    "sha256":"d"*64,
+                    "revision":self.source_catalog["simc_revision"][:10],
+                    "source":"V208_USER_LOCAL_EXACT_STATIC_L",
+                },
+            }],
+            "cache_summary":{"hits":1,"misses":0,
+                             "native_calls_this_start":0},
+            "native_calls_this_start":0,
+            "native_json2_sha256s":["d"*64],
+        }
+        payload["receipt_sha256"]=p.sha(p.canonical(payload).encode("utf8"))
+        return payload
 
     def test_v213_real_source_contract_and_exact_7967_approval(self):
         result = self.compile()
@@ -126,6 +219,11 @@ class EnvironmentManifestTests(unittest.TestCase):
         self.assertEqual(result["target_profile"]["final_T"], 3182)
         self.assertIn("ALL_26_DPS_REPRESENTATIVE_PROFILE_SUPPLIERS",
                       result["unresolved_dependencies"])
+        self.assertEqual(result["v208_start_receipt"]["status"],
+                         "NOT_REQUIRED_NO_SELECTED_SPECIAL")
+        self.assertNotIn(
+            "V208_SELECTED_SPECIAL_L_START_RECEIPT_NOT_YET_SERIALIZED_IN_ENVIRONMENT_MANIFEST",
+            result["unresolved_dependencies"])
 
     def test_same_inputs_produce_byte_stable_manifest(self):
         first = self.compile()
@@ -206,6 +304,38 @@ class EnvironmentManifestTests(unittest.TestCase):
         with self.assertRaisesRegex(p.EnvironmentBlocked,
                                     "SELECTED_SPECIAL_STATIC_L_CACHE_SNAPSHOT_MISSING"):
             self.compile()
+
+    def test_selected_special_without_v208_receipt_remains_unresolved(self):
+        self.add_selected_special()
+        result=self.compile()
+        self.assertEqual(result["v208_start_receipt"]["status"],"NOT_PROVIDED")
+        self.assertIn(
+            "V208_SELECTED_SPECIAL_L_START_RECEIPT_NOT_YET_SERIALIZED_IN_ENVIRONMENT_MANIFEST",
+            result["unresolved_dependencies"])
+
+    def test_exact_v208_start_receipt_is_bound_into_environment_manifest(self):
+        row,cache_path,record=self.add_selected_special()
+        receipt=self.make_v208_receipt(row,cache_path,record)
+        result=self.compile(receipt)
+        self.assertEqual(result["v208_start_receipt"]["status"],"VERIFIED")
+        self.assertEqual(result["v208_start_receipt"]["receipt_sha256"],
+                         receipt["receipt_sha256"])
+        self.assertEqual(result["v208_start_receipt"]["cache_hits"],1)
+        self.assertEqual(result["v208_start_receipt"]["cache_misses"],0)
+        self.assertEqual(result["v208_start_receipt"]["native_calls_this_start"],0)
+        self.assertNotIn(
+            "V208_SELECTED_SPECIAL_L_START_RECEIPT_NOT_YET_SERIALIZED_IN_ENVIRONMENT_MANIFEST",
+            result["unresolved_dependencies"])
+
+    def test_v208_receipt_selected_identity_tamper_fails_closed(self):
+        row,cache_path,record=self.add_selected_special()
+        receipt=self.make_v208_receipt(row,cache_path,record)
+        receipt["selected_specials"][0]["selected_identity"]["item_id"]=159289
+        receipt["receipt_sha256"]=p.sha(p.canonical(
+            {k:v for k,v in receipt.items() if k!="receipt_sha256"}).encode("utf8"))
+        with self.assertRaisesRegex(p.EnvironmentBlocked,
+                                    "V208_RECEIPT_SELECTED_SPECIAL_IDENTITY_MISMATCH"):
+            self.compile(receipt)
 
     def test_augmentation_and_non_dps_contracts_are_not_accepted(self):
         self.bootstrap["template_archetype"] = "evoker/augmentation"
