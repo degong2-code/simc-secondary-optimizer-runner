@@ -94,8 +94,9 @@ def main():
     fake_cache = root / "existing-static-cache.json"
     fake_cache.write_text("{}", encoding="utf8")
     staged_capture = {}
+    original_build = bootstrap.build
     def capture_stage(*args, **kwargs):
-        staged_capture["value"] = bootstrap.build(*args, **kwargs)
+        staged_capture["value"] = original_build(*args, **kwargs)
         return staged_capture["value"]
     with (mock.patch.object(exact_L.item_cache, "load", return_value={}),
           mock.patch.object(exact_L, "missing_specials", return_value=[]),

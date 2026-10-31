@@ -173,7 +173,7 @@ class EnvironmentManifestTests(unittest.TestCase):
 
     def test_v213_digest_or_artifact_sha_mismatch_fails_closed(self):
         self.source_catalog["manifest_sha256"] = "0" * 64
-        with self.assertRaisesRegex(p.CatalogBlocked,
+        with self.assertRaisesRegex(source_bridge.CatalogBlocked,
                                     "V213_CATALOG_DIGEST_MISMATCH"):
             self.compile()
         self.source_catalog["manifest_sha256"] = p.sha(
@@ -220,7 +220,7 @@ class EnvironmentManifestTests(unittest.TestCase):
         self.source_catalog["manifest_sha256"] = p.sha(
             p.canonical({k: v for k, v in self.source_catalog.items()
                          if k != "manifest_sha256"}).encode("utf8"))
-        with self.assertRaisesRegex(p.CatalogBlocked,
+        with self.assertRaisesRegex(source_bridge.CatalogBlocked,
                                     "V213_CATALOG_CONTRACT_INVALID"):
             self.compile()
 
