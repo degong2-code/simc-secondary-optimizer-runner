@@ -116,8 +116,12 @@ def compile_static_budget(contract,standard_filler,cache):
             if is_special:missing_special.append(entry)
             continue
         observed[row["slot"]]={"item_id":row["item_id"],
-              "identity":exact_identity(source),"secondary":dict(stat),
+              "identity":exact_identity(row),"secondary":dict(stat),
               "sum":sum(stat.values())}
+        if is_special and source["options"]!=row["options"]:
+            # Profile binding always uses the full user's equipped options.
+            # Numeric provenance alone points to the exact bare Native L.
+            observed[row["slot"]]["numeric_source_identity"]=exact_identity(source)
         for k in STATS:G_components[k]+=stat[k]
         if is_special:
             # This is only the confirmed base L. No J/E enters locked.
