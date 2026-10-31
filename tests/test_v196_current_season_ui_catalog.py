@@ -27,6 +27,23 @@ class SourceSeasonUiCatalog(unittest.TestCase):
         self.assertEqual(enc["groups"],{
             "boots":3,"chest":4,"helm":6,"ring":9,"shoulders":6,"weapon":10})
         self.assertEqual([x["enchant_id"] for x in enc["items"] if x["ui_selectable"]],[7967])
+        self.assertEqual(enc["source_classified_count"],38)
+        self.assertEqual(enc["effect_classification_status"],
+            "PINNED_SIMC_DBC_SPELLTEXT_AND_HANDLER_CLASSIFIED_NOT_NATIVE_GENERALIZED")
+        self.assertEqual(enc["source_classification_counts"]["static_chmv_rating"],8)
+        self.assertEqual(enc["source_classification_counts"]["static_nonchmv_only_or_mixed"],19)
+        self.assertEqual(enc["source_classification_counts"]["spell_effects"],15)
+        self.assertEqual(enc["source_classification_counts"]["native_E_measured"],2)
+        self.assertTrue(all(x["source_effect_classification_status"]==
+            "PINNED_SIMC_DBC_SPELLTEXT_AND_HANDLER_SOURCE_CLASSIFIED"
+            for x in enc["items"]))
+        # Source classification is metadata only: no additional choices.
+        self.assertEqual(sum(x["ui_selectable"] for x in enc["items"]),1)
+        self.assertFalse(next(x for x in enc["items"] if x["enchant_id"]==8025)
+                         ["ui_selectable"])
+        self.assertEqual(next(x for x in enc["items"] if x["enchant_id"]==8041)
+                         ["source_dynamic_chmv_proc_roles"],
+                         ["TEMPORARY_MASTERY_RATING_PROC"])
         self.assertEqual({tuple(x["source_slots"]) for x in enc["items"]
             if x["kind"]=="ring"},{("finger1/finger2",)})
         self.assertEqual({tuple(x["source_slots"]) for x in enc["items"]
