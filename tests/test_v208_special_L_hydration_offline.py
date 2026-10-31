@@ -125,6 +125,24 @@ class OneExactSpecialHydration(unittest.TestCase):
             self.assertEqual(second.json()["session_id"],sid)
             self.assertEqual(self.calls,1)
 
+    def test_source_listed_cloak_is_unmodified_special_L_variant(self):
+        # Fail here (Native zero) if the source composer auto-decorates
+        # this special with gem/enchant; exact fixed L cannot be derived
+        # from decorated CHMV options without separate evidence.
+        controls=copy.deepcopy(self.controls)
+        controls["special_items"]=[{"slot":"back","item_id":159288,"options":{}}]
+        user=sessions.user_scenario(controls)
+        stage=hydrate.bootstrap.build(
+            user,self.root/"scope-only",self.binary,"710c2408bf",
+            current_season_product=True,static_special_probe_only=True)
+        self.assertEqual(stage["native_calls"],0)
+        self.assertEqual(len(stage["special_rows"]),1)
+        item=stage["special_rows"][0]
+        self.assertEqual((item["slot"],item["item_id"],item["ilevel"]),
+                         ("back",159288,331))
+        self.assertFalse(set(item["options"]) & {"gem_id","enchant",
+                          "enchant_id"})
+
     def test_forged_native_item_id_or_missing_profile_stats_fail_closed(self):
         fake=hydrate.selected_records
         row={"slot":"chest","item_id":271486,"ilevel":331,
