@@ -8,7 +8,12 @@ on:
       - runner/v108_native_consumable_inputs.py
       - runner/v188_user_choice_metadata.py
       - runner/v196_current_season_user_catalog.py
+      - runner/v213_source_to_catalog.py
       - data/current_season_simc_enchant_candidates.json
+      - data/current_season_source_to_catalog.json
+      - integration_probes/v181_windows_beta_packager.py
+      - tests/test_v181_windows_beta_package_offline.py
+      - tests/test_v113_local_web_api_offline.py
       - tests/test_v196_current_season_ui_catalog.py
       - runner/v197_verified_effect_budget.py
       - runner/v197_enchant_effect_families.py
@@ -35,8 +40,21 @@ on:
       - tests/test_v114_local_web_ui_offline.py
       - tests/test_v167_local_gear_catalog_api.py
       - .github/workflows/v182_simple_user_input_ui.yml
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Successful v213 source-to-catalog workflow run ID
+        type: string
+        required: true
+        default: "41172423986"
+      source_artifact:
+        description: Exact v213 source-to-catalog artifact name
+        type: string
+        required: true
+        default: "v213-source-to-catalog-41172423986"
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: v182-user-input-batch
   cancel-in-progress: false
@@ -60,6 +78,21 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
+      - name: Reuse exact source-backed v213 catalog artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.source_artifact || 'v213-source-to-catalog-41172423986' }}
+          run-id: ${{ inputs.source_run_id || '41172423986' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: p3c-source
+      - name: Bind v213 catalog bytes into the Windows package workspace
+        shell: pwsh
+        run: |
+          $source = Join-Path $PWD "p3c-source/v213_current_season_source_to_catalog.json"
+          if (!(Test-Path $source -PathType Leaf)) { throw "V213_SOURCE_ARTIFACT_FILE_MISSING" }
+          Copy-Item $source "data/current_season_source_to_catalog.json" -Force
+          python -c "import json,sys;sys.path.insert(0,'runner');import v213_source_to_catalog as v;p=json.load(open('data/current_season_source_to_catalog.json',encoding='utf8'));assert v.verify_catalog(p);assert p['native_calls']==0 and p['network_calls']==0 and p['automatic_ui_promotion'] is False;print('V182_V213_SOURCE_ARTIFACT_VALIDATED',p['manifest_sha256'])"
+          if ($LASTEXITCODE -ne 0) { throw "V213_SOURCE_CATALOG_VALIDATION_FAILED" }
       - run: python -m pip install -r requirements-web-test.txt
         shell: bash
       - name: New form contract, old user consumables and 26 spec/5 level regressions
