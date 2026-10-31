@@ -221,6 +221,13 @@ class LocalJobs:
 
     def _seal_environment_manifest(self, folder, bootstrap_result,
                                    receipt_path=None):
+        generated=pathlib.Path(folder)/"generated"
+        bootstrap_path=generated/"v098_bootstrap_result.json"
+        encoded_bootstrap=json.dumps(bootstrap_result,sort_keys=True,
+            ensure_ascii=False,indent=2,allow_nan=False)+"\n"
+        # Persist v098 output even for a legacy package without v213. A later
+        # explicit Start still needs the exact bootstrap identity for v208.
+        bootstrap.put_once(bootstrap_path,encoded_bootstrap)
         source_path=self.source_catalog_path()
         if source_path is None:
             return {"status":"SOURCE_CATALOG_NOT_PACKAGED",
@@ -230,11 +237,6 @@ class LocalJobs:
                     "unresolved_dependencies":[
                         "V213_SOURCE_CATALOG_NOT_PACKAGED"],
                     "native_calls":0,"network_calls":0}
-        generated=pathlib.Path(folder)/"generated"
-        bootstrap_path=generated/"v098_bootstrap_result.json"
-        encoded_bootstrap=json.dumps(bootstrap_result,sort_keys=True,
-            ensure_ascii=False,indent=2,allow_nan=False)+"\n"
-        bootstrap.put_once(bootstrap_path,encoded_bootstrap)
         if receipt_path is None:
             receipt_path=self._latest_v208_receipt_path(folder)
         result=environment_manifest.compile_from_paths(

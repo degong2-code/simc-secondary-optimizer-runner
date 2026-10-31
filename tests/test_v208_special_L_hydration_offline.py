@@ -120,46 +120,51 @@ class OneExactSpecialHydration(unittest.TestCase):
                  "origin":"http://127.0.0.1:8765"}
         payload={"controls":self.controls,"binary":str(self.binary),
                  "revision":"710c2408bf","current_season_product":True}
-        plan=client.post("/api/v1/sessions/plan",headers=headers,json=payload)
-        self.assertEqual(plan.status_code,422,plan.text)
-        self.assertEqual(self.calls,0)
-        self.assertEqual(plan.json()["detail"]["code"],
-                         "V106_SPECIAL_EQUIPMENT_REQUIRES_EXACT_STATIC_CACHE")
-        with (mock.patch.object(hydrate.subprocess,"run",side_effect=self.fake_native),
-              mock.patch.object(web.subprocess,"Popen") as spawned):
-            spawned.return_value.poll.return_value=None
-            started=client.post("/api/v1/sessions/start",headers=headers,json=payload)
-            self.assertEqual(started.status_code,200,started.text)
-            self.assertEqual(started.json()["static_L_native_calls_this_start"],1)
-            self.assertEqual(started.json()["native_attempt_ceiling_cumulative"],6)
-            self.assertEqual(self.calls,1)
-            sid=started.json()["session_id"]
-            receipt_ref=started.json()["static_L_start_receipt"]
-            self.assertEqual(receipt_ref["schema"],
-                             "v208_selected_special_start_receipt_v1")
-            receipt_path=self.root/"runs"/sid/receipt_ref["path"]
-            receipt=json.loads(receipt_path.read_text("utf8"))
-            self.assertEqual(receipt["receipt_sha256"],
-                             receipt_ref["receipt_sha256"])
-            self.assertEqual(receipt["native_calls_this_start"],1)
-            manifest=json.loads((self.root/"runs"/sid/"generated"/"manifest.json")
-                               .read_text("utf8"))
-            self.assertTrue(manifest["static_cache_json"])
-            self.assertTrue(pathlib.Path(manifest["static_cache_json"]).is_file())
-            self.assertEqual(started.json()["status"],"WORKER_STARTED")
-            # Stop mocked pseudo worker, then the same start is cache-only
-            # for static L; DPS subprocess still belongs to original worker.
-            spawned.return_value.poll.return_value=0
-            second=client.post("/api/v1/sessions/start",headers=headers,json=payload)
-            self.assertEqual(second.status_code,200,second.text)
-            self.assertEqual(second.json()["static_L_native_calls_this_start"],0)
-            self.assertEqual(second.json()["session_id"],sid)
-            second_receipt=second.json()["static_L_start_receipt"]
-            self.assertEqual(second_receipt["native_calls_this_start"],0)
-            self.assertNotEqual(second_receipt["receipt_sha256"],
-                                receipt_ref["receipt_sha256"])
-            self.assertTrue((self.root/"runs"/sid/second_receipt["path"]).is_file())
-            self.assertEqual(self.calls,1)
+        # This test preserves the historical v208 receipt contract with a
+        # revision-prefix fixture. v213 package binding is exercised separately
+        # with the exact 40-character pinned revision in v181/v113 integration.
+        with mock.patch.object(app.state.jobs,"source_catalog_path",
+                               return_value=None):
+            plan=client.post("/api/v1/sessions/plan",headers=headers,json=payload)
+            self.assertEqual(plan.status_code,422,plan.text)
+            self.assertEqual(self.calls,0)
+            self.assertEqual(plan.json()["detail"]["code"],
+                             "V106_SPECIAL_EQUIPMENT_REQUIRES_EXACT_STATIC_CACHE")
+            with (mock.patch.object(hydrate.subprocess,"run",side_effect=self.fake_native),
+                  mock.patch.object(web.subprocess,"Popen") as spawned):
+                spawned.return_value.poll.return_value=None
+                started=client.post("/api/v1/sessions/start",headers=headers,json=payload)
+                self.assertEqual(started.status_code,200,started.text)
+                self.assertEqual(started.json()["static_L_native_calls_this_start"],1)
+                self.assertEqual(started.json()["native_attempt_ceiling_cumulative"],6)
+                self.assertEqual(self.calls,1)
+                sid=started.json()["session_id"]
+                receipt_ref=started.json()["static_L_start_receipt"]
+                self.assertEqual(receipt_ref["schema"],
+                                 "v208_selected_special_start_receipt_v1")
+                receipt_path=self.root/"runs"/sid/receipt_ref["path"]
+                receipt=json.loads(receipt_path.read_text("utf8"))
+                self.assertEqual(receipt["receipt_sha256"],
+                                 receipt_ref["receipt_sha256"])
+                self.assertEqual(receipt["native_calls_this_start"],1)
+                manifest=json.loads((self.root/"runs"/sid/"generated"/"manifest.json")
+                                   .read_text("utf8"))
+                self.assertTrue(manifest["static_cache_json"])
+                self.assertTrue(pathlib.Path(manifest["static_cache_json"]).is_file())
+                self.assertEqual(started.json()["status"],"WORKER_STARTED")
+                # Stop mocked pseudo worker, then the same start is cache-only
+                # for static L; DPS subprocess still belongs to original worker.
+                spawned.return_value.poll.return_value=0
+                second=client.post("/api/v1/sessions/start",headers=headers,json=payload)
+                self.assertEqual(second.status_code,200,second.text)
+                self.assertEqual(second.json()["static_L_native_calls_this_start"],0)
+                self.assertEqual(second.json()["session_id"],sid)
+                second_receipt=second.json()["static_L_start_receipt"]
+                self.assertEqual(second_receipt["native_calls_this_start"],0)
+                self.assertNotEqual(second_receipt["receipt_sha256"],
+                                    receipt_ref["receipt_sha256"])
+                self.assertTrue((self.root/"runs"/sid/second_receipt["path"]).is_file())
+                self.assertEqual(self.calls,1)
 
     def test_source_listed_cloak_is_unmodified_special_L_variant(self):
         # Fail here (Native zero) if the source composer auto-decorates

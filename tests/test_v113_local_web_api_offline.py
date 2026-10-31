@@ -310,13 +310,13 @@ class LocalWebAPIOffline(unittest.TestCase):
             return {"session_id":session_id,"status":"WORKER_STARTED"}
         with mock.patch.object(web.exact_L,"hydrate",return_value={
                  "static_cache_path":str(cache_path),"start_receipt":{},
-                 "native_new_calls":0,"cache_reused":1}), \\
+                 "native_new_calls":0,"cache_reused":1}), \
              mock.patch.object(web.exact_L,"write_start_receipt",
-                               return_value=receipt_info), \\
+                               return_value=receipt_info), \
              mock.patch.object(jobs,"plan",return_value={
-                 "session_id":session_id,"environment_manifest":None}), \\
-             mock.patch.object(jobs,"folder",return_value=folder), \\
-             mock.patch.object(jobs,"_seal_environment_manifest",side_effect=seal), \\
+                 "session_id":session_id,"environment_manifest":None}), \
+             mock.patch.object(jobs,"folder",return_value=folder), \
+             mock.patch.object(jobs,"_seal_environment_manifest",side_effect=seal), \
              mock.patch.object(jobs,"launch",side_effect=launch):
             result=jobs.start_with_internal_special_L(params)
         self.assertEqual(order,["seal","launch"])
