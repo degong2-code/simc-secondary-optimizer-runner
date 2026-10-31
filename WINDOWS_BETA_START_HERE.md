@@ -1,5 +1,8 @@
 # SIMC Secondary Optimizer — Windows 로컬 베타 시작
 
+> **P3-A v212 개발 진척:** 격리 소스에는 v191/v211/v196/v098 산출물을 SHA와 schema/build/revision으로 묶는 내부 Environment Manifest assembler가 추가됐고 Ubuntu·Windows 각 8/8 오프라인 PASS, Native0입니다. 이 모듈은 아직 Windows 베타의 사용자 Build 버튼/API에 연결되지 않았으며, 기존 ZIP에 자동 반영되지 않습니다. 실제 원클릭 환경 구축 기능이 이미 배포됐다는 의미가 아닙니다. [설계·남은 통합 단계](docs/P3_ENVIRONMENT_BUILDER_TARGET_ARCHITECTURE_20261031.md).
+>
+
 
 > **최종 제품 목표 — 원클릭 Environment Build (P3, 아직 미구현):** 장비 수집 DB와 SimC 원본 자동 발견·분류·자가검증 엔진, 기존 대표 프로필/예산 및 SimC 최적화 엔진을 연결하여 한 번의 명시적 Build 동작으로 실행 환경을 준비하는 방향입니다. 동일 source/build/hash와 검증 캐시는 재사용하고 변경된 데이터만 갱신합니다. Plan은 Native0, 실제 선택 항목의 미관측 정적 L/E만 필요한 경우 Start에서 최소 Native로 확인합니다. 미확인 데이터는 0이나 선택 가능으로 추정하지 않습니다. v191/v196/v211/v098/v208은 현재 부분 구성요소이며 전체 통합, 26 DPS 대표 프로필, 최종 Windows 원클릭 UX는 아직 완료되지 않았습니다. [P3 아키텍처·단계별 계획](docs/P3_ENVIRONMENT_BUILDER_TARGET_ARCHITECTURE_20261031.md).
 >
