@@ -588,6 +588,8 @@ async function withBusy(fn) {
           "정확한 L이 없어 예산 미리 확인은 차단됐습니다. 직접 캐시를 준비할 필요는 없습니다. ‘SimC 최적화 실행’을 누르면 로컬 SimC가 누락된 선택 특수장비의 정적 L을 최대 1회 조회한 뒤 DPS 계산을 진행합니다. 다른 레벨의 레코드를 대신 적용하지 않습니다.",
         "REFERENCE_FIXED_L_CONSTRAINT_UNRESOLVED":
           "선택 장비의 정확한 고정 스탯 L 하한을 확인할 수 없습니다.",
+        "SPECIAL_L_DECORATED_NUMERIC_VARIANT_NOT_YET_ATTRIBUTABLE":
+          "선택 특수장비의 보석·마부 옵션이 정적 스탯 L과 섞여 있어 안전하게 분리할 수 없습니다. 임의로 합산하지 않으며, 현재 이 조합은 차단합니다.",
         "SELECTED_SPECIAL_FLOOR_UNFEASIBLE":
           "선택 장비의 고정 스탯 하한 L과 입력 총량 T가 충돌합니다.",
         "FIVE_TIER_LAYOUT_OUTSIDE_FOUR_ROW_CONTRACT":
