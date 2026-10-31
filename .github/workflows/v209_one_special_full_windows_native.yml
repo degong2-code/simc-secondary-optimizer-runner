@@ -1,0 +1,64 @@
+name: v209 one selected special Windows Native L1 DPS6 cache6
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/v209_one_special_full_windows_native.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: v209-one-special-full-Windows-Native-once
+  cancel-in-progress: false
+jobs:
+  one-real-user:
+    runs-on: windows-2022
+    timeout-minutes: 22
+    steps:
+      - name: Preserve authored LF
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install existing local web/test deps
+        run: python -m pip install -r requirements-web-test.txt
+      - name: Reuse existing official SHA-pinned Windows SimC, no build
+        uses: actions/download-artifact@v4
+        with:
+          repository: simulationcraft/simc-publish
+          run-id: 40999844143
+          name: simc-nightly-win64-midnight
+          path: .simc-windows
+          github-token: ${{ github.token }}
+      - name: Verify SHA of official SimC archive and executable
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $src=Join-Path $PWD '.simc-windows/simc-1210.01.710c240-win64.7z'
+          if (!(Test-Path $src)) { throw 'PINNED_OFFICIAL_ARCHIVE_MISSING' }
+          if ((Get-FileHash -Algorithm SHA256 $src).Hash.ToLowerInvariant() -ne '386b2827c537a0447ac09a158e14c63b1d71d73e8e29f6e8ab404416861aab89') { throw 'PINNED_OFFICIAL_ARCHIVE_SHA_DRIFT' }
+          New-Item -Path .simc-win-extracted -ItemType Directory -Force | Out-Null
+          & 'C:\Program Files\7-Zip\7z.exe' x '-o.simc-win-extracted' -y -bd $src | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'OFFICIAL_7Z_EXTRACTION_FAILED' }
+          $exes=@(Get-ChildItem .simc-win-extracted -Recurse -Filter simc.exe -File)
+          if ($exes.Count -ne 1) { throw 'EXACT_ONE_SIMC_EXE_REQUIRED' }
+          if ((Get-FileHash -Algorithm SHA256 $exes[0].FullName).Hash.ToLowerInvariant() -ne '0ad16368cd1effb19c793dbce63518ccb72fec89c72f6ef75d9afca239a039e8') { throw 'OFFICIAL_SIMC_EXECUTABLE_SHA_DRIFT' }
+          "SIMC_EXE=$($exes[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: One exact selected special from user start through true SimC and cache
+        shell: pwsh
+        run: |
+          python integration_probes/v209_selected_special_windows_user_native_cache.py --simc "$env:SIMC_EXE" --out out/v209
+          if ($LASTEXITCODE -ne 0) { throw 'V209_SELECTED_SPECIAL_USER_SIMC_E2E_FAILED' }
+      - name: Retain only small exact SHA and 95% receipt
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v209-one-Windows-selected-special-full-native
+          path: out/v209/V209_ONE_SPECIAL_USER_E2E_RECEIPT.json
+          retention-days: 2
+          if-no-files-found: warn
