@@ -40,6 +40,8 @@ MANDATORY=(
     "runner/v208_internal_exact_special_L_hydrator.py",
     "runner/v212_environment_manifest.py",
     "runner/v216_environment_build_coordinator.py",
+    "runner/v217_stage_execution_engine.py",
+    "runner/v218_v098_profile_stage_adapter.py",
     "runner/v094_durable_inclusive_adaptive_runner.py",
     "runner/v169_source_first_representative_stage.py",
     "runner/webui/index.html",
