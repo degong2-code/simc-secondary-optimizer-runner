@@ -46,6 +46,19 @@ def read_json(path, max_bytes=25_000_000):
         raise EnvironmentBlocked("INPUT_JSON_INVALID:" + path.name) from exc
 
 
+def sha_file(path):
+    path = Path(path).resolve()
+    need(path.is_file(), "RUNTIME_BINARY_OR_CACHE_MISSING:" + path.name)
+    digest = hashlib.sha256()
+    size = 0
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            size += len(chunk)
+            digest.update(chunk)
+    return {"basename": path.name, "size_bytes": size,
+            "sha256": digest.hexdigest()}
+
+
 def file_identity(path, root):
     path = Path(path).resolve()
     root = Path(root).resolve()
@@ -105,8 +118,29 @@ def compile_manifest(season, season_sha, enchants, enchants_sha,
          and target_manifest.get("scenario_json") == "scenario.json"
          and target_manifest.get("fillers_json") == "fillers.json",
          "V098_PROFILE_MANIFEST_FILE_BINDING_INVALID")
-    need(target_manifest.get("native_limit") == 6,
-         "V098_EXISTING_ADAPTIVE_NATIVE_LIMIT_CHANGED")
+    need(target_manifest.get("native_limit") == 6
+         and target_manifest.get("native_revision") == revision,
+         "V098_ADAPTIVE_LIMIT_OR_SIMC_REVISION_CHANGED")
+    binary = sha_file(target_manifest.get("native_binary", ""))
+    static_cache = target_manifest.get("static_cache_json")
+    static_cache_identity = (sha_file(static_cache)
+                             if static_cache else None)
+    # Hash a machine-independent projection; do not leak local absolute paths.
+    target_manifest_identity = {
+        "profile_simc": target_manifest["profile_simc"],
+        "scenario_json": target_manifest["scenario_json"],
+        "fillers_json": target_manifest["fillers_json"],
+        "native_revision": target_manifest["native_revision"],
+        "native_limit": target_manifest["native_limit"],
+        "weapon_layout": target_manifest.get("weapon_layout"),
+        "oil_hands": target_manifest.get("oil_hands"),
+        "flask_F": target_manifest.get("flask_F"),
+        "seed_targets_B": target_manifest.get("seed_targets_B"),
+        "static_cache_sha256": (static_cache_identity["sha256"]
+                                if static_cache_identity else None),
+    }
+    target_manifest_identity_sha = sha(
+        canonical(target_manifest_identity).encode("utf8"))
     plan = bootstrap.get("plan")
     need(type(plan) is dict and type(plan.get("base_B")) is int
          and type(plan.get("final_T")) is int,
@@ -154,7 +188,9 @@ def compile_manifest(season, season_sha, enchants, enchants_sha,
             "template_archetype": archetype,
             "target_ilevel": target_ilevel,
             "base_B": plan["base_B"], "final_T": plan["final_T"],
-            "generated_manifest_sha256": target_manifest_sha,
+            "generated_manifest_sha256": target_manifest_identity_sha,
+            "runtime_binary": binary,
+            "static_cache": static_cache_identity,
             "profile_files": profile_files,
             "native_calls": bootstrap["native_calls"],
         },
