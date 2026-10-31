@@ -13,6 +13,9 @@ on:
       - runner/v208_internal_exact_special_L_hydrator.py
       - runner/v212_environment_manifest.py
       - runner/v216_environment_build_coordinator.py
+      - runner/v217_stage_execution_engine.py
+      - runner/v218_v098_profile_stage_adapter.py
+      - tests/test_v217_stage_execution_engine.py
       - runner/v213_source_to_catalog.py
       - data/current_season_source_to_catalog.json
       - integration_probes/v181_windows_beta_live_http.py
@@ -123,7 +126,7 @@ jobs:
       - name: Existing Windows local web, session, SHA/cache, security offline regressions
         shell: pwsh
         run: |
-          python -m unittest -q tests.test_v152_windows_local_web_launcher_offline tests.test_v113_local_web_api_offline tests.test_v114_local_web_ui_offline tests.test_v106_user_session_controller tests.test_v177_current_season_product_flow tests.test_v180_multilevel_current_season_product_offline tests.test_v193_simc_local_updater tests.test_v193_local_web_simc_update_api tests.test_v196_current_season_ui_catalog tests.test_v197_verified_effect_budget tests.test_v197_enchant_effect_families tests.test_v198_targeted_enchant_native_rating tests.test_v202_one_enchant_admission tests.test_v202_enchant_scheduler_floor
+          python -m unittest -q tests.test_v152_windows_local_web_launcher_offline tests.test_v113_local_web_api_offline tests.test_v114_local_web_ui_offline tests.test_v106_user_session_controller tests.test_v177_current_season_product_flow tests.test_v180_multilevel_current_season_product_offline tests.test_v193_simc_local_updater tests.test_v193_local_web_simc_update_api tests.test_v196_current_season_ui_catalog tests.test_v197_verified_effect_budget tests.test_v197_enchant_effect_families tests.test_v198_targeted_enchant_native_rating tests.test_v202_one_enchant_admission tests.test_v202_enchant_scheduler_floor tests.test_v217_stage_execution_engine
           if ($LASTEXITCODE -ne 0) { throw "Existing local web or session regression failed" }
           node --check runner/webui/app.js
           if ($LASTEXITCODE -ne 0) { throw "Browser JS syntax failed" }
