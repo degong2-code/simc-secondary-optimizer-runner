@@ -15,6 +15,7 @@ import secrets
 import subprocess
 import sys
 import threading
+import tempfile
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, HTTPException, Request
@@ -30,6 +31,7 @@ import v193_simc_local_updater as simc_updates
 import v148_local_batch_results as batch_view
 import v167_product_season_gear_adapter as season_gear
 import v208_internal_exact_special_L_hydrator as exact_L
+import v212_environment_manifest as environment_manifest
 
 SCHEMA = "v113_local_web_api_p1_v1"
 KEY = re.compile(r"[a-f0-9]{20}\Z")
@@ -57,7 +59,8 @@ def blocked(exc):
     """Return stable codes, not private absolute paths, talent strings, or tracebacks."""
     if isinstance(exc, (sessions.SessionBlocked, bootstrap.UserScenarioBlocked,
                         sessions.nonchmv_enchant.EnchantChoiceBlocked,
-                        exact_L.StaticLBlocked)):
+                        exact_L.StaticLBlocked,
+                        environment_manifest.EnvironmentBlocked)):
         code = str(exc).split(":", 1)[0].split("\n", 1)[0]
         return HTTPException(422, detail={"code": code})
     # Exact special L is a user-actionable, pre-Native input mismatch.
@@ -97,6 +100,150 @@ class LocalJobs:
         """Use the packaged v213 artifact when present; legacy source remains fallback."""
         candidate=pathlib.Path(__file__).resolve().parents[1]/"data"/"current_season_source_to_catalog.json"
         return candidate if candidate.is_file() else None
+
+    def package_manifest_path(self):
+        """Return the exact package-root manifest, never infer from a ZIP filename."""
+        candidate=pathlib.Path(__file__).resolve().parents[1]/"V181_PACKAGE_MANIFEST.json"
+        return candidate if candidate.is_file() and not candidate.is_symlink() else None
+
+    @staticmethod
+    def _write_atomic(path, encoded):
+        path=pathlib.Path(path)
+        path.parent.mkdir(parents=True,exist_ok=True)
+        if path.is_file() and path.read_text(encoding="utf8")==encoded:
+            return path
+        fd,temp=tempfile.mkstemp(prefix=".environment-manifest-",dir=path.parent)
+        try:
+            with os.fdopen(fd,"w",encoding="utf8") as stream:
+                stream.write(encoded);stream.flush();os.fsync(stream.fileno())
+            os.replace(temp,path)
+        finally:
+            if os.path.exists(temp):os.unlink(temp)
+        return path
+
+    @staticmethod
+    def _environment_summary(document):
+        payload={k:v for k,v in document.items() if k!="manifest_sha256"}
+        digest=environment_manifest.sha(
+            environment_manifest.canonical(payload).encode("utf8"))
+        if digest!=document.get("manifest_sha256"):
+            raise environment_manifest.EnvironmentBlocked(
+                "ENVIRONMENT_MANIFEST_DIGEST_MISMATCH")
+        source=document.get("source_catalog") or {}
+        package=document.get("windows_package") or {}
+        scope=document.get("product_scope") or {}
+        receipt=document.get("v208_start_receipt") or {}
+        return {
+            "schema":document.get("schema"),
+            "status":document.get("status"),
+            "manifest_sha256":digest,
+            "source_catalog_sha256":source.get("artifact_sha256"),
+            "source_catalog_manifest_sha256":source.get("manifest_sha256"),
+            "windows_package_status":package.get("status","NOT_PROVIDED"),
+            "windows_package_manifest_sha256":package.get("manifest_sha256"),
+            "all_specs_ready":scope.get("all_specs_ready"),
+            "v208_start_receipt_status":receipt.get("status"),
+            "unresolved_dependencies":list(document.get(
+                "unresolved_dependencies",[])),
+            "native_calls":document.get("native_calls"),
+            "network_calls":document.get("network_calls"),
+        }
+
+    def _read_environment_summary(self, folder):
+        path=pathlib.Path(folder)/"generated"/"environment_manifest.json"
+        if not path.is_file():
+            return None
+        try:
+            document=json.loads(path.read_text(encoding="utf8"))
+            if type(document) is not dict:
+                raise ValueError("ENVIRONMENT_MANIFEST_OBJECT_REQUIRED")
+            return self._environment_summary(document)
+        except (OSError,ValueError,TypeError,KeyError) as exc:
+            raise environment_manifest.EnvironmentBlocked(
+                "ENVIRONMENT_MANIFEST_INVALID:"+type(exc).__name__) from exc
+
+    def _verify_environment_dependencies(self, summary):
+        if not summary or summary.get("windows_package_status")!="VERIFIED":
+            return
+        source_path=self.source_catalog_path()
+        package_path=self.package_manifest_path()
+        if source_path is None or package_path is None:
+            raise environment_manifest.EnvironmentBlocked(
+                "V213_PACKAGED_SOURCE_REMOVED_AFTER_PLAN")
+        source_doc,source_sha=environment_manifest.read_json(source_path)
+        if source_sha!=summary.get("source_catalog_sha256"):
+            raise environment_manifest.EnvironmentBlocked(
+                "V213_SOURCE_CATALOG_CHANGED_AFTER_PLAN")
+        package=environment_manifest.verify_windows_package_manifest(
+            package_path,source_path,source_doc,source_sha)
+        if package.get("manifest_sha256")!=summary.get(
+                "windows_package_manifest_sha256"):
+            raise environment_manifest.EnvironmentBlocked(
+                "V181_PACKAGE_MANIFEST_CHANGED_AFTER_PLAN")
+
+    def _latest_v208_receipt_path(self, folder):
+        pointer=pathlib.Path(folder)/"V208_START_RECEIPT_REF.json"
+        if not pointer.is_file():
+            return None
+        try:
+            record=json.loads(pointer.read_text(encoding="utf8"))
+            relative=record.get("path")
+            if (record.get("schema")!="v113_v208_start_receipt_pointer_v1" or
+                type(relative) is not str or not relative or
+                pathlib.Path(relative).is_absolute() or
+                ".." in pathlib.PurePosixPath(relative.replace("\\","/")).parts):
+                raise ValueError("V208_RECEIPT_POINTER_INVALID")
+            root=pathlib.Path(folder).resolve()
+            target=(root/relative).resolve()
+            if not target.is_relative_to(root) or not target.is_file():
+                raise ValueError("V208_RECEIPT_POINTER_TARGET_INVALID")
+            receipt=json.loads(target.read_text(encoding="utf8"))
+            if receipt.get("receipt_sha256")!=record.get("receipt_sha256"):
+                raise ValueError("V208_RECEIPT_POINTER_DIGEST_MISMATCH")
+            return target
+        except (OSError,ValueError,TypeError,KeyError) as exc:
+            raise environment_manifest.EnvironmentBlocked(
+                "V208_RECEIPT_POINTER_INVALID:"+type(exc).__name__) from exc
+
+    def _record_v208_receipt(self, folder, receipt_info):
+        relative=receipt_info.get("path")
+        if type(relative) is not str or not relative:
+            raise environment_manifest.EnvironmentBlocked(
+                "V208_RECEIPT_RELATIVE_PATH_REQUIRED")
+        pointer={
+            "schema":"v113_v208_start_receipt_pointer_v1",
+            "path":relative,
+            "receipt_sha256":receipt_info.get("receipt_sha256"),
+        }
+        encoded=json.dumps(pointer,sort_keys=True,ensure_ascii=False,
+                           indent=2,allow_nan=False)+"\n"
+        self._write_atomic(pathlib.Path(folder)/"V208_START_RECEIPT_REF.json",encoded)
+
+    def _seal_environment_manifest(self, folder, bootstrap_result,
+                                   receipt_path=None):
+        source_path=self.source_catalog_path()
+        if source_path is None:
+            return {"status":"SOURCE_CATALOG_NOT_PACKAGED",
+                    "windows_package_status":"NOT_VERIFIED",
+                    "all_specs_ready":bootstrap_result.get("all_specs_ready"),
+                    "v208_start_receipt_status":"NOT_VERIFIED",
+                    "unresolved_dependencies":[
+                        "V213_SOURCE_CATALOG_NOT_PACKAGED"],
+                    "native_calls":0,"network_calls":0}
+        generated=pathlib.Path(folder)/"generated"
+        bootstrap_path=generated/"v098_bootstrap_result.json"
+        encoded_bootstrap=json.dumps(bootstrap_result,sort_keys=True,
+            ensure_ascii=False,indent=2,allow_nan=False)+"\n"
+        bootstrap.put_once(bootstrap_path,encoded_bootstrap)
+        if receipt_path is None:
+            receipt_path=self._latest_v208_receipt_path(folder)
+        result=environment_manifest.compile_from_paths(
+            source_path,bootstrap_path,generated,receipt_path,
+            package_manifest_path=self.package_manifest_path())
+        encoded=json.dumps(result,sort_keys=True,ensure_ascii=False,
+                          indent=2,allow_nan=False)+"\n"
+        self._write_atomic(generated/"environment_manifest.json",encoded)
+        return self._environment_summary(result)
 
     def recent_sessions(self, limit=48):
         """Read-only local session index; no binary hashing, Native or writes.
@@ -218,13 +365,17 @@ class LocalJobs:
                         sessions.sha(old.read_bytes())==
                         sessions.sha(pathlib.Path(resolved_static).read_bytes())):
                         resolved_static=saved
-            plan = bootstrap.build(user,folder / "generated",binary,
-                                   params.revision,resolved_static,
-                                   independent_334=independent,
-                                   independent_target_level=independent_level,
-                                   current_season_product=current_season,
-                                   source_catalog_path=self.source_catalog_path())["plan"]
+            bootstrap_result = bootstrap.build(
+                user,folder / "generated",binary,params.revision,resolved_static,
+                independent_334=independent,
+                independent_target_level=independent_level,
+                current_season_product=current_season,
+                source_catalog_path=self.source_catalog_path())
+            plan=bootstrap_result["plan"]
+            environment=(self._seal_environment_manifest(folder,bootstrap_result)
+                         if current_season else None)
             return {"session_id":folder.name,"status":"READY_ZERO_NATIVE",
+                    "environment_manifest":environment,
                     "native_calls":0,
                     "static_cache_auto_used":bool(
                         resolved_static and params.static_cache is None),
@@ -270,10 +421,22 @@ class LocalJobs:
                     "static_cache":hydrated["static_cache_path"]})
         prepared=self.plan(prepared_params)
         folder=self.folder(prepared["session_id"])
+        if hydrated:
+            receipt_info=exact_L.write_start_receipt(
+                folder,hydrated["start_receipt"])
+            self._record_v208_receipt(folder,receipt_info)
+            bootstrap_path=folder/"generated"/"v098_bootstrap_result.json"
+            bootstrap_result=json.loads(bootstrap_path.read_text(encoding="utf8"))
+            environment=self._seal_environment_manifest(
+                folder,bootstrap_result,folder/receipt_info["path"])
+        else:
+            environment=prepared.get("environment_manifest")
+        # The environment manifest is sealed before the optimizer worker is
+        # launched, so Start never outruns its exact v213/v208 provenance.
         response=self.launch(folder)
         if hydrated:
-            response["static_L_start_receipt"]=exact_L.write_start_receipt(
-                folder,hydrated["start_receipt"])
+            response["static_L_start_receipt"]=receipt_info
+        response["environment_manifest"]=environment
         response["static_L_native_calls_this_start"]=(
             hydrated["native_new_calls"] if hydrated else 0)
         response["static_L_reused_exact_variants"]=(
@@ -332,7 +495,8 @@ class LocalJobs:
         return {"session_id":folder.name,"active":self.is_active(folder),
                 "cancel_requested":p["cancel"].exists(),
                 "progress":item,
-                "result_ready":p["final"].is_file()}
+                "result_ready":p["final"].is_file(),
+                "environment_manifest":self._read_environment_summary(folder)}
 
     def inputs(self, folder):
         """Restore locally sealed user form/SimC paths, read-only and without Native.
@@ -369,6 +533,9 @@ class LocalJobs:
             if self.is_active(folder):
                 raise HTTPException(409,detail={"code":"SESSION_ALREADY_RUNNING"})
             try:
+                # Verify the sealed package/source identity before spawning a worker.
+                environment=self._read_environment_summary(folder)
+                self._verify_environment_dependencies(environment)
                 binary, rev, static = self.args_for_existing(folder)
                 if cache_only:
                     sessions.cache_only_preflight(folder)
@@ -401,7 +568,8 @@ class LocalJobs:
         return {"session_id":folder.name,
                 "status":"CACHE_ONLY_WORKER_STARTED" if cache_only else "WORKER_STARTED",
                 "native_attempt_ceiling_cumulative":6,
-                "new_native_execution_permitted":not cache_only}
+                "new_native_execution_permitted":not cache_only,
+                "environment_manifest":environment}
 
     def cancel(self, folder):
         with self.lock:

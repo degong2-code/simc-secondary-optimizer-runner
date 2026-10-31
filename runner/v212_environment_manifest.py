@@ -22,6 +22,8 @@ SCHEMA = "v212_simc_environment_manifest_v2"
 V098 = "v098_target_ilevel_user_scenario_v1"
 EXPECTED_APPROVED_ENCHANT_IDS = [7967]
 EXPECTED_ENCHANT_COUNT = 38
+
+WINDOWS_PACKAGE_SCHEMA = "v181_windows_local_web_beta_source_package_v1"
 EXPECTED_SIMC_REVISION_LENGTH = 40
 
 
@@ -57,6 +59,65 @@ def read_json(path, max_bytes=25_000_000):
         return json.loads(raw.decode("utf8")), sha(raw)
     except (UnicodeError, ValueError) as exc:
         raise EnvironmentBlocked("INPUT_JSON_INVALID:" + path.name) from exc
+
+
+def verify_windows_package_manifest(package_manifest_path, source_catalog_path,
+                                      source_catalog, source_catalog_sha):
+    if package_manifest_path is None:
+        return {"status": "NOT_PROVIDED"}
+    raw_path = Path(package_manifest_path)
+    need(raw_path.is_file() and not raw_path.is_symlink(),
+         "WINDOWS_PACKAGE_MANIFEST_MISSING_OR_INVALID")
+    package_path = raw_path.resolve()
+    package, package_sha = read_json(package_path, max_bytes=5_000_000)
+    package_root = package_path.parent
+    source_path = Path(source_catalog_path).resolve()
+    need(source_path.is_file() and
+         sha_file(source_path)["sha256"] == source_catalog_sha,
+         "WINDOWS_PACKAGE_SOURCE_CATALOG_BYTES_CHANGED")
+    try:
+        relative = source_path.relative_to(package_root).as_posix()
+    except ValueError as exc:
+        raise EnvironmentBlocked(
+            "WINDOWS_PACKAGE_SOURCE_CATALOG_ESCAPES_PACKAGE_ROOT") from exc
+    need(package.get("schema") == WINDOWS_PACKAGE_SCHEMA and
+         package.get("archive_root") == package_root.name,
+         "WINDOWS_PACKAGE_MANIFEST_IDENTITY_INVALID")
+    source = package.get("source_catalog")
+    need(type(source) is dict and
+         relative == "data/current_season_source_to_catalog.json" and
+         source.get("path") == relative and
+         source.get("schema") == source_catalog.get("schema") and
+         source.get("artifact_sha256") == source_catalog_sha and
+         source.get("manifest_sha256") == source_catalog.get("manifest_sha256") and
+         source.get("game_build") == source_catalog.get("game_build") and
+         source.get("simc_revision") == source_catalog.get("simc_revision") and
+         source.get("native_calls") == 0 and
+         source.get("network_calls") == 0 and
+         source.get("automatic_ui_promotion") is False,
+         "WINDOWS_PACKAGE_SOURCE_CATALOG_IDENTITY_MISMATCH")
+    files = package.get("files")
+    need(type(files) is list and
+         type(package.get("file_count")) is int and
+         package["file_count"] == len(files) and
+         all(type(row) is dict and type(row.get("path")) is str
+             for row in files) and
+         len({row["path"] for row in files}) == len(files),
+         "WINDOWS_PACKAGE_FILE_MANIFEST_INVALID")
+    matches = [row for row in files if row["path"] == relative]
+    need(len(matches) == 1 and
+         matches[0].get("sha256") == source_catalog_sha and
+         matches[0].get("size") == source_path.stat().st_size,
+         "WINDOWS_PACKAGE_SOURCE_CATALOG_FILE_SHA_MISMATCH")
+    return {
+        "status": "VERIFIED",
+        "schema": package["schema"],
+        "manifest_sha256": package_sha,
+        "archive_root": package["archive_root"],
+        "file_count": package["file_count"],
+        "source_catalog_path": relative,
+        "source_catalog_sha256": source_catalog_sha,
+    }
 
 
 def sha_file(path):
@@ -359,7 +420,8 @@ def _verify_v208_start_receipt(receipt, scenario, source_catalog,
 
 
 def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
-                     bootstrap, target_root, v208_start_receipt=None):
+                     bootstrap, target_root, v208_start_receipt=None,
+                     windows_package=None):
     build, revision, v191, v211 = _source_identity(
         source_catalog, source_catalog_sha)
     need(ui.get("schema") == ui_catalog.SCHEMA
@@ -374,6 +436,11 @@ def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
              source_catalog.get("manifest_sha256"),
          "V196_UI_NOT_DERIVED_FROM_EXACT_V213_ARTIFACT")
     approved_ids, source_enchants = _approved_enchants(source_catalog, ui)
+    windows_package = ({"status":"NOT_PROVIDED"}
+                       if windows_package is None else windows_package)
+    need(type(windows_package) is dict and
+         windows_package.get("status") in ("VERIFIED", "NOT_PROVIDED"),
+         "WINDOWS_PACKAGE_IDENTITY_INVALID")
 
     need(bootstrap.get("schema") == V098
          and bootstrap.get("native_calls") == 0
@@ -475,10 +542,9 @@ def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
             v208_receipt_identity["status"]!="VERIFIED"):
         limitations.append(
             "V208_SELECTED_SPECIAL_L_START_RECEIPT_NOT_YET_SERIALIZED_IN_ENVIRONMENT_MANIFEST")
-    limitations.extend([
-        "V213_ARTIFACT_NOT_YET_PACKAGED_IN_DEFAULT_WINDOWS_DATA_PATH",
-        "WINDOWS_ONE_CLICK_BUILD_START_PROGRESS_CANCEL_RESUME",
-    ])
+    if windows_package["status"] != "VERIFIED":
+        limitations.append("V213_WINDOWS_PACKAGE_MANIFEST_NOT_VERIFIED")
+    limitations.append("WINDOWS_ONE_CLICK_ENVIRONMENT_BUILD_AND_START_NOT_INTEGRATED")
     limitations = list(dict.fromkeys(limitations))
     unresolved = []
     if bootstrap.get("all_specs_ready") is not True:
@@ -487,7 +553,9 @@ def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
             v208_receipt_identity["status"]!="VERIFIED"):
         unresolved.append(
             "V208_SELECTED_SPECIAL_L_START_RECEIPT_NOT_YET_SERIALIZED_IN_ENVIRONMENT_MANIFEST")
-    unresolved.append("WINDOWS_ONE_CLICK_BUILD_START_PROGRESS_CANCEL_RESUME")
+    if windows_package["status"] != "VERIFIED":
+        unresolved.append("V213_WINDOWS_PACKAGE_MANIFEST_NOT_VERIFIED")
+    unresolved.append("WINDOWS_ONE_CLICK_ENVIRONMENT_BUILD_AND_START_NOT_INTEGRATED")
     payload = {
         "schema": SCHEMA,
         "status": "READY_WITH_LIMITATIONS" if limitations or unresolved else "READY",
@@ -532,6 +600,7 @@ def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
         },
         "selected_nonchmv_enchant": selected_enchant,
         "v208_start_receipt": v208_receipt_identity,
+        "windows_package": windows_package,
         "target_profile": {
             "schema": bootstrap["schema"],
             "normalized_result_sha256": bootstrap_identity_sha,
@@ -555,7 +624,8 @@ def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
 
 
 def compile_from_paths(source_catalog_path, bootstrap_path, target_root,
-                      v208_start_receipt_path=None):
+                      v208_start_receipt_path=None,
+                      package_manifest_path=None):
     source_catalog_path = Path(source_catalog_path).resolve()
     source_catalog, source_catalog_sha = read_json(source_catalog_path)
     bootstrap, _ = read_json(bootstrap_path)
@@ -564,8 +634,11 @@ def compile_from_paths(source_catalog_path, bootstrap_path, target_root,
         receipt,_=read_json(v208_start_receipt_path)
     ui = ui_catalog.public_options(source_catalog_path)
     ui_sha = sha(canonical(ui).encode("utf8"))
+    package_identity = verify_windows_package_manifest(
+        package_manifest_path, source_catalog_path,
+        source_catalog, source_catalog_sha)
     return compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
-                             bootstrap, target_root, receipt)
+                             bootstrap, target_root, receipt, package_identity)
 
 
 def main(argv=None):
@@ -574,12 +647,14 @@ def main(argv=None):
     parser.add_argument("--bootstrap-result", required=True, type=Path)
     parser.add_argument("--target-root", required=True, type=Path)
     parser.add_argument("--v208-start-receipt", type=Path)
+    parser.add_argument("--package-manifest", type=Path)
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args(argv)
     try:
         result = compile_from_paths(args.source_to_catalog,
                                     args.bootstrap_result, args.target_root,
-                                    args.v208_start_receipt)
+                                    args.v208_start_receipt,
+                                    args.package_manifest)
     except (OSError, ValueError, KeyError, TypeError) as exc:
         print("V212_ENVIRONMENT_BUILD_BLOCKED", type(exc).__name__, str(exc))
         return 3

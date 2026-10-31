@@ -166,7 +166,7 @@ def run(archive_path):
                     # Defaults include fields class/spec and user inputs; no
                     # unknown HTTP keys are introduced.
                     payload={"controls":controls,"binary":str(fake),
-                             "revision":"7bc10711b5",
+                             "revision":source_meta["simc_revision"],
                              "current_season_product":True}
                     st,result=http(base,"/api/v1/sessions/plan",
                                    token=token,payload=payload)
@@ -179,6 +179,16 @@ def run(archive_path):
                          result["plan"]["native_limit"]==6 and
                          result["plan"]["current_season_product"] is True,
                          "WRONG_PLAN_OR_SIMC_WAS_CALLED")
+                    environment=result.get("environment_manifest") or {}
+                    need(environment.get("status")=="READY_WITH_LIMITATIONS" and
+                         environment.get("windows_package_status")=="VERIFIED" and
+                         environment.get("source_catalog_sha256")==
+                             source_meta["artifact_sha256"] and
+                         environment.get("v208_start_receipt_status")==
+                             "NOT_REQUIRED_NO_SELECTED_SPECIAL" and
+                         environment.get("native_calls")==0 and
+                         environment.get("network_calls")==0,
+                         "V212_RUNTIME_ENVIRONMENT_MANIFEST_NOT_SEALED")
                     st,restore=http(base,"/api/v1/sessions/"+sid+"/inputs",
                                      token=token)
                     need(st==200 and restore["current_season_product"] is True
@@ -187,10 +197,12 @@ def run(archive_path):
                     st,progress=http(base,"/api/v1/sessions/"+sid+"/status",
                                       token=token)
                     need(st==200 and not progress["active"] and
-                         progress["progress"]["native_attempts"]==0,
-                         "PLAN_ACCIDENTALLY_LAUNCHED_NATIVE")
+                         progress["progress"]["native_attempts"]==0 and
+                         progress.get("environment_manifest",{}).get(
+                             "manifest_sha256")==environment["manifest_sha256"],
+                         "PLAN_ACCIDENTALLY_LAUNCHED_NATIVE_OR_ENVIRONMENT_DRIFT")
                     print("V181_WINDOWS_HTTP_PLAN_PASS",cls+"/"+spec,level,
-                          "native 0",flush=True)
+                          "native 0","v212",environment["status"],flush=True)
                 # Security: foreign Host rejected, missing token refused.
                 st,_=http(base,"/api/v1/defaults")
                 need(st==403,"UNAUTHORIZED_DEFAULTS_NOT_DENIED")

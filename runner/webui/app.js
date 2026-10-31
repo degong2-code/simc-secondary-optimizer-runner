@@ -603,11 +603,17 @@ async function withBusy(fn) {
 function showPlan(plan) {
   if(!plan?.plan) return;
   const o=Object.values(plan.plan.fixed_O).reduce((a,n)=>a+n,0);
+  const environment=plan.environment_manifest;
+  const environmentText=environment?
+    " · 환경 "+environment.status+
+    " · 미해결 "+(environment.unresolved_dependencies||[]).length:
+    "";
   setNotice("계산 준비 확인 · B "+number(plan.plan.base_B)+
     " + 고정 기름 O "+number(o)+" = 최종 T "+number(plan.plan.final_T)+
     " · 계획 Native 최대 "+plan.plan.native_limit+"회 (지금 실행 0회)"+
     (plan.plan.current_season_product?" · 새 시즌 대표장비 별도 세션":"")+
-    (plan.static_cache_auto_used?" · 저장된 정적 캐시 자동 적용":""));
+    (plan.static_cache_auto_used?" · 저장된 정적 캐시 자동 적용":"")+
+    environmentText);
 }
 function renderProgress(data) {
   const p=data?.progress||{};
@@ -629,8 +635,10 @@ function renderProgress(data) {
     worker==="BLOCKED_OR_PARTIAL"?
       (p.worker?.reason||p.error||worker):
       (p.error||p.worker?.reason||worker);
+  const environment=data?.environment_manifest;
+  const environmentText=environment?" · 환경 "+environment.status:"";
   $("stage-text").textContent=status+" · Native 누적 "+(p.native_attempts||0)+
-                       " · 캐시 "+(p.cache_hits||0);
+                       " · 캐시 "+(p.cache_hits||0)+environmentText;
   $("run-label").textContent=data.active?"진행 중":
     cancelled?"취소됨 · 재개 가능":
     worker==="BLOCKED_OR_PARTIAL"?"실행 차단":

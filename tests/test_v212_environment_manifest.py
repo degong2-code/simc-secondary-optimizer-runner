@@ -107,6 +107,36 @@ class EnvironmentManifestTests(unittest.TestCase):
             self.source_catalog, self.source_catalog_sha,
             self.ui, self.ui_sha, self.bootstrap, self.target, receipt)
 
+    def make_windows_package_manifest(self):
+        package_root=self.root/"SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA"
+        data=package_root/"data"
+        data.mkdir(parents=True,exist_ok=True)
+        source_path=data/"current_season_source_to_catalog.json"
+        raw=self.source_path.read_bytes()
+        source_path.write_bytes(raw)
+        source_meta={
+            "path":"data/current_season_source_to_catalog.json",
+            "schema":self.source_catalog["schema"],
+            "game_build":self.source_catalog["game_build"],
+            "simc_revision":self.source_catalog["simc_revision"],
+            "artifact_sha256":p.sha(raw),
+            "manifest_sha256":self.source_catalog["manifest_sha256"],
+            "native_calls":0,"network_calls":0,
+            "automatic_ui_promotion":False,
+        }
+        package={
+            "schema":p.WINDOWS_PACKAGE_SCHEMA,
+            "archive_root":package_root.name,
+            "files":[{"path":source_meta["path"],"size":len(raw),
+                      "sha256":p.sha(raw)}],
+            "file_count":1,
+            "source_catalog":source_meta,
+        }
+        package_path=package_root/"V181_PACKAGE_MANIFEST.json"
+        package_path.write_text(json.dumps(package,sort_keys=True,
+            ensure_ascii=False,indent=2)+"\n",encoding="utf8")
+        return source_path,package_path
+
     def add_selected_special(self):
         row={"slot":"back","item_id":159288,"ilevel":334,"options":{}}
         scenario={
@@ -353,6 +383,42 @@ class EnvironmentManifestTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,
                                     "V213_CATALOG_CONTRACT_INVALID"):
             self.compile()
+
+
+    def test_windows_package_manifest_binds_exact_v213_source_file(self):
+        source_path,package_path=self.make_windows_package_manifest()
+        identity=p.verify_windows_package_manifest(
+            package_path,source_path,self.source_catalog,self.source_catalog_sha)
+        self.assertEqual(identity["status"],"VERIFIED")
+        self.assertEqual(identity["source_catalog_sha256"],self.source_catalog_sha)
+        self.assertEqual(identity["file_count"],1)
+
+    def test_windows_package_source_bytes_tamper_fails_closed(self):
+        source_path,package_path=self.make_windows_package_manifest()
+        raw=source_path.read_bytes()
+        source_path.write_bytes(raw[:-1]+(b" " if raw[-1:]!=b" " else b"\\t"))
+        with self.assertRaisesRegex(p.EnvironmentBlocked,
+                                    "WINDOWS_PACKAGE_SOURCE_CATALOG_BYTES_CHANGED"):
+            p.verify_windows_package_manifest(
+                package_path,source_path,self.source_catalog,self.source_catalog_sha)
+
+    def test_compile_from_paths_marks_verified_default_windows_package(self):
+        source_path,package_path=self.make_windows_package_manifest()
+        bootstrap_path=self.root/"v098_bootstrap_result.json"
+        bootstrap_path.write_text(json.dumps(self.bootstrap),encoding="utf8")
+        result=p.compile_from_paths(
+            source_path,bootstrap_path,self.target,
+            package_manifest_path=package_path)
+        self.assertEqual(result["windows_package"]["status"],"VERIFIED")
+        self.assertEqual(result["windows_package"]["source_catalog_sha256"],
+                         self.source_catalog_sha)
+        self.assertNotIn("V213_WINDOWS_PACKAGE_MANIFEST_NOT_VERIFIED",
+                         result["readiness_limitations"])
+        self.assertNotIn("V213_WINDOWS_PACKAGE_MANIFEST_NOT_VERIFIED",
+                         result["unresolved_dependencies"])
+        self.assertIn(
+            "WINDOWS_ONE_CLICK_ENVIRONMENT_BUILD_AND_START_NOT_INTEGRATED",
+            result["unresolved_dependencies"])
 
 
 if __name__ == "__main__":

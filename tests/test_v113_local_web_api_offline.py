@@ -14,6 +14,8 @@ sys.path.insert(0,str(ROOT/"runner"))
 import v113_local_web_api as web
 import v106_user_session_controller as sessions
 from tests.test_v106_user_session_controller import fake_native
+from tests.test_v213_source_to_catalog import SourceToCatalogTests
+import v213_source_to_catalog as source_bridge
 
 class LocalWebAPIOffline(unittest.TestCase):
     def setUp(self):
@@ -200,6 +202,129 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(status.status_code,200)
         self.assertEqual(status.json()["progress"]["completed_jobs"],0)
         self.assertFalse(status.json()["active"])
+
+    def test_current_season_plan_seals_packaged_v212_environment_manifest_zero_native(self):
+        builder=SourceToCatalogTests()
+        builder.setUpClass()
+        season,classification=builder.build_inputs()
+        source=source_bridge.compile_catalog(
+            season,"a"*64,classification,"b"*64)
+        package_root=self.root/"SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA"
+        data=package_root/"data"
+        data.mkdir(parents=True,exist_ok=True)
+        source_path=data/"current_season_source_to_catalog.json"
+        raw=json.dumps(source,sort_keys=True,ensure_ascii=False,
+                       indent=2).encode("utf8")+b"\n"
+        source_path.write_bytes(raw)
+        source_sha=source_bridge.sha(raw)
+        source_meta={
+            "path":"data/current_season_source_to_catalog.json",
+            "schema":source["schema"],"game_build":source["game_build"],
+            "simc_revision":source["simc_revision"],
+            "artifact_sha256":source_sha,
+            "manifest_sha256":source["manifest_sha256"],
+            "native_calls":0,"network_calls":0,
+            "automatic_ui_promotion":False,
+        }
+        package={
+            "schema":"v181_windows_local_web_beta_source_package_v1",
+            "archive_root":package_root.name,
+            "files":[{"path":source_meta["path"],"size":len(raw),
+                      "sha256":source_sha}],
+            "file_count":1,"source_catalog":source_meta,
+        }
+        package_path=package_root/"V181_PACKAGE_MANIFEST.json"
+        package_path.write_text(json.dumps(package,sort_keys=True,
+            ensure_ascii=False,indent=2)+"\n",encoding="utf8")
+        jobs=self.app.state.jobs
+        payload={**self.payload,"revision":source["simc_revision"],
+                 "current_season_product":True}
+        with mock.patch.object(jobs,"source_catalog_path",return_value=source_path), \
+             mock.patch.object(jobs,"package_manifest_path",return_value=package_path):
+            with mock.patch.object(web.subprocess,"Popen") as spawn:
+                response=self.post("/api/v1/sessions/plan",payload)
+                spawn.assert_not_called()
+            self.assertEqual(response.status_code,200,response.text)
+            body=response.json()
+            environment=body["environment_manifest"]
+            self.assertEqual(environment["status"],"READY_WITH_LIMITATIONS")
+            self.assertEqual(environment["windows_package_status"],"VERIFIED")
+            self.assertEqual(environment["source_catalog_sha256"],source_sha)
+            self.assertEqual(environment["native_calls"],0)
+            self.assertEqual(environment["network_calls"],0)
+            self.assertIn("ALL_26_DPS_REPRESENTATIVE_PROFILE_SUPPLIERS",
+                          environment["unresolved_dependencies"])
+            folder=self.root/"runs"/body["session_id"]
+            saved=json.loads((folder/"generated"/"environment_manifest.json")
+                             .read_text(encoding="utf8"))
+            self.assertEqual(saved["manifest_sha256"],environment["manifest_sha256"])
+            status=self.client.get("/api/v1/sessions/"+body["session_id"]+"/status",
+                                   headers=self.headers)
+            self.assertEqual(status.status_code,200,status.text)
+            self.assertEqual(status.json()["environment_manifest"],environment)
+            self.assertEqual(status.json()["progress"]["native_attempts"],0)
+            # A changed packaged source invalidates Start/Resume before a
+            # worker process is spawned; the status read itself is non-mutating.
+            source_path.write_bytes(raw[:-1]+b" ")
+            with mock.patch.object(web.subprocess,"Popen") as spawn:
+                stale=self.post("/api/v1/sessions/"+body["session_id"]+"/resume")
+                spawn.assert_not_called()
+            self.assertEqual(stale.status_code,422,stale.text)
+            self.assertEqual(stale.json()["detail"]["code"],
+                             "V213_SOURCE_CATALOG_CHANGED_AFTER_PLAN")
+
+    def test_selected_special_start_seals_v208_receipt_before_worker_launch(self):
+        jobs=self.app.state.jobs
+        controls=copy.deepcopy(self.controls)
+        controls["special_items"]=[{
+            "slot":"back","item_id":159288,"options":{}}]
+        params=web.UserRequest(
+            controls=controls,binary=str(self.binary),revision="7bc1071",
+            static_cache=None,current_season_product=True)
+        session_id="a"*20
+        folder=self.root/"runs"/session_id
+        generated=folder/"generated"
+        generated.mkdir(parents=True,exist_ok=True)
+        (generated/"v098_bootstrap_result.json").write_text(
+            json.dumps({"schema":"test"}),encoding="utf8")
+        cache_path=self.root/"static-cache.json"
+        cache_path.write_text("{}",encoding="utf8")
+        receipt_info={
+            "schema":"v208_selected_special_start_receipt_v1",
+            "path":"start-receipts/v208-start-test.json",
+            "receipt_sha256":"a"*64,"native_calls_this_start":0,
+            "selected_special_count":1,
+        }
+        order=[]
+        def seal(receipt_folder,bootstrap_result,receipt_path=None):
+            self.assertEqual(receipt_folder,folder)
+            self.assertEqual(receipt_path,folder/receipt_info["path"])
+            self.assertEqual(bootstrap_result,{"schema":"test"})
+            order.append("seal")
+            return {"status":"READY_WITH_LIMITATIONS",
+                    "v208_start_receipt_status":"VERIFIED"}
+        def launch(launch_folder):
+            self.assertEqual(launch_folder,folder)
+            self.assertEqual(order,["seal"])
+            order.append("launch")
+            return {"session_id":session_id,"status":"WORKER_STARTED"}
+        with mock.patch.object(web.exact_L,"hydrate",return_value={
+                 "static_cache_path":str(cache_path),"start_receipt":{},
+                 "native_new_calls":0,"cache_reused":1}), \\
+             mock.patch.object(web.exact_L,"write_start_receipt",
+                               return_value=receipt_info), \\
+             mock.patch.object(jobs,"plan",return_value={
+                 "session_id":session_id,"environment_manifest":None}), \\
+             mock.patch.object(jobs,"folder",return_value=folder), \\
+             mock.patch.object(jobs,"_seal_environment_manifest",side_effect=seal), \\
+             mock.patch.object(jobs,"launch",side_effect=launch):
+            result=jobs.start_with_internal_special_L(params)
+        self.assertEqual(order,["seal","launch"])
+        self.assertEqual(result["static_L_start_receipt"],receipt_info)
+        self.assertEqual(result["environment_manifest"]["v208_start_receipt_status"],
+                         "VERIFIED")
+        pointer=json.loads((folder/"V208_START_RECEIPT_REF.json").read_text("utf8"))
+        self.assertEqual(pointer["receipt_sha256"],"a"*64)
 
     def test_internal_variant_resume_uses_sealed_identity_not_browser_defaults(self):
         # Developer stage only: browser plan/defaults still expose no variant.
