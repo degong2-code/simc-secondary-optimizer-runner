@@ -1,6 +1,6 @@
-# 2026-10-31 P3-D v216 — 최신 검증 상태 (실제 HEAD 547811e8)
+# 2026-10-31 P3-D v216 — 최신 검증 상태 (code HEAD 547811e8 / docs HEAD 636b7f96)
 
-> **최신 상태가 아래 v215 기록을 대체한다.** 현재 격리 브랜치 HEAD는 547811e8ffb7d25eb9ad45bb416b0b75dd5458c3이며, 커밋은 v216 Incremental Environment Build Coordinator 및 로컬 API/UI 연결을 추가했다. 저장소는 Public, main HEAD는 07133e0aaf738d6e4816a6486057b1cd49c018de로 불변이다. 최신 Actions #41200816574/#41200816595/#41200816597/#41200816611 및 v169/v177/v180 회귀는 성공했다.
+> **최신 상태가 아래 v215 기록을 대체한다.** 최신 격리 브랜치 HEAD는 docs-only handoff commit 636b7f9636cf1653f2b8b3a90e4f069d9cfbdb3e이며, 직전 code HEAD 547811e8ffb7d25eb9ad45bb416b0b75dd5458c3가 v216 Incremental Environment Build Coordinator 및 로컬 API/UI 연결을 추가했다. 문서 커밋은 코드/테스트를 변경하지 않았다. 저장소는 Public, main HEAD는 07133e0aaf738d6e4816a6486057b1cd49c018de로 불변이다. 최신 Actions #41200816574/#41200816595/#41200816597/#41200816611 및 v169/v177/v180 회귀는 성공했다.
 >
 > **v216 구현 범위:** 설치된 versioned v213 artifact를 재사용하는 request-driven Environment Build coordinator, user-scenario scope identity, 이전 세션의 검증된 receipt/manifest 검색(최근 128 세션 제한), v212 dependency graph 비교, Environment Build Receipt, v113 POST/GET API, 사용자 UI Build 버튼/상태 표시, Windows package inclusion이 구현됐다. 이것은 설치된 artifact로 환경 manifest를 구성·검증하는 첫 P3-D slice다. **새 시즌 source refresh를 실행하거나 v191/v211/v213 collector를 호출하는 기능은 아니다.** source mode는 INSTALLED_VERSIONED_ARTIFACT_ONLY, refresh_performed=false이며 Network/Native/optimizer-cache mutation은 0이다.
 >
