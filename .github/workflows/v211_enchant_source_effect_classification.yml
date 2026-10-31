@@ -1,0 +1,92 @@
+name: v211 pinned SimC season enchant effect classification (no Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v211_enchant_source_effect_classification.py
+      - tests/test_v211_enchant_source_effect_classification.py
+      - .github/workflows/v211_enchant_source_effect_classification.yml
+      - data/current_season_simc_enchant_candidates.json
+      - data/v202_verified_enchant_8025_source.json
+      - data/v206_eagle_7967_windows_E0_proof.json
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: v211-pinned-enchant-source-classification
+  cancel-in-progress: false
+jobs:
+  classify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - name: Preserve authored LF on Windows
+        shell: bash
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Compile and focused offline tests
+        run: |
+          python -m py_compile runner/v211_enchant_source_effect_classification.py
+          python -m unittest -v tests.test_v211_enchant_source_effect_classification
+      - name: Download exact immutable SimC DBC and spell/effect source (no build, no Native)
+        env:
+          SIMC_COMMIT: 710c2408bfd3ae4df71b8cd55cdf01f63fd6c926
+        run: |
+          python - <<'PY'
+          import pathlib,urllib.request,os,re
+          commit=os.environ["SIMC_COMMIT"]
+          assert re.fullmatch(r"[a-f0-9]{40}",commit)
+          files={
+            "permanent_enchant.inc":"engine/dbc/generated/permanent_enchant.inc",
+            "spell_item_enchantment.inc":"engine/dbc/generated/spell_item_enchantment.inc",
+            "spelltext_data.inc":"engine/dbc/generated/spelltext_data.inc",
+            "data_enums.hh":"engine/dbc/data_enums.hh",
+            "unique_gear_midnight.cpp":"engine/player/unique_gear_midnight.cpp",
+            "enchants.cpp":"engine/item/enchants.cpp"
+          }
+          root=pathlib.Path("simc-source");root.mkdir(exist_ok=True)
+          for name,relative in files.items():
+              url=f"https://raw.githubusercontent.com/simulationcraft/simc/{commit}/{relative}"
+              request=urllib.request.Request(url,headers={"User-Agent":"SIMC-Secondary-v211-source-pin/1.0"})
+              with urllib.request.urlopen(request,timeout=40) as response:
+                  if response.status!=200:raise RuntimeError(f"SIMC_SOURCE_HTTP_{response.status}:{name}")
+                  raw=response.read(10_000_001)
+              if not raw or len(raw)>10_000_000:raise RuntimeError(f"SIMC_SOURCE_SIZE_INVALID:{name}")
+              (root/name).write_bytes(raw)
+              print("SOURCE_FETCHED",name,len(raw))
+          PY
+      - name: Compile all 38 exact DBC enchant rows, spell text and SimC handler registrations
+        run: |
+          python runner/v211_enchant_source_effect_classification.py --candidates data/current_season_simc_enchant_candidates.json --source-dir simc-source --proof-8025 data/v202_verified_enchant_8025_source.json --proof-7967 data/v206_eagle_7967_windows_E0_proof.json --out out/v211_current_season_enchant_effect_classification.json
+          python - <<'PY'
+          import json,pathlib
+          p=pathlib.Path("out/v211_current_season_enchant_effect_classification.json")
+          x=json.loads(p.read_text(encoding="utf8"))
+          assert x["status"]=="SOURCE_CLASSIFIED_NOT_GENERAL_NATIVE_ACCEPTANCE_OR_UI_PROMOTION"
+          assert x["counts"]=={"total":38,"static_chmv_rating":8,
+            "static_nonchmv_only_or_mixed":19,"spell_effects":15,
+            "native_E_measured":2,"user_selectable_existing_scope":1,
+            "developer_only_exact_scope":1,"locked":36}
+          assert x["native_calls"]==0 and x["automatic_ui_promotion"] is False
+          assert len(x["rows"])==38
+          print("V211_ALL_38_SOURCE_CLASSIFIED_NO_NATIVE_NO_UI_PROMOTION_PASS")
+          PY
+      - name: Retain compact source-classification receipt
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v211-enchant-effect-classification-${{ matrix.os }}
+          path: out/v211_current_season_enchant_effect_classification.json
+          retention-days: 7
+          if-no-files-found: warn
