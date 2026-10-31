@@ -137,7 +137,7 @@
 
 ### 구현 순서 및 현재 결손
 
-- **P3-A:** v191/v211/v196/v098/v208을 참조하는 단일 버전형 Environment Manifest 및 source dependency/invalidation contract. Native0 readiness preview와 unresolved join report.
+- **P3-A:** v212가 v191/v211/v196/v098의 기존 산출물을 참조하는 내부 버전형 Environment Manifest assembler를 첫 구현했다. v208은 아직 별도 입력으로 연결되지 않았고, dependency invalidation/orchestration은 미완료다. 아래 P3-A 검증 경계와 코드 리뷰 결손을 함께 적용한다.
 - **P3-B:** v191 source candidate → v211 classification → v196 approved catalog의 직접 artifact handoff. 부위별 카탈로그는 exact mask/item join에서 생성하고 discovery/classification과 UI selection을 분리.
 - **P3-C:** 승인된 선택값 → v098 대표 프로필/예산 → v208 선택 L → 기존 optimizer를 하나의 sealed environment로 연결하고 26 DPS 프로필 공급 확장.
 - **P3-D:** Windows 원클릭 Build/Start, progress, cancel/resume, incremental refresh, cache/evidence diagnostics.
@@ -152,3 +152,7 @@
 - 결과는 절대 로컬 경로와 전체 사용자 프로필 내용을 복제하지 않고 SHA·상대 profile file identity만 보존한다. 현재 26 DPS 프로필 공급 및 단일 source-to-catalog handoff가 미완료이므로 READY_WITH_LIMITATIONS가 정상 결과다.
 - 신규 `tests/test_v212_environment_manifest.py` **9 tests**; 최종 [Ubuntu/Windows Actions #41160002104](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41160002104) 각각 **9/9 PASS**, compile PASS, Native0/network0. 같은 source/profile을 다른 로컬 디렉터리로 옮겨도 manifest digest가 유지되는 relocation 안정성도 검증. v210/v211 기존 Native/캐시 증거는 재실행하지 않았고 무효화하지 않았다.
 - 이 단계는 P3-A의 artifact manifest/readiness 핵심만 구현했다. v191/v211/v196/v098을 자동 실행하는 production command, Build UI/API, 모든 26 DPS profile supplier, Windows one-click progress/cancel/resume는 미완료. 상세 `docs/P3_ENVIRONMENT_BUILDER_TARGET_ARCHITECTURE_20261031.md` §8.
+- **검증 적용 범위:** #41160002104의 Ubuntu/Windows 9/9는 synthetic JSON fixtures와 dummy binary 기반 계약 테스트다. 실제 production v191/v211/v196/v098 artifact를 연결한 종단 간 실행이 아니다.
+- **v212 코드 리뷰 결손:** `bootstrap_sha` 인자는 전달되지만 사용되지 않으며, raw v098 result SHA 대신 정규화한 일부 identity와 생성 파일 SHA가 결과에 반영된다. 또한 UI approval 경계는 selectable count 1만 검사하고 정확한 ID 7967을 v212 자체에서 확인하지 않는다. 현재 38 rows/1 selectable은 현 시즌 고정 상수다. v208 선택 L 영수증도 별도 manifest 입력이 아니다.
+- **P3-B의 실제 접합 지점:** v191 workflow는 `out/v191_unified_source_first_catalog.json`을 생성하지만 v211과 v196은 현재 고정 파일 `data/current_season_simc_enchant_candidates.json`(source artifact `12961140046`)을 읽는다. v196은 이 파일의 artifact ID 및 관련 source counts도 고정 검증한다. 따라서 v191 결과가 v211→v196으로 자동 전달되는 파이프라인은 아직 없다. P3-B에서 정확한 source SHA/build/revision/mask를 보존하는 adapter/artifact contract로 연결하되, 7967 외 선택을 자동 승격하지 않는다.
+- **소규모 분류 문구 결손:** v211 생성 코드와 runtime manifest의 limitations 문구가 'other six static CHMV ring enchants'라고 적혀 있다. 정적 CHMV 8종 중 8025만 E 실측됐으므로 미측정은 7종이다. 숫자/선택 경계/Native 결과에는 영향 없는 설명 오류이며, 후속 분류 산출물 갱신 때 7로 교정한다.
