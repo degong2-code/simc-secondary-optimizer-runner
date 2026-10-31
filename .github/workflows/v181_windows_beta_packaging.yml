@@ -49,12 +49,12 @@ on:
         description: Successful v213 source-to-catalog workflow run ID
         type: string
         required: true
-        default: "41178704794"
+        default: "41194394128"
       source_artifact:
         description: Exact v213 source-to-catalog artifact name
         type: string
         required: true
-        default: "v213-source-to-catalog-41178704794"
+        default: "v213-source-to-catalog-41194394128"
 permissions:
   contents: read
   actions: read
@@ -88,8 +88,8 @@ jobs:
       - name: Reuse exact source-backed v213 catalog artifact
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.source_artifact || 'v213-source-to-catalog-41178704794' }}
-          run-id: ${{ inputs.source_run_id || '41178704794' }}
+          name: ${{ inputs.source_artifact || 'v213-source-to-catalog-41194394128' }}
+          run-id: ${{ inputs.source_run_id || '41194394128' }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           path: p3c-source
       - name: Bind v213 catalog bytes into the Windows package workspace
