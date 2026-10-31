@@ -149,6 +149,16 @@ def compile_manifest(season, season_sha, enchants, enchants_sha,
     target_ilevel = bootstrap.get("target_ilevel")
     need(type(archetype) is str and type(target_ilevel) is int,
          "V098_TARGET_IDENTITY_MISSING")
+    bootstrap_identity = {
+        "schema": bootstrap["schema"],
+        "status": bootstrap["status"],
+        "template_archetype": archetype,
+        "target_ilevel": target_ilevel,
+        "base_B": plan["base_B"],
+        "final_T": plan["final_T"],
+        "native_calls": bootstrap["native_calls"],
+    }
+    bootstrap_identity_sha = sha(canonical(bootstrap_identity).encode("utf8"))
     limitations = []
     if bootstrap.get("all_specs_ready") is not True:
         limitations.append("V098_REPRESENTATIVE_ARCHETYPE_COVERAGE_INCOMPLETE")
@@ -184,7 +194,7 @@ def compile_manifest(season, season_sha, enchants, enchants_sha,
         },
         "target_profile": {
             "schema": bootstrap["schema"],
-            "sha256": bootstrap_sha,
+            "normalized_result_sha256": bootstrap_identity_sha,
             "template_archetype": archetype,
             "target_ilevel": target_ilevel,
             "base_B": plan["base_B"], "final_T": plan["final_T"],
