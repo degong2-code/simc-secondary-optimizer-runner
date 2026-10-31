@@ -70,7 +70,7 @@ jobs:
       - name: Compile all 38 exact DBC enchant rows, spell text and SimC handler registrations
         shell: bash
         run: |
-          python runner/v211_enchant_source_effect_classification.py --candidates data/current_season_simc_enchant_candidates.json --source-dir simc-source --proof-8025 data/v202_verified_enchant_8025_source.json --proof-7967 data/v206_eagle_7967_windows_E0_proof.json --out out/v211_current_season_enchant_effect_classification.json
+          python runner/v211_enchant_source_effect_classification.py --candidates data/current_season_simc_enchant_candidates.json --source-dir simc-source --proof-8025 data/v202_verified_enchant_8025_source.json --proof-7967 data/v206_eagle_7967_windows_E0_proof.json --runtime-manifest data/current_season_enchant_effect_classification.json --out out/v211_current_season_enchant_effect_classification.json
           python - <<'PY'
           import json,pathlib
           p=pathlib.Path("out/v211_current_season_enchant_effect_classification.json")
