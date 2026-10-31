@@ -207,6 +207,8 @@ class SourceToCatalogTests(unittest.TestCase):
 
     def test_actual_source_rows_join_and_v196_preserves_approval_boundary(self):
         result = self.compile()
+        repeat = self.compile()
+        self.assertEqual(result["manifest_sha256"], repeat["manifest_sha256"])
         self.assertTrue(v213.verify_catalog(result))
         self.assertEqual(result["status"],
                          "SOURCE_TO_CATALOG_JOINED_NOT_USER_PUBLISHED")
@@ -272,8 +274,13 @@ class SourceToCatalogTests(unittest.TestCase):
         with self.assertRaisesRegex(v213.CatalogBlocked, "GAME_BUILD_MISMATCH"):
             self.compile(season, classification)
 
-    def test_manifest_digest_detects_catalog_mutation(self):
-        result = self.compile()
+    def test_manifest_digest_detects_catalog_mutation_and_source_identity_change(self):
+        season, classification = self.build_inputs()
+        original = v213.compile_catalog(season, "a" * 64, classification, "b" * 64)
+        changed_source = v213.compile_catalog(season, "c" * 64, classification, "b" * 64)
+        self.assertNotEqual(original["manifest_sha256"],
+                            changed_source["manifest_sha256"])
+        result = original
         result["catalog_summary"]["gear"]["count"] = 0
         with self.assertRaisesRegex(v213.CatalogBlocked, "DIGEST_MISMATCH"):
             v213.verify_catalog(result)
