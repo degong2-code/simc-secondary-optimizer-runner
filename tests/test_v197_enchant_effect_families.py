@@ -69,6 +69,8 @@ class SourceRingEffectFamilies(unittest.TestCase):
                          ["TEMPORARY_MASTERY_RATING_PROC"])
         self.assertEqual(arcane["source_simc_custom_handlers"],
                          ["stat_weapon_enchant"])
+        self.assertTrue(all(not x["source_dynamic_chmv_proc_roles"]
+                            for x in rows if x["source_static_chmv_rating_present"]))
         # Cradle's effect text is a healing-triggered target barrier.
         cradle=by_id[8007]["source_effect_classification"]
         self.assertEqual(cradle["spell_effect_roles"],["ABSORB_OR_DEFENSIVE_PROC"])
@@ -91,6 +93,11 @@ class SourceRingEffectFamilies(unittest.TestCase):
         doc["simc_commit"]="0"*40
         with tempfile.TemporaryDirectory() as td:
             p=pathlib.Path(td)/"bad.json"
+            p.write_text(json.dumps(doc),encoding="utf8")
+            with self.assertRaisesRegex(ValueError,"PROVENANCE_INVALID"):
+                families.read_source_classification(p)
+            doc=json.loads(families.SOURCE_CLASSIFICATION_PATH.read_text("utf8"))
+            doc["source_files"]["spelltext_data.inc"]["sha256"]="0"*64
             p.write_text(json.dumps(doc),encoding="utf8")
             with self.assertRaisesRegex(ValueError,"PROVENANCE_INVALID"):
                 families.read_source_classification(p)
