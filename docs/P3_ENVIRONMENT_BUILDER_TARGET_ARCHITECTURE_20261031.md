@@ -77,11 +77,11 @@ A single record can have multiple compatible slots only when the exact source ma
 
 ## 7. Implementation roadmap and first integration slice
 
-**P3-A — artifact contract and gap closure (next):**
-- define one versioned Environment Manifest that references (not duplicates) the v191 source aggregation, v211 effect-classification manifest, v196 approved UI catalog, v098 representative profile, and v208 selected-L cache evidence;
-- add exact source/schema/hash dependency checks and incremental invalidation rules;
-- produce a no-Native readiness preview and clear missing-join report;
-- keep existing UI selection approvals unchanged.
+**P3-A — artifact contract and gap closure (v212 first implementation; not full acceptance):**
+- **Implemented in v212:** one versioned Environment Manifest references the existing v191 source aggregation, v211 effect-classification manifest, v196 approved UI catalog and v098 target-profile result without copying full profiles or absolute paths. v208 is **not yet a separate manifest input**; only the optional static-cache file referenced by the v098 target manifest is hashed.
+- **Implemented in v212:** exact schema/build/SimC-revision checks, source JSON SHA references, profile/scenario/fillers/manifest file identities, binary SHA, deterministic digest, fail-closed mismatches and Native0 manifest compilation.
+- **Partial / still open:** changed inputs alter the digest, but there is no production dependency-graph invalidation/orchestrator yet. The current fixed `unresolved_dependencies` list is not a dynamic missing-join report.
+- Keep existing UI selection approvals unchanged; the current manifest checks `selectable_count == 1` but does not itself assert that the sole selected enchant ID is exactly 7967.
 
 **P3-B — source-to-catalog integration:**
 - make v191-derived season candidates and v211 source classifications flow into v196 through a single versioned artifact contract; avoid hand-maintained duplicate candidate lists;
@@ -98,7 +98,7 @@ A single record can have multiple compatible slots only when the exact source ma
 
 **Acceptance criteria:** same inputs and source identity produce byte-stable manifest; unchanged artifacts are reused; a changed source invalidates only its dependents; unknown joins block only the affected choice rather than erasing unrelated options; plan mode Native0; Start makes only the selected missing static lookups; final profile retains full user-selected options; optimizer/cache/statistics behavior is the existing approved path.
 
-**Current state:** architecture contract only. Existing v191/v196/v098/v208/v211 pieces exist with their documented limits, but the unified Environment Builder, single end-to-end manifest, all-26 profile coverage, and final Windows one-click experience are not yet complete.
+**Current state:** architecture contract plus the v212 P3-A first manifest assembler. Its 9×2 tests use synthetic fixtures, not actual production v191/v211/v196/v098 artifacts. The production source-to-catalog chain, real artifact end-to-end manifest, all-26 profile coverage, explicit v208 selected-L receipt integration, dependency invalidation/orchestration, and final Windows one-click experience remain incomplete.
 
 
 ## 8. P3-A first implementation — v212 Environment Manifest assembler (2026-10-31)
@@ -116,6 +116,11 @@ It validates:
 
 The resulting manifest references the source component hashes and profile identities without copying the full user profile or emitting local absolute paths. Its digest is deterministic for the same inputs. It reports `READY_WITH_LIMITATIONS` while 26-spec profile coverage and source/catalog handoff are incomplete. A changed profile file changes the environment digest. Source/build/revision/approval/path mismatches fail closed. The module makes **Native0 and network0**.
 
-**New tests:** `tests/test_v212_environment_manifest.py`, 9 tests. The final run [Ubuntu + Windows focused #41160002104](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41160002104): **9/9 PASS on each OS**, compile PASS, Native0 marker PASS. This includes relocation stability: the same profile/source identity in a different local target directory yields the same Environment digest. No previous Native/cache evidence was rerun or invalidated.
+**New tests:** `tests/test_v212_environment_manifest.py`, 9 tests built from synthetic JSON fixtures and a dummy binary. The final run [Ubuntu + Windows focused #41160002104](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41160002104): **9/9 PASS on each OS**, compile PASS, Native0 marker PASS. This includes relocation stability: the same profile/source identity in a different local target directory yields the same Environment digest. This is contract testing, **not** a real v191→v211→v196→v098 end-to-end run. No previous Native/cache evidence was rerun or invalidated.
+
+**Code-review gaps to close before treating the manifest as a sealed production contract:**
+- The v212 input `bootstrap_sha` is accepted but currently unused. The output hashes a normalized subset of v098 identity plus its generated files; it does not include the raw bootstrap-result file SHA. Preserve relocation invariance, but make this normalized provenance contract explicit or correct it.
+- The current approval check validates only one selectable enchant by count, not the exact authorized ID 7967. v196's own tests separately assert 7967, but v212 should bind the exact approved identity.
+- Current-season constants `38` candidate rows and `1` selectable choice are pinned to this season; do not present v212 as season-agnostic until the versioned source contract makes those counts data-driven.
 
 **Not yet implemented:** automatic production invocation of v191/v211/v196/v098 into one command; a v191→v211→v196 source artifact pipeline; actual user Build button/API; 26 DPS representative profile suppliers; selected L/E lookup integration beyond existing v208; Windows one-click progress/cancel/resume. The current v212 CLI is an internal manifest assembler that requires its input artifacts to have already been produced. It does not make the product Environment Builder complete.
