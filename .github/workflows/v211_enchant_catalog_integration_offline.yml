@@ -42,6 +42,7 @@ jobs:
           python -m py_compile runner/v196_current_season_user_catalog.py runner/v197_enchant_effect_families.py
           python -m unittest -v tests.test_v197_enchant_effect_families tests.test_v197_verified_effect_budget tests.test_v196_current_season_ui_catalog tests.test_v206_nonchmv_user_path tests.test_v202_one_enchant_admission tests.test_v202_enchant_scheduler_floor tests.test_v113_local_web_api_offline tests.test_v114_local_web_ui_offline
       - name: Compact catalog integration receipt; no Native and no selection expansion
+        shell: bash
         run: |
           python - <<'PY'
           import json,pathlib,sys
