@@ -10,6 +10,11 @@ on:
       - runner/v193_simc_local_updater.py
       - runner/v113_local_web_api.py
       - runner/v196_current_season_user_catalog.py
+      - runner/v213_source_to_catalog.py
+      - data/current_season_source_to_catalog.json
+      - integration_probes/v181_windows_beta_live_http.py
+      - integration_probes/v181_windows_beta_packager.py
+      - tests/test_v113_local_web_api_offline.py
       - data/current_season_simc_enchant_candidates.json
       - tests/test_v196_current_season_ui_catalog.py
       - runner/v197_verified_effect_budget.py
@@ -34,8 +39,21 @@ on:
       - tests/test_v193_local_web_simc_update_api.py
       - START_SIMC_OPTIMIZER_WEB_WINDOWS.cmd
       - .github/workflows/v181_windows_beta_packaging.yml
+  workflow_dispatch:
+    inputs:
+      source_run_id:
+        description: Successful v213 source-to-catalog workflow run ID
+        type: string
+        required: true
+        default: "41172423986"
+      source_artifact:
+        description: Exact v213 source-to-catalog artifact name
+        type: string
+        required: true
+        default: "v213-source-to-catalog-41172423986"
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: v181-windows-beta-one-source-package
   cancel-in-progress: false
@@ -63,6 +81,21 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.py }}
+      - name: Reuse exact source-backed v213 catalog artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.source_artifact || 'v213-source-to-catalog-41172423986' }}
+          run-id: ${{ inputs.source_run_id || '41172423986' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: p3c-source
+      - name: Bind v213 catalog bytes into the Windows package workspace
+        shell: pwsh
+        run: |
+          $source = Join-Path $PWD "p3c-source/v213_current_season_source_to_catalog.json"
+          if (!(Test-Path $source -PathType Leaf)) { throw "V213_SOURCE_ARTIFACT_FILE_MISSING" }
+          Copy-Item $source "data/current_season_source_to_catalog.json" -Force
+          python -c "import json,sys;sys.path.insert(0,'runner');import v213_source_to_catalog as v;p=json.load(open('data/current_season_source_to_catalog.json',encoding='utf8'));assert v.verify_catalog(p);assert p['native_calls']==0 and p['network_calls']==0 and p['automatic_ui_promotion'] is False;print('V181_V213_SOURCE_ARTIFACT_VALIDATED',p['manifest_sha256'])"
+          if ($LASTEXITCODE -ne 0) { throw "V213_SOURCE_CATALOG_VALIDATION_FAILED" }
       - name: Install only current Windows web-test dependencies, no SimC
         shell: pwsh
         run: |

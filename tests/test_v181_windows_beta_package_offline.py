@@ -35,6 +35,18 @@ class WindowsBetaPackageOffline(unittest.TestCase):
                                      for s in names))
                 stored=json.loads(archive.read(pack.PREFIX+"/V181_PACKAGE_MANIFEST.json"))
                 self.assertEqual(stored,manifest)
+                source_raw=archive.read(
+                    pack.PREFIX+"/data/current_season_source_to_catalog.json")
+                source_doc=json.loads(source_raw)
+                self.assertEqual(stored["source_catalog"]["schema"],
+                                 "v213_current_season_source_to_catalog_v1")
+                self.assertEqual(stored["source_catalog"]["artifact_sha256"],
+                                 hashlib.sha256(source_raw).hexdigest())
+                self.assertEqual(stored["source_catalog"]["manifest_sha256"],
+                                 source_doc["manifest_sha256"])
+                self.assertEqual(stored["source_catalog"]["native_calls"],0)
+                self.assertEqual(stored["source_catalog"]["network_calls"],0)
+                self.assertFalse(stored["source_catalog"]["automatic_ui_promotion"])
                 for rec in stored["files"]:
                     source=archive.read(pack.PREFIX+"/"+rec["path"])
                     self.assertEqual(len(source),rec["size"],rec["path"])

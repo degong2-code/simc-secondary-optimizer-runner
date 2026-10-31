@@ -6,6 +6,7 @@ season user plans and restored identities over actual loopback port.
 """
 from __future__ import annotations
 import argparse
+import hashlib
 import json
 import os
 import pathlib
@@ -45,8 +46,23 @@ def run(archive_path):
     with tempfile.TemporaryDirectory(prefix="v181_windows_beta_") as tmp:
         work=pathlib.Path(tmp)
         with zipfile.ZipFile(archive_path) as archive:
-            # The packager is trusted only after tests validate its exact roots.
+            # The package manifest binds the exact v213 source artifact bytes.
             names=archive.namelist()
+            package_manifest=json.loads(archive.read(
+                "SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA/V181_PACKAGE_MANIFEST.json"))
+            source_meta=package_manifest.get("source_catalog")
+            need(type(source_meta) is dict and
+                 source_meta.get("schema")=="v213_current_season_source_to_catalog_v1",
+                 "V213_PACKAGE_IDENTITY_MISSING")
+            source_member=("SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA/"+
+                           "data/current_season_source_to_catalog.json")
+            source_raw=archive.read(source_member)
+            source_doc=json.loads(source_raw)
+            need(hashlib.sha256(source_raw).hexdigest()==
+                 source_meta.get("artifact_sha256") and
+                 source_doc.get("manifest_sha256")==
+                 source_meta.get("manifest_sha256"),
+                 "V213_PACKAGE_SOURCE_SHA_MISMATCH")
             need(all(n.startswith("SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA/")
                      and ".." not in pathlib.PurePosixPath(n).parts
                      for n in names),"INVALID_ZIP_MEMBER")
@@ -126,6 +142,14 @@ def run(archive_path):
                      season_options["enchant_candidates"]["selectable_count"]==1 and
                      season_options["native_calls_now"]==0,
                      "V196_WINDOWS_UNAPPROVED_ENCHANT_CATALOG_CONTRACT")
+                active_source=season_options.get("source_catalog") or {}
+                need(active_source.get("schema")==source_meta["schema"] and
+                     active_source.get("manifest_sha256")==
+                         source_meta["manifest_sha256"] and
+                     season_options["season_build"]==source_meta["game_build"] and
+                     season_options["simc_revision"]==source_meta["simc_revision"],
+                     "V181_WINDOWS_V213_CATALOG_NOT_ACTIVE_IN_API")
+                print("V181_WINDOWS_PACKAGED_V213_SOURCE_CATALOG_ACTIVE_PASS",flush=True)
                 print("V206_WINDOWS_SOURCE_OPTIONS_EAGLE_ONE_OTHERS_LOCKED_NATIVE_ZERO_PASS",flush=True)
                 status,gear=http(base,"/api/v1/season-gear",token=token)
                 need(status==200 and gear.get("status")==

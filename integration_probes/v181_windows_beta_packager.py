@@ -10,9 +10,12 @@ import argparse
 import hashlib
 import json
 import pathlib
+import sys
 import zipfile
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/"runner"))
+import v213_source_to_catalog as source_bridge
 PREFIX="SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA"
 SCHEMA="v181_windows_local_web_beta_source_package_v1"
 BASE_FILES=(
@@ -41,6 +44,7 @@ MANDATORY=(
     "data/current_season_product_gear_db.json",
     "data/current_season_tier_itemsets.json",
     "data/current_season_chmv_consumables.json",
+    "data/current_season_source_to_catalog.json",
     "integration_probes/catalog/v144_mid2_season_items.json",
     "integration_probes/catalog/v146_character_starter_examples.json",
     "integration_probes/data/midnight_s2_ilvl_chmv_reference_v1.json",
@@ -49,6 +53,37 @@ class PackageBlocked(ValueError):pass
 
 def need(value,reason):
     if not value:raise PackageBlocked("V181_"+reason)
+
+def source_catalog_identity(root):
+    path=pathlib.Path(root)/"data/current_season_source_to_catalog.json"
+    need(path.is_file() and not path.is_symlink(),
+         "V213_SOURCE_CATALOG_MISSING")
+    raw=path.read_bytes()
+    try:
+        document=json.loads(raw.decode("utf8"))
+        source_bridge.verify_catalog(document)
+    except Exception as exc:
+        raise PackageBlocked("V213_SOURCE_CATALOG_INVALID:"+
+                             type(exc).__name__) from exc
+    need(document.get("schema")==source_bridge.SCHEMA and
+         document.get("status")=="SOURCE_TO_CATALOG_JOINED_NOT_USER_PUBLISHED" and
+         document.get("native_calls")==0 and
+         document.get("network_calls")==0 and
+         document.get("automatic_ui_promotion") is False and
+         document.get("selection_state_mutated") is False and
+         document.get("simc_effect_reimplemented") is False,
+         "V213_SOURCE_CATALOG_CONTRACT_INVALID")
+    return {
+        "path":path.relative_to(pathlib.Path(root).resolve()).as_posix(),
+        "schema":document["schema"],
+        "game_build":document["game_build"],
+        "simc_revision":document["simc_revision"],
+        "artifact_sha256":hashlib.sha256(raw).hexdigest(),
+        "manifest_sha256":document["manifest_sha256"],
+        "native_calls":document["native_calls"],
+        "network_calls":document["network_calls"],
+        "automatic_ui_promotion":document["automatic_ui_promotion"],
+    }
 
 def select(root=ROOT):
     root=pathlib.Path(root).resolve()
@@ -80,7 +115,9 @@ def select(root=ROOT):
 
 def build(target,root=ROOT):
     target=pathlib.Path(target).resolve()
+    root=pathlib.Path(root).resolve()
     choices=select(root)
+    source_identity=source_catalog_identity(root)
     need(target.suffix.lower()==".zip","ZIP_EXTENSION_REQUIRED")
     target.parent.mkdir(parents=True,exist_ok=True)
     records=[]
@@ -97,7 +134,8 @@ def build(target,root=ROOT):
               "dependency_auto_install":False,
               "historical_native_json2_bundled":False,
               "sessions_bundled":False,
-              "runtime_identity_bytes_unchanged":True}
+              "runtime_identity_bytes_unchanged":True,
+              "source_catalog":source_identity}
     manifest_raw=(json.dumps(manifest,ensure_ascii=False,
             indent=2,sort_keys=True)+"\n").encode("utf8")
     # DOS epoch permits reproducible metadata even across Linux/Windows.

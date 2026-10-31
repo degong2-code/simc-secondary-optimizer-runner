@@ -40,6 +40,24 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(r.status_code,200,r.text)
         return r.json()
 
+    def test_packaged_v213_catalog_path_is_detected_and_missing_path_falls_back(self):
+        jobs=web.LocalJobs(self.root/"runs")
+        expected=(pathlib.Path(web.__file__).resolve().parents[1]/
+                  "data"/"current_season_source_to_catalog.json")
+        original=pathlib.Path.is_file
+        def only_catalog_present(path):
+            if path.resolve()==expected.resolve():
+                return True
+            return original(path)
+        with mock.patch.object(pathlib.Path,"is_file",only_catalog_present):
+            self.assertEqual(jobs.source_catalog_path(),expected)
+        def catalog_absent(path):
+            if path.resolve()==expected.resolve():
+                return False
+            return original(path)
+        with mock.patch.object(pathlib.Path,"is_file",catalog_absent):
+            self.assertIsNone(jobs.source_catalog_path())
+
     def test_bootstrap_health_and_all_26_dps_defaults_no_simc(self):
         health=self.client.get("/api/v1/health")
         self.assertEqual(health.status_code,200)
