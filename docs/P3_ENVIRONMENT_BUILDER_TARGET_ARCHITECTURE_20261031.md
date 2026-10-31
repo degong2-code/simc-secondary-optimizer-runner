@@ -99,3 +99,23 @@ A single record can have multiple compatible slots only when the exact source ma
 **Acceptance criteria:** same inputs and source identity produce byte-stable manifest; unchanged artifacts are reused; a changed source invalidates only its dependents; unknown joins block only the affected choice rather than erasing unrelated options; plan mode Native0; Start makes only the selected missing static lookups; final profile retains full user-selected options; optimizer/cache/statistics behavior is the existing approved path.
 
 **Current state:** architecture contract only. Existing v191/v196/v098/v208/v211 pieces exist with their documented limits, but the unified Environment Builder, single end-to-end manifest, all-26 profile coverage, and final Windows one-click experience are not yet complete.
+
+
+## 8. P3-A first implementation — v212 Environment Manifest assembler (2026-10-31)
+
+**Implemented on the isolated branch:** `runner/v212_environment_manifest.py` is a deterministic, no-Native artifact join. It consumes existing v191 season-candidate JSON, v211 enchant-classification JSON, v196 approved UI-catalog JSON, v098 preparation result, and the v098 target folder. It does not call any collector, API, SimC binary, or optimizer.
+
+It validates:
+- exact v191/v211/v196/v098 schema contracts;
+- same season/game build and exact 40-character SimC revision across v191, v211 and v196;
+- 38 enchant rows and current selectable-count boundary of exactly one;
+- source candidate/classifier Native0 and no automatic UI promotion;
+- v098 plan-ready status, target archetype/ilvl/B/T, generated profile manifest and the four exact generated files;
+- target SimC binary SHA, optional static-cache SHA, and profile/scenario/fillers/manifest SHA;
+- target manifest revision and existing adaptive Native limit 6.
+
+The resulting manifest references the source component hashes and profile identities without copying the full user profile or emitting local absolute paths. Its digest is deterministic for the same inputs. It reports `READY_WITH_LIMITATIONS` while 26-spec profile coverage and source/catalog handoff are incomplete. A changed profile file changes the environment digest. Source/build/revision/approval/path mismatches fail closed. The module makes **Native0 and network0**.
+
+**New tests:** `tests/test_v212_environment_manifest.py`, 8 tests. [Ubuntu + Windows focused #41159726342](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41159726342): **8/8 PASS on each OS**, compile PASS, Native0 marker PASS. No previous Native/cache evidence was rerun or invalidated.
+
+**Not yet implemented:** automatic production invocation of v191/v211/v196/v098 into one command; a v191→v211→v196 source artifact pipeline; actual user Build button/API; 26 DPS representative profile suppliers; selected L/E lookup integration beyond existing v208; Windows one-click progress/cancel/resume. The current v212 CLI is an internal manifest assembler that requires its input artifacts to have already been produced. It does not make the product Environment Builder complete.
