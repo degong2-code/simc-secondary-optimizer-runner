@@ -2,7 +2,7 @@ name: v210 one gemmed special bare L Windows Native L1 DPS6 cache6
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
-    paths: [.github/workflows/v210_one_special_full_windows_native.yml]
+    paths: [.github/workflows/v210_one_gemmed_neck_full_windows_native.yml]
 permissions:
   contents: read
   actions: read
