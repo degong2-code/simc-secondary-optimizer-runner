@@ -91,7 +91,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 7959,
@@ -111,7 +113,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 7961,
@@ -135,7 +139,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 1
     },
     {
       "enchant_id": 7963,
@@ -156,7 +162,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 7965,
@@ -180,7 +188,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 7967,
@@ -207,7 +217,11 @@
       },
       "selection_status": "EXISTING_EAGLE_ONE_SCOPE_USER_CHOICE",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [
+        "eyes_of_the_eagle"
+      ],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 7969,
@@ -231,7 +245,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 7971,
@@ -251,7 +267,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 7973,
@@ -271,7 +289,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 7979,
@@ -293,7 +313,11 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [
+        "strength_of_halazzi"
+      ],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 7981,
@@ -317,7 +341,11 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [
+        "stat_weapon_enchant"
+      ],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 7983,
@@ -341,7 +369,11 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [
+        "stat_weapon_enchant"
+      ],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 7985,
@@ -362,7 +394,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 7987,
@@ -382,7 +416,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 7989,
@@ -402,7 +438,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 7991,
@@ -426,7 +464,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 1
     },
     {
       "enchant_id": 7993,
@@ -447,7 +487,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 7995,
@@ -471,7 +513,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 7997,
@@ -495,7 +539,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 7999,
@@ -515,7 +561,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 8001,
@@ -535,7 +583,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 8007,
@@ -557,7 +607,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 1
     },
     {
       "enchant_id": 8009,
@@ -579,7 +631,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 1
     },
     {
       "enchant_id": 8011,
@@ -603,7 +657,11 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [
+        "stat_weapon_enchant"
+      ],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 8013,
@@ -627,7 +685,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 1
     },
     {
       "enchant_id": 8015,
@@ -647,7 +707,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 8017,
@@ -671,7 +733,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 1
     },
     {
       "enchant_id": 8019,
@@ -692,7 +756,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 8021,
@@ -716,7 +782,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 8023,
@@ -740,7 +808,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 8025,
@@ -769,7 +839,9 @@
       },
       "selection_status": "DEVELOPER_ONLY_EXACT_SCOPE",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 8027,
@@ -793,7 +865,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 8029,
@@ -813,7 +887,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 8031,
@@ -833,7 +909,9 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 8037,
@@ -855,7 +933,11 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [
+        "flames_of_the_sindorei"
+      ],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 8039,
@@ -877,7 +959,11 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [
+        "stat_weapon_enchant"
+      ],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 8041,
@@ -901,7 +987,11 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [
+        "stat_weapon_enchant"
+      ],
+      "simc_generic_or_unregistered_spell_count": 0
     },
     {
       "enchant_id": 8689,
@@ -925,7 +1015,11 @@
       "native_E": null,
       "selection_status": "LOCKED_NO_GENERAL_USER_ADMISSION",
       "simc_effect_owner": "SIMC",
-      "simc_effect_reimplemented": false
+      "simc_effect_reimplemented": false,
+      "simc_custom_handlers": [
+        "rite_of_the_hashey"
+      ],
+      "simc_generic_or_unregistered_spell_count": 0
     }
   ]
 }
