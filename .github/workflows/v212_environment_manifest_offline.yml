@@ -5,6 +5,9 @@ on:
     paths:
       - runner/v212_environment_manifest.py
       - runner/v216_environment_build_coordinator.py
+      - runner/v217_stage_execution_engine.py
+      - runner/v218_v098_profile_stage_adapter.py
+      - tests/test_v217_stage_execution_engine.py
       - runner/v208_internal_exact_special_L_hydrator.py
       - runner/v213_source_to_catalog.py
       - runner/v196_current_season_user_catalog.py
@@ -35,7 +38,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Compile source catalog, approval adapter and manifest modules
-        run: python -m py_compile runner/v143_specialization_contracts.py runner/v196_current_season_user_catalog.py runner/v206_nonchmv_eagle_selection.py runner/v208_internal_exact_special_L_hydrator.py runner/v213_source_to_catalog.py runner/v212_environment_manifest.py runner/v216_environment_build_coordinator.py tests/test_v213_source_to_catalog.py tests/test_v212_environment_manifest.py
+        run: python -m py_compile runner/v143_specialization_contracts.py runner/v196_current_season_user_catalog.py runner/v206_nonchmv_eagle_selection.py runner/v208_internal_exact_special_L_hydrator.py runner/v213_source_to_catalog.py runner/v212_environment_manifest.py runner/v216_environment_build_coordinator.py runner/v217_stage_execution_engine.py runner/v218_v098_profile_stage_adapter.py tests/test_v213_source_to_catalog.py tests/test_v217_stage_execution_engine.py tests/test_v212_environment_manifest.py
       - name: Deterministic v213 provenance, exact 7967 approval, v098 profile and relocation checks
         run: python -m unittest -v tests.test_v213_source_to_catalog tests.test_v212_environment_manifest tests.test_v216_environment_build_coordinator
       - name: Assert no Native output was created
