@@ -44,7 +44,7 @@ def _profile_supplier_registry():
     # only: no Native, no network, and no legacy profile text read.
     import v106_user_session_controller as sessions
     contracts=tuple(sorted(source_first.contracts.CONTRACTS))
-    legacy=tuple(sorted(ARCHETYPES))
+    legacy=tuple(sorted("/".join(x) for x in ARCHETYPES))
     independent=tuple(sorted("/".join(x) for x in PURE_PRODUCT_SPECS))
     supported=tuple(sorted("/".join(x) for x in sessions.SUPPORTED))
     starters=tuple(sorted(
