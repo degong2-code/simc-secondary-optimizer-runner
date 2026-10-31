@@ -1,0 +1,84 @@
+{
+  "schema": "v210_gemmed_special_bare_L_full_windows_verified_successor_v1",
+  "status": "PASS_ONE_SOURCE_GEMMED_SPECIAL_BARE_L_NATIVE1_DPS6_CACHE6",
+  "evidence": {
+    "actions_run_id": 41152171198,
+    "job_id": 124390957066,
+    "source_commit": "4ee7842846ae50b340f6f5c2df6b127691beb4a0",
+    "artifact_id": 13023806394,
+    "artifact_zip_sha256": "43b384800b74918eea6ad71569537ad66c84d53b0f56aecc5c0869d3f0666cf4",
+    "simc_windows_executable_sha256": "0ad16368cd1effb19c793dbce63518ccb72fec89c72f6ef75d9afca239a039e8",
+    "full_dps_profile_sha256": "fb83f7c81fc755bfc57e3577a0939ca71ca4dd61d8a38d549ca5bea6d31527dd",
+    "bare_L_native_json2_sha256": "b42b1425231b76f9024465cb4f97766a728b08599c43d8fc93e96d089c676cc9",
+    "static_cache_snapshot_sha256": "bac5994ed951bca3c0524600cfdfd10e2199df803ce2af5d5b50bba347559038"
+  },
+  "scope": {
+    "class": "shaman",
+    "spec": "elemental",
+    "target_ilevel": 331,
+    "selected_full_item": {
+      "season": "midnight_s2",
+      "item_id": 268250,
+      "ilevel": 331,
+      "slot": "neck",
+      "options": {
+        "gem_id": "240900/240900"
+      }
+    },
+    "native_measured_bare_item": {
+      "season": "midnight_s2",
+      "item_id": 268250,
+      "ilevel": 331,
+      "slot": "neck",
+      "options": {}
+    }
+  },
+  "observed": {
+    "fixed_intrinsic_L": {
+      "crit_rating": 93,
+      "haste_rating": 305,
+      "mastery_rating": 0,
+      "versatility_rating": 0
+    },
+    "automatic_B": 3110,
+    "fixed_oil_O": 32,
+    "final_T": 3142,
+    "extra_L_added_to_B_or_T": 0,
+    "selected_full_DPS_neck_preserved_gem": true,
+    "static_L_new_native_calls": 1,
+    "dps_new_native_calls": 6,
+    "dps_replay_cache_hits": 6,
+    "additional_native_on_static_replay": 0,
+    "additional_native_on_dps_replay": 0,
+    "first_choice_dps": 202301.8300481545,
+    "simc_sem": 346.17525001684186,
+    "confidence_level": 0.95,
+    "global_optimum_proven": false
+  },
+  "six_dps_native_json2_sha256": {
+    "confirmations/confirm_00/result.json": "9234796e57e94c2197b83200a33e702e4005ffe298dd6677790d7cd790c716a2",
+    "confirmations/confirm_01/result.json": "e8d1b171026886fe33e7b946a127199841f4f479ca8f273200484f741fc9dc82",
+    "search/material_00/result.json": "2acb51df2fe2418ccb370ffc51d0b3c1e6ddb062d259aac0e6fafa477445a2df",
+    "search/scout_00/result.json": "06f6009f07f3d0594b44a10dbc95e9d424b9ba94c5a7e20400b24a79fa3b8ec6",
+    "search/seed_00/result.json": "5c2a1f2b35af9ea23174d31a347451e1cb31dc80ed61b5908252f78a281805a3",
+    "search/seed_01/result.json": "388570920b2bdd36685d2bd846005e5ccc6c2e1dab41119d5f86bee45cec3c85"
+  },
+  "focused_regression": {
+    "run_id": 41152031433,
+    "ubuntu_tests_pass": 127,
+    "windows_tests_pass": 127,
+    "new_native": 0,
+    "legacy_v098_regression_run": 41151976759,
+    "status": "success"
+  },
+  "not_proven": [
+    "Other item IDs, targets, classes, different gem/enchant combinations, or 26-specialization coverage",
+    "General permanent rating-enchant on the same selected special item (existing v202 safety contract remains)",
+    "Independent verification of all gem effects/stat contributions to J apart from SimC and existing budget contracts",
+    "Windows user desktop GUI physical clicks or original v016 integration",
+    "Global optimality or DPS improvement over a different user loadout"
+  ],
+  "independent_simc_effect_model": false,
+  "main_branch_unchanged": true,
+  "original_artifact_bytes_unchanged": true
+}
