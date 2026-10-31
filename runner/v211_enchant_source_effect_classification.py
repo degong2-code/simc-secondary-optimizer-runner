@@ -66,6 +66,9 @@ def build_from_header(text,label):
     need(m is not None,"SIMC_SOURCE_BUILD_HEADER_MISSING:"+label)
     return m.group(1)
 def parse_permanent(text):
+    # The full historical SimC DBC array may repeat an enchant ID across
+    # different item masks/tokens. Preserve all rows and match the exact
+    # v191 token+rank+class+mask identity; never assume ID alone is unique.
     rows={}
     for line in text.splitlines():
         if not line.lstrip().startswith("{"):continue
@@ -75,8 +78,7 @@ def parse_permanent(text):
         row={"enchant_id":int(eid),"quality_rank":int(rank),
              "item_class":int(item_class),"inventory_type_mask":int(inv,16),
              "item_subclass_mask":int(sub,16),"token":token}
-        need(row["enchant_id"] not in rows,"SIMC_PERMANENT_ENCHANT_DUPLICATE_ID")
-        rows[row["enchant_id"]]=row
+        rows.setdefault(row["enchant_id"],[]).append(row)
     return rows
 def ints(raw):
     return [int(x.strip(),0) for x in raw.split(",")]
@@ -313,12 +315,13 @@ def compile_catalog(candidates,source_dir,proof_8025,proof_7967):
     ids={r["enchant_id"] for r in candidates["rows"]}
     need(len(ids)==38,"V191_ENCHANT_IDS_DUPLICATE")
     for row in candidates["rows"]:
-        source=permanent.get(row["enchant_id"])
-        need(source is not None and source["token"]==row["token"]
-             and source["quality_rank"]==row["quality_rank"]
-             and source["item_class"]==row["item_class"]
-             and source["inventory_type_mask"]==row["inventory_type_mask"]
-             and source["item_subclass_mask"]==row["item_subclass_mask"],
+        matches=[source for source in permanent.get(row["enchant_id"],[])
+                 if source["token"]==row["token"]
+                 and source["quality_rank"]==row["quality_rank"]
+                 and source["item_class"]==row["item_class"]
+                 and source["inventory_type_mask"]==row["inventory_type_mask"]
+                 and source["item_subclass_mask"]==row["item_subclass_mask"]]
+        need(len(matches)==1,
              "V191_CANDIDATE_VS_PINNED_PERMANENT_SOURCE_DRIFT:"+str(row["enchant_id"]))
     dbc=parse_dbc_rows(sources["spell_item_enchantment.inc"],ids)
     enums=parse_enums(sources["data_enums.hh"])
