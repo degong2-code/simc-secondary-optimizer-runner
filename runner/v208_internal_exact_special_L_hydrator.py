@@ -170,6 +170,10 @@ def hydrate(user,root,binary,revision,existing=None,*,timeout=MAX_SECONDS):
     staged=bootstrap.build(user,root.parent/"static-item-prebudget-no-write",
                            binary,revision,static_special_probe_only=True,
                            current_season_product=True)
+    for row in staged["special_rows"]:
+        modifiers=set(row["options"]) & budget.MODIFIERS_WITH_BUDGET_AMBIGUITY
+        need(not modifiers or (modifiers=={"gem_id"} and budget.primary_only_head_gem(row)),
+             "SPECIAL_L_DECORATED_NUMERIC_VARIANT_NOT_YET_ATTRIBUTABLE")
     initial=item_cache.load(pathlib.Path(existing)) if existing else item_cache.empty_cache()
     missing=missing_specials(initial,staged)
     if not missing:
