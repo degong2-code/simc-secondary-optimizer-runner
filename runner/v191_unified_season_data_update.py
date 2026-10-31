@@ -245,6 +245,10 @@ def compile_catalog(gear,tier,budget,effects,consumables,generated,*,event):
       "schema":SCHEMA,"status":"SOURCE_COMBINED_NOT_YET_USER_SELECTABLE",
       "update_event":event,"game_build":build,"expansion_id":gear["expansion_id"],
       "simc_revision":effects["source"]["commit"],"simc_generated_builds":builds,
+      "simc_generated_sources":{
+        name:{"source_build":value["source_build"],
+              "declared_rows":value["declared_rows"],"sha256":value["sha256"]}
+        for name,value in sorted(generated.items())},
       "warnings":warnings,"native_calls":0,"network_calls_by_compiler":0,
       "source_first":True,"automatic_ui_promotion":False,
       "source_artifacts":{

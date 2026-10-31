@@ -69,6 +69,14 @@ class SourceToCatalogTests(unittest.TestCase):
             "game_build": "12.1.5.70575",
             "expansion_id": 11,
             "simc_revision": "710c2408bfd3ae4df71b8cd55cdf01f63fd6c926",
+            "simc_generated_sources": {
+                name: {
+                    "source_build": "12.1.5.70575",
+                    "declared_rows": 100 if name == "permanent_enchant" else 50,
+                    "sha256": "6" * 64,
+                }
+                for name in ("permanent_enchant", "temporary_enchant", "gem_property")
+            },
             "source_artifacts": {
                 "v189": {
                     "schema": "v189_pinned_simc_effect_registration_candidates_v1",

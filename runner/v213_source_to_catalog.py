@@ -357,6 +357,22 @@ def compile_catalog(season, season_sha, classification, classification_sha):
          classification.get("simc_commit") == revision,
          "SOURCE_CATALOG_SIMC_REVISION_MISMATCH")
 
+    input_hashes = season.get("sha256_by_input", {})
+    need(type(input_hashes) is dict and set(input_hashes) ==
+         {"gear","tier","budget","v189","v190"} and
+         all(type(value) is str and len(value)==64 and
+             all(ch in "0123456789abcdef" for ch in value)
+             for value in input_hashes.values()),
+         "V191_INPUT_SOURCE_SHA256_MISSING_OR_INVALID")
+    generated_sources = season.get("simc_generated_sources", {})
+    need(type(generated_sources) is dict and set(generated_sources) ==
+         {"permanent_enchant","temporary_enchant","gem_property"} and
+         all(type(row) is dict and row.get("source_build") == build and
+             type(row.get("declared_rows")) is int and row["declared_rows"] > 0 and
+             type(row.get("sha256")) is str and len(row["sha256"]) == 64 and
+             all(ch in "0123456789abcdef" for ch in row["sha256"])
+             for row in generated_sources.values()),
+         "V191_SIMC_GENERATED_SOURCE_SHA256_MISSING_OR_INVALID")
     source_artifacts = season.get("source_artifacts", {})
     v189 = source_artifacts.get("v189", {})
     v190 = source_artifacts.get("v190", {})
@@ -468,6 +484,7 @@ def compile_catalog(season, season_sha, classification, classification_sha):
                 "sha256": season_sha,
                 "source_artifacts": season.get("source_artifacts"),
                 "sha256_by_input": season.get("sha256_by_input"),
+                "simc_generated_sources": generated_sources,
             },
             "v211": {
                 "schema": V211,

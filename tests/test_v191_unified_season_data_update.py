@@ -117,6 +117,10 @@ class UnifiedCatalogTest(unittest.TestCase):
         self.assertEqual(result["tier"]["piece_count"],65)
         self.assertEqual(len(result["tier"]["classes"]),13)
         self.assertEqual(result["tier"]["classes"]["deathknight"]["pieces"]["head"],271474)
+        self.assertEqual(set(result["simc_generated_sources"]),
+                         {"permanent_enchant","temporary_enchant","gem_property"})
+        self.assertTrue(all(len(x["sha256"])==64
+                            for x in result["simc_generated_sources"].values()))
         self.assertEqual(result["related_source_counts"],{
             "gear_item_candidates":511,"tier_piece_ids":65,
             "food_raw_item_candidates":1,"potion_raw_item_candidates":1,
