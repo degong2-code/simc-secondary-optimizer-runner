@@ -78,10 +78,10 @@ A single record can have multiple compatible slots only when the exact source ma
 ## 7. Implementation roadmap and first integration slice
 
 **P3-A — artifact contract and gap closure (v212 first implementation; not full acceptance):**
-- **Implemented in v212:** one versioned Environment Manifest references the existing v191 source aggregation, v211 effect-classification manifest, v196 approved UI catalog and v098 target-profile result without copying full profiles or absolute paths. v208 is **not yet a separate manifest input**; only the optional static-cache file referenced by the v098 target manifest is hashed.
-- **Implemented in v212:** exact schema/build/SimC-revision checks, source JSON SHA references, profile/scenario/fillers/manifest file identities, binary SHA, deterministic digest, fail-closed mismatches and Native0 manifest compilation.
-- **Partial / still open:** changed inputs alter the digest, but there is no production dependency-graph invalidation/orchestrator yet. The current fixed `unresolved_dependencies` list is not a dynamic missing-join report.
-- Keep existing UI selection approvals unchanged; the current manifest checks `selectable_count == 1` but does not itself assert that the sole selected enchant ID is exactly 7967.
+- **Implemented in v212 v2:** the Environment Manifest now consumes the actual v213 source-to-catalog artifact directly, derives the existing v196 approved UI projection from the same exact file path, and binds both the artifact byte SHA and embedded manifest digest. It no longer accepts three separately supplied v191/v211/v196 JSON documents as independent authorities.
+- **Implemented:** exact v191/v211 component SHA and generated SimC source hashes, same game build/40-character SimC revision, v196 projection identity, exact selectable ID **7967 only**, 8025 developer-only, all other 36 locked, and v098 current-season profile identity. The selected 7967 must appear exactly once on the profile ring line and retain static E=0/no CHMV budget increment.
+- **Implemented:** normalized v098 semantic identity plus generated profile/scenario/fillers/manifest file hashes; raw bootstrap JSON SHA is intentionally not used because it contains relocation-sensitive absolute paths. Binary SHA and optional static-cache SHA are bound. Selected special rows contribute exact ID/slot/options identity SHA; if present, a static-cache snapshot is required.
+- **Partial / still open:** relocation-stable digest and fail-closed source/build/revision/approval checks are tested, but production dependency-graph invalidation/orchestration and a separately serialized v208 Start receipt are not implemented. `unresolved_dependencies` remains a fixed readiness list, not a dynamic missing-join report.
 
 **P3-B — source-to-catalog integration (v213 first implementation: actual source E2E PASS, not full product acceptance):**
 - **Implemented:** v191 emits compact gear candidate rows with exact InventoryType/class/subclass masks, all 13 class/65 tier IDs, related-source counts, raw input SHA256, and the three exact SimC generated-table SHA256 values.
@@ -90,12 +90,13 @@ A single record can have multiple compatible slots only when the exact source ma
 - **Implemented:** v196 accepts the versioned v213 artifact by explicit path and v197 consumes its v211 classification rows. Classification is distinct from UI approval; only the pre-existing 7967 approval is selectable, 8025 remains developer-only, and 36 remain locked.
 - **Actual artifact E2E:** [Actions #41169754323](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41169754323), artifact [#13031015315](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41169754323/artifacts/13031015315), v213 digest `b888123728097371705c037ae2fc0085cc6735fac870f000b7606b1428d5ced5`. Actual counts: gear 511, tier 13/65, current-season enchant candidates 38/38, food 192, potion 61, embellishment registrations 20, temporary enchant source rows 117, gem properties 2409. Gear inventory groups contain 511 rows and zero unknown slot rows. Enchant groups: boots3/chest4/helm6/ring9/shoulders6/weapon10.
 - **Cross-platform regression:** [Ubuntu + Windows #41170184299](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41170184299), 62/62 tests PASS on each OS, including six v213 contract tests and deterministic source-identity digest checks. No Native calls, no SimC binary build, no optimizer/cache mutation.
-- **Still limited:** v196's default data path has not been switched to a packaged v213 artifact; the artifact is explicitly consumed by the P3-B CI path. Embellishment registrations do not yet join exact item IDs/slots, temporary enchants do not yet resolve exact hand applicability, and gem-property rows are not gem item IDs. P3-B is a source/catalog bridge, not a user-facing Environment Build.
+- **Still limited:** v196's default data path and the Windows beta package do not yet contain the v213 artifact; P3-C now supplies it explicitly in the source-backed CI path. Embellishment registrations do not yet join exact item IDs/slots, temporary enchants do not yet resolve exact hand applicability, and gem-property rows are not gem item IDs.
 
-**P3-C — one-click target environment:**
-- connect approved catalog selections to v098 profile assembly for all 26 DPS specializations;
-- reuse v208 exact selected-L acquisition and existing CHMV budget bridge;
-- create sealed profile/manifest and hand off to existing optimizer.
+**P3-C — one-click target environment (first source-backed integration slice PASS; not complete):**
+- **Implemented:** exact v213 artifact → v196 approved projection → v212 v2 Environment Manifest. v206/v098/v208 accept an optional exact v213 source path; v113 uses the packaged artifact path when present and otherwise preserves legacy fallback.
+- **Actual profile witness:** existing v098 generated a current-season Retribution 334 profile with the already-approved 7967 enchant exactly once, no Native, and no CHMV budget increment. v212 sealed the same source identity and profile hashes.
+- **Special-L boundary:** v208 receives the same source path. A cache-hit plumbing probe verifies path propagation with the cache lookup mocked to avoid Native; it does not prove actual cache bytes or a new L observation. Existing v208 Native/cache evidence is reused.
+- **Still required:** all-26 profile-supplier readiness, package the v213 artifact in the Windows beta, serialize an exact v208 Start receipt into the environment manifest, connect the sealed profile to the existing optimizer through the production user flow, and implement dependency-aware invalidation/orchestration.
 
 **P3-D — Windows product experience:**
 - one-click Build / Start, progress, cancellation/resume, incremental refresh, cache report and downloadable diagnostics;
@@ -103,32 +104,20 @@ A single record can have multiple compatible slots only when the exact source ma
 
 **Acceptance criteria:** same inputs and source identity produce byte-stable manifest; unchanged artifacts are reused; a changed source invalidates only its dependents; unknown joins block only the affected choice rather than erasing unrelated options; plan mode Native0; Start makes only the selected missing static lookups; final profile retains full user-selected options; optimizer/cache/statistics behavior is the existing approved path.
 
-**Current state:** P3-A has the v212 Native0 Environment Manifest assembler with 9/9 tests on Ubuntu and Windows. P3-B now has a real v191→v211→v213→v196 source/catalog artifact path and a real source-backed Actions receipt. However, v212 does not yet consume v213 directly, the one-click production orchestration and user Build API/UI do not exist, all-26 target-profile assembly is not yet connected to this catalog, v208 selected-L receipt integration remains separate, dependency invalidation is not implemented, and the Windows one-click experience remains incomplete.
+**Current state:** P3-A v212 v2 directly consumes and verifies v213; focused tests pass 23/23 on Ubuntu and 23/23 on Windows. P3-B source-to-catalog remains source-backed and passes. P3-C first actual source-backed integration passed: v213→v196 exact 7967 approval→v098 Retribution 334 profile→v212 manifest, plus v208 source-path propagation through a mocked cache-hit probe; the full pipeline is Native0. The default Windows package still lacks the v213 artifact, the actual v208 Start receipt is not serialized, all-26 profile-supplier readiness remains false, production Build API/UI and optimizer handoff are not complete, dependency invalidation/orchestration is not implemented, and the Windows one-click experience remains incomplete.
 
 
-## 8. P3-A first implementation — v212 Environment Manifest assembler (2026-10-31)
+## 8. P3-A first implementation — v212 Environment Manifest assembler (2026-10-31; v2 hardening in §10)
 
-**Implemented on the isolated branch:** `runner/v212_environment_manifest.py` is a deterministic, no-Native artifact join. It consumes existing v191 season-candidate JSON, v211 enchant-classification JSON, v196 approved UI-catalog JSON, v098 preparation result, and the v098 target folder. It does not call any collector, API, SimC binary, or optimizer.
+**Initial v1 implementation:** v212 first joined separately supplied v191/v211/v196 JSON and a v098 result. The initial [#41160002104](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41160002104) synthetic contract suite passed 9/9 on Ubuntu and Windows, Native0. This historical evidence remains valid for the original v1 contract only.
 
-It validates:
-- exact v191/v211/v196/v098 schema contracts;
-- same season/game build and exact 40-character SimC revision across v191, v211 and v196;
-- 38 enchant rows and current selectable-count boundary of exactly one;
-- source candidate/classifier Native0 and no automatic UI promotion;
-- v098 plan-ready status, target archetype/ilvl/B/T, generated profile manifest and the four exact generated files;
-- target SimC binary SHA, optional static-cache SHA, and profile/scenario/fillers/manifest SHA;
-- target manifest revision and existing adaptive Native limit 6.
+**Current v2 contract:** v212 now consumes one exact v213 artifact plus a v098 current-season profile result. It calls the existing v196 public-options projection from the same v213 path and verifies the exact 7967-only approval boundary, 8025 developer-only state and all other candidates locked. It binds the v213 raw artifact SHA, embedded manifest digest, v191/v211 source identities, generated SimC source hashes, game build/revision, v098 normalized result identity, generated profile files, binary SHA and optional static-cache SHA. It does not call collectors, APIs, SimC, or the optimizer.
 
-The resulting manifest references the source component hashes and profile identities without copying the full user profile or emitting local absolute paths. Its digest is deterministic for the same inputs. It reports `READY_WITH_LIMITATIONS` while 26-spec profile coverage and final profile/optimizer handoff are incomplete. P3-B now produces a separate v213 source/catalog artifact, but v212 does not yet consume that artifact directly. A changed profile file changes the environment digest. Source/build/revision/approval/path mismatches fail closed. The module makes **Native0 and network0**.
+The v212 digest intentionally excludes raw bootstrap JSON bytes because the file contains local absolute paths. Instead, it hashes a stable semantic projection and every generated target file SHA; relocating the same target folder does not change the digest. Selected special rows are represented by exact slot/item/ilevel/options identity SHA and require a bound static-cache snapshot. The manifest records no absolute local path or full user profile.
 
-**New tests:** `tests/test_v212_environment_manifest.py`, 9 tests built from synthetic JSON fixtures and a dummy binary. The final run [Ubuntu + Windows focused #41160002104](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41160002104): **9/9 PASS on each OS**, compile PASS, Native0 marker PASS. This includes relocation stability: the same profile/source identity in a different local target directory yields the same Environment digest. This is contract testing, **not** a real v191→v211→v196→v098 end-to-end run. No previous Native/cache evidence was rerun or invalidated.
+**Current cross-platform tests:** [#41172225040](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41172225040), **23/23 PASS Ubuntu + 23/23 PASS Windows**, Native0. The tests exercise actual repository source rows through the v213 compiler fixture, exact approval checks, digest tampering, build/revision drift, augmentation exclusion, profile mutation and relocation stability. The actual production artifact/profile integration is recorded separately in §10. The module makes **Native0 and network0**.
 
-**Code-review gaps to close before treating the manifest as a sealed production contract:**
-- The v212 input `bootstrap_sha` is accepted but currently unused. The output hashes a normalized subset of v098 identity plus its generated files; it does not include the raw bootstrap-result file SHA. Preserve relocation invariance, but make this normalized provenance contract explicit or correct it.
-- The current approval check validates only one selectable enchant by count, not the exact authorized ID 7967. v196's own tests separately assert 7967, but v212 should bind the exact approved identity.
-- Current-season constants `38` candidate rows and `1` selectable choice are pinned to this season; do not present v212 as season-agnostic until the versioned source contract makes those counts data-driven.
-
-**Not yet implemented:** automatic production invocation of v191/v211/v213/v196/v098 into one user Build command; actual user Build button/API; all-26 DPS representative profile suppliers connected to the catalog; selected L/E lookup integration beyond existing v208; dynamic dependency invalidation; Windows one-click progress/cancel/resume. The current v212 CLI is still an internal manifest assembler that requires its input artifacts to have already been produced. It does not make the product Environment Builder complete.
+**Still open:** the v212 source/catalog contract pins 38 current-season candidates and the current 7967-only approved selection; it is not yet season-agnostic. The v208 Start receipt is not separately serialized in the Environment Manifest, dependency invalidation is not dynamic, and the manifest remains an internal readiness artifact rather than the user-facing Build API/UI.
 
 
 ## 9. P3-B first implementation — v213 source-to-catalog bridge (2026-10-31)
@@ -145,4 +134,37 @@ The resulting manifest references the source component hashes and profile identi
 
 **Regression evidence:** v191 focused 6 tests PASS within #41169754323; the integrated Ubuntu workflow reports 22 tests PASS. [Catalog integration #41169754402](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41170184299) reports 62 tests PASS on Ubuntu and 62 on Windows, including all six v213 contract tests and deterministic source-identity digest checks. New SimC Native calls: 0; SimC binary builds: 0; optimizer/cache mutation: 0. The workflow fetches pinned source text at the Actions layer; the v191/v211/v213 compilers themselves report network0.
 
-**Important boundary:** v196's default checked-in data path and the Windows beta package are not yet switched to or bundled with v213. The actual v196 consumer test passes when the v213 artifact path is supplied explicitly. v212 does not yet bind v213 as an Environment Manifest input. This proves the source-to-catalog bridge, not the one-click user product, the 26-spec profile assembly, or a full optimizer run. No main/v003/v016/Project UI/visibility/Work OS change was made.
+**Important boundary:** v196's default checked-in data path and the Windows beta package are not yet switched to or bundled with v213. P3-C §10 now proves v212 can consume v213 directly when supplied explicitly; the packaged local app still falls back to the legacy catalog because the artifact is not included. This proves a source-backed profile/manifest slice, not the one-click user product, all-26 profile readiness, or a full optimizer run. No main/v003/v016/Project UI/visibility/Work OS change was made.
+
+
+## 10. P3-C first source-backed environment handoff (2026-10-31)
+
+### 10.1 Implemented code path
+
+- `runner/v212_environment_manifest.py` is now schema `v212_simc_environment_manifest_v2`. Its CLI accepts the exact `--source-to-catalog` v213 artifact, a v098 bootstrap result, and the target folder. It verifies v213's embedded digest and file SHA, derives v196 options from that exact path, checks source/build/revision identity, and binds the exact existing 7967 approval (8025 developer-only; 36 other candidates locked).
+- `runner/v206_nonchmv_eagle_selection.py`: `source`, `check_choice`, `apply`, and `admit` accept an optional exact catalog path. The default legacy source remains unchanged when no v213 path is supplied.
+- `runner/v098_target_user_scenario_bootstrap.py`: `build` and `run` accept optional `source_catalog_path`; the selected 7967 validation is performed against the supplied v213 artifact when present.
+- `runner/v208_internal_exact_special_L_hydrator.py`: `hydrate` forwards the same optional v213 path into its existing v098 static-special pre-budget stage. No new L engine or Native behavior was introduced.
+- `runner/v113_local_web_api.py`: detects `data/current_season_source_to_catalog.json` inside a packaged app and, if present, uses that same artifact for the option catalog, Plan and Start/v208 path. If absent, the existing legacy catalog remains the fallback. The current Windows beta does not yet package the v213 file, so its tested runtime still uses that fallback.
+- `integration_probes/v214_p3c_v213_v098_v208_handoff.py`: source-backed CI probe using the actual v213 artifact and an existing v098 Retribution 334 scenario; no new profile generator.
+
+### 10.2 Actual end-to-end receipt
+
+- [Source/catalog + P3-C integration #41172423986](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41172423986): SUCCESS, branch commit `1ef1f3f73e619f6b42a95e71cfca0f6d2f864fc7`.
+- Artifact [#13031735907](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41172423986/artifacts/13031735907), 103,321 bytes compressed, 7-day retention. It contains the actual v191/v211/v213 components, the v098 bootstrap/profile, v212 Environment Manifest, and v208 path-plumbing receipt.
+- v213 artifact raw file SHA256: `55e74d4fb3d4721a56ecbc8e76448360273ddc0181d335fa94d9d9cc4e1619ad`.
+- Embedded v213 manifest SHA256: `b888123728097371705c037ae2fc0085cc6735fac870f000b7606b1428d5ced5`.
+- v212 Environment Manifest SHA256: `988a0b40f1123ee1271c6f761896bdb21f798ec4c734266a1d8feb7e311ce275`.
+- Actual v098 current-season Retribution 334 profile applies the existing approved ring enchant 7967 exactly once. Existing E=0 proof scope is retained; the enchant adds no CHMV budget and does not change B/T. v098 plan is Native0.
+- v212 verifies exact 26 DPS contract scope from v143, rejects Augmentation Evoker, binds v213/v196/v098 identities, profile files, binary SHA and the optional static-cache snapshot. `all_specs_ready` remains false; the 26 scope declaration is not a claim that all profile suppliers are ready.
+- v208 cache-hit plumbing is exercised with the cache lookup/missing-variant functions mocked to avoid Native. This proves exact v213 path propagation into the existing v208→v098 staging call only. It does **not** prove real cache bytes or a new static-L observation; existing v208 Native/cache receipts are reused.
+- Pipeline tests: v191 focused 6 PASS; integrated source/classifier/catalog/v208 suite 29 PASS. [v212 cross-platform contract #41172225040](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41172225040): Ubuntu 23/23 PASS, Windows 23/23 PASS. v098 offline [#41172082190](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41172082190), v113 API Windows+Ubuntu [#41172082178](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41172082178) both SUCCESS. The latest Windows beta [#41172082207](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41172082207) passed 101 tests on Python 3.12 and 3.14, but its 187-file ZIP [#13031975054](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41172082207/artifacts/13031975054) does not yet include v213 data.
+- New SimC Native calls: **0**. New SimC binary builds: **0**. Optimizer/cache mutation: **0**. No previous Native/cache receipts were invalidated.
+
+### 10.3 Still incomplete
+
+- Package the generated v213 artifact into the Windows beta and make it the default UI/catalog source. Until then, the new v113 path detection deliberately falls back to the existing source.
+- Serialize a verifiable v208 Start receipt (selected special identity, exact cache hit/miss, Native JSON2 source/hash, measured L) into v212. Current v212 binds the selected-special identity SHA and static-cache SHA but not the full v208 receipt.
+- Complete readiness/coverage for all 26 DPS profile suppliers; current v098 result reports `all_specs_ready=false` and the source-backed witness is one Retribution 334 profile.
+- Implement dynamic dependency invalidation/orchestration, the user-facing Build API/UI, and Windows one-click Build/Start/progress/cancel/resume.
+- Do not repeat all-26 Native matrices, build a new optimizer, or promote any additional enchant. Continue with focused source/profile contract work and reuse valid historical receipts.
