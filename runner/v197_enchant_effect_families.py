@@ -44,6 +44,26 @@ SOURCE_CLASSIFICATION_PATH=(
     "data/current_season_enchant_effect_classification.json")
 SOURCE_CLASSIFICATION_SCHEMA="v211_current_season_enchant_effect_classification_v1"
 SOURCE_SIMC_COMMIT="710c2408bfd3ae4df71b8cd55cdf01f63fd6c926"
+SOURCE_FILE_PINS={
+ "data_enums.hh":(75791,"23e5af4d5c407aef6092225030019757c9fa3354",
+                  "25a88c629f3d4ebb4ac966f3927307b28f756cf9cef9482dc77a79b197873ea4"),
+ "enchants.cpp":(19322,"4876fc816c275844ad6da9be3ca026cdb4a52090",
+                 "e4b4cb85c4f74896f3a330d3932aaa5e32b67a1ab7f48d0fd8b9f0fa2fb92ff0"),
+ "permanent_enchant.inc":(86347,"2321ad985ab4ee960a5a3a80d41b25db9fb2b8af",
+                          "1d836f16acfa812c9fe39fe30185910595c6b813c9e8c2c87691bc2c47fd586a"),
+ "spell_item_enchantment.inc":(1093702,"7262db77d57d3c041a561de4d3d404431685a7ff",
+                               "dad56ceec265431ea9abbca80f6ce426bf316ac3d0ba12dce80ed6d28701f080"),
+ "spelltext_data.inc":(3971792,"0197c596fd5dfddbe04a1d7284ec9025d51d3bf3",
+                       "f4f124ff41b13f18512c7b10ef56b9a5f744150938b3d37b9528ed4d51d09f23"),
+ "unique_gear_midnight.cpp":(243844,"9bb01bff903f22c3332f9cb6464ed72c0cae27ea",
+                             "80393730af429f225610a0c65399c65289117eccc9faaaa63ba685a72e0d4987")
+}
+SIMC_ITEM_ENCHANT_PIPELINE={
+ "static_stat_path":"ITEM_ENCHANTMENT_STAT",
+ "spell_effect_path":"ITEM_ENCHANTMENT_EQUIP_SPELL",
+ "passive_spell_path":"passive_enchant",
+ "owner":"SIMC","source_file":"engine/item/enchants.cpp"
+}
 
 def read_source_classification(path=SOURCE_CLASSIFICATION_PATH):
     """Read compact source classification; never turns source facts into E proof."""
@@ -59,6 +79,14 @@ def read_source_classification(path=SOURCE_CLASSIFICATION_PATH):
           "static_nonchmv_only_or_mixed":19,"spell_effects":15,
           "native_E_measured":2,"user_selectable_existing_scope":1,
           "developer_only_exact_scope":1,"locked":36} or
+        doc.get("candidate_source_artifact_id")!=12961140046 or
+        doc.get("simc_item_enchant_pipeline")!=SIMC_ITEM_ENCHANT_PIPELINE or
+        type(doc.get("source_files")) is not dict or
+        set(doc["source_files"])!=set(SOURCE_FILE_PINS) or
+        any((doc["source_files"][k].get("size_bytes"),
+             doc["source_files"][k].get("git_blob_sha1"),
+             doc["source_files"][k].get("sha256"))!=SOURCE_FILE_PINS[k]
+            for k in SOURCE_FILE_PINS) or
         doc.get("native_calls")!=0 or doc.get("automatic_ui_promotion") is not False or
         doc.get("simc_effect_reimplemented") is not False):
         raise ValueError("V211_SOURCE_CLASSIFICATION_PROVENANCE_INVALID")
@@ -80,8 +108,25 @@ def read_source_classification(path=SOURCE_CLASSIFICATION_PATH):
         sum(x["selection_status"]=="EXISTING_EAGLE_ONE_SCOPE_USER_CHOICE"
             for x in rows)!=1 or
         sum(x["selection_status"]=="DEVELOPER_ONLY_EXACT_SCOPE"
-            for x in rows)!=1):
+            for x in rows)!=1 or
+        sum(bool(x["driver_spell_ids"]) for x in rows)!=15):
         raise ValueError("V211_SOURCE_CLASSIFICATION_SCOPE_DRIFT")
+    by_id={x["enchant_id"]:x for x in rows}
+    zero={"crit_rating":0,"haste_rating":0,"mastery_rating":0,"versatility_rating":0}
+    if (by_id.get(7967,{}).get("native_E_status")!=
+        "MEASURED_ZERO_ONE_WINDOWS_PALADIN_334_PROFILE" or
+        by_id.get(7967,{}).get("native_E")!=zero or
+        by_id.get(7967,{}).get("selection_status")!=
+        "EXISTING_EAGLE_ONE_SCOPE_USER_CHOICE" or
+        by_id.get(8025,{}).get("native_E_status")!=
+        "MEASURED_ONE_LINUX_FROST_334_PROFILE" or
+        by_id.get(8025,{}).get("native_E")!={"crit_rating":0,"haste_rating":30,
+            "mastery_rating":0,"versatility_rating":0} or
+        by_id.get(8025,{}).get("selection_status")!="DEVELOPER_ONLY_EXACT_SCOPE"):
+        raise ValueError("V211_SOURCE_NATIVE_E_SCOPE_OR_SELECTION_DRIFT")
+    if any(x["dynamic_chmv_proc_present"] for x in rows
+           if x["static_chmv_rating_present"]):
+        raise ValueError("V211_STATIC_RING_RATING_MISLABELED_AS_DYNAMIC_PROC")
     return result
 
 def decorate(enchant_rows):
