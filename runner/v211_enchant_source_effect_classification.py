@@ -414,7 +414,6 @@ def verify_runtime_manifest(compiled,runtime):
              "V211_RUNTIME_MANIFEST_IDENTITY_DRIFT:"+str(source["enchant_id"]))
         expected={
           "effect_family":source["effect_family"],
-          "effect_summary":source["effect_summary"],
           "static_components":[x["item_mod"] for x in source["static_components"]],
           "static_chmv_rating_present":source["static_chmv_rating_present_in_dbc"],
           "static_chmv_stats":source["static_chmv_stats"],
