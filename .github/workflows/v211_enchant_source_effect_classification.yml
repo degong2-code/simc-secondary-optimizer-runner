@@ -40,6 +40,7 @@ jobs:
           python -m py_compile runner/v211_enchant_source_effect_classification.py
           python -m unittest -v tests.test_v211_enchant_source_effect_classification
       - name: Download exact immutable SimC DBC and spell/effect source (no build, no Native)
+        shell: bash
         env:
           SIMC_COMMIT: 710c2408bfd3ae4df71b8cd55cdf01f63fd6c926
         run: |
@@ -67,6 +68,7 @@ jobs:
               print("SOURCE_FETCHED",name,len(raw))
           PY
       - name: Compile all 38 exact DBC enchant rows, spell text and SimC handler registrations
+        shell: bash
         run: |
           python runner/v211_enchant_source_effect_classification.py --candidates data/current_season_simc_enchant_candidates.json --source-dir simc-source --proof-8025 data/v202_verified_enchant_8025_source.json --proof-7967 data/v206_eagle_7967_windows_E0_proof.json --out out/v211_current_season_enchant_effect_classification.json
           python - <<'PY'
