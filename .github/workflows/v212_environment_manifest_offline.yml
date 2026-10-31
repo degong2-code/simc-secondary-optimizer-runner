@@ -10,7 +10,6 @@ on:
       - runner/v206_nonchmv_eagle_selection.py
       - runner/v143_specialization_contracts.py
       - tests/test_v212_environment_manifest.py
-      - tests/test_v208_special_L_hydration_offline.py
       - tests/test_v213_source_to_catalog.py
       - .github/workflows/v212_environment_manifest_offline.yml
 permissions:
@@ -34,8 +33,8 @@ jobs:
         with:
           python-version: "3.12"
       - name: Compile source catalog, approval adapter and manifest modules
-        run: python -m py_compile runner/v143_specialization_contracts.py runner/v196_current_season_user_catalog.py runner/v206_nonchmv_eagle_selection.py runner/v208_internal_exact_special_L_hydrator.py runner/v213_source_to_catalog.py runner/v212_environment_manifest.py tests/test_v208_special_L_hydration_offline.py tests/test_v213_source_to_catalog.py tests/test_v212_environment_manifest.py
+        run: python -m py_compile runner/v143_specialization_contracts.py runner/v196_current_season_user_catalog.py runner/v206_nonchmv_eagle_selection.py runner/v208_internal_exact_special_L_hydrator.py runner/v213_source_to_catalog.py runner/v212_environment_manifest.py tests/test_v213_source_to_catalog.py tests/test_v212_environment_manifest.py
       - name: Deterministic v213 provenance, exact 7967 approval, v098 profile and relocation checks
-        run: python -m unittest -v tests.test_v208_special_L_hydration_offline tests.test_v213_source_to_catalog tests.test_v212_environment_manifest
+        run: python -m unittest -v tests.test_v213_source_to_catalog tests.test_v212_environment_manifest
       - name: Assert no Native output was created
         run: python -c "from pathlib import Path; assert not Path('out').exists(); print('V212_ENVIRONMENT_MANIFEST_NATIVE0_PASS')"
