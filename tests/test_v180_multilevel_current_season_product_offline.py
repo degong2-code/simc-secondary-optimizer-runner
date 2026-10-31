@@ -55,6 +55,10 @@ class CurrentSeasonMultiLevelProductOffline(unittest.TestCase):
                         self.assertEqual(plan["native_limit"],6)
                         self.assertEqual(len(planned["effective_four_tier_slots"]),4)
                         self.assertTrue(planned["current_season_product"])
+                        coverage=planned["profile_supplier_coverage"]
+                        self.assertEqual(coverage["current_season_profile_supplier_count"],26)
+                        self.assertEqual(coverage["selected_specialization"],cls+"/"+spec)
+                        self.assertFalse(coverage["all_specs_ready"])
                         self.assertTrue(planned["non334_physical_simc_not_yet_observed"])
                         self.assertFalse(planned["v176_base_physical_26_of_26_verified"])
                         manifest=json.loads((folder/"manifest.json").read_text("utf8"))
@@ -105,11 +109,14 @@ class CurrentSeasonMultiLevelProductOffline(unittest.TestCase):
                  "origin":"http://127.0.0.1:8765",
                  "content-type":"application/json"}
         controls=sessions.standard_controls(("warrior","fury"))
+        source_path=app.state.jobs.source_catalog_path()
+        revision=(json.loads(source_path.read_text(encoding="utf8"))["simc_revision"]
+                  if source_path is not None else self.rev)
         requests=[]
         for level in (321,344):
             controls["ilevel"]=level
             payload={"controls":dict(controls),"binary":str(self.binary),
-                     "revision":self.rev,"current_season_product":True}
+                     "revision":revision,"current_season_product":True}
             with mock.patch.object(api.subprocess,"Popen") as spawn:
                 response=client.post("/api/v1/sessions/plan",
                              headers=headers,json=payload)
@@ -128,7 +135,7 @@ class CurrentSeasonMultiLevelProductOffline(unittest.TestCase):
         # Old API clients remain on their original independent non334 path.
         controls["ilevel"]=321
         original=client.post("/api/v1/sessions/plan",headers=headers,json={
-            "controls":controls,"binary":str(self.binary),"revision":self.rev})
+            "controls":controls,"binary":str(self.binary),"revision":revision})
         self.assertEqual(original.status_code,200,original.text)
         self.assertTrue(original.json()["plan"]["independent_non334_profile"])
         self.assertFalse(original.json()["plan"]["current_season_product"])

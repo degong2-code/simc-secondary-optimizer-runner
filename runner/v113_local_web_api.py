@@ -142,6 +142,8 @@ class LocalJobs:
             "windows_package_status":package.get("status","NOT_PROVIDED"),
             "windows_package_manifest_sha256":package.get("manifest_sha256"),
             "all_specs_ready":scope.get("all_specs_ready"),
+            "profile_supplier_coverage":scope.get("profile_supplier_coverage"),
+            "dependency_change":document.get("dependency_change"),
             "v208_start_receipt_status":receipt.get("status"),
             "unresolved_dependencies":list(document.get(
                 "unresolved_dependencies",[])),
@@ -162,24 +164,49 @@ class LocalJobs:
             raise environment_manifest.EnvironmentBlocked(
                 "ENVIRONMENT_MANIFEST_INVALID:"+type(exc).__name__) from exc
 
-    def _verify_environment_dependencies(self, summary):
-        if not summary or summary.get("windows_package_status")!="VERIFIED":
+    def _verify_environment_dependencies(self, summary, folder=None):
+        if not summary:
             return
         source_path=self.source_catalog_path()
-        package_path=self.package_manifest_path()
-        if source_path is None or package_path is None:
-            raise environment_manifest.EnvironmentBlocked(
-                "V213_PACKAGED_SOURCE_REMOVED_AFTER_PLAN")
-        source_doc,source_sha=environment_manifest.read_json(source_path)
-        if source_sha!=summary.get("source_catalog_sha256"):
-            raise environment_manifest.EnvironmentBlocked(
-                "V213_SOURCE_CATALOG_CHANGED_AFTER_PLAN")
-        package=environment_manifest.verify_windows_package_manifest(
-            package_path,source_path,source_doc,source_sha)
-        if package.get("manifest_sha256")!=summary.get(
-                "windows_package_manifest_sha256"):
-            raise environment_manifest.EnvironmentBlocked(
-                "V181_PACKAGE_MANIFEST_CHANGED_AFTER_PLAN")
+        if summary.get("source_catalog_sha256"):
+            if source_path is None or folder is None:
+                raise environment_manifest.EnvironmentBlocked(
+                    "V213_PACKAGED_SOURCE_REMOVED_AFTER_PLAN")
+            source_doc,source_sha=environment_manifest.read_json(source_path)
+            if source_sha!=summary.get("source_catalog_sha256"):
+                raise environment_manifest.EnvironmentBlocked(
+                    "V213_SOURCE_CATALOG_CHANGED_AFTER_PLAN")
+            try:
+                session_identity=json.loads(
+                    (pathlib.Path(folder)/"V106_SESSION_IDENTITY.json")
+                    .read_text(encoding="utf8"))
+            except (OSError,ValueError,TypeError) as exc:
+                raise environment_manifest.EnvironmentBlocked(
+                    "V213_SESSION_SOURCE_IDENTITY_MISSING") from exc
+            bound=session_identity.get("current_season_source_catalog")
+            if (type(bound) is not dict or
+                bound.get("artifact_sha256")!=source_sha or
+                bound.get("manifest_sha256")!=summary.get(
+                    "source_catalog_manifest_sha256") or
+                bound.get("game_build")!=source_doc.get("game_build") or
+                bound.get("simc_revision")!=source_doc.get("simc_revision")):
+                raise environment_manifest.EnvironmentBlocked(
+                    "V213_SESSION_SOURCE_IDENTITY_MISMATCH")
+            package_path=self.package_manifest_path()
+            if summary.get("windows_package_status")=="VERIFIED":
+                if package_path is None:
+                    raise environment_manifest.EnvironmentBlocked(
+                        "V213_PACKAGED_SOURCE_REMOVED_AFTER_PLAN")
+                package_raw=package_path.read_bytes()
+                if bound.get("package_manifest_sha256")!=sessions.sha(package_raw):
+                    raise environment_manifest.EnvironmentBlocked(
+                        "V181_SESSION_PACKAGE_IDENTITY_MISMATCH")
+                package=environment_manifest.verify_windows_package_manifest(
+                    package_path,source_path,source_doc,source_sha)
+                if package.get("manifest_sha256")!=summary.get(
+                        "windows_package_manifest_sha256"):
+                    raise environment_manifest.EnvironmentBlocked(
+                        "V181_PACKAGE_MANIFEST_CHANGED_AFTER_PLAN")
 
     def _latest_v208_receipt_path(self, folder):
         pointer=pathlib.Path(folder)/"V208_START_RECEIPT_REF.json"
@@ -233,15 +260,20 @@ class LocalJobs:
             return {"status":"SOURCE_CATALOG_NOT_PACKAGED",
                     "windows_package_status":"NOT_VERIFIED",
                     "all_specs_ready":bootstrap_result.get("all_specs_ready"),
+                    "profile_supplier_coverage":bootstrap_result.get(
+                        "profile_supplier_coverage"),
                     "v208_start_receipt_status":"NOT_VERIFIED",
                     "unresolved_dependencies":[
                         "V213_SOURCE_CATALOG_NOT_PACKAGED"],
                     "native_calls":0,"network_calls":0}
         if receipt_path is None:
             receipt_path=self._latest_v208_receipt_path(folder)
+        previous_path=generated/"environment_manifest.json"
         result=environment_manifest.compile_from_paths(
             source_path,bootstrap_path,generated,receipt_path,
-            package_manifest_path=self.package_manifest_path())
+            package_manifest_path=self.package_manifest_path(),
+            previous_manifest_path=(previous_path
+                if previous_path.is_file() else None))
         encoded=json.dumps(result,sort_keys=True,ensure_ascii=False,
                           indent=2,allow_nan=False)+"\n"
         self._write_atomic(generated/"environment_manifest.json",encoded)
@@ -347,11 +379,18 @@ class LocalJobs:
                          key in bootstrap.ARCHETYPES)
             independent_level=(not current_season and user["target"]["ilevel"]!=334 and
                                key in sessions.SUPPORTED)
+            source_catalog_path=self.source_catalog_path()
+            package_manifest_path=self.package_manifest_path()
             folder = sessions.store_session(user,self.root,binary,params.revision,
                                             resolved_static,
                                             independent_334=independent,
                                             independent_target_level=independent_level,
-                                            current_season_product=current_season)
+                                            current_season_product=current_season,
+                                            source_catalog_path=(source_catalog_path
+                                                if current_season else None),
+                                            package_manifest_path=(package_manifest_path
+                                                if current_season and source_catalog_path
+                                                else None))
             # Session identity binds CACHE CONTENT, not its user-visible
             # path. If the same bytes are passed via a different path later,
             # honor the already-sealed manifest path rather than rewriting
@@ -372,7 +411,7 @@ class LocalJobs:
                 independent_334=independent,
                 independent_target_level=independent_level,
                 current_season_product=current_season,
-                source_catalog_path=self.source_catalog_path())
+                source_catalog_path=source_catalog_path)
             plan=bootstrap_result["plan"]
             environment=(self._seal_environment_manifest(folder,bootstrap_result)
                          if current_season else None)
@@ -537,7 +576,7 @@ class LocalJobs:
             try:
                 # Verify the sealed package/source identity before spawning a worker.
                 environment=self._read_environment_summary(folder)
-                self._verify_environment_dependencies(environment)
+                self._verify_environment_dependencies(environment,folder)
                 binary, rev, static = self.args_for_existing(folder)
                 if cache_only:
                     sessions.cache_only_preflight(folder)

@@ -207,6 +207,13 @@ class LocalWebAPIOffline(unittest.TestCase):
         builder=SourceToCatalogTests()
         builder.setUpClass()
         season,classification=builder.build_inputs()
+        # The source artifact must bind the exact current-season input bytes
+        # consumed by the v098 profile supplier and the v181 package.
+        for key,name in (("gear","current_season_product_gear_db.json"),
+                         ("tier","current_season_tier_itemsets.json"),
+                         ("budget","current_season_chmv_consumables.json")):
+            season["sha256_by_input"][key]=source_bridge.sha(
+                (ROOT/"data"/name).read_bytes())
         source=source_bridge.compile_catalog(
             season,"a"*64,classification,"b"*64)
         package_root=self.root/"SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA"
@@ -252,8 +259,12 @@ class LocalWebAPIOffline(unittest.TestCase):
             self.assertEqual(environment["source_catalog_sha256"],source_sha)
             self.assertEqual(environment["native_calls"],0)
             self.assertEqual(environment["network_calls"],0)
-            self.assertIn("ALL_26_DPS_REPRESENTATIVE_PROFILE_SUPPLIERS",
+            self.assertIn("ALL_26_ADAPTIVE_PROFILE_NATIVE_ACCEPTANCE",
                           environment["unresolved_dependencies"])
+            self.assertEqual(
+                environment["profile_supplier_coverage"]
+                    ["current_season_profile_supplier_count"],26)
+            self.assertFalse(environment["profile_supplier_coverage"]["all_specs_ready"])
             folder=self.root/"runs"/body["session_id"]
             saved=json.loads((folder/"generated"/"environment_manifest.json")
                              .read_text(encoding="utf8"))

@@ -419,9 +419,154 @@ def _verify_v208_start_receipt(receipt, scenario, source_catalog,
     }
 
 
+def _verify_profile_supplier_coverage(bootstrap, v191, build, archetype):
+    coverage=bootstrap.get("profile_supplier_coverage")
+    expected=sorted(specs.CONTRACTS)
+    need(type(coverage) is dict and
+         coverage.get("schema")=="v215_profile_supplier_coverage_v1" and
+         coverage.get("status")=="CURRENT_SEASON_PLAN_SUPPLIERS_26_OF_26",
+         "V098_PROFILE_SUPPLIER_COVERAGE_MISSING")
+    need(coverage.get("supported_specializations")==expected and
+         coverage.get("contract_count")==26 and
+         coverage.get("legacy_source_backed_count")==24 and
+         coverage.get("source_independent_count")==2 and
+         coverage.get("user_input_default_count")==26 and
+         coverage.get("starter_default_count")==26 and
+         coverage.get("season_catalog_count")==26 and
+         coverage.get("current_season_profile_supplier_count")==26 and
+         coverage.get("selected_specialization")==archetype and
+         coverage.get("selected_specialization_plan_supplier") is True and
+         coverage.get("season_build")==build and
+         coverage.get("all_specs_ready") is False and
+         coverage.get("adaptive_native_evidence_complete") is False and
+         coverage.get("native_calls")==0 and
+         coverage.get("network_calls")==0,
+         "V098_PROFILE_SUPPLIER_COVERAGE_CONTRACT_INVALID")
+    source_hashes=coverage.get("source_input_sha256")
+    expected_hashes=v191["sha256_by_input"]
+    need(type(source_hashes) is dict and
+         set(source_hashes)=={"gear","tier","budget"} and
+         all(valid_sha(value) for value in source_hashes.values()) and
+         all(source_hashes[key]==expected_hashes[key]
+             for key in ("gear","tier","budget")),
+         "V098_PROFILE_SUPPLIER_SOURCE_INPUT_SHA_MISMATCH")
+    code_hashes=coverage.get("supplier_code_sha256")
+    need(type(code_hashes) is dict and
+         set(code_hashes)=={"contracts","profile_composer",
+                            "user_session","season_stage"} and
+         all(valid_sha(value) for value in code_hashes.values()),
+         "V098_PROFILE_SUPPLIER_CODE_IDENTITY_INVALID")
+    return coverage
+
+
+DEPENDENCY_INVALIDATION_RULES={
+    "v213_source_catalog":(
+        "v196_ui_projection","v098_profile","v208_receipt_validation",
+        "environment_manifest","session_identity"),
+    "v191_gear_input":(
+        "v213_source_catalog","v098_profile","environment_manifest",
+        "session_identity"),
+    "v191_tier_input":(
+        "v213_source_catalog","v098_profile","environment_manifest",
+        "session_identity"),
+    "v191_budget_input":(
+        "v213_source_catalog","v098_budget_plan","environment_manifest",
+        "session_identity"),
+    "v196_ui_projection":(
+        "v098_selected_choice","environment_manifest","session_identity"),
+    "v098_profile":("environment_manifest","optimizer_session"),
+    "selected_special_identity":(
+        "v208_receipt_validation","environment_manifest","optimizer_session"),
+    "static_item_cache":(
+        "v208_receipt_validation","environment_manifest","optimizer_session"),
+    "v208_start_receipt":("environment_manifest",),
+    "windows_package_manifest":(
+        "environment_manifest","start_runtime_verification"),
+    "simc_binary":(
+        "environment_manifest","optimizer_session","adaptive_dps_cache"),
+    "simc_revision":(
+        "environment_manifest","optimizer_session","adaptive_dps_cache"),
+}
+
+
+def compare_dependency_graphs(previous_manifest, current_graph):
+    """Read-only invalidation plan; never deletes caches or historical sessions."""
+    current=current_graph.get("fingerprints",{})
+    if previous_manifest is None:
+        return {
+            "status":"INITIAL_ENVIRONMENT",
+            "changed_inputs":sorted(current),
+            "invalidated_components":sorted({
+                node for key in current
+                for node in DEPENDENCY_INVALIDATION_RULES.get(key,())}),
+            "static_item_cache_preserved":True,
+            "historical_sessions_preserved":True,
+            "cache_mutations":0,"native_calls":0,
+        }
+    previous_payload={k:v for k,v in previous_manifest.items()
+                      if k!="manifest_sha256"}
+    need(valid_sha(previous_manifest.get("manifest_sha256")) and
+         sha(canonical(previous_payload).encode("utf8"))==
+             previous_manifest["manifest_sha256"],
+         "PREVIOUS_ENVIRONMENT_MANIFEST_DIGEST_INVALID")
+    old_graph=previous_manifest.get("dependency_graph") or {}
+    old=old_graph.get("fingerprints") or {}
+    changed=sorted(key for key in set(old)|set(current)
+                   if old.get(key)!=current.get(key))
+    invalidated=sorted({
+        node for key in changed
+        for node in DEPENDENCY_INVALIDATION_RULES.get(key,())})
+    same_static=(old.get("static_item_cache")==
+                 current.get("static_item_cache"))
+    return {
+        "status":"UNCHANGED" if not changed else "DEPENDENCIES_CHANGED",
+        "previous_manifest_sha256":previous_manifest.get("manifest_sha256"),
+        "changed_inputs":changed,
+        "invalidated_components":invalidated,
+        "static_item_cache_preserved":same_static,
+        "historical_sessions_preserved":True,
+        "cache_mutations":0,"native_calls":0,
+    }
+
+
+def _dependency_graph(source_catalog_sha, v191, ui_sha,
+                      bootstrap_identity_sha, profile_files, special_L,
+                      static_cache_identity, v208_receipt_identity,
+                      windows_package, binary, revision):
+    fingerprints={
+        "v213_source_catalog":source_catalog_sha,
+        "v191_gear_input":v191["sha256_by_input"]["gear"],
+        "v191_tier_input":v191["sha256_by_input"]["tier"],
+        "v191_budget_input":v191["sha256_by_input"]["budget"],
+        "v196_ui_projection":ui_sha,
+        "v098_profile":bootstrap_identity_sha,
+        "selected_special_identity":special_L["selected_identity_sha256"],
+        "static_item_cache":(static_cache_identity["sha256"]
+                             if static_cache_identity else None),
+        "v208_start_receipt":v208_receipt_identity.get("receipt_sha256"),
+        "windows_package_manifest":windows_package.get("manifest_sha256"),
+        "simc_binary":binary["sha256"],
+        "simc_revision":revision,
+    }
+    return {
+        "schema":"v212_environment_dependency_graph_v1",
+        "fingerprints":fingerprints,
+        "invalidation_rules":{
+            key:list(value) for key,value in DEPENDENCY_INVALIDATION_RULES.items()},
+        "cache_policy":{
+            "static_item_cache":
+                "PRESERVE_UNLESS_EXACT_VARIANT_IDENTITY_CHANGED; REVISION_ONLY_DOES_NOT_PURGE",
+            "dps_cache":
+                "BINARY_REVISION_PROFILE_CANDIDATE_COMBAT_AND_ITERATION_IDENTITY",
+            "historical_sessions":
+                "IMMUTABLE; DEPENDENCY_CHANGES_CREATE_OR_REQUIRE_A_NEW_SESSION",
+        },
+    }
+
+
 def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
                      bootstrap, target_root, v208_start_receipt=None,
-                     windows_package=None):
+                     windows_package=None, previous_environment_manifest=None):
     build, revision, v191, v211 = _source_identity(
         source_catalog, source_catalog_sha)
     need(ui.get("schema") == ui_catalog.SCHEMA
@@ -460,6 +605,8 @@ def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
          "PRODUCT_DPS_26_SPECIALIZATION_CONTRACT_DRIFT")
     need(type(target_ilevel) is int,
          "V098_TARGET_IDENTITY_MISSING")
+    profile_supplier_coverage=_verify_profile_supplier_coverage(
+        bootstrap,v191,build,archetype)
     plan = bootstrap.get("plan")
     need(type(plan) is dict and type(plan.get("base_B")) is int
          and type(plan.get("final_T")) is int,
@@ -517,6 +664,7 @@ def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
         "native_calls": bootstrap["native_calls"],
         "current_season_product": bootstrap["current_season_product"],
         "all_specs_ready": bootstrap["all_specs_ready"],
+        "profile_supplier_coverage":profile_supplier_coverage,
         "source_independent_334_user_session":
             bootstrap.get("source_independent_334_user_session"),
         "source_independent_non334_user_session":
@@ -533,8 +681,9 @@ def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
     }
     bootstrap_identity_sha = sha(canonical(bootstrap_identity).encode("utf8"))
     limitations = list(source_catalog.get("readiness_limitations", []))
-    if bootstrap.get("all_specs_ready") is not True:
-        limitations.append("V098_REPRESENTATIVE_ARCHETYPE_COVERAGE_INCOMPLETE")
+    if not profile_supplier_coverage["all_specs_ready"]:
+        limitations.append(
+            "ALL_26_ADAPTIVE_PROFILE_NATIVE_ACCEPTANCE_NOT_COMPLETE")
     if ui.get("enchant_candidates", {}).get("source_classification_counts", {}).get(
             "native_E_measured", 0) < EXPECTED_ENCHANT_COUNT:
         limitations.append("ENCHANT_SOURCE_CLASSIFICATION_IS_NOT_GENERAL_NATIVE_E")
@@ -547,8 +696,8 @@ def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
     limitations.append("WINDOWS_ONE_CLICK_ENVIRONMENT_BUILD_AND_START_NOT_INTEGRATED")
     limitations = list(dict.fromkeys(limitations))
     unresolved = []
-    if bootstrap.get("all_specs_ready") is not True:
-        unresolved.append("ALL_26_DPS_REPRESENTATIVE_PROFILE_SUPPLIERS")
+    if not profile_supplier_coverage["all_specs_ready"]:
+        unresolved.append("ALL_26_ADAPTIVE_PROFILE_NATIVE_ACCEPTANCE")
     if (special_L["selected_count"] and
             v208_receipt_identity["status"]!="VERIFIED"):
         unresolved.append(
@@ -567,6 +716,7 @@ def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
             "excluded": ["evoker/augmentation", "all_tanks", "all_healers"],
             "current_profile_archetype": archetype,
             "all_specs_ready": bootstrap.get("all_specs_ready"),
+            "profile_supplier_coverage":profile_supplier_coverage,
         },
         "source_catalog": {
             "schema": source_catalog["schema"],
@@ -614,18 +764,30 @@ def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
             "selected_special_L": special_L,
             "profile_files": profile_files,
             "scenario_sha256": scenario_sha,
+            "profile_supplier_coverage_sha256":sha(
+                canonical(profile_supplier_coverage).encode("utf8")),
             "native_calls": bootstrap["native_calls"],
         },
+        "dependency_graph":None,
+        "dependency_change":None,
         "readiness_limitations": limitations,
         "unresolved_dependencies": unresolved,
     }
+    graph=_dependency_graph(
+        source_catalog_sha,v191,ui_sha,bootstrap_identity_sha,profile_files,
+        special_L,static_cache_identity,v208_receipt_identity,
+        windows_package,binary,revision)
+    payload["dependency_graph"]=graph
+    payload["dependency_change"]=compare_dependency_graphs(
+        previous_environment_manifest,graph)
     digest = sha(canonical(payload).encode("utf8"))
     return {**payload, "manifest_sha256": digest}
 
 
 def compile_from_paths(source_catalog_path, bootstrap_path, target_root,
                       v208_start_receipt_path=None,
-                      package_manifest_path=None):
+                      package_manifest_path=None,
+                      previous_manifest_path=None):
     source_catalog_path = Path(source_catalog_path).resolve()
     source_catalog, source_catalog_sha = read_json(source_catalog_path)
     bootstrap, _ = read_json(bootstrap_path)
@@ -637,8 +799,18 @@ def compile_from_paths(source_catalog_path, bootstrap_path, target_root,
     package_identity = verify_windows_package_manifest(
         package_manifest_path, source_catalog_path,
         source_catalog, source_catalog_sha)
+    previous=None
+    if previous_manifest_path is not None:
+        previous,_=read_json(previous_manifest_path)
+        need(type(previous) is dict and
+             valid_sha(previous.get("manifest_sha256")) and
+             sha(canonical({k:v for k,v in previous.items()
+                            if k!="manifest_sha256"}).encode("utf8"))==
+                 previous["manifest_sha256"],
+             "PREVIOUS_ENVIRONMENT_MANIFEST_DIGEST_INVALID")
     return compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
-                             bootstrap, target_root, receipt, package_identity)
+                             bootstrap, target_root, receipt, package_identity,
+                             previous)
 
 
 def main(argv=None):
@@ -648,13 +820,15 @@ def main(argv=None):
     parser.add_argument("--target-root", required=True, type=Path)
     parser.add_argument("--v208-start-receipt", type=Path)
     parser.add_argument("--package-manifest", type=Path)
+    parser.add_argument("--previous-manifest", type=Path)
     parser.add_argument("--out", required=True, type=Path)
     args = parser.parse_args(argv)
     try:
         result = compile_from_paths(args.source_to_catalog,
                                     args.bootstrap_result, args.target_root,
                                     args.v208_start_receipt,
-                                    args.package_manifest)
+                                    args.package_manifest,
+                                    args.previous_manifest)
     except (OSError, ValueError, KeyError, TypeError) as exc:
         print("V212_ENVIRONMENT_BUILD_BLOCKED", type(exc).__name__, str(exc))
         return 3

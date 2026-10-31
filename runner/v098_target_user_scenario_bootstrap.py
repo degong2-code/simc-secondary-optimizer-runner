@@ -7,7 +7,7 @@ Not a new item DB, equipment optimizer, SimC effect evaluator or general class
 coverage claim. Planning invokes ZERO Native SimC calls.
 """
 from __future__ import annotations
-import argparse,copy,hashlib,json,pathlib,sys
+import argparse,copy,functools,hashlib,json,pathlib,sys
 import v046_static_item_cache as cache_mod
 import v055_simc_item_selection as item_mod
 import v061_scenario_contract as scenario
@@ -37,6 +37,83 @@ ENCHANT_FIELD="verified_enchant"
 SEASON_ENCHANT_FIELD=nonchmv_enchant.FIELD
 TIER_FIVE=common.TIER_FIVE
 FIFTH_TIER=common.FIFTH_TIER
+
+@functools.lru_cache(maxsize=1)
+def _profile_supplier_registry():
+    # Resolve all 26 user-input routes once per process. Contract discovery
+    # only: no Native, no network, and no legacy profile text read.
+    import v106_user_session_controller as sessions
+    contracts=tuple(sorted(source_first.contracts.CONTRACTS))
+    legacy=tuple(sorted(ARCHETYPES))
+    independent=tuple(sorted("/".join(x) for x in PURE_PRODUCT_SPECS))
+    supported=tuple(sorted("/".join(x) for x in sessions.SUPPORTED))
+    starters=tuple(sorted(
+        set(sessions.starter_examples()) |
+        {"/".join(x) for x in sessions.PURE_STARTERS}))
+    season_catalog=tuple(sorted(pure.catalog()["specializations"]))
+    gear_raw=source_first.gear.DEFAULT.read_bytes()
+    tier_raw=source_first.TIER_PATH.read_bytes()
+    budget_raw=source_first.BUDGET_PATH.read_bytes()
+    gear_doc=json.loads(gear_raw.decode("utf8"))
+    tier_doc=json.loads(tier_raw.decode("utf8"))
+    digest=lambda raw:hashlib.sha256(raw).hexdigest()
+    code_hashes={
+        "contracts":digest(pathlib.Path(source_first.contracts.__file__).read_bytes()),
+        "profile_composer":digest(pathlib.Path(pure.__file__).read_bytes()),
+        "user_session":digest(pathlib.Path(sessions.__file__).read_bytes()),
+        "season_stage":digest(pathlib.Path(source_first.__file__).read_bytes()),
+    }
+    return {"contracts":contracts,"legacy_source_backed":legacy,
+            "source_independent":independent,"user_input":supported,
+            "starter_defaults":starters,"season_catalog":season_catalog,
+            "season_build":gear_doc["season_build"],
+            "tier_build":tier_doc["retail_build"],
+            "source_input_sha256":{
+                "gear":digest(gear_raw),"tier":digest(tier_raw),
+                "budget":digest(budget_raw)},
+            "supplier_code_sha256":code_hashes}
+
+
+def _current_season_profile_supplier_coverage(season_override, selected_key):
+    need(type(season_override) is dict and
+         type(season_override.get("specializations")) is dict,
+         "CURRENT_SEASON_PROFILE_SUPPLIER_CATALOG_MISSING")
+    registry=_profile_supplier_registry()
+    expected=registry["contracts"]
+    supplied=tuple(sorted(season_override["specializations"]))
+    for name in ("legacy_source_backed","source_independent","user_input",
+                 "starter_defaults","season_catalog"):
+        need(registry[name] == expected,
+             "PROFILE_SUPPLIER_REGISTRY_DRIFT:"+name)
+    need(supplied == expected,
+         "CURRENT_SEASON_PROFILE_SUPPLIER_SET_DRIFT")
+    need(selected_key in supplied,
+         "SELECTED_SPEC_HAS_NO_CURRENT_SEASON_PROFILE_SUPPLIER")
+    need(registry["season_build"]==registry["tier_build"],
+         "PROFILE_SUPPLIER_GEAR_TIER_BUILD_MISMATCH")
+    return {
+        "schema":"v215_profile_supplier_coverage_v1",
+        "status":"CURRENT_SEASON_PLAN_SUPPLIERS_26_OF_26",
+        "supported_specializations":list(expected),
+        "contract_count":len(registry["contracts"]),
+        "legacy_source_backed_count":len(registry["legacy_source_backed"]),
+        "source_independent_count":len(registry["source_independent"]),
+        "user_input_default_count":len(registry["user_input"]),
+        "starter_default_count":len(registry["starter_defaults"]),
+        "season_catalog_count":len(registry["season_catalog"]),
+        "current_season_profile_supplier_count":len(supplied),
+        "selected_specialization":selected_key,
+        "selected_specialization_plan_supplier":True,
+        "season_build":registry["season_build"],
+        "source_input_sha256":registry["source_input_sha256"],
+        "supplier_code_sha256":registry["supplier_code_sha256"],
+        # Supplier/plan coverage is not full adaptive DPS acceptance.
+        "all_specs_ready":False,
+        "adaptive_native_evidence_complete":False,
+        "native_calls":0,
+        "network_calls":0,
+    }
+
 
 def reconcile_four_tier(key,rows,groups,taken,ilevel):
     return common.reconcile_four_tier(key,rows,groups,taken,ilevel,need)
@@ -257,6 +334,13 @@ def build(user,folder,binary,revision,static_cache_path=None,
     # Source-independent P1 production specs compile from the season catalog.
     # Existing 24 source-backed default paths remain unchanged; explicit
     # pure_stage=True preserves the older v140 witness-only pilot contract.
+    season_override=None
+    profile_supplier_coverage=None
+    if source_first_stage or current_season_product:
+        season_override=source_first.season_scope()
+        if current_season_product:
+            profile_supplier_coverage=_current_season_profile_supplier_coverage(
+                season_override,"/".join(key))
     if pure_stage or source_free:
         need(ordinary_variant is None and
              (ilvl==334 or independent_target_level or current_season_product),
@@ -266,8 +350,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
                              combat=combat,
                              level_preview=(independent_target_level or
                                             (current_season_product and ilvl!=334)),
-                             season_override=(source_first.season_scope()
-                                              if (source_first_stage or current_season_product) else None)))
+                             season_override=season_override))
     elif ordinary_variant is None:
         # Preserve the historical exact call shape and all default receipts.
         base_profile,cfg,rows,groups,weapon_layout,F=common.source_backed_gear(
@@ -457,6 +540,10 @@ def build(user,folder,binary,revision,static_cache_path=None,
             "generated_manifest":str(folder/"manifest.json"),
             "output_dir":str(folder/"simc_results"),"plan":plan,
             "native_calls":0,"supported_archetypes_now":len(ARCHETYPES),
+            **({"current_season_supported_specializations":
+                    profile_supplier_coverage["current_season_profile_supplier_count"],
+                "profile_supplier_coverage":profile_supplier_coverage}
+               if profile_supplier_coverage is not None else {}),
             "armor_family":common.CLASS_ARMOR[key[0]],
             "ordinary_armor_seed_slots_available":list(
                 common.available_ordinary_seed_slots(

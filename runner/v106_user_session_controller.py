@@ -12,6 +12,7 @@ sys.path.insert(0,str(pathlib.Path(__file__).resolve().parent))
 import v098_target_user_scenario_bootstrap as bootstrap
 import v108_native_consumable_inputs as consumer
 import v206_nonchmv_eagle_selection as nonchmv_enchant
+import v213_source_to_catalog as source_catalog_bridge
 
 SCHEMA="v106_dps_user_session_v1"
 DEFAULT_ROOT=pathlib.Path.home()/"SIMC_Secondary_Optimizer"/"runs"
@@ -37,6 +38,44 @@ def canonical(obj):
                       separators=(",",":"),allow_nan=False)
 def sha(data):
     return hashlib.sha256(data).hexdigest()
+
+
+def source_catalog_identity(path,revision,package_manifest_path=None):
+    if path is None:
+        need(package_manifest_path is None,
+             "PACKAGE_MANIFEST_WITHOUT_SOURCE_CATALOG")
+        return None
+    source_path=pathlib.Path(path).expanduser().resolve()
+    need(source_path.is_file() and not source_path.is_symlink(),
+         "V213_SOURCE_CATALOG_FILE_INVALID")
+    raw=source_path.read_bytes()
+    try:
+        document=json.loads(raw.decode("utf8"))
+        source_catalog_bridge.verify_catalog(document)
+    except Exception as exc:
+        raise SessionBlocked("V213_SOURCE_CATALOG_INVALID:"+type(exc).__name__) from exc
+    need(document.get("schema")==source_catalog_bridge.SCHEMA and
+         document.get("simc_revision")==revision and
+         document.get("native_calls")==0 and
+         document.get("network_calls")==0 and
+         document.get("automatic_ui_promotion") is False,
+         "V213_SOURCE_CATALOG_SESSION_IDENTITY_MISMATCH")
+    result={
+        "schema":document["schema"],
+        "artifact_sha256":sha(raw),
+        "manifest_sha256":document["manifest_sha256"],
+        "game_build":document["game_build"],
+        "simc_revision":document["simc_revision"],
+    }
+    if package_manifest_path is not None:
+        package_path=pathlib.Path(package_manifest_path).expanduser().resolve()
+        need(package_path.is_file() and not package_path.is_symlink(),
+             "V181_PACKAGE_MANIFEST_FILE_INVALID")
+        package_raw=package_path.read_bytes()
+        need(0<len(package_raw)<=5_000_000,
+             "V181_PACKAGE_MANIFEST_SIZE_INVALID")
+        result["package_manifest_sha256"]=sha(package_raw)
+    return result
 STARTER_CATALOG=(pathlib.Path(__file__).resolve().parents[1]/
     "integration_probes/catalog/v146_character_starter_examples.json")
 
@@ -234,7 +273,8 @@ def standard_controls(key=("paladin","retribution")):
 
 def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
                 independent_334=False,independent_target_level=False,
-                current_season_product=False):
+                current_season_product=False,source_catalog_path=None,
+                package_manifest_path=None):
     binary=pathlib.Path(binary).expanduser().resolve()
     need(binary.is_file(),"SIMC_BINARY_NOT_FOUND")
     need(type(revision) is str and re.fullmatch(r"[0-9a-fA-F]{7,40}",revision),
@@ -248,6 +288,10 @@ def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
          "SPECIAL_EQUIPMENT_REQUIRES_EXACT_STATIC_CACHE")
     need(type(current_season_product) is bool,
          "CURRENT_SEASON_PRODUCT_MODE_BOOL_REQUIRED")
+    need(source_catalog_path is None or current_season_product,
+         "V213_SOURCE_CATALOG_ONLY_CURRENT_SEASON_PRODUCT")
+    need(package_manifest_path is None or source_catalog_path is not None,
+         "V181_PACKAGE_MANIFEST_WITHOUT_V213_SOURCE")
     need(not current_season_product or (
          not independent_334 and not independent_target_level and
          ordinary_variant is None and
@@ -324,26 +368,36 @@ def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
         identity["current_season_budget_sha256"]=sha(stage.BUDGET_PATH.read_bytes())
         identity["source_first_base_catalog_sha256"]=sha(
             bootstrap.pure.DEFAULT_CATALOG.read_bytes())
+        source_identity=source_catalog_identity(
+            source_catalog_path,revision,package_manifest_path)
+        if source_identity is not None:
+            identity["current_season_source_catalog"]=source_identity
     return sha(canonical(identity).encode("utf8"))[:20],identity
 
 def session_path(user,root,binary,revision,static_cache=None,*,
                  ordinary_variant=None,independent_334=False,independent_target_level=False,
-                 current_season_product=False):
+                 current_season_product=False,source_catalog_path=None,
+                 package_manifest_path=None):
     key,identity=session_key(user,binary,revision,static_cache,
                              ordinary_variant=ordinary_variant,
                              independent_334=independent_334,
                              independent_target_level=independent_target_level,
-                             current_season_product=current_season_product)
+                             current_season_product=current_season_product,
+                             source_catalog_path=source_catalog_path,
+                             package_manifest_path=package_manifest_path)
     return pathlib.Path(root).expanduser().resolve()/key,identity
 
 def store_session(user,root,binary,revision,static_cache=None,*,
                   ordinary_variant=None,independent_334=False,independent_target_level=False,
-                  current_season_product=False):
+                  current_season_product=False,source_catalog_path=None,
+                  package_manifest_path=None):
     folder,identity=session_path(user,root,binary,revision,static_cache,
                                  ordinary_variant=ordinary_variant,
                                  independent_334=independent_334,
                                  independent_target_level=independent_target_level,
-                                 current_season_product=current_season_product)
+                                 current_season_product=current_season_product,
+                                 source_catalog_path=source_catalog_path,
+                                 package_manifest_path=package_manifest_path)
     folder.mkdir(parents=True,exist_ok=True)
     target=folder/"user.json"
     raw=canonical(user)+"\n"

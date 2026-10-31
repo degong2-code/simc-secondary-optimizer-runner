@@ -604,9 +604,15 @@ function showPlan(plan) {
   if(!plan?.plan) return;
   const o=Object.values(plan.plan.fixed_O).reduce((a,n)=>a+n,0);
   const environment=plan.environment_manifest;
+  const coverage=environment?.profile_supplier_coverage;
+  const supplierText=coverage?
+    " · 프로필 공급원 "+coverage.current_season_profile_supplier_count+
+    "/"+coverage.contract_count+" (계획 경로; 전체 적응형 Native 미검증)":
+    "";
   const environmentText=environment?
     " · 환경 "+environment.status+
-    " · 미해결 "+(environment.unresolved_dependencies||[]).length:
+    " · 미해결 "+(environment.unresolved_dependencies||[]).length+
+    supplierText:
     "";
   setNotice("계산 준비 확인 · B "+number(plan.plan.base_B)+
     " + 고정 기름 O "+number(o)+" = 최종 T "+number(plan.plan.final_T)+

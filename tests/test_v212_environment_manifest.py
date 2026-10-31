@@ -101,11 +101,33 @@ class EnvironmentManifestTests(unittest.TestCase):
             },
             "selected_nonchmv_enchant": self.selected,
         }
+        v191_hashes=self.source_catalog["source_provenance"]["v191"]["sha256_by_input"]
+        self.bootstrap["profile_supplier_coverage"]={
+            "schema":"v215_profile_supplier_coverage_v1",
+            "status":"CURRENT_SEASON_PLAN_SUPPLIERS_26_OF_26",
+            "supported_specializations":sorted(p.specs.CONTRACTS),
+            "contract_count":26,"legacy_source_backed_count":24,
+            "source_independent_count":2,"user_input_default_count":26,
+            "starter_default_count":26,"season_catalog_count":26,
+            "current_season_profile_supplier_count":26,
+            "selected_specialization":"paladin/retribution",
+            "selected_specialization_plan_supplier":True,
+            "season_build":self.source_catalog["game_build"],
+            "source_input_sha256":{k:v191_hashes[k]
+                                   for k in ("gear","tier","budget")},
+            "supplier_code_sha256":{
+                "contracts":"c"*64,"profile_composer":"d"*64,
+                "user_session":"e"*64,"season_stage":"f"*64},
+            "all_specs_ready":False,
+            "adaptive_native_evidence_complete":False,
+            "native_calls":0,"network_calls":0,
+        }
 
-    def compile(self, receipt=None):
+    def compile(self, receipt=None, previous=None):
         return p.compile_manifest(
             self.source_catalog, self.source_catalog_sha,
-            self.ui, self.ui_sha, self.bootstrap, self.target, receipt)
+            self.ui, self.ui_sha, self.bootstrap, self.target, receipt,
+            previous_environment_manifest=previous)
 
     def make_windows_package_manifest(self):
         package_root=self.root/"SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA"
@@ -254,6 +276,40 @@ class EnvironmentManifestTests(unittest.TestCase):
         self.assertNotIn(
             "V208_SELECTED_SPECIAL_L_START_RECEIPT_NOT_YET_SERIALIZED_IN_ENVIRONMENT_MANIFEST",
             result["unresolved_dependencies"])
+
+    def test_profile_supplier_source_hash_mismatch_blocks(self):
+        self.bootstrap["profile_supplier_coverage"]["source_input_sha256"]["gear"]="0"*64
+        with self.assertRaisesRegex(p.EnvironmentBlocked,
+                                    "V098_PROFILE_SUPPLIER_SOURCE_INPUT_SHA_MISMATCH"):
+            self.compile()
+
+    def test_dependency_change_from_v208_receipt_preserves_static_cache(self):
+        row,cache_path,record=self.add_selected_special()
+        initial=self.compile()
+        receipt=self.make_v208_receipt(row,cache_path,record)
+        updated=self.compile(receipt,initial)
+        change=updated["dependency_change"]
+        self.assertEqual(change["status"],"DEPENDENCIES_CHANGED")
+        self.assertEqual(change["changed_inputs"],["v208_start_receipt"])
+        self.assertEqual(change["invalidated_components"],["environment_manifest"])
+        self.assertTrue(change["static_item_cache_preserved"])
+        self.assertTrue(change["historical_sessions_preserved"])
+        self.assertEqual(change["cache_mutations"],0)
+        self.assertEqual(change["native_calls"],0)
+
+    def test_dependency_graph_same_inputs_and_source_change(self):
+        first=self.compile()
+        unchanged=p.compare_dependency_graphs(first,first["dependency_graph"])
+        self.assertEqual(unchanged["status"],"UNCHANGED")
+        changed_graph=dict(first["dependency_graph"])
+        changed_graph["fingerprints"]=dict(first["dependency_graph"]["fingerprints"])
+        changed_graph["fingerprints"]["v213_source_catalog"]="9"*64
+        diff=p.compare_dependency_graphs(first,changed_graph)
+        self.assertIn("v213_source_catalog",diff["changed_inputs"])
+        self.assertIn("v098_profile",diff["invalidated_components"])
+        self.assertIn("session_identity",diff["invalidated_components"])
+        self.assertTrue(diff["static_item_cache_preserved"])
+        self.assertEqual(diff["cache_mutations"],0)
 
     def test_same_inputs_produce_byte_stable_manifest(self):
         first = self.compile()

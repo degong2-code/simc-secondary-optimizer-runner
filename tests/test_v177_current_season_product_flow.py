@@ -15,6 +15,8 @@ import v113_local_web_api as web
 import v096_unified_product_entry as entry
 import v169_source_first_representative_stage as first
 from tests.test_v106_user_session_controller import fake_native
+from tests.test_v213_source_to_catalog import SourceToCatalogTests
+import v213_source_to_catalog as source_bridge
 
 class CurrentSeasonProductIntegration(unittest.TestCase):
     def setUp(self):
@@ -43,6 +45,12 @@ class CurrentSeasonProductIntegration(unittest.TestCase):
                 self.assertEqual(result["plan"]["native_limit"],6)
                 self.assertEqual(len(result["effective_four_tier_slots"]),4)
                 self.assertTrue(result["current_season_product"])
+                coverage=result["profile_supplier_coverage"]
+                self.assertEqual(coverage["current_season_profile_supplier_count"],26)
+                self.assertEqual(coverage["legacy_source_backed_count"],24)
+                self.assertEqual(coverage["source_independent_count"],2)
+                self.assertEqual(coverage["selected_specialization"],"/".join(key))
+                self.assertFalse(coverage["all_specs_ready"])
                 manifest=json.loads(pathlib.Path(result["generated_manifest"]).read_text())
                 self.assertNotIn(entry.STAGE_FIELD,manifest)
                 self.assertEqual(manifest["native_limit"],6)
@@ -116,6 +124,47 @@ class CurrentSeasonProductIntegration(unittest.TestCase):
         sessions.clear_cancel(folder)
         self.assertFalse(sessions.paths(folder)["cancel"].exists())
 
+    def test_v213_source_catalog_bytes_are_session_dependencies_not_paths(self):
+        builder=SourceToCatalogTests()
+        builder.setUpClass()
+        season,classification=builder.build_inputs()
+        first=source_bridge.compile_catalog(season,"a"*64,classification,"b"*64)
+        changed=source_bridge.compile_catalog(season,"c"*64,classification,"b"*64)
+        one=self.root/"source-one.json";same=self.root/"relocated"/"source-one.json"
+        two=self.root/"source-two.json";same.parent.mkdir()
+        one.write_text(json.dumps(first,sort_keys=True),encoding="utf8")
+        same.write_bytes(one.read_bytes())
+        two.write_text(json.dumps(changed,sort_keys=True),encoding="utf8")
+        user=self.user()
+        rev=first["simc_revision"]
+        key1,identity1=sessions.session_key(
+            user,self.binary,rev,current_season_product=True,
+            source_catalog_path=one)
+        key_same,identity_same=sessions.session_key(
+            user,self.binary,rev,current_season_product=True,
+            source_catalog_path=same)
+        key2,identity2=sessions.session_key(
+            user,self.binary,rev,current_season_product=True,
+            source_catalog_path=two)
+        self.assertEqual(key1,key_same)
+        self.assertNotEqual(key1,key2)
+        self.assertEqual(identity1["current_season_source_catalog"]["artifact_sha256"],
+                         identity_same["current_season_source_catalog"]["artifact_sha256"])
+        self.assertNotEqual(
+            identity1["current_season_source_catalog"]["manifest_sha256"],
+            identity2["current_season_source_catalog"]["manifest_sha256"])
+        self.assertNotIn("path",identity1["current_season_source_catalog"])
+        package=self.root/"V181_PACKAGE_MANIFEST.json"
+        package.write_text('{"package":"one"}',encoding="utf8")
+        package_key,_=sessions.session_key(
+            user,self.binary,rev,current_season_product=True,
+            source_catalog_path=one,package_manifest_path=package)
+        package.write_text('{"package":"two"}',encoding="utf8")
+        changed_package_key,_=sessions.session_key(
+            user,self.binary,rev,current_season_product=True,
+            source_catalog_path=one,package_manifest_path=package)
+        self.assertNotEqual(package_key,changed_package_key)
+
     def test_local_http_user_choice_and_restore_existing_session_mode(self):
         app=web.create_app(root=self.root/"web",token="v177-offline-token")
         client=TestClient(app,base_url="http://127.0.0.1:8765")
@@ -141,6 +190,15 @@ class CurrentSeasonProductIntegration(unittest.TestCase):
         self.assertTrue(r.json()["plan"]["current_season_product"])
         self.assertEqual(r.json()["native_calls"],0)
         assert r.json()["plan"]["native_limit"]==6
+        coverage=r.json()["environment_manifest"]["profile_supplier_coverage"]
+        self.assertEqual(coverage["current_season_profile_supplier_count"],26)
+        self.assertFalse(coverage["all_specs_ready"])
+        if source_path is not None:
+            identity=json.loads((self.root/"web"/new_id/
+                                 "V106_SESSION_IDENTITY.json").read_text("utf8"))
+            self.assertEqual(
+                identity["current_season_source_catalog"]["artifact_sha256"],
+                sessions.sha(source_path.read_bytes()))
         restored=client.get("/api/v1/sessions/"+new_id+"/inputs",headers=headers)
         self.assertEqual(restored.status_code,200,restored.text)
         self.assertIs(restored.json()["current_season_product"],True)
