@@ -389,17 +389,64 @@ def compile_catalog(candidates,source_dir,proof_8025,proof_7967):
         "All 37 choices other than existing one-scope Eagle remain non-user-selectable; 8025 remains developer-only."
       ]
     }
+def verify_runtime_manifest(compiled,runtime):
+    """The checked-in UI metadata must be an exact compact projection."""
+    need(runtime.get("schema")==SCHEMA and
+         runtime.get("status")==compiled["status"] and
+         runtime.get("simc_commit")==compiled["simc_commit"] and
+         runtime.get("season_game_build")==compiled["season_game_build"] and
+         runtime.get("candidate_source_artifact_id")==compiled["candidate_source_artifact_id"] and
+         runtime.get("source_files")==compiled["source_files"] and
+         runtime.get("simc_item_enchant_pipeline")==compiled["simc_item_enchant_pipeline"] and
+         runtime.get("counts")==compiled["counts"] and
+         runtime.get("native_calls")==0 and
+         runtime.get("automatic_ui_promotion") is False and
+         runtime.get("simc_effect_reimplemented") is False,
+         "V211_RUNTIME_MANIFEST_PROVENANCE_OR_COUNTS_DRIFT")
+    rows=runtime.get("rows")
+    need(type(rows) is list and len(rows)==38,
+         "V211_RUNTIME_MANIFEST_ROW_COUNT_INVALID")
+    compact={x.get("enchant_id"):x for x in rows}
+    need(len(compact)==38,"V211_RUNTIME_MANIFEST_DUPLICATE_ID")
+    for source in compiled["rows"]:
+        target=compact.get(source["enchant_id"])
+        need(target is not None and target.get("token")==source["token"],
+             "V211_RUNTIME_MANIFEST_IDENTITY_DRIFT:"+str(source["enchant_id"]))
+        expected={
+          "effect_family":source["effect_family"],
+          "effect_summary":source["effect_summary"],
+          "static_components":[x["item_mod"] for x in source["static_components"]],
+          "static_chmv_rating_present":source["static_chmv_rating_present_in_dbc"],
+          "static_chmv_stats":source["static_chmv_stats"],
+          "driver_spell_ids":[x["driver_spell_id"] for x in source["spell_effects"]],
+          "spell_effect_roles":[x["effect_role"] for x in source["spell_effects"]],
+          "dynamic_chmv_proc_roles":source["dynamic_chmv_proc_roles"],
+          "dynamic_chmv_proc_present":source["dynamic_chmv_proc_present_in_spell_text"],
+          "simc_custom_handlers":source["simc_custom_handlers"],
+          "simc_generic_or_unregistered_spell_count":source["simc_generic_or_unregistered_spell_count"],
+          "native_E_status":source["native_E_evidence"]["status"],
+          "native_E":source["native_E_evidence"]["static_E"],
+          "selection_status":source["selection_status"],
+          "simc_effect_owner":source["simc_effect_owner"],
+          "simc_effect_reimplemented":source["simc_effect_reimplemented"]}
+        need(all(target.get(k)==v for k,v in expected.items()),
+             "V211_RUNTIME_MANIFEST_CLASSIFICATION_DRIFT:"+str(source["enchant_id"]))
+    return True
+
 def main(argv=None):
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("--candidates",type=Path,required=True)
     p.add_argument("--source-dir",type=Path,required=True)
     p.add_argument("--proof-8025",type=Path,required=True)
     p.add_argument("--proof-7967",type=Path,required=True)
+    p.add_argument("--runtime-manifest",type=Path,required=True)
     p.add_argument("--out",type=Path,required=True)
     a=p.parse_args(argv)
     try:
         out=compile_catalog(json.loads(a.candidates.read_text("utf8")),
                             a.source_dir,a.proof_8025,a.proof_7967)
+        runtime=json.loads(a.runtime_manifest.read_text("utf8"))
+        verify_runtime_manifest(out,runtime)
     except (OSError,ValueError,KeyError) as e:
         print("V211_SOURCE_CLASSIFICATION_BLOCKED",str(e))
         return 3
