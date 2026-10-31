@@ -128,6 +128,17 @@ class UserSessionControls(unittest.TestCase):
                       json.loads((folder/"V106_SESSION_IDENTITY.json").read_text()))
         self.assertEqual(len(list((root/"runs").iterdir())),2)
 
+    def test_profile_stage_contract_is_sealed_into_new_session_identity(self):
+        root,binary,user=self.fixture()
+        key,identity=ux.session_key(user,binary,"7bc10711b5")
+        self.assertEqual(key,ux.sha(ux.canonical(identity).encode("utf8"))[:20])
+        self.assertEqual(identity["profile_stage"]["stage_id"],
+                         "v098_target_profile")
+        self.assertEqual(identity["profile_stage"]["stage_version"],
+                         "v098_profile_stage_v1")
+        self.assertEqual(len(identity["profile_stage"]["code_sha256"]),64)
+        self.assertTrue(identity["profile_stage"]["data_fingerprints"])
+
     def test_deterministic_session_resume_and_binary_revision_identity(self):
         root,binary,user=self.fixture()
         folder=ux.store_session(user,root/"sessions",binary,"7bc10711b5")
