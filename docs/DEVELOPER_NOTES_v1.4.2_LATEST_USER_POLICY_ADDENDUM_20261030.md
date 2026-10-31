@@ -104,3 +104,42 @@
 - SimC는 spell/proc timing, dynamic stat buffs, damage, APL interaction, DPS를 전담한다. source에 custom handler가 안 보인다는 사실은 unsupported나 Native acceptance를 뜻하지 않는다. 우리 코드는 독립 proc/effect evaluator를 만들지 않는다. 정확 Native로 확인된 **영구 정적 CHMV E만** 자동 참조 B/T 회계에 기존 v204 계약대로 반영; 수동 최종 T 불변, T=G+J+F+O/B=G+J+F, O once, special L fixed floor, cache/session identity 불변.
 - [source compiler #41155772497](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41155772497) Ubuntu·Windows 각 6 tests PASS, all38 pinned source/manifest match, Native0. [catalog integration #41155959636](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41155959636) 각 OS 56 tests PASS, 38 rows visible read-only, selectable count1, Native0. [UI #41155959593](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41155959593) 두 OS PASS; [Windows source beta #41155959570](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41155959570) Python3.12/3.14 SUCCESS; refreshed v211 guide package [#41157484148](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41157484148) Python3.12/3.14 SUCCESS, artifact #13025173397 SHA256 `edfa49030145622c8dc31ee84daf3ba9d4784a1e7749419ad054c107fe538141`, Native0. Full details and original source compiler artifact hash: `docs/V211_ENCHANT_EFFECT_SOURCE_CLASSIFICATION_AND_EVIDENCE_20261031.md`.
 - 추가 7개 CHMV ring enchant를 실제 사용자 선택으로 확장하려면 정확한 ring ID·slot·전문화·프로필 조건을 정하고 필요한 Native E만 최소 횟수로 측정한 뒤 별도 승인해야 한다. 38×26 Native matrix 불필요. v211은 classification only, no UI unlock, no Native.
+
+
+## 7. 2026-10-31 사용자 직접 승인 — 장비 수집 DB와 원클릭 Environment Builder 통합 목표
+
+**최종 제품은 장비 수집 DB, 원본 기반 자동 발견·분류·자가검증 엔진, 기존 SimC 최적화 엔진을 결합하여 사용자가 원클릭으로 실행 환경을 구축하는 프로그램이어야 한다.** 개별 마부/장비 UI를 만드는 것이 최종 목표가 아니다. 새로운 시즌/아이템/효과를 사용자가 일일이 알려주거나 개발자가 매번 하드코딩하지 않아도, 승인된 원본을 탐색해 후보를 발견하고 출처·정체성·적용 부위·효과 유형·정적 스탯·검증 범위를 구조화하며 필요한 선택 조건만 최소 검증해야 한다.
+
+### 승인된 최종 구성
+
+1. **시즌 장비 수집 DB:** 기존 v161–v190 API-first/zero-seed 수집 체계를 재사용해 장비·티어·장신구·특수장비·제작/장식·보석·마부·소모품 후보를 모은다. 다른 프로젝트/WEQUIP를 시드로 쓰지 않는다.
+2. **자동 발견·분류·자가검증 엔진:** SimC generated DBC/enum/spelltext/handler와 DB2/item metadata를 정확 ID·token·source revision/build/SHA로 연결한다. 부위별 적용성은 실제 inventory/subclass mask 및 아이템 데이터로 결정한다. 미확인·누락·충돌은 UNKNOWN/PENDING/CONFLICT로 보존하고 0이나 전 부위 허용으로 추정하지 않는다. 동일 효과·동일 부위·비교 가능한 강도만 축약한다.
+3. **기존 제품 카탈로그 연결:** v191 thin aggregator, v211 source classifier, v196/v197 catalog bridge를 재사용한다. 현재는 각각 별도 후보/manifest와 제한된 UI 승인 경계를 갖고 있으므로, 단일 버전형 Environment Manifest로 출처를 참조·결합하는 통합이 미완료다. 새 수집기나 중복 데이터베이스를 만들지 않는다.
+4. **목표 환경 구축:** 승인된 사용자 선택을 기존 v098 대표 프로필 생성 및 v062 예산 계산에 전달한다. v208 exact selected-special bare L lookup과 v046 static cache를 재사용한다. 전체 DPS 프로필에는 사용자가 선택한 보석/마부/장비 옵션을 그대로 보존한다. 26개 DPS 전문화 대표 프로필 공급을 완성한다.
+5. **기존 SimC 최적화:** 봉인된 프로필/manifest를 v093/v094/v095 적응형 SimC에 넘긴다. DPS/SEM/95%/대안/캐시/취소/재개를 새로 만들지 않는다.
+
+### 원클릭 Environment Build 동작 계약
+
+- 사용자 명시 요청 시 실행하는 증분 동기화이며 상시 폴링/백그라운드 감시가 아니다.
+- 동일 source identity/build/hash의 기존 artifact와 검증 캐시는 재사용한다. SimC revision 변경만으로 정적 시즌 아이템 캐시를 폐기하지 않는다.
+- 변경된 source row만 파생 카탈로그/검증 의존성을 무효화한다. DPS 결과 캐시는 SimC binary/version, full profile/options, 후보, O, 전투조건, iterations identity로 별도 관리한다.
+- Preview/Plan은 Native0. 명시적 Start 시 실제 선택된 항목의 미관측 정적 수치만 필요한 최소 Native로 조회한다. v208은 여러 선택 특수장비 L miss를 한 번의 Native로 해결할 수 있다. 26×아이템/마부 전수 Native 금지.
+- Environment Manifest는 season/game build, SimC revision/binary, 원본 경로·SHA/artifact, 카탈로그 schema/version, exact item/options/slot identity, Native profile/binary/JSON2 SHA scope, static CHMV status, cache references, unresolved dependencies를 보존한다.
+- 준비 상태는 READY / READY_WITH_LIMITATIONS / BLOCKED로 구분하고 새로 발견·갱신·재사용·미확인·차단 항목, Native 횟수/cache hit, 적용 범위를 보고한다. 한 항목의 미확인이 무관한 선택지를 제거하지 않되, 그 항목 자체는 fail-closed 한다.
+
+### 불변 제품 경계
+
+- 사용자 지원은 **증강 기원사 제외 DPS 26전문화**. 탱커/힐러 제외.
+- 목적은 목표 ilvl 또는 수동 최종 T에 대한 최적 절대 CHMV rating 탐색이지 현재 장비 재분배나 장비 조합/획득 경로 추천이 아니다.
+- T=G+J+F+O, B=G+J+F, O once. 선택 특수 bare L은 G/B 내부 하한이며 재가산하지 않는다. Gem J와 영구 마부 E는 L에서 별도 귀속한다. 정확 Native E가 확인된 선택 정적 CHMV 마부만 기존 v204 자동 ilvl reference 규칙을 적용하며, 비CHMV 7967은 B/T 불변, 수동 최종 T는 재증가 금지.
+- SimC가 장비효과/proc/APL/buff/DPS를 소유한다. 우리 코드는 출처·ID·옵션·적용성·프로필·예산·정적 JSON2 정합·통계·캐시·오케스트레이션을 담당한다.
+- 기존 GitHub 격리 브랜치 문서 반영은 Project Sources/Instructions UI 적용이 아니다. main, v003 immutable, 원본 v016, 저장소 visibility, 공식 Work OS 승격은 별도 권한.
+
+### 구현 순서 및 현재 결손
+
+- **P3-A:** v191/v211/v196/v098/v208을 참조하는 단일 버전형 Environment Manifest 및 source dependency/invalidation contract. Native0 readiness preview와 unresolved join report.
+- **P3-B:** v191 source candidate → v211 classification → v196 approved catalog의 직접 artifact handoff. 부위별 카탈로그는 exact mask/item join에서 생성하고 discovery/classification과 UI selection을 분리.
+- **P3-C:** 승인된 선택값 → v098 대표 프로필/예산 → v208 선택 L → 기존 optimizer를 하나의 sealed environment로 연결하고 26 DPS 프로필 공급 확장.
+- **P3-D:** Windows 원클릭 Build/Start, progress, cancel/resume, incremental refresh, cache/evidence diagnostics.
+- 현재 v191은 source-pinned candidate aggregator이며 automatic UI promotion=false; v196은 고정 source candidate JSON과 별도 approval boundary를 읽는다; v211은 38 마부 분류만 수행한다; v098은 source-backed archetype subset만 지원한다. 따라서 **통합 Environment Builder, end-to-end manifest, 26 DPS 전체 프로필 공급, 최종 Windows one-click UX는 미완료**다.
+- 설계 상세 및 최초 통합 단위: `docs/P3_ENVIRONMENT_BUILDER_TARGET_ARCHITECTURE_20261031.md`. 이번 반영은 아키텍처/정책 문서화이며 코드 통합 완료나 사용자 배포 승격을 뜻하지 않는다.
