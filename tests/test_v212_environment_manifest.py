@@ -85,6 +85,19 @@ class EnvironmentManifestTests(unittest.TestCase):
         self.assertEqual(p.canonical(first), p.canonical(second))
         self.assertEqual(first["manifest_sha256"], second["manifest_sha256"])
 
+    def test_same_profile_at_different_local_root_has_same_environment_digest(self):
+        first = self.compile()
+        other = self.root / "relocated-target"
+        other.mkdir()
+        for name in ("manifest.json", "profile.simc", "scenario.json", "fillers.json"):
+            (other / name).write_bytes((self.target / name).read_bytes())
+        moved_bootstrap = dict(self.bootstrap)
+        moved_bootstrap["generated_manifest"] = str(other / "manifest.json")
+        moved = p.compile_manifest(
+            self.season, "1" * 64, self.enchants, "2" * 64,
+            self.ui, "3" * 64, moved_bootstrap, "9" * 64, other)
+        self.assertEqual(first["manifest_sha256"], moved["manifest_sha256"])
+
     def test_build_mismatch_fails_closed(self):
         self.enchants["season_game_build"] = "12.1.5.70576"
         with self.assertRaisesRegex(p.EnvironmentBlocked, "GAME_BUILD_MISMATCH"):
