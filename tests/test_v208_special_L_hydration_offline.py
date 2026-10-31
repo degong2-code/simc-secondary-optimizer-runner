@@ -101,7 +101,7 @@ class OneExactSpecialHydration(unittest.TestCase):
         self.assertEqual(plan.status_code,422,plan.text)
         self.assertEqual(self.calls,0)
         self.assertEqual(plan.json()["detail"]["code"],
-                         "SPECIAL_L_REQUIRES_EXACT_NATIVE_STATIC_VARIANT")
+                         "V106_SPECIAL_EQUIPMENT_REQUIRES_EXACT_STATIC_CACHE")
         with (mock.patch.object(hydrate.subprocess,"run",side_effect=self.fake_native),
               mock.patch.object(web.subprocess,"Popen") as spawned):
             spawned.return_value.poll.return_value=None
