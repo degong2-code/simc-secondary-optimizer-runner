@@ -168,3 +168,15 @@
 - **코드 범위 대조:** `runner/v143_specialization_contracts.py`의 현재 계약은 26개다. `integration_probes/v176_all_26_source_first_physical_native.py`는 26개 및 `sessions.SUPPORTED`와의 정확한 집합 일치를 강제한다. `tests/test_v176_all_26_source_first_physical_native.py`는 `evoker/augmentation`이 목록에 없음을 확인한다.
 - **기존 물리 증거 재사용:** [Actions #40972829357](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40972829357) 실제 로그의 `FINISHED_ALL_26_PHYSICAL_PASS`, `26 PASS_PHYSICAL_NATIVE`, 신규 Native 25회와 기존 v174 성기사 영수증 1회 재사용을 확인했다. 이는 ilvl334/35 iterations의 물리 프로필 smoke이며, 26개 모두의 적응형 CHMV 최적화 E2E를 증명하지 않는다.
 - **이번 정정에서 코드·Native·Actions 재실행은 없다.** 기존 소스·테스트·실제 Native 영수증을 재사용한다. `main`, immutable v003, 원본 v016, repository visibility, Project Sources/Instructions UI 및 공식 Work OS는 변경하지 않았다.
+
+
+## 7. 2026-10-31 P3-D v216 implementation evidence (no policy change)
+
+This is implementation-status evidence only. It does not alter the approved v1.4.2 user-flow, CHMV, SimC responsibility, 95% statistics, 26-DPS scope, or authority boundaries.
+
+- Isolated branch HEAD 547811e8ffb7d25eb9ad45bb416b0b75dd5458c3 adds v216 Environment Build Coordinator, v113 Build API/status route, UI Build button/status, package inclusion and focused regression.
+- The first slice builds an environment from the already installed, exact v213 artifact. It reuses v191/v211 provenance and v213 artifact bytes; it does not perform a new-season source refresh or call collectors.
+- v212 cross-platform #41200816574: 36/36 PASS per OS. v113 #41200816595: 150/150 PASS per OS. v181 #41200816597: Windows Python 3.12/3.14 each 118 regression + 2 package tests PASS. v182 #41200816611: Ubuntu/Windows each 76 focused + 68 compatibility + 2 package tests PASS.
+- v169 #41200816572 13 PASS; v177 #41200816573 12+85 PASS with Native-one-product skipped; v180 #41200816659 3+64 PASS with Native-six-cases skipped.
+- New Native0, binary builds0, optimizer/DPS/static-cache mutations0. Windows artifacts #13042157651 and #13042686292 each 750,209 bytes, 189-file inner package, no SimC binary/user cache, expire 2026-11-07.
+- Remaining: two-session changed-dependency API E2E; measured reuse of profile-generation I/O; request-driven v191→v211→v213 refresh; exact Build→Start→existing adaptive-worker identity; Windows user-PC GUI/cancel/resume; all-26 adaptive Native/DPS acceptance. Existing Native/cache evidence must be reused.

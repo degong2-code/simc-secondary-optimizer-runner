@@ -1,3 +1,23 @@
+# 2026-10-31 P3-D v216 — 최신 검증 상태 (실제 HEAD 547811e8)
+
+> **최신 상태가 아래 v215 기록을 대체한다.** 현재 격리 브랜치 HEAD는 547811e8ffb7d25eb9ad45bb416b0b75dd5458c3이며, 커밋은 v216 Incremental Environment Build Coordinator 및 로컬 API/UI 연결을 추가했다. 저장소는 Public, main HEAD는 07133e0aaf738d6e4816a6486057b1cd49c018de로 불변이다. 최신 Actions #41200816574/#41200816595/#41200816597/#41200816611 및 v169/v177/v180 회귀는 성공했다.
+>
+> **v216 구현 범위:** 설치된 versioned v213 artifact를 재사용하는 request-driven Environment Build coordinator, user-scenario scope identity, 이전 세션의 검증된 receipt/manifest 검색(최근 128 세션 제한), v212 dependency graph 비교, Environment Build Receipt, v113 POST/GET API, 사용자 UI Build 버튼/상태 표시, Windows package inclusion이 구현됐다. 이것은 설치된 artifact로 환경 manifest를 구성·검증하는 첫 P3-D slice다. **새 시즌 source refresh를 실행하거나 v191/v211/v213 collector를 호출하는 기능은 아니다.** source mode는 INSTALLED_VERSIONED_ARTIFACT_ONLY, refresh_performed=false이며 Network/Native/optimizer-cache mutation은 0이다.
+>
+> **최신 검증:** v212 Ubuntu/Windows 각각 36/36 PASS; v113 Ubuntu/Windows 각각 150/150 PASS; v181 Windows Python 3.12/3.14 각각 118 regression tests + 2 package tests PASS 및 추출 후 HTTP/3 Plan/restore PASS; v182 Ubuntu/Windows 각각 76 focused + 68 compatibility + 2 package tests PASS. v169 13 PASS; v177 12+85 PASS; v180 3+64 PASS. v177 Native-one-product와 v180 Native-six-cases는 SKIPPED. 신규 SimC Native 0, SimC binary build 0, optimizer/DPS cache mutation 0.
+>
+> **Windows artifacts:** v181 #41200816597 artifact #13042157651, 750,209 bytes, expires 2026-11-07T12:23:22Z. v182 #41200816611 artifact #13042686292, 750,209 bytes, expires 2026-11-07T12:23:10Z. 내부 beta ZIP은 189 files이며 SimC binary/user cache를 포함하지 않는다.
+>
+> **아직 미완료:** 실제 시즌 source refresh, changed dependency에 따른 cross-session end-to-end invalidation/rebuild proof, Environment Build→existing adaptive v093/v094/v095 Start의 전체 사용자 acceptance, Windows 사용자 PC GUI 클릭/취소/재개 확인, exact unresolved embellishment/temp-enchant/gem joins, 26 DPS 전체 adaptive Native/DPS acceptance. v216의 동일 세션 재요청은 manifest bytes reuse를 확인하지만 dependency_change는 INITIAL_ENVIRONMENT로 남는다. cross-session lookup은 별도 단위시험으로만 검증됐고, 변경 source가 새 세션을 만들고 이전 manifest에서 실제 invalidation되는 전체 경로는 추가 focused test가 필요하다.
+>
+> **정책:** 정확히 26 DPS, Augmentation Evoker/tank/healer 제외. T=G+J+F+O, B=G+J+F, oil once, special L floor, SimC owns effects/APL/procs/DPS, 95% only, 7967 only user-selectable. 아래 과거 27/증강 포함 문구는 무효. 업로드된 v1.4.1 사본(SHA 752641f0...)은 27/증강 포함 오기가 있어 corrected replacement를 docs에 포함했다(SHA e4513776f1a225394e404601532dfea61f066dd5e7f23149c7af355d6e43e0d3). Project Sources/Instructions UI는 여전히 수동 적용 대기다.
+>
+> **다음 작업:** (1) v216의 cross-session dependency-change path와 session immutability/cache preservation을 실제 두 세션 API regression으로 검증, (2) profile/manifest 동일 입력 재사용이 실제로 불필요한 build/I/O를 줄이는지 점검하고 labels를 사실에 맞춤, (3) source refresh는 새 시즌/patch 요청 시에만 v191→v211→v213을 호출하도록 기존 collectors에 연결, (4) sealed v098/v208 environment를 기존 adaptive worker에 넘기는 Start end-to-end를 검증, (5) Windows 사용자 PC acceptance. 신규 optimizer/collector/effect engine은 만들지 않는다.
+>
+> **권한:** 격리 브랜치만 변경. main, v003 immutable, original v016, Project Sources/Instructions UI, repository visibility, official Work OS/M0 authority는 변경하지 않았다.
+
+---
+
 # 사용자 직접 변경 — 시즌 자료 수집 엔진은 Zero-Seed / API-First (2026-10-29)
 
 > **2026-10-31 P3-C v215 최신 상태 — 26개 profile plan supplier + dependency identity + Windows v213 package PASS:** v098는 v143/v106/v139/v169의 기존 경로를 교차검사하여 24 legacy source-backed + 2 source-independent = **26/26 현재 시즌 profile plan suppliers**를 검증하고 gear/tier/budget 원본 SHA를 v191 입력 SHA와 일치시킨다. 이 수치는 계획·프로필 공급원 준비도이며 **26개 전부의 adaptive Native/DPS E2E 완료를 뜻하지 않는다**. `all_specs_ready=false`를 유지한다. v212는 profile supplier coverage와 dependency fingerprint graph를 봉인하고, 이전 manifest와 비교해 실제 변경된 downstream component만 read-only invalidation report로 기록한다. v106 session identity는 v213 raw artifact SHA/manifest/build/revision 및 패키지 manifest SHA를 경로와 분리해 바인딩한다. v113 Start는 현재 package/source와 세션 identity가 다르면 차단하며, source/package 변경은 새 session identity를 만든다. v208 receipt 변경은 environment manifest를 갱신하고 같은 exact static cache는 보존한다. 캐시 삭제/Native 재실행은 하지 않는다.
@@ -8,7 +28,7 @@
 >
 > **보존된 실패 영수증과 교정:** #41194031247/#41194031277/#41194031295/#41194031263 및 #41194215309/#41194215360/#41194215331/#41194215357에서 v098 supplier registry 검증이 실패했다. 원인은 24 legacy tuple-key + 2 source-independent tuple-key를 26 string-key 계약과 비교할 때 class/spec key 정규화 및 부분집합 합집합 검증이 빠진 것이었다. tuple을 class/spec 문자열로 정규화하고 24+2 disjoint union=26, 나머지 user-input/starter/season catalog는 26/26 exact equality로 교정했다. 별도 #41187430260/#41187430366의 Windows package regression 실패는 v213 artifact 주입 후 test fixture가 이전 SimC revision을 고정 사용한 문제였다. v177/v180 fixture가 source artifact revision을 읽도록 교정했고 최신 #41194394055/#41194394105 및 #41194661922/#41194661890 PASS로 확인했다. 실패 영수증은 삭제하지 않았으며 최종 교정은 신규 Native 없이 검증했다.
 
-> **2026-10-31 사용자 직접 범위 교정 — DPS 26개 전문화, 증강 기원사 제외 (최신 우선):** 현행 지원 범위는 DPS 26개이며 증강 기원사·탱커·힐러는 제외한다. 이전 v1.4.1 업로드 사본의 27개/증강 포함 표기는 범위 오기였고, 교정본 `SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.1_DPS_ONLY_SCOPE_CORRECTION_20261031.md`를 생성했다(SHA256 `d85ada7d20cb91730cad532d8d31908e2452e8700205ee46af136f2e5712a6d7`). `runner/v143_specialization_contracts.py`의 계약 목록은 26개이며, `integration_probes/v176_all_26_source_first_physical_native.py`는 `len(ALL)==26` 및 `ALL == sessions.SUPPORTED`를 강제하고, `tests/test_v176_all_26_source_first_physical_native.py`는 `evoker/augmentation` 부재를 확인한다. 기존 [Actions #40972829357](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40972829357) 실제 로그는 `FINISHED_ALL_26_PHYSICAL_PASS`, 26/26 물리 SimC PASS, 신규 Native 25회+기존 징벌 성기사 영수증 1회 재사용을 확인한다. 이는 물리 프로필 smoke 증거이지 26개 전부의 적응형 최적화 E2E 완료 증거는 아니다. 이번 정책 정정은 문서만 변경하며 코드·Native·Actions를 새로 실행하지 않는다. Project Sources/Instructions UI는 아직 직접 변경하지 않았고, 교정본 수동 적용이 별도로 필요하다. 과거 기록에서 '지원 목표 27개/증강 포함'이라고 단정한 정책 문구는 오기로 정정한다. 단, 24/27 등 당시 source inventory의 분모는 증강을 포함한 역사적 수치로 보존하며 현재 제품 지원 수로 해석하지 않는다.
+> **2026-10-31 사용자 직접 범위 교정 — DPS 26개 전문화, 증강 기원사 제외 (최신 우선):** 현행 지원 범위는 DPS 26개이며 증강 기원사·탱커·힐러는 제외한다. 이전 v1.4.1 업로드 사본의 27개/증강 포함 표기는 범위 오기였고, 교정본 docs/SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.1_DPS_ONLY_SCOPE_CORRECTION_20261031.md를 생성했다(SHA256 e4513776f1a225394e404601532dfea61f066dd5e7f23149c7af355d6e43e0d3). `runner/v143_specialization_contracts.py`의 계약 목록은 26개이며, `integration_probes/v176_all_26_source_first_physical_native.py`는 `len(ALL)==26` 및 `ALL == sessions.SUPPORTED`를 강제하고, `tests/test_v176_all_26_source_first_physical_native.py`는 `evoker/augmentation` 부재를 확인한다. 기존 [Actions #40972829357](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40972829357) 실제 로그는 `FINISHED_ALL_26_PHYSICAL_PASS`, 26/26 물리 SimC PASS, 신규 Native 25회+기존 징벌 성기사 영수증 1회 재사용을 확인한다. 이는 물리 프로필 smoke 증거이지 26개 전부의 적응형 최적화 E2E 완료 증거는 아니다. 이번 정책 정정은 문서만 변경하며 코드·Native·Actions를 새로 실행하지 않는다. Project Sources/Instructions UI는 아직 직접 변경하지 않았고, 교정본 수동 적용이 별도로 필요하다. 과거 기록에서 '지원 목표 27개/증강 포함'이라고 단정한 정책 문구는 오기로 정정한다. 단, 24/27 등 당시 source inventory의 분모는 증강을 포함한 역사적 수치로 보존하며 현재 제품 지원 수로 해석하지 않는다.
 
 > **2026-10-31 P3-A/v212 v2 — v213 직접 입력 Environment Manifest PASS:** runner/v212_environment_manifest.py는 이제 별도 v191/v211/v196 JSON 세 개가 아니라 실제 v213 versioned source-to-catalog artifact와 v098 current-season profile 결과를 직접 입력받는다. v213 내부 digest 및 artifact file SHA, v191/v211 component/source SHA, game build/SimC revision, 동일 v213 경로에서 생성한 v196 UI projection, 정확한 사용자 승인 ID 7967(8025 developer-only/나머지 36 locked), v098 선택 enchant와 실제 finger1 profile line, profile/scenario/fillers/manifest SHA, 실행 binary/static-cache SHA를 fail-closed로 확인한다. bootstrap raw JSON SHA 대신 절대경로에 영향받지 않는 정규화 semantic identity와 생성 파일 SHA를 결합해 relocation-stable digest를 유지한다. 선택 특수장비는 scenario의 정확 ID/옵션 identity SHA와 v098이 사용한 static-cache SHA를 묶는다. [Ubuntu+Windows #41172225040](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41172225040) 각 **23/23 PASS**, Native0. 실제 source artifact + 실제 v098 profile 연결은 P3-C [#41172423986](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41172423986)에서 별도 검증했다. v208 Start receipt serialization은 후속 구현 완료. v212 dependency graph/read-only diff와 v106 source/package session identity isolation도 후속 구현 완료; full Build orchestrator는 아직 미완료.
 >
@@ -677,3 +697,47 @@
 ## 6. 문서 유지 규칙
 
 새 버전을 개발할 때마다 *실제 실행된 Run ID, SHA, PASS/FAIL, 남은 불확실성과 정확한 다음 작업*만 추가한다. 미실행 시험이나 이전 문서의 자기 보고를 독립 검증 완료로 바꾸지 않는다. “인계 준비”를 개발 중단이나 새 채팅 이동 요청으로 해석하지 않는다.
+
+
+## 2026-10-31 P3-D v216 Environment Build 구현 및 검증
+
+### 구현된 코드
+- 547811e8ffb7d25eb9ad45bb416b0b75dd5458c3의 v216 commit은 runner/v216_environment_build_coordinator.py와 tests/test_v216_environment_build_coordinator.py를 추가했다.
+- v113 API는 POST /api/v1/environment/build (current-season only), GET /api/v1/environment/{session_id}를 제공하고, 기존 /sessions/plan·status에도 Build Receipt 요약을 노출한다.
+- UI Build 버튼은 /api/v1/environment/build를 호출하고 재사용/재구축/변경 입력/v213 artifact hit/26개 plan supplier 및 adaptive Native 미완료를 표시한다.
+- v181 Windows package manifest에 v216 runtime을 포함한다. v191 workflow path trigger에서 profile/manifest consumer 변경을 제거해 source acquisition workflow와 분리했다.
+
+### 정확한 동작 범위
+- v216은 사용자가 명시적으로 Build를 누를 때 실행된다. 설치된 exact v213 artifact를 소비하고 v191/v211 provenance를 artifact 안에서 재사용한다. 새 시즌 source refresh는 수행하지 않는다.
+- user scenario SHA로 이전 동일 조건 환경을 묶고, 최근 128 session folders에서 digest가 검증된 v216 receipt와 v212 manifest를 찾는다. 유효 이전 manifest를 v212에 전달해 dependency graph 변경을 계산한다.
+- Build Receipt에는 source identity, 단계별 reuse/build status, changed inputs, invalidated/reused components, readiness/limitations, Native/network/cache mutation count를 기록한다.
+- receipt 계약은 native_calls=0, network_calls=0, cache_mutations=0, historical_sessions_preserved=true를 요구한다. 정적 item cache와 DPS cache는 수정하지 않는다.
+- 동일 session의 반복 Build는 동일 manifest bytes 및 receipt를 재사용할 수 있다. 현재 반복 API 테스트는 dependency_change.status=INITIAL_ENVIRONMENT를 유지하는 동일-session 경로를 확인한다. 이전 세션 lookup 자체는 별도 단위 테스트로 확인됐지만, 변경 source가 새 세션에서 실제 downstream invalidation되는 전체 경로는 API E2E로 증명한 것이 아니다.
+
+### Actions 영수증
+| Run | 결과 |
+|---|---|
+| [v212 #41200816574](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41200816574) | Ubuntu/Windows 각 36/36 PASS; v216 4개 단위시험 포함; Native0 |
+| [v113 #41200816595](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41200816595) | Ubuntu/Windows 각 150/150 PASS; 실제 API test 포함, Native0 |
+| [v181 #41200816597](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41200816597) | Windows Python3.12/3.14 각 118 regression + 2 package tests PASS; 추출 CMD/HTTP security/3 plan/restore PASS |
+| [v182 #41200816611](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41200816611) | Ubuntu/Windows 각 76 focused + 68 compatibility + 2 package tests PASS |
+| [v169 #41200816572](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41200816572) | 13 PASS, 26-spec source-first physical candidate preview, Native0 |
+| [v177 #41200816573](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41200816573) | 12 focused + 85 regression PASS; Native-one-product SKIPPED |
+| [v180 #41200816659](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41200816659) | 3 focused + 64 regression PASS; Native-six-cases SKIPPED |
+
+v181 artifact #13042157651 / 750,209 bytes / expires 2026-11-07T12:23:22Z. v182 artifact #13042686292 / 750,209 bytes / expires 2026-11-07T12:23:10Z. Both contain a 189-file beta ZIP without SimC binary or user cache.
+
+### 미완료·검증 경계
+- source refresh: 미구현; installed artifact only.
+- true cross-session changed-source API E2E: 미검증.
+- 26/26 plan supplier is not 26/26 adaptive Native/DPS acceptance; all_specs_ready=false remains.
+- exact embellishment item/slot, temporary-enchant hand applicability, gem property→gem item ID joins remain UNKNOWN/PENDING.
+- full Build→Start→existing adaptive optimizer user acceptance and Windows user PC GUI/cancel/resume acceptance remain incomplete.
+- 신규 Native 0, 신규 SimC binary 0, optimizer/DPS/static cache mutation 0. Existing Native/cache evidence only reused.
+
+### 다음 작업 우선순위
+1. Two-session cross-session regression: same user scope, changed v213/source dependency, new session identity, expected changed_inputs/invalidated components, old session/receipt/cache unchanged.
+2. Verify same-input Build idempotency and actual avoided I/O/profile rebuild; do not equate a receipt label with skipped work.
+3. Request-driven source refresh via existing v191→v211→v213 pipeline; reuse unchanged versioned artifacts and never poll continuously.
+4. Prove the sealed v098/v208 environment is the exact profile consumed by existing v093/v094/v095 Start/worker.
+5. Windows user-PC acceptance of Build, Start, progress, cancel, resume. No blanket 26×N Native matrix.

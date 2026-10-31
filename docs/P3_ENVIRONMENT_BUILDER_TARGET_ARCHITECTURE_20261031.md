@@ -243,3 +243,46 @@ Next:
 4. Complete only the exact missing embellishment item/slot, temporary-enchant hand-applicability and gem-property→item-ID joins. UNKNOWN remains UNKNOWN/PENDING.
 5. Add Windows one-click Build/Start progress/cancel/resume and verify the packaged runtime. Do not repeat the 26×N Native matrix; use existing evidence and targeted tests only.
 
+
+
+## 12. 2026-10-31 v216 — first request-driven Environment Build slice
+
+**Status:** implemented on isolated branch HEAD 547811e8ffb7d25eb9ad45bb416b0b75dd5458c3; cross-platform CI PASS. This supersedes §11.4 statements that the coordinator/API/UI are not implemented. It does not claim the complete one-click product is accepted.
+
+### 12.1 Implemented
+
+- runner/v216_environment_build_coordinator.py consumes the installed exact v213 source-to-catalog artifact. It reuses v191/v211 provenance embedded in that artifact and never starts collectors/network source acquisition.
+- It derives a stable scope from the canonical user scenario, searches at most 128 recent session folders for a valid receipt+manifest pair, and passes the previous valid v212 manifest to the existing dependency graph comparator.
+- It writes a digest-sealed v216 Environment Build Receipt with source identity, step states, dependency delta, readiness/limitations, cache report and explicit zero Native/network/cache-mutation assertions.
+- v113 adds POST /api/v1/environment/build (current-season only) and GET /api/v1/environment/{session_id}. Existing session status also returns the receipt summary.
+- The user-facing Build button invokes the new endpoint and displays readiness, reuse/rebuild/change counts, v213 artifact hits and 26/26 plan supplier coverage with adaptive Native incompleteness explicitly noted.
+- v181 Windows package now includes the v216 runtime module; v113/v212/v181/v182 workflows include v216 code/test path triggers. v191 source collection workflow path triggers were narrowed to source pipeline dependencies.
+
+### 12.2 Exact evidence
+
+- v212 #41200816574: Ubuntu 36/36 and Windows 36/36 PASS, including four v216 unit tests; Native0.
+- v113 #41200816595: Ubuntu 150/150 and Windows 150/150 PASS, including the real local HTTP Environment Build API test; Native0.
+- v181 #41200816597: Windows Python 3.12 and 3.14 each 118 regression tests + 2 package tests PASS; extracted CMD, loopback HTTP security, three current-season plans and restore PASS; Native0.
+- v182 #41200816611: Ubuntu and Windows each 76 focused + 68 compatibility + 2 package tests PASS.
+- v169 #41200816572: 13 tests PASS; 26-spec source-first physical candidate preview only; Native0.
+- v177 #41200816573: 12 focused + 85 regression tests PASS; optional Native-one-product job SKIPPED.
+- v180 #41200816659: 3 focused + 64 regression tests PASS; optional Native-six-cases job SKIPPED.
+- Windows artifacts: v181 #13042157651 (750,209 bytes, expires 2026-11-07T12:23:22Z), v182 #13042686292 (750,209 bytes, expires 2026-11-07T12:23:10Z); packaged inner ZIP 189 files, no SimC binary or user cache.
+- New Native0, binary builds0, optimizer/DPS/static-cache mutations0.
+
+### 12.3 Limitations / next acceptance
+
+- This is an installed-artifact Environment Build, not a season refresh. It records INSTALLED_VERSIONED_ARTIFACT_ONLY and refresh_performed=false.
+- The API test proves first Build, same-session manifest reuse, receipt readback and zero side effects. Same-session repeat currently reports INITIAL_ENVIRONMENT because previous-session search excludes the current folder; manifest byte reuse is separately asserted.
+- Prior-session lookup is unit-tested for valid receipt/manifest and invalid receipt rejection. A two-session API E2E proving changed-source invalidation and preservation of the old session/cache is still needed.
+- The coordinator builds/validates the manifest around v098/v212; a full dependency-selective source collector schedule and measured avoidance of unchanged profile-generation I/O are not yet proven.
+- Full Build→Start→existing v093/v094/v095 adaptive-worker identity handoff, user-PC Windows GUI acceptance, cancel/resume acceptance through the Build lifecycle, all-26 adaptive Native/DPS acceptance, and exact missing source joins remain incomplete.
+- Preserve 26 DPS scope, exact 7967 approval boundary, UNKNOWN/PENDING joins, Native/cache reuse and the no-new-optimizer rule.
+
+### 12.4 Next work
+
+1. Add the two-session changed-dependency regression and assert the prior session, v216 receipt, v212 manifest and static/DPS caches remain byte-identical.
+2. Verify actual incremental behavior against v098 profile-generation and file-I/O cost; only report REUSED where work was truly skipped.
+3. Add request-driven season refresh using the existing v191→v211→v213 workflow, with exact artifact identities and no background polling.
+4. Prove the sealed v098/v208 environment is the exact profile consumed by the existing adaptive worker.
+5. Complete Windows user-PC Build/Start/progress/cancel/resume acceptance using the packaged artifact. No blanket 26×N Native matrix.

@@ -8,8 +8,8 @@ This is the user's latest direct decision. The earlier uploaded copy of the v1.4
 
 ## Corrected source replacement
 
-- Replacement file: `SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.1_DPS_ONLY_SCOPE_CORRECTION_20261031.md`
-- SHA256: `d85ada7d20cb91730cad532d8d31908e2452e8700205ee46af136f2e5712a6d7`
+- Replacement file: `docs/SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.1_DPS_ONLY_SCOPE_CORRECTION_20261031.md`
+- SHA256: `e4513776f1a225394e404601532dfea61f066dd5e7f23149c7af355d6e43e0d3`
 - The corrected file preserves the v1.4.1 CHMV, SimC responsibility, statistics, budget, and product-flow policies while correcting all active scope/roadmap statements to 26 DPS and excluding Augmentation Evoker.
 - The file is prepared for manual Project Sources replacement. This GitHub update does not itself change Project Sources/Instructions UI.
 
@@ -27,3 +27,11 @@ This is the user's latest direct decision. The earlier uploaded copy of the v1.4
 - No new SimC Native calls and no new Actions run were started. Existing code assertions, offline tests, and physical Native receipt were reused.
 - P3 architecture already states 26 DPS and excludes Augmentation Evoker; it required no edit.
 - `main`, immutable `v003`, original `v016`, repository visibility, Project Sources/Instructions UI, and official Work OS authority were not changed.
+
+
+## 2026-10-31 uploaded-file identity reconciliation
+
+- The v1.4.1 file uploaded in the 2026-10-31 conversation as the 20261029 copy has SHA256 752641f0eaa954c76096da4fe3e60d2a16abae28216f547104a364f728ac6798 and still states 27 DPS / Augmentation included. It is not the corrected replacement.
+- The actual corrected full replacement is now stored in this repository at docs/SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.1_DPS_ONLY_SCOPE_CORRECTION_20261031.md, SHA256 e4513776f1a225394e404601532dfea61f066dd5e7f23149c7af355d6e43e0d3.
+- It changes only the specialization-scope statements to exactly 26 DPS excluding Augmentation Evoker, tanks and healers. CHMV/SimC/statistics policies remain unchanged.
+- Project Sources/Instructions UI was not changed; manual replacement is still pending.

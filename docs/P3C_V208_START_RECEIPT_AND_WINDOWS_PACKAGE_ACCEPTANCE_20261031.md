@@ -153,3 +153,19 @@ New SimC Native calls: **0**. New SimC binary builds: **0**. Optimizer/cache mut
 5. Complete Windows one-click Build/Start/progress/cancel/resume integration and user-PC acceptance.
 6. Full adaptive Native/DPS evidence across all 26 remains incomplete; do not repeat blanket 26×N Native matrices.
 
+
+
+## 7. 2026-10-31 v216 follow-up — Environment Build coordinator/API/UI
+
+This section supersedes §3 and §5 statements that the coordinator and Build API/UI are not implemented. It records the first installed-artifact build slice, not full product acceptance.
+
+- New code: runner/v216_environment_build_coordinator.py; unit tests: tests/test_v216_environment_build_coordinator.py.
+- v113 API: POST /api/v1/environment/build (current-season only) and GET /api/v1/environment/{session_id}. The existing plan flow creates the v098 profile, then v216 calls existing v212 with the installed v213 artifact and optional v208 Start receipt.
+- v216 uses the canonical user scenario as scope identity, searches at most 128 recent sessions for a self-digested receipt+manifest, and passes a valid prior manifest to v212 dependency comparison. Receipt output explicitly records zero Native, network and cache mutations and historical session preservation.
+- UI Build button calls the new endpoint and shows status plus reuse/rebuild/change/artifact-hit counts and 26/26 plan supplier coverage. This is a first Build action, not a season source refresh.
+- Exact source mode: INSTALLED_VERSIONED_ARTIFACT_ONLY; refresh_performed=false. v191/v211 are reused as embedded provenance and v213 as the installed package artifact. The collectors are not invoked.
+- Tests: v212 #41200816574 Ubuntu/Windows 36/36; v113 #41200816595 Ubuntu/Windows 150/150; v181 #41200816597 Windows Python3.12/3.14 118 regression + 2 package tests each; v182 #41200816611 Ubuntu/Windows 76 focused + 68 compatibility + 2 package tests each. All succeeded.
+- v169 #41200816572 13 PASS; v177 #41200816573 12+85 PASS with optional Native skipped; v180 #41200816659 3+64 PASS with six Native skipped. New Native0, binary builds0, optimizer/cache mutation0.
+- Windows artifacts: #13042157651 and #13042686292, each 750,209 bytes, seven-day retention through 2026-11-07; 189-file inner ZIP excludes SimC binary/user cache.
+
+**Not yet proven:** cross-session changed-source API E2E, measured skip of unchanged v098 profile-generation work, new-season source refresh, exact Build→Start→adaptive-worker identity, Windows user-PC GUI/cancel/resume, and 26-spec adaptive Native/DPS acceptance. The same-session repeat test confirms manifest byte reuse but reports INITIAL_ENVIRONMENT; do not relabel it as cross-session dependency reuse. Next work is the two-session invalidation regression, then source refresh and existing adaptive-worker handoff.
