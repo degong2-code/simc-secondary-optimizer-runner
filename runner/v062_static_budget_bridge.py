@@ -71,6 +71,17 @@ def primary_only_head_gem(row):
             and not (set(row["options"]) &
                      (MODIFIERS_WITH_BUDGET_AMBIGUITY-{"gem_id"})))
 
+def undecorated_special(row):
+    """Exact bare special identity: retain intrinsic options; remove only J/E.
+
+    Never borrow a decorated variant's rating as the permanent special L.
+    Native item stats for this bare variant must exist independently.
+    """
+    need(type(row) is dict and type(row.get("options")) is dict,
+         "SPECIAL_BASE_ITEM_ROW_INVALID")
+    return {**row,"options":{k:v for k,v in row["options"].items()
+            if k not in MODIFIERS_WITH_BUDGET_AMBIGUITY}}
+
 def compile_static_budget(contract,standard_filler,cache):
     need(type(contract) is dict and contract.get("schema")==scenario.SCHEMA
          and contract.get("status")=="VALID_SCENARIO_INPUT_NO_SIMC_EFFECT_GATE",
@@ -92,32 +103,29 @@ def compile_static_budget(contract,standard_filler,cache):
     locked=zero();G_components=zero()
     missing_special=[]
     for row in nontrinket:
-        stat=get_native_secondary(cache,row)
-        # The two v108 head diamonds add zero flat secondary rating. If the
-        # exact gemmed variant is absent, a Native-observed EXACT base variant
-        # of the same special item/ilvl/all OTHER options can still supply L.
-        # No analogous fallback is allowed for arbitrary gems or gear slots.
-        if (stat is None and row["slot"] in specials and
-            primary_only_head_gem(row)):
-            bare={**row,"options":{k:v for k,v in row["options"].items()
-                                   if k!="gem_id"}}
-            stat=get_native_secondary(cache,bare)
+        is_special=row["slot"] in specials
+        # Special L must be measured in the exact bare item variant.
+        # Gem J / enchant E are separate even when their equipped variant
+        # has an independently cached SimC static gear record.
+        source=undecorated_special(row) if is_special else row
+        stat=get_native_secondary(cache,source)
         if stat is None:
             entry={"slot":row["slot"],"item_id":row["item_id"],
-                   "ilevel":row["ilevel"],"identity":exact_identity(row)}
+                   "ilevel":row["ilevel"],"identity":exact_identity(source)}
             missing.append(entry)
-            if row["slot"] in specials:missing_special.append(entry)
+            if is_special:missing_special.append(entry)
             continue
         observed[row["slot"]]={"item_id":row["item_id"],
-              "identity":exact_identity(row),"secondary":dict(stat),
+              "identity":exact_identity(source),"secondary":dict(stat),
               "sum":sum(stat.values())}
         for k in STATS:G_components[k]+=stat[k]
-        if row["slot"] in specials:
-            modifiers=MODIFIERS_WITH_BUDGET_AMBIGUITY.intersection(row["options"])
-            need(not modifiers or
-                 (modifiers=={"gem_id"} and primary_only_head_gem(row)),
-                 "SPECIAL_LOCK_NEEDS_UNDECORATED_NUMERIC_VARIANT")
+        if is_special:
+            # This is only the confirmed base L. No J/E enters locked.
             for k in STATS:locked[k]+=stat[k]
+            if source["options"]!=row["options"]:
+                observed[row["slot"]]["base_item_L_excludes"]=[
+                    k for k in sorted(row["options"])
+                    if k in MODIFIERS_WITH_BUDGET_AMBIGUITY]
         if MODIFIERS_WITH_BUDGET_AMBIGUITY.intersection(row["options"]):
             modified.append({"slot":row["slot"],"item_id":row["item_id"],
                  "reason":"GEM_ENCHANT_NUMERIC_ATTRIBUTION_REQUIRES_P3"})
