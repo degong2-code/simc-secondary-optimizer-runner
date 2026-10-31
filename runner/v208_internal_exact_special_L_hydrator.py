@@ -49,7 +49,7 @@ def source_cache(root,requested):
         data=json.loads(pointer.read_text("utf8"))
         name=data.get("filename")
         need(type(name) is str and
-             len(name)==69 and name.startswith("static-") and
+             len(name)==76 and name.startswith("static-") and
              name.endswith(".json") and
              all(k in "0123456789abcdef" for k in name[7:-5]),
              "STATIC_L_SNAPSHOT_POINTER_INVALID")
