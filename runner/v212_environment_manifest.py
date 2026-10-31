@@ -459,70 +459,159 @@ def _verify_profile_supplier_coverage(bootstrap, v191, build, archetype):
     return coverage
 
 
+# Declarative dependency edges are consumed by the generic DAG evaluator
+# below. Each edge is upstream -> directly affected downstream component.
+# Transitive invalidation and execution ordering are derived by the engine,
+# not duplicated as hand-maintained per-input impact lists.
 DEPENDENCY_INVALIDATION_RULES={
     "v213_source_catalog":(
         "v196_ui_projection","v098_profile","v208_receipt_validation",
-        "environment_manifest","session_identity"),
+        "session_identity"),
     "v191_gear_input":(
-        "v213_source_catalog","v098_profile","environment_manifest",
-        "session_identity"),
+        "v213_source_catalog","v098_profile","session_identity"),
     "v191_tier_input":(
-        "v213_source_catalog","v098_profile","environment_manifest",
-        "session_identity"),
+        "v213_source_catalog","v098_profile","session_identity"),
     "v191_budget_input":(
-        "v213_source_catalog","v098_budget_plan","environment_manifest",
-        "session_identity"),
-    "v196_ui_projection":(
-        "v098_selected_choice","environment_manifest","session_identity"),
+        "v213_source_catalog","v098_budget_plan","session_identity"),
+    "v196_ui_projection":("v098_selected_choice","session_identity"),
+    "v098_selected_choice":("v098_profile",),
+    "v098_budget_plan":("v098_profile",),
     "v098_profile":("environment_manifest","optimizer_session"),
     "selected_special_identity":(
-        "v208_receipt_validation","environment_manifest","optimizer_session"),
+        "v208_receipt_validation","optimizer_session"),
     "static_item_cache":(
-        "v208_receipt_validation","environment_manifest","optimizer_session"),
+        "v208_receipt_validation","optimizer_session"),
     "v208_start_receipt":("environment_manifest",),
+    "v208_receipt_validation":(
+        "environment_manifest","optimizer_session"),
     "windows_package_manifest":(
         "environment_manifest","start_runtime_verification"),
     "simc_binary":(
         "environment_manifest","optimizer_session","adaptive_dps_cache"),
     "simc_revision":(
         "environment_manifest","optimizer_session","adaptive_dps_cache"),
+    "session_identity":("optimizer_session",),
+    "optimizer_session":("adaptive_dps_cache",),
 }
+DEPENDENCY_GRAPH_SCHEMA="v212_environment_dependency_graph_v2"
+
+
+def _validated_dependency_edges(edges):
+    need(type(edges) is dict, "DEPENDENCY_GRAPH_EDGES_OBJECT_REQUIRED")
+    normalized={}
+    for upstream,downstream in edges.items():
+        need(type(upstream) is str and bool(upstream.strip()) and
+             type(downstream) in (list,tuple) and
+             all(type(node) is str and bool(node.strip()) for node in downstream) and
+             len(set(downstream))==len(downstream),
+             "DEPENDENCY_GRAPH_EDGE_INVALID")
+        normalized[upstream]=tuple(sorted(downstream))
+    nodes=set(normalized)
+    for downstream in normalized.values():
+        nodes.update(downstream)
+    indegree={node:0 for node in nodes}
+    adjacency={node:[] for node in nodes}
+    for upstream,downstream in normalized.items():
+        for node in downstream:
+            adjacency[upstream].append(node)
+            indegree[node]+=1
+    ready=sorted(node for node,count in indegree.items() if count==0)
+    order=[]
+    while ready:
+        node=ready.pop(0)
+        order.append(node)
+        for child in sorted(adjacency[node]):
+            indegree[child]-=1
+            if indegree[child]==0:
+                ready.append(child)
+                ready.sort()
+    need(len(order)==len(nodes), "DEPENDENCY_GRAPH_CYCLE")
+    return normalized,tuple(order),nodes
+
+
+def _dependency_closure(changed_inputs, edges):
+    invalidated=set()
+    pending=list(sorted(changed_inputs))
+    while pending:
+        upstream=pending.pop(0)
+        for downstream in edges.get(upstream,()):
+            if downstream not in invalidated:
+                invalidated.add(downstream)
+                pending.append(downstream)
+    return invalidated
 
 
 def compare_dependency_graphs(previous_manifest, current_graph):
-    """Read-only invalidation plan; never deletes caches or historical sessions."""
-    current=current_graph.get("fingerprints",{})
+    """Evaluate a declarative DAG without mutating sessions, caches or inputs.
+
+    The result is an execution plan, not proof that a component was reused.
+    Runtime adapters must separately report whether work was actually skipped,
+    recomputed identically, or rebuilt.
+    """
+    need(type(current_graph) is dict and
+         current_graph.get("schema")==DEPENDENCY_GRAPH_SCHEMA,
+         "DEPENDENCY_GRAPH_SCHEMA_INVALID")
+    current=current_graph.get("fingerprints")
+    need(type(current) is dict and
+         all(type(key) is str and bool(key.strip()) for key in current),
+         "DEPENDENCY_GRAPH_FINGERPRINTS_INVALID")
+    edges,topological_order,nodes=_validated_dependency_edges(
+        current_graph.get("invalidation_rules"))
+    need(set(current)<=nodes, "DEPENDENCY_GRAPH_FINGERPRINT_NODE_MISSING")
+    component_nodes=set(node for values in edges.values() for node in values)
+
     if previous_manifest is None:
-        return {
-            "status":"INITIAL_ENVIRONMENT",
-            "changed_inputs":sorted(current),
-            "invalidated_components":sorted({
-                node for key in current
-                for node in DEPENDENCY_INVALIDATION_RULES.get(key,())}),
-            "static_item_cache_preserved":True,
-            "historical_sessions_preserved":True,
-            "cache_mutations":0,"native_calls":0,
-        }
-    previous_payload={k:v for k,v in previous_manifest.items()
-                      if k!="manifest_sha256"}
-    need(valid_sha(previous_manifest.get("manifest_sha256")) and
-         sha(canonical(previous_payload).encode("utf8"))==
-             previous_manifest["manifest_sha256"],
-         "PREVIOUS_ENVIRONMENT_MANIFEST_DIGEST_INVALID")
-    old_graph=previous_manifest.get("dependency_graph") or {}
-    old=old_graph.get("fingerprints") or {}
-    changed=sorted(key for key in set(old)|set(current)
-                   if old.get(key)!=current.get(key))
-    invalidated=sorted({
-        node for key in changed
-        for node in DEPENDENCY_INVALIDATION_RULES.get(key,())})
-    same_static=(old.get("static_item_cache")==
-                 current.get("static_item_cache"))
+        changed=sorted(current)
+        invalidated=_dependency_closure(changed,edges)
+        same_static=True
+        rules_changed=False
+        previous_sha=None
+        reusable=[]
+    else:
+        need(type(previous_manifest) is dict,
+             "PREVIOUS_ENVIRONMENT_MANIFEST_OBJECT_REQUIRED")
+        previous_payload={k:v for k,v in previous_manifest.items()
+                          if k!="manifest_sha256"}
+        need(valid_sha(previous_manifest.get("manifest_sha256")) and
+             sha(canonical(previous_payload).encode("utf8"))==
+                 previous_manifest["manifest_sha256"],
+             "PREVIOUS_ENVIRONMENT_MANIFEST_DIGEST_INVALID")
+        old_graph=previous_manifest.get("dependency_graph")
+        need(type(old_graph) is dict and
+             type(old_graph.get("fingerprints")) is dict,
+             "PREVIOUS_DEPENDENCY_GRAPH_INVALID")
+        old=old_graph["fingerprints"]
+        changed=sorted(key for key in set(old)|set(current)
+                       if old.get(key)!=current.get(key))
+        rules_changed=(
+            old_graph.get("schema")!=DEPENDENCY_GRAPH_SCHEMA or
+            old_graph.get("invalidation_rules")!=
+                current_graph.get("invalidation_rules"))
+        if rules_changed:
+            changed.append("$dependency_graph")
+            changed.sort()
+            invalidated=set(component_nodes)
+        else:
+            invalidated=_dependency_closure(changed,edges)
+        same_static=(old.get("static_item_cache")==
+                     current.get("static_item_cache"))
+        previous_sha=previous_manifest.get("manifest_sha256")
+        reusable=sorted(
+            node for node in topological_order
+            if node in component_nodes and node not in invalidated
+            and node not in changed)
+
+    execution_order=[node for node in topological_order
+                     if node in invalidated and node in component_nodes]
     return {
-        "status":"UNCHANGED" if not changed else "DEPENDENCIES_CHANGED",
-        "previous_manifest_sha256":previous_manifest.get("manifest_sha256"),
+        "status":"INITIAL_ENVIRONMENT" if previous_manifest is None else
+                 ("DEPENDENCIES_CHANGED" if changed else "UNCHANGED"),
+        "previous_manifest_sha256":previous_sha,
         "changed_inputs":changed,
-        "invalidated_components":invalidated,
+        "invalidated_components":sorted(invalidated),
+        "planned_execution_order":execution_order,
+        "reusable_candidates":reusable,
+        "dependency_rules_changed":rules_changed,
         "static_item_cache_preserved":same_static,
         "historical_sessions_preserved":True,
         "cache_mutations":0,"native_calls":0,
@@ -549,7 +638,7 @@ def _dependency_graph(source_catalog_sha, v191, ui_sha,
         "simc_revision":revision,
     }
     return {
-        "schema":"v212_environment_dependency_graph_v1",
+        "schema":DEPENDENCY_GRAPH_SCHEMA,
         "fingerprints":fingerprints,
         "invalidation_rules":{
             key:list(value) for key,value in DEPENDENCY_INVALIDATION_RULES.items()},

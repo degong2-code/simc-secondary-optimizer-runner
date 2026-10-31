@@ -367,7 +367,7 @@ class LocalWebAPIOffline(unittest.TestCase):
             self.assertEqual(third.json()["environment_build"]["dependency_change"]
                              ["status"],"INITIAL_ENVIRONMENT")
             self.assertEqual(third.json()["environment_build"]["steps"][-1]["status"],
-                             "REUSED")
+                             "COMPILED_IDENTICAL_NO_WRITE")
             status=self.client.get("/api/v1/environment/"+session_id,
                                    headers=self.headers)
             self.assertEqual(status.status_code,200,status.text)

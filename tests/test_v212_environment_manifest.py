@@ -9,8 +9,10 @@ from runner import v062_static_budget_bridge as budget
 from runner import v143_specialization_contracts as specs
 from runner import v196_current_season_user_catalog as ui_catalog
 from runner import v206_nonchmv_eagle_selection as eagle
+from runner import v106_user_session_controller as sessions
 from runner import v212_environment_manifest as p
 from runner import v213_source_to_catalog as source_bridge
+from runner import v216_environment_build_coordinator as environment_build
 from tests.test_v213_source_to_catalog import SourceToCatalogTests
 
 
@@ -313,6 +315,157 @@ class EnvironmentManifestTests(unittest.TestCase):
         self.assertIn("session_identity",diff["invalidated_components"])
         self.assertTrue(diff["static_item_cache_preserved"])
         self.assertEqual(diff["cache_mutations"],0)
+
+
+
+    def test_generic_dependency_engine_closes_transitive_edges_and_orders_work(self):
+        graph={
+            "schema":p.DEPENDENCY_GRAPH_SCHEMA,
+            "fingerprints":{"source":"a"*64},
+            "invalidation_rules":{
+                "source":["catalog"],
+                "catalog":["profile"],
+                "profile":["manifest"],
+                "manifest":["runtime"],
+            },
+        }
+        previous_payload={
+            "schema":p.SCHEMA,
+            "dependency_graph":{
+                "schema":p.DEPENDENCY_GRAPH_SCHEMA,
+                "fingerprints":{"source":"b"*64},
+                "invalidation_rules":graph["invalidation_rules"],
+            },
+        }
+        previous={**previous_payload,"manifest_sha256":p.sha(
+            p.canonical(previous_payload).encode("utf8"))}
+        plan=p.compare_dependency_graphs(previous,graph)
+        self.assertEqual(plan["changed_inputs"],["source"])
+        self.assertEqual(plan["invalidated_components"],
+                         ["catalog","manifest","profile","runtime"])
+        self.assertEqual(plan["planned_execution_order"],
+                         ["catalog","profile","manifest","runtime"])
+        self.assertEqual(plan["reusable_candidates"],[])
+        self.assertEqual(plan["native_calls"],0)
+        self.assertEqual(plan["cache_mutations"],0)
+
+    def test_generic_dependency_engine_rejects_cycles(self):
+        graph={
+            "schema":p.DEPENDENCY_GRAPH_SCHEMA,
+            "fingerprints":{"source":"a"*64},
+            "invalidation_rules":{"source":["catalog"],"catalog":["source"]},
+        }
+        with self.assertRaisesRegex(p.EnvironmentBlocked,
+                                    "DEPENDENCY_GRAPH_CYCLE"):
+            p.compare_dependency_graphs(None,graph)
+
+    def test_dependency_rule_change_invalidates_all_downstream_components(self):
+        first=self.compile()
+        changed_graph=dict(first["dependency_graph"])
+        changed_graph["invalidation_rules"]=dict(
+            first["dependency_graph"]["invalidation_rules"])
+        changed_graph["invalidation_rules"]["v213_source_catalog"]=(
+            *changed_graph["invalidation_rules"]["v213_source_catalog"],
+            "new_runtime_component")
+        plan=p.compare_dependency_graphs(first,changed_graph)
+        self.assertTrue(plan["dependency_rules_changed"])
+        self.assertIn("$dependency_graph",plan["changed_inputs"])
+        self.assertIn("new_runtime_component",plan["invalidated_components"])
+        self.assertEqual(plan["reusable_candidates"],[])
+
+    def test_two_session_source_artifact_change_invalidates_downstream_and_preserves_history(self):
+        import copy
+
+        user={
+            "schema":"v098_target_ilevel_user_scenario_v1",
+            "character":{"class":"paladin","spec":"retribution",
+                         "race":"human","talents":"test-talent-string"},
+            "target":{"ilevel":334,"final_T":None},
+            "special_items":[],"embellishments":[],
+        }
+        cache_path=self.root/"static-cache.json"
+        cache_path.write_text("{}",encoding="utf8")
+        target_manifest=json.loads(
+            (self.target/"manifest.json").read_text(encoding="utf8"))
+        target_manifest["static_cache_json"]=str(cache_path)
+        (self.target/"manifest.json").write_text(
+            json.dumps(target_manifest,sort_keys=True),encoding="utf8")
+        sessions_root=self.root/"sessions"
+        sessions_root.mkdir()
+
+        def make_session():
+            key,identity=sessions.session_key(
+                user,self.binary,self.source_catalog["simc_revision"],cache_path,
+                current_season_product=True,
+                source_catalog_path=self.source_path)
+            folder=sessions_root/key
+            folder.mkdir()
+            generated=folder/"generated"
+            generated.mkdir()
+            for name in ("manifest.json","profile.simc",
+                         "scenario.json","fillers.json"):
+                shutil.copy2(self.target/name,generated/name)
+            bootstrap=copy.deepcopy(self.bootstrap)
+            bootstrap["generated_manifest"]=str(generated/"manifest.json")
+            (folder/"user.json").write_text(
+                sessions.canonical(user)+"\n",encoding="utf8")
+            (folder/"V106_SESSION_IDENTITY.json").write_text(
+                sessions.canonical(identity)+"\n",encoding="utf8")
+            return key,folder,generated,bootstrap
+
+        first_id,first_folder,first_generated,first_bootstrap=make_session()
+        first=environment_build.build_environment(
+            sessions_root=sessions_root,session_folder=first_folder,user=user,
+            binary=self.binary,revision=self.source_catalog["simc_revision"],
+            static_cache=cache_path,source_catalog_path=self.source_path,
+            bootstrap_result=first_bootstrap)
+        self.assertEqual(first["receipt"]["dependency_change"]["status"],
+                         "INITIAL_ENVIRONMENT")
+        dps_cache=first_folder/"simc_results"/"adaptive-dps-cache.json"
+        dps_cache.parent.mkdir()
+        dps_cache.write_bytes(b"existing-adaptive-dps-cache")
+        def snapshot(folder):
+            return {
+                path.relative_to(folder).as_posix():path.read_bytes()
+                for path in folder.rglob("*") if path.is_file()
+            }
+        old_session_bytes=snapshot(first_folder)
+        old_static_cache=cache_path.read_bytes()
+
+        # Same semantic v213 document, different exact artifact bytes. This
+        # isolates the source-artifact fingerprint while retaining v191/UI,
+        # profile, binary, revision and static-cache identities.
+        self.source_path.write_text(json.dumps(
+            self.source_catalog,ensure_ascii=False,separators=(",",":"))+"\n",
+            encoding="utf8")
+        second_id,second_folder,second_generated,second_bootstrap=make_session()
+        self.assertNotEqual(first_id,second_id)
+        second=environment_build.build_environment(
+            sessions_root=sessions_root,session_folder=second_folder,user=user,
+            binary=self.binary,revision=self.source_catalog["simc_revision"],
+            static_cache=cache_path,source_catalog_path=self.source_path,
+            bootstrap_result=second_bootstrap)
+        change=second["receipt"]["dependency_change"]
+        self.assertEqual(change["status"],"DEPENDENCIES_CHANGED")
+        self.assertEqual(change["previous_session_id"],first_id)
+        self.assertEqual(change["changed_inputs"],["v213_source_catalog"])
+        self.assertIn("environment_manifest",change["invalidated_components"])
+        self.assertIn("optimizer_session",change["invalidated_components"])
+        self.assertIn("adaptive_dps_cache",change["invalidated_components"])
+        self.assertTrue(second["receipt"]["cache_reuse"][
+            "static_item_cache_preserved"])
+        self.assertEqual(second["receipt"]["native_calls"],0)
+        self.assertEqual(second["receipt"]["network_calls"],0)
+        self.assertEqual(second["receipt"]["cache_mutations"],0)
+        self.assertTrue(second["receipt"]["historical_sessions_preserved"])
+        self.assertEqual(old_session_bytes,snapshot(first_folder))
+        self.assertEqual(old_static_cache,cache_path.read_bytes())
+        self.assertEqual(
+            second["receipt"]["dependency_change"]["computed_identical_components"],
+            ["v196_user_catalog_projection","v098_target_profile"])
+        self.assertNotIn("v098_target_profile",
+                         second["receipt"]["dependency_change"]["reused_components"])
+        self.assertTrue(dps_cache.is_file())
 
     def test_same_inputs_produce_byte_stable_manifest(self):
         first = self.compile()

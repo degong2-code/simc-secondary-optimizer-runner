@@ -265,14 +265,15 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
               artifact_sha256=source_raw_sha,
               manifest_sha256=source_document.get("manifest_sha256")),
         _step("v196_user_catalog_projection",
-              "REUSED" if same_ui else "VERIFIED_READ_ONLY",
+              "COMPUTED_IDENTICAL" if same_ui else "COMPUTED_CHANGED",
               normalized_sha256=ui.get("normalized_sha256")),
         _step("v098_target_profile",
-              "REUSED" if same_profile else "BUILT",
+              "COMPUTED_IDENTICAL" if same_profile else "COMPUTED_CHANGED",
               normalized_result_sha256=profile.get("normalized_result_sha256"),
               profile_files=profile.get("profile_files")),
         _step("v212_environment_manifest",
-              "REUSED" if manifest_reused else "BUILT",
+              "COMPILED_IDENTICAL_NO_WRITE" if manifest_reused else
+              "COMPILED_CHANGED_WRITTEN",
               manifest_sha256=result.get("manifest_sha256")),
     ]
     dependency_change = result.get("dependency_change") or {}
@@ -281,7 +282,14 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
     reused_components = [row["component"] for row in steps
                          if row["status"].startswith("REUSED")]
     rebuilt_components = [row["component"] for row in steps
-                          if row["status"] == "BUILT"]
+                          if row["status"] in
+                          ("COMPUTED_CHANGED","COMPILED_CHANGED_WRITTEN")]
+    computed_components = [row["component"] for row in steps
+                           if row["status"].startswith(("COMPUTED_","COMPILED_"))]
+    computed_identical_components = [row["component"] for row in steps
+                                     if row["status"] in
+                                     ("COMPUTED_IDENTICAL",
+                                      "COMPILED_IDENTICAL_NO_WRITE")]
     verified_read_only_components = [row["component"] for row in steps
                                       if row["status"] == "VERIFIED_READ_ONLY"]
     cache_reuse = {
@@ -316,6 +324,14 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             "reused_components": reused_components,
             "rebuilt_components": rebuilt_components,
             "verified_read_only_components": verified_read_only_components,
+            "computed_components": computed_components,
+            "computed_identical_components": computed_identical_components,
+            "planned_execution_order": list(
+                dependency_change.get("planned_execution_order", [])),
+            "reusable_candidates": list(
+                dependency_change.get("reusable_candidates", [])),
+            "dependency_rules_changed": dependency_change.get(
+                "dependency_rules_changed", False),
         },
         "cache_reuse": cache_reuse,
         "readiness": {
