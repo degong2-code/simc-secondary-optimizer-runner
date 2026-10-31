@@ -4,7 +4,7 @@
 
 **Exactly 26 DPS specializations are in scope. Augmentation Evoker, all tank specializations, and all healer specializations are excluded.**
 
-This is the user's latest direct decision. The earlier uploaded copy of the v1.4.1 DPS-only source incorrectly stated 27 DPS specializations including Augmentation Evoker. That was a documentation/continuity error, not an approved expansion of product scope.
+This is the user's latest direct decision. The earlier uploaded copy of the v1.4.1 DPS-only source incorrectly stated 27 DPS specializations including Augmentation Evoker. That was a documentation/continuity error, not an approved expansion of product scope. Historical source-inventory denominators such as 24/27 remain historical counts of the earlier source universe and must not be read as the current supported-product target.
 
 ## Corrected source replacement
 
