@@ -148,19 +148,50 @@ class LocalWebAPIOffline(unittest.TestCase):
         for key in sorted(web.bootstrap.PURE_PRODUCT_SPECS):
             with self.subTest(spec=key):
                 params={**self.payload,"controls":sessions.standard_controls(key)}
-                with mock.patch.object(web.subprocess,"Popen") as spawn:
-                    response=self.post("/api/v1/sessions/plan",params)
-                    spawn.assert_not_called()
-                self.assertEqual(response.status_code,200,response.text)
-                body=response.json()
-                self.assertEqual(body["plan"]["final_T"],3150)
-                folder=self.root/"runs"/body["session_id"]/"generated"
-                self.assertIn("default_actions=1",
-                              (folder/"profile.simc").read_text())
-                self.assertNotIn(web.bootstrap.entry.STAGE_FIELD,
-                         json.loads((folder/"manifest.json").read_text()))
-                again=self.post("/api/v1/sessions/plan",params)
-                self.assertEqual(again.json()["session_id"],body["session_id"])
+                with mock.patch.object(web.bootstrap,"build",
+                                       wraps=web.bootstrap.build) as profile_build:
+                    with mock.patch.object(web.subprocess,"Popen") as spawn:
+                        response=self.post("/api/v1/sessions/plan",params)
+                        spawn.assert_not_called()
+                    self.assertEqual(response.status_code,200,response.text)
+                    body=response.json()
+                    self.assertEqual(body["plan"]["final_T"],3150)
+                    self.assertEqual(body["profile_stage"]["status"],
+                                     "EXECUTED_AND_SEALED")
+                    self.assertTrue(body["profile_stage"]["executed"])
+                    folder=self.root/"runs"/body["session_id"]/"generated"
+                    self.assertIn("default_actions=1",
+                                  (folder/"profile.simc").read_text())
+                    self.assertNotIn(web.bootstrap.entry.STAGE_FIELD,
+                             json.loads((folder/"manifest.json").read_text()))
+                    again=self.post("/api/v1/sessions/plan",params)
+                    self.assertEqual(again.status_code,200,again.text)
+                    self.assertEqual(again.json()["session_id"],body["session_id"])
+                    self.assertEqual(again.json()["profile_stage"]["status"],
+                                     "REUSED_VERIFIED")
+                    self.assertTrue(again.json()["profile_stage"]["reused"])
+                    self.assertFalse(again.json()["profile_stage"]["executed"])
+                    self.assertEqual(profile_build.call_count,1)
+
+    def test_legacy_session_without_stage_receipt_remains_resumable(self):
+        user=sessions.user_scenario(self.controls)
+        _,identity=sessions.session_key(user,self.binary,"7bc1071")
+        legacy=dict(identity)
+        legacy.pop("profile_stage")
+        legacy_key=sessions.sha(sessions.canonical(legacy).encode("utf8"))[:20]
+        folder=self.root/"runs"/legacy_key
+        generated=folder/"generated"
+        generated.mkdir(parents=True)
+        (folder/"user.json").write_text(
+            sessions.canonical(user)+"\n",encoding="utf8")
+        (folder/"V106_SESSION_IDENTITY.json").write_text(
+            sessions.canonical(legacy)+"\n",encoding="utf8")
+        (generated/"manifest.json").write_text(json.dumps({
+            "native_binary":str(self.binary),
+            "native_revision":"7bc1071",
+            "static_cache_json":None}),encoding="utf8")
+        self.assertEqual(self.app.state.jobs.args_for_existing(folder),
+                         (self.binary.resolve(),"7bc1071",None))
 
     def test_host_rebinding_foreign_origin_token_and_cross_site_all_denied(self):
         for host in ("attacker.example:8765","localhost:8765",
@@ -327,57 +358,77 @@ class LocalWebAPIOffline(unittest.TestCase):
                  "current_season_product":True}
         with mock.patch.object(jobs,"source_catalog_path",return_value=source_path), \
              mock.patch.object(jobs,"package_manifest_path",return_value=package_path):
-            with mock.patch.object(web.subprocess,"Popen") as spawn:
-                first=self.post("/api/v1/environment/build",payload)
-                spawn.assert_not_called()
-            self.assertEqual(first.status_code,200,first.text)
-            first_body=first.json()
-            self.assertEqual(first_body["status"],"READY_ZERO_NATIVE")
-            self.assertEqual(first_body["environment_build"]["status"],
-                             "READY_WITH_LIMITATIONS")
-            self.assertEqual(first_body["environment_build"]["source"]["mode"],
-                             "INSTALLED_VERSIONED_ARTIFACT_ONLY")
-            self.assertFalse(first_body["environment_build"]["source"]["refresh_performed"])
-            self.assertEqual(first_body["environment_build"]["native_calls"],0)
-            self.assertEqual(first_body["environment_build"]["network_calls"],0)
-            self.assertEqual(first_body["environment_build"]["cache_mutations"],0)
-            self.assertEqual(first_body["environment_build"]["cache_reuse"]
-                             ["installed_v213_artifact_hits"],1)
-            self.assertEqual(first_body["environment_build"]["readiness"]
-                             ["profile_plan_suppliers"]["count"],26)
-            components={row["component"]:row["status"]
-                        for row in first_body["environment_build"]["steps"]}
-            self.assertEqual(components["v191_source_collection"],"REUSED_EMBEDDED")
-            self.assertEqual(components["v211_simc_effect_classification"],
-                             "REUSED_EMBEDDED")
-            self.assertEqual(components["v213_source_to_catalog"],
-                             "REUSED_PACKAGED_ARTIFACT")
-            session_id=first_body["session_id"]
-            folder=self.root/"runs"/session_id
-            receipt_path=folder/"generated"/"environment_build_receipt.json"
-            self.assertTrue(receipt_path.is_file())
-            saved=json.loads(receipt_path.read_text(encoding="utf8"))
-            self.assertEqual(saved["source"]["artifact_sha256"],source_sha)
-            self.assertEqual(saved["historical_sessions_preserved"],True)
-            second=self.post("/api/v1/environment/build",payload)
-            self.assertEqual(second.status_code,200,second.text)
-            self.assertEqual(second.json()["session_id"],session_id)
-            third=self.post("/api/v1/environment/build",payload)
-            self.assertEqual(third.status_code,200,third.text)
-            self.assertEqual(third.json()["environment_build"]["dependency_change"]
-                             ["status"],"INITIAL_ENVIRONMENT")
-            self.assertEqual(third.json()["environment_build"]["steps"][-1]["status"],
-                             "COMPILED_IDENTICAL_NO_WRITE")
-            status=self.client.get("/api/v1/environment/"+session_id,
-                                   headers=self.headers)
-            self.assertEqual(status.status_code,200,status.text)
-            self.assertEqual(status.json()["environment_build"]["receipt_sha256"],
-                             third.json()["environment_build"]["receipt_sha256"])
-            session_status=self.client.get(
-                "/api/v1/sessions/"+session_id+"/status",headers=self.headers)
-            self.assertEqual(session_status.status_code,200,session_status.text)
-            self.assertEqual(session_status.json()["environment_build"]["status"],
-                             "READY_WITH_LIMITATIONS")
+            with mock.patch.object(web.bootstrap,"build",
+                                   wraps=web.bootstrap.build) as profile_build:
+                with mock.patch.object(web.subprocess,"Popen") as spawn:
+                    first=self.post("/api/v1/environment/build",payload)
+                    spawn.assert_not_called()
+                self.assertEqual(first.status_code,200,first.text)
+                first_body=first.json()
+                self.assertEqual(first_body["status"],"READY_ZERO_NATIVE")
+                self.assertEqual(first_body["environment_build"]["status"],
+                                 "READY_WITH_LIMITATIONS")
+                self.assertEqual(first_body["environment_build"]["source"]["mode"],
+                                 "INSTALLED_VERSIONED_ARTIFACT_ONLY")
+                self.assertFalse(first_body["environment_build"]["source"]["refresh_performed"])
+                self.assertEqual(first_body["environment_build"]["native_calls"],0)
+                self.assertEqual(first_body["environment_build"]["network_calls"],0)
+                self.assertEqual(first_body["environment_build"]["cache_mutations"],0)
+                self.assertEqual(first_body["profile_stage"]["status"],
+                                 "EXECUTED_AND_SEALED")
+                self.assertEqual(first_body["environment_build"]["profile_stage"]["status"],
+                                 "EXECUTED_AND_SEALED")
+                self.assertEqual(first_body["environment_build"]["cache_reuse"]
+                                 ["installed_v213_artifact_hits"],1)
+                self.assertEqual(first_body["environment_build"]["readiness"]
+                                 ["profile_plan_suppliers"]["count"],26)
+                components={row["component"]:row["status"]
+                            for row in first_body["environment_build"]["steps"]}
+                self.assertEqual(components["v191_source_collection"],"REUSED_EMBEDDED")
+                self.assertEqual(components["v211_simc_effect_classification"],
+                                 "REUSED_EMBEDDED")
+                self.assertEqual(components["v213_source_to_catalog"],
+                                 "REUSED_PACKAGED_ARTIFACT")
+                self.assertEqual(components["v098_target_profile"],
+                                 "EXECUTED_AND_SEALED")
+                session_id=first_body["session_id"]
+                folder=self.root/"runs"/session_id
+                receipt_path=folder/"generated"/"environment_build_receipt.json"
+                self.assertTrue(receipt_path.is_file())
+                saved=json.loads(receipt_path.read_text(encoding="utf8"))
+                self.assertEqual(saved["source"]["artifact_sha256"],source_sha)
+                self.assertEqual(saved["historical_sessions_preserved"],True)
+
+                second=self.post("/api/v1/environment/build",payload)
+                self.assertEqual(second.status_code,200,second.text)
+                self.assertEqual(second.json()["session_id"],session_id)
+                self.assertEqual(second.json()["profile_stage"]["status"],
+                                 "REUSED_VERIFIED")
+                self.assertEqual(second.json()["environment_build"]["profile_stage"]["status"],
+                                 "REUSED_VERIFIED")
+                second_steps={row["component"]:row["status"]
+                              for row in second.json()["environment_build"]["steps"]}
+                self.assertEqual(second_steps["v098_target_profile"],
+                                 "REUSED_VERIFIED_ARTIFACTS")
+                third=self.post("/api/v1/environment/build",payload)
+                self.assertEqual(third.status_code,200,third.text)
+                self.assertEqual(profile_build.call_count,1)
+                self.assertEqual(third.json()["environment_build"]["dependency_change"]
+                                 ["status"],"INITIAL_ENVIRONMENT")
+                self.assertEqual(third.json()["environment_build"]["steps"][-1]["status"],
+                                 "COMPILED_IDENTICAL_NO_WRITE")
+                self.assertEqual(jobs.args_for_existing(folder),
+                                 (self.binary,source["simc_revision"],None))
+                status=self.client.get("/api/v1/environment/"+session_id,
+                                        headers=self.headers)
+                self.assertEqual(status.status_code,200,status.text)
+                self.assertEqual(status.json()["environment_build"]["receipt_sha256"],
+                                 third.json()["environment_build"]["receipt_sha256"])
+                session_status=self.client.get(
+                    "/api/v1/sessions/"+session_id+"/status",headers=self.headers)
+                self.assertEqual(session_status.status_code,200,session_status.text)
+                self.assertEqual(session_status.json()["environment_build"]["status"],
+                                 "READY_WITH_LIMITATIONS")
         blocked_build=self.post("/api/v1/environment/build",{
             **payload,"current_season_product":False})
         self.assertEqual(blocked_build.status_code,422,blocked_build.text)
