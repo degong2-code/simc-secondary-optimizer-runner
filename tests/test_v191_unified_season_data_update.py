@@ -112,7 +112,17 @@ class UnifiedCatalogTest(unittest.TestCase):
         result=u.compile_catalog(gear,tier,budget,effects,consumables,
                                  generated,event="mid_patch")
         self.assertEqual(result["gear"]["count"],511)
+        self.assertEqual(len(result["gear"]["candidates"]),511)
+        self.assertEqual(result["gear"]["candidates"][0]["inventory_type"],3)
         self.assertEqual(result["tier"]["piece_count"],65)
+        self.assertEqual(len(result["tier"]["classes"]),13)
+        self.assertEqual(result["tier"]["classes"]["deathknight"]["pieces"]["head"],271474)
+        self.assertEqual(result["related_source_counts"],{
+            "gear_item_candidates":511,"tier_piece_ids":65,
+            "food_raw_item_candidates":1,"potion_raw_item_candidates":1,
+            "food_handler_registrations":0,"potion_handler_registrations":0,
+            "embellishment_darkmoon_registrations":1,
+            "temporary_enchant_entries":3,"gem_property_records":2})
         self.assertEqual(result["consumables"]["food"]["candidates"][0]["item_id"],500001)
         self.assertFalse(result["automatic_ui_promotion"])
         self.assertTrue(result["historical_cache_modified"] is False)

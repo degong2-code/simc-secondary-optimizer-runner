@@ -129,10 +129,52 @@ def read_source_classification(path=SOURCE_CLASSIFICATION_PATH):
         raise ValueError("V211_STATIC_RING_RATING_MISLABELED_AS_DYNAMIC_PROC")
     return result
 
-def decorate(enchant_rows):
+def compact_classification_rows(rows):
+    """Normalize full v211 compiler rows to the existing v197 read model."""
+    if type(rows) is not list:
+        raise ValueError("V211_CLASSIFICATION_ROWS_INVALID")
+    result={}
+    for row in rows:
+        token=row.get("token") if type(row) is dict else None
+        eid=row.get("enchant_id") if type(row) is dict else None
+        if type(token) is not str or type(eid) is not int or token in result:
+            raise ValueError("V211_CLASSIFICATION_ROW_IDENTITY_INVALID")
+        native=row.get("native_E_evidence",{})
+        if type(native) is not dict:
+            raise ValueError("V211_CLASSIFICATION_NATIVE_E_INVALID")
+        spells=row.get("spell_effects",[])
+        static=row.get("static_components",[])
+        if type(spells) is not list or type(static) is not list:
+            raise ValueError("V211_CLASSIFICATION_COMPONENTS_INVALID")
+        result[token]={
+          "token":token,"enchant_id":eid,
+          "static_components":[x.get("item_mod") for x in static
+                               if type(x) is dict and x.get("item_mod")],
+          "driver_spell_ids":[x.get("driver_spell_id") for x in spells
+                              if type(x) is dict and
+                              type(x.get("driver_spell_id")) is int],
+          "simc_custom_handlers":list(row.get("simc_custom_handlers",[])),
+          "simc_effect_owner":row.get("simc_effect_owner"),
+          "simc_effect_reimplemented":row.get("simc_effect_reimplemented"),
+          "static_chmv_rating_present":row.get("static_chmv_rating_present_in_dbc"),
+          "static_chmv_stats":list(row.get("static_chmv_stats",[])),
+          "dynamic_chmv_proc_present":row.get("dynamic_chmv_proc_present_in_spell_text"),
+          "dynamic_chmv_proc_roles":list(row.get("dynamic_chmv_proc_roles",[])),
+          "native_E_status":native.get("status"),
+          "native_E":native.get("static_E"),
+          "selection_status":row.get("selection_status"),
+          "effect_family":row.get("effect_family"),
+          "effect_summary":row.get("effect_summary")
+        }
+    if len(result)!=38:
+        raise ValueError("V211_CLASSIFICATION_ROW_COUNT_INVALID")
+    return result
+
+def decorate(enchant_rows, source_classification_rows=None):
     if type(enchant_rows) is not list:
         raise ValueError("ENCHANT_ROWS_INVALID")
-    source_rows=read_source_classification()
+    source_rows=(read_source_classification() if source_classification_rows is None
+                 else compact_classification_rows(source_classification_rows))
     result=[];observed=set()
     for row in enchant_rows:
         token=row.get("token")

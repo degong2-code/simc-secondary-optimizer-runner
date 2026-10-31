@@ -95,6 +95,43 @@ register_special_effect( 1236701, enchants::eyes_of_the_eagle, false, true );
         self.assertEqual(w["dynamic_chmv_proc_roles"],["TEMPORARY_MASTERY_RATING_PROC"])
         self.assertFalse(w["native_E_evidence"]["ui_selectable"])
         self.assertFalse(w["simc_effect_reimplemented"])
+    def test_v191_live_candidates_are_direct_classifier_input(self):
+        source=json.loads((ROOT/"data/current_season_simc_enchant_candidates.json").read_text())
+        rows=[]
+        for row in source["rows"]:
+            item=dict(row)
+            item["simc_token"]=item.pop("token")
+            item["inventory_type_options"]=[
+                i for i in range(1,31) if item["inventory_type_mask"]&(1<<i)]
+            item["user_selectable"]=False
+            rows.append(item)
+        season={
+          "schema":v.V191_SCHEMA,"source_first":True,
+          "automatic_ui_promotion":False,"native_calls":0,
+          "network_calls_by_compiler":0,
+          "game_build":"12.1.5.70575","simc_revision":v.SIMC_COMMIT,
+          "enchants":{"current_season_midnight":{
+            "count":38,"highest_rank_candidates":rows}}
+        }
+        normalized=v.candidates_from_v191(season)
+        self.assertEqual(normalized["schema"],"v196_source_first_enchant_candidates_v1")
+        self.assertIsNone(normalized["source_artifact_id"])
+        self.assertEqual(len(normalized["rows"]),38)
+        self.assertFalse(any(x["approved"] for x in normalized["rows"]))
+        self.assertEqual(
+            {x["enchant_id"] for x in normalized["rows"]},
+            {x["enchant_id"] for x in source["rows"]})
+        bad=json.loads(json.dumps(season))
+        bad["enchants"]["current_season_midnight"]["highest_rank_candidates"][0][
+            "inventory_type_options"]=[]
+        with self.assertRaisesRegex(v.SourceBlocked,"SLOT_MASK_DRIFT"):
+            v.candidates_from_v191(bad)
+        bad=json.loads(json.dumps(season))
+        bad["enchants"]["current_season_midnight"]["highest_rank_candidates"][0][
+            "user_selectable"]=True
+        with self.assertRaisesRegex(v.SourceBlocked,"AUTO_SELECTION_INVALID"):
+            v.candidates_from_v191(bad)
+
     def test_candidate_manifest_keeps_38_ids_and_existing_selection_boundary(self):
         data=json.loads((ROOT/"data/current_season_simc_enchant_candidates.json").read_text())
         self.assertEqual(len(data["rows"]),38)

@@ -1,10 +1,24 @@
-name: v191 Unified Season Data Catalog (Request Only, No Native)
+name: v191 → v211 → v213 → v196 Source-to-Catalog (Request Only, No Native)
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
     paths:
       - runner/v191_unified_season_data_update.py
+      - runner/v211_enchant_source_effect_classification.py
+      - runner/v213_source_to_catalog.py
+      - runner/v196_current_season_user_catalog.py
+      - runner/v197_enchant_effect_families.py
       - tests/test_v191_unified_season_data_update.py
+      - tests/test_v211_enchant_source_effect_classification.py
+      - tests/test_v213_source_to_catalog.py
+      - tests/test_v196_current_season_ui_catalog.py
+      - tests/test_v197_enchant_effect_families.py
+      - data/current_season_product_gear_db.json
+      - data/current_season_tier_itemsets.json
+      - data/current_season_chmv_consumables.json
+      - data/current_season_enchant_effect_classification.json
+      - data/v202_verified_enchant_8025_source.json
+      - data/v206_eagle_7967_windows_E0_proof.json
       - .github/workflows/v191_unified_season_data_update.yml
   workflow_dispatch:
     inputs:
@@ -32,13 +46,16 @@ on:
 permissions:
   contents: read
   actions: read
+concurrency:
+  group: v191-v211-v213-v196-source-to-catalog
+  cancel-in-progress: false
 jobs:
-  unified-candidate:
+  source-to-catalog:
     runs-on: ubuntu-24.04
-    timeout-minutes: 7
+    timeout-minutes: 15
     env:
-      SIMC_COMMIT: ${{ inputs.simc_commit || '710c2408bfd3ae4df71b8cd55cdf01f63fd6c926' }}
-      UPDATE_EVENT: ${{ inputs.event || 'mid_patch' }}
+      SIMC_COMMIT: \${{ inputs.simc_commit || '710c2408bfd3ae4df71b8cd55cdf01f63fd6c926' }}
+      UPDATE_EVENT: \${{ inputs.event || 'mid_patch' }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -46,7 +63,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - name: Offline source contract and quality reduction regression
+      - name: Offline source contracts and v191 quality reduction regression
         shell: bash
         run: |
           set -euo pipefail
@@ -55,22 +72,22 @@ jobs:
       - name: Reuse exact existing SimC + DB2 source receipts (no new DB snapshot)
         uses: actions/download-artifact@v4
         with:
-          name: ${{ inputs.source_artifact || 'v192-updated-simc-catalog-41017578894' }}
-          run-id: ${{ inputs.source_run_id || '41017578894' }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          name: \${{ inputs.source_artifact || 'v192-updated-simc-catalog-41017578894' }}
+          run-id: \${{ inputs.source_run_id || '41017578894' }}
+          github-token: \${{ secrets.GITHUB_TOKEN }}
           path: source
       - name: Fetch exact immutable SimC generated enchant + gem tables (no Native)
         shell: bash
         run: |
           set -euo pipefail
-          # This workflow is intentionally wired to the CURRENT pinned
-          # source snapshot. A new season/expansion must supply matching NEW
-          # source artifacts, not just relabel the existing 2026 snapshot.
+          # The current pinned source snapshot is reused. A new season or
+          # expansion must supply matching new source artifacts, not relabel
+          # the current 2026 snapshot.
           if [ "$UPDATE_EVENT" != "mid_patch" ]; then
             echo "V191_NEW_SEASON_SOURCES_REQUIRED_NOT_OLD_PINNED_SNAPSHOT"
             exit 3
           fi
-          mkdir -p simc-generated out
+          mkdir -p simc-generated simc-source out
           python - <<'PY'
           import pathlib,urllib.request,hashlib,os,re
           assert re.fullmatch(r'[a-f0-9]{40}',os.environ['SIMC_COMMIT'])
@@ -97,7 +114,8 @@ jobs:
           python - <<'PY'
           import json,os
           x=json.load(open('out/v191_unified_source_first_catalog.json'))
-          assert x['gear']['count']==511 and x['tier']['piece_count']==65
+          assert x['gear']['count']==511 and len(x['gear']['candidates'])==511
+          assert x['tier']['piece_count']==65 and len(x['tier']['classes'])==13
           assert x['native_calls']==0 and x['automatic_ui_promotion'] is False
           assert len(x['consumables']['food']['candidates'])==192
           assert len(x['consumables']['potion']['candidates'])==61
@@ -106,15 +124,105 @@ jobs:
           assert x['gem_properties']['source_count']>2000
           assert set(x['simc_generated_builds'].values())=={x['game_build']}
           assert x['enchants']['current_season_midnight']['count']==38
+          assert x['related_source_counts']['food_handler_registrations']==37
+          assert x['related_source_counts']['potion_handler_registrations']==5
           assert x['simc_revision']==os.environ['SIMC_COMMIT']
           print('V191_UPDATED_SIMC_CURRENT_SEASON_38_ENCHANTS_HIGHEST_RANK')
           print('V191_UNIFIED_SEASON_CANDIDATE_PASS_UNPUBLISHED_NATIVE_ZERO')
           PY
-      - name: Archive just source-provenance receipt and small candidate catalog
+      - name: Fetch remaining pinned SimC DBC and effect-handler sources (no build)
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp simc-generated/permanent_enchant.inc simc-source/permanent_enchant.inc
+          python - <<'PY'
+          import pathlib,urllib.request,os,re
+          commit=os.environ["SIMC_COMMIT"]
+          assert re.fullmatch(r"[a-f0-9]{40}",commit)
+          files={
+            "spell_item_enchantment.inc":"engine/dbc/generated/spell_item_enchantment.inc",
+            "spelltext_data.inc":"engine/dbc/generated/spelltext_data.inc",
+            "data_enums.hh":"engine/dbc/data_enums.hh",
+            "unique_gear_midnight.cpp":"engine/player/unique_gear_midnight.cpp",
+            "enchants.cpp":"engine/item/enchants.cpp"
+          }
+          root=pathlib.Path("simc-source")
+          for name,relative in files.items():
+              url=f"https://raw.githubusercontent.com/simulationcraft/simc/{commit}/{relative}"
+              request=urllib.request.Request(url,headers={"User-Agent":"SIMC-Secondary-v213-source-join/1.0"})
+              with urllib.request.urlopen(request,timeout=40) as response:
+                  if response.status!=200:raise RuntimeError(f"SIMC_SOURCE_HTTP_{response.status}:{name}")
+                  raw=response.read(10_000_001)
+              if not raw or len(raw)>10_000_000:raise RuntimeError(f"SIMC_SOURCE_SIZE_INVALID:{name}")
+              (root/name).write_bytes(raw)
+              print("V211_SOURCE",name,len(raw))
+          PY
+      - name: Classify the actual v191 candidate rows from exact pinned SimC sources (Native0)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile runner/v211_enchant_source_effect_classification.py
+          python runner/v211_enchant_source_effect_classification.py \
+            --candidates out/v191_unified_source_first_catalog.json \
+            --source-dir simc-source \
+            --proof-8025 data/v202_verified_enchant_8025_source.json \
+            --proof-7967 data/v206_eagle_7967_windows_E0_proof.json \
+            --runtime-manifest data/current_season_enchant_effect_classification.json \
+            --out out/v211_current_season_enchant_effect_classification.json
+          python - <<'PY'
+          import json
+          x=json.load(open('out/v211_current_season_enchant_effect_classification.json'))
+          assert x['candidate_source_schema']=='v191_unified_patch_season_expansion_data_candidates_v1'
+          assert x['candidate_source_artifact_id'] is None
+          assert x['counts']=={'total':38,'static_chmv_rating':8,
+            'static_nonchmv_only_or_mixed':19,'spell_effects':15,
+            'native_E_measured':2,'user_selectable_existing_scope':1,
+            'developer_only_exact_scope':1,'locked':36}
+          assert x['native_calls']==0 and x['automatic_ui_promotion'] is False
+          print('V211_CLASSIFIED_DIRECTLY_FROM_V191_LIVE_ROWS_PASS_NATIVE0')
+          PY
+      - name: Join v191 + v211 into one versioned source-to-catalog artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile runner/v213_source_to_catalog.py
+          python runner/v213_source_to_catalog.py \
+            --season-catalog out/v191_unified_source_first_catalog.json \
+            --enchant-classification out/v211_current_season_enchant_effect_classification.json \
+            --out out/v213_current_season_source_to_catalog.json
+      - name: Exercise the real v213 artifact through the existing v196 UI catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install -r requirements-web-test.txt
+          python -m py_compile runner/v196_current_season_user_catalog.py runner/v197_enchant_effect_families.py
+          python -m unittest -v \
+            tests.test_v211_enchant_source_effect_classification \
+            tests.test_v213_source_to_catalog \
+            tests.test_v196_current_season_ui_catalog \
+            tests.test_v197_enchant_effect_families
+          python - <<'PY'
+          import pathlib,sys
+          sys.path.insert(0,"runner")
+          import v196_current_season_user_catalog as catalog
+          c=catalog.public_options(pathlib.Path("out/v213_current_season_source_to_catalog.json"))
+          e=c["enchant_candidates"]
+          assert e["total"]==38 and e["source_classified_count"]==38
+          assert e["selectable_count"]==1
+          assert [x["enchant_id"] for x in e["items"] if x["ui_selectable"]]==[7967]
+          assert c["source_catalog"]["summary"]["gear"]["count"]==511
+          assert c["source_catalog"]["summary"]["tier"]=={
+            "class_count":13,"piece_count":65}
+          assert c["native_calls_now"]==0 and c["optimizer_or_cache_mutated"] is False
+          print("V191_V211_V213_V196_REAL_ARTIFACT_HANDOFF_PASS")
+          print("V213_V196_EXISTING_7967_ONLY_APPROVAL_BOUNDARY_PASS")
+          print("NATIVE_0_NETWORK0_NO_NEW_CHOICES")
+          PY
+      - name: Archive source-to-catalog and all three exact component artifacts
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: v191-unified-candidate-catalog-${{ github.run_id }}
+          name: v213-source-to-catalog-\${{ github.run_id }}
           path: out/
           retention-days: 7
           if-no-files-found: warn

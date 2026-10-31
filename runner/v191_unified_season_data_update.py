@@ -213,16 +213,55 @@ def compile_catalog(gear,tier,budget,effects,consumables,generated,*,event):
         "SIMC_EFFECT_IMPLEMENTED_IS_DISCOVERY_AUTHORITY_NOT_PHYSICAL_SLOT_MASK"]
     if set(builds.values())!={build}:
         warnings.append("SIMC_COMPILED_DBC_AND_GAME_DB2_BUILDS_DIFFER_REVIEW")
+    gear_candidates=[
+      {k:x.get(k) for k in (
+        "item_id","name","category","class_id","subclass_id","inventory_type",
+        "allowed_class_mask","item_set_id","slot_hint","source_kinds",
+        "season_list_basis","stat_modifier_codes")}
+      for x in sorted(gear["items"],key=lambda row:row["item_id"])
+    ]
+    tier_classes={
+      cl:{
+        "allowed_class_mask":data["allowed_class_mask"],
+        "item_set_id":data["item_set_id"],
+        "names":dict(sorted(data["names"].items())),
+        "pieces":dict(sorted(tiers[cl].items()))
+      }
+      for cl,data in sorted(tier["classes"].items())
+    }
+    related_source_counts={
+      "gear_item_candidates":len(gear_candidates),
+      "tier_piece_ids":sum(len(x["pieces"]) for x in tier_classes.values()),
+      "food_raw_item_candidates":sum(x["kind"]=="food" for x in consumables["items"]),
+      "potion_raw_item_candidates":sum(x["kind"]=="potion" for x in consumables["items"]),
+      "food_handler_registrations":len(effects["candidates"].get("food",[])),
+      "potion_handler_registrations":len(effects["candidates"].get("potion",[])),
+      "embellishment_darkmoon_registrations":len(
+          effects["candidates"].get("embellishment_or_darkmoon",[])),
+      "temporary_enchant_entries":generated["temporary_enchant"]["declared_rows"],
+      "gem_property_records":generated["gem_property"]["declared_rows"]
+    }
     return {
       "schema":SCHEMA,"status":"SOURCE_COMBINED_NOT_YET_USER_SELECTABLE",
       "update_event":event,"game_build":build,"expansion_id":gear["expansion_id"],
       "simc_revision":effects["source"]["commit"],"simc_generated_builds":builds,
       "warnings":warnings,"native_calls":0,"network_calls_by_compiler":0,
       "source_first":True,"automatic_ui_promotion":False,
-      "gear":{"count":len(gear["items"]),"role_counts":dict(sorted(counts.items())),
+      "source_artifacts":{
+        "v189":{"schema":effects["schema"],"simc_commit":effects["source"]["commit"],
+                "source_sha256":effects["source"]["sha256"]},
+        "v190":{"schema":consumables["schema"],
+                "game_build":consumables["source"]["wago_snapshot_build"],
+                "simc_revision":consumables["source"]["simc_revision"],
+                "simc_registration_sha256":consumables["source"]["simc_registration_sha256"]}
+      },
+      "related_source_counts":related_source_counts,
+      "gear":{"count":len(gear_candidates),"role_counts":dict(sorted(counts.items())),
               "item_ids_by_role":{kind:sorted(x["item_id"] for x in gear["items"]
-                                    if x["category"]==kind) for kind in sorted(counts)}},
-      "tier":{"class_count":13,"piece_count":65,"item_ids":tiers},
+                                    if x["category"]==kind) for kind in sorted(counts)},
+              "candidates":gear_candidates},
+      "tier":{"class_count":13,"piece_count":65,"item_ids":tiers,
+              "classes":tier_classes},
       "consumables":{
          "food":{"candidates":[x for x in consumables["items"]
                                 if x["kind"]=="food"],"stage":"DB2_ID_ONLY"},

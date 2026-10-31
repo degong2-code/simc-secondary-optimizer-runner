@@ -303,7 +303,65 @@ def classify_row(candidate,dbc,enums,spelltexts,handlers,evidence):
       "effect_source_status":("DBC_STAT_AND_SPELLTEXT_SOURCE_CLASSIFIED"
                               if not unknown else "UNKNOWN_DBC_COMPONENT_REVIEW_REQUIRED")
     }
+V191_SCHEMA="v191_unified_patch_season_expansion_data_candidates_v1"
+
+def candidates_from_v191(season):
+    """Project v191's live SimC candidates into the classifier input contract.
+
+    No checked-in 38-row candidate copy is read on this path. v191 owns the
+    current source rows; this projection preserves exact identity/masks.
+    """
+    need(season.get("schema")==V191_SCHEMA and
+         season.get("source_first") is True and
+         season.get("automatic_ui_promotion") is False and
+         season.get("native_calls")==0 and
+         season.get("network_calls_by_compiler")==0 and
+         season.get("simc_revision")==SIMC_COMMIT and
+         season.get("game_build")=="12.1.5.70575",
+         "V191_LIVE_CANDIDATE_SOURCE_CONTRACT_INVALID")
+    current=season.get("enchants",{}).get("current_season_midnight",{})
+    rows=current.get("highest_rank_candidates")
+    need(current.get("count")==38 and type(rows) is list and len(rows)==38,
+         "V191_LIVE_ENCHANT_CANDIDATE_COUNT_INVALID")
+    projected=[];seen=set()
+    for row in rows:
+        need(type(row) is dict and row.get("user_selectable") is False,
+             "V191_LIVE_ENCHANT_AUTO_SELECTION_INVALID")
+        token=row.get("simc_token")
+        eid=row.get("enchant_id")
+        need(type(token) is str and token.startswith("enchant_")
+             and type(eid) is int and eid>0 and eid not in seen,
+             "V191_LIVE_ENCHANT_IDENTITY_INVALID")
+        seen.add(eid)
+        mask=row.get("inventory_type_mask")
+        options=row.get("inventory_type_options")
+        need(type(mask) is int and mask>=0 and type(options) is list
+             and options==[i for i in range(1,31) if mask&(1<<i)],
+             "V191_LIVE_ENCHANT_SLOT_MASK_DRIFT:"+str(eid))
+        projected.append({
+          "token":token,"enchant_id":eid,
+          "quality_rank":row.get("quality_rank"),
+          "item_class":row.get("item_class"),
+          "inventory_type_mask":mask,
+          "item_subclass_mask":row.get("item_subclass_mask"),
+          "approved":False
+        })
+    return {
+      "schema":"v196_source_first_enchant_candidates_v1",
+      "status":"SOURCE_OBSERVED_NOT_NATIVE_BUDGET_VERIFIED",
+      "season_game_build":season["game_build"],
+      "simc_commit":season["simc_revision"],
+      "source_artifact_id":None,
+      "user_selectable":False,
+      "rows":projected
+    }
+
 def compile_catalog(candidates,source_dir,proof_8025,proof_7967):
+    candidate_source_schema=candidates.get("schema")
+    if candidate_source_schema==V191_SCHEMA:
+        candidates=candidates_from_v191(candidates)
+    elif candidate_source_schema!="v196_source_first_enchant_candidates_v1":
+        need(False,"V191_ENCHANT_CANDIDATE_SOURCE_DRIFT")
     need(candidates.get("schema")=="v196_source_first_enchant_candidates_v1"
          and candidates.get("status")=="SOURCE_OBSERVED_NOT_NATIVE_BUDGET_VERIFIED"
          and candidates.get("simc_commit")==SIMC_COMMIT
@@ -367,7 +425,8 @@ def compile_catalog(candidates,source_dir,proof_8025,proof_7967):
         "owner":"SIMC",
         "source_file":"engine/item/enchants.cpp"
       },
-      "candidate_source_artifact_id":candidates["source_artifact_id"],
+      "candidate_source_artifact_id":candidates.get("source_artifact_id"),
+      "candidate_source_schema":candidate_source_schema,
       "counts":{"total":38,"static_chmv_rating":8,
                 "static_nonchmv_only_or_mixed":sum(
                     bool(x["static_components"]) and
@@ -395,7 +454,9 @@ def verify_runtime_manifest(compiled,runtime):
          runtime.get("status")==compiled["status"] and
          runtime.get("simc_commit")==compiled["simc_commit"] and
          runtime.get("season_game_build")==compiled["season_game_build"] and
-         runtime.get("candidate_source_artifact_id")==compiled["candidate_source_artifact_id"] and
+         (runtime.get("candidate_source_artifact_id")==compiled.get("candidate_source_artifact_id")
+          or (compiled.get("candidate_source_schema")==V191_SCHEMA
+              and runtime.get("candidate_source_artifact_id")==12961140046)) and
          runtime.get("source_files")==compiled["source_files"] and
          runtime.get("simc_item_enchant_pipeline")==compiled["simc_item_enchant_pipeline"] and
          runtime.get("counts")==compiled["counts"] and

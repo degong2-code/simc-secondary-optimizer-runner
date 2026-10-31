@@ -16,6 +16,7 @@ import v188_user_choice_metadata as v188
 import v197_enchant_effect_families as effect_groups
 import v197_verified_effect_budget as fixed_budget
 import v202_one_enchant_admission as observed_enchant
+import v213_source_to_catalog as source_bridge
 
 SCHEMA="v196_current_season_ui_catalog_v1"
 SOURCE_SCHEMA="v196_source_first_enchant_candidates_v1"
@@ -30,9 +31,27 @@ def need(condition,code):
 
 def read(path=DEFAULT):
     path=Path(path)
-    need(path.is_file() and 0<path.stat().st_size<=100_000,
+    need(path.is_file() and 0<path.stat().st_size<=25_000_000,
          "SEASON_ENCHANT_CANDIDATES_ABSENT")
     document=json.loads(path.read_text("utf8"))
+    source_classification_rows=None
+    source_catalog=None
+    if type(document) is dict and document.get("schema")==source_bridge.SCHEMA:
+        source_bridge.verify_catalog(document)
+        source_classification_rows=document["enchant_classification"]["rows"]
+        source_catalog={
+          "schema":document["schema"],
+          "status":document["status"],
+          "manifest_sha256":document["manifest_sha256"],
+          "summary":document["catalog_summary"],
+          "related_source_counts":document["related_source_counts"],
+          "source_provenance":document["source_provenance"]
+        }
+        document=dict(document["v196_enchant_source"])
+        document["_v211_classification_rows"]=source_classification_rows
+        document["_v213_source_catalog"]=source_catalog
+    from_v213="_v213_source_catalog" in document
+    expected_artifact_id=(None if from_v213 else 12961140046)
     need(type(document) is dict and
          document.get("schema")==SOURCE_SCHEMA and
          document.get("status")=="SOURCE_OBSERVED_NOT_NATIVE_BUDGET_VERIFIED" and
@@ -40,19 +59,26 @@ def read(path=DEFAULT):
          document.get("simc_commit")==
              "710c2408bfd3ae4df71b8cd55cdf01f63fd6c926" and
          document.get("user_selectable") is False and
-         document.get("source_artifact_id")==12961140046,
+         document.get("source_artifact_id")==expected_artifact_id,
          "SOURCE_FIRST_ENCHANT_PROVENANCE_INVALID")
     related=document.get("related_source_counts")
-    need(type(related) is dict and
-         related=={
-           "gear_item_candidates":511,"tier_piece_ids":65,
-           "food_raw_item_candidates":192,"potion_raw_item_candidates":61,
-           "food_handler_registrations":37,"potion_handler_registrations":5,
-           "embellishment_darkmoon_registrations":20,
-           "temporary_enchant_entries":117,"gem_property_records":2409}
-         and document.get("related_source_status")==
+    if from_v213:
+        expected_related=source_catalog["related_source_counts"]
+        need(type(related) is dict and related==expected_related and
+             document.get("related_source_status")==
              "EVIDENCE_ONLY_NO_NEW_USER_OPTIONS",
-         "PINNED_SEASON_SOURCE_COUNTS_MISMATCH")
+             "V213_RELATED_SOURCE_COUNTS_MISMATCH")
+    else:
+        need(type(related) is dict and
+             related=={
+               "gear_item_candidates":511,"tier_piece_ids":65,
+               "food_raw_item_candidates":192,"potion_raw_item_candidates":61,
+               "food_handler_registrations":37,"potion_handler_registrations":5,
+               "embellishment_darkmoon_registrations":20,
+               "temporary_enchant_entries":117,"gem_property_records":2409}
+             and document.get("related_source_status")==
+             "EVIDENCE_ONLY_NO_NEW_USER_OPTIONS",
+             "PINNED_SEASON_SOURCE_COUNTS_MISMATCH")
     rows=document.get("rows")
     need(type(rows) is list and len(rows)==38,
          "CURRENT_SEASON_ENCHANT_COUNT_INVALID")
@@ -100,7 +126,10 @@ def read(path=DEFAULT):
 
 def public_options(path=DEFAULT):
     source,enchants,counts=read(path)
-    enchants=effect_groups.decorate(enchants)
+    source_classification_rows=source.pop("_v211_classification_rows",None)
+    source_catalog=source.pop("_v213_source_catalog",None)
+    enchants=effect_groups.decorate(
+        enchants,source_classification_rows=source_classification_rows)
     # A single source-classified nonCHMV choice has a separate two-Native
     # Windows E=0 witness. Do not generalize its rating classification to
     # unknown enchants, nor unlock the numeric rating-family choices.
@@ -180,6 +209,7 @@ def public_options(path=DEFAULT):
         "source_artifact_id":source["source_artifact_id"],
         "related_source_counts":dict(source["related_source_counts"]),
         "related_source_status":source["related_source_status"],
+        "source_catalog":source_catalog,
         "existing_allowed_input_choices":approved,
         "proven_armor_embellishments":v188.public_embellishments(),
         "enchant_candidates":{"total":len(enchants),"groups":counts,
