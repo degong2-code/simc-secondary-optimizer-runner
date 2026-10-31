@@ -1,5 +1,7 @@
 # P3-C v208 Start Receipt + v213 Windows Package Acceptance (2026-10-31)
 
+> **Status update:** Sections 1–5 preserve the initial receipt/package acceptance baseline. The later v215 supplier-coverage, dependency-identity, and latest-source packaging implementation in §6 supersedes the older all-26/dependency/package limitations below.
+
 ## 판정
 
 **P3-C source-backed Environment 연결의 이번 범위는 PASS.** 실제 v213 season catalog가 Windows beta ZIP에 포함되고, package manifest와 실행 중 v113 API가 동일한 catalog identity를 사용하는 것을 Windows Server 2022에서 확인했다. 선택 특수장비의 v208 Start receipt도 v212 Environment Manifest에 결합·검증된다.
@@ -33,7 +35,7 @@
 
 | 항목 | 결과 |
 |---|---|
-| branch HEAD | `98104eb702b6d7712d4a27fe7b428a084f671fcf` |
+| branch HEAD | `cbc2244225f6c99bb57e765ca9b03b591fbc7cce` (code baseline before this document update) |
 | v181 workflow | [#41182176804](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41182176804) — Windows 2022 / Python 3.12·3.14 SUCCESS |
 | v181 artifact | [#13035257931](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41182176804/artifacts/13035257931) |
 | v182 workflow | [#41182176762](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41182176762) — Ubuntu 24.04 + Windows 2022 SUCCESS |
@@ -81,3 +83,73 @@
 ## 5. 다음 구현 우선순위
 
 P3-C package/receipt handoff는 완료로 표시한다. 다음은 기존 profile suppliers와 v212/v098를 재사용해 **26 DPS specialization coverage gap을 source-backed 형태로 줄이는 작업**이다. 먼저 v212 `unresolved_dependencies`와 v169/v176 source-first evidence를 대조해 누락 supplier를 분류하고, 이미 검증된 supplier·source identity는 재실행하지 않는다. 그 다음 dependency invalidation/orchestration을 최소 구현하고, 이를 사용자 Build API/UI 및 Windows one-click Build/Start에 연결한다. 새로운 optimizer나 별도 수집기·효과 계산기는 만들지 않는다.
+
+
+## 6. 2026-10-31 v215 follow-up — profile suppliers, dependency graph, latest source package
+
+### 6.1 26-DPS plan supplier coverage
+
+The previous “all-26 profile suppliers incomplete” wording is superseded for **plan/profile supplier availability**. v098 now computes a deterministic, cached source-supplier registry and v212 validates its contract before sealing the environment manifest.
+
+- Existing legacy source-backed routes: 24.
+- Source-independent product routes: 2.
+- Union, exact and disjoint: 26/26 approved DPS contracts.
+- v106 user-input routes: 26/26.
+- v106 starter defaults: 26/26.
+- v139 season catalog: 26/26.
+- v169 current-season source-first profile suppliers: 26/26.
+- gear/tier/budget raw input SHA256 values are bound to the v191 source input hashes embedded in v213.
+- The current selected specialization must be a member of the exact 26-key set.
+- The coverage record is v215_profile_supplier_coverage_v1. It explicitly keeps all_specs_ready=false and adaptive_native_evidence_complete=false.
+
+**Interpretation:** the full set of current-season Plan/profile supplier routes is verified. This does not assert that every one of the 26 specializations has a current-season adaptive Native/DPS end-to-end receipt. Existing physical/native evidence remains scoped to its original profile/condition; no blanket matrix was rerun.
+
+### 6.2 Dependency-aware identity and invalidation
+
+- v212 seals v212_environment_dependency_graph_v1 fingerprints for v213 source catalog, v191 gear/tier/budget inputs, v196 UI projection, v098 profile/generated files, selected-special identity, static-item cache, v208 Start receipt, Windows package manifest, SimC binary and revision.
+- compare_dependency_graphs() compares the current sealed environment with the previous valid manifest and reports changed inputs and affected downstream components. It is read-only; it never deletes static caches or historical sessions.
+- A v208 receipt change invalidates the environment manifest only when selected-special identity and static-cache snapshot are unchanged; the exact static item cache is preserved.
+- v106 session identity now binds the raw v213 artifact SHA, embedded manifest SHA, build, revision and optional package-manifest SHA. Absolute paths are excluded, so same bytes relocated to another directory retain the same session identity.
+- v113 Start verifies that the current packaged source and package manifest still match the session identity. Changed source/package bytes create a new session identity instead of reusing a stale current-season session.
+- The full incremental Environment Build orchestrator is not implemented yet; the current change provides deterministic dependency fingerprints, invalidation planning and source/package session isolation.
+
+### 6.3 Latest source artifact and Windows package acceptance
+
+The v181/v182 workflow defaults were corrected from the older v213 source run #41178704794 to the latest successful source artifact from #41194394128.
+
+| Item | Latest evidence |
+|---|---|
+| Source pipeline | [#41194394128](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41194394128) SUCCESS |
+| v213 artifact | [#13040083134](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41194394128/artifacts/13040083134), 117,921 bytes |
+| Downloaded artifact ZIP SHA256 | aada3cf81d0528bdc45674f5979b3bb5189594b83db3d3feca6cb4ecf545423f |
+| Embedded v213 manifest SHA256 | b888123728097371705c037ae2fc0085cc6735fac870f000b7606b1428d5ced5 |
+| v181 Windows package | [#41194661922](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41194661922), Windows Python 3.12/3.14 SUCCESS |
+| v181 artifact | [#13039854689](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41194661922/artifacts/13039854689), 744,988 bytes; outer artifact SHA256 2e2198d12fd611f2305a70c71ee6d1158a07654c808306531a126c5e107ea3bd |
+| v182 UI/package | [#41194661890](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41194661890), Ubuntu/Windows SUCCESS |
+| v182 artifact | [#13040520318](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41194661890/artifacts/13040520318), 744,988 bytes; outer artifact SHA256 ac6ebfc30f1dcee5d8e87e5ad9a092e16008e38b781cccc5702ed7a4c6037ab0 |
+
+The packaged ZIP contains 188 files and includes the v213 catalog. The Windows extracted launcher and localhost API confirm that the packaged v213 identity is active; Retribution 334, Fury 321 and Frost 344 plans and restore pass with Native0. HTTP security checks pass. This is an extracted Windows runtime/HTTP test, not a claim that the user's installed PC has been updated or that every GUI action was manually clicked.
+
+### 6.4 Cross-platform and focused regressions
+
+- v177 [#41194394055](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41194394055): 12 focused tests + 84 regression tests PASS; includes v213 artifact SHA session identity and path-relocation stability. Native-one-product job SKIPPED.
+- v180 [#41194394105](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41194394105): 26 DPS × 5 target-level plan matrix; 3 focused tests + 63 regression tests PASS. Native-six-cases job SKIPPED.
+- v113 [#41194394127](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41194394127): Ubuntu and Windows each 145/145 PASS.
+- v187 [#41194394156](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41194394156): 13 tests PASS.
+- v191 source pipeline #41194394128 includes the actual v191→v211→v213→v196 artifact handoff and P3-C v213→v098→v212 manifest probe; integrated tests PASS, Native0.
+- v181: each Windows Python version reports 117 tests PASS; actual extracted CMD/HTTP/three plans/restore PASS.
+- v182: Ubuntu and Windows each report 76 focused + 67 compatibility + 2 ZIP tests PASS; Windows extracted HTTP/three plans PASS.
+
+New SimC Native calls: **0**. New SimC binary builds: **0**. Optimizer/cache mutations: **0**. Existing v208 Native/cache receipts were reused.
+
+**Preserved failure history:** Earlier #41194031247/#41194031277/#41194031295/#41194031263 and #41194215309/#41194215360/#41194215331/#41194215357 failed the initial supplier-set check. The defect was key normalization/partition logic: 24 legacy tuple-key source-backed suppliers and 2 source-independent suppliers must be normalized to the 26 string-key DPS contracts, then checked as a disjoint union; only user-input/starter/season-catalog registries are each compared directly to all 26. The code was corrected and final v098/v177/v180/v187/v191 runs passed. Earlier Windows package regressions #41187430260/#41187430366 also exposed pinned-revision test fixtures after the v213 artifact was injected; v177/v180 fixtures now derive the pinned revision from the source artifact, and latest v181/v182 Windows package runs pass. These failed receipts are retained, not deleted. No Native was run to resolve either test-only issue.
+
+### 6.5 Current remaining work
+
+1. Build the actual incremental Environment Build coordinator using existing v191/v211/v213/v196/v212 components and the dependency graph. Reuse unchanged sources; rebuild only affected dependencies; preserve historical sessions/static caches.
+2. Connect Build readiness and dependency-change reporting to the user API/UI with READY / READY_WITH_LIMITATIONS / BLOCKED, missing joins, 26/26 plan-supplier coverage, cache hits and Native scope.
+3. Connect the sealed v098/v208 profile to the existing v093/v094/v095 optimizer; no new optimizer.
+4. Resolve only exact embellishment item/slot joins, temporary-enchant hand applicability, and gem-property→gem-item-ID joins. UNKNOWN remains UNKNOWN/PENDING.
+5. Complete Windows one-click Build/Start/progress/cancel/resume integration and user-PC acceptance.
+6. Full adaptive Native/DPS evidence across all 26 remains incomplete; do not repeat blanket 26×N Native matrices.
+
