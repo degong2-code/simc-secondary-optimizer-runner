@@ -155,6 +155,19 @@ def public_options(path=DEFAULT):
          and set(labels["diamond_id"])==
              {"0",*(str(x) for x in v108.DIAMONDS)},
          "V108_USER_APPROVED_CHOICES_DRIFT")
+    source_classified=sum("source_effect_classification" in x for x in enchants)
+    source_classification_counts={
+        "static_chmv_rating":sum(bool(x.get("source_static_chmv_rating_present"))
+                                  for x in enchants),
+        "static_nonchmv_only_or_mixed":sum(
+            bool(x.get("source_effect_classification",{}).get("static_components"))
+            and not x.get("source_static_chmv_rating_present",False)
+            for x in enchants),
+        "spell_effects":sum(bool(x.get("source_effect_classification",{}).get("driver_spell_ids"))
+                            for x in enchants),
+        "native_E_measured":sum(x.get("source_native_E_status") not in
+                                (None,"NOT_MEASURED") for x in enchants)
+    }
     return {
         "schema":SCHEMA,"status":"SOURCE_COMBINED_WITH_CLEAR_APPROVAL_BOUNDARY",
         "season_build":source["season_game_build"],
@@ -176,8 +189,12 @@ def public_options(path=DEFAULT):
                                   "STRONGER_VARIANT_REPORTED" for x in enchants),
                               "effect_family_sources":list(
                                   effect_groups.SOURCE_REFERENCES),
-                              "effect_classification_status":
-                                  "SOURCE_DESCRIPTION_NOT_NATIVE_CHMV_VERIFIED"},
+                              "source_classified_count":source_classified,
+                              "source_classification_counts":source_classification_counts,
+                              "effect_classification_status":(
+                                  "PINNED_SIMC_DBC_SPELLTEXT_AND_HANDLER_CLASSIFIED_NOT_NATIVE_GENERALIZED"
+                                  if source_classified==38 else
+                                  "SOURCE_CLASSIFICATION_INCOMPLETE")},
         "budget_effect_contract":{"schema":fixed_budget.SCHEMA,
               "fixed_enchant_E_part_of":"GEAR_G_ALREADY_INSIDE_FINAL_T",
               "requires_exact_companion_native_receipt":True,
