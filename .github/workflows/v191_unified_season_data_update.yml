@@ -54,8 +54,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
-      SIMC_COMMIT: \${{ inputs.simc_commit || '710c2408bfd3ae4df71b8cd55cdf01f63fd6c926' }}
-      UPDATE_EVENT: \${{ inputs.event || 'mid_patch' }}
+      SIMC_COMMIT: ${{ inputs.simc_commit || '710c2408bfd3ae4df71b8cd55cdf01f63fd6c926' }}
+      UPDATE_EVENT: ${{ inputs.event || 'mid_patch' }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -72,9 +72,9 @@ jobs:
       - name: Reuse exact existing SimC + DB2 source receipts (no new DB snapshot)
         uses: actions/download-artifact@v4
         with:
-          name: \${{ inputs.source_artifact || 'v192-updated-simc-catalog-41017578894' }}
-          run-id: \${{ inputs.source_run_id || '41017578894' }}
-          github-token: \${{ secrets.GITHUB_TOKEN }}
+          name: ${{ inputs.source_artifact || 'v192-updated-simc-catalog-41017578894' }}
+          run-id: ${{ inputs.source_run_id || '41017578894' }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
           path: source
       - name: Fetch exact immutable SimC generated enchant + gem tables (no Native)
         shell: bash
@@ -222,7 +222,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: v213-source-to-catalog-\${{ github.run_id }}
+          name: v213-source-to-catalog-${{ github.run_id }}
           path: out/
           retention-days: 7
           if-no-files-found: warn
