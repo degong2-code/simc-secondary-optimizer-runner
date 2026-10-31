@@ -81,8 +81,12 @@ def _current_season_profile_supplier_coverage(season_override, selected_key):
     registry=_profile_supplier_registry()
     expected=registry["contracts"]
     supplied=tuple(sorted(season_override["specializations"]))
-    for name in ("legacy_source_backed","source_independent","user_input",
-                 "starter_defaults","season_catalog"):
+    need(set(registry["legacy_source_backed"]) |
+         set(registry["source_independent"]) == set(expected) and
+         set(registry["legacy_source_backed"]).isdisjoint(
+             registry["source_independent"]),
+         "PROFILE_SUPPLIER_LEGACY_AND_PURE_COVERAGE_DRIFT")
+    for name in ("user_input","starter_defaults","season_catalog"):
         need(registry[name] == expected,
              "PROFILE_SUPPLIER_REGISTRY_DRIFT:"+name)
     need(supplied == expected,

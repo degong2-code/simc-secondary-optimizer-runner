@@ -269,8 +269,11 @@ class EnvironmentManifestTests(unittest.TestCase):
         self.assertEqual(result["selected_nonchmv_enchant"]["budget_increment"], 0)
         self.assertEqual(result["target_profile"]["base_B"], 3150)
         self.assertEqual(result["target_profile"]["final_T"], 3182)
-        self.assertIn("ALL_26_DPS_REPRESENTATIVE_PROFILE_SUPPLIERS",
+        self.assertIn("ALL_26_ADAPTIVE_PROFILE_NATIVE_ACCEPTANCE",
                       result["unresolved_dependencies"])
+        self.assertEqual(
+            result["product_scope"]["profile_supplier_coverage"]
+                ["current_season_profile_supplier_count"],26)
         self.assertEqual(result["v208_start_receipt"]["status"],
                          "NOT_REQUIRED_NO_SELECTED_SPECIAL")
         self.assertNotIn(
