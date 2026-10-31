@@ -143,18 +143,73 @@ class OneExactSpecialHydration(unittest.TestCase):
         self.assertFalse(set(item["options"]) & {"gem_id","enchant",
                           "enchant_id"})
 
-    def test_decorated_special_neck_refuses_static_L_without_Native(self):
-        # v062 cannot attribute gems to permanent special-item L. A new
-        # static Native must not be spent on a variant it must later reject.
+    def test_decorated_special_neck_runs_only_bare_L_and_preserves_full_profile(self):
+        import v062_static_budget_bridge as budget
         controls=copy.deepcopy(self.controls)
         controls["special_items"]=[{"slot":"neck","item_id":268250,
                                      "options":{}}]
         user=sessions.user_scenario(controls)
-        with mock.patch.object(hydrate.subprocess,"run") as fake:
-            with self.assertRaisesRegex(hydrate.StaticLBlocked,
-                                        "DECORATED_NUMERIC_VARIANT"):
-                hydrate.hydrate(user,self.root/"runs",self.binary,"710c2408bf")
-            fake.assert_not_called()
+        stage=hydrate.bootstrap.build(
+            user,self.root/"neck-source",self.binary,"710c2408bf",
+            current_season_product=True,static_special_probe_only=True)
+        row=stage["special_rows"][0]
+        self.assertIn("gem_id",row["options"])
+        original_profile=stage["profile"]
+        self.assertIn("gem_id=",next(x for x in original_profile.splitlines()
+                                     if x.startswith("neck=")))
+        base=budget.undecorated_special(row)
+        self.assertNotIn("gem_id",base["options"])
+        def simulate_native(cmd,**kwargs):
+            self.calls+=1
+            physical=pathlib.Path(cmd[1]).read_text("utf8")
+            bare_neck=next(x for x in physical.splitlines() if x.startswith("neck="))
+            self.assertNotIn("gem_id=",bare_neck)
+            self.assertIn("id=268250",bare_neck)
+            self.assertIn("ilevel=331",bare_neck)
+            self.assertNotIn("gear_crit_rating=",physical)
+            path=pathlib.Path(next(x.split("=",1)[1] for x in physical.splitlines()
+                                   if x.startswith("json2=")))
+            response={"report_version":"2.0.0","git_revision":"710c2408bf",
+                     "sim":{"players":[{"gear":{"neck":{
+                      "ilevel":331,"encoded_item":bare_neck.split("=",1)[1],
+                      "crit_rating":0,"haste_rating":0,
+                      "mastery_rating":110,"versatility_rating":20}}}]}}
+            path.write_text(json.dumps(response),encoding="utf8")
+            return FakeNativeCompleted()
+        with mock.patch.object(hydrate.subprocess,"run",side_effect=simulate_native):
+            first=hydrate.hydrate(user,self.root/"runs",self.binary,"710c2408bf")
+            self.assertEqual(first["native_new_calls"],1)
+            self.assertEqual(self.calls,1)
+            path=pathlib.Path(first["static_cache_path"])
+            snapshot=cache.load(path)
+            self.assertIn(cache.digest(budget.exact_identity(base)),snapshot["variants"])
+            self.assertNotIn(cache.digest(budget.exact_identity(row)),snapshot["variants"])
+            plan=hydrate.bootstrap.build(user,self.root/"neck-plan",self.binary,
+                                         "710c2408bf",path,current_season_product=True)
+            self.assertEqual(plan["plan"]["base_B"],3110)
+            self.assertEqual(plan["plan"]["final_T"],3142)
+            self.assertIn("gem_id=", (self.root/"neck-plan"/"profile.simc").read_text())
+            self.assertEqual(plan["plan"]["selected_fixed_enchant_E"] if
+                             "selected_fixed_enchant_E" in plan["plan"] else None,None)
+            self.assertEqual(hydrate.hydrate(
+                user,self.root/"runs",self.binary,"710c2408bf",
+                existing=path)["native_new_calls"],0)
+            self.assertEqual(self.calls,1)
+
+    def test_mismatch_in_temporary_physical_special_source_blocked(self):
+        import v062_static_budget_bridge as budget
+        controls=copy.deepcopy(self.controls)
+        controls["special_items"]=[{"slot":"neck","item_id":268250,"options":{}}]
+        user=sessions.user_scenario(controls)
+        stage=hydrate.bootstrap.build(
+            user,self.root/"neck-source-2",self.binary,"710c2408bf",
+            current_season_product=True,static_special_probe_only=True)
+        original=stage["special_rows"][0]
+        bare=budget.undecorated_special(original)
+        with self.assertRaisesRegex(hydrate.StaticLBlocked,
+                                    "SOURCE_NOT_EXACT_USER_VARIANT"):
+            wrong=stage["profile"].replace("id=268250","id=268251")
+            hydrate.physical_input(wrong,self.root/"x.json",[original],[bare])
 
     def test_forged_native_item_id_or_missing_profile_stats_fail_closed(self):
         fake=hydrate.selected_records
