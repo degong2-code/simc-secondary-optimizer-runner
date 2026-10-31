@@ -476,7 +476,7 @@ class EnvironmentManifestTests(unittest.TestCase):
         self.assertNotIn("V213_WINDOWS_PACKAGE_MANIFEST_NOT_VERIFIED",
                          result["unresolved_dependencies"])
         self.assertIn(
-            "WINDOWS_ONE_CLICK_ENVIRONMENT_BUILD_AND_START_NOT_INTEGRATED",
+            "WINDOWS_ONE_CLICK_BUILD_START_PROGRESS_CANCEL_RESUME_NOT_FULLY_ACCEPTED",
             result["unresolved_dependencies"])
 
 

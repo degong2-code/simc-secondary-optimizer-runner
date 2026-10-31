@@ -284,6 +284,106 @@ class LocalWebAPIOffline(unittest.TestCase):
             self.assertEqual(stale.json()["detail"]["code"],
                              "V213_SOURCE_CATALOG_CHANGED_AFTER_PLAN")
 
+    def test_environment_build_api_reuses_installed_source_and_seals_incremental_receipt(self):
+        builder=SourceToCatalogTests()
+        builder.setUpClass()
+        season,classification=builder.build_inputs()
+        for key,name in (("gear","current_season_product_gear_db.json"),
+                         ("tier","current_season_tier_itemsets.json"),
+                         ("budget","current_season_chmv_consumables.json")):
+            season["sha256_by_input"][key]=source_bridge.sha(
+                (ROOT/"data"/name).read_bytes())
+        source=source_bridge.compile_catalog(
+            season,"a"*64,classification,"b"*64)
+        package_root=self.root/"SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA"
+        data=package_root/"data"
+        data.mkdir(parents=True,exist_ok=True)
+        source_path=data/"current_season_source_to_catalog.json"
+        raw=json.dumps(source,sort_keys=True,ensure_ascii=False,
+                       indent=2).encode("utf8")+b"\n"
+        source_path.write_bytes(raw)
+        source_sha=source_bridge.sha(raw)
+        source_meta={
+            "path":"data/current_season_source_to_catalog.json",
+            "schema":source["schema"],"game_build":source["game_build"],
+            "simc_revision":source["simc_revision"],
+            "artifact_sha256":source_sha,
+            "manifest_sha256":source["manifest_sha256"],
+            "native_calls":0,"network_calls":0,
+            "automatic_ui_promotion":False,
+        }
+        package={
+            "schema":"v181_windows_local_web_beta_source_package_v1",
+            "archive_root":package_root.name,
+            "files":[{"path":source_meta["path"],"size":len(raw),
+                      "sha256":source_sha}],
+            "file_count":1,"source_catalog":source_meta,
+        }
+        package_path=package_root/"V181_PACKAGE_MANIFEST.json"
+        package_path.write_text(json.dumps(package,sort_keys=True,
+            ensure_ascii=False,indent=2)+"\n",encoding="utf8")
+        jobs=self.app.state.jobs
+        payload={**self.payload,"revision":source["simc_revision"],
+                 "current_season_product":True}
+        with mock.patch.object(jobs,"source_catalog_path",return_value=source_path), \
+             mock.patch.object(jobs,"package_manifest_path",return_value=package_path):
+            with mock.patch.object(web.subprocess,"Popen") as spawn:
+                first=self.post("/api/v1/environment/build",payload)
+                spawn.assert_not_called()
+            self.assertEqual(first.status_code,200,first.text)
+            first_body=first.json()
+            self.assertEqual(first_body["status"],"READY_ZERO_NATIVE")
+            self.assertEqual(first_body["environment_build"]["status"],
+                             "READY_WITH_LIMITATIONS")
+            self.assertEqual(first_body["environment_build"]["source"]["mode"],
+                             "INSTALLED_VERSIONED_ARTIFACT_ONLY")
+            self.assertFalse(first_body["environment_build"]["source"]["refresh_performed"])
+            self.assertEqual(first_body["environment_build"]["native_calls"],0)
+            self.assertEqual(first_body["environment_build"]["network_calls"],0)
+            self.assertEqual(first_body["environment_build"]["cache_mutations"],0)
+            self.assertEqual(first_body["environment_build"]["cache_reuse"]
+                             ["installed_v213_artifact_hits"],1)
+            self.assertEqual(first_body["environment_build"]["readiness"]
+                             ["profile_plan_suppliers"]["count"],26)
+            components={row["component"]:row["status"]
+                        for row in first_body["environment_build"]["steps"]}
+            self.assertEqual(components["v191_source_collection"],"REUSED_EMBEDDED")
+            self.assertEqual(components["v211_simc_effect_classification"],
+                             "REUSED_EMBEDDED")
+            self.assertEqual(components["v213_source_to_catalog"],
+                             "REUSED_PACKAGED_ARTIFACT")
+            session_id=first_body["session_id"]
+            folder=self.root/"runs"/session_id
+            receipt_path=folder/"generated"/"environment_build_receipt.json"
+            self.assertTrue(receipt_path.is_file())
+            saved=json.loads(receipt_path.read_text(encoding="utf8"))
+            self.assertEqual(saved["source"]["artifact_sha256"],source_sha)
+            self.assertEqual(saved["historical_sessions_preserved"],True)
+            second=self.post("/api/v1/environment/build",payload)
+            self.assertEqual(second.status_code,200,second.text)
+            self.assertEqual(second.json()["session_id"],session_id)
+            third=self.post("/api/v1/environment/build",payload)
+            self.assertEqual(third.status_code,200,third.text)
+            self.assertEqual(third.json()["environment_build"]["dependency_change"]
+                             ["status"],"INITIAL_ENVIRONMENT")
+            self.assertEqual(third.json()["environment_build"]["steps"][-1]["status"],
+                             "REUSED")
+            status=self.client.get("/api/v1/environment/"+session_id,
+                                   headers=self.headers)
+            self.assertEqual(status.status_code,200,status.text)
+            self.assertEqual(status.json()["environment_build"]["receipt_sha256"],
+                             third.json()["environment_build"]["receipt_sha256"])
+            session_status=self.client.get(
+                "/api/v1/sessions/"+session_id+"/status",headers=self.headers)
+            self.assertEqual(session_status.status_code,200,session_status.text)
+            self.assertEqual(session_status.json()["environment_build"]["status"],
+                             "READY_WITH_LIMITATIONS")
+        blocked_build=self.post("/api/v1/environment/build",{
+            **payload,"current_season_product":False})
+        self.assertEqual(blocked_build.status_code,422,blocked_build.text)
+        self.assertEqual(blocked_build.json()["detail"]["code"],
+                         "ENVIRONMENT_BUILD_CURRENT_SEASON_ONLY")
+
     def test_selected_special_start_seals_v208_receipt_before_worker_launch(self):
         jobs=self.app.state.jobs
         controls=copy.deepcopy(self.controls)

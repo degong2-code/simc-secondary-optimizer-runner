@@ -600,10 +600,37 @@ async function withBusy(fn) {
   }
   finally{state.busy=false;buttonState(state.running,$("filled-result").hidden===false);}
 }
+function showEnvironmentBuild(build) {
+  const node=$("environment-build-status");
+  if(!node)return;
+  if(!build) {
+    node.textContent="환경 구축 전 · 설치된 시즌 데이터는 예산 확인을 누르면 검사합니다.";
+    return;
+  }
+  const labels={
+    "READY":"준비 완료",
+    "READY_WITH_LIMITATIONS":"제한 사항 포함 준비 완료",
+    "BLOCKED":"차단"
+  };
+  const change=build.dependency_change||{};
+  const reused=Array.isArray(change.reused_components)?change.reused_components.length:0;
+  const rebuilt=Array.isArray(change.rebuilt_components)?change.rebuilt_components.length:0;
+  const changed=Array.isArray(change.changed_inputs)?change.changed_inputs.length:0;
+  const hits=Number(build.cache_reuse?.installed_v213_artifact_hits)||0;
+  const coverage=build.readiness?.profile_plan_suppliers;
+  const coverageText=coverage?
+    " · 계획 공급원 "+coverage.count+"/"+coverage.total+
+    (coverage.adaptive_native_evidence_complete?"":" (adaptive Native 미완료)"):"";
+  node.textContent="환경 구축 "+(labels[build.status]||build.status)+
+    " · 재사용 "+reused+" · 재구축 "+rebuilt+
+    " · 변경 입력 "+changed+" · v213 artifact 재사용 "+hits+
+    coverageText+" · Native 0 · Network 0";
+}
 function showPlan(plan) {
   if(!plan?.plan) return;
   const o=Object.values(plan.plan.fixed_O).reduce((a,n)=>a+n,0);
   const environment=plan.environment_manifest;
+  showEnvironmentBuild(plan.environment_build);
   const coverage=environment?.profile_supplier_coverage;
   const supplierText=coverage?
     " · 프로필 공급원 "+coverage.current_season_profile_supplier_count+
@@ -643,6 +670,7 @@ function renderProgress(data) {
       (p.error||p.worker?.reason||worker);
   const environment=data?.environment_manifest;
   const environmentText=environment?" · 환경 "+environment.status:"";
+  showEnvironmentBuild(data?.environment_build);
   $("stage-text").textContent=status+" · Native 누적 "+(p.native_attempts||0)+
                        " · 캐시 "+(p.cache_hits||0)+environmentText;
   $("run-label").textContent=data.active?"진행 중":
@@ -1048,7 +1076,7 @@ function registerHandlers() {
   });
   $("ilevel").addEventListener("change",showRepresentativeScope);
   $("plan-btn").addEventListener("click",()=>withBusy(async()=>{
-    const p=await api("/api/v1/sessions/plan",{method:"POST",payload:buildRequest()});
+    const p=await api("/api/v1/environment/build",{method:"POST",payload:buildRequest()});
     markSession(p.session_id);showPlan(p);await pollOnce();
   }));
   $("start-btn").addEventListener("click",()=>withBusy(async()=>{

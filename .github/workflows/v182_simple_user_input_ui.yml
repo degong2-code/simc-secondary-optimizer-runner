@@ -27,6 +27,7 @@ on:
       - runner/v098_target_user_scenario_bootstrap.py
       - runner/v208_internal_exact_special_L_hydrator.py
       - runner/v212_environment_manifest.py
+      - runner/v216_environment_build_coordinator.py
       - runner/v202_one_enchant_admission.py
       - data/v202_verified_enchant_8025_source.json
       - tests/test_v202_one_enchant_admission.py
@@ -41,6 +42,7 @@ on:
       - tests/test_v182_simple_user_inputs_offline.py
       - tests/test_v208_special_L_hydration_offline.py
       - tests/test_v212_environment_manifest.py
+      - tests/test_v216_environment_build_coordinator.py
       - tests/test_v114_local_web_ui_offline.py
       - tests/test_v167_local_gear_catalog_api.py
       - .github/workflows/v182_simple_user_input_ui.yml

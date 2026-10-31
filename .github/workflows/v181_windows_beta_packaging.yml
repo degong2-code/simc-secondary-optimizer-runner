@@ -12,6 +12,7 @@ on:
       - runner/v196_current_season_user_catalog.py
       - runner/v208_internal_exact_special_L_hydrator.py
       - runner/v212_environment_manifest.py
+      - runner/v216_environment_build_coordinator.py
       - runner/v213_source_to_catalog.py
       - data/current_season_source_to_catalog.json
       - integration_probes/v181_windows_beta_live_http.py
@@ -19,6 +20,7 @@ on:
       - tests/test_v113_local_web_api_offline.py
       - tests/test_v208_special_L_hydration_offline.py
       - tests/test_v212_environment_manifest.py
+      - tests/test_v216_environment_build_coordinator.py
       - data/current_season_simc_enchant_candidates.json
       - tests/test_v196_current_season_ui_catalog.py
       - runner/v197_verified_effect_budget.py

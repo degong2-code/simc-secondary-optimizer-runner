@@ -32,6 +32,7 @@ import v148_local_batch_results as batch_view
 import v167_product_season_gear_adapter as season_gear
 import v208_internal_exact_special_L_hydrator as exact_L
 import v212_environment_manifest as environment_manifest
+import v216_environment_build_coordinator as environment_build
 
 SCHEMA = "v113_local_web_api_p1_v1"
 KEY = re.compile(r"[a-f0-9]{20}\Z")
@@ -252,8 +253,6 @@ class LocalJobs:
         bootstrap_path=generated/"v098_bootstrap_result.json"
         encoded_bootstrap=json.dumps(bootstrap_result,sort_keys=True,
             ensure_ascii=False,indent=2,allow_nan=False)+"\n"
-        # Persist v098 output even for a legacy package without v213. A later
-        # explicit Start still needs the exact bootstrap identity for v208.
         bootstrap.put_once(bootstrap_path,encoded_bootstrap)
         source_path=self.source_catalog_path()
         if source_path is None:
@@ -268,16 +267,29 @@ class LocalJobs:
                     "native_calls":0,"network_calls":0}
         if receipt_path is None:
             receipt_path=self._latest_v208_receipt_path(folder)
-        previous_path=generated/"environment_manifest.json"
-        result=environment_manifest.compile_from_paths(
-            source_path,bootstrap_path,generated,receipt_path,
-            package_manifest_path=self.package_manifest_path(),
-            previous_manifest_path=(previous_path
-                if previous_path.is_file() else None))
-        encoded=json.dumps(result,sort_keys=True,ensure_ascii=False,
-                          indent=2,allow_nan=False)+"\n"
-        self._write_atomic(generated/"environment_manifest.json",encoded)
-        return self._environment_summary(result)
+        try:
+            user=json.loads((pathlib.Path(folder)/"user.json").read_text("utf8"))
+            target_manifest=json.loads(
+                (generated/"manifest.json").read_text("utf8"))
+        except (OSError,ValueError,TypeError) as exc:
+            raise environment_manifest.EnvironmentBlocked(
+                "V216_BUILD_INPUT_IDENTITY_INVALID:"+type(exc).__name__) from exc
+        built=environment_build.build_environment(
+            sessions_root=self.root,session_folder=folder,user=user,
+            binary=target_manifest.get("native_binary"),
+            revision=target_manifest.get("native_revision"),
+            static_cache=target_manifest.get("static_cache_json"),
+            source_catalog_path=source_path,bootstrap_result=bootstrap_result,
+            v208_start_receipt_path=receipt_path,
+            package_manifest_path=self.package_manifest_path())
+        return self._environment_summary(built["manifest"])
+
+    def _read_environment_build_summary(self, folder):
+        path=pathlib.Path(folder)/"generated"/"environment_build_receipt.json"
+        if not path.is_file():
+            return None
+        receipt=environment_build.read_receipt(path,folder.name)
+        return environment_build.public_summary(receipt)
 
     def recent_sessions(self, limit=48):
         """Read-only local session index; no binary hashing, Native or writes.
@@ -415,8 +427,12 @@ class LocalJobs:
             plan=bootstrap_result["plan"]
             environment=(self._seal_environment_manifest(folder,bootstrap_result)
                          if current_season else None)
+            environment_build_receipt=(
+                self._read_environment_build_summary(folder)
+                if current_season else None)
             return {"session_id":folder.name,"status":"READY_ZERO_NATIVE",
                     "environment_manifest":environment,
+                    "environment_build":environment_build_receipt,
                     "native_calls":0,
                     "static_cache_auto_used":bool(
                         resolved_static and params.static_cache is None),
@@ -537,7 +553,8 @@ class LocalJobs:
                 "cancel_requested":p["cancel"].exists(),
                 "progress":item,
                 "result_ready":p["final"].is_file(),
-                "environment_manifest":self._read_environment_summary(folder)}
+                "environment_manifest":self._read_environment_summary(folder),
+                "environment_build":self._read_environment_build_summary(folder)}
 
     def inputs(self, folder):
         """Restore locally sealed user form/SimC paths, read-only and without Native.
@@ -610,7 +627,8 @@ class LocalJobs:
                 "status":"CACHE_ONLY_WORKER_STARTED" if cache_only else "WORKER_STARTED",
                 "native_attempt_ceiling_cumulative":6,
                 "new_native_execution_permitted":not cache_only,
-                "environment_manifest":environment}
+                "environment_manifest":environment,
+                "environment_build":self._read_environment_build_summary(folder)}
 
     def cancel(self, folder):
         with self.lock:
@@ -836,6 +854,20 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                                "representative_scope":scope})
         return {"archetypes":archetypes,
                 "unavailable_missing_legacy_fixtures":[]}
+
+    @app.post("/api/v1/environment/build")
+    def build_environment(request: UserRequest):
+        if not request.current_season_product:
+            raise HTTPException(422,detail={"code":"ENVIRONMENT_BUILD_CURRENT_SEASON_ONLY"})
+        return jobs.plan(request)
+
+    @app.get("/api/v1/environment/{session_id}")
+    def environment_status(session_id: str):
+        folder=jobs.folder(session_id)
+        return {"session_id":session_id,
+                "environment_manifest":jobs._read_environment_summary(folder),
+                "environment_build":jobs._read_environment_build_summary(folder),
+                "native_calls":0,"network_calls":0}
 
     @app.post("/api/v1/sessions/plan")
     def plan(request: UserRequest):

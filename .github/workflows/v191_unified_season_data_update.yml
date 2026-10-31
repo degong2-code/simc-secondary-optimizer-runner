@@ -9,28 +9,18 @@ on:
       - runner/v196_current_season_user_catalog.py
       - runner/v197_enchant_effect_families.py
       - runner/v206_nonchmv_eagle_selection.py
-      - runner/v098_target_user_scenario_bootstrap.py
-      - runner/v208_internal_exact_special_L_hydrator.py
-      - runner/v212_environment_manifest.py
-      - runner/v143_specialization_contracts.py
-      - runner/v113_local_web_api.py
-      - integration_probes/v214_p3c_v213_v098_v208_handoff.py
       - tests/test_v191_unified_season_data_update.py
       - tests/test_v211_enchant_source_effect_classification.py
       - tests/test_v213_source_to_catalog.py
       - tests/test_v196_current_season_ui_catalog.py
       - tests/test_v197_enchant_effect_families.py
-      - tests/test_v212_environment_manifest.py
       - tests/test_v213_source_to_catalog.py
-      - tests/test_v098_target_user_scenario_bootstrap.py
-      - tests/test_v208_special_L_hydration_offline.py
       - data/current_season_product_gear_db.json
       - data/current_season_tier_itemsets.json
       - data/current_season_chmv_consumables.json
       - data/current_season_enchant_effect_classification.json
       - data/v202_verified_enchant_8025_source.json
       - data/v206_eagle_7967_windows_E0_proof.json
-      - .github/workflows/v191_unified_season_data_update.yml
   workflow_dispatch:
     inputs:
       event:

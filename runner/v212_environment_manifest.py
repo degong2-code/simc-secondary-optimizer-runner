@@ -693,7 +693,7 @@ def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
             "V208_SELECTED_SPECIAL_L_START_RECEIPT_NOT_YET_SERIALIZED_IN_ENVIRONMENT_MANIFEST")
     if windows_package["status"] != "VERIFIED":
         limitations.append("V213_WINDOWS_PACKAGE_MANIFEST_NOT_VERIFIED")
-    limitations.append("WINDOWS_ONE_CLICK_ENVIRONMENT_BUILD_AND_START_NOT_INTEGRATED")
+    limitations.append("WINDOWS_ONE_CLICK_BUILD_START_PROGRESS_CANCEL_RESUME_NOT_FULLY_ACCEPTED")
     limitations = list(dict.fromkeys(limitations))
     unresolved = []
     if not profile_supplier_coverage["all_specs_ready"]:
@@ -704,7 +704,7 @@ def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
             "V208_SELECTED_SPECIAL_L_START_RECEIPT_NOT_YET_SERIALIZED_IN_ENVIRONMENT_MANIFEST")
     if windows_package["status"] != "VERIFIED":
         unresolved.append("V213_WINDOWS_PACKAGE_MANIFEST_NOT_VERIFIED")
-    unresolved.append("WINDOWS_ONE_CLICK_ENVIRONMENT_BUILD_AND_START_NOT_INTEGRATED")
+    unresolved.append("WINDOWS_ONE_CLICK_BUILD_START_PROGRESS_CANCEL_RESUME_NOT_FULLY_ACCEPTED")
     payload = {
         "schema": SCHEMA,
         "status": "READY_WITH_LIMITATIONS" if limitations or unresolved else "READY",
