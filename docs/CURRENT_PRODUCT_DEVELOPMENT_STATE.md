@@ -1,3 +1,19 @@
+# 2026-11-01 P3-D Stage Execution Engine — 최신 검증 상태 (code HEAD be659444)
+
+> **현재 격리 코드 HEAD:** `be6594440b4e61ab5aba2c6a0865e0d8b9c7ee23` (`probe/chat-cache-v035-20261024`). `main`은 `07133e0aaf738d6e4816a6486057b1cd49c018de`에서 불변, repository Public으로 확인되었으며 visibility는 변경하지 않았다.
+>
+> **실제 구현:** `runner/v217_stage_execution_engine.py`는 일반화한 stage 실행·input/output fingerprint·완료 영수증·검증 후 재사용·중단 복구를 제공한다. `v218_v098_profile_stage_adapter.py`는 기존 `v098`를 감싸며 새로운 profile generator를 구현하지 않는다. `v106` session identity와 `v113` Build/Plan 연결, `v216` 실제 `EXECUTED_AND_SEALED` / `REUSED_VERIFIED_ARTIFACTS` 상태 기록을 추가했다. 현재 구현은 전체 DAG Stage Executor 완성 증거가 아니라 **첫 프로필 stage의 실제 실행 생략** 증거다.
+>
+> **이번 교정:** 코드/테스트 변경의 최종 commit `be659444`; 구형 개발용 variant session resume와 selected special v208 mock 함수 호환성은 `64ab08e`에서 교정. Windows short(8.3) vs long path 비교는 `be659444`에서 `Path.resolve()` 기준으로 교정. 기능 추가 없이 회귀만 해결했다.
+>
+> **신규 검증 (신규 Native 0):** [v212 DAG Actions #41216333617](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41216333617) Ubuntu/Windows PASS; 최종 [v113 API #41267353281](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41267353281) Ubuntu/Windows PASS; [v182 UI #41267353295](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41267353295) Ubuntu/Windows PASS; [v181 Windows package #41267353279](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41267353279) Windows Python 3.12/3.14 PASS. 성공은 각 CI 범위만 증명하고 사용자 PC 실제 GUI 또는 26/26 adaptive Native E2E 완료를 뜻하지 않는다.
+>
+> **효율/제약:** 같은 세션의 두 번째 `/api/v1/environment/build` 요청에서 `v098.build`가 실제로 생략되는 것을 테스트로 확인했다(3회 요청 중 생성기 1회). 재사용 전 출력 파일 SHA 검증 I/O는 남고, 공통 stage identity 계산의 코드 의존성 fingerprint 비용 최적화는 미완료. 실행시간·CPU/메모리의 계측값은 아직 확보하지 않았다. 신규 Native/네트워크 호출을 생성하는 로직은 추가하지 않았다. 기존 적응형 v093/v094/v095 및 캐시를 교체하지 않았다.
+>
+> **다음 소단위:** 현재 v217/v218의 실제 기존 Stage receipt/partial output fail-closed 동작과 상이한 source 변경 시 최소 무효화 범위를 한 항목씩 검증·교정. 그 다음 v191→v211→v213 요청형 refresh, optimizer handoff, Windows 사용자 PC Start/progress/cancel/resume acceptance를 진행한다. 과거 Native 검증은 변경에 의해 무효화된 범위 외 재실행하지 않는다.
+
+---
+
 # 2026-10-31 P3-D dependency DAG engine — 최신 검증 상태 (code HEAD 0583d22a)
 
 > **현재 격리 브랜치:** `probe/chat-cache-v035-20261024`. 제품 코드 변경 commit `0583d22a0623495521193ffca0da14bbaf09565b`; 이 문서 갱신 후 branch HEAD는 다시 조회한다. `main`은 `07133e0aaf738d6e4816a6486057b1cd49c018de`로 유지되며 merge하지 않았다. Repository visibility는 Public으로 확인됐고 변경하지 않았다.
