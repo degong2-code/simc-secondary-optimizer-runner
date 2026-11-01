@@ -1,3 +1,21 @@
+# 2026-11-01 P3-F — 비영속 Stage 재사용 실측, Ubuntu/Windows CI PASS
+
+> **코드 커밋:** `3003c241127c8aedf7a272a09bf7c56525ee42e8` (개발용 `integration_probes/v219_profile_stage_efficiency.py` + 기존 v113 workflow 실행). 제품 실행 엔진 자체 수정 없음. `main` `07133e0aaf738d6e4816a6486057b1cd49c018de` 유지, Project UI/visibility/official 권한 변경 없음.
+>
+> **실제 계측 (Fake binary, Native0):** 기존 v113 `POST /api/v1/sessions/plan`을 evoker/devastation 한 시나리오에서 최초 1회 + 동일 세션 재사용 3회 실행. 외부 의존성 없는 임시 세션만 사용. `v098.build` 전체 1회, 재사용 추가 0회; Stage receipt 최초 2 writes / 이후 0; 임시 session 파일 8개의 SHA256·mtime_ns·크기가 3회 반복 모두 불변; Native0/network0. `read_bytes`만 별도 계측하므로 전체 OS I/O 수치가 **아님**. 실행시간과 read byte 계측값은 session/manifest/DPS cache/receipt에 기록되지 않으며, 성능 threshold를 PASS 조건으로 사용하지 않음.
+>
+> **Ubuntu Python 3.12:** 최초 378.567ms, 재사용 6.808 / 6.874 / 6.207ms; `Path.read_bytes` 호출 81 → 각 7, read_bytes 처리량 954,026 → 각 25,285 bytes.
+>
+> **Windows Python 3.14:** 최초 440.420ms, 재사용 14.490 / 11.230 / 12.042ms; `Path.read_bytes` 호출 81 → 각 7, read_bytes 처리량 954,158 → 각 25,417 bytes.
+>
+> **검증:** [v113 Actions #41268981093](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41268981093), Ubuntu 164 tests PASS + v219 observed PASS, Windows 164 tests PASS + v219 observed PASS. 이 수치는 일회 CI 측정값일 뿐 실제 Windows 사용자 PC의 Native 최적화 계산 속도, 보편적인 속도 배수 또는 메모리 절감을 입증하지 않는다.
+>
+> **엔진 기준 판정:** 원래 stage fingerprint가 1회 생성으로 끝난다는 가정을 추측하지 않고, 실제 HTTP→v217/v218 reuse 분기·출력 검증·바이트 무변경을 확인. 검증을 생략하는 최적화는 도입하지 않았다. 반복 Build/Plan 간 성능 측정의 추가 저장 I/O 0으로 설계.
+>
+> **다음 작업:** 사용자 실제 Windows SimC 설치 환경에서 Build→Start→progress→cancel/resume acceptance 확인 미완료. 앱의 기존 v191→v211→v213 수동 source refresh는 별도 요청 시 재사용; source artifact 만료가 refresh를 자동 승인하는 것은 아님. 26 DPS 범위/CHMV 절대 rating/95% 통계 유지. 과거 Native 재실행하지 않음.
+
+---
+
 # 2026-11-01 P3-E 기존 적응형 optimizer로 정확한 Stage handoff — 최신 확인
 
 > **격리 코드 커밋:** `0b9383a9d8aa1cf1c9770ec7611720993d5c975d` (worker handoff); `92291d1d252b4359795dc132da51251ed258fd69` (Windows 경로 테스트 교정). `main`·v003·original v016·Project UI·repo visibility는 변경하지 않았다. 이 문서 커밋 이후 최신 HEAD는 재조회한다.
