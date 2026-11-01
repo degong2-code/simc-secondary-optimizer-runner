@@ -338,10 +338,9 @@ def _source_key_inventory(records, count, keys, key_field, family):
     Duplicates are reported as ambiguity, not dropped or treated as a join.
     """
     if records is None:
-        return {"status":"COUNT_ONLY_LEGACY_SOURCE",
-                "raw_key_rows_available":0,
-                "distinct_source_keys":0,"duplicate_source_key_rows":0,
-                "conflicting_source_key_rows":0}
+        # A historical v213 audit had no source-key fields. Recomputing it
+        # must remain byte-for-byte semantically identical.
+        return {}
     need(type(records) is list and len(records)==count,
          "JOIN_SOURCE_RECORD_COUNT_DRIFT:"+family)
     mapping={};duplicates=0;conflicts=0
@@ -360,9 +359,9 @@ def _source_key_inventory(records, count, keys, key_field, family):
                 conflicts+=1
         else:
             mapping[raw_key]=row
-    return {"status":("SOURCE_KEYS_CONFLICTED" if conflicts else
-                       "SOURCE_KEYS_WITH_DUPLICATES" if duplicates else
-                       "SOURCE_KEYS_RETAINED_NO_COUNTERPART_JOIN"),
+    return {"source_key_status":("SOURCE_KEYS_CONFLICTED" if conflicts else
+                                  "SOURCE_KEYS_WITH_DUPLICATES" if duplicates else
+                                  "SOURCE_KEYS_RETAINED_NO_COUNTERPART_JOIN"),
             "raw_key_rows_available":count,
             "distinct_source_keys":len(mapping),
             "duplicate_source_key_rows":duplicates,
