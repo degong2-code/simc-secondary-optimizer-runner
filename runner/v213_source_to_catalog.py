@@ -331,6 +331,107 @@ def _related_source_counts(season):
     return counts
 
 
+def _source_join_audit(catalog):
+    """One common missing-join contract derived from *actual* source rows.
+
+    Observed effects and item IDs are never evidence of a physical item-slot
+    or weapon-hand join. This audit is only a provenance/coverage inventory;
+    no additional item or enchant is admitted as a user selection.
+    """
+    gear = catalog["gear"]
+    gear_rows = [row for rows in gear["slot_groups"].values() for row in rows]
+    need(len(gear_rows) == gear["count"], "JOIN_AUDIT_GEAR_ROW_DRIFT")
+    unknown_gear = sorted(row["item_id"] for row in gear_rows
+                          if row["slot_resolution_status"] == "UNKNOWN_PENDING")
+    need(len(unknown_gear) == gear["unresolved_count"] and
+         len(unknown_gear) == len(gear["unresolved"]),
+         "JOIN_AUDIT_GEAR_PENDING_COUNT_DRIFT")
+    need(all(row["slot_resolution_status"] in
+             ("UNKNOWN_PENDING", "SOURCE_INVENTORY_TYPE_RESOLVED")
+             for row in gear_rows), "JOIN_AUDIT_GEAR_STATUS_UNRECOGNIZED")
+
+    enchants = catalog["enchants"]["items"]
+    need(len(enchants) == catalog["enchants"]["count"],
+         "JOIN_AUDIT_ENCHANT_ROW_DRIFT")
+    known_enchants = sum(row["slot_resolution_status"] ==
+                         "SOURCE_MASK_RESOLVED" for row in enchants)
+    pending_enchants = sum(row["slot_resolution_status"] ==
+                           "WEAPON_SUBCLASS_PENDING_EXACT_HAND_APPLICABILITY"
+                           for row in enchants)
+    need(known_enchants + pending_enchants == len(enchants),
+         "JOIN_AUDIT_ENCHANT_STATUS_UNRECOGNIZED")
+
+    effects = catalog["embellishments"].get("registered_effects")
+    need(type(effects) is list, "JOIN_AUDIT_EMBELLISHMENT_ROWS_INVALID")
+    # An observed positive item ID is still not a verified
+    # effect -> item -> physical slot relationship.
+    observed_effect_item_ids = sum(type(row) is dict and
+                                  type(row.get("actual_item_id")) is int and
+                                  row["actual_item_id"] > 0
+                                  for row in effects)
+
+    temporary = catalog["temporary_enchants"]
+    need(type(temporary) is dict and
+         type(temporary.get("source_rows")) is int and
+         temporary["source_rows"] >= 0 and
+         type(temporary.get("highest_rank_candidates")) is list,
+         "JOIN_AUDIT_TEMPORARY_SOURCE_INVALID")
+    # The generated table is source observations, not hand applicability.
+    temp_total = temporary["source_rows"]
+    need(len(temporary["highest_rank_candidates"]) <= temp_total,
+         "JOIN_AUDIT_TEMPORARY_CANDIDATE_DRIFT")
+    gems = catalog["gem_properties"]
+    need(type(gems) is dict and type(gems.get("source_count")) is int
+         and gems["source_count"] >= 0,
+         "JOIN_AUDIT_GEM_SOURCE_INVALID")
+
+    rows = (
+        ("gear_inventory_slot", len(gear_rows),
+         len(gear_rows) - len(unknown_gear),
+         "GEAR_INVENTORY_TYPE_UNKNOWN",
+         {"unresolved_item_ids_sample": unknown_gear[:8]}),
+        ("permanent_enchant_slot", len(enchants), known_enchants,
+         "WEAPON_ENCHANT_HAND_APPLICABILITY_MISSING",
+         {"weapon_hand_pending": pending_enchants}),
+        ("embellishment_effect_item_slot", len(effects), 0,
+         "EMBELLISHMENT_EXACT_ITEM_SLOT_JOIN_MISSING",
+         {"item_id_observed_not_proof": observed_effect_item_ids}),
+        ("temporary_enchant_weapon_hand", temp_total, 0,
+         "TEMPORARY_ENCHANT_HAND_JOIN_MISSING",
+         {"highest_rank_candidate_count":
+          len(temporary["highest_rank_candidates"])}),
+        ("gem_property_item", gems["source_count"], 0,
+         "GEM_PROPERTY_TO_ITEM_ID_JOIN_MISSING",
+         {"item_ids_confirmed": 0}),
+    )
+    families = {}
+    pending_codes = []
+    for name, observed, resolved, code, extra in rows:
+        pending = observed - resolved
+        need(0 <= resolved <= observed, "JOIN_AUDIT_COUNT_INVALID:" + name)
+        status = ("NO_SOURCE_ROWS" if observed == 0 else
+                  "SOURCE_RESOLVED" if pending == 0 else
+                  "SOURCE_PARTIAL" if resolved else "SOURCE_JOIN_PENDING")
+        families[name] = {
+            "source_rows": observed,
+            "source_resolved_rows": resolved,
+            "pending_rows": pending,
+            "status": status,
+            "pending_code": code if pending else None,
+            **extra,
+        }
+        if pending:
+            pending_codes.append("SOURCE_JOIN_PENDING:" + code)
+    return {
+        "schema": "v213_source_join_audit_v1",
+        "families": families,
+        "unresolved_dependencies": pending_codes,
+        "user_selection_granted": False,
+        "native_calls": 0,
+        "network_calls": 0,
+    }
+
+
 def compile_catalog(season, season_sha, classification, classification_sha):
     need(season.get("schema") == V191 and
          season.get("source_first") is True and
@@ -524,6 +625,13 @@ def compile_catalog(season, season_sha, classification, classification_sha):
         },
         "v196_enchant_source": v196_source,
         "catalog_summary": summary,
+        "source_join_audit": _source_join_audit({
+            "gear": gear,
+            "enchants": enchants,
+            "embellishments": embellishments,
+            "temporary_enchants": temporary,
+            "gem_properties": gem_properties,
+        }),
         "readiness_limitations": limitations,
         "native_calls": 0,
         "network_calls": 0,
@@ -565,6 +673,12 @@ def verify_catalog(document):
              row.get("inventory_type_mask") == item.get("inventory_type_mask") and
              row.get("approved") is False and item.get("ui_selectable") is False,
              "V213_V196_ENCHANT_PROJECTION_DRIFT:" + str(item_id))
+    # Older immutable v213 artifacts did not contain join_audit. They remain
+    # readable, but their audit must not be inferred as fully complete.
+    if "source_join_audit" in document:
+        need(document["source_join_audit"] ==
+             _source_join_audit(document["catalog"]),
+             "V213_SOURCE_JOIN_AUDIT_DRIFT")
     return True
 
 

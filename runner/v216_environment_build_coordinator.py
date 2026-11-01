@@ -346,6 +346,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             "limitations": list(result.get("readiness_limitations", [])),
             "unresolved_dependencies": list(
                 result.get("unresolved_dependencies", [])),
+            "source_join_audit":
+                result.get("source_catalog", {}).get("source_join_audit"),
             "profile_plan_suppliers": {
                 "verified": profile.get("profile_supplier_coverage_sha256") is not None,
                 "count": result["product_scope"]["profile_supplier_coverage"].get(

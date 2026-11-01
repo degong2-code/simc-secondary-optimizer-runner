@@ -243,6 +243,47 @@ class SourceToCatalogTests(unittest.TestCase):
         self.assertEqual(ui["native_calls_now"], 0)
         self.assertFalse(ui["optimizer_or_cache_mutated"])
 
+    def test_join_audit_reports_source_proof_vs_missing_item_links(self):
+        result = self.compile()
+        audit = result["source_join_audit"]
+        self.assertEqual(audit["schema"], "v213_source_join_audit_v1")
+        families = audit["families"]
+        self.assertEqual(families["gear_inventory_slot"]["source_rows"], 511)
+        self.assertEqual(families["gear_inventory_slot"]["pending_rows"], 0)
+        self.assertEqual(families["permanent_enchant_slot"]["source_rows"], 38)
+        self.assertEqual(families["permanent_enchant_slot"]["source_resolved_rows"], 28)
+        self.assertEqual(families["permanent_enchant_slot"]["pending_rows"], 10)
+        self.assertEqual(families["embellishment_effect_item_slot"]["pending_rows"], 20)
+        self.assertEqual(families["temporary_enchant_weapon_hand"]["pending_rows"], 117)
+        self.assertEqual(families["gem_property_item"]["pending_rows"], 2409)
+        self.assertEqual(len(audit["unresolved_dependencies"]), 4)
+        self.assertFalse(audit["user_selection_granted"])
+        self.assertEqual(audit["native_calls"], 0)
+        self.assertTrue(v213.verify_catalog(result))
+
+    def test_join_audit_detects_source_gear_unknown_without_granting_selection(self):
+        season, classification = self.build_inputs()
+        season["gear"]["candidates"][0]["inventory_type"] = 999
+        result = self.compile(season, classification)
+        audit = result["source_join_audit"]
+        self.assertEqual(
+            audit["families"]["gear_inventory_slot"]["pending_rows"], 1)
+        self.assertIn("SOURCE_JOIN_PENDING:GEAR_INVENTORY_TYPE_UNKNOWN",
+                      audit["unresolved_dependencies"])
+        self.assertEqual(
+            audit["families"]["gear_inventory_slot"]["unresolved_item_ids_sample"],
+            [158344])
+        self.assertFalse(audit["user_selection_granted"])
+
+    def test_recomputed_digest_cannot_hide_false_join_audit_claim(self):
+        result = self.compile()
+        result["source_join_audit"]["families"]["gem_property_item"]["pending_rows"] = 0
+        payload = {k: v for k, v in result.items() if k != "manifest_sha256"}
+        result["manifest_sha256"] = v213.sha(v213.canonical(payload).encode("utf8"))
+        with self.assertRaisesRegex(v213.CatalogBlocked,
+                                    "V213_SOURCE_JOIN_AUDIT_DRIFT"):
+            v213.verify_catalog(result)
+
     def test_unknown_gear_inventory_type_is_retained_as_pending(self):
         season, classification = self.build_inputs()
         season["gear"]["candidates"][0]["inventory_type"] = 999

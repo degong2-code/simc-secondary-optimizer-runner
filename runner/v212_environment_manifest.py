@@ -770,6 +770,19 @@ def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
     }
     bootstrap_identity_sha = sha(canonical(bootstrap_identity).encode("utf8"))
     limitations = list(source_catalog.get("readiness_limitations", []))
+    source_join_audit = source_catalog.get("source_join_audit")
+    if source_join_audit is None:
+        # Historical packaged source did not carry row-based join evidence.
+        join_unresolved = ["SOURCE_JOIN_AUDIT_NOT_AVAILABLE"]
+    else:
+        need(type(source_join_audit) is dict and
+             source_join_audit.get("schema") == "v213_source_join_audit_v1" and
+             source_join_audit.get("user_selection_granted") is False and
+             type(source_join_audit.get("unresolved_dependencies")) is list,
+             "V213_SOURCE_JOIN_AUDIT_INVALID")
+        join_unresolved = list(source_join_audit["unresolved_dependencies"])
+    if join_unresolved:
+        limitations.append("SOURCE_JOIN_AUDIT_HAS_UNRESOLVED_EVIDENCE")
     if not profile_supplier_coverage["all_specs_ready"]:
         limitations.append(
             "ALL_26_ADAPTIVE_PROFILE_NATIVE_ACCEPTANCE_NOT_COMPLETE")
@@ -784,7 +797,7 @@ def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
         limitations.append("V213_WINDOWS_PACKAGE_MANIFEST_NOT_VERIFIED")
     limitations.append("WINDOWS_ONE_CLICK_BUILD_START_PROGRESS_CANCEL_RESUME_NOT_FULLY_ACCEPTED")
     limitations = list(dict.fromkeys(limitations))
-    unresolved = []
+    unresolved = list(join_unresolved)
     if not profile_supplier_coverage["all_specs_ready"]:
         unresolved.append("ALL_26_ADAPTIVE_PROFILE_NATIVE_ACCEPTANCE")
     if (special_L["selected_count"] and
@@ -824,6 +837,7 @@ def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
                 "candidate_source_schema": v211["candidate_source_schema"],
             },
             "catalog_summary": source_catalog.get("catalog_summary"),
+            "source_join_audit": source_join_audit,
             "related_source_counts": source_catalog.get("related_source_counts"),
         },
         "approved_ui_catalog": {

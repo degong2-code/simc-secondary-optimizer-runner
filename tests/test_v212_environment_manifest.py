@@ -282,6 +282,19 @@ class EnvironmentManifestTests(unittest.TestCase):
             "V208_SELECTED_SPECIAL_L_START_RECEIPT_NOT_YET_SERIALIZED_IN_ENVIRONMENT_MANIFEST",
             result["unresolved_dependencies"])
 
+    def test_source_join_audit_is_embedded_in_environment_readiness(self):
+        manifest = self.compile()
+        join = manifest["source_catalog"]["source_join_audit"]
+        self.assertEqual(join["schema"], "v213_source_join_audit_v1")
+        self.assertEqual(
+            join["families"]["embellishment_effect_item_slot"]["pending_rows"], 20)
+        self.assertIn(
+            "SOURCE_JOIN_PENDING:GEM_PROPERTY_TO_ITEM_ID_JOIN_MISSING",
+            manifest["unresolved_dependencies"])
+        self.assertIn("SOURCE_JOIN_AUDIT_HAS_UNRESOLVED_EVIDENCE",
+                      manifest["readiness_limitations"])
+        self.assertEqual(manifest["status"], "READY_WITH_LIMITATIONS")
+
     def test_profile_supplier_source_hash_mismatch_blocks(self):
         self.bootstrap["profile_supplier_coverage"]["source_input_sha256"]["gear"]="0"*64
         with self.assertRaisesRegex(p.EnvironmentBlocked,
