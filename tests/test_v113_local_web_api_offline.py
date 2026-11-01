@@ -419,6 +419,46 @@ class LocalWebAPIOffline(unittest.TestCase):
                                  "COMPILED_IDENTICAL_NO_WRITE")
                 self.assertEqual(jobs.args_for_existing(folder),
                                  (self.binary.resolve(),source["simc_revision"],None))
+                # Exact worker handoff: no second v098 generator call and
+                # the existing v096 runner receives the stage-sealed manifest.
+                from tests.test_v106_user_session_controller import fake_native
+                with mock.patch.object(
+                    sessions,"_installed_source_paths",
+                    return_value=(source_path,package_path)
+                ), mock.patch.object(
+                    web.bootstrap.entry,"run_manifest",
+                    return_value=fake_native(0)
+                ) as existing_optimizer, mock.patch.object(
+                    web.bootstrap,"build",
+                    side_effect=AssertionError("V098_BUILD_MUST_BE_SKIPPED")
+                ) as duplicate_builder:
+                    if hasattr(sessions.os,"startfile"):
+                        folder_open=mock.patch.object(sessions.os,"startfile")
+                    else:
+                        from contextlib import nullcontext
+                        folder_open=nullcontext()
+                    with folder_open:
+                        self.assertEqual(
+                            sessions.worker(folder,self.binary,
+                                            source["simc_revision"]),0)
+                    duplicate_builder.assert_not_called()
+                    existing_optimizer.assert_called_once_with(
+                        folder/"generated"/"manifest.json",cache_only=False)
+                    self.assertTrue((folder/"V106_USER_RESULT.json").exists()
+                                    or sessions.paths(folder)["final"].is_file())
+
+                    # Tampering after Plan is blocked by the child before
+                    # the optimizer can consume a different profile.
+                    profile_file=folder/"generated"/"profile.simc"
+                    profile_file.write_bytes(profile_file.read_bytes()+b"\n#tampered")
+                    existing_optimizer.reset_mock()
+                    self.assertEqual(
+                        sessions.worker(folder,self.binary,
+                                        source["simc_revision"]),3)
+                    existing_optimizer.assert_not_called()
+                    self.assertIn("STAGE_OUTPUT_HASH_MISMATCH",
+                        json.loads(sessions.paths(folder)["state"].read_text())
+                        ["reason"])
                 status=self.client.get("/api/v1/environment/"+session_id,
                                         headers=self.headers)
                 self.assertEqual(status.status_code,200,status.text)

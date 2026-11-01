@@ -582,6 +582,23 @@ def worker(folder,binary,revision,static_cache=None,cache_only=False):
         print("V106_BLOCKED:",str(e),file=sys.stderr,flush=True)
         return 3
 
+def _installed_source_paths(identity):
+    """Locate packaged source used when this session was planned.
+
+    No network, no artifact refresh. The exact SHA is checked by session_key.
+    Product sessions never fall back to an arbitrary or missing source file.
+    """
+    if "current_season_source_catalog" not in identity:
+        return None,None
+    root=pathlib.Path(__file__).resolve().parents[1]
+    source=root/"data"/"current_season_source_to_catalog.json"
+    bound=identity["current_season_source_catalog"]
+    need(type(bound) is dict,"V213_SESSION_SOURCE_IDENTITY_INVALID")
+    package=(root/"V181_PACKAGE_MANIFEST.json"
+             if bound.get("package_manifest_sha256") else None)
+    return source,package
+
+
 def _worker_locked(folder,binary,revision,static_cache,cache_only):
     p=paths(folder)
     def write_state(status,reason=None):
@@ -611,17 +628,37 @@ def _worker_locked(folder,binary,revision,static_cache,cache_only):
                 need(identity.get("current_season_tier_layout_policy")==
                      bootstrap.common.CURRENT_SEASON_TIER_LAYOUT_POLICY,
                      "OLD_TIER_LAYOUT_SESSION_START_NEW_CORRECTED_SESSION")
+        source_path,package_path=_installed_source_paths(identity)
         actual_key,now=session_key(user,binary,revision,static_cache,
                                    ordinary_variant=variant,
                                    independent_334=independent,
                                    independent_target_level=independent_level,
-                                   current_season_product=current_season)
+                                   current_season_product=current_season,
+                                   source_catalog_path=source_path,
+                                   package_manifest_path=package_path)
         need(actual_key==folder.name and identity==now,
              "SESSION_BINARY_REVISION_OR_CACHE_DRIFT")
+        # The child worker must independently verify the exact profile.
+        # Parent-side /start validation cannot close the spawn-to-run gap.
+        stage_receipt=(folder/"generated"/".stage_receipts"/
+                       "v098_target_profile.json")
+        use_prepared=stage_receipt.is_file()
+        if source_path is not None:
+            need(use_prepared,"V217_PRODUCT_PROFILE_STAGE_RECEIPT_MISSING")
+        if use_prepared:
+            need("profile_stage" in identity,"V217_STAGE_IDENTITY_MISSING")
+            profile_stage.verify_existing(folder,identity)
         cached_before=cache_only_preflight(folder) if cache_only else None
         write_state("RUNNING_CACHE_ONLY" if cache_only else "RUNNING")
-        if variant is None:
-            # Preserve historical worker call shape and sealed default input.
+        if use_prepared:
+            # Reuse the exact Stage-sealed profile/manifest, and hand it
+            # straight to the EXISTING bounded SimC optimizer. Do not call
+            # v098.build again or generate a second physical profile.
+            actual=bootstrap.entry.run_manifest(
+                folder/"generated"/"manifest.json",cache_only=cache_only)
+            result={"native_result":actual}
+        elif variant is None:
+            # Preserve historical worker call shape for pre-stage sessions.
             if current_season:
                 result=bootstrap.run(folder/"user.json",folder/"generated",
                      binary,revision,static_cache,execute=True,
