@@ -1,3 +1,17 @@
+# 2026-11-01 P3-D dependency semantics + Stage path contract — 실제 검증
+
+> **제품 변경 기준 HEAD:** `902aad02d587ba6e172bb3223eba1a7abc805cb5`; focused test 교정 HEAD `cfb4dc4611bc134d3af348a644a38aa107b501ae`. `probe/chat-cache-v035-20261024` 격리 브랜치만 수정; main·v003·original v016·Project UI·visibility·Work OS 권한 변경 없음.
+>
+> **엔진 중심 변경:** v212에 영향 없는 DAG 독립 분기가 reusable candidate로 남는 focused 시험을 추가. 기존 두 세션 v213 바이트 변경 E2E에 세 번째 **의미 있는 v211 locked-enchant 분류 설명 변경 → 정상 v213 재생성** 세션을 추가하여 v213 및 v196 변경 감지, SimC binary·v191 gear/tier/budget 불변, 기존 두 세션·static/DPS cache 보존, Native/network/cache mutation 0을 확인. 이것은 최적화 전체 E2E가 아니라 올바른 dependency/invalidation 계획의 시험이다.
+>
+> **Stage 출력 소유권:** v217 범용 Stage Engine에서 `.stage_receipts/` 예약 공간과 중복·상위/하위로 겹치는 출력 경로를 차단한다. 정상 경로의 프로필 재사용·부분 복구 동작은 그대로 유지한다. 새 optimizer/collector/profile generator/effect engine 없음.
+>
+> **실제 검증:** [v212 #41267856717](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41267856717) Ubuntu/Windows 각 41 PASS; [v113 #41267856787](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41267856787) Ubuntu/Windows 각 164 PASS; [v181 #41267856718](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41267856718) Windows Python 3.12/3.14 package/actual extracted HTTP PASS. 동일 변경의 초기 v113 실패 [#41267799250](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41267799250)는 기존 traversal error code를 새 테스트 regex에 누락한 문제였고 `cfb4dc4`에서 테스트 기대값만 교정했다. 신규 Native 0, 새로운 SimC binary 0, static/DPS cache 변경 0.
+>
+> **남은 작업:** Stage Engine의 실제 output hash 검증 I/O와 code dependency fingerprint 성능 계측; source 변화 시 세부 Stage 단위 최소 재생성/안전 재사용(아직 계획 수준); 기존 v191→v211→v213 명시적 refresh 경로, v098/v208→기존 v093/v094/v095 정확한 handoff, 사용자 Windows PC Build/Start/progress/cancel/resume. 26/26 Plan 공급과 26/26 adaptive Native/DPS 완료를 구분하며 Native 전수 재실행 금지.
+
+---
+
 # 2026-11-01 P3-D Stage Execution Engine — 최신 검증 상태 (code HEAD be659444)
 
 > **현재 격리 코드 HEAD:** `be6594440b4e61ab5aba2c6a0865e0d8b9c7ee23` (`probe/chat-cache-v035-20261024`). `main`은 `07133e0aaf738d6e4816a6486057b1cd49c018de`에서 불변, repository Public으로 확인되었으며 visibility는 변경하지 않았다.
