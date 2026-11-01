@@ -98,6 +98,15 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('"druid/balance":"드루이드 · 조화"',labels)
         self.assertIn('"evoker/devastation":"기원사 · 황폐"',labels)
 
+    def test_environment_source_join_audit_is_visible_without_new_approvals(self):
+        js=self.client.get("/assets/app.js").text
+        self.assertIn("build.readiness?.source_join_audit",js)
+        self.assertIn("DB 연결 근거 보류(소스 행)",js)
+        self.assertIn("DB Join Audit 없음(구형 카탈로그)",js)
+        self.assertIn("gem_property_item",js)
+        self.assertIn("entry.pending_rows",js)
+        self.assertNotIn("innerHTML",js)
+
     def test_optional_simc_import_only_extracts_identity_and_talents(self):
         page=self.client.get("/").text
         js=self.client.get("/assets/app.js").text

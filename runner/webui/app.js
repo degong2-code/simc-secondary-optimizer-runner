@@ -617,6 +617,24 @@ function showEnvironmentBuild(build) {
   const rebuilt=Array.isArray(change.rebuilt_components)?change.rebuilt_components.length:0;
   const changed=Array.isArray(change.changed_inputs)?change.changed_inputs.length:0;
   const hits=Number(build.cache_reuse?.installed_v213_artifact_hits)||0;
+  const audit=build.readiness?.source_join_audit;
+  const joinLabels={
+    "gear_inventory_slot":"일반 장비 부위",
+    "permanent_enchant_slot":"무기 마부 손·부위",
+    "embellishment_effect_item_slot":"장식 아이템·부위",
+    "temporary_enchant_weapon_hand":"임시 마부 무기 손",
+    "gem_property_item":"보석 아이템 ID"
+  };
+  const pendingSource=(
+    audit?.schema==="v213_source_join_audit_v1" && audit.families
+  )?Object.entries(audit.families)
+    .filter(([,entry])=>Number(entry.pending_rows)>0)
+    .map(([key,entry])=>(joinLabels[key]||key)+" "+entry.pending_rows)
+    .join(" · "):null;
+  const joinText=pendingSource===null?
+    " · DB Join Audit 없음(구형 카탈로그)":
+    pendingSource?" · DB 연결 근거 보류(소스 행) "+pendingSource:
+    " · DB 연결 근거 미해결 없음(조사 범위 한정)";
   const coverage=build.readiness?.profile_plan_suppliers;
   const coverageText=coverage?
     " · 계획 공급원 "+coverage.count+"/"+coverage.total+
@@ -624,7 +642,7 @@ function showEnvironmentBuild(build) {
   node.textContent="환경 구축 "+(labels[build.status]||build.status)+
     " · 재사용 "+reused+" · 재구축 "+rebuilt+
     " · 변경 입력 "+changed+" · v213 artifact 재사용 "+hits+
-    coverageText+" · Native 0 · Network 0";
+    coverageText+joinText+" · Native 0 · Network 0";
 }
 function showPlan(plan) {
   if(!plan?.plan) return;
