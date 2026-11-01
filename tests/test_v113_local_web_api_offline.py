@@ -458,7 +458,7 @@ class LocalWebAPIOffline(unittest.TestCase):
             "selected_special_count":1,
         }
         order=[]
-        def seal(receipt_folder,bootstrap_result,receipt_path=None):
+        def seal(receipt_folder,bootstrap_result,receipt_path=None,profile_stage_receipt=None):
             self.assertEqual(receipt_folder,folder)
             self.assertEqual(receipt_path,folder/receipt_info["path"])
             self.assertEqual(bootstrap_result,{"schema":"test"})
@@ -492,8 +492,21 @@ class LocalWebAPIOffline(unittest.TestCase):
         # Developer stage only: browser plan/defaults still expose no variant.
         user=sessions.user_scenario(sessions.standard_controls(
              ("demonhunter","havoc")))
-        folder=sessions.store_session(user,self.root/"runs",self.binary,
-            "7bc1071",ordinary_variant="mid2_havoc_leather_feet_v1")
+        # Reconstruct a pre-v217 sealed variant, which had no profile-stage
+        # receipt. Current v217 sessions MUST require that receipt.
+        _, current_identity=sessions.session_key(
+            user,self.binary,"7bc1071",
+            ordinary_variant="mid2_havoc_leather_feet_v1")
+        legacy_identity=dict(current_identity)
+        legacy_identity.pop("profile_stage")
+        legacy_key=sessions.sha(
+            sessions.canonical(legacy_identity).encode("utf8"))[:20]
+        folder=self.root/"runs"/legacy_key
+        folder.mkdir(parents=True)
+        (folder/"user.json").write_text(
+            sessions.canonical(user)+"\n",encoding="utf8")
+        (folder/"V106_SESSION_IDENTITY.json").write_text(
+            sessions.canonical(legacy_identity)+"\n",encoding="utf8")
         web.bootstrap.build(user,folder/"generated",self.binary,"7bc1071",
             ordinary_variant="mid2_havoc_leather_feet_v1")
         jobs=web.LocalJobs(self.root/"runs")
