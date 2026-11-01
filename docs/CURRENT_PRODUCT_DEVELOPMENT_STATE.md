@@ -1,3 +1,17 @@
+# 2026-11-02 P3-I — 사용자 승인 정책 A: 검증 후 자동 선택지 등록
+
+> **사용자 직접 결정:** 2026-11-02 “A방법.” 새로운 데이터는 소스에서 발견했다는 사실만으로 자동 등록하지 않는다. 정확한 item/effect/token/slot applicability, SimC 입력 수용, 정적 CHMV 고정치·소유권·중복 방지의 *관련 선택 범위* 검증이 끝난 항목은 추가 수동 승인 없이 자동 사용자 선택지로 등록한다. 불확실·충돌·누락 항목은 해당 항목만 보류한다. 전 전문화·전 장비 Native 일괄 검증을 선행 조건으로 도입하지 않으며, SimC 자체의 효과·proc·DPS 작동을 별도 재현하거나 독립 인증 Gate로 만들지 않는다.
+>
+> **구현 코드 커밋:** `3b0b55c479903d2d7f354eaa96812356b4596f92` (new pure `runner/v220_catalog_auto_admission.py`, nine focused regression cases, `v196` read-only `automatic_admission` preview and v212 CI integration). 새 v220은 정확한 item/token/slot/build/SimC revision/v213 manifest identity를 기반으로 source relation·SimC input·product input route·CHMV budget ownership 내부 검증 영수증 네 개가 모두 검증되어야 `ELIGIBLE_FOR_ATOMIC_PUBLICATION` 판정한다. 각 영수증의 동일 identity/범위/해시가 불일치하면 BLOCKED; 무기 손/부위 미확인·정적 CHMV unknown·중복 계상 가능성은 PENDING. 효과·proc 메커니즘은 SimC 소유로 유지한다. 영수증 문자열은 자체 인증 수단이 아니므로 실제 서비스에서는 신뢰할 수 있는 기존 내부 검증기만 공급할 수 있다(사용자 외부 입력 JSON으로 신규 선택권을 부여할 수 없음).
+>
+> **한계 및 위험 격리:** 이것은 **판정 엔진/정책 계약** 구현이며 아직 v196→v212→제품 입력/SimC 실행 경로의 실제 자동 선택지 발행을 구현한 것이 아니다. `v196.automatic_admission`은 정책 A 준비 상태만 읽기 전용으로 보여주며 source row의 `approved=false`를 변경하거나 item `ui_selectable`을 수정하지 않는다. 기존 7967 영구마부 허용, 8025 개발용, 나머지 기존 제한 유지. 관련 증거가 없는 현행 38마부 자동 신규 승인 0. 완전 검증 항목을 실제 사용 경로에 **원자적으로** 전파하는 작업(validator receipt producer → auto admission → season-option catalog / user input validator → v212/SimC exact profile)과 실제 원본 DB2 item/reagent/slot 관계 복원은 다음 구현의 의존성이다.
+>
+> **실제 회귀 검증:** [v212 #41361157043](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41361157043) Ubuntu/Windows SUCCESS; [v191→v213 source #41361157020](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41361157020) SUCCESS Native0; [v211 catalog #41361156917](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41361156917) Ubuntu/Windows SUCCESS; [v181 Windows #41361156911](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41361156911) Python3.12/3.14 SUCCESS; [v182 UI #41361156921](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41361156921) Ubuntu/Windows SUCCESS. 신규 SimC Native 0, historical cache/session modification 0; main `07133e0aaf738d6e4816a6486057b1cd49c018de` unchanged.
+>
+> **다음 우선순위:** v161 Wago DB2/SimC generated relation source의 정확한 ID/버전 조인, 증거 생산 자동화 및 검증된 한 항목의 source→UI→user input→profile/SimC 수용까지 최소 수직 경로를 구성. 단순히 이미 관측된 아이템/마부 38건을 모두 자동 열지 말 것. 사용자 승인 정책 A는 이제 확정이며 항목별 반복 승인 요청 금지.
+
+---
+
 # 2026-11-02 P3-H — 원본 SimC 관계 키 보존 및 구버전 Join Audit 호환
 
 > **격리 코드 HEAD:** `4815f3822ba2a193df3c7c49ce1dfbfc7452d6ed` (v191/v213 source key retention + tests), `62eeed94fe2f3690be82340b3a68146fe25b144f` (legacy v213 audit forward verification and nonshadowing status fix), `2467f998dcfa3455f840967fadda67f835b94c22` (v181/v182 pinned new exact artifact). main `07133e0aaf738d6e4816a6486057b1cd49c018de` 불변, repo visibility/Public/Project UI/v003/v016/Work OS 권한 변경 없음.
