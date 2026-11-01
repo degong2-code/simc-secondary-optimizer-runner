@@ -261,6 +261,52 @@ class SourceToCatalogTests(unittest.TestCase):
         self.assertEqual(audit["native_calls"], 0)
         self.assertTrue(v213.verify_catalog(result))
 
+    def test_source_key_retention_without_gem_item_id_invention(self):
+        season,classification=self.build_inputs()
+        season["gem_properties"]["source_records"]=[
+            {"gem_property_id":8801,"enchant_id":701,
+             "color_mask":2,"minimum_ilevel":0}
+            for _ in range(2409)]
+        season["enchants"]["temporary"]["source_records"]=[
+            {"enchant_id":9000+i,"quality_rank":1,
+             "effect_spell_id":20000+i,"simc_token":"oil_"+str(i)}
+            for i in range(117)]
+        compiled=self.compile(season,classification)
+        gem=compiled["source_join_audit"]["families"]["gem_property_item"]
+        temp=compiled["source_join_audit"]["families"]["temporary_enchant_weapon_hand"]
+        self.assertEqual(gem["raw_key_rows_available"],2409)
+        self.assertEqual(gem["distinct_source_keys"],1)
+        self.assertEqual(gem["duplicate_source_key_rows"],2408)
+        self.assertEqual(gem["pending_rows"],2409)
+        self.assertEqual(temp["distinct_source_keys"],117)
+        self.assertEqual(temp["pending_rows"],117)
+        self.assertEqual(gem["item_ids_confirmed"],0)
+        self.assertTrue(v213.verify_catalog(compiled))
+
+        invalid=copy.deepcopy(season)
+        invalid["gem_properties"]["source_records"].pop()
+        with self.assertRaisesRegex(v213.CatalogBlocked,
+                                    "JOIN_SOURCE_RECORD_COUNT_DRIFT"):
+            self.compile(invalid,classification)
+        invented=copy.deepcopy(season)
+        invented["gem_properties"]["source_records"][0]["gem_item_id"]=123456
+        with self.assertRaisesRegex(v213.CatalogBlocked,
+                                    "JOIN_SOURCE_RECORD_INVALID"):
+            self.compile(invented,classification)
+
+    def test_source_key_conflict_retained_as_ambiguity(self):
+        season,classification=self.build_inputs()
+        a={"gem_property_id":12,"enchant_id":23,
+           "color_mask":2,"minimum_ilevel":0}
+        b={**a,"enchant_id":24}
+        season["gem_properties"]["source_records"]=[a,b]+[
+            {**a,"gem_property_id":10000+i} for i in range(2407)]
+        output=self.compile(season,classification)
+        family=output["source_join_audit"]["families"]["gem_property_item"]
+        self.assertEqual(family["conflicting_source_key_rows"],1)
+        self.assertEqual(family["status"],"SOURCE_JOIN_PENDING")
+        self.assertEqual(family["pending_rows"],2409)
+
     def test_join_audit_detects_source_gear_unknown_without_granting_selection(self):
         season, classification = self.build_inputs()
         season["gear"]["candidates"][0]["inventory_type"] = 999

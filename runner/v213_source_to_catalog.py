@@ -331,6 +331,44 @@ def _related_source_counts(season):
     return counts
 
 
+def _source_key_inventory(records, count, keys, key_field, family):
+    """Validate raw SimC source row keys without inventing counterpart IDs.
+
+    Catalogs from before v191 source-record retention only have counts.
+    Duplicates are reported as ambiguity, not dropped or treated as a join.
+    """
+    if records is None:
+        return {"status":"COUNT_ONLY_LEGACY_SOURCE",
+                "raw_key_rows_available":0,
+                "distinct_source_keys":0,"duplicate_source_key_rows":0,
+                "conflicting_source_key_rows":0}
+    need(type(records) is list and len(records)==count,
+         "JOIN_SOURCE_RECORD_COUNT_DRIFT:"+family)
+    mapping={};duplicates=0;conflicts=0
+    for row in records:
+        need(type(row) is dict and set(row)==set(keys) and
+             all(type(row[k]) is int and row[k]>=0
+                 for k in keys if k!="simc_token") and
+             (("simc_token" not in keys) or
+               (type(row["simc_token"]) is str and bool(row["simc_token"]))),
+             "JOIN_SOURCE_RECORD_INVALID:"+family)
+        raw_key=row[key_field]
+        prior=mapping.get(raw_key)
+        if prior is not None:
+            duplicates+=1
+            if prior!=row:
+                conflicts+=1
+        else:
+            mapping[raw_key]=row
+    return {"status":("SOURCE_KEYS_CONFLICTED" if conflicts else
+                       "SOURCE_KEYS_WITH_DUPLICATES" if duplicates else
+                       "SOURCE_KEYS_RETAINED_NO_COUNTERPART_JOIN"),
+            "raw_key_rows_available":count,
+            "distinct_source_keys":len(mapping),
+            "duplicate_source_key_rows":duplicates,
+            "conflicting_source_key_rows":conflicts}
+
+
 def _source_join_audit(catalog):
     """One common missing-join contract derived from *actual* source rows.
 
@@ -380,10 +418,18 @@ def _source_join_audit(catalog):
     temp_total = temporary["source_rows"]
     need(len(temporary["highest_rank_candidates"]) <= temp_total,
          "JOIN_AUDIT_TEMPORARY_CANDIDATE_DRIFT")
+    temporary_keys=_source_key_inventory(
+        temporary.get("source_records"),temp_total,
+        ("enchant_id","quality_rank","effect_spell_id","simc_token"),
+        "enchant_id","temporary_enchant")
     gems = catalog["gem_properties"]
     need(type(gems) is dict and type(gems.get("source_count")) is int
          and gems["source_count"] >= 0,
          "JOIN_AUDIT_GEM_SOURCE_INVALID")
+    gem_keys=_source_key_inventory(
+        gems.get("source_records"),gems["source_count"],
+        ("gem_property_id","enchant_id","color_mask","minimum_ilevel"),
+        "gem_property_id","gem_property")
 
     rows = (
         ("gear_inventory_slot", len(gear_rows),
@@ -399,10 +445,10 @@ def _source_join_audit(catalog):
         ("temporary_enchant_weapon_hand", temp_total, 0,
          "TEMPORARY_ENCHANT_HAND_JOIN_MISSING",
          {"highest_rank_candidate_count":
-          len(temporary["highest_rank_candidates"])}),
+          len(temporary["highest_rank_candidates"]),**temporary_keys}),
         ("gem_property_item", gems["source_count"], 0,
          "GEM_PROPERTY_TO_ITEM_ID_JOIN_MISSING",
-         {"item_ids_confirmed": 0}),
+         {"item_ids_confirmed": 0,**gem_keys}),
     )
     families = {}
     pending_codes = []

@@ -121,6 +121,15 @@ class UnifiedCatalogTest(unittest.TestCase):
                          {"permanent_enchant","temporary_enchant","gem_property"})
         self.assertTrue(all(len(x["sha256"])==64
                             for x in result["simc_generated_sources"].values()))
+        self.assertEqual(result["gem_properties"]["source_count"],2)
+        self.assertEqual([x["gem_property_id"]
+                          for x in result["gem_properties"]["source_records"]],
+                         [12345,12346])
+        self.assertFalse(any("gem_item_id" in row for row in
+                         result["gem_properties"]["source_records"]))
+        self.assertEqual(len(result["enchants"]["temporary"]["source_records"]),3)
+        self.assertEqual(result["enchants"]["temporary"]["source_records"][0]
+                         ["effect_spell_id"],1212345)
         self.assertEqual(result["related_source_counts"],{
             "gear_item_candidates":511,"tier_piece_ids":65,
             "food_raw_item_candidates":1,"potion_raw_item_candidates":1,

@@ -289,8 +289,16 @@ def compile_catalog(gear,tier,budget,effects,consumables,generated,*,event):
                     "stage":"SIMC_ENCHANT_SLOT_MASK_KNOWN_SEASON_EFFECT_UNVERIFIED"},
                   "temporary":{"source_rows":generated["temporary_enchant"]["declared_rows"],
                     "highest_rank_candidates":temporary,
+                    "source_records":[
+                        {k:row[k] for k in ("enchant_id","quality_rank",
+                                          "effect_spell_id","simc_token")}
+                        for row in generated["temporary_enchant"]["rows"]],
                     "stage":"SIMC_TEMPORARY_EFFECT_SPELL_KNOWN_SEASON_UNVERIFIED"}},
       "gem_properties":{"source_count":generated["gem_property"]["declared_rows"],
+                        "source_records":[
+                            {k:row[k] for k in ("gem_property_id","enchant_id",
+                                              "color_mask","minimum_ilevel")}
+                            for row in generated["gem_property"]["rows"]],
                         "stage":"SIMC_ENCHANT_PROPERTIES_NOT_GEM_ITEM_IDS"},
       "pending":["SAME_BUILD_SIMC_COMPILED_DBC_ITEM_AND_EFFECT_LINK",
                  "SOURCE_VERIFIED_HIGHEST_QUALITY_AND_STRONGEST_EQUIVALENT_EFFECT",
