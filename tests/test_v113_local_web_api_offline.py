@@ -442,8 +442,12 @@ class LocalWebAPIOffline(unittest.TestCase):
                             sessions.worker(folder,self.binary,
                                             source["simc_revision"]),0)
                     duplicate_builder.assert_not_called()
-                    existing_optimizer.assert_called_once_with(
-                        folder/"generated"/"manifest.json",cache_only=False)
+                    existing_optimizer.assert_called_once()
+                    self.assertEqual(
+                        existing_optimizer.call_args.args[0].resolve(),
+                        (folder/"generated"/"manifest.json").resolve())
+                    self.assertEqual(existing_optimizer.call_args.kwargs,
+                                     {"cache_only":False})
                     self.assertTrue((folder/"V106_USER_RESULT.json").exists()
                                     or sessions.paths(folder)["final"].is_file())
 
