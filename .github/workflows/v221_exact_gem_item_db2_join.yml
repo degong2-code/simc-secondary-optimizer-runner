@@ -1,0 +1,78 @@
+name: v221 Exact Gem DB2 ID Join (Request Only, NO Native)
+on:
+  workflow_dispatch:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v221_gem_item_db2_relation.py
+      - integration_probes/v221_fetch_two_wago_tables.py
+      - .github/workflows/v221_exact_gem_item_db2_join.yml
+permissions:
+  contents: read
+concurrency:
+  group: v221-request-gem-db2-two-tables
+  cancel-in-progress: false
+jobs:
+  gem-join:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[gem-join]') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Reuse exact v213 source with retained gem IDs
+        uses: actions/download-artifact@v4
+        with:
+          repository: degong2-code/simc-secondary-optimizer-runner
+          name: v213-source-to-catalog-41360273361
+          run-id: 41360273361
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: source
+      - name: Verify catalog, game build and generated-source build
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile runner/v221_gem_item_db2_relation.py integration_probes/v221_fetch_two_wago_tables.py
+          python - <<'PY'
+          import json,sys
+          from pathlib import Path
+          sys.path.insert(0,'runner')
+          import v213_source_to_catalog as v
+          d=json.loads(Path('source/v213_current_season_source_to_catalog.json').read_text(encoding='utf8'))
+          assert v.verify_catalog(d)
+          assert d['game_build']=='12.1.5.70575'
+          assert d['source_provenance']['v191']['simc_generated_sources']['gem_property']['source_build']=='12.1.5.70575'
+          assert d['catalog']['gem_properties']['source_records']
+          assert d['automatic_ui_promotion'] is False
+          print('V221_VERIFIED_SOURCE_CATALOG',d['manifest_sha256'])
+          PY
+      - name: Read only the two exact pinned Wago DB2 CSV sources
+        run: python integration_probes/v221_fetch_two_wago_tables.py --folder ephemeral-db2
+      - name: Verify exact snapshot SHA and produce gem item relation, no user admission
+        shell: bash
+        run: |
+          set -euo pipefail
+          python runner/v221_gem_item_db2_relation.py \
+            --v213-source source/v213_current_season_source_to_catalog.json \
+            --db2-folder ephemeral-db2 \
+            --out out/v221_gem_relation.json
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          x=json.loads(Path('out/v221_gem_relation.json').read_text(encoding='utf8'))
+          assert x['automatic_ui_promotion'] is False and x['simc_native_calls']==0
+          assert x['network_calls']==0 and x['historical_cache_modified'] is False
+          assert all(not r['ui_selectable'] and r['status']=='EXACT_DB2_ITEMSPARSE_GEM_PROPERTY_RELATION' for r in x['joins'])
+          print('V221_EXACT_RELATION_PASS',x['status'],x['exact_link_count'],'NATIVE0_NO_UI_ADMISSION')
+          PY
+      - name: Preserve small evidence only — never DB2 CSVs or user caches
+        if: success()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v221-gem-relation-${{ github.run_id }}
+          path: out/v221_gem_relation.json
+          retention-days: 14
