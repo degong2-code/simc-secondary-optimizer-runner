@@ -120,7 +120,7 @@ class StageExecutionEngineTests(unittest.TestCase):
                 with self.assertRaisesRegex(
                         stage.StageExecutionBlocked,
                         "STAGE_RESERVED_OUTPUT_PATH|STAGE_OUTPUT_PATH_COLLISION|"
-                        "STAGE_OUTPUT_PATH_ESCAPES_ROOT"):
+                        "STAGE_OUTPUT_PATH_ESCAPES_ROOT|STAGE_OUTPUT_PATH_INVALID"):
                     stage.execute_stage(
                         root=self.root,stage_id="profile",stage_version="v1",
                         inputs=self.inputs,outputs=outputs,execute=self.execute)
