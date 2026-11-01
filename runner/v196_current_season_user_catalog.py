@@ -17,6 +17,7 @@ import v197_enchant_effect_families as effect_groups
 import v197_verified_effect_budget as fixed_budget
 import v202_one_enchant_admission as observed_enchant
 import v213_source_to_catalog as source_bridge
+import v220_catalog_auto_admission as auto_admission
 
 SCHEMA="v196_current_season_ui_catalog_v1"
 SOURCE_SCHEMA="v196_source_first_enchant_candidates_v1"
@@ -210,6 +211,11 @@ def public_options(path=DEFAULT):
         "related_source_counts":dict(source["related_source_counts"]),
         "related_source_status":source["related_source_status"],
         "source_catalog":source_catalog,
+        "automatic_admission":auto_admission.preview_enchant_catalog(
+            {"game_build":source["season_game_build"],
+             "simc_revision":source["simc_commit"],
+             "manifest_sha256":source_catalog["manifest_sha256"]}
+            if source_catalog else None,enchants),
         "existing_allowed_input_choices":approved,
         "proven_armor_embellishments":v188.public_embellishments(),
         "enchant_candidates":{"total":len(enchants),"groups":counts,
