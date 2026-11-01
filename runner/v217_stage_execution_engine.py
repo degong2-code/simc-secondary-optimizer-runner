@@ -90,6 +90,10 @@ def _safe_paths(root,stage_id,outputs):
             current=current/part
             need(not current.is_symlink(),"STAGE_OUTPUT_PARENT_SYMLINK_BLOCKED")
         need(not target.is_symlink(),"STAGE_OUTPUT_SYMLINK_BLOCKED")
+        need(rel.parts[0]!=".stage_receipts","STAGE_RESERVED_OUTPUT_PATH")
+        need(all(target!=prior and target not in prior.parents
+                 and prior not in target.parents
+                 for _,prior in paths.values()),"STAGE_OUTPUT_PATH_COLLISION")
         paths[name]=(rel.as_posix(),target)
     receipt_dir=base/".stage_receipts"
     need(not receipt_dir.is_symlink(),"STAGE_RECEIPT_DIRECTORY_SYMLINK_BLOCKED")

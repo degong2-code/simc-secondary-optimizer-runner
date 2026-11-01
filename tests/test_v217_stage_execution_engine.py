@@ -108,6 +108,26 @@ class StageExecutionEngineTests(unittest.TestCase):
         self.assertEqual(self.calls,["execute","execute"])
         self.assertEqual((self.root/"profile.simc").read_text(),"profile-v1")
 
+    def test_stage_contract_blocks_reserved_and_overlapping_outputs(self):
+        invalid=(
+            {"a":".stage_receipts/profile.json"},
+            {"a":"same.bin","b":"./same.bin"},
+            {"a":"nested","b":"nested/child.bin"},
+            {"a":"../outside.bin"},
+        )
+        for outputs in invalid:
+            with self.subTest(outputs=outputs):
+                with self.assertRaisesRegex(
+                        stage.StageExecutionBlocked,
+                        "STAGE_RESERVED_OUTPUT_PATH|STAGE_OUTPUT_PATH_COLLISION|"
+                        "STAGE_OUTPUT_PATH_ESCAPES_ROOT"):
+                    stage.execute_stage(
+                        root=self.root,stage_id="profile",stage_version="v1",
+                        inputs=self.inputs,outputs=outputs,execute=self.execute)
+                self.assertFalse(
+                    (self.root/".stage_receipts/profile.json").exists())
+        self.assertEqual(self.calls,[])
+
     def test_module_fingerprint_tracks_transitive_local_imports(self):
         runner=self.root/"runner"
         runner.mkdir()

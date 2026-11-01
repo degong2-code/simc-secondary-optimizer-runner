@@ -349,6 +349,26 @@ class EnvironmentManifestTests(unittest.TestCase):
         self.assertEqual(plan["native_calls"],0)
         self.assertEqual(plan["cache_mutations"],0)
 
+    def test_generic_dependency_engine_preserves_unaffected_branch(self):
+        rules={"source":["catalog"],"catalog":["profile"],
+               "binary":["dps"],"dps":["report"]}
+        old={"schema":p.DEPENDENCY_GRAPH_SCHEMA,
+             "fingerprints":{"source":"a"*64,"binary":"b"*64},
+             "invalidation_rules":rules}
+        payload={"dependency_graph":old}
+        previous={**payload,"manifest_sha256":
+                  p.sha(p.canonical(payload).encode("utf8"))}
+        now={"schema":p.DEPENDENCY_GRAPH_SCHEMA,
+             "fingerprints":{"source":"c"*64,"binary":"b"*64},
+             "invalidation_rules":rules}
+        diff=p.compare_dependency_graphs(previous,now)
+        self.assertEqual(diff["changed_inputs"],["source"])
+        self.assertEqual(diff["invalidated_components"],["catalog","profile"])
+        self.assertEqual(diff["planned_execution_order"],["catalog","profile"])
+        self.assertEqual(diff["reusable_candidates"],["dps","report"])
+        self.assertTrue(diff["static_item_cache_preserved"])
+        self.assertEqual(diff["native_calls"],0)
+
     def test_generic_dependency_engine_rejects_cycles(self):
         graph={
             "schema":p.DEPENDENCY_GRAPH_SCHEMA,
@@ -466,6 +486,51 @@ class EnvironmentManifestTests(unittest.TestCase):
         self.assertNotIn("v098_target_profile",
                          second["receipt"]["dependency_change"]["reused_components"])
         self.assertTrue(dps_cache.is_file())
+        second_session_bytes=snapshot(second_folder)
+
+        # Source content change, not merely a serialization change.
+        season,classification=self.source_builder.build_inputs()
+        locked=next(row for row in classification["rows"]
+                    if row["selection_status"]==
+                       "LOCKED_NO_GENERAL_USER_ADMISSION")
+        locked["effect_summary"]+=" [source amendment fixture]"
+        modified=source_bridge.compile_catalog(
+            season,"a"*64,classification,
+            p.sha(p.canonical(classification).encode("utf8")))
+        self.assertTrue(source_bridge.verify_catalog(modified))
+        self.assertNotEqual(modified["manifest_sha256"],
+                            self.source_catalog["manifest_sha256"])
+        self.assertEqual(
+            modified["source_provenance"]["v191"]["sha256_by_input"],
+            self.source_catalog["source_provenance"]["v191"]["sha256_by_input"])
+        self.source_catalog=modified
+        self.source_path.write_text(
+            json.dumps(modified,ensure_ascii=False,sort_keys=True,indent=2)+"\n",
+            encoding="utf8")
+        third_id,third_folder,_,third_bootstrap=make_session()
+        self.assertNotIn(third_id,(first_id,second_id))
+        third=environment_build.build_environment(
+            sessions_root=sessions_root,session_folder=third_folder,user=user,
+            binary=self.binary,revision=modified["simc_revision"],
+            static_cache=cache_path,source_catalog_path=self.source_path,
+            bootstrap_result=third_bootstrap)
+        semantic_change=third["receipt"]["dependency_change"]
+        self.assertEqual(semantic_change["status"],"DEPENDENCIES_CHANGED")
+        self.assertIn("v213_source_catalog",semantic_change["changed_inputs"])
+        self.assertIn("v196_ui_projection",semantic_change["changed_inputs"])
+        self.assertNotIn("v191_gear_input",semantic_change["changed_inputs"])
+        self.assertNotIn("v191_tier_input",semantic_change["changed_inputs"])
+        self.assertNotIn("v191_budget_input",semantic_change["changed_inputs"])
+        self.assertNotIn("simc_binary",semantic_change["changed_inputs"])
+        self.assertIn("optimizer_session",semantic_change["invalidated_components"])
+        self.assertTrue(third["receipt"]["cache_reuse"][
+            "static_item_cache_preserved"])
+        self.assertEqual(third["receipt"]["native_calls"],0)
+        self.assertEqual(third["receipt"]["network_calls"],0)
+        self.assertEqual(third["receipt"]["cache_mutations"],0)
+        self.assertEqual(snapshot(first_folder),old_session_bytes)
+        self.assertEqual(snapshot(second_folder),second_session_bytes)
+        self.assertEqual(cache_path.read_bytes(),old_static_cache)
 
     def test_same_inputs_produce_byte_stable_manifest(self):
         first = self.compile()
