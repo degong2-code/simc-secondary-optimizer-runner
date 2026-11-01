@@ -1,3 +1,23 @@
+# 2026-11-01 P3-E 기존 적응형 optimizer로 정확한 Stage handoff — 최신 확인
+
+> **격리 코드 커밋:** `0b9383a9d8aa1cf1c9770ec7611720993d5c975d` (worker handoff); `92291d1d252b4359795dc132da51251ed258fd69` (Windows 경로 테스트 교정). `main`·v003·original v016·Project UI·repo visibility는 변경하지 않았다. 이 문서 커밋 이후 최신 HEAD는 재조회한다.
+>
+> **실제 코드:** `runner/v106_user_session_controller.py`에서 작업자 프로세스가 설치된 v213 source와 선택적 v181 package manifest identity를 동일한 `session_key` 계약으로 재검증한다. 현재 시즌 source-backed 제품 session에는 `v217` stage receipt 존재를 필수로 하고, `v218.verify_existing`으로 프로필/manifest/receipt SHA를 확인한 뒤 기존 `v098.entry.run_manifest`에 *정확히 봉인된* `generated/manifest.json`을 전달한다. 따라서 해당 경로에서는 기존 `bootstrap.run`이 수행하던 두 번째 `v098.build`를 실제 생략한다. pre-stage legacy session(사전 receipt 없음) 처리는 이전 경로를 유지한다. 새 optimizer·APL·SimC 효과 계산 엔진 없음.
+>
+> **검증:** `tests/test_v113_local_web_api_offline.py`는 installed v213 source와 v181 package를 가진 API Build→Plan 후 mock worker를 실제 실행한다. v098 재호출 0, 기존 adaptive runner에게 전달된 manifest identity, 봉인 프로필 변조 시 runner 진입 전 차단을 확인. 이 시험은 SimC Native를 실행하거나 전역 최적해를 증명하지 않는다.
+>
+> **Actions (Native0):** [v113 #41268584440](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41268584440) Ubuntu/Windows 각 164 tests PASS. [v181 #41268584470](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41268584470) Windows Python 3.12/3.14 성공, source ZIP 191 files, extracted CMD/localhost HTTP·plan·restore 및 127 regression tests PASS. [v182 #41268584426](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41268584426) Ubuntu/Windows UI+package PASS. 이전 [v098 #41268492865](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41268492865) 및 [v177 #41268492918](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41268492918) offline PASS (각 run 변경 범위에 한함; v177 Native SKIPPED). 초기 Windows 실패는 짧은 8.3 경로와 resolve된 정식 경로를 `mock.assert_called_once_with`로 문자열 비교한 시험 오류였다. 코드 변경 없이 `92291d1`에서 테스트 경로 비교를 `Path.resolve()`로 교정했다.
+>
+> **Windows artifact:** [#13068022784](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41268584470/artifacts/13068022784), 758,737 bytes, outer SHA256 `48eaf85a8d1357536f8e3a10dc164a75fe955b505d81ff8ae6e1a116ab7e6532`, expires 2026-11-08T03:18:28Z. SimC binary·사용자 캐시 제외.
+>
+> **Source refresh 조사:** 기존 `.github/workflows/v191_unified_season_data_update.yml`는 이미 명시적 `workflow_dispatch`(`mid_patch`/`season_change`/`expansion_change` + 40-hex SimC commit + 기존 source artifact run/name)를 제공한다. 자동 수집/지속 polling을 만들지 않는다. 현재 기본 v189/v190 source catalog artifact [#12959844108](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41017578894/artifacts/12959844108)는 2026-11-06까지 유효함을 확인했다. 새 시즌·확장 이벤트는 워크플로에서 정확한 새 source를 요구하고 이전 고정 snapshot 재활용을 차단한다. 이번 변경은 source-refresh 실행·새 자료 설치가 아님. 새 데이터·SimC revision 요청/증거가 없는 상태에서 동일 소스를 재수집하지 않는다.
+>
+> **효율:** 동일 세션 반복 Build는 앞서 3회 요청 중 v098 생성기 호출 1회를 증명했고, 이번 변경으로 worker의 두 번째 profile build도 생략할 수 있다. 출력 hash 검증 I/O와 `session_key`의 바이너리/source SHA 확인은 무결성 책임상 유지. 벽시계 실행시간·메모리 측정값은 아직 없음. 신규 Native0, cache 삭제0, 변경된 정책 없음.
+>
+> **다음 진행:** 실제 SimC binary를 보유한 사용자 Windows PC에서 Build→Start→progress/cancel/resume 실사용 수용시험이 미완료. 기존 Native v209/v210 및 여러 전문화 물리 프로필 영수증과 구별할 것. 추가로 Stage 함수별 재사용 소요시간을 비영속 계측(세션 identity/manifest digest 오염 금지)하고, 새 업데이트 요청 발생 시 기존 v191→v211→v213 workflow로 정확한 새 source를 검증·설치할 것. 사용 범위 26 DPS, CHMV 절대 rating, 95% 판정 고정.
+
+---
+
 # 2026-11-01 P3-D dependency semantics + Stage path contract — 실제 검증
 
 > **제품 변경 기준 HEAD:** `902aad02d587ba6e172bb3223eba1a7abc805cb5`; focused test 교정 HEAD `cfb4dc4611bc134d3af348a644a38aa107b501ae`. `probe/chat-cache-v035-20261024` 격리 브랜치만 수정; main·v003·original v016·Project UI·visibility·Work OS 권한 변경 없음.
