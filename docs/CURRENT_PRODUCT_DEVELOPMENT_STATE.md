@@ -1,3 +1,17 @@
+# 2026-11-02 P3-J — 실제 SAME-BUILD 보석 아이템↔속성 검증 75건 PASS
+
+> **격리 구현 HEAD:** `f65ecf1bfccbb549b6796370086a85f4a18bf1e4` (pure `runner/v221_gem_item_db2_relation.py`, six offline tests, v212 CI), `996d64b793faaaefa7856060193f50894b86861c` (요청형 2-CSV 원본 조회 `integration_probes/v221_fetch_two_wago_tables.py` 및 새 Actions). main `07133e0aaf738d6e4816a6486057b1cd49c018de` 불변. 사용 승인 정책 A의 기존 `v220` 유효; 새 사용자 선택지/Native 변경 없음.
+>
+> **실제 검증 범위:** [v221 request-only Actions #41362149724](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41362149724) SUCCESS. 재수집 불필요한 10개 DB2 전체가 아니라 동일 빌드 `12.1.5.70575`의 `Item.csv` 9,103,685 bytes SHA256 `f4e8d548e9f8ac2e98e58684521e470c3b50334d365601c82f0571add20ad206` + `ItemSparse.csv` 51,691,672 bytes SHA256 `f01d63a9a49686df5064042798ee768fdee67a9c42e5ce69299729d9ebbf6ab3`만 Wago에서 일회 수집; 정확한 파일별 크기/SHA 검증. 원본 대용량 CSV는 GitHub 일회 Actions 작업 폴더에만 존재하고 업로드/제품 패키지/사용자 캐시에 보관하지 않는다.
+>
+> **Join 결과:** 기존 immutable [v213 source artifact #13104842881](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41360273361/artifacts/13104842881)와 동일 빌드의 Item.ClassID=3 및 ItemSparse.Gem_properties→v191 SimC generated gem_property_id 정확 키 조인. 게임 확장 `ExpansionID=11` 조건. **75개의 정확한 아이템↔보석속성 연결** 생성. 75는 현재 확장팩의 DB2 source relation 수이고 user UI 75개 허용이나 보석 속성 2,409개의 complete 비율이 아니다(다수 아이템이 같은 GemProperties ID 공유 가능). 모든 아이템의 socket eligibility, SimC input, 정적 CHMV J/B/중복 방지, 실제 시즌 구분은 여전히 미검증. v220 정책 A는 4개 증거가 없으므로 `PENDING`, 신규 UI 승인 0.
+>
+> **증거 산출물:** [v221 relation artifact #13106070626](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41362149724/artifacts/13106070626), 1979 bytes outer SHA `sha256:55a7e34a36aa7ae47cd7cc00412e7db9d0c64b08b9951315abc425c9412c4326`; 정확 조인만 14일 보관, 대용량 CSV 0. [v212 #41361848175](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41361848175) Ubuntu/Windows 각각 78 tests PASS, 신규 SimC Native 0, 기존 session/cache mutation 0. Source proof의 75개 exact record는 아직 제품 UI/catalog이나 Windows 베타의 user-selectable로 자동 승격하지 않았다.
+>
+> **해결된 문제 및 다음 실제 작업:** v161 전체 Wago snapshot [historical #40836955761](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40836955761)은 artifact 목록에 남지 않아 재사용할 수 없었다. 전체 10개 테이블 재수집 대신 2개만 요청하여 해결. 이제 relation proof의 immutable SHA/manifest를 v220 내부 승인 경로에 묶되, **동일 아이템이 SimC gem input으로 수용되는지, 장착 부위/소켓 제약과 J 예산 처리가 정확한지** 검증한 범위에 한해서만 자동 UI 등록을 완성할 수 있다. 추가 정책 결정이 아니라 검증기/제품 입력 실장 문제다. 시즌 연관성·레시피/획득 경로를 장비 추천 DB로 확장하지 않는다.
+
+---
+
 # 2026-11-02 P3-I — 사용자 승인 정책 A: 검증 후 자동 선택지 등록
 
 > **사용자 직접 결정:** 2026-11-02 “A방법.” 새로운 데이터는 소스에서 발견했다는 사실만으로 자동 등록하지 않는다. 정확한 item/effect/token/slot applicability, SimC 입력 수용, 정적 CHMV 고정치·소유권·중복 방지의 *관련 선택 범위* 검증이 끝난 항목은 추가 수동 승인 없이 자동 사용자 선택지로 등록한다. 불확실·충돌·누락 항목은 해당 항목만 보류한다. 전 전문화·전 장비 Native 일괄 검증을 선행 조건으로 도입하지 않으며, SimC 자체의 효과·proc·DPS 작동을 별도 재현하거나 독립 인증 Gate로 만들지 않는다.
