@@ -418,7 +418,7 @@ class LocalWebAPIOffline(unittest.TestCase):
                 self.assertEqual(third.json()["environment_build"]["steps"][-1]["status"],
                                  "COMPILED_IDENTICAL_NO_WRITE")
                 self.assertEqual(jobs.args_for_existing(folder),
-                                 (self.binary,source["simc_revision"],None))
+                                 (self.binary.resolve(),source["simc_revision"],None))
                 status=self.client.get("/api/v1/environment/"+session_id,
                                         headers=self.headers)
                 self.assertEqual(status.status_code,200,status.text)
