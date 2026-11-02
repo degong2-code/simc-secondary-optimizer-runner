@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER — 개발자 실행 원칙 보충 (2026-11-02)
 
+> **새 채팅 인계 정본 갱신(2026-11-02, P3-AF):** [CHAT_CONTINUITY_HANDOFF_20261102_P3_AF_V216_TO_FRESH_BUILD_NEXT.md](CHAT_CONTINUITY_HANDOFF_20261102_P3_AF_V216_TO_FRESH_BUILD_NEXT.md)가 P3-AB→P3-AC→P3-AD→P3-AE 연속 개발 이후 최신 복원 순서·실물 HEAD·증거/미구현·시작 프롬프트를 소유한다. 아래에 남은 “v221·P3-L 인계에서 단일 관리”는 당시의 역사적 안내이며 최신 정본을 대신하지 않는다. **다음 첫 복원 응답은 읽기/검증/보고만 하고 사용자 '진행' 전 코드·Actions·Native 수정·실행 금지.** 이후 일반 Build 요청에 신규 source fetch→기존 v191→v211→v213→v196→v216, G/J/F/O→v222→v212·v098를 **같은 엔진**으로 이어가며 과거 v216의 정상 미완료 차단을 우회하지 않는다.
+
 > **최신 사용자 직접 교정 / 단일 엔진 통제실험 (2026-11-02):** [P3-AA](P3_AA_20261102_SINGLE_ENGINE_FRESH_SEASON_CONTROL_ACCEPTANCE.md), [v1.4.3 최신 §7](SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.3_SEASON_GJFO_AUTO_BUILD_APPROVED_20261102.md)을 최우선으로 읽는다. 최종 시험은 정상 실사용 **같은 Environment Build 엔진**을 현재 시즌에 대한 **기존 데이터·캐시·영수증 없이** 실행하는 것이다. Wago DB2·Blizzard·WCL·공개 GitHub·SimC의 **신규 원본 수집은 허용**한다. 이전의 "SimC-only 최종 시험" 또는 외부 네트워크 차단 해석을 반복하지 않는다. v229~v237은 제한된 조사용 부품이며 별도 최종 제품 엔진을 만들지 않는다.
 
 > 승인 설계 원본 [v1.4.3](SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.3_SEASON_GJFO_AUTO_BUILD_APPROVED_20261102.md)의 내용을 변경하지 않는 **실행/인계용 보충**. 최신 작업 상태와 새 채팅 프롬프트는 [v221·P3-L 인계](CHAT_CONTINUITY_HANDOFF_20261102_V221_P3L_ENGINE_FIRST.md)에서 단일 관리한다. 구형 v216 인계는 역사 자료다.
