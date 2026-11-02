@@ -24,11 +24,17 @@ try:
 except ImportError:  # script entrypoint from runner/
     import v224_season_gjfo_evidence_inventory as preflight
 
-SCHEMA = "v225_season_core_source_bundle_v1"
+SCHEMA = "v225_season_core_source_bundle_v2"
 SOURCE_FILES = {
     "gear": "gear.json",
     "tier": "tier.json",
     "budget": "budget.json",
+}
+COMPONENT_INPUTS = {
+    "G": ("gear", "tier"),
+    "J": ("budget",),
+    "F": ("budget",),
+    "O": ("budget",),
 }
 SOURCE_SYSTEMS = frozenset((
     "blizzard_game_data_api",
@@ -127,6 +133,7 @@ def _manifest(path):
     need(type(doc) is dict and set(doc) == {
         "schema", "event", "game_build", "previous_game_build",
         "expansion_id", "season", "simc_revision", "sources",
+        "component_origins",
     } and doc["schema"] == SCHEMA and
          doc["event"] in EVENTS and
          type(doc["game_build"]) is str and BUILD.fullmatch(doc["game_build"]) and
@@ -194,6 +201,54 @@ def verify_bundle(*, folder, event, previous_game_build,
             "declared_retrieval_receipt_sha256":
                 row["retrieval_receipt_sha256"],
         }
+    # A composite budget.json may derive J, F and O from DIFFERENT IDs,
+    # source tables, and effect conditions. Record their paths separately;
+    # one budget-file link is never evidence for all three components.
+    component_origins = manifest["component_origins"]
+    need(type(component_origins) is dict and
+         set(component_origins) == set(COMPONENT_INPUTS),
+         "V225_GJFO_COMPONENT_ORIGINS_REQUIRED")
+    mapped_origins = {}
+    for component, source_files in COMPONENT_INPUTS.items():
+        row = component_origins[component]
+        need(type(row) is dict and set(row) ==
+             {"source_files", "candidate_sources"} and
+             row["source_files"] == list(source_files) and
+             type(row["candidate_sources"]) is list and
+             1 <= len(row["candidate_sources"]) <= 6,
+             "V225_GJFO_COMPONENT_INPUT_ROUTE_INVALID:" + component)
+        mapped = []
+        for source in row["candidate_sources"]:
+            need(type(source) is dict and set(source) == {
+                "source_system", "source_locator", "source_build",
+                "retrieval_receipt_sha256", "item_ids",
+            } and source.get("source_system") in SOURCE_SYSTEMS and
+                 type(source.get("source_build")) is str and
+                 source["source_build"] == manifest["game_build"] and
+                 type(source.get("retrieval_receipt_sha256")) is str and
+                 SHA.fullmatch(source["retrieval_receipt_sha256"]) and
+                 type(source.get("source_locator")) is str and
+                 10 <= len(source["source_locator"]) <= 2048 and
+                 type(source.get("item_ids")) is list and
+                 1 <= len(source["item_ids"]) <= 25 and
+                 all(type(n) is int and n > 0 for n in
+                     source["item_ids"]) and
+                 len(set(source["item_ids"])) == len(source["item_ids"]),
+                 "V225_GJFO_COMPONENT_SOURCE_RECORD_INVALID:" + component)
+            _origin_url(source["source_system"], source["source_locator"],
+                        manifest["game_build"], manifest["simc_revision"])
+            mapped.append({
+                "system": source["source_system"],
+                "declared_locator": source["source_locator"],
+                "item_ids": list(source["item_ids"]),
+                "declared_retrieval_receipt_sha256":
+                    source["retrieval_receipt_sha256"],
+            })
+        mapped_origins[component] = {
+            "source_files": list(source_files),
+            "candidate_sources": mapped,
+            "source_identity_only_not_effect_proof": True,
+        }
     try:
         checked = preflight.core_source_preflight(
             inputs=inputs, event=event,
@@ -217,6 +272,7 @@ def verify_bundle(*, folder, event, previous_game_build,
         "target_ilevel": target_ilevel,
         "source_input_sha256": checked["source_input_sha256"],
         "source_origins": source_origins,
+        "component_origin_routes": mapped_origins,
         "core_preflight_sha256": checked["receipt_sha256"],
         "source_origin_independently_authenticated": False,
         "same_season_native_G_authenticated": False,
