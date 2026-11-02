@@ -140,7 +140,8 @@ def discover(*,wago_folder,build,expansion_id,source_bytes):
         if iid in wanted:
             need(iid not in sparse,"TIER_PHYSICAL_DUPLICATE_ITEMSPARSE")
             sparse[iid]=(number(r["ItemSet"]),number(r["ExpansionID"]),
-                         number(r["AllowableClass"]),number(r["InventoryType"]))
+                         number(r["AllowableClass"]),number(r["InventoryType"]),
+                         number(r.get("ItemLevel")))
     items={}
     for r in physical.rows(folder/"Item.csv",
                            ("ID","ClassID","SubclassID","InventoryType")):
@@ -154,6 +155,7 @@ def discover(*,wago_folder,build,expansion_id,source_bytes):
         cl,cid=data["class"],data["class_id"]
         mask=1<<(cid-1)
         pieces={}
+        base_levels={}
         piece_expansions=set()
         for iid in data["item_ids"]:
             sp=sparse.get(iid)
@@ -166,6 +168,7 @@ def discover(*,wago_folder,build,expansion_id,source_bytes):
             slot=physical.CORE.get(sp[3])
             if slot is None or slot in pieces:break
             pieces[slot]=iid
+            base_levels[slot]=sp[4] if sp[4]>0 else None
             piece_expansions.add(sp[1])
         else:
             if set(pieces)==set(physical.SLOTS) and len(piece_expansions)==1:
@@ -174,6 +177,18 @@ def discover(*,wago_folder,build,expansion_id,source_bytes):
                     "name_observed_not_used_for_selection":data["name"],
                     "class":cl,"class_id":cid,
                     "tier_piece_ids":{k:pieces[k] for k in physical.SLOTS},
+                    "observed_base_item_level_by_slot":
+                        {k:base_levels[k] for k in physical.SLOTS},
+                    "observed_base_item_level_min":
+                        (min(base_levels.values()) if all(
+                            x is not None for x in base_levels.values()) else None),
+                    "observed_base_item_level_max":
+                        (max(base_levels.values()) if all(
+                            x is not None for x in base_levels.values()) else None),
+                    "base_item_level_evidence":
+                        ("SOURCE_OBSERVED_ALL_FIVE" if all(
+                            x is not None for x in base_levels.values())
+                         else "UNVERIFIED_MISSING_ITEMSPARSE_ITEMLEVEL"),
                     "spec_bonus_spells":data["spec_bonus_spells"],
                     "season_membership_verified":False})
     byclass={cl:[r["item_set_id"] for r in found if r["class"]==cl]
@@ -198,6 +213,10 @@ def discover(*,wago_folder,build,expansion_id,source_bytes):
              "v161_item_sha256":receipt["tables"]["Item"]["sha256"],
              "class_armor_slots_from_existing_v168":True},
         "used_prior_tier_names":False,"used_prior_tier_ids":False,
+        "base_item_level_semantics":
+            "SAME_BUILD_ITEMSPARSE_BASE_VALUE_NOT_UPGRADED_ITEM_LEVEL",
+        "base_item_level_may_filter_candidates":True,
+        "base_item_level_proves_current_season":False,
         "current_season_selection":None,
         "expansion_selection_source":"AUTHENTICATED_LIVE_SCOPE" if
             expansion_id is not None else "UNSCOPED_OBSERVED_EXPANSIONS_ONLY",
