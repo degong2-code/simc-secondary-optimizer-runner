@@ -42,7 +42,7 @@ jobs:
           test ! -d "$RUNNER_TEMP/simc-real/data"
           test ! -d "$RUNNER_TEMP/simc-real/integration_probes"
           test ! -d "$RUNNER_TEMP/simc-real/.git"
-          printf 'SIMC_UPSTREAM_FIXED_REVISION=710c2408bfd3ae4df71b8cd55cdf01f63fd6c926\nSOURCE_GAME_BUILD=12.1.5.70575\nTYPE=OLDER_PINNED_SOURCE_LAYOUT_SMOKE_NOT_NEW_SEASON\n' > "$RUNNER_TEMP/simc-real/out/intent.txt"
+          printf 'SIMC_UPSTREAM_FIXED_REVISION=710c2408bfd3ae4df71b8cd55cdf01f63fd6c926\nSOURCE_GAME_BUILD=12.1.5.70575\nTYPE=OLDER_PINNED_SOURCE_LAYOUT_SMOKE_NOT_NEW_SEASON\nREASON=REAL_SIMC_ITEM_HEADER_APPEARS_AFTER_STAT_ARRAY\n' > "$RUNNER_TEMP/simc-real/out/intent.txt"
       - name: Fetch 4 exact files from upstream SimC commit including item_data once
         shell: bash
         run: |
