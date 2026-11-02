@@ -103,7 +103,7 @@ class LocalJobs:
         candidate=exact_L.source_cache(self.root,None)
         return str(candidate) if candidate is not None else None
 
-    def collect_fresh_source(self, build, controls):
+    def collect_fresh_source(self, build, controls, revision_hint=None):
         # Reuse the product's existing user validator; never ask users for
         # internal source filenames, SHA, tier IDs or G seed vectors.
         # Prevalidate the requested DPS/ilvl BEFORE expensive HTTP.
@@ -116,7 +116,8 @@ class LocalJobs:
         with self.season_source_lock:
             return environment_build.collect_wago_new_season_source(
                 sessions_root=self.root,expected_game_build=build,
-                representative_request=requested)
+                representative_request=requested,
+                simc_revision_hint=revision_hint)
 
     def source_catalog_path(self):
         """Use the packaged v213 artifact when present; legacy source remains fallback."""
@@ -904,7 +905,8 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
         if request.fresh_season_build is not None:
             try:
                 return jobs.collect_fresh_source(
-                    request.fresh_season_build,request.controls)
+                    request.fresh_season_build,request.controls,
+                    request.revision)
             except Exception as exc:
                 raise blocked(exc) from None
         if not request.current_season_product:
