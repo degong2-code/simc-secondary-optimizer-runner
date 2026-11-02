@@ -301,6 +301,39 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                 expected_game_build="12.2.0.99999",fetch=fetch,
                 credentials={},tier_transport=tier_transport,
                 bonus_transport=bonus_transport)
+            from tests.test_v251_db2_raid_tier_simc_bridge import (
+                pinned_thirteen_class_source)
+            seed_folder=self.root/"pinned_simc_v229";seed_folder.mkdir()
+            tier_candidate=json.loads(pathlib.Path(
+                first["fresh_tier_simc_candidate_bridge"]["candidate_path"])
+                .read_text(encoding="utf8"))
+            pinned_thirteen_class_source(seed_folder,tier_candidate)
+            third=v216.collect_wago_new_season_source(
+                sessions_root=self.root/"runtime",
+                expected_game_build="12.2.0.99999",fetch=fetch,
+                credentials={},tier_transport=tier_transport,
+                bonus_transport=bonus_transport,
+                simc_seed_directory=seed_folder)
+            fourth=v216.collect_wago_new_season_source(
+                sessions_root=self.root/"runtime",
+                expected_game_build="12.2.0.99999",fetch=fetch,
+                credentials={},tier_transport=tier_transport,
+                bonus_transport=bonus_transport,
+                simc_seed_directory=seed_folder)
+        self.assertEqual(third["fresh_tier_first_party_simc_options"]["status"],
+            "EXACT_13_CLASS_SIMC_SET_OPTIONS_MATCHED_SEASON_PENDING")
+        self.assertEqual(third["fresh_tier_first_party_simc_options"]
+            ["source_stage"]["status"],"EXECUTED_AND_SEALED")
+        self.assertEqual(fourth["fresh_tier_first_party_simc_options"]
+            ["source_stage"]["status"],"REUSED_VERIFIED")
+        self.assertEqual(third["fresh_tier_first_party_simc_options"]
+                         ["class_count"],13)
+        self.assertFalse(third["fresh_tier_first_party_simc_options"]
+                         ["season_membership_verified"])
+        self.assertEqual(third["network_calls_by_stage"],0)
+        self.assertEqual(fourth["network_calls_by_stage"],0)
+        self.assertEqual(second["fresh_tier_first_party_simc_options"]["status"],
+            "FIRST_PARTY_SIMC_PINNED_SOURCE_PENDING")
         self.assertEqual(compiled.call_count,1)
         self.assertEqual(len(calls),10)
         self.assertEqual(tier_calls,list(db2_tier.TABLES))
