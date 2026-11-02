@@ -307,6 +307,20 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             raise EnvironmentBuildBlocked(
                 "V216_SEASON_BUDGET_PROOF_OR_ARITHMETIC_BLOCKED:" + str(exc)
             ) from exc
+    # Verify the previous sealed source before compiling or writing ANY
+    # new manifest/receipt. A source drift must not alter historical session
+    # bytes, even if the numeric B/T happens to remain equal.
+    prior_receipt = generated / "environment_build_receipt.json"
+    if prior_receipt.is_file():
+        previous_receipt = read_receipt(prior_receipt, folder.name)
+        previous_budget = previous_receipt.get("season_budget") or {}
+        previous_source_sha = previous_budget.get("source_input_sha256")
+        current_source_sha = season_budget.get("source_input_sha256")
+        # A sealed G/J/F/O source proof cannot be silently replaced inside
+        # a pre-existing session, regardless of unchanged B/T arithmetic.
+        if previous_source_sha is not None:
+            need(previous_source_sha == current_source_sha,
+                 "V216_SEALED_SESSION_GJFO_SOURCE_CHANGED")
     scope = environment_scope_identity(user)
     previous = find_previous_environment(root, folder, scope["scope_sha256"])
     previous_manifest = previous["manifest"] if previous else None
@@ -460,16 +474,6 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                digest(canonical(payload).encode("utf8"))}
     verify_receipt(receipt)
     receipt_path = generated / "environment_build_receipt.json"
-    if receipt_path.is_file():
-        previous_receipt = read_receipt(receipt_path, folder.name)
-        previous_budget = previous_receipt.get("season_budget") or {}
-        previous_source_sha = previous_budget.get("source_input_sha256")
-        current_source_sha = season_budget.get("source_input_sha256")
-        # A sealed G/J/F/O source proof cannot be silently replaced inside
-        # a pre-existing session, regardless of unchanged B/T arithmetic.
-        if previous_source_sha is not None:
-            need(previous_source_sha == current_source_sha,
-                 "V216_SEALED_SESSION_GJFO_SOURCE_CHANGED")
     receipt_encoded = json.dumps(
         receipt, sort_keys=True, ensure_ascii=False,
         indent=2, allow_nan=False) + "\n"
