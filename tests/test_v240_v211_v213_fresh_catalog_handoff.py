@@ -131,12 +131,23 @@ class SameFreshCatalogChain(unittest.TestCase):
                            "inventory_type_mask":r["inventory_type_mask"],
                            "item_subclass_mask":r["item_subclass_mask"]}
                           for r in candidates]},
-              "temporary_enchant":{"source_build":BUILD,"declared_rows":0,
-                                   "sha256":"b"*64,"rows":[]},
-              "gem_property":{"source_build":BUILD,"declared_rows":0,
-                              "sha256":"c"*64,"rows":[]}}
+              "temporary_enchant":{"source_build":BUILD,"declared_rows":1,
+                                   "sha256":"b"*64,
+                                   "rows":[{"enchant_id":999001,"quality_rank":2,
+                                            "effect_spell_id":999002,
+                                            "simc_token":"oil_test"}]},
+              "gem_property":{"source_build":BUILD,"declared_rows":1,
+                              "sha256":"c"*64,
+                              "rows":[{"gem_property_id":999003,
+                                       "enchant_id":999004,
+                                       "color_mask":2,"minimum_ilevel":0}]}}
             v191=merge.compile_catalog(gear,tier,None,effects,consumables,
                                        generated,event="season_change")
+            # v191.main normally attaches hashes of actual freshly
+            # downloaded input bytes; no prior budget file/hash exists here.
+            v191["sha256_by_input"]={
+                "gear":"1"*64,"tier":"2"*64,"budget":None,
+                "v189":"3"*64,"v190":"4"*64}
             self.assertIsNone(v191["consumables"]["flask"]["reference"])
             self.assertIsNone(v191["consumables"]["general_gems"]["reference"])
             self.assertEqual(v191["source_budget_state"],
