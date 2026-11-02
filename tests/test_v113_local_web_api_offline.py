@@ -65,7 +65,8 @@ class LocalWebAPIOffline(unittest.TestCase):
             representative_request={
                 "class":validated["character"]["class"],
                 "spec":validated["character"]["spec"],
-                "target_ilevel":validated["target"]["ilevel"]})
+                "target_ilevel":validated["target"]["ilevel"]},
+            simc_revision_hint=self.payload["revision"])
         self.assertFalse((self.root/"runs").exists())
         for endpoint in ("/api/v1/sessions/plan","/api/v1/sessions/start"):
             forbidden=self.post(endpoint,payload)
