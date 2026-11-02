@@ -51,13 +51,15 @@ class DB2SimCBridgeTests(unittest.TestCase):
             with self.assertRaisesRegex(bridge.BridgeBlocked,
                                         "UNPROMOTED_SAME_BUILD"):
                 bridge.preview(db2=tier,corroboration=bonus)
-            tier,bonus=fixture(d)
+            tier,bonus=inputs(Path(d)/"second_fixture")
+            bonus=v250.correlate(tier=tier,raid=bonus,source_bytes=source_rows())
             tier["candidates"]=[x for x in tier["candidates"]
                                 if x["class"]!="paladin"]
             with self.assertRaisesRegex(bridge.BridgeBlocked,
                                         "DB2_SOURCE_SET_CLASS_SLOT"):
                 bridge.preview(db2=tier,corroboration=bonus)
-            tier,bonus=fixture(d)
+            tier,raid=inputs(Path(d)/"third_fixture")
+            bonus=v250.correlate(tier=tier,raid=raid,source_bytes=source_rows())
             bonus["observed_leading_cohort"]["source_season_verified"]=True
             with self.assertRaisesRegex(bridge.BridgeBlocked,
                                         "UNIQUE_OBSERVED_RAID_COHORT"):
