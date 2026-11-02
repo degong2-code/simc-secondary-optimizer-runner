@@ -1,4 +1,4 @@
-name: v244 ONE-SHOT Wago ItemSetSpell 2pc 4pc current pinned build (No Native)
+name: v244 ONE-SHOT DB2 tier item versus Journal loot source join (No Native)
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
@@ -7,7 +7,7 @@ on:
 permissions:
   contents: read
 jobs:
-  inspect-two-tables:
+  inspect-raid-join:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -17,61 +17,38 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
-      - name: Pinned Wago ItemSet and ItemSetSpell exact 2pc/4pc relations
+      - name: Detect whether same-season tier physical items appear directly in JournalEncounterItem
         shell: bash
         run: |
           python - <<'PY'
+          import csv,io,hashlib
+          from collections import Counter
           from urllib.request import Request,urlopen
-          import csv,io,hashlib,json
-          source="https://wago.tools/db2/"
           build="12.1.5.70575"
-          def table(name,limit):
-              u=source+name+"/csv?build="+build+"&locale=enUS"
-              with urlopen(Request(u,headers={"User-Agent":"SIMC-Secondary-TierSource-Probe/1.0"}),timeout=60) as r:
-                  if r.status!=200:raise RuntimeError("HTTP_NOT_200:"+name)
-                  data=r.read(limit+1)
-                  if not 0<len(data)<=limit:raise RuntimeError("SOURCE_LIMIT:"+name)
-              print("SOURCE",name,"bytes",len(data),"sha256",hashlib.sha256(data).hexdigest())
-              rd=csv.DictReader(io.StringIO(data.decode("utf-8-sig")))
+          def get(name,limit):
+              url="https://wago.tools/db2/"+name+"/csv?build="+build+"&locale=enUS"
+              with urlopen(Request(url,headers={"User-Agent":"SIMC-TierJoinSource-Pilot/1.0"}),timeout=60) as response:
+                  if response.status!=200:raise RuntimeError(name+"_HTTP")
+                  raw=response.read(limit+1)
+              if not 0<len(raw)<=limit:raise RuntimeError(name+"_LIMIT")
+              print("SOURCE",name,len(raw),hashlib.sha256(raw).hexdigest())
+              rd=csv.DictReader(io.StringIO(raw.decode("utf-8-sig")))
               print("FIELDS",name,rd.fieldnames)
               return list(rd)
-          sets=table("ItemSet",5_000_000)
-          spells=table("ItemSetSpell",20_000_000)
-          from collections import defaultdict,Counter
-          set_rows={int(row["ID"]):row for row in sets}
-          byset=defaultdict(list)
-          for row in spells:
-              iid=int(row["ItemSetID"] or 0)
-              if iid>0:
-                  byset[iid].append(row)
-          two_four=[]
-          with_spec=[]
-          for iid,rows in byset.items():
-              thresholds={int(r["Threshold"] or 0) for r in rows}
-              specs={int(r["ChrSpecID"] or 0) for r in rows}
-              if {2,4}<=thresholds:
-                  two_four.append(iid)
-                  if specs-{0}:with_spec.append(iid)
-          print("RAW_TOTAL_SETS",len(sets),
-                "RAW_ITEMSETS_WITH_SPELLS",len(byset),
-                "TWO_FOUR_COUNT",len(two_four),
-                "TWO_FOUR_WITH_SPEC",len(with_spec))
-          class_sig=[]
-          for iid in with_spec:
-              row=set_rows.get(iid,{})
-              physical=[int(row.get("ItemID_"+str(n),"0") or 0)
-                       for n in range(17)]
-              physical=[x for x in physical if x>0]
-              class_sig.append({"id":iid,"name":row.get("Name_lang"),
-                  "setflags":row.get("SetFlags"),"physical":len(physical),
-                  "bonuses":len(byset[iid]),
-                  "threshold":sorted({int(r["Threshold"] or 0)
-                      for r in byset[iid]}),
-                  "specs":sorted({int(r["ChrSpecID"] or 0)
-                      for r in byset[iid]})[:7]})
-          print("STRUCTURAL_2PC4PC_SPEC_SET_CANDIDATES",
-                len(class_sig),"HIGHEST_ID_SAMPLE_MAX_35")
-          for d in sorted(class_sig,key=lambda x:x["id"],reverse=True)[:35]:
-              print("CANDIDATE",json.dumps(d,ensure_ascii=False,sort_keys=True))
-          print("STRUCTURAL_ONLY_SEASON_MEMBERSHIP_NOT_PROVEN")
+          sets=get("ItemSet",5_000_000)
+          journals=get("JournalEncounterItem",40_000_000)
+          all_raid=Counter(int(r.get("ItemID","0") or 0) for r in journals)
+          for name,ids in (("OBSERVED_MIDNIGHT_S1",range(1978,1991)),
+                           ("OBSERVED_MIDNIGHT_S2",range(2055,2068))):
+              chosen=[s for s in sets if int(s["ID"]) in ids]
+              physical={int(s.get("ItemID_"+str(i),0) or 0) for s in chosen for i in range(17)}
+              physical.discard(0)
+              matching=[r for r in journals if int(r.get("ItemID",0) or 0) in physical]
+              seasons=Counter(r.get("DisplaySeasonID","<no column>") for r in matching)
+              states=Counter(r.get("WorldStateExpressionID","<no column>") for r in matching)
+              print("GROUP",name,"sets",len(chosen),"physical_ids",len(physical),
+                    "journal_link_rows",len(matching),
+                    "display_seasons",dict(seasons),"world_states",dict(states))
+              print("GROUP_FIRST_5_SET_NAMES",[s.get("Name_lang") for s in chosen[:5]])
+          print("DIAGNOSTIC_ONLY_NO_ASSUMED_CURRENT_SEASON_BY_ITEMSET_ID")
           PY
