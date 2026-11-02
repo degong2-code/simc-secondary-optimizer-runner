@@ -44,7 +44,7 @@ class LocalWebAPIOffline(unittest.TestCase):
 
 
     def test_environment_build_fresh_source_routes_before_old_plan(self):
-        payload={**self.payload,"current_season_product":True,
+        payload={**self.payload,"current_season_product":False,
                  "fresh_season_build":"12.2.0.99999"}
         fake={"schema":"v216_fresh_source_stage_v1",
               "status":"FRESH_WAGO_DB2_COLLECTED_MORE_SOURCES_PENDING",
@@ -62,6 +62,11 @@ class LocalWebAPIOffline(unittest.TestCase):
             sessions_root=(self.root/"runs").resolve(),
             expected_game_build="12.2.0.99999")
         self.assertFalse((self.root/"runs").exists())
+        for endpoint in ("/api/v1/sessions/plan","/api/v1/sessions/start"):
+            forbidden=self.post(endpoint,payload)
+            self.assertEqual(forbidden.status_code,422,forbidden.text)
+            self.assertEqual(forbidden.json()["detail"]["code"],
+                             "FRESH_SOURCE_NOT_INSTALLED")
         wrong=self.post("/api/v1/environment/build",
                         {**payload,"fresh_season_build":"../../other"})
         self.assertEqual(wrong.status_code,422)

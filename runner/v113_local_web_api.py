@@ -892,13 +892,14 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
 
     @app.post("/api/v1/environment/build")
     def build_environment(request: UserRequest):
-        if not request.current_season_product:
-            raise HTTPException(422,detail={"code":"ENVIRONMENT_BUILD_CURRENT_SEASON_ONLY"})
+        # New season source collection is not an installed current-season plan.
         if request.fresh_season_build is not None:
             try:
                 return jobs.collect_fresh_source(request.fresh_season_build)
             except Exception as exc:
                 raise blocked(exc) from None
+        if not request.current_season_product:
+            raise HTTPException(422,detail={"code":"ENVIRONMENT_BUILD_CURRENT_SEASON_ONLY"})
         return jobs.plan(request)
 
     @app.get("/api/v1/environment/{session_id}")
@@ -911,10 +912,14 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
 
     @app.post("/api/v1/sessions/plan")
     def plan(request: UserRequest):
+        if request.fresh_season_build is not None:
+            raise HTTPException(422,detail={"code":"FRESH_SOURCE_NOT_INSTALLED"})
         return jobs.plan(request)
 
     @app.post("/api/v1/sessions/start")
     def start(request: UserRequest):
+        if request.fresh_season_build is not None:
+            raise HTTPException(422,detail={"code":"FRESH_SOURCE_NOT_INSTALLED"})
         return jobs.start_with_internal_special_L(request)
 
     @app.post("/api/v1/sessions/{session_id}/resume")
