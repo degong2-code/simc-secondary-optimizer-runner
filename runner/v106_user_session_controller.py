@@ -55,8 +55,11 @@ def source_catalog_identity(path,revision,package_manifest_path=None):
         source_catalog_bridge.verify_catalog(document)
     except Exception as exc:
         raise SessionBlocked("V213_SOURCE_CATALOG_INVALID:"+type(exc).__name__) from exc
+    # This is the IMMUTABLE static-season source revision, not the actual
+    # SimC runtime revision. Session identity separately binds the active
+    # revision and executable SHA; do not rebuild unchanged seasonal gear
+    # whenever SimC balance/APL is updated.
     need(document.get("schema")==source_catalog_bridge.SCHEMA and
-         document.get("simc_revision")==revision and
          document.get("native_calls")==0 and
          document.get("network_calls")==0 and
          document.get("automatic_ui_promotion") is False,
