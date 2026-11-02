@@ -292,8 +292,8 @@ def build_stage(*,stage_root,wago_folder,build,expansion_id,
             fields=next(csv.reader(stream),[])
         need(required<=set(fields),
              "TIER_DB2_PHYSICAL_SOURCE_SCHEMA_PENDING:"+table)
-    outputs={t:"source/db2_tier_"+t+".csv" for t in TABLES}
-    outputs["candidates"]="source/v245_db2_tier_candidates.json"
+    outputs={t:"source/db2_tier_ilvl_"+t+".csv" for t in TABLES}
+    outputs["candidates"]="source/v245_db2_tier_candidates_ilvl.json"
     code=stages.module_dependency_fingerprint(
         [Path(__file__),Path(stages.__file__)])
     attempts=[0]
@@ -331,8 +331,8 @@ def build_stage(*,stage_root,wago_folder,build,expansion_id,
                     ==sha(paths[t].read_bytes()) for t in TABLES))
     try:
         stage=stages.execute_stage(root=root,
-            stage_id="fresh-db2-class-tier-candidates",
-            stage_version="v245-no-name-no-season-seed-1",
+            stage_id="fresh-db2-class-tier-candidates-ilvl",
+            stage_version="v245-physical-base-ilvl-roster-1",
             inputs={"game_build":build,"expansion_id":expansion_id,
                     "v161_receipt_sha256":wago_receipt_sha256,
                     "wago_extra_tables":list(TABLES),
