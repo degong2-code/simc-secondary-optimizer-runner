@@ -345,6 +345,27 @@ class LocalWebAPIOffline(unittest.TestCase):
             self.assertEqual(status.status_code,200,status.text)
             self.assertEqual(status.json()["environment_manifest"],environment)
             self.assertEqual(status.json()["progress"]["native_attempts"],0)
+            # Same season and exact source bytes, updated SimC balance binary
+            # revision: normal HTTP plan should create a NEW DPS identity
+            # without any source recollection or previous session mutation.
+            prior_bytes=(folder/"generated"/"environment_manifest.json").read_bytes()
+            next_revision="f"*40
+            updated=self.post("/api/v1/sessions/plan",
+                              {**payload,"revision":next_revision})
+            self.assertEqual(updated.status_code,200,updated.text)
+            newer=updated.json()
+            self.assertNotEqual(newer["session_id"],body["session_id"])
+            new_folder=self.root/"runs"/newer["session_id"]
+            new_manifest=json.loads((new_folder/"generated"/
+                                     "environment_manifest.json").read_text("utf8"))
+            self.assertEqual(new_manifest["source_catalog"]["simc_revision"],
+                             source["simc_revision"])
+            self.assertEqual(new_manifest["dependency_graph"]["fingerprints"][
+                             "simc_revision"],next_revision)
+            self.assertEqual((folder/"generated"/
+                              "environment_manifest.json").read_bytes(),prior_bytes)
+            self.assertEqual(source_path.read_bytes(),raw)
+            self.assertEqual(newer["environment_manifest"]["native_calls"],0)
             # A changed packaged source invalidates Start/Resume before a
             # worker process is spawned; the status read itself is non-mutating.
             source_path.write_bytes(raw[:-1]+b" ")
