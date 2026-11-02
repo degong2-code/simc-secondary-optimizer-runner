@@ -22,13 +22,15 @@ from urllib.error import HTTPError, URLError
 
 import v168_current_season_tier_discovery as physical
 import v217_stage_execution_engine as stages
-import v231_simc_tier_item_join as simc_tier
-
 SCHEMA="v245_db2_first_class_tier_candidates_v1"
 TABLES=("ItemSet","ItemSetSpell","ChrSpecialization")
 MAX_SOURCE_BYTES={"ItemSet":5_000_000,"ItemSetSpell":20_000_000,
                   "ChrSpecialization":5_000_000}
-CLASS_IDS=simc_tier.CLASS_ID
+# Stable ChrClasses enum, not any season's tier ID, name or gear source.
+# Keep this source discovery independent of the SimC profile/Native modules.
+CLASS_IDS={"warrior":1,"paladin":2,"hunter":3,"rogue":4,
+           "priest":5,"deathknight":6,"shaman":7,"mage":8,
+           "warlock":9,"monk":10,"druid":11,"demonhunter":12,"evoker":13}
 BY_ID={v:k for k,v in CLASS_IDS.items()}
 MAX_RELATION_ROWS=30000
 
