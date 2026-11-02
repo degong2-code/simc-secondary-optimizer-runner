@@ -153,13 +153,13 @@ class SeasonGjfoInventoryTests(unittest.TestCase):
             paths={}
             for key in p.SOURCE:
                 path=folder/(key+".json")
-                path.write_text(p.canonical(inputs[key][0])+"\\n",encoding="utf8")
+                path.write_text(p.canonical(inputs[key][0])+"\n",encoding="utf8")
                 paths[key]=path
                 season["sha256_by_input"][key]=p.digest(path.read_bytes())
             # Pin an actual v191 file SHA in the v213 manifest, not an
             # invented token. Compiler must authenticate the exact file.
             v191=folder/"v191.json"
-            v191.write_text(p.canonical(season)+"\\n",encoding="utf8")
+            v191.write_text(p.canonical(season)+"\n",encoding="utf8")
             actual_v191_sha=p.digest(v191.read_bytes())
             classification=SourceToCatalogTests()
             classification.setUpClass()
@@ -167,7 +167,7 @@ class SeasonGjfoInventoryTests(unittest.TestCase):
             catalog=catalog_bridge.compile_catalog(
                 season,actual_v191_sha,class_doc,"b"*64)
             v213=folder/"v213.json"
-            v213.write_text(p.canonical(catalog)+"\\n",encoding="utf8")
+            v213.write_text(p.canonical(catalog)+"\n",encoding="utf8")
             output=folder/"inventory.json"
             self.assertEqual(p.main([
                 "--v191",str(v191),"--v213",str(v213),
