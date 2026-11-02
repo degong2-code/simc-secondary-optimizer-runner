@@ -85,6 +85,60 @@ class Roles(unittest.TestCase):
             with self.assertRaises(gear.CatalogBlocked):
                 gear.compile_pool(w,l,sparse,effect)
 
+    def test_fresh_source_only_never_reads_installed_budget_and_reports_unknown(self):
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as d:
+            sparse,effect=self.make(Path(d))
+            w,l=fixture()
+            w["build"]=l["db2_build"]="12.2.0.99999"
+            with patch.object(gear,"INSTALLED_BUDGET",
+                              Path(d)/"DELIBERATELY_ABSENT_OLD.json"):
+                result=gear.compile_pool(
+                    w,l,sparse,effect,budget_source=None)
+            self.assertEqual(result["item_count"],5)
+            self.assertEqual(result["consumable_budget_source_mode"],
+                             "NEW_SEASON_J_F_BUDGET_EVIDENCE_PENDING")
+            self.assertIsNone(result["consumable_budget_reference"])
+            self.assertIsNone(result["G"])
+            self.assertIsNone(result["B"])
+            self.assertIsNone(result["T"])
+            self.assertEqual(result["new_native_calls"],0)
+
+    def test_newly_collected_same_build_budget_is_explicit_not_old_reference(self):
+        with tempfile.TemporaryDirectory() as d:
+            sparse,effect=self.make(Path(d))
+            w,l=fixture()
+            w["build"]=l["db2_build"]="12.2.0.99999"
+            new_budget={
+              "retail_build":"12.2.0.99999",
+              "ordinary_gem":{"slots":6,"highest_quality_bonus":[12,13],
+                              "total_J":150},
+              "flasks":{"total_F":210,
+                        "single_secondary_highest_quality_rating":210,
+                        "by_stat":{k:{"rating":210} for k in
+                                   ("crit","haste","mastery","versatility")}}}
+            from unittest.mock import patch
+            with patch.object(gear,"INSTALLED_BUDGET",
+                              Path(d)/"ABSENT_INSTALLED.json"):
+                result=gear.compile_pool(
+                    w,l,sparse,effect,budget_source=new_budget)
+            self.assertEqual(result["consumable_budget_reference"],new_budget)
+            self.assertEqual(result["consumable_budget_source_mode"],
+                "EXPLICIT_SAME_BUILD_NEW_SEASON_BUDGET_CANDIDATE")
+            self.assertIsNone(result["G"])
+            self.assertIsNone(result["B"])
+            self.assertIsNone(result["T"])
+            # A source-supplied number is a candidate, not an authenticated
+            # new-season J/F quality or arithmetic approval.
+            mismatch=dict(new_budget,retail_build="12.1.5.70575")
+            with self.assertRaisesRegex(gear.CatalogBlocked,
+                                        "CONSUMABLE_BUDGET_BUILD_MISMATCH"):
+                gear.compile_pool(w,l,sparse,effect,budget_source=mismatch)
+            incomplete=dict(new_budget,ordinary_gem={"total_J":150})
+            with self.assertRaisesRegex(gear.CatalogBlocked,
+                                        "CONSUMABLE_BUDGET_DATA_INCONSISTENT"):
+                gear.compile_pool(w,l,sparse,effect,budget_source=incomplete)
+
     def test_missing_effect_columns_fail_closed(self):
         with tempfile.TemporaryDirectory() as d:
             sparse,effect=self.make(Path(d))
