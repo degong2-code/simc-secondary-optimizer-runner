@@ -122,6 +122,11 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                          "_fresh_season_sources")
         folder=pathlib.Path(a["snapshot_receipt_path"]).parent
         self.assertFalse((folder/"db2-snapshot.zip").exists())
+        receipt=json.loads((folder/"receipt.json").read_text("utf8"))
+        self.assertEqual(receipt["fetched_at_utc"],a["fetched_at_utc"])
+        self.assertEqual(len(receipt["tables"]),10)
+        self.assertTrue(all(row["source_url"].startswith(
+            "https://wago.tools/db2/") for row in receipt["tables"].values()))
         tampered=folder/"Item.csv"
         tampered.write_text("ID,Name\n1,changed\n",encoding="utf8")
         with self.assertRaisesRegex(

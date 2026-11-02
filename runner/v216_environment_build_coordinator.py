@@ -20,7 +20,6 @@ import v222_season_budget_contract as season_budget_contract
 import v223_installed_season_budget_source as season_source_proof
 import v213_source_to_catalog as source_to_catalog
 import v161_wago_db2_snapshot as wago_snapshot
-import v163_zero_seed_db2_join as db2_join
 import v217_stage_execution_engine as stage_engine
 import v196_current_season_user_catalog as user_catalog
 import v241_fresh_source_stage_adapter as fresh_stage
@@ -295,21 +294,38 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
     outputs={"receipt":"wago/receipt.json"}
     outputs.update({t:"wago/"+t+".csv" for t in wago_snapshot.TABLES})
     code=stage_engine.module_dependency_fingerprint(
-        [pathlib.Path(__file__),pathlib.Path(wago_snapshot.__file__),
-         pathlib.Path(db2_join.__file__)])
+        [pathlib.Path(__file__),pathlib.Path(wago_snapshot.__file__)])
     def execute():
         opts={"build":expected_game_build,"make_archive":False}
         if fetch is not None:
             opts["fetch"]=fetch
         wago_snapshot.snapshot(output_dir,**opts)
     def validate(_paths):
-        receipt=db2_join.verify_snapshot(output_dir,expected_game_build)
+        # v217 streams all declared bytes and seals their SHA exactly once
+        # per run; defer cross-table SHA equality to its sealed output record
+        # instead of reading hundreds of MB a second time here.
+        receipt=json.loads((output_dir/"receipt.json").read_text("utf8"))
+        entries=receipt.get("tables",{})
         return (receipt.get("schema")==
                 "v161_wago_zero_seed_csv_snapshot_v1" and
                 receipt.get("status")==
                 "ALL_CSV_DOWNLOADED_NOT_YET_INTERPRETED" and
+                receipt.get("build")==expected_game_build and
+                receipt.get("locale")=="enUS" and
                 receipt.get("simc_native_calls")==0 and
-                receipt.get("legacy_item_ids_imported") is False)
+                receipt.get("legacy_item_ids_imported") is False and
+                isinstance(receipt.get("fetched_at_utc"),str) and
+                set(entries)==set(wago_snapshot.TABLES) and
+                all(isinstance(entries[t],dict) and
+                    entries[t].get("source_url") ==
+                        ("https://wago.tools/db2/"+t+"/csv?"+
+                         wago_snapshot.urlencode({
+                             "build":expected_game_build,"locale":"enUS"}))
+                    and entries[t].get("bytes") ==
+                        (output_dir/(t+".csv")).stat().st_size
+                    for t in wago_snapshot.TABLES) and
+                receipt.get("total_csv_bytes") ==
+                    sum(entries[t]["bytes"] for t in wago_snapshot.TABLES))
     try:
         stage=stage_engine.execute_stage(
             root=stage_root,stage_id="fresh-wago-db2",
@@ -322,11 +338,24 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
     except stage_engine.StageExecutionBlocked as exc:
         raise EnvironmentBuildBlocked(
             "V216_FRESH_WAGO_STAGE_BLOCKED:"+str(exc)) from exc
+    # Cross-check the original downloader's per-table SHA with the hashes
+    # actually sealed by v217. No extra full CSV read.
+    receipts=stage_root/".stage_receipts"/"fresh-wago-db2.json"
+    stage_doc=json.loads(receipts.read_text(encoding="utf8"))
+    source_doc=json.loads((output_dir/"receipt.json").read_text(encoding="utf8"))
+    need(all(
+        stage_doc["outputs"][table]["sha256"] ==
+            source_doc["tables"][table]["sha256"] and
+        stage_doc["outputs"][table]["size"] ==
+            source_doc["tables"][table]["bytes"]
+        for table in wago_snapshot.TABLES),
+        "V216_WAGO_SOURCE_AND_STAGE_SHA_MISMATCH")
     return {
         "schema":"v216_fresh_source_stage_v1",
         "status":"FRESH_WAGO_DB2_COLLECTED_MORE_SOURCES_PENDING",
         "expected_game_build":expected_game_build,
         "source":"https://wago.tools/db2",
+        "fetched_at_utc":source_doc["fetched_at_utc"],
         "snapshot_receipt_path":str((output_dir/"receipt.json").resolve()),
         "source_stage":{k:v for k,v in stage.items() if k!="result"},
         "network_calls_by_stage":len(wago_snapshot.TABLES)

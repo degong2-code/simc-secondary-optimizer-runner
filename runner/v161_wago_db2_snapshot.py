@@ -7,6 +7,7 @@ snapshot as ephemeral GitHub artifact, not to repository or product runtime.
 from __future__ import annotations
 import argparse,hashlib,json,os,re,zipfile
 from pathlib import Path
+from datetime import datetime, timezone
 from urllib.parse import urlencode
 from urllib.request import Request,urlopen
 from urllib.error import HTTPError,URLError
@@ -45,8 +46,10 @@ def snapshot(folder,build=BUILD,fetch=urlopen,*,make_archive=True):
                     sha.update(chunk)
                     out.write(chunk)
         budget+=received
-        receipt["tables"][table]={"bytes":received,"sha256":sha.hexdigest()}
+        receipt["tables"][table]={"bytes":received,"sha256":sha.hexdigest(),
+                                  "source_url":url}
     receipt["total_csv_bytes"]=budget
+    receipt["fetched_at_utc"]=datetime.now(timezone.utc).isoformat(timespec="seconds")
     receipt["status"]="ALL_CSV_DOWNLOADED_NOT_YET_INTERPRETED"
     (folder/"receipt.json").write_text(json.dumps(
         receipt,ensure_ascii=False,sort_keys=True,indent=2)+"\n",encoding="utf8")
