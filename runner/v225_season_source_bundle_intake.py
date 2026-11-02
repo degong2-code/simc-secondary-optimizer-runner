@@ -267,6 +267,9 @@ def verify_bundle(*, folder, event, previous_game_build,
         "source_manifest_sha256": sha(manifest_path.read_bytes()),
         "event": event, "game_build": checked["game_build"],
         "previous_game_build": previous_game_build,
+        "previous_build_record_status":
+            checked["previous_build_record_status"],
+        "previous_build_is_not_season_proof": True,
         "season": manifest["season"],
         "expansion_id": manifest["expansion_id"],
         "simc_revision": manifest["simc_revision"],
@@ -293,7 +296,8 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bundle-dir", type=pathlib.Path, required=True)
     parser.add_argument("--event", choices=EVENTS, required=True)
-    parser.add_argument("--previous-game-build", required=True)
+    # Optional local history: the actual source manifest must still agree.
+    parser.add_argument("--previous-game-build")
     parser.add_argument("--target-ilevel", type=int, required=True)
     parser.add_argument("--out", type=pathlib.Path, required=True)
     args = parser.parse_args(argv)
