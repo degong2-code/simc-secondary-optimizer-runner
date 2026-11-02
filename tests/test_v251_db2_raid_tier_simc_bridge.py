@@ -8,6 +8,8 @@ from unittest import mock
 
 from runner import v250_raid_tier_bonus_corroboration as v250
 from runner import v251_db2_raid_tier_simc_bridge as bridge
+from runner import v229_simc_only_source_seed as seed
+from tests.test_v229_simc_only_source_seed import raw_sources,OLD
 from tests.test_v250_raid_tier_bonus_corroboration import (
     inputs,raid_scope,source_rows,BUILD)
 
@@ -16,6 +18,38 @@ def fixture(root):
     corroboration=v250.correlate(tier=tier,raid=raid,
                                   source_bytes=source_rows())
     return tier,corroboration
+
+
+def pinned_thirteen_class_source(root,candidate,*,alter_one=False):
+    """Make an actual v229 byte-validated synthetic first-party seed, once."""
+    lines=[]
+    for cls,entry in sorted(candidate["classes"].items()):
+        ids=list(entry["tier_piece_ids"].values())
+        if alter_one and cls=="paladin":
+            ids[0]+=100000
+        for threshold in (2,4):
+            lines.append(
+                '  { "Synthetic class set", "opaque_13_class_set", "SYN",'
+                f' 1, {entry["item_set_id"]}, {threshold},'
+                f' {bridge.simc_tier.CLASS_ID[cls]}, 71, -1,'
+                f' {20000+len(lines)},'
+                ' { '+", ".join(str(x) for x in ids)+', 0 } },'
+            )
+    txt=(f"// Set bonus data, wow build {BUILD}\n"
+         f"static constexpr std::array<item_set_bonus_t, {len(lines)}> __set_bonus_data {{ {{\n"
+         +"\n".join(lines)+"\n} };\n")
+    sources=raw_sources(build=BUILD)
+    sources["item_set_bonus.inc"]=txt.encode("utf8")
+    for name,raw in sources.items():
+        (Path(root)/name).write_bytes(raw)
+    receipt=seed.inventory(sources,simc_revision="b"*40,
+                           expected_build=BUILD,
+                           previous_game_build=OLD,
+                           expected_git_blob={
+                               name:seed.git_blob(raw) for name,raw in sources.items()})
+    (Path(root)/seed.RECEIPT).write_text(
+        json.dumps(receipt),encoding="utf8")
+    return receipt
 
 class DB2SimCBridgeTests(unittest.TestCase):
     def test_13_classes_65_pieces_precise_candidate_without_season_promotion(self):
@@ -146,6 +180,61 @@ class DB2SimCBridgeTests(unittest.TestCase):
             self.assertEqual(first["piece_count"],65)
             self.assertFalse(second["simc_source_verified"])
             self.assertFalse(first["environment_ready"])
+
+
+    def test_actual_pinned_source_receipt_exact_13_classes_and_sealed_reuse(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            tier,bonus=fixture(root)
+            candidate=bridge.preview(db2=tier,corroboration=bonus)
+            pinned=pinned_thirteen_class_source(root,candidate)
+            self.assertTrue(pinned["provenance_tree_blob_authenticated"])
+            real_receipt,groups=bridge.simc_tier.read_receipt(root)
+            joined=bridge.match_first_party_roster(
+                candidate=candidate,simc_receipt=real_receipt,
+                simc_set_groups=groups)
+            self.assertEqual(joined["class_count"],13)
+            self.assertEqual(joined["piece_count"],65)
+            self.assertEqual(joined["observed_simc_options"],
+                             ["opaque_13_class_set"])
+            self.assertTrue(joined["simc_set_option_verified_by_exact_physical_ids"])
+            self.assertFalse(joined["simc_item_data_metadata_fully_verified"])
+            self.assertFalse(joined["season_membership_verified"])
+            self.assertIsNone(joined["G"])
+            stage=root/"stage";stage.mkdir()
+            p=root/"candidate.json"
+            p.write_text(json.dumps(candidate),encoding="utf8")
+            kwargs=dict(stage_root=stage,physical_candidate_path=p,
+                        physical_stage_receipt="a"*64,seed_directory=root)
+            first=bridge.build_first_party_match_stage(**kwargs)
+            second=bridge.build_first_party_match_stage(**kwargs)
+            self.assertEqual(first["source_stage"]["status"],
+                             "EXECUTED_AND_SEALED")
+            self.assertEqual(second["source_stage"]["status"],
+                             "REUSED_VERIFIED")
+            self.assertEqual(second["network_calls_by_stage"],0)
+            self.assertEqual(joined["simc_seed_receipt_sha256"],
+                             first["simc_seed_receipt_sha256"])
+
+    def test_first_party_missing_or_changed_source_fails_not_guessed(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d)
+            tier,bonus=fixture(root)
+            candidate=bridge.preview(db2=tier,corroboration=bonus)
+            pinned_thirteen_class_source(root,candidate,alter_one=True)
+            receipt,groups=bridge.simc_tier.read_receipt(root)
+            with self.assertRaisesRegex(bridge.BridgeBlocked,
+                    "EXACT_SET_OPTION_MISSING_OR_AMBIGUOUS"):
+                bridge.match_first_party_roster(
+                    candidate=candidate,simc_receipt=receipt,
+                    simc_set_groups=groups)
+            pinned_thirteen_class_source(root,candidate)
+            p=root/"item_set_bonus.inc"
+            p.write_bytes(p.read_bytes()+b" ")
+            with self.assertRaisesRegex(
+                  (bridge.simc_tier.TierCandidateBlocked,
+                   seed.SimCSourceBlocked),"SOURCE|SET_BYTES"):
+                bridge.simc_tier.read_receipt(root)
 
 if __name__=="__main__":
     unittest.main()
