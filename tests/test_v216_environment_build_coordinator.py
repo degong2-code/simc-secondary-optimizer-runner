@@ -178,7 +178,8 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                  "OverallQualityID":4,"LimitCategory":0,
                  "StatModifier_bonusStat_0":24 if i==3001 else 0,
                  "StatModifier_bonusStat_1":25 if i==3001 else 0,
-                 "InventoryType":5,"ItemSet":0,"AllowableClass":0}
+                 "InventoryType":5,"ItemSet":0,"AllowableClass":0,
+                 "ItemLevel":219 if i==1001 else 197}
                 for i in (1001,2001,3001)],
             "Item":[{"ID":i,"ClassID":4,"InventoryType":5,"SubclassID":4}
                     for i in (1001,2001,3001)],
@@ -202,7 +203,8 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                         "LimitCategory":0,"StatModifier_bonusStat_0":0,
                         "StatModifier_bonusStat_1":0,
                         "InventoryType":inv,"ItemSet":sid,
-                        "AllowableClass":1<<(cid-1)})
+                        "AllowableClass":1<<(cid-1),
+                        "ItemLevel":197 if wave==0 else 219})
                     data["Item"].append({"ID":iid,"ClassID":4,
                                          "InventoryType":inv,"SubclassID":sub})
                 extra_sets.append({"ID":sid,"Name_lang":"Unsearched set "+str(sid),
@@ -222,6 +224,30 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         extra_sources["ItemSet"]=extra_csv(extra_sets)
         extra_sources["ItemSetSpell"]=extra_csv(extra_spells)
         extra_sources["ChrSpecialization"]=extra_csv(extra_specs)
+        bonus_xrefs=[]
+        for wave in (0,1):
+            for n in range(len(physical.FAMILY)):
+                for pos in range(5):
+                    iid=(910000 if wave==0 else 820000)+100*n+pos
+                    bonus_xrefs.append({"ID":len(bonus_xrefs)+1,"ItemID":iid,
+                       "ItemBonusTreeID":900+wave})
+        bonus_xrefs.append({"ID":len(bonus_xrefs)+1,
+                           "ItemID":1001,"ItemBonusTreeID":901})
+        bonus_nodes=[]
+        for wave in (0,1):
+            for pos in range(5):
+                bonus_nodes.append({"ID":len(bonus_nodes)+1,
+                    "ParentItemBonusTreeID":900+wave,
+                    "ChildItemBonusTreeID":0,
+                    "ChildItemBonusListGroupID":
+                        (608 if wave==0 else 614)+pos})
+        bonus_sources={"ItemXBonusTree":extra_csv(bonus_xrefs),
+                       "ItemBonusTreeNode":extra_csv(bonus_nodes)}
+        bonus_calls=[]
+        def bonus_transport(req,timeout):
+            table=urlsplit(req.full_url).path.split("/")[-2]
+            bonus_calls.append(table)
+            return Response(bonus_sources[table])
         tier_calls=[]
         def tier_transport(req,timeout):
             table=urlsplit(req.full_url).path.split("/")[-2]
@@ -268,15 +294,30 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             first=v216.collect_wago_new_season_source(
                 sessions_root=self.root/"runtime",
                 expected_game_build="12.2.0.99999",fetch=fetch,
-                credentials={},tier_transport=tier_transport)
+                credentials={},tier_transport=tier_transport,
+                bonus_transport=bonus_transport)
             second=v216.collect_wago_new_season_source(
                 sessions_root=self.root/"runtime",
                 expected_game_build="12.2.0.99999",fetch=fetch,
-                credentials={},tier_transport=tier_transport)
+                credentials={},tier_transport=tier_transport,
+                bonus_transport=bonus_transport)
         self.assertEqual(compiled.call_count,1)
         self.assertEqual(len(calls),10)
         self.assertEqual(tier_calls,list(db2_tier.TABLES))
+        self.assertEqual(bonus_calls,
+                         ["ItemXBonusTree","ItemBonusTreeNode"])
         self.assertEqual(first["fresh_tier"]["network_calls_by_stage"],3)
+        bonus=first["fresh_tier_raid_bonus_corroboration"]
+        self.assertEqual(bonus["status"],
+            "UNIQUE_RAID_BONUS_CORRELATED_TIER_COHORT_SEASON_PENDING")
+        self.assertEqual(bonus["observed_leading_cohort"]
+                         ["observed_base_item_level"],219)
+        self.assertEqual(bonus["observed_leading_cohort"]
+                         ["physical_items"],65)
+        self.assertEqual(bonus["network_calls_by_stage"],2)
+        self.assertEqual(second["fresh_tier_raid_bonus_corroboration"]
+                         ["network_calls_by_stage"],0)
+        self.assertFalse(bonus["source_season_verified"])
         self.assertEqual(second["fresh_tier"]["network_calls_by_stage"],0)
         self.assertEqual(first["fresh_tier"]["status"],
                          "DB2_CLASS_TIER_CANDIDATES_SEASON_PENDING")
