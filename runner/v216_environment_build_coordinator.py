@@ -331,16 +331,14 @@ def _db2_first_tier_stage(*,stage_root,wago_folder,build,linked,
     2 both qualify, so this stage NEVER selects a current-season roster.
     v168 remains the original physical 13x5 verifier after season proof.
     """
-    if not linked.get("candidate_path"):
-        return {"status":"TIER_SEASON_SCOPE_PENDING",
-                "reason":"NO_UNIQUE_V163_SCOPE",
-                "candidate_path":None,"network_calls_by_stage":0,
-                "source_season_verified":False}
-    scope=linked["source_scope"]
+    # Tier structure is discoverable directly from the pinned DB2 snapshot,
+    # independent of WCL/Blizzard auth and independent of season selection.
+    # Missing live scope means ALL observed expansions are candidate-only.
+    scope=linked.get("source_scope") or {}
     try:
         return tier_db.build_stage(
             stage_root=stage_root,wago_folder=wago_folder,build=build,
-            expansion_id=scope["expansion_id"],
+            expansion_id=scope.get("expansion_id"),
             wago_receipt_sha256=wago_receipt_sha256,
             transport=transport)
     except (tier_db.TierDBBlocked,tier_db.physical.TierBlocked) as exc:
