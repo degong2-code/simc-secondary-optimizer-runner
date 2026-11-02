@@ -73,6 +73,26 @@ class SimCOnlySeedTests(unittest.TestCase):
         self.assertFalse(result["provenance_tree_blob_authenticated"])
         self.assertEqual(result["native_calls"],0)
 
+    def test_zero_history_cold_start_is_source_only_not_season_proof(self):
+        direct=seed.inventory(raw_sources(),
+                              simc_revision=REVISION,expected_build=BUILD,
+                              previous_game_build=None,season_event="cold_start")
+        self.assertEqual(direct["season_event"],"cold_start")
+        self.assertIsNone(direct["previous_game_build"])
+        self.assertFalse(direct["environment_ready"])
+        self.assertIsNone(direct["G"])
+        self.assertTrue(direct["active_season_not_automatically_inferred"])
+        with self.assertRaisesRegex(
+                seed.SimCSourceBlocked,"V229_COLD_START_MUST_HAVE_NO_PRIOR_BUILD"):
+            seed.inventory(raw_sources(),simc_revision=REVISION,
+                           expected_build=BUILD,previous_game_build=OLD,
+                           season_event="cold_start")
+        with self.assertRaisesRegex(
+                seed.SimCSourceBlocked,"V229_NEW_SEASON_OLD_BUILD_REUSE_BLOCKED"):
+            seed.inventory(raw_sources(),simc_revision=REVISION,
+                           expected_build=BUILD,previous_game_build=None,
+                           season_event="season_change")
+
     def test_build_mismatch_is_never_reinterpreted_as_new_season(self):
         raw=raw_sources()
         raw["gem_data.inc"]=raw_sources(OLD)["gem_data.inc"]
