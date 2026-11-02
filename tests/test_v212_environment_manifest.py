@@ -618,6 +618,9 @@ class EnvironmentManifestTests(unittest.TestCase):
             key,identity=sessions.session_key(
                 user,self.binary,rev,cache_path,
                 current_season_product=True,source_catalog_path=self.source_path)
+            self.assertEqual(identity["simc_revision"],rev)
+            self.assertEqual(identity["current_season_source_catalog"]["simc_revision"],
+                             self.source_catalog["simc_revision"])
             folder=sessions_root/key
             folder.mkdir()
             generated=folder/"generated"
