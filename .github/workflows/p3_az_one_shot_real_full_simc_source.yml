@@ -1,0 +1,77 @@
+name: P3-AZ ONE-SHOT actual full SimC source cold-start and one-DPS physical tier
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p3_az_one_shot_real_full_simc_source.yml
+permissions:
+  contents: read
+concurrency:
+  group: p3-az-one-real-full-simc-source-once
+  cancel-in-progress: false
+jobs:
+  source-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Bounded first-party pinned source and one DPS physical candidate (Native0)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, pathlib, tempfile
+          from runner import v229_simc_only_source_seed as seed
+          from runner import v231_simc_tier_item_join as tier
+          from runner import v232_simc_only_ordinary_representative as representative
+          revision="710c2408bfd3ae4df71b8cd55cdf01f63fd6c926"
+          build="12.1.5.70575"
+          with tempfile.TemporaryDirectory(prefix="p3-az-one-shot-") as td:
+              folder=pathlib.Path(td)/"full"
+              proof=seed.collect(
+                  revision=revision,expected_build=build,dest=folder,
+                  previous_game_build=None,season_event="cold_start",
+                  include_item_data=True)
+              assert proof["simc_revision"]==revision
+              assert proof["simc_generated_build"]==build
+              assert proof["previous_game_build"] is None
+              assert proof["season_event"]=="cold_start"
+              assert proof["item_data_present"] is True
+              assert proof["provenance_tree_blob_authenticated"] is True
+              assert proof["environment_ready"] is False
+              assert all(proof[k] is None for k in ("G","J","F","O","B","T"))
+              item=folder/"item_data.inc"
+              assert 0<item.stat().st_size<=seed.MAX_ITEM_FILE
+              print("P3_AZ_REAL_FULL_SIMC_SOURCE_PROVENANCE_PASS",
+                    "build",build,"item_bytes",item.stat().st_size,
+                    "git_blob",proof["source_files"]["item_data.inc"]["git_blob_sha1"],
+                    "source_revision",revision,flush=True)
+              try:
+                  one=tier.select(seed_directory=folder,
+                      cls="paladin",spec="retribution",
+                      set_option="midnight_season_2")
+                  assert one["G"] is None
+                  assert one["environment_ready"] is False
+                  print("P3_AZ_PALADIN_TIER_PHYSICAL_SOURCE_CANDIDATE",
+                        "five_tier_ids",sorted(one["tier_piece_ids"].values()),
+                        flush=True)
+                  try:
+                      candidate=representative.find_candidate(
+                          seed_directory=folder,tier_candidate=one,
+                          target_ilevel=334,max_source_distance=100)
+                      assert candidate["G"] is None
+                      assert not candidate["environment_ready"]
+                      print("P3_AZ_SIMC_ONLY_ORDINARY_CANDIDATE_NOT_SEASON_PROOF",
+                            "slots",len(candidate["selected_G_slot_ids"]),
+                            flush=True)
+                  except representative.SourceRepresentativeBlocked as exc:
+                      print("P3_AZ_SIMC_ONLY_ORDINARY_COVERAGE_PENDING",
+                            str(exc).split(":",1)[0],flush=True)
+              except tier.TierCandidateBlocked as exc:
+                  print("P3_AZ_FIRST_PARTY_TIER_PHYSICAL_PENDING",
+                        str(exc).split(":",1)[0],flush=True)
+              print("P3_AZ_REAL_SOURCE_ONLY_COMPLETE_NATIVE0_GJFO_PENDING",
+                    flush=True)
+          PY
