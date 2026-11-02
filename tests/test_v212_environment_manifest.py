@@ -607,6 +607,7 @@ class EnvironmentManifestTests(unittest.TestCase):
         (self.target/"manifest.json").write_text(json.dumps(target),encoding="utf8")
         self.binary.write_bytes(b"NEW_SIMC_BALANCE_BINARY_FOR_HIT")
         receipt["simc"]["revision"]="f"*40
+        receipt["simc"]["binary_sha256"]=p.sha(self.binary.read_bytes())
         payload={k:v for k,v in receipt.items() if k!="receipt_sha256"}
         receipt["receipt_sha256"]=p.sha(p.canonical(payload).encode("utf8"))
         output=self.compile(receipt)
