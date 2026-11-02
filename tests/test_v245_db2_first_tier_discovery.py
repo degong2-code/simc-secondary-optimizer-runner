@@ -16,6 +16,7 @@ def arrange(folder,*,two_seasons=True,omit_4pc=False,bad_mask=False):
     """Only synthetic source identity, never using any tier name seed."""
     root=Path(folder)
     receipt=synthetic(root)
+    receipt["build"]=BUILD
     sparse=list(csv.DictReader((root/"ItemSparse.csv").open()))
     items=list(csv.DictReader((root/"Item.csv").open()))
     classes=sorted(physical.FAMILY)
