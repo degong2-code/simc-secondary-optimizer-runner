@@ -112,6 +112,11 @@ class BundleIntakeTests(unittest.TestCase):
         for row in self.manifest["sources"].values():
             row["source_locator"]=row["source_locator"].replace(
                 "build=12.2.0.99999","build=12.1.5.70575")
+        for row in self.manifest["component_origins"].values():
+            for source in row["candidate_sources"]:
+                source["source_build"]="12.1.5.70575"
+                source["source_locator"]=source["source_locator"].replace(
+                    "build=12.2.0.99999","build=12.1.5.70575")
         self.write_manifest()
         with self.assertRaisesRegex(bundle.SourceBundleBlocked,
                                     "MANIFEST_VS_SOURCE_BUILD"):
@@ -130,6 +135,11 @@ class BundleIntakeTests(unittest.TestCase):
             entry["source_build"]="12.1.5.70575"
             entry["source_locator"]=entry["source_locator"].replace(
                 "build=12.2.0.99999","build=12.1.5.70575")
+        for row in self.manifest["component_origins"].values():
+            for source in row["candidate_sources"]:
+                source["source_build"]="12.1.5.70575"
+                source["source_locator"]=source["source_locator"].replace(
+                    "build=12.2.0.99999","build=12.1.5.70575")
         self.write_manifest()
         with self.assertRaisesRegex(bundle.SourceBundleBlocked,
                                     "CORE_SOURCE_PREFLIGHT_BLOCKED"):
