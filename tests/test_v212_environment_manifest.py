@@ -562,6 +562,97 @@ class EnvironmentManifestTests(unittest.TestCase):
             self.ui, self.ui_sha, moved_bootstrap, other)
         self.assertEqual(first["manifest_sha256"], moved["manifest_sha256"])
 
+    def test_updated_simc_runtime_reuses_immutable_season_sources(self):
+        import copy
+        first=self.compile()
+        original_source_sha=self.source_path.read_bytes()
+        new_revision="f"*40
+        target=json.loads((self.target/"manifest.json").read_text("utf8"))
+        target["native_revision"]=new_revision
+        (self.target/"manifest.json").write_text(json.dumps(target),encoding="utf8")
+        # Distinct installed SimC executable, not a new static gear source.
+        self.binary.write_bytes(b"NEW_SIMC_BALANCE_ONLY_BINARY_NOT_EXECUTED")
+        next_run=self.compile(previous=first)
+        self.assertEqual(self.source_path.read_bytes(),original_source_sha)
+        self.assertEqual(next_run["source_catalog"]["simc_revision"],
+                         first["source_catalog"]["simc_revision"])
+        self.assertEqual(next_run["approved_ui_catalog"]["simc_revision"],
+                         first["approved_ui_catalog"]["simc_revision"])
+        self.assertEqual(next_run["dependency_graph"]["fingerprints"][
+                         "simc_revision"],new_revision)
+        self.assertEqual(next_run["dependency_graph"]["fingerprints"][
+                         "simc_binary"],p.sha(self.binary.read_bytes()))
+        diff=next_run["dependency_change"]
+        self.assertIn("simc_binary",diff["changed_inputs"])
+        self.assertIn("simc_revision",diff["changed_inputs"])
+        self.assertNotIn("v191_gear_input",diff["changed_inputs"])
+        self.assertNotIn("v191_tier_input",diff["changed_inputs"])
+        self.assertNotIn("v191_budget_input",diff["changed_inputs"])
+        self.assertTrue(diff["static_item_cache_preserved"])
+        self.assertIn("adaptive_dps_cache",diff["invalidated_components"])
+        self.assertEqual(next_run["target_profile"]["base_B"],
+                         first["target_profile"]["base_B"])
+        self.assertEqual(next_run["target_profile"]["final_T"],
+                         first["target_profile"]["final_T"])
+        self.assertEqual(first["manifest_sha256"],
+                         p.sha(p.canonical({k:v for k,v in first.items()
+                             if k!="manifest_sha256"}).encode("utf8")))
+
+    def test_historical_selected_special_native_hit_survives_new_simc(self):
+        row,cache_path,record=self.add_selected_special()
+        receipt=self.make_v208_receipt(row,cache_path,record)
+        old_native_revision=receipt["selected_specials"][0]["native_json2"]["revision"]
+        target=json.loads((self.target/"manifest.json").read_text("utf8"))
+        target["native_revision"]="f"*40
+        (self.target/"manifest.json").write_text(json.dumps(target),encoding="utf8")
+        self.binary.write_bytes(b"NEW_SIMC_BALANCE_BINARY_FOR_HIT")
+        receipt["simc"]["revision"]="f"*40
+        payload={k:v for k,v in receipt.items() if k!="receipt_sha256"}
+        receipt["receipt_sha256"]=p.sha(p.canonical(payload).encode("utf8"))
+        output=self.compile(receipt)
+        self.assertEqual(output["v208_start_receipt"]["status"],"VERIFIED")
+        self.assertEqual(receipt["selected_specials"][0]["native_json2"]["revision"],
+                         old_native_revision)
+        self.assertEqual(output["source_catalog"]["simc_revision"],
+                         self.source_catalog["simc_revision"])
+        self.assertEqual(output["dependency_graph"]["fingerprints"][
+                         "simc_revision"],"f"*40)
+        self.assertEqual(output["target_profile"]["static_cache"]["sha256"],
+                         p.sha(cache_path.read_bytes()))
+
+    def test_new_native_special_measurement_must_use_executing_revision(self):
+        row,cache_path,record=self.add_selected_special()
+        receipt=self.make_v208_receipt(row,cache_path,record)
+        target=json.loads((self.target/"manifest.json").read_text("utf8"))
+        target["native_revision"]="f"*40
+        (self.target/"manifest.json").write_text(json.dumps(target),encoding="utf8")
+        receipt["simc"]["revision"]="f"*40
+        special=receipt["selected_specials"][0]
+        special["cache_status"]="MISS_NEW_NATIVE_JSON2"
+        receipt["cache_summary"]={"hits":0,"misses":1,"native_calls_this_start":1}
+        receipt["native_calls_this_start"]=1
+        def seal():
+            value={k:v for k,v in receipt.items() if k!="receipt_sha256"}
+            receipt["receipt_sha256"]=p.sha(p.canonical(value).encode("utf8"))
+        seal()
+        with self.assertRaisesRegex(p.EnvironmentBlocked,
+                                    "V208_RECEIPT_NATIVE_JSON2_PROVENANCE_INVALID"):
+            self.compile(receipt)
+        special["native_json2"]["revision"]="f"*40
+        seal()
+        accepted=self.compile(receipt)
+        self.assertEqual(accepted["v208_start_receipt"]["status"],"VERIFIED")
+        self.assertIsNone(accepted["dependency_graph"]["fingerprints"].get(
+            "unverified_source_build_override"))
+
+    def test_malformed_runtime_revision_is_not_an_item_source_refresh(self):
+        raw=json.loads((self.target/"manifest.json").read_text("utf8"))
+        raw["native_revision"]="not-hex"
+        (self.target/"manifest.json").write_text(json.dumps(raw),encoding="utf8")
+        with self.assertRaisesRegex(p.EnvironmentBlocked,
+                                    "V098_ADAPTIVE_LIMIT_OR_SIMC_REVISION_INVALID"):
+            self.compile()
+
     def test_build_or_revision_mismatch_fails_closed(self):
         self.ui["season_build"] = "12.1.5.70576"
         with self.assertRaisesRegex(p.EnvironmentBlocked,
