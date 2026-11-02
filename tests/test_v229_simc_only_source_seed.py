@@ -131,11 +131,11 @@ class SimCOnlySeedTests(unittest.TestCase):
 
     def test_optional_item_data_is_build_scoped_but_does_not_activate_G(self):
         raw=raw_sources()
-        raw["item_data.inc"]=b"// Item data, wow build "+BUILD.encode()+b"\n"
+        raw["item_data.inc"]=b"// Items, ilevel 1-1000, wow build "+BUILD.encode()+b"\n"
         result=inventory(raw)
         self.assertTrue(result["item_data_present"])
         self.assertIsNone(result["G"])
-        raw["item_data.inc"]=b"// Item data, wow build "+OLD.encode()+b"\n"
+        raw["item_data.inc"]=b"// Items, ilevel 1-1000, wow build "+OLD.encode()+b"\n"
         with self.assertRaisesRegex(seed.SimCSourceBlocked,
                                     "ITEM_DATA_BUILT_FOR_DIFFERENT_GAME_BUILD"):
             inventory(raw)
