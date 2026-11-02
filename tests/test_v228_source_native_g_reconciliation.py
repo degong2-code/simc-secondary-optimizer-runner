@@ -111,6 +111,21 @@ class NativeGReconciliationTests(unittest.TestCase):
                                     "PROFILE_EXTRA_OR_DUPLICATE_EQUIPMENT"):
             self.check()
 
+    def test_known_native_slot_aliases_preserve_exact_ring_identity(self):
+        gear=self.doc["sim"]["players"][0]["gear"]
+        for old,new in (("shoulders","shoulder"),("wrists","wrist"),
+                        ("hands","hand"),("finger1","ring1"),
+                        ("finger2","ring2")):
+            gear[new]=gear.pop(old)
+        self.encode()
+        self.assertEqual(self.check()["matching_equipment_slot_count"],13)
+        # Two ring slots must NEVER collapse to one ambiguous 'finger'.
+        gear["finger"]=gear.pop("ring1")
+        self.encode()
+        with self.assertRaisesRegex(bridge.NativeGBlocked,
+                                    "NATIVE_UNEXPECTED_OR_DUPLICATE_GEAR_SLOT"):
+            self.check()
+
     def test_user_profile_gem_oil_flask_rating_override_rejected(self):
         for token in (
             "temporary_enchant=main_hand:unknown_oil",
