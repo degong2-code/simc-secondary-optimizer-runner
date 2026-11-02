@@ -24,7 +24,7 @@ This allows treating P3-BA as a reusable **same-build** source proof when the ac
 
 Early intermediate workflow runs `#41481399582`, `#41481422110`, `#41481520787` failed due to tests that **still asserted the now superseded requirement** that previous client build must exist/differ. They are preserved as evidence of intermediate test/code contract mismatch; subsequently updated, not portrayed as passing.
 
-**Updated focused code+test receipt** [Actions #41481804619](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41481804619): completed SUCCESS, verifying the new v224/v225 contract before the final CLI addition. **Final updated CLI test receipt** [Actions #41481925936](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41481925936): check actual jobs and logs independently before marking final PASS.
+**Updated focused code+test receipt** [Actions #41481804619](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41481804619): completed SUCCESS, verifying the new v224/v225 contract before the final CLI addition. **Final source + CLI code/test receipt** [Actions #41481925936](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41481925936): **Ubuntu 393 tests / 0 FAIL / 4 SKIP / SUCCESS; Windows 393 tests / 0 FAIL / 4 SKIP / SUCCESS**, confirmed in both actual job logs; `V212_ENVIRONMENT_MANIFEST_NATIVE0_PASS` in both, including no-previous-record CLI test. Final functional commit `63a9d7555e666dad937665e483cc3bc8882c935b`. Older intermediate failing runs retained separately; no real Wago/SimC Native added in this P3-BB code fix.
 
 ## Next product milestone
 
