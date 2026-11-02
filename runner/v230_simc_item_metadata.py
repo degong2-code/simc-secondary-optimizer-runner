@@ -9,6 +9,7 @@ active-season membership, scaling rating or SimC Native acceptance.
 from __future__ import annotations
 import argparse
 import hashlib
+import io
 import json
 import pathlib
 import re
@@ -81,7 +82,7 @@ def parse_exact(raw, *, build, item_ids, max_bytes=seed.MAX_ITEM_FILE):
          "V230_EXACT_ITEM_REQUEST_IDS_INVALID")
     wanted=set(item_ids)
     try:
-        lines=raw.decode("utf8").splitlines()
+        lines=io.StringIO(raw.decode("utf8"))  # no massive list of C++ lines
     except UnicodeError as exc:
         raise ItemMetadataBlocked("V230_ITEM_DATA_NON_UTF8") from exc
     stats=[];stat_name=None;stat_total=None;inside_stats=False
