@@ -227,12 +227,13 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
     package_root = pathlib.Path(__file__).resolve().parents[1]
     installed_catalog = (package_root / "data" /
                          "current_season_source_to_catalog.json")
-    if (season_budget_source_paths is None and
+    installed_source_proof = (season_budget_source_paths is None and
             season_budget_evidence is None and
             source_path == installed_catalog and
             not user.get("special_items") and
             not user.get("embellishments") and
-            not user.get("verified_enchant")):
+            not user.get("verified_enchant"))
+    if installed_source_proof:
         season_budget_source_paths = {
             "gear": package_root / "data" /
                     "current_season_product_gear_db.json",
@@ -250,13 +251,24 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
          "V216_SEASON_BUDGET_TWO_EVIDENCE_MODES")
     linked_source_proof = None
     if season_budget_source_paths is not None:
+        source_scenario_path = generated / "scenario.json"
+        if source_scenario_path.is_file():
+            need(not source_scenario_path.is_symlink(),
+                 "V216_SOURCE_SCENARIO_SYMLINK_BLOCKED")
+            pre_oil_scenario, _ = environment_manifest.read_json(
+                source_scenario_path)
+        else:
+            need(not installed_source_proof,
+                 "V216_INSTALLED_SOURCE_SCENARIO_NOT_GENERATED")
+            pre_oil_scenario = None
         try:
             linked_source_proof = season_source_proof.produce(
                 catalog=source_document, catalog_sha=source_raw_sha,
                 source_paths=season_budget_source_paths, user=user,
                 bootstrap=bootstrap_result,
                 physical_profile=(generated / "profile.simc").read_text(
-                    encoding="utf8"))
+                    encoding="utf8"),
+                pre_oil_scenario=pre_oil_scenario)
             season_budget_evidence = linked_source_proof["evidence"]
         except (season_source_proof.SourceBudgetBlocked, OSError) as exc:
             raise EnvironmentBuildBlocked(
@@ -288,6 +300,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         linked_source_proof["source_input_sha256"],
                     "reference_rounded":
                         linked_source_proof["reference_rounded"],
+                    "profile_oil_serialization":
+                        linked_source_proof["profile_oil_serialization"],
                 }
         except season_budget_contract.SeasonBudgetBlocked as exc:
             raise EnvironmentBuildBlocked(
