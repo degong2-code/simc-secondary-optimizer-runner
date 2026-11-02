@@ -144,9 +144,15 @@ def inventory(source_bytes, *, simc_revision, expected_build,
     """Identify only SimC first-party source facts; never auto-approve stats."""
     need(type(simc_revision) is str and REV.fullmatch(simc_revision) and
          type(expected_build) is str and BUILD.fullmatch(expected_build) and
-         season_event in ("season_change","expansion_change","mid_patch"),
+         season_event in ("season_change","expansion_change","mid_patch",
+                          "cold_start"),
          "V229_PINNED_SIMC_REVISION_BUILD_OR_EVENT_INVALID")
-    if season_event != "mid_patch":
+    if season_event == "cold_start":
+        # A first install may have no prior verified game build. Never
+        # synthesize it or pretend this proves current season membership.
+        need(previous_game_build is None,
+             "V229_COLD_START_MUST_HAVE_NO_PRIOR_BUILD")
+    elif season_event != "mid_patch":
         need(type(previous_game_build) is str and
              BUILD.fullmatch(previous_game_build) and
              expected_build != previous_game_build,
@@ -361,7 +367,8 @@ def main(argv=None):
     p.add_argument("--revision",required=True)
     p.add_argument("--game-build",required=True)
     p.add_argument("--previous-game-build")
-    p.add_argument("--event",choices=("mid_patch","season_change","expansion_change"),
+    p.add_argument("--event",choices=("mid_patch","season_change","expansion_change",
+                                     "cold_start"),
                    default="season_change")
     p.add_argument("--out-dir",type=Path,required=True)
     p.add_argument("--include-item-data",action="store_true")
