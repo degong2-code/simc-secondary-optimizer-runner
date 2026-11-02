@@ -308,6 +308,52 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         self.assertIsNone(first["G"])
         self.assertIsNone(first["T"])
 
+    def test_unscoped_db2_tier_discovery_no_blizzard_wcl_credentials(self):
+        """New build raw source must not depend on hardcoded Midnight v155."""
+        import io
+        from urllib.parse import urlsplit
+        from tests.test_v245_db2_first_tier_discovery import arrange
+        from runner import v245_db2_first_tier_discovery as tierdb
+        from runner import v161_wago_db2_snapshot as snapshot
+        source=self.root/"source_fixture"
+        source.mkdir()
+        tier_sources=arrange(source)
+        class Response(io.BytesIO):
+            status=200
+            def __enter__(self):return self
+            def __exit__(self,*args):self.close()
+        requests=[]
+        def fetch(req,timeout):
+            table=urlsplit(req.full_url).path.split("/")[-2]
+            requests.append(("primary",table))
+            if table in ("ItemSparse","Item"):
+                return Response((source/(table+".csv")).read_bytes())
+            return Response(("ID,Name\n1,"+table+"\n").encode("utf8"))
+        def tier_fetch(req,timeout):
+            table=urlsplit(req.full_url).path.split("/")[-2]
+            requests.append(("tier",table))
+            return Response(tier_sources[table])
+        args={"sessions_root":self.root/"unscoped_no_credentials",
+              "expected_game_build":"12.2.0.99999",
+              "fetch":fetch,"tier_transport":tier_fetch,"credentials":{}}
+        first=v216.collect_wago_new_season_source(**args)
+        second=v216.collect_wago_new_season_source(**args)
+        self.assertEqual(len(requests),len(snapshot.TABLES)+len(tierdb.TABLES))
+        self.assertEqual(first["network_calls_by_stage"],13)
+        self.assertEqual(second["network_calls_by_stage"],0)
+        self.assertEqual(first["season_join"]["status"],
+                         "AUTHENTICATED_SEASON_JOIN_NOT_READY")
+        self.assertEqual(first["fresh_tier"]["candidate_set_count"],26)
+        self.assertEqual(first["fresh_tier"]["candidate_counts_by_expansion_id"],
+                         {"11":26})
+        self.assertFalse(first["fresh_tier"]["source_season_verified"])
+        self.assertEqual(first["fresh_tier"]["expansion_selection_source"],
+                         "UNSCOPED_OBSERVED_EXPANSIONS_ONLY")
+        self.assertIsNone(first["G"])
+        self.assertIsNone(first["T"])
+        self.assertFalse(first["environment_ready"])
+        self.assertFalse(first["environment_installed"])
+
     def test_partial_season_credentials_block_before_wago_fetch(self):
         calls=[]
         def fetch(req,timeout):
