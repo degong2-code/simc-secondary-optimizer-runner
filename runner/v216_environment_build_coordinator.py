@@ -449,9 +449,17 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
                 "network_calls_by_stage":attempted[0],
                 "season_representative_verified":False}
     result=json.loads((root/paths["candidate"]).read_text(encoding="utf8"))
-    return {"status":"FRESH_GEAR_PLAIN_CANDIDATES_SOURCE_ONLY",
+    plain=[r for r in result["items"]
+           if r["category"]=="plain_representative_candidate"]
+    # A source containing only trinkets/special-effect items is not a usable
+    # ordinary gear/weapon pool. Preserve its sealed evidence as PENDING.
+    return {"status":("FRESH_GEAR_PLAIN_CANDIDATES_SOURCE_ONLY" if plain
+                      else "FRESH_GEAR_PLAIN_CANDIDATES_NOT_FOUND_PENDING"),
             "candidate_path":str((root/paths["candidate"]).resolve()),
             "item_count":result["item_count"],
+            "plain_candidate_count":len(plain),
+            "plain_armor_candidate_count":sum(x["class_id"]==4 for x in plain),
+            "plain_weapon_candidate_count":sum(x["class_id"]==2 for x in plain),
             "network_calls_by_stage":attempted[0],
             "source_stage":{k:v for k,v in stage.items() if k!="result"},
             "season_representative_verified":False,
