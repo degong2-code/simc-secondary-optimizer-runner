@@ -1,3 +1,15 @@
+# 2026-11-02 P3-M — 최신 새 채팅 인계 / 엔진 우선 개발 실행 기준
+
+> **최신 인계 진입점:** [CHAT_CONTINUITY_HANDOFF_20261102_V221_P3L_ENGINE_FIRST.md](CHAT_CONTINUITY_HANDOFF_20261102_V221_P3L_ENGINE_FIRST.md). **엔진 개발자 보충:** [DEVELOPER_NOTES_ENGINE_FIRST_EXECUTION_ADDENDUM_20261102.md](DEVELOPER_NOTES_ENGINE_FIRST_EXECUTION_ADDENDUM_20261102.md). 유효 승인 설계는 [v1.4.3](SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.3_SEASON_GJFO_AUTO_BUILD_APPROVED_20261102.md). v216 인계의 “아직 Build 미구현” 같은 당시 문구는 최신 코드/Actions로 교정해 읽을 것.
+>
+> **실물 확인(인계 작성 직전):** 격리 브랜치 HEAD \`d521e400401024fc55b5c698fe120c972090fecc\` (이 문서 커밋 후 새 HEAD 재조회 필수), main \`07133e0aaf738d6e4816a6486057b1cd49c018de\` 불변, repo Public. 가장 최신 실제 성공 CI는 v212 [#41367669540](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41367669540), Ubuntu/Windows 각 79 tests PASS (오프라인, Native0). v221 [#41362149724](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41362149724) exact gem item-property 75 relations, **UI 신규 자동 등록 0**. 이 인계 작업은 **문서만 갱신**, 제품 코드·기존 캐시·Native·Actions·main·Project UI 변경 없음. 신규 테스트 PASS 주장 없음.
+>
+> **장·단기 기준:** 목표는 특정 기능을 넣는 것이 아니라 그 기능을 반복적으로 구현하는 범용 **Environment DB / SimC 통합 엔진**. 단기는 동일 시즌/새 시즌 G/J/F/O 확인→B/T 자동 갱신→최고 품질·정책 A 선택지 자동 발행→기존 v098/적응형 optimizer/Windows 실제 사용자 흐름 연결. 기존 evidence/캐시는 재사용하고 독립 검증은 묶어서 처리. \`v216\`의 설치된 source만 쓰는 Build와 최종 새 시즌 자동 구축 완료를 혼동하지 않는다.
+>
+> **Project UI 경계:** 사용자는 Project Instructions 직접 반영을 보고했고 GitHub 개발 기준은 v1.4.3으로 등록됐음. 이 채팅의 접근 가능한 Project Files에서는 v1.4.1 20261029 사본만 확인되어 v1.4 원문/v1.4.3의 **Project Sources 저장 완료는 미확인**. 사용자가 등록을 승인했더라도 GitHub commit ≠ Project UI upload. 해당 상태는 아직 \`UNVERIFIED_PROJECT_SOURCE_APPLY\`로 기록한다.
+
+---
+
 # 2026-11-02 P3-L — 최신 사용자 승인 정책 GitHub 개발 기준 등록
 
 > **사용자 직접 승인:** 프로젝트 지침에 G/J/F/O 및 B/T 신규 기준을 직접 등록했다고 보고하고, GitHub 승인 개발 기준/Project Sources 등록을 명시 승인. 공식 해석은 [**개발자 노트 v1.4.3 — 시즌별 G/J/F/O 자동 구축**](./SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.3_SEASON_GJFO_AUTO_BUILD_APPROVED_20261102.md)을 우선한다. v1.4 원본 사용자 목표·v1.4.1 DPS26 교정·v1.4.2 증거와 충돌 없는 내용 유지. 기존 P3-K의 “J/F/O 자동 갱신”은 **G를 빠뜨린 과거 표현**으로 현재 정책이 아니다.
