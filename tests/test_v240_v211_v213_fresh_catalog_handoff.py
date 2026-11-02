@@ -75,10 +75,12 @@ class SameFreshCatalogChain(unittest.TestCase):
             artifact=join.compile_catalog(season,"a"*64,classified,"b"*64)
             p=folder/"fresh_v213.json"
             p.write_text(json.dumps(artifact,ensure_ascii=False),encoding="utf8")
-            with patch.object(ui.v188,"labels",side_effect=AssertionError(
-                    "OLD_INSTALLED_SEASON_LABELS_FORBIDDEN")), \\
-                 patch.object(ui.observed_enchant,"read",side_effect=AssertionError(
-                    "OLD_NATIVE_E_FORBIDDEN")):
+            with (
+                patch.object(ui.v188,"labels",side_effect=AssertionError(
+                    "OLD_INSTALLED_SEASON_LABELS_FORBIDDEN")),
+                patch.object(ui.observed_enchant,"read",side_effect=AssertionError(
+                    "OLD_NATIVE_E_FORBIDDEN")),
+            ):
                 result=ui.public_options(p)
             self.assertEqual(result["season_build"],BUILD)
             self.assertEqual(result["simc_revision"],REV)
