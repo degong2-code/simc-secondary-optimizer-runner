@@ -113,13 +113,12 @@ class ExistingSingleGearPipeline(unittest.TestCase):
                          v165["consumable_budget_source_mode"])
         self.assertTrue(v167["J_F_NUMERIC_AUTHENTICATION_NOT_IN_GEAR_COLLECTOR"])
         self.assertEqual(v167["season_build"],BUILD)
-        self.assertEqual(v167["item_count"],3)
+        self.assertEqual(v167["item_count"],4)
         self.assertEqual({x["item_id"] for x in v167["items"]},
-                         {4001,4002,4005})
-        # Selectable-stat craft classified as special; v165 original source
-        # allows the source candidate. With direct ItemXItemEffect relation
-        # the v166 product pool should also contain it.
-        self.assertEqual(v166["current_candidate_count"],3)
+                         {4001,4002,4003,4005})
+        # Selectable-stat craft is included as a current-season candidate;
+        # its specific stat selection and equipment effects are not certified.
+        self.assertEqual(v166["current_candidate_count"],4)
         self.assertEqual(v166["conditional_count"],1)
         self.assertTrue(v167["not_certified"]["tier_four_set"])
         self.assertNotIn("G",v167)
