@@ -283,7 +283,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             if candidate.get("enchant_classification",{}).get(
                     "source_manifest_sha256") is not None:
                 need(type(expected_new_season_build) is str and
-                     re.fullmatch(r"[0-9]+(?:\\.[0-9]+){3}",
+                     re.fullmatch(r"[0-9]+(?:\.[0-9]+){3}",
                                   expected_new_season_build) is not None,
                      "V216_EXPLICIT_NEW_SEASON_BUILD_REQUIRED")
                 preflight=preflight_new_season_source(
