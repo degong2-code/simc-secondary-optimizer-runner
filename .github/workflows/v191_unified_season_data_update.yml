@@ -4,6 +4,9 @@ on:
     branches: [probe/chat-cache-v035-20261024]
     paths:
       - runner/v191_unified_season_data_update.py
+      - runner/v224_season_gjfo_evidence_inventory.py
+      - runner/v225_season_source_bundle_intake.py
+      - tests/test_v225_season_source_bundle_intake.py
       - runner/v211_enchant_source_effect_classification.py
       - runner/v213_source_to_catalog.py
       - runner/v196_current_season_user_catalog.py
@@ -42,8 +45,25 @@ on:
       source_artifact:
         description: Existing artifact name with matching v189/v190 source receipts
         type: string
-        required: true
+        required: false
         default: v192-updated-simc-catalog-41017578894
+      season_bundle_run_id:
+        description: New-season source bundle artifact run ID (season/expansion only; no defaults)
+        type: string
+        required: false
+      season_bundle_artifact:
+        description: New-season source bundle exact artifact name (season/expansion only)
+        type: string
+        required: false
+      previous_game_build:
+        description: Verified previous retail build, required for season/expansion
+        type: string
+        required: false
+      target_ilevel:
+        description: Target item level to preflight (default 334)
+        type: number
+        required: false
+        default: 334
 permissions:
   contents: read
   actions: read
@@ -52,6 +72,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   source-to-catalog:
+    if: github.event_name != 'workflow_dispatch' || inputs.event == 'mid_patch'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -282,3 +303,73 @@ jobs:
           path: out/
           retention-days: 90
           if-no-files-found: warn
+
+  new-season-core:
+    if: github.event_name == 'workflow_dispatch' && (inputs.event == 'season_change' || inputs.event == 'expansion_change')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Validate explicit new-season source artifact contract (never use old-season defaults)
+        env:
+          BUNDLE_RUN: ${{ inputs.season_bundle_run_id }}
+          BUNDLE_NAME: ${{ inputs.season_bundle_artifact }}
+          PREVIOUS_BUILD: ${{ inputs.previous_game_build }}
+          TARGET_LEVEL: ${{ inputs.target_ilevel }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os,re
+          assert re.fullmatch(r'[1-9][0-9]{6,16}',os.environ['BUNDLE_RUN']), 'NEW_SEASON_EXACT_SOURCE_RUN_ID_REQUIRED'
+          assert re.fullmatch(r'[A-Za-z0-9_.-]{5,100}',os.environ['BUNDLE_NAME']), 'NEW_SEASON_EXACT_SOURCE_ARTIFACT_REQUIRED'
+          assert re.fullmatch(r'[0-9]+(?:\.[0-9]+){3}',os.environ['PREVIOUS_BUILD']), 'NEW_SEASON_PREVIOUS_BUILD_REQUIRED'
+          assert os.environ['TARGET_LEVEL'].isdigit() and 1<=int(os.environ['TARGET_LEVEL'])<=1000, 'NEW_SEASON_TARGET_ILVL_INVALID'
+          print('V225_EXPLICIT_SEASON_SOURCE_ARTIFACT_REQUEST_ACCEPTED_NO_NATIVE')
+          PY
+      - name: Reuse exactly requested new-season source bundle (read only, no collection)
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.season_bundle_artifact }}
+          run-id: ${{ inputs.season_bundle_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path: season-core
+      - name: Validate exact origin declarations and core source SHA; retain GJFO missing proofs
+        env:
+          UPDATE_EVENT: ${{ inputs.event }}
+          PREVIOUS_BUILD: ${{ inputs.previous_game_build }}
+          TARGET_LEVEL: ${{ inputs.target_ilevel }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile runner/v224_season_gjfo_evidence_inventory.py runner/v225_season_source_bundle_intake.py
+          python -m unittest -q tests.test_v224_season_gjfo_evidence_inventory tests.test_v225_season_source_bundle_intake
+          python runner/v225_season_source_bundle_intake.py \
+            --bundle-dir season-core \
+            --event "$UPDATE_EVENT" \
+            --previous-game-build "$PREVIOUS_BUILD" \
+            --target-ilevel "$TARGET_LEVEL" \
+            --out out/v225_new_season_core_source_intake.json
+          python - <<'PY'
+          import json
+          row=json.load(open('out/v225_new_season_core_source_intake.json',encoding='utf8'))
+          assert row['verified_components']==[] and row['missing_components']==['G','J','F','O']
+          assert row['B'] is None and row['T'] is None and not row['ready']
+          assert not row['source_origin_independently_authenticated']
+          assert not row['user_options_auto_admitted']
+          assert row['native_calls']==row['network_calls']==row['cache_mutations']==0
+          print('V225_NEW_SEASON_SOURCE_BYTES_BOUND_GJFO_NOT_AUTHENTICATED_OR_PUBLISHED')
+          PY
+      - name: Preserve small GJFO core source receipt only, not source snapshots or native cache
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v225-new-season-core-intake-${{ github.run_id }}
+          path: out/v225_new_season_core_source_intake.json
+          if-no-files-found: warn
+          retention-days: 7
