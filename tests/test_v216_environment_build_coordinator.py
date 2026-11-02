@@ -152,11 +152,22 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         stage_root.mkdir()
         with self.assertRaisesRegex(
                 v216.EnvironmentBuildBlocked,
-                "V216_FRESH_GEM_DB2_SOURCE_INVALID"):
+                "V216_FRESH_GEM_V213_GAME_BUILD_MISMATCH"):
             v216._fresh_gem_item_source_stage(
                 stage_root=stage_root, wago_folder=sample.folder,
                 source_catalog_path=source_path,
                 expected_game_build="12.1.5.70576")
+        receipt_path = sample.folder / "receipt.json"
+        receipt = json.loads(receipt_path.read_text(encoding="utf8"))
+        receipt["build"] = "12.1.5.70576"
+        receipt_path.write_text(json.dumps(receipt), encoding="utf8")
+        with self.assertRaisesRegex(
+                v216.EnvironmentBuildBlocked,
+                "V216_FRESH_GEM_DB2_SOURCE_INVALID"):
+            v216._fresh_gem_item_source_stage(
+                stage_root=stage_root, wago_folder=sample.folder,
+                source_catalog_path=source_path,
+                expected_game_build="12.1.5.70575")
 
     def test_normal_build_reuses_existing_v229_simc_source_collector_only_once(self):
         from tests.test_v229_simc_only_source_seed import (
