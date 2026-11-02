@@ -495,7 +495,7 @@ def load_fresh_sources(folder,manifest,*,game_build,simc_revision):
              "FRESH_SIMC_SOURCE_FILE_RECORD_INVALID:"+key)
         if key=="unique_gear.cpp":
             need(re.fullmatch(
-                r"engine/player/unique_gear_[a-z0-9_]+\\.cpp",
+                r"engine/player/unique_gear_[a-z0-9_]+\.cpp",
                 row["source_path"]) is not None,
                 "FRESH_SIMC_HANDLER_RELATIVE_PATH_INVALID")
         else:
