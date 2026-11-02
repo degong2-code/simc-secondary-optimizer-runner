@@ -32,6 +32,12 @@ SCHEMA = "v228_representative_G_native_json2_reconciliation_v1"
 SHA = re.compile(r"[a-f0-9]{64}\Z")
 PROFILE_MAX = 2_000_000
 NATIVE_MAX = cache_mod.MAX_NATIVE_BYTES
+# v046 normalizes these JSON2 spellings; keep distinct ring identities so
+# each physical ring must match its requested item rather than a pooled sum.
+NATIVE_SLOT_TO_PROFILE = {
+    "shoulder": "shoulders", "wrist": "wrists", "hand": "hands",
+    "ring1": "finger1", "ring2": "finger2",
+}
 
 
 class NativeGBlocked(ValueError):
@@ -156,14 +162,15 @@ def reconcile(*, bundle_dir, work_order, profile_raw, native_raw):
             "V228_V046_NATIVE_JSON2_PARSER_BLOCKED:" + str(exc)) from exc
     actual_slots={}
     for record in records:
-        slot=record["observed_slot"]
+        raw_slot=record["observed_slot"]
+        slot=NATIVE_SLOT_TO_PROFILE.get(raw_slot,raw_slot)
         need(slot in parsed_profile and slot not in actual_slots,
              "V228_NATIVE_UNEXPECTED_OR_DUPLICATE_GEAR_SLOT")
         identity=record["identity"]
         need(identity["item_id"] == parsed_profile[slot][0] and
              identity["ilevel"] == parsed_profile[slot][1] and
              identity["options"] == {} and
-             identity["slot"] == cache_mod.normalize_slot(slot) and
+             identity["slot"] == cache_mod.normalize_slot(raw_slot) and
              record["modifiers_present"] is False,
              "V228_NATIVE_ITEM_VARIANT_OR_MODIFIER_DRIFT")
         actual_slots[slot]=record["static_digest"]
