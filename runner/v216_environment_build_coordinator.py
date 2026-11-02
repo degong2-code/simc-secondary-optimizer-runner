@@ -667,6 +667,79 @@ def _verified_first_party_tier_options_stage(*,stage_root,tier_bridge,
 
 
 
+
+def _resolve_one_spec_simc_commit_stage(*, stage_root, build, gear, tier,
+                                       revision_hint=None, transport=None):
+    """One pinned SimC source commit, cached; not a binary or season proof."""
+    waiting={"status":"SIMC_SOURCE_COMMIT_NOT_YET_RESOLVABLE_PENDING",
+             "simc_revision":None,"network_calls_by_stage":0,
+             "environment_ready":False,"binary_attested":False}
+    if (revision_hint is None or not gear.get("candidate_path")
+            or not tier.get("candidate_path")):
+        return waiting
+    need(type(revision_hint) is str and
+         re.fullmatch(r"[a-f0-9]{7,12}|[a-f0-9]{40}",
+                      revision_hint) is not None,
+         "V216_SOURCE_REVISION_HINT_INVALID")
+    root=pathlib.Path(stage_root)
+    out="source/v257_exact_simc_commit.json"
+    code=stage_engine.module_dependency_fingerprint([
+        pathlib.Path(simc_source.__file__),
+        pathlib.Path(stage_engine.__file__)])
+    calls=[0]
+    def lookup(req,timeout):
+        calls[0]+=1
+        return (simc_source.urlopen if transport is None else transport)(
+            req,timeout=timeout)
+    def execute():
+        exact=simc_source.resolve_exact_commit(revision_hint,transport=lookup)
+        payload={"schema":"v257_one_spec_exact_simc_git_commit_v1",
+                 "source_repo":"simulationcraft/simc",
+                 "game_build_requested":build,
+                 "revision_hint":revision_hint,"resolved_revision":exact,
+                 "immutable_git_source_only":True,
+                 "binary_attested":False,"season_verified":False,
+                 "G":None,"environment_ready":False}
+        dest=root/out
+        dest.parent.mkdir(parents=True,exist_ok=True)
+        dest.write_text(json.dumps(payload,sort_keys=True,ensure_ascii=False,
+                          indent=2)+"\n",encoding="utf8")
+    def validate(paths):
+        row=json.loads(paths["resolved"].read_text("utf8"))
+        return (row.get("schema")=="v257_one_spec_exact_simc_git_commit_v1"
+                and row.get("source_repo")=="simulationcraft/simc"
+                and row.get("game_build_requested")==build
+                and row.get("revision_hint")==revision_hint
+                and type(row.get("resolved_revision")) is str
+                and simc_source.REV.fullmatch(row["resolved_revision"]) is not None
+                and row["resolved_revision"].startswith(revision_hint)
+                and row.get("immutable_git_source_only") is True
+                and row.get("binary_attested") is False
+                and row.get("season_verified") is False
+                and row.get("G") is None
+                and row.get("environment_ready") is False)
+    try:
+        stage=stage_engine.execute_stage(
+            root=root,stage_id="fresh-v257-exact-simc-commit",
+            stage_version="source-only-revision-prefix-v1",
+            inputs={"requested_build":build,"revision_hint":revision_hint,
+                    "code_sha256":code["sha256"]},
+            outputs={"resolved":out},execute=execute,validate=validate)
+    except (simc_source.SimCSourceBlocked,
+            stage_engine.StageExecutionBlocked,
+            OSError,ValueError) as exc:
+        return {**waiting,
+                "status":"SIMC_SOURCE_COMMIT_RESOLUTION_PENDING",
+                "reason":str(exc).split(":",1)[0],
+                "network_calls_by_stage":calls[0]}
+    row=json.loads((root/out).read_text("utf8"))
+    return {"status":"SIMC_SOURCE_COMMIT_EXACT_PIN_CANDIDATE",
+            "simc_revision":row["resolved_revision"],
+            "source_stage":{k:v for k,v in stage.items() if k!="result"},
+            "network_calls_by_stage":calls[0],"environment_ready":False,
+            "binary_attested":False,"season_verified":False}
+
+
 def _lazy_full_pinned_simc_item_stage(*, stage_root, build, small_seed_dir,
                                       gear_candidate, tier_bridge, request,
                                       transport=None):
@@ -974,7 +1047,8 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
                                    previous_game_build=None,
                                    simc_season_event="season_change",
                                    simc_transport=None,
-                                   representative_request=None):
+                                   representative_request=None,
+                                   simc_revision_hint=None):
     """First real normal-source acquisition inside the SAME Environment Build.
 
     Explicit build is only a request identity, not independent season or tier
@@ -998,6 +1072,14 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
                 representative_request["class"],
                 representative_request["spec"]) is not None,
              "V216_ONE_SPEC_26_DPS_REQUEST_REQUIRED")
+    need(not (simc_revision is not None and
+              simc_revision_hint is not None),
+         "V216_DUPLICATE_SIMC_REVISION_SOURCES")
+    if simc_revision_hint is not None:
+        need(type(simc_revision_hint) is str and
+             re.fullmatch(r"[a-f0-9]{7,12}|[a-f0-9]{40}",
+                          simc_revision_hint) is not None,
+             "V216_SOURCE_REVISION_HINT_INVALID")
     supplied=pathlib.Path(sessions_root).expanduser()
     need(not supplied.is_symlink(),
          "V216_SEASON_SOURCE_SESSION_ROOT_SYMLINK_BLOCKED")
@@ -1113,11 +1195,18 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         linked=linked,fresh_tier=fresh_tier,transport=bonus_transport)
     tier_bridge=_physical_tier_to_simc_candidate(
         stage_root=stage_root,fresh_tier=fresh_tier,tier_bonus=tier_bonus)
-    need(not (simc_seed_directory is not None and simc_revision is not None),
+    resolved_simc=_resolve_one_spec_simc_commit_stage(
+        stage_root=stage_root,build=expected_game_build,
+        gear=fresh_gear,tier=tier_bridge,
+        revision_hint=simc_revision_hint,transport=simc_transport)
+    pinned_revision=simc_revision or resolved_simc.get("simc_revision")
+    need(not (simc_seed_directory is not None and pinned_revision is not None),
          "V216_DUPLICATE_PINNED_SIMC_SOURCE_INPUTS")
     pinned_simc=_collect_first_party_simc_seed_stage(
         stage_root=stage_root,build=expected_game_build,
-        revision=simc_revision,previous_game_build=previous_game_build,
+        revision=(pinned_revision if previous_game_build is not None or
+                  simc_season_event=="mid_patch" else None),
+        previous_game_build=previous_game_build,
         season_event=simc_season_event,transport=simc_transport)
     effective_seed=simc_seed_directory or pinned_simc.get("source_dir")
     first_party=_verified_first_party_tier_options_stage(
@@ -1156,6 +1245,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "fresh_tier_simc_candidate_bridge":tier_bridge,
         "fresh_tier_first_party_simc_options":first_party,
         "fresh_pinned_first_party_simc_source":pinned_simc,
+        "fresh_pinned_simc_commit_resolution":resolved_simc,
         "fresh_lazy_full_pinned_simc_item_source":full_seed,
         "tier_discovery_mode":"DB2_FIRST_NO_PUBLISHER_NAME_LOOKUP",
         "network_calls_by_stage":(len(wago_snapshot.TABLES)
@@ -1164,6 +1254,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
             fresh_tier["network_calls_by_stage"]+
             tier_bonus["network_calls_by_stage"]+
             pinned_simc["network_calls_by_stage"]+
+            resolved_simc["network_calls_by_stage"]+
             full_seed["network_calls_by_stage"],
         "native_calls":0,
         "environment_installed":False,
