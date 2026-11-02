@@ -194,13 +194,39 @@ def discover(*,wago_folder,build,expansion_id,source_bytes):
     byclass={cl:[r["item_set_id"] for r in found if r["class"]==cl]
              for cl in sorted(physical.FAMILY)}
     byexpansion=defaultdict(int)
+    groups=defaultdict(list)
     for candidate in found:
         byexpansion[str(candidate["observed_expansion_id"])]+=1
+        if (candidate["base_item_level_evidence"]=="SOURCE_OBSERVED_ALL_FIVE"
+            and candidate["observed_base_item_level_min"]==
+                candidate["observed_base_item_level_max"]):
+            groups[(candidate["observed_expansion_id"],
+                    candidate["observed_base_item_level_min"])].append(candidate)
+    # A complete same-base-ilvl roster is useful EVIDENCE but NOT proof
+    # that this is the active season: old season gear persists in DB2.
+    base_ilvl_rosters=[]
+    for (expansion,level),members in sorted(groups.items()):
+        perclass=defaultdict(list)
+        for member in members:
+            perclass[member["class"]].append(member["item_set_id"])
+        base_ilvl_rosters.append({
+            "observed_expansion_id":expansion,
+            "observed_base_item_level":level,
+            "set_count":len(members),
+            "class_count":len(perclass),
+            "item_set_ids_by_class":
+                {cl:sorted(ids) for cl,ids in sorted(perclass.items())},
+            "exact_13_class_5piece_structural_roster":
+                (len(members)==len(physical.FAMILY) and
+                 set(perclass)==set(physical.FAMILY) and
+                 all(len(v)==1 for v in perclass.values())),
+            "season_membership_verified":False})
     payload={"schema":SCHEMA,
         "status":"DB2_CLASS_TIER_CANDIDATES_SEASON_PENDING",
         "game_build":build,"expansion_id":expansion_id,
         "candidate_set_count":len(found),
         "candidate_counts_by_expansion_id":dict(sorted(byexpansion.items())),
+        "observed_base_ilvl_roster_groups":base_ilvl_rosters,
         "candidate_counts_by_class":
             {cl:len(ids) for cl,ids in byclass.items()},
         "candidate_set_ids_by_class":byclass,
@@ -327,6 +353,8 @@ def build_stage(*,stage_root,wago_folder,build,expansion_id,
             "candidate_counts_by_class":doc["candidate_counts_by_class"],
             "candidate_counts_by_expansion_id":
                 doc["candidate_counts_by_expansion_id"],
+            "observed_base_ilvl_roster_groups":
+                doc["observed_base_ilvl_roster_groups"],
             "expansion_selection_source":
                 doc["expansion_selection_source"],
             "source_stage":{k:v for k,v in stage.items() if k!="result"},
