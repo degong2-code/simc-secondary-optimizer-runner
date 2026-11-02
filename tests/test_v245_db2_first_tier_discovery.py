@@ -90,6 +90,50 @@ class DB2CandidateTest(unittest.TestCase):
             self.assertTrue(all(set(next(iter(x["spec_bonus_spells"]
                 .values())))=={"2","4"} for x in doc["candidates"]))
 
+    def test_unscoped_current_build_does_not_mean_current_season(self):
+        with tempfile.TemporaryDirectory() as d:
+            sources=arrange(d)
+            doc=tierdb.discover(wago_folder=d,build=BUILD,
+                                 expansion_id=None,source_bytes=sources)
+            self.assertEqual(doc["candidate_set_count"],26)
+            self.assertEqual(doc["candidate_counts_by_expansion_id"],{"11":26})
+            self.assertEqual(doc["expansion_selection_source"],
+                             "UNSCOPED_OBSERVED_EXPANSIONS_ONLY")
+            self.assertTrue(all(x["observed_expansion_id"]==11
+                                for x in doc["candidates"]))
+            self.assertIsNone(doc["current_season_selection"])
+            self.assertFalse(doc["source_season_verified"])
+
+    def test_unscoped_sealed_stage_reuses_without_authenticated_scope(self):
+        class Response(io.BytesIO):
+            status=200
+            def __enter__(self):return self
+            def __exit__(self,*args):self.close()
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);wago=root/"wago";wago.mkdir()
+            sources=arrange(wago)
+            stage=root/"stage";stage.mkdir()
+            requested=[]
+            def transport(req,timeout):
+                table=req.full_url.split("/db2/")[1].split("/")[0]
+                requested.append(table)
+                return Response(sources[table])
+            args={"stage_root":stage,"wago_folder":wago,
+                  "build":BUILD,"expansion_id":None,
+                  "wago_receipt_sha256":"a"*64,
+                  "transport":transport}
+            first=tierdb.build_stage(**args)
+            second=tierdb.build_stage(**args)
+            self.assertEqual(requested,list(tierdb.TABLES))
+            self.assertEqual(first["candidate_set_count"],26)
+            self.assertEqual(first["candidate_counts_by_expansion_id"],
+                             {"11":26})
+            self.assertEqual(first["network_calls_by_stage"],3)
+            self.assertEqual(second["network_calls_by_stage"],0)
+            self.assertEqual(first["expansion_selection_source"],
+                             "UNSCOPED_OBSERVED_EXPANSIONS_ONLY")
+            self.assertFalse(first["source_season_verified"])
+
     def test_not_every_set_name_or_bonus_is_a_tier(self):
         with tempfile.TemporaryDirectory() as d:
             sources=arrange(d,omit_4pc=True,bad_mask=True)
