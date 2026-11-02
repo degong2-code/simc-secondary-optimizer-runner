@@ -661,6 +661,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
                                    discovery_transport=None,
                                    tier_transport=None,
                                    bonus_transport=None,
+                                   gear_transport=None,
                                    simc_seed_directory=None,
                                    simc_revision=None,
                                    previous_game_build=None,
@@ -771,9 +772,17 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         expected_game_build=expected_game_build,
         discovered=discovered,
         wago_stage_receipt=stage["receipt_sha256"])
-    fresh_gear=_fresh_ordinary_gear_source_stage(
-        stage_root=stage_root,wago_folder=output_dir,
-        build=expected_game_build,linked=linked)
+    # A caller-injected Wago transport cannot be mixed with a LIVE effect
+    # relation unless its exact same-build transport is explicitly supplied.
+    # Production with the ordinary v161 collector uses the live URL.
+    if fetch is not None and gear_transport is None:
+        fresh_gear={"status":"FRESH_GEAR_INJECTED_SOURCE_EFFECT_TRANSPORT_PENDING",
+                    "candidate_path":None,"network_calls_by_stage":0,
+                    "season_representative_verified":False}
+    else:
+        fresh_gear=_fresh_ordinary_gear_source_stage(
+            stage_root=stage_root,wago_folder=output_dir,
+            build=expected_game_build,linked=linked,transport=gear_transport)
     fresh_tier=_db2_first_tier_stage(
         stage_root=stage_root,wago_folder=output_dir,
         build=expected_game_build,linked=linked,
