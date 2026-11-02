@@ -26,6 +26,18 @@ on:
         type: boolean
         required: false
         default: false
+      tier_set_option:
+        description: Optional independently identified season tier set option (candidate only)
+        type: string
+        required: false
+      tier_class:
+        description: DPS class for optional SimC tier physical slot crosscheck
+        type: string
+        required: false
+      tier_spec:
+        description: DPS specialization for optional tier crosscheck
+        type: string
+        required: false
 
 permissions:
   contents: read
@@ -45,7 +57,14 @@ jobs:
           sparse-checkout: |
             runner/v191_unified_season_data_update.py
             runner/v229_simc_only_source_seed.py
+            runner/v230_simc_item_metadata.py
+            runner/v231_simc_tier_item_join.py
+            runner/v169_source_first_representative_stage.py
+            runner/v167_product_season_gear_adapter.py
+            runner/v143_specialization_contracts.py
             tests/test_v229_simc_only_source_seed.py
+            tests/test_v230_simc_item_metadata.py
+            tests/test_v231_simc_tier_item_join.py
           sparse-checkout-cone-mode: false
       - uses: actions/setup-python@v6
         with:
@@ -55,12 +74,12 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/v229-only/runner" "$RUNNER_TEMP/v229-only/tests"
-          cp runner/v191_unified_season_data_update.py runner/v229_simc_only_source_seed.py "$RUNNER_TEMP/v229-only/runner/"
-          cp tests/test_v229_simc_only_source_seed.py "$RUNNER_TEMP/v229-only/tests/"
+          cp runner/v191_unified_season_data_update.py runner/v229_simc_only_source_seed.py runner/v230_simc_item_metadata.py runner/v231_simc_tier_item_join.py runner/v169_source_first_representative_stage.py runner/v167_product_season_gear_adapter.py runner/v143_specialization_contracts.py "$RUNNER_TEMP/v229-only/runner/"
+          cp tests/test_v229_simc_only_source_seed.py tests/test_v230_simc_item_metadata.py tests/test_v231_simc_tier_item_join.py "$RUNNER_TEMP/v229-only/tests/"
           test ! -e "$RUNNER_TEMP/v229-only/data"
           test ! -e "$RUNNER_TEMP/v229-only/integration_probes"
           test ! -e "$RUNNER_TEMP/v229-only/.git"
-          (cd "$RUNNER_TEMP/v229-only" && python -m unittest discover -s tests -p test_v229_simc_only_source_seed.py -v)
+          (cd "$RUNNER_TEMP/v229-only" && python -m unittest discover -s tests -p 'test_v2*.py' -v)
           echo 'V229_SEPARATE_ENGINE_WORKTREE_NO_LEGACY_SOURCE_FILES_NATIVE0'
       - name: Validate required exact revision, build and source request before network
         shell: bash
@@ -112,6 +131,38 @@ jobs:
           assert doc['native_calls']==0 and not doc['environment_ready']
           assert not doc['user_options_auto_admitted']
           print('V229_SOURCE_IDENTITY_ONLY_NOT_GJFO_RATING_READY')
+          PY
+      - name: Optional one-spec exact tier item join (still NOT an active-season proof)
+        if: inputs.tier_set_option != '' || inputs.tier_class != '' || inputs.tier_spec != ''
+        env:
+          SET_OPTION: ${{ inputs.tier_set_option }}
+          REQUESTED_CLASS: ${{ inputs.tier_class }}
+          REQUESTED_SPEC: ${{ inputs.tier_spec }}
+          LARGE_ITEM_DATA: ${{ inputs.include_item_data }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$LARGE_ITEM_DATA" != 'true' ]]; then
+            echo 'V231_OPT_IN_ITEM_DATA_REQUIRED' >&2
+            exit 3
+          fi
+          (
+            cd "$RUNNER_TEMP/v229-only"
+            python runner/v231_simc_tier_item_join.py \
+              --seed-dir "$RUNNER_TEMP/v229-only/seed" \
+              --set-option "$SET_OPTION" \
+              --class "$REQUESTED_CLASS" \
+              --spec "$REQUESTED_SPEC" \
+              --out "$RUNNER_TEMP/v229-only/seed/v231_tier_candidate.json"
+          )
+          python - <<'PY'
+          import json,os,pathlib
+          p=pathlib.Path(os.environ['RUNNER_TEMP'])/'v229-only/seed/v231_tier_candidate.json'
+          r=json.loads(p.read_text(encoding='utf8'))
+          assert set(r['tier_piece_ids'])=={'head','shoulders','chest','hands','legs'}
+          assert r['tier_bonus_sizes']==[2,4] and not r['environment_ready']
+          assert r['G'] is None and r['B'] is None and r['T'] is None
+          print('V231_ONE_SPEC_TIER_SOURCE_CANDIDATE_ONLY_NO_NATIVE')
           PY
       - name: Save short-lived exact SimC source seed for future verified adapters
         if: success()
