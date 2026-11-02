@@ -1,3 +1,6 @@
+> **2026-11-02 P3-AP Wago build≠season 검증 및 엔진 개선:** [P3-AP 근거·영수증](P3_AP_20261102_WAGO_BUILD_NOT_SEASON_UNSCOPED_TIER_SOURCE.md). Wago 빌드 12.1.5.70575에는 Midnight S1(1978–1990)·S2(2055–2067) 13직업 티어 세트가 모두 존재. `build` 파라미터는 단일 게임 빌드 DB2 전체 테이블을 지정하지 활성 시즌만 필터하지 않음. 신규 v245는 기존 v155/v163 인증 범위 확인 없이도 동일빌드 Wago 3테이블과 v161 물리 CSV에서 **시즌 미선택 후보** 및 observed expansion별 그룹을 산출; 인증정보 없으면 현재 확장팩조차 자동선택하지 않음. 미완성 Wago 헤더 사전검사로 불필요한 3 HTTP 사전차단, 동일빌드 반복은 0 요청. **실제 새 시즌 소속 증거·G/J/F/O·환경 설치는 PENDING.** [회귀 #41433274984](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41433274984) Ubuntu+Windows PASS/Native0, 원본 재호출/신규 Native 없음. main 및 Project UI/권한 변경 없음.
+>
+
 > **P3-AO 최종 focused CI 검증 2026-11-02:** [v212 #41430340938](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41430340938) Ubuntu·Windows 각 **345 tests, 0 FAIL, 4 SKIP, Native0**. [v113 #41430297062](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41430297062), [v181 #41430297063](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41430297063), [v182 #41430297181](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41430297181) 별도 성공. v245 정상 Build에 DB2-FIRST 반영; 현재 시즌 선택은 여전히 PENDING. 신규 시즌/실제 65 물리 확인 및 G/J/F/O 미완료.
 >
 
