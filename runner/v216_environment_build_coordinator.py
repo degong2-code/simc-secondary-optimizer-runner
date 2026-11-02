@@ -23,6 +23,7 @@ import v161_wago_db2_snapshot as wago_snapshot
 import v242_authenticated_season_source_stage as discovery_stage
 import v163_zero_seed_db2_join as season_join
 import v245_db2_first_tier_discovery as tier_db
+import v250_raid_tier_bonus_corroboration as raid_bonus
 import v217_stage_execution_engine as stage_engine
 import v196_current_season_user_catalog as user_catalog
 import v241_fresh_source_stage_adapter as fresh_stage
@@ -352,10 +353,43 @@ def _db2_first_tier_stage(*,stage_root,wago_folder,build,linked,
                 "environment_installed":False}
 
 
+def _raid_correlated_tier_stage(*,stage_root,build,linked,fresh_tier,
+                                transport=None):
+    """Optional corroboration after both source stages, NEVER a new Gate.
+
+    No live authenticated raid scope or complete 13-class/5-item cohorts:
+    skip extra DB2 requests rather than blocking standalone tier discovery.
+    """
+    if not linked.get("candidate_path") or not fresh_tier.get("candidate_path"):
+        return {"status":"RAID_BONUS_SOURCE_SCOPE_PENDING",
+                "network_calls_by_stage":0,"source_season_verified":False}
+    tier_path=pathlib.Path(fresh_tier["candidate_path"])
+    tier_doc=json.loads(tier_path.read_text("utf8"))
+    if not any(x.get("exact_13_class_5piece_structural_roster") is True
+               for x in tier_doc.get("observed_base_ilvl_roster_groups",[])):
+        return {"status":"RAID_BONUS_FULL_13_CLASS_BASE_ILVL_ROSTER_PENDING",
+                "network_calls_by_stage":0,"source_season_verified":False}
+    try:
+        return raid_bonus.build_stage(
+            stage_root=stage_root,build=build,
+            tier_candidate_path=tier_path,
+            raid_candidate_path=linked["candidate_path"],
+            tier_stage_receipt=fresh_tier["source_stage"]["receipt_sha256"],
+            raid_stage_receipt=linked["stage"]["receipt_sha256"],
+            transport=transport)
+    except raid_bonus.BonusSourceBlocked as exc:
+        return {"status":"RAID_BONUS_CORROBORATION_PENDING",
+                "reason":str(exc).split(":",1)[0],
+                "network_calls_by_stage":getattr(
+                    exc,"network_calls_attempted",0),
+                "source_season_verified":False}
+
+
 def collect_wago_new_season_source(*, sessions_root, expected_game_build,
                                    fetch=None, credentials=None,
                                    discovery_transport=None,
-                                   tier_transport=None):
+                                   tier_transport=None,
+                                   bonus_transport=None):
     """First real normal-source acquisition inside the SAME Environment Build.
 
     Explicit build is only a request identity, not independent season or tier
@@ -466,6 +500,9 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         build=expected_game_build,linked=linked,
         wago_receipt_sha256=stage["receipt_sha256"],
         transport=tier_transport)
+    tier_bonus=_raid_correlated_tier_stage(
+        stage_root=stage_root,build=expected_game_build,
+        linked=linked,fresh_tier=fresh_tier,transport=bonus_transport)
     return {
         "schema":"v216_fresh_source_stage_v1",
         "status":"FRESH_WAGO_DB2_COLLECTED_MORE_SOURCES_PENDING",
@@ -477,10 +514,12 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "season_discovery":discovered,
         "season_join":linked,
         "fresh_tier":fresh_tier,
+        "fresh_tier_raid_bonus_corroboration":tier_bonus,
         "tier_discovery_mode":"DB2_FIRST_NO_PUBLISHER_NAME_LOOKUP",
         "network_calls_by_stage":(len(wago_snapshot.TABLES)
             if stage["executed"] else 0)+discovered["network_calls_by_stage"]+
-            fresh_tier["network_calls_by_stage"],
+            fresh_tier["network_calls_by_stage"]+
+            tier_bonus["network_calls_by_stage"],
         "native_calls":0,
         "environment_installed":False,
         "environment_ready":False,
