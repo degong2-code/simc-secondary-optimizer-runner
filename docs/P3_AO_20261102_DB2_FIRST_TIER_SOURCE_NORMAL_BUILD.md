@@ -1,3 +1,10 @@
+## Final focused code validation after request-accounting fix
+
+- Code commit: 7ba332e04587120e58b57e38219eac28b57f6517.
+- [v212 offline contract #41430340938](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41430340938): **Ubuntu 345 tests, OK (skipped=4); Windows 345 tests, OK (skipped=4)**, 0 FAIL, Native artifact absence assertion PASS. Includes new test for real attempted-HTTP accounting on partial failure.
+- [v113 local API #41430297062](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41430297062), [v181 Windows source beta #41430297063](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41430297063), [v182 user UI #41430297181](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41430297181) all concluded SUCCESS at code commit b813162ecb44c44ef24df86e7d354f021d97d1a3 (before subsequent focused new-test-only commit). No new Native.
+- Real source pilot remains limited to 3 smaller relations, not a full real source 13x5 `ItemSparse` profile or current-season certainty.
+
 # P3-AO — Source DB2-first tier candidate discovery replaces name-first Build
 
 ## User decision, applicability
