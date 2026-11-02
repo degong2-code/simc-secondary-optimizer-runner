@@ -63,6 +63,16 @@ on:
         type: number
         required: false
         default: 334
+      representative_class:
+        description: Requested DPS class for representative G work order (internal preview)
+        type: string
+        required: false
+        default: paladin
+      representative_spec:
+        description: Requested DPS specialization for G work order (internal preview)
+        type: string
+        required: false
+        default: retribution
 permissions:
   contents: read
   actions: read
@@ -364,11 +374,41 @@ jobs:
           assert row['native_calls']==row['network_calls']==row['cache_mutations']==0
           print('V225_NEW_SEASON_SOURCE_BYTES_BOUND_GJFO_NOT_AUTHENTICATED_OR_PUBLISHED')
           PY
+      - name: Select requested representative source gear and emit ONE Native G work order (no Native)
+        env:
+          UPDATE_EVENT: ${{ inputs.event }}
+          PREVIOUS_BUILD: ${{ inputs.previous_game_build }}
+          TARGET_LEVEL: ${{ inputs.target_ilevel }}
+          REQUESTED_CLASS: ${{ inputs.representative_class }}
+          REQUESTED_SPEC: ${{ inputs.representative_spec }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile runner/v169_source_first_representative_stage.py runner/v226_representative_native_g_work_order.py
+          python runner/v226_representative_native_g_work_order.py \
+            --bundle-dir season-core \
+            --event "$UPDATE_EVENT" \
+            --previous-game-build "$PREVIOUS_BUILD" \
+            --target-ilevel "$TARGET_LEVEL" \
+            --class "$REQUESTED_CLASS" \
+            --spec "$REQUESTED_SPEC" \
+            --out out/v226_representative_G_work_order.json
+          python - <<'PY'
+          import json
+          x=json.load(open('out/v226_representative_G_work_order.json',encoding='utf8'))
+          assert x['scope']=='ONE_REQUESTED_SPEC_AND_ITEM_LEVEL'
+          assert x['measurement_request']['execute_native_now'] is False
+          assert x['G'] is None and x['B'] is None and x['T'] is None
+          assert x['new_native_calls']==0 and x['cache_mutations']==0
+          print('V226_NEW_SEASON_REQUESTED_G_REPRESENTATIVE_SELECTED_NATIVE_NOT_RUN')
+          PY
       - name: Preserve small GJFO core source receipt only, not source snapshots or native cache
         if: always()
         uses: actions/upload-artifact@v6
         with:
           name: v225-new-season-core-intake-${{ github.run_id }}
-          path: out/v225_new_season_core_source_intake.json
+          path: |
+            out/v225_new_season_core_source_intake.json
+            out/v226_representative_G_work_order.json
           if-no-files-found: warn
           retention-days: 7
