@@ -346,18 +346,56 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                 first["fresh_tier_simc_candidate_bridge"]["candidate_path"])
                 .read_text(encoding="utf8"))
             pinned_thirteen_class_source(seed_folder,tier_candidate)
+            simc_revision="e"*40
+            simc_source=v216.simc_source
+            source_files={name:(seed_folder/name).read_bytes()
+                for name in simc_source.SOURCE_FILES}
+            simc_responses={}
+            for parent,child in ((simc_revision,("engine","b"*40)),
+                                 ("b"*40,("dbc","c"*40)),
+                                 ("c"*40,("generated","d"*40))):
+                name,tree=child
+                simc_responses[simc_source.BASE+parent]=json.dumps({
+                    "tree":[{"path":name,"sha":tree,"type":"tree"}]
+                }).encode("utf8")
+            simc_responses[simc_source.BASE+"d"*40]=json.dumps({
+                "tree":[{"path":name,
+                         "sha":simc_source.git_blob(raw),
+                         "size":len(raw),"type":"blob"}
+                        for name,raw in source_files.items()]
+                       +[{"path":"item_data.inc","sha":"f"*40,
+                          "size":1000,"type":"blob"}]
+                }).encode("utf8")
+            for name,raw in source_files.items():
+                simc_responses[simc_source.RAW_BASE+simc_revision+
+                  "/engine/dbc/generated/"+name]=raw
+            simc_calls=[]
+            def simc_transport(req,timeout):
+                simc_calls.append(req.full_url)
+                return Response(simc_responses[req.full_url])
             third=v216.collect_wago_new_season_source(
                 sessions_root=self.root/"runtime",
                 expected_game_build="12.2.0.99999",fetch=fetch,
                 credentials={},tier_transport=tier_transport,
                 bonus_transport=bonus_transport,
-                simc_seed_directory=seed_folder)
+                simc_revision=simc_revision,
+                previous_game_build="12.1.5.70575",
+                simc_transport=simc_transport)
             fourth=v216.collect_wago_new_season_source(
                 sessions_root=self.root/"runtime",
                 expected_game_build="12.2.0.99999",fetch=fetch,
                 credentials={},tier_transport=tier_transport,
                 bonus_transport=bonus_transport,
-                simc_seed_directory=seed_folder)
+                simc_revision=simc_revision,
+                previous_game_build="12.1.5.70575",
+                simc_transport=simc_transport)
+        self.assertEqual(len(simc_calls),7)
+        self.assertEqual(third["fresh_pinned_first_party_simc_source"]["status"],
+                         "SIMC_PINNED_SET_SOURCE_RECEIPT_READY")
+        self.assertEqual(third["fresh_pinned_first_party_simc_source"]
+                         ["network_calls_by_stage"],7)
+        self.assertEqual(fourth["fresh_pinned_first_party_simc_source"]
+                         ["network_calls_by_stage"],0)
         self.assertEqual(third["fresh_tier_first_party_simc_options"]["status"],
             "EXACT_13_CLASS_SIMC_SET_OPTIONS_MATCHED_SEASON_PENDING")
         self.assertEqual(third["fresh_tier_first_party_simc_options"]
@@ -368,7 +406,7 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                          ["class_count"],13)
         self.assertFalse(third["fresh_tier_first_party_simc_options"]
                          ["season_membership_verified"])
-        self.assertEqual(third["network_calls_by_stage"],0)
+        self.assertEqual(third["network_calls_by_stage"],7)
         self.assertEqual(fourth["network_calls_by_stage"],0)
         self.assertEqual(second["fresh_tier_first_party_simc_options"]["status"],
             "FIRST_PARTY_SIMC_PINNED_SOURCE_PENDING")
