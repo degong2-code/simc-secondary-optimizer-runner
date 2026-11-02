@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 
 import v143_specialization_contracts as specs
@@ -365,7 +366,12 @@ def _verify_v208_start_receipt(receipt, scenario, source_catalog,
         if source_kind=="NATIVE_JSON2_RESOLVED_VARIANT":
             need(valid_sha(native.get("sha256")) and
                  type(native.get("revision")) is str and
-                 native["revision"].startswith(revision[:7]) and
+                 re.fullmatch(r"[a-f0-9]{7,40}",
+                              native["revision"]) is not None and
+                 # A sealed HIT can be static data from an older SimC.
+                 # Native misses must match the executing SimC revision.
+                 (row["cache_status"]=="HIT" or
+                  native["revision"].startswith(revision[:7])) and
                  type(native.get("source")) is str and bool(native["source"]),
                  "V208_RECEIPT_NATIVE_JSON2_PROVENANCE_INVALID")
             native_hashes.add(native["sha256"])
@@ -404,7 +410,7 @@ def _verify_v208_start_receipt(receipt, scenario, source_catalog,
          source.get("artifact_sha256")==source_catalog_sha and
          source.get("manifest_sha256")==source_catalog["manifest_sha256"] and
          source.get("game_build")==source_catalog["game_build"] and
-         source.get("simc_revision")==revision,
+         source.get("simc_revision")==source_catalog["simc_revision"],
          "V208_RECEIPT_SOURCE_CATALOG_IDENTITY_MISMATCH")
     return {
         "status":"VERIFIED",
@@ -713,9 +719,13 @@ def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
          and target_manifest.get("scenario_json") == "scenario.json"
          and target_manifest.get("fillers_json") == "fillers.json",
          "V098_PROFILE_MANIFEST_FILE_BINDING_INVALID")
+    # Static catalog source and current SimC executable revisions are
+    # separate: ordinary balance/APL updates must not rebuild unchanged GJFO.
+    runtime_revision=target_manifest.get("native_revision")
     need(target_manifest.get("native_limit") == 6
-         and target_manifest.get("native_revision") == revision,
-         "V098_ADAPTIVE_LIMIT_OR_SIMC_REVISION_CHANGED")
+         and type(runtime_revision) is str and
+         re.fullmatch(r"[a-f0-9]{7,40}",runtime_revision) is not None,
+         "V098_ADAPTIVE_LIMIT_OR_SIMC_REVISION_INVALID")
     binary = sha_file(target_manifest.get("native_binary", ""))
     static_cache = target_manifest.get("static_cache_json")
     static_cache_identity = sha_file(static_cache) if static_cache else None
@@ -725,7 +735,7 @@ def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
     special_L = _selected_special_L(scenario, static_cache_identity)
     v208_receipt_identity = _verify_v208_start_receipt(
         v208_start_receipt, scenario, source_catalog, source_catalog_sha,
-        revision, binary, static_cache_identity, special_L)
+        runtime_revision, binary, static_cache_identity, special_L)
 
     # Hash a machine-independent projection; do not leak local absolute paths.
     target_manifest_identity = {
@@ -879,7 +889,7 @@ def compile_manifest(source_catalog, source_catalog_sha, ui, ui_sha,
     graph=_dependency_graph(
         source_catalog_sha,v191,ui_sha,bootstrap_identity_sha,profile_files,
         special_L,static_cache_identity,v208_receipt_identity,
-        windows_package,binary,revision)
+        windows_package,binary,runtime_revision)
     payload["dependency_graph"]=graph
     payload["dependency_change"]=compare_dependency_graphs(
         previous_environment_manifest,graph)
