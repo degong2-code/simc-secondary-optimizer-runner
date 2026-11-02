@@ -66,7 +66,8 @@ def discover(*,wago_folder,build,expansion_id,source_bytes):
     need(type(source_bytes) is dict and set(source_bytes)==set(TABLES)
          and type(build) is str and re.fullmatch(
              r"\d+(?:\.\d+){3}",build) is not None
-         and type(expansion_id) is int and expansion_id>0,
+         and (expansion_id is None or
+              (type(expansion_id) is int and expansion_id>0)),
          "TIER_DB2_SCOPE_OR_SOURCE_INVALID")
     folder=Path(wago_folder)
     receipt=json.loads((folder/"receipt.json").read_text("utf8"))
@@ -153,19 +154,23 @@ def discover(*,wago_folder,build,expansion_id,source_bytes):
         cl,cid=data["class"],data["class_id"]
         mask=1<<(cid-1)
         pieces={}
+        piece_expansions=set()
         for iid in data["item_ids"]:
             sp=sparse.get(iid)
             it=items.get(iid)
-            if (not sp or not it or sp[0]!=sid or sp[1]!=expansion_id
+            if (not sp or not it or sp[0]!=sid or sp[1]<=0
+                or (expansion_id is not None and sp[1]!=expansion_id)
                 or sp[2]!=mask or it[:2]!=(4,physical.FAMILY[cl])
                 or it[2]!=sp[3]):
                 break
             slot=physical.CORE.get(sp[3])
             if slot is None or slot in pieces:break
             pieces[slot]=iid
+            piece_expansions.add(sp[1])
         else:
-            if set(pieces)==set(physical.SLOTS):
+            if set(pieces)==set(physical.SLOTS) and len(piece_expansions)==1:
                 found.append({"item_set_id":sid,
+                    "observed_expansion_id":next(iter(piece_expansions)),
                     "name_observed_not_used_for_selection":data["name"],
                     "class":cl,"class_id":cid,
                     "tier_piece_ids":{k:pieces[k] for k in physical.SLOTS},
@@ -173,10 +178,15 @@ def discover(*,wago_folder,build,expansion_id,source_bytes):
                     "season_membership_verified":False})
     byclass={cl:[r["item_set_id"] for r in found if r["class"]==cl]
              for cl in sorted(physical.FAMILY)}
+    byexpansion=defaultdict(int)
+    for candidate in found:
+        byexpansion[str(candidate["observed_expansion_id"])]+=1
     payload={"schema":SCHEMA,
         "status":"DB2_CLASS_TIER_CANDIDATES_SEASON_PENDING",
         "game_build":build,"expansion_id":expansion_id,
-        "candidate_set_count":len(found),"candidate_counts_by_class":
+        "candidate_set_count":len(found),
+        "candidate_counts_by_expansion_id":dict(sorted(byexpansion.items())),
+        "candidate_counts_by_class":
             {cl:len(ids) for cl,ids in byclass.items()},
         "candidate_set_ids_by_class":byclass,
         "candidates":found,
@@ -189,6 +199,8 @@ def discover(*,wago_folder,build,expansion_id,source_bytes):
              "class_armor_slots_from_existing_v168":True},
         "used_prior_tier_names":False,"used_prior_tier_ids":False,
         "current_season_selection":None,
+        "expansion_selection_source":"AUTHENTICATED_LIVE_SCOPE" if
+            expansion_id is not None else "UNSCOPED_OBSERVED_EXPANSIONS_ONLY",
         "source_season_verified":False,"environment_ready":False,
         "native_calls":0}
     return payload
@@ -281,6 +293,10 @@ def build_stage(*,stage_root,wago_folder,build,expansion_id,
             "candidate_path":str(target.resolve()),
             "candidate_set_count":doc["candidate_set_count"],
             "candidate_counts_by_class":doc["candidate_counts_by_class"],
+            "candidate_counts_by_expansion_id":
+                doc["candidate_counts_by_expansion_id"],
+            "expansion_selection_source":
+                doc["expansion_selection_source"],
             "source_stage":{k:v for k,v in stage.items() if k!="result"},
             "network_calls_by_stage":attempts[0],
             "used_publisher_names":False,
