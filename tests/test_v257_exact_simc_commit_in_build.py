@@ -69,6 +69,36 @@ class ExactPin(unittest.TestCase):
         self.assertFalse(receipt["environment_ready"])
         self.assertIsNone(receipt["G"])
 
+    def test_game_event_is_not_local_previous_build_history(self):
+        for game_event in ("season_change","expansion_change"):
+            no_history=build._simc_source_collection_context(
+                requested_event=game_event,previous_game_build=None)
+            self.assertEqual(no_history["requested_game_event"],game_event)
+            self.assertEqual(no_history["source_collection_mode"],"cold_start")
+            self.assertEqual(no_history["previous_build_record_status"],
+                             "NOT_RECORDED")
+            self.assertTrue(no_history[
+                "previous_game_build_is_not_a_season_proof"])
+            recorded=build._simc_source_collection_context(
+                requested_event=game_event,
+                previous_game_build="12.1.5.70575")
+            self.assertEqual(recorded["requested_game_event"],game_event)
+            self.assertEqual(recorded["source_collection_mode"],game_event)
+            self.assertEqual(recorded["previous_build_record_status"],
+                             "RECORDED")
+        self.assertEqual(build._simc_source_collection_context(
+            requested_event="mid_patch",previous_game_build=None)[
+                "source_collection_mode"],"mid_patch")
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,"V216_GAME_EVENT_INVALID"):
+            build._simc_source_collection_context(
+                requested_event="cold_start",previous_game_build=None)
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_PREVIOUS_GAME_BUILD_RECORD_INVALID"):
+            build._simc_source_collection_context(
+                requested_event="expansion_change",previous_game_build="unknown")
+
     def test_short_commit_resolved_once_and_sealed_reused_without_http(self):
         first=self.go()
         second=self.go()
