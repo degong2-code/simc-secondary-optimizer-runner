@@ -59,7 +59,7 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(response.status_code,200,response.text)
         self.assertEqual(response.json(),fake)
         acquire.assert_called_once_with(
-            sessions_root=self.root/"runs",
+            sessions_root=(self.root/"runs").resolve(),
             expected_game_build="12.2.0.99999")
         self.assertFalse((self.root/"runs").exists())
         wrong=self.post("/api/v1/environment/build",
