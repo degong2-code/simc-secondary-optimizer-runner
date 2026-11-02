@@ -172,7 +172,7 @@ class NewSeasonV211Tests(unittest.TestCase):
             code=v.main(["--fresh-v191",str(p),"--fresh-source-dir",
                          str(src),"--fresh-manifest",str(m),"--out",str(out)])
             self.assertEqual(code,0)
-            doc=json.loads(out.read_text())
+            doc=json.loads(out.read_text(encoding="utf8"))
             self.assertEqual(doc["counts"]["total"],2)
             self.assertFalse(doc["automatic_ui_promotion"])
             self.assertEqual(doc["counts"]["native_E_measured"],0)
