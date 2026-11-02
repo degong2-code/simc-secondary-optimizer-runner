@@ -17,6 +17,7 @@ import hashlib
 import json
 import pathlib
 import re
+from urllib.parse import urlsplit, parse_qs
 
 import v224_season_gjfo_evidence_inventory as preflight
 
@@ -38,6 +39,53 @@ SHA = re.compile(r"[a-f0-9]{64}\Z")
 BUILD = re.compile(r"[0-9]+(?:\.[0-9]+){3}\Z")
 SEASON = re.compile(r"[a-z0-9][a-z0-9_-]{2,55}\Z")
 MAX_MANIFEST = 64_000
+SOURCE_HOSTS = {
+    "blizzard_game_data_api":
+        frozenset(("us.api.blizzard.com", "eu.api.blizzard.com",
+                   "kr.api.blizzard.com", "tw.api.blizzard.com")),
+    "wago_db2_build_snapshot": frozenset(("wago.tools",)),
+    "simulationcraft_revision_source":
+        frozenset(("raw.githubusercontent.com",)),
+    "verified_public_item_source":
+        frozenset(("wowhead.com", "www.wowhead.com")),
+}
+SOURCE_ROLE_SYSTEMS = {
+    "gear": frozenset(("blizzard_game_data_api", "wago_db2_build_snapshot")),
+    "tier": frozenset(("blizzard_game_data_api", "wago_db2_build_snapshot")),
+    "budget": frozenset(("blizzard_game_data_api", "wago_db2_build_snapshot",
+                          "verified_public_item_source")),
+}
+
+
+def _origin_url(system, raw, build, revision):
+    """Validate recognizable source locators, not their claimed contents."""
+    try:
+        parsed = urlsplit(raw)
+        host = parsed.hostname
+        port = parsed.port
+    except ValueError as exc:
+        raise SourceBundleBlocked("V225_SOURCE_URL_INVALID") from exc
+    need(parsed.scheme == "https" and port in (None, 443) and
+         host in SOURCE_HOSTS[system] and not parsed.username and
+         not parsed.password and not parsed.fragment and
+         not any(ord(c) < 32 or ord(c) == 127 for c in raw),
+         "V225_SOURCE_ORIGIN_HOST_OR_PROTOCOL_NOT_ALLOWED")
+    if system == "wago_db2_build_snapshot":
+        need(parsed.path.startswith("/db2/") and
+             parse_qs(parsed.query).get("build") == [build],
+             "V225_DB2_SOURCE_EXPLICIT_BUILD_REQUIRED")
+    elif system == "simulationcraft_revision_source":
+        need(parsed.path.startswith(
+            "/simulationcraft/simc/" + revision + "/"),
+            "V225_SIMC_PINNED_REVISION_REQUIRED")
+    elif system == "blizzard_game_data_api":
+        need(parsed.path.startswith("/data/wow/") and
+             bool(parsed.query), "V225_BLIZZARD_GAME_DATA_RESOURCE_REQUIRED")
+    else:
+        need(parsed.path.startswith("/item=") or
+             parsed.path.startswith("/spell="),
+             "V225_PUBLIC_ITEM_OR_SPELL_ID_RESOURCE_REQUIRED")
+    return True
 
 
 class SourceBundleBlocked(ValueError):
@@ -97,7 +145,10 @@ def verify_bundle(*, folder, event, previous_game_build,
     Trust boundary: source location metadata are declarations until compared
     with upstream Blizzard/DB2/SimC byte receipts by an independent verifier.
     """
-    directory = pathlib.Path(folder).expanduser().resolve()
+    folder_path = pathlib.Path(folder).expanduser()
+    need(not folder_path.is_symlink(),
+         "V225_SOURCE_BUNDLE_FOLDER_SYMLINK")
+    directory = folder_path.resolve()
     need(directory.is_dir() and not directory.is_symlink(),
          "V225_SOURCE_BUNDLE_FOLDER_MISSING")
     manifest_path = _safe_file(directory, "source_manifest.json")
@@ -117,7 +168,7 @@ def verify_bundle(*, folder, event, previous_game_build,
             "source_build", "retrieval_receipt_sha256",
         } and row["filename"] == filename and
              type(row["sha256"]) is str and SHA.fullmatch(row["sha256"]) and
-             row["source_system"] in SOURCE_SYSTEMS and
+             row["source_system"] in SOURCE_ROLE_SYSTEMS[name] and
              type(row["source_build"]) is str and
              row["source_build"] == manifest["game_build"] and
              type(row["retrieval_receipt_sha256"]) is str and
@@ -128,6 +179,8 @@ def verify_bundle(*, folder, event, previous_game_build,
              all(x not in row["source_locator"] for x in
                  ("\n", "\r", "\x00", "@")),
              "V225_SOURCE_ORIGIN_DECLARATION_INCOMPLETE:" + name)
+        _origin_url(row["source_system"], row["source_locator"],
+                    manifest["game_build"], manifest["simc_revision"])
         doc, file_sha = preflight.load(_safe_file(directory, filename))
         need(row["sha256"] == file_sha,
              "V225_SOURCE_BYTES_CHANGED_AFTER_RETRIEVAL:" + name)
