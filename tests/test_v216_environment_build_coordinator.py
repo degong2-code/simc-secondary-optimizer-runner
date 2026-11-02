@@ -80,6 +80,84 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
 
 
 
+
+    def test_fresh_gem_item_relation_reuses_existing_db2_and_v213(self):
+        from tests.test_v221_gem_item_db2_relation import (
+            GemPropertyRelationTests)
+        GemPropertyRelationTests.setUpClass()
+        sample = GemPropertyRelationTests(
+            "test_exact_two_items_may_share_one_gem_property_no_admission")
+        sample.setUp()
+        self.addCleanup(sample.doCleanups)
+        catalog_path = self.root / "new_v213_catalog.json"
+        catalog_path.write_text(
+            json.dumps(sample.catalog), encoding="utf8")
+        stage_root = self.root / "new_gem_source_stage"
+        stage_root.mkdir()
+        opts = dict(stage_root=stage_root, wago_folder=sample.folder,
+                    source_catalog_path=catalog_path,
+                    expected_game_build="12.1.5.70575")
+        first = v216._fresh_gem_item_source_stage(**opts)
+        second = v216._fresh_gem_item_source_stage(**opts)
+        self.assertEqual(first["physical_gem_item_links"], 2)
+        self.assertEqual(first["source_stage"]["status"],
+                         "EXECUTED_AND_SEALED")
+        self.assertEqual(second["source_stage"]["status"],
+                         "REUSED_VERIFIED")
+        self.assertEqual(second["source_stage"]["receipt_writes"], 0)
+        self.assertEqual(second["network_calls_by_stage"], 0)
+        self.assertEqual(second["native_calls"], 0)
+        self.assertIsNone(second["J"])
+        self.assertFalse(second["highest_quality_J_verified"])
+        self.assertFalse(second["environment_ready"])
+        evidence = json.loads(
+            pathlib.Path(second["candidate_path"]).read_text("utf8"))
+        self.assertFalse(evidence["automatic_ui_promotion"])
+        self.assertTrue(all(not x["ui_selectable"] for x in
+                            evidence["joins"]))
+
+    def test_fresh_gem_item_source_hash_drift_blocks_on_cache_hit(self):
+        from tests.test_v221_gem_item_db2_relation import (
+            GemPropertyRelationTests)
+        GemPropertyRelationTests.setUpClass()
+        sample = GemPropertyRelationTests(
+            "test_exact_two_items_may_share_one_gem_property_no_admission")
+        sample.setUp()
+        self.addCleanup(sample.doCleanups)
+        source_path = self.root / "source_v213.json"
+        source_path.write_text(json.dumps(sample.catalog), encoding="utf8")
+        stage_root = self.root / "source_stage"
+        stage_root.mkdir()
+        args = dict(stage_root=stage_root, wago_folder=sample.folder,
+                    source_catalog_path=source_path,
+                    expected_game_build="12.1.5.70575")
+        v216._fresh_gem_item_source_stage(**args)
+        with (sample.folder / "ItemSparse.csv").open("ab") as stream:
+            stream.write(b"\\n")
+        with self.assertRaisesRegex(
+                v216.EnvironmentBuildBlocked, "V216_FRESH_GEM_DB2_SOURCE_INVALID"):
+            v216._fresh_gem_item_source_stage(**args)
+
+    def test_fresh_gem_snapshot_build_mismatch_never_promotes_J(self):
+        from tests.test_v221_gem_item_db2_relation import (
+            GemPropertyRelationTests)
+        GemPropertyRelationTests.setUpClass()
+        sample = GemPropertyRelationTests(
+            "test_exact_two_items_may_share_one_gem_property_no_admission")
+        sample.setUp()
+        self.addCleanup(sample.doCleanups)
+        source_path = self.root / "source_v213.json"
+        source_path.write_text(json.dumps(sample.catalog), encoding="utf8")
+        stage_root = self.root / "source_stage"
+        stage_root.mkdir()
+        with self.assertRaisesRegex(
+                v216.EnvironmentBuildBlocked,
+                "V216_FRESH_GEM_DB2_SOURCE_INVALID"):
+            v216._fresh_gem_item_source_stage(
+                stage_root=stage_root, wago_folder=sample.folder,
+                source_catalog_path=source_path,
+                expected_game_build="12.1.5.70576")
+
     def test_normal_build_reuses_existing_v229_simc_source_collector_only_once(self):
         from tests.test_v229_simc_only_source_seed import (
             SimCCollectorTests,REVISION,BUILD,OLD)

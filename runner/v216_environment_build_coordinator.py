@@ -19,6 +19,7 @@ from urllib.request import Request, urlopen
 
 import v212_environment_manifest as environment_manifest
 import v222_season_budget_contract as season_budget_contract
+import v221_gem_item_db2_relation as gem_item_join
 import v223_installed_season_budget_source as season_source_proof
 import v213_source_to_catalog as source_to_catalog
 import v161_wago_db2_snapshot as wago_snapshot
@@ -199,9 +200,98 @@ def _step(name, status, **details):
 FRESH_SOURCE_PREFLIGHT_SCHEMA="v216_new_season_source_preflight_v1"
 
 
+
+def _fresh_gem_item_source_stage(*, stage_root, wago_folder,
+                                 source_catalog_path, expected_game_build):
+    """Join new-season gem property IDs to physical ItemSparse gem items.
+
+    Reuse the original v221 verifier and the same v161 snapshot: no HTTP,
+    Native, J rating guesses, item cache mutation, or user admission.
+    v217 seals a deterministic compact candidate; replays recheck the two
+    original DB2 file hashes without re-parsing their million rows.
+    """
+    root = pathlib.Path(stage_root).expanduser()
+    snapshot = pathlib.Path(wago_folder).expanduser()
+    need(root.is_dir() and not root.is_symlink() and
+         snapshot.is_dir() and not snapshot.is_symlink(),
+         "V216_FRESH_GEM_STAGE_OR_SNAPSHOT_ROOT_INVALID")
+    source_path = pathlib.Path(source_catalog_path).expanduser()
+    need(source_path.is_file() and not source_path.is_symlink(),
+         "V216_FRESH_GEM_V213_SOURCE_REQUIRED")
+    catalog, source_sha = environment_manifest.read_json(source_path)
+    need(catalog.get("game_build") == expected_game_build,
+         "V216_FRESH_GEM_V213_GAME_BUILD_MISMATCH")
+    try:
+        db2 = gem_item_join._verify_db2(snapshot, expected_game_build)
+    except (gem_item_join.GemJoinBlocked, ValueError, OSError) as exc:
+        raise EnvironmentBuildBlocked(
+            "V216_FRESH_GEM_DB2_SOURCE_INVALID:" + str(exc)) from exc
+    receipt = snapshot / "receipt.json"
+    receipt_sha = digest(receipt.read_bytes())
+    code = stage_engine.module_dependency_fingerprint([
+        pathlib.Path(gem_item_join.__file__),
+        pathlib.Path(stage_engine.__file__)])
+    output = "fresh_source/v221_new_season_gem_item_candidates.json"
+    path = root / output
+    def execute():
+        result = gem_item_join.join(catalog, snapshot)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(result, sort_keys=True,
+            ensure_ascii=False, indent=2, allow_nan=False) + "\n",
+            encoding="utf8")
+    def validate(outputs):
+        row = json.loads(outputs["candidate"].read_text(encoding="utf8"))
+        return (row.get("schema") == gem_item_join.SCHEMA
+                and row.get("game_build") == expected_game_build
+                and row.get("v213_manifest_sha256") ==
+                    catalog.get("manifest_sha256")
+                and row.get("db2_tables") == db2
+                and row.get("status") in (
+                    "SOURCE_ITEM_PROPERTY_LINKS_ONLY_NOT_USER_ADMITTED",
+                    "PENDING_GENERATED_SIMC_DBC_AND_DB2_BUILD_MISMATCH")
+                and row.get("exact_link_count") ==
+                    len(row.get("joins", []))
+                and row.get("automatic_ui_promotion") is False
+                and row.get("historical_cache_modified") is False
+                and row.get("network_calls") == 0
+                and row.get("simc_native_calls") == 0
+                and all(x.get("ui_selectable") is False
+                        for x in row.get("joins", [])))
+    try:
+        stage = stage_engine.execute_stage(
+            root=root, stage_id="fresh-v221-gem-item-source",
+            stage_version="source-only-same-build-v1",
+            inputs={"source_artifact_sha256":source_sha,
+                    "game_build":expected_game_build,
+                    "wago_receipt_sha256":receipt_sha,
+                    "wago_core_db2_sha256":db2,
+                    "code_sha256":code["sha256"]},
+            outputs={"candidate":output},
+            execute=execute, validate=validate)
+    except (gem_item_join.GemJoinBlocked,
+            stage_engine.StageExecutionBlocked, ValueError, OSError) as exc:
+        raise EnvironmentBuildBlocked(
+            "V216_FRESH_GEM_ITEM_JOIN_BLOCKED:" + str(exc)) from exc
+    result = json.loads(path.read_text(encoding="utf8"))
+    return {
+        "status":result["status"],
+        "candidate_path":str(path.resolve()),
+        "physical_gem_item_links":result["exact_link_count"],
+        "source_stage":{k:v for k,v in stage.items() if k!="result"},
+        "simc_dbc_build_matched":(
+            result["simc_generated_gem_source_build"] ==
+            expected_game_build),
+        "highest_quality_J_verified":False,
+        "J":None,"environment_ready":False,
+        "network_calls_by_stage":0,"native_calls":0,
+    }
+
+
 def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                                 expected_simc_revision, budget_evidence=None,
-                                target_ilevel=None, manual_final_T=None):
+                                target_ilevel=None, manual_final_T=None,
+                                source_snapshot_folder=None,
+                                source_stage_root=None):
     """Inspect a freshly assembled v213 artifact in the NORMAL Build path.
 
     This does not install an environment or require previously held source
@@ -268,6 +358,17 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
             raise EnvironmentBuildBlocked(
                 "V216_PREPROFILE_GJFO_ARITHMETIC_BLOCKED:" + str(exc)
             ) from exc
+    need(source_snapshot_folder is not None or source_stage_root is None,
+         "V216_FRESH_GEM_SNAPSHOT_AND_STAGE_MUST_BE_PAIRED")
+    need(source_stage_root is not None or source_snapshot_folder is None,
+         "V216_FRESH_GEM_SNAPSHOT_AND_STAGE_MUST_BE_PAIRED")
+    gem_source = None
+    if source_snapshot_folder is not None:
+        gem_source = _fresh_gem_item_source_stage(
+            stage_root=source_stage_root,
+            wago_folder=source_snapshot_folder,
+            source_catalog_path=supplied,
+            expected_game_build=expected_game_build)
     payload={
         "schema":FRESH_SOURCE_PREFLIGHT_SCHEMA,
         "status":"FRESH_SOURCE_CANDIDATES_VALID_GJFO_PENDING_NOT_INSTALLED",
@@ -288,6 +389,10 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
         "source_retrieval_authenticated_by_this_stage":False,
         "native_calls":0,"network_calls":0,"cache_mutations":0,
     }
+    if gem_source is not None:
+        payload["fresh_gem_item_source_candidates"] = gem_source
+        payload["requires"].append(
+            "GEM_J_HIGHEST_QUALITY_EFFECT_AND_SOCKET_BUDGET_PROOF")
     if proposed_budget is not None:
         payload["proposed_budget_arithmetic_unadmitted"] = proposed_budget
         payload["requires"].append(
@@ -1366,19 +1471,30 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
     # Existing v217 stages assemble the same v211/v213 source candidate
     # inside this original Build request. No session is created before the
     # ensuing preflight/required-budget barrier; never imply installation.
+    fresh_snapshot_folder = None
+    fresh_stage_root = None
     if fresh_source_stage_inputs is not None:
+        valid_keys = (
+            frozenset(("stage_root", "v191_path",
+                        "simc_source_dir", "simc_manifest_path")),
+            frozenset(("stage_root", "fresh_v191_inputs",
+                        "simc_source_dir", "simc_manifest_path")))
+        input_keys = set(fresh_source_stage_inputs) if type(
+            fresh_source_stage_inputs) is dict else set()
         need(source_catalog_path is None and
-             type(fresh_source_stage_inputs) is dict and
-             set(fresh_source_stage_inputs) in (
-                 frozenset(("stage_root", "v191_path",
-                            "simc_source_dir", "simc_manifest_path")),
-                 frozenset(("stage_root", "fresh_v191_inputs",
-                            "simc_source_dir", "simc_manifest_path"))),
+             (frozenset(input_keys) in valid_keys or
+              frozenset(input_keys - {"wago_snapshot_folder"}) in valid_keys
+              and "wago_snapshot_folder" in input_keys),
              "V216_FRESH_STAGE_INPUT_CONTRACT_INVALID")
         need(type(expected_new_season_build) is str,
              "V216_EXPLICIT_NEW_SEASON_BUILD_REQUIRED")
+        compile_inputs = dict(fresh_source_stage_inputs)
+        fresh_snapshot_folder = compile_inputs.pop(
+            "wago_snapshot_folder", None)
+        fresh_stage_root = (compile_inputs["stage_root"]
+                            if fresh_snapshot_folder is not None else None)
         prepared = fresh_stage.compile_fresh_candidate(
-            **fresh_source_stage_inputs,
+            **compile_inputs,
             expected_game_build=expected_new_season_build,
             expected_simc_revision=revision)
         source_catalog_path = prepared["source_catalog_path"]
@@ -1399,7 +1515,9 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 preflight=preflight_new_season_source(
                     source_catalog_path=candidate_path,
                     expected_game_build=expected_new_season_build,
-                    expected_simc_revision=revision)
+                    expected_simc_revision=revision,
+                    source_snapshot_folder=fresh_snapshot_folder,
+                    source_stage_root=fresh_stage_root)
                 raise EnvironmentBuildBlocked(
                     "V216_FRESH_SOURCE_PROVENANCE_PASS_GJFO_NOT_READY:"
                     +preflight["preflight_sha256"])
