@@ -598,6 +598,78 @@ class EnvironmentManifestTests(unittest.TestCase):
                          p.sha(p.canonical({k:v for k,v in first.items()
                              if k!="manifest_sha256"}).encode("utf8")))
 
+    def test_v216_normal_build_reuses_static_source_with_new_simc_runtime(self):
+        import copy
+        user={
+            "schema":"v098_target_ilevel_user_scenario_v1",
+            "character":{"class":"paladin","spec":"retribution",
+                         "race":"human","talents":"test-talent-string"},
+            "target":{"ilevel":334,"final_T":None},
+            "special_items":[],"embellishments":[],
+        }
+        cache_path=self.root/"unchanged-static.json"
+        cache_path.write_text("{}",encoding="utf8")
+        target=json.loads((self.target/"manifest.json").read_text("utf8"))
+        target["static_cache_json"]=str(cache_path)
+        (self.target/"manifest.json").write_text(json.dumps(target),encoding="utf8")
+        sessions_root=self.root/"isolated-sessions"
+        sessions_root.mkdir()
+        def make(rev):
+            key,identity=sessions.session_key(
+                user,self.binary,rev,cache_path,
+                current_season_product=True,source_catalog_path=self.source_path)
+            folder=sessions_root/key
+            folder.mkdir()
+            generated=folder/"generated"
+            generated.mkdir()
+            for name in ("manifest.json","profile.simc","scenario.json","fillers.json"):
+                shutil.copy2(self.target/name,generated/name)
+            boot=copy.deepcopy(self.bootstrap)
+            boot["generated_manifest"]=str(generated/"manifest.json")
+            (folder/"user.json").write_text(
+                sessions.canonical(user)+"\n",encoding="utf8")
+            (folder/"V106_SESSION_IDENTITY.json").write_text(
+                sessions.canonical(identity)+"\n",encoding="utf8")
+            return key,folder,boot
+        original_revision=self.source_catalog["simc_revision"]
+        prior_id,prior_folder,prior_boot=make(original_revision)
+        old=environment_build.build_environment(
+            sessions_root=sessions_root,session_folder=prior_folder,user=user,
+            binary=self.binary,revision=original_revision,static_cache=cache_path,
+            source_catalog_path=self.source_path,bootstrap_result=prior_boot)
+        source_bytes=self.source_path.read_bytes()
+        static_bytes=cache_path.read_bytes()
+        old_manifest_bytes=(prior_folder/"generated"/"environment_manifest.json").read_bytes()
+        new_revision="f"*40
+        self.binary.write_bytes(b"UPDATED_SIMC_BALANCE_RUNTIME_NOT_EXECUTED")
+        target["native_revision"]=new_revision
+        (self.target/"manifest.json").write_text(json.dumps(target),encoding="utf8")
+        next_id,next_folder,next_boot=make(new_revision)
+        self.assertNotEqual(prior_id,next_id)
+        new=environment_build.build_environment(
+            sessions_root=sessions_root,session_folder=next_folder,user=user,
+            binary=self.binary,revision=new_revision,static_cache=cache_path,
+            source_catalog_path=self.source_path,bootstrap_result=next_boot)
+        self.assertEqual(new["previous_session_id"],prior_id)
+        self.assertEqual(new["manifest"]["source_catalog"]["simc_revision"],
+                         original_revision)
+        self.assertEqual(new["manifest"]["dependency_graph"]["fingerprints"][
+                         "simc_revision"],new_revision)
+        diff=new["receipt"]["dependency_change"]
+        self.assertIn("simc_binary",diff["changed_inputs"])
+        self.assertIn("simc_revision",diff["changed_inputs"])
+        self.assertTrue(new["receipt"]["cache_reuse"]["static_item_cache_preserved"])
+        self.assertIn("adaptive_dps_cache",diff["invalidated_components"])
+        for field in ("v191_gear_input","v191_tier_input","v191_budget_input"):
+            self.assertNotIn(field,diff["changed_inputs"])
+        self.assertEqual(old["receipt"]["native_calls"],0)
+        self.assertEqual(new["receipt"]["native_calls"],0)
+        self.assertEqual(new["receipt"]["network_calls"],0)
+        self.assertEqual(self.source_path.read_bytes(),source_bytes)
+        self.assertEqual(cache_path.read_bytes(),static_bytes)
+        self.assertEqual((prior_folder/"generated"/"environment_manifest.json").read_bytes(),
+                         old_manifest_bytes)
+
     def test_historical_selected_special_native_hit_survives_new_simc(self):
         row,cache_path,record=self.add_selected_special()
         receipt=self.make_v208_receipt(row,cache_path,record)
