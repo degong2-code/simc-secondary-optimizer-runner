@@ -4,9 +4,8 @@ on:
     branches: [probe/chat-cache-v035-20261024]
     paths:
       - runner/v191_unified_season_data_update.py
-      - runner/v224_season_gjfo_evidence_inventory.py
-      - runner/v225_season_source_bundle_intake.py
-      - tests/test_v225_season_source_bundle_intake.py
+      # v224/v225 offline contracts are validated by the v212 matrix.
+      # Avoid re-fetching the entire pinned SimC source merely on validator edits.
       - runner/v211_enchant_source_effect_classification.py
       - runner/v213_source_to_catalog.py
       - runner/v196_current_season_user_catalog.py
