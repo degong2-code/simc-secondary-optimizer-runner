@@ -1049,8 +1049,9 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
             "selected_slot_count":len(observed["selected_G_slot_ids"]),
             "source_kinds_by_selected_slot":
                 observed["selected_gear_season_source_kinds"],
-            "mplus_world_state_pending":
-                observed.get("season_gear_db_mplus_worldstate_pending"),
+            "mplus_world_state_pending":(
+                observed.get("season_gear_db_mplus_worldstate_pending")
+                if "mplus_season_candidate_inclusion" in gear else None),
             "network_calls_by_stage":0,"native_calls":0,
             "season_membership_verified":False,"G":None,
             "environment_ready":False}
