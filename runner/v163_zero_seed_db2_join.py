@@ -230,9 +230,27 @@ def build_index(folder, report, *, raid_zone, mplus_zone, build, expansion_id):
     items={number(r['ID']):r for r in read_rows(folder,'Item') if number(r['ID']) in needed}
     sparse={number(r['ID']):r for r in read_rows(folder,'ItemSparse') if number(r['ID']) in needed}
     results={}
+    raid_non_equipment=[]
     for iid,provenances in sources.items():
         it=items.get(iid);sp=sparse.get(iid)
-        if not it or not sp or number(it['ClassID']) not in (2,4):continue
+        if not it or not sp:continue
+        item_class=number(it['ClassID'])
+        if item_class not in (2,4):
+            # The old equipment-only pool filtered raid tokens out. Retain
+            # source-backed NON-EQUIPMENT loot only as internal evidence; no
+            # claim that every such item is a tier token or current-season gear.
+            raid_sources=[p for p in provenances if p['source']=='raid_journal']
+            if raid_sources and number(sp.get('ExpansionID'))==expansion_id:
+                base_level=number(sp.get('ItemLevel'))
+                raid_non_equipment.append({
+                    'item_id':iid,'item_class_id':item_class,
+                    'observed_base_item_level':base_level if base_level>0 else None,
+                    'observed_expansion_id':number(sp['ExpansionID']),
+                    'acquisition_sources':sorted(
+                        raid_sources,key=lambda p:(p['journal_encounter_id'],
+                                                 p['journal_instance_id'])),
+                    'classification':'RAID_NON_EQUIPMENT_LOOT_TOKEN_UNVERIFIED'})
+            continue
         results[iid]={'item_id':iid,'name':sp['Display_lang'],
             'slot':number(it['InventoryType']),
             'acquisition_sources':sorted({json.dumps(s,sort_keys=True) for s in provenances})}
@@ -263,6 +281,10 @@ def build_index(folder, report, *, raid_zone, mplus_zone, build, expansion_id):
         'mapped_raid_bosses':len(mapped_raid),'wcl_raid_bosses':len(raid['encounters']),
         'mapped_mplus_dungeons':len(mapped_mplus),'wcl_mplus_dungeons':len(mplus['encounters']),
         'collection_counts':counts,'items':[results[i] for i in sorted(results)],
+        'raid_non_equipment_loot_candidates':sorted(
+            raid_non_equipment,key=lambda r:r['item_id']),
+        'raid_non_equipment_tier_tokens_verified':False,
+        'raid_non_equipment_in_user_gear_catalog':False,
         'unknown':problems,'unverified_world_state_expressions':True,
         'full_season_completeness_confirmed':False,
         'old_item_catalog_imported':False,'simc_native_calls':0}
