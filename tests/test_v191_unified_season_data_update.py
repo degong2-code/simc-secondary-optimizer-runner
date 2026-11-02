@@ -111,6 +111,36 @@ class UnifiedCatalogTest(unittest.TestCase):
                    "gem_property":u.parse_generated("gem_property",GEMS)}
         result=u.compile_catalog(gear,tier,budget,effects,consumables,
                                  generated,event="mid_patch")
+        # The *same* merger on a new season must assemble equipment and
+        # exact SimC candidates without reading existing J=138/F=165.
+        fresh_gear=copy.deepcopy(gear)
+        fresh_gear["season_build"]="12.2.0.99999"
+        fresh_tier=copy.deepcopy(tier)
+        fresh_tier["retail_build"]="12.2.0.99999"
+        fresh_consumables=copy.deepcopy(consumables)
+        fresh_consumables["source"]["wago_snapshot_build"]="12.2.0.99999"
+        fresh=u.compile_catalog(fresh_gear,fresh_tier,None,effects,
+                                fresh_consumables,generated,event="season_change")
+        self.assertEqual(fresh["source_budget_state"],
+                         "NEW_SEASON_J_F_EVIDENCE_PENDING")
+        self.assertIsNone(fresh["consumables"]["flask"]["reference"])
+        self.assertIsNone(fresh["consumables"]["general_gems"]["reference"])
+        self.assertIsNone(fresh["G"])
+        self.assertIsNone(fresh["B"])
+        self.assertIsNone(fresh["T"])
+        self.assertFalse(fresh["environment_ready"])
+        self.assertFalse(fresh["automatic_ui_promotion"])
+        self.assertIn("current_season",fresh["enchants"])
+        self.assertNotIn("current_season_midnight",fresh["enchants"])
+        self.assertEqual(fresh["gear"]["count"],511)
+        self.assertEqual(fresh["tier"]["piece_count"],65)
+        self.assertEqual(fresh["simc_revision"],pinned)
+        self.assertEqual(fresh["native_calls"],0)
+        mismatch=copy.deepcopy(budget)
+        mismatch["retail_build"]="12.1.5.70000"
+        with self.assertRaisesRegex(u.CatalogBlocked,"CORE_BUILD"):
+            u.compile_catalog(fresh_gear,fresh_tier,mismatch,effects,
+                              fresh_consumables,generated,event="season_change")
         self.assertEqual(result["gear"]["count"],511)
         self.assertEqual(len(result["gear"]["candidates"]),511)
         self.assertEqual(result["gear"]["candidates"][0]["inventory_type"],3)
