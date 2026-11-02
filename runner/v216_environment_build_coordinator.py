@@ -262,7 +262,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                       static_cache, source_catalog_path, bootstrap_result,
                       v208_start_receipt_path=None, package_manifest_path=None,
                       profile_stage_receipt=None, season_budget_evidence=None,
-                      season_budget_source_paths=None):
+                      season_budget_source_paths=None,
+                      expected_new_season_build=None):
     """Reconcile existing inputs and seal one incremental, auditable build.
 
     Source acquisition is intentionally outside this local coordinator:
@@ -281,9 +282,13 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             candidate,_=environment_manifest.read_json(candidate_path)
             if candidate.get("enchant_classification",{}).get(
                     "source_manifest_sha256") is not None:
+                need(type(expected_new_season_build) is str and
+                     re.fullmatch(r"[0-9]+(?:\\.[0-9]+){3}",
+                                  expected_new_season_build) is not None,
+                     "V216_EXPLICIT_NEW_SEASON_BUILD_REQUIRED")
                 preflight=preflight_new_season_source(
                     source_catalog_path=candidate_path,
-                    expected_game_build=candidate.get("game_build"),
+                    expected_game_build=expected_new_season_build,
                     expected_simc_revision=revision)
                 raise EnvironmentBuildBlocked(
                     "V216_FRESH_SOURCE_PROVENANCE_PASS_GJFO_NOT_READY:"
