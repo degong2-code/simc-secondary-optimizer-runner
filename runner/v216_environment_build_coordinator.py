@@ -20,6 +20,7 @@ import v222_season_budget_contract as season_budget_contract
 import v223_installed_season_budget_source as season_source_proof
 import v213_source_to_catalog as source_to_catalog
 import v196_current_season_user_catalog as user_catalog
+import v241_fresh_source_stage_adapter as fresh_stage
 
 SCHEMA = "v216_incremental_environment_build_receipt_v1"
 SESSION_KEY = re.compile(r"[a-f0-9]{20}\Z")
@@ -263,7 +264,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                       v208_start_receipt_path=None, package_manifest_path=None,
                       profile_stage_receipt=None, season_budget_evidence=None,
                       season_budget_source_paths=None,
-                      expected_new_season_build=None):
+                      expected_new_season_build=None,
+                      fresh_source_stage_inputs=None):
     """Reconcile existing inputs and seal one incremental, auditable build.
 
     Source acquisition is intentionally outside this local coordinator:
@@ -272,6 +274,23 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
     versioned source package. The coordinator never silently relabels stale
     source bytes as current.
     """
+    # Existing v217 stages assemble the same v211/v213 source candidate
+    # inside this original Build request. No session is created before the
+    # ensuing preflight/required-budget barrier; never imply installation.
+    if fresh_source_stage_inputs is not None:
+        need(source_catalog_path is None and
+             type(fresh_source_stage_inputs) is dict and
+             set(fresh_source_stage_inputs) == {
+                 "stage_root", "v191_path", "simc_source_dir",
+                 "simc_manifest_path"},
+             "V216_FRESH_STAGE_INPUT_CONTRACT_INVALID")
+        need(type(expected_new_season_build) is str,
+             "V216_EXPLICIT_NEW_SEASON_BUILD_REQUIRED")
+        prepared = fresh_stage.compile_fresh_candidate(
+            **fresh_source_stage_inputs,
+            expected_game_build=expected_new_season_build,
+            expected_simc_revision=revision)
+        source_catalog_path = prepared["source_catalog_path"]
     # A freshly collected v213 source must first pass the shared source
     # preflight. With G/J/F/O incomplete it must NOT be fed to the legacy
     # v212 manifest, which requires old exact 7967/8025 approval and v098.

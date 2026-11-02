@@ -268,6 +268,74 @@ class SameFreshCatalogChain(unittest.TestCase):
                     source_catalog_path=catalog,expected_game_build=BUILD,
                     expected_simc_revision=REV)
 
+
+    def test_v216_uses_v217_reusable_fresh_source_stages_before_install(self):
+        from runner import v216_environment_build_coordinator as build
+        from runner import v217_stage_execution_engine as stage
+        with tempfile.TemporaryDirectory() as d:
+            root=pathlib.Path(d)
+            source=root/"source";source.mkdir()
+            workspace=root/"stages";workspace.mkdir()
+            session=root/("f"*20);session.mkdir()
+            season,_classified=self.inputs(source)
+            _fixture,raw_sources=fixture_source()
+            source_manifest=put_sources(source,raw_sources)
+            season["sha256_by_input"]["budget"]=None
+            season["source_budget_state"]="NEW_SEASON_J_F_EVIDENCE_PENDING"
+            season["consumables"]["flask"]["reference"]=None
+            season["consumables"]["general_gems"]["reference"]=None
+            v191=root/"new_v191.json"
+            manifest=root/"simc_manifest.json"
+            v191.write_text(json.dumps(season),encoding="utf8")
+            manifest.write_text(json.dumps(source_manifest),encoding="utf8")
+            inputs={"stage_root":workspace,"v191_path":v191,
+                    "simc_source_dir":source,"simc_manifest_path":manifest}
+            from runner import v241_fresh_source_stage_adapter as adapter
+            with patch("v211_enchant_source_effect_classification."
+                       "compile_fresh_season",
+                       wraps=classifier.compile_fresh_season) as compiled:
+                first=adapter.compile_fresh_candidate(
+                    **inputs, expected_game_build=BUILD,
+                    expected_simc_revision=REV)
+                second=adapter.compile_fresh_candidate(
+                    **inputs, expected_game_build=BUILD,
+                    expected_simc_revision=REV)
+            self.assertEqual(compiled.call_count,1)
+            self.assertEqual(first["v211_stage"]["status"],"EXECUTED_AND_SEALED")
+            self.assertEqual(first["v213_stage"]["status"],"EXECUTED_AND_SEALED")
+            self.assertEqual(second["v211_stage"]["status"],"REUSED_VERIFIED")
+            self.assertEqual(second["v213_stage"]["status"],"REUSED_VERIFIED")
+            self.assertEqual(second["v211_stage"]["receipt_writes"],0)
+            self.assertEqual(second["v213_stage"]["receipt_writes"],0)
+            self.assertFalse(first["environment_installed"])
+            self.assertFalse(first["upstream_fetch_authenticated_by_adapter"])
+            before={p.relative_to(root).as_posix():p.read_bytes()
+                    for p in root.rglob("*") if p.is_file()}
+            with self.assertRaisesRegex(
+                    build.EnvironmentBuildBlocked,
+                    "V216_FRESH_SOURCE_PROVENANCE_PASS_GJFO_NOT_READY"):
+                build.build_environment(
+                    sessions_root=root,session_folder=session,user={
+                        "character":{"class":"paladin","spec":"retribution"},
+                        "target":{"ilevel":334,"final_T":None}},
+                    binary=root/"missing-simc",revision=REV,
+                    static_cache=None,source_catalog_path=None,
+                    bootstrap_result={"schema":"v098"},
+                    expected_new_season_build=BUILD,
+                    fresh_source_stage_inputs=inputs)
+            self.assertFalse((session/"generated").exists())
+            self.assertEqual(before,{
+                p.relative_to(root).as_posix():p.read_bytes()
+                for p in root.rglob("*") if p.is_file()})
+            season["source_budget_state"]="OLD_INSTALLED"
+            v191.write_text(json.dumps(season),encoding="utf8")
+            with self.assertRaisesRegex(
+                    stage.StageExecutionBlocked,
+                    "FRESH_STAGE_HISTORIC_BUDGET_FORBIDDEN"):
+                adapter.compile_fresh_candidate(
+                    **inputs,expected_game_build=BUILD,
+                    expected_simc_revision=REV)
+
     def test_reject_mismatched_source_and_false_old_enchant_approval(self):
         with tempfile.TemporaryDirectory() as d:
             season,classified=self.inputs(pathlib.Path(d))
