@@ -1,0 +1,22 @@
+# P3-AN — Real DB2 source research: tier detection from ItemSetSpell (2026-11-02)
+
+**Scope:** evidence and next existing-engine improvement, NOT a current/new-season tier resolver implementation or full Environment Build completion. GitHub isolated branch only; no Native.
+
+## Actual same-build Wago source receipts, build 12.1.5.70575
+
+- [Actual ItemSet+ItemSetSpell probe, Actions #41424797433](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41424797433): ItemSet 92,549 bytes SHA-256 0ae48ff20e117ba0d4bc30d6934819b752785cca0d61cbb0b5812ed99bd19bc6; ItemSetSpell 68,835 bytes SHA-256 5f81a5ee83788a17314f610de58654363a1a285eef7843ab4a6da600a078903e.
+- ItemSetSpell exact columns: ID, ChrSpecID, SpellID, TraitSubTreeID, Threshold, ItemSetID, consistent with [WoWDBDefs](https://github.com/wowdev/WoWDBDefs/blob/master/definitions/ItemSetSpell.dbd). 1,008 ItemSets total; 999 had ItemSetSpell rows; 673 had both threshold=2 and threshold=4; 210 had both plus at least one nonzero ChrSpecID. All 210 remain **structural candidates**, not a complete current-season tier roster.
+- Current (independently named by publisher) Midnight season 2 ItemSet IDs 2055–2067 show exactly 13 class sets, each 5 physical ItemSet.ItemID_0..16 entries, 2pc + 4pc rows per specialization. Example: Shaman ItemSet 2065, 'Ophidian Oracle's Prophecy', specs 262, 263, 264, 6 item-set-spell rows. Druid ItemSet 2057 includes 4 specs, 8 rows. This does NOT independently certify mechanics.
+- Previous Midnight season 1 ItemSets 1978–1990 have the same 13-class/65-physical-item/2+4/spec structure. Other historic sets also satisfy this structural pattern. No direct current-season flag established; **never choose largest ItemSet ID**, an ID range, ExpansionID alone, or latest build alone.
+- First pilot attempted exact full-title equality against historic data/current_season_tier_source_anchors.json strings (only partial fragments), returning 0; this was an invalid lookup assumption, not absence of sets. Second pilot used ItemSetSpell grouping without any prior name anchor and observed the positive structure above.
+- [Actual Journal loot join, Actions #41425008713](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41425008713): JournalEncounterItem 689,808 bytes, SHA-256 5203576d974e31df9ce4c02d05e8a45902b81a4ae91853834ffb48a25debe787. For BOTH 13-set groups (65 physical IDs each), direct ItemSet.ItemID → JournalEncounterItem.ItemID intersection was **0** rows. The raid drops exchange tokens, so raw physical ID intersection is not a viable current-season join. Need independently source token→tier conversion or another season-bound source.
+
+## Implications for the existing product path
+
+1. The currently implemented v216→v243→v168 route starts with publisher set names; DB-first can instead source Wago ItemSet+ItemSetSpell for deterministic **class tier candidates**, using shared v161 ItemSparse/Item and original v168 class/armor/5-slot verifier. ItemSetSpell is only a small extra same-build source (68.8 KB in this pilot), not a new global gear DB or proc simulation.
+2. Distinguish structural class-tier candidate from proven **current season selection**. Verify spec→class using supported specialization contracts, keep all class specs in source including excluded product specs, then apply 26-DPS scope only to optimizer. A qualified 13-set roster does not prove season membership.
+3. Current-season resolver must link to independently observed season/raid or an authenticated exact token→set relation. If cannot prove it, retain external season-specific publisher merely as fallback and return explicit PENDING on ambiguity. Blizzard Game Data provides /data/wow/item-set/index, /data/wow/item-set/{id}, plus Journal endpoints; availability does not imply a current-season-tier field ([Blizzard API announcement](https://us.forums.blizzard.com/en/blizzard/t/world-of-warcraft-api-update-visions-of-nzoth/3461)).
+4. Existing v231 SimC original set-bonus candidate flow also expressly refuses season inference. Reuse its original implementation; SimC owns effects and APL. No new effect-mechanism certification gate or blanket Native reruns.
+5. Static source caches remain same-build SHA scoped. No new-season G/J/F/O, B/T, v212 ready install or SimC DPS was proven. No changes to main, immutable files, Project UI or authority.
+
+Temporary research-only workflow was removed from isolated branch after source runs; completed GitHub Actions run/logs remain the evidence.
