@@ -702,7 +702,36 @@ def verify_runtime_manifest(compiled,runtime):
              str(source["enchant_id"])+":"+",".join(mismatches))
     return True
 
+def fresh_main(argv):
+    p=argparse.ArgumentParser(description=
+        "Existing v211 source compiler; new game-build no historical E/UI proofs")
+    p.add_argument("--fresh-v191",type=Path,required=True)
+    p.add_argument("--fresh-source-dir",type=Path,required=True)
+    p.add_argument("--fresh-manifest",type=Path,required=True)
+    p.add_argument("--out",type=Path,required=True)
+    a=p.parse_args(argv)
+    try:
+        season=json.loads(a.fresh_v191.read_text("utf8"))
+        manifest=json.loads(a.fresh_manifest.read_text("utf8"))
+        result=compile_fresh_season(season,a.fresh_source_dir,manifest)
+    except (OSError,ValueError,KeyError,TypeError) as e:
+        print("V211_FRESH_SEASON_SOURCE_CLASSIFICATION_BLOCKED",
+              type(e).__name__,str(e),flush=True)
+        return 3
+    a.out.parent.mkdir(parents=True,exist_ok=True)
+    a.out.write_text(json.dumps(result,ensure_ascii=False,
+                        sort_keys=True,indent=2)+"\\n",encoding="utf8")
+    print("V211_FRESH_SOURCE_CLASSIFIED_NOT_ADMITTED",
+          result["counts"]["total"],"NATIVE_0","OLD_E_0",
+          "NO_USER_UI",flush=True)
+    return 0
+
+
 def main(argv=None):
+    import sys
+    args=sys.argv[1:] if argv is None else argv
+    if '--fresh-v191' in args:
+        return fresh_main(args)
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument("--candidates",type=Path,required=True)
     p.add_argument("--source-dir",type=Path,required=True)
