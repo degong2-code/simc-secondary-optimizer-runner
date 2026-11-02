@@ -402,8 +402,8 @@ class SameFreshCatalogChain(unittest.TestCase):
                                "v191_candidate.json").read_text())
             self.assertIsNone(season["sha256_by_input"]["budget"])
             self.assertIsNone(season["G"])
-            self.assertIsNone(season["J"])
-            self.assertIsNone(season["F"])
+            self.assertIsNone(season["consumables"]["general_gems"]["reference"])
+            self.assertIsNone(season["consumables"]["flask"]["reference"])
             self.assertFalse(first["environment_installed"])
             self.assertFalse(first["upstream_fetch_authenticated_by_adapter"])
 
