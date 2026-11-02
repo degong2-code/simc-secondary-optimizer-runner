@@ -101,6 +101,8 @@ def discover_unique_live_scope(folder, report):
     challenge={number(x["ID"]):x for x in read_rows(folder,"MapChallengeMode")}
     groups=defaultdict(set)
     for row in read_rows(folder,"MythicPlusSeasonTrackedMap"):
+        fail_if(not {"DisplaySeasonID","MapChallengeModeID"}<=set(row),
+                "LIVE_MPLUS_DB2_SOURCE_SCHEMA_PENDING")
         sid=number(row["DisplaySeasonID"])
         mode=challenge.get(number(row["MapChallengeModeID"]))
         if sid>0 and mode and mode.get("Name_lang"):
