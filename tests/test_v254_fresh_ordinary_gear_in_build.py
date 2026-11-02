@@ -40,7 +40,7 @@ class FreshOrdinaryGearSource(unittest.TestCase):
             writer.writeheader()
             writer.writerows(rows)
 
-    def source(self,expansion=11):
+    def source(self,expansion=11,inventory=13):
         row={"schema":"v163_zero_seed_db2_join_v1",
              "source_provider":"WAGO_TOOLS_PINNED_DB2_WCL_LIVE",
              "build":self.BUILD,"db2_expansion_id":11,
@@ -48,7 +48,7 @@ class FreshOrdinaryGearSource(unittest.TestCase):
              "old_item_catalog_imported":False,
              "items":[{"item_id":self.item_id,
                        "name":"Current raid plain one-hand sword",
-                       "slot":13,
+                       "slot":inventory,
                        "acquisition_sources":[
                            {"source":"raid_journal",
                             "season_evidence":"UNKNOWN_UNSCOPED_JOURNAL"}]}]}
@@ -56,14 +56,15 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         path.write_text(json.dumps(row),encoding="utf8")
         self.write_csv("Item.csv",
                        ["ID","ClassID","SubclassID","InventoryType"],
-                       [{"ID":self.item_id,"ClassID":2,"SubclassID":7,
-                         "InventoryType":13}])
+                       [{"ID":self.item_id,"ClassID":4 if inventory==12 else 2,
+                         "SubclassID":0 if inventory==12 else 7,
+                         "InventoryType":inventory}])
         self.write_csv("ItemSparse.csv",
                        ["ID","Display_lang","InventoryType","ExpansionID",
                         "ItemSet","OverallQualityID","AllowableClass",
                         "StatModifier_bonusStat_0"],
                        [{"ID":self.item_id,"Display_lang":"Source plain sword",
-                         "InventoryType":13,"ExpansionID":expansion,
+                         "InventoryType":inventory,"ExpansionID":expansion,
                          "ItemSet":0,"OverallQualityID":4,
                          "AllowableClass":-1,
                          "StatModifier_bonusStat_0":4}])
@@ -85,6 +86,8 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         second=build._fresh_ordinary_gear_source_stage(**args)
         self.assertEqual(first["status"],"FRESH_GEAR_PLAIN_CANDIDATES_SOURCE_ONLY")
         self.assertEqual(first["network_calls_by_stage"],1)
+        self.assertEqual(first["plain_candidate_count"],1)
+        self.assertEqual(first["plain_weapon_candidate_count"],1)
         self.assertEqual(second["network_calls_by_stage"],0)
         self.assertEqual(len(urls),1)
         self.assertEqual(first["source_stage"]["status"],"EXECUTED_AND_SEALED")
@@ -125,6 +128,25 @@ class FreshOrdinaryGearSource(unittest.TestCase):
             build._fresh_ordinary_gear_source_stage(
                 stage_root=self.root,wago_folder=self.wago,
                 build="12.2.0.99998",linked=linked,transport=transport)
+        self.assertEqual(len(calls),1)
+
+    def test_trinket_only_source_stays_pending_not_ordinary_pool(self):
+        linked=self.source(inventory=12)
+        calls=[]
+        def transport(request,timeout):
+            calls.append(request.full_url)
+            return Response(b"ID,ItemID,ItemEffectID\\n")
+        result=build._fresh_ordinary_gear_source_stage(
+            stage_root=self.root,wago_folder=self.wago,
+            build=self.BUILD,linked=linked,transport=transport)
+        self.assertEqual(result["status"],
+                         "FRESH_GEAR_PLAIN_CANDIDATES_NOT_FOUND_PENDING")
+        self.assertEqual(result["item_count"],1)
+        self.assertEqual(result["plain_candidate_count"],0)
+        self.assertEqual(result["plain_weapon_candidate_count"],0)
+        self.assertEqual(result["plain_armor_candidate_count"],0)
+        self.assertIsNotNone(result["candidate_path"])
+        self.assertFalse(result["season_representative_verified"])
         self.assertEqual(len(calls),1)
 
     def test_unauthenticated_join_has_zero_network(self):
