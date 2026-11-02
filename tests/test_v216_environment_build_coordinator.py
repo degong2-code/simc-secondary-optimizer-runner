@@ -184,15 +184,15 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                   "wago_snapshot_folder":snapshot}
         candidate = {"enchant_classification":{
             "source_manifest_sha256":"f" * 64}}
-        with mock.patch.object(v216.fresh_stage,
-                               "compile_fresh_candidate",
-                               return_value={"source_catalog_path":str(catalog)}) \\
-             as compile_stage, \
-             mock.patch.object(v216.environment_manifest, "read_json",
-                               return_value=(candidate,"b" * 64)), \
-             mock.patch.object(v216, "preflight_new_season_source",
-                               return_value={"preflight_sha256":"c" * 64}) \\
-             as preflight:
+        with (mock.patch.object(v216.fresh_stage,
+                                "compile_fresh_candidate",
+                                return_value={"source_catalog_path":str(catalog)})
+                  as compile_stage,
+              mock.patch.object(v216.environment_manifest, "read_json",
+                                return_value=(candidate,"b" * 64)),
+              mock.patch.object(v216, "preflight_new_season_source",
+                                return_value={"preflight_sha256":"c" * 64})
+                  as preflight):
             with self.assertRaisesRegex(v216.EnvironmentBuildBlocked,
                                         "FRESH_SOURCE_PROVENANCE_PASS_GJFO_NOT_READY"):
                 v216.build_environment(
