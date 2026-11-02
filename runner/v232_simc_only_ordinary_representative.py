@@ -39,7 +39,7 @@ def need(ok, code):
 
 
 def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
-                   max_source_distance=MAX_DISTANCE):
+                   max_source_distance=MAX_DISTANCE, season_gear_db=None):
     """Source-only deterministic G-work precursor, Native0 and cache0.
 
     The distance of ordinary item's *unscaled source level* from the tier's
@@ -100,6 +100,27 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
          chooser.gear.ARMOR_SUBCLASS[contract["family"]] > 0,
          "V232_CLASS_MASK_OR_ARMOR_FAMILY_INVALID")
 
+    # Normal product mode: opt into same-build Wago DB2 candidates already
+    # collected by v167/v171. Omitted by default for strict SimC-only trials.
+    season_ids=None
+    provider_by_id={}
+    if season_gear_db is not None:
+        try:
+            verified=chooser.gear.validate(season_gear_db)
+        except (chooser.gear.GearBlocked,KeyError,TypeError) as exc:
+            raise SourceRepresentativeBlocked(
+                "V232_OPTIONAL_SEASON_GEAR_SOURCE_INVALID") from exc
+        need(verified["season_build"]==receipt["simc_generated_build"]
+             and verified.get("no_old_catalog_seed") is True,
+             "V232_OPTIONAL_SEASON_GEAR_BUILD_OR_PROVENANCE_MISMATCH")
+        provider_by_id={
+            x["item_id"]:x for x in verified["items"]
+            if x["category"]=="plain_representative_candidate"
+            and x.get("source_kinds")
+        }
+        season_ids=set(provider_by_id)
+        need(bool(season_ids),
+             "V232_OPTIONAL_SEASON_GEAR_HAS_NO_PLAIN_CANDIDATES")
     raw=seed.bounded_read(Path(seed_directory)/"item_data.inc",
                           seed.MAX_ITEM_FILE)
     item_source=receipt.get("source_files",{}).get("item_data.inc",{})
@@ -113,14 +134,18 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
         # unscaled source-level/quality/slots to actual physical bytes.
         iid=metadata.number(fields[1],"V232_ITEM_ID_INVALID")
         if iid in tier_ids:return True
+        if season_ids is not None and iid not in season_ids:return False
         inv=metadata.number(fields[10],"V232_INVENTORY_TYPE_INVALID")
         if inv not in VALID_INVENTORY:return False
         kind=metadata.number(fields[11],"V232_ITEM_CLASS_INVALID")
         if kind not in (2,4):return False
         source_level=metadata.number(fields[5],"V232_ITEM_LEVEL_INVALID")
-        if abs(source_level-ref_ilevel)>max_source_distance:return False
-        if metadata.number(fields[9],"V232_ITEM_QUALITY_INVALID")!=quality:
-            return False
+        # Optional DB2 candidates may have different historical base ilvl
+        # or quality despite being in the *current rotation* (returning M+).
+        if season_ids is None:
+            if abs(source_level-ref_ilevel)>max_source_distance:return False
+            if metadata.number(fields[9],"V232_ITEM_QUALITY_INVALID")!=quality:
+                return False
         if metadata.number(fields[24],"V232_ITEM_SET_INVALID")!=0:
             return False
         if (metadata.number(fields[19],"V232_CLASS_MASK_INVALID")
@@ -154,6 +179,14 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
     options=[]
     for r in items.values():
         if r["item_id"] in tier_ids:continue
+        provider=provider_by_id.get(r["item_id"])
+        if season_ids is not None:
+            need(provider is not None and
+                 provider["inventory_type"]==r["inventory_type"] and
+                 provider["class_id"]==r["class_id"] and
+                 provider["subclass_id"]==r["subclass_id"] and
+                 provider["item_set_id"]==0,
+                 "V232_SAME_BUILD_DB2_SIMC_ITEM_METADATA_DISAGREES")
         options.append({
             "category":"plain_representative_candidate",
             "item_id":r["item_id"],"name":r["name"],
@@ -162,6 +195,8 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
             "stat_modifier_codes":r["stat_modifier_codes"],
             "allowed_class_mask":r["allowed_class_mask"],
             "item_set_id":0,
+            "season_candidate_source_kinds":(
+                provider.get("source_kinds",[]) if provider else []),
         })
     # Reuse v169 pure physical selectors only. Do not call
     # v169.select_class_spec/v167.validate with a fake CURRENT_SEASON flag.
@@ -215,6 +250,20 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
                  "distance":max_source_distance,"tier_quality":quality,
                  "not_an_ilevel_scaling_rule":True},
         "physical_gear_candidates_seen":len(options),
+        "season_candidate_provider":(
+            "EXPLICIT_SAME_BUILD_WAGO_DB2_V167_CANDIDATES"
+            if season_ids is not None else "SIMC_ONLY_NO_SEASON_PROOF"),
+        "season_gear_db_digest_sha256":(
+            seed.digest(seed.canonical(verified).encode("utf8"))
+            if season_ids is not None else None),
+        "season_gear_db_mplus_worldstate_pending":(
+            verified.get("mplus_season_candidate_inclusion",{}).get(
+                "world_state_effectively_resolved") is False
+            if season_ids is not None else None),
+        "selected_gear_season_source_kinds":{
+            slot:provider_by_id.get(iid,{}).get("source_kinds",[])
+            for slot,iid in sorted(selected.items())
+            if iid not in tier_ids},
         "selected_ordinary":ordinary,
         "selected_common":common,
         "selected_weapons":weapons,
@@ -238,11 +287,14 @@ def main(argv=None):
     p.add_argument("--seed-dir",type=Path,required=True)
     p.add_argument("--tier-candidate",type=Path,required=True)
     p.add_argument("--target-ilevel",type=int,required=True)
+    p.add_argument("--season-gear-db",type=Path,
+                   help="Optional v167/v171 same-build Wago candidates; omit for SimC-only trials")
     p.add_argument("--out",type=Path,required=True)
     a=p.parse_args(argv)
     source=json.loads(a.tier_candidate.read_text(encoding="utf8"))
+    db=json.loads(a.season_gear_db.read_text(encoding="utf8")) if a.season_gear_db else None
     data=find_candidate(seed_directory=a.seed_dir,tier_candidate=source,
-                       target_ilevel=a.target_ilevel)
+                       target_ilevel=a.target_ilevel,season_gear_db=db)
     a.out.parent.mkdir(parents=True,exist_ok=True)
     a.out.write_text(json.dumps(
         data,sort_keys=True,ensure_ascii=False,indent=2)+"\n",
