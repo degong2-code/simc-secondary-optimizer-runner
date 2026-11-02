@@ -17,7 +17,7 @@
 2. `docs/CURRENT_PRODUCT_DEVELOPMENT_STATE.md` **파일 최상단 최신 P3-AF/P3-AE/P3-AD/P3-AC/P3-AB 요약**. 이 파일은 장대한 누적 역사 로그이며 오래된 동일 제목이나 과거 HEAD/“미구현” 기록보다 **실제 최신 코드·CI** 우선.
 3. `docs/SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.3_SEASON_GJFO_AUTO_BUILD_APPROVED_20261102.md` + `docs/DEVELOPER_NOTES_ENGINE_FIRST_EXECUTION_ADDENDUM_20261102.md` — 유효 승인·엔진 개발 기준.
 4. `docs/P3_AA_20261102_SINGLE_ENGINE_FRESH_SEASON_CONTROL_ACCEPTANCE.md` — 사용자 직접 정정한 **제로기존자료/정상 신규 외부 수집 허용/단일 엔진** 최종 시험 계약.
-5. `docs/P3_ENVIRONMENT_BUILDER_TARGET_ARCHITECTURE_20261031.md` **§12·§13** + `docs/P3_C_SOURCE_BACKED_ENVIRONMENT_ACCEPTANCE_20261031.md` **§7** (파일명·경로가 다르면 Git tree로 실제 파일을 찾아 유효한 §7만 읽고 부재를 보고). P3 Architecture는 미래 목표, P3-AE는 실제 현재 코드.
+5. `docs/P3_ENVIRONMENT_BUILDER_TARGET_ARCHITECTURE_20261031.md` **§12·§13** + `docs/P3C_V208_START_RECEIPT_AND_WINDOWS_PACKAGE_ACCEPTANCE_20261031.md` **§7** (파일명·경로가 다르면 Git tree로 실제 파일을 찾아 유효한 §7만 읽고 부재를 보고). P3 Architecture는 미래 목표, P3-AE는 실제 현재 코드.
 6. **최근 개발 근거는 역순** `docs/P3_AE_20261102_V216_NEW_SEASON_SOURCE_PREFLIGHT_NO_INSTALL.md` → `docs/P3_AD_20261102_V191_V196_FRESH_UNAPPROVED_SOURCE_TO_UI.md` → `docs/P3_AC_20261102_V211_V213_FRESH_SEASON_SIMC_ENCHANT_SOURCE_HANDOFF.md` → `docs/P3_AB_20261102_V165_V167_NEW_SEASON_NO_OLD_JF_GEAR_CHAIN.md`. 필요할 때만 해당 실제 코드·focused tests 및 older v191/v211/v213/v216 receipts 참조.
 7. DPS26 교정 `docs/SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.1_DPS_ONLY_SCOPE_CORRECTION_20261029.md`가 repo tree에 없다면 실제 Project 업로드본을 사용자에게 요청하지 말고 **최신 v1.4.3의 26 DPS 정책을 우선**. 과거 v1.4.1에 **27 DPS/증강 포함** 기록이 있어도 과거 문서의 모순이며 복원하지 말 것.
 8. 최신 GitHub HEAD·main·visibility, Actions jobs/step logs, Native receipts/artifact identity/만료를 API로 조회해 **아래 스냅샷과 대조**. 필요한 원본 범위만 펼치고 역사를 전수 감사·Native 재실행하지 말 것.
@@ -76,7 +76,7 @@
 
 - **A (읽기+계획 / 신규 CI 최소)**: 최신 `v113.plan`, `v216.build_environment`, `v217.execute_stage`, `v161/v163/v162/v171/v168/v189/v190/v191` 입출력을 직접 대조. 이미 구현된 collector/HTTP path/receipt를 재사용하는 **한 개의** stage adapter를 최소 수정 범위로 붙인다. Build의 과거 자료 재사용 mode와 신규 season mode를 명시적으로 구별하되 **서로 다른 엔진으로 분기하지 않는다**.
 - **B (작은 수직 오프라인 시험)**: 구 시즌 `data/current_season_*`을 접근 불가로 만들고, **합성 신규 source 모사 입력**에서 같은 normal collector→v191→v211→v213→v216 source preflight까지 진행. 기대: 원본 출처/빌드·SHA 정합/기어·티어/옵션 후보 생성, budget 미확정이면 세션 write 없이 PENDING, **old J/F/E/7967/old gear seed/caches 0 읽기**, 중복 collector/Native 0, fetch stage 동일 identity 재호출 시 무변경.
-- **C (작은 실제 외부 소스 시험 — 필요·가용 시)**: 정상 신규 Wago DB2/SimC 등 **실제 HTTP 1회 제한적** 수집, URL·build·SHA 영수증과 실제 API 오류 원문 보존. 새 시즌 자동 G/J/F/O가 검증되기 전에는 설치 READY 금지. CI 기존 320 тест 매 변경마다 전체 무조건 재실행하지 말고 focused + 영향 범위 확인 후 Windows/Ubuntu 종합.
+- **C (작은 실제 외부 소스 시험 — 필요·가용 시)**: 정상 신규 Wago DB2/SimC 등 **실제 HTTP 1회 제한적** 수집, URL·build·SHA 영수증과 실제 API 오류 원문 보존. 새 시즌 자동 G/J/F/O가 검증되기 전에는 설치 READY 금지. CI 기존 320 tests 매 변경마다 전체 무조건 재실행하지 말고 focused + 영향 범위 확인 후 Windows/Ubuntu 종합.
 - **D (후속 P2)**: 기존 `v222`에 정확한 G/J/F/O 검증 inputs 제공하고 신규 v212 설치/정책 A 선택지까지 이어간다. 독립 가능 소규모 작업은 한 번에 묶고 큰 의존성은 단계별 seal/check 후 확장.
 
 **더 효율적인 대안:** 새 G·J·F·O별 collector, 별도 Run dispatcher, 새 optimizer·profile generator를 다시 만들지 않는다. 반복 수집/Native 최소화, 기존 stage identity, 작은 SHA/provenance 기록만 보존, large raw Wago CSV는 필요 시 임시 파일만 사용; cache/메모리/I/O/전체 소요시간을 신규 변경마다 정량 또는 제한된 근거로 평가. 성공 영수증의 적용 범위가 변하지 않았으면 반복 실행·재감사 금지.
