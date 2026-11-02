@@ -122,7 +122,7 @@ class BundleIntakeTests(unittest.TestCase):
                                     "MANIFEST_VS_SOURCE_BUILD"):
             self.verify()
 
-    def test_old_build_sources_and_urls_all_consistent_still_block_new_season(self):
+    def test_same_client_build_sources_stay_unapproved_without_season_evidence(self):
         _, _, old = fixture(event="season_change",
                             build="12.1.5.70575")
         self.manifest["game_build"] = "12.1.5.70575"
@@ -141,9 +141,33 @@ class BundleIntakeTests(unittest.TestCase):
                 source["source_locator"]=source["source_locator"].replace(
                     "build=12.2.0.99999","build=12.1.5.70575")
         self.write_manifest()
+        result=self.verify()
+        self.assertEqual(result["game_build"],"12.1.5.70575")
+        self.assertFalse(result["ready"])
+        self.assertFalse(result["source_origin_independently_authenticated"])
+        self.assertTrue(all(result[k] is None for k in ("G","J","F","O","B","T")))
+
+    def test_no_local_prior_build_record_uses_normal_event_not_cold_start(self):
+        self.manifest["previous_game_build"]=None
+        self.write_manifest()
+        result=bundle.verify_bundle(
+            folder=self.root,event="season_change",
+            previous_game_build=None,target_ilevel=335)
+        self.assertEqual(result["event"],"season_change")
+        self.assertIsNone(result["previous_game_build"])
+        self.assertFalse(result["ready"])
+        self.assertTrue(all(result[k] is None for k in ("G","J","F","O","B","T")))
         with self.assertRaisesRegex(bundle.SourceBundleBlocked,
-                                    "CORE_SOURCE_PREFLIGHT_BLOCKED"):
+                                    "REQUEST_EVENT_OR_PREVIOUS_BUILD_MISMATCH"):
             self.verify()
+
+    def test_malformed_previous_build_still_blocked(self):
+        self.manifest["previous_game_build"]="unknown"
+        self.write_manifest()
+        with self.assertRaisesRegex(bundle.SourceBundleBlocked,
+                                    "MANIFEST_FIELDS_INVALID"):
+            bundle.verify_bundle(folder=self.root,event="season_change",
+                previous_game_build="unknown",target_ilevel=335)
 
     def test_ambiguous_or_foreign_source_system_rejected(self):
         self.manifest["sources"]["gear"]["source_system"]="verified_public_item_source"
