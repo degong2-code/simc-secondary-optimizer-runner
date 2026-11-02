@@ -281,7 +281,7 @@ def _join_authenticated_season_source(*,stage_root,output_dir,
                 "reason":str(exc).split(":",1)[0],
                 "candidate_path":None,"stage":None,
                 "season_membership_verified":False}
-    rel="source/v163_unapproved_candidates.json"
+    rel="source/v163_unapproved_candidates_token_provenance.json"
     path=pathlib.Path(stage_root)/rel
     code=stage_engine.module_dependency_fingerprint(
         [pathlib.Path(season_join.__file__),
@@ -306,8 +306,8 @@ def _join_authenticated_season_source(*,stage_root,output_dir,
                 and doc.get("simc_native_calls")==0)
     try:
         stage=stage_engine.execute_stage(
-            root=stage_root,stage_id="fresh-v163",
-            stage_version="live-unique-scope-1",
+            root=stage_root,stage_id="fresh-v163-token-provenance",
+            stage_version="live-unique-scope-token-provenance-1",
             inputs={"game_build":expected_game_build,
                     "wago_receipt_sha256":wago_stage_receipt,
                     "v155_sha256":digest(report_path.read_bytes()),
