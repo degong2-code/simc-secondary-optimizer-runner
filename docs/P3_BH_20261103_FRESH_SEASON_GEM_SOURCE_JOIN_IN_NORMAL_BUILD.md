@@ -23,9 +23,9 @@ Approved v1.4.3 + DPS26 + P3-AA single-engine policy; implementation on the isol
 - Test-only correction [`e28aade55edbeb66138ddd25310e188a1360c7a0`](https://github.com/degong2-code/simc-secondary-optimizer-runner/commit/e28aade55edbeb66138ddd25310e188a1360c7a0) distinguished genuine v213 build drift from corrupted Wago snapshot build; its four Actions checks all **SUCCESS**.
 - Added same normal Build pre-session route test, correcting its Python context-manager syntax before final acceptance. Latest functional/test SHA: `ab0eb108f9cc4f03481ea9dfa868dbb47ea67033`.
 - [v212 contract #41548414140](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41548414140): Ubuntu/Windows each **417 tests, 0 FAIL, 4 SKIP**, including direct original v221 joins, exact cached receipt reuse, changed DB2 hash rejection, cross-build rejection and normal Build preflight wiring.
-- [v113 offline API #41548414308](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41548414308): Ubuntu/Windows success.
-- [v182 UI #41548414262](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41548414262): Ubuntu/Windows success.
-- [v181 Windows beta #41548414349](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41548414349): check actual job completion/conclusion before claiming success.
+- [v113 offline API #41548414308](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41548414308): Ubuntu/Windows **198 tests each, 0 FAIL**, SUCCESS.
+- [v182 UI #41548414262](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41548414262): Ubuntu/Windows 92+81+focused 2 tests each, SUCCESS.
+- [v181 Windows beta #41548414349](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41548414349): Windows Python 3.12/3.14 **139 tests each, 0 FAIL**, SUCCESS, `V181_WINDOWS_BETA_LIVE_3_PLANS_RESTORE_ZERO_NATIVE_PASS`.
 - These tests are **deterministic offline fixtures** using re-used test snapshots. In this task actual external Wago/SimC HTTP calls=0, actual SimC Native=0; no actual live season numeric J/F/O/G measurement, no adaptive DPS E2E.
 
 ## Next concrete development (engine-first)
