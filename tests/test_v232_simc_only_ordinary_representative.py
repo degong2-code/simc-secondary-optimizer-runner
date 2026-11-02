@@ -127,6 +127,63 @@ class SourceOnlyRepresentativeTests(unittest.TestCase):
         self.assertIsNone(result["G"])
         self.assertFalse(result["environment_ready"])
 
+    def test_opt_in_wago_db2_season_candidates_override_unscaled_level_heuristic(self):
+        from runner import v167_product_season_gear_adapter as provider
+        from runner import v233_source_only_G_probe_profile as compiler
+        allowed={
+            9020:(5,4,4), 9028:(9,4,4), 9021:(6,4,4),
+            9022:(8,4,4), 9023:(2,4,0),9024:(16,4,0),
+            9012:(11,4,0),9025:(11,4,0),9010:(17,2,8)}
+        rows=[{
+            "item_id":iid,"name":f"season_{iid}",
+            "category":"plain_representative_candidate",
+            "inventory_type":inv,"class_id":kind,"subclass_id":sub,
+            "allowed_class_mask":2,
+            "source_kinds":["raid_journal"],"item_set_id":0}
+            for iid,(inv,kind,sub) in sorted(allowed.items())]
+        season={
+            "schema":provider.SCHEMA,
+            "status":"CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
+            "no_old_catalog_seed":True,
+            "season_build":BUILD,
+            "item_count":len(rows),
+            "role_counts":{"plain_representative_candidate":len(rows)},
+            "items":rows,
+            "not_certified":{"tier_four_set":True,"simc_item_effects":True},
+            "new_native_calls":0,"new_api_calls":0}
+        baseline=self.plan()
+        self.assertEqual(baseline["selected_G_slot_ids"]["wrists"],9011)
+        preferred=builder.find_candidate(
+            seed_directory=self.folder,tier_candidate=self.tier,
+            target_ilevel=335,season_gear_db=season)
+        self.assertEqual(preferred["selected_G_slot_ids"]["wrists"],9028)
+        self.assertEqual(preferred["selected_G_slot_ids"]["main_hand"],9010)
+        self.assertEqual(preferred["season_candidate_provider"],
+                         "EXPLICIT_SAME_BUILD_WAGO_DB2_V167_CANDIDATES")
+        self.assertEqual(preferred["selected_gear_season_source_kinds"]["wrists"],
+                         ["raid_journal"])
+        self.assertIsNone(preferred["G"])
+        self.assertFalse(preferred["environment_ready"])
+        self.assertTrue(preferred["same_season_membership_not_proven"])
+        text,receipt=compiler.build(
+            source_directory=self.folder,tier_candidate=self.tier,
+            representative_candidate=preferred,race="human",
+            level=90,season_gear_db=season)
+        self.assertIn("wrists=simc_source_9028,id=9028",text)
+        self.assertEqual(receipt["native_calls"],0)
+        with self.assertRaisesRegex(compiler.ProbeBlocked,
+                                    "REPLAY_DRIFT"):
+            compiler.build(
+                source_directory=self.folder,tier_candidate=self.tier,
+                representative_candidate=preferred,race="human",level=90)
+        wrong=dict(season,season_build="12.0.0.11111")
+        with self.assertRaisesRegex(
+                builder.SourceRepresentativeBlocked,
+                "BUILD_OR_PROVENANCE_MISMATCH"):
+            builder.find_candidate(
+                seed_directory=self.folder,tier_candidate=self.tier,
+                target_ilevel=335,season_gear_db=wrong)
+
     def test_different_target_ilevel_does_not_infer_scaling(self):
         first=self.plan(target=335)
         next=self.plan(target=336)
