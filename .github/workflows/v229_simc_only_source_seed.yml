@@ -76,6 +76,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/v229-only/runner" "$RUNNER_TEMP/v229-only/tests"
           cp runner/v191_unified_season_data_update.py runner/v229_simc_only_source_seed.py runner/v230_simc_item_metadata.py runner/v231_simc_tier_item_join.py runner/v169_source_first_representative_stage.py runner/v167_product_season_gear_adapter.py runner/v143_specialization_contracts.py "$RUNNER_TEMP/v229-only/runner/"
           cp tests/test_v229_simc_only_source_seed.py tests/test_v230_simc_item_metadata.py tests/test_v231_simc_tier_item_join.py "$RUNNER_TEMP/v229-only/tests/"
+          touch "$RUNNER_TEMP/v229-only/runner/__init__.py" "$RUNNER_TEMP/v229-only/tests/__init__.py"
           test ! -e "$RUNNER_TEMP/v229-only/data"
           test ! -e "$RUNNER_TEMP/v229-only/integration_probes"
           test ! -e "$RUNNER_TEMP/v229-only/.git"
