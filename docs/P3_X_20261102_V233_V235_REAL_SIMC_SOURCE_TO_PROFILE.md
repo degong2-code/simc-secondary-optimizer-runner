@@ -1,10 +1,12 @@
 # P3-X — Actual pinned SimC source → physical 14-slot profile, plus one-native execution adapter
 
+> **2026-11-02 최신 사용자 교정:** 이 문서의 SimC-only 표기는 역사적 제한 원본 조사 경로를 가리킬 뿐, 최종 통제실험의 데이터 수집 차단 정책이 아니다. 최종 시험은 **동일한 실사용 Environment Build 엔진**, **기존 데이터·캐시·영수증의 입력 사용 금지**, **정상 Wago/Blizzard/WCL/공개 GitHub/SimC 신규 수집 허용** 조건을 따른다. [P3-AA 최신 승인 기준](P3_AA_20261102_SINGLE_ENGINE_FRESH_SEASON_CONTROL_ACCEPTANCE.md)이 우선한다.
+
 Date: 2026-11-02 KST. Isolated development only; do not merge main, promote original v016, rewrite immutable v003, update Project UI, or transfer main product-chat authority.
 
 ## Engine purpose
 
-Continue the user-approved **season-specific G/J/F/O → B/T → representative 26-DPS user profile → existing adaptive SimC** engine. Current equipment redistribution and season gear recommendations remain out of scope. Later, **only after engine completion**, perform the user's strict SimC-only **zero-base experiment** where all existing source catalogs, caches, historical G references and Native evidence are forbidden and access is audited.
+Continue the user-approved **season-specific G/J/F/O → B/T → representative 26-DPS user profile → existing adaptive SimC** engine. Current equipment redistribution and season gear recommendations remain out of scope. Later, **only after engine completion**, perform the user's **zero-history acceptance** using the unchanged normal Build engine: previous source catalogs, caches, historical G references and Native evidence are forbidden as inputs, but fresh Wago/Blizzard/WCL/public GitHub/SimC source collection is allowed and audited. The v229~v237 narrow SimC-source test is not this final acceptance.
 
 ## Implementation
 
@@ -27,6 +29,6 @@ Source commit pinned for this *historical same-build compatibility check*: `simu
 1. Active-season tier/ordinary gear provenance must be sourced/authenticated independently; SimC's generated item records contain historical sets and same-ilvl candidates. The source-only heuristic remains a **candidate**, not a confirmed new-season representative item pool.
 2. Execute one exact pinned-binary Native physical observation only where it fills a genuine evidence gap. The v234 runner exists but **has not been invoked with a real SimC executable**. Its existing standard mode requires the already pinned source files at execution time and records binary/profile/JSON2 SHA without claiming compiled-build attestation. Avoid treating a GitHub artifact or synthetic JSON as execution proof.
 3. Determine J/F/O highest-quality exact same-effect item IDs/ratings and weapon applicability, permanent E and special L accounting, then recompute B=G+J+F and T=B+O with manual T authority. Connect to v216/v222/v098 and the existing adaptive engine and 95%-only reporting.
-4. For true zero-base final acceptance, use an actually restricted clean VM/FS/network, not merely the development job's sparse checkout. Seal new results before consulting old evidence.
+4. For true zero-history final acceptance, isolate **prior files/cache/receipts**, not approved external source endpoints: run the **same full Build** with fresh Wago/Blizzard/WCL/public GitHub/SimC fetches. Seal new results before consulting old evidence. A sparse checkout alone is insufficient.
 
 Status: **real upstream source → valid physical candidate → generated SimC input verified; actual Native static G, full new-season environment and full optimizer integration pending**.
