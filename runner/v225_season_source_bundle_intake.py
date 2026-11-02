@@ -137,8 +137,9 @@ def _manifest(path):
     } and doc["schema"] == SCHEMA and
          doc["event"] in EVENTS and
          type(doc["game_build"]) is str and BUILD.fullmatch(doc["game_build"]) and
-         type(doc["previous_game_build"]) is str and
-         BUILD.fullmatch(doc["previous_game_build"]) and
+         (doc["previous_game_build"] is None or
+          (type(doc["previous_game_build"]) is str and
+           BUILD.fullmatch(doc["previous_game_build"]) is not None)) and
          type(doc["season"]) is str and SEASON.fullmatch(doc["season"]) and
          type(doc["simc_revision"]) is str and
          REV.fullmatch(doc["simc_revision"]) and
