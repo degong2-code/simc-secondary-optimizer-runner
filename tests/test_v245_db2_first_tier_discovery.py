@@ -93,6 +93,14 @@ class DB2CandidateTest(unittest.TestCase):
                 self.assertEqual(entry["observed_base_item_level_min"],level)
                 self.assertEqual(entry["observed_base_item_level_max"],level)
             self.assertEqual(base_counts,{44:13,219:13})
+            observed=doc["observed_base_ilvl_roster_groups"]
+            self.assertEqual(len(observed),2)
+            self.assertEqual({x["observed_base_item_level"] for x in observed},
+                             {44,219})
+            self.assertTrue(all(x["set_count"]==13 and x["class_count"]==13
+                                and x["exact_13_class_5piece_structural_roster"]
+                                and x["season_membership_verified"] is False
+                                for x in observed))
             self.assertFalse(doc["base_item_level_proves_current_season"])
             self.assertIsNone(doc["current_season_selection"])
             self.assertFalse(doc["source_season_verified"])
