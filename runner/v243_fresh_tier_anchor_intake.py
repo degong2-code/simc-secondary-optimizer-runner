@@ -52,6 +52,7 @@ class VisibleText(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
         self.parts = []
+        self.nodes = []
         self.hidden = 0
     def handle_starttag(self, tag, attrs):
         if tag in ("script", "style", "noscript", "svg"):
@@ -69,6 +70,8 @@ class VisibleText(HTMLParser):
         if not self.hidden:
             self.parts.append(" ")
             self.parts.append(data)
+            if data.strip():
+                self.nodes.append(data.strip())
 
 def visible(raw):
     try:
@@ -116,15 +119,22 @@ def parse_anchor(*,publisher_raw,itemset_raw,build,expansion_id,mplus_zone):
          mplus.group(1)==header.group(1),
          "TIER_PUBLISHER_SEASON_MISMATCH_OR_UNPROVEN")
     names=itemset_rows(itemset_raw)
-    # Preserve word boundaries: Hunter must not match Demon Hunter, and
-    # similarly nested class terms must never steal another class's set.
-    norm=lambda value:" ".join(
-        re.findall(r"[a-z0-9]+",value.casefold()))
-    haystack=" "+norm(body)+" "
+    # Match publisher labels and titles as adjacent visible HTML text nodes,
+    # NOT as substrings of one giant string: 'Hunter' must never claim a
+    # 'Demon Hunter' card just because its title contains hunter.
+    p=VisibleText()
+    p.feed(publisher_raw.decode("utf-8-sig"))
+    nodes=[compact(v) for v in p.nodes]
     chosen={};labels={}
     for cl,alias in ALIASES.items():
-        possibles=[(iid,name) for iid,name in names.items()
-                   if (" "+norm(alias)+" "+norm(name)+" ") in haystack]
+        label=compact(alias)
+        possibles=[]
+        for iid,name in names.items():
+            title=compact(name)
+            if any((node==label and idx+1<len(nodes) and
+                    nodes[idx+1]==title) or node==label+title
+                   for idx,node in enumerate(nodes)):
+                possibles.append((iid,name))
         need(len(possibles)==1,
              "TIER_PUBLISHER_CLASS_ITEMSET_NOT_UNIQUE:"+cl)
         chosen[cl],labels[cl]=possibles[0]
