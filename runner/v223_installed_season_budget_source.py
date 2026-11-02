@@ -144,7 +144,7 @@ def produce(*, catalog, catalog_sha, source_paths, user, bootstrap,
     except (ValueError, KeyError, TypeError) as exc:
         raise SourceBudgetBlocked("G_REFERENCE_WEAPON_TRACK_UNVERIFIED") from exc
     row = reg["values"][level - 266]
-    need(row.get("ilevel") == level and
+    need(row.get("ilvl") == level and
          type(row.get(track)) is int and row[track] > J + F,
          "G_REFERENCE_LEVEL_OR_TOTAL_MISSING")
     G = row[track] - J - F  # rounded same-season reference, NOT exact G
