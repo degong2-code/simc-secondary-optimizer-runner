@@ -35,12 +35,17 @@ def need(ok,code):
 
 def digest(raw):return hashlib.sha256(raw).hexdigest()
 
-def load(path):
+def raw_report(path):
     p=Path(path)
     need(p.is_file() and not p.is_symlink()
          and 0<p.stat().st_size<=MAX_JSON,
          "V251_SOURCE_REPORT_MISSING_OR_UNSAFE")
-    return json.loads(p.read_bytes())
+    raw=p.read_bytes()
+    need(0<len(raw)<=MAX_JSON,"V251_SOURCE_CHANGED_WHILE_READING")
+    return raw
+
+def load(path):
+    return json.loads(raw_report(path))
 
 def preview(*,db2,corroboration):
     need(db2.get("schema")=="v245_db2_first_class_tier_candidates_v1"
@@ -191,8 +196,8 @@ def build_stage(*,stage_root,db2_candidate_path,bonus_candidate_path,
     need(root.is_dir() and not root.is_symlink(),
          "V251_STAGE_ROOT_REQUIRED")
     db2path=Path(db2_candidate_path);bonuspath=Path(bonus_candidate_path)
-    db2raw=db2path.read_bytes();bonusraw=bonuspath.read_bytes()
-    db2=load(db2path);bonus=load(bonuspath)
+    db2raw=raw_report(db2path);bonusraw=raw_report(bonuspath)
+    db2=json.loads(db2raw);bonus=json.loads(bonusraw)
     need(type(db2_receipt) is str and len(db2_receipt)==64
          and type(bonus_receipt) is str and len(bonus_receipt)==64,
          "V251_UPSTREAM_STAGE_RECEIPTS_REQUIRED")
