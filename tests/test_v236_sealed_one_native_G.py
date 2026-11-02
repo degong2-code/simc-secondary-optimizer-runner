@@ -20,13 +20,22 @@ class SealedNativeSourceTests(unittest.TestCase):
         self.tmp=tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root=pathlib.Path(self.tmp.name)
+        self.pin_fixture_for_pinned_binary()
         self.profile=self.root/"sealed.simc"
-        self.profile.write_text(self.fixture.text,encoding="utf8")
+        self.profile.write_bytes(self.fixture.text.encode("utf8"))
         self.receipt=self.root/"sealed.json"
         self.receipt.write_text(json.dumps(self.fixture.prepared),encoding="utf8")
         self.exe=self.root/"simc_fake"
         self.exe.write_bytes(b"fake simc binary must not be launched unmocked")
         self.binarysha=hashlib.sha256(self.exe.read_bytes()).hexdigest()
+
+    def pin_fixture_for_pinned_binary(self):
+        from runner import v229_simc_only_source_seed as source
+        r=self.fixture.prepared
+        r["simc_revision"]="710c2408bfd3ae4df71b8cd55cdf01f63fd6c926"
+        r["game_build_declared_by_simc_source"]="12.1.5.70575"
+        r["receipt_sha256"]=source.digest(source.canonical(
+            {k:v for k,v in r.items() if k!="receipt_sha256"}).encode("utf8"))
 
     def run_one(self, *, max_new=0,output="out"):
         return engine.run(profile_path=self.profile,receipt_path=self.receipt,
@@ -90,7 +99,7 @@ class SealedNativeSourceTests(unittest.TestCase):
                                         "PROFILE_BYTES_NOT_SEALED"):
                 self.run_one(max_new=1)
             runner.assert_not_called()
-        self.profile.write_text(self.fixture.text,encoding="utf8")
+        self.profile.write_bytes(self.fixture.text.encode("utf8"))
         self.exe.write_bytes(b"new executable bytes")
         with self.assertRaisesRegex(engine.SealedNativeBlocked,
                                     "EXECUTABLE_SHA256_MISMATCH"):
@@ -120,7 +129,8 @@ class SealedNativeSourceTests(unittest.TestCase):
         self.fixture.tier=self.fixture.fixture.tier
         self.fixture.representative=self.fixture.fixture.plan()
         self.fixture._profile()
-        self.profile.write_text(self.fixture.text,encoding="utf8")
+        self.pin_fixture_for_pinned_binary()
+        self.profile.write_bytes(self.fixture.text.encode("utf8"))
         self.receipt.write_text(json.dumps(self.fixture.prepared))
         doc=json.loads(self.receipt.read_text())
         self.assertEqual(len(doc["selected_G_slot_ids"]),14)
