@@ -125,6 +125,53 @@ class SeasonBudgetContractTests(unittest.TestCase):
         plan.update(fixed_O=proof["components"]["O"]["rating"], final_T=3214)
         self.assertEqual(resolve(catalog, proof, plan)["final_T"], 3214)
 
+    def test_v216_installed_build_reconciles_internal_proof_without_native(self):
+        import json
+        import pathlib
+        import tempfile
+        from unittest import mock
+        from runner import v216_environment_build_coordinator as build
+        from tests.test_v216_environment_build_coordinator import sealed_manifest
+        catalog, proof, plan = fixture()
+        with tempfile.TemporaryDirectory() as temp:
+            root = pathlib.Path(temp)
+            source_path = root / "v213_source.json"
+            source_path.write_text(json.dumps(catalog), encoding="utf8")
+            proof["source_catalog_artifact_sha256"] = build.digest(
+                source_path.read_bytes())
+            session = root / ("3" * 20)
+            session.mkdir()
+            bootstrap = {"schema": "v098", "target_ilevel": 334,
+                         "plan": plan}
+            with mock.patch.object(
+                    build.environment_manifest, "compile_from_paths",
+                    return_value=sealed_manifest()):
+                result = build.build_environment(
+                    sessions_root=root, session_folder=session,
+                    user={"target": {"final_T": None}},
+                    binary=root / "unused_simc", revision="c" * 40,
+                    static_cache=None, source_catalog_path=source_path,
+                    bootstrap_result=bootstrap, season_budget_evidence=proof)
+                self.assertEqual(
+                    result["receipt"]["season_budget"]["base_B"], 3150)
+                self.assertFalse(
+                    result["receipt"]["season_budget"][
+                        "source_authentication_performed_here"])
+                self.assertIn(
+                    "SEASON_GJFO_AUTO_REFRESH_NOT_VERIFIED",
+                    result["receipt"]["readiness"]["limitations"])
+                proof["components"]["J"]["rating"] = 139
+                with self.assertRaisesRegex(
+                        build.EnvironmentBuildBlocked,
+                        "V216_SEASON_BUDGET_PROOF_OR_ARITHMETIC_BLOCKED"):
+                    build.build_environment(
+                        sessions_root=root, session_folder=session,
+                        user={"target": {"final_T": None}},
+                        binary=root / "unused_simc", revision="c" * 40,
+                        static_cache=None, source_catalog_path=source_path,
+                        bootstrap_result=bootstrap,
+                        season_budget_evidence=proof)
+
     def test_v098_actual_plan_mismatch_blocks_before_publication(self):
         catalog, proof, plan = fixture()
         plan["base_B"] = 3151
