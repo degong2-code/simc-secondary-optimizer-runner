@@ -37,34 +37,41 @@ jobs:
               return list(rd)
           sets=table("ItemSet",5_000_000)
           spells=table("ItemSetSpell",20_000_000)
-          anchors=json.load(open("data/current_season_tier_source_anchors.json",encoding="utf8"))
-          ids={}
-          for cl,needle in anchors["classes"].items():
-              matching=[s for s in sets if s["Name_lang"].strip().casefold()==needle.casefold()]
-              if len(matching)!=1:
-                  print("SET_NOT_UNIQUE",cl,needle,len(matching))
-              else:
-                  ids[cl]=int(matching[0]["ID"])
-          print("EXACT_SET_NAMES",len(ids))
-          keys=set(spells[0]) if spells else set()
-          if not {"ItemSetID","Threshold","ChrSpecID","SpellID"}<=keys:
-              raise RuntimeError("ITEMSET_SPELL_COLUMNS_MISSING")
-          summaries={}
-          for cl,iid in sorted(ids.items()):
-              rs=[r for r in spells if int(r.get("ItemSetID","0") or 0)==iid]
-              bythreshold={}
-              for row in rs:
-                  th=int(row.get("Threshold",0) or 0)
-                  bythreshold[th]=bythreshold.get(th,0)+1
-              specs={int(row.get("ChrSpecID",0) or 0) for row in rs}
-              summaries[cl]={"set_id":iid,"rows":len(rs),"thresholds":bythreshold,
-                  "spec_count":len(specs),"spec_ids":sorted(specs)[:6]}
-          for cl,r in summaries.items():
-              print("CLASS",cl,json.dumps(r,sort_keys=True))
-          two=sum(2 in x["thresholds"] for x in summaries.values())
-          four=sum(4 in x["thresholds"] for x in summaries.values())
-          both=sum(2 in x["thresholds"] and 4 in x["thresholds"] for x in summaries.values())
-          print("2PC_4PC_OBSERVED","both",both,"2pc",two,"4pc",four,
-                "class_set_count",len(ids))
-          print("SOURCE_DISCOVERY_ONLY_NOT_SEASON_CERTIFICATION")
+          from collections import defaultdict,Counter
+          set_rows={int(row["ID"]):row for row in sets}
+          byset=defaultdict(list)
+          for row in spells:
+              iid=int(row["ItemSetID"] or 0)
+              if iid>0:
+                  byset[iid].append(row)
+          two_four=[]
+          with_spec=[]
+          for iid,rows in byset.items():
+              thresholds={int(r["Threshold"] or 0) for r in rows}
+              specs={int(r["ChrSpecID"] or 0) for r in rows}
+              if {2,4}<=thresholds:
+                  two_four.append(iid)
+                  if specs-{0}:with_spec.append(iid)
+          print("RAW_TOTAL_SETS",len(sets),
+                "RAW_ITEMSETS_WITH_SPELLS",len(byset),
+                "TWO_FOUR_COUNT",len(two_four),
+                "TWO_FOUR_WITH_SPEC",len(with_spec))
+          class_sig=[]
+          for iid in with_spec:
+              row=set_rows.get(iid,{})
+              physical=[int(row.get("ItemID_"+str(n),"0") or 0)
+                       for n in range(17)]
+              physical=[x for x in physical if x>0]
+              class_sig.append({"id":iid,"name":row.get("Name_lang"),
+                  "setflags":row.get("SetFlags"),"physical":len(physical),
+                  "bonuses":len(byset[iid]),
+                  "threshold":sorted({int(r["Threshold"] or 0)
+                      for r in byset[iid]}),
+                  "specs":sorted({int(r["ChrSpecID"] or 0)
+                      for r in byset[iid]})[:7]})
+          print("STRUCTURAL_2PC4PC_SPEC_SET_CANDIDATES",
+                len(class_sig),"HIGHEST_ID_SAMPLE_MAX_35")
+          for d in sorted(class_sig,key=lambda x:x["id"],reverse=True)[:35]:
+              print("CANDIDATE",json.dumps(d,ensure_ascii=False,sort_keys=True))
+          print("STRUCTURAL_ONLY_SEASON_MEMBERSHIP_NOT_PROVEN")
           PY
