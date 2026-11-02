@@ -97,6 +97,12 @@ class OneSpecInBuild(unittest.TestCase):
         self.assertEqual(select.call_count,1)
         self.assertEqual(first["network_calls_by_stage"],0)
         self.assertEqual(first["native_calls"],0)
+        self.assertEqual(first["selected_slot_count"],13)
+        self.assertEqual(first["source_kinds_by_selected_slot"]["wrists"],
+                         ["raid_journal"])
+        self.assertIsNone(first["mplus_world_state_pending"])
+        self.assertFalse(first["season_membership_verified"])
+        self.assertIsNone(first["G"])
         result=json.loads(Path(first["candidate_path"]).read_text())
         self.assertEqual(len(result["selected_G_slot_ids"]),13)
         self.assertEqual(result["selected_G_slot_ids"]["wrists"],9028)
@@ -145,8 +151,9 @@ class OneSpecInBuild(unittest.TestCase):
             output=self.invoke(self.seed)
         self.assertEqual(output["status"],
                          "FRESH_ONE_SPEC_PHYSICAL_SOURCE_OR_COVERAGE_PENDING")
-        self.assertIn("V232_ORDINARY_SLOT_WITHOUT_SIMC_CANDIDATE",
-                      output["reason"])
+        self.assertEqual(output["reason"],
+                         "V232_ORDINARY_SLOT_WITHOUT_SIMC_CANDIDATE")
+        self.assertEqual(output["missing_slot"],"waist")
         self.assertFalse(output["environment_ready"])
         self.assertEqual(output["native_calls"],0)
 
