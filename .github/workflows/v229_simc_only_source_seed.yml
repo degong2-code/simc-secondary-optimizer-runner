@@ -1,0 +1,123 @@
+name: v229 SimC-Only Source Seed (Explicit Request, No Native)
+
+on:
+  workflow_dispatch:
+    inputs:
+      simc_commit:
+        description: Exact upstream SimulationCraft 40-hex commit (never a branch or latest)
+        type: string
+        required: true
+      game_build:
+        description: Exact retail build observed in that commit's generated tables
+        type: string
+        required: true
+      previous_game_build:
+        description: Previously known build (only used to prevent stale season relabel)
+        type: string
+        required: true
+      update_event:
+        description: Update type, season/expansion require changed game build
+        type: choice
+        required: true
+        default: season_change
+        options: [season_change, expansion_change, mid_patch]
+      include_item_data:
+        description: Also fetch large SimC item_data.inc (up to 32 MB), opt in
+        type: boolean
+        required: false
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v229-simc-source-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  simc-source-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            runner/v191_unified_season_data_update.py
+            runner/v229_simc_only_source_seed.py
+            tests/test_v229_simc_only_source_seed.py
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Isolate only reusable engine code and offline tests, no old data
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/v229-only/runner" "$RUNNER_TEMP/v229-only/tests"
+          cp runner/v191_unified_season_data_update.py runner/v229_simc_only_source_seed.py "$RUNNER_TEMP/v229-only/runner/"
+          cp tests/test_v229_simc_only_source_seed.py "$RUNNER_TEMP/v229-only/tests/"
+          test ! -e "$RUNNER_TEMP/v229-only/data"
+          test ! -e "$RUNNER_TEMP/v229-only/integration_probes"
+          test ! -e "$RUNNER_TEMP/v229-only/.git"
+          (cd "$RUNNER_TEMP/v229-only" && python -m unittest discover -s tests -p test_v229_simc_only_source_seed.py -v)
+          echo 'V229_SEPARATE_ENGINE_WORKTREE_NO_LEGACY_SOURCE_FILES_NATIVE0'
+      - name: Validate required exact revision, build and source request before network
+        shell: bash
+        env:
+          REVISION: ${{ inputs.simc_commit }}
+          GAME_BUILD: ${{ inputs.game_build }}
+          PRIOR_BUILD: ${{ inputs.previous_game_build }}
+          UPDATE_EVENT: ${{ inputs.update_event }}
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os,re
+          r=os.environ['REVISION']; b=os.environ['GAME_BUILD']; prev=os.environ['PRIOR_BUILD']
+          assert re.fullmatch(r'[a-f0-9]{40}',r),'SIMC_EXACT_SOURCE_COMMIT_REQUIRED'
+          assert re.fullmatch(r'\d+(?:\.\d+){3}',b),'SIMC_GAME_BUILD_REQUIRED'
+          assert re.fullmatch(r'\d+(?:\.\d+){3}',prev),'SIMC_PRIOR_BUILD_REQUIRED'
+          assert os.environ['UPDATE_EVENT']=='mid_patch' or b!=prev, 'OLD_BUILD_AS_NEW_SEASON_BLOCKED'
+          print('V229_SOURCE_REQUEST_EXPLICIT_AND_PINNED')
+          PY
+      - name: Download exact immutable generated SimC source only (no Blizzard/Wago request)
+        shell: bash
+        env:
+          REVISION: ${{ inputs.simc_commit }}
+          GAME_BUILD: ${{ inputs.game_build }}
+          PRIOR_BUILD: ${{ inputs.previous_game_build }}
+          UPDATE_EVENT: ${{ inputs.update_event }}
+          LARGE_ITEM_DATA: ${{ inputs.include_item_data }}
+        run: |
+          set -euo pipefail
+          args=()
+          if [[ "$LARGE_ITEM_DATA" == 'true' ]]; then args+=(--include-item-data); fi
+          (
+            cd "$RUNNER_TEMP/v229-only"
+            python runner/v229_simc_only_source_seed.py \
+              --revision "$REVISION" \
+              --game-build "$GAME_BUILD" \
+              --previous-game-build "$PRIOR_BUILD" \
+              --event "$UPDATE_EVENT" \
+              --out-dir "$RUNNER_TEMP/v229-only/seed" \
+              "${args[@]}"
+          )
+          python - <<'PY'
+          import json,os,pathlib
+          r=pathlib.Path(os.environ["RUNNER_TEMP"])/'v229-only/seed/simc_seed_receipt.json'
+          doc=json.loads(r.read_text(encoding='utf8'))
+          assert doc['provenance_tree_blob_authenticated'] is True
+          assert doc['G'] is None and doc['J'] is None and doc['F'] is None and doc['O'] is None
+          assert doc['B'] is None and doc['T'] is None
+          assert doc['native_calls']==0 and not doc['environment_ready']
+          assert not doc['user_options_auto_admitted']
+          print('V229_SOURCE_IDENTITY_ONLY_NOT_GJFO_RATING_READY')
+          PY
+      - name: Save short-lived exact SimC source seed for future verified adapters
+        if: success()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v229-simc-source-seed-${{ github.run_id }}
+          path: ${{ runner.temp }}/v229-only/seed/
+          if-no-files-found: error
+          retention-days: 2
