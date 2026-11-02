@@ -149,6 +149,10 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         self.assertEqual(calls[0],None)
         self.assertIsNone(calls[1])
         self.assertEqual(result3["receipt"]["native_calls"],0)
+        self.assertEqual(result3["receipt"]["season_budget"]["status"],
+                         "INSTALLED_REFERENCE_ONLY_GJFO_REFRESH_NOT_VERIFIED")
+        self.assertIn("SEASON_GJFO_AUTO_REFRESH_NOT_VERIFIED",
+                      result3["receipt"]["readiness"]["limitations"])
         self.assertEqual(result3["receipt"]["network_calls"],0)
         self.assertEqual(result3["receipt"]["cache_mutations"],0)
         self.assertTrue(result3["receipt"]["historical_sessions_preserved"])
