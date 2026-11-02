@@ -22,7 +22,7 @@ import v213_source_to_catalog as source_to_catalog
 import v161_wago_db2_snapshot as wago_snapshot
 import v242_authenticated_season_source_stage as discovery_stage
 import v163_zero_seed_db2_join as season_join
-import v243_fresh_tier_anchor_intake as tier_intake
+import v245_db2_first_tier_discovery as tier_db
 import v217_stage_execution_engine as stage_engine
 import v196_current_season_user_catalog as user_catalog
 import v241_fresh_source_stage_adapter as fresh_stage
@@ -323,29 +323,32 @@ def _join_authenticated_season_source(*,stage_root,output_dir,
             "G":None,"J":None,"F":None,"O":None}
 
 
-def _source_first_tier_stage(*,stage_root,wago_folder,build,linked,
-                             wago_receipt_sha256,transport=None):
-    """Same Build: fresh publisher+ItemSet -> existing physical v168."""
+def _db2_first_tier_stage(*,stage_root,wago_folder,build,linked,
+                         wago_receipt_sha256,transport=None):
+    """Same Build: ItemSet + ItemSetSpell + ChrSpecialization, NO title seed.
+
+    The exact class/2pc/4pc/5-slot structure is a CANDIDATE. Season 1 and
+    2 both qualify, so this stage NEVER selects a current-season roster.
+    v168 remains the original physical 13x5 verifier after season proof.
+    """
     if not linked.get("candidate_path"):
-        return {"status":"TIER_SEASON_JOIN_PENDING","reason":"NO_UNIQUE_V163_SCOPE",
-                "tier_candidate_path":None,"network_calls_by_stage":0}
+        return {"status":"TIER_SEASON_SCOPE_PENDING",
+                "reason":"NO_UNIQUE_V163_SCOPE",
+                "candidate_path":None,"network_calls_by_stage":0,
+                "source_season_verified":False}
     scope=linked["source_scope"]
     try:
-        return tier_intake.build_from_public_source(
+        return tier_db.build_stage(
             stage_root=stage_root,wago_folder=wago_folder,build=build,
             expansion_id=scope["expansion_id"],
-            mplus_zone=scope["mplus_zone"],
             wago_receipt_sha256=wago_receipt_sha256,
             transport=transport)
-    except (tier_intake.TierSourceBlocked,
-            tier_intake.tier.TierBlocked) as exc:
-        # Fresh publisher can lag or omit a new season. This only blocks its
-        # optional tier candidate, NEVER authorizes last season's fixed IDs.
-        return {"status":"TIER_FRESH_PUBLICATION_OR_DB2_PENDING",
+    except (tier_db.TierDBBlocked,tier_db.physical.TierBlocked) as exc:
+        return {"status":"TIER_DB2_STRUCTURAL_CANDIDATES_PENDING",
                 "reason":str(exc).split(":",1)[0],
-                "tier_candidate_path":None,"network_calls_by_stage":0,
-                "environment_installed":False,
-                "season_membership_completely_verified":False}
+                "candidate_path":None,"network_calls_by_stage":0,
+                "source_season_verified":False,
+                "environment_installed":False}
 
 
 def collect_wago_new_season_source(*, sessions_root, expected_game_build,
@@ -457,7 +460,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         expected_game_build=expected_game_build,
         discovered=discovered,
         wago_stage_receipt=stage["receipt_sha256"])
-    fresh_tier=_source_first_tier_stage(
+    fresh_tier=_db2_first_tier_stage(
         stage_root=stage_root,wago_folder=output_dir,
         build=expected_game_build,linked=linked,
         wago_receipt_sha256=stage["receipt_sha256"],
@@ -473,6 +476,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "season_discovery":discovered,
         "season_join":linked,
         "fresh_tier":fresh_tier,
+        "tier_discovery_mode":"DB2_FIRST_NO_PUBLISHER_NAME_LOOKUP",
         "network_calls_by_stage":(len(wago_snapshot.TABLES)
             if stage["executed"] else 0)+discovered["network_calls_by_stage"]+
             fresh_tier["network_calls_by_stage"],
@@ -483,7 +487,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "simc_source_verified":False,
         "G":None,"J":None,"F":None,"O":None,"B":None,"T":None,
         "requires":["CURRENT_EXPANSION_AND_SEASON_WCL_BLIZZARD_JOIN",
-                    "CURRENT_SEASON_AND_TIER_SOURCE_PROOF",
+                    "DB2_CLASS_TIER_SEASON_MEMBERSHIP_PROOF",
                     "SOURCE_FIRST_GEAR_AND_CONSUMABLE_JOINS",
                     "SIMC_EXACT_SOURCE_MANIFEST",
                     "G_J_F_O_B_T_AND_POLICY_A",
