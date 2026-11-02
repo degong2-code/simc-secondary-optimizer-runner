@@ -30,13 +30,17 @@ class JoinTests(unittest.TestCase):
             'JournalTierXInstance':[{'ID':'1','JournalTierID':'505','JournalInstanceID':'1','AvailabilityCondition':'0'}],
             'JournalInstance':[{'ID':'1','Name_lang':'Test Raid','MapID':'100'}, {'ID':'2','Name_lang':'Test Dungeon','MapID':'200'}],
             'JournalEncounter':[{'ID':'11','JournalInstanceID':'1','Name_lang':'Hydra'}, {'ID':'22','JournalInstanceID':'2','Name_lang':'Dungeon Boss'}],
-            'JournalEncounterItem':[{'ID':'1','JournalEncounterID':'11','ItemID':'1001','DisplaySeasonID':'0','WorldStateExpressionID':'0'}, {'ID':'2','JournalEncounterID':'22','ItemID':'2001','DisplaySeasonID':'37','WorldStateExpressionID':'52104'}, {'ID':'3','JournalEncounterID':'22','ItemID':'2002','DisplaySeasonID':'37','WorldStateExpressionID':'0'}],
+            'JournalEncounterItem':[{'ID':'1','JournalEncounterID':'11','ItemID':'1001','DisplaySeasonID':'0','WorldStateExpressionID':'0'}, {'ID':'2','JournalEncounterID':'22','ItemID':'2001','DisplaySeasonID':'37','WorldStateExpressionID':'52104'}, {'ID':'3','JournalEncounterID':'22','ItemID':'2002','DisplaySeasonID':'37','WorldStateExpressionID':'0'},
+                                    {'ID':'4','JournalEncounterID':'11','ItemID':'4001','DisplaySeasonID':'0','WorldStateExpressionID':'0'}],
             'MythicPlusSeasonTrackedMap':[{'ID':'1','MapChallengeModeID':'9','DisplaySeasonID':'37'}],
             'MapChallengeMode':[{'ID':'9','Name_lang':'Test Dungeon','MapID':'200'}],
             'Map':[{'ID':'100','MapName_lang':'Test Raid'}, {'ID':'200','MapName_lang':'Test Dungeon'}],
             'CraftingData':[{'ID':'1','CraftedItemID':'3001'}],
-            'ItemSparse':[{'ID':str(i),'Display_lang':str(i),'ExpansionID':'11','OverallQualityID':'4','LimitCategory':'0', 'StatModifier_bonusStat_0':'24' if i==3001 else '0', 'StatModifier_bonusStat_1':'25' if i==3001 else '0'} for i in [1001,2001,2002,3001]],
-            'Item':[{'ID':str(i),'ClassID':'4','InventoryType':'5'} for i in [1001,2001,2002,3001]],
+            'ItemSparse':[{'ID':str(i),'Display_lang':str(i),'ExpansionID':'11','OverallQualityID':'4','LimitCategory':'0', 'StatModifier_bonusStat_0':'24' if i==3001 else '0', 'StatModifier_bonusStat_1':'25' if i==3001 else '0',
+                           'ItemLevel':'219' if i==4001 else '197'} for i in [1001,2001,2002,3001,4001]],
+            'Item':[{'ID':str(i),'ClassID':'15' if i==4001 else '4',
+                     'InventoryType':'0' if i==4001 else '5'}
+                    for i in [1001,2001,2002,3001,4001]],
         }
         season_report={'schema':'v155_season_discovery_provider_probe_v1','mode':'LIVE_AUTHENTICATED_BOUNDED','blizzard':{'endpoints':{'keystone_season_index':{'data':{'current_season_id':18}}}},'wcl':{'midnight_zones':[{'zone_name':'Test Raid', 'zone_id':10,'wcl_frozen':False,'encounters':[{'name':'Hydra'}]},{'zone_name':'Mythic+ S2','zone_id':11,'wcl_frozen':False,'encounters':[{'name':'Test Dungeon'}]}]}}
         with tempfile.TemporaryDirectory() as temp:
@@ -53,6 +57,15 @@ class JoinTests(unittest.TestCase):
                 mplus_zone='Mythic+ S2',build='12.1.5.70575',expansion_id=11)
             self.assertEqual(result['collection_counts'],{'raid_journal':1,'mplus_journal':2,'selectable_stat_craft':1})
             self.assertEqual(result['raid_journal_tier_id'],505)
+            self.assertEqual(len(result['raid_non_equipment_loot_candidates']),1)
+            token=result['raid_non_equipment_loot_candidates'][0]
+            self.assertEqual(token['item_id'],4001)
+            self.assertEqual(token['item_class_id'],15)
+            self.assertEqual(token['observed_base_item_level'],219)
+            self.assertEqual(token['acquisition_sources'][0]['source'],'raid_journal')
+            self.assertFalse(result['raid_non_equipment_tier_tokens_verified'])
+            self.assertFalse(result['raid_non_equipment_in_user_gear_catalog'])
+            self.assertTrue(all(item['item_id']!=4001 for item in result['items']))
             self.assertEqual(result['db2_display_season_id'],37)
             self.assertEqual(result['blizzard_keystone_season_id'],18)
             self.assertIn('UNKNOWN_WORLD_STATE_EXPRESSION',[x['season_evidence'] for i in result['items'] for x in i['acquisition_sources'] if x['source']=='mplus_journal'])
