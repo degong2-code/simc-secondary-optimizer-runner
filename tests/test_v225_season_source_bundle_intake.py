@@ -155,11 +155,26 @@ class BundleIntakeTests(unittest.TestCase):
             previous_game_build=None,target_ilevel=335)
         self.assertEqual(result["event"],"season_change")
         self.assertIsNone(result["previous_game_build"])
+        self.assertEqual(result["previous_build_record_status"],"NOT_RECORDED")
+        self.assertTrue(result["previous_build_is_not_season_proof"])
         self.assertFalse(result["ready"])
         self.assertTrue(all(result[k] is None for k in ("G","J","F","O","B","T")))
         with self.assertRaisesRegex(bundle.SourceBundleBlocked,
                                     "REQUEST_EVENT_OR_PREVIOUS_BUILD_MISMATCH"):
             self.verify()
+
+    def test_cli_initial_install_does_not_require_prior_build(self):
+        self.manifest["previous_game_build"]=None
+        self.write_manifest()
+        out=self.root/"no_history_receipt.json"
+        self.assertEqual(bundle.main([
+            "--bundle-dir",str(self.root),"--event","season_change",
+            "--target-ilevel","335","--out",str(out)]),0)
+        value=json.loads(out.read_text(encoding="utf8"))
+        self.assertIsNone(value["previous_game_build"])
+        self.assertEqual(value["previous_build_record_status"],"NOT_RECORDED")
+        self.assertFalse(value["ready"])
+        self.assertTrue(all(value[k] is None for k in ("G","J","F","O","B","T")))
 
     def test_malformed_previous_build_still_blocked(self):
         self.manifest["previous_game_build"]="unknown"
