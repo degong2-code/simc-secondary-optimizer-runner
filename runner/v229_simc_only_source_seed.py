@@ -104,7 +104,7 @@ def parse_set_bonus(raw, build):
         need(m is not None, "V229_SET_BONUS_ROW_UNRECOGNIZED")
         name,opt,tier,enum,setid,bns,cls,spec,trait,spell,ids=m.groups()
         item_ids=[int(i.strip()) for i in ids.split(",")]
-        need(len(item_ids)>=4 and item_ids[-1]==0 and
+        need(len(item_ids)>=3 and item_ids[-1]==0 and
              all(x>=0 for x in item_ids) and
              len(set(x for x in item_ids if x))==len(item_ids)-1,
              "V229_SET_BONUS_ITEM_IDS_INVALID")
