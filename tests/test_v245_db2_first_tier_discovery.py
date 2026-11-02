@@ -55,6 +55,8 @@ def arrange(folder,*,two_seasons=True,omit_4pc=False,bad_mask=False):
                     bonus.append({"ID":len(bonus)+1,"ItemSetID":sid,
                          "ChrSpecID":10000+10*n+j,"Threshold":th,
                          "SpellID":100000+10*n+th+j})
+    for row in sparse:
+        row["ItemLevel"]=219 if int(row.get("ItemSet",0))>=600 else 44
     write_csv(root/"ItemSparse.csv",list(sparse[0]),sparse)
     write_csv(root/"Item.csv",list(items[0]),items)
     for name in ("ItemSparse","Item"):
@@ -80,6 +82,18 @@ class DB2CandidateTest(unittest.TestCase):
                                  expansion_id=11,source_bytes=sources)
             self.assertEqual(doc["candidate_set_count"],26)
             self.assertEqual(set(doc["candidate_counts_by_class"].values()),{2})
+            base_counts={44:0,219:0}
+            for entry in doc["candidates"]:
+                levels=set(entry["observed_base_item_level_by_slot"].values())
+                self.assertEqual(len(levels),1)
+                level=next(iter(levels))
+                base_counts[level]+=1
+                self.assertEqual(entry["base_item_level_evidence"],
+                                 "SOURCE_OBSERVED_ALL_FIVE")
+                self.assertEqual(entry["observed_base_item_level_min"],level)
+                self.assertEqual(entry["observed_base_item_level_max"],level)
+            self.assertEqual(base_counts,{44:13,219:13})
+            self.assertFalse(doc["base_item_level_proves_current_season"])
             self.assertIsNone(doc["current_season_selection"])
             self.assertFalse(doc["source_season_verified"])
             self.assertFalse(doc["used_prior_tier_names"])
@@ -97,6 +111,9 @@ class DB2CandidateTest(unittest.TestCase):
                                  expansion_id=None,source_bytes=sources)
             self.assertEqual(doc["candidate_set_count"],26)
             self.assertEqual(doc["candidate_counts_by_expansion_id"],{"11":26})
+            self.assertEqual({x["observed_base_item_level_min"] for x in
+                              doc["candidates"]},{44,219})
+            self.assertIsNone(doc["current_season_selection"])
             self.assertEqual(doc["expansion_selection_source"],
                              "UNSCOPED_OBSERVED_EXPANSIONS_ONLY")
             self.assertTrue(all(x["observed_expansion_id"]==11
