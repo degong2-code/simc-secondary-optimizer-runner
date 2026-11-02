@@ -79,6 +79,89 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         self.revision="c"*40
 
 
+
+    def test_blizzard_wcl_authenticated_stage_runs_before_wago_and_reuses(self):
+        import io
+        from urllib.parse import urlsplit
+        from runner import v242_authenticated_season_source_stage as source
+        calls=[]
+        secret="SECRET_NEVER_PERSIST"
+        creds={"BLIZZARD_CLIENT_ID":"blizzard-test",
+               "BLIZZARD_CLIENT_SECRET":secret,
+               "WCL_CLIENT_ID":"wcl-test",
+               "WCL_CLIENT_SECRET":secret+"-WCL"}
+        class Response(io.BytesIO):
+            status=200
+            def __enter__(self):return self
+            def __exit__(self,*args):self.close()
+        def transport(req,timeout):
+            url=req.full_url
+            calls.append(url)
+            if url.endswith("/token"):
+                doc={"access_token":"PRIVATE_FAKE_BEARER"}
+            elif "/api/v2/client" in url:
+                payload=json.loads(req.data)
+                if "expansions" in payload["query"]:
+                    doc={"data":{"worldData":{"expansions":[
+                        {"id":11,"name":"Midnight"}]}}}
+                else:
+                    doc={"data":{"worldData":{"zones":[
+                        {"id":99,"name":"Synthetic Raid","frozen":False,
+                         "encounters":[{"id":100,"name":"Boss",
+                                        "journalID":200}]}]}}}
+            elif "/season/index" in url:
+                doc={"current_season":{"id":55}}
+            else:
+                doc={"items":[]}
+            return Response(json.dumps(doc).encode())
+        def fetch(req,timeout):
+            calls.append(req.full_url)
+            table=urlsplit(req.full_url).path.split("/")[-2]
+            return Response(("ID,Name\n1,"+table+"\n").encode())
+        folder=self.root/"live"
+        first=v216.collect_wago_new_season_source(
+            sessions_root=folder,expected_game_build="12.2.0.99999",
+            fetch=fetch,credentials=creds,discovery_transport=transport)
+        count=len(calls)
+        self.assertEqual(count,18) # 2 OAuth, 4 Blizzard, 2 WCL + 10 Wago
+        self.assertEqual(first["network_calls_by_stage"],18)
+        self.assertEqual(first["season_discovery"]["status"],
+                         "AUTHENTICATED_SOURCE_DISCOVERED_SEASON_JOIN_PENDING")
+        self.assertFalse(first["season_discovery"]["current_season_membership_verified"])
+        self.assertFalse(first["environment_installed"])
+        report=pathlib.Path(first["season_discovery"]["source_report_path"])
+        data=report.read_text("utf8")
+        self.assertNotIn(secret,data)
+        self.assertNotIn("PRIVATE_FAKE_BEARER",data)
+        second=v216.collect_wago_new_season_source(
+            sessions_root=folder,expected_game_build="12.2.0.99999",
+            fetch=fetch,credentials=creds,discovery_transport=transport)
+        self.assertEqual(len(calls),count)
+        self.assertEqual(second["network_calls_by_stage"],0)
+        self.assertEqual(second["season_discovery"]["stage"]["status"],
+                         "REUSED_VERIFIED")
+        self.assertEqual(second["source_stage"]["status"],"REUSED_VERIFIED")
+        self.assertTrue(report.is_file())
+
+    def test_partial_season_credentials_block_before_wago_fetch(self):
+        calls=[]
+        def fetch(req,timeout):
+            calls.append(1)
+            raise AssertionError("NO_WAGO_ON_INCOMPLETE_CREDENTIAL_PAIRS")
+        with self.assertRaisesRegex(
+                v216.EnvironmentBuildBlocked,
+                "V242_INCOMPLETE_BLIZZARD_WCL_CREDENTIAL_PAIRS"):
+            v216.collect_wago_new_season_source(
+                sessions_root=self.root/"live",
+                expected_game_build="12.2.0.99999",fetch=fetch,
+                credentials={"BLIZZARD_CLIENT_ID":"x",
+                             "BLIZZARD_CLIENT_SECRET":"",
+                             "WCL_CLIENT_ID":"x",
+                             "WCL_CLIENT_SECRET":"x"})
+        self.assertEqual(calls,[])
+        self.assertFalse((self.root/"live"/"_fresh_season_sources"/
+                          "wago_12.2.0.99999"/"wago").exists())
+
     def test_live_collector_reuse_by_build_without_old_season_or_native(self):
         from urllib.parse import urlsplit, parse_qs
         from unittest import mock

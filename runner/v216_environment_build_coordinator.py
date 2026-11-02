@@ -20,6 +20,7 @@ import v222_season_budget_contract as season_budget_contract
 import v223_installed_season_budget_source as season_source_proof
 import v213_source_to_catalog as source_to_catalog
 import v161_wago_db2_snapshot as wago_snapshot
+import v242_authenticated_season_source_stage as discovery_stage
 import v217_stage_execution_engine as stage_engine
 import v196_current_season_user_catalog as user_catalog
 import v241_fresh_source_stage_adapter as fresh_stage
@@ -263,7 +264,8 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
 
 
 def collect_wago_new_season_source(*, sessions_root, expected_game_build,
-                                   fetch=None):
+                                   fetch=None, credentials=None,
+                                   discovery_transport=None):
     """First real normal-source acquisition inside the SAME Environment Build.
 
     Explicit build is only a request identity, not independent season or tier
@@ -288,6 +290,17 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
     need(not stage_root.is_symlink(),
          "V216_FRESH_SOURCE_BUILD_SYMLINK_BLOCKED")
     stage_root.mkdir(exist_ok=True)
+    # Authenticated Blizzard/WCL discovery is attempted BEFORE the large
+    # Wago snapshot whenever both credential pairs are configured.
+    # Missing credentials do not imply an empty season or block raw Wago.
+    if credentials is None:
+        credentials={k:os.environ.get(k,"") for k in discovery_stage.FIELDS}
+    try:
+        discovered=discovery_stage.collect(
+            stage_root=stage_root,expected_game_build=expected_game_build,
+            credentials=credentials,transport=discovery_transport)
+    except discovery_stage.DiscoveryBlocked as exc:
+        raise EnvironmentBuildBlocked(str(exc).split(":",1)[0]) from exc
     output_dir=stage_root/"wago"
     need(not output_dir.is_symlink(),
          "V216_FRESH_SOURCE_OUTPUT_SYMLINK_BLOCKED")
@@ -361,15 +374,17 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "fetched_at_utc":source_doc["fetched_at_utc"],
         "snapshot_receipt_path":str((output_dir/"receipt.json").resolve()),
         "source_stage":{k:v for k,v in stage.items() if k!="result"},
-        "network_calls_by_stage":len(wago_snapshot.TABLES)
-            if stage["executed"] else 0,
+        "season_discovery":discovered,
+        "network_calls_by_stage":(len(wago_snapshot.TABLES)
+            if stage["executed"] else 0)+discovered["network_calls_by_stage"],
         "native_calls":0,
         "environment_installed":False,
         "environment_ready":False,
         "source_season_verified":False,
         "simc_source_verified":False,
         "G":None,"J":None,"F":None,"O":None,"B":None,"T":None,
-        "requires":["CURRENT_SEASON_AND_TIER_SOURCE_PROOF",
+        "requires":["CURRENT_EXPANSION_AND_SEASON_WCL_BLIZZARD_JOIN",
+                    "CURRENT_SEASON_AND_TIER_SOURCE_PROOF",
                     "SOURCE_FIRST_GEAR_AND_CONSUMABLE_JOINS",
                     "SIMC_EXACT_SOURCE_MANIFEST",
                     "G_J_F_O_B_T_AND_POLICY_A",
