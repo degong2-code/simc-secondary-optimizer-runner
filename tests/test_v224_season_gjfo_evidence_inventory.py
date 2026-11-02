@@ -175,13 +175,14 @@ class SeasonGjfoInventoryTests(unittest.TestCase):
         self.assertIsNone(result["T"])
         self.assertEqual(result["native_calls"],0)
 
-    def test_core_new_season_rejects_stale_build_and_mixed_sources(self):
+    def test_core_same_client_build_is_pending_and_mixed_sources_rejected(self):
         _,_,core=fixture()
-        with self.assertRaisesRegex(p.SeasonEvidenceBlocked,
-                                    "STALE_BUILD_BLOCKED"):
-            p.core_source_preflight(
-                inputs=core,event="season_change",target_ilevel=334,
-                previous_game_build="12.1.5.70575")
+        source_only=p.core_source_preflight(
+            inputs=core,event="season_change",target_ilevel=334,
+            previous_game_build="12.1.5.70575")
+        self.assertEqual(source_only["previous_build_record_status"],"RECORDED")
+        self.assertFalse(source_only["budget_can_be_published"])
+        self.assertIsNone(source_only["G"])
         _,_,new=fixture(build="12.2.0.99999")
         changed=dict(new)
         old_budget=core["budget"]
