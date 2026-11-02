@@ -14,6 +14,8 @@ import os
 import pathlib
 import re
 import tempfile
+from urllib.parse import urlencode
+from urllib.request import Request, urlopen
 
 import v212_environment_manifest as environment_manifest
 import v222_season_budget_contract as season_budget_contract
@@ -22,6 +24,9 @@ import v213_source_to_catalog as source_to_catalog
 import v161_wago_db2_snapshot as wago_snapshot
 import v242_authenticated_season_source_stage as discovery_stage
 import v163_zero_seed_db2_join as season_join
+import v165_current_season_gear_pool as source_gear_pool
+import v166_compact_product_gear_db as compact_gear_db
+import v167_product_season_gear_adapter as product_gear_db
 import v245_db2_first_tier_discovery as tier_db
 import v250_raid_tier_bonus_corroboration as raid_bonus
 import v251_db2_raid_tier_simc_bridge as tier_simc_bridge
@@ -324,6 +329,133 @@ def _join_authenticated_season_source(*,stage_root,output_dir,
             "stage":{k:v for k,v in stage.items() if k!="result"},
             "source_scope":scope,"season_membership_verified":False,
             "G":None,"J":None,"F":None,"O":None}
+
+
+
+def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
+                                     linked, transport=None):
+    """Reuse v165->v166->v167 from the authenticated v163 seasonal source.
+
+    One additional same-build Retail ItemXItemEffect relation distinguishes
+    a direct effect-record candidate from a plain-gear candidate. This is a
+    source classification, not SimC effect certification, season-wide gear
+    completeness, target-ilvl G, or an installed representative profile.
+    No Localbots / legacy J/F / old gear input is permitted on this path.
+    """
+    if not linked.get("candidate_path"):
+        return {"status":"FRESH_GEAR_AUTHENTICATED_RAID_SOURCE_PENDING",
+                "candidate_path":None,"network_calls_by_stage":0,
+                "season_representative_verified":False}
+    root=pathlib.Path(stage_root)
+    source_path=pathlib.Path(linked["candidate_path"])
+    sparse=pathlib.Path(wago_folder)/"ItemSparse.csv"
+    item=pathlib.Path(wago_folder)/"Item.csv"
+    need(source_path.is_file() and not source_path.is_symlink()
+         and sparse.is_file() and not sparse.is_symlink()
+         and item.is_file() and not item.is_symlink(),
+         "V216_FRESH_GEAR_SOURCE_FILES_MISSING")
+    raw_source=source_path.read_bytes()
+    try:
+        source=json.loads(raw_source)
+    except ValueError as exc:
+        raise EnvironmentBuildBlocked("V216_FRESH_GEAR_V163_JSON_INVALID") from exc
+    need(source.get("schema")==season_join.SCHEMA
+         and source.get("build")==build
+         and source.get("source_provider")=="WAGO_TOOLS_PINNED_DB2_WCL_LIVE"
+         and source.get("old_item_catalog_imported") is False,
+         "V216_FRESH_GEAR_V163_SOURCE_MISMATCH")
+    rel="source/v254_fresh_ordinary_gear_"
+    paths={"effect":rel+"ItemXItemEffect.csv",
+           "pool":rel+"v165_pool.json",
+           "compact":rel+"v166_compact.json",
+           "candidate":rel+"v167_candidates.json"}
+    source_identity=stage_engine.module_dependency_fingerprint([
+        pathlib.Path(source_gear_pool.__file__),
+        pathlib.Path(compact_gear_db.__file__),
+        pathlib.Path(product_gear_db.__file__),
+        pathlib.Path(stage_engine.__file__)])
+    attempted=[0]
+    def execute():
+        url="https://wago.tools/db2/ItemXItemEffect/csv?"+urlencode(
+            {"build":build,"locale":"enUS"})
+        req=Request(url,headers={
+            "User-Agent":"SIMC-Secondary-Environment-Gear/1.0",
+            "Accept":"text/csv"})
+        attempted[0]+=1
+        with (urlopen if transport is None else transport)(
+                req,timeout=75) as response:
+            need(response.status==200,"V216_FRESH_GEAR_HTTP_NON_200")
+            parts=[]
+            total=0
+            while True:
+                chunk=response.read(262144)
+                if not chunk:
+                    break
+                total+=len(chunk)
+                need(total<=12_000_000,"V216_FRESH_GEAR_HTTP_SIZE_LIMIT")
+                parts.append(chunk)
+        need(total>0,"V216_FRESH_GEAR_EMPTY_EFFECT_SOURCE")
+        effect=root/paths["effect"]
+        effect.parent.mkdir(parents=True,exist_ok=True)
+        effect.write_bytes(b"".join(parts))
+        # Explicit budget_source=None prevents any installed J/F reference.
+        pool=source_gear_pool.compile_pool(
+            source,None,sparse,effect,budget_source=None)
+        compact=compact_gear_db.build(pool,item,sparse)
+        candidate=product_gear_db.from_v166(compact)
+        for name,payload in (("pool",pool),("compact",compact),
+                             ("candidate",candidate)):
+            target=root/paths[name]
+            target.write_text(json.dumps(payload,ensure_ascii=False,
+                sort_keys=True,indent=2,allow_nan=False)+"\\n",encoding="utf8")
+    def validate(outputs):
+        pool=json.loads(outputs["pool"].read_text(encoding="utf8"))
+        compact=json.loads(outputs["compact"].read_text(encoding="utf8"))
+        candidate=json.loads(outputs["candidate"].read_text(encoding="utf8"))
+        return (pool.get("build")==build
+                and pool.get("item_x_item_effect_csv_sha256")==
+                    digest(outputs["effect"].read_bytes())
+                and pool.get("supplementary_localbots_status")==
+                    "OPTIONAL_SOURCE_NOT_COLLECTED"
+                and pool.get("consumable_budget_reference") is None
+                and pool.get("consumable_budget_source_mode")==
+                    "NEW_SEASON_J_F_BUDGET_EVIDENCE_PENDING"
+                and pool.get("G") is None and pool.get("B") is None
+                and pool.get("T") is None
+                and compact.get("season_build")==build
+                and compact.get("no_old_catalog_seed") is True
+                and candidate.get("season_build")==build
+                and candidate.get("item_count")==compact.get(
+                    "current_candidate_count")
+                and product_gear_db.validate(candidate) is candidate)
+    try:
+        stage=stage_engine.execute_stage(
+            root=root,stage_id="fresh-ordinary-gear-source-candidates",
+            stage_version="v165-v167-wago-no-legacy-budget-v1",
+            inputs={"game_build":build,
+                    "v163_sha256":digest(raw_source),
+                    "v163_stage_receipt":(linked.get("stage") or {}).get(
+                        "receipt_sha256"),
+                    "code_sha256":source_identity["sha256"]},
+            outputs=paths,execute=execute,validate=validate)
+    except (stage_engine.StageExecutionBlocked,
+            source_gear_pool.CatalogBlocked,
+            compact_gear_db.GearDbBlocked,
+            product_gear_db.GearBlocked,
+            EnvironmentBuildBlocked,OSError,ValueError) as exc:
+        return {"status":"FRESH_GEAR_SOURCE_OR_JOIN_PENDING",
+                "reason":str(exc).split(":",1)[0],
+                "candidate_path":None,
+                "network_calls_by_stage":attempted[0],
+                "season_representative_verified":False}
+    result=json.loads((root/paths["candidate"]).read_text(encoding="utf8"))
+    return {"status":"FRESH_GEAR_PLAIN_CANDIDATES_SOURCE_ONLY",
+            "candidate_path":str((root/paths["candidate"]).resolve()),
+            "item_count":result["item_count"],
+            "network_calls_by_stage":attempted[0],
+            "source_stage":{k:v for k,v in stage.items() if k!="result"},
+            "season_representative_verified":False,
+            "seasonal_G_verified":False,"native_calls":0}
 
 
 def _db2_first_tier_stage(*,stage_root,wago_folder,build,linked,
@@ -639,6 +771,9 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         expected_game_build=expected_game_build,
         discovered=discovered,
         wago_stage_receipt=stage["receipt_sha256"])
+    fresh_gear=_fresh_ordinary_gear_source_stage(
+        stage_root=stage_root,wago_folder=output_dir,
+        build=expected_game_build,linked=linked)
     fresh_tier=_db2_first_tier_stage(
         stage_root=stage_root,wago_folder=output_dir,
         build=expected_game_build,linked=linked,
@@ -669,6 +804,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "source_stage":{k:v for k,v in stage.items() if k!="result"},
         "season_discovery":discovered,
         "season_join":linked,
+        "fresh_ordinary_gear":fresh_gear,
         "fresh_tier":fresh_tier,
         "fresh_tier_raid_bonus_corroboration":tier_bonus,
         "fresh_tier_simc_candidate_bridge":tier_bridge,
@@ -677,6 +813,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "tier_discovery_mode":"DB2_FIRST_NO_PUBLISHER_NAME_LOOKUP",
         "network_calls_by_stage":(len(wago_snapshot.TABLES)
             if stage["executed"] else 0)+discovered["network_calls_by_stage"]+
+            fresh_gear["network_calls_by_stage"]+
             fresh_tier["network_calls_by_stage"]+
             tier_bonus["network_calls_by_stage"]+
             pinned_simc["network_calls_by_stage"],
