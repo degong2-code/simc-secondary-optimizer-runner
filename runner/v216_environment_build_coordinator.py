@@ -18,6 +18,8 @@ import tempfile
 import v212_environment_manifest as environment_manifest
 import v222_season_budget_contract as season_budget_contract
 import v223_installed_season_budget_source as season_source_proof
+import v213_source_to_catalog as source_to_catalog
+import v196_current_season_user_catalog as user_catalog
 
 SCHEMA = "v216_incremental_environment_build_receipt_v1"
 SESSION_KEY = re.compile(r"[a-f0-9]{20}\Z")
@@ -179,6 +181,83 @@ def _step(name, status, **details):
     return {"component": name, "status": status, **details}
 
 
+FRESH_SOURCE_PREFLIGHT_SCHEMA="v216_new_season_source_preflight_v1"
+
+
+def preflight_new_season_source(*, source_catalog_path, expected_game_build,
+                                expected_simc_revision):
+    """Inspect a freshly assembled v213 artifact in the NORMAL Build path.
+
+    This does not install an environment or require previously held source
+    values. Source acquisition and item-level G/J/F/O authentication are
+    still prerequisites of final admission; checking local hashes does not
+    constitute upstream retrieval authentication.
+    """
+    need(type(expected_game_build) is str and bool(expected_game_build)
+         and type(expected_simc_revision) is str and
+         re.fullmatch(r"[a-f0-9]{40}",expected_simc_revision),
+         "V216_FRESH_EXPECTED_BUILD_AND_SOURCE_COMMIT_REQUIRED")
+    supplied=pathlib.Path(source_catalog_path)
+    need(supplied.is_file() and not supplied.is_symlink(),
+         "V216_FRESH_V213_SOURCE_FILE_REQUIRED")
+    source,raw_sha=environment_manifest.read_json(supplied)
+    try:
+        source_to_catalog.verify_catalog(source)
+        ui=user_catalog.public_options(supplied)
+    except (source_to_catalog.CatalogBlocked,
+            user_catalog.CatalogBlocked) as exc:
+        raise EnvironmentBuildBlocked(
+            "V216_FRESH_SOURCE_OR_UI_CONTRACT_BLOCKED:"+str(exc)) from exc
+    need(source.get("game_build")==expected_game_build and
+         source.get("simc_revision")==expected_simc_revision and
+         ui.get("season_build")==expected_game_build and
+         ui.get("simc_revision")==expected_simc_revision,
+         "V216_FRESH_SEASON_BUILD_OR_SIMC_REVISION_MISMATCH")
+    v191=source.get("source_provenance",{}).get("v191",{})
+    v211=source.get("enchant_classification",{})
+    inputs=v191.get("sha256_by_input")
+    need(type(inputs) is dict and
+         inputs.get("budget") is None and
+         v211.get("source_manifest_sha256") is not None and
+         source.get("catalog",{}).get("consumables",{}).get(
+             "flask",{}).get("reference","MISSING") is None and
+         source.get("catalog",{}).get("consumables",{}).get(
+             "general_gems",{}).get("reference","MISSING") is None,
+         "V216_FRESH_NO_HISTORICAL_BUDGET_AND_SOURCE_PROOF_REQUIRED")
+    need(ui.get("status")==
+             "FRESH_SEASON_CANDIDATES_UNAPPROVED_NOT_ENVIRONMENT_READY" and
+         ui.get("enchant_candidates",{}).get("selectable_count")==0 and
+         ui.get("existing_allowed_input_choices")=={} and
+         ui.get("environment_ready") is False and
+         all(ui.get(x) is None for x in ("G","J","F","O","B","T")) and
+         ui.get("native_calls_now")==0 and
+         ui.get("game_db_recollection_now")==0 and
+         ui.get("optimizer_or_cache_mutated") is False,
+         "V216_FRESH_UNVERIFIED_CHOICE_OR_BUDGET_PROMOTION")
+    payload={
+        "schema":FRESH_SOURCE_PREFLIGHT_SCHEMA,
+        "status":"FRESH_SOURCE_CANDIDATES_VALID_GJFO_PENDING_NOT_INSTALLED",
+        "game_build":expected_game_build,
+        "simc_revision":expected_simc_revision,
+        "source_artifact_sha256":raw_sha,
+        "source_catalog_manifest_sha256":source["manifest_sha256"],
+        "simc_source_manifest_sha256":v211["source_manifest_sha256"],
+        "gear_candidates":source["catalog"]["gear"]["count"],
+        "tier_pieces":source["catalog"]["tier"]["piece_count"],
+        "enchant_candidates":ui["enchant_candidates"]["total"],
+        "approved_new_choices":0,
+        "G":None,"J":None,"F":None,"O":None,"B":None,"T":None,
+        "environment_ready":False,
+        "requires":["G/J/F/O_VERIFIED_SOURCE_RECEIPTS",
+                    "POLICY_A_OPTION_ADMISSION",
+                    "NEW_SEASON_TARGET_PROFILE_AND_V212_MANIFEST"],
+        "source_retrieval_authenticated_by_this_stage":False,
+        "native_calls":0,"network_calls":0,"cache_mutations":0,
+    }
+    return {**payload,"preflight_sha256":
+        digest(canonical(payload).encode("utf8"))}
+
+
 def build_environment(*, sessions_root, session_folder, user, binary, revision,
                       static_cache, source_catalog_path, bootstrap_result,
                       v208_start_receipt_path=None, package_manifest_path=None,
@@ -192,6 +271,23 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
     versioned source package. The coordinator never silently relabels stale
     source bytes as current.
     """
+    # A freshly collected v213 source must first pass the shared source
+    # preflight. With G/J/F/O incomplete it must NOT be fed to the legacy
+    # v212 manifest, which requires old exact 7967/8025 approval and v098.
+    # Fail before any session file creation or historical cache access.
+    if source_catalog_path is not None:
+        candidate_path=pathlib.Path(source_catalog_path)
+        if candidate_path.is_file() and not candidate_path.is_symlink():
+            candidate,_=environment_manifest.read_json(candidate_path)
+            if candidate.get("enchant_classification",{}).get(
+                    "source_manifest_sha256") is not None:
+                preflight=preflight_new_season_source(
+                    source_catalog_path=candidate_path,
+                    expected_game_build=candidate.get("game_build"),
+                    expected_simc_revision=revision)
+                raise EnvironmentBuildBlocked(
+                    "V216_FRESH_SOURCE_PROVENANCE_PASS_GJFO_NOT_READY:"
+                    +preflight["preflight_sha256"])
     root = pathlib.Path(sessions_root).expanduser().resolve()
     folder = pathlib.Path(session_folder).expanduser().resolve()
     need(SESSION_KEY.fullmatch(folder.name) is not None and
