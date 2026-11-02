@@ -36,7 +36,7 @@ def need(ok,reason):
 def digest(raw):return hashlib.sha256(raw).hexdigest()
 
 
-def check(profile_bytes,receipt):
+def check(profile_bytes,receipt,*,expected_source_revision,expected_game_build):
     need(type(receipt) is dict and receipt.get("schema")==compiler.SCHEMA and
          receipt.get("status")=="EXACT_SIMC_SOURCE_PROFILE_PREPARED_NOT_EXECUTED" and
          receipt.get("receipt_sha256")==source.digest(source.canonical({
@@ -83,15 +83,20 @@ def check(profile_bytes,receipt):
         f"ilevel={receipt['target_ilevel']},source=local"
         for slot in compiler.contracts.SLOT_ORDER if slot in items],
          "V236_SOURCE_EQUIPMENT_OR_OVERRIDES_CHANGED")
+    need(type(expected_source_revision) is str and
+         re.fullmatch("[a-f0-9]{40}",expected_source_revision) and
+         type(expected_game_build) is str and
+         source.BUILD.fullmatch(expected_game_build),
+         "V236_EXPLICIT_IMMUTABLE_SOURCE_PIN_REQUIRED")
     need(receipt["current_season_membership_certified"] is False and
-         receipt["game_build_declared_by_simc_source"]=="12.1.5.70575" and
-         receipt["simc_revision"]==
-          "710c2408bfd3ae4df71b8cd55cdf01f63fd6c926",
-         "V236_WRONG_HISTORIC_PINNED_SOURCE")
+         receipt["game_build_declared_by_simc_source"]==expected_game_build
+         and receipt["simc_revision"]==expected_source_revision,
+         "V236_SOURCE_REVISION_OR_GAME_BUILD_NOT_PINNED")
     return text
 
 
 def run(*, profile_path, receipt_path, binary, binary_sha256,
+        expected_source_revision, expected_game_build,
         output_dir, max_new=0, iterations=1, timeout_seconds=180):
     need(type(max_new) is int and max_new in (0,1) and
          type(iterations) is int and 1<=iterations<=35 and
@@ -100,7 +105,9 @@ def run(*, profile_path, receipt_path, binary, binary_sha256,
          "V236_EXACT_BINARY_AND_NATIVE_CAP_REQUIRED")
     receipt=json.loads(Path(receipt_path).read_text(encoding="utf8"))
     profile_bytes=Path(profile_path).read_bytes()
-    profile=check(profile_bytes,receipt)
+    profile=check(profile_bytes,receipt,
+                  expected_source_revision=expected_source_revision,
+                  expected_game_build=expected_game_build)
     binpath=Path(binary).resolve(strict=True)
     need(binpath.is_file() and digest(binpath.read_bytes())==binary_sha256,
          "V236_EXECUTABLE_SHA256_MISMATCH")
@@ -116,6 +123,7 @@ def run(*, profile_path, receipt_path, binary, binary_sha256,
         "executed_input_sha256":digest(input_bytes),
         "executable_sha256":binary_sha256,
         "simc_source_revision":receipt["simc_revision"],
+        "source_game_build":expected_game_build,
         "compiled_game_build_not_proven":True,
         "target_ilevel":receipt["target_ilevel"],
         "iterations":iterations}
@@ -162,11 +170,15 @@ def main(argv=None):
     p.add_argument("--receipt",type=Path,required=True)
     p.add_argument("--simc-binary",type=Path,required=True)
     p.add_argument("--simc-sha256",required=True)
+    p.add_argument("--source-revision",required=True)
+    p.add_argument("--source-game-build",required=True)
     p.add_argument("--output-dir",type=Path,required=True)
     p.add_argument("--max-new",type=int,choices=(0,1),default=0)
     args=p.parse_args(argv)
     result=run(profile_path=args.profile,receipt_path=args.receipt,
         binary=args.simc_binary,binary_sha256=args.simc_sha256,
+        expected_source_revision=args.source_revision,
+        expected_game_build=args.source_game_build,
         output_dir=args.output_dir,max_new=args.max_new)
     print("V236_ONE_SEALED_SOURCE_NATIVE",result["status"],
           "calls",result["new_native_calls"])
