@@ -1,5 +1,7 @@
 # P3-Y — Real one-call Native G observed, and cross-season representative selection defect
 
+> **2026-11-02 최신 사용자 교정:** 이 문서의 SimC-only 표기는 역사적 제한 원본 조사 경로를 가리킬 뿐, 최종 통제실험의 데이터 수집 차단 정책이 아니다. 최종 시험은 **동일한 실사용 Environment Build 엔진**, **기존 데이터·캐시·영수증의 입력 사용 금지**, **정상 Wago/Blizzard/WCL/공개 GitHub/SimC 신규 수집 허용** 조건을 따른다. [P3-AA 최신 승인 기준](P3_AA_20261102_SINGLE_ENGINE_FRESH_SEASON_CONTROL_ACCEPTANCE.md)이 우선한다.
+
 **2026-11-02 KST.** Isolated `probe/chat-cache-v035-20261024` development only. No `main` merge, v003 immutable edit, Product Sources/UI/Instructions application, Work OS promotion, or takeover of principal product development ownership.
 
 ## Product direction
@@ -32,10 +34,10 @@ This is NOT a Native item-resolution failure or a false G arithmetic sum; it is 
 
 ## Efficient next product work
 
-**Priority 1**: build a reliable current-season identification adapter for tier + representative ordinary gear + weapons, with exact source/build/provenance and candidate membership. Never infer active season just because SimC contains the item, its itemlevel is nearby, its quality matches, or its ID is numerically close to tier. Existing normal-product Wago/DB2 source acquisition may be adapted to provide explicit provenance; for the strict future **SimC-only** zero-base acceptance test, sources outside SimC remain forbidden. If SimC does not expose enough membership metadata for a slot, report precisely **SOURCE_INSUFFICIENT** rather than silently granting an outside provider or copying previous season IDs.
+**Priority 1**: build a reliable current-season identification adapter for tier + representative ordinary gear + weapons, with exact source/build/provenance and candidate membership. Never infer active season just because SimC contains the item, its itemlevel is nearby, its quality matches, or its ID is numerically close to tier. Reuse the **normal product's existing Wago DB2/Blizzard/WCL/public GitHub/SimC collection** for authenticated source provenance. The future zero-history acceptance will run this **same Build engine and fresh normal collection**, while forbidding old catalogs/cache/receipts as inputs. If the *normal approved* source chain cannot prove a slot, report **SOURCE_INSUFFICIENT** rather than copy old season IDs.
 
 **Priority 2**: after source-valid representative selection, reuse the *same* v233/v234/v236 one-Native path or same-build evidence only where it fills a genuine missing G proof. Do not repeat the mixed-gear Native attempt or sweep 26 specs/all ilvls. Preserve binary/JSON2/identity hashes and differentiations between observed and verified G.
 
 **Priority 3**: full new-season J/F/O highest quality/effects/weapon applicability, E/L/O one-time budget ownership, automatic B/T and user manual T, and existing v216/v222/v098 adaptive SimC, cache/cancel/resume/95%. No new independent proc-effect certification Gate.
 
-**Final acceptance**: only once the engine and normal product flow are substantively complete, run the user's strict new VM/process filesystem/network isolation experiment with **all historical records forbidden**; seal the result before comparing it to prior evidence. Current v235/v237 were incremental compatibility/provenance probes, NOT that final controlled zero-base trial.
+**Final acceptance**: only once the engine and normal product flow are substantively complete, run the user's **zero-history** controlled experiment with all previously retained historical records **forbidden as input**, but the normal external source collection **allowed**; seal the result before comparing it to prior evidence. Current v235/v237 were incremental compatibility/provenance probes, NOT that final controlled zero-base trial.
