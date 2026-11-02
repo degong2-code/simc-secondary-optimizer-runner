@@ -167,12 +167,17 @@ def inventory_options(entry):
 def compile_catalog(gear,tier,budget,effects,consumables,generated,*,event):
     need(event in ("mid_patch","season_change","expansion_change"),
          "UPDATE_EVENT_NOT_EXPLICIT")
+    # The same source compiler must work when new-season J/F is unknown.
+    # No installed budget file is consulted on this path.
+    budget_pending=budget is None
     need(gear.get("schema")=="v167_product_season_gear_db_v1"
          and tier.get("schema")=="v168_source_first_class_tier_5pc_v1"
-         and budget.get("schema")=="v165_current_season_chmv_consumables_v1",
+         and (budget_pending or
+              budget.get("schema")=="v165_current_season_chmv_consumables_v1"),
          "SOURCE_FIRST_CORE_CATALOG_SCHEMA_MISMATCH")
     build=gear["season_build"]
-    need(tier["retail_build"]==budget["retail_build"]==build
+    need(tier["retail_build"]==build
+         and (budget_pending or budget["retail_build"]==build)
          and tier["expansion_id"]==gear["expansion_id"]
          and len(tier["classes"])==13 and
          len(gear["items"])==gear["item_count"],
@@ -213,6 +218,8 @@ def compile_catalog(gear,tier,budget,effects,consumables,generated,*,event):
         "SIMC_EFFECT_IMPLEMENTED_IS_DISCOVERY_AUTHORITY_NOT_PHYSICAL_SLOT_MASK"]
     if set(builds.values())!={build}:
         warnings.append("SIMC_COMPILED_DBC_AND_GAME_DB2_BUILDS_DIFFER_REVIEW")
+    if budget_pending:
+        warnings.append("NEW_SEASON_J_F_UNKNOWN_NO_PREVIOUS_SEASON_BUDGET_INPUT")
     gear_candidates=[
       {k:x.get(k) for k in (
         "item_id","name","category","class_id","subclass_id","inventory_type",
@@ -251,6 +258,9 @@ def compile_catalog(gear,tier,budget,effects,consumables,generated,*,event):
         for name,value in sorted(generated.items())},
       "warnings":warnings,"native_calls":0,"network_calls_by_compiler":0,
       "source_first":True,"automatic_ui_promotion":False,
+      "source_budget_state":("NEW_SEASON_J_F_EVIDENCE_PENDING"
+                             if budget_pending else "EXPLICIT_SAME_BUILD_BUDGET_REFERENCE"),
+      "environment_ready":False,"G":None,"B":None,"T":None,
       "source_artifacts":{
         "v189":{"schema":effects["schema"],"simc_commit":effects["source"]["commit"],
                 "source_sha256":effects["source"]["sha256"]},
@@ -271,19 +281,25 @@ def compile_catalog(gear,tier,budget,effects,consumables,generated,*,event):
                                 if x["kind"]=="food"],"stage":"DB2_ID_ONLY"},
          "potion":{"candidates":[x for x in consumables["items"]
                                   if x["kind"]=="potion"],"stage":"DB2_ID_ONLY"},
-         "flask":{"reference":budget["flasks"],
-                   "stage":"CHMV_F_REFERENCE_NOT_ALL_SIMC_VALIDATED"},
+         "flask":{"reference":None if budget_pending else budget["flasks"],
+                   "stage":("NEW_SEASON_F_EVIDENCE_PENDING" if budget_pending
+                            else "CHMV_F_REFERENCE_NOT_ALL_SIMC_VALIDATED")},
          "augmentation_rune":{"stage":"SIMC_DBC_ITEM_MATCH_PENDING"},
          "weapon_oils":{"stage":"SIMC_TEMPORARY_ENCHANT_MATCH_PENDING"},
-         "general_gems":{"reference":budget["ordinary_gem"],
-                         "stage":"CHMV_J_REFERENCE_NOT_FULL_GEM_CATALOG"},
+         "general_gems":{"reference":None if budget_pending else budget["ordinary_gem"],
+                         "stage":("NEW_SEASON_J_EVIDENCE_PENDING" if budget_pending
+                                  else "CHMV_J_REFERENCE_NOT_FULL_GEM_CATALOG")},
          "special_diamonds":{"stage":"ITEM_GEM_EFFECT_ID_JOIN_PENDING"}},
       "embellishments":{"registered_effects":
             effects["candidates"]["embellishment_or_darkmoon"],
             "stage":"SIMC_IMPLEMENTED_EFFECT_DISCOVERY_RECIPE_TYPE_AND_SLOT_LINK_PENDING"},
-      "enchants":{"current_season_midnight":{"highest_rank_candidates":season_enchants,
+      "enchants":{("current_season" if budget_pending else
+                    "current_season_midnight"):{
+                    "highest_rank_candidates":season_enchants,
                     "count":len(season_enchants),
-                    "stage":"SIMC_MIDNIGHT_TOKEN_AND_SLOT_MASK_CANDIDATE_NOT_NATIVE_UI"},
+                    "stage":("SIMC_CURRENT_BUILD_TOKEN_AND_SLOT_MASK_CANDIDATE_NOT_NATIVE_UI"
+                             if budget_pending else
+                             "SIMC_MIDNIGHT_TOKEN_AND_SLOT_MASK_CANDIDATE_NOT_NATIVE_UI")},
                   "permanent":{"source_rows":generated["permanent_enchant"]["declared_rows"],
                     "highest_rank_candidates":permanent,
                     "stage":"SIMC_ENCHANT_SLOT_MASK_KNOWN_SEASON_EFFECT_UNVERIFIED"},
@@ -310,21 +326,26 @@ def compile_catalog(gear,tier,budget,effects,consumables,generated,*,event):
       "no_optimizer_changes":True}
 def main(argv=None):
     p=argparse.ArgumentParser(description=__doc__)
-    for x in ("gear","tier","budget","v189","v190","simc-generated-folder","out"):
+    for x in ("gear","tier","v189","v190","simc-generated-folder","out"):
         p.add_argument("--"+x,required=True,type=Path)
+    group=p.add_mutually_exclusive_group(required=True)
+    group.add_argument("--budget",type=Path)
+    group.add_argument("--fresh-budget-pending",action="store_true")
     p.add_argument("--event",choices=("mid_patch","season_change","expansion_change"),
                    required=True)
     args=p.parse_args(argv)
     inputs={}
-    for key in ("gear","tier","budget","v189","v190"):
+    for key in ("gear","tier","v189","v190"):
         inputs[key]=load_json(getattr(args,key))[0]
+    inputs["budget"]=load_json(args.budget)[0] if args.budget else None
     src={}
     for key,filename in GENERATED.items():
         src[key]=parse_generated(key,read_small(args.simc_generated_folder/filename))
     out=compile_catalog(inputs["gear"],inputs["tier"],inputs["budget"],
                         inputs["v189"],inputs["v190"],src,event=args.event)
     out["sha256_by_input"]={key:load_json(getattr(args,key))[1]
-                             for key in ("gear","tier","budget","v189","v190")}
+                             for key in ("gear","tier","v189","v190")}
+    out["sha256_by_input"]["budget"]=load_json(args.budget)[1] if args.budget else None
     args.out.parent.mkdir(parents=True,exist_ok=True)
     args.out.write_text(json.dumps(out,indent=2,sort_keys=True,
                                   ensure_ascii=False)+"\n",encoding="utf8")
