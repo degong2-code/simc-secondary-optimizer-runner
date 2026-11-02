@@ -183,25 +183,50 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             "Item":[{"ID":i,"ClassID":4,"InventoryType":5,"SubclassID":4}
                     for i in (1001,2001,3001)],
         }
-        from tests.test_v243_fresh_tier_anchor_intake import fixture
         from runner import v168_current_season_tier_discovery as physical
+        from runner import v245_db2_first_tier_discovery as db2_tier
+        extra_sets=[];extra_spells=[];extra_specs=[]
         for n,(cl,sub) in enumerate(sorted(physical.FAMILY.items())):
-            for pos,inv in enumerate((1,3,20,10,7)):
-                iid=910000+100*n+pos
-                data["ItemSparse"].append({
-                    "ID":iid,"Display_lang":"Unrelated "+cl+" piece",
-                    "ExpansionID":11,"OverallQualityID":4,"LimitCategory":0,
-                    "StatModifier_bonusStat_0":0,"StatModifier_bonusStat_1":0,
-                    "InventoryType":inv,"ItemSet":500+n,
-                    "AllowableClass":1<<n})
-                data["Item"].append({"ID":iid,"ClassID":4,
-                                     "InventoryType":inv,"SubclassID":sub})
-        publisher_html,itemset_csv=fixture()
+            cid=db2_tier.CLASS_IDS[cl]
+            for i in (0,1):
+                extra_specs.append({"ID":10000+10*n+i,"ClassID":cid})
+            for wave in (0,1):
+                sid=500+n+100*wave
+                iids=[]
+                for pos,inv in enumerate((1,3,20,10,7)):
+                    iid=910000+100*n+pos if wave==0 else 820000+100*n+pos
+                    iids.append(iid)
+                    data["ItemSparse"].append({
+                        "ID":iid,"Display_lang":"Opaque item "+str(iid),
+                        "ExpansionID":11,"OverallQualityID":4,
+                        "LimitCategory":0,"StatModifier_bonusStat_0":0,
+                        "StatModifier_bonusStat_1":0,
+                        "InventoryType":inv,"ItemSet":sid,
+                        "AllowableClass":1<<(cid-1)})
+                    data["Item"].append({"ID":iid,"ClassID":4,
+                                         "InventoryType":inv,"SubclassID":sub})
+                extra_sets.append({"ID":sid,"Name_lang":"Unsearched set "+str(sid),
+                    **{"ItemID_"+str(i):iids[i] if i<5 else 0
+                       for i in range(17)}})
+                for i in (0,1):
+                    for th in (2,4):
+                        extra_spells.append({"ID":len(extra_spells)+1,
+                            "ItemSetID":sid,"ChrSpecID":10000+10*n+i,
+                            "Threshold":th,"SpellID":100000+100*n+10*i+th})
+        extra_sources={}
+        def extra_csv(rs):
+            stream=io.StringIO()
+            wr=csv.DictWriter(stream,fieldnames=list(rs[0]))
+            wr.writeheader();wr.writerows(rs)
+            return stream.getvalue().encode("utf8")
+        extra_sources["ItemSet"]=extra_csv(extra_sets)
+        extra_sources["ItemSetSpell"]=extra_csv(extra_spells)
+        extra_sources["ChrSpecialization"]=extra_csv(extra_specs)
         tier_calls=[]
         def tier_transport(req,timeout):
-            tier_calls.append(req.full_url)
-            return Response(publisher_html if req.full_url==
-                            v216.tier_intake.SOURCE_URL else itemset_csv)
+            table=urlsplit(req.full_url).path.split("/")[-2]
+            tier_calls.append(table)
+            return Response(extra_sources[table])
         report={"schema":"v155_season_discovery_provider_probe_v1",
                 "mode":"LIVE_AUTHENTICATED_BOUNDED",
                 "blizzard":{"endpoints":{"keystone_season_index":{
@@ -250,17 +275,22 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                 credentials={},tier_transport=tier_transport)
         self.assertEqual(compiled.call_count,1)
         self.assertEqual(len(calls),10)
-        self.assertEqual(len(tier_calls),2)
-        self.assertEqual(first["fresh_tier"]["network_calls_by_stage"],2)
+        self.assertEqual(tier_calls,list(db2_tier.TABLES))
+        self.assertEqual(first["fresh_tier"]["network_calls_by_stage"],3)
         self.assertEqual(second["fresh_tier"]["network_calls_by_stage"],0)
         self.assertEqual(first["fresh_tier"]["status"],
-                         "CURRENT_SET_NAMES_AND_65_PHYSICAL_IDS_VERIFIED")
+                         "DB2_CLASS_TIER_CANDIDATES_SEASON_PENDING")
+        self.assertEqual(first["fresh_tier"]["candidate_set_count"],26)
+        self.assertFalse(first["fresh_tier"]["used_publisher_names"])
+        self.assertFalse(first["fresh_tier"]["source_season_verified"])
+        self.assertEqual(first["tier_discovery_mode"],
+                         "DB2_FIRST_NO_PUBLISHER_NAME_LOOKUP")
         self.assertEqual(first["fresh_tier"]["source_stage"]["status"],
                          "EXECUTED_AND_SEALED")
         self.assertEqual(second["fresh_tier"]["source_stage"]["status"],
                          "REUSED_VERIFIED")
         self.assertTrue(pathlib.Path(
-            first["fresh_tier"]["tier_candidate_path"]).is_file())
+            first["fresh_tier"]["candidate_path"]).is_file())
         self.assertEqual(first["season_join"]["status"],
                          "DB2_WCL_CANDIDATES_JOINED_SEASON_CONDITIONS_PENDING")
         self.assertEqual(first["season_join"]["stage"]["status"],
