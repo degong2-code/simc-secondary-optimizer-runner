@@ -135,7 +135,7 @@ class FreshOrdinaryGearSource(unittest.TestCase):
         calls=[]
         def transport(request,timeout):
             calls.append(request.full_url)
-            return Response(b"ID,ItemID,ItemEffectID\\n")
+            return Response(b"ID,ItemID,ItemEffectID\n")
         result=build._fresh_ordinary_gear_source_stage(
             stage_root=self.root,wago_folder=self.wago,
             build=self.BUILD,linked=linked,transport=transport)
