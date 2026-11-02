@@ -1,3 +1,5 @@
+> **최신 개발 상태 인계 안내만 추가 (2026-11-02 P3-AT; 본문 승인 정책 불변):** [CHAT_CONTINUITY_HANDOFF_20261102_P3_AT_SIMC_TO_GJFO_ENGINE_NEXT.md](CHAT_CONTINUITY_HANDOFF_20261102_P3_AT_SIMC_TO_GJFO_ENGINE_NEXT.md), [P3-AT 실측](P3_AT_20261102_NORMAL_SIMC_SOURCE_INTEGRATION.md), CURRENT를 최신 실제 구현 확인에 사용한다. 기존 P3-AF·320-tests·SimC source 미연결 등의 개발 시점 서술은 **역사 스냅샷**이다. 신규 시즌 G/J/F/O 필수, 26 DPS, 단일 정상 Build, 권한 제한 등 승인 기준은 그대로다. GitHub 인계 포인터는 Project UI 등록 증거가 아니다.
+
 # SIMC SECONDARY OPTIMIZER — 개발자 노트 v1.4.3 (2026-11-02)
 ## 최신 승인 정책: 시즌별 G/J/F/O 전체 자동 구축 · B/T 통합 갱신
 

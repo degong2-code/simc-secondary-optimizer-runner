@@ -1,3 +1,5 @@
+> **최신 실행·연속 개발 인계 포인터 (2026-11-02 P3-AT):** [CHAT_CONTINUITY_HANDOFF_20261102_P3_AT_SIMC_TO_GJFO_ENGINE_NEXT.md](CHAT_CONTINUITY_HANDOFF_20261102_P3_AT_SIMC_TO_GJFO_ENGINE_NEXT.md)가 이 파일에 남아 있는 P3-AF·v221 당시 인계 안내보다 최신이다. 한 Build에서 기존 v229 실제 SimC source 7→0 HTTP·v251 exact-ID 후보 연결까지 완료되었으나 대표 일반장비 시즌 근거/G/J/F/O·B/T·사용자 Start E2E는 미완료. 새 채팅 **첫 턴 복원 보고만**, '진행' 전 구현·Actions·Native 중지. 승인 설계·개발 소유권·권한 정책 변경 없음.
+
 # SIMC SECONDARY OPTIMIZER — 개발자 실행 원칙 보충 (2026-11-02)
 
 > **새 채팅 인계 정본 갱신(2026-11-02, P3-AF):** [CHAT_CONTINUITY_HANDOFF_20261102_P3_AF_V216_TO_FRESH_BUILD_NEXT.md](CHAT_CONTINUITY_HANDOFF_20261102_P3_AF_V216_TO_FRESH_BUILD_NEXT.md)가 P3-AB→P3-AC→P3-AD→P3-AE 연속 개발 이후 최신 복원 순서·실물 HEAD·증거/미구현·시작 프롬프트를 소유한다. 아래에 남은 “v221·P3-L 인계에서 단일 관리”는 당시의 역사적 안내이며 최신 정본을 대신하지 않는다. **다음 첫 복원 응답은 읽기/검증/보고만 하고 사용자 '진행' 전 코드·Actions·Native 수정·실행 금지.** 이후 일반 Build 요청에 신규 source fetch→기존 v191→v211→v213→v196→v216, G/J/F/O→v222→v212·v098를 **같은 엔진**으로 이어가며 과거 v216의 정상 미완료 차단을 우회하지 않는다.
