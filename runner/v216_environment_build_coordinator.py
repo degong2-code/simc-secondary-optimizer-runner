@@ -31,6 +31,7 @@ import v245_db2_first_tier_discovery as tier_db
 import v250_raid_tier_bonus_corroboration as raid_bonus
 import v251_db2_raid_tier_simc_bridge as tier_simc_bridge
 import v229_simc_only_source_seed as simc_source
+import v232_simc_only_ordinary_representative as simc_representative
 import v217_stage_execution_engine as stage_engine
 import v196_current_season_user_catalog as user_catalog
 import v241_fresh_source_stage_adapter as fresh_stage
@@ -664,6 +665,144 @@ def _verified_first_party_tier_options_stage(*,stage_root,tier_bridge,
                 "network_calls_by_stage":0,"source_season_verified":False}
 
 
+
+def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
+                                  tier_bridge, seed_directory=None,
+                                  request=None):
+    """Reuse v251 + v232 for ONE requested DPS; only source candidates.
+
+    Never fetch item_data.inc implicitly or substitute the small v229 seed.
+    Real Native/G and independently authenticated season membership remain
+    prerequisites for any production profile or budget promotion.
+    """
+    if request is None:
+        return {"status":"FRESH_ONE_SPEC_REPRESENTATIVE_NOT_REQUESTED",
+                "network_calls_by_stage":0,"native_calls":0,
+                "environment_ready":False}
+    need(type(request) is dict and set(request)=={
+        "class","spec","target_ilevel"} and
+        type(request["class"]) is str and
+        type(request["spec"]) is str and
+        type(request["target_ilevel"]) is int and
+        1<=request["target_ilevel"]<=1000 and
+        simc_representative.chooser.contracts.lookup(
+            request["class"],request["spec"]) is not None,
+        "V216_ONE_SPEC_26_DPS_REQUEST_REQUIRED")
+    if not (fresh_gear.get("candidate_path") and
+            tier_bridge.get("candidate_path")):
+        return {"status":"FRESH_ONE_SPEC_GEAR_OR_TIER_SOURCE_PENDING",
+                "network_calls_by_stage":0,"native_calls":0,
+                "environment_ready":False}
+    if seed_directory is None:
+        return {"status":"FRESH_ONE_SPEC_FULL_PINNED_SIMC_ITEM_DATA_PENDING",
+                "network_calls_by_stage":0,"native_calls":0,
+                "environment_ready":False}
+    root=pathlib.Path(stage_root)
+    seed_dir=pathlib.Path(seed_directory)
+    item_data=seed_dir/"item_data.inc"
+    if not item_data.is_file() or item_data.is_symlink():
+        return {"status":"FRESH_ONE_SPEC_FULL_PINNED_SIMC_ITEM_DATA_PENDING",
+                "network_calls_by_stage":0,"native_calls":0,
+                "environment_ready":False}
+    gear_path=pathlib.Path(fresh_gear["candidate_path"])
+    tier_path=pathlib.Path(tier_bridge["candidate_path"])
+    need(gear_path.is_file() and not gear_path.is_symlink() and
+         tier_path.is_file() and not tier_path.is_symlink() and
+         not seed_dir.is_symlink(),
+         "V216_ONE_SPEC_SOURCE_PATH_MISSING_OR_UNSAFE")
+    gear_bytes=gear_path.read_bytes()
+    tier_bytes=tier_path.read_bytes()
+    gear=json.loads(gear_bytes)
+    tier=json.loads(tier_bytes)
+    need(gear.get("schema")==product_gear_db.SCHEMA and
+         gear.get("season_build")==build and
+         gear.get("no_old_catalog_seed") is True and
+         tier.get("schema")==tier_simc_bridge.SCHEMA and
+         tier.get("game_build")==build and
+         tier.get("season_membership_verified") is False and
+         tier.get("environment_ready") is False,
+         "V216_ONE_SPEC_SOURCE_BUILD_OR_PROVENANCE_MISMATCH")
+    # The SHA is a stage identity, not proof of the file's Git provenance.
+    # v251/v231/v229 recheck the immutable Git tree/blob inside execute().
+    receipt_path=seed_dir/simc_source.RECEIPT
+    need(receipt_path.is_file() and not receipt_path.is_symlink(),
+         "V216_ONE_SPEC_SIMC_RECEIPT_REQUIRED")
+    source_receipt_bytes=receipt_path.read_bytes()
+    item_sha=stage_engine.file_sha256(item_data) if hasattr(
+        stage_engine,"file_sha256") else digest(item_data.read_bytes())
+    output="source/v255_one_spec_source_representative.json"
+    path=root/output
+    code=stage_engine.module_dependency_fingerprint([
+        pathlib.Path(tier_simc_bridge.__file__),
+        pathlib.Path(simc_representative.__file__),
+        pathlib.Path(simc_representative.metadata.__file__),
+        pathlib.Path(stage_engine.__file__)])
+    def execute():
+        source_tier=tier_simc_bridge.select_for_simc(
+            candidate=tier,seed_directory=seed_dir,
+            cls=request["class"],spec=request["spec"])
+        result=simc_representative.find_candidate(
+            seed_directory=seed_dir,
+            tier_candidate=source_tier["v231_candidate"],
+            target_ilevel=request["target_ilevel"],
+            season_gear_db=gear)
+        need(result["game_build"]==build and
+             result["G"] is None and
+             result["environment_ready"] is False,
+             "V216_ONE_SPEC_SOURCE_NOT_PROVISIONAL")
+        path.parent.mkdir(parents=True,exist_ok=True)
+        path.write_text(json.dumps(result,ensure_ascii=False,
+            sort_keys=True,indent=2,allow_nan=False)+"\\n",encoding="utf8")
+    def validate(outputs):
+        row=json.loads(outputs["candidate"].read_text(encoding="utf8"))
+        return (row.get("schema")==simc_representative.SCHEMA and
+                row.get("status")==
+                    "SIMC_SOURCE_PHYSICAL_CANDIDATE_NOT_ACTUAL_SEASON_PROOF"
+                and row.get("game_build")==build and
+                row.get("character",{}).get("class")==request["class"] and
+                row.get("character",{}).get("spec")==request["spec"] and
+                row.get("target_ilevel")==request["target_ilevel"] and
+                row.get("season_candidate_provider")==
+                    "EXPLICIT_SAME_BUILD_WAGO_DB2_V167_CANDIDATES" and
+                row.get("season_gear_db_digest_sha256")==
+                    simc_source.digest(simc_source.canonical(gear).encode("utf8"))
+                and row.get("same_season_membership_not_proven") is True and
+                row.get("native_physical_and_static_G_still_required") is True and
+                row.get("G") is None and row.get("B") is None
+                and row.get("T") is None and
+                row.get("native_calls")==0 and
+                row.get("environment_ready") is False and
+                row.get("receipt_sha256")==simc_source.digest(
+                    simc_source.canonical({
+                        k:v for k,v in row.items()
+                        if k!="receipt_sha256"}).encode("utf8")))
+    try:
+        staged=stage_engine.execute_stage(
+            root=root,stage_id="fresh-one-spec-source-representative",
+            stage_version="v251-v232-exact-sources-one-spec-v1",
+            inputs={"game_build":build,"request":request,
+                    "gear_sha256":digest(gear_bytes),
+                    "tier_sha256":digest(tier_bytes),
+                    "seed_receipt_sha256":digest(source_receipt_bytes),
+                    "simc_item_data_sha256":item_sha,
+                    "code_sha256":code["sha256"]},
+            outputs={"candidate":output},execute=execute,validate=validate)
+    except (stage_engine.StageExecutionBlocked,
+            tier_simc_bridge.BridgeBlocked,
+            simc_representative.SourceRepresentativeBlocked,
+            EnvironmentBuildBlocked,ValueError,KeyError,OSError) as exc:
+        return {"status":"FRESH_ONE_SPEC_PHYSICAL_SOURCE_OR_COVERAGE_PENDING",
+                "reason":str(exc).split(":",1)[0],
+                "network_calls_by_stage":0,"native_calls":0,
+                "environment_ready":False}
+    return {"status":"FRESH_ONE_SPEC_SIMC_G_SOURCE_CANDIDATE_PENDING_NATIVE",
+            "candidate_path":str(path.resolve()),
+            "source_stage":{k:v for k,v in staged.items() if k!="result"},
+            "network_calls_by_stage":0,"native_calls":0,
+            "season_membership_verified":False,"G":None,
+            "environment_ready":False}
+
+
 def collect_wago_new_season_source(*, sessions_root, expected_game_build,
                                    fetch=None, credentials=None,
                                    discovery_transport=None,
@@ -674,7 +813,8 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
                                    simc_revision=None,
                                    previous_game_build=None,
                                    simc_season_event="season_change",
-                                   simc_transport=None):
+                                   simc_transport=None,
+                                   representative_request=None):
     """First real normal-source acquisition inside the SAME Environment Build.
 
     Explicit build is only a request identity, not independent season or tier
@@ -686,6 +826,18 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
          re.fullmatch(r"[0-9]+(?:\.[0-9]+){3}",
                       expected_game_build) is not None,
          "V216_EXPLICIT_NEW_SEASON_BUILD_REQUIRED")
+    # Validate a requested specialization before collecting expensive DB2.
+    if representative_request is not None:
+        need(type(representative_request) is dict and
+             set(representative_request)=={"class","spec","target_ilevel"} and
+             type(representative_request["class"]) is str and
+             type(representative_request["spec"]) is str and
+             type(representative_request["target_ilevel"]) is int and
+             1<=representative_request["target_ilevel"]<=1000 and
+             simc_representative.chooser.contracts.lookup(
+                representative_request["class"],
+                representative_request["spec"]) is not None,
+             "V216_ONE_SPEC_26_DPS_REQUEST_REQUIRED")
     supplied=pathlib.Path(sessions_root).expanduser()
     need(not supplied.is_symlink(),
          "V216_SEASON_SOURCE_SESSION_ROOT_SYMLINK_BLOCKED")
@@ -811,6 +963,10 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
     first_party=_verified_first_party_tier_options_stage(
         stage_root=stage_root,tier_bridge=tier_bridge,
         simc_seed_directory=effective_seed)
+    one_spec=_one_spec_ordinary_simc_stage(
+        stage_root=stage_root,build=expected_game_build,
+        fresh_gear=fresh_gear,tier_bridge=tier_bridge,
+        seed_directory=effective_seed,request=representative_request)
     return {
         "schema":"v216_fresh_source_stage_v1",
         "status":"FRESH_WAGO_DB2_COLLECTED_MORE_SOURCES_PENDING",
@@ -822,6 +978,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "season_discovery":discovered,
         "season_join":linked,
         "fresh_ordinary_gear":fresh_gear,
+        "fresh_one_spec_simc_representative":one_spec,
         "fresh_tier":fresh_tier,
         "fresh_tier_raid_bonus_corroboration":tier_bonus,
         "fresh_tier_simc_candidate_bridge":tier_bridge,
