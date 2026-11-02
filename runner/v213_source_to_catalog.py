@@ -326,7 +326,8 @@ def _compile_enchants(season, classification):
                    for key, value in sorted(groups.items())},
         "selection_policy": {
             "classifier_grants_selection": False,
-            "existing_user_approval_is_applied_by": "v196",
+            "existing_user_approval_is_applied_by": (
+                None if fresh else "v196"),
             "only_existing_native_scoped_choice": None if fresh else 7967,
             "developer_only": [] if fresh else [8025],
             "all_other_candidates_remain_locked": True,
