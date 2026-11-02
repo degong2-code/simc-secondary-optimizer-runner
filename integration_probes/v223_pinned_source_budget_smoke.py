@@ -9,10 +9,13 @@ from __future__ import annotations
 import hashlib
 import json
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "runner"))
+import v098_target_user_scenario_bootstrap as bootstrap
+import v106_user_session_controller as sessions
 import v222_season_budget_contract as budget_contract
 import v223_installed_season_budget_source as source_proof
 
@@ -59,6 +62,32 @@ def main():
           proof["source_input_sha256"], "G_APPROX", result["reference_G"],
           "B", result["base_B"], "T", result["final_T"])
     print("V223_SYNTHETIC_OIL_SERIALIZATION_FIXTURE_NOT_NATIVE_ACCEPTANCE")
+    # A real (generated, not hand-written) internal user profile must pass
+    # exactly the same proof, with the existing SimC worker never invoked.
+    with tempfile.TemporaryDirectory(prefix="v223_real_profile_zero_native_") as tmp:
+        root = Path(tmp)
+        fake_binary = root / "simc-not-executable"
+        fake_binary.write_bytes(b"NO_NATIVE_CALLS")
+        full_user = sessions.user_scenario(sessions.standard_controls())
+        generated = root / "generated"
+        result = bootstrap.build(
+            full_user, generated, fake_binary, catalog["simc_revision"],
+            current_season_product=True, source_catalog_path=CATALOG)
+        physical = (generated / "profile.simc").read_text(encoding="utf8")
+        full_proof = source_proof.produce(
+            catalog=catalog, catalog_sha=artifact_sha,
+            source_paths=FILES, user=full_user,
+            bootstrap=result, physical_profile=physical)
+        final = budget_contract.reconcile(
+            source_catalog=catalog, source_artifact_sha256=artifact_sha,
+            evidence=full_proof["evidence"], plan=result["plan"],
+            target_ilevel=result["target_ilevel"],
+            manual_final_T=full_user["target"]["final_T"])
+        assert final["base_B"] == result["plan"]["base_B"]
+        assert final["final_T"] == result["plan"]["final_T"]
+        print("V223_REAL_GENERATED_PROFILE_GJFO_SOURCE_PASS_NO_NATIVE",
+              result["template_archetype"], full_proof["reference_track"],
+              final["base_B"], final["final_T"])
 
 
 if __name__ == "__main__":
