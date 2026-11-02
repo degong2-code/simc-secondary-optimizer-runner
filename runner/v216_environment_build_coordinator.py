@@ -448,6 +448,9 @@ def _collect_first_party_simc_seed_stage(*,stage_root,build,
         return (simc_source.urlopen if transport is None else transport)(
             req,timeout=timeout)
     def execute():
+        need(not directory.parent.is_symlink(),
+             "V216_SIMC_GENERATED_PARENT_SYMLINK_BLOCKED")
+        directory.parent.mkdir(parents=True,exist_ok=True)
         simc_source.collect(
             revision=revision,expected_build=build,
             previous_game_build=previous_game_build,
