@@ -200,7 +200,8 @@ FRESH_SOURCE_PREFLIGHT_SCHEMA="v216_new_season_source_preflight_v1"
 
 
 def preflight_new_season_source(*, source_catalog_path, expected_game_build,
-                                expected_simc_revision):
+                                expected_simc_revision, budget_evidence=None,
+                                target_ilevel=None, manual_final_T=None):
     """Inspect a freshly assembled v213 artifact in the NORMAL Build path.
 
     This does not install an environment or require previously held source
@@ -249,6 +250,24 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
          ui.get("game_db_recollection_now")==0 and
          ui.get("optimizer_or_cache_mutated") is False,
          "V216_FRESH_UNVERIFIED_CHOICE_OR_BUDGET_PROMOTION")
+    # A caller may supply source-bound numeric evidence before a v098 profile
+    # exists. Only arithmetic/identity is tested here: a self-declared
+    # "verified" label cannot authenticate Wago/SimC/Native provenance.
+    # The top-level G/J/F/O/B/T remain null and installation remains blocked.
+    need(budget_evidence is not None or
+         (target_ilevel is None and manual_final_T is None),
+         "V216_PREPROFILE_BUDGET_INPUT_INCOMPLETE")
+    proposed_budget = None
+    if budget_evidence is not None:
+        try:
+            proposed_budget = season_budget_contract.preprofile_budget(
+                source_catalog=source, source_artifact_sha256=raw_sha,
+                evidence=budget_evidence, target_ilevel=target_ilevel,
+                manual_final_T=manual_final_T)
+        except season_budget_contract.SeasonBudgetBlocked as exc:
+            raise EnvironmentBuildBlocked(
+                "V216_PREPROFILE_GJFO_ARITHMETIC_BLOCKED:" + str(exc)
+            ) from exc
     payload={
         "schema":FRESH_SOURCE_PREFLIGHT_SCHEMA,
         "status":"FRESH_SOURCE_CANDIDATES_VALID_GJFO_PENDING_NOT_INSTALLED",
@@ -269,6 +288,10 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
         "source_retrieval_authenticated_by_this_stage":False,
         "native_calls":0,"network_calls":0,"cache_mutations":0,
     }
+    if proposed_budget is not None:
+        payload["proposed_budget_arithmetic_unadmitted"] = proposed_budget
+        payload["requires"].append(
+            "INDEPENDENT_GJFO_SOURCE_ORIGIN_AND_RATING_AUTHENTICATION")
     return {**payload,"preflight_sha256":
         digest(canonical(payload).encode("utf8"))}
 

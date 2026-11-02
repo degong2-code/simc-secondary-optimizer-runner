@@ -49,16 +49,17 @@ def _component(proof, name, build, manifest_sha):
     return proof
 
 
-def reconcile(*, source_catalog, source_artifact_sha256, evidence,
-              plan, target_ilevel, manual_final_T=None):
-    """Check numeric ownership and require agreement with an existing v098 plan.
+def preprofile_budget(*, source_catalog, source_artifact_sha256, evidence,
+                      target_ilevel, manual_final_T=None):
+    """Calculate the candidate season budget BEFORE v098 profile creation.
 
-    Evidence is internal-only, never copied from browser input. Verification
-    labels and hashes are checked for identity/structure but source proofs
-    must be independently authenticated by the existing source pipeline.
+    This is a pure accounting boundary, not evidence authentication or
+    environment admission. Upstream collectors must independently verify
+    every source/component; the caller must not promote this result to READY.
+    It never fetches source data, runs Native, or changes caches.
     """
-    need(type(source_catalog) is dict and type(evidence) is dict and
-         type(plan) is dict, "GJFO_CONTRACT_OBJECTS_REQUIRED")
+    need(type(source_catalog) is dict and type(evidence) is dict,
+         "GJFO_CONTRACT_OBJECTS_REQUIRED")
     build = source_catalog.get("game_build")
     rev = source_catalog.get("simc_revision")
     manifest_sha = source_catalog.get("manifest_sha256")
@@ -121,11 +122,6 @@ def reconcile(*, source_catalog, source_artifact_sha256, evidence,
     need(B >= amounts["J"] + amounts["F"] +
          sum(fixed_L.values()) + sum(fixed_E.values()),
          "GJFO_FIXED_MINIMA_EXCEED_TOTAL")
-    need(type(plan.get("base_B")) is int and
-         type(plan.get("final_T")) is int and
-         plan["base_B"] == B and plan["final_T"] == T and
-         plan.get("fixed_O") == oil,
-         "GJFO_EXISTING_V098_PLAN_B_T_O_MISMATCH")
     return {
         "schema": SCHEMA,
         "status": "ARITHMETIC_RECONCILED_SOURCE_AUTHENTICATION_EXTERNAL",
@@ -141,3 +137,25 @@ def reconcile(*, source_catalog, source_artifact_sha256, evidence,
         "source_authentication_performed_here": False,
         "native_calls": 0, "network_calls": 0, "cache_mutations": 0,
     }
+
+
+def reconcile(*, source_catalog, source_artifact_sha256, evidence,
+              plan, target_ilevel, manual_final_T=None):
+    """Recheck an already generated v098 plan against the same accounting.
+
+    Uses the pre-profile calculator as the only source of B/T arithmetic,
+    so the user profile and the season engine cannot silently diverge.
+    """
+    need(type(plan) is dict, "GJFO_CONTRACT_OBJECTS_REQUIRED")
+    resolved = preprofile_budget(
+        source_catalog=source_catalog,
+        source_artifact_sha256=source_artifact_sha256,
+        evidence=evidence, target_ilevel=target_ilevel,
+        manual_final_T=manual_final_T)
+    need(type(plan.get("base_B")) is int and
+         type(plan.get("final_T")) is int and
+         plan["base_B"] == resolved["base_B"] and
+         plan["final_T"] == resolved["final_T"] and
+         plan.get("fixed_O") == resolved["fixed_O"],
+         "GJFO_EXISTING_V098_PLAN_B_T_O_MISMATCH")
+    return resolved
