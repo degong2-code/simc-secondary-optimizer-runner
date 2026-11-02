@@ -271,7 +271,6 @@ class SameFreshCatalogChain(unittest.TestCase):
 
     def test_v216_uses_v217_reusable_fresh_source_stages_before_install(self):
         from runner import v216_environment_build_coordinator as build
-        from runner import v217_stage_execution_engine as stage
         with tempfile.TemporaryDirectory() as d:
             root=pathlib.Path(d)
             source=root/"source";source.mkdir()
@@ -330,7 +329,7 @@ class SameFreshCatalogChain(unittest.TestCase):
             season["source_budget_state"]="OLD_INSTALLED"
             v191.write_text(json.dumps(season),encoding="utf8")
             with self.assertRaisesRegex(
-                    stage.StageExecutionBlocked,
+                    ValueError,
                     "FRESH_STAGE_HISTORIC_BUDGET_FORBIDDEN"):
                 adapter.compile_fresh_candidate(
                     **inputs,expected_game_build=BUILD,
