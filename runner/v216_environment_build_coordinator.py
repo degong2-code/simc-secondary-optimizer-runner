@@ -24,6 +24,7 @@ import v242_authenticated_season_source_stage as discovery_stage
 import v163_zero_seed_db2_join as season_join
 import v245_db2_first_tier_discovery as tier_db
 import v250_raid_tier_bonus_corroboration as raid_bonus
+import v251_db2_raid_tier_simc_bridge as tier_simc_bridge
 import v217_stage_execution_engine as stage_engine
 import v196_current_season_user_catalog as user_catalog
 import v241_fresh_source_stage_adapter as fresh_stage
@@ -385,6 +386,35 @@ def _raid_correlated_tier_stage(*,stage_root,build,linked,fresh_tier,
                 "source_season_verified":False}
 
 
+def _physical_tier_to_simc_candidate(*,stage_root,fresh_tier,tier_bonus):
+    """Source-only 13x5 piece bridge; no Native, option inference or Gate.
+
+    If raid correlation is not unique, the Wago candidate discovery remains
+    usable and this optional stage stays pending with zero extra HTTP.
+    """
+    if (tier_bonus.get("status")!=
+          "UNIQUE_RAID_BONUS_CORRELATED_TIER_COHORT_SEASON_PENDING"
+        or not fresh_tier.get("candidate_path")
+        or not tier_bonus.get("candidate_path")):
+        return {"status":"TIER_SIMC_BRIDGE_RAID_CORROBORATION_PENDING",
+                "source_season_verified":False,
+                "simc_source_verified":False,
+                "network_calls_by_stage":0}
+    try:
+        return tier_simc_bridge.build_stage(
+            stage_root=stage_root,
+            db2_candidate_path=fresh_tier["candidate_path"],
+            bonus_candidate_path=tier_bonus["candidate_path"],
+            db2_receipt=fresh_tier["source_stage"]["receipt_sha256"],
+            bonus_receipt=tier_bonus["source_stage"]["receipt_sha256"])
+    except tier_simc_bridge.BridgeBlocked as exc:
+        return {"status":"TIER_SIMC_PHYSICAL_CANDIDATE_PENDING",
+                "reason":str(exc).split(":",1)[0],
+                "source_season_verified":False,
+                "simc_source_verified":False,
+                "network_calls_by_stage":0}
+
+
 def collect_wago_new_season_source(*, sessions_root, expected_game_build,
                                    fetch=None, credentials=None,
                                    discovery_transport=None,
@@ -503,6 +533,8 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
     tier_bonus=_raid_correlated_tier_stage(
         stage_root=stage_root,build=expected_game_build,
         linked=linked,fresh_tier=fresh_tier,transport=bonus_transport)
+    tier_bridge=_physical_tier_to_simc_candidate(
+        stage_root=stage_root,fresh_tier=fresh_tier,tier_bonus=tier_bonus)
     return {
         "schema":"v216_fresh_source_stage_v1",
         "status":"FRESH_WAGO_DB2_COLLECTED_MORE_SOURCES_PENDING",
@@ -515,6 +547,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "season_join":linked,
         "fresh_tier":fresh_tier,
         "fresh_tier_raid_bonus_corroboration":tier_bonus,
+        "fresh_tier_simc_candidate_bridge":tier_bridge,
         "tier_discovery_mode":"DB2_FIRST_NO_PUBLISHER_NAME_LOOKUP",
         "network_calls_by_stage":(len(wago_snapshot.TABLES)
             if stage["executed"] else 0)+discovered["network_calls_by_stage"]+
