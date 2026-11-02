@@ -46,7 +46,7 @@ SET_ROW = re.compile(
     r'(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*'
     r'(-?\d+)\s*,\s*(-?\d+)\s*,\s*(\d+)\s*,\s*'
     r'\{\s*([\d,\s]+)\s*\}\s*\}\s*,?\s*$')
-ITEM_HEAD = re.compile(r"wow build (\d+(?:\.\d+){3})")
+ITEM_HEAD = re.compile(rb"(?m)^// Items, ilevel [0-9]+-[0-9]+, wow build ([0-9]+(?:\.[0-9]+){3})\r?$")
 BASE = "https://api.github.com/repos/simulationcraft/simc/git/trees/"
 RAW_BASE = "https://raw.githubusercontent.com/simulationcraft/simc/"
 
@@ -189,10 +189,12 @@ def inventory(source_bytes, *, simc_revision, expected_build,
         provenance[key]["source_build"]=doc["source_build"]
         provenance[key]["source_row_count"]=doc["declared_rows"]
     if OPTIONAL_ITEM_FILE in source_bytes:
-        text=source_bytes[OPTIONAL_ITEM_FILE][:512].decode(
-            "utf8",errors="replace")
-        found=ITEM_HEAD.search(text)
-        need(found is not None and found.group(1)==expected_build,
+        # The generated item source starts with a potentially huge stat
+        # array. Its genuine item-level/build header occurs afterward.
+        # Scan raw bytes once, without allocating another decoded copy.
+        found=ITEM_HEAD.search(source_bytes[OPTIONAL_ITEM_FILE])
+        need(found is not None and
+             found.group(1)==expected_build.encode("ascii"),
              "V229_ITEM_DATA_BUILT_FOR_DIFFERENT_GAME_BUILD")
         provenance[OPTIONAL_ITEM_FILE]["source_build"]=expected_build
     # Never select 'newest' season by lexicographic tier token or item IDs.
