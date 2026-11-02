@@ -19,7 +19,10 @@ import json
 import pathlib
 import re
 
-import v213_source_to_catalog as source_bridge
+try:
+    from . import v213_source_to_catalog as source_bridge
+except ImportError:  # script entrypoint from runner/
+    import v213_source_to_catalog as source_bridge
 
 SCHEMA = "v224_season_gjfo_evidence_inventory_v1"
 COMPONENTS = ("G", "J", "F", "O")
