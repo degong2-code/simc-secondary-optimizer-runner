@@ -346,7 +346,10 @@ def _db2_first_tier_stage(*,stage_root,wago_folder,build,linked,
     except (tier_db.TierDBBlocked,tier_db.physical.TierBlocked) as exc:
         return {"status":"TIER_DB2_STRUCTURAL_CANDIDATES_PENDING",
                 "reason":str(exc).split(":",1)[0],
-                "candidate_path":None,"network_calls_by_stage":0,
+                "candidate_path":None,
+                "network_calls_by_stage":getattr(
+                    exc,"network_calls_attempted",0),
+                "network_attempts_recorded":True,
                 "source_season_verified":False,
                 "environment_installed":False}
 
