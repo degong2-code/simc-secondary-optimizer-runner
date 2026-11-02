@@ -18,7 +18,8 @@ jobs:
         shell: bash
         run: |
           python - <<'PY'
-          import tempfile, pathlib,json
+          import tempfile, pathlib,json,sys
+          sys.path.insert(0,str(pathlib.Path.cwd()/"runner"))
           from runner import v216_environment_build_coordinator as build
           from runner import v231_simc_tier_item_join as tier
           with tempfile.TemporaryDirectory(prefix="v253-same-build-real-") as td:
