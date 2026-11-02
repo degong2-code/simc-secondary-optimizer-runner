@@ -42,7 +42,7 @@ jobs:
           test ! -d "$RUNNER_TEMP/simc-real/data"
           test ! -d "$RUNNER_TEMP/simc-real/integration_probes"
           test ! -d "$RUNNER_TEMP/simc-real/.git"
-          printf 'SIMC_UPSTREAM_FIXED_REVISION=710c2408bfd3ae4df71b8cd55cdf01f63fd6c926\nSOURCE_GAME_BUILD=12.1.5.70575\nTYPE=OLDER_PINNED_SOURCE_LAYOUT_SMOKE_NOT_NEW_SEASON\nREASON=REAL_SIMC_ITEM_HEADER_APPEARS_AFTER_STAT_ARRAY\n' > "$RUNNER_TEMP/simc-real/out/intent.txt"
+          printf 'SIMC_UPSTREAM_FIXED_REVISION=710c2408bfd3ae4df71b8cd55cdf01f63fd6c926\nSOURCE_GAME_BUILD=12.1.5.70575\nTYPE=OLDER_PINNED_SOURCE_LAYOUT_SMOKE_NOT_NEW_SEASON\nREASON=REAL_SIMC_ITEM_STAT_ROW_COMPATIBILITY_AND_EXACT_PROFILE\n' > "$RUNNER_TEMP/simc-real/out/intent.txt"
       - name: Fetch 4 exact files from upstream SimC commit including item_data once
         shell: bash
         run: |
@@ -56,9 +56,22 @@ jobs:
             --include-item-data \
             --out-dir seed
           cp seed/simc_seed_receipt.json out/v229_simc_seed_receipt.json
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('seed/item_data.inc')
+          seen=False
+          with p.open('rb') as f:
+            for line in f:
+              if b'__item_stats_data[' in line:
+                seen=True
+                print('SIMC_ITEM_STAT_ARRAY_HEADER:',line[:130])
+                for _ in range(2):
+                  print('SIMC_ITEM_STAT_SAMPLE:',next(f,b'')[:130])
+                break
+          assert seen,'SIMC_ITEM_STAT_ARRAY_NOT_PRESENT'
+          PY
       - name: Join real generated set bonus with exact item metadata (1 DPS)
         shell: bash
-        continue-on-error: true
         run: |
           set -euo pipefail
           cd "$RUNNER_TEMP/simc-real"
@@ -68,7 +81,6 @@ jobs:
             --out out/v231_one_mage_tier.json
       - name: Build one provisional physical source representative
         if: always()
-        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
@@ -82,7 +94,6 @@ jobs:
             --target-ilevel 334 --out out/v232_one_mage_representative.json
       - name: Compile zero-Native exact profile if physical source candidate exists
         if: always()
-        continue-on-error: true
         shell: bash
         run: |
           set -euo pipefail
