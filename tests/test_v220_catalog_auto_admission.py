@@ -79,6 +79,14 @@ class AutoAdmissionTests(unittest.TestCase):
         out=policy.decide(self.item,receipts)
         self.assertIn("SIMC_EFFECT_OWNERSHIP_VIOLATION",out["conflicts"])
 
+    def test_temporary_enchant_not_user_auto_admitted_even_with_receipts(self):
+        """Oil is its own fixed-O product input; not a generic enchant choice."""
+        temporary={**self.item,"kind":"temporary_enchant",
+                   "simc_token":"temporary_oil_example"}
+        with self.assertRaisesRegex(ValueError,
+                                    "AUTO_ADMISSION_CANDIDATE_IDENTITY_INVALID"):
+            policy.decide(temporary,self.receipts)
+
     def test_generic_not_hardcoded_to_7967_or_enchant(self):
         gem={**self.item,"kind":"gem","exact_id":244444,
              "simc_token":"gem_foo","slot":"socket1"}

@@ -18,8 +18,11 @@ PROOF_STATUSES={
     "product_input":"PRODUCT_INPUT_ROUTE_ACCEPTED",
     "chmv_budget":"CHMV_ACCOUNTING_VERIFIED",
 }
-ALLOWED_KINDS=frozenset(("permanent_enchant","temporary_enchant",
-                          "gem","embellishment","consumable"))
+# General-purpose temporary enchants are excluded from product choices by
+# the user's 2026-11-02 policy. Weapon oil remains a separate fixed-O product
+# control; its SimC serialization may still use temporary_enchant=.
+ALLOWED_KINDS=frozenset(("permanent_enchant","gem",
+                          "embellishment","consumable"))
 HEX64=re.compile(r"[0-9a-f]{64}\Z")
 HEX40=re.compile(r"[0-9a-f]{40}\Z")
 

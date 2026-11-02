@@ -1,3 +1,11 @@
+# 2026-11-02 P3-K — 최신 사용자 환경 DB 정책 4항목
+
+> **최신 직접 사용자 결정:** ([P3-K 상세 정책](P3_K_20261102_ENVIRONMENT_DB_POLICY_HIGHEST_QUALITY_NO_TEMP_ENCHANT_SEASON_REFRESH_ADDONS.md)) ① 보석·음식·영약 등 정확히 같은 효과/적용 범위에서 수치 우월성이 검증된 **최고 품질만 사용자 UI 등록** ② 일반 임시 마부는 제품 목록에서 제외, **무기 기름 고정 O는 유지** ③ 다음 시즌 F/J/O 수치·아이템·token은 사용자의 1회 Environment Build 요청에서 증거 기반 자동 생성·적용이 목표이나 **현재 미구현**(v108 F165/J138, v091 oil crit16+haste16 고정, v216 installed v213 재사용) ④ Omnium 같은 확장팩·시즌 특수 콘텐츠는 독립 ON/OFF add-on 및 Build 후 GPT에 별도 업데이트 요청 안내. 기존 26 DPS/정책 A/SimC 효과 계산 책임 불변.
+>
+> **이번 반영 범위:** v220 일반 `temporary_enchant` 후보의 정책 A 자동 승격을 막고 회귀 검사를 추가한다. 코드의 다른 v191 수집/117 raw 감사/기존 v091 기름 O/기존 v108 Omnium 입력은 현재 그대로다. 이번 변경은 최고 품질 전체 필터, 수치 갱신, 선택형 add-on 구현 완료가 아니다. GitHub 격리 브랜치·문서만 변경했으며 Native 0, 현재 사용자 세션·캐시/Main/Project UI 변경 없음. 검증 증거는 신규 Actions 결과를 보고 따로 추가한다.
+
+---
+
 # 2026-11-02 P3-J — 실제 SAME-BUILD 보석 아이템↔속성 검증 75건 PASS
 
 > **격리 구현 HEAD:** `f65ecf1bfccbb549b6796370086a85f4a18bf1e4` (pure `runner/v221_gem_item_db2_relation.py`, six offline tests, v212 CI), `996d64b793faaaefa7856060193f50894b86861c` (요청형 2-CSV 원본 조회 `integration_probes/v221_fetch_two_wago_tables.py` 및 새 Actions). main `07133e0aaf738d6e4816a6486057b1cd49c018de` 불변. 사용 승인 정책 A의 기존 `v220` 유효; 새 사용자 선택지/Native 변경 없음.
