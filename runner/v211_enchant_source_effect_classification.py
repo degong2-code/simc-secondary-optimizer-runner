@@ -720,7 +720,7 @@ def fresh_main(argv):
         return 3
     a.out.parent.mkdir(parents=True,exist_ok=True)
     a.out.write_text(json.dumps(result,ensure_ascii=False,
-                        sort_keys=True,indent=2)+"\\n",encoding="utf8")
+                        sort_keys=True,indent=2)+"\n",encoding="utf8")
     print("V211_FRESH_SOURCE_CLASSIFIED_NOT_ADMITTED",
           result["counts"]["total"],"NATIVE_0","OLD_E_0",
           "NO_USER_UI",flush=True)
