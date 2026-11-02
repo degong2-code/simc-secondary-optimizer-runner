@@ -1,0 +1,172 @@
+name: P3-BA ONE-SHOT same-build Wago x pinned SimC ordinary coverage
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p3_ba_one_shot_wago_simc_crosscheck.yml
+permissions:
+  contents: read
+concurrency:
+  group: p3-ba-real-one-spec-source-once
+  cancel-in-progress: false
+jobs:
+  source-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 11
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Real 3 Wago DB2 tables + pinned SimC v229 -> existing v232 one DPS candidate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import csv,hashlib,json,pathlib,tempfile
+          from collections import Counter
+          from urllib.parse import urlencode
+          from urllib.request import Request,urlopen
+          from runner import v229_simc_only_source_seed as seed
+          from runner import v231_simc_tier_item_join as tier
+          from runner import v232_simc_only_ordinary_representative as ordinary
+          from runner import v167_product_season_gear_adapter as gear
+          from runner import v161_wago_db2_snapshot as wago
+
+          build="12.1.5.70575"
+          revision="710c2408bfd3ae4df71b8cd55cdf01f63fd6c926"
+          installed=gear.read()
+          assert installed["season_build"]==build
+          assert installed["no_old_catalog_seed"] is True
+          assert installed["not_certified"]["full_mplus_world_state"] is True
+          plain={x["item_id"]:x for x in installed["items"]
+                 if x["category"]=="plain_representative_candidate"}
+          assert 0<len(plain)<750
+          print("P3_BA_INPUT_V167_SOURCE_ONLY",len(plain),
+                "world_state_unresolved",flush=True)
+
+          with tempfile.TemporaryDirectory(prefix="p3-ba-one-spec-") as td:
+              root=pathlib.Path(td)
+              # This one-run sample uses an existing exact same-build pinned
+              # reference, not an asserted current/newest live build.
+              pinned=root/"simc"
+              receipt=seed.collect(
+                  revision=revision,expected_build=build,dest=pinned,
+                  previous_game_build=None,season_event="cold_start",
+                  include_item_data=True)
+              assert receipt["provenance_tree_blob_authenticated"] is True
+              assert receipt["item_data_present"] is True
+              set_candidate=tier.select(seed_directory=pinned,
+                  cls="paladin",spec="retribution",
+                  set_option="midnight_season_2")
+              print("P3_BA_PINNED_SIMC_TIER",set_candidate["set_id"],
+                    "tier_ids",sorted(set_candidate["tier_piece_ids"].values()),
+                    flush=True)
+
+              sizes={}
+              hashes={}
+              for table in ("Item","ItemSparse","ItemXItemEffect"):
+                  url="https://wago.tools/db2/"+table+"/csv?"+urlencode({
+                      "build":build,"locale":"enUS"})
+                  target=root/(table+".csv")
+                  req=Request(url,headers={
+                      "User-Agent":"SIMC-Secondary-DB2-Research/1.0",
+                      "Accept":"text/csv"})
+                  sha=hashlib.sha256()
+                  used=0
+                  with urlopen(req,timeout=90) as source,target.open("wb") as out:
+                      assert source.status==200,table+"_HTTP_NON200"
+                      while True:
+                          chunk=source.read(262144)
+                          if not chunk:break
+                          used+=len(chunk)
+                          assert used<=wago.MAX_PER,table+"_OVERSIZE"
+                          sha.update(chunk);out.write(chunk)
+                  assert used>0,table+"_EMPTY"
+                  sizes[table]=used;hashes[table]=sha.hexdigest()
+                  print("P3_BA_WAGO_SAME_BUILD",table,"bytes",used,
+                        "sha256",hashes[table],flush=True)
+
+              def index_csv(table,columns):
+                  result={}
+                  with (root/(table+".csv")).open(
+                          encoding="utf-8-sig",newline="") as stream:
+                      rd=csv.DictReader(stream)
+                      assert set(columns)<=set(rd.fieldnames or ()),(
+                          table,"MISSING_COLUMNS",rd.fieldnames)
+                      for i,row in enumerate(rd):
+                          assert i<wago.MAX_TOTAL,table+"_ROW_LIMIT"
+                          try:iid=int(row["ID"])
+                          except (TypeError,ValueError):continue
+                          if iid in plain:
+                              assert iid not in result,(table,"DUPLICATE",iid)
+                              result[iid]=row
+                  return result
+              item=index_csv("Item",("ID","ClassID","SubclassID","InventoryType"))
+              sparse=index_csv("ItemSparse",(
+                  "ID","InventoryType","ItemSet","ExpansionID"))
+              effect=set()
+              with (root/"ItemXItemEffect.csv").open(
+                      encoding="utf-8-sig",newline="") as stream:
+                  rd=csv.DictReader(stream)
+                  assert {"ItemID","ItemEffectID"}<=set(rd.fieldnames or ())
+                  for i,row in enumerate(rd):
+                      assert i<wago.MAX_TOTAL,"EFFECT_ROW_LIMIT"
+                      try:
+                          iid=int(row["ItemID"])
+                          eff=int(row["ItemEffectID"])
+                      except (ValueError,TypeError):continue
+                      if iid in plain and eff>0:effect.add(iid)
+              reasons=Counter()
+              survivors=[]
+              for iid,entry in sorted(plain.items()):
+                  raw=item.get(iid);sp=sparse.get(iid)
+                  if raw is None or sp is None:
+                      reasons["MISSING_SAME_BUILD_WAGO_ITEM_OR_SPARSE"]+=1
+                      continue
+                  if (int(raw["InventoryType"])!=entry["inventory_type"] or
+                      int(raw["ClassID"])!=entry["class_id"] or
+                      int(raw["SubclassID"])!=entry["subclass_id"] or
+                      int(sp["InventoryType"])!=entry["inventory_type"] or
+                      int(sp["ItemSet"])!=0):
+                      reasons["DB2_INSTALLED_METADATA_MISMATCH"]+=1
+                      continue
+                  if iid in effect:
+                      reasons["WAGO_DIRECT_ITEM_EFFECT_PRESENT"]+=1
+                      continue
+                  survivors.append(entry)
+              # Do not rewrite the installed DB. A transient, independently
+              # filtered compatible v167 source is passed to existing v232.
+              filtered={**installed,"items":survivors,
+                        "item_count":len(survivors),
+                        "role_counts":{"plain_representative_candidate":
+                                       len(survivors)}}
+              print("P3_BA_WAGO_CROSSCHECK_COUNTS",
+                    "source_plain",len(plain),"surviving",len(survivors),
+                    "excluded",dict(reasons),flush=True)
+              if not survivors:
+                  print("P3_BA_NO_WAGO_PLAIN_CANDIDATES_PENDING",flush=True)
+              else:
+                  checked=gear.validate(filtered)
+                  try:
+                      candidate=ordinary.find_candidate(
+                          seed_directory=pinned,tier_candidate=set_candidate,
+                          target_ilevel=334,season_gear_db=checked)
+                  except ordinary.SourceRepresentativeBlocked as exc:
+                      # A missing physical slot is a valid, explicit BLOCKED
+                      # outcome rather than a fallback to SimC-only gear.
+                      print("P3_BA_WAGO_X_SIMC_ONE_SPEC_COVERAGE_PENDING",
+                            str(exc).split(":",1)[0],flush=True)
+                  else:
+                      assert candidate["season_candidate_provider"]==(
+                          "EXPLICIT_SAME_BUILD_WAGO_DB2_V167_CANDIDATES")
+                      assert candidate["G"] is None
+                      assert candidate["environment_ready"] is False
+                      print("P3_BA_WAGO_X_SIMC_ONE_SPEC_SOURCE_CANDIDATE",
+                            "slot_count",len(candidate["selected_G_slot_ids"]),
+                            "physical_ids",json.dumps(
+                                candidate["selected_G_slot_ids"],sort_keys=True),
+                            "source_kinds",json.dumps(
+                                candidate["selected_gear_season_source_kinds"],
+                                sort_keys=True),flush=True)
+              print("P3_BA_NO_SEASON_INSTALL_NATIVE0_GJFO_PENDING",flush=True)
+          PY
