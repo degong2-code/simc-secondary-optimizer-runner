@@ -55,7 +55,7 @@ def _component(value, sha, catalog, category):
 
 
 def produce(*, catalog, catalog_sha, source_paths, user, bootstrap,
-            physical_profile):
+            physical_profile, pre_oil_scenario=None):
     """Derive a v222 receipt only for an already-installed same-season snapshot.
 
     Fail closed when the exact v191 budget/gear/tier files are unavailable,
@@ -169,11 +169,32 @@ def produce(*, catalog, catalog_sha, source_paths, user, bootstrap,
     expected = ("/".join(hand + ":" + oil.OIL for hand in
                           ("main_hand", "off_hand") if hand in hands)
                 if hands else "disabled")
-    temp_lines = [line for line in physical_profile.splitlines()
+    # v098 persists a PRE-oil profile. The existing v091 adapter generates
+    # the real candidate oil token from those bytes and the sealed scenario.
+    # Replay that exact path, checking its user-supplied source-profile SHA.
+    checked_profile = physical_profile
+    serializer = "EXPLICIT_EXISTING_OIL_TOKEN_ONLY"
+    if pre_oil_scenario is not None:
+        try:
+            configured = oil.configure(physical_profile, pre_oil_scenario,
+                                       weapon_layout, hands)
+        except (ValueError, TypeError, KeyError) as exc:
+            raise SourceBudgetBlocked(
+                "O_PREOIL_SCENARIO_OR_SOURCE_PROFILE_INVALID") from exc
+        checked_profile = configured["profile"]
+        serializer = "V091_ORIGINAL_PROFILE_SHA_AND_OIL_SERIALIZER_REPLAYED"
+        need(configured["applied_hands"] ==
+             [x for x in ("main_hand", "off_hand") if x in hands] and
+             configured["expected_simc_temporary_enchant"] == expected,
+             "O_V091_HANDS_OR_TOKEN_DRIFT")
+    temp_lines = [line for line in checked_profile.splitlines()
                   if line.startswith("temporary_enchant=")]
     need(temp_lines == ["temporary_enchant=" + expected],
          "O_PROFILE_SERIALIZATION_DIFFERENT_FROM_SELECTED_HANDS")
     O = {key: oil.PER_WEAPON[key] * len(hands) for key in contract.STATS}
+    if pre_oil_scenario is not None:
+        need(configured["declared_O"] == O,
+             "O_V091_DECLARED_RATING_MISMATCH")
     fixed_zero = {key: 0 for key in contract.STATS}
     evidence = {
         "schema": contract.SCHEMA,
@@ -204,6 +225,7 @@ def produce(*, catalog, catalog_sha, source_paths, user, bootstrap,
         "evidence": evidence,
         "reference_track": track,
         "reference_rounded": True,
+        "profile_oil_serialization": serializer,
         "source_input_sha256": {**digests, "reference": reference_sha},
         "source_not_native_effect_or_highest_quality_admission": True,
         "native_calls": 0, "network_calls": 0,
