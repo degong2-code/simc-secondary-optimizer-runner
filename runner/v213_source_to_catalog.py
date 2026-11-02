@@ -685,6 +685,9 @@ def compile_catalog(season, season_sha, classification, classification_sha):
             "status": classification["status"],
             "counts": classification["counts"],
             "rows": classification["rows"],
+            **({"source_manifest_sha256":classification["source_manifest_sha256"]}
+               if classification.get("source_manifest_sha256") is not None
+               else {}),
         },
         "v196_enchant_source": v196_source,
         "catalog_summary": summary,
