@@ -146,5 +146,54 @@ class SeasonGjfoInventoryTests(unittest.TestCase):
                 p.load(link)
 
 
+    def test_real_file_cli_compiles_sealed_v191_v213_source_gap_receipt(self):
+        season,catalog,inputs=fixture()
+        with tempfile.TemporaryDirectory() as td:
+            folder=pathlib.Path(td)
+            paths={}
+            for key in p.SOURCE:
+                path=folder/(key+".json")
+                path.write_text(p.canonical(inputs[key][0])+"\\n",encoding="utf8")
+                paths[key]=path
+                season["sha256_by_input"][key]=p.digest(path.read_bytes())
+            # Pin an actual v191 file SHA in the v213 manifest, not an
+            # invented token. Compiler must authenticate the exact file.
+            v191=folder/"v191.json"
+            v191.write_text(p.canonical(season)+"\\n",encoding="utf8")
+            actual_v191_sha=p.digest(v191.read_bytes())
+            classification=SourceToCatalogTests()
+            classification.setUpClass()
+            _,class_doc=classification.build_inputs()
+            catalog=catalog_bridge.compile_catalog(
+                season,actual_v191_sha,class_doc,"b"*64)
+            v213=folder/"v213.json"
+            v213.write_text(p.canonical(catalog)+"\\n",encoding="utf8")
+            output=folder/"inventory.json"
+            self.assertEqual(p.main([
+                "--v191",str(v191),"--v213",str(v213),
+                "--gear",str(paths["gear"]),"--tier",str(paths["tier"]),
+                "--budget",str(paths["budget"]),
+                "--event","mid_patch","--target-ilevel","334",
+                "--out",str(output)]),0)
+            result=json.loads(output.read_text(encoding="utf8"))
+            self.assertEqual(result["v191_source_sha256"],actual_v191_sha)
+            self.assertEqual(result["verified_components"],[])
+            self.assertIsNone(result["B"])
+            self.assertFalse(result["budget_can_be_published"])
+            # An actual on-disk byte drift fails without modifying output.
+            raw=output.read_bytes()
+            paths["budget"].write_bytes(paths["budget"].read_bytes()+b" ")
+            with self.assertRaisesRegex(p.SeasonEvidenceBlocked,
+                                        "BUDGET_SOURCE_DIGEST_MISMATCH"):
+                p.main([
+                    "--v191",str(v191),"--v213",str(v213),
+                    "--gear",str(paths["gear"]),
+                    "--tier",str(paths["tier"]),
+                    "--budget",str(paths["budget"]),
+                    "--event","mid_patch","--target-ilevel","334",
+                    "--out",str(output)])
+            self.assertEqual(output.read_bytes(),raw)
+
+
 if __name__=="__main__":
     unittest.main()
