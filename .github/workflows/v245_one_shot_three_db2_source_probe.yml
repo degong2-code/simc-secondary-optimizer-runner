@@ -1,0 +1,63 @@
+name: v245 ONE-SHOT three DB2 tier source reality check (NO Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/v245_one_shot_three_db2_source_probe.yml
+permissions:
+  contents: read
+jobs:
+  three-tables:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Inspect actual same-build ItemSet ItemSetSpell ChrSpecialization DB2 source
+        shell: bash
+        run: |
+          python - <<'PY'
+          import sys
+          sys.path.insert(0,"runner")
+          import v245_db2_first_tier_discovery as tier
+          from collections import defaultdict
+          b="12.1.5.70575"
+          payload={name:tier.fetch_table(name,b) for name in tier.TABLES}
+          rows={name:tier.rows(payload[name],
+                 (("ID","Name_lang") if name=="ItemSet"
+                  else ("ItemSetID","ChrSpecID","SpellID","Threshold")
+                  if name=="ItemSetSpell" else ("ID","ClassID")),name)
+                for name in tier.TABLES}
+          print("P245_REAL_DB2_BYTES",[(name,len(payload[name]),tier.sha(payload[name]))
+                                          for name in tier.TABLES])
+          spec={tier.number(r["ID"]):tier.number(r["ClassID"])
+                for r in rows["ChrSpecialization"]}
+          groups=defaultdict(lambda:defaultdict(set))
+          for r in rows["ItemSetSpell"]:
+              group=tier.number(r["ItemSetID"])
+              cls=spec.get(tier.number(r["ChrSpecID"]))
+              if cls in tier.BY_ID:
+                  groups[group][tier.number(r["ChrSpecID"])].add(
+                       tier.number(r["Threshold"]))
+          qualifying={}
+          for s in rows["ItemSet"]:
+              sid=tier.number(s["ID"])
+              byspec=groups.get(sid,{})
+              if len(byspec)<2 or not all({2,4}<=v for v in byspec.values()):
+                  continue
+              classes={spec[i] for i in byspec}
+              if len(classes)!=1:continue
+              pieces=[tier.number(s.get("ItemID_"+str(i),0))
+                      for i in range(17)]
+              pieces=[x for x in pieces if x>0]
+              if len(pieces)!=5 or len(set(pieces))!=5:continue
+              qualifying[sid]=tier.BY_ID[next(iter(classes))]
+          print("P245_REAL_DB2_STRUCTURAL_5PC_2PC4PC",len(qualifying),
+                "class_coverage",len(set(qualifying.values())))
+          print("P245_REAL_DB2_SOURCE_SCHEMA_PASS")
+          print("P245_NO_CURRENT_SEASON_SELECTION_FROM_STRUCTURE")
+          PY
