@@ -71,16 +71,26 @@ def split_cpp_record(line):
     return fields
 
 
-def parse_exact(raw, *, build, item_ids, max_bytes=seed.MAX_ITEM_FILE):
+def parse_exact(raw, *, build, item_ids=None, candidate_filter=None,
+                candidate_limit=4000, max_bytes=seed.MAX_ITEM_FILE):
+    """One streaming pass for either exact IDs or bounded candidate selection.
+
+    Candidate mode reuses all existing C++ layout, generated-stat pointer and
+    chunk-count checks. A candidate is not an approved in-season item.
+    """
     need(type(raw) is bytes and 0<len(raw)<=max_bytes and
          type(build) is str and seed.BUILD.fullmatch(build),
          "V230_ITEM_DATA_BYTES_OR_BUILD_INVALID")
-    need(type(item_ids) in (list,tuple,set) and
-         0<len(item_ids)<=MAX_REQUEST_IDS and
-         all(type(x) is int and 0<x<10**10 for x in item_ids) and
-         len(set(item_ids))==len(item_ids),
+    candidate_mode=item_ids is None
+    need((candidate_mode and callable(candidate_filter) and
+          type(candidate_limit) is int and 1<=candidate_limit<=5000) or
+         (not candidate_mode and candidate_filter is None and
+          type(item_ids) in (list,tuple,set) and
+          0<len(item_ids)<=MAX_REQUEST_IDS and
+          all(type(x) is int and 0<x<10**10 for x in item_ids) and
+          len(set(item_ids))==len(item_ids)),
          "V230_EXACT_ITEM_REQUEST_IDS_INVALID")
-    wanted=set(item_ids)
+    wanted=None if candidate_mode else set(item_ids)
     try:
         lines=io.StringIO(raw.decode("utf8"))  # no massive list of C++ lines
     except UnicodeError as exc:
@@ -140,7 +150,18 @@ def parse_exact(raw, *, build, item_ids, max_bytes=seed.MAX_ITEM_FILE):
             current_items+=1
             item_count+=1
             iid=number(fields[1],"V230_ITEM_ID_UNRECOGNIZED")
-            if iid not in wanted:
+            if candidate_mode:
+                try:
+                    include=candidate_filter(fields)
+                except (ValueError,TypeError,KeyError,IndexError) as exc:
+                    raise ItemMetadataBlocked(
+                        "V230_CANDIDATE_FILTER_REJECTED") from exc
+                need(type(include) is bool,
+                     "V230_CANDIDATE_FILTER_MUST_RETURN_BOOL")
+                if not include:continue
+                need(len(found)<candidate_limit,
+                     "V230_SOURCE_CANDIDATE_LIMIT_REACHED")
+            elif iid not in wanted:
                 continue
             need(iid not in found,"V230_DUPLICATE_ITEM_ID")
             name=fields[0]
@@ -175,7 +196,7 @@ def parse_exact(raw, *, build, item_ids, max_bytes=seed.MAX_ITEM_FILE):
     need(built and chunks>0 and not inside_stats and not inside_chunk and
          declared_items==item_count and
          stat_total==len(stats) and
-         set(found)==wanted,
+         (bool(found) if candidate_mode else set(found)==wanted),
          "V230_GENERATED_ITEM_DATA_INCOMPLETE_OR_REQUEST_MISSING")
     return {
         "schema":SCHEMA,"status":"SOURCE_ITEM_METADATA_ONLY_NO_G_PROOF",
@@ -183,7 +204,9 @@ def parse_exact(raw, *, build, item_ids, max_bytes=seed.MAX_ITEM_FILE):
         "source_sha256":hashlib.sha256(raw).hexdigest(),
         "source_bytes":len(raw),
         "full_generated_item_rows_scanned":item_count,
-        "requested_item_count":len(wanted),
+        "requested_item_count":len(found) if candidate_mode else len(wanted),
+        "selection_mode":"SOURCE_CANDIDATE_UNAPPROVED" if candidate_mode
+                         else "EXACT_REQUESTED_IDS",
         "items":sorted(found.values(),key=lambda row:row["item_id"]),
         "native_calls":0,"G":None,"environment_ready":False,
     }
