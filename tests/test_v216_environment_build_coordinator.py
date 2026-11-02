@@ -335,7 +335,8 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             return Response(tier_sources[table])
         args={"sessions_root":self.root/"unscoped_no_credentials",
               "expected_game_build":"12.2.0.99999",
-              "fetch":fetch,"tier_transport":tier_fetch,"credentials":{}}
+              "fetch":fetch,"tier_transport":tier_fetch,
+              "credentials":{k:"" for k in v216.discovery_stage.FIELDS}}
         first=v216.collect_wago_new_season_source(**args)
         second=v216.collect_wago_new_season_source(**args)
         self.assertEqual(len(requests),len(snapshot.TABLES)+len(tierdb.TABLES))
