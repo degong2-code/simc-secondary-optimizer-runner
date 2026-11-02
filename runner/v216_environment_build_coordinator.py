@@ -735,10 +735,17 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
     item_sha=item_digest.hexdigest()
     output="source/v255_one_spec_source_representative.json"
     path=root/output
+    # Include transitive source parser/chooser and the adapter itself.
+    # An implementation change must not silently reuse an old candidate.
     code=stage_engine.module_dependency_fingerprint([
+        pathlib.Path(__file__),
         pathlib.Path(tier_simc_bridge.__file__),
+        pathlib.Path(tier_simc_bridge.simc_tier.__file__),
+        pathlib.Path(simc_source.__file__),
         pathlib.Path(simc_representative.__file__),
         pathlib.Path(simc_representative.metadata.__file__),
+        pathlib.Path(simc_representative.chooser.__file__),
+        pathlib.Path(product_gear_db.__file__),
         pathlib.Path(stage_engine.__file__)])
     def execute():
         source_tier=tier_simc_bridge.select_for_simc(
