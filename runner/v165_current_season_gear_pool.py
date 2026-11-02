@@ -96,16 +96,26 @@ def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALL
     need(db2.get("schema")=="v163_zero_seed_db2_join_v1"
          and db2.get("source_provider")=="WAGO_TOOLS_PINNED_DB2_WCL_LIVE",
          "SOURCE_DB2_REPORT_INVALID")
-    need(delve.get("schema")=="v162_localbots_delve_source_v1"
-         and delve.get("source_provider")=="Localbots / balovich-matje/localbots",
-         "SOURCE_LOCALBOTS_REPORT_INVALID")
-    need(db2.get("build")==delve.get("db2_build")
-         and db2.get("db2_expansion_id")==delve.get("db2_expansion_id")
-         and type(db2.get("db2_expansion_id")) is int,
+    # Localbots is supplementary. An authenticated v163 raid/M+ source
+    # must remain usable when Localbots is unavailable on a fresh install.
+    # No synthetic Localbots receipt or old-season seed may be substituted.
+    need(type(db2.get("db2_expansion_id")) is int,
          "SEASON_BUILD_EXPANSION_MISMATCH")
+    if delve is None:
+        delve_rows=[]
+        delve_status="OPTIONAL_SOURCE_NOT_COLLECTED"
+    else:
+        need(delve.get("schema")=="v162_localbots_delve_source_v1"
+             and delve.get("source_provider")=="Localbots / balovich-matje/localbots",
+             "SOURCE_LOCALBOTS_REPORT_INVALID")
+        need(db2.get("build")==delve.get("db2_build")
+             and db2.get("db2_expansion_id")==delve.get("db2_expansion_id"),
+             "SEASON_BUILD_EXPANSION_MISMATCH")
+        delve_rows=delve.get("items")
+        delve_status="SAME_BUILD_SUPPLEMENTARY_SOURCE"
     budget, budget_mode=_budget_source(budget_source,db2["build"])
     originals={}
-    for src,rows in (("wago",db2.get("items")),("localbots",delve.get("items"))):
+    for src,rows in (("wago",db2.get("items")),("localbots",delve_rows)):
         need(type(rows) is list and len(rows)<=30000,"SOURCE_ROWS_INVALID")
         seen=set()
         for row in rows:
@@ -185,6 +195,7 @@ def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALL
        "counts_by_season_status":dict(sorted(selection.items())),
        "item_x_item_effect_csv_sha256":fx_sha,
        "effect_classification_meaning":"RETAIL_ITEMXITEMEFFECT_RELATION_ONLY_NOT_SIMC_PROC_CERTIFICATION",
+       "supplementary_localbots_status":delve_status,
        "usable_four_piece_roster_certified":False,
        "fully_implemented_special_item_list_certified":False,
        "full_season_completeness_confirmed":False,
