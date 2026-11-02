@@ -1,0 +1,55 @@
+name: v253 ONE-SHOT actual pinned first-party SimC stage in normal Build
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/v253_one_shot_live_v229_in_normal_build.yml]
+permissions:
+  contents: read
+jobs:
+  source-stage:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: "3.12"}
+      - name: Real pinned existing v229 collector through v216 normal source stage, cache reuse, no Native
+        shell: bash
+        run: |
+          python - <<'PY'
+          import tempfile, pathlib,json
+          from runner import v216_environment_build_coordinator as build
+          from runner import v231_simc_tier_item_join as tier
+          with tempfile.TemporaryDirectory(prefix="v253-same-build-real-") as td:
+              root=pathlib.Path(td)
+              args={"stage_root":root,"build":"12.1.5.70575",
+                    "revision":"710c2408bfd3ae4df71b8cd55cdf01f63fd6c926",
+                    "previous_game_build":"12.0.1.66838",
+                    "season_event":"season_change"}
+              one=build._collect_first_party_simc_seed_stage(**args)
+              print("V253_FIRST",one["status"],"network",one["network_calls_by_stage"],flush=True)
+              assert one["status"]=="SIMC_PINNED_SET_SOURCE_RECEIPT_READY",one
+              assert one["network_calls_by_stage"]==7,one
+              two=build._collect_first_party_simc_seed_stage(**args)
+              print("V253_REUSE",two["status"],"network",two["network_calls_by_stage"],flush=True)
+              assert two["network_calls_by_stage"]==0,two
+              assert two["source_stage"]["status"]=="REUSED_VERIFIED",two
+              receipt,source=tier.read_receipt(one["source_dir"])
+              assert receipt["provenance_tree_blob_authenticated"] is True
+              assert receipt["simc_generated_build"]=="12.1.5.70575"
+              assert receipt["item_data_present"] is False
+              for start in (1978,2055):
+                  groups=[x for x in source["candidate_groups"]
+                          if start<=x["set_id"]<=start+12
+                          and x["observed_bonus_sizes"]==[2,4]
+                          and len(x["item_ids"])==5]
+                  assert len(groups)==13 and len({g["class_id"] for g in groups})==13,groups
+                  print("V253_COHORT",start,"groups",len(groups),
+                        "five_pieces",sum(len(x["item_ids"]) for x in groups),
+                        "options",sorted({g["set_opt"] for g in groups}),flush=True)
+              print("V253_SOURCE_RECEIPT",receipt["receipt_sha256"],
+                    "set_source_sha256",
+                    receipt["source_files"]["item_set_bonus.inc"]["sha256"],flush=True)
+              print("V253_ACTUAL_SOURCE_STAGE_PASS_NOT_SEASON_INSTALL",flush=True)
+          PY
