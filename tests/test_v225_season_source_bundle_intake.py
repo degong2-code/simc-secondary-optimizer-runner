@@ -27,6 +27,7 @@ class BundleIntakeTests(unittest.TestCase):
             "season": "synthetic_next_season_test_only",
             "simc_revision": "a" * 40,
             "sources": {},
+            "component_origins": {},
         }
         for key, filename in bundle.SOURCE_FILES.items():
             path = self.root / filename
@@ -43,6 +44,19 @@ class BundleIntakeTests(unittest.TestCase):
                 "source_system": system,
                 "source_locator": uri, "source_build": self.target_build,
                 "retrieval_receipt_sha256": "e" * 64,
+            }
+        for component, keys in bundle.COMPONENT_INPUTS.items():
+            key = keys[0]
+            row = self.manifest["sources"][key]
+            self.manifest["component_origins"][component] = {
+                "source_files": list(keys),
+                "candidate_sources": [{
+                    "source_system": row["source_system"],
+                    "source_locator": row["source_locator"],
+                    "source_build": self.target_build,
+                    "retrieval_receipt_sha256": "e" * 64,
+                    "item_ids": [123456],
+                }],
             }
         self.write_manifest()
 
@@ -62,6 +76,13 @@ class BundleIntakeTests(unittest.TestCase):
         self.assertEqual(set(result["source_input_sha256"]),
                          {"gear","tier","budget"})
         self.assertEqual(result["missing_components"],["G","J","F","O"])
+        self.assertEqual(result["component_origin_routes"]["G"]["source_files"],
+                         ["gear","tier"])
+        self.assertEqual(result["component_origin_routes"]["J"]["source_files"],
+                         ["budget"])
+        self.assertNotEqual(
+            result["component_origin_routes"]["G"]["source_files"],
+            result["component_origin_routes"]["O"]["source_files"])
         self.assertTrue(all(result[key] is None for key in
                             ["G","J","F","O","B","T"]))
         self.assertFalse(result["ready"])
@@ -166,6 +187,29 @@ class BundleIntakeTests(unittest.TestCase):
         self.write_manifest()
         with self.assertRaisesRegex(bundle.SourceBundleBlocked,
                                     "SOURCE_ORIGIN_DECLARATION"):
+            self.verify()
+
+    def test_component_routes_cannot_claim_same_budget_source_for_G(self):
+        self.manifest["component_origins"]["G"]["source_files"]=["budget"]
+        self.write_manifest()
+        with self.assertRaisesRegex(bundle.SourceBundleBlocked,
+                                    "GJFO_COMPONENT_INPUT_ROUTE_INVALID"):
+            self.verify()
+
+    def test_component_source_revision_or_id_identity_cannot_be_omitted(self):
+        self.manifest["component_origins"]["O"]["candidate_sources"][0][
+            "item_ids"]=[]
+        self.write_manifest()
+        with self.assertRaisesRegex(bundle.SourceBundleBlocked,
+                                    "GJFO_COMPONENT_SOURCE_RECORD_INVALID"):
+            self.verify()
+        self.manifest["component_origins"]["O"]["candidate_sources"][0][
+            "item_ids"]=[123456]
+        self.manifest["component_origins"]["O"]["candidate_sources"][0][
+            "source_build"]="12.1.5.70575"
+        self.write_manifest()
+        with self.assertRaisesRegex(bundle.SourceBundleBlocked,
+                                    "GJFO_COMPONENT_SOURCE_RECORD_INVALID"):
             self.verify()
 
     def test_unrelated_event_request_blocked(self):
