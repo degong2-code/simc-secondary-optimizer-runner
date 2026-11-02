@@ -55,6 +55,17 @@ class ProductAdapterTests(unittest.TestCase):
         self.assertFalse(plate["weapon_profile_confirmed"])
         self.assertEqual(plate["status"],"PREVIEW_ONLY_NOT_A_PROFILE")
 
+    def test_fresh_j_f_unknown_is_preserved_without_making_it_ready(self):
+        inp=source()
+        inp["consumable_budget_source_mode"]="NEW_SEASON_J_F_BUDGET_EVIDENCE_PENDING"
+        inp["consumable_budget_reference"]=None
+        result=adapter.from_v166(inp)
+        self.assertEqual(result["consumable_budget_source_mode"],
+                         "NEW_SEASON_J_F_BUDGET_EVIDENCE_PENDING")
+        self.assertTrue(result["J_F_NUMERIC_AUTHENTICATION_NOT_IN_GEAR_COLLECTOR"])
+        self.assertEqual(result["item_count"],5)
+        self.assertTrue(result["not_certified"]["tier_four_set"])
+
     def test_reject_conditional_or_uncertified_as_current(self):
         a=source();a["current_candidates"][0]["selection_evidence"]="CONDITIONAL_SEASON_NOT_ESTABLISHED"
         with self.assertRaises(adapter.GearBlocked):
