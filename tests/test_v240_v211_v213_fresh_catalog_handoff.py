@@ -176,8 +176,24 @@ class SameFreshCatalogChain(unittest.TestCase):
             root=pathlib.Path(d)
             src=root/"simc";src.mkdir()
             season,classified=self.inputs(src)
-            artifact=join.compile_catalog(season,"a"*64,classified,"b"*64)
+            # A previously generated fixture has an old known budget source.
+            # The fresh Build preflight must reject that historical input.
+            legacy=join.compile_catalog(season,"a"*64,classified,"b"*64)
             catalog=root/"fresh_v213.json"
+            catalog.write_text(json.dumps(legacy,ensure_ascii=False),
+                               encoding="utf8")
+            with self.assertRaisesRegex(
+                    build.EnvironmentBuildBlocked,
+                    "V216_FRESH_NO_HISTORICAL_BUDGET_AND_SOURCE_PROOF_REQUIRED"):
+                build.preflight_new_season_source(
+                    source_catalog_path=catalog,expected_game_build=BUILD,
+                    expected_simc_revision=REV)
+            # Real new-season mode carries NULL J/F and NULL budget-file SHA.
+            season["sha256_by_input"]["budget"]=None
+            season["source_budget_state"]="NEW_SEASON_J_F_EVIDENCE_PENDING"
+            season["consumables"]["flask"]["reference"]=None
+            season["consumables"]["general_gems"]["reference"]=None
+            artifact=join.compile_catalog(season,"a"*64,classified,"b"*64)
             catalog.write_text(json.dumps(artifact,ensure_ascii=False),
                                encoding="utf8")
             receipt=build.preflight_new_season_source(
