@@ -1,0 +1,130 @@
+name: v235 One-Time Pinned SimC Raw Source Compatibility (No Native)
+
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/v235_one_pinned_simc_real_source.yml
+
+permissions:
+  contents: read
+
+jobs:
+  pinned-source-compatibility:
+    if: contains(github.event.head_commit.message, '[simc-source-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            runner/v191_unified_season_data_update.py
+            runner/v229_simc_only_source_seed.py
+            runner/v230_simc_item_metadata.py
+            runner/v231_simc_tier_item_join.py
+            runner/v232_simc_only_ordinary_representative.py
+            runner/v233_source_only_G_probe_profile.py
+            runner/v143_specialization_contracts.py
+            runner/v167_product_season_gear_adapter.py
+            runner/v169_source_first_representative_stage.py
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Copy only source-engine files, exclude existing season DB and caches
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/simc-real/runner" "$RUNNER_TEMP/simc-real/out"
+          cp runner/*.py "$RUNNER_TEMP/simc-real/runner/"
+          touch "$RUNNER_TEMP/simc-real/runner/__init__.py"
+          test ! -d "$RUNNER_TEMP/simc-real/data"
+          test ! -d "$RUNNER_TEMP/simc-real/integration_probes"
+          test ! -d "$RUNNER_TEMP/simc-real/.git"
+          printf 'SIMC_UPSTREAM_FIXED_REVISION=710c2408bfd3ae4df71b8cd55cdf01f63fd6c926\nSOURCE_GAME_BUILD=12.1.5.70575\nTYPE=OLDER_PINNED_SOURCE_LAYOUT_SMOKE_NOT_NEW_SEASON\n' > "$RUNNER_TEMP/simc-real/out/intent.txt"
+      - name: Fetch 4 exact files from upstream SimC commit including item_data once
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/simc-real"
+          python runner/v229_simc_only_source_seed.py \
+            --revision 710c2408bfd3ae4df71b8cd55cdf01f63fd6c926 \
+            --game-build 12.1.5.70575 \
+            --previous-game-build 12.1.5.70575 \
+            --event mid_patch \
+            --include-item-data \
+            --out-dir seed
+          cp seed/simc_seed_receipt.json out/v229_simc_seed_receipt.json
+      - name: Join real generated set bonus with exact item metadata (1 DPS)
+        shell: bash
+        continue-on-error: true
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/simc-real"
+          python runner/v231_simc_tier_item_join.py \
+            --seed-dir seed --class mage --spec frost \
+            --set-option midnight_season_2 \
+            --out out/v231_one_mage_tier.json
+      - name: Build one provisional physical source representative
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/simc-real"
+          if [[ ! -f out/v231_one_mage_tier.json ]]; then
+            echo 'V232_NOT_RUN_NO_VERIFIED_TIER_CANDIDATE'
+            exit 3
+          fi
+          python runner/v232_simc_only_ordinary_representative.py \
+            --seed-dir seed --tier-candidate out/v231_one_mage_tier.json \
+            --target-ilevel 334 --out out/v232_one_mage_representative.json
+      - name: Compile zero-Native exact profile if physical source candidate exists
+        if: always()
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$RUNNER_TEMP/simc-real"
+          if [[ ! -f out/v232_one_mage_representative.json ]]; then
+            echo 'V233_NOT_RUN_NO_FULL_PHYSICAL_SOURCE_CANDIDATE'
+            exit 3
+          fi
+          python runner/v233_source_only_G_probe_profile.py \
+            --seed-dir seed \
+            --tier-candidate out/v231_one_mage_tier.json \
+            --representative-candidate out/v232_one_mage_representative.json \
+            --race human --level 90 --output-dir out
+      - name: Assert that all results stay unpromoted and no Native was run
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,os,pathlib
+          out=pathlib.Path(os.environ['RUNNER_TEMP'])/'simc-real/out'
+          for filename in ('v229_simc_seed_receipt.json',
+                           'v231_one_mage_tier.json',
+                           'v232_one_mage_representative.json',
+                           'v233_receipt.json'):
+            p=out/filename
+            if not p.exists():
+              print(filename+':MISSING_OPTIONAL_STAGE_NOT_APPROVED')
+              continue
+            d=json.loads(p.read_text(encoding='utf8'))
+            assert d.get('environment_ready') is False
+            assert d.get('G') is None and d.get('B') is None and d.get('T') is None
+            assert d.get('native_calls')==0
+            print(filename+':SOURCE_ONLY_CANDIDATE_NOT_PRODUCTION')
+          assert not (out/'native.json').exists()
+          print('V235_NO_NATIVE_RUN_NO_G_PROMOTION')
+          PY
+      - name: Save small receipts only (exclude the 26MB raw generated data)
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v235-pinned-simc-source-compatibility-${{ github.run_id }}
+          path: ${{ runner.temp }}/simc-real/out/
+          retention-days: 2
+          if-no-files-found: warn
