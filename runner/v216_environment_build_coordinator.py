@@ -16,6 +16,7 @@ import re
 import tempfile
 
 import v212_environment_manifest as environment_manifest
+import v222_season_budget_contract as season_budget_contract
 
 SCHEMA = "v216_incremental_environment_build_receipt_v1"
 SESSION_KEY = re.compile(r"[a-f0-9]{20}\Z")
@@ -180,7 +181,7 @@ def _step(name, status, **details):
 def build_environment(*, sessions_root, session_folder, user, binary, revision,
                       static_cache, source_catalog_path, bootstrap_result,
                       v208_start_receipt_path=None, package_manifest_path=None,
-                      profile_stage_receipt=None):
+                      profile_stage_receipt=None, season_budget_evidence=None):
     """Reconcile existing inputs and seal one incremental, auditable build.
 
     Source acquisition is intentionally outside this local coordinator:
@@ -217,6 +218,31 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
     need(source_path is not None and source_path.is_file(),
          "V213_SOURCE_CATALOG_NOT_PACKAGED")
     source_document, source_raw_sha = environment_manifest.read_json(source_path)
+    # Numeric-only contract: evidence is supplied by trusted internal producers,
+    # never by a browser request. This does not authenticate proof bytes or
+    # perform season refresh; missing proof must not imply READY.
+    if season_budget_evidence is None:
+        season_budget = {
+            "schema": season_budget_contract.SCHEMA,
+            "status": "INSTALLED_REFERENCE_ONLY_GJFO_REFRESH_NOT_VERIFIED",
+            "source_authentication_performed_here": False,
+            "native_calls": 0, "network_calls": 0,
+        }
+    else:
+        try:
+            target = user.get("target") if type(user) is dict else None
+            manual_T = target.get("final_T") if type(target) is dict else None
+            season_budget = season_budget_contract.reconcile(
+                source_catalog=source_document,
+                source_artifact_sha256=source_raw_sha,
+                evidence=season_budget_evidence,
+                plan=bootstrap_result.get("plan"),
+                target_ilevel=bootstrap_result.get("target_ilevel"),
+                manual_final_T=manual_T)
+        except season_budget_contract.SeasonBudgetBlocked as exc:
+            raise EnvironmentBuildBlocked(
+                "V216_SEASON_BUDGET_PROOF_OR_ARITHMETIC_BLOCKED:" + str(exc)
+            ) from exc
     scope = environment_scope_identity(user)
     previous = find_previous_environment(root, folder, scope["scope_sha256"])
     previous_manifest = previous["manifest"] if previous else None
@@ -322,6 +348,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 "v191_v211_v213_refresh_requires_a_separately_verified_source_package",
         },
         "steps": steps,
+        "season_budget": season_budget,
         "profile_stage": profile_stage_receipt,
         "dependency_change": {
             "status": dependency_change.get("status", "INITIAL_ENVIRONMENT"),
@@ -343,7 +370,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         "cache_reuse": cache_reuse,
         "readiness": {
             "status": result["status"],
-            "limitations": list(result.get("readiness_limitations", [])),
+            "limitations": list(result.get("readiness_limitations", [])) +
+                ["SEASON_GJFO_AUTO_REFRESH_NOT_VERIFIED"],
             "unresolved_dependencies": list(
                 result.get("unresolved_dependencies", [])),
             "source_join_audit":
@@ -409,6 +437,7 @@ def public_summary(receipt):
             "simc_revision": receipt["source"]["simc_revision"],
         },
         "steps": receipt["steps"],
+        "season_budget": receipt.get("season_budget"),
         "profile_stage": receipt.get("profile_stage"),
         "dependency_change": receipt["dependency_change"],
         "cache_reuse": receipt["cache_reuse"],
