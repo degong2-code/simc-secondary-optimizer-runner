@@ -42,7 +42,7 @@ def need(ok, reason):
 
 
 def build(*, source_directory, tier_candidate, representative_candidate,
-          race, level, talents=None):
+          race, level, talents=None, season_gear_db=None):
     need(type(representative_candidate) is dict and
          representative_candidate.get("schema")==ordinary.SCHEMA and
          representative_candidate.get("status")==
@@ -60,7 +60,8 @@ def build(*, source_directory, tier_candidate, representative_candidate,
             seed_directory=source_directory,
             tier_candidate=tier_candidate,
             target_ilevel=representative_candidate["target_ilevel"],
-            max_source_distance=window["distance"])
+            max_source_distance=window["distance"],
+            season_gear_db=season_gear_db)
     except (ordinary.SourceRepresentativeBlocked,ValueError,KeyError,
             TypeError,OSError) as exc:
         raise ProbeBlocked("V233_REGENERATED_SIMC_SOURCE_REJECTED") from exc
@@ -128,6 +129,8 @@ def main(argv=None):
     p.add_argument("--seed-dir",type=pathlib.Path,required=True)
     p.add_argument("--tier-candidate",type=pathlib.Path,required=True)
     p.add_argument("--representative-candidate",type=pathlib.Path,required=True)
+    p.add_argument("--season-gear-db",type=pathlib.Path,
+                   help="Optional same-build v167 candidate DB when v232 used season mode")
     p.add_argument("--race",required=True)
     p.add_argument("--level",type=int,required=True)
     p.add_argument("--talents",default=None)
@@ -135,10 +138,12 @@ def main(argv=None):
     a=p.parse_args(argv)
     tier=json.loads(a.tier_candidate.read_text("utf8"))
     candidate=json.loads(a.representative_candidate.read_text("utf8"))
+    db=(json.loads(a.season_gear_db.read_text(encoding="utf8"))
+        if a.season_gear_db else None)
     profile,receipt=build(
         source_directory=a.seed_dir,tier_candidate=tier,
         representative_candidate=candidate,race=a.race,
-        level=a.level,talents=a.talents)
+        level=a.level,talents=a.talents,season_gear_db=db)
     a.output_dir.mkdir(parents=True,exist_ok=True)
     outputs=((a.output_dir/"source_G_probe.simc",profile.encode("utf8")),
              (a.output_dir/"v233_receipt.json",
