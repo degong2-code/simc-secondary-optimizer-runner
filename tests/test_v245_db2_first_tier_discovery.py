@@ -19,6 +19,10 @@ def arrange(folder,*,two_seasons=True,omit_4pc=False,bad_mask=False):
     sparse=list(csv.DictReader((root/"ItemSparse.csv").open()))
     items=list(csv.DictReader((root/"Item.csv").open()))
     classes=sorted(physical.FAMILY)
+    for row in sparse:
+        idx=(number_id-500 if (number_id:=int(row["ItemSet"]))>=500 else -1)
+        if 0<=idx<len(classes):
+            row["AllowableClass"]=str(1<<(tierdb.CLASS_IDS[classes[idx]]-1))
     setrows=[];bonus=[];specs=[]
     for n,cl in enumerate(classes):
         classid=tierdb.CLASS_IDS[cl]
@@ -33,11 +37,11 @@ def arrange(folder,*,two_seasons=True,omit_4pc=False,bad_mask=False):
                 if wave==1:
                     sparse.append({"ID":iid,"Display_lang":"Old-looking "+cl,
                         "InventoryType":str(inv),"ExpansionID":"11",
-                        "ItemSet":str(sid),"AllowableClass":str(1<<n)})
+                        "ItemSet":str(sid),"AllowableClass":str(1<<(classid-1))})
                     items.append({"ID":iid,"ClassID":"4",
                          "SubclassID":str(physical.FAMILY[cl]),
                          "InventoryType":str(inv)})
-                elif bad_mask and cl=="evoker" and pos==0:
+                elif bad_mask and cl=="druid" and pos==0:
                     for row in sparse:
                         if int(row["ID"])==iid:row["AllowableClass"]="0"
             setrows.append({"ID":sid,"Name_lang":"not for matching "+str(wave)+cl,
@@ -91,7 +95,8 @@ class DB2CandidateTest(unittest.TestCase):
             doc=tierdb.discover(wago_folder=d,build=BUILD,
                                  expansion_id=11,source_bytes=sources)
             self.assertEqual(doc["candidate_set_count"],24)
-            self.assertEqual(doc["candidate_counts_by_class"]["evoker"],0)
+            self.assertEqual(doc["candidate_counts_by_class"]["druid"],1)
+            self.assertEqual(doc["candidate_counts_by_class"]["evoker"],1)
             self.assertIsNone(doc["current_season_selection"])
 
     def test_source_schema_build_and_missing_provenance_block(self):
