@@ -318,6 +318,17 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         self.assertEqual(second["fresh_tier_raid_bonus_corroboration"]
                          ["network_calls_by_stage"],0)
         self.assertFalse(bonus["source_season_verified"])
+        bridge=first["fresh_tier_simc_candidate_bridge"]
+        self.assertEqual(bridge["status"],
+            "OBSERVED_CURRENT_RAID_CORRELATED_65_PIECE_TIER_CANDIDATE")
+        self.assertEqual(bridge["class_count"],13)
+        self.assertEqual(bridge["piece_count"],65)
+        self.assertEqual(bridge["source_stage"]["status"],"EXECUTED_AND_SEALED")
+        self.assertEqual(second["fresh_tier_simc_candidate_bridge"]
+                         ["source_stage"]["status"],"REUSED_VERIFIED")
+        self.assertFalse(bridge["season_membership_verified"])
+        self.assertFalse(bridge["simc_source_verified"])
+        self.assertFalse(bridge["environment_ready"])
         self.assertEqual(second["fresh_tier"]["network_calls_by_stage"],0)
         self.assertEqual(first["fresh_tier"]["status"],
                          "DB2_CLASS_TIER_CANDIDATES_SEASON_PENDING")
