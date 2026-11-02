@@ -100,10 +100,14 @@ class SimCOnlySeedTests(unittest.TestCase):
         with self.assertRaisesRegex(seed.SimCSourceBlocked,
                                     "GENERATED_SIMC_COMPILED_BUILD_MISMATCH"):
             inventory(raw)
-        with self.assertRaisesRegex(seed.SimCSourceBlocked,
-                                    "NEW_SEASON_OLD_BUILD_REUSE_BLOCKED"):
-            seed.inventory(raw_sources(OLD),simc_revision=REVISION,
-                           expected_build=OLD,previous_game_build=OLD)
+        # Same client build is allowed as source input; season proof is
+        # still absent and generated-file build drift still blocks above.
+        same=seed.inventory(raw_sources(OLD),simc_revision=REVISION,
+                            expected_build=OLD,previous_game_build=OLD)
+        self.assertEqual(same["season_event"],"season_change")
+        self.assertEqual(same["simc_generated_build"],OLD)
+        self.assertIsNone(same["G"])
+        self.assertFalse(same["environment_ready"])
 
     def test_gem_and_oil_candidates_may_not_prove_quality_or_rating(self):
         result=inventory()
