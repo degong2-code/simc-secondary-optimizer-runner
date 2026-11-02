@@ -1,0 +1,36 @@
+# P3-AT — Normal Environment Build first-party SimC source acquisition and exact-ID tier source matching
+
+Date 2026-11-02 KST; isolated branch only. Do not confuse observed source readiness with product completion.
+
+## Product invariant and user decision
+
+Build future absolute CHMV optimal ratings for 26 DPS specs at target ilvl (default 334) or manual final T, using the existing adaptive SimC maximum-DPS search. Season-specific G, J, F, O must be independently verified and B=G+J+F, T=B+O recomputed; selected oil is fixed-only and applied once; honor E/L lower bounds, quality/option restrictions, 95% only stats, cache/cancel/resume. No equipped-gear redistribution, all-season item database or loot recommendation.
+
+## Real evidence and scope
+
+- [#41455991413](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41455991413) **PASS real cross-provider exact ID**. Same pinned game build 12.1.5.70575, SimC immutable commit `710c2408bfd3ae4df71b8cd55cdf01f63fd6c926`: Wago ItemSet CSV 92,549 bytes SHA256 `0ae48ff20e117ba0d4bc30d6934819b752785cca0d61cbb0b5812ed99bd19bc6`; generated SimC `item_set_bonus.inc` 239,987 bytes SHA256 `3f05a2df338c92f315af9d6b6b47eb3b03171a72630ed852d9a661a7da7c99bc`. Independently exact-joined all 13 class sets/65 physical IDs in historical S1 ItemSet IDs 1978–1990 and observed S2 IDs 2055–2067. SimC set options are `midnight_season_1` / `midnight_season_2`; **these string labels are output of exact ID matching, not external input selection**. Both same-build historical sets are present; nothing chooses `max ID` as the season.
+- [#41457632768](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41457632768) **PASS actual v216 wrapper calling existing v229**: 4 public Git tree requests plus 3 exact source blob downloads = 7 network requests on new source, immutable blob SHA authenticated and v217 SHA-sealed. Same revision/build rerun = 0 network requests and `REUSED_VERIFIED`. Verified S1 and S2 13 source groups/65 pieces each. Actual v229 source receipt SHA256 `a223c1cbd27aab60d734644b8a7580e4dbd22cb9912d504121c4b797c2c7ac7a`. There is **no item_data.inc, Native or static G** in this acceptance.
+- Initial disposable research workflow [#41457527529](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41457527529) failed before any HTTP because the research script omitted the normal `runner` import path. Corrected **only** that one-shot script, then real #41457632768 PASS. Preserve the failure as research-script error, not a SimC source failure.
+
+## Code implemented
+
+1. `runner/v251_db2_raid_tier_simc_bridge.py`: add `match_first_party_roster()` for one-pass exact group join across 13 classes using a **v231.read_receipt**-authenticated v229 first-party seed. Match `class_id`, `ItemSetID`, unordered exact **5 item IDs** and `[2,4]` bonuses, require exactly one `set_opt` per class. No name matching, old season seed, item effect implementation or Native. Output 13 source-backed option candidates; keep `season_membership_verified=false`, `simc_item_data_metadata_fully_verified=false`, `G/J/F/O/B/T=null`, no product environment promotion.
+2. `v251.build_first_party_match_stage()`: new v217 sealed source-identity stage binding exact v251 physical candidate SHA, upstream stage receipt, actual v229 source SHA and SimC revision. Repeating unchanged source bytes returns a reused output; 0 HTTP. Existing `v251.select_for_simc()` remains the per-user DPS verification against actual `item_data.inc` when the latter is acquired for physical profile/G work.
+3. `runner/v216_environment_build_coordinator.py`: reuse existing v229.collect (not a new collector). When an exact runtime `simc_revision` and `previous_game_build` are supplied, same normal fresh Wago Build requests three small generated SimC source blobs, validates Git tree blob IDs, records a versioned v217 stage and passes source directory directly into v251 bulk match. Existing internal `simc_seed_directory` reuse remains an optional path. With no revision/source, reports source pending and performs 0 extra requests. An untrusted/mismatched seed fails closed. New source collector is NOT a new mandatory Gate; other v245 source discovery can continue without it.
+4. `v229.collect` never downloads large `item_data.inc` in this 13-class option stage. Only requested G/profile validation may request full exact item data later. Any SimC revision/build mismatch or failed source fetch remains pending with an actual reason, never relabels old source as current.
+
+## Validation and efficiency
+
+- [#41457357814](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41457357814) final relevant code CI: **Ubuntu 360 tests, Windows 360 tests**, each 0 FAIL/4 SKIP and Native0. Simulated integrated v216 source flow: first Wago 10 + tier 3 + bonus 2 = 15 requests, then source v229 7 requests, all cached follow-up 0. Test includes source ID match + no seasonal auto admission. **This 360-test result is synthetic and separate from the actual real-source receipts above.**
+- [#41457357665](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41457357665), [#41457357885](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41457357885), [#41457357707](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41457357707): local API, Windows Beta, UI Actions at the functional SHA all SUCCESS. No actual new SimC Native or current season G proof was executed.
+- No item DB expansion, no extra tier research gate; historical same-season raw source cache remains valid by source/build identity, DPS cache unchanged. All time-consuming source downloads bounded and memoized. The research workflows were deleted after actual Actions receipts were retained.
+
+## Incomplete and next efficient product work
+
+- Runtime SimC revision **must be supplied as the exact pinned source commit**; this work does not infer it from the game build or guess a latest branch. The normal 26-DPS user session still needs source→physical representative and profile wiring, plus new-season default budget.
+- Active raid↔tier observed bonus corroboration is strong, but `source_season_verified` remains false without conclusive active-season attribution. The exact v229 13x5 join establishes SimC **compatibility**, not active-season provenance by itself.
+- The most important remaining P1 work is **same-season G/J/F/O source/ratings and B/T**: use existing v221–v240 modules, validate highest-quality J/F/O item/effects/static amounts and selected oils, exact representative weapon+tier static G (season-valid source/reference), once-only E/L/O, then emit 26-DPS supported profiles and connect existing adaptive SimC. `item_data.inc` and Native are reserved for those actual source gaps. Fresh Environment Build is still NOT installed. A zero-history full Build experiment is only after completion, never as a substitute for implementing the ordinary route.
+
+## Authority and integrity
+
+Development branch `probe/chat-cache-v035-20261024`; main must stay `07133e0aaf738d6e4816a6486057b1cd49c018de`. No modification to immutable v003/original v016, Project UI/Instructions, official Work OS or primary product chat ownership.
