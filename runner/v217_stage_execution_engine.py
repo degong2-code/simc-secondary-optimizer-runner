@@ -149,7 +149,12 @@ def _snapshot(paths):
         need(path.is_file() and not path.is_symlink(),
              "STAGE_OUTPUT_MISSING_OR_INVALID:"+name)
         size=path.stat().st_size
-        records[name]={"path":relative,"size":size,"sha256":digest(path.read_bytes())}
+        # Source-stage DB2 files can be hundreds of MB: hash in bounded memory.
+        h=hashlib.sha256()
+        with path.open("rb") as stream:
+            for chunk in iter(lambda:stream.read(1024*1024),b""):
+                h.update(chunk)
+        records[name]={"path":relative,"size":size,"sha256":h.hexdigest()}
         total+=size
     return records,total
 

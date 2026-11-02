@@ -56,6 +56,9 @@ class UserRequest(BaseModel):
     revision: str = Field(min_length=7, max_length=40)
     static_cache: str | None = Field(default=None, max_length=4096)
     current_season_product: bool = False
+    # Opt-in normal-source collection only; never grants new environment READY.
+    fresh_season_build: str | None = Field(
+        default=None,max_length=32,pattern=r"^d+(?:.d+){3}$")
 
 def blocked(exc):
     """Return stable codes, not private absolute paths, talent strings, or tracebacks."""
@@ -86,6 +89,7 @@ class LocalJobs:
         self.children = {}
         self.static_lock = threading.Lock()
         self.profile_stage_lock = threading.Lock()
+        self.season_source_lock = threading.Lock()
 
     def default_static_cache(self, user, requested):
         """Reuse an existing same-PC static cache; never create L or call SimC.
@@ -98,6 +102,13 @@ class LocalJobs:
             return requested
         candidate=exact_L.source_cache(self.root,None)
         return str(candidate) if candidate is not None else None
+
+    def collect_fresh_source(self, build):
+        # One request per exact build at a time. v217 then reuses proof bytes
+        # for the same build without repeating external Wago HTTP.
+        with self.season_source_lock:
+            return environment_build.collect_wago_new_season_source(
+                sessions_root=self.root,expected_game_build=build)
 
     def source_catalog_path(self):
         """Use the packaged v213 artifact when present; legacy source remains fallback."""
@@ -883,6 +894,11 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
     def build_environment(request: UserRequest):
         if not request.current_season_product:
             raise HTTPException(422,detail={"code":"ENVIRONMENT_BUILD_CURRENT_SEASON_ONLY"})
+        if request.fresh_season_build is not None:
+            try:
+                return jobs.collect_fresh_source(request.fresh_season_build)
+            except Exception as exc:
+                raise blocked(exc) from None
         return jobs.plan(request)
 
     @app.get("/api/v1/environment/{session_id}")

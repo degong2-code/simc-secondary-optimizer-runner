@@ -17,7 +17,7 @@ TABLES=("JournalTierXInstance","JournalInstance","JournalEncounter",
         "MapChallengeMode","Map","CraftingData","ItemSparse","Item")
 MAX_TOTAL=320_000_000
 MAX_PER=210_000_000
-def snapshot(folder,build=BUILD,fetch=urlopen):
+def snapshot(folder,build=BUILD,fetch=urlopen,*,make_archive=True):
     if not re.fullmatch(r"\d+\.\d+\.\d+\.\d+",build):
         raise ValueError("INVALID_BUILD")
     folder.mkdir(parents=True,exist_ok=True)
@@ -51,11 +51,12 @@ def snapshot(folder,build=BUILD,fetch=urlopen):
     (folder/"receipt.json").write_text(json.dumps(
         receipt,ensure_ascii=False,sort_keys=True,indent=2)+"\n",encoding="utf8")
     # Separate archive inside output directory, only CSV and receipt
-    with zipfile.ZipFile(folder/"db2-snapshot.zip","w",zipfile.ZIP_DEFLATED,
-                         compresslevel=5) as archive:
-        for table in TABLES:
-            archive.write(folder/(table+".csv"),arcname=table+".csv")
-        archive.write(folder/"receipt.json",arcname="receipt.json")
+    if make_archive:
+        with zipfile.ZipFile(folder/"db2-snapshot.zip","w",zipfile.ZIP_DEFLATED,
+                             compresslevel=5) as archive:
+            for table in TABLES:
+                archive.write(folder/(table+".csv"),arcname=table+".csv")
+            archive.write(folder/"receipt.json",arcname="receipt.json")
     return receipt
 def main():
     p=argparse.ArgumentParser()

@@ -19,6 +19,9 @@ import v212_environment_manifest as environment_manifest
 import v222_season_budget_contract as season_budget_contract
 import v223_installed_season_budget_source as season_source_proof
 import v213_source_to_catalog as source_to_catalog
+import v161_wago_db2_snapshot as wago_snapshot
+import v163_zero_seed_db2_join as db2_join
+import v217_stage_execution_engine as stage_engine
 import v196_current_season_user_catalog as user_catalog
 import v241_fresh_source_stage_adapter as fresh_stage
 
@@ -257,6 +260,90 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
     }
     return {**payload,"preflight_sha256":
         digest(canonical(payload).encode("utf8"))}
+
+
+
+def collect_wago_new_season_source(*, sessions_root, expected_game_build,
+                                   fetch=None):
+    """First real normal-source acquisition inside the SAME Environment Build.
+
+    Explicit build is only a request identity, not independent season or tier
+    proof. Use original v161 Wago collector and v217 receipt stage. Neither
+    existing season references, sessions nor optimizer caches are inputs.
+    Missing other independent sources must not be marked READY or installed.
+    """
+    need(type(expected_game_build) is str and
+         re.fullmatch(r"[0-9]+(?:\.[0-9]+){3}",
+                      expected_game_build) is not None,
+         "V216_EXPLICIT_NEW_SEASON_BUILD_REQUIRED")
+    supplied=pathlib.Path(sessions_root).expanduser()
+    need(not supplied.is_symlink(),
+         "V216_SEASON_SOURCE_SESSION_ROOT_SYMLINK_BLOCKED")
+    root=supplied.resolve()
+    root.mkdir(parents=True,exist_ok=True)
+    workspace=root/"_fresh_season_sources"
+    need(not workspace.is_symlink(),
+         "V216_FRESH_SOURCE_WORKSPACE_SYMLINK_BLOCKED")
+    workspace.mkdir(exist_ok=True)
+    stage_root=workspace/("wago_"+expected_game_build)
+    need(not stage_root.is_symlink(),
+         "V216_FRESH_SOURCE_BUILD_SYMLINK_BLOCKED")
+    stage_root.mkdir(exist_ok=True)
+    output_dir=stage_root/"wago"
+    need(not output_dir.is_symlink(),
+         "V216_FRESH_SOURCE_OUTPUT_SYMLINK_BLOCKED")
+    outputs={"receipt":"wago/receipt.json"}
+    outputs.update({t:"wago/"+t+".csv" for t in wago_snapshot.TABLES})
+    code=stage_engine.module_dependency_fingerprint(
+        [pathlib.Path(__file__),pathlib.Path(wago_snapshot.__file__),
+         pathlib.Path(db2_join.__file__)])
+    def execute():
+        opts={"build":expected_game_build,"make_archive":False}
+        if fetch is not None:
+            opts["fetch"]=fetch
+        wago_snapshot.snapshot(output_dir,**opts)
+    def validate(_paths):
+        receipt=db2_join.verify_snapshot(output_dir,expected_game_build)
+        return (receipt.get("schema")==
+                "v161_wago_zero_seed_csv_snapshot_v1" and
+                receipt.get("status")==
+                "ALL_CSV_DOWNLOADED_NOT_YET_INTERPRETED" and
+                receipt.get("simc_native_calls")==0 and
+                receipt.get("legacy_item_ids_imported") is False)
+    try:
+        stage=stage_engine.execute_stage(
+            root=stage_root,stage_id="fresh-wago-db2",
+            stage_version="v161-normal-collector-1",
+            inputs={"game_build":expected_game_build,"locale":"enUS",
+                    "tables":list(wago_snapshot.TABLES),
+                    "source":"https://wago.tools/db2",
+                    "code_sha256":code["sha256"]},
+            outputs=outputs,execute=execute,validate=validate)
+    except stage_engine.StageExecutionBlocked as exc:
+        raise EnvironmentBuildBlocked(
+            "V216_FRESH_WAGO_STAGE_BLOCKED:"+str(exc)) from exc
+    return {
+        "schema":"v216_fresh_source_stage_v1",
+        "status":"FRESH_WAGO_DB2_COLLECTED_MORE_SOURCES_PENDING",
+        "expected_game_build":expected_game_build,
+        "source":"https://wago.tools/db2",
+        "snapshot_receipt_path":str((output_dir/"receipt.json").resolve()),
+        "source_stage":{k:v for k,v in stage.items() if k!="result"},
+        "network_calls_by_stage":len(wago_snapshot.TABLES)
+            if stage["executed"] else 0,
+        "native_calls":0,
+        "environment_installed":False,
+        "environment_ready":False,
+        "source_season_verified":False,
+        "simc_source_verified":False,
+        "G":None,"J":None,"F":None,"O":None,"B":None,"T":None,
+        "requires":["CURRENT_SEASON_AND_TIER_SOURCE_PROOF",
+                    "SOURCE_FIRST_GEAR_AND_CONSUMABLE_JOINS",
+                    "SIMC_EXACT_SOURCE_MANIFEST",
+                    "G_J_F_O_B_T_AND_POLICY_A",
+                    "NEW_SEASON_V212_PROFILE_INSTALL"],
+        "existing_session_or_cache_mutated":False,
+    }
 
 
 def build_environment(*, sessions_root, session_folder, user, binary, revision,

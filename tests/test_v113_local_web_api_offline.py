@@ -42,6 +42,35 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(r.status_code,200,r.text)
         return r.json()
 
+
+    def test_environment_build_fresh_source_routes_before_old_plan(self):
+        payload={**self.payload,"current_season_product":True,
+                 "fresh_season_build":"12.2.0.99999"}
+        fake={"schema":"v216_fresh_source_stage_v1",
+              "status":"FRESH_WAGO_DB2_COLLECTED_MORE_SOURCES_PENDING",
+              "environment_ready":False,"environment_installed":False,
+              "network_calls_by_stage":10,"native_calls":0}
+        with mock.patch.object(
+                web.environment_build,"collect_wago_new_season_source",
+                return_value=fake) as acquire, mock.patch.object(
+                self.app.state.jobs,"plan",
+                side_effect=AssertionError("PRIOR_SEASON_PLAN_FORBIDDEN")):
+            response=self.post("/api/v1/environment/build",payload)
+        self.assertEqual(response.status_code,200,response.text)
+        self.assertEqual(response.json(),fake)
+        acquire.assert_called_once_with(
+            sessions_root=self.root/"runs",
+            expected_game_build="12.2.0.99999")
+        self.assertFalse((self.root/"runs").exists())
+        wrong=self.post("/api/v1/environment/build",
+                        {**payload,"fresh_season_build":"../../other"})
+        self.assertEqual(wrong.status_code,422)
+        self.assertFalse((self.root/"runs").exists())
+        unauthorized=self.client.post(
+            "/api/v1/environment/build",json=payload,
+            headers={"content-type":"application/json"})
+        self.assertEqual(unauthorized.status_code,403)
+
     def test_packaged_v213_catalog_path_is_detected_and_missing_path_falls_back(self):
         jobs=web.LocalJobs(self.root/"runs")
         expected=(pathlib.Path(web.__file__).resolve().parents[1]/

@@ -78,6 +78,83 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                    "target":{"ilevel":334,"final_T":None}}
         self.revision="c"*40
 
+
+    def test_live_collector_reuse_by_build_without_old_season_or_native(self):
+        from urllib.parse import urlsplit, parse_qs
+        from unittest import mock
+        import io
+        calls=[]
+        class Response(io.BytesIO):
+            status=200
+            def __enter__(self):return self
+            def __exit__(self,*args):self.close()
+        def fetch(req,timeout):
+            url=urlsplit(req.full_url)
+            self.assertEqual(url.hostname,"wago.tools")
+            self.assertEqual(parse_qs(url.query)["build"],["12.2.0.99999"])
+            table=url.path.split("/")[-2]
+            self.assertIn(table,v216.wago_snapshot.TABLES)
+            calls.append(table)
+            return Response(("ID,Name\n1,"+table+"\n").encode())
+        base=self.root/"user-sessions"
+        with mock.patch.object(v216.stage_engine,"_snapshot",
+                               wraps=v216.stage_engine._snapshot) as snapshots:
+            a=v216.collect_wago_new_season_source(
+                sessions_root=base,expected_game_build="12.2.0.99999",
+                fetch=fetch)
+            b=v216.collect_wago_new_season_source(
+                sessions_root=base,expected_game_build="12.2.0.99999",
+                fetch=fetch)
+        self.assertEqual(len(calls),len(v216.wago_snapshot.TABLES))
+        self.assertEqual(len(set(calls)),len(v216.wago_snapshot.TABLES))
+        self.assertEqual(a["source_stage"]["status"],"EXECUTED_AND_SEALED")
+        self.assertEqual(b["source_stage"]["status"],"REUSED_VERIFIED")
+        self.assertEqual(b["source_stage"]["receipt_writes"],0)
+        self.assertEqual(a["network_calls_by_stage"],10)
+        self.assertEqual(b["network_calls_by_stage"],0)
+        self.assertGreater(snapshots.call_count,1)
+        self.assertFalse(a["environment_ready"])
+        self.assertFalse(a["environment_installed"])
+        self.assertFalse(a["source_season_verified"])
+        self.assertIsNone(a["G"])
+        self.assertIsNone(a["T"])
+        self.assertEqual(list(base.iterdir())[0].name,
+                         "_fresh_season_sources")
+        folder=pathlib.Path(a["snapshot_receipt_path"]).parent
+        self.assertFalse((folder/"db2-snapshot.zip").exists())
+        tampered=folder/"Item.csv"
+        tampered.write_text("ID,Name\n1,changed\n",encoding="utf8")
+        with self.assertRaisesRegex(
+                v216.EnvironmentBuildBlocked,
+                "V216_FRESH_WAGO_STAGE_BLOCKED:STAGE_OUTPUT_HASH_MISMATCH"):
+            v216.collect_wago_new_season_source(
+                sessions_root=base,expected_game_build="12.2.0.99999",
+                fetch=fetch)
+        self.assertEqual(len(calls),10)
+        self.assertFalse((base/"generated").exists())
+
+    def test_collector_wrong_build_and_symlink_fail_before_network(self):
+        calls=[]
+        def fetch(*args,**kwargs):
+            calls.append(1)
+            raise AssertionError("NETWORK_NOT_ALLOWED")
+        with self.assertRaisesRegex(
+                v216.EnvironmentBuildBlocked,
+                "V216_EXPLICIT_NEW_SEASON_BUILD_REQUIRED"):
+            v216.collect_wago_new_season_source(
+                sessions_root=self.root,expected_game_build="old",
+                fetch=fetch)
+        root=self.root/"linked"
+        actual=self.root/"real";actual.mkdir()
+        root.symlink_to(actual,target_is_directory=True)
+        with self.assertRaisesRegex(
+                v216.EnvironmentBuildBlocked,
+                "V216_SEASON_SOURCE_SESSION_ROOT_SYMLINK_BLOCKED"):
+            v216.collect_wago_new_season_source(
+                sessions_root=root,expected_game_build="12.2.0.99999",
+                fetch=fetch)
+        self.assertEqual(calls,[])
+
     def test_scope_identity_groups_same_user_across_dependency_versions(self):
         first=v216.environment_scope_identity(self.user)
         same=v216.environment_scope_identity(dict(self.user))
