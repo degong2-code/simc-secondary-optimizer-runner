@@ -25,6 +25,7 @@ import v163_zero_seed_db2_join as season_join
 import v245_db2_first_tier_discovery as tier_db
 import v250_raid_tier_bonus_corroboration as raid_bonus
 import v251_db2_raid_tier_simc_bridge as tier_simc_bridge
+import v229_simc_only_source_seed as simc_source
 import v217_stage_execution_engine as stage_engine
 import v196_current_season_user_catalog as user_catalog
 import v241_fresh_source_stage_adapter as fresh_stage
@@ -415,6 +416,84 @@ def _physical_tier_to_simc_candidate(*,stage_root,fresh_tier,tier_bonus):
                 "network_calls_by_stage":0}
 
 
+def _collect_first_party_simc_seed_stage(*,stage_root,build,
+                                          revision=None,
+                                          previous_game_build=None,
+                                          season_event="season_change",
+                                          transport=None):
+    """Use existing verified v229 source collector, not a parallel collector.
+
+    Exact immutable SimC revision and previous build are internal runtime
+    inputs, never filled from historical season guesses. Only the three
+    SMALL generated source tables; defer item_data.inc to actual G work.
+    """
+    if revision is None:
+        return {"status":"SIMC_PINNED_REVISION_NOT_AVAILABLE_PENDING",
+                "source_dir":None,"network_calls_by_stage":0}
+    need(type(revision) is str and
+         simc_source.REV.fullmatch(revision) is not None and
+         season_event in ("season_change","expansion_change","mid_patch"),
+         "V216_SIMC_FIRST_PARTY_REVISION_OR_EVENT_INVALID")
+    rel="source/v229_pinned_generated"
+    outputs={name:rel+"/"+name for name in
+             (*simc_source.SOURCE_FILES,simc_source.RECEIPT)}
+    directory=pathlib.Path(stage_root)/rel
+    code=stage_engine.module_dependency_fingerprint(
+        [pathlib.Path(simc_source.__file__),
+         pathlib.Path(simc_source.generated_parser.__file__),
+         pathlib.Path(stage_engine.__file__)])
+    calls=[0]
+    def fetch(req,timeout):
+        calls[0]+=1
+        return (simc_source.urlopen if transport is None else transport)(
+            req,timeout=timeout)
+    def execute():
+        simc_source.collect(
+            revision=revision,expected_build=build,
+            previous_game_build=previous_game_build,
+            season_event=season_event,include_item_data=False,
+            dest=directory,transport=fetch)
+    def validate(paths):
+        doc=json.loads(paths[simc_source.RECEIPT].read_text("utf8"))
+        return (doc.get("schema")==simc_source.SCHEMA
+                and doc.get("simc_generated_build")==build
+                and doc.get("simc_revision")==revision
+                and doc.get("previous_game_build")==previous_game_build
+                and doc.get("provenance_tree_blob_authenticated") is True
+                and doc.get("item_data_present") is False
+                and doc.get("environment_ready") is False
+                and doc.get("native_calls")==0
+                and set(doc.get("source_files",{}))==
+                    set(simc_source.SOURCE_FILES)
+                and all(doc["source_files"][name].get("sha256")==
+                        simc_source.digest(paths[name].read_bytes())
+                        for name in simc_source.SOURCE_FILES))
+    try:
+        stage=stage_engine.execute_stage(
+            root=stage_root,stage_id="fresh-v229-pinned-simc-generated",
+            stage_version="source-three-small-files-no-native-v1",
+            inputs={"game_build":build,"revision":revision,
+                    "previous_game_build":previous_game_build,
+                    "season_event":season_event,
+                    "include_item_data":False,
+                    "code_sha256":code["sha256"]},
+            outputs=outputs,execute=execute,validate=validate)
+    except (stage_engine.StageExecutionBlocked,
+            simc_source.SimCSourceBlocked,
+            ValueError,OSError) as exc:
+        return {"status":"SIMC_FIRST_PARTY_SOURCE_COLLECTION_PENDING",
+                "reason":str(exc).split(":",1)[0],
+                "source_dir":None,
+                "network_calls_by_stage":calls[0]}
+    doc=json.loads((directory/simc_source.RECEIPT).read_text("utf8"))
+    return {"status":"SIMC_PINNED_SET_SOURCE_RECEIPT_READY",
+            "source_dir":str(directory.resolve()),
+            "simc_receipt_sha256":doc["receipt_sha256"],
+            "source_stage":{k:v for k,v in stage.items() if k!="result"},
+            "network_calls_by_stage":calls[0],
+            "native_calls":0,"source_season_verified":False}
+
+
 def _verified_first_party_tier_options_stage(*,stage_root,tier_bridge,
                                              simc_seed_directory=None):
     """Use existing pinned v229 SimC bytes when available, never redownload.
@@ -447,7 +526,11 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
                                    discovery_transport=None,
                                    tier_transport=None,
                                    bonus_transport=None,
-                                   simc_seed_directory=None):
+                                   simc_seed_directory=None,
+                                   simc_revision=None,
+                                   previous_game_build=None,
+                                   simc_season_event="season_change",
+                                   simc_transport=None):
     """First real normal-source acquisition inside the SAME Environment Build.
 
     Explicit build is only a request identity, not independent season or tier
@@ -563,9 +646,16 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         linked=linked,fresh_tier=fresh_tier,transport=bonus_transport)
     tier_bridge=_physical_tier_to_simc_candidate(
         stage_root=stage_root,fresh_tier=fresh_tier,tier_bonus=tier_bonus)
+    need(not (simc_seed_directory is not None and simc_revision is not None),
+         "V216_DUPLICATE_PINNED_SIMC_SOURCE_INPUTS")
+    pinned_simc=_collect_first_party_simc_seed_stage(
+        stage_root=stage_root,build=expected_game_build,
+        revision=simc_revision,previous_game_build=previous_game_build,
+        season_event=simc_season_event,transport=simc_transport)
+    effective_seed=simc_seed_directory or pinned_simc.get("source_dir")
     first_party=_verified_first_party_tier_options_stage(
         stage_root=stage_root,tier_bridge=tier_bridge,
-        simc_seed_directory=simc_seed_directory)
+        simc_seed_directory=effective_seed)
     return {
         "schema":"v216_fresh_source_stage_v1",
         "status":"FRESH_WAGO_DB2_COLLECTED_MORE_SOURCES_PENDING",
@@ -580,11 +670,13 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "fresh_tier_raid_bonus_corroboration":tier_bonus,
         "fresh_tier_simc_candidate_bridge":tier_bridge,
         "fresh_tier_first_party_simc_options":first_party,
+        "fresh_pinned_first_party_simc_source":pinned_simc,
         "tier_discovery_mode":"DB2_FIRST_NO_PUBLISHER_NAME_LOOKUP",
         "network_calls_by_stage":(len(wago_snapshot.TABLES)
             if stage["executed"] else 0)+discovered["network_calls_by_stage"]+
             fresh_tier["network_calls_by_stage"]+
-            tier_bonus["network_calls_by_stage"],
+            tier_bonus["network_calls_by_stage"]+
+            pinned_simc["network_calls_by_stage"],
         "native_calls":0,
         "environment_installed":False,
         "environment_ready":False,
