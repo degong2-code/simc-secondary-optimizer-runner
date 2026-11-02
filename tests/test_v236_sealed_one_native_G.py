@@ -124,6 +124,24 @@ class SealedNativeSourceTests(unittest.TestCase):
         with self.assertRaises(engine.SealedNativeBlocked):
             self.run_one()
 
+    def test_explicit_revision_and_build_pin_mismatch_blocks_before_native(self):
+        packed=json.loads(self.receipt.read_text())
+        with self.assertRaisesRegex(engine.SealedNativeBlocked,
+                                    "SOURCE_REVISION_OR_GAME_BUILD_NOT_PINNED"):
+            engine.check(self.profile.read_bytes(),packed,
+                expected_source_revision="b"*40,
+                expected_game_build="12.1.5.70575")
+        with self.assertRaisesRegex(engine.SealedNativeBlocked,
+                                    "SOURCE_REVISION_OR_GAME_BUILD_NOT_PINNED"):
+            engine.check(self.profile.read_bytes(),packed,
+                expected_source_revision="710c2408bfd3ae4df71b8cd55cdf01f63fd6c926",
+                expected_game_build="12.2.0.99999")
+        with self.assertRaisesRegex(engine.SealedNativeBlocked,
+                                    "EXPLICIT_IMMUTABLE_SOURCE_PIN_REQUIRED"):
+            engine.check(self.profile.read_bytes(),packed,
+                expected_source_revision="latest",
+                expected_game_build="12.1.5.70575")
+
     def test_fourteen_source_slots_fury(self):
         from tests.test_v232_simc_only_ordinary_representative import make_fixture
         self.fixture.fixture.seed_files(make_fixture(warrior=True),
