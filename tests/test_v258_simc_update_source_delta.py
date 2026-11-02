@@ -51,7 +51,7 @@ class UpdateDiff(unittest.TestCase):
         self.assertFalse(result["full_simc_equivalence_proven"])
 
     def test_new_simc_revision_four_metadata_queries_no_item_download(self):
-        nxt="b"*40
+        nxt="f"*40
         self.tree_revision(nxt)
         item=b"// Items, ilevel 1-1000, wow build "+BUILD.encode()+b"\n"
         self.tree_item(item)
@@ -68,7 +68,7 @@ class UpdateDiff(unittest.TestCase):
         self.assertFalse(result["season_membership_verified_by_this_check"])
 
     def test_three_file_seed_does_not_assume_item_data_is_unchanged(self):
-        nxt="b"*40
+        nxt="f"*40
         self.tree_revision(nxt)
         result=review.compare(previous_receipt=previous(),
                               next_revision_hint=nxt,transport=self.transport)
@@ -79,7 +79,7 @@ class UpdateDiff(unittest.TestCase):
         self.assertEqual(result["requests_used"],4)
 
     def test_changed_gem_blob_only_warns_selected_source_not_rebuild(self):
-        nxt="b"*40
+        nxt="f"*40
         self.tree_revision(nxt)
         self.tree_item(
             b"// Items, ilevel 1-1000, wow build "+BUILD.encode()+b"\n")
@@ -127,7 +127,7 @@ class UpdateDiff(unittest.TestCase):
         self.assertEqual(self.calls,[])
 
     def test_simc_revision_generated_build_not_assumed_to_equal_old_build(self):
-        nxt="b"*40
+        nxt="f"*40
         self.tree_revision(nxt)
         result=review.compare(previous_receipt=previous(),
                               next_revision_hint=nxt,transport=self.transport)
