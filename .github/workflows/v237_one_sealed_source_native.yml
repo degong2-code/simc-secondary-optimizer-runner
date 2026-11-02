@@ -1,0 +1,150 @@
+name: v237 One Sealed Source-Only Native G Observation (One Attempt)
+
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/v237_one_sealed_source_native.yml
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: v237-one-sealed-source-native-once
+  cancel-in-progress: false
+
+jobs:
+  one-physical-native:
+    if: contains(github.event.head_commit.message, '[one-native-source-G]')
+    runs-on: windows-2022
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            runner/v046_static_item_cache.py
+            runner/v143_specialization_contracts.py
+            runner/v167_product_season_gear_adapter.py
+            runner/v169_source_first_representative_stage.py
+            runner/v191_unified_season_data_update.py
+            runner/v229_simc_only_source_seed.py
+            runner/v230_simc_item_metadata.py
+            runner/v231_simc_tier_item_join.py
+            runner/v232_simc_only_ordinary_representative.py
+            runner/v233_source_only_G_probe_profile.py
+            runner/v234_source_only_one_native_G.py
+            runner/v236_sealed_one_native_G.py
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Retrieve previously sealed small v235 source profile, NOT old item DB
+        uses: actions/download-artifact@v4
+        with:
+          repository: degong2-code/simc-secondary-optimizer-runner
+          run-id: 41393829968
+          name: v235-pinned-simc-source-compatibility-41393829968
+          path: .sealed
+          github-token: ${{ github.token }}
+      - name: Assert the sealed source receipt and profile identity before Native
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          @'
+          import pathlib,json,sys
+          sys.path.insert(0,str(pathlib.Path('runner').resolve()))
+          import v236_sealed_one_native_G as v236
+          p=pathlib.Path('.sealed/source_G_probe.simc')
+          r=pathlib.Path('.sealed/v233_receipt.json')
+          assert p.is_file() and r.is_file(),'V237_SEALED_SOURCE_PROFILE_NOT_FOUND'
+          d=json.loads(r.read_text(encoding='utf8'))
+          v236.check(p.read_bytes(),d)
+          assert d['class']=='mage' and d['spec']=='frost'
+          assert d['target_ilevel']==334
+          assert len(d['selected_G_slot_ids'])==14
+          assert d['G'] is None and d['B'] is None and d['T'] is None
+          assert not pathlib.Path('data').exists()
+          assert not pathlib.Path('integration_probes').exists()
+          print('V237_SEALED_PROFILE_14_SLOTS_PINNED_SOURCE_NO_OLD_DATA')
+          '@ | python -
+          if ($LASTEXITCODE -ne 0) { throw 'V237_SEALED_PRECONDITION_FAILED' }
+      - name: Reuse official previously pinned SimC Windows archive (no rebuild)
+        uses: actions/download-artifact@v4
+        with:
+          repository: simulationcraft/simc-publish
+          run-id: 40999844143
+          name: simc-nightly-win64-midnight
+          path: .simc-windows
+          github-token: ${{ github.token }}
+      - name: Verify official archive and executable SHA256 before single Native
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $archive=Join-Path $PWD '.simc-windows/simc-1210.01.710c240-win64.7z'
+          if (!(Test-Path $archive)) { throw 'V237_OFFICIAL_ARCHIVE_MISSING' }
+          if ((Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant() -ne '386b2827c537a0447ac09a158e14c63b1d71d73e8e29f6e8ab404416861aab89') {
+            throw 'V237_OFFICIAL_ARCHIVE_SHA_DRIFT'
+          }
+          $seven='C:\Program Files\7-Zip\7z.exe'
+          if (!(Test-Path $seven)) { throw 'V237_7ZIP_MISSING' }
+          New-Item -ItemType Directory -Force -Path .simc-extracted | Out-Null
+          & $seven x '-o.simc-extracted' -y -bd $archive | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'V237_OFFICIAL_SIMC_EXTRACT_FAILED' }
+          $exes=@(Get-ChildItem .simc-extracted -Filter simc.exe -Recurse -File)
+          if ($exes.Count -ne 1) { throw 'V237_EXACTLY_ONE_EXECUTABLE_REQUIRED' }
+          $exehash=(Get-FileHash -Algorithm SHA256 $exes[0].FullName).Hash.ToLowerInvariant()
+          if ($exehash -ne '0ad16368cd1effb19c793dbce63518ccb72fec89c72f6ef75d9afca239a039e8') {
+            throw 'V237_OFFICIAL_SIMC_EXE_SHA_DRIFT'
+          }
+          "SIMC_WINDOWS_PATH=$($exes[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          Write-Host 'V237_OFFICIAL_SIMC_PINNED_BINARY_READY'
+      - name: Source-only sealed input and binary dry-run (zero Native)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          python runner/v236_sealed_one_native_G.py --profile .sealed/source_G_probe.simc --receipt .sealed/v233_receipt.json --simc-binary "$env:SIMC_WINDOWS_PATH" --simc-sha256 0ad16368cd1effb19c793dbce63518ccb72fec89c72f6ef75d9afca239a039e8 --output-dir out/preflight --max-new 0
+          if ($LASTEXITCODE -ne 0) { throw 'V237_PREFLIGHT_BLOCKED_NO_NATIVE' }
+      - name: ONE real Native invocation, preserve raw SimC and JSON2 (never auto-repeat)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          python runner/v236_sealed_one_native_G.py --profile .sealed/source_G_probe.simc --receipt .sealed/v233_receipt.json --simc-binary "$env:SIMC_WINDOWS_PATH" --simc-sha256 0ad16368cd1effb19c793dbce63518ccb72fec89c72f6ef75d9afca239a039e8 --output-dir out/live --max-new 1
+          if ($LASTEXITCODE -ne 0) { throw 'V237_ONE_NATIVE_COMPLETED_WITH_RECORDED_FAILURE' }
+      - name: Verify exact observed G exists only if Native success
+        if: always()
+        shell: pwsh
+        run: |
+          if (Test-Path out/live/receipt.json) {
+            @'
+          import json,pathlib
+          r=json.loads(pathlib.Path('out/live/receipt.json').read_text())
+          assert r['new_native_calls']==1
+          assert r['G'] is None and r['B'] is None and r['T'] is None
+          assert r['environment_ready'] is False
+          observed=r.get('observed_G')
+          if observed is not None:
+              assert observed['observed_G_total']==sum(observed['observed_G_vector'].values())
+              assert observed['matching_nontrinket_G_slots']==14
+              print('V237_REAL_NATIVE_OBSERVED_G_BUT_NOT_APPROVED',observed['observed_G_total'])
+          else:
+              print('V237_REAL_NATIVE_FAILED_OR_BLOCKED',r['status'],r.get('error'))
+          '@ | python -
+          } else {
+            Write-Host 'V237_NATIVE_NOT_INVOKED_PREFLIGHT_BLOCKED'
+          }
+      - name: Save exact one-attempt evidence and raw SimC errors
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v237-source-only-one-native-${{ github.run_id }}
+          path: |
+            out/live/receipt.json
+            out/live/input.simc
+            out/live/simc.log
+            out/live/native.json
+            out/preflight/receipt.json
+            .sealed/v233_receipt.json
+          retention-days: 3
+          if-no-files-found: warn
