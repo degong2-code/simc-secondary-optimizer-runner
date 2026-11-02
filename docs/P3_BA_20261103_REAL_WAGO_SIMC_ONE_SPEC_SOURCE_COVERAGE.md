@@ -31,7 +31,9 @@ On the isolated `runner/v216_environment_build_coordinator.py` internal source-o
 - For a candidate success, expose `selected_slot_count`, `source_kinds_by_selected_slot`, and `mplus_world_state_pending` from the **already sealed v232 candidate receipt**, with `season_membership_verified=false` and `G=null`.
 - For a physically absent required ordinary/common slot, preserve an exact safe `missing_slot` (such as `waist`) alongside the existing blocked status, rather than truncate the exception detail and force blind resampling.
 - `tests/test_v255_one_spec_simc_representative_in_build.py` adds assertions for source kind and missing waist, retaining existing v251/v232 synthetic stage and zero-Native contract.
-- [v212 cross-platform CI #41480060220](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41480060220) is the final new-code verification; use real job logs before recording PASS. No source collection should be rerun merely to validate this small diagnostic change.
+- Initial diagnostic regression [Actions #41480060220](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41480060220): **Ubuntu/Windows 386 tests each / 1 FAIL / 4 SKIP**. The new assertion exposed a semantic issue: absent M+ world-state metadata was returned as `false` instead of `null`. The real Wago crosscheck itself was not affected.
+- Corrected `v216` to preserve **unknown M+ world-state as `null`** when the source lacks `mplus_season_candidate_inclusion`, while retaining explicit evidence when available. Final code commit `e772c7f204aa428cbd1648a80d2ed172e4979e52`.
+- **Final CI [Actions #41480361465](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41480361465): Ubuntu 386 tests / 0 FAIL / 4 SKIP; Windows 386 tests / 0 FAIL / 4 SKIP; both SUCCESS**, `V212_ENVIRONMENT_MANIFEST_NATIVE0_PASS` in actual job logs. One-spec success/failed missing-waist regression both passed. No real source acquisition was repeated just to test the diagnostic fix.
 
 ## Remaining critical path
 
