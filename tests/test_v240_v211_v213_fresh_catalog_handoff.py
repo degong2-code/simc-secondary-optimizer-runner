@@ -6,9 +6,11 @@ NOT certify current-season source retrieval, actual G/J/F/O or v196 readiness.
 """
 from __future__ import annotations
 import copy
+import json
 import pathlib
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from runner import v211_enchant_source_effect_classification as classifier
 from runner import v213_source_to_catalog as join
@@ -64,6 +66,33 @@ class SameFreshCatalogChain(unittest.TestCase):
             in artifact["catalog"]["enchants"]["items"]))
         self.assertTrue(all(not x["approved"] for x
             in artifact["v196_enchant_source"]["rows"]))
+
+    def test_same_v196_ui_bridge_shows_unapproved_fresh_catalog_without_old_data(self):
+        import v196_current_season_user_catalog as ui
+        with tempfile.TemporaryDirectory() as d:
+            folder=pathlib.Path(d)
+            season,classified=self.inputs(folder)
+            artifact=join.compile_catalog(season,"a"*64,classified,"b"*64)
+            p=folder/"fresh_v213.json"
+            p.write_text(json.dumps(artifact,ensure_ascii=False),encoding="utf8")
+            with patch.object(ui.v188,"labels",side_effect=AssertionError(
+                    "OLD_INSTALLED_SEASON_LABELS_FORBIDDEN")), \\
+                 patch.object(ui.observed_enchant,"read",side_effect=AssertionError(
+                    "OLD_NATIVE_E_FORBIDDEN")):
+                result=ui.public_options(p)
+            self.assertEqual(result["season_build"],BUILD)
+            self.assertEqual(result["simc_revision"],REV)
+            self.assertEqual(result["enchant_candidates"]["total"],2)
+            self.assertEqual(result["enchant_candidates"]["selectable_count"],0)
+            self.assertEqual(result["existing_allowed_input_choices"],{})
+            self.assertEqual(result["proven_armor_embellishments"],{})
+            self.assertFalse(result["environment_ready"])
+            self.assertFalse(result["new_approval_granted"])
+            self.assertEqual(result["native_calls_now"],0)
+            for key in ("G","J","F","O","B","T"):
+                self.assertIsNone(result[key])
+            self.assertTrue(all(not row["ui_selectable"] for row in
+                                result["enchant_candidates"]["items"]))
 
     def test_reject_mismatched_source_and_false_old_enchant_approval(self):
         with tempfile.TemporaryDirectory() as d:
