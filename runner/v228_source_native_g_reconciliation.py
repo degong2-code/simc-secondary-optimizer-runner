@@ -62,6 +62,7 @@ def parse_profile(raw, work_order):
     rows = {}
     attrs = {}
     ignored = {"actions", "actions.precombat"}
+    equipment_keys=set(work_mod.representative.contracts.SLOT_ORDER) | set(cache_mod.SLOT_ALIASES)
     for line in text.splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
@@ -78,8 +79,7 @@ def parse_profile(raw, work_order):
                           "gems", "enchant", "enchants") or
                   key.startswith("profileset.")),
              "V228_PROFILE_NONBARE_G_RATING_OR_CONSUMABLE_OVERRIDE")
-        if key in cache_mod.SLOT_ALIASES or key in work_order[
-                "selected_source_slots"] or key.startswith("trinket"):
+        if key in equipment_keys:
             need(key in work_order["selected_source_slots"] and
                  key not in rows, "V228_PROFILE_EXTRA_OR_DUPLICATE_EQUIPMENT")
             try:
@@ -118,14 +118,14 @@ def reconcile(*, bundle_dir, work_order, profile_raw, native_raw):
          "V228_WORK_ORDER_INVALID_OR_TAMPERED")
     # Reconstruct the work order from the same source artifact. This detects
     # substituted gear/tier/season bytes instead of trusting the old receipt.
+    source_manifest_path=pathlib.Path(bundle_dir)/"source_manifest.json"
+    try:
+        manifest=bundle_mod._manifest(source_manifest_path)
+    except (ValueError,KeyError,OSError) as exc:
+        raise NativeGBlocked("V228_SOURCE_MANIFEST_INVALID") from exc
     expected=work_mod.make_work_order(
-        bundle_dir=bundle_dir,
-        event="season_change" if False else
-            json.loads((pathlib.Path(bundle_dir) /
-                        "source_manifest.json").read_text("utf8"))["event"],
-        previous_game_build=json.loads(
-            (pathlib.Path(bundle_dir) /
-             "source_manifest.json").read_text("utf8"))["previous_game_build"],
+        bundle_dir=bundle_dir, event=manifest["event"],
+        previous_game_build=manifest["previous_game_build"],
         target_ilevel=work_order["target_ilevel"],
         character_class=work_order["character"]["class"],
         specialization=work_order["character"]["spec"])
@@ -137,11 +137,6 @@ def reconcile(*, bundle_dir, work_order, profile_raw, native_raw):
         payload=json.loads(text)
     except ValueError as exc:
         raise NativeGBlocked("V228_NATIVE_JSON2_JSON_INVALID") from exc
-    source_manifest_path=pathlib.Path(bundle_dir)/"source_manifest.json"
-    try:
-        manifest=bundle_mod._manifest(source_manifest_path)
-    except (ValueError,KeyError,OSError) as exc:
-        raise NativeGBlocked("V228_SOURCE_MANIFEST_INVALID") from exc
     git_revision=payload.get("git_revision") if type(payload) is dict else None
     need(type(git_revision) is str and
          re.fullmatch(r"[a-f0-9]{7,40}",git_revision) is not None and
