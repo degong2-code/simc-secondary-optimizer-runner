@@ -169,6 +169,48 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                 source_catalog_path=source_path,
                 expected_game_build="12.1.5.70575")
 
+    def test_normal_fresh_build_reaches_gem_source_preflight_before_session(self):
+        stage_root = self.root / "fresh_catalog_stage"
+        stage_root.mkdir()
+        snapshot = self.root / "existing_wago_snapshot"
+        snapshot.mkdir()
+        catalog = self.root / "fresh_catalog.json"
+        catalog.write_text("{}", encoding="utf8")
+        missing_session = self.root / ("a" * 20)
+        inputs = {"stage_root":stage_root,
+                  "v191_path":self.root / "new_v191.json",
+                  "simc_source_dir":self.root / "new_simc_source",
+                  "simc_manifest_path":self.root / "new_simc_manifest.json",
+                  "wago_snapshot_folder":snapshot}
+        candidate = {"enchant_classification":{
+            "source_manifest_sha256":"f" * 64}}
+        with mock.patch.object(v216.fresh_stage,
+                               "compile_fresh_candidate",
+                               return_value={"source_catalog_path":str(catalog)}) \\
+             as compile_stage, \
+             mock.patch.object(v216.environment_manifest, "read_json",
+                               return_value=(candidate,"b" * 64)), \
+             mock.patch.object(v216, "preflight_new_season_source",
+                               return_value={"preflight_sha256":"c" * 64}) \\
+             as preflight:
+            with self.assertRaisesRegex(v216.EnvironmentBuildBlocked,
+                                        "FRESH_SOURCE_PROVENANCE_PASS_GJFO_NOT_READY"):
+                v216.build_environment(
+                    sessions_root=self.root,session_folder=missing_session,
+                    user=self.user,binary=self.binary,revision=self.revision,
+                    static_cache=None,source_catalog_path=None,
+                    bootstrap_result={},
+                    expected_new_season_build="12.1.5.70575",
+                    fresh_source_stage_inputs=inputs)
+        self.assertFalse(missing_session.exists())
+        self.assertNotIn("wago_snapshot_folder", compile_stage.call_args.kwargs)
+        self.assertEqual(preflight.call_args.kwargs["source_snapshot_folder"],
+                         snapshot)
+        self.assertEqual(preflight.call_args.kwargs["source_stage_root"],
+                         stage_root)
+        self.assertEqual(preflight.call_args.kwargs["expected_game_build"],
+                         "12.1.5.70575")
+
     def test_normal_build_reuses_existing_v229_simc_source_collector_only_once(self):
         from tests.test_v229_simc_only_source_seed import (
             SimCCollectorTests,REVISION,BUILD,OLD)
