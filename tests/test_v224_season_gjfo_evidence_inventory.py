@@ -76,19 +76,35 @@ class SeasonGjfoInventoryTests(unittest.TestCase):
         self.assertNotIn("138",p.canonical(result))
         self.assertNotIn("165",p.canonical(result))
 
-    def test_existing_build_relabelled_new_season_must_fail(self):
+    def test_same_client_build_does_not_claim_a_verified_new_season(self):
         season,catalog,inputs=fixture(event="season_change")
-        with self.assertRaisesRegex(p.SeasonEvidenceBlocked,
-                                    "CANNOT_REUSE_PREVIOUS_GAME_BUILD"):
-            inventory(season,catalog,inputs,event="season_change",
-                      old="12.1.5.70575")
+        result=inventory(season,catalog,inputs,event="season_change",
+                         old="12.1.5.70575")
+        self.assertEqual(result["previous_build_record_status"],"RECORDED")
+        self.assertTrue(result["previous_build_is_not_season_proof"])
+        self.assertEqual(result["request_event"],"season_change")
+        self.assertFalse(result["budget_can_be_published"])
+        self.assertIsNone(result["G"])
 
-    def test_new_season_missing_previous_build_must_fail(self):
+    def test_new_expansion_without_local_previous_build_still_collects_sources(self):
         season,catalog,inputs=fixture(event="expansion_change",
                                      build="13.0.0.99999")
+        result=inventory(season,catalog,inputs,event="expansion_change")
+        self.assertEqual(result["request_event"],"expansion_change")
+        self.assertIsNone(result["previous_game_build"])
+        self.assertEqual(result["previous_build_record_status"],"NOT_RECORDED")
+        self.assertEqual(result["verified_components"],[])
+        self.assertTrue(all(result[x] is None for x in ("G","J","F","O","B","T")))
+        preview=p.core_source_preflight(inputs=inputs,event="expansion_change",
+                                        target_ilevel=334)
+        self.assertEqual(preview["previous_build_record_status"],"NOT_RECORDED")
+        self.assertFalse(preview["source_bytes_verified_by_upstream_artifact"])
+
+    def test_bad_previous_build_syntax_rejected_even_as_optional_field(self):
+        season,catalog,inputs=fixture(event="season_change")
         with self.assertRaisesRegex(p.SeasonEvidenceBlocked,
-                                    "REQUIRES_PREVIOUS_BUILD"):
-            inventory(season,catalog,inputs,event="expansion_change")
+                                    "PREVIOUS_BUILD_INVALID"):
+            inventory(season,catalog,inputs,event="season_change",old="unknown")
 
     def test_source_hash_mismatch_blocks(self):
         season,catalog,inputs=fixture()
