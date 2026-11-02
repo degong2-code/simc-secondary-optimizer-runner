@@ -20,9 +20,10 @@ MAX_ROWS=1_000_000
 # Separate CHMV accounting facts: one quality-two (highest) example and 4
 # top-tier flask item IDs verified from public item pages. Not effect code.
 ROOT=Path(__file__).resolve().parents[1]
-# One replaceable CURRENT-season data file; not persistent Wago/raw history.
-CONSUMABLES=json.loads((ROOT/"data/current_season_chmv_consumables.json")
-                      .read_text(encoding="utf8"))
+# Legacy installed-season budget is a compatibility source, never imported
+# at module load. Fresh-season Build must supply new J/F evidence or None.
+INSTALLED_BUDGET=ROOT/"data/current_season_chmv_consumables.json"
+_INSTALLED=object()
 
 class CatalogBlocked(ValueError):pass
 def need(test,code):
@@ -59,7 +60,39 @@ def effects(path,ids):
         for chunk in iter(lambda:source.read(1024*1024),b""):
             digest.update(chunk)
     return observed,digest.hexdigest()
-def compile_pool(db2,delve,sparse_path,effect_path=None):
+def _budget_source(source,build):
+    if source is _INSTALLED:
+        source=read_json(INSTALLED_BUDGET)
+        mode="INSTALLED_SAME_SEASON_REFERENCE_COMPATIBILITY"
+    elif source is None:
+        return None,"NEW_SEASON_J_F_BUDGET_EVIDENCE_PENDING"
+    else:
+        need(type(source) is dict,
+             "EXPLICIT_NEW_SEASON_BUDGET_SOURCE_OBJECT_REQUIRED")
+        mode="EXPLICIT_SAME_BUILD_NEW_SEASON_BUDGET_CANDIDATE"
+    need(source.get("retail_build")==build,
+         "CONSUMABLE_BUDGET_BUILD_MISMATCH")
+    gem=source.get("ordinary_gem",{})
+    flask=source.get("flasks",{})
+    need(type(gem) is dict and type(flask) is dict
+         and type(gem.get("slots")) is int
+         and type(gem.get("highest_quality_bonus")) is list
+         and all(type(x) is int and x>=0
+                 for x in gem["highest_quality_bonus"])
+         and type(gem.get("total_J")) is int
+         and gem["slots"]*sum(gem["highest_quality_bonus"])==gem["total_J"]
+         and type(flask.get("total_F")) is int
+         and flask.get("total_F")==flask.get(
+             "single_secondary_highest_quality_rating")
+         and type(flask.get("by_stat")) is dict
+         and len(flask["by_stat"])==4
+         and all(type(x) is dict and x.get("rating")==flask["total_F"]
+                 for x in flask["by_stat"].values()),
+         "CONSUMABLE_BUDGET_DATA_INCONSISTENT")
+    return source,mode
+
+
+def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALLED):
     need(db2.get("schema")=="v163_zero_seed_db2_join_v1"
          and db2.get("source_provider")=="WAGO_TOOLS_PINNED_DB2_WCL_LIVE",
          "SOURCE_DB2_REPORT_INVALID")
@@ -70,16 +103,7 @@ def compile_pool(db2,delve,sparse_path,effect_path=None):
          and db2.get("db2_expansion_id")==delve.get("db2_expansion_id")
          and type(db2.get("db2_expansion_id")) is int,
          "SEASON_BUILD_EXPANSION_MISMATCH")
-    need(CONSUMABLES.get("retail_build")==db2["build"],
-         "CONSUMABLE_BUDGET_BUILD_MISMATCH")
-    gem=CONSUMABLES.get("ordinary_gem",{})
-    flask=CONSUMABLES.get("flasks",{})
-    need(type(gem.get("highest_quality_bonus")) is list and
-         gem.get("slots")*sum(gem["highest_quality_bonus"])==gem.get("total_J") and
-         flask.get("total_F")==flask.get("single_secondary_highest_quality_rating") and
-         len(flask.get("by_stat",{}))==4 and
-         all(x.get("rating")==flask["total_F"] for x in flask["by_stat"].values()),
-         "CONSUMABLE_BUDGET_DATA_INCONSISTENT")
+    budget, budget_mode=_budget_source(budget_source,db2["build"])
     originals={}
     for src,rows in (("wago",db2.get("items")),("localbots",delve.get("items"))):
         need(type(rows) is list and len(rows)<=30000,"SOURCE_ROWS_INVALID")
@@ -164,7 +188,9 @@ def compile_pool(db2,delve,sparse_path,effect_path=None):
        "usable_four_piece_roster_certified":False,
        "fully_implemented_special_item_list_certified":False,
        "full_season_completeness_confirmed":False,
-       "consumable_budget_reference":CONSUMABLES,
+       "consumable_budget_reference":budget,
+        "consumable_budget_source_mode":budget_mode,
+        "G":None,"B":None,"T":None,
        "no_legacy_catalog_seed":True,"new_native_calls":0}
 def main(argv=None):
     p=argparse.ArgumentParser()
@@ -172,11 +198,18 @@ def main(argv=None):
     p.add_argument("--delve",type=Path,required=True)
     p.add_argument("--item-sparse",type=Path,required=True)
     p.add_argument("--item-effect",type=Path)
+    sources=p.add_mutually_exclusive_group()
+    sources.add_argument("--budget-source",type=Path,
+                         help="Explicit same-build newly collected J/F source file")
+    sources.add_argument("--fresh-source-only",action="store_true",
+                         help="Discover gear with J/F unknown; NEVER read installed budget")
     p.add_argument("--out",type=Path,required=True)
     a=p.parse_args(argv)
     try:
+        budget=(None if a.fresh_source_only else
+                read_json(a.budget_source) if a.budget_source else _INSTALLED)
         result=compile_pool(read_json(a.db2),read_json(a.delve),
-                            a.item_sparse,a.item_effect)
+                            a.item_sparse,a.item_effect,budget_source=budget)
         a.out.parent.mkdir(parents=True,exist_ok=True)
         a.out.write_text(json.dumps(result,ensure_ascii=False,sort_keys=True,
                                    separators=(",",":"))+"\n",encoding="utf8")
