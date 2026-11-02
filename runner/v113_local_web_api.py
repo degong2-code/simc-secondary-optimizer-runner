@@ -103,12 +103,20 @@ class LocalJobs:
         candidate=exact_L.source_cache(self.root,None)
         return str(candidate) if candidate is not None else None
 
-    def collect_fresh_source(self, build):
-        # One request per exact build at a time. v217 then reuses proof bytes
-        # for the same build without repeating external Wago HTTP.
+    def collect_fresh_source(self, build, controls):
+        # Reuse the product's existing user validator; never ask users for
+        # internal source filenames, SHA, tier IDs or G seed vectors.
+        # Prevalidate the requested DPS/ilvl BEFORE expensive HTTP.
+        user=sessions.user_scenario(controls)
+        character=user["character"]
+        requested={"class":character["class"],"spec":character["spec"],
+                   "target_ilevel":user["target"]["ilevel"]}
+        # One request per exact build at a time. v217 reuses source bytes.
+        # With no full pinned SimC item_data, one-spec stays PENDING/Native0.
         with self.season_source_lock:
             return environment_build.collect_wago_new_season_source(
-                sessions_root=self.root,expected_game_build=build)
+                sessions_root=self.root,expected_game_build=build,
+                representative_request=requested)
 
     def source_catalog_path(self):
         """Use the packaged v213 artifact when present; legacy source remains fallback."""
@@ -895,7 +903,8 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
         # New season source collection is not an installed current-season plan.
         if request.fresh_season_build is not None:
             try:
-                return jobs.collect_fresh_source(request.fresh_season_build)
+                return jobs.collect_fresh_source(
+                    request.fresh_season_build,request.controls)
             except Exception as exc:
                 raise blocked(exc) from None
         if not request.current_season_product:
