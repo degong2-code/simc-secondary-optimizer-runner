@@ -1,3 +1,6 @@
+> **2026-11-03 새 채팅 최신 실행 인계 (P3-BF, 승인 설계 본문 불변):** [CHAT_CONTINUITY_HANDOFF_20261103_P3_BF_ENGINE_GJFO_NEXT.md](CHAT_CONTINUITY_HANDOFF_20261103_P3_BF_ENGINE_GJFO_NEXT.md)가 이 파일에 남은 P3-AT/P3-AF/v221 인계 포인터보다 최신이다. 실측 P3-AT→BA Wago·SimC 출처, 같은 시즌 SimC 버전 변경의 정적 DB 유지, P3-BE v212와 P3-BF v106 세션·실행 revision 분리 및 실제 Actions 409/194/139/focused2 PASS를 구별한다. **완료하지 않은 핵심은 동일 시즌 대표 G/J/F/O 전체 자동 산출/검증 → 기존 v222 B/T → 정책 A 최고 품질 선택지 → 정상 사용자 환경·대표 프로필 → 기존 적응형 SimC DPS/SEM/95% E2E**. 최종 목표는 **반복 가능한 범용 Environment DB 구축 엔진**이지 시즌별 기능 수작업이 아니다. 독립 수집/검증은 효율적으로 묶되 출처·예산·UI/Native 완료 판정은 분리하고, 동일 검증 기준과 기존 source/cache/Native 영수증을 재사용한다. 매 변경마다 HTTP/Native 중복·캐시·메모리·I/O·실행시간/구조 단순화 점검. **새 채팅 첫 응답은 복원·검증 보고 후 중단하고 사용자 ‘진행’을 기다림**. 이 갱신은 GitHub 개발자 노트 포인터만 변경하며 승인 v1.4.3 정책 내용/Project UI·main·Work OS 승격·신규 Native 실행을 뜻하지 않는다.
+>
+
 > **최신 실행·연속 개발 인계 포인터 (2026-11-02 P3-AT):** [CHAT_CONTINUITY_HANDOFF_20261102_P3_AT_SIMC_TO_GJFO_ENGINE_NEXT.md](CHAT_CONTINUITY_HANDOFF_20261102_P3_AT_SIMC_TO_GJFO_ENGINE_NEXT.md)가 이 파일에 남아 있는 P3-AF·v221 당시 인계 안내보다 최신이다. 한 Build에서 기존 v229 실제 SimC source 7→0 HTTP·v251 exact-ID 후보 연결까지 완료되었으나 대표 일반장비 시즌 근거/G/J/F/O·B/T·사용자 Start E2E는 미완료. 새 채팅 **첫 턴 복원 보고만**, '진행' 전 구현·Actions·Native 중지. 승인 설계·개발 소유권·권한 정책 변경 없음.
 
 # SIMC SECONDARY OPTIMIZER — 개발자 실행 원칙 보충 (2026-11-02)
