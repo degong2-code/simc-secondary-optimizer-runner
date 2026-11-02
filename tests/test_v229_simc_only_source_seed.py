@@ -87,11 +87,12 @@ class SimCOnlySeedTests(unittest.TestCase):
             seed.inventory(raw_sources(),simc_revision=REVISION,
                            expected_build=BUILD,previous_game_build=OLD,
                            season_event="cold_start")
-        with self.assertRaisesRegex(
-                seed.SimCSourceBlocked,"V229_NEW_SEASON_OLD_BUILD_REUSE_BLOCKED"):
-            seed.inventory(raw_sources(),simc_revision=REVISION,
-                           expected_build=BUILD,previous_game_build=None,
-                           season_event="season_change")
+        result=seed.inventory(raw_sources(),simc_revision=REVISION,
+            expected_build=BUILD,previous_game_build=None,
+            season_event="season_change")
+        self.assertEqual(result["season_event"],"season_change")
+        self.assertIsNone(result["previous_game_build"])
+        self.assertFalse(result["environment_ready"])
 
     def test_build_mismatch_is_never_reinterpreted_as_new_season(self):
         raw=raw_sources()
