@@ -146,6 +146,107 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         self.assertEqual(second["source_stage"]["status"],"REUSED_VERIFIED")
         self.assertTrue(report.is_file())
 
+
+    def test_unique_authenticated_scope_executes_v163_once_and_reuses(self):
+        import csv
+        import io
+        from urllib.parse import urlsplit
+        from unittest import mock
+        data={
+            "JournalTierXInstance":[
+                {"ID":1,"JournalTierID":505,"JournalInstanceID":1}],
+            "JournalInstance":[
+                {"ID":1,"Name_lang":"Synthetic Raid","MapID":100},
+                {"ID":2,"Name_lang":"Synthetic Dungeon","MapID":200}],
+            "JournalEncounter":[
+                {"ID":11,"JournalInstanceID":1,"Name_lang":"Hydra"},
+                {"ID":22,"JournalInstanceID":2,"Name_lang":"Dungeon Boss"}],
+            "JournalEncounterItem":[
+                {"ID":1,"JournalEncounterID":11,"ItemID":1001,
+                 "DisplaySeasonID":0,"WorldStateExpressionID":0},
+                {"ID":2,"JournalEncounterID":22,"ItemID":2001,
+                 "DisplaySeasonID":37,"WorldStateExpressionID":0}],
+            "MythicPlusSeasonTrackedMap":[
+                {"ID":1,"MapChallengeModeID":9,"DisplaySeasonID":37}],
+            "MapChallengeMode":[
+                {"ID":9,"Name_lang":"Synthetic Dungeon","MapID":200}],
+            "Map":[{"ID":100,"MapName_lang":"Synthetic Raid"},
+                   {"ID":200,"MapName_lang":"Synthetic Dungeon"}],
+            "CraftingData":[{"ID":1,"CraftedItemID":3001}],
+            "ItemSparse":[
+                {"ID":i,"Display_lang":str(i),"ExpansionID":11,
+                 "OverallQualityID":4,"LimitCategory":0,
+                 "StatModifier_bonusStat_0":24 if i==3001 else 0,
+                 "StatModifier_bonusStat_1":25 if i==3001 else 0}
+                for i in (1001,2001,3001)],
+            "Item":[{"ID":i,"ClassID":4,"InventoryType":5}
+                    for i in (1001,2001,3001)],
+        }
+        report={"schema":"v155_season_discovery_provider_probe_v1",
+                "mode":"LIVE_AUTHENTICATED_BOUNDED",
+                "blizzard":{"endpoints":{"keystone_season_index":{
+                    "data":{"current_season_id":18}}}},
+                "wcl":{"midnight_zones":[
+                    {"zone_id":10,"zone_name":"Synthetic Raid",
+                     "wcl_frozen":False,"encounters":[{"name":"Hydra"}]},
+                    {"zone_id":11,"zone_name":"Mythic+ Test",
+                     "wcl_frozen":False,
+                     "encounters":[{"name":"Synthetic Dungeon"}]}]}}
+        report_path=self.root/"synthetic_v155.json"
+        report_path.write_text(json.dumps(report),encoding="utf8")
+        encoded={}
+        for table,rows in data.items():
+            stream=io.StringIO()
+            writer=csv.DictWriter(stream,fieldnames=list(rows[0]))
+            writer.writeheader();writer.writerows(rows)
+            encoded[table]=stream.getvalue().encode("utf8")
+        calls=[]
+        class Response(io.BytesIO):
+            status=200
+            def __enter__(self):return self
+            def __exit__(self,*a):self.close()
+        def fetch(req,timeout):
+            table=urlsplit(req.full_url).path.split("/")[-2]
+            calls.append(table)
+            return Response(encoded[table])
+        fake_discovery={
+            "schema":"v242_authenticated_season_discovery_stage_v1",
+            "status":"AUTHENTICATED_SOURCE_DISCOVERED_SEASON_JOIN_PENDING",
+            "source_report_path":str(report_path),
+            "season_join_ready":True,
+            "network_calls_by_stage":0,
+        }
+        with mock.patch.object(v216.discovery_stage,"collect",
+                               return_value=fake_discovery), \
+             mock.patch.object(v216.season_join,"build_index",
+                               wraps=v216.season_join.build_index) as compiled:
+            first=v216.collect_wago_new_season_source(
+                sessions_root=self.root/"runtime",
+                expected_game_build="12.2.0.99999",fetch=fetch,
+                credentials={})
+            second=v216.collect_wago_new_season_source(
+                sessions_root=self.root/"runtime",
+                expected_game_build="12.2.0.99999",fetch=fetch,
+                credentials={})
+        self.assertEqual(compiled.call_count,1)
+        self.assertEqual(len(calls),10)
+        self.assertEqual(first["season_join"]["status"],
+                         "DB2_WCL_CANDIDATES_JOINED_SEASON_CONDITIONS_PENDING")
+        self.assertEqual(first["season_join"]["stage"]["status"],
+                         "EXECUTED_AND_SEALED")
+        self.assertEqual(second["season_join"]["stage"]["status"],
+                         "REUSED_VERIFIED")
+        self.assertEqual(second["network_calls_by_stage"],0)
+        self.assertFalse(first["season_join"]["season_membership_verified"])
+        joined=json.loads(pathlib.Path(first["season_join"]["candidate_path"])
+                          .read_text(encoding="utf8"))
+        self.assertEqual(joined["auto_source_scope"]["expansion_id"],11)
+        self.assertEqual(joined["collection_counts"]["raid_journal"],1)
+        self.assertFalse(joined["full_season_completeness_confirmed"])
+        self.assertFalse(first["environment_installed"])
+        self.assertIsNone(first["G"])
+        self.assertIsNone(first["T"])
+
     def test_partial_season_credentials_block_before_wago_fetch(self):
         calls=[]
         def fetch(req,timeout):
