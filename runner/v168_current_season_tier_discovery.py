@@ -55,6 +55,19 @@ def discover(anchors,sparse_csv,item_csv,*,receipt=None):
          and type(anchors.get("expansion_id")) is int
          and anchors.get("native_item_set_effect_certified") is False,
          "TIER_SOURCE_ANCHORS_INVALID")
+    # New-season path: v243 matches a publisher's exact class/set title
+    # against same-build ItemSet.Name_lang. Physical gear names need not
+    # contain the marketing set name (e.g. Evoker chest and legs).
+    exact=anchors.get("verified_item_set_ids")
+    if exact is not None:
+        need(type(exact) is dict and set(exact)==set(FAMILY)
+             and all(type(i) is int and i>0 for i in exact.values())
+             and len(set(exact.values()))==len(FAMILY)
+             and type(anchors.get("publisher_html_sha256")) is str
+             and len(anchors["publisher_html_sha256"])==64
+             and type(anchors.get("itemset_csv_sha256")) is str
+             and len(anchors["itemset_csv_sha256"])==64,
+             "TIER_SOURCE_EXACT_ITEMSET_PROVENANCE_INVALID")
     source_sha={}
     if receipt is not None:
         need(receipt.get("build")==anchors["retail_build"] and
@@ -84,7 +97,9 @@ def discover(anchors,sparse_csv,item_csv,*,receipt=None):
         for cl,needle in anchors["classes"].items():
             need(type(needle) is str and len(needle)>=7 and len(needle)<=80,
                  "TIER_ANCHOR_NAME_INVALID")
-            if needle.casefold() in rec["name"].casefold():
+            if ((exact is not None and itemset==exact[cl])
+                or (exact is None and needle.casefold() in
+                    rec["name"].casefold())):
                 matches[cl].add(itemset)
     assigned={}
     for cl in sorted(FAMILY):
@@ -126,7 +141,10 @@ def discover(anchors,sparse_csv,item_csv,*,receipt=None):
       "evidence":{"publisher_url":anchors["source_url"],
         "db2_item_sparse_sha256":source_sha.get("ItemSparse") or hash_file(sparse_csv),
         "db2_item_sha256":source_sha.get("Item") or hash_file(item_csv),
-        "name_anchor_is_not_item_id_seed":True},
+        "name_anchor_is_not_item_id_seed":True,
+        "verified_new_season_itemset_name_match":exact is not None,
+        "publisher_html_sha256":anchors.get("publisher_html_sha256"),
+        "itemset_csv_sha256":anchors.get("itemset_csv_sha256")},
       "native_calls":0,"api_calls":0,
       "simc_tier_bonus_mechanics_verified":False,
       "catalyst_retains_original_stats_and_cantrips":True,

@@ -52,6 +52,32 @@ class TierIdentity(unittest.TestCase):
         self.assertFalse(out["production_profile_promoted"])
         self.assertEqual(out["native_calls"],0)
 
+
+    def test_verified_new_season_itemset_names_override_piece_name_only(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);receipt=synthetic(root)
+            a=anchors()
+            a["classes"]={cl:"Official class set for "+cl
+                          for cl in tier.FAMILY}
+            a["verified_item_set_ids"]={
+                cl:500+n for n,cl in enumerate(sorted(tier.FAMILY))}
+            a["publisher_html_sha256"]="a"*64
+            a["itemset_csv_sha256"]="b"*64
+            # Physical names deliberately do NOT contain official set titles.
+            result=tier.discover(a,root/"ItemSparse.csv",
+                root/"Item.csv",receipt=receipt)
+            self.assertEqual(result["item_count"],65)
+            self.assertTrue(result["evidence"][
+                "verified_new_season_itemset_name_match"])
+            self.assertEqual(result["classes"]["evoker"]["item_set_id"],
+                             a["verified_item_set_ids"]["evoker"])
+            bad=dict(a,verified_item_set_ids={
+                **a["verified_item_set_ids"],"evoker":
+                    a["verified_item_set_ids"]["druid"]})
+            with self.assertRaisesRegex(
+                    tier.TierBlocked,"TIER_SOURCE_EXACT_ITEMSET_PROVENANCE_INVALID"):
+                tier.discover(bad,root/"ItemSparse.csv",root/"Item.csv")
+
     def test_source_build_digest_mismatch_blocks(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d);receipt=synthetic(root)
