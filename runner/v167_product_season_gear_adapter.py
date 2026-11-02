@@ -106,6 +106,9 @@ def from_v166(source):
         "role_counts": dict(sorted(Counter(x["category"] for x in result).items())),
         "items": result,
         "conditional_ids_excluded": source.get("conditional_count"),
+        "consumable_budget_source_mode": source.get(
+            "consumable_budget_source_mode","LEGACY_UNRECORDED_SOURCE_MODE"),
+        "J_F_NUMERIC_AUTHENTICATION_NOT_IN_GEAR_COLLECTOR": True,
         "no_old_catalog_seed": True,
         "not_certified": {
             "simc_item_effects": True, "tier_four_set": True,
