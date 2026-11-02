@@ -731,6 +731,7 @@ def _lazy_full_pinned_simc_item_stage(*, stage_root, build, small_seed_dir,
         return (simc_source.urlopen if transport is None else transport)(
             req,timeout=timeout)
     code=stage_engine.module_dependency_fingerprint([
+        pathlib.Path(__file__),
         pathlib.Path(simc_source.__file__),
         pathlib.Path(simc_source.generated_parser.__file__),
         pathlib.Path(stage_engine.__file__)])
