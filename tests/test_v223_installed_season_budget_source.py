@@ -160,7 +160,9 @@ class InstalledSeasonSourceTests(unittest.TestCase):
             root = Path(td)
             sid = root / ("a" * 20)
             sid.mkdir()
-            (sid / "profile.simc").write_text(self.profile, encoding="utf8")
+            (sid / "generated").mkdir()
+            (sid / "generated" / "profile.simc").write_text(
+                self.profile, encoding="utf8")
             source = root / "catalog.json"
             source.write_text(json.dumps(self.catalog), encoding="utf8")
             # Internal file hash is the source artifact identity for v222.
