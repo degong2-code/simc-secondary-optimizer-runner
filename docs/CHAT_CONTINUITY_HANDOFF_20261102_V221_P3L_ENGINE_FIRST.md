@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER — 새 채팅 인계 2026-11-02 / v221·P3-L
 
+> **후속 최신 인계 정본으로 대체됨 (2026-11-02, P3-AF):** [CHAT_CONTINUITY_HANDOFF_20261102_P3_AF_V216_TO_FRESH_BUILD_NEXT.md](CHAT_CONTINUITY_HANDOFF_20261102_P3_AF_V216_TO_FRESH_BUILD_NEXT.md)를 새 채팅에서 **먼저 전체 읽을 것**. 이 v221·P3-L 문서는 당시 정책/이력의 **역사적 증거**로만 보존한다. P3-AB→AC→AD→AE 구현·최종 v216 source preflight·v212 Actions #41408530210 (Ubuntu/Windows 각 320 tests / 0 FAIL / 2 SKIP)와 신규 Build 원본 수집·G/J/F/O/설치 미완료는 최신 정본과 CURRENT를 따른다. 별도 SimC-only 최종 엔진 금지, 정상 Wago/Blizzard/WCL/공개 GitHub/SimC 신규 수집 허용, 기존 캐시/과거 증거 없는 동일 엔진 최종 수용시험은 P3-AA를 따른다. 첫 복원 보고 후 사용자 **'진행'** 대기; main/v003/v016/Project UI/Work OS 무승인 변경 금지.
+
 > **인계 후 최신 결정(2026-11-02) — 이 문서의 당시 상태보다 우선:** [P3-AA 최신 통제실험 교정](P3_AA_20261102_SINGLE_ENGINE_FRESH_SEASON_CONTROL_ACCEPTANCE.md), [v1.4.3 개발자 노트 §7](SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.3_SEASON_GJFO_AUTO_BUILD_APPROVED_20261102.md), [CURRENT 최상단](CURRENT_PRODUCT_DEVELOPMENT_STATE.md)을 먼저 읽을 것. **하나의 실제 제품 Environment Build 엔진만 개발**하고, 완성 뒤 기존 자료·캐시·영수증 없이 현재 시즌을 새 시즌처럼 구축하는 동일 실행 경로를 시험한다. 신규 Wago DB2/WCL/Blizzard/공개 GitHub/SimC 원본 다운로드는 차단하지 않는다. "SimC-only 최종 통제실험"은 잘못된 이전 해석이다. 이 문서의 역사적 GitHub HEAD/당시 작업 진척도는 실제 ref·CI를 다시 조회하여 확인하고 제품 구현 완료로 읽지 않는다.
 
 > **이 문서는 지금 채팅의 최신 인계 진입점이다.** 과거 v216 인계는 그 당시까지의 증거다. 코드/CI 영수증보다 설계가 앞서 있는 항목을 “구현 완료”로 승격하지 말 것. 새 채팅은 먼저 **읽기·GitHub 실물 검증·복원 보고만** 수행하고 사용자 **“진행”** 전에는 코드 변경·Actions 실행·Native 수행을 하지 않는다.
