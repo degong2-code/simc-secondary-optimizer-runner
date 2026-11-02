@@ -147,16 +147,18 @@ def inventory(source_bytes, *, simc_revision, expected_build,
          season_event in ("season_change","expansion_change","mid_patch",
                           "cold_start"),
          "V229_PINNED_SIMC_REVISION_BUILD_OR_EVENT_INVALID")
+    # A previous local client-build record is optional and only historical.
+    # Same-season SimC updates and even a new season can share a game build.
+    # The generated SimC source's OWN build is still verified strictly below.
+    need(previous_game_build is None or
+         (type(previous_game_build) is str and
+          BUILD.fullmatch(previous_game_build) is not None),
+         "V229_PREVIOUS_GAME_BUILD_RECORD_INVALID")
     if season_event == "cold_start":
-        # A first install may have no prior verified game build. Never
-        # synthesize it or pretend this proves current season membership.
+        # Preserve the legacy source-only label for already issued receipts.
+        # It denotes no LOCAL record, not a missing WoW historical build.
         need(previous_game_build is None,
              "V229_COLD_START_MUST_HAVE_NO_PRIOR_BUILD")
-    elif season_event != "mid_patch":
-        need(type(previous_game_build) is str and
-             BUILD.fullmatch(previous_game_build) and
-             expected_build != previous_game_build,
-             "V229_NEW_SEASON_OLD_BUILD_REUSE_BLOCKED")
     need(type(source_bytes) is dict and
          set(SOURCE_FILES)<=set(source_bytes) and
          set(source_bytes)<=set(SOURCE_FILES)|{OPTIONAL_ITEM_FILE},
