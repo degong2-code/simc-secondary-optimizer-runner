@@ -415,11 +415,39 @@ def _physical_tier_to_simc_candidate(*,stage_root,fresh_tier,tier_bonus):
                 "network_calls_by_stage":0}
 
 
+def _verified_first_party_tier_options_stage(*,stage_root,tier_bridge,
+                                             simc_seed_directory=None):
+    """Use existing pinned v229 SimC bytes when available, never redownload.
+
+    The stage authenticates and exact-matches SimC set option for 13 classes,
+    not the actual target season and not full item_data/Native/G.
+    """
+    if not tier_bridge.get("candidate_path"):
+        return {"status":"FIRST_PARTY_SIMC_TIER_PHYSICAL_CANDIDATE_PENDING",
+                "network_calls_by_stage":0,"source_season_verified":False}
+    if simc_seed_directory is None:
+        return {"status":"FIRST_PARTY_SIMC_PINNED_SOURCE_PENDING",
+                "network_calls_by_stage":0,"source_season_verified":False}
+    try:
+        return tier_simc_bridge.build_first_party_match_stage(
+            stage_root=stage_root,
+            physical_candidate_path=tier_bridge["candidate_path"],
+            physical_stage_receipt=tier_bridge["source_stage"]["receipt_sha256"],
+            seed_directory=simc_seed_directory)
+    except (tier_simc_bridge.BridgeBlocked,
+            tier_simc_bridge.simc_tier.TierCandidateBlocked,
+            tier_simc_bridge.simc_tier.seed.SimCSourceBlocked) as exc:
+        return {"status":"FIRST_PARTY_SIMC_EXACT_OPTION_PENDING",
+                "reason":str(exc).split(":",1)[0],
+                "network_calls_by_stage":0,"source_season_verified":False}
+
+
 def collect_wago_new_season_source(*, sessions_root, expected_game_build,
                                    fetch=None, credentials=None,
                                    discovery_transport=None,
                                    tier_transport=None,
-                                   bonus_transport=None):
+                                   bonus_transport=None,
+                                   simc_seed_directory=None):
     """First real normal-source acquisition inside the SAME Environment Build.
 
     Explicit build is only a request identity, not independent season or tier
@@ -535,6 +563,9 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         linked=linked,fresh_tier=fresh_tier,transport=bonus_transport)
     tier_bridge=_physical_tier_to_simc_candidate(
         stage_root=stage_root,fresh_tier=fresh_tier,tier_bonus=tier_bonus)
+    first_party=_verified_first_party_tier_options_stage(
+        stage_root=stage_root,tier_bridge=tier_bridge,
+        simc_seed_directory=simc_seed_directory)
     return {
         "schema":"v216_fresh_source_stage_v1",
         "status":"FRESH_WAGO_DB2_COLLECTED_MORE_SOURCES_PENDING",
@@ -548,6 +579,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "fresh_tier":fresh_tier,
         "fresh_tier_raid_bonus_corroboration":tier_bonus,
         "fresh_tier_simc_candidate_bridge":tier_bridge,
+        "fresh_tier_first_party_simc_options":first_party,
         "tier_discovery_mode":"DB2_FIRST_NO_PUBLISHER_NAME_LOOKUP",
         "network_calls_by_stage":(len(wago_snapshot.TABLES)
             if stage["executed"] else 0)+discovered["network_calls_by_stage"]+
