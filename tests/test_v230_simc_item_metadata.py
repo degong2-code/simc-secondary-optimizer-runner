@@ -95,6 +95,13 @@ class SimCExactItemMetadataTests(unittest.TestCase):
                          "simc_item_comma, and space")
         self.assertEqual(result["items"][0]["allowed_class_mask"],2)
 
+    def test_generated_stat_suffix_blank_and_comment_are_accepted(self):
+        raw=synthetic_item_data().replace(
+            b"  { 4, 100, 0.0 },",
+            b"  // Source generator note\n\n  { 4, 100, 0.0f }, // multiplier")
+        result=item.parse_exact(raw,build=BUILD,item_ids=[9001])
+        self.assertEqual(result["items"][0]["stat_modifier_codes"],[4])
+
     def test_bad_generated_fields_even_unrequested_item_blocks(self):
         raw=synthetic_item_data().replace(
             b'simc_item_9012",',b'simc_item_9012", broken,',1)
