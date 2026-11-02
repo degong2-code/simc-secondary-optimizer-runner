@@ -60,7 +60,7 @@
 | [26 DPS Native #40972829357](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40972829357) | **역사 실제 Native** 26개 physical profile smoke, 26개 adaptive 최적화 E2E 아님 |
 | [G=2847 Native #41396545012](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41396545012) | **역사 실제 측정** 값이지만 구 PvP 대표장비 혼합: `FAIL_ACTIVE_SEASON_REPRESENTATIVE_AUTHENTICATION`, 새 시즌 유효 G 사용 금지 |
 
-본 인계 작성 중 **새 Native 0, 신규 원본 HTTP 0, Actions 신규 실행 0**. P3-BF 기능·테스트 결과는 당시 source/runtime SHA에 한정. 새 버전 실제 Windows SimC 물리·적응형 DPS 시험 미완료.
+**Run별 코드 신분:** v212 #41538567324의 테스트 대상 HEAD는 `743f3d3d4fce4d2146a962ce204ae891d4494415`, 이후 v113/v181/v182 #41538766459/#41538766461/#41538766716은 `7f007b4c62e664aefd3c2070de7dd09809774bca`를 대상으로 했다. 모든 PASS를 최종 문서 HEAD에 대한 독립 재실행으로 오해하지 않는다. 본 인계 작성 중 **새 Native 0, 신규 원본 HTTP 0, Actions 신규 실행 0**. P3-BF 기능·테스트 결과는 각 당시 source/runtime SHA에 한정. 새 버전 실제 Windows SimC 물리·적응형 DPS 시험 미완료.
 
 ## 5. 우선 로드맵과 효율적인 실제 다음 작업
 
