@@ -189,6 +189,20 @@ def run(archive_path):
                          environment.get("native_calls")==0 and
                          environment.get("network_calls")==0,
                          "V212_RUNTIME_ENVIRONMENT_MANIFEST_NOT_SEALED")
+                    budget_receipt=(result.get("environment_build") or {}).get(
+                        "season_budget") or {}
+                    need(budget_receipt.get("source_links_verified_by_v223") is True and
+                         budget_receipt.get("status") ==
+                         "CURRENT_SEASON_REFERENCE_SOURCE_LINKS_VERIFIED_NOT_REFRESHED" and
+                         budget_receipt.get("profile_oil_serialization") ==
+                         "V091_ORIGINAL_PROFILE_SHA_AND_OIL_SERIALIZER_REPLAYED" and
+                         budget_receipt.get("base_B") == result["plan"]["base_B"] and
+                         budget_receipt.get("final_T") == result["plan"]["final_T"] and
+                         budget_receipt.get("native_calls") == 0,
+                         "V223_REAL_WINDOWS_BUILD_BUDGET_PROOF_NOT_BOUND")
+                    print("V223_REAL_WINDOWS_HTTP_GJFO_BUILD_PASS",
+                          cls+"/"+spec,level, budget_receipt["base_B"],
+                          budget_receipt["final_T"],flush=True)
                     st,restore=http(base,"/api/v1/sessions/"+sid+"/inputs",
                                      token=token)
                     need(st==200 and restore["current_season_product"] is True
