@@ -72,7 +72,20 @@ class ExactPin(unittest.TestCase):
         self.assertEqual(a["status"],"SIMC_SOURCE_COMMIT_NOT_YET_RESOLVABLE_PENDING")
         self.assertEqual(b["status"],"SIMC_SOURCE_COMMIT_NOT_YET_RESOLVABLE_PENDING")
         self.assertEqual(self.urls,[])
-        self.assertFalse(self.root.joinpath("source/v257_exact_simc_commit.json").exists())
+        self.assertFalse(list(self.root.glob("source/v257_exact_simc_commit_*.json")))
+
+    def test_revision_switch_preserves_previous_sealed_source(self):
+        first=self.go()
+        old=pathlib.Path(self.root/"source"/(
+            "v257_exact_simc_commit_"+self.hint+".json"))
+        original=old.read_bytes()
+        self.revision="a"*40
+        second=self.go(hint=self.revision)
+        self.assertEqual(first["status"],"SIMC_SOURCE_COMMIT_EXACT_PIN_CANDIDATE")
+        self.assertEqual(second["status"],"SIMC_SOURCE_COMMIT_EXACT_PIN_CANDIDATE")
+        self.assertEqual(old.read_bytes(),original)
+        self.assertEqual(len(list(self.root.glob("source/v257_exact_simc_commit_*.json"))),2)
+        self.assertEqual(second["network_calls_by_stage"],0)
 
     def test_wrong_sha_or_invalid_json_stays_pending_no_season_certification(self):
         self.revision="b"*40
