@@ -728,8 +728,11 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
     need(receipt_path.is_file() and not receipt_path.is_symlink(),
          "V216_ONE_SPEC_SIMC_RECEIPT_REQUIRED")
     source_receipt_bytes=receipt_path.read_bytes()
-    item_sha=stage_engine.file_sha256(item_data) if hasattr(
-        stage_engine,"file_sha256") else digest(item_data.read_bytes())
+    item_digest=hashlib.sha256()
+    with item_data.open("rb") as stream:
+        for chunk in iter(lambda:stream.read(1024*1024),b""):
+            item_digest.update(chunk)
+    item_sha=item_digest.hexdigest()
     output="source/v255_one_spec_source_representative.json"
     path=root/output
     code=stage_engine.module_dependency_fingerprint([
@@ -752,7 +755,7 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
              "V216_ONE_SPEC_SOURCE_NOT_PROVISIONAL")
         path.parent.mkdir(parents=True,exist_ok=True)
         path.write_text(json.dumps(result,ensure_ascii=False,
-            sort_keys=True,indent=2,allow_nan=False)+"\\n",encoding="utf8")
+            sort_keys=True,indent=2,allow_nan=False)+"\n",encoding="utf8")
     def validate(outputs):
         row=json.loads(outputs["candidate"].read_text(encoding="utf8"))
         return (row.get("schema")==simc_representative.SCHEMA and
