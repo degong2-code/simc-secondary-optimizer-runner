@@ -84,6 +84,15 @@ class BundleIntakeTests(unittest.TestCase):
             row["source_build"]="12.1.5.70575"
         self.write_manifest()
         with self.assertRaisesRegex(bundle.SourceBundleBlocked,
+                                    "DB2_SOURCE_EXPLICIT_BUILD_REQUIRED"):
+            self.verify()
+        # Even if the declared DB2 source URL is also relabelled to
+        # match the old build, the new-season request remains blocked.
+        for row in self.manifest["sources"].values():
+            row["source_locator"]=row["source_locator"].replace(
+                "build=12.2.0.99999","build=12.1.5.70575")
+        self.write_manifest()
+        with self.assertRaisesRegex(bundle.SourceBundleBlocked,
                                     "CORE_SOURCE_PREFLIGHT_BLOCKED"):
             self.verify()
 
