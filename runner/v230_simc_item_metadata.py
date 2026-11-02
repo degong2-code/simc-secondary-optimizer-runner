@@ -23,7 +23,7 @@ SCHEMA="v230_simc_generated_exact_item_metadata_v1"
 BUILD_HEADER=re.compile(r"^// Items, ilevel (\d+)-(\d+), wow build (\d+(?:\.\d+){3})$")
 STATS_HEAD=re.compile(r"^static const dbc_item_data_t::stats_t\s+(__[a-zA-Z0-9_]+)\[(\d+)\]\s*=\s*\{")
 CHUNK_HEAD=re.compile(r"^static const std::array<dbc_item_data_t,\s*(\d+)>\s+__[a-zA-Z0-9_]+_data_chunk(\d+)\s*\{\s*\{")
-STAT_ROW=re.compile(r"^\s*\{\s*(-?\d+)\s*,\s*(-?\d+)\s*,\s*([-+.0-9eE]+)\s*\},?\s*$")
+STAT_ROW=re.compile(r"^\s*\{\s*(-?\d+)\s*,\s*(-?\d+)\s*,\s*([-+.0-9eE]+[fF]?)\s*\},?\s*(?://.*)?$")
 POINTER=re.compile(r"^&(__[a-zA-Z0-9_]+)\[(\d+)\]$")
 NON_NEG_INT=re.compile(r"(?:0[xX][0-9a-fA-F]+|[0-9]+)\Z")
 MAX_REQUEST_IDS=750
@@ -122,9 +122,16 @@ def parse_exact(raw, *, build, item_ids=None, candidate_filter=None,
                 need(len(stats)==stat_total,"V230_ITEM_STATS_COUNT_MISMATCH")
                 inside_stats=False
                 continue
+            if not line.strip() or line.lstrip().startswith("//"):
+                continue
             m=STAT_ROW.fullmatch(line)
-            need(m is not None,"V230_ITEM_STATS_ROW_UNRECOGNIZED")
+            need(m is not None,
+                 "V230_ITEM_STATS_ROW_UNRECOGNIZED:"+repr(line[:100]))
             # Stat alloc/third factor do NOT establish the scaled rating.
+            try:
+                float(m.group(3).rstrip("fF"))
+            except ValueError as exc:
+                raise ItemMetadataBlocked("V230_BAD_ITEM_STAT_SOCKET_MULTIPLIER") from exc
             stats.append(int(m.group(1)))
             continue
         if (m:=CHUNK_HEAD.fullmatch(line)):
