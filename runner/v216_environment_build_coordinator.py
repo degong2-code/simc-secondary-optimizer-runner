@@ -1027,13 +1027,30 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
             tier_simc_bridge.BridgeBlocked,
             simc_representative.SourceRepresentativeBlocked,
             EnvironmentBuildBlocked,ValueError,KeyError,OSError) as exc:
+        reason,_,detail=str(exc).partition(":")
+        # Preserve actionable missing slot without exposing source paths,
+        # copying gear from old seasons, or granting a G success.
+        slot=(detail if reason in (
+            "V232_ORDINARY_SLOT_WITHOUT_SIMC_CANDIDATE",
+            "V232_COMMON_SLOT_WITHOUT_SIMC_CANDIDATE")
+            and detail in simc_representative.chooser.contracts.SLOT_ORDER
+            else None)
         return {"status":"FRESH_ONE_SPEC_PHYSICAL_SOURCE_OR_COVERAGE_PENDING",
-                "reason":str(exc).split(":",1)[0],
+                "reason":reason,"missing_slot":slot,
                 "network_calls_by_stage":0,"native_calls":0,
                 "environment_ready":False}
+    # v217 checked this source-only file's hash even on receipt reuse.
+    # Present just the selected source provenance, NOT a verified G or
+    # newly authenticated season-membership verdict.
+    observed=json.loads(path.read_text(encoding="utf8"))
     return {"status":"FRESH_ONE_SPEC_SIMC_G_SOURCE_CANDIDATE_PENDING_NATIVE",
             "candidate_path":str(path.resolve()),
             "source_stage":{k:v for k,v in staged.items() if k!="result"},
+            "selected_slot_count":len(observed["selected_G_slot_ids"]),
+            "source_kinds_by_selected_slot":
+                observed["selected_gear_season_source_kinds"],
+            "mplus_world_state_pending":
+                observed.get("season_gear_db_mplus_worldstate_pending"),
             "network_calls_by_stage":0,"native_calls":0,
             "season_membership_verified":False,"G":None,
             "environment_ready":False}
