@@ -22,6 +22,7 @@ import v213_source_to_catalog as source_to_catalog
 import v161_wago_db2_snapshot as wago_snapshot
 import v242_authenticated_season_source_stage as discovery_stage
 import v163_zero_seed_db2_join as season_join
+import v243_fresh_tier_anchor_intake as tier_intake
 import v217_stage_execution_engine as stage_engine
 import v196_current_season_user_catalog as user_catalog
 import v241_fresh_source_stage_adapter as fresh_stage
@@ -322,9 +323,35 @@ def _join_authenticated_season_source(*,stage_root,output_dir,
             "G":None,"J":None,"F":None,"O":None}
 
 
+def _source_first_tier_stage(*,stage_root,wago_folder,build,linked,
+                             wago_receipt_sha256,transport=None):
+    """Same Build: fresh publisher+ItemSet -> existing physical v168."""
+    if not linked.get("candidate_path"):
+        return {"status":"TIER_SEASON_JOIN_PENDING","reason":"NO_UNIQUE_V163_SCOPE",
+                "tier_candidate_path":None,"network_calls_by_stage":0}
+    scope=linked["source_scope"]
+    try:
+        return tier_intake.build_from_public_source(
+            stage_root=stage_root,wago_folder=wago_folder,build=build,
+            expansion_id=scope["expansion_id"],
+            mplus_zone=scope["mplus_zone"],
+            wago_receipt_sha256=wago_receipt_sha256,
+            transport=transport)
+    except (tier_intake.TierSourceBlocked,
+            tier_intake.tier.TierBlocked) as exc:
+        # Fresh publisher can lag or omit a new season. This only blocks its
+        # optional tier candidate, NEVER authorizes last season's fixed IDs.
+        return {"status":"TIER_FRESH_PUBLICATION_OR_DB2_PENDING",
+                "reason":str(exc).split(":",1)[0],
+                "tier_candidate_path":None,"network_calls_by_stage":0,
+                "environment_installed":False,
+                "season_membership_completely_verified":False}
+
+
 def collect_wago_new_season_source(*, sessions_root, expected_game_build,
                                    fetch=None, credentials=None,
-                                   discovery_transport=None):
+                                   discovery_transport=None,
+                                   tier_transport=None):
     """First real normal-source acquisition inside the SAME Environment Build.
 
     Explicit build is only a request identity, not independent season or tier
@@ -430,6 +457,11 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         expected_game_build=expected_game_build,
         discovered=discovered,
         wago_stage_receipt=stage["receipt_sha256"])
+    fresh_tier=_source_first_tier_stage(
+        stage_root=stage_root,wago_folder=output_dir,
+        build=expected_game_build,linked=linked,
+        wago_receipt_sha256=stage["receipt_sha256"],
+        transport=tier_transport)
     return {
         "schema":"v216_fresh_source_stage_v1",
         "status":"FRESH_WAGO_DB2_COLLECTED_MORE_SOURCES_PENDING",
@@ -440,8 +472,10 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "source_stage":{k:v for k,v in stage.items() if k!="result"},
         "season_discovery":discovered,
         "season_join":linked,
+        "fresh_tier":fresh_tier,
         "network_calls_by_stage":(len(wago_snapshot.TABLES)
-            if stage["executed"] else 0)+discovered["network_calls_by_stage"],
+            if stage["executed"] else 0)+discovered["network_calls_by_stage"]+
+            fresh_tier["network_calls_by_stage"],
         "native_calls":0,
         "environment_installed":False,
         "environment_ready":False,
