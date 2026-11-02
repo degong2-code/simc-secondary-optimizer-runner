@@ -44,6 +44,31 @@ class ExactPin(unittest.TestCase):
             revision_hint=self.hint if hint is None else hint,
             transport=self.fetch)
 
+    def test_cold_start_pinned_small_source_sealed_once_without_prior_build(self):
+        from tests.test_v229_simc_only_source_seed import (
+            SimCCollectorTests,REVISION,BUILD)
+        upstream=SimCCollectorTests(
+            "test_collect_pinned_sources_without_any_legacy_data")
+        upstream.setUp()
+        first=build._collect_first_party_simc_seed_stage(
+            stage_root=self.root,build=BUILD,revision=REVISION,
+            previous_game_build=None,season_event="cold_start",
+            transport=upstream.fetch)
+        second=build._collect_first_party_simc_seed_stage(
+            stage_root=self.root,build=BUILD,revision=REVISION,
+            previous_game_build=None,season_event="cold_start",
+            transport=upstream.fetch)
+        self.assertEqual(first["status"],"SIMC_PINNED_SET_SOURCE_RECEIPT_READY")
+        self.assertEqual(first["network_calls_by_stage"],7)
+        self.assertEqual(second["network_calls_by_stage"],0)
+        receipt=json.loads((pathlib.Path(first["source_dir"])/
+                            seed.RECEIPT).read_text())
+        self.assertIsNone(receipt["previous_game_build"])
+        self.assertEqual(receipt["season_event"],"cold_start")
+        self.assertTrue(receipt["provenance_tree_blob_authenticated"])
+        self.assertFalse(receipt["environment_ready"])
+        self.assertIsNone(receipt["G"])
+
     def test_short_commit_resolved_once_and_sealed_reused_without_http(self):
         first=self.go()
         second=self.go()
