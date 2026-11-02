@@ -448,6 +448,213 @@ def compile_catalog(candidates,source_dir,proof_8025,proof_7967):
         "All 37 choices other than existing one-scope Eagle remain non-user-selectable; 8025 remains developer-only."
       ]
     }
+# Fresh-season production source path, sharing the normal v211 parser and
+# classification logic. The earlier fixed 38-row/old-E routine is retained
+# ONLY for backwards compatibility with an already-installed season.
+FRESH_SOURCE_SCHEMA="v211_fresh_simc_source_manifest_v1"
+FRESH_REQUIRED=("permanent_enchant.inc","spell_item_enchantment.inc",
+                "spelltext_data.inc","data_enums.hh",
+                "unique_gear.cpp","enchants.cpp")
+FRESH_FIXED_PATHS={
+    "permanent_enchant.inc":"engine/dbc/generated/permanent_enchant.inc",
+    "spell_item_enchantment.inc":
+        "engine/dbc/generated/spell_item_enchantment.inc",
+    "spelltext_data.inc":"engine/dbc/generated/spelltext_data.inc",
+    "data_enums.hh":"engine/dbc/data_enums.hh",
+    "enchants.cpp":"engine/item/enchants.cpp"}
+HASH40=re.compile("[0-9a-f]{40}\\Z")
+HASH64=re.compile("[0-9a-f]{64}\\Z")
+BUILD_RE=re.compile("[0-9]+(?:\\.[0-9]+){3}\\Z")
+
+
+def load_fresh_sources(folder,manifest,*,game_build,simc_revision):
+    """Reuse the real v211 parsers with exact new pinned source bytes.
+
+    The manifest binds downloaded bytes; it is not independent proof that
+    the URL was actually retrieved. Normal v161/v191 source receipts own
+    that provenance. No historical v202/v206 Native E receipts are loaded.
+    """
+    need(type(manifest) is dict and
+         manifest.get("schema")==FRESH_SOURCE_SCHEMA and
+         manifest.get("game_build")==game_build and
+         manifest.get("simc_revision")==simc_revision and
+         type(manifest.get("files")) is dict and
+         set(manifest["files"])==set(FRESH_REQUIRED),
+         "FRESH_SIMC_SOURCE_MANIFEST_BUILD_OR_FILES_INVALID")
+    outputs={};receipts={}
+    for key in FRESH_REQUIRED:
+        row=manifest["files"][key]
+        need(type(row) is dict and
+             set(row)=={"source_path","size_bytes","sha256","git_blob_sha1"}
+             and type(row["source_path"]) is str
+             and type(row["size_bytes"]) is int and
+             0<row["size_bytes"]<=MAX_SOURCE and
+             type(row["sha256"]) is str and HASH64.fullmatch(row["sha256"]) and
+             type(row["git_blob_sha1"]) is str and HASH40.fullmatch(
+                 row["git_blob_sha1"]),
+             "FRESH_SIMC_SOURCE_FILE_RECORD_INVALID:"+key)
+        if key=="unique_gear.cpp":
+            need(re.fullmatch(
+                r"engine/player/unique_gear_[a-z0-9_]+\\.cpp",
+                row["source_path"]) is not None,
+                "FRESH_SIMC_HANDLER_RELATIVE_PATH_INVALID")
+        else:
+            need(row["source_path"]==FRESH_FIXED_PATHS[key],
+                 "FRESH_SIMC_SOURCE_RELATIVE_PATH_CHANGED:"+key)
+        raw=read_bytes(Path(folder)/key)
+        need(len(raw)==row["size_bytes"] and
+             sha256(raw)==row["sha256"] and
+             git_blob_sha(raw)==row["git_blob_sha1"],
+             "FRESH_SIMC_SOURCE_BYTES_OR_GIT_BLOB_CHANGED:"+key)
+        try:
+            outputs[key]=raw.decode("utf8")
+        except UnicodeError as exc:
+            raise SourceBlocked("FRESH_SIMC_SOURCE_UTF8_INVALID:"+key) from exc
+        receipts[key]={"path":row["source_path"],
+                       "size_bytes":len(raw),"sha256":sha256(raw),
+                       "git_blob_sha1":git_blob_sha(raw)}
+    for key in ("permanent_enchant.inc","spell_item_enchantment.inc",
+                "spelltext_data.inc"):
+        need(build_from_header(outputs[key],key)==game_build,
+             "FRESH_SIMC_GENERATED_BUILD_DRIFT:"+key)
+    return outputs,receipts
+
+
+def candidates_from_v191_fresh(season):
+    """A live v191 input, not a fixed old 38-entry Midnight snapshot."""
+    need(type(season) is dict and
+         season.get("schema")==V191_SCHEMA and
+         season.get("source_first") is True and
+         season.get("automatic_ui_promotion") is False and
+         season.get("native_calls")==0 and
+         season.get("network_calls_by_compiler")==0 and
+         type(season.get("simc_revision")) is str and
+         HASH40.fullmatch(season["simc_revision"]) is not None and
+         type(season.get("game_build")) is str and
+         BUILD_RE.fullmatch(season["game_build"]) is not None,
+         "FRESH_V191_SOURCE_IDENTITY_REQUIRED")
+    enchants=season.get("enchants",{})
+    current=enchants.get("current_season")
+    if current is None:
+        current=enchants.get("current_season_midnight")
+    need(type(current) is dict and
+         type(current.get("highest_rank_candidates")) is list and
+         current.get("count")==len(current["highest_rank_candidates"]) and
+         1<=current["count"]<=1000,
+         "FRESH_V191_SOURCE_CANDIDATES_REQUIRED")
+    rows=[]; seen=set()
+    for row in current["highest_rank_candidates"]:
+        need(type(row) is dict and row.get("user_selectable") is False
+             and type(row.get("enchant_id")) is int and
+             row["enchant_id"]>0 and row["enchant_id"] not in seen
+             and type(row.get("simc_token")) is str and
+             row["simc_token"].startswith("enchant_")
+             and type(row.get("quality_rank")) is int
+             and type(row.get("item_class")) is int and
+             type(row.get("inventory_type_mask")) is int and
+             row["inventory_type_mask"]>=0 and
+             type(row.get("item_subclass_mask")) is int and
+             type(row.get("inventory_type_options")) is list and
+             row["inventory_type_options"]==[
+                 i for i in range(1,31)
+                 if row["inventory_type_mask"]&(1<<i)],
+             "FRESH_V191_ENCHANT_ID_TOKEN_MASK_OR_OPTION_INVALID")
+        seen.add(row["enchant_id"])
+        rows.append({
+            "enchant_id":row["enchant_id"],
+            "token":row["simc_token"],
+            "quality_rank":row["quality_rank"],
+            "item_class":row["item_class"],
+            "inventory_type_mask":row["inventory_type_mask"],
+            "item_subclass_mask":row["item_subclass_mask"],
+            "approved":False})
+    return rows
+
+
+def compile_fresh_season(season,source_dir,manifest):
+    """New season source-bound classification, without old 38/native E pins.
+
+    This is the original v211 compiler reused by the normal Build, NOT a
+    second Environment Builder. Unverified choices remain unapproved.
+    """
+    candidates=candidates_from_v191_fresh(season)
+    build=season["game_build"];commit=season["simc_revision"]
+    sources,source_receipt=load_fresh_sources(
+        source_dir,manifest,game_build=build,simc_revision=commit)
+    permanent=parse_permanent(sources["permanent_enchant.inc"])
+    ids=set()
+    for row in candidates:
+        eid=row["enchant_id"]
+        need(eid not in ids,"FRESH_V191_ENCHANT_ID_DUPLICATE")
+        ids.add(eid)
+        matches=[p for p in permanent.get(eid,[])
+                 if p["token"]==row["token"]
+                 and p["quality_rank"]==row["quality_rank"]
+                 and p["item_class"]==row["item_class"]
+                 and p["inventory_type_mask"]==row["inventory_type_mask"]
+                 and p["item_subclass_mask"]==row["item_subclass_mask"]]
+        need(len(matches)==1,
+             "FRESH_V191_SIMC_PERMANENT_ENCHANT_NOT_EXACT:"+str(eid))
+    dbc=parse_dbc_rows(sources["spell_item_enchantment.inc"],ids)
+    enums=parse_enums(sources["data_enums.hh"])
+    spells=parse_spelltexts(sources["spelltext_data.inc"])
+    handlers=parse_custom_handlers(sources["unique_gear.cpp"])
+    need("case ITEM_ENCHANTMENT_STAT:" in sources["enchants.cpp"] and
+         "case ITEM_ENCHANTMENT_EQUIP_SPELL:" in sources["enchants.cpp"] and
+         "passive_enchant" in sources["enchants.cpp"],
+         "FRESH_SIMC_ENCHANT_PIPELINE_MISSING")
+    rows=[classify_row(row,dbc[row["enchant_id"]],enums,spells,
+                       handlers,{})
+          for row in sorted(candidates,key=lambda r:r["enchant_id"])]
+    # Existing id7967/8025 approvals, E measurements and semantics are
+    # strictly scope-specific; do NOT transfer old evidence to a new build.
+    for row in rows:
+        row["selection_status"]="LOCKED_PENDING_CURRENT_SEASON_ITEM_EFFECT_PROOF"
+        row["native_E_evidence"]={
+            "status":"NOT_MEASURED_NEW_BUILD","static_E":None,
+            "ui_selectable":False,"source_file":None}
+        if row["enchant_id"]==7967:
+            row["effect_family"]="SIMC_SOURCE_EFFECT_REQUIRES_NEW_BUILD_PROOF"
+            row["effect_summary"]="기존 시즌 치명 효과 설명 미승격; 새 빌드 원본·SimC 확인 필요"
+    counts={"total":len(rows),
+            "static_chmv_rating":sum(
+                x["static_chmv_rating_present_in_dbc"] for x in rows),
+            "static_nonchmv_only_or_mixed":sum(
+                bool(x["static_components"]) and
+                not x["static_chmv_rating_present_in_dbc"] for x in rows),
+            "spell_effects":sum(bool(x["spell_effects"]) for x in rows),
+            "native_E_measured":0,"user_selectable_existing_scope":0,
+            "developer_only_exact_scope":0,"locked":len(rows)}
+    result={
+       "schema":SCHEMA,
+       "status":"SOURCE_CLASSIFIED_NOT_GENERAL_NATIVE_ACCEPTANCE_OR_UI_PROMOTION",
+       "season_game_build":build,
+       "simc_commit":commit,
+       "source_files":source_receipt,
+       "simc_item_enchant_pipeline":{
+           "static_stat_path":"ITEM_ENCHANTMENT_STAT",
+           "spell_effect_path":"ITEM_ENCHANTMENT_EQUIP_SPELL",
+           "passive_spell_path":"passive_enchant","owner":"SIMC",
+           "source_file":"engine/item/enchants.cpp"},
+       "candidate_source_artifact_id":None,
+       "candidate_source_schema":V191_SCHEMA,
+       "counts":counts,
+       "native_calls":0,"network_calls_by_classifier":0,
+       "automatic_ui_promotion":False,
+       "simc_effect_reimplemented":False,
+       "rows":rows,
+       "source_manifest_sha256":sha256(canonical(manifest).encode("utf8")),
+       "source_retrieval_independently_authenticated_here":False,
+       "J_F_O_G_not_calculated":True,
+       "limitations":[
+           "Fresh source hashes bind bytes but cannot prove actual upstream retrieval.",
+           "Current-season enchant item/effect ownership and highest quality require evidence.",
+           "Existing prior-season E/7967 approvals were NOT reused.",
+           "Unknown DBC components remain unapproved, not reimplemented.",
+           "New G/J/F/O and user UI admission remain pending."]}
+    return result
+
+
 def verify_runtime_manifest(compiled,runtime):
     """The checked-in UI metadata must be an exact compact projection."""
     need(runtime.get("schema")==SCHEMA and
