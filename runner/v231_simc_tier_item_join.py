@@ -94,6 +94,7 @@ def select(*, seed_directory, cls, spec, set_option):
     mask=1<<(CLASS_ID[cls]-1)
     pieces={}
     tier_levels={}
+    tier_quality={}
     for row in table["items"]:
         slot=INV_SLOT.get(row["inventory_type"])
         need(slot is not None and slot not in pieces and
@@ -104,6 +105,7 @@ def select(*, seed_directory, cls, spec, set_option):
              "V231_TIER_PHYSICAL_ARMOR_CLASS_SLOT_OR_SET_INVALID")
         pieces[slot]=row["item_id"]
         tier_levels[slot]=row["ilevel_unscaled"]
+        tier_quality[slot]=row["quality"]
     need(set(pieces)==FULL and all(type(x) is int and x>0
                                   for x in tier_levels.values()),
          "V231_TIER_FIVE_DISTINCT_SLOTS_REQUIRED")
@@ -125,6 +127,8 @@ def select(*, seed_directory, cls, spec, set_option):
                           ("head","shoulders","chest","hands","legs")},
         "tier_unscaled_ilevel_by_slot":{k:tier_levels[k] for k in
                                            ("head","shoulders","chest","hands","legs")},
+        "tier_quality_by_slot":{k:tier_quality[k] for k in
+                                ("head","shoulders","chest","hands","legs")},
         "four_piece_slots":["head","shoulders","hands","legs"],
         "tier_bonus_sizes":selected["observed_bonus_sizes"],
         "next_stage":"OTHER_GEAR_WEAPON_SOURCE_DISCOVERY_AND_NATIVE_G",
