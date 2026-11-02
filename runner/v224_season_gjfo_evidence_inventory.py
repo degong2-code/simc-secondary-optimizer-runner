@@ -84,6 +84,82 @@ def load(path):
     return doc, digest(raw)
 
 
+
+def core_source_preflight(*, inputs, event, target_ilevel,
+                          previous_game_build=None):
+    """Preflight new-season gear/tier/consumable *source bytes* BEFORE v211/v213.
+
+    Allows the mandatory G/J/F/O path to start even if unrelated new-season
+    enchant/embellishment candidate classification is not implemented. A
+    source row or a declared same-build label is not numeric verification.
+    This never produces budgets or an approved environment.
+    """
+    need(event in EVENTS and type(target_ilevel) is int and
+         target_ilevel > 0, "V224_CORE_EVENT_OR_ILVL_INVALID")
+    need(type(inputs) is dict and set(inputs) == set(SOURCE),
+         "V224_CORE_ALL_THREE_INPUTS_REQUIRED")
+    rows = {}
+    for name in SOURCE:
+        pair = inputs[name]
+        need(type(pair) is tuple and len(pair) == 2,
+             "V224_CORE_EXACT_FILE_IDENTITY_REQUIRED")
+        document, original_sha = pair
+        need(type(document) is dict and type(original_sha) is str and
+             SHA.fullmatch(original_sha) is not None,
+             "V224_CORE_SOURCE_DOCUMENT_OR_HASH_INVALID")
+        rows[name] = document
+    gear, tier, budget = (rows[name] for name in SOURCE)
+    build = gear.get("season_build")
+    need(type(build) is str and BUILD.fullmatch(build) is not None and
+         gear.get("schema") == "v167_product_season_gear_db_v1" and
+         tier.get("schema") == "v168_source_first_class_tier_5pc_v1" and
+         budget.get("schema") == "v165_current_season_chmv_consumables_v1" and
+         tier.get("retail_build") == build and
+         budget.get("retail_build") == build and
+         gear.get("expansion_id") == tier.get("expansion_id") and
+         type(gear.get("items")) is list and
+         gear.get("item_count") == len(gear["items"]) and
+         gear["item_count"] > 0 and
+         type(tier.get("classes")) is dict and
+         len(tier["classes"]) == 13 and
+         type(tier.get("item_count")) is int and tier["item_count"] > 0,
+         "V224_CORE_SAME_BUILD_REPRESENTATIVE_INPUTS_REQUIRED")
+    need(previous_game_build is None or
+         (type(previous_game_build) is str and
+          BUILD.fullmatch(previous_game_build) is not None),
+         "V224_CORE_PRIOR_BUILD_INVALID")
+    if event in ("season_change", "expansion_change"):
+        need(previous_game_build is not None,
+             "V224_CORE_NEW_SEASON_REQUIRES_PRIOR_BUILD")
+        need(build != previous_game_build,
+             "V224_CORE_NEW_SEASON_STALE_BUILD_BLOCKED")
+    output = {
+        "schema": "v224_core_season_input_preflight_v1",
+        "status": "CORE_SOURCE_PRESENT_GJFO_ALL_MANDATORY_EVIDENCE_PENDING",
+        "update_event": event, "game_build": build,
+        "previous_game_build": previous_game_build,
+        "target_ilevel": target_ilevel,
+        "source_input_sha256": {name: inputs[name][1] for name in SOURCE},
+        "source_bytes_verified_by_upstream_artifact": False,
+        "component_state": {
+            name: {
+                "status": "BLOCKED_INDEPENDENT_SOURCE_AND_RATING_VERIFICATION",
+                "missing_evidence": list(REQUIREMENTS[name]),
+                "rating": None,
+            } for name in COMPONENTS
+        },
+        "G": None, "J": None, "F": None, "O": None,
+        "B": None, "T": None,
+        "budget_can_be_published": False,
+        "user_options_auto_admitted": False,
+        "requires_v191_source_pinning": True,
+        "requires_v213_catalog_join_for_user_options": True,
+        "native_calls": 0, "network_calls": 0, "cache_mutations": 0,
+    }
+    return {**output,
+            "receipt_sha256": digest(canonical(output).encode("utf8"))}
+
+
 def compile_inventory(*, v191, v191_sha, v213, v213_sha,
                       inputs, event, target_ilevel,
                       previous_game_build=None):
@@ -206,26 +282,39 @@ def compile_inventory(*, v191, v191_sha, v213, v213_sha,
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    for name in ("v191", "v213", "gear", "tier", "budget", "out"):
+    for name in ("gear", "tier", "budget", "out"):
         parser.add_argument("--" + name, type=pathlib.Path, required=True)
+    parser.add_argument("--v191", type=pathlib.Path)
+    parser.add_argument("--v213", type=pathlib.Path)
+    parser.add_argument("--core-only", action="store_true")
     parser.add_argument("--event", choices=EVENTS, required=True)
     parser.add_argument("--target-ilevel", type=int, required=True)
     parser.add_argument("--previous-game-build")
     args = parser.parse_args(argv)
-    season, season_sha = load(args.v191)
-    catalog, catalog_sha = load(args.v213)
     inputs = {name: load(getattr(args, name)) for name in SOURCE}
-    result = compile_inventory(
-        v191=season, v191_sha=season_sha, v213=catalog,
-        v213_sha=catalog_sha, inputs=inputs,
-        event=args.event, target_ilevel=args.target_ilevel,
-        previous_game_build=args.previous_game_build)
+    if args.core_only:
+        need(args.v191 is None and args.v213 is None,
+             "V224_CORE_ONLY_CANNOT_CLAIM_V191_V213_PROVENANCE")
+        result = core_source_preflight(
+            inputs=inputs, event=args.event,
+            target_ilevel=args.target_ilevel,
+            previous_game_build=args.previous_game_build)
+    else:
+        need(args.v191 is not None and args.v213 is not None,
+             "V224_V191_V213_PINNED_ARTIFACT_REQUIRED")
+        season, season_sha = load(args.v191)
+        catalog, catalog_sha = load(args.v213)
+        result = compile_inventory(
+            v191=season, v191_sha=season_sha, v213=catalog,
+            v213_sha=catalog_sha, inputs=inputs,
+            event=args.event, target_ilevel=args.target_ilevel,
+            previous_game_build=args.previous_game_build)
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(
         result, sort_keys=True, ensure_ascii=False, indent=2) + "\n",
         encoding="utf8")
-    print("V224_SOURCE_LINKED_GJFO_ALL_UNVERIFIED",
-          result["game_build"], "GJF0", result["required_components"],
+    print("V224_GJFO_ALL_MANDATORY_PROOFS_PENDING",
+          result["game_build"], list(COMPONENTS),
           "NATIVE0_NOT_USER_READY", flush=True)
     return 0
 
