@@ -177,11 +177,31 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                 {"ID":i,"Display_lang":str(i),"ExpansionID":11,
                  "OverallQualityID":4,"LimitCategory":0,
                  "StatModifier_bonusStat_0":24 if i==3001 else 0,
-                 "StatModifier_bonusStat_1":25 if i==3001 else 0}
+                 "StatModifier_bonusStat_1":25 if i==3001 else 0,
+                 "InventoryType":5,"ItemSet":0,"AllowableClass":0}
                 for i in (1001,2001,3001)],
-            "Item":[{"ID":i,"ClassID":4,"InventoryType":5}
+            "Item":[{"ID":i,"ClassID":4,"InventoryType":5,"SubclassID":4}
                     for i in (1001,2001,3001)],
         }
+        from tests.test_v243_fresh_tier_anchor_intake import fixture
+        from runner import v168_current_season_tier_discovery as physical
+        for n,(cl,sub) in enumerate(sorted(physical.FAMILY.items())):
+            for pos,inv in enumerate((1,3,20,10,7)):
+                iid=910000+100*n+pos
+                data["ItemSparse"].append({
+                    "ID":iid,"Display_lang":"Unrelated "+cl+" piece",
+                    "ExpansionID":11,"OverallQualityID":4,"LimitCategory":0,
+                    "StatModifier_bonusStat_0":0,"StatModifier_bonusStat_1":0,
+                    "InventoryType":inv,"ItemSet":500+n,
+                    "AllowableClass":1<<n})
+                data["Item"].append({"ID":iid,"ClassID":4,
+                                     "InventoryType":inv,"SubclassID":sub})
+        publisher_html,itemset_csv=fixture()
+        tier_calls=[]
+        def tier_transport(req,timeout):
+            tier_calls.append(req.full_url)
+            return Response(publisher_html if req.full_url==
+                            v216.tier_intake.SOURCE_URL else itemset_csv)
         report={"schema":"v155_season_discovery_provider_probe_v1",
                 "mode":"LIVE_AUTHENTICATED_BOUNDED",
                 "blizzard":{"endpoints":{"keystone_season_index":{
@@ -189,7 +209,7 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                 "wcl":{"midnight_zones":[
                     {"zone_id":10,"zone_name":"Synthetic Raid",
                      "wcl_frozen":False,"encounters":[{"name":"Hydra"}]},
-                    {"zone_id":11,"zone_name":"Mythic+ Test",
+                    {"zone_id":11,"zone_name":"Mythic+ Season 2",
                      "wcl_frozen":False,
                      "encounters":[{"name":"Synthetic Dungeon"}]}]}}
         report_path=self.root/"synthetic_v155.json"
@@ -223,13 +243,24 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             first=v216.collect_wago_new_season_source(
                 sessions_root=self.root/"runtime",
                 expected_game_build="12.2.0.99999",fetch=fetch,
-                credentials={})
+                credentials={},tier_transport=tier_transport)
             second=v216.collect_wago_new_season_source(
                 sessions_root=self.root/"runtime",
                 expected_game_build="12.2.0.99999",fetch=fetch,
-                credentials={})
+                credentials={},tier_transport=tier_transport)
         self.assertEqual(compiled.call_count,1)
         self.assertEqual(len(calls),10)
+        self.assertEqual(len(tier_calls),2)
+        self.assertEqual(first["fresh_tier"]["network_calls_by_stage"],2)
+        self.assertEqual(second["fresh_tier"]["network_calls_by_stage"],0)
+        self.assertEqual(first["fresh_tier"]["status"],
+                         "CURRENT_SET_NAMES_AND_65_PHYSICAL_IDS_VERIFIED")
+        self.assertEqual(first["fresh_tier"]["source_stage"]["status"],
+                         "EXECUTED_AND_SEALED")
+        self.assertEqual(second["fresh_tier"]["source_stage"]["status"],
+                         "REUSED_VERIFIED")
+        self.assertTrue(pathlib.Path(
+            first["fresh_tier"]["tier_candidate_path"]).is_file())
         self.assertEqual(first["season_join"]["status"],
                          "DB2_WCL_CANDIDATES_JOINED_SEASON_CONDITIONS_PENDING")
         self.assertEqual(first["season_join"]["stage"]["status"],
