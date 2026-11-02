@@ -1,5 +1,7 @@
 # P3-W — v232 SimC-only source → one-spec provisional ordinary gear and weapons
 
+> **2026-11-02 최신 사용자 교정:** 이 문서의 SimC-only 표기는 역사적 제한 원본 조사 경로를 가리킬 뿐, 최종 통제실험의 데이터 수집 차단 정책이 아니다. 최종 시험은 **동일한 실사용 Environment Build 엔진**, **기존 데이터·캐시·영수증의 입력 사용 금지**, **정상 Wago/Blizzard/WCL/공개 GitHub/SimC 신규 수집 허용** 조건을 따른다. [P3-AA 최신 승인 기준](P3_AA_20261102_SINGLE_ENGINE_FRESH_SEASON_CONTROL_ACCEPTANCE.md)이 우선한다.
+
 Date: 2026-11-02 KST. **Isolated branch** `probe/chat-cache-v035-20261024`; no main merge, immutable v003 change, original v016 integration claim, Project UI/Instructions mutation or Work OS promotion.
 
 ## Objective
@@ -51,4 +53,4 @@ The long-term purpose is **SimC DPS optimized future absolute CHMV** for 26 DPS 
 
 **Not complete:** Current-season tier-set option is still a caller-supplied source token, not authenticated game-season discovery. A non-set item with matching physical metadata is not automatically a normal/effect-free item or a verified *in-season* representative. Native item acceptance and binary/game-build/profile provenance are not newly executed. J/F/O actual same-season highest-quality values, E/L accounting, B/T and P1 user-profile runtime integration are pending. Do NOT report `v232` as new-season ready or G measured.
 
-**Next:** derive authenticated season identity, or an independently verified SimC source signal, without copying old names; then connect the provisional chosen 13/14 slots to the existing v226/v227/v228 exact Native static G measurement path (without forging v225 receipts), and validate real G → J/F/O → B/T. Only after engine completion perform the user's final **strict SimC-only zero-base controlled experiment**, where historical source files, old caches/receipts and Wago/Blizzard access are actually blocked and audited; compare the sealed outcome with historic evidence only afterward.
+**Next:** derive authenticated season identity, or an independently verified SimC source signal, without copying old names; then connect the provisional chosen 13/14 slots to the existing v226/v227/v228 exact Native static G measurement path (without forging v225 receipts), and validate real G → J/F/O → B/T. Only after the **single normal Environment Build engine** is complete, perform the user's final **zero-history controlled experiment using that unchanged Build and ordinary fresh Wago/Blizzard/WCL/public GitHub/SimC collection**, while preventing any reads of previously installed source files, old caches/receipts and prior budget references. Seal fresh outcomes before independent comparison.
