@@ -131,16 +131,17 @@ def core_source_preflight(*, inputs, event, target_ilevel,
          (type(previous_game_build) is str and
           BUILD.fullmatch(previous_game_build) is not None),
          "V224_CORE_PRIOR_BUILD_INVALID")
-    if event in ("season_change", "expansion_change"):
-        need(previous_game_build is not None,
-             "V224_CORE_NEW_SEASON_REQUIRES_PRIOR_BUILD")
-        need(build != previous_game_build,
-             "V224_CORE_NEW_SEASON_STALE_BUILD_BLOCKED")
+    # Client build history is optional; a live new season may even activate
+    # without changing the client build. Never certify season membership from
+    # the difference, and never require an old local record to collect source.
     output = {
         "schema": "v224_core_season_input_preflight_v1",
         "status": "CORE_SOURCE_PRESENT_GJFO_ALL_MANDATORY_EVIDENCE_PENDING",
         "update_event": event, "game_build": build,
         "previous_game_build": previous_game_build,
+        "previous_build_record_status": (
+            "NOT_RECORDED" if previous_game_build is None else "RECORDED"),
+        "previous_build_is_not_season_proof": True,
         "target_ilevel": target_ilevel,
         "source_input_sha256": {name: inputs[name][1] for name in SOURCE},
         "source_bytes_verified_by_upstream_artifact": False,
@@ -229,14 +230,9 @@ def compile_inventory(*, v191, v191_sha, v213, v213_sha,
          (type(previous_game_build) is str and
           BUILD.fullmatch(previous_game_build) is not None),
          "V224_PREVIOUS_BUILD_INVALID")
-    if event in ("season_change", "expansion_change"):
-        need(previous_game_build is not None,
-             "V224_NEW_SEASON_REQUIRES_PREVIOUS_BUILD")
-        need(build != previous_game_build,
-             "V224_NEW_SEASON_CANNOT_REUSE_PREVIOUS_GAME_BUILD")
-        # New season cannot import the old same-season budget's 'approved'
-        # status based on label or equal numeric values; source join alone
-        # remains untrusted for each quantitative component.
+    # A source-only season change never licenses previous budget reuse, even
+    # if a client build comparison is available. The event identity, Wago
+    # source and independent tier/consumable proof must do that work.
     native_builds = v191.get("simc_generated_builds", {})
     need(type(native_builds) is dict and
          set(native_builds) ==
@@ -262,6 +258,9 @@ def compile_inventory(*, v191, v191_sha, v213, v213_sha,
         "request_event": event,
         "game_build": build,
         "previous_game_build": previous_game_build,
+        "previous_build_record_status": (
+            "NOT_RECORDED" if previous_game_build is None else "RECORDED"),
+        "previous_build_is_not_season_proof": True,
         "simc_revision": rev,
         "target_ilevel": target_ilevel,
         "v191_source_sha256": v191_sha,
