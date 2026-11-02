@@ -146,6 +146,56 @@ class SeasonGjfoInventoryTests(unittest.TestCase):
                 p.load(link)
 
 
+    def test_new_season_core_only_runs_before_enchant_catalog_exists(self):
+        _,_,originals=fixture(build="12.2.0.99999")
+        result=p.core_source_preflight(
+            inputs=originals,event="season_change",
+            target_ilevel=335,previous_game_build="12.1.5.70575")
+        self.assertEqual(result["game_build"],"12.2.0.99999")
+        self.assertFalse(result["budget_can_be_published"])
+        self.assertTrue(result["requires_v191_source_pinning"])
+        self.assertEqual(set(result["component_state"]),set(p.COMPONENTS))
+        self.assertIsNone(result["B"])
+        self.assertIsNone(result["T"])
+        self.assertEqual(result["native_calls"],0)
+
+    def test_core_new_season_rejects_stale_build_and_mixed_sources(self):
+        _,_,core=fixture()
+        with self.assertRaisesRegex(p.SeasonEvidenceBlocked,
+                                    "STALE_BUILD_BLOCKED"):
+            p.core_source_preflight(
+                inputs=core,event="season_change",target_ilevel=334,
+                previous_game_build="12.1.5.70575")
+        _,_,new=fixture(build="12.2.0.99999")
+        changed=dict(new)
+        old_budget=core["budget"]
+        changed["budget"]=old_budget
+        with self.assertRaisesRegex(p.SeasonEvidenceBlocked,
+                                    "SAME_BUILD_REPRESENTATIVE"):
+            p.core_source_preflight(
+                inputs=changed,event="season_change",target_ilevel=335,
+                previous_game_build="12.1.5.70575")
+
+    def test_core_only_cli_accepts_future_input_without_v213_or_budget_ready(self):
+        _,_,core=fixture(build="12.2.0.99999")
+        with tempfile.TemporaryDirectory() as td:
+            folder=pathlib.Path(td)
+            args=["--core-only","--event","season_change",
+                  "--previous-game-build","12.1.5.70575",
+                  "--target-ilevel","335"]
+            for key in p.SOURCE:
+                path=folder/(key+".json")
+                path.write_text(p.canonical(core[key][0])+"\n",encoding="utf8")
+                args.extend(("--"+key,str(path)))
+            target=folder/"core_gjfo_inventory.json"
+            args.extend(("--out",str(target)))
+            self.assertEqual(p.main(args),0)
+            result=json.loads(target.read_text(encoding="utf8"))
+            self.assertFalse(result["budget_can_be_published"])
+            self.assertFalse(result["user_options_auto_admitted"])
+            self.assertEqual(result["native_calls"],0)
+            self.assertTrue(result["requires_v213_catalog_join_for_user_options"])
+
     def test_real_file_cli_compiles_sealed_v191_v213_source_gap_receipt(self):
         season,catalog,inputs=fixture()
         with tempfile.TemporaryDirectory() as td:
