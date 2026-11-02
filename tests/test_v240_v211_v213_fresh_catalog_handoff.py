@@ -170,6 +170,63 @@ class SameFreshCatalogChain(unittest.TestCase):
         self.assertEqual(v196["source_catalog"]["summary"]["gear"]["count"],511)
         self.assertEqual(v196["native_calls_now"],0)
 
+    def test_existing_v216_build_preflights_fresh_sources_without_session_writes(self):
+        from runner import v216_environment_build_coordinator as build
+        with tempfile.TemporaryDirectory() as d:
+            root=pathlib.Path(d)
+            src=root/"simc";src.mkdir()
+            season,classified=self.inputs(src)
+            artifact=join.compile_catalog(season,"a"*64,classified,"b"*64)
+            catalog=root/"fresh_v213.json"
+            catalog.write_text(json.dumps(artifact,ensure_ascii=False),
+                               encoding="utf8")
+            receipt=build.preflight_new_season_source(
+                source_catalog_path=catalog,expected_game_build=BUILD,
+                expected_simc_revision=REV)
+            self.assertEqual(receipt["status"],
+                "FRESH_SOURCE_CANDIDATES_VALID_GJFO_PENDING_NOT_INSTALLED")
+            self.assertEqual(receipt["gear_candidates"],511)
+            self.assertEqual(receipt["tier_pieces"],65)
+            self.assertEqual(receipt["enchant_candidates"],2)
+            self.assertIsNone(receipt["G"])
+            self.assertIsNone(receipt["J"])
+            self.assertIsNone(receipt["B"])
+            self.assertIsNone(receipt["T"])
+            self.assertFalse(receipt["environment_ready"])
+            self.assertEqual(receipt["cache_mutations"],0)
+            session=root/("f"*20);session.mkdir()
+            prior_files={p.relative_to(root).as_posix():p.read_bytes()
+                         for p in root.rglob("*") if p.is_file()}
+            with self.assertRaisesRegex(
+                    build.EnvironmentBuildBlocked,
+                    "V216_FRESH_SOURCE_PROVENANCE_PASS_GJFO_NOT_READY"):
+                build.build_environment(
+                    sessions_root=root,session_folder=session,user={
+                        "character":{"class":"paladin","spec":"retribution"},
+                        "target":{"ilevel":334,"final_T":None}},
+                    binary=root/"missing-simc.exe",revision=REV,
+                    static_cache=root/"missing-cache.json",
+                    source_catalog_path=catalog,bootstrap_result={
+                        "schema":"v098"})
+            self.assertFalse((session/"generated").exists())
+            self.assertEqual(prior_files,{
+                p.relative_to(root).as_posix():p.read_bytes()
+                for p in root.rglob("*") if p.is_file()})
+            with self.assertRaisesRegex(
+                    build.EnvironmentBuildBlocked,"BUILD_OR_SIMC_REVISION_MISMATCH"):
+                build.preflight_new_season_source(
+                    source_catalog_path=catalog,expected_game_build=BUILD,
+                    expected_simc_revision="c"*40)
+            modified=json.loads(catalog.read_text(encoding="utf8"))
+            modified["catalog"]["gear"]["count"]=510
+            catalog.write_text(json.dumps(modified,ensure_ascii=False),
+                               encoding="utf8")
+            with self.assertRaisesRegex(
+                    build.EnvironmentBuildBlocked,"SOURCE_OR_UI_CONTRACT_BLOCKED"):
+                build.preflight_new_season_source(
+                    source_catalog_path=catalog,expected_game_build=BUILD,
+                    expected_simc_revision=REV)
+
     def test_reject_mismatched_source_and_false_old_enchant_approval(self):
         with tempfile.TemporaryDirectory() as d:
             season,classified=self.inputs(pathlib.Path(d))
