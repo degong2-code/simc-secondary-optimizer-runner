@@ -86,6 +86,67 @@ def classify_era(display_season, wse, selected):
     if display_season == 0: return 'UNKNOWN_UNSCOPED_JOURNAL'
     return 'UNKNOWN_OTHER_DISPLAY_SEASON'
 
+def discover_unique_live_scope(folder, report):
+    """Derive exact zone, season and expansion IDs from live WCL + DB2.
+
+    Fail closed on ambiguous maps/raid tiers/loot expansions; not a proof
+    of global season membership or WorldStateExpression semantics.
+    """
+    fail_if(report.get("schema") != "v155_season_discovery_provider_probe_v1"
+            or report.get("mode") != "LIVE_AUTHENTICATED_BOUNDED",
+            "LIVE_SEASON_REPORT_REQUIRED")
+    zones=[z for z in (report.get("wcl",{}).get("midnight_zones") or [])
+           if z.get("wcl_frozen") is False and z.get("encounters")]
+    fail_if(not zones,"LIVE_ACTIVE_WCL_ZONES_NOT_PROVEN")
+    challenge={number(x["ID"]):x for x in read_rows(folder,"MapChallengeMode")}
+    groups=defaultdict(set)
+    for row in read_rows(folder,"MythicPlusSeasonTrackedMap"):
+        sid=number(row["DisplaySeasonID"])
+        mode=challenge.get(number(row["MapChallengeModeID"]))
+        if sid>0 and mode and mode.get("Name_lang"):
+            groups[sid].add(norm(mode["Name_lang"]))
+    choices=[(z,sid) for z in zones for sid,names in groups.items()
+             if names and {norm(x["name"]) for x in z["encounters"]}==names]
+    fail_if(len(choices)!=1,"LIVE_MPLUS_ZONE_OR_DISPLAY_SEASON_AMBIGUOUS")
+    mplus,sid=choices[0]
+    encounters=list(read_rows(folder,"JournalEncounter"))
+    tiers=defaultdict(set)
+    for row in read_rows(folder,"JournalTierXInstance"):
+        tiers[number(row["JournalTierID"])].add(
+            number(row["JournalInstanceID"]))
+    raidzones=[]
+    for zone in zones:
+        if zone["zone_id"]==mplus["zone_id"]:continue
+        found=[uniquely_match(e["name"],encounters,"Name_lang")
+               for e in zone["encounters"]]
+        if not found or any(x is None for x in found):continue
+        instances={number(x["JournalInstanceID"]) for x in found}
+        tids=[t for t,ids in tiers.items()
+              if t>0 and instances and instances<=ids]
+        if len(tids)==1:raidzones.append((zone,found,tids[0]))
+    fail_if(len(raidzones)!=1,"LIVE_RAID_ZONE_OR_TIER_AMBIGUOUS")
+    raid,found,tid=raidzones[0]
+    eids={number(x["ID"]) for x in found}
+    loot={number(x["ItemID"]) for x in read_rows(folder,"JournalEncounterItem")
+          if number(x["JournalEncounterID"]) in eids
+          and number(x["ItemID"])>0}
+    fail_if(not loot,"LIVE_RAID_LOOT_IDS_NOT_FOUND")
+    seen={number(x["ID"]):number(x["ExpansionID"])
+          for x in read_rows(folder,"ItemSparse")
+          if number(x["ID"]) in loot}
+    exps=set(seen.values())
+    fail_if(set(seen)!=loot or len(exps)!=1 or next(iter(exps))<=0,
+            "LIVE_RAID_LOOT_EXPANSION_ID_NOT_UNIQUE")
+    return {"raid_zone":raid["zone_name"],
+            "mplus_zone":mplus["zone_name"],
+            "expansion_id":next(iter(exps)),
+            "db2_display_season_id":sid,
+            "raid_journal_tier_id":tid,
+            "source_basis":"LIVE_WCL_ACTIVE_ZONES_AND_SAME_BUILD_DB2",
+            "season_membership_completely_verified":False,
+            "unknown_world_state_not_promoted":True}
+
+
 def build_index(folder, report, *, raid_zone, mplus_zone, build, expansion_id):
     fail_if(report.get('schema') != 'v155_season_discovery_provider_probe_v1'
             or report.get('mode') != 'LIVE_AUTHENTICATED_BOUNDED',

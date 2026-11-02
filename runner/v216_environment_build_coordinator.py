@@ -21,6 +21,7 @@ import v223_installed_season_budget_source as season_source_proof
 import v213_source_to_catalog as source_to_catalog
 import v161_wago_db2_snapshot as wago_snapshot
 import v242_authenticated_season_source_stage as discovery_stage
+import v163_zero_seed_db2_join as season_join
 import v217_stage_execution_engine as stage_engine
 import v196_current_season_user_catalog as user_catalog
 import v241_fresh_source_stage_adapter as fresh_stage
@@ -263,6 +264,64 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
 
 
 
+def _join_authenticated_season_source(*,stage_root,output_dir,
+                                      expected_game_build,discovered,
+                                      wago_stage_receipt):
+    if not discovered.get("season_join_ready"):
+        return {"status":"AUTHENTICATED_SEASON_JOIN_NOT_READY",
+                "candidate_path":None,"stage":None,
+                "season_membership_verified":False}
+    report_path=pathlib.Path(discovered["source_report_path"])
+    report=json.loads(report_path.read_text(encoding="utf8"))
+    try:
+        scope=season_join.discover_unique_live_scope(output_dir,report)
+    except season_join.JoinBlocked as exc:
+        return {"status":"LIVE_SEASON_SCOPE_AMBIGUOUS_PENDING",
+                "reason":str(exc).split(":",1)[0],
+                "candidate_path":None,"stage":None,
+                "season_membership_verified":False}
+    rel="source/v163_unapproved_candidates.json"
+    path=pathlib.Path(stage_root)/rel
+    code=stage_engine.module_dependency_fingerprint(
+        [pathlib.Path(season_join.__file__),
+         pathlib.Path(stage_engine.__file__)])
+    def execute():
+        result=season_join.build_index(
+            output_dir,report,raid_zone=scope["raid_zone"],
+            mplus_zone=scope["mplus_zone"],
+            build=expected_game_build,expansion_id=scope["expansion_id"])
+        result["auto_source_scope"]=scope
+        path.parent.mkdir(parents=True,exist_ok=True)
+        path.write_text(json.dumps(result,sort_keys=True,indent=2,
+                        ensure_ascii=False,allow_nan=False)+"\n",encoding="utf8")
+    def validate(outputs):
+        doc=json.loads(outputs["candidate"].read_text("utf8"))
+        return (doc.get("schema")==season_join.SCHEMA
+                and doc.get("build")==expected_game_build
+                and doc.get("auto_source_scope")==scope
+                and doc.get("db2_display_season_id")==scope["db2_display_season_id"]
+                and doc.get("full_season_completeness_confirmed") is False
+                and doc.get("old_item_catalog_imported") is False
+                and doc.get("simc_native_calls")==0)
+    try:
+        stage=stage_engine.execute_stage(
+            root=stage_root,stage_id="fresh-v163",
+            stage_version="live-unique-scope-1",
+            inputs={"game_build":expected_game_build,
+                    "wago_receipt_sha256":wago_stage_receipt,
+                    "v155_sha256":digest(report_path.read_bytes()),
+                    "scope":scope,"code_sha256":code["sha256"]},
+            outputs={"candidate":rel},execute=execute,validate=validate)
+    except stage_engine.StageExecutionBlocked as exc:
+        raise EnvironmentBuildBlocked(
+            "V216_FRESH_V163_STAGE_BLOCKED:"+str(exc)) from exc
+    return {"status":"DB2_WCL_CANDIDATES_JOINED_SEASON_CONDITIONS_PENDING",
+            "candidate_path":str(path.resolve()),
+            "stage":{k:v for k,v in stage.items() if k!="result"},
+            "source_scope":scope,"season_membership_verified":False,
+            "G":None,"J":None,"F":None,"O":None}
+
+
 def collect_wago_new_season_source(*, sessions_root, expected_game_build,
                                    fetch=None, credentials=None,
                                    discovery_transport=None):
@@ -366,6 +425,11 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
             source_doc["tables"][table]["bytes"]
         for table in wago_snapshot.TABLES),
         "V216_WAGO_SOURCE_AND_STAGE_SHA_MISMATCH")
+    linked=_join_authenticated_season_source(
+        stage_root=stage_root,output_dir=output_dir,
+        expected_game_build=expected_game_build,
+        discovered=discovered,
+        wago_stage_receipt=stage["receipt_sha256"])
     return {
         "schema":"v216_fresh_source_stage_v1",
         "status":"FRESH_WAGO_DB2_COLLECTED_MORE_SOURCES_PENDING",
@@ -375,6 +439,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "snapshot_receipt_path":str((output_dir/"receipt.json").resolve()),
         "source_stage":{k:v for k,v in stage.items() if k!="result"},
         "season_discovery":discovered,
+        "season_join":linked,
         "network_calls_by_stage":(len(wago_snapshot.TABLES)
             if stage["executed"] else 0)+discovered["network_calls_by_stage"],
         "native_calls":0,

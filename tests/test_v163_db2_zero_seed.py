@@ -57,6 +57,18 @@ class JoinTests(unittest.TestCase):
             self.assertEqual(result['blizzard_keystone_season_id'],18)
             self.assertIn('UNKNOWN_WORLD_STATE_EXPRESSION',[x['season_evidence'] for i in result['items'] for x in i['acquisition_sources'] if x['source']=='mplus_journal'])
             self.assertEqual(result['simc_native_calls'],0)
+            scope=v163.discover_unique_live_scope(folder,season_report)
+            self.assertEqual(scope["raid_zone"],"Test Raid")
+            self.assertEqual(scope["mplus_zone"],"Mythic+ S2")
+            self.assertEqual(scope["expansion_id"],11)
+            self.assertEqual(scope["db2_display_season_id"],37)
+            self.assertFalse(scope["season_membership_completely_verified"])
+            duplicated=json.loads(json.dumps(season_report))
+            duplicated["wcl"]["midnight_zones"].append(
+                dict(duplicated["wcl"]["midnight_zones"][0],zone_id=12))
+            with self.assertRaisesRegex(
+                    v163.JoinBlocked,"LIVE_RAID_ZONE_OR_TIER_AMBIGUOUS"):
+                v163.discover_unique_live_scope(folder,duplicated)
 
     def test_real_snapshot_when_supplied(self):
         folder=os.environ.get('SIMC_V161_SNAPSHOT_DIR')

@@ -33,6 +33,8 @@ on:
       - runner/v212_environment_manifest.py
       - runner/v216_environment_build_coordinator.py
       - runner/v242_authenticated_season_source_stage.py
+      - runner/v163_zero_seed_db2_join.py
+      - tests/test_v163_db2_zero_seed.py
       - runner/v217_stage_execution_engine.py
       - runner/v218_v098_profile_stage_adapter.py
       - tests/test_v217_stage_execution_engine.py
