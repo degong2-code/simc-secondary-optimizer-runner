@@ -28,6 +28,6 @@ At an ordinary SimC update:
 
 ## Verification
 
-Offline tests through existing `.github/workflows/v212_environment_manifest_offline.yml` only, zero newly executed Native. Preserve exact Actions result and scope in CURRENT after CI.
+[Actions #41484925517](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41484925517) checked code commit `62933cf97b2d11d5b3ff51082a2553f9fa13ce82`: Ubuntu 24.04 **394 tests / 0 FAIL / 4 SKIP**, Windows 2022 **394 tests / 0 FAIL / 4 SKIP**, SUCCESS in both actual job logs, `V212_ENVIRONMENT_MANIFEST_NATIVE0_PASS`. Newly performed SimC Native runs **0**, new season Wago/SimC network collection **0**. Earlier code-only CI #41484725362 failed before updated tests; the later complete code+test suite is the authoritative result for P3-BC.
 
 **Pending:** real different-build old-season Wago vs newly updated SimC acceptance, season-scoped G/J/F/O reconciliation and complete adaptive SimC E2E.
