@@ -121,15 +121,19 @@ class NativeGReconciliationTests(unittest.TestCase):
         ):
             with self.subTest(token=token):
                 raw=self.profile_bytes+token.encode("utf8")+b"\n"
-                if token.startswith("gem_id"):
-                    # gem_id scalar input is presently excluded via the
-                    # bare profile allowlist validated in v228.
-                    continue
                 with self.assertRaisesRegex(bridge.NativeGBlocked,
                                             "PROFILE_NONBARE"):
                     bridge.reconcile(
                         bundle_dir=self.fixture.root,work_order=self.work,
                         profile_raw=raw,native_raw=self.native_bytes)
+
+    def test_second_class_input_is_never_a_matching_static_profile(self):
+        raw=self.profile_bytes+b"warrior=other_character\n"
+        with self.assertRaisesRegex(bridge.NativeGBlocked,
+                                    "PROFILE_MULTIPLE_CLASS"):
+            bridge.reconcile(
+                bundle_dir=self.fixture.root,work_order=self.work,
+                profile_raw=raw,native_raw=self.native_bytes)
 
     def test_ilvl_and_source_profile_must_match_work_order(self):
         profile=self.profile_bytes.replace(
