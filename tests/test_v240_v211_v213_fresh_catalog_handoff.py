@@ -335,6 +335,78 @@ class SameFreshCatalogChain(unittest.TestCase):
                     **inputs,expected_game_build=BUILD,
                     expected_simc_revision=REV)
 
+
+    def test_fresh_v191_compiles_from_explicit_sources_with_stage_reuse(self):
+        from runner import v241_fresh_source_stage_adapter as adapter
+        from tests.test_v191_unified_season_data_update import TEMP, GEMS
+        with tempfile.TemporaryDirectory() as d:
+            root=pathlib.Path(d)
+            stage_root=root/"stages";stage_root.mkdir()
+            simc=root/"simc";simc.mkdir()
+            generated=root/"generated";generated.mkdir()
+            _stub,raw_sources=fixture_source()
+            source_manifest=put_sources(simc,raw_sources)
+            body=raw_sources["permanent_enchant.inc"]
+            generated_permanent=(
+                "// Permanent item enchants, wow build "+BUILD+"\n"
+                "static constexpr std::array<permanent_enchant_entry_t, 2> "
+                "__permanent_enchant_data { {\n"+
+                "\n".join(body.splitlines()[1:])+"\n} };\n")
+            (generated/"permanent_enchant.inc").write_text(
+                generated_permanent,encoding="utf8")
+            (generated/"temporary_enchant.inc").write_bytes(
+                TEMP.replace(b"12.1.5.70448",BUILD.encode()))
+            (generated/"gem_data.inc").write_bytes(
+                GEMS.replace(b"12.1.5.70448",BUILD.encode()))
+            gear=copy.deepcopy(SourceToCatalogTests.gear_source)
+            gear["season_build"]=BUILD
+            tier=copy.deepcopy(SourceToCatalogTests.tier_source)
+            tier["retail_build"]=BUILD
+            v189={"schema":"v189_pinned_simc_effect_registration_candidates_v1",
+                  "auto_promote_to_user_ui":False,
+                  "source":{"commit":REV,"sha256":"a"*64},
+                  "candidates":{"food":[],"potion":[],
+                                "embellishment_or_darkmoon":[]}}
+            v190={"schema":"v190_same_build_consumable_item_candidates_v1",
+                  "automatic_ui_promotion":False,
+                  "source":{"wago_snapshot_build":BUILD,"simc_revision":REV,
+                            "simc_registration_sha256":"a"*64},
+                  "items":[{"item_id":8901,"kind":"food"},
+                           {"item_id":8902,"kind":"potion"}]}
+            paths={}
+            for name,data in (("gear",gear),("tier",tier),
+                              ("v189",v189),("v190",v190)):
+                p=root/(name+".json")
+                p.write_text(json.dumps(data),encoding="utf8")
+                paths[name]=p
+            paths["simc_generated_folder"]=generated
+            paths["event"]="season_change"
+            manifest=root/"manifest.json"
+            manifest.write_text(json.dumps(source_manifest),encoding="utf8")
+            request={"stage_root":stage_root,
+                     "fresh_v191_inputs":paths,
+                     "simc_source_dir":simc,"simc_manifest_path":manifest,
+                     "expected_game_build":BUILD,"expected_simc_revision":REV}
+            first=adapter.compile_fresh_candidate(**request)
+            again=adapter.compile_fresh_candidate(**request)
+            self.assertEqual(first["v191_stage"]["status"],
+                             "EXECUTED_AND_SEALED")
+            self.assertEqual(first["v211_stage"]["status"],
+                             "EXECUTED_AND_SEALED")
+            self.assertEqual(first["v213_stage"]["status"],
+                             "EXECUTED_AND_SEALED")
+            for name in ("v191_stage","v211_stage","v213_stage"):
+                self.assertEqual(again[name]["status"],"REUSED_VERIFIED")
+                self.assertEqual(again[name]["receipt_writes"],0)
+            season=json.loads((stage_root/"fresh_source"/
+                               "v191_candidate.json").read_text())
+            self.assertIsNone(season["sha256_by_input"]["budget"])
+            self.assertIsNone(season["G"])
+            self.assertIsNone(season["J"])
+            self.assertIsNone(season["F"])
+            self.assertFalse(first["environment_installed"])
+            self.assertFalse(first["upstream_fetch_authenticated_by_adapter"])
+
     def test_reject_mismatched_source_and_false_old_enchant_approval(self):
         with tempfile.TemporaryDirectory() as d:
             season,classified=self.inputs(pathlib.Path(d))

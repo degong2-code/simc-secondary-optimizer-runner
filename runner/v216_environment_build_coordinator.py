@@ -280,9 +280,11 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
     if fresh_source_stage_inputs is not None:
         need(source_catalog_path is None and
              type(fresh_source_stage_inputs) is dict and
-             set(fresh_source_stage_inputs) == {
-                 "stage_root", "v191_path", "simc_source_dir",
-                 "simc_manifest_path"},
+             set(fresh_source_stage_inputs) in (
+                 frozenset(("stage_root", "v191_path",
+                            "simc_source_dir", "simc_manifest_path")),
+                 frozenset(("stage_root", "fresh_v191_inputs",
+                            "simc_source_dir", "simc_manifest_path"))),
              "V216_FRESH_STAGE_INPUT_CONTRACT_INVALID")
         need(type(expected_new_season_build) is str,
              "V216_EXPLICIT_NEW_SEASON_BUILD_REQUIRED")

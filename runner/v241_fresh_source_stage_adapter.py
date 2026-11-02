@@ -11,6 +11,7 @@ import hashlib
 import json
 from pathlib import Path
 
+import v191_unified_season_data_update as v191
 import v211_enchant_source_effect_classification as v211
 import v213_source_to_catalog as v213
 import v217_stage_execution_engine as stages
@@ -88,9 +89,83 @@ def source_inputs(v191_path, simc_source_dir, simc_manifest_path,
     }
 
 
-def compile_fresh_candidate(*, stage_root, v191_path, simc_source_dir,
+
+def compile_fresh_v191_stage(*, stage_root, fresh_v191_inputs,
+                            expected_game_build, expected_simc_revision):
+    """Run the ORIGINAL v191 compiler from explicit new-source files.
+
+    No legacy --budget/default-source fallback: --fresh-budget-pending is
+    mandatory. This stage never downloads anything or reads installed season
+    references; normal upstream collectors must supply these inputs.
+    """
+    require(type(fresh_v191_inputs) is dict
+            and set(fresh_v191_inputs) == {
+                "gear", "tier", "v189", "v190",
+                "simc_generated_folder", "event"},
+            "FRESH_V191_INPUT_CONTRACT_INVALID")
+    event = fresh_v191_inputs["event"]
+    require(event in ("season_change", "expansion_change", "mid_patch"),
+            "FRESH_V191_EVENT_INVALID")
+    root = Path(stage_root).expanduser()
+    require(root.is_dir() and not root.is_symlink(),
+            "FRESH_STAGE_WORKSPACE_REQUIRED")
+    pinned = {}
+    for key in ("gear", "tier", "v189", "v190"):
+        pinned[key] = sha(raw_file(fresh_v191_inputs[key], v191.MAX_FILE))
+    generated = Path(fresh_v191_inputs["simc_generated_folder"]).expanduser()
+    require(generated.is_dir() and not generated.is_symlink(),
+            "FRESH_V191_GENERATED_SOURCE_DIR_REQUIRED")
+    for key, filename in v191.GENERATED.items():
+        pinned["generated_" + key] = sha(
+            raw_file(generated / filename, v191.MAX_FILE))
+    code = stages.module_dependency_fingerprint(
+        [Path(__file__), Path(v191.__file__)])
+    output = "fresh_source/v191_candidate.json"
+    target = root / output
+
+    def execute():
+        arguments = []
+        for key in ("gear", "tier", "v189", "v190"):
+            arguments.extend(["--" + key, str(fresh_v191_inputs[key])])
+        arguments.extend([
+            "--simc-generated-folder", str(generated),
+            "--fresh-budget-pending", "--event", event,
+            "--out", str(target)])
+        require(v191.main(arguments) == 0, "FRESH_V191_COMPILER_BLOCKED")
+
+    def validate(paths):
+        doc = json.loads(paths["candidate"].read_text(encoding="utf8"))
+        budget = doc.get("sha256_by_input", {})
+        cons = doc.get("consumables", {})
+        return (
+            doc.get("schema") == v191.SCHEMA
+            and doc.get("game_build") == expected_game_build
+            and doc.get("simc_revision") == expected_simc_revision
+            and doc.get("source_budget_state") ==
+                "NEW_SEASON_J_F_EVIDENCE_PENDING"
+            and type(budget) is dict
+            and budget.get("budget", "MISSING") is None
+            and all(budget.get(k) == pinned[k]
+                    for k in ("gear", "tier", "v189", "v190"))
+            and cons.get("flask", {}).get("reference", "MISSING") is None
+            and cons.get("general_gems", {}).get(
+                "reference", "MISSING") is None
+            and doc.get("environment_ready") is False)
+    result = stages.execute_stage(
+        root=root, stage_id="fresh-v191", stage_version="1",
+        inputs={**pinned, "event": event,
+                "expected_build": expected_game_build,
+                "expected_revision": expected_simc_revision,
+                "code_sha256": code["sha256"]},
+        outputs={"candidate": output}, execute=execute, validate=validate)
+    return str(target.resolve()), {
+        k: v for k, v in result.items() if k != "result"}
+
+
+def compile_fresh_candidate(*, stage_root, simc_source_dir,
                             simc_manifest_path, expected_game_build,
-                            expected_simc_revision):
+                            expected_simc_revision, v191_path=None,
+                            fresh_v191_inputs=None):
     """Reuse v217 stages; never read installed-season data or caches.
 
     root must be an existing, dedicated build-source workspace outside the
@@ -100,6 +175,14 @@ def compile_fresh_candidate(*, stage_root, v191_path, simc_source_dir,
     root = Path(stage_root).expanduser()
     require(root.is_dir() and not root.is_symlink(),
             "FRESH_STAGE_WORKSPACE_REQUIRED")
+    require((v191_path is None) != (fresh_v191_inputs is None),
+            "FRESH_V191_EXACTLY_ONE_INPUT_MODE_REQUIRED")
+    first_stage = None
+    if fresh_v191_inputs is not None:
+        v191_path, first_stage = compile_fresh_v191_stage(
+            stage_root=root, fresh_v191_inputs=fresh_v191_inputs,
+            expected_game_build=expected_game_build,
+            expected_simc_revision=expected_simc_revision)
     season, manifest, identity = source_inputs(
         v191_path, simc_source_dir, simc_manifest_path,
         expected_game_build=expected_game_build,
@@ -152,6 +235,7 @@ def compile_fresh_candidate(*, stage_root, v191_path, simc_source_dir,
         execute=execute_v213, validate=validate_v213)
     return {
         "source_catalog_path": str(second.resolve()),
+        "v191_stage": first_stage,
         "v211_stage": {k: v for k, v in one.items() if k != "result"},
         "v213_stage": {k: v for k, v in two.items() if k != "result"},
         "status": "FRESH_SOURCE_CANDIDATE_UNAPPROVED_GJFO_PENDING",
