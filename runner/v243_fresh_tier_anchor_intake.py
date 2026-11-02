@@ -116,11 +116,15 @@ def parse_anchor(*,publisher_raw,itemset_raw,build,expansion_id,mplus_zone):
          mplus.group(1)==header.group(1),
          "TIER_PUBLISHER_SEASON_MISMATCH_OR_UNPROVEN")
     names=itemset_rows(itemset_raw)
-    needle=compact(body)
+    # Preserve word boundaries: Hunter must not match Demon Hunter, and
+    # similarly nested class terms must never steal another class's set.
+    norm=lambda value:" ".join(
+        re.findall(r"[a-z0-9]+",value.casefold()))
+    haystack=" "+norm(body)+" "
     chosen={};labels={}
     for cl,alias in ALIASES.items():
         possibles=[(iid,name) for iid,name in names.items()
-                   if compact(alias)+compact(name) in needle]
+                   if (" "+norm(alias)+" "+norm(name)+" ") in haystack]
         need(len(possibles)==1,
              "TIER_PUBLISHER_CLASS_ITEMSET_NOT_UNIQUE:"+cl)
         chosen[cl],labels[cl]=possibles[0]
