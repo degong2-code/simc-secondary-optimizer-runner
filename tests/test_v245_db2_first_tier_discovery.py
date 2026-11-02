@@ -100,6 +100,29 @@ class DB2CandidateTest(unittest.TestCase):
             self.assertEqual(doc["candidate_counts_by_class"]["evoker"],1)
             self.assertIsNone(doc["current_season_selection"])
 
+    def test_failed_second_http_records_real_attempt_count(self):
+        with tempfile.TemporaryDirectory() as d:
+            root=Path(d);wago=root/"wago";wago.mkdir()
+            sources=arrange(wago)
+            stage=root/"stage";stage.mkdir()
+            called=[]
+            class Response(io.BytesIO):
+                status=200
+                def __enter__(self):return self
+                def __exit__(self,*args):self.close()
+            def transport(request,timeout):
+                table=request.full_url.split("/db2/")[1].split("/")[0]
+                called.append(table)
+                if len(called)==2:raise OSError("synthetic HTTP failure")
+                return Response(sources[table])
+            with self.assertRaisesRegex(tierdb.TierDBBlocked,
+                                        "TIER_DB2_DOWNLOAD_FAILED") as ctx:
+                tierdb.build_stage(stage_root=stage,wago_folder=wago,
+                    build=BUILD,expansion_id=11,
+                    wago_receipt_sha256="b"*64,transport=transport)
+            self.assertEqual(called,list(tierdb.TABLES)[:2])
+            self.assertEqual(ctx.exception.network_calls_attempted,2)
+
     def test_source_schema_build_and_missing_provenance_block(self):
         with tempfile.TemporaryDirectory() as d:
             sources=arrange(d)
