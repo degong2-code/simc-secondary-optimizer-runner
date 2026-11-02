@@ -17,6 +17,7 @@ import tempfile
 
 import v212_environment_manifest as environment_manifest
 import v222_season_budget_contract as season_budget_contract
+import v223_installed_season_budget_source as season_source_proof
 
 SCHEMA = "v216_incremental_environment_build_receipt_v1"
 SESSION_KEY = re.compile(r"[a-f0-9]{20}\Z")
@@ -181,7 +182,8 @@ def _step(name, status, **details):
 def build_environment(*, sessions_root, session_folder, user, binary, revision,
                       static_cache, source_catalog_path, bootstrap_result,
                       v208_start_receipt_path=None, package_manifest_path=None,
-                      profile_stage_receipt=None, season_budget_evidence=None):
+                      profile_stage_receipt=None, season_budget_evidence=None,
+                      season_budget_source_paths=None):
     """Reconcile existing inputs and seal one incremental, auditable build.
 
     Source acquisition is intentionally outside this local coordinator:
@@ -218,9 +220,24 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
     need(source_path is not None and source_path.is_file(),
          "V213_SOURCE_CATALOG_NOT_PACKAGED")
     source_document, source_raw_sha = environment_manifest.read_json(source_path)
-    # Numeric-only contract: evidence is supplied by trusted internal producers,
-    # never by a browser request. This does not authenticate proof bytes or
-    # perform season refresh; missing proof must not imply READY.
+    # Optional installed same-season source proof; never a browser argument.
+    # The pure arithmetic contract alone cannot validate source provenance.
+    need(not (season_budget_evidence is not None and
+              season_budget_source_paths is not None),
+         "V216_SEASON_BUDGET_TWO_EVIDENCE_MODES")
+    linked_source_proof = None
+    if season_budget_source_paths is not None:
+        try:
+            linked_source_proof = season_source_proof.produce(
+                catalog=source_document, catalog_sha=source_raw_sha,
+                source_paths=season_budget_source_paths, user=user,
+                bootstrap=bootstrap_result,
+                physical_profile=(folder / "profile.simc").read_text(
+                    encoding="utf8"))
+            season_budget_evidence = linked_source_proof["evidence"]
+        except (season_source_proof.SourceBudgetBlocked, OSError) as exc:
+            raise EnvironmentBuildBlocked(
+                "V216_SEASON_SOURCE_PROOF_BLOCKED:" + str(exc)) from exc
     if season_budget_evidence is None:
         season_budget = {
             "schema": season_budget_contract.SCHEMA,
@@ -239,6 +256,16 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 plan=bootstrap_result.get("plan"),
                 target_ilevel=bootstrap_result.get("target_ilevel"),
                 manual_final_T=manual_T)
+            if linked_source_proof is not None:
+                season_budget = {
+                    **season_budget,
+                    "status": linked_source_proof["status"],
+                    "source_links_verified_by_v223": True,
+                    "source_input_sha256":
+                        linked_source_proof["source_input_sha256"],
+                    "reference_rounded":
+                        linked_source_proof["reference_rounded"],
+                }
         except season_budget_contract.SeasonBudgetBlocked as exc:
             raise EnvironmentBuildBlocked(
                 "V216_SEASON_BUDGET_PROOF_OR_ARITHMETIC_BLOCKED:" + str(exc)
