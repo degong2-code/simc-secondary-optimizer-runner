@@ -13,7 +13,7 @@ Continue P3-AU, P3-AT and approved v1.4.3 inside the **same** normal Environment
 ## Evidence
 - `tests/test_v255_one_spec_simc_representative_in_build.py`: 4 new synthetic tests covering a one-spec `v232` physical candidate with mocked `v251.select_for_simc` wrapper, second-run receipt reuse, absent full item_data, bad build / unsupported Augmentation, and missing required ordinary slot. The real `v251` exact-13x5 source-join tests remain in their original suite.
 - [Actions #41474110912](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41474110912), code commit `1f5a3ac406d37b7ad34434c09a5fa39eecc72ab2`: **Ubuntu 368 tests, 0 FAIL, 4 SKIP; Windows 368 tests, 0 FAIL, 4 SKIP**. First integration PASS.
-- Final code adds `v216/v251/v231/v229/v232/v230/v169/v167/v217` transitive dependency hashes to the stage so changes do not reuse stale results. Its last code commit is `803d7cd59d25baf6b6d30cc6744e5e2fddcb4b81`. This code change requires its own CI receipt; do not copy the previous PASS to this SHA.
+- Final code adds `v216/v251/v231/v229/v232/v230/v169/v167/v217` transitive dependency hashes to the stage so changes do not reuse stale results. Last code commit: `803d7cd59d25baf6b6d30cc6744e5e2fddcb4b81`. **Final [Actions #41474328927](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41474328927): Ubuntu and Windows each 368 tests / 0 FAIL / 4 SKIP**, from both actual completed SUCCESS job logs; `V212_ENVIRONMENT_MANIFEST_NATIVE0_PASS` on both.
 - New real Wago HTTP **0**, new SimC Native **0**, new physical or DPS samples **0**. Historical P3-AT receipts reused as background only, no user sessions/caches modified, `main` untouched.
 
 ## Efficiency, risk and next steps
