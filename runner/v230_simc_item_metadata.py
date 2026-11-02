@@ -89,7 +89,8 @@ def parse_exact(raw, *, build, item_ids, max_bytes=seed.MAX_ITEM_FILE):
     chunks=0;item_count=0;declared_items=0;current_items=0
     inside_chunk=False;built=False;min_ilevel=None;max_ilevel=None
     found={}
-    for line in lines:
+    for raw_line in lines:
+        line=raw_line.rstrip("\r\n")
         if (m:=BUILD_HEADER.fullmatch(line)):
             need(not built and m.group(3)==build,
                  "V230_ITEM_DATA_GENERATED_BUILD_MISMATCH")
