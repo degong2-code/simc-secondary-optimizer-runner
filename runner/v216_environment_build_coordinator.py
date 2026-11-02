@@ -682,7 +682,9 @@ def _resolve_one_spec_simc_commit_stage(*, stage_root, build, gear, tier,
                       revision_hint) is not None,
          "V216_SOURCE_REVISION_HINT_INVALID")
     root=pathlib.Path(stage_root)
-    out="source/v257_exact_simc_commit.json"
+    # A changed installed/source revision is a new source identity, not
+    # a conflicting replacement of the earlier sealed immutable receipt.
+    out="source/v257_exact_simc_commit_"+revision_hint+".json"
     code=stage_engine.module_dependency_fingerprint([
         pathlib.Path(simc_source.__file__),
         pathlib.Path(stage_engine.__file__)])
@@ -720,7 +722,7 @@ def _resolve_one_spec_simc_commit_stage(*, stage_root, build, gear, tier,
                 and row.get("environment_ready") is False)
     try:
         stage=stage_engine.execute_stage(
-            root=root,stage_id="fresh-v257-exact-simc-commit",
+            root=root,stage_id="fresh-v257-exact-simc-commit-"+revision_hint,
             stage_version="source-only-revision-prefix-v1",
             inputs={"requested_build":build,"revision_hint":revision_hint,
                     "code_sha256":code["sha256"]},
