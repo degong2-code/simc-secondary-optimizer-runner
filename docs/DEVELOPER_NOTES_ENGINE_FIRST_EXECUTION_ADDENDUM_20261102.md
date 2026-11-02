@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER — 개발자 실행 원칙 보충 (2026-11-02)
 
+> **최신 사용자 직접 교정 / 단일 엔진 통제실험 (2026-11-02):** [P3-AA](P3_AA_20261102_SINGLE_ENGINE_FRESH_SEASON_CONTROL_ACCEPTANCE.md), [v1.4.3 최신 §7](SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.3_SEASON_GJFO_AUTO_BUILD_APPROVED_20261102.md)을 최우선으로 읽는다. 최종 시험은 정상 실사용 **같은 Environment Build 엔진**을 현재 시즌에 대한 **기존 데이터·캐시·영수증 없이** 실행하는 것이다. Wago DB2·Blizzard·WCL·공개 GitHub·SimC의 **신규 원본 수집은 허용**한다. 이전의 "SimC-only 최종 시험" 또는 외부 네트워크 차단 해석을 반복하지 않는다. v229~v237은 제한된 조사용 부품이며 별도 최종 제품 엔진을 만들지 않는다.
+
 > 승인 설계 원본 [v1.4.3](SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.3_SEASON_GJFO_AUTO_BUILD_APPROVED_20261102.md)의 내용을 변경하지 않는 **실행/인계용 보충**. 최신 작업 상태와 새 채팅 프롬프트는 [v221·P3-L 인계](CHAT_CONTINUITY_HANDOFF_20261102_V221_P3L_ENGINE_FIRST.md)에서 단일 관리한다. 구형 v216 인계는 역사 자료다.
 
 ## 유일하게 가장 중요한 자가검증 원칙
