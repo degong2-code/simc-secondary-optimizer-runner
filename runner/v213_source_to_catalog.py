@@ -520,11 +520,18 @@ def compile_catalog(season, season_sha, classification, classification_sha):
          "SOURCE_CATALOG_SIMC_REVISION_MISMATCH")
 
     input_hashes = season.get("sha256_by_input", {})
+    budget_pending=(season.get("source_budget_state")==
+                   "NEW_SEASON_J_F_EVIDENCE_PENDING" and
+                   season.get("consumables",{}).get("flask",{}).get(
+                       "reference","ABSENT") is None and
+                   season.get("consumables",{}).get("general_gems",{}).get(
+                       "reference","ABSENT") is None)
     need(type(input_hashes) is dict and set(input_hashes) ==
          {"gear","tier","budget","v189","v190"} and
-         all(type(value) is str and len(value)==64 and
-             all(ch in "0123456789abcdef" for ch in value)
-             for value in input_hashes.values()),
+         all((value is None if budget_pending and key=="budget" else
+              type(value) is str and len(value)==64 and
+              all(ch in "0123456789abcdef" for ch in value))
+             for key,value in input_hashes.items()),
          "V191_INPUT_SOURCE_SHA256_MISSING_OR_INVALID")
     generated_sources = season.get("simc_generated_sources", {})
     need(type(generated_sources) is dict and set(generated_sources) ==
