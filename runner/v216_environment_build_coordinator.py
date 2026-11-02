@@ -293,8 +293,11 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
          "V216_FRESH_SOURCE_OUTPUT_SYMLINK_BLOCKED")
     outputs={"receipt":"wago/receipt.json"}
     outputs.update({t:"wago/"+t+".csv" for t in wago_snapshot.TABLES})
+    # Fetch identity depends on collector and stage implementation only.
+    # A v216 UI/profile change must not invalidate unchanged DB2 bytes.
     code=stage_engine.module_dependency_fingerprint(
-        [pathlib.Path(__file__),pathlib.Path(wago_snapshot.__file__)])
+        [pathlib.Path(wago_snapshot.__file__),
+         pathlib.Path(stage_engine.__file__)])
     def execute():
         opts={"build":expected_game_build,"make_archive":False}
         if fetch is not None:
