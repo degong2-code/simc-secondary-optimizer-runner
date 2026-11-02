@@ -106,7 +106,7 @@ def make_work_order(*, bundle_dir, event, previous_game_build, target_ilevel,
     # slot forms. These are source candidates, NOT Native proficiency proof.
     # Tier ids originate from the tier source, not necessarily ordinary DB.
     plain_and_weapon = set(chosen["ordinary"].values()) | set(
-        chosen["common_gear"].values()) | set(chosen["weapons"].values()))
+        chosen["common_gear"].values()) | set(chosen["weapons"].values())
     known_plain = {r["item_id"] for r in gear_doc["items"]
                    if r["category"] == "plain_representative_candidate"}
     need(plain_and_weapon <= known_plain,
