@@ -220,6 +220,29 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
     need(source_path is not None and source_path.is_file(),
          "V213_SOURCE_CATALOG_NOT_PACKAGED")
     source_document, source_raw_sha = environment_manifest.read_json(source_path)
+    # Product's installed v213 file is a fixed app-local source, not an HTTP
+    # parameter. Existing v106 already keys its sessions on v213/gear/tier/
+    # consumables bytes; do not introduce a new session fingerprint and
+    # invalidate historical Native caches for an accounting-only audit.
+    package_root = pathlib.Path(__file__).resolve().parents[1]
+    installed_catalog = (package_root / "data" /
+                         "current_season_source_to_catalog.json")
+    if (season_budget_source_paths is None and
+            season_budget_evidence is None and
+            source_path == installed_catalog and
+            not user.get("special_items") and
+            not user.get("embellishments") and
+            not user.get("verified_enchant")):
+        season_budget_source_paths = {
+            "gear": package_root / "data" /
+                    "current_season_product_gear_db.json",
+            "tier": package_root / "data" /
+                    "current_season_tier_itemsets.json",
+            "budget": package_root / "data" /
+                      "current_season_chmv_consumables.json",
+            "reference": package_root / "integration_probes" / "data" /
+                         "midnight_s2_ilvl_chmv_reference_v1.json",
+        }
     # Optional installed same-season source proof; never a browser argument.
     # The pure arithmetic contract alone cannot validate source provenance.
     need(not (season_budget_evidence is not None and
@@ -232,7 +255,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 catalog=source_document, catalog_sha=source_raw_sha,
                 source_paths=season_budget_source_paths, user=user,
                 bootstrap=bootstrap_result,
-                physical_profile=(folder / "profile.simc").read_text(
+                physical_profile=(generated / "profile.simc").read_text(
                     encoding="utf8"))
             season_budget_evidence = linked_source_proof["evidence"]
         except (season_source_proof.SourceBudgetBlocked, OSError) as exc:
@@ -423,6 +446,16 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                digest(canonical(payload).encode("utf8"))}
     verify_receipt(receipt)
     receipt_path = generated / "environment_build_receipt.json"
+    if receipt_path.is_file():
+        previous_receipt = read_receipt(receipt_path, folder.name)
+        previous_budget = previous_receipt.get("season_budget") or {}
+        previous_source_sha = previous_budget.get("source_input_sha256")
+        current_source_sha = season_budget.get("source_input_sha256")
+        # A sealed G/J/F/O source proof cannot be silently replaced inside
+        # a pre-existing session, regardless of unchanged B/T arithmetic.
+        if previous_source_sha is not None:
+            need(previous_source_sha == current_source_sha,
+                 "V216_SEALED_SESSION_GJFO_SOURCE_CHANGED")
     receipt_encoded = json.dumps(
         receipt, sort_keys=True, ensure_ascii=False,
         indent=2, allow_nan=False) + "\n"
