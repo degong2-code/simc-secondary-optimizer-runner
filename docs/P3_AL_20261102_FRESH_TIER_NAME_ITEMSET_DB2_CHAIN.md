@@ -1,3 +1,7 @@
+## Follow-up P3-AM: actual public source was fetched and parsed
+
+After the offline tests recorded below, a bounded one-shot real HTTP pilot succeeded: GitHub Actions #41422198932, two source GETs, HTML 14,018 bytes SHA a2642f38bdc3022a15505ff694695ceab2a895dbe328c7578eceb99850507a7b and Wago ItemSet CSV 92,549 bytes SHA 0ae48ff20e117ba0d4bc30d6934819b752785cca0d61cbb0b5812ed99bd19bc6, exactly 13 publisher classes and 13 unique physical set identity IDs matched by the same parser. This is CURRENT SAME-SEASON SOURCE PARSING ONLY; not future-season identity, live 65-piece physical evidence, full environment build, GJFO, or Native DPS. See P3_AM_20261102_LIVE_TIER_PUBLIC_SOURCE_PILOT.md.
+
 # P3-AL 2026-11-02: New-season tier-name source to original v168 (evidence and limits)
 
 ## Goal, original flow and actual result
