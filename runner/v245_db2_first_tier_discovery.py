@@ -226,9 +226,13 @@ def build_stage(*,stage_root,wago_folder,build,expansion_id,
     outputs["candidates"]="source/v245_db2_tier_candidates.json"
     code=stages.module_dependency_fingerprint(
         [Path(__file__),Path(stages.__file__)])
+    attempts=[0]
+    def tracked_transport(req,timeout):
+        attempts[0]+=1
+        return (urlopen if transport is None else transport)(req,timeout=timeout)
     def execute():
-        opts={} if transport is None else {"transport":transport}
-        sources={t:fetch_table(t,build,**opts) for t in TABLES}
+        sources={t:fetch_table(t,build,transport=tracked_transport)
+                 for t in TABLES}
         result=discover(wago_folder=wago_folder,build=build,
                          expansion_id=expansion_id,source_bytes=sources)
         for t in TABLES:
@@ -265,7 +269,12 @@ def build_stage(*,stage_root,wago_folder,build,expansion_id,
                     "code_sha256":code["sha256"]},
             outputs=outputs,execute=execute,validate=validate)
     except stages.StageExecutionBlocked as exc:
-        raise TierDBBlocked("TIER_DB2_CANDIDATE_STAGE_BLOCKED:"+str(exc)) from exc
+        error=TierDBBlocked("TIER_DB2_CANDIDATE_STAGE_BLOCKED:"+str(exc))
+        error.network_calls_attempted=attempts[0]
+        raise error from exc
+    except (TierDBBlocked,physical.TierBlocked) as exc:
+        exc.network_calls_attempted=attempts[0]
+        raise
     target=root/outputs["candidates"]
     doc=json.loads(target.read_text("utf8"))
     return {"schema":SCHEMA,"status":doc["status"],
@@ -273,7 +282,7 @@ def build_stage(*,stage_root,wago_folder,build,expansion_id,
             "candidate_set_count":doc["candidate_set_count"],
             "candidate_counts_by_class":doc["candidate_counts_by_class"],
             "source_stage":{k:v for k,v in stage.items() if k!="result"},
-            "network_calls_by_stage":len(TABLES) if stage["executed"] else 0,
+            "network_calls_by_stage":attempts[0],
             "used_publisher_names":False,
             "source_season_verified":False,"environment_installed":False,
             "environment_ready":False,"native_calls":0}
