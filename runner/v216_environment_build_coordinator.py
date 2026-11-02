@@ -573,7 +573,8 @@ def _collect_first_party_simc_seed_stage(*,stage_root,build,
                 "source_dir":None,"network_calls_by_stage":0}
     need(type(revision) is str and
          simc_source.REV.fullmatch(revision) is not None and
-         season_event in ("season_change","expansion_change","mid_patch"),
+         season_event in ("season_change","expansion_change","mid_patch",
+                          "cold_start"),
          "V216_SIMC_FIRST_PARTY_REVISION_OR_EVENT_INVALID")
     rel="source/v229_pinned_generated"
     outputs={name:rel+"/"+name for name in
@@ -1204,12 +1205,18 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
     pinned_revision=simc_revision or resolved_simc.get("simc_revision")
     need(not (simc_seed_directory is not None and pinned_revision is not None),
          "V216_DUPLICATE_PINNED_SIMC_SOURCE_INPUTS")
+    # No previous verified game build is legitimate for an initial install.
+    # Call it cold_start; neither source provenance nor Build declares a
+    # season change or grants GJFO approval from that absence.
+    effective_source_event=(
+        "cold_start" if pinned_revision is not None and
+        previous_game_build is None and
+        simc_season_event=="season_change" else simc_season_event)
     pinned_simc=_collect_first_party_simc_seed_stage(
         stage_root=stage_root,build=expected_game_build,
-        revision=(pinned_revision if previous_game_build is not None or
-                  simc_season_event=="mid_patch" else None),
+        revision=pinned_revision,
         previous_game_build=previous_game_build,
-        season_event=simc_season_event,transport=simc_transport)
+        season_event=effective_source_event,transport=simc_transport)
     effective_seed=simc_seed_directory or pinned_simc.get("source_dir")
     first_party=_verified_first_party_tier_options_stage(
         stage_root=stage_root,tier_bridge=tier_bridge,
@@ -1248,6 +1255,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "fresh_tier_first_party_simc_options":first_party,
         "fresh_pinned_first_party_simc_source":pinned_simc,
         "fresh_pinned_simc_commit_resolution":resolved_simc,
+        "simc_source_event":effective_source_event,
         "fresh_lazy_full_pinned_simc_item_source":full_seed,
         "tier_discovery_mode":"DB2_FIRST_NO_PUBLISHER_NAME_LOOKUP",
         "network_calls_by_stage":(len(wago_snapshot.TABLES)
