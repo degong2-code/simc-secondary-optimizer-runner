@@ -81,7 +81,11 @@ def main():
         full_proof = source_proof.produce(
             catalog=catalog, catalog_sha=artifact_sha,
             source_paths=FILES, user=full_user,
-            bootstrap=result, physical_profile=physical)
+            bootstrap=result, physical_profile=physical,
+            pre_oil_scenario=json.loads(
+                (generated / "scenario.json").read_text(encoding="utf8")))
+        assert full_proof["profile_oil_serialization"] == (
+            "V091_ORIGINAL_PROFILE_SHA_AND_OIL_SERIALIZER_REPLAYED")
         final = budget_contract.reconcile(
             source_catalog=catalog, source_artifact_sha256=artifact_sha,
             evidence=full_proof["evidence"], plan=result["plan"],
