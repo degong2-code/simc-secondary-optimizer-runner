@@ -59,6 +59,19 @@ class Compact(unittest.TestCase):
         self.assertFalse(result["current_mplus_world_state_confirmed"])
         self.assertTrue(result["representative_selection_needs_primary_and_four_tier_resolution"])
 
+    def test_fresh_j_f_pending_flows_to_same_compact_gear_without_old_value(self):
+        with tempfile.TemporaryDirectory() as d:
+            item,sparse=self.prepare(Path(d))
+            clean=pool()
+            clean["consumable_budget_reference"]=None
+            clean["consumable_budget_source_mode"]="NEW_SEASON_J_F_BUDGET_EVIDENCE_PENDING"
+            result=db.build(clean,item,sparse)
+        self.assertIsNone(result["consumable_budget_reference"])
+        self.assertEqual(result["consumable_budget_source_mode"],
+                         "NEW_SEASON_J_F_BUDGET_EVIDENCE_PENDING")
+        self.assertTrue(result["J_F_NUMERIC_AUTHENTICATION_NOT_IN_GEAR_COLLECTOR"])
+        self.assertEqual(result["current_candidate_count"],1)
+
     def test_wrong_item_slot_blocks(self):
         with tempfile.TemporaryDirectory() as d:
             item,sparse=self.prepare(Path(d))
