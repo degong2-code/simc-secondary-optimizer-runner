@@ -96,6 +96,69 @@ class SameFreshCatalogChain(unittest.TestCase):
             self.assertTrue(all(not row["ui_selectable"] for row in
                                 result["enchant_candidates"]["items"]))
 
+    def test_original_v191_v211_v213_v196_continuous_fresh_chain_without_budget(self):
+        import v191_unified_season_data_update as merge
+        import v196_current_season_user_catalog as ui
+        with tempfile.TemporaryDirectory() as d:
+            folder=pathlib.Path(d)
+            season_stub,generated_source=fixture_source()
+            manifest=put_sources(folder,generated_source)
+            gear=copy.deepcopy(SourceToCatalogTests.gear_source)
+            gear["season_build"]=BUILD
+            tier=copy.deepcopy(SourceToCatalogTests.tier_source)
+            tier["retail_build"]=BUILD
+            effects={"schema":"v189_pinned_simc_effect_registration_candidates_v1",
+                     "auto_promote_to_user_ui":False,
+                     "source":{"commit":REV,"sha256":"a"*64},
+                     "candidates":{"food":[],"potion":[],
+                                   "embellishment_or_darkmoon":[]}}
+            consumables={
+              "schema":"v190_same_build_consumable_item_candidates_v1",
+              "automatic_ui_promotion":False,
+              "source":{"wago_snapshot_build":BUILD,"simc_revision":REV,
+                        "simc_registration_sha256":"a"*64},
+              "items":[{"item_id":8901,"kind":"food"},
+                       {"item_id":8902,"kind":"potion"}]}
+            candidates=season_stub["enchants"]["current_season"][
+                "highest_rank_candidates"]
+            generated={
+              "permanent_enchant":{
+                  "source_build":BUILD,"declared_rows":2,"sha256":"a"*64,
+                  "rows":[{"enchant_id":r["enchant_id"],
+                           "simc_token":r["simc_token"],
+                           "quality_rank":r["quality_rank"],
+                           "item_class":r["item_class"],
+                           "inventory_type_mask":r["inventory_type_mask"],
+                           "item_subclass_mask":r["item_subclass_mask"]}
+                          for r in candidates]},
+              "temporary_enchant":{"source_build":BUILD,"declared_rows":0,
+                                   "sha256":"b"*64,"rows":[]},
+              "gem_property":{"source_build":BUILD,"declared_rows":0,
+                              "sha256":"c"*64,"rows":[]}}
+            v191=merge.compile_catalog(gear,tier,None,effects,consumables,
+                                       generated,event="season_change")
+            self.assertIsNone(v191["consumables"]["flask"]["reference"])
+            self.assertIsNone(v191["consumables"]["general_gems"]["reference"])
+            self.assertEqual(v191["source_budget_state"],
+                             "NEW_SEASON_J_F_EVIDENCE_PENDING")
+            v211=classifier.compile_fresh_season(v191,folder,manifest)
+            v213=join.compile_catalog(v191,"a"*64,v211,"b"*64)
+            self.assertTrue(join.verify_catalog(v213))
+            p=folder/"same_build.json"
+            p.write_text(json.dumps(v213,ensure_ascii=False),encoding="utf8")
+            with patch.object(ui.v188,"labels",side_effect=AssertionError(
+                    "PRIOR_APPROVED_LABELS_READ")), patch.object(
+                    ui.observed_enchant,"read",side_effect=AssertionError(
+                    "PRIOR_NATIVE_E_READ")):
+                v196=ui.public_options(p)
+        self.assertEqual(v196["enchant_candidates"]["total"],2)
+        self.assertEqual(v196["enchant_candidates"]["selectable_count"],0)
+        self.assertFalse(v196["environment_ready"])
+        self.assertEqual(v196["existing_allowed_input_choices"],{})
+        self.assertEqual(v196["source_catalog"]["summary"]["tier"]["piece_count"],65)
+        self.assertEqual(v196["source_catalog"]["summary"]["gear"]["count"],511)
+        self.assertEqual(v196["native_calls_now"],0)
+
     def test_reject_mismatched_source_and_false_old_enchant_approval(self):
         with tempfile.TemporaryDirectory() as d:
             season,classified=self.inputs(pathlib.Path(d))
