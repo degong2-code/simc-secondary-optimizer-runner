@@ -407,7 +407,7 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
                              ("candidate",candidate)):
             target=root/paths[name]
             target.write_text(json.dumps(payload,ensure_ascii=False,
-                sort_keys=True,indent=2,allow_nan=False)+"\\n",encoding="utf8")
+                sort_keys=True,indent=2,allow_nan=False)+"\n",encoding="utf8")
     def validate(outputs):
         pool=json.loads(outputs["pool"].read_text(encoding="utf8"))
         compact=json.loads(outputs["compact"].read_text(encoding="utf8"))
