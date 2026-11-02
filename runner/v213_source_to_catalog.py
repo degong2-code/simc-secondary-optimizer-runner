@@ -181,13 +181,19 @@ def _compile_tier(season):
 
 
 def _compile_enchants(season, classification):
-    source = season.get("enchants", {}).get("current_season_midnight", {})
+    fresh = classification.get("source_manifest_sha256") is not None
+    sources = season.get("enchants", {})
+    source = (sources.get("current_season")
+              if fresh and sources.get("current_season") is not None
+              else sources.get("current_season_midnight", {}))
     candidates = source.get("highest_rank_candidates")
     rows = classification.get("rows")
-    need(source.get("count") == 38 and type(candidates) is list
-         and len(candidates) == 38,
+    n = source.get("count")
+    need(type(n) is int and 1 <= n <= (1000 if fresh else 38) and
+         (fresh or n == 38) and type(candidates) is list and
+         len(candidates) == n,
          "V191_CURRENT_SEASON_ENCHANT_COUNT_INVALID")
-    need(type(rows) is list and len(rows) == 38,
+    need(type(rows) is list and len(rows) == n,
          "V211_CLASSIFICATION_ROW_COUNT_INVALID")
     by_identity = {}
     by_id = {}
@@ -197,7 +203,7 @@ def _compile_enchants(season, classification):
              "V211_DUPLICATE_ENCHANT_CLASSIFICATION_IDENTITY")
         by_identity[identity] = row
         by_id[identity[0]] = row
-    need(len(by_identity) == 38, "V211_CLASSIFICATION_IDENTITY_COUNT_INVALID")
+    need(len(by_identity) == n, "V211_CLASSIFICATION_IDENTITY_COUNT_INVALID")
 
     groups = {}
     joined = []
@@ -216,7 +222,7 @@ def _compile_enchants(season, classification):
              str(candidate.get("enchant_id")))
         need(classified.get("simc_effect_owner") == "SIMC" and
              classified.get("simc_effect_reimplemented") is False and
-             classified.get("unknown_components") == [],
+             (fresh or classified.get("unknown_components") == []),
              "V211_EFFECT_OWNERSHIP_OR_UNKNOWN_COMPONENT_DRIFT:" +
              str(candidate["enchant_id"]))
 
@@ -286,7 +292,7 @@ def _compile_enchants(season, classification):
             not x.get("static_chmv_rating_present_in_dbc", False) for x in rows),
         "spell_effects": sum(bool(x.get("spell_effects")) for x in rows),
         "native_E_measured": sum(
-            x.get("native_E_evidence", {}).get("status") != "NOT_MEASURED"
+            x.get("native_E_evidence", {}).get("static_E") is not None
             for x in rows),
         "user_selectable_existing_scope": sum(
             x.get("selection_status") == "EXISTING_EAGLE_ONE_SCOPE_USER_CHOICE"
@@ -295,10 +301,19 @@ def _compile_enchants(season, classification):
             x.get("selection_status") == "DEVELOPER_ONLY_EXACT_SCOPE"
             for x in rows),
         "locked": sum(
-            x.get("selection_status") == "LOCKED_NO_GENERAL_USER_ADMISSION"
+            x.get("selection_status") in (
+                "LOCKED_NO_GENERAL_USER_ADMISSION",
+                "LOCKED_PENDING_CURRENT_SEASON_ITEM_EFFECT_PROOF")
             for x in rows),
     }
-    need(counts == EXPECTED_ENCHANT_COUNTS and actual_counts == counts,
+    need(actual_counts == counts and
+         (fresh and counts["native_E_measured"]==0 and
+          counts["user_selectable_existing_scope"]==0 and
+          counts["developer_only_exact_scope"]==0 and
+          counts["locked"]==n and
+          type(classification["source_manifest_sha256"]) is str and
+          len(classification["source_manifest_sha256"])==64
+          or not fresh and counts==EXPECTED_ENCHANT_COUNTS),
          "V211_CLASSIFICATION_COUNTS_OR_SELECTION_BOUNDARY_DRIFT")
     need(classification.get("native_calls") == 0 and
          classification.get("automatic_ui_promotion") is False,
@@ -312,8 +327,8 @@ def _compile_enchants(season, classification):
         "selection_policy": {
             "classifier_grants_selection": False,
             "existing_user_approval_is_applied_by": "v196",
-            "only_existing_native_scoped_choice": 7967,
-            "developer_only": [8025],
+            "only_existing_native_scoped_choice": None if fresh else 7967,
+            "developer_only": [] if fresh else [8025],
             "all_other_candidates_remain_locked": True,
         },
     }
@@ -592,7 +607,9 @@ def compile_catalog(season, season_sha, classification, classification_sha):
             "total": enchants["count"],
             "groups": enchants["group_counts"],
             "classifier_selectable_count": 0,
-            "existing_user_approval_id": 7967,
+            "existing_user_approval_id": (
+                None if classification.get("source_manifest_sha256") is not None
+                else 7967),
         },
         "embellishments": {
             "registered_effects": len(embellishments.get("registered_effects", [])),
@@ -705,12 +722,14 @@ def verify_catalog(document):
     source = document.get("v196_enchant_source", {})
     rows = source.get("rows")
     items = document.get("catalog", {}).get("enchants", {}).get("items")
-    need(type(rows) is list and type(items) is list and
-         len(rows) == len(items) == 38,
+    expected = document.get("catalog", {}).get("enchants", {}).get("count")
+    need(type(expected) is int and 1 <= expected <= 1000 and
+         type(rows) is list and type(items) is list and
+         len(rows) == len(items) == expected,
          "V213_V196_ENCHANT_PROJECTION_COUNT_INVALID")
     projected = {x.get("enchant_id"): x for x in rows}
     joined = {x.get("enchant_id"): x for x in items}
-    need(len(projected) == len(joined) == 38,
+    need(len(projected) == len(joined) == expected,
          "V213_V196_ENCHANT_PROJECTION_DUPLICATE_ID")
     for item_id, row in projected.items():
         item = joined.get(item_id)
