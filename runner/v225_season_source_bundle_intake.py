@@ -19,7 +19,10 @@ import pathlib
 import re
 from urllib.parse import urlsplit, parse_qs
 
-import v224_season_gjfo_evidence_inventory as preflight
+try:
+    from . import v224_season_gjfo_evidence_inventory as preflight
+except ImportError:  # script entrypoint from runner/
+    import v224_season_gjfo_evidence_inventory as preflight
 
 SCHEMA = "v225_season_core_source_bundle_v1"
 SOURCE_FILES = {
