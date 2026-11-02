@@ -185,5 +185,46 @@ class InstalledSeasonSourceTests(unittest.TestCase):
                 result["receipt"]["readiness"]["limitations"])
 
 
+    def test_sealed_proof_change_blocks_before_any_manifest_or_receipt_write(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            session = root / ("e" * 20)
+            generated = session / "generated"
+            generated.mkdir(parents=True)
+            (generated / "profile.simc").write_text(self.profile, encoding="utf8")
+            source_path = root / "catalog.json"
+            source_path.write_text(json.dumps(self.catalog), encoding="utf8")
+            registry_path = root / "reference.json"
+            registry_path.write_bytes(FILES["reference"].read_bytes())
+            sources = dict(FILES, reference=registry_path)
+            opts = dict(
+                sessions_root=root, session_folder=session,
+                user=self.user, binary=root / "unused",
+                revision=self.catalog["simc_revision"], static_cache=None,
+                source_catalog_path=source_path,
+                bootstrap_result=self.bootstrap,
+                season_budget_source_paths=sources)
+            with mock.patch.object(v216.environment_manifest,
+                                   "compile_from_paths",
+                                   return_value=sealed_manifest()):
+                result = v216.build_environment(**opts)
+                manifest_file = generated / "environment_manifest.json"
+                receipt_file = generated / "environment_build_receipt.json"
+                before_manifest = manifest_file.read_bytes()
+                before_receipt = receipt_file.read_bytes()
+                reg = json.loads(registry_path.read_text("utf8"))
+                reg["source_general"] += " NONNUMERIC_PROVENANCE_CHANGED"
+                registry_path.write_text(json.dumps(reg), encoding="utf8")
+                with self.assertRaisesRegex(
+                        v216.EnvironmentBuildBlocked,
+                        "V216_SEALED_SESSION_GJFO_SOURCE_CHANGED"):
+                    v216.build_environment(**opts)
+                self.assertEqual(manifest_file.read_bytes(), before_manifest)
+                self.assertEqual(receipt_file.read_bytes(), before_receipt)
+                self.assertTrue(result["receipt"]["season_budget"][
+                    "source_links_verified_by_v223"])
+
+
+
 if __name__ == "__main__":
     unittest.main()
