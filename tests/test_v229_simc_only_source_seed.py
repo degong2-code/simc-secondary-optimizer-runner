@@ -109,6 +109,23 @@ class SimCOnlySeedTests(unittest.TestCase):
         self.assertIsNone(same["G"])
         self.assertFalse(same["environment_ready"])
 
+    def test_game_event_does_not_require_new_retail_build(self):
+        for event in ("mid_patch", "season_change", "expansion_change"):
+            with self.subTest(event=event):
+                row=seed.inventory(raw_sources(),simc_revision=REVISION,
+                    expected_build=BUILD,previous_game_build=BUILD,
+                    season_event=event)
+                self.assertEqual(row["simc_generated_build"],BUILD)
+                self.assertEqual(row["season_event"],event)
+                self.assertIsNone(row["G"])
+                self.assertFalse(row["environment_ready"])
+                self.assertTrue(row["active_season_not_automatically_inferred"])
+        with self.assertRaisesRegex(seed.SimCSourceBlocked,
+                                    "PREVIOUS_GAME_BUILD_RECORD_INVALID"):
+            seed.inventory(raw_sources(),simc_revision=REVISION,
+                expected_build=BUILD,previous_game_build="wrong",
+                season_event="season_change")
+
     def test_gem_and_oil_candidates_may_not_prove_quality_or_rating(self):
         result=inventory()
         self.assertEqual(result["source_files"]["temporary_enchant.inc"][
