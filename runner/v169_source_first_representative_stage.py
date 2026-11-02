@@ -12,8 +12,12 @@ from __future__ import annotations
 import argparse,json
 from pathlib import Path
 
-import v143_specialization_contracts as contracts
-import v167_product_season_gear_adapter as gear
+try:
+    from . import v143_specialization_contracts as contracts
+    from . import v167_product_season_gear_adapter as gear
+except ImportError:  # direct runner/ script execution
+    import v143_specialization_contracts as contracts
+    import v167_product_season_gear_adapter as gear
 
 ROOT=Path(__file__).resolve().parents[1]
 TIER_PATH=ROOT/"data/current_season_tier_itemsets.json"
