@@ -223,7 +223,32 @@ class SameFreshCatalogChain(unittest.TestCase):
                     binary=root/"missing-simc.exe",revision=REV,
                     static_cache=root/"missing-cache.json",
                     source_catalog_path=catalog,bootstrap_result={
+                        "schema":"v098"},expected_new_season_build=BUILD)
+            # Missing independently requested new season/build is blocked
+            # before interpreting the candidate's own self-declared build.
+            with self.assertRaisesRegex(
+                    build.EnvironmentBuildBlocked,
+                    "V216_EXPLICIT_NEW_SEASON_BUILD_REQUIRED"):
+                build.build_environment(
+                    sessions_root=root,session_folder=session,user={
+                        "character":{"class":"paladin","spec":"retribution"},
+                        "target":{"ilevel":334,"final_T":None}},
+                    binary=root/"missing-simc.exe",revision=REV,
+                    static_cache=root/"missing-cache.json",
+                    source_catalog_path=catalog,bootstrap_result={
                         "schema":"v098"})
+            with self.assertRaisesRegex(
+                    build.EnvironmentBuildBlocked,
+                    "V216_FRESH_SEASON_BUILD_OR_SIMC_REVISION_MISMATCH"):
+                build.build_environment(
+                    sessions_root=root,session_folder=session,user={
+                        "character":{"class":"paladin","spec":"retribution"},
+                        "target":{"ilevel":334,"final_T":None}},
+                    binary=root/"missing-simc.exe",revision=REV,
+                    static_cache=root/"missing-cache.json",
+                    source_catalog_path=catalog,bootstrap_result={
+                        "schema":"v098"},
+                    expected_new_season_build="12.2.0.88888")
             self.assertFalse((session/"generated").exists())
             self.assertEqual(prior_files,{
                 p.relative_to(root).as_posix():p.read_bytes()
