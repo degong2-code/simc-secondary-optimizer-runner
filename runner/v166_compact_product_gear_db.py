@@ -91,6 +91,9 @@ def build(pool,item_file,sparse_file):
       "conditional_count":len(conditional),
       "current_role_counts":dict(sorted(role_counts.items())),
       "consumable_budget_reference":pool["consumable_budget_reference"],
+       "consumable_budget_source_mode":pool.get(
+           "consumable_budget_source_mode","LEGACY_UNRECORDED_SOURCE_MODE"),
+       "J_F_NUMERIC_AUTHENTICATION_NOT_IN_GEAR_COLLECTOR":True,
       "representative_selection_needs_primary_and_four_tier_resolution":True,
       "current_mplus_world_state_confirmed":False,
       "data_is_role_candidates_not_simc_special_effect_certification":True,
