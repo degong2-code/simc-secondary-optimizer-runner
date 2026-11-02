@@ -248,6 +248,40 @@ def _http_json(url, transport=urlopen):
         raise SimCSourceBlocked("V229_UPSTREAM_GIT_TREE_JSON_INVALID") from exc
 
 
+
+def resolve_exact_commit(revision_hint, *, transport=urlopen):
+    """Resolve a user/installed SimC 7-12 hex revision to ONE Git commit.
+
+    The exact 40-hex source tree is independently rechecked by the caller's
+    existing discover_generated_tree/inventory. This does NOT authenticate a
+    separately supplied binary or infer a season from a commit's timestamp.
+    """
+    need(type(revision_hint) is str and
+         re.fullmatch(r"[a-f0-9]{7,12}|[a-f0-9]{40}",
+                      revision_hint) is not None,
+         "V229_SOURCE_REVISION_HINT_INVALID")
+    if REV.fullmatch(revision_hint):
+        return revision_hint
+    url=("https://api.github.com/repos/simulationcraft/simc/commits/"
+         +revision_hint)
+    request=Request(url,headers={
+        "User-Agent":"SIMC-Secondary-source-cold-start/1.0",
+        "Accept":"application/vnd.github+json"})
+    with transport(request,timeout=25) as response:
+        need(response.status==200,"V229_REVISION_LOOKUP_HTTP_INVALID")
+        raw=response.read(120_001)
+    need(0<len(raw)<=120_000,"V229_REVISION_LOOKUP_RESPONSE_TOO_LARGE")
+    try:
+        doc=json.loads(raw)
+    except (UnicodeError,ValueError) as exc:
+        raise SimCSourceBlocked("V229_REVISION_LOOKUP_JSON_INVALID") from exc
+    exact=doc.get("sha") if type(doc) is dict else None
+    need(type(exact) is str and REV.fullmatch(exact) is not None
+         and exact.startswith(revision_hint),
+         "V229_REVISION_LOOKUP_IDENTITY_MISMATCH")
+    return exact
+
+
 def discover_generated_tree(revision, *, transport=urlopen):
     """Walk 4 fixed first-party Git tree levels, not whole repo/history."""
     need(type(revision) is str and REV.fullmatch(revision),
