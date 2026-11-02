@@ -1,5 +1,7 @@
 # P3 — One-click Environment Builder target architecture (2026-10-31)
 
+> **2026-11-02 사용자 최종 통제실험 교정:** [P3-AA](P3_AA_20261102_SINGLE_ENGINE_FRESH_SEASON_CONTROL_ACCEPTANCE.md) 및 [v1.4.3 최신 개발자 노트 §7](SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.3_SEASON_GJFO_AUTO_BUILD_APPROVED_20261102.md) 우선. **본 문서의 동일 Environment Build 진입점·엔진을 실제 새 시즌과 기존 자료 없는 통제실험 모두에서 재사용**한다. 금지되는 것은 이미 수집·구축된 과거 데이터/영수증/캐시를 입력·증거로 쓰는 행위이고, **Wago DB2/Blizzard/WCL/공개 GitHub·SimC 등 정상 새 원본 수집을 막지 않는다**. 시험 하네스가 초기 상태만 비우고 수집 URL·코드를 교체하지 않는다.
+
 **Status: user-approved long-term product direction; architecture contract documented, not yet implemented as a complete one-click flow.** This document does not promote GitHub branch code to Project Sources, Windows release, main, v003, or official Work OS.
 
 ## 1. Product outcome
@@ -286,3 +288,11 @@ Next:
 3. Add request-driven season refresh using the existing v191→v211→v213 workflow, with exact artifact identities and no background polling.
 4. Prove the sealed v098/v208 environment is the exact profile consumed by the existing adaptive worker.
 5. Complete Windows user-PC Build/Start/progress/cancel/resume acceptance using the packaged artifact. No blanket 26×N Native matrix.
+
+## 13. 최종 인수시험 설계 교정 — 단일 엔진, 빈 기존 상태, 신규 수집 허용 (2026-11-02)
+
+- 동일한 **실사용 「새 시즌/확장팩 환경 구축」** 호출이 정상 제품과 통제시험에 모두 적용되어야 한다. 기존 `v216`의 설치 아티팩트 재사용 단계만 돌리거나 `v229~v237`의 SimC-only 원본 조사 하위 경로만 돌리는 것은 완성 시험이 아니다.
+- 시험에서는 기존 설치된 시즌 catalog, prior gear IDs/seed, G/J/F/O·79×2 참조, DB2 스냅샷, SimC Native/DPS 영수증, 세션 및 모든 이전 캐시를 읽지 못하게 한다. 단, 기존 승인 수집기의 **새 Wago·Blizzard·WCL·공개 GitHub·SimC HTTP/source 조회는 반드시 그대로 허용**하고 새 수집 영수증·빌드·SHA를 기록한다.
+- 정상 엔진으로 새 원본 수집·시즌 대표 장비/티어·선택지·G/J/F/O/B/T·품질 승인·설치·사용자 프로필 생성까지 완료한 후 **새 결과를 봉인**, 그 뒤 분리된 평가 프로세스에서 기존 현 시즌 환경과 비교한다.
+- `SimC-only`는 구버전 기술 조사 실험의 라벨이지 최종 제품 모드/최종 인수시험 조건이 아니다. 독립 엔진을 추가 개발하지 않고 기존 v160~v171/v191/v211/v213/v216/v220/v222/v098와 필요한 v229~v237 컴포넌트를 같은 흐름으로 연결한다. 구 버전 역사 기록은 보존하되 그 잘못된 요구 가정은 폐기한다.
+- 현 시점 통합 엔진 구축·실사용 End-to-End 및 이 최종 인수시험은 **미완료**. 문서 수정은 실제 통합 PASS, 기존 원본 v016/Project UI 변경의 증거가 아니다.
