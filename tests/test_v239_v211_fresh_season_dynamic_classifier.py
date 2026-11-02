@@ -128,13 +128,15 @@ class NewSeasonV211Tests(unittest.TestCase):
             with self.assertRaisesRegex(v.SourceBlocked,
                                         "SOURCE_BYTES_OR_GIT_BLOB_CHANGED"):
                 v.compile_fresh_season(season,folder,manifest)
-            (folder/"data_enums.hh").write_text(ENUMS)
-            (folder/"spelltext_data.inc").write_text(
-                generated["spelltext_data.inc"].replace(BUILD,"12.1.5.70575"))
+            (folder/"data_enums.hh").write_bytes(ENUMS.encode("utf8"))
+            (folder/"spelltext_data.inc").write_bytes(
+                generated["spelltext_data.inc"].replace(
+                    BUILD,"12.1.5.70575").encode("utf8"))
             fixed=copy.deepcopy(manifest)
             raw=(folder/"spelltext_data.inc").read_bytes()
             fixed["files"]["spelltext_data.inc"].update({
-                "sha256":v.sha256(raw),"git_blob_sha1":v.git_blob_sha(raw)})
+                "sha256":v.sha256(raw),"git_blob_sha1":v.git_blob_sha(raw),
+                "size_bytes":len(raw)})
             with self.assertRaisesRegex(v.SourceBlocked,
                                         "GENERATED_BUILD_DRIFT"):
                 v.compile_fresh_season(season,folder,fixed)
