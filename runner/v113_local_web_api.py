@@ -58,7 +58,7 @@ class UserRequest(BaseModel):
     current_season_product: bool = False
     # Opt-in normal-source collection only; never grants new environment READY.
     fresh_season_build: str | None = Field(
-        default=None,max_length=32,pattern=r"^d+(?:.d+){3}$")
+        default=None,max_length=32,pattern=r"^\d+(?:\.\d+){3}$")
 
 def blocked(exc):
     """Return stable codes, not private absolute paths, talent strings, or tracebacks."""
