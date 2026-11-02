@@ -74,6 +74,10 @@ def main():
             full_user, generated, fake_binary, catalog["simc_revision"],
             current_season_product=True, source_catalog_path=CATALOG)
         physical = (generated / "profile.simc").read_text(encoding="utf8")
+        print("V223_GENERATED_OIL_FORMAT", full_user["oil_hands"],
+              result["weapon_form"],
+              [line for line in physical.splitlines()
+               if "temporary_enchant" in line], flush=True)
         full_proof = source_proof.produce(
             catalog=catalog, catalog_sha=artifact_sha,
             source_paths=FILES, user=full_user,
