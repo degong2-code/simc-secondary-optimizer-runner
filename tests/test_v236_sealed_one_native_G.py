@@ -40,6 +40,8 @@ class SealedNativeSourceTests(unittest.TestCase):
     def run_one(self, *, max_new=0,output="out"):
         return engine.run(profile_path=self.profile,receipt_path=self.receipt,
                           binary=self.exe,binary_sha256=self.binarysha,
+                          expected_source_revision="710c2408bfd3ae4df71b8cd55cdf01f63fd6c926",
+                          expected_game_build="12.1.5.70575",
                           output_dir=self.root/output,max_new=max_new)
 
     def test_preflight_zero_native_and_no_repeated_output(self):
@@ -134,7 +136,9 @@ class SealedNativeSourceTests(unittest.TestCase):
         self.receipt.write_text(json.dumps(self.fixture.prepared))
         doc=json.loads(self.receipt.read_text())
         self.assertEqual(len(doc["selected_G_slot_ids"]),14)
-        engine.check(self.profile.read_bytes(),doc)
+        engine.check(self.profile.read_bytes(),doc,
+                     expected_source_revision="710c2408bfd3ae4df71b8cd55cdf01f63fd6c926",
+                     expected_game_build="12.1.5.70575")
         self.assertIn("off_hand=",self.profile.read_text())
 
 
