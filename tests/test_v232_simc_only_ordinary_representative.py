@@ -26,8 +26,9 @@ def item_row(iid,inv,cls,sub,primary=4,quality=4,base=335,mask="0x2"):
     return "  { "+", ".join(fields)+" },\n"
 
 
-def make_fixture(*,omit=None,wrong_weapon=False,quality_error=False):
-    src=raw_fixture()
+def make_fixture(*,omit=None,wrong_weapon=False,quality_error=False,
+                 warrior=False):
+    src=raw_fixture(set_class=1 if warrior else 2)
     extra=[
         item_row(9020,5,4,4),  # source-only plain chest
         item_row(9021,6,4,4),  # belt
@@ -40,6 +41,8 @@ def make_fixture(*,omit=None,wrong_weapon=False,quality_error=False):
         item_row(9028,9,4,4,base=700),# remote base ilevel
         item_row(9029,8,4,4,mask="0x4"), # wrong class
     ]
+    if warrior:
+        extra.append(item_row(9031,17,2,8))  # Titan's Grip second 2H
     if omit is not None:
         extra=[r for r in extra if f"rep_{omit}" not in r]
     raw=src["item_data.inc"].decode("utf8")
@@ -53,6 +56,9 @@ def make_fixture(*,omit=None,wrong_weapon=False,quality_error=False):
     raw=raw.replace("dbc_item_data_t, 8>",f"dbc_item_data_t, {8+len(extra)}>")
     raw=raw.replace("} };\nstatic const std::array<util::span",
                     "".join(extra)+"} };\nstatic const std::array<util::span")
+    if warrior:
+        # Warrior class bit 0 (paladin class bit 1) for all selected gear.
+        raw=raw.replace("0x2", "0x1")
     src["item_data.inc"]=raw.encode()
     return src
 
@@ -64,7 +70,7 @@ class SourceOnlyRepresentativeTests(unittest.TestCase):
         self.folder=pathlib.Path(self.temp.name)
         self.seed_files(make_fixture())
 
-    def seed_files(self,files):
+    def seed_files(self,files,cls="paladin",spec="retribution"):
         for filename,raw in files.items():
             (self.folder/filename).write_bytes(raw)
         receipt=seed.inventory(
@@ -74,8 +80,8 @@ class SourceOnlyRepresentativeTests(unittest.TestCase):
         (self.folder/seed.RECEIPT).write_text(
             json.dumps(receipt),encoding="utf8")
         self.tier=tier_join.select(
-            seed_directory=self.folder,cls="paladin",
-            spec="retribution",set_option="season_token_test")
+            seed_directory=self.folder,cls=cls,
+            spec=spec,set_option="season_token_test")
 
     def plan(self,target=335):
         return builder.find_candidate(
@@ -107,6 +113,19 @@ class SourceOnlyRepresentativeTests(unittest.TestCase):
         self.assertFalse(row["environment_ready"])
         self.assertEqual(row["native_calls"],0)
         self.assertEqual(row["cache_mutations"],0)
+
+    def test_warrior_fury_titans_grip_requires_two_real_distinct_2h_items(self):
+        self.seed_files(make_fixture(warrior=True),
+                        cls="warrior",spec="fury")
+        result=self.plan()
+        self.assertEqual(result["character"]["weapon_form"],"dual_two_hand")
+        self.assertEqual(len(result["selected_G_slot_ids"]),14)
+        self.assertEqual(
+            {result["selected_G_slot_ids"]["main_hand"],
+             result["selected_G_slot_ids"]["off_hand"]},
+            {9010,9031})
+        self.assertIsNone(result["G"])
+        self.assertFalse(result["environment_ready"])
 
     def test_different_target_ilevel_does_not_infer_scaling(self):
         first=self.plan(target=335)
