@@ -93,6 +93,24 @@ class BundleIntakeTests(unittest.TestCase):
                 "build=12.2.0.99999","build=12.1.5.70575")
         self.write_manifest()
         with self.assertRaisesRegex(bundle.SourceBundleBlocked,
+                                    "MANIFEST_VS_SOURCE_BUILD"):
+            self.verify()
+
+    def test_old_build_sources_and_urls_all_consistent_still_block_new_season(self):
+        _, _, old = fixture(event="season_change",
+                            build="12.1.5.70575")
+        self.manifest["game_build"] = "12.1.5.70575"
+        for key, path_name in bundle.SOURCE_FILES.items():
+            path=self.root/path_name
+            path.write_text(json.dumps(old[key][0],sort_keys=True)+"\n",
+                            encoding="utf8")
+            entry=self.manifest["sources"][key]
+            entry["sha256"]=bundle.sha(path.read_bytes())
+            entry["source_build"]="12.1.5.70575"
+            entry["source_locator"]=entry["source_locator"].replace(
+                "build=12.2.0.99999","build=12.1.5.70575")
+        self.write_manifest()
+        with self.assertRaisesRegex(bundle.SourceBundleBlocked,
                                     "CORE_SOURCE_PREFLIGHT_BLOCKED"):
             self.verify()
 
