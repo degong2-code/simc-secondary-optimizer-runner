@@ -80,6 +80,44 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
 
 
 
+    def test_normal_build_reuses_existing_v229_simc_source_collector_only_once(self):
+        from tests.test_v229_simc_only_source_seed import (
+            SimCCollectorTests,REVISION,BUILD,OLD)
+        fake=SimCCollectorTests("test_collect_pinned_sources_without_any_legacy_data")
+        fake.setUp()
+        calls=[]
+        def transport(req,timeout):
+            calls.append(req.full_url)
+            return fake.fetch(req,timeout=timeout)
+        root=self.root/"new_simc_source"
+        root.mkdir()
+        empty=v216._collect_first_party_simc_seed_stage(
+            stage_root=root,build=BUILD)
+        self.assertEqual(empty["network_calls_by_stage"],0)
+        self.assertEqual(empty["status"],
+                         "SIMC_PINNED_REVISION_NOT_AVAILABLE_PENDING")
+        options=dict(stage_root=root,build=BUILD,revision=REVISION,
+                     previous_game_build=OLD,transport=transport)
+        first=v216._collect_first_party_simc_seed_stage(**options)
+        second=v216._collect_first_party_simc_seed_stage(**options)
+        self.assertEqual(first["status"],
+                         "SIMC_PINNED_SET_SOURCE_RECEIPT_READY")
+        self.assertEqual(len(calls),7) # four immutable Git tree + 3 small raw
+        self.assertEqual(first["network_calls_by_stage"],7)
+        self.assertEqual(second["network_calls_by_stage"],0)
+        self.assertEqual(first["source_stage"]["status"],"EXECUTED_AND_SEALED")
+        self.assertEqual(second["source_stage"]["status"],"REUSED_VERIFIED")
+        path=pathlib.Path(first["source_dir"])
+        self.assertEqual(set(x.name for x in path.iterdir()),
+                         set(v216.simc_source.SOURCE_FILES)|
+                         {v216.simc_source.RECEIPT})
+        self.assertFalse((path/"item_data.inc").exists())
+        receipt=json.loads((path/v216.simc_source.RECEIPT).read_text())
+        self.assertEqual(first["simc_receipt_sha256"],receipt["receipt_sha256"])
+        self.assertTrue(receipt["provenance_tree_blob_authenticated"])
+        self.assertIsNone(receipt["G"])
+        self.assertFalse(receipt["environment_ready"])
+
     def test_blizzard_wcl_authenticated_stage_runs_before_wago_and_reuses(self):
         import io
         from urllib.parse import urlsplit
