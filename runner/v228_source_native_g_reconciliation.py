@@ -76,7 +76,8 @@ def parse_profile(raw, work_order):
         need(not (key.startswith("gear_") or
                   key in ("flask", "food", "potion", "augmentation",
                           "temporary_enchant", "ilevel", "gem",
-                          "gems", "enchant", "enchants") or
+                          "gems", "gem_id", "socket", "sockets",
+                          "enchant", "enchants", "enchant_id") or
                   key.startswith("profileset.")),
              "V228_PROFILE_NONBARE_G_RATING_OR_CONSUMABLE_OVERRIDE")
         if key in equipment_keys:
@@ -97,6 +98,10 @@ def parse_profile(raw, work_order):
                  "V228_PROFILE_DUPLICATE_SCALAR_ASSIGNMENT")
             attrs[key]=value
     char=work_order["character"]
+    all_classes={key.split("/")[0] for key in
+                 work_mod.representative.contracts.CONTRACTS}
+    need(not ((set(attrs) & all_classes) - {char["class"]}),
+         "V228_PROFILE_MULTIPLE_CLASS_ASSIGNMENTS")
     need(char["class"] in attrs and
          attrs.get("spec") == char["spec"] and
          set(rows) == set(work_order["selected_source_slots"]),
