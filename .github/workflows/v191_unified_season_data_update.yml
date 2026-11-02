@@ -191,6 +191,32 @@ jobs:
             --season-catalog out/v191_unified_source_first_catalog.json \
             --enchant-classification out/v211_current_season_enchant_effect_classification.json \
             --out out/v213_current_season_source_to_catalog.json
+      - name: Inventory mandatory seasonal G J F O proof gaps from v191 and v213 (No Native)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile runner/v224_season_gjfo_evidence_inventory.py
+          python -m unittest -v tests.test_v224_season_gjfo_evidence_inventory
+          python runner/v224_season_gjfo_evidence_inventory.py \
+            --v191 out/v191_unified_source_first_catalog.json \
+            --v213 out/v213_current_season_source_to_catalog.json \
+            --gear data/current_season_product_gear_db.json \
+            --tier data/current_season_tier_itemsets.json \
+            --budget data/current_season_chmv_consumables.json \
+            --event "$UPDATE_EVENT" \
+            --target-ilevel 334 \
+            --out out/v224_season_gjfo_evidence_inventory.json
+          python - <<'PY'
+          import json
+          x=json.load(open('out/v224_season_gjfo_evidence_inventory.json',encoding='utf8'))
+          assert x['required_components']==['G','J','F','O']
+          assert x['verified_components']==[]
+          assert x['B'] is None and x['T'] is None
+          assert x['budget_can_be_published'] is False
+          assert x['automatic_ui_admission'] is False
+          assert x['native_calls']==0
+          print('V224_REAL_V191_V213_GJFO_INVENTORY_BLOCKED_AS_REQUIRED_NATIVE0')
+          PY
       - name: Exercise the real v213 artifact through the existing v196 UI catalog
         shell: bash
         run: |
