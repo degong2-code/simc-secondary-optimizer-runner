@@ -666,6 +666,155 @@ def _verified_first_party_tier_options_stage(*,stage_root,tier_bridge,
 
 
 
+
+def _lazy_full_pinned_simc_item_stage(*, stage_root, build, small_seed_dir,
+                                      gear_candidate, tier_bridge, request,
+                                      transport=None):
+    """Extend existing v229 source with ONE exact item_data download.
+
+    v229 is the only Git tree/blob authority; no duplicate small downloads,
+    no season inference, no Native. v217 seals a separate complete directory
+    and the original three-file receipt is never mutated.
+    """
+    pending={"status":"FRESH_ONE_SPEC_FULL_PINNED_SIMC_ITEM_DATA_PENDING",
+             "source_dir":None,"network_calls_by_stage":0,"native_calls":0,
+             "environment_ready":False}
+    if (request is None or small_seed_dir is None or
+            not gear_candidate.get("candidate_path") or
+            not tier_bridge.get("candidate_path")):
+        return pending
+    root=pathlib.Path(stage_root)
+    source=pathlib.Path(small_seed_dir)
+    need(source.is_dir() and not source.is_symlink(),
+         "V216_FULL_SIMC_SMALL_SOURCE_DIRECTORY_REQUIRED")
+    receipt_file=source/simc_source.RECEIPT
+    need(receipt_file.is_file() and not receipt_file.is_symlink(),
+         "V216_FULL_SIMC_SMALL_SOURCE_RECEIPT_REQUIRED")
+    try:
+        receipt=json.loads(receipt_file.read_text("utf8"))
+    except (ValueError,UnicodeError) as exc:
+        raise EnvironmentBuildBlocked("V216_FULL_SIMC_SMALL_RECEIPT_INVALID") from exc
+    names=tuple(simc_source.SOURCE_FILES)
+    need(receipt.get("schema")==simc_source.SCHEMA
+         and receipt.get("simc_generated_build")==build
+         and receipt.get("item_data_present") is False
+         and receipt.get("provenance_tree_blob_authenticated") is True
+         and set(receipt.get("source_files",{}))==set(names)
+         and type(receipt.get("simc_revision")) is str
+         and simc_source.REV.fullmatch(receipt["simc_revision"]) is not None,
+         "V216_FULL_SIMC_SMALL_RECEIPT_PROVENANCE_INVALID")
+    raws={}
+    pinned={}
+    for name in names:
+        data=simc_source.bounded_read(source/name,simc_source.SOURCE_FILES[name])
+        row=receipt["source_files"][name]
+        need(row.get("sha256")==simc_source.digest(data)
+             and row.get("git_blob_sha1")==simc_source.git_blob(data),
+             "V216_FULL_SIMC_SMALL_SOURCE_CHANGED:"+name)
+        raws[name]=data
+        pinned[name]=row["git_blob_sha1"]
+    baseline=simc_source.inventory(
+        raws,simc_revision=receipt["simc_revision"],
+        expected_build=build,previous_game_build=receipt["previous_game_build"],
+        season_event=receipt["season_event"],expected_git_blob=pinned)
+    need(baseline==receipt,
+         "V216_FULL_SIMC_SMALL_RECEIPT_INCONSISTENT")
+    revision=receipt["simc_revision"]
+    rel="source/v256_full_pinned_simc"
+    output={name:rel+"/"+name for name in
+            (*names,simc_source.OPTIONAL_ITEM_FILE,simc_source.RECEIPT)}
+    folder=root/rel
+    need(not folder.is_symlink(),"V216_FULL_SIMC_OUTPUT_SYMLINK_BLOCKED")
+    calls=[0]
+    def fetch(req,timeout):
+        calls[0]+=1
+        return (simc_source.urlopen if transport is None else transport)(
+            req,timeout=timeout)
+    code=stage_engine.module_dependency_fingerprint([
+        pathlib.Path(simc_source.__file__),
+        pathlib.Path(simc_source.generated_parser.__file__),
+        pathlib.Path(stage_engine.__file__)])
+    def execute():
+        # v229 walks the immutable Git tree. The previously verified 3 blobs
+        # must still match, otherwise never fetch the large fourth file.
+        tree=simc_source.discover_generated_tree(revision,transport=fetch)
+        need(all(tree[name]["sha"]==pinned[name] and
+                 tree[name]["size"]==len(raws[name]) for name in names),
+             "V216_FULL_SIMC_PINNED_SMALL_TREE_DRIFT")
+        item=simc_source.OPTIONAL_ITEM_FILE
+        expected=tree[item]
+        limit=simc_source.MAX_ITEM_FILE
+        need(type(expected["size"]) is int and
+             0<expected["size"]<=limit,
+             "V216_FULL_SIMC_ITEM_DATA_TREE_SIZE_INVALID")
+        req=Request(simc_source.RAW_BASE+revision+
+                    "/engine/dbc/generated/"+item,
+                    headers={"User-Agent":"SIMC-Secondary-source-cold-start/1.0"})
+        with fetch(req,timeout=90) as response:
+            need(response.status==200,
+                 "V216_FULL_SIMC_ITEM_DATA_HTTP_NON_200")
+            data=response.read(limit+1)
+        need(len(data)==expected["size"] and len(data)<=limit and
+             simc_source.git_blob(data)==expected["sha"],
+             "V216_FULL_SIMC_ITEM_DATA_GIT_BLOB_MISMATCH")
+        merged={**raws,item:data}
+        proof=simc_source.inventory(
+            merged,simc_revision=revision,expected_build=build,
+            previous_game_build=receipt["previous_game_build"],
+            season_event=receipt["season_event"],
+            expected_git_blob={**pinned,item:expected["sha"]})
+        need(proof["item_data_present"] is True and
+             proof["environment_ready"] is False and proof["G"] is None,
+             "V216_FULL_SIMC_SOURCE_NOT_PROVISIONAL")
+        folder.mkdir(parents=True,exist_ok=True)
+        for name,raw in merged.items():
+            (folder/name).write_bytes(raw)
+        (folder/simc_source.RECEIPT).write_text(
+            json.dumps(proof,sort_keys=True,ensure_ascii=False,
+                       indent=2,allow_nan=False)+"\n",encoding="utf8")
+    def validate(paths):
+        try:
+            document=json.loads(paths[simc_source.RECEIPT].read_text("utf8"))
+        except (ValueError,UnicodeError):
+            return False
+        return (document.get("schema")==simc_source.SCHEMA and
+                document.get("simc_revision")==revision and
+                document.get("simc_generated_build")==build and
+                document.get("item_data_present") is True and
+                document.get("provenance_tree_blob_authenticated") is True and
+                document.get("environment_ready") is False and
+                document.get("G") is None and
+                document.get("native_calls")==0 and
+                set(document.get("source_files",{}))==
+                     set((*names,simc_source.OPTIONAL_ITEM_FILE)) and
+                all(document["source_files"][name].get("sha256")==
+                    simc_source.digest(paths[name].read_bytes())
+                    for name in (*names,simc_source.OPTIONAL_ITEM_FILE)))
+    try:
+        stage=stage_engine.execute_stage(
+            root=root,stage_id="fresh-v229-full-item-data-for-one-spec",
+            stage_version="v229-reuse-three-download-one-v1",
+            inputs={"build":build,"revision":revision,
+                    "small_seed_receipt_sha256":digest(
+                        receipt_file.read_bytes()),
+                    "item_data_required_for_one_spec":True,
+                    "code_sha256":code["sha256"]},
+            outputs=output,execute=execute,validate=validate)
+    except (simc_source.SimCSourceBlocked,
+            stage_engine.StageExecutionBlocked,
+            EnvironmentBuildBlocked,ValueError,OSError) as exc:
+        return {**pending,"status":"FRESH_FULL_PINNED_SIMC_SOURCE_PENDING",
+                "reason":str(exc).split(":",1)[0],
+                "network_calls_by_stage":calls[0]}
+    full=json.loads((folder/simc_source.RECEIPT).read_text("utf8"))
+    return {"status":"FRESH_FULL_PINNED_SIMC_ITEM_DATA_SOURCE_ONLY",
+            "source_dir":str(folder.resolve()),
+            "receipt_sha256":full["receipt_sha256"],
+            "source_stage":{k:v for k,v in stage.items() if k!="result"},
+            "network_calls_by_stage":calls[0],"native_calls":0,
+            "environment_ready":False,"G":None}
+
+
 def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
                                   tier_bridge, seed_directory=None,
                                   request=None):
@@ -973,10 +1122,22 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
     first_party=_verified_first_party_tier_options_stage(
         stage_root=stage_root,tier_bridge=tier_bridge,
         simc_seed_directory=effective_seed)
+    full_seed={"status":"FRESH_FULL_SIMC_NOT_REQUESTED",
+               "source_dir":None,"network_calls_by_stage":0,"native_calls":0}
+    if (representative_request is not None and
+            pinned_simc.get("source_dir") and
+            fresh_gear.get("candidate_path") and
+            tier_bridge.get("candidate_path")):
+        full_seed=_lazy_full_pinned_simc_item_stage(
+            stage_root=stage_root,build=expected_game_build,
+            small_seed_dir=pinned_simc["source_dir"],
+            gear_candidate=fresh_gear,tier_bridge=tier_bridge,
+            request=representative_request,transport=simc_transport)
     one_spec=_one_spec_ordinary_simc_stage(
         stage_root=stage_root,build=expected_game_build,
         fresh_gear=fresh_gear,tier_bridge=tier_bridge,
-        seed_directory=effective_seed,request=representative_request)
+        seed_directory=full_seed.get("source_dir") or effective_seed,
+        request=representative_request)
     return {
         "schema":"v216_fresh_source_stage_v1",
         "status":"FRESH_WAGO_DB2_COLLECTED_MORE_SOURCES_PENDING",
@@ -994,13 +1155,15 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "fresh_tier_simc_candidate_bridge":tier_bridge,
         "fresh_tier_first_party_simc_options":first_party,
         "fresh_pinned_first_party_simc_source":pinned_simc,
+        "fresh_lazy_full_pinned_simc_item_source":full_seed,
         "tier_discovery_mode":"DB2_FIRST_NO_PUBLISHER_NAME_LOOKUP",
         "network_calls_by_stage":(len(wago_snapshot.TABLES)
             if stage["executed"] else 0)+discovered["network_calls_by_stage"]+
             fresh_gear["network_calls_by_stage"]+
             fresh_tier["network_calls_by_stage"]+
             tier_bonus["network_calls_by_stage"]+
-            pinned_simc["network_calls_by_stage"],
+            pinned_simc["network_calls_by_stage"]+
+            full_seed["network_calls_by_stage"],
         "native_calls":0,
         "environment_installed":False,
         "environment_ready":False,
