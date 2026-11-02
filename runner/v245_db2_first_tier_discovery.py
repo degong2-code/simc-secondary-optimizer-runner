@@ -234,6 +234,19 @@ def build_stage(*,stage_root,wago_folder,build,expansion_id,
     need(type(wago_receipt_sha256) is str and
          re.fullmatch(r"[0-9a-f]{64}",wago_receipt_sha256) is not None,
          "TIER_DB2_V161_RECEIPT_IDENTITY_REQUIRED")
+    # The v161 collector seals bytes, not DB2 schemas. Detect malformed
+    # physical snapshots before issuing 3 additional Wago HTTP requests.
+    for table,required in (("ItemSparse",{"ID","ItemSet","ExpansionID",
+                                         "AllowableClass","InventoryType"}),
+                           ("Item",{"ID","ClassID","SubclassID",
+                                    "InventoryType"})):
+        p=Path(wago_folder)/(table+".csv")
+        need(p.is_file() and not p.is_symlink(),
+             "TIER_DB2_PHYSICAL_SOURCE_MISSING:"+table)
+        with p.open(encoding="utf-8-sig",newline="") as stream:
+            fields=next(csv.reader(stream),[])
+        need(required<=set(fields),
+             "TIER_DB2_PHYSICAL_SOURCE_SCHEMA_PENDING:"+table)
     outputs={t:"source/db2_tier_"+t+".csv" for t in TABLES}
     outputs["candidates"]="source/v245_db2_tier_candidates.json"
     code=stages.module_dependency_fingerprint(
