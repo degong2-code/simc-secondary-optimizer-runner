@@ -40,6 +40,8 @@ def read(path=DEFAULT):
     if type(document) is dict and document.get("schema")==source_bridge.SCHEMA:
         source_bridge.verify_catalog(document)
         source_classification_rows=document["enchant_classification"]["rows"]
+        fresh_catalog=(document["enchant_classification"].get(
+            "source_manifest_sha256") is not None)
         source_catalog={
           "schema":document["schema"],
           "status":document["status"],
@@ -51,14 +53,16 @@ def read(path=DEFAULT):
         document=dict(document["v196_enchant_source"])
         document["_v211_classification_rows"]=source_classification_rows
         document["_v213_source_catalog"]=source_catalog
+        document["_v213_fresh_unapproved"]=fresh_catalog
     from_v213="_v213_source_catalog" in document
+    fresh=from_v213 and document.get("_v213_fresh_unapproved") is True
     expected_artifact_id=(None if from_v213 else 12961140046)
     need(type(document) is dict and
          document.get("schema")==SOURCE_SCHEMA and
          document.get("status")=="SOURCE_OBSERVED_NOT_NATIVE_BUDGET_VERIFIED" and
-         document.get("season_game_build")=="12.1.5.70575" and
-         document.get("simc_commit")==
-             "710c2408bfd3ae4df71b8cd55cdf01f63fd6c926" and
+         (fresh or document.get("season_game_build")=="12.1.5.70575") and
+         (fresh or document.get("simc_commit")==
+             "710c2408bfd3ae4df71b8cd55cdf01f63fd6c926") and
          document.get("user_selectable") is False and
          document.get("source_artifact_id")==expected_artifact_id,
          "SOURCE_FIRST_ENCHANT_PROVENANCE_INVALID")
@@ -81,7 +85,8 @@ def read(path=DEFAULT):
              "EVIDENCE_ONLY_NO_NEW_USER_OPTIONS",
              "PINNED_SEASON_SOURCE_COUNTS_MISMATCH")
     rows=document.get("rows")
-    need(type(rows) is list and len(rows)==38,
+    need(type(rows) is list and
+         (1<=len(rows)<=1000 if fresh else len(rows)==38),
          "CURRENT_SEASON_ENCHANT_COUNT_INVALID")
     names=set();ids=set();group_counts=Counter();clean=[]
     for r in rows:
@@ -93,7 +98,9 @@ def read(path=DEFAULT):
         need(type(name) is str and name.startswith("enchant_")
              and name not in names and
              type(item_id) is int and item_id>0 and item_id not in ids and
-             r["approved"] is False and r["quality_rank"]==2,
+             r["approved"] is False and
+             (type(r["quality_rank"]) is int and r["quality_rank"]>=0
+              if fresh else r["quality_rank"]==2),
              "SOURCE_FIRST_ENCHANT_ROW_INVALID")
         names.add(name);ids.add(item_id)
         mask=r["inventory_type_mask"]
@@ -120,7 +127,7 @@ def read(path=DEFAULT):
                       "source_slots":slots,"kind":category,
                       "ui_selectable":False,
                       "blocked_reason":"EFFECT_STATIC_RATING_AND_NATIVE_INPUT_UNVERIFIED"})
-    need(dict(group_counts)=={"boots":3,"chest":4,"helm":6,"ring":9,
+    need(fresh or dict(group_counts)=={"boots":3,"chest":4,"helm":6,"ring":9,
                               "shoulders":6,"weapon":10},
          "CURRENT_SEASON_ENCHANT_CATEGORY_COUNTS_INVALID")
     return document,clean,dict(sorted(group_counts.items()))
@@ -129,6 +136,55 @@ def public_options(path=DEFAULT):
     source,enchants,counts=read(path)
     source_classification_rows=source.pop("_v211_classification_rows",None)
     source_catalog=source.pop("_v213_source_catalog",None)
+    # The unchanged product UI bridge can inspect new-build source data,
+    # but no legacy v108/v188/7967/8025/E/J/F approvals are transferable.
+    if source.pop("_v213_fresh_unapproved",False):
+        classification=source_classification_rows
+        need(type(classification) is list and len(classification)==len(enchants),
+             "FRESH_SEASON_CLASSIFICATION_COVERAGE_MISMATCH")
+        by_id={r["enchant_id"]:r for r in classification}
+        need(len(by_id)==len(enchants),
+             "FRESH_SEASON_DUPLICATE_CLASSIFICATION_ID")
+        for item in enchants:
+            classified=by_id.get(item["enchant_id"])
+            need(classified is not None and
+                 classified["token"]==item["token"] and
+                 classified["selection_status"]==
+                     "LOCKED_PENDING_CURRENT_SEASON_ITEM_EFFECT_PROOF" and
+                 classified["native_E_evidence"]["static_E"] is None,
+                 "FRESH_SEASON_UNAUTHORIZED_ENCHANT_APPROVAL_OR_NATIVE_E")
+            item["blocked_reason"]="NEW_SEASON_ITEM_EFFECT_QUALITY_AND_CHMV_PROOF_PENDING"
+        return {
+            "schema":SCHEMA,
+            "status":"FRESH_SEASON_CANDIDATES_UNAPPROVED_NOT_ENVIRONMENT_READY",
+            "season_build":source["season_game_build"],
+            "simc_revision":source["simc_commit"],
+            "source_artifact_id":source["source_artifact_id"],
+            "related_source_counts":dict(source["related_source_counts"]),
+            "related_source_status":source["related_source_status"],
+            "source_catalog":source_catalog,
+            "automatic_admission":{"status":"PENDING_EXACT_ITEM_AND_BUDGET_PROOFS",
+                                   "approved_count":0},
+            "existing_allowed_input_choices":{},
+            "proven_armor_embellishments":{},
+            "enchant_candidates":{"total":len(enchants),"groups":counts,
+                                  "items":enchants,"selectable_count":0,
+                                  "source_classified_count":len(classification),
+                                  "effect_classification_status":
+                                      "NEW_BUILD_SOURCE_ONLY_NOT_NATIVE_E_OR_USER_ADMITTED"},
+            "budget_effect_contract":{
+                "fixed_enchant_E_part_of":"GEAR_G_ALREADY_INSIDE_FINAL_T",
+                "no_extra_T_or_O_increment":True,
+                "status":"NEW_SEASON_E_NOT_VERIFIED"},
+            "future_categories":{
+                "flask":"NEW_SEASON_F_SOURCE_EVIDENCE_PENDING",
+                "ordinary_gems":"NEW_SEASON_J_SOURCE_EVIDENCE_PENDING",
+                "weapon_oil":"NEW_SEASON_O_SOURCE_EVIDENCE_PENDING"},
+            "environment_ready":False,"G":None,"J":None,"F":None,
+            "O":None,"B":None,"T":None,
+            "native_calls_now":0,"game_db_recollection_now":0,
+            "new_approval_granted":False,
+            "optimizer_or_cache_mutated":False}
     enchants=effect_groups.decorate(
         enchants,source_classification_rows=source_classification_rows)
     # A single source-classified nonCHMV choice has a separate two-Native
