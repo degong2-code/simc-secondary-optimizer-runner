@@ -1509,6 +1509,8 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
                 and row.get("same_season_membership_not_proven") is True
                 and row.get("tier_active_season_membership_not_authenticated") is True
                 and row.get("selected_G_source_candidate_not_approved") is True
+                and row.get("generic_G_physical_conditions_verified") is True
+                and row.get("generic_G_current_season_membership_required") is False
                 and type(row.get("selected_non_tier_season_condition_pending_slots"))
                     is list
                 and row.get("native_physical_and_static_G_still_required") is True and
@@ -1566,6 +1568,9 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
                 observed["selected_non_tier_explicit_db2_match_count"],
             "tier_active_season_membership_not_authenticated":True,
             "G_source_approved":False,
+            "generic_G_physical_conditions_verified":
+                observed["generic_G_physical_conditions_verified"],
+            "generic_G_current_season_membership_required":False,
             "mplus_world_state_pending":(
                 observed.get("season_gear_db_mplus_worldstate_pending")
                 if "mplus_season_candidate_inclusion" in gear else None),
@@ -1720,6 +1725,9 @@ def _one_spec_source_G_probe_stage(*, stage_root, build, one_spec,
             "source_stage":{k:v for k,v in stage.items() if k!="result"},
             "level_mode":proof["level_mode"],
             "native_calls":0,"network_calls_by_stage":0,
+            "generic_G_physical_conditions_verified":
+                proof["generic_G_physical_conditions_verified"],
+            "generic_G_current_season_membership_required":False,
             "G":None,"environment_ready":False,
             "season_membership_verified":False}
 
