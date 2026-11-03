@@ -185,6 +185,72 @@ class StandardBudgetNormalBuildTests(unittest.TestCase):
                     "EXISTING_G_NATIVE_RECEIPT_INVALID"):
                 self.preflight(table,native_paths=paths)
 
+    def test_normal_build_fills_missing_G_from_native_while_season_is_unknown(self):
+        catalog, table, _ = prepared()
+        with tempfile.TemporaryDirectory() as temp:
+            root=pathlib.Path(temp)
+            paths={}
+            for level,source in table.items():
+                component=source["components"]["G"]
+                native={
+                    "schema":"v234_one_source_only_physical_native_G_observation_v1",
+                    "source_simc_revision":catalog["simc_revision"],
+                    "game_build_from_source_not_independently_binary_attested":
+                        catalog["game_build"],
+                    "target_ilevel":level,
+                    "observed_G_total":
+                        component["standardization"]["observed_G_total"],
+                    "native_json2_sha256":component["source_sha256"],
+                    "standardized_G_preview_unapproved":
+                        component["standardization"],
+                    "source_profile_receipt_sha256":"f"*64,
+                    "generic_G_numeric_reference_usable":True,
+                    "generic_G_current_season_membership_required":False,
+                    "source_current_season_membership_verified":False,
+                    "full_G_approved":False,"environment_ready":False,
+                    "class":"paladin","spec":"retribution",
+                }
+                native["receipt_sha256"]=build.digest(
+                    build.canonical(native).encode("utf8"))
+                outer={
+                    "status":"PASS_NATIVE_PHYSICAL_G_OBSERVED_NOT_SEASON_APPROVED",
+                    "native_returncode":0,"new_native_calls":1,
+                    "environment_ready":False,
+                    "identity":{"source_game_build":catalog["game_build"]},
+                    "native_json2_sha256":native["native_json2_sha256"],
+                    "observed_G":native,
+                }
+                p=root/f"g_{level}.json"
+                p.write_text(__import__("json").dumps(outer),encoding="utf8")
+                paths[level]=p
+            incomplete={
+                level:{**proof,"components":{
+                    key:value for key,value in proof["components"].items()
+                    if key!="G"}}
+                for level,proof in table.items()}
+            result=self.preflight(incomplete,native_paths=paths,manual=3300)
+            self.assertEqual(result["G_levels_filled_from_existing_v234_native"],
+                             [334,335])
+            self.assertEqual([r["G_standard"] for r in result[
+                "standardized_ilevel_budget_rows_unadmitted"]["rows"]],
+                [2850,2850])
+            self.assertEqual(result["proposed_budget_arithmetic_unadmitted"]
+                             ["final_T"],3300)
+            self.assertFalse(result["environment_ready"])
+            self.assertIsNone(result["G"])
+            # Dropping physical/primary/plain evidence cannot convert G into
+            # a usable numeric reference even if the native G total exists.
+            import json
+            outer=json.loads(paths[334].read_text("utf8"))
+            outer["observed_G"]["generic_G_numeric_reference_usable"]=False
+            native=outer["observed_G"]
+            native["receipt_sha256"]=build.digest(build.canonical({
+                k:v for k,v in native.items() if k!="receipt_sha256"}).encode("utf8"))
+            paths[334].write_text(json.dumps(outer),encoding="utf8")
+            with self.assertRaisesRegex(build.EnvironmentBuildBlocked,
+                                        "G_NATIVE_GENERIC_PHYSICAL_CONDITIONS_MISSING"):
+                self.preflight(incomplete,native_paths=paths)
+
     def test_v234_receipt_and_budget_G_disagreement_is_not_silently_accepted(self):
         catalog, table, _ = prepared()
         proof=table[334]["components"]["G"]
