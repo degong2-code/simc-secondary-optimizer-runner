@@ -244,6 +244,16 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
              row["allowed_class_mask"]==class_mask and
              tier_join.INV_SLOT.get(row["inventory_type"])==slot,
              "V232_TIER_PHYSICAL_SOURCE_ROW_CHANGED")
+    primary_allowed=chooser.PRIMARY_STAT_CODES[contract["primary"]]
+    all_primary=frozenset().union(*chooser.PRIMARY_STAT_CODES.values())
+    def matching_primary(iid,slot):
+        # WoW neck/rings may carry no primary rating. When a primary code
+        # exists, it must still be usable by this specialization.
+        codes=set(items[iid]["stat_modifier_codes"])
+        if slot in chooser.COMMON:
+            return not (codes & all_primary) or bool(codes & primary_allowed)
+        return bool(codes & primary_allowed)
+
     options=[]
     for r in items.values():
         if r["item_id"] in tier_ids:continue
@@ -293,6 +303,8 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
         matches=chooser.available_plain(scratch,slot=slot,
             family=contract["family"],class_mask=class_mask,used=used)
         need(bool(matches),"V232_ORDINARY_SLOT_WITHOUT_SIMC_CANDIDATE:"+slot)
+        matches=[iid for iid in matches if matching_primary(iid,slot)]
+        need(bool(matches),"V232_ORDINARY_PRIMARY_STAT_NOT_COMPATIBLE:"+slot)
         matches.sort(key=lambda iid:(source_rank(iid),iid))
         ordinary[slot]=matches[0];used.add(matches[0])
     common={}
@@ -300,6 +312,8 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
         matches=chooser.available_plain(scratch,slot=slot,
                 class_mask=class_mask,used=used)
         need(bool(matches),"V232_COMMON_SLOT_WITHOUT_SIMC_CANDIDATE:"+slot)
+        matches=[iid for iid in matches if matching_primary(iid,slot)]
+        need(bool(matches),"V232_COMMON_PRIMARY_STAT_NOT_COMPATIBLE:"+slot)
         matches.sort(key=lambda iid:(source_rank(iid),iid))
         common[slot]=matches[0];used.add(matches[0])
     try:
@@ -334,6 +348,24 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
          len(set(selected.values()))==len(selected) and
          set(selected)<=set(chooser.contracts.SLOT_ORDER),
          "V232_DUPLICATE_OR_MISSING_G_ITEM")
+    # v165/v166's original ItemXItemEffect classification (via v167
+    # 'plain_representative_candidate') and v169's existing weapon shape
+    # establish generic G *physical* suitability. Neither condition depends
+    # on the item's active-season acquisition/WorldStateExpression status.
+    # SimC-only fallback lacks the DB2 effect record and remains a probe.
+    selected_plain_catalog_effect_free=(
+        season_ids is not None and all(
+            provider_by_id.get(iid,{}).get("category")==
+                "plain_representative_candidate"
+            and provider_by_id[iid].get("item_set_id")==0
+            for slot,iid in selected.items() if iid not in tier_ids))
+    selected_primary_compatible=all(
+        matching_primary(iid,slot) for slot,iid in selected.items())
+    need(selected_primary_compatible,
+         "V232_SELECTED_G_PRIMARY_STAT_OR_WEAPON_INCOMPATIBLE")
+    generic_G_physical_conditions_verified=bool(
+        selected_plain_catalog_effect_free and selected_primary_compatible
+        and len(selected) in (13,14))
     non_tier_sources={slot:evidence_by_id[iid]
         for slot,iid in sorted(selected.items()) if iid not in tier_ids}
     unresolved_slots=sorted(
@@ -387,6 +419,13 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
             slot:items[iid]["ilevel_unscaled"] for slot,iid
             in sorted(selected.items())},
         "native_physical_and_static_G_still_required":True,
+        "generic_G_physical_conditions_verified":
+            generic_G_physical_conditions_verified,
+        "generic_G_current_season_membership_required":False,
+        "generic_G_plain_item_effect_relation_checked":
+            selected_plain_catalog_effect_free,
+        # Tier 2/4pc effects and arbitrary non-DB2 SimC effects are NOT
+        # independently certified here; SimC remains their owner.
         "item_effects_absence_not_proven":True,
         "same_season_membership_not_proven":True,
         "G":None,"J":None,"F":None,"O":None,"B":None,"T":None,
