@@ -319,7 +319,10 @@ def _reuse_observed_G_native_receipts(*, catalog, receipt_paths_by_ilevel):
             observed=receipt["observed_G"]
             original={k:v for k,v in observed.items() if k!="receipt_sha256"}
             expected_sha=digest(canonical(original).encode("utf8"))
-            need(receipt.get("status")==
+            need(type(receipt.get("identity")) is dict and
+                 observed.get("schema")==
+                     "v234_one_source_only_physical_native_G_observation_v1"
+                 and receipt.get("status")==
                      "PASS_NATIVE_PHYSICAL_G_OBSERVED_NOT_SEASON_APPROVED"
                  and receipt.get("native_returncode")==0
                  and receipt.get("new_native_calls")==1
@@ -355,6 +358,9 @@ def _reuse_observed_G_native_receipts(*, catalog, receipt_paths_by_ilevel):
             "native_json2_sha256":observed["native_json2_sha256"],
             "source_profile_receipt_sha256":
                 observed["source_profile_receipt_sha256"],
+            "source_candidate_receipt_sha256":
+                observed.get("source_candidate_receipt_sha256"),
+            "class":observed.get("class"),"spec":observed.get("spec"),
             "standardization":rounded,
             "source_selection_status":"OBSERVED_PHYSICAL_NOT_SEASON_ADMITTED",
         }
