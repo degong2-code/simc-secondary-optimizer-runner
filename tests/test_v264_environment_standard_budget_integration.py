@@ -54,7 +54,8 @@ def prepared():
 
 class StandardBudgetNormalBuildTests(unittest.TestCase):
     def preflight(self, table, *, level=334, manual=None,
-                  track="ordinary_two_hand", exact=None):
+                  track="ordinary_two_hand", exact=None,
+                  native_paths=None):
         catalog, _, ui = prepared()
         with tempfile.TemporaryDirectory() as d:
             path = pathlib.Path(d)/"v213.json"
@@ -71,7 +72,8 @@ class StandardBudgetNormalBuildTests(unittest.TestCase):
                     standard_budget_evidence_by_ilevel=table,
                     standard_budget_reference_track=track,
                     target_ilevel=level,manual_final_T=manual,
-                    budget_evidence=exact)
+                    budget_evidence=exact,
+                    g_native_receipt_paths_by_ilevel=native_paths)
 
     def test_preflight_reuses_all_measured_rows_and_manual_final_T(self):
         _, table, _ = prepared()
@@ -110,6 +112,107 @@ class StandardBudgetNormalBuildTests(unittest.TestCase):
                                     "LEVELS_AND_TRACK_MUST_BE_PAIRED"):
             self.preflight(None)
 
+    def test_reuses_real_v234_receipt_schema_once_without_native_or_JFO_guess(self):
+        catalog, table, _ = prepared()
+        def receipt_for(level):
+            component=table[level]["components"]["G"]
+            observed={
+                "schema":"v234_one_source_only_physical_native_G_observation_v1",
+                "source_simc_revision":catalog["simc_revision"],
+                "game_build_from_source_not_independently_binary_attested":
+                    catalog["game_build"],
+                "target_ilevel":level,
+                "observed_G_total":
+                    component["standardization"]["observed_G_total"],
+                "native_json2_sha256":component["source_sha256"],
+                "standardized_G_preview_unapproved":
+                    component["standardization"],
+                "source_profile_receipt_sha256":"f"*64,
+                "full_G_approved":False,
+                "environment_ready":False,
+            }
+            observed["receipt_sha256"]=build.digest(
+                build.canonical(observed).encode("utf8"))
+            return {
+                "status":"PASS_NATIVE_PHYSICAL_G_OBSERVED_NOT_SEASON_APPROVED",
+                "native_returncode":0,"new_native_calls":1,
+                "environment_ready":False,
+                "identity":{"source_game_build":catalog["game_build"]},
+                "native_json2_sha256":observed["native_json2_sha256"],
+                "observed_G":observed,
+            }
+        with tempfile.TemporaryDirectory() as temp:
+            base=pathlib.Path(temp)
+            paths={}
+            for level in table:
+                path=base/f"native_{level}.json"
+                path.write_text(__import__("json").dumps(receipt_for(level)),
+                                encoding="utf8")
+                paths[level]=path
+            result=self.preflight(table,native_paths=paths)
+            rows=result["measured_ilevel_G_from_existing_native_unadmitted"]
+            self.assertEqual([x["target_ilevel"] for x in rows],[334,335])
+            self.assertEqual([x["standardization"]["standardized_G"]
+                              for x in rows],[2850,2850])
+            self.assertEqual([x["native_json2_sha256"] for x in rows],
+                             [table[k]["components"]["G"]["source_sha256"]
+                              for k in sorted(table)])
+            self.assertFalse(result["environment_ready"])
+            self.assertIsNone(result["G"])
+            self.assertEqual(result["native_calls"],0)
+            # If highest-quality J/F/O is not established, only G is shown.
+            just_g=self.preflight(None,level=None,track=None,
+                                  native_paths=paths)
+            self.assertNotIn("standardized_ilevel_budget_rows_unadmitted",
+                             just_g)
+            self.assertEqual(len(just_g[
+                "measured_ilevel_G_from_existing_native_unadmitted"]),2)
+            self.assertIsNone(just_g["B"])
+            broken=receipt_for(334)
+            broken["observed_G"]["observed_G_total"]=1
+            paths[334].write_text(__import__("json").dumps(broken),
+                                  encoding="utf8")
+            with self.assertRaisesRegex(
+                    build.EnvironmentBuildBlocked,
+                    "EXISTING_G_NATIVE_RECEIPT_INVALID"):
+                self.preflight(table,native_paths=paths)
+
+    def test_v234_receipt_and_budget_G_disagreement_is_not_silently_accepted(self):
+        catalog, table, _ = prepared()
+        proof=table[334]["components"]["G"]
+        native={
+            "source_simc_revision":catalog["simc_revision"],
+            "game_build_from_source_not_independently_binary_attested":
+                catalog["game_build"],
+            "target_ilevel":334,
+            "observed_G_total":2847,
+            "native_json2_sha256":"4"*64,
+            "standardized_G_preview_unapproved":
+                budget.standardize_representative_G(
+                    observed_G_total=2847,target_ilevel=334,
+                    source_observation_sha256="4"*64),
+            "source_profile_receipt_sha256":"f"*64,
+            "full_G_approved":False,"environment_ready":False,
+        }
+        native["receipt_sha256"]=build.digest(
+            build.canonical(native).encode("utf8"))
+        outer={
+            "status":"PASS_NATIVE_PHYSICAL_G_OBSERVED_NOT_SEASON_APPROVED",
+            "native_returncode":0,"new_native_calls":1,
+            "environment_ready":False,
+            "identity":{"source_game_build":catalog["game_build"]},
+            "native_json2_sha256":"4"*64,
+            "observed_G":native,
+        }
+        with tempfile.TemporaryDirectory() as temp:
+            path=pathlib.Path(temp)/"native.json"
+            path.write_text(__import__("json").dumps(outer),encoding="utf8")
+            with self.assertRaisesRegex(build.EnvironmentBuildBlocked,
+                                        "G_NATIVE_V222_OBSERVATION_DRIFT"):
+                self.preflight({334:table[334]},native_paths={334:path})
+            self.assertNotEqual(proof["source_sha256"],
+                                native["native_json2_sha256"])
+
     def test_existing_normal_build_entry_passes_rows_and_user_manual_T(self):
         catalog, table, _ = prepared()
         with tempfile.TemporaryDirectory() as d:
@@ -133,7 +236,8 @@ class StandardBudgetNormalBuildTests(unittest.TestCase):
                         source_catalog_path=source,bootstrap_result={},
                         expected_new_season_build=catalog["game_build"],
                         fresh_standard_budget_evidence_by_ilevel=table,
-                        fresh_standard_budget_reference_track="ordinary_two_hand")
+                        fresh_standard_budget_reference_track="ordinary_two_hand",
+                        fresh_g_native_receipt_paths_by_ilevel={334:source})
             self.assertEqual(pf.call_count,1)
             kwargs=pf.call_args.kwargs
             self.assertIs(kwargs["standard_budget_evidence_by_ilevel"],table)
@@ -141,6 +245,8 @@ class StandardBudgetNormalBuildTests(unittest.TestCase):
                              "ordinary_two_hand")
             self.assertEqual(kwargs["target_ilevel"],334)
             self.assertEqual(kwargs["manual_final_T"],3300)
+            self.assertEqual(kwargs["g_native_receipt_paths_by_ilevel"],
+                             {334:source})
             self.assertFalse((root/"sessions").exists())
 
 
