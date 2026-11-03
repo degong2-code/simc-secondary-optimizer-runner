@@ -28,6 +28,7 @@ import v274_zero_history_source_compiler_wiring as source_wiring
 import v275_pinned_simc_compiler_inputs as pinned_compiler_source
 import v276_sealed_tier_compiler_source as compiler_tier_source
 import v277_zero_history_native_G_stage as zero_history_G_native
+import v278_sealed_simc_consumable_native_pair as native_effect_pair
 import v223_installed_season_budget_source as season_source_proof
 import v213_source_to_catalog as source_to_catalog
 import v161_wago_db2_snapshot as wago_snapshot
@@ -2373,8 +2374,19 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                  "fetch","credentials","discovery_transport",
                  "tier_transport","bonus_transport","gear_transport",
                  "simc_transport","simc_compiler_transport",
-                 "gem_enchant_transport"},
+                 "gem_enchant_transport","effect_probe_requests"},
              "V216_ZERO_HISTORY_SOURCE_INPUT_FIELDS")
+        effect_probe_requests=fresh_collection_inputs.get("effect_probe_requests")
+        need(effect_probe_requests is None or
+             (type(effect_probe_requests) is list
+              and len(effect_probe_requests)<=4
+              and all(type(r) is dict and
+                  set(r)=={"source_profile_path","kind","token"}
+                  and type(r["source_profile_path"]) is str
+                  and type(r["token"]) is str
+                  and r["kind"] in ("flask","food","temporary_enchant")
+                  for r in effect_probe_requests)),
+             "V216_ZERO_HISTORY_NATIVE_EFFECT_REQUEST_FIELDS")
         need(source_catalog_path is None and
              fresh_source_stage_inputs is None and
              fresh_gjfo_evidence is None and
@@ -2382,8 +2394,11 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
              session_folder is None and
              bootstrap_result is None,
              "V216_ZERO_HISTORY_MUST_NOT_USE_INSTALLED_SESSION_OR_BUDGET")
+        source_inputs={
+            k:v for k,v in fresh_collection_inputs.items()
+            if k!="effect_probe_requests"}
         collected=collect_wago_new_season_source(
-            sessions_root=sessions_root,**fresh_collection_inputs)
+            sessions_root=sessions_root,**source_inputs)
         progress=_zero_history_source_progress(collected)
         # Reuse the original v236/v234 source-profile Native parser. Only a
         # configured local binary and existing v233 source profile may trigger
@@ -2432,6 +2447,43 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             raise EnvironmentBuildBlocked(
                 "V216_ZERO_HISTORY_SOURCE_COMPILER_INVALID:"
                 +str(exc).split(":",1)[0]) from exc
+        # Source-selected consumables are tested through the original
+        # v269 JSON2 before/after comparer, with an immutable shared baseline.
+        # No blanket item-quality or weapon-eligibility certification: the
+        # product must first have a complete same-build source compilation
+        # and an internal local profile with precombat snapshot_stats.
+        effect_observations=[]
+        if effect_probe_requests:
+            if source_compilation["status"]!=(
+                    "FRESH_V191_V211_V213_COMPILED_UNADMITTED"):
+                progress["requires"].append(
+                    "F_O_SIMC_EFFECT_PROBES_WAIT_FOR_SAME_BUILD_CATALOG")
+            else:
+                for request in effect_probe_requests:
+                    try:
+                        observation=native_effect_pair.measure(
+                            stage_root=source_compilation["stage_root"],
+                            source_profile_path=request["source_profile_path"],
+                            binary=binary,
+                            simc_revision=source_compilation["simc_revision"],
+                            kind=request["kind"],token=request["token"])
+                    except (native_effect_pair.NativePairBlocked,
+                            OSError,ValueError,KeyError,TypeError) as exc:
+                        raise EnvironmentBuildBlocked(
+                            "V216_ZERO_HISTORY_NATIVE_EFFECT_INVALID:"
+                            +str(exc).split(":",1)[0]) from exc
+                    effect_observations.append(observation)
+            if effect_observations:
+                progress["new_native_calls"]+=sum(
+                    x["new_native_calls"] for x in effect_observations)
+                progress["F_O_effect_numeric_candidates_unadmitted"]={
+                    "F":[x.get("F_candidate_unadmitted")
+                         for x in effect_observations if x["kind"]=="flask"],
+                    "O":[x.get("O_candidate_unadmitted")
+                         for x in effect_observations
+                         if x["kind"]=="temporary_enchant"]}
+                progress["requires"].append(
+                    "F_O_HIGHEST_QUALITY_AND_WEAPON_APPLICABILITY_PENDING")
         progress["source_compilation_status"]=source_compilation["status"]
         progress["source_compilation_missing"]=source_compilation["missing"]
         if source_compilation["missing"]:
@@ -2440,7 +2492,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 for name in source_compilation["missing"])
         return {**collected,"source_compilation":source_compilation,
                 "native_G_numeric_source":native_G,
-                "native_calls":native_G["new_native_calls"],
+                "native_effect_numeric_sources_unadmitted":effect_observations,
+                "native_calls":progress["new_native_calls"],
                 "zero_history_build":progress,
                 "normal_build_entry":True}
     # Existing v217 stages assemble the same v211/v213 source candidate
