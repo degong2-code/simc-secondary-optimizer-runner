@@ -1,3 +1,6 @@
+> **2026-11-03 P3-BR — 기존 티어 시즌 판별 증거를 정상 Build의 대표 티어 선정에 재사용:** [작업 기록](development/notes/2026-11-03_p3-br-tier-evidence-reuse.md) · [INDEX](development/INDEX.md). P3-AQ/AR/AT의 동일빌드 기초 ilvl197/219·활성 레이드 보너스 그룹·SimC 정확 13직업×5부위 **기존 영수증**만 사용. 봉인된 v251 단계의 **실제 원본 코드 blob d5ef4509271351b9c142f867bc50fad7fb5e617e을 원상 보존**하고, 새 `v261` 경량 source-only 재사용 어댑터를 `v216` 정상 "collect_wago_new_season_source"에 연결. 요청 전문화 4pc ItemID/SimC 세트 옵션·기존 v217 소스 영수증 표시, 티어 재식별/추가 독립 인증 기본 요구 제거; 단 "source evidence reused"≠전 시즌 파밍 인증 또는 G/B/T/READY. **새 테스트 코드 작성, 신규 CI 실제 PASS/FAIL 영수증 미확인**, 신규 외부 게임 HTTP0/Native0, 메모리/시간 개선 미측정. 일부 일반 장비 출처·G/J/F/O 및 B/T/정책 A/정상 DPS E2E 여전히 미완료. 기존 P3-BQ 선조회·노트+INDEX 규약 유지; main/v003/v016/Project UI/Work OS 변경 없음. 기능 코드 최신 관련 SHA `ece8a72f369669efb65bb0f89c52c318e64a2422`.
+>
+
 > **2026-11-03 P3-BQ 최신 인계/선조회 영구 규약:** [새 인계 정본](CHAT_CONTINUITY_HANDOFF_20261103_P3_BQ_EVIDENCE_FIRST_LEDGER.md) → [작업 전 선조회·노트 규약](development/PROTOCOL.md) → [기능별 기존 증거/연결 상태 INDEX](development/INDEX.md) → [첫 교정 기록](development/notes/2026-11-03_p3-bq-continuity-correction.md). P3-AQ/AR/AT 티어 기초 ilvl197/219×65·현재 레이드101/118·SimC 정확13×5 기존 증거 재사용; 시즌 티어 소스 확인과 제품 최종 선정/READY 미연결을 분리. 새 인증기/원본 전수 재수집 전에 기존 작업 검색 필수. 논리적 개발 묶음당 노트 1개+INDEX 갱신. 이번 검사기 코드·테스트는 반영, 새 CI PASS 영수증 미확인. main/Project UI/Work OS 미승격.
 >
 
