@@ -183,6 +183,18 @@ class SourceOnlyRepresentativeTests(unittest.TestCase):
             compiler.build(
                 source_directory=self.folder,tier_candidate=self.tier,
                 representative_candidate=preferred,race="human",level=90)
+        # Source classification already excludes ItemXItemEffect-linked
+        # special equipment from the ordinary G pool, regardless of season.
+        effects=json.loads(json.dumps(season))
+        chest=next(x for x in effects["items"] if x["item_id"]==9020)
+        chest["category"]="special_effect_gear_candidate"
+        effects["role_counts"]={"plain_representative_candidate":len(rows)-1,
+                                "special_effect_gear_candidate":1}
+        with self.assertRaisesRegex(builder.SourceRepresentativeBlocked,
+                                    "V232_ORDINARY_SLOT_WITHOUT_SIMC_CANDIDATE:chest"):
+            builder.find_candidate(
+                seed_directory=self.folder,tier_candidate=self.tier,
+                target_ilevel=335,season_gear_db=effects)
         wrong=dict(season,season_build="12.0.0.11111")
         with self.assertRaisesRegex(
                 builder.SourceRepresentativeBlocked,
