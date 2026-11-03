@@ -1,0 +1,10 @@
+# 2026-11-03 · P3-CB · 과거 자료 없는 정상 Environment Build 진입/재개 연결
+
+- **Capability:** `SOURCE.SEAL`, `BUDGET.GJFO`, `PRODUCT.E2E`, `DEV.CONTINUITY`
+- **Keywords:** zero-history, zero-base, 제로베이스, engine, fresh season, v216, v161, v217, Wago, cache, resume, environment/build
+- **Prior evidence:** [PROTOCOL](../PROTOCOL.md) → [INDEX](../INDEX.md) 선조회. 기존 `v216.collect_wago_new_season_source`는 실제 빈 디렉터리에서 Wago DB2 10개 수집·v217 SHA 봉인·같은 시즌 재사용([기존 테스트](../../../tests/test_v216_environment_build_coordinator.py)) 가능. `v241`은 기존 v191→v211→v213 컴파일을 정상 v216 Build에 붙이지만 실제 수집 입력이 완결되기 전엔 동작 불가. [P3-CA J/B/T](2026-11-03_p3-ca-physical-gems-j-normal-build.md) 계산기 재사용.
+- **Decision:** `CONNECT` — 새로운 제로베이스 전용 최적화/환경 엔진을 만들지 않음. **일반 `v216.build_environment` 동일 진입점**에 기존 정상 수집기 호출을 연결하고 `v113 /api/v1/environment/build`도 해당 진입점을 사용. 실제 추가 source 항목은 `EXTEND` 필요하나 역사 J138/F165/79×2를 채우지 않음.
+- **Changes:** `fresh_collection_inputs`는 설치 세션·기존 카탈로그·과거 GJFO/seed와 배타적인 정상 Build 입력 모드. 동일 `v216.collect_wago_new_season_source`와 `v217.execute_stage`를 한 번 요청에 연결; 빈 저장소에서도 수집하고 기존 봉인 SHA로 다음 요청에서 재사용. `_zero_history_source_progress`는 실제 단계별 부족 자료와 상태를 구조화하지만 필수 G/J/F/O/B/T·정책 A·SimC E2E가 미충족이면 `READY=false`, 세션 생성 없음. `v113` 경로 변경과 신규 true-empty fixture/회귀를 기존 focused CI에 추가.
+- **Verification:** 최초 작업 작성 시 신규 Actions `NOT_VERIFIED`. 이전 P3-CA 71 PASS와 P3-BZ/P3-BX Native 4/4 등은 `REUSED_HISTORY`, 유효 조건 외 승격 금지. 신규 live 게임 HTTP=0, Native=0; 입력된 가짜 Wago transport로 빈 폴더 → 첫 수집 10개 → 같은 build 두 번째 네트워크 0회 재사용을 회귀 확인하도록 추가.
+- **Remaining:** **전체 자동 Environment Build 완료 아님**: 제로베이스 원본 수집 후 실제 v167 대표 gear/v168 tier/v189-v190 consumables/SimC generated 동시 완성→v191/v211/v213→실제 신규 시즌 수치 G/J/F/O→v222 B/T→v212 정책 A 설치·기존 v098/adaptive E2E가 아직 미연결. Source PENDING과 증거 부재를 구별. 새로운 엔진을 만들지 않고 이 정상 체인의 자동 손실 구간만 보완.
+- **Efficiency:** 외부 과거 시즌 파일 없이 Wago 10 테이블·공개 SimC 원본의 현재 v217 stage SHA/캐시를 사용. 같은 입력에서는 네트워크 0, Native 0, 사용자 세션 0; 이미 존재하는 stage receipt 재조회는 단일 정상 단계 기준. 추가 메모리 = 작은 상태 사전; 새 대형 장비 DB·새 인증기·중복 소스 fetch 없음, 전체 구축시간은 미측정.
