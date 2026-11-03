@@ -551,7 +551,7 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         self.assertEqual(first["food_item_count"],1)
         self.assertEqual(first["potion_item_count"],1)
         self.assertEqual(first["flask_physical_item_count"],1)
-        self.assertEqual(first["item_enhancement_candidate_count"],1)
+        self.assertEqual(first["item_enhancement_candidate_count"],2)
         self.assertEqual(first["network_calls_by_stage"],1)
         self.assertEqual(second["network_calls_by_stage"],0)
         self.assertEqual(len(calls),1)
@@ -566,7 +566,7 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         candidate=json.loads(pathlib.Path(
             first["candidate_path"]).read_text(encoding="utf8"))
         self.assertEqual({row["item_id"] for row in candidate["items"]},
-                         {101,102,105,106})
+                         {101,102,105,106,109})
         self.assertEqual(first["source_stage"]["stage_id"],
                          "fresh-v189-v190-consumable-physical-other")
         self.assertFalse(candidate["automatic_ui_promotion"])

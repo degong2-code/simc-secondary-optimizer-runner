@@ -121,7 +121,8 @@ def build(discovered,snapshot_folder,*,expected_build,expansion_id,
                 if item["kind"]=="item_enhancement" else "NOT_APPLICABLE"),
             "source_only_subclass_not_effect_proof":True,
             "broad_other_consumable_candidate":item["kind"]=="item_enhancement"
-                and family==OTHER_CONSUMABLE_CLASS_SUBCLASS,
+                and (item["item_class"],item["item_subclass"])==
+                    OTHER_CONSUMABLE_CLASS_SUBCLASS,
             "native_acceptance":"NOT_CHECKED",
             "ui_selectable":False})
         selected.append(item)
