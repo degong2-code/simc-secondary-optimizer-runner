@@ -1,0 +1,57 @@
+name: v270 four-case SimC socket parser versus actual socket bonus
+
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/v270_socket_parser_native_contrast.yml]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v270-socket-native-once
+  cancel-in-progress: false
+
+jobs:
+  pinned-simc-socket-contrast:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    env:
+      SIMC_COMMIT: 710c2408bfd3ae4df71b8cd55cdf01f63fd6c926
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Restore existing SHA-pinned Linux SimC, no rebuild
+        uses: actions/cache/restore@v4
+        with:
+          path: .simc-cache/v192/
+          key: v192-ubuntu2404-710c2408bfd3ae4df71b8cd55cdf01f63fd6c926-cli-r1
+      - name: Verify reused exact SimC binary and source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x .simc-cache/v192/simc
+          sha256sum -c .simc-cache/v192/simc.sha256
+          test "$(cat .simc-cache/v192/source_revision.txt)" = "$SIMC_COMMIT"
+      - name: Read real one-socket bonus ID and run at most four 1-iteration Native cases
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile integration_probes/v270_socket_parser_native_contrast.py
+          python integration_probes/v270_socket_parser_native_contrast.py \
+            --binary .simc-cache/v192/simc \
+            --profile integration_probes/fixtures/v084_upstream_mid2_mage_frost_reference.simc \
+            --revision 710c2408bf \
+            --out out/v270
+      - name: Preserve small complete receipt; no executable or bulk JSON2
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v270-socket-native-contrast-receipt
+          path: out/v270/V270_SOCKET_NATIVE_CONTRAST_RECEIPT.json
+          retention-days: 3
+          if-no-files-found: warn
