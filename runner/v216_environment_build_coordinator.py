@@ -27,6 +27,7 @@ import v271_user_socket_gem_layout as physical_gems
 import v274_zero_history_source_compiler_wiring as source_wiring
 import v275_pinned_simc_compiler_inputs as pinned_compiler_source
 import v276_sealed_tier_compiler_source as compiler_tier_source
+import v277_zero_history_native_G_stage as zero_history_G_native
 import v223_installed_season_budget_source as season_source_proof
 import v213_source_to_catalog as source_to_catalog
 import v161_wago_db2_snapshot as wago_snapshot
@@ -2384,6 +2385,31 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         collected=collect_wago_new_season_source(
             sessions_root=sessions_root,**fresh_collection_inputs)
         progress=_zero_history_source_progress(collected)
+        # Reuse the original v236/v234 source-profile Native parser. Only a
+        # configured local binary and existing v233 source profile may trigger
+        # one real G probe. The content-addressed v236 output folder forbids
+        # repeat executions on cache hits, failures and interrupted runs.
+        try:
+            native_G=zero_history_G_native.collect(
+                sessions_root=sessions_root,collected=collected,binary=binary)
+        except (zero_history_G_native.GNativeStageBlocked,
+                OSError,ValueError,KeyError,TypeError) as exc:
+            raise EnvironmentBuildBlocked(
+                "V216_ZERO_HISTORY_NATIVE_G_INVALID:"
+                +str(exc).split(":",1)[0]) from exc
+        progress["native_G_status"]=native_G["status"]
+        progress["new_native_calls"]=native_G["new_native_calls"]
+        if native_G.get("standardized_G") is not None:
+            progress["G_numeric_reference_observed_unadmitted"]=(
+                native_G["standardized_G"])
+            progress["requires"]=[
+                x for x in progress["requires"]
+                if x!="G_NATIVE_RATING_OBSERVATION_PENDING"]
+            progress["requires"].append(
+                "G_NATIVE_NUMERIC_REFERENCE_REUSE_REQUIRES_J_F_O")
+        elif native_G.get("native_log_excerpt") is not None:
+            progress["requires"].append(
+                "G_NATIVE_SIMC_ERROR_INSPECT_OR_CHANGE_SOURCE_BINARY")
         # Reuse v241's already tested v191 -> v211 -> v213 compilers, not
         # another source builder. A missing original input is a specific
         # source-work item rather than a fake legacy file or J/F default.
@@ -2413,6 +2439,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 "FRESH_COMPILER_INPUT_"+name+"_PENDING"
                 for name in source_compilation["missing"])
         return {**collected,"source_compilation":source_compilation,
+                "native_G_numeric_source":native_G,
+                "native_calls":native_G["new_native_calls"],
                 "zero_history_build":progress,
                 "normal_build_entry":True}
     # Existing v217 stages assemble the same v211/v213 source candidate
