@@ -81,6 +81,121 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
 
 
 
+    def test_v233_G_probe_is_staged_reused_and_tamper_rejected_without_native(self):
+        # Exercise actual v229 + v231 + v232 + v233 replay, not a new
+        # equipment calculator. Only the existing v251 roster bridge is
+        # mocked, as this unit tests the v216 probe output integration.
+        from tests.test_v232_simc_only_ordinary_representative import make_fixture
+        from tests.test_v229_simc_only_source_seed import (
+            BUILD, OLD, REVISION)
+        source_root=self.root/"simc_source"
+        source_root.mkdir()
+        raws=make_fixture()
+        for name,raw in raws.items():
+            (source_root/name).write_bytes(raw)
+        receipt=v216.simc_source.inventory(
+            raws,simc_revision=REVISION,expected_build=BUILD,
+            previous_game_build=OLD,
+            expected_git_blob={
+                k:v216.simc_source.git_blob(v) for k,v in raws.items()})
+        (source_root/v216.simc_source.RECEIPT).write_text(
+            json.dumps(receipt),encoding="utf8")
+        tier=v216.tier_simc_bridge.simc_tier.select(
+            seed_directory=source_root,cls="paladin",
+            spec="retribution",set_option="season_token_test")
+        from runner import v167_product_season_gear_adapter as provider
+        allowed={
+            9020:(5,4,4),9011:(9,4,4),9021:(6,4,4),
+            9022:(8,4,4),9023:(2,4,0),9024:(16,4,0),
+            9012:(11,4,0),9025:(11,4,0),9010:(17,2,8)}
+        items=[{"item_id":iid,"name":f"season_{iid}",
+            "category":"plain_representative_candidate",
+            "inventory_type":inv,"class_id":cls,"subclass_id":sub,
+            "allowed_class_mask":2,"item_set_id":0,
+            "source_kinds":["raid_journal"]}
+            for iid,(inv,cls,sub) in sorted(allowed.items())]
+        catalog={"schema":provider.SCHEMA,
+            "status":"CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
+            "season_build":BUILD,"no_old_catalog_seed":True,
+            "item_count":len(items),
+            "role_counts":{"plain_representative_candidate":len(items)},
+            "items":items,
+            "not_certified":{"tier_four_set":True,"simc_item_effects":True},
+            "new_native_calls":0,"new_api_calls":0}
+        rep=v216.simc_representative.find_candidate(
+            seed_directory=source_root,tier_candidate=tier,
+            target_ilevel=334,season_gear_db=catalog)
+        candidate=self.root/"source_candidate.json"
+        candidate.write_text(json.dumps(rep),encoding="utf8")
+        gear=self.root/"v167.json"
+        gear.write_text(json.dumps(catalog),encoding="utf8")
+        bridge=self.root/"v251.json"
+        bridge.write_text(json.dumps({
+            "schema":v216.tier_simc_bridge.SCHEMA,
+            "game_build":BUILD}),encoding="utf8")
+        stage_root=self.root/"stage"
+        stage_root.mkdir()
+        kwargs={"stage_root":stage_root,"build":BUILD,
+            "one_spec":{"candidate_path":str(candidate),
+                "source_stage":{"receipt_sha256":"a"*64}},
+            "fresh_gear":{"candidate_path":str(gear)},
+            "tier_bridge":{"candidate_path":str(bridge)},
+            "seed_directory":source_root,
+            "character":{"race":"human","level":90}}
+        with mock.patch.object(v216.tier_simc_bridge,"select_for_simc",
+                               return_value={"v231_candidate":tier}) as match:
+            first=v216._one_spec_source_G_probe_stage(**kwargs)
+            second=v216._one_spec_source_G_probe_stage(**kwargs)
+        self.assertEqual(match.call_count,1)
+        self.assertEqual(first["status"],
+            "FRESH_ONE_SPEC_PHYSICAL_G_PROFILE_PREPARED_NATIVE_PENDING")
+        self.assertEqual(first["source_stage"]["status"],
+                         "EXECUTED_AND_SEALED")
+        self.assertEqual(second["source_stage"]["status"],
+                         "REUSED_VERIFIED")
+        self.assertEqual(second["source_stage"]["receipt_writes"],0)
+        self.assertEqual(second["native_calls"],0)
+        self.assertEqual(second["network_calls_by_stage"],0)
+        self.assertIsNone(second["G"])
+        self.assertFalse(second["environment_ready"])
+        raw=pathlib.Path(first["profile_path"]).read_text(encoding="utf8")
+        self.assertIn("chest=simc_source_9020,id=9020,ilevel=334",raw)
+        self.assertIn("race=human",raw)
+        self.assertNotIn("trinket1=",raw)
+        proof=json.loads(pathlib.Path(
+            first["profile_receipt_path"]).read_text(encoding="utf8"))
+        self.assertEqual(proof["physical_profile_sha256"],
+                         first["physical_profile_sha256"])
+        self.assertFalse(proof["current_season_membership_certified"])
+        pathlib.Path(first["profile_path"]).write_text(
+            "tampered",encoding="utf8")
+        rejected=v216._one_spec_source_G_probe_stage(**kwargs)
+        self.assertEqual(rejected["status"],
+                         "FRESH_G_PROBE_SOURCE_OR_CHARACTER_PENDING")
+        self.assertIn("STAGE_OUTPUT_HASH_MISMATCH",rejected["reason"])
+        self.assertIsNone(rejected["G"])
+
+    def test_G_probe_character_context_rejected_before_fetch(self):
+        args={"sessions_root":self.root/"unused_network",
+              "expected_game_build":"12.2.0.99999",
+              "g_probe_character":{"race":"human","level":90}}
+        with self.assertRaisesRegex(v216.EnvironmentBuildBlocked,
+                                    "V216_G_PROBE_CHARACTER_CONTEXT_INVALID"):
+            v216.collect_wago_new_season_source(**args)
+        self.assertFalse(args["sessions_root"].exists())
+        args["representative_request"]={
+            "class":"paladin","spec":"retribution",
+            "target_ilevel":334}
+        args["g_probe_character"]={"race":"###","level":90}
+        with self.assertRaisesRegex(v216.EnvironmentBuildBlocked,
+                                    "V216_G_PROBE_CHARACTER_CONTEXT_INVALID"):
+            v216.collect_wago_new_season_source(**args)
+        args["g_probe_character"]={"race":"human","level":True}
+        with self.assertRaisesRegex(v216.EnvironmentBuildBlocked,
+                                    "V216_G_PROBE_CHARACTER_CONTEXT_INVALID"):
+            v216.collect_wago_new_season_source(**args)
+        self.assertFalse(args["sessions_root"].exists())
+
     def test_fresh_gem_item_relation_reuses_existing_db2_and_v213(self):
         from tests.test_v221_gem_item_db2_relation import (
             GemPropertyRelationTests)
