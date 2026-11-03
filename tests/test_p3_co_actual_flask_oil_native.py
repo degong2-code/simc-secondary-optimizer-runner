@@ -49,6 +49,27 @@ class P3COFocused(unittest.TestCase):
                     probe.run(root=pathlib.Path(folder)/"out",
                               source=ROOT/probe.PROFILE,binary="unused",
                               simc_revision="a"*39+"b")
+    def test_followup_two_source_candidates_share_three_native_max(self):
+        hits=[]
+        def fake(**kwargs):
+            hits.append((kwargs["kind"],kwargs["token"]))
+            return {"status":"SIMC_STATIC_CHMV_EFFECT_OBSERVED_NOT_ADMITTED",
+                    "new_native_calls":2 if len(hits)==1 else 1,
+                    "static_CHMV_candidate":{"crit_rating":12}}
+        with tempfile.TemporaryDirectory() as td:
+            receipt=probe.run(root=td,source=ROOT/probe.PROFILE,
+                              binary="unused",measure=fake,
+                              cases=probe.FOLLOWUP_CASES,mode="followup")
+        self.assertEqual(receipt["observation_mode"],"followup")
+        self.assertEqual(receipt["new_native_calls"],3)
+        self.assertEqual(receipt["observations"][0]["item"]["item_id"],241327)
+        self.assertEqual(receipt["observations"][1]["item"]["item_id"],243734)
+        self.assertIsNone(receipt["F"])
+        self.assertIsNone(receipt["O"])
+        self.assertFalse(receipt["quality_group_verified"])
+        with self.assertRaisesRegex(ValueError,"UNSUPPORTED_NATIVE_SOURCE_CASES"):
+            probe.run(root="/does-not-matter",source=ROOT/probe.PROFILE,
+                      binary=None,cases=probe.FOLLOWUP_CASES,mode="primary")
     def test_failure_records_native_log_without_fake_F_O(self):
         def failed(**kwargs):
             return {"status":"SIMC_CONSUMABLE_NATIVE_FAILED_NO_AUTO_RETRY",

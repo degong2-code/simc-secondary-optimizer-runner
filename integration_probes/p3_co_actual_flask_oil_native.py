@@ -27,12 +27,21 @@ CASES=(
      "enchant_id":8054,"effect_spell_id":1237001,
      "token":"main_hand:oil_of_dawn_2","quality_rank":2},
 )
+# Different exact-source candidates run separately without rechecking
+# already-measured options. Each two-option case shares one baseline.
+FOLLOWUP_CASES=(
+    {"kind":"flask","item_id":241327,
+     "token":"flask_of_the_shattered_sun_1","quality_rank":1},
+    {"kind":"temporary_enchant","item_id":243734,
+     "enchant_id":8052,"effect_spell_id":1237006,
+     "token":"main_hand:thalassian_phoenix_oil_2","quality_rank":2},
+)
 MAX_NEW_NATIVE=3
 
 def git_blob(raw):
     return hashlib.sha1(b"blob "+str(len(raw)).encode()+b"\0"+raw).hexdigest()
 
-def profile_from_source(raw):
+def profile_from_source(raw,*,cases=CASES):
     if git_blob(raw)!=UPSTREAM_BLOB:
         raise ValueError("P3_CO_PINNED_SOURCE_PROFILE_SHA_DRIFT")
     text=raw.decode("utf8")
@@ -42,17 +51,20 @@ def profile_from_source(raw):
     profile=text.replace(needle,
         "actions.precombat=flask\n"
         "actions.precombat+=/arcane_intellect\n")
-    for candidate in CASES:
+    for candidate in cases:
         snapshot.prepare(profile=profile,kind=candidate["kind"],
                          token=candidate["token"])
     return profile
 
-def run(*,root,source,binary,simc_revision=REVISION,measure=None):
+def run(*,root,source,binary,simc_revision=REVISION,measure=None,
+        cases=CASES,mode="primary"):
     if simc_revision!=REVISION:
         raise ValueError("P3_CO_PINNED_SIMC_REVISION_REQUIRED")
+    if ((cases,mode) not in ((CASES,"primary"),(FOLLOWUP_CASES,"followup"))):
+        raise ValueError("P3_CO_UNSUPPORTED_NATIVE_SOURCE_CASES")
     folder=Path(root).resolve()
     folder.mkdir(parents=True,exist_ok=True)
-    profile=profile_from_source(Path(source).read_bytes())
+    profile=profile_from_source(Path(source).read_bytes(),cases=cases)
     path=folder/"source_profile.simc"
     if path.exists():
         if path.read_text("utf8")!=profile:
@@ -62,7 +74,7 @@ def run(*,root,source,binary,simc_revision=REVISION,measure=None):
     measure=measure or pair.measure
     results=[]
     total=0
-    for candidate in CASES:
+    for candidate in cases:
         try:
             original=measure(stage_root=folder,
                              source_profile_path=path,
@@ -94,13 +106,14 @@ def run(*,root,source,binary,simc_revision=REVISION,measure=None):
            "SIMC_CONDITIONAL_OR_NONSTATIC_EFFECT_PENDING"):
             break
     outcome=("OBSERVATIONS_SOURCE_ONLY" if
-            len(results)==len(CASES) and all(row["status"] in (
+            len(results)==len(cases) and all(row["status"] in (
                 "SIMC_STATIC_CHMV_EFFECT_OBSERVED_NOT_ADMITTED",
                 "SIMC_CONDITIONAL_OR_NONSTATIC_EFFECT_PENDING")
                 for row in results)
             else "NATIVE_SOURCE_PROBE_FAILED")
     receipt={
         "schema":SCHEMA,"game_build":BUILD,"simc_revision":REVISION,
+        "observation_mode":mode,
         "prior_source_proof":PROOF_RUN,
         "source_profile_git_blob_sha1":UPSTREAM_BLOB,
         "source_profile_sha256":hashlib.sha256(
@@ -120,8 +133,11 @@ def main():
     p.add_argument("--binary",type=Path,required=True)
     p.add_argument("--source",type=Path,default=Path(PROFILE))
     p.add_argument("--out",type=Path,default=Path("out/p3-co"))
+    p.add_argument("--mode",choices=("primary","followup"),default="primary")
     args=p.parse_args()
-    result=run(root=args.out,source=args.source,binary=args.binary)
+    result=run(root=args.out,source=args.source,binary=args.binary,
+               cases=CASES if args.mode=="primary" else FOLLOWUP_CASES,
+               mode=args.mode)
     for row in result["observations"]:
         print("P3_CO_ACTUAL_NATIVE",row["item"]["kind"],
               "item",row["item"]["item_id"],"status",row["status"],

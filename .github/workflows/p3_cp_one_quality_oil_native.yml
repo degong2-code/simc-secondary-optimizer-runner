@@ -1,0 +1,55 @@
+name: P3-CP two focused quality/real oil Native observations
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p3_cp_one_quality_oil_native.yml
+permissions:
+  contents: read
+concurrency:
+  group: p3-cp-quality-phoenix-oil-once
+  cancel-in-progress: false
+jobs:
+  reuse-original-native-measurement:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Restore exact existing Linux SimC binary only
+        uses: actions/cache/restore@v4
+        with:
+          path: .simc-cache/v192/
+          key: v192-ubuntu2404-710c2408bfd3ae4df71b8cd55cdf01f63fd6c926-cli-r1
+      - name: Fail closed if pinned binary is unavailable
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x .simc-cache/v192/simc || { echo P3_CP_NO_BINARY_NO_NATIVE; exit 3; }
+          sha256sum -c .simc-cache/v192/simc.sha256
+          test "$(cat .simc-cache/v192/source_revision.txt)" = "710c2408bfd3ae4df71b8cd55cdf01f63fd6c926"
+      - name: Original v269/v278 one lower flask quality and one rank2 Phoenix Oil
+        shell: bash
+        env:
+          PYTHONPATH: runner:.
+        run: |
+          set -euo pipefail
+          python integration_probes/p3_co_actual_flask_oil_native.py \
+            --mode followup \
+            --binary .simc-cache/v192/simc \
+            --out out/p3-cp
+      - name: Preserve source-only receipt and original SimC diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p3-cp-source-only-native-rating-receipt
+          path: |
+            out/p3-cp/P3_CO_RECEIPT.json
+            out/p3-cp/source/v278_*/receipt.json
+            out/p3-cp/source/v278_*/simc.log
+          if-no-files-found: warn
+          retention-days: 3
