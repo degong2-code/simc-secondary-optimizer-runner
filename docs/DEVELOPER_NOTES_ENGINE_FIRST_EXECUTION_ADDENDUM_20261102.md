@@ -1,3 +1,6 @@
+> **2026-11-03 최신 사용자 직접 개발 효율 교정 — 인계·개발 노트 영구 적용:** 코드/검증 작업 전 **[개발 연속성 규약](development/PROTOCOL.md) → [기능별 증거·미완료 INDEX](development/INDEX.md) → 해당 원본/Actions 영수증 → 관련 코드** 순서로 확인한다. **[P3-BQ 실제 교정 기록](development/notes/2026-11-03_p3-bq-continuity-correction.md)**이 선례. `false/PENDING`은 과거 원본 증거 부족과 현재 제품 연결 미완료를 구별하지 못하므로 그대로 신규 조사 명령으로 삼지 않는다. 기존 시즌 티어 **기초 ilvl 197/219×65, 현재 레이드 그룹 101/118, SimC 정확 13직업×5부위** 재사용, 새 인증 엔진·Native/원본 재수집 기본 금지. **논리적 작업 묶음마다** 원본/상태 선조회→REUSE/CONNECT/EXTEND/NEW/STOP 결정→짧은 구조화 GitHub 노트 1개와 INDEX 갱신→인계 반영 필수. 해당 규약을 새 채팅에서도 먼저 읽어야 한다. `python tools/check_development_ledger.py`(선택 `--since TASK_BASE_REF`)로 구조와 작업 변경 대비 노트 누락 점검. 본 교정은 개발 운영 규약이지 새 제품 READY/효과 인증 Gate가 아니며 GitHub 기록이 Project UI 적용 증거도 아니다.
+>
+
 > **2026-11-03 최신 실행·새 채팅 인계: [P3-BO 단일 정본](CHAT_CONTINUITY_HANDOFF_20261103_P3_BO_ENGINE_GJFO_NEXT.md).** 아래 P3-BF/P3-AT 인계 포인터는 역사 안내. 최신 사용자 선택 입력은 종족 미입력 `dwarf`(직업 불가 시 명시 종족 필요), 특성 미입력 기존 대표, 일반 `level=` 생략/SimC MAX_LEVEL; 장비·소모품·기름·영구 마부 및 G/J/F/O는 우리 환경 엔진이 관리. P3-BO는 v216의 기존 v189/v190 음식/물약 소스 후보 연결 및 430/206/142/UI 합성 CI 범위 PASS까지만, 실제 G/J/F/O→B/T→정책 A→READY·DPS E2E는 미완료. 이전 WSE 전용 연구/레벨 자체 추론/별도 최적화 엔진을 다시 시작하지 말 것. 독립 G·J/F/O는 묶어 처리하되 검증은 독립, 기존 영수증과 같은 완료 기준 재사용. 최초 새 채팅에서는 읽기·복원·검증만 하고 사용자 **"진행"** 전에는 구현·Actions·Native·원본 수집 금지. 승인 v1.4.3 본문, main/v003/v016/Project UI/Work OS 불변.
 >
 >
