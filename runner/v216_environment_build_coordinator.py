@@ -362,6 +362,16 @@ def _reuse_observed_G_native_receipts(*, catalog, receipt_paths_by_ilevel):
                 observed.get("source_candidate_receipt_sha256"),
             "class":observed.get("class"),"spec":observed.get("spec"),
             "standardization":rounded,
+            # The existing v232 plain/primary/weapon proof plus v234 Native
+            # static observation is enough to use the numeric G reference.
+            # Active-season acquisition remains a SEPARATE diagnostic.
+            "generic_G_numeric_reference_usable":
+                observed.get("generic_G_numeric_reference_usable") is True,
+            "generic_G_standard_rating":(
+                rounded["standardized_G"]
+                if observed.get("generic_G_numeric_reference_usable") is True
+                else None),
+            "current_season_acquisition_required_for_G":False,
             "source_selection_status":"OBSERVED_PHYSICAL_NOT_SEASON_ADMITTED",
         }
     return result
@@ -1664,6 +1674,10 @@ def _one_spec_source_G_probe_stage(*, stage_root, build, one_spec,
             and observed.get("selected_G_slot_ids")==
                 rep["selected_G_slot_ids"]
             and observed.get("current_season_membership_certified") is False
+            and observed.get("generic_G_physical_conditions_verified")==
+                rep.get("generic_G_physical_conditions_verified",False)
+            and observed.get("generic_G_current_season_membership_required")
+                is False
             and observed.get("G") is None
             and observed.get("environment_ready") is False
             and observed.get("native_calls")==0
