@@ -157,7 +157,10 @@ def validate(payload):
                      "expansion_id") for k in r)
                  for r in evidence),
              "PRODUCT_SOURCE_EVIDENCE_INVALID")
-        if "source_evidence" in x:
+        # Older already-sealed v166 catalogs contain source kinds but not
+        # per-item DB2 conditions. Keep them as UNKNOWN provenance rather
+        # than inventing evidence or rejecting compatible old source data.
+        if evidence:
             need({r["source"] for r in evidence}==
                  set(x.get("source_kinds",[])),
                  "PRODUCT_SOURCE_EVIDENCE_KINDS_DISAGREE")
