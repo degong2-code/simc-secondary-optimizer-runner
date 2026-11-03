@@ -71,9 +71,10 @@ class DevelopmentLedgerGuardTests(unittest.TestCase):
                       ledger.check_changed_files([
                           "docs/development/notes/2026-11-03_example.md"
                       ]))
-        self.assertEqual(ledger.check_changed_files([
-            "docs/CURRENT_PRODUCT_DEVELOPMENT_STATE.md"
-        ]), [])
+        self.assertIn("TASK_CHANGE_WITHOUT_DEVELOPMENT_NOTE",
+                      ledger.check_changed_files([
+                          "docs/CURRENT_PRODUCT_DEVELOPMENT_STATE.md"
+                      ]))
 
 
 if __name__ == "__main__":
