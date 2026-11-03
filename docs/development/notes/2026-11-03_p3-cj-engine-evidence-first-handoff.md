@@ -1,0 +1,10 @@
+# 2026-11-03 · P3-CJ · 최신 엔진 우선 인계 정본과 개발 연속성 복원
+
+- **Capability:** DEV.CONTINUITY, PRODUCT.E2E, F.FLASK, O.OIL, J.GEM, BUDGET.GJFO
+- **Keywords:** handoff, continuity, 엔진, zero-history, 26 DPS, P3-CI, 122 PASS, F/O join, socket, J, source receipts
+- **Prior evidence:** [PROTOCOL](../PROTOCOL.md) → [INDEX](../INDEX.md) → [P3-BY 이전 인계](2026-11-03_p3-by-continuity-handoff-gem-sockets.md) 및 [P3-CI 실제 최신 노트](2026-11-03_p3-ci-physical-flask-and-item-enhancement-items.md). 인계 전 실제 branch HEAD f230da67243b85fb6c1b513a3e5081b3fd5fb04a, main 07133e0aaf738d6e4816a6486057b1cd49c018de 독립 조회. [최종 HEAD focused #41642574658](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41642574658) 122 PASS/0 FAIL; [원래 P3-CI source chain #41642094705](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41642094705) SUCCESS; [P3-BX Native 4/4](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41601140696) 기존 해당 범위.
+- **Decision:** REUSE — 이미 확보된 P3-CB~CI의 source/build/G/Native delta/physical F/O 후보·기존 예산/O·adaptive/CI/Native 영수증을 다시 조사·재실행하지 않는다. 이번 작업은 새 채팅의 상태 복원/필요 최소 CONNECT·EXTEND 판별 문서만 갱신.
+- **Changes:** [이번 단일 정본 인계](../../CHAT_CONTINUITY_HANDOFF_20261103_P3_CJ_ENGINE_EVIDENCE_FIRST_RESTORE.md), PROTOCOL 최신 인계 포인터, INDEX의 DEV.CONTINUITY 행, CURRENT 상단 최신 스냅샷, 개발자 실행 노트 상단 포인터. 승인 v1.4.3 본문/기존 증거·코드·GitHub main·Project UI/Work OS 불변.
+- **Verification:** 이번 인계 작성은 새 SimC Native/게임 HTTP/사용자 E2E/제품 코드 변경 0. 앞선 **122 focused PASS**는 기존 실제 HEAD의 오프라인 회귀 범위이며 이 문서 작성 후 HEAD와 CI는 별도 조회해 기록. P3-BX Native 4/4(+16/+8)와 원본 보석 240906 +16/+7의 원인 불명 +1은 해결 아님, J=24 선언 금지. 새 채팅은 첫 복원 보고 전 신규 CI/Native 실행 금지.
+- **Remaining:** F/O 실제 item ID↔use spell↔SimC token/effect·quality·손/무기 규칙 정확 조인, 물리 일반보석 J의 소켓·품질/정적 효과 증거, 유효 새 시즌 G/J/F/O→v222 B/T→v212 Policy A/사용자 profile→기존 adaptive 26 DPS E2E 미완료. 잃어버린 증거와 이미 존재하는 증거가 제품에 미연결인 상태를 구별.
+- **Efficiency:** 한 링크/한 최근 노트로 경량 인계, source·receipts 재사용, 추가 제품 검증·Native·API 0, 새 채팅에서 기능별 INDEX 먼저 읽고 한 논리 묶음마다 하나의 결정과 기존 완료 기준 재사용. 중복 인계 파일·전체 CURRENT 이력 재작성 금지.
