@@ -26,6 +26,27 @@ class WagoDB2Probe(unittest.TestCase):
         self.assertIn("CraftingData",p.TABLES)
         self.assertIn("JournalEncounterItem",p.TABLES)
         self.assertNotIn("delve-loot.json",json.dumps(p.TABLES))
+    def test_two_real_source_headers_only_and_no_original_nine_requests(self):
+        class R:
+            status=200
+            headers={"Content-Type":"text/csv"}
+            def __init__(self,data):self.data=data
+            def __enter__(self):return self
+            def __exit__(self,*args):pass
+            def read(self,n):return self.data
+        requests=[]
+        def transport(req,timeout):
+            requests.append(req.full_url)
+            if "/ItemEffect/" in req.full_url:
+                return R(b"ID,SpellID,TriggerType\n1,111,0\n")
+            return R(b"ID,SpellID,Effect,EffectIndex,EffectMiscValue_0\n1,111,54,0,777\n")
+        data=p.run(transport=transport,tables=("ItemEffect","SpellEffect"))
+        self.assertEqual(data["requested_csv_tables"],2)
+        self.assertEqual(data["confirmed_csv_tables"],2)
+        self.assertEqual(len(requests),2)
+        self.assertFalse(data["full_tables_downloaded"])
+        with self.assertRaisesRegex(ValueError,"INVALID_SOURCE_TABLE_SELECTION"):
+            p.run(tables=("ItemEffect","ItemEffect"))
     def test_transport_validates_origin_and_limits(self):
         class R:
             status=200

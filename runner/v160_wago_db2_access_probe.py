@@ -33,6 +33,9 @@ TABLES={
     "ItemSparse":("ID","Display_lang","ExpansionID",
                   "StatModifier_bonusStat_0"),
 }
+DETAIL_TABLES={"ItemEffect":("ID","SpellID","TriggerType"),
+               "SpellEffect":("SpellID","Effect","EffectIndex")}
+ALLOWED_TABLES={**TABLES,**DETAIL_TABLES}
 def csv_preview(payload,required):
     if payload.startswith(b"\\x1f\\x8b"):
         return {"status":"ENCODING_GZIP_NOT_SUPPORTED"}
@@ -54,7 +57,7 @@ def csv_preview(payload,required):
     except (ValueError,UnicodeDecodeError,StopIteration,csv.Error):
         return {"status":"NON_CSV_OR_INVALID_UTF8"}
 def fetch_header(table,required,*,transport=urlopen,build=BUILD):
-    if table not in TABLES or not build or len(build)>40 or any(
+    if table not in ALLOWED_TABLES or not build or len(build)>40 or any(
        c not in "0123456789." for c in build):
         raise ValueError("INVALID_TABLE_OR_BUILD")
     url=HOST+table+"/csv?"+urlencode({"build":build,"locale":LOCALE})
@@ -75,9 +78,15 @@ def fetch_header(table,required,*,transport=urlopen,build=BUILD):
     result["http_status"]=status
     result["content_type"]=content_type[:90]
     return result
-def run(build=BUILD,*,transport=urlopen):
+def run(build=BUILD,*,transport=urlopen,tables=None):
+    selected=tuple(TABLES) if tables is None else tuple(tables)
+    if (not selected or len(selected)>len(ALLOWED_TABLES) or
+            len(selected)!=len(set(selected)) or
+            any(name not in ALLOWED_TABLES for name in selected)):
+        raise ValueError("INVALID_SOURCE_TABLE_SELECTION")
     outcomes={}
-    for table,required in TABLES.items():
+    for table in selected:
+        required=ALLOWED_TABLES[table]
         outcomes[table]=fetch_header(table,required,build=build,transport=transport)
     return {
         "schema":SCHEMA,"build":build,"product":"Retail / Midnight",
@@ -95,10 +104,11 @@ def main(argv=None):
     p=argparse.ArgumentParser()
     p.add_argument("--out",type=Path,required=True)
     p.add_argument("--build",default=BUILD)
+    p.add_argument("--tables",nargs="+",choices=sorted(ALLOWED_TABLES))
     args=p.parse_args(argv)
     if len(args.build)>40 or any(c not in "0123456789." for c in args.build):
         raise SystemExit("INVALID_BUILD")
-    result=run(build=args.build)
+    result=run(build=args.build,tables=args.tables)
     args.out.parent.mkdir(parents=True,exist_ok=True)
     args.out.write_text(json.dumps(result,indent=2,ensure_ascii=False,
                                    sort_keys=True)+"\n",encoding="utf8")

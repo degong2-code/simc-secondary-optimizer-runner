@@ -27,7 +27,16 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - run: python runner/v160_wago_db2_access_probe.py --out v160-wago-db2-probe-evidence.json
+      - name: Probe only two same-build ItemEffect and SpellEffect CSV headers
+        run: |
+          python runner/v160_wago_db2_access_probe.py --out v160-wago-db2-probe-evidence.json --tables ItemEffect SpellEffect
+          python - <<'PY'
+          import json
+          doc=json.load(open("v160-wago-db2-probe-evidence.json",encoding="utf8"))
+          for name,row in doc["tables"].items():
+              print("V160_P3_CM_HEADER",name,row["status"],"http",
+                    row.get("http_status"),"columns",row.get("header_sample"),flush=True)
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: v160-wago-db2-probe-evidence
