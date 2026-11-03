@@ -1,0 +1,33 @@
+name: P3-CN one-shot real same-build consumable source relation
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p3_cn_one_shot_real_consumable_join.yml
+permissions:
+  contents: read
+concurrency:
+  group: p3-cn-one-shot-real-source-only
+  cancel-in-progress: false
+jobs:
+  source-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Reuse v161/v189/v190/v229/v230/v280/v281 against real same-build sources
+        env:
+          PYTHONPATH: .
+        run: python integration_probes/p3_cn_real_consumable_join.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: p3-cn-real-source-receipt
+          path: p3_cn_receipt.json
+          if-no-files-found: ignore
+          retention-days: 2

@@ -1,0 +1,10 @@
+# 2026-11-03 · P3-CN · 실제 동일 빌드 물리 소비품→SimC 원본 경로 일회성 확인
+
+- **Capability:** `F.FLASK`, `O.OIL`, `SOURCE.SEAL`, `PRODUCT.E2E`
+- **Keywords:** P3-CN, real source, v161, v189, v190, v229, v230, v280, v281, item spell SimC, flask, oil
+- **Prior evidence:** PROTOCOL→INDEX→P3-CM([Wago real headers #41657577279](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41657577279) HTTP2, [focused #41658052763](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41658052763) 140 PASS). v161/189/190/229/230/280/281 기존 source joins, same-build SimC revision 710c2408b..., no historical item DB.
+- **Decision:** `REUSE` — 실제 데이터가 연결되는지 **기존 함수 그대로 한 번 실행**하여 원본 누락·파서 결함만 특정. 정상 v216 Environment Build/최종 설치를 대체하는 새 엔진·Gate가 아니다.
+- **Changes:** 기존 v161 수집기 일회성 두 표 한정 + v189 등록, v190 분류, v229 검증된 전원본+v230, v280/281 실제 Wago 3 관계 표를 합성 아닌 동빌드 자료로 호출하는 경량 probe/일회성 GitHub Action. SHA/크기, 후보 수, bounded examples, READY=false만 출력. 기존 캐시·프로필·데이터 원본 미수정.
+- **Verification:** Actions 수행 전 NOT_RUN. 유효 자료의 실측 PASS/FAIL과 오류 코드를 추가 기록. 현재 P3-CM Wago HTTP2와 focused 140 PASS는 REUSED_HISTORY. 실제 Native=0.
+- **Remaining:** 선택 후보의 최고품질·적용 무기손/실효과와 Native F/O, v222 B/T→Policy A→v216 정상 Build 설치·26 DPS E2E.
+- **Efficiency:** 기존 다수 one-shot 전체 수집을 다시 실행하지 않고 필요한 Wago 5종만 (Item, ItemSparse, ItemXItemEffect, ItemEffect, SpellEffect) 호출. SimC 원본도 기존 v229 수집기 이용. 최소 2일 artifact, 대용량 CSV는 runner 임시 디스크에서만 사용, 다음 제품 단계에서는 v216/v217 원본 캐시 재사용을 우선. main·immutable·Project UI/Work OS 불변.
