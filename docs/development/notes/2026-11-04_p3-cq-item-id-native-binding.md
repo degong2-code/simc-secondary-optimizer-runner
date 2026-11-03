@@ -1,0 +1,10 @@
+# 2026-11-04 · P3-CQ · 정상 Build에서 물리 소비품 ID→실제 SimC 옵션 측정 직접 연결
+
+- **Capability:** `F.FLASK`, `O.OIL`, `SOURCE.SEAL`, `BUDGET.GJFO`, `PRODUCT.E2E`
+- **Keywords:** P3-CQ, ItemID, Flask, Oil, SimC token, v281, v216, v278, Native input, source seal, cache, quality, hand
+- **Prior evidence:** [PROTOCOL](../PROTOCOL.md)→[INDEX](../INDEX.md)→[P3-CN](2026-11-03_p3-cn-real-source-integration.md) 실 Wago/SimC 정확 ID 후보 Flask16·temp enchant12 (숫돌 포함), [P3-CO](2026-11-04_p3-co-actual-flask-oil-native.md)/[P3-CP](2026-11-04_p3-cp-quality-phoenix-oil-native.md) 핀 SimC Native 총6, Shattered Sun Flask rank1 crit151/rank2 crit165, Phoenix Oil main-hand rank2 crit16/haste17, Dawn Oil 정적 0/비정적 보류. [P3-CH](2026-11-03_p3-ch-flask-oil-native-pair.md) 기존 v216→v269/v278 공유 baseline·동일 입력 Native 캐시 및 미승격 경로.
+- **Decision:** `CONNECT` — 소스와 Native 결과는 확보됐지만 정상 Build의 내부 `effect_probe_requests`가 아직 SimC token을 직접 받아 실물 ID 근거를 실행 시 다시 확인하지 않는다. 새 최적화 엔진·효과 계산·별도 무기 인증기 대신 원래 v281/216/278만 증분 연결한다.
+- **Changes:** v281의 stage-verified exact `item_id`(플라스크) 및 `item_id+hand`(원본 oil 후보) → 실제 SimC source token resolving; 기존 v217 sealed receipt SHA·candidate hash/빌드·SimC revision·원본 관계 확인, 일반 임시 마부/불명 ID 차단. v216 제로히스토리 원래 Build에서 신규 내부 item-ID 요청을 받아 기존 v278 측정에 전달; 원래 token 기반 테스트 요청도 하위 호환. 결과에 item ID/quality/enchant/hand 및 SHA provenance를 `physical_item_native_source_unadmitted`로 보존하고, source PENDING이면 Native0·READY=false. `F/O/B/T`, 캐시·user option 승격 없음.
+- **Verification:** 신규 focused CI 전 NOT_RUN/NOT_VERIFIED. 이전 P3-CP focused149 PASS와 실 Native6회, P3-CN 실제 원본 조인은 REUSED_HISTORY(동일 pinned 빌드/프로필 적용 범위). 이번 변경 자체의 HTTP0/Native0.
+- **Remaining:** 원본 Flask/기름의 전체 효과 동등성, 최고 품질·무기/손 적합성, 공식 F/O 예산 귀속 및 J/G·v222 B/T, 자동 Policy A 등록, 사용자별 대표 프로필→26 DPS 적응형 E2E는 여전히 미완료. 현재 item-ID 연결은 내부 실측 요청만 허용하며 UI 승인 근거가 아니다.
+- **Efficiency:** 기존 v217 receipt 및 v281 소형 봉인된 candidate만 검증·파싱 (대형 SpellEffect/Item DB 해시 재실행 없음); v278 원래 동일 프로필/바이너리 cache 키와 baseline 공유, 원본 Wago·SimC 재수집0·Native0. 기존 v279/v282/283/284 영수증, main, immutable, Project UI 및 Work OS 불변.

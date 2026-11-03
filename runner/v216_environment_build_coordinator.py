@@ -2424,10 +2424,17 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
              (type(effect_probe_requests) is list
               and len(effect_probe_requests)<=4
               and all(type(r) is dict and
-                  set(r)=={"source_profile_path","kind","token"}
-                  and type(r["source_profile_path"]) is str
-                  and type(r["token"]) is str
-                  and r["kind"] in ("flask","food","temporary_enchant")
+                  type(r.get("source_profile_path")) is str and
+                  ((set(r)=={"source_profile_path","kind","token"}
+                    and type(r["token"]) is str
+                    and r["kind"] in ("flask","food","temporary_enchant"))
+                   or (set(r)=={"source_profile_path","kind","item_id"}
+                       and r["kind"]=="flask"
+                       and type(r["item_id"]) is int and r["item_id"]>0)
+                   or (set(r)=={"source_profile_path","kind","item_id","hand"}
+                       and r["kind"]=="temporary_enchant"
+                       and type(r["item_id"]) is int and r["item_id"]>0
+                       and r["hand"] in ("main_hand","off_hand")))
                   for r in effect_probe_requests)),
              "V216_ZERO_HISTORY_NATIVE_EFFECT_REQUEST_FIELDS")
         need(source_catalog_path is None and
@@ -2503,18 +2510,47 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     "F_O_SIMC_EFFECT_PROBES_WAIT_FOR_SAME_BUILD_CATALOG")
             else:
                 for request in effect_probe_requests:
+                    bound_item=None
+                    native_token=request.get("token")
+                    if "item_id" in request:
+                        # An internal physical item selection must use the
+                        # sealed same-build v281 item→SimC join; its source
+                        # status grants measurement only, not F/O approval.
+                        try:
+                            bound_item=consumable_simc_relation.resolve_native_input(
+                                stage_root=source_compilation["stage_root"],
+                                relation=collected.get(
+                                    "fresh_consumable_simc_effect_relation"),
+                                build=collected["expected_game_build"],
+                                simc_revision=source_compilation["simc_revision"],
+                                kind=request["kind"],item_id=request["item_id"],
+                                hand=request.get("hand"))
+                        except (consumable_simc_relation.SimCRelationBlocked,
+                                OSError,ValueError,KeyError,TypeError) as exc:
+                            raise EnvironmentBuildBlocked(
+                                "V216_ZERO_HISTORY_PHYSICAL_EFFECT_SOURCE_INVALID:"
+                                +str(exc).split(":",1)[0]) from exc
+                        if bound_item is None:
+                            progress["requires"].append(
+                                "F_O_EXACT_ITEM_SIMC_SOURCE_PENDING")
+                            continue
+                        native_token=bound_item["simc_input_token"]
                     try:
                         observation=native_effect_pair.measure(
                             stage_root=source_compilation["stage_root"],
                             source_profile_path=request["source_profile_path"],
                             binary=binary,
                             simc_revision=source_compilation["simc_revision"],
-                            kind=request["kind"],token=request["token"])
+                            kind=request["kind"],token=native_token)
                     except (native_effect_pair.NativePairBlocked,
                             OSError,ValueError,KeyError,TypeError) as exc:
                         raise EnvironmentBuildBlocked(
                             "V216_ZERO_HISTORY_NATIVE_EFFECT_INVALID:"
                             +str(exc).split(":",1)[0]) from exc
+                    if bound_item is not None:
+                        observation={
+                            **observation,
+                            "physical_item_native_source_unadmitted":bound_item}
                     effect_observations.append(observation)
             if effect_observations:
                 progress["new_native_calls"]+=sum(

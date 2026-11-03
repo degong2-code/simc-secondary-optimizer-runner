@@ -419,3 +419,150 @@ def collect(*,stage_root,build,consumables,compiler_source,
             "counts":result["simc_relation_source"],
             "network_calls_by_stage":calls[0],"native_calls":0,
             "F":None,"O":None,"environment_ready":False}
+
+
+# P3-CQ: Bind the exact same-build physical ItemID to existing v269/v278
+# Native input, rather than accepting a copied SimC token for new-season
+# options. This is an admission-to-MEASUREMENT only, not to product F/O/UI.
+MEASUREMENT_BINDING_SCHEMA="v281_exact_item_native_input_source_only_v1"
+_SOURCE_LIMIT=5_000_000
+
+def resolve_native_input(*,stage_root,relation,build,simc_revision,
+                         kind,item_id,hand=None):
+    """Resolve one exact physical ID from the v217 sealed v281 successor.
+
+    Returns None when sources are genuinely unavailable. Complete stages
+    with a bad item/receipt fail closed; no Native is called here. A source
+    token that SimC actually accepts is checked later by original v278.
+    """
+    row=relation or {}
+    stage=row.get("source_stage") if type(row) is dict else None
+    if (type(stage) is not dict or stage.get("status") not in STAGED
+            or not row.get("candidate_path")):
+        return None
+    need(type(build) is str and bool(build)
+         and type(simc_revision) is str and
+         re.fullmatch(r"[0-9a-f]{40}",simc_revision) is not None
+         and type(item_id) is int and item_id>0
+         and kind in ("flask","temporary_enchant"),
+         "V281_NATIVE_ITEM_REQUEST_IDENTITY_INVALID")
+    need((kind=="flask" and hand is None) or
+         (kind=="temporary_enchant"
+          and hand in ("main_hand","off_hand")),
+         "V281_NATIVE_ITEM_HAND_SELECTION_INVALID")
+    root=Path(stage_root).resolve(strict=True)
+    need(root.is_dir() and not root.is_symlink(),
+         "V281_NATIVE_ITEM_STAGE_ROOT_INVALID")
+    stage_id=stage.get("stage_id")
+    need(stage_id in ("fresh-consumable-simc-spell-effect-source",
+                      "fresh-consumable-simc-spell-effect-source-other"),
+         "V281_NATIVE_ITEM_STAGE_ID_INVALID")
+    candidate=_safe_path(root,row["candidate_path"])
+    receipt_file=root/".stage_receipts"/(stage_id+".json")
+    try:
+        receipt=stages._read_receipt(receipt_file)
+    except stages.StageExecutionBlocked as exc:
+        raise SimCRelationBlocked("V281_SOURCE_STAGE_RECEIPT_INVALID:"
+                                  +str(exc)) from exc
+    need(receipt.get("status")=="COMPLETE"
+         and receipt.get("receipt_sha256")==stage.get("receipt_sha256")
+         and receipt.get("stage_id")==stage_id
+         and receipt.get("stage_version")==stage.get("stage_version")
+         and receipt.get("input_fingerprint")==stage.get("input_fingerprint")
+         and receipt.get("output_paths")==stage.get("output_paths"),
+         "V281_SOURCE_STAGE_RECEIPT_IDENTITY_DRIFT")
+    rel=candidate.relative_to(root).as_posix()
+    need(receipt.get("output_paths",{}).get("candidate")==rel,
+         "V281_NATIVE_ITEM_CANDIDATE_PATH_DRIFT")
+    output=receipt.get("outputs",{}).get("candidate",{})
+    need(type(output) is dict and output.get("path")==rel
+         and type(output.get("size")) is int
+         and 0<output["size"]<=_SOURCE_LIMIT
+         and candidate.stat().st_size==output["size"],
+         "V281_NATIVE_ITEM_CANDIDATE_SIZE_DRIFT")
+    raw=candidate.read_bytes()
+    need(digest(raw)==output.get("sha256"),
+         "V281_NATIVE_ITEM_CANDIDATE_SHA_DRIFT")
+    try:
+        source=json.loads(raw)
+    except (UnicodeError,ValueError) as exc:
+        raise SimCRelationBlocked("V281_NATIVE_ITEM_CANDIDATE_JSON_INVALID") from exc
+    need(type(source) is dict,"V281_NATIVE_ITEM_CANDIDATE_OBJECT_REQUIRED")
+    proof=source.get("simc_relation_source")
+    origin=source.get("source")
+    need(source.get("schema")==physical.SCHEMA
+         and source.get("automatic_ui_promotion") is False
+         and type(origin) is dict
+         and origin.get("wago_snapshot_build")==build
+         and origin.get("simc_revision")==simc_revision
+         and type(proof) is dict and proof.get("schema")==SCHEMA
+         and proof.get("game_build")==build
+         and proof.get("source_only") is True
+         and proof.get("simc_token_native_verified") is False
+         and proof.get("F") is None and proof.get("O") is None
+         and proof.get("environment_ready") is False,
+         "V281_NATIVE_ITEM_SOURCE_BUILD_OR_PROMOTION_DRIFT")
+    items=source.get("items")
+    need(type(items) is list and len(items)<=10000,
+         "V281_NATIVE_ITEM_LIST_INVALID")
+    matches=[x for x in items if type(x) is dict and
+             x.get("item_id")==item_id]
+    need(len(matches)==1 and matches[0].get("ui_selectable") is False
+         and matches[0].get("simc_token")=="UNRESOLVED",
+         "V281_NATIVE_ITEM_ID_NOT_EXACTLY_ONE_SOURCE_CANDIDATE")
+    item=matches[0]
+    need(item.get("item_effect_source",{}).get("status")==
+         "EXACT_DB2_ITEM_TO_ON_USE_SPELL_SOURCE_ONLY",
+         "V281_NATIVE_ITEM_ON_USE_RELATION_PENDING")
+    if kind=="flask":
+        src=item.get("simc_flask_item_source") or {}
+        token=src.get("simc_flask_option_candidate")
+        need(item.get("kind")=="flask"
+             and src.get("status")=="SIMC_ITEM_ID_CLASS_SUBCLASS_CANDIDATE"
+             and src.get("simc_item_id")==item_id
+             and type(token) is str
+             and TOKEN_CHARS.fullmatch(token) is not None
+             and type(src.get("crafting_quality")) is int,
+             "V281_NATIVE_FLASK_DBC_ITEM_TOKEN_PENDING")
+        enchant_id=None
+        quality=src["crafting_quality"]
+    else:
+        src=item.get("simc_temporary_enchant_source") or {}
+        links=src.get("exact_source_matches")
+        need(item.get("kind")=="item_enhancement"
+             and item.get("weapon_oil_identity")=="NOT_ESTABLISHED"
+             and src.get("status")=="EXACT_SIMC_TEMP_ENCHANT_ID_CANDIDATE"
+             and type(links) is list and bool(links),
+             "V281_NATIVE_TEMP_ENCHANT_ITEM_RELATION_PENDING")
+        unique={(m.get("enchant_id"),m.get("quality_rank"),
+                 m.get("simc_token"))
+                for m in links if type(m) is dict}
+        need(len(unique)==1,
+             "V281_NATIVE_TEMP_ENCHANT_MULTIPLE_SOURCE_IDENTITIES")
+        enchant_id,quality,token=next(iter(unique))
+        need(type(enchant_id) is int and enchant_id>0
+             and type(quality) is int and quality>=0
+             and type(token) is str
+             and TOKEN_CHARS.fullmatch(token) is not None,
+             "V281_NATIVE_TEMP_ENCHANT_ID_OR_TOKEN_INVALID")
+        # Restrict this *internal* probe to candidate oils; the exact
+        # source relationship, not the word 'oil', establishes its SimC ID.
+        # Names do NOT certify game effects or weapon applicability.
+        need("oil" in token.split("_"),
+             "V281_NATIVE_GENERAL_TEMP_ENCHANT_OUT_OF_PRODUCT_SCOPE")
+        token=(("main_hand:" if hand=="main_hand" else
+                "main_hand:disabled/off_hand:")+token)
+    return {
+        "schema":MEASUREMENT_BINDING_SCHEMA,
+        "game_build":build,"simc_revision":simc_revision,
+        "physical_item_id":item_id,"kind":kind,
+        "simc_input_token":token,"crafting_quality":quality,
+        "simc_enchant_id":enchant_id,"selected_hand":hand,
+        "source_stage_receipt_sha256":stage["receipt_sha256"],
+        "source_candidate_sha256":output["sha256"],
+        "same_effect_quality_group_verified":False,
+        "weapon_oil_identity_verified":False,
+        "weapon_and_hand_applicability_verified":False,
+        "native_option_verified":False,
+        "source_only":True,"F":None,"O":None,"environment_ready":False,
+    }

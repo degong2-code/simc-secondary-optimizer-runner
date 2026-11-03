@@ -56,6 +56,7 @@ jobs:
             tests.test_p3_co_actual_flask_oil_native \
             tests.test_v280_consumable_item_use_spell_source \
             tests.test_v281_consumable_simc_relation \
+            tests.test_v281_physical_native_item_binding \
             tests.test_v230_simc_item_metadata \
             tests.test_v190_consumable_item_snapshot_join \
             tests.test_v191_unified_season_data_update
