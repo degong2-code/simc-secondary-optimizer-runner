@@ -8,10 +8,13 @@ The installed product path remains v216→v274→v191/v211/v213→v212.
 """
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
+import os
 import pathlib
 import tempfile
+from collections import Counter
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
@@ -66,16 +69,45 @@ def run():
         folder = root / "wago"
         # The original v161 downloader is reused with a LOCAL two-table
         # test-only selection; never rewrite v161.TABLES in repository.
+        class_probe=os.environ.get("P3_CN_ITEM_CLASS_ONLY")=="1"
         original_tables = wago.TABLES
         try:
-            wago.TABLES = ("Item", "ItemSparse")
+            wago.TABLES = ("Item",) if class_probe else ("Item", "ItemSparse")
             snapshot = wago.snapshot(folder, build=BUILD, make_archive=False)
         finally:
             wago.TABLES = original_tables
-        assert set(snapshot["tables"]) == {"Item", "ItemSparse"}
+        assert set(snapshot["tables"]) == ({"Item"} if class_probe else {"Item","ItemSparse"})
         print("P3_CN_REAL_WAGO_REUSED_V161",json.dumps({
             n:{"bytes":v["bytes"],"sha256":v["sha256"]}
             for n,v in snapshot["tables"].items()},sort_keys=True),flush=True)
+
+        if class_probe:
+            counts=Counter()
+            known={}
+            names={243733:"Thalassian Phoenix Oil rank1",
+                   243734:"Thalassian Phoenix Oil rank2"}
+            with (folder/"Item.csv").open(encoding="utf-8-sig",newline="") as stream:
+                reader=csv.DictReader(stream)
+                if not {"ID","ClassID","SubclassID"}<=set(reader.fieldnames or []):
+                    raise ValueError("P3_CN_ITEM_CLASS_COLUMNS_MISSING")
+                for row in reader:
+                    cl,sub=int(row["ClassID"]),int(row["SubclassID"])
+                    if (cl==8 or cl==0 and sub in (6,8)):
+                        counts[(cl,sub)]+=1
+                    iid=int(row["ID"])
+                    if iid in names:
+                        known[iid]={"name_context":names[iid],
+                                    "class_id":cl,"subclass_id":sub}
+            proof={"schema":"p3_cn_real_item_class_probe_v1",
+                   "game_build":BUILD,
+                   "item_source":snapshot["tables"]["Item"],
+                   "known_oil_item_ids":known,
+                   "source_class_subclass_counts":{
+                       str(cl)+"/"+str(sub):n for (cl,sub),n in sorted(counts.items())},
+                   "native_calls":0,"environment_ready":False}
+            print("P3_CN_REAL_ITEM_CLASS_DISCOVERY",
+                  json.dumps(proof,sort_keys=True),flush=True)
+            return proof
 
         # Existing registration extractor + real v190 physical ID source.
         registration_raw = handlers.read_source(commit=REVISION)
@@ -172,6 +204,9 @@ if __name__=="__main__":
     pathlib.Path("p3_cn_receipt.json").write_text(
         json.dumps(result,ensure_ascii=False,sort_keys=True,indent=2)
         +"\n",encoding="utf8")
+    if "known_oil_item_ids" in result:
+        print("P3_CN_CLASS_SOURCE_ONLY_NO_NATIVE_NO_READY",flush=True)
+        raise SystemExit(0)
     print("P3_CN_REAL_JOIN_COUNTS",json.dumps({
         "physical":result["physical_counts"],
         "on_use":result["on_use_counts"],
