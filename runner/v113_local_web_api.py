@@ -114,13 +114,17 @@ class LocalJobs:
         # One request per exact build at a time. v217 reuses source bytes.
         # With no full pinned SimC item_data, one-spec stays PENDING/Native0.
         with self.season_source_lock:
-            return environment_build.collect_wago_new_season_source(
-                sessions_root=self.root,expected_game_build=build,
-                representative_request=requested,
-                g_probe_character={
-                    "race":character["race"],
-                    "talents":character["talents"]},
-                simc_revision_hint=revision_hint)
+            return environment_build.build_environment(
+                sessions_root=self.root,session_folder=None,user=user,
+                binary=None,revision=None,static_cache=None,
+                source_catalog_path=None,bootstrap_result=None,
+                fresh_collection_inputs={
+                    "expected_game_build":build,
+                    "representative_request":requested,
+                    "g_probe_character":{
+                        "race":character["race"],
+                        "talents":character["talents"]},
+                    "simc_revision_hint":revision_hint})
 
     def source_catalog_path(self):
         """Use the packaged v213 artifact when present; legacy source remains fallback."""
