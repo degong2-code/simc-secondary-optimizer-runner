@@ -30,6 +30,7 @@
   - [v167 #41561808395](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41561808395)
   - [v177 #41561808380](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41561808380)
   - [v180 #41561808408](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41561808408)
+- **Final SHA `3c781c12...` verification: all six workflows above completed SUCCESS**, including two-OS v113 (204 tests each), two-OS v182 UI (92+82+2 suites), Windows v181 beta (142 tests for each Python version + existing loopback HTTP 3-plan restore), v167 focused (14 tests, 1 SKIP), and v177/v180 offline flow. The `v180` real Native six-case job is guarded by a special one-time commit token and was not activated by this commit.
 - These CI runs are *offline / synthetic* (some legacy job names contain the word Native or actual historical scenarios). **New actual SimC Native 0, new real game HTTP 0** in P3-BN. The failing intermediate runs are deliberately preserved, not described as a product engine failure once corrected.
 - No G/J/F/O/B/T numeric values were established or promoted; active-season 13/14 gear and full tier identity still need independent current evidence; Env READY and complete target user DPS E2E remain pending. Full native/source compatibility is not automatically proven by omission of level.
 - Latest user's exact policy on highest-quality item choices, oil not double-added, fixed L within G, manual T priority, 26 DPS and 95% inference remains in force.
