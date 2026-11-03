@@ -24,6 +24,8 @@ class StandardizedGNativeBridgeTests(unittest.TestCase):
             "target_ilevel":334,
             "source_candidate_receipt_sha256":"b"*64,
             "class":"paladin","spec":"retribution",
+            "generic_G_physical_conditions_verified":True,
+            "generic_G_current_season_membership_required":False,
         }
         receipt["receipt_sha256"]=native.seed.digest(native.seed.canonical(
             receipt).encode("utf8"))
@@ -64,6 +66,8 @@ class StandardizedGNativeBridgeTests(unittest.TestCase):
         self.assertIsNone(result["G"])
         self.assertFalse(result["full_G_approved"])
         self.assertFalse(result["source_current_season_membership_verified"])
+        self.assertTrue(result["generic_G_numeric_reference_usable"])
+        self.assertFalse(result["generic_G_current_season_membership_required"])
         self.assertFalse(result["environment_ready"])
         self.assertEqual(result["new_native_calls_by_observer"],0)
 
