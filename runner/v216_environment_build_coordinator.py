@@ -24,6 +24,7 @@ import v269_simc_chmv_effect_snapshot as simc_snapshot_delta
 import v221_gem_item_db2_relation as gem_item_join
 import v268_gem_enchant_existing_source_stage as gem_enchant_stage
 import v271_user_socket_gem_layout as physical_gems
+import v274_zero_history_source_compiler_wiring as source_wiring
 import v223_installed_season_budget_source as season_source_proof
 import v213_source_to_catalog as source_to_catalog
 import v161_wago_db2_snapshot as wago_snapshot
@@ -2346,7 +2347,36 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         collected=collect_wago_new_season_source(
             sessions_root=sessions_root,**fresh_collection_inputs)
         progress=_zero_history_source_progress(collected)
-        return {**collected,"zero_history_build":progress,
+        # Reuse v241's already tested v191 -> v211 -> v213 compilers, not
+        # another source builder. A missing original input is a specific
+        # source-work item rather than a fake legacy file or J/F default.
+        try:
+            source_compilation=source_wiring.compile_collected(
+                collected,compiler=fresh_stage.compile_fresh_candidate)
+            if source_compilation["status"]==(
+                    "FRESH_V191_V211_V213_COMPILED_UNADMITTED"):
+                preflight=preflight_new_season_source(
+                    source_catalog_path=source_compilation["source_catalog_path"],
+                    expected_game_build=collected["expected_game_build"],
+                    expected_simc_revision=source_compilation["simc_revision"],
+                    source_snapshot_folder=pathlib.Path(
+                        collected["snapshot_receipt_path"]).parent,
+                    source_stage_root=source_compilation["stage_root"])
+                source_compilation["preflight_sha256"]=preflight[
+                    "preflight_sha256"]
+                source_compilation["preflight_status"]=preflight["status"]
+        except (ValueError, OSError, KeyError, TypeError) as exc:
+            raise EnvironmentBuildBlocked(
+                "V216_ZERO_HISTORY_SOURCE_COMPILER_INVALID:"
+                +str(exc).split(":",1)[0]) from exc
+        progress["source_compilation_status"]=source_compilation["status"]
+        progress["source_compilation_missing"]=source_compilation["missing"]
+        if source_compilation["missing"]:
+            progress["requires"].extend(
+                "FRESH_COMPILER_INPUT_"+name+"_PENDING"
+                for name in source_compilation["missing"])
+        return {**collected,"source_compilation":source_compilation,
+                "zero_history_build":progress,
                 "normal_build_entry":True}
     # Existing v217 stages assemble the same v211/v213 source candidate
     # inside this original Build request. No session is created before the
