@@ -191,29 +191,37 @@ SOURCE_SOCKETED_WRIST_REPLACEMENTS={
     268240:240900,   # Subtlety: original wrist 271506 carried 240900
     273775:240906}  # Elemental: original wrist 244584 carried 240906
 
-def ensure_representative_gem_colors(rows,diamond_id,need):
-    """Keep six real ordinary gems; for 240967 cover all four colors.
+def ensure_representative_gem_colors(rows,diamond_id,need,*,
+                                    ordinary_count=6,diamond_slot="head",
+                                    allow_partial=False):
+    """Reuse the source-observed 240967 four-color selection for N gems.
 
-    Fixes only missing colors, leaving a source profile unchanged if its
-    socketed gems already cover all colors. Existing 240983 source scenarios
-    are byte-preserved. The optimizer may overwrite secondary rating via
-    gear_*; actual gem IDs remain on the physical items for SimC effects.
+    The default 6/head path is byte-compatible with pinned v101 plans.
+    Opt-in layouts select an actual diamond slot and count; this adjusts
+    physical gem IDs, not CHMV ratings or game socket eligibility.
     """
     if diamond_id!=240967:
         return False
+    need(type(ordinary_count) is int and ordinary_count>=0 and
+         type(diamond_slot) is str and diamond_slot in rows and
+         type(allow_partial) is bool,
+         "REPRESENTATIVE_GEM_LAYOUT_ARGUMENTS_INVALID")
     slots=[]
     for slot in sorted(rows):
-        if slot=="head" or slot.startswith("trinket"):
+        if slot.startswith("trinket"):
             continue
         gem_ids=rows[slot]["options"].get("gem_id")
         if gem_ids is None:
             continue
         tokens=gem_ids.split("/")
-        need(all(t.isdigit() and int(t) not in (240967,240983) for t in tokens),
-             "REPRESENTATIVE_ORDINARY_GEM_INVALID")
         for idx,token in enumerate(tokens):
+            if slot==diamond_slot and idx==0:
+                # The v098 user diamond swap happens after this function.
+                continue
+            need(token.isdigit() and int(token) not in (240967,240983),
+                 "REPRESENTATIVE_ORDINARY_GEM_INVALID")
             slots.append((slot,idx,int(token)))
-    if len(slots)==5:
+    if ordinary_count==6 and diamond_slot=="head" and len(slots)==5:
         wrist=rows.get("wrists")
         prior=(SOURCE_SOCKETED_WRIST_REPLACEMENTS.get(wrist["item_id"])
                if wrist else None)
@@ -224,7 +232,12 @@ def ensure_representative_gem_colors(rows,diamond_id,need):
             all(gem_id==prior for _,_,gem_id in slots)):
             wrist["options"]["gem_id"]=str(prior)
             slots.append(("wrists",0,prior))
-    need(len(slots)==6,"REPRESENTATIVE_SIX_ORDINARY_GEMS_REQUIRED")
+    need(len(slots)==ordinary_count,
+         "REPRESENTATIVE_SIX_ORDINARY_GEMS_REQUIRED" if
+         ordinary_count==6 else "REPRESENTATIVE_ORDINARY_GEM_COUNT_MISMATCH")
+    if len(slots)<4 and allow_partial:
+        # SimC may calculate a partial 240967 color effect. Never claim four.
+        return False
     present=set()
     replaceable=[]
     for slot,idx,gem_id in slots:
