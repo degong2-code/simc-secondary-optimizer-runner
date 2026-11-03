@@ -1002,10 +1002,18 @@ def _reuse_existing_tier_source_stage(*,build,tier_bridge,first_party,
                pathlib.Path(first_party["candidate_path"])]
         need(all(p.is_file() and not p.is_symlink() for p in paths),
              "V216_TIER_REUSE_SEALED_PATH_UNSAFE")
+        # Bind only the original v251 stage outputs; refuse a caller-chosen
+        # alternate JSON path without rehashing or re-certifying the sources.
+        need(paths[0].parent==paths[1].parent and
+             paths[0].name=="v251_raid_correlated_tier_65_piece_candidate.json" and
+             paths[1].name=="v251_exact_first_party_13_class_simc_options.json",
+             "V216_TIER_REUSE_SEALED_STAGE_OUTPUT_PATH_DRIFT")
         need(all(type(s.get("source_stage")) is dict and
+                 s["source_stage"].get("stage_id")==name and
                  type(s["source_stage"].get("receipt_sha256")) is str and
                  len(s["source_stage"]["receipt_sha256"])==64
-                 for s in (tier_bridge,first_party)),
+                 for s,name in ((tier_bridge,"fresh-v251-db2-raid-tier-candidate"),
+                                (first_party,"fresh-v251-exact-first-party-simc-options"))),
              "V216_TIER_REUSE_UPSTREAM_STAGE_RECEIPTS_REQUIRED")
         physical=json.loads(paths[0].read_text("utf8"))
         matched=json.loads(paths[1].read_text("utf8"))
