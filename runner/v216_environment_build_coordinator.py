@@ -20,6 +20,7 @@ from urllib.request import Request, urlopen
 import v212_environment_manifest as environment_manifest
 import v222_season_budget_contract as season_budget_contract
 import v262_standardized_ilevel_budget_rows as standardized_budget_rows
+import v269_simc_chmv_effect_snapshot as simc_snapshot_delta
 import v221_gem_item_db2_relation as gem_item_join
 import v268_gem_enchant_existing_source_stage as gem_enchant_stage
 import v223_installed_season_budget_source as season_source_proof
@@ -382,6 +383,42 @@ def _reuse_observed_G_native_receipts(*, catalog, receipt_paths_by_ilevel):
     return result
 
 
+def _existing_simc_native_effect_snapshot(*, candidate, simc_revision):
+    """Read two existing SimC JSON2 outputs, not a second effects engine.
+
+    No Native execution, automatic F/O/J admission, or session mutation.
+    v198 already established matched precombat rating deltas for enchants.
+    """
+    need(type(candidate) is dict and
+         set(candidate)=={
+             "source_profile_path","kind","token",
+             "baseline_json2_path","active_json2_path","binary_sha256"},
+         "V216_SIMC_EFFECT_PAIR_INTERNAL_INPUT_REQUIRED")
+    try:
+        paths={key:pathlib.Path(candidate[key]) for key in (
+            "source_profile_path","baseline_json2_path",
+            "active_json2_path")}
+        need(all(p.is_file() and not p.is_symlink() and
+                 0<p.stat().st_size<=(
+                     4_000_000 if k=="source_profile_path"
+                     else simc_snapshot_delta.MAX_JSON)
+                 for k,p in paths.items()),
+             "V216_SIMC_EFFECT_PAIR_SOURCE_FILES_INVALID")
+        source=paths["source_profile_path"].read_text("utf8")
+        paired=simc_snapshot_delta.prepare(
+            profile=source,kind=candidate["kind"],token=candidate["token"])
+        observed=simc_snapshot_delta.compare(
+            baseline_json2=paths["baseline_json2_path"].read_bytes(),
+            active_json2=paths["active_json2_path"].read_bytes(),
+            prepared=paired,binary_sha256=candidate["binary_sha256"],
+            simc_revision=simc_revision)
+    except (OSError,UnicodeError,ValueError,TypeError,
+            simc_snapshot_delta.SnapshotBlocked) as exc:
+        raise EnvironmentBuildBlocked(
+            "V216_EXISTING_SIMC_EFFECT_NATIVE_DELTA_INVALID:"+str(exc)) from exc
+    return observed
+
+
 def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                                 expected_simc_revision, budget_evidence=None,
                                 target_ilevel=None, manual_final_T=None,
@@ -389,7 +426,8 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                                 source_stage_root=None,
                                 standard_budget_evidence_by_ilevel=None,
                                 standard_budget_reference_track=None,
-                                g_native_receipt_paths_by_ilevel=None):
+                                g_native_receipt_paths_by_ilevel=None,
+                                simc_effect_snapshot_case=None):
     """Inspect a freshly assembled v213 artifact in the NORMAL Build path.
 
     This does not install an environment. Reuse authenticated source
@@ -586,6 +624,11 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
     if existing_G_rows is not None:
         payload["measured_ilevel_G_from_existing_native_unadmitted"] = (
             [existing_G_rows[k] for k in sorted(existing_G_rows)])
+    if simc_effect_snapshot_case is not None:
+        payload["simc_native_effect_rating_delta_unadmitted"] = (
+            _existing_simc_native_effect_snapshot(
+                candidate=simc_effect_snapshot_case,
+                simc_revision=expected_simc_revision))
     return {**payload,"preflight_sha256":
         digest(canonical(payload).encode("utf8"))}
 
@@ -2149,7 +2192,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                       fresh_source_stage_inputs=None,
                       fresh_standard_budget_evidence_by_ilevel=None,
                       fresh_standard_budget_reference_track=None,
-                      fresh_g_native_receipt_paths_by_ilevel=None):
+                      fresh_g_native_receipt_paths_by_ilevel=None,
+                      fresh_simc_effect_snapshot_case=None):
     """Reconcile existing inputs and seal one incremental, auditable build.
 
     Source acquisition is intentionally outside this local coordinator:
@@ -2214,6 +2258,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         fresh_standard_budget_reference_track),
                     g_native_receipt_paths_by_ilevel=(
                         fresh_g_native_receipt_paths_by_ilevel),
+                    simc_effect_snapshot_case=(
+                        fresh_simc_effect_snapshot_case),
                     target_ilevel=(
                         user["target"]["ilevel"]
                         if fresh_standard_budget_evidence_by_ilevel is not None
