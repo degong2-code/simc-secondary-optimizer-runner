@@ -110,3 +110,47 @@ def arrange(rows, plan, need, *, observed_rating_per_ordinary=None):
         "environment_ready": False,
         "native_calls": 0,
     }
+
+
+
+def reconcile_observed_J(layout, per_gem_rating_by_id, need):
+    """Match static J candidate against actual placed ordinary gem IDs.
+
+    Only arithmetic; no independent item quality, source provenance, socket
+    legality, or SimC buffed_stats +1 certification is performed here.
+    """
+    need(type(layout) is dict and layout.get("schema")==SCHEMA and
+         layout.get("status")==
+         "PHYSICAL_GEMS_STAGED_SOURCE_AND_SOCKET_PROOFS_PENDING",
+         "GEM_J_PHYSICAL_LAYOUT_STAGE_REQUIRED")
+    ids=layout.get("ordinary_gem_ids")
+    counts=layout.get("socket_counts")
+    need(type(ids) is list and
+         all(type(gem) is int and gem in representative.SOURCE_GEM_COLOR
+             for gem in ids) and
+         type(counts) is dict and
+         all(type(n) is int and n>=0 for n in counts.values()) and
+         layout.get("ordinary_count")==len(ids) and
+         layout.get("socket_total")==len(ids)+1 and
+         sum(counts.values())==len(ids)+1 and
+         layout.get("special_gem_id") in DIAMONDS and
+         type(layout.get("special_slot")) is str and
+         counts.get(layout["special_slot"],0)>=1,
+         "GEM_J_LAYOUT_COUNTS_OR_IDS_DRIFT")
+    need(type(per_gem_rating_by_id) is dict and
+         set(per_gem_rating_by_id)=={str(gem) for gem in ids} and
+         all(type(n) is int and 0<n<=10000
+             for n in per_gem_rating_by_id.values()),
+         "GEM_J_EXACT_PHYSICAL_ITEM_RATINGS_REQUIRED")
+    return {
+        "status":"PHYSICAL_GEM_J_ARITHMETIC_UNADMITTED",
+        "source_layout_schema":SCHEMA,
+        "ordinary_count":len(ids),
+        "physical_gem_item_ids":list(ids),
+        "J_candidate_unadmitted":sum(
+            per_gem_rating_by_id[str(gem)] for gem in ids),
+        "source_quality_and_applicability_authenticated_here":False,
+        "game_socket_legality_verified_here":False,
+        "environment_ready":False,
+        "native_calls":0,
+    }
