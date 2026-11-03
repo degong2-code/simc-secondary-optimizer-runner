@@ -830,6 +830,19 @@ def _fresh_consumable_item_source_stage(*, stage_root, wago_folder,
                  and len(tables[name]["sha256"])==64
                  for name in ("Item","ItemSparse")),
          "V216_CONSUMABLE_WAGO_SOURCE_IDENTITY_INVALID")
+    scope_file=pathlib.Path(linked["candidate_path"])
+    need(scope_file.is_file() and not scope_file.is_symlink(),
+         "V216_CONSUMABLE_V163_ORIGIN_FILE_REQUIRED")
+    scope_raw=scope_file.read_bytes()
+    need(0<len(scope_raw)<=25_000_000,
+         "V216_CONSUMABLE_V163_ORIGIN_SIZE_INVALID")
+    scope_doc=json.loads(scope_raw)
+    need(scope_doc.get("schema")==season_join.SCHEMA
+         and scope_doc.get("build")==build
+         and scope_doc.get("source_provider")==
+             "WAGO_TOOLS_PINNED_DB2_WCL_LIVE"
+         and scope_doc.get("auto_source_scope")==scope,
+         "V216_CONSUMABLE_V163_SEASON_SCOPE_DRIFT")
     root=pathlib.Path(stage_root)
     prefix="source/v258_same_season_consumable_"
     outputs={
@@ -856,7 +869,7 @@ def _fresh_consumable_item_source_stage(*, stage_root, wago_folder,
         files["simc_source"].write_bytes(raw)
         for key,document in (("v189",first),("candidate",second)):
             files[key].write_text(json.dumps(document,sort_keys=True,
-                ensure_ascii=False,indent=2,allow_nan=False)+"\\n",
+                ensure_ascii=False,indent=2,allow_nan=False)+"\n",
                 encoding="utf8")
     def validate(checked):
         first=json.loads(checked["v189"].read_text("utf8"))
@@ -897,6 +910,7 @@ def _fresh_consumable_item_source_stage(*, stage_root, wago_folder,
                     "simc_seed_receipt_sha256":digest(receipt_raw),
                     "v163_stage_sha256":(linked.get("stage") or {}).get(
                         "receipt_sha256"),
+                    "v163_candidate_sha256":digest(scope_raw),
                     "wago_item_sha256":tables["Item"]["sha256"],
                     "wago_sparse_sha256":tables["ItemSparse"]["sha256"],
                     "code_sha256":code["sha256"]},

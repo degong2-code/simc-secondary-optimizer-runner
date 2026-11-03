@@ -431,6 +431,107 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         self.assertIsNone(receipt["G"])
         self.assertFalse(receipt["environment_ready"])
 
+    def test_fresh_v189_v190_exact_consumables_reuse_existing_wago_and_simc(self):
+        from tests.test_v229_simc_only_source_seed import raw_sources
+        from tests.test_v189_simc_choice_discovery import SOURCE
+        from tests.test_v190_consumable_item_snapshot_join import prepare
+        import io
+        build="12.1.5.70575"; revision="a"*40
+        folder=self.root/"v258_consumable"
+        folder.mkdir()
+        wago=folder/"wago";wago.mkdir()
+        prepare(wago)
+        seed_dir=folder/"simc"
+        seed_dir.mkdir()
+        raw=raw_sources(build)
+        receipt=v216.simc_source.inventory(
+            raw,simc_revision=revision,expected_build=build,
+            previous_game_build=None,season_event="cold_start",
+            expected_git_blob={
+                key:v216.simc_source.git_blob(data)
+                for key,data in raw.items()})
+        (seed_dir/v216.simc_source.RECEIPT).write_text(
+            json.dumps(receipt),encoding="utf8")
+        pinned={"source_dir":str(seed_dir),
+                "simc_receipt_sha256":receipt["receipt_sha256"]}
+        scope={"expansion_id":11,"source_basis":
+               "LIVE_WCL_ACTIVE_ZONES_AND_SAME_BUILD_DB2"}
+        source_path=folder/"v163.json"
+        source_path.write_text(json.dumps({
+            "schema":v216.season_join.SCHEMA,
+            "build":build,
+            "source_provider":"WAGO_TOOLS_PINNED_DB2_WCL_LIVE",
+            "auto_source_scope":scope}),encoding="utf8")
+        linked={"status":
+                "DB2_WCL_CANDIDATES_JOINED_SEASON_CONDITIONS_PENDING",
+                "candidate_path":str(source_path),
+                "source_scope":scope,
+                "stage":{"receipt_sha256":"a"*64}}
+        calls=[]
+        class Response(io.BytesIO):
+            status=200
+            def __enter__(self):return self
+            def __exit__(self,*args):self.close()
+        def transport(req,timeout):
+            calls.append(req.full_url)
+            self.assertEqual(req.full_url,
+                v216.simc_effect_candidates.URL_PREFIX+revision+"/"+
+                v216.simc_effect_candidates.SOURCE)
+            return Response(SOURCE.encode("utf8"))
+        args={"stage_root":folder,"wago_folder":wago,
+              "build":build,"linked":linked,
+              "pinned_simc":pinned,"transport":transport}
+        first=v216._fresh_consumable_item_source_stage(**args)
+        second=v216._fresh_consumable_item_source_stage(**args)
+        self.assertEqual(first["status"],
+            "FRESH_FOOD_POTION_DB2_CANDIDATES_NOT_USER_ADMITTED",
+            str(first))
+        self.assertEqual(first["food_item_count"],1)
+        self.assertEqual(first["potion_item_count"],1)
+        self.assertEqual(first["network_calls_by_stage"],1)
+        self.assertEqual(second["network_calls_by_stage"],0)
+        self.assertEqual(len(calls),1)
+        self.assertEqual(first["source_stage"]["status"],
+                         "EXECUTED_AND_SEALED")
+        self.assertEqual(second["source_stage"]["status"],
+                         "REUSED_VERIFIED")
+        self.assertEqual(second["source_stage"]["receipt_writes"],0)
+        self.assertEqual((first["J"],first["F"],first["O"]),
+                         (None,None,None))
+        self.assertFalse(first["environment_ready"])
+        candidate=json.loads(pathlib.Path(
+            first["candidate_path"]).read_text(encoding="utf8"))
+        self.assertEqual({row["item_id"] for row in candidate["items"]},
+                         {101,102})
+        self.assertFalse(candidate["automatic_ui_promotion"])
+        self.assertTrue(all(row["ui_selectable"] is False
+                            for row in candidate["items"]))
+        self.assertTrue(all(row["simc_token"]=="UNRESOLVED"
+                            for row in candidate["items"]))
+        # Different physical v163 source bytes must not relabel a cached
+        # output or repeat a network fetch; receipt identity blocks it.
+        changed=json.loads(source_path.read_text("utf8"))
+        changed["suspicious_source_mutation"]=True
+        source_path.write_text(json.dumps(changed),encoding="utf8")
+        bad=v216._fresh_consumable_item_source_stage(**args)
+        self.assertEqual(bad["status"],
+            "FRESH_CONSUMABLE_HANDLER_OR_DB2_JOIN_PENDING")
+        self.assertIn("STAGE_INPUT",bad["reason"])
+        self.assertEqual(bad["network_calls_by_stage"],0)
+        self.assertEqual(len(calls),1)
+
+    def test_fresh_v189_v190_without_exact_credible_season_is_pending(self):
+        result=v216._fresh_consumable_item_source_stage(
+            stage_root=self.root,wago_folder=self.root/"missing",
+            build="12.2.0.99999",
+            linked={"status":"AUTHENTICATED_SEASON_JOIN_NOT_READY"},
+            pinned_simc={"source_dir":None})
+        self.assertEqual(result["status"],
+                         "FRESH_CONSUMABLE_SAME_BUILD_SOURCE_PENDING")
+        self.assertIsNone(result["F"])
+        self.assertIsNone(result["O"])
+        self.assertEqual(result["network_calls_by_stage"],0)
+
     def test_blizzard_wcl_authenticated_stage_runs_before_wago_and_reuses(self):
         import io
         from urllib.parse import urlsplit
