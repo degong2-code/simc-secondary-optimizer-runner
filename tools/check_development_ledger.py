@@ -139,8 +139,10 @@ def check_changed_files(paths):
     paths = set(paths)
     changed = any(
         p.startswith(("runner/", "tests/", "tools/", "data/",
-                      ".github/workflows/"))
+                      "docs/", ".github/workflows/"))
         for p in paths
+        if not p.startswith(PREFIX + "notes/")
+        and p != PREFIX + "INDEX.md"
     )
     has_note = any(
         p.startswith(PREFIX + "notes/") and p.endswith(".md")
