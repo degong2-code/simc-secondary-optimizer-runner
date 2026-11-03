@@ -14,6 +14,7 @@ from pathlib import Path
 import v191_unified_season_data_update as season_compiler
 import v168_current_season_tier_discovery as tier_compiler
 import v211_enchant_source_effect_classification as enchant_classifier
+import v286_representative_oil_source_binding as representative_oil
 
 SCHEMA = "v274_v216_collected_to_v241_fresh_compile_inputs_v1"
 STAGED = frozenset(("EXECUTED_AND_SEALED", "REUSED_VERIFIED",
@@ -236,10 +237,16 @@ def discover(collected):
 def compile_collected(collected, *, compiler):
     """Run the EXISTING v241 once only when all original source types exist."""
     plan = discover(collected)
+    # Reuse the exact selected v232 representative and sealed v167/v285
+    # source files. This creates neither a second source compiler nor
+    # an oil admission Gate: missing weapon data remains source PENDING.
+    oil_sources = representative_oil.match_collected(collected)
     if plan["inputs"] is None:
-        return {k: v for k, v in plan.items() if k != "inputs"}
+        return {**{k: v for k, v in plan.items() if k != "inputs"},
+                "representative_oil_source_options_unadmitted":oil_sources}
     compiled = compiler(**plan["inputs"])
     return {"schema": SCHEMA,
+            "representative_oil_source_options_unadmitted":oil_sources,
             "status": "FRESH_V191_V211_V213_COMPILED_UNADMITTED",
             "missing": [], "available": list(NEEDED),
             "source_catalog_path": compiled["source_catalog_path"],
