@@ -6,7 +6,7 @@ sys.path.insert(0,str(ROOT/"runner"))
 import v281_consumable_simc_relation as v281
 import v280_consumable_item_use_spell_source as v280
 BUILD="12.2.0.99999"
-CSV=b"SpellID,Effect,EffectMiscValue,EffectIndex\n111,6,0,0\n211,54,8052,0\n212,54,9999,0\n999,54,8052,0\n"
+CSV=b"SpellID,DifficultyID,Effect,EffectMiscValue_0,EffectMiscValue_1,EffectIndex\n111,0,6,0,0,0\n211,0,54,8052,0,0\n212,0,54,9999,0,0\n999,0,54,8052,0,0\n"
 TEMP=b"""// Temporary item enchants, wow build 12.2.0.99999
 static constexpr std::array<temporary_enchant_entry_t, 2> __temporary_enchant_data { {
   { 8051, 1, 1237008, "thalassian_phoenix_oil" },
@@ -60,9 +60,25 @@ class ConsumptionRelation(unittest.TestCase):
             v281.correlate(SOURCE,rows,TMP,build="12.2.0.99998")
         with tempfile.TemporaryDirectory() as td:
             path=pathlib.Path(td)/"bad.csv"
-            path.write_text("SpellID,Effect,Wrong\n211,54,8052\n")
+            path.write_text("SpellID,DifficultyID,Effect,EffectIndex,Wrong\n211,0,54,0,8052\n")
             with self.assertRaisesRegex(v281.SimCRelationBlocked,"COLUMNS_DRIFT"):
                 v281.scan_spell_effects(path,{211})
+    def test_same_build_real_csv_fields_and_difficulty_are_not_confused(self):
+        # The column spellings were read from live Wago Retail
+        # 12.1.5.70575 HTTP 200, workflow #41657577279.
+        rows=b"ID,SpellID,DifficultyID,EffectIndex,Effect,EffectMiscValue_0,EffectMiscValue_1\n1,211,0,0,54,8052,9999\n2,211,1,0,54,8051,9999\n"
+        with tempfile.TemporaryDirectory() as td:
+            p=pathlib.Path(td)/"actual-shape.csv";p.write_bytes(rows)
+            parsed=v281.scan_spell_effects(p,{211})
+        self.assertEqual(len(parsed),2)
+        self.assertEqual(parsed[0]["enchant_id"],8052)
+        self.assertEqual(parsed[0]["difficulty_id"],0)
+        self.assertEqual(parsed[1]["difficulty_id"],1)
+        doc=v281.correlate(SOURCE,parsed,TMP,build=BUILD,flask_dbc_rows=FLASK)
+        self.assertEqual(doc["items"][1]["simc_temporary_enchant_source"][
+                         "exact_source_matches"][0]["enchant_id"],8052)
+        self.assertNotIn(8051,[r["enchant_id"] for r in doc["items"][1][
+                         "simc_temporary_enchant_source"]["exact_source_matches"]])
     def test_sealed_stage_one_fetch_then_zero_and_tamper_blocks(self):
         with tempfile.TemporaryDirectory() as td:
             root=pathlib.Path(td);(root/"source").mkdir()

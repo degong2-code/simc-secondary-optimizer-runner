@@ -169,7 +169,9 @@ def correlate(source, spell_rows, temporary_rows, *, build, flask_dbc_rows=()):
             # enchant ID. Same-looking spell name and token alone are invalid.
             links=[];not_simc=[];conflicted=[]
             for effect in effects:
-                if effect["effect"]!=TEMPORARY_ENCHANT_EFFECT or effect["enchant_id"]<=0:
+                if (effect["effect"]!=TEMPORARY_ENCHANT_EFFECT or
+                        effect["enchant_id"]<=0 or
+                        effect.get("difficulty_id",0)!=0):
                     continue
                 source_rows=by_enchant.get(effect["enchant_id"],[])
                 if len(source_rows)==1:
@@ -186,9 +188,12 @@ def correlate(source, spell_rows, temporary_rows, *, build, flask_dbc_rows=()):
                 else:
                     conflicted.append(effect["enchant_id"])
             links=sorted(links,key=lambda x:(x["on_use_spell_id"],x["enchant_id"]))
+            # A matched ID is a candidate only when unambiguous. Multiple
+            # different valid enchant IDs are not safely interchangeable.
+            one_enchant=len({x["enchant_id"] for x in links})==1
             row["simc_temporary_enchant_source"]={
                 "status":("EXACT_SIMC_TEMP_ENCHANT_ID_CANDIDATE"
-                          if links and not conflicted and not not_simc
+                          if links and one_enchant and not conflicted and not not_simc
                           and origin.get("status")==
                               "EXACT_DB2_ITEM_TO_ON_USE_SPELL_SOURCE_ONLY"
                           else "TEMP_ENCHANT_SIMC_RELATION_PENDING"),
@@ -229,21 +234,24 @@ def scan_spell_effects(csv_path, wanted):
     out=[];seen=set()
     with Path(csv_path).open("r",encoding="utf-8-sig",newline="") as stream:
         reader=csv.DictReader(stream)
-        need({"SpellID","Effect","EffectMiscValue"}<=set(reader.fieldnames or ()),
+        need({"SpellID","Effect","EffectIndex","EffectMiscValue_0",
+              "DifficultyID"}<=set(reader.fieldnames or ()),
              "V281_SPELL_EFFECT_DB2_COLUMNS_DRIFT")
         for n,row in enumerate(reader):
             need(n<2_500_000,"V281_SPELL_EFFECT_ROW_LIMIT")
             sid=_int(row["SpellID"],"SPELL_ID")
             if sid not in wanted:continue
             effect=_int(row["Effect"],"EFFECT_CODE")
-            misc=_int(row["EffectMiscValue"],"MISC_VALUE",allow_negative=True)
+            misc=_int(row["EffectMiscValue_0"],"MISC_VALUE_0",allow_negative=True)
+            difficulty=_int(row["DifficultyID"],"DIFFICULTY_ID")
             idx=(_int(row["EffectIndex"],"EFFECT_INDEX")
                  if "EffectIndex" in row else n)
-            key=(sid,idx)
+            key=(sid,difficulty,idx)
             need(key not in seen,"V281_DUPLICATE_SPELL_EFFECT_INDEX")
             seen.add(key)
             out.append({"spell_id":sid,"effect":effect,
-                        "enchant_id":misc,"effect_index":idx})
+                        "enchant_id":misc,"effect_index":idx,
+                        "difficulty_id":difficulty})
     return out
 
 def _flask_from_sealed_item_data(full_seed, build):
