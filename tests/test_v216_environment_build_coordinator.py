@@ -546,10 +546,12 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         first=v216._fresh_consumable_item_source_stage(**args)
         second=v216._fresh_consumable_item_source_stage(**args)
         self.assertEqual(first["status"],
-            "FRESH_FOOD_POTION_DB2_CANDIDATES_NOT_USER_ADMITTED",
+            "FRESH_FOOD_POTION_FLASK_ENHANCEMENT_DB2_CANDIDATES_NOT_USER_ADMITTED",
             str(first))
         self.assertEqual(first["food_item_count"],1)
         self.assertEqual(first["potion_item_count"],1)
+        self.assertEqual(first["flask_physical_item_count"],1)
+        self.assertEqual(first["item_enhancement_candidate_count"],1)
         self.assertEqual(first["network_calls_by_stage"],1)
         self.assertEqual(second["network_calls_by_stage"],0)
         self.assertEqual(len(calls),1)
@@ -564,7 +566,9 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         candidate=json.loads(pathlib.Path(
             first["candidate_path"]).read_text(encoding="utf8"))
         self.assertEqual({row["item_id"] for row in candidate["items"]},
-                         {101,102})
+                         {101,102,105,106})
+        self.assertEqual(first["source_stage"]["stage_id"],
+                         "fresh-v189-v190-consumable-physical-four-class")
         self.assertFalse(candidate["automatic_ui_promotion"])
         self.assertTrue(all(row["ui_selectable"] is False
                             for row in candidate["items"]))
@@ -875,7 +879,7 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                 simc_transport=simc_transport)
         self.assertEqual(len(simc_calls),8)
         self.assertEqual(third["fresh_food_potion_item_sources"]["status"],
-            "FRESH_FOOD_POTION_DB2_CANDIDATES_NOT_USER_ADMITTED")
+            "FRESH_FOOD_POTION_FLASK_ENHANCEMENT_DB2_CANDIDATES_NOT_USER_ADMITTED")
         self.assertEqual(third["fresh_food_potion_item_sources"]
                          ["network_calls_by_stage"],1)
         self.assertEqual(fourth["fresh_food_potion_item_sources"]

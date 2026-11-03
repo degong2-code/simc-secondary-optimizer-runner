@@ -16,12 +16,20 @@ ITEMS="""ID,ClassID,SubclassID,InventoryType
 102,0,1,0
 103,4,1,1
 104,0,1,0
+105,0,3,0
+106,0,6,0
+107,0,3,0
+108,8,0,0
 """
 SPARSE="""ID,ExpansionID,Display_lang
 101,11,Fresh Feast
 102,11,New Potion
 103,11,Normal Armor
 104,10,Legacy Potion
+105,11,Source Flask
+106,11,Source Item Enhancement
+107,10,Legacy Flask
+108,11,Modern Item Enhancement class
 """
 def prepare(root):
     table={}
@@ -41,10 +49,18 @@ class ConsumableDb2Join(unittest.TestCase):
                expected_build="12.1.5.70575",expansion_id=11)
             self.assertEqual(out["counts"],{
                "food_items":1,"potion_items":1,
+               "flask_items":1,"item_enhancement_items":1,
                "simc_effect_food_registrations":37,
                "simc_effect_potion_registrations":5})
-            self.assertEqual({x["item_id"] for x in out["items"]},{101,102})
-            self.assertEqual({x["kind"] for x in out["items"]},{"food","potion"})
+            self.assertEqual({x["item_id"] for x in out["items"]},
+                             {101,102,105,106})
+            self.assertEqual({x["kind"] for x in out["items"]},
+                             {"food","potion","flask","item_enhancement"})
+            self.assertEqual(next(x for x in out["items"]
+                if x["item_id"]==106)["weapon_oil_identity"],
+                "NOT_ESTABLISHED")
+            self.assertTrue(all(x["crafting_quality"]=="UNRESOLVED"
+                                for x in out["items"]))
             self.assertTrue(all(x["ui_selectable"] is False for x in out["items"]))
             self.assertTrue(all(x["simc_dbc_presence"]=="NOT_CHECKED" for x in out["items"]))
             self.assertFalse(out["automatic_ui_promotion"])
@@ -72,6 +88,8 @@ class ConsumableDb2Join(unittest.TestCase):
                 result=join.build(SOURCE,root,expected_build="12.1.5.70575",
                                   expansion_id=11,verified_tables=proof)
             self.assertEqual(result["counts"]["food_items"],1)
+            self.assertEqual(result["counts"]["flask_items"],1)
+            self.assertEqual(result["counts"]["item_enhancement_items"],1)
             self.assertFalse(result["automatic_ui_promotion"])
             modified=json.loads(json.dumps(proof))
             modified["Item"]["sha256"]="f"*64

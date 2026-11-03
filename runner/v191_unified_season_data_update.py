@@ -241,6 +241,9 @@ def compile_catalog(gear,tier,budget,effects,consumables,generated,*,event):
       "tier_piece_ids":sum(len(x["pieces"]) for x in tier_classes.values()),
       "food_raw_item_candidates":sum(x["kind"]=="food" for x in consumables["items"]),
       "potion_raw_item_candidates":sum(x["kind"]=="potion" for x in consumables["items"]),
+      "flask_raw_item_candidates":sum(x["kind"]=="flask" for x in consumables["items"]),
+      "item_enhancement_raw_candidates":sum(
+          x["kind"]=="item_enhancement" for x in consumables["items"]),
       "food_handler_registrations":len(effects["candidates"].get("food",[])),
       "potion_handler_registrations":len(effects["candidates"].get("potion",[])),
       "embellishment_darkmoon_registrations":len(
@@ -282,10 +285,21 @@ def compile_catalog(gear,tier,budget,effects,consumables,generated,*,event):
          "potion":{"candidates":[x for x in consumables["items"]
                                   if x["kind"]=="potion"],"stage":"DB2_ID_ONLY"},
          "flask":{"reference":None if budget_pending else budget["flasks"],
+                   "physical_item_candidates":[
+                       x for x in consumables["items"] if x["kind"]=="flask"],
+                   "simc_token_join_verified":False,
+                   "highest_quality_effect_verified":False,
                    "stage":("NEW_SEASON_F_EVIDENCE_PENDING" if budget_pending
                             else "CHMV_F_REFERENCE_NOT_ALL_SIMC_VALIDATED")},
          "augmentation_rune":{"stage":"SIMC_DBC_ITEM_MATCH_PENDING"},
-         "weapon_oils":{"stage":"SIMC_TEMPORARY_ENCHANT_MATCH_PENDING"},
+         "weapon_oils":{
+             "item_enhancement_source_candidates":[
+                 x for x in consumables["items"]
+                 if x["kind"]=="item_enhancement"],
+             "temporary_simc_token_candidates":temporary,
+             "item_to_temporary_enchant_join_verified":False,
+             "weapon_and_hand_applicability_verified":False,
+             "stage":"PHYSICAL_SUBCLASS_NOT_WEAPON_OIL_PROOF"},
          "general_gems":{"reference":None if budget_pending else budget["ordinary_gem"],
                          "stage":("NEW_SEASON_J_EVIDENCE_PENDING" if budget_pending
                                   else "CHMV_J_REFERENCE_NOT_FULL_GEM_CATALOG")},

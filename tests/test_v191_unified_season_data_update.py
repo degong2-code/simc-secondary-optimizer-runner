@@ -119,11 +119,42 @@ class UnifiedCatalogTest(unittest.TestCase):
         fresh_tier["retail_build"]="12.2.0.99999"
         fresh_consumables=copy.deepcopy(consumables)
         fresh_consumables["source"]["wago_snapshot_build"]="12.2.0.99999"
+        fresh_consumables["items"].extend([
+            {"item_id":500003,"kind":"flask",
+             "item_class":0,"item_subclass":3,
+             "simc_token":"UNRESOLVED","crafting_quality":"UNRESOLVED",
+             "ui_selectable":False},
+            {"item_id":500004,"kind":"item_enhancement",
+             "item_class":0,"item_subclass":6,
+             "weapon_oil_identity":"NOT_ESTABLISHED",
+             "simc_token":"UNRESOLVED","ui_selectable":False}])
         fresh=u.compile_catalog(fresh_gear,fresh_tier,None,effects,
                                 fresh_consumables,generated,event="season_change")
         self.assertEqual(fresh["source_budget_state"],
                          "NEW_SEASON_J_F_EVIDENCE_PENDING")
         self.assertIsNone(fresh["consumables"]["flask"]["reference"])
+        self.assertEqual(
+            [r["item_id"] for r in
+             fresh["consumables"]["flask"]["physical_item_candidates"]],
+            [500003])
+        self.assertEqual(
+            [r["item_id"] for r in
+             fresh["consumables"]["weapon_oils"][
+                 "item_enhancement_source_candidates"]],
+            [500004])
+        self.assertEqual(fresh["consumables"]["weapon_oils"][
+            "temporary_simc_token_candidates"][0]["simc_token"],
+            "somestrength_oil")
+        self.assertFalse(fresh["consumables"]["weapon_oils"][
+            "item_to_temporary_enchant_join_verified"])
+        self.assertFalse(fresh["consumables"]["weapon_oils"][
+            "weapon_and_hand_applicability_verified"])
+        self.assertFalse(fresh["consumables"]["flask"][
+            "highest_quality_effect_verified"])
+        self.assertEqual(fresh["related_source_counts"][
+            "flask_raw_item_candidates"],1)
+        self.assertEqual(fresh["related_source_counts"][
+            "item_enhancement_raw_candidates"],1)
         self.assertIsNone(fresh["consumables"]["general_gems"]["reference"])
         self.assertIsNone(fresh["G"])
         self.assertIsNone(fresh["B"])

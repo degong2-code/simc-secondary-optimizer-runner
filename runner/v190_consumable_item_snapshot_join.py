@@ -12,8 +12,18 @@ from pathlib import Path
 SCHEMA="v190_same_build_consumable_item_candidates_v1"
 MAX_TABLE=210_000_000
 MAX_ROWS=1_000_000
+# Retail Enum.ItemConsumableSubclass values, confirmed against actual DB2
+# ClassID/SubclassID fields. Subclass 6 is a *broad* item-enhancement
+# category, NOT proof that an item is a supported weapon oil.
 FOOD_CLASS_SUBCLASS=(0,5)
 POTION_CLASS_SUBCLASS=(0,1)
+FLASK_CLASS_SUBCLASS=(0,3)
+ITEM_ENHANCEMENT_CLASS_SUBCLASS=(0,6)
+CATEGORIES={
+    FOOD_CLASS_SUBCLASS:"food",POTION_CLASS_SUBCLASS:"potion",
+    FLASK_CLASS_SUBCLASS:"flask",
+    ITEM_ENHANCEMENT_CLASS_SUBCLASS:"item_enhancement",
+}
 class ConsumableJoinBlocked(ValueError):pass
 def need(ok,why):
     if not ok:raise ConsumableJoinBlocked(why)
@@ -73,18 +83,18 @@ def build(discovered,snapshot_folder,*,expected_build,expansion_id,
                  "V217_VERIFIED_TABLE_PROVENANCE_MISMATCH:"+table)
         actual[table]={"sha256":recorded["sha256"],
                        "bytes":recorded["bytes"]}
-    # Keep only consumables of the two legal subclasses, not all items:
-    # this avoids duplicating the season equipment DB in memory or artifacts.
+    # One original Item/ItemSparse scan covers the four scoped consumable
+    # subclasses; no full item DB, name matching or oil token guesses.
     base={}
     for row in csvrows(root/"Item.csv",
                        ("ID","ClassID","SubclassID","InventoryType")):
         iid=integer(row["ID"],"BAD_ITEM_ID")
         family=(integer(row["ClassID"],"BAD_ITEM_CLASS"),
                 integer(row["SubclassID"],"BAD_ITEM_SUBCLASS"))
-        if family not in (FOOD_CLASS_SUBCLASS,POTION_CLASS_SUBCLASS):continue
+        if family not in CATEGORIES:continue
         need(iid not in base,"DUPLICATE_ITEM_ID")
-        base[iid]={"item_id":iid,"kind":"food" if family==FOOD_CLASS_SUBCLASS
-                   else "potion","item_class":family[0],
+        base[iid]={"item_id":iid,"kind":CATEGORIES[family],
+                   "item_class":family[0],
                    "item_subclass":family[1],
                    "inventory_type":integer(row["InventoryType"],"BAD_INVENTORY_TYPE")}
     found={};selected=[]
@@ -105,6 +115,9 @@ def build(discovered,snapshot_folder,*,expected_build,expansion_id,
             "effect_handler_spell_join":"NOT_CHECKED",
             "crafting_quality":"UNRESOLVED",
             "real_in_game_obtainability":"NOT_CHECKED",
+            "weapon_oil_identity":("NOT_ESTABLISHED"
+                if item["kind"]=="item_enhancement" else "NOT_APPLICABLE"),
+            "source_only_subclass_not_effect_proof":True,
             "native_acceptance":"NOT_CHECKED",
             "ui_selectable":False})
         selected.append(item)
@@ -118,10 +131,15 @@ def build(discovered,snapshot_folder,*,expected_build,expansion_id,
         "tables":actual},
       "counts":{"food_items":sum(x["kind"]=="food" for x in selected),
                 "potion_items":sum(x["kind"]=="potion" for x in selected),
+                "flask_items":sum(x["kind"]=="flask" for x in selected),
+                "item_enhancement_items":sum(
+                    x["kind"]=="item_enhancement" for x in selected),
                 "simc_effect_food_registrations":discovered["counts"]["food_handler_registrations"],
                 "simc_effect_potion_registrations":discovered["counts"]["potion_handler_registrations"]},
       "items":selected,
       "unresolved_requirements":[
+          "FLASK_ID_TO_SIMC_TOKEN_AND_HIGHEST_QUALITY_EFFECT_PROOF",
+          "ITEM_ENHANCEMENT_TO_WEAPON_OIL_ID_SPELL_AND_HANDS_PROOF",
           "SIMC_COMPILED_DBC_ITEM_PRESENCE_AND_TOKEN_QUALITY",
           "SAME_BUILD_ITEM_EFFECT_SPELL_LINK_FOR_CLASSIFICATION",
           "GAME_RECIPE_ELIGIBILITY_FOR_EMBELLISHMENT_SLOTS",

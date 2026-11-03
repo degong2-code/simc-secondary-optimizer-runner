@@ -1054,8 +1054,9 @@ def _fresh_consumable_item_source_stage(*, stage_root, wago_folder,
 
     Exactly one small pinned SimC source fetch at the already resolved
     revision; zero duplicate Wago requests, Native or UI admission.
-    This produces food/potion **item candidates**, not flask F, gem J,
-    oil O, quality equivalence, or validated user options.
+    The source ID set includes food, potions, subclass-3 flasks and broad
+    subclass-6 item enhancements. The latter are NOT necessarily weapon oils;
+    no flask token, quality/effect, physical hands or F/O is approved.
     """
     pending={"status":"FRESH_CONSUMABLE_SAME_BUILD_SOURCE_PENDING",
              "candidate_path":None,"source_stage":None,
@@ -1125,7 +1126,10 @@ def _fresh_consumable_item_source_stage(*, stage_root, wago_folder,
          and scope_doc.get("auto_source_scope")==scope,
          "V216_CONSUMABLE_V163_SEASON_SCOPE_DRIFT")
     root=pathlib.Path(stage_root)
-    prefix="source/v258_same_season_consumable_"
+    # Successor source stage: preserve historical v258 sealed bytes; the
+    # broadened four-subclass raw source needs a new immutable receipt/output
+    # identity but no new Wago download or additional SimC source HTTP.
+    prefix="source/v279_same_season_consumable_"
     outputs={
         "simc_source":prefix+"unique_gear_midnight.cpp",
         "v189":prefix+"v189_handlers.json",
@@ -1180,13 +1184,18 @@ def _fresh_consumable_item_source_stage(*, stage_root, wago_folder,
                 sum(x.get("kind")=="food" for x in second.get("items",[]))
             and second.get("counts",{}).get("potion_items")==
                 sum(x.get("kind")=="potion" for x in second.get("items",[]))
+            and second.get("counts",{}).get("flask_items")==
+                sum(x.get("kind")=="flask" for x in second.get("items",[]))
+            and second.get("counts",{}).get("item_enhancement_items")==
+                sum(x.get("kind")=="item_enhancement"
+                    for x in second.get("items",[]))
             and all(item.get("ui_selectable") is False and
                     item.get("simc_token")=="UNRESOLVED"
                     for item in second.get("items",[])))
     try:
         stage=stage_engine.execute_stage(
-            root=root,stage_id="fresh-v189-v190-consumable-source",
-            stage_version="one-pinned-handler-plus-existing-wago-v1",
+            root=root,stage_id="fresh-v189-v190-consumable-physical-four-class",
+            stage_version="one-pinned-handler-plus-existing-wago-v2",
             inputs={"game_build":build,"expansion_id":expansion,
                     "simc_revision":revision,
                     "simc_seed_receipt_sha256":digest(receipt_raw),
@@ -1206,11 +1215,14 @@ def _fresh_consumable_item_source_stage(*, stage_root, wago_folder,
                 "network_calls_by_stage":calls[0]}
     observed=json.loads(files["candidate"].read_text(encoding="utf8"))
     return {**pending,
-        "status":"FRESH_FOOD_POTION_DB2_CANDIDATES_NOT_USER_ADMITTED",
+        "status":"FRESH_FOOD_POTION_FLASK_ENHANCEMENT_DB2_CANDIDATES_NOT_USER_ADMITTED",
         "candidate_path":str(files["candidate"].resolve()),
         "simc_effect_source_receipt_path":str(files["v189"].resolve()),
         "food_item_count":observed["counts"]["food_items"],
         "potion_item_count":observed["counts"]["potion_items"],
+        "flask_physical_item_count":observed["counts"]["flask_items"],
+        "item_enhancement_candidate_count":
+            observed["counts"]["item_enhancement_items"],
         "simc_handler_registrations":
             observed["counts"]["simc_effect_food_registrations"]+
             observed["counts"]["simc_effect_potion_registrations"],

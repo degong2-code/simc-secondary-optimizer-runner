@@ -66,8 +66,9 @@ def original_sources(*,stage_root,pinned,consumables,build):
          pinned["source_stage"].get("status") in (
              "EXECUTED_AND_SEALED","REUSED_VERIFIED","RECOVERED_VERIFIED") and
          type(consumables.get("source_stage")) is dict and
-         consumables["source_stage"].get("stage_id")==
-         "fresh-v189-v190-consumable-source" and
+         consumables["source_stage"].get("stage_id") in (
+            "fresh-v189-v190-consumable-source",
+            "fresh-v189-v190-consumable-physical-four-class") and
          consumables["source_stage"].get("status") in (
              "EXECUTED_AND_SEALED","REUSED_VERIFIED","RECOVERED_VERIFIED"),
          "V275_PINNED_EXISTING_V229_V189_STAGES_REQUIRED")
