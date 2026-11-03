@@ -33,6 +33,7 @@ import v250_raid_tier_bonus_corroboration as raid_bonus
 import v251_db2_raid_tier_simc_bridge as tier_simc_bridge
 import v229_simc_only_source_seed as simc_source
 import v232_simc_only_ordinary_representative as simc_representative
+import v233_source_only_G_probe_profile as g_probe_profile
 import v217_stage_execution_engine as stage_engine
 import v196_current_season_user_catalog as user_catalog
 import v241_fresh_source_stage_adapter as fresh_stage
@@ -1204,6 +1205,139 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
             "environment_ready":False}
 
 
+
+def _one_spec_source_G_probe_stage(*, stage_root, build, one_spec,
+                                   fresh_gear, tier_bridge,
+                                   seed_directory=None, character=None):
+    """Same original source Build -> v233 profile, only when asked.
+
+    This is a physical G *measurement input* (not G or an approved
+    production user profile). v233 itself rebuilds the v232 candidate
+    from exact pinned sources. Seal the small input+receipt with v217;
+    never call Native or duplicate the Wago/SimC source downloader.
+    """
+    if character is None:
+        return {"status":"FRESH_G_PROBE_CHARACTER_NOT_REQUESTED",
+                "network_calls_by_stage":0,"native_calls":0,
+                "G":None,"environment_ready":False}
+    if (not one_spec.get("candidate_path") or
+            not fresh_gear.get("candidate_path") or
+            not tier_bridge.get("candidate_path") or
+            seed_directory is None):
+        return {"status":"FRESH_G_PROBE_REPRESENTATIVE_SOURCE_PENDING",
+                "network_calls_by_stage":0,"native_calls":0,
+                "G":None,"environment_ready":False}
+    root=pathlib.Path(stage_root)
+    seed_dir=pathlib.Path(seed_directory)
+    paths=[pathlib.Path(one_spec["candidate_path"]),
+           pathlib.Path(fresh_gear["candidate_path"]),
+           pathlib.Path(tier_bridge["candidate_path"]),
+           seed_dir/simc_source.RECEIPT]
+    need(all(p.is_file() and not p.is_symlink() for p in paths)
+         and seed_dir.is_dir() and not seed_dir.is_symlink(),
+         "V216_G_PROBE_SOURCE_PATH_MISSING_OR_UNSAFE")
+    rep_raw,gear_raw,tier_raw,receipt_raw=[p.read_bytes() for p in paths]
+    rep=json.loads(rep_raw)
+    gear=json.loads(gear_raw)
+    tier=json.loads(tier_raw)
+    need(rep.get("schema")==simc_representative.SCHEMA
+         and rep.get("game_build")==build
+         and rep.get("G") is None
+         and rep.get("environment_ready") is False
+         and rep.get("receipt_sha256")==simc_source.digest(
+             simc_source.canonical({k:v for k,v in rep.items()
+                 if k!="receipt_sha256"}).encode("utf8"))
+         and gear.get("schema")==product_gear_db.SCHEMA
+         and gear.get("season_build")==build
+         and tier.get("schema")==tier_simc_bridge.SCHEMA
+         and tier.get("game_build")==build,
+         "V216_G_PROBE_SOURCE_IDENTITY_INVALID")
+    outputs={"input":"source/v256_one_spec_G_probe.simc",
+             "receipt":"source/v256_one_spec_G_probe_receipt.json"}
+    profile_path=root/outputs["input"]
+    receipt_path=root/outputs["receipt"]
+    code=stage_engine.module_dependency_fingerprint([
+        pathlib.Path(__file__),
+        pathlib.Path(g_probe_profile.__file__),
+        pathlib.Path(simc_representative.__file__),
+        pathlib.Path(tier_simc_bridge.__file__),
+        pathlib.Path(stage_engine.__file__)])
+    def execute():
+        physical=tier_simc_bridge.select_for_simc(
+            candidate=tier,seed_directory=seed_dir,
+            cls=rep["character"]["class"],
+            spec=rep["character"]["spec"])
+        profile,proof=g_probe_profile.build(
+            source_directory=seed_dir,
+            tier_candidate=physical["v231_candidate"],
+            representative_candidate=rep,
+            race=character["race"],level=character["level"],
+            talents=character.get("talents"),season_gear_db=gear)
+        profile_path.parent.mkdir(parents=True,exist_ok=True)
+        profile_path.write_bytes(profile.encode("utf8"))
+        receipt_path.write_text(json.dumps(
+            proof,sort_keys=True,ensure_ascii=False,indent=2,
+            allow_nan=False)+"\\n",encoding="utf8")
+    def validate(out):
+        observed=json.loads(out["receipt"].read_text(encoding="utf8"))
+        return (
+            observed.get("schema")==g_probe_profile.SCHEMA
+            and observed.get("status")==
+                "EXACT_SIMC_SOURCE_PROFILE_PREPARED_NOT_EXECUTED"
+            and observed.get("source_candidate_receipt_sha256")==
+                rep["receipt_sha256"]
+            and observed.get("game_build_declared_by_simc_source")==build
+            and observed.get("class")==rep["character"]["class"]
+            and observed.get("spec")==rep["character"]["spec"]
+            and observed.get("race")==character["race"]
+            and observed.get("level")==character["level"]
+            and observed.get("target_ilevel")==rep["target_ilevel"]
+            and observed.get("selected_G_slot_ids")==
+                rep["selected_G_slot_ids"]
+            and observed.get("current_season_membership_certified") is False
+            and observed.get("G") is None
+            and observed.get("environment_ready") is False
+            and observed.get("native_calls")==0
+            and observed.get("physical_profile_sha256")==
+                digest(out["input"].read_bytes())
+            and observed.get("receipt_sha256")==simc_source.digest(
+                simc_source.canonical({k:v for k,v in observed.items()
+                    if k!="receipt_sha256"}).encode("utf8")))
+    try:
+        stage=stage_engine.execute_stage(
+            root=root,stage_id="fresh-one-spec-physical-G-probe",
+            stage_version="v232-v233-source-profile-v1",
+            inputs={"game_build":build,
+                    "candidate_sha256":digest(rep_raw),
+                    "gear_sha256":digest(gear_raw),
+                    "tier_sha256":digest(tier_raw),
+                    "simc_seed_receipt_sha256":digest(receipt_raw),
+                    "source_stage_sha256":one_spec.get(
+                        "source_stage",{}).get("receipt_sha256"),
+                    "character":character,"code_sha256":code["sha256"]},
+            outputs=outputs,execute=execute,validate=validate)
+    except (stage_engine.StageExecutionBlocked,
+            tier_simc_bridge.BridgeBlocked,
+            simc_representative.SourceRepresentativeBlocked,
+            g_probe_profile.ProbeBlocked,ValueError,KeyError,
+            TypeError,OSError) as exc:
+        # A source-only proposal can fail without blocking a verified core
+        # season environment or making up an exact G.
+        return {"status":"FRESH_G_PROBE_SOURCE_OR_CHARACTER_PENDING",
+                "reason":str(exc).split(":",1)[0],
+                "network_calls_by_stage":0,"native_calls":0,
+                "G":None,"environment_ready":False}
+    proof=json.loads(receipt_path.read_text(encoding="utf8"))
+    return {"status":"FRESH_ONE_SPEC_PHYSICAL_G_PROFILE_PREPARED_NATIVE_PENDING",
+            "profile_path":str(profile_path.resolve()),
+            "profile_receipt_path":str(receipt_path.resolve()),
+            "physical_profile_sha256":proof["physical_profile_sha256"],
+            "source_stage":{k:v for k,v in stage.items() if k!="result"},
+            "native_calls":0,"network_calls_by_stage":0,
+            "G":None,"environment_ready":False,
+            "season_membership_verified":False}
+
+
 def _simc_source_collection_context(*, requested_event, previous_game_build):
     """Keep the actual game event separate from local acquisition history.
 
@@ -1240,7 +1374,8 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
                                    simc_season_event="season_change",
                                    simc_transport=None,
                                    representative_request=None,
-                                   simc_revision_hint=None):
+                                   simc_revision_hint=None,
+                                   g_probe_character=None):
     """First real normal-source acquisition inside the SAME Environment Build.
 
     Explicit build is only a request identity, not independent season or tier
@@ -1264,6 +1399,26 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
                 representative_request["class"],
                 representative_request["spec"]) is not None,
              "V216_ONE_SPEC_26_DPS_REQUEST_REQUIRED")
+    if g_probe_character is not None:
+        need(representative_request is not None and
+             type(g_probe_character) is dict and
+             set(g_probe_character) in (
+                 {"race","level"},{"race","level","talents"}) and
+             type(g_probe_character.get("race")) is str and
+             g_probe_profile.RACE.fullmatch(g_probe_character["race"])
+                 is not None and
+             type(g_probe_character.get("level")) is int and
+             1<=g_probe_character["level"]<=100 and
+             (g_probe_character.get("talents") is None or
+              type(g_probe_character["talents"]) is str and
+              g_probe_profile.TALENTS.fullmatch(
+                  g_probe_character["talents"]) is not None),
+             "V216_G_PROBE_CHARACTER_CONTEXT_INVALID")
+        allowed=simc_representative.chooser.contracts.lookup(
+            representative_request["class"],representative_request["spec"]
+        )["allowed_races"]
+        need(allowed is None or g_probe_character["race"] in allowed,
+             "V216_G_PROBE_RACE_NOT_ALLOWED")
     need(not (simc_revision is not None and
               simc_revision_hint is not None),
          "V216_DUPLICATE_SIMC_REVISION_SOURCES")
@@ -1426,6 +1581,11 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         fresh_gear=fresh_gear,tier_bridge=tier_bridge,
         seed_directory=full_seed.get("source_dir") or effective_seed,
         request=representative_request)
+    physical_probe=_one_spec_source_G_probe_stage(
+        stage_root=stage_root,build=expected_game_build,
+        one_spec=one_spec,fresh_gear=fresh_gear,tier_bridge=tier_bridge,
+        seed_directory=full_seed.get("source_dir") or effective_seed,
+        character=g_probe_character)
     return {
         "schema":"v216_fresh_source_stage_v1",
         "status":"FRESH_WAGO_DB2_COLLECTED_MORE_SOURCES_PENDING",
@@ -1438,6 +1598,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "season_join":linked,
         "fresh_ordinary_gear":fresh_gear,
         "fresh_one_spec_simc_representative":one_spec,
+        "fresh_one_spec_physical_G_probe":physical_probe,
         "fresh_tier":fresh_tier,
         "fresh_tier_raid_bonus_corroboration":tier_bonus,
         "fresh_tier_simc_candidate_bridge":tier_bridge,
