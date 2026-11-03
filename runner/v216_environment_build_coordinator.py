@@ -981,6 +981,51 @@ def _verified_first_party_tier_options_stage(*,stage_root,tier_bridge,
 
 
 
+def _reuse_existing_tier_source_stage(*,build,tier_bridge,first_party,
+                                      request=None):
+    """Consume the v217-sealed v251 raid+SimC receipts once, no new Gate.
+
+    A selected tier source is distinct from a fully authenticated season
+    environment or a measured secondary rating budget G.
+    """
+    pending={"status":"TIER_EXISTING_SOURCE_REUSE_PENDING",
+             "source_evidence_reused":False,
+             "season_membership_verified":False,
+             "environment_ready":False,
+             "network_calls_by_stage":0,"native_calls":0}
+    if (not tier_bridge.get("candidate_path")
+            or not first_party.get("candidate_path")):
+        return pending
+    try:
+        paths=[pathlib.Path(tier_bridge["candidate_path"]),
+               pathlib.Path(first_party["candidate_path"])]
+        need(all(p.is_file() and not p.is_symlink() for p in paths),
+             "V216_TIER_REUSE_SEALED_PATH_UNSAFE")
+        need(all(type(s.get("source_stage")) is dict and
+                 type(s["source_stage"].get("receipt_sha256")) is str and
+                 len(s["source_stage"]["receipt_sha256"])==64
+                 for s in (tier_bridge,first_party)),
+             "V216_TIER_REUSE_UPSTREAM_STAGE_RECEIPTS_REQUIRED")
+        physical=json.loads(paths[0].read_text("utf8"))
+        matched=json.loads(paths[1].read_text("utf8"))
+        chosen=tier_simc_bridge.reuse_existing_tier_source(
+            physical_candidate=physical,exact_match=matched,
+            cls=request["class"] if request is not None else None,
+            spec=request["spec"] if request is not None else None)
+        need(chosen["game_build"]==build,
+             "V216_TIER_REUSE_GAME_BUILD_DRIFT")
+    except (tier_simc_bridge.BridgeBlocked,
+            EnvironmentBuildBlocked,ValueError,KeyError,TypeError,OSError) as exc:
+        return {**pending,"reason":str(exc).split(":",1)[0]}
+    return {**chosen,
+            "source_stage_receipts":{
+                "raid_correlated_physical":
+                    tier_bridge["source_stage"]["receipt_sha256"],
+                "simc_exact_13_class":
+                    first_party["source_stage"]["receipt_sha256"]},
+            "network_calls_by_stage":0}
+
+
 def _resolve_one_spec_simc_commit_stage(*, stage_root, build, gear, tier,
                                        revision_hint=None, transport=None):
     """One pinned SimC source commit, cached; not a binary or season proof."""
@@ -1768,6 +1813,12 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
     first_party=_verified_first_party_tier_options_stage(
         stage_root=stage_root,tier_bridge=tier_bridge,
         simc_seed_directory=effective_seed)
+    # The existing active-raid tier selection AND first-party 13x5 SimC
+    # match are already sealed; reuse them as a representative source rather
+    # than re-identifying/re-certifying the tier in a separate engine.
+    selected_tier=_reuse_existing_tier_source_stage(
+        build=expected_game_build,tier_bridge=tier_bridge,
+        first_party=first_party,request=representative_request)
     # Optional seasonal consumables join reuses exactly the existing Wago
     # snapshot and the pinned v229 revision; missing evidence stays PENDING.
     # Injected snapshot tests must supply an explicit SimC transport and
@@ -1800,6 +1851,11 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         fresh_gear=fresh_gear,tier_bridge=tier_bridge,
         seed_directory=full_seed.get("source_dir") or effective_seed,
         request=representative_request)
+    # Preserve the difference between a selected, provenance-backed tier and
+    # still-unmeasured G. This doesn't modify the v232 source-stage artifact.
+    if selected_tier.get("selected_for_request") is not None:
+        one_spec["tier_selected_from_existing_source_evidence"]=(
+            selected_tier["selected_for_request"])
     # SimC player_t::default_level == MAX_LEVEL for the matched binary.
     # A source-only G probe does not hardcode expansion/game cap or add
     # user-level conditions. Explicit levels remain internal test overrides.
@@ -1828,6 +1884,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "fresh_tier_raid_bonus_corroboration":tier_bonus,
         "fresh_tier_simc_candidate_bridge":tier_bridge,
         "fresh_tier_first_party_simc_options":first_party,
+        "fresh_tier_selected_from_existing_evidence":selected_tier,
         "fresh_pinned_first_party_simc_source":pinned_simc,
         "fresh_pinned_simc_commit_resolution":resolved_simc,
         "simc_source_event":effective_source_event,
@@ -1849,8 +1906,9 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "source_season_verified":False,
         "simc_source_verified":False,
         "G":None,"J":None,"F":None,"O":None,"B":None,"T":None,
-        "requires":["CURRENT_EXPANSION_AND_SEASON_WCL_BLIZZARD_JOIN",
-                    "DB2_CLASS_TIER_SEASON_MEMBERSHIP_PROOF",
+        "requires":["CURRENT_EXPANSION_AND_SEASON_WCL_BLIZZARD_JOIN"]+
+            ([] if selected_tier["source_evidence_reused"] else
+             ["TIER_SELECTION_FROM_EXISTING_RAID_SIMC_EVIDENCE_PENDING"])+[
                     "SOURCE_FIRST_GEAR_AND_CONSUMABLE_JOINS",
                     "SIMC_EXACT_SOURCE_MANIFEST",
                     "G_J_F_O_B_T_AND_POLICY_A",
