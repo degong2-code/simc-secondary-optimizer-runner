@@ -1,0 +1,34 @@
+name: P3-CR one real same-build SpellEquippedItems source only
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p3_cr_spell_equipped_items_source_probe.yml
+permissions:
+  contents: read
+concurrency:
+  group: p3-cr-one-spell-equipped-items-table
+  cancel-in-progress: false
+jobs:
+  observe-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Read exact pinned Wago source for three observed use spells
+        env:
+          PYTHONPATH: runner:.
+        run: python integration_probes/p3_cr_spell_equipped_items.py
+      - name: Preserve small source-only receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p3-cr-spell-equipped-items-receipt
+          path: p3_cr_spell_equipped_items_receipt.json
+          if-no-files-found: ignore
+          retention-days: 3
