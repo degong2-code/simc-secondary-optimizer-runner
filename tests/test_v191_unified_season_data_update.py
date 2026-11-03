@@ -194,6 +194,8 @@ class UnifiedCatalogTest(unittest.TestCase):
         self.assertEqual(result["related_source_counts"],{
             "gear_item_candidates":511,"tier_piece_ids":65,
             "food_raw_item_candidates":1,"potion_raw_item_candidates":1,
+            "flask_raw_item_candidates":0,
+            "item_enhancement_raw_candidates":0,
             "food_handler_registrations":0,"potion_handler_registrations":0,
             "embellishment_darkmoon_registrations":1,
             "temporary_enchant_entries":3,"gem_property_records":2})
