@@ -47,4 +47,5 @@ jobs:
             tests.test_v139_pure_target_profile_composer \
             tests.test_v271_user_socket_gem_layout \
             tests.test_v272_normal_build_gem_j_bridge \
-            tests.test_v273_zero_history_normal_build_engine
+            tests.test_v273_zero_history_normal_build_engine \
+            tests.test_v274_zero_history_source_compiler_wiring
