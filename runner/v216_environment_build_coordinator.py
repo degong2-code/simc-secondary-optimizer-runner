@@ -1277,7 +1277,7 @@ def _one_spec_source_G_probe_stage(*, stage_root, build, one_spec,
         profile_path.write_bytes(profile.encode("utf8"))
         receipt_path.write_text(json.dumps(
             proof,sort_keys=True,ensure_ascii=False,indent=2,
-            allow_nan=False)+"\\n",encoding="utf8")
+            allow_nan=False)+"\n",encoding="utf8")
     def validate(out):
         observed=json.loads(out["receipt"].read_text(encoding="utf8"))
         return (
