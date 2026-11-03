@@ -259,7 +259,7 @@ class DB2SimCBridgeTests(unittest.TestCase):
             altered=json.loads(json.dumps(candidate))
             altered["classes"]["paladin"]["tier_piece_ids"]["head"]+=999
             with self.assertRaisesRegex(bridge.BridgeBlocked,
-                    "REUSE_EXACT_SIMC_SOURCE_PROOF"):
+                    "REUSE_EXACT_CLASS_PHYSICAL_OR_BONUS_DRIFT"):
                 reuse.reuse_existing_tier_source(
                     physical_candidate=altered,exact_match=exact,
                     cls="paladin",spec="retribution")
