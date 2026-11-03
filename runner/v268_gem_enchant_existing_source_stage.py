@@ -81,9 +81,16 @@ def view(*,stage_root,v221_candidate_path,build):
                 "J":None,"native_calls":0,"network_calls":0}
     try:
         sealed=stage._read_receipt(receipt_path)
+        fingerprint=stage.module_dependency_fingerprint([
+            Path(source.__file__),Path(stage.__file__)])
+        expected=stage._input_sha(
+            STAGE,VERSION,{
+                "game_build":build,"table":source.TABLE,"locale":"enUS",
+                "fetch_code_sha256":fingerprint["sha256"]})
         if (sealed.get("status")!="COMPLETE" or
             sealed.get("stage_id")!=STAGE or
             sealed.get("stage_version")!=VERSION or
+            sealed.get("input_fingerprint")!=expected or
             sealed.get("output_paths")!=OUTPUTS):
             raise ValueError("V268_GEM_CSV_RECEIPT_IDENTITY_DRIFT")
         path=Path(v221_candidate_path)
