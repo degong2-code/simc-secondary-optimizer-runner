@@ -142,6 +142,59 @@ def pinned_git_blobs(*,revision,paths,transport):
                      "size":rows[0]["size"]}
     return found
 
+def reuse_verified_first_party_bytes(*,root,revision,build,reused,unique):
+    """Reuse v275's prior verified Git blobs if only the DB2 item scope grew.
+
+    v279 changes v190's *physical item candidates*, not the pinned SimC
+    revision or unique_gear.cpp. Revalidate original v217 output bytes
+    against its immutable completed receipt and exact present upstream bytes
+    rather than downloading five identical SimC files again.
+    """
+    stage_id="fresh-pinned-v211-and-permanent-inputs"
+    receipt_path=root/".stage_receipts"/(stage_id+".json")
+    if not receipt_path.is_file():
+        return None
+    try:
+        paths,_=stages._safe_paths(root,stage_id,OUTPUTS)
+        old=stages._read_receipt(receipt_path)
+        need(old.get("status")=="COMPLETE"
+             and old.get("stage_id")==stage_id
+             and old.get("stage_version")=="v275-git-tree-reuse-v1"
+             and old.get("output_paths")=={
+                 key:relative for key,(relative,_) in paths.items()},
+             "V275_HISTORICAL_STAGE_IDENTITY_INVALID")
+        total=stages._verify_outputs(old,paths)
+        folder=root/OUTPUT_DIR
+        manifest=json.loads((folder/"simc_source_manifest.json")
+                            .read_text("utf8"))
+        classifier.load_fresh_sources(
+            folder,manifest,game_build=build,simc_revision=revision)
+        need((folder/"unique_gear.cpp").read_bytes()==unique
+             and all((folder/name).read_bytes()==raw
+                     for name,raw in reused.items()),
+             "V275_HISTORICAL_SIMC_INPUT_BYTES_DIFFER")
+        for name,kind in (("temporary_enchant.inc","temporary_enchant"),
+                          ("gem_data.inc","gem_property"),
+                          ("permanent_enchant.inc","permanent_enchant")):
+            need(season.parse_generated(
+                kind,(folder/name).read_bytes())["source_build"]==build,
+                "V275_HISTORICAL_GENERATED_BUILD_INVALID")
+        stage=stages._summary(old,"REUSED_VERIFIED",False,False,0,total)
+    except (stages.StageExecutionBlocked,SimCCompilerInputBlocked,
+            classifier.SourceBlocked,season.CatalogBlocked,
+            OSError,ValueError,KeyError,TypeError) as exc:
+        raise SimCCompilerInputBlocked(
+            "V275_HISTORICAL_SOURCE_REUSE_INVALID:"
+            +str(exc).split(":",1)[0]) from exc
+    return {"schema":SCHEMA,"status":"PINNED_V211_AND_GENERATED_SOURCES_SEALED",
+            "source_dir":str(folder.resolve()),
+            "manifest_path":str((folder/"simc_source_manifest.json").resolve()),
+            "simc_revision":revision,"source_stage":stage,
+            "network_calls_by_stage":0,"native_calls":0,
+            "source_season_verified":False,
+            "user_options_approved":False,"environment_ready":False}
+
+
 def collect(*,stage_root,build,pinned_simc,consumables,transport=None):
     """One incremental v217 stage; return PENDING for missing producers.
 
@@ -155,6 +208,20 @@ def collect(*,stage_root,build,pinned_simc,consumables,transport=None):
     root,revision,reused,unique=original_sources(
         stage_root=stage_root,pinned=pinned_simc,
         consumables=consumables,build=build)
+    cached=reuse_verified_first_party_bytes(
+        root=root,revision=revision,build=build,
+        reused=reused,unique=unique)
+    if cached is not None:
+        return cached
+    # Fresh v279 physical candidate scope is a successor receipt, never
+    # a rewrite of v275's original immutable source-stage identity.
+    newer=consumables["source_stage"]["stage_id"]==(
+        "fresh-v189-v190-consumable-physical-four-class")
+    compiler_stage_id=("fresh-pinned-v211-from-four-subclass-consumables"
+                       if newer else
+                       "fresh-pinned-v211-and-permanent-inputs")
+    compiler_version=("v275-git-tree-reuse-four-class-v1"
+                      if newer else "v275-git-tree-reuse-v1")
     source_paths={**COMPILER_INPUTS,
                   "unique_gear.cpp":handlers.SOURCE}
     code=stages.module_dependency_fingerprint([
@@ -219,8 +286,8 @@ def collect(*,stage_root,build,pinned_simc,consumables,transport=None):
         return True
     try:
         stage=stages.execute_stage(
-            root=root,stage_id="fresh-pinned-v211-and-permanent-inputs",
-            stage_version="v275-git-tree-reuse-v1",
+            root=root,stage_id=compiler_stage_id,
+            stage_version=compiler_version,
             inputs={"game_build":build,"simc_revision":revision,
                     "v229_source_stage_sha256":
                         pinned_simc["source_stage"]["receipt_sha256"],

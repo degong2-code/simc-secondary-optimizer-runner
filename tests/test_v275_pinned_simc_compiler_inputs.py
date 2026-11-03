@@ -195,6 +195,34 @@ class PinnedSimcInputs(unittest.TestCase):
         self.assertIn("TIER_V168",discover["missing"])
         self.assertFalse(discover["environment_ready"])
 
+    def test_four_class_consumable_successor_reuses_original_simc_bytes(self):
+        first=self.collect()
+        before=dict(self.calls)
+        self.consumables["source_stage"]["stage_id"]=(
+            "fresh-v189-v190-consumable-physical-four-class")
+        self.consumables["source_stage"]["receipt_sha256"]="d"*64
+        second=self.collect()
+        self.assertEqual(second["source_stage"]["status"],"REUSED_VERIFIED")
+        self.assertEqual(second["source_stage"]["stage_id"],
+                         first["source_stage"]["stage_id"])
+        self.assertEqual(second["source_dir"],first["source_dir"])
+        self.assertEqual(second["network_calls_by_stage"],0)
+        self.assertEqual(self.calls,before)
+        self.assertFalse(second["user_options_approved"])
+
+    def test_four_class_from_empty_compiler_seals_successor(self):
+        self.consumables["source_stage"]["stage_id"]=(
+            "fresh-v189-v190-consumable-physical-four-class")
+        self.consumables["source_stage"]["receipt_sha256"]="d"*64
+        first=self.collect()
+        self.assertEqual(first["source_stage"]["status"],"EXECUTED_AND_SEALED")
+        self.assertEqual(first["source_stage"]["stage_id"],
+                         "fresh-pinned-v211-from-four-subclass-consumables")
+        second=self.collect()
+        self.assertEqual(second["source_stage"]["status"],"REUSED_VERIFIED")
+        self.assertEqual(second["network_calls_by_stage"],0)
+        self.assertEqual(self.calls,{"tree":6,"raw":5})
+
     def test_tamper_sealed_source_blocks_without_http_retry(self):
         one=self.collect()
         pathlib.Path(one["source_dir"],"permanent_enchant.inc").write_bytes(
