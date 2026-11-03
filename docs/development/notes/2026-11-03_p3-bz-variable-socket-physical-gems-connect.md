@@ -1,0 +1,10 @@
+# 2026-11-03 · P3-BZ · 가변 소켓 물리 보석 배치와 기존 4색 로직 연결
+
+- **Capability:** `J.GEM`, `PRODUCT.E2E`, `BUDGET.GJFO`, `DEV.CONTINUITY`
+- **Keywords:** socket, 가변소켓, gem, diamond, 240967, 네색, J, representative, source ID, Native
+- **Prior evidence:** [PROTOCOL](../PROTOCOL.md)·[INDEX](../INDEX.md) 선조회; [P3-BY](2026-11-03_p3-by-continuity-handoff-gem-sockets.md), [P3-BX Native 4/4](2026-11-03_p3-bx-simc-socket-native-contrast.md); 기존 `v101.ensure_representative_gem_colors`·`v135` 원본 ID, `v139.compose`·`v098/v108` 6개/머리 고정; `v222` GJFO 회계 및 [CI #41601682781](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41601682781) 역사 38 PASS.
+- **Decision:** `CONNECT` — 새 보석 효과 엔진이나 소켓 적법성 Gate 없이 v101의 실제 4색 ID 보정기를 일반보석 수/특수보석 위치에 대해 선택적으로 확장. 원래 v098/v108 6개/J138 회계와 봉인된 프로필·캐시는 무수정.
+- **Changes:** `v101` 기본 6/head 동작 유지, 선택적인 일반보석 N개·특수보석 위치 지원; `v271.arrange`에서 사용자 부위별 최종 소켓 수/실제 일반보석 ID/특수보석 정확히 하나를 **비파괴** 배치, v101 4색을 재사용. `v139.compose(socket_plan=...)` opt-in일 때 새 SimC 물리 장비 행을 출력하고 기본 경로 바이트는 보존. 새 `tests/test_v271_user_socket_gem_layout.py`와 기존 v101/v139 focused 회귀를 공용 offline CI에 추가.
+- **Verification:** 이전 P3-BX 4 Native와 기존 색상·기름·티어 영수증은 `REUSED_HISTORY`만. 이번 작업 새 Native=0, 게임 HTTP=0. 새 테스트를 작업 브랜치에 추가했으며 **공식 대상 브랜치 CI 및 새 PASS/FAIL은 적용 후 확인**; 이 문서 작성 시 `NOT_VERIFIED`. 소켓 허용·최고 품질·수치 J·26 DPS READY는 테스트 성공으로 승격 금지.
+- **Remaining:** 신 경로는 **물리 SimC stage**이며 v098/v108 사용자 Build/정책 A에는 아직 연결되지 않음. 사용자 선택 소켓의 실제 아이템/부위 허용성, 새 시즌 일반보석 ID/품질 및 +16/+7 vs SimC +16/+8, J 원본 영수증, F/O/실 G를 기존 v216→v222→v098→adaptive에 연결해야 함. 별도 새 보석 메커니즘 구현 금지.
+- **Efficiency:** 기존 v101 색상 조합 재사용, 소켓 plan 한 번에만 rows deep copy/직렬화, 기존 v135 물리 ID 사용. 전체 시즌 장비 조회/신규 인증 Gate/Native·HTTP=0. 구형 캐시/세션 identity 불변, 신규 opt-in 프로필 바이트는 원래와 별도 identity. 메모리·I/O 증가 소형 rows 복사 1회; 실제 시간 절감은 미측정. 한 논리 묶음으로 작업 브랜치에서 작성 후 공식 격리 브랜치 한 번의 fast-forward 목표.
