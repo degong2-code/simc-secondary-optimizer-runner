@@ -118,13 +118,28 @@ def discover(collected):
               if generated is not None else None)
         for key, filename in season_compiler.GENERATED.items()
     }
-    revision = (simc.get("simc_revision") if isinstance(simc, dict)
-                else None)
-    # Source revision identity can also be explicitly supplied by the
-    # original pinned v229 receipt. Never fall back to revision_hint (7 chars).
-    if (not isinstance(revision, str) or len(revision) != 40 or
-            any(c not in "0123456789abcdef" for c in revision)):
-        revision = None
+    # Read the ORIGINAL v229 receipt (small metadata only) for its exact
+    # 40-char pinned revision; don't use a 7-char UI hint or historical build.
+    revision = None
+    if (generated is not None and isinstance(simc, dict) and
+            isinstance(simc.get("source_stage"), dict) and
+            simc["source_stage"].get("status") in STAGED):
+        receipt_file = _safe_file(generated / "simc_seed_receipt.json", root)
+        if receipt_file is not None and receipt_file.stat().st_size <= 200000:
+            try:
+                doc = json.loads(receipt_file.read_text(encoding="utf8"))
+            except (OSError, ValueError, UnicodeError):
+                doc = {}
+            candidate = doc.get("simc_revision")
+            if (doc.get("schema") ==
+                    "v229_simc_only_first_party_source_seed_v1" and
+                    doc.get("simc_generated_build") ==
+                    collected.get("expected_game_build") and
+                    doc.get("receipt_sha256") ==
+                    simc.get("simc_receipt_sha256") and
+                    isinstance(candidate, str) and len(candidate) == 40 and
+                    all(ch in "0123456789abcdef" for ch in candidate)):
+                revision = candidate
     v211 = collected.get("fresh_pinned_v211_source")
     v211_dir = (v211.get("source_dir") if isinstance(v211, dict)
                 else None)
