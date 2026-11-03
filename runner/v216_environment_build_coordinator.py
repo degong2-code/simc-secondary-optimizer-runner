@@ -313,6 +313,9 @@ def _reuse_observed_G_native_receipts(*, catalog, receipt_paths_by_ilevel):
             need(0 < len(raw) <= MAX_RECEIPT_BYTES,
                  "V216_G_NATIVE_OBSERVATION_RECEIPT_TOO_LARGE")
             receipt=json.loads(raw)
+            need(type(receipt) is dict and
+                 type(receipt.get("observed_G")) is dict,
+                 "V216_G_NATIVE_OBSERVED_OBJECT_REQUIRED")
             observed=receipt["observed_G"]
             original={k:v for k,v in observed.items() if k!="receipt_sha256"}
             expected_sha=digest(canonical(original).encode("utf8"))
