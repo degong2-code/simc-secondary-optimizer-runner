@@ -141,13 +141,13 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             "fresh_gear":{"candidate_path":str(gear)},
             "tier_bridge":{"candidate_path":str(bridge)},
             "seed_directory":source_root,
-            "character":{"race":"human","level":90}}
+            "character":{"race":"human"}}
         with mock.patch.object(v216.tier_simc_bridge,"select_for_simc",
                                return_value={"v231_candidate":tier}) as match:
             first=v216._one_spec_source_G_probe_stage(**kwargs)
             second=v216._one_spec_source_G_probe_stage(**kwargs)
             other=v216._one_spec_source_G_probe_stage(
-                **dict(kwargs,character={"race":"dwarf","level":90}))
+                **dict(kwargs,character={"race":"dwarf"}))
         self.assertEqual(first["status"],
             "FRESH_ONE_SPEC_PHYSICAL_G_PROFILE_PREPARED_NATIVE_PENDING",
             str(first))
@@ -169,12 +169,15 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         raw=pathlib.Path(first["profile_path"]).read_text(encoding="utf8")
         self.assertIn("chest=simc_source_9020,id=9020,ilevel=334",raw)
         self.assertIn("race=human",raw)
+        self.assertNotIn("level=",raw)
         self.assertNotIn("trinket1=",raw)
         proof=json.loads(pathlib.Path(
             first["profile_receipt_path"]).read_text(encoding="utf8"))
         self.assertEqual(proof["physical_profile_sha256"],
                          first["physical_profile_sha256"])
         self.assertFalse(proof["current_season_membership_certified"])
+        self.assertIsNone(proof["level"])
+        self.assertEqual(proof["level_mode"],"SIMC_COMPILED_MAX_LEVEL")
         from runner import v234_source_only_one_native_G as native_probe
         # No real subprocess here: v234 must replay the same selected
         # source-only v167 catalog and prepare its Native JSON2 command.
@@ -186,7 +189,7 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                 source_directory=source_root,
                 tier_candidate=tier,
                 representative_candidate=rep,
-                race="human",level=90,talents=None,
+                race="human",talents=None,
                 binary=self.binary,
                 expected_binary_sha256=v216.digest(self.binary.read_bytes()),
                 output_dir=self.root/"native_plan",
@@ -206,7 +209,7 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                                     "REPLAY_DRIFT"):
             native_probe.execute(
                 source_directory=source_root,tier_candidate=tier,
-                representative_candidate=rep,race="human",level=90,
+                representative_candidate=rep,race="human",
                 talents=None,binary=self.binary,
                 expected_binary_sha256=v216.digest(self.binary.read_bytes()),
                 output_dir=self.root/"missing_v167_plan",
@@ -241,35 +244,10 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             v216.collect_wago_new_season_source(**args)
         self.assertFalse(args["sessions_root"].exists())
 
-    def test_expansion_level_uses_only_exact_joined_source_and_official_cap(self):
-        scope={"status":"DB2_WCL_CANDIDATES_JOINED_SEASON_CONDITIONS_PENDING",
-            "source_scope":{
-                "source_basis":"LIVE_WCL_ACTIVE_ZONES_AND_SAME_BUILD_DB2",
-                "expansion_id":11}}
-        approved=v216._source_expansion_level(
-            build="12.1.5.70575",linked=scope)
-        self.assertEqual(approved["level"],90)
-        self.assertTrue(approved["level_source_authenticated"])
-        self.assertIn("worldofwarcraft.blizzard.com",
-                      approved["source_url"])
-        mismatch=v216._source_expansion_level(
-            build="13.0.0.80000",linked=scope)
-        self.assertIsNone(mismatch["level"])
-        self.assertFalse(mismatch["level_source_authenticated"])
-        unknown=v216._source_expansion_level(
-            build="12.1.5.70575",linked={
-                **scope,"source_scope":{**scope["source_scope"],
-                                       "expansion_id":12}})
-        self.assertIsNone(unknown["level"])
-        no_live=v216._source_expansion_level(
-            build="12.1.5.70575",linked={
-                **scope,"status":"AUTHENTICATED_SEASON_JOIN_NOT_READY"})
-        self.assertIsNone(no_live["level"])
-        self.assertFalse(no_live["level_source_authenticated"])
-
-    def test_user_g_probe_character_can_defer_level_to_source(self):
-        # Invalid profile data is blocked before collecting paid network data.
-        args={"sessions_root":self.root/"level_autoresolve",
+    def test_optional_character_level_is_not_resolved_from_season_sources(self):
+        # Source-only actual collector must not block on expansion cap.
+        # User level is not a normal control; SimC's compiled MAX_LEVEL is.
+        args={"sessions_root":self.root/"level_native_default",
               "expected_game_build":"12.2.0.99999",
               "representative_request":{"class":"paladin",
                    "spec":"retribution","target_ilevel":334},
@@ -280,10 +258,9 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError,"PREFLIGHT_PASSED"):
                 v216.collect_wago_new_season_source(**args)
         self.assertTrue(args["sessions_root"].exists())
-        # No default level is assigned merely from the requested build.
-        pending=v216._source_expansion_level(
-            build="12.2.0.99999",linked={})
-        self.assertIsNone(pending["level"])
+        # No expansion-to-level lookup exists. This is intentionally a
+        # Native source-only plan until exact build/items are observed.
+        self.assertFalse(hasattr(v216,"_source_expansion_level"))
 
     def test_fresh_gem_item_relation_reuses_existing_db2_and_v213(self):
         from tests.test_v221_gem_item_db2_relation import (

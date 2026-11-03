@@ -43,39 +43,6 @@ SESSION_KEY = re.compile(r"[a-f0-9]{20}\Z")
 MAX_RECEIPT_BYTES = 1_000_000
 MAX_PRIOR_SESSIONS = 128
 
-# Expansion-level cap is NOT a season-drop discriminator or a per-build
-# guess. Blizzard's official Midnight notes specify level 90. Only an
-# independently joined expansion 11 / game major 12 source may use it.
-# Future expansions require their own verified reference, not an old level.
-_OFFICIAL_EXPANSION_LEVELS = {
-    11: {"game_major":12,"level":90,
-         "source_url":"https://worldofwarcraft.blizzard.com/en-us/news/24244646",
-         "source_kind":"BLIZZARD_OFFICIAL_MIDNIGHT_LEVEL_CAP"},
-}
-
-
-def _source_expansion_level(*, build, linked):
-    """Pure source resolver: never calls HTTP, Native or user history."""
-    scope=(linked.get("source_scope") or {})
-    result={"status":"SEASON_CHARACTER_LEVEL_SOURCE_PENDING",
-            "game_build":build,"expansion_id":scope.get("expansion_id"),
-            "level":None,"source_url":None,
-            "level_source_authenticated":False}
-    if (linked.get("status")!=
-            "DB2_WCL_CANDIDATES_JOINED_SEASON_CONDITIONS_PENDING"
-        or scope.get("source_basis")!=
-            "LIVE_WCL_ACTIVE_ZONES_AND_SAME_BUILD_DB2"):
-        return result
-    proof=_OFFICIAL_EXPANSION_LEVELS.get(scope.get("expansion_id"))
-    if (proof is None or not re.fullmatch(r"\d+(?:\.\d+){3}",build)
-        or int(build.split(".",1)[0])!=proof["game_major"]):
-        return result
-    return {**result,"status":"OFFICIAL_EXPANSION_LEVEL_REUSED",
-            "level":proof["level"],"source_url":proof["source_url"],
-            "source_kind":proof["source_kind"],
-            "level_source_authenticated":True}
-
-
 class EnvironmentBuildBlocked(environment_manifest.EnvironmentBlocked):
     pass
 
@@ -1246,8 +1213,7 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
 
 def _one_spec_source_G_probe_stage(*, stage_root, build, one_spec,
                                    fresh_gear, tier_bridge,
-                                   seed_directory=None, character=None,
-                                   level_source=None):
+                                   seed_directory=None, character=None):
     """Same original source Build -> v233 profile, only when asked.
 
     This is a physical G *measurement input* (not G or an approved
@@ -1317,7 +1283,7 @@ def _one_spec_source_G_probe_stage(*, stage_root, build, one_spec,
             source_directory=seed_dir,
             tier_candidate=physical["v231_candidate"],
             representative_candidate=rep,
-            race=character["race"],level=character["level"],
+            race=character["race"],level=character.get("level"),
             talents=character.get("talents"),season_gear_db=gear)
         profile_path.parent.mkdir(parents=True,exist_ok=True)
         profile_path.write_bytes(profile.encode("utf8"))
@@ -1336,7 +1302,10 @@ def _one_spec_source_G_probe_stage(*, stage_root, build, one_spec,
             and observed.get("class")==rep["character"]["class"]
             and observed.get("spec")==rep["character"]["spec"]
             and observed.get("race")==character["race"]
-            and observed.get("level")==character["level"]
+            and observed.get("level")==character.get("level")
+            and observed.get("level_mode")==(
+                "SIMC_COMPILED_MAX_LEVEL" if character.get("level") is None
+                else "EXPLICIT_INTERNAL_OVERRIDE")
             and observed.get("target_ilevel")==rep["target_ilevel"]
             and observed.get("selected_G_slot_ids")==
                 rep["selected_G_slot_ids"]
@@ -1352,7 +1321,7 @@ def _one_spec_source_G_probe_stage(*, stage_root, build, one_spec,
     try:
         stage=stage_engine.execute_stage(
             root=root,stage_id="fresh-one-spec-physical-G-probe-"+probe_key,
-            stage_version="v232-v233-source-profile-v2",
+            stage_version="v232-v233-source-profile-v3",
             inputs={"game_build":build,
                     "candidate_sha256":digest(rep_raw),
                     "gear_sha256":digest(gear_raw),
@@ -1360,7 +1329,8 @@ def _one_spec_source_G_probe_stage(*, stage_root, build, one_spec,
                     "simc_seed_receipt_sha256":digest(receipt_raw),
                     "source_stage_sha256":one_spec.get(
                         "source_stage",{}).get("receipt_sha256"),
-                    "character":character,"level_source":level_source,
+                    "character":character,
+                    "level_policy":"SIMC_COMPILED_DEFAULT_MAX_LEVEL",
                     "code_sha256":code["sha256"]},
             outputs=outputs,execute=execute,validate=validate)
     except (stage_engine.StageExecutionBlocked,
@@ -1380,7 +1350,7 @@ def _one_spec_source_G_probe_stage(*, stage_root, build, one_spec,
             "profile_receipt_path":str(receipt_path.resolve()),
             "physical_profile_sha256":proof["physical_profile_sha256"],
             "source_stage":{k:v for k,v in stage.items() if k!="result"},
-            "level_source":level_source,
+            "level_mode":proof["level_mode"],
             "native_calls":0,"network_calls_by_stage":0,
             "G":None,"environment_ready":False,
             "season_membership_verified":False}
@@ -1631,36 +1601,14 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         fresh_gear=fresh_gear,tier_bridge=tier_bridge,
         seed_directory=full_seed.get("source_dir") or effective_seed,
         request=representative_request)
-    character_level_source=_source_expansion_level(
-        build=expected_game_build,linked=linked)
-    effective_character=g_probe_character
-    if g_probe_character is not None:
-        if "level" not in g_probe_character:
-            if character_level_source["level_source_authenticated"]:
-                effective_character={
-                    **g_probe_character,
-                    "level":character_level_source["level"]}
-            else:
-                effective_character=None
-        elif (character_level_source["level_source_authenticated"] and
-              g_probe_character["level"]!=character_level_source["level"]):
-            effective_character=None
-            character_level_source={
-                **character_level_source,
-                "status":"EXPLICIT_LEVEL_DISAGREES_WITH_EXPANSION_SOURCE",
-                "level_source_authenticated":False}
-    if g_probe_character is not None and effective_character is None:
-        physical_probe={"status":"FRESH_G_PROBE_LEVEL_SOURCE_PENDING",
-            "reason":character_level_source["status"],
-            "network_calls_by_stage":0,"native_calls":0,
-            "G":None,"environment_ready":False}
-    else:
-        physical_probe=_one_spec_source_G_probe_stage(
-            stage_root=stage_root,build=expected_game_build,
-            one_spec=one_spec,fresh_gear=fresh_gear,tier_bridge=tier_bridge,
-            seed_directory=full_seed.get("source_dir") or effective_seed,
-            character=effective_character,
-            level_source=character_level_source)
+    # SimC player_t::default_level == MAX_LEVEL for the matched binary.
+    # A source-only G probe does not hardcode expansion/game cap or add
+    # user-level conditions. Explicit levels remain internal test overrides.
+    physical_probe=_one_spec_source_G_probe_stage(
+        stage_root=stage_root,build=expected_game_build,
+        one_spec=one_spec,fresh_gear=fresh_gear,tier_bridge=tier_bridge,
+        seed_directory=full_seed.get("source_dir") or effective_seed,
+        character=g_probe_character)
     return {
         "schema":"v216_fresh_source_stage_v1",
         "status":"FRESH_WAGO_DB2_COLLECTED_MORE_SOURCES_PENDING",
@@ -1674,7 +1622,8 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "fresh_ordinary_gear":fresh_gear,
         "fresh_one_spec_simc_representative":one_spec,
         "fresh_one_spec_physical_G_probe":physical_probe,
-        "fresh_one_spec_character_level_source":character_level_source,
+        "fresh_one_spec_character_level_policy":
+            "SIMC_COMPILED_DEFAULT_MAX_LEVEL",
         "fresh_tier":fresh_tier,
         "fresh_tier_raid_bonus_corroboration":tier_bonus,
         "fresh_tier_simc_candidate_bridge":tier_bridge,

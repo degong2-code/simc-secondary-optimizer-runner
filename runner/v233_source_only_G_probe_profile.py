@@ -42,7 +42,7 @@ def need(ok, reason):
 
 
 def build(*, source_directory, tier_candidate, representative_candidate,
-          race, level, talents=None, season_gear_db=None):
+          race, level=None, talents=None, season_gear_db=None):
     need(type(representative_candidate) is dict and
          representative_candidate.get("schema")==ordinary.SCHEMA and
          representative_candidate.get("status")==
@@ -77,7 +77,8 @@ def build(*, source_directory, tier_candidate, representative_candidate,
          (contract["allowed_races"] is None or
           race in contract["allowed_races"]),
          "V233_RACE_INVALID_OR_UNSUPPORTED")
-    need(type(level) is int and 1<=level<=100,
+    need(level is None or
+         type(level) is int and 1<=level<=100,
          "V233_CHARACTER_LEVEL_INVALID")
     need(talents is None or
          (type(talents) is str and TALENTS.fullmatch(talents) is not None),
@@ -92,8 +93,12 @@ def build(*, source_directory, tier_candidate, representative_candidate,
     ilvl=rebuilt["target_ilevel"]
     lines=["# v233 generated, SimC-only physical G measurement candidate",
            class_name+"="+NAME,
-           "level="+str(level),"race="+race,"spec="+spec_name,
+           "race="+race,"spec="+spec_name,
            "position="+contract["position"]]
+    if level is not None:
+        # Internal explicit override only; ordinary users rely on the
+        # compiled SimC player default MAX_LEVEL instead.
+        lines.append("level="+str(level))
     if talents is not None:
         lines.append("talents="+talents)
     for slot in contracts.SLOT_ORDER:
@@ -111,7 +116,10 @@ def build(*, source_directory, tier_candidate, representative_candidate,
         "simc_revision":rebuilt["simc_revision"],
         "game_build_declared_by_simc_source":rebuilt["game_build"],
         "class":class_name,"spec":spec_name,"race":race,
-        "level":level,"talents_supplied":talents is not None,
+        "level":level,
+        "level_mode":("SIMC_COMPILED_MAX_LEVEL" if level is None
+                      else "EXPLICIT_INTERNAL_OVERRIDE"),
+        "talents_supplied":talents is not None,
         "target_ilevel":ilvl,
         "selected_G_slot_ids":{k:slots[k] for k in sorted(slots)},
         "physical_profile_sha256":hashlib.sha256(raw).hexdigest(),
@@ -132,7 +140,8 @@ def main(argv=None):
     p.add_argument("--season-gear-db",type=pathlib.Path,
                    help="Optional same-build v167 candidate DB when v232 used season mode")
     p.add_argument("--race",required=True)
-    p.add_argument("--level",type=int,required=True)
+    p.add_argument("--level",type=int,default=None,
+                   help="Optional internal override; omit for SimC MAX_LEVEL")
     p.add_argument("--talents",default=None)
     p.add_argument("--output-dir",type=pathlib.Path,required=True)
     a=p.parse_args(argv)

@@ -141,8 +141,9 @@ def observe(*, native_raw, profile_receipt, native_binary_sha256,
 
 
 def execute(*, source_directory, tier_candidate, representative_candidate,
-            race, level, talents, binary, expected_binary_sha256,
-            output_dir, iterations=1, timeout_seconds=180, max_new=0,
+            race, binary, expected_binary_sha256,
+            output_dir, level=None, talents=None,
+            iterations=1, timeout_seconds=180, max_new=0,
             season_gear_db=None):
     """Explicit max_new=1 for a single Native call. Other mode is plan only."""
     need(max_new in (0,1) and type(max_new) is int and
@@ -240,7 +241,8 @@ def main(argv=None):
     p.add_argument("--season-gear-db",type=pathlib.Path,
                    help="Same-build v167 catalog for exact v232 replay")
     p.add_argument("--race",required=True)
-    p.add_argument("--level",type=int,required=True)
+    p.add_argument("--level",type=int,default=None,
+                   help="Optional internal override; defaults to compiled SimC MAX_LEVEL")
     p.add_argument("--talents")
     p.add_argument("--simc-binary",type=pathlib.Path,required=True)
     p.add_argument("--simc-sha256",required=True)
