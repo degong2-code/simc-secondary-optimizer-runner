@@ -42,27 +42,27 @@ class DevelopmentLedgerGuardTests(unittest.TestCase):
             notes=folder/"notes"
             notes.mkdir(parents=True)
             template=(
-                "# Synthetic task note\\n"
-                "- **Capability:** `TIER.SEASON`\\n"
-                "- **Keywords:** tier, season\\n"
-                "- **Prior evidence:** previous actual source receipt\\n"
-                "- **Decision:** `REUSE` — reuse existing evidence\\n"
-                "- **Changes:** DOCS_ONLY\\n"
-                "- **Verification:** REUSED_HISTORY; no Native\\n"
-                "- **Remaining:** product integration pending\\n"
-                "- **Efficiency:** no HTTP or Native\\n"
+                "# Synthetic task note\n"
+                "- **Capability:** `TIER.SEASON`\n"
+                "- **Keywords:** tier, season\n"
+                "- **Prior evidence:** previous actual source receipt\n"
+                "- **Decision:** `REUSE` — reuse existing evidence\n"
+                "- **Changes:** DOCS_ONLY\n"
+                "- **Verification:** REUSED_HISTORY; no Native\n"
+                "- **Remaining:** product integration pending\n"
+                "- **Efficiency:** no HTTP or Native\n"
             )
             for day,slug in (("2026-11-02","earlier"),
                              ("2026-11-03","newest")):
                 (notes/(day+"_"+slug+".md")).write_text(
                     template,encoding="utf8")
             (folder/"INDEX.md").write_text(
-                "# Index\\n"
-                "| Capability | Keywords | Evidence | Integration | Prior evidence | Last note |\\n"
-                "|---|---|---|---|---|---|\\n"
+                "# Index\n"
+                "| Capability | Keywords | Evidence | Integration | Prior evidence | Last note |\n"
+                "|---|---|---|---|---|---|\n"
                 "| `TIER.SEASON` | tier | `SOURCE_CORROBORATED`"
                 " | `NOT_INTEGRATED` | real source receipt"
-                " | [latest](notes/2026-11-03_newest.md) |\\n",
+                " | [latest](notes/2026-11-03_newest.md) |\n",
                 encoding="utf8")
             self.assertEqual(ledger.validate(root), [])
 
