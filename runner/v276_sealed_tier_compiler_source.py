@@ -238,7 +238,7 @@ def collect(*,stage_root,wago_folder,build,tier_bridge,first_party,
             verified_wago_tables=verified_wago_tables)
         output.parent.mkdir(parents=True,exist_ok=True)
         output.write_text(json.dumps(document,sort_keys=True,
-            indent=2,ensure_ascii=False,allow_nan=False)+"\\n",encoding="utf8")
+            indent=2,ensure_ascii=False,allow_nan=False)+"\n",encoding="utf8")
     def validate(files):
         doc=json.loads(files["candidate"].read_text("utf8"))
         return (doc.get("schema")==SCHEMA and
