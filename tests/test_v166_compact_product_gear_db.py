@@ -91,6 +91,29 @@ class Compact(unittest.TestCase):
         self.assertTrue(result["J_F_NUMERIC_AUTHENTICATION_NOT_IN_GEAR_COLLECTOR"])
         self.assertEqual(result["current_candidate_count"],1)
 
+    def test_wse_current_display_season_retained_only_for_internal_G_source(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);item,sparse=self.prepare(root)
+            src=pool()
+            src["items"][0].update({
+                "expansion_id":11,
+                "season_selection":"CONDITIONAL_SEASON_NOT_ESTABLISHED",
+                "user_selectable_candidate":False,
+                "acquisition_sources":[{
+                    "source":"mplus_journal",
+                    "season_evidence":"UNKNOWN_WORLD_STATE_EXPRESSION",
+                    "display_season_id":37,"world_state_expression_id":441,
+                    "journal_encounter_id":10,"journal_instance_id":20}]})
+            out=db.build(src,item,sparse)
+        self.assertEqual(out["current_candidate_count"],0)
+        self.assertEqual(out["conditional_count"],2)
+        self.assertEqual(out["internal_conditional_mplus_plain_count"],1)
+        row=out["internal_conditional_mplus_plain_candidates"][0]
+        self.assertEqual(row["item_id"],1)
+        self.assertEqual(row["source_evidence"][0][
+            "world_state_expression_id"],441)
+        self.assertNotIn("name",row["source_evidence"][0])
+
     def test_wrong_item_slot_blocks(self):
         with tempfile.TemporaryDirectory() as d:
             item,sparse=self.prepare(Path(d))

@@ -55,7 +55,7 @@ def build(pool,item_file,sparse_file):
     items=extract(item_file,("ID","ClassID","SubclassID","InventoryType"),ids)
     sparse=extract(sparse_file,("ID","InventoryType","ExpansionID","AllowableClass",
         "StatModifier_bonusStat_0","ItemSet"),ids)
-    selectable=[]; conditional=[]
+    selectable=[]; conditional=[]; conditional_mplus=[]
     for v in values:
         iid=v["item_id"];raw=items[iid];extra=sparse[iid]
         slot=integer(raw["InventoryType"])
@@ -90,6 +90,26 @@ def build(pool,item_file,sparse_file):
             conditional.append({"item_id":iid,"slot":slot,
                 "category":v["category"],"source_kinds":data["source_kinds"],
                 "reason":v["season_selection"]})
+            # WSE!=0 is not a negative eligibility verdict. Preserve only
+            # same-display-season physical M+ plain items for INTERNAL
+            # representative fallback, never the user catalog or G.
+            if (v["category"]=="plain_representative_candidate"
+                and v["direct_item_effect_record"] is False
+                and v["item_set_id"]==0
+                and v.get("expansion_id")==pool["expansion_id"]
+                and any(e.get("source")=="mplus_journal"
+                    and e.get("season_evidence")==
+                        "UNKNOWN_WORLD_STATE_EXPRESSION"
+                    and e.get("display_season_id")==
+                        pool["db2_display_season_id"]
+                    and type(e.get("world_state_expression_id")) is int
+                    and e["world_state_expression_id"]>0
+                    and type(e.get("journal_encounter_id")) is int
+                    and e["journal_encounter_id"]>0
+                    and type(e.get("journal_instance_id")) is int
+                    and e["journal_instance_id"]>0
+                    for e in data["source_evidence"])):
+                conditional_mplus.append(data)
     role_counts=Counter(v["category"] for v in selectable)
     return {"schema":SCHEMA,"status":"COMPACT_CANDIDATE_DB_WITH_PENDING_GAPS",
       "season_build":pool["build"],"expansion_id":pool["expansion_id"],
@@ -99,6 +119,8 @@ def build(pool,item_file,sparse_file):
       "current_candidate_count":len(selectable),
       "conditional_unverified":conditional,
       "conditional_count":len(conditional),
+      "internal_conditional_mplus_plain_candidates":conditional_mplus,
+      "internal_conditional_mplus_plain_count":len(conditional_mplus),
       "current_role_counts":dict(sorted(role_counts.items())),
       "consumable_budget_reference":pool["consumable_budget_reference"],
        "consumable_budget_source_mode":pool.get(

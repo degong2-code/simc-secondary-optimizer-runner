@@ -98,6 +98,53 @@ def from_v166(source):
             "source_evidence":entry.get("source_evidence", []),
         })
     result.sort(key=lambda x:x["item_id"])
+    pending=source.get("internal_conditional_mplus_plain_candidates",[])
+    need(type(pending) is list and len(pending)<=2000 and
+         len(pending)==source.get("internal_conditional_mplus_plain_count",
+                                 len(pending)),
+         "CONDITIONAL_MPLUS_SOURCE_COUNT_INVALID")
+    internal=[]; seen={r["item_id"] for r in result}
+    for entry in pending:
+        need(type(entry) is dict
+             and entry.get("selection_evidence")==
+                 "CONDITIONAL_SEASON_NOT_ESTABLISHED"
+             and entry.get("category")=="plain_representative_candidate"
+             and entry.get("direct_item_effect_record") is False
+             and entry.get("item_set_id")==0
+             and type(entry.get("item_id")) is int
+             and entry["item_id"]>0 and entry["item_id"] not in seen
+             and type(entry.get("slot")) is int and entry["slot"]>0
+             and entry["slot"]!=12
+             and type(entry.get("class_id")) is int
+             and entry["class_id"] in (2,4)
+             and type(entry.get("subclass_id")) is int
+             and type(entry.get("source_evidence")) is list
+             and any(e.get("source")=="mplus_journal"
+                 and e.get("season_evidence")==
+                     "UNKNOWN_WORLD_STATE_EXPRESSION"
+                 and e.get("display_season_id")==source.get("display_season_id")
+                 and type(e.get("world_state_expression_id")) is int
+                 and e["world_state_expression_id"]>0
+                 and type(e.get("journal_encounter_id")) is int
+                 and e["journal_encounter_id"]>0
+                 and type(e.get("journal_instance_id")) is int
+                 and e["journal_instance_id"]>0
+                 for e in entry["source_evidence"]),
+             "CONDITIONAL_MPLUS_SOURCE_NOT_JUSTIFIED")
+        seen.add(entry["item_id"])
+        internal.append({
+            "item_id":entry["item_id"],"name":entry["name"],
+            "category":"plain_representative_candidate",
+            "inventory_type":entry["slot"],
+            "class_id":entry["class_id"],"subclass_id":entry["subclass_id"],
+            "allowed_class_mask":entry["allowed_class_mask"],
+            "stat_modifier_codes":entry["stat_modifier_codes"],
+            "item_set_id":0,
+            "source_kinds":entry["source_kinds"],
+            "source_evidence":entry["source_evidence"],
+            "provisional_mplus_world_state_only":True,
+            "season_membership_verified":False,"ui_selectable":False})
+    internal.sort(key=lambda x:x["item_id"])
     summary = {
         "schema": SCHEMA, "status": "CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
         "season_build": source["season_build"],
@@ -106,6 +153,8 @@ def from_v166(source):
         "item_count": len(result),
         "role_counts": dict(sorted(Counter(x["category"] for x in result).items())),
         "items": result,
+        "internal_conditional_mplus_plain_candidates":internal,
+        "internal_conditional_mplus_plain_count":len(internal),
         "conditional_ids_excluded": source.get("conditional_count"),
         "consumable_budget_source_mode": source.get(
             "consumable_budget_source_mode","LEGACY_UNRECORDED_SOURCE_MODE"),
@@ -172,6 +221,33 @@ def validate(payload):
                  "PRODUCT_OTHER_SLOT")
     need(dict(sorted(Counter(x["category"] for x in items).items())) ==
          payload.get("role_counts"), "PRODUCT_ROLE_COUNTS_INVALID")
+    pending=payload.get("internal_conditional_mplus_plain_candidates",[])
+    need(type(pending) is list
+         and len(pending)==payload.get("internal_conditional_mplus_plain_count",
+                                       len(pending))
+         and len(pending)<=2000,
+         "PRODUCT_INTERNAL_MPLUS_SOURCE_COUNT_INVALID")
+    for x in pending:
+        ev=x.get("source_evidence",[]) if type(x) is dict else []
+        need(type(x) is dict and type(x.get("item_id")) is int
+             and x["item_id"]>0 and x["item_id"] not in ids
+             and type(x.get("inventory_type")) is int
+             and x["inventory_type"]!=12
+             and x.get("category")=="plain_representative_candidate"
+             and x.get("item_set_id")==0
+             and x.get("provisional_mplus_world_state_only") is True
+             and x.get("season_membership_verified") is False
+             and x.get("ui_selectable") is False and type(ev) is list
+             and any(type(e) is dict
+                 and e.get("source")=="mplus_journal"
+                 and e.get("season_evidence")==
+                     "UNKNOWN_WORLD_STATE_EXPRESSION"
+                 and e.get("display_season_id")==
+                     payload.get("db2_display_season_id")
+                 and type(e.get("world_state_expression_id")) is int
+                 and e["world_state_expression_id"]>0 for e in ev),
+             "PRODUCT_INTERNAL_MPLUS_SOURCE_NOT_PENDING")
+        ids.add(x["item_id"])
     need(payload.get("not_certified", {}).get("tier_four_set") is True and
          payload["not_certified"].get("simc_item_effects") is True,
          "PRODUCT_EFFECT_OR_TIER_OVERCLAIM")

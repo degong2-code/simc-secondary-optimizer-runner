@@ -74,6 +74,34 @@ class ProductAdapterTests(unittest.TestCase):
         with self.assertRaises(adapter.GearBlocked):
             adapter.from_v166(b)
 
+    def test_conditional_worldstate_plain_is_internal_only(self):
+        source_doc=source()
+        source_doc["internal_conditional_mplus_plain_candidates"]=[{
+            "item_id":200,"name":"Conditional M+ Wrist","slot":9,
+            "class_id":4,"subclass_id":4,
+            "allowed_class_mask":2,"stat_modifier_codes":[4],
+            "item_set_id":0,"direct_item_effect_record":False,
+            "category":"plain_representative_candidate",
+            "selection_evidence":"CONDITIONAL_SEASON_NOT_ESTABLISHED",
+            "source_kinds":["mplus_journal"],
+            "source_evidence":[{
+                "source":"mplus_journal",
+                "season_evidence":"UNKNOWN_WORLD_STATE_EXPRESSION",
+                "display_season_id":37,"world_state_expression_id":441,
+                "journal_encounter_id":10,"journal_instance_id":20}]}]
+        source_doc["internal_conditional_mplus_plain_count"]=1
+        c=adapter.from_v166(source_doc)
+        self.assertEqual(c["internal_conditional_mplus_plain_count"],1)
+        self.assertNotIn(200,{x["item_id"] for x in c["items"]})
+        self.assertFalse(c["internal_conditional_mplus_plain_candidates"][0][
+            "ui_selectable"])
+        self.assertNotIn("plain_representative_candidate",
+                         adapter.public_options(c)["choices"])
+        c["internal_conditional_mplus_plain_candidates"][0]["ui_selectable"]=True
+        with self.assertRaisesRegex(adapter.GearBlocked,
+                                    "INTERNAL_MPLUS_SOURCE_NOT_PENDING"):
+            adapter.validate(c)
+
     def test_unknown_roles_counts_and_tier_fail_closed(self):
         doc=adapter.from_v166(source())
         doc["role_counts"]["trinket"]=20
