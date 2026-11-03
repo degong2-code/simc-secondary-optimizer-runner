@@ -22,7 +22,7 @@ from tests.test_v229_simc_only_source_seed import raw_sources
 from tests.test_v233_v234_source_native_G import SinglePhysicalNativeTests
 
 REV="710c2408bfd3ae4df71b8cd55cdf01f63fd6c926"
-BUILD="12.1.5.70575"
+BUILD="12.2.0.99999"
 
 
 class OneGNativeReuse(unittest.TestCase):
@@ -30,7 +30,7 @@ class OneGNativeReuse(unittest.TestCase):
         tmp=tempfile.TemporaryDirectory()
         self.addCleanup(tmp.cleanup)
         self.root=pathlib.Path(tmp.name)/"entirely_empty_install"
-        self.stage=self.root/"_fresh_season_sources"/"wago_12.1.5.70575"
+        self.stage=self.root/"_fresh_season_sources"/("wago_"+BUILD)
         self.stage.mkdir(parents=True)
         self.fixture=SinglePhysicalNativeTests()
         self.fixture.setUp()
