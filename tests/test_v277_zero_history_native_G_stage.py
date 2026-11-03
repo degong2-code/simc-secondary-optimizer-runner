@@ -35,6 +35,43 @@ class OneGNativeReuse(unittest.TestCase):
         self.fixture=SinglePhysicalNativeTests()
         self.fixture.setUp()
         self.addCleanup(self.fixture.doCleanups)
+        # The existing v232 fixture without the v167 plain-gear source is
+        # deliberately NOT physically eligible. Reuse the original v232
+        # same-build candidate contract to make a valid synthetic G probe,
+        # instead of forging any receipt's approved/verified flag.
+        import v167_product_season_gear_adapter as provider
+        import v232_simc_only_ordinary_representative as ordinary
+        import v233_source_only_G_probe_profile as gprofile
+        allowed={
+            9020:(5,4,4),9028:(9,4,4),9021:(6,4,4),
+            9022:(8,4,4),9023:(2,4,0),9024:(16,4,0),
+            9012:(11,4,0),9025:(11,4,0),9010:(17,2,8)}
+        rows=[{"item_id":iid,"name":f"candidate_{iid}",
+               "category":"plain_representative_candidate",
+               "inventory_type":inv,"class_id":kind,"subclass_id":sub,
+               "allowed_class_mask":2,
+               "source_kinds":["raid_journal"],"item_set_id":0}
+              for iid,(inv,kind,sub) in sorted(allowed.items())]
+        season={"schema":provider.SCHEMA,
+                "status":"CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
+                "no_old_catalog_seed":True,
+                "season_build":BUILD,"item_count":len(rows),
+                "role_counts":{"plain_representative_candidate":len(rows)},
+                "items":rows,
+                "not_certified":{"tier_four_set":True,
+                                 "simc_item_effects":True},
+                "new_native_calls":0,"new_api_calls":0}
+        self.fixture.representative=ordinary.find_candidate(
+            seed_directory=self.fixture.folder,
+            tier_candidate=self.fixture.tier,target_ilevel=335,
+            season_gear_db=season)
+        self.fixture.text,self.fixture.prepared=gprofile.build(
+            source_directory=self.fixture.folder,
+            tier_candidate=self.fixture.tier,
+            representative_candidate=self.fixture.representative,
+            race=self.fixture.race,level=90,season_gear_db=season)
+        self.assertTrue(self.fixture.prepared[
+            "generic_G_physical_conditions_verified"])
         receipt=self.fixture.prepared
         receipt["simc_revision"]=REV
         receipt["game_build_declared_by_simc_source"]=BUILD
