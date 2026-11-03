@@ -4,9 +4,10 @@
 Reads exactly v229's pinned SimC generated item source and a v231 physical
 tier candidate. Reuses v230's single-pass metadata parser and v169's existing
 ordinary/weapon physical selection functions (not a new item recommender).
-The selected source IDs are provisional until active-season membership and
-the real Native static profile are independently verified; NEVER feed this
-candidate directly to production G/B/T or v167 verified-season admission.
+The selected physical IDs are provisional until their actual Native static G
+is observed. Active-season acquisition is NOT a numeric G prerequisite when
+slot/material/primary/plain item-effect conditions are checked. This source
+candidate alone is not the final product G/B/T or item-list admission.
 """
 from __future__ import annotations
 
@@ -44,8 +45,9 @@ def _source_scope_diagnostic(provider, display_season_id):
 
     WCL-active zone and DB2 display season relation are useful *candidate*
     provenance, not a guarantee that the particular difficulty/item variant
-    is obtainable this week. Unknown world-state, Localbots and expansion-only
-    crafts must not silently become current-season G or user equipment.
+    is obtainable this week. Unknown world-state, Localbots and crafts
+    must not silently become current-season obtainable USER equipment.
+    They may still be physically suitable for a generic G reference.
     """
     sources = provider.get("source_evidence", []) if provider else []
     kind = provider.get("source_kinds", []) if provider else []
@@ -277,9 +279,9 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
                 provider.get("source_kinds",[]) if provider else []),
         })
     # Reuse v169 pure selectors, preferring explicit same-display-season
-    # DB2 candidates to lower-ID Localbots / unscoped historical candidates.
-    # The tier itself still needs independent season proof, so even an
-    # explicitly matched normal slot is NOT admitted to G at this stage.
+    # DB2 candidates to lower-ID Localbots / unscoped historical candidates
+    # for a clean SimC profile. This preference is not a G-budget Gate:
+    # same-ilevel plain physical gear can also provide numeric G after Native.
     season_display=(verified.get("db2_display_season_id")
                     if season_ids is not None else None)
     evidence_by_id={
