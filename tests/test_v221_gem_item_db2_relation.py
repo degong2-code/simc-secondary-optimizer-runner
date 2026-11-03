@@ -6,6 +6,7 @@ import pathlib
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"runner"))
@@ -88,6 +89,19 @@ class GemPropertyRelationTests(unittest.TestCase):
         self.assertFalse(decision["eligible"])
         self.assertIn("EXACT_PHYSICAL_SLOT_OR_HAND_RELATION_NOT_VERIFIED",
                       decision["missing"])
+
+    def test_reuse_verified_snapshot_pair_without_duplicate_hash(self):
+        proof=joiner._verify_db2(self.folder,self.catalog["game_build"])
+        with mock.patch.object(joiner,"_sha_file",
+                               side_effect=AssertionError("duplicate SHA")):
+            result=joiner.join(self.catalog,self.folder,verified_tables=proof)
+        self.assertEqual(result["exact_link_count"],2)
+        self.assertFalse(result["automatic_ui_promotion"])
+        bad=copy.deepcopy(proof)
+        bad["ItemSparse"]["sha256"]="0"*64
+        with self.assertRaisesRegex(joiner.GemJoinBlocked,
+                                    "V217_VERIFIED_TABLE_PROVENANCE_MISMATCH"):
+            joiner.join(self.catalog,self.folder,verified_tables=bad)
 
     def test_simc_generated_build_difference_is_pending_not_false_join(self):
         changed=copy.deepcopy(self.catalog)
