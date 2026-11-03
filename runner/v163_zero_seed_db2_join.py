@@ -47,21 +47,33 @@ def read_rows(folder, table):
             fail_if(i >= MAX_ROWS, 'CSV_ROW_LIMIT_' + table)
             yield row
 
-def verify_snapshot(folder, build):
+def verify_snapshot(folder, build, *, verified_tables=None):
     receipt = json.loads((folder / 'receipt.json').read_text(encoding='utf-8'))
     fail_if(receipt.get('build') != build or receipt.get('locale') != 'enUS'
             or set(receipt.get('tables', {})) != set(TABLES),
             'PINNED_RECEIPT_MISMATCH')
+    # Only the normal collector supplies the already SHA-checked v217 table
+    # identities. A standalone caller retains the original full-file scan.
+    if verified_tables is not None:
+        fail_if(type(verified_tables) is not dict or
+                set(verified_tables) != set(TABLES),
+                'V217_VERIFIED_TABLE_SET_MISMATCH')
     for table in TABLES:
         path = folder / (table+'.csv')
         fail_if(not path.is_file(), 'CSV_MISSING_'+table)
         meta = receipt['tables'][table]
         fail_if(path.stat().st_size != meta.get('bytes'), 'CSV_SIZE_MISMATCH_'+table)
-        digest = hashlib.sha256()
-        with path.open('rb') as f:
-            for chunk in iter(lambda: f.read(1024*1024), b''):
-                digest.update(chunk)
-        fail_if(digest.hexdigest() != meta.get('sha256'), 'CSV_SHA_MISMATCH_'+table)
+        if verified_tables is None:
+            digest = hashlib.sha256()
+            with path.open('rb') as f:
+                for chunk in iter(lambda: f.read(1024*1024), b''):
+                    digest.update(chunk)
+            fail_if(digest.hexdigest() != meta.get('sha256'),
+                    'CSV_SHA_MISMATCH_'+table)
+        else:
+            fail_if(verified_tables[table] != {
+                'sha256': meta.get('sha256'), 'bytes': meta.get('bytes')},
+                'V217_VERIFIED_TABLE_PROVENANCE_MISMATCH_'+table)
     return receipt
 
 def named_zone(report, name):
@@ -149,11 +161,13 @@ def discover_unique_live_scope(folder, report):
             "unknown_world_state_not_promoted":True}
 
 
-def build_index(folder, report, *, raid_zone, mplus_zone, build, expansion_id):
+def build_index(folder, report, *, raid_zone, mplus_zone, build,
+                expansion_id, verified_tables=None):
     fail_if(report.get('schema') != 'v155_season_discovery_provider_probe_v1'
             or report.get('mode') != 'LIVE_AUTHENTICATED_BOUNDED',
             'LIVE_SEASON_REPORT_REQUIRED')
-    receipt = verify_snapshot(folder, build)
+    receipt = verify_snapshot(folder, build,
+                              verified_tables=verified_tables)
     raid = named_zone(report, raid_zone)
     mplus = named_zone(report, mplus_zone)
     fail_if(not raid.get('encounters') or not mplus.get('encounters'),
