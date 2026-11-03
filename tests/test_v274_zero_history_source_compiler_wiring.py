@@ -156,6 +156,22 @@ class ZeroHistorySourceCompilerWiring(unittest.TestCase):
         self.assertFalse(result["zero_history_build"]["user_session_created"])
         self.assertFalse((self.root/"sessions").exists())
 
+    def test_weapon_mask_successor_is_passed_to_original_v191(self):
+        self.complete_producer_outputs()
+        derived=self.emit("source/v285_weapon_masks.json",{
+            "schema":"v190_same_build_consumable_item_candidates_v1",
+            "weapon_equipped_source":{
+                "schema":"v285_same_build_consumable_spell_weapon_source_v1",
+                "game_build":self.build,"source_only":True}})
+        self.source["fresh_consumable_weapon_source"]={
+            "candidate_path":str(derived),
+            "source_stage":{"status":"EXECUTED_AND_SEALED"}}
+        discovered=wiring.discover(self.source)
+        self.assertEqual(discovered["status"],"COLLECTED_COMPILER_INPUTS_COMPLETE")
+        self.assertEqual(discovered["inputs"]["fresh_v191_inputs"]["v190"],
+                         derived)
+        self.assertFalse(discovered["environment_ready"])
+
     def test_wrong_tier_schema_or_foreign_sources_do_not_enter_v191(self):
         self.complete_producer_outputs()
         (self.stage/"source"/"v168.json").write_text(

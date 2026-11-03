@@ -124,6 +124,13 @@ def discover(collected):
         "v190_same_build_consumable_item_candidates_v1")
     if simc_bound is not None:
         v190=simc_bound
+    # Same selected physical source with actual SpellEquippedItems masks,
+    # when its separate immutable successor has been sealed.
+    weapon_bound=_from_sealed_candidate(
+        collected.get("fresh_consumable_weapon_source"),root,
+        "v190_same_build_consumable_item_candidates_v1")
+    if weapon_bound is not None:
+        v190=weapon_bound
 
     simc = collected.get("fresh_pinned_first_party_simc_source")
     source_dir = simc.get("source_dir") if isinstance(simc, dict) else None

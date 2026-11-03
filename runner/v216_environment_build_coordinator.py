@@ -31,6 +31,7 @@ import v277_zero_history_native_G_stage as zero_history_G_native
 import v278_sealed_simc_consumable_native_pair as native_effect_pair
 import v280_consumable_item_use_spell_source as item_spell_bridge
 import v281_consumable_simc_relation as consumable_simc_relation
+import v285_consumable_weapon_source as consumable_weapon_source
 import v223_installed_season_budget_source as season_source_proof
 import v213_source_to_catalog as source_to_catalog
 import v161_wago_db2_snapshot as wago_snapshot
@@ -1915,6 +1916,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
                                    gear_transport=None,
                                    item_effect_transport=None,
                                    spell_effect_transport=None,
+                                   spell_equipped_transport=None,
                                    simc_seed_directory=None,
                                    simc_revision=None,
                                    previous_game_build=None,
@@ -2220,6 +2222,16 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
             consumables=fresh_item_spell,compiler_source=pinned_classifier,
             full_simc_item_source=full_seed,
             transport=spell_effect_transport)
+    # Same-build source class/inventory masks for exact SimC-linked oils.
+    # No item/weapon approval and no calls when upstream remains PENDING.
+    if fetch is not None and spell_equipped_transport is None:
+        weapon_source=consumable_weapon_source.pending(
+            "V285_INJECTED_WEAPON_TRANSPORT_NOT_SUPPLIED")
+    else:
+        weapon_source=consumable_weapon_source.collect(
+            stage_root=stage_root,build=expected_game_build,
+            consumables=simc_consumable_relation,
+            transport=spell_equipped_transport)
     one_spec=_one_spec_ordinary_simc_stage(
         stage_root=stage_root,build=expected_game_build,
         fresh_gear=fresh_gear,tier_bridge=tier_bridge,
@@ -2254,6 +2266,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "fresh_food_potion_item_sources":fresh_consumables,
         "fresh_consumable_item_spell_source":fresh_item_spell,
         "fresh_consumable_simc_effect_relation":simc_consumable_relation,
+        "fresh_consumable_weapon_source":weapon_source,
         "fresh_gem_enchant_raw_source":gem_enchant_csv,
         "fresh_one_spec_character_level_policy":
             "SIMC_COMPILED_DEFAULT_MAX_LEVEL",
@@ -2281,6 +2294,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
             fresh_consumables["network_calls_by_stage"]+
             fresh_item_spell["network_calls_by_stage"]+
             simc_consumable_relation["network_calls_by_stage"]+
+            weapon_source["network_calls_by_stage"]+
             pinned_classifier["network_calls_by_stage"]+
             compiler_tier["network_calls_by_stage"]+
             gem_enchant_csv["network_calls_by_stage"],
@@ -2416,6 +2430,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                  "fetch","credentials","discovery_transport",
                  "tier_transport","bonus_transport","gear_transport",
                   "item_effect_transport","spell_effect_transport",
+                  "spell_equipped_transport",
                  "simc_transport","simc_compiler_transport",
                  "gem_enchant_transport","effect_probe_requests"},
              "V216_ZERO_HISTORY_SOURCE_INPUT_FIELDS")
