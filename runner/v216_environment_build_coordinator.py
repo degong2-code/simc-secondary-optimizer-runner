@@ -1903,7 +1903,8 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
                                    representative_request=None,
                                    simc_revision_hint=None,
                                    g_probe_character=None,
-                                   gem_enchant_transport=None):
+                                   gem_enchant_transport=None,
+                                   simc_compiler_transport=None):
     """First real normal-source acquisition inside the SAME Environment Build.
 
     Explicit build is only a request identity, not independent season or tier
@@ -2143,10 +2144,17 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
     # When upstream v189 is pending (e.g. injected CSV without exact SimC
     # transport), avoid implicit public requests or invented source proofs.
     try:
-        pinned_classifier=pinned_compiler_source.collect(
-            stage_root=stage_root,build=expected_game_build,
-            pinned_simc=pinned_simc,consumables=fresh_consumables,
-            transport=simc_transport)
+        if simc_transport is not None and simc_compiler_transport is None:
+            # A fixture transports ONLY the original v229/v189 URL set.
+            # Do not silently expand its contract or fall through to LIVE
+            # GitHub for v275. Production (no injection) still auto-fetches.
+            pinned_classifier=pinned_compiler_source.pending(
+                "V275_INJECTED_SIMC_COMPILER_TRANSPORT_NOT_SUPPLIED")
+        else:
+            pinned_classifier=pinned_compiler_source.collect(
+                stage_root=stage_root,build=expected_game_build,
+                pinned_simc=pinned_simc,consumables=fresh_consumables,
+                transport=simc_compiler_transport)
     except pinned_compiler_source.SimCCompilerInputBlocked as exc:
         raise EnvironmentBuildBlocked(str(exc).split(":",1)[0]) from exc
     full_seed={"status":"FRESH_FULL_SIMC_NOT_REQUESTED",
@@ -2349,7 +2357,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                  "g_probe_character","simc_revision_hint",
                  "fetch","credentials","discovery_transport",
                  "tier_transport","bonus_transport","gear_transport",
-                 "simc_transport","gem_enchant_transport"},
+                 "simc_transport","simc_compiler_transport",
+                 "gem_enchant_transport"},
              "V216_ZERO_HISTORY_SOURCE_INPUT_FIELDS")
         need(source_catalog_path is None and
              fresh_source_stage_inputs is None and
