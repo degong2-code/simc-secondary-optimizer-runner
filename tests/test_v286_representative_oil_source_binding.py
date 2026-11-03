@@ -141,7 +141,7 @@ class RepresentativeOilSource(unittest.TestCase):
     def test_existing_compiler_receives_source_only_representative_match(self):
         stub={"schema":wiring.SCHEMA,
               "status":"COLLECTED_COMPILER_INPUTS_COMPLETE",
-              "inputs":{"ready":True},"missing":[]}
+              "inputs":{"ready":True,"stage_root":self.root},"missing":[]}
         compiler_result={
             "source_catalog_path":str(self.root/"catalog.json"),
             "v191_stage":{"status":"EXECUTED_AND_SEALED"},
