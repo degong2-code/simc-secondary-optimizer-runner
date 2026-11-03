@@ -258,6 +258,9 @@ def match_first_party_roster(*,candidate,simc_receipt,simc_set_groups):
         "game_build":candidate["game_build"],
         "simc_revision":simc_receipt["simc_revision"],
         "simc_seed_receipt_sha256":simc_receipt["receipt_sha256"],
+        "physical_candidate_semantic_sha256":digest(json.dumps(
+            candidate,sort_keys=True,ensure_ascii=False,
+            separators=(",",":")).encode("utf8")),
         "observed_simc_options":sorted(options),
         "class_count":13,"piece_count":65,
         "classes":rows,
@@ -295,6 +298,9 @@ def reuse_existing_tier_source(*,physical_candidate,exact_match,
          exact_match.get("status")==
            "EXACT_13_CLASS_SIMC_SET_OPTIONS_MATCHED_SEASON_PENDING" and
          exact_match.get("game_build")==physical_candidate["game_build"] and
+         exact_match.get("physical_candidate_semantic_sha256")==
+             digest(json.dumps(physical_candidate,sort_keys=True,
+                        ensure_ascii=False,separators=(",",":")).encode("utf8")) and
          exact_match.get("class_count")==13 and
          exact_match.get("piece_count")==65 and
          exact_match.get("simc_set_option_verified_by_exact_physical_ids")
