@@ -81,6 +81,62 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
 
 
 
+    def test_reuse_sealed_tier_source_in_normal_build_without_new_certifier(self):
+        from tests.test_v251_db2_raid_tier_simc_bridge import (
+            fixture,pinned_thirteen_class_source,BUILD)
+        root=self.root/"tier-reuse"
+        root.mkdir()
+        tier,corroboration=fixture(root)
+        tier_path=root/"tier.json"
+        corr_path=root/"corr.json"
+        tier_path.write_text(json.dumps(tier),encoding="utf8")
+        corr_path.write_text(json.dumps(corroboration),encoding="utf8")
+        physical=v216.tier_simc_bridge.build_stage(
+            stage_root=root,db2_candidate_path=tier_path,
+            bonus_candidate_path=corr_path,
+            db2_receipt="a"*64,bonus_receipt="b"*64)
+        source=json.loads(pathlib.Path(physical["candidate_path"]).read_text("utf8"))
+        pinned_thirteen_class_source(root,source)
+        matched=v216.tier_simc_bridge.build_first_party_match_stage(
+            stage_root=root,physical_candidate_path=physical["candidate_path"],
+            physical_stage_receipt=physical["source_stage"]["receipt_sha256"],
+            seed_directory=root)
+        requested={"class":"paladin","spec":"retribution","target_ilevel":334}
+        selected=v216._reuse_existing_tier_source_stage(
+            build=BUILD,tier_bridge=physical,first_party=matched,
+            request=requested)
+        self.assertTrue(selected["source_evidence_reused"])
+        self.assertEqual(selected["native_calls"],0)
+        self.assertEqual(selected["network_calls_by_stage"],0)
+        self.assertEqual(selected["selected_for_request"]["spec"],"retribution")
+        self.assertEqual(len(selected["selected_for_request"]["four_piece_item_ids"]),4)
+        self.assertEqual(set(selected["source_stage_receipts"]),
+                         {"raid_correlated_physical","simc_exact_13_class"})
+        self.assertFalse(selected["environment_ready"])
+        self.assertFalse(selected["season_membership_verified"])
+        same=v216._reuse_existing_tier_source_stage(
+            build=BUILD,tier_bridge=physical,first_party=matched)
+        self.assertTrue(same["source_evidence_reused"])
+        self.assertIsNone(same["selected_for_request"])
+        drift=v216._reuse_existing_tier_source_stage(
+            build="12.9.9.99999",tier_bridge=physical,
+            first_party=matched,request=requested)
+        self.assertEqual(drift["status"],"TIER_EXISTING_SOURCE_REUSE_PENDING")
+        self.assertEqual(drift["reason"],"V216_TIER_REUSE_GAME_BUILD_DRIFT")
+        pending=v216._reuse_existing_tier_source_stage(
+            build=BUILD,tier_bridge=physical,first_party={})
+        self.assertFalse(pending["source_evidence_reused"])
+        # Sealed metadata cannot be used for source reuse when actual
+        # first-party IDs or status are absent.
+        corrupted=json.loads(pathlib.Path(matched["candidate_path"]).read_text("utf8"))
+        corrupted["classes"]["paladin"]["item_set_id"]+=1
+        bad_path=root/"corrupted_simc_exact.json"
+        bad_path.write_text(json.dumps(corrupted),encoding="utf8")
+        altered={**matched,"candidate_path":str(bad_path)}
+        self.assertEqual(v216._reuse_existing_tier_source_stage(
+            build=BUILD,tier_bridge=physical,first_party=altered)["status"],
+            "TIER_EXISTING_SOURCE_REUSE_PENDING")
+
     def test_v233_G_probe_is_staged_reused_and_tamper_rejected_without_native(self):
         # Exercise actual v229 + v231 + v232 + v233 replay, not a new
         # equipment calculator. Only the existing v251 roster bridge is
@@ -829,6 +885,18 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                          ["network_calls_by_stage"],0)
         self.assertEqual(third["fresh_tier_first_party_simc_options"]["status"],
             "EXACT_13_CLASS_SIMC_SET_OPTIONS_MATCHED_SEASON_PENDING")
+        self.assertEqual(third["fresh_tier_selected_from_existing_evidence"]["status"],
+            "EXISTING_ACTIVE_RAID_SIMC_EXACT_TIER_SOURCE_REUSED")
+        self.assertTrue(third["fresh_tier_selected_from_existing_evidence"]
+                        ["source_evidence_reused"])
+        self.assertFalse(third["fresh_tier_selected_from_existing_evidence"]
+                         ["environment_ready"])
+        self.assertEqual(third["fresh_tier_selected_from_existing_evidence"]
+                         ["observed_base_item_level"],219)
+        self.assertNotIn("DB2_CLASS_TIER_SEASON_MEMBERSHIP_PROOF",
+                         third["requires"])
+        self.assertEqual(fourth["fresh_tier_selected_from_existing_evidence"]
+                         ["network_calls_by_stage"],0)
         self.assertEqual(third["fresh_tier_first_party_simc_options"]
             ["source_stage"]["status"],"EXECUTED_AND_SEALED")
         self.assertEqual(fourth["fresh_tier_first_party_simc_options"]
