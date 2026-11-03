@@ -1,0 +1,127 @@
+name: P3-BK One-Shot Wago Journal Encounter WorldStateExpression Audit
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p3_bk_one_shot_worldstate_audit.yml
+permissions:
+  contents: read
+jobs:
+  research:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - name: Inspect actual pinned DB2 journal rows (NO Native, NO secrets)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import csv,hashlib,json,pathlib,tempfile
+          from collections import Counter,defaultdict
+          from urllib.parse import urlencode
+          from urllib.request import Request,urlopen
+          build="12.1.5.70575"
+          names=("JournalEncounterItem","JournalEncounter","JournalInstance")
+          with tempfile.TemporaryDirectory(prefix="p3-bk-wse-") as temp:
+              folder=pathlib.Path(temp)
+              files={}
+              for name in names:
+                  url="https://wago.tools/db2/"+name+"/csv?"+urlencode({
+                      "build":build,"locale":"enUS"})
+                  req=Request(url,headers={"User-Agent":"SIMC-Secondary-DB2-Research/1.0",
+                      "Accept":"text/csv"})
+                  sha=hashlib.sha256();size=0
+                  with urlopen(req,timeout=90) as src,(folder/(name+".csv")).open("wb") as out:
+                      assert src.status==200,(name,"HTTP",src.status)
+                      for chunk in iter(lambda:src.read(262144),b""):
+                          size+=len(chunk)
+                          assert size<=35_000_000,(name,"EXCEEDS_BOUNDED_SIZE")
+                          sha.update(chunk);out.write(chunk)
+                  assert size>32,(name,"EMPTY")
+                  files[name]={"bytes":size,"sha256":sha.hexdigest()}
+                  print("P3_BK_PINNED_SOURCE",build,name,size,sha.hexdigest(),flush=True)
+              def rows(name,required):
+                  with (folder/(name+".csv")).open(encoding="utf-8-sig",newline="") as f:
+                      reader=csv.DictReader(f)
+                      assert required<=set(reader.fieldnames or ()),(name,"MISSING_FIELDS",reader.fieldnames)
+                      for index,row in enumerate(reader):
+                          assert index<400_000,(name,"ROW_LIMIT")
+                          yield row
+              def number(x):
+                  try:return int(x or 0)
+                  except (ValueError,TypeError):return 0
+              instances={number(r["ID"]):r.get("Name_lang","")
+                  for r in rows("JournalInstance",{"ID","Name_lang"})}
+              encounters={number(r["ID"]):(number(r["JournalInstanceID"]),r.get("Name_lang",""))
+                  for r in rows("JournalEncounter",{"ID","JournalInstanceID","Name_lang"})}
+              byseason=defaultdict(lambda:Counter())
+              byinst=defaultdict(lambda:Counter())
+              byitem=defaultdict(lambda:set())
+              condition=Counter()
+              details=[]
+              count=Counter()
+              for row in rows("JournalEncounterItem",{
+                  "JournalEncounterID","ItemID","DisplaySeasonID","WorldStateExpressionID"}):
+                  iid=number(row["ItemID"]);eid=number(row["JournalEncounterID"])
+                  if iid<=0:continue
+                  sid=number(row["DisplaySeasonID"])
+                  wse=number(row["WorldStateExpressionID"])
+                  state="positive" if wse>0 else "zero"
+                  count["total_item_loot_rows"]+=1
+                  count["wse_"+state]+=1
+                  byseason[sid][state]+=1
+                  inst,encounter=encounters.get(eid,(0,""))
+                  byinst[inst][state]+=1
+                  condition[wse]+=1
+                  byitem[iid].add((sid,wse,eid))
+                  if wse>0:
+                      details.append({"item_id":iid,"display_season_id":sid,
+                          "world_state_expression_id":wse,"encounter_id":eid,
+                          "encounter_name":encounter,"instance_id":inst,
+                          "instance_name":instances.get(inst,"")})
+              mixed=[]
+              for iid,triples in sorted(byitem.items()):
+                  flags={x[1]>0 for x in triples}
+                  expressions={x[1] for x in triples}
+                  if len(flags)>1 or len(expressions)>1:
+                      mixed.append({"item_id":iid,
+                          "wse_ids":sorted(expressions),
+                          "season_ids":sorted({x[0] for x in triples}),
+                          "encounter_ids":sorted({x[2] for x in triples}),
+                          "both_zero_and_positive":len(flags)>1})
+              instance_rank=sorted((
+                  {"instance_id":id,"instance_name":instances.get(id,""),
+                   "wse_positive":c["positive"],"wse_zero":c["zero"]}
+                  for id,c in byinst.items() if c["positive"]),
+                  key=lambda x:(-x["wse_positive"],x["instance_id"]))
+              byseasonrows=sorted((
+                  {"display_season_id":sid,"wse_positive":c["positive"],
+                   "wse_zero":c["zero"]} for sid,c in byseason.items()),
+                  key=lambda x:(-x["wse_positive"],x["display_season_id"]))
+              preferred=sorted(details,key=lambda x:(
+                  x["display_season_id"]!=37,-x["display_season_id"],
+                  x["instance_name"],x["item_id"]))
+              # Fixed per-build snapshot counts, not a live server verdict.
+              result={"schema":"p3_bk_worldstate_journal_audit_v1","build":build,
+                  "source":"WAGO_PINNED_DB2_CSV","files":files,
+                  "total_item_loot_rows":count["total_item_loot_rows"],
+                  "wse_zero":count["wse_zero"],"wse_positive":count["wse_positive"],
+                  "unique_item_ids":len(byitem),
+                  "distinct_positive_wse_ids":len([x for x in condition if x>0]),
+                  "positive_wse_top20":[{"id":k,"rows":v} for k,v in condition.most_common()
+                      if k>0][:20],
+                  "seasons":byseasonrows[:40],
+                  "instances_with_positive_wse":instance_rank[:22],
+                  "different_wse_for_same_item_count":len(mixed),
+                  "both_wse_zero_and_positive_same_item_count":sum(
+                      v["both_zero_and_positive"] for v in mixed),
+                  "mixed_same_item_examples":mixed[:14],
+                  "positive_row_examples":preferred[:18],
+                  "season37":dict(byseason.get(37,{})),
+                  "source_is_not_active_season_or_worldstate_evaluation":True,
+                  "native_calls":0}
+              print("P3_BK_WSE_AUDIT_JSON "+json.dumps(
+                  result,ensure_ascii=False,sort_keys=True),flush=True)
+              assert count["total_item_loot_rows"]==count["wse_positive"]+count["wse_zero"]
+              assert count["total_item_loot_rows"]>0
+          PY
