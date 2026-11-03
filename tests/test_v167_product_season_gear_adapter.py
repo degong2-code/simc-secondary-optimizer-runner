@@ -97,6 +97,17 @@ class ProductAdapterTests(unittest.TestCase):
             "ui_selectable"])
         self.assertNotIn("plain_representative_candidate",
                          adapter.public_options(c)["choices"])
+        # A new season may expose no approved current choices yet while
+        # the sole WSE-pending same-display-season plain item is available
+        # for INTERNAL physical source discovery.
+        source_doc["current_candidates"]=[]
+        source_doc["current_candidate_count"]=0
+        only_pending=adapter.from_v166(source_doc)
+        self.assertEqual(only_pending["item_count"],0)
+        self.assertEqual(only_pending[
+            "internal_conditional_mplus_plain_count"],1)
+        self.assertEqual(adapter.public_options(only_pending)["choices"][
+            "trinket"],[])
         c["internal_conditional_mplus_plain_candidates"][0]["ui_selectable"]=True
         with self.assertRaisesRegex(adapter.GearBlocked,
                                     "INTERNAL_MPLUS_SOURCE_NOT_PENDING"):
