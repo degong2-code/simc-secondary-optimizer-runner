@@ -99,8 +99,14 @@ def discover(collected):
 
     gear = _from_sealed_candidate(collected.get("fresh_ordinary_gear"),
                                   root, "v167_product_season_gear_db_v1")
-    tier = _from_sealed_candidate(collected.get("fresh_tier"), root,
-                                  tier_compiler.SCHEMA)
+    # New zero-history production source is a SAME-BUILD DB2 physical
+    # read of v251's sealed 13x5 SimC exact pair, NOT a schema relabel.
+    # Keep the original v168 direct-source mode for validated old callers.
+    tier = _from_sealed_candidate(
+        collected.get("fresh_compiler_tier_source"),root,tier_compiler.SCHEMA)
+    if tier is None:
+        tier = _from_sealed_candidate(
+            collected.get("fresh_tier"),root,tier_compiler.SCHEMA)
     consumable = collected.get("fresh_food_potion_item_sources")
     v189 = _stage_output(consumable, root, "v189",
              "v189_pinned_simc_effect_registration_candidates_v1")
