@@ -140,6 +140,13 @@ def observe(*, native_raw, profile_receipt, native_binary_sha256,
         "observed_G_vector":vector,
         "observed_G_total":value,
         "standardized_G_preview_unapproved":g_standard_preview,
+        "generic_G_numeric_reference_usable":(
+            profile_receipt.get("generic_G_physical_conditions_verified")
+                is True and
+            profile_receipt.get(
+                "generic_G_current_season_membership_required") is False),
+        # Source season is not a precondition for a generic static budget.
+        "generic_G_current_season_membership_required":False,
         "source_current_season_membership_verified":False,
         "native_compiled_game_build_independently_verified":False,
         "full_G_approved":False,
