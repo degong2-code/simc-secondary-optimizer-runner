@@ -365,11 +365,15 @@ def _reuse_observed_G_native_receipts(*, catalog, receipt_paths_by_ilevel):
             # The existing v232 plain/primary/weapon proof plus v234 Native
             # static observation is enough to use the numeric G reference.
             # Active-season acquisition remains a SEPARATE diagnostic.
-            "generic_G_numeric_reference_usable":
-                observed.get("generic_G_numeric_reference_usable") is True,
+            "generic_G_numeric_reference_usable":(
+                observed.get("generic_G_numeric_reference_usable") is True
+                and observed.get(
+                    "generic_G_current_season_membership_required") is False),
             "generic_G_standard_rating":(
                 rounded["standardized_G"]
                 if observed.get("generic_G_numeric_reference_usable") is True
+                and observed.get(
+                    "generic_G_current_season_membership_required") is False
                 else None),
             "current_season_acquisition_required_for_G":False,
             "source_selection_status":"OBSERVED_PHYSICAL_NOT_SEASON_ADMITTED",
