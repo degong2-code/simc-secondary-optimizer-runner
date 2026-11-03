@@ -69,6 +69,8 @@ class ZeroHistorySourceCompilerWiring(unittest.TestCase):
             "receipt_sha256":"a"*64})
         v211=self.stage/"source"/"v211_classification"
         v211.mkdir()
+        for name in build.source_wiring.enchant_classifier.FRESH_REQUIRED:
+            (v211/name).write_text("test",encoding="utf8")
         manifest=self.emit("source/v211_manifest.json",{"schema":"test"})
         self.source.update({
             "fresh_ordinary_gear":{"candidate_path":str(gear),
