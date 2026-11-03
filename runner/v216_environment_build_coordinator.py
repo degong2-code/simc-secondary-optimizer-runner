@@ -2220,6 +2220,83 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
     }
 
 
+def _zero_history_source_progress(source):
+    """Report the real one-engine source stage without inventing G/J/F/O.
+
+    This has no additional fetch, old-season lookup, cache or session writes.
+    The v217 receipts from the same normal collector remain the resume keys.
+    """
+    need(type(source) is dict and source.get("schema")==
+         "v216_fresh_source_stage_v1" and
+         type(source.get("source_stage")) is dict and
+         source["source_stage"].get("status") in (
+             "EXECUTED_AND_SEALED","REUSED_VERIFIED","RECOVERED_VERIFIED"),
+         "V216_ZERO_HISTORY_SOURCE_STAGE_NOT_SEALED")
+    need(source.get("environment_installed") is False and
+         source.get("environment_ready") is False and
+         source.get("native_calls")==0 and
+         all(source.get(name) is None for name in ("G","J","F","O","B","T")),
+         "V216_ZERO_HISTORY_PREMATURE_BUDGET_OR_READY")
+    # Only completed source stage receipts indicate reuse. PENDING fields are
+    # not proof that the season has no matching items.
+    pending=[]
+    components=(
+        ("season_source","season_join","SOURCE_SEASON_JOIN_PENDING"),
+        ("representative_tier","fresh_tier_selected_from_existing_evidence",
+         "REPRESENTATIVE_TIER_SOURCE_PENDING"),
+        ("representative_gear","fresh_one_spec_simc_representative",
+         "REPRESENTATIVE_GEAR_SOURCE_PENDING"),
+        ("G_native","fresh_one_spec_physical_G_probe",
+         "G_NATIVE_RATING_OBSERVATION_PENDING"),
+        ("J_gems","fresh_gem_enchant_raw_source",
+         "HIGHEST_QUALITY_GEM_J_SOURCE_PENDING"),
+        ("F_flask","fresh_food_potion_item_sources",
+         "HIGHEST_QUALITY_FLASK_F_SOURCE_PENDING"),
+    )
+    for label,key,reason in components:
+        row=source.get(key)
+        if type(row) is not dict:
+            pending.append(reason)
+        elif label=="G_native" and row.get("G") is None:
+            pending.append(reason)
+        elif label in ("J_gems","F_flask"):
+            # A source candidate or raw effect table does not certify J/F.
+            pending.append(reason)
+        elif label=="season_source" and row.get(
+                "status","").endswith("_PENDING"):
+            pending.append(reason)
+        elif label=="representative_tier" and not row.get(
+                "source_evidence_reused",False):
+            pending.append(reason)
+        elif label=="representative_gear" and not row.get(
+                "candidate_path"):
+            pending.append(reason)
+    pending.extend((
+        "WEAPON_OIL_O_EXACT_APPLICATION_AND_RATING_PENDING",
+        "SAME_SEASON_GJFO_B_T_AND_POLICY_A_PENDING",
+        "SAME_BUILD_V191_V211_V213_V212_INSTALL_PENDING",
+        "USER_TARGET_PROFILE_ADAPTIVE_SIMC_E2E_PENDING",
+    ))
+    return {
+        "schema":"v216_zero_history_normal_build_progress_v1",
+        "status":"SOURCE_COLLECTED_GJFO_PENDING_NOT_INSTALLED",
+        "entrypoint":"v216.build_environment",
+        "source_pipeline":"v216.collect_wago_new_season_source",
+        "stage_engine":"v217.execute_stage",
+        "history_dependency_required":False,
+        "resume_from_sealed_source_stage":True,
+        "source_stage_status":source["source_stage"]["status"],
+        "same_build_cache_reuse":source["source_stage"].get("reused",False),
+        "no_historical_budget_defaults":True,
+        "requires":pending,
+        "G":None,"J":None,"F":None,"O":None,"B":None,"T":None,
+        "environment_ready":False,"environment_installed":False,
+        "new_native_calls":0,
+        "additional_network_calls":0,
+        "user_session_created":False,
+    }
+
+
 def build_environment(*, sessions_root, session_folder, user, binary, revision,
                       static_cache, source_catalog_path, bootstrap_result,
                       v208_start_receipt_path=None, package_manifest_path=None,
@@ -2233,7 +2310,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                       fresh_simc_effect_snapshot_case=None,
                       fresh_gem_layout_receipt=None,
                       fresh_gem_rating_by_id=None,
-                      fresh_gjfo_evidence=None):
+                      fresh_gjfo_evidence=None,
+                      fresh_collection_inputs=None):
     """Reconcile existing inputs and seal one incremental, auditable build.
 
     Source acquisition is intentionally outside this local coordinator:
@@ -2242,6 +2320,34 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
     versioned source package. The coordinator never silently relabels stale
     source bytes as current.
     """
+    # ZERO-HISTORY is an input mode of the SAME normal Build, not a parallel
+    # compiler or a SimC-only fixture. The real v161/v217/v216 source chain
+    # collects in its own receipt-backed workspace and returns PENDING until
+    # the actual new-season G/J/F/O and source compiler can be admitted.
+    if fresh_collection_inputs is not None:
+        need(type(fresh_collection_inputs) is dict and
+             {"expected_game_build","representative_request",
+              "g_probe_character","simc_revision_hint"} <=
+                 set(fresh_collection_inputs) and
+             set(fresh_collection_inputs) <= {
+                 "expected_game_build","representative_request",
+                 "g_probe_character","simc_revision_hint",
+                 "fetch","credentials","discovery_transport",
+                 "tier_transport","bonus_transport","gear_transport",
+                 "simc_transport","gem_enchant_transport"},
+             "V216_ZERO_HISTORY_SOURCE_INPUT_FIELDS")
+        need(source_catalog_path is None and
+             fresh_source_stage_inputs is None and
+             fresh_gjfo_evidence is None and
+             fresh_standard_budget_evidence_by_ilevel is None and
+             session_folder is None and
+             bootstrap_result is None,
+             "V216_ZERO_HISTORY_MUST_NOT_USE_INSTALLED_SESSION_OR_BUDGET")
+        collected=collect_wago_new_season_source(
+            sessions_root=sessions_root,**fresh_collection_inputs)
+        progress=_zero_history_source_progress(collected)
+        return {**collected,"zero_history_build":progress,
+                "normal_build_entry":True}
     # Existing v217 stages assemble the same v211/v213 source candidate
     # inside this original Build request. No session is created before the
     # ensuing preflight/required-budget barrier; never imply installation.
