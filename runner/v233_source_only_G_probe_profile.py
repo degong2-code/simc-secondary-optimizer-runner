@@ -121,6 +121,12 @@ def build(*, source_directory, tier_candidate, representative_candidate,
         "talents_supplied":talents is not None,
         "target_ilevel":ilvl,
         "selected_G_slot_ids":{k:slots[k] for k in sorted(slots)},
+        # Generic rating budget needs compatible plain gear, not a
+        # current-season acquisition label. This follows the replayed v232
+        # source receipt; exact Native G is still measured by v234.
+        "generic_G_physical_conditions_verified":
+            rebuilt.get("generic_G_physical_conditions_verified") is True,
+        "generic_G_current_season_membership_required":False,
         "physical_profile_sha256":hashlib.sha256(raw).hexdigest(),
         "physical_profile_bytes":len(raw),
         "native_calls":0,"G":None,"J":None,"F":None,"O":None,
