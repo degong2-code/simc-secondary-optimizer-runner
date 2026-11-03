@@ -110,17 +110,17 @@ function parseSimcCharacter(source) {
     }
     if(name==="copy")throw Error("여러 캐릭터/복제 프로필은 가져올 수 없습니다.");
   }
-  if(actors.length!==1||!info.spec||!info.race||!info.talents)
-    throw Error("한 캐릭터의 직업·전문화·종족·talents가 모두 필요합니다.");
-  const race=info.race.toLowerCase(),spec=info.spec.toLowerCase();
-  if(!/^[a-z_]{2,40}$/.test(race)||
+  if(actors.length!==1||!info.spec)
+    throw Error("한 캐릭터의 직업·전문화가 필요합니다.");
+  const race=(info.race||"").toLowerCase(),spec=info.spec.toLowerCase();
+  if((race&&!/^[a-z_]{2,40}$/.test(race))||
      !/^[a-z_]{2,60}$/.test(spec)||
-     !/^[A-Za-z0-9+/_=-]{10,2048}$/.test(info.talents))
+     (info.talents&&!/^[A-Za-z0-9+/_=-]{10,2048}$/.test(info.talents)))
     throw Error("SimC 종족·전문화·특성 코드 형식이 올바르지 않습니다.");
   const key=actors[0]+"/"+spec;
   const matched=state.defaults.find(x=>x.class+"/"+x.spec===key);
   if(!matched)throw Error("아직 지원하지 않는 전문화: "+key);
-  return {key,race,talents:info.talents,defaults:matched};
+  return {key,race,talents:info.talents||"",defaults:matched};
 }
 async function importSimcCharacter() {
   const file=$("simc-import-file").files?.[0];
@@ -134,7 +134,8 @@ async function importSimcCharacter() {
   }
   $("race").value=parsed.race;
   $("talents").value=parsed.talents;
-  setNotice("SimC 캐릭터 정보만 적용됨 · 현재 장비·스탯은 가져오지 않았고 Native 0회");
+  showCharacterDefaultHint();
+  setNotice("SimC 캐릭터 정보만 적용됨 · 미입력 종족/특성은 기본값 사용 · 장비/스탯은 가져오지 않음 · Native 0회");
 }
 // The only user-selectable non-crafted equipment is seasonal trinkets and
 // optional special-effect gear. General plain equipment stays internal.
