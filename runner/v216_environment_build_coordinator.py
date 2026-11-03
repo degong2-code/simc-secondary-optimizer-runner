@@ -236,7 +236,8 @@ def _fresh_gem_item_source_stage(*, stage_root, wago_folder,
     output = "fresh_source/v221_new_season_gem_item_candidates.json"
     path = root / output
     def execute():
-        result = gem_item_join.join(catalog, snapshot)
+        # The original _verify_db2 above has already checked both files.
+        result = gem_item_join.join(catalog, snapshot, verified_tables=db2)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(result, sort_keys=True,
             ensure_ascii=False, indent=2, allow_nan=False) + "\n",
@@ -406,7 +407,8 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
 
 def _join_authenticated_season_source(*,stage_root,output_dir,
                                       expected_game_build,discovered,
-                                      wago_stage_receipt):
+                                      wago_stage_receipt,
+                                      verified_tables=None):
     if not discovered.get("season_join_ready"):
         return {"status":"AUTHENTICATED_SEASON_JOIN_NOT_READY",
                 "candidate_path":None,"stage":None,
@@ -429,7 +431,8 @@ def _join_authenticated_season_source(*,stage_root,output_dir,
         result=season_join.build_index(
             output_dir,report,raid_zone=scope["raid_zone"],
             mplus_zone=scope["mplus_zone"],
-            build=expected_game_build,expansion_id=scope["expansion_id"])
+            build=expected_game_build,expansion_id=scope["expansion_id"],
+            verified_tables=verified_tables)
         result["auto_source_scope"]=scope
         path.parent.mkdir(parents=True,exist_ok=True)
         path.write_text(json.dumps(result,sort_keys=True,indent=2,
@@ -779,7 +782,7 @@ def _collect_first_party_simc_seed_stage(*,stage_root,build,
 
 def _fresh_consumable_item_source_stage(*, stage_root, wago_folder,
                                         build, linked, pinned_simc,
-                                        transport=None):
+                                        transport=None, verified_tables=None):
     """Reuse original v189 and v190 to join same-season consumable IDs.
 
     Exactly one small pinned SimC source fetch at the already resolved
@@ -830,6 +833,17 @@ def _fresh_consumable_item_source_stage(*, stage_root, wago_folder,
                  and len(tables[name]["sha256"])==64
                  for name in ("Item","ItemSparse")),
          "V216_CONSUMABLE_WAGO_SOURCE_IDENTITY_INVALID")
+    # v217 checked these bytes at collection/reuse; compare identities only.
+    # A direct standalone call without this proof retains v190 SHA scans.
+    if verified_tables is not None:
+        need(type(verified_tables) is dict and
+             set(verified_tables)==set(wago_snapshot.TABLES) and
+             all(verified_tables[t]=={"sha256":tables[t]["sha256"],
+                                      "bytes":tables[t]["bytes"]}
+                 for t in wago_snapshot.TABLES),
+             "V216_CONSUMABLE_V217_SOURCE_SEAL_MISMATCH")
+    trusted_pair=({t:verified_tables[t] for t in ("Item","ItemSparse")}
+                  if verified_tables is not None else None)
     scope_file=pathlib.Path(linked["candidate_path"])
     need(scope_file.is_file() and not scope_file.is_symlink(),
          "V216_CONSUMABLE_V163_ORIGIN_FILE_REQUIRED")
@@ -864,7 +878,8 @@ def _fresh_consumable_item_source_stage(*, stage_root, wago_folder,
             commit=revision,transport=fetch)
         first=simc_effect_candidates.discover(raw,revision)
         second=consumable_item_candidates.build(
-            first,db2root,expected_build=build,expansion_id=expansion)
+            first,db2root,expected_build=build,expansion_id=expansion,
+            verified_tables=trusted_pair)
         files["simc_source"].parent.mkdir(parents=True,exist_ok=True)
         files["simc_source"].write_bytes(raw)
         for key,document in (("v189",first),("candidate",second)):
@@ -1698,11 +1713,17 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
             source_doc["tables"][table]["bytes"]
         for table in wago_snapshot.TABLES),
         "V216_WAGO_SOURCE_AND_STAGE_SHA_MISMATCH")
+    # Reuse the source authentication already performed by v217; no second
+    # whole-file SHA pass in v163 or v190. Eligibility checks remain distinct.
+    verified_wago_tables={t:{"sha256":stage_doc["outputs"][t]["sha256"],
+                             "bytes":stage_doc["outputs"][t]["size"]}
+                          for t in wago_snapshot.TABLES}
     linked=_join_authenticated_season_source(
         stage_root=stage_root,output_dir=output_dir,
         expected_game_build=expected_game_build,
         discovered=discovered,
-        wago_stage_receipt=stage["receipt_sha256"])
+        wago_stage_receipt=stage["receipt_sha256"],
+        verified_tables=verified_wago_tables)
     # A caller-injected Wago transport cannot be mixed with a LIVE effect
     # relation unless its exact same-build transport is explicitly supplied.
     # Production with the ordinary v161 collector uses the live URL.
@@ -1761,7 +1782,8 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         fresh_consumables=_fresh_consumable_item_source_stage(
             stage_root=stage_root,wago_folder=output_dir,
             build=expected_game_build,linked=linked,
-            pinned_simc=pinned_simc,transport=simc_transport)
+            pinned_simc=pinned_simc,transport=simc_transport,
+            verified_tables=verified_wago_tables)
     full_seed={"status":"FRESH_FULL_SIMC_NOT_REQUESTED",
                "source_dir":None,"network_calls_by_stage":0,"native_calls":0}
     if (representative_request is not None and
