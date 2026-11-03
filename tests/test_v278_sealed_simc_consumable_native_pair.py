@@ -158,6 +158,7 @@ class TwoNativeOptions(unittest.TestCase):
             "environment_installed":False,"environment_ready":False,
             "native_calls":0,"G":None,"J":None,"F":None,"O":None,
             "B":None,"T":None}
+        source["expected_game_build"]="12.2.0.99999"
         compiled={"status":"FRESH_V191_V211_V213_COMPILED_UNADMITTED",
                   "stage_root":str(self.root),"simc_revision":REV,
                   "source_catalog_path":str(self.root/"catalog.json"),
