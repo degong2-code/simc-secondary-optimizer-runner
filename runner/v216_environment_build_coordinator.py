@@ -292,13 +292,80 @@ def _fresh_gem_item_source_stage(*, stage_root, wago_folder,
     }
 
 
+def _reuse_observed_G_native_receipts(*, catalog, receipt_paths_by_ilevel):
+    """Read v234's already-computed G once, no Native rerun or new verifier.
+
+    This is a source-bound NUMERIC input, not item-eligibility certification.
+    Even a well-formed observed native receipt must not imply environment READY.
+    """
+    need(type(receipt_paths_by_ilevel) is dict and
+         1 <= len(receipt_paths_by_ilevel) <= 200 and
+         all(type(k) is int and k > 0 for k in receipt_paths_by_ilevel),
+         "V216_G_NATIVE_MEASURED_LEVELS_REQUIRED")
+    result={}
+    for level,path in sorted(receipt_paths_by_ilevel.items()):
+        try:
+            file=pathlib.Path(path)
+            need(file.is_file() and not file.is_symlink() and
+                 0 < file.stat().st_size <= MAX_RECEIPT_BYTES,
+                 "V216_G_NATIVE_OBSERVATION_RECEIPT_FILE_INVALID")
+            raw=file.read_bytes()
+            need(0 < len(raw) <= MAX_RECEIPT_BYTES,
+                 "V216_G_NATIVE_OBSERVATION_RECEIPT_TOO_LARGE")
+            receipt=json.loads(raw)
+            observed=receipt["observed_G"]
+            original={k:v for k,v in observed.items() if k!="receipt_sha256"}
+            expected_sha=digest(canonical(original).encode("utf8"))
+            need(receipt.get("status")==
+                     "PASS_NATIVE_PHYSICAL_G_OBSERVED_NOT_SEASON_APPROVED"
+                 and receipt.get("native_returncode")==0
+                 and receipt.get("new_native_calls")==1
+                 and receipt.get("environment_ready") is False
+                 and type(observed) is dict
+                 and observed.get("receipt_sha256")==expected_sha
+                 and observed.get("source_simc_revision")==
+                     catalog["simc_revision"]
+                 and observed.get(
+                     "game_build_from_source_not_independently_binary_attested")==
+                     catalog["game_build"]
+                 and observed.get("target_ilevel")==level
+                 and receipt.get("identity",{}).get("source_game_build")==
+                     catalog["game_build"]
+                 and receipt.get("native_json2_sha256")==
+                     observed.get("native_json2_sha256")
+                 and observed.get("full_G_approved") is False
+                 and observed.get("environment_ready") is False,
+                 "V216_G_NATIVE_OBSERVATION_IDENTITY_DRIFT")
+            rounded=season_budget_contract.standardize_representative_G(
+                observed_G_total=observed["observed_G_total"],
+                target_ilevel=level,
+                source_observation_sha256=observed["native_json2_sha256"])
+            need(observed.get("standardized_G_preview_unapproved")==rounded,
+                 "V216_G_NATIVE_ROUNDING_RECEIPT_DRIFT")
+        except (OSError,TypeError,ValueError,KeyError,
+                season_budget_contract.SeasonBudgetBlocked) as exc:
+            raise EnvironmentBuildBlocked(
+                "V216_EXISTING_G_NATIVE_RECEIPT_INVALID:" + str(exc)) from exc
+        result[level]={
+            "target_ilevel":level,
+            "native_receipt_sha256":digest(raw),
+            "native_json2_sha256":observed["native_json2_sha256"],
+            "source_profile_receipt_sha256":
+                observed["source_profile_receipt_sha256"],
+            "standardization":rounded,
+            "source_selection_status":"OBSERVED_PHYSICAL_NOT_SEASON_ADMITTED",
+        }
+    return result
+
+
 def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                                 expected_simc_revision, budget_evidence=None,
                                 target_ilevel=None, manual_final_T=None,
                                 source_snapshot_folder=None,
                                 source_stage_root=None,
                                 standard_budget_evidence_by_ilevel=None,
-                                standard_budget_reference_track=None):
+                                standard_budget_reference_track=None,
+                                g_native_receipt_paths_by_ilevel=None):
     """Inspect a freshly assembled v213 artifact in the NORMAL Build path.
 
     This does not install an environment or require previously held source
@@ -351,6 +418,11 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
     # exists. Only arithmetic/identity is tested here: a self-declared
     # "verified" label cannot authenticate Wago/SimC/Native provenance.
     # The top-level G/J/F/O/B/T remain null and installation remains blocked.
+    existing_G_rows = None
+    if g_native_receipt_paths_by_ilevel is not None:
+        existing_G_rows = _reuse_observed_G_native_receipts(
+            catalog=source,
+            receipt_paths_by_ilevel=g_native_receipt_paths_by_ilevel)
     # Consume already-measured ilvl rows using v262/v222, not a new engine.
     need((standard_budget_evidence_by_ilevel is None) ==
          (standard_budget_reference_track is None),
@@ -372,6 +444,16 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
             need(budget_evidence is None or budget_evidence == target_evidence,
                  "V216_STANDARD_BUDGET_TARGET_EVIDENCE_CONFLICT")
             budget_evidence = target_evidence
+    if existing_G_rows is not None and standard_table is not None:
+        need(set(existing_G_rows)==set(standard_budget_evidence_by_ilevel),
+             "V216_G_NATIVE_V262_LEVEL_SET_MISMATCH")
+        for level,native_row in existing_G_rows.items():
+            component=standard_budget_evidence_by_ilevel[level]["components"]["G"]
+            need(component.get("source_sha256")==
+                     native_row["native_json2_sha256"] and
+                 component.get("standardization")==
+                     native_row["standardization"],
+                 "V216_G_NATIVE_V222_OBSERVATION_DRIFT")
     need(budget_evidence is not None or
          (target_ilevel is None and manual_final_T is None),
          "V216_PREPROFILE_BUDGET_INPUT_INCOMPLETE")
@@ -427,6 +509,9 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
             "INDEPENDENT_GJFO_SOURCE_ORIGIN_AND_RATING_AUTHENTICATION")
     if standard_table is not None:
         payload["standardized_ilevel_budget_rows_unadmitted"] = standard_table
+    if existing_G_rows is not None:
+        payload["measured_ilevel_G_from_existing_native_unadmitted"] = (
+            [existing_G_rows[k] for k in sorted(existing_G_rows)])
     return {**payload,"preflight_sha256":
         digest(canonical(payload).encode("utf8"))}
 
@@ -1960,7 +2045,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                       expected_new_season_build=None,
                       fresh_source_stage_inputs=None,
                       fresh_standard_budget_evidence_by_ilevel=None,
-                      fresh_standard_budget_reference_track=None):
+                      fresh_standard_budget_reference_track=None,
+                      fresh_g_native_receipt_paths_by_ilevel=None):
     """Reconcile existing inputs and seal one incremental, auditable build.
 
     Source acquisition is intentionally outside this local coordinator:
@@ -2023,6 +2109,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         fresh_standard_budget_evidence_by_ilevel),
                     standard_budget_reference_track=(
                         fresh_standard_budget_reference_track),
+                    g_native_receipt_paths_by_ilevel=(
+                        fresh_g_native_receipt_paths_by_ilevel),
                     target_ilevel=(
                         user["target"]["ilevel"]
                         if fresh_standard_budget_evidence_by_ilevel is not None
