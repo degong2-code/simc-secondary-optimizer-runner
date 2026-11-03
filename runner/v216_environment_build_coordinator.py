@@ -25,6 +25,7 @@ import v221_gem_item_db2_relation as gem_item_join
 import v268_gem_enchant_existing_source_stage as gem_enchant_stage
 import v271_user_socket_gem_layout as physical_gems
 import v274_zero_history_source_compiler_wiring as source_wiring
+import v275_pinned_simc_compiler_inputs as pinned_compiler_source
 import v223_installed_season_budget_source as season_source_proof
 import v213_source_to_catalog as source_to_catalog
 import v161_wago_db2_snapshot as wago_snapshot
@@ -2137,6 +2138,17 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
             build=expected_game_build,linked=linked,
             pinned_simc=pinned_simc,transport=simc_transport,
             verified_tables=verified_wago_tables)
+    # Reuse the v229 generated gem/temp bytes and v189 unique_gear bytes;
+    # only still-missing first-party v211/permanent files are fetched.
+    # When upstream v189 is pending (e.g. injected CSV without exact SimC
+    # transport), avoid implicit public requests or invented source proofs.
+    try:
+        pinned_classifier=pinned_compiler_source.collect(
+            stage_root=stage_root,build=expected_game_build,
+            pinned_simc=pinned_simc,consumables=fresh_consumables,
+            transport=simc_transport)
+    except pinned_compiler_source.SimCCompilerInputBlocked as exc:
+        raise EnvironmentBuildBlocked(str(exc).split(":",1)[0]) from exc
     full_seed={"status":"FRESH_FULL_SIMC_NOT_REQUESTED",
                "source_dir":None,"network_calls_by_stage":0,"native_calls":0}
     if (representative_request is not None and
@@ -2189,6 +2201,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "fresh_tier_first_party_simc_options":first_party,
         "fresh_tier_selected_from_existing_evidence":selected_tier,
         "fresh_pinned_first_party_simc_source":pinned_simc,
+        "fresh_pinned_v211_source":pinned_classifier,
         "fresh_pinned_simc_commit_resolution":resolved_simc,
         "simc_source_event":effective_source_event,
         "simc_source_collection_context":source_context,
@@ -2203,6 +2216,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
             resolved_simc["network_calls_by_stage"]+
             full_seed["network_calls_by_stage"]+
             fresh_consumables["network_calls_by_stage"]+
+            pinned_classifier["network_calls_by_stage"]+
             gem_enchant_csv["network_calls_by_stage"],
         "native_calls":0,
         "environment_installed":False,
