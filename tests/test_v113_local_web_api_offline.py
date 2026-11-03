@@ -66,6 +66,9 @@ class LocalWebAPIOffline(unittest.TestCase):
                 "class":validated["character"]["class"],
                 "spec":validated["character"]["spec"],
                 "target_ilevel":validated["target"]["ilevel"]},
+            g_probe_character={
+                "race":validated["character"]["race"],
+                "talents":validated["character"]["talents"]},
             simc_revision_hint=self.payload["revision"])
         self.assertFalse((self.root/"runs").exists())
         for endpoint in ("/api/v1/sessions/plan","/api/v1/sessions/start"):

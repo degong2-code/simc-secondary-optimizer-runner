@@ -142,7 +142,8 @@ def observe(*, native_raw, profile_receipt, native_binary_sha256,
 
 def execute(*, source_directory, tier_candidate, representative_candidate,
             race, level, talents, binary, expected_binary_sha256,
-            output_dir, iterations=1, timeout_seconds=180, max_new=0):
+            output_dir, iterations=1, timeout_seconds=180, max_new=0,
+            season_gear_db=None):
     """Explicit max_new=1 for a single Native call. Other mode is plan only."""
     need(max_new in (0,1) and type(max_new) is int and
          type(iterations) is int and 1<=iterations<=35 and
@@ -155,7 +156,8 @@ def execute(*, source_directory, tier_candidate, representative_candidate,
         source_directory=source_directory,
         tier_candidate=tier_candidate,
         representative_candidate=representative_candidate,
-        race=race,level=level,talents=talents)
+        race=race,level=level,talents=talents,
+        season_gear_db=season_gear_db)
     binary=pathlib.Path(binary).resolve(strict=True)
     need(binary.is_file() and sha(binary.read_bytes())==expected_binary_sha256,
          "V234_BINARY_BYTES_NOT_PINNED_SHA256")
@@ -235,6 +237,8 @@ def main(argv=None):
     p.add_argument("--seed-dir",type=pathlib.Path,required=True)
     p.add_argument("--tier-candidate",type=pathlib.Path,required=True)
     p.add_argument("--representative-candidate",type=pathlib.Path,required=True)
+    p.add_argument("--season-gear-db",type=pathlib.Path,
+                   help="Same-build v167 catalog for exact v232 replay")
     p.add_argument("--race",required=True)
     p.add_argument("--level",type=int,required=True)
     p.add_argument("--talents")
@@ -246,12 +250,14 @@ def main(argv=None):
     args=p.parse_args(argv)
     tier=json.loads(args.tier_candidate.read_text("utf8"))
     rep=json.loads(args.representative_candidate.read_text("utf8"))
+    season_db=(json.loads(args.season_gear_db.read_text("utf8"))
+               if args.season_gear_db else None)
     receipt=execute(source_directory=args.seed_dir,tier_candidate=tier,
         representative_candidate=rep,race=args.race,level=args.level,
         talents=args.talents,binary=args.simc_binary,
         expected_binary_sha256=args.simc_sha256,
         output_dir=args.output_dir,iterations=args.iterations,
-        max_new=args.max_new)
+        max_new=args.max_new,season_gear_db=season_db)
     print("V234_SIMC_NATIVE_ONE_REQUEST",receipt["status"],
           "new_native",receipt["new_native_calls"],flush=True)
     return 0 if receipt["status"].startswith(

@@ -117,6 +117,9 @@ class LocalJobs:
             return environment_build.collect_wago_new_season_source(
                 sessions_root=self.root,expected_game_build=build,
                 representative_request=requested,
+                g_probe_character={
+                    "race":character["race"],
+                    "talents":character["talents"]},
                 simc_revision_hint=revision_hint)
 
     def source_catalog_path(self):
