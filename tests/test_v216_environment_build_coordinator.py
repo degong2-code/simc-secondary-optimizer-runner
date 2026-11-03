@@ -181,6 +181,8 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         rep=v216.simc_representative.find_candidate(
             seed_directory=source_root,tier_candidate=tier,
             target_ilevel=334,season_gear_db=catalog)
+        self.assertTrue(rep["generic_G_physical_conditions_verified"])
+        self.assertFalse(rep["generic_G_current_season_membership_required"])
         candidate=self.root/"source_candidate.json"
         candidate.write_text(json.dumps(rep),encoding="utf8")
         gear=self.root/"v167.json"
@@ -220,6 +222,8 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         self.assertEqual(second["source_stage"]["receipt_writes"],0)
         self.assertEqual(second["native_calls"],0)
         self.assertEqual(second["network_calls_by_stage"],0)
+        self.assertTrue(second["generic_G_physical_conditions_verified"])
+        self.assertFalse(second["generic_G_current_season_membership_required"])
         self.assertIsNone(second["G"])
         self.assertFalse(second["environment_ready"])
         raw=pathlib.Path(first["profile_path"]).read_text(encoding="utf8")
@@ -233,6 +237,8 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         self.assertEqual(proof["physical_profile_sha256"],
                          first["physical_profile_sha256"])
         self.assertFalse(proof["current_season_membership_certified"])
+        self.assertTrue(proof["generic_G_physical_conditions_verified"])
+        self.assertFalse(proof["generic_G_current_season_membership_required"])
         self.assertIsNone(proof["level"])
         self.assertEqual(proof["level_mode"],"SIMC_COMPILED_MAX_LEVEL")
         from runner import v234_source_only_one_native_G as native_probe
