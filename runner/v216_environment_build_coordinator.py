@@ -1095,7 +1095,12 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
         for chunk in iter(lambda:stream.read(1024*1024),b""):
             item_digest.update(chunk)
     item_sha=item_digest.hexdigest()
-    output="source/v255_one_spec_source_representative.json"
+    # One physical gear source can serve 26 specs and many target ilvls.
+    # Key only the requested physical source shape, NOT race/talents or
+    # historical session identity, so the costly pinned SimC source is reused.
+    one_spec_key=digest(canonical({"game_build":build,
+        "request":request}).encode("utf8"))[:16]
+    output="source/v255_one_spec_source_representative_"+one_spec_key+".json"
     path=root/output
     # Include transitive source parser/chooser and the adapter itself.
     # An implementation change must not silently reuse an old candidate.
@@ -1154,8 +1159,9 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
                         if k!="receipt_sha256"}).encode("utf8")))
     try:
         staged=stage_engine.execute_stage(
-            root=root,stage_id="fresh-one-spec-source-representative",
-            stage_version="v251-v232-exact-sources-one-spec-v1",
+            root=root,
+            stage_id="fresh-one-spec-source-representative-"+one_spec_key,
+            stage_version="v251-v232-exact-sources-one-spec-v2",
             inputs={"game_build":build,"request":request,
                     "gear_sha256":digest(gear_bytes),
                     "tier_sha256":digest(tier_bytes),
@@ -1252,8 +1258,15 @@ def _one_spec_source_G_probe_stage(*, stage_root, build, one_spec,
          and tier.get("schema")==tier_simc_bridge.SCHEMA
          and tier.get("game_build")==build,
          "V216_G_PROBE_SOURCE_IDENTITY_INVALID")
-    outputs={"input":"source/v256_one_spec_G_probe.simc",
-             "receipt":"source/v256_one_spec_G_probe_receipt.json"}
+    # A different character reuses the same v232 source IDs, while its
+    # character-specific profile is independently sealed and never overwrites
+    # the previous user's measurement input.
+    probe_key=digest(canonical({
+        "source_candidate_receipt":rep["receipt_sha256"],
+        "game_build":build,"character":character}).encode("utf8"))[:16]
+    outputs={"input":"source/v257_one_spec_G_probe_"+probe_key+".simc",
+             "receipt":"source/v257_one_spec_G_probe_receipt_"+
+                       probe_key+".json"}
     profile_path=root/outputs["input"]
     receipt_path=root/outputs["receipt"]
     code=stage_engine.module_dependency_fingerprint([
@@ -1305,8 +1318,8 @@ def _one_spec_source_G_probe_stage(*, stage_root, build, one_spec,
                     if k!="receipt_sha256"}).encode("utf8")))
     try:
         stage=stage_engine.execute_stage(
-            root=root,stage_id="fresh-one-spec-physical-G-probe",
-            stage_version="v232-v233-source-profile-v1",
+            root=root,stage_id="fresh-one-spec-physical-G-probe-"+probe_key,
+            stage_version="v232-v233-source-profile-v2",
             inputs={"game_build":build,
                     "candidate_sha256":digest(rep_raw),
                     "gear_sha256":digest(gear_raw),
