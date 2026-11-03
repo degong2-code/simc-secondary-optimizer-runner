@@ -21,6 +21,7 @@ import v212_environment_manifest as environment_manifest
 import v222_season_budget_contract as season_budget_contract
 import v262_standardized_ilevel_budget_rows as standardized_budget_rows
 import v221_gem_item_db2_relation as gem_item_join
+import v268_gem_enchant_existing_source_stage as gem_enchant_stage
 import v223_installed_season_budget_source as season_source_proof
 import v213_source_to_catalog as source_to_catalog
 import v161_wago_db2_snapshot as wago_snapshot
@@ -532,12 +533,18 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
     need(source_stage_root is not None or source_snapshot_folder is None,
          "V216_FRESH_GEM_SNAPSHOT_AND_STAGE_MUST_BE_PAIRED")
     gem_source = None
+    gem_enchant = None
     if source_snapshot_folder is not None:
         gem_source = _fresh_gem_item_source_stage(
             stage_root=source_stage_root,
             wago_folder=source_snapshot_folder,
             source_catalog_path=supplied,
             expected_game_build=expected_game_build)
+        if gem_source.get("candidate_path"):
+            gem_enchant=gem_enchant_stage.view(
+                stage_root=source_stage_root,
+                v221_candidate_path=gem_source["candidate_path"],
+                build=expected_game_build)
     payload={
         "schema":FRESH_SOURCE_PREFLIGHT_SCHEMA,
         "status":"FRESH_SOURCE_CANDIDATES_VALID_GJFO_PENDING_NOT_INSTALLED",
@@ -562,6 +569,8 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
         payload["fresh_gem_item_source_candidates"] = gem_source
         payload["requires"].append(
             "GEM_J_HIGHEST_QUALITY_EFFECT_AND_SOCKET_BUDGET_PROOF")
+    if gem_enchant is not None:
+        payload["fresh_gem_raw_enchant_points_source"] = gem_enchant
     if proposed_budget is not None:
         payload["proposed_budget_arithmetic_unadmitted"] = proposed_budget
         # Follow the already-verified original source receipts. Missing
@@ -1815,7 +1824,8 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
                                    simc_transport=None,
                                    representative_request=None,
                                    simc_revision_hint=None,
-                                   g_probe_character=None):
+                                   g_probe_character=None,
+                                   gem_enchant_transport=None):
     """First real normal-source acquisition inside the SAME Environment Build.
 
     Explicit build is only a request identity, not independent season or tier
@@ -1963,6 +1973,17 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
     verified_wago_tables={t:{"sha256":stage_doc["outputs"][t]["sha256"],
                              "bytes":stage_doc["outputs"][t]["size"]}
                           for t in wago_snapshot.TABLES}
+    # One extra missing gem enchant source, without touching the already
+    # sealed ten-table v161 Wago snapshot. Injected transports stay offline.
+    if fetch is not None and gem_enchant_transport is None:
+        gem_enchant_csv={
+            "status":"GEM_ENCHANT_INJECTED_TRANSPORT_PENDING",
+            "candidate_path":None,"network_calls_by_stage":0,
+            "J":None,"native_calls":0,"environment_ready":False}
+    else:
+        gem_enchant_csv=gem_enchant_stage.collect(
+            stage_root=stage_root,build=expected_game_build,
+            transport=gem_enchant_transport)
     linked=_join_authenticated_season_source(
         stage_root=stage_root,output_dir=output_dir,
         expected_game_build=expected_game_build,
@@ -2078,6 +2099,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "fresh_one_spec_simc_representative":one_spec,
         "fresh_one_spec_physical_G_probe":physical_probe,
         "fresh_food_potion_item_sources":fresh_consumables,
+        "fresh_gem_enchant_raw_source":gem_enchant_csv,
         "fresh_one_spec_character_level_policy":
             "SIMC_COMPILED_DEFAULT_MAX_LEVEL",
         "fresh_tier":fresh_tier,
@@ -2099,7 +2121,8 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
             pinned_simc["network_calls_by_stage"]+
             resolved_simc["network_calls_by_stage"]+
             full_seed["network_calls_by_stage"]+
-            fresh_consumables["network_calls_by_stage"],
+            fresh_consumables["network_calls_by_stage"]+
+            gem_enchant_csv["network_calls_by_stage"],
         "native_calls":0,
         "environment_installed":False,
         "environment_ready":False,
