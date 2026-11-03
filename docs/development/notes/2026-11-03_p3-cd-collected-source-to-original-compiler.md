@@ -1,0 +1,10 @@
+# 2026-11-03 · P3-CD · 제로베이스 수집 영수증→동일 v191/v211/v213 원본 컴파일러 자동 연결
+
+- **Capability:** `SOURCE.SEAL`, `TIER.SEASON`, `GEAR.SEASON`, `BUDGET.GJFO`, `PRODUCT.E2E`
+- **Keywords:** zero-base, cold start, 자동 구축, engine, v216, v274 adapter, v241, v191, v211, v213, tier, source path, manifest
+- **Prior evidence:** [PROTOCOL](../PROTOCOL.md)→[INDEX](../INDEX.md) 및 [P3-CB](2026-11-03_p3-cb-zero-history-one-engine-entry.md) 74 PASS/0 FAIL; 기존 [v240 원본 컴파일 연속 회귀](../../../tests/test_v240_v211_v213_fresh_catalog_handoff.py)에서 `v241.compile_fresh_candidate`의 v191→v211→v213 stage 재사용과 v196 미승인 출력 검증. 원래 `v216` 수집기는 v167 gear, v189/v190, v229 2개 생성물과 v251 tier 후보를 분리 저장, 그러나 `v191`의 정확한 v168 13×5 및 v211 6원본/manifest, permanent generated는 불충분.
+- **Decision:** `CONNECT` — 별도 신규 시즌 구축/효과 엔진 없음. 수집 영수증의 실제 파일을 `v241`의 **기존 원본 컴파일러 계약**으로 자동 전달하되 원본 타입·빌드·인증을 생략하거나 v251을 v168로 허위 승격하지 않는다. 같은 Build의 보조 `v274`는 오직 경로/필수 입력 확인과 자동 호출 담당.
+- **Changes:** `v274.discover`는 동일 stage_root의 봉인된 v167/v168/v189/v190 + 실제 v229 SimC exact SHA 기반 revision/gem/temp/permanent + v211 6종/manifest를 내부에서 탐색. 부족하면 `COLLECTED_COMPILER_INPUTS_PENDING`과 정확한 부족 구성요소 반환(이전 시즌 고정 값 대입·사용자 파일 입력 없음). 모두 갖추면 `v216.build_environment`에서 `v241.compile_fresh_candidate` 재사용→기존 `v216.preflight_new_season_source` 진입. 새 시즌 GJFO/Policy A가 미인증이면 설치·사용자 세션/캐시 변경 없이 `environment_ready=false` 유지.
+- **Verification:** 변경 직후 신규 CI `NOT_VERIFIED`. `v240`/P3-CB·이전 CI 및 Native는 `REUSED_HISTORY`만. 신규 실제 게임 HTTP/Native 0, 동시 입력 검사·mocked compiler handoff 및 불충분 source case focused 오프라인 테스트 계획.
+- **Remaining:** 실제 zero-history stage가 `v168`에 부합하는 13×5 확정 source, `v211`의 정확한 여섯 파일·manifest, permanent_enchant generated를 자동 생산하도록 기존 수집 경로 **EXTEND** 필요(기존 v251 structural/SimC corroboration을 임의 자격 승격 금지). 이어 실제 G/J/F/O 영수증 및 `v222`, v212·정책 A, 최종 v098→adaptive 통합. 미구현은 별도 인증 Gate로 차단을 확대하는 대신 원본 수집/파생 source 경로에 편입.
+- **Efficiency:** 새로운 네트워크/Native/대용량 DB=0, v217 sealed path과 기존 v241 compiler stage 캐시를 재사용, 필수 파일의 작은 JSON/schema/receipt만 읽음. 추가 부하: 소형 파일 판별(상한 v191.MAX_FILE)과 input-path 사전, 실제 실행시간·종단 제품 처리량 미측정. 같은 build에서 source replay는 원래 v217 SHA 계약에 따름.
