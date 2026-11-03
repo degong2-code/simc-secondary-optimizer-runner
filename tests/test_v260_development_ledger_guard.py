@@ -2,6 +2,7 @@
 from __future__ import annotations
 import importlib.util
 import pathlib
+import tempfile
 import unittest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -32,6 +33,38 @@ class DevelopmentLedgerGuardTests(unittest.TestCase):
             "docs/development/notes/2026-11-03_example.md",
             "docs/development/INDEX.md",
         ]), [])
+
+    def test_append_only_old_note_may_be_replaced_as_latest_in_index(self):
+        # The index must remain short when hundreds of valid notes accumulate.
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            folder=root/"docs"/"development"
+            notes=folder/"notes"
+            notes.mkdir(parents=True)
+            template=(
+                "# Synthetic task note\\n"
+                "- **Capability:** `TIER.SEASON`\\n"
+                "- **Keywords:** tier, season\\n"
+                "- **Prior evidence:** previous actual source receipt\\n"
+                "- **Decision:** `REUSE` — reuse existing evidence\\n"
+                "- **Changes:** DOCS_ONLY\\n"
+                "- **Verification:** REUSED_HISTORY; no Native\\n"
+                "- **Remaining:** product integration pending\\n"
+                "- **Efficiency:** no HTTP or Native\\n"
+            )
+            for day,slug in (("2026-11-02","earlier"),
+                             ("2026-11-03","newest")):
+                (notes/(day+"_"+slug+".md")).write_text(
+                    template,encoding="utf8")
+            (folder/"INDEX.md").write_text(
+                "# Index\\n"
+                "| Capability | Keywords | Evidence | Integration | Prior evidence | Last note |\\n"
+                "|---|---|---|---|---|---|\\n"
+                "| `TIER.SEASON` | tier | `SOURCE_CORROBORATED`"
+                " | `NOT_INTEGRATED` | real source receipt"
+                " | [latest](notes/2026-11-03_newest.md) |\\n",
+                encoding="utf8")
+            self.assertEqual(ledger.validate(root), [])
 
     def test_note_without_capability_index_update_is_rejected(self):
         self.assertIn("TASK_NOTE_WITHOUT_INDEX_UPDATE",
