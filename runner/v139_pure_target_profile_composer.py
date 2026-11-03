@@ -148,9 +148,10 @@ def compose(character,trinkets,*,target_ilevel=334,
     for slot,opts in seasonal_options.items():
         options.setdefault(slot,{}).update(items.checked_options(opts))
     need(set(options)<=set(ids) and
-         "head" in options and
-         sum(len(v["gem_id"].split("/")) for slot,v in options.items()
-             if slot!="head" and "gem_id" in v)==6,
+         (socket_plan is not None or
+          ("head" in options and
+           sum(len(v["gem_id"].split("/")) for slot,v in options.items()
+               if slot!="head" and "gem_id" in v)==6)),
          "PHYSICAL_GEM_LAYOUT_NOT_STAGED")
     rows={slot:{"slot":slot,"item_id":item_id,
                 "ilevel":target_ilevel,
