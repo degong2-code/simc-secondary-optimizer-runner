@@ -158,6 +158,19 @@ def discover(collected):
             any(_safe_file(Path(v211_dir) / name, root) is None
                 for name in enchant_classifier.FRESH_REQUIRED)):
         v211_dir = None
+    # v275's one sealed folder carries all three generated sources plus the
+    # original six v211 classification inputs. v229 remains the independent
+    # revision authority, while its original bytes/receipt remain unchanged.
+    # Retain the prior independent-folder mode for the existing v241 test
+    # fixtures and callers with explicitly complete original inputs.
+    if v211_dir is not None and all(
+            _safe_file(Path(v211_dir) / name, root) is not None
+            for name in season_compiler.GENERATED.values()):
+        generated = Path(v211_dir)
+        generated_files = {
+            key:_safe_file(generated / filename, root)
+            for key,filename in season_compiler.GENERATED.items()
+        }
 
     files = {"GEAR_V167": gear, "TIER_V168": tier,
              "V189": v189, "V190": v190,
