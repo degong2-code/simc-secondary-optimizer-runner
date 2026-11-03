@@ -1,3 +1,6 @@
+> **2026-11-03 최신 사용자 직접 설계 교정 (P3-BU, 역사 v1.4.3 비충돌 유지):** G는 **목표 ilvl별 대표 일반 장비의 보조능력치 정적 총량**이며 *현재 시즌 획득 여부는 수치 적합성의 필수조건이 아니다*. 동일 ilvl/해당 슬롯·무기 구조의 무효과 일반 장비로 구성하고 SimC Native 정적 합계를 10 rating 단위 반올림한다. 주스탯(힘/민첩/지능), 방어구 재질, 직업/전문화 착용 가능, 무기 형태, 비특수효과·일반 보조능력치 예산은 반드시 확인한다. WSE/Localbots/과거 시즌 소속 미확정은 **G 거부 사유가 아니라 실제 SimC 대표 프로필의 출처·안전 우선순위 기록**이다. 현재 시즌 장비가 있으면 SimC 안정성상 우선 사용하지만 신규 시즌 인증 Gate를 추가하지 않는다. 실전 티어4세트·효과·선택 특수장비·장신구는 계속 정확한 SimC 입력이 필요. `v232→v233→v234→v216→v262/v222` 기존 체계 사용, G numerical fit과 전체 G/J/F/O 및 최종 제품 READY를 구별. [P3-BU 노트](development/notes/2026-11-03_p3-bu-generic-g-physical-not-season-gate.md)·[INDEX](development/INDEX.md) 선조회 필수. 이번 반영은 격리 브랜치 GitHub 문서·코드일 뿐 Project UI/Sources 실제 적용이나 main 승격이 아니다.
+>
+
 > **2026-11-03 P3-BQ 최신 인계 정본(이전 P3-BO 역사 인계보다 우선):** [CHAT_CONTINUITY_HANDOFF_20261103_P3_BQ_EVIDENCE_FIRST_LEDGER.md](CHAT_CONTINUITY_HANDOFF_20261103_P3_BQ_EVIDENCE_FIRST_LEDGER.md). 모든 새 채팅은 위 [개발 연속성 규약](development/PROTOCOL.md)과 [증거/연결 분리 INDEX](development/INDEX.md)를 이전 미완료 목록보다 먼저 읽고, 새 개발 착수 전 관련 과거 소스·코드·검증 영수증을 검색한다. 완료 사실이 제품에 미연결된 것과 원본 사실 미확정을 구별하고, 작업마다 짧은 노트와 INDEX를 갱신한다. 이전 P3-BO 인계는 역사 스냅샷이며 이 문서 포인터가 최신이다.
 >
 
