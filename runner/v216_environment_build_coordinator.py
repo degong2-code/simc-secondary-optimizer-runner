@@ -26,6 +26,7 @@ import v268_gem_enchant_existing_source_stage as gem_enchant_stage
 import v271_user_socket_gem_layout as physical_gems
 import v274_zero_history_source_compiler_wiring as source_wiring
 import v275_pinned_simc_compiler_inputs as pinned_compiler_source
+import v276_sealed_tier_compiler_source as compiler_tier_source
 import v223_installed_season_budget_source as season_source_proof
 import v213_source_to_catalog as source_to_catalog
 import v161_wago_db2_snapshot as wago_snapshot
@@ -2123,6 +2124,17 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
     selected_tier=_reuse_existing_tier_source_stage(
         build=expected_game_build,tier_bridge=tier_bridge,
         first_party=first_party,request=representative_request)
+    # Preserve the v251 CANDIDATE status while deriving the original v191
+    # physical tier input from the already sealed Wago Item/ItemSparse bytes.
+    # This costs one pair of CSV scans on a new build, zero on v217 reuse.
+    try:
+        compiler_tier=compiler_tier_source.collect(
+            stage_root=stage_root,wago_folder=output_dir,
+            build=expected_game_build,tier_bridge=tier_bridge,
+            first_party=first_party,selected_tier=selected_tier,
+            verified_wago_tables=verified_wago_tables)
+    except compiler_tier_source.TierCompilerSourceBlocked as exc:
+        raise EnvironmentBuildBlocked(str(exc).split(":",1)[0]) from exc
     # Optional seasonal consumables join reuses exactly the existing Wago
     # snapshot and the pinned v229 revision; missing evidence stays PENDING.
     # Injected snapshot tests must supply an explicit SimC transport and
@@ -2208,6 +2220,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "fresh_tier_simc_candidate_bridge":tier_bridge,
         "fresh_tier_first_party_simc_options":first_party,
         "fresh_tier_selected_from_existing_evidence":selected_tier,
+        "fresh_compiler_tier_source":compiler_tier,
         "fresh_pinned_first_party_simc_source":pinned_simc,
         "fresh_pinned_v211_source":pinned_classifier,
         "fresh_pinned_simc_commit_resolution":resolved_simc,
@@ -2225,6 +2238,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
             full_seed["network_calls_by_stage"]+
             fresh_consumables["network_calls_by_stage"]+
             pinned_classifier["network_calls_by_stage"]+
+            compiler_tier["network_calls_by_stage"]+
             gem_enchant_csv["network_calls_by_stage"],
         "native_calls":0,
         "environment_installed":False,
