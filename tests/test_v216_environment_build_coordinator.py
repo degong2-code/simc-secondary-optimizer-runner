@@ -169,7 +169,8 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         raw=pathlib.Path(first["profile_path"]).read_text(encoding="utf8")
         self.assertIn("chest=simc_source_9020,id=9020,ilevel=334",raw)
         self.assertIn("race=human",raw)
-        self.assertNotIn("level=",raw)
+        self.assertFalse(any(line.startswith("level=")
+                             for line in raw.splitlines()))
         self.assertNotIn("trinket1=",raw)
         proof=json.loads(pathlib.Path(
             first["profile_receipt_path"]).read_text(encoding="utf8"))

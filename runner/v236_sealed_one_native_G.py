@@ -62,12 +62,19 @@ def check(profile_bytes,receipt,*,expected_source_revision,expected_game_build):
          len(set(items.values()))==len(items) and
          all(type(n) is int and n>0 for n in items.values()),
          "V236_SOURCE_G_SLOT_IDS_INVALID")
+    level=receipt.get("level")
+    mode=receipt.get("level_mode")
+    need((level is None and mode=="SIMC_COMPILED_MAX_LEVEL") or
+         (type(level) is int and 1<=level<=100 and
+          mode in (None,"EXPLICIT_INTERNAL_OVERRIDE")),
+         "V236_SOURCE_LEVEL_MODE_INVALID")
     expected=[
         "# v233 generated, SimC-only physical G measurement candidate",
-        receipt["class"]+"="+compiler.NAME,
-        "level="+str(receipt["level"]),
-        "race="+receipt["race"],"spec="+receipt["spec"],
-        "position="+contract["position"]]
+        receipt["class"]+"="+compiler.NAME]
+    if level is not None:
+        expected.append("level="+str(level))
+    expected.extend(("race="+receipt["race"],"spec="+receipt["spec"],
+                     "position="+contract["position"]))
     lines=text.splitlines()
     need(lines[:len(expected)]==expected and
          text.endswith("\n"),

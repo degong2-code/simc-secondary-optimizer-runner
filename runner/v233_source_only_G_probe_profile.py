@@ -92,13 +92,12 @@ def build(*, source_directory, tier_candidate, representative_candidate,
          "V233_REPRESENTATIVE_G_SLOTS_INVALID")
     ilvl=rebuilt["target_ilevel"]
     lines=["# v233 generated, SimC-only physical G measurement candidate",
-           class_name+"="+NAME,
-           "race="+race,"spec="+spec_name,
-           "position="+contract["position"]]
+           class_name+"="+NAME]
     if level is not None:
-        # Internal explicit override only; ordinary users rely on the
-        # compiled SimC player default MAX_LEVEL instead.
+        # Preserve legacy explicit-level ordering for old sealed profiles.
         lines.append("level="+str(level))
+    lines.extend(("race="+race,"spec="+spec_name,
+                  "position="+contract["position"]))
     if talents is not None:
         lines.append("talents="+talents)
     for slot in contracts.SLOT_ORDER:

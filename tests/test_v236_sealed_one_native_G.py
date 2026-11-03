@@ -44,6 +44,30 @@ class SealedNativeSourceTests(unittest.TestCase):
                           expected_game_build="12.1.5.70575",
                           output_dir=self.root/output,max_new=max_new)
 
+    def test_omitted_level_is_byte_sealed_and_not_a_native_gate(self):
+        # The chosen compiled SimC MAX_LEVEL owns the level; the sealed
+        # profile has no explicit level assignment and cannot drift.
+        self.fixture.text,self.fixture.prepared=engine.compiler.build(
+            source_directory=self.fixture.folder,
+            tier_candidate=self.fixture.tier,
+            representative_candidate=self.fixture.representative,
+            race=self.fixture.race,level=None,talents=None)
+        self.pin_fixture_for_pinned_binary()
+        self.profile.write_bytes(self.fixture.text.encode("utf8"))
+        self.receipt.write_text(json.dumps(self.fixture.prepared),
+                                encoding="utf8")
+        self.assertFalse(any(x.startswith("level=")
+                             for x in self.fixture.text.splitlines()))
+        self.assertEqual(self.fixture.prepared["level_mode"],
+                         "SIMC_COMPILED_MAX_LEVEL")
+        with patch.object(engine.subprocess,"run") as native_call:
+            result=self.run_one(max_new=0)
+        native_call.assert_not_called()
+        self.assertEqual(result["status"],"PREPARED_NOT_EXECUTED")
+        self.assertEqual(result["new_native_calls"],0)
+        self.assertFalse(result["environment_ready"])
+        self.assertIsNone(result["G"])
+
     def test_preflight_zero_native_and_no_repeated_output(self):
         with patch.object(engine.subprocess,"run") as runner:
             result=self.run_one()
