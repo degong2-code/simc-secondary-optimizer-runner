@@ -104,12 +104,13 @@ def original_sources(*,stage_root,pinned,consumables,build):
          "V275_SIMC_UNIQUE_GEAR_SOURCE_PATH_INVALID")
     return root,revision,reused,unique
 
-def pinned_git_blobs(*,revision,paths,transport,counter):
+def pinned_git_blobs(*,revision,paths,transport):
     """The existing v229 Git tree protocol with shared directory reads."""
     cache={}
     def get_tree(tree_sha):
         if tree_sha not in cache:
-            counter[0]+=1
+            # 'transport' wraps the only HTTP counter: count each Git tree
+            # request exactly once, just like each raw blob fetch.
             doc=seed._http_json(seed.BASE+tree_sha,transport=transport)
             need(type(doc) is dict and doc.get("truncated") is not True and
                  type(doc.get("tree")) is list,
@@ -167,8 +168,7 @@ def collect(*,stage_root,build,pinned_simc,consumables,transport=None):
         # v229-proven original v189 source is additionally checked against
         # the actual pinned tree blob; never silently trust a name/URL alone.
         meta=pinned_git_blobs(
-            revision=revision,paths=source_paths,transport=fetch,
-            counter=calls)
+            revision=revision,paths=source_paths,transport=fetch)
         need(seed.git_blob(unique)==meta["unique_gear.cpp"]["sha"] and
              len(unique)==meta["unique_gear.cpp"]["size"],
              "V275_V189_SOURCE_NOT_IN_PINNED_GIT_TREE")
