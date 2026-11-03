@@ -75,7 +75,7 @@ def catalog(path=DEFAULT_CATALOG):
     return validate_season(json.loads(pathlib.Path(path).read_text(encoding="utf8")))
 
 def compose(character,trinkets,*,target_ilevel=334,
-            combat=None,season=None):
+            combat=None,season=None,socket_plan=None):
     """Return (profile text, stage metadata, rows, tier group) without Native.
 
     This is deliberately independent of the 24 source-backed ARCHETYPES.
@@ -168,6 +168,13 @@ def compose(character,trinkets,*,target_ilevel=334,
     required_slots=physical_slots|{"trinket1","trinket2"}
     need(set(rows)==required_slots and len(rows) in (15,16),
          "COMPLETE_FIFTEEN_OR_SIXTEEN_PHYSICAL_SLOTS")
+    socket_receipt=None
+    if socket_plan is not None:
+        # Opt-in physical serialization only. The v098/v108 historical J=138
+        # session is NOT automatically reused for a different socket count.
+        import v271_user_socket_gem_layout as socket_layout
+        rows,socket_receipt=socket_layout.arrange(
+            rows,socket_plan,need)
     # Explicit default_actions lets SimulationCraft select its built-in APL;
     # no season profile, copied class action list or proprietary rotation.
     settings=[
@@ -207,7 +214,11 @@ def compose(character,trinkets,*,target_ilevel=334,
              "four_tier_item_ids":{s:rows[s]["item_id"]
                                    for s in info["four_tier_slots"]},
              "physical_slots":len(rows),
-             "ordinary_gems":6,"source_profile_read":False,
+             "ordinary_gems":(6 if socket_receipt is None else
+                              socket_receipt["ordinary_count"]),
+             **({"socket_layout":socket_receipt}
+                if socket_receipt is not None else {}),
+             "source_profile_read":False,
              "simc_default_apl":True,"native_calls":0,
              "exact_static_rating_verified":False,
              "physical_socket_and_weapon_compatibility_verified":False,
