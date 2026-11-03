@@ -291,6 +291,49 @@ class StandardBudgetNormalBuildTests(unittest.TestCase):
             self.assertNotEqual(proof["source_sha256"],
                                 native["native_json2_sha256"])
 
+    def test_v216_preflight_reuses_raw_gem_enchant_points_without_J_admission(self):
+        catalog, _, ui=prepared()
+        with tempfile.TemporaryDirectory() as d:
+            root=pathlib.Path(d)
+            wago=root/"wago"
+            wago.mkdir()
+            source_path=root/"v213.json"
+            source_path.write_text("{}",encoding="utf8")
+            candidate=root/"v221_gem.json"
+            candidate.write_text("{}",encoding="utf8")
+            raw_effects={
+                "status":"ENCHANT_RAW_POINTS_SOURCE_ONLY_J_NOT_APPROVED",
+                "raw_static_candidate_count":1,
+                "unresolved_enchant_count":3,"J":None,
+                "highest_quality_J_verified":False,
+                "native_calls":0,"network_calls":0,
+            }
+            with mock.patch.object(build.environment_manifest,"read_json",
+                                   return_value=(catalog,"a"*64)), \
+                 mock.patch.object(build.source_to_catalog,"verify_catalog"), \
+                 mock.patch.object(build.user_catalog,"public_options",
+                                   return_value=ui), \
+                 mock.patch.object(build,"_fresh_gem_item_source_stage",
+                                   return_value={
+                                       "candidate_path":str(candidate),
+                                       "status":"SOURCE_ITEM_PROPERTY_LINKS_ONLY_NOT_USER_ADMITTED",
+                                       "J":None}) as gem, \
+                 mock.patch.object(build.gem_enchant_stage,"view",
+                                   return_value=raw_effects) as enrich:
+                result=build.preflight_new_season_source(
+                    source_catalog_path=source_path,
+                    expected_game_build=catalog["game_build"],
+                    expected_simc_revision=catalog["simc_revision"],
+                    source_snapshot_folder=wago,source_stage_root=root)
+            self.assertEqual(gem.call_count,1)
+            self.assertEqual(enrich.call_count,1)
+            self.assertEqual(
+                result["fresh_gem_raw_enchant_points_source"],raw_effects)
+            self.assertIsNone(result["J"])
+            self.assertIsNone(result["B"])
+            self.assertFalse(result["environment_ready"])
+            self.assertEqual(result["network_calls"],0)
+
     def test_existing_normal_build_entry_passes_rows_and_user_manual_T(self):
         catalog, table, _ = prepared()
         with tempfile.TemporaryDirectory() as d:
