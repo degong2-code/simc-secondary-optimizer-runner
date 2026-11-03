@@ -185,8 +185,8 @@ def preprofile_budget(*, source_catalog, source_artifact_sha256, evidence,
         "fixed_O": oil, "fixed_L": fixed_L, "fixed_E": fixed_E,
         "reference_B": reference_B, "base_B": B, "final_T": T,
         "manual_final_T_authoritative": manual_final_T is not None,
-        "G_standardization": (
-            dict(g_standardization) if g_standardization is not None else None),
+        **({"G_standardization":dict(g_standardization)}
+           if g_standardization is not None else {}),
         "source_authentication_performed_here": False,
         "native_calls": 0, "network_calls": 0, "cache_mutations": 0,
     }
