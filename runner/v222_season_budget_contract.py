@@ -17,6 +17,39 @@ SHA = re.compile(r"[0-9a-f]{64}\Z")
 REV = re.compile(r"[0-9a-f]{40}\Z")
 
 
+G_ROUNDING_SCHEMA = "v222_aggregate_G_nearest_10_half_up_v1"
+G_ROUNDING_UNIT = 10
+
+
+def standardize_representative_G(*, observed_G_total, target_ilevel,
+                                 source_observation_sha256):
+    """Round the WHOLE observed G once, never each item or CHMV component.
+
+    This produces a deterministic numerical transformation and provenance,
+    NOT a claim that the underlying Native or current-season source was
+    independently validated. That belongs upstream of preprofile_budget().
+    The fixed 10-rating unit is the approved standard-reference policy.
+    """
+    need(type(observed_G_total) is int and observed_G_total > 0,
+         "G_STANDARD_REFERENCE_OBSERVED_TOTAL_REQUIRED")
+    need(type(target_ilevel) is int and target_ilevel > 0,
+         "G_STANDARD_REFERENCE_TARGET_ILEVEL_REQUIRED")
+    need(type(source_observation_sha256) is str and
+         SHA.fullmatch(source_observation_sha256) is not None,
+         "G_STANDARD_REFERENCE_SOURCE_OBSERVATION_REQUIRED")
+    standard = ((observed_G_total + G_ROUNDING_UNIT // 2) //
+                G_ROUNDING_UNIT) * G_ROUNDING_UNIT
+    return {
+        "schema": G_ROUNDING_SCHEMA,
+        "observed_G_total": observed_G_total,
+        "standardized_G": standard,
+        "rounding_delta": standard - observed_G_total,
+        "rounding_unit": G_ROUNDING_UNIT,
+        "target_ilevel": target_ilevel,
+        "source_observation_sha256": source_observation_sha256,
+    }
+
+
 class SeasonBudgetBlocked(ValueError):
     pass
 
@@ -89,6 +122,24 @@ def preprofile_budget(*, source_catalog, source_artifact_sha256, evidence,
         need(type(amount) is int and amount >= (1 if name == "G" else 0),
              "GJFO_" + name + "_RATING_UNVERIFIED")
         amounts[name] = amount
+    # Optional new-season standardized G reference: verify arithmetic and
+    # bind its observed source identity. The existing exact/legacy G contracts
+    # remain unchanged. A matching SHA or caller label is not source approval.
+    g_standardization = proofs["G"].get("standardization")
+    if g_standardization is not None:
+        need(type(g_standardization) is dict and
+             set(g_standardization)=={
+                 "schema", "observed_G_total", "standardized_G",
+                 "rounding_delta", "rounding_unit", "target_ilevel",
+                 "source_observation_sha256"},
+             "GJFO_G_STANDARDIZATION_FIELDS_INVALID")
+        expected = standardize_representative_G(
+            observed_G_total=g_standardization["observed_G_total"],
+            target_ilevel=target_ilevel,
+            source_observation_sha256=proofs["G"]["source_sha256"])
+        need(g_standardization==expected and
+             amounts["G"]==expected["standardized_G"],
+             "GJFO_G_ROUNDING_OR_SOURCE_DRIFT")
     oil = _vector(proofs["O"].get("rating"), "O")
     hands = proofs["O"].get("applied_hands")
     need(type(hands) is list and len(hands) <= 2 and
@@ -134,6 +185,8 @@ def preprofile_budget(*, source_catalog, source_artifact_sha256, evidence,
         "fixed_O": oil, "fixed_L": fixed_L, "fixed_E": fixed_E,
         "reference_B": reference_B, "base_B": B, "final_T": T,
         "manual_final_T_authoritative": manual_final_T is not None,
+        "G_standardization": (
+            dict(g_standardization) if g_standardization is not None else None),
         "source_authentication_performed_here": False,
         "native_calls": 0, "network_calls": 0, "cache_mutations": 0,
     }
