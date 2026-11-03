@@ -47,7 +47,7 @@ def collect(*,stage_root,build,transport=None):
         with file.open("rb") as stream:
             raw_header=stream.readline(16384)
         try:
-            fields=next(csv.reader([raw_header.decode("utf8-sig")]))
+            fields=next(csv.reader([raw_header.decode("utf-8-sig")]))
         except (UnicodeError,csv.Error,ValueError,StopIteration):
             return False
         return set(join.COLUMNS)<=set(fields)
