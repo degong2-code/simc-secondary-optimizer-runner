@@ -1,3 +1,6 @@
+> **2026-11-03 P3-BQ 최신 인계 정본(이전 P3-BO 역사 인계보다 우선):** [CHAT_CONTINUITY_HANDOFF_20261103_P3_BQ_EVIDENCE_FIRST_LEDGER.md](CHAT_CONTINUITY_HANDOFF_20261103_P3_BQ_EVIDENCE_FIRST_LEDGER.md). 모든 새 채팅은 위 [개발 연속성 규약](development/PROTOCOL.md)과 [증거/연결 분리 INDEX](development/INDEX.md)를 이전 미완료 목록보다 먼저 읽고, 새 개발 착수 전 관련 과거 소스·코드·검증 영수증을 검색한다. 완료 사실이 제품에 미연결된 것과 원본 사실 미확정을 구별하고, 작업마다 짧은 노트와 INDEX를 갱신한다. 이전 P3-BO 인계는 역사 스냅샷이며 이 문서 포인터가 최신이다.
+>
+
 > **2026-11-03 최신 사용자 직접 개발 효율 교정 — 인계·개발 노트 영구 적용:** 코드/검증 작업 전 **[개발 연속성 규약](development/PROTOCOL.md) → [기능별 증거·미완료 INDEX](development/INDEX.md) → 해당 원본/Actions 영수증 → 관련 코드** 순서로 확인한다. **[P3-BQ 실제 교정 기록](development/notes/2026-11-03_p3-bq-continuity-correction.md)**이 선례. `false/PENDING`은 과거 원본 증거 부족과 현재 제품 연결 미완료를 구별하지 못하므로 그대로 신규 조사 명령으로 삼지 않는다. 기존 시즌 티어 **기초 ilvl 197/219×65, 현재 레이드 그룹 101/118, SimC 정확 13직업×5부위** 재사용, 새 인증 엔진·Native/원본 재수집 기본 금지. **논리적 작업 묶음마다** 원본/상태 선조회→REUSE/CONNECT/EXTEND/NEW/STOP 결정→짧은 구조화 GitHub 노트 1개와 INDEX 갱신→인계 반영 필수. 해당 규약을 새 채팅에서도 먼저 읽어야 한다. `python tools/check_development_ledger.py`(선택 `--since TASK_BASE_REF`)로 구조와 작업 변경 대비 노트 누락 점검. 본 교정은 개발 운영 규약이지 새 제품 READY/효과 인증 Gate가 아니며 GitHub 기록이 Project UI 적용 증거도 아니다.
 >
 
