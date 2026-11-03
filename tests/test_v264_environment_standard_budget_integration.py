@@ -129,6 +129,8 @@ class StandardBudgetNormalBuildTests(unittest.TestCase):
                     component["standardization"],
                 "source_profile_receipt_sha256":"f"*64,
                 "full_G_approved":False,
+                "generic_G_numeric_reference_usable":True,
+                "generic_G_current_season_membership_required":False,
                 "environment_ready":False,
             }
             observed["receipt_sha256"]=build.digest(
@@ -157,6 +159,12 @@ class StandardBudgetNormalBuildTests(unittest.TestCase):
             self.assertEqual([x["native_json2_sha256"] for x in rows],
                              [table[k]["components"]["G"]["source_sha256"]
                               for k in sorted(table)])
+            self.assertTrue(all(row["generic_G_numeric_reference_usable"]
+                                for row in rows))
+            self.assertEqual([row["generic_G_standard_rating"] for row in rows],
+                             [2850,2850])
+            self.assertTrue(all(not row[
+                "current_season_acquisition_required_for_G"] for row in rows))
             self.assertFalse(result["environment_ready"])
             self.assertIsNone(result["G"])
             self.assertEqual(result["native_calls"],0)
@@ -193,7 +201,10 @@ class StandardBudgetNormalBuildTests(unittest.TestCase):
                     observed_G_total=2847,target_ilevel=334,
                     source_observation_sha256="4"*64),
             "source_profile_receipt_sha256":"f"*64,
-            "full_G_approved":False,"environment_ready":False,
+            "full_G_approved":False,
+            "generic_G_numeric_reference_usable":True,
+            "generic_G_current_season_membership_required":False,
+            "environment_ready":False,
         }
         native["receipt_sha256"]=build.digest(
             build.canonical(native).encode("utf8"))
