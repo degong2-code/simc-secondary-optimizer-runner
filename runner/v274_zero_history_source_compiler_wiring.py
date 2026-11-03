@@ -118,6 +118,12 @@ def discover(collected):
         "v190_same_build_consumable_item_candidates_v1")
     if joined is not None:
         v190=joined
+    # The original v191 compiler consumes the sealed successor when present.
+    simc_bound=_from_sealed_candidate(
+        collected.get("fresh_consumable_simc_effect_relation"),root,
+        "v190_same_build_consumable_item_candidates_v1")
+    if simc_bound is not None:
+        v190=simc_bound
 
     simc = collected.get("fresh_pinned_first_party_simc_source")
     source_dir = simc.get("source_dir") if isinstance(simc, dict) else None

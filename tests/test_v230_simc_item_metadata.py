@@ -47,6 +47,7 @@ class SimCExactItemMetadataTests(unittest.TestCase):
         self.assertEqual(result["requested_item_count"],2)
         self.assertEqual(result["full_generated_item_rows_scanned"],8)
         self.assertEqual(result["items"][0]["inventory_type"],1)
+        self.assertEqual(result["items"][0]["crafting_quality"],0)
         self.assertEqual(result["items"][0]["item_set_id"],1234)
         self.assertEqual(result["items"][0]["stat_modifier_codes"],[4])
         self.assertEqual(result["items"][1]["class_id"],2)
