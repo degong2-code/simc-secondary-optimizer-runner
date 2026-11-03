@@ -253,7 +253,7 @@ class SourceOnlyRepresentativeTests(unittest.TestCase):
         from runner import v167_product_season_gear_adapter as provider
         from runner import v233_source_only_G_probe_profile as compiler
         eligible={
-            9020:(5,4,4),9021:(6,4,4),
+            9020:(5,4,4),9021:(6,4,4),9011:(9,4,4),
             9023:(2,4,0),9024:(16,4,0),
             9012:(11,4,0),9025:(11,4,0),
             9010:(17,2,8)}
