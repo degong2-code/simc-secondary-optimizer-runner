@@ -249,6 +249,61 @@ class SourceOnlyRepresentativeTests(unittest.TestCase):
         self.assertIsNone(picked["G"])
         self.assertFalse(picked["environment_ready"])
 
+    def test_conditional_mplus_worldstate_physical_fallback_no_G(self):
+        from runner import v167_product_season_gear_adapter as provider
+        from runner import v233_source_only_G_probe_profile as compiler
+        eligible={
+            9020:(5,4,4),9021:(6,4,4),
+            9023:(2,4,0),9024:(16,4,0),
+            9012:(11,4,0),9025:(11,4,0),
+            9010:(17,2,8)}
+        rows=[{"item_id":iid,"name":f"season_{iid}",
+               "category":"plain_representative_candidate",
+               "inventory_type":inv,"class_id":cls,"subclass_id":sub,
+               "allowed_class_mask":2,"source_kinds":["raid_journal"],
+               "item_set_id":0}
+              for iid,(inv,cls,sub) in sorted(eligible.items())]
+        conditional={"item_id":9022,"name":"pending_foot",
+               "category":"plain_representative_candidate",
+               "inventory_type":8,"class_id":4,"subclass_id":4,
+               "allowed_class_mask":2,"item_set_id":0,
+               "provisional_mplus_world_state_only":True,
+               "season_membership_verified":False,"ui_selectable":False,
+               "source_kinds":["mplus_journal"],
+               "source_evidence":[{
+                   "source":"mplus_journal",
+                   "season_evidence":"UNKNOWN_WORLD_STATE_EXPRESSION",
+                   "display_season_id":37,"world_state_expression_id":441,
+                   "journal_encounter_id":30,"journal_instance_id":20}]}
+        db={"schema":provider.SCHEMA,
+            "status":"CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
+            "no_old_catalog_seed":True,"season_build":BUILD,
+            "db2_display_season_id":37,"item_count":len(rows),
+            "role_counts":{"plain_representative_candidate":len(rows)},
+            "items":rows,
+            "internal_conditional_mplus_plain_candidates":[conditional],
+            "internal_conditional_mplus_plain_count":1,
+            "not_certified":{"tier_four_set":True,"simc_item_effects":True},
+            "new_native_calls":0,"new_api_calls":0}
+        picked=builder.find_candidate(
+            seed_directory=self.folder,tier_candidate=self.tier,
+            target_ilevel=334,season_gear_db=db)
+        self.assertEqual(picked["selected_G_slot_ids"]["feet"],9022)
+        self.assertIn("feet",picked[
+            "selected_non_tier_season_condition_pending_slots"])
+        detail=picked["selected_ordinary_source_provenance"]["feet"]
+        self.assertEqual(detail["world_state_expression_ids"],[441])
+        self.assertTrue(detail["same_display_season_worldstate_pending"])
+        self.assertFalse(detail["G_source_approved"])
+        self.assertIsNone(picked["G"])
+        self.assertFalse(picked["environment_ready"])
+        text,receipt=compiler.build(
+            source_directory=self.folder,tier_candidate=self.tier,
+            representative_candidate=picked,race="human",
+            level=90,season_gear_db=db)
+        self.assertIn("feet=simc_source_9022,id=9022",text)
+        self.assertEqual(receipt["native_calls"],0)
+
     def test_different_target_ilevel_does_not_infer_scaling(self):
         first=self.plan(target=335)
         next=self.plan(target=336)

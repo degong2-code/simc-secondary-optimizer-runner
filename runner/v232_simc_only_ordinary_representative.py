@@ -60,6 +60,12 @@ def _source_scope_diagnostic(provider, display_season_id):
                 and s["journal_encounter_id"] > 0
                 and type(s.get("journal_instance_id")) is int
                 and s["journal_instance_id"] > 0]
+    same_world = any(
+        type(display_season_id) is int and display_season_id>0
+        and s.get("source")=="mplus_journal"
+        and s.get("display_season_id")==display_season_id
+        and type(s.get("world_state_expression_id")) is int
+        and s["world_state_expression_id"]>0 for s in sources)
     if explicit:
         state = "DB2_DISPLAY_SEASON_EXPLICIT_WSE_ZERO_CANDIDATE"
         blockers = ["INDEPENDENT_ACTIVE_ITEM_VARIANT_AND_TIER_SEASON_PROOF"]
@@ -84,6 +90,11 @@ def _source_scope_diagnostic(provider, display_season_id):
     return {
         "status":state,
         "explicit_db2_match_no_world_state":bool(explicit),
+        "same_display_season_worldstate_pending":same_world,
+        "world_state_expression_ids":sorted({
+            s["world_state_expression_id"] for s in sources
+            if type(s.get("world_state_expression_id")) is int
+            and s["world_state_expression_id"]>0}),
         "season_membership_authenticated":False,
         "G_source_approved":False,
         "source_kinds":list(kind),
@@ -169,7 +180,9 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
              and verified.get("no_old_catalog_seed") is True,
              "V232_OPTIONAL_SEASON_GEAR_BUILD_OR_PROVENANCE_MISMATCH")
         provider_by_id={
-            x["item_id"]:x for x in verified["items"]
+            x["item_id"]:x for x in (
+                verified["items"]+
+                verified.get("internal_conditional_mplus_plain_candidates",[]))
             if x["category"]=="plain_representative_candidate"
             and x.get("source_kinds")
         }
@@ -263,8 +276,16 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
         r["item_id"]:_source_scope_diagnostic(
             provider_by_id.get(r["item_id"]),season_display)
         for r in options}
+    def source_rank(iid):
+        e=evidence_by_id[iid]
+        if e["explicit_db2_match_no_world_state"]:return 0
+        if (e["status"]=="WORLD_STATE_EXPRESSION_PENDING"
+            and e["same_display_season_worldstate_pending"]):return 1
+        if "raid_journal" in e["source_kinds"]:return 2
+        if "mplus_journal" in e["source_kinds"]:return 3
+        return 4
     def explicit_id(iid):
-        return evidence_by_id[iid]["explicit_db2_match_no_world_state"]
+        return source_rank(iid)==0
     scratch={"items":options}
     used=set(tier_ids)
     ordinary={}
@@ -272,19 +293,18 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
         matches=chooser.available_plain(scratch,slot=slot,
             family=contract["family"],class_mask=class_mask,used=used)
         need(bool(matches),"V232_ORDINARY_SLOT_WITHOUT_SIMC_CANDIDATE:"+slot)
-        matches.sort(key=lambda iid:(not explicit_id(iid),iid))
+        matches.sort(key=lambda iid:(source_rank(iid),iid))
         ordinary[slot]=matches[0];used.add(matches[0])
     common={}
     for slot in chooser.COMMON:
         matches=chooser.available_plain(scratch,slot=slot,
                 class_mask=class_mask,used=used)
         need(bool(matches),"V232_COMMON_SLOT_WITHOUT_SIMC_CANDIDATE:"+slot)
-        matches.sort(key=lambda iid:(not explicit_id(iid),iid))
+        matches.sort(key=lambda iid:(source_rank(iid),iid))
         common[slot]=matches[0];used.add(matches[0])
     try:
-        # Prefer a complete compatible weapon form from the explicit
-        # season-candidate subset; otherwise use the original selector on
-        # all source candidates and report each unresolved hand.
+        # Reuse v169 exact weapon-form selection; WSE candidates are
+        # second-tier internal source fallback, never public eligibility.
         explicit_weapons={"items":[r for r in options if explicit_id(
             r["item_id"])]}
         try:
@@ -292,9 +312,16 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
                 explicit_weapons,contract["weapon_form"],class_mask,
                 spec_key=cl+"/"+sp)
         except chooser.RepresentativeBlocked:
-            weapons=chooser.shape_weapons(
-                scratch,contract["weapon_form"],class_mask,
-                spec_key=cl+"/"+sp)
+            conditional_weapons={"items":[r for r in options
+                if source_rank(r["item_id"])<=1]}
+            try:
+                weapons=chooser.shape_weapons(
+                    conditional_weapons,contract["weapon_form"],class_mask,
+                    spec_key=cl+"/"+sp)
+            except chooser.RepresentativeBlocked:
+                weapons=chooser.shape_weapons(
+                    scratch,contract["weapon_form"],class_mask,
+                    spec_key=cl+"/"+sp)
     except chooser.RepresentativeBlocked as exc:
         raise SourceRepresentativeBlocked(
             "V232_WEAPON_FORM_SOURCE_CANDIDATE_MISSING:"+str(exc)) from exc

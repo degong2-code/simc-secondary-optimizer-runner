@@ -59,9 +59,13 @@ def from_v166(source):
          source.get("native_calls") == 0,
          "REAL_V166_SOURCE_REQUIRED")
     rows = source.get("current_candidates")
+    # A fresh season may have only WSE-conditional physical candidates.
+    # Keep them internal while the public current-candidate list is empty.
+    pending_count=source.get("internal_conditional_mplus_plain_count",0)
     need(type(rows) is list and
          len(rows) == source.get("current_candidate_count") and
-         0 < len(rows) <= 2000,
+         len(rows) <= 2000 and
+         (bool(rows) or type(pending_count) is int and pending_count>0),
          "CURRENT_ITEM_COUNT_MISMATCH")
     result = []
     for entry in rows:
@@ -180,7 +184,9 @@ def validate(payload):
     items = payload.get("items")
     need(type(items) is list and
          type(payload.get("item_count")) is int and
-         0 < len(items) == payload["item_count"] <= 2000,
+         len(items) == payload["item_count"] <= 2000 and
+         (bool(items) or payload.get(
+             "internal_conditional_mplus_plain_count",0)>0),
          "PRODUCT_SEASON_DB_COUNT_INVALID")
     ids = set()
     for x in items:

@@ -580,15 +580,22 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
     result=json.loads((root/paths["candidate"]).read_text(encoding="utf8"))
     plain=[r for r in result["items"]
            if r["category"]=="plain_representative_candidate"]
+    internal=result.get("internal_conditional_mplus_plain_candidates",[])
+    # An internal WSE condition candidate remains useful for constructing
+    # a source-only representative, but cannot be installed/published.
     # A source containing only trinkets/special-effect items is not a usable
     # ordinary gear/weapon pool. Preserve its sealed evidence as PENDING.
-    return {"status":("FRESH_GEAR_PLAIN_CANDIDATES_SOURCE_ONLY" if plain
+    return {"status":("FRESH_GEAR_PLAIN_CANDIDATES_SOURCE_ONLY"
+                      if plain or internal
                       else "FRESH_GEAR_PLAIN_CANDIDATES_NOT_FOUND_PENDING"),
             "candidate_path":str((root/paths["candidate"]).resolve()),
             "item_count":result["item_count"],
             "plain_candidate_count":len(plain),
-            "plain_armor_candidate_count":sum(x["class_id"]==4 for x in plain),
-            "plain_weapon_candidate_count":sum(x["class_id"]==2 for x in plain),
+            "internal_wse_conditional_plain_count":len(internal),
+            "plain_armor_candidate_count":sum(x["class_id"]==4
+                for x in plain+internal),
+            "plain_weapon_candidate_count":sum(x["class_id"]==2
+                for x in plain+internal),
             "network_calls_by_stage":attempted[0],
             "source_stage":{k:v for k,v in stage.items() if k!="result"},
             "season_representative_verified":False,
