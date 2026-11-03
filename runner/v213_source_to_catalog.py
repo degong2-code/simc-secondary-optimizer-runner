@@ -337,13 +337,38 @@ def _compile_enchants(season, classification):
 
 def _related_source_counts(season):
     counts = season.get("related_source_counts")
-    need(type(counts) is dict and set(counts) == {
+    historical={
         "gear_item_candidates", "tier_piece_ids",
         "food_raw_item_candidates", "potion_raw_item_candidates",
         "food_handler_registrations", "potion_handler_registrations",
         "embellishment_darkmoon_registrations", "temporary_enchant_entries",
         "gem_property_records"
-    }, "V191_RELATED_SOURCE_COUNTS_MISSING")
+    }
+    new={"flask_raw_item_candidates","item_enhancement_raw_candidates"}
+    need(type(counts) is dict and
+         set(counts) in (historical,historical|new) and
+         all(type(n) is int and n>=0 for n in counts.values()),
+         "V191_RELATED_SOURCE_COUNTS_MISSING")
+    if set(counts)==historical|new:
+        consumables=season.get("consumables",{})
+        flask=consumables.get("flask",{})
+        oils=consumables.get("weapon_oils",{})
+        physical=flask.get("physical_item_candidates")
+        source_items=oils.get("item_enhancement_source_candidates")
+        need(type(physical) is list and type(source_items) is list and
+             counts["flask_raw_item_candidates"]==len(physical) and
+             counts["item_enhancement_raw_candidates"]==len(source_items) and
+             all(type(x) is dict and x.get("kind")=="flask" and
+                 x.get("ui_selectable") is False for x in physical) and
+             all(type(x) is dict and
+                 x.get("kind")=="item_enhancement" and
+                 x.get("weapon_oil_identity")=="NOT_ESTABLISHED" and
+                 x.get("ui_selectable") is False for x in source_items) and
+             flask.get("simc_token_join_verified") is False and
+             flask.get("highest_quality_effect_verified") is False and
+             oils.get("item_to_temporary_enchant_join_verified") is False and
+             oils.get("weapon_and_hand_applicability_verified") is False,
+             "V191_PHYSICAL_F_O_ITEM_SOURCE_COUNTS_OR_ADMISSION_DRIFT")
     return counts
 
 
