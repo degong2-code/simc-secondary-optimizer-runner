@@ -51,4 +51,5 @@ jobs:
             tests.test_v274_zero_history_source_compiler_wiring \
             tests.test_v275_pinned_simc_compiler_inputs \
             tests.test_v276_sealed_tier_compiler_source \
-            tests.test_v277_zero_history_native_G_stage
+            tests.test_v277_zero_history_native_G_stage \
+            tests.test_v278_sealed_simc_consumable_native_pair
