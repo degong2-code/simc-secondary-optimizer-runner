@@ -66,6 +66,12 @@ class DevelopmentLedgerGuardTests(unittest.TestCase):
                 encoding="utf8")
             self.assertEqual(ledger.validate(root), [])
 
+    def test_index_only_change_without_task_note_is_rejected(self):
+        self.assertIn("TASK_CHANGE_WITHOUT_DEVELOPMENT_NOTE",
+                      ledger.check_changed_files([
+                          "docs/development/INDEX.md"
+                      ]))
+
     def test_note_without_capability_index_update_is_rejected(self):
         self.assertIn("TASK_NOTE_WITHOUT_INDEX_UPDATE",
                       ledger.check_changed_files([
