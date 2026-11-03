@@ -1436,8 +1436,9 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
     """Reuse v251 + v232 for ONE requested DPS; only source candidates.
 
     Never fetch item_data.inc implicitly or substitute the small v229 seed.
-    Real Native/G and independently authenticated season membership remain
-    prerequisites for any production profile or budget promotion.
+    Real Native static G remains necessary for a numeric G reference.
+    Acquisition-season membership is separate from generic G eligibility;
+    actual product-profile/option installation stays with the normal Build.
     """
     if request is None:
         return {"status":"FRESH_ONE_SPEC_REPRESENTATIVE_NOT_REQUESTED",
@@ -1502,7 +1503,9 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
     # historical session identity, so the costly pinned SimC source is reused.
     one_spec_key=digest(canonical({"game_build":build,
         "request":request}).encode("utf8"))[:16]
-    output="source/v255_one_spec_source_representative_"+one_spec_key+".json"
+    # New physical-budget semantics must not overwrite earlier v255 sealed
+    # receipts or force re-downloading build-wide Wago/SimC source bytes.
+    output="source/v265_one_spec_generic_G_representative_"+one_spec_key+".json"
     path=root/output
     # Include transitive source parser/chooser and the adapter itself.
     # An implementation change must not silently reuse an old candidate.
@@ -1564,8 +1567,8 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
     try:
         staged=stage_engine.execute_stage(
             root=root,
-            stage_id="fresh-one-spec-source-representative-"+one_spec_key,
-            stage_version="v251-v232-exact-sources-one-spec-v2",
+            stage_id="fresh-one-spec-generic-G-representative-"+one_spec_key,
+            stage_version="v251-v232-generic-G-physical-v1",
             inputs={"game_build":build,"request":request,
                     "gear_sha256":digest(gear_bytes),
                     "tier_sha256":digest(tier_bytes),
