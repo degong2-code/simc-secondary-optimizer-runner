@@ -783,6 +783,14 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             for name,raw in source_files.items():
                 simc_responses[simc_source.RAW_BASE+simc_revision+
                   "/engine/dbc/generated/"+name]=raw
+            # An optional v189/v190 stage is now part of the one-spec
+            # source acquisition: 1 small pinned effect file, reusing the
+            # SAME existing Wago Item/ItemSparse CSV and revision.
+            from tests.test_v189_simc_choice_discovery import SOURCE as V189
+            simc_responses[
+                v216.simc_effect_candidates.URL_PREFIX+simc_revision+
+                "/"+v216.simc_effect_candidates.SOURCE
+                ]=V189.encode("utf8")
             simc_calls=[]
             def simc_transport(req,timeout):
                 simc_calls.append(req.full_url)
@@ -803,7 +811,16 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                 simc_revision=simc_revision,
                 previous_game_build="12.1.5.70575",
                 simc_transport=simc_transport)
-        self.assertEqual(len(simc_calls),7)
+        self.assertEqual(len(simc_calls),8)
+        self.assertEqual(third["fresh_food_potion_item_sources"]["status"],
+            "FRESH_FOOD_POTION_DB2_CANDIDATES_NOT_USER_ADMITTED")
+        self.assertEqual(third["fresh_food_potion_item_sources"]
+                         ["network_calls_by_stage"],1)
+        self.assertEqual(fourth["fresh_food_potion_item_sources"]
+                         ["network_calls_by_stage"],0)
+        self.assertFalse(third["fresh_food_potion_item_sources"]
+                         ["environment_ready"])
+        self.assertIsNone(third["fresh_food_potion_item_sources"]["F"])
         self.assertEqual(third["fresh_pinned_first_party_simc_source"]["status"],
                          "SIMC_PINNED_SET_SOURCE_RECEIPT_READY")
         self.assertEqual(third["fresh_pinned_first_party_simc_source"]
@@ -820,7 +837,7 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                          ["class_count"],13)
         self.assertFalse(third["fresh_tier_first_party_simc_options"]
                          ["season_membership_verified"])
-        self.assertEqual(third["network_calls_by_stage"],7)
+        self.assertEqual(third["network_calls_by_stage"],8)
         self.assertEqual(fourth["network_calls_by_stage"],0)
         self.assertEqual(second["fresh_tier_first_party_simc_options"]["status"],
             "FIRST_PARTY_SIMC_PINNED_SOURCE_PENDING")
