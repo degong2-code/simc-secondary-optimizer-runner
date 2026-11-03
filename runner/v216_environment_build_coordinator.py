@@ -377,10 +377,10 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                                 g_native_receipt_paths_by_ilevel=None):
     """Inspect a freshly assembled v213 artifact in the NORMAL Build path.
 
-    This does not install an environment or require previously held source
-    values. Source acquisition and item-level G/J/F/O authentication are
-    still prerequisites of final admission; checking local hashes does not
-    constitute upstream retrieval authentication.
+    This does not install an environment. Reuse authenticated source
+    acquisition facts exactly once; identify only missing item-level G/J/F/O
+    values or applicability. Reading a stored hash is not proof of game
+    eligibility, and this numeric preflight is not another certification Gate.
     """
     need(type(expected_game_build) is str and bool(expected_game_build)
          and type(expected_simc_revision) is str and
@@ -514,8 +514,11 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
             "GEM_J_HIGHEST_QUALITY_EFFECT_AND_SOCKET_BUDGET_PROOF")
     if proposed_budget is not None:
         payload["proposed_budget_arithmetic_unadmitted"] = proposed_budget
+        # Follow the already-verified original source receipts. Missing
+        # applicability/rating facts are resolved per item, not by a second
+        # global or independent source-certification engine.
         payload["requires"].append(
-            "INDEPENDENT_GJFO_SOURCE_ORIGIN_AND_RATING_AUTHENTICATION")
+            "GJFO_EXISTING_SOURCE_RECEIPT_AND_SELECTED_ITEM_LINK_PENDING")
     if standard_table is not None:
         payload["standardized_ilevel_budget_rows_unadmitted"] = standard_table
     if existing_G_rows is not None:
