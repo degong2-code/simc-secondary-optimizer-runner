@@ -1,3 +1,6 @@
+> **2026-11-03 P3-BX 소켓 자동 발견 규칙:** SimC C++ 기본 `socket_color[]`와 `ITEM_BONUS_SOCKET` type6는 해당 아이템 및 실제 `bonus_id`가 제공하는 소켓 개수를 판독할 수 있다. 하지만 실제 [Native 4/4 반례](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41601140696): 소켓 선언 없는 가슴에 `gem_id`만 지정하면 Crit+16/Haste+8 적용, 1소켓 ID 13750을 가슴/어깨에 강제 부착해도 정상 실행. 따라서 **SimC 실행 성공만으로 게임 소켓 구성 유효성을 승인하지 말 것**. 새 시즌의 소켓 추가 수단이 적용 가능한 장비 부위/조건만 작게 환경 자료로 확정하고, 아이템 기본/변형 소켓 수 + 사용자 최종 선택을 기존 대표 프로필/J에 연결. 6~7개는 이번 시즌 사례일 뿐 엔진 상수가 아님. [P3-BX 노트](development/notes/2026-11-03_p3-bx-simc-socket-native-contrast.md).
+>
+
 > **2026-11-03 최신 통합 원칙 (P3-BW):** 보석·영약·음식·기름·영구 마부의 효과 수치 책임은 SimC에 있다. 신규 시즌에는 과거 J/F/O·무기당 16/16을 복사하거나 DB2 EffectPointsMin을 SimC 최종 rating으로 추정하지 말 것. 기존 v198 Native 비교 및 v269 SimC JSON2 precombat 정적 CHMV 관측을 재사용하고, 고정 rating이 실제 존재하는 경우에만 v222 회계의 소유 스탯으로 연결한다. Proc/조건부 효과는 재구현하지 않음; 선택 아이템·품질/적용 손은 원본 정확 ID·SimC 토큰으로 결정. 추가 마부 CSV 소스는 기본 다운로드하지 않으며 필요 시 opt-in. 중복 소스/Native Gate 만들지 않음. 재사용 가능한 최신 오프라인 자동 CI [#41594997300](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41594997300) 38 PASS/0 FAIL은 **해당 집중 테스트 범위**만 증명한다. [P3-BW 노트](development/notes/2026-11-03_p3-bw-simc-json2-effect-rating-delta.md) 및 [INDEX](development/INDEX.md) 선조회.
 >
 
