@@ -42,7 +42,7 @@ def _sha_file(path):
     return h.hexdigest()
 
 
-def _verify_db2(root,expected_build):
+def _verify_db2(root,expected_build,*,verified_tables=None):
     receipt_path=root/"receipt.json"
     require(receipt_path.is_file() and not receipt_path.is_symlink() and
             0<receipt_path.stat().st_size<=100_000,
@@ -56,15 +56,25 @@ def _verify_db2(root,expected_build):
             receipt.get("source")=="wago.tools/db2",
             "DB2_SNAPSHOT_BUILD_OR_SOURCE_MISMATCH")
     files={}
+    if verified_tables is not None:
+        require(type(verified_tables) is dict and
+                set(verified_tables)=={"Item","ItemSparse"},
+                "V217_VERIFIED_TABLE_SET_MISMATCH")
     for name in ("Item","ItemSparse"):
         p=root/(name+".csv")
         meta=receipt.get("tables",{}).get(name,{})
         require(p.is_file() and not p.is_symlink() and
                 0<p.stat().st_size<=MAX_TABLE and
                 type(meta) is dict and meta.get("bytes")==p.stat().st_size and
-                type(meta.get("sha256")) is str and
-                _sha_file(p)==meta["sha256"],
+                type(meta.get("sha256")) is str,
                 "DB2_TABLE_SHA_OR_SIZE_MISMATCH:"+name)
+        if verified_tables is None:
+            require(_sha_file(p)==meta["sha256"],
+                    "DB2_TABLE_SHA_OR_SIZE_MISMATCH:"+name)
+        else:
+            require(verified_tables[name]=={
+                "sha256":meta["sha256"],"bytes":meta["bytes"]},
+                "V217_VERIFIED_TABLE_PROVENANCE_MISMATCH:"+name)
         files[name]={"bytes":meta["bytes"],"sha256":meta["sha256"]}
     return files
 
@@ -120,7 +130,7 @@ def _source_properties(source):
     return mapping,duplicate
 
 
-def join(source_catalog,snapshot_folder):
+def join(source_catalog,snapshot_folder,*,verified_tables=None):
     """Return ONLY exact same-build physical item/property links.
 
     Empty matches are not proof that no gems exist. All unresolved data is
@@ -131,7 +141,7 @@ def join(source_catalog,snapshot_folder):
     generated=source_catalog["source_provenance"]["v191"][
         "simc_generated_sources"]["gem_property"]["source_build"]
     root=Path(snapshot_folder)
-    tables=_verify_db2(root,build)
+    tables=_verify_db2(root,build,verified_tables=verified_tables)
     base={
         "schema":SCHEMA,
         "game_build":build,
