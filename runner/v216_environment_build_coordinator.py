@@ -23,6 +23,7 @@ import v262_standardized_ilevel_budget_rows as standardized_budget_rows
 import v269_simc_chmv_effect_snapshot as simc_snapshot_delta
 import v221_gem_item_db2_relation as gem_item_join
 import v268_gem_enchant_existing_source_stage as gem_enchant_stage
+import v271_user_socket_gem_layout as physical_gems
 import v223_installed_season_budget_source as season_source_proof
 import v213_source_to_catalog as source_to_catalog
 import v161_wago_db2_snapshot as wago_snapshot
@@ -427,7 +428,9 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                                 standard_budget_evidence_by_ilevel=None,
                                 standard_budget_reference_track=None,
                                 g_native_receipt_paths_by_ilevel=None,
-                                simc_effect_snapshot_case=None):
+                                simc_effect_snapshot_case=None,
+                                gem_layout_receipt=None,
+                                gem_rating_by_id=None):
     """Inspect a freshly assembled v213 artifact in the NORMAL Build path.
 
     This does not install an environment. Reuse authenticated source
@@ -476,6 +479,27 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
          ui.get("game_db_recollection_now")==0 and
          ui.get("optimizer_or_cache_mutated") is False,
          "V216_FRESH_UNVERIFIED_CHOICE_OR_BUDGET_PROMOTION")
+    # A staged physical gem layout is not evidence of legal game sockets.
+    need(gem_layout_receipt is not None or gem_rating_by_id is None,
+         "V216_GEM_LAYOUT_REQUIRED_BEFORE_RATING_MATCH")
+    gem_J=None
+    if gem_layout_receipt is not None:
+        if gem_rating_by_id is not None:
+            gem_J=physical_gems.reconcile_observed_J(
+                gem_layout_receipt,gem_rating_by_id,need)
+        numeric_evidence=(
+            ([budget_evidence] if budget_evidence is not None else [])+
+            (list(standard_budget_evidence_by_ilevel.values())
+             if type(standard_budget_evidence_by_ilevel) is dict else []))
+        for row in numeric_evidence:
+            proof=(row.get("components",{}).get("J")
+                   if type(row) is dict and
+                   type(row.get("components")) is dict else None)
+            if type(proof) is dict and type(proof.get("rating")) is int:
+                need(gem_J is not None,
+                     "V216_J_PHYSICAL_ID_RATING_LINK_MISSING")
+                need(proof["rating"]==gem_J["J_candidate_unadmitted"],
+                     "V216_J_RATING_DISAGREES_WITH_PHYSICAL_GEM_IDS")
     # A caller may supply source-bound numeric evidence before a v098 profile
     # exists. Only arithmetic/identity is tested here: a self-declared
     # "verified" label cannot authenticate Wago/SimC/Native provenance.
@@ -609,6 +633,15 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
             "GEM_J_HIGHEST_QUALITY_EFFECT_AND_SOCKET_BUDGET_PROOF")
     if gem_enchant is not None:
         payload["fresh_gem_raw_enchant_points_source"] = gem_enchant
+    if gem_layout_receipt is not None:
+        payload["physical_gem_layout_unadmitted"] = gem_layout_receipt
+        payload["requires"].append(
+            "PHYSICAL_SOCKET_ELIGIBILITY_HIGHEST_QUALITY_GEM_SOURCE")
+        if gem_J is not None:
+            payload["physical_gem_J_arithmetic_unadmitted"] = gem_J
+        else:
+            payload["requires"].append(
+                "PHYSICAL_GEM_ITEM_BY_ID_CHMV_RATING_SOURCE_PENDING")
     if proposed_budget is not None:
         payload["proposed_budget_arithmetic_unadmitted"] = proposed_budget
         # Follow the already-verified original source receipts. Missing
@@ -2197,7 +2230,10 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                       fresh_standard_budget_evidence_by_ilevel=None,
                       fresh_standard_budget_reference_track=None,
                       fresh_g_native_receipt_paths_by_ilevel=None,
-                      fresh_simc_effect_snapshot_case=None):
+                      fresh_simc_effect_snapshot_case=None,
+                      fresh_gem_layout_receipt=None,
+                      fresh_gem_rating_by_id=None,
+                      fresh_gjfo_evidence=None):
     """Reconcile existing inputs and seal one incremental, auditable build.
 
     Source acquisition is intentionally outside this local coordinator:
@@ -2250,12 +2286,20 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                      re.fullmatch(r"[0-9]+(?:\.[0-9]+){3}",
                                   expected_new_season_build) is not None,
                      "V216_EXPLICIT_NEW_SEASON_BUILD_REQUIRED")
+                selected_gem_layout=(
+                    fresh_gem_layout_receipt if
+                    fresh_gem_layout_receipt is not None else
+                    (profile_stage_receipt.get("socket_layout") if
+                     type(profile_stage_receipt) is dict else None))
                 preflight=preflight_new_season_source(
                     source_catalog_path=candidate_path,
                     expected_game_build=expected_new_season_build,
                     expected_simc_revision=revision,
                     source_snapshot_folder=fresh_snapshot_folder,
                     source_stage_root=fresh_stage_root,
+                    budget_evidence=fresh_gjfo_evidence,
+                    gem_layout_receipt=selected_gem_layout,
+                    gem_rating_by_id=fresh_gem_rating_by_id,
                     standard_budget_evidence_by_ilevel=(
                         fresh_standard_budget_evidence_by_ilevel),
                     standard_budget_reference_track=(
@@ -2266,12 +2310,14 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         fresh_simc_effect_snapshot_case),
                     target_ilevel=(
                         user["target"]["ilevel"]
-                        if fresh_standard_budget_evidence_by_ilevel is not None
+                        if (fresh_standard_budget_evidence_by_ilevel is not None
+                            or fresh_gjfo_evidence is not None)
                         and type(user) is dict
                         and type(user.get("target")) is dict else None),
                     manual_final_T=(
                         user["target"].get("final_T")
-                        if fresh_standard_budget_evidence_by_ilevel is not None
+                        if (fresh_standard_budget_evidence_by_ilevel is not None
+                            or fresh_gjfo_evidence is not None)
                         and type(user) is dict
                         and type(user.get("target")) is dict else None))
                 raise EnvironmentBuildBlocked(
