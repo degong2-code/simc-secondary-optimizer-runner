@@ -41,7 +41,8 @@ class ZeroHistoryNormalBuild(unittest.TestCase):
                      "representative_request":None,
                      "g_probe_character":None,
                      "simc_revision_hint":None,
-                     "credentials":{},
+                     "credentials":{name:"" for name in
+                                    engine.discovery_stage.FIELDS},
                      "fetch":fake_fetch}
             kwargs={"sessions_root":root,"session_folder":None,
                     "user":None,"binary":None,"revision":None,
