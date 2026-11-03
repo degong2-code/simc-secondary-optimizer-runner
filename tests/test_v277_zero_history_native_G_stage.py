@@ -131,8 +131,8 @@ class OneGNativeReuse(unittest.TestCase):
         self.assertIsNone(first.get("B"))
         self.assertFalse(first["environment_ready"])
         self.assertFalse(first["full_G_approved"])
-        self.assertEqual([x.name for x in self.root.iterdir()],
-                         ["_fresh_season_sources","simc_exe"])
+        self.assertEqual({x.name for x in self.root.iterdir()},
+                         {"_fresh_season_sources","simc_exe"})
 
     def test_absent_binary_does_not_generate_or_guess_G(self):
         with mock.patch.object(stage.native.subprocess,"run",
