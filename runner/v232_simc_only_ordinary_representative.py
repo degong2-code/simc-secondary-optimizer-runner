@@ -38,6 +38,61 @@ def need(ok, code):
     if not ok:raise SourceRepresentativeBlocked(code)
 
 
+
+def _source_scope_diagnostic(provider, display_season_id):
+    """Grade observed DB2 source relations, NOT actual season membership.
+
+    WCL-active zone and DB2 display season relation are useful *candidate*
+    provenance, not a guarantee that the particular difficulty/item variant
+    is obtainable this week. Unknown world-state, Localbots and expansion-only
+    crafts must not silently become current-season G or user equipment.
+    """
+    sources = provider.get("source_evidence", []) if provider else []
+    kind = provider.get("source_kinds", []) if provider else []
+    explicit = [s for s in sources if
+                s.get("source") in ("mplus_journal","raid_journal")
+                and type(display_season_id) is int
+                and display_season_id > 0
+                and s.get("season_evidence") == "DB2_DISPLAY_SEASON_MATCH"
+                and s.get("display_season_id") == display_season_id
+                and s.get("world_state_expression_id") == 0
+                and type(s.get("journal_encounter_id")) is int
+                and s["journal_encounter_id"] > 0
+                and type(s.get("journal_instance_id")) is int
+                and s["journal_instance_id"] > 0]
+    if explicit:
+        state = "DB2_DISPLAY_SEASON_EXPLICIT_WSE_ZERO_CANDIDATE"
+        blockers = ["INDEPENDENT_ACTIVE_ITEM_VARIANT_AND_TIER_SEASON_PROOF"]
+    else:
+        unresolved_world = any(
+            s.get("season_evidence") == "UNKNOWN_WORLD_STATE_EXPRESSION"
+            or type(s.get("world_state_expression_id")) is int
+            and s["world_state_expression_id"] > 0 for s in sources)
+        if unresolved_world:
+            state = "WORLD_STATE_EXPRESSION_PENDING"
+        elif "raid_journal" in kind:
+            state = "RAID_JOURNAL_SEASON_UNSCOPED_OR_UNKNOWN"
+        elif "mplus_journal" in kind:
+            state = "MPLUS_DISPLAY_SEASON_NOT_INDEPENDENTLY_MATCHED"
+        elif "selectable_stat_craft" in kind:
+            state = "EXPANSION_CRAFT_NOT_SEASON_AUTHENTICATED"
+        elif "localbots_delve_pool" in kind:
+            state = "LOCALBOTS_SUPPLEMENTARY_NOT_SEASON_AUTHENTICATED"
+        else:
+            state = "SOURCE_CONDITIONS_NOT_RETAINED_OR_NOT_FOUND"
+        blockers = [state]
+    return {
+        "status":state,
+        "explicit_db2_match_no_world_state":bool(explicit),
+        "season_membership_authenticated":False,
+        "G_source_approved":False,
+        "source_kinds":list(kind),
+        "matched_journal_encounter_ids":sorted({
+            s["journal_encounter_id"] for s in explicit}),
+        "unresolved_requirements":blockers,
+    }
+
+
 def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
                    max_source_distance=MAX_DISTANCE, season_gear_db=None):
     """Source-only deterministic G-work precursor, Native0 and cache0.
@@ -198,8 +253,18 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
             "season_candidate_source_kinds":(
                 provider.get("source_kinds",[]) if provider else []),
         })
-    # Reuse v169 pure physical selectors only. Do not call
-    # v169.select_class_spec/v167.validate with a fake CURRENT_SEASON flag.
+    # Reuse v169 pure selectors, preferring explicit same-display-season
+    # DB2 candidates to lower-ID Localbots / unscoped historical candidates.
+    # The tier itself still needs independent season proof, so even an
+    # explicitly matched normal slot is NOT admitted to G at this stage.
+    season_display=(verified.get("db2_display_season_id")
+                    if season_ids is not None else None)
+    evidence_by_id={
+        r["item_id"]:_source_scope_diagnostic(
+            provider_by_id.get(r["item_id"]),season_display)
+        for r in options}
+    def explicit_id(iid):
+        return evidence_by_id[iid]["explicit_db2_match_no_world_state"]
     scratch={"items":options}
     used=set(tier_ids)
     ordinary={}
@@ -207,17 +272,29 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
         matches=chooser.available_plain(scratch,slot=slot,
             family=contract["family"],class_mask=class_mask,used=used)
         need(bool(matches),"V232_ORDINARY_SLOT_WITHOUT_SIMC_CANDIDATE:"+slot)
+        matches.sort(key=lambda iid:(not explicit_id(iid),iid))
         ordinary[slot]=matches[0];used.add(matches[0])
     common={}
     for slot in chooser.COMMON:
         matches=chooser.available_plain(scratch,slot=slot,
                 class_mask=class_mask,used=used)
         need(bool(matches),"V232_COMMON_SLOT_WITHOUT_SIMC_CANDIDATE:"+slot)
+        matches.sort(key=lambda iid:(not explicit_id(iid),iid))
         common[slot]=matches[0];used.add(matches[0])
     try:
-        weapons=chooser.shape_weapons(
-            scratch,contract["weapon_form"],class_mask,
-            spec_key=cl+"/"+sp)
+        # Prefer a complete compatible weapon form from the explicit
+        # season-candidate subset; otherwise use the original selector on
+        # all source candidates and report each unresolved hand.
+        explicit_weapons={"items":[r for r in options if explicit_id(
+            r["item_id"])]}
+        try:
+            weapons=chooser.shape_weapons(
+                explicit_weapons,contract["weapon_form"],class_mask,
+                spec_key=cl+"/"+sp)
+        except chooser.RepresentativeBlocked:
+            weapons=chooser.shape_weapons(
+                scratch,contract["weapon_form"],class_mask,
+                spec_key=cl+"/"+sp)
     except chooser.RepresentativeBlocked as exc:
         raise SourceRepresentativeBlocked(
             "V232_WEAPON_FORM_SOURCE_CANDIDATE_MISSING:"+str(exc)) from exc
@@ -230,6 +307,11 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
          len(set(selected.values()))==len(selected) and
          set(selected)<=set(chooser.contracts.SLOT_ORDER),
          "V232_DUPLICATE_OR_MISSING_G_ITEM")
+    non_tier_sources={slot:evidence_by_id[iid]
+        for slot,iid in sorted(selected.items()) if iid not in tier_ids}
+    unresolved_slots=sorted(
+        slot for slot,details in non_tier_sources.items()
+        if not details["explicit_db2_match_no_world_state"])
     result={
         "schema":SCHEMA,
         "status":"SIMC_SOURCE_PHYSICAL_CANDIDATE_NOT_ACTUAL_SEASON_PROOF",
@@ -264,6 +346,12 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
             slot:provider_by_id.get(iid,{}).get("source_kinds",[])
             for slot,iid in sorted(selected.items())
             if iid not in tier_ids},
+        "selected_ordinary_source_provenance":non_tier_sources,
+        "selected_non_tier_season_condition_pending_slots":unresolved_slots,
+        "selected_non_tier_explicit_db2_match_count":
+            len(non_tier_sources)-len(unresolved_slots),
+        "tier_active_season_membership_not_authenticated":True,
+        "selected_G_source_candidate_not_approved":True,
         "selected_ordinary":ordinary,
         "selected_common":common,
         "selected_weapons":weapons,

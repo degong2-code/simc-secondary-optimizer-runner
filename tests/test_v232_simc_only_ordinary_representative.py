@@ -184,6 +184,71 @@ class SourceOnlyRepresentativeTests(unittest.TestCase):
                 seed_directory=self.folder,tier_candidate=self.tier,
                 target_ilevel=335,season_gear_db=wrong)
 
+    def test_selected_sources_prefer_explicit_db2_season_and_keep_unknowns_pending(self):
+        from runner import v167_product_season_gear_adapter as provider
+        eligible = {
+            9020:(5,4,4),9021:(6,4,4),9022:(8,4,4),
+            9023:(2,4,0),9024:(16,4,0),9012:(11,4,0),
+            9025:(11,4,0),9010:(17,2,8),
+            9011:(9,4,4),9028:(9,4,4)}
+        rows=[]
+        for iid,(inv,cls,sub) in sorted(eligible.items()):
+            if iid==9028:
+                evidence=[{"source":"mplus_journal",
+                    "season_evidence":"DB2_DISPLAY_SEASON_MATCH",
+                    "display_season_id":37,
+                    "world_state_expression_id":0,
+                    "journal_encounter_id":14,"journal_instance_id":2}]
+            elif iid==9011:
+                evidence=[{"source":"localbots_delve_pool"}]
+            elif iid==9022:
+                evidence=[{"source":"mplus_journal",
+                    "season_evidence":"UNKNOWN_WORLD_STATE_EXPRESSION",
+                    "display_season_id":37,
+                    "world_state_expression_id":55,
+                    "journal_encounter_id":14,"journal_instance_id":2}]
+            else:
+                evidence=[{"source":"raid_journal",
+                    "season_evidence":"UNKNOWN_UNSCOPED_JOURNAL",
+                    "display_season_id":0,
+                    "world_state_expression_id":0,
+                    "journal_encounter_id":7,"journal_instance_id":1}]
+            rows.append({"item_id":iid,"name":f"season_{iid}",
+                "category":"plain_representative_candidate",
+                "inventory_type":inv,"class_id":cls,"subclass_id":sub,
+                "allowed_class_mask":2,"item_set_id":0,
+                "source_kinds":[evidence[0]["source"]],
+                "source_evidence":evidence})
+        season={"schema":provider.SCHEMA,
+            "status":"CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
+            "no_old_catalog_seed":True,"season_build":BUILD,
+            "db2_display_season_id":37,
+            "item_count":len(rows),
+            "role_counts":{"plain_representative_candidate":len(rows)},
+            "items":rows,
+            "not_certified":{"tier_four_set":True,"simc_item_effects":True},
+            "new_native_calls":0,"new_api_calls":0}
+        picked=builder.find_candidate(
+            seed_directory=self.folder,tier_candidate=self.tier,
+            target_ilevel=334,season_gear_db=season)
+        self.assertEqual(picked["selected_G_slot_ids"]["wrists"],9028)
+        self.assertEqual(picked["selected_non_tier_explicit_db2_match_count"],1)
+        self.assertEqual(picked["selected_ordinary_source_provenance"][
+            "wrists"]["status"],
+            "DB2_DISPLAY_SEASON_EXPLICIT_WSE_ZERO_CANDIDATE")
+        self.assertIn("feet",picked[
+            "selected_non_tier_season_condition_pending_slots"])
+        self.assertEqual(picked["selected_ordinary_source_provenance"][
+            "feet"]["status"],"WORLD_STATE_EXPRESSION_PENDING")
+        self.assertEqual(picked["selected_ordinary_source_provenance"][
+            "chest"]["status"],"RAID_JOURNAL_SEASON_UNSCOPED_OR_UNKNOWN")
+        self.assertFalse(picked["selected_ordinary_source_provenance"][
+            "wrists"]["season_membership_authenticated"])
+        self.assertTrue(picked["tier_active_season_membership_not_authenticated"])
+        self.assertTrue(picked["selected_G_source_candidate_not_approved"])
+        self.assertIsNone(picked["G"])
+        self.assertFalse(picked["environment_ready"])
+
     def test_different_target_ilevel_does_not_infer_scaling(self):
         first=self.plan(target=335)
         next=self.plan(target=336)

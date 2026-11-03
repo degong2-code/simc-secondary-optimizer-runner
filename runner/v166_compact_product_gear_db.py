@@ -71,6 +71,16 @@ def build(pool,item_file,sparse_file):
             "item_set_id":v["item_set_id"],"quality":v["quality"],
             "category":v["category"],"direct_item_effect_record":v["direct_item_effect_record"],
             "source_kinds":sorted(set(x["source"] for x in v["acquisition_sources"])),
+            # Retain only source conditions actually needed for selected
+            # representative membership checks; do not carry full WCL text
+            # or inflate the v167 compact catalog with the whole v163 index.
+            "source_evidence":[{
+                key:src[key] for key in (
+                    "source","season_evidence","display_season_id",
+                    "world_state_expression_id","journal_encounter_id",
+                    "journal_instance_id","challenge_mode_id",
+                    "expansion_id") if key in src}
+                for src in v["acquisition_sources"]],
             "selection_evidence":v["season_selection"]}
         if v["user_selectable_candidate"]:
             selectable.append(data)

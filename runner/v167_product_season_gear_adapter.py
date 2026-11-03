@@ -95,6 +95,7 @@ def from_v166(source):
             "item_set_id": entry.get("item_set_id", 0),
             "slot_hint": SLOTS.get(inventory_type),
             "source_kinds": entry.get("source_kinds", []),
+            "source_evidence":entry.get("source_evidence", []),
         })
     result.sort(key=lambda x:x["item_id"])
     summary = {
@@ -142,6 +143,24 @@ def validate(payload):
              and type(x.get("inventory_type")) is int,
              "PRODUCT_SEASON_ITEM_INVALID")
         ids.add(x["item_id"])
+        evidence=x.get("source_evidence",[])
+        need(type(evidence) is list and len(evidence)<=64 and
+             all(type(r) is dict and
+                 type(r.get("source")) is str and
+                 r["source"] in (
+                     "raid_journal","mplus_journal",
+                     "selectable_stat_craft","localbots_delve_pool")
+                 and all(k in (
+                     "source","season_evidence","display_season_id",
+                     "world_state_expression_id","journal_encounter_id",
+                     "journal_instance_id","challenge_mode_id",
+                     "expansion_id") for k in r)
+                 for r in evidence),
+             "PRODUCT_SOURCE_EVIDENCE_INVALID")
+        if "source_evidence" in x:
+            need({r["source"] for r in evidence}==
+                 set(x.get("source_kinds",[])),
+                 "PRODUCT_SOURCE_EVIDENCE_KINDS_DISAGREE")
         if x["category"] == "trinket":
             need(x["inventory_type"] == TRINKET_INVENTORY_TYPE,
                  "PRODUCT_TRINKET_SLOT")

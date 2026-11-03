@@ -1130,8 +1130,12 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
                     "EXPLICIT_SAME_BUILD_WAGO_DB2_V167_CANDIDATES" and
                 row.get("season_gear_db_digest_sha256")==
                     simc_source.digest(simc_source.canonical(gear).encode("utf8"))
-                and row.get("same_season_membership_not_proven") is True and
-                row.get("native_physical_and_static_G_still_required") is True and
+                and row.get("same_season_membership_not_proven") is True
+                and row.get("tier_active_season_membership_not_authenticated") is True
+                and row.get("selected_G_source_candidate_not_approved") is True
+                and type(row.get("selected_non_tier_season_condition_pending_slots"))
+                    is list
+                and row.get("native_physical_and_static_G_still_required") is True and
                 row.get("G") is None and row.get("B") is None
                 and row.get("T") is None and
                 row.get("native_calls")==0 and
@@ -1177,6 +1181,14 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
             "selected_slot_count":len(observed["selected_G_slot_ids"]),
             "source_kinds_by_selected_slot":
                 observed["selected_gear_season_source_kinds"],
+            "selected_non_tier_source_provenance":
+                observed["selected_ordinary_source_provenance"],
+            "pending_non_tier_season_source_slots":
+                observed["selected_non_tier_season_condition_pending_slots"],
+            "explicit_db2_season_matched_non_tier_count":
+                observed["selected_non_tier_explicit_db2_match_count"],
+            "tier_active_season_membership_not_authenticated":True,
+            "G_source_approved":False,
             "mplus_world_state_pending":(
                 observed.get("season_gear_db_mplus_worldstate_pending")
                 if "mplus_season_candidate_inclusion" in gear else None),

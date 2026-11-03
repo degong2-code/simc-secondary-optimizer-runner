@@ -59,6 +59,25 @@ class Compact(unittest.TestCase):
         self.assertFalse(result["current_mplus_world_state_confirmed"])
         self.assertTrue(result["representative_selection_needs_primary_and_four_tier_resolution"])
 
+    def test_exact_source_conditions_reach_compact_candidates(self):
+        src=fixture()
+        first=src["items"][0]
+        first["acquisition_sources"]=[{
+            "source":"mplus_journal",
+            "season_evidence":"DB2_DISPLAY_SEASON_MATCH",
+            "display_season_id":37,
+            "world_state_expression_id":0,
+            "journal_encounter_id":201,
+            "journal_instance_id":22}]
+        result=adapter.build(src,self.folder/"Item.csv",
+                             self.folder/"ItemSparse.csv")
+        info=result["current_candidates"][0]
+        self.assertEqual(info["source_evidence"][0][
+            "display_season_id"],37)
+        self.assertEqual(info["source_evidence"][0][
+            "world_state_expression_id"],0)
+        self.assertNotIn("name",info["source_evidence"][0])
+
     def test_fresh_j_f_pending_flows_to_same_compact_gear_without_old_value(self):
         with tempfile.TemporaryDirectory() as d:
             item,sparse=self.prepare(Path(d))
