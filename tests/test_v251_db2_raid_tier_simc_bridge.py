@@ -263,7 +263,7 @@ class DB2SimCBridgeTests(unittest.TestCase):
                     physical_candidate=altered,exact_match=exact,
                     cls="paladin",spec="retribution")
             changed=json.loads(json.dumps(exact))
-            changed["classes"]["paladin"]["simc_set_option"]="wrong"
+            changed["classes"]["paladin"]["item_set_id"]+=1
             with self.assertRaisesRegex(bridge.BridgeBlocked,
                     "REUSE_EXACT_CLASS_PHYSICAL_OR_BONUS_DRIFT"):
                 bridge.reuse_existing_tier_source(
