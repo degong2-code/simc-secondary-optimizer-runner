@@ -53,5 +53,6 @@ jobs:
             tests.test_v276_sealed_tier_compiler_source \
             tests.test_v277_zero_history_native_G_stage \
             tests.test_v278_sealed_simc_consumable_native_pair \
+            tests.test_v280_consumable_item_use_spell_source \
             tests.test_v190_consumable_item_snapshot_join \
             tests.test_v191_unified_season_data_update
