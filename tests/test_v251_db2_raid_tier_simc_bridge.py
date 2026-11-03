@@ -216,6 +216,68 @@ class DB2SimCBridgeTests(unittest.TestCase):
             self.assertEqual(joined["simc_seed_receipt_sha256"],
                              first["simc_seed_receipt_sha256"])
 
+    def test_reuse_current_raid_and_exact_simc_tier_for_4pc_without_new_probe(self):
+        with tempfile.TemporaryDirectory() as d:
+            tier,bonus=fixture(d)
+            candidate=bridge.preview(db2=tier,corroboration=bonus)
+            pinned_thirteen_class_source(d,candidate)
+            receipt,groups=bridge.simc_tier.read_receipt(d)
+            exact=bridge.match_first_party_roster(
+                candidate=candidate,simc_receipt=receipt,simc_set_groups=groups)
+            selected=bridge.reuse_existing_tier_source(
+                physical_candidate=candidate,exact_match=exact,
+                cls="paladin",spec="retribution")
+            self.assertEqual(selected["status"],
+                "EXISTING_ACTIVE_RAID_SIMC_EXACT_TIER_SOURCE_REUSED")
+            self.assertEqual(selected["observed_base_item_level"],219)
+            self.assertEqual(selected["class_count"],13)
+            self.assertEqual(selected["piece_count"],65)
+            self.assertTrue(selected["source_evidence_reused"])
+            self.assertFalse(selected["tier_reidentification_or_extra_source_authentication_required"])
+            self.assertFalse(selected["season_membership_verified"])
+            self.assertFalse(selected["environment_ready"])
+            self.assertIsNone(selected["G"])
+            self.assertEqual(selected["native_calls"],0)
+            self.assertEqual(selected["network_calls"],0)
+            self.assertEqual(
+                selected["selected_for_request"]["four_piece_item_ids"],
+                {s:candidate["classes"]["paladin"]["tier_piece_ids"][s]
+                 for s in bridge.FOUR})
+            entire=bridge.reuse_existing_tier_source(
+                physical_candidate=candidate,exact_match=exact)
+            self.assertIsNone(entire["selected_for_request"])
+
+    def test_tier_source_reuse_does_not_infer_absent_or_mismatched_proof(self):
+        with tempfile.TemporaryDirectory() as d:
+            tier,bonus=fixture(d)
+            candidate=bridge.preview(db2=tier,corroboration=bonus)
+            pinned_thirteen_class_source(d,candidate)
+            receipt,groups=bridge.simc_tier.read_receipt(d)
+            exact=bridge.match_first_party_roster(
+                candidate=candidate,simc_receipt=receipt,simc_set_groups=groups)
+            altered=json.loads(json.dumps(candidate))
+            altered["classes"]["paladin"]["tier_piece_ids"]["head"]+=999
+            with self.assertRaisesRegex(bridge.BridgeBlocked,
+                    "REUSE_EXACT_SIMC_SOURCE_PROOF"):
+                bridge.reuse_existing_tier_source(
+                    physical_candidate=altered,exact_match=exact,
+                    cls="paladin",spec="retribution")
+            changed=json.loads(json.dumps(exact))
+            changed["classes"]["paladin"]["simc_set_option"]="wrong"
+            with self.assertRaisesRegex(bridge.BridgeBlocked,
+                    "REUSE_EXACT_CLASS_PHYSICAL_OR_BONUS_DRIFT"):
+                bridge.reuse_existing_tier_source(
+                    physical_candidate=candidate,exact_match=changed)
+            with self.assertRaisesRegex(bridge.BridgeBlocked,
+                    "REUSE_26_DPS_REQUEST_REQUIRED"):
+                bridge.reuse_existing_tier_source(
+                    physical_candidate=candidate,exact_match=exact,
+                    cls="paladin",spec="holy")
+            with self.assertRaisesRegex(bridge.BridgeBlocked,
+                    "REUSE_EXACT_SIMC_SOURCE_PROOF_REQUIRED"):
+                bridge.reuse_existing_tier_source(
+                    physical_candidate=candidate,exact_match={})
+
     def test_first_party_missing_or_changed_source_fails_not_guessed(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d)
