@@ -222,10 +222,6 @@ def collect(*,stage_root,wago_folder,build,tier_bridge,first_party,
              "V276_V251_SELECTION_SOURCE_RECEIPT_DRIFT")
         physical=_read_candidate(physical_path)
         matched=_read_candidate(exact_path)
-        document=physical_roster(
-            physical=physical,matched=matched,selected=selected_tier,
-            build=build,wago_folder=wago_folder,
-            verified_wago_tables=verified_wago_tables)
     except (TierCompilerSourceBlocked,tier.TierBlocked,
             OSError,KeyError,TypeError,ValueError) as exc:
         return pending(str(exc).split(":",1)[0])
@@ -234,13 +230,24 @@ def collect(*,stage_root,wago_folder,build,tier_bridge,first_party,
         Path(stages.__file__)])
     output=root/RELATIVE_OUTPUT
     def execute():
+        # Scan DB2 only on uncached stages; verified v217 hits reuse the
+        # 65-item result without a second giant Wago CSV parse.
+        document=physical_roster(
+            physical=physical,matched=matched,selected=selected_tier,
+            build=build,wago_folder=wago_folder,
+            verified_wago_tables=verified_wago_tables)
         output.parent.mkdir(parents=True,exist_ok=True)
         output.write_text(json.dumps(document,sort_keys=True,
-            indent=2,ensure_ascii=False,allow_nan=False)+"\n",encoding="utf8")
+            indent=2,ensure_ascii=False,allow_nan=False)+"\\n",encoding="utf8")
     def validate(files):
-        return (json.loads(files["candidate"].read_text("utf8"))==document
-                and document["season_membership_verified"] is False
-                and document["environment_ready"] is False)
+        doc=json.loads(files["candidate"].read_text("utf8"))
+        return (doc.get("schema")==SCHEMA and
+                doc.get("status")==CANDIDATE_STATUS and
+                doc.get("retail_build")==build and
+                doc.get("class_count")==13 and doc.get("item_count")==65 and
+                set(doc.get("classes",{}))==set(tier.FAMILY) and
+                doc.get("season_membership_verified") is False and
+                doc.get("environment_ready") is False)
     try:
         stage=stages.execute_stage(
             root=root,stage_id="fresh-v251-physical-tier-compiler-source",
@@ -262,6 +269,9 @@ def collect(*,stage_root,wago_folder,build,tier_bridge,first_party,
             execute=execute,validate=validate)
     except stages.StageExecutionBlocked as exc:
         raise TierCompilerSourceBlocked(str(exc).split(":",1)[0]) from exc
+    except (TierCompilerSourceBlocked,tier.TierBlocked,
+            OSError,KeyError,TypeError,ValueError) as exc:
+        return pending(str(exc).split(":",1)[0])
     return {"status":CANDIDATE_STATUS,
             "candidate_path":str(output.resolve()),
             "source_stage":{k:v for k,v in stage.items() if k!="result"},
