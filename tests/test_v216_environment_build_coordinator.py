@@ -175,6 +175,43 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         self.assertEqual(proof["physical_profile_sha256"],
                          first["physical_profile_sha256"])
         self.assertFalse(proof["current_season_membership_certified"])
+        from runner import v234_source_only_one_native_G as native_probe
+        # No real subprocess here: v234 must replay the same selected
+        # source-only v167 catalog and prepare its Native JSON2 command.
+        # max_new=0 makes actual SimC execution forbidden by design.
+        with mock.patch.object(native_probe.subprocess,"run",
+                               side_effect=AssertionError(
+                                   "NATIVE_EXECUTION_FORBIDDEN")) as run:
+            plan=native_probe.execute(
+                source_directory=source_root,
+                tier_candidate=tier,
+                representative_candidate=rep,
+                race="human",level=90,talents=None,
+                binary=self.binary,
+                expected_binary_sha256=v216.digest(self.binary.read_bytes()),
+                output_dir=self.root/"native_plan",
+                max_new=0,season_gear_db=catalog)
+        run.assert_not_called()
+        self.assertEqual(plan["status"],"PREPARED_NATIVE_NOT_EXECUTED")
+        self.assertEqual(plan["new_native_calls"],0)
+        self.assertIsNone(plan["G"])
+        self.assertFalse(plan["environment_ready"])
+        self.assertEqual(plan["identity"]["profile_receipt_sha256"],
+                         proof["receipt_sha256"])
+        self.assertIn("json2=",(
+            self.root/"native_plan"/"native.simc").read_text("utf8"))
+        # Missing the source DB must never silently mutate a
+        # season-selected representative into an old/default gear profile.
+        with self.assertRaisesRegex(native_probe.compiler.ProbeBlocked,
+                                    "REPLAY_DRIFT"):
+            native_probe.execute(
+                source_directory=source_root,tier_candidate=tier,
+                representative_candidate=rep,race="human",level=90,
+                talents=None,binary=self.binary,
+                expected_binary_sha256=v216.digest(self.binary.read_bytes()),
+                output_dir=self.root/"missing_v167_plan",
+                max_new=0)
+
         pathlib.Path(first["profile_path"]).write_text(
             "tampered",encoding="utf8")
         rejected=v216._one_spec_source_G_probe_stage(**kwargs)
