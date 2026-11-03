@@ -49,7 +49,9 @@ class LocalWebAPIOffline(unittest.TestCase):
         fake={"schema":"v216_fresh_source_stage_v1",
               "status":"FRESH_WAGO_DB2_COLLECTED_MORE_SOURCES_PENDING",
               "environment_ready":False,"environment_installed":False,
-              "network_calls_by_stage":10,"native_calls":0}
+              "network_calls_by_stage":10,"native_calls":0,
+              "source_stage":{"status":"EXECUTED_AND_SEALED",
+                              "reused":False}}
         with mock.patch.object(
                 web.environment_build,"collect_wago_new_season_source",
                 return_value=fake) as acquire, mock.patch.object(
@@ -57,7 +59,13 @@ class LocalWebAPIOffline(unittest.TestCase):
                 side_effect=AssertionError("PRIOR_SEASON_PLAN_FORBIDDEN")):
             response=self.post("/api/v1/environment/build",payload)
         self.assertEqual(response.status_code,200,response.text)
-        self.assertEqual(response.json(),fake)
+        self.assertEqual(response.json()["status"],fake["status"])
+        self.assertTrue(response.json()["normal_build_entry"])
+        phase=response.json()["zero_history_build"]
+        self.assertEqual(phase["entrypoint"],"v216.build_environment")
+        self.assertFalse(phase["history_dependency_required"])
+        self.assertFalse(phase["environment_ready"])
+        self.assertFalse(phase["user_session_created"])
         validated=sessions.user_scenario(self.controls)
         acquire.assert_called_once_with(
             sessions_root=(self.root/"runs").resolve(),
@@ -93,7 +101,12 @@ class LocalWebAPIOffline(unittest.TestCase):
         payload["controls"]=controls
         with mock.patch.object(
                 web.environment_build,"collect_wago_new_season_source",
-                return_value={"environment_ready":False,"native_calls":0}
+                return_value={"schema":"v216_fresh_source_stage_v1",
+                              "source_stage":{"status":"EXECUTED_AND_SEALED",
+                                              "reused":False},
+                              "environment_ready":False,
+                              "environment_installed":False,
+                              "native_calls":0}
                 ) as called:
             response=self.post("/api/v1/environment/build",payload)
         self.assertEqual(response.status_code,200,response.text)
