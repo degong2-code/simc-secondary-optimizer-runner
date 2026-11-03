@@ -22,7 +22,7 @@ jobs:
           python-version: '3.12'
       - name: Reuse v161/v189/v190/v229/v230/v280/v281 against real same-build sources
         env:
-          PYTHONPATH: .
+          PYTHONPATH: runner:.
         run: python integration_probes/p3_cn_real_consumable_join.py
       - uses: actions/upload-artifact@v4
         if: always()
