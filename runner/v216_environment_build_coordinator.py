@@ -32,6 +32,8 @@ import v245_db2_first_tier_discovery as tier_db
 import v250_raid_tier_bonus_corroboration as raid_bonus
 import v251_db2_raid_tier_simc_bridge as tier_simc_bridge
 import v229_simc_only_source_seed as simc_source
+import v189_simc_consumable_embellishment_discovery as simc_effect_candidates
+import v190_consumable_item_snapshot_join as consumable_item_candidates
 import v232_simc_only_ordinary_representative as simc_representative
 import v233_source_only_G_probe_profile as g_probe_profile
 import v217_stage_execution_engine as stage_engine
@@ -772,6 +774,152 @@ def _collect_first_party_simc_seed_stage(*,stage_root,build,
             "source_stage":{k:v for k,v in stage.items() if k!="result"},
             "network_calls_by_stage":calls[0],
             "native_calls":0,"source_season_verified":False}
+
+
+
+def _fresh_consumable_item_source_stage(*, stage_root, wago_folder,
+                                        build, linked, pinned_simc,
+                                        transport=None):
+    """Reuse original v189 and v190 to join same-season consumable IDs.
+
+    Exactly one small pinned SimC source fetch at the already resolved
+    revision; zero duplicate Wago requests, Native or UI admission.
+    This produces food/potion **item candidates**, not flask F, gem J,
+    oil O, quality equivalence, or validated user options.
+    """
+    pending={"status":"FRESH_CONSUMABLE_SAME_BUILD_SOURCE_PENDING",
+             "candidate_path":None,"source_stage":None,
+             "network_calls_by_stage":0,"native_calls":0,
+             "J":None,"F":None,"O":None,
+             "highest_quality_verified":False,
+             "environment_ready":False}
+    scope=linked.get("source_scope") or {}
+    expansion=scope.get("expansion_id")
+    directory=pinned_simc.get("source_dir")
+    if (not linked.get("candidate_path") or
+            linked.get("status")!=
+                "DB2_WCL_CANDIDATES_JOINED_SEASON_CONDITIONS_PENDING" or
+            type(expansion) is not int or expansion<=0 or
+            not directory):
+        return pending
+    seed_dir=pathlib.Path(directory)
+    receipt_path=seed_dir/simc_source.RECEIPT
+    need(seed_dir.is_dir() and not seed_dir.is_symlink()
+         and receipt_path.is_file() and not receipt_path.is_symlink(),
+         "V216_CONSUMABLE_PINNED_SIMC_RECEIPT_MISSING")
+    receipt_raw=receipt_path.read_bytes()
+    receipt=json.loads(receipt_raw)
+    revision=receipt.get("simc_revision")
+    need(receipt.get("schema")==simc_source.SCHEMA
+         and receipt.get("simc_generated_build")==build
+         and receipt.get("provenance_tree_blob_authenticated") is True
+         and type(revision) is str
+         and simc_source.REV.fullmatch(revision) is not None
+         and receipt.get("receipt_sha256")==simc_source.digest(
+             simc_source.canonical({k:v for k,v in receipt.items()
+                 if k!="receipt_sha256"}).encode("utf8"))
+         and pinned_simc.get("simc_receipt_sha256")==
+             receipt["receipt_sha256"],
+         "V216_CONSUMABLE_PINNED_SOURCE_IDENTITY_INVALID")
+    db2root=pathlib.Path(wago_folder)
+    wago_doc=json.loads((db2root/"receipt.json").read_text("utf8"))
+    tables=wago_doc.get("tables",{})
+    need(wago_doc.get("build")==build
+         and all(type(tables.get(name)) is dict and
+                 type(tables[name].get("sha256")) is str
+                 and len(tables[name]["sha256"])==64
+                 for name in ("Item","ItemSparse")),
+         "V216_CONSUMABLE_WAGO_SOURCE_IDENTITY_INVALID")
+    root=pathlib.Path(stage_root)
+    prefix="source/v258_same_season_consumable_"
+    outputs={
+        "simc_source":prefix+"unique_gear_midnight.cpp",
+        "v189":prefix+"v189_handlers.json",
+        "candidate":prefix+"v190_items.json"}
+    files={k:root/v for k,v in outputs.items()}
+    code=stage_engine.module_dependency_fingerprint([
+        pathlib.Path(simc_effect_candidates.__file__),
+        pathlib.Path(consumable_item_candidates.__file__),
+        pathlib.Path(stage_engine.__file__)])
+    calls=[0]
+    def execute():
+        def fetch(req,timeout):
+            calls[0]+=1
+            return (simc_effect_candidates.urlopen
+                    if transport is None else transport)(req,timeout=timeout)
+        raw=simc_effect_candidates.read_source(
+            commit=revision,transport=fetch)
+        first=simc_effect_candidates.discover(raw,revision)
+        second=consumable_item_candidates.build(
+            first,db2root,expected_build=build,expansion_id=expansion)
+        files["simc_source"].parent.mkdir(parents=True,exist_ok=True)
+        files["simc_source"].write_bytes(raw)
+        for key,document in (("v189",first),("candidate",second)):
+            files[key].write_text(json.dumps(document,sort_keys=True,
+                ensure_ascii=False,indent=2,allow_nan=False)+"\\n",
+                encoding="utf8")
+    def validate(checked):
+        first=json.loads(checked["v189"].read_text("utf8"))
+        second=json.loads(checked["candidate"].read_text("utf8"))
+        return (
+            first.get("schema")==simc_effect_candidates.SCHEMA
+            and first.get("source",{}).get("commit")==revision
+            and first["source"].get("sha256")==
+                digest(checked["simc_source"].read_bytes())
+            and first["source"].get("bytes")==
+                checked["simc_source"].stat().st_size
+            and first.get("auto_promote_to_user_ui") is False
+            and first.get("new_native_calls")==0
+            and second.get("schema")==consumable_item_candidates.SCHEMA
+            and second.get("source",{}).get("simc_revision")==revision
+            and second["source"].get("simc_registration_sha256")==
+                first["source"]["sha256"]
+            and second["source"].get("wago_snapshot_build")==build
+            and second["source"].get("expansion_id")==expansion
+            and all(second["source"].get("tables",{}).get(t,{}).get(
+                "sha256")==tables[t]["sha256"]
+                for t in ("Item","ItemSparse"))
+            and second.get("automatic_ui_promotion") is False
+            and second.get("simc_native_calls")==0
+            and second.get("counts",{}).get("food_items")==
+                sum(x.get("kind")=="food" for x in second.get("items",[]))
+            and second.get("counts",{}).get("potion_items")==
+                sum(x.get("kind")=="potion" for x in second.get("items",[]))
+            and all(item.get("ui_selectable") is False and
+                    item.get("simc_token")=="UNRESOLVED"
+                    for item in second.get("items",[])))
+    try:
+        stage=stage_engine.execute_stage(
+            root=root,stage_id="fresh-v189-v190-consumable-source",
+            stage_version="one-pinned-handler-plus-existing-wago-v1",
+            inputs={"game_build":build,"expansion_id":expansion,
+                    "simc_revision":revision,
+                    "simc_seed_receipt_sha256":digest(receipt_raw),
+                    "v163_stage_sha256":(linked.get("stage") or {}).get(
+                        "receipt_sha256"),
+                    "wago_item_sha256":tables["Item"]["sha256"],
+                    "wago_sparse_sha256":tables["ItemSparse"]["sha256"],
+                    "code_sha256":code["sha256"]},
+            outputs=outputs,execute=execute,validate=validate)
+    except (stage_engine.StageExecutionBlocked,
+            simc_effect_candidates.DiscoveryBlocked,
+            consumable_item_candidates.ConsumableJoinBlocked,
+            ValueError,KeyError,TypeError,OSError) as exc:
+        return {**pending,"status":"FRESH_CONSUMABLE_HANDLER_OR_DB2_JOIN_PENDING",
+                "reason":str(exc).split(":",1)[0],
+                "network_calls_by_stage":calls[0]}
+    observed=json.loads(files["candidate"].read_text(encoding="utf8"))
+    return {**pending,
+        "status":"FRESH_FOOD_POTION_DB2_CANDIDATES_NOT_USER_ADMITTED",
+        "candidate_path":str(files["candidate"].resolve()),
+        "simc_effect_source_receipt_path":str(files["v189"].resolve()),
+        "food_item_count":observed["counts"]["food_items"],
+        "potion_item_count":observed["counts"]["potion_items"],
+        "simc_handler_registrations":
+            observed["counts"]["simc_effect_food_registrations"]+
+            observed["counts"]["simc_effect_potion_registrations"],
+        "network_calls_by_stage":calls[0],
+        "source_stage":{k:v for k,v in stage.items() if k!="result"}}
 
 
 def _verified_first_party_tier_options_stage(*,stage_root,tier_bridge,
@@ -1585,6 +1733,21 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
     first_party=_verified_first_party_tier_options_stage(
         stage_root=stage_root,tier_bridge=tier_bridge,
         simc_seed_directory=effective_seed)
+    # Optional seasonal consumables join reuses exactly the existing Wago
+    # snapshot and the pinned v229 revision; missing evidence stays PENDING.
+    # Injected snapshot tests must supply an explicit SimC transport and
+    # never fall through into the public network.
+    if fetch is not None and simc_transport is None:
+        fresh_consumables={
+            "status":"FRESH_CONSUMABLE_INJECTED_TRANSPORT_PENDING",
+            "candidate_path":None,"network_calls_by_stage":0,
+            "native_calls":0,"J":None,"F":None,"O":None,
+            "environment_ready":False}
+    else:
+        fresh_consumables=_fresh_consumable_item_source_stage(
+            stage_root=stage_root,wago_folder=output_dir,
+            build=expected_game_build,linked=linked,
+            pinned_simc=pinned_simc,transport=simc_transport)
     full_seed={"status":"FRESH_FULL_SIMC_NOT_REQUESTED",
                "source_dir":None,"network_calls_by_stage":0,"native_calls":0}
     if (representative_request is not None and
@@ -1622,6 +1785,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "fresh_ordinary_gear":fresh_gear,
         "fresh_one_spec_simc_representative":one_spec,
         "fresh_one_spec_physical_G_probe":physical_probe,
+        "fresh_food_potion_item_sources":fresh_consumables,
         "fresh_one_spec_character_level_policy":
             "SIMC_COMPILED_DEFAULT_MAX_LEVEL",
         "fresh_tier":fresh_tier,
@@ -1641,7 +1805,8 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
             tier_bonus["network_calls_by_stage"]+
             pinned_simc["network_calls_by_stage"]+
             resolved_simc["network_calls_by_stage"]+
-            full_seed["network_calls_by_stage"],
+            full_seed["network_calls_by_stage"]+
+            fresh_consumables["network_calls_by_stage"],
         "native_calls":0,
         "environment_installed":False,
         "environment_ready":False,
