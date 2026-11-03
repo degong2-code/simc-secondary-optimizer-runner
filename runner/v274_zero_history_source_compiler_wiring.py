@@ -112,6 +112,12 @@ def discover(collected):
              "v189_pinned_simc_effect_registration_candidates_v1")
     v190 = _from_sealed_candidate(consumable, root,
              "v190_same_build_consumable_item_candidates_v1")
+    # One original compiler: prefer the sealed exact ItemEffect successor.
+    joined=_from_sealed_candidate(
+        collected.get("fresh_consumable_item_spell_source"),root,
+        "v190_same_build_consumable_item_candidates_v1")
+    if joined is not None:
+        v190=joined
 
     simc = collected.get("fresh_pinned_first_party_simc_source")
     source_dir = simc.get("source_dir") if isinstance(simc, dict) else None

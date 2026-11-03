@@ -88,7 +88,9 @@ def join(physical_source, relation_bytes, effect_bytes, *,
     for row in _rows(relation_bytes,("ItemID","ItemEffectID"),"RELATION"):
         item_id=_id(row["ItemID"],"RELATION_ITEM_ID")
         if item_id in links:
-            links[item_id].add(_id(row["ItemEffectID"],"RELATION_EFFECT_ID"))
+            effect_id=_id(row["ItemEffectID"],"RELATION_EFFECT_ID",zero=True)
+            if effect_id>0:
+                links[item_id].add(effect_id)
     effect_ids={value for bucket in links.values() for value in bucket}
     effects={}
     for row in _rows(effect_bytes,("ID","SpellID","TriggerType"),"EFFECT"):

@@ -29,6 +29,7 @@ import v275_pinned_simc_compiler_inputs as pinned_compiler_source
 import v276_sealed_tier_compiler_source as compiler_tier_source
 import v277_zero_history_native_G_stage as zero_history_G_native
 import v278_sealed_simc_consumable_native_pair as native_effect_pair
+import v280_consumable_item_use_spell_source as item_spell_bridge
 import v223_installed_season_budget_source as season_source_proof
 import v213_source_to_catalog as source_to_catalog
 import v161_wago_db2_snapshot as wago_snapshot
@@ -1910,6 +1911,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
                                    tier_transport=None,
                                    bonus_transport=None,
                                    gear_transport=None,
+                                   item_effect_transport=None,
                                    simc_seed_directory=None,
                                    simc_revision=None,
                                    previous_game_build=None,
@@ -2165,6 +2167,16 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
             build=expected_game_build,linked=linked,
             pinned_simc=pinned_simc,transport=simc_transport,
             verified_tables=verified_wago_tables)
+    # Reuse the sealed v254 ItemXItemEffect: fetch only the missing DB2
+    # ItemEffect source. This is still unadmitted F/O provenance, not READY.
+    if fetch is not None and item_effect_transport is None:
+        fresh_item_spell=item_spell_bridge.pending(
+            "V280_INJECTED_ITEM_EFFECT_TRANSPORT_NOT_SUPPLIED")
+    else:
+        fresh_item_spell=item_spell_bridge.collect(
+            stage_root=stage_root,build=expected_game_build,
+            fresh_gear=fresh_gear,consumables=fresh_consumables,
+            transport=item_effect_transport)
     # Reuse the v229 generated gem/temp bytes and v189 unique_gear bytes;
     # only still-missing first-party v211/permanent files are fetched.
     # When upstream v189 is pending (e.g. injected CSV without exact SimC
@@ -2226,6 +2238,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         "fresh_one_spec_simc_representative":one_spec,
         "fresh_one_spec_physical_G_probe":physical_probe,
         "fresh_food_potion_item_sources":fresh_consumables,
+        "fresh_consumable_item_spell_source":fresh_item_spell,
         "fresh_gem_enchant_raw_source":gem_enchant_csv,
         "fresh_one_spec_character_level_policy":
             "SIMC_COMPILED_DEFAULT_MAX_LEVEL",
@@ -2251,6 +2264,7 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
             resolved_simc["network_calls_by_stage"]+
             full_seed["network_calls_by_stage"]+
             fresh_consumables["network_calls_by_stage"]+
+            fresh_item_spell["network_calls_by_stage"]+
             pinned_classifier["network_calls_by_stage"]+
             compiler_tier["network_calls_by_stage"]+
             gem_enchant_csv["network_calls_by_stage"],
@@ -2385,6 +2399,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                  "g_probe_character","simc_revision_hint",
                  "fetch","credentials","discovery_transport",
                  "tier_transport","bonus_transport","gear_transport",
+                  "item_effect_transport",
                  "simc_transport","simc_compiler_transport",
                  "gem_enchant_transport","effect_probe_requests"},
              "V216_ZERO_HISTORY_SOURCE_INPUT_FIELDS")
