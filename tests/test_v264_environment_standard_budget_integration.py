@@ -181,6 +181,7 @@ class StandardBudgetNormalBuildTests(unittest.TestCase):
         catalog, table, _ = prepared()
         proof=table[334]["components"]["G"]
         native={
+            "schema":"v234_one_source_only_physical_native_G_observation_v1",
             "source_simc_revision":catalog["simc_revision"],
             "game_build_from_source_not_independently_binary_attested":
                 catalog["game_build"],
