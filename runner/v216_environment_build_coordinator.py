@@ -31,6 +31,7 @@ import v167_product_season_gear_adapter as product_gear_db
 import v245_db2_first_tier_discovery as tier_db
 import v250_raid_tier_bonus_corroboration as raid_bonus
 import v251_db2_raid_tier_simc_bridge as tier_simc_bridge
+import v261_tier_source_evidence_reuse as tier_evidence_reuse
 import v229_simc_only_source_seed as simc_source
 import v189_simc_consumable_embellishment_discovery as simc_effect_candidates
 import v190_consumable_item_snapshot_join as consumable_item_candidates
@@ -1008,7 +1009,7 @@ def _reuse_existing_tier_source_stage(*,build,tier_bridge,first_party,
              "V216_TIER_REUSE_UPSTREAM_STAGE_RECEIPTS_REQUIRED")
         physical=json.loads(paths[0].read_text("utf8"))
         matched=json.loads(paths[1].read_text("utf8"))
-        chosen=tier_simc_bridge.reuse_existing_tier_source(
+        chosen=tier_evidence_reuse.reuse_existing_tier_source(
             physical_candidate=physical,exact_match=matched,
             cls=request["class"] if request is not None else None,
             spec=request["spec"] if request is not None else None)
