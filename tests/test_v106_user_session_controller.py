@@ -86,6 +86,50 @@ class UserSessionControls(unittest.TestCase):
                 self.assertEqual(u["embellishments"],[])
                 self.assertEqual(u["special_items"],[])
 
+    def test_optional_race_and_talents_default_without_gear_import(self):
+        controls=self.fixture()[2]
+        self.assertEqual(controls["character"]["class"],"paladin")
+        sample=ux.standard_controls(("paladin","retribution"))
+        sample.pop("race");sample.pop("talents")
+        resolved=ux.user_scenario(sample)
+        self.assertEqual(resolved["character"]["race"],"dwarf")
+        self.assertEqual(resolved["character"]["talents"],
+                         ux.source_defaults(("paladin","retribution"))["talents"])
+        self.assertEqual(resolved["trinkets"][0]["item_id"],
+                         sample["trinket_ids"][0])
+        self.assertEqual(resolved["special_items"],[])
+        self.assertEqual(resolved["embellishments"],[])
+        self.assertNotIn("fillers",resolved)
+        self.assertNotIn("simc_gear",resolved)
+        blank=ux.standard_controls(("paladin","retribution"))
+        blank["race"]="   ";blank["talents"]=""
+        self.assertEqual(ux.user_scenario(blank),resolved)
+        custom=ux.standard_controls(("paladin","retribution"))
+        custom["race"]="human";custom["talents"]="CUSTOM_TALENTS_V1"
+        result=ux.user_scenario(custom)
+        self.assertEqual(result["character"]["race"],"human")
+        self.assertEqual(result["character"]["talents"],"CUSTOM_TALENTS_V1")
+
+    def test_dwarf_default_requires_explicit_race_for_unsupported_classes(self):
+        for key in (("druid","balance"),("druid","feral"),
+                    ("demonhunter","havoc"),("demonhunter","devourer"),
+                    ("evoker","devastation")):
+            with self.subTest(key=key):
+                controls=ux.standard_controls(key)
+                controls.pop("race")
+                with self.assertRaisesRegex(
+                        ux.SessionBlocked,
+                        "DWARF_NOT_AVAILABLE_FOR_CLASS_SELECT_RACE"):
+                    ux.user_scenario(controls)
+                controls["race"]="dwarf"
+                with self.assertRaisesRegex(
+                        ux.SessionBlocked,
+                        "DWARF_NOT_AVAILABLE_FOR_CLASS_SELECT_RACE"):
+                    ux.user_scenario(controls)
+                controls["race"]=ux.source_defaults(key)["race"]
+                self.assertEqual(ux.user_scenario(controls)["character"]["race"],
+                                 controls["race"])
+
     def test_24_compact_starter_examples_exactly_reproduce_legacy_defaults(self):
         # Pinned complete source profiles are ONLY offline comparison fixtures.
         # Runtime starter lookup cannot require those full .simc files.

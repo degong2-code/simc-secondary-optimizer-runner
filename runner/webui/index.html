@@ -32,10 +32,10 @@
               <p class="hint">원본 파일은 브라우저 내부에서만 열며 서버에 전송하거나 저장하지 않습니다. 장비·장신구·보석·현재 CHMV 데이터는 가져와 적용하지 않습니다. 전문화가 변경되면 해당 전문화 기본 입력으로 전환됩니다.</p>
             </details>
             <div class="two">
-              <div class="field"><label for="race">종족 (SimC 토큰)</label><input id="race" required spellcheck="false"></div>
+              <div class="field"><label for="race">종족 (SimC 토큰 · 선택)</label><input id="race" placeholder="미입력 시 dwarf" spellcheck="false"><p class="hint" id="race-default-note">종족 미입력 시 dwarf를 사용합니다.</p></div>
               <div class="field"><label for="ilevel">목표 아이템레벨</label><input id="ilevel" type="number" min="266" max="344" step="1" value="334" required></div>
             </div>
-            <div class="field"><label for="talents">특성 코드 <small>원본 기본 특성 자동 입력</small></label><textarea id="talents" rows="2" required spellcheck="false"></textarea></div>
+            <div class="field"><label for="talents">특성 코드 <small>선택 · 비우면 기본 대표 특성</small></label><textarea id="talents" rows="2" placeholder="직접 입력하지 않으면 기본 대표 특성 사용" spellcheck="false"></textarea><p class="hint" id="talents-default-note">특성 미입력 시 선택한 전문화의 검증된 기본 대표 특성을 사용합니다.</p></div>
             <div class="two">
               <div class="field"><label for="trinket1">장신구 1 · 이번 시즌 목록</label><select id="trinket1" required><option value="">시즌 목록 확인 중…</option></select></div>
               <div class="field"><label for="trinket2">장신구 2 · 이번 시즌 목록</label><select id="trinket2" required><option value="">시즌 목록 확인 중…</option></select></div>

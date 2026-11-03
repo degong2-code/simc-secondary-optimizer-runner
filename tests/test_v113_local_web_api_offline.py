@@ -85,6 +85,25 @@ class LocalWebAPIOffline(unittest.TestCase):
             headers={"content-type":"application/json"})
         self.assertEqual(unauthorized.status_code,403)
 
+    def test_web_environment_build_fills_optional_character_defaults(self):
+        payload={**self.payload,"current_season_product":False,
+                 "fresh_season_build":"12.2.0.99999"}
+        controls=dict(self.controls)
+        controls.pop("race");controls.pop("talents")
+        payload["controls"]=controls
+        with mock.patch.object(
+                web.environment_build,"collect_wago_new_season_source",
+                return_value={"environment_ready":False,"native_calls":0}
+                ) as called:
+            response=self.post("/api/v1/environment/build",payload)
+        self.assertEqual(response.status_code,200,response.text)
+        request=called.call_args.kwargs
+        self.assertEqual(request["g_probe_character"]["race"],"dwarf")
+        self.assertEqual(request["g_probe_character"]["talents"],
+                         sessions.source_defaults(
+                             ("paladin","retribution"))["talents"])
+        self.assertEqual(request["representative_request"]["target_ilevel"],334)
+
     def test_packaged_v213_catalog_path_is_detected_and_missing_path_falls_back(self):
         jobs=web.LocalJobs(self.root/"runs")
         expected=(pathlib.Path(web.__file__).resolve().parents[1]/

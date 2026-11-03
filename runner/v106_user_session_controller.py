@@ -199,16 +199,39 @@ def selected_rows_from_form(special_rows,crafted_rows):
 
 def user_scenario(controls):
     """Only approved v098 user fields; do not expose manifest/filler/seed."""
-    required={"class","spec","race","talents","ilevel","final_T",
+    required={"class","spec","ilevel","final_T",
               "trinket_ids","oil_hands","targets","duration_seconds",
               "raid_buffs"}
     need(type(controls) is dict and
-         required<=set(controls)<=required|OPTIONAL_CONTROLS,
+         required<=set(controls)<=required|OPTIONAL_CONTROLS|{"race","talents"},
          "USER_INPUT_FIELDS")
     key=(controls["class"],controls["spec"])
     need(key in SUPPORTED,"DPS_ARCHETYPE_NOT_READY")
-    for x in ("race","talents"):
-        bootstrap.scenario.text_token(controls[x],"USER_"+x.upper())
+    # Empty or omitted character choices have explicit, deterministic
+    # defaults; saved sessions always bind the EFFECTIVE race/talents.
+    # Do not import gear, flask, enchants or oils from a SimC sample.
+    raw_race=controls.get("race")
+    raw_talents=controls.get("talents")
+    need(raw_race is None or type(raw_race) is str,
+         "USER_RACE_TYPE_INVALID")
+    need(raw_talents is None or type(raw_talents) is str,
+         "USER_TALENTS_TYPE_INVALID")
+    race=(raw_race.strip() if raw_race else "") or "dwarf"
+    talents=(raw_talents.strip() if raw_talents else "")
+    if not talents:
+        talents=source_defaults(key)["talents"]
+    # Dwarves cannot be druids, demon hunters or evokers. Do not silently
+    # replace the user's requested dwarf default with another race.
+    need(not (race=="dwarf" and key[0] in
+              ("druid","demonhunter","evoker")),
+         "DWARF_NOT_AVAILABLE_FOR_CLASS_SELECT_RACE")
+    contract=bootstrap.pure.contracts.lookup(*key)
+    need(contract is not None and
+         (contract["allowed_races"] is None or
+          race in contract["allowed_races"]),
+         "RACE_NOT_SUPPORTED_BY_SPECIALIZATION")
+    bootstrap.scenario.text_token(race,"USER_RACE")
+    bootstrap.scenario.text_token(talents,"USER_TALENTS")
     ilvl=controls["ilevel"];final=controls["final_T"]
     need(type(ilvl) is int and 266<=ilvl<=344,"ILVL_OUT_OF_REFERENCE")
     need(final is None or type(final) is int and 1<=final<=100000,
@@ -248,8 +271,8 @@ def user_scenario(controls):
     need(len(occupied)==len(set(occupied)),
          "SELECTED_SPECIAL_AND_CRAFTED_SLOT_CONFLICT")
     output={"schema":bootstrap.SCHEMA,
-            "character":{k:controls[k] for k in
-                         ("class","spec","race","talents")},
+            "character":{"class":key[0],"spec":key[1],
+                         "race":race,"talents":talents},
             "target":{"ilevel":ilvl,"final_T":final},
             "trinkets":[{"slot":slot,"item_id":id_,"options":{}}
                 for slot,id_ in zip(("trinket1","trinket2"),trinkets)],

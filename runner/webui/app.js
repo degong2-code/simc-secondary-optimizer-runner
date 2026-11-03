@@ -264,9 +264,21 @@ function showRepresentativeScope() {
     "334 이외 목표 ilvl: 최신 시즌 대표 장비·티어·무기를 선택 레벨로 구성합니다. 기존 334 Native 결과를 다른 레벨로 확대하지 않으며, 해당 조건의 수용 여부는 실제 SimC 실행으로 판정합니다.";
 }
 
+function showCharacterDefaultHint() {
+  const item=state.defaults.find(d=>d.class+"/"+d.spec===field("spec"));
+  const unavailable=item&&["druid","demonhunter","evoker"].includes(item.class);
+  $("race-default-note").textContent=unavailable?
+    "이 직업은 dwarf 종족을 선택할 수 없습니다. 종족을 직접 입력해 주세요.":
+    "종족 미입력 시 dwarf를 사용합니다.";
+  $("talents-default-note").textContent=
+    "특성 미입력 시 선택한 전문화의 검증된 기본 대표 특성을 사용합니다.";
+}
 function fillDefault(item) {
-  $("race").value=item.race;
-  $("talents").value=item.talents;
+  // Keep optional character choices visibly unset. The backend will
+  // resolve dwarf and the verified representative talents when absent.
+  $("race").value="";
+  $("talents").value="";
+  showCharacterDefaultHint();
   setTrinketSelection("trinket1",item.trinket_ids[0]);
   setTrinketSelection("trinket2",item.trinket_ids[1]);
   $("ilevel").value=item.ilevel;
@@ -417,6 +429,7 @@ function fillSessionInputs(payload) {
   $("spec").value=spec;
   $("race").value=c.race;
   $("talents").value=c.talents;
+  showCharacterDefaultHint();
   $("ilevel").value=t.ilevel;
   $("final_T").value=t.final_T??"";
   setTrinketSelection("trinket1",u.trinkets[0].item_id,true);
@@ -495,6 +508,9 @@ function buildRequest() {
   const spec=field("spec");
   const source=state.defaults.find(d=>d.class+"/"+d.spec===spec);
   if(!source) throw Error("지원되는 전문화를 선택해 주세요.");
+  if(["druid","demonhunter","evoker"].includes(source.class)&&
+     (!field("race")||field("race")==="dwarf"))
+    throw Error("이 직업은 dwarf를 사용할 수 없습니다. 종족을 직접 선택해 주세요.");
   if(!seasonChoice("trinket",valueInt("trinket1"))||
      !seasonChoice("trinket",valueInt("trinket2")))
     throw Error("장신구 2개를 이번 시즌 목록에서 선택해 주세요.");
