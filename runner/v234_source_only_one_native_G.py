@@ -117,10 +117,11 @@ def observe(*, native_raw, profile_receipt, native_binary_sha256,
     # v046 already computed the only physical G. Standardize its TOTAL
     # exactly once, without inventing a second stat extraction or a season
     # approval. v222 will reconcile J/F/O only when those sources are proven.
+    native_sha=sha(native_raw)
     g_standard_preview=budget.standardize_representative_G(
         observed_G_total=value,
         target_ilevel=profile_receipt["target_ilevel"],
-        source_observation_sha256=sha(native_raw))
+        source_observation_sha256=native_sha)
     data={
         "schema":SCHEMA,
         "status":"REAL_NATIVE_G_OBSERVED_SEASON_MEMBERSHIP_AND_COMPILED_BUILD_PENDING",
@@ -129,7 +130,7 @@ def observe(*, native_raw, profile_receipt, native_binary_sha256,
             profile_receipt["source_candidate_receipt_sha256"],
         "binary_sha256":native_binary_sha256,
         "physical_input_sha256":executed_profile_sha256,
-        "native_json2_sha256":sha(native_raw),
+        "native_json2_sha256":native_sha,
         "source_simc_revision":profile_receipt["simc_revision"],
         "native_observed_revision":revision,
         "game_build_from_source_not_independently_binary_attested":game_build,
