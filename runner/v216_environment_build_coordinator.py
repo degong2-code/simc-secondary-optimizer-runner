@@ -19,6 +19,7 @@ from urllib.request import Request, urlopen
 
 import v212_environment_manifest as environment_manifest
 import v222_season_budget_contract as season_budget_contract
+import v262_standardized_ilevel_budget_rows as standardized_budget_rows
 import v221_gem_item_db2_relation as gem_item_join
 import v223_installed_season_budget_source as season_source_proof
 import v213_source_to_catalog as source_to_catalog
@@ -295,7 +296,9 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                                 expected_simc_revision, budget_evidence=None,
                                 target_ilevel=None, manual_final_T=None,
                                 source_snapshot_folder=None,
-                                source_stage_root=None):
+                                source_stage_root=None,
+                                standard_budget_evidence_by_ilevel=None,
+                                standard_budget_reference_track=None):
     """Inspect a freshly assembled v213 artifact in the NORMAL Build path.
 
     This does not install an environment or require previously held source
@@ -348,6 +351,27 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
     # exists. Only arithmetic/identity is tested here: a self-declared
     # "verified" label cannot authenticate Wago/SimC/Native provenance.
     # The top-level G/J/F/O/B/T remain null and installation remains blocked.
+    # Consume already-measured ilvl rows using v262/v222, not a new engine.
+    need((standard_budget_evidence_by_ilevel is None) ==
+         (standard_budget_reference_track is None),
+         "V216_STANDARD_BUDGET_LEVELS_AND_TRACK_MUST_BE_PAIRED")
+    standard_table = None
+    if standard_budget_evidence_by_ilevel is not None:
+        try:
+            standard_table = standardized_budget_rows.build(
+                source_catalog=source, source_artifact_sha256=raw_sha,
+                evidence_by_ilevel=standard_budget_evidence_by_ilevel,
+                reference_track=standard_budget_reference_track)
+        except season_budget_contract.SeasonBudgetBlocked as exc:
+            raise EnvironmentBuildBlocked(
+                "V216_STANDARD_BUDGET_ROWS_INVALID:" + str(exc)) from exc
+        if target_ilevel is not None:
+            need(target_ilevel in standard_budget_evidence_by_ilevel,
+                 "V216_TARGET_ILEVEL_G_OBSERVATION_NOT_PROVIDED")
+            target_evidence = standard_budget_evidence_by_ilevel[target_ilevel]
+            need(budget_evidence is None or budget_evidence == target_evidence,
+                 "V216_STANDARD_BUDGET_TARGET_EVIDENCE_CONFLICT")
+            budget_evidence = target_evidence
     need(budget_evidence is not None or
          (target_ilevel is None and manual_final_T is None),
          "V216_PREPROFILE_BUDGET_INPUT_INCOMPLETE")
@@ -401,6 +425,8 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
         payload["proposed_budget_arithmetic_unadmitted"] = proposed_budget
         payload["requires"].append(
             "INDEPENDENT_GJFO_SOURCE_ORIGIN_AND_RATING_AUTHENTICATION")
+    if standard_table is not None:
+        payload["standardized_ilevel_budget_rows_unadmitted"] = standard_table
     return {**payload,"preflight_sha256":
         digest(canonical(payload).encode("utf8"))}
 
@@ -1932,7 +1958,9 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                       profile_stage_receipt=None, season_budget_evidence=None,
                       season_budget_source_paths=None,
                       expected_new_season_build=None,
-                      fresh_source_stage_inputs=None):
+                      fresh_source_stage_inputs=None,
+                      fresh_standard_budget_evidence_by_ilevel=None,
+                      fresh_standard_budget_reference_track=None):
     """Reconcile existing inputs and seal one incremental, auditable build.
 
     Source acquisition is intentionally outside this local coordinator:
@@ -1990,7 +2018,21 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     expected_game_build=expected_new_season_build,
                     expected_simc_revision=revision,
                     source_snapshot_folder=fresh_snapshot_folder,
-                    source_stage_root=fresh_stage_root)
+                    source_stage_root=fresh_stage_root,
+                    standard_budget_evidence_by_ilevel=(
+                        fresh_standard_budget_evidence_by_ilevel),
+                    standard_budget_reference_track=(
+                        fresh_standard_budget_reference_track),
+                    target_ilevel=(
+                        user["target"]["ilevel"]
+                        if fresh_standard_budget_evidence_by_ilevel is not None
+                        and type(user) is dict
+                        and type(user.get("target")) is dict else None),
+                    manual_final_T=(
+                        user["target"].get("final_T")
+                        if fresh_standard_budget_evidence_by_ilevel is not None
+                        and type(user) is dict
+                        and type(user.get("target")) is dict else None))
                 raise EnvironmentBuildBlocked(
                     "V216_FRESH_SOURCE_PROVENANCE_PASS_GJFO_NOT_READY:"
                     +preflight["preflight_sha256"])
