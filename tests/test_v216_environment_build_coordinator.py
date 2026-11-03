@@ -146,9 +146,10 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                                return_value={"v231_candidate":tier}) as match:
             first=v216._one_spec_source_G_probe_stage(**kwargs)
             second=v216._one_spec_source_G_probe_stage(**kwargs)
-        self.assertEqual(match.call_count,1)
         self.assertEqual(first["status"],
-            "FRESH_ONE_SPEC_PHYSICAL_G_PROFILE_PREPARED_NATIVE_PENDING")
+            "FRESH_ONE_SPEC_PHYSICAL_G_PROFILE_PREPARED_NATIVE_PENDING",
+            str(first))
+        self.assertEqual(match.call_count,1)
         self.assertEqual(first["source_stage"]["status"],
                          "EXECUTED_AND_SEALED")
         self.assertEqual(second["source_stage"]["status"],
