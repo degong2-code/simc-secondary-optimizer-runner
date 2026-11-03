@@ -8,6 +8,7 @@ from unittest import mock
 
 from runner import v250_raid_tier_bonus_corroboration as v250
 from runner import v251_db2_raid_tier_simc_bridge as bridge
+from runner import v261_tier_source_evidence_reuse as reuse
 from runner import v229_simc_only_source_seed as seed
 from tests.test_v229_simc_only_source_seed import raw_sources,OLD
 from tests.test_v250_raid_tier_bonus_corroboration import (
@@ -224,7 +225,7 @@ class DB2SimCBridgeTests(unittest.TestCase):
             receipt,groups=bridge.simc_tier.read_receipt(d)
             exact=bridge.match_first_party_roster(
                 candidate=candidate,simc_receipt=receipt,simc_set_groups=groups)
-            selected=bridge.reuse_existing_tier_source(
+            selected=reuse.reuse_existing_tier_source(
                 physical_candidate=candidate,exact_match=exact,
                 cls="paladin",spec="retribution")
             self.assertEqual(selected["status"],
@@ -243,7 +244,7 @@ class DB2SimCBridgeTests(unittest.TestCase):
                 selected["selected_for_request"]["four_piece_item_ids"],
                 {s:candidate["classes"]["paladin"]["tier_piece_ids"][s]
                  for s in bridge.FOUR})
-            entire=bridge.reuse_existing_tier_source(
+            entire=reuse.reuse_existing_tier_source(
                 physical_candidate=candidate,exact_match=exact)
             self.assertIsNone(entire["selected_for_request"])
 
@@ -259,23 +260,23 @@ class DB2SimCBridgeTests(unittest.TestCase):
             altered["classes"]["paladin"]["tier_piece_ids"]["head"]+=999
             with self.assertRaisesRegex(bridge.BridgeBlocked,
                     "REUSE_EXACT_SIMC_SOURCE_PROOF"):
-                bridge.reuse_existing_tier_source(
+                reuse.reuse_existing_tier_source(
                     physical_candidate=altered,exact_match=exact,
                     cls="paladin",spec="retribution")
             changed=json.loads(json.dumps(exact))
             changed["classes"]["paladin"]["item_set_id"]+=1
             with self.assertRaisesRegex(bridge.BridgeBlocked,
                     "REUSE_EXACT_CLASS_PHYSICAL_OR_BONUS_DRIFT"):
-                bridge.reuse_existing_tier_source(
+                reuse.reuse_existing_tier_source(
                     physical_candidate=candidate,exact_match=changed)
             with self.assertRaisesRegex(bridge.BridgeBlocked,
                     "REUSE_26_DPS_REQUEST_REQUIRED"):
-                bridge.reuse_existing_tier_source(
+                reuse.reuse_existing_tier_source(
                     physical_candidate=candidate,exact_match=exact,
                     cls="paladin",spec="holy")
             with self.assertRaisesRegex(bridge.BridgeBlocked,
                     "REUSE_EXACT_SIMC_SOURCE_PROOF_REQUIRED"):
-                bridge.reuse_existing_tier_source(
+                reuse.reuse_existing_tier_source(
                     physical_candidate=candidate,exact_match={})
 
     def test_first_party_missing_or_changed_source_fails_not_guessed(self):
