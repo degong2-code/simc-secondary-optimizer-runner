@@ -236,7 +236,7 @@ class SeasonBudgetContractTests(unittest.TestCase):
         self.assertFalse(preview["environment_ready"])
         self.assertEqual(preview["proposed_budget_arithmetic_unadmitted"][
             "final_T"], 3182)
-        self.assertIn("INDEPENDENT_GJFO_SOURCE_ORIGIN_AND_RATING_AUTHENTICATION",
+        self.assertIn("GJFO_EXISTING_SOURCE_RECEIPT_AND_SELECTED_ITEM_LINK_PENDING",
                       preview["requires"])
 
     def test_current_season_reconciles_without_native_or_ready_claim(self):
