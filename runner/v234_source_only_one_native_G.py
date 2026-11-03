@@ -22,10 +22,12 @@ try:
     from . import v046_static_item_cache as static
     from . import v229_simc_only_source_seed as seed
     from . import v233_source_only_G_probe_profile as compiler
+    from . import v222_season_budget_contract as budget
 except ImportError:
     import v046_static_item_cache as static
     import v229_simc_only_source_seed as seed
     import v233_source_only_G_probe_profile as compiler
+    import v222_season_budget_contract as budget
 
 SCHEMA="v234_one_source_only_physical_native_G_observation_v1"
 HEX64=re.compile(r"[a-f0-9]{64}\Z")
@@ -112,6 +114,13 @@ def observe(*, native_raw, profile_receipt, native_binary_sha256,
          sum(vector.values())==value and
          all(type(vector[k]) is int and vector[k]>=0 for k in static.STATS),
          "V234_NATIVE_STATIC_G_NUMERIC_INVALID")
+    # v046 already computed the only physical G. Standardize its TOTAL
+    # exactly once, without inventing a second stat extraction or a season
+    # approval. v222 will reconcile J/F/O only when those sources are proven.
+    g_standard_preview=budget.standardize_representative_G(
+        observed_G_total=value,
+        target_ilevel=profile_receipt["target_ilevel"],
+        source_observation_sha256=sha(native_raw))
     data={
         "schema":SCHEMA,
         "status":"REAL_NATIVE_G_OBSERVED_SEASON_MEMBERSHIP_AND_COMPILED_BUILD_PENDING",
@@ -129,6 +138,7 @@ def observe(*, native_raw, profile_receipt, native_binary_sha256,
         "matching_nontrinket_G_slots":len(observed),
         "observed_G_vector":vector,
         "observed_G_total":value,
+        "standardized_G_preview_unapproved":g_standard_preview,
         "source_current_season_membership_verified":False,
         "native_compiled_game_build_independently_verified":False,
         "full_G_approved":False,
