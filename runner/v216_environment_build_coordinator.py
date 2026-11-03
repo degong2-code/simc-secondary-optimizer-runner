@@ -446,6 +446,42 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
     need((standard_budget_evidence_by_ilevel is None) ==
          (standard_budget_reference_track is None),
          "V216_STANDARD_BUDGET_LEVELS_AND_TRACK_MUST_BE_PAIRED")
+    # A normal Environment Build already has the actual v234 observed-G
+    # receipt. When J/F/O evidence is present but G was not transcribed,
+    # construct that one v222 G component directly from the Native bytes.
+    # It is still a candidate arithmetic input, not environment admission.
+    native_G_filled_levels=[]
+    if (existing_G_rows is not None
+            and standard_budget_evidence_by_ilevel is not None):
+        need(set(existing_G_rows)==set(standard_budget_evidence_by_ilevel),
+             "V216_G_NATIVE_V262_LEVEL_SET_MISMATCH")
+        populated={}
+        for level,evidence in standard_budget_evidence_by_ilevel.items():
+            need(type(evidence) is dict and
+                 type(evidence.get("components")) is dict,
+                 "V216_GJFO_EVIDENCE_COMPONENTS_OBJECT_REQUIRED")
+            components=evidence["components"]
+            if components.get("G") is None:
+                observed=existing_G_rows[level]
+                need(observed["generic_G_numeric_reference_usable"] is True,
+                     "V216_G_NATIVE_GENERIC_PHYSICAL_CONDITIONS_MISSING")
+                rounded=observed["standardization"]
+                g_component={
+                    "rating":rounded["standardized_G"],
+                    "game_build":source["game_build"],
+                    "source_catalog_manifest_sha256":source["manifest_sha256"],
+                    "source_sha256":observed["native_json2_sha256"],
+                    "source_verification":"EXACT_NATIVE",
+                    "standardization":rounded,
+                    "reference_track":standard_budget_reference_track,
+                }
+                populated[level]={
+                    **evidence,
+                    "components":{**components,"G":g_component}}
+                native_G_filled_levels.append(level)
+            else:
+                populated[level]=evidence
+        standard_budget_evidence_by_ilevel=populated
     standard_table = None
     if standard_budget_evidence_by_ilevel is not None:
         try:
@@ -531,6 +567,9 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
             "GJFO_EXISTING_SOURCE_RECEIPT_AND_SELECTED_ITEM_LINK_PENDING")
     if standard_table is not None:
         payload["standardized_ilevel_budget_rows_unadmitted"] = standard_table
+    if native_G_filled_levels:
+        payload["G_levels_filled_from_existing_v234_native"] = sorted(
+            native_G_filled_levels)
     if existing_G_rows is not None:
         payload["measured_ilevel_G_from_existing_native_unadmitted"] = (
             [existing_G_rows[k] for k in sorted(existing_G_rows)])
