@@ -1,0 +1,45 @@
+name: Secondary Optimizer — Reusable Offline Focused Checks
+
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - 'runner/**'
+      - 'integration_probes/**'
+      - 'tests/**'
+      - 'tools/check_development_ledger.py'
+      - 'docs/development/**'
+      - '.github/workflows/offline_focused_continuity.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: secondary-offline-focused-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  reuse-existing-proofs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Check compact developer ledger (offline, zero Native)
+        run: python tools/check_development_ledger.py
+      - name: Focused shared source/budget/SimC snapshot regression (offline)
+        env:
+          PYTHONPATH: runner:integration_probes:.
+        run: |
+          python -m unittest -v \
+            tests.test_v269_simc_chmv_effect_snapshot \
+            tests.test_v198_targeted_enchant_native_rating \
+            tests.test_v222_season_budget_contract \
+            tests.test_v264_environment_standard_budget_integration \
+            tests.test_v266_v268_gem_enchant_source_reuse
