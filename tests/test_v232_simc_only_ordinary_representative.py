@@ -106,6 +106,8 @@ class SourceOnlyRepresentativeTests(unittest.TestCase):
         self.assertEqual(ids["legs"],9004)
         self.assertEqual(row["character"]["weapon_form"],"single_two_hand")
         self.assertTrue(row["item_effects_absence_not_proven"])
+        self.assertFalse(row["generic_G_physical_conditions_verified"])
+        self.assertFalse(row["generic_G_current_season_membership_required"])
         self.assertFalse(row["tier_set_current_season_authenticated"])
         self.assertIsNone(row["G"])
         self.assertIsNone(row["B"])
@@ -163,6 +165,9 @@ class SourceOnlyRepresentativeTests(unittest.TestCase):
         self.assertEqual(preferred["selected_gear_season_source_kinds"]["wrists"],
                          ["raid_journal"])
         self.assertIsNone(preferred["G"])
+        self.assertTrue(preferred["generic_G_physical_conditions_verified"])
+        self.assertTrue(preferred["generic_G_plain_item_effect_relation_checked"])
+        self.assertFalse(preferred["generic_G_current_season_membership_required"])
         self.assertFalse(preferred["environment_ready"])
         self.assertTrue(preferred["same_season_membership_not_proven"])
         text,receipt=compiler.build(
@@ -171,6 +176,8 @@ class SourceOnlyRepresentativeTests(unittest.TestCase):
             level=90,season_gear_db=season)
         self.assertIn("wrists=simc_source_9028,id=9028",text)
         self.assertEqual(receipt["native_calls"],0)
+        self.assertTrue(receipt["generic_G_physical_conditions_verified"])
+        self.assertFalse(receipt["generic_G_current_season_membership_required"])
         with self.assertRaisesRegex(compiler.ProbeBlocked,
                                     "REPLAY_DRIFT"):
             compiler.build(
@@ -246,6 +253,10 @@ class SourceOnlyRepresentativeTests(unittest.TestCase):
             "wrists"]["season_membership_authenticated"])
         self.assertTrue(picked["tier_active_season_membership_not_authenticated"])
         self.assertTrue(picked["selected_G_source_candidate_not_approved"])
+        # Unscoped raid, Localbots and WSE!=0 do not invalidate the
+        # ordinary physical G budget if the category/primary is correct.
+        self.assertTrue(picked["generic_G_physical_conditions_verified"])
+        self.assertFalse(picked["generic_G_current_season_membership_required"])
         self.assertIsNone(picked["G"])
         self.assertFalse(picked["environment_ready"])
 
@@ -295,6 +306,7 @@ class SourceOnlyRepresentativeTests(unittest.TestCase):
         self.assertEqual(detail["world_state_expression_ids"],[441])
         self.assertTrue(detail["same_display_season_worldstate_pending"])
         self.assertFalse(detail["G_source_approved"])
+        self.assertTrue(picked["generic_G_physical_conditions_verified"])
         self.assertIsNone(picked["G"])
         self.assertFalse(picked["environment_ready"])
         text,receipt=compiler.build(
@@ -303,6 +315,20 @@ class SourceOnlyRepresentativeTests(unittest.TestCase):
             level=90,season_gear_db=db)
         self.assertIn("feet=simc_source_9022,id=9022",text)
         self.assertEqual(receipt["native_calls"],0)
+
+    def test_selected_plain_armor_wrong_primary_blocks_g_not_season(self):
+        # Same slot, class, quality and base ilvl are insufficient when a
+        # plate chest has NO valid main-stat row for this specialization.
+        files=make_fixture()
+        raw=files["item_data.inc"]
+        before=b'"rep_9020", 9020, 0, 0, 0, 335, 80, 0, 0, 4, 5, 4, 4, 0, 0.0, 0.0, 0.0, &__item_stats_data[0], 1, 0x2'
+        after=b'"rep_9020", 9020, 0, 0, 0, 335, 80, 0, 0, 4, 5, 4, 4, 0, 0.0, 0.0, 0.0, 0, 0, 0x2'
+        self.assertIn(before,raw)
+        files["item_data.inc"]=raw.replace(before,after,1)
+        self.seed_files(files)
+        with self.assertRaisesRegex(builder.SourceRepresentativeBlocked,
+                                    "ORDINARY_PRIMARY_STAT_NOT_COMPATIBLE:chest"):
+            self.plan()
 
     def test_different_target_ilevel_does_not_infer_scaling(self):
         first=self.plan(target=335)
