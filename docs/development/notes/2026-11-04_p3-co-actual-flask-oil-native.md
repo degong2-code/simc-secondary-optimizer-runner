@@ -1,0 +1,10 @@
+# 2026-11-04 · P3-CO · 실제 핀 SimC F/O 원본 v269/v278 최소 Native 관측
+
+- **Capability:** `F.FLASK`, `O.OIL`, `BUDGET.GJFO`, `SOURCE.SEAL`, `PRODUCT.E2E`
+- **Keywords:** P3-CO, flask, oil, F/O, Native, CHMV rating, v269, v278, quality, hands, shared baseline
+- **Prior evidence:** PROTOCOL→INDEX→[P3-CN](2026-11-03_p3-cn-real-source-integration.md): 실제 빌드 12.1.5.70575의 영약 item241326→flask_of_the_shattered_sun_2, 강화 item243736→임시 마부 8054/effect spell1237001→oil_of_dawn rank2를 같은 revision SimC에 조인. [P3-CH](2026-11-03_p3-ch-flask-oil-native-pair.md): 기존 v269/v278 JSON2 delta/동일 프로필 baseline 공유, 실패 재실행 금지. v084 공식 예시 프로필·기존 v270 정확한 pin Linux binary cache.
+- **Decision:** `CONNECT` — 이미 연결된 각 물리 ID 1개의 **정적 CHMV 관측**에 한해 원래 Native 측정기를 재사용. 별도 효과 엔진/품질 인증기·독립 예산 계산기를 만들지 않는다.
+- **Changes:** 기존 v084 SimC representative 전체 장비/특성/APL은 그대로 두고 precombat의 flask 동작을 snapshot_stats 앞에 옮겨 v269 조건 충족. v278.measure 동일 profile/바이너리로 flask와 temporary_enchant 각각 1옵션, disabled baseline 공유시 Native 최대3, SHA-keyed receipt 재사용·실패 자동 재실행 없음. 결과는 F/O가 아닌 미승격 observed candidate. 이전 실원본 아이템→SimC link Actions를 source identity로 명시.
+- **Verification:** 최초 실제 Native Actions 전 NOT_RUN. 기존 P3-CN 실물 조인 PASS/최종 focused144 PASS는 REUSED_HISTORY. 이번 변경의 focused CI·최대3 Native 결과는 Actions 실행 후 기록. Wago 신규 HTTP0, SimC 소스 신규 다운로드0, 바이너리 캐시만 사용.
+- **Remaining:** 두 물리 후보의 효과 동등성·최고품질 우위 및 기름의 게임상 손/무기 조건은 이번 측정으로 증명되지 않음. 실제 정적 F/O가 관측되더라도 검증된 선택지·예산 소유권과 v222 B/T, Policy A, 사용자 profile→26 DPS 적응형 E2E는 별도 연결 과제. READY/UI·F/O 수치를 조기 승격하지 않는다.
+- **Efficiency:** 기존 source 데이터·same-build SimC 바이너리 캐시 재사용; v269/v278의 baseline content SHA 공유해 최대 3번만 1-iteration Native, 동일 identity 캐시 hit 0. Native 원문 로그와 작은 결과 receipt 3일 보관, 대형 Wago·시즌 장비 DB 재수집 없음. main/immutable/Project UI/Work OS 불변.

@@ -1,0 +1,55 @@
+name: P3-CO one original pinned SimC F/O Native paired observation
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p3_co_one_actual_flask_oil_native.yml
+permissions:
+  contents: read
+concurrency:
+  group: p3-co-one-source-flask-oil-native
+  cancel-in-progress: false
+jobs:
+  original-v269-v278-pair:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Restore existing SHA-pinned Linux SimC, no rebuild/download
+        uses: actions/cache/restore@v4
+        with:
+          path: .simc-cache/v192/
+          key: v192-ubuntu2404-710c2408bfd3ae4df71b8cd55cdf01f63fd6c926-cli-r1
+      - name: Check existing executable and revision BEFORE any Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x .simc-cache/v192/simc || { echo P3_CO_CACHE_MISS_NO_NATIVE; exit 3; }
+          sha256sum -c .simc-cache/v192/simc.sha256
+          test "$(cat .simc-cache/v192/source_revision.txt)" = "710c2408bfd3ae4df71b8cd55cdf01f63fd6c926"
+          echo P3_CO_EXACT_PINNED_BINARY_AND_REVISION_READY
+      - name: Original v269/v278 paired flask/oil observations, at most 3 calls
+        shell: bash
+        env:
+          PYTHONPATH: runner:.
+        run: |
+          set -euo pipefail
+          python integration_probes/p3_co_actual_flask_oil_native.py \
+            --binary .simc-cache/v192/simc \
+            --out out/p3-co
+      - name: Retain source-only receipt and original SimC logs
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p3-co-original-native-rating-receipt
+          path: |
+            out/p3-co/P3_CO_RECEIPT.json
+            out/p3-co/source/v278_*/receipt.json
+            out/p3-co/source/v278_*/simc.log
+          if-no-files-found: warn
+          retention-days: 3

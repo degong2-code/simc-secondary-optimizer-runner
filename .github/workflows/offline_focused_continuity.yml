@@ -53,6 +53,7 @@ jobs:
             tests.test_v276_sealed_tier_compiler_source \
             tests.test_v277_zero_history_native_G_stage \
             tests.test_v278_sealed_simc_consumable_native_pair \
+            tests.test_p3_co_actual_flask_oil_native \
             tests.test_v280_consumable_item_use_spell_source \
             tests.test_v281_consumable_simc_relation \
             tests.test_v230_simc_item_metadata \
