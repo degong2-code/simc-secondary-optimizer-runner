@@ -36,7 +36,8 @@ def csvrows(path,required):
 def integer(value,code):
     try:return int(value)
     except (ValueError,TypeError):raise ConsumableJoinBlocked(code)
-def build(discovered,snapshot_folder,*,expected_build,expansion_id):
+def build(discovered,snapshot_folder,*,expected_build,expansion_id,
+          verified_tables=None):
     need(type(discovered) is dict and discovered.get("schema")==
          "v189_pinned_simc_effect_registration_candidates_v1" and
          discovered.get("auto_promote_to_user_ui") is False,
@@ -52,14 +53,24 @@ def build(discovered,snapshot_folder,*,expected_build,expansion_id):
          receipt.get("build")==expected_build and receipt.get("locale")=="enUS",
          "V161_SNAPSHOT_BUILD_OR_LOCALE_MISMATCH")
     actual={}
+    if verified_tables is not None:
+        need(type(verified_tables) is dict and
+             set(verified_tables)=={"Item","ItemSparse"},
+             "V217_VERIFIED_TABLE_SET_MISMATCH")
     for table in ("Item","ItemSparse"):
         path=root/(table+".csv")
         recorded=receipt.get("tables",{}).get(table,{})
         need(type(recorded.get("sha256")) is str and
-             path.is_file() and
-             recorded.get("bytes")==path.stat().st_size and
-             sha_file(path)==recorded["sha256"],
+             path.is_file() and not path.is_symlink() and
+             recorded.get("bytes")==path.stat().st_size,
              "V161_TABLE_SHA_MISMATCH:"+table)
+        if verified_tables is None:
+            need(sha_file(path)==recorded["sha256"],
+                 "V161_TABLE_SHA_MISMATCH:"+table)
+        else:
+            need(verified_tables[table]=={"sha256":recorded["sha256"],
+                                         "bytes":recorded["bytes"]},
+                 "V217_VERIFIED_TABLE_PROVENANCE_MISMATCH:"+table)
         actual[table]={"sha256":recorded["sha256"],
                        "bytes":recorded["bytes"]}
     # Keep only consumables of the two legal subclasses, not all items:
