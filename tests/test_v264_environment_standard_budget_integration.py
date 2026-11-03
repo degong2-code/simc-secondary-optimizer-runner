@@ -334,6 +334,55 @@ class StandardBudgetNormalBuildTests(unittest.TestCase):
             self.assertFalse(result["environment_ready"])
             self.assertEqual(result["network_calls"],0)
 
+    def test_v216_reuses_existing_simc_flask_snapshot_without_F_or_O_admission(self):
+        from tests.test_v269_simc_chmv_effect_snapshot import PROFILE, report
+        catalog,_,ui=prepared()
+        with tempfile.TemporaryDirectory() as d:
+            root=pathlib.Path(d)
+            supplied=root/"v213.json"
+            supplied.write_text("{}",encoding="utf8")
+            profile=root/"profile.simc"
+            profile.write_text(PROFILE,encoding="utf8")
+            base=root/"before.json"
+            active=root/"after.json"
+            rev=catalog["simc_revision"][:10]
+            base.write_bytes(report({},rev=rev))
+            active.write_bytes(report(
+                {"flask":"flask_of_the_magisters_2"},crit=2566,rev=rev))
+            case={
+                "source_profile_path":profile,
+                "kind":"flask","token":"flask_of_the_magisters_2",
+                "baseline_json2_path":base,
+                "active_json2_path":active,
+                "binary_sha256":"b"*64,
+            }
+            with mock.patch.object(build.environment_manifest,"read_json",
+                                   return_value=(catalog,"a"*64)), \
+                 mock.patch.object(build.source_to_catalog,"verify_catalog"), \
+                 mock.patch.object(build.user_catalog,"public_options",
+                                   return_value=ui):
+                result=build.preflight_new_season_source(
+                    source_catalog_path=supplied,
+                    expected_game_build=catalog["game_build"],
+                    expected_simc_revision=catalog["simc_revision"],
+                    simc_effect_snapshot_case=case)
+                delta=result["simc_native_effect_rating_delta_unadmitted"]
+                self.assertEqual(delta["static_CHMV_candidate"]["crit_rating"],66)
+                self.assertEqual(delta["kind"],"flask")
+                self.assertIsNone(delta["F"])
+                self.assertIsNone(result["F"])
+                self.assertFalse(result["environment_ready"])
+                self.assertEqual(result["native_calls"],0)
+                active.write_bytes(report({},rev=rev))
+                with self.assertRaisesRegex(
+                        build.EnvironmentBuildBlocked,
+                        "SIMC_EFFECT_NATIVE_DELTA_INVALID"):
+                    build.preflight_new_season_source(
+                        source_catalog_path=supplied,
+                        expected_game_build=catalog["game_build"],
+                        expected_simc_revision=catalog["simc_revision"],
+                        simc_effect_snapshot_case=case)
+
     def test_existing_normal_build_entry_passes_rows_and_user_manual_T(self):
         catalog, table, _ = prepared()
         with tempfile.TemporaryDirectory() as d:
