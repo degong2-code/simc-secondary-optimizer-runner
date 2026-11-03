@@ -2016,11 +2016,15 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
     verified_wago_tables={t:{"sha256":stage_doc["outputs"][t]["sha256"],
                              "bytes":stage_doc["outputs"][t]["size"]}
                           for t in wago_snapshot.TABLES}
-    # One extra missing gem enchant source, without touching the already
-    # sealed ten-table v161 Wago snapshot. Injected transports stay offline.
-    if fetch is not None and gem_enchant_transport is None:
+    # Optional forensic fallback only: SimC's measured rating is the
+    # preferred numerical owner. Do not download another DB2 table during
+    # every ordinary season Build when the raw enchant-point rows are not
+    # needed. Existing sealed CSV remains readable by the local preflight.
+    if gem_enchant_transport is None:
         gem_enchant_csv={
-            "status":"GEM_ENCHANT_INJECTED_TRANSPORT_PENDING",
+            "status":("GEM_ENCHANT_INJECTED_TRANSPORT_PENDING"
+                      if fetch is not None else
+                      "GEM_ENCHANT_OPTIONAL_DBC_SOURCE_NOT_REQUESTED"),
             "candidate_path":None,"network_calls_by_stage":0,
             "J":None,"native_calls":0,"environment_ready":False}
     else:
