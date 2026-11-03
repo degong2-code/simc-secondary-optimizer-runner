@@ -12,17 +12,19 @@ from pathlib import Path
 SCHEMA="v190_same_build_consumable_item_candidates_v1"
 MAX_TABLE=210_000_000
 MAX_ROWS=1_000_000
-# Retail Enum.ItemConsumableSubclass values, confirmed against actual DB2
-# ClassID/SubclassID fields. Subclass 6 is a *broad* item-enhancement
-# category, NOT proof that an item is a supported weapon oil.
+# Exact Wago 12.1.5.70575 Item.csv proved oil IDs 243733/243734 are
+# Consumable(0)/Other(8), NOT obsolete Consumable(0)/Enhancement(6).
+# Both broad families remain SOURCE candidates, never proof of weapon oil.
 FOOD_CLASS_SUBCLASS=(0,5)
 POTION_CLASS_SUBCLASS=(0,1)
 FLASK_CLASS_SUBCLASS=(0,3)
-ITEM_ENHANCEMENT_CLASS_SUBCLASS=(0,6)
+ITEM_ENHANCEMENT_CLASS_SUBCLASS=(0,6)  # obsolete; preserve historical rows
+OTHER_CONSUMABLE_CLASS_SUBCLASS=(0,8)  # real oil-containing broad category
 CATEGORIES={
     FOOD_CLASS_SUBCLASS:"food",POTION_CLASS_SUBCLASS:"potion",
     FLASK_CLASS_SUBCLASS:"flask",
     ITEM_ENHANCEMENT_CLASS_SUBCLASS:"item_enhancement",
+    OTHER_CONSUMABLE_CLASS_SUBCLASS:"item_enhancement",
 }
 class ConsumableJoinBlocked(ValueError):pass
 def need(ok,why):
@@ -83,8 +85,8 @@ def build(discovered,snapshot_folder,*,expected_build,expansion_id,
                  "V217_VERIFIED_TABLE_PROVENANCE_MISMATCH:"+table)
         actual[table]={"sha256":recorded["sha256"],
                        "bytes":recorded["bytes"]}
-    # One original Item/ItemSparse scan covers the four scoped consumable
-    # subclasses; no full item DB, name matching or oil token guesses.
+    # One original Item/ItemSparse scan covers five class/subclass pairs;
+    # broad (0,8) Other is only an oil source candidate, never certification.
     base={}
     for row in csvrows(root/"Item.csv",
                        ("ID","ClassID","SubclassID","InventoryType")):
@@ -118,6 +120,8 @@ def build(discovered,snapshot_folder,*,expected_build,expansion_id,
             "weapon_oil_identity":("NOT_ESTABLISHED"
                 if item["kind"]=="item_enhancement" else "NOT_APPLICABLE"),
             "source_only_subclass_not_effect_proof":True,
+            "broad_other_consumable_candidate":item["kind"]=="item_enhancement"
+                and family==OTHER_CONSUMABLE_CLASS_SUBCLASS,
             "native_acceptance":"NOT_CHECKED",
             "ui_selectable":False})
         selected.append(item)

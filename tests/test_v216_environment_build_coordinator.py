@@ -568,7 +568,7 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         self.assertEqual({row["item_id"] for row in candidate["items"]},
                          {101,102,105,106})
         self.assertEqual(first["source_stage"]["stage_id"],
-                         "fresh-v189-v190-consumable-physical-four-class")
+                         "fresh-v189-v190-consumable-physical-other")
         self.assertFalse(candidate["automatic_ui_promotion"])
         self.assertTrue(all(row["ui_selectable"] is False
                             for row in candidate["items"]))

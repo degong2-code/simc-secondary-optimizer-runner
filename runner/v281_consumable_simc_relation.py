@@ -312,6 +312,15 @@ def collect(*,stage_root,build,consumables,compiler_source,
     root=Path(stage_root).resolve()
     src=consumables or {}
     compiler=compiler_source or {}
+    corrected=(src.get("source_stage",{}).get("stage_id")==
+        "fresh-consumable-item-use-spell-source-other")
+    outputs=({"spell_effect":"source/v284_SpellEffect.csv",
+              "candidate":"source/v284_simc_consumable_relations.json"}
+             if corrected else OUT)
+    stage_id=("fresh-consumable-simc-spell-effect-source-other"
+              if corrected else "fresh-consumable-simc-spell-effect-source")
+    stage_version=("v281-real-other-consumables-v2" if corrected
+                   else "v281-same-build-db2-simc-source-join-v1")
     if (src.get("source_stage",{}).get("status") not in STAGED
         or compiler.get("source_stage",{}).get("status") not in STAGED
         or not src.get("candidate_path") or not compiler.get("source_dir")):
@@ -345,7 +354,7 @@ def collect(*,stage_root,build,consumables,compiler_source,
             "User-Agent":"SIMC-Secondary-v281-ConsumableJoin/1.0",
             "Accept":"text/csv"})
         calls[0]+=1
-        target=root/OUT["spell_effect"]
+        target=root/outputs["spell_effect"]
         target.parent.mkdir(parents=True,exist_ok=True)
         total=0
         with (urlopen if transport is None else transport)(request,timeout=75) as resp:
@@ -367,7 +376,7 @@ def collect(*,stage_root,build,consumables,compiler_source,
                          flask_dbc_rows=simc_rows)
         result["simc_relation_source"]["flask_dbc_status"]=status
         result["simc_relation_source"]["item_data_sha256"]=item_sha
-        (root/OUT["candidate"]).write_text(
+        (root/outputs["candidate"]).write_text(
             json.dumps(result,sort_keys=True,ensure_ascii=False,
                        indent=2,allow_nan=False)+"\n",encoding="utf8")
     def validate(paths):
@@ -387,8 +396,8 @@ def collect(*,stage_root,build,consumables,compiler_source,
     # Read verified small input bytes once, no old-season/static/DPS cache.
     try:
         stage=stages.execute_stage(
-            root=root,stage_id="fresh-consumable-simc-spell-effect-source",
-            stage_version="v281-same-build-db2-simc-source-join-v1",
+            root=root,stage_id=stage_id,
+            stage_version=stage_version,
             inputs={
                 "game_build":build,
                 "v280_receipt":src["source_stage"]["receipt_sha256"],
@@ -397,15 +406,15 @@ def collect(*,stage_root,build,consumables,compiler_source,
                 "temporary_enchant_sha256":digest(temp_raw),
                 "item_data_sha256":item_sha,
                 "code_sha256":fingerprint["sha256"]},
-            outputs=OUT,execute=execute,validate=validate)
+            outputs=outputs,execute=execute,validate=validate)
     except (stages.StageExecutionBlocked,SimCRelationBlocked,
             metadata.ItemMetadataBlocked,season.CatalogBlocked,
             OSError,ValueError,KeyError,TypeError) as exc:
         return {**pending(str(exc).split(":",1)[0]),
                 "network_calls_by_stage":calls[0]}
-    result=json.loads((root/OUT["candidate"]).read_text("utf8"))
+    result=json.loads((root/outputs["candidate"]).read_text("utf8"))
     return {"schema":SCHEMA,"status":"SIMC_CONSUMABLE_RELATIONS_SOURCE_ONLY",
-            "candidate_path":str((root/OUT["candidate"]).resolve()),
+            "candidate_path":str((root/outputs["candidate"]).resolve()),
             "source_stage":{k:v for k,v in stage.items() if k!="result"},
             "counts":result["simc_relation_source"],
             "network_calls_by_stage":calls[0],"native_calls":0,

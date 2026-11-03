@@ -113,6 +113,40 @@ class ConsumptionRelation(unittest.TestCase):
                 self.assertEqual(blocked["status"],"CONSUMABLE_SIMC_RELATION_SOURCE_PENDING")
                 self.assertEqual(blocked["network_calls_by_stage"],0)
                 self.assertEqual(len(hits),1)
+    def test_v284_successor_only_for_real_other_source_stage(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            source=root/"source";source.mkdir()
+            candidate=source/"v283.json"
+            candidate.write_text(json.dumps(SOURCE),encoding="utf8")
+            compiler=root/"simc";compiler.mkdir()
+            (compiler/"temporary_enchant.inc").write_bytes(TEMP)
+            cons={"candidate_path":str(candidate),"source_stage":{
+                "status":"EXECUTED_AND_SEALED","receipt_sha256":"a"*64,
+                "stage_id":"fresh-consumable-item-use-spell-source-other"}}
+            simc={"source_dir":str(compiler),"source_stage":{
+                "status":"EXECUTED_AND_SEALED","receipt_sha256":"b"*64}}
+            full={"source_dir":str(root/"full"),"source_stage":{
+                "status":"EXECUTED_AND_SEALED","receipt_sha256":"c"*64}}
+            hits=[]
+            def transport(req,timeout):
+                hits.append(req.full_url)
+                return Response(CSV)
+            args=dict(stage_root=root,build=BUILD,consumables=cons,
+                      compiler_source=simc,full_simc_item_source=full,
+                      transport=transport)
+            with mock.patch.object(v281,"_full_seed_identity",
+                                   return_value="f"*64),\
+                 mock.patch.object(v281,"_flask_from_sealed_item_data",
+                                   return_value=(FLASK,"EXACT","f"*64)):
+                first=v281.collect(**args)
+                self.assertEqual(first["source_stage"]["stage_id"],
+                                 "fresh-consumable-simc-spell-effect-source-other")
+                self.assertIn("v284_",first["candidate_path"])
+                again=v281.collect(**args)
+                self.assertEqual(again["network_calls_by_stage"],0)
+                self.assertEqual(len(hits),1)
+
     def test_missing_exact_sources_zero_network(self):
         with tempfile.TemporaryDirectory() as td:
             result=v281.collect(stage_root=td,build=BUILD,consumables={},

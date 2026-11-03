@@ -1129,9 +1129,10 @@ def _fresh_consumable_item_source_stage(*, stage_root, wago_folder,
          "V216_CONSUMABLE_V163_SEASON_SCOPE_DRIFT")
     root=pathlib.Path(stage_root)
     # Successor source stage: preserve historical v258 sealed bytes; the
-    # broadened four-subclass raw source needs a new immutable receipt/output
-    # identity but no new Wago download or additional SimC source HTTP.
-    prefix="source/v279_same_season_consumable_"
+    # A real Wago-confirmed (0,8) Other consumable contains oils. Preserve
+    # earlier v258/v279 receipts; successor v282 seals the corrected scope
+    # without a new Item/Sparse download or additional SimC source HTTP.
+    prefix="source/v282_same_season_consumable_"
     outputs={
         "simc_source":prefix+"unique_gear_midnight.cpp",
         "v189":prefix+"v189_handlers.json",
@@ -1196,8 +1197,8 @@ def _fresh_consumable_item_source_stage(*, stage_root, wago_folder,
                     for item in second.get("items",[])))
     try:
         stage=stage_engine.execute_stage(
-            root=root,stage_id="fresh-v189-v190-consumable-physical-four-class",
-            stage_version="one-pinned-handler-plus-existing-wago-v2",
+            root=root,stage_id="fresh-v189-v190-consumable-physical-other",
+            stage_version="same-build-real-other-consumable-v3",
             inputs={"game_build":build,"expansion_id":expansion,
                     "simc_revision":revision,
                     "simc_seed_receipt_sha256":digest(receipt_raw),

@@ -161,6 +161,15 @@ def collect(*, stage_root, build, fresh_gear, consumables, transport=None):
     root=Path(stage_root).resolve()
     gear_stage=(fresh_gear or {}).get("source_stage") or {}
     consumable_stage=(consumables or {}).get("source_stage") or {}
+    corrected=(consumable_stage.get("stage_id")==
+        "fresh-v189-v190-consumable-physical-other")
+    outputs=({"item_effect":"source/v283_ItemEffect.csv",
+              "candidate":"source/v283_consumable_use_spell_candidates.json"}
+             if corrected else OUT)
+    stage_id=("fresh-consumable-item-use-spell-source-other" if corrected
+              else "fresh-consumable-item-use-spell-source")
+    stage_version=("v280-real-other-consumables-v2" if corrected
+                   else "v280-first-party-itemeffect-db2-v1")
     if (gear_stage.get("status") not in STAGED or
             consumable_stage.get("status") not in STAGED or
             not (consumables or {}).get("candidate_path")):
@@ -198,12 +207,12 @@ def collect(*, stage_root, build, fresh_gear, consumables, transport=None):
             need(resp.status==200,"V280_ITEM_EFFECT_HTTP_NON_200")
             raw=resp.read(MAX_EFFECT_BYTES+1)
         need(0<len(raw)<=MAX_EFFECT_BYTES,"V280_ITEM_EFFECT_HTTP_SIZE_LIMIT")
-        output=root/OUT["item_effect"]
+        output=root/outputs["item_effect"]
         output.parent.mkdir(parents=True,exist_ok=True)
         output.write_bytes(raw)
         joined=join(physical_source,relation.read_bytes(),raw,build=build,
                     relation_sha256=relation_sha,effect_sha256=sha(raw))
-        (root/OUT["candidate"]).write_text(
+        (root/outputs["candidate"]).write_text(
             json.dumps(joined,sort_keys=True,ensure_ascii=False,
                        indent=2,allow_nan=False)+"\n",encoding="utf8")
     def validate(paths):
@@ -224,23 +233,23 @@ def collect(*, stage_root, build, fresh_gear, consumables, transport=None):
         [Path(__file__),Path(physical.__file__),Path(stages.__file__)])
     try:
         stage=stages.execute_stage(
-            root=root,stage_id="fresh-consumable-item-use-spell-source",
-            stage_version="v280-first-party-itemeffect-db2-v1",
+            root=root,stage_id=stage_id,
+            stage_version=stage_version,
             inputs={"game_build":build,
                     "v254_stage_sha256":gear_stage.get("receipt_sha256"),
                     "v279_stage_sha256":consumable_stage.get("receipt_sha256"),
                     "v190_candidate_sha256":sha(raw_source),
                     "item_x_item_effect_sha256":relation_sha,
                     "code_sha256":code["sha256"]},
-            outputs=OUT,execute=execute,validate=validate)
+            outputs=outputs,execute=execute,validate=validate)
     except (stages.StageExecutionBlocked,ItemSpellBlocked,
             OSError,ValueError,KeyError,TypeError) as exc:
         return {**pending(str(exc).split(":",1)[0]),
                 "network_calls_by_stage":calls[0]}
-    doc=json.loads((root/OUT["candidate"]).read_text("utf8"))
+    doc=json.loads((root/outputs["candidate"]).read_text("utf8"))
     return {"schema":SCHEMA,
             "status":"ITEM_USE_SPELL_SOURCE_JOINED_UNADMITTED",
-            "candidate_path":str((root/OUT["candidate"]).resolve()),
+            "candidate_path":str((root/outputs["candidate"]).resolve()),
             "counts":doc["item_use_spell_join"],
             "source_stage":{k:v for k,v in stage.items() if k!="result"},
             "network_calls_by_stage":calls[0],"native_calls":0,

@@ -223,6 +223,32 @@ class PinnedSimcInputs(unittest.TestCase):
         self.assertEqual(second["network_calls_by_stage"],0)
         self.assertEqual(self.calls,{"tree":6,"raw":5})
 
+    def test_real_other_consumable_successor_reuses_old_simc_bytes(self):
+        first=self.collect()
+        previous=dict(self.calls)
+        self.consumables["source_stage"]["stage_id"]=(
+            "fresh-v189-v190-consumable-physical-other")
+        self.consumables["source_stage"]["receipt_sha256"]="e"*64
+        second=self.collect()
+        self.assertEqual(second["source_stage"]["status"],"REUSED_VERIFIED")
+        self.assertEqual(second["source_stage"]["stage_id"],
+                         first["source_stage"]["stage_id"])
+        self.assertEqual(second["network_calls_by_stage"],0)
+        self.assertEqual(self.calls,previous)
+
+    def test_real_other_consumable_from_clean_source_seals_successor(self):
+        self.consumables["source_stage"]["stage_id"]=(
+            "fresh-v189-v190-consumable-physical-other")
+        self.consumables["source_stage"]["receipt_sha256"]="e"*64
+        first=self.collect()
+        self.assertEqual(first["source_stage"]["stage_id"],
+                         "fresh-pinned-v211-from-other-consumables")
+        self.assertEqual(first["source_stage"]["status"],"EXECUTED_AND_SEALED")
+        second=self.collect()
+        self.assertEqual(second["source_stage"]["status"],"REUSED_VERIFIED")
+        self.assertEqual(second["network_calls_by_stage"],0)
+        self.assertEqual(self.calls,{"tree":6,"raw":5})
+
     def test_tamper_sealed_source_blocks_without_http_retry(self):
         one=self.collect()
         pathlib.Path(one["source_dir"],"permanent_enchant.inc").write_bytes(

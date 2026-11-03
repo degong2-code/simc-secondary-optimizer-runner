@@ -23,7 +23,6 @@ jobs:
       - name: Reuse v161/v189/v190/v229/v230/v280/v281 against real same-build sources
         env:
           PYTHONPATH: runner:.
-          P3_CN_ITEM_CLASS_ONLY: "1"
         run: python integration_probes/p3_cn_real_consumable_join.py
       - uses: actions/upload-artifact@v4
         if: always()

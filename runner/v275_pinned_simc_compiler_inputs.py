@@ -68,7 +68,8 @@ def original_sources(*,stage_root,pinned,consumables,build):
          type(consumables.get("source_stage")) is dict and
          consumables["source_stage"].get("stage_id") in (
             "fresh-v189-v190-consumable-source",
-            "fresh-v189-v190-consumable-physical-four-class") and
+            "fresh-v189-v190-consumable-physical-four-class",
+            "fresh-v189-v190-consumable-physical-other") and
          consumables["source_stage"].get("status") in (
              "EXECUTED_AND_SEALED","REUSED_VERIFIED","RECOVERED_VERIFIED"),
          "V275_PINNED_EXISTING_V229_V189_STAGES_REQUIRED")
@@ -145,21 +146,31 @@ def pinned_git_blobs(*,revision,paths,transport):
 def reuse_verified_first_party_bytes(*,root,revision,build,reused,unique):
     """Reuse v275's prior verified Git blobs if only the DB2 item scope grew.
 
-    v279 changes v190's *physical item candidates*, not the pinned SimC
+    v279/v282 change only v190 physical candidate scope, not the pinned SimC
     revision or unique_gear.cpp. Revalidate original v217 output bytes
     against its immutable completed receipt and exact present upstream bytes
     rather than downloading five identical SimC files again.
     """
-    stage_id="fresh-pinned-v211-and-permanent-inputs"
-    receipt_path=root/".stage_receipts"/(stage_id+".json")
-    if not receipt_path.is_file():
+    # Exact pinned source bytes can be reused across physical item-scope
+    # changes. Honor both historical immutable source stages before GET.
+    candidates=(
+        ("fresh-pinned-v211-and-permanent-inputs",
+         "v275-git-tree-reuse-v1"),
+        ("fresh-pinned-v211-from-four-subclass-consumables",
+         "v275-git-tree-reuse-four-class-v1"),
+    )
+    available=[(name,version) for name,version in candidates
+               if (root/".stage_receipts"/(name+".json")).is_file()]
+    if not available:
         return None
+    stage_id,stage_version=available[0]
+    receipt_path=root/".stage_receipts"/(stage_id+".json")
     try:
         paths,_=stages._safe_paths(root,stage_id,OUTPUTS)
         old=stages._read_receipt(receipt_path)
         need(old.get("status")=="COMPLETE"
              and old.get("stage_id")==stage_id
-             and old.get("stage_version")=="v275-git-tree-reuse-v1"
+             and old.get("stage_version")==stage_version
              and old.get("output_paths")=={
                  key:relative for key,(relative,_) in paths.items()},
              "V275_HISTORICAL_STAGE_IDENTITY_INVALID")
@@ -215,12 +226,15 @@ def collect(*,stage_root,build,pinned_simc,consumables,transport=None):
         return cached
     # Fresh v279 physical candidate scope is a successor receipt, never
     # a rewrite of v275's original immutable source-stage identity.
-    newer=consumables["source_stage"]["stage_id"]==(
-        "fresh-v189-v190-consumable-physical-four-class")
-    compiler_stage_id=("fresh-pinned-v211-from-four-subclass-consumables"
-                       if newer else
-                       "fresh-pinned-v211-and-permanent-inputs")
-    compiler_version=("v275-git-tree-reuse-four-class-v1"
+    source_stage_id=consumables["source_stage"]["stage_id"]
+    corrected=source_stage_id=="fresh-v189-v190-consumable-physical-other"
+    newer=source_stage_id=="fresh-v189-v190-consumable-physical-four-class"
+    compiler_stage_id=("fresh-pinned-v211-from-other-consumables"
+                       if corrected else
+                       "fresh-pinned-v211-from-four-subclass-consumables"
+                       if newer else "fresh-pinned-v211-and-permanent-inputs")
+    compiler_version=("v275-git-tree-reuse-real-other-v1"
+                      if corrected else "v275-git-tree-reuse-four-class-v1"
                       if newer else "v275-git-tree-reuse-v1")
     source_paths={**COMPILER_INPUTS,
                   "unique_gear.cpp":handlers.SOURCE}

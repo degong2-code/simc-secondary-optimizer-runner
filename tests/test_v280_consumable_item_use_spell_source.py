@@ -113,6 +113,35 @@ class ItemSpellTests(unittest.TestCase):
             self.assertEqual(blocked["network_calls_by_stage"],0)
             self.assertEqual(len(calls),1)
 
+    def test_real_other_source_uses_new_immutable_v283_stage(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            relation=root/"source"/"v254_ItemXItemEffect.csv"
+            relation.parent.mkdir(parents=True)
+            relation.write_bytes(REL)
+            candidate=root/"source"/"v282_v190_items.json"
+            candidate.write_text(json.dumps(SOURCE),encoding="utf8")
+            gear={"source_stage":{"status":"EXECUTED_AND_SEALED",
+                "receipt_sha256":"a"*64,
+                "output_paths":{"effect":"source/v254_ItemXItemEffect.csv"}}}
+            consumables={"candidate_path":str(candidate),"source_stage":{
+                "status":"EXECUTED_AND_SEALED","receipt_sha256":"b"*64,
+                "stage_id":"fresh-v189-v190-consumable-physical-other"}}
+            calls=[]
+            def transport(req,timeout):
+                calls.append(req.full_url)
+                return Response(EFFECT)
+            args=dict(stage_root=root,build=BUILD,fresh_gear=gear,
+                      consumables=consumables,transport=transport)
+            first=v280.collect(**args)
+            self.assertEqual(first["source_stage"]["stage_id"],
+                             "fresh-consumable-item-use-spell-source-other")
+            self.assertIn("v283_",first["candidate_path"])
+            self.assertEqual(first["network_calls_by_stage"],1)
+            again=v280.collect(**args)
+            self.assertEqual(again["network_calls_by_stage"],0)
+            self.assertEqual(len(calls),1)
+
     def test_no_valid_sources_does_not_attempt_http(self):
         with tempfile.TemporaryDirectory() as temp:
             result=v280.collect(stage_root=temp,build=BUILD,
