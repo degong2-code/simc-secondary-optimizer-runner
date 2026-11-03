@@ -49,6 +49,110 @@ def resolve(catalog, evidence, plan, manual=None):
 
 
 class SeasonBudgetContractTests(unittest.TestCase):
+    def test_nearest_ten_applies_once_only_to_total_native_G(self):
+        catalog, proof, _ = fixture()
+        # Synthetic values only: 2847/J138/F165/O32 are NOT a fresh-season
+        # source, and test status cannot be promoted to product READY.
+        meta = p.standardize_representative_G(
+            observed_G_total=2847,target_ilevel=334,
+            source_observation_sha256=proof["components"]["G"]["source_sha256"])
+        self.assertEqual((meta["observed_G_total"],meta["standardized_G"],
+                          meta["rounding_delta"],meta["rounding_unit"]),
+                         (2847,2850,3,10))
+        proof["components"]["G"]["rating"] = meta["standardized_G"]
+        proof["components"]["G"]["standardization"] = meta
+        result = p.preprofile_budget(
+            source_catalog=catalog,source_artifact_sha256="a"*64,
+            evidence=proof,target_ilevel=334)
+        self.assertEqual(result["reference_G"],2850)
+        self.assertEqual(result["reference_B"],3153)
+        self.assertEqual(result["base_B"],3153)
+        self.assertEqual(result["final_T"],3185)
+        self.assertEqual(result["G_standardization"],meta)
+        self.assertFalse(result["source_authentication_performed_here"])
+        self.assertEqual(result["native_calls"],0)
+
+    def test_total_rounding_boundaries_and_no_per_item_rounding(self):
+        sha="1"*64
+        pairs=((2844,2840,-4),(2845,2850,5),(2846,2850,4),
+               (2849,2850,1),(2850,2850,0),(2854,2850,-4),
+               (2855,2860,5))
+        for raw,rounded,delta in pairs:
+            with self.subTest(raw=raw):
+                meta=p.standardize_representative_G(
+                    observed_G_total=raw,target_ilevel=334,
+                    source_observation_sha256=sha)
+                self.assertEqual((meta["standardized_G"],meta["rounding_delta"]),
+                                 (rounded,delta))
+                self.assertLessEqual(abs(meta["rounding_delta"]),5)
+        # Per-piece rounding can accumulate larger errors; never use it.
+        unrounded = (101,101,101,101,101,101,101,101,101,101,101,101,101)
+        total=sum(unrounded)
+        meta=p.standardize_representative_G(
+            observed_G_total=total,target_ilevel=334,
+            source_observation_sha256=sha)
+        self.assertEqual(meta["standardized_G"],1310)
+        self.assertNotEqual(meta["standardized_G"],
+                            sum(((piece+5)//10)*10 for piece in unrounded))
+
+    def test_standardized_G_manual_final_T_and_E_L_stay_authoritative(self):
+        catalog, proof, _ = fixture()
+        meta=p.standardize_representative_G(
+            observed_G_total=2847,target_ilevel=334,
+            source_observation_sha256=proof["components"]["G"]["source_sha256"])
+        proof["components"]["G"].update(rating=2850,standardization=meta)
+        proof["fixed_E"]["haste_rating"]=30
+        proof["fixed_L"]["crit_rating"]=100
+        result=p.preprofile_budget(
+            source_catalog=catalog,source_artifact_sha256="a"*64,
+            evidence=proof,target_ilevel=334,manual_final_T=3270)
+        self.assertEqual((result["reference_G"],result["effective_G"],
+                          result["reference_B"],result["base_B"],
+                          result["final_T"]),
+                         (2850,2880,3183,3238,3270))
+        self.assertTrue(result["manual_final_T_authoritative"])
+        proof["G_reference_excludes_selected_E"]=False
+        included=p.preprofile_budget(
+            source_catalog=catalog,source_artifact_sha256="a"*64,
+            evidence=proof,target_ilevel=334)
+        self.assertEqual(included["effective_G"],2850)
+        self.assertEqual(included["final_T"],3185)
+
+    def test_rounding_proof_drift_or_unverified_G_is_not_accepted(self):
+        catalog, proof, _ = fixture()
+        meta=p.standardize_representative_G(
+            observed_G_total=2847,target_ilevel=334,
+            source_observation_sha256=proof["components"]["G"]["source_sha256"])
+        proof["components"]["G"]["rating"]=2850
+        proof["components"]["G"]["standardization"]=meta
+        for change in (
+            {"target_ilevel":333},
+            {"standardized_G":2840},
+            {"source_observation_sha256":"9"*64},
+            {"rounding_unit":1},
+            {"observed_G_total":2846},
+        ):
+            altered=copy.deepcopy(proof)
+            altered["components"]["G"]["standardization"].update(change)
+            with self.subTest(change=change), self.assertRaisesRegex(
+                    p.SeasonBudgetBlocked,"G_ROUNDING_OR_SOURCE_DRIFT"):
+                p.preprofile_budget(
+                    source_catalog=catalog,source_artifact_sha256="a"*64,
+                    evidence=altered,target_ilevel=334)
+        unknown=copy.deepcopy(proof)
+        unknown["components"]["G"]["source_verification"]="NOT_VERIFIED"
+        with self.assertRaisesRegex(p.SeasonBudgetBlocked,
+                                    "G_SOURCE_VERIFICATION_MISSING"):
+            p.preprofile_budget(
+                source_catalog=catalog,source_artifact_sha256="a"*64,
+                evidence=unknown,target_ilevel=334)
+        for total in (0,-1,1.5,True,None):
+            with self.subTest(total=total), self.assertRaises(
+                    p.SeasonBudgetBlocked):
+                p.standardize_representative_G(
+                    observed_G_total=total,target_ilevel=334,
+                    source_observation_sha256="1"*64)
+
     def test_preprofile_budget_does_not_require_a_v098_plan(self):
         catalog, proof, plan = fixture()
         result = p.preprofile_budget(
