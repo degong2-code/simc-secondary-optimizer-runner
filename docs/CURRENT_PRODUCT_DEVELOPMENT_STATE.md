@@ -1,3 +1,6 @@
+> **2026-11-03 P3-BQ 최신 인계/선조회 영구 규약:** [새 인계 정본](CHAT_CONTINUITY_HANDOFF_20261103_P3_BQ_EVIDENCE_FIRST_LEDGER.md) → [작업 전 선조회·노트 규약](development/PROTOCOL.md) → [기능별 기존 증거/연결 상태 INDEX](development/INDEX.md) → [첫 교정 기록](development/notes/2026-11-03_p3-bq-continuity-correction.md). P3-AQ/AR/AT 티어 기초 ilvl197/219×65·현재 레이드101/118·SimC 정확13×5 기존 증거 재사용; 시즌 티어 소스 확인과 제품 최종 선정/READY 미연결을 분리. 새 인증기/원본 전수 재수집 전에 기존 작업 검색 필수. 논리적 개발 묶음당 노트 1개+INDEX 갱신. 이번 검사기 코드·테스트는 반영, 새 CI PASS 영수증 미확인. main/Project UI/Work OS 미승격.
+>
+
 > **2026-11-03 P3-BP (1차) — 원본 검증 증거 1회 판정·후속 재사용:** [세부 범위·남은 과제](P3_BP_20261103_ONCE_ONLY_SOURCE_SEAL_REUSE.md). 사용자 직접 결정: 원본 수집/분류 단계에서 이미 확인한 시즌 적합성·아이템 조건을 후속 단계가 중복 인증하지 않는다. 구현: `v216` 원본 `v217` Wago SHA 봉인 결과를 `v163` 전체 DB2 및 `v190` Item/ItemSparse에 전달해 재해시 방지; `v221`은 동일 요청에서 이미 읽은 원본 검증 SHA 재사용. 단독 소스 호출은 기존 전체 SHA 검사를 유지하고, v217의 캐시 재사용 시 파일 무결성 검사는 유지. 신규 소스/Native0. 관련 테스트 3개 추가했으나 **변경 후 새 CI 영수증 미확인·PASS 미주장**, 이전 P3-BO CI는 역사 회귀 증거. **실제 시즌 대표 장비·tier, G/J/F/O 수치, v222 B/T, 정책 A, READY/제품 adaptive E2E 미완료**. 코드 커밋 기준 `68f582ca72bebba212536bef0ab0c72748128349`; main/v003/v016/Project UI/Work OS 변경 없음.
 >
 
