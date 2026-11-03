@@ -13,6 +13,7 @@ from pathlib import Path
 
 import v191_unified_season_data_update as season_compiler
 import v168_current_season_tier_discovery as tier_compiler
+import v211_enchant_source_effect_classification as enchant_classifier
 
 SCHEMA = "v274_v216_collected_to_v241_fresh_compile_inputs_v1"
 STAGED = frozenset(("EXECUTED_AND_SEALED", "REUSED_VERIFIED",
@@ -152,7 +153,10 @@ def discover(collected):
         v211_dir = None
     if (v211_dir is None or v211_manifest is None or
             not isinstance(v211, dict) or
-            v211.get("source_stage", {}).get("status") not in STAGED):
+            not isinstance(v211.get("source_stage"), dict) or
+            v211["source_stage"].get("status") not in STAGED or
+            any(_safe_file(Path(v211_dir) / name, root) is None
+                for name in enchant_classifier.FRESH_REQUIRED)):
         v211_dir = None
 
     files = {"GEAR_V167": gear, "TIER_V168": tier,
