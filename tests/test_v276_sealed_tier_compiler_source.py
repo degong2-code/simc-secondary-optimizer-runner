@@ -33,7 +33,7 @@ class V251PhysicalTierCompiler(unittest.TestCase):
         self.root=pathlib.Path(tmp.name)/"source_build"
         self.root.mkdir()
         self.wago=self.root/"wago"
-        self.wago.mkdir()
+        # The existing v250 fixture creates its own Wago workspace.
         t,b=fixture(self.root)
         self.physical=bridge.preview(db2=t,corroboration=b)
         seed_root=self.root/"simc";seed_root.mkdir()
