@@ -1,5 +1,6 @@
 """v190 deterministic snapshot join without network, Native or UI changes."""
 import hashlib,json,pathlib,sys,tempfile,unittest
+from unittest import mock
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"runner"))
 import v190_consumable_item_snapshot_join as join
@@ -62,6 +63,23 @@ class ConsumableDb2Join(unittest.TestCase):
             with self.assertRaisesRegex(join.ConsumableJoinBlocked,"TABLE_SHA_MISMATCH"):
                 join.build(SOURCE,root,expected_build="12.1.5.70575",
                            expansion_id=11)
+    def test_reuse_v217_seal_without_duplicate_hash(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=self.create(td)
+            proof=json.loads((root/"receipt.json").read_text())["tables"]
+            with mock.patch.object(join,"sha_file",
+                                   side_effect=AssertionError("duplicate SHA")):
+                result=join.build(SOURCE,root,expected_build="12.1.5.70575",
+                                  expansion_id=11,verified_tables=proof)
+            self.assertEqual(result["counts"]["food_items"],1)
+            self.assertFalse(result["automatic_ui_promotion"])
+            modified=json.loads(json.dumps(proof))
+            modified["Item"]["sha256"]="f"*64
+            with self.assertRaisesRegex(join.ConsumableJoinBlocked,
+                                        "V217_VERIFIED_TABLE_PROVENANCE_MISMATCH"):
+                join.build(SOURCE,root,expected_build="12.1.5.70575",
+                           expansion_id=11,verified_tables=modified)
+
     def test_no_unverified_source_or_missing_columns_can_pass(self):
         with tempfile.TemporaryDirectory() as td:
             root=self.create(td)
