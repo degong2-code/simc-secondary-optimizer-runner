@@ -108,7 +108,6 @@ def validate(root=ROOT):
     """Return errors, do not mutate any files."""
     root = Path(root).resolve()
     folder = root / "docs" / "development"
-    index_path = folder / "INDEX.md"
     index, errors = _index(root)
     note_dir = folder / "notes"
     if not note_dir.is_dir():
@@ -116,17 +115,22 @@ def validate(root=ROOT):
     notes = sorted(note_dir.glob("*.md"))
     if not notes:
         errors.append("NO_DEVELOPMENT_NOTES")
-    index_text = index_path.read_text("utf8") if index_path.is_file() else ""
+    # Historical notes are intentionally append-only: INDEX points to the
+    # latest note per capability, NOT every note ever written. Keeping all
+    # history in the short index would grow indefinitely and block updates.
+    note_keys = {}
     for note in notes:
         keys, problems = _note(root, note, index)
         errors.extend(problems)
-        relative = "notes/" + note.name
-        if relative not in index_text:
-            errors.append("NOTE_NOT_LINKED_FROM_INDEX:" + note.name)
-        # Every affected capability row must link the latest relevant note.
-        for key in keys:
-            if relative not in index.get(key, [""] * 6)[5]:
-                errors.append("NOTE_NOT_LINKED_FROM_CAPABILITY:" + key)
+        note_keys["notes/" + note.name] = set(keys)
+    for key, row in index.items():
+        links = [dest for dest in LINK.findall(row[5])
+                 if dest.startswith("notes/") and dest.endswith(".md")]
+        if not links:
+            errors.append("CAPABILITY_LATEST_NOTE_MISSING:" + key)
+        for dest in links:
+            if dest in note_keys and key not in note_keys[dest]:
+                errors.append("CAPABILITY_LATEST_NOTE_KEY_MISMATCH:" + key)
     return errors
 
 
