@@ -473,13 +473,20 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         selected={"flask_item_id":241326,
                   "oil_item_ids_by_hand":{"main_hand":243734}}
         try:
+            # This focused fake compiler has NO actual v217 source bytes:
+            # never treat its fabricated receipt IDs as Policy A proof.
+            # Real v241/v217 source-relation path is tested separately in
+            # test_v240 (no internal source-stage mocks).
             with mock.patch.object(
+                    build,"_v217_policy_A_source_relation_receipts",
+                    return_value={}) as no_fake_policy, mock.patch.object(
                     build,"_stage_source_environment_only",
                     return_value={"status":"FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED",
                                   "environment_ready":False,
                                   "environment_installed":False}) as staged:
                 result=self.run_build(
                     proof=False,selected_budget_items=selected)
+                self.assertTrue(no_fake_policy.called)
         finally:
             self.compiled=previous
         staged.assert_called_once()
