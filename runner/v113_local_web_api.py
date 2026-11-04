@@ -56,6 +56,7 @@ class SeasonEnvironmentBuildRequest(BaseModel):
     target_ilevel: int = Field(default=334,ge=1,le=1000)
     # Explicit opt-in to the EXISTING single v277/v236 Native G probe.
     native_G_binary: str | None = Field(default=None,min_length=1,max_length=4096)
+    auto_native_F_requested: bool = False
     simc_revision_hint: str | None = Field(
         default=None,pattern=r"^(?:[a-f0-9]{7,12}|[a-f0-9]{40})$")
 
@@ -115,7 +116,8 @@ class LocalJobs:
         return str(candidate) if candidate is not None else None
 
     def build_season_environment(self, game_build, target_ilevel=334,
-                                 native_G_binary=None, simc_revision_hint=None):
+                                 native_G_binary=None, simc_revision_hint=None,
+                                 auto_native_F_requested=False):
         """Run original v216 with season inputs, never a user DPS scenario.
 
         One deterministic one-spec reference G probe is NOT season-level
@@ -139,13 +141,15 @@ class LocalJobs:
                         "class":"paladin","spec":"retribution",
                         "target_ilevel":target_ilevel},
                     "g_probe_character":{"race":"dwarf"},
-                    "simc_revision_hint":simc_revision_hint})
+                    "simc_revision_hint":simc_revision_hint,
+                    "auto_native_F_requested":auto_native_F_requested})
         return {**observed,"web_environment_scope":{
             "schema":"v113_web_season_environment_build_scope_v1",
             "game_build":game_build,"target_ilevel":target_ilevel,
             "internal_numeric_probe":"paladin/retribution",
             "numeric_probe_not_whole_season_G_certification":True,
             "local_native_G_requested":binary is not None,
+            "auto_native_F_requested":auto_native_F_requested,
             "dps_optimization_started":False,
             "user_character_or_trinkets_required":False,
             "environment_installed":observed.get("environment_installed") is True,
@@ -961,7 +965,8 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
             return jobs.build_season_environment(
                 request.game_build,request.target_ilevel,
                 native_G_binary=request.native_G_binary,
-                simc_revision_hint=request.simc_revision_hint)
+                simc_revision_hint=request.simc_revision_hint,
+                auto_native_F_requested=request.auto_native_F_requested)
         except Exception as exc:
             raise blocked(exc) from None
 

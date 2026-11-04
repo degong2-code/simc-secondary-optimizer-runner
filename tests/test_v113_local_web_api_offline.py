@@ -222,7 +222,8 @@ class LocalWebAPIOffline(unittest.TestCase):
             "expected_game_build":"12.2.0.99999",
             "representative_request":{"class":"paladin","spec":"retribution",
                                       "target_ilevel":334},
-            "g_probe_character":{"race":"dwarf"},"simc_revision_hint":None})
+            "g_probe_character":{"race":"dwarf"},"simc_revision_hint":None,
+            "auto_native_F_requested":False})
         self.assertFalse((self.root/"runs").exists())
 
     def test_web_season_environment_build_native_only_explicit_and_validated(self):
@@ -239,6 +240,18 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(stage.call_args.kwargs["fresh_collection_inputs"]
                          ["representative_request"]["target_ilevel"],341)
         self.assertTrue(response.json()["web_environment_scope"]["local_native_G_requested"])
+        self.assertFalse(response.json()["web_environment_scope"]["auto_native_F_requested"])
+        with mock.patch.object(web.environment_build,"build_environment",
+                               return_value={"status":"SOURCE_ONLY_PENDING",
+                                             "environment_ready":False,
+                                             "environment_installed":False}) as auto:
+            opted=self.post("/api/v1/environment/season-build",
+                            {**payload,"auto_native_F_requested":True})
+        self.assertEqual(opted.status_code,200,opted.text)
+        self.assertTrue(auto.call_args.kwargs["fresh_collection_inputs"][
+            "auto_native_F_requested"])
+        self.assertTrue(opted.json()["web_environment_scope"][
+            "auto_native_F_requested"])
         with mock.patch.object(web.environment_build,"build_environment",
                                side_effect=AssertionError("MUST_BLOCK_BEFORE_SOURCE")) as stage:
             invalid=self.post("/api/v1/environment/season-build",
