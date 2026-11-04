@@ -3439,6 +3439,25 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             raise EnvironmentBuildBlocked(
                 "V216_ZERO_HISTORY_SOURCE_COMPILER_INVALID:"
                 +str(exc).split(":",1)[0]) from exc
+        # Build the exact original v281 measurement *worklist* from the
+        # sealed same-build physical item relation. This does not select
+        # F/O on the user's behalf, run Native or approve the candidate.
+        if source_compilation["status"]==(
+                "FRESH_V191_V211_V213_COMPILED_UNADMITTED"):
+            try:
+                measurement_plan=consumable_simc_relation.plan_physical_native_measurements(
+                    stage_root=source_compilation["stage_root"],
+                    relation=collected.get(
+                        "fresh_consumable_simc_effect_relation"),
+                    build=collected["expected_game_build"],
+                    simc_revision=source_compilation["simc_revision"])
+            except (consumable_simc_relation.SimCRelationBlocked,
+                    OSError,ValueError,KeyError,TypeError) as exc:
+                raise EnvironmentBuildBlocked(
+                    "V216_AUTO_PHYSICAL_MEASUREMENT_SOURCE_INVALID:"
+                    +str(exc).split(":",1)[0]) from exc
+            progress["automatic_F_O_measurement_candidates_unadmitted"]=measurement_plan
+            source_compilation["automatic_F_O_measurement_candidates_unadmitted"]=measurement_plan
         # Source-selected consumables are tested through the original
         # v269 JSON2 before/after comparer, with an immutable shared baseline.
         # No blanket item-quality or weapon-eligibility certification: the

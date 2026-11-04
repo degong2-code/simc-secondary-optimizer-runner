@@ -427,6 +427,106 @@ def collect(*,stage_root,build,consumables,compiler_source,
 MEASUREMENT_BINDING_SCHEMA="v281_exact_item_native_input_source_only_v1"
 _SOURCE_LIMIT=5_000_000
 
+def plan_physical_native_measurements(*,stage_root,relation,build,
+                                      simc_revision):
+    """Build bounded F/O measurement work orders from SAME-BUILD v281 bytes.
+
+    Only original resolve_native_input authenticates every selected physical
+    item and source-stage receipt. This neither selects a default flask/oil
+    nor certifies maximum quality/weapon compatibility, runs Native, or
+    admits the options to the product. It eliminates manual item-ID input
+    for the next internal measurement stage.
+    """
+    output={"schema":"v281_source_selected_physical_measurement_plan_v1",
+            "status":"SAME_BUILD_PHYSICAL_F_O_RELATION_PENDING",
+            "flask":[],"oil":[],
+            "requires":["V281_SAME_BUILD_ITEM_SIMC_RELATION_PENDING"],
+            "candidate_count":0,"source_only":True,
+            "quality_coverage_verified":False,
+            "weapon_applicability_verified":False,
+            "budget_values_verified":False,
+            "environment_ready":False,"user_selectable":False,
+            "native_calls":0,"network_calls":0}
+    row=relation or {}
+    stage=row.get("source_stage") if type(row) is dict else None
+    if (type(stage) is not dict or stage.get("status") not in STAGED
+            or not row.get("candidate_path")):
+        return output
+    root=Path(stage_root).resolve(strict=True)
+    need(root.is_dir() and not root.is_symlink(),
+         "V281_AUTO_MEASUREMENT_STAGE_ROOT_INVALID")
+    candidate=_safe_path(root,row["candidate_path"])
+    need(0<candidate.stat().st_size<=_SOURCE_LIMIT,
+         "V281_AUTO_MEASUREMENT_CANDIDATE_SIZE_INVALID")
+    try:
+        source=json.loads(candidate.read_bytes())
+    except (ValueError,UnicodeError) as exc:
+        raise SimCRelationBlocked(
+            "V281_AUTO_MEASUREMENT_SOURCE_JSON_INVALID") from exc
+    need(type(source) is dict and
+         source.get("schema")==physical.SCHEMA and
+         type(source.get("items")) is list and
+         len(source["items"])<=10000,
+         "V281_AUTO_MEASUREMENT_CANDIDATE_SCHEMA_INVALID")
+    # A candidate row is an unadmitted source observation, not a default.
+    # Only rows with all original v281 prerequisites may be measured.
+    to_resolve=[]
+    for item in source["items"]:
+        if type(item) is not dict or type(item.get("item_id")) is not int:
+            continue
+        if item.get("item_effect_source",{}).get("status")!=(
+                "EXACT_DB2_ITEM_TO_ON_USE_SPELL_SOURCE_ONLY"):
+            continue
+        if (item.get("kind")=="flask" and
+                item.get("simc_flask_item_source",{}).get("status")==(
+                    "SIMC_ITEM_ID_CLASS_SUBCLASS_CANDIDATE")):
+            to_resolve.append(("flask",item["item_id"],None))
+        elif item.get("kind")=="item_enhancement":
+            links=item.get("simc_temporary_enchant_source",{}).get(
+                "exact_source_matches")
+            if (item.get("simc_temporary_enchant_source",{}).get("status")
+                    =="EXACT_SIMC_TEMP_ENCHANT_ID_CANDIDATE"
+                    and type(links) is list and len(links)==1 and
+                    type(links[0]) is dict and
+                    "oil" in str(links[0].get("simc_token","")).split("_")):
+                for hand in ("main_hand","off_hand"):
+                    to_resolve.append(("temporary_enchant",item["item_id"],hand))
+    # Bounded source inventory, never silently truncate top qualities.
+    need(len(to_resolve)<=128,
+         "V281_AUTO_MEASUREMENT_TOO_MANY_CANDIDATES_PENDING")
+    seen=set()
+    flasks=[];oils=[]
+    for kind,item_id,hand in sorted(to_resolve):
+        key=(kind,item_id,hand)
+        need(key not in seen,"V281_AUTO_MEASUREMENT_DUPLICATE_ITEM_HAND")
+        seen.add(key)
+        exact=resolve_native_input(
+            stage_root=stage_root,relation=relation,build=build,
+            simc_revision=simc_revision,kind=kind,item_id=item_id,hand=hand)
+        need(exact is not None,
+             "V281_AUTO_MEASUREMENT_SOURCE_CHANGED_AFTER_SELECTION")
+        item={"physical_item_id":exact["physical_item_id"],
+              "kind":exact["kind"],
+              "crafting_quality":exact["crafting_quality"],
+              "simc_input_token":exact["simc_input_token"],
+              "selected_hand":exact["selected_hand"],
+              "simc_enchant_id":exact["simc_enchant_id"],
+              "source_candidate_sha256":exact["source_candidate_sha256"],
+              "source_stage_receipt_sha256":
+                  exact["source_stage_receipt_sha256"],
+              "native_measurement_pending":True,
+              "quality_and_use_conditions_pending":True,
+              "user_selectable":False}
+        (flasks if kind=="flask" else oils).append(item)
+    status=("MEASURABLE_PHYSICAL_F_O_CANDIDATES_UNADMITTED"
+            if flasks or oils else
+            "NO_EXACT_F_O_SOURCE_CANDIDATES_NOT_ABSENCE_PROOF")
+    return {**output,"status":status,"flask":flasks,"oil":oils,
+            "requires":["F_HIGHEST_QUALITY_EFFECT_COVERAGE_AND_NATIVE_PENDING",
+                        "O_EXPLICIT_SELECTION_WEAPON_HAND_AND_NATIVE_PENDING"],
+            "candidate_count":len(flasks)+len(oils)}
+
+
 def resolve_native_input(*,stage_root,relation,build,simc_revision,
                          kind,item_id,hand=None):
     """Resolve one exact physical ID from the v217 sealed v281 successor.

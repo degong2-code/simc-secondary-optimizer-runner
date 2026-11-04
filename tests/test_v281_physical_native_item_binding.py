@@ -55,6 +55,40 @@ class ExactPhysicalNativeInput(unittest.TestCase):
             relation=self.source if source is None else source,
             build=build_arg,simc_revision=REV,
             kind=kind,item_id=item_id,hand=hand)
+    def test_auto_measurement_plan_uses_original_exact_source_without_manual_ids(self):
+        planned=relation.plan_physical_native_measurements(
+            stage_root=self.root,relation=self.source,
+            build=BUILD,simc_revision=REV)
+        self.assertEqual(
+            planned["status"],"MEASURABLE_PHYSICAL_F_O_CANDIDATES_UNADMITTED")
+        self.assertEqual(planned["candidate_count"],3)
+        self.assertEqual([x["physical_item_id"] for x in planned["flask"]],
+                         [501])
+        self.assertEqual({x["selected_hand"] for x in planned["oil"]},
+                         {"main_hand","off_hand"})
+        self.assertTrue(all(not x["user_selectable"] for x in
+                            planned["flask"]+planned["oil"]))
+        self.assertFalse(planned["quality_coverage_verified"])
+        self.assertFalse(planned["weapon_applicability_verified"])
+        self.assertFalse(planned["environment_ready"])
+        self.assertEqual(planned["native_calls"],0)
+        self.assertEqual(planned["network_calls"],0)
+        again=relation.plan_physical_native_measurements(
+            stage_root=self.root,relation=self.source,
+            build=BUILD,simc_revision=REV)
+        self.assertEqual(again,planned)
+        self.assertEqual(
+            relation.plan_physical_native_measurements(
+                stage_root=self.root,relation={},
+                build=BUILD,simc_revision=REV)["candidate_count"],0)
+        self.output.write_text("{}",encoding="utf8")
+        with self.assertRaisesRegex(
+                relation.SimCRelationBlocked,
+                "AUTO_MEASUREMENT_CANDIDATE_SCHEMA_INVALID"):
+            relation.plan_physical_native_measurements(
+                stage_root=self.root,relation=self.source,
+                build=BUILD,simc_revision=REV)
+
     def test_flask_and_main_offhand_use_exact_physical_id(self):
         f=self.choose("flask",501)
         self.assertEqual(f["physical_item_id"],501)
