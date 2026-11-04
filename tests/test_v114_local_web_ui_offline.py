@@ -97,6 +97,8 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn("user_character_or_trinkets_required",js)
         self.assertIn("DPS 최적화 0회",js)
         self.assertIn("관측 수치(미승인)",js)
+        self.assertIn("F/O 자동 발견",js)
+        self.assertIn("automatic_F_O_measurement_candidates_unadmitted",js)
         self.assertIn("numeric_preview_only",js)
         self.assertIn("신규 Native",js)
         self.assertNotIn('id="season-optimizer-submit"',page)

@@ -628,11 +628,14 @@ function showSeasonEnvironmentBuild(data) {
   const node=$("season-build-stage");
   const ready=scope.environment_ready===true&&scope.environment_installed===true;
   const numeric=step.selected_auto_v222_numeric_preview_unadmitted?.calculation;
+  const autoFO=source.automatic_F_O_measurement_candidates_unadmitted;
   node.textContent=(ready?"시즌 환경 설치 완료":"원본 수집·검증 진행 결과 (설치 미완료)")+
     " · 요청 빌드 "+(scope.game_build||"–")+
     " · 원본 "+(step.source_stage_status||data?.source_stage?.status||"미확정")+
     " · 컴파일 "+(source.status||step.source_compilation_status||"대기")+
     " · G 관측 "+(step.native_G_status||"대기")+
+    (autoFO?.source_only===true&&autoFO.candidate_count>0?
+      " · F/O 자동 발견 "+autoFO.candidate_count+"건(측정 후보·미승인)":"")+
     " · 신규 Native "+(Number(data?.native_calls)||0)+"회"+
     (numeric?.numeric_preview_only===true&&numeric.environment_ready===false?
        " · 관측 수치(미승인) G="+numeric.reference_G+

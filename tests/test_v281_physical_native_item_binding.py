@@ -186,6 +186,12 @@ class ExactPhysicalNativeInput(unittest.TestCase):
                          "physical_item_id"],501)
         self.assertFalse(actual[1]["physical_item_native_source_unadmitted"][
                          "weapon_and_hand_applicability_verified"])
+        auto=result["source_compilation"][
+            "automatic_F_O_measurement_candidates_unadmitted"]
+        self.assertEqual(auto["candidate_count"],3)
+        self.assertEqual([x["physical_item_id"] for x in auto["flask"]],[501])
+        self.assertFalse(auto["environment_ready"])
+        self.assertFalse(auto["user_selectable"])
         self.assertIsNone(result["F"])
         self.assertIsNone(result["O"])
         self.assertFalse(result["zero_history_build"]["environment_ready"])
