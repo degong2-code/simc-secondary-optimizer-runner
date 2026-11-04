@@ -84,8 +84,11 @@ class FreshEnvironmentSourceStageTests(unittest.TestCase):
             staged=json.loads(Path(actual["stage_output_path"]).read_text("utf8"))
             self.assertEqual(staged,result)
             Path(actual["stage_output_path"]).write_text("{}\n",encoding="utf8")
-            with self.assertRaisesRegex(stages.StageExecutionBlocked,
-                                        "STAGE_OUTPUT_HASH_MISMATCH"):
+            # Top-level runner import owns this exact exception class;
+            # runner.v217 is a second Python module identity in this suite.
+            with self.assertRaisesRegex(
+                    environment_build.stage_engine.StageExecutionBlocked,
+                    "STAGE_OUTPUT_HASH_MISMATCH"):
                 environment_build._stage_source_environment_only(
                     compilation=wired,preflight=preflight,target_ilevel=334)
             # Original stage receipt mechanism remains the only writer.
