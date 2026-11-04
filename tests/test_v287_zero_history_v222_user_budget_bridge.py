@@ -695,7 +695,10 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         return {"schema":"v098_internal_season_profile_inputs_v1",
                 "v216_numeric_preview":preview,
                 "flask":{"physical_item_id":241326,
-                         "simc_input_token":"flask_of_the_shattered_sun_2"},
+                         "simc_input_token":"flask_of_the_shattered_sun_2",
+                         "static_CHMV_vector":{
+                             "crit_rating":176,"haste_rating":0,
+                             "mastery_rating":0,"versatility_rating":0}},
                 "oil_by_hand":{"main_hand":{
                     "physical_item_id":243734,
                     "simc_input_token":"main_hand:thalassian_phoenix_oil",
@@ -732,6 +735,14 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             self.assertEqual(result["scenario"]["consumables"][
                 "weapon_temporary_fixed_rating"]["haste_rating"],17)
             self.assertEqual(result["budget_preview_unadmitted"]["final_T"],3400)
+            typed=result["v096_typed_input_unadmitted"]
+            self.assertEqual(typed["scenario"]["target"]["manual_total"],3367)
+            self.assertEqual(typed["scenario"]["target"]["mode"],"manual_total")
+            self.assertEqual(typed["flask_F"]["crit_rating"],176)
+            self.assertEqual(typed["fixed_O"]["haste_rating"],17)
+            self.assertEqual(typed["final_T"],3400)
+            self.assertFalse(typed["native_execution_authorized"])
+            self.assertFalse(typed["runtime_manifest_created"])
             self.assertFalse(result["environment_ready"])
             self.assertFalse(result["adaptive_v094_started"])
             self.assertEqual(result["new_native_calls"],0)
@@ -889,6 +900,7 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             "v098_source_only_profile_inputs_unadmitted"]
         self.assertEqual(payload["flask"]["physical_item_id"],241326)
         self.assertEqual(payload["flask"]["simc_input_token"],"test_flask_2")
+        self.assertEqual(payload["flask"]["static_CHMV_vector"]["crit_rating"],165)
         self.assertEqual(payload["oil_by_hand"],{})
         with tempfile.TemporaryDirectory() as td:
             p,c,_=frost(td)
@@ -903,6 +915,8 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 "SEASON_PROFILE_COMPOSED_NOT_ADMITTED_NO_NATIVE")
             self.assertEqual(profile["scenario"]["consumables"][
                 "flask_budget_F"],165)
+            self.assertEqual(profile["v096_typed_input_unadmitted"][
+                "flask_F"]["crit_rating"],165)
             self.assertIn("flask=test_flask_2",profile["profile_simc"])
             self.assertIn("temporary_enchant=disabled",
                           profile["profile_simc"])
@@ -945,6 +959,47 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertIsNone(build._zero_history_v098_profile_source_inputs(
             numeric_preview=pending,physical_sources=numeric))
 
+
+    def test_v098_typed_v096_source_only_input_manual_and_automatic_total(self):
+        import v098_target_user_scenario_bootstrap as boot
+        from tests.test_v091_weapon_oil_external_adapter import frost
+        from copy import deepcopy
+        with tempfile.TemporaryDirectory() as td:
+            p,c,_=frost(td)
+            budget=self.dynamic_season_profile_inputs(oil=False)
+            budget["v216_numeric_preview"]["calculation"].update({
+                "base_B":3400,"final_T":3400,
+                "fixed_O":{k:0 for k in (
+                    "crit_rating","haste_rating","mastery_rating",
+                    "versatility_rating")},
+                "manual_final_T_authoritative":False})
+            user={"target":{"ilevel":334,"final_T":None},"oil_hands":[]}
+            auto=boot.season_profile_source_only(
+                profile=p,cfg=c,user=user,
+                weapon_layout="one_hand_frill",
+                season_profile_inputs=budget,
+                season_build=budget["v216_numeric_preview"][
+                    "calculation"]["game_build"],simc_revision="c"*40)
+            from runner import v061_scenario_contract as typed_contract
+            plan=typed_contract.normalize(
+                auto["v096_typed_input_unadmitted"]["scenario"])
+            self.assertEqual(plan["budget"]["T"],3400)
+            self.assertEqual(sum(plan["budget"][
+                "external_temporary_rating"].values()),0)
+            self.assertEqual(auto["v096_typed_input_unadmitted"][
+                "base_B"],3400)
+            self.assertFalse(auto["v096_typed_input_unadmitted"][
+                "native_execution_authorized"])
+            bad=deepcopy(budget)
+            bad["flask"]["static_CHMV_vector"]["crit_rating"]=175
+            with self.assertRaisesRegex(
+                boot.UserScenarioBlocked,"SEASON_PROFILE_FLASK_NATIVE_VECTOR_SUM_DRIFT"):
+                boot.season_profile_source_only(
+                    profile=p,cfg=c,user=user,
+                    weapon_layout="one_hand_frill",
+                    season_profile_inputs=bad,
+                    season_build=budget["v216_numeric_preview"][
+                        "calculation"]["game_build"],simc_revision="c"*40)
     def test_automatic_target_goes_through_existing_v222_once(self):
         result=self.run_build()
         source=result["source_compilation"]

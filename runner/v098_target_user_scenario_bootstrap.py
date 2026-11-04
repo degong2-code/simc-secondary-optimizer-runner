@@ -277,9 +277,16 @@ def season_profile_source_only(*, profile, cfg, weapon_layout, user,
          "SEASON_PROFILE_GEAR_BUILD_OR_BUDGET_DRIFT")
     flask=season_profile_inputs["flask"]
     need(type(flask) is dict and
-         set(flask)=={"physical_item_id","simc_input_token"}
+         set(flask)=={"physical_item_id","simc_input_token",
+                      "static_CHMV_vector"}
          and flask.get("physical_item_id")==selected.get("flask_item_id"),
          "SEASON_PROFILE_FLASK_ITEM_ID_DRIFT")
+    # v096/v094 require the exact per-stat F vector, not just scalar F.
+    # Reuse original v278 Native baseline/active static CHMV observations.
+    native_flask_vector=scenario.vector(
+        flask["static_CHMV_vector"],"SEASON_SELECTED_FLASK_NATIVE_F")
+    need(sum(native_flask_vector.values())==budget["F"],
+         "SEASON_PROFILE_FLASK_NATIVE_VECTOR_SUM_DRIFT")
     by_hand=season_profile_inputs["oil_by_hand"]
     need(type(by_hand) is dict
          and type(selected.get("oil_item_ids_by_hand")) is dict
@@ -325,12 +332,43 @@ def season_profile_source_only(*, profile, cfg, weapon_layout, user,
          and configured["applied_hands"]==[
              hand for hand in ("main_hand","off_hand") if hand in by_hand],
          "SEASON_PROFILE_FIXED_J_F_O_OR_SERIALIZATION_DRIFT")
+    # v061's legacy "T" is officially the free B and explicitly EXCLUDES
+    # external O. Bind original v222 B as a typed manual_total regardless of
+    # whether the user selected an automatic ilevel target or manual final T.
+    # This is a scenario draft ONLY: no v089 old-season 79x2 reference and
+    # no new session/Native/cache are permitted from unadmitted source data.
+    typed=copy.deepcopy(configured["scenario"])
+    typed["target"]={
+        "mode":"manual_total","ilevel":budget["target_ilevel"],
+        "manual_total":budget["base_B"],
+        "manual_total_scope":scenario.MANUAL_TOTAL_SCOPE}
+    typed_plan=scenario.normalize(typed)
+    need(typed_plan["budget"]["T"]==budget["base_B"]
+         and typed_plan["budget"]["J"]==budget["J"]
+         and typed_plan["budget"]["F"]==budget["F"]
+         and typed_plan["budget"]["external_temporary_rating"]==fixed_o
+         and typed_plan["scenario"]["source"]["profile_sha256"]==
+             configured["profile_sha256"]
+         and typed_plan["scenario"]["equipment"]==
+             scenario.normalize(configured["scenario"])["scenario"]["equipment"],
+         "SEASON_PROFILE_TYPED_BASE_B_OR_SOURCE_DRIFT")
+    typed_input={
+        "schema":"v098_unadmitted_v096_typed_input_v1",
+        "scenario":typed_plan["scenario"],
+        "scenario_digest":typed_plan["scenario_digest"],
+        "base_B":budget["base_B"],"final_T":budget["final_T"],
+        "fixed_O":dict(fixed_o),"flask_F":dict(native_flask_vector),
+        "source_profile_sha256":configured["profile_sha256"],
+        "source_status":"UNADMITTED_NUMERIC_PREVIEW_ONLY",
+        "runtime_manifest_created":False,
+        "native_execution_authorized":False}
     return {
         "schema":"v098_source_only_season_profile_plan_v1",
         "status":"SEASON_PROFILE_COMPOSED_NOT_ADMITTED_NO_NATIVE",
         "profile_simc":configured["profile"],
         "scenario":configured["scenario"],
         "source_profile_sha256":configured["profile_sha256"],
+        "v096_typed_input_unadmitted":typed_input,
         "budget_preview_unadmitted":budget,
         "same_season_build":season_build,
         "official_B_T_formula":"B=G+J+F;T=B+O",

@@ -3032,7 +3032,9 @@ def _zero_history_v098_profile_source_inputs(*, numeric_preview,
         "schema":"v098_internal_season_profile_inputs_v1",
         "v216_numeric_preview":numeric_preview,
         "flask":{"physical_item_id":flask["physical_item_id"],
-                 "simc_input_token":flask["simc_input_token"]},
+                 "simc_input_token":flask["simc_input_token"],
+                 "static_CHMV_vector":dict(
+                     flask["static_CHMV_vector_unadmitted"])},
         "oil_by_hand":by_hand}
 
 
