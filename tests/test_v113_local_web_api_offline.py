@@ -82,13 +82,20 @@ class LocalWebAPIOffline(unittest.TestCase):
                 credentials={key:"" for key in
                              web.environment_build.discovery_stage.FIELDS})
 
+        # Windows asyncio Proactor uses loopback socketpair() internally.
+        # Restrict only non-loopback sockets; do not break TestClient itself.
+        original_connect=socket.socket.connect
+        def local_only_connect(sock,address):
+            if (sock.family in (socket.AF_INET,socket.AF_INET6) and
+                (not isinstance(address,tuple) or
+                 address[0] not in ("127.0.0.1","::1","localhost"))):
+                raise AssertionError("NETWORK_ESCAPE_FORBIDDEN")
+            return original_connect(sock,address)
         with (
             mock.patch.object(
                 web.environment_build,"collect_wago_new_season_source",
                 side_effect=controlled_external_only) as collector,
-            mock.patch.object(
-                socket.socket,"connect",
-                side_effect=AssertionError("NETWORK_ESCAPE_FORBIDDEN")),
+            mock.patch.object(socket.socket,"connect",new=local_only_connect),
             mock.patch.object(
                 self.app.state.jobs,"plan",
                 side_effect=AssertionError("DPS_PLAN_FORBIDDEN")),
@@ -156,13 +163,18 @@ class LocalWebAPIOffline(unittest.TestCase):
                 credentials={key:"" for key in
                              web.environment_build.discovery_stage.FIELDS})
 
+        original_connect=socket.socket.connect
+        def local_only_connect(sock,address):
+            if (sock.family in (socket.AF_INET,socket.AF_INET6) and
+                (not isinstance(address,tuple) or
+                 address[0] not in ("127.0.0.1","::1","localhost"))):
+                raise AssertionError("NETWORK_ESCAPE_FORBIDDEN")
+            return original_connect(sock,address)
         with (
             mock.patch.object(
                 web.environment_build,"collect_wago_new_season_source",
                 side_effect=controlled_external_only),
-            mock.patch.object(
-                socket.socket,"connect",
-                side_effect=AssertionError("NETWORK_ESCAPE_FORBIDDEN")),
+            mock.patch.object(socket.socket,"connect",new=local_only_connect),
         ):
             first=self.post("/api/v1/environment/season-build",
                             {"game_build":build,"target_ilevel":334})
