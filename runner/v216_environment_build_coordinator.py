@@ -3217,10 +3217,12 @@ def _auto_F_native_from_sealed_v281(*,collected,compilation,binary):
         except (consumable_simc_relation.SimCRelationBlocked,
                 native_effect_pair.NativePairBlocked,
                 OSError,KeyError,ValueError,TypeError) as exc:
-            receipts.append({"physical_item_id":item_id,
-                             "status":"SIMC_SOURCE_OR_NATIVE_ERROR",
-                             "error":str(exc).split(":",1)[0]})
-            continue
+            # A failure may occur AFTER a Native subprocess has started.
+            # Do not silently report 0 Native calls or keep running new
+            # candidates when the exact call count is unknown.
+            raise EnvironmentBuildBlocked(
+                "V216_AUTO_F_NATIVE_OR_SOURCE_FAILED:"
+                +str(exc).split(":",1)[0]) from exc
         count=native.get("new_native_calls")
         need(type(count) is int and 0<=count<=2,
              "AUTO_F_NATIVE_CALL_COUNT_INVALID")
