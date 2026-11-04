@@ -2554,6 +2554,7 @@ def _zero_history_F_O_native_component_candidates(*, observations,
                 source["source_candidate_sha256"],
             "status": "SOURCE_ONLY_NATIVE_STATIC_RATING_PENDING",
             "rating_candidate_unadmitted": None,
+            "static_CHMV_vector_unadmitted": None,
             "simc_native_receipt_sha256": [],
             "same_effect_quality_group_verified": False,
             "weapon_and_hand_applicability_verified": False,
@@ -2589,6 +2590,7 @@ def _zero_history_F_O_native_component_candidates(*, observations,
                  and sum(vector.values()) > 0
                  and vector == row.get("static_CHMV_candidate"),
                  "V216_ZERO_HISTORY_FO_STATIC_VECTOR_DRIFT")
+            candidate["static_CHMV_vector_unadmitted"] = dict(vector)
             if row["kind"] == "flask":
                 need(row.get("F_candidate_unadmitted") ==
                          sum(vector.values()),
@@ -2615,6 +2617,144 @@ def _zero_history_F_O_native_component_candidates(*, observations,
         "no_multi_option_summing_or_quality_promotion": True,
         "F": None, "O": None, "environment_ready": False,
         "new_native_calls": 0, "network_calls": 0,
+    }
+
+
+
+def _zero_history_quality_weapon_candidate_join(*, numeric, weapon_source,
+                                                game_build, simc_revision):
+    """Reuse v281/v278 physical Native rows and the original v286 mask match.
+
+    A source-only ordering among OBSERVED Flask qualities is not an assertion
+    that every available quality was measured. Weapon eligibility uses only
+    the existing same-build v286 representative join; absence is not false
+    proof of ineligibility. Do not calculate F/O/B/T or publish user options.
+    """
+    need(type(numeric) is dict and numeric.get("status") ==
+         "PHYSICAL_ITEM_SIMC_F_O_CANDIDATES_UNADMITTED"
+         and type(numeric.get("flask")) is list
+         and type(numeric.get("oil")) is list,
+         "V216_FO_JOIN_NUMERIC_SOURCE_REQUIRED")
+    groups = {}
+    for option in numeric["flask"]:
+        token = option["simc_input_token"]
+        quality = option["crafting_quality"]
+        suffix = "_" + str(quality)
+        # v281 flask token comes from the exact SimC ItemID DBC relation.
+        # Do not merge different stat kinds or unfamiliar naming formats.
+        family = (token[:-len(suffix)]
+                  if token.endswith(suffix) else
+                  "item_" + str(option["physical_item_id"]))
+        groups.setdefault(family, []).append(option)
+    flasks = []
+    for family, rows in sorted(groups.items()):
+        ranked = sorted(rows, key=lambda x:(
+            -x["crafting_quality"], x["physical_item_id"]))
+        complete = all(x["status"] == "SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY"
+                       and type(x.get("static_CHMV_vector_unadmitted")) is dict
+                       for x in ranked)
+        best = ranked[0] if complete else None
+        best_vector = (best["static_CHMV_vector_unadmitted"]
+                       if best is not None else None)
+        kinds = ([frozenset(k for k,v in
+                            x["static_CHMV_vector_unadmitted"].items()
+                            if v > 0) for x in ranked]
+                 if complete else [])
+        unique_top = (len(ranked) == 1 or
+                      ranked[0]["crafting_quality"] >
+                      ranked[1]["crafting_quality"])
+        comparable = (complete and unique_top
+                      and all(k == kinds[0] for k in kinds)
+                      and all(all(best_vector[k] >=
+                                      x["static_CHMV_vector_unadmitted"][k]
+                                  for k in season_budget_contract.STATS)
+                              for x in ranked[1:]))
+        flasks.append({
+            "simc_family_stem_source_only":family,
+            "observed_item_ids":[x["physical_item_id"] for x in ranked],
+            "observed_qualities":[x["crafting_quality"] for x in ranked],
+            "status":("TOP_QUALITY_AMONG_OBSERVED_ONLY"
+                      if comparable and len(ranked)>1 else
+                      "ONLY_ONE_QUALITY_OBSERVED" if comparable else
+                      "QUALITY_STATIC_STATS_NOT_COMPARABLE"),
+            "highest_observed_quality_item_id_unadmitted":
+                best["physical_item_id"] if comparable else None,
+            "highest_observed_rating_unadmitted":
+                best["rating_candidate_unadmitted"] if comparable else None,
+            "all_market_qualities_verified":False,
+            "user_selectable":False,
+        })
+    source = weapon_source or {}
+    stage_status = source.get("status")
+    if stage_status in ("REPRESENTATIVE_OIL_MASK_MATCH_SOURCE_ONLY",
+                        "REPRESENTATIVE_OIL_MASK_MATCH_PENDING"):
+        need(source.get("schema") ==
+                 "v286_representative_oil_source_compatibility_v1"
+             and source.get("same_build_source_only") is True
+             and source.get("game_build") == game_build
+             and source.get("simc_revision") == simc_revision
+             and source.get("environment_ready") is False
+             and type(source.get("candidate_options")) is list
+             and len(source["candidate_options"]) <= 10000,
+             "V216_FO_V286_WEAPON_SOURCE_IDENTITY_DRIFT")
+        weapon_rows = source["candidate_options"]
+    else:
+        weapon_rows = []
+    oils = []
+    for option in numeric["oil"]:
+        hand = option["selected_hand"]
+        token = option["simc_input_token"]
+        # v281 constructs precisely this hand-qualified SimC option.
+        prefix = ("main_hand:" if hand == "main_hand" else
+                  "main_hand:disabled/off_hand:")
+        stripped = token[len(prefix):] if token.startswith(prefix) else None
+        matching = [w for w in weapon_rows
+                    if w.get("oil_item_id") == option["physical_item_id"]
+                    and w.get("quality_rank") == option["crafting_quality"]
+                    and w.get("simc_enchant_id") == option["simc_enchant_id"]
+                    and w.get("simc_token") == stripped
+                    and w.get("hand") == hand
+                    and w.get("matched_same_build_spell_equipped_masks") is True
+                    and w.get("user_selectable") is False]
+        need(len(matching) <= 1, "V216_FO_V286_DUPLICATE_WEAPON_MATCH")
+        selected = matching[0] if matching else None
+        oils.append({
+            "physical_item_id":option["physical_item_id"],
+            "crafting_quality":option["crafting_quality"],
+            "simc_input_token":token,
+            "hand":hand,
+            "status":("SAME_BUILD_REPRESENTATIVE_WEAPON_MASK_MATCH_SOURCE_ONLY"
+                      if selected is not None else
+                      "REPRESENTATIVE_WEAPON_MASK_NOT_MATCHED_OR_PENDING"),
+            "selected_representative_weapon_id_unadmitted":
+                selected["representative_weapon_id"]
+                if selected is not None else None,
+            "static_O_for_hand_unadmitted":(
+                dict(option["rating_candidate_unadmitted"])
+                if selected is not None and
+                   option["status"] == "SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY"
+                else None),
+            "weapon_min_ilevel_and_use_conditions_verified":False,
+            "official_budget_ownership_verified":False,
+            "user_selectable":False,
+        })
+    return {
+        "schema":"v216_existing_flask_quality_and_weapon_mask_join_v1",
+        "status":"SOURCE_ONLY_OBSERVED_CHOICES_NOT_SEASON_ADMITTED",
+        "game_build":game_build,"simc_revision":simc_revision,
+        "flask_quality_groups_observed_unadmitted":flasks,
+        "oil_representative_weapon_matches_unadmitted":oils,
+        "oil_source_status":stage_status or "REPRESENTATIVE_SOURCE_NOT_PROVIDED",
+        "oil_source_stage_identities":source.get("source_stage_identities")
+            if stage_status in ("REPRESENTATIVE_OIL_MASK_MATCH_SOURCE_ONLY",
+                                "REPRESENTATIVE_OIL_MASK_MATCH_PENDING")
+            else None,
+        "highest_available_quality_verified":False,
+        "quality_only_compared_when_same_simc_family_and_static_stat_kind":True,
+        "weapon_min_ilevel_and_use_conditions_verified":False,
+        "F":None,"O":None,"B":None,"T":None,
+        "environment_ready":False,"user_selectable":False,
+        "new_native_calls":0,"network_calls":0,
     }
 
 
@@ -2878,6 +3018,14 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 simc_revision=source_compilation["simc_revision"])
             progress["physical_F_O_native_source_candidates_unadmitted"]=native_F_O
             source_compilation["physical_F_O_native_source_candidates_unadmitted"]=native_F_O
+            quality_weapon=_zero_history_quality_weapon_candidate_join(
+                numeric=native_F_O,
+                weapon_source=source_compilation.get(
+                    "representative_oil_source_options_unadmitted"),
+                game_build=collected["expected_game_build"],
+                simc_revision=source_compilation["simc_revision"])
+            progress["observed_quality_weapon_choices_unadmitted"]=quality_weapon
+            source_compilation["observed_quality_weapon_choices_unadmitted"]=quality_weapon
         progress["source_compilation_status"]=source_compilation["status"]
         progress["source_compilation_missing"]=source_compilation["missing"]
         if source_compilation["missing"]:

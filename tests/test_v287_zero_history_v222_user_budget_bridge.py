@@ -306,6 +306,138 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertEqual(candidates["flask"],[])
         self.assertIsNone(candidates["F"])
 
+
+    def test_flask_observed_quality_ranks_same_simc_family_only(self):
+        first,_,_=self.physical_effect()
+        def flask(iid,quality,crit,token):
+            vector={k:0 for k in build.season_budget_contract.STATS}
+            vector["crit_rating"]=crit
+            return {
+                "physical_item_id":iid,"crafting_quality":quality,
+                "simc_input_token":token,
+                "status":"SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY",
+                "rating_candidate_unadmitted":crit,
+                "static_CHMV_vector_unadmitted":vector,
+            }
+        numeric={
+            "status":"PHYSICAL_ITEM_SIMC_F_O_CANDIDATES_UNADMITTED",
+            "flask":[
+                flask(241327,1,151,"flask_of_the_shattered_sun_1"),
+                flask(241326,2,165,"flask_of_the_shattered_sun_2")],
+            "oil":[]}
+        out=build._zero_history_quality_weapon_candidate_join(
+            numeric=numeric,weapon_source={},
+            game_build=self.catalog["game_build"],
+            simc_revision=self.catalog["simc_revision"])
+        family=out["flask_quality_groups_observed_unadmitted"][0]
+        self.assertEqual(family["status"],
+                         "TOP_QUALITY_AMONG_OBSERVED_ONLY")
+        self.assertEqual(family[
+            "highest_observed_quality_item_id_unadmitted"],241326)
+        self.assertEqual(family["highest_observed_rating_unadmitted"],165)
+        self.assertFalse(family["all_market_qualities_verified"])
+        self.assertIsNone(out["F"])
+        self.assertFalse(out["user_selectable"])
+
+    def test_flask_different_stats_or_nonmonotone_not_merged_or_promoted(self):
+        z={k:0 for k in build.season_budget_contract.STATS}
+        a=dict(z,crit_rating=151)
+        b=dict(z,haste_rating=165)
+        def option(iid,rank,vector):
+            return {"physical_item_id":iid,"crafting_quality":rank,
+                    "simc_input_token":"flask_of_same_stem_"+str(rank),
+                    "status":"SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY",
+                    "rating_candidate_unadmitted":sum(vector.values()),
+                    "static_CHMV_vector_unadmitted":vector}
+        native={"status":"PHYSICAL_ITEM_SIMC_F_O_CANDIDATES_UNADMITTED",
+                "flask":[option(1,1,a),option(2,2,b)],"oil":[]}
+        out=build._zero_history_quality_weapon_candidate_join(
+            numeric=native,weapon_source=None,
+            game_build=self.catalog["game_build"],
+            simc_revision=self.catalog["simc_revision"])
+        group=out["flask_quality_groups_observed_unadmitted"][0]
+        self.assertEqual(group["status"],"QUALITY_STATIC_STATS_NOT_COMPARABLE")
+        self.assertIsNone(group[
+            "highest_observed_quality_item_id_unadmitted"])
+        self.assertIsNone(out["F"])
+
+    def existing_oil_mask_fixture(self,matched=True):
+        return {
+            "schema":"v286_representative_oil_source_compatibility_v1",
+            "status":("REPRESENTATIVE_OIL_MASK_MATCH_SOURCE_ONLY"
+                      if matched else "REPRESENTATIVE_OIL_MASK_MATCH_PENDING"),
+            "same_build_source_only":True,
+            "game_build":self.catalog["game_build"],
+            "simc_revision":self.catalog["simc_revision"],
+            "environment_ready":False,
+            "source_stage_identities":{
+                "OIL":{"candidate_sha256":"a"*64}},
+            "candidate_options":([{
+                "oil_item_id":243734,
+                "quality_rank":2,"simc_token":"thalassian_phoenix_oil",
+                "simc_enchant_id":8052,"hand":"main_hand",
+                "representative_weapon_id":9101,
+                "matched_same_build_spell_equipped_masks":True,
+                "user_selectable":False}]
+                if matched else []),
+        }
+
+    def test_oil_native_rating_attaches_only_to_existing_representative_weapon(self):
+        request,bound,observed=self.physical_effect(
+            kind="temporary_enchant",hand="main_hand")
+        self.compiled["representative_oil_source_options_unadmitted"]=(
+            self.existing_oil_mask_fixture())
+        out=self.run_build(proof=False,effect_requests=[request],
+                           effect_resolver=bound,effect_observation=observed)
+        quality=out["source_compilation"][
+            "observed_quality_weapon_choices_unadmitted"]
+        record=quality["oil_representative_weapon_matches_unadmitted"][0]
+        self.assertEqual(record["status"],
+            "SAME_BUILD_REPRESENTATIVE_WEAPON_MASK_MATCH_SOURCE_ONLY")
+        self.assertEqual(record[
+            "selected_representative_weapon_id_unadmitted"],9101)
+        self.assertEqual(record[
+            "static_O_for_hand_unadmitted"]["haste_rating"],17)
+        self.assertFalse(record["user_selectable"])
+        self.assertIsNone(quality["O"])
+        self.assertFalse(out["zero_history_build"]["environment_ready"])
+
+    def test_oil_offhand_shield_or_unresolved_mask_not_assumed_eligible(self):
+        request,bound,observed=self.physical_effect(
+            kind="temporary_enchant",hand="main_hand")
+        src=self.existing_oil_mask_fixture(matched=False)
+        native=build._zero_history_F_O_native_component_candidates(
+            observations=[{**observed,
+                "physical_item_native_source_unadmitted":bound}],
+            game_build=self.catalog["game_build"],
+            simc_revision=self.catalog["simc_revision"])
+        q=build._zero_history_quality_weapon_candidate_join(
+            numeric=native,weapon_source=src,
+            game_build=self.catalog["game_build"],
+            simc_revision=self.catalog["simc_revision"])
+        entry=q["oil_representative_weapon_matches_unadmitted"][0]
+        self.assertEqual(entry["status"],
+                         "REPRESENTATIVE_WEAPON_MASK_NOT_MATCHED_OR_PENDING")
+        self.assertIsNone(entry["static_O_for_hand_unadmitted"])
+        self.assertIsNone(q["O"])
+
+    def test_oil_foreign_weapon_source_build_or_revision_blocks(self):
+        req,bound,obs=self.physical_effect(
+            kind="temporary_enchant",hand="main_hand")
+        native=build._zero_history_F_O_native_component_candidates(
+            observations=[{**obs,
+                "physical_item_native_source_unadmitted":bound}],
+            game_build=self.catalog["game_build"],
+            simc_revision=self.catalog["simc_revision"])
+        src=self.existing_oil_mask_fixture()
+        src["game_build"]="12.2.0.99999"
+        with self.assertRaisesRegex(build.EnvironmentBuildBlocked,
+                                    "V216_FO_V286_WEAPON_SOURCE_IDENTITY_DRIFT"):
+            build._zero_history_quality_weapon_candidate_join(
+                numeric=native,weapon_source=src,
+                game_build=self.catalog["game_build"],
+                simc_revision=self.catalog["simc_revision"])
+
     def test_automatic_target_goes_through_existing_v222_once(self):
         result=self.run_build()
         source=result["source_compilation"]
