@@ -1028,8 +1028,112 @@ def build(user,folder,binary,revision,static_cache_path=None,
                 "default_legacy_sessions_unchanged":True}
                if current_season_product else {})}
 
+def _season_settings_from_v216(*, compilation, numeric_inputs,
+                                controls, need):
+    """Compose only observed gems/J/F/flask from the normal Build.
+
+    The small non-budget controls (level/food/potion/augmentation/optional
+    module) must be sourced by the season input layer. This adapter NEVER
+    copies v144 historical defaults or certifies gem/socket quality.
+    """
+    need(type(controls) is dict and set(controls)=={
+        "character_level","food","potion","augmentation","omnium_talents"},
+         "SEASON_SETTINGS_SOURCE_CONTROLS_REQUIRED")
+    need(type(controls["character_level"]) is int and
+         1<=controls["character_level"]<=100 and
+         all(type(controls[k]) is str and bool(controls[k]) and
+             "\n" not in controls[k] and "\r" not in controls[k]
+             for k in ("food","potion","augmentation")) and
+         (controls["omnium_talents"] is None or
+          type(controls["omnium_talents"]) is str and
+          bool(controls["omnium_talents"]) and
+          "\n" not in controls["omnium_talents"] and
+          "\r" not in controls["omnium_talents"]),
+         "SEASON_SETTINGS_EXACT_SIMC_SOURCE_TOKENS_REQUIRED")
+    layout=compilation.get("physical_gem_layout_unadmitted")
+    gem=compilation.get("physical_gem_J_arithmetic_unadmitted")
+    missing=[]
+    if type(layout) is not dict or type(gem) is not dict:
+        missing.append("V271_SELECTED_PHYSICAL_GEM_LAYOUT_AND_J_PENDING")
+    if missing:
+        return {"status":"SEASON_SETTINGS_SOURCE_PENDING",
+                "missing":missing,"settings":None}
+    need(layout.get("schema")=="v271_user_socket_gem_layout_stage_v1"
+         and layout.get("status")==
+             "PHYSICAL_GEMS_STAGED_SOURCE_AND_SOCKET_PROOFS_PENDING"
+         and gem.get("status")=="PHYSICAL_GEM_J_ARITHMETIC_UNADMITTED"
+         and gem.get("physical_gem_item_ids")==layout.get("ordinary_gem_ids")
+         and gem.get("J_candidate_unadmitted")==
+             numeric_inputs["v216_numeric_preview"]["calculation"]["J"],
+         "SEASON_SETTINGS_V271_V222_PHYSICAL_J_DRIFT")
+    ordinary=layout["ordinary_gem_ids"]
+    counts=layout.get("socket_counts")
+    special=layout.get("special_gem_id")
+    where=layout.get("special_slot")
+    # The existing v139 source-only formatter still expects a head gem
+    # and six ordinary slots. Do not invent sockets for other layouts.
+    if (type(counts) is not dict or type(ordinary) is not list or
+        type(special) is not int or special<=0 or
+        where!="head" or counts.get("head")!=1 or
+        len(ordinary)!=6 or sum(counts.values())!=7):
+        return {"status":"SEASON_SETTINGS_SOURCE_PENDING",
+                "missing":["V139_VARIABLE_SOCKET_LAYOUT_COMPOSER_PENDING"],
+                "settings":None}
+    allowed={"head","neck","shoulders","back","chest","wrists","hands",
+             "waist","legs","feet","finger1","finger2","main_hand","off_hand"}
+    need(all(type(k) is str and k in allowed and
+             type(v) is int and 0<=v<=6 for k,v in counts.items()) and
+         all(type(item) is int and item>0 for item in ordinary),
+         "SEASON_SETTINGS_V271_SOCKET_ROWS_INVALID")
+    source_gems={}
+    consumed=iter(ordinary)
+    for slot in sorted(counts):
+        item_ids=[special] if slot==where else []
+        item_ids.extend(next(consumed) for _ in
+                        range(counts[slot]-(1 if slot==where else 0)))
+        if item_ids:
+            source_gems[slot]="/".join(map(str,item_ids))
+    flask=numeric_inputs["flask"]
+    vector=scenario.vector(flask["static_CHMV_vector"],
+                           "SEASON_SETTINGS_NATIVE_FLASK_VECTOR")
+    chosen=[k for k,v in vector.items() if v>0]
+    calc=numeric_inputs["v216_numeric_preview"]["calculation"]
+    need(sum(vector.values())==calc["F"],
+         "SEASON_SETTINGS_FLASK_NATIVE_V222_DRIFT")
+    if len(chosen)!=1:
+        return {"status":"SEASON_SETTINGS_SOURCE_PENDING",
+                "missing":["V139_MULTI_STAT_FLASK_SOURCE_COMPOSER_PENDING"],
+                "settings":None}
+    build=calc["game_build"]
+    settings={
+        "schema":"v144_representative_season_items_v1",
+        "season":"source_build_"+build.replace(".","_"),
+        "target_ilevel":calc["target_ilevel"],
+        "character_level":controls["character_level"],
+        "common_gear":{},"specializations":{},
+        "simc_item_db_source":"local",
+        "gems":source_gems,
+        "default_consumables":{
+            "flask":flask["simc_input_token"],
+            "food":controls["food"],
+            "potion":controls["potion"],
+            "augmentation":controls["augmentation"],
+            "omnium_talents":controls["omnium_talents"],
+            "gem_budget_J":calc["J"],
+            "flask_budget_F":calc["F"],
+            "flask_fixed_stat":chosen[0]}}
+    pure.validate_season(settings)
+    return {"status":"SEASON_SETTINGS_PHYSICAL_GEMS_FLASK_COMPOSED_UNADMITTED",
+            "missing":[],"settings":settings,
+            "physical_gem_ids_reused":True,
+            "selected_native_flask_reused":True,
+            "game_socket_legality_authenticated_here":False,
+            "controls_admitted_or_default_quality_verified_here":False}
+
+
 def preview_from_environment_build(user,folder,binary,revision,*,
-                                   environment_result,season_settings=None):
+                                   environment_result,season_settings=None,
+                                   season_controls=None):
     """Normal v216 source → v098 preview without manual gear/tier/J/F bundling.
 
     The v216 zero-history Build already compiles v191/v213 gear/tier and
@@ -1054,12 +1158,24 @@ def preview_from_environment_build(user,folder,binary,revision,*,
         missing.append("ORIGINAL_V191_GEAR_TIER_PATHS_PENDING")
     if inputs is None:
         missing.append("SELECTED_V222_GJFO_PROFILE_INPUTS_PENDING")
-    if season_settings is None:
+    need(season_settings is None or season_controls is None,
+         "SEASON_SETTINGS_AMBIGUOUS_EXPLICIT_AND_DERIVED")
+    derived_settings=None
+    if (season_settings is None and season_controls is not None and
+            inputs is not None):
+        derived_settings=_season_settings_from_v216(
+            compilation=compilation,numeric_inputs=inputs,
+            controls=season_controls,need=need)
+        if derived_settings["settings"] is not None:
+            season_settings=derived_settings["settings"]
+        else:
+            missing.extend(derived_settings["missing"])
+    elif season_settings is None:
         missing.append("SEASON_SPECIFIC_GEM_AND_CONSUMABLE_SETTINGS_PENDING")
     if missing:
         return {"schema":"v098_v216_auto_source_preview_bridge_v1",
                 "status":"V216_TO_V098_SOURCE_PROFILE_PENDING",
-                "missing":missing,
+                "missing":sorted(set(missing)),
                 "environment_ready":False,"native_calls":0,
                 "network_calls":0,"user_session_created":False}
     need(type(originals) is dict and
@@ -1129,6 +1245,11 @@ def preview_from_environment_build(user,folder,binary,revision,*,
             "v216_to_v098_auto_source_linked_preview":True,
             "season_settings_source_admitted_here":False,
             "verified_user_default_options_registered":False,
+            "season_settings_physical_gem_flask_assembled_unadmitted":
+                derived_settings is not None,
+            "optional_omnium_module_active_in_profile":
+                season_settings["default_consumables"]["omnium_talents"]
+                is not None,
             "v216_preflight_sha256":compilation.get("preflight_sha256")}
 
 

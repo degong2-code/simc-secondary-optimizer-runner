@@ -234,6 +234,8 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                               gem_ratings=ratings)
         j=result["source_compilation"]["physical_gem_J_arithmetic_unadmitted"]
         self.assertEqual(j["J_candidate_unadmitted"],138)
+        self.assertEqual(result["source_compilation"][
+            "physical_gem_layout_unadmitted"],layout)
         self.assertEqual(j["physical_gem_item_ids"],[240908]*6)
         self.assertFalse(j["game_socket_legality_verified_here"])
         self.assertNotIn("preprofile_budget_arithmetic_unadmitted",
@@ -1470,6 +1472,61 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                     "raw_source_sha256"],source_sha)
                 self.assertEqual(result["v216_preflight_sha256"],"e"*64)
                 self.assertFalse(result["season_settings_source_admitted_here"])
+                # Reconstruct the v139 season gems from ORIGINAL v271
+                # physical slots, and the flask stat from original v278.
+                # No legacy v144 numeric/default choices are copied.
+                defaults=doc["settings"]["default_consumables"]
+                controls={
+                    "character_level":doc["settings"]["character_level"],
+                    "food":defaults["food"],"potion":defaults["potion"],
+                    "augmentation":defaults["augmentation"],
+                    "omnium_talents":None}
+                waiting=boot.preview_from_environment_build(
+                    user,root/"gem_pending",binary,"c"*40,
+                    environment_result=env,season_controls=controls)
+                self.assertEqual(waiting["status"],
+                    "V216_TO_V098_SOURCE_PROFILE_PENDING")
+                self.assertIn("V271_SELECTED_PHYSICAL_GEM_LAYOUT_AND_J_PENDING",
+                              waiting["missing"])
+                self.assertFalse((root/"gem_pending").exists())
+                layout,_=self.physical_layout()
+                env["source_compilation"]["physical_gem_layout_unadmitted"]=layout
+                env["source_compilation"][
+                    "physical_gem_J_arithmetic_unadmitted"]={
+                    "status":"PHYSICAL_GEM_J_ARITHMETIC_UNADMITTED",
+                    "physical_gem_item_ids":list(layout["ordinary_gem_ids"]),
+                    "J_candidate_unadmitted":143}
+                derived=boot.preview_from_environment_build(
+                    user,root/"derived",binary,"c"*40,
+                    environment_result=env,season_controls=controls)
+                self.assertEqual(derived["status"],
+                    "SEASON_PROFILE_COMPOSED_NOT_ADMITTED_NO_NATIVE")
+                self.assertTrue(derived[
+                    "season_settings_physical_gem_flask_assembled_unadmitted"])
+                self.assertIn("gem_id=240967",
+                              derived["profile_simc"])
+                self.assertIn("gem_id=240908/240908",
+                              derived["profile_simc"])
+                self.assertNotIn("omnium_talents=",
+                                 derived["profile_simc"])
+                self.assertFalse(derived[
+                    "optional_omnium_module_active_in_profile"])
+                self.assertEqual(derived["scenario"]["consumables"][
+                    "gem_budget_J"],143)
+                self.assertEqual(derived["scenario"]["consumables"][
+                    "flask_budget_F"],176)
+                self.assertEqual(derived["new_native_calls"],0)
+                self.assertFalse((root/"derived").exists())
+                env["source_compilation"][
+                    "physical_gem_J_arithmetic_unadmitted"][
+                        "J_candidate_unadmitted"]=142
+                with self.assertRaisesRegex(
+                        boot.UserScenarioBlocked,
+                        "SEASON_SETTINGS_V271_V222_PHYSICAL_J_DRIFT"):
+                    boot.preview_from_environment_build(
+                        user,root/"bad_J",binary,"c"*40,
+                        environment_result=env,season_controls=controls)
+                self.assertFalse((root/"bad_J").exists())
                 self.assertFalse(result[
                     "verified_user_default_options_registered"])
                 self.assertEqual(result["new_native_calls"],0)

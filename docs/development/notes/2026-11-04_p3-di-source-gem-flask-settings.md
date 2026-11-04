@@ -1,0 +1,10 @@
+# 2026-11-04 · P3-DI · 시즌 원본 보석/영약 → 내부 기본 설정 자동 구성
+
+- **Capability:** `J.GEM`, `F.FLASK`, `PRODUCT.E2E`
+- **Keywords:** P3-DI, settings, gem sockets, v271, v216, v098, v139, omitted omnium, 자동 설정, 시즌
+- **Prior evidence:** [PROTOCOL](../PROTOCOL.md)→[INDEX](../INDEX.md)→[P3-DH](2026-11-04_p3-dh-v216-v098-auto-source-only-bridge.md) [225 PASS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41777910284) 원본 v216→v098 source-only 연결, [P3-DA](2026-11-04_p3-da-v222-direct-numeric-gjfo.md) J/F 원본 수치, 원래 v271 배치와 v278 실제 정적 F, v139/v169 대표 프로필.
+- **Decision:** `CONNECT` — 이미 v216에 전달된 원래 v271 물리 보석 배치 및 J 합계, 선택 Flask 정적 vector/SimC token으로 v139 시즌 설정의 `gems`, J/F, F 종류를 자동 조합한다. 시즌에 따라 달라지는 캐릭터 레벨·음식·물약·증강 및 모듈 선택은 명시된 내부 원본 controls로 전달하며 불명확하면 보류. 오래된 v144 기본 보석/소모품을 새 시즌으로 복사하는 방법은 `STOP`.
+- **Changes:** v216 zero-history preflight의 **기존** `physical_gem_layout_unadmitted`를 source_compilation 출력에 보존. v098 `preview_from_environment_build`의 내부 opt-in `season_controls` 경로가 v271 physical IDs/counts, 기존 v222 J/F, 정확 Native Flask vector에서 source-only v139 설정을 구성하고, 기존 v169→v139→v098 미리보기 함수를 호출한다. 현재 v139 formatter의 6개 일반 보석/머리 특수 보석 범위를 넘으면 PENDING, 합계/ID 다르면 FAIL-CLOSED. `omnium_talents=None`으로 명시 모듈 OFF 시 프로필 해당 줄을 생략(기존 문자열 지정 profile bytes 불변). source-only·no session·no Native·no Policy A.
+- **Verification:** 합성 오프라인 시험에서 원래 v216→v098 단일 호출, 물리 gem ID/배치·J/F·flask, 옵션 모듈 OFF 프로필 삭제, 누락 source PENDING, J 불일치 조기 차단, 기존 default 회귀를 점검. 최종 Actions 판정 전 **NOT_VERIFIED**; 과거 P3-DH [225 PASS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41777910284)·원래 Native/원본은 범위 한정 역사 재사용. 신규 게임 HTTP0/Native0.
+- **Remaining:** 새 시즌 실제 character level/food/potion/augmentation의 정확 입력 producer, v271의 새 시즌 다이아몬드·가변 socket 개수/법적 적용·최고 품질, Omnium 별도 모듈 검증, 정식 Policy A·v216/v223 READY·26 DPS Native E2E는 아직 미완료. 실제 현 시즌 자료는 수집 가능하므로 미래 출시까지 개발을 대기할 이유는 없다.
+- **Efficiency:** 원래 v216 preflight layout object 단순 전달, 원래 v222 J/F 한 번만 사용, 기존 v139/v169 compose 재사용. 신규 Native/HTTP, 신규 효과 엔진, 전수 아이템 DB, 기존 DPS/정적 캐시 무효화 없음. main/immutable/원본 v016/Project UI/Work OS 변경 없음.

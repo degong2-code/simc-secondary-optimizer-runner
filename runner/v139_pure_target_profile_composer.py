@@ -191,7 +191,11 @@ def compose(character,trinkets,*,target_ilevel=334,
       "position="+contract["position"],
       "default_actions=1",
       *(name+"="+season["default_consumables"][name] for name in
-        ("flask","food","potion","augmentation","omnium_talents")),
+        ("flask","food","potion","augmentation")),
+      # Optional expansion/season module: absent means exactly OFF.
+      # Historical non-null v144 profiles keep identical assignment bytes.
+      *([] if season["default_consumables"]["omnium_talents"] is None else
+        ["omnium_talents="+season["default_consumables"]["omnium_talents"]]),
       "fight_style=Patchwerk",
       "desired_targets="+str(combat["targets"]),
       "max_time="+str(combat["duration_seconds"]),

@@ -3216,6 +3216,9 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     manual_final_T=(
                         manual_T if zero_history_budget_evidence is not None
                         else None))
+                if "physical_gem_layout_unadmitted" in preflight:
+                    source_compilation["physical_gem_layout_unadmitted"]=(
+                        preflight["physical_gem_layout_unadmitted"])
                 if "physical_gem_J_arithmetic_unadmitted" in preflight:
                     gem_J=preflight["physical_gem_J_arithmetic_unadmitted"]
                     source_compilation["physical_gem_J_arithmetic_unadmitted"]=gem_J
