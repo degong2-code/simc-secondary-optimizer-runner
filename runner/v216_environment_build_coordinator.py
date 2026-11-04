@@ -428,6 +428,95 @@ def _existing_simc_native_effect_snapshot(*, candidate, simc_revision):
     return observed
 
 
+def _reuse_v277_G_in_preprofile(*, catalog, target_ilevel, native_G,
+                                budget_evidence):
+    """Bind this Build's already-verified v277 numeric G to existing v222.
+
+    No source collection, Native retry, new rounding rule or READY admission.
+    v277 owns the original source/profile/binary/receipt verification. The
+    preflight checks numeric identity and only fills a missing G in a supplied
+    J/F/O arithmetic candidate; it does not authenticate those components.
+    """
+    need(native_G is None or type(native_G) is dict,
+         "V216_ZERO_HISTORY_V277_SOURCE_OBJECT_INVALID")
+    if (native_G is None or native_G.get("status") !=
+            "G_NATIVE_NUMERIC_REFERENCE_OBSERVED_JFO_PENDING"):
+        return None, budget_evidence
+    require_sha = season_budget_contract.SHA.fullmatch
+    rounded = native_G.get("standardization")
+    source_sha = native_G.get("native_json2_sha256")
+    need(type(target_ilevel) is int and target_ilevel > 0
+         and type(source_sha) is str and require_sha(source_sha) is not None
+         and type(native_G.get("observed_G_total")) is int
+         and native_G["observed_G_total"] > 0
+         and type(native_G.get("standardized_G")) is int
+         and type(rounded) is dict
+         and all(type(native_G.get(k)) is str
+                 and require_sha(native_G[k]) is not None for k in (
+                     "native_receipt_sha256",
+                     "source_profile_receipt_sha256",
+                     "native_binary_sha256"))
+         and type(native_G.get("new_native_calls")) is int
+         and native_G["new_native_calls"] in (0, 1)
+         and native_G.get("full_G_approved") is False
+         and native_G.get("environment_ready") is False,
+         "V216_ZERO_HISTORY_V277_NUMERIC_SOURCE_INVALID")
+    try:
+        expected = season_budget_contract.standardize_representative_G(
+            observed_G_total=native_G["observed_G_total"],
+            target_ilevel=target_ilevel,
+            source_observation_sha256=source_sha)
+    except season_budget_contract.SeasonBudgetBlocked as exc:
+        raise EnvironmentBuildBlocked(
+            "V216_ZERO_HISTORY_V277_G_STANDARDIZATION_INVALID:" + str(exc)
+        ) from exc
+    need(rounded == expected
+         and native_G["standardized_G"] == expected["standardized_G"],
+         "V216_ZERO_HISTORY_V277_G_ROUNDING_OR_TARGET_DRIFT")
+    candidate = {
+        "status": "NATIVE_G_NUMERIC_SOURCE_ONLY_JFO_AND_ADMISSION_PENDING",
+        "game_build": catalog["game_build"],
+        "simc_revision": catalog["simc_revision"],
+        "target_ilevel": target_ilevel,
+        "observed_G_total": native_G["observed_G_total"],
+        "standardized_G": native_G["standardized_G"],
+        "standardization": expected,
+        "native_json2_sha256": source_sha,
+        "native_receipt_sha256": native_G["native_receipt_sha256"],
+        "source_profile_receipt_sha256":
+            native_G["source_profile_receipt_sha256"],
+        "native_binary_sha256": native_G["native_binary_sha256"],
+        "source_admission_performed_here": False,
+        "environment_ready": False,
+        "network_calls": 0, "native_calls": 0,
+    }
+    if budget_evidence is None:
+        return candidate, None
+    need(type(budget_evidence) is dict
+         and type(budget_evidence.get("components")) is dict,
+         "V216_ZERO_HISTORY_V277_BUDGET_COMPONENTS_REQUIRED")
+    components = dict(budget_evidence["components"])
+    if components.get("G") is None:
+        components["G"] = {
+            "game_build": catalog["game_build"],
+            "source_catalog_manifest_sha256": catalog["manifest_sha256"],
+            "source_sha256": source_sha,
+            "source_verification": "EXACT_NATIVE",
+            "rating": expected["standardized_G"],
+            "standardization": expected,
+        }
+    else:
+        proof = components["G"]
+        need(type(proof) is dict
+             and proof.get("rating") == expected["standardized_G"]
+             and proof.get("source_sha256") == source_sha
+             and proof.get("standardization") == expected,
+             "V216_ZERO_HISTORY_V277_G_V222_CONFLICT")
+    return candidate, {
+        **budget_evidence, "components": components,
+    }
+
+
 def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                                 expected_simc_revision, budget_evidence=None,
                                 target_ilevel=None, manual_final_T=None,
@@ -438,7 +527,8 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                                 g_native_receipt_paths_by_ilevel=None,
                                 simc_effect_snapshot_case=None,
                                 gem_layout_receipt=None,
-                                gem_rating_by_id=None):
+                                gem_rating_by_id=None,
+                                zero_history_native_G=None):
     """Inspect a freshly assembled v213 artifact in the NORMAL Build path.
 
     This does not install an environment. Reuse authenticated source
@@ -517,6 +607,9 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
         existing_G_rows = _reuse_observed_G_native_receipts(
             catalog=source,
             receipt_paths_by_ilevel=g_native_receipt_paths_by_ilevel)
+    v277_G_preview, budget_evidence = _reuse_v277_G_in_preprofile(
+        catalog=source, target_ilevel=target_ilevel,
+        native_G=zero_history_native_G, budget_evidence=budget_evidence)
     # Consume already-measured ilvl rows using v262/v222, not a new engine.
     need((standard_budget_evidence_by_ilevel is None) ==
          (standard_budget_reference_track is None),
@@ -584,8 +677,7 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                  component.get("standardization")==
                      native_row["standardization"],
                  "V216_G_NATIVE_V222_OBSERVATION_DRIFT")
-    need(budget_evidence is not None or
-         (target_ilevel is None and manual_final_T is None),
+    need(budget_evidence is not None or manual_final_T is None,
          "V216_PREPROFILE_BUDGET_INPUT_INCOMPLETE")
     proposed_budget = None
     if budget_evidence is not None:
@@ -650,6 +742,8 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
         else:
             payload["requires"].append(
                 "PHYSICAL_GEM_ITEM_BY_ID_CHMV_RATING_SOURCE_PENDING")
+    if v277_G_preview is not None:
+        payload["v277_native_G_preprofile_unadmitted"] = v277_G_preview
     if proposed_budget is not None:
         payload["proposed_budget_arithmetic_unadmitted"] = proposed_budget
         # Follow the already-verified original source receipts. Missing
@@ -2534,13 +2628,21 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         collected["snapshot_receipt_path"]).parent,
                     source_stage_root=source_compilation["stage_root"],
                     budget_evidence=zero_history_budget_evidence,
+                    zero_history_native_G=native_G,
                     target_ilevel=(
                         fresh_collection_inputs[
                             "representative_request"]["target_ilevel"]
-                        if zero_history_budget_evidence is not None else None),
+                        if (zero_history_budget_evidence is not None or
+                            native_G.get("status")==
+                            "G_NATIVE_NUMERIC_REFERENCE_OBSERVED_JFO_PENDING")
+                        else None),
                     manual_final_T=(
                         manual_T if zero_history_budget_evidence is not None
                         else None))
+                if "v277_native_G_preprofile_unadmitted" in preflight:
+                    observed=preflight["v277_native_G_preprofile_unadmitted"]
+                    source_compilation["v277_native_G_preprofile_unadmitted"]=observed
+                    progress["v277_native_G_preprofile_unadmitted"]=observed
                 if "proposed_budget_arithmetic_unadmitted" in preflight:
                     # The original v222 calculator owns B/T and manual T;
                     # source trust / user session admission remains pending.

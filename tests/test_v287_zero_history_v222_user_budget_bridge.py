@@ -40,7 +40,8 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             "stage_root":str(self.root),
             "simc_revision":self.catalog["simc_revision"],
             "source_catalog_path":str(self.path),"missing":[]}
-    def run_build(self,manual=None,proof=True,level=334,user_level=None):
+    def run_build(self,manual=None,proof=True,level=334,user_level=None,
+                  native_result=None):
         inputs={
             "expected_game_build":self.catalog["game_build"],
             "representative_request":{
@@ -54,8 +55,9 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         with mock.patch.object(build,"collect_wago_new_season_source",
                                return_value=self.collected) as collect,\
              mock.patch.object(build.zero_history_G_native,"collect",
-                               return_value={"status":"PENDING",
-                                             "new_native_calls":0}) as native,\
+                               return_value=(native_result if native_result is not None
+                                             else {"status":"PENDING",
+                                                   "new_native_calls":0})) as native,\
              mock.patch.object(build.source_wiring,"compile_collected",
                                return_value=dict(self.compiled)) as compiler,\
              mock.patch.object(build.environment_manifest,"read_json",
@@ -77,6 +79,73 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                          collect.call_args.kwargs)
         self.assertFalse((self.root/"sessions").exists())
         return result
+    def v277_native_G(self, *, level=334, source_sha=None):
+        # Synthetic source-only Native return: v277 itself is mocked here.
+        # Existing P3-CO/CP/BX real evidence is NOT re-executed.
+        g=self.table[334]["components"]["G"]
+        sha=source_sha or g["source_sha256"]
+        from runner import v222_season_budget_contract as budget
+        rounded=budget.standardize_representative_G(
+            observed_G_total=2847,target_ilevel=level,
+            source_observation_sha256=sha)
+        return {
+            "status":"G_NATIVE_NUMERIC_REFERENCE_OBSERVED_JFO_PENDING",
+            "observed_G_total":2847,
+            "standardized_G":rounded["standardized_G"],
+            "standardization":rounded,
+            "native_json2_sha256":sha,
+            "native_receipt_sha256":"1"*64,
+            "source_profile_receipt_sha256":"2"*64,
+            "native_binary_sha256":"3"*64,
+            "new_native_calls":0,"full_G_approved":False,
+            "environment_ready":False,
+        }
+
+    def test_native_G_without_JFO_proof_is_visible_but_never_ready(self):
+        result=self.run_build(proof=False,native_result=self.v277_native_G())
+        source=result["source_compilation"]
+        numeric=source["v277_native_G_preprofile_unadmitted"]
+        self.assertEqual(numeric["standardized_G"],2850)
+        self.assertEqual(numeric["target_ilevel"],334)
+        self.assertFalse(numeric["source_admission_performed_here"])
+        self.assertNotIn("preprofile_budget_arithmetic_unadmitted",source)
+        self.assertFalse(result["zero_history_build"]["environment_ready"])
+        self.assertFalse(result["zero_history_build"]["user_session_created"])
+        self.assertEqual(result["native_calls"],0)
+
+    def test_existing_v277_G_fills_only_missing_component_for_v222(self):
+        component=self.table[334]["components"].pop("G")
+        try:
+            result=self.run_build(
+                manual=3300,native_result=self.v277_native_G())
+        finally:
+            self.table[334]["components"]["G"]=component
+        calc=result["source_compilation"][
+            "preprofile_budget_arithmetic_unadmitted"]
+        self.assertEqual((calc["reference_G"],calc["base_B"],calc["final_T"]),
+                         (2850,3268,3300))
+        self.assertTrue(calc["manual_final_T_authoritative"])
+        self.assertFalse(calc["source_authentication_performed_here"])
+        self.assertFalse(result["zero_history_build"]["environment_ready"])
+        self.assertEqual(result["native_calls"],0)
+
+    def test_v277_native_and_supplied_G_conflict_fails_closed(self):
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_ZERO_HISTORY_SOURCE_COMPILER_INVALID:"
+                "V216_ZERO_HISTORY_V277_G_V222_CONFLICT"):
+            self.run_build(native_result=self.v277_native_G(
+                source_sha="7"*64))
+        self.assertFalse((self.root/"sessions").exists())
+
+    def test_v277_native_target_drift_fails_before_budget(self):
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_ZERO_HISTORY_SOURCE_COMPILER_INVALID:"
+                "V216_ZERO_HISTORY_V277_G_ROUNDING_OR_TARGET_DRIFT"):
+            self.run_build(native_result=self.v277_native_G(level=335))
+        self.assertFalse((self.root/"sessions").exists())
+
     def test_automatic_target_goes_through_existing_v222_once(self):
         result=self.run_build()
         source=result["source_compilation"]
