@@ -1,6 +1,6 @@
 # 2026-11-04 · P3-DL · 기존 정책 A 판정→새 시즌 UI 후보 보류 사유 연결
 
-- **Capability:** `CATALOG.POLICY_A`, `PRODUCT.E2E`
+- **Capability:** `CATALOG.AUTOADMIT`, `PRODUCT.E2E`
 - **Keywords:** P3-DL, Policy A, auto admission, source catalog, v220, v196, v212, per-item missing, 선택지, 신시즌, 보류, highest quality
 - **Prior evidence:** [PROTOCOL](../PROTOCOL.md)→[INDEX](../INDEX.md)→[12항목 책임표](../ENVIRONMENT_BUILD_INPUT_SCOPE_20261104.md); [승인 정책](../../P3_K_20261102_ENVIRONMENT_DB_POLICY_HIGHEST_QUALITY_NO_TEMP_ENCHANT_SEASON_REFRESH_ADDONS.md); 기존 `v220.decide/preview_enchant_catalog`, `v196.public_options`, `v113 /api/v1/season-option-catalog`, `v212._approved_enchants`, [P3-DK 226 PASS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41784297402).
 - **Decision:** `CONNECT` — 실제 새 시즌 v213/v196 **원본 후보**에는 기존 v220의 정확 항목별 부족한 4종 증거(source relation, SimC input, product route, CHMV budget)를 연결한다. 검증된 영수증이 없는 동안 selectable 0·환경 READY false는 유지. 다부위 마부 후보 하나 때문에 기본 소스 진단 전체가 중지되지 않도록 그 후보만 unresolved로 보류. `v212`의 종전 동일 시즌 7967 전용 Native manifest를 근거 없이 새 시즌 범용 발행기로 승격시키지 않는다.

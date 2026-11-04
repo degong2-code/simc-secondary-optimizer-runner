@@ -98,8 +98,13 @@ class SameFreshCatalogChain(unittest.TestCase):
             self.assertEqual(
                 len(policy["per_item_missing_reasons"]),2)
             self.assertTrue(all(
-                any("EVIDENCE_MISSING:" in why for why in reasons)
+                {f"EVIDENCE_MISSING:{family}" for family in
+                 ("source_relation","simc_input","product_input",
+                  "chmv_budget")} <= set(reasons)
                 for reasons in policy["per_item_missing_reasons"].values()))
+            self.assertTrue(all(
+                not row["ui_selectable"] and row["blocked_reason"]
+                for row in result["enchant_candidates"]["items"]))
             self.assertEqual(result["existing_allowed_input_choices"],{})
             self.assertEqual(result["proven_armor_embellishments"],{})
             self.assertFalse(result["environment_ready"])
