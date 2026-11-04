@@ -822,6 +822,80 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                     flask_item_id=241326,
                     flask_simc_token="flask_of_the_shattered_sun_2")
 
+
+    def test_v216_selected_source_flows_into_v098_profile_without_manual_payload(self):
+        import v098_target_user_scenario_bootstrap as boot
+        from tests.test_v091_weapon_oil_external_adapter import frost
+        layout,ratings=self.physical_layout()
+        req,bound,obs=self.physical_effect()
+        result=self.run_build(
+            proof=False,manual=3333,
+            native_result=self.v277_native_G(),
+            gem_layout=layout,gem_ratings=ratings,
+            effect_requests=[req],effect_resolver=bound,
+            effect_observation=obs,
+            selected_budget_items={
+                "flask_item_id":241326,"oil_item_ids_by_hand":{}})
+        payload=result["source_compilation"][
+            "v098_source_only_profile_inputs_unadmitted"]
+        self.assertEqual(payload["flask"]["physical_item_id"],241326)
+        self.assertEqual(payload["flask"]["simc_input_token"],"test_flask_2")
+        self.assertEqual(payload["oil_by_hand"],{})
+        with tempfile.TemporaryDirectory() as td:
+            p,c,_=frost(td)
+            profile=boot.season_profile_source_only(
+                profile=p,cfg=c,weapon_layout="one_hand_frill",
+                user={"target":{"ilevel":334,"final_T":3333},
+                      "oil_hands":[]},
+                season_profile_inputs=payload,
+                season_build=self.catalog["game_build"],
+                simc_revision=self.catalog["simc_revision"])
+            self.assertEqual(profile["status"],
+                "SEASON_PROFILE_COMPOSED_NOT_ADMITTED_NO_NATIVE")
+            self.assertEqual(profile["scenario"]["consumables"][
+                "flask_budget_F"],165)
+            self.assertIn("flask=test_flask_2",profile["profile_simc"])
+            self.assertIn("temporary_enchant=disabled",
+                          profile["profile_simc"])
+            self.assertFalse(profile["user_session_created"])
+            self.assertFalse(profile["environment_ready"])
+            self.assertEqual(profile["new_native_calls"],0)
+
+    def test_v216_v098_exact_physical_oil_payload_and_pending_rejected(self):
+        numeric,choices=self.selected_physical_pair()
+        g=self.v277_native_G()
+        preview_g,_=build._reuse_v277_G_in_preprofile(
+            catalog=self.catalog,target_ilevel=334,native_G=g,
+            budget_evidence=None)
+        layout,ratings=self.physical_layout()
+        gem=build.physical_gems.reconcile_observed_J(
+            layout,ratings,build.need)
+        preflight={
+            "v277_native_G_preprofile_unadmitted":preview_g,
+            "physical_gem_J_arithmetic_unadmitted":gem,
+            "physical_gem_layout_unadmitted":layout,
+            "game_build":self.catalog["game_build"],
+            "simc_revision":self.catalog["simc_revision"],
+            "source_catalog_manifest_sha256":self.catalog["manifest_sha256"],
+            "source_artifact_sha256":"a"*64}
+        selection={"flask_item_id":241326,
+                   "oil_item_ids_by_hand":{"main_hand":243734}}
+        auto=build._zero_history_auto_v222_numeric_preview(
+            preflight=preflight,native_numeric=numeric,
+            source_choices=choices,selected=selection,
+            gem_ratings=ratings,target_ilevel=334,manual_final_T=3333)
+        payload=build._zero_history_v098_profile_source_inputs(
+            numeric_preview=auto,physical_sources=numeric)
+        self.assertEqual(payload["oil_by_hand"]["main_hand"][
+            "static_CHMV_vector"]["haste_rating"],17)
+        self.assertEqual(payload["oil_by_hand"]["main_hand"][
+            "simc_input_token"],"main_hand:thalassian_phoenix_oil")
+        pending={**auto,
+            "status":"GJFO_SELECTED_NUMERIC_OBSERVATIONS_PENDING",
+            "calculation":None}
+        self.assertIsNone(build._zero_history_v098_profile_source_inputs(
+            numeric_preview=pending,physical_sources=numeric))
+
     def test_automatic_target_goes_through_existing_v222_once(self):
         result=self.run_build()
         source=result["source_compilation"]
