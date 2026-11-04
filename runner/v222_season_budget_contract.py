@@ -67,7 +67,7 @@ def _vector(value, name):
     return {k: value[k] for k in STATS}
 
 
-def _component(proof, name, build, manifest_sha):
+def _component(proof, name, build, manifest_sha, numeric_preview_only=False):
     need(type(proof) is dict and proof.get("game_build") == build and
          proof.get("source_catalog_manifest_sha256") == manifest_sha and
          type(proof.get("source_sha256")) is str and
@@ -75,15 +75,18 @@ def _component(proof, name, build, manifest_sha):
          "GJFO_" + name + "_SAME_BUILD_SOURCE_IDENTITY_REQUIRED")
     # A reported verification label is NOT an independent authentication
     # of the source or its relation to a physical SimC input.
-    need(proof.get("source_verification") in
-         ("EXACT_NATIVE", "VALID_SAME_SEASON_REFERENCE",
-          "VALID_SAME_SEASON_SOURCE"),
+    allowed = (("UNADMITTED_NUMERIC_OBSERVATION",)
+               if numeric_preview_only else
+               ("EXACT_NATIVE", "VALID_SAME_SEASON_REFERENCE",
+                "VALID_SAME_SEASON_SOURCE"))
+    need(proof.get("source_verification") in allowed,
          "GJFO_" + name + "_SOURCE_VERIFICATION_MISSING")
     return proof
 
 
 def preprofile_budget(*, source_catalog, source_artifact_sha256, evidence,
-                      target_ilevel, manual_final_T=None):
+                      target_ilevel, manual_final_T=None,
+                      numeric_preview_only=False):
     """Calculate the candidate season budget BEFORE v098 profile creation.
 
     This is a pure accounting boundary, not evidence authentication or
@@ -93,6 +96,8 @@ def preprofile_budget(*, source_catalog, source_artifact_sha256, evidence,
     """
     need(type(source_catalog) is dict and type(evidence) is dict,
          "GJFO_CONTRACT_OBJECTS_REQUIRED")
+    need(type(numeric_preview_only) is bool,
+         "GJFO_NUMERIC_PREVIEW_MODE_BOOL_REQUIRED")
     build = source_catalog.get("game_build")
     rev = source_catalog.get("simc_revision")
     manifest_sha = source_catalog.get("manifest_sha256")
@@ -115,7 +120,8 @@ def preprofile_budget(*, source_catalog, source_artifact_sha256, evidence,
     need(type(proofs) is dict and set(proofs) == {"G", "J", "F", "O"},
          "GJFO_ALL_FOUR_COMPONENTS_REQUIRED")
     for name in ("G", "J", "F", "O"):
-        _component(proofs[name], name, build, manifest_sha)
+        _component(proofs[name], name, build, manifest_sha,
+                   numeric_preview_only=numeric_preview_only)
     amounts = {}
     for name in ("G", "J", "F"):
         amount = proofs[name].get("rating")
@@ -146,8 +152,18 @@ def preprofile_budget(*, source_catalog, source_artifact_sha256, evidence,
          all(x in ("main_hand", "off_hand") for x in hands) and
          len(set(hands)) == len(hands),
          "GJFO_O_PHYSICAL_HANDS_REQUIRED")
-    need(proofs["O"].get("weapon_applicability_verified") is True,
-         "GJFO_O_WEAPON_APPLICABILITY_NOT_VERIFIED")
+    if numeric_preview_only:
+        # Source-only v286's same-build representative weapon mask is
+        # arithmetic eligibility, NOT full item-level/use validation.
+        # v222.reconcile and production preprofile calls cannot accept
+        # this downgraded input mode by default.
+        need(proofs["O"].get("weapon_applicability_verified") is False
+             and proofs["O"].get("source_mask_matches_all_selected_only")
+                 is True,
+             "GJFO_O_SOURCE_ONLY_MASK_INPUT_REQUIRED")
+    else:
+        need(proofs["O"].get("weapon_applicability_verified") is True,
+             "GJFO_O_WEAPON_APPLICABILITY_NOT_VERIFIED")
     if not hands:
         need(sum(oil.values()) == 0, "GJFO_O_UNSELECTED_NONZERO")
     else:
@@ -175,7 +191,9 @@ def preprofile_budget(*, source_catalog, source_artifact_sha256, evidence,
          "GJFO_FIXED_MINIMA_EXCEED_TOTAL")
     return {
         "schema": SCHEMA,
-        "status": "ARITHMETIC_RECONCILED_SOURCE_AUTHENTICATION_EXTERNAL",
+        "status": ("NUMERIC_PREVIEW_UNADMITTED_NO_SOURCE_AUTHENTICATION"
+                   if numeric_preview_only else
+                   "ARITHMETIC_RECONCILED_SOURCE_AUTHENTICATION_EXTERNAL"),
         "game_build": build, "simc_revision": rev,
         "source_catalog_manifest_sha256": manifest_sha,
         "source_catalog_artifact_sha256": source_artifact_sha256,
@@ -188,6 +206,8 @@ def preprofile_budget(*, source_catalog, source_artifact_sha256, evidence,
         **({"G_standardization":dict(g_standardization)}
            if g_standardization is not None else {}),
         "source_authentication_performed_here": False,
+        **({"numeric_preview_only":True,"environment_ready":False}
+           if numeric_preview_only else {}),
         "native_calls": 0, "network_calls": 0, "cache_mutations": 0,
     }
 

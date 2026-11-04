@@ -2850,6 +2850,150 @@ def _zero_history_selected_F_O_v222_reconcile(*, selected, numeric,
     return out
 
 
+
+def _zero_history_auto_v222_numeric_preview(*, preflight, native_numeric,
+                                           source_choices, selected, gem_ratings,
+                                           target_ilevel, manual_final_T):
+    """Original v222 B/T over already observed G/J/selected physical F/O.
+
+    Deliberately unadmitted and not executable by v098/v094. This consumes
+    original v277, v271, v281/v278 and v286 outputs, not prior-season values
+    or supplied same_build_budget_evidence. Only the real upstream stages
+    establish the receipts; this adapter never certifies them independently.
+    """
+    out = {"schema":"v216_zero_history_selected_v222_numeric_preview_v1",
+           "status":"GJFO_SELECTED_NUMERIC_OBSERVATIONS_PENDING",
+           "requires":[],"calculation":None,"selected_physical_items":selected,
+           "numeric_preview_only":True,"source_authenticated":False,
+           "policy_A_registered":False,"user_session_created":False,
+           "environment_ready":False,"native_calls":0,"network_calls":0}
+    need(type(selected) is dict and type(native_numeric) is dict
+         and type(source_choices) is dict,
+         "V216_AUTO_NUMERIC_SELECTED_SOURCES_INVALID")
+    if preflight is None:
+        out["requires"].append("CURRENT_V213_PREFLIGHT_PENDING")
+        return out
+    g = preflight.get("v277_native_G_preprofile_unadmitted")
+    j = preflight.get("physical_gem_J_arithmetic_unadmitted")
+    if g is None:
+        out["requires"].append("V277_G_NATIVE_NUMERIC_PENDING")
+    if j is None:
+        out["requires"].append("V271_PHYSICAL_GEM_J_NUMERIC_PENDING")
+    flask_rows=[x for x in native_numeric.get("flask",[])
+                if x["physical_item_id"]==selected["flask_item_id"]]
+    need(len(flask_rows)<=1,"V216_AUTO_SELECTED_FLASK_DUPLICATED")
+    f=flask_rows[0] if flask_rows else None
+    if f is None or f["status"]!="SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY":
+        out["requires"].append("SELECTED_FLASK_NATIVE_RATING_PENDING")
+    oils={}
+    for hand,item_id in sorted(selected["oil_item_ids_by_hand"].items()):
+        observed=[x for x in native_numeric.get("oil",[])
+                  if x["physical_item_id"]==item_id and
+                  x["selected_hand"]==hand]
+        matched=[x for x in source_choices.get(
+            "oil_representative_weapon_matches_unadmitted",[])
+                 if x.get("physical_item_id")==item_id and
+                 x.get("hand")==hand and x.get("status")==(
+                     "SAME_BUILD_REPRESENTATIVE_WEAPON_MASK_MATCH_SOURCE_ONLY")]
+        need(len(observed)<=1 and len(matched)<=1,
+             "V216_AUTO_SELECTED_OIL_DUPLICATED")
+        if (len(observed)!=1 or len(matched)!=1 or
+            observed[0]["status"]!="SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY"
+            or observed[0]["rating_candidate_unadmitted"]!=
+               matched[0]["static_O_for_hand_unadmitted"]):
+            out["requires"].append("SELECTED_OIL_"+hand.upper()+
+                                    "_NATIVE_OR_WEAPON_MASK_PENDING")
+        else:
+            oils[hand]={"native":observed[0],"mask":matched[0]}
+    if out["requires"]:
+        return out
+    need(type(g) is dict and type(j) is dict
+         and type(gem_ratings) is dict
+         and g.get("status")==(
+             "NATIVE_G_NUMERIC_SOURCE_ONLY_JFO_AND_ADMISSION_PENDING")
+         and j.get("status")=="PHYSICAL_GEM_J_ARITHMETIC_UNADMITTED"
+         and j.get("game_socket_legality_verified_here") is False,
+         "V216_AUTO_G_J_SOURCE_ONLY_IDENTITY_REQUIRED")
+    stats=season_budget_contract.STATS
+    oil_vector={stat:sum(row["native"]["rating_candidate_unadmitted"][stat]
+                          for row in oils.values()) for stat in stats}
+    catalog={"game_build":preflight["game_build"],
+             "simc_revision":preflight["simc_revision"],
+             "manifest_sha256":
+                 preflight["source_catalog_manifest_sha256"]}
+    manifest_sha=catalog["manifest_sha256"]
+    def comp(rating,sha):
+        return {"rating":rating,"game_build":catalog["game_build"],
+                "source_catalog_manifest_sha256":manifest_sha,
+                "source_sha256":sha,
+                "source_verification":"UNADMITTED_NUMERIC_OBSERVATION"}
+    def source_sha(*,kind,items):
+        return digest(canonical({"kind":kind,"items":items}).encode("utf8"))
+    j_sha=source_sha(kind="physical_gem_layout_and_ratings",
+                    items={"layout":preflight[
+                        "physical_gem_layout_unadmitted"],
+                           "rating_by_id":gem_ratings})
+    f_sha=source_sha(kind="selected_flask_original_v278_receipts",
+                    items={"item_id":f["physical_item_id"],
+                           "candidate_sha256":
+                               f["physical_item_source_candidate_sha256"],
+                           "native_receipts":
+                               f["simc_native_receipt_sha256"],
+                           "static_vector":
+                               f["static_CHMV_vector_unadmitted"]})
+    oil_receipts=[{
+        "hand":hand,
+        "item_id":part["native"]["physical_item_id"],
+        "native_receipts":part["native"]["simc_native_receipt_sha256"],
+        "candidate_sha256":
+            part["native"]["physical_item_source_candidate_sha256"],
+        "representative_weapon_id":
+            part["mask"]["selected_representative_weapon_id_unadmitted"]}
+        for hand,part in sorted(oils.items())]
+    oil_sha=source_sha(kind="selected_oil_hands_and_v286_mask",
+                      items=oil_receipts)
+    evidence={
+        "schema":season_budget_contract.SCHEMA,
+        "game_build":catalog["game_build"],
+        "simc_revision":catalog["simc_revision"],
+        "source_catalog_manifest_sha256":manifest_sha,
+        "source_catalog_artifact_sha256":
+            preflight["source_artifact_sha256"],
+        "target_ilevel":target_ilevel,
+        "components":{
+            "G":{**comp(g["standardized_G"],g["native_json2_sha256"]),
+                 "standardization":g["standardization"]},
+            "J":comp(j["J_candidate_unadmitted"],j_sha),
+            "F":comp(f["rating_candidate_unadmitted"],f_sha),
+            "O":{**comp(oil_vector,oil_sha),
+                 "applied_hands":sorted(oils),
+                 "weapon_applicability_verified":False,
+                 "source_mask_matches_all_selected_only":True}},
+        "fixed_L":{k:0 for k in stats},
+        "fixed_E":{k:0 for k in stats},
+        "G_reference_excludes_selected_E":True}
+    try:
+        calculation=season_budget_contract.preprofile_budget(
+            source_catalog=catalog,
+            source_artifact_sha256=preflight["source_artifact_sha256"],
+            evidence=evidence,target_ilevel=target_ilevel,
+            manual_final_T=manual_final_T,numeric_preview_only=True)
+    except season_budget_contract.SeasonBudgetBlocked as exc:
+        raise EnvironmentBuildBlocked(
+            "V216_AUTO_SELECTED_V222_NUMERIC_INVALID:"+str(exc)) from exc
+    out.update({
+        "status":"SELECTED_GJFO_V222_ARITHMETIC_PREVIEW_UNADMITTED",
+        "calculation":calculation,
+        "numeric_receipt_identities":{
+            "G_native_json2_sha256":g["native_json2_sha256"],
+            "J_physical_layout_rating_sha256":j_sha,
+            "F_selected_item_native_sha256":f_sha,
+            "O_selected_hands_native_mask_sha256":oil_sha},
+        "L_E_unselected_plain_representative_only":True,
+        "unknown_oil_not_treated_as_zero":True})
+    return out
+
+
 def build_environment(*, sessions_root, session_folder, user, binary, revision,
                       static_cache, source_catalog_path, bootstrap_result,
                       v208_start_receipt_path=None, package_manifest_path=None,
@@ -2998,6 +3142,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         elif native_G.get("native_log_excerpt") is not None:
             progress["requires"].append(
                 "G_NATIVE_SIMC_ERROR_INSPECT_OR_CHANGE_SOURCE_BINARY")
+        preflight=None
         # Reuse v241's already tested v191 -> v211 -> v213 compilers, not
         # another source builder. A missing original input is a specific
         # source-work item rather than a fake legacy file or J/F default.
@@ -3143,6 +3288,22 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     budget_evidence=zero_history_budget_evidence)
                 progress["selected_physical_F_O_budget_link_unadmitted"]=selected_check
                 source_compilation["selected_physical_F_O_budget_link_unadmitted"]=selected_check
+        if selected_budget_items is not None:
+            selected_numeric=_zero_history_auto_v222_numeric_preview(
+                preflight=preflight,
+                native_numeric=(
+                    native_F_O if effect_observations else
+                    {"flask":[],"oil":[]}),
+                source_choices=(
+                    quality_weapon if effect_observations else
+                    {"oil_representative_weapon_matches_unadmitted":[]}),
+                selected=selected_budget_items,
+                gem_ratings=zero_history_gem_ratings,
+                target_ilevel=fresh_collection_inputs[
+                    "representative_request"]["target_ilevel"],
+                manual_final_T=manual_T)
+            progress["selected_auto_v222_numeric_preview_unadmitted"]=selected_numeric
+            source_compilation["selected_auto_v222_numeric_preview_unadmitted"]=selected_numeric
         if (selected_budget_items is not None and
                 "selected_physical_F_O_budget_link_unadmitted" not in progress):
             waiting={
