@@ -512,6 +512,55 @@ class SameFreshCatalogChain(unittest.TestCase):
             self.assertEqual(linked["approved_new_choices"],0)
             self.assertEqual(linked["native_calls"],0)
             self.assertEqual(linked["network_calls"],0)
+            # T1: *one continuous ORIGINAL* v191 -> v211 -> v213
+            # -> v216 preflight -> v212 -> v217 environment source unit.
+            # The genuine v241 outputs above have original sealed receipts,
+            # not caller-supplied fake evidence or a mocked installer.
+            staged_input={
+                **first,
+                "status":"FRESH_V191_V211_V213_COMPILED_UNADMITTED",
+                "stage_root":str(stage_root),
+                "simc_revision":REV,
+                "preflight_sha256":linked["preflight_sha256"],
+                "environment_ready":False,
+            }
+            staged=build._stage_source_environment_only(
+                compilation=staged_input,preflight=linked,target_ilevel=334)
+            staged_input_reuse={
+                **staged_input,
+                "v191_stage":again["v191_stage"],
+                "v211_stage":again["v211_stage"],
+                "v213_stage":again["v213_stage"],
+            }
+            same_stage=build._stage_source_environment_only(
+                compilation=staged_input_reuse,preflight=linked,
+                target_ilevel=334)
+            self.assertEqual(staged["stage_status"],"EXECUTED_AND_SEALED")
+            self.assertEqual(same_stage["stage_status"],"REUSED_VERIFIED")
+            self.assertEqual(staged["manifest_sha256"],
+                             same_stage["manifest_sha256"])
+            with pathlib.Path(staged["stage_output_path"]).open(
+                    encoding="utf8") as stream:
+                environment=json.load(stream)
+            self.assertEqual(environment["schema"],
+                             build.environment_manifest.FRESH_SEASON_STAGE_SCHEMA)
+            self.assertTrue(build.environment_manifest.
+                            verify_fresh_source_environment(environment))
+            self.assertEqual(environment["target_ilevel"],334)
+            self.assertEqual(environment["game_build"],BUILD)
+            self.assertEqual(environment["simc_revision"],REV)
+            self.assertEqual(environment["original_v217_stage_receipts"],
+                             {name:first[name]["receipt_sha256"]
+                              for name in ("v191_stage","v211_stage","v213_stage")})
+            self.assertIsNone(environment["numeric_budget_preview_unadmitted"])
+            self.assertTrue(environment["optional_policy_A_pending_separate"])
+            self.assertFalse(environment["environment_ready"])
+            self.assertFalse(environment["environment_installed"])
+            self.assertFalse(environment["options_published"])
+            self.assertFalse(environment["dps_optimization_required"])
+            self.assertEqual(staged["new_native_calls"],0)
+            self.assertEqual(staged["network_calls"],0)
+            self.assertFalse((root/"generated"/"environment_manifest.json").exists())
             reused=build.preflight_new_season_source(
                 **args,policy_A_v217_stages={
                     **attest,"v191_stage":again["v191_stage"],
