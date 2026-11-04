@@ -107,8 +107,16 @@ def decide(candidate, receipts=None):
     }
 
 
-def preview_enchant_catalog(source_catalog, items):
-    """Read-only preview for existing v196; no receipt means no new choices."""
+def preview_enchant_catalog(source_catalog, items, *,
+                            trusted_internal_receipts_by_id=None):
+    """Reuse decide() per exact item, without publishing a user choice.
+
+    The optional receipt map is strictly for an INTERNAL orchestrator that
+    has already authenticated each source/SimC/product/budget receipt. It
+    MUST NOT be populated from an HTTP request, user file, or raw DB2 row.
+    Eligible here means eligible for a *later* atomic v196/v212 publication,
+    not an installed or executable product choice.
+    """
     if type(source_catalog) is not dict:
         return {"schema":SCHEMA,"policy":"AUTO_AFTER_VERIFIED_EVIDENCE",
                 "status":"SOURCE_CATALOG_UNAVAILABLE",
@@ -116,6 +124,11 @@ def preview_enchant_catalog(source_catalog, items):
                 "selection_mutated":False}
     if type(items) is not list:
         raise ValueError("AUTO_ADMISSION_ITEMS_INVALID")
+    if (trusted_internal_receipts_by_id is not None and
+        (type(trusted_internal_receipts_by_id) is not dict or
+         any(type(k) is not int or k<=0 or type(v) is not dict
+             for k,v in trusted_internal_receipts_by_id.items()))):
+        raise ValueError("AUTO_ADMISSION_INTERNAL_RECEIPT_MAP_INVALID")
     decisions=[]
     seen=set()
     for row in items:
@@ -145,13 +158,27 @@ def preview_enchant_catalog(source_catalog, items):
             "simc_revision":source_catalog["simc_revision"],
             "catalog_sha256":source_catalog["manifest_sha256"],
         }
-        decisions.append(decide(candidate))
+        trusted=(None if trusted_internal_receipts_by_id is None else
+                 trusted_internal_receipts_by_id.get(item_id))
+        decisions.append(decide(candidate,trusted))
+    if trusted_internal_receipts_by_id is not None and (
+        set(trusted_internal_receipts_by_id)-seen):
+        raise ValueError("AUTO_ADMISSION_RECEIPT_FOR_NONCANDIDATE")
+    eligible=[d for d in decisions if d["eligible"]]
     return {"schema":SCHEMA,"policy":"AUTO_AFTER_VERIFIED_EVIDENCE",
-            "status":"PREVIEW_ONLY_NO_PROOF_RECEIPTS",
-            "automatically_eligible":sum(d["eligible"] for d in decisions),
-            "pending":sum(not d["eligible"] for d in decisions),
+            "status":("PREVIEW_ONLY_ELIGIBLE_NEEDS_ATOMIC_PUBLICATION"
+                      if eligible else "PREVIEW_ONLY_NO_PROOF_RECEIPTS"
+                      if trusted_internal_receipts_by_id is None else
+                      "PREVIEW_ONLY_EXACT_PROOFS_PENDING"),
+            "automatically_eligible":len(eligible),
+            "pending":len(decisions)-len(eligible),
             "selection_mutated":False,
+            "eligible_for_atomic_publication":[d["identity"] for d in eligible],
             "per_item_missing_reasons":{
                 str(d["identity"]["exact_id"]):d["missing"]
                 for d in decisions if not d["eligible"]
+            },
+            "per_item_conflict_reasons":{
+                str(d["identity"]["exact_id"]):d["conflicts"]
+                for d in decisions if d["conflicts"]
             }}

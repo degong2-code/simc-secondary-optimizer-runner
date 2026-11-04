@@ -721,9 +721,26 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
         "approved_new_choices":0,
         "G":None,"J":None,"F":None,"O":None,"B":None,"T":None,
         "environment_ready":False,
+        # Only the base G/J/F/O and executable profile are core Build
+        # dependencies. Optional enchants/consumables lacking Policy A
+        # proof must be held per item, not block an otherwise verified base.
         "requires":["G/J/F/O_VERIFIED_SOURCE_RECEIPTS",
-                    "POLICY_A_OPTION_ADMISSION",
                     "NEW_SEASON_TARGET_PROFILE_AND_V212_MANIFEST"],
+        "optional_choice_requires":[
+                    "POLICY_A_EXACT_ITEM_PROOFS_WHEN_SELECTED"],
+        "optional_policy_A_evidence_unadmitted":{
+            "schema":ui["automatic_admission"].get("schema"),
+            "source_catalog_manifest_sha256":source["manifest_sha256"],
+            "source_catalog_artifact_sha256":raw_sha,
+            "candidate_count":ui["enchant_candidates"]["total"],
+            "pending":ui["automatic_admission"]["pending"],
+            "per_item_missing_reasons":dict(
+                ui["automatic_admission"]["per_item_missing_reasons"]),
+            "per_item_conflict_reasons":dict(
+                ui["automatic_admission"].get(
+                    "per_item_conflict_reasons",{})),
+            "verified_options_published":False,
+            "affects_verified_base_GJFO":False},
         "source_retrieval_authenticated_by_this_stage":False,
         "native_calls":0,"network_calls":0,"cache_mutations":0,
     }

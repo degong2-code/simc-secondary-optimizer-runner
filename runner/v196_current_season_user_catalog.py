@@ -132,7 +132,14 @@ def read(path=DEFAULT):
          "CURRENT_SEASON_ENCHANT_CATEGORY_COUNTS_INVALID")
     return document,clean,dict(sorted(group_counts.items()))
 
-def public_options(path=DEFAULT):
+def public_options(path=DEFAULT, *, trusted_internal_receipts_by_id=None):
+    """Project source candidates and existing v220 decisions, not an approval.
+
+    Only the normal *internal* Build may supply previously authenticated
+    exact item receipts. The local HTTP catalog route never accepts such
+    evidence from a request. Even eligible results remain UNPUBLISHED until
+    the correct versioned v212 product-input path admits them.
+    """
     source,enchants,counts=read(path)
     source_classification_rows=source.pop("_v211_classification_rows",None)
     source_catalog=source.pop("_v213_source_catalog",None)
@@ -163,9 +170,10 @@ def public_options(path=DEFAULT):
             {"game_build":source["season_game_build"],
              "simc_revision":source["simc_commit"],
              "manifest_sha256":source_catalog["manifest_sha256"]},
-            enchants)
-        need(admission_preview["automatically_eligible"]==0 and
-             admission_preview["pending"]==len(enchants) and
+            enchants,
+            trusted_internal_receipts_by_id=trusted_internal_receipts_by_id)
+        need((trusted_internal_receipts_by_id is not None or
+              admission_preview["automatically_eligible"]==0) and
              admission_preview["selection_mutated"] is False,
              "FRESH_SEASON_POLICY_A_SOURCE_ONLY_MUST_REMAIN_PENDING")
         return {
@@ -179,8 +187,13 @@ def public_options(path=DEFAULT):
             "source_catalog":source_catalog,
             "automatic_admission":{
                 **admission_preview,
-                "status":"PENDING_EXACT_ITEM_AND_BUDGET_PROOFS",
-                "approved_count":0},
+                "status":("ELIGIBLE_NOT_PUBLISHED_TO_PRODUCT"
+                          if admission_preview["automatically_eligible"] else
+                          "PENDING_EXACT_ITEM_AND_BUDGET_PROOFS"),
+                "approved_count":0,
+                "eligible_count_unpublished":
+                    admission_preview["automatically_eligible"],
+                "v212_install_or_user_selection_authorized":False},
             "existing_allowed_input_choices":{},
             "proven_armor_embellishments":{},
             "enchant_candidates":{"total":len(enchants),"groups":counts,
@@ -201,6 +214,8 @@ def public_options(path=DEFAULT):
             "native_calls_now":0,"game_db_recollection_now":0,
             "new_approval_granted":False,
             "optimizer_or_cache_mutated":False}
+    need(trusted_internal_receipts_by_id is None,
+         "LEGACY_SEASON_POLICY_A_INTERNAL_PROOFS_WRONG_PATH")
     enchants=effect_groups.decorate(
         enchants,source_classification_rows=source_classification_rows)
     # A single source-classified nonCHMV choice has a separate two-Native

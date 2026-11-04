@@ -115,6 +115,51 @@ class SameFreshCatalogChain(unittest.TestCase):
             self.assertTrue(all(not row["ui_selectable"] for row in
                                 result["enchant_candidates"]["items"]))
 
+    def test_internal_exact_receipts_do_not_publish_unresolved_slots(self):
+        import v196_current_season_user_catalog as ui
+        import v220_catalog_auto_admission as policy
+        with tempfile.TemporaryDirectory() as td:
+            folder=pathlib.Path(td)
+            season,classified=self.inputs(folder)
+            artifact=join.compile_catalog(season,"a"*64,classified,"b"*64)
+            path=folder/"fresh_policy_a.json"
+            path.write_text(json.dumps(artifact),encoding="utf8")
+            original=ui.public_options(path)
+            self.assertEqual(original["automatic_admission"]["pending"],2)
+            candidate={"kind":"permanent_enchant","exact_id":91001,
+                       "simc_token":"enchant_ring__new_haste",
+                       "slot":"SOURCE_SLOT_UNRESOLVED",
+                       "slot_status":"PENDING_EXACT_SLOT_OR_HAND",
+                       "game_build":BUILD,"simc_revision":REV,
+                       "catalog_sha256":artifact["manifest_sha256"]}
+            identity=policy._identity(candidate)
+            receipts={name:{"identity":identity,"status":status,
+                            "evidence_sha256":str(i)*64}
+                      for i,(name,status) in
+                      enumerate(policy.PROOF_STATUSES.items(),1)}
+            receipts["chmv_budget"].update({
+                "no_double_count":True,"unknown_static_chmv":False})
+            internal=ui.public_options(
+                path,trusted_internal_receipts_by_id={91001:receipts})
+            self.assertEqual(internal["automatic_admission"]["pending"],2)
+            self.assertEqual(internal["automatic_admission"][
+                "eligible_count_unpublished"],0)
+            self.assertEqual(internal["automatic_admission"]["approved_count"],0)
+            self.assertFalse(internal["automatic_admission"][
+                "v212_install_or_user_selection_authorized"])
+            self.assertIn("EXACT_PHYSICAL_SLOT_OR_HAND_RELATION_NOT_VERIFIED",
+                internal["automatic_admission"]["per_item_missing_reasons"][
+                    "91001"])
+            self.assertEqual(internal["enchant_candidates"]["selectable_count"],0)
+            self.assertEqual(internal["existing_allowed_input_choices"],{})
+            self.assertFalse(internal["environment_ready"])
+            # A caller cannot smuggle the internal evidence path into
+            # the old installed-season catalog.
+            with self.assertRaisesRegex(
+                    ui.CatalogBlocked,
+                    "LEGACY_SEASON_POLICY_A_INTERNAL_PROOFS_WRONG_PATH"):
+                ui.public_options(trusted_internal_receipts_by_id={})
+
     def test_original_v191_v211_v213_v196_continuous_fresh_chain_without_budget(self):
         import v191_unified_season_data_update as merge
         import v196_current_season_user_catalog as ui

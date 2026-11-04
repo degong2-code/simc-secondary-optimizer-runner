@@ -134,6 +134,45 @@ class AutoAdmissionTests(unittest.TestCase):
                 {"enchant_id":8016,"token":"enchant_ring__bad",
                  "source_slots":[None]}])
 
+    def test_trusted_internal_receipts_project_eligible_not_published(self):
+        source={"game_build":"12.1.5.70575","simc_revision":"a"*40,
+                "manifest_sha256":"b"*64}
+        rows=[{"enchant_id":8019,"token":self.item["simc_token"],
+               "source_slots":["feet"]},
+              {"enchant_id":8018,"token":"enchant_boots__other",
+               "source_slots":["feet"]}]
+        projected=policy.preview_enchant_catalog(
+            source,rows,trusted_internal_receipts_by_id={
+                8019:copy.deepcopy(self.receipts)})
+        self.assertEqual(projected["status"],
+            "PREVIEW_ONLY_ELIGIBLE_NEEDS_ATOMIC_PUBLICATION")
+        self.assertEqual(projected["automatically_eligible"],1)
+        self.assertEqual(projected["pending"],1)
+        self.assertEqual([r["exact_id"] for r in projected[
+            "eligible_for_atomic_publication"]],[8019])
+        self.assertEqual(len(projected["per_item_missing_reasons"]["8018"]),4)
+        self.assertFalse(projected["selection_mutated"])
+        self.assertFalse(projected.get("approved_count",0))
+        # The same receipts on another revision or source SHA do not match.
+        another={**source,"simc_revision":"c"*40}
+        shifted=policy.preview_enchant_catalog(
+            another,rows,trusted_internal_receipts_by_id={
+                8019:copy.deepcopy(self.receipts)})
+        self.assertEqual(shifted["automatically_eligible"],0)
+        self.assertIn("EVIDENCE_SCOPE_MISMATCH:source_relation",
+                      shifted["per_item_conflict_reasons"]["8019"])
+        self.assertEqual(shifted["pending"],2)
+        with self.assertRaisesRegex(ValueError,
+                    "AUTO_ADMISSION_RECEIPT_FOR_NONCANDIDATE"):
+            policy.preview_enchant_catalog(
+                source,rows,trusted_internal_receipts_by_id={
+                    999999:copy.deepcopy(self.receipts)})
+        with self.assertRaisesRegex(ValueError,
+                    "AUTO_ADMISSION_INTERNAL_RECEIPT_MAP_INVALID"):
+            policy.preview_enchant_catalog(
+                source,rows,trusted_internal_receipts_by_id={
+                    "8019":copy.deepcopy(self.receipts)})
+
     def test_invalid_scope_fails_closed(self):
         with self.assertRaisesRegex(ValueError,"CANDIDATE_IDENTITY_INVALID"):
             policy.decide({**self.item,"simc_revision":"wrong"})
