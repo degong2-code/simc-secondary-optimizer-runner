@@ -579,6 +579,96 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                             "flask_item_id":241326,
                             "oil_item_ids_by_hand":{"offhand":243734}}})
 
+
+    def test_auto_v222_new_season_GJFO_without_manual_budget_evidence(self):
+        layout,ratings=self.physical_layout()
+        req,bound,obs=self.physical_effect()
+        selected={"flask_item_id":241326,"oil_item_ids_by_hand":{}}
+        result=self.run_build(
+            proof=False,manual=3333,
+            native_result=self.v277_native_G(),
+            gem_layout=layout,gem_ratings=ratings,
+            effect_requests=[req],effect_resolver=bound,
+            effect_observation=obs,selected_budget_items=selected)
+        auto=result["source_compilation"][
+            "selected_auto_v222_numeric_preview_unadmitted"]
+        self.assertEqual(auto["status"],
+                         "SELECTED_GJFO_V222_ARITHMETIC_PREVIEW_UNADMITTED")
+        calc=auto["calculation"]
+        self.assertEqual((calc["reference_G"],calc["J"],calc["F"]),
+                         (2850,138,165))
+        self.assertEqual((calc["reference_B"],calc["base_B"],calc["final_T"]),
+                         (3153,3333,3333))
+        self.assertEqual(sum(calc["fixed_O"].values()),0)
+        self.assertTrue(calc["numeric_preview_only"])
+        self.assertTrue(calc["manual_final_T_authoritative"])
+        self.assertFalse(auto["environment_ready"])
+        self.assertFalse(auto["user_session_created"])
+        self.assertIsNone(result["B"])
+        self.assertIsNone(result["T"])
+        self.assertEqual(result["native_calls"],0)
+
+    def test_auto_v222_selected_phoenix_oil_uses_existing_v286_mask_once(self):
+        layout,ratings=self.physical_layout()
+        numeric,choices=self.selected_physical_pair()
+        g=self.v277_native_G()
+        preview_g,_=build._reuse_v277_G_in_preprofile(
+            catalog=self.catalog,target_ilevel=334,native_G=g,
+            budget_evidence=None)
+        gem=build.physical_gems.reconcile_observed_J(
+            layout,ratings,build.need)
+        preflight={
+            "v277_native_G_preprofile_unadmitted":preview_g,
+            "physical_gem_J_arithmetic_unadmitted":gem,
+            "physical_gem_layout_unadmitted":layout,
+            "game_build":self.catalog["game_build"],
+            "simc_revision":self.catalog["simc_revision"],
+            "source_catalog_manifest_sha256":self.catalog["manifest_sha256"],
+            "source_artifact_sha256":"a"*64}
+        selected={"flask_item_id":241326,
+                  "oil_item_ids_by_hand":{"main_hand":243734}}
+        auto=build._zero_history_auto_v222_numeric_preview(
+            preflight=preflight,native_numeric=numeric,
+            source_choices=choices,selected=selected,
+            gem_ratings=ratings,target_ilevel=334,manual_final_T=3333)
+        calc=auto["calculation"]
+        self.assertEqual((calc["reference_B"],calc["base_B"],calc["final_T"]),
+                         (3153,3300,3333))
+        self.assertEqual(calc["fixed_O"]["crit_rating"],16)
+        self.assertEqual(calc["fixed_O"]["haste_rating"],17)
+        self.assertEqual(calc["fixed_O"]["mastery_rating"],0)
+        self.assertFalse(calc["environment_ready"])
+        self.assertFalse(auto["policy_A_registered"])
+        no_oil=build._zero_history_auto_v222_numeric_preview(
+            preflight=preflight,native_numeric=numeric,
+            source_choices=choices,selected={"flask_item_id":241326,
+                                              "oil_item_ids_by_hand":{}},
+            gem_ratings=ratings,target_ilevel=334,manual_final_T=None)
+        self.assertEqual(no_oil["calculation"]["final_T"],3153)
+        self.assertEqual(sum(no_oil["calculation"]["fixed_O"].values()),0)
+
+    def test_auto_v222_incomplete_G_J_or_oil_never_uses_old_defaults(self):
+        numeric,choices=self.selected_physical_pair()
+        no_source=build._zero_history_auto_v222_numeric_preview(
+            preflight=None,native_numeric=numeric,source_choices=choices,
+            selected={"flask_item_id":241326,
+                      "oil_item_ids_by_hand":{}},
+            gem_ratings=None,target_ilevel=334,manual_final_T=None)
+        self.assertIsNone(no_source["calculation"])
+        self.assertIn("CURRENT_V213_PREFLIGHT_PENDING",
+                      no_source["requires"])
+        no_gj=build._zero_history_auto_v222_numeric_preview(
+            preflight={"game_build":self.catalog["game_build"]},
+            native_numeric=numeric,source_choices=choices,
+            selected={"flask_item_id":241326,
+                      "oil_item_ids_by_hand":{"off_hand":243734}},
+            gem_ratings=None,target_ilevel=334,manual_final_T=3300)
+        self.assertIsNone(no_gj["calculation"])
+        self.assertIn("V277_G_NATIVE_NUMERIC_PENDING",no_gj["requires"])
+        self.assertIn("V271_PHYSICAL_GEM_J_NUMERIC_PENDING",no_gj["requires"])
+        self.assertIn("SELECTED_OIL_OFF_HAND_NATIVE_OR_WEAPON_MASK_PENDING",
+                      no_gj["requires"])
+
     def test_automatic_target_goes_through_existing_v222_once(self):
         result=self.run_build()
         source=result["source_compilation"]

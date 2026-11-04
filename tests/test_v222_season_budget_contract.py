@@ -167,6 +167,44 @@ class SeasonBudgetContractTests(unittest.TestCase):
                           result["cache_mutations"]), (0, 0, 0))
         self.assertNotIn("READY", result["status"])
 
+
+    def test_unadmitted_numeric_preview_reuses_arithmetic_without_proof_upgrade(self):
+        catalog, proof, _ = fixture()
+        for name in ("G","J","F","O"):
+            proof["components"][name]["source_verification"]=(
+                "UNADMITTED_NUMERIC_OBSERVATION")
+        proof["components"]["O"]["weapon_applicability_verified"]=False
+        proof["components"]["O"]["source_mask_matches_all_selected_only"]=True
+        with self.assertRaisesRegex(
+                p.SeasonBudgetBlocked,"G_SOURCE_VERIFICATION_MISSING"):
+            p.preprofile_budget(
+                source_catalog=catalog,source_artifact_sha256="a"*64,
+                evidence=proof,target_ilevel=334)
+        preview=p.preprofile_budget(
+            source_catalog=catalog,source_artifact_sha256="a"*64,
+            evidence=proof,target_ilevel=334,
+            manual_final_T=3270,numeric_preview_only=True)
+        self.assertEqual((preview["reference_B"],preview["base_B"],
+                          preview["final_T"]),(3150,3238,3270))
+        self.assertTrue(preview["numeric_preview_only"])
+        self.assertFalse(preview["environment_ready"])
+        self.assertFalse(preview["source_authentication_performed_here"])
+        with self.assertRaisesRegex(
+                p.SeasonBudgetBlocked,"G_SOURCE_VERIFICATION_MISSING"):
+            p.reconcile(
+                source_catalog=catalog,source_artifact_sha256="a"*64,
+                evidence=proof,
+                plan={"base_B":3238,"final_T":3270,
+                      "fixed_O":preview["fixed_O"]},
+                target_ilevel=334,manual_final_T=3270)
+        bad=copy.deepcopy(proof)
+        bad["components"]["O"]["source_mask_matches_all_selected_only"]=False
+        with self.assertRaisesRegex(
+                p.SeasonBudgetBlocked,"O_SOURCE_ONLY_MASK_INPUT_REQUIRED"):
+            p.preprofile_budget(
+                source_catalog=catalog,source_artifact_sha256="a"*64,
+                evidence=bad,target_ilevel=334,numeric_preview_only=True)
+
     def test_preprofile_manual_T_and_oil_exactly_once(self):
         catalog, proof, _ = fixture()
         result = p.preprofile_budget(
