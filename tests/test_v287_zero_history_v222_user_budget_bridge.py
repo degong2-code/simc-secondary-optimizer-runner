@@ -1202,6 +1202,118 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                  folder/"fillers.json",folder/"manifest.json")})
             self.assertFalse((folder/"simc_results").exists())
 
+
+    def synthetic_future_season_source_bundle(self):
+        import v169_source_first_representative_stage as source_first
+        import v139_pure_target_profile_composer as pure
+        db=copy.deepcopy(source_first.gear.read())
+        tier=copy.deepcopy(source_first.load_tier())
+        settings=copy.deepcopy(pure.catalog())
+        budget=json.loads(
+            source_first.BUDGET_PATH.read_text(encoding="utf8"))
+        # Synthetic fixture only. Never cite these changed build/item IDs
+        # as facts about an actual World of Warcraft future season.
+        build="12.2.0.99999"
+        db["season_build"]=build
+        tier["retail_build"]=build
+        budget["retail_build"]=build
+        settings["season"]="synthetic_future_only_not_game_data"
+        settings["gems"]["head"]="250999"
+        settings["default_consumables"]["gem_budget_J"]=143
+        settings["default_consumables"]["flask_budget_F"]=176
+        budget["ordinary_gem"]["total_J"]=143
+        budget["flasks"]["total_F"]=176
+        return {"schema":"v098_internal_season_source_bundle_v1",
+                "gear":db,"tier":tier,
+                "budget":budget,"settings":settings}
+
+    def test_future_season_document_swap_composes_source_only_without_old_diamond(self):
+        import v169_source_first_representative_stage as source_first
+        import v139_pure_target_profile_composer as pure
+        import v098_target_user_scenario_bootstrap as boot
+        import v106_user_session_controller as sessions
+        doc=self.synthetic_future_season_source_bundle()
+        args={k:doc[k] for k in ("gear","tier","settings")}
+        args["db"]=args.pop("gear")
+        with self.assertRaisesRegex(source_first.RepresentativeBlocked,
+                                     "P1_J_F_BUDGET_NOT_ALIGNED"):
+            source_first.season_scope(**args)
+        scope=source_first.season_scope(
+            **args,budget=doc["budget"])
+        self.assertEqual(len(scope["specializations"]),26)
+        user=sessions.user_scenario(
+            sessions.standard_controls(("mage","frost")))
+        payload=self.dynamic_season_profile_inputs()
+        payload["v216_numeric_preview"]["calculation"][
+            "game_build"]=doc["gear"]["season_build"]
+        user["target"]["final_T"]=3400
+        user["oil_hands"]=["main_hand"]
+        with tempfile.TemporaryDirectory() as td:
+            from pathlib import Path
+            root=Path(td)
+            binary=root/"fake_simc"
+            binary.write_bytes(b"NO_NATIVE_SYNTHETIC_FUTURE")
+            # With ordinary default mode, even a valid synthetic season
+            # scope cannot bypass the original legacy diamond semantics.
+            with self.assertRaisesRegex(pure.ProfileStageBlocked,
+                                        "STAGED_PRIMARY_DIAMOND_REQUIRED"):
+                pure.v098_inputs(
+                    user["character"],user["trinkets"],
+                    season_override=scope)
+            result=boot.build(
+                user,root/"preview",binary,"c"*40,
+                current_season_product=True,
+                season_source_bundle=doc,
+                season_profile_inputs=payload)
+            self.assertEqual(result["status"],
+                             "SEASON_PROFILE_COMPOSED_NOT_ADMITTED_NO_NATIVE")
+            self.assertIn("gem_id=250999",result["profile_simc"])
+            self.assertEqual(result["same_season_build"],
+                             "12.2.0.99999")
+            self.assertEqual(result["v096_typed_input_unadmitted"][
+                             "base_B"],3367)
+            self.assertFalse(result["environment_ready"])
+            self.assertFalse((root/"preview").exists())
+
+    def test_future_season_document_swap_rejects_cross_build_or_budget(self):
+        import v098_target_user_scenario_bootstrap as boot
+        import v106_user_session_controller as sessions
+        import v169_source_first_representative_stage as source_first
+        doc=self.synthetic_future_season_source_bundle()
+        mismatched=copy.deepcopy(doc)
+        mismatched["tier"]["retail_build"]="12.3.0.99999"
+        with self.assertRaisesRegex(source_first.RepresentativeBlocked,
+                                     "GEAR_TIER_BUILD_MISMATCH"):
+            source_first.season_scope(
+                db=mismatched["gear"],tier=mismatched["tier"],
+                settings=mismatched["settings"],
+                budget=mismatched["budget"])
+        bad_budget=copy.deepcopy(doc)
+        bad_budget["budget"]["flasks"]["total_F"]=165
+        with self.assertRaisesRegex(source_first.RepresentativeBlocked,
+                                     "P1_J_F_BUDGET_NOT_ALIGNED"):
+            source_first.season_scope(
+                db=bad_budget["gear"],tier=bad_budget["tier"],
+                settings=bad_budget["settings"],
+                budget=bad_budget["budget"])
+        user=sessions.user_scenario(
+            sessions.standard_controls(("mage","frost")))
+        user["target"]["final_T"]=3400
+        user["oil_hands"]=["main_hand"]
+        payload=self.dynamic_season_profile_inputs()
+        with tempfile.TemporaryDirectory() as td:
+            from pathlib import Path
+            root=Path(td);binary=root/"fake"
+            binary.write_bytes(b"OFFLINE")
+            with self.assertRaisesRegex(
+                     boot.UserScenarioBlocked,
+                     "SEASON_SOURCE_BUNDLE_V216_BUILD_OR_TARGET_DRIFT"):
+                boot.build(user,root/"no_write",binary,"c"*40,
+                    current_season_product=True,
+                    season_source_bundle=doc,
+                    season_profile_inputs=payload)
+            self.assertFalse((root/"no_write").exists())
+
     def test_automatic_target_goes_through_existing_v222_once(self):
         result=self.run_build()
         source=result["source_compilation"]
