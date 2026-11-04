@@ -569,6 +569,12 @@ def build(user,folder,binary,revision,static_cache_path=None,
           and season_source_bundle["schema"]==
              "v098_internal_season_source_bundle_v1"),
          "SEASON_SOURCE_BUNDLE_INTERNAL_PREVIEW_ONLY")
+    # v216/v223 verifies previous-season installed source links; the
+    # replaceable season bundle has not yet been joined to those exact
+    # raw source bytes. A same build label is never sufficient for Native.
+    need(season_source_bundle is None or
+         season_environment_receipt_path is None,
+         "SEASON_SOURCE_BUNDLE_ORIGINAL_GEAR_TIER_SHA_ADMISSION_PENDING")
     need(season_environment_receipt_path is None or
          (season_profile_inputs is not None
           and static_cache_path is None),

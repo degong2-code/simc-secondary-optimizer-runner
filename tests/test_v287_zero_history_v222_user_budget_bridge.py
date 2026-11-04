@@ -1314,6 +1314,32 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                     season_profile_inputs=payload)
             self.assertFalse((root/"no_write").exists())
 
+
+    def test_future_season_bundle_is_preview_only_even_with_old_receipt(self):
+        import v098_target_user_scenario_bootstrap as boot
+        import v106_user_session_controller as sessions
+        user=sessions.user_scenario(
+            sessions.standard_controls(("mage","frost")))
+        user["target"]["final_T"]=3400
+        user["oil_hands"]=["main_hand"]
+        source=self.synthetic_future_season_source_bundle()
+        payload=self.dynamic_season_profile_inputs()
+        payload["v216_numeric_preview"]["calculation"][
+            "game_build"]=source["gear"]["season_build"]
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            binary=root/"fake"
+            binary.write_bytes(b"NO_NATIVE")
+            with self.assertRaisesRegex(
+                    boot.UserScenarioBlocked,
+                    "SEASON_SOURCE_BUNDLE_ORIGINAL_GEAR_TIER_SHA_ADMISSION_PENDING"):
+                boot.build(
+                    user,root/"blocked",binary,"c"*40,
+                    current_season_product=True,
+                    season_profile_inputs=payload,
+                    season_source_bundle=source,
+                    season_environment_receipt_path=root/"synthetic_receipt.json")
+            self.assertFalse((root/"blocked").exists())
     def test_automatic_target_goes_through_existing_v222_once(self):
         result=self.run_build()
         source=result["source_compilation"]
