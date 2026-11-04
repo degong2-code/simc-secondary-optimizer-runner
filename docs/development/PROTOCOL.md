@@ -19,6 +19,8 @@
 
 **성능·설계:** 기존 원본·동일 시즌 SHA/검증 결과·캐시·Native/CI를 재사용하고, 실제로 부족한 범위만 보완한다. 새 코드 변경마다 중복 HTTP/Native, 캐시 무효화, 메모리/I/O, 전체 시간·구조 간결성을 평가한다. 장기 목표는 **26 DPS용 하나의 재사용 가능한 시즌 G/J/F/O Environment Build → B/T → 기존 적응형 SimC**이며 별도 효과 엔진/전수 장비 DB/추가 인증기 개발이 아니다.
 
-## 새 채팅 인계 복원 동작 · P3-CJ 최신
+## 새 채팅 인계 복원 동작 · P3-CV 최신 (2026-11-04)
 
-새 채팅의 첫 응답은 [P3-BY 최신 인계](../CHAT_CONTINUITY_HANDOFF_20261103_P3_CJ_ENGINE_EVIDENCE_FIRST_RESTORE.md) 1개를 출발점으로 실제 GitHub branch/main HEAD와 관련 INDEX→원본→코드→Actions/Native 영수증을 **읽기 전용으로 독립 검증**, 증거 확립/제품 연결 미완료/소스 부족을 구분한 **복원 결과 및 단기·장기 로드맵**을 보고한 뒤 **사용자의 '진행'까지 중단**한다. 역사 v1.4.1의 27 DPS 기록, 옛 J138/6개 보석/특수보석 머리 고정은 최신 26 DPS 및 가변 소켓 정책보다 낮은 지위다. 인계 생성 자체는 제품 구현·테스트·실제 Project UI 변경 권한이 아니다.
+새 채팅의 단일 진입점은 [P3-CV 최신 인계](../CHAT_CONTINUITY_HANDOFF_20261104_P3_CV_ENGINE_RESTORE.md)다. 먼저 실제 GitHub 격리 branch/main HEAD를 독립 조회하고 이 규약→INDEX→P3-CU/P3-CT/P3-CN 최근 노트→CURRENT→개발자 노트→승인 v1.4.3→관련 실제 코드·원본·Actions/Native 영수증을 **읽기 전용**으로 대조하라. 특히 P3-CU 178 PASS는 같은 빌드 **예산 산술의 제품 경로 연결**이지 G/J/F/O 실제 전량 증빙/정책 A/`v098`·적응형 26 DPS E2E 완료가 아니다. [기존 P3-CJ](../CHAT_CONTINUITY_HANDOFF_20261103_P3_CJ_ENGINE_EVIDENCE_FIRST_RESTORE.md)는 역사 자료로만 사용한다.
+
+**첫 응답은 복원 결과·확립된 증거의 적용 범위/실제 누락/제품 접합 미완료와 단·장기 로드맵을 보고하고 사용자 “진행” 전 중단**한다. 문서·코드 변경/커밋, 신규 데이터 수집, Native/Actions/테스트 실행 및 공식 승격 금지. 최신 26 DPS(증강 제외)·가변 소켓, v080 톱니날 촉 특성의 buffed rating과 정적 CHMV 분리, 사용자 승인 영약 1pt 후순위를 지킨다. GitHub 문서 갱신은 ChatGPT Project Sources/Instructions UI 등록 또는 Work OS 실행/승격 증거가 아니다.
