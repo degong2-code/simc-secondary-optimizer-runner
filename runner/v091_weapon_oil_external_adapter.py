@@ -147,7 +147,7 @@ def configure(profile,doc,weapon_layout,applied_hands,*,
         "internal_season_oil_source_only":season_oil_by_hand is not None,
         "season_oil_budget_admitted_here":False,
         "declared_O":declared_O,"oil_outside_legacy_B":True,
-        "oil_in_approved_final_T":True,
+        "oil_in_approved_final_T":season_oil_by_hand is None,
         "legacy_B_unchanged":True,"native_calls":0,
         "mechanics_owner":"SimC",
         "buffed_O_addition_independently_proven":False}

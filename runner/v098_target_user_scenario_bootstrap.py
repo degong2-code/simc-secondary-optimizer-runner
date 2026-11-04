@@ -385,8 +385,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
           and not static_special_probe_only
           and not user["special_items"] and not user["embellishments"]
           and ENCHANT_FIELD not in user
-          and SEASON_ENCHANT_FIELD not in user
-          and CONSUME_FIELD not in user),
+          and SEASON_ENCHANT_FIELD not in user),
          "SEASON_PROFILE_INTERNAL_SOURCE_ONLY_MODE_REQUIRED")
     need(type(current_season_product) is bool,"CURRENT_SEASON_PRODUCT_BOOL_REQUIRED")
     # Separate opt-in product session: NO physical-proof-only stage seal.
