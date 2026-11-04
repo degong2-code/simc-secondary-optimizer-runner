@@ -3571,7 +3571,13 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         if (preflight is not None and
                 preflight.get("schema")==FRESH_SOURCE_PREFLIGHT_SCHEMA and
                 source_compilation["status"]==
-                    "FRESH_V191_V211_V213_COMPILED_UNADMITTED"):
+                    "FRESH_V191_V211_V213_COMPILED_UNADMITTED" and
+                all(type(source_compilation.get(key)) is dict and
+                    type(source_compilation[key].get("receipt_sha256")) is str
+                    for key in ("v191_stage","v211_stage","v213_stage"))):
+            # Only the original v217 COMPLETE stage receipts can authorize
+            # a versioned source manifest. An old/synthetic compiler summary
+            # without sealed receipts remains a source-only diagnostic.
             staged=_stage_source_environment_only(
                 compilation=source_compilation,preflight=preflight,
                 target_ilevel=fresh_collection_inputs[
