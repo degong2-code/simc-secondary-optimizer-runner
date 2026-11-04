@@ -126,14 +126,21 @@ def preview_enchant_catalog(source_catalog, items):
             raise ValueError("AUTO_ADMISSION_DUPLICATE_ID")
         seen.add(item_id)
         slot=row.get("source_slots")
-        if type(slot) is not list or len(slot)!=1:
-            raise ValueError("AUTO_ADMISSION_SLOT_SCOPE_UNRESOLVED")
+        if (type(slot) is not list or
+            not all(type(value) is str and bool(value) for value in slot)):
+            raise ValueError("AUTO_ADMISSION_SLOT_SCOPE_INVALID")
+        # Multi-slot candidates and grouped ring/weapon masks must be
+        # held per item, not crash the entire fresh environment. This is
+        # SOURCE-ONLY diagnostic preview, never a verified slot identity.
+        resolved=(len(slot)==1 and
+                  "/" not in slot[0] and
+                  not slot[0].startswith("WEAPON_SUBCLASS_"))
         candidate={
             "kind":"permanent_enchant","exact_id":item_id,
-            "simc_token":row["token"],"slot":slot[0],
-            "slot_status":("SOURCE_MASK_RESOLVED"
-                            if not slot[0].startswith("WEAPON_SUBCLASS_")
-                            else "PENDING_EXACT_HAND"),
+            "simc_token":row["token"],
+            "slot":(slot[0] if resolved else "SOURCE_SLOT_UNRESOLVED"),
+            "slot_status":("SOURCE_MASK_RESOLVED" if resolved
+                            else "PENDING_EXACT_SLOT_OR_HAND"),
             "game_build":source_catalog["game_build"],
             "simc_revision":source_catalog["simc_revision"],
             "catalog_sha256":source_catalog["manifest_sha256"],

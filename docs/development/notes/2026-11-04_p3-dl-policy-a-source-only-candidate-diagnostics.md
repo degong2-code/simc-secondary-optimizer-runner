@@ -1,0 +1,10 @@
+# 2026-11-04 · P3-DL · 기존 정책 A 판정→새 시즌 UI 후보 보류 사유 연결
+
+- **Capability:** `CATALOG.POLICY_A`, `PRODUCT.E2E`
+- **Keywords:** P3-DL, Policy A, auto admission, source catalog, v220, v196, v212, per-item missing, 선택지, 신시즌, 보류, highest quality
+- **Prior evidence:** [PROTOCOL](../PROTOCOL.md)→[INDEX](../INDEX.md)→[12항목 책임표](../ENVIRONMENT_BUILD_INPUT_SCOPE_20261104.md); [승인 정책](../../P3_K_20261102_ENVIRONMENT_DB_POLICY_HIGHEST_QUALITY_NO_TEMP_ENCHANT_SEASON_REFRESH_ADDONS.md); 기존 `v220.decide/preview_enchant_catalog`, `v196.public_options`, `v113 /api/v1/season-option-catalog`, `v212._approved_enchants`, [P3-DK 226 PASS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41784297402).
+- **Decision:** `CONNECT` — 실제 새 시즌 v213/v196 **원본 후보**에는 기존 v220의 정확 항목별 부족한 4종 증거(source relation, SimC input, product route, CHMV budget)를 연결한다. 검증된 영수증이 없는 동안 selectable 0·환경 READY false는 유지. 다부위 마부 후보 하나 때문에 기본 소스 진단 전체가 중지되지 않도록 그 후보만 unresolved로 보류. `v212`의 종전 동일 시즌 7967 전용 Native manifest를 근거 없이 새 시즌 범용 발행기로 승격시키지 않는다.
+- **Changes:** 새 시즌 `v196.public_options`에서 `v220.preview_enchant_catalog`을 실제 source catalog identity와 검증된 후보 행으로 호출, `automatic_admission.per_item_missing_reasons` 및 `pending` 제공. `v220`의 read-only 다부위·그룹링/무기 슬롯 preview는 `PENDING_EXACT_SLOT_OR_HAND`으로 표기하고 전체 미승인 카탈로그를 반환. 기존 source default 선택, 7967 관측 범위, 캐시/Native/사용자 UI 변경 없음.
+- **Verification:** 신규 합성 fresh catalog 테스트는 두 항목의 정책 A 보류 사유·네 증거 부족/선택지 0, 기존 고정 시즌 회귀, 다부위/손 미확정 항목 보류·잘못된 슬롯 타입 차단을 검사. 신규 CI 실제 영수증은 실행 후 갱신; 이전 P3-DK 226 PASS는 역사 재사용, 신규 게임 HTTP0/Native0.
+- **Remaining:** 실제 품질 동등성·정확 ID/적용 슬롯 및 SimC·CHMV 영수증을 기존 환경 Build에서 연결한 후 `v220.decide` eligible 상태→**사용자 선택 경로**→v212의 동시 버전 환경/캐시 발행을 완료해야 등록 가능. 현재는 **증거 부족 사유의 UI 읽기 전용 연결**, 실제 새 옵션 승인·설치가 아니다. 일반 임시 마부 제외/기름은 별도 O 경로 유지. 검증된 기본 환경을 선택 옵션의 미비만으로 차단하지 않음.
+- **Efficiency:** 기존 v220 pure 판정과 기존 v196 JSON 한 번 읽기 재사용, 아이템별 목록 1회 순회. 추가 DB/Wago/Native·효과 엔진·독립 품질 Gate/캐시 소거 없음. main/immutable v003/원본 v016/Project UI/Work OS·주 제품 채팅 권한 불변.

@@ -86,6 +86,20 @@ class SameFreshCatalogChain(unittest.TestCase):
             self.assertEqual(result["simc_revision"],REV)
             self.assertEqual(result["enchant_candidates"]["total"],2)
             self.assertEqual(result["enchant_candidates"]["selectable_count"],0)
+            policy=result["automatic_admission"]
+            self.assertEqual(policy["schema"],
+                "v220_exact_evidence_automatic_admission_policy_v1")
+            self.assertEqual(policy["status"],
+                "PENDING_EXACT_ITEM_AND_BUDGET_PROOFS")
+            self.assertEqual(policy["approved_count"],0)
+            self.assertEqual(policy["automatically_eligible"],0)
+            self.assertEqual(policy["pending"],2)
+            self.assertFalse(policy["selection_mutated"])
+            self.assertEqual(
+                len(policy["per_item_missing_reasons"]),2)
+            self.assertTrue(all(
+                any("EVIDENCE_MISSING:" in why for why in reasons)
+                for reasons in policy["per_item_missing_reasons"].values()))
             self.assertEqual(result["existing_allowed_input_choices"],{})
             self.assertEqual(result["proven_armor_embellishments"],{})
             self.assertFalse(result["environment_ready"])
@@ -164,6 +178,9 @@ class SameFreshCatalogChain(unittest.TestCase):
                 v196=ui.public_options(p)
         self.assertEqual(v196["enchant_candidates"]["total"],2)
         self.assertEqual(v196["enchant_candidates"]["selectable_count"],0)
+        self.assertEqual(v196["automatic_admission"]["pending"],2)
+        self.assertEqual(v196["automatic_admission"]["automatically_eligible"],0)
+        self.assertFalse(v196["automatic_admission"]["selection_mutated"])
         self.assertFalse(v196["environment_ready"])
         self.assertEqual(v196["existing_allowed_input_choices"],{})
         self.assertEqual(v196["source_catalog"]["summary"]["tier"]["piece_count"],65)

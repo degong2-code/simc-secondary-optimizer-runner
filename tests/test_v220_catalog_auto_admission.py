@@ -107,6 +107,33 @@ class AutoAdmissionTests(unittest.TestCase):
         self.assertFalse(result["selection_mutated"])
         self.assertIn("8019",result["per_item_missing_reasons"])
 
+    def test_multi_slot_and_grouped_ring_preview_only_pending(self):
+        src={"game_build":"12.1.5.70575","simc_revision":"a"*40,
+             "manifest_sha256":"b"*64}
+        rows=[
+            {"enchant_id":8019,"token":"enchant_boots__farstriders_hunt",
+             "source_slots":["feet","hands"]},
+            {"enchant_id":8018,"token":"enchant_ring__example",
+             "source_slots":["finger1/finger2"]},
+            {"enchant_id":8017,"token":"enchant_weapon__example",
+             "source_slots":["WEAPON_SUBCLASS_NOT_YET_USER_SLOT_CERTIFIED"]},
+        ]
+        out=policy.preview_enchant_catalog(src,rows)
+        self.assertEqual(out["pending"],3)
+        self.assertEqual(out["automatically_eligible"],0)
+        self.assertFalse(out["selection_mutated"])
+        for id_ in (8019,8018,8017):
+            self.assertIn(
+                "EXACT_PHYSICAL_SLOT_OR_HAND_RELATION_NOT_VERIFIED",
+                out["per_item_missing_reasons"][str(id_)])
+        # A missing/ill-formed source-slot structure is NOT a valid
+        # candidate silently promoted through diagnostics.
+        with self.assertRaisesRegex(ValueError,
+                "AUTO_ADMISSION_SLOT_SCOPE_INVALID"):
+            policy.preview_enchant_catalog(src,[
+                {"enchant_id":8016,"token":"enchant_ring__bad",
+                 "source_slots":[None]}])
+
     def test_invalid_scope_fails_closed(self):
         with self.assertRaisesRegex(ValueError,"CANDIDATE_IDENTITY_INVALID"):
             policy.decide({**self.item,"simc_revision":"wrong"})

@@ -154,6 +154,20 @@ def public_options(path=DEFAULT):
                  classified["native_E_evidence"]["static_E"] is None,
                  "FRESH_SEASON_UNAUTHORIZED_ENCHANT_APPROVAL_OR_NATIVE_E")
             item["blocked_reason"]="NEW_SEASON_ITEM_EFFECT_QUALITY_AND_CHMV_PROOF_PENDING"
+        # Reuse the SAME v220 policy decision that will be used for
+        # future exact evidence.  The normal new-season source contains
+        # candidates only, so each remains unapproved until trusted
+        # source/SimC/product/CHMV receipts actually exist. This is a
+        # read-only projection, not an additional approval gate.
+        admission_preview=auto_admission.preview_enchant_catalog(
+            {"game_build":source["season_game_build"],
+             "simc_revision":source["simc_commit"],
+             "manifest_sha256":source_catalog["manifest_sha256"]},
+            enchants)
+        need(admission_preview["automatically_eligible"]==0 and
+             admission_preview["pending"]==len(enchants) and
+             admission_preview["selection_mutated"] is False,
+             "FRESH_SEASON_POLICY_A_SOURCE_ONLY_MUST_REMAIN_PENDING")
         return {
             "schema":SCHEMA,
             "status":"FRESH_SEASON_CANDIDATES_UNAPPROVED_NOT_ENVIRONMENT_READY",
@@ -163,8 +177,10 @@ def public_options(path=DEFAULT):
             "related_source_counts":dict(source["related_source_counts"]),
             "related_source_status":source["related_source_status"],
             "source_catalog":source_catalog,
-            "automatic_admission":{"status":"PENDING_EXACT_ITEM_AND_BUDGET_PROOFS",
-                                   "approved_count":0},
+            "automatic_admission":{
+                **admission_preview,
+                "status":"PENDING_EXACT_ITEM_AND_BUDGET_PROOFS",
+                "approved_count":0},
             "existing_allowed_input_choices":{},
             "proven_armor_embellishments":{},
             "enchant_candidates":{"total":len(enchants),"groups":counts,
