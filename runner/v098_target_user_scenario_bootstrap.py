@@ -12,6 +12,7 @@ import v046_static_item_cache as cache_mod
 import v055_simc_item_selection as item_mod
 import v061_scenario_contract as scenario
 import v065_v015_scheduler_adapter as scheduler
+import v062_static_budget_bridge as static_budget
 import v101_common_representative_equipment as common
 import v091_weapon_oil_external_adapter as oil_mod
 import v096_unified_product_entry as entry
@@ -240,7 +241,7 @@ def initial_seeds(B,lower,upper):
 
 def season_profile_source_only(*, profile, cfg, weapon_layout, user,
                                season_profile_inputs, season_build,
-                               simc_revision):
+                               simc_revision, fillers=None):
     """Season-neutral v098 profile composition from v216 numeric preview.
 
     This route reuses v108 J/F and v091 O serializers. It is purposely
@@ -352,6 +353,32 @@ def season_profile_source_only(*, profile, cfg, weapon_layout, user,
          and typed_plan["scenario"]["equipment"]==
              scenario.normalize(configured["scenario"])["scenario"]["equipment"],
          "SEASON_PROFILE_TYPED_BASE_B_OR_SOURCE_DRIFT")
+    # Reuse the actual v062 static-L budget and v065 feasibility floors
+    # with the typed B and exact F/O vectors. This is the same deterministic
+    # seed planning policy the existing runnable v098/v096 path uses; a
+    # source-only plan is NEVER a Native or Policy A authorization.
+    seed_plan=None
+    if fillers is not None:
+        need(type(fillers) is list,
+             "SEASON_PROFILE_EXACT_FILLERS_REQUIRED")
+        compiled=static_budget.compile_static_budget(
+            typed_plan,fillers,cache_mod.empty_cache())
+        feasible=scheduler.budget_with_fixed_components(
+            typed_plan,compiled,native_flask_vector,fixed_o)
+        planned_B,lower,upper=scheduler.bounds(typed_plan,feasible)
+        need(planned_B==budget["base_B"],
+             "SEASON_PROFILE_ADAPTIVE_BASE_B_DRIFT")
+        seeds=initial_seeds(planned_B,lower,upper)
+        seed_plan={
+            "schema":"v098_v065_unadmitted_seed_plan_v1",
+            "status":"EXISTING_ADAPTIVE_SEEDS_SOURCE_ONLY",
+            "seed_targets_B":seeds,
+            "base_B":planned_B,
+            "lower_B":dict(zip(scenario.STATS,lower)),
+            "upper_B":dict(zip(scenario.STATS,upper)),
+            "source_profile_sha256":configured["profile_sha256"],
+            "scenario_digest":typed_plan["scenario_digest"],
+            "runtime_native_authorized":False}
     typed_input={
         "schema":"v098_unadmitted_v096_typed_input_v1",
         "scenario":typed_plan["scenario"],
@@ -359,6 +386,7 @@ def season_profile_source_only(*, profile, cfg, weapon_layout, user,
         "base_B":budget["base_B"],"final_T":budget["final_T"],
         "fixed_O":dict(fixed_o),"flask_F":dict(native_flask_vector),
         "source_profile_sha256":configured["profile_sha256"],
+        "adaptive_seed_plan_unadmitted":seed_plan,
         "source_status":"UNADMITTED_NUMERIC_PREVIEW_ONLY",
         "runtime_manifest_created":False,
         "native_execution_authorized":False}
@@ -612,7 +640,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
             profile=profile,cfg=cfg,weapon_layout=weapon_layout,user=user,
             season_profile_inputs=season_profile_inputs,
             season_build=_profile_supplier_registry()["season_build"],
-            simc_revision=revision)
+            simc_revision=revision,fillers=fillers)
     if static_special_probe_only:
         # v208 internal on-demand static-L source, never a product plan.
         # Reuses exactly the real user/gear/consumables profile composition

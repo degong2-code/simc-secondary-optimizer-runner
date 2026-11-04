@@ -743,6 +743,14 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             self.assertEqual(typed["final_T"],3400)
             self.assertFalse(typed["native_execution_authorized"])
             self.assertFalse(typed["runtime_manifest_created"])
+            seeds=typed["adaptive_seed_plan_unadmitted"]
+            self.assertEqual(len(seeds["seed_targets_B"]),2)
+            self.assertEqual(seeds["base_B"],3367)
+            self.assertFalse(seeds["runtime_native_authorized"])
+            self.assertTrue(all(sum(x.values())==3367
+                                for x in seeds["seed_targets_B"]))
+            self.assertNotEqual(seeds["seed_targets_B"][0],
+                                seeds["seed_targets_B"][1])
             self.assertFalse(result["environment_ready"])
             self.assertFalse(result["adaptive_v094_started"])
             self.assertEqual(result["new_native_calls"],0)
