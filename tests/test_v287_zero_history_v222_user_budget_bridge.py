@@ -1534,6 +1534,63 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                     "flask_budget_F"],176)
                 self.assertEqual(derived["new_native_calls"],0)
                 self.assertFalse((root/"derived").exists())
+                # P3-DK: use the EXISTING v271/v139 variable socket
+                # compositor end-to-end, including special gem on wrist,
+                # not the original 6+head season template.
+                variable=copy.deepcopy(layout)
+                variable["socket_counts"]={"wrists":1,"waist":2,"feet":2}
+                variable["socket_total"]=5
+                variable["ordinary_count"]=4
+                variable["ordinary_gem_ids"]=[240908]*4
+                variable["special_gem_id"]=240983
+                variable["special_slot"]="wrists"
+                calc["J"]=92
+                env["source_compilation"][
+                    "physical_gem_layout_unadmitted"]=variable
+                env["source_compilation"][
+                    "physical_gem_J_arithmetic_unadmitted"]={
+                        "status":"PHYSICAL_GEM_J_ARITHMETIC_UNADMITTED",
+                        "physical_gem_item_ids":[240908]*4,
+                        "J_candidate_unadmitted":92}
+                variable_result=boot.preview_from_environment_build(
+                    user,root/"variable_socket",binary,"c"*40,
+                    environment_result=env)
+                self.assertEqual(variable_result["status"],
+                    "SEASON_PROFILE_COMPOSED_NOT_ADMITTED_NO_NATIVE")
+                self.assertTrue(variable_result[
+                    "existing_v271_variable_socket_connected_unadmitted"])
+                self.assertIn("gem_id=240983",
+                    next(row for row in variable_result["profile_simc"].splitlines()
+                         if row.startswith("wrists=")))
+                self.assertNotIn("gem_id=",
+                    next(row for row in variable_result["profile_simc"].splitlines()
+                         if row.startswith("head=")))
+                self.assertEqual(variable_result["scenario"]["consumables"][
+                    "special_gem_id"],240983)
+                self.assertEqual(variable_result["scenario"]["consumables"][
+                    "gem_budget_J"],92)
+                self.assertEqual(variable_result[
+                    "v271_variable_socket_layout_unadmitted"][
+                    "ordinary_gem_ids"],[240908]*4)
+                self.assertEqual(variable_result["new_native_calls"],0)
+                self.assertFalse((root/"variable_socket").exists())
+                # A v271 four-color reshuffle may change physical IDs.
+                # v222's original per-ID J cannot be silently reused.
+                variable["special_gem_id"]=240967
+                with self.assertRaisesRegex(boot.UserScenarioBlocked,
+                        "SEASON_V271_PHYSICAL_GEM_IDS_CHANGED_AFTER_J"):
+                    boot.preview_from_environment_build(
+                        user,root/"changed_physical_gem_id",binary,"c"*40,
+                        environment_result=env)
+                self.assertFalse((root/"changed_physical_gem_id").exists())
+                calc["J"]=143
+                env["source_compilation"][
+                    "physical_gem_layout_unadmitted"]=layout
+                env["source_compilation"][
+                    "physical_gem_J_arithmetic_unadmitted"]={
+                        "status":"PHYSICAL_GEM_J_ARITHMETIC_UNADMITTED",
+                        "physical_gem_item_ids":list(layout["ordinary_gem_ids"]),
+                        "J_candidate_unadmitted":143}
                 env["source_compilation"][
                     "physical_gem_J_arithmetic_unadmitted"][
                         "J_candidate_unadmitted"]=142
@@ -1655,8 +1712,12 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         result=boot._season_settings_from_v216(
             compilation=joined,numeric_inputs=numeric,
             controls=controls,need=boot.need)
-        self.assertIn("V139_VARIABLE_SOCKET_LAYOUT_COMPOSER_PENDING",
-                      result["missing"])
+        self.assertEqual(result["status"],
+            "SEASON_SETTINGS_PHYSICAL_GEMS_FLASK_COMPOSED_UNADMITTED")
+        self.assertEqual(result["v271_socket_plan_unadmitted"][
+            "ordinary_gem_ids"],[240908]*5)
+        self.assertEqual(result["v271_socket_plan_unadmitted"][
+            "socket_counts"]["feet"],1)
         joined["physical_gem_layout_unadmitted"]=layout
         joined["physical_gem_J_arithmetic_unadmitted"]={
             **joined["physical_gem_J_arithmetic_unadmitted"],

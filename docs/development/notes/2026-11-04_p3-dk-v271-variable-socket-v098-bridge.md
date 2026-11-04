@@ -1,0 +1,10 @@
+# 2026-11-04 · P3-DK · 기존 v271 가변 소켓을 v139/v098 시즌 미리보기에 연결
+
+- **Capability:** `SOCKET.LAYOUT`, `J.GEM`, `BUDGET.GJFO`, `PRODUCT.E2E`
+- **Keywords:** P3-DK, v271, v139, v098, 가변 소켓, 비머리 특수보석, socket_plan, source-only, gem J, v216, reuse
+- **Prior evidence:** [PROTOCOL](../PROTOCOL.md)→[INDEX](../INDEX.md)→[환경 입력 12항목 정책표](../ENVIRONMENT_BUILD_INPUT_SCOPE_20261104.md); [P3-BZ](2026-11-03_p3-bz-variable-socket-physical-gems-connect.md) 기존 `v271.arrange`/`v139.compose(socket_plan)` 실구현 [67 PASS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41611131956), [P3-CA](2026-11-03_p3-ca-physical-gems-j-normal-build.md) 기존 실제 J/물리 ID 조인, [P3-DJ](2026-11-04_p3-dj-environment-input-policy-reconcile.md) source-only [226 PASS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41782855503).
+- **Decision:** `CONNECT` — 이미 구현된 `v271→v139.compose(socket_plan)`을 같은 v216→v098 미리보기에 이어 준다. 별도 소켓 생성기/게임 적법성 Gate/Native·HTTP·최적화 엔진 신설은 `STOP`; 원래 6일반+머리특수 보석, 기존 사용자 저장 프로필 바이트는 그대로 유지한다.
+- **Changes:** `v139.v098_inputs(socket_plan=...)` 내부 source-only 전달 및 특수 보석이 머리가 아니어도 원본 `socket_layout.special_gem_id`를 cfg에 반영. `v098._season_settings_from_v216`은 원래 v271 배치(최대 64보석, 16/slot)에서 6+head 외 레이아웃은 기존 `v271.arrange`로 전달하는 **opt-in `season_socket_plan`** 제공. 원래 배치 후 일반 보석 item ID가 4색 조정 등으로 바뀌면 J 원본과 드리프트 차단. source-only v216→v098 내부 preview 외엔 허용하지 않음. 신규 특수보석 가족과 실제 인게임 소켓 적용성은 미인증/선택 대기.
+- **Verification:** 신규 합성 오프라인 회귀는 5소켓·손목 특수 보석·머리 보석 없음, 원래 v222 J/SimC 프로필 ID·일회 oil, 4색 변경시 ID 드리프트 차단, 세션/Native 생성0, 기존 6/head 전 경로 보존 검사. 최종 CI/ledger 영수증 아직 미확인 `NOT_VERIFIED`. P3-BZ/CA/DJ의 PASS 및 P3-BX Native4는 역사 증거만 재사용, 신규 게임 HTTP0/Native0.
+- **Remaining:** 본 경로는 **원본 숫자 미승인 source-only**이다. 소켓 게임 적용/새 시즌 색상·특수보석 ID/최고품질 J와 정확 대표 장비 동빌드 증거, `v220/v196` 선택지 실제 등록, v216/v223 READY, v096→v094 사용자 DPS Native E2E 미완료. v271 현 코드의 역사 특수보석 ID 지원 범위 밖은 증거 후 별도 확장.
+- **Efficiency:** 기존 `v271.arrange` 한 번과 이미 구성된 v216 source layout/J 재사용. 별도 DB2 조회·Native 재측정·새 엔진/고비용 캐시 소거 없음. 기존 프로필·DPS/정적 캐시 identity 불변, 신규 미리보기는 고유 프로필 SHA로 구별. main/immutable v003/원본 v016/Project UI/Work OS/주 제품 채팅 권한 불변.

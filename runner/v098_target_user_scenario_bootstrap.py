@@ -588,7 +588,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
           source_first_stage=False,current_season_product=False,
           static_special_probe_only=False,source_catalog_path=None,
           season_profile_inputs=None,season_environment_receipt_path=None,
-          season_source_bundle=None,season_original_source_paths=None):
+          season_source_bundle=None,season_original_source_paths=None,
+          season_socket_plan=None):
     """Return an already validated internal manifest and v096 plan; no Native."""
     base_accepted=(FIELDS,FIELDS|{IMPORT_FIELD},FIELDS|{CONSUME_FIELD},
                    FIELDS|{IMPORT_FIELD,CONSUME_FIELD})
@@ -631,6 +632,14 @@ def build(user,folder,binary,revision,static_cache_path=None,
     need(season_original_source_paths is None or
          season_source_bundle is not None,
          "SEASON_V191_ORIGINALS_REQUIRE_SOURCE_BUNDLE")
+    # v271 plan is an INTERNAL source-only preview, never a public
+    # socket selector or runnable admission bypass.
+    need(season_socket_plan is None or
+         (type(season_socket_plan) is dict and
+          season_source_bundle is not None and
+          season_profile_inputs is not None and
+          season_environment_receipt_path is None),
+         "SEASON_V271_SOCKET_PLAN_SOURCE_ONLY_REQUIRED")
     # v216/v223 verifies previous-season installed source links; the
     # replaceable season bundle has not yet been joined to those exact
     # raw source bytes. A same build label is never sufficient for Native.
@@ -769,7 +778,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
                                             (current_season_product and ilvl!=334)),
                              season_override=season_override,
                              source_only_season_consumables=(
-                                 season_profile_inputs is not None)))
+                                 season_profile_inputs is not None),
+                             socket_plan=season_socket_plan))
     elif ordinary_variant is None:
         # Preserve the historical exact call shape and all default receipts.
         base_profile,cfg,rows,groups,weapon_layout,F=common.source_backed_gear(
@@ -783,6 +793,27 @@ def build(user,folder,binary,revision,static_cache_path=None,
              "ORDINARY_VARIANT_CONFLICTS_WITH_USER_SELECTED_ITEM")
         base_profile,cfg,rows,groups,weapon_layout,F=common.source_backed_gear(
             key,folder,ilvl,need,ordinary_variant=ordinary_variant)
+    if season_socket_plan is not None:
+        # Reuse v271's physical compositor above; compare the ACTUAL rows
+        # with the original v216/v222 item-ID basis before any profile
+        # serialization. Recoloring must never silently change J ownership.
+        slot_counts=season_socket_plan["socket_counts"]
+        actually_ordinary=[]
+        actual_special=None
+        for slot in sorted(slot_counts):
+            need(slot in rows,"SEASON_V271_SOCKET_SLOT_NOT_IN_REPRESENTATIVE")
+            value=rows[slot]["options"].get("gem_id","")
+            tokens=[] if not value else value.split("/")
+            need(len(tokens)==slot_counts[slot] and
+                 all(part.isdigit() for part in tokens),
+                 "SEASON_V271_PHYSICAL_SOCKET_COUNT_DRIFT")
+            if slot==season_socket_plan["special_slot"]:
+                actual_special=int(tokens[0])
+                tokens=tokens[1:]
+            actually_ordinary.extend(int(v) for v in tokens)
+        need(actual_special==season_socket_plan["special_gem_id"] and
+             actually_ordinary==season_socket_plan["ordinary_gem_ids"],
+             "SEASON_V271_PHYSICAL_GEM_IDS_CHANGED_AFTER_J")
     if pure_stage or source_free:
         restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
             key,rows,groups,user,ilvl,need,
@@ -875,6 +906,14 @@ def build(user,folder,binary,revision,static_cache_path=None,
             simc_revision=revision,fillers=fillers)
         if linked_originals is not None:
             source_only["original_v191_gear_tier_source_unadmitted"]=linked_originals
+        if season_socket_plan is not None:
+            source_only["v271_variable_socket_layout_unadmitted"]={
+                "socket_counts":dict(season_socket_plan["socket_counts"]),
+                "special_slot":season_socket_plan["special_slot"],
+                "special_gem_id":season_socket_plan["special_gem_id"],
+                "ordinary_gem_ids":list(season_socket_plan["ordinary_gem_ids"]),
+                "game_socket_legality_verified_here":False,
+                "new_native_calls":0}
         if season_environment_receipt_path is None:
             # Unadmitted observations never write a runnable manifest.
             return source_only
@@ -1079,19 +1118,24 @@ def _season_settings_from_v216(*, compilation, numeric_inputs,
     counts=layout.get("socket_counts")
     special=layout.get("special_gem_id")
     where=layout.get("special_slot")
-    # The existing v139 source-only formatter still expects a head gem
-    # and six ordinary slots. Do not invent sockets for other layouts.
+    # v271/v139 already support variable N and a non-head special slot.
+    # Unsupported source IDs remain pending rather than being invented.
     if (type(counts) is not dict or type(ordinary) is not list or
         type(special) is not int or special<=0 or
-        where!="head" or counts.get("head")!=1 or
-        len(ordinary)!=6 or sum(counts.values())!=7):
+        type(where) is not str or counts.get(where,0)<1 or
+        sum(counts.values())!=len(ordinary)+1 or
+        not 1<=sum(counts.values())<=64):
         return {"status":"SEASON_SETTINGS_SOURCE_PENDING",
-                "missing":["V139_VARIABLE_SOCKET_LAYOUT_COMPOSER_PENDING"],
+                "missing":["V271_PHYSICAL_SOCKET_PLAN_SOURCE_PENDING"],
+                "settings":None}
+    if special not in (240983,240967):
+        return {"status":"SEASON_SETTINGS_SOURCE_PENDING",
+                "missing":["V271_NEW_SPECIAL_GEM_SOURCE_ID_NOT_SUPPORTED"],
                 "settings":None}
     allowed={"head","neck","shoulders","back","chest","wrists","hands",
              "waist","legs","feet","finger1","finger2","main_hand","off_hand"}
     need(all(type(k) is str and k in allowed and
-             type(v) is int and 0<=v<=6 for k,v in counts.items()) and
+             type(v) is int and 0<=v<=16 for k,v in counts.items()) and
          all(type(item) is int and item>0 for item in ordinary),
          "SEASON_SETTINGS_V271_SOCKET_ROWS_INVALID")
     source_gems={}
@@ -1132,8 +1176,17 @@ def _season_settings_from_v216(*, compilation, numeric_inputs,
             "flask_budget_F":calc["F"],
             "flask_fixed_stat":chosen[0]}}
     pure.validate_season(settings)
+    # Old 6+head shape keeps its exact existing serialization. All other
+    # source-observed layouts use the existing v271 opt-in compositor.
+    fixed=(where=="head" and counts.get("head")==1 and
+           len(ordinary)==6 and sum(counts.values())==7)
+    socket_plan=(None if fixed else {
+        "socket_counts":dict(counts),
+        "special_gem_id":special,"special_slot":where,
+        "ordinary_gem_ids":list(ordinary)})
     return {"status":"SEASON_SETTINGS_PHYSICAL_GEMS_FLASK_COMPOSED_UNADMITTED",
             "missing":[],"settings":settings,
+            "v271_socket_plan_unadmitted":socket_plan,
             "physical_gem_ids_reused":True,
             "selected_native_flask_reused":True,
             "game_socket_legality_authenticated_here":False,
@@ -1244,7 +1297,10 @@ def preview_from_environment_build(user,folder,binary,revision,*,
                  current_season_product=True,
                  season_source_bundle=bundle,
                  season_original_source_paths=originals,
-                 season_profile_inputs=inputs)
+                 season_profile_inputs=inputs,
+                 season_socket_plan=(derived_settings.get(
+                     "v271_socket_plan_unadmitted")
+                     if derived_settings is not None else None))
     proof=result["original_v191_gear_tier_source_unadmitted"]
     need(proof["source_catalog_artifact_sha256"]==
              calc.get("source_catalog_artifact_sha256") and
@@ -1257,6 +1313,9 @@ def preview_from_environment_build(user,folder,binary,revision,*,
             "verified_user_default_options_registered":False,
             "season_settings_physical_gem_flask_assembled_unadmitted":
                 derived_settings is not None,
+            "existing_v271_variable_socket_connected_unadmitted":
+                derived_settings is not None and
+                derived_settings.get("v271_socket_plan_unadmitted") is not None,
             "optional_omnium_module_active_in_profile":
                 season_settings["default_consumables"]["omnium_talents"]
                 is not None,

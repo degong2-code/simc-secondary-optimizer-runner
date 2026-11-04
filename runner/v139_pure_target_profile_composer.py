@@ -257,7 +257,7 @@ def current_season_ordinary_candidates(character, *, season_product_db=None):
 
 def v098_inputs(character,trinkets,*,target_ilevel=334,combat=None,
                 level_preview=False,season_override=None,
-                source_only_season_consumables=False):
+                source_only_season_consumables=False,socket_plan=None):
     """Translate season-built profile to the established v061/v098 tuple.
 
     No v132/v133 fixture, no per-spec APL, no second budget algorithm.
@@ -280,14 +280,19 @@ def v098_inputs(character,trinkets,*,target_ilevel=334,combat=None,
              target_ilevel!=season["target_ilevel"],
              "NONDEFAULT_LEVEL_PREVIEW_OUTSIDE_REFERENCE")
         season={**season,"target_ilevel":target_ilevel}
+    need(socket_plan is None or source_only_season_consumables,
+         "SOURCE_SOCKET_PLAN_ONLY_WITH_UNADMITTED_SEASON")
     profile,receipt,rows,tier=compose(
         character,trinkets,target_ilevel=target_ilevel,combat=combat,
-        season=season)
+        season=season,socket_plan=socket_plan)
     cl,spec=character["class"],character["spec"]
     info=season["specializations"][cl+"/"+spec]
     contract=contracts.lookup(cl,spec)
     defaults=season["default_consumables"]
-    gem=int(rows["head"]["options"]["gem_id"])
+    # v271 already supplies the physical special position; it is not
+    # necessarily the head. Historical calls without socket_plan unchanged.
+    gem=(receipt["socket_layout"]["special_gem_id"] if socket_plan is not None
+         else int(rows["head"]["options"]["gem_id"]))
     if source_only_season_consumables:
         # New seasons must not be rejected solely for not using Midnight
         # gem IDs/Omnium preset tokens. Actual sockets, quality and SimC
