@@ -150,6 +150,11 @@ class ZeroHistorySourceCompilerWiring(unittest.TestCase):
                          "v229_pinned_generated")
         self.assertEqual(result["source_compilation"]["status"],
                          "FRESH_V191_V211_V213_COMPILED_UNADMITTED")
+        original_links=result["source_compilation"][
+            "v191_original_gear_tier_source_paths"]
+        self.assertEqual(original_links["catalog"],str(path))
+        self.assertEqual(original_links["gear"],str(original["gear"]))
+        self.assertEqual(original_links["tier"],str(original["tier"]))
         self.assertEqual(result["source_compilation"]["preflight_sha256"],
                          "f"*64)
         self.assertFalse(result["zero_history_build"]["environment_ready"])
