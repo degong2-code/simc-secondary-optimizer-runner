@@ -497,7 +497,20 @@ def build(user,folder,binary,revision,static_cache_path=None,
     choice=user.get(CONSUME_FIELD) or {}
     gem_choice=choice.get("diamond_id") or int(
         rows["head"]["options"].get("gem_id","0"))
-    common.ensure_representative_gem_colors(rows,gem_choice,need)
+    if season_profile_inputs is None:
+        common.ensure_representative_gem_colors(rows,gem_choice,need)
+    else:
+        # Socket legality is owned by the actual season source and v271.
+        # Do not require historical Midnight-specific four-color diamonds
+        # merely to compile a NON-executable source-only preview.
+        default_choice=user.get(CONSUME_FIELD)
+        need(default_choice is None or (
+             type(default_choice) is dict and
+             set(default_choice)==consumer.CHOICE_FIELDS and
+             all(default_choice[k]=="source_default" for k in
+                 ("flask","food","potion","augmentation","omnium_talents"))
+             and default_choice["diamond_id"]==0),
+             "SEASON_PROFILE_NONDEFAULT_CONSUMABLES_NOT_SOURCE_BOUND")
     selected_nonchmv=None
     if SEASON_ENCHANT_FIELD in user:
         selected_nonchmv=nonchmv_enchant.apply(
@@ -535,8 +548,15 @@ def build(user,folder,binary,revision,static_cache_path=None,
     profile=replace_assignments(base_profile,settings,rows)
     # Profile-native consumables and primary-only diamond are applied to
     # existing full source-backed gear BEFORE oil recalculates SHA and B/O.
-    selected=consumer.apply(profile,cfg,rows,
-                            user.get(CONSUME_FIELD))
+    if season_profile_inputs is None:
+        selected=consumer.apply(profile,cfg,rows,
+                                user.get(CONSUME_FIELD))
+    else:
+        # The ordinary legacy v108.apply requires J=138/F=165; bypass that
+        # *only* for the internal source-only season preview. The actual
+        # v108 season serializer below writes independently observed J/F.
+        selected={"profile":profile,"scenario":cfg,
+                  "selected":None}
     profile=consumer.set_head_gem(selected["profile"],rows["head"])
     # This runtime serializer is now shared by all current archetypes;
     # per-spec producer APL/items are data inputs, never output-format forks.

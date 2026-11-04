@@ -737,6 +737,55 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             self.assertEqual(result["new_native_calls"],0)
             self.assertFalse(folder.exists())
 
+
+    def test_v098_season_preview_never_calls_historical_jf_or_gem_gate(self):
+        import v098_target_user_scenario_bootstrap as boot
+        import v106_user_session_controller as sessions
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            binary=root/"fake"
+            binary.write_bytes(b"OFFLINE")
+            user=sessions.user_scenario(
+                sessions.standard_controls(("mage","frost")))
+            user["target"]["final_T"]=3400
+            user["oil_hands"]=["main_hand"]
+            with mock.patch.object(boot.consumer,"apply",
+                                   side_effect=AssertionError(
+                                       "LEGACY_J_F_MUST_NOT_RUN")), \\
+                 mock.patch.object(boot.common,
+                                   "ensure_representative_gem_colors",
+                                   side_effect=AssertionError(
+                                       "OLD_SEASON_GEM_GATE_MUST_NOT_RUN")):
+                result=boot.build(
+                    user,root/"preview",binary,"c"*40,
+                    current_season_product=True,
+                    season_profile_inputs=self.dynamic_season_profile_inputs())
+            self.assertEqual(result["scenario"]["consumables"][
+                "gem_budget_J"],143)
+            self.assertEqual(result["scenario"]["consumables"][
+                "flask_budget_F"],176)
+            self.assertFalse((root/"preview").exists())
+
+    def test_v098_source_only_disallows_ignored_user_consumable_overrides(self):
+        import v098_target_user_scenario_bootstrap as boot
+        import v106_user_session_controller as sessions
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            binary=root/"fake"
+            binary.write_bytes(b"OFFLINE")
+            user=sessions.user_scenario(
+                sessions.standard_controls(("mage","frost")))
+            user["consumable_choices"]["food"]="harandar_celebration"
+            user["target"]["final_T"]=3400
+            with self.assertRaisesRegex(
+                boot.UserScenarioBlocked,
+                "SEASON_PROFILE_NONDEFAULT_CONSUMABLES_NOT_SOURCE_BOUND"):
+                boot.build(user,root/"preview",binary,"c"*40,
+                    current_season_product=True,
+                    season_profile_inputs=self.dynamic_season_profile_inputs())
+            self.assertFalse((root/"preview").exists())
+
     def test_v098_season_serializer_rejects_mismatched_build_or_oil(self):
         import v098_target_user_scenario_bootstrap as boot
         from tests.test_v091_weapon_oil_external_adapter import frost
