@@ -21,10 +21,10 @@
 
 **성능·설계:** 기존 원본·동일 시즌 SHA/검증 결과·캐시·Native/CI를 재사용하고, 실제로 부족한 범위만 보완한다. 새 코드 변경마다 중복 HTTP/Native, 캐시 무효화, 메모리/I/O, 전체 시간·구조 간결성을 평가한다. 장기 목표는 **26 DPS용 하나의 재사용 가능한 시즌 G/J/F/O Environment Build → B/T → 기존 적응형 SimC**이며 별도 효과 엔진/전수 장비 DB/추가 인증기 개발이 아니다.
 
-## 새 채팅 인계 복원 동작 · P3-DF 최신 (2026-11-04)
+## 새 채팅 인계 복원 동작 · P3-DO 최신 (2026-11-04)
 
-새 채팅의 단일 진입점은 [P3-DF 인계](../CHAT_CONTINUITY_HANDOFF_20261104_P3_DF_ENGINE_RESTORE.md). [P3-CV](../CHAT_CONTINUITY_HANDOFF_20261104_P3_CV_ENGINE_RESTORE.md)는 역사 자료. GitHub 격리 branch/main HEAD 각각 독립 조회 → 본 PROTOCOL → INDEX → P3-DE/P3-DD 관련 노트 → CURRENT/개발자 노트/승인 v1.4.3 → 실제 코드·영수증 순서로 **읽기 전용** 복원. PENDING 상태만으로 원본 증거 부재를 주장하지 말 것.
+새 채팅 단일 진입점은 [P3-DO 인계](../CHAT_CONTINUITY_HANDOFF_20261104_P3_DO_ENGINE_FIRST.md). 기존 [P3-DF](../CHAT_CONTINUITY_HANDOFF_20261104_P3_DF_ENGINE_RESTORE.md)는 역사 인계다. 격리/main HEAD 각각 독립 조회 → PROTOCOL → INDEX → P3-DN/P3-DM 및 관련 노트 → CURRENT/실행 노트/승인 v1.4.3 → 코드·원본·Actions/Native 영수증 순서로 **읽기 전용** 복원. P3-DG 이후 gear/tier raw SHA 연결·P3-DK 가변 소켓 연결을 다시 미구현으로 되돌리지 않는다.
 
-**P3-DE** [222 PASS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41767573431)는 새 시즌 gear/tier/budget/settings 교체형 26 DPS 대표 프로필 미리보기이지 실제 새 시즌 raw gear/tier SHA 인증/Native READY가 아니다. **P3-DD** [219 PASS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41764255684)는 기존 같은 시즌 승인 영수증에서 v098→v096→v094 실행 함수 연결. 실제 근거와 제품 접합을 구분하고 최신 26 DPS(증강 제외), G/J/F/O 전체 자동 구축, 정적≠buffed, 1 rating 후순위·SimC 효과 책임 준수.
+**최신 P3-DN:** [v212 #41790639319](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41790639319) Ubuntu/Windows 각각 444 tests(440 PASS/4 SKIP)/0 FAIL, [focused #41790639275](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41790639275) 226 PASS/DEV_LEDGER_PASS. 기존 봉인 source_relation 1 family만 연결; `simc_input/product_input/chmv_budget`와 실제 선택지 발행·새 시즌 READY·26 DPS Native E2E는 미완료. 인계 작성/등록은 제품 통합·Native PASS가 아니다.
 
-**새 채팅 첫 응답에서는 HEAD·증거·완료/미완료·병목·효율 대안·로드맵 복원 결과만 보고하고 STOP. 사용자의 “진행” 전 코드/문서 수정·커밋/신규 수집/CI/Actions/Native/테스트·승격 금지.** GitHub 문서 작성은 Project UI·Work OS 등록·main 병합 증거가 아님.
+**새 채팅 첫 응답은 HEAD·핵심 증거·완료/미완료·병목·효율·로드맵·권한 복원 보고 후 STOP. '진행' 이전 개발/코드·문서 수정/커밋/수집/CI·Actions·Native/테스트·공식 승격 금지.** GitHub 문서는 Project UI/Work OS 등록이나 main 병합 증거가 아니다.
