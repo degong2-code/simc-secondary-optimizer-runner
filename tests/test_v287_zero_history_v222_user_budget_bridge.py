@@ -43,7 +43,7 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
     def run_build(self,manual=None,proof=True,level=334,user_level=None,
                   native_result=None,gem_layout=None,gem_ratings=None,
                   effect_requests=None,effect_resolver=None,
-                  effect_observation=None):
+                  effect_observation=None,selected_budget_items=None):
         inputs={
             "expected_game_build":self.catalog["game_build"],
             "representative_request":{
@@ -58,6 +58,8 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             inputs["gem_rating_by_id"]=gem_ratings
         if effect_requests is not None:
             inputs["effect_probe_requests"]=effect_requests
+        if selected_budget_items is not None:
+            inputs["selected_budget_items"]=selected_budget_items
         user={"target":{"ilevel":user_level if user_level is not None else level,
                         "final_T":manual}}
         with mock.patch.object(build,"collect_wago_new_season_source",
@@ -89,7 +91,8 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertEqual(native.call_count,1)
         self.assertEqual(compiler.call_count,1)
         for name in ("same_build_budget_evidence","gem_layout_receipt",
-                     "gem_rating_by_id","effect_probe_requests"):
+                     "gem_rating_by_id","effect_probe_requests",
+                     "selected_budget_items"):
             self.assertNotIn(name,collect.call_args.kwargs)
         self.assertFalse((self.root/"sessions").exists())
         return result
@@ -437,6 +440,132 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 numeric=native,weapon_source=src,
                 game_build=self.catalog["game_build"],
                 simc_revision=self.catalog["simc_revision"])
+
+
+    def test_selected_flask_explicit_no_oil_reconciles_original_manual_T(self):
+        request,bound,observed=self.physical_effect()
+        original=copy.deepcopy(self.table[334]["components"]["O"])
+        try:
+            self.table[334]["components"]["O"]["rating"]={
+                k:0 for k in build.season_budget_contract.STATS}
+            self.table[334]["components"]["O"]["applied_hands"]=[]
+            result=self.run_build(
+                manual=3300,effect_requests=[request],
+                effect_resolver=bound,effect_observation=observed,
+                selected_budget_items={
+                    "flask_item_id":241326,"oil_item_ids_by_hand":{}})
+        finally:
+            self.table[334]["components"]["O"]=original
+        linked=result["source_compilation"][
+            "selected_physical_F_O_budget_link_unadmitted"]
+        self.assertTrue(linked["v222_numbers_reconciled"])
+        self.assertEqual(linked["matched_f"]["rating"],165)
+        self.assertEqual(linked["matched_o_by_hand"],{})
+        self.assertEqual(linked["v222_arithmetic_unadmitted"]["final_T"],3300)
+        self.assertEqual(linked["v222_arithmetic_unadmitted"]["base_B"],3300)
+        self.assertTrue(linked["v222_arithmetic_unadmitted"][
+            "manual_final_T_authoritative"])
+        self.assertFalse(linked["source_admission_performed_here"])
+        self.assertFalse(result["zero_history_build"]["environment_ready"])
+        self.assertEqual(result["native_calls"],0)
+
+    def selected_physical_pair(self):
+        f_request,f_bound,f_obs=self.physical_effect()
+        o_request,o_bound,o_obs=self.physical_effect(
+            kind="temporary_enchant",hand="main_hand")
+        numeric=build._zero_history_F_O_native_component_candidates(
+            observations=[
+                {**f_obs,"physical_item_native_source_unadmitted":f_bound},
+                {**o_obs,"physical_item_native_source_unadmitted":o_bound}],
+            game_build=self.catalog["game_build"],
+            simc_revision=self.catalog["simc_revision"])
+        masks=self.existing_oil_mask_fixture()
+        choices=build._zero_history_quality_weapon_candidate_join(
+            numeric=numeric,weapon_source=masks,
+            game_build=self.catalog["game_build"],
+            simc_revision=self.catalog["simc_revision"])
+        return numeric,choices
+
+    def test_selected_physical_oil_matches_existing_v222_only_once(self):
+        numeric,choices=self.selected_physical_pair()
+        source=copy.deepcopy(self.table[334])
+        source["components"]["O"]["rating"]={
+            "crit_rating":16,"haste_rating":17,
+            "mastery_rating":0,"versatility_rating":0}
+        source["components"]["O"]["applied_hands"]=["main_hand"]
+        original=build.season_budget_contract.preprofile_budget(
+            source_catalog=self.catalog,source_artifact_sha256="a"*64,
+            evidence=source,target_ilevel=334,manual_final_T=3333)
+        selected={"flask_item_id":241326,
+                  "oil_item_ids_by_hand":{"main_hand":243734}}
+        linked=build._zero_history_selected_F_O_v222_reconcile(
+            selected=selected,numeric=numeric,choices=choices,
+            existing_budget=original,budget_evidence=source)
+        self.assertTrue(linked["v222_numbers_reconciled"])
+        self.assertEqual(linked["v222_arithmetic_unadmitted"]["fixed_O"][
+            "haste_rating"],17)
+        self.assertEqual(linked["v222_arithmetic_unadmitted"]["base_B"],3300)
+        self.assertEqual(linked["v222_arithmetic_unadmitted"]["final_T"],3333)
+        self.assertEqual(linked["matched_o_by_hand"]["main_hand"][
+            "representative_weapon_id"],9101)
+        self.assertFalse(linked["user_selectable"])
+
+    def test_selected_flask_or_oil_rating_conflict_blocks(self):
+        numeric,choices=self.selected_physical_pair()
+        source=copy.deepcopy(self.table[334])
+        source["components"]["O"]["applied_hands"]=["main_hand"]
+        original=build.season_budget_contract.preprofile_budget(
+            source_catalog=self.catalog,source_artifact_sha256="a"*64,
+            evidence=source,target_ilevel=334,manual_final_T=3300)
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "SELECTED_F_O_V222_PHYSICAL_RATING_OR_HANDS_CONFLICT"):
+            build._zero_history_selected_F_O_v222_reconcile(
+                selected={"flask_item_id":241326,
+                          "oil_item_ids_by_hand":{"main_hand":243734}},
+                numeric=numeric,choices=choices,
+                existing_budget=original,budget_evidence=source)
+        changed=dict(original,F=166)
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "SELECTED_F_O_V222_PHYSICAL_RATING_OR_HANDS_CONFLICT"):
+            build._zero_history_selected_F_O_v222_reconcile(
+                selected={"flask_item_id":241326,
+                          "oil_item_ids_by_hand":{}},
+                numeric=numeric,choices=choices,
+                existing_budget=changed,budget_evidence=source)
+
+    def test_selected_unknown_oil_or_unmatched_shield_remains_pending(self):
+        numeric,choices=self.selected_physical_pair()
+        selected={"flask_item_id":241326,
+                  "oil_item_ids_by_hand":{"off_hand":243734}}
+        out=build._zero_history_selected_F_O_v222_reconcile(
+            selected=selected,numeric=numeric,choices=choices,
+            existing_budget=None,budget_evidence=None)
+        self.assertFalse(out["v222_numbers_reconciled"])
+        self.assertIn("SELECTED_OIL_OFF_HAND_STATIC_OR_WEAPON_MASK_PENDING",
+                      out["missing"])
+        self.assertNotIn("off_hand",out["matched_o_by_hand"])
+        self.assertFalse(out["environment_ready"])
+
+    def test_selected_physical_budget_bad_input_blocks_before_collector(self):
+        with mock.patch.object(build,"collect_wago_new_season_source",
+                side_effect=AssertionError("WAGO_MUST_NOT_RUN")):
+            with self.assertRaisesRegex(build.EnvironmentBuildBlocked,
+                                         "SELECTED_PHYSICAL_BUDGET_ITEM_FIELDS_INVALID"):
+                build.build_environment(
+                    sessions_root=self.root/"sessions",session_folder=None,
+                    user={"target":{"ilevel":334,"final_T":None}},
+                    binary=None,revision=None,static_cache=None,
+                    source_catalog_path=None,bootstrap_result=None,
+                    fresh_collection_inputs={
+                        "expected_game_build":self.catalog["game_build"],
+                        "representative_request":{
+                            "class":"mage","spec":"frost","target_ilevel":334},
+                        "g_probe_character":None,"simc_revision_hint":None,
+                        "selected_budget_items":{
+                            "flask_item_id":241326,
+                            "oil_item_ids_by_hand":{"offhand":243734}}})
 
     def test_automatic_target_goes_through_existing_v222_once(self):
         result=self.run_build()
