@@ -630,6 +630,7 @@ function showSeasonEnvironmentBuild(data) {
   const numeric=step.selected_auto_v222_numeric_preview_unadmitted?.calculation;
   const autoFO=source.automatic_F_O_measurement_candidates_unadmitted;
   const measuredF=source.automatic_F_native_measurements_unadmitted;
+  const measuredO=source.automatic_O_native_measurements_unadmitted;
   node.textContent=(ready?"시즌 환경 설치 완료":"원본 수집·검증 진행 결과 (설치 미완료)")+
     " · 요청 빌드 "+(scope.game_build||"–")+
     " · 원본 "+(step.source_stage_status||data?.source_stage?.status||"미확정")+
@@ -640,6 +641,9 @@ function showSeasonEnvironmentBuild(data) {
     (measuredF?.status==="AUTO_F_NATIVE_MEASURED_SOURCE_ONLY"?
       " · F Native "+measuredF.attempted+"/"+measuredF.total_source_candidates+
       "건(미승인)":"")+
+    (measuredO?.status==="AUTO_O_NATIVE_MEASURED_SOURCE_ONLY"?
+      " · O Native "+measuredO.attempted+"/"+measuredO.total_source_candidates+
+      "건(손별 측정 후보·미승인)":"")+
     " · 신규 Native "+(Number(data?.native_calls)||0)+"회"+
     (numeric?.numeric_preview_only===true&&numeric.environment_ready===false?
        " · 관측 수치(미승인) G="+numeric.reference_G+
@@ -667,8 +671,9 @@ async function buildSeasonEnvironment() {
     throw Error("목표 ilvl은 1~1000 범위여야 합니다.");
   const nativeRequested=$("season-native-g").checked;
   const auto_native_F_requested=$("season-native-f").checked;
-  if(auto_native_F_requested&&!nativeRequested)
-    throw Error("영약 F 측정을 위해 위 G Native 선택도 필요합니다.");
+  const auto_native_O_requested=$("season-native-o").checked;
+  if((auto_native_F_requested||auto_native_O_requested)&&!nativeRequested)
+    throw Error("F/O 측정을 위해 위 G Native 선택도 필요합니다.");
   const native_G_binary=nativeRequested?field("binary"):null;
   if(nativeRequested&&!native_G_binary)
     throw Error("G Native 실측을 선택한 경우 아래 SimC 실행 파일 경로가 필요합니다.");
@@ -677,13 +682,14 @@ async function buildSeasonEnvironment() {
     throw Error("SimC revision은 7~12자리 또는 40자리 소문자 16진수여야 합니다.");
   if(!window.confirm("새 시즌 원본 수집·검증을 시작할까요? 외부 네트워크를 사용할 수 있습니다."+
       (nativeRequested?" 기존 G Native 최대 1회 실행될 수 있습니다.":" Native는 기본적으로 실행하지 않습니다.")+
-      (auto_native_F_requested?" F 후보의 정적 SimC Native를 추가로 요청당 신규 최대 8회 실행할 수 있으며, 기존 결과는 캐시를 재사용합니다.":"")))
+      ((auto_native_F_requested||auto_native_O_requested)?
+       " 선택한 F/O 후보의 정적 SimC Native를 요청당 합계 신규 최대 8회 실행할 수 있으며, 기존 결과는 캐시를 재사용합니다. 품질·무기 적합성 승인과 별도입니다.":"")))
     return;
   $("season-build-stage").textContent="동일 환경 엔진에서 원본 수집·봉인 및 기존 증거 재사용 중…";
   try {
     const report=await api("/api/v1/environment/season-build",
       {method:"POST",payload:{game_build,target_ilevel,native_G_binary,
-                              auto_native_F_requested,
+                              auto_native_F_requested,auto_native_O_requested,
                               simc_revision_hint:revision||null}});
     showSeasonEnvironmentBuild(report);
     setNotice("시즌 환경 구축 단계 조회 완료 · READY 여부는 별도 검증 · 개별 DPS 최적화는 시작되지 않았습니다.");
