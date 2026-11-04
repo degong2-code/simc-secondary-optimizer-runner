@@ -3545,7 +3545,15 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 manual_final_T=manual_T)
             progress["selected_auto_v222_numeric_preview_unadmitted"]=selected_numeric
             source_compilation["selected_auto_v222_numeric_preview_unadmitted"]=selected_numeric
-            if selected_numeric["calculation"] is not None:
+            if selected_numeric["calculation"] is None:
+                # Missing physical G/J/F/O is a core *data* PENDING,
+                # not a reason to discard already sealed v191/v211/v213.
+                # Do not feed an incomplete preview into v212's strict
+                # complete-numeric contract.
+                progress["requires"].extend(
+                    "SELECTED_AUTO_GJFO_"+reason
+                    for reason in selected_numeric["requires"])
+            else:
                 profile_inputs=_zero_history_v098_profile_source_inputs(
                     numeric_preview=selected_numeric,
                     physical_sources=native_F_O)
@@ -3578,12 +3586,19 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             # Only the original v217 COMPLETE stage receipts can authorize
             # a versioned source manifest. An old/synthetic compiler summary
             # without sealed receipts remains a source-only diagnostic.
+            staged_numeric=source_compilation.get(
+                "selected_auto_v222_numeric_preview_unadmitted")
             staged=_stage_source_environment_only(
                 compilation=source_compilation,preflight=preflight,
                 target_ilevel=fresh_collection_inputs[
                     "representative_request"]["target_ilevel"],
-                selected_numeric=source_compilation.get(
-                    "selected_auto_v222_numeric_preview_unadmitted"))
+                selected_numeric=(
+                    staged_numeric
+                    if type(staged_numeric) is dict and
+                    staged_numeric.get("status")==(
+                        "SELECTED_GJFO_V222_ARITHMETIC_PREVIEW_UNADMITTED")
+                    and type(staged_numeric.get("calculation")) is dict
+                    else None))
             progress["versioned_environment_source_stage"]=staged
             source_compilation["versioned_environment_source_stage"]=staged
         progress["source_compilation_status"]=source_compilation["status"]

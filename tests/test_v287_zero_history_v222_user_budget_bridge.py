@@ -456,6 +456,46 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertFalse(out["zero_history_build"]["user_session_created"])
         self.assertEqual(out["native_calls"],0)
 
+    def test_t1_incomplete_selected_budget_preserves_original_source_stage(self):
+        """The real v216 coordinator must stage v212 even with pending F/O.
+
+        Only the last v212 stage writer is observed here; the full external
+        cold start remains the separate T1 acceptance objective.
+        """
+        previous=self.compiled
+        self.compiled={
+            **previous,
+            **{name:{"status":"REUSED_VERIFIED",
+                     "receipt_sha256":str(i)*64}
+               for i,name in enumerate(
+                   ("v191_stage","v211_stage","v213_stage"),1)},
+        }
+        selected={"flask_item_id":241326,
+                  "oil_item_ids_by_hand":{"main_hand":243734}}
+        try:
+            with mock.patch.object(
+                    build,"_stage_source_environment_only",
+                    return_value={"status":"FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED",
+                                  "environment_ready":False,
+                                  "environment_installed":False}) as staged:
+                result=self.run_build(
+                    proof=False,selected_budget_items=selected)
+        finally:
+            self.compiled=previous
+        staged.assert_called_once()
+        self.assertIsNone(staged.call_args.kwargs["selected_numeric"])
+        self.assertEqual(
+            result["source_compilation"]["versioned_environment_source_stage"]
+                  ["status"],
+            "FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED")
+        numeric=result["source_compilation"][
+            "selected_auto_v222_numeric_preview_unadmitted"]
+        self.assertIsNone(numeric["calculation"])
+        self.assertIn("SELECTED_AUTO_GJFO_V277_G_NATIVE_NUMERIC_PENDING",
+                      result["zero_history_build"]["requires"])
+        self.assertFalse(result["zero_history_build"]["environment_ready"])
+        self.assertEqual(result["native_calls"],0)
+
     def test_selected_flask_explicit_no_oil_reconciles_original_manual_T(self):
         request,bound,observed=self.physical_effect()
         original=copy.deepcopy(self.table[334]["components"]["O"])
