@@ -153,7 +153,8 @@ def configure(profile,doc,weapon_layout,applied_hands,*,
         "buffed_O_addition_independently_proven":False}
 
 def prepare(profile,doc,fillers,static_cache,weapon_layout,applied_hands,
-            *,manual_final_T=None,verified_enchant_E=None):
+            *,manual_final_T=None,verified_enchant_E=None,
+            season_oil_by_hand=None,season_base_B=None):
     # Source-locked oil is configured ONCE. A final-inclusive user T is
     # converted explicitly to legacy free B by the approved v092 policy.
     if manual_final_T is not None:
@@ -161,7 +162,19 @@ def prepare(profile,doc,fillers,static_cache,weapon_layout,applied_hands,
              "MANUAL_FINAL_T_REQUIRED")
         need(doc["target"]["mode"]=="derived_ilevel",
              "MANUAL_FINAL_T_REQUIRES_UNSET_LEGACY_TARGET")
-    oil=configure(profile,doc,weapon_layout,applied_hands)
+    if season_oil_by_hand is not None:
+        # Original v089 manual-total route already represents legacy free B.
+        # An approved seasonal caller must supply B; never consult the
+        # previous season's 79x2 table or invent its J/F/oil constants.
+        need(type(season_base_B) is int and season_base_B>0
+             and manual_final_T is None and verified_enchant_E is None
+             and doc["target"]["mode"]=="manual_total"
+             and doc["target"]["manual_total"]==season_base_B,
+             "SEASON_SOURCE_TYPED_BASE_B_OR_FIXED_E_INVALID")
+    else:
+        need(season_base_B is None,"SEASON_B_WITHOUT_EXACT_O_SOURCE")
+    oil=configure(profile,doc,weapon_layout,applied_hands,
+                  season_oil_by_hand=season_oil_by_hand)
     if manual_final_T is not None:
         converted=total_policy.approved_manual_total_to_legacy_B(
             oil["scenario"],manual_final_T,oil["declared_O"])
@@ -191,6 +204,9 @@ def prepare(profile,doc,fillers,static_cache,weapon_layout,applied_hands,
     # fixed L and no ordinary G cache is required via existing v090.
     return {"schema":SCHEMA,"status":"READY_V091_STATIC_C_CANDIDATE",
         "oil":oil,"prepared":prepared,"approved_total":accounting,
+        **({"season_specific_fixed_O":True,
+            "season_reference_table_not_used":True}
+           if season_oil_by_hand is not None else {}),
         "native_calls":0,"original_v015_v016_integrated":False}
 
 def propose(bundle,target,flask_vector,binary_sha,revision,iterations,path):

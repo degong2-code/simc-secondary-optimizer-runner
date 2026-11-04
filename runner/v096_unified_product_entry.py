@@ -26,6 +26,8 @@ FIELDS={"schema","profile_simc","scenario_json","fillers_json",
 MANUAL_FIELD="manual_final_T"
 NATIVE_ENCHANT_FIELD="v202_verified_enchant_choice"
 NONCHMV_ENCHANT_FIELD="v206_source_classified_nonchmv_enchant_choice"
+SEASON_FIELD="admitted_season_budget_source"
+SEASON_SCHEMA="v096_internal_admitted_season_budget_source_v1"
 # Optional internal stage seal: no Native until physical SimC acceptance.
 STAGE_FIELD="unverified_pure_profile_plan_only"
 class EntryBlocked(ValueError):pass
@@ -40,6 +42,103 @@ def read_object(path):
     need(path.is_file(),"ENTRY_INPUT_NOT_FOUND:"+path.name)
     return json.loads(path.read_text(encoding="utf8"))
 
+
+def _admitted_season_source(*, manifest_path, season, revision,
+                            user_scenario, flask_F, oil_hands):
+    """Reuse v216's exact already-sealed v223-backed budget receipt.
+
+    Internal season package path only. v222 labels or numeric preview alone
+    never authorize a session. The v216-v223 source provenance remains the
+    authority; this is the original v096 execution adapter, not a new effect
+    or separate season certification engine.
+    """
+    need(type(season) is dict and
+         set(season)=={
+             "schema","environment_receipt_path",
+             "environment_receipt_sha256","oil_by_hand"}
+         and season["schema"]==SEASON_SCHEMA,
+         "SEASON_BUDGET_INTERNAL_SOURCE_FIELDS")
+    receipt_path=path_for(pathlib.Path(manifest_path).parent,
+                          season["environment_receipt_path"])
+    need(not receipt_path.is_symlink(),
+         "SEASON_ENVIRONMENT_RECEIPT_SYMLINK_BLOCKED")
+    import v216_environment_build_coordinator as environment
+    try:
+        receipt=environment.read_receipt(receipt_path)
+    except (OSError,ValueError,KeyError,TypeError) as exc:
+        raise EntryBlocked("SEASON_V216_EXISTING_RECEIPT_INVALID:"+
+                           type(exc).__name__) from exc
+    need(receipt.get("receipt_sha256")==season["environment_receipt_sha256"],
+         "SEASON_ENVIRONMENT_RECEIPT_IDENTITY_MISMATCH")
+    b=receipt.get("season_budget",{})
+    src=receipt.get("source",{})
+    need(type(b) is dict and type(src) is dict
+         and b.get("source_links_verified_by_v223") is True
+         and b.get("source_authentication_performed_here") is False
+         and type(b.get("source_input_sha256")) is dict
+         and all(type(v) is str and contract.HASH_RE.fullmatch(v) is not None
+                 for v in b["source_input_sha256"].values())
+         and set(b["source_input_sha256"])=={
+             "gear","tier","budget","reference"}
+         and b.get("source_catalog_manifest_sha256")==
+             src.get("manifest_sha256")
+         and b.get("source_catalog_artifact_sha256")==
+             src.get("artifact_sha256")
+         and b.get("game_build")==src.get("game_build")
+         and b.get("simc_revision")==revision==
+             src.get("simc_revision"),
+         "SEASON_V223_ACTUAL_SOURCE_LINKS_NOT_VERIFIED")
+    normalized=contract.normalize(user_scenario)
+    budget=normalized["budget"]
+    final=b.get("base_B")
+    oil=b.get("fixed_O")
+    need(type(final) is int and final>0 and
+         type(oil) is dict and
+         b.get("final_T")==final+sum(oil.values())
+         and b.get("target_ilevel")==normalized["scenario"]["target"]["ilevel"]
+         and normalized["scenario"]["target"]["mode"]=="manual_total"
+         and normalized["scenario"]["target"]["manual_total"]==final
+         and budget["T"]==final and budget["J"]==b.get("J")
+         and budget["F"]==b.get("F")
+         and budget["external_temporary_rating"]==oil
+         and sum(flask_F.values())==b.get("F")
+         and all(b.get(k)=={stat:0 for stat in contract.STATS}
+                 for k in ("fixed_L","fixed_E")),
+         "SEASON_V222_TYPED_GJFO_B_T_F_O_DRIFT")
+    by_hand=season["oil_by_hand"]
+    need(type(by_hand) is dict and set(by_hand)==set(oil_hands)
+         and all(type(v) is dict
+                 and set(v)=={
+                     "physical_item_id","simc_input_token",
+                     "static_CHMV_vector"}
+                 and type(v["physical_item_id"]) is int
+                 and v["physical_item_id"]>0
+                 for v in by_hand.values()),
+         "SEASON_SELECTED_PHYSICAL_OIL_HANDS_DRIFT")
+    exact_o={stat:0 for stat in contract.STATS}
+    for hand,info in by_hand.items():
+        vector=contract.vector(
+            info["static_CHMV_vector"],"SEASON_V223_FIXED_O")
+        for stat in contract.STATS:
+            exact_o[stat]+=vector[stat]
+    need(exact_o==oil,
+         "SEASON_V223_PHYSICAL_OIL_STATIC_VECTOR_DRIFT")
+    # Distinguish same-B profiles from different seasons and sources in
+    # v093/v094 durable case keys. Do not invalidate old legacy identities.
+    source_identity=hashlib.sha256(json.dumps(
+        b["source_input_sha256"],sort_keys=True,
+        separators=(",",":")).encode("utf8")).hexdigest()
+    return {"season_budget":b,
+            "season_source_identity":{
+                "environment_build_receipt_sha256":receipt["receipt_sha256"],
+                "environment_manifest_sha256":
+                    receipt["environment_manifest_sha256"],
+                "source_catalog_artifact_sha256":
+                    src["artifact_sha256"],
+                "source_input_sha256":source_identity},
+            "oil_by_hand":by_hand}
+
+
 def source(manifest_path):
     """Build the existing typed and SHA-locked Native context; zero SimC calls."""
     manifest_path=pathlib.Path(manifest_path).resolve()
@@ -48,7 +147,8 @@ def source(manifest_path):
                   FIELDS|{MANUAL_FIELD,STAGE_FIELD})
     allowed=(base_allowed+
              tuple(x|{NATIVE_ENCHANT_FIELD} for x in base_allowed)+
-             tuple(x|{NONCHMV_ENCHANT_FIELD} for x in base_allowed))
+             tuple(x|{NONCHMV_ENCHANT_FIELD} for x in base_allowed)+
+             tuple(x|{SEASON_FIELD} for x in (FIELDS,)))
     need(type(user) is dict and set(user) in allowed
          and user.get("schema")==SCHEMA,"ENTRY_SCHEMA_OR_FIELDS")
     if STAGE_FIELD in user:
@@ -84,10 +184,32 @@ def source(manifest_path):
     binary_sha=hashlib.sha256(paths["native_binary"].read_bytes()).hexdigest()
     selected_fixed_E=(verified_enchant.read()[0]["static_enchant_E"]
                       if NATIVE_ENCHANT_FIELD in user else None)
-    prepared=oil_adapter.prepare(profile,doc,fillers,cache,
-                                 user["weapon_layout"],user["oil_hands"],
-                                 manual_final_T=manual_T,
-                                 verified_enchant_E=selected_fixed_E)
+    season_source=(
+        _admitted_season_source(
+            manifest_path=manifest_path,season=user[SEASON_FIELD],
+            revision=user["native_revision"],user_scenario=doc,
+            flask_F=user["flask_F"],oil_hands=user["oil_hands"])
+        if SEASON_FIELD in user else None)
+    prepared=oil_adapter.prepare(
+        profile,doc,fillers,cache,
+        user["weapon_layout"],user["oil_hands"],
+        manual_final_T=manual_T,
+        verified_enchant_E=selected_fixed_E,
+        season_oil_by_hand=(
+            season_source["oil_by_hand"] if season_source else None),
+        season_base_B=(
+            season_source["season_budget"]["base_B"]
+            if season_source else None))
+    if season_source is not None:
+        need(prepared["approved_total"]["base_B"]==
+                 season_source["season_budget"]["base_B"]
+             and prepared["approved_total"]["final_T"]==
+                 season_source["season_budget"]["final_T"]
+             and prepared["oil"]["declared_O"]==
+                 season_source["season_budget"]["fixed_O"],
+             "SEASON_PHYSICAL_OIL_AND_V092_TOTAL_DRIFT")
+        prepared["admitted_season_environment_identity"]=(
+            season_source["season_source_identity"])
     if NONCHMV_ENCHANT_FIELD in user:
         # Source and exact Windows E=0 comparison have separate provenance;
         # neither creates new B/T nor certifies effect mechanics in every spec.
@@ -119,7 +241,17 @@ def source(manifest_path):
     provenance=prepared["prepared"]["static_budget"]["reference_budget_provenance"]
     need(provenance["schema"]=="v090_reference_budget_provenance_v1",
          "SOURCE_BUDGET_PROVENANCE_REQUIRED")
-    if manual_T is None:
+    if season_source is not None:
+        need(provenance["source"]=="user_manual_total"
+             and provenance["total_T"]==
+                 season_source["season_budget"]["base_B"]
+             and context["identity"]["approved_final_T"]==
+                 season_source["season_budget"]["final_T"]
+             and context["identity"].get(
+                 "admitted_season_environment_identity")==
+                 season_source["season_source_identity"],
+             "SEASON_ADMITTED_V090_V093_SOURCE_DRIFT")
+    elif manual_T is None:
         need(provenance["source"]=="reference_rounded_opt_in",
              "REFERENCE_B_ONLY_UNTIL_EXACT_G_MERGE")
         if NATIVE_ENCHANT_FIELD in user:
@@ -149,10 +281,19 @@ def source(manifest_path):
           "scouts":user["scouts"],"material_scouts":user["material_scouts"],
           "native_called":False,
           "original_product_v015_v016_merged":False,
-          "budget_source":"USER_MANUAL_FINAL_INCLUDING_OIL" if manual_T is not None
+          "budget_source":"ADMITTED_SEASON_GJFO_V216_V223" if season_source
+                          else "USER_MANUAL_FINAL_INCLUDING_OIL" if manual_T is not None
                           else ("OPT_IN_ILVL_REFERENCE_PLUS_VERIFIED_FIXED_E"
                                 if NATIVE_ENCHANT_FIELD in user
                                 else "OPT_IN_ILVL_REFERENCE_BASE_B")}
+    if season_source is not None:
+        plan["season_source_receipt_sha256"]=(
+            season_source["season_source_identity"][
+                "environment_build_receipt_sha256"])
+        plan["source_links_verified_by_v223"]=True
+        plan["season_source_same_game_build"]=(
+            season_source["season_budget"]["game_build"])
+        plan["season_gjfo_source_is_NOT_policy_A_coverage"]=True
     if approved_nonchmv is not None:
         need(enchant_reference.KEY not in provenance,
              "NONCHMV_EFFECT_MUST_NOT_ADD_REFERENCE_B")

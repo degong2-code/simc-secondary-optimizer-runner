@@ -56,6 +56,22 @@ def identity(bundle,binary_sha,revision,scout_iterations,confirm_iterations):
         "threads":runtime["threads"],
         "simc_mechanics_owner":"SimC",
         "policy_v065_original_v015_source_sha":policy.SOURCE_V015_SHA256}
+    if "admitted_season_environment_identity" in bundle:
+        env=bundle["admitted_season_environment_identity"]
+        need(type(env) is dict
+             and set(env)=={
+                 "environment_build_receipt_sha256",
+                 "environment_manifest_sha256",
+                 "source_catalog_artifact_sha256",
+                 "source_input_sha256"}
+             and all(type(env[k]) is str and
+                     scenario.HASH_RE.fullmatch(env[k]) is not None
+                     for k in ("environment_build_receipt_sha256",
+                               "environment_manifest_sha256",
+                               "source_catalog_artifact_sha256",
+                               "source_input_sha256")),
+             "ADMITTED_SEASON_ENVIRONMENT_IDENTITY_REQUIRED")
+        result["admitted_season_environment_identity"]=dict(env)
     if "v202_verified_enchant" in o:
         proof=o["v202_verified_enchant"]
         need(proof.get("schema")=="v202_one_exact_enchant_source_evidence_v1"
