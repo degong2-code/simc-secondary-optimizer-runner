@@ -195,6 +195,81 @@ class ExactPhysicalNativeInput(unittest.TestCase):
         self.assertIsNone(result["F"])
         self.assertIsNone(result["O"])
         self.assertFalse(result["zero_history_build"]["environment_ready"])
+    def test_normal_v216_auto_F_native_opt_in_uses_exact_v281_id_only(self):
+        """No user-supplied F ID; same v281 source + original v278 worker."""
+        src={"schema":"v216_fresh_source_stage_v1",
+            "source_stage":{"status":"EXECUTED_AND_SEALED","reused":False},
+            "environment_installed":False,"environment_ready":False,
+            "native_calls":0,"G":None,"J":None,"F":None,"O":None,
+            "B":None,"T":None,
+            "expected_game_build":BUILD,
+            "snapshot_receipt_path":str(self.root/"wago"/"receipt.json"),
+            "fresh_consumable_simc_effect_relation":self.source,
+            "fresh_one_spec_physical_G_probe":{
+                "profile_path":str(self.root/"source"/"probe.simc"),
+                "source_stage":{"status":"EXECUTED_AND_SEALED"}}}
+        compiled={"status":"FRESH_V191_V211_V213_COMPILED_UNADMITTED",
+                  "stage_root":str(self.root),"simc_revision":REV,
+                  "source_catalog_path":str(self.root/"catalog.json"),
+                  "missing":[]}
+        p={"expected_game_build":BUILD,
+           "representative_request":{"class":"paladin","spec":"retribution",
+                                     "target_ilevel":334},
+           "g_probe_character":{"race":"dwarf"},
+           "simc_revision_hint":None,"auto_native_F_requested":True}
+        measured=[]
+        def controlled_measure(**kwargs):
+            measured.append(kwargs)
+            return {"kind":"flask",
+                    "status":"SIMC_CONSUMABLE_SOURCE_OR_BINARY_PENDING",
+                    "token":kwargs["token"],"new_native_calls":0,
+                    "F_candidate_unadmitted":None}
+        with mock.patch.object(build,"collect_wago_new_season_source",
+                               return_value=src) as collect,\
+             mock.patch.object(build.source_wiring,"compile_collected",
+                               return_value=compiled),\
+             mock.patch.object(build,"preflight_new_season_source",
+                               return_value={"preflight_sha256":"b"*64,
+                                             "status":"FRESH_SOURCE_UNADMITTED"}),\
+             mock.patch.object(build.zero_history_G_native,"collect",
+                               return_value={"status":"PENDING",
+                                             "new_native_calls":0}),\
+             mock.patch.object(build.native_effect_pair,"measure",
+                               side_effect=controlled_measure):
+            result=build.build_environment(
+                sessions_root=self.root,session_folder=None,user=None,
+                binary=self.root/"simc_mock",revision=None,
+                static_cache=None,source_catalog_path=None,
+                bootstrap_result=None,fresh_collection_inputs=p)
+        self.assertEqual(len(measured),1)
+        self.assertEqual(measured[0]["token"],"test_flask_3")
+        self.assertEqual(measured[0]["kind"],"flask")
+        self.assertNotIn("auto_native_F_requested",collect.call_args.kwargs)
+        report=result["source_compilation"][
+            "automatic_F_native_measurements_unadmitted"]
+        self.assertEqual(report["total_source_candidates"],1)
+        self.assertEqual(report["attempted"],1)
+        self.assertEqual(report["new_native_calls"],0)
+        self.assertFalse(report["F_approved"])
+        self.assertFalse(report["environment_ready"])
+        self.assertIsNone(result["F"])
+        self.assertFalse(result["zero_history_build"]["environment_ready"])
+
+    def test_auto_F_native_without_binary_blocks_before_source_collection(self):
+        p={"expected_game_build":BUILD,"representative_request":None,
+           "g_probe_character":None,"simc_revision_hint":None,
+           "auto_native_F_requested":True}
+        with mock.patch.object(build,"collect_wago_new_season_source",
+                               side_effect=AssertionError("NO_SOURCE_FETCH")):
+            with self.assertRaisesRegex(
+                    build.EnvironmentBuildBlocked,
+                    "AUTO_F_NATIVE_EXPLICIT_BINARY_REQUIRED"):
+                build.build_environment(
+                    sessions_root=self.root,session_folder=None,user=None,
+                    binary=None,revision=None,static_cache=None,
+                    source_catalog_path=None,bootstrap_result=None,
+                    fresh_collection_inputs=p)
+
     def test_missing_relation_in_normal_build_never_calls_native(self):
         source={"schema":"v216_fresh_source_stage_v1",
             "source_stage":{"status":"EXECUTED_AND_SEALED","reused":False},
