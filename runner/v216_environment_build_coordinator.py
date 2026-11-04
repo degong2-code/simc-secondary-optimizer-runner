@@ -2505,8 +2505,13 @@ def _zero_history_F_O_native_component_candidates(*, observations,
                  "flask", "food", "temporary_enchant"),
              "V216_ZERO_HISTORY_FO_NATIVE_RECORD_INVALID")
         source = row.get("physical_item_native_source_unadmitted")
-        # Legacy developer token probes are not physical-item evidence.
-        if source is None:
+        # Legacy developer token probes and mocks without a real v278 status
+        # are not physical Native rating evidence. Do not reclassify them.
+        if (source is None or row.get("status") not in (
+                "SIMC_STATIC_CHMV_EFFECT_OBSERVED_NOT_ADMITTED",
+                "SIMC_CONDITIONAL_OR_NONSTATIC_EFFECT_PENDING",
+                "SIMC_CONSUMABLE_SOURCE_OR_BINARY_PENDING",
+                "SIMC_CONSUMABLE_NATIVE_FAILED_NO_AUTO_RETRY")):
             continue
         need(type(source) is dict and source.get("schema") ==
                  consumable_simc_relation.MEASUREMENT_BINDING_SCHEMA
