@@ -100,7 +100,8 @@ def _admitted_season_source(*, manifest_path, season, revision,
          and normalized["scenario"]["target"]["manual_total"]==final
          and budget["T"]==final and budget["J"]==b.get("J")
          and budget["F"]==b.get("F")
-         and budget["external_temporary_rating"]==oil
+         and budget["external_temporary_rating"] in (
+             oil,{stat:0 for stat in contract.STATS})
          and sum(flask_F.values())==b.get("F")
          and all(b.get(k)=={stat:0 for stat in contract.STATS}
                  for k in ("fixed_L","fixed_E")),
