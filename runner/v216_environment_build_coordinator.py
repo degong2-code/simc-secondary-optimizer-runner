@@ -3640,18 +3640,19 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             **observation,
                             "physical_item_native_source_unadmitted":bound_item}
                     effect_observations.append(observation)
-            if effect_observations:
-                progress["new_native_calls"]+=sum(
-                    x["new_native_calls"] for x in effect_observations)
-                progress["F_O_effect_numeric_candidates_unadmitted"]={
-                    "F":[x.get("F_candidate_unadmitted")
-                         for x in effect_observations if x["kind"]=="flask"],
-                    "O":[x.get("O_candidate_unadmitted")
-                         for x in effect_observations
-                         if x["kind"]=="temporary_enchant"]}
-                progress["requires"].append(
-                    "F_O_HIGHEST_QUALITY_AND_WEAPON_APPLICABILITY_PENDING")
         if effect_observations:
+            # Count automatic and explicit v278 measurements exactly once.
+            # This block also runs without manual effect_probe_requests.
+            progress["new_native_calls"]+=sum(
+                x["new_native_calls"] for x in effect_observations)
+            progress["F_O_effect_numeric_candidates_unadmitted"]={
+                "F":[x.get("F_candidate_unadmitted")
+                     for x in effect_observations if x["kind"]=="flask"],
+                "O":[x.get("O_candidate_unadmitted")
+                     for x in effect_observations
+                     if x["kind"]=="temporary_enchant"]}
+            progress["requires"].append(
+                "F_O_HIGHEST_QUALITY_AND_WEAPON_APPLICABILITY_PENDING")
             native_F_O=_zero_history_F_O_native_component_candidates(
                 observations=effect_observations,
                 game_build=collected["expected_game_build"],
