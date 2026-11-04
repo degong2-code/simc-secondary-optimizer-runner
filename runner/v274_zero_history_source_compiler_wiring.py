@@ -250,6 +250,11 @@ def compile_collected(collected, *, compiler):
             "status": "FRESH_V191_V211_V213_COMPILED_UNADMITTED",
             "missing": [], "available": list(NEEDED),
             "source_catalog_path": compiled["source_catalog_path"],
+            # Reuse v241/v191 sealed originals; return only paths, not payloads.
+            "v191_original_gear_tier_source_paths": {
+                "catalog": compiled["source_catalog_path"],
+                "gear": str(plan["inputs"]["fresh_v191_inputs"]["gear"]),
+                "tier": str(plan["inputs"]["fresh_v191_inputs"]["tier"])},
             "stage_root": str(plan["inputs"]["stage_root"]),
             "v191_stage": compiled["v191_stage"],
             "v211_stage": compiled["v211_stage"],

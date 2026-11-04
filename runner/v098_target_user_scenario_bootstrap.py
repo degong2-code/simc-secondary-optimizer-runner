@@ -20,6 +20,7 @@ import v108_native_consumable_inputs as consumer
 import v122_common_profile_format as profile_format
 import v139_pure_target_profile_composer as pure
 import v169_source_first_representative_stage as source_first
+import v213_source_to_catalog as original_catalog
 import v202_one_enchant_admission as verified_enchant
 import v206_nonchmv_eagle_selection as nonchmv_enchant
 
@@ -237,6 +238,64 @@ def initial_seeds(B,lower,upper):
                              for x in (first,second)),
          "TWO_DISTINCT_ELIGIBLE_SEEDS_UNAVAILABLE")
     return [dict(zip(scenario.STATS,v)) for v in (first,second)]
+
+
+def _v191_raw_gear_tier_link(bundle, originals, revision):
+    """Read-only original v191/v213 gear/tier SHA binding for source preview.
+
+    The source compiler already sealed these original bytes. This verifies
+    that the replaceable v098 documents are precisely those same raw inputs.
+    It never grants environment READY, policy A, or Native admission.
+    """
+    need(type(originals) is dict and
+         set(originals)=={"catalog","gear","tier"},
+         "SEASON_V191_ORIGINAL_SOURCE_PATHS_REQUIRED")
+    files={}; raw={}
+    for name in ("catalog","gear","tier"):
+        value=originals[name]
+        need(isinstance(value,(str,pathlib.Path)),
+             "SEASON_V191_ORIGINAL_SOURCE_PATH_INVALID")
+        path=pathlib.Path(value).expanduser()
+        need(path.is_file() and not path.is_symlink() and
+             0<path.stat().st_size<=12_000_000,
+             "SEASON_V191_ORIGINAL_SOURCE_UNSAFE_OR_MISSING")
+        files[name]=path.resolve()
+    root=files["catalog"].parent.parent
+    need(files["catalog"].parent.name=="fresh_source" and
+         files["catalog"].name=="v213_candidate_catalog.json" and
+         all(files[k].is_relative_to(root) for k in ("gear","tier")),
+         "SEASON_V191_SOURCES_OUTSIDE_ORIGINAL_STAGE")
+    try:
+        for name,path in files.items():
+            raw[name]=path.read_bytes()
+        catalog=json.loads(raw["catalog"])
+        original_catalog.verify_catalog(catalog)
+        expected=catalog["source_provenance"]["v191"]["sha256_by_input"]
+        need(type(expected) is dict and expected.get("budget") is None,
+             "SEASON_V191_FRESH_BUDGET_SOURCE_REQUIRED")
+        need(catalog["game_build"]==bundle["gear"]["season_build"]==
+             bundle["tier"]["retail_build"] and
+             catalog["simc_revision"]==revision,
+             "SEASON_V191_ORIGINAL_BUILD_OR_REVISION_DRIFT")
+        sha={}
+        for name in ("gear","tier"):
+            sha[name]=hashlib.sha256(raw[name]).hexdigest()
+            need(sha[name]==expected.get(name) and
+                 json.loads(raw[name])==bundle[name],
+                 "SEASON_V191_"+name.upper()+"_RAW_SHA_OR_BYTES_DRIFT")
+    except (OSError,ValueError,KeyError,TypeError,
+            original_catalog.CatalogBlocked) as exc:
+        if isinstance(exc,UserScenarioBlocked):
+            raise
+        raise UserScenarioBlocked(
+            "SEASON_V191_ORIGINAL_SOURCE_NOT_VERIFIED") from exc
+    return {"schema":"v098_v191_original_gear_tier_link_v1",
+            "status":"ORIGINAL_GEAR_TIER_RAW_SHA_LINKED_PREVIEW_ONLY",
+            "source_catalog_artifact_sha256":hashlib.sha256(
+                raw["catalog"]).hexdigest(),
+            "source_catalog_manifest_sha256":catalog["manifest_sha256"],
+            "raw_source_sha256":sha,
+            "environment_ready":False,"native_authorized":False}
 
 
 def season_profile_source_only(*, profile, cfg, weapon_layout, user,
@@ -529,7 +588,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
           source_first_stage=False,current_season_product=False,
           static_special_probe_only=False,source_catalog_path=None,
           season_profile_inputs=None,season_environment_receipt_path=None,
-          season_source_bundle=None):
+          season_source_bundle=None,season_original_source_paths=None):
     """Return an already validated internal manifest and v096 plan; no Native."""
     base_accepted=(FIELDS,FIELDS|{IMPORT_FIELD},FIELDS|{CONSUME_FIELD},
                    FIELDS|{IMPORT_FIELD,CONSUME_FIELD})
@@ -569,6 +628,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
           and season_source_bundle["schema"]==
              "v098_internal_season_source_bundle_v1"),
          "SEASON_SOURCE_BUNDLE_INTERNAL_PREVIEW_ONLY")
+    need(season_original_source_paths is None or
+         season_source_bundle is not None,
+         "SEASON_V191_ORIGINALS_REQUIRE_SOURCE_BUNDLE")
     # v216/v223 verifies previous-season installed source links; the
     # replaceable season bundle has not yet been joined to those exact
     # raw source bytes. A same build label is never sufficient for Native.
@@ -650,6 +712,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
     binary=pathlib.Path(binary).resolve()
     need(binary.is_file(),"SIMC_BINARY_NOT_PRESENT")
     need(type(revision) is str and len(revision)>=7,"SIMC_REVISION_REQUIRED")
+    linked_originals=(_v191_raw_gear_tier_link(
+        season_source_bundle,season_original_source_paths,revision)
+        if season_original_source_paths is not None else None)
     # Source-independent P1 production specs compile from the season catalog.
     # Existing 24 source-backed default paths remain unchanged; explicit
     # pure_stage=True preserves the older v140 witness-only pilot contract.
@@ -800,6 +865,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
             season_profile_inputs=season_profile_inputs,
             season_build=actual_season_build,
             simc_revision=revision,fillers=fillers)
+        if linked_originals is not None:
+            source_only["original_v191_gear_tier_source_unadmitted"]=linked_originals
         if season_environment_receipt_path is None:
             # Unadmitted observations never write a runnable manifest.
             return source_only
@@ -959,7 +1026,7 @@ def run(user_path,folder,binary,revision,static_cache_path=None,
         independent_target_level=False,source_first_stage=False,
         current_season_product=False,source_catalog_path=None,
         season_profile_inputs=None,season_environment_receipt_path=None,
-        season_source_bundle=None):
+        season_source_bundle=None,season_original_source_paths=None):
     # An exact v140 (historical 2 specs) or v145 (single preview profile)
     # physical Native receipt authorizes ONLY its identical internal profile.
     # v096 verifies original JSON2 bytes before any adaptive Native call.
@@ -988,7 +1055,8 @@ def run(user_path,folder,binary,revision,static_cache_path=None,
                    season_profile_inputs=season_profile_inputs,
                    season_environment_receipt_path=
                        season_environment_receipt_path,
-                   season_source_bundle=season_source_bundle)
+                   season_source_bundle=season_source_bundle,
+                   season_original_source_paths=season_original_source_paths)
     if not execute:return prepared
     if pure_stage:
         actual=entry.run_manifest(prepared["generated_manifest"],

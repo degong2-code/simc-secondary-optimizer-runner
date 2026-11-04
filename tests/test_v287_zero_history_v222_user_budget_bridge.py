@@ -1340,6 +1340,74 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                     season_source_bundle=source,
                     season_environment_receipt_path=root/"synthetic_receipt.json")
             self.assertFalse((root/"blocked").exists())
+    def test_p3_dg_original_raw_sha_links_only_to_preview(self):
+        import hashlib
+        from unittest import mock
+        import v098_target_user_scenario_bootstrap as boot
+        import v106_user_session_controller as sessions
+        doc=self.synthetic_future_season_source_bundle()
+        user=sessions.user_scenario(sessions.standard_controls(("mage","frost")))
+        user["target"]["final_T"]=3400
+        user["oil_hands"]=["main_hand"]
+        numeric=self.dynamic_season_profile_inputs()
+        numeric["v216_numeric_preview"]["calculation"]["game_build"]=(
+            doc["gear"]["season_build"])
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            (root/"fresh_source").mkdir()
+            (root/"sources").mkdir()
+            paths={"catalog":root/"fresh_source"/"v213_candidate_catalog.json",
+                   "gear":root/"sources"/"gear.json",
+                   "tier":root/"sources"/"tier.json"}
+            for k in ("gear","tier"):
+                paths[k].write_text(json.dumps(doc[k],sort_keys=True),
+                                    encoding="utf8")
+            sha={k:hashlib.sha256(paths[k].read_bytes()).hexdigest()
+                 for k in ("gear","tier")}
+            catalog={"game_build":doc["gear"]["season_build"],
+                     "simc_revision":"c"*40,"manifest_sha256":"a"*64,
+                     "source_provenance":{"v191":{"sha256_by_input":
+                         {**sha,"budget":None}}}}
+            paths["catalog"].write_text(json.dumps(catalog),encoding="utf8")
+            originals={k:str(v) for k,v in paths.items()}
+            binary=root/"fake";binary.write_bytes(b"OFFLINE_NO_NATIVE")
+            # v213's original source validator is tested separately;
+            # here test exact raw-byte binding against its verified identity.
+            with mock.patch.object(boot.original_catalog,"verify_catalog",
+                                   return_value=True):
+                preview=boot.build(user,root/"preview",binary,"c"*40,
+                    current_season_product=True,season_source_bundle=doc,
+                    season_profile_inputs=numeric,
+                    season_original_source_paths=originals)
+                self.assertEqual(preview["status"],
+                    "SEASON_PROFILE_COMPOSED_NOT_ADMITTED_NO_NATIVE")
+                link=preview["original_v191_gear_tier_source_unadmitted"]
+                self.assertEqual(link["raw_source_sha256"],sha)
+                self.assertFalse(link["native_authorized"])
+                self.assertFalse((root/"preview").exists())
+                changed=copy.deepcopy(doc)
+                changed["tier"]["classes"]={}
+                with self.assertRaisesRegex(boot.UserScenarioBlocked,
+                    "SEASON_V191_TIER_RAW_SHA_OR_BYTES_DRIFT"):
+                    boot._v191_raw_gear_tier_link(changed,originals,"c"*40)
+                paths["gear"].write_text(paths["gear"].read_text("utf8")+" ",
+                                         encoding="utf8")
+                with self.assertRaisesRegex(boot.UserScenarioBlocked,
+                    "SEASON_V191_GEAR_RAW_SHA_OR_BYTES_DRIFT"):
+                    boot._v191_raw_gear_tier_link(doc,originals,"c"*40)
+                # Even a fully matched raw source cannot authorize v096
+                # when v216/v223 actual NEW-season GJFO is not admitted.
+                paths["gear"].write_text(json.dumps(doc["gear"],sort_keys=True),
+                                         encoding="utf8")
+                with self.assertRaisesRegex(boot.UserScenarioBlocked,
+                    "SEASON_SOURCE_BUNDLE_ORIGINAL_GEAR_TIER_SHA_ADMISSION_PENDING"):
+                    boot.build(user,root/"blocked",binary,"c"*40,
+                        current_season_product=True,season_source_bundle=doc,
+                        season_profile_inputs=numeric,
+                        season_original_source_paths=originals,
+                        season_environment_receipt_path=root/"old.json")
+                self.assertFalse((root/"blocked").exists())
+
     def test_automatic_target_goes_through_existing_v222_once(self):
         result=self.run_build()
         source=result["source_compilation"]
