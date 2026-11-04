@@ -3174,6 +3174,78 @@ def _zero_history_v098_profile_source_inputs(*, numeric_preview,
         "oil_by_hand":by_hand}
 
 
+def _auto_F_native_from_sealed_v281(*,collected,compilation,binary):
+    """Opt-in source-selected v278 pairs, not F/default-quality admission."""
+    out={"status":"AUTO_F_SOURCE_OR_PROFILE_PENDING","requires":[],
+         "per_item":[],"new_native_calls":0,"F_approved":False,
+         "environment_ready":False}
+    work=compilation.get("automatic_F_O_measurement_candidates_unadmitted")
+    probe=collected.get("fresh_one_spec_physical_G_probe") or {}
+    source_profile=(probe.get("profile_path") if type(probe) is dict and
+                    type(probe.get("source_stage")) is dict and
+                    probe["source_stage"].get("status") in (
+                        "EXECUTED_AND_SEALED","REUSED_VERIFIED",
+                        "RECOVERED_VERIFIED") else None)
+    if compilation.get("status")!=(
+            "FRESH_V191_V211_V213_COMPILED_UNADMITTED"):
+        out["requires"].append("AUTO_F_SAME_BUILD_COMPILER_PENDING")
+    elif not source_profile:
+        out["requires"].append("AUTO_F_ORIGINAL_V233_PROFILE_PENDING")
+    elif type(work) is not dict or not work.get("flask"):
+        out["requires"].append("AUTO_F_EXACT_PHYSICAL_ITEM_PENDING")
+    if out["requires"]:return [],out
+    rows=[];receipts=[];new=0
+    for item in work["flask"]:
+        if new>=7:break  # 2 runs per v278 pair; <=8 in normal path
+        item_id=item["physical_item_id"]
+        try:
+            source=consumable_simc_relation.resolve_native_input(
+                stage_root=compilation["stage_root"],
+                relation=collected.get(
+                    "fresh_consumable_simc_effect_relation"),
+                build=collected["expected_game_build"],
+                simc_revision=compilation["simc_revision"],
+                kind="flask",item_id=item_id)
+            need(type(source) is dict and
+                 source.get("simc_input_token")==item["simc_input_token"],
+                 "AUTO_F_EXACT_ITEM_SOURCE_DRIFT")
+            native=native_effect_pair.measure(
+                stage_root=compilation["stage_root"],
+                source_profile_path=source_profile,binary=binary,
+                simc_revision=compilation["simc_revision"],
+                kind="flask",token=source["simc_input_token"])
+        except (consumable_simc_relation.SimCRelationBlocked,
+                native_effect_pair.NativePairBlocked,
+                OSError,KeyError,ValueError,TypeError) as exc:
+            receipts.append({"physical_item_id":item_id,
+                             "status":"SIMC_SOURCE_OR_NATIVE_ERROR",
+                             "error":str(exc).split(":",1)[0]})
+            continue
+        count=native.get("new_native_calls")
+        need(type(count) is int and 0<=count<=2,
+             "AUTO_F_NATIVE_CALL_COUNT_INVALID")
+        new+=count
+        rows.append({**native,"physical_item_native_source_unadmitted":source})
+        receipts.append({"physical_item_id":item_id,
+                         "status":native["status"],"new_native_calls":count,
+                         "cache_hit":count==0,
+                         "F_candidate_unadmitted":
+                             native.get("F_candidate_unadmitted"),
+                         **({"native_error":native.get("native_error"),
+                             "native_log_excerpt":
+                                 native.get("native_log_excerpt")}
+                            if native.get("native_error") else {})})
+    out.update({"status":"AUTO_F_NATIVE_MEASURED_SOURCE_ONLY",
+                "total_source_candidates":len(work["flask"]),
+                "attempted":len(receipts),
+                "remaining":len(work["flask"])-len(receipts),
+                "new_native_calls":new,"per_item":receipts,
+                "requires":["AUTO_F_QUALITY_EFFECT_AND_BUDGET_PROOF_PENDING"]+
+                    (["AUTO_F_NEXT_MEASUREMENT_BATCH_PENDING"]
+                     if len(receipts)<len(work["flask"]) else [])})
+    return rows,out
+
+
 def _stage_source_environment_only(*, compilation, preflight,
                                    target_ilevel, selected_numeric=None):
     """Seal a versioned environment UNIT with original v217; no DPS plan.
@@ -3270,8 +3342,14 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                  "gem_enchant_transport","effect_probe_requests",
                   "same_build_budget_evidence",
                   "gem_layout_receipt","gem_rating_by_id",
-                  "selected_budget_items"},
+                  "selected_budget_items","auto_native_F_requested"},
              "V216_ZERO_HISTORY_SOURCE_INPUT_FIELDS")
+        auto_native_F=fresh_collection_inputs.get("auto_native_F_requested",False)
+        need(type(auto_native_F) is bool and
+             (not auto_native_F or binary is not None) and
+             (not auto_native_F or
+              fresh_collection_inputs.get("effect_probe_requests") is None),
+             "V216_AUTO_F_NATIVE_EXPLICIT_BINARY_REQUIRED")
         effect_probe_requests=fresh_collection_inputs.get("effect_probe_requests")
         # Same-build evidence is internal. The ORIGINAL catalog preflight
         # audits the source and v222 arithmetic only after v191/v211/v213.
@@ -3346,7 +3424,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             if k not in ("effect_probe_requests",
                          "same_build_budget_evidence",
                          "gem_layout_receipt","gem_rating_by_id",
-                         "selected_budget_items")}
+                         "selected_budget_items","auto_native_F_requested")}
         collected=collect_wago_new_season_source(
             sessions_root=sessions_root,**source_inputs)
         progress=_zero_history_source_progress(collected)
@@ -3464,6 +3542,16 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         # product must first have a complete same-build source compilation
         # and an internal local profile with precombat snapshot_stats.
         effect_observations=[]
+        if auto_native_F:
+            auto_rows,auto_state=_auto_F_native_from_sealed_v281(
+                collected=collected,compilation=source_compilation,
+                binary=binary)
+            effect_observations.extend(auto_rows)
+            progress["new_native_calls"]+=auto_state["new_native_calls"]
+            progress["automatic_F_native_measurements_unadmitted"]=auto_state
+            source_compilation[
+                "automatic_F_native_measurements_unadmitted"]=auto_state
+            progress["requires"].extend(auto_state["requires"])
         if effect_probe_requests:
             if source_compilation["status"]!=(
                     "FRESH_V191_V211_V213_COMPILED_UNADMITTED"):
