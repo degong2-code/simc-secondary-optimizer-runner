@@ -1032,6 +1032,13 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             self.assertEqual(options["native_limit"],4)
             self.assertFalse((path.parent/"output").exists())
 
+
+    def test_previous_v096_reference_path_still_works_after_seasonal_failure(self):
+        from tests.test_v096_unified_product_entry import V096Unified
+        # Exercise the existing legacy restore regression in the focused
+        # workflow too; v097 covered it at the preceding failing SHA.
+        V096Unified().test_seasonal_source_receipt_sha_drift_blocks_and_legacy_unchanged()
+
     def test_season_execution_is_not_authorized_by_numeric_or_fake_v223_flag(self):
         import v096_unified_product_entry as entry
         import v216_environment_build_coordinator as original
