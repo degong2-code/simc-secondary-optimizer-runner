@@ -486,9 +486,9 @@ def _materialize_admitted_season_v096(*, source_only,season_profile_inputs,
               entry.SEASON_FIELD:manifest_source}
     files={
         "profile.simc":source_only["profile_simc"],
-        "scenario.json":canonical(draft["scenario"])+"\\n",
-        "fillers.json":canonical(fillers)+"\\n",
-        "manifest.json":canonical(manifest)+"\\n"}
+        "scenario.json":canonical(draft["scenario"])+"\n",
+        "fillers.json":canonical(fillers)+"\n",
+        "manifest.json":canonical(manifest)+"\n"}
     # Precheck ALL existing bytes before writing any new file. The original
     # V094_SESSION_IDENTITY is never replaced, even if B/T happen to match.
     for name,content in files.items():

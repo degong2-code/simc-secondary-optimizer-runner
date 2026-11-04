@@ -1063,6 +1063,99 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 self.assertEqual(actual.call_count,0)
             self.assertFalse((path.parent/"output").exists())
 
+
+    def admitted_v216_receipt_for_source_only_v098(self, td, season_payload):
+        import v216_environment_build_coordinator as env
+        from tests.test_v096_unified_product_entry import V096Unified
+        path,_,receipt=V096Unified().seasonal_fixture(td)
+        budget=season_payload["v216_numeric_preview"]["calculation"]
+        target=path.parent/"environment_build_receipt.json"
+        b=receipt["season_budget"]
+        for key in ("game_build","simc_revision","target_ilevel",
+                    "base_B","final_T","J","F","fixed_O"):
+            b[key]=copy.deepcopy(budget[key])
+        receipt["source"]["game_build"]=budget["game_build"]
+        receipt["source"]["simc_revision"]=budget["simc_revision"]
+        season_payload["v216_numeric_preview"]["calculation"].update({
+            "source_catalog_manifest_sha256":
+                receipt["source"]["manifest_sha256"],
+            "source_catalog_artifact_sha256":
+                receipt["source"]["artifact_sha256"]})
+        receipt["receipt_sha256"]=env.digest(env.canonical({
+            k:v for k,v in receipt.items() if k!="receipt_sha256"
+        }).encode("utf8"))
+        target.write_text(json.dumps(receipt),encoding="utf8")
+        return target
+
+    def test_v098_automatically_writes_admitted_v096_manifest_and_reuses_v094(self):
+        import v098_target_user_scenario_bootstrap as boot
+        import v096_unified_product_entry as entry
+        import v106_user_session_controller as sessions
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            user=sessions.user_scenario(
+                sessions.standard_controls(("mage","frost")))
+            user["target"]["final_T"]=3400
+            user["oil_hands"]=["main_hand"]
+            payload=self.dynamic_season_profile_inputs()
+            proof=self.admitted_v216_receipt_for_source_only_v098(td,payload)
+            binary=root/"fake_simc"
+            binary.write_bytes(b"OFFLINE_NO_NATIVE")
+            folder=root/"auto_session"
+            result=boot.build(
+                user,folder,binary,"c"*40,current_season_product=True,
+                season_profile_inputs=payload,
+                season_environment_receipt_path=proof)
+            self.assertEqual(result["status"],
+                "READY_SOURCE_BOUND_SEASON_MANIFEST_ZERO_NATIVE")
+            self.assertEqual(result["plan"]["budget_source"],
+                             "ADMITTED_SEASON_GJFO_V216_V223")
+            self.assertEqual(result["plan"]["base_B"],3367)
+            self.assertEqual(result["plan"]["final_T"],3400)
+            self.assertEqual(result["plan"]["fixed_O"]["haste_rating"],17)
+            self.assertTrue((folder/"manifest.json").is_file())
+            self.assertFalse((folder/"simc_results").exists())
+            self.assertEqual(entry.run_manifest(
+                result["generated_manifest"],plan_only=True),result["plan"])
+            with mock.patch.object(entry.durable,"run",
+                      side_effect=RuntimeError("EXISTING_V094_REUSED")) as actual:
+                with self.assertRaisesRegex(
+                        RuntimeError,"EXISTING_V094_REUSED"):
+                    entry.run_manifest(result["generated_manifest"])
+                self.assertEqual(actual.call_count,1)
+            self.assertFalse((folder/"simc_results").exists())
+            replay=boot.build(
+                user,folder,binary,"c"*40,current_season_product=True,
+                season_profile_inputs=payload,
+                season_environment_receipt_path=proof)
+            self.assertEqual(replay["generated_manifest"],
+                             result["generated_manifest"])
+            self.assertEqual(replay["plan"],result["plan"])
+
+    def test_v098_unadmitted_source_never_writes_any_session(self):
+        import v098_target_user_scenario_bootstrap as boot
+        import v106_user_session_controller as sessions
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            user=sessions.user_scenario(
+                sessions.standard_controls(("mage","frost")))
+            user["target"]["final_T"]=3400
+            user["oil_hands"]=["main_hand"]
+            payload=self.dynamic_season_profile_inputs()
+            proof=self.admitted_v216_receipt_for_source_only_v098(td,payload)
+            payload["v216_numeric_preview"]["calculation"]["F"]=175
+            binary=root/"fake_simc"
+            binary.write_bytes(b"OFFLINE")
+            dest=root/"must_not_create"
+            with self.assertRaisesRegex(
+                    boot.UserScenarioBlocked,
+                    "SEASON_WRITER_V216_V098_SOURCE_ACCOUNTING_DRIFT"):
+                boot.build(user,dest,binary,"c"*40,
+                    current_season_product=True,
+                    season_profile_inputs=payload,
+                    season_environment_receipt_path=proof)
+            self.assertFalse(dest.exists())
+
     def test_automatic_target_goes_through_existing_v222_once(self):
         result=self.run_build()
         source=result["source_compilation"]
