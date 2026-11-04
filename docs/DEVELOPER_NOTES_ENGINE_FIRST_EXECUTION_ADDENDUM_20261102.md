@@ -1,3 +1,5 @@
+> **2026-11-04 P3-DR:** 새 시즌 `v212` 소스 단계에 기존 `v222` 미승인 G/J/F/O/B/T 숫자와 정확 물리 아이템 선택·성분별 SHA를 전달·재사용. 원본 변경 시 다른 환경 단위, 기름 명시 미사용만 O0, 임의 값/결손 SHA 차단. 공식 GJFO·품질/소켓·무기/유효 옵션·환경 설치/READY는 별도이며 **사용자 DPS 실행을 환경 구축의 선행 조건으로 삼지 않는다**. [노트](development/notes/2026-11-04_p3-dr-exact-gjfo-v222-source-identity-in-v212.md).
+>
 > **2026-11-04 P3-DQ:** 기존 v212 사용자별 최적화 manifest를 변경하지 않고 같은 v212 모듈의 **환경 전용 버전화 source-stage**를 새 v216 정상 Build와 기존 v217 봉인/재사용에 연결. 인증/설치/READY와 사용자 DPS 최적화의 책임은 분리. [작업 노트](development/notes/2026-11-04_p3-dq-v212-versioned-season-environment-source-stage.md).
 >
 > **2026-11-04 P3-DP 최신 사용자 직접 지시:** **지금 개발 완료 판정의 대상은 웹앱 환경 구축 엔진**(시즌 원본·대표 장비/티어·G/J/F/O·B/T·정책 A 선택지·버전화 설치/READY)이다. 사용자별 SimC DPS 최적화 실행은 이미 개발된 재사용 기능이지만 **환경 구축 완료의 선행 요건이 아니며, 후속 메인 제품 개발 범위**이다. 기존 전체 장기 제품 목표(DPS 최대 절대 rating)는 유지. [P3-DP 기록](development/notes/2026-11-04_p3-dp-web-environment-build-separate-from-dps.md); P3-DO 시점의 Environment Build→DPS E2E 완료 요구 해석은 최신 사용자 직접 지시로 교정한다.

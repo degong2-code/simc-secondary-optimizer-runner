@@ -1,3 +1,5 @@
+> **2026-11-04 P3-DR · 최신 환경 구축 코드:** `v216`이 기존 `v222`로 계산한 **G/J/F/O/B/T 미승인 관측치와 물리 영약·기름 선택 ID 및 성분별 영수증 SHA**를 `v212` 버전화 시즌 환경 단위에 실어 기존 `v217` 봉인·재사용하도록 연결. 웹앱의 미승인 관측 숫자 표시 추가. 오프라인 양 OS 회귀 PASS; **실제 시즌 고품질/적용성 인증·공식 예산·설치/READY·옵션 자동 발행은 미완료**. 사용자 DPS 최적화는 환경 구축 완료 Gate 밖. [P3-DR 노트](development/notes/2026-11-04_p3-dr-exact-gjfo-v222-source-identity-in-v212.md).
+>
 > **2026-11-04 P3-DQ:** 원래 v216→v241/v217 소스 컴파일+preflight에서 사용자별 DPS 프로필 없이 v212 시즌 환경의 **버전화·원본 단계 매니페스트**를 봉인/재사용하도록 CONNECT. 정확 원본영수증이 누락되면 생성하지 않고 미승인 source-only로 남는다. 실제 G/J/F/O/B/T 승인·환경 설치·옵션 발행·READY는 미완료; DPS 실행은 환경 구축 완료 Gate 밖. [P3-DQ 노트](development/notes/2026-11-04_p3-dq-v212-versioned-season-environment-source-stage.md).
 >
 > **2026-11-04 P3-DP · 최신 사용자 직접 범위 교정:** **현재 통합 작업은 웹앱 「시즌 환경 구축 엔진」의 원본 수집→대표 장비·티어·G/J/F/O 검증→B/T→정책 A 선택지 설치·환경 READY까지**이다. 사용자별 SimC DPS 최적화 실행은 **별도의 후속 메인 제품 개발**, Environment Build 완료 Gate가 아니다. [P3-DP 노트](development/notes/2026-11-04_p3-dp-web-environment-build-separate-from-dps.md). v113 독립 시즌 API/웹 UI→같은 v216/v217/v277 연결, G Native opt-in. 새 시즌 공식 GJFO/범용 설치/READY는 계속 미완료. GitHub 격리만, main/원본/Project UI/Work OS 미승격.
