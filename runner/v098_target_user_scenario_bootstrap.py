@@ -528,7 +528,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
           independent_334=False,independent_target_level=False,
           source_first_stage=False,current_season_product=False,
           static_special_probe_only=False,source_catalog_path=None,
-          season_profile_inputs=None,season_environment_receipt_path=None):
+          season_profile_inputs=None,season_environment_receipt_path=None,
+          season_source_bundle=None):
     """Return an already validated internal manifest and v096 plan; no Native."""
     base_accepted=(FIELDS,FIELDS|{IMPORT_FIELD},FIELDS|{CONSUME_FIELD},
                    FIELDS|{IMPORT_FIELD,CONSUME_FIELD})
@@ -559,6 +560,15 @@ def build(user,folder,binary,revision,static_cache_path=None,
     # production route at ilvl 334 only. Historic v147/v145 probes remain
     # unpromoted and their unchanged pure_stage semantics are preserved.
     need(type(source_first_stage) is bool,"SOURCE_FIRST_STAGE_BOOL_REQUIRED")
+    need(season_source_bundle is None or
+         (season_profile_inputs is not None
+          and current_season_product
+          and type(season_source_bundle) is dict
+          and set(season_source_bundle)=={
+             "schema","gear","tier","budget","settings"}
+          and season_source_bundle["schema"]==
+             "v098_internal_season_source_bundle_v1"),
+         "SEASON_SOURCE_BUNDLE_INTERNAL_PREVIEW_ONLY")
     need(season_environment_receipt_path is None or
          (season_profile_inputs is not None
           and static_cache_path is None),
@@ -640,10 +650,35 @@ def build(user,folder,binary,revision,static_cache_path=None,
     season_override=None
     profile_supplier_coverage=None
     if source_first_stage or current_season_product:
-        season_override=source_first.season_scope()
+        if season_source_bundle is None:
+            season_override=source_first.season_scope()
+            actual_season_build=_profile_supplier_registry()["season_build"]
+        else:
+            season_override=source_first.season_scope(
+                db=season_source_bundle["gear"],
+                tier=season_source_bundle["tier"],
+                settings=season_source_bundle["settings"],
+                budget=season_source_bundle["budget"])
+            actual_season_build=season_source_bundle["gear"]["season_build"]
+            observed=season_profile_inputs["v216_numeric_preview"]
+            candidate=observed.get("calculation")
+            need(type(candidate) is dict
+                 and candidate.get("game_build")==actual_season_build
+                 and candidate.get("target_ilevel")==ilvl,
+                 "SEASON_SOURCE_BUNDLE_V216_BUILD_OR_TARGET_DRIFT")
         if current_season_product:
             profile_supplier_coverage=_current_season_profile_supplier_coverage(
                 season_override,"/".join(key))
+            if season_source_bundle is not None:
+                profile_supplier_coverage={
+                    **profile_supplier_coverage,
+                    "season_build":actual_season_build,
+                    "source_input_sha256":{
+                        name:hashlib.sha256(canonical(
+                            season_source_bundle[name]).encode("utf8")).hexdigest()
+                        for name in ("gear","tier","budget","settings")},
+                    "season_catalog_source_only":True,
+                    "native_evidence_not_promoted":True}
     if pure_stage or source_free:
         need(ordinary_variant is None and
              (ilvl==334 or independent_target_level or current_season_product),
@@ -653,7 +688,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
                              combat=combat,
                              level_preview=(independent_target_level or
                                             (current_season_product and ilvl!=334)),
-                             season_override=season_override))
+                             season_override=season_override,
+                             source_only_season_consumables=(
+                                 season_profile_inputs is not None)))
     elif ordinary_variant is None:
         # Preserve the historical exact call shape and all default receipts.
         base_profile,cfg,rows,groups,weapon_layout,F=common.source_backed_gear(
@@ -755,7 +792,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
         source_only=season_profile_source_only(
             profile=profile,cfg=cfg,weapon_layout=weapon_layout,user=user,
             season_profile_inputs=season_profile_inputs,
-            season_build=_profile_supplier_registry()["season_build"],
+            season_build=actual_season_build,
             simc_revision=revision,fillers=fillers)
         if season_environment_receipt_path is None:
             # Unadmitted observations never write a runnable manifest.
@@ -915,7 +952,8 @@ def run(user_path,folder,binary,revision,static_cache_path=None,
         physical_acceptance_root=None,open_folder=True,independent_334=False,
         independent_target_level=False,source_first_stage=False,
         current_season_product=False,source_catalog_path=None,
-        season_profile_inputs=None,season_environment_receipt_path=None):
+        season_profile_inputs=None,season_environment_receipt_path=None,
+        season_source_bundle=None):
     # An exact v140 (historical 2 specs) or v145 (single preview profile)
     # physical Native receipt authorizes ONLY its identical internal profile.
     # v096 verifies original JSON2 bytes before any adaptive Native call.
@@ -943,7 +981,8 @@ def run(user_path,folder,binary,revision,static_cache_path=None,
                    source_catalog_path=source_catalog_path,
                    season_profile_inputs=season_profile_inputs,
                    season_environment_receipt_path=
-                       season_environment_receipt_path)
+                       season_environment_receipt_path,
+                   season_source_bundle=season_source_bundle)
     if not execute:return prepared
     if pure_stage:
         actual=entry.run_manifest(prepared["generated_manifest"],

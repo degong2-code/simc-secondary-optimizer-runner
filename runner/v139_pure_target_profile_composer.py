@@ -246,7 +246,8 @@ def current_season_ordinary_candidates(character, *, season_product_db=None):
 
 
 def v098_inputs(character,trinkets,*,target_ilevel=334,combat=None,
-                level_preview=False,season_override=None):
+                level_preview=False,season_override=None,
+                source_only_season_consumables=False):
     """Translate season-built profile to the established v061/v098 tuple.
 
     No v132/v133 fixture, no per-spec APL, no second budget algorithm.
@@ -257,7 +258,9 @@ def v098_inputs(character,trinkets,*,target_ilevel=334,combat=None,
     # reads and prevent a mixed-season profile if data changes mid-run.
     season=(catalog() if season_override is None
             else validate_season(season_override))
-    need(type(level_preview) is bool,"LEVEL_PREVIEW_BOOL_REQUIRED")
+    need(type(level_preview) is bool and
+         type(source_only_season_consumables) is bool,
+         "LEVEL_PREVIEW_OR_SOURCE_ONLY_CONSUMABLES_BOOL_REQUIRED")
     if level_preview:
         # Same-season candidate roster, but SimC must accept its IDs at
         # this selected ilvl. The 79-row reference B does not prove gear
@@ -275,9 +278,15 @@ def v098_inputs(character,trinkets,*,target_ilevel=334,combat=None,
     contract=contracts.lookup(cl,spec)
     defaults=season["default_consumables"]
     gem=int(rows["head"]["options"]["gem_id"])
-    need(gem in consumer.DIAMONDS,"STAGED_PRIMARY_DIAMOND_REQUIRED")
-    # v108 consumes these exact SimC-native settings, not another effect model.
-    consumer.default_choice(profile,rows["head"])
+    if source_only_season_consumables:
+        # New seasons must not be rejected solely for not using Midnight
+        # gem IDs/Omnium preset tokens. Actual sockets, quality and SimC
+        # effects are proven by the separate season source, NOT this plan.
+        need(gem>0,"SEASON_SOURCE_GEM_ID_REQUIRED")
+    else:
+        need(gem in consumer.DIAMONDS,"STAGED_PRIMARY_DIAMOND_REQUIRED")
+        # Exact previous-season behavior and receipts remain unchanged.
+        consumer.default_choice(profile,rows["head"])
     fields=("crit_rating","haste_rating","mastery_rating","versatility_rating")
     need(defaults["flask_fixed_stat"] in fields and
          type(defaults["flask_budget_F"]) is int and

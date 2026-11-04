@@ -237,7 +237,7 @@ def build_all(db,tier):
        "all_items_physical_simc_accepted":False,
        "profile_activated_in_v098":False,"simc_native_calls":0}
 
-def season_scope(*,db=None,tier=None,settings=None):
+def season_scope(*,db=None,tier=None,settings=None,budget=None):
     """One opt-in, same-season equipment catalog for internal v098 stage only.
 
     The stable v139 serializer, gem/consumable declarations, and 26 contracts
@@ -249,8 +249,11 @@ def season_scope(*,db=None,tier=None,settings=None):
     tier=load_tier() if tier is None else tier
     candidate=build_all(db,tier)
     config=pure.catalog() if settings is None else pure.validate_season(settings)
-    budget=json.loads(BUDGET_PATH.read_text(encoding="utf8"))
-    need(budget.get("retail_build")==candidate["season_build"] and
+    budget=(json.loads(BUDGET_PATH.read_text(encoding="utf8"))
+            if budget is None else budget)
+    need(type(budget) is dict and
+         budget.get("schema")=="v165_current_season_chmv_consumables_v1"
+         and budget.get("retail_build")==candidate["season_build"] and
          config["default_consumables"]["gem_budget_J"]==
             budget["ordinary_gem"]["total_J"] and
          config["default_consumables"]["flask_budget_F"]==
