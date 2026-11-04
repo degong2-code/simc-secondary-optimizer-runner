@@ -1,0 +1,10 @@
+# 2026-11-04 · P3-CU · 기존 v216 zero-history Build → v222 B/T → 사용자 목표값 연결
+
+- **Capability:** `BUDGET.GJFO`, `PRODUCT.E2E`, `G.NUMERIC`, `O.OIL`
+- **Keywords:** P3-CU, 26 DPS, zero-history, fresh season, preprofile, v216, v222, B, T, manual_final_T, source-only, existing budget, source reuse
+- **Prior evidence:** [PROTOCOL](../PROTOCOL.md)→[INDEX](../INDEX.md)→[P3-CT](2026-11-04_p3-ct-representative-oil-product-bridge.md) 소스 마스크 조인 focused 172 PASS. [P3-BG](../../P3_BG_20261103_PREPROFILE_GJFO_ACCOUNTING_BRIDGE.md) 기존 G/J/F/O·고정 L/E·수동 최종 T 산술(해당 파일 없으면 원래 `runner/v222_season_budget_contract.py`와 `tests/test_v264_environment_standard_budget_integration.py`를 진실 근거로 함); v216 기존 `preflight_new_season_source` 이미 이 계산기를 사용. P3-CO/CP 실 Native F/O 및 P3-CA J 등 후보는 **아직 새 시즌 공식 인증 자료가 아님**.
+- **Decision:** `CONNECT` — 신규 G/J/F/O 추정기·별도 프로필 생성기·수치 보정 대신 기존 v216의 처음부터 시즌 구축하는 분기에서 **이미 있는 v222 프리프로필 예산 계산** 호출 결과를 재사용. 수치 불일치 심층 재연구는 사용자 요청에 따라 보류.
+- **Changes:** `fresh_collection_inputs.same_build_budget_evidence`는 개발용/내부 소스 증거이고 일반 사용자 입력이 아님. 정확히 생성된 해당 빌드 v191/v211/v213 소스가 있을 때만 기존 `preflight_new_season_source`에 전달, 사용자 `target.ilevel`과 대표 요청 일치, 최종 `target.final_T`의 수동 우선권을 `v222`에 전달. 산출 `preprofile_budget_arithmetic_unadmitted`를 기존 source_compilation/zero_history_build에 동봉. evidence가 없으면 기존 PENDING 그대로. 원래 별도 `fresh_gjfo_evidence`/기존 session/installed 소스를 zero-history에서 여전히 금지.
+- **Verification:** 최초 focused CI 전 **NOT_RUN/NOT_VERIFIED**. 직전 P3-CT 172 PASS, 그 전 v212 Ubuntu/Windows 각 440·API 각 207·Wago 실제 1 HTTP·SimC Native 6회 증거는 **REUSED_HISTORY**. 이번 HTTP0/Native0.
+- **Remaining:** 이 반환값은 기존 v222의 *산술 정합*뿐, 부여된 검증 라벨 자체가 실제 J/F/O 품질·Native·동일효과·실제 무기 조건의 독립 증거는 아님. `G/J/F/O` 공식 수치·Policy A·사용자 실제 v098 프로필·캐시/취소/재개/26 DPS 적응형 E2E은 미승격. 수동 최종 T를 포함한 적응형 실행은 해당 근거가 확보된 후 기존 v098/v096를 연결할 것.
+- **Efficiency:** 원래 zero-history 단계·프리플라이트·v222 arithmetic 함수를 그대로 호출; 별도 budget engine·소스 fetch·Native 추가 0, 기존 SHA 캐시·프로필 및 역사 영수증 불변. main·immutable v003·원본 v016·Project UI/Work OS 권한 변경 없음.

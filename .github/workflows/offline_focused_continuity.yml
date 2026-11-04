@@ -59,6 +59,7 @@ jobs:
             tests.test_v281_physical_native_item_binding \
             tests.test_v285_consumable_weapon_source \
             tests.test_v286_representative_oil_source_binding \
+            tests.test_v287_zero_history_v222_user_budget_bridge \
             tests.test_v274_zero_history_source_compiler_wiring \
             tests.test_v230_simc_item_metadata \
             tests.test_v190_consumable_item_snapshot_join \

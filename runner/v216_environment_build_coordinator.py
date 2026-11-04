@@ -2432,9 +2432,36 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                   "item_effect_transport","spell_effect_transport",
                   "spell_equipped_transport",
                  "simc_transport","simc_compiler_transport",
-                 "gem_enchant_transport","effect_probe_requests"},
+                 "gem_enchant_transport","effect_probe_requests",
+                  "same_build_budget_evidence"},
              "V216_ZERO_HISTORY_SOURCE_INPUT_FIELDS")
         effect_probe_requests=fresh_collection_inputs.get("effect_probe_requests")
+        # Same-build evidence is internal. The ORIGINAL catalog preflight
+        # audits the source and v222 arithmetic only after v191/v211/v213.
+        zero_history_budget_evidence=fresh_collection_inputs.get(
+            "same_build_budget_evidence")
+        need(zero_history_budget_evidence is None or
+             (type(zero_history_budget_evidence) is dict and
+              type(fresh_collection_inputs["representative_request"]) is dict
+              and type(fresh_collection_inputs[
+                  "representative_request"].get("target_ilevel")) is int
+              and 1<=fresh_collection_inputs[
+                  "representative_request"]["target_ilevel"]<=1000),
+             "V216_ZERO_HISTORY_BUDGET_TARGET_REPRESENTATIVE_REQUIRED")
+        manual_T=None
+        if user is not None:
+            need(type(user) is dict and type(user.get("target")) is dict
+                 and set(user["target"])=={"ilevel","final_T"}
+                 and type(user["target"]["ilevel"]) is int
+                 and (user["target"]["final_T"] is None or
+                      type(user["target"]["final_T"]) is int
+                      and 1<=user["target"]["final_T"]<=100000),
+                 "V216_ZERO_HISTORY_USER_TARGET_REQUIRED")
+            requested=fresh_collection_inputs["representative_request"]
+            need(type(requested) is dict
+                 and requested.get("target_ilevel")==user["target"]["ilevel"],
+                 "V216_ZERO_HISTORY_USER_REPRESENTATIVE_ILEVEL_MISMATCH")
+            manual_T=user["target"]["final_T"]
         need(effect_probe_requests is None or
              (type(effect_probe_requests) is list
               and len(effect_probe_requests)<=4
@@ -2461,7 +2488,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
              "V216_ZERO_HISTORY_MUST_NOT_USE_INSTALLED_SESSION_OR_BUDGET")
         source_inputs={
             k:v for k,v in fresh_collection_inputs.items()
-            if k!="effect_probe_requests"}
+            if k not in ("effect_probe_requests",
+                         "same_build_budget_evidence")}
         collected=collect_wago_new_season_source(
             sessions_root=sessions_root,**source_inputs)
         progress=_zero_history_source_progress(collected)
@@ -2504,7 +2532,26 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     expected_simc_revision=source_compilation["simc_revision"],
                     source_snapshot_folder=pathlib.Path(
                         collected["snapshot_receipt_path"]).parent,
-                    source_stage_root=source_compilation["stage_root"])
+                    source_stage_root=source_compilation["stage_root"],
+                    budget_evidence=zero_history_budget_evidence,
+                    target_ilevel=(
+                        fresh_collection_inputs[
+                            "representative_request"]["target_ilevel"]
+                        if zero_history_budget_evidence is not None else None),
+                    manual_final_T=(
+                        manual_T if zero_history_budget_evidence is not None
+                        else None))
+                if "proposed_budget_arithmetic_unadmitted" in preflight:
+                    # The original v222 calculator owns B/T and manual T;
+                    # source trust / user session admission remains pending.
+                    arithmetic=preflight[
+                        "proposed_budget_arithmetic_unadmitted"]
+                    source_compilation[
+                        "preprofile_budget_arithmetic_unadmitted"]=arithmetic
+                    progress[
+                        "preprofile_budget_arithmetic_unadmitted"]=arithmetic
+                    progress["requires"].append(
+                        "V222_GJFO_SOURCE_ADMISSION_AND_V098_PROFILE_PENDING")
                 source_compilation["preflight_sha256"]=preflight[
                     "preflight_sha256"]
                 source_compilation["preflight_status"]=preflight["status"]
