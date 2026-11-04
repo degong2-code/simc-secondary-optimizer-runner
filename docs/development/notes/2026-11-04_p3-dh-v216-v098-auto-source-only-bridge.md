@@ -1,0 +1,10 @@
+# 2026-11-04 · P3-DH · v216 원본 시즌 소스·v222 예산→v098 내부 자동 미리보기
+
+- **Capability:** `GEAR.SEASON`, `SOURCE.SEAL`, `BUDGET.GJFO`, `PRODUCT.E2E`
+- **Keywords:** P3-DH, auto bridge, source-first, v216, v222, v274, v191, v098, GJFO, source-only, 자동 전달
+- **Prior evidence:** [PROTOCOL](../PROTOCOL.md)→[INDEX](../INDEX.md)→[P3-DG](2026-11-04_p3-dg-v191-gear-tier-raw-sha-link.md) 원본 v191 gear/tier SHA 연결 [223 PASS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41775580042); [P3-DA](2026-11-04_p3-da-v222-direct-numeric-gjfo.md) 실제 관측 G/J/F/O→v222 B/T; [P3-DE](2026-11-04_p3-de-new-season-source-swap.md) source-only 26 supplier. 기존 v096/v094 실행 엔진은 [P3-DD](2026-11-04_p3-dd-admitted-season-v096-native-entry.md) 범위만 재사용.
+- **Decision:** `CONNECT` — v216 normal Build가 이미 산출한 원본 경로+selected v222/J/F/O typed profile inputs을 v098의 기존 `build` source-only 경로에 **한 내부 함수 호출**로 연결. 새 파밍 DB·Native/HTTP·효과 엔진·중복 GJFO 산술은 `STOP`.
+- **Changes:** v098.`preview_from_environment_build`가 v216 zero-history 반환 결과의 원본 v191 gear/tier 경로를 그대로 읽고 v222 수치에서 교체형 `budget`의 J/F만 구성. 별도 내부 `season_settings`이 같은 J/F인지 검사하고 기존 v169/v139→v098 프로필 편집, raw SHA 원본 검증, 정확 SimC F/O 입력·typed v096 B/T를 그대로 재사용. v098 교체형 `budget`의 J/F와 원본 v222 계산 간 일치도 확인. 모든 미승인 결과는 preview only/no session/Native, settings/source 부족 시 PENDING; 이전 시즌 source defaults를 새 시즌의 검증값으로 대입하지 않음.
+- **Verification:** 신규 합성 오프라인 fixture는 단일 v216→v098 호출·정확 v191 SHA·수동 T/J/F/O·원본/설정/예산 SHA 변조 차단·불완전 소스 PENDING·파일 생성 0을 검사. **최종 focused CI/ledger는 실제 실행 영수증을 확인한 뒤 기록**; 역사 P3-DG 223 PASS만 재사용, 신규 게임 HTTP/Native 0.
+- **Remaining:** `season_settings`의 신규 시즌 실제 보석/소켓·최고품질·기본 음식/물약 공급원 및 Policy A 검증, 원래 v216/v223 **새 시즌** 진정한 source admission, L/E/효과조건, 26 DPS Native E2E는 미완료. 이 기능은 내부 source-only 연결이며 일반 사용자 환경 READY/실행 허용이 아니다. 새 게임 실측·소스 수집은 구체적 결손 확인 후 논의.
+- **Efficiency:** 기존 v274/v191/v213 원본 경로·v222 결과·v098/v139/v169 실행 함수 재사용. 새 산술/Source Gate·전수 DB/Native 반복 없음; 조회는 두 bounded JSON 파일과 v098 내부 raw SHA 재검증에 한정, 기존 세션·같은 시즌 캐시 불변. main/immutable v003/원본 v016/Project UI/Work OS 변경 없음.

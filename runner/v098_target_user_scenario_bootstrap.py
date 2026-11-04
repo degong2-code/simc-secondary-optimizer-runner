@@ -737,6 +737,14 @@ def build(user,folder,binary,revision,static_cache_path=None,
                  and candidate.get("game_build")==actual_season_build
                  and candidate.get("target_ilevel")==ilvl,
                  "SEASON_SOURCE_BUNDLE_V216_BUILD_OR_TARGET_DRIFT")
+            # v222 is the single authority for season J/F arithmetic. A
+            # replaceable profile/settings file cannot silently overwrite
+            # source-observed rating, even in a non-executable preview.
+            need(candidate.get("J")==season_source_bundle["budget"][
+                     "ordinary_gem"]["total_J"] and
+                 candidate.get("F")==season_source_bundle["budget"][
+                     "flasks"]["total_F"],
+                 "SEASON_SOURCE_BUNDLE_V222_J_F_RATING_DRIFT")
         if current_season_product:
             profile_supplier_coverage=_current_season_profile_supplier_coverage(
                 season_override,"/".join(key))
@@ -1019,6 +1027,110 @@ def build(user,folder,binary,revision,static_cache_path=None,
                 "current_user_selected_options_verified_only_by_native":True,
                 "default_legacy_sessions_unchanged":True}
                if current_season_product else {})}
+
+def preview_from_environment_build(user,folder,binary,revision,*,
+                                   environment_result,season_settings=None):
+    """Normal v216 source → v098 preview without manual gear/tier/J/F bundling.
+
+    The v216 zero-history Build already compiles v191/v213 gear/tier and
+    calculates selected exact G/J/F/O with original v222. Keep those single
+    sources; require separate season-native profile settings until a verified
+    automatic settings producer exists. No session, Native, Policy A or READY.
+    """
+    need(type(environment_result) is dict and
+         environment_result.get("normal_build_entry") is True and
+         type(environment_result.get("zero_history_build")) is dict and
+         environment_result["zero_history_build"].get("environment_ready") is False,
+         "SEASON_V216_NORMAL_BUILD_UNADMITTED_RESULT_REQUIRED")
+    compilation=environment_result.get("source_compilation")
+    need(type(compilation) is dict,
+         "SEASON_V216_ORIGINAL_SOURCE_COMPILATION_REQUIRED")
+    originals=compilation.get("v191_original_gear_tier_source_paths")
+    inputs=compilation.get("v098_source_only_profile_inputs_unadmitted")
+    missing=[]
+    if compilation.get("status")!="FRESH_V191_V211_V213_COMPILED_UNADMITTED":
+        missing.append("ORIGINAL_V191_V213_COMPILATION_PENDING")
+    if originals is None:
+        missing.append("ORIGINAL_V191_GEAR_TIER_PATHS_PENDING")
+    if inputs is None:
+        missing.append("SELECTED_V222_GJFO_PROFILE_INPUTS_PENDING")
+    if season_settings is None:
+        missing.append("SEASON_SPECIFIC_GEM_AND_CONSUMABLE_SETTINGS_PENDING")
+    if missing:
+        return {"schema":"v098_v216_auto_source_preview_bridge_v1",
+                "status":"V216_TO_V098_SOURCE_PROFILE_PENDING",
+                "missing":missing,
+                "environment_ready":False,"native_calls":0,
+                "network_calls":0,"user_session_created":False}
+    need(type(originals) is dict and
+         set(originals)=={"catalog","gear","tier"} and
+         originals["catalog"]==compilation.get("source_catalog_path") and
+         type(inputs) is dict and
+         inputs.get("schema")=="v098_internal_season_profile_inputs_v1" and
+         type(inputs.get("v216_numeric_preview")) is dict,
+         "SEASON_V216_SOURCE_PATHS_OR_INPUTS_DRIFT")
+    numeric=inputs["v216_numeric_preview"]
+    calc=numeric.get("calculation")
+    need(numeric.get("schema")==
+             "v216_zero_history_selected_v222_numeric_preview_v1" and
+         numeric.get("status")==
+             "SELECTED_GJFO_V222_ARITHMETIC_PREVIEW_UNADMITTED" and
+         numeric.get("numeric_preview_only") is True and
+         numeric.get("environment_ready") is False and
+         type(calc) is dict and calc.get("numeric_preview_only") is True and
+         calc.get("simc_revision")==compilation.get("simc_revision")==revision and
+         type(calc.get("J")) is int and calc["J"]>0 and
+         type(calc.get("F")) is int and calc["F"]>0,
+         "SEASON_V216_NUMERIC_GJFO_SOURCE_NOT_RECONCILED")
+    need(type(season_settings) is dict and
+         type(season_settings.get("default_consumables")) is dict and
+         season_settings["default_consumables"].get("gem_budget_J")==calc["J"] and
+         season_settings["default_consumables"].get("flask_budget_F")==calc["F"],
+         "SEASON_V216_SETTINGS_J_F_DRIFT")
+    # Read the ORIGINAL same-build files selected by v274. v098.build will
+    # immediately recheck their v191 raw SHA / actual v213 manifest identity,
+    # so a forged season label or file edit cannot become a runnable manifest.
+    docs={}
+    for name in ("gear","tier"):
+        path=pathlib.Path(originals[name]).expanduser()
+        need(path.is_file() and not path.is_symlink() and
+             0<path.stat().st_size<=12_000_000,
+             "SEASON_V216_ORIGINAL_GEAR_TIER_FILE_MISSING")
+        try:
+            docs[name]=json.loads(path.read_text(encoding="utf8"))
+        except (OSError,ValueError,UnicodeError) as exc:
+            raise UserScenarioBlocked(
+                "SEASON_V216_ORIGINAL_GEAR_TIER_JSON_INVALID") from exc
+    need(docs["gear"].get("season_build")==calc.get("game_build") and
+         docs["tier"].get("retail_build")==calc.get("game_build") and
+         type(user) is dict and type(user.get("target")) is dict and
+         user["target"].get("ilevel")==calc.get("target_ilevel"),
+         "SEASON_V216_GEAR_TIER_BUILD_OR_USER_TARGET_DRIFT")
+    # v169 requires only these measured numeric components from v222; do
+    # not manufacture legacy J138/F165, high-quality approval or oil values.
+    budget={"schema":"v165_current_season_chmv_consumables_v1",
+            "retail_build":calc["game_build"],
+            "ordinary_gem":{"total_J":calc["J"]},
+            "flasks":{"total_F":calc["F"]}}
+    bundle={"schema":"v098_internal_season_source_bundle_v1",
+            **docs,"budget":budget,"settings":copy.deepcopy(season_settings)}
+    result=build(user,folder,binary,revision,
+                 current_season_product=True,
+                 season_source_bundle=bundle,
+                 season_original_source_paths=originals,
+                 season_profile_inputs=inputs)
+    proof=result["original_v191_gear_tier_source_unadmitted"]
+    need(proof["source_catalog_artifact_sha256"]==
+             calc.get("source_catalog_artifact_sha256") and
+         proof["source_catalog_manifest_sha256"]==
+             calc.get("source_catalog_manifest_sha256"),
+         "SEASON_V216_GJFO_SOURCE_CATALOG_SHA_DRIFT")
+    return {**result,
+            "v216_to_v098_auto_source_linked_preview":True,
+            "season_settings_source_admitted_here":False,
+            "verified_user_default_options_registered":False,
+            "v216_preflight_sha256":compilation.get("preflight_sha256")}
+
 
 def run(user_path,folder,binary,revision,static_cache_path=None,
         execute=False,cache_only=False,*,ordinary_variant=None,pure_stage=False,

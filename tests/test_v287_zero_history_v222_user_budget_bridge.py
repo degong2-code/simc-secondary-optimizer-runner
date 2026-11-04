@@ -1408,6 +1408,137 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                         season_environment_receipt_path=root/"old.json")
                 self.assertFalse((root/"blocked").exists())
 
+    def test_p3_dh_one_call_v216_to_v098_uses_original_gear_and_v222_j_f(self):
+        import hashlib
+        import v098_target_user_scenario_bootstrap as boot
+        import v106_user_session_controller as sessions
+        doc=self.synthetic_future_season_source_bundle()
+        user=sessions.user_scenario(
+            sessions.standard_controls(("mage","frost")))
+        user["target"]["final_T"]=3400
+        user["oil_hands"]=["main_hand"]
+        payload=self.dynamic_season_profile_inputs()
+        payload["v216_numeric_preview"]["calculation"]["game_build"]=(
+            doc["gear"]["season_build"])
+        with tempfile.TemporaryDirectory() as temp:
+            root=pathlib.Path(temp)
+            (root/"fresh_source").mkdir()
+            (root/"inputs").mkdir()
+            paths={"catalog":root/"fresh_source"/"v213_candidate_catalog.json",
+                   "gear":root/"inputs"/"gear.json",
+                   "tier":root/"inputs"/"tier.json"}
+            for name in ("gear","tier"):
+                paths[name].write_text(json.dumps(doc[name],sort_keys=True),
+                                       encoding="utf8")
+            source_sha={name:hashlib.sha256(
+                paths[name].read_bytes()).hexdigest()
+                for name in ("gear","tier")}
+            catalog={"game_build":doc["gear"]["season_build"],
+                     "simc_revision":"c"*40,"manifest_sha256":"d"*64,
+                     "source_provenance":{"v191":{
+                         "sha256_by_input":{**source_sha,"budget":None}}}}
+            paths["catalog"].write_text(json.dumps(catalog),encoding="utf8")
+            calc=payload["v216_numeric_preview"]["calculation"]
+            calc["source_catalog_manifest_sha256"]=catalog["manifest_sha256"]
+            calc["source_catalog_artifact_sha256"]=hashlib.sha256(
+                paths["catalog"].read_bytes()).hexdigest()
+            originals={name:str(path) for name,path in paths.items()}
+            env={"normal_build_entry":True,
+                 "zero_history_build":{"environment_ready":False},
+                 "source_compilation":{
+                    "status":"FRESH_V191_V211_V213_COMPILED_UNADMITTED",
+                    "source_catalog_path":str(paths["catalog"]),
+                    "v191_original_gear_tier_source_paths":originals,
+                    "v098_source_only_profile_inputs_unadmitted":payload,
+                    "simc_revision":"c"*40,
+                    "preflight_sha256":"e"*64}}
+            binary=root/"fake";binary.write_bytes(b"NO_NATIVE_NO_NETWORK")
+            with mock.patch.object(boot.original_catalog,"verify_catalog",
+                                   return_value=True):
+                result=boot.preview_from_environment_build(
+                    user,root/"preview",binary,"c"*40,
+                    environment_result=env,season_settings=doc["settings"])
+                self.assertEqual(result["status"],
+                    "SEASON_PROFILE_COMPOSED_NOT_ADMITTED_NO_NATIVE")
+                self.assertTrue(result[
+                    "v216_to_v098_auto_source_linked_preview"])
+                self.assertEqual(result["budget_preview_unadmitted"]["J"],143)
+                self.assertEqual(result["budget_preview_unadmitted"]["F"],176)
+                self.assertEqual(result["v096_typed_input_unadmitted"][
+                    "base_B"],3367)
+                self.assertEqual(result["original_v191_gear_tier_source_unadmitted"][
+                    "raw_source_sha256"],source_sha)
+                self.assertEqual(result["v216_preflight_sha256"],"e"*64)
+                self.assertFalse(result["season_settings_source_admitted_here"])
+                self.assertFalse(result[
+                    "verified_user_default_options_registered"])
+                self.assertEqual(result["new_native_calls"],0)
+                self.assertFalse((root/"preview").exists())
+                wrong_settings=copy.deepcopy(doc["settings"])
+                wrong_settings["default_consumables"]["gem_budget_J"]=138
+                with self.assertRaisesRegex(boot.UserScenarioBlocked,
+                        "SEASON_V216_SETTINGS_J_F_DRIFT"):
+                    boot.preview_from_environment_build(
+                        user,root/"wrong_settings",binary,"c"*40,
+                        environment_result=env,
+                        season_settings=wrong_settings)
+                old_sha=calc["source_catalog_artifact_sha256"]
+                calc["source_catalog_artifact_sha256"]="0"*64
+                try:
+                    with self.assertRaisesRegex(boot.UserScenarioBlocked,
+                            "SEASON_V216_GJFO_SOURCE_CATALOG_SHA_DRIFT"):
+                        boot.preview_from_environment_build(
+                            user,root/"wrong_catalog",binary,"c"*40,
+                            environment_result=env,
+                            season_settings=doc["settings"])
+                finally:
+                    calc["source_catalog_artifact_sha256"]=old_sha
+                # Both the settings and replacement budget may agree with
+                # each other yet disagree with the ORIGINAL v222 GJFO.
+                bad_bundle=copy.deepcopy(doc)
+                bad_bundle["settings"]["default_consumables"]["flask_budget_F"]=177
+                bad_bundle["budget"]["flasks"]["total_F"]=177
+                with self.assertRaisesRegex(boot.UserScenarioBlocked,
+                        "SEASON_SOURCE_BUNDLE_V222_J_F_RATING_DRIFT"):
+                    boot.build(user,root/"wrong_jf",binary,"c"*40,
+                        current_season_product=True,
+                        season_source_bundle=bad_bundle,
+                        season_profile_inputs=payload)
+                self.assertFalse((root/"wrong_settings").exists())
+                self.assertFalse((root/"wrong_catalog").exists())
+                self.assertFalse((root/"wrong_jf").exists())
+
+    def test_p3_dh_incomplete_source_or_settings_remains_pending(self):
+        import v098_target_user_scenario_bootstrap as boot
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            incomplete={"normal_build_entry":True,
+                        "zero_history_build":{"environment_ready":False},
+                        "source_compilation":{
+                            "status":"COLLECTED_COMPILER_INPUTS_PENDING",
+                            "missing":["TIER_V168"]}}
+            result=boot.preview_from_environment_build(
+                {},root/"never_writes",root/"no_binary","c"*40,
+                environment_result=incomplete)
+            self.assertEqual(result["status"],
+                "V216_TO_V098_SOURCE_PROFILE_PENDING")
+            self.assertIn("ORIGINAL_V191_V213_COMPILATION_PENDING",
+                          result["missing"])
+            self.assertIn("ORIGINAL_V191_GEAR_TIER_PATHS_PENDING",
+                          result["missing"])
+            self.assertIn("SELECTED_V222_GJFO_PROFILE_INPUTS_PENDING",
+                          result["missing"])
+            self.assertIn("SEASON_SPECIFIC_GEM_AND_CONSUMABLE_SETTINGS_PENDING",
+                          result["missing"])
+            self.assertFalse(result["environment_ready"])
+            self.assertFalse(result["user_session_created"])
+            self.assertFalse((root/"never_writes").exists())
+            with self.assertRaisesRegex(boot.UserScenarioBlocked,
+                    "SEASON_V216_NORMAL_BUILD_UNADMITTED_RESULT_REQUIRED"):
+                boot.preview_from_environment_build(
+                    {},root/"invalid",root/"no_binary","c"*40,
+                    environment_result={"normal_build_entry":False})
+
     def test_automatic_target_goes_through_existing_v222_once(self):
         result=self.run_build()
         source=result["source_compilation"]
