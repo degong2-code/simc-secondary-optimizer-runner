@@ -180,6 +180,63 @@ def apply(profile,cfg,rows,chosen=None):
             "omnium_folio_not_augmentation":True,
             "omnium_whole_source_preset_only":True}
 
+
+def season_static_consumables_source_only(profile,cfg,*,gem_budget_J,
+                                          flask_budget_F,flask_item_id,
+                                          flask_simc_token):
+    """Season-agnostic exact SimC flask and J/F serializer, not admission.
+
+    The original v216 source stage must independently establish physical
+    ItemID, quality, socket and Native rating; this helper only composes the
+    already selected values without injecting old-season J=138/F=165.
+    Legacy v108.apply remains byte-identical in the existing product path.
+    """
+    need(type(profile) is str and type(cfg) is dict
+         and type(gem_budget_J) is int and 0<=gem_budget_J<=100000
+         and type(flask_budget_F) is int and 0<flask_budget_F<=100000
+         and type(flask_item_id) is int and flask_item_id>0
+         and type(flask_simc_token) is str and
+         re.fullmatch(r"[a-z0-9_]{1,90}",flask_simc_token) is not None,
+         "SEASON_J_F_EXACT_SOURCE_INPUTS_REQUIRED")
+    original=scenario.normalize(cfg)
+    if original["scenario"]["source"]["kind"]=="user_supplied":
+        need(hashlib.sha256(profile.encode("utf8")).hexdigest()==
+             original["scenario"]["source"]["profile_sha256"],
+             "SEASON_FLASK_SOURCE_PROFILE_SHA_MISMATCH")
+    lines=profile.splitlines()
+    need(sum(line.startswith("flask=") for line in lines)==1,
+         "SEASON_FLASK_EXACT_ONE_SIMC_ASSIGNMENT")
+    updated_profile="\n".join(
+        ("flask="+flask_simc_token if line.startswith("flask=") else line)
+        for line in lines).rstrip()+"\n"
+    updated=copy.deepcopy(cfg)
+    updated["consumables"]["gem_budget_J"]=gem_budget_J
+    updated["consumables"]["flask_budget_F"]=flask_budget_F
+    updated["consumables"]["flask"]=flask_simc_token
+    if updated["source"]["kind"]=="user_supplied":
+        updated["source"]["profile_sha256"]=hashlib.sha256(
+            updated_profile.encode("utf8")).hexdigest()
+    normalized=scenario.normalize(updated)
+    need(normalized["budget"]["J"]==gem_budget_J
+         and normalized["budget"]["F"]==flask_budget_F
+         and normalized["scenario"]["equipment"]==
+             original["scenario"]["equipment"]
+         and normalized["scenario"]["character"]==
+             original["scenario"]["character"]
+         and normalized["scenario"]["target"]==
+             original["scenario"]["target"],
+         "SEASON_J_F_SERIALIZER_CHANGED_GEAR_OR_TARGET")
+    return {"schema":"v108_season_static_consumables_source_only_v1",
+            "status":"SEASON_J_F_PROFILE_SERIALIZED_NOT_ADMITTED",
+            "profile":updated_profile,"scenario":updated,
+            "physical_flask_item_id_unadmitted":flask_item_id,
+            "flask_simc_token":flask_simc_token,
+            "gem_budget_J_unadmitted":gem_budget_J,
+            "flask_budget_F_unadmitted":flask_budget_F,
+            "source_only":True,"environment_ready":False,
+            "new_native_calls":0,"network_calls":0}
+
+
 def set_head_gem(profile,head):
     """Replace ONLY existing head equipment line, preserving other options."""
     import v055_simc_item_selection as items
