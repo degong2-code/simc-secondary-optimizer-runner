@@ -627,12 +627,18 @@ function showSeasonEnvironmentBuild(data) {
   const unique=[...new Set(needs)];
   const node=$("season-build-stage");
   const ready=scope.environment_ready===true&&scope.environment_installed===true;
+  const numeric=step.selected_auto_v222_numeric_preview_unadmitted?.calculation;
   node.textContent=(ready?"시즌 환경 설치 완료":"원본 수집·검증 진행 결과 (설치 미완료)")+
     " · 요청 빌드 "+(scope.game_build||"–")+
     " · 원본 "+(step.source_stage_status||data?.source_stage?.status||"미확정")+
     " · 컴파일 "+(source.status||step.source_compilation_status||"대기")+
     " · G 관측 "+(step.native_G_status||"대기")+
     " · 신규 Native "+(Number(data?.native_calls)||0)+"회"+
+    (numeric?.numeric_preview_only===true&&numeric.environment_ready===false?
+       " · 관측 수치(미승인) G="+numeric.reference_G+
+       " J="+numeric.J+" F="+numeric.F+
+       " O="+Object.values(numeric.fixed_O||{}).reduce((a,b)=>a+Number(b||0),0)+
+       " / B="+numeric.base_B+" T="+numeric.final_T:"")+
     " · 환경 매니페스트 "+(step.versioned_environment_source_stage?.stage_status||"입력 대기")+
     " · 미해결 "+unique.length+"건 · DPS 최적화 0회"+
     (scope.user_character_or_trinkets_required===false?" · 사용자 장비 입력 없음":"");

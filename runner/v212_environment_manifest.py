@@ -132,12 +132,66 @@ def compile_fresh_source_environment(*, source_catalog, source_artifact_sha256,
              calc.get("numeric_preview_only") is True and
              calc.get("environment_ready") is False,
              "FRESH_ENVIRONMENT_V222_PREVIEW_IDENTITY_DRIFT")
+        # Reuse the ORIGINAL v222 accounting outcome. A self-described
+        # numeric receipt is not game/source authentication. Store only
+        # its bounded identities and values: no new Native, re-calculation,
+        # or user/session inputs are introduced by this manifest.
+        need(calc.get("schema")=="v222_season_gjfo_budget_contract_v1" and
+             calc.get("status")==
+                 "NUMERIC_PREVIEW_UNADMITTED_NO_SOURCE_AUTHENTICATION" and
+             calc.get("source_authentication_performed_here") is False and
+             type(calc.get("reference_G")) is int and calc["reference_G"]>0 and
+             type(calc.get("J")) is int and calc["J"]>=0 and
+             type(calc.get("F")) is int and calc["F"]>=0 and
+             type(calc.get("base_B")) is int and calc["base_B"]>0 and
+             type(calc.get("final_T")) is int and calc["final_T"]>0 and
+             type(calc.get("fixed_O")) is dict and
+             set(calc["fixed_O"]) == {
+                 "crit_rating","haste_rating","mastery_rating",
+                 "versatility_rating"} and
+             all(type(v) is int and v>=0
+                 for v in calc["fixed_O"].values()) and
+             calc["base_B"]+sum(calc["fixed_O"].values())==
+                 calc["final_T"],
+             "FRESH_ENVIRONMENT_ORIGINAL_V222_ARITHMETIC_REQUIRED")
+        identities=selected_numeric.get("numeric_receipt_identities")
+        need(type(identities) is dict and set(identities)=={
+                 "G_native_json2_sha256",
+                 "J_physical_layout_rating_sha256",
+                 "F_selected_item_native_sha256",
+                 "O_selected_hands_native_mask_sha256"} and
+             all(valid_sha(value) for value in identities.values()),
+             "FRESH_ENVIRONMENT_GJFO_ORIGINAL_RECEIPT_IDENTITIES_REQUIRED")
+        selection=selected_numeric.get("selected_physical_items")
+        need(type(selection) is dict and
+             set(selection)=={"flask_item_id","oil_item_ids_by_hand"} and
+             type(selection["flask_item_id"]) is int and
+             selection["flask_item_id"]>0 and
+             type(selection["oil_item_ids_by_hand"]) is dict and
+             set(selection["oil_item_ids_by_hand"])<={
+                 "main_hand","off_hand"} and
+             all(type(v) is int and v>0 for v in
+                 selection["oil_item_ids_by_hand"].values()) and
+             (bool(selection["oil_item_ids_by_hand"]) or
+              sum(calc["fixed_O"].values())==0),
+             "FRESH_ENVIRONMENT_PHYSICAL_F_O_SELECTION_REQUIRED")
         preview={"status":"NUMERIC_OBSERVED_NOT_ADMITTED",
-                 "base_B_unadmitted":calc.get("base_B"),
-                 "final_T_unadmitted":calc.get("final_T"),
-                 "J_unadmitted":calc.get("J"),
-                 "F_unadmitted":calc.get("F"),
-                 "fixed_O_unadmitted":calc.get("fixed_O"),
+                 "reference_G_unadmitted":calc["reference_G"],
+                 "J_unadmitted":calc["J"],
+                 "F_unadmitted":calc["F"],
+                 "fixed_O_unadmitted":dict(calc["fixed_O"]),
+                 "base_B_unadmitted":calc["base_B"],
+                 "final_T_unadmitted":calc["final_T"],
+                 "manual_final_T_authoritative":
+                     calc.get("manual_final_T_authoritative") is True,
+                 "physical_item_selection_unadmitted":{
+                     "flask_item_id":selection["flask_item_id"],
+                     "oil_item_ids_by_hand":
+                         dict(selection["oil_item_ids_by_hand"])},
+                 "exact_source_receipt_identities_unadmitted":
+                     dict(identities),
+                 "original_v222_calculation_sha256":sha(
+                     canonical(calc).encode("utf8")),
                  "source_authentication_performed_here":False}
     payload={
         "schema":FRESH_SEASON_STAGE_SCHEMA,

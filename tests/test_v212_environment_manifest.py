@@ -67,6 +67,84 @@ class FreshEnvironmentSourceStageTests(unittest.TestCase):
                 source_catalog=catalog,source_artifact_sha256=artifact_sha,
                 preflight=preflight,compilation=compilation,target_ilevel=334)
             self.assertEqual(same,result)
+            # The existing v216->v222 source-only numbers and exact source
+            # receipt identities are preserved, NEVER promoted to official.
+            calc={
+                "schema":"v222_season_gjfo_budget_contract_v1",
+                "status":"NUMERIC_PREVIEW_UNADMITTED_NO_SOURCE_AUTHENTICATION",
+                "game_build":catalog["game_build"],
+                "simc_revision":catalog["simc_revision"],
+                "target_ilevel":334,
+                "source_catalog_manifest_sha256":catalog["manifest_sha256"],
+                "source_catalog_artifact_sha256":artifact_sha,
+                "numeric_preview_only":True,"environment_ready":False,
+                "source_authentication_performed_here":False,
+                "reference_G":2800,"J":140,"F":170,
+                "fixed_O":{"crit_rating":15,"haste_rating":17,
+                           "mastery_rating":0,"versatility_rating":0},
+                "base_B":3110,"final_T":3142,
+                "manual_final_T_authoritative":False,
+            }
+            identities={
+                "G_native_json2_sha256":"1"*64,
+                "J_physical_layout_rating_sha256":"2"*64,
+                "F_selected_item_native_sha256":"3"*64,
+                "O_selected_hands_native_mask_sha256":"4"*64,
+            }
+            numeric={
+                "schema":"v216_zero_history_selected_v222_numeric_preview_v1",
+                "status":"SELECTED_GJFO_V222_ARITHMETIC_PREVIEW_UNADMITTED",
+                "numeric_preview_only":True,"environment_ready":False,
+                "selected_physical_items":{
+                    "flask_item_id":11001,
+                    "oil_item_ids_by_hand":{"main_hand":11002}},
+                "numeric_receipt_identities":identities,
+                "calculation":calc,
+            }
+            with_numbers=p.compile_fresh_source_environment(
+                source_catalog=catalog,source_artifact_sha256=artifact_sha,
+                preflight=preflight,compilation=compilation,target_ilevel=334,
+                selected_numeric=numeric)
+            budget_preview=with_numbers["numeric_budget_preview_unadmitted"]
+            self.assertEqual(budget_preview["reference_G_unadmitted"],2800)
+            self.assertEqual(budget_preview["J_unadmitted"],140)
+            self.assertEqual(budget_preview["F_unadmitted"],170)
+            self.assertEqual(budget_preview["base_B_unadmitted"],3110)
+            self.assertEqual(budget_preview["final_T_unadmitted"],3142)
+            self.assertEqual(budget_preview["exact_source_receipt_identities_unadmitted"],
+                             identities)
+            self.assertEqual(budget_preview["physical_item_selection_unadmitted"],
+                             numeric["selected_physical_items"])
+            self.assertFalse(with_numbers["environment_ready"])
+            self.assertFalse(with_numbers["environment_installed"])
+            self.assertIsNone(with_numbers["official_G"])
+            self.assertNotEqual(with_numbers["manifest_sha256"],
+                                result["manifest_sha256"])
+            self.assertTrue(p.verify_fresh_source_environment(with_numbers))
+            # Different exact item/Native proof -> new environment unit.
+            new_ids=dict(identities,F_selected_item_native_sha256="5"*64)
+            changed=p.compile_fresh_source_environment(
+                source_catalog=catalog,source_artifact_sha256=artifact_sha,
+                preflight=preflight,compilation=compilation,target_ilevel=334,
+                selected_numeric={**numeric,"numeric_receipt_identities":new_ids})
+            self.assertNotEqual(changed["manifest_sha256"],
+                                with_numbers["manifest_sha256"])
+            for modified,reason in (
+                ({**numeric,"numeric_receipt_identities":{}},
+                 "RECEIPT_IDENTITIES_REQUIRED"),
+                ({**numeric,"calculation":{**calc,"base_B":3000}},
+                 "ORIGINAL_V222_ARITHMETIC_REQUIRED"),
+                ({**numeric,"selected_physical_items":{
+                    "flask_item_id":11001,"oil_item_ids_by_hand":{}}},
+                 "PHYSICAL_F_O_SELECTION_REQUIRED"),
+            ):
+                with self.subTest(reason=reason):
+                    with self.assertRaisesRegex(p.EnvironmentBlocked,reason):
+                        p.compile_fresh_source_environment(
+                            source_catalog=catalog,
+                            source_artifact_sha256=artifact_sha,
+                            preflight=preflight,compilation=compilation,
+                            target_ilevel=334,selected_numeric=modified)
             # v216 writes one environment unit without a user v098/DPS session.
             catalog_file=root/"fresh_v213.json"
             catalog_file.write_bytes(p.canonical(catalog).encode("utf8"))
