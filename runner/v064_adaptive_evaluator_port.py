@@ -92,15 +92,22 @@ def verify_profile_binding(normalized,budget,reference):
                  "PROFILE_CONSUMABLE_DRIFT:"+name)
     temp=consumables["weapon_temporary"]
     if temp is not None:
-        single="main_hand:"+temp
-        dual=single+"/off_hand:"+temp
-        off="off_hand:"+temp
-        # v091 may deliberately apply oil only to the off-hand weapon.
-        # Weapon eligibility itself is checked by the v091 exact layout
-        # adapter, not by the mere presence of an off_hand slot.
-        need(parsed.get("temporary_enchant") in ({single,off,dual} if
-             "off_hand" in slots else {single}),
-             "PROFILE_TEMPORARY_DRIFT")
+        # Legacy v091 stores only the common oil name. The season-specific
+        # v091 serializer stores the EXACT already hand-qualified literal.
+        # Never prepend another hand or silently normalize a new SimC token.
+        if temp.startswith(("main_hand:","off_hand:")):
+            need(parsed.get("temporary_enchant")==temp
+                 and ("off_hand:" not in temp or "off_hand" in slots)
+                 and ("main_hand:" in temp or "off_hand:" in temp),
+                 "PROFILE_TEMPORARY_DRIFT")
+        else:
+            single="main_hand:"+temp
+            dual=single+"/off_hand:"+temp
+            off="off_hand:"+temp
+            # Historic profile behavior remains byte-for-byte unchanged.
+            need(parsed.get("temporary_enchant") in ({single,off,dual} if
+                 "off_hand" in slots else {single}),
+                 "PROFILE_TEMPORARY_DRIFT")
     gear=cfg["equipment"]
     expected={}
     for kind in ("tier","special","crafted","trinkets"):

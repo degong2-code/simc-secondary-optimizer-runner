@@ -166,8 +166,8 @@ class V096Unified(unittest.TestCase):
             cfg=path.parent/"scenario.json"
             obj=json.loads(cfg.read_text("utf8"))
             obj["target"]["mode"]="derived_ilevel"
-            obj["target"].pop("manual_total",None)
-            obj["target"].pop("manual_total_scope",None)
+            obj["target"]["manual_total"]=None
+            obj["target"]["manual_total_scope"]=None
             cfg.write_text(json.dumps(obj),encoding="utf8")
             p=entry.run_manifest(path,plan_only=True)
             self.assertEqual(p["budget_source"],"OPT_IN_ILVL_REFERENCE_BASE_B")
