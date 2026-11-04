@@ -1,3 +1,5 @@
+> **2026-11-05 P3-DU:** 새 시즌 v216 환경 구축에서 기존 v281 봉인 원본의 exact 물리 영약·기름 ID/손 정보를 자동 **측정 후보 목록**으로 추출. 원본 영수증 검증은 기존 v281.resolve_native_input 재사용, 새 효과 검증·선택 인증 Gate 없음. 웹앱에는 후보 수를 '미승인'으로 표시. 실 Native 호출/품질·O applicability 승인/READY 설치는 미구현, [개발기록](development/notes/2026-11-05_p3-du-automatic-exact-physical-fo-measurement-worklist.md). 사용자별 DPS 최적화는 환경 구축 완료 Gate 외부.
+>
 > **2026-11-04 P3-DR:** 새 시즌 `v212` 소스 단계에 기존 `v222` 미승인 G/J/F/O/B/T 숫자와 정확 물리 아이템 선택·성분별 SHA를 전달·재사용. 원본 변경 시 다른 환경 단위, 기름 명시 미사용만 O0, 임의 값/결손 SHA 차단. 공식 GJFO·품질/소켓·무기/유효 옵션·환경 설치/READY는 별도이며 **사용자 DPS 실행을 환경 구축의 선행 조건으로 삼지 않는다**. [노트](development/notes/2026-11-04_p3-dr-exact-gjfo-v222-source-identity-in-v212.md).
 >
 > **2026-11-04 P3-DQ:** 기존 v212 사용자별 최적화 manifest를 변경하지 않고 같은 v212 모듈의 **환경 전용 버전화 source-stage**를 새 v216 정상 Build와 기존 v217 봉인/재사용에 연결. 인증/설치/READY와 사용자 DPS 최적화의 책임은 분리. [작업 노트](development/notes/2026-11-04_p3-dq-v212-versioned-season-environment-source-stage.md).
