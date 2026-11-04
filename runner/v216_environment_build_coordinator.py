@@ -545,15 +545,15 @@ def _v217_policy_A_source_relation_receipts(*, catalog, artifact_sha256,
          "V216_POLICY_A_V213_ORIGINAL_STAGE_PATH_DRIFT")
     source_provenance=catalog["source_provenance"]
     expected={
-        "v191":("fresh_source/v191_candidate.json",
+        "v191":("candidate","fresh_source/v191_candidate.json",
                 source_provenance["v191"]["sha256"]),
-        "v211":("fresh_source/v211_classification.json",
+        "v211":("classification","fresh_source/v211_classification.json",
                 source_provenance["v211"]["sha256"]),
-        "v213":("fresh_source/v213_candidate_catalog.json",
+        "v213":("candidate","fresh_source/v213_candidate_catalog.json",
                 artifact_sha256),
     }
     stamps={}
-    for short,(relative,expected_sha) in expected.items():
+    for short,(output_name,relative,expected_sha) in expected.items():
         summary=stage_attestations["v"+short[1:]+"_stage"]
         need(type(summary) is dict and
              summary.get("status") in (
@@ -567,11 +567,11 @@ def _v217_policy_A_source_relation_receipts(*, catalog, artifact_sha256,
              receipt.get("stage_version")=="1" and
              receipt.get("status")=="COMPLETE" and
              receipt.get("receipt_sha256")==summary.get("receipt_sha256") and
-             receipt.get("output_paths")=={"candidate":relative} and
+             receipt.get("output_paths")=={output_name:relative} and
              type(receipt.get("outputs")) is dict and
-             receipt["outputs"].get("candidate",{}).get("sha256")==
+             receipt["outputs"].get(output_name,{}).get("sha256")==
                  expected_sha and
-             receipt["outputs"]["candidate"].get("path")==relative,
+             receipt["outputs"][output_name].get("path")==relative,
              "V216_POLICY_A_V217_SOURCE_OUTPUT_SHA_DRIFT:"+short)
         stamps[short]=receipt["receipt_sha256"]
     catalog_items={row["enchant_id"]:row
@@ -643,10 +643,12 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
         # The v241 stage executor has already checked the same bytes. Reuse
         # its sealed original receipts to populate only source_relation,
         # with no fresh HTTP/Native and no standalone admission engine.
-        source_relations=_v217_policy_A_source_relation_receipts(
-            catalog=source,artifact_sha256=raw_sha,catalog_path=supplied,
-            stage_attestations=policy_A_v217_stages,
-            public_rows=ui["enchant_candidates"]["items"])
+        source_relations={}
+        if policy_A_v217_stages is not None:
+            source_relations=_v217_policy_A_source_relation_receipts(
+                catalog=source,artifact_sha256=raw_sha,catalog_path=supplied,
+                stage_attestations=policy_A_v217_stages,
+                public_rows=ui.get("enchant_candidates",{}).get("items",[]))
         if source_relations:
             source_context={"game_build":expected_game_build,
                             "simc_revision":expected_simc_revision,
