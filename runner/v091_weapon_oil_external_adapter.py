@@ -7,7 +7,7 @@ numeric override replaces the oil's natural secondary rating; O is not a
 freely distributable stat budget, and is not separately added to JSON2 again.
 """
 from __future__ import annotations
-import copy,hashlib,pathlib
+import copy,hashlib,pathlib,re
 import v061_scenario_contract as scenario
 import v064_adaptive_evaluator_port as port
 import v089_ilvl_chmv_budget_selector as chooser
@@ -38,7 +38,8 @@ def _profile_slots(profile):
     need("main_hand" in result,"MAIN_HAND_ITEM_REQUIRED")
     return result
 
-def configure(profile,doc,weapon_layout,applied_hands):
+def configure(profile,doc,weapon_layout,applied_hands,*,
+              season_oil_by_hand=None):
     """Return exact selected oil input + updated user-supplied SHA v061 doc.
 
     Crucial: never rely on the absence of temporary_enchant. SimC supplies
@@ -72,8 +73,44 @@ def configure(profile,doc,weapon_layout,applied_hands):
               if l.startswith("temporary_enchant=")])<=1,
          "MULTIPLE_TEMPORARY_ENCHANT_ASSIGNMENTS")
     ordered=[s for s in ("main_hand","off_hand") if s in applied]
-    declared_O={k:PER_WEAPON[k]*len(ordered) for k in scenario.STATS}
-    literal=("/".join(s+":"+OIL for s in ordered) if ordered else "disabled")
+    if season_oil_by_hand is None:
+        declared_O={k:PER_WEAPON[k]*len(ordered) for k in scenario.STATS}
+        literal=("/".join(s+":"+OIL for s in ordered) if ordered else "disabled")
+        selected_token=OIL if ordered else None
+    else:
+        # Generic internal season input. A v216/v286 original source must
+        # independently establish these exact IDs, rating and weapon masks.
+        # This is a serializer, not Policy A or an effect verification Gate.
+        need(type(season_oil_by_hand) is dict and
+             set(season_oil_by_hand)==set(ordered),
+             "SEASON_OIL_PHYSICAL_HAND_SET_MISMATCH")
+        declared_O={k:0 for k in scenario.STATS}
+        pieces=[]
+        for hand in ordered:
+            row=season_oil_by_hand[hand]
+            need(type(row) is dict and
+                 set(row)=={"physical_item_id","simc_input_token",
+                            "static_CHMV_vector"} and
+                 type(row["physical_item_id"]) is int and
+                 row["physical_item_id"]>0,
+                 "SEASON_OIL_EXACT_PHYSICAL_ROW_REQUIRED")
+            source=row["simc_input_token"]
+            prefix=("main_hand:" if hand=="main_hand"
+                    else "main_hand:disabled/off_hand:")
+            need(type(source) is str and source.startswith(prefix),
+                 "SEASON_OIL_SIMC_HAND_SOURCE_TOKEN_DRIFT")
+            token=source[len(prefix):]
+            need(re.fullmatch(r"[a-z0-9_]{1,90}",token) is not None,
+                 "SEASON_OIL_SIMC_TOKEN_INVALID")
+            vector=scenario.vector(row["static_CHMV_vector"],
+                                   "SEASON_OIL_EXACT_NATIVE_STATIC_VECTOR")
+            need(sum(vector.values())>0,
+                 "SEASON_OIL_NONSTATIC_OR_UNKNOWN_IS_NOT_ZERO")
+            for stat in declared_O:
+                declared_O[stat]+=vector[stat]
+            pieces.append(hand+":"+token)
+        literal="/".join(pieces) if pieces else "disabled"
+        selected_token=literal if pieces else None
     token="temporary_enchant="+literal
     out=[]
     replaced=False
@@ -90,7 +127,7 @@ def configure(profile,doc,weapon_layout,applied_hands):
              for x in new_profile.splitlines())==1,
          "OIL_MUST_BE_EXPLICIT_ONCE")
     cfg=copy.deepcopy(doc)
-    cfg["consumables"]["weapon_temporary"]=OIL if ordered else None
+    cfg["consumables"]["weapon_temporary"]=selected_token
     cfg["consumables"]["weapon_temporary_fixed_rating"]=declared_O
     if cfg["source"]["kind"]=="user_supplied":
         cfg["source"]["profile_sha256"]=hashlib.sha256(
@@ -105,8 +142,10 @@ def configure(profile,doc,weapon_layout,applied_hands):
         "original_sha256":hashlib.sha256(profile.encode("utf8")).hexdigest(),
         "profile_sha256":hashlib.sha256(new_profile.encode("utf8")).hexdigest(),
         "weapon_layout":weapon_layout,"applied_hands":ordered,
-        "oil_token":OIL if ordered else None,
+        "oil_token":selected_token,
         "expected_simc_temporary_enchant":literal,
+        "internal_season_oil_source_only":season_oil_by_hand is not None,
+        "season_oil_budget_admitted_here":False,
         "declared_O":declared_O,"oil_outside_legacy_B":True,
         "oil_in_approved_final_T":True,
         "legacy_B_unchanged":True,"native_calls":0,
