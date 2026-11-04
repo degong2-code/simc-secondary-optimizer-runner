@@ -1008,6 +1008,54 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                     season_profile_inputs=bad,
                     season_build=budget["v216_numeric_preview"][
                         "calculation"]["game_build"],simc_revision="c"*40)
+
+    def test_sealed_v216_to_v096_to_v094_offline_delegation(self):
+        import v096_unified_product_entry as entry
+        from tests.test_v096_unified_product_entry import V096Unified
+        with tempfile.TemporaryDirectory() as td:
+            path,raw,receipt=V096Unified().seasonal_fixture(td)
+            ready=entry.source(path)
+            self.assertEqual(ready["plan"]["budget_source"],
+                             "ADMITTED_SEASON_GJFO_V216_V223")
+            self.assertEqual(ready["plan"]["final_T"],3183)
+            self.assertEqual(ready["context"]["identity"][
+                "admitted_season_environment_identity"][
+                "environment_build_receipt_sha256"],
+                receipt["receipt_sha256"])
+            with mock.patch.object(entry.durable,"run",
+                    side_effect=RuntimeError("EXISTING_V094_DELEGATED")) as actual:
+                with self.assertRaisesRegex(
+                        RuntimeError,"EXISTING_V094_DELEGATED"):
+                    entry.run_manifest(path,plan_only=False)
+            self.assertEqual(actual.call_count,1)
+            _,options=actual.call_args
+            self.assertEqual(options["native_limit"],4)
+            self.assertFalse((path.parent/"output").exists())
+
+    def test_season_execution_is_not_authorized_by_numeric_or_fake_v223_flag(self):
+        import v096_unified_product_entry as entry
+        import v216_environment_build_coordinator as original
+        from tests.test_v096_unified_product_entry import V096Unified
+        with tempfile.TemporaryDirectory() as td:
+            path,user,receipt=V096Unified().seasonal_fixture(td)
+            receipt["season_budget"]["source_links_verified_by_v223"]=False
+            receipt["receipt_sha256"]=original.digest(original.canonical(
+                {k:v for k,v in receipt.items()
+                 if k!="receipt_sha256"}).encode("utf8"))
+            (path.parent/"environment_build_receipt.json").write_text(
+                json.dumps(receipt),encoding="utf8")
+            user[entry.SEASON_FIELD]["environment_receipt_sha256"]=(
+                receipt["receipt_sha256"])
+            path.write_text(json.dumps(user),encoding="utf8")
+            with mock.patch.object(entry.durable,"run",
+                side_effect=AssertionError("V094_MUST_NOT_RUN")) as actual:
+                with self.assertRaisesRegex(
+                        entry.EntryBlocked,
+                        "SEASON_V223_ACTUAL_SOURCE_LINKS_NOT_VERIFIED"):
+                    entry.run_manifest(path,plan_only=False)
+                self.assertEqual(actual.call_count,0)
+            self.assertFalse((path.parent/"output").exists())
+
     def test_automatic_target_goes_through_existing_v222_once(self):
         result=self.run_build()
         source=result["source_compilation"]
