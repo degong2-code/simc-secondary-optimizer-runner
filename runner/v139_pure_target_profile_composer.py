@@ -48,8 +48,11 @@ def validate_season(doc):
          type(doc.get("gems")) is dict and
          type(doc.get("target_ilevel")) is int and
          type(doc.get("season")) is str and
-         type(doc.get("character_level")) is int and
-         1<=doc["character_level"]<=100 and
+         "character_level" in doc and
+         ((type(doc["character_level"]) is int and
+           1<=doc["character_level"]<=100) or
+          (doc["character_level"] is None and
+           doc.get("simc_item_db_source")=="local")) and
          type(doc.get("default_consumables")) is dict and
          set(doc["default_consumables"])=={
             "flask","food","potion","augmentation","omnium_talents",
@@ -183,7 +186,10 @@ def compose(character,trinkets,*,target_ilevel=334,
       *(["item_db_source=local"] if
         season.get("simc_item_db_source")=="local" else []),
       contract["simc_class"]+"=target_"+contract["simc_spec"],
-      "level="+str(season["character_level"]),
+      # P3-BN: normal source-only seasons use SimC's compiled MAX_LEVEL.
+      # Preserve explicit historical season level bytes unchanged.
+      *(["level="+str(season["character_level"])]
+        if season["character_level"] is not None else []),
       "spec="+contract["simc_spec"],
       "race="+character["race"],
       "talents="+character["talents"],

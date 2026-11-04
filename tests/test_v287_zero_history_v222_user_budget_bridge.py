@@ -1477,7 +1477,6 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 # No legacy v144 numeric/default choices are copied.
                 defaults=doc["settings"]["default_consumables"]
                 controls={
-                    "character_level":doc["settings"]["character_level"],
                     "food":defaults["food"],"potion":defaults["potion"],
                     "augmentation":defaults["augmentation"],
                     "omnium_talents":None}
@@ -1509,6 +1508,24 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                               derived["profile_simc"])
                 self.assertNotIn("omnium_talents=",
                                  derived["profile_simc"])
+                self.assertNotIn("\nlevel=", "\n"+derived["profile_simc"])
+                self.assertEqual(derived["scenario"]["consumables"]["food"],
+                                 defaults["food"])
+                # Without a season-specific optional choice, the real
+                # source-only Build is still allowed to compose GJFO.
+                automatic=boot.preview_from_environment_build(
+                    user,root/"optional_off",binary,"c"*40,
+                    environment_result=env)
+                self.assertEqual(automatic["status"],
+                    "SEASON_PROFILE_COMPOSED_NOT_ADMITTED_NO_NATIVE")
+                self.assertIn("\nfood=disabled\n", "\n"+automatic["profile_simc"])
+                self.assertIn("\npotion=disabled\n", "\n"+automatic["profile_simc"])
+                self.assertIn("\naugmentation=disabled\n",
+                              "\n"+automatic["profile_simc"])
+                self.assertNotIn("omnium_talents=",automatic["profile_simc"])
+                self.assertNotIn("\nlevel=", "\n"+automatic["profile_simc"])
+                self.assertEqual(automatic["new_native_calls"],0)
+                self.assertFalse((root/"optional_off").exists())
                 self.assertFalse(derived[
                     "optional_omnium_module_active_in_profile"])
                 self.assertEqual(derived["scenario"]["consumables"][
@@ -1600,7 +1617,7 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         import v098_target_user_scenario_bootstrap as boot
         layout,_=self.physical_layout()
         numeric=self.dynamic_season_profile_inputs()
-        controls={"character_level":90,"food":"food_token",
+        controls={"food":"food_token",
                   "potion":"potion_token","augmentation":"aug_token",
                   "omnium_talents":None}
         joined={"physical_gem_layout_unadmitted":layout,
@@ -1614,6 +1631,19 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertEqual(direct["settings"]["gems"]["head"],"240967")
         self.assertEqual(direct["settings"]["gems"]["feet"],"240908/240908")
         self.assertFalse(direct["game_socket_legality_authenticated_here"])
+        self.assertIsNone(direct["settings"]["character_level"])
+        with self.assertRaisesRegex(
+                boot.UserScenarioBlocked,
+                "SEASON_SETTINGS_ONLY_OPTIONAL_CONSUMABLE_AND_MODULE_FIELDS"):
+            boot._season_settings_from_v216(
+                compilation=joined,numeric_inputs=numeric,
+                controls={**controls,"character_level":90},need=boot.need)
+        with self.assertRaisesRegex(
+                boot.UserScenarioBlocked,
+                "SEASON_SETTINGS_EXACT_OPTIONAL_SIMC_TOKEN_REQUIRED"):
+            boot._season_settings_from_v216(
+                compilation=joined,numeric_inputs=numeric,
+                controls={**controls,"food":"source_default"},need=boot.need)
         changed=copy.deepcopy(layout)
         changed["ordinary_gem_ids"]=[240908]*5
         changed["socket_counts"]["feet"]=1

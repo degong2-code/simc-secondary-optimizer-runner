@@ -1029,27 +1029,36 @@ def build(user,folder,binary,revision,static_cache_path=None,
                if current_season_product else {})}
 
 def _season_settings_from_v216(*, compilation, numeric_inputs,
-                                controls, need):
-    """Compose only observed gems/J/F/flask from the normal Build.
+                                controls=None, need):
+    """Compose observed gem/J/F settings without optional user-input gates.
 
-    The small non-budget controls (level/food/potion/augmentation/optional
-    module) must be sourced by the season input layer. This adapter NEVER
-    copies v144 historical defaults or certifies gem/socket quality.
+    P3-BN: SimC owns compiled default level (no level=). The existing
+    optional food/potion/augmentation settings are disabled when unselected;
+    Omnium is a separate OFF-by-default module, not a budget prerequisite.
+    Exact season-specific options remain unadmitted until normal Policy A.
     """
-    need(type(controls) is dict and set(controls)=={
-        "character_level","food","potion","augmentation","omnium_talents"},
-         "SEASON_SETTINGS_SOURCE_CONTROLS_REQUIRED")
-    need(type(controls["character_level"]) is int and
-         1<=controls["character_level"]<=100 and
-         all(type(controls[k]) is str and bool(controls[k]) and
-             "\n" not in controls[k] and "\r" not in controls[k]
-             for k in ("food","potion","augmentation")) and
-         (controls["omnium_talents"] is None or
-          type(controls["omnium_talents"]) is str and
-          bool(controls["omnium_talents"]) and
-          "\n" not in controls["omnium_talents"] and
-          "\r" not in controls["omnium_talents"]),
-         "SEASON_SETTINGS_EXACT_SIMC_SOURCE_TOKENS_REQUIRED")
+    need(controls is None or
+         (type(controls) is dict and
+          set(controls)<={"food","potion","augmentation","omnium_talents"}),
+         "SEASON_SETTINGS_ONLY_OPTIONAL_CONSUMABLE_AND_MODULE_FIELDS")
+    optional={} if controls is None else controls
+    choices={}
+    for name in ("food","potion","augmentation"):
+        token=optional.get(name,"disabled")
+        need(type(token) is str and 1<=len(token)<=90 and
+             token!="source_default" and token[0].isalpha() and
+             token[0].islower() and
+             all(char in "abcdefghijklmnopqrstuvwxyz0123456789_"
+                 for char in token),
+             "SEASON_SETTINGS_EXACT_OPTIONAL_SIMC_TOKEN_REQUIRED:"+name)
+        choices[name]=token
+    folio=optional.get("omnium_talents")
+    need(folio is None or
+         (type(folio) is str and 1<=len(folio)<=500 and
+          folio!="source_default" and
+          all(char in "0123456789:/"
+              for char in folio)),
+         "SEASON_SETTINGS_OPTIONAL_OMNIUM_TOKEN_INVALID")
     layout=compilation.get("physical_gem_layout_unadmitted")
     gem=compilation.get("physical_gem_J_arithmetic_unadmitted")
     missing=[]
@@ -1109,16 +1118,16 @@ def _season_settings_from_v216(*, compilation, numeric_inputs,
         "schema":"v144_representative_season_items_v1",
         "season":"source_build_"+build.replace(".","_"),
         "target_ilevel":calc["target_ilevel"],
-        "character_level":controls["character_level"],
+        "character_level":None,
         "common_gear":{},"specializations":{},
         "simc_item_db_source":"local",
         "gems":source_gems,
         "default_consumables":{
             "flask":flask["simc_input_token"],
-            "food":controls["food"],
-            "potion":controls["potion"],
-            "augmentation":controls["augmentation"],
-            "omnium_talents":controls["omnium_talents"],
+            "food":choices["food"],
+            "potion":choices["potion"],
+            "augmentation":choices["augmentation"],
+            "omnium_talents":folio,
             "gem_budget_J":calc["J"],
             "flask_budget_F":calc["F"],
             "flask_fixed_stat":chosen[0]}}
@@ -1128,7 +1137,9 @@ def _season_settings_from_v216(*, compilation, numeric_inputs,
             "physical_gem_ids_reused":True,
             "selected_native_flask_reused":True,
             "game_socket_legality_authenticated_here":False,
-            "controls_admitted_or_default_quality_verified_here":False}
+            "controls_admitted_or_default_quality_verified_here":False,
+            "optional_consumables_default_disabled_if_unselected":True,
+            "simc_compiled_default_level_used":True}
 
 
 def preview_from_environment_build(user,folder,binary,revision,*,
@@ -1161,8 +1172,7 @@ def preview_from_environment_build(user,folder,binary,revision,*,
     need(season_settings is None or season_controls is None,
          "SEASON_SETTINGS_AMBIGUOUS_EXPLICIT_AND_DERIVED")
     derived_settings=None
-    if (season_settings is None and season_controls is not None and
-            inputs is not None):
+    if season_settings is None and inputs is not None:
         derived_settings=_season_settings_from_v216(
             compilation=compilation,numeric_inputs=inputs,
             controls=season_controls,need=need)
