@@ -2758,6 +2758,98 @@ def _zero_history_quality_weapon_candidate_join(*, numeric, weapon_source,
     }
 
 
+
+def _zero_history_selected_F_O_v222_reconcile(*, selected, numeric,
+                                             choices, existing_budget,
+                                             budget_evidence):
+    """Check selected exact physical F/O against ORIGINAL v222 arithmetic.
+
+    A successful comparison is numeric/source-only; it never authenticates
+    quality coverage, socket legality, weapon minimum ilvl or product READY.
+    Missing physical Native facts remain PENDING, not zero. Selected no-oil
+    is an explicit empty hand mapping and legitimately has fixed O=0.
+    """
+    out={
+        "status":"SELECTED_PHYSICAL_F_O_SOURCE_PENDING",
+        "selected_physical_items":selected,
+        "missing":[],"matched_f":None,"matched_o_by_hand":{},
+        "v222_numbers_reconciled":False,
+        "source_admission_performed_here":False,
+        "environment_ready":False,"user_selectable":False,
+        "new_native_calls":0,"network_calls":0}
+    need(type(numeric) is dict and type(choices) is dict,
+         "V216_SELECTED_PHYSICAL_NUMERIC_AND_MASK_REQUIRED")
+    found=[x for x in numeric.get("flask",[])
+           if x["physical_item_id"]==selected["flask_item_id"]]
+    need(len(found)<=1,"V216_SELECTED_FLASK_DUPLICATE_OBSERVATION")
+    flask=found[0] if found else None
+    if flask is None or flask["status"]!=(
+            "SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY"):
+        out["missing"].append("SELECTED_FLASK_STATIC_NATIVE_PENDING")
+    else:
+        out["matched_f"]={
+            "physical_item_id":flask["physical_item_id"],
+            "rating":flask["rating_candidate_unadmitted"],
+            "simc_native_receipt_sha256":flask["simc_native_receipt_sha256"]}
+    for hand,item_id in sorted(selected["oil_item_ids_by_hand"].items()):
+        observed=[x for x in numeric.get("oil",[])
+                  if x["physical_item_id"]==item_id and
+                  x["selected_hand"]==hand]
+        matched=[x for x in choices.get(
+            "oil_representative_weapon_matches_unadmitted",[])
+            if x.get("physical_item_id")==item_id and
+            x.get("hand")==hand and
+            x.get("status")==(
+                "SAME_BUILD_REPRESENTATIVE_WEAPON_MASK_MATCH_SOURCE_ONLY")]
+        need(len(observed)<=1 and len(matched)<=1,
+             "V216_SELECTED_OIL_DUPLICATE_PHYSICAL_HAND_OBSERVATION")
+        if (len(observed)!=1 or len(matched)!=1 or
+                observed[0]["status"]!=(
+                    "SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY") or
+                observed[0]["rating_candidate_unadmitted"]!=
+                    matched[0]["static_O_for_hand_unadmitted"]):
+            out["missing"].append("SELECTED_OIL_"+hand.upper()+
+                                  "_STATIC_OR_WEAPON_MASK_PENDING")
+        else:
+            out["matched_o_by_hand"][hand]={
+                "physical_item_id":item_id,
+                "representative_weapon_id":
+                    matched[0]["selected_representative_weapon_id_unadmitted"],
+                "rating":dict(observed[0]["rating_candidate_unadmitted"]),
+                "simc_native_receipt_sha256":
+                    observed[0]["simc_native_receipt_sha256"]}
+    if out["missing"]:
+        return out
+    if existing_budget is None:
+        out["status"]="SELECTED_PHYSICAL_F_O_OBSERVED_V222_PROOF_PENDING"
+        out["missing"].append("V222_EXISTING_BUDGET_EVIDENCE_PENDING")
+        return out
+    need(type(existing_budget) is dict and
+         type(budget_evidence) is dict and
+         type(budget_evidence.get("components")) is dict and
+         type(budget_evidence["components"].get("O")) is dict,
+         "V216_SELECTED_V222_EXISTING_BUDGET_CONTRACT_REQUIRED")
+    summed={key:0 for key in season_budget_contract.STATS}
+    for candidate in out["matched_o_by_hand"].values():
+        for key in summed:
+            summed[key]+=candidate["rating"][key]
+    need(existing_budget["F"]==out["matched_f"]["rating"] and
+         existing_budget["fixed_O"]==summed and
+         sorted(budget_evidence["components"]["O"].get("applied_hands",[]))==
+             sorted(selected["oil_item_ids_by_hand"]),
+         "V216_SELECTED_F_O_V222_PHYSICAL_RATING_OR_HANDS_CONFLICT")
+    out["status"]="SELECTED_PHYSICAL_F_O_V222_ARITHMETIC_RECONCILED_UNADMITTED"
+    out["v222_numbers_reconciled"]=True
+    out["v222_arithmetic_unadmitted"]={
+        "F":existing_budget["F"],
+        "fixed_O":existing_budget["fixed_O"],
+        "base_B":existing_budget["base_B"],
+        "final_T":existing_budget["final_T"],
+        "manual_final_T_authoritative":
+            existing_budget["manual_final_T_authoritative"]}
+    return out
+
+
 def build_environment(*, sessions_root, session_folder, user, binary, revision,
                       static_cache, source_catalog_path, bootstrap_result,
                       v208_start_receipt_path=None, package_manifest_path=None,
@@ -2800,7 +2892,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                  "simc_transport","simc_compiler_transport",
                  "gem_enchant_transport","effect_probe_requests",
                   "same_build_budget_evidence",
-                  "gem_layout_receipt","gem_rating_by_id"},
+                  "gem_layout_receipt","gem_rating_by_id",
+                  "selected_budget_items"},
              "V216_ZERO_HISTORY_SOURCE_INPUT_FIELDS")
         effect_probe_requests=fresh_collection_inputs.get("effect_probe_requests")
         # Same-build evidence is internal. The ORIGINAL catalog preflight
@@ -2811,6 +2904,20 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             "gem_layout_receipt")
         zero_history_gem_ratings=fresh_collection_inputs.get(
             "gem_rating_by_id")
+        selected_budget_items=fresh_collection_inputs.get(
+            "selected_budget_items")
+        need(selected_budget_items is None or
+             (type(selected_budget_items) is dict and
+              set(selected_budget_items)=={
+                  "flask_item_id","oil_item_ids_by_hand"} and
+              type(selected_budget_items["flask_item_id"]) is int and
+              selected_budget_items["flask_item_id"]>0 and
+              type(selected_budget_items["oil_item_ids_by_hand"]) is dict and
+              set(selected_budget_items["oil_item_ids_by_hand"]) <= {
+                  "main_hand","off_hand"} and
+              all(type(item_id) is int and item_id>0 for item_id in
+                  selected_budget_items["oil_item_ids_by_hand"].values())),
+             "V216_SELECTED_PHYSICAL_BUDGET_ITEM_FIELDS_INVALID")
         need(zero_history_budget_evidence is None or
              (type(zero_history_budget_evidence) is dict and
               type(fresh_collection_inputs["representative_request"]) is dict
@@ -2861,7 +2968,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             k:v for k,v in fresh_collection_inputs.items()
             if k not in ("effect_probe_requests",
                          "same_build_budget_evidence",
-                         "gem_layout_receipt","gem_rating_by_id")}
+                         "gem_layout_receipt","gem_rating_by_id",
+                         "selected_budget_items")}
         collected=collect_wago_new_season_source(
             sessions_root=sessions_root,**source_inputs)
         progress=_zero_history_source_progress(collected)
@@ -3026,6 +3134,15 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 simc_revision=source_compilation["simc_revision"])
             progress["observed_quality_weapon_choices_unadmitted"]=quality_weapon
             source_compilation["observed_quality_weapon_choices_unadmitted"]=quality_weapon
+            if selected_budget_items is not None:
+                selected_check=_zero_history_selected_F_O_v222_reconcile(
+                    selected=selected_budget_items,numeric=native_F_O,
+                    choices=quality_weapon,
+                    existing_budget=source_compilation.get(
+                        "preprofile_budget_arithmetic_unadmitted"),
+                    budget_evidence=zero_history_budget_evidence)
+                progress["selected_physical_F_O_budget_link_unadmitted"]=selected_check
+                source_compilation["selected_physical_F_O_budget_link_unadmitted"]=selected_check
         progress["source_compilation_status"]=source_compilation["status"]
         progress["source_compilation_missing"]=source_compilation["missing"]
         if source_compilation["missing"]:

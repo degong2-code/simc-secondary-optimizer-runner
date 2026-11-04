@@ -1,0 +1,10 @@
+# 2026-11-04 · P3-CZ · 선택 물리 F/O와 v222 예산 소유권 숫자 정합 연결
+
+- **Capability:** `F.FLASK`, `O.OIL`, `BUDGET.GJFO`, `PRODUCT.E2E`
+- **Keywords:** P3-CZ, selected item id, v281, v278, v286, v216, v222, physical flask oil, fixed O, manual T, source-only
+- **Prior evidence:** [PROTOCOL](../PROTOCOL.md)→[INDEX](../INDEX.md)→[P3-CY](2026-11-04_p3-cy-flask-observed-quality-oil-mask.md) v281/v278 실물 F/O와 v286 대표무기 마스크의 원래 연결, [P3-CU](2026-11-04_p3-cu-zero-history-budget-user-target.md) 기존 v222 B/T·수동 T; P3-CR 실 Wago #41732744145, P3-CO/CP 실 Native6는 실제 범위의 역사 증거만 재사용.
+- **Decision:** `CONNECT` — 기존 v222 산술이 이미 실행된 Build의 동일 Build F/O 값을 선택 ItemID·손·실제 무기 마스크·Native 수치에 직접 대조한다. 새 예산 엔진·원본 재수집·Native/효과 연구나 추가 인증 Gate 없음.
+- **Changes:** 정상 zero-history 내부 `selected_budget_items`(영약 ItemID, 손별 기름 ItemID) 검증, collector 전송 제외. v278의 물리 영약 정적 F, v286 실 무기 마스크와 v278의 손별 정적 O를 선택 ID로 대조한 뒤 기존 `v222` 계산 F/고정 O·applied_hands와 충돌 시 차단. 명시적 oil 미선택만 O0 인정하고 없는 Native/마스크는 PENDING. 수동 최종 T·예산 산술은 기존 v222 결과 그대로 보존하고 UI/READY 미승격.
+- **Verification:** 변경 후 offline focused/Actions **NOT_VERIFIED**, 신규 합성 selected-match/missing/wrong hands·numeric conflict 테스트 추가 예정. 기존 P3-CY focused194 PASS와 Wago/Native 영수증은 REUSED_HISTORY. 신규 실제 게임 HTTP0·Native0.
+- **Remaining:** 새 시즌 G/J/F/O 전부 원본 인증과 선택지 최고품질/무기 실제 min-ilvl·소켓 합법성, 정책 A 등록 및 v098→v094 26 DPS E2E 미완료. 내부 `same_build_budget_evidence`는 별도 Wago/SimC 인증이 아니다. 새 게임 사실 조사·실측은 사용자 논의 전 보류.
+- **Efficiency:** 기존 단일 v222 예산·v281/v278/v286 소형 source-only 결과만 1회 대조, 추가 Native/HTTP, 새 계산기/대형DB/캐시 무효화 없음. main/immutable v003/원본 v016/Project UI/Work OS 변경 없음.
