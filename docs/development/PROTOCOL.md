@@ -28,3 +28,10 @@
 **최신 P3-DN:** [v212 #41790639319](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41790639319) Ubuntu/Windows 각각 444 tests(440 PASS/4 SKIP)/0 FAIL, [focused #41790639275](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41790639275) 226 PASS/DEV_LEDGER_PASS. 기존 봉인 source_relation 1 family만 연결; `simc_input/product_input/chmv_budget`와 실제 선택지 발행·새 시즌 READY·26 DPS Native E2E는 미완료. 인계 작성/등록은 제품 통합·Native PASS가 아니다.
 
 **새 채팅 첫 응답은 HEAD·핵심 증거·완료/미완료·병목·효율·로드맵·권한 복원 보고 후 STOP. '진행' 이전 개발/코드·문서 수정/커밋/수집/CI·Actions·Native/테스트·공식 승격 금지.** GitHub 문서는 Project UI/Work OS 등록이나 main 병합 증거가 아니다.
+
+## 새 채팅 인계 복원 동작 · P3-DW 최신 (2026-11-05)
+
+- 새 채팅의 **단일 정본**: [P3-DW](../CHAT_CONTINUITY_HANDOFF_20261105_P3_DW_ENGINE_FIRST.md). 위 P3-DO는 역사 기록. 최신 격리/main HEAD를 각각 독립 조회한 뒤 PROTOCOL→INDEX→P3-DN/DM·P3-DS/DT/DU/DV→CURRENT→개발자 실행 노트→승인 v1.4.3→실제 코드/Actions·Native 증거 순서로 읽는다.
+- **지금의 완료 Gate:** 하나의 웹앱 `v216` Environment Build가 G/J/F/O·B/T·정책 A 검증 선택지·시즌 설치/READY를 만든다. 이미 개발된 사용자별 v098/v096/v094 DPS 최적화 실행은 **후속 메인 기능**이므로 환경 READY 선행 Gate가 아니다. 최종 제품 목표는 26 DPS 공통 하나의 엔진.
+- P3-DV 코드/오프라인 PASS는 자동 F 후보 측정 연결까지의 증거이지 최고품질·예산 승인 또는 전체 T1 READY가 아니다. 새 채팅 첫 답변은 **읽기 전용 복원 보고만** 하고 **'진행' 전 일체 수정·CI/Native/게임 HTTP/테스트·승격 금지**.
+
