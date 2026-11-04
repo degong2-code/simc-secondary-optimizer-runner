@@ -2994,6 +2994,48 @@ def _zero_history_auto_v222_numeric_preview(*, preflight, native_numeric,
     return out
 
 
+
+def _zero_history_v098_profile_source_inputs(*, numeric_preview,
+                                             physical_sources):
+    """Direct v216 observed ItemID/token/O -> existing v098 source-only path.
+
+    This is JSON plumbing of the already selected v281/v278/v286 receipts,
+    not independently authenticated options or a runnable product manifest.
+    """
+    need(type(numeric_preview) is dict and
+         type(physical_sources) is dict,
+         "V216_V098_SELECTED_PROFILE_INPUT_OBJECTS_REQUIRED")
+    if numeric_preview.get("status")!=(
+            "SELECTED_GJFO_V222_ARITHMETIC_PREVIEW_UNADMITTED"):
+        return None
+    selected=numeric_preview["selected_physical_items"]
+    flasks=[x for x in physical_sources.get("flask",[])
+            if x.get("physical_item_id")==selected["flask_item_id"]]
+    need(len(flasks)==1 and flasks[0].get("status")==(
+             "SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY"),
+         "V216_V098_SELECTED_FLASK_SOURCE_DRIFT")
+    flask=flasks[0]
+    by_hand={}
+    for hand,item_id in selected["oil_item_ids_by_hand"].items():
+        options=[row for row in physical_sources.get("oil",[])
+                 if row.get("physical_item_id")==item_id and
+                 row.get("selected_hand")==hand]
+        need(len(options)==1 and options[0].get("status")==(
+                 "SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY"),
+             "V216_V098_SELECTED_OIL_SOURCE_DRIFT")
+        row=options[0]
+        by_hand[hand]={
+            "physical_item_id":item_id,
+            "simc_input_token":row["simc_input_token"],
+            "static_CHMV_vector":dict(row["static_CHMV_vector_unadmitted"])}
+    return {
+        "schema":"v098_internal_season_profile_inputs_v1",
+        "v216_numeric_preview":numeric_preview,
+        "flask":{"physical_item_id":flask["physical_item_id"],
+                 "simc_input_token":flask["simc_input_token"]},
+        "oil_by_hand":by_hand}
+
+
 def build_environment(*, sessions_root, session_folder, user, binary, revision,
                       static_cache, source_catalog_path, bootstrap_result,
                       v208_start_receipt_path=None, package_manifest_path=None,
@@ -3304,6 +3346,15 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 manual_final_T=manual_T)
             progress["selected_auto_v222_numeric_preview_unadmitted"]=selected_numeric
             source_compilation["selected_auto_v222_numeric_preview_unadmitted"]=selected_numeric
+            if selected_numeric["calculation"] is not None:
+                profile_inputs=_zero_history_v098_profile_source_inputs(
+                    numeric_preview=selected_numeric,
+                    physical_sources=native_F_O)
+                # A source-only v098 profile can now reuse the same exact
+                # ItemID/SimC receipt without manually assembling payloads.
+                # Never invoke v098 build/session from this unadmitted stage.
+                source_compilation[
+                    "v098_source_only_profile_inputs_unadmitted"]=profile_inputs
         if (selected_budget_items is not None and
                 "selected_physical_F_O_budget_link_unadmitted" not in progress):
             waiting={
