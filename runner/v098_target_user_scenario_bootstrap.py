@@ -237,11 +237,118 @@ def initial_seeds(B,lower,upper):
          "TWO_DISTINCT_ELIGIBLE_SEEDS_UNAVAILABLE")
     return [dict(zip(scenario.STATS,v)) for v in (first,second)]
 
+
+def season_profile_source_only(*, profile, cfg, weapon_layout, user,
+                               season_profile_inputs, season_build,
+                               simc_revision):
+    """Season-neutral v098 profile composition from v216 numeric preview.
+
+    This route reuses v108 J/F and v091 O serializers. It is purposely
+    not executable: v216 source-only ratings and the pinned gear supplier
+    cannot be promoted into the old v096/v094 runtime or Policy A.
+    """
+    need(type(season_profile_inputs) is dict and
+         set(season_profile_inputs)=={
+             "schema","v216_numeric_preview","flask","oil_by_hand"}
+         and season_profile_inputs["schema"]==
+             "v098_internal_season_profile_inputs_v1",
+         "SEASON_PROFILE_INPUT_SCHEMA_REQUIRED")
+    v216=season_profile_inputs["v216_numeric_preview"]
+    need(type(v216) is dict and v216.get("schema")==(
+             "v216_zero_history_selected_v222_numeric_preview_v1")
+         and v216.get("status")==(
+             "SELECTED_GJFO_V222_ARITHMETIC_PREVIEW_UNADMITTED")
+         and v216.get("numeric_preview_only") is True
+         and v216.get("source_authenticated") is False
+         and v216.get("environment_ready") is False
+         and type(v216.get("calculation")) is dict,
+         "SEASON_PROFILE_REQUIRES_UNADMITTED_V216_PREVIEW")
+    budget=v216["calculation"]
+    selected=v216.get("selected_physical_items")
+    need(type(selected) is dict and type(user) is dict
+         and type(season_build) is str
+         and budget.get("game_build")==season_build
+         and budget.get("simc_revision")==simc_revision
+         and budget.get("target_ilevel")==user["target"]["ilevel"]
+         and budget.get("numeric_preview_only") is True
+         and budget.get("source_authentication_performed_here") is False
+         and type(budget.get("J")) is int
+         and type(budget.get("F")) is int,
+         "SEASON_PROFILE_GEAR_BUILD_OR_BUDGET_DRIFT")
+    flask=season_profile_inputs["flask"]
+    need(type(flask) is dict and
+         set(flask)=={"physical_item_id","simc_input_token"}
+         and flask.get("physical_item_id")==selected.get("flask_item_id"),
+         "SEASON_PROFILE_FLASK_ITEM_ID_DRIFT")
+    by_hand=season_profile_inputs["oil_by_hand"]
+    need(type(by_hand) is dict
+         and type(selected.get("oil_item_ids_by_hand")) is dict
+         and set(by_hand)==set(selected["oil_item_ids_by_hand"])
+         and sorted(by_hand)==sorted(user["oil_hands"])
+         and all(type(row) is dict and
+                 row.get("physical_item_id")==
+                     selected["oil_item_ids_by_hand"][hand]
+                 for hand,row in by_hand.items()),
+         "SEASON_PROFILE_OIL_PHYSICAL_ITEMS_OR_HANDS_DRIFT")
+    if user["target"]["final_T"] is not None:
+        need(budget.get("final_T")==user["target"]["final_T"]
+             and budget.get("manual_final_T_authoritative") is True,
+             "SEASON_PROFILE_MANUAL_FINAL_T_DRIFT")
+    else:
+        need(budget.get("manual_final_T_authoritative") is False,
+             "SEASON_PROFILE_AUTO_TARGET_DRIFT")
+    fixed_o=budget.get("fixed_O")
+    need(type(fixed_o) is dict and
+         type(budget.get("base_B")) is int
+         and type(budget.get("final_T")) is int
+         and budget["base_B"]+sum(fixed_o.values())==
+             budget["final_T"],
+         "SEASON_PROFILE_B_PLUS_O_DRIFT")
+    consumed=consumer.season_static_consumables_source_only(
+        profile,cfg,gem_budget_J=budget["J"],
+        flask_budget_F=budget["F"],
+        flask_item_id=flask["physical_item_id"],
+        flask_simc_token=flask["simc_input_token"])
+    configured=oil_mod.configure(
+        consumed["profile"],consumed["scenario"],
+        weapon_layout,user["oil_hands"],
+        season_oil_by_hand={
+            hand:{"physical_item_id":row["physical_item_id"],
+                  "simc_input_token":row["simc_input_token"],
+                  "static_CHMV_vector":row["static_CHMV_vector"]}
+            for hand,row in by_hand.items()})
+    need(configured["declared_O"]==fixed_o
+         and configured["scenario"]["consumables"]["gem_budget_J"]==
+             budget["J"]
+         and configured["scenario"]["consumables"]["flask_budget_F"]==
+             budget["F"]
+         and configured["applied_hands"]==[
+             hand for hand in ("main_hand","off_hand") if hand in by_hand],
+         "SEASON_PROFILE_FIXED_J_F_O_OR_SERIALIZATION_DRIFT")
+    return {
+        "schema":"v098_source_only_season_profile_plan_v1",
+        "status":"SEASON_PROFILE_COMPOSED_NOT_ADMITTED_NO_NATIVE",
+        "profile_simc":configured["profile"],
+        "scenario":configured["scenario"],
+        "source_profile_sha256":configured["profile_sha256"],
+        "budget_preview_unadmitted":budget,
+        "same_season_build":season_build,
+        "official_B_T_formula":"B=G+J+F;T=B+O",
+        "user_does_not_choose_all_gear":True,
+        "source_data_never_promoted_to_runtime":True,
+        "source_authentication_performed_here":False,
+        "policy_A_options_registered":False,
+        "environment_ready":False,"user_session_created":False,
+        "adaptive_v094_started":False,
+        "new_native_calls":0,"network_calls":0}
+
+
 def build(user,folder,binary,revision,static_cache_path=None,
           imported_profile_text=None,*,ordinary_variant=None,pure_stage=False,
           independent_334=False,independent_target_level=False,
           source_first_stage=False,current_season_product=False,
-          static_special_probe_only=False,source_catalog_path=None):
+          static_special_probe_only=False,source_catalog_path=None,
+          season_profile_inputs=None):
     """Return an already validated internal manifest and v096 plan; no Native."""
     base_accepted=(FIELDS,FIELDS|{IMPORT_FIELD},FIELDS|{CONSUME_FIELD},
                    FIELDS|{IMPORT_FIELD,CONSUME_FIELD})
@@ -272,6 +379,15 @@ def build(user,folder,binary,revision,static_cache_path=None,
     # production route at ilvl 334 only. Historic v147/v145 probes remain
     # unpromoted and their unchanged pure_stage semantics are preserved.
     need(type(source_first_stage) is bool,"SOURCE_FIRST_STAGE_BOOL_REQUIRED")
+    need(season_profile_inputs is None or
+         (type(season_profile_inputs) is dict and current_season_product
+          and not source_first_stage and not pure_stage
+          and not static_special_probe_only
+          and not user["special_items"] and not user["embellishments"]
+          and ENCHANT_FIELD not in user
+          and SEASON_ENCHANT_FIELD not in user
+          and CONSUME_FIELD not in user),
+         "SEASON_PROFILE_INTERNAL_SOURCE_ONLY_MODE_REQUIRED")
     need(type(current_season_product) is bool,"CURRENT_SEASON_PRODUCT_BOOL_REQUIRED")
     # Separate opt-in product session: NO physical-proof-only stage seal.
     # v176 physically accepted all 26 source-first archetypes. Different
@@ -432,6 +548,14 @@ def build(user,folder,binary,revision,static_cache_path=None,
     cfg["source"]={"kind":"user_supplied",
                    "profile_sha256":hashlib.sha256(profile.encode("utf8")).hexdigest()}
     scenario.normalize(cfg)
+    if season_profile_inputs is not None:
+        # Return before legacy reference selection, disk writes and Native.
+        # This branch does not claim a ready current/new-season product.
+        return season_profile_source_only(
+            profile=profile,cfg=cfg,weapon_layout=weapon_layout,user=user,
+            season_profile_inputs=season_profile_inputs,
+            season_build=_profile_supplier_registry()["season_build"],
+            simc_revision=revision)
     if static_special_probe_only:
         # v208 internal on-demand static-L source, never a product plan.
         # Reuses exactly the real user/gear/consumables profile composition
