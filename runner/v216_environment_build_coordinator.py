@@ -843,7 +843,7 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
         # dependencies. Optional enchants/consumables lacking Policy A
         # proof must be held per item, not block an otherwise verified base.
         "requires":["G/J/F/O_VERIFIED_SOURCE_RECEIPTS",
-                    "NEW_SEASON_TARGET_PROFILE_AND_V212_MANIFEST"],
+                    "NEW_SEASON_VERSIONED_ENVIRONMENT_MANIFEST_INSTALL"],
         "optional_choice_requires":[
                     "POLICY_A_EXACT_ITEM_PROOFS_WHEN_SELECTED"],
         "optional_policy_A_evidence_unadmitted":{
@@ -2599,9 +2599,8 @@ def _zero_history_source_progress(source):
             pending.append(reason)
     pending.extend((
         "WEAPON_OIL_O_EXACT_APPLICATION_AND_RATING_PENDING",
-        "SAME_SEASON_GJFO_B_T_AND_POLICY_A_PENDING",
+        "SAME_SEASON_GJFO_B_T_AND_VERSIONED_INSTALL_PENDING",
         "SAME_BUILD_V191_V211_V213_V212_INSTALL_PENDING",
-        "USER_TARGET_PROFILE_ADAPTIVE_SIMC_E2E_PENDING",
     ))
     return {
         "schema":"v216_zero_history_normal_build_progress_v1",

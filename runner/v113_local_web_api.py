@@ -49,6 +49,17 @@ class UpdateLocalArchiveRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     archive_path: str = Field(min_length=8,max_length=4096)
 
+class SeasonEnvironmentBuildRequest(BaseModel):
+    """Season-wide Build, independent of DPS scenario/trinket/target optimization."""
+    model_config = ConfigDict(extra="forbid")
+    game_build: str = Field(pattern=r"^\d+(?:\.\d+){3}$",min_length=7,max_length=32)
+    target_ilevel: int = Field(default=334,ge=1,le=1000)
+    # Explicit opt-in to the EXISTING single v277/v236 Native G probe.
+    native_G_binary: str | None = Field(default=None,min_length=1,max_length=4096)
+    simc_revision_hint: str | None = Field(
+        default=None,pattern=r"^(?:[a-f0-9]{7,12}|[a-f0-9]{40})$")
+
+
 class UserRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     controls: dict
@@ -102,6 +113,43 @@ class LocalJobs:
             return requested
         candidate=exact_L.source_cache(self.root,None)
         return str(candidate) if candidate is not None else None
+
+    def build_season_environment(self, game_build, target_ilevel=334,
+                                 native_G_binary=None, simc_revision_hint=None):
+        """Run original v216 with season inputs, never a user DPS scenario.
+
+        One deterministic one-spec reference G probe is NOT season-level
+        validation, Fury-TG proof or a user character/profile input.
+        """
+        binary=None
+        if native_G_binary is not None:
+            supplied=pathlib.Path(native_G_binary).expanduser()
+            if supplied.is_symlink() or not supplied.is_file():
+                raise environment_manifest.EnvironmentBlocked(
+                    "SEASON_NATIVE_G_BINARY_INVALID")
+            binary=supplied.resolve()
+        with self.season_source_lock:
+            observed=environment_build.build_environment(
+                sessions_root=self.root,session_folder=None,user=None,
+                binary=binary,revision=None,static_cache=None,
+                source_catalog_path=None,bootstrap_result=None,
+                fresh_collection_inputs={
+                    "expected_game_build":game_build,
+                    "representative_request":{
+                        "class":"paladin","spec":"retribution",
+                        "target_ilevel":target_ilevel},
+                    "g_probe_character":{"race":"dwarf"},
+                    "simc_revision_hint":simc_revision_hint})
+        return {**observed,"web_environment_scope":{
+            "schema":"v113_web_season_environment_build_scope_v1",
+            "game_build":game_build,"target_ilevel":target_ilevel,
+            "internal_numeric_probe":"paladin/retribution",
+            "numeric_probe_not_whole_season_G_certification":True,
+            "local_native_G_requested":binary is not None,
+            "dps_optimization_started":False,
+            "user_character_or_trinkets_required":False,
+            "environment_installed":observed.get("environment_installed") is True,
+            "environment_ready":observed.get("environment_ready") is True}}
 
     def collect_fresh_source(self, build, controls, revision_hint=None):
         # Reuse the product's existing user validator; never ask users for
@@ -906,8 +954,21 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
         return {"archetypes":archetypes,
                 "unavailable_missing_legacy_fixtures":[]}
 
+    @app.post("/api/v1/environment/season-build")
+    def season_environment_build(request: SeasonEnvironmentBuildRequest):
+        """Web-app Environment Build only: no DPS inputs or optimizer."""
+        try:
+            return jobs.build_season_environment(
+                request.game_build,request.target_ilevel,
+                native_G_binary=request.native_G_binary,
+                simc_revision_hint=request.simc_revision_hint)
+        except Exception as exc:
+            raise blocked(exc) from None
+
     @app.post("/api/v1/environment/build")
     def build_environment(request: UserRequest):
+        # Backward compatible installed-season plan. The separate seasonal
+        # Environment Build UI uses /environment/season-build.
         # New season source collection is not an installed current-season plan.
         if request.fresh_season_build is not None:
             try:

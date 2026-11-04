@@ -43,6 +43,73 @@ class LocalWebAPIOffline(unittest.TestCase):
         return r.json()
 
 
+    def test_web_season_environment_build_no_dps_inputs_and_no_native(self):
+        payload={"game_build":"12.2.0.99999","target_ilevel":334}
+        source={"status":"FRESH_WAGO_DB2_COLLECTED_MORE_SOURCES_PENDING",
+                "environment_ready":False,"environment_installed":False,
+                "native_calls":0,"source_stage":{"status":"REUSED_VERIFIED"},
+                "source_compilation":{"status":"SOURCE_COMPILER_PENDING"},
+                "zero_history_build":{"requires":["GJFO_PENDING"],
+                                      "environment_ready":False}}
+        with mock.patch.object(web.environment_build,"build_environment",
+                               return_value=source) as stage, \
+             mock.patch.object(self.app.state.jobs,"plan",
+                               side_effect=AssertionError("DPS_PLAN_FORBIDDEN")):
+            response=self.post("/api/v1/environment/season-build",payload)
+        self.assertEqual(response.status_code,200,response.text)
+        result=response.json()
+        self.assertEqual(result["status"],source["status"])
+        self.assertFalse(result["web_environment_scope"]["environment_ready"])
+        self.assertFalse(result["web_environment_scope"]["environment_installed"])
+        self.assertFalse(result["web_environment_scope"]["dps_optimization_started"])
+        self.assertFalse(result["web_environment_scope"]["user_character_or_trinkets_required"])
+        self.assertFalse(result["web_environment_scope"]["local_native_G_requested"])
+        kwargs=stage.call_args.kwargs
+        self.assertIsNone(kwargs["user"])
+        self.assertIsNone(kwargs["binary"])
+        self.assertIsNone(kwargs["session_folder"])
+        self.assertIsNone(kwargs["bootstrap_result"])
+        self.assertEqual(kwargs["fresh_collection_inputs"],{
+            "expected_game_build":"12.2.0.99999",
+            "representative_request":{"class":"paladin","spec":"retribution",
+                                      "target_ilevel":334},
+            "g_probe_character":{"race":"dwarf"},"simc_revision_hint":None})
+        self.assertFalse((self.root/"runs").exists())
+
+    def test_web_season_environment_build_native_only_explicit_and_validated(self):
+        payload={"game_build":"12.2.0.99999","target_ilevel":341,
+                 "native_G_binary":str(self.binary),
+                 "simc_revision_hint":"7bc1071"}
+        with mock.patch.object(web.environment_build,"build_environment",
+                               return_value={"status":"SOURCE_ONLY_PENDING",
+                                             "environment_ready":False,
+                                             "environment_installed":False}) as stage:
+            response=self.post("/api/v1/environment/season-build",payload)
+        self.assertEqual(response.status_code,200,response.text)
+        self.assertEqual(stage.call_args.kwargs["binary"],self.binary.resolve())
+        self.assertEqual(stage.call_args.kwargs["fresh_collection_inputs"]
+                         ["representative_request"]["target_ilevel"],341)
+        self.assertTrue(response.json()["web_environment_scope"]["local_native_G_requested"])
+        with mock.patch.object(web.environment_build,"build_environment",
+                               side_effect=AssertionError("MUST_BLOCK_BEFORE_SOURCE")) as stage:
+            invalid=self.post("/api/v1/environment/season-build",
+                              {**payload,"native_G_binary":str(self.root/"missing.exe")})
+        self.assertEqual(invalid.status_code,422,invalid.text)
+        self.assertEqual(invalid.json()["detail"]["code"],
+                         "SEASON_NATIVE_G_BINARY_INVALID")
+        stage.assert_not_called()
+        self.assertEqual(self.post("/api/v1/environment/season-build",
+                                   {"game_build":"12.2.0.99999",
+                                    "controls":{"class":"paladin"}}).status_code,422)
+        self.assertEqual(self.post("/api/v1/environment/season-build",
+                                   {"game_build":"../../bad"}).status_code,422)
+        self.assertEqual(self.post("/api/v1/environment/season-build",
+                                   {"game_build":"12.2.0.99999",
+                                    "target_ilevel":1001}).status_code,422)
+        self.assertEqual(self.client.post("/api/v1/environment/season-build",
+                         json={"game_build":"12.2.0.99999"},
+                         headers={"content-type":"application/json"}).status_code,403)
+
     def test_environment_build_fresh_source_routes_before_old_plan(self):
         payload={**self.payload,"current_season_product":False,
                  "fresh_season_build":"12.2.0.99999"}
