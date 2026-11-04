@@ -107,6 +107,26 @@ def decide(candidate, receipts=None):
     }
 
 
+def candidate_from_source_enchant(source_catalog, row):
+    """Shared v196/v216 source candidate shape; never evidence by itself."""
+    if type(source_catalog) is not dict or type(row) is not dict:
+        raise ValueError("AUTO_ADMISSION_SOURCE_CANDIDATE_INVALID")
+    slot=row.get("source_slots")
+    if (type(slot) is not list or
+        not all(type(value) is str and bool(value) for value in slot)):
+        raise ValueError("AUTO_ADMISSION_SLOT_SCOPE_INVALID")
+    resolved=(len(slot)==1 and "/" not in slot[0] and
+              not slot[0].startswith("WEAPON_SUBCLASS_"))
+    return {"kind":"permanent_enchant","exact_id":row["enchant_id"],
+            "simc_token":row["token"],
+            "slot":slot[0] if resolved else "SOURCE_SLOT_UNRESOLVED",
+            "slot_status":"SOURCE_MASK_RESOLVED" if resolved else
+                          "PENDING_EXACT_SLOT_OR_HAND",
+            "game_build":source_catalog["game_build"],
+            "simc_revision":source_catalog["simc_revision"],
+            "catalog_sha256":source_catalog["manifest_sha256"]}
+
+
 def preview_enchant_catalog(source_catalog, items, *,
                             trusted_internal_receipts_by_id=None):
     """Reuse decide() per exact item, without publishing a user choice.
@@ -138,26 +158,8 @@ def preview_enchant_catalog(source_catalog, items, *,
         if type(item_id) is not int or item_id in seen:
             raise ValueError("AUTO_ADMISSION_DUPLICATE_ID")
         seen.add(item_id)
-        slot=row.get("source_slots")
-        if (type(slot) is not list or
-            not all(type(value) is str and bool(value) for value in slot)):
-            raise ValueError("AUTO_ADMISSION_SLOT_SCOPE_INVALID")
-        # Multi-slot candidates and grouped ring/weapon masks must be
-        # held per item, not crash the entire fresh environment. This is
-        # SOURCE-ONLY diagnostic preview, never a verified slot identity.
-        resolved=(len(slot)==1 and
-                  "/" not in slot[0] and
-                  not slot[0].startswith("WEAPON_SUBCLASS_"))
-        candidate={
-            "kind":"permanent_enchant","exact_id":item_id,
-            "simc_token":row["token"],
-            "slot":(slot[0] if resolved else "SOURCE_SLOT_UNRESOLVED"),
-            "slot_status":("SOURCE_MASK_RESOLVED" if resolved
-                            else "PENDING_EXACT_SLOT_OR_HAND"),
-            "game_build":source_catalog["game_build"],
-            "simc_revision":source_catalog["simc_revision"],
-            "catalog_sha256":source_catalog["manifest_sha256"],
-        }
+        # Existing per-item slot/hand PENDING still prevents publication.
+        candidate=candidate_from_source_enchant(source_catalog,row)
         trusted=(None if trusted_internal_receipts_by_id is None else
                  trusted_internal_receipts_by_id.get(item_id))
         decisions.append(decide(candidate,trusted))

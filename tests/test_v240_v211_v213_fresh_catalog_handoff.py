@@ -473,6 +473,68 @@ class SameFreshCatalogChain(unittest.TestCase):
             self.assertIsNone(season["consumables"]["flask"]["reference"])
             self.assertFalse(first["environment_installed"])
             self.assertFalse(first["upstream_fetch_authenticated_by_adapter"])
+            # P3-DN: ORIGINAL v217-sealed v191/v211/v213 receipts already
+            # authenticate the exact source join, not quality/game slots.
+            # Reuse that evidence as ONE Policy A family; no new Native.
+            from runner import v216_environment_build_coordinator as build
+            args={"source_catalog_path":first["source_catalog_path"],
+                  "expected_game_build":BUILD,
+                  "expected_simc_revision":REV}
+            no_stage=build.preflight_new_season_source(**args)
+            old=no_stage["optional_policy_A_evidence_unadmitted"]
+            self.assertEqual(old["v217_source_relation_receipt_count"],0)
+            self.assertEqual(old["pending"],2)
+            self.assertTrue(all(
+                "EVIDENCE_MISSING:source_relation" in missing
+                for missing in old["per_item_missing_reasons"].values()))
+            attest={"stage_root":str(stage_root),
+                    "v191_stage":first["v191_stage"],
+                    "v211_stage":first["v211_stage"],
+                    "v213_stage":first["v213_stage"]}
+            linked=build.preflight_new_season_source(
+                **args,policy_A_v217_stages=attest)
+            optional=linked["optional_policy_A_evidence_unadmitted"]
+            self.assertEqual(optional["v217_source_relation_receipt_count"],2)
+            self.assertEqual(optional["pending"],2)
+            self.assertFalse(optional["verified_options_published"])
+            self.assertFalse(optional["affects_verified_base_GJFO"])
+            self.assertEqual(set(optional["per_item_missing_reasons"]),
+                             {"91001","91002"})
+            for missing in optional["per_item_missing_reasons"].values():
+                self.assertNotIn("EVIDENCE_MISSING:source_relation",missing)
+                self.assertTrue({"EVIDENCE_MISSING:simc_input",
+                                 "EVIDENCE_MISSING:product_input",
+                                 "EVIDENCE_MISSING:chmv_budget"} <= set(missing))
+            self.assertIn(
+                "EXACT_PHYSICAL_SLOT_OR_HAND_RELATION_NOT_VERIFIED",
+                optional["per_item_missing_reasons"]["91001"])
+            self.assertFalse(linked["environment_ready"])
+            self.assertEqual(linked["approved_new_choices"],0)
+            self.assertEqual(linked["native_calls"],0)
+            self.assertEqual(linked["network_calls"],0)
+            reused=build.preflight_new_season_source(
+                **args,policy_A_v217_stages={
+                    **attest,"v191_stage":again["v191_stage"],
+                    "v211_stage":again["v211_stage"],
+                    "v213_stage":again["v213_stage"]})
+            self.assertEqual(
+                reused["optional_policy_A_evidence_unadmitted"],
+                optional)
+            bad=copy.deepcopy(attest)
+            bad["v213_stage"]={**bad["v213_stage"],
+                               "receipt_sha256":"0"*64}
+            with self.assertRaisesRegex(
+                    build.EnvironmentBuildBlocked,
+                    "V216_POLICY_A_V217_SOURCE_OUTPUT_SHA_DRIFT:v213"):
+                build.preflight_new_season_source(
+                    **args,policy_A_v217_stages=bad)
+            missing=build.preflight_new_season_source(
+                **args,policy_A_v217_stages={
+                    **attest,"v191_stage":None})
+            self.assertEqual(missing[
+                "optional_policy_A_evidence_unadmitted"][
+                "v217_source_relation_receipt_count"],0)
+            self.assertFalse((root/"generated"/"manifest.json").exists())
 
     def test_reject_mismatched_source_and_false_old_enchant_approval(self):
         with tempfile.TemporaryDirectory() as d:

@@ -51,6 +51,7 @@ import v232_simc_only_ordinary_representative as simc_representative
 import v233_source_only_G_probe_profile as g_probe_profile
 import v217_stage_execution_engine as stage_engine
 import v196_current_season_user_catalog as user_catalog
+import v220_catalog_auto_admission as auto_admission
 import v241_fresh_source_stage_adapter as fresh_stage
 
 SCHEMA = "v216_incremental_environment_build_receipt_v1"
@@ -517,6 +518,97 @@ def _reuse_v277_G_in_preprofile(*, catalog, target_ilevel, native_G,
     }
 
 
+def _v217_policy_A_source_relation_receipts(*, catalog, artifact_sha256,
+                                           catalog_path, stage_attestations,
+                                           public_rows):
+    """Consume ORIGINAL sealed v241/v217 source joins; no new trust gate.
+
+    This attests only exact source ItemID/token/slot-mask provenance within
+    already-sealed v191→v211→v213. It does NOT authenticate game usability,
+    same-effect quality, Native acceptance or CHMV fixed E. The remaining
+    Policy A receipt families and unresolved physical slots stay pending.
+    """
+    if stage_attestations is None:
+        return {}
+    need(type(stage_attestations) is dict and
+         set(stage_attestations)=={
+             "stage_root","v191_stage","v211_stage","v213_stage"},
+         "V216_POLICY_A_ORIGINAL_STAGE_ATTESTATIONS_INVALID")
+    if any(stage_attestations[k] is None
+           for k in ("v191_stage","v211_stage","v213_stage")):
+        return {}
+    stage_root=pathlib.Path(stage_attestations["stage_root"]).expanduser()
+    need(stage_root.is_dir() and not stage_root.is_symlink() and
+         pathlib.Path(catalog_path).resolve()==
+             (stage_root.resolve()/"fresh_source"/
+              "v213_candidate_catalog.json"),
+         "V216_POLICY_A_V213_ORIGINAL_STAGE_PATH_DRIFT")
+    source_provenance=catalog["source_provenance"]
+    expected={
+        "v191":("fresh_source/v191_candidate.json",
+                source_provenance["v191"]["sha256"]),
+        "v211":("fresh_source/v211_classification.json",
+                source_provenance["v211"]["sha256"]),
+        "v213":("fresh_source/v213_candidate_catalog.json",
+                artifact_sha256),
+    }
+    stamps={}
+    for short,(relative,expected_sha) in expected.items():
+        summary=stage_attestations["v"+short[1:]+"_stage"]
+        need(type(summary) is dict and
+             summary.get("status") in (
+                 "EXECUTED_AND_SEALED","REUSED_VERIFIED",
+                 "RECOVERED_VERIFIED") and
+             summary.get("stage_id")=="fresh-"+short,
+             "V216_POLICY_A_V217_STAGE_ATTESTATION_MISSING:"+short)
+        receipt=stage_engine._read_receipt(
+            stage_root/".stage_receipts"/("fresh-"+short+".json"))
+        need(receipt.get("stage_id")=="fresh-"+short and
+             receipt.get("stage_version")=="1" and
+             receipt.get("status")=="COMPLETE" and
+             receipt.get("receipt_sha256")==summary.get("receipt_sha256") and
+             receipt.get("output_paths")=={"candidate":relative} and
+             type(receipt.get("outputs")) is dict and
+             receipt["outputs"].get("candidate",{}).get("sha256")==
+                 expected_sha and
+             receipt["outputs"]["candidate"].get("path")==relative,
+             "V216_POLICY_A_V217_SOURCE_OUTPUT_SHA_DRIFT:"+short)
+        stamps[short]=receipt["receipt_sha256"]
+    catalog_items={row["enchant_id"]:row
+                   for row in catalog["catalog"]["enchants"]["items"]}
+    v196_items={row["enchant_id"]:row
+                for row in catalog["v196_enchant_source"]["rows"]}
+    need(len(catalog_items)==len(v196_items)==len(public_rows),
+         "V216_POLICY_A_SOURCE_RELATION_CANDIDATE_COVERAGE_DRIFT")
+    source_context={"game_build":catalog["game_build"],
+                    "simc_revision":catalog["simc_revision"],
+                    "manifest_sha256":catalog["manifest_sha256"]}
+    proofs={}
+    for row in public_rows:
+        item=catalog_items.get(row["enchant_id"])
+        projected=v196_items.get(row["enchant_id"])
+        need(item is not None and projected is not None and
+             item["token"]==row["token"]==projected["token"] and
+             item["inventory_type_mask"]==
+                 projected["inventory_type_mask"],
+             "V216_POLICY_A_SOURCE_JOIN_ID_TOKEN_MASK_DRIFT")
+        candidate=auto_admission.candidate_from_source_enchant(
+            source_context,row)
+        identity=auto_admission._identity(candidate)
+        payload={"identity":identity,"v217_source_receipts":stamps,
+                 "v213_catalog_manifest_sha256":catalog["manifest_sha256"],
+                 "v213_catalog_artifact_sha256":artifact_sha256,
+                 "source_inventory_mask":item["inventory_type_mask"],
+                 "source_item_subclass_mask":item["item_subclass_mask"],
+                 "source_slot_group":item["slot_group"]}
+        proofs[row["enchant_id"]]={
+            "source_relation":{
+                "identity":identity,
+                "status":"EXACT_SOURCE_RELATION_VERIFIED",
+                "evidence_sha256":digest(canonical(payload).encode("utf8"))}}
+    return proofs
+
+
 def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                                 expected_simc_revision, budget_evidence=None,
                                 target_ilevel=None, manual_final_T=None,
@@ -528,7 +620,8 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                                 simc_effect_snapshot_case=None,
                                 gem_layout_receipt=None,
                                 gem_rating_by_id=None,
-                                zero_history_native_G=None):
+                                zero_history_native_G=None,
+                                policy_A_v217_stages=None):
     """Inspect a freshly assembled v213 artifact in the NORMAL Build path.
 
     This does not install an environment. Reuse authenticated source
@@ -547,6 +640,25 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
     try:
         source_to_catalog.verify_catalog(source)
         ui=user_catalog.public_options(supplied)
+        # The v241 stage executor has already checked the same bytes. Reuse
+        # its sealed original receipts to populate only source_relation,
+        # with no fresh HTTP/Native and no standalone admission engine.
+        source_relations=_v217_policy_A_source_relation_receipts(
+            catalog=source,artifact_sha256=raw_sha,catalog_path=supplied,
+            stage_attestations=policy_A_v217_stages,
+            public_rows=ui["enchant_candidates"]["items"])
+        if source_relations:
+            source_context={"game_build":expected_game_build,
+                            "simc_revision":expected_simc_revision,
+                            "manifest_sha256":source["manifest_sha256"]}
+            projected=auto_admission.preview_enchant_catalog(
+                source_context,ui["enchant_candidates"]["items"],
+                trusted_internal_receipts_by_id=source_relations)
+            # Projection changes only diagnostics, not selectable rows.
+            ui["automatic_admission"]={
+                **ui["automatic_admission"],**projected,
+                "status":"V217_SOURCE_RELATION_ONLY_OTHER_PROOFS_PENDING",
+                "approved_count":0,"v212_install_or_user_selection_authorized":False}
     except (source_to_catalog.CatalogBlocked,
             user_catalog.CatalogBlocked) as exc:
         raise EnvironmentBuildBlocked(
@@ -743,6 +855,8 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
             "per_item_conflict_reasons":dict(
                 admission.get("per_item_conflict_reasons") or {}),
             "source_evidence_projection_provided":bool(admission),
+            "v217_source_relation_receipt_count":len(source_relations),
+            "v217_source_relation_scoped_only":True,
             "verified_options_published":False,
             "affects_verified_base_GJFO":False},
         "source_retrieval_authenticated_by_this_stage":False,
@@ -3223,6 +3337,11 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     source_snapshot_folder=pathlib.Path(
                         collected["snapshot_receipt_path"]).parent,
                     source_stage_root=source_compilation["stage_root"],
+                    policy_A_v217_stages={
+                        "stage_root":source_compilation["stage_root"],
+                        "v191_stage":source_compilation.get("v191_stage"),
+                        "v211_stage":source_compilation.get("v211_stage"),
+                        "v213_stage":source_compilation.get("v213_stage")},
                     budget_evidence=zero_history_budget_evidence,
                     gem_layout_receipt=zero_history_gem_layout,
                     gem_rating_by_id=zero_history_gem_ratings,
