@@ -67,6 +67,27 @@ class FreshEnvironmentSourceStageTests(unittest.TestCase):
                 source_catalog=catalog,source_artifact_sha256=artifact_sha,
                 preflight=preflight,compilation=compilation,target_ilevel=334)
             self.assertEqual(same,result)
+            # v216 writes one environment unit without a user v098/DPS session.
+            catalog_file=root/"fresh_v213.json"
+            catalog_file.write_bytes(p.canonical(catalog).encode("utf8"))
+            wired={**compilation,"stage_root":str(root),
+                   "source_catalog_path":str(catalog_file)}
+            actual=environment_build._stage_source_environment_only(
+                compilation=wired,preflight=preflight,target_ilevel=334)
+            reused=environment_build._stage_source_environment_only(
+                compilation=wired,preflight=preflight,target_ilevel=334)
+            self.assertEqual(actual["stage_status"],"EXECUTED_AND_SEALED")
+            self.assertEqual(reused["stage_status"],"REUSED_VERIFIED")
+            self.assertEqual(actual["manifest_sha256"],result["manifest_sha256"])
+            self.assertFalse(actual["environment_installed"])
+            self.assertFalse(actual["dps_optimization_required"])
+            staged=json.loads(Path(actual["stage_output_path"]).read_text("utf8"))
+            self.assertEqual(staged,result)
+            Path(actual["stage_output_path"]).write_text("{}\n",encoding="utf8")
+            with self.assertRaisesRegex(stages.StageExecutionBlocked,
+                                        "STAGE_OUTPUT_HASH_MISMATCH"):
+                environment_build._stage_source_environment_only(
+                    compilation=wired,preflight=preflight,target_ilevel=334)
             # Original stage receipt mechanism remains the only writer.
             docpath=root/"environment.json"
             def write():docpath.write_text(p.canonical(result)+"\n",encoding="utf8")
