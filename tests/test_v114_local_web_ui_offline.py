@@ -89,7 +89,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         page=self.client.get("/").text
         js=self.client.get("/assets/app.js").text
         for ident in ("season-game-build","season-target-ilevel",
-                      "season-native-g","season-build-btn",
+                      "season-native-g","season-native-f","season-build-btn",
                       "season-build-stage","season-build-missing"):
             self.assertIn('id="'+ident+'"',page)
         self.assertIn('"/api/v1/environment/season-build"',js)
@@ -98,6 +98,8 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn("DPS 최적화 0회",js)
         self.assertIn("관측 수치(미승인)",js)
         self.assertIn("F/O 자동 발견",js)
+        self.assertIn("F Native",js)
+        self.assertIn("auto_native_F_requested",js)
         self.assertIn("automatic_F_O_measurement_candidates_unadmitted",js)
         self.assertIn("numeric_preview_only",js)
         self.assertIn("신규 Native",js)
