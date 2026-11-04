@@ -1157,6 +1157,51 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                     season_environment_receipt_path=proof)
             self.assertFalse(dest.exists())
 
+
+    def test_v098_season_receipt_change_cannot_overwrite_sealed_session(self):
+        import v098_target_user_scenario_bootstrap as boot
+        import v106_user_session_controller as sessions
+        import v216_environment_build_coordinator as env
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            user=sessions.user_scenario(
+                sessions.standard_controls(("mage","frost")))
+            user["target"]["final_T"]=3400
+            user["oil_hands"]=["main_hand"]
+            payload=self.dynamic_season_profile_inputs()
+            receipt_path=self.admitted_v216_receipt_for_source_only_v098(
+                td,payload)
+            binary=root/"fake_simc"
+            binary.write_bytes(b"OFFLINE")
+            folder=root/"session"
+            first=boot.build(
+                user,folder,binary,"c"*40,current_season_product=True,
+                season_profile_inputs=payload,
+                season_environment_receipt_path=receipt_path)
+            original={
+                x.name:x.read_bytes() for x in
+                (folder/"profile.simc",folder/"scenario.json",
+                 folder/"fillers.json",folder/"manifest.json")}
+            altered=json.loads(receipt_path.read_text("utf8"))
+            altered["season_budget"]["source_input_sha256"]["gear"]="9"*64
+            altered["receipt_sha256"]=env.digest(env.canonical({
+                k:v for k,v in altered.items()
+                if k!="receipt_sha256"}).encode("utf8"))
+            replacement=root/"different_source_receipt.json"
+            replacement.write_text(json.dumps(altered),encoding="utf8")
+            with self.assertRaisesRegex(
+                    boot.UserScenarioBlocked,
+                    "SEASON_WRITER_EXISTING_SESSION_SOURCE_CHANGED:manifest.json"):
+                boot.build(user,folder,binary,"c"*40,
+                    current_season_product=True,
+                    season_profile_inputs=payload,
+                    season_environment_receipt_path=replacement)
+            self.assertEqual(original,{
+                x.name:x.read_bytes() for x in
+                (folder/"profile.simc",folder/"scenario.json",
+                 folder/"fillers.json",folder/"manifest.json")})
+            self.assertFalse((folder/"simc_results").exists())
+
     def test_automatic_target_goes_through_existing_v222_once(self):
         result=self.run_build()
         source=result["source_compilation"]
