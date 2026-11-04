@@ -85,6 +85,20 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('window.confirm("이 PC에서 실제 SimC',js.text)
         self.assertEqual(self.client.get("/assets/missing.js").status_code,403)
 
+    def test_environment_build_surface_is_not_optimizer_plan(self):
+        page=self.client.get("/").text
+        js=self.client.get("/assets/app.js").text
+        for ident in ("season-game-build","season-target-ilevel",
+                      "season-native-g","season-build-btn",
+                      "season-build-stage","season-build-missing"):
+            self.assertIn('id="'+ident+'"',page)
+        self.assertIn('"/api/v1/environment/season-build"',js)
+        self.assertIn('"/api/v1/sessions/plan"',js)
+        self.assertIn("user_character_or_trinkets_required",js)
+        self.assertIn("DPS 최적화 0회",js)
+        self.assertIn("신규 Native",js)
+        self.assertNotIn('id="season-optimizer-submit"',page)
+
     def test_all_26_spec_labels_are_neutral_not_historical_native_claims(self):
         js=self.client.get("/assets/app.js").text
         labels=js.split("const specLabels = {",1)[1].split("};",1)[0]

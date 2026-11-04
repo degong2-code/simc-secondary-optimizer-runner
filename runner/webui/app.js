@@ -582,6 +582,7 @@ function buttonState(active=false,ready=false) {
   state.running=active;
   const busy=state.busy;
   $("plan-btn").disabled=busy||active||!state.token;
+  $("season-build-btn").disabled=busy||!state.token;
   $("start-btn").disabled=busy||active||!state.token;
   $("resume-btn").disabled=busy||active||!state.session;
   $("cache-btn").disabled=busy||active||!state.session||!ready;
@@ -616,6 +617,62 @@ async function withBusy(fn) {
     }
   }
   finally{state.busy=false;buttonState(state.running,$("filled-result").hidden===false);}
+}
+function showSeasonEnvironmentBuild(data) {
+  const scope=data?.web_environment_scope||{};
+  const step=data?.zero_history_build||{};
+  const source=data?.source_compilation||{};
+  const needs=[...(Array.isArray(step.requires)?step.requires:[]),
+    ...(Array.isArray(source.missing)?source.missing.map(x=>"SOURCE_COMPILER:"+x):[])];
+  const unique=[...new Set(needs)];
+  const node=$("season-build-stage");
+  const ready=scope.environment_ready===true&&scope.environment_installed===true;
+  node.textContent=(ready?"시즌 환경 설치 완료":"원본 수집·검증 진행 결과 (설치 미완료)")+
+    " · 요청 빌드 "+(scope.game_build||"–")+
+    " · 원본 "+(step.source_stage_status||data?.source_stage?.status||"미확정")+
+    " · 컴파일 "+(source.status||step.source_compilation_status||"대기")+
+    " · G 관측 "+(step.native_G_status||"대기")+
+    " · 신규 Native "+(Number(data?.native_calls)||0)+"회"+
+    " · 미해결 "+unique.length+"건 · DPS 최적화 0회"+
+    (scope.user_character_or_trinkets_required===false?" · 사용자 장비 입력 없음":"");
+  const details=$("season-build-pending"),list=$("season-build-missing");
+  list.replaceChildren();
+  for(const missing of unique){
+    const item=document.createElement("li");
+    item.textContent=String(missing);
+    list.appendChild(item);
+  }
+  details.hidden=unique.length===0;
+}
+async function buildSeasonEnvironment() {
+  const game_build=field("season-game-build");
+  if(!/^\d+(?:\.\d+){3}$/.test(game_build))
+    throw Error("게임 빌드를 숫자.숫자.숫자.숫자 형식으로 입력해 주세요.");
+  const target_ilevel=valueInt("season-target-ilevel");
+  if(target_ilevel<1||target_ilevel>1000)
+    throw Error("목표 ilvl은 1~1000 범위여야 합니다.");
+  const nativeRequested=$("season-native-g").checked;
+  const native_G_binary=nativeRequested?field("binary"):null;
+  if(nativeRequested&&!native_G_binary)
+    throw Error("G Native 실측을 선택한 경우 아래 SimC 실행 파일 경로가 필요합니다.");
+  const revision=field("revision");
+  if(revision&&!/^(?:[a-f0-9]{7,12}|[a-f0-9]{40})$/.test(revision))
+    throw Error("SimC revision은 7~12자리 또는 40자리 소문자 16진수여야 합니다.");
+  if(!window.confirm("새 시즌 원본을 수집·검증할까요? 네트워크 조회가 발생할 수 있으며 기존 봉인 단계는 재사용됩니다."+
+     (nativeRequested?" 기존 G Native 최대 1회가 시도될 수 있습니다.":" SimC Native는 실행하지 않습니다.")))
+    return;
+  $("season-build-stage").textContent="동일 환경 엔진에서 원본 수집·봉인 및 기존 증거 재사용 중…";
+  try {
+    const report=await api("/api/v1/environment/season-build",
+      {method:"POST",payload:{game_build,target_ilevel,native_G_binary,
+                              simc_revision_hint:revision||null}});
+    showSeasonEnvironmentBuild(report);
+    setNotice("시즌 환경 구축 단계 조회 완료 · READY 여부는 별도 검증 · 개별 DPS 최적화는 시작되지 않았습니다.");
+  }catch(err){
+    $("season-build-stage").textContent="시즌 환경 구축 단계 차단/오류 · "+err.message+
+      " · 기존 영수증은 보존됩니다.";
+    throw err;
+  }
 }
 function showEnvironmentBuild(build) {
   const node=$("environment-build-status");
@@ -1105,13 +1162,14 @@ function registerHandlers() {
   $("simc-install-local-btn").addEventListener("click",()=>withBusy(installLocalSimcUpdater));
   $("simc-rollback-btn").addEventListener("click",()=>withBusy(rollbackSimcUpdater));
   $("simc-import-btn").addEventListener("click",()=>withBusy(importSimcCharacter));
+  $("season-build-btn").addEventListener("click",()=>withBusy(buildSeasonEnvironment));
   $("spec").addEventListener("change",()=>{
     const selected=state.defaults.find(d=>d.class+"/"+d.spec===field("spec"));
     if(selected)fillDefault(selected);
   });
   $("ilevel").addEventListener("change",showRepresentativeScope);
   $("plan-btn").addEventListener("click",()=>withBusy(async()=>{
-    const p=await api("/api/v1/environment/build",{method:"POST",payload:buildRequest()});
+    const p=await api("/api/v1/sessions/plan",{method:"POST",payload:buildRequest()});
     markSession(p.session_id);showPlan(p);await pollOnce();
   }));
   $("start-btn").addEventListener("click",()=>withBusy(async()=>{
