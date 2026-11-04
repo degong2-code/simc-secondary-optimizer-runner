@@ -41,7 +41,9 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             "simc_revision":self.catalog["simc_revision"],
             "source_catalog_path":str(self.path),"missing":[]}
     def run_build(self,manual=None,proof=True,level=334,user_level=None,
-                  native_result=None):
+                  native_result=None,gem_layout=None,gem_ratings=None,
+                  effect_requests=None,effect_resolver=None,
+                  effect_observation=None):
         inputs={
             "expected_game_build":self.catalog["game_build"],
             "representative_request":{
@@ -50,6 +52,12 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             "simc_revision_hint":None}
         if proof:
             inputs["same_build_budget_evidence"]=self.table[334]
+        if gem_layout is not None:
+            inputs["gem_layout_receipt"]=gem_layout
+        if gem_ratings is not None:
+            inputs["gem_rating_by_id"]=gem_ratings
+        if effect_requests is not None:
+            inputs["effect_probe_requests"]=effect_requests
         user={"target":{"ilevel":user_level if user_level is not None else level,
                         "final_T":manual}}
         with mock.patch.object(build,"collect_wago_new_season_source",
@@ -66,7 +74,12 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
              mock.patch.object(build.user_catalog,"public_options",
                                return_value=self.ui),\
              mock.patch.object(build,"_fresh_gem_item_source_stage",
-                               return_value={"candidate_path":None}):
+                               return_value={"candidate_path":None}),\
+             mock.patch.object(build.consumable_simc_relation,
+                               "resolve_native_input",
+                               return_value=effect_resolver),\
+             mock.patch.object(build.native_effect_pair,"measure",
+                               return_value=effect_observation):
             result=build.build_environment(
                 sessions_root=self.root/"sessions",session_folder=None,
                 user=user,binary=None,revision=None,static_cache=None,
@@ -75,8 +88,9 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertEqual(collect.call_count,1)
         self.assertEqual(native.call_count,1)
         self.assertEqual(compiler.call_count,1)
-        self.assertNotIn("same_build_budget_evidence",
-                         collect.call_args.kwargs)
+        for name in ("same_build_budget_evidence","gem_layout_receipt",
+                     "gem_rating_by_id","effect_probe_requests"):
+            self.assertNotIn(name,collect.call_args.kwargs)
         self.assertFalse((self.root/"sessions").exists())
         return result
     def v277_native_G(self, *, level=334, source_sha=None):
@@ -146,6 +160,151 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 "V216_ZERO_HISTORY_V277_G_ROUNDING_OR_TARGET_DRIFT"):
             self.run_build(native_result=self.v277_native_G(level=335))
         self.assertFalse((self.root/"sessions").exists())
+
+    def physical_layout(self, rating=23):
+        ordinary = [240908] * 6
+        return ({
+            "schema": build.physical_gems.SCHEMA,
+            "status":"PHYSICAL_GEMS_STAGED_SOURCE_AND_SOCKET_PROOFS_PENDING",
+            "ordinary_gem_ids":ordinary,
+            "ordinary_count":len(ordinary),"socket_total":7,
+            "socket_counts":{"head":1,"wrists":2,"waist":2,"feet":2},
+            "special_gem_id":240967,"special_slot":"head",
+        }, {"240908":rating})
+
+    def physical_effect(self, *, kind="flask", hand=None, static=True):
+        import v222_season_budget_contract as budget
+        stats=budget.STATS
+        vec={k:0 for k in stats}
+        vec["crit_rating"]=165 if kind=="flask" else 16
+        if kind=="temporary_enchant":
+            vec["haste_rating"]=17
+        token=("test_flask_2" if kind=="flask" else
+               "main_hand:thalassian_phoenix_oil")
+        item_id=241326 if kind=="flask" else 243734
+        bound={
+            "schema":build.consumable_simc_relation.MEASUREMENT_BINDING_SCHEMA,
+            "game_build":self.catalog["game_build"],
+            "simc_revision":self.catalog["simc_revision"],
+            "physical_item_id":item_id,"kind":kind,
+            "simc_input_token":token,"crafting_quality":2,
+            "simc_enchant_id":None if kind=="flask" else 8052,
+            "selected_hand":hand,
+            "source_stage_receipt_sha256":"c"*64,
+            "source_candidate_sha256":"d"*64,
+            "source_only":True,"environment_ready":False}
+        observation={
+            "kind":kind,"token":token,
+            "status":("SIMC_STATIC_CHMV_EFFECT_OBSERVED_NOT_ADMITTED"
+                      if static else
+                      "SIMC_CONDITIONAL_OR_NONSTATIC_EFFECT_PENDING"),
+            "simc_revision":self.catalog["simc_revision"],
+            "binary_sha256":"e"*64,
+            "source_profile_sha256":"f"*64,
+            "static_CHMV_candidate":vec if static else None,
+            "F_candidate_unadmitted":(
+                sum(vec.values()) if kind=="flask" and static else None),
+            "O_candidate_unadmitted":(
+                vec if kind=="temporary_enchant" and static else None),
+            "native_case_receipts":[
+                {"variant":k,"receipt_sha256":h*64}
+                for k,h in (("baseline","a"),("active","b"))],
+            "new_native_calls":0}
+        if static:
+            observation["observed"]={
+                "schema":build.simc_snapshot_delta.SCHEMA,
+                "kind":kind,"token":token,
+                "simc_revision":self.catalog["simc_revision"],
+                "binary_sha256":observation["binary_sha256"],
+                "source_profile_sha256":observation["source_profile_sha256"],
+                "static_CHMV_candidate":vec}
+        request={
+            "source_profile_path":"source.simc","kind":kind,
+            "item_id":item_id}
+        if kind=="temporary_enchant":
+            request["hand"]=hand
+        return request,bound,observation
+
+    def test_real_id_gem_layout_J_reused_in_zero_history_without_promotion(self):
+        layout, ratings=self.physical_layout()
+        result=self.run_build(proof=False,gem_layout=layout,
+                              gem_ratings=ratings)
+        j=result["source_compilation"]["physical_gem_J_arithmetic_unadmitted"]
+        self.assertEqual(j["J_candidate_unadmitted"],138)
+        self.assertEqual(j["physical_gem_item_ids"],[240908]*6)
+        self.assertFalse(j["game_socket_legality_verified_here"])
+        self.assertNotIn("preprofile_budget_arithmetic_unadmitted",
+                         result["source_compilation"])
+        self.assertIsNone(result["J"])
+        self.assertFalse(result["zero_history_build"]["environment_ready"])
+
+    def test_gem_j_conflicting_existing_budget_blocks_without_native(self):
+        layout, ratings=self.physical_layout(rating=24)
+        with self.assertRaisesRegex(build.EnvironmentBuildBlocked,
+                                    "V216_ZERO_HISTORY_SOURCE_COMPILER_INVALID:"
+                                    "V216_J_RATING_DISAGREES"):
+            self.run_build(gem_layout=layout,gem_ratings=ratings)
+        self.assertFalse((self.root/"sessions").exists())
+
+    def test_bound_exact_flask_native_is_source_only_F_candidate(self):
+        request,bound,observed=self.physical_effect()
+        result=self.run_build(proof=False,effect_requests=[request],
+                              effect_resolver=bound,effect_observation=observed)
+        native=result["source_compilation"][
+            "physical_F_O_native_source_candidates_unadmitted"]
+        self.assertEqual(len(native["flask"]),1)
+        self.assertEqual(native["flask"][0]["physical_item_id"],241326)
+        self.assertEqual(native["flask"][0]["rating_candidate_unadmitted"],165)
+        self.assertIsNone(native["F"])
+        self.assertIsNone(result["F"])
+        self.assertFalse(result["zero_history_build"]["environment_ready"])
+
+    def test_bound_oil_static_vector_does_not_certify_weapon_hand(self):
+        request,bound,observed=self.physical_effect(
+            kind="temporary_enchant",hand="main_hand")
+        result=self.run_build(proof=False,effect_requests=[request],
+                              effect_resolver=bound,effect_observation=observed)
+        native=result["zero_history_build"][
+            "physical_F_O_native_source_candidates_unadmitted"]
+        self.assertEqual(native["oil"][0]["rating_candidate_unadmitted"]
+                         ["haste_rating"],17)
+        self.assertFalse(native["oil"][0][
+            "weapon_and_hand_applicability_verified"])
+        self.assertIsNone(native["O"])
+        self.assertIsNone(result["O"])
+
+    def test_no_static_delta_is_pending_not_zero_o(self):
+        request,bound,observed=self.physical_effect(
+            kind="temporary_enchant",hand="main_hand",static=False)
+        result=self.run_build(proof=False,effect_requests=[request],
+                              effect_resolver=bound,effect_observation=observed)
+        native=result["source_compilation"][
+            "physical_F_O_native_source_candidates_unadmitted"]
+        self.assertIsNone(native["oil"][0]["rating_candidate_unadmitted"])
+        self.assertEqual(native["oil"][0]["status"],
+                         "SOURCE_ONLY_NATIVE_STATIC_RATING_PENDING")
+        self.assertIsNone(native["O"])
+
+    def test_tampered_native_item_token_fails_without_new_probe(self):
+        request,bound,observed=self.physical_effect()
+        bound["simc_input_token"]="wrong_flask"
+        with self.assertRaisesRegex(build.EnvironmentBuildBlocked,
+                                    "V216_ZERO_HISTORY_FO_PHYSICAL_NATIVE_IDENTITY_DRIFT"):
+            self.run_build(proof=False,effect_requests=[request],
+                           effect_resolver=bound,effect_observation=observed)
+        self.assertFalse((self.root/"sessions").exists())
+
+    def test_token_only_legacy_probe_is_not_auto_promoted(self):
+        _,_,observed=self.physical_effect()
+        result=self.run_build(
+            proof=False,effect_requests=[{
+                "source_profile_path":"source.simc","kind":"flask",
+                "token":"test_flask_2"}],
+            effect_observation=observed)
+        candidates=result["source_compilation"][
+            "physical_F_O_native_source_candidates_unadmitted"]
+        self.assertEqual(candidates["flask"],[])
+        self.assertIsNone(candidates["F"])
 
     def test_automatic_target_goes_through_existing_v222_once(self):
         result=self.run_build()

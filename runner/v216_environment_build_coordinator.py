@@ -2486,6 +2486,133 @@ def _zero_history_source_progress(source):
     }
 
 
+
+def _zero_history_F_O_native_component_candidates(*, observations,
+                                                 game_build, simc_revision):
+    """Project existing v281 exact physical ID + v278 Native observation.
+
+    This is a READ-ONLY source-only view for the existing v222 Build, not
+    selection, quality/weapon certification or an independent effect model.
+    Preserve each option separately: neither multiple flask qualities nor
+    two oils may be summed/selected without their own validated conditions.
+    """
+    need(type(observations) is list and len(observations) <= 4,
+         "V216_ZERO_HISTORY_FO_OBSERVATION_COUNT_INVALID")
+    candidates = []
+    stats = season_budget_contract.STATS
+    for row in observations:
+        need(type(row) is dict and row.get("kind") in (
+                 "flask", "food", "temporary_enchant"),
+             "V216_ZERO_HISTORY_FO_NATIVE_RECORD_INVALID")
+        source = row.get("physical_item_native_source_unadmitted")
+        # Legacy developer token probes are not physical-item evidence.
+        if source is None:
+            continue
+        need(type(source) is dict and source.get("schema") ==
+                 consumable_simc_relation.MEASUREMENT_BINDING_SCHEMA
+             and source.get("source_only") is True
+             and source.get("environment_ready") is False
+             and source.get("game_build") == game_build
+             and source.get("simc_revision") == simc_revision
+             and source.get("kind") == row["kind"]
+             and source.get("simc_input_token") == row.get("token")
+             and type(source.get("physical_item_id")) is int
+             and source["physical_item_id"] > 0
+             and type(source.get("crafting_quality")) is int
+             and source["crafting_quality"] >= 0
+             and all(type(source.get(k)) is str
+                     and season_budget_contract.SHA.fullmatch(source[k])
+                     for k in ("source_stage_receipt_sha256",
+                               "source_candidate_sha256")),
+             "V216_ZERO_HISTORY_FO_PHYSICAL_NATIVE_IDENTITY_DRIFT")
+        # This makes NO claim that an item named oil is a valid weapon oil.
+        if row["kind"] == "temporary_enchant":
+            need(source.get("selected_hand") in ("main_hand", "off_hand")
+                 and type(source.get("simc_enchant_id")) is int
+                 and source["simc_enchant_id"] > 0,
+                 "V216_ZERO_HISTORY_O_PHYSICAL_HAND_OR_ENCHANT_INVALID")
+        else:
+            need(source.get("selected_hand") is None,
+                 "V216_ZERO_HISTORY_F_PHYSICAL_HAND_INVALID")
+        observed = row.get("observed")
+        candidate = {
+            "kind": row["kind"],
+            "physical_item_id": source["physical_item_id"],
+            "crafting_quality": source["crafting_quality"],
+            "simc_input_token": source["simc_input_token"],
+            "simc_enchant_id": source.get("simc_enchant_id"),
+            "selected_hand": source.get("selected_hand"),
+            "game_build": game_build, "simc_revision": simc_revision,
+            "physical_item_source_stage_sha256":
+                source["source_stage_receipt_sha256"],
+            "physical_item_source_candidate_sha256":
+                source["source_candidate_sha256"],
+            "status": "SOURCE_ONLY_NATIVE_STATIC_RATING_PENDING",
+            "rating_candidate_unadmitted": None,
+            "simc_native_receipt_sha256": [],
+            "same_effect_quality_group_verified": False,
+            "weapon_and_hand_applicability_verified": False,
+            "budget_ownership_verified": False,
+            "source_admitted": False,
+            "environment_ready": False,
+        }
+        if row.get("status") == "SIMC_STATIC_CHMV_EFFECT_OBSERVED_NOT_ADMITTED":
+            need(type(observed) is dict
+                 and observed.get("schema") == simc_snapshot_delta.SCHEMA
+                 and observed.get("kind") == row["kind"]
+                 and observed.get("token") == row.get("token")
+                 and observed.get("simc_revision") == simc_revision
+                 and observed.get("binary_sha256") == row.get("binary_sha256")
+                 and observed.get("source_profile_sha256") ==
+                     row.get("source_profile_sha256")
+                 and row.get("simc_revision") == simc_revision
+                 and type(row.get("native_case_receipts")) is list
+                 and len(row["native_case_receipts"]) == 2
+                 and all(type(rec) is dict and
+                         rec.get("variant") == variant and
+                         type(rec.get("receipt_sha256")) is str and
+                         season_budget_contract.SHA.fullmatch(
+                             rec["receipt_sha256"])
+                         for variant,rec in zip(
+                             ("baseline","active"),
+                             row["native_case_receipts"])),
+                 "V216_ZERO_HISTORY_FO_SIMC_NATIVE_IDENTITY_DRIFT")
+            vector = observed.get("static_CHMV_candidate")
+            need(type(vector) is dict and set(vector) == set(stats)
+                 and all(type(vector[k]) is int and vector[k] >= 0
+                         for k in stats)
+                 and sum(vector.values()) > 0
+                 and vector == row.get("static_CHMV_candidate"),
+                 "V216_ZERO_HISTORY_FO_STATIC_VECTOR_DRIFT")
+            if row["kind"] == "flask":
+                need(row.get("F_candidate_unadmitted") ==
+                         sum(vector.values()),
+                     "V216_ZERO_HISTORY_F_NATIVE_TOTAL_DRIFT")
+                candidate["rating_candidate_unadmitted"] = sum(
+                    vector.values())
+            elif row["kind"] == "temporary_enchant":
+                need(row.get("O_candidate_unadmitted") == vector,
+                     "V216_ZERO_HISTORY_O_NATIVE_VECTOR_DRIFT")
+                candidate["rating_candidate_unadmitted"] = dict(vector)
+            candidate["status"] = "SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY"
+            candidate["simc_native_receipt_sha256"] = [
+                rec["receipt_sha256"]
+                for rec in row["native_case_receipts"]]
+        candidates.append(candidate)
+    return {
+        "status": "PHYSICAL_ITEM_SIMC_F_O_CANDIDATES_UNADMITTED",
+        "flask": [x for x in candidates if x["kind"] == "flask"],
+        "oil": [x for x in candidates
+                if x["kind"] == "temporary_enchant"],
+        "source_only": True,
+        "quality_or_effect_equivalence_verified": False,
+        "game_weapon_applicability_verified": False,
+        "no_multi_option_summing_or_quality_promotion": True,
+        "F": None, "O": None, "environment_ready": False,
+        "new_native_calls": 0, "network_calls": 0,
+    }
+
+
 def build_environment(*, sessions_root, session_folder, user, binary, revision,
                       static_cache, source_catalog_path, bootstrap_result,
                       v208_start_receipt_path=None, package_manifest_path=None,
@@ -2527,13 +2654,18 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                   "spell_equipped_transport",
                  "simc_transport","simc_compiler_transport",
                  "gem_enchant_transport","effect_probe_requests",
-                  "same_build_budget_evidence"},
+                  "same_build_budget_evidence",
+                  "gem_layout_receipt","gem_rating_by_id"},
              "V216_ZERO_HISTORY_SOURCE_INPUT_FIELDS")
         effect_probe_requests=fresh_collection_inputs.get("effect_probe_requests")
         # Same-build evidence is internal. The ORIGINAL catalog preflight
         # audits the source and v222 arithmetic only after v191/v211/v213.
         zero_history_budget_evidence=fresh_collection_inputs.get(
             "same_build_budget_evidence")
+        zero_history_gem_layout=fresh_collection_inputs.get(
+            "gem_layout_receipt")
+        zero_history_gem_ratings=fresh_collection_inputs.get(
+            "gem_rating_by_id")
         need(zero_history_budget_evidence is None or
              (type(zero_history_budget_evidence) is dict and
               type(fresh_collection_inputs["representative_request"]) is dict
@@ -2583,7 +2715,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         source_inputs={
             k:v for k,v in fresh_collection_inputs.items()
             if k not in ("effect_probe_requests",
-                         "same_build_budget_evidence")}
+                         "same_build_budget_evidence",
+                         "gem_layout_receipt","gem_rating_by_id")}
         collected=collect_wago_new_season_source(
             sessions_root=sessions_root,**source_inputs)
         progress=_zero_history_source_progress(collected)
@@ -2628,6 +2761,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         collected["snapshot_receipt_path"]).parent,
                     source_stage_root=source_compilation["stage_root"],
                     budget_evidence=zero_history_budget_evidence,
+                    gem_layout_receipt=zero_history_gem_layout,
+                    gem_rating_by_id=zero_history_gem_ratings,
                     zero_history_native_G=native_G,
                     target_ilevel=(
                         fresh_collection_inputs[
@@ -2639,6 +2774,10 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     manual_final_T=(
                         manual_T if zero_history_budget_evidence is not None
                         else None))
+                if "physical_gem_J_arithmetic_unadmitted" in preflight:
+                    gem_J=preflight["physical_gem_J_arithmetic_unadmitted"]
+                    source_compilation["physical_gem_J_arithmetic_unadmitted"]=gem_J
+                    progress["physical_gem_J_arithmetic_unadmitted"]=gem_J
                 if "v277_native_G_preprofile_unadmitted" in preflight:
                     observed=preflight["v277_native_G_preprofile_unadmitted"]
                     source_compilation["v277_native_G_preprofile_unadmitted"]=observed
@@ -2727,6 +2866,13 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                          if x["kind"]=="temporary_enchant"]}
                 progress["requires"].append(
                     "F_O_HIGHEST_QUALITY_AND_WEAPON_APPLICABILITY_PENDING")
+        if effect_observations:
+            native_F_O=_zero_history_F_O_native_component_candidates(
+                observations=effect_observations,
+                game_build=collected["expected_game_build"],
+                simc_revision=source_compilation["simc_revision"])
+            progress["physical_F_O_native_source_candidates_unadmitted"]=native_F_O
+            source_compilation["physical_F_O_native_source_candidates_unadmitted"]=native_F_O
         progress["source_compilation_status"]=source_compilation["status"]
         progress["source_compilation_missing"]=source_compilation["missing"]
         if source_compilation["missing"]:
