@@ -750,13 +750,13 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 sessions.standard_controls(("mage","frost")))
             user["target"]["final_T"]=3400
             user["oil_hands"]=["main_hand"]
-            with mock.patch.object(boot.consumer,"apply",
+            with (mock.patch.object(boot.consumer,"apply",
                                    side_effect=AssertionError(
-                                       "LEGACY_J_F_MUST_NOT_RUN")), \\
+                                       "LEGACY_J_F_MUST_NOT_RUN")),
                  mock.patch.object(boot.common,
                                    "ensure_representative_gem_colors",
                                    side_effect=AssertionError(
-                                       "OLD_SEASON_GEM_GATE_MUST_NOT_RUN")):
+                                       "OLD_SEASON_GEM_GATE_MUST_NOT_RUN"))):
                 result=boot.build(
                     user,root/"preview",binary,"c"*40,
                     current_season_product=True,
