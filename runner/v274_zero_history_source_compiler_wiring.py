@@ -245,16 +245,22 @@ def compile_collected(collected, *, compiler):
         return {**{k: v for k, v in plan.items() if k != "inputs"},
                 "representative_oil_source_options_unadmitted":oil_sources}
     compiled = compiler(**plan["inputs"])
+    # Normal v241 Build supplies exact fresh_v191_inputs. Historical
+    # source-only mock/legacy callers may omit these optional provenance
+    # paths; never fabricate them or break their existing compiler result.
+    originals=plan["inputs"].get("fresh_v191_inputs")
+    links=({"catalog": compiled["source_catalog_path"],
+            "gear": str(originals["gear"]),
+            "tier": str(originals["tier"])}
+           if isinstance(originals,dict) and
+           {"gear","tier"} <= set(originals) else None)
     return {"schema": SCHEMA,
             "representative_oil_source_options_unadmitted":oil_sources,
             "status": "FRESH_V191_V211_V213_COMPILED_UNADMITTED",
             "missing": [], "available": list(NEEDED),
             "source_catalog_path": compiled["source_catalog_path"],
-            # Reuse v241/v191 sealed originals; return only paths, not payloads.
-            "v191_original_gear_tier_source_paths": {
-                "catalog": compiled["source_catalog_path"],
-                "gear": str(plan["inputs"]["fresh_v191_inputs"]["gear"]),
-                "tier": str(plan["inputs"]["fresh_v191_inputs"]["tier"])},
+            **({"v191_original_gear_tier_source_paths": links}
+               if links is not None else {}),
             "stage_root": str(plan["inputs"]["stage_root"]),
             "v191_stage": compiled["v191_stage"],
             "v211_stage": compiled["v211_stage"],
