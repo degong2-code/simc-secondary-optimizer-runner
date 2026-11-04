@@ -1596,6 +1596,50 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                     {},root/"invalid",root/"no_binary","c"*40,
                     environment_result={"normal_build_entry":False})
 
+    def test_p3_di_unsupported_layout_and_multi_stat_flask_stay_pending(self):
+        import v098_target_user_scenario_bootstrap as boot
+        layout,_=self.physical_layout()
+        numeric=self.dynamic_season_profile_inputs()
+        controls={"character_level":90,"food":"food_token",
+                  "potion":"potion_token","augmentation":"aug_token",
+                  "omnium_talents":None}
+        joined={"physical_gem_layout_unadmitted":layout,
+                "physical_gem_J_arithmetic_unadmitted":{
+                    "status":"PHYSICAL_GEM_J_ARITHMETIC_UNADMITTED",
+                    "physical_gem_item_ids":[240908]*6,
+                    "J_candidate_unadmitted":143}}
+        direct=boot._season_settings_from_v216(
+            compilation=joined,numeric_inputs=numeric,
+            controls=controls,need=boot.need)
+        self.assertEqual(direct["settings"]["gems"]["head"],"240967")
+        self.assertEqual(direct["settings"]["gems"]["feet"],"240908/240908")
+        self.assertFalse(direct["game_socket_legality_authenticated_here"])
+        changed=copy.deepcopy(layout)
+        changed["ordinary_gem_ids"]=[240908]*5
+        changed["socket_counts"]["feet"]=1
+        changed["socket_total"]=6
+        joined["physical_gem_layout_unadmitted"]=changed
+        joined["physical_gem_J_arithmetic_unadmitted"]={
+            **joined["physical_gem_J_arithmetic_unadmitted"],
+            "physical_gem_item_ids":[240908]*5}
+        result=boot._season_settings_from_v216(
+            compilation=joined,numeric_inputs=numeric,
+            controls=controls,need=boot.need)
+        self.assertIn("V139_VARIABLE_SOCKET_LAYOUT_COMPOSER_PENDING",
+                      result["missing"])
+        joined["physical_gem_layout_unadmitted"]=layout
+        joined["physical_gem_J_arithmetic_unadmitted"]={
+            **joined["physical_gem_J_arithmetic_unadmitted"],
+            "physical_gem_item_ids":[240908]*6}
+        different=copy.deepcopy(numeric)
+        different["flask"]["static_CHMV_vector"]["crit_rating"]=80
+        different["flask"]["static_CHMV_vector"]["haste_rating"]=96
+        result=boot._season_settings_from_v216(
+            compilation=joined,numeric_inputs=different,
+            controls=controls,need=boot.need)
+        self.assertIn("V139_MULTI_STAT_FLASK_SOURCE_COMPOSER_PENDING",
+                      result["missing"])
+
     def test_automatic_target_goes_through_existing_v222_once(self):
         result=self.run_build()
         source=result["source_compilation"]
