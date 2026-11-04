@@ -3143,6 +3143,18 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     budget_evidence=zero_history_budget_evidence)
                 progress["selected_physical_F_O_budget_link_unadmitted"]=selected_check
                 source_compilation["selected_physical_F_O_budget_link_unadmitted"]=selected_check
+        if (selected_budget_items is not None and
+                "selected_physical_F_O_budget_link_unadmitted" not in progress):
+            waiting={
+                "status":"SELECTED_PHYSICAL_F_O_SOURCE_PENDING",
+                "selected_physical_items":selected_budget_items,
+                "missing":["PHYSICAL_F_O_NATIVE_OBSERVATIONS_OR_CATALOG_PENDING"],
+                "v222_numbers_reconciled":False,
+                "source_admission_performed_here":False,
+                "environment_ready":False,"user_selectable":False,
+                "new_native_calls":0,"network_calls":0}
+            progress["selected_physical_F_O_budget_link_unadmitted"]=waiting
+            source_compilation["selected_physical_F_O_budget_link_unadmitted"]=waiting
         progress["source_compilation_status"]=source_compilation["status"]
         progress["source_compilation_missing"]=source_compilation["missing"]
         if source_compilation["missing"]:

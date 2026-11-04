@@ -442,6 +442,18 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 simc_revision=self.catalog["simc_revision"])
 
 
+    def test_selected_items_without_native_observations_remain_visible_pending(self):
+        selected={"flask_item_id":241326,
+                  "oil_item_ids_by_hand":{"main_hand":243734}}
+        out=self.run_build(selected_budget_items=selected)
+        linked=out["source_compilation"][
+            "selected_physical_F_O_budget_link_unadmitted"]
+        self.assertEqual(linked["status"],"SELECTED_PHYSICAL_F_O_SOURCE_PENDING")
+        self.assertEqual(linked["selected_physical_items"],selected)
+        self.assertFalse(linked["v222_numbers_reconciled"])
+        self.assertFalse(out["zero_history_build"]["user_session_created"])
+        self.assertEqual(out["native_calls"],0)
+
     def test_selected_flask_explicit_no_oil_reconciles_original_manual_T(self):
         request,bound,observed=self.physical_effect()
         original=copy.deepcopy(self.table[334]["components"]["O"])
