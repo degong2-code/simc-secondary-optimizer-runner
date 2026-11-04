@@ -1143,7 +1143,8 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             user["oil_hands"]=["main_hand"]
             payload=self.dynamic_season_profile_inputs()
             proof=self.admitted_v216_receipt_for_source_only_v098(td,payload)
-            payload["v216_numeric_preview"]["calculation"]["F"]=175
+            payload["v216_numeric_preview"]["calculation"][
+                "source_catalog_manifest_sha256"]="f"*64
             binary=root/"fake_simc"
             binary.write_bytes(b"OFFLINE")
             dest=root/"must_not_create"
