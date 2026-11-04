@@ -84,7 +84,7 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         # Existing P3-CO/CP/BX real evidence is NOT re-executed.
         g=self.table[334]["components"]["G"]
         sha=source_sha or g["source_sha256"]
-        from runner import v222_season_budget_contract as budget
+        import v222_season_budget_contract as budget
         rounded=budget.standardize_representative_G(
             observed_G_total=2847,target_ilevel=level,
             source_observation_sha256=sha)
@@ -114,10 +114,11 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertEqual(result["native_calls"],0)
 
     def test_existing_v277_G_fills_only_missing_component_for_v222(self):
+        native_result=self.v277_native_G()
         component=self.table[334]["components"].pop("G")
         try:
             result=self.run_build(
-                manual=3300,native_result=self.v277_native_G())
+                manual=3300,native_result=native_result)
         finally:
             self.table[334]["components"]["G"]=component
         calc=result["source_compilation"][
