@@ -1,0 +1,10 @@
+# 2026-11-04 · P3-DB · 재사용 가능한 시즌별 v098 대표 프로필 J/F/O 직렬화
+
+- **Capability:** `F.FLASK`, `O.OIL`, `BUDGET.GJFO`, `PRODUCT.E2E`
+- **Keywords:** P3-DB, v098, v108, v091, v216, v222, per-season, engine, J, F, O, actual SimC tokens, source only, 26 DPS
+- **Prior evidence:** [PROTOCOL](../PROTOCOL.md)→[INDEX](../INDEX.md)→[P3-DA](2026-11-04_p3-da-v222-direct-numeric-gjfo.md) 기존 v216 G/J/F/O 숫자 + v222 산술, [P3-CT](2026-11-04_p3-ct-representative-oil-product-bridge.md) 실제 무기 class/inventory/subclass 마스크, [P3-CY](2026-11-04_p3-cy-flask-observed-quality-oil-mask.md) 물리 아이템 ID/Native, v098 v215 26/26 대표 profile supplier, v091 legacy 손별 oil/캐시, v108 legacy 영약/gem serializer.
+- **Decision:** `CONNECT` — 기존 사용자 입력→대표장비 v098 흐름에서 시즌에 따라 바뀌는 J/F/기름 손별 O 및 SimC 토큰을 기존 v108/v091 serializer에 옵션으로 연결한다. 기존 시즌 고정값 삭제/덮어쓰기나 별도 효과·스탯 엔진·새 Native/HTTP 없이 안전한 내부 source-only 접합 우선.
+- **Changes:** v108은 기존 고정 J138/F165 경로 보존 + 내부 J/F·정확 ItemID/flask token serializer, v091은 기존 무기당 16/16 유지 + 내부 손별 physical item ID/SimC token/vector O serializer 지원. v098의 26-specialization 현재 시즌 대표 gear compiler 뒤에서 선택적으로 원래 v216 numeric-preview를 받아 SimC flask/oil 문자열·cfg J/F/O를 한 번 구성, source/catalog game build·SimC revision·사용자 수동 최종 T·O 손·ItemID·SHA를 대조. `v098.build(...,season_profile_inputs=...)`는 내부 opt-in에만, profile/source-only 결과 반환 전에 멈추며 manifest/session/Native/cache는 생성하지 않음; old v096/v094는 원래 경로 그대로. 실제 시즌 모든 장비·보석·오일의 독립 원본 인증/Policy A는 이 serializer의 책임 아님.
+- **Verification:** 현재 CI **NOT_VERIFIED**, focused에 합성 테스트 4개(새 시즌 J/F/O 프로필, 두 serializer, 빌드/오일 불일치 차단) 추가, 기존 제품 테스트/실제 P3-CR/CO/CP 영수증 역사 재사용. 이번 실제 Native0·게임 HTTP0.
+- **Remaining:** v216 실제 같은 빌드 실물 장비·보석·최고품질/무기 적합성 official 승인 후 이 엔진을 실행 가능한 v098/v096→v094 계약으로 연결하고 시즌별 source supplier 경로까지 확장. 현재 pinned `current_season_product` gear/source는 기존 동일 시즌에만 맞으며 다른 시즌 preview를 섞지 못함. 모든 26 DPS 사용자 시나리오 실 Native/DPS 통합은 미완료. 신규 게임 사실 연구/실측 필요시 사용자 사전 논의.
+- **Efficiency:** 기존 v098 representative compiler, v108 flask line replacement, v091 explicit hand oil serializer, v222 budget preview와 source SHA만 재사용; Native/HTTP 새 호출0, 캐시/기존 임시 프로필 파일·기존 종료/재개 정체성 불변. main/immutable v003/원본 v016/Project UI/Work OS 권한 불변.

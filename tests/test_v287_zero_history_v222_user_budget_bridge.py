@@ -669,6 +669,159 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertIn("SELECTED_OIL_OFF_HAND_NATIVE_OR_WEAPON_MASK_PENDING",
                       no_gj["requires"])
 
+
+    def dynamic_season_profile_inputs(self, *, oil=True, manually=True):
+        import v098_target_user_scenario_bootstrap as boot
+        fixed={"crit_rating":16,"haste_rating":17,
+               "mastery_rating":0,"versatility_rating":0}
+        if not oil:
+            fixed={k:0 for k in fixed}
+        preview={"schema":"v216_zero_history_selected_v222_numeric_preview_v1",
+            "status":"SELECTED_GJFO_V222_ARITHMETIC_PREVIEW_UNADMITTED",
+            "numeric_preview_only":True,"source_authenticated":False,
+            "environment_ready":False,
+            "selected_physical_items":{
+                "flask_item_id":241326,
+                "oil_item_ids_by_hand":{"main_hand":243734} if oil else {}},
+            "calculation":{
+                "game_build":boot._profile_supplier_registry()["season_build"],
+                "simc_revision":"c"*40,"target_ilevel":334,
+                "numeric_preview_only":True,
+                "source_authentication_performed_here":False,
+                "J":143,"F":176,"fixed_O":fixed,
+                "base_B":3367 if oil else 3400,
+                "final_T":3400,
+                "manual_final_T_authoritative":manually}}
+        return {"schema":"v098_internal_season_profile_inputs_v1",
+                "v216_numeric_preview":preview,
+                "flask":{"physical_item_id":241326,
+                         "simc_input_token":"flask_of_the_shattered_sun_2"},
+                "oil_by_hand":{"main_hand":{
+                    "physical_item_id":243734,
+                    "simc_input_token":"main_hand:thalassian_phoenix_oil",
+                    "static_CHMV_vector":{"crit_rating":16,"haste_rating":17,
+                         "mastery_rating":0,"versatility_rating":0}}}
+                    if oil else {}}
+
+    def test_v098_profile_engine_serializes_variable_j_f_and_o_without_native(self):
+        import v098_target_user_scenario_bootstrap as boot
+        import v106_user_session_controller as sessions
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            binary=root/"fake_simc"
+            binary.write_bytes(b"TEST_OFFLINE_NO_NATIVE")
+            folder=root/"unadmitted_preview"
+            user=sessions.user_scenario(
+                sessions.standard_controls(("mage","frost")))
+            user["target"]["final_T"]=3400
+            user["oil_hands"]=["main_hand"]
+            payload=self.dynamic_season_profile_inputs()
+            result=boot.build(user,folder,binary,"c"*40,
+                current_season_product=True,
+                season_profile_inputs=payload)
+            self.assertEqual(result["status"],
+                "SEASON_PROFILE_COMPOSED_NOT_ADMITTED_NO_NATIVE")
+            self.assertIn("flask=flask_of_the_shattered_sun_2",
+                          result["profile_simc"])
+            self.assertIn("temporary_enchant=main_hand:thalassian_phoenix_oil",
+                          result["profile_simc"])
+            self.assertEqual(result["scenario"]["consumables"][
+                "gem_budget_J"],143)
+            self.assertEqual(result["scenario"]["consumables"][
+                "flask_budget_F"],176)
+            self.assertEqual(result["scenario"]["consumables"][
+                "weapon_temporary_fixed_rating"]["haste_rating"],17)
+            self.assertEqual(result["budget_preview_unadmitted"]["final_T"],3400)
+            self.assertFalse(result["environment_ready"])
+            self.assertFalse(result["adaptive_v094_started"])
+            self.assertEqual(result["new_native_calls"],0)
+            self.assertFalse(folder.exists())
+
+    def test_v098_season_serializer_rejects_mismatched_build_or_oil(self):
+        import v098_target_user_scenario_bootstrap as boot
+        from tests.test_v091_weapon_oil_external_adapter import frost
+        with tempfile.TemporaryDirectory() as td:
+            profile,cfg,_=frost(td)
+            user={"target":{"ilevel":334,"final_T":3400},
+                  "oil_hands":["main_hand"]}
+            inp=self.dynamic_season_profile_inputs()
+            kwargs={"profile":profile,"cfg":cfg,
+                    "weapon_layout":"one_hand_frill","user":user,
+                    "season_build":inp["v216_numeric_preview"][
+                         "calculation"]["game_build"],
+                    "simc_revision":"c"*40}
+            good=boot.season_profile_source_only(
+                season_profile_inputs=inp,**kwargs)
+            self.assertEqual(good["status"],
+                "SEASON_PROFILE_COMPOSED_NOT_ADMITTED_NO_NATIVE")
+            import copy
+            changed=copy.deepcopy(inp)
+            changed["oil_by_hand"]["main_hand"][
+                "static_CHMV_vector"]["haste_rating"]=16
+            with self.assertRaisesRegex(
+                (boot.UserScenarioBlocked),"SEASON_PROFILE_FIXED_J_F_O"):
+                boot.season_profile_source_only(
+                    season_profile_inputs=changed,**kwargs)
+            with self.assertRaisesRegex(
+                (boot.UserScenarioBlocked),"SEASON_PROFILE_GEAR_BUILD"):
+                boot.season_profile_source_only(
+                    season_profile_inputs=inp,
+                    **{**kwargs,"season_build":"12.2.0.99999"})
+
+    def test_v091_new_oil_by_hand_never_reuses_old_16_16(self):
+        from tests.test_v091_weapon_oil_external_adapter import frost
+        import v091_weapon_oil_external_adapter as oil_adapter
+        with tempfile.TemporaryDirectory() as td:
+            p,c,_=frost(td)
+            sample=self.dynamic_season_profile_inputs()["oil_by_hand"]
+            configured=oil_adapter.configure(
+                p,c,"one_hand_frill",["main_hand"],
+                season_oil_by_hand=sample)
+            self.assertEqual(configured["declared_O"]["crit_rating"],16)
+            self.assertEqual(configured["declared_O"]["haste_rating"],17)
+            self.assertTrue(configured["internal_season_oil_source_only"])
+            self.assertFalse(configured["season_oil_budget_admitted_here"])
+            with self.assertRaisesRegex(
+                oil_adapter.OilInputBlocked,"SEASON_OIL_PHYSICAL_HAND_SET"):
+                oil_adapter.configure(
+                    p,c,"one_hand_frill",[],
+                    season_oil_by_hand=sample)
+            with self.assertRaisesRegex(
+                oil_adapter.OilInputBlocked,"NONWEAPON_OFFHAND"):
+                oil_adapter.configure(
+                    p,c,"one_hand_frill",["off_hand"],
+                    season_oil_by_hand={"off_hand":{
+                        "physical_item_id":243734,
+                        "simc_input_token":
+                            "main_hand:disabled/off_hand:thalassian_phoenix_oil",
+                        "static_CHMV_vector":
+                            sample["main_hand"]["static_CHMV_vector"]}})
+
+    def test_v108_source_only_accepts_new_season_rating_without_legacy_default(self):
+        from tests.test_v091_weapon_oil_external_adapter import frost
+        import v108_native_consumable_inputs as serializer
+        with tempfile.TemporaryDirectory() as td:
+            p,c,_=frost(td)
+            result=serializer.season_static_consumables_source_only(
+                p,c,gem_budget_J=143,flask_budget_F=176,
+                flask_item_id=241326,
+                flask_simc_token="flask_of_the_shattered_sun_2")
+            self.assertEqual(result["scenario"]["consumables"][
+                "gem_budget_J"],143)
+            self.assertEqual(result["scenario"]["consumables"][
+                "flask_budget_F"],176)
+            self.assertIn("flask=flask_of_the_shattered_sun_2",
+                          result["profile"])
+            self.assertFalse(result["environment_ready"])
+            with self.assertRaisesRegex(
+                serializer.ConsumableBlocked,
+                "SEASON_FLASK_SOURCE_PROFILE_SHA_MISMATCH"):
+                serializer.season_static_consumables_source_only(
+                    p.replace("race=human","race=orc"),c,
+                    gem_budget_J=143,flask_budget_F=176,
+                    flask_item_id=241326,
+                    flask_simc_token="flask_of_the_shattered_sun_2")
+
     def test_automatic_target_goes_through_existing_v222_once(self):
         result=self.run_build()
         source=result["source_compilation"]
