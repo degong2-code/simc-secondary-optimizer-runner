@@ -43,6 +43,143 @@ class LocalWebAPIOffline(unittest.TestCase):
         return r.json()
 
 
+    def test_controlled_cold_start_web_real_collector_and_rebuild(self):
+        """P3-DS T0: web -> original v216/v161/v217 in a virgin workspace.
+
+        Replace external Wago transport only. Real source compilation,
+        budget PENDING and source-stage receipt behaviors remain unmocked.
+        """
+        import io
+        import socket
+        from urllib.parse import parse_qs, urlsplit
+
+        build="12.2.0.99999"  # Synthetic identity, NOT live season evidence.
+        workspace=self.root/"runs"
+        self.assertFalse(workspace.exists())
+        calls=[]
+
+        class Response(io.BytesIO):
+            status=200
+            def __enter__(self):return self
+            def __exit__(self,*exc):self.close()
+
+        def fixture_fetch(req,timeout):
+            url=urlsplit(req.full_url)
+            self.assertEqual(url.hostname,"wago.tools")
+            self.assertEqual(parse_qs(url.query)["build"],[build])
+            self.assertEqual(parse_qs(url.query)["locale"],["enUS"])
+            table=url.path.split("/")[-2]
+            self.assertIn(table,web.environment_build.wago_snapshot.TABLES)
+            calls.append(table)
+            return Response(("ID,Name\n1,"+table+"\n").encode("utf8"))
+
+        # Preserve the real original collector, insert its *documented*
+        # internal-only external fixture seam, never a synthetic stage result.
+        original=web.environment_build.collect_wago_new_season_source
+        def controlled_external_only(**kwargs):
+            return original(
+                **kwargs,fetch=fixture_fetch,
+                credentials={key:"" for key in
+                             web.environment_build.discovery_stage.FIELDS})
+
+        with (
+            mock.patch.object(
+                web.environment_build,"collect_wago_new_season_source",
+                side_effect=controlled_external_only) as collector,
+            mock.patch.object(
+                socket.socket,"connect",
+                side_effect=AssertionError("NETWORK_ESCAPE_FORBIDDEN")),
+            mock.patch.object(
+                self.app.state.jobs,"plan",
+                side_effect=AssertionError("DPS_PLAN_FORBIDDEN")),
+        ):
+            first=self.post("/api/v1/environment/season-build",
+                            {"game_build":build,"target_ilevel":334})
+            second=self.post("/api/v1/environment/season-build",
+                             {"game_build":build,"target_ilevel":334})
+            self.assertEqual(collector.call_count,2)
+
+        self.assertEqual(first.status_code,200,first.text)
+        self.assertEqual(second.status_code,200,second.text)
+        one,two=first.json(),second.json()
+        self.assertEqual(len(calls),len(web.environment_build.wago_snapshot.TABLES))
+        self.assertEqual(set(calls),set(web.environment_build.wago_snapshot.TABLES))
+        self.assertEqual(one["source_stage"]["status"],"EXECUTED_AND_SEALED")
+        self.assertEqual(two["source_stage"]["status"],"REUSED_VERIFIED")
+        self.assertEqual(one["network_calls_by_stage"],
+                         len(web.environment_build.wago_snapshot.TABLES))
+        self.assertEqual(two["network_calls_by_stage"],0)
+        self.assertEqual(one["snapshot_receipt_path"],
+                         two["snapshot_receipt_path"])
+        for result in (one,two):
+            self.assertTrue(result["normal_build_entry"])
+            scope=result["web_environment_scope"]
+            self.assertFalse(scope["dps_optimization_started"])
+            self.assertFalse(scope["user_character_or_trinkets_required"])
+            self.assertFalse(scope["environment_installed"])
+            self.assertFalse(scope["environment_ready"])
+            self.assertEqual(result["native_calls"],0)
+            self.assertTrue(result["zero_history_build"]["requires"])
+            self.assertFalse(result["zero_history_build"]["user_session_created"])
+        self.assertFalse((workspace/"manifest.json").exists())
+        self.assertFalse((workspace/"data").exists())
+        self.assertFalse((workspace/"runs").exists())
+        stage=workspace/"_fresh_season_sources"/("wago_"+build)
+        self.assertTrue((stage/".stage_receipts"/"fresh-wago-db2.json").is_file())
+        self.assertEqual(len(list(stage.rglob("*.csv"))),
+                         len(web.environment_build.wago_snapshot.TABLES))
+
+    def test_controlled_cold_start_corrupted_source_not_silently_refetched(self):
+        """P3-DS T0 tamper: original v217 must reject changed source bytes."""
+        import io
+        import socket
+        from urllib.parse import urlsplit
+
+        build="12.2.0.99999"
+        calls=[]
+
+        class Response(io.BytesIO):
+            status=200
+            def __enter__(self):return self
+            def __exit__(self,*exc):self.close()
+
+        def fixture_fetch(req,timeout):
+            table=urlsplit(req.full_url).path.split("/")[-2]
+            self.assertIn(table,web.environment_build.wago_snapshot.TABLES)
+            calls.append(table)
+            return Response(("ID,Name\n1,"+table+"\n").encode("utf8"))
+
+        original=web.environment_build.collect_wago_new_season_source
+        def controlled_external_only(**kwargs):
+            return original(
+                **kwargs,fetch=fixture_fetch,
+                credentials={key:"" for key in
+                             web.environment_build.discovery_stage.FIELDS})
+
+        with (
+            mock.patch.object(
+                web.environment_build,"collect_wago_new_season_source",
+                side_effect=controlled_external_only),
+            mock.patch.object(
+                socket.socket,"connect",
+                side_effect=AssertionError("NETWORK_ESCAPE_FORBIDDEN")),
+        ):
+            first=self.post("/api/v1/environment/season-build",
+                            {"game_build":build,"target_ilevel":334})
+            self.assertEqual(first.status_code,200,first.text)
+            artifact=(self.root/"runs"/"_fresh_season_sources"/
+                      ("wago_"+build)/"wago"/"Item.csv")
+            self.assertTrue(artifact.is_file())
+            artifact.write_bytes(b"CORRUPTED_SOURCE")
+            second=self.post("/api/v1/environment/season-build",
+                             {"game_build":build,"target_ilevel":334})
+
+        self.assertEqual(second.status_code,422,second.text)
+        self.assertEqual(second.json()["detail"]["code"],
+                         "V216_FRESH_WAGO_STAGE_BLOCKED")
+        self.assertEqual(len(calls),len(web.environment_build.wago_snapshot.TABLES))
+        self.assertEqual(artifact.read_bytes(),b"CORRUPTED_SOURCE")
+
     def test_web_season_environment_build_no_dps_inputs_and_no_native(self):
         payload={"game_build":"12.2.0.99999","target_ilevel":334}
         source={"status":"FRESH_WAGO_DB2_COLLECTED_MORE_SOURCES_PENDING",
