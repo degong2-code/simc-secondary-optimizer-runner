@@ -409,12 +409,126 @@ def season_profile_source_only(*, profile, cfg, weapon_layout, user,
         "new_native_calls":0,"network_calls":0}
 
 
+
+def _materialize_admitted_season_v096(*, source_only,season_profile_inputs,
+                                     season_environment_receipt_path,folder,
+                                     binary,revision,static_cache_path,
+                                     weapon_layout,fillers,user,ilevel,rows,key):
+    """Reuse the ORIGINAL v096 manifest+durable v094 route for an admitted season.
+
+    A non-admitted v216 numeric draft can never reach this writer. The
+    existing v216/v223 receipt and original v096's own source checks remain
+    authoritative. No new season quality, proc or item-effect certification.
+    """
+    need(type(source_only) is dict and
+         source_only.get("status")==(
+             "SEASON_PROFILE_COMPOSED_NOT_ADMITTED_NO_NATIVE")
+         and type(source_only.get("v096_typed_input_unadmitted")) is dict
+         and static_cache_path is None,
+         "SEASON_WRITER_PLAIN_SOURCE_ONLY_PROFILE_REQUIRED")
+    draft=source_only["v096_typed_input_unadmitted"]
+    seed=draft.get("adaptive_seed_plan_unadmitted")
+    need(type(seed) is dict and seed.get("schema")==(
+             "v098_v065_unadmitted_seed_plan_v1")
+         and seed.get("runtime_native_authorized") is False
+         and len(seed.get("seed_targets_B",[]))==2,
+         "SEASON_WRITER_ORIGINAL_SEED_PLAN_REQUIRED")
+    receipt_path=pathlib.Path(season_environment_receipt_path).resolve()
+    need(receipt_path.is_file() and not receipt_path.is_symlink(),
+         "SEASON_WRITER_V216_RECEIPT_NOT_INSTALLED")
+    import v216_environment_build_coordinator as existing_environment
+    original_receipt=existing_environment.read_receipt(receipt_path)
+    manifest_source={
+        "schema":entry.SEASON_SCHEMA,
+        "environment_receipt_path":str(receipt_path),
+        "environment_receipt_sha256":original_receipt["receipt_sha256"],
+        "oil_by_hand":copy.deepcopy(
+            season_profile_inputs["oil_by_hand"])}
+    # Original v096 rechecks the same v216 receipt and the v223 provenance
+    # before constructing its Native context. This pre-write call also
+    # prevents creating partial files from unadmitted GJFO.
+    source=entry._admitted_season_source(
+        manifest_path=folder/"manifest.json",season=manifest_source,
+        revision=revision,user_scenario=draft["scenario"],
+        flask_F=draft["flask_F"],oil_hands=user["oil_hands"])
+    approved=source["season_budget"]
+    draft_budget=source_only["budget_preview_unadmitted"]
+    need(all(draft_budget.get(k)==approved.get(k)
+             for k in ("game_build","simc_revision",
+                       "source_catalog_manifest_sha256",
+                       "source_catalog_artifact_sha256",
+                       "target_ilevel","base_B","final_T",
+                       "J","F","fixed_O"))
+         and draft["base_B"]==approved["base_B"]
+         and draft["final_T"]==approved["final_T"]
+         and draft["fixed_O"]==approved["fixed_O"]
+         and source_only["same_season_build"]==
+             approved["game_build"]
+         and draft["source_profile_sha256"]==
+             source_only["source_profile_sha256"]
+         and seed["base_B"]==draft["base_B"],
+         "SEASON_WRITER_V216_V098_SOURCE_ACCOUNTING_DRIFT")
+    manifest={"schema":entry.SCHEMA,
+              "profile_simc":"profile.simc",
+              "scenario_json":"scenario.json",
+              "fillers_json":"fillers.json",
+              "static_cache_json":None,
+              "weapon_layout":weapon_layout,
+              "oil_hands":user["oil_hands"],
+              "flask_F":draft["flask_F"],
+              "seed_targets_B":seed["seed_targets_B"],
+              "native_binary":str(binary),
+              "native_revision":revision,
+              "output_dir":"simc_results",
+              "scouts":1,"material_scouts":1,
+              "native_limit":6,"step":100,
+              "cancel_file":"CANCEL",
+              entry.SEASON_FIELD:manifest_source}
+    files={
+        "profile.simc":source_only["profile_simc"],
+        "scenario.json":canonical(draft["scenario"])+"\\n",
+        "fillers.json":canonical(fillers)+"\\n",
+        "manifest.json":canonical(manifest)+"\\n"}
+    # Precheck ALL existing bytes before writing any new file. The original
+    # V094_SESSION_IDENTITY is never replaced, even if B/T happen to match.
+    for name,content in files.items():
+        dest=folder/name
+        need(not dest.is_symlink() and
+             (not dest.exists() or
+              dest.is_file() and dest.read_bytes()==content.encode("utf8")),
+             "SEASON_WRITER_EXISTING_SESSION_SOURCE_CHANGED:"+name)
+    for name,content in files.items():
+        put_once(folder/name,content)
+    plan=entry.run_manifest(folder/"manifest.json",plan_only=True)
+    need(plan.get("budget_source")=="ADMITTED_SEASON_GJFO_V216_V223"
+         and plan["base_B"]==draft["base_B"]
+         and plan["final_T"]==draft["final_T"]
+         and plan["fixed_O"]==draft["fixed_O"]
+         and plan.get("season_source_receipt_sha256")==
+             original_receipt["receipt_sha256"]
+         and plan["item_slots"]==len(rows),
+         "SEASON_WRITER_V096_ORIGINAL_PLAN_DRIFT")
+    return {
+        "schema":SCHEMA,
+        "status":"READY_SOURCE_BOUND_SEASON_MANIFEST_ZERO_NATIVE",
+        "generated_manifest":str(folder/"manifest.json"),
+        "output_dir":str(folder/"simc_results"),
+        "plan":plan,
+        "season_environment_receipt_sha256":
+            original_receipt["receipt_sha256"],
+        "user_does_not_supply_full_gear_or_simc_profile":True,
+        "season_source_not_full_policy_A_option_coverage":True,
+        "existing_v096_v094_execution_reused":True,
+        "native_calls":0,
+        "source_authentication_created_here":False}
+
+
 def build(user,folder,binary,revision,static_cache_path=None,
           imported_profile_text=None,*,ordinary_variant=None,pure_stage=False,
           independent_334=False,independent_target_level=False,
           source_first_stage=False,current_season_product=False,
           static_special_probe_only=False,source_catalog_path=None,
-          season_profile_inputs=None):
+          season_profile_inputs=None,season_environment_receipt_path=None):
     """Return an already validated internal manifest and v096 plan; no Native."""
     base_accepted=(FIELDS,FIELDS|{IMPORT_FIELD},FIELDS|{CONSUME_FIELD},
                    FIELDS|{IMPORT_FIELD,CONSUME_FIELD})
@@ -445,6 +559,10 @@ def build(user,folder,binary,revision,static_cache_path=None,
     # production route at ilvl 334 only. Historic v147/v145 probes remain
     # unpromoted and their unchanged pure_stage semantics are preserved.
     need(type(source_first_stage) is bool,"SOURCE_FIRST_STAGE_BOOL_REQUIRED")
+    need(season_environment_receipt_path is None or
+         (season_profile_inputs is not None
+          and static_cache_path is None),
+         "SEASON_WRITER_INTERNAL_SOURCE_AND_NO_STATIC_CACHE_REQUIRED")
     need(season_profile_inputs is None or
          (type(season_profile_inputs) is dict and current_season_product
           and not source_first_stage and not pure_stage
@@ -634,13 +752,21 @@ def build(user,folder,binary,revision,static_cache_path=None,
                    "profile_sha256":hashlib.sha256(profile.encode("utf8")).hexdigest()}
     scenario.normalize(cfg)
     if season_profile_inputs is not None:
-        # Return before legacy reference selection, disk writes and Native.
-        # This branch does not claim a ready current/new-season product.
-        return season_profile_source_only(
+        source_only=season_profile_source_only(
             profile=profile,cfg=cfg,weapon_layout=weapon_layout,user=user,
             season_profile_inputs=season_profile_inputs,
             season_build=_profile_supplier_registry()["season_build"],
             simc_revision=revision,fillers=fillers)
+        if season_environment_receipt_path is None:
+            # Unadmitted observations never write a runnable manifest.
+            return source_only
+        return _materialize_admitted_season_v096(
+            source_only=source_only,
+            season_profile_inputs=season_profile_inputs,
+            season_environment_receipt_path=season_environment_receipt_path,
+            folder=folder,binary=binary,revision=revision,
+            static_cache_path=static_cache_path,weapon_layout=weapon_layout,
+            fillers=fillers,user=user,ilevel=ilvl,rows=rows,key=key)
     if static_special_probe_only:
         # v208 internal on-demand static-L source, never a product plan.
         # Reuses exactly the real user/gear/consumables profile composition
@@ -788,7 +914,8 @@ def run(user_path,folder,binary,revision,static_cache_path=None,
         execute=False,cache_only=False,*,ordinary_variant=None,pure_stage=False,
         physical_acceptance_root=None,open_folder=True,independent_334=False,
         independent_target_level=False,source_first_stage=False,
-        current_season_product=False,source_catalog_path=None):
+        current_season_product=False,source_catalog_path=None,
+        season_profile_inputs=None,season_environment_receipt_path=None):
     # An exact v140 (historical 2 specs) or v145 (single preview profile)
     # physical Native receipt authorizes ONLY its identical internal profile.
     # v096 verifies original JSON2 bytes before any adaptive Native call.
@@ -813,7 +940,10 @@ def run(user_path,folder,binary,revision,static_cache_path=None,
                    independent_target_level=independent_target_level,
                    source_first_stage=source_first_stage,
                    current_season_product=current_season_product,
-                   source_catalog_path=source_catalog_path)
+                   source_catalog_path=source_catalog_path,
+                   season_profile_inputs=season_profile_inputs,
+                   season_environment_receipt_path=
+                       season_environment_receipt_path)
     if not execute:return prepared
     if pure_stage:
         actual=entry.run_manifest(prepared["generated_manifest"],
