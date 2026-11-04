@@ -3174,6 +3174,59 @@ def _zero_history_v098_profile_source_inputs(*, numeric_preview,
         "oil_by_hand":by_hand}
 
 
+def _stage_source_environment_only(*, compilation, preflight,
+                                   target_ilevel, selected_numeric=None):
+    """Seal a versioned environment UNIT with original v217; no DPS plan.
+
+    All original same-build v191/v211/v213 and v216 preflight authentication
+    already ran before this call. The artifact is always NOT INSTALLED.
+    Different numeric source receipts get different content-addressed paths,
+    never silently overwrite an earlier build stage or its cache.
+    """
+    source=pathlib.Path(compilation["source_catalog_path"]).resolve()
+    stage_root=pathlib.Path(compilation["stage_root"]).resolve()
+    need(source.is_file() and not source.is_symlink() and
+         stage_root.is_dir() and source.is_relative_to(stage_root),
+         "V216_ENVIRONMENT_STAGE_SOURCE_OUTSIDE_SEALED_WORKSPACE")
+    catalog,catalog_sha=environment_manifest.read_json(source)
+    document=environment_manifest.compile_fresh_source_environment(
+        source_catalog=catalog,source_artifact_sha256=catalog_sha,
+        preflight=preflight,compilation=compilation,
+        target_ilevel=target_ilevel,selected_numeric=selected_numeric)
+    key=document["manifest_sha256"][:20]
+    stage_id="fresh-v212-environment-"+key
+    output="fresh_source/v212_environment_"+key+".json"
+    path=stage_root/output
+    encoded=environment_manifest.canonical(document)+"\n"
+    def execute():
+        path.parent.mkdir(parents=True,exist_ok=True)
+        need(not path.is_symlink(),"V216_ENVIRONMENT_STAGE_OUTPUT_SYMLINK")
+        need(not path.exists(),"V216_ENVIRONMENT_STAGE_OUTPUT_UNRECEIPTED")
+        path.write_text(encoded,encoding="utf8")
+    def validate(files):
+        saved=files["environment"]
+        if saved.is_symlink() or saved.read_text(encoding="utf8")!=encoded:
+            return False
+        return environment_manifest.verify_fresh_source_environment(
+            json.loads(saved.read_text(encoding="utf8")))
+    sealed=stage_engine.execute_stage(
+        root=stage_root,stage_id=stage_id,
+        stage_version="v212-fresh-source-environment-1",
+        inputs={"manifest_sha256":document["manifest_sha256"],
+                "v216_preflight_sha256":preflight["preflight_sha256"]},
+        outputs={"environment":output},execute=execute,validate=validate)
+    return {"schema":environment_manifest.FRESH_SEASON_STAGE_SCHEMA,
+            "status":document["status"],
+            "manifest_sha256":document["manifest_sha256"],
+            "original_v216_preflight_sha256":preflight["preflight_sha256"],
+            "stage_status":sealed["status"],
+            "stage_receipt_sha256":sealed["receipt_sha256"],
+            "stage_output_path":str(path),
+            "environment_ready":False,"environment_installed":False,
+            "dps_optimization_required":False,
+            "new_native_calls":0,"network_calls":0}
+
+
 def build_environment(*, sessions_root, session_folder, user, binary, revision,
                       static_cache, source_catalog_path, bootstrap_result,
                       v208_start_receipt_path=None, package_manifest_path=None,
@@ -3513,6 +3566,20 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 "new_native_calls":0,"network_calls":0}
             progress["selected_physical_F_O_budget_link_unadmitted"]=waiting
             source_compilation["selected_physical_F_O_budget_link_unadmitted"]=waiting
+        # The new season's exact source stage is now a versioned Environment
+        # unit, independent of v098/optimizer sessions. It is not an install.
+        if (preflight is not None and
+                preflight.get("schema")==FRESH_SOURCE_PREFLIGHT_SCHEMA and
+                source_compilation["status"]==
+                    "FRESH_V191_V211_V213_COMPILED_UNADMITTED"):
+            staged=_stage_source_environment_only(
+                compilation=source_compilation,preflight=preflight,
+                target_ilevel=fresh_collection_inputs[
+                    "representative_request"]["target_ilevel"],
+                selected_numeric=source_compilation.get(
+                    "selected_auto_v222_numeric_preview_unadmitted"))
+            progress["versioned_environment_source_stage"]=staged
+            source_compilation["versioned_environment_source_stage"]=staged
         progress["source_compilation_status"]=source_compilation["status"]
         progress["source_compilation_missing"]=source_compilation["missing"]
         if source_compilation["missing"]:

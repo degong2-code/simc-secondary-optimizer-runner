@@ -633,6 +633,7 @@ function showSeasonEnvironmentBuild(data) {
     " · 컴파일 "+(source.status||step.source_compilation_status||"대기")+
     " · G 관측 "+(step.native_G_status||"대기")+
     " · 신규 Native "+(Number(data?.native_calls)||0)+"회"+
+    " · 환경 매니페스트 "+(step.versioned_environment_source_stage?.stage_status||"입력 대기")+
     " · 미해결 "+unique.length+"건 · DPS 최적화 0회"+
     (scope.user_character_or_trinkets_required===false?" · 사용자 장비 입력 없음":"");
   const details=$("season-build-pending"),list=$("season-build-missing");

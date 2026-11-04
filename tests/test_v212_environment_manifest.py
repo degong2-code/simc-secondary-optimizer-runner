@@ -16,6 +16,85 @@ from runner import v216_environment_build_coordinator as environment_build
 from tests.test_v213_source_to_catalog import SourceToCatalogTests
 
 
+class FreshEnvironmentSourceStageTests(unittest.TestCase):
+    """Only season source staging; no user v098, Native or installed READY."""
+
+    def test_fresh_stage_manifest_reuses_original_source_and_never_promotes(self):
+        from tests.test_v240_v211_v213_fresh_catalog_handoff import (
+            SameFreshCatalogChain)
+        from runner import v217_stage_execution_engine as stages
+        fixture=SameFreshCatalogChain()
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td)
+            season,classification=fixture.inputs(root)
+            catalog=source_bridge.compile_catalog(
+                season,"a"*64,classification,"b"*64)
+            artifact_sha=p.sha(p.canonical(catalog).encode("utf8"))
+            preflight={
+                "schema":"v216_new_season_source_preflight_v1",
+                "status":"FRESH_SOURCE_CANDIDATES_VALID_GJFO_PENDING_NOT_INSTALLED",
+                "game_build":catalog["game_build"],
+                "simc_revision":catalog["simc_revision"],
+                "source_artifact_sha256":artifact_sha,
+                "source_catalog_manifest_sha256":catalog["manifest_sha256"],
+                "environment_ready":False,"approved_new_choices":0,
+                "G":None,"J":None,"F":None,"O":None,"B":None,"T":None,
+                "requires":["G/J/F/O_VERIFIED_SOURCE_RECEIPTS"],
+            }
+            preflight["preflight_sha256"]=p.sha(p.canonical(preflight).encode("utf8"))
+            compilation={
+                "status":"FRESH_V191_V211_V213_COMPILED_UNADMITTED",
+                "simc_revision":catalog["simc_revision"],
+                "preflight_sha256":preflight["preflight_sha256"],
+                "environment_ready":False,
+                **{key:{"status":"REUSED_VERIFIED","receipt_sha256":(str(i)*64)}
+                   for i,key in enumerate(
+                       ("v191_stage","v211_stage","v213_stage"),1)},
+            }
+            result=p.compile_fresh_source_environment(
+                source_catalog=catalog,source_artifact_sha256=artifact_sha,
+                preflight=preflight,compilation=compilation,target_ilevel=334)
+            self.assertTrue(p.verify_fresh_source_environment(result))
+            self.assertEqual(result["official_G"],None)
+            self.assertEqual(result["status"],
+                "FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED")
+            self.assertFalse(result["dps_optimization_required"])
+            self.assertFalse(result["environment_ready"])
+            self.assertEqual(result["original_v217_stage_receipts"]["v191_stage"],
+                             "1"*64)
+            self.assertIsNone(result["numeric_budget_preview_unadmitted"])
+            same=p.compile_fresh_source_environment(
+                source_catalog=catalog,source_artifact_sha256=artifact_sha,
+                preflight=preflight,compilation=compilation,target_ilevel=334)
+            self.assertEqual(same,result)
+            # Original stage receipt mechanism remains the only writer.
+            docpath=root/"environment.json"
+            def write():docpath.write_text(p.canonical(result)+"\n",encoding="utf8")
+            params={"root":root,"stage_id":"fresh-v212-test",
+                    "stage_version":"1","inputs":{"sha":result["manifest_sha256"]},
+                    "outputs":{"env":"environment.json"}}
+            first=stages.execute_stage(**params,execute=write)
+            second=stages.execute_stage(**params,execute=lambda: self.fail("repeated"))
+            self.assertEqual(first["status"],"EXECUTED_AND_SEALED")
+            self.assertEqual(second["status"],"REUSED_VERIFIED")
+            wrong=dict(result,environment_ready=True)
+            with self.assertRaisesRegex(p.EnvironmentBlocked,"CANNOT_PROMOTE"):
+                p.verify_fresh_source_environment(wrong)
+            bad=dict(preflight,J=138)
+            bad["preflight_sha256"]=p.sha(p.canonical(
+                {k:v for k,v in bad.items() if k!="preflight_sha256"}
+            ).encode("utf8"))
+            bad_compilation={**compilation,"preflight_sha256":bad["preflight_sha256"]}
+            with self.assertRaisesRegex(p.EnvironmentBlocked,"ORIGINAL_PREFLIGHT"):
+                p.compile_fresh_source_environment(
+                    source_catalog=catalog,source_artifact_sha256=artifact_sha,
+                    preflight=bad,compilation=bad_compilation,target_ilevel=334)
+            with self.assertRaisesRegex(p.EnvironmentBlocked,"ORIGINAL_PREFLIGHT"):
+                p.compile_fresh_source_environment(
+                    source_catalog=catalog,source_artifact_sha256="f"*64,
+                    preflight=preflight,compilation=compilation,target_ilevel=334)
+
+
 class EnvironmentManifestTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

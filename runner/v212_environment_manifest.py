@@ -24,6 +24,7 @@ V098 = "v098_target_ilevel_user_scenario_v1"
 EXPECTED_APPROVED_ENCHANT_IDS = [7967]
 EXPECTED_ENCHANT_COUNT = 38
 
+FRESH_SEASON_STAGE_SCHEMA = "v212_fresh_source_environment_stage_v1"
 WINDOWS_PACKAGE_SCHEMA = "v181_windows_local_web_beta_source_package_v1"
 EXPECTED_SIMC_REVISION_LENGTH = 40
 
@@ -60,6 +61,129 @@ def read_json(path, max_bytes=25_000_000):
         return json.loads(raw.decode("utf8")), sha(raw)
     except (UnicodeError, ValueError) as exc:
         raise EnvironmentBlocked("INPUT_JSON_INVALID:" + path.name) from exc
+
+
+def compile_fresh_source_environment(*, source_catalog, source_artifact_sha256,
+                                     preflight, compilation, target_ilevel,
+                                     selected_numeric=None):
+    """Versioned ENVIRONMENT-only source stage, reusable by original v216.
+
+    Not the legacy per-user v098/DPS manifest. Original v213/v216/v217
+    authentication and v222 arithmetic remain upstream; no caller-provided
+    status can turn these unaudited ratings or policy options into READY.
+    """
+    source_bridge.verify_catalog(source_catalog)
+    need(valid_sha(source_artifact_sha256) and
+         type(target_ilevel) is int and 1<=target_ilevel<=1000,
+         "FRESH_ENVIRONMENT_SOURCE_IDENTITY_REQUIRED")
+    need(type(preflight) is dict and
+         preflight.get("schema")=="v216_new_season_source_preflight_v1" and
+         preflight.get("status")==
+             "FRESH_SOURCE_CANDIDATES_VALID_GJFO_PENDING_NOT_INSTALLED" and
+         preflight.get("source_artifact_sha256")==source_artifact_sha256 and
+         preflight.get("source_catalog_manifest_sha256")==
+             source_catalog.get("manifest_sha256") and
+         preflight.get("game_build")==source_catalog.get("game_build") and
+         preflight.get("simc_revision")==source_catalog.get("simc_revision") and
+         preflight.get("environment_ready") is False and
+         preflight.get("approved_new_choices")==0 and
+         all(preflight.get(x) is None for x in ("G","J","F","O","B","T")),
+         "FRESH_ENVIRONMENT_ORIGINAL_PREFLIGHT_REQUIRED")
+    expected_preflight_sha=sha(canonical({
+        k:v for k,v in preflight.items() if k!="preflight_sha256"
+    }).encode("utf8"))
+    need(preflight.get("preflight_sha256")==expected_preflight_sha,
+         "FRESH_ENVIRONMENT_PREFLIGHT_DIGEST_DRIFT")
+    need(type(compilation) is dict and
+         compilation.get("status")==
+             "FRESH_V191_V211_V213_COMPILED_UNADMITTED" and
+         compilation.get("preflight_sha256")==expected_preflight_sha and
+         compilation.get("simc_revision")==source_catalog["simc_revision"] and
+         compilation.get("environment_ready") is False,
+         "FRESH_ENVIRONMENT_COMPILER_LINK_REQUIRED")
+    seals={}
+    for key in ("v191_stage","v211_stage","v213_stage"):
+        receipt=compilation.get(key)
+        need(type(receipt) is dict and
+             receipt.get("status") in ("EXECUTED_AND_SEALED",
+                                      "REUSED_VERIFIED","RECOVERED_VERIFIED")
+             and valid_sha(receipt.get("receipt_sha256")),
+             "FRESH_ENVIRONMENT_ORIGINAL_STAGE_RECEIPT_REQUIRED:"+key)
+        seals[key]=receipt["receipt_sha256"]
+    preview=None
+    if selected_numeric is not None:
+        need(type(selected_numeric) is dict and
+             selected_numeric.get("schema")==
+                "v216_zero_history_selected_v222_numeric_preview_v1" and
+             selected_numeric.get("status")==
+                "SELECTED_GJFO_V222_ARITHMETIC_PREVIEW_UNADMITTED" and
+             selected_numeric.get("numeric_preview_only") is True and
+             selected_numeric.get("environment_ready") is False and
+             type(selected_numeric.get("calculation")) is dict,
+             "FRESH_ENVIRONMENT_V222_NUMERIC_PREVIEW_UNADMITTED_REQUIRED")
+        calc=selected_numeric["calculation"]
+        need(calc.get("game_build")==source_catalog["game_build"] and
+             calc.get("simc_revision")==source_catalog["simc_revision"] and
+             calc.get("target_ilevel")==target_ilevel and
+             calc.get("source_catalog_manifest_sha256")==
+                source_catalog["manifest_sha256"] and
+             calc.get("source_catalog_artifact_sha256")==
+                source_artifact_sha256 and
+             calc.get("numeric_preview_only") is True and
+             calc.get("environment_ready") is False,
+             "FRESH_ENVIRONMENT_V222_PREVIEW_IDENTITY_DRIFT")
+        preview={"status":"NUMERIC_OBSERVED_NOT_ADMITTED",
+                 "base_B_unadmitted":calc.get("base_B"),
+                 "final_T_unadmitted":calc.get("final_T"),
+                 "J_unadmitted":calc.get("J"),
+                 "F_unadmitted":calc.get("F"),
+                 "fixed_O_unadmitted":calc.get("fixed_O"),
+                 "source_authentication_performed_here":False}
+    payload={
+        "schema":FRESH_SEASON_STAGE_SCHEMA,
+        "status":"FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED",
+        "game_build":source_catalog["game_build"],
+        "simc_revision":source_catalog["simc_revision"],
+        "target_ilevel":target_ilevel,
+        "source_catalog_manifest_sha256":source_catalog["manifest_sha256"],
+        "source_catalog_artifact_sha256":source_artifact_sha256,
+        "original_v217_stage_receipts":seals,
+        "original_v216_preflight_sha256":expected_preflight_sha,
+        "pending_core_requirements":list(preflight["requires"]),
+        "optional_policy_A_pending_separate":True,
+        "optional_item_missing":preflight.get(
+            "optional_policy_A_evidence_unadmitted",{}).get("per_item_missing_reasons",{}),
+        "numeric_budget_preview_unadmitted":preview,
+        "official_G":None,"official_J":None,"official_F":None,
+        "official_O":None,"official_B":None,"official_T":None,
+        "environment_ready":False,"environment_installed":False,
+        "options_published":False,"dps_optimization_required":False,
+        "user_profile_or_trinkets_required":False,
+        "source_authorization_created_here":False,
+        "native_calls":0,"network_calls":0,
+    }
+    return {**payload,"manifest_sha256":sha(canonical(payload).encode("utf8"))}
+
+
+def verify_fresh_source_environment(document):
+    """Read-only integrity check for a source-only ENVIRONMENT stage."""
+    need(type(document) is dict and
+         document.get("schema")==FRESH_SEASON_STAGE_SCHEMA and
+         document.get("status")==
+             "FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED" and
+         all(document.get(x) is None for x in
+             ("official_G","official_J","official_F","official_O",
+              "official_B","official_T")) and
+         document.get("environment_ready") is False and
+         document.get("environment_installed") is False and
+         document.get("options_published") is False and
+         document.get("dps_optimization_required") is False,
+         "FRESH_ENVIRONMENT_STAGE_CANNOT_PROMOTE_TO_READY")
+    payload={k:v for k,v in document.items() if k!="manifest_sha256"}
+    need(document.get("manifest_sha256")==sha(
+        canonical(payload).encode("utf8")),
+        "FRESH_ENVIRONMENT_STAGE_MANIFEST_DIGEST_INVALID")
+    return True
 
 
 def verify_windows_package_manifest(package_manifest_path, source_catalog_path,
