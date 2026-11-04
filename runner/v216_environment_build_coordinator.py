@@ -707,6 +707,10 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                 stage_root=source_stage_root,
                 v221_candidate_path=gem_source["candidate_path"],
                 build=expected_game_build)
+    # Existing focused v216 callers can supply a minimal v196 mock
+    # without per-item diagnostic detail. Do not reinterpret absent proof
+    # data as zero missing items or as approved product choices.
+    admission=ui.get("automatic_admission") or {}
     payload={
         "schema":FRESH_SOURCE_PREFLIGHT_SCHEMA,
         "status":"FRESH_SOURCE_CANDIDATES_VALID_GJFO_PENDING_NOT_INSTALLED",
@@ -729,16 +733,16 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
         "optional_choice_requires":[
                     "POLICY_A_EXACT_ITEM_PROOFS_WHEN_SELECTED"],
         "optional_policy_A_evidence_unadmitted":{
-            "schema":ui["automatic_admission"].get("schema"),
+            "schema":admission.get("schema"),
             "source_catalog_manifest_sha256":source["manifest_sha256"],
             "source_catalog_artifact_sha256":raw_sha,
             "candidate_count":ui["enchant_candidates"]["total"],
-            "pending":ui["automatic_admission"]["pending"],
+            "pending":admission.get("pending"),
             "per_item_missing_reasons":dict(
-                ui["automatic_admission"]["per_item_missing_reasons"]),
+                admission.get("per_item_missing_reasons") or {}),
             "per_item_conflict_reasons":dict(
-                ui["automatic_admission"].get(
-                    "per_item_conflict_reasons",{})),
+                admission.get("per_item_conflict_reasons") or {}),
+            "source_evidence_projection_provided":bool(admission),
             "verified_options_published":False,
             "affects_verified_base_GJFO":False},
         "source_retrieval_authenticated_by_this_stage":False,
