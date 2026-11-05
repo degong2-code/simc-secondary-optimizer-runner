@@ -275,6 +275,10 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                              layout["ordinary_gem_ids"])
             self.assertEqual(view.call_args.kwargs["selected_source_gem_item_ids"],
                              layout.get("source_observed_gem_item_ids"))
+            self.assertEqual(view.call_args.kwargs[
+                "selected_special_gem_item_id"],(
+                    layout["special_gem_id"]
+                    if "source_observed_gem_item_ids" in layout else None))
             return result
 
     def source_selected_future_gems(self):

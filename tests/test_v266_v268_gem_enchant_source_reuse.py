@@ -166,6 +166,16 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
                         selected_source_gem_item_ids=[2001,2003],
                         selected_special_gem_item_id=2001)
                 self.assertFalse(second["environment_ready"])
+                # Unscoped legacy gem layouts remain ordinary-only previews:
+                # the new source-bound special argument is not mandatory.
+                legacy=adapter.view(
+                    stage_root=root,v221_candidate_path=source_path,
+                    build=BUILD,selected_gem_item_ids=[2001])
+                self.assertEqual(parse.call_count,1)
+                self.assertIsNone(legacy[
+                    "selected_special_gem_raw_effect_unadmitted"])
+                self.assertEqual(legacy[
+                    "selected_gem_raw_points_by_id_unadmitted"],{"2001":25})
                 self.assertFalse(second["highest_quality_J_verified"])
                 # A new v221 artifact identity MUST miss the old cache.
                 modified=joined()

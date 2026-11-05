@@ -976,7 +976,8 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                 selected_source_gem_item_ids=selected_source_ids,
                 selected_special_gem_item_id=(
                     gem_layout_receipt.get("special_gem_id")
-                    if type(gem_layout_receipt) is dict else None))
+                    if selected_source_ids is not None and
+                       type(gem_layout_receipt) is dict else None))
     # New-season physical IDs are accepted for a SOURCE-ONLY preview only
     # when the ORIGINAL sealed v221→v266 join actually contains all IDs.
     # An input list or SHA string by itself never certifies a special gem,
