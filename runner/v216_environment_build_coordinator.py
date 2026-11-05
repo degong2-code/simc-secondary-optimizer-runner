@@ -4170,7 +4170,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                          "gem_layout_receipt","gem_rating_by_id",
                          "selected_budget_items","auto_native_F_requested",
                          "auto_native_O_requested",
-                  "auto_native_G_requested")}
+                  "auto_native_G_requested",
+                  "verified_install_input_provider")}
         collected=collect_wago_new_season_source(
             sessions_root=sessions_root,**source_inputs)
         progress=_zero_history_source_progress(collected)
