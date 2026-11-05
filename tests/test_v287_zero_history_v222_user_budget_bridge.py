@@ -1866,7 +1866,8 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                     "consumables"]["gem_budget_J"],143)
                 self.assertIn("gem_id=310001/310001",
                               no_special["profile_simc"])
-                self.assertIn("gem_id=310002",no_special["profile_simc"])
+                self.assertIn("gem_id=310001/310002",
+                              no_special["profile_simc"])
                 self.assertNotIn("gem_id=240967",no_special["profile_simc"])
                 self.assertNotIn("gem_id=240983",no_special["profile_simc"])
                 self.assertFalse(no_special["verified_user_default_options_registered"])

@@ -91,8 +91,10 @@ class SocketLayoutTests(unittest.TestCase):
         reconciled=sockets.reconcile_observed_J(
             meta,{"310001":33,"310002":24},self.need)
         self.assertEqual(reconciled["J_candidate_unadmitted"],114)
-        self.assertEqual(reconciled["physical_gem_item_ids"],
-                         [310001,310002,310001,310002])
+        # v271 materializes physical slot order; IDs are the same set
+        # with each duplicate occurrence retained, not input-list order.
+        self.assertCountEqual(reconciled["physical_gem_item_ids"],
+                              [310001,310002,310001,310002])
         self.assertFalse(reconciled["game_socket_legality_verified_here"])
         for invalid in (
             {**plan,"special_slot":"head"},
