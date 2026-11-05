@@ -822,13 +822,12 @@ def build(user,folder,binary,revision,static_cache_path=None,
     else:
         restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
             key,rows,groups,user,ilvl,need)
-    # 240967 requires four distinct ordinary Midnight gem colors for its
-    # crit-effectiveness bonus. These are real SimC gem IDs, not locked CHMV.
-    # Existing 240983 profiles and already-four-color source rows stay intact.
-    choice=user.get(CONSUME_FIELD) or {}
-    gem_choice=choice.get("diamond_id") or int(
-        rows["head"]["options"].get("gem_id","0"))
+    # Historical 240967 needs four colors, but future ordinary-only J
+    # layouts have no head diamond or historical gem-color requirement.
     if season_profile_inputs is None:
+        choice=user.get(CONSUME_FIELD) or {}
+        gem_choice=choice.get("diamond_id") or int(
+            rows["head"]["options"].get("gem_id","0"))
         common.ensure_representative_gem_colors(rows,gem_choice,need)
     else:
         # Socket legality is owned by the actual season source and v271.
@@ -1118,17 +1117,19 @@ def _season_settings_from_v216(*, compilation, numeric_inputs,
     counts=layout.get("socket_counts")
     special=layout.get("special_gem_id")
     where=layout.get("special_slot")
-    # v271/v139 already support variable N and a non-head special slot.
-    # Unsupported source IDs remain pending rather than being invented.
+    # The base J budget may use ordinary gems with NO special diamond.
+    # Only the opt-in historical special effect uses the v101 color rules.
+    with_special=special is not None
     if (type(counts) is not dict or type(ordinary) is not list or
-        type(special) is not int or special<=0 or
-        type(where) is not str or counts.get(where,0)<1 or
-        sum(counts.values())!=len(ordinary)+1 or
+        ((with_special and
+          (type(where) is not str or counts.get(where,0)<1)) or
+         (not with_special and where is not None)) or
+        sum(counts.values())!=len(ordinary)+int(with_special) or
         not 1<=sum(counts.values())<=64):
         return {"status":"SEASON_SETTINGS_SOURCE_PENDING",
                 "missing":["V271_PHYSICAL_SOCKET_PLAN_SOURCE_PENDING"],
                 "settings":None}
-    if special not in (240983,240967):
+    if with_special and special not in (240983,240967):
         return {"status":"SEASON_SETTINGS_SOURCE_PENDING",
                 "missing":["V271_NEW_SPECIAL_GEM_SOURCE_ID_NOT_SUPPORTED"],
                 "settings":None}
@@ -1141,9 +1142,10 @@ def _season_settings_from_v216(*, compilation, numeric_inputs,
     source_gems={}
     consumed=iter(ordinary)
     for slot in sorted(counts):
-        item_ids=[special] if slot==where else []
+        item_ids=[special] if with_special and slot==where else []
         item_ids.extend(next(consumed) for _ in
-                        range(counts[slot]-(1 if slot==where else 0)))
+                        range(counts[slot]-
+                              (1 if with_special and slot==where else 0)))
         if item_ids:
             source_gems[slot]="/".join(map(str,item_ids))
     flask=numeric_inputs["flask"]
@@ -1178,8 +1180,8 @@ def _season_settings_from_v216(*, compilation, numeric_inputs,
     pure.validate_season(settings)
     # Old 6+head shape keeps its exact existing serialization. All other
     # source-observed layouts use the existing v271 opt-in compositor.
-    fixed=(where=="head" and counts.get("head")==1 and
-           len(ordinary)==6 and sum(counts.values())==7)
+    fixed=(with_special and where=="head" and counts.get("head")==1
+           and len(ordinary)==6 and sum(counts.values())==7)
     socket_plan=(None if fixed else {
         "socket_counts":dict(counts),
         "special_gem_id":special,"special_slot":where,

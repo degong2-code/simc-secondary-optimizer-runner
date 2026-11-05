@@ -70,6 +70,72 @@ class SocketLayoutTests(unittest.TestCase):
         self.assertFalse(meta["CHMV_J_source_authenticated"])
         self.assertFalse(meta["highest_quality_gem_ids_verified_for_new_season"])
 
+    def test_ordinary_only_future_gems_no_historical_diamond_or_color_gate(self):
+        before=self.rows()
+        plan={"socket_counts":{"head":2,"wrists":1,"waist":1},
+              "special_gem_id":None,"special_slot":None,
+              "ordinary_gem_ids":[310001,310002,310001,310002]}
+        staged,meta=sockets.arrange(before,plan,self.need,
+                                     observed_rating_per_ordinary=27)
+        self.assertEqual(before,self.rows())
+        self.assertEqual(staged["head"]["options"]["gem_id"],
+                         "310001/310002")
+        self.assertNotIn("gem_id",staged["feet"]["options"])
+        self.assertEqual(meta["socket_total"],4)
+        self.assertEqual(meta["ordinary_count"],4)
+        self.assertIsNone(meta["special_gem_id"])
+        self.assertIsNone(meta["special_slot"])
+        self.assertFalse(meta["four_colors_physically_present"])
+        self.assertEqual(meta["candidate_J_unadmitted"],108)
+        self.assertFalse(meta["environment_ready"])
+        reconciled=sockets.reconcile_observed_J(
+            meta,{"310001":33,"310002":24},self.need)
+        self.assertEqual(reconciled["J_candidate_unadmitted"],114)
+        self.assertEqual(reconciled["physical_gem_item_ids"],
+                         [310001,310002,310001,310002])
+        self.assertFalse(reconciled["game_socket_legality_verified_here"])
+        for invalid in (
+            {**plan,"special_slot":"head"},
+            {**plan,"special_gem_id":240983},
+            {**plan,"ordinary_gem_ids":[240967,310002,310001,310002]},
+            {**plan,"ordinary_gem_ids":[310001,310002]},
+        ):
+            with self.subTest(invalid=invalid),self.assertRaises(ValueError):
+                sockets.arrange(before,invalid,self.need)
+
+    def test_existing_one_special_only_zero_ordinary_J_remains_supported(self):
+        plan={"socket_counts":{"head":1},
+              "special_gem_id":240983,"special_slot":"head",
+              "ordinary_gem_ids":[]}
+        staged,meta=sockets.arrange(self.rows(),plan,self.need)
+        self.assertEqual(staged["head"]["options"]["gem_id"],"240983")
+        self.assertEqual(meta["ordinary_count"],0)
+        candidate=sockets.reconcile_observed_J(meta,{},self.need)
+        self.assertEqual(candidate["J_candidate_unadmitted"],0)
+        self.assertFalse(candidate["environment_ready"])
+
+    def test_v139_source_only_ordinary_only_profile_and_old_defaults(self):
+        character={"class":"druid","spec":"balance",
+                   "race":"night_elf","talents":"CAAAABBB11122"}
+        trinkets=[{"slot":"trinket1","item_id":270175,"options":{}},
+                  {"slot":"trinket2","item_id":270173,"options":{}}]
+        plan={"socket_counts":{"head":2,"wrists":1,"waist":1},
+              "special_gem_id":None,"special_slot":None,
+              "ordinary_gem_ids":[310001,310002,310001,310002]}
+        historical,receipt,_,_=pure.compose(character,trinkets)
+        preview,cfg,rows,_,_,_,_,_=pure.v098_inputs(
+            character,trinkets,socket_plan=plan,
+            source_only_season_consumables=True)
+        self.assertNotEqual(preview,historical)
+        self.assertEqual(receipt["ordinary_gems"],6)
+        self.assertIsNone(cfg["consumables"]["special_gem_id"])
+        self.assertEqual(rows["head"]["options"]["gem_id"],
+                         "310001/310002")
+        self.assertIn("head=",preview)
+        self.assertIn("gem_id=310001/310002",preview)
+        self.assertNotIn("gem_id=240983",preview)
+        self.assertNotIn("gem_id=240967",preview)
+
     def test_invalid_slots_unknown_gem_or_extra_diamond_fail_closed(self):
         base = {"socket_counts": {"head": 1, "wrists": 1},
                 "special_gem_id": 240983, "special_slot": "head",
