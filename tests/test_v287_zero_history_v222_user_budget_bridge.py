@@ -953,6 +953,8 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             "manual_final_T_authoritative"])
         self.assertFalse(linked["source_admission_performed_here"])
         self.assertFalse(result["zero_history_build"]["environment_ready"])
+        self.assertNotIn("WEAPON_OIL_O_EXACT_APPLICATION_AND_RATING_PENDING",
+                         result["zero_history_build"]["requires"])
         self.assertEqual(result["native_calls"],0)
 
     def selected_physical_pair(self):
@@ -1231,6 +1233,10 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                          preview["calculation"])
         self.assertFalse(preview["environment_ready"])
         self.assertFalse(result["zero_history_build"]["environment_ready"])
+        self.assertNotIn("G_NATIVE_RATING_OBSERVATION_PENDING",
+                         result["zero_history_build"]["requires"])
+        self.assertIn("G_SAME_SEASON_REFERENCE_SOURCE_AUTHENTICATION_PENDING",
+                      result["zero_history_build"]["requires"])
         self.assertEqual(result["native_calls"],0)
 
     def test_p3_eg_unbound_or_drifted_G_source_stays_pending(self):

@@ -4008,6 +4008,14 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         collected=collect_wago_new_season_source(
             sessions_root=sessions_root,**source_inputs)
         progress=_zero_history_source_progress(collected)
+        # Explicit NONE is an actual user selection, not the O=0 preview
+        # assumption. The old physical-weapon applicability task is then
+        # irrelevant; incomplete F/G/J evidence stays pending as before.
+        if (selected_budget_items is not None and
+                not selected_budget_items["oil_item_ids_by_hand"]):
+            progress["requires"]=[
+                requirement for requirement in progress["requires"]
+                if requirement!="WEAPON_OIL_O_EXACT_APPLICATION_AND_RATING_PENDING"]
         # Reuse the original v236/v234 source-profile Native parser. Only a
         # configured local binary and existing v233 source profile may trigger
         # one real G probe. The content-addressed v236 output folder forbids
@@ -4096,6 +4104,21 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     source_compilation[
                         "v222_G_component_reference_unadmitted"]=dict(
                             preflight["v222_G_component_reference_unadmitted"])
+                    # The existing v222 same-season reference is an
+                    # alternative to Native G, not another required Native
+                    # measurement. Report the actual remaining source
+                    # authentication work without fabricating G approval.
+                    referenced_G=_zero_history_G_numeric_input_from_preflight(
+                        preflight=preflight,target_ilevel=fresh_collection_inputs[
+                            "representative_request"]["target_ilevel"])
+                    if (type(referenced_G) is dict and
+                            referenced_G.get("status")==
+                            "V222_SAME_SEASON_REFERENCE_G_NUMERIC_UNADMITTED"):
+                        progress["requires"]=[
+                            requirement for requirement in progress["requires"]
+                            if requirement!="G_NATIVE_RATING_OBSERVATION_PENDING"]
+                        progress["requires"].append(
+                            "G_SAME_SEASON_REFERENCE_SOURCE_AUTHENTICATION_PENDING")
                 if "proposed_budget_arithmetic_unadmitted" in preflight:
                     # The original v222 calculator owns B/T and manual T;
                     # source trust / user session admission remains pending.
