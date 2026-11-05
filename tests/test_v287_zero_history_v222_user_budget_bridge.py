@@ -237,6 +237,59 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             request["hand"]=hand
         return request,bound,observation
 
+    def test_p3_ey_v232_intrinsic_j_source_reuses_original_build(self):
+        layout,ratings=self.physical_layout()
+        previous=self.collected.get("fresh_one_spec_simc_representative")
+        counts={"head":1,"wrists":2,"waist":2,"feet":2}
+        original={"status":
+                      "FRESH_ONE_SPEC_SIMC_G_SOURCE_CANDIDATE_PENDING_NATIVE",
+                  "source_stage":{"status":"REUSED_VERIFIED",
+                                  "receipt_sha256":"a"*64},
+                  "intrinsic_socket_counts_by_selected_slot_source_only":counts,
+                  "selected_slot_count":4,"intrinsic_socket_total_source_only":7,
+                  "added_socket_bonus_and_game_permission_not_proven":True}
+        try:
+            self.collected["fresh_one_spec_simc_representative"]=original
+            result=self.run_build(proof=False,gem_layout=layout,gem_ratings=ratings)
+            join=result["source_compilation"][
+                "selected_J_intrinsic_socket_origin_unadmitted"]
+            self.assertEqual(join["status"],"J_INTRINSIC_COUNTS_BOUND_SOURCE_ONLY")
+            self.assertEqual(join["observed_J_unadmitted"],138)
+            self.assertEqual(join["additional_socket_proof_required_by_slot"],{})
+            self.assertFalse(join["J_approved"])
+            self.assertIsNone(result["J"])
+            self.assertEqual(result["native_calls"],0)
+            self.collected["fresh_one_spec_simc_representative"]={
+                **original,"intrinsic_socket_counts_by_selected_slot_source_only":{
+                    **counts,"wrists":1},
+                "intrinsic_socket_total_source_only":6}
+            more=self.run_build(proof=False,gem_layout=layout,gem_ratings=ratings)
+            extra=more["source_compilation"][
+                "selected_J_intrinsic_socket_origin_unadmitted"]
+            self.assertEqual(extra["status"],
+                             "J_ADDITIONAL_SOCKET_SOURCE_PROOF_PENDING")
+            self.assertEqual(extra["additional_socket_proof_required_by_slot"],
+                             {"wrists":1})
+            self.assertFalse(extra["J_approved"])
+            self.collected["fresh_one_spec_simc_representative"]={
+                **original,"intrinsic_socket_total_source_only":8}
+            with self.assertRaisesRegex(
+                    build.EnvironmentBuildBlocked,
+                    "V216_J_V232_ORIGINAL_SEALED_SOURCE_DRIFT"):
+                self.run_build(proof=False,gem_layout=layout,gem_ratings=ratings)
+            self.collected.pop("fresh_one_spec_simc_representative")
+            missing=self.run_build(
+                proof=False,gem_layout=layout,gem_ratings=ratings)[
+                    "source_compilation"][
+                    "selected_J_intrinsic_socket_origin_unadmitted"]
+            self.assertEqual(missing["status"],"J_V232_INTRINSIC_SOURCE_PENDING")
+            self.assertIsNone(missing["intrinsic_socket_counts_by_slot"])
+        finally:
+            if previous is None:
+                self.collected.pop("fresh_one_spec_simc_representative",None)
+            else:
+                self.collected["fresh_one_spec_simc_representative"]=previous
+
     def test_real_id_gem_layout_J_reused_in_zero_history_without_promotion(self):
         layout, ratings=self.physical_layout()
         result=self.run_build(proof=False,gem_layout=layout,

@@ -3921,6 +3921,74 @@ def _stage_source_environment_only(*, compilation, preflight,
             "new_native_calls":0,"network_calls":0}
 
 
+def _fresh_selected_J_intrinsic_socket_source(*, collected, preflight,
+                                               compilation):
+    """Join already sealed v232 intrinsic sockets to v271, never approve J."""
+    layout=preflight.get("physical_gem_layout_unadmitted")
+    if layout is None:
+        return None
+    need(type(layout) is dict and layout.get("schema")==physical_gems.SCHEMA
+         and layout.get("status")==
+             "PHYSICAL_GEMS_STAGED_SOURCE_AND_SOCKET_PROOFS_PENDING"
+         and type(layout.get("ordinary_gem_ids")) is list
+         and type(layout.get("socket_counts")) is dict
+         and layout.get("ordinary_count")==len(layout["ordinary_gem_ids"])
+         and layout.get("socket_total")==len(layout["ordinary_gem_ids"])+1
+         and sum(layout["socket_counts"].values())==layout["socket_total"]
+         and layout["socket_counts"].get(layout["special_slot"],0)>0,
+         "V216_J_ORIGINAL_V271_LAYOUT_REQUIRED")
+    out={"schema":"v216_selected_J_intrinsic_source_v1",
+         "status":"J_V232_INTRINSIC_SOURCE_PENDING",
+         "selected_socket_counts":dict(layout["socket_counts"]),
+         "intrinsic_socket_counts_by_slot":None,
+         "additional_socket_proof_required_by_slot":None,
+         "v232_stage_receipt_sha256":None,"observed_J_unadmitted":None,
+         "game_socket_legal_verified":False,"J_quality_and_effect_verified":False,
+         "J_approved":False,"environment_ready":False,
+         "new_native_calls":0,"network_calls":0}
+    source=collected.get("fresh_one_spec_simc_representative") or {}
+    stage=source.get("source_stage") or {}
+    if (source.get("status")!=
+            "FRESH_ONE_SPEC_SIMC_G_SOURCE_CANDIDATE_PENDING_NATIVE"
+        or stage.get("status") not in (
+            "EXECUTED_AND_SEALED","REUSED_VERIFIED","RECOVERED_VERIFIED")):
+        return out
+    counts=source.get("intrinsic_socket_counts_by_selected_slot_source_only")
+    need(preflight.get("schema")==FRESH_SOURCE_PREFLIGHT_SCHEMA
+         and preflight.get("game_build")==collected.get("expected_game_build")
+         and preflight.get("simc_revision")==compilation.get("simc_revision")
+         and preflight.get("environment_ready") is False
+         and type(stage.get("receipt_sha256")) is str
+         and season_budget_contract.SHA.fullmatch(
+             stage["receipt_sha256"]) is not None
+         and type(counts) is dict and bool(counts)
+         and all(type(slot) is str and type(n) is int and 0<=n<=3
+                 for slot,n in counts.items())
+         and source.get("selected_slot_count")==len(counts)
+         and source.get("intrinsic_socket_total_source_only")==sum(counts.values())
+         and source.get("added_socket_bonus_and_game_permission_not_proven")
+             is True,
+         "V216_J_V232_ORIGINAL_SEALED_SOURCE_DRIFT")
+    extra={slot:n-counts.get(slot,0)
+           for slot,n in sorted(layout["socket_counts"].items())
+           if n>counts.get(slot,0)}
+    j=preflight.get("physical_gem_J_arithmetic_unadmitted")
+    if j is not None:
+        need(j.get("status")=="PHYSICAL_GEM_J_ARITHMETIC_UNADMITTED"
+             and j.get("physical_gem_item_ids")==layout["ordinary_gem_ids"]
+             and type(j.get("J_candidate_unadmitted")) is int
+             and j.get("environment_ready") is False,
+             "V216_J_V271_NUMERIC_SOURCE_DRIFT")
+    return {**out,
+            "status":("J_INTRINSIC_COUNTS_BOUND_SOURCE_ONLY" if not extra else
+                      "J_ADDITIONAL_SOCKET_SOURCE_PROOF_PENDING"),
+            "intrinsic_socket_counts_by_slot":dict(counts),
+            "additional_socket_proof_required_by_slot":extra,
+            "v232_stage_receipt_sha256":stage["receipt_sha256"],
+            "observed_J_unadmitted":(
+                j["J_candidate_unadmitted"] if j is not None else None)}
+
+
 def _fresh_source_owner_native_G_component(*, native_G, preflight,
                                            compilation, staged, target_ilevel):
     """Reuse the ORIGINAL v277-verified Native G as one source-owner component.
@@ -4402,6 +4470,14 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 if "physical_gem_layout_unadmitted" in preflight:
                     source_compilation["physical_gem_layout_unadmitted"]=(
                         preflight["physical_gem_layout_unadmitted"])
+                    # Existing sealed v232 + original v271; no new J gate.
+                    j_socket=_fresh_selected_J_intrinsic_socket_source(
+                        collected=collected,preflight=preflight,
+                        compilation=source_compilation)
+                    source_compilation[
+                        "selected_J_intrinsic_socket_origin_unadmitted"]=j_socket
+                    progress[
+                        "selected_J_intrinsic_socket_origin_unadmitted"]=j_socket
                 if "selected_v221_gem_item_relation_unadmitted" in preflight:
                     source_compilation["selected_v221_gem_item_relation_unadmitted"]=(
                         preflight["selected_v221_gem_item_relation_unadmitted"])
