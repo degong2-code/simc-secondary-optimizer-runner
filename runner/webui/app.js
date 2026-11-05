@@ -647,7 +647,9 @@ function showSeasonEnvironmentBuild(data) {
       "건(손별 측정 후보·미승인)":"")+
     " · 신규 Native "+(Number(data?.native_calls)||0)+"회"+
     (autoFlask?.status==="ONE_OBSERVED_FLASK_NO_OIL_NUMERIC_PREVIEW_UNADMITTED"?
-      " · F 관측 1가족 · 기름 미적용 가정(공식 선택 아님)":"")+
+      (scope.auto_select_observed_F_no_oil===true?
+        " · F 최고 관측값 선택 요청·기름 미사용(실제 원본 인증 대기)":
+        " · F 관측 1가족 · 기름 미적용 가정(공식 선택 아님)"):"")+
     (numeric?.numeric_preview_only===true&&numeric.environment_ready===false?
        " · 관측 수치(미승인) G="+numeric.reference_G+
        " J="+numeric.J+" F="+numeric.F+
@@ -675,6 +677,9 @@ async function buildSeasonEnvironment() {
   const nativeRequested=$("season-native-g").checked;
   const auto_native_F_requested=$("season-native-f").checked;
   const auto_native_O_requested=$("season-native-o").checked;
+  const auto_select_observed_F_no_oil=$("season-auto-f-no-oil").checked;
+  if(auto_select_observed_F_no_oil&&(!auto_native_F_requested||auto_native_O_requested))
+    throw Error("영약 자동 선택은 F Native 측정을 켜고 기름 O 측정을 끈 상태에서만 사용할 수 있습니다.");
   const native_F_O_requested=auto_native_F_requested||auto_native_O_requested;
   const executable=(nativeRequested||native_F_O_requested)?field("binary"):null;
   if((nativeRequested||native_F_O_requested)&&!executable)
@@ -696,6 +701,7 @@ async function buildSeasonEnvironment() {
       {method:"POST",payload:{game_build,target_ilevel,native_G_binary,
                               consumable_native_binary,
                               auto_native_F_requested,auto_native_O_requested,
+                              auto_select_observed_F_no_oil,
                               simc_revision_hint:revision||null}});
     showSeasonEnvironmentBuild(report);
     setNotice("시즌 환경 구축 단계 조회 완료 · READY 여부는 별도 검증 · 개별 DPS 최적화는 시작되지 않았습니다.");
