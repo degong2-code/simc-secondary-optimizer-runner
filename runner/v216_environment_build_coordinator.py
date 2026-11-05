@@ -4011,6 +4011,171 @@ def _fresh_selected_J_intrinsic_socket_source(*, collected, preflight,
                 j["J_candidate_unadmitted"] if j is not None else None)}
 
 
+def _fresh_source_owner_selected_J_F_numeric(*, preflight, compilation,
+                                             selected_physical_items):
+    """Bind original J/F numerics for an INTERNAL quality/source owner.
+
+    J is the nominal sum of ordinary gem ratings from the original sealed
+    v266 join. F is the selected physical v281 item + v278 SimC paired
+    static rating. Neither a source-only observation nor a self-computed
+    digest proves highest available quality, use conditions or user READY.
+    A provider must still authenticate those facts before returning v222
+    trusted components. No additional Native, DB read or effect engine.
+    """
+    out={"schema":"v216_original_selected_J_F_numeric_owner_inputs_v1",
+         "status":"SELECTED_J_F_NUMERIC_SOURCE_PENDING",
+         "J":None,"F":None,"missing":[],
+         "quality_and_use_scope_verified":False,
+         "v222_components_admitted":False,
+         "environment_ready":False,"new_native_calls":0,
+         "network_calls":0}
+    if (type(preflight) is not dict or
+            preflight.get("schema")!=FRESH_SOURCE_PREFLIGHT_SCHEMA or
+            type(compilation) is not dict or
+            compilation.get("status")!=
+                "FRESH_V191_V211_V213_COMPILED_UNADMITTED"):
+        out["missing"].append("ORIGINAL_V216_SOURCE_COMPILATION_PENDING")
+        return out
+    need(preflight.get("simc_revision")==compilation.get("simc_revision") and
+         preflight.get("environment_ready") is False,
+         "V216_JF_OWNER_ORIGINAL_COMPILATION_IDENTITY_DRIFT")
+    j=preflight.get("physical_gem_J_arithmetic_unadmitted")
+    layout=preflight.get("physical_gem_layout_unadmitted")
+    link=preflight.get("selected_v221_gem_item_relation_unadmitted")
+    original=preflight.get("physical_gem_raw_rating_by_id_unadmitted")
+    if (type(j) is dict and type(layout) is dict and
+            type(link) is dict and type(original) is dict and
+            j.get("rating_origin")=="V266_RAW_SAME_BUILD_EFFECT_POINTS_ONLY"):
+        ids=layout.get("ordinary_gem_ids")
+        special=layout.get("special_gem_id")
+        need(type(ids) is list and bool(ids) and len(ids)<=64
+             and all(type(x) is int and x>0 for x in ids)
+             and type(special) is int and special>0 and special not in ids
+             and j.get("physical_gem_item_ids")==ids
+             and j.get("status")=="PHYSICAL_GEM_J_ARITHMETIC_UNADMITTED"
+             and j.get("J_accounting_policy")==
+                 "SUM_SELECTED_ORDINARY_GEM_RATINGS"
+             and j.get("special_gem_count_in_J")==0
+             and set(original)==set(str(x) for x in ids)
+             and all(type(x) is int and x>0 for x in original.values())
+             and sum(original[str(x)] for x in ids)==
+                 j.get("J_candidate_unadmitted")
+             and link.get("same_build_gem_item_join_only") is True
+             and link.get("special_gem_item_id")==special
+             and link.get("selected_item_ids")==sorted(set(ids+[special]))
+             and type(link.get("enchant_source_sha256")) is str
+             and season_budget_contract.SHA.fullmatch(
+                 link["enchant_source_sha256"]) is not None
+             and j.get("source_enchant_sha256")==
+                 link["enchant_source_sha256"]
+             and type(link.get("v221_stage_receipt_sha256")) is str
+             and season_budget_contract.SHA.fullmatch(
+                 link["v221_stage_receipt_sha256"]) is not None
+             and j.get("source_v221_stage_receipt_sha256")==
+                 link["v221_stage_receipt_sha256"],
+             "V216_JF_OWNER_ORIGINAL_V266_ORDINARY_NUMERIC_DRIFT")
+        src={"kind":"nominal_ordinary_gem_J",
+             "game_build":preflight["game_build"],
+             "source_catalog_manifest_sha256":
+                 preflight["source_catalog_manifest_sha256"],
+             "v221_stage_receipt_sha256":link["v221_stage_receipt_sha256"],
+             "v266_enchant_source_sha256":link["enchant_source_sha256"],
+             "special_gem_item_id":special,"ordinary_gem_item_ids":list(ids),
+             "per_item_nominal_rating":dict(original)}
+        out["J"]={"rating":j["J_candidate_unadmitted"],
+                  "source_identity_sha256":
+                      digest(canonical(src).encode("utf8")),
+                  **src,"special_gem_contributes_to_J":False,
+                  "highest_available_quality_verified":False,
+                  "real_socket_source_verified":False,
+                  "nominal_J_not_simc_effective_delta":True}
+    else:
+        out["missing"].append(
+            "J_ORIGINAL_V266_NUMERIC_OR_HIGHEST_QUALITY_SOURCE_PENDING")
+    if type(selected_physical_items) is dict:
+        chosen=selected_physical_items.get("flask_item_id")
+        linked=compilation.get(
+            "selected_physical_F_O_budget_link_unadmitted")
+        observed=(linked.get("matched_f")
+                  if type(linked) is dict and
+                     linked.get("selected_physical_items")==
+                         selected_physical_items else None)
+        if type(observed) is dict and observed.get("physical_item_id")==chosen:
+            vec=observed.get("static_CHMV_vector")
+            receipts=observed.get("simc_native_receipt_sha256")
+            need(type(chosen) is int and chosen>0
+                 and type(vec) is dict and
+                 set(vec)==set(season_budget_contract.STATS)
+                 and all(type(x) is int and x>=0 for x in vec.values())
+                 and sum(vec.values())>0
+                 and observed.get("rating")==sum(vec.values())
+                 and type(observed.get("crafting_quality")) is int
+                 and observed["crafting_quality"]>=0
+                 and type(observed.get("simc_input_token")) is str
+                 and bool(observed["simc_input_token"])
+                 and type(observed.get("source_candidate_sha256")) is str
+                 and season_budget_contract.SHA.fullmatch(
+                     observed["source_candidate_sha256"]) is not None
+                 and type(receipts) is list and len(receipts)==2
+                 and all(type(x) is str and
+                         season_budget_contract.SHA.fullmatch(x) is not None
+                         for x in receipts),
+                 "V216_JF_OWNER_SELECTED_V278_SIMC_NUMBER_OR_ID_DRIFT")
+            source={"kind":"selected_flask_SimC_static_F",
+                    "game_build":preflight["game_build"],
+                    "simc_revision":preflight["simc_revision"],
+                    "physical_item_id":chosen,
+                    "crafting_quality":observed["crafting_quality"],
+                    "simc_input_token":observed["simc_input_token"],
+                    "source_candidate_sha256":
+                        observed["source_candidate_sha256"],
+                    "native_pair_receipt_sha256":list(receipts),
+                    "static_CHMV_vector":dict(vec)}
+            out["F"]={"rating":sum(vec.values()),
+                      "source_identity_sha256":
+                          digest(canonical(source).encode("utf8")),
+                      **source,"highest_available_quality_verified":False,
+                      "source_owner_admitted":False}
+        else:
+            out["missing"].append("F_SELECTED_PHYSICAL_V281_V278_NUMERIC_PENDING")
+    else:
+        out["missing"].append("F_EXPLICIT_SELECTED_PHYSICAL_ITEM_PENDING")
+    if out["J"] is not None and out["F"] is not None:
+        out["status"]="SELECTED_J_F_NUMERIC_SOURCES_BOUND_UNADMITTED"
+    return out
+
+
+def _fresh_source_owner_crosscheck_selected_J_F(*, owner_numeric,
+                                               trusted_budget_evidence):
+    """Reject a claimed source match with a different J/F amount.
+
+    A real authenticated J source may differ from raw v266 candidates;
+    only a provider explicitly reusing the SAME raw-J source identity is
+    compared. A selected F must match the measured SimC numeric F. Neither
+    check authenticates highest-quality conditions.
+    """
+    if type(owner_numeric) is not dict:
+        return trusted_budget_evidence
+    need(type(trusted_budget_evidence) is dict and
+         type(trusted_budget_evidence.get("components")) is dict,
+         "V216_JF_OWNER_TRUSTED_GJFO_COMPONENTS_REQUIRED")
+    proofs=trusted_budget_evidence["components"]
+    source_j=owner_numeric.get("J")
+    provider_j=proofs.get("J")
+    if (type(source_j) is dict and type(provider_j) is dict and
+            provider_j.get("source_sha256")==
+                source_j["source_identity_sha256"]):
+        need(provider_j.get("rating")==source_j["rating"],
+             "V216_JF_OWNER_SAME_SOURCE_NOMINAL_J_CONFLICT")
+    source_f=owner_numeric.get("F")
+    if type(source_f) is dict:
+        provider_f=proofs.get("F")
+        need(type(provider_f) is dict and
+             provider_f.get("rating")==source_f["rating"],
+             "V216_JF_OWNER_SELECTED_SIMC_F_NUMBER_CONFLICT")
+    return trusted_budget_evidence
+
+
 def _fresh_source_owner_native_G_component(*, native_G, preflight,
                                            compilation, staged, target_ilevel):
     """Reuse the ORIGINAL v277-verified Native G as one source-owner component.
@@ -4758,6 +4923,15 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 "new_native_calls":0,"network_calls":0}
             progress["selected_physical_F_O_budget_link_unadmitted"]=waiting
             source_compilation["selected_physical_F_O_budget_link_unadmitted"]=waiting
+        # Reuse original v266/v271 nominal J and v281/v278 selected SimC
+        # numeric F in one compact source-owner input. Quality/use/sockets
+        # still belong to the internal verifier, NOT this preview.
+        jf_numeric=_fresh_source_owner_selected_J_F_numeric(
+            preflight=preflight,compilation=source_compilation,
+            selected_physical_items=selected_budget_items)
+        source_compilation[
+            "selected_J_F_source_owner_numeric_unadmitted"]=jf_numeric
+        progress["selected_J_F_source_owner_numeric_unadmitted"]=jf_numeric
         # The new season's exact source stage is now a versioned Environment
         # unit, independent of v098/optimizer sessions. It is not an install.
         if (preflight is not None and
@@ -4824,6 +4998,9 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     trusted_budget=_fresh_source_owner_exact_no_oil(
                         preflight=preflight,
                         selected_budget_items=selected_budget_items,
+                        trusted_budget_evidence=trusted_budget)
+                    trusted_budget=_fresh_source_owner_crosscheck_selected_J_F(
+                        owner_numeric=jf_numeric,
                         trusted_budget_evidence=trusted_budget)
                     installed=_install_verified_fresh_environment_only(
                         compilation=source_compilation,staged=staged,

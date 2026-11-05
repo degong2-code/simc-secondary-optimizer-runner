@@ -1,0 +1,10 @@
+# 2026-11-05 · P3-FA · 실제 선택 J/F 원본 숫자 source-owner 연결
+
+- **Capability:** `J.GEM`, `F.FLASK`, `BUDGET.GJFO`, `ENVIRONMENT.WEB`
+- **Keywords:** P3-FA, nominal J, v266, v268, v271, v281, v278, F, original Native, same-build, source-owner, numeric, provider, READY
+- **Prior evidence:** [기능 INDEX C1/C4/D1/E1/E3](../INDEX.md) → [P3-EY](2026-11-05_p3-ey-j-intrinsic-socket-source-join.md) → [P3-EZ](2026-11-05_p3-ez-jf-numeric-policy.md) → [P3-EU](2026-11-05_p3-eu-fresh-environment-install-engine.md). 기존 v216은 J/F candidate를 각각 source-only 필드에 전달했으나, 내부 검증 공급자의 동일 수치/원본 소유권 대조가 없었음.
+- **Decision:** `CONNECT` — 새 item parser, gem effective-J Native, F effect 인증 Gate, G/J/F/O 계산기를 만들지 않고, 기존 선택·관측·원본 영수증을 내부 단일 입력으로 묶고 숫자 충돌만 차단한다.
+- **Changes:** `v216._fresh_source_owner_selected_J_F_numeric`은 v266 봉인 원본의 일반 gem ID별 nominal J·특수 1개 제외·v221/v266 SHA를 기존 v271 합계와 대조한다. 사용자가 수동 supplied gem_rating_by_id를 사용하거나 최고품질 출처가 없으면 J는 미확정. 선택 F는 기존 v281 physical ID·crafting_quality·SimC token·원본 SHA·v278 2 Native 영수증·4-vector 합계를 연결한다. 양 후보 모두 `highest_available_quality_verified=False`, `environment_ready=False`로 공급자에게 전달. 설치 전에 동일 원본 J 충돌 및 선택 F SimC 수치 충돌을 fail closed 검사. 원래 v222/v196/v212/v217 공식 인증 경계를 변경하지 않음.
+- **Verification:** 신규 합성 회귀 하나에서 source-only J/F와 각 source SHA, 중복 일반 gem 수량, 정확 특수 ID, F 원본 수치·품질·2 Native 영수증, 미인증/미관측, 동일 원본 수치 충돌/변조 차단을 점검. 신규 Actions 결과 확인 전 `NOT_VERIFIED`. 역사 [P3-EZ focused #42010198855](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42010198855) 260 PASS·ledger PASS는 이전 코드 범위. 이번 신규 Native/게임 HTTP 0회.
+- **Remaining:** 실제 최고품질 일반 gem/영약 증명과 선택 조건·소켓, 정확 item source owner verified receipt 생성, v220 4-family Policy A 실제 등록 및 신규 시즌 T1/READY 모두 미완료. 특수 gem 효과는 SimC 담당; raw static hint로 공식 J를 증감하지 않는다. 이전 저품질 영약 151/O 16+17 수치는 사용자 요청 재검토 후순위·공식 값 사용 금지.
+- **Efficiency:** 기존 봉인 원본/캐시 딕셔너리만 결합(일반 gem O(N) 상한 64, 영약 1개); 신규 수집/CSV/JSON2 재파싱·Native·효과 재구현·또 다른 Gate 0. v222/Native cache key 불변, main/불변 원본/Project UI/Work OS/주 개발 채팅 권한 변경 없음.

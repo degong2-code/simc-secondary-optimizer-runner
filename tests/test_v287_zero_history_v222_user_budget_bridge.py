@@ -1307,6 +1307,92 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                     "verified_install_input_provider":{"verified":True}})
         self.assertFalse((self.root/"sessions").exists())
 
+    def test_p3_fa_original_J_F_source_owner_numeric_and_provider_conflict(self):
+        # Reuse v266 sealed ordinary-item points and v281/v278 same-item F.
+        # No real Native, implicit admission, or new effect engine.
+        layout=self.source_selected_future_gems()
+        raw={"status":"ENCHANT_RAW_POINTS_SOURCE_ONLY_J_NOT_APPROVED",
+             "enchant_source_sha256":"4"*64,
+             "selected_gem_raw_points_by_id_unadmitted":{
+                "311001":20,"311002":30},
+             "selected_gem_all_raw_points_known":True,
+             "selected_gem_v221_item_ids_unadmitted":[311001,311002,311003],
+             "selected_gem_v221_same_build_items_all_present":True,
+             "J":None,"environment_ready":False}
+        pre=self.preflight_with_sealed_gem_raw(layout,raw)
+        numeric,_=self.selected_physical_pair()
+        chosen={"flask_item_id":241326,"oil_item_ids_by_hand":{}}
+        source_link=build._zero_history_selected_F_O_v222_reconcile(
+            selected=chosen,numeric=numeric,choices={},
+            existing_budget=None,budget_evidence=None)
+        compiled={"status":"FRESH_V191_V211_V213_COMPILED_UNADMITTED",
+                  "simc_revision":self.catalog["simc_revision"],
+                  "selected_physical_F_O_budget_link_unadmitted":source_link}
+        owner=build._fresh_source_owner_selected_J_F_numeric(
+            preflight=pre,compilation=compiled,
+            selected_physical_items=chosen)
+        self.assertEqual(owner["status"],
+            "SELECTED_J_F_NUMERIC_SOURCES_BOUND_UNADMITTED")
+        self.assertEqual(owner["J"]["rating"],70)
+        self.assertEqual(owner["J"]["ordinary_gem_item_ids"],
+                         [311001,311001,311002])
+        self.assertFalse(owner["J"]["special_gem_contributes_to_J"])
+        self.assertFalse(owner["J"]["highest_available_quality_verified"])
+        self.assertEqual(owner["F"]["rating"],165)
+        self.assertEqual(owner["F"]["physical_item_id"],241326)
+        self.assertEqual(owner["F"]["crafting_quality"],2)
+        self.assertEqual(owner["F"]["native_pair_receipt_sha256"],
+                         ["a"*64,"b"*64])
+        self.assertFalse(owner["F"]["highest_available_quality_verified"])
+        self.assertFalse(owner["environment_ready"])
+        self.assertEqual(owner["new_native_calls"],0)
+        evidence={"components":{
+            "J":{"source_sha256":owner["J"]["source_identity_sha256"],
+                 "rating":70},
+            "F":{"source_sha256":"f"*64,"rating":165}}}
+        self.assertIs(
+            build._fresh_source_owner_crosscheck_selected_J_F(
+                owner_numeric=owner,trusted_budget_evidence=evidence),
+            evidence)
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_JF_OWNER_SAME_SOURCE_NOMINAL_J_CONFLICT"):
+            build._fresh_source_owner_crosscheck_selected_J_F(
+                owner_numeric=owner,trusted_budget_evidence={
+                    "components":{**evidence["components"],"J":{
+                        **evidence["components"]["J"],"rating":71}}})
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_JF_OWNER_SELECTED_SIMC_F_NUMBER_CONFLICT"):
+            build._fresh_source_owner_crosscheck_selected_J_F(
+                owner_numeric=owner,trusted_budget_evidence={
+                    "components":{**evidence["components"],"F":{
+                        **evidence["components"]["F"],"rating":151}}})
+        # An independently authenticated J could legitimately use a
+        # different numeric source. Raw v266 is only a candidate.
+        other={"components":{"J":{"rating":71,"source_sha256":"e"*64},
+                              "F":{"rating":165}}}
+        self.assertIs(
+            build._fresh_source_owner_crosscheck_selected_J_F(
+                owner_numeric=owner,trusted_budget_evidence=other),other)
+        pre["physical_gem_raw_rating_by_id_unadmitted"]["311001"]=19
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_JF_OWNER_ORIGINAL_V266_ORDINARY_NUMERIC_DRIFT"):
+            build._fresh_source_owner_selected_J_F_numeric(
+                preflight=pre,compilation=compiled,
+                selected_physical_items=chosen)
+        # If selected flask Native was not collected, it stays PENDING.
+        pending=build._fresh_source_owner_selected_J_F_numeric(
+            preflight={**pre,
+              "physical_gem_raw_rating_by_id_unadmitted":{
+                  "311001":20,"311002":30}},
+            compilation={**compiled,
+                "selected_physical_F_O_budget_link_unadmitted":{}},
+            selected_physical_items=chosen)
+        self.assertIsNone(pending["F"])
+        self.assertFalse(pending["environment_ready"])
+
     def test_p3_ez_F_uses_same_simc_numeric_and_item_origin(self):
         request,bound,observation=self.physical_effect()
         vec={key:0 for key in build.season_budget_contract.STATS}
