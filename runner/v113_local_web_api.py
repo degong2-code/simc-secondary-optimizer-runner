@@ -33,6 +33,7 @@ import v167_product_season_gear_adapter as season_gear
 import v208_internal_exact_special_L_hydrator as exact_L
 import v212_environment_manifest as environment_manifest
 import v216_environment_build_coordinator as environment_build
+import v289_retail_live_build_source as retail_build_source
 import v218_v098_profile_stage_adapter as profile_stage
 
 SCHEMA = "v113_local_web_api_p1_v1"
@@ -52,7 +53,10 @@ class UpdateLocalArchiveRequest(BaseModel):
 class SeasonEnvironmentBuildRequest(BaseModel):
     """Season-wide Build, independent of DPS scenario/trinket/target optimization."""
     model_config = ConfigDict(extra="forbid")
-    game_build: str = Field(pattern=r"^\d+(?:\.\d+){3}$",min_length=7,max_length=32)
+    # Blank/omitted means live Retail KR build discovery, not legacy defaults.
+    game_build: str | None = Field(
+        default=None,pattern=r"^\d+(?:\.\d+){3}$",
+        min_length=7,max_length=32)
     target_ilevel: int = Field(default=334,ge=1,le=1000)
     # Explicit opt-in to the EXISTING single v277/v236 Native G probe.
     native_G_binary: str | None = Field(default=None,min_length=1,max_length=4096)
@@ -124,7 +128,7 @@ class LocalJobs:
         candidate=exact_L.source_cache(self.root,None)
         return str(candidate) if candidate is not None else None
 
-    def build_season_environment(self, game_build, target_ilevel=334,
+    def build_season_environment(self, game_build=None, target_ilevel=334,
                                  native_G_binary=None, simc_revision_hint=None,
                                  auto_native_F_requested=False,
                                  auto_native_O_requested=False,
@@ -160,6 +164,15 @@ class LocalJobs:
                 auto_native_F_requested or auto_native_O_requested):
             raise environment_manifest.EnvironmentBlocked(
                 "SEASON_F_O_BINARY_WITHOUT_MEASUREMENT_SELECTION")
+        # Discover public Retail version only when the normal user does not
+        # supply a build. No historical build or item ID is a fallback.
+        discovered_build=None
+        if game_build is None:
+            try:
+                discovered_build=retail_build_source.discover(region="KR")
+            except retail_build_source.RetailVersionBlocked as exc:
+                raise environment_manifest.EnvironmentBlocked(str(exc)) from exc
+            game_build=discovered_build["game_build"]
         with self.season_source_lock:
             observed=environment_build.build_environment(
                 sessions_root=self.root,session_folder=None,user=None,
@@ -195,6 +208,12 @@ class LocalJobs:
         return {**observed,"web_environment_scope":{
             "schema":"v113_web_season_environment_build_scope_v1",
             "game_build":game_build,"target_ilevel":target_ilevel,
+            "game_build_source":(
+                "BLIZZARD_PUBLIC_RETAIL_KR" if discovered_build is not None
+                else "EXPLICIT_GAME_BUILD"),
+            "retail_build_source_sha256":(
+                discovered_build["source_sha256"]
+                if discovered_build is not None else None),
             "internal_numeric_probe":"paladin/retribution",
             "numeric_probe_not_whole_season_G_certification":True,
             "local_native_G_requested":native_G_binary is not None,

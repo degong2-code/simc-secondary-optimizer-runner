@@ -639,6 +639,8 @@ function showSeasonEnvironmentBuild(data) {
   node.textContent=(ready?"시즌 환경 설치 완료":"원본 수집·검증 진행 결과 (설치 미완료)")+
     " · 요청 빌드 "+(scope.game_build||"–")+
     (scope.selected_flask_item_id?" · 지정 F ItemID "+scope.selected_flask_item_id:"")+
+    " · 빌드 "+(scope.game_build||"원본 대기")+
+    (scope.game_build_source==="BLIZZARD_PUBLIC_RETAIL_KR"?" (Retail 자동)":"")+
     " · 원본 "+(step.source_stage_status||data?.source_stage?.status||"미확정")+
     " · 컴파일 "+(source.status||step.source_compilation_status||"대기")+
     " · G 관측 "+(step.native_G_status||"대기")+
@@ -675,9 +677,10 @@ function showSeasonEnvironmentBuild(data) {
   details.hidden=unique.length===0;
 }
 async function buildSeasonEnvironment() {
-  const game_build=field("season-game-build");
-  if(!/^\d+(?:\.\d+){3}$/.test(game_build))
-    throw Error("게임 빌드를 숫자.숫자.숫자.숫자 형식으로 입력해 주세요.");
+  const supplied_build=field("season-game-build");
+  if(supplied_build&&!/^\d+(?:\.\d+){3}$/.test(supplied_build))
+    throw Error("게임 빌드는 네 개의 숫자 그룹 형식이어야 합니다.");
+  const game_build=supplied_build||null;
   const target_ilevel=valueInt("season-target-ilevel");
   if(target_ilevel<1||target_ilevel>1000)
     throw Error("목표 ilvl은 1~1000 범위여야 합니다.");

@@ -229,6 +229,55 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertFalse((self.root/"runs").exists())
 
 
+    def test_p3_fr_zero_base_build_auto_retail_version_from_public_source(self):
+        # No user-supplied game_build, historical ID, or client secrets.
+        observed={"status":"FRESH_SOURCE_PENDING","environment_ready":False,
+                  "environment_installed":False,"native_calls":0}
+        discovered={"game_build":"12.1.5.70783",
+                    "source_sha256":"5"*64}
+        with mock.patch.object(web.retail_build_source,"discover",
+                               return_value=discovered) as source, \
+             mock.patch.object(web.environment_build,"build_environment",
+                               return_value=observed) as build:
+            result=self.post("/api/v1/environment/season-build",{
+                "target_ilevel":334})
+        self.assertEqual(result.status_code,200,result.text)
+        source.assert_called_once_with(region="KR")
+        args=build.call_args.kwargs
+        self.assertEqual(args["fresh_collection_inputs"][
+            "expected_game_build"],"12.1.5.70783")
+        self.assertIsNone(args["binary"])
+        self.assertNotIn("source_selected_gem_roles",
+                         args["fresh_collection_inputs"])
+        self.assertNotIn("selected_budget_items",
+                         args["fresh_collection_inputs"])
+        scope=result.json()["web_environment_scope"]
+        self.assertEqual(scope["game_build"],"12.1.5.70783")
+        self.assertEqual(scope["game_build_source"],
+                         "BLIZZARD_PUBLIC_RETAIL_KR")
+        self.assertEqual(scope["retail_build_source_sha256"],"5"*64)
+        self.assertFalse(scope["environment_ready"])
+        with mock.patch.object(web.retail_build_source,"discover",
+               side_effect=web.retail_build_source.RetailVersionBlocked(
+                   "RETAIL_VERSION_LIVE_SOURCE_UNAVAILABLE")) as source, \
+             mock.patch.object(web.environment_build,"build_environment",
+                               side_effect=AssertionError("NEVER_RUN")) as build:
+            fail=self.post("/api/v1/environment/season-build",{})
+        self.assertEqual(fail.status_code,422,fail.text)
+        self.assertEqual(fail.json()["detail"]["code"],
+                         "RETAIL_VERSION_LIVE_SOURCE_UNAVAILABLE")
+        build.assert_not_called()
+        source.assert_called_once()
+        with mock.patch.object(web.retail_build_source,"discover",
+                  side_effect=AssertionError("NOT_FOR_EXPLICIT")):
+            with mock.patch.object(web.environment_build,"build_environment",
+                                   return_value=observed):
+                explicit=self.post("/api/v1/environment/season-build",{
+                    "game_build":"12.2.0.99999"})
+            self.assertEqual(explicit.status_code,200,explicit.text)
+            self.assertEqual(explicit.json()["web_environment_scope"][
+                "game_build_source"],"EXPLICIT_GAME_BUILD")
+
     def test_p3_fo_web_reuses_existing_special_for_four_ordinary_no_effect_gate(self):
         payload={"game_build":"12.2.0.99999","target_ilevel":334,
                  "existing_special_gem_id":311200}

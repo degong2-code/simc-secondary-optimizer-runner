@@ -96,6 +96,9 @@ class RealHTTPPageOffline(unittest.TestCase):
                       "season-selected-flask-id"):
             self.assertIn('id="'+ident+'"',page)
         self.assertIn('"/api/v1/environment/season-build"',js)
+        self.assertIn("BLIZZARD_PUBLIC_RETAIL_KR",js)
+        self.assertIn("현재 Retail(KR) 자동 조회",page)
+        self.assertIn("const game_build=supplied_build||null",js)
         self.assertIn("existing_special_gem_id",js)
         self.assertIn("selected_flask_item_id",js)
         self.assertIn("J/F 원본: ",js)

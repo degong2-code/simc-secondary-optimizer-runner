@@ -1,0 +1,61 @@
+name: P3-FR zero-history LIVE Retail Environment Build T1 (one-shot)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p3_fr_zero_base_live_t1.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: p3-fr-zero-history-one-shot-live-t1
+  cancel-in-progress: false
+jobs:
+  original-v216-live-t1:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      PYTHONPATH: runner:.
+      SIMC_CLI_WRAPPER: ""
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Obtain official latest SimulationCraft CLI Docker binary if accessible
+        shell: bash
+        run: |
+          set -euo pipefail
+          if docker pull --quiet simulationcraftorg/simc:latest; then
+            IMAGE="$(docker image inspect --format '{{index .RepoDigests 0}}' simulationcraftorg/simc:latest)"
+            test -n "$IMAGE"
+            mkdir -p .p3-fr-tools
+            cat > .p3-fr-tools/simc-cli <<'SH'
+          #!/bin/sh
+          # Immutable image digest is in runner environment & in wrapper SHA.
+          exec docker run --rm --network none -v /tmp:/tmp -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" "$SIMC_IMAGE_REF" "$@"
+          SH
+            echo "# image digest $IMAGE" >> .p3-fr-tools/simc-cli
+            chmod +x .p3-fr-tools/simc-cli
+            echo "SIMC_IMAGE_REF=$IMAGE" >> "$GITHUB_ENV"
+            echo "SIMC_CLI_WRAPPER=$GITHUB_WORKSPACE/.p3-fr-tools/simc-cli" >> "$GITHUB_ENV"
+            echo "P3_FR_SIMC_DOCKER_IMAGE=$IMAGE"
+          else
+            echo "P3_FR_SIMC_IMAGE_UNAVAILABLE; source-only diagnosis will not be READY"
+          fi
+      - name: Run original v216 full zero-history current-Retail Build
+        id: live
+        shell: bash
+        timeout-minutes: 17
+        run: |
+          python -u integration_probes/p3_fr_zero_base_t1_acceptance.py
+      - name: Preserve only small factual T1 receipt (never DB2 or SimC cache)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p3-fr-zero-base-live-t1-small-receipt
+          path: p3_fr_zero_base_t1_receipt.json
+          if-no-files-found: ignore
+          retention-days: 2
