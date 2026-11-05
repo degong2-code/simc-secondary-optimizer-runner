@@ -645,6 +645,8 @@ function showSeasonEnvironmentBuild(data) {
     (measuredO?.status==="AUTO_O_NATIVE_MEASURED_SOURCE_ONLY"?
       " · O Native "+measuredO.attempted+"/"+measuredO.total_source_candidates+
       "건(손별 측정 후보·미승인)":"")+
+    (scope.four_stat_ordinary_default_requested===true?
+        " · 일반보석 4종 기본 배치 요청(특수효과 SimC 담당)":"")+
     " · 신규 Native "+(Number(data?.native_calls)||0)+"회"+
     (autoFlask?.status==="ONE_OBSERVED_FLASK_NO_OIL_NUMERIC_PREVIEW_UNADMITTED"?
       (scope.auto_select_observed_F_no_oil===true?
@@ -678,6 +680,14 @@ async function buildSeasonEnvironment() {
   const auto_native_F_requested=$("season-native-f").checked;
   const auto_native_O_requested=$("season-native-o").checked;
   const auto_select_observed_F_no_oil=$("season-auto-f-no-oil").checked;
+  const existingSpecial=field("season-existing-special-gem-id");
+  if(existingSpecial&&!/^[1-9][0-9]*$/.test(existingSpecial))
+    throw Error("기존 특수보석 ItemID는 양의 정수여야 합니다.");
+  const existing_special_gem_id=existingSpecial?Number(existingSpecial):null;
+  if(existing_special_gem_id!==null&&
+      (!Number.isSafeInteger(existing_special_gem_id)||
+       existing_special_gem_id>999999999))
+    throw Error("특수보석 ItemID 범위가 올바르지 않습니다.");
   if(auto_select_observed_F_no_oil&&(!auto_native_F_requested||auto_native_O_requested))
     throw Error("영약 자동 선택은 F Native 측정을 켜고 기름 O 측정을 끈 상태에서만 사용할 수 있습니다.");
   const native_F_O_requested=auto_native_F_requested||auto_native_O_requested;
@@ -702,6 +712,7 @@ async function buildSeasonEnvironment() {
                               consumable_native_binary,
                               auto_native_F_requested,auto_native_O_requested,
                               auto_select_observed_F_no_oil,
+                              existing_special_gem_id,
                               simc_revision_hint:revision||null}});
     showSeasonEnvironmentBuild(report);
     setNotice("시즌 환경 구축 단계 조회 완료 · READY 여부는 별도 검증 · 개별 DPS 최적화는 시작되지 않았습니다.");

@@ -91,9 +91,15 @@ class RealHTTPPageOffline(unittest.TestCase):
         for ident in ("season-game-build","season-target-ilevel",
                       "season-native-g","season-native-f","season-native-o",
                       "season-build-btn",
-                      "season-build-stage","season-build-missing"):
+                      "season-build-stage","season-build-missing",
+                      "season-existing-special-gem-id"):
             self.assertIn('id="'+ident+'"',page)
         self.assertIn('"/api/v1/environment/season-build"',js)
+        self.assertIn("existing_special_gem_id",js)
+        self.assertIn("일반보석 4종 기본 배치 요청",js)
+        self.assertIn("모든 효과 계산은 SimC",page)
+        self.assertIn("이미 선택된 특수보석",page)
+
         self.assertIn('"/api/v1/sessions/plan"',js)
         self.assertIn("user_character_or_trinkets_required",js)
         self.assertIn("DPS 최적화 0회",js)

@@ -5335,7 +5335,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         build=collected["expected_game_build"],
                         selected_source_gem_item_ids=[
                             source_selected_gem_roles["special_gem_id"]],
-                        selected_special_gem_item_id=
+                        excluded_ordinary_item_id=
                             source_selected_gem_roles["special_gem_id"])
                     socket_total=(collected.get(
                         "fresh_one_spec_simc_representative") or {}).get(

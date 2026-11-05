@@ -229,6 +229,32 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertFalse((self.root/"runs").exists())
 
 
+    def test_p3_fo_web_reuses_existing_special_for_four_ordinary_no_effect_gate(self):
+        payload={"game_build":"12.2.0.99999","target_ilevel":334,
+                 "existing_special_gem_id":311200}
+        stub={"status":"SOURCE_ONLY_PENDING","environment_ready":False,
+              "environment_installed":False,"native_calls":0}
+        with mock.patch.object(web.environment_build,"build_environment",
+                               return_value=stub) as build:
+            response=self.post("/api/v1/environment/season-build",payload)
+        self.assertEqual(response.status_code,200,response.text)
+        kwargs=build.call_args.kwargs
+        self.assertIsNone(kwargs["user"])
+        self.assertIsNone(kwargs["binary"])
+        self.assertEqual(kwargs["fresh_collection_inputs"][
+            "source_selected_gem_roles"],{
+                "special_gem_id":311200,"ordinary_gem_ids":None})
+        self.assertTrue(response.json()["web_environment_scope"][
+            "four_stat_ordinary_default_requested"])
+        self.assertFalse(response.json()["web_environment_scope"][
+            "special_gem_effect_verified_here"])
+        self.assertFalse(response.json()["web_environment_scope"][
+            "environment_ready"])
+        for bad in (0,-1,"not-an-id",1000000000):
+            response=self.post("/api/v1/environment/season-build",{
+                **payload,"existing_special_gem_id":bad})
+            self.assertEqual(response.status_code,422,response.text)
+
     def test_p3_fg_web_flask_selection_reaches_real_source_verifier_only(self):
         payload={"game_build":"12.2.0.99999",
                  "target_ilevel":334,"selected_flask_item_id":241326}

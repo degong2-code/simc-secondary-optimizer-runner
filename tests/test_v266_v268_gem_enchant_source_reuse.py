@@ -88,7 +88,7 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
         links["joins"]=[]
         header=list(source.COLUMNS)
         buf=io.StringIO()
-        writer=csv.DictWriter(buf,fieldnames=header,lineterminator="\\n")
+        writer=csv.DictWriter(buf,fieldnames=header,lineterminator="\n")
         writer.writeheader()
         for i,stat_code in enumerate((0,32,36,49,40,32)):
             item=2100+i
@@ -101,9 +101,9 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
                 "ui_selectable":False})
             row={key:"0" for key in header}
             row.update(ID=str(600+i),
-                       Effect_0=("3" if i==0 else "5"),
-                       EffectArg_0=str(stat_code),
-                       EffectPointsMin_0=str(20+i*5),
+                       Effect_0="5",
+                       EffectArg_0=str(32 if i==0 else stat_code),
+                       EffectPointsMin_0=str(200 if i==0 else 20+i*5),
                        EffectScalingPoints_0="0")
             writer.writerow(row)
         links["exact_link_count"]=len(links["joins"])
@@ -115,14 +115,15 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
             def read(self,size=-1):return raw
         with tempfile.TemporaryDirectory() as td:
             root=Path(td)
-            adapter.collect(stage_root=root,build=BUILD,
-                            transport=lambda req,timeout:FakeResponse())
+            collected=adapter.collect(stage_root=root,build=BUILD,
+                transport=lambda req,timeout:FakeResponse())
+            self.assertEqual(collected["status"],"GEM_ENCHANT_CSV_SOURCE_SEALED")
             path=root/"v221.json"
             path.write_text(json.dumps(links),encoding="utf8")
             first=adapter.view(
                 stage_root=root,v221_candidate_path=path,build=BUILD,
                 selected_source_gem_item_ids=[2100],
-                selected_special_gem_item_id=2100)
+                excluded_ordinary_item_id=2100)
             self.assertTrue(first[
                 "four_stat_ordinary_source_complete_unadmitted"])
             self.assertEqual({
@@ -132,6 +133,18 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
                  "mastery_rating":2103,"versatility_rating":2104})
             self.assertFalse(first[
                 "four_stat_effect_or_special_role_reverified"])
+            self.assertIsNone(first["selected_special_gem_raw_effect_unadmitted"])
+            # The same strong nominal crit item would win WITHOUT the exact
+            # already-selected special-item exclusion.
+            unexcluded=adapter.view(
+                stage_root=root,v221_candidate_path=path,build=BUILD)
+            self.assertEqual(unexcluded[
+                "four_stat_ordinary_best_observed_unadmitted"][
+                    "crit_rating"]["item_id"],2100)
+            with self.assertRaisesRegex(
+                    ValueError,"ORDINARY_EXCLUSION_SOURCE_BOUND_ID_REQUIRED"):
+                adapter.view(stage_root=root,v221_candidate_path=path,
+                             build=BUILD,excluded_ordinary_item_id=2100)
             self.assertIsNone(first["J"])
             self.assertFalse(first["environment_ready"])
             self.assertEqual(first["native_calls"],0)

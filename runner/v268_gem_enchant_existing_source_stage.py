@@ -71,7 +71,8 @@ def collect(*,stage_root,build,transport=None):
 
 
 def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
-         selected_source_gem_item_ids=None,selected_special_gem_item_id=None):
+         selected_source_gem_item_ids=None,selected_special_gem_item_id=None,
+         excluded_ordinary_item_id=None):
     """Reuse a sealed v266 source view and only project selected raw gem IDs.
 
     Raw EffectPointsMin values are NOT proven effective rating, best quality,
@@ -101,6 +102,14 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
                 (selected_gem_item_ids is not None and
                  selected_special_gem_item_id in selected_gem_item_ids)):
             raise ValueError("V268_SPECIAL_GEM_MUST_BE_SOURCE_BOUND_AND_DISTINCT")
+    # Existing selected special is excluded from the ordinary four-type
+    # candidates; its effect remains wholly SimC-owned and unmeasured here.
+    if excluded_ordinary_item_id is not None:
+        if (type(excluded_ordinary_item_id) is not int or
+            excluded_ordinary_item_id<=0 or
+            selected_source_gem_item_ids is None or
+            excluded_ordinary_item_id not in selected_source_gem_item_ids):
+            raise ValueError("V268_ORDINARY_EXCLUSION_SOURCE_BOUND_ID_REQUIRED")
     root=Path(stage_root)
     csv_path=root/OUTPUTS["csv"]
     receipt_path=root/".stage_receipts"/(STAGE+".json")
@@ -196,7 +205,8 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
     four_stat_best={}
     for record in result["records"]:
         item_id=record["item_id"]
-        if (item_id==selected_special_gem_item_id or
+        if (item_id in (selected_special_gem_item_id,
+                        excluded_ordinary_item_id) or
             item_id in (240967,240983) or
             record["effect_classification"]!=
                 "RAW_STATIC_CHMV_POINTS_CANDIDATE_ONLY"):

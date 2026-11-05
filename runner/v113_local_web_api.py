@@ -64,6 +64,8 @@ class SeasonEnvironmentBuildRequest(BaseModel):
     # evidence. A missing selection leaves the normal Build pending.
     selected_flask_item_id: int | None = Field(default=None,ge=1,le=999999999)
     auto_select_observed_F_no_oil: bool = False
+    # Optional existing selection; never identify or measure the special effect.
+    existing_special_gem_id: int | None = Field(default=None,ge=1,le=999999999)
     simc_revision_hint: str | None = Field(
         default=None,pattern=r"^(?:[a-f0-9]{7,12}|[a-f0-9]{40})$")
 
@@ -128,7 +130,8 @@ class LocalJobs:
                                  auto_native_O_requested=False,
                                  consumable_native_binary=None,
                                  selected_flask_item_id=None,
-                                 auto_select_observed_F_no_oil=False):
+                                 auto_select_observed_F_no_oil=False,
+                                 existing_special_gem_id=None):
         """Run original v216 with season inputs, never a user DPS scenario.
 
         One deterministic one-spec reference G probe is NOT season-level
@@ -181,7 +184,14 @@ class LocalJobs:
                         "oil_item_ids_by_hand":{}}}
                        if selected_flask_item_id is not None else {}),
                     **({"auto_select_observed_F_no_oil":True}
-                       if auto_select_observed_F_no_oil else {})})
+                       if auto_select_observed_F_no_oil else {}),
+                    # Existing special selection only; the normal v216 path
+                    # obtains four ordinary types from the already sealed
+                    # same-build gem source and delegates every effect to SimC.
+                    **({"source_selected_gem_roles":{
+                        "special_gem_id":existing_special_gem_id,
+                        "ordinary_gem_ids":None}}
+                       if existing_special_gem_id is not None else {})})
         return {**observed,"web_environment_scope":{
             "schema":"v113_web_season_environment_build_scope_v1",
             "game_build":game_build,"target_ilevel":target_ilevel,
@@ -196,6 +206,9 @@ class LocalJobs:
                 selected_flask_item_id is not None,
             "auto_select_observed_F_no_oil":
                 auto_select_observed_F_no_oil,
+            "four_stat_ordinary_default_requested":
+                existing_special_gem_id is not None,
+            "special_gem_effect_verified_here":False,
             "dps_optimization_started":False,
             "user_character_or_trinkets_required":False,
             "environment_installed":observed.get("environment_installed") is True,
@@ -1017,7 +1030,8 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                 auto_native_O_requested=request.auto_native_O_requested,
                 selected_flask_item_id=request.selected_flask_item_id,
                 auto_select_observed_F_no_oil=
-                    request.auto_select_observed_F_no_oil)
+                    request.auto_select_observed_F_no_oil,
+                existing_special_gem_id=request.existing_special_gem_id)
         except Exception as exc:
             raise blocked(exc) from None
 
