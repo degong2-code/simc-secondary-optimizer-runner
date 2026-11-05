@@ -294,15 +294,10 @@ def v098_inputs(character,trinkets,*,target_ilevel=334,combat=None,
     gem=(receipt["socket_layout"]["special_gem_id"] if socket_plan is not None
          else int(rows["head"]["options"]["gem_id"]))
     if source_only_season_consumables:
-        # A new season may have ONLY ordinary J gems; the special gem is
-        # optional. This is strictly an unadmitted physical source preview.
-        # It never certifies the ordinary gem IDs or socket eligibility.
-        if socket_plan is not None and gem is None:
-            need(bool(receipt["socket_layout"]["ordinary_gem_ids"]),
-                 "SEASON_SOURCE_ORDINARY_GEMS_REQUIRED")
-        else:
-            need(type(gem) is int and gem>0,
-                 "SEASON_SOURCE_GEM_ID_REQUIRED")
+        # New seasons must not be rejected solely for not using Midnight
+        # gem IDs/Omnium preset tokens. Actual sockets, quality and SimC
+        # effects are proven by the separate season source, NOT this plan.
+        need(gem>0,"SEASON_SOURCE_GEM_ID_REQUIRED")
     else:
         need(gem in consumer.DIAMONDS,"STAGED_PRIMARY_DIAMOND_REQUIRED")
         # Exact previous-season behavior and receipts remain unchanged.

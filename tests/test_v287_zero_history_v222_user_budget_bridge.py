@@ -1834,55 +1834,6 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                     "ordinary_gem_ids"],[240908]*4)
                 self.assertEqual(variable_result["new_native_calls"],0)
                 self.assertFalse((root/"variable_socket").exists())
-                # New-season core J does not require the OPTIONAL Midnight
-                # diamond. Source-only physical IDs may not be v101 colors.
-                # No historical season gem/effect is injected into SimC.
-                ordinary_only=copy.deepcopy(variable)
-                ordinary_only["socket_counts"]={
-                    "wrists":2,"waist":2,"feet":1}
-                ordinary_only["socket_total"]=5
-                ordinary_only["ordinary_count"]=5
-                ordinary_only["ordinary_gem_ids"]=[
-                    310001,310001,310001,310001,310002]
-                ordinary_only["special_gem_id"]=None
-                ordinary_only["special_slot"]=None
-                calc["J"]=143
-                env["source_compilation"][
-                    "physical_gem_layout_unadmitted"]=ordinary_only
-                env["source_compilation"][
-                    "physical_gem_J_arithmetic_unadmitted"]={
-                        "status":"PHYSICAL_GEM_J_ARITHMETIC_UNADMITTED",
-                        "physical_gem_item_ids":list(
-                            ordinary_only["ordinary_gem_ids"]),
-                        "J_candidate_unadmitted":143}
-                no_special=boot.preview_from_environment_build(
-                    user,root/"base_J_no_diamond",binary,"c"*40,
-                    environment_result=env)
-                self.assertEqual(no_special["status"],
-                    "SEASON_PROFILE_COMPOSED_NOT_ADMITTED_NO_NATIVE")
-                self.assertIsNone(no_special["scenario"][
-                    "consumables"]["special_gem_id"])
-                self.assertEqual(no_special["scenario"][
-                    "consumables"]["gem_budget_J"],143)
-                self.assertIn("gem_id=310001/310001",
-                              no_special["profile_simc"])
-                self.assertIn("gem_id=310001/310002",
-                              no_special["profile_simc"])
-                self.assertNotIn("gem_id=240967",no_special["profile_simc"])
-                self.assertNotIn("gem_id=240983",no_special["profile_simc"])
-                self.assertFalse(no_special["verified_user_default_options_registered"])
-                self.assertFalse(no_special["season_settings_source_admitted_here"])
-                self.assertEqual(no_special["new_native_calls"],0)
-                self.assertFalse((root/"base_J_no_diamond").exists())
-                # Restore the independent historical variable-diamond case.
-                calc["J"]=92
-                env["source_compilation"][
-                    "physical_gem_layout_unadmitted"]=variable
-                env["source_compilation"][
-                    "physical_gem_J_arithmetic_unadmitted"]={
-                        "status":"PHYSICAL_GEM_J_ARITHMETIC_UNADMITTED",
-                        "physical_gem_item_ids":[240908]*4,
-                        "J_candidate_unadmitted":92}
                 # A v271 four-color reshuffle may change physical IDs.
                 # v222's original per-ID J cannot be silently reused.
                 variable["special_gem_id"]=240967

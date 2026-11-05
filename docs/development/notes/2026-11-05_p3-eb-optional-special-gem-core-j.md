@@ -1,5 +1,7 @@
 # 2026-11-05 · P3-EB · 일반 보석 J의 역사 다이아 의존성 제거
 
+> **SUPERSEDED / 정책 오류 교정(2026-11-05):** 최신 사용자 직접 결정에 따라 **특수 보석 정확히 1개 장착은 필수**다. 이 문서의 ‘특수 보석 없음’ 가정·P3-EB 구현과 테스트는 승인된 설계가 아니다. P3-EB 코드 철회/원래 v271 필수 1개 계약 복귀 및 후속 검증은 [P3-EC](2026-11-05_p3-ec-exactly-one-special-gem-policy-correction.md)를 따른다. 아래 내용은 오류 이력으로만 보존한다.
+
 - **Capability:** `J.GEM`, `SOCKET.LAYOUT`, `ENVIRONMENT.WEB`, `PRODUCT.E2E`
 - **Keywords:** P3-EB, ordinary gems only, optional special gem, no diamond, v271, v139, v098, v216, v222, future season, source-only, replay
 - **Prior evidence:** [PROTOCOL](../PROTOCOL.md)→[INDEX](../INDEX.md)→[환경 구축 12항목](../ENVIRONMENT_BUILD_INPUT_SCOPE_20261104.md) ⑥ 일반 J 필수·⑧ 특수보석 선택→[P3-BZ](2026-11-03_p3-bz-variable-socket-physical-gems-connect.md) 기존 v271/4색→[P3-BX](2026-11-03_p3-bx-simc-socket-native-contrast.md) 실 Native 4/4는 SimC gem_id≠게임 소켓 적법성→[P3-DK](2026-11-04_p3-dk-v271-variable-socket-v098-bridge.md) v098 가변 배치 재사용→[P3-EA](2026-11-05_p3-ea-v266-raw-gem-rating-normal-build-bridge.md) 실제 v221/v266 보석 ID/raw 산술. `v061` 원래 scenario 계약은 `special_gem_id=None` 허용하지만 기존 `v271.arrange/reconcile`과 `v098._season_settings_from_v216`은 역사 240983/240967 **필수**로 강제하는 제품 정책 불일치 확인.
