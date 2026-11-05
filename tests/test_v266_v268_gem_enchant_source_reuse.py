@@ -27,6 +27,10 @@ def joined(*,game_build=BUILD):
         "exact_link_count":len(rows),
         "joins":[{"item_id":itemid,"gem_property_id":property_id,
                   "enchant_id":enchant_id,
+                  "color_mask":(1 if itemid==2003 else 2),
+                  "minimum_ilevel":(345 if itemid==2003 else 300),
+                  "expansion_id":12,
+                  "socket_eligibility":"NOT_YET_VERIFIED",
                   "status":"EXACT_DB2_ITEMSPARSE_GEM_PROPERTY_RELATION",
                   "ui_selectable":False}
                  for itemid,property_id,enchant_id in rows],
@@ -139,6 +143,14 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
             self.assertTrue(source_bound[
                 "selected_gem_v221_same_build_items_all_present"])
             self.assertTrue(source_bound["selected_gem_v221_source_only"])
+            self.assertTrue(source_bound[
+                "selected_gem_v221_source_properties_complete"])
+            props=source_bound["selected_gem_v221_source_properties_unadmitted"]
+            self.assertEqual([p["item_id"] for p in props],[2001,2003])
+            self.assertEqual(props[1]["minimum_ilevel"],345)
+            self.assertEqual(props[1]["color_mask"],1)
+            self.assertEqual(props[1]["gem_property_id"],13)
+            self.assertEqual(len(props),2)
             # 2003 has non-static effects: source ID exists but its
             # SimC effect, specialness and rating remain unverified.
             self.assertEqual(source_bound[
@@ -150,6 +162,10 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
                 "selected_gem_v221_same_build_items_all_present"])
             self.assertEqual(missing["selected_gem_v221_missing_item_ids"],
                              [999999])
+            self.assertFalse(missing[
+                "selected_gem_v221_source_properties_complete"])
+            self.assertEqual(len(missing[
+                "selected_gem_v221_source_properties_unadmitted"]),1)
             self.assertIsNone(only["J"])
             self.assertEqual(status["raw_static_candidate_count"],1)
             self.assertEqual(status["unresolved_enchant_count"],3)

@@ -316,6 +316,59 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 "V216_V221_SELECTED_SAME_BUILD_GEM_ITEM_SOURCE_REQUIRED"):
             self.preflight_with_sealed_gem_raw(layout,bad)
 
+    def test_p3_ei_source_property_rows_reach_v216_and_v098_unadmitted(self):
+        import v098_target_user_scenario_bootstrap as boot
+        layout=self.source_selected_future_gems()
+        rows=[
+            {"item_id":i,"gem_property_id":i-300000,
+             "enchant_id":100+i,"color_mask":(1 if i==311003 else 2),
+             "minimum_ilevel":(345 if i==311003 else 300),
+             "expansion_id":12}
+            for i in (311001,311002,311003)]
+        raw={"status":"ENCHANT_RAW_POINTS_SOURCE_ONLY_J_NOT_APPROVED",
+             "enchant_source_sha256":"4"*64,
+             "selected_gem_raw_points_by_id_unadmitted":{
+                 "311001":20,"311002":30},
+             "selected_gem_all_raw_points_known":True,
+             "selected_gem_v221_item_ids_unadmitted":[311001,311002,311003],
+             "selected_gem_v221_same_build_items_all_present":True,
+             "selected_gem_v221_source_properties_complete":True,
+             "selected_gem_v221_source_properties_unadmitted":rows,
+             "J":None,"environment_ready":False}
+        pre=self.preflight_with_sealed_gem_raw(layout,raw)
+        linked=pre["selected_v221_gem_item_relation_unadmitted"]
+        self.assertTrue(linked["gem_property_source_fields_complete"])
+        self.assertEqual(linked["selected_gem_property_records_unadmitted"],rows)
+        self.assertEqual(linked["special_gem_source_property_unadmitted"],
+                         rows[2])
+        self.assertFalse(linked["special_class_and_quality_verified"])
+        self.assertFalse(linked["game_socket_applicability_verified"])
+        joined={"physical_gem_layout_unadmitted":layout,
+                "physical_gem_J_arithmetic_unadmitted":
+                    pre["physical_gem_J_arithmetic_unadmitted"],
+                "selected_v221_gem_item_relation_unadmitted":linked}
+        inputs={"v216_numeric_preview":{"calculation":{
+                    "J":70,"F":165,"game_build":self.catalog["game_build"],
+                    "target_ilevel":334}},
+                "flask":{"simc_input_token":"flask_of_the_shattered_sun_2",
+                    "static_CHMV_vector":{
+                        "crit_rating":165,"haste_rating":0,
+                        "mastery_rating":0,"versatility_rating":0}}}
+        derived=boot._season_settings_from_v216(
+            compilation=joined,numeric_inputs=inputs,need=boot.need)
+        self.assertEqual(derived["status"],
+                         "SEASON_SETTINGS_PHYSICAL_GEMS_FLASK_COMPOSED_UNADMITTED")
+        self.assertEqual(derived[
+            "selected_v221_gem_property_inputs_unadmitted"],rows)
+        self.assertFalse(derived[
+            "source_minimum_ilevel_for_selected_gems_observed_only"])
+        self.assertFalse(derived["game_socket_legality_authenticated_here"])
+        bad={**raw,"selected_gem_v221_source_properties_unadmitted":
+             [rows[0],rows[1],{**rows[2],"item_id":999999}]}
+        with self.assertRaisesRegex(build.EnvironmentBuildBlocked,
+                                    "SOURCE_PROPERTY_RECORDS_DRIFT"):
+            self.preflight_with_sealed_gem_raw(layout,bad)
+
     def test_new_season_special_v098_source_settings_require_bound_v221_ids(self):
         import v098_target_user_scenario_bootstrap as boot
         layout=self.source_selected_future_gems()

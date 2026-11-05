@@ -1134,6 +1134,24 @@ def _season_settings_from_v216(*, compilation, numeric_inputs,
             return {"status":"SEASON_SETTINGS_SOURCE_PENDING",
                     "missing":["V221_SELECTED_SPECIAL_GEM_SOURCE_LINK_PENDING"],
                     "settings":None}
+    # Same-build item property metadata is reusable season input, but it
+    # does not prove special-effect role, highest quality or legal sockets.
+    property_rows=(source_relation.get(
+        "selected_gem_property_records_unadmitted")
+        if type(source_relation) is dict else None)
+    if property_rows is not None:
+        if (type(property_rows) is not list or
+                [row.get("item_id") for row in property_rows
+                 if type(row) is dict]!=source_ids or
+                any(type(row) is not dict or
+                    set(row)!={"item_id","gem_property_id","enchant_id",
+                               "color_mask","minimum_ilevel","expansion_id"}
+                    or any(type(v) is not int or v<0
+                           for v in row.values())
+                    for row in property_rows)):
+            return {"status":"SEASON_SETTINGS_SOURCE_PENDING",
+                    "missing":["V221_GEM_SOURCE_PROPERTY_INPUT_DRIFT"],
+                    "settings":None}
     # v271/v139 already support variable N and a non-head special slot.
     # Unsupported source IDs remain pending rather than being invented.
     if (type(counts) is not dict or type(ordinary) is not list or
@@ -1208,6 +1226,13 @@ def _season_settings_from_v216(*, compilation, numeric_inputs,
             "v271_socket_plan_unadmitted":socket_plan,
             "physical_gem_ids_reused":True,
             "selected_native_flask_reused":True,
+            "selected_v221_gem_property_inputs_unadmitted":(
+                [dict(row) for row in property_rows]
+                if property_rows is not None else None),
+            "source_minimum_ilevel_for_selected_gems_observed_only":(
+                all(row["minimum_ilevel"]<=calc["target_ilevel"]
+                    for row in property_rows)
+                if property_rows is not None else None),
             "game_socket_legality_authenticated_here":False,
             "controls_admitted_or_default_quality_verified_here":False,
             "optional_consumables_default_disabled_if_unselected":True,

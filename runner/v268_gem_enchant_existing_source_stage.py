@@ -157,12 +157,39 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
         # The v221 candidate and same-build source relation were already
         # parsed and validated by v266.preview in THIS call.
         exact={row["item_id"]:row for row in records["joins"]}
-        missing=sorted(set(selected_source_gem_item_ids)-set(exact))
+        requested=sorted(set(selected_source_gem_item_ids))
+        missing=sorted(set(requested)-set(exact))
+        # v221 already supplied the physical ItemSparse->GemProperty join.
+        # Project those SAME rows into the normal Build input contract.
+        # Color/minimum-level are source facts, not game-socket legality.
+        properties=[]
+        unresolved_properties=[]
+        for item_id in requested:
+            row=exact.get(item_id)
+            if row is None:
+                continue
+            keys=("gem_property_id","enchant_id","color_mask",
+                  "minimum_ilevel","expansion_id")
+            if (any(type(row.get(k)) is not int or
+                    row[k] < (1 if k=="gem_property_id" else 0)
+                    for k in keys) or
+                row.get("socket_eligibility")!="NOT_YET_VERIFIED" or
+                row.get("ui_selectable") is not False):
+                unresolved_properties.append(item_id)
+                continue
+            properties.append({"item_id":item_id,
+                               **{k:row[k] for k in keys}})
         source_membership={
             "selected_gem_v221_item_ids_unadmitted":sorted(
-                set(selected_source_gem_item_ids)&set(exact)),
+                set(requested)&set(exact)),
             "selected_gem_v221_missing_item_ids":missing,
             "selected_gem_v221_same_build_items_all_present":not missing,
+            "selected_gem_v221_source_properties_unadmitted":properties,
+            "selected_gem_v221_source_properties_unresolved_item_ids":
+                unresolved_properties,
+            "selected_gem_v221_source_properties_complete":(
+                not missing and not unresolved_properties and
+                len(properties)==len(requested)),
             "selected_gem_v221_source_only":True}
     return {
         "status":result["status"],

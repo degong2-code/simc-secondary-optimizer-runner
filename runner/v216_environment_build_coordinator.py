@@ -736,8 +736,29 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
              type(gem_source.get("source_stage")) is dict and
              type(gem_source["source_stage"].get("receipt_sha256")) is str,
              "V216_V221_SELECTED_SAME_BUILD_GEM_ITEM_SOURCE_REQUIRED")
+        source_properties=None
+        if gem_enchant.get("selected_gem_v221_source_properties_complete") is True:
+            props=gem_enchant.get(
+                "selected_gem_v221_source_properties_unadmitted")
+            keys={"item_id","gem_property_id","enchant_id","color_mask",
+                  "minimum_ilevel","expansion_id"}
+            need(type(props) is list and len(props)==len(selected_source_ids)
+                 and [row.get("item_id") for row in props
+                      if type(row) is dict]==sorted(selected_source_ids)
+                 and all(type(row) is dict and set(row)==keys and
+                         all(type(v) is int and v>=0
+                             for v in row.values()) and
+                         row["gem_property_id"]>0 for row in props),
+                 "V216_SELECTED_V221_SOURCE_PROPERTY_RECORDS_DRIFT")
+            source_properties=[dict(row) for row in props]
         source_item_link={
             "selected_item_ids":sorted(selected_source_ids),
+            "selected_gem_property_records_unadmitted":source_properties,
+            "gem_property_source_fields_complete":source_properties is not None,
+            "special_gem_source_property_unadmitted":(
+                next(row for row in source_properties
+                     if row["item_id"]==gem_layout_receipt["special_gem_id"])
+                if source_properties is not None else None),
             "special_gem_item_id":gem_layout_receipt["special_gem_id"],
             "v221_stage_receipt_sha256":
                 gem_source["source_stage"]["receipt_sha256"],
