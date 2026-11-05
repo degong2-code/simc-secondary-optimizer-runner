@@ -3921,6 +3921,125 @@ def _stage_source_environment_only(*, compilation, preflight,
             "new_native_calls":0,"network_calls":0}
 
 
+def _fresh_source_owner_native_G_component(*, native_G, preflight,
+                                           compilation, staged, target_ilevel):
+    """Reuse the ORIGINAL v277-verified Native G as one source-owner component.
+
+    This is called only after v277.collect and the same v216/v217 source
+    compilation. Recheck its small sealed receipt and exact catalog scope,
+    without another SimC subprocess, JSON2 parse, binary hash or source fetch.
+    It authenticates only generic physical G, NEVER J/F/O, Policy A or READY.
+    """
+    if (type(native_G) is not dict or native_G.get("status")!=
+            "G_NATIVE_NUMERIC_REFERENCE_OBSERVED_JFO_PENDING" or
+            not native_G.get("native_run_folder")):
+        # Legacy synthetic/source-only rows cannot be owner evidence.
+        return None
+    need(type(preflight) is dict and type(compilation) is dict and
+         type(staged) is dict and
+         staged.get("status")=="FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED" and
+         staged.get("original_v216_preflight_sha256")==
+             preflight.get("preflight_sha256") and
+         preflight.get("schema")==FRESH_SOURCE_PREFLIGHT_SCHEMA and
+         preflight.get("environment_ready") is False and
+         preflight.get("simc_revision")==compilation.get("simc_revision") and
+         type(preflight.get("game_build")) is str and
+         type(preflight.get("source_catalog_manifest_sha256")) is str and
+         season_budget_contract.SHA.fullmatch(
+             preflight["source_catalog_manifest_sha256"]) is not None and
+         type(target_ilevel) is int and target_ilevel>0,
+         "V216_NATIVE_G_OWNER_ORIGINAL_SOURCE_SCOPE_REQUIRED")
+    root=pathlib.Path(compilation["stage_root"]).resolve()
+    folder=pathlib.Path(native_G["native_run_folder"])
+    need(root.is_dir() and not root.is_symlink() and
+         folder.is_dir() and not folder.is_symlink() and
+         folder.resolve().parent==root/"source" and
+         folder.name.startswith("v277_native_G_") and
+         len(folder.name)==len("v277_native_G_")+24,
+         "V216_NATIVE_G_OWNER_SEALED_STAGE_LOCATION_REQUIRED")
+    receipt_file=folder/"receipt.json"
+    need(receipt_file.is_file() and not receipt_file.is_symlink() and
+         0<receipt_file.stat().st_size<=zero_history_G_native.MAX_RECEIPT,
+         "V216_NATIVE_G_OWNER_RECEIPT_REQUIRED")
+    raw=receipt_file.read_bytes()
+    need(digest(raw)==native_G.get("native_receipt_sha256"),
+         "V216_NATIVE_G_OWNER_RECEIPT_SHA_DRIFT")
+    try:
+        receipt=json.loads(raw)
+        identity=receipt["identity"]
+        observed=receipt["observed_G"]
+        expected=season_budget_contract.standardize_representative_G(
+            observed_G_total=observed["observed_G_total"],
+            target_ilevel=target_ilevel,
+            source_observation_sha256=observed["native_json2_sha256"])
+    except (ValueError,TypeError,KeyError,
+            season_budget_contract.SeasonBudgetBlocked) as exc:
+        raise EnvironmentBuildBlocked(
+            "V216_NATIVE_G_OWNER_ORIGINAL_NATIVE_RECORD_INVALID") from exc
+    v277=preflight.get("v277_native_G_preprofile_unadmitted")
+    need(type(v277) is dict and
+         v277.get("status")==
+             "NATIVE_G_NUMERIC_SOURCE_ONLY_JFO_AND_ADMISSION_PENDING" and
+         v277.get("game_build")==preflight["game_build"] and
+         v277.get("simc_revision")==preflight["simc_revision"] and
+         v277.get("target_ilevel")==target_ilevel and
+         v277.get("native_receipt_sha256")==digest(raw) and
+         v277.get("native_json2_sha256")==observed["native_json2_sha256"] and
+         v277.get("standardization")==expected and
+         v277.get("standardized_G")==expected["standardized_G"] and
+         v277.get("source_profile_receipt_sha256")==
+             native_G.get("source_profile_receipt_sha256") and
+         receipt.get("status")=="PASS_NATIVE_OBSERVED_G_UNPROMOTED" and
+         receipt.get("returncode")==0 and
+         receipt.get("new_native_calls")==1 and
+         receipt.get("native_json2_sha256")==observed["native_json2_sha256"] and
+         identity.get("source_game_build")==preflight["game_build"] and
+         identity.get("simc_source_revision")==preflight["simc_revision"] and
+         identity.get("target_ilevel")==target_ilevel and
+         identity.get("source_receipt_sha256")==
+             native_G.get("source_profile_receipt_sha256") and
+         identity.get("executable_sha256")==
+             native_G.get("native_binary_sha256") and
+         identity.get("compiled_game_build_not_proven") is True and
+         observed.get("generic_G_numeric_reference_usable") is True and
+         observed.get("generic_G_current_season_membership_required") is False and
+         observed.get("full_G_approved") is False and
+         observed.get("source_profile_receipt_sha256")==
+             native_G.get("source_profile_receipt_sha256") and
+         observed.get("target_ilevel")==target_ilevel and
+         observed.get("standardized_G_preview_unapproved")==expected and
+         native_G.get("standardization")==expected and
+         native_G.get("standardized_G")==expected["standardized_G"] and
+         native_G.get("full_G_approved") is False and
+         native_G.get("environment_ready") is False,
+         "V216_NATIVE_G_OWNER_ORIGINAL_PROOF_OR_PROFILE_DRIFT")
+    return {"rating":expected["standardized_G"],
+            "game_build":preflight["game_build"],
+            "source_catalog_manifest_sha256":
+                preflight["source_catalog_manifest_sha256"],
+            "source_sha256":observed["native_json2_sha256"],
+            "source_verification":"EXACT_NATIVE",
+            "standardization":expected}
+
+
+def _fresh_source_owner_merge_native_G(*, trusted_budget_evidence,
+                                       owner_G):
+    """Attach one already verified native component, not a second G budget."""
+    if owner_G is None:
+        return trusted_budget_evidence
+    need(type(trusted_budget_evidence) is dict and
+         type(trusted_budget_evidence.get("components")) is dict and
+         type(owner_G) is dict,
+         "V216_NATIVE_G_OWNER_COMPLETE_EVIDENCE_REQUIRED")
+    components=trusted_budget_evidence["components"]
+    current=components.get("G")
+    need(current is None or (type(current) is dict and
+         all(current.get(k)==owner_G[k] for k in owner_G)),
+         "V216_NATIVE_G_OWNER_PROVIDER_COMPONENT_CONFLICT")
+    return {**trusted_budget_evidence,
+            "components":{**components,"G":(current or owner_G)}}
+
+
 def _fresh_source_owner_exact_no_oil(*, preflight, selected_budget_items,
                                      trusted_budget_evidence):
     """Reuse v222's original O=0 proof ONLY for explicitly selected no oil.
@@ -4568,6 +4687,19 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     else None))
             progress["versioned_environment_source_stage"]=staged
             source_compilation["versioned_environment_source_stage"]=staged
+            # G owner reuses the SAME original v277 sealed Native result.
+            # A source-only preview or mock without its original receipt
+            # stays pending, and none of this implies complete G/J/F/O.
+            owner_G=_fresh_source_owner_native_G_component(
+                native_G=native_G,preflight=preflight,
+                compilation=source_compilation,staged=staged,
+                target_ilevel=fresh_collection_inputs[
+                    "representative_request"]["target_ilevel"])
+            if owner_G is not None:
+                source_compilation[
+                    "native_G_source_owner_component_not_full_environment"]=owner_G
+                progress["native_G_source_owner_status"]=(
+                    "EXACT_GENERIC_G_NATIVE_PROVENANCE_REUSED_J_F_O_PENDING")
             if verified_install_provider is not None and not source_compilation["missing"]:
                 # Normal Build continuation, not an independent compiler.
                 # Only an internal Python verifier may provide the bundle;
@@ -4588,10 +4720,13 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     # Only an explicit, empty oil-hand selection owns O=0.
                     # Attach the existing v222 receipt, not a preview or an
                     # invented season constant. Conflicting provider O blocks.
+                    trusted_budget=_fresh_source_owner_merge_native_G(
+                        trusted_budget_evidence=confirmed["trusted_budget_evidence"],
+                        owner_G=owner_G)
                     trusted_budget=_fresh_source_owner_exact_no_oil(
                         preflight=preflight,
                         selected_budget_items=selected_budget_items,
-                        trusted_budget_evidence=confirmed["trusted_budget_evidence"])
+                        trusted_budget_evidence=trusted_budget)
                     installed=_install_verified_fresh_environment_only(
                         compilation=source_compilation,staged=staged,
                         trusted_budget_evidence=trusted_budget,

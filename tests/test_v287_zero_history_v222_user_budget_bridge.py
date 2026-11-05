@@ -990,6 +990,96 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertFalse(result["zero_history_build"]["environment_ready"])
         self.assertEqual(result["native_calls"],0)
 
+    def test_original_v277_native_G_owner_reuses_receipt_and_merges(self):
+        # P3-EX exercises the source-owner boundary with synthetic receipt
+        # bytes. This is not a real Native measurement nor season READY.
+        import hashlib
+        import v222_season_budget_contract as budget
+        native=self.v277_native_G()
+        stage=self.root/"source"
+        stage.mkdir(exist_ok=True)
+        folder=stage/("v277_native_G_"+"a"*24)
+        folder.mkdir()
+        level=334
+        identity={
+            "source_game_build":self.catalog["game_build"],
+            "simc_source_revision":self.catalog["simc_revision"],
+            "target_ilevel":level,
+            "source_receipt_sha256":native["source_profile_receipt_sha256"],
+            "executable_sha256":native["native_binary_sha256"],
+            "compiled_game_build_not_proven":True}
+        observed={
+            "observed_G_total":native["observed_G_total"],
+            "native_json2_sha256":native["native_json2_sha256"],
+            "generic_G_numeric_reference_usable":True,
+            "generic_G_current_season_membership_required":False,
+            "full_G_approved":False,
+            "source_profile_receipt_sha256":
+                native["source_profile_receipt_sha256"],
+            "target_ilevel":level,
+            "standardized_G_preview_unapproved":native["standardization"]}
+        receipt={"identity":identity,"observed_G":observed,
+                 "status":"PASS_NATIVE_OBSERVED_G_UNPROMOTED",
+                 "returncode":0,"new_native_calls":1,
+                 "native_json2_sha256":native["native_json2_sha256"]}
+        raw=json.dumps(receipt).encode("utf8")
+        (folder/"receipt.json").write_bytes(raw)
+        native["native_run_folder"]=str(folder)
+        native["native_receipt_sha256"]=hashlib.sha256(raw).hexdigest()
+        preflight={
+            "schema":build.FRESH_SOURCE_PREFLIGHT_SCHEMA,
+            "game_build":self.catalog["game_build"],
+            "simc_revision":self.catalog["simc_revision"],
+            "source_catalog_manifest_sha256":self.catalog["manifest_sha256"],
+            "environment_ready":False,"preflight_sha256":"f"*64}
+        candidate,_=build._reuse_v277_G_in_preprofile(
+            catalog=self.catalog,target_ilevel=level,
+            native_G=native,budget_evidence=None)
+        preflight["v277_native_G_preprofile_unadmitted"]=candidate
+        compilation={"stage_root":str(self.root),
+                     "simc_revision":self.catalog["simc_revision"]}
+        staged={"status":"FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED",
+                "original_v216_preflight_sha256":"f"*64}
+        def owner(native_row=native,flight=preflight,stage_row=staged):
+            return build._fresh_source_owner_native_G_component(
+                native_G=native_row,preflight=flight,
+                compilation=compilation,staged=stage_row,
+                target_ilevel=level)
+        g=owner()
+        self.assertEqual(g["rating"],2850)
+        self.assertEqual(g["source_verification"],"EXACT_NATIVE")
+        self.assertEqual(g["source_sha256"],native["native_json2_sha256"])
+        evidence={"components":{"J":{"rating":140},"F":{"rating":170}}}
+        merged=build._fresh_source_owner_merge_native_G(
+            trusted_budget_evidence=evidence,owner_G=g)
+        self.assertEqual(merged["components"]["G"],g)
+        self.assertNotIn("G",evidence["components"])
+        self.assertEqual(build._fresh_source_owner_merge_native_G(
+            trusted_budget_evidence=evidence,owner_G=None),evidence)
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,"PROVIDER_COMPONENT_CONFLICT"):
+            build._fresh_source_owner_merge_native_G(
+                trusted_budget_evidence={"components":{
+                    "G":{**g,"rating":2840}}},
+                owner_G=g)
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_NATIVE_G_OWNER_ORIGINAL_PROOF_OR_PROFILE_DRIFT"):
+            owner(flight={**preflight,"simc_revision":"b"*40})
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_NATIVE_G_OWNER_ORIGINAL_SOURCE_SCOPE_REQUIRED"):
+            owner(stage_row={**staged,
+                            "original_v216_preflight_sha256":"e"*64})
+        (folder/"receipt.json").write_bytes(raw+b" ")
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_NATIVE_G_OWNER_RECEIPT_SHA_DRIFT"):
+            owner()
+        # An unsealed synthetic preview is never automatically certified.
+        self.assertIsNone(owner(native_row={
+            **native,"native_run_folder":None}))
+
     def test_source_owner_no_oil_uses_exact_selection_not_preview(self):
         # P3-EW: original v222 O=0 is valid only for explicit no oil.
         import v222_season_budget_contract as budget
