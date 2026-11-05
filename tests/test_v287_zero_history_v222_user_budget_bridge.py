@@ -379,6 +379,86 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 "V216_V221_SELECTED_SAME_BUILD_GEM_ITEM_SOURCE_REQUIRED"):
             self.preflight_with_sealed_gem_raw(layout,bad)
 
+    def test_p3_fq_selected_F_measures_only_exact_source_and_reuses_v278(self):
+        # The v281 source list already exists. Neither a new fetch nor
+        # a competing flask Native measurement is needed for an exact ID.
+        candidates=[
+            {"physical_item_id":8111,"simc_input_token":"flask_bloom_1",
+             "crafting_quality":1},
+            {"physical_item_id":8112,"simc_input_token":"flask_bloom_2",
+             "crafting_quality":2},
+            {"physical_item_id":8223,"simc_input_token":"flask_storm_3",
+             "crafting_quality":3}]
+        collected={
+            "expected_game_build":self.catalog["game_build"],
+            "fresh_one_spec_physical_G_probe":{
+                "profile_path":str(self.root/"v233.profile"),
+                "source_stage":{"status":"REUSED_VERIFIED"}},
+            "fresh_consumable_simc_effect_relation":{}}
+        compiled={
+            "status":"FRESH_V191_V211_V213_COMPILED_UNADMITTED",
+            "stage_root":str(self.root),
+            "simc_revision":self.catalog["simc_revision"],
+            "automatic_F_O_measurement_candidates_unadmitted":{
+                "flask":candidates,"oil":[]}}
+        def resolve(**kwargs):
+            self.assertEqual(kwargs["kind"],"flask")
+            item=next(x for x in candidates
+                      if x["physical_item_id"]==kwargs["item_id"])
+            return {**item,"selected_hand":None}
+        native={"status":"NATIVE_JSON2_CAPTURED",
+                "new_native_calls":2,"kind":"flask"}
+        with mock.patch.object(
+                build.consumable_simc_relation,"resolve_native_input",
+                side_effect=resolve) as exact, mock.patch.object(
+                build.native_effect_pair,"measure",
+                return_value=native) as measure:
+            rows,selected=build._auto_F_native_from_sealed_v281(
+                collected=collected,compilation=compiled,
+                binary=self.root/"fake_simc",selected_item_id=8112)
+            self.assertEqual([x["physical_item_native_source_unadmitted"][
+                "physical_item_id"] for x in rows],[8112])
+            self.assertEqual(selected["attempted"],1)
+            self.assertEqual(selected["remaining"],0)
+            self.assertEqual(selected["total_source_candidates"],1)
+            self.assertEqual(selected["all_source_candidate_count"],3)
+            self.assertEqual(selected["selected_exact_item_id"],8112)
+            self.assertEqual(selected["new_native_calls"],2)
+            self.assertFalse(selected["environment_ready"])
+            self.assertFalse(selected["F_approved"])
+            exact.assert_called_once()
+            measure.assert_called_once()
+            exact.reset_mock()
+            measure.reset_mock()
+            rows,low=build._auto_F_native_from_sealed_v281(
+                collected=collected,compilation=compiled,
+                binary=self.root/"fake_simc",selected_item_id=8111)
+            self.assertEqual(rows,[])
+            self.assertIn("AUTO_F_SELECTED_ITEM_BELOW_OBSERVED_QUALITY",
+                          low["requires"])
+            rows,missing=build._auto_F_native_from_sealed_v281(
+                collected=collected,compilation=compiled,
+                binary=self.root/"fake_simc",selected_item_id=9999)
+            self.assertEqual(rows,[])
+            self.assertIn("AUTO_F_SELECTED_EXACT_ITEM_NOT_IN_V281_SOURCE",
+                          missing["requires"])
+            exact.assert_not_called()
+            measure.assert_not_called()
+            with self.assertRaisesRegex(
+                    build.EnvironmentBuildBlocked,
+                    "V216_AUTO_F_O_NATIVE_BUDGET_OR_KIND_INVALID"):
+                build._auto_F_native_from_sealed_v281(
+                    collected=collected,compilation=compiled,
+                    binary=self.root/"fake_simc",
+                    kind="temporary_enchant",selected_item_id=8112)
+            # The previous caller with no exact selection is unchanged.
+            rows,all_candidates=build._auto_F_native_from_sealed_v281(
+                collected=collected,compilation=compiled,
+                binary=self.root/"fake_simc")
+            self.assertEqual(len(rows),3)
+            self.assertEqual(all_candidates["new_native_calls"],6)
+            self.assertNotIn("selected_exact_item_id",all_candidates)
+
     def test_p3_fp_single_stat_cannot_enter_J_even_with_manual_number(self):
         # A physically selected one-stat ordinary gem may remain on the
         # SimC socket layout for special-effect activation, but never in J.

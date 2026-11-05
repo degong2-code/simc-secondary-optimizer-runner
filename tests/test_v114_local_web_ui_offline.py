@@ -92,10 +92,17 @@ class RealHTTPPageOffline(unittest.TestCase):
                       "season-native-g","season-native-f","season-native-o",
                       "season-build-btn",
                       "season-build-stage","season-build-missing",
-                      "season-existing-special-gem-id"):
+                      "season-existing-special-gem-id",
+                      "season-selected-flask-id"):
             self.assertIn('id="'+ident+'"',page)
         self.assertIn('"/api/v1/environment/season-build"',js)
         self.assertIn("existing_special_gem_id",js)
+        self.assertIn("selected_flask_item_id",js)
+        self.assertIn("J/F 원본: ",js)
+        self.assertIn("J/F 품질: ",js)
+        self.assertIn("정확한 영약 ItemID 선택",js)
+        self.assertIn("기존 같은 시즌 v281 원본",page)
+
         self.assertIn("일반보석 4종 기본 배치 요청",js)
         self.assertIn("모든 효과 계산은 SimC",page)
         self.assertIn("이미 선택된 특수보석",page)

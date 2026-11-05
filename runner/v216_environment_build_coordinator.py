@@ -3855,7 +3855,8 @@ def _zero_history_v098_profile_source_inputs(*, numeric_preview,
 
 
 def _auto_F_native_from_sealed_v281(*,collected,compilation,binary,
-                                      kind="flask",max_new_native_calls=8):
+                                      kind="flask",max_new_native_calls=8,
+                                      selected_item_id=None):
     """Shared sealed F/O Native opt-in; original F entry point is preserved.
 
     v281 owns exact physical ID/hand/source evidence and v278 owns immutable
@@ -3863,7 +3864,10 @@ def _auto_F_native_from_sealed_v281(*,collected,compilation,binary,
     """
     need(kind in ("flask","temporary_enchant") and
          type(max_new_native_calls) is int and
-         0<=max_new_native_calls<=8,
+         0<=max_new_native_calls<=8 and
+         (selected_item_id is None or
+          (kind=="flask" and type(selected_item_id) is int and
+           selected_item_id>0)),
          "V216_AUTO_F_O_NATIVE_BUDGET_OR_KIND_INVALID")
     oil=(kind=="temporary_enchant")
     label="O" if oil else "F"
@@ -3886,8 +3890,41 @@ def _auto_F_native_from_sealed_v281(*,collected,compilation,binary,
     elif type(work) is not dict or not work.get(family):
         out["requires"].append("AUTO_"+label+"_EXACT_PHYSICAL_ITEM_PENDING")
     if out["requires"]:return [],out
+    worklist=work[family]
+    if selected_item_id is not None:
+        # The existing v281 same-build item relation owns exact ID lookup.
+        # Do not spend Native calls on unrelated flask effects or quality.
+        matches=[row for row in worklist
+                 if row["physical_item_id"]==selected_item_id]
+        need(len(matches)<=1,"V216_SELECTED_F_DUPLICATE_V281_ITEM_ID")
+        if not matches:
+            out["requires"].append(
+                "AUTO_F_SELECTED_EXACT_ITEM_NOT_IN_V281_SOURCE")
+            return [],out
+        chosen=matches[0]
+        token=chosen["simc_input_token"]
+        rank=chosen["crafting_quality"]
+        need(type(token) is str and bool(token) and
+             type(rank) is int and rank>=0,
+             "V216_SELECTED_F_V281_TOKEN_QUALITY_INVALID")
+        suffix="_"+str(rank)
+        family_key=token[:-len(suffix)] if token.endswith(suffix) else None
+        # Preserve existing highest-observed-quality policy: measuring only
+        # this item must not make a known lower rank look like the top rank.
+        if family_key is not None:
+            for other in worklist:
+                q=other["crafting_quality"]
+                t=other["simc_input_token"]
+                need(type(q) is int and q>=0 and type(t) is str,
+                     "V216_SELECTED_F_V281_QUALITY_RECORD_INVALID")
+                if (t.endswith("_"+str(q)) and
+                    t[:-(len(str(q))+1)]==family_key and q>rank):
+                    out["requires"].append(
+                        "AUTO_F_SELECTED_ITEM_BELOW_OBSERVED_QUALITY")
+                    return [],out
+        worklist=matches
     rows=[];receipts=[];new=0
-    for item in work[family]:
+    for item in worklist:
         # A v278 paired measurement may launch 2 new subprocesses. Reserve
         # both slots; already-sealed cache hits can be revisited next Build.
         if new+2>max_new_native_calls:break
@@ -3933,15 +3970,18 @@ def _auto_F_native_from_sealed_v281(*,collected,compilation,binary,
                                  native.get("native_log_excerpt")}
                             if native.get("native_error") else {})})
     out.update({"status":"AUTO_"+label+"_NATIVE_MEASURED_SOURCE_ONLY",
-                "total_source_candidates":len(work[family]),
+                "total_source_candidates":len(worklist),
                 "attempted":len(receipts),
-                "remaining":len(work[family])-len(receipts),
+                "remaining":len(worklist)-len(receipts),
+                **({"selected_exact_item_id":selected_item_id,
+                    "all_source_candidate_count":len(work[family])}
+                   if selected_item_id is not None else {}),
                 "new_native_calls":new,"per_item":receipts,
                 "requires":[("AUTO_O_QUALITY_WEAPON_HAND_AND_BUDGET_PROOF_PENDING"
                              if oil else
                              "AUTO_F_HIGHEST_QUALITY_ITEM_AND_NUMERIC_BUDGET_SOURCE_PENDING")]+
                     (["AUTO_"+label+"_NEXT_MEASUREMENT_BATCH_PENDING"]
-                     if len(receipts)<len(work[family]) else [])})
+                     if len(receipts)<len(worklist) else [])})
     return rows,out
 
 
@@ -5515,7 +5555,10 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             oil_reserved=min(4,2*len(oil_work))
             auto_rows,auto_state=_auto_F_native_from_sealed_v281(
                 collected=collected,compilation=source_compilation,
-                binary=binary,max_new_native_calls=8-oil_reserved)
+                binary=binary,max_new_native_calls=8-oil_reserved,
+                selected_item_id=(selected_budget_items["flask_item_id"]
+                                  if selected_budget_items is not None
+                                  else None))
             effect_observations.extend(auto_rows)
             auto_F_calls=auto_state["new_native_calls"]
             progress["automatic_F_native_measurements_unadmitted"]=auto_state

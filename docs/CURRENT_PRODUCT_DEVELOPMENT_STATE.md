@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FQ 신규 연결:** [기능 노트](development/notes/2026-11-06_p3-fq-selected-flask-source-scope-to-normal-build.md). v113 시즌 웹 Build에는 영약 F 물리 ItemID 정확 선택 API가 있었지만 브라우저 폼에 없었음. 해당 입력을 **선택형 고급 필드**로 연결하고, v216 이미 봉인된 v281 영약 출처에서 선택된 ID만 v278 Native/캐시로 우선 측정하도록 축소. 같은 SimC token 계열에서 원본에 더 높은 관측 품질이 있으면 저품질 선택 Native 불필요·PENDING; 누락 ID도 타 영약 Native로 대체하지 않음. 나머지 입력/기름/O/기존 자동 F 미선택 흐름 보존. v216 원래 J/F 출처 미해결 원인도 웹 상세에 표시. **신규 검증 PASS는 신규 SHA Actions 확인 전 미주장, 신규 실물 시즌 T1/READY 없음**, 특수보석 효과 인증 없음. main/Project UI 불변.
+>
+
 > **2026-11-06 P3-FP 검증 완료:** [P3-FP revised focused #42073753482](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42073753482) **287/287 PASS·DEV_LEDGER_PASS**; [P3-FP initial #42073288075](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42073288075) **286/286 PASS**, v113/v181/v182/v212 workflow SUCCESS. 정확히 두 종류의 양수 2차 스탯이 있는 일반보석만 J 후보에 허용하고 단일 스탯 보석의 장착 자체는 허용한다. 관련 v216 J 자동 계산 및 수동 수치 우회 차단 직접 검증 완료. 합성/오프라인 테스트는 실 시즌 G/J/F/O·원본 인증·READY/T1·DPS E2E 입증이 아님. SimC 특수 효과 검증/Native 신규 실행 없음. main/Project UI/공식 상태 불변.
 >
 

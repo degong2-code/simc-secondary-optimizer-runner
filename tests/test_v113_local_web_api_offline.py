@@ -255,6 +255,40 @@ class LocalWebAPIOffline(unittest.TestCase):
                 **payload,"existing_special_gem_id":bad})
             self.assertEqual(response.status_code,422,response.text)
 
+    def test_p3_fq_exact_F_and_four_stat_j_share_normal_web_build(self):
+        payload={"game_build":"12.2.0.99999","target_ilevel":334,
+                 "selected_flask_item_id":241326,
+                 "existing_special_gem_id":311200,
+                 "auto_native_F_requested":True,
+                 "consumable_native_binary":str(self.binary)}
+        source={"status":"SOURCE_ONLY_PENDING","environment_ready":False,
+                "environment_installed":False,"native_calls":0}
+        with mock.patch.object(web.environment_build,"build_environment",
+                               return_value=source) as build_stage:
+            response=self.post("/api/v1/environment/season-build",payload)
+        self.assertEqual(response.status_code,200,response.text)
+        kw=build_stage.call_args.kwargs
+        self.assertIsNone(kw["user"])
+        self.assertEqual(kw["binary"],self.binary.resolve())
+        f=kw["fresh_collection_inputs"]
+        self.assertTrue(f["auto_native_F_requested"])
+        self.assertFalse(f["auto_native_G_requested"])
+        self.assertEqual(f["selected_budget_items"],{
+            "flask_item_id":241326,"oil_item_ids_by_hand":{}})
+        self.assertEqual(f["source_selected_gem_roles"],{
+            "special_gem_id":311200,"ordinary_gem_ids":None})
+        scope=response.json()["web_environment_scope"]
+        self.assertEqual(scope["selected_flask_item_id"],241326)
+        self.assertTrue(scope["four_stat_ordinary_default_requested"])
+        self.assertFalse(scope["special_gem_effect_verified_here"])
+        self.assertFalse(scope["environment_ready"])
+        with mock.patch.object(web.environment_build,"build_environment",
+                               side_effect=AssertionError("MUST_NOT_RUN")) as no:
+            result=self.post("/api/v1/environment/season-build",{
+                **payload,"auto_select_observed_F_no_oil":True})
+            self.assertEqual(result.status_code,422,result.text)
+            no.assert_not_called()
+
     def test_p3_fg_web_flask_selection_reaches_real_source_verifier_only(self):
         payload={"game_build":"12.2.0.99999",
                  "target_ilevel":334,"selected_flask_item_id":241326}

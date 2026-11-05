@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FQ 사용자 경로 우선:** [개발 노트](development/notes/2026-11-06_p3-fq-selected-flask-source-scope-to-normal-build.md). 기존 v113 `selected_flask_item_id` 계약을 사용자 고급 웹 입력에 CONNECT. v216의 F Native는 명시된 같은 시즌 영약 ID만 원본 v281에 귀속시키고 기존 v278 paired-cache를 재사용한다. 이미 원본에 더 높은 같은 계열 품질이 있는 저품질/없는 ID는 Native를 낭비하지 않고 PENDING; 미선택 자동 F·O·G·기존 v222/v212 설치 경로/특수보석 SimC 효과 책임 유지. 실제 새 시즌 READY/T1 미완료, 공식 G/J/F/O/자동 정책 A 원본 미인증, 코드 변경 CI 결과는 별도 확인.
+>
+
 > **2026-11-06 P3-FP 검증 완료:** [P3-FP revised focused #42073753482](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42073753482) **287/287 PASS·DEV_LEDGER_PASS**; [P3-FP initial #42073288075](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42073288075) **286/286 PASS**, v113/v181/v182/v212 workflow SUCCESS. 정확히 두 종류의 양수 2차 스탯이 있는 일반보석만 J 후보에 허용하고 단일 스탯 보석의 장착 자체는 허용한다. 관련 v216 J 자동 계산 및 수동 수치 우회 차단 직접 검증 완료. 합성/오프라인 테스트는 실 시즌 G/J/F/O·원본 인증·READY/T1·DPS E2E 입증이 아님. SimC 특수 효과 검증/Native 신규 실행 없음. main/Project UI/공식 상태 불변.
 >
 

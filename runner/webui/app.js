@@ -623,7 +623,11 @@ function showSeasonEnvironmentBuild(data) {
   const step=data?.zero_history_build||{};
   const source=data?.source_compilation||{};
   const needs=[...(Array.isArray(step.requires)?step.requires:[]),
-    ...(Array.isArray(source.missing)?source.missing.map(x=>"SOURCE_COMPILER:"+x):[])];
+    ...(Array.isArray(source.missing)?source.missing.map(x=>"SOURCE_COMPILER:"+x):[]),
+    ...(Array.isArray(source.selected_J_F_source_owner_numeric_unadmitted?.missing)?
+      source.selected_J_F_source_owner_numeric_unadmitted.missing.map(x=>"J/F 원본: "+x):[]),
+    ...(Array.isArray(source.selected_J_F_source_owner_quality_unadmitted?.missing)?
+      source.selected_J_F_source_owner_quality_unadmitted.missing.map(x=>"J/F 품질: "+x):[])];
   const unique=[...new Set(needs)];
   const node=$("season-build-stage");
   const ready=scope.environment_ready===true&&scope.environment_installed===true;
@@ -634,6 +638,7 @@ function showSeasonEnvironmentBuild(data) {
   const autoFlask=source.auto_observed_flask_budget_preview_unadmitted;
   node.textContent=(ready?"시즌 환경 설치 완료":"원본 수집·검증 진행 결과 (설치 미완료)")+
     " · 요청 빌드 "+(scope.game_build||"–")+
+    (scope.selected_flask_item_id?" · 지정 F ItemID "+scope.selected_flask_item_id:"")+
     " · 원본 "+(step.source_stage_status||data?.source_stage?.status||"미확정")+
     " · 컴파일 "+(source.status||step.source_compilation_status||"대기")+
     " · G 관측 "+(step.native_G_status||"대기")+
@@ -680,6 +685,16 @@ async function buildSeasonEnvironment() {
   const auto_native_F_requested=$("season-native-f").checked;
   const auto_native_O_requested=$("season-native-o").checked;
   const auto_select_observed_F_no_oil=$("season-auto-f-no-oil").checked;
+  const selectedFlask=field("season-selected-flask-id");
+  if(selectedFlask&&!/^[1-9][0-9]*$/.test(selectedFlask))
+    throw Error("영약 ItemID는 양의 정수여야 합니다.");
+  const selected_flask_item_id=selectedFlask?Number(selectedFlask):null;
+  if(selected_flask_item_id!==null&&
+      (!Number.isSafeInteger(selected_flask_item_id)||
+       selected_flask_item_id>999999999))
+    throw Error("영약 ItemID 범위가 올바르지 않습니다.");
+  if(selected_flask_item_id!==null&&auto_select_observed_F_no_oil)
+    throw Error("정확한 영약 ItemID 선택과 영약 자동 선택은 함께 사용할 수 없습니다.");
   const existingSpecial=field("season-existing-special-gem-id");
   if(existingSpecial&&!/^[1-9][0-9]*$/.test(existingSpecial))
     throw Error("기존 특수보석 ItemID는 양의 정수여야 합니다.");
@@ -712,6 +727,7 @@ async function buildSeasonEnvironment() {
                               consumable_native_binary,
                               auto_native_F_requested,auto_native_O_requested,
                               auto_select_observed_F_no_oil,
+                              selected_flask_item_id,
                               existing_special_gem_id,
                               simc_revision_hint:revision||null}});
     showSeasonEnvironmentBuild(report);

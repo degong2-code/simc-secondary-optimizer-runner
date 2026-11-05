@@ -31,6 +31,10 @@
           <div class="field"><label for="season-existing-special-gem-id">이미 선택된 특수보석 ItemID <small>새 특수보석을 탐색하거나 효과를 측정하지 않습니다</small></label><input id="season-existing-special-gem-id" type="number" min="1" max="999999999" step="1" placeholder="기존에 지정된 ItemID" inputmode="numeric"></div>
           <p class="hint">ID가 있는 경우 동일 시즌 원본에서 치명타·가속·특화·유연 일반보석 각 1개를 자동 배치합니다. 실제 소켓 5개 미만 또는 해당 시즌 보석 원본이 없으면 미완료로 표시합니다. 모든 효과 계산은 SimC가 담당합니다.</p>
         </details>
+        <details class="fold"><summary>영약 F 정확한 ItemID 선택 (선택형 고급 설정)</summary>
+          <div class="field"><label for="season-selected-flask-id">선택한 영약 ItemID <small>시즌 원본으로 검증 · 실제 검증된 선택지 등록과 별개</small></label><input id="season-selected-flask-id" type="number" min="1" max="999999999" step="1" inputmode="numeric" placeholder="이미 알고 있는 영약 ItemID"></div>
+          <p class="hint">선택한 경우 기존 같은 시즌 v281 원본에서 이 영약만 찾아 F Native 측정(별도 선택)을 진행합니다. 없는 ID나 관측상 더 낮은 품질은 보류하며, 다른 영약 전체를 측정하지 않습니다. 정확한 ID를 모르면 비워 두세요.</p>
+        </details>
         <div class="check-row"><label><input id="season-native-g" type="checkbox"> 기존 G Native 단일 실측 시도 <small>(아래 SimC 실행 파일 경로 사용 · 별도 명시 선택)</small></label></div>
         <div class="check-row"><label><input id="season-native-f" type="checkbox"> 영약 F 후보의 정적 SimC Native 측정 <small>(G 실측 불필요 · SimC 실행 파일 경로 필요 · 기름 O와 합계 최대 8회/요청 · 품질·등록 별도 검증)</small></label></div>
         <div class="check-row"><label><input id="season-native-o" type="checkbox"> 기름 O 후보의 손별 정적 SimC Native 측정 <small>(G 실측 불필요 · SimC 실행 파일 경로 필요 · F 측정과 호출 예산 공유 · 무기 적합성·품질·등록 별도 검증)</small></label></div>
