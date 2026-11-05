@@ -823,6 +823,13 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                          (2850,144,165))
         self.assertEqual((calc["reference_B"],calc["final_T"]),
                          (3159,3159))
+        old_identity=build.digest(build.canonical({
+            "kind":"physical_gem_layout_and_ratings",
+            "items":{"layout":layout,"rating_by_id":{"240908":24}}
+        }).encode("utf8"))
+        self.assertNotEqual(stage["selected_auto_v222_numeric_preview_unadmitted"][
+            "numeric_receipt_identities"]["J_physical_layout_rating_sha256"],
+            old_identity)
         self.assertTrue(calc["numeric_preview_only"])
         self.assertFalse(calc["environment_ready"])
         self.assertIsNone(result["J"])
@@ -846,6 +853,12 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         calc=auto["calculation"]
         self.assertEqual((calc["reference_G"],calc["J"],calc["F"]),
                          (2850,138,165))
+        old_j_sha=build.digest(build.canonical({
+            "kind":"physical_gem_layout_and_ratings",
+            "items":{"layout":layout,"rating_by_id":ratings}
+        }).encode("utf8"))
+        self.assertEqual(auto["numeric_receipt_identities"][
+            "J_physical_layout_rating_sha256"],old_j_sha)
         self.assertEqual((calc["reference_B"],calc["base_B"],calc["final_T"]),
                          (3153,3333,3333))
         self.assertEqual(sum(calc["fixed_O"].values()),0)

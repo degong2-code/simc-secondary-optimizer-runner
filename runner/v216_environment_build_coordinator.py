@@ -3169,12 +3169,16 @@ def _zero_history_auto_v222_numeric_preview(*, preflight, native_numeric,
                 "source_verification":"UNADMITTED_NUMERIC_OBSERVATION"}
     def source_sha(*,kind,items):
         return digest(canonical({"kind":kind,"items":items}).encode("utf8"))
+    j_identity={"layout":preflight["physical_gem_layout_unadmitted"],
+                "rating_by_id":gem_ratings}
+    # Only the NEW raw-source fallback carries v266/v221 origin. Preserve
+    # the exact historical explicit-gem SHA and its existing cache identity.
+    if j.get("rating_origin")== "V266_RAW_SAME_BUILD_EFFECT_POINTS_ONLY":
+        j_identity["raw_points_source_sha256"]=j["source_enchant_sha256"]
+        j_identity["source_v221_stage_receipt_sha256"]=j.get(
+            "source_v221_stage_receipt_sha256")
     j_sha=source_sha(kind="physical_gem_layout_and_ratings",
-                    items={"layout":preflight[
-                        "physical_gem_layout_unadmitted"],
-                           "rating_by_id":gem_ratings,
-                           "raw_points_source_sha256":j.get(
-                               "source_enchant_sha256")})
+                    items=j_identity)
     f_sha=source_sha(kind="selected_flask_original_v278_receipts",
                     items={"item_id":f["physical_item_id"],
                            "candidate_sha256":
