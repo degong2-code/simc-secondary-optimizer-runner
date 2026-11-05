@@ -3789,6 +3789,13 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     observed=preflight["v277_native_G_preprofile_unadmitted"]
                     source_compilation["v277_native_G_preprofile_unadmitted"]=observed
                     progress["v277_native_G_preprofile_unadmitted"]=observed
+                if "v222_G_component_reference_unadmitted" in preflight:
+                    # The same source-scoped G must reach BOTH the automatic
+                    # numeric input and the Build's inspectable source summary.
+                    # It remains a source-only candidate, not certified G.
+                    source_compilation[
+                        "v222_G_component_reference_unadmitted"]=dict(
+                            preflight["v222_G_component_reference_unadmitted"])
                 if "proposed_budget_arithmetic_unadmitted" in preflight:
                     # The original v222 calculator owns B/T and manual T;
                     # source trust / user session admission remains pending.

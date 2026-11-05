@@ -708,7 +708,7 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         numeric=result["source_compilation"][
             "selected_auto_v222_numeric_preview_unadmitted"]
         self.assertIsNone(numeric["calculation"])
-        self.assertIn("SELECTED_AUTO_GJFO_V277_G_NATIVE_NUMERIC_PENDING",
+        self.assertIn("SELECTED_AUTO_GJFO_SAME_SEASON_G_BUDGET_SOURCE_PENDING",
                       result["zero_history_build"]["requires"])
         self.assertFalse(result["zero_history_build"]["environment_ready"])
         self.assertEqual(result["native_calls"],0)
