@@ -1,0 +1,9 @@
+# 2026-11-05 · P3-EG · 기존 동일 시즌 G 참조 → 신규 시즌 자동 B/T의 불필요한 Native 의존성 제거
+
+- **Capability:** `BUDGET.GJFO`, `ENVIRONMENT.WEB` / **Keywords:** P3-EG, v222, reference G, v277 optional, no redundant Native, reuse source.
+- **Baseline:** [PROTOCOL](../PROTOCOL.md) → [INDEX](../INDEX.md) → [ENVIRONMENT 입력 책임표](../ENVIRONMENT_BUILD_INPUT_SCOPE_20261104.md) → [P3-DZ](2026-11-05_p3-dz-independent-optional-g-vs-fo-native.md) → [P3-EF](2026-11-05_p3-ef-explicit-no-oil-accounting-proof-waiver.md). `v216.preflight_new_season_source`는 기존 `v222.preprofile_budget`로 같은 시즌 제공 G를 산술 조정 가능했지만, 선택형 `_zero_history_auto_v222_numeric_preview`는 `v277` Native G만 직접 참조했음.
+- **Decision:** `CONNECT` / `NOT_REQUIRED` when valid same-season G reference already supplied, **not** when G evidence is absent. 새로운 시즌 전체 G 추정표·전문화를 강제로 Native 실행하는 수집기는 불필요. 동일 시즌 참조값, 아이템레벨, source SHA/manifest/SimC 버전, v222 결과의 일치만 소비; 본 어댑터가 제공 원본을 새로 인증하지 않는다.
+- **Changes:** `v216` preflight는 이미 v222를 거친 G 컴포넌트/원본 identity를 source-only로 전달; 단일 `_zero_history_G_numeric_input_from_preflight`가 Native G 우선 사용, 부재 시 기존 G 참조를 안전하게 투영. 선택 flask family 경로와 selected G/J/F/O→v222 자동 경로가 이 함수를 공용 사용. 숫자 출력의 G 원본 종류별 SHA를 구별, 신규 Native-G 영수증 위장 방지. 자동 선택에서 O 미사용은 사용자 명시 선택이 아닌 **source-only 가정**이므로 기존 `O=0 preview assumption` 경로로만 처리하고 P3-EF의 명시 NONE 적용성 면제를 주장하지 않는다.
+- **Verification:** v287 focused synthetic tests 추가. 신규 실행 영수증은 **NOT_RUN/NOT_VERIFIED**, 코드 연결·기존 테스트의 결과는 실제 Actions 영수증 없이는 PASS 주장하지 않음. 역사 P3-ED CI, 기존 P3-CO/CP Native는 당해 범위 증거만 재사용. 이번 커밋 자체는 신규 Native/HTTP=0.
+- **Remaining:** 원본이 진짜 같은 시즌 참조임을 독립 인증하는 것은 기존 v217/v213/v212 install owner 책임. J의 정확한 최고 품질/특수보석 1개/소켓 적법성·F 품질·선택 O 무기 적용 조건·Policy A 자동발행·T1 READY는 계속 미완료. 수동 T·기존 캐시·SimC 프로필·기존 DPS 엔진 변경 없음.
+- **Efficiency:** v277 Native 없이 동일 G를 재계산하지 않으며 1회 기존 v222 결과를 재사용. 추가 DB/독립 Gate/HTTP/SimC 호출/캐시 무효화/전체 26전문화 재검증 없음. main/v003/v016/Project UI/주 개발 소유권 불변.

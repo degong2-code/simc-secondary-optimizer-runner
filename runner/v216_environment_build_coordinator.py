@@ -949,6 +949,11 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
         payload["v277_native_G_preprofile_unadmitted"] = v277_G_preview
     if proposed_budget is not None:
         payload["proposed_budget_arithmetic_unadmitted"] = proposed_budget
+        # Carry the exact already-consumed v222 G component, including its
+        # original source identity. This is a numeric source-only projection:
+        # preprofile_budget does not authenticate the source itself.
+        payload["v222_G_component_reference_unadmitted"] = dict(
+            budget_evidence["components"]["G"])
         # Follow the already-verified original source receipts. Missing
         # applicability/rating facts are resolved per item, not by a second
         # global or independent source-certification engine.
@@ -2964,6 +2969,54 @@ def _zero_history_quality_weapon_candidate_join(*, numeric, weapon_source,
 
 
 
+def _zero_history_G_numeric_input_from_preflight(*, preflight,
+                                                 target_ilevel=None):
+    """Reuse Native G or a previously reconciled same-season v222 G source.
+
+    The latter is NOT authenticated here; the normal Build's source-stage
+    owner is responsible for validating original G provenance before READY.
+    """
+    if type(preflight) is not dict:
+        return None
+    native = preflight.get("v277_native_G_preprofile_unadmitted")
+    if native is not None:
+        return native
+    g = preflight.get("v222_G_component_reference_unadmitted")
+    calc = preflight.get("proposed_budget_arithmetic_unadmitted")
+    if type(g) is not dict or type(calc) is not dict:
+        return None
+    if (g.get("source_verification") not in
+            ("EXACT_NATIVE","VALID_SAME_SEASON_REFERENCE",
+             "VALID_SAME_SEASON_SOURCE")
+        or g.get("game_build") != preflight.get("game_build")
+        or g.get("source_catalog_manifest_sha256") !=
+            preflight.get("source_catalog_manifest_sha256")
+        or calc.get("game_build") != preflight.get("game_build")
+        or calc.get("simc_revision") != preflight.get("simc_revision")
+        or calc.get("source_catalog_manifest_sha256") !=
+            preflight.get("source_catalog_manifest_sha256")
+        or calc.get("source_catalog_artifact_sha256") !=
+            preflight.get("source_artifact_sha256")
+        or (target_ilevel is not None and
+            calc.get("target_ilevel") != target_ilevel)
+        or calc.get("reference_G") != g.get("rating")
+        or calc.get("source_authentication_performed_here") is not False
+        or type(g.get("rating")) is not int
+        or g["rating"] <= 0
+        or type(g.get("source_sha256")) is not str
+        or season_budget_contract.SHA.fullmatch(g["source_sha256"]) is None):
+        return None
+    return {
+        "status":"V222_SAME_SEASON_REFERENCE_G_NUMERIC_UNADMITTED",
+        "standardized_G":g["rating"],
+        "native_json2_sha256":g["source_sha256"],
+        "standardization":g.get("standardization"),
+        "target_ilevel":calc["target_ilevel"],
+        "source_origin":"V222_ALREADY_RECONCILED_G_COMPONENT",
+        "source_authentication_performed_here":False,
+    }
+
+
 def _source_only_one_flask_budget_preview(*, preflight, worklist,
                                           native_numeric, source_choices):
     """Choose a single observed F family ONLY for an unadmitted no-oil preview.
@@ -2982,7 +3035,8 @@ def _source_only_one_flask_budget_preview(*, preflight, worklist,
          "user_selectable":False,"environment_ready":False,
          "native_calls":0,"network_calls":0}
     if (type(preflight) is not dict or
-            preflight.get("v277_native_G_preprofile_unadmitted") is None or
+            _zero_history_G_numeric_input_from_preflight(
+                preflight=preflight) is None or
             preflight.get("physical_gem_J_arithmetic_unadmitted") is None):
         out["requires"].append("G_AND_PHYSICAL_J_PREVIEW_REQUIRED")
         return out
@@ -3129,7 +3183,8 @@ def _zero_history_selected_F_O_v222_reconcile(*, selected, numeric,
 
 def _zero_history_auto_v222_numeric_preview(*, preflight, native_numeric,
                                            source_choices, selected, gem_ratings,
-                                           target_ilevel, manual_final_T):
+                                           target_ilevel, manual_final_T,
+                                           no_oil_is_preview_assumption=False):
     """Original v222 B/T over already observed G/J/selected physical F/O.
 
     Deliberately unadmitted and not executable by v098/v094. This consumes
@@ -3142,14 +3197,20 @@ def _zero_history_auto_v222_numeric_preview(*, preflight, native_numeric,
            "requires":[],"calculation":None,"selected_physical_items":selected,
            "numeric_preview_only":True,"source_authenticated":False,
            "policy_A_registered":False,"user_session_created":False,
-           "environment_ready":False,"native_calls":0,"network_calls":0}
+           "environment_ready":False,"native_calls":0,"network_calls":0,
+           "oil_zero_is_preview_assumption_only":no_oil_is_preview_assumption}
     need(type(selected) is dict and type(native_numeric) is dict
          and type(source_choices) is dict,
          "V216_AUTO_NUMERIC_SELECTED_SOURCES_INVALID")
+    need(type(no_oil_is_preview_assumption) is bool
+         and (not no_oil_is_preview_assumption
+              or not selected.get("oil_item_ids_by_hand")),
+         "V216_NO_OIL_PREVIEW_SCOPE_INVALID")
     if preflight is None:
         out["requires"].append("CURRENT_V213_PREFLIGHT_PENDING")
         return out
-    g = preflight.get("v277_native_G_preprofile_unadmitted")
+    g = _zero_history_G_numeric_input_from_preflight(
+        preflight=preflight,target_ilevel=target_ilevel)
     j = preflight.get("physical_gem_J_arithmetic_unadmitted")
     if g is None:
         out["requires"].append("V277_G_NATIVE_NUMERIC_PENDING")
@@ -3185,8 +3246,9 @@ def _zero_history_auto_v222_numeric_preview(*, preflight, native_numeric,
         return out
     need(type(g) is dict and type(j) is dict
          and type(gem_ratings) is dict
-         and g.get("status")==(
-             "NATIVE_G_NUMERIC_SOURCE_ONLY_JFO_AND_ADMISSION_PENDING")
+         and g.get("status") in (
+             "NATIVE_G_NUMERIC_SOURCE_ONLY_JFO_AND_ADMISSION_PENDING",
+             "V222_SAME_SEASON_REFERENCE_G_NUMERIC_UNADMITTED")
          and j.get("status")=="PHYSICAL_GEM_J_ARITHMETIC_UNADMITTED"
          and j.get("game_socket_legality_verified_here") is False,
          "V216_AUTO_G_J_SOURCE_ONLY_IDENTITY_REQUIRED")
@@ -3244,14 +3306,16 @@ def _zero_history_auto_v222_numeric_preview(*, preflight, native_numeric,
         "target_ilevel":target_ilevel,
         "components":{
             "G":{**comp(g["standardized_G"],g["native_json2_sha256"]),
-                 "standardization":g["standardization"]},
+                 **({"standardization":g["standardization"]}
+                    if g.get("standardization") is not None else {})},
             "J":comp(j["J_candidate_unadmitted"],j_sha),
             "F":comp(f["rating_candidate_unadmitted"],f_sha),
             "O":(season_budget_contract.explicit_no_oil_component(
                 game_build=catalog["game_build"],
                 source_catalog_manifest_sha256=manifest_sha,
                 selected_oil_item_ids_by_hand=selected["oil_item_ids_by_hand"])
-                if not selected["oil_item_ids_by_hand"] else
+                if (not selected["oil_item_ids_by_hand"] and
+                    not no_oil_is_preview_assumption) else
                 {**comp(oil_vector,oil_sha),
                  "applied_hands":sorted(oils),
                  "weapon_applicability_verified":False,
@@ -3259,8 +3323,10 @@ def _zero_history_auto_v222_numeric_preview(*, preflight, native_numeric,
         "fixed_L":{k:0 for k in stats},
         "fixed_E":{k:0 for k in stats},
         "G_reference_excludes_selected_E":True}
-    if not selected["oil_item_ids_by_hand"]:
-        # An explicit NONE is an O=0 fact by construction, not missing data.
+    if (not selected["oil_item_ids_by_hand"] and
+            not no_oil_is_preview_assumption):
+        # An actual explicit NONE is O=0. An automatic fallback is only
+        # a preview assumption and must not claim the user's selection.
         oil_sha=evidence["components"]["O"]["source_sha256"]
     try:
         calculation=season_budget_contract.preprofile_budget(
@@ -3275,7 +3341,11 @@ def _zero_history_auto_v222_numeric_preview(*, preflight, native_numeric,
         "status":"SELECTED_GJFO_V222_ARITHMETIC_PREVIEW_UNADMITTED",
         "calculation":calculation,
         "numeric_receipt_identities":{
-            "G_native_json2_sha256":g["native_json2_sha256"],
+            **({"G_native_json2_sha256":g["native_json2_sha256"]}
+               if g["status"] ==
+               "NATIVE_G_NUMERIC_SOURCE_ONLY_JFO_AND_ADMISSION_PENDING"
+               else {"G_same_season_reference_source_sha256":
+                     g["native_json2_sha256"]}),
             "J_physical_layout_rating_sha256":j_sha,
             "F_selected_item_native_sha256":f_sha,
             "O_selected_hands_native_mask_sha256":oil_sha},
@@ -3885,7 +3955,9 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         "physical_gem_raw_rating_by_id_unadmitted")),
                 target_ilevel=fresh_collection_inputs[
                     "representative_request"]["target_ilevel"],
-                manual_final_T=manual_T)
+                manual_final_T=manual_T,
+                no_oil_is_preview_assumption=(
+                    selected_budget_items is None))
             progress["selected_auto_v222_numeric_preview_unadmitted"]=selected_numeric
             source_compilation["selected_auto_v222_numeric_preview_unadmitted"]=selected_numeric
             if selected_numeric["calculation"] is None:

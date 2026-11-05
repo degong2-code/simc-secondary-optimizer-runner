@@ -812,6 +812,9 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertFalse(chosen["highest_available_quality_verified"])
         self.assertTrue(chosen["oil_zero_is_preview_assumption_only"])
         numeric=source["selected_auto_v222_numeric_preview_unadmitted"]
+        self.assertTrue(numeric["oil_zero_is_preview_assumption_only"])
+        self.assertNotIn("O_weapon_proof_not_required_reason",
+                         numeric["calculation"])
         calc=numeric["calculation"]
         self.assertEqual((calc["reference_G"],calc["J"],calc["F"]),
                          (2850,138,165))
@@ -921,6 +924,92 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertIsNone(result["J"])
         self.assertIsNone(result["T"])
         self.assertFalse(result["zero_history_build"]["environment_ready"])
+
+    def test_p3_eg_same_season_G_reference_reuses_v222_without_native(self):
+        # Simulate no v277 observation: an existing scoped G receipt already
+        # reconciled by v222 can drive the SAME source-only numeric preview.
+        layout,ratings=self.physical_layout()
+        req,bound,observed=self.physical_effect()
+        plan={"status":"MEASURABLE_PHYSICAL_F_O_CANDIDATES_UNADMITTED",
+              "flask":[{"physical_item_id":bound["physical_item_id"],
+                        "simc_input_token":bound["simc_input_token"],
+                        "crafting_quality":bound["crafting_quality"]}],
+              "oil":[]}
+        with mock.patch.object(
+                build.consumable_simc_relation,
+                "plan_physical_native_measurements",return_value=plan):
+            result=self.run_build(
+                proof=True,gem_layout=layout,gem_ratings=ratings,
+                effect_requests=[req],effect_resolver=bound,
+                effect_observation=observed)
+        stage=result["source_compilation"]
+        self.assertNotIn("v277_native_G_preprofile_unadmitted",stage)
+        ref=stage["v222_G_component_reference_unadmitted"]
+        self.assertEqual(ref["rating"],2850)
+        preview=stage["selected_auto_v222_numeric_preview_unadmitted"]
+        self.assertEqual(preview["status"],
+                         "SELECTED_GJFO_V222_ARITHMETIC_PREVIEW_UNADMITTED")
+        self.assertEqual(preview["calculation"]["reference_G"],2850)
+        self.assertEqual(preview["calculation"]["final_T"],3153)
+        self.assertEqual(
+            preview["numeric_receipt_identities"][
+                "G_same_season_reference_source_sha256"],
+            ref["source_sha256"])
+        self.assertNotIn("G_native_json2_sha256",
+                         preview["numeric_receipt_identities"])
+        self.assertFalse(preview["source_authenticated"])
+        self.assertTrue(preview["oil_zero_is_preview_assumption_only"])
+        self.assertNotIn("O_weapon_proof_not_required_reason",
+                         preview["calculation"])
+        self.assertFalse(preview["environment_ready"])
+        self.assertFalse(result["zero_history_build"]["environment_ready"])
+        self.assertEqual(result["native_calls"],0)
+
+    def test_p3_eg_unbound_or_drifted_G_source_stays_pending(self):
+        known=self.table[334]["components"]["G"]
+        calc={"game_build":self.catalog["game_build"],
+              "simc_revision":self.catalog["simc_revision"],
+              "source_catalog_manifest_sha256":self.catalog["manifest_sha256"],
+              "source_catalog_artifact_sha256":"a"*64,
+              "target_ilevel":334,"reference_G":known["rating"],
+              "source_authentication_performed_here":False}
+        basis={"game_build":self.catalog["game_build"],
+               "simc_revision":self.catalog["simc_revision"],
+               "source_catalog_manifest_sha256":self.catalog["manifest_sha256"],
+               "source_artifact_sha256":"a"*64,
+               "v222_G_component_reference_unadmitted":known,
+               "proposed_budget_arithmetic_unadmitted":calc}
+        resolved=build._zero_history_G_numeric_input_from_preflight(
+            preflight=basis,target_ilevel=334)
+        self.assertEqual(resolved["status"],
+                         "V222_SAME_SEASON_REFERENCE_G_NUMERIC_UNADMITTED")
+        for edit in (
+                {"target_ilevel":335},
+                {"reference_G":known["rating"]+10},
+                {"source_catalog_artifact_sha256":"f"*64},
+                {"source_authentication_performed_here":True},
+        ):
+            with self.subTest(edit=edit):
+                bad={**basis,"proposed_budget_arithmetic_unadmitted":
+                    {**calc,**edit}}
+                self.assertIsNone(
+                    build._zero_history_G_numeric_input_from_preflight(
+                        preflight=bad,target_ilevel=334))
+        for bad_g in (
+                {**known,"game_build":"12.2.0.99999"},
+                {**known,"source_verification":"UNADMITTED_NUMERIC_OBSERVATION"},
+                {**known,"rating":known["rating"]+10},
+                {**known,"source_sha256":"not_sha"},
+        ):
+            with self.subTest(g=bad_g):
+                self.assertIsNone(
+                    build._zero_history_G_numeric_input_from_preflight(
+                        preflight={**basis,
+                            "v222_G_component_reference_unadmitted":bad_g},
+                        target_ilevel=334))
+        self.assertIsNone(build._zero_history_G_numeric_input_from_preflight(
+            preflight={**basis,"v222_G_component_reference_unadmitted":None},
+            target_ilevel=334))
 
     def test_auto_v222_new_season_GJFO_without_manual_budget_evidence(self):
         layout,ratings=self.physical_layout()
