@@ -732,6 +732,31 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertFalse(no_merge["same_raw_four_stat_vector_source_only"])
         self.assertIsNone(no_merge[
             "highest_observed_quality_item_id_unadmitted"])
+        # The strongest observed comparable rating wins even when the
+        # weaker candidate has a higher craft rank and a different minimum
+        # item level. No exhaustive quality/use-condition certification.
+        dominant={**raw,
+          "selected_gem_raw_points_by_id_unadmitted":{
+              "311001":26,"311002":20},
+          "selected_gem_raw_CHMV_vectors_by_id_unadmitted":{
+              "311001":{**vec,"crit_rating":26},
+              "311002":dict(vec)},
+          "selected_gem_v221_source_properties_unadmitted":[
+              {**properties[0],"minimum_ilevel":315},
+              properties[1],properties[2]]}
+        with mock.patch.object(
+                build,"_fresh_selected_gem_simc_quality_stage",
+                return_value=quality):
+            stronger=self.preflight_with_sealed_gem_raw(
+                layout,dominant,pinned_seed=self.root)
+        preferred=stronger["selected_v221_gem_item_relation_unadmitted"][
+            "gem_policy_A_source_and_quality_unadmitted"][
+                "quality_source_groups_unadmitted"][0]
+        self.assertEqual(preferred["highest_observed_effect_item_id_source_only"],
+                         311001)
+        self.assertTrue(preferred[
+            "observed_strongest_effect_sufficient_quality_policy"])
+        self.assertFalse(preferred["same_raw_four_stat_vector_source_only"])
         different={**raw,"selected_gem_v221_source_properties_unadmitted":
             [properties[0],{**properties[1],"enchant_id":993},
              properties[2]]}
@@ -926,6 +951,24 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             "highest_observed_quality_item_id_unadmitted"],241326)
         self.assertEqual(family["highest_observed_rating_unadmitted"],165)
         self.assertFalse(family["all_market_qualities_verified"])
+        self.assertTrue(family[
+            "observed_strongest_effect_sufficient_quality_policy"])
+        # The effect magnitude, not the printed crafting-quality rank, wins.
+        stronger={"status":"PHYSICAL_ITEM_SIMC_F_O_CANDIDATES_UNADMITTED",
+                  "flask":[
+                    flask(241327,1,180,"flask_of_the_shattered_sun_1"),
+                    flask(241326,2,165,"flask_of_the_shattered_sun_2")],
+                  "oil":[]}
+        preferred=build._zero_history_quality_weapon_candidate_join(
+            numeric=stronger,weapon_source={},
+            game_build=self.catalog["game_build"],
+            simc_revision=self.catalog["simc_revision"])[
+                "flask_quality_groups_observed_unadmitted"][0]
+        self.assertEqual(preferred[
+            "highest_observed_quality_item_id_unadmitted"],241327)
+        self.assertEqual(preferred["highest_observed_rating_unadmitted"],180)
+        self.assertTrue(preferred[
+            "observed_strongest_effect_sufficient_quality_policy"])
         self.assertIsNone(out["F"])
         self.assertFalse(out["user_selectable"])
 
@@ -1371,6 +1414,8 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertEqual(result["F"]["selected_item_id"],241326)
         self.assertTrue(result["F"][
             "selected_is_highest_observed_source_only"])
+        self.assertTrue(result["F"][
+            "discovered_best_effect_accepted_as_quality_policy"])
         self.assertEqual(result["F"][
             "highest_observed_quality_item_id_unadmitted"],241326)
         self.assertFalse(result["highest_available_quality_verified"])

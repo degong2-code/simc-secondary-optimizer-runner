@@ -199,13 +199,12 @@ def prepare_verified_fresh_choices(source_catalog, source_ui,
         if item_id not in admissible:
             continue
         candidate=auto_admission.candidate_from_source_enchant(context,row)
-        # The existing product_input proof family owns quality and use
-        # conditions. A bare highest_source_quality_rank cannot prove either.
+        # New approved policy: best DISCOVERED comparable source rank is
+        # enough; full-market discovery and a second use-conditions certificate
+        # are NOT admission gates. Original v220 trusted product_input and
+        # exact application slot remain mandatory for valid SimC input.
         product=trusted_internal_receipts_by_id[item_id]["product_input"]
-        required=("highest_available_quality_verified",
-                  "same_effect_and_use_conditions_verified",
-                  "exact_application_scope_verified")
-        if (not all(product.get(x) is True for x in required)
+        if (product.get("exact_application_scope_verified") is not True
             or not (type(product.get("quality_source_sha256")) is str
                     and auto_admission.HEX64.fullmatch(
                         product["quality_source_sha256"]))

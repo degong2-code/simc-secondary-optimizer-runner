@@ -438,12 +438,12 @@ def _fresh_selected_gem_simc_quality_stage(*, stage_root, seed_directory,
 def _selected_gem_quality_policy_A_preview(*, source_catalog,
                                            source_item_link, gem_enchant,
                                            ordinary_gem_ids):
-    """Existing v220 source_relation plus selected same-enchant/quality facts.
+    """Reuse original v221/v266/v230 comparable-effect observations.
 
-    Only already-sealed v221/v266 and v230 observations are joined. An
-    identical enchant ID and raw vector are same *source* evidence, not full
-    item conditions, usable socket proof, highest available quality or J.
-    Every gem remains unadmitted until the existing Policy A families pass.
+    The best OBSERVED comparable secondary-stat vector suffices for the
+    quality preference; no exhaustive market scan or separate use-condition
+    certificate is required. Exact source/slot and four v220 proof families
+    still control final admission, not this source-only grouping.
     """
     properties=source_item_link.get(
         "selected_gem_property_records_unadmitted")
@@ -506,11 +506,13 @@ def _selected_gem_quality_policy_A_preview(*, source_catalog,
         if item_id not in ordinary or item_id not in metadata:
             continue
         row=metadata[item_id]
-        # Same DB2 enchant and documented use-scope fields, with identical
-        # existing raw 4-stat vectors only. No effect-name/token heuristics.
+        # Exact source enchant/color/class/expansion identify a comparable
+        # effect family. Minimum item level is NOT a separate quality gate:
+        # variants may have different level restrictions, and SimC owns use.
+        # Do not group merely by matching a name or quality rank.
         key=(prop["enchant_id"],prop["color_mask"],
-             prop["minimum_ilevel"],prop["expansion_id"],
-             row["quality"],row["class_id"],row["subclass_id"])
+             prop["expansion_id"],row["quality"],
+             row["class_id"],row["subclass_id"])
         if prop["enchant_id"]>0 and prop["color_mask"]>0:
             source_groups.setdefault(key,[]).append({
                 "item_id":item_id,
@@ -528,20 +530,33 @@ def _selected_gem_quality_policy_A_preview(*, source_catalog,
                      all(type(v) is int and v>=0 for v in x.values())
                      and any(x.values()) for x in raw))
         same_vector=(numeric and all(x==raw[0] for x in raw[1:]))
-        unique_top=(len(ranked)>=2 and
-                    ranked[0]["crafting_quality"]>
-                    ranked[1]["crafting_quality"])
-        observed_top=(ranked[0]["item_id"]
-                      if same_vector and unique_top and
-                      ranked[0]["crafting_quality"]>0 else None)
+        # Compare EFFECT rating, not quality labels. A top candidate must
+        # dominate every observed 4-stat vector of the same stat-kind set.
+        # Ties use the documented craft rank, then stable physical item ID.
+        strongest=(max(ranked,key=lambda x:(
+            sum(x["raw_CHMV_vector_unadmitted"].values())
+            if type(x["raw_CHMV_vector_unadmitted"]) is dict else -1,
+            x["crafting_quality"],-x["item_id"])) if numeric else None)
+        top_vector=(strongest["raw_CHMV_vector_unadmitted"]
+                    if strongest is not None else None)
+        comparable=(numeric and all(
+            {k for k,v in vec.items() if v>0}==
+            {k for k,v in raw[0].items() if v>0} for vec in raw)
+            and all(all(top_vector[k]>=vec[k]
+                        for k in season_budget_contract.STATS)
+                    for vec in raw))
+        observed_top=strongest["item_id"] if comparable else None
         groups.append({
             "enchant_id":key[0],
-            "same_v221_color_minimum_ilevel_expansion_and_v230_class":True,
+            "same_v221_color_expansion_and_v230_class_source":True,
             "observed_item_ids":[r["item_id"] for r in ranked],
             "observed_crafting_quality_ranks":[
                 r["crafting_quality"] for r in ranked],
             "same_raw_four_stat_vector_source_only":bool(same_vector),
+            "observed_effect_vectors_comparable_source_only":bool(comparable),
             "highest_observed_quality_item_id_unadmitted":observed_top,
+            "highest_observed_effect_item_id_source_only":observed_top,
+            "observed_strongest_effect_sufficient_quality_policy":bool(comparable),
             "actual_same_effect_and_use_conditions_verified":False,
             "all_available_quality_ranks_verified":False,
             "quality_filtered_user_options":False})
@@ -3204,8 +3219,9 @@ def _zero_history_quality_weapon_candidate_join(*, numeric, weapon_source,
                                                 game_build, simc_revision):
     """Reuse v281/v278 physical Native rows and the original v286 mask match.
 
-    A source-only ordering among OBSERVED Flask qualities is not an assertion
-    that every available quality was measured. Weapon eligibility uses only
+    Strongest comparable observed effect is enough for the quality POLICY,
+    without an exhaustive market scan or separate item-use certification.
+    Weapon eligibility uses only
     the existing same-build v286 representative join; absence is not false
     proof of ineligibility. Do not calculate F/O/B/T or publish user options.
     """
@@ -3232,17 +3248,17 @@ def _zero_history_quality_weapon_candidate_join(*, numeric, weapon_source,
         complete = all(x["status"] == "SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY"
                        and type(x.get("static_CHMV_vector_unadmitted")) is dict
                        for x in ranked)
-        best = ranked[0] if complete else None
+        best = (max(ranked,key=lambda x:(
+            sum(x["static_CHMV_vector_unadmitted"].values()),
+            x["crafting_quality"],-x["physical_item_id"]))
+            if complete else None)
         best_vector = (best["static_CHMV_vector_unadmitted"]
                        if best is not None else None)
         kinds = ([frozenset(k for k,v in
                             x["static_CHMV_vector_unadmitted"].items()
                             if v > 0) for x in ranked]
                  if complete else [])
-        unique_top = (len(ranked) == 1 or
-                      ranked[0]["crafting_quality"] >
-                      ranked[1]["crafting_quality"])
-        comparable = (complete and unique_top
+        comparable = (complete
                       and all(k == kinds[0] for k in kinds)
                       and all(all(best_vector[k] >=
                                       x["static_CHMV_vector_unadmitted"][k]
@@ -3260,6 +3276,9 @@ def _zero_history_quality_weapon_candidate_join(*, numeric, weapon_source,
                 best["physical_item_id"] if comparable else None,
             "highest_observed_rating_unadmitted":
                 best["rating_candidate_unadmitted"] if comparable else None,
+            "observed_strongest_effect_sufficient_quality_policy":
+                bool(comparable),
+            # Historical diagnostic, NOT a prerequisite for selection.
             "all_market_qualities_verified":False,
             "user_selectable":False,
         })
@@ -4148,13 +4167,12 @@ def _fresh_source_owner_selected_J_F_numeric(*, preflight, compilation,
 
 def _fresh_source_owner_observed_J_F_quality(*, preflight, compilation,
                                              owner_numeric):
-    """Expose original quality comparisons without certifying availability.
+    """Expose bounded observed-effect maximum to the original source owner.
 
-    v230 supplies only the PINNED selected gem rows; v216's earlier
-    v221/v266 quality comparison owns same raw vector/source joins. v281/v278
-    supplies only observed flask ranks. Neither proves the exhaustive quality
-    inventory or same-effects/use conditions, so no v222 component or v220
-    receipt is generated here. No Native, DB scan or independent Gate.
+    Highest comparable effect DISCOVERED is enough as a quality preference,
+    not proof of an exhaustive market or a new v220 admission receipt.
+    Selected item IDs, original source receipts and exact numerical budget
+    still need to match. No extra Native, DB scan or use-condition Gate.
     """
     result={
         "schema":"v216_original_selected_J_F_quality_observations_v1",
@@ -4208,9 +4226,10 @@ def _fresh_source_owner_observed_J_F_quality(*, preflight, compilation,
                      len(ids)==len(ranks) and len(set(ids))==len(ids) and
                      all(i in by_id and by_id[i]==q
                          for i,q in zip(ids,ranks)) and
-                     group.get("actual_same_effect_and_use_conditions_verified")
-                         is False and
-                     group.get("all_available_quality_ranks_verified") is False,
+                     (group.get("highest_observed_quality_item_id_unadmitted")
+                         in ids or
+                      group.get("highest_observed_quality_item_id_unadmitted")
+                         is None),
                      "V216_JF_QUALITY_ORIGINAL_V220_OBSERVED_RANK_DRIFT")
                 if any(i in ordinary for i in ids):
                     bounded.append({
@@ -4221,6 +4240,12 @@ def _fresh_source_owner_observed_J_F_quality(*, preflight, compilation,
                                 "highest_observed_quality_item_id_unadmitted"),
                         "same_raw_four_stat_vector_source_only":
                             group.get("same_raw_four_stat_vector_source_only")
+                                is True,
+                        "best_discovered_effect_item_id_source_only":
+                            group.get("highest_observed_effect_item_id_source_only",
+                                      group.get("highest_observed_quality_item_id_unadmitted")),
+                        "comparable_effect_source_only":
+                            group.get("observed_effect_vectors_comparable_source_only")
                                 is True})
             result["J"]={
                 "ordinary_gem_item_ids":list(ordinary),
@@ -4259,7 +4284,10 @@ def _fresh_source_owner_observed_J_F_quality(*, preflight, compilation,
                      all(type(i) is int and i>0 and
                          type(q) is int and q>=0
                          for i,q in zip(ids,ranks)) and
-                     group.get("all_market_qualities_verified") is False,
+                     (group.get("highest_observed_quality_item_id_unadmitted")
+                         in ids or
+                      group.get("highest_observed_quality_item_id_unadmitted")
+                         is None),
                      "V216_JF_QUALITY_ORIGINAL_F_RANK_GROUP_INVALID")
                 if f["physical_item_id"] in ids:
                     need(ranks[ids.index(f["physical_item_id"])]==
@@ -4281,6 +4309,12 @@ def _fresh_source_owner_observed_J_F_quality(*, preflight, compilation,
                     "selected_is_highest_observed_source_only":(
                         g.get("highest_observed_quality_item_id_unadmitted")==
                             f["physical_item_id"]),
+                    "discovered_best_effect_accepted_as_quality_policy":(
+                        g.get("highest_observed_quality_item_id_unadmitted")==
+                            f["physical_item_id"] and
+                        g.get("status") in (
+                            "TOP_QUALITY_AMONG_OBSERVED_ONLY",
+                            "ONLY_ONE_QUALITY_OBSERVED")),
                     "same_effect_and_use_conditions_verified":False,
                     "all_available_quality_ranks_verified":False,
                     "selected_simc_numeric_sha256":
@@ -5088,8 +5122,9 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             "selected_J_F_source_owner_numeric_unadmitted"]=jf_numeric
         progress["selected_J_F_source_owner_numeric_unadmitted"]=jf_numeric
         # Reuse existing selected v230/v220 and v281/v278 observed quality
-        # comparisons; only report original ranks and remaining proof scope.
-        # Never certify highest AVAILABLE quality from observed ranks alone.
+        # comparisons. The highest COMPARABLE OBSERVED effect now satisfies
+        # quality preference; it does not replace v220's source/input/budget
+        # proofs or itself install the new season.
         quality_scope=_fresh_source_owner_observed_J_F_quality(
             preflight=preflight,compilation=source_compilation,
             owner_numeric=jf_numeric)

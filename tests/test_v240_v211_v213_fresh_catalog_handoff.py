@@ -160,8 +160,9 @@ class SameFreshCatalogChain(unittest.TestCase):
             receipts["chmv_budget"].update({
                 "no_double_count":True,"unknown_static_chmv":False})
             proofs={91001:receipts}
-            # The exact legacy v220 eligibility is not sufficient to
-            # prove highest quality/effect equivalence in the new season.
+            # Exact v220 eligibility alone still needs the selected observed
+            # rank/source and a usable SimC application scope, but NOT a
+            # complete market inventory or independent use-condition Gate.
             not_quality=ui.prepare_verified_fresh_choices(
                 artifact,fresh,proofs)
             self.assertEqual(not_quality[
@@ -172,8 +173,6 @@ class SameFreshCatalogChain(unittest.TestCase):
                 "quality_use_scope_pending_item_ids"],[91001])
             self.assertFalse(not_quality["options_published"])
             receipts["product_input"].update({
-                "highest_available_quality_verified":True,
-                "same_effect_and_use_conditions_verified":True,
                 "exact_application_scope_verified":True,
                 "quality_source_sha256":"f"*64,
                 "verified_quality_rank":row["highest_source_quality_rank"]})
@@ -209,6 +208,19 @@ class SameFreshCatalogChain(unittest.TestCase):
             self.assertEqual(ui.prepare_verified_fresh_choices(
                 artifact,fresh,weak)[
                 "verified_option_inputs_unpublished"],[])
+            unsuitable=copy.deepcopy(proofs)
+            unsuitable[91001]["product_input"][
+                "exact_application_scope_verified"]=False
+            self.assertEqual(ui.prepare_verified_fresh_choices(
+                artifact,fresh,unsuitable)[
+                "verified_option_inputs_unpublished"],[])
+            # Missing previous exhaustive/use-condition flags is now legal
+            # once original four receipts + comparable source rank and slot
+            # are checked by the trusted installer.
+            self.assertNotIn("highest_available_quality_verified",
+                             proofs[91001]["product_input"])
+            self.assertNotIn("same_effect_and_use_conditions_verified",
+                             proofs[91001]["product_input"])
             forged=copy.deepcopy(fresh)
             next(x for x in forged["enchant_candidates"]["items"]
                  if x["enchant_id"]==91002)["source_slots"]=["feet"]
