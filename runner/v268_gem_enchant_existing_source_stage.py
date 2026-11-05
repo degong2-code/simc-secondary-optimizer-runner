@@ -189,6 +189,33 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
         return {"status":"GEM_ENCHANT_LOCAL_JOIN_PENDING",
                 "reason":str(exc).split(":",1)[0],
                 "J":None,"native_calls":0,"network_calls":0}
+    # Four nominal CHMV types from the existing same-build v221/v266 join.
+    # No SimC effect check, special-gem search, or option admission.
+    stat_types=("crit_rating","haste_rating",
+                "mastery_rating","versatility_rating")
+    four_stat_best={}
+    for record in result["records"]:
+        item_id=record["item_id"]
+        if (item_id==selected_special_gem_item_id or
+            item_id in (240967,240983) or
+            record["effect_classification"]!=
+                "RAW_STATIC_CHMV_POINTS_CANDIDATE_ONLY"):
+            continue
+        vector=record["raw_static_points_candidate"]
+        if (type(vector) is not dict or set(vector)!=set(stat_types) or
+            any(type(v) is not int or v<0 for v in vector.values())):
+            continue
+        nonzero=[stat for stat in stat_types if vector[stat]>0]
+        if len(nonzero)!=1:
+            continue
+        stat=nonzero[0]
+        current=four_stat_best.get(stat)
+        if (current is None or
+            (-vector[stat],item_id)<
+            (-current["raw_nominal_points"],current["item_id"])):
+            four_stat_best[stat]={
+                "item_id":item_id,"raw_nominal_points":vector[stat]}
+    # Only the best observed *nominal* point amount is compared.
     # v266 already traversed and verified the exact v221/CSV join. Limit the
     # downstream projection to actually placed gems, not the whole item DB.
     selected={}
@@ -280,14 +307,13 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
             "selected_gem_v221_source_properties_complete":(
                 not missing and not unresolved_properties and
                 len(properties)==len(requested)),
-            "selected_gem_v221_limit_categories_by_id_unadmitted":{
-                str(item_id):exact[item_id].get(
-                    "limit_category_id_source_only")
-                for item_id in requested if item_id in exact},
-            "selected_gem_limit_category_not_role_proof":True,
             "selected_gem_v221_source_only":True}
     return {
         "status":result["status"],
+        "four_stat_ordinary_best_observed_unadmitted":four_stat_best,
+        "four_stat_ordinary_source_complete_unadmitted":(
+            set(four_stat_best)==set(stat_types)),
+        "four_stat_effect_or_special_role_reverified":False,
         **source_membership,
         "selected_gem_raw_points_by_id_unadmitted":selected,
         "selected_gem_raw_CHMV_vectors_by_id_unadmitted":selected_vectors,

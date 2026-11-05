@@ -28,6 +28,34 @@ class SocketLayoutTests(unittest.TestCase):
                        "ilevel": 334, "options": {"gem_id": "240908"}}
                 for slot in ("head", "wrists", "waist", "feet", "shoulders")}
 
+    def test_p3_fm_four_stat_default_uses_each_nominal_type_once(self):
+        source={
+            stat:{"item_id":311100+i,"raw_nominal_points":40+i}
+            for i,stat in enumerate(sockets.ORDINARY_FOUR_STATS)}
+        before=copy.deepcopy(source)
+        ids=sockets.ordinary_four_stat_default(
+            observed_by_stat=source,socket_total=7,special_gem_id=311200,
+            need=self.need)
+        self.assertEqual(ids,[311100,311101,311102,311103,311100,311101])
+        self.assertEqual(source,before)
+        self.assertEqual(len(set(ids[:4])),4)
+        self.assertNotIn(311200,ids)
+        for wrong in (
+            {"socket_total":4},
+            {"observed_by_stat":{k:v for k,v in source.items()
+                                 if k!="crit_rating"}},
+            {"observed_by_stat":{**source,
+                "mastery_rating":source["crit_rating"]}},
+            {"observed_by_stat":{**source,
+                "crit_rating":{"item_id":311200,"raw_nominal_points":40}}},
+            {"observed_by_stat":{**source,
+                "crit_rating":{"item_id":240967,"raw_nominal_points":40}}},
+        ):
+            args={"observed_by_stat":source,"socket_total":7,
+                  "special_gem_id":311200,"need":self.need}
+            with self.subTest(wrong=wrong),self.assertRaises(ValueError):
+                sockets.ordinary_four_stat_default(**{**args,**wrong})
+
     def test_five_sockets_one_wrist_diamond_four_actual_colors(self):
         before = self.rows()
         plan = {"socket_counts": {"head": 1, "wrists": 2,

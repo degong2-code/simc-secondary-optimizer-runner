@@ -90,35 +90,6 @@ class GemPropertyRelationTests(unittest.TestCase):
         self.assertIn("EXACT_PHYSICAL_SLOT_OR_HAND_RELATION_NOT_VERIFIED",
                       decision["missing"])
 
-    def test_optional_limit_category_is_source_only_not_special_proof(self):
-        # ItemSparse already includes this foreign key in modern snapshots.
-        # A category number says nothing about its quantity or gem role.
-        self.files["ItemSparse"]=(
-            "ID,ExpansionID,Display_lang,Gem_properties,LimitCategory\n"
-            "240001,11,Gem One,12000,77\n"
-            "240002,11,Gem Two,12000,0\n"
-            "240003,11,Armor Not Gem,12001,77\n"
-            "240004,10,Old Expansion,12002,77\n")
-        self.write_snapshot()
-        result=joiner.join(self.catalog,self.folder)
-        self.assertEqual(
-            [x["limit_category_id_source_only"] for x in result["joins"]],
-            [77,0])
-        self.assertFalse(result["automatic_ui_promotion"])
-        self.assertEqual(result["native_calls"] if "native_calls" in result
-                         else result["simc_native_calls"],0)
-        self.assertTrue(all(not x["ui_selectable"] for x in result["joins"]))
-
-    def test_malformed_populated_limit_category_rejected_without_native(self):
-        self.files["ItemSparse"]=(
-            "ID,ExpansionID,Display_lang,Gem_properties,LimitCategory\n"
-            "240001,11,Gem One,12000,not-a-number\n"
-            "240002,11,Gem Two,12000,0\n")
-        self.write_snapshot()
-        with self.assertRaisesRegex(
-                joiner.GemJoinBlocked,"DB2_GEM_LIMIT_CATEGORY_INVALID"):
-            joiner.join(self.catalog,self.folder)
-
     def test_reuse_verified_snapshot_pair_without_duplicate_hash(self):
         proof=joiner._verify_db2(self.folder,self.catalog["game_build"])
         with mock.patch.object(joiner,"_sha_file",

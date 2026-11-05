@@ -23,6 +23,43 @@ SOURCE_IDS_FIELD = "source_observed_gem_item_ids"
 
 
 
+# Nominal ordinary secondary-stat types, not special-gem effects.
+ORDINARY_FOUR_STATS = (
+    "crit_rating", "haste_rating", "mastery_rating", "versatility_rating")
+
+
+def ordinary_four_stat_default(*, observed_by_stat, socket_total,
+                               special_gem_id, need):
+    """Select 1 of each ordinary CHMV type from a sealed same-build join.
+
+    v268 projects these nominal source-only candidates from v221/v266.
+    SimC owns runtime effects; no special gem classification happens here.
+    """
+    need(type(socket_total) is int and 5<=socket_total<=64,
+         "SOCKET_FOUR_ORDINARY_TYPES_NEED_FIVE_PHYSICAL_SOCKETS")
+    need(type(special_gem_id) is int and special_gem_id>0,
+         "SOCKET_EXISTING_SPECIAL_ID_REQUIRED")
+    need(type(observed_by_stat) is dict and
+         set(observed_by_stat)==set(ORDINARY_FOUR_STATS),
+         "SOCKET_FOUR_ORDINARY_STAT_SOURCES_REQUIRED")
+    ids=[]
+    for stat in ORDINARY_FOUR_STATS:
+        candidate=observed_by_stat[stat]
+        need(type(candidate) is dict and
+             set(candidate)=={"item_id","raw_nominal_points"} and
+             type(candidate["item_id"]) is int and
+             candidate["item_id"]>0 and
+             candidate["item_id"]!=special_gem_id and
+             candidate["item_id"] not in DIAMONDS and
+             type(candidate["raw_nominal_points"]) is int and
+             candidate["raw_nominal_points"]>0,
+             "SOCKET_FOUR_ORDINARY_SOURCE_CANDIDATE_INVALID")
+        ids.append(candidate["item_id"])
+    need(len(set(ids))==4,"SOCKET_FOUR_ORDINARY_PHYSICAL_IDS_REQUIRED")
+    # Balanced default for extra slots; the optimizer determines actual DPS.
+    return [ids[i%4] for i in range(socket_total-1)]
+
+
 def intrinsic_source_plan(*, intrinsic_socket_counts, special_gem_id,
                           ordinary_gem_ids, source_observed_gem_item_ids,
                           need):

@@ -31,8 +31,6 @@ def joined(*,game_build=BUILD):
                   "color_mask":(1 if itemid==2003 else 2),
                   "minimum_ilevel":(345 if itemid==2003 else 300),
                   "expansion_id":12,
-                  "limit_category_id_source_only":(
-                      77 if itemid==2003 else 0),
                   "socket_eligibility":"NOT_YET_VERIFIED",
                   "status":"EXACT_DB2_ITEMSPARSE_GEM_PROPERTY_RELATION",
                   "ui_selectable":False}
@@ -84,6 +82,61 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
                             and not row["J_rating_verified"]
                             for row in result["records"]))
 
+    def test_p3_fm_four_nominal_stat_types_from_one_sealed_join(self):
+        # A special is already chosen. No effect/role proof or Native call.
+        links=joined()
+        links["joins"]=[]
+        header=list(source.COLUMNS)
+        buf=io.StringIO()
+        writer=csv.DictWriter(buf,fieldnames=header,lineterminator="\\n")
+        writer.writeheader()
+        for i,stat_code in enumerate((0,32,36,49,40,32)):
+            item=2100+i
+            links["joins"].append({
+                "item_id":item,"gem_property_id":11+i,
+                "enchant_id":600+i,"color_mask":2,
+                "minimum_ilevel":0,"expansion_id":12,
+                "socket_eligibility":"NOT_YET_VERIFIED",
+                "status":"EXACT_DB2_ITEMSPARSE_GEM_PROPERTY_RELATION",
+                "ui_selectable":False})
+            row={key:"0" for key in header}
+            row.update(ID=str(600+i),
+                       Effect_0=("3" if i==0 else "5"),
+                       EffectArg_0=str(stat_code),
+                       EffectPointsMin_0=str(20+i*5),
+                       EffectScalingPoints_0="0")
+            writer.writerow(row)
+        links["exact_link_count"]=len(links["joins"])
+        raw=buf.getvalue().encode("utf8")
+        class FakeResponse:
+            status=200
+            def __enter__(self):return self
+            def __exit__(self,*args):return False
+            def read(self,size=-1):return raw
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td)
+            adapter.collect(stage_root=root,build=BUILD,
+                            transport=lambda req,timeout:FakeResponse())
+            path=root/"v221.json"
+            path.write_text(json.dumps(links),encoding="utf8")
+            first=adapter.view(
+                stage_root=root,v221_candidate_path=path,build=BUILD,
+                selected_source_gem_item_ids=[2100],
+                selected_special_gem_item_id=2100)
+            self.assertTrue(first[
+                "four_stat_ordinary_source_complete_unadmitted"])
+            self.assertEqual({
+                k:v["item_id"] for k,v in first[
+                    "four_stat_ordinary_best_observed_unadmitted"].items()},
+                {"crit_rating":2105,"haste_rating":2102,
+                 "mastery_rating":2103,"versatility_rating":2104})
+            self.assertFalse(first[
+                "four_stat_effect_or_special_role_reverified"])
+            self.assertIsNone(first["J"])
+            self.assertFalse(first["environment_ready"])
+            self.assertEqual(first["native_calls"],0)
+            self.assertEqual(first["network_calls"],0)
+
     def test_same_build_source_and_scaling_schema_must_be_explicit(self):
         with self.assertRaisesRegex(source.EnchantSourceBlocked,
                                     "EXACT_SAME_BUILD"):
@@ -131,11 +184,6 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
                     "selected_gem_unresolved_item_ids"],[2002,2003])
                 self.assertTrue(second[
                     "selected_gem_v221_same_build_items_all_present"])
-                self.assertEqual(
-                    second["selected_gem_v221_limit_categories_by_id_unadmitted"],
-                    {"2002":0,"2003":77})
-                self.assertTrue(second[
-                    "selected_gem_limit_category_not_role_proof"])
                 # Mandatory special gem is projected from the SAME cached
                 # join; its nonstatic effect is NOT a proved zero J.
                 unknown_special=adapter.view(

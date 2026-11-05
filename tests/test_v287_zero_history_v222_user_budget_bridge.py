@@ -1397,6 +1397,21 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 "V216_DEFAULT_GEM_ORIGINAL_V232_CANDIDATE_IDENTITY_DRIFT"):
             fn(collected=collected,selected_roles=roles,target_ilevel=334)
 
+    def test_p3_fm_auto_four_stat_requires_existing_special_and_real_sockets(self):
+        # The source-only adapter will refuse any invented 5th socket.
+        selected={
+            stat:{"item_id":311100+i,"raw_nominal_points":35+i}
+            for i,stat in enumerate(build.physical_gems.ORDINARY_FOUR_STATS)}
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "SOCKET_FOUR_ORDINARY_TYPES_NEED_FIVE_PHYSICAL_SOCKETS"):
+            build.physical_gems.ordinary_four_stat_default(
+                observed_by_stat=selected,socket_total=3,
+                special_gem_id=311200,need=build.need)
+        self.assertEqual(len(build.physical_gems.ordinary_four_stat_default(
+            observed_by_stat=selected,socket_total=5,
+            special_gem_id=311200,need=build.need)),4)
+
     def test_p3_fg_default_web_original_four_budget_without_provider(self):
         # Complete exact sources can form G/J/F/O, but only in the
         # season-wide no OPTIONAL special equipment/enchant or oil.

@@ -1098,17 +1098,6 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                      if row["item_id"]==gem_layout_receipt["special_gem_id"])
                 if source_properties is not None else None),
             "special_gem_item_id":gem_layout_receipt["special_gem_id"],
-            # The ItemSparse limit category is source provenance, not a
-            # role/unique-equip certificate. Selection still needs an exact
-            # independent source owner before source_selected_gem_roles.
-            "selected_gem_limit_categories_by_id_unadmitted":
-                gem_enchant.get(
-                    "selected_gem_v221_limit_categories_by_id_unadmitted"),
-            "special_limit_category_id_unadmitted":
-                (gem_enchant.get(
-                    "selected_gem_v221_limit_categories_by_id_unadmitted")
-                 or {}).get(str(gem_layout_receipt["special_gem_id"])),
-            "special_role_verified_from_limit_category":False,
             "v221_stage_receipt_sha256":
                 gem_source["source_stage"]["receipt_sha256"],
             "enchant_source_sha256":gem_enchant["enchant_source_sha256"],
@@ -2626,7 +2615,8 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
                                    simc_revision_hint=None,
                                    g_probe_character=None,
                                    gem_enchant_transport=None,
-                                   simc_compiler_transport=None):
+                                   simc_compiler_transport=None,
+                                   auto_four_stat_gems=False):
     """First real normal-source acquisition inside the SAME Environment Build.
 
     Explicit build is only a request identity, not independent season or tier
@@ -2778,7 +2768,12 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
     # preferred numerical owner. Do not download another DB2 table during
     # every ordinary season Build when the raw enchant-point rows are not
     # needed. Existing sealed CSV remains readable by the local preflight.
-    if gem_enchant_transport is None:
+    # Fetch the existing one CSV only for the requested four-stat default.
+    # An injected collector must never silently mix in a live Wago source.
+    need(type(auto_four_stat_gems) is bool,
+         "V216_FOUR_STAT_SOURCE_REQUEST_BOOL_REQUIRED")
+    if gem_enchant_transport is None and (
+            fetch is not None or not auto_four_stat_gems):
         gem_enchant_csv={
             "status":("GEM_ENCHANT_INJECTED_TRANSPORT_PENDING"
                       if fetch is not None else
@@ -5176,8 +5171,17 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
              (type(source_selected_gem_roles) is dict and
               set(source_selected_gem_roles)=={
                   "special_gem_id","ordinary_gem_ids"} and
-              user is None and zero_history_gem_layout is None),
+              type(source_selected_gem_roles["special_gem_id"]) is int and
+              source_selected_gem_roles["special_gem_id"]>0 and
+              (source_selected_gem_roles["ordinary_gem_ids"] is None or
+               type(source_selected_gem_roles["ordinary_gem_ids"]) is list)
+              and user is None and zero_history_gem_layout is None),
              "V216_DEFAULT_GEM_INTERNAL_ROLE_SELECTION_SCOPE_REQUIRED")
+        # None ordinary IDs => use four types from sealed nominal CHMV source.
+        # The existing special ID is consumed, never rediscovered/probed.
+        auto_four_stat_default=(
+            source_selected_gem_roles is not None and
+            source_selected_gem_roles["ordinary_gem_ids"] is None)
         zero_history_gem_ratings=fresh_collection_inputs.get(
             "gem_rating_by_id")
         selected_budget_items=fresh_collection_inputs.get(
@@ -5258,10 +5262,12 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                          "auto_select_observed_F_no_oil",
                          "source_selected_gem_roles",
                          "verified_install_input_provider")}
+        if auto_four_stat_default:
+            source_inputs["auto_four_stat_gems"]=True
         collected=collect_wago_new_season_source(
             sessions_root=sessions_root,**source_inputs)
         progress=_zero_history_source_progress(collected)
-        if source_selected_gem_roles is not None:
+        if source_selected_gem_roles is not None and not auto_four_stat_default:
             zero_history_gem_layout=(
                 _fresh_default_intrinsic_gem_layout_from_source(
                     collected=collected,
@@ -5313,6 +5319,61 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 collected,compiler=fresh_stage.compile_fresh_candidate)
             if source_compilation["status"]==(
                     "FRESH_V191_V211_V213_COMPILED_UNADMITTED"):
+                if auto_four_stat_default:
+                    # Reuse the original v221/v266 receipts; the normal
+                    # preflight reads their same-build source again by cache.
+                    src=_fresh_gem_item_source_stage(
+                        stage_root=source_compilation["stage_root"],
+                        wago_folder=pathlib.Path(
+                            collected["snapshot_receipt_path"]).parent,
+                        source_catalog_path=source_compilation[
+                            "source_catalog_path"],
+                        expected_game_build=collected["expected_game_build"])
+                    observed=gem_enchant_stage.view(
+                        stage_root=source_compilation["stage_root"],
+                        v221_candidate_path=src["candidate_path"],
+                        build=collected["expected_game_build"],
+                        selected_source_gem_item_ids=[
+                            source_selected_gem_roles["special_gem_id"]],
+                        selected_special_gem_item_id=
+                            source_selected_gem_roles["special_gem_id"])
+                    socket_total=(collected.get(
+                        "fresh_one_spec_simc_representative") or {}).get(
+                            "intrinsic_socket_total_source_only")
+                    if type(socket_total) is not int or socket_total<5:
+                        progress["requires"].append(
+                            "FOUR_ORDINARY_TYPES_NEED_FIVE_PHYSICAL_SOCKETS")
+                    elif not (
+                            observed.get(
+                                "selected_gem_v221_same_build_items_all_present")
+                            is True and observed.get(
+                                "four_stat_ordinary_source_complete_unadmitted")
+                            is True):
+                        progress["requires"].append(
+                            "FOUR_ORDINARY_TYPES_SAME_BUILD_SOURCE_PENDING")
+                        progress["four_stat_ordinary_source_status_unadmitted"]=(
+                            observed.get("status"))
+                    else:
+                        ordinary=physical_gems.ordinary_four_stat_default(
+                            observed_by_stat=observed[
+                                "four_stat_ordinary_best_observed_unadmitted"],
+                            socket_total=socket_total,
+                            special_gem_id=source_selected_gem_roles[
+                                "special_gem_id"],need=need)
+                        zero_history_gem_layout=(
+                            _fresh_default_intrinsic_gem_layout_from_source(
+                                collected=collected,
+                                selected_roles={
+                                    "special_gem_id":source_selected_gem_roles[
+                                        "special_gem_id"],
+                                    "ordinary_gem_ids":ordinary},
+                                target_ilevel=fresh_collection_inputs[
+                                    "representative_request"]["target_ilevel"]))
+                        progress["default_intrinsic_gem_layout_unadmitted"]=(
+                            zero_history_gem_layout)
+                        progress["four_stat_ordinary_source_selection_unadmitted"]=(
+                            observed[
+                                "four_stat_ordinary_best_observed_unadmitted"])
                 preflight=preflight_new_season_source(
                     source_catalog_path=source_compilation["source_catalog_path"],
                     expected_game_build=collected["expected_game_build"],
