@@ -60,6 +60,9 @@ class SeasonEnvironmentBuildRequest(BaseModel):
     consumable_native_binary: str | None = Field(default=None,min_length=1,max_length=4096)
     auto_native_F_requested: bool = False
     auto_native_O_requested: bool = False
+    # The user's selected flask is an exact physical ID, NOT trusted F
+    # evidence. A missing selection leaves the normal Build pending.
+    selected_flask_item_id: int | None = Field(default=None,ge=1,le=999999999)
     simc_revision_hint: str | None = Field(
         default=None,pattern=r"^(?:[a-f0-9]{7,12}|[a-f0-9]{40})$")
 
@@ -122,7 +125,8 @@ class LocalJobs:
                                  native_G_binary=None, simc_revision_hint=None,
                                  auto_native_F_requested=False,
                                  auto_native_O_requested=False,
-                                 consumable_native_binary=None):
+                                 consumable_native_binary=None,
+                                 selected_flask_item_id=None):
         """Run original v216 with season inputs, never a user DPS scenario.
 
         One deterministic one-spec reference G probe is NOT season-level
@@ -160,7 +164,15 @@ class LocalJobs:
                     "simc_revision_hint":simc_revision_hint,
                     "auto_native_F_requested":auto_native_F_requested,
                     "auto_native_O_requested":auto_native_O_requested,
-                    "auto_native_G_requested":native_G_binary is not None})
+                    "auto_native_G_requested":native_G_binary is not None,
+                    # Explicit flask choice + no selected oil. Normal v216
+                    # checks the same-build physical F and original Native
+                    # receipts BEFORE any official v222 install. Do not
+                    # pass an unverified F amount or a receipt from HTTP.
+                    **({"selected_budget_items":{
+                        "flask_item_id":selected_flask_item_id,
+                        "oil_item_ids_by_hand":{}}}
+                       if selected_flask_item_id is not None else {})})
         return {**observed,"web_environment_scope":{
             "schema":"v113_web_season_environment_build_scope_v1",
             "game_build":game_build,"target_ilevel":target_ilevel,
@@ -170,6 +182,9 @@ class LocalJobs:
             "F_O_native_binary_configured":consumable_native_binary is not None,
             "auto_native_F_requested":auto_native_F_requested,
             "auto_native_O_requested":auto_native_O_requested,
+            "selected_flask_item_id":selected_flask_item_id,
+            "explicit_no_oil_with_selected_flask":
+                selected_flask_item_id is not None,
             "dps_optimization_started":False,
             "user_character_or_trinkets_required":False,
             "environment_installed":observed.get("environment_installed") is True,
@@ -988,7 +1003,8 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                 consumable_native_binary=request.consumable_native_binary,
                 simc_revision_hint=request.simc_revision_hint,
                 auto_native_F_requested=request.auto_native_F_requested,
-                auto_native_O_requested=request.auto_native_O_requested)
+                auto_native_O_requested=request.auto_native_O_requested,
+                selected_flask_item_id=request.selected_flask_item_id)
         except Exception as exc:
             raise blocked(exc) from None
 

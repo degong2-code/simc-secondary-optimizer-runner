@@ -228,6 +228,34 @@ class LocalWebAPIOffline(unittest.TestCase):
             "auto_native_G_requested":False})
         self.assertFalse((self.root/"runs").exists())
 
+
+    def test_p3_fg_web_flask_selection_reaches_real_source_verifier_only(self):
+        payload={"game_build":"12.2.0.99999",
+                 "target_ilevel":334,"selected_flask_item_id":241326}
+        result={"status":"SOURCE_ONLY_PENDING",
+                "environment_ready":False,"environment_installed":False,
+                "native_calls":0}
+        with mock.patch.object(web.environment_build,"build_environment",
+                               return_value=result) as stage:
+            response=self.post("/api/v1/environment/season-build",payload)
+        self.assertEqual(response.status_code,200,response.text)
+        inputs=stage.call_args.kwargs["fresh_collection_inputs"]
+        self.assertEqual(inputs["selected_budget_items"],{
+            "flask_item_id":241326,"oil_item_ids_by_hand":{}})
+        self.assertNotIn("same_build_budget_evidence",inputs)
+        self.assertNotIn("verified_install_input_provider",inputs)
+        self.assertIsNone(stage.call_args.kwargs["user"])
+        self.assertFalse(response.json()["web_environment_scope"][
+            "environment_ready"])
+        self.assertEqual(response.json()["web_environment_scope"][
+            "selected_flask_item_id"],241326)
+        self.assertTrue(response.json()["web_environment_scope"][
+            "explicit_no_oil_with_selected_flask"])
+        self.assertEqual(self.post("/api/v1/environment/season-build",
+            {**payload,"selected_flask_item_id":0}).status_code,422)
+        self.assertEqual(self.post("/api/v1/environment/season-build",
+            {**payload,"selected_flask_item_id":"invalid"}).status_code,422)
+
     def test_web_season_environment_build_native_only_explicit_and_validated(self):
         payload={"game_build":"12.2.0.99999","target_ilevel":341,
                  "native_G_binary":str(self.binary),
