@@ -151,6 +151,51 @@ class SocketLayoutTests(unittest.TestCase):
             with self.subTest(patch=patch),self.assertRaises(ValueError):
                 sockets.arrange(old,{**plan,**patch},self.need)
 
+
+    def test_p3_fj_intrinsic_source_plan_stages_one_special_and_n_ordinary(self):
+        counts={"head":1,"waist":0,"wrists":2,"feet":1}
+        original=copy.deepcopy(counts)
+        plan=sockets.intrinsic_source_plan(
+            intrinsic_socket_counts=counts,special_gem_id=311003,
+            ordinary_gem_ids=[311001,311001,311002],
+            source_observed_gem_item_ids=[311001,311002,311003],
+            need=self.need)
+        self.assertEqual(counts,original)
+        self.assertEqual(plan["socket_counts"],
+                         {"feet":1,"head":1,"wrists":2})
+        self.assertEqual(plan["special_slot"],"head")
+        rows,receipt=sockets.arrange(self.rows(),plan,self.need)
+        self.assertEqual(rows["head"]["options"]["gem_id"],"311003")
+        self.assertEqual(rows["wrists"]["options"]["gem_id"],"311001/311002")
+        self.assertEqual(receipt["ordinary_count"],3)
+        self.assertEqual(receipt["special_gem_id"],311003)
+        self.assertFalse(receipt["environment_ready"])
+        self.assertFalse(receipt["CHMV_J_source_authenticated"])
+        self.assertFalse(receipt["game_socket_applicability_verified"])
+
+        wrist=sockets.intrinsic_source_plan(
+            intrinsic_socket_counts={"wrists":2,"feet":1},
+            special_gem_id=311003,
+            ordinary_gem_ids=[311001,311002],
+            source_observed_gem_item_ids=[311001,311002,311003],
+            need=self.need)
+        self.assertEqual(wrist["special_slot"],"feet")
+        for changed in (
+            {"intrinsic_socket_counts":{"head":1}},
+            {"ordinary_gem_ids":[311001,311001]},
+            {"special_gem_id":None},
+            {"ordinary_gem_ids":[311003,311001,311002]},
+            {"source_observed_gem_item_ids":[311001,311003]},
+            {"intrinsic_socket_counts":{"head":1,"wrists":-1}},
+        ):
+            args={"intrinsic_socket_counts":counts,
+                  "special_gem_id":311003,
+                  "ordinary_gem_ids":[311001,311001,311002],
+                  "source_observed_gem_item_ids":[311001,311002,311003],
+                  "need":self.need}
+            with self.subTest(changed=changed),self.assertRaises(ValueError):
+                sockets.intrinsic_source_plan(**{**args,**changed})
+
     def test_invalid_slots_unknown_gem_or_extra_diamond_fail_closed(self):
         base = {"socket_counts": {"head": 1, "wrists": 1},
                 "special_gem_id": 240983, "special_slot": "head",

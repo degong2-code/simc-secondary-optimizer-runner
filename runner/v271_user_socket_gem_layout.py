@@ -22,6 +22,44 @@ FIELDS = frozenset(("socket_counts", "special_gem_id", "special_slot",
 SOURCE_IDS_FIELD = "source_observed_gem_item_ids"
 
 
+
+def intrinsic_source_plan(*, intrinsic_socket_counts, special_gem_id,
+                          ordinary_gem_ids, source_observed_gem_item_ids,
+                          need):
+    """Reuse source-observed v232 slots; NEVER decide gem roles or approve J.
+
+    The selection of a real special ID and ordinary IDs is a separate
+    same-season source-owner decision. This only removes manual socket
+    positioning from that selection. It consumes every intrinsic socket,
+    adds NO socket bonus and keeps the exactly-one-special v271 contract.
+    """
+    counts=intrinsic_socket_counts
+    need(type(counts) is dict and bool(counts) and
+         all(type(slot) is str and bool(slot) and
+             type(n) is int and 0<=n<=3 for slot,n in counts.items()),
+         "SOCKET_INTRINSIC_SOURCE_COUNTS_INVALID")
+    available={slot:n for slot,n in sorted(counts.items()) if n>0}
+    total=sum(available.values())
+    need(2<=total<=64, "SOCKET_INTRINSIC_ONE_SPECIAL_PLUS_ORDINARY_REQUIRED")
+    need(type(special_gem_id) is int and special_gem_id>0 and
+         type(ordinary_gem_ids) is list and
+         len(ordinary_gem_ids)==total-1 and
+         all(type(i) is int and i>0 and i!=special_gem_id
+             and i not in DIAMONDS for i in ordinary_gem_ids),
+         "SOCKET_INTRINSIC_SPECIAL_AND_ORDINARY_IDS_REQUIRED")
+    observed=source_observed_gem_item_ids
+    ids=sorted(set(ordinary_gem_ids)|{special_gem_id})
+    need(type(observed) is list and observed==ids,
+         "SOCKET_INTRINSIC_EXACT_SOURCE_ITEM_IDS_REQUIRED")
+    # This is a stable position, NOT a head-only special requirement.
+    position="head" if available.get("head",0)>0 else sorted(available)[0]
+    return {"socket_counts":available,
+            "special_gem_id":special_gem_id,
+            "special_slot":position,
+            "ordinary_gem_ids":list(ordinary_gem_ids),
+            SOURCE_IDS_FIELD:list(ids)}
+
+
 def arrange(rows, plan, need, *, observed_rating_per_ordinary=None):
     """Return independent physical rows and an explicitly UNADMITTED J preview.
 
