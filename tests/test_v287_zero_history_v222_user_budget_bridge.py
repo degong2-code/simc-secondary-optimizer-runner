@@ -1064,7 +1064,7 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 owner_G=g)
         with self.assertRaisesRegex(
                 build.EnvironmentBuildBlocked,
-                "V216_NATIVE_G_OWNER_ORIGINAL_PROOF_OR_PROFILE_DRIFT"):
+                "V216_NATIVE_G_OWNER_ORIGINAL_SOURCE_SCOPE_REQUIRED"):
             owner(flight={**preflight,"simc_revision":"b"*40})
         with self.assertRaisesRegex(
                 build.EnvironmentBuildBlocked,
