@@ -70,8 +70,18 @@ def collect(*,stage_root,build,transport=None):
     }
 
 
-def view(*,stage_root,v221_candidate_path,build):
-    """Use one locally sealed CSV and exact v221 ID join; never HTTP."""
+def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None):
+    """Reuse a sealed v266 source view and only project selected raw gem IDs.
+
+    Raw EffectPointsMin values are NOT proven effective rating, best quality,
+    legal sockets or Native accepted gems. No new CSV read or SimC run.
+    """
+    if selected_gem_item_ids is not None:
+        if (type(selected_gem_item_ids) is not list or
+                len(selected_gem_item_ids)>64 or
+                any(type(item) is not int or item<=0
+                    for item in selected_gem_item_ids)):
+            raise ValueError("V268_SELECTED_GEM_ITEM_IDS_INVALID")
     root=Path(stage_root)
     csv_path=root/OUTPUTS["csv"]
     receipt_path=root/".stage_receipts"/(STAGE+".json")
@@ -111,8 +121,37 @@ def view(*,stage_root,v221_candidate_path,build):
         return {"status":"GEM_ENCHANT_LOCAL_JOIN_PENDING",
                 "reason":str(exc).split(":",1)[0],
                 "J":None,"native_calls":0,"network_calls":0}
+    # v266 already traversed and verified the exact v221/CSV join. Limit the
+    # downstream projection to actually placed gems, not the whole item DB.
+    selected={}
+    unresolved=[]
+    if selected_gem_item_ids is not None:
+        by_id={row["item_id"]:row for row in result["records"]}
+        for item_id in sorted(set(selected_gem_item_ids)):
+            row=by_id.get(item_id)
+            if (row is None or row["effect_classification"]!=
+                    "RAW_STATIC_CHMV_POINTS_CANDIDATE_ONLY"):
+                unresolved.append(item_id)
+                continue
+            vector=row["raw_static_points_candidate"]
+            if (type(vector) is not dict or
+                    set(vector)!={"crit_rating","haste_rating",
+                                  "mastery_rating","versatility_rating"} or
+                    any(type(amount) is not int or amount<0
+                        for amount in vector.values()) or
+                    sum(vector.values())<=0):
+                unresolved.append(item_id)
+            else:
+                selected[str(item_id)]=sum(vector.values())
     return {
         "status":result["status"],
+        "selected_gem_raw_points_by_id_unadmitted":selected,
+        "selected_gem_unresolved_item_ids":unresolved,
+        "selected_gem_all_raw_points_known":(
+            selected_gem_item_ids is not None and not unresolved and
+            bool(selected_gem_item_ids)),
+        "selected_gem_raw_points_not_native_verified":True,
+        "selected_gem_raw_points_not_quality_or_socket_verified":True,
         "raw_static_candidate_count":result["raw_static_candidate_count"],
         "unresolved_enchant_count":result["unresolved_count"],
         "linked_gem_items":result["gem_item_link_count"],

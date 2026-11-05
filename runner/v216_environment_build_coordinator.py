@@ -691,14 +691,54 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
          ui.get("game_db_recollection_now")==0 and
          ui.get("optimizer_or_cache_mutated") is False,
          "V216_FRESH_UNVERIFIED_CHOICE_OR_BUDGET_PROMOTION")
+    # Reuse the already sealed v221→v266→v268 source data BEFORE checking J.
+    # v268 returns selected item IDs only, not another large gem catalog.
+    # Raw EffectPointsMin values are candidates, not SimC-effective ratings.
+    need(source_snapshot_folder is not None or source_stage_root is None,
+         "V216_FRESH_GEM_SNAPSHOT_AND_STAGE_MUST_BE_PAIRED")
+    need(source_stage_root is not None or source_snapshot_folder is None,
+         "V216_FRESH_GEM_SNAPSHOT_AND_STAGE_MUST_BE_PAIRED")
+    gem_source = None
+    gem_enchant = None
+    if source_snapshot_folder is not None:
+        gem_source = _fresh_gem_item_source_stage(
+            stage_root=source_stage_root,
+            wago_folder=source_snapshot_folder,
+            source_catalog_path=supplied,
+            expected_game_build=expected_game_build)
+        if gem_source.get("candidate_path"):
+            gem_enchant=gem_enchant_stage.view(
+                stage_root=source_stage_root,
+                v221_candidate_path=gem_source["candidate_path"],
+                build=expected_game_build,
+                selected_gem_item_ids=(
+                    gem_layout_receipt.get("ordinary_gem_ids")
+                    if type(gem_layout_receipt) is dict else None))
     # A staged physical gem layout is not evidence of legal game sockets.
     need(gem_layout_receipt is not None or gem_rating_by_id is None,
          "V216_GEM_LAYOUT_REQUIRED_BEFORE_RATING_MATCH")
     gem_J=None
+    raw_gem_ratings=None
     if gem_layout_receipt is not None:
+        if gem_enchant is not None and gem_enchant.get(
+                "selected_gem_all_raw_points_known") is True:
+            raw_gem_ratings=dict(gem_enchant[
+                "selected_gem_raw_points_by_id_unadmitted"])
         if gem_rating_by_id is not None:
             gem_J=physical_gems.reconcile_observed_J(
                 gem_layout_receipt,gem_rating_by_id,need)
+        elif raw_gem_ratings is not None:
+            gem_J=physical_gems.reconcile_observed_J(
+                gem_layout_receipt,raw_gem_ratings,need)
+            gem_J={**gem_J,
+                   "rating_origin":"V266_RAW_SAME_BUILD_EFFECT_POINTS_ONLY",
+                   "simc_effective_rating_verified":False,
+                   "highest_quality_verified":False,
+                   "source_enchant_sha256":
+                       gem_enchant["enchant_source_sha256"],
+                   "source_v221_stage_receipt_sha256":
+                       (gem_source.get("source_stage") or {}).get(
+                           "receipt_sha256")}
         numeric_evidence=(
             ([budget_evidence] if budget_evidence is not None else [])+
             (list(standard_budget_evidence_by_ilevel.values())
@@ -710,8 +750,11 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
             if type(proof) is dict and type(proof.get("rating")) is int:
                 need(gem_J is not None,
                      "V216_J_PHYSICAL_ID_RATING_LINK_MISSING")
-                need(proof["rating"]==gem_J["J_candidate_unadmitted"],
-                     "V216_J_RATING_DISAGREES_WITH_PHYSICAL_GEM_IDS")
+                # v266 raw points are NOT an exact SimC-effective rating.
+                # Do not reject an independently verified J based on them.
+                if gem_rating_by_id is not None:
+                    need(proof["rating"]==gem_J["J_candidate_unadmitted"],
+                         "V216_J_RATING_DISAGREES_WITH_PHYSICAL_GEM_IDS")
     # A caller may supply source-bound numeric evidence before a v098 profile
     # exists. Only arithmetic/identity is tested here: a self-declared
     # "verified" label cannot authenticate Wago/SimC/Native provenance.
@@ -804,23 +847,6 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
             raise EnvironmentBuildBlocked(
                 "V216_PREPROFILE_GJFO_ARITHMETIC_BLOCKED:" + str(exc)
             ) from exc
-    need(source_snapshot_folder is not None or source_stage_root is None,
-         "V216_FRESH_GEM_SNAPSHOT_AND_STAGE_MUST_BE_PAIRED")
-    need(source_stage_root is not None or source_snapshot_folder is None,
-         "V216_FRESH_GEM_SNAPSHOT_AND_STAGE_MUST_BE_PAIRED")
-    gem_source = None
-    gem_enchant = None
-    if source_snapshot_folder is not None:
-        gem_source = _fresh_gem_item_source_stage(
-            stage_root=source_stage_root,
-            wago_folder=source_snapshot_folder,
-            source_catalog_path=supplied,
-            expected_game_build=expected_game_build)
-        if gem_source.get("candidate_path"):
-            gem_enchant=gem_enchant_stage.view(
-                stage_root=source_stage_root,
-                v221_candidate_path=gem_source["candidate_path"],
-                build=expected_game_build)
     # Existing focused v216 callers can supply a minimal v196 mock
     # without per-item diagnostic detail. Do not reinterpret absent proof
     # data as zero missing items or as approved product choices.
@@ -872,6 +898,10 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
         payload["fresh_gem_raw_enchant_points_source"] = gem_enchant
     if gem_layout_receipt is not None:
         payload["physical_gem_layout_unadmitted"] = gem_layout_receipt
+        if raw_gem_ratings is not None:
+            payload["physical_gem_raw_rating_by_id_unadmitted"] = (
+                dict(raw_gem_ratings))
+            payload["physical_gem_raw_rating_source_only"] = True
         payload["requires"].append(
             "PHYSICAL_SOCKET_ELIGIBILITY_HIGHEST_QUALITY_GEM_SOURCE")
         if gem_J is not None:
@@ -3142,7 +3172,9 @@ def _zero_history_auto_v222_numeric_preview(*, preflight, native_numeric,
     j_sha=source_sha(kind="physical_gem_layout_and_ratings",
                     items={"layout":preflight[
                         "physical_gem_layout_unadmitted"],
-                           "rating_by_id":gem_ratings})
+                           "rating_by_id":gem_ratings,
+                           "raw_points_source_sha256":j.get(
+                               "source_enchant_sha256")})
     f_sha=source_sha(kind="selected_flask_original_v278_receipts",
                     items={"item_id":f["physical_item_id"],
                            "candidate_sha256":
@@ -3603,6 +3635,9 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 if "physical_gem_layout_unadmitted" in preflight:
                     source_compilation["physical_gem_layout_unadmitted"]=(
                         preflight["physical_gem_layout_unadmitted"])
+                if "physical_gem_raw_rating_by_id_unadmitted" in preflight:
+                    source_compilation["physical_gem_raw_rating_by_id_unadmitted"]=(
+                        preflight["physical_gem_raw_rating_by_id_unadmitted"])
                 if "physical_gem_J_arithmetic_unadmitted" in preflight:
                     gem_J=preflight["physical_gem_J_arithmetic_unadmitted"]
                     source_compilation["physical_gem_J_arithmetic_unadmitted"]=gem_J
@@ -3793,7 +3828,10 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     quality_weapon if effect_observations else
                     {"oil_representative_weapon_matches_unadmitted":[]}),
                 selected=numeric_selection,
-                gem_ratings=zero_history_gem_ratings,
+                gem_ratings=(zero_history_gem_ratings
+                    if zero_history_gem_ratings is not None else
+                    (preflight or {}).get(
+                        "physical_gem_raw_rating_by_id_unadmitted")),
                 target_ilevel=fresh_collection_inputs[
                     "representative_request"]["target_ilevel"],
                 manual_final_T=manual_T)

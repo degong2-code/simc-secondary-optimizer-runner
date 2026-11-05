@@ -43,7 +43,8 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
     def run_build(self,manual=None,proof=True,level=334,user_level=None,
                   native_result=None,gem_layout=None,gem_ratings=None,
                   effect_requests=None,effect_resolver=None,
-                  effect_observation=None,selected_budget_items=None):
+                  effect_observation=None,selected_budget_items=None,
+                  raw_gem_source=None):
         inputs={
             "expected_game_build":self.catalog["game_build"],
             "representative_request":{
@@ -76,7 +77,13 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
              mock.patch.object(build.user_catalog,"public_options",
                                return_value=self.ui),\
              mock.patch.object(build,"_fresh_gem_item_source_stage",
-                               return_value={"candidate_path":None}),\
+                               return_value={
+                                   "candidate_path":(
+                                       "sealed_v221.json"
+                                       if raw_gem_source is not None else None),
+                                   "source_stage":{"receipt_sha256":"5"*64}}),\
+             mock.patch.object(build.gem_enchant_stage,"view",
+                               return_value=raw_gem_source),\
              mock.patch.object(build.consumable_simc_relation,
                                "resolve_native_input",
                                return_value=effect_resolver),\
@@ -242,6 +249,70 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                          result["source_compilation"])
         self.assertIsNone(result["J"])
         self.assertFalse(result["zero_history_build"]["environment_ready"])
+
+    def preflight_with_sealed_gem_raw(self, layout, raw, manual_ratings=None):
+        gem_source={"candidate_path":str(self.root/"gem_candidate.json"),
+                    "source_stage":{"receipt_sha256":"5"*64}}
+        with (mock.patch.object(build.environment_manifest,"read_json",
+                                return_value=(self.catalog,"a"*64)),
+              mock.patch.object(build.source_to_catalog,"verify_catalog"),
+              mock.patch.object(build.user_catalog,"public_options",
+                                return_value=self.ui),
+              mock.patch.object(build,"_fresh_gem_item_source_stage",
+                                return_value=gem_source),
+              mock.patch.object(build.gem_enchant_stage,"view",
+                                return_value=raw) as view):
+            result=build.preflight_new_season_source(
+                source_catalog_path=self.path,
+                expected_game_build=self.catalog["game_build"],
+                expected_simc_revision=self.catalog["simc_revision"],
+                source_snapshot_folder=self.wago,
+                source_stage_root=self.root,
+                gem_layout_receipt=layout,gem_rating_by_id=manual_ratings)
+            self.assertEqual(view.call_args.kwargs["selected_gem_item_ids"],
+                             layout["ordinary_gem_ids"])
+            return result
+
+    def test_sealed_v266_raw_gem_ID_reuses_v271_not_manual_J(self):
+        layout,_=self.physical_layout()
+        raw={"status":"ENCHANT_RAW_POINTS_SOURCE_ONLY_J_NOT_APPROVED",
+             "enchant_source_sha256":"4"*64,
+             "selected_gem_raw_points_by_id_unadmitted":{"240908":24},
+             "selected_gem_unresolved_item_ids":[],
+             "selected_gem_all_raw_points_known":True,
+             "highest_quality_J_verified":False,"J":None,
+             "environment_ready":False}
+        auto=self.preflight_with_sealed_gem_raw(layout,raw)
+        j=auto["physical_gem_J_arithmetic_unadmitted"]
+        self.assertEqual(j["J_candidate_unadmitted"],144)
+        self.assertEqual(j["rating_origin"],
+                         "V266_RAW_SAME_BUILD_EFFECT_POINTS_ONLY")
+        self.assertFalse(j["simc_effective_rating_verified"])
+        self.assertFalse(j["highest_quality_verified"])
+        self.assertEqual(j["source_enchant_sha256"],"4"*64)
+        self.assertEqual(auto["physical_gem_raw_rating_by_id_unadmitted"],
+                         {"240908":24})
+        self.assertTrue(auto["physical_gem_raw_rating_source_only"])
+        self.assertIsNone(auto["J"])
+        self.assertFalse(auto["environment_ready"])
+        manual=self.preflight_with_sealed_gem_raw(layout,raw,
+                                                 {"240908":23})
+        self.assertEqual(manual["physical_gem_J_arithmetic_unadmitted"][
+            "J_candidate_unadmitted"],138)
+        self.assertNotIn("rating_origin",manual[
+            "physical_gem_J_arithmetic_unadmitted"])
+
+    def test_sealed_v266_unresolved_raw_J_does_not_invent_zero(self):
+        layout,_=self.physical_layout()
+        raw={"status":"ENCHANT_RAW_POINTS_SOURCE_ONLY_J_NOT_APPROVED",
+             "selected_gem_all_raw_points_known":False,
+             "selected_gem_raw_points_by_id_unadmitted":{},
+             "selected_gem_unresolved_item_ids":[240908],
+             "J":None}
+        pending=self.preflight_with_sealed_gem_raw(layout,raw)
+        self.assertNotIn("physical_gem_J_arithmetic_unadmitted",pending)
+        self.assertIsNone(pending["J"])
+        self.assertFalse(pending["environment_ready"])
 
     def test_gem_j_conflicting_existing_budget_blocks_without_native(self):
         layout, ratings=self.physical_layout(rating=24)
@@ -721,6 +792,42 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 observations=items*26,
                 game_build=self.catalog["game_build"],
                 simc_revision=self.catalog["simc_revision"])
+
+    def test_sealed_v266_v271_GJFO_to_original_v222_without_manual_J(self):
+        layout,_=self.physical_layout()
+        req,bound,obs=self.physical_effect()
+        source_view={
+            "status":"ENCHANT_RAW_POINTS_SOURCE_ONLY_J_NOT_APPROVED",
+            "enchant_source_sha256":"4"*64,
+            "selected_gem_raw_points_by_id_unadmitted":{"240908":24},
+            "selected_gem_unresolved_item_ids":[],
+            "selected_gem_all_raw_points_known":True,
+            "highest_quality_J_verified":False,"J":None,
+            "environment_ready":False}
+        result=self.run_build(
+            proof=False,native_result=self.v277_native_G(),
+            gem_layout=layout,gem_ratings=None,
+            effect_requests=[req],effect_resolver=bound,
+            effect_observation=obs,
+            selected_budget_items={"flask_item_id":241326,
+                                   "oil_item_ids_by_hand":{}},
+            raw_gem_source=source_view)
+        stage=result["source_compilation"]
+        j=stage["physical_gem_J_arithmetic_unadmitted"]
+        self.assertEqual(j["J_candidate_unadmitted"],144)
+        self.assertEqual(j["rating_origin"],
+                         "V266_RAW_SAME_BUILD_EFFECT_POINTS_ONLY")
+        calc=stage["selected_auto_v222_numeric_preview_unadmitted"][
+            "calculation"]
+        self.assertEqual((calc["reference_G"],calc["J"],calc["F"]),
+                         (2850,144,165))
+        self.assertEqual((calc["reference_B"],calc["final_T"]),
+                         (3159,3159))
+        self.assertTrue(calc["numeric_preview_only"])
+        self.assertFalse(calc["environment_ready"])
+        self.assertIsNone(result["J"])
+        self.assertIsNone(result["T"])
+        self.assertFalse(result["zero_history_build"]["environment_ready"])
 
     def test_auto_v222_new_season_GJFO_without_manual_budget_evidence(self):
         layout,ratings=self.physical_layout()

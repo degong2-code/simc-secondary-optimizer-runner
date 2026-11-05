@@ -117,7 +117,20 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
             p=root/"v221.json"
             p.write_text(json.dumps(joined()),encoding="utf8")
             status=adapter.view(stage_root=root,v221_candidate_path=p,
-                                build=BUILD)
+                                build=BUILD,
+                                selected_gem_item_ids=[2001,2001,2002,2004])
+            self.assertEqual(status["selected_gem_raw_points_by_id_unadmitted"],
+                             {"2001":25})
+            self.assertEqual(status["selected_gem_unresolved_item_ids"],
+                             [2002,2004])
+            self.assertFalse(status["selected_gem_all_raw_points_known"])
+            self.assertTrue(status["selected_gem_raw_points_not_native_verified"])
+            only=adapter.view(stage_root=root,v221_candidate_path=p,
+                              build=BUILD,selected_gem_item_ids=[2001]*6)
+            self.assertTrue(only["selected_gem_all_raw_points_known"])
+            self.assertEqual(only["selected_gem_raw_points_by_id_unadmitted"],
+                             {"2001":25})
+            self.assertIsNone(only["J"])
             self.assertEqual(status["raw_static_candidate_count"],1)
             self.assertEqual(status["unresolved_enchant_count"],3)
             self.assertIsNone(status["J"])
