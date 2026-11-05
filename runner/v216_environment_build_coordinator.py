@@ -1117,12 +1117,19 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
          "V216_GEM_LAYOUT_REQUIRED_BEFORE_RATING_MATCH")
     gem_J=None
     raw_gem_ratings=None
+    # Numeric J owns exactly-two-stat ordinary gems, not single-stat
+    # activation gems. This never blocks the physical SimC socket layout.
+    one_stat_or_ambiguous_J=(
+        type(gem_enchant) is dict and gem_enchant.get(
+            "selected_ordinary_gem_two_stat_budget_eligible_unadmitted")
+        is False)
     if gem_layout_receipt is not None:
-        if gem_enchant is not None and gem_enchant.get(
-                "selected_gem_all_raw_points_known") is True:
+        if (not one_stat_or_ambiguous_J and gem_enchant is not None
+                and gem_enchant.get(
+                    "selected_gem_all_raw_points_known") is True):
             raw_gem_ratings=dict(gem_enchant[
                 "selected_gem_raw_points_by_id_unadmitted"])
-        if gem_rating_by_id is not None:
+        if gem_rating_by_id is not None and not one_stat_or_ambiguous_J:
             gem_J=physical_gems.reconcile_observed_J(
                 gem_layout_receipt,gem_rating_by_id,need)
         elif raw_gem_ratings is not None:
@@ -1299,6 +1306,10 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
         payload["fresh_gem_raw_enchant_points_source"] = gem_enchant
     if gem_layout_receipt is not None:
         payload["physical_gem_layout_unadmitted"] = gem_layout_receipt
+        if one_stat_or_ambiguous_J:
+            payload["ordinary_gem_J_two_stat_requirement_pending"]=True
+            payload["requires"].append(
+                "ORDINARY_GEM_J_REQUIRES_EXACTLY_TWO_SECONDARY_STATS")
         if source_item_link is not None:
             payload["selected_v221_gem_item_relation_unadmitted"]=source_item_link
             payload["requires"].append(

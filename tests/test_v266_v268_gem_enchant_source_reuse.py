@@ -90,7 +90,7 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
         buf=io.StringIO()
         writer=csv.DictWriter(buf,fieldnames=header,lineterminator="\n")
         writer.writeheader()
-        for i,stat_code in enumerate((0,32,36,49,40,32)):
+        for i,stat_code in enumerate((0,32,36,49,40,32,32)):
             item=2100+i
             links["joins"].append({
                 "item_id":item,"gem_property_id":11+i,
@@ -105,6 +105,14 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
                        EffectArg_0=str(32 if i==0 else stat_code),
                        EffectPointsMin_0=str(200 if i==0 else 20+i*5),
                        EffectScalingPoints_0="0")
+            if i>=2:
+                # Each ordinary is a 2-stat gem: +dominant/+7.
+                # One equal +50/+50 example must remain unassigned.
+                row.update(Effect_1="5",
+                           EffectArg_1=str(
+                               {2:32,3:40,4:36,5:49,6:36}[i]),
+                           EffectPointsMin_1=str(50 if i==6 else 7),
+                           EffectScalingPoints_1="0")
             writer.writerow(row)
         links["exact_link_count"]=len(links["joins"])
         raw=buf.getvalue().encode("utf8")
@@ -131,16 +139,56 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
                     "four_stat_ordinary_best_observed_unadmitted"].items()},
                 {"crit_rating":2105,"haste_rating":2102,
                  "mastery_rating":2103,"versatility_rating":2104})
+            # Full CHMV, including secondary +7, belongs to J rather than
+            # treating these four legitimate ordinary gems as missing.
+            self.assertEqual(first[
+                "four_stat_ordinary_best_observed_unadmitted"],{
+                    "crit_rating":{"item_id":2105,"raw_nominal_points":52},
+                    "haste_rating":{"item_id":2102,"raw_nominal_points":37},
+                    "mastery_rating":{"item_id":2103,"raw_nominal_points":42},
+                    "versatility_rating":{"item_id":2104,"raw_nominal_points":47}})
+            chosen=adapter.view(
+                stage_root=root,v221_candidate_path=path,build=BUILD,
+                selected_gem_item_ids=[2102,2103,2104,2105],
+                selected_source_gem_item_ids=[
+                    2100,2102,2103,2104,2105],
+                excluded_ordinary_item_id=2100)
+            self.assertEqual(
+                chosen["selected_gem_raw_points_by_id_unadmitted"],
+                {"2102":37,"2103":42,"2104":47,"2105":52})
+            self.assertEqual(sum(chosen[
+                "selected_gem_raw_points_by_id_unadmitted"].values()),178)
+            self.assertTrue(chosen["selected_gem_all_raw_points_known"])
+            self.assertTrue(chosen[
+                "selected_ordinary_gem_two_stat_budget_eligible_unadmitted"])
+            single=adapter.view(
+                stage_root=root,v221_candidate_path=path,build=BUILD,
+                selected_gem_item_ids=[2101],
+                selected_source_gem_item_ids=[2101])
+            self.assertTrue(single["selected_gem_all_raw_points_known"])
+            self.assertFalse(single[
+                "selected_ordinary_gem_two_stat_budget_eligible_unadmitted"])
+            self.assertEqual(single[
+                "selected_one_stat_gem_activation_only_item_ids"],[2101])
+            self.assertEqual(single[
+                "selected_gem_raw_points_by_id_unadmitted"],{"2101":25})
+            self.assertIsNone(single["J"])
+            self.assertIsNone(chosen["J"])
+            self.assertFalse(chosen["environment_ready"])
+            self.assertNotIn(2106,[d["item_id"] for d in first[
+                "four_stat_ordinary_best_observed_unadmitted"].values()])
             self.assertFalse(first[
                 "four_stat_effect_or_special_role_reverified"])
             self.assertIsNone(first["selected_special_gem_raw_effect_unadmitted"])
-            # The same strong nominal crit item would win WITHOUT the exact
-            # already-selected special-item exclusion.
+            # A single-stat gem never qualifies for the nominal J default,
+            # even if it has a much larger observed stat amount.
             unexcluded=adapter.view(
                 stage_root=root,v221_candidate_path=path,build=BUILD)
             self.assertEqual(unexcluded[
                 "four_stat_ordinary_best_observed_unadmitted"][
-                    "crit_rating"]["item_id"],2100)
+                    "crit_rating"]["item_id"],2105)
+            self.assertNotIn(2100,[x["item_id"] for x in unexcluded[
+                "four_stat_ordinary_best_observed_unadmitted"].values()])
             with self.assertRaisesRegex(
                     ValueError,"ORDINARY_EXCLUSION_SOURCE_BOUND_ID_REQUIRED"):
                 adapter.view(stage_root=root,v221_candidate_path=path,

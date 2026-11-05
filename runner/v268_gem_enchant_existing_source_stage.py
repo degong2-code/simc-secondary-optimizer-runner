@@ -215,17 +215,29 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
         if (type(vector) is not dict or set(vector)!=set(stat_types) or
             any(type(v) is not int or v<0 for v in vector.values())):
             continue
-        nonzero=[stat for stat in stat_types if vector[stat]>0]
-        if len(nonzero)!=1:
+        # Only an ordinary gem with EXACTLY TWO positive secondary stats
+        # may enter the future-farming J budget. A one-stat gem may still
+        # exist for special-gem activation, but is not a J candidate.
+        positive=[stat for stat in stat_types if vector[stat]>0]
+        if len(positive)!=2:
             continue
-        stat=nonzero[0]
+        # Categorize by the unique dominant secondary; retain both numbers.
+        largest=max(vector.values())
+        if largest<=0:
+            continue
+        leading=[stat for stat in stat_types if vector[stat]==largest]
+        if len(leading)!=1:
+            continue
+        stat=leading[0]
+        full_nominal=sum(vector.values())
         current=four_stat_best.get(stat)
         if (current is None or
-            (-vector[stat],item_id)<
+            (-full_nominal,item_id)<
             (-current["raw_nominal_points"],current["item_id"])):
             four_stat_best[stat]={
-                "item_id":item_id,"raw_nominal_points":vector[stat]}
-    # Only the best observed *nominal* point amount is compared.
+                "item_id":item_id,"raw_nominal_points":full_nominal}
+    # This is the largest observed *total nominal CHMV* per leading type,
+    # not a claim of quality certification, socket legality or SimC DPS.
     # v266 already traversed and verified the exact v221/CSV join. Limit the
     # downstream projection to actually placed gems, not the whole item DB.
     selected={}
@@ -250,6 +262,21 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
             else:
                 selected[str(item_id)]=sum(vector.values())
                 selected_vectors[str(item_id)]=dict(vector)
+    # Raw points are diagnostic. Only a two-stat ordinary gem is eligible
+    # for J. This does NOT prevent an independently selected one-stat gem
+    # from occupying a socket for special-gem activation in SimC.
+    dual_stat_budget_eligibility={}
+    if selected_gem_item_ids is not None:
+        for item_id in sorted(set(selected_gem_item_ids)):
+            row=by_id.get(item_id)
+            vector=(row.get("raw_static_points_candidate")
+                    if type(row) is dict else None)
+            dual_stat_budget_eligibility[str(item_id)]=(
+                type(vector) is dict and set(vector)==set(stat_types)
+                and sum(type(n) is int and n>0
+                        for n in vector.values())==2
+                and all(type(n) is int and n>=0
+                        for n in vector.values()))
     # The same sealed v266 record also describes the mandatory special gem.
     # It may contribute fixed CHMV, or it may have an unresolved/nonstatic
     # effect. Neither case may be silently interpreted as zero for final J.
@@ -332,6 +359,21 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
         "selected_gem_all_raw_points_known":(
             selected_gem_item_ids is not None and not unresolved and
             bool(selected_gem_item_ids)),
+        "selected_ordinary_gem_two_stat_budget_eligible_unadmitted":(
+            None if selected_gem_item_ids is None else
+            bool(dual_stat_budget_eligibility) and
+            all(dual_stat_budget_eligibility.values())),
+        "selected_ordinary_gem_two_stat_by_id_unadmitted":
+            dual_stat_budget_eligibility,
+        "selected_one_stat_gem_activation_only_item_ids":(
+            [int(item_id) for item_id,valid in
+             dual_stat_budget_eligibility.items()
+             if not valid and
+             type(by_id.get(int(item_id))) is dict
+             and type(by_id[int(item_id)].get(
+                 "raw_static_points_candidate")) is dict
+             and sum(n>0 for n in by_id[int(item_id)][
+                 "raw_static_points_candidate"].values())==1]),
         "selected_gem_raw_points_not_native_verified":True,
         "selected_gem_raw_points_not_quality_or_socket_verified":True,
         "raw_static_candidate_count":result["raw_static_candidate_count"],

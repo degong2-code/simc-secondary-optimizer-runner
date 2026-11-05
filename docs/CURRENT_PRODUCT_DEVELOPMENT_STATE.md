@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FP 보석 +16/+7 후보 보정:** [노트](development/notes/2026-11-06_p3-fp-dual-stat-ordinary-gem-source.md). 기존 v266 동일 빌드 봉인 정적 4벡터를 재사용하고 v268 일반보석 4종 후보를 **서로 다른 2개 2차스탯을 가진 경우로 제한**, 주 스탯은 유일 최대 스탯, J는 2개 명목 rating 합. 단일 스탯 보석은 효과 활성화용 장착 가능하더라도 J 예산에서 제외; v216 내부 source-only J에도 동일 조건 적용. 동률로 종류가 모호한 후보는 제외, 기존 선택 특수보석은 배제하되 효과 식별·Native 추가 없음. 초기 회귀 증거는 새 commit Actions에서 별도 확인, 실제 시즌 J/G/F/O·READY/T1 미완료. main·공식 승격 변경 없음.
+>
+
 > **2026-11-06 P3-FO 검증 영수증 확정 (제품 코드 `e42c3dc0ec`):** [P3-FO focused #42070530121](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42070530121) **DEV_LEDGER_PASS·286/286 PASS**, [v113 #42070530115](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42070530115) Ubuntu·Windows **각 218 PASS**, [v212 #42070530078](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42070530078) 양 OS **448 PASS/4 SKIP**, [v182 #42070530293](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42070530293) SUCCESS (Windows **94+91+2 PASS**), v181/v169/v167/v177/v180 SUCCESS (v180 Native optional SKIPPED). 검증 범위는 오프라인/기존 계약·웹 API/UI. 실제 새 시즌 소켓/보석 ID·G/J/F/O·정식 v212 READY/T1은 미증명이며 특수보석 효과 별도 Native 검증 없음. 새로운 문서 갱신은 코드 승격이 아니며 main·immutable·Project UI/Work OS를 변경하지 않음.
 >
 
