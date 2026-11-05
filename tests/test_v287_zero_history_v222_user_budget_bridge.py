@@ -1354,14 +1354,17 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             "environment_ready":False}
         original["receipt_sha256"]=build.simc_source.digest(
             build.simc_source.canonical(original).encode("utf8"))
-        path=self.root/"v232_original.json"
+        path=self.root/"source"/"v232_original.json"
+        path.parent.mkdir()
         path.write_text(json.dumps(original),encoding="utf8")
         collected={"expected_game_build":self.catalog["game_build"],
                    "fresh_one_spec_simc_representative":{
                        "status":"FRESH_ONE_SPEC_SIMC_G_SOURCE_CANDIDATE_PENDING_NATIVE",
                        "candidate_path":str(path),
                        "source_stage":{"status":"REUSED_VERIFIED",
-                                       "receipt_sha256":"f"*64},
+                                       "receipt_sha256":"f"*64,
+                                       "output_paths":{
+                                           "candidate":"source/v232_original.json"}},
                        "selected_slot_count":3,
                        "intrinsic_socket_total_source_only":3,
                        "intrinsic_socket_counts_by_selected_slot_source_only":{

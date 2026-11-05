@@ -4008,7 +4008,12 @@ def _fresh_default_intrinsic_gem_layout_from_source(*, collected,
              stage["receipt_sha256"]) is not None,
          "V216_DEFAULT_GEM_ORIGINAL_V232_SEALED_SOURCE_REQUIRED")
     path=pathlib.Path(source.get("candidate_path") or "")
-    need(path.is_file() and not path.is_symlink() and
+    declared=(stage.get("output_paths") or {}).get("candidate")
+    need(type(declared) is str and
+         declared.startswith("source/") and
+         path.is_file() and not path.is_symlink() and
+         path.parent.name=="source" and
+         path.resolve()==(path.parent.parent/declared).resolve() and
          0<path.stat().st_size<=10_000_000,
          "V216_DEFAULT_GEM_ORIGINAL_V232_CANDIDATE_REQUIRED")
     original=json.loads(path.read_text("utf8"))
