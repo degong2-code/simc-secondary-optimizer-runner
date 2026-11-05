@@ -1359,7 +1359,7 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             "rating":2850,"source_verification":"EXACT_NATIVE",
             "standardization":season.standardize_representative_G(
                 observed_G_total=2847,target_ilevel=334,
-                source_observation_sha256:
+                source_observation_sha256=
                     data["components"]["G"]["source_sha256"])}
         original_J={**data["components"]["J"],
                     "source_verification":"VALID_SAME_SEASON_SOURCE"}
