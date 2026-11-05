@@ -1249,6 +1249,10 @@ def _season_settings_from_v216(*, compilation, numeric_inputs,
                 if type(selected_quality) is dict and
                 selected_quality.get("quality_source_authenticated") is True
                 else None),
+            "gem_policy_A_source_and_quality_unadmitted":(
+                source_relation.get(
+                    "gem_policy_A_source_and_quality_unadmitted")
+                if type(source_relation) is dict else None),
             "gem_highest_quality_verified_here":False,
             "source_minimum_ilevel_for_selected_gems_observed_only":(
                 all(row["minimum_ilevel"]<=calc["target_ilevel"]

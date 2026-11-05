@@ -468,6 +468,122 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 simc_revision=self.catalog["simc_revision"],
                 selected_item_ids=selected)
 
+    def test_p3_ek_gem_effect_quality_reuses_original_v220_without_ui(self):
+        import v098_target_user_scenario_bootstrap as boot
+        layout=self.source_selected_future_gems()
+        selected=[311001,311002,311003]
+        properties=[
+            {"item_id":item_id,
+             "gem_property_id":item_id-300000,
+             "enchant_id":991 if item_id!=311003 else 992,
+             "color_mask":2 if item_id!=311003 else 1,
+             "minimum_ilevel":300 if item_id!=311003 else 345,
+             "expansion_id":12}
+            for item_id in selected]
+        vec={"crit_rating":20,"haste_rating":0,
+             "mastery_rating":0,"versatility_rating":0}
+        raw={"status":"ENCHANT_RAW_POINTS_SOURCE_ONLY_J_NOT_APPROVED",
+             "enchant_source_sha256":"4"*64,
+             "selected_gem_raw_points_by_id_unadmitted":{
+                 "311001":20,"311002":20},
+             "selected_gem_raw_CHMV_vectors_by_id_unadmitted":{
+                 "311001":dict(vec),"311002":dict(vec)},
+             "selected_gem_all_raw_points_known":True,
+             "selected_gem_v221_item_ids_unadmitted":selected,
+             "selected_gem_v221_same_build_items_all_present":True,
+             "selected_gem_v221_source_properties_complete":True,
+             "selected_gem_v221_source_properties_unadmitted":properties,
+             "J":None,"environment_ready":False}
+        quality_rows=[
+            {"item_id":item_id,"quality":3,"crafting_quality":rank,
+             "class_id":3,"subclass_id":0}
+            for item_id,rank in zip(selected,(1,3,2))]
+        quality={"status":"PINNED_SIMC_GEM_QUALITY_SOURCE_ONLY_UNADMITTED",
+                 "game_build":self.catalog["game_build"],
+                 "simc_revision":self.catalog["simc_revision"],
+                 "selected_item_ids":selected,
+                 "selected_item_quality_unadmitted":quality_rows,
+                 "quality_source_authenticated":True,
+                 "highest_quality_selection_verified":False}
+        with mock.patch.object(
+                build,"_fresh_selected_gem_simc_quality_stage",
+                return_value=quality):
+            pre=self.preflight_with_sealed_gem_raw(
+                layout,raw,pinned_seed=self.root)
+        source=pre["selected_v221_gem_item_relation_unadmitted"]
+        verdict=source["gem_policy_A_source_and_quality_unadmitted"]
+        self.assertEqual(verdict["status"],
+                         "SELECTED_GEM_SOURCE_RELATION_AND_QUALITY_UNADMITTED")
+        self.assertEqual(len(verdict["per_item_policy_A_source_only"]),3)
+        self.assertEqual(verdict["automatically_eligible"],0)
+        self.assertIsNone(pre["J"])
+        for option in verdict["per_item_policy_A_source_only"]:
+            self.assertEqual(option["decision"]["status"],
+                             "PENDING_EXACT_EVIDENCE")
+            self.assertNotIn(
+                "EVIDENCE_MISSING:source_relation",
+                option["decision"]["missing"])
+            self.assertFalse(option["user_selectable"])
+        groups=verdict["quality_source_groups_unadmitted"]
+        self.assertEqual(len(groups),1)
+        self.assertEqual(groups[0]["observed_item_ids"],
+                         [311002,311001])
+        self.assertEqual(groups[0][
+            "highest_observed_quality_item_id_unadmitted"],311002)
+        self.assertTrue(groups[0][
+            "same_raw_four_stat_vector_source_only"])
+        self.assertFalse(groups[0][
+            "actual_same_effect_and_use_conditions_verified"])
+        self.assertFalse(groups[0]["all_available_quality_ranks_verified"])
+        self.assertFalse(groups[0]["quality_filtered_user_options"])
+        self.assertFalse(verdict["environment_ready"])
+        self.assertEqual(pre["physical_gem_J_arithmetic_unadmitted"][
+            "J_candidate_unadmitted"],60)
+        joined={"physical_gem_layout_unadmitted":layout,
+                "physical_gem_J_arithmetic_unadmitted":
+                    pre["physical_gem_J_arithmetic_unadmitted"],
+                "selected_v221_gem_item_relation_unadmitted":source}
+        numeric={"v216_numeric_preview":{"calculation":{
+                     "J":60,"F":165,"game_build":self.catalog["game_build"],
+                     "target_ilevel":334}},
+                 "flask":{"simc_input_token":"flask_of_the_shattered_sun_2",
+                     "static_CHMV_vector":{
+                         "crit_rating":165,"haste_rating":0,
+                         "mastery_rating":0,"versatility_rating":0}}}
+        derived=boot._season_settings_from_v216(
+            compilation=joined,numeric_inputs=numeric,need=boot.need)
+        self.assertEqual(
+            derived["gem_policy_A_source_and_quality_unadmitted"],verdict)
+        self.assertFalse(derived["gem_highest_quality_verified_here"])
+        self.assertFalse(derived["game_socket_legality_authenticated_here"])
+        # A different stat vector or enchant ID must never be merged even
+        # when quality ranks are ordered. No quality-based UI publication.
+        mismatched={**raw,"selected_gem_raw_CHMV_vectors_by_id_unadmitted":{
+            "311001":dict(vec),
+            "311002":{**vec,"crit_rating":0,"haste_rating":20}}}
+        with mock.patch.object(
+                build,"_fresh_selected_gem_simc_quality_stage",
+                return_value=quality):
+            changed=self.preflight_with_sealed_gem_raw(
+                layout,mismatched,pinned_seed=self.root)
+        no_merge=changed["selected_v221_gem_item_relation_unadmitted"][
+            "gem_policy_A_source_and_quality_unadmitted"][
+                "quality_source_groups_unadmitted"][0]
+        self.assertFalse(no_merge["same_raw_four_stat_vector_source_only"])
+        self.assertIsNone(no_merge[
+            "highest_observed_quality_item_id_unadmitted"])
+        different={**raw,"selected_gem_v221_source_properties_unadmitted":
+            [properties[0],{**properties[1],"enchant_id":993},
+             properties[2]]}
+        with mock.patch.object(
+                build,"_fresh_selected_gem_simc_quality_stage",
+                return_value=quality):
+            independent=self.preflight_with_sealed_gem_raw(
+                layout,different,pinned_seed=self.root)
+        separated=independent["selected_v221_gem_item_relation_unadmitted"][
+            "gem_policy_A_source_and_quality_unadmitted"]
+        self.assertEqual(separated["quality_source_groups_unadmitted"],[])
+
     def test_new_season_special_v098_source_settings_require_bound_v221_ids(self):
         import v098_target_user_scenario_bootstrap as boot
         layout=self.source_selected_future_gems()

@@ -133,6 +133,7 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
     # v266 already traversed and verified the exact v221/CSV join. Limit the
     # downstream projection to actually placed gems, not the whole item DB.
     selected={}
+    selected_vectors={}
     unresolved=[]
     if selected_gem_item_ids is not None:
         by_id={row["item_id"]:row for row in result["records"]}
@@ -152,6 +153,7 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
                 unresolved.append(item_id)
             else:
                 selected[str(item_id)]=sum(vector.values())
+                selected_vectors[str(item_id)]=dict(vector)
     source_membership={}
     if selected_source_gem_item_ids is not None:
         # The v221 candidate and same-build source relation were already
@@ -195,6 +197,7 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
         "status":result["status"],
         **source_membership,
         "selected_gem_raw_points_by_id_unadmitted":selected,
+        "selected_gem_raw_CHMV_vectors_by_id_unadmitted":selected_vectors,
         "selected_gem_unresolved_item_ids":unresolved,
         "selected_gem_all_raw_points_known":(
             selected_gem_item_ids is not None and not unresolved and

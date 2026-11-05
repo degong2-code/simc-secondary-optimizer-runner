@@ -125,6 +125,10 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
                                 selected_gem_item_ids=[2001,2001,2002,2004])
             self.assertEqual(status["selected_gem_raw_points_by_id_unadmitted"],
                              {"2001":25})
+            self.assertEqual(
+                status["selected_gem_raw_CHMV_vectors_by_id_unadmitted"],
+                {"2001":{"crit_rating":25,"haste_rating":0,
+                         "mastery_rating":0,"versatility_rating":0}})
             self.assertEqual(status["selected_gem_unresolved_item_ids"],
                              [2002,2004])
             self.assertFalse(status["selected_gem_all_raw_points_known"])

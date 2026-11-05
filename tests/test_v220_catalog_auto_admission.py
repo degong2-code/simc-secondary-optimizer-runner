@@ -96,6 +96,37 @@ class AutoAdmissionTests(unittest.TestCase):
             proof["identity"]=identity
         self.assertTrue(policy.decide(gem,receipts)["eligible"])
 
+    def test_same_build_gem_property_uses_original_v220_source_family_only(self):
+        src={"game_build":"12.1.5.70575",
+             "simc_revision":"a"*40,
+             "manifest_sha256":"b"*64}
+        prop={"item_id":311001,"gem_property_id":11001,
+              "enchant_id":9801,"color_mask":2,
+              "minimum_ilevel":300,"expansion_id":12}
+        gem=policy.candidate_from_source_gem(src,prop)
+        self.assertEqual(gem["exact_id"],311001)
+        self.assertEqual(gem["simc_token"],"gem_id=311001")
+        self.assertEqual(gem["kind"],"gem")
+        self.assertEqual(gem["slot_status"],
+                         "PENDING_GAME_SOCKET_APPLICABILITY")
+        ident=policy._identity(gem)
+        proof={"source_relation":{"identity":ident,
+                "status":"EXACT_SOURCE_RELATION_VERIFIED",
+                "evidence_sha256":"c"*64}}
+        decision=policy.decide(gem,proof)
+        self.assertFalse(decision["eligible"])
+        self.assertNotIn("EVIDENCE_MISSING:source_relation",
+                         decision["missing"])
+        for field in ("simc_input","product_input","chmv_budget"):
+            self.assertIn("EVIDENCE_MISSING:"+field,decision["missing"])
+        self.assertIn("EXACT_PHYSICAL_SLOT_OR_HAND_RELATION_NOT_VERIFIED",
+                      decision["missing"])
+        for bad in ({**prop,"gem_property_id":0},
+                    {**prop,"item_id":-1}):
+            with self.assertRaisesRegex(ValueError,
+                                        "GEM_PROPERTY_FIELDS_INVALID"):
+                policy.candidate_from_source_gem(src,bad)
+
     def test_preview_source_catalog_never_auto_promotes_without_proofs(self):
         src={"game_build":"12.1.5.70575","simc_revision":"a"*40,
              "manifest_sha256":"b"*64}

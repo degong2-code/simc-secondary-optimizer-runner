@@ -127,6 +127,38 @@ def candidate_from_source_enchant(source_catalog, row):
             "catalog_sha256":source_catalog["manifest_sha256"]}
 
 
+def candidate_from_source_gem(source_catalog, row):
+    """Physical v221 gem ID as existing Policy A input, NOT game approval.
+
+    SimC equipment gem_id syntax is the profile input proposal; v220 decides
+    it remains pending until actual socket, SimC acceptance and J proofs.
+    """
+    if type(source_catalog) is not dict or type(row) is not dict:
+        raise ValueError("AUTO_ADMISSION_GEM_SOURCE_REQUIRED")
+    if (type(row.get("item_id")) is not int or row["item_id"]<=0 or
+        type(row.get("gem_property_id")) is not int or
+        row["gem_property_id"]<=0 or
+        type(row.get("enchant_id")) is not int or
+        row["enchant_id"]<0 or
+        type(row.get("color_mask")) is not int or
+        row["color_mask"]<0 or
+        type(row.get("minimum_ilevel")) is not int or
+        row["minimum_ilevel"]<0 or
+        type(row.get("expansion_id")) is not int or
+        row["expansion_id"]<0):
+        raise ValueError("AUTO_ADMISSION_GEM_PROPERTY_FIELDS_INVALID")
+    candidate={
+        "kind":"gem","exact_id":row["item_id"],
+        "simc_token":"gem_id="+str(row["item_id"]),
+        "slot":"GEM_SOCKET_SOURCE_UNRESOLVED",
+        "slot_status":"PENDING_GAME_SOCKET_APPLICABILITY",
+        "game_build":source_catalog.get("game_build"),
+        "simc_revision":source_catalog.get("simc_revision"),
+        "catalog_sha256":source_catalog.get("manifest_sha256")}
+    _identity(candidate)
+    return candidate
+
+
 def preview_enchant_catalog(source_catalog, items, *,
                             trusted_internal_receipts_by_id=None):
     """Reuse decide() per exact item, without publishing a user choice.

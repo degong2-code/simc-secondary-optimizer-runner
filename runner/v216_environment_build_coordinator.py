@@ -435,6 +435,131 @@ def _fresh_selected_gem_simc_quality_stage(*, stage_root, seed_directory,
             "quality_source_authenticated":True}
 
 
+def _selected_gem_quality_policy_A_preview(*, source_catalog,
+                                           source_item_link, gem_enchant,
+                                           ordinary_gem_ids):
+    """Existing v220 source_relation plus selected same-enchant/quality facts.
+
+    Only already-sealed v221/v266 and v230 observations are joined. An
+    identical enchant ID and raw vector are same *source* evidence, not full
+    item conditions, usable socket proof, highest available quality or J.
+    Every gem remains unadmitted until the existing Policy A families pass.
+    """
+    properties=source_item_link.get(
+        "selected_gem_property_records_unadmitted")
+    if properties is None:
+        return {"status":"SELECTED_GEM_PROPERTY_SOURCE_PENDING",
+                "per_item_policy_A_source_only":[],
+                "quality_source_groups_unadmitted":[],
+                "automatically_eligible":0,
+                "user_selectable":False,"environment_ready":False}
+    need(type(properties) is list and
+         len(properties)==len(source_item_link["selected_item_ids"]) and
+         [r.get("item_id") for r in properties]==
+             source_item_link["selected_item_ids"],
+         "V216_GEM_POLICY_A_PROPERTIES_IDENTITY_DRIFT")
+    ordinary=set(ordinary_gem_ids)
+    vectors=gem_enchant.get(
+        "selected_gem_raw_CHMV_vectors_by_id_unadmitted") or {}
+    need(type(vectors) is dict and len(vectors)<=64 and
+         set(vectors)<=set(map(str,ordinary)),
+         "V216_GEM_RAW_CHMV_VECTOR_SCOPE_DRIFT")
+    quality=source_item_link.get(
+        "selected_simc_gem_quality_source_unadmitted")
+    metadata={}
+    if type(quality) is dict and quality.get(
+            "quality_source_authenticated") is True:
+        need(quality.get("game_build")==source_catalog["game_build"]
+             and quality.get("simc_revision")==source_catalog["simc_revision"]
+             and quality.get("selected_item_ids")==
+                 source_item_link["selected_item_ids"],
+             "V216_GEM_QUALITY_SOURCE_BUILD_DRIFT")
+        metadata={r["item_id"]:r
+                  for r in quality["selected_item_quality_unadmitted"]}
+        need(len(metadata)==len(properties),
+             "V216_GEM_QUALITY_SOURCE_ITEM_COUNT_DRIFT")
+    per_item=[]
+    eligible_count=0
+    source_groups={}
+    for prop in properties:
+        item_id=prop["item_id"]
+        candidate=auto_admission.candidate_from_source_gem(
+            source_catalog,prop)
+        identity=auto_admission._identity(candidate)
+        evidence={
+            "v221_stage_receipt_sha256":
+                source_item_link["v221_stage_receipt_sha256"],
+            "v266_enchant_source_sha256":
+                source_item_link["enchant_source_sha256"],
+            "v221_exact_gem_property":prop}
+        proof={"source_relation":{
+            "identity":identity,
+            "status":"EXACT_SOURCE_RELATION_VERIFIED",
+            "evidence_sha256":digest(canonical(evidence).encode("utf8"))}}
+        decision=auto_admission.decide(candidate,proof)
+        eligible_count+=int(decision["eligible"])
+        per_item.append({
+            "item_id":item_id,"candidate":candidate,
+            "source_relation_evidence_sha256":
+                proof["source_relation"]["evidence_sha256"],
+            "decision":decision,"user_selectable":False})
+        if item_id not in ordinary or item_id not in metadata:
+            continue
+        row=metadata[item_id]
+        # Same DB2 enchant and documented use-scope fields, with identical
+        # existing raw 4-stat vectors only. No effect-name/token heuristics.
+        key=(prop["enchant_id"],prop["color_mask"],
+             prop["minimum_ilevel"],prop["expansion_id"],
+             row["quality"],row["class_id"],row["subclass_id"])
+        if prop["enchant_id"]>0 and prop["color_mask"]>0:
+            source_groups.setdefault(key,[]).append({
+                "item_id":item_id,
+                "crafting_quality":row["crafting_quality"],
+                "raw_CHMV_vector_unadmitted":vectors.get(str(item_id))})
+    groups=[]
+    for key,items in sorted(source_groups.items()):
+        if len(items)<2:
+            continue
+        ranked=sorted(items,key=lambda x:(
+            -x["crafting_quality"],x["item_id"]))
+        raw=[x["raw_CHMV_vector_unadmitted"] for x in ranked]
+        numeric=(all(type(x) is dict and
+                     set(x)==set(season_budget_contract.STATS) and
+                     all(type(v) is int and v>=0 for v in x.values())
+                     and any(x.values()) for x in raw))
+        same_vector=(numeric and all(x==raw[0] for x in raw[1:]))
+        unique_top=(len(ranked)>=2 and
+                    ranked[0]["crafting_quality"]>
+                    ranked[1]["crafting_quality"])
+        observed_top=(ranked[0]["item_id"]
+                      if same_vector and unique_top and
+                      ranked[0]["crafting_quality"]>0 else None)
+        groups.append({
+            "enchant_id":key[0],
+            "same_v221_color_minimum_ilevel_expansion_and_v230_class":True,
+            "observed_item_ids":[r["item_id"] for r in ranked],
+            "observed_crafting_quality_ranks":[
+                r["crafting_quality"] for r in ranked],
+            "same_raw_four_stat_vector_source_only":bool(same_vector),
+            "highest_observed_quality_item_id_unadmitted":observed_top,
+            "actual_same_effect_and_use_conditions_verified":False,
+            "all_available_quality_ranks_verified":False,
+            "quality_filtered_user_options":False})
+    return {
+        "schema":"v216_selected_gem_quality_policy_A_preview_v1",
+        "status":"SELECTED_GEM_SOURCE_RELATION_AND_QUALITY_UNADMITTED",
+        "game_build":source_catalog["game_build"],
+        "simc_revision":source_catalog["simc_revision"],
+        "per_item_policy_A_source_only":per_item,
+        "quality_source_groups_unadmitted":groups,
+        "automatically_eligible":eligible_count,
+        "source_relation_only":True,
+        "highest_quality_verified":False,
+        "actual_game_socket_verified":False,
+        "user_selectable":False,"environment_ready":False,
+        "native_calls":0,"network_calls":0}
+
+
 def _reuse_observed_G_native_receipts(*, catalog, receipt_paths_by_ilevel):
     """Read v234's already-computed G once, no Native rerun or new verifier.
 
@@ -928,6 +1053,11 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
             "special_class_and_quality_verified":False,
             "game_socket_applicability_verified":False,
             "simc_effective_J_verified":False}
+        source_item_link["gem_policy_A_source_and_quality_unadmitted"]=(
+            _selected_gem_quality_policy_A_preview(
+                source_catalog=source,source_item_link=source_item_link,
+                gem_enchant=gem_enchant,
+                ordinary_gem_ids=gem_layout_receipt["ordinary_gem_ids"]))
     # A staged physical gem layout is not evidence of legal game sockets.
     need(gem_layout_receipt is not None or gem_rating_by_id is None,
          "V216_GEM_LAYOUT_REQUIRED_BEFORE_RATING_MATCH")
