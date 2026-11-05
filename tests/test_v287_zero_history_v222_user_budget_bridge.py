@@ -2086,7 +2086,7 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                     "V216_AUTO_F_NO_OIL_EXPLICIT_SCOPE_REQUIRED"):
                     build.build_environment(
                         sessions_root=self.root/"sessions",
-                        session_folder=None,user=None,binary=None,
+                        session_folder=None,user=None,binary="TEST_NOT_EXECUTED",
                         revision=None,static_cache=None,
                         source_catalog_path=None,bootstrap_result=None,
                         fresh_collection_inputs={
