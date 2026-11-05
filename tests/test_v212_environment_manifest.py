@@ -121,6 +121,39 @@ class FreshEnvironmentSourceStageTests(unittest.TestCase):
             self.assertNotEqual(with_numbers["manifest_sha256"],
                                 result["manifest_sha256"])
             self.assertTrue(p.verify_fresh_source_environment(with_numbers))
+            reference_ids={key:value for key,value in identities.items()
+                           if key!="G_native_json2_sha256"}
+            reference_ids["G_same_season_reference_source_sha256"]=(
+                identities["G_native_json2_sha256"])
+            reference=p.compile_fresh_source_environment(
+                source_catalog=catalog,source_artifact_sha256=artifact_sha,
+                preflight=preflight,compilation=compilation,target_ilevel=334,
+                selected_numeric={**numeric,
+                    "numeric_receipt_identities":reference_ids,
+                    "oil_zero_is_preview_assumption_only":True})
+            self.assertFalse(reference["environment_ready"])
+            self.assertFalse(reference["environment_installed"])
+            self.assertEqual(reference["numeric_budget_preview_unadmitted"][
+                "exact_source_receipt_identities_unadmitted"],reference_ids)
+            self.assertTrue(p.verify_fresh_source_environment(reference))
+            self.assertNotEqual(
+                reference["manifest_sha256"],with_numbers["manifest_sha256"])
+            for invalid in (
+                {**identities,**reference_ids},
+                {key:value for key,value in identities.items()
+                 if key!="G_native_json2_sha256"},
+                {**reference_ids,"G_same_season_reference_source_sha256":
+                 "not_a_sha"},
+            ):
+                with self.subTest(invalid=invalid),self.assertRaisesRegex(
+                        p.EnvironmentBlocked,"RECEIPT_IDENTITIES_REQUIRED"):
+                    p.compile_fresh_source_environment(
+                        source_catalog=catalog,
+                        source_artifact_sha256=artifact_sha,
+                        preflight=preflight,compilation=compilation,
+                        target_ilevel=334,
+                        selected_numeric={**numeric,
+                            "numeric_receipt_identities":invalid})
             # Different exact item/Native proof -> new environment unit.
             new_ids=dict(identities,F_selected_item_native_sha256="5"*64)
             changed=p.compile_fresh_source_environment(

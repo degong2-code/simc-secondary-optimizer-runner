@@ -155,11 +155,16 @@ def compile_fresh_source_environment(*, source_catalog, source_artifact_sha256,
                  calc["final_T"],
              "FRESH_ENVIRONMENT_ORIGINAL_V222_ARITHMETIC_REQUIRED")
         identities=selected_numeric.get("numeric_receipt_identities")
-        need(type(identities) is dict and set(identities)=={
-                 "G_native_json2_sha256",
-                 "J_physical_layout_rating_sha256",
-                 "F_selected_item_native_sha256",
-                 "O_selected_hands_native_mask_sha256"} and
+        # Native G and an already-scoped v222 G reference are alternative
+        # evidence routes, not interchangeable measurements. Exactly one.
+        g_sources={"G_native_json2_sha256",
+                   "G_same_season_reference_source_sha256"}
+        common={"J_physical_layout_rating_sha256",
+                "F_selected_item_native_sha256",
+                "O_selected_hands_native_mask_sha256"}
+        present=(set(identities) if type(identities) is dict else set())
+        need(len(present & g_sources)==1 and
+             present==common | (present & g_sources) and
              all(valid_sha(value) for value in identities.values()),
              "FRESH_ENVIRONMENT_GJFO_ORIGINAL_RECEIPT_IDENTITIES_REQUIRED")
         selection=selected_numeric.get("selected_physical_items")
