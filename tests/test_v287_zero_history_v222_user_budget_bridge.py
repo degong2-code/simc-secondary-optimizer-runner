@@ -1307,6 +1307,107 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                     "verified_install_input_provider":{"verified":True}})
         self.assertFalse((self.root/"sessions").exists())
 
+    def test_p3_fb_selected_jf_observed_quality_scope_is_not_admission(self):
+        # All quality comparisons are original selected-source projections,
+        # not a proof that every season quality or use condition is known.
+        layout=self.source_selected_future_gems()
+        raw={"status":"ENCHANT_RAW_POINTS_SOURCE_ONLY_J_NOT_APPROVED",
+             "enchant_source_sha256":"4"*64,
+             "selected_gem_raw_points_by_id_unadmitted":{
+                 "311001":20,"311002":30},
+             "selected_gem_all_raw_points_known":True,
+             "selected_gem_v221_item_ids_unadmitted":[311001,311002,311003],
+             "selected_gem_v221_same_build_items_all_present":True,
+             "J":None,"environment_ready":False}
+        pre=self.preflight_with_sealed_gem_raw(layout,raw)
+        link=pre["selected_v221_gem_item_relation_unadmitted"]
+        selected=[311001,311002,311003]
+        quality_rows=[
+            {"item_id":i,"crafting_quality":rank}
+            for i,rank in zip(selected,(1,3,2))]
+        pre["selected_v221_gem_item_relation_unadmitted"]={
+            **link,
+            "selected_simc_gem_quality_source_unadmitted":{
+                "quality_source_authenticated":True,
+                "v230_stage_receipt_sha256":"c"*64,
+                "game_build":self.catalog["game_build"],
+                "simc_revision":self.catalog["simc_revision"],
+                "selected_item_ids":selected,
+                "selected_item_quality_unadmitted":quality_rows},
+            "gem_policy_A_source_and_quality_unadmitted":{
+                "schema":"v216_selected_gem_quality_policy_A_preview_v1",
+                "game_build":self.catalog["game_build"],
+                "simc_revision":self.catalog["simc_revision"],
+                "quality_source_groups_unadmitted":[{
+                    "observed_item_ids":[311002,311001],
+                    "observed_crafting_quality_ranks":[3,1],
+                    "highest_observed_quality_item_id_unadmitted":311002,
+                    "same_raw_four_stat_vector_source_only":True,
+                    "actual_same_effect_and_use_conditions_verified":False,
+                    "all_available_quality_ranks_verified":False}]}}
+        numeric,quality=self.selected_physical_pair()
+        chosen={"flask_item_id":241326,"oil_item_ids_by_hand":{}}
+        linked=build._zero_history_selected_F_O_v222_reconcile(
+            selected=chosen,numeric=numeric,choices=quality,
+            existing_budget=None,budget_evidence=None)
+        compiled={"status":"FRESH_V191_V211_V213_COMPILED_UNADMITTED",
+                  "simc_revision":self.catalog["simc_revision"],
+                  "selected_physical_F_O_budget_link_unadmitted":linked,
+                  "observed_quality_weapon_choices_unadmitted":quality}
+        owner=build._fresh_source_owner_selected_J_F_numeric(
+            preflight=pre,compilation=compiled,
+            selected_physical_items=chosen)
+        result=build._fresh_source_owner_observed_J_F_quality(
+            preflight=pre,compilation=compiled,owner_numeric=owner)
+        self.assertEqual(result["status"],
+            "SELECTED_J_F_OBSERVED_QUALITY_BOUND_UNADMITTED")
+        self.assertEqual(result["J"][
+            "observed_crafting_quality_by_item_id"],{
+                "311001":1,"311002":3})
+        self.assertEqual(result["J"][
+            "same_enchant_quality_groups_source_only"][0][
+            "highest_observed_item_id_source_only"],311002)
+        self.assertEqual(result["J"]["v230_stage_receipt_sha256"],"c"*64)
+        self.assertEqual(result["F"]["selected_item_id"],241326)
+        self.assertTrue(result["F"][
+            "selected_is_highest_observed_source_only"])
+        self.assertEqual(result["F"][
+            "highest_observed_quality_item_id_unadmitted"],241326)
+        self.assertFalse(result["highest_available_quality_verified"])
+        self.assertFalse(result["same_effect_and_use_conditions_verified"])
+        self.assertFalse(result["environment_ready"])
+        self.assertEqual(result["new_native_calls"],0)
+        broken=copy.deepcopy(pre)
+        broken["selected_v221_gem_item_relation_unadmitted"][
+            "selected_simc_gem_quality_source_unadmitted"][
+                "selected_item_quality_unadmitted"][1]["crafting_quality"]=1
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_JF_QUALITY_ORIGINAL_V220_OBSERVED_RANK_DRIFT"):
+            build._fresh_source_owner_observed_J_F_quality(
+                preflight=broken,compilation=compiled,owner_numeric=owner)
+        damaged=copy.deepcopy(quality)
+        damaged["flask_quality_groups_observed_unadmitted"][0][
+            "observed_qualities"]=[1,1]
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_JF_QUALITY_SELECTED_F_ITEM_RANK_DRIFT"):
+            build._fresh_source_owner_observed_J_F_quality(
+                preflight=pre,
+                compilation={**compiled,
+                             "observed_quality_weapon_choices_unadmitted":
+                                 damaged},
+                owner_numeric=owner)
+        missing=build._fresh_source_owner_observed_J_F_quality(
+            preflight=pre,
+            compilation={**compiled,
+                         "observed_quality_weapon_choices_unadmitted":None},
+            owner_numeric=owner)
+        self.assertIsNone(missing["F"])
+        self.assertFalse(missing["environment_ready"])
+        self.assertIn("F_SELECTED_SIMC_NUMERIC_OR_QUALITY_SOURCE_PENDING",
+                      missing["missing"])
+
     def test_p3_fa_original_J_F_source_owner_numeric_and_provider_conflict(self):
         # Reuse v266 sealed ordinary-item points and v281/v278 same-item F.
         # No real Native, implicit admission, or new effect engine.

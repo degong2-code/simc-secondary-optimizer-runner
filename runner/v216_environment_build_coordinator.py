@@ -4145,6 +4145,161 @@ def _fresh_source_owner_selected_J_F_numeric(*, preflight, compilation,
     return out
 
 
+
+def _fresh_source_owner_observed_J_F_quality(*, preflight, compilation,
+                                             owner_numeric):
+    """Expose original quality comparisons without certifying availability.
+
+    v230 supplies only the PINNED selected gem rows; v216's earlier
+    v221/v266 quality comparison owns same raw vector/source joins. v281/v278
+    supplies only observed flask ranks. Neither proves the exhaustive quality
+    inventory or same-effects/use conditions, so no v222 component or v220
+    receipt is generated here. No Native, DB scan or independent Gate.
+    """
+    result={
+        "schema":"v216_original_selected_J_F_quality_observations_v1",
+        "status":"SELECTED_J_F_QUALITY_SCOPE_PENDING",
+        "J":None,"F":None,
+        "missing":[],
+        "highest_available_quality_verified":False,
+        "same_effect_and_use_conditions_verified":False,
+        "official_budget_admitted":False,
+        "environment_ready":False,
+        "new_native_calls":0,"network_calls":0}
+    if type(owner_numeric) is not dict or (
+            type(preflight) is not dict or type(compilation) is not dict):
+        result["missing"].append("ORIGINAL_J_F_NUMERIC_AND_SEASON_SOURCE_PENDING")
+        return result
+    j=owner_numeric.get("J")
+    link=preflight.get("selected_v221_gem_item_relation_unadmitted")
+    if type(j) is dict and type(link) is dict:
+        original=link.get("selected_simc_gem_quality_source_unadmitted")
+        comparison=link.get("gem_policy_A_source_and_quality_unadmitted")
+        if (type(original) is dict and
+                original.get("quality_source_authenticated") is True and
+                type(original.get("v230_stage_receipt_sha256")) is str and
+                season_budget_contract.SHA.fullmatch(
+                    original["v230_stage_receipt_sha256"]) is not None and
+                type(comparison) is dict and
+                comparison.get("schema")==
+                    "v216_selected_gem_quality_policy_A_preview_v1"):
+            all_ids=link["selected_item_ids"]
+            rows=original.get("selected_item_quality_unadmitted")
+            need(original.get("game_build")==preflight.get("game_build") and
+                 original.get("simc_revision")==preflight.get("simc_revision") and
+                 original.get("selected_item_ids")==all_ids and
+                 type(rows) is list and len(rows)==len(all_ids) and
+                 [r.get("item_id") for r in rows]==all_ids and
+                 all(type(r.get("crafting_quality")) is int and
+                     r["crafting_quality"]>=0 for r in rows) and
+                 comparison.get("game_build")==preflight.get("game_build") and
+                 comparison.get("simc_revision")==preflight.get("simc_revision"),
+                 "V216_JF_QUALITY_ORIGINAL_V230_IDENTITY_DRIFT")
+            by_id={r["item_id"]:r["crafting_quality"] for r in rows}
+            ordinary=j["ordinary_gem_item_ids"]
+            groups=comparison.get("quality_source_groups_unadmitted")
+            need(type(groups) is list,
+                 "V216_JF_QUALITY_ORIGINAL_V220_GROUPS_REQUIRED")
+            bounded=[]
+            for group in groups:
+                ids=group.get("observed_item_ids")
+                ranks=group.get("observed_crafting_quality_ranks")
+                need(type(ids) is list and type(ranks) is list and
+                     len(ids)==len(ranks) and len(set(ids))==len(ids) and
+                     all(i in by_id and by_id[i]==q
+                         for i,q in zip(ids,ranks)) and
+                     group.get("actual_same_effect_and_use_conditions_verified")
+                         is False and
+                     group.get("all_available_quality_ranks_verified") is False,
+                     "V216_JF_QUALITY_ORIGINAL_V220_OBSERVED_RANK_DRIFT")
+                if any(i in ordinary for i in ids):
+                    bounded.append({
+                        "observed_item_ids":list(ids),
+                        "observed_crafting_quality_ranks":list(ranks),
+                        "highest_observed_item_id_source_only":
+                            group.get(
+                                "highest_observed_quality_item_id_unadmitted"),
+                        "same_raw_four_stat_vector_source_only":
+                            group.get("same_raw_four_stat_vector_source_only")
+                                is True})
+            result["J"]={
+                "ordinary_gem_item_ids":list(ordinary),
+                "observed_crafting_quality_by_item_id":{
+                    str(item_id):by_id[item_id] for item_id in sorted(set(ordinary))},
+                "v230_stage_receipt_sha256":
+                    original["v230_stage_receipt_sha256"],
+                "v221_stage_receipt_sha256":link["v221_stage_receipt_sha256"],
+                "same_enchant_quality_groups_source_only":bounded,
+                "ranked_only_within_selected_source_items":True,
+                "highest_available_quality_verified":False,
+                "same_effect_and_use_conditions_verified":False,
+                "real_socket_proof_required":True}
+        else:
+            result["missing"].append(
+                "J_SELECTED_V230_SEALED_QUALITY_SOURCE_PENDING")
+    else:
+        result["missing"].append("J_SELECTED_NOMINAL_SOURCE_PENDING")
+    f=owner_numeric.get("F")
+    choices=compilation.get(
+        "observed_quality_weapon_choices_unadmitted")
+    if type(f) is dict and type(choices) is dict:
+        if choices.get("schema")==(
+                "v216_existing_flask_quality_and_weapon_mask_join_v1"):
+            need(choices.get("game_build")==preflight.get("game_build") and
+                 choices.get("simc_revision")==preflight.get("simc_revision") and
+                 type(choices.get(
+                     "flask_quality_groups_observed_unadmitted")) is list,
+                 "V216_JF_QUALITY_ORIGINAL_F_SAME_BUILD_DRIFT")
+            found=[]
+            for group in choices["flask_quality_groups_observed_unadmitted"]:
+                ids=group.get("observed_item_ids")
+                ranks=group.get("observed_qualities")
+                need(type(ids) is list and type(ranks) is list and
+                     len(ids)==len(ranks) and len(set(ids))==len(ids) and
+                     all(type(i) is int and i>0 and
+                         type(q) is int and q>=0
+                         for i,q in zip(ids,ranks)) and
+                     group.get("all_market_qualities_verified") is False,
+                     "V216_JF_QUALITY_ORIGINAL_F_RANK_GROUP_INVALID")
+                if f["physical_item_id"] in ids:
+                    need(ranks[ids.index(f["physical_item_id"])]==
+                             f["crafting_quality"],
+                         "V216_JF_QUALITY_SELECTED_F_ITEM_RANK_DRIFT")
+                    found.append(group)
+            need(len(found)<=1,
+                 "V216_JF_QUALITY_SELECTED_F_DUPLICATE_GROUPS")
+            if found:
+                g=found[0]
+                result["F"]={
+                    "selected_item_id":f["physical_item_id"],
+                    "selected_crafting_quality":f["crafting_quality"],
+                    "observed_item_ids":list(g["observed_item_ids"]),
+                    "observed_qualities":list(g["observed_qualities"]),
+                    "comparison_status_source_only":g["status"],
+                    "highest_observed_quality_item_id_unadmitted":
+                        g.get("highest_observed_quality_item_id_unadmitted"),
+                    "selected_is_highest_observed_source_only":(
+                        g.get("highest_observed_quality_item_id_unadmitted")==
+                            f["physical_item_id"]),
+                    "same_effect_and_use_conditions_verified":False,
+                    "all_available_quality_ranks_verified":False,
+                    "selected_simc_numeric_sha256":
+                        f["source_identity_sha256"],
+                    "highest_available_quality_verified":False}
+            else:
+                result["missing"].append(
+                    "F_SELECTED_ITEM_OBSERVED_QUALITY_GROUP_PENDING")
+        else:
+            result["missing"].append(
+                "F_ORIGINAL_QUALITY_COMPARISON_PENDING")
+    else:
+        result["missing"].append(
+            "F_SELECTED_SIMC_NUMERIC_OR_QUALITY_SOURCE_PENDING")
+    if result["J"] is not None and result["F"] is not None:
+        result["status"]="SELECTED_J_F_OBSERVED_QUALITY_BOUND_UNADMITTED"
+    return result
+
+
 def _fresh_source_owner_crosscheck_selected_J_F(*, owner_numeric,
                                                trusted_budget_evidence):
     """Reject a claimed source match with a different J/F amount.
@@ -4932,6 +5087,15 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         source_compilation[
             "selected_J_F_source_owner_numeric_unadmitted"]=jf_numeric
         progress["selected_J_F_source_owner_numeric_unadmitted"]=jf_numeric
+        # Reuse existing selected v230/v220 and v281/v278 observed quality
+        # comparisons; only report original ranks and remaining proof scope.
+        # Never certify highest AVAILABLE quality from observed ranks alone.
+        quality_scope=_fresh_source_owner_observed_J_F_quality(
+            preflight=preflight,compilation=source_compilation,
+            owner_numeric=jf_numeric)
+        source_compilation[
+            "selected_J_F_source_owner_quality_unadmitted"]=quality_scope
+        progress["selected_J_F_source_owner_quality_unadmitted"]=quality_scope
         # The new season's exact source stage is now a versioned Environment
         # unit, independent of v098/optimizer sessions. It is not an install.
         if (preflight is not None and

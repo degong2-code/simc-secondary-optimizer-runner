@@ -1,0 +1,10 @@
+# 2026-11-05 · P3-FB · 기존 J/F 관측 품질 원본의 단일 공급자 연결
+
+- **Capability:** `J.GEM`, `F.FLASK`, `ENVIRONMENT.WEB`
+- **Keywords:** P3-FB, quality, v230, v220, v281, v278, observed highest, same effect, source owner, nominal J, flask F
+- **Prior evidence:** [INDEX C2/D1/E1/E3](../INDEX.md), [P3-EK](2026-11-05_p3-ek-existing-gem-effect-quality-policy-a-connect.md), [P3-EZ](2026-11-05_p3-ez-jf-numeric-policy.md), [P3-FA](2026-11-05_p3-fa-selected-jf-source-owner-numeric-bridge.md). 실제 Build에는 이미 v230/v220 selected gem 품질 비교와 v281/v278 observed F 품질 그룹이 있으나 내부 J/F source-owner 전용 공통 quality summary는 별도 생성되지 않았다.
+- **Decision:** `CONNECT` — 기존 봉인 quality/효과 관련 원본을 재활용하는 source-only handoff만 추가. 최고 관측=최고 존재로 승격하거나 새 per-quality Native/효과 자체 구현/중복 parser/신규 품질 Gate를 만드는 것은 `STOP`.
+- **Changes:** `_fresh_source_owner_observed_J_F_quality`가 기존 v230 Stage receipt 및 selected ItemID/quality rank와 v220 같은-enchant/raw-vector 관측 그룹을 일치 확인하고, F는 기존 품질 비교와 선택 영약 ItemID·rank를 연결한다. 오류/변조는 fail closed, stage source 부족은 pending. 원래 `selected_J_F_source_owner_numeric_unadmitted`와 함께 `selected_J_F_source_owner_quality_unadmitted`로 같은 정상 v216 provider compilation에 전달. 모두 `highest_available_quality_verified=False`, `environment_ready=False`; v222·v196·v212·v217 설치/캐시/원래 회계 변경 없음.
+- **Verification:** 신규 focused 합성 단위 시험으로 동일 선택품 ID/원본 품질 비교·J/F 미승격·소스 불일치 차단·미관측 PENDING 점검. 신규 CI 실제 영수증 확인 전 `NOT_VERIFIED`. 이전 [P3-FA focused #42020032156](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42020032156) 261 PASS는 이전 코드 범위. 신규 Native·게임 HTTP 0회.
+- **Remaining:** 관측 품질 모든 시장 품질인지 원본 범위 인증, 동일효과/사용조건·실 소켓·정확 F 최고품질, 인증 공급자 verified J/F와 Policy A의 4-family 영수증 실제 생성/발행, 실제 새시즌 READY/T1은 미완료. 특수 gem 효과 SimC 소유, 저품질 F 151·Phoenix Oil 16/17 의심 관측은 재조사 저우선순위.
+- **Efficiency:** 원래 v230·v220·v281/v278 dict/receipt를 얕게 읽고 항목 수만큼 비교, 신규 Native0/HTTP0/CSV/JSON2 재파싱0/캐시 무효화0/새 시스템 기전0. 동일 시즌 정적 캐시 재사용 및 기존 v217 install stage 유지. main/v003/v016/Project UI/Work OS/주 개발 소유권 불변.
