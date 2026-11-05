@@ -1291,7 +1291,11 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
         payload["requires"].append(
             "REAL_SOCKET_COUNTS_AND_HIGHEST_QUALITY_GEM_SOURCE_PENDING")
         if gem_J is not None:
-            payload["physical_gem_J_arithmetic_unadmitted"] = gem_J
+            payload["physical_gem_J_arithmetic_unadmitted"] = {
+                **gem_J,
+                "J_accounting_policy":"SUM_SELECTED_ORDINARY_GEM_RATINGS",
+                "special_gem_count_in_J":0,
+                "simc_effective_rating_is_budget_gate":False}
         else:
             payload["requires"].append(
                 "PHYSICAL_GEM_ITEM_BY_ID_CHMV_RATING_SOURCE_PENDING")
@@ -3481,10 +3485,33 @@ def _zero_history_selected_F_O_v222_reconcile(*, selected, numeric,
             "SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY"):
         out["missing"].append("SELECTED_FLASK_STATIC_NATIVE_PENDING")
     else:
+        # The selected F scalar is only the sum of the SAME original
+        # v281 physical item and v278 SimC static CHMV vector. No effect
+        # mechanism reimplementation, historical constants or extra Native.
+        fvec=flask.get("static_CHMV_vector_unadmitted")
+        need(type(fvec) is dict and
+             set(fvec)==set(season_budget_contract.STATS) and
+             all(type(fvec[s]) is int and fvec[s]>=0
+                 for s in season_budget_contract.STATS) and
+             sum(fvec.values())>0 and
+             sum(fvec.values())==flask.get("rating_candidate_unadmitted") and
+             type(flask.get("crafting_quality")) is int and
+             flask["crafting_quality"]>=0 and
+             type(flask.get("simc_input_token")) is str and
+             type(flask.get("physical_item_source_candidate_sha256")) is str and
+             season_budget_contract.SHA.fullmatch(
+                 flask["physical_item_source_candidate_sha256"]) is not None,
+             "V216_SELECTED_F_SIMC_NUMBER_OR_EXACT_SOURCE_DRIFT")
         out["matched_f"]={
             "physical_item_id":flask["physical_item_id"],
+            "crafting_quality":flask["crafting_quality"],
+            "simc_input_token":flask["simc_input_token"],
+            "static_CHMV_vector":dict(fvec),
+            "source_candidate_sha256":
+                flask["physical_item_source_candidate_sha256"],
             "rating":flask["rating_candidate_unadmitted"],
-            "simc_native_receipt_sha256":flask["simc_native_receipt_sha256"]}
+            "simc_native_receipt_sha256":flask["simc_native_receipt_sha256"],
+            "F_numeric_source_owner":"EXISTING_V281_V278_SIMC_DELTA_ONLY"}
     for hand,item_id in sorted(selected["oil_item_ids_by_hand"].items()):
         observed=[x for x in numeric.get("oil",[])
                   if x["physical_item_id"]==item_id and
@@ -3576,20 +3603,13 @@ def _zero_history_auto_v222_numeric_preview(*, preflight, native_numeric,
     g = _zero_history_G_numeric_input_from_preflight(
         preflight=preflight,target_ilevel=target_ilevel)
     j = preflight.get("physical_gem_J_arithmetic_unadmitted")
-    # v271 currently sums placed ORDINARY gems. A separately observed
-    # nonzero static vector on the mandatory special gem cannot be dropped
-    # from J, nor added as effective rating without SimC/source ownership.
-    # Block only the resulting numeric preview, keeping original receipts.
-    selected_link=preflight.get(
-        "selected_v221_gem_item_relation_unadmitted")
-    special=(selected_link.get(
-        "selected_special_gem_raw_effect_unadmitted")
-        if type(selected_link) is dict else None)
-    if type(special) is dict and type(special.get(
-            "raw_static_CHMV_total_candidate_unadmitted")) is int and (
-            special["raw_static_CHMV_total_candidate_unadmitted"]>0):
-        out["requires"].append(
-            "SPECIAL_GEM_STATIC_CHMV_J_BUDGET_ATTRIBUTION_PENDING")
+    # Policy: J is the ordinary-gem NOMINAL secondary-rating budget.
+    # Exactly one special gem remains equipped for SimC effect mechanics.
+    # Its optional raw-static observation is NOT an extra J component or
+    # a reason to block J arithmetic. Native candidate reconciliation still
+    # owns the final 4-stat vector; do not reimplement the special effect.
+    out["J_accounting_policy"]="ORDINARY_GEM_NOMINAL_SECONDARY_SUM_ONLY"
+    out["special_gem_effect_owner"]="SIMC_PROFILE"
     if g is None:
         # Native G is optional when a valid same-season G reference exists.
         out["requires"].append("SAME_SEASON_G_BUDGET_SOURCE_PENDING")
@@ -3862,7 +3882,7 @@ def _auto_F_native_from_sealed_v281(*,collected,compilation,binary,
                 "new_native_calls":new,"per_item":receipts,
                 "requires":[("AUTO_O_QUALITY_WEAPON_HAND_AND_BUDGET_PROOF_PENDING"
                              if oil else
-                             "AUTO_F_QUALITY_EFFECT_AND_BUDGET_PROOF_PENDING")]+
+                             "AUTO_F_HIGHEST_QUALITY_ITEM_AND_NUMERIC_BUDGET_SOURCE_PENDING")]+
                     (["AUTO_"+label+"_NEXT_MEASUREMENT_BATCH_PENDING"]
                      if len(receipts)<len(work[family]) else [])})
     return rows,out

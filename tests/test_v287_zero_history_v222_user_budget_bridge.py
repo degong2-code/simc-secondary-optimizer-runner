@@ -422,9 +422,11 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             gem_ratings={"311001":20,"311002":30},
             target_ilevel=334,manual_final_T=None)
         self.assertIsNone(numeric["calculation"])
-        self.assertIn(
+        self.assertNotIn(
             "SPECIAL_GEM_STATIC_CHMV_J_BUDGET_ATTRIBUTION_PENDING",
             numeric["requires"])
+        self.assertEqual(numeric["J_accounting_policy"],
+                         "ORDINARY_GEM_NOMINAL_SECONDARY_SUM_ONLY")
         bad={**raw,"selected_special_gem_raw_effect_unadmitted":{
             **raw["selected_special_gem_raw_effect_unadmitted"],
             "item_id":999999}}
@@ -432,6 +434,49 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 build.EnvironmentBuildBlocked,
                 "V216_SPECIAL_GEM_RAW_EFFECT_SOURCE_SCOPE_DRIFT"):
             self.preflight_with_sealed_gem_raw(layout,bad)
+
+    def test_p3_ez_special_static_raw_does_not_expand_nominal_j(self):
+        layout=self.source_selected_future_gems()
+        vec={key:0 for key in build.season_budget_contract.STATS}
+        vec["mastery_rating"]=80
+        raw={
+            "status":"ENCHANT_RAW_POINTS_SOURCE_ONLY_J_NOT_APPROVED",
+            "enchant_source_sha256":"4"*64,
+            "selected_gem_raw_points_by_id_unadmitted":{
+                "311001":20,"311002":30},
+            "selected_gem_all_raw_points_known":True,
+            "selected_gem_v221_item_ids_unadmitted":[311001,311002,311003],
+            "selected_gem_v221_same_build_items_all_present":True,
+            "selected_special_gem_raw_effect_unadmitted":{
+                "item_id":311003,
+                "effect_classification":"RAW_STATIC_CHMV_POINTS_CANDIDATE_ONLY",
+                "raw_static_CHMV_vector_candidate_unadmitted":vec,
+                "raw_static_CHMV_total_candidate_unadmitted":80,
+                "missing_or_nonstatic_never_assumed_zero":True,
+                "simc_effective_rating_verified":False,
+                "J_budget_attribution_verified":False},
+            "J":None,"environment_ready":False}
+        pre=self.preflight_with_sealed_gem_raw(layout,raw)
+        j=pre["physical_gem_J_arithmetic_unadmitted"]
+        self.assertEqual(j["J_candidate_unadmitted"],70)
+        self.assertEqual(j["special_gem_count_in_J"],0)
+        self.assertFalse(j["simc_effective_rating_is_budget_gate"])
+        numeric,_=self.selected_physical_pair()
+        pre={**pre,"v277_native_G_preprofile_unadmitted":{
+            "status":"NATIVE_G_NUMERIC_SOURCE_ONLY_JFO_AND_ADMISSION_PENDING",
+            "standardized_G":2850,"native_json2_sha256":"a"*64,
+            "target_ilevel":334}}
+        candidate=build._zero_history_auto_v222_numeric_preview(
+            preflight=pre,native_numeric=numeric,
+            source_choices={"oil_representative_weapon_matches_unadmitted":[]},
+            selected={"flask_item_id":241326,"oil_item_ids_by_hand":{}},
+            gem_ratings={"311001":20,"311002":30},
+            target_ilevel=334,manual_final_T=None)
+        self.assertEqual(candidate["calculation"]["J"],70)
+        self.assertEqual(candidate["calculation"]["base_B"],3085)
+        self.assertEqual(candidate["J_accounting_policy"],
+                         "ORDINARY_GEM_NOMINAL_SECONDARY_SUM_ONLY")
+        self.assertFalse(candidate["environment_ready"])
 
     def test_p3_ei_source_property_rows_reach_v216_and_v098_unadmitted(self):
         import v098_target_user_scenario_bootstrap as boot
@@ -1261,6 +1306,54 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                     "g_probe_character":None,"simc_revision_hint":None,
                     "verified_install_input_provider":{"verified":True}})
         self.assertFalse((self.root/"sessions").exists())
+
+    def test_p3_ez_F_uses_same_simc_numeric_and_item_origin(self):
+        request,bound,observation=self.physical_effect()
+        vec={key:0 for key in build.season_budget_contract.STATS}
+        vec["haste_rating"]=177
+        observation["static_CHMV_candidate"]=dict(vec)
+        observation["observed"]["static_CHMV_candidate"]=dict(vec)
+        observation["F_candidate_unadmitted"]=177
+        native=build._zero_history_F_O_native_component_candidates(
+            observations=[{**observation,
+                           "physical_item_native_source_unadmitted":bound}],
+            game_build=self.catalog["game_build"],
+            simc_revision=self.catalog["simc_revision"])
+        selected={"flask_item_id":bound["physical_item_id"],
+                  "oil_item_ids_by_hand":{}}
+        matched=build._zero_history_selected_F_O_v222_reconcile(
+            selected=selected,numeric=native,choices={},
+            existing_budget=None,budget_evidence=None)
+        row=matched["matched_f"]
+        self.assertEqual(row["rating"],177)
+        self.assertEqual(row["static_CHMV_vector"],vec)
+        self.assertEqual(row["crafting_quality"],bound["crafting_quality"])
+        self.assertEqual(row["simc_input_token"],bound["simc_input_token"])
+        self.assertEqual(row["source_candidate_sha256"],
+                         bound["source_candidate_sha256"])
+        self.assertEqual(row["F_numeric_source_owner"],
+                         "EXISTING_V281_V278_SIMC_DELTA_ONLY")
+        self.assertFalse(matched["environment_ready"])
+        drift=copy.deepcopy(native)
+        drift["flask"][0]["rating_candidate_unadmitted"]=178
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_SELECTED_F_SIMC_NUMBER_OR_EXACT_SOURCE_DRIFT"):
+            build._zero_history_selected_F_O_v222_reconcile(
+                selected=selected,numeric=drift,choices={},
+                existing_budget=None,budget_evidence=None)
+        _,_,conditional=self.physical_effect(static=False)
+        pending=build._zero_history_F_O_native_component_candidates(
+            observations=[{**conditional,
+                           "physical_item_native_source_unadmitted":bound}],
+            game_build=self.catalog["game_build"],
+            simc_revision=self.catalog["simc_revision"])
+        unresolved=build._zero_history_selected_F_O_v222_reconcile(
+            selected=selected,numeric=pending,choices={},
+            existing_budget=None,budget_evidence=None)
+        self.assertIsNone(unresolved["matched_f"])
+        self.assertIn("SELECTED_FLASK_STATIC_NATIVE_PENDING",
+                      unresolved["missing"])
 
     def test_selected_flask_explicit_no_oil_reconciles_original_manual_T(self):
         request,bound,observed=self.physical_effect()
