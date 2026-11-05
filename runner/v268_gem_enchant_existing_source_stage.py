@@ -75,7 +75,8 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
     """Reuse a sealed v266 source view and only project selected raw gem IDs.
 
     Raw EffectPointsMin values are NOT proven effective rating, best quality,
-    legal sockets or Native accepted gems. No new CSV read or SimC run.
+    legal sockets or Native accepted gems. No network or SimC run. The CSV
+    bytes are still hashed each time, but the full parse is cached by v217.
     """
     if selected_gem_item_ids is not None:
         if (type(selected_gem_item_ids) is not list or
@@ -115,16 +116,65 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
         path=Path(v221_candidate_path)
         if not path.is_file() or path.is_symlink():
             raise ValueError("V268_V221_EXACT_JOIN_MISSING")
-        records=json.loads(path.read_text("utf8"))
+        # Check original source bytes on EVERY view, including cache hits.
+        # A cached join must never hide changed or corrupted CSV/DB2 inputs.
+        v221_raw=path.read_bytes()
+        records=json.loads(v221_raw.decode("utf8"))
         raw=csv_path.read_bytes()
         if not 0<len(raw)<=source.MAX_BYTES:
             raise ValueError("V268_CSV_SIZE_INVALID")
-        result=join.preview(gem_join=records,raw_enchant_csv=raw,
-                            expected_game_build=build)
+        raw_sha=hashlib.sha256(raw).hexdigest()
         recorded=sealed["outputs"]["csv"]
-        if (result["enchant_source_sha256"]!=recorded["sha256"] or
-                len(raw)!=recorded["size"]):
+        if raw_sha!=recorded["sha256"] or len(raw)!=recorded["size"]:
             raise ValueError("V268_SEALED_CSV_BYTES_CHANGED")
+        # The v266 source join is independent of which gems a user selects.
+        # Seal it ONCE per exact CSV, v221 artifact, code and game build.
+        # Subsequent selections read a small authenticated projection rather
+        # than decoding and scanning the full CSV on every preflight.
+        join_stage_id="fresh-v266-gem-enchant-join"
+        join_version="v266-exact-same-build-source-only-join-v1"
+        parser_sha=stage.module_dependency_fingerprint([
+            Path(join.__file__),Path(__file__),Path(stage.__file__)
+        ])["sha256"]
+        join_inputs={
+            "game_build":build,
+            "source_enchant_sha256":raw_sha,
+            "v221_candidate_sha256":hashlib.sha256(v221_raw).hexdigest(),
+            "join_code_sha256":parser_sha}
+        join_key=stage._input_sha(join_stage_id,join_version,join_inputs)[:20]
+        output="fresh_source/v266_exact_gem_enchant_join_"+join_key+".json"
+        output_path=root/output
+        def execute_join():
+            result=join.preview(gem_join=records,raw_enchant_csv=raw,
+                                expected_game_build=build)
+            output_path.parent.mkdir(parents=True,exist_ok=True)
+            output_path.write_text(json.dumps(result,sort_keys=True,
+                ensure_ascii=False,separators=(",",":"),allow_nan=False)+"\n",
+                encoding="utf8")
+        def validate_join(files):
+            doc=json.loads(files["joined"].read_text("utf8"))
+            return (doc.get("schema")==join.SCHEMA and
+                    doc.get("status")==
+                        "ENCHANT_RAW_POINTS_SOURCE_ONLY_J_NOT_APPROVED" and
+                    doc.get("game_build")==build and
+                    doc.get("simc_revision")==records.get("simc_revision") and
+                    doc.get("v221_manifest_sha256")==
+                        records.get("v213_manifest_sha256") and
+                    doc.get("gem_item_link_count")==records.get("exact_link_count") and
+                    doc.get("enchant_source_sha256")==raw_sha and
+                    type(doc.get("records")) is list and
+                    len(doc["records"])==records.get("exact_link_count") and
+                    doc.get("highest_quality_selection_verified") is False and
+                    doc.get("environment_ready") is False and
+                    doc.get("network_calls")==0 and
+                    doc.get("native_calls")==0 and
+                    doc.get("cache_mutations")==0)
+        join_stage=stage.execute_stage(
+            root=root,stage_id=join_stage_id+"-"+join_key,
+            stage_version=join_version,inputs=join_inputs,
+            outputs={"joined":output},execute=execute_join,
+            validate=validate_join)
+        result=json.loads(output_path.read_text("utf8"))
     except (ValueError,TypeError,KeyError,OSError,
             stage.StageExecutionBlocked,join.EnchantSourceBlocked) as exc:
         return {"status":"GEM_ENCHANT_LOCAL_JOIN_PENDING",

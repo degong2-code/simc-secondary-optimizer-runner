@@ -1,0 +1,10 @@
+# 2026-11-05 · P3-EM · 동일 시즌 v266 원본 조인 중복 해석 제거
+
+- **Capability:** `SOURCE.SEAL`, `J.GEM`, `ENVIRONMENT.WEB`
+- **Keywords:** P3-EM, gem, v266, v267, v268, v217, 원본 캐시, CSV 파싱, source join, selected gems, 중복 계산, cache
+- **Prior evidence:** [PROTOCOL](../PROTOCOL.md) → [INDEX](../INDEX.md) → [책임표](../ENVIRONMENT_BUILD_INPUT_SCOPE_20261104.md) → [P3-BV](2026-11-03_p3-bv-gem-enchant-source-once.md) → [P3-EJ](2026-11-05_p3-ej-existing-pinned-simc-gem-quality-bridge.md) → [P3-EK](2026-11-05_p3-ek-existing-gem-effect-quality-policy-a-connect.md). v267 CSV 네트워크 수집은 v217에 이미 캐시되지만 `v268.view`는 매 선택 변경마다 `v266.preview`로 전체 CSV를 다시 해석함. 실제 병목 시간은 아직 측정되지 않았음.
+- **Decision:** `CONNECT/REUSE` — 기존 v217 Stage Engine의 내용 SHA 및 원본 검증을 그대로 활용. v266 전체 원본 조인은 **선택 보석 ID와 독립적**이므로 동일 빌드·v221 원본·SpellItemEnchantment CSV·코드 동일성에 1회만 수행하고, 사용자의 최대 64개 ID 선택 결과는 매번 기존 v268 투영 코드로 계산. 새 수집기·효과 인증기·Native·전체 시즌 장비 DB는 `STOP`.
+- **Changes:** `v268.view`에서 원본 v267 영수증/CSV SHA와 v221 원본 SHA를 매 호출 검증 후, `v217.execute_stage`로 `v266` 정확 조인 전체 결과를 내용기반 이름의 소형 JSON 산출물에 재사용. 선택지/환경 반환값에 캐시 적중 여부를 노출하지 않아 동일 입력의 preflight SHA를 안정적으로 유지하고, 테스트는 원래 v217 내부 영수증으로 실행 횟수를 확인(원래 J/UI/READY 계약 불변). `tests/test_v266_v268_gem_enchant_source_reuse.py`에 다른 선택의 1회 parse 재사용, v221 변경시 재parse, CSV 및 조인 결과 변조 차단 검사 추가.
+- **Verification:** 이번 코드 변경 신규 Actions 실행 전 `NOT_RUN/NOT_VERIFIED`. 이전 [P3-EL focused 249 PASS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41972410711)·[v212 양 OS 444 PASS/4 SKIP](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41972410751)는 **역사 범위**. 신규 게임 HTTP/SimC Native 호출 0.
+- **Remaining:** 원본 SHA 확인용 CSV 바이트 I/O와 선택별 이미 조인된 작은 JSON 투영은 여전히 발생. 실제 큰 시즌 CSV의 벤치마크 아직 없음. 최고 품질·실제 소켓·SimC-effective J·공식 GJFO·신규 READY/T1·유저 선택지 발행은 별도 미완료이며 변경하지 않음.
+- **Efficiency:** 중복된 v266 전체 CSV 파싱 `N회→같은 source당 1회`(이후 선택 변경은 v217 결과 검증+투영). SHA 바이트 확인은 매 호출 유지해 변조를 숨기지 않음. 입력 변동 시에만 추가 작은 JSON 캐시 파일, DPS·기존 정적 캐시 무효화·원본 재수집/Native0. 26 DPS 엔진 하나를 유지하며 main/v003/v016/Project UI·주 채팅 소유권 불변.

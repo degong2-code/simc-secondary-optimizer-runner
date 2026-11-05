@@ -5,6 +5,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from runner import v266_gem_enchant_raw_stat_source as source
 from runner import v268_gem_enchant_existing_source_stage as adapter
@@ -93,6 +94,80 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
                                     "STATIC_COLUMNS_MISSING"):
             source.preview(gem_join=joined(),raw_enchant_csv=data,
                            expected_game_build=BUILD)
+
+    def test_selected_gem_change_reuses_verified_full_join_once(self):
+        """One CSV parse per unchanged source, not per user gem selection."""
+        raw=enchant_csv()
+        class FakeResponse:
+            status=200
+            def __enter__(self):return self
+            def __exit__(self,*args):return False
+            def read(self,size=-1):return raw
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td)
+            adapter.collect(stage_root=root,build=BUILD,
+                transport=lambda request,timeout:FakeResponse())
+            source_path=root/"v221.json"
+            source_path.write_text(json.dumps(joined()),encoding="utf8")
+            original=adapter.join.preview
+            with patch.object(adapter.join,"preview",wraps=original) as parse:
+                first=adapter.view(stage_root=root,v221_candidate_path=source_path,
+                    build=BUILD,selected_gem_item_ids=[2001],
+                    selected_source_gem_item_ids=[2001,2002])
+                second=adapter.view(stage_root=root,v221_candidate_path=source_path,
+                    build=BUILD,selected_gem_item_ids=[2002,2003],
+                    selected_source_gem_item_ids=[2002,2003])
+                self.assertEqual(parse.call_count,1)
+                receipts=list((root/".stage_receipts").glob(
+                    "fresh-v266-gem-enchant-join-*.json"))
+                self.assertEqual(len(receipts),1)
+                self.assertEqual(json.loads(receipts[0].read_text("utf8"))[
+                    "status"],"COMPLETE")
+                self.assertEqual(first[
+                    "selected_gem_raw_points_by_id_unadmitted"],{"2001":25})
+                self.assertEqual(second[
+                    "selected_gem_unresolved_item_ids"],[2002,2003])
+                self.assertTrue(second[
+                    "selected_gem_v221_same_build_items_all_present"])
+                self.assertFalse(second["environment_ready"])
+                self.assertFalse(second["highest_quality_J_verified"])
+                # A new v221 artifact identity MUST miss the old cache.
+                modified=joined()
+                modified["source_annotation"]="changed_original_bytes"
+                source_path.write_text(json.dumps(modified),encoding="utf8")
+                third=adapter.view(stage_root=root,v221_candidate_path=source_path,
+                    build=BUILD,selected_gem_item_ids=[2001])
+                self.assertEqual(parse.call_count,2)
+                self.assertEqual(len(list((root/".stage_receipts").glob(
+                    "fresh-v266-gem-enchant-join-*.json"))),2)
+                # The original exact bytes should hit their previous receipt.
+                source_path.write_text(json.dumps(joined()),encoding="utf8")
+                fourth=adapter.view(stage_root=root,v221_candidate_path=source_path,
+                    build=BUILD,selected_gem_item_ids=[2001])
+                self.assertEqual(parse.call_count,2)
+                self.assertEqual(len(list((root/".stage_receipts").glob(
+                    "fresh-v266-gem-enchant-join-*.json"))),2)
+                # Even a known-good cache cannot hide a modified CSV.
+                csvpath=root/adapter.OUTPUTS["csv"]
+                csvpath.write_bytes(raw+b"\n")
+                drift=adapter.view(stage_root=root,v221_candidate_path=source_path,
+                    build=BUILD,selected_gem_item_ids=[2001])
+                self.assertEqual(drift["status"],"GEM_ENCHANT_LOCAL_JOIN_PENDING")
+                self.assertEqual(drift["reason"],"V268_SEALED_CSV_BYTES_CHANGED")
+                self.assertEqual(parse.call_count,2)
+                # A tampered cached join is rejected by the existing v217
+                # output hash, never used as a fresh product J or UI choice.
+                csvpath.write_bytes(raw)
+                joined_outputs=list((root/"fresh_source").glob(
+                    "v266_exact_gem_enchant_join_*.json"))
+                self.assertEqual(len(joined_outputs),2)
+                for original_json in joined_outputs:
+                    original_json.write_text("{}\n",encoding="utf8")
+                invalid=adapter.view(
+                    stage_root=root,v221_candidate_path=source_path,
+                    build=BUILD,selected_gem_item_ids=[2001])
+                self.assertEqual(invalid["status"],"GEM_ENCHANT_LOCAL_JOIN_PENDING")
+                self.assertIn("STAGE_OUTPUT_HASH_MISMATCH",invalid["reason"])
 
     def test_single_fetch_replays_local_and_rejects_changed_csv(self):
         raw=enchant_csv()
