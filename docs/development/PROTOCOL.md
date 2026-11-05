@@ -4,7 +4,13 @@
 
 **환경 입력 관련 필수 선조회:** 레벨·종족·특성·음식/물약/증강·보석/가변 소켓·영약/기름·Omnium·품질/정책 A 작업 전에 [2026-11-04 환경 구축 입력 12항목 책임표](ENVIRONMENT_BUILD_INPUT_SCOPE_20261104.md)를 읽고, 각 항목의 REUSE/CONNECT/EXTEND/STOP·기본 G/J/F/O와 선택형 기능 경계를 확인한다. 이 문서는 승인 원문 교체가 아닌 기존 정책과 구현을 구분하는 개발 색인이다. 특히 P3-BN SimC 기본 level 및 P3-BZ 기존 가변 socket_plan 구현을 재개발하지 않는다.
 
-## P3-EV 최신 인계/실행 경계 (2026-11-05)
+## P3-FK 현재 단일 인계·읽기 전용 새 채팅 (2026-11-05)
+
+**현재 인계 정본:** [P3-FK 엔진 연속성](../CHAT_CONTINUITY_HANDOFF_20261105_P3_FK_ENGINE_FIRST_RESTORE.md). 이전 P3-EV/ES/EN/EE/DW/DO는 작성 당시의 역사 정본. 새 채팅은 **격리/main HEAD 각각 독립 조회 → P3-FK → 이 PROTOCOL → INDEX E3/E2/E1·C1~C4 → CURRENT 상단/개발자 실행 노트 → P3-FJ/FI/FH/FG/FD/FE 및 필요한 E* → 해당 실제 코드·봉인 원본·Actions/Native** 순서로 좁혀 본다. **새 채팅 첫 답변은 읽기 전용 복원 보고 후 STOP**, 명시적 '진행' 이전 수정·수집·CI/Native/테스트·승격 전면 금지.
+
+**제품 변경 경계:** P3-FJ는 v232 봉인 기본 소켓과 v271 특수보석 정확 1개+일반 N개 장착 위치를 **역할별 ID 제공 시** 연결했고 focused 270 PASS. **보석 정확 역할/ItemID source-owner 자동 선택과 실 신규 시즌 READY/T1은 아직 미완료**. P3-FD~FG J/F 원본 조건부 v222 설치 및 P3-FH 발견 최대 F opt-in·P3-FE source_relation 재사용은 기존 자산. 새로운 소켓/보석 엔진·기능 게이트 재개발 금지. 목적은 다음 시즌 26 DPS 공통 엔진 하나.
+
+## P3-EV 당시 최신 인계/실행 경계 (2026-11-05)
 
 **단일 인계 정본:** [P3-EV 환경 설치 엔진 인계](../CHAT_CONTINUITY_HANDOFF_20261105_P3_EV_ENGINE_INSTALL_RESTORE.md). 다음 채팅은 격리/main HEAD를 각각 독립 조회 → P3-EV → 이 규약 → [INDEX 기능 라이브러리](INDEX.md)의 **E3→E2→E1**, 필요 시 B3/C4/D1/D2만 → [CURRENT](../CURRENT_PRODUCT_DEVELOPMENT_STATE.md) 최상단 → P3-EU/ET/EV 노트 및 실제 코드·봉인 원본·CI/Native. 기존 P3-ES/EN/EE는 **역사 인계**이며 전체 P3 기록의 순차적 재감사는 금지한다.
 
