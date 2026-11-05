@@ -22,7 +22,7 @@ def parse(payload, *, region="KR"):
         raise RetailVersionBlocked("RETAIL_VERSION_SOURCE_BYTES_INVALID")
     try:
         lines=payload.decode("utf-8-sig").splitlines()
-        header=[x.strip() for x in lines[0].split("|")]
+        header=[x.split("!",1)[0].strip() for x in lines[0].split("|")]
         fields={name:i for i,name in enumerate(header)}
         version_key=next(
             name for name in ("VersionsName","VersionName")
@@ -32,8 +32,11 @@ def parse(payload, *, region="KR"):
                 raise KeyError(name)
         rows=[]
         for line in lines[1:]:
+            # Official Blizzard BPSV has a typed header and ## seqn comment.
+            if not line or line.startswith("#"):
+                continue
             cols=[x.strip() for x in line.split("|")]
-            if len(cols)!=len(header) or cols[fields["Region"]]!=region:
+            if len(cols)!=len(header) or cols[fields["Region"]].upper()!=region:
                 continue
             version=cols[fields[version_key]]
             build_id=cols[fields["BuildId"]]

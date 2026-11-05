@@ -24,19 +24,6 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - name: Diagnose public Blizzard Retail versions response shape
-        shell: bash
-        run: |
-          python - <<'PY'
-          from urllib.request import urlopen,Request
-          req=Request("https://us.version.battle.net/wow/versions",
-              headers={"User-Agent":"SIMC-Secondary-Optimizer/1.0"})
-          with urlopen(req,timeout=15) as resp:
-              raw=resp.read(1024)
-              print("P3_FR_PUBLIC_RETAIL_VERSION_HTTP",resp.status,
-                    resp.headers.get("Content-Type"))
-              print("P3_FR_PUBLIC_RETAIL_VERSION_HEADER",repr(raw[:400]))
-          PY
       - name: Obtain official latest SimulationCraft CLI Docker binary if accessible
         shell: bash
         run: |

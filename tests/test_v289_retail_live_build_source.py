@@ -16,6 +16,16 @@ RAW=(b"Region|BuildConfig|CDNConfig|KeyRing|BuildId|VersionsName|ProductConfig\n
      b"KR|a|b|c|70783|12.1.5.70783|d\n"
      b"EU|a|b|c|70783|12.1.5.70783|d\n")
 
+# The actual official CDN format is typed BPSV, lower-case region and
+# a sequencing comment. These bytes are a fixture, NOT a future live default.
+BPSV=(b"Region!STRING:0|BuildConfig!HEX:16|CDNConfig!HEX:16|"
+      b"KeyRing!HEX:16|BuildId!DEC:4|VersionsName!String:0|"
+      b"ProductConfig!HEX:16\n"
+      b"## seqn = 4117315\n"
+      b"us|a|b|c|70783|12.1.5.70783|d\n"
+      b"kr|a|b|c|70783|12.1.5.70783|d\n"
+      b"eu|a|b|c|70783|12.1.5.70783|d\n")
+
 class Response:
     status=200
     def __init__(self,data):self.data=data
@@ -32,6 +42,10 @@ class RetailBuildDiscovery(unittest.TestCase):
         self.assertFalse(found["environment_ready"])
         self.assertFalse(found["simc_binary_matched"])
         self.assertEqual(len(found["source_sha256"]),64)
+        typed=source.parse(BPSV)
+        self.assertEqual(typed["game_build"],found["game_build"])
+        self.assertEqual(typed["region"],"KR")
+        self.assertNotEqual(typed["source_sha256"],found["source_sha256"])
         got=source.discover(
             fetch=lambda req,timeout:Response(RAW))
         self.assertEqual(got,found)

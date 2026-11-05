@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FR 실전 원본 형식 교정:** [실전 #42080678732](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42080678732)의 200 응답에서 Blizzard의 **typed BPSV 헤더·`## seqn` 메타행·소문자 지역**이 원인임을 실제 확인. v289 파서가 공인 데이터 구조를 지원하도록 최소 교정하고 실전 조사용 임시 중복 HTTP 삭제. 네트워크 접근이 확인됐다고 G/J/F/O·READY/T1을 PASS로 승격하지 않는다. 신규 실전 결과는 후속 SHA 기준.
+>
+
 > **2026-11-06 P3-FR 1차 실제 T1 결과:** [실전 #42080236805](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42080236805) **ZERO_BASE_T1_BLOCKED**, 이유 `RETAIL_VERSION_SOURCE_FORMAT_INVALID`; 공식 SimC Docker 이미지의 immutable digest 확보에는 성공했으나 공식 Blizzard 공개 버전 응답 파싱에서 중단되어 Wago/아이템/실 SimC 실행 전 단계임. [focused #42080236385](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42080236385) 291 PASS 및 기록 PASS는 오프라인 증거 한정. 현 단계에서 T1·READY라고 주장 금지; 임의 게임 빌드/구시즌 참조 대입 대신 실제 HTTP 본문 형식 최소 확인으로 교정. main·원본·Project UI 불변.
 >
 
