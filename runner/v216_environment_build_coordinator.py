@@ -3247,31 +3247,34 @@ def _zero_history_quality_weapon_candidate_join(*, numeric, weapon_source,
     for family, rows in sorted(groups.items()):
         ranked = sorted(rows, key=lambda x:(
             -x["crafting_quality"], x["physical_item_id"]))
-        complete = all(x["status"] == "SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY"
-                       and type(x.get("static_CHMV_vector_unadmitted")) is dict
-                       for x in ranked)
-        best = (max(ranked,key=lambda x:(
+        measured = [x for x in ranked
+                    if x["status"] == "SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY"
+                    and type(x.get("static_CHMV_vector_unadmitted")) is dict]
+        # The approved quality rule is strongest actually observed effect,
+        # not exhaustive measurement of every catalog quality.
+        best = (max(measured,key=lambda x:(
             sum(x["static_CHMV_vector_unadmitted"].values()),
             x["crafting_quality"],-x["physical_item_id"]))
-            if complete else None)
+            if measured else None)
         best_vector = (best["static_CHMV_vector_unadmitted"]
                        if best is not None else None)
-        kinds = ([frozenset(k for k,v in
+        kinds = [frozenset(k for k,v in
                             x["static_CHMV_vector_unadmitted"].items()
-                            if v > 0) for x in ranked]
-                 if complete else [])
-        comparable = (complete
+                            if v > 0) for x in measured]
+        comparable = (bool(measured) and bool(kinds[0])
                       and all(k == kinds[0] for k in kinds)
-                      and all(all(best_vector[k] >=
-                                      x["static_CHMV_vector_unadmitted"][k]
+                      and all(all(best_vector[k]>=
+                                  x["static_CHMV_vector_unadmitted"][k]
                                   for k in season_budget_contract.STATS)
-                              for x in ranked[1:]))
+                              for x in measured))
         flasks.append({
             "simc_family_stem_source_only":family,
-            "observed_item_ids":[x["physical_item_id"] for x in ranked],
-            "observed_qualities":[x["crafting_quality"] for x in ranked],
+            "observed_item_ids":[x["physical_item_id"] for x in measured],
+            "observed_qualities":[x["crafting_quality"] for x in measured],
+            "source_unmeasured_item_ids_unadmitted":[
+                x["physical_item_id"] for x in ranked if x not in measured],
             "status":("TOP_QUALITY_AMONG_OBSERVED_ONLY"
-                      if comparable and len(ranked)>1 else
+                      if comparable and len(measured)>1 else
                       "ONLY_ONE_QUALITY_OBSERVED" if comparable else
                       "QUALITY_STATIC_STATS_NOT_COMPARABLE"),
             "highest_observed_quality_item_id_unadmitted":
@@ -3449,15 +3452,27 @@ def _source_only_one_flask_budget_preview(*, preflight, worklist,
     need(len(planned_by_id)==len(planned) and
          len(measured_by_id)==len(measured),
          "V216_F_PREVIEW_DUPLICATE_PHYSICAL_ITEMS")
-    if (set(planned_by_id)!=set(measured_by_id) or
+    if (not measured_by_id or
+            not set(measured_by_id)<=set(planned_by_id) or
             any(measured_by_id[item_id].get("status")!=
-                 "SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY" or
-                 measured_by_id[item_id].get("simc_input_token")!=
-                 planned_by_id[item_id].get("simc_input_token") or
-                 measured_by_id[item_id].get("crafting_quality")!=
-                 planned_by_id[item_id].get("crafting_quality")
-                 for item_id in planned_by_id)):
-        out["requires"].append("ALL_SAME_BUILD_FLASK_OPTIONS_NOT_YET_MEASURED")
+                    "SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY" or
+                measured_by_id[item_id].get("simc_input_token")!=
+                    planned_by_id[item_id].get("simc_input_token") or
+                measured_by_id[item_id].get("crafting_quality")!=
+                    planned_by_id[item_id].get("crafting_quality")
+                for item_id in measured_by_id)):
+        out["requires"].append("ORIGINAL_OBSERVED_FLASK_SOURCE_PENDING")
+        return out
+    # Different effects are separate options, not a numerical competition:
+    # never pick one family just because another is not yet measured.
+    families=set()
+    for row in planned:
+        token=row["simc_input_token"]
+        suffix="_"+str(row["crafting_quality"])
+        families.add(token[:-len(suffix)] if token.endswith(suffix) else
+                     "item_"+str(row["physical_item_id"]))
+    if len(families)!=1:
+        out["requires"].append("FLASK_EFFECT_FAMILY_NOT_UNAMBIGUOUS")
         return out
     groups=source_choices.get("flask_quality_groups_observed_unadmitted")
     if type(groups) is not list or len(groups)!=1:
@@ -3468,16 +3483,16 @@ def _source_only_one_flask_budget_preview(*, preflight, worklist,
     if (group.get("status") not in (
             "TOP_QUALITY_AMONG_OBSERVED_ONLY",
             "ONLY_ONE_QUALITY_OBSERVED") or
-            chosen not in planned_by_id or
-            set(group.get("observed_item_ids",[]))!=set(planned_by_id)):
+            chosen not in measured_by_id or
+            set(group.get("observed_item_ids",[]))!=set(measured_by_id)):
         out["requires"].append("FLASK_STATIC_RATING_QUALITY_COMPARISON_PENDING")
         return out
     return {**out,
             "status":"ONE_OBSERVED_FLASK_NO_OIL_NUMERIC_PREVIEW_UNADMITTED",
             "selected_physical_items_unadmitted":{
                 "flask_item_id":chosen,"oil_item_ids_by_hand":{}},
-            "requires":["F_HIGHEST_AVAILABLE_QUALITY_AND_EFFECT_PENDING",
-                        "O_SELECTION_AND_WEAPON_ELIGIBILITY_PENDING"]}
+            "requires":["F_ORIGINAL_NATIVE_RECEIPTS_REQUIRED",
+                        "O_EXPLICIT_NONE_NOT_IMPLIED"]}
 
 
 def _zero_history_selected_F_O_v222_reconcile(*, selected, numeric,

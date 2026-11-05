@@ -2022,6 +2022,49 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                             "oil_item_ids_by_hand":{"offhand":243734}}})
 
 
+
+    def test_p3_fh_best_observed_same_family_without_full_worklist(self):
+        def row(item_id,quality,rating,measured=True):
+            vector={k:0 for k in build.season_budget_contract.STATS}
+            vector["crit_rating"]=rating
+            return {"physical_item_id":item_id,"crafting_quality":quality,
+                    "simc_input_token":"test_flask_"+str(quality),
+                    "status":("SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY"
+                              if measured else "SIMC_NATIVE_SOURCE_PENDING"),
+                    "rating_candidate_unadmitted":rating if measured else None,
+                    "static_CHMV_vector_unadmitted":
+                        vector if measured else None}
+        numeric={"status":"PHYSICAL_ITEM_SIMC_F_O_CANDIDATES_UNADMITTED",
+                 "flask":[row(501,1,180),row(502,2,0,False)],"oil":[]}
+        observed=build._zero_history_quality_weapon_candidate_join(
+            numeric=numeric,weapon_source={},
+            game_build=self.catalog["game_build"],
+            simc_revision=self.catalog["simc_revision"])
+        group=observed["flask_quality_groups_observed_unadmitted"][0]
+        self.assertEqual(group["observed_item_ids"],[501])
+        self.assertEqual(group["source_unmeasured_item_ids_unadmitted"],[502])
+        self.assertEqual(group["highest_observed_quality_item_id_unadmitted"],501)
+        self.assertTrue(group["observed_strongest_effect_sufficient_quality_policy"])
+        preflight={"v277_native_G_preprofile_unadmitted":{"status":"source"},
+                   "physical_gem_J_arithmetic_unadmitted":{"status":"source"}}
+        planned={"status":"MEASURABLE_PHYSICAL_F_O_CANDIDATES_UNADMITTED",
+                 "flask":[{"physical_item_id":x["physical_item_id"],
+                           "simc_input_token":x["simc_input_token"],
+                           "crafting_quality":x["crafting_quality"]}
+                          for x in numeric["flask"]]}
+        selected=build._source_only_one_flask_budget_preview(
+            preflight=preflight,worklist=planned,
+            native_numeric={"flask":[numeric["flask"][0]]},
+            source_choices=observed)
+        self.assertEqual(selected["selected_physical_items_unadmitted"],{
+            "flask_item_id":501,"oil_item_ids_by_hand":{}})
+        self.assertFalse(selected["environment_ready"])
+        waiting=build._source_only_one_flask_budget_preview(
+            preflight=preflight,worklist=planned,
+            native_numeric={"flask":[]},source_choices=observed)
+        self.assertIn("ORIGINAL_OBSERVED_FLASK_SOURCE_PENDING",
+                      waiting["requires"])
+
     def test_auto_one_observed_flask_source_only_v222_preview_no_manual_id(self):
         """Full same-build v281 worklist + G/J permits a preview, not READY."""
         layout,ratings=self.physical_layout()
@@ -2079,7 +2122,7 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 "highest_observed_quality_item_id_unadmitted":501,
                 "observed_item_ids":[501]}]})
         self.assertIsNone(many["selected_physical_items_unadmitted"])
-        self.assertIn("ALL_SAME_BUILD_FLASK_OPTIONS_NOT_YET_MEASURED",
+        self.assertIn("FLASK_EFFECT_FAMILY_NOT_UNAMBIGUOUS",
                       many["requires"])
         observed["flask"].append({**second,
             "status":"SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY"})
