@@ -198,6 +198,33 @@ def compile_fresh_source_environment(*, source_catalog, source_artifact_sha256,
                  "original_v222_calculation_sha256":sha(
                      canonical(calc).encode("utf8")),
                  "source_authentication_performed_here":False}
+    # Existing v196/v220 exact item proofs are retained across the original
+    # v216 -> v212 versioned boundary, independently of the core GJFO gate.
+    # Even fully prepared optional rows do not authorize user publication
+    # while this fresh-season environment remains NOT INSTALLED.
+    optional=preflight.get("optional_policy_A_evidence_unadmitted")
+    prepared=(optional.get("prepared_verified_options_unpublished")
+              if type(optional) is dict else None)
+    if prepared is not None:
+        need(type(prepared) is dict and
+             prepared.get("schema")==
+                 "v196_fresh_verified_option_install_inputs_v1" and
+             prepared.get("game_build")==source_catalog["game_build"] and
+             prepared.get("simc_revision")==source_catalog["simc_revision"] and
+             prepared.get("source_catalog_manifest_sha256")==
+                 source_catalog["manifest_sha256"] and
+             prepared.get("selection_mutated") is False and
+             prepared.get("ui_selectable") is False and
+             prepared.get("environment_ready") is False and
+             prepared.get("environment_installed") is False and
+             prepared.get("options_published") is False and
+             type(prepared.get("verified_option_inputs_unpublished")) is list,
+             "FRESH_ENVIRONMENT_POLICY_A_PREPARED_SCOPE_DRIFT")
+        body={k:v for k,v in prepared.items()
+              if k!="prepared_options_sha256"}
+        need(prepared.get("prepared_options_sha256")==sha(
+             canonical(body).encode("utf8")),
+             "FRESH_ENVIRONMENT_POLICY_A_PREPARED_DIGEST_INVALID")
     payload={
         "schema":FRESH_SEASON_STAGE_SCHEMA,
         "status":"FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED",
@@ -210,6 +237,7 @@ def compile_fresh_source_environment(*, source_catalog, source_artifact_sha256,
         "original_v216_preflight_sha256":expected_preflight_sha,
         "pending_core_requirements":list(preflight["requires"]),
         "optional_policy_A_pending_separate":True,
+        "versioned_policy_A_prepared_options_unpublished":prepared,
         "optional_item_missing":preflight.get(
             "optional_policy_A_evidence_unadmitted",{}).get("per_item_missing_reasons",{}),
         "numeric_budget_preview_unadmitted":preview,

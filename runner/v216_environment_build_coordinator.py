@@ -906,7 +906,10 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                 catalog=source,artifact_sha256=raw_sha,catalog_path=supplied,
                 stage_attestations=policy_A_v217_stages,
                 public_rows=ui.get("enchant_candidates",{}).get("items",[]))
+        prepared_options=None
         if source_relations:
+            prepared_options=user_catalog.prepare_verified_fresh_choices(
+                source,ui,source_relations)
             source_context={"game_build":expected_game_build,
                             "simc_revision":expected_simc_revision,
                             "manifest_sha256":source["manifest_sha256"]}
@@ -1229,6 +1232,7 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
             "source_evidence_projection_provided":bool(admission),
             "v217_source_relation_receipt_count":len(source_relations),
             "v217_source_relation_scoped_only":True,
+            "prepared_verified_options_unpublished":prepared_options,
             "verified_options_published":False,
             "affects_verified_base_GJFO":False},
         "source_retrieval_authenticated_by_this_stage":False,

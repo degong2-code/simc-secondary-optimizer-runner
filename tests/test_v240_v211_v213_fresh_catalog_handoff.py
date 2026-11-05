@@ -115,6 +115,114 @@ class SameFreshCatalogChain(unittest.TestCase):
             self.assertTrue(all(not row["ui_selectable"] for row in
                                 result["enchant_candidates"]["items"]))
 
+    def test_p3_el_source_bound_prepared_choices_do_not_publish_early(self):
+        import v196_current_season_user_catalog as ui
+        import v220_catalog_auto_admission as policy
+        with tempfile.TemporaryDirectory() as td:
+            folder=pathlib.Path(td)
+            season,_classified=self.inputs(folder)
+            new_source,generated=fixture_source()
+            # A second synthetic in-build source with one unambiguous boot
+            # scope exercises the positive path without inventing game proof.
+            chosen=season["enchants"]["current_season"][
+                "highest_rank_candidates"][0]
+            chosen["simc_token"]="enchant_boots__new_haste"
+            chosen["inventory_type_mask"]=1<<8
+            chosen["inventory_type_options"]=[8]
+            generated["permanent_enchant.inc"]=(
+                generated["permanent_enchant.inc"].replace(
+                    "enchant_ring__new_haste","enchant_boots__new_haste"
+                ).replace("0x800","0x100"))
+            manifest=put_sources(folder,generated)
+            classified=classifier.compile_fresh_season(
+                season,folder,manifest)
+            artifact=join.compile_catalog(
+                season,"a"*64,classified,"b"*64)
+            path=folder/"source.json"
+            path.write_text(json.dumps(artifact),encoding="utf8")
+            fresh=ui.public_options(path)
+            self.assertEqual(fresh["enchant_candidates"]["selectable_count"],0)
+            row=next(x for x in fresh["enchant_candidates"]["items"]
+                     if x["enchant_id"]==91001)
+            self.assertEqual(row["source_slots"],["feet"])
+            source_context={
+                "game_build":artifact["game_build"],
+                "simc_revision":artifact["simc_revision"],
+                "manifest_sha256":artifact["manifest_sha256"]}
+            candidate=policy.candidate_from_source_enchant(
+                source_context,row)
+            identity=policy._identity(candidate)
+            receipts={
+                kind:{"identity":dict(identity),"status":status,
+                      "evidence_sha256":str(i)*64}
+                for i,(kind,status) in enumerate(
+                    policy.PROOF_STATUSES.items(),1)}
+            receipts["chmv_budget"].update({
+                "no_double_count":True,"unknown_static_chmv":False})
+            proofs={91001:receipts}
+            # The exact legacy v220 eligibility is not sufficient to
+            # prove highest quality/effect equivalence in the new season.
+            not_quality=ui.prepare_verified_fresh_choices(
+                artifact,fresh,proofs)
+            self.assertEqual(not_quality[
+                "v220_exact_proof_eligible_count"],1)
+            self.assertEqual(not_quality[
+                "verified_option_inputs_unpublished"],[])
+            self.assertEqual(not_quality[
+                "quality_use_scope_pending_item_ids"],[91001])
+            self.assertFalse(not_quality["options_published"])
+            receipts["product_input"].update({
+                "highest_available_quality_verified":True,
+                "same_effect_and_use_conditions_verified":True,
+                "exact_application_scope_verified":True,
+                "quality_source_sha256":"f"*64,
+                "verified_quality_rank":row["highest_source_quality_rank"]})
+            staged=ui.prepare_verified_fresh_choices(
+                artifact,fresh,proofs)
+            self.assertEqual(staged["status"],
+                "EXACT_OPTIONS_PREPARED_FOR_VERSIONED_INSTALL")
+            self.assertEqual(len(staged[
+                "verified_option_inputs_unpublished"]),1)
+            option=staged["verified_option_inputs_unpublished"][0]
+            self.assertEqual(option["enchant_id"],91001)
+            self.assertEqual(option["slot"],"feet")
+            self.assertEqual(option["quality_source_sha256"],"f"*64)
+            self.assertEqual(
+                staged["prepared_options_sha256"],
+                ui.hashlib.sha256(json.dumps({
+                    k:v for k,v in staged.items()
+                    if k!="prepared_options_sha256"},
+                    sort_keys=True,ensure_ascii=False,
+                    separators=(",",":"),allow_nan=False
+                ).encode("utf8")).hexdigest())
+            self.assertFalse(staged["options_published"])
+            self.assertFalse(staged["environment_ready"])
+            self.assertFalse(staged["ui_selectable"])
+            self.assertEqual(ui.public_options(path)[
+                "enchant_candidates"]["selectable_count"],0)
+            self.assertEqual(
+                ui.prepare_verified_fresh_choices(
+                    artifact,fresh,proofs),staged)
+            weak=copy.deepcopy(proofs)
+            weak[91001]["product_input"]["verified_quality_rank"]=0
+            self.assertEqual(ui.prepare_verified_fresh_choices(
+                artifact,fresh,weak)[
+                "verified_option_inputs_unpublished"],[])
+            forged=copy.deepcopy(fresh)
+            next(x for x in forged["enchant_candidates"]["items"]
+                 if x["enchant_id"]==91002)["source_slots"]=["feet"]
+            with self.assertRaisesRegex(
+                ui.CatalogBlocked,"SOURCE_SLOT_DRIFT"):
+                ui.prepare_verified_fresh_choices(
+                    artifact,forged,proofs)
+            foreign=copy.deepcopy(proofs)
+            foreign[91001]["source_relation"]["identity"]={
+                **identity,"catalog_sha256":"0"*64}
+            self.assertEqual(
+                ui.prepare_verified_fresh_choices(
+                    artifact,fresh,foreign)[
+                "verified_option_inputs_unpublished"],[])
+
     def test_internal_exact_receipts_do_not_publish_unresolved_slots(self):
         import v196_current_season_user_catalog as ui
         import v220_catalog_auto_admission as policy

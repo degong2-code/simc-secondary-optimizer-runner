@@ -8,6 +8,7 @@ per-item evidence. Already authorized v108/v188 choices remain unchanged.
 """
 from __future__ import annotations
 from collections import Counter
+import hashlib
 import json
 from pathlib import Path
 
@@ -131,6 +132,120 @@ def read(path=DEFAULT):
                               "shoulders":6,"weapon":10},
          "CURRENT_SEASON_ENCHANT_CATEGORY_COUNTS_INVALID")
     return document,clean,dict(sorted(group_counts.items()))
+
+
+def prepare_verified_fresh_choices(source_catalog, source_ui,
+                                  trusted_internal_receipts_by_id):
+    """Normal Build's existing Policy A -> versioned candidate install input.
+
+    Must only be invoked with the original v217/v216 internally authenticated
+    receipts; never from HTTP, a browser upload, or a user-supplied JSON proof.
+    This is preparation, NOT publication. v212 owns the eventual install.
+    """
+    source_bridge.verify_catalog(source_catalog)
+    need(type(source_ui) is dict and source_ui.get("schema")==SCHEMA
+         and source_ui.get("status")==
+             "FRESH_SEASON_CANDIDATES_UNAPPROVED_NOT_ENVIRONMENT_READY"
+         and source_ui.get("environment_ready") is False
+         and source_ui.get("season_build")==source_catalog["game_build"]
+         and source_ui.get("simc_revision")==source_catalog["simc_revision"]
+         and type(source_ui.get("source_catalog")) is dict
+         and source_ui["source_catalog"].get("manifest_sha256")==
+             source_catalog["manifest_sha256"]
+         and source_ui.get("enchant_candidates",{}).get("selectable_count")==0,
+         "FRESH_POLICY_A_SOURCE_UI_IDENTITY_REQUIRED")
+    items=source_ui["enchant_candidates"].get("items")
+    source_items=source_catalog["v196_enchant_source"]["rows"]
+    need(type(items) is list and len(items)==len(source_items)
+         and sorted((x["enchant_id"],x["token"],
+                     x["highest_source_quality_rank"])
+                    for x in items)==sorted((
+                     x["enchant_id"],x["token"],x["quality_rank"])
+                     for x in source_items)
+         and all(x.get("ui_selectable") is False for x in items),
+         "FRESH_POLICY_A_ITEM_SOURCE_ROW_DRIFT")
+    # An internal caller may not replace an unresolved ring/weapon source
+    # mask with a convenient single slot to bypass v220's applicability.
+    original_by_id={r["enchant_id"]:r for r in source_items}
+    for row in items:
+        original=original_by_id[row["enchant_id"]]
+        if row["token"].startswith("enchant_weapon__"):
+            original_slots=["WEAPON_SUBCLASS_NOT_YET_USER_SLOT_CERTIFIED"]
+        else:
+            mask=original["inventory_type_mask"]
+            need(type(mask) is int and mask>0,
+                 "FRESH_POLICY_A_ITEM_MASK_INVALID")
+            covered=[n for n in range(1,31) if mask & (1<<n)]
+            need(covered and all(n in SLOTS for n in covered),
+                 "FRESH_POLICY_A_ITEM_MASK_INVALID")
+            original_slots=sorted(set(SLOTS[n] for n in covered))
+        need(row.get("source_slots")==original_slots,
+             "FRESH_POLICY_A_ITEM_SOURCE_SLOT_DRIFT")
+    need(type(trusted_internal_receipts_by_id) is dict,
+         "FRESH_POLICY_A_INTERNAL_PROOFS_REQUIRED")
+    context={"game_build":source_catalog["game_build"],
+             "simc_revision":source_catalog["simc_revision"],
+             "manifest_sha256":source_catalog["manifest_sha256"]}
+    decision=auto_admission.preview_enchant_catalog(
+        context,items,
+        trusted_internal_receipts_by_id=trusted_internal_receipts_by_id)
+    admissible={x["exact_id"]:x
+                for x in decision["eligible_for_atomic_publication"]}
+    ready=[]
+    quality_pending=[]
+    for row in items:
+        item_id=row["enchant_id"]
+        if item_id not in admissible:
+            continue
+        candidate=auto_admission.candidate_from_source_enchant(context,row)
+        # The existing product_input proof family owns quality and use
+        # conditions. A bare highest_source_quality_rank cannot prove either.
+        product=trusted_internal_receipts_by_id[item_id]["product_input"]
+        required=("highest_available_quality_verified",
+                  "same_effect_and_use_conditions_verified",
+                  "exact_application_scope_verified")
+        if (not all(product.get(x) is True for x in required)
+            or not (type(product.get("quality_source_sha256")) is str
+                    and auto_admission.HEX64.fullmatch(
+                        product["quality_source_sha256"]))
+            or product.get("verified_quality_rank")!=
+                    row["highest_source_quality_rank"]):
+            quality_pending.append(item_id)
+            continue
+        ready.append({
+            "enchant_id":item_id,
+            "simc_token":candidate["simc_token"],
+            "slot":candidate["slot"],
+            "highest_verified_quality_rank":
+                row["highest_source_quality_rank"],
+            "policy_A_source_relation_sha256":
+                trusted_internal_receipts_by_id[item_id][
+                    "source_relation"]["evidence_sha256"],
+            "quality_source_sha256":product["quality_source_sha256"],
+            "exact_v220_identity":admissible[item_id],
+        })
+    ready.sort(key=lambda x:x["enchant_id"])
+    payload={
+        "schema":"v196_fresh_verified_option_install_inputs_v1",
+        "status":("EXACT_OPTIONS_PREPARED_FOR_VERSIONED_INSTALL"
+                  if ready else "EXACT_OPTIONS_NOT_YET_PREPARED"),
+        "game_build":context["game_build"],
+        "simc_revision":context["simc_revision"],
+        "source_catalog_manifest_sha256":context["manifest_sha256"],
+        "verified_option_inputs_unpublished":ready,
+        "v220_exact_proof_eligible_count":len(admissible),
+        "quality_use_scope_pending_item_ids":sorted(quality_pending),
+        "other_proofs_pending_by_item_id":
+            dict(decision["per_item_missing_reasons"]),
+        "selection_mutated":False,
+        "ui_selectable":False,"environment_ready":False,
+        "environment_installed":False,"options_published":False,
+        "native_calls":0,"network_calls":0,
+    }
+    encoded=json.dumps(payload,sort_keys=True,
+        ensure_ascii=False,separators=(",",":"),allow_nan=False).encode("utf8")
+    return {**payload,"prepared_options_sha256":
+        hashlib.sha256(encoded).hexdigest()}
 
 def public_options(path=DEFAULT, *, trusted_internal_receipts_by_id=None):
     """Project source candidates and existing v220 decisions, not an approval.

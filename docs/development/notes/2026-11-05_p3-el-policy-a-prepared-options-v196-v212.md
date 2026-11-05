@@ -1,0 +1,10 @@
+# 2026-11-05 · P3-EL · 기존 정책 A 선택지 준비값을 v196→v212 환경 단계에 연결
+
+- **Capability:** `CATALOG.AUTOADMIT`, `ENVIRONMENT.WEB`, `BUDGET.GJFO`, `PRODUCT.E2E`
+- **Keywords:** P3-EL, v196, v220, v216, v212, Policy A, atomic publication, eligible, quality, source identity, prepared options, install
+- **Prior evidence:** [PROTOCOL](../PROTOCOL.md) → [INDEX](../INDEX.md) → [책임표](../ENVIRONMENT_BUILD_INPUT_SCOPE_20261104.md) → [P3-DM](2026-11-04_p3-dm-policy-a-receipts-normal-build-connect.md) → [P3-DN](2026-11-04_p3-dn-v217-staged-source-relation-policy-a.md) → [P3-EK](2026-11-05_p3-ek-existing-gem-effect-quality-policy-a-connect.md). 기존 v220가 영수증 4종·손/소켓 판정, v196은 후보 UI와 미발행 판정, 새 시즌 v212는 NOT_INSTALLED stage. 구 v212 기존 7967/8025 고정 READY 경로를 새 시즌으로 복사하면 안 됨.
+- **Decision:** `CONNECT` — v196에서 원래 v220와 동일한 `eligible_for_atomic_publication`만 사용하고, 기존 `product_input` 증거가 최고품질·동일 효과/사용 조건·적용 범위를 실제 확인한 경우에만 **설치 준비 후보**를 만든다. 별도 인증기/리스트/효과 계산 엔진은 `STOP`. 실제 증거가 source_relation만 있는 현재 정상 빌드에는 **0개 준비**, 사용자 UI 발행·실행 READY는 여전히 0.
+- **Changes:** `v196.prepare_verified_fresh_choices`는 실제 v213·v196 동일 source/item/rank 비교, v220 동일 결정/기존 product_input 증거의 품질/조건/소켓/용도 범위와 SHA를 보존해 SHA-scoped 후보만 반환. `v216.preflight`는 v217 내부 원본 영수증만 받은 조건에서 해당 준비값을 core GJFO와 분리. `v212.compile_fresh_source_environment`는 v216 원본 preflight digest에 묶인 내용을 봉인하되 **NOT_INSTALLED/NOT_PUBLISHED** 상태 유지. Legacy v212/v196 user options / DPS 캐시 불변.
+- **Verification:** 신규 합성 회귀/ledger 실제 Actions 미확인(`NOT_RUN/NOT_VERIFIED`); P3-EK focused 249 PASS, v212 443 PASS/4 SKIP 양 OS는 역사 범위. 이번 게임 HTTP/SimC Native 0.
+- **Remaining:** 기존 내부 validator가 `simc_input/product_input/chmv_budget` 완비와 source-verified 품질·실 소켓을 생성해야 신규 준비 후보가 생긴다. 공식 G/J/F/O의 증거와 `v212` 실제 신규 설치 READY, 설치된 버전의 `v196` UI 원자적 발행, 26 DPS 사용자 Adaptive 실행 연결은 미완료. 현재 단순 임의 `status`/source-only 입력으로 READY/발행 불가.
+- **Efficiency:** 이미 파싱된 원본 v213/v196와 기존 v220 O(n) 순회 1회 추가, 외부 DB/Native/네트워크 없이 v217 sealed stage에서 같은 preflight SHA/캐시 identity 재사용. 정적 같은 시즌 캐시 및 역사 세션 보존, main/v003/v016/Project UI/Work OS·주 개발 권한 불변.

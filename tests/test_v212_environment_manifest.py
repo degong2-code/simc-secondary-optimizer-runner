@@ -67,6 +67,75 @@ class FreshEnvironmentSourceStageTests(unittest.TestCase):
                 source_catalog=catalog,source_artifact_sha256=artifact_sha,
                 preflight=preflight,compilation=compilation,target_ilevel=334)
             self.assertEqual(same,result)
+            # An internally prepared Policy A choice is carried by the SAME
+            # versioned v212 source envelope, but it is never installed.
+            prepared={
+                "schema":"v196_fresh_verified_option_install_inputs_v1",
+                "status":"EXACT_OPTIONS_PREPARED_FOR_VERSIONED_INSTALL",
+                "game_build":catalog["game_build"],
+                "simc_revision":catalog["simc_revision"],
+                "source_catalog_manifest_sha256":catalog["manifest_sha256"],
+                "verified_option_inputs_unpublished":[{
+                    "enchant_id":91001,
+                    "simc_token":"enchant_boots__new_haste",
+                    "slot":"feet","highest_verified_quality_rank":2,
+                    "policy_A_source_relation_sha256":"a"*64,
+                    "quality_source_sha256":"b"*64,
+                    "exact_v220_identity":{"kind":"permanent_enchant",
+                        "exact_id":91001,
+                        "simc_token":"enchant_boots__new_haste",
+                        "slot":"feet",
+                        "game_build":catalog["game_build"],
+                        "simc_revision":catalog["simc_revision"],
+                        "catalog_sha256":catalog["manifest_sha256"]}}],
+                "v220_exact_proof_eligible_count":1,
+                "quality_use_scope_pending_item_ids":[],
+                "other_proofs_pending_by_item_id":{},
+                "selection_mutated":False,"ui_selectable":False,
+                "environment_ready":False,"environment_installed":False,
+                "options_published":False,
+                "native_calls":0,"network_calls":0}
+            prepared["prepared_options_sha256"]=p.sha(
+                p.canonical(prepared).encode("utf8"))
+            staged_pre={**preflight,
+                "optional_policy_A_evidence_unadmitted":{
+                    "prepared_verified_options_unpublished":prepared}}
+            staged_pre.pop("preflight_sha256",None)
+            staged_pre["preflight_sha256"]=p.sha(
+                p.canonical(staged_pre).encode("utf8"))
+            staged_comp={**compilation,
+                "preflight_sha256":staged_pre["preflight_sha256"]}
+            with_candidate=p.compile_fresh_source_environment(
+                source_catalog=catalog,
+                source_artifact_sha256=artifact_sha,
+                preflight=staged_pre,compilation=staged_comp,
+                target_ilevel=334)
+            self.assertEqual(
+                with_candidate[
+                  "versioned_policy_A_prepared_options_unpublished"],
+                prepared)
+            self.assertNotEqual(with_candidate["manifest_sha256"],
+                                result["manifest_sha256"])
+            self.assertTrue(p.verify_fresh_source_environment(with_candidate))
+            self.assertFalse(with_candidate["options_published"])
+            self.assertFalse(with_candidate["environment_installed"])
+            self.assertFalse(with_candidate["environment_ready"])
+            forged_prepared={**prepared,"prepared_options_sha256":"f"*64}
+            forged_pre={**staged_pre,
+                "optional_policy_A_evidence_unadmitted":{
+                    "prepared_verified_options_unpublished":forged_prepared}}
+            forged_pre.pop("preflight_sha256")
+            forged_pre["preflight_sha256"]=p.sha(
+                p.canonical(forged_pre).encode("utf8"))
+            with self.assertRaisesRegex(p.EnvironmentBlocked,
+                    "POLICY_A_PREPARED_DIGEST_INVALID"):
+                p.compile_fresh_source_environment(
+                    source_catalog=catalog,
+                    source_artifact_sha256=artifact_sha,
+                    preflight=forged_pre,
+                    compilation={**compilation,
+                        "preflight_sha256":forged_pre["preflight_sha256"]},
+                    target_ilevel=334)
             # The existing v216->v222 source-only numbers and exact source
             # receipt identities are preserved, NEVER promoted to official.
             calc={
