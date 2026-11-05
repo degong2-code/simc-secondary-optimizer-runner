@@ -41,3 +41,10 @@
 - **가장 최근 단일 진입점**: [P3-EE](../CHAT_CONTINUITY_HANDOFF_20261105_P3_EE_ENGINE_FIRST.md), [작업 기록](notes/2026-11-05_p3-ee-engine-continuity-handoff.md). 위 P3-DW/DO는 이전 인계 시점 기록이다. 격리/main 실제 HEAD 각각 조회 → P3-EE → 이 규약 → INDEX → 최근 P3-DX/DY/DZ/EA/EC/ED 및 관련 P3-DN/DM/DS/DT/DU/DV → CURRENT → 개발자 실행 노트 → 승인 v1.4.3 + 최신 사용자 직접 정정 → 실제 코드·원본·CI/Native 영수증 순서.
 - **제품 핵심:** 다음 시즌에도 쓰이는 **26 DPS 공통 하나의 엔진**. 현재 T1 Gate는 사용자 웹 `v216` 새 시즌 G/J/F/O → `v222` 공식 B/T → 정책 A 최고 품질 선택지 실제 발행 → `v212` 설치·READY. 후속 `v098/v096/v094` DPS 실행을 환경 READY 필수 Gate로 만들지 않는다. **특수 보석은 정확히 1개 필수**, P3-EB의 0개 허용은 P3-EC에서 철회. P3-ED는 동일 빌드 물리 ID 확인 **source-only**, 실제 품질/효과/소켓 인증 아님.
 - 첫 응답은 **GitHub 양 HEAD·실제 영수증·Evidence/Integration 완료/미완료·효율·단기/장기 로드맵·권한**을 독립 복원해 보고한 뒤 **STOP**. 사용자 명시적 **'진행' 이전 문서/코드 수정·커밋·원본 수집·Actions/Native/테스트/공식 승격 전면 금지**.
+
+
+## 새 채팅 인계 복원 동작 · P3-EN 최종 후속 정본 (2026-11-05)
+
+- **현재 단일 진입점:** [P3-EN](../CHAT_CONTINUITY_HANDOFF_20261105_P3_EN_ENGINE_FIRST.md) / [노트](notes/2026-11-05_p3-en-engine-continuity-handoff.md). P3-EE/DW/DO는 각 시점의 역사 인계이며 삭제하지 않는다. 격리/main 실제 HEAD를 각각 조회 → P3-EN → PROTOCOL → INDEX → P3-EF~EM·선행 P3-DX~ED/DN~DV → CURRENT/실행 노트/승인 v1.4.3 → 실제 원본·코드·Actions/Native를 독립 대조한다.
+- 최신 작업 P3-EM의 동일 원본 v266 조인 재사용 **250 PASS**, 이전 P3-EL v212 양 OS **444 PASS/4 SKIP는 역사 범위**. 이는 제품 T1/공식 GJFO·Policy A 발행/READY가 아니다. 최종 목표는 **26 DPS 공통 재사용 가능한 단일 엔진**; 특수 gem 정확 1개 필수, v098 DPS는 환경 READY 이후. 작업 전 Evidence/Integration 분리하고 REUSE/CONNECT/EXTEND/NEW/STOP, 원본·검증 선조회, 논리적 묶음/캐시·효율 점검 필수.
+- **새 채팅은 첫 응답에서 복원 보고 후 즉시 STOP. 사용자 '진행' 전 개발·문서/코드 수정·커밋·HTTP/Native/CI/Actions/테스트·공식 승격 금지.** 이 문서 갱신 자체는 Project UI/Work OS/main 적용 증거가 아니다.
