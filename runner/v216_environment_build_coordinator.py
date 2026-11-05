@@ -3187,10 +3187,10 @@ def _zero_history_auto_v222_numeric_preview(*, preflight, native_numeric,
                                            no_oil_is_preview_assumption=False):
     """Original v222 B/T over already observed G/J/selected physical F/O.
 
-    Deliberately unadmitted and not executable by v098/v094. This consumes
-    original v277, v271, v281/v278 and v286 outputs, not prior-season values
-    or supplied same_build_budget_evidence. Only the real upstream stages
-    establish the receipts; this adapter never certifies them independently.
+    Deliberately unadmitted and not executable by v098/v094. It reuses
+    original v277 G or an already reconciled same-season v222 G reference,
+    plus v271, v281/v278 and v286 outputs. No old-season defaults. Only
+    upstream source owners authenticate evidence; not this numeric adapter.
     """
     out = {"schema":"v216_zero_history_selected_v222_numeric_preview_v1",
            "status":"GJFO_SELECTED_NUMERIC_OBSERVATIONS_PENDING",
@@ -3213,7 +3213,8 @@ def _zero_history_auto_v222_numeric_preview(*, preflight, native_numeric,
         preflight=preflight,target_ilevel=target_ilevel)
     j = preflight.get("physical_gem_J_arithmetic_unadmitted")
     if g is None:
-        out["requires"].append("V277_G_NATIVE_NUMERIC_PENDING")
+        # Native G is optional when a valid same-season G reference exists.
+        out["requires"].append("SAME_SEASON_G_BUDGET_SOURCE_PENDING")
     if j is None:
         out["requires"].append("V271_PHYSICAL_GEM_J_NUMERIC_PENDING")
     flask_rows=[x for x in native_numeric.get("flask",[])

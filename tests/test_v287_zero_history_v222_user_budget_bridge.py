@@ -1103,7 +1103,7 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                       "oil_item_ids_by_hand":{"off_hand":243734}},
             gem_ratings=None,target_ilevel=334,manual_final_T=3300)
         self.assertIsNone(no_gj["calculation"])
-        self.assertIn("V277_G_NATIVE_NUMERIC_PENDING",no_gj["requires"])
+        self.assertIn("SAME_SEASON_G_BUDGET_SOURCE_PENDING",no_gj["requires"])
         self.assertIn("V271_PHYSICAL_GEM_J_NUMERIC_PENDING",no_gj["requires"])
         self.assertIn("SELECTED_OIL_OFF_HAND_NATIVE_OR_WEAPON_MASK_PENDING",
                       no_gj["requires"])
