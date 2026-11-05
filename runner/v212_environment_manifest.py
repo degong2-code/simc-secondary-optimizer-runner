@@ -18,6 +18,7 @@ import v062_static_budget_bridge as budget
 import v196_current_season_user_catalog as ui_catalog
 import v206_nonchmv_eagle_selection as eagle
 import v213_source_to_catalog as source_bridge
+import v222_season_budget_contract as season_budget
 
 SCHEMA = "v212_simc_environment_manifest_v2"
 V098 = "v098_target_ilevel_user_scenario_v1"
@@ -337,6 +338,164 @@ def verify_fresh_source_environment(document):
     need(document.get("manifest_sha256")==sha(
         canonical(payload).encode("utf8")),
         "FRESH_ENVIRONMENT_STAGE_MANIFEST_DIGEST_INVALID")
+    return True
+
+
+
+FRESH_SEASON_INSTALLED_SCHEMA = "v212_fresh_verified_environment_installed_v1"
+
+
+def compile_fresh_installed_environment(*, source_catalog, source_artifact_sha256,
+                                        staged_source_environment,
+                                        trusted_budget_evidence, source_ui,
+                                        trusted_policy_A_receipts_by_id,
+                                        target_ilevel, manual_final_T=None):
+    """Assemble the actual fresh-season install from existing verified owners.
+
+    INTERNAL ONLY: trusted_budget_evidence must originate from verified
+    G/J/F/O source owners, and Policy A receipts from the existing v220
+    internal source/SimC/product/CHMV verification pipeline. Neither a user
+    request, source-only v222 preview nor a self-rehashed stage is authority.
+    This function does no additional source authentication/Native/network.
+    The caller MUST install through v217.execute_stage before exposing READY.
+    """
+    source_bridge.verify_catalog(source_catalog)
+    verify_fresh_source_environment(staged_source_environment)
+    need(valid_sha(source_artifact_sha256) and
+         staged_source_environment["source_catalog_manifest_sha256"]==
+             source_catalog["manifest_sha256"] and
+         staged_source_environment["source_catalog_artifact_sha256"]==
+             source_artifact_sha256 and
+         staged_source_environment["game_build"]==source_catalog["game_build"] and
+         staged_source_environment["simc_revision"]==
+             source_catalog["simc_revision"] and
+         staged_source_environment["target_ilevel"]==target_ilevel,
+         "FRESH_INSTALL_SEALED_STAGE_OR_SEASON_IDENTITY_MISMATCH")
+    need(type(trusted_budget_evidence) is dict and
+         type(trusted_policy_A_receipts_by_id) is dict and
+         type(source_ui) is dict,
+         "FRESH_INSTALL_TRUSTED_INTERNAL_INPUTS_REQUIRED")
+    try:
+        budget=season_budget.preprofile_budget(
+            source_catalog=source_catalog,
+            source_artifact_sha256=source_artifact_sha256,
+            evidence=trusted_budget_evidence,target_ilevel=target_ilevel,
+            manual_final_T=manual_final_T)
+    except season_budget.SeasonBudgetBlocked as exc:
+        raise EnvironmentBlocked(
+            "FRESH_INSTALL_OFFICIAL_GJFO_RECONCILIATION_BLOCKED:"+str(exc)
+        ) from exc
+    need(budget["status"]==
+             "ARITHMETIC_RECONCILED_SOURCE_AUTHENTICATION_EXTERNAL" and
+         budget["source_authentication_performed_here"] is False and
+         not budget.get("numeric_preview_only",False),
+         "FRESH_INSTALL_UNADMITTED_V222_PREVIEW_CANNOT_PROMOTE")
+    # v196 is the original admission/quality projection. Each optional item
+    # lacking proof remains pending; it cannot block an otherwise proven base.
+    try:
+        prepared=ui_catalog.prepare_verified_fresh_choices(
+            source_catalog,source_ui,trusted_policy_A_receipts_by_id)
+    except ui_catalog.CatalogBlocked as exc:
+        raise EnvironmentBlocked(
+            "FRESH_INSTALL_POLICY_A_ORIGIN_BLOCKED:"+str(exc)) from exc
+    _validate_fresh_prepared_option_sources(prepared,source_catalog)
+    published=[{**row,"ui_selectable":True}
+               for row in prepared["verified_option_inputs_unpublished"]]
+    oil=budget["fixed_O"]
+    components=trusted_budget_evidence["components"]
+    payload={
+        "schema":FRESH_SEASON_INSTALLED_SCHEMA,
+        "status":"FRESH_SEASON_VERIFIED_ENVIRONMENT_INSTALLED_READY",
+        "game_build":source_catalog["game_build"],
+        "simc_revision":source_catalog["simc_revision"],
+        "target_ilevel":target_ilevel,
+        "source_catalog_manifest_sha256":source_catalog["manifest_sha256"],
+        "source_catalog_artifact_sha256":source_artifact_sha256,
+        "staged_source_environment_sha256":
+            staged_source_environment["manifest_sha256"],
+        "original_v216_preflight_sha256":
+            staged_source_environment["original_v216_preflight_sha256"],
+        "original_v217_stage_receipts":
+            dict(staged_source_environment["original_v217_stage_receipts"]),
+        "trusted_budget_evidence_sha256":
+            sha(canonical(trusted_budget_evidence).encode("utf8")),
+        "trusted_budget_component_source_identities":{
+            k:{"source_sha256":components[k]["source_sha256"],
+               "source_verification":components[k]["source_verification"]}
+            for k in ("G","J","F","O")},
+        "official_G":budget["reference_G"],
+        "official_effective_G":budget["effective_G"],
+        "official_J":budget["J"],
+        "official_F":budget["F"],
+        "official_O":dict(oil),
+        "official_B":budget["base_B"],
+        "official_T":budget["final_T"],
+        "manual_final_T_authoritative":
+            budget["manual_final_T_authoritative"],
+        "v222_reconciled_budget":budget,
+        "original_v196_prepared_options_sha256":
+            prepared["prepared_options_sha256"],
+        "published_verified_options":published,
+        "published_verified_option_count":len(published),
+        "optional_quality_pending_item_ids":
+            list(prepared["quality_use_scope_pending_item_ids"]),
+        "optional_other_proof_pending_by_id":
+            dict(prepared["other_proofs_pending_by_item_id"]),
+        "optional_items_do_not_block_base":True,
+        "environment_ready":True,"environment_installed":True,
+        "options_published":True,
+        "dps_optimization_required":False,
+        "user_profile_or_trinkets_required":False,
+        "source_authentication_created_here":False,
+        "native_calls":0,"network_calls":0,
+    }
+    return {**payload,
+            "manifest_sha256":sha(canonical(payload).encode("utf8"))}
+
+
+def verify_fresh_installed_environment(document):
+    """Integrity and official accounting of a versioned installed output.
+
+    This does not replace existing source owner verification, which must
+    occur before compile_fresh_installed_environment is called.
+    """
+    need(type(document) is dict and
+         document.get("schema")==FRESH_SEASON_INSTALLED_SCHEMA and
+         document.get("status")==
+             "FRESH_SEASON_VERIFIED_ENVIRONMENT_INSTALLED_READY" and
+         document.get("environment_ready") is True and
+         document.get("environment_installed") is True and
+         document.get("options_published") is True and
+         document.get("source_authentication_created_here") is False and
+         document.get("optional_items_do_not_block_base") is True and
+         valid_sha(document.get("staged_source_environment_sha256")) and
+         valid_sha(document.get("trusted_budget_evidence_sha256")) and
+         valid_sha(document.get("original_v196_prepared_options_sha256")) and
+         type(document.get("official_G")) is int and
+         document["official_G"]>0 and
+         type(document.get("official_J")) is int and
+         document["official_J"]>=0 and
+         type(document.get("official_F")) is int and
+         document["official_F"]>=0 and
+         type(document.get("official_O")) is dict and
+         set(document["official_O"])==set(season_budget.STATS) and
+         all(type(i) is int and i>=0
+             for i in document["official_O"].values()) and
+         type(document.get("official_B")) is int and
+         type(document.get("official_T")) is int and
+         document["official_B"]+sum(document["official_O"].values())==
+             document["official_T"] and
+         type(document.get("published_verified_options")) is list and
+         document.get("published_verified_option_count")==
+             len(document["published_verified_options"]) and
+         all(type(row) is dict and row.get("ui_selectable") is True
+             for row in document["published_verified_options"]) and
+         document.get("dps_optimization_required") is False and
+         document.get("native_calls")==0 and document.get("network_calls")==0,
+         "FRESH_INSTALL_READY_OR_BUDGET_CONTRACT_DRIFT")
+    payload={k:v for k,v in document.items() if k!="manifest_sha256"}
+    need(document.get("manifest_sha256")==sha(canonical(payload).encode("utf8")),
+         "FRESH_INSTALL_MANIFEST_DIGEST_INVALID")
     return True
 
 

@@ -370,6 +370,157 @@ class FreshEnvironmentSourceStageTests(unittest.TestCase):
                     preflight=preflight,compilation=compilation,target_ilevel=334)
 
 
+    def test_fresh_install_uses_original_v222_v196_and_v217_not_preview(self):
+        from runner import v217_stage_execution_engine as stages
+        from runner import v222_season_budget_contract as gjfo
+        from tests.test_v240_v211_v213_fresh_catalog_handoff import (
+            SameFreshCatalogChain)
+        fixture=SameFreshCatalogChain()
+        with tempfile.TemporaryDirectory() as td:
+            root=Path(td)
+            season,classification=fixture.inputs(root)
+            catalog=source_bridge.compile_catalog(
+                season,"a"*64,classification,"b"*64)
+            artifact_sha=p.sha(p.canonical(catalog).encode("utf8"))
+            source_path=root/"fresh_v213.json"
+            source_path.write_bytes(p.canonical(catalog).encode("utf8"))
+            preflight={
+                "schema":"v216_new_season_source_preflight_v1",
+                "status":"FRESH_SOURCE_CANDIDATES_VALID_GJFO_PENDING_NOT_INSTALLED",
+                "game_build":catalog["game_build"],
+                "simc_revision":catalog["simc_revision"],
+                "source_artifact_sha256":artifact_sha,
+                "source_catalog_manifest_sha256":catalog["manifest_sha256"],
+                "environment_ready":False,"approved_new_choices":0,
+                "G":None,"J":None,"F":None,"O":None,"B":None,"T":None,
+                "requires":["G/J/F/O_VERIFIED_SOURCE_RECEIPTS"],
+            }
+            preflight["preflight_sha256"]=p.sha(
+                p.canonical(preflight).encode("utf8"))
+            compilation={
+                "status":"FRESH_V191_V211_V213_COMPILED_UNADMITTED",
+                "simc_revision":catalog["simc_revision"],
+                "preflight_sha256":preflight["preflight_sha256"],
+                "environment_ready":False,
+                "stage_root":str(root),
+                "source_catalog_path":str(source_path),
+                **{key:{"status":"REUSED_VERIFIED",
+                         "receipt_sha256":str(i)*64}
+                   for i,key in enumerate((
+                       "v191_stage","v211_stage","v213_stage"),1)},
+            }
+            staged=environment_build._stage_source_environment_only(
+                compilation=compilation,preflight=preflight,
+                target_ilevel=334)
+            staged_data=json.loads(Path(staged["stage_output_path"]).read_text())
+            self.assertTrue(p.verify_fresh_source_environment(staged_data))
+            self.assertFalse(staged_data["environment_ready"])
+            def component(value,kind):
+                return {"rating":value,
+                        "game_build":catalog["game_build"],
+                        "source_catalog_manifest_sha256":
+                            catalog["manifest_sha256"],
+                        "source_sha256":kind*64,
+                        "source_verification":"VALID_SAME_SEASON_SOURCE"}
+            none=gjfo.explicit_no_oil_component(
+                game_build=catalog["game_build"],
+                source_catalog_manifest_sha256=catalog["manifest_sha256"],
+                selected_oil_item_ids_by_hand={})
+            zeros={stat:0 for stat in gjfo.STATS}
+            trusted_budget={
+                "schema":gjfo.SCHEMA,
+                "game_build":catalog["game_build"],
+                "simc_revision":catalog["simc_revision"],
+                "source_catalog_manifest_sha256":catalog["manifest_sha256"],
+                "source_catalog_artifact_sha256":artifact_sha,
+                "target_ilevel":334,
+                "components":{
+                    "G":component(2800,"4"),
+                    "J":component(140,"5"),
+                    "F":component(170,"6"),
+                    "O":none},
+                "fixed_L":zeros,"fixed_E":zeros,
+                "G_reference_excludes_selected_E":True,
+            }
+            published=p.compile_fresh_installed_environment(
+                source_catalog=catalog,
+                source_artifact_sha256=artifact_sha,
+                staged_source_environment=staged_data,
+                trusted_budget_evidence=trusted_budget,
+                source_ui=ui_catalog.public_options(source_path),
+                trusted_policy_A_receipts_by_id={},
+                target_ilevel=334)
+            self.assertTrue(p.verify_fresh_installed_environment(published))
+            self.assertEqual(published["official_G"],2800)
+            self.assertEqual(published["official_J"],140)
+            self.assertEqual(published["official_F"],170)
+            self.assertEqual(published["official_O"],zeros)
+            self.assertEqual(published["official_B"],3110)
+            self.assertEqual(published["official_T"],3110)
+            self.assertTrue(published["environment_installed"])
+            self.assertTrue(published["options_published"])
+            self.assertEqual(published["published_verified_options"],[])
+            self.assertTrue(published["optional_other_proof_pending_by_id"])
+            first=environment_build._install_verified_fresh_environment_only(
+                compilation=compilation,staged=staged,
+                trusted_budget_evidence=trusted_budget,
+                target_ilevel=334,trusted_policy_A_receipts_by_id={})
+            self.assertTrue(first["environment_ready"])
+            self.assertEqual(first["stage_status"],"EXECUTED_AND_SEALED")
+            self.assertTrue(Path(first["stage_output_path"]).is_file())
+            saved=json.loads(Path(first["stage_output_path"]).read_text())
+            self.assertEqual(saved,published)
+            second=environment_build._install_verified_fresh_environment_only(
+                compilation=compilation,staged=staged,
+                trusted_budget_evidence=trusted_budget,
+                target_ilevel=334,trusted_policy_A_receipts_by_id={})
+            self.assertEqual(second["stage_status"],"REUSED_VERIFIED")
+            self.assertEqual(second["manifest_sha256"],first["manifest_sha256"])
+            manual=p.compile_fresh_installed_environment(
+                source_catalog=catalog,source_artifact_sha256=artifact_sha,
+                staged_source_environment=staged_data,
+                trusted_budget_evidence=trusted_budget,
+                source_ui=ui_catalog.public_options(source_path),
+                trusted_policy_A_receipts_by_id={},
+                target_ilevel=334,manual_final_T=3333)
+            self.assertEqual(manual["official_B"],3333)
+            self.assertEqual(manual["official_T"],3333)
+            self.assertTrue(manual["manual_final_T_authoritative"])
+            with self.assertRaisesRegex(
+                    p.EnvironmentBlocked,"OFFICIAL_GJFO_RECONCILIATION_BLOCKED"):
+                p.compile_fresh_installed_environment(
+                    source_catalog=catalog,source_artifact_sha256=artifact_sha,
+                    staged_source_environment=staged_data,
+                    trusted_budget_evidence={**trusted_budget,
+                        "components":{**trusted_budget["components"],
+                            "J":{**trusted_budget["components"]["J"],
+                                 "source_verification":
+                                     "UNADMITTED_NUMERIC_OBSERVATION"}}},
+                    source_ui=ui_catalog.public_options(source_path),
+                    trusted_policy_A_receipts_by_id={},
+                    target_ilevel=334)
+            with self.assertRaisesRegex(
+                    p.EnvironmentBlocked,"STAGE_CANNOT_PROMOTE"):
+                p.compile_fresh_installed_environment(
+                    source_catalog=catalog,source_artifact_sha256=artifact_sha,
+                    staged_source_environment={**staged_data,
+                        "environment_ready":True},
+                    trusted_budget_evidence=trusted_budget,
+                    source_ui=ui_catalog.public_options(source_path),
+                    trusted_policy_A_receipts_by_id={},
+                    target_ilevel=334)
+            with self.assertRaisesRegex(
+                    p.EnvironmentBlocked,"SEASON_IDENTITY_MISMATCH"):
+                p.compile_fresh_installed_environment(
+                    source_catalog=catalog,source_artifact_sha256=artifact_sha,
+                    staged_source_environment=staged_data,
+                    trusted_budget_evidence=trusted_budget,
+                    source_ui=ui_catalog.public_options(source_path),
+                    trusted_policy_A_receipts_by_id={},
+                    target_ilevel=335)
+
+
+
 class EnvironmentManifestTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

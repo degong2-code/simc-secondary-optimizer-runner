@@ -3921,6 +3921,92 @@ def _stage_source_environment_only(*, compilation, preflight,
             "new_native_calls":0,"network_calls":0}
 
 
+def _install_verified_fresh_environment_only(*, compilation, staged,
+                                             trusted_budget_evidence,
+                                             target_ilevel, manual_final_T=None,
+                                             trusted_policy_A_receipts_by_id=None):
+    """Finish the SAME v216/v217 Environment Build after source verification.
+
+    This INTERNAL boundary takes only source-owner-authenticated v222 GJFO
+    evidence and existing v220 exact item receipts. Source-only previews,
+    user-submitted JSON, or catalog stage SHA by itself MUST NOT call it.
+    No new data collector, Native, cache, separate season DB or DPS run.
+    """
+    need(type(compilation) is dict and type(staged) is dict and
+         type(trusted_budget_evidence) is dict and
+         type(trusted_policy_A_receipts_by_id) is dict and
+         staged.get("schema")==environment_manifest.FRESH_SEASON_STAGE_SCHEMA and
+         staged.get("status")==
+             "FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED" and
+         staged.get("stage_status") in (
+             "EXECUTED_AND_SEALED","REUSED_VERIFIED","RECOVERED_VERIFIED") and
+         type(staged.get("stage_receipt_sha256")) is str,
+         "V216_FRESH_INSTALL_TRUSTED_STAGE_AND_BUDGET_REQUIRED")
+    source_path=pathlib.Path(compilation["source_catalog_path"])
+    stage_root=pathlib.Path(compilation["stage_root"])
+    staged_path=pathlib.Path(staged["stage_output_path"])
+    need(source_path.is_file() and not source_path.is_symlink() and
+         stage_root.is_dir() and not stage_root.is_symlink() and
+         staged_path.is_file() and not staged_path.is_symlink() and
+         source_path.resolve().is_relative_to(stage_root.resolve()) and
+         staged_path.resolve().is_relative_to(stage_root.resolve()),
+         "V216_FRESH_INSTALL_SOURCE_OR_STAGE_OUTSIDE_WORKSPACE")
+    catalog,catalog_sha=environment_manifest.read_json(source_path)
+    sealed, _ = environment_manifest.read_json(staged_path)
+    environment_manifest.verify_fresh_source_environment(sealed)
+    need(sealed["manifest_sha256"]==staged["manifest_sha256"] and
+         sealed["original_v216_preflight_sha256"]==
+             staged["original_v216_preflight_sha256"],
+         "V216_FRESH_INSTALL_STAGED_SOURCE_RECEIPT_DRIFT")
+    # Same original v196 normal product catalog and v220 Policy A pipeline.
+    ui=user_catalog.public_options(source_path)
+    installed=environment_manifest.compile_fresh_installed_environment(
+        source_catalog=catalog,source_artifact_sha256=catalog_sha,
+        staged_source_environment=sealed,
+        trusted_budget_evidence=trusted_budget_evidence,
+        source_ui=ui,
+        trusted_policy_A_receipts_by_id=trusted_policy_A_receipts_by_id,
+        target_ilevel=target_ilevel,manual_final_T=manual_final_T)
+    key=installed["manifest_sha256"][:20]
+    stage_id="fresh-v212-installed-"+key
+    output="fresh_source/v212_installed_"+key+".json"
+    path=stage_root/output
+    encoded=environment_manifest.canonical(installed)+"\n"
+    def execute():
+        path.parent.mkdir(parents=True,exist_ok=True)
+        need(not path.exists() and not path.is_symlink(),
+             "V216_FRESH_INSTALL_OUTPUT_ALREADY_EXISTS_UNRECEIPTED")
+        path.write_text(encoded,encoding="utf8")
+    def validate(files):
+        saved=files["environment"]
+        if saved.is_symlink() or saved.read_text(encoding="utf8")!=encoded:
+            return False
+        return environment_manifest.verify_fresh_installed_environment(
+            json.loads(saved.read_text(encoding="utf8")))
+    receipt=stage_engine.execute_stage(
+        root=stage_root,stage_id=stage_id,
+        stage_version="v212-fresh-installed-environment-1",
+        inputs={"manifest_sha256":installed["manifest_sha256"],
+                "source_stage_sha256":sealed["manifest_sha256"],
+                "trusted_budget_evidence_sha256":
+                    installed["trusted_budget_evidence_sha256"],
+                "policy_A_prepared_sha256":
+                    installed["original_v196_prepared_options_sha256"]},
+        outputs={"environment":output},execute=execute,validate=validate)
+    return {"schema":environment_manifest.FRESH_SEASON_INSTALLED_SCHEMA,
+            "status":installed["status"],
+            "manifest_sha256":installed["manifest_sha256"],
+            "source_stage_sha256":sealed["manifest_sha256"],
+            "stage_status":receipt["status"],
+            "stage_receipt_sha256":receipt["receipt_sha256"],
+            "stage_output_path":str(path),
+            "environment_ready":True,"environment_installed":True,
+            "options_published":True,
+            "published_verified_option_count":
+                installed["published_verified_option_count"],
+            "new_native_calls":0,"network_calls":0}
+
+
 def build_environment(*, sessions_root, session_folder, user, binary, revision,
                       static_cache, source_catalog_path, bootstrap_result,
                       v208_start_receipt_path=None, package_manifest_path=None,
