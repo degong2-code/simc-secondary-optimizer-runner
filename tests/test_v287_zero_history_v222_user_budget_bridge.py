@@ -990,6 +990,50 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertFalse(result["zero_history_build"]["environment_ready"])
         self.assertEqual(result["native_calls"],0)
 
+    def test_source_owner_no_oil_uses_exact_selection_not_preview(self):
+        # P3-EW: original v222 O=0 is valid only for explicit no oil.
+        import v222_season_budget_contract as budget
+        preflight={
+            "schema":build.FRESH_SOURCE_PREFLIGHT_SCHEMA,
+            "game_build":self.catalog["game_build"],
+            "source_catalog_manifest_sha256":self.catalog["manifest_sha256"],
+            "environment_ready":False}
+        raw={"components":{"G":{"rating":2800},"J":{"rating":140},
+                            "F":{"rating":170}}}
+        selected={"flask_item_id":241326,"oil_item_ids_by_hand":{}}
+        merged=build._fresh_source_owner_exact_no_oil(
+            preflight=preflight,selected_budget_items=selected,
+            trusted_budget_evidence=raw)
+        exact=budget.explicit_no_oil_component(
+            game_build=self.catalog["game_build"],
+            source_catalog_manifest_sha256=self.catalog["manifest_sha256"],
+            selected_oil_item_ids_by_hand={})
+        self.assertEqual(merged["components"]["O"],exact)
+        self.assertNotIn("O",raw["components"])
+        for choice in (None,{"flask_item_id":241326,
+                             "oil_item_ids_by_hand":{"main_hand":243734}}):
+            self.assertEqual(
+                build._fresh_source_owner_exact_no_oil(
+                    preflight=preflight,selected_budget_items=choice,
+                    trusted_budget_evidence=raw),raw)
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_SOURCE_OWNER_NO_OIL_PROOF_CONFLICT"):
+            build._fresh_source_owner_exact_no_oil(
+                preflight=preflight,selected_budget_items=selected,
+                trusted_budget_evidence={
+                    "components":{**raw["components"],"O":{
+                        **exact,"rating":{**exact["rating"],
+                                          "crit_rating":1}}}})
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_SOURCE_OWNER_NO_OIL_ORIGINAL_PREFLIGHT_REQUIRED"):
+            build._fresh_source_owner_exact_no_oil(
+                preflight={**preflight,
+                           "source_catalog_manifest_sha256":"wrong"},
+                selected_budget_items=selected,
+                trusted_budget_evidence=raw)
+
     def test_verified_install_provider_connects_same_normal_build(self):
         # Existing v217/v216 source stage is a prerequisite. The internal
         # provider returns None until it has actually verified GJFO.

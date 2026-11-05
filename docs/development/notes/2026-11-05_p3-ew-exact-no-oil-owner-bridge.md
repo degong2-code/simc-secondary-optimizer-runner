@@ -1,0 +1,10 @@
+# 2026-11-05 · P3-EW · 명시적 기름 없음 원본 소유권 연결
+
+- **Capability:** `BUDGET.GJFO`, `ENVIRONMENT.WEB`
+- **Keywords:** P3-EW, explicit no oil, O, v222, v216, source-owner, verified_install_input_provider, season-agnostic, READY
+- **Prior evidence:** [기능 라이브러리 E1/E3](../INDEX.md), [P3-EF](2026-11-05_p3-ef-explicit-no-oil-accounting-proof-waiver.md), [P3-EU](2026-11-05_p3-eu-fresh-environment-install-engine.md). 기존 `v222.explicit_no_oil_component`가 같은 source catalog identity에 귀속되는 정확한 `EXPLICIT_NO_OIL_SELECTION` O=0 영수증을 이미 생성.
+- **Decision:** `CONNECT` — 새 시즌 수치 인증기나 새 Native 대신 정상 v216 내부 source-owner 결과에 **명시적** 기름 없음만 v222 기존 영수증을 결합한다.
+- **Changes:** `v216._fresh_source_owner_exact_no_oil` 추가. 내부 검증된 공급자가 G/J/F와 정책 A 결과를 제공할 때, 명시적으로 빈 기름 hands를 선택한 경우에만 동일 build/source SHA 기반 v222 O=0 컴포넌트를 결합한다. 기름을 선택했거나 선택 자체가 없으면 입력을 변경하지 않고, 공급자 O가 명시 NONE과 충돌하면 fail closed. 기존 v217 봉인·재개, v222 공식 B/T, v220/v196, 수동 T 및 L/E를 유지한다.
+- **Verification:** 새 focused 단위 회귀 1개(명시 NONE, 미선택, 선택 기름, 변조, 원본 범위). 커밋 전 `NOT_VERIFIED`; 코드 검증은 해당 HEAD Actions 결과를 우선한다. 역사 범위: [P3-EU focused #41994773484](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41994773484) 255 PASS, [v212 #41994773720](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41994773720) Ubuntu/Windows 각 448 PASS/4 SKIP, Native0. 이번 새 SimC Native·게임 HTTP 0, 실제 신규 시즌 T1 미실행.
+- **Remaining:** 실제 G/J/F 검증 source-owner 공급자 및 실제 선택 O의 손/효과/정적 수치·정책 A 4-family·웹앱 신규 시즌 READY/T1 미완료. P3-CP +151/+16·+17 실측은 사용자 지적으로 **재조사 필요·저우선순위**, 공식 수치나 새시즌 하드코딩 금지.
+- **Efficiency:** 기존 v222 함수를 그대로 호출, 새 collector/Native/HTTP/캐시 파일·전수 증거 재탐색 0. 입력 dict의 얕은 복사만 수행, 새 별도 Gate나 최적화 엔진 없음; 다음 시즌 동일 선택 시 그대로 재사용. main/v003/v016/Project UI/Work OS·주 개발 소유권 불변.

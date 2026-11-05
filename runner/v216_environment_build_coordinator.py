@@ -3921,6 +3921,39 @@ def _stage_source_environment_only(*, compilation, preflight,
             "new_native_calls":0,"network_calls":0}
 
 
+def _fresh_source_owner_exact_no_oil(*, preflight, selected_budget_items,
+                                     trusted_budget_evidence):
+    """Reuse v222's original O=0 proof ONLY for explicitly selected no oil.
+
+    Neither missing selections nor source-only numeric previews grant O
+    ownership. G/J/F and selected actual oils still need their source owners.
+    """
+    if (selected_budget_items is None or
+            selected_budget_items.get("oil_item_ids_by_hand") != {}):
+        return trusted_budget_evidence
+    need(type(preflight) is dict and
+         preflight.get("schema")==FRESH_SOURCE_PREFLIGHT_SCHEMA and
+         preflight.get("environment_ready") is False and
+         type(preflight.get("game_build")) is str and
+         type(preflight.get("source_catalog_manifest_sha256")) is str and
+         season_budget_contract.SHA.fullmatch(
+             preflight["source_catalog_manifest_sha256"]) is not None,
+         "V216_SOURCE_OWNER_NO_OIL_ORIGINAL_PREFLIGHT_REQUIRED")
+    need(type(trusted_budget_evidence) is dict and
+         type(trusted_budget_evidence.get("components")) is dict,
+         "V216_SOURCE_OWNER_NO_OIL_BUDGET_COMPONENTS_REQUIRED")
+    exact=season_budget_contract.explicit_no_oil_component(
+        game_build=preflight["game_build"],
+        source_catalog_manifest_sha256=preflight[
+            "source_catalog_manifest_sha256"],
+        selected_oil_item_ids_by_hand={})
+    components=trusted_budget_evidence["components"]
+    need("O" not in components or components["O"]==exact,
+         "V216_SOURCE_OWNER_NO_OIL_PROOF_CONFLICT")
+    return {**trusted_budget_evidence,
+            "components":{**components,"O":exact}}
+
+
 def _install_verified_fresh_environment_only(*, compilation, staged,
                                              trusted_budget_evidence,
                                              target_ilevel, manual_final_T=None,
@@ -4552,9 +4585,16 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                          type(confirmed["trusted_budget_evidence"]) is dict and
                          type(confirmed["trusted_policy_A_receipts_by_id"]) is dict,
                          "V216_INSTALL_PROVIDER_VERIFIED_OUTPUT_FIELDS")
+                    # Only an explicit, empty oil-hand selection owns O=0.
+                    # Attach the existing v222 receipt, not a preview or an
+                    # invented season constant. Conflicting provider O blocks.
+                    trusted_budget=_fresh_source_owner_exact_no_oil(
+                        preflight=preflight,
+                        selected_budget_items=selected_budget_items,
+                        trusted_budget_evidence=confirmed["trusted_budget_evidence"])
                     installed=_install_verified_fresh_environment_only(
                         compilation=source_compilation,staged=staged,
-                        trusted_budget_evidence=confirmed["trusted_budget_evidence"],
+                        trusted_budget_evidence=trusted_budget,
                         trusted_policy_A_receipts_by_id=confirmed[
                             "trusted_policy_A_receipts_by_id"],
                         target_ilevel=fresh_collection_inputs[
