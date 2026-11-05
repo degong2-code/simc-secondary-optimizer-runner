@@ -3981,6 +3981,79 @@ def _stage_source_environment_only(*, compilation, preflight,
             "new_native_calls":0,"network_calls":0}
 
 
+
+def _fresh_default_intrinsic_gem_layout_from_source(*, collected,
+                                                    selected_roles,
+                                                    target_ilevel):
+    """Stage exact one-special + N ordinary on v232 intrinsic slots only.
+
+    The caller's role-selected IDs are *not* independently certified here.
+    The same normal preflight still authenticates them against the original
+    sealed v221/v266/v230 source before producing any J source candidate.
+    No historical gem IDs, new sockets, Native or arbitrary UI ID selection.
+    """
+    source=collected.get("fresh_one_spec_simc_representative") or {}
+    stage=source.get("source_stage") or {}
+    need(type(selected_roles) is dict and set(selected_roles)=={
+        "special_gem_id","ordinary_gem_ids"} and
+         type(selected_roles["special_gem_id"]) is int and
+         selected_roles["special_gem_id"]>0 and
+         type(selected_roles["ordinary_gem_ids"]) is list and
+         source.get("status")==
+             "FRESH_ONE_SPEC_SIMC_G_SOURCE_CANDIDATE_PENDING_NATIVE"
+         and stage.get("status") in (
+             "EXECUTED_AND_SEALED","REUSED_VERIFIED","RECOVERED_VERIFIED")
+         and type(stage.get("receipt_sha256")) is str and
+         season_budget_contract.SHA.fullmatch(
+             stage["receipt_sha256"]) is not None,
+         "V216_DEFAULT_GEM_ORIGINAL_V232_SEALED_SOURCE_REQUIRED")
+    path=pathlib.Path(source.get("candidate_path") or "")
+    need(path.is_file() and not path.is_symlink() and
+         0<path.stat().st_size<=10_000_000,
+         "V216_DEFAULT_GEM_ORIGINAL_V232_CANDIDATE_REQUIRED")
+    original=json.loads(path.read_text("utf8"))
+    receipt=original.get("receipt_sha256")
+    need(original.get("schema")==simc_representative.SCHEMA and
+         original.get("game_build")==collected.get("expected_game_build") and
+         original.get("target_ilevel")==target_ilevel and
+         original.get("environment_ready") is False and
+         type(receipt) is str and
+         receipt==simc_source.digest(simc_source.canonical({
+             k:v for k,v in original.items()
+             if k!="receipt_sha256"}).encode("utf8")),
+         "V216_DEFAULT_GEM_ORIGINAL_V232_CANDIDATE_IDENTITY_DRIFT")
+    ids=original.get("selected_G_slot_ids")
+    counts=original.get(
+        "selected_intrinsic_socket_count_by_slot_source_only")
+    need(type(ids) is dict and bool(ids) and
+         type(counts) is dict and set(ids)==set(counts) and
+         counts==source.get(
+             "intrinsic_socket_counts_by_selected_slot_source_only") and
+         sum(counts.values())==
+             source.get("intrinsic_socket_total_source_only") and
+         len(counts)==source.get("selected_slot_count") and
+         all(type(i) is int and i>0 for i in ids.values()) and
+         type(target_ilevel) is int and 1<=target_ilevel<=1000,
+         "V216_DEFAULT_GEM_V232_PHYSICAL_SLOTS_DRIFT")
+    selected=selected_roles["ordinary_gem_ids"]
+    special=selected_roles["special_gem_id"]
+    plan=physical_gems.intrinsic_source_plan(
+        intrinsic_socket_counts=counts,
+        special_gem_id=special,ordinary_gem_ids=selected,
+        source_observed_gem_item_ids=sorted(set(selected)|{special}),
+        need=need)
+    rows={slot:{"slot":slot,"item_id":ids[slot],
+                "ilevel":target_ilevel,"options":{}}
+          for slot in sorted(ids)}
+    _,layout=physical_gems.arrange(rows,plan,need)
+    need(layout["socket_total"]==sum(counts.values()) and
+         layout["ordinary_count"]==sum(counts.values())-1 and
+         layout["special_gem_id"]==special and
+         layout["environment_ready"] is False,
+         "V216_DEFAULT_GEM_V271_INTRINSIC_LAYOUT_DRIFT")
+    return layout
+
+
 def _fresh_selected_J_intrinsic_socket_source(*, collected, preflight,
                                                compilation):
     """Join already sealed v232 intrinsic sockets to v271, never approve J."""
@@ -5038,7 +5111,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                   "auto_native_O_requested",
                   "auto_native_G_requested",
                    "verified_install_input_provider",
-                   "auto_select_observed_F_no_oil"},
+                   "auto_select_observed_F_no_oil",
+                   "source_selected_gem_roles"},
              "V216_ZERO_HISTORY_SOURCE_INPUT_FIELDS")
         # A trusted internal source-owner adapter can provide independently
         # verified GJFO/Policy A input. JSON or HTTP cannot supply a callable.
@@ -5080,6 +5154,14 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             "same_build_budget_evidence")
         zero_history_gem_layout=fresh_collection_inputs.get(
             "gem_layout_receipt")
+        source_selected_gem_roles=fresh_collection_inputs.get(
+            "source_selected_gem_roles")
+        need(source_selected_gem_roles is None or
+             (type(source_selected_gem_roles) is dict and
+              set(source_selected_gem_roles)=={
+                  "special_gem_id","ordinary_gem_ids"} and
+              user is None and zero_history_gem_layout is None),
+             "V216_DEFAULT_GEM_INTERNAL_ROLE_SELECTION_SCOPE_REQUIRED")
         zero_history_gem_ratings=fresh_collection_inputs.get(
             "gem_rating_by_id")
         selected_budget_items=fresh_collection_inputs.get(
@@ -5156,11 +5238,22 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                          "gem_layout_receipt","gem_rating_by_id",
                          "selected_budget_items","auto_native_F_requested",
                          "auto_native_O_requested",
-                  "auto_native_G_requested",
-                  "verified_install_input_provider")}
+                         "auto_native_G_requested",
+                         "auto_select_observed_F_no_oil",
+                         "source_selected_gem_roles",
+                         "verified_install_input_provider")}
         collected=collect_wago_new_season_source(
             sessions_root=sessions_root,**source_inputs)
         progress=_zero_history_source_progress(collected)
+        if source_selected_gem_roles is not None:
+            zero_history_gem_layout=(
+                _fresh_default_intrinsic_gem_layout_from_source(
+                    collected=collected,
+                    selected_roles=source_selected_gem_roles,
+                    target_ilevel=fresh_collection_inputs[
+                        "representative_request"]["target_ilevel"]))
+            progress["default_intrinsic_gem_layout_unadmitted"]=(
+                zero_history_gem_layout)
         # Explicit NONE is an actual user selection, not the O=0 preview
         # assumption. The old physical-weapon applicability task is then
         # irrelevant; incomplete F/G/J evidence stays pending as before.

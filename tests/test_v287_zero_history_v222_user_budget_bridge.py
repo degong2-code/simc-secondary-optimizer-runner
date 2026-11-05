@@ -1339,6 +1339,61 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                             trusted_policy_A_receipts_by_id=provider),provider)
 
 
+
+    def test_p3_fj_intrinsic_v232_roles_stage_exactly_one_special_for_preflight(self):
+        # The pure adapter uses only previously sealed source observations.
+        # Input gem ROLE IDs are provisional until the original v221 join,
+        # so this test does NOT claim the selected item is a real special.
+        original={
+            "schema":build.simc_representative.SCHEMA,
+            "game_build":self.catalog["game_build"],
+            "target_ilevel":334,
+            "selected_G_slot_ids":{"head":1001,"waist":1002,"wrists":1003},
+            "selected_intrinsic_socket_count_by_slot_source_only":{
+                "head":1,"waist":0,"wrists":2},
+            "environment_ready":False}
+        original["receipt_sha256"]=build.simc_source.digest(
+            build.simc_source.canonical(original).encode("utf8"))
+        path=self.root/"v232_original.json"
+        path.write_text(json.dumps(original),encoding="utf8")
+        collected={"expected_game_build":self.catalog["game_build"],
+                   "fresh_one_spec_simc_representative":{
+                       "status":"FRESH_ONE_SPEC_SIMC_G_SOURCE_CANDIDATE_PENDING_NATIVE",
+                       "candidate_path":str(path),
+                       "source_stage":{"status":"REUSED_VERIFIED",
+                                       "receipt_sha256":"f"*64},
+                       "selected_slot_count":3,
+                       "intrinsic_socket_total_source_only":3,
+                       "intrinsic_socket_counts_by_selected_slot_source_only":{
+                           "head":1,"waist":0,"wrists":2}}}
+        roles={"special_gem_id":311003,
+               "ordinary_gem_ids":[311001,311002]}
+        fn=build._fresh_default_intrinsic_gem_layout_from_source
+        result=fn(collected=collected,selected_roles=roles,target_ilevel=334)
+        self.assertEqual(result["socket_counts"],{"head":1,"wrists":2})
+        self.assertEqual(result["special_slot"],"head")
+        self.assertEqual(result["special_gem_id"],311003)
+        self.assertEqual(result["ordinary_gem_ids"],[311001,311002])
+        self.assertFalse(result["environment_ready"])
+        self.assertFalse(result["CHMV_J_source_authenticated"])
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_DEFAULT_GEM_ORIGINAL_V232_CANDIDATE_IDENTITY_DRIFT"):
+            fn(collected=collected,selected_roles=roles,target_ilevel=335)
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "SOCKET_INTRINSIC_SPECIAL_AND_ORDINARY_IDS_REQUIRED"):
+            fn(collected=collected,selected_roles={
+                "special_gem_id":311003,"ordinary_gem_ids":[311001]},
+                target_ilevel=334)
+        path.write_text(json.dumps({
+            **original,"selected_G_slot_ids":{
+                "head":9999,"waist":1002,"wrists":1003}}),encoding="utf8")
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_DEFAULT_GEM_ORIGINAL_V232_CANDIDATE_IDENTITY_DRIFT"):
+            fn(collected=collected,selected_roles=roles,target_ilevel=334)
+
     def test_p3_fg_default_web_original_four_budget_without_provider(self):
         # Complete exact sources can form G/J/F/O, but only in the
         # season-wide no OPTIONAL special equipment/enchant or oil.
