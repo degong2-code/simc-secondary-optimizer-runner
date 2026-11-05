@@ -1283,6 +1283,8 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
             "source_evidence_projection_provided":bool(admission),
             "v217_source_relation_receipt_count":len(source_relations),
             "v217_source_relation_scoped_only":True,
+            "original_v217_source_relation_receipts_internal":
+                dict(source_relations),
             "prepared_verified_options_unpublished":prepared_options,
             "verified_options_published":False,
             "affects_verified_base_GJFO":False},
@@ -4689,6 +4691,70 @@ def _fresh_source_owner_merge_native_G(*, trusted_budget_evidence,
             "components":{**components,"G":(current or owner_G)}}
 
 
+
+def _fresh_source_owner_merge_policy_A_original_source_relation(
+        *,preflight,staged,trusted_policy_A_receipts_by_id):
+    """Reuse only the original sealed v217 source family, not three others."""
+    need(type(trusted_policy_A_receipts_by_id) is dict,
+         "V216_POLICY_A_INTERNAL_PROVIDER_RECEIPTS_REQUIRED")
+    meta=(preflight.get("optional_policy_A_evidence_unadmitted")
+          if type(preflight) is dict else None)
+    source=(meta.get("original_v217_source_relation_receipts_internal")
+            if type(meta) is dict else None)
+    if not source:
+        return trusted_policy_A_receipts_by_id
+    need(type(source) is dict and type(staged) is dict
+         and staged.get("status")==
+             "FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED"
+         and staged.get("original_v216_preflight_sha256")==
+             preflight.get("preflight_sha256")
+         and staged.get("stage_status") in (
+             "EXECUTED_AND_SEALED","REUSED_VERIFIED","RECOVERED_VERIFIED")
+         and meta.get("v217_source_relation_scoped_only") is True
+         and meta.get("v217_source_relation_receipt_count")==len(source)
+         and meta.get("source_catalog_manifest_sha256")==
+             preflight.get("source_catalog_manifest_sha256")
+         and meta.get("source_catalog_artifact_sha256")==
+             preflight.get("source_artifact_sha256")
+         and preflight.get("schema")==FRESH_SOURCE_PREFLIGHT_SCHEMA
+         and preflight.get("environment_ready") is False,
+         "V216_POLICY_A_ORIGINAL_V217_SEALED_SCOPE_REQUIRED")
+    need(all(type(k) is int and k>0 and type(v) is dict
+             for k,v in trusted_policy_A_receipts_by_id.items()),
+         "V216_POLICY_A_PROVIDER_ITEM_MAP_INVALID")
+    merged={k:dict(v) for k,v in trusted_policy_A_receipts_by_id.items()}
+    for item_id,parts in source.items():
+        need(type(item_id) is int and item_id>0
+             and type(parts) is dict
+             and set(parts)=={"source_relation"}
+             and type(parts["source_relation"]) is dict,
+             "V216_POLICY_A_V217_SOURCE_RELATION_SHAPE_DRIFT")
+        proof=parts["source_relation"]
+        ident=proof.get("identity")
+        need(type(ident) is dict and
+             ident.get("kind")=="permanent_enchant" and
+             ident.get("exact_id")==item_id and
+             ident.get("game_build")==preflight.get("game_build") and
+             ident.get("simc_revision")==preflight.get("simc_revision") and
+             ident.get("catalog_sha256")==
+                 preflight.get("source_catalog_manifest_sha256") and
+             type(ident.get("slot")) is str and bool(ident["slot"]) and
+             type(ident.get("simc_token")) is str
+             and bool(ident["simc_token"]) and
+             proof.get("status")==
+                 auto_admission.PROOF_STATUSES["source_relation"] and
+             type(proof.get("evidence_sha256")) is str
+             and season_budget_contract.SHA.fullmatch(
+                 proof["evidence_sha256"]) is not None,
+             "V216_POLICY_A_V217_ORIGINAL_SOURCE_PROOF_DRIFT")
+        existing=merged.get(item_id,{})
+        need("source_relation" not in existing or
+             existing["source_relation"]==proof,
+             "V216_POLICY_A_PROVIDER_SOURCE_RELATION_CONFLICT")
+        merged[item_id]={**existing,"source_relation":dict(proof)}
+    return merged
+
+
 def _fresh_source_owner_exact_no_oil(*, preflight, selected_budget_items,
                                      trusted_budget_evidence):
     """Reuse v222's original O=0 proof ONLY for explicitly selected no oil.
@@ -5420,11 +5486,15 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     trusted_budget=_fresh_source_owner_crosscheck_selected_J_F(
                         owner_numeric=jf_numeric,
                         trusted_budget_evidence=trusted_budget)
+                    policy_A_receipts=(
+                        _fresh_source_owner_merge_policy_A_original_source_relation(
+                            preflight=preflight,staged=staged,
+                            trusted_policy_A_receipts_by_id=confirmed[
+                                "trusted_policy_A_receipts_by_id"]))
                     installed=_install_verified_fresh_environment_only(
                         compilation=source_compilation,staged=staged,
                         trusted_budget_evidence=trusted_budget,
-                        trusted_policy_A_receipts_by_id=confirmed[
-                            "trusted_policy_A_receipts_by_id"],
+                        trusted_policy_A_receipts_by_id=policy_A_receipts,
                         target_ilevel=fresh_collection_inputs[
                             "representative_request"]["target_ilevel"],
                         manual_final_T=manual_T)

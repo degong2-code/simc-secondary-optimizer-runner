@@ -1265,6 +1265,79 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 selected_budget_items=selected,
                 trusted_budget_evidence=raw)
 
+
+    def test_p3_fe_original_v217_source_relation_only_merge(self):
+        from runner import v220_catalog_auto_admission as policy
+        identity={"kind":"permanent_enchant","exact_id":91001,
+                  "simc_token":"enchant_boots__source",
+                  "slot":"feet","game_build":self.catalog["game_build"],
+                  "simc_revision":self.catalog["simc_revision"],
+                  "catalog_sha256":self.catalog["manifest_sha256"]}
+        proof={"identity":identity,
+               "status":"EXACT_SOURCE_RELATION_VERIFIED",
+               "evidence_sha256":"1"*64}
+        pre={"schema":build.FRESH_SOURCE_PREFLIGHT_SCHEMA,
+             "game_build":self.catalog["game_build"],
+             "simc_revision":self.catalog["simc_revision"],
+             "source_catalog_manifest_sha256":self.catalog["manifest_sha256"],
+             "source_artifact_sha256":"a"*64,
+             "preflight_sha256":"e"*64,"environment_ready":False,
+             "optional_policy_A_evidence_unadmitted":{
+                 "v217_source_relation_receipt_count":1,
+                 "v217_source_relation_scoped_only":True,
+                 "source_catalog_manifest_sha256":
+                     self.catalog["manifest_sha256"],
+                 "source_catalog_artifact_sha256":"a"*64,
+                 "original_v217_source_relation_receipts_internal":{
+                     91001:{"source_relation":proof}}}}
+        staged={"status":"FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED",
+                "stage_status":"REUSED_VERIFIED",
+                "original_v216_preflight_sha256":"e"*64}
+        provider={91001:{"simc_input":{
+            "identity":dict(identity),"status":"SIMC_INPUT_ACCEPTED",
+            "evidence_sha256":"2"*64}}}
+        merge=build._fresh_source_owner_merge_policy_A_original_source_relation
+        result=merge(preflight=pre,staged=staged,
+                     trusted_policy_A_receipts_by_id=provider)
+        self.assertEqual(result[91001]["source_relation"],proof)
+        self.assertEqual(set(provider[91001]),{"simc_input"})
+        choice={**identity,"slot_status":"SOURCE_MASK_RESOLVED"}
+        decision=policy.decide(choice,result[91001])
+        self.assertFalse(decision["eligible"])
+        self.assertIn("EVIDENCE_MISSING:product_input",decision["missing"])
+        self.assertIn("EVIDENCE_MISSING:chmv_budget",decision["missing"])
+        self.assertEqual(result,merge(preflight=pre,staged=staged,
+                                      trusted_policy_A_receipts_by_id=result))
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_POLICY_A_PROVIDER_SOURCE_RELATION_CONFLICT"):
+            merge(preflight=pre,staged=staged,
+                  trusted_policy_A_receipts_by_id={
+                    91001:{"source_relation":{**proof,
+                         "evidence_sha256":"3"*64}}})
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_POLICY_A_ORIGINAL_V217_SEALED_SCOPE_REQUIRED"):
+            merge(preflight=pre,staged={**staged,
+                    "original_v216_preflight_sha256":"b"*64},
+                  trusted_policy_A_receipts_by_id=provider)
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_POLICY_A_V217_ORIGINAL_SOURCE_PROOF_DRIFT"):
+            forged=copy.deepcopy(pre)
+            forged["optional_policy_A_evidence_unadmitted"][
+                "original_v217_source_relation_receipts_internal"][91001][
+                    "source_relation"]["identity"]["exact_id"]=99999
+            merge(preflight=forged,staged=staged,
+                  trusted_policy_A_receipts_by_id=provider)
+        empty=copy.deepcopy(pre)
+        empty["optional_policy_A_evidence_unadmitted"][
+            "original_v217_source_relation_receipts_internal"]={}
+        empty["optional_policy_A_evidence_unadmitted"][
+            "v217_source_relation_receipt_count"]=0
+        self.assertIs(merge(preflight=empty,staged=staged,
+                            trusted_policy_A_receipts_by_id=provider),provider)
+
     def test_verified_install_provider_connects_same_normal_build(self):
         # Existing v217/v216 source stage is a prerequisite. The internal
         # provider returns None until it has actually verified GJFO.
