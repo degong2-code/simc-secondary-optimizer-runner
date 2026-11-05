@@ -1152,6 +1152,20 @@ def _season_settings_from_v216(*, compilation, numeric_inputs,
             return {"status":"SEASON_SETTINGS_SOURCE_PENDING",
                     "missing":["V221_GEM_SOURCE_PROPERTY_INPUT_DRIFT"],
                     "settings":None}
+    # Reuse v230's existing exact-item crafting-quality source observation.
+    # An item rank does not establish identical effect/applicability or best
+    # available quality; such conclusions remain owned by Policy A evidence.
+    selected_quality=(source_relation.get(
+        "selected_simc_gem_quality_source_unadmitted")
+        if type(source_relation) is dict else None)
+    if selected_quality is not None and selected_quality.get(
+            "quality_source_authenticated") is True:
+        if (selected_quality.get("game_build")!=
+                numeric_inputs["v216_numeric_preview"]["calculation"]["game_build"]
+                or selected_quality.get("selected_item_ids")!=source_ids):
+            return {"status":"SEASON_SETTINGS_SOURCE_PENDING",
+                    "missing":["V230_SELECTED_GEM_QUALITY_SCOPE_DRIFT"],
+                    "settings":None}
     # v271/v139 already support variable N and a non-head special slot.
     # Unsupported source IDs remain pending rather than being invented.
     if (type(counts) is not dict or type(ordinary) is not list or
@@ -1229,6 +1243,13 @@ def _season_settings_from_v216(*, compilation, numeric_inputs,
             "selected_v221_gem_property_inputs_unadmitted":(
                 [dict(row) for row in property_rows]
                 if property_rows is not None else None),
+            "selected_v230_gem_item_quality_unadmitted":(
+                [dict(row) for row in selected_quality[
+                    "selected_item_quality_unadmitted"]]
+                if type(selected_quality) is dict and
+                selected_quality.get("quality_source_authenticated") is True
+                else None),
+            "gem_highest_quality_verified_here":False,
             "source_minimum_ilevel_for_selected_gems_observed_only":(
                 all(row["minimum_ilevel"]<=calc["target_ilevel"]
                     for row in property_rows)

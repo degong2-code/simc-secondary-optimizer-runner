@@ -45,6 +45,7 @@ import v250_raid_tier_bonus_corroboration as raid_bonus
 import v251_db2_raid_tier_simc_bridge as tier_simc_bridge
 import v261_tier_source_evidence_reuse as tier_evidence_reuse
 import v229_simc_only_source_seed as simc_source
+import v230_simc_item_metadata as simc_item_metadata
 import v189_simc_consumable_embellishment_discovery as simc_effect_candidates
 import v190_consumable_item_snapshot_join as consumable_item_candidates
 import v232_simc_only_ordinary_representative as simc_representative
@@ -302,6 +303,136 @@ def _fresh_gem_item_source_stage(*, stage_root, wago_folder,
         "J":None,"environment_ready":False,
         "network_calls_by_stage":0,"native_calls":0,
     }
+
+
+def _fresh_selected_gem_simc_quality_stage(*, stage_root, seed_directory,
+                                            game_build, simc_revision,
+                                            selected_item_ids):
+    """Reuse existing v230 exact selected-item fields from sealed v256 seed.
+
+    This is a v217-cached SOURCE-ONLY projection, not quality equivalence,
+    same-effect certification, special classification, socket permission
+    or highest-quality option publication. No network or Native.
+    """
+    root=pathlib.Path(stage_root).resolve()
+    seed=pathlib.Path(seed_directory).resolve()
+    need(seed==root/"source"/"v256_full_pinned_simc" and
+         seed.is_dir() and not seed.is_symlink() and
+         type(selected_item_ids) is list and
+         1<=len(selected_item_ids)<=64 and
+         all(type(item) is int and item>0 for item in selected_item_ids) and
+         len(set(selected_item_ids))==len(selected_item_ids) and
+         type(game_build) is str and bool(game_build) and
+         type(simc_revision) is str and
+         re.fullmatch(r"[a-f0-9]{40}",simc_revision) is not None,
+         "V216_SELECTED_GEM_PINNED_V230_SCOPE_INVALID")
+    selected=sorted(selected_item_ids)
+    receipt_file=seed/simc_source.RECEIPT
+    need(receipt_file.is_file() and not receipt_file.is_symlink(),
+         "V216_SELECTED_GEM_V230_SEED_RECEIPT_REQUIRED")
+    receipt=json.loads(simc_source.bounded_read(receipt_file,2_000_000))
+    need(receipt.get("schema")==simc_source.SCHEMA and
+         receipt.get("provenance_tree_blob_authenticated") is True and
+         receipt.get("item_data_present") is True and
+         receipt.get("simc_generated_build")==game_build and
+         receipt.get("simc_revision")==simc_revision and
+         type(receipt.get("source_files",{}).get("item_data.inc")) is dict,
+         "V216_SELECTED_GEM_V230_ORIGINAL_BUILD_REVISION_REQUIRED")
+    input_seed={
+        "game_build":game_build,"simc_revision":simc_revision,
+        "seed_receipt_sha256":digest(receipt_file.read_bytes()),
+        "selected_gem_item_ids":selected,
+        "v230_parser_code_sha256":stage_engine.module_dependency_fingerprint(
+            [pathlib.Path(simc_item_metadata.__file__),
+             pathlib.Path(stage_engine.__file__)])["sha256"]}
+    key=digest(canonical(input_seed).encode("utf8"))[:20]
+    output="fresh_source/v230_selected_gem_item_source_"+key+".json"
+    path=root/output
+    def execute():
+        original=simc_item_metadata.from_seed(
+            directory=seed,item_ids=selected)
+        need(original.get("schema")==simc_item_metadata.SCHEMA and
+             original.get("game_build")==game_build and
+             original.get("simc_revision")==simc_revision and
+             original.get("requested_item_count")==len(selected) and
+             [row.get("item_id") for row in original.get("items",[])]==
+                selected and
+             all(type(row.get("quality")) is int and
+                 type(row.get("crafting_quality")) is int and
+                 row["quality"]>=0 and row["crafting_quality"]>=0 and
+                 row.get("class_id")==gem_item_join.GEM_CLASS
+                 for row in original["items"]),
+             "V216_SELECTED_GEM_V230_EXACT_GEM_METADATA_REQUIRED")
+        payload={
+            "schema":"v216_selected_gem_source_quality_observation_v1",
+            "status":"PINNED_SIMC_GEM_QUALITY_SOURCE_ONLY_UNADMITTED",
+            "game_build":game_build,"simc_revision":simc_revision,
+            "seed_receipt_sha256":original["source_receipt_sha256"],
+            "item_data_sha256":original["source_sha256"],
+            "selected_item_ids":selected,
+            "selected_item_quality_unadmitted":[{
+                "item_id":row["item_id"],
+                "quality":row["quality"],
+                "crafting_quality":row["crafting_quality"],
+                "class_id":row["class_id"],
+                "subclass_id":row["subclass_id"],
+            } for row in original["items"]],
+            "exact_same_effect_and_conditions_verified":False,
+            "highest_quality_selection_verified":False,
+            "special_gem_role_verified":False,
+            "game_socket_legality_verified":False,
+            "environment_ready":False,
+            "native_calls":0,"network_calls":0}
+        path.parent.mkdir(parents=True,exist_ok=True)
+        path.write_text(canonical(payload)+"\n",encoding="utf8")
+    def validate(files):
+        try:
+            doc=json.loads(files["quality"].read_text("utf8"))
+            qualities=doc["selected_item_quality_unadmitted"]
+            return (doc.get("schema")==
+                    "v216_selected_gem_source_quality_observation_v1" and
+                    doc.get("status")==
+                    "PINNED_SIMC_GEM_QUALITY_SOURCE_ONLY_UNADMITTED" and
+                    doc.get("game_build")==game_build and
+                    doc.get("simc_revision")==simc_revision and
+                    doc.get("selected_item_ids")==selected and
+                    doc.get("seed_receipt_sha256")==
+                        receipt["receipt_sha256"] and
+                    doc.get("item_data_sha256")==
+                        receipt["source_files"]["item_data.inc"]["sha256"] and
+                    type(qualities) is list and
+                    len(qualities)==len(selected) and
+                    [row.get("item_id") for row in qualities]==selected and
+                    all(type(row.get(k)) is int and row[k]>=0
+                        for row in qualities
+                        for k in ("quality","crafting_quality",
+                                  "class_id","subclass_id")) and
+                    all(row["class_id"]==gem_item_join.GEM_CLASS
+                        for row in qualities) and
+                    doc.get("highest_quality_selection_verified") is False and
+                    doc.get("special_gem_role_verified") is False and
+                    doc.get("game_socket_legality_verified") is False and
+                    doc.get("environment_ready") is False and
+                    doc.get("native_calls")==0 and doc.get("network_calls")==0)
+        except (OSError,ValueError,KeyError,TypeError):
+            return False
+    try:
+        stage=stage_engine.execute_stage(
+            root=root,stage_id="fresh-v230-selected-gem-"+key,
+            stage_version="selected-gem-existing-v230-quality-source-v1",
+            inputs=input_seed,outputs={"quality":output},
+            execute=execute,validate=validate)
+    except (simc_item_metadata.ItemMetadataBlocked,
+            stage_engine.StageExecutionBlocked,
+            EnvironmentBuildBlocked,ValueError,OSError,KeyError) as exc:
+        return {"status":"PINNED_SIMC_SELECTED_GEM_METADATA_PENDING",
+                "reason":str(exc).split(":",1)[0],
+                "quality_source_authenticated":False,
+                "native_calls":0,"network_calls":0}
+    doc=json.loads(path.read_text("utf8"))
+    return {**doc,"v230_stage_receipt_sha256":stage["receipt_sha256"],
+            "v230_stage_cache_status":stage["status"],
+            "quality_source_authenticated":True}
 
 
 def _reuse_observed_G_native_receipts(*, catalog, receipt_paths_by_ilevel):
@@ -621,7 +752,8 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                                 gem_layout_receipt=None,
                                 gem_rating_by_id=None,
                                 zero_history_native_G=None,
-                                policy_A_v217_stages=None):
+                                policy_A_v217_stages=None,
+                                pinned_gem_simc_source_folder=None):
     """Inspect a freshly assembled v213 artifact in the NORMAL Build path.
 
     This does not install an environment. Reuse authenticated source
@@ -751,7 +883,36 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                          row["gem_property_id"]>0 for row in props),
                  "V216_SELECTED_V221_SOURCE_PROPERTY_RECORDS_DRIFT")
             source_properties=[dict(row) for row in props]
+        quality_source=None
+        if pinned_gem_simc_source_folder is not None:
+            quality_source=_fresh_selected_gem_simc_quality_stage(
+                stage_root=source_stage_root,
+                seed_directory=pinned_gem_simc_source_folder,
+                game_build=expected_game_build,
+                simc_revision=expected_simc_revision,
+                selected_item_ids=sorted(selected_source_ids))
+            if quality_source.get("quality_source_authenticated") is True:
+                rows=quality_source.get(
+                    "selected_item_quality_unadmitted")
+                need(quality_source.get("game_build")==expected_game_build
+                     and quality_source.get("simc_revision")==
+                        expected_simc_revision
+                     and quality_source.get("selected_item_ids")==
+                         sorted(selected_source_ids)
+                     and type(rows) is list and
+                     len(rows)==len(selected_source_ids)
+                     and [row.get("item_id") for row in rows
+                          if type(row) is dict]==sorted(selected_source_ids)
+                     and all(type(row) is dict and
+                         set(row)=={"item_id","quality","crafting_quality",
+                                    "class_id","subclass_id"}
+                         and all(type(v) is int and v>=0
+                                 for v in row.values())
+                         and row["class_id"]==gem_item_join.GEM_CLASS
+                         for row in rows),
+                     "V216_V230_SELECTED_GEM_QUALITY_SOURCE_SCOPE_DRIFT")
         source_item_link={
+            "selected_simc_gem_quality_source_unadmitted":quality_source,
             "selected_item_ids":sorted(selected_source_ids),
             "selected_gem_property_records_unadmitted":source_properties,
             "gem_property_source_fields_complete":source_properties is not None,
@@ -3762,6 +3923,9 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     gem_layout_receipt=zero_history_gem_layout,
                     gem_rating_by_id=zero_history_gem_ratings,
                     zero_history_native_G=native_G,
+                    pinned_gem_simc_source_folder=collected.get(
+                        "fresh_lazy_full_pinned_simc_item_source",{}).get(
+                            "source_dir"),
                     target_ilevel=(
                         fresh_collection_inputs[
                             "representative_request"]["target_ilevel"]

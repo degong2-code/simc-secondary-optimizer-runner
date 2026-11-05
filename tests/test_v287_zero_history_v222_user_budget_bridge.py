@@ -250,7 +250,8 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertIsNone(result["J"])
         self.assertFalse(result["zero_history_build"]["environment_ready"])
 
-    def preflight_with_sealed_gem_raw(self, layout, raw, manual_ratings=None):
+    def preflight_with_sealed_gem_raw(self, layout, raw, manual_ratings=None,
+                                      pinned_seed=None):
         gem_source={"candidate_path":str(self.root/"gem_candidate.json"),
                     "source_stage":{"receipt_sha256":"5"*64}}
         with (mock.patch.object(build.environment_manifest,"read_json",
@@ -268,7 +269,8 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 expected_simc_revision=self.catalog["simc_revision"],
                 source_snapshot_folder=self.wago,
                 source_stage_root=self.root,
-                gem_layout_receipt=layout,gem_rating_by_id=manual_ratings)
+                gem_layout_receipt=layout,gem_rating_by_id=manual_ratings,
+                pinned_gem_simc_source_folder=pinned_seed)
             self.assertEqual(view.call_args.kwargs["selected_gem_item_ids"],
                              layout["ordinary_gem_ids"])
             self.assertEqual(view.call_args.kwargs["selected_source_gem_item_ids"],
@@ -368,6 +370,103 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         with self.assertRaisesRegex(build.EnvironmentBuildBlocked,
                                     "SOURCE_PROPERTY_RECORDS_DRIFT"):
             self.preflight_with_sealed_gem_raw(layout,bad)
+
+    def test_p3_ej_reuses_pinned_simc_selected_gem_quality_with_stage_cache(self):
+        from runner import v229_simc_only_source_seed as source_seed
+        import v098_target_user_scenario_bootstrap as boot
+        selected=[311001,311002,311003]
+        simc_dir=self.root/"source"/"v256_full_pinned_simc"
+        simc_dir.mkdir(parents=True,exist_ok=True)
+        receipt={"schema":source_seed.SCHEMA,
+                 "provenance_tree_blob_authenticated":True,
+                 "item_data_present":True,
+                 "simc_generated_build":self.catalog["game_build"],
+                 "simc_revision":self.catalog["simc_revision"],
+                 "receipt_sha256":"8"*64,
+                 "source_files":{"item_data.inc":{"sha256":"7"*64}}}
+        (simc_dir/source_seed.RECEIPT).write_text(
+            json.dumps(receipt),encoding="utf8")
+        items=[{"item_id":item_id,"quality":3,"crafting_quality":rank,
+                "class_id":3,"subclass_id":0}
+               for item_id,rank in zip(selected,(1,3,2))]
+        parsed={"schema":build.simc_item_metadata.SCHEMA,
+                "game_build":self.catalog["game_build"],
+                "simc_revision":self.catalog["simc_revision"],
+                "requested_item_count":3,
+                "source_receipt_sha256":"8"*64,
+                "source_sha256":"7"*64,
+                "items":items}
+        with mock.patch.object(
+                build.simc_item_metadata,"from_seed",return_value=parsed) as parser:
+            first=build._fresh_selected_gem_simc_quality_stage(
+                stage_root=self.root,seed_directory=simc_dir,
+                game_build=self.catalog["game_build"],
+                simc_revision=self.catalog["simc_revision"],
+                selected_item_ids=selected)
+            again=build._fresh_selected_gem_simc_quality_stage(
+                stage_root=self.root,seed_directory=simc_dir,
+                game_build=self.catalog["game_build"],
+                simc_revision=self.catalog["simc_revision"],
+                selected_item_ids=selected)
+            parser.assert_called_once()
+        self.assertEqual(first["status"],
+                         "PINNED_SIMC_GEM_QUALITY_SOURCE_ONLY_UNADMITTED")
+        self.assertEqual(first["selected_item_quality_unadmitted"],items)
+        self.assertTrue(first["quality_source_authenticated"])
+        self.assertEqual(again["v230_stage_cache_status"],"REUSED_VERIFIED")
+        self.assertFalse(first["highest_quality_selection_verified"])
+        self.assertFalse(first["special_gem_role_verified"])
+        self.assertEqual(first["native_calls"],0)
+        layout=self.source_selected_future_gems()
+        raw={"status":"ENCHANT_RAW_POINTS_SOURCE_ONLY_J_NOT_APPROVED",
+             "enchant_source_sha256":"4"*64,
+             "selected_gem_raw_points_by_id_unadmitted":{
+                 "311001":20,"311002":30},
+             "selected_gem_all_raw_points_known":True,
+             "selected_gem_v221_item_ids_unadmitted":selected,
+             "selected_gem_v221_same_build_items_all_present":True,
+             "J":None,"environment_ready":False}
+        # The existing sealed stage is hit without another v230 parse.
+        pre=self.preflight_with_sealed_gem_raw(
+            layout,raw,pinned_seed=simc_dir)
+        bound=pre["selected_v221_gem_item_relation_unadmitted"]
+        self.assertEqual(
+            bound["selected_simc_gem_quality_source_unadmitted"][
+                "selected_item_quality_unadmitted"],items)
+        self.assertFalse(bound["special_class_and_quality_verified"])
+        self.assertIsNone(pre["J"])
+        joined={"physical_gem_layout_unadmitted":layout,
+                "physical_gem_J_arithmetic_unadmitted":
+                    pre["physical_gem_J_arithmetic_unadmitted"],
+                "selected_v221_gem_item_relation_unadmitted":bound}
+        inputs={"v216_numeric_preview":{"calculation":{
+                    "J":70,"F":165,"game_build":self.catalog["game_build"],
+                    "target_ilevel":334}},
+                "flask":{"simc_input_token":"flask_of_the_shattered_sun_2",
+                    "static_CHMV_vector":{
+                        "crit_rating":165,"haste_rating":0,
+                        "mastery_rating":0,"versatility_rating":0}}}
+        derived=boot._season_settings_from_v216(
+            compilation=joined,numeric_inputs=inputs,need=boot.need)
+        self.assertEqual(derived["selected_v230_gem_item_quality_unadmitted"],
+                         items)
+        self.assertFalse(derived["gem_highest_quality_verified_here"])
+        bad={**first,"selected_item_ids":[311001,311003]}
+        with mock.patch.object(
+                build,"_fresh_selected_gem_simc_quality_stage",
+                return_value=bad):
+            with self.assertRaisesRegex(
+                    build.EnvironmentBuildBlocked,"QUALITY_SOURCE_SCOPE_DRIFT"):
+                self.preflight_with_sealed_gem_raw(
+                    layout,raw,pinned_seed=simc_dir)
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_SELECTED_GEM_PINNED_V230_SCOPE_INVALID"):
+            build._fresh_selected_gem_simc_quality_stage(
+                stage_root=self.root,seed_directory=self.root,
+                game_build=self.catalog["game_build"],
+                simc_revision=self.catalog["simc_revision"],
+                selected_item_ids=selected)
 
     def test_new_season_special_v098_source_settings_require_bound_v221_ids(self):
         import v098_target_user_scenario_bootstrap as boot
