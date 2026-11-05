@@ -63,6 +63,72 @@ def read_json(path, max_bytes=25_000_000):
         raise EnvironmentBlocked("INPUT_JSON_INVALID:" + path.name) from exc
 
 
+
+def _validate_fresh_prepared_option_sources(prepared, catalog):
+    """Source identity check before an eventually authorized v212 install.
+
+    v220/v196 already decide exact proofs; never certify effects or READY here.
+    An updated JSON digest alone must not authorize a wrong item/slot/quality.
+    """
+    rows=catalog["catalog"]["enchants"]["items"]
+    by_id={r["enchant_id"]:r for r in rows}
+    selected=prepared["verified_option_inputs_unpublished"]
+    eligible=prepared.get("v220_exact_proof_eligible_count")
+    pending=prepared.get("quality_use_scope_pending_item_ids")
+    other=prepared.get("other_proofs_pending_by_item_id")
+    need(len(by_id)==len(rows) and type(eligible) is int and
+         len(selected)<=eligible<=len(rows) and
+         type(pending) is list and
+         all(type(i) is int and i in by_id for i in pending) and
+         len(set(pending))==len(pending) and
+         type(other) is dict and
+         all(type(i) is str and i.isdecimal() and int(i) in by_id and
+             type(v) is list and all(type(reason) is str for reason in v)
+             for i,v in other.items()) and
+         eligible==len(selected)+len(pending),
+         "FRESH_ENVIRONMENT_PREPARED_POLICY_A_COUNTS_DRIFT")
+    need(prepared.get("status")==(
+         "EXACT_OPTIONS_PREPARED_FOR_VERSIONED_INSTALL" if selected else
+         "EXACT_OPTIONS_NOT_YET_PREPARED") and
+         prepared.get("native_calls")==0 and
+         prepared.get("network_calls")==0,
+         "FRESH_ENVIRONMENT_PREPARED_STATUS_OR_SIDE_EFFECT_DRIFT")
+    expected_fields={"enchant_id","simc_token","slot",
+                     "highest_verified_quality_rank",
+                     "policy_A_source_relation_sha256",
+                     "quality_source_sha256","exact_v220_identity"}
+    ids=[]
+    for row in selected:
+        need(type(row) is dict and set(row)==expected_fields and
+             type(row.get("enchant_id")) is int and
+             row["enchant_id"] in by_id,
+             "FRESH_ENVIRONMENT_PREPARED_ITEM_ID_OR_FIELDS_INVALID")
+        source=by_id[row["enchant_id"]]
+        need(source["slot_resolution_status"]=="SOURCE_MASK_RESOLVED" and
+             type(source["slot_group"]) is str and
+             "/" not in source["slot_group"],
+             "FRESH_ENVIRONMENT_PREPARED_SOURCE_SLOT_UNRESOLVED")
+        identity={"kind":"permanent_enchant","exact_id":source["enchant_id"],
+                  "simc_token":source["token"],"slot":source["slot_group"],
+                  "game_build":catalog["game_build"],
+                  "simc_revision":catalog["simc_revision"],
+                  "catalog_sha256":catalog["manifest_sha256"]}
+        need(row["exact_v220_identity"]==identity and
+             row["simc_token"]==source["token"] and
+             row["slot"]==source["slot_group"] and
+             type(row["highest_verified_quality_rank"]) is int and
+             row["highest_verified_quality_rank"]==source["quality_rank"] and
+             valid_sha(row["policy_A_source_relation_sha256"]) and
+             valid_sha(row["quality_source_sha256"]),
+             "FRESH_ENVIRONMENT_PREPARED_SOURCE_IDENTITY_DRIFT")
+        ids.append(row["enchant_id"])
+    need(ids==sorted(set(ids)) and
+         not (set(ids)&set(pending)) and
+         not (set(map(str,ids))&set(other)),
+         "FRESH_ENVIRONMENT_PREPARED_DUPLICATE_OR_PENDING_CONFLICT")
+    return len(ids)
+
+
 def compile_fresh_source_environment(*, source_catalog, source_artifact_sha256,
                                      preflight, compilation, target_ilevel,
                                      selected_numeric=None):
@@ -225,6 +291,7 @@ def compile_fresh_source_environment(*, source_catalog, source_artifact_sha256,
         need(prepared.get("prepared_options_sha256")==sha(
              canonical(body).encode("utf8")),
              "FRESH_ENVIRONMENT_POLICY_A_PREPARED_DIGEST_INVALID")
+        _validate_fresh_prepared_option_sources(prepared, source_catalog)
     payload={
         "schema":FRESH_SEASON_STAGE_SCHEMA,
         "status":"FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED",

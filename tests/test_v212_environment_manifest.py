@@ -23,10 +23,28 @@ class FreshEnvironmentSourceStageTests(unittest.TestCase):
         from tests.test_v240_v211_v213_fresh_catalog_handoff import (
             SameFreshCatalogChain)
         from runner import v217_stage_execution_engine as stages
+        from runner import v211_enchant_source_effect_classification as classifier
+        from tests.test_v239_v211_fresh_season_dynamic_classifier import (
+            fixture_source,put_sources)
         fixture=SameFreshCatalogChain()
         with tempfile.TemporaryDirectory() as td:
             root=Path(td)
             season,classification=fixture.inputs(root)
+            # Exercise v212 with an actual source-compatible prepared item,
+            # rather than an arbitrary option that only has a matching SHA.
+            _,generated=fixture_source()
+            row=season["enchants"]["current_season"][
+                "highest_rank_candidates"][0]
+            row["simc_token"]="enchant_boots__new_haste"
+            row["inventory_type_mask"]=1<<8
+            row["inventory_type_options"]=[8]
+            generated["permanent_enchant.inc"]=(
+                generated["permanent_enchant.inc"].replace(
+                    "enchant_ring__new_haste","enchant_boots__new_haste"
+                ).replace("0x800","0x100"))
+            refreshed=put_sources(root,generated)
+            classification=classifier.compile_fresh_season(
+                season,root,refreshed)
             catalog=source_bridge.compile_catalog(
                 season,"a"*64,classification,"b"*64)
             artifact_sha=p.sha(p.canonical(catalog).encode("utf8"))
@@ -120,6 +138,59 @@ class FreshEnvironmentSourceStageTests(unittest.TestCase):
             self.assertFalse(with_candidate["options_published"])
             self.assertFalse(with_candidate["environment_installed"])
             self.assertFalse(with_candidate["environment_ready"])
+            # A new digest for a changed v196 row does not make it a real
+            # current-v213 source choice or grant a true installer identity.
+            def rehash(value):
+                body={k:v for k,v in value.items()
+                      if k!="prepared_options_sha256"}
+                return {**body,"prepared_options_sha256":p.sha(
+                    p.canonical(body).encode("utf8"))}
+            ready_row=prepared["verified_option_inputs_unpublished"][0]
+            for name,forged in (
+                ("token",{**ready_row,"simc_token":"enchant_boots__wrong"}),
+                ("slot",{**ready_row,"slot":"head"}),
+                ("rank",{**ready_row,"highest_verified_quality_rank":0}),
+                ("exact_id",{**ready_row,"exact_v220_identity":{
+                    **ready_row["exact_v220_identity"],"exact_id":91002}}),
+            ):
+                with self.subTest(name=name),self.assertRaisesRegex(
+                    p.EnvironmentBlocked,"PREPARED_SOURCE_IDENTITY_DRIFT"):
+                    fake=rehash({**prepared,
+                        "verified_option_inputs_unpublished":[forged]})
+                    updated={**staged_pre,
+                        "optional_policy_A_evidence_unadmitted":{
+                            "prepared_verified_options_unpublished":fake}}
+                    updated.pop("preflight_sha256",None)
+                    updated["preflight_sha256"]=p.sha(
+                        p.canonical(updated).encode("utf8"))
+                    p.compile_fresh_source_environment(
+                        source_catalog=catalog,source_artifact_sha256=artifact_sha,
+                        preflight=updated,
+                        compilation={**compilation,
+                            "preflight_sha256":updated["preflight_sha256"]},
+                        target_ilevel=334)
+            for name,broken in (
+                ("duplicate",{**prepared,
+                    "verified_option_inputs_unpublished":[ready_row,ready_row],
+                    "v220_exact_proof_eligible_count":2}),
+                ("invalid_count",{**prepared,
+                    "v220_exact_proof_eligible_count":2}),
+            ):
+                with self.subTest(name=name),self.assertRaisesRegex(
+                    p.EnvironmentBlocked,
+                    "PREPARED_(DUPLICATE_OR_PENDING_CONFLICT|POLICY_A_COUNTS_DRIFT)"):
+                    fake=rehash(broken)
+                    updated={**staged_pre,
+                        "optional_policy_A_evidence_unadmitted":{
+                            "prepared_verified_options_unpublished":fake}}
+                    updated.pop("preflight_sha256",None)
+                    updated["preflight_sha256"]=p.sha(
+                        p.canonical(updated).encode("utf8"))
+                    p.compile_fresh_source_environment(
+                        source_catalog=catalog,source_artifact_sha256=artifact_sha,
+                        preflight=updated,compilation={**compilation,
+                            "preflight_sha256":updated["preflight_sha256"]},
+                        target_ilevel=334)
             forged_prepared={**prepared,"prepared_options_sha256":"f"*64}
             forged_pre={**staged_pre,
                 "optional_policy_A_evidence_unadmitted":{
