@@ -1341,7 +1341,8 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
 
     def test_p3_fg_default_web_original_four_budget_without_provider(self):
         # Complete exact sources can form G/J/F/O, but only in the
-        # unenchanted season-wide no-special/no-oil scope.
+        # season-wide no OPTIONAL special equipment/enchant or oil.
+        # Exactly one special GEM is still mandatory under v271.
         from runner import v222_season_budget_contract as season
         data=self.table[334]
         meta={"schema":build.FRESH_SOURCE_PREFLIGHT_SCHEMA,

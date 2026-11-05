@@ -4770,8 +4770,9 @@ def _fresh_original_default_base_install_inputs(*, preflight, staged,
     need(type(standard) is dict and
          standard.get("target_ilevel")==target_ilevel,
          "V216_DEFAULT_BASE_G_TARGET_ILEVEL_DRIFT")
-    # The v233 default reference has no enchants/specials. This explicit
-    # zero L/E scope is valid ONLY for the user=None season-wide baseline.
+    # v233's base has no selected enchant or optional SPECIAL EQUIPMENT.
+    # Therefore fixed L/E=0 applies only to this season-wide baseline.
+    # Exactly one SPECIAL GEM is still mandatory, only excluded from J.
     zero={k:0 for k in season_budget_contract.STATS}
     no_oil=season_budget_contract.explicit_no_oil_component(
         game_build=game_build,

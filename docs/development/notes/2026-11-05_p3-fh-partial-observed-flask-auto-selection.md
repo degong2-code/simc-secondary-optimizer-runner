@@ -1,5 +1,7 @@
 # 2026-11-05 · P3-FH · 최고 관측 F 영약 자동 선택과 no-oil UI 연결
 
+> **후속 P3-FI 정책 정정:** [P3-FI](2026-11-05_p3-fi-mandatory-special-gem-correction.md). 아래 역사 Remaining의 '일반보석만 기본 장착' 제안은 기존 P3-EC의 **특수보석 정확히 1개 필수** 정책에 반하므로 현재 개발 과제가 아니다. 해당 문구는 당시 오류 기록으로 보존한다.
+
 - **Capability:** `F.FLASK`, `ENVIRONMENT.WEB`, `J.GEM`
 - **Keywords:** P3-FH, measured highest effect, missing quality, different effect families, no-oil, v281, v278, v216, v113, webui, J ordinary-only
 - **Prior evidence:** [INDEX C2/D1/E3](../INDEX.md), [P3-FC](2026-11-05_p3-fc-discovered-best-effect-policy.md), [P3-FG](2026-11-05_p3-fg-default-season-install.md). User-approved policy: strongest comparable actually discovered effect is enough; no blanket full-market quality or separate item-use gate. v281 already collects candidates, v278 measures exact paired Native F and v216 joins same-family observations.
