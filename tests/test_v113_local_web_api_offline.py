@@ -256,6 +256,39 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(self.post("/api/v1/environment/season-build",
             {**payload,"selected_flask_item_id":"invalid"}).status_code,422)
 
+
+    def test_p3_fh_web_auto_flask_choice_never_injects_rating_proof(self):
+        payload={"game_build":"12.2.0.99999","target_ilevel":334,
+                 "consumable_native_binary":str(self.binary),
+                 "auto_native_F_requested":True,
+                 "auto_select_observed_F_no_oil":True}
+        with mock.patch.object(web.environment_build,"build_environment",
+                               return_value={"status":"SOURCE_ONLY_PENDING",
+                                   "environment_ready":False,
+                                   "environment_installed":False}) as stage:
+            response=self.post("/api/v1/environment/season-build",payload)
+        self.assertEqual(response.status_code,200,response.text)
+        args=stage.call_args.kwargs["fresh_collection_inputs"]
+        self.assertIsNone(stage.call_args.kwargs["user"])
+        self.assertTrue(args["auto_select_observed_F_no_oil"])
+        self.assertTrue(args["auto_native_F_requested"])
+        self.assertNotIn("selected_budget_items",args)
+        self.assertNotIn("same_build_budget_evidence",args)
+        self.assertTrue(response.json()["web_environment_scope"][
+            "auto_select_observed_F_no_oil"])
+        with mock.patch.object(web.environment_build,"build_environment",
+                               side_effect=AssertionError("MUST_NOT_COLLECT")) as collect:
+            bads=[
+                {**payload,"auto_native_F_requested":False},
+                {**payload,"auto_native_O_requested":True},
+                {**payload,"selected_flask_item_id":241326}]
+            for bad in bads:
+                result=self.post("/api/v1/environment/season-build",bad)
+                self.assertEqual(result.status_code,422,result.text)
+                self.assertEqual(result.json()["detail"]["code"],
+                    "SEASON_AUTO_F_REQUIRES_EXPLICIT_F_NATIVE_AND_NO_OIL")
+            collect.assert_not_called()
+
     def test_web_season_environment_build_native_only_explicit_and_validated(self):
         payload={"game_build":"12.2.0.99999","target_ilevel":341,
                  "native_G_binary":str(self.binary),

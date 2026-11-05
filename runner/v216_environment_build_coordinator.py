@@ -3428,12 +3428,12 @@ def _source_only_one_flask_budget_preview(*, preflight, worklist,
          "quality_or_effect_equivalence_verified":False,
          "user_selectable":False,"environment_ready":False,
          "native_calls":0,"network_calls":0}
-    if (type(preflight) is not dict or
-            _zero_history_G_numeric_input_from_preflight(
-                preflight=preflight) is None or
-            preflight.get("physical_gem_J_arithmetic_unadmitted") is None):
-        out["requires"].append("G_AND_PHYSICAL_J_PREVIEW_REQUIRED")
-        return out
+    # Selecting a measured physical F item does not depend on G or J.
+    # Only B/T preview computation does; keep missing core data pending.
+    missing_G_J=(type(preflight) is not dict or
+        _zero_history_G_numeric_input_from_preflight(
+            preflight=preflight) is None or
+        preflight.get("physical_gem_J_arithmetic_unadmitted") is None)
     if (type(worklist) is not dict or worklist.get("status")!=
             "MEASURABLE_PHYSICAL_F_O_CANDIDATES_UNADMITTED" or
             type(worklist.get("flask")) is not list or
@@ -3491,7 +3491,9 @@ def _source_only_one_flask_budget_preview(*, preflight, worklist,
             "status":"ONE_OBSERVED_FLASK_NO_OIL_NUMERIC_PREVIEW_UNADMITTED",
             "selected_physical_items_unadmitted":{
                 "flask_item_id":chosen,"oil_item_ids_by_hand":{}},
-            "requires":["F_ORIGINAL_NATIVE_RECEIPTS_REQUIRED",
+            "requires":(["G_AND_PHYSICAL_J_PREVIEW_REQUIRED"]
+                        if missing_G_J else [])+
+                       ["F_ORIGINAL_NATIVE_RECEIPTS_REQUIRED",
                         "O_EXPLICIT_NONE_NOT_IMPLIED"]}
 
 
@@ -5034,7 +5036,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                   "selected_budget_items","auto_native_F_requested",
                   "auto_native_O_requested",
                   "auto_native_G_requested",
-                   "verified_install_input_provider"},
+                   "verified_install_input_provider",
+                   "auto_select_observed_F_no_oil"},
              "V216_ZERO_HISTORY_SOURCE_INPUT_FIELDS")
         # A trusted internal source-owner adapter can provide independently
         # verified GJFO/Policy A input. JSON or HTTP cannot supply a callable.
@@ -5080,6 +5083,13 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             "gem_rating_by_id")
         selected_budget_items=fresh_collection_inputs.get(
             "selected_budget_items")
+        auto_select_default_F=fresh_collection_inputs.get(
+            "auto_select_observed_F_no_oil",False)
+        need(type(auto_select_default_F) is bool and
+             (not auto_select_default_F or
+              (user is None and selected_budget_items is None
+               and auto_native_F and not auto_native_O)),
+             "V216_AUTO_F_NO_OIL_EXPLICIT_SCOPE_REQUIRED")
         need(selected_budget_items is None or
              (type(selected_budget_items) is dict and
               set(selected_budget_items)=={
@@ -5441,6 +5451,21 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             source_compilation[
                 "auto_observed_flask_budget_preview_unadmitted"]=auto_preview
             numeric_selection=auto_preview["selected_physical_items_unadmitted"]
+            if auto_select_default_F and numeric_selection is not None:
+                # The season user explicitly chose best observed same-effect
+                # flask and no oil. The preview gives an ItemID ONLY;
+                # actual F requires the original v278 sealed Native cases.
+                selected_budget_items=dict(numeric_selection)
+                selected_check=_zero_history_selected_F_O_v222_reconcile(
+                    selected=selected_budget_items,numeric=native_F_O,
+                    choices=quality_weapon,
+                    existing_budget=source_compilation.get(
+                        "preprofile_budget_arithmetic_unadmitted"),
+                    budget_evidence=zero_history_budget_evidence)
+                progress["selected_physical_F_O_budget_link_unadmitted"]=selected_check
+                source_compilation["selected_physical_F_O_budget_link_unadmitted"]=selected_check
+                progress["automatic_observed_F_explicit_no_oil_selected_item_id"]=(
+                    selected_budget_items["flask_item_id"])
         if numeric_selection is not None:
             selected_numeric=_zero_history_auto_v222_numeric_preview(
                 preflight=preflight,

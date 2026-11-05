@@ -63,6 +63,7 @@ class SeasonEnvironmentBuildRequest(BaseModel):
     # The user's selected flask is an exact physical ID, NOT trusted F
     # evidence. A missing selection leaves the normal Build pending.
     selected_flask_item_id: int | None = Field(default=None,ge=1,le=999999999)
+    auto_select_observed_F_no_oil: bool = False
     simc_revision_hint: str | None = Field(
         default=None,pattern=r"^(?:[a-f0-9]{7,12}|[a-f0-9]{40})$")
 
@@ -126,7 +127,8 @@ class LocalJobs:
                                  auto_native_F_requested=False,
                                  auto_native_O_requested=False,
                                  consumable_native_binary=None,
-                                 selected_flask_item_id=None):
+                                 selected_flask_item_id=None,
+                                 auto_select_observed_F_no_oil=False):
         """Run original v216 with season inputs, never a user DPS scenario.
 
         One deterministic one-spec reference G probe is NOT season-level
@@ -150,6 +152,11 @@ class LocalJobs:
                 auto_native_F_requested or auto_native_O_requested):
             raise environment_manifest.EnvironmentBlocked(
                 "SEASON_F_O_BINARY_WITHOUT_MEASUREMENT_SELECTION")
+        if auto_select_observed_F_no_oil and (
+                selected_flask_item_id is not None
+                or not auto_native_F_requested or auto_native_O_requested):
+            raise environment_manifest.EnvironmentBlocked(
+                "SEASON_AUTO_F_REQUIRES_EXPLICIT_F_NATIVE_AND_NO_OIL")
         with self.season_source_lock:
             observed=environment_build.build_environment(
                 sessions_root=self.root,session_folder=None,user=None,
@@ -172,7 +179,9 @@ class LocalJobs:
                     **({"selected_budget_items":{
                         "flask_item_id":selected_flask_item_id,
                         "oil_item_ids_by_hand":{}}}
-                       if selected_flask_item_id is not None else {})})
+                       if selected_flask_item_id is not None else {}),
+                    **({"auto_select_observed_F_no_oil":True}
+                       if auto_select_observed_F_no_oil else {})})
         return {**observed,"web_environment_scope":{
             "schema":"v113_web_season_environment_build_scope_v1",
             "game_build":game_build,"target_ilevel":target_ilevel,
@@ -185,6 +194,8 @@ class LocalJobs:
             "selected_flask_item_id":selected_flask_item_id,
             "explicit_no_oil_with_selected_flask":
                 selected_flask_item_id is not None,
+            "auto_select_observed_F_no_oil":
+                auto_select_observed_F_no_oil,
             "dps_optimization_started":False,
             "user_character_or_trinkets_required":False,
             "environment_installed":observed.get("environment_installed") is True,
@@ -1004,7 +1015,9 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                 simc_revision_hint=request.simc_revision_hint,
                 auto_native_F_requested=request.auto_native_F_requested,
                 auto_native_O_requested=request.auto_native_O_requested,
-                selected_flask_item_id=request.selected_flask_item_id)
+                selected_flask_item_id=request.selected_flask_item_id,
+                auto_select_observed_F_no_oil=
+                    request.auto_select_observed_F_no_oil)
         except Exception as exc:
             raise blocked(exc) from None
 

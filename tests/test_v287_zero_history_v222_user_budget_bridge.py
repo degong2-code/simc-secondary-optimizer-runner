@@ -2065,6 +2065,39 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertIn("ORIGINAL_OBSERVED_FLASK_SOURCE_PENDING",
                       waiting["requires"])
 
+
+    def test_p3_fh_auto_flask_only_scope_requires_explicit_none_oil(self):
+        # Check rejection happens BEFORE any source/network and does not
+        # treat web input as proof. The real selection requires paired F
+        # Native evidence after original v281 discovery.
+        with mock.patch.object(build,"collect_wago_new_season_source",
+                               side_effect=AssertionError("NO_NETWORK")):
+            for kwargs in (
+                {"auto_select_observed_F_no_oil":True},
+                {"auto_select_observed_F_no_oil":True,
+                 "auto_native_F_requested":True,
+                 "selected_budget_items":{
+                     "flask_item_id":241326,"oil_item_ids_by_hand":{}}},
+                {"auto_select_observed_F_no_oil":True,
+                 "auto_native_F_requested":True,
+                 "auto_native_O_requested":True}):
+                with self.assertRaisesRegex(
+                    build.EnvironmentBuildBlocked,
+                    "V216_AUTO_F_NO_OIL_EXPLICIT_SCOPE_REQUIRED"):
+                    build.build_environment(
+                        sessions_root=self.root/"sessions",
+                        session_folder=None,user=None,binary=None,
+                        revision=None,static_cache=None,
+                        source_catalog_path=None,bootstrap_result=None,
+                        fresh_collection_inputs={
+                            "expected_game_build":self.catalog["game_build"],
+                            "representative_request":{
+                                "class":"mage","spec":"frost",
+                                "target_ilevel":334},
+                            "g_probe_character":None,
+                            "simc_revision_hint":None,
+                            **kwargs})
+
     def test_auto_one_observed_flask_source_only_v222_preview_no_manual_id(self):
         """Full same-build v281 worklist + G/J permits a preview, not READY."""
         layout,ratings=self.physical_layout()
