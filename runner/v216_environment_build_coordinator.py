@@ -4004,6 +4004,12 @@ def _install_verified_fresh_environment_only(*, compilation, staged,
             "options_published":True,
             "published_verified_option_count":
                 installed["published_verified_option_count"],
+            "official_G":installed["official_G"],
+            "official_J":installed["official_J"],
+            "official_F":installed["official_F"],
+            "official_O":dict(installed["official_O"]),
+            "official_B":installed["official_B"],
+            "official_T":installed["official_T"],
             "new_native_calls":0,"network_calls":0}
 
 
@@ -4052,8 +4058,16 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                   "gem_layout_receipt","gem_rating_by_id",
                   "selected_budget_items","auto_native_F_requested",
                   "auto_native_O_requested",
-                  "auto_native_G_requested"},
+                  "auto_native_G_requested",
+                   "verified_install_input_provider"},
              "V216_ZERO_HISTORY_SOURCE_INPUT_FIELDS")
+        # A trusted internal source-owner adapter can provide independently
+        # verified GJFO/Policy A input. JSON or HTTP cannot supply a callable.
+        verified_install_provider=fresh_collection_inputs.get(
+            "verified_install_input_provider")
+        need(verified_install_provider is None or
+             callable(verified_install_provider),
+             "V216_VERIFIED_INSTALL_PROVIDER_INTERNAL_CALLABLE_REQUIRED")
         # G Native is optional when an existing same-build v222 budget
         # receipt was supplied. Do not spend a Native call merely because
         # the same SimC binary is also available for F/O. The original
@@ -4520,13 +4534,54 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     else None))
             progress["versioned_environment_source_stage"]=staged
             source_compilation["versioned_environment_source_stage"]=staged
+            if verified_install_provider is not None and not source_compilation["missing"]:
+                # Normal Build continuation, not an independent compiler.
+                # Only an internal Python verifier may provide the bundle;
+                # raw request data or a "verified" string cannot install.
+                confirmed=verified_install_provider(
+                    compilation=source_compilation,preflight=preflight,
+                    staged=staged,selected_numeric=staged_numeric,
+                    selected_physical_items=selected_budget_items,
+                    target_ilevel=fresh_collection_inputs[
+                        "representative_request"]["target_ilevel"])
+                if confirmed is not None:
+                    need(type(confirmed) is dict and set(confirmed)=={
+                        "trusted_budget_evidence",
+                        "trusted_policy_A_receipts_by_id"} and
+                         type(confirmed["trusted_budget_evidence"]) is dict and
+                         type(confirmed["trusted_policy_A_receipts_by_id"]) is dict,
+                         "V216_INSTALL_PROVIDER_VERIFIED_OUTPUT_FIELDS")
+                    installed=_install_verified_fresh_environment_only(
+                        compilation=source_compilation,staged=staged,
+                        trusted_budget_evidence=confirmed["trusted_budget_evidence"],
+                        trusted_policy_A_receipts_by_id=confirmed[
+                            "trusted_policy_A_receipts_by_id"],
+                        target_ilevel=fresh_collection_inputs[
+                            "representative_request"]["target_ilevel"],
+                        manual_final_T=manual_T)
+                    source_compilation["verified_environment_install"]=installed
+                    progress["source_only_pending_before_install"]=list(
+                        progress["requires"])
+                    progress.update({
+                        "status":installed["status"],"requires":[],
+                        "environment_ready":True,
+                        "environment_installed":True,"options_published":True,
+                        "G":installed["official_G"],"J":installed["official_J"],
+                        "F":installed["official_F"],
+                        "O":dict(installed["official_O"]),
+                        "B":installed["official_B"],"T":installed["official_T"],
+                        "versioned_environment_installed":installed})
         progress["source_compilation_status"]=source_compilation["status"]
         progress["source_compilation_missing"]=source_compilation["missing"]
         if source_compilation["missing"]:
             progress["requires"].extend(
                 "FRESH_COMPILER_INPUT_"+name+"_PENDING"
                 for name in source_compilation["missing"])
-        return {**collected,"source_compilation":source_compilation,
+        return {**collected,
+                **({key:progress[key] for key in (
+                    "G","J","F","O","B","T","environment_ready",
+                    "environment_installed")} if progress["environment_ready"] else {}),
+                "source_compilation":source_compilation,
                 "native_G_numeric_source":native_G,
                 "native_effect_numeric_sources_unadmitted":effect_observations,
                 "native_calls":progress["new_native_calls"],

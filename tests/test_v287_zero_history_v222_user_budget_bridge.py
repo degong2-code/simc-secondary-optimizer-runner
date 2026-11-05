@@ -44,7 +44,7 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                   native_result=None,gem_layout=None,gem_ratings=None,
                   effect_requests=None,effect_resolver=None,
                   effect_observation=None,selected_budget_items=None,
-                  raw_gem_source=None):
+                  raw_gem_source=None,trusted_provider=None):
         inputs={
             "expected_game_build":self.catalog["game_build"],
             "representative_request":{
@@ -61,6 +61,8 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             inputs["effect_probe_requests"]=effect_requests
         if selected_budget_items is not None:
             inputs["selected_budget_items"]=selected_budget_items
+        if trusted_provider is not None:
+            inputs["verified_install_input_provider"]=trusted_provider
         user={"target":{"ilevel":user_level if user_level is not None else level,
                         "final_T":manual}}
         with mock.patch.object(build,"collect_wago_new_season_source",
@@ -99,7 +101,7 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertEqual(compiler.call_count,1)
         for name in ("same_build_budget_evidence","gem_layout_receipt",
                      "gem_rating_by_id","effect_probe_requests",
-                     "selected_budget_items"):
+                     "selected_budget_items","verified_install_input_provider"):
             self.assertNotIn(name,collect.call_args.kwargs)
         self.assertFalse((self.root/"sessions").exists())
         return result
@@ -987,6 +989,80 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                       result["zero_history_build"]["requires"])
         self.assertFalse(result["zero_history_build"]["environment_ready"])
         self.assertEqual(result["native_calls"],0)
+
+    def test_verified_install_provider_connects_same_normal_build(self):
+        # Existing v217/v216 source stage is a prerequisite. The internal
+        # provider returns None until it has actually verified GJFO.
+        old=self.compiled
+        self.compiled={**old,
+            **{key:{"status":"REUSED_VERIFIED",
+                    "receipt_sha256":str(i)*64}
+               for i,key in enumerate(
+                   ("v191_stage","v211_stage","v213_stage"),1)}}
+        staged={"schema":"v212_fresh_source_environment_stage_v1",
+                "status":"FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED",
+                "manifest_sha256":"b"*64,
+                "stage_status":"REUSED_VERIFIED",
+                "environment_ready":False,
+                "environment_installed":False}
+        installed={
+            "status":"FRESH_SEASON_VERIFIED_ENVIRONMENT_INSTALLED_READY",
+            "official_G":2800,"official_J":140,"official_F":170,
+            "official_O":{"crit_rating":0,"haste_rating":0,
+                          "mastery_rating":0,"versatility_rating":0},
+            "official_B":3110,"official_T":3110,
+            "environment_ready":True,"environment_installed":True,
+            "options_published":True,"published_verified_option_count":0,
+            "stage_status":"EXECUTED_AND_SEALED"}
+        try:
+            with mock.patch.object(build,
+                    "_v217_policy_A_source_relation_receipts",
+                    return_value={}),mock.patch.object(build,
+                    "_stage_source_environment_only",
+                    return_value=staged),mock.patch.object(build,
+                    "_install_verified_fresh_environment_only",
+                    return_value=installed) as installer:
+                missing=mock.Mock(return_value=None)
+                previous=self.run_build(proof=False,trusted_provider=missing)
+                self.assertFalse(previous["zero_history_build"][
+                    "environment_ready"])
+                installer.assert_not_called()
+                supplied={"trusted_budget_evidence":{"components":{}},
+                          "trusted_policy_A_receipts_by_id":{}}
+                provider=mock.Mock(return_value=supplied)
+                result=self.run_build(proof=False,trusted_provider=provider)
+                provider.assert_called_once()
+                installer.assert_called_once()
+                self.assertEqual(installer.call_args.kwargs[
+                    "trusted_budget_evidence"],supplied["trusted_budget_evidence"])
+                self.assertEqual(result["zero_history_build"]["status"],
+                                 installed["status"])
+                self.assertTrue(result["environment_ready"])
+                self.assertTrue(result["environment_installed"])
+                self.assertEqual(result["G"],2800)
+                self.assertEqual(result["T"],3110)
+                self.assertEqual(result["zero_history_build"]["requires"],[])
+                self.assertTrue(result["zero_history_build"][
+                    "source_only_pending_before_install"])
+        finally:
+            self.compiled=old
+
+    def test_verified_install_provider_must_be_internal_callable(self):
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_VERIFIED_INSTALL_PROVIDER_INTERNAL_CALLABLE_REQUIRED"):
+            build.build_environment(
+                sessions_root=self.root/"sessions",session_folder=None,
+                user={"target":{"ilevel":334,"final_T":None}},binary=None,
+                revision=None,static_cache=None,source_catalog_path=None,
+                bootstrap_result=None,
+                fresh_collection_inputs={
+                    "expected_game_build":self.catalog["game_build"],
+                    "representative_request":{
+                        "class":"mage","spec":"frost","target_ilevel":334},
+                    "g_probe_character":None,"simc_revision_hint":None,
+                    "verified_install_input_provider":{"verified":True}})
+        self.assertFalse((self.root/"sessions").exists())
 
     def test_selected_flask_explicit_no_oil_reconciles_original_manual_T(self):
         request,bound,observed=self.physical_effect()
