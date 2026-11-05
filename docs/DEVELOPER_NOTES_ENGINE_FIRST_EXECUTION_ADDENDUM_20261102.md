@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FP 검증 완료:** [P3-FP revised focused #42073753482](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42073753482) **287/287 PASS·DEV_LEDGER_PASS**; [P3-FP initial #42073288075](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42073288075) **286/286 PASS**, v113/v181/v182/v212 workflow SUCCESS. 정확히 두 종류의 양수 2차 스탯이 있는 일반보석만 J 후보에 허용하고 단일 스탯 보석의 장착 자체는 허용한다. 관련 v216 J 자동 계산 및 수동 수치 우회 차단 직접 검증 완료. 합성/오프라인 테스트는 실 시즌 G/J/F/O·원본 인증·READY/T1·DPS E2E 입증이 아님. SimC 특수 효과 검증/Native 신규 실행 없음. main/Project UI/공식 상태 불변.
+>
+
 > **2026-11-06 P3-FP:** [기능 노트](development/notes/2026-11-06_p3-fp-dual-stat-ordinary-gem-source.md). 사용자 일반보석 4종 기본 선택을 실제 +16/+7 이중 스탯 출처에도 적용: v266 정적 CHMV vector에서 **서로 다른 2개 양수 2차스탯**을 필수로 하고, 유일 최대 스탯으로 종류를 구분하며 **두 스탯 합계만 J**에 사용. 단일 스탯은 효과 활성화용 장착은 허용하되 J 계산에서 제외. v268 원본 raw 진단과 v216 J 예산 경계를 분리. 동률 모호성은 대체 수치로 임의 결론 내리지 않는다. v217 캐시·v271 배치·SimC 효과 위임·P3-FO 웹 연결 모두 유지, 새로운 Native/품질 독립 Gate 없음. 실제 READY/T1 여부는 후속 영수증으로만 기록.
 >
 

@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FP 검증 완료:** [P3-FP revised focused #42073753482](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42073753482) **287/287 PASS·DEV_LEDGER_PASS**; [P3-FP initial #42073288075](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42073288075) **286/286 PASS**, v113/v181/v182/v212 workflow SUCCESS. 정확히 두 종류의 양수 2차 스탯이 있는 일반보석만 J 후보에 허용하고 단일 스탯 보석의 장착 자체는 허용한다. 관련 v216 J 자동 계산 및 수동 수치 우회 차단 직접 검증 완료. 합성/오프라인 테스트는 실 시즌 G/J/F/O·원본 인증·READY/T1·DPS E2E 입증이 아님. SimC 특수 효과 검증/Native 신규 실행 없음. main/Project UI/공식 상태 불변.
+>
+
 > **2026-11-06 P3-FP 보석 +16/+7 후보 보정:** [노트](development/notes/2026-11-06_p3-fp-dual-stat-ordinary-gem-source.md). 기존 v266 동일 빌드 봉인 정적 4벡터를 재사용하고 v268 일반보석 4종 후보를 **서로 다른 2개 2차스탯을 가진 경우로 제한**, 주 스탯은 유일 최대 스탯, J는 2개 명목 rating 합. 단일 스탯 보석은 효과 활성화용 장착 가능하더라도 J 예산에서 제외; v216 내부 source-only J에도 동일 조건 적용. 동률로 종류가 모호한 후보는 제외, 기존 선택 특수보석은 배제하되 효과 식별·Native 추가 없음. 초기 회귀 증거는 새 commit Actions에서 별도 확인, 실제 시즌 J/G/F/O·READY/T1 미완료. main·공식 승격 변경 없음.
 >
 
