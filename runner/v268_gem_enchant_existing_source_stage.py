@@ -280,6 +280,11 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
             "selected_gem_v221_source_properties_complete":(
                 not missing and not unresolved_properties and
                 len(properties)==len(requested)),
+            "selected_gem_v221_limit_categories_by_id_unadmitted":{
+                str(item_id):exact[item_id].get(
+                    "limit_category_id_source_only")
+                for item_id in requested if item_id in exact},
+            "selected_gem_limit_category_not_role_proof":True,
             "selected_gem_v221_source_only":True}
     return {
         "status":result["status"],

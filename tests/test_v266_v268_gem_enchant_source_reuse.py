@@ -31,6 +31,8 @@ def joined(*,game_build=BUILD):
                   "color_mask":(1 if itemid==2003 else 2),
                   "minimum_ilevel":(345 if itemid==2003 else 300),
                   "expansion_id":12,
+                  "limit_category_id_source_only":(
+                      77 if itemid==2003 else 0),
                   "socket_eligibility":"NOT_YET_VERIFIED",
                   "status":"EXACT_DB2_ITEMSPARSE_GEM_PROPERTY_RELATION",
                   "ui_selectable":False}
@@ -129,6 +131,11 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
                     "selected_gem_unresolved_item_ids"],[2002,2003])
                 self.assertTrue(second[
                     "selected_gem_v221_same_build_items_all_present"])
+                self.assertEqual(
+                    second["selected_gem_v221_limit_categories_by_id_unadmitted"],
+                    {"2002":0,"2003":77})
+                self.assertTrue(second[
+                    "selected_gem_limit_category_not_role_proof"])
                 # Mandatory special gem is projected from the SAME cached
                 # join; its nonstatic effect is NOT a proved zero J.
                 unknown_special=adapter.view(

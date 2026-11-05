@@ -187,11 +187,18 @@ def join(source_catalog,snapshot_folder,*,verified_tables=None):
         if property_id not in properties or expansion!=source_catalog["expansion_id"]:
             continue
         property_row=properties[property_id]
+        # An existing ItemSparse column, not a new table or role classifier.
+        # LimitCategory is only a source foreign key: the number does not
+        # certify a unique-equip quantity or identify a special gem.
+        category=(None if row.get("LimitCategory") in (None,"") else
+                  _integer(row["LimitCategory"],
+                           "DB2_GEM_LIMIT_CATEGORY_INVALID"))
         base["joins"].append({
             "item_id":item_id,
             "gem_property_id":property_id,
             "enchant_id":property_row["enchant_id"],
             "color_mask":property_row["color_mask"],
+            "limit_category_id_source_only":category,
             "minimum_ilevel":property_row["minimum_ilevel"],
             "expansion_id":expansion,
             "status":"EXACT_DB2_ITEMSPARSE_GEM_PROPERTY_RELATION",

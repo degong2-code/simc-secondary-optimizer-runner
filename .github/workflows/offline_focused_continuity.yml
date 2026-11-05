@@ -61,7 +61,7 @@ jobs:
             tests.test_v286_representative_oil_source_binding \
             tests.test_v287_zero_history_v222_user_budget_bridge \
             tests.test_v288_no_redundant_g_native \
-            tests.test_v274_zero_history_source_compiler_wiring \
+            tests.test_v221_gem_item_db2_relation \
             tests.test_v230_simc_item_metadata \
             tests.test_v190_consumable_item_snapshot_join \
             tests.test_v191_unified_season_data_update

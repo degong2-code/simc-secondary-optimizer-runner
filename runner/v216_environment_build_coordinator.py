@@ -1098,6 +1098,17 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                      if row["item_id"]==gem_layout_receipt["special_gem_id"])
                 if source_properties is not None else None),
             "special_gem_item_id":gem_layout_receipt["special_gem_id"],
+            # The ItemSparse limit category is source provenance, not a
+            # role/unique-equip certificate. Selection still needs an exact
+            # independent source owner before source_selected_gem_roles.
+            "selected_gem_limit_categories_by_id_unadmitted":
+                gem_enchant.get(
+                    "selected_gem_v221_limit_categories_by_id_unadmitted"),
+            "special_limit_category_id_unadmitted":
+                (gem_enchant.get(
+                    "selected_gem_v221_limit_categories_by_id_unadmitted")
+                 or {}).get(str(gem_layout_receipt["special_gem_id"])),
+            "special_role_verified_from_limit_category":False,
             "v221_stage_receipt_sha256":
                 gem_source["source_stage"]["receipt_sha256"],
             "enchant_source_sha256":gem_enchant["enchant_source_sha256"],
