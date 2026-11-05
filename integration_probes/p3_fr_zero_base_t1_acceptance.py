@@ -61,6 +61,37 @@ def main():
                 binary=candidate,revision=None,static_cache=None,
                 source_catalog_path=None,bootstrap_result=None,
                 fresh_collection_inputs=inputs)
+            # Source-owner causes, not just nine downstream compiler flags.
+            # The original rows are unchanged and may be large; record only
+            # compact, nonsecret status/receipt reuse information.
+            owners=(
+                "season_discovery","season_join","fresh_ordinary_gear",
+                "fresh_tier","fresh_tier_simc_candidate_bridge",
+                "fresh_tier_selected_from_existing_evidence",
+                "fresh_compiler_tier_source",
+                "fresh_pinned_first_party_simc_source",
+                "fresh_pinned_v211_source",
+                "fresh_food_potion_item_sources",
+                "fresh_consumable_item_spell_source",
+                "fresh_consumable_simc_effect_relation",
+                "fresh_one_spec_simc_representative",
+                "fresh_one_spec_physical_G_probe",
+                "fresh_gem_enchant_raw_source")
+            rec["source_owner_statuses"]={
+                key:{
+                    "status":row.get("status"),
+                    "source_stage_status":(
+                        (row.get("source_stage") or {}).get("status")
+                        if type(row.get("source_stage")) is dict else None),
+                    "reason":row.get("reason"),
+                    "requires":row.get("requires"),
+                    "missing":row.get("missing"),
+                    "has_candidate":bool(row.get("candidate_path")),
+                    "has_pinned_dir":bool(row.get("source_dir")),
+                }
+                for key in owners
+                for row in [result.get(key)]
+                if type(row) is dict}
             progress=result.get("zero_history_build") or {}
             compiled=result.get("source_compilation") or {}
             rec.update({

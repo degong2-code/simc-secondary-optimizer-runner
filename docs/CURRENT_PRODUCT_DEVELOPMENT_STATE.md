@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FR 첫 유효 제로베이스 실전:** [실전 #42081102354](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42081102354)에서 공식 KR 현재 Retail `12.1.5.70783` 식별·Wago `v161/v217 EXECUTED_AND_SEALED` 성공. 그러나 v274 필수 컴파일러 입력 9종 `GEAR_V167, TIER_V168, V189, V190, GENERATED_PERMANENT/TEMPORARY/GEM, SIMC_V211_6_SOURCES, PINNED_SIMC_REVISION` 미확보, Native0·v222 공식 G/J/F/O 없음·v212 READY/T1 **NOT_READY**. 이는 현재 원본을 못 찾는다는 일반론이 아니라 실제 source owner 상태/버전 연결부 병목. 다음 계측은 원본 재수집을 무조건 반복하는 게 아닌 각 기존 owner의 PENDING 이유만 가볍게 기록한다. 소스 원본은 이 실행에서 temp에만 보존되어 별도 실행은 새 영수증 범위임.
+>
+
 > **2026-11-06 P3-FR 실전 원본 형식 교정:** [실전 #42080678732](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42080678732)의 200 응답에서 Blizzard의 **typed BPSV 헤더·`## seqn` 메타행·소문자 지역**이 원인임을 실제 확인. v289 파서가 공인 데이터 구조를 지원하도록 최소 교정하고 실전 조사용 임시 중복 HTTP 삭제. 네트워크 접근이 확인됐다고 G/J/F/O·READY/T1을 PASS로 승격하지 않는다. 신규 실전 결과는 후속 SHA 기준.
 >
 
