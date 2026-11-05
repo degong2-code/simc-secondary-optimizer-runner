@@ -1089,6 +1089,8 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
             "same_build_gem_item_join_only":True,
             "special_class_and_quality_verified":False,
             "game_socket_applicability_verified":False,
+            # Compatibility diagnostic only; this is NOT a separate
+            # admission gate for the nominal ordinary-gem J budget.
             "simc_effective_J_verified":False}
         source_item_link["gem_policy_A_source_and_quality_unadmitted"]=(
             _selected_gem_quality_policy_A_preview(
@@ -1275,7 +1277,7 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
     if gem_source is not None:
         payload["fresh_gem_item_source_candidates"] = gem_source
         payload["requires"].append(
-            "GEM_J_HIGHEST_QUALITY_EFFECT_AND_SOCKET_BUDGET_PROOF")
+            "GEM_J_HIGHEST_QUALITY_ORDINARY_RATING_AND_REAL_SOCKET_SOURCE_PENDING")
     if gem_enchant is not None:
         payload["fresh_gem_raw_enchant_points_source"] = gem_enchant
     if gem_layout_receipt is not None:
