@@ -337,6 +337,59 @@ class SeasonBudgetContractTests(unittest.TestCase):
         with self.assertRaisesRegex(p.SeasonBudgetBlocked, "UNSELECTED"):
             resolve(catalog, proof, plan)
 
+    def test_explicit_no_oil_needs_no_weapon_proof_but_still_requires_sources(self):
+        catalog, evidence, _ = fixture()
+        no_oil = p.explicit_no_oil_component(
+            game_build=catalog["game_build"],
+            source_catalog_manifest_sha256=catalog["manifest_sha256"],
+            selected_oil_item_ids_by_hand={})
+        evidence["components"]["O"] = no_oil
+        result = p.preprofile_budget(
+            source_catalog=catalog, source_artifact_sha256="a"*64,
+            evidence=evidence, target_ilevel=334)
+        self.assertEqual((result["base_B"],result["final_T"]),(3150,3150))
+        self.assertEqual(result["O_weapon_proof_not_required_reason"],
+                         "NO_APPLIED_OIL_ITEM_OR_WEAPON_HAND")
+        self.assertFalse(result["source_authentication_performed_here"])
+        self.assertEqual(result["native_calls"],0)
+        manual = p.preprofile_budget(
+            source_catalog=catalog, source_artifact_sha256="a"*64,
+            evidence=evidence, target_ilevel=334, manual_final_T=3250)
+        self.assertEqual((manual["base_B"],manual["final_T"]),(3250,3250))
+        preview=copy.deepcopy(evidence)
+        for name in ("G","J","F"):
+            preview["components"][name]["source_verification"]=(
+                "UNADMITTED_NUMERIC_OBSERVATION")
+        staged=p.preprofile_budget(
+            source_catalog=catalog,source_artifact_sha256="a"*64,
+            evidence=preview,target_ilevel=334,numeric_preview_only=True)
+        self.assertFalse(staged["environment_ready"])
+        with self.assertRaisesRegex(
+                p.SeasonBudgetBlocked,"EXPLICIT_EMPTY_HAND_SELECTION"):
+            p.explicit_no_oil_component(
+                game_build=catalog["game_build"],
+                source_catalog_manifest_sha256=catalog["manifest_sha256"],
+                selected_oil_item_ids_by_hand={"main_hand":243734})
+        for change in (
+                {"rating":{**no_oil["rating"],"crit_rating":1}},
+                {"applied_hands":["main_hand"]},
+                {"source_sha256":"f"*64},
+                {"selected_oil_item_ids_by_hand":{"main_hand":243734}},
+                {"game_build":"12.2.0.99999"},
+        ):
+            modified=copy.deepcopy(evidence)
+            modified["components"]["O"]={**no_oil,**change}
+            with self.subTest(change=change), self.assertRaises(
+                    p.SeasonBudgetBlocked):
+                p.preprofile_budget(
+                    source_catalog=catalog,source_artifact_sha256="a"*64,
+                    evidence=modified,target_ilevel=334)
+        del evidence["components"]["O"]
+        with self.assertRaisesRegex(p.SeasonBudgetBlocked,"ALL_FOUR"):
+            p.preprofile_budget(
+                source_catalog=catalog,source_artifact_sha256="a"*64,
+                evidence=evidence,target_ilevel=334)
+
     def test_no_oil_and_two_weapons_are_distinct(self):
         catalog, proof, plan = fixture()
         zero = {k: 0 for k in p.STATS}

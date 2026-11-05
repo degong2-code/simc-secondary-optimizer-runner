@@ -3247,13 +3247,21 @@ def _zero_history_auto_v222_numeric_preview(*, preflight, native_numeric,
                  "standardization":g["standardization"]},
             "J":comp(j["J_candidate_unadmitted"],j_sha),
             "F":comp(f["rating_candidate_unadmitted"],f_sha),
-            "O":{**comp(oil_vector,oil_sha),
+            "O":(season_budget_contract.explicit_no_oil_component(
+                game_build=catalog["game_build"],
+                source_catalog_manifest_sha256=manifest_sha,
+                selected_oil_item_ids_by_hand=selected["oil_item_ids_by_hand"])
+                if not selected["oil_item_ids_by_hand"] else
+                {**comp(oil_vector,oil_sha),
                  "applied_hands":sorted(oils),
                  "weapon_applicability_verified":False,
-                 "source_mask_matches_all_selected_only":True}},
+                 "source_mask_matches_all_selected_only":True})},
         "fixed_L":{k:0 for k in stats},
         "fixed_E":{k:0 for k in stats},
         "G_reference_excludes_selected_E":True}
+    if not selected["oil_item_ids_by_hand"]:
+        # An explicit NONE is an O=0 fact by construction, not missing data.
+        oil_sha=evidence["components"]["O"]["source_sha256"]
     try:
         calculation=season_budget_contract.preprofile_budget(
             source_catalog=catalog,

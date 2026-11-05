@@ -10,12 +10,16 @@ or oil applicability have been verified.
 from __future__ import annotations
 
 import re
+import hashlib
+import json
 
 SCHEMA = "v222_season_gjfo_budget_contract_v1"
 STATS = ("crit_rating", "haste_rating", "mastery_rating", "versatility_rating")
 SHA = re.compile(r"[0-9a-f]{64}\Z")
 REV = re.compile(r"[0-9a-f]{40}\Z")
 
+
+NO_OIL_SOURCE = "EXPLICIT_NO_OIL_SELECTION"
 
 G_ROUNDING_SCHEMA = "v222_aggregate_G_nearest_10_half_up_v1"
 G_ROUNDING_UNIT = 10
@@ -59,6 +63,38 @@ def need(condition, reason):
         raise SeasonBudgetBlocked(reason)
 
 
+def explicit_no_oil_component(*, game_build, source_catalog_manifest_sha256,
+                              selected_oil_item_ids_by_hand):
+    """Exact empty oil selection: no applied weapon exists to authenticate.
+
+    This pure v222 input adapter does NOT certify game sources or default oil
+    availability; the normal Build must supply the explicit selection.
+    """
+    need(type(game_build) is str and bool(game_build) and
+         type(source_catalog_manifest_sha256) is str and
+         SHA.fullmatch(source_catalog_manifest_sha256) is not None,
+         "GJFO_NO_OIL_SOURCE_CATALOG_REQUIRED")
+    need(type(selected_oil_item_ids_by_hand) is dict and
+         not selected_oil_item_ids_by_hand,
+         "GJFO_NO_OIL_EXPLICIT_EMPTY_HAND_SELECTION_REQUIRED")
+    seed = json.dumps({
+        "schema":SCHEMA, "game_build":game_build,
+        "source_catalog_manifest_sha256":source_catalog_manifest_sha256,
+        "selection":"EXPLICIT_NO_OIL", "oil_item_ids_by_hand":{}
+    },sort_keys=True,separators=(",",":"),ensure_ascii=False)
+    return {
+        "rating":{stat:0 for stat in STATS},
+        "game_build":game_build,
+        "source_catalog_manifest_sha256":source_catalog_manifest_sha256,
+        "source_sha256":hashlib.sha256(seed.encode("utf8")).hexdigest(),
+        "source_verification":NO_OIL_SOURCE,
+        "selected_oil_item_ids_by_hand":{},
+        "applied_hands":[],
+        "weapon_applicability_verified":False,
+        "proof_not_required_reason":"NO_APPLIED_OIL_ITEM_OR_WEAPON_HAND",
+    }
+
+
 def _vector(value, name):
     need(type(value) is dict and set(value) == set(STATS),
          name + "_FOUR_RATING_VECTOR_REQUIRED")
@@ -73,6 +109,15 @@ def _component(proof, name, build, manifest_sha, numeric_preview_only=False):
          type(proof.get("source_sha256")) is str and
          SHA.fullmatch(proof["source_sha256"]) is not None,
          "GJFO_" + name + "_SAME_BUILD_SOURCE_IDENTITY_REQUIRED")
+    # A selected NONE is not a missing oil source. Bind exact empty hands
+    # to this source catalog before waiving irrelevant weapon applicability.
+    if name == "O" and proof.get("source_verification") == NO_OIL_SOURCE:
+        expected = explicit_no_oil_component(
+            game_build=build,
+            source_catalog_manifest_sha256=manifest_sha,
+            selected_oil_item_ids_by_hand={})
+        need(proof == expected, "GJFO_O_EXPLICIT_NONE_SELECTION_DRIFT")
+        return proof
     # A reported verification label is NOT an independent authentication
     # of the source or its relation to a physical SimC input.
     allowed = (("UNADMITTED_NUMERIC_OBSERVATION",)
@@ -148,11 +193,16 @@ def preprofile_budget(*, source_catalog, source_artifact_sha256, evidence,
              "GJFO_G_ROUNDING_OR_SOURCE_DRIFT")
     oil = _vector(proofs["O"].get("rating"), "O")
     hands = proofs["O"].get("applied_hands")
+    explicit_none = proofs["O"].get("source_verification") == NO_OIL_SOURCE
     need(type(hands) is list and len(hands) <= 2 and
          all(x in ("main_hand", "off_hand") for x in hands) and
          len(set(hands)) == len(hands),
          "GJFO_O_PHYSICAL_HANDS_REQUIRED")
-    if numeric_preview_only:
+    if explicit_none:
+        # No oil was selected, so no weapon/hand needs an applicability proof.
+        need(hands == [] and sum(oil.values()) == 0,
+             "GJFO_O_EXPLICIT_NONE_MUST_BE_ZERO")
+    elif numeric_preview_only:
         # Source-only v286's same-build representative weapon mask is
         # arithmetic eligibility, NOT full item-level/use validation.
         # v222.reconcile and production preprofile calls cannot accept
@@ -203,6 +253,8 @@ def preprofile_budget(*, source_catalog, source_artifact_sha256, evidence,
         "fixed_O": oil, "fixed_L": fixed_L, "fixed_E": fixed_E,
         "reference_B": reference_B, "base_B": B, "final_T": T,
         "manual_final_T_authoritative": manual_final_T is not None,
+        **({"O_weapon_proof_not_required_reason":
+            "NO_APPLIED_OIL_ITEM_OR_WEAPON_HAND"} if explicit_none else {}),
         **({"G_standardization":dict(g_standardization)}
            if g_standardization is not None else {}),
         "source_authentication_performed_here": False,

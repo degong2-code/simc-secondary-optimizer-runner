@@ -948,6 +948,8 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertEqual((calc["reference_B"],calc["base_B"],calc["final_T"]),
                          (3153,3333,3333))
         self.assertEqual(sum(calc["fixed_O"].values()),0)
+        self.assertEqual(calc["O_weapon_proof_not_required_reason"],
+                         "NO_APPLIED_OIL_ITEM_OR_WEAPON_HAND")
         self.assertTrue(calc["numeric_preview_only"])
         self.assertTrue(calc["manual_final_T_authoritative"])
         self.assertFalse(auto["environment_ready"])
