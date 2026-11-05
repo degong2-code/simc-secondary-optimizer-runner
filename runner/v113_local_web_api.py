@@ -56,6 +56,8 @@ class SeasonEnvironmentBuildRequest(BaseModel):
     target_ilevel: int = Field(default=334,ge=1,le=1000)
     # Explicit opt-in to the EXISTING single v277/v236 Native G probe.
     native_G_binary: str | None = Field(default=None,min_length=1,max_length=4096)
+    # Same optional SimC executable may measure F/O with no G subprocess.
+    consumable_native_binary: str | None = Field(default=None,min_length=1,max_length=4096)
     auto_native_F_requested: bool = False
     auto_native_O_requested: bool = False
     simc_revision_hint: str | None = Field(
@@ -119,19 +121,31 @@ class LocalJobs:
     def build_season_environment(self, game_build, target_ilevel=334,
                                  native_G_binary=None, simc_revision_hint=None,
                                  auto_native_F_requested=False,
-                                 auto_native_O_requested=False):
+                                 auto_native_O_requested=False,
+                                 consumable_native_binary=None):
         """Run original v216 with season inputs, never a user DPS scenario.
 
         One deterministic one-spec reference G probe is NOT season-level
         validation, Fury-TG proof or a user character/profile input.
         """
         binary=None
-        if native_G_binary is not None:
-            supplied=pathlib.Path(native_G_binary).expanduser()
+        for label,requested in (
+                ("SEASON_NATIVE_G_BINARY_INVALID",native_G_binary),
+                ("SEASON_NATIVE_F_O_BINARY_INVALID",consumable_native_binary)):
+            if requested is None:
+                continue
+            supplied=pathlib.Path(requested).expanduser()
             if supplied.is_symlink() or not supplied.is_file():
+                raise environment_manifest.EnvironmentBlocked(label)
+            resolved=supplied.resolve()
+            if binary is not None and resolved!=binary:
                 raise environment_manifest.EnvironmentBlocked(
-                    "SEASON_NATIVE_G_BINARY_INVALID")
-            binary=supplied.resolve()
+                    "SEASON_NATIVE_G_F_O_BINARY_MISMATCH")
+            binary=resolved
+        if consumable_native_binary is not None and not (
+                auto_native_F_requested or auto_native_O_requested):
+            raise environment_manifest.EnvironmentBlocked(
+                "SEASON_F_O_BINARY_WITHOUT_MEASUREMENT_SELECTION")
         with self.season_source_lock:
             observed=environment_build.build_environment(
                 sessions_root=self.root,session_folder=None,user=None,
@@ -145,13 +159,15 @@ class LocalJobs:
                     "g_probe_character":{"race":"dwarf"},
                     "simc_revision_hint":simc_revision_hint,
                     "auto_native_F_requested":auto_native_F_requested,
-                    "auto_native_O_requested":auto_native_O_requested})
+                    "auto_native_O_requested":auto_native_O_requested,
+                    "auto_native_G_requested":native_G_binary is not None})
         return {**observed,"web_environment_scope":{
             "schema":"v113_web_season_environment_build_scope_v1",
             "game_build":game_build,"target_ilevel":target_ilevel,
             "internal_numeric_probe":"paladin/retribution",
             "numeric_probe_not_whole_season_G_certification":True,
-            "local_native_G_requested":binary is not None,
+            "local_native_G_requested":native_G_binary is not None,
+            "F_O_native_binary_configured":consumable_native_binary is not None,
             "auto_native_F_requested":auto_native_F_requested,
             "auto_native_O_requested":auto_native_O_requested,
             "dps_optimization_started":False,
@@ -969,6 +985,7 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
             return jobs.build_season_environment(
                 request.game_build,request.target_ilevel,
                 native_G_binary=request.native_G_binary,
+                consumable_native_binary=request.consumable_native_binary,
                 simc_revision_hint=request.simc_revision_hint,
                 auto_native_F_requested=request.auto_native_F_requested,
                 auto_native_O_requested=request.auto_native_O_requested)

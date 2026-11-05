@@ -224,7 +224,8 @@ class LocalWebAPIOffline(unittest.TestCase):
                                       "target_ilevel":334},
             "g_probe_character":{"race":"dwarf"},"simc_revision_hint":None,
             "auto_native_F_requested":False,
-            "auto_native_O_requested":False})
+            "auto_native_O_requested":False,
+            "auto_native_G_requested":False})
         self.assertFalse((self.root/"runs").exists())
 
     def test_web_season_environment_build_native_only_explicit_and_validated(self):
@@ -278,6 +279,55 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(self.client.post("/api/v1/environment/season-build",
                          json={"game_build":"12.2.0.99999"},
                          headers={"content-type":"application/json"}).status_code,403)
+
+    def test_web_F_O_only_native_uses_existing_binary_without_G_probe(self):
+        payload={"game_build":"12.2.0.99999","target_ilevel":334,
+                 "consumable_native_binary":str(self.binary),
+                 "auto_native_F_requested":True,
+                 "auto_native_O_requested":True}
+        source={"status":"SOURCE_ONLY_PENDING",
+                "environment_ready":False,"environment_installed":False,
+                "native_calls":0}
+        with mock.patch.object(web.environment_build,"build_environment",
+                               return_value=source) as stage:
+            response=self.post("/api/v1/environment/season-build",payload)
+        self.assertEqual(response.status_code,200,response.text)
+        scope=response.json()["web_environment_scope"]
+        self.assertFalse(scope["local_native_G_requested"])
+        self.assertTrue(scope["F_O_native_binary_configured"])
+        self.assertTrue(scope["auto_native_F_requested"])
+        self.assertTrue(scope["auto_native_O_requested"])
+        self.assertFalse(scope["environment_ready"])
+        kwargs=stage.call_args.kwargs
+        self.assertEqual(kwargs["binary"],self.binary.resolve())
+        self.assertFalse(kwargs["fresh_collection_inputs"][
+            "auto_native_G_requested"])
+        self.assertTrue(kwargs["fresh_collection_inputs"][
+            "auto_native_O_requested"])
+        self.assertIsNone(kwargs["user"])
+        self.assertIsNone(kwargs["session_folder"])
+        with mock.patch.object(web.environment_build,"build_environment",
+                               side_effect=AssertionError("NO_COLLECTION")) as stage:
+            bad=self.post("/api/v1/environment/season-build",
+                          {**payload,"consumable_native_binary":
+                              str(self.root/"missing_simc")})
+            self.assertEqual(bad.status_code,422,bad.text)
+            self.assertEqual(bad.json()["detail"]["code"],
+                             "SEASON_NATIVE_F_O_BINARY_INVALID")
+            not_opted=self.post("/api/v1/environment/season-build",
+                                {**payload,"auto_native_F_requested":False,
+                                 "auto_native_O_requested":False})
+            self.assertEqual(not_opted.status_code,422,not_opted.text)
+            self.assertEqual(not_opted.json()["detail"]["code"],
+                             "SEASON_F_O_BINARY_WITHOUT_MEASUREMENT_SELECTION")
+            alternate=self.root/"alternate_simc.exe"
+            alternate.write_bytes(b"NOT_EXECUTED")
+            mixed=self.post("/api/v1/environment/season-build",
+                            {**payload,"native_G_binary":str(alternate)})
+            self.assertEqual(mixed.status_code,422,mixed.text)
+            self.assertEqual(mixed.json()["detail"]["code"],
+                             "SEASON_NATIVE_G_F_O_BINARY_MISMATCH")
+            stage.assert_not_called()
 
     def test_environment_build_fresh_source_routes_before_old_plan(self):
         payload={**self.payload,"current_season_product":False,

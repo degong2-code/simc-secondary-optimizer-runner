@@ -3436,8 +3436,17 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                   "same_build_budget_evidence",
                   "gem_layout_receipt","gem_rating_by_id",
                   "selected_budget_items","auto_native_F_requested",
-                  "auto_native_O_requested"},
+                  "auto_native_O_requested",
+                  "auto_native_G_requested"},
              "V216_ZERO_HISTORY_SOURCE_INPUT_FIELDS")
+        # The optional exact G Native probe is distinct from F/O v278
+        # measurements. A shared binary never silently opts the user into G.
+        # Legacy internal callers retain their original binary=>G behavior.
+        auto_native_G=fresh_collection_inputs.get(
+            "auto_native_G_requested",binary is not None)
+        need(type(auto_native_G) is bool and
+             (not auto_native_G or binary is not None),
+             "V216_AUTO_G_NATIVE_EXPLICIT_BINARY_REQUIRED")
         auto_native_F=fresh_collection_inputs.get("auto_native_F_requested",False)
         need(type(auto_native_F) is bool and
              (not auto_native_F or binary is not None) and
@@ -3525,7 +3534,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                          "same_build_budget_evidence",
                          "gem_layout_receipt","gem_rating_by_id",
                          "selected_budget_items","auto_native_F_requested",
-                         "auto_native_O_requested")}
+                         "auto_native_O_requested",
+                  "auto_native_G_requested")}
         collected=collect_wago_new_season_source(
             sessions_root=sessions_root,**source_inputs)
         progress=_zero_history_source_progress(collected)
@@ -3535,7 +3545,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         # repeat executions on cache hits, failures and interrupted runs.
         try:
             native_G=zero_history_G_native.collect(
-                sessions_root=sessions_root,collected=collected,binary=binary)
+                sessions_root=sessions_root,collected=collected,
+            binary=binary if auto_native_G else None)
         except (zero_history_G_native.GNativeStageBlocked,
                 OSError,ValueError,KeyError,TypeError) as exc:
             raise EnvironmentBuildBlocked(

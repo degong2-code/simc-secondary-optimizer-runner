@@ -675,11 +675,13 @@ async function buildSeasonEnvironment() {
   const nativeRequested=$("season-native-g").checked;
   const auto_native_F_requested=$("season-native-f").checked;
   const auto_native_O_requested=$("season-native-o").checked;
-  if((auto_native_F_requested||auto_native_O_requested)&&!nativeRequested)
-    throw Error("F/O 측정을 위해 위 G Native 선택도 필요합니다.");
-  const native_G_binary=nativeRequested?field("binary"):null;
-  if(nativeRequested&&!native_G_binary)
-    throw Error("G Native 실측을 선택한 경우 아래 SimC 실행 파일 경로가 필요합니다.");
+  const native_F_O_requested=auto_native_F_requested||auto_native_O_requested;
+  const executable=(nativeRequested||native_F_O_requested)?field("binary"):null;
+  if((nativeRequested||native_F_O_requested)&&!executable)
+    throw Error("Native 측정을 선택한 경우 SimC 실행 파일 경로가 필요합니다.");
+  // G is truly optional even if F/O uses the same executable.
+  const native_G_binary=nativeRequested?executable:null;
+  const consumable_native_binary=native_F_O_requested?executable:null;
   const revision=field("revision");
   if(revision&&!/^(?:[a-f0-9]{7,12}|[a-f0-9]{40})$/.test(revision))
     throw Error("SimC revision은 7~12자리 또는 40자리 소문자 16진수여야 합니다.");
@@ -692,6 +694,7 @@ async function buildSeasonEnvironment() {
   try {
     const report=await api("/api/v1/environment/season-build",
       {method:"POST",payload:{game_build,target_ilevel,native_G_binary,
+                              consumable_native_binary,
                               auto_native_F_requested,auto_native_O_requested,
                               simc_revision_hint:revision||null}});
     showSeasonEnvironmentBuild(report);

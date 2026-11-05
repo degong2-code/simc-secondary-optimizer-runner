@@ -275,7 +275,8 @@ class ExactPhysicalNativeInput(unittest.TestCase):
                 "representative_request":{"class":"paladin","spec":"retribution",
                                           "target_ilevel":334},
                 "g_probe_character":{"race":"dwarf"},"simc_revision_hint":None,
-                "auto_native_F_requested":True,"auto_native_O_requested":True}
+                "auto_native_F_requested":True,"auto_native_O_requested":True,
+                "auto_native_G_requested":False}
         called=[]
         def measure(**kwargs):
             called.append((kwargs["kind"],kwargs["token"]))
@@ -292,7 +293,7 @@ class ExactPhysicalNativeInput(unittest.TestCase):
                                              "status":"FRESH_SOURCE_UNADMITTED"}),\
              mock.patch.object(build.zero_history_G_native,"collect",
                                return_value={"status":"PENDING",
-                                             "new_native_calls":0}),\
+                                             "new_native_calls":0}) as g_native,\
              mock.patch.object(build.native_effect_pair,"measure",
                                side_effect=measure):
             result=build.build_environment(
@@ -301,6 +302,8 @@ class ExactPhysicalNativeInput(unittest.TestCase):
                 static_cache=None,source_catalog_path=None,
                 bootstrap_result=None,fresh_collection_inputs=params)
         self.assertEqual(len(called),3)
+        # F/O use the same executable while G Native is truly disabled.
+        self.assertIsNone(g_native.call_args.kwargs["binary"])
         self.assertEqual(called[0],("flask","test_flask_3"))
         self.assertEqual({token for kind,token in called
                           if kind=="temporary_enchant"},
@@ -318,6 +321,21 @@ class ExactPhysicalNativeInput(unittest.TestCase):
                          ["O_approved"])
         self.assertFalse(result["zero_history_build"]["environment_ready"])
         self.assertIsNone(result["O"])
+
+    def test_G_native_explicit_without_binary_blocks_before_source(self):
+        inputs={"expected_game_build":BUILD,"representative_request":None,
+                "g_probe_character":None,"simc_revision_hint":None,
+                "auto_native_G_requested":True}
+        with mock.patch.object(build,"collect_wago_new_season_source",
+                               side_effect=AssertionError("NO_SOURCE_COLLECTION")):
+            with self.assertRaisesRegex(
+                    build.EnvironmentBuildBlocked,
+                    "AUTO_G_NATIVE_EXPLICIT_BINARY_REQUIRED"):
+                build.build_environment(
+                    sessions_root=self.root,session_folder=None,user=None,
+                    binary=None,revision=None,static_cache=None,
+                    source_catalog_path=None,bootstrap_result=None,
+                    fresh_collection_inputs=inputs)
 
     def test_auto_O_native_without_binary_blocks_before_collection(self):
         params={"expected_game_build":BUILD,"representative_request":None,
