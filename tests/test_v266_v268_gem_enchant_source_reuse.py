@@ -129,6 +129,42 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
                     "selected_gem_unresolved_item_ids"],[2002,2003])
                 self.assertTrue(second[
                     "selected_gem_v221_same_build_items_all_present"])
+                # Mandatory special gem is projected from the SAME cached
+                # join; its nonstatic effect is NOT a proved zero J.
+                unknown_special=adapter.view(
+                    stage_root=root,v221_candidate_path=source_path,
+                    build=BUILD,selected_gem_item_ids=[2001],
+                    selected_source_gem_item_ids=[2001,2003],
+                    selected_special_gem_item_id=2003)
+                self.assertEqual(parse.call_count,1)
+                unknown=unknown_special[
+                    "selected_special_gem_raw_effect_unadmitted"]
+                self.assertEqual(unknown["item_id"],2003)
+                self.assertIsNone(unknown[
+                    "raw_static_CHMV_total_candidate_unadmitted"])
+                self.assertTrue(unknown[
+                    "missing_or_nonstatic_never_assumed_zero"])
+                observed_special=adapter.view(
+                    stage_root=root,v221_candidate_path=source_path,
+                    build=BUILD,selected_gem_item_ids=[2003],
+                    selected_source_gem_item_ids=[2001,2003],
+                    selected_special_gem_item_id=2001)
+                self.assertEqual(parse.call_count,1)
+                static=observed_special[
+                    "selected_special_gem_raw_effect_unadmitted"]
+                self.assertEqual(static[
+                    "raw_static_CHMV_total_candidate_unadmitted"],25)
+                self.assertEqual(static[
+                    "raw_static_CHMV_vector_candidate_unadmitted"][
+                    "crit_rating"],25)
+                self.assertFalse(static["J_budget_attribution_verified"])
+                with self.assertRaisesRegex(ValueError,
+                        "V268_SPECIAL_GEM_MUST_BE_SOURCE_BOUND_AND_DISTINCT"):
+                    adapter.view(
+                        stage_root=root,v221_candidate_path=source_path,
+                        build=BUILD,selected_gem_item_ids=[2001],
+                        selected_source_gem_item_ids=[2001,2003],
+                        selected_special_gem_item_id=2001)
                 self.assertFalse(second["environment_ready"])
                 self.assertFalse(second["highest_quality_J_verified"])
                 # A new v221 artifact identity MUST miss the old cache.

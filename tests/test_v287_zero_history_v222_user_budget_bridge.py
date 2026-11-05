@@ -306,6 +306,8 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertEqual(source["v221_stage_receipt_sha256"],"5"*64)
         self.assertFalse(source["special_class_and_quality_verified"])
         self.assertFalse(source["game_socket_applicability_verified"])
+        self.assertIsNone(
+            source["selected_special_gem_raw_effect_unadmitted"])
         self.assertEqual(pre["physical_gem_J_arithmetic_unadmitted"][
             "J_candidate_unadmitted"],70)
         self.assertIsNone(pre["J"])
@@ -316,6 +318,60 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         with self.assertRaisesRegex(
                 build.EnvironmentBuildBlocked,
                 "V216_V221_SELECTED_SAME_BUILD_GEM_ITEM_SOURCE_REQUIRED"):
+            self.preflight_with_sealed_gem_raw(layout,bad)
+
+    def test_special_raw_chmv_source_reaches_preflight_without_fake_j(self):
+        layout=self.source_selected_future_gems()
+        vec={stat:0 for stat in build.season_budget_contract.STATS}
+        vec["mastery_rating"]=35
+        raw={
+            "status":"ENCHANT_RAW_POINTS_SOURCE_ONLY_J_NOT_APPROVED",
+            "enchant_source_sha256":"4"*64,
+            "selected_gem_raw_points_by_id_unadmitted":{
+                "311001":20,"311002":30},
+            "selected_gem_all_raw_points_known":True,
+            "selected_gem_v221_item_ids_unadmitted":[311001,311002,311003],
+            "selected_gem_v221_same_build_items_all_present":True,
+            "selected_special_gem_raw_effect_unadmitted":{
+                "item_id":311003,
+                "effect_classification":
+                    "RAW_STATIC_CHMV_POINTS_CANDIDATE_ONLY",
+                "raw_static_CHMV_vector_candidate_unadmitted":vec,
+                "raw_static_CHMV_total_candidate_unadmitted":35,
+                "missing_or_nonstatic_never_assumed_zero":True,
+                "simc_effective_rating_verified":False,
+                "J_budget_attribution_verified":False},
+            "J":None,"environment_ready":False}
+        pre=self.preflight_with_sealed_gem_raw(layout,raw)
+        link=pre["selected_v221_gem_item_relation_unadmitted"]
+        self.assertEqual(link[
+            "selected_special_gem_raw_effect_unadmitted"][
+            "raw_static_CHMV_total_candidate_unadmitted"],35)
+        self.assertEqual(pre["physical_gem_J_arithmetic_unadmitted"][
+            "J_candidate_unadmitted"],70)
+        self.assertIsNone(pre["J"])
+        numeric=build._zero_history_auto_v222_numeric_preview(
+            preflight={**pre,
+                "v222_G_component_reference_unadmitted":
+                    self.table[334]["components"]["G"],
+                "proposed_budget_arithmetic_unadmitted":pre.get(
+                    "proposed_budget_arithmetic_unadmitted")},
+            native_numeric={"flask":[],"oil":[]},
+            source_choices={"oil_representative_weapon_matches_unadmitted":[]},
+            selected={"flask_item_id":241326,
+                      "oil_item_ids_by_hand":{}},
+            gem_ratings={"311001":20,"311002":30},
+            target_ilevel=334,manual_final_T=None)
+        self.assertIsNone(numeric["calculation"])
+        self.assertIn(
+            "SPECIAL_GEM_STATIC_CHMV_J_BUDGET_ATTRIBUTION_PENDING",
+            numeric["requires"])
+        bad={**raw,"selected_special_gem_raw_effect_unadmitted":{
+            **raw["selected_special_gem_raw_effect_unadmitted"],
+            "item_id":999999}}
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_SPECIAL_GEM_RAW_EFFECT_SOURCE_SCOPE_DRIFT"):
             self.preflight_with_sealed_gem_raw(layout,bad)
 
     def test_p3_ei_source_property_rows_reach_v216_and_v098_unadmitted(self):

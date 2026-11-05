@@ -973,7 +973,10 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                 selected_gem_item_ids=(
                     gem_layout_receipt.get("ordinary_gem_ids")
                     if type(gem_layout_receipt) is dict else None),
-                selected_source_gem_item_ids=selected_source_ids)
+                selected_source_gem_item_ids=selected_source_ids,
+                selected_special_gem_item_id=(
+                    gem_layout_receipt.get("special_gem_id")
+                    if type(gem_layout_receipt) is dict else None))
     # New-season physical IDs are accepted for a SOURCE-ONLY preview only
     # when the ORIGINAL sealed v221→v266 join actually contains all IDs.
     # An input list or SHA string by itself never certifies a special gem,
@@ -1035,7 +1038,41 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                          and row["class_id"]==gem_item_join.GEM_CLASS
                          for row in rows),
                      "V216_V230_SELECTED_GEM_QUALITY_SOURCE_SCOPE_DRIFT")
+        special_raw=gem_enchant.get(
+            "selected_special_gem_raw_effect_unadmitted")
+        if special_raw is not None:
+            need(type(special_raw) is dict and
+                 special_raw.get("item_id")==
+                     gem_layout_receipt["special_gem_id"] and
+                 special_raw.get("effect_classification") in (
+                     "RAW_STATIC_CHMV_POINTS_CANDIDATE_ONLY",
+                     "NONSTATIC_SCALED_OR_NON_CHMV_EFFECT_PENDING",
+                     "ENCHANT_ID_MISSING_FROM_SAME_BUILD_CSV") and
+                 special_raw.get("missing_or_nonstatic_never_assumed_zero")
+                     is True and
+                 special_raw.get("simc_effective_rating_verified") is False and
+                 special_raw.get("J_budget_attribution_verified") is False,
+                 "V216_SPECIAL_GEM_RAW_EFFECT_SOURCE_SCOPE_DRIFT")
+            vector=special_raw.get(
+                "raw_static_CHMV_vector_candidate_unadmitted")
+            rating=special_raw.get(
+                "raw_static_CHMV_total_candidate_unadmitted")
+            if vector is None:
+                need(rating is None and
+                     special_raw["effect_classification"]!=
+                     "RAW_STATIC_CHMV_POINTS_CANDIDATE_ONLY",
+                     "V216_SPECIAL_GEM_UNKNOWN_STATIC_NOT_ZERO")
+            else:
+                need(type(vector) is dict and
+                     set(vector)==set(season_budget_contract.STATS) and
+                     all(type(n) is int and n>=0 for n in vector.values())
+                     and type(rating) is int and rating>0 and
+                     sum(vector.values())==rating and
+                     special_raw["effect_classification"]==
+                         "RAW_STATIC_CHMV_POINTS_CANDIDATE_ONLY",
+                     "V216_SPECIAL_GEM_RAW_STATIC_VECTOR_DRIFT")
         source_item_link={
+            "selected_special_gem_raw_effect_unadmitted":special_raw,
             "selected_simc_gem_quality_source_unadmitted":quality_source,
             "selected_item_ids":sorted(selected_source_ids),
             "selected_gem_property_records_unadmitted":source_properties,
@@ -3524,6 +3561,20 @@ def _zero_history_auto_v222_numeric_preview(*, preflight, native_numeric,
     g = _zero_history_G_numeric_input_from_preflight(
         preflight=preflight,target_ilevel=target_ilevel)
     j = preflight.get("physical_gem_J_arithmetic_unadmitted")
+    # v271 currently sums placed ORDINARY gems. A separately observed
+    # nonzero static vector on the mandatory special gem cannot be dropped
+    # from J, nor added as effective rating without SimC/source ownership.
+    # Block only the resulting numeric preview, keeping original receipts.
+    selected_link=preflight.get(
+        "selected_v221_gem_item_relation_unadmitted")
+    special=(selected_link.get(
+        "selected_special_gem_raw_effect_unadmitted")
+        if type(selected_link) is dict else None)
+    if type(special) is dict and type(special.get(
+            "raw_static_CHMV_total_candidate_unadmitted")) is int and (
+            special["raw_static_CHMV_total_candidate_unadmitted"]>0):
+        out["requires"].append(
+            "SPECIAL_GEM_STATIC_CHMV_J_BUDGET_ATTRIBUTION_PENDING")
     if g is None:
         # Native G is optional when a valid same-season G reference exists.
         out["requires"].append("SAME_SEASON_G_BUDGET_SOURCE_PENDING")

@@ -71,7 +71,7 @@ def collect(*,stage_root,build,transport=None):
 
 
 def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
-         selected_source_gem_item_ids=None):
+         selected_source_gem_item_ids=None,selected_special_gem_item_id=None):
     """Reuse a sealed v266 source view and only project selected raw gem IDs.
 
     Raw EffectPointsMin values are NOT proven effective rating, best quality,
@@ -92,6 +92,15 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
                 len(set(selected_source_gem_item_ids))!=len(
                     selected_source_gem_item_ids)):
             raise ValueError("V268_SOURCE_GEM_ITEM_IDS_INVALID")
+    if selected_special_gem_item_id is not None:
+        if (type(selected_special_gem_item_id) is not int or
+                selected_special_gem_item_id<=0 or
+                selected_source_gem_item_ids is None or
+                selected_special_gem_item_id not in
+                    selected_source_gem_item_ids or
+                (selected_gem_item_ids is not None and
+                 selected_special_gem_item_id in selected_gem_item_ids)):
+            raise ValueError("V268_SPECIAL_GEM_MUST_BE_SOURCE_BOUND_AND_DISTINCT")
     root=Path(stage_root)
     csv_path=root/OUTPUTS["csv"]
     receipt_path=root/".stage_receipts"/(STAGE+".json")
@@ -185,8 +194,8 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
     selected={}
     selected_vectors={}
     unresolved=[]
+    by_id={row["item_id"]:row for row in result["records"]}
     if selected_gem_item_ids is not None:
-        by_id={row["item_id"]:row for row in result["records"]}
         for item_id in sorted(set(selected_gem_item_ids)):
             row=by_id.get(item_id)
             if (row is None or row["effect_classification"]!=
@@ -204,6 +213,35 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
             else:
                 selected[str(item_id)]=sum(vector.values())
                 selected_vectors[str(item_id)]=dict(vector)
+    # The same sealed v266 record also describes the mandatory special gem.
+    # It may contribute fixed CHMV, or it may have an unresolved/nonstatic
+    # effect. Neither case may be silently interpreted as zero for final J.
+    special_effect=None
+    if selected_special_gem_item_id is not None:
+        row=by_id.get(selected_special_gem_item_id)
+        if row is None:
+            raise ValueError("V268_SPECIAL_GEM_NOT_IN_SEALED_ENCHANT_JOIN")
+        vector=row["raw_static_points_candidate"]
+        if row["effect_classification"]=="RAW_STATIC_CHMV_POINTS_CANDIDATE_ONLY":
+            if (type(vector) is not dict or
+                    set(vector)!={"crit_rating","haste_rating",
+                                  "mastery_rating","versatility_rating"} or
+                    any(type(amount) is not int or amount<0
+                        for amount in vector.values()) or
+                    sum(vector.values())<=0):
+                raise ValueError("V268_SPECIAL_GEM_RAW_VECTOR_INVALID")
+            vector=dict(vector)
+        else:
+            vector=None
+        special_effect={
+            "item_id":selected_special_gem_item_id,
+            "effect_classification":row["effect_classification"],
+            "raw_static_CHMV_vector_candidate_unadmitted":vector,
+            "raw_static_CHMV_total_candidate_unadmitted":(
+                sum(vector.values()) if vector is not None else None),
+            "missing_or_nonstatic_never_assumed_zero":True,
+            "simc_effective_rating_verified":False,
+            "J_budget_attribution_verified":False}
     source_membership={}
     if selected_source_gem_item_ids is not None:
         # The v221 candidate and same-build source relation were already
@@ -248,6 +286,7 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
         **source_membership,
         "selected_gem_raw_points_by_id_unadmitted":selected,
         "selected_gem_raw_CHMV_vectors_by_id_unadmitted":selected_vectors,
+        "selected_special_gem_raw_effect_unadmitted":special_effect,
         "selected_gem_unresolved_item_ids":unresolved,
         "selected_gem_all_raw_points_known":(
             selected_gem_item_ids is not None and not unresolved and
