@@ -148,15 +148,15 @@ class LocalJobs:
                 raise environment_manifest.EnvironmentBlocked(
                     "SEASON_NATIVE_G_F_O_BINARY_MISMATCH")
             binary=resolved
-        if consumable_native_binary is not None and not (
-                auto_native_F_requested or auto_native_O_requested):
-            raise environment_manifest.EnvironmentBlocked(
-                "SEASON_F_O_BINARY_WITHOUT_MEASUREMENT_SELECTION")
         if auto_select_observed_F_no_oil and (
                 selected_flask_item_id is not None
                 or not auto_native_F_requested or auto_native_O_requested):
             raise environment_manifest.EnvironmentBlocked(
                 "SEASON_AUTO_F_REQUIRES_EXPLICIT_F_NATIVE_AND_NO_OIL")
+        if consumable_native_binary is not None and not (
+                auto_native_F_requested or auto_native_O_requested):
+            raise environment_manifest.EnvironmentBlocked(
+                "SEASON_F_O_BINARY_WITHOUT_MEASUREMENT_SELECTION")
         with self.season_source_lock:
             observed=environment_build.build_environment(
                 sessions_root=self.root,session_folder=None,user=None,
