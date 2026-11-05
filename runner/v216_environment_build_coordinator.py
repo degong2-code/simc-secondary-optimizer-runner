@@ -1283,13 +1283,13 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
         if source_item_link is not None:
             payload["selected_v221_gem_item_relation_unadmitted"]=source_item_link
             payload["requires"].append(
-                "SPECIAL_GEM_EXACT_TYPE_QUALITY_AND_GAME_SOCKET_PENDING")
+                "SPECIAL_GEM_EXACT_ROLE_QUALITY_AND_REAL_SOCKET_COUNTS_PENDING")
         if raw_gem_ratings is not None:
             payload["physical_gem_raw_rating_by_id_unadmitted"] = (
                 dict(raw_gem_ratings))
             payload["physical_gem_raw_rating_source_only"] = True
         payload["requires"].append(
-            "PHYSICAL_SOCKET_ELIGIBILITY_HIGHEST_QUALITY_GEM_SOURCE")
+            "REAL_SOCKET_COUNTS_AND_HIGHEST_QUALITY_GEM_SOURCE_PENDING")
         if gem_J is not None:
             payload["physical_gem_J_arithmetic_unadmitted"] = gem_J
         else:

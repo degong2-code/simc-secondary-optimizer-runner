@@ -2,8 +2,10 @@
 """P3-BZ: opt-in physical socket/gem composition, never an admission gate.
 
 Uses the existing v101 four-color ID selector. A caller must separately prove
-which sockets and highest-quality gem IDs are valid for the current season.
-This stage does not authenticate game eligibility or calculate DPS.
+how many sockets really exist on chosen equipment, and which gem IDs are
+valid for the season. Any existing socket accepts an ordinary or special gem:
+no gem-color/type-to-socket compatibility gate. This stage does not
+authenticate real socket existence or calculate DPS.
 """
 from __future__ import annotations
 
@@ -57,6 +59,8 @@ def arrange(rows, plan, need, *, observed_rating_per_ordinary=None):
          type(where) is str and counts.get(where, 0) >= 1,
          "SOCKET_SINGLE_SPECIAL_GEM_POSITION_REQUIRED")
     ordinary = plan["ordinary_gem_ids"]
+    # SOURCE_GEM_COLOR is used only for the existing four-color special
+    # effect; it is NOT a restriction on which open socket accepts a gem.
     source_colors = representative.SOURCE_GEM_COLOR
     need(type(ordinary) is list and len(ordinary) == total - 1 and
          all(type(g) is int and g!=special and g not in DIAMONDS and

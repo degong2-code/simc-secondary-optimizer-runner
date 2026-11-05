@@ -63,7 +63,14 @@ def decide(candidate, receipts=None):
     if set(receipts)-set(PROOF_STATUSES):
         raise ValueError("AUTO_ADMISSION_UNKNOWN_PROOF_FAMILY")
     missing=[]; conflicts=[]
-    if candidate["slot_status"]!="SOURCE_MASK_RESOLVED":
+    # Gem choices are valid for ANY existing socket; there is no separate
+    # per-gem socket color/type compatibility gate. The product_input proof
+    # remains responsible for a real usable socket count and the selected
+    # item/use restrictions. Enchants and oils keep their slot/hand checks.
+    universal_gem=(candidate["kind"]=="gem" and
+                   candidate["slot"]=="ANY_EXISTING_SOCKET" and
+                   candidate["slot_status"]=="GEM_SOCKET_TYPE_NOT_APPLICABLE")
+    if candidate["slot_status"]!="SOURCE_MASK_RESOLVED" and not universal_gem:
         missing.append("EXACT_PHYSICAL_SLOT_OR_HAND_RELATION_NOT_VERIFIED")
     for family, expected_status in PROOF_STATUSES.items():
         proof=receipts.get(family)
@@ -130,8 +137,10 @@ def candidate_from_source_enchant(source_catalog, row):
 def candidate_from_source_gem(source_catalog, row):
     """Physical v221 gem ID as existing Policy A input, NOT game approval.
 
-    SimC equipment gem_id syntax is the profile input proposal; v220 decides
-    it remains pending until actual socket, SimC acceptance and J proofs.
+    SimC equipment gem_id syntax is the profile input proposal. A gem fits
+    any existing socket regardless of color/type; actual socket COUNT and
+    physical item/use conditions belong to product_input proof. Source facts
+    alone never prove the other three evidence families or publish the gem.
     """
     if type(source_catalog) is not dict or type(row) is not dict:
         raise ValueError("AUTO_ADMISSION_GEM_SOURCE_REQUIRED")
@@ -150,8 +159,8 @@ def candidate_from_source_gem(source_catalog, row):
     candidate={
         "kind":"gem","exact_id":row["item_id"],
         "simc_token":"gem_id="+str(row["item_id"]),
-        "slot":"GEM_SOCKET_SOURCE_UNRESOLVED",
-        "slot_status":"PENDING_GAME_SOCKET_APPLICABILITY",
+        "slot":"ANY_EXISTING_SOCKET",
+        "slot_status":"GEM_SOCKET_TYPE_NOT_APPLICABLE",
         "game_build":source_catalog.get("game_build"),
         "simc_revision":source_catalog.get("simc_revision"),
         "catalog_sha256":source_catalog.get("manifest_sha256")}

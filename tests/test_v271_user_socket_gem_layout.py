@@ -113,6 +113,10 @@ class SocketLayoutTests(unittest.TestCase):
         self.assertEqual(old,self.rows())
         self.assertEqual(staged["wrists"]["options"]["gem_id"],
                          "311003/311002")
+        # A source-observed special may occupy an ordinary open wrist
+        # socket. No source color/type comparison with the slot is needed.
+        self.assertEqual(receipt["special_slot"],"wrists")
+        self.assertEqual(receipt["socket_total"],4)
         self.assertEqual(staged["head"]["options"]["gem_id"],"311001")
         self.assertEqual(receipt["ordinary_gem_ids"],
                          [311001,311001,311002])

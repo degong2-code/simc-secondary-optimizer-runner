@@ -107,8 +107,9 @@ class AutoAdmissionTests(unittest.TestCase):
         self.assertEqual(gem["exact_id"],311001)
         self.assertEqual(gem["simc_token"],"gem_id=311001")
         self.assertEqual(gem["kind"],"gem")
+        self.assertEqual(gem["slot"],"ANY_EXISTING_SOCKET")
         self.assertEqual(gem["slot_status"],
-                         "PENDING_GAME_SOCKET_APPLICABILITY")
+                         "GEM_SOCKET_TYPE_NOT_APPLICABLE")
         ident=policy._identity(gem)
         proof={"source_relation":{"identity":ident,
                 "status":"EXACT_SOURCE_RELATION_VERIFIED",
@@ -119,8 +120,28 @@ class AutoAdmissionTests(unittest.TestCase):
                          decision["missing"])
         for field in ("simc_input","product_input","chmv_budget"):
             self.assertIn("EVIDENCE_MISSING:"+field,decision["missing"])
+        self.assertNotIn("EXACT_PHYSICAL_SLOT_OR_HAND_RELATION_NOT_VERIFIED",
+                         decision["missing"])
+        # Source-only is still NOT an accepted gem. All three remaining
+        # original proof families must be real and internally scoped.
+        self.assertEqual(decision["status"],"PENDING_EXACT_EVIDENCE")
+        receipts={family:{"identity":dict(ident),"status":status,
+                          "evidence_sha256":str(i)*64}
+                  for i,(family,status) in enumerate(
+                      policy.PROOF_STATUSES.items(),1)}
+        receipts["chmv_budget"].update(
+            no_double_count=True,unknown_static_chmv=False)
+        self.assertTrue(policy.decide(gem,receipts)["eligible"])
+        # Changing only the DB2 source color is not socket rejection.
+        other_color=policy.candidate_from_source_gem(
+            src,{**prop,"color_mask":1})
+        self.assertEqual(other_color["slot"],"ANY_EXISTING_SOCKET")
+        self.assertEqual(other_color["slot_status"],
+                         "GEM_SOCKET_TYPE_NOT_APPLICABLE")
+        self.assertFalse(policy.decide(other_color)["eligible"])
+        forged={**gem,"slot_status":"PENDING_GAME_SOCKET_APPLICABILITY"}
         self.assertIn("EXACT_PHYSICAL_SLOT_OR_HAND_RELATION_NOT_VERIFIED",
-                      decision["missing"])
+                      policy.decide(forged)["missing"])
         for bad in ({**prop,"gem_property_id":0},
                     {**prop,"item_id":-1}):
             with self.assertRaisesRegex(ValueError,
