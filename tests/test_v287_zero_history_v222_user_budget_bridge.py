@@ -1388,7 +1388,7 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 preflight=broken,compilation=compiled,owner_numeric=owner)
         damaged=copy.deepcopy(quality)
         damaged["flask_quality_groups_observed_unadmitted"][0][
-            "observed_qualities"]=[1,1]
+            "observed_qualities"]=[1]
         with self.assertRaisesRegex(
                 build.EnvironmentBuildBlocked,
                 "V216_JF_QUALITY_SELECTED_F_ITEM_RANK_DRIFT"):
