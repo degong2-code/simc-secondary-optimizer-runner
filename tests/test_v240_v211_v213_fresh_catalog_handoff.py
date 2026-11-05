@@ -177,8 +177,9 @@ class SameFreshCatalogChain(unittest.TestCase):
                 "exact_application_scope_verified":True,
                 "quality_source_sha256":"f"*64,
                 "verified_quality_rank":row["highest_source_quality_rank"]})
-            staged=ui.prepare_verified_fresh_choices(
-                artifact,fresh,proofs)
+            staged,policy_preview=ui.prepare_verified_fresh_choices(
+                artifact,fresh,proofs,return_policy_A_preview=True)
+            self.assertEqual(policy_preview["automatically_eligible"],1)
             self.assertEqual(staged["status"],
                 "EXACT_OPTIONS_PREPARED_FOR_VERSIONED_INSTALL")
             self.assertEqual(len(staged[

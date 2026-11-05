@@ -135,7 +135,8 @@ def read(path=DEFAULT):
 
 
 def prepare_verified_fresh_choices(source_catalog, source_ui,
-                                  trusted_internal_receipts_by_id):
+                                  trusted_internal_receipts_by_id, *,
+                                  return_policy_A_preview=False):
     """Normal Build's existing Policy A -> versioned candidate install input.
 
     Must only be invoked with the original v217/v216 internally authenticated
@@ -244,8 +245,11 @@ def prepare_verified_fresh_choices(source_catalog, source_ui,
     }
     encoded=json.dumps(payload,sort_keys=True,
         ensure_ascii=False,separators=(",",":"),allow_nan=False).encode("utf8")
-    return {**payload,"prepared_options_sha256":
+    prepared={**payload,"prepared_options_sha256":
         hashlib.sha256(encoded).hexdigest()}
+    # The normal Build needs the same v220 diagnostics. Return the already
+    # computed single-pass decision instead of walking the candidates twice.
+    return (prepared,decision) if return_policy_A_preview else prepared
 
 def public_options(path=DEFAULT, *, trusted_internal_receipts_by_id=None):
     """Project source candidates and existing v220 decisions, not an approval.

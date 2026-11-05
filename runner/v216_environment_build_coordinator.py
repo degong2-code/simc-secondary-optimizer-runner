@@ -908,14 +908,10 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                 public_rows=ui.get("enchant_candidates",{}).get("items",[]))
         prepared_options=None
         if source_relations:
-            prepared_options=user_catalog.prepare_verified_fresh_choices(
-                source,ui,source_relations)
-            source_context={"game_build":expected_game_build,
-                            "simc_revision":expected_simc_revision,
-                            "manifest_sha256":source["manifest_sha256"]}
-            projected=auto_admission.preview_enchant_catalog(
-                source_context,ui["enchant_candidates"]["items"],
-                trusted_internal_receipts_by_id=source_relations)
+            prepared_options,projected=(
+                user_catalog.prepare_verified_fresh_choices(
+                    source,ui,source_relations,
+                    return_policy_A_preview=True))
             # Projection changes only diagnostics, not selectable rows.
             ui["automatic_admission"]={
                 **ui["automatic_admission"],**projected,
