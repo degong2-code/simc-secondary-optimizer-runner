@@ -70,7 +70,8 @@ def collect(*,stage_root,build,transport=None):
     }
 
 
-def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None):
+def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None,
+         selected_source_gem_item_ids=None):
     """Reuse a sealed v266 source view and only project selected raw gem IDs.
 
     Raw EffectPointsMin values are NOT proven effective rating, best quality,
@@ -82,6 +83,14 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None):
                 any(type(item) is not int or item<=0
                     for item in selected_gem_item_ids)):
             raise ValueError("V268_SELECTED_GEM_ITEM_IDS_INVALID")
+    if selected_source_gem_item_ids is not None:
+        if (type(selected_source_gem_item_ids) is not list or
+                not 1<=len(selected_source_gem_item_ids)<=64 or
+                any(type(item) is not int or item<=0
+                    for item in selected_source_gem_item_ids) or
+                len(set(selected_source_gem_item_ids))!=len(
+                    selected_source_gem_item_ids)):
+            raise ValueError("V268_SOURCE_GEM_ITEM_IDS_INVALID")
     root=Path(stage_root)
     csv_path=root/OUTPUTS["csv"]
     receipt_path=root/".stage_receipts"/(STAGE+".json")
@@ -143,8 +152,21 @@ def view(*,stage_root,v221_candidate_path,build,selected_gem_item_ids=None):
                 unresolved.append(item_id)
             else:
                 selected[str(item_id)]=sum(vector.values())
+    source_membership={}
+    if selected_source_gem_item_ids is not None:
+        # The v221 candidate and same-build source relation were already
+        # parsed and validated by v266.preview in THIS call.
+        exact={row["item_id"]:row for row in records["joins"]}
+        missing=sorted(set(selected_source_gem_item_ids)-set(exact))
+        source_membership={
+            "selected_gem_v221_item_ids_unadmitted":sorted(
+                set(selected_source_gem_item_ids)&set(exact)),
+            "selected_gem_v221_missing_item_ids":missing,
+            "selected_gem_v221_same_build_items_all_present":not missing,
+            "selected_gem_v221_source_only":True}
     return {
         "status":result["status"],
+        **source_membership,
         "selected_gem_raw_points_by_id_unadmitted":selected,
         "selected_gem_unresolved_item_ids":unresolved,
         "selected_gem_all_raw_points_known":(

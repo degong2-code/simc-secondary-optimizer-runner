@@ -130,6 +130,26 @@ class GemEnchantmentSourceReuseTests(unittest.TestCase):
             self.assertTrue(only["selected_gem_all_raw_points_known"])
             self.assertEqual(only["selected_gem_raw_points_by_id_unadmitted"],
                              {"2001":25})
+            source_bound=adapter.view(
+                stage_root=root,v221_candidate_path=p,build=BUILD,
+                selected_gem_item_ids=[2001]*2,
+                selected_source_gem_item_ids=[2001,2003])
+            self.assertEqual(source_bound[
+                "selected_gem_v221_item_ids_unadmitted"],[2001,2003])
+            self.assertTrue(source_bound[
+                "selected_gem_v221_same_build_items_all_present"])
+            self.assertTrue(source_bound["selected_gem_v221_source_only"])
+            # 2003 has non-static effects: source ID exists but its
+            # SimC effect, specialness and rating remain unverified.
+            self.assertEqual(source_bound[
+                "selected_gem_raw_points_by_id_unadmitted"],{"2001":25})
+            missing=adapter.view(
+                stage_root=root,v221_candidate_path=p,build=BUILD,
+                selected_source_gem_item_ids=[2001,999999])
+            self.assertFalse(missing[
+                "selected_gem_v221_same_build_items_all_present"])
+            self.assertEqual(missing["selected_gem_v221_missing_item_ids"],
+                             [999999])
             self.assertIsNone(only["J"])
             self.assertEqual(status["raw_static_candidate_count"],1)
             self.assertEqual(status["unresolved_enchant_count"],3)

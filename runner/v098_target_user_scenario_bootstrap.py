@@ -1118,6 +1118,22 @@ def _season_settings_from_v216(*, compilation, numeric_inputs,
     counts=layout.get("socket_counts")
     special=layout.get("special_gem_id")
     where=layout.get("special_slot")
+    # A future-season gem item must first match the ORIGINAL sealed v221
+    # same-build ItemSparse→GemProperty FK. This is not certification of
+    # special class, effective J, highest quality or game socket legality.
+    source_ids=layout.get("source_observed_gem_item_ids")
+    source_relation=compilation.get(
+        "selected_v221_gem_item_relation_unadmitted")
+    if source_ids is not None:
+        if (type(source_ids) is not list or
+                type(source_relation) is not dict or
+                source_relation.get("same_build_gem_item_join_only") is not True or
+                source_relation.get("selected_item_ids")!=source_ids or
+                source_relation.get("special_gem_item_id")!=special or
+                type(source_relation.get("v221_stage_receipt_sha256")) is not str):
+            return {"status":"SEASON_SETTINGS_SOURCE_PENDING",
+                    "missing":["V221_SELECTED_SPECIAL_GEM_SOURCE_LINK_PENDING"],
+                    "settings":None}
     # v271/v139 already support variable N and a non-head special slot.
     # Unsupported source IDs remain pending rather than being invented.
     if (type(counts) is not dict or type(ordinary) is not list or
@@ -1128,9 +1144,9 @@ def _season_settings_from_v216(*, compilation, numeric_inputs,
         return {"status":"SEASON_SETTINGS_SOURCE_PENDING",
                 "missing":["V271_PHYSICAL_SOCKET_PLAN_SOURCE_PENDING"],
                 "settings":None}
-    if special not in (240983,240967):
+    if special not in (240983,240967) and source_ids is None:
         return {"status":"SEASON_SETTINGS_SOURCE_PENDING",
-                "missing":["V271_NEW_SPECIAL_GEM_SOURCE_ID_NOT_SUPPORTED"],
+                "missing":["V271_NEW_SPECIAL_GEM_SAME_BUILD_ID_PENDING"],
                 "settings":None}
     allowed={"head","neck","shoulders","back","chest","wrists","hands",
              "waist","legs","feet","finger1","finger2","main_hand","off_hand"}
@@ -1178,12 +1194,15 @@ def _season_settings_from_v216(*, compilation, numeric_inputs,
     pure.validate_season(settings)
     # Old 6+head shape keeps its exact existing serialization. All other
     # source-observed layouts use the existing v271 opt-in compositor.
-    fixed=(where=="head" and counts.get("head")==1 and
+    fixed=(source_ids is None and where=="head"
+           and counts.get("head")==1 and
            len(ordinary)==6 and sum(counts.values())==7)
     socket_plan=(None if fixed else {
         "socket_counts":dict(counts),
         "special_gem_id":special,"special_slot":where,
-        "ordinary_gem_ids":list(ordinary)})
+        "ordinary_gem_ids":list(ordinary),
+        **({"source_observed_gem_item_ids":list(source_ids)}
+           if source_ids is not None else {})})
     return {"status":"SEASON_SETTINGS_PHYSICAL_GEMS_FLASK_COMPOSED_UNADMITTED",
             "missing":[],"settings":settings,
             "v271_socket_plan_unadmitted":socket_plan,

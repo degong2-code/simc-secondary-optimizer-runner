@@ -14,6 +14,10 @@ SCHEMA = "v271_user_socket_gem_layout_stage_v1"
 DIAMONDS = frozenset((240983, 240967))
 FIELDS = frozenset(("socket_counts", "special_gem_id", "special_slot",
                     "ordinary_gem_ids"))
+# An opt-in list of physical IDs from the ORIGINAL, sealed v221 join.
+# v216 MUST compare it with that exact same-build source before even a
+# source-only J preview is used. This list itself grants no admission.
+SOURCE_IDS_FIELD = "source_observed_gem_item_ids"
 
 
 def arrange(rows, plan, need, *, observed_rating_per_ordinary=None):
@@ -25,8 +29,18 @@ def arrange(rows, plan, need, *, observed_rating_per_ordinary=None):
     The existing v101 selector replaces duplicated colors for 240967.
     """
     need(type(rows) is dict and rows, "SOCKET_ROWS_REQUIRED")
-    need(type(plan) is dict and set(plan) == FIELDS,
+    source_mode=(type(plan) is dict and SOURCE_IDS_FIELD in plan)
+    need(type(plan) is dict and
+         (set(plan)==FIELDS or set(plan)==FIELDS|{SOURCE_IDS_FIELD}),
          "SOCKET_PLAN_FIELDS")
+    source_ids=None
+    if source_mode:
+        selected=plan[SOURCE_IDS_FIELD]
+        need(type(selected) is list and 1<=len(selected)<=64 and
+             all(type(g) is int and g>0 for g in selected) and
+             len(set(selected))==len(selected),
+             "SOCKET_V221_SOURCE_ITEM_ID_SELECTION_INVALID")
+        source_ids=set(selected)
     physical = set(rows) - {"trinket1", "trinket2"}
     counts = plan["socket_counts"]
     need(type(counts) is dict and bool(counts) and
@@ -38,14 +52,17 @@ def arrange(rows, plan, need, *, observed_rating_per_ordinary=None):
     need(1 <= total <= 64, "SOCKET_TOTAL_INPUT_BOUNDS")
     special = plan["special_gem_id"]
     where = plan["special_slot"]
-    need(type(special) is int and special in DIAMONDS and
+    need(type(special) is int and special>0 and
+         (special in source_ids if source_mode else special in DIAMONDS) and
          type(where) is str and counts.get(where, 0) >= 1,
          "SOCKET_SINGLE_SPECIAL_GEM_POSITION_REQUIRED")
     ordinary = plan["ordinary_gem_ids"]
     source_colors = representative.SOURCE_GEM_COLOR
     need(type(ordinary) is list and len(ordinary) == total - 1 and
-         all(type(g) is int and g in source_colors and
-             g not in DIAMONDS for g in ordinary),
+         all(type(g) is int and g!=special and g not in DIAMONDS and
+             (g in source_ids if source_mode else g in source_colors)
+             for g in ordinary) and
+         (not source_mode or source_ids==set(ordinary)|{special}),
          "SOCKET_ORDINARY_GEMS_SOURCE_OBSERVED_AND_COUNTED")
     need(observed_rating_per_ordinary is None or
          (type(observed_rating_per_ordinary) is int and
@@ -65,28 +82,37 @@ def arrange(rows, plan, need, *, observed_rating_per_ordinary=None):
         if chosen:
             staged[slot]["options"]["gem_id"] = "/".join(map(str, chosen))
 
-    if special == 240967 and total - 1 >= 4:
+    # Existing Midnight four-color selection is valid ONLY for the
+    # historically source-observed colored IDs. A new same-build ordinary
+    # gem must not be rewritten into an old-season fallback item ID.
+    if (special == 240967 and total - 1 >= 4 and
+            all(g in source_colors for g in ordinary)):
         representative.ensure_representative_gem_colors(
             staged, special, need, ordinary_count=total - 1,
             diamond_slot=where, allow_partial=True)
     actual = []
-    all_diamonds = 0
-    for slot, row in staged.items():
+    special_count = 0
+    # In the new source-scoped mode, the physical J identity follows
+    # sorted socket slots, matching the existing v098 reconciliation.
+    # Keep legacy insertion-order receipts BYTE IDENTICAL.
+    scan=(staged.items() if not source_mode else
+          ((slot,staged[slot]) for slot in sorted(staged)))
+    for slot, row in scan:
         tokens = row["options"].get("gem_id", "").split("/")
         for index, token in enumerate(tokens):
             if not token:
                 continue
             gem = int(token)
-            all_diamonds += gem in DIAMONDS
+            special_count += gem==special
             if slot == where and index == 0:
                 need(gem == special, "SOCKET_SPECIAL_GEM_NOT_EQUIPPED")
-            elif gem in DIAMONDS:
+            elif gem==special or gem in DIAMONDS:
                 need(False, "SOCKET_SECOND_SPECIAL_GEM")
             elif slot in physical:
                 actual.append(gem)
-    need(all_diamonds == 1 and len(actual) == total - 1,
+    need(special_count == 1 and len(actual) == total - 1,
          "SOCKET_ACTUAL_PHYSICAL_GEM_COUNT_DRIFT")
-    colors = {source_colors[g] for g in actual}
+    colors = {source_colors[g] for g in actual if g in source_colors}
     complete = special == 240967 and set(
         representative.FOUR_COLOR_GEMS).issubset(colors)
     return staged, {
@@ -98,6 +124,8 @@ def arrange(rows, plan, need, *, observed_rating_per_ordinary=None):
         "special_gem_id": special,
         "special_slot": where,
         "ordinary_gem_ids": list(actual),
+        **({SOURCE_IDS_FIELD: sorted(source_ids)}
+           if source_mode else {}),
         "ordinary_colors_observed": sorted(colors),
         "four_colors_physically_present": complete,
         "max_four_color_effect_claimed": False,
@@ -125,15 +153,29 @@ def reconcile_observed_J(layout, per_gem_rating_by_id, need):
          "GEM_J_PHYSICAL_LAYOUT_STAGE_REQUIRED")
     ids=layout.get("ordinary_gem_ids")
     counts=layout.get("socket_counts")
+    source_ids=layout.get(SOURCE_IDS_FIELD)
+    source_mode=source_ids is not None
+    need(not source_mode or
+         (type(ids) is list and type(source_ids) is list and
+          1<=len(source_ids)<=64 and
+          all(type(g) is int and g>0 for g in source_ids) and
+          len(set(source_ids))==len(source_ids) and
+          set(source_ids)==set(ids)|{layout.get("special_gem_id")}),
+         "GEM_J_V221_SOURCE_ITEM_ID_SELECTION_DRIFT")
     need(type(ids) is list and
-         all(type(gem) is int and gem in representative.SOURCE_GEM_COLOR
+         all(type(gem) is int and gem not in DIAMONDS and
+             (gem in source_ids if source_mode else
+              gem in representative.SOURCE_GEM_COLOR)
              for gem in ids) and
          type(counts) is dict and
          all(type(n) is int and n>=0 for n in counts.values()) and
          layout.get("ordinary_count")==len(ids) and
          layout.get("socket_total")==len(ids)+1 and
          sum(counts.values())==len(ids)+1 and
-         layout.get("special_gem_id") in DIAMONDS and
+         ((type(layout.get("special_gem_id")) is int and
+           layout["special_gem_id"]>0 and
+           layout["special_gem_id"] in source_ids) if source_mode else
+          layout.get("special_gem_id") in DIAMONDS) and
          type(layout.get("special_slot")) is str and
          counts.get(layout["special_slot"],0)>=1,
          "GEM_J_LAYOUT_COUNTS_OR_IDS_DRIFT")

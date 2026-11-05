@@ -102,6 +102,51 @@ class SocketLayoutTests(unittest.TestCase):
                 ValueError, "SOCKET_ORDINARY_GEMS_SOURCE_OBSERVED_AND_COUNTED"):
             sockets.arrange(before, plan, self.need)
 
+    def test_same_build_source_gem_ids_support_one_new_special_only(self):
+        """Source-only v221 ID allowance, not proof of special effect or socket."""
+        plan={"socket_counts":{"head":1,"wrists":2,"waist":1},
+              "special_gem_id":311003,"special_slot":"wrists",
+              "ordinary_gem_ids":[311001,311001,311002],
+              "source_observed_gem_item_ids":[311001,311002,311003]}
+        old=self.rows()
+        staged,receipt=sockets.arrange(old,plan,self.need)
+        self.assertEqual(old,self.rows())
+        self.assertEqual(staged["wrists"]["options"]["gem_id"],
+                         "311003/311002")
+        self.assertEqual(staged["head"]["options"]["gem_id"],"311001")
+        self.assertEqual(receipt["ordinary_gem_ids"],
+                         [311001,311001,311002])
+        self.assertEqual(receipt["special_gem_id"],311003)
+        self.assertEqual(receipt["ordinary_count"],3)
+        self.assertFalse(receipt["highest_quality_gem_ids_verified_for_new_season"])
+        self.assertFalse(receipt["game_socket_applicability_verified"])
+        j=sockets.reconcile_observed_J(
+            receipt,{"311001":20,"311002":30},self.need)
+        self.assertEqual(j["J_candidate_unadmitted"],70)
+        self.assertFalse(j["environment_ready"])
+        character={"class":"druid","spec":"balance",
+                   "race":"night_elf","talents":"CAAAABBB11122"}
+        trinkets=[{"slot":"trinket1","item_id":270175,"options":{}},
+                  {"slot":"trinket2","item_id":270173,"options":{}}]
+        profile,cfg,rows,_,_,_,_,_=pure.v098_inputs(
+            character,trinkets,socket_plan=plan,
+            source_only_season_consumables=True)
+        self.assertEqual(cfg["consumables"]["special_gem_id"],311003)
+        self.assertIn("gem_id=311003/311002",profile)
+        self.assertNotIn("gem_id=240983",profile)
+        self.assertEqual(rows["wrists"]["options"]["gem_id"],
+                         "311003/311002")
+        for patch in (
+            {"source_observed_gem_item_ids":[311001,311002]},
+            {"source_observed_gem_item_ids":[311001,311002,311003,311004]},
+            {"ordinary_gem_ids":[311003,311002,311001]},
+            {"special_gem_id":None},
+            {"special_gem_id":999999},
+            {"source_observed_gem_item_ids":[311001,311001,311003]},
+        ):
+            with self.subTest(patch=patch),self.assertRaises(ValueError):
+                sockets.arrange(old,{**plan,**patch},self.need)
+
     def test_invalid_slots_unknown_gem_or_extra_diamond_fail_closed(self):
         base = {"socket_counts": {"head": 1, "wrists": 1},
                 "special_gem_id": 240983, "special_slot": "head",

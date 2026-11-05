@@ -700,6 +700,9 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
          "V216_FRESH_GEM_SNAPSHOT_AND_STAGE_MUST_BE_PAIRED")
     gem_source = None
     gem_enchant = None
+    selected_source_ids=(
+        gem_layout_receipt.get(physical_gems.SOURCE_IDS_FIELD)
+        if type(gem_layout_receipt) is dict else None)
     if source_snapshot_folder is not None:
         gem_source = _fresh_gem_item_source_stage(
             stage_root=source_stage_root,
@@ -713,7 +716,36 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                 build=expected_game_build,
                 selected_gem_item_ids=(
                     gem_layout_receipt.get("ordinary_gem_ids")
-                    if type(gem_layout_receipt) is dict else None))
+                    if type(gem_layout_receipt) is dict else None),
+                selected_source_gem_item_ids=selected_source_ids)
+    # New-season physical IDs are accepted for a SOURCE-ONLY preview only
+    # when the ORIGINAL sealed v221→v266 join actually contains all IDs.
+    # An input list or SHA string by itself never certifies a special gem,
+    # a legal socket, effect/quality equivalence, or effective J.
+    source_item_link=None
+    if selected_source_ids is not None:
+        need(type(selected_source_ids) is list and
+             1<=len(selected_source_ids)<=64 and
+             all(type(x) is int and x>0 for x in selected_source_ids) and
+             len(set(selected_source_ids))==len(selected_source_ids) and
+             type(gem_enchant) is dict and
+             gem_enchant.get("selected_gem_v221_same_build_items_all_present") is True and
+             gem_enchant.get("selected_gem_v221_item_ids_unadmitted")==
+                 sorted(selected_source_ids) and
+             type(gem_source) is dict and
+             type(gem_source.get("source_stage")) is dict and
+             type(gem_source["source_stage"].get("receipt_sha256")) is str,
+             "V216_V221_SELECTED_SAME_BUILD_GEM_ITEM_SOURCE_REQUIRED")
+        source_item_link={
+            "selected_item_ids":sorted(selected_source_ids),
+            "special_gem_item_id":gem_layout_receipt["special_gem_id"],
+            "v221_stage_receipt_sha256":
+                gem_source["source_stage"]["receipt_sha256"],
+            "enchant_source_sha256":gem_enchant["enchant_source_sha256"],
+            "same_build_gem_item_join_only":True,
+            "special_class_and_quality_verified":False,
+            "game_socket_applicability_verified":False,
+            "simc_effective_J_verified":False}
     # A staged physical gem layout is not evidence of legal game sockets.
     need(gem_layout_receipt is not None or gem_rating_by_id is None,
          "V216_GEM_LAYOUT_REQUIRED_BEFORE_RATING_MATCH")
@@ -898,6 +930,10 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
         payload["fresh_gem_raw_enchant_points_source"] = gem_enchant
     if gem_layout_receipt is not None:
         payload["physical_gem_layout_unadmitted"] = gem_layout_receipt
+        if source_item_link is not None:
+            payload["selected_v221_gem_item_relation_unadmitted"]=source_item_link
+            payload["requires"].append(
+                "SPECIAL_GEM_EXACT_TYPE_QUALITY_AND_GAME_SOCKET_PENDING")
         if raw_gem_ratings is not None:
             payload["physical_gem_raw_rating_by_id_unadmitted"] = (
                 dict(raw_gem_ratings))
@@ -3639,6 +3675,9 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 if "physical_gem_layout_unadmitted" in preflight:
                     source_compilation["physical_gem_layout_unadmitted"]=(
                         preflight["physical_gem_layout_unadmitted"])
+                if "selected_v221_gem_item_relation_unadmitted" in preflight:
+                    source_compilation["selected_v221_gem_item_relation_unadmitted"]=(
+                        preflight["selected_v221_gem_item_relation_unadmitted"])
                 if "physical_gem_raw_rating_by_id_unadmitted" in preflight:
                     source_compilation["physical_gem_raw_rating_by_id_unadmitted"]=(
                         preflight["physical_gem_raw_rating_by_id_unadmitted"])
