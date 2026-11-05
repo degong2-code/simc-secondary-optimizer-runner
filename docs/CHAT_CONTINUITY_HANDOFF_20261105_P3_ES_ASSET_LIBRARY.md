@@ -32,7 +32,7 @@
 
 - 직전 제품 코드: [focused #41985639086](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41985639086) **253 PASS/0 FAIL·DEV_LEDGER_PASS**. 문서 HEAD [#41986004769](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41986004769) 253 PASS.
 - [v212 #41985639098](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41985639098): Ubuntu/Windows 각 **447 PASS/4 SKIP, Native0**. v113 API/v181 Windows/v182 UI SUCCESS. 모든 CI는 정해진 오프라인 범위이며 새시즌 READY가 아니다.
-- 실 Native 역사 증거 [소켓 #41601140696](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41601140696), [영약/기름 #41666305288](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41666305288)/[#41666925906](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41666925906)는 해당 게임 빌드/바이너리/프로필/옵션 범위만. **이번 P3-ES는 문서 개편만, 신규 Native·게임 HTTP·제품 코드·환경 T1 시험 0**. 이후 문서 HEAD CI 결과는 별도 확인.
+- 실 Native 역사 증거 [소켓 #41601140696](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41601140696), [영약/기름 #41666305288](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41666305288)/[#41666925906](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41666925906)는 해당 게임 빌드/바이너리/프로필/옵션 범위만. **이번 P3-ES는 문서 개편만, 신규 Native·게임 HTTP·제품 코드·환경 T1 시험 0**. [P3-ES 첫 문서 HEAD #41988307960](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41988307960) **253 PASS/0 FAIL·DEV_LEDGER_PASS**; 검증 결과 반영 커밋 CI는 별도 확인.
 
 ## 5. 다음 가장 작은 개발 묶음
 
