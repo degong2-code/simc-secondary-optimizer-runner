@@ -1164,11 +1164,22 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 supplied={"trusted_budget_evidence":{"components":{}},
                           "trusted_policy_A_receipts_by_id":{}}
                 provider=mock.Mock(return_value=supplied)
-                result=self.run_build(proof=False,trusted_provider=provider)
+                # Prove original Build passes a separately verified native-G
+                # source-owner result to the existing installer. The owner
+                # itself is mocked here; its sealed-proof contract has its
+                # own focused regression above, not a synthetic season pass.
+                original_G=self.table[334]["components"]["G"]
+                with mock.patch.object(
+                        build,"_fresh_source_owner_native_G_component",
+                        return_value=original_G) as g_owner:
+                    result=self.run_build(
+                        proof=False,trusted_provider=provider)
+                    g_owner.assert_called_once()
                 provider.assert_called_once()
                 installer.assert_called_once()
                 self.assertEqual(installer.call_args.kwargs[
-                    "trusted_budget_evidence"],supplied["trusted_budget_evidence"])
+                    "trusted_budget_evidence"],
+                    {"components":{"G":original_G}})
                 self.assertEqual(result["zero_history_build"]["status"],
                                  installed["status"])
                 self.assertTrue(result["environment_ready"])
