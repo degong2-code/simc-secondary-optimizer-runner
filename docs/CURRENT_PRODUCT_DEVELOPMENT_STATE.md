@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FR 1차 실제 T1 결과:** [실전 #42080236805](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42080236805) **ZERO_BASE_T1_BLOCKED**, 이유 `RETAIL_VERSION_SOURCE_FORMAT_INVALID`; 공식 SimC Docker 이미지의 immutable digest 확보에는 성공했으나 공식 Blizzard 공개 버전 응답 파싱에서 중단되어 Wago/아이템/실 SimC 실행 전 단계임. [focused #42080236385](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42080236385) 291 PASS 및 기록 PASS는 오프라인 증거 한정. 현 단계에서 T1·READY라고 주장 금지; 임의 게임 빌드/구시즌 참조 대입 대신 실제 HTTP 본문 형식 최소 확인으로 교정. main·원본·Project UI 불변.
+>
+
 > **2026-11-06 P3-FR — 제로베이스 실 T1 수용 시험 착수:** [기능 노트](development/notes/2026-11-06_p3-fr-zero-base-live-t1-current-build.md). 최신 사용자 직접 판정: 모든 기존 세션·시즌 DB·캐시·수집 원본 없이 외부 데이터/SimC 접근 허용, 사용자 빌드/아이템 ID 없이 v216 Environment Build가 현재 Retail 시즌 G/J/F/O를 스스로 확보·v222 계산·v212 실제 설치에 성공해야 T1 PASS. v289는 KR Retail `wow/versions` 공인 공개 버전을 동적으로 조회해 기본 시즌 입력에 사용하며 v113 웹 필드는 선택적으로 변경. 전체 T1은 실제 원본 수집 실행·영수증 확인 전 **NOT_VERIFIED**. 이전 과거 빌드/SimC 참조값으로 성공 위장 금지. Wago/Native 캐시 기존 보존, main 및 공식 승격 없음.
 >
 
