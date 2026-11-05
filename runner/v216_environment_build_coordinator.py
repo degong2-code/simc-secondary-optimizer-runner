@@ -2632,7 +2632,9 @@ def _zero_history_F_O_native_component_candidates(*, observations,
     Preserve each option separately: neither multiple flask qualities nor
     two oils may be summed/selected without their own validated conditions.
     """
-    need(type(observations) is list and len(observations) <= 4,
+    # v281 already bounds the entire sealed physical F/O worklist to 128.
+    # Cached v278 measurements may return >4 rows with ZERO new subprocesses.
+    need(type(observations) is list and len(observations) <= 128,
          "V216_ZERO_HISTORY_FO_OBSERVATION_COUNT_INVALID")
     candidates = []
     stats = season_budget_contract.STATS
@@ -2893,6 +2895,78 @@ def _zero_history_quality_weapon_candidate_join(*, numeric, weapon_source,
         "new_native_calls":0,"network_calls":0,
     }
 
+
+
+
+def _source_only_one_flask_budget_preview(*, preflight, worklist,
+                                          native_numeric, source_choices):
+    """Choose a single observed F family ONLY for an unadmitted no-oil preview.
+
+    This reuses v281's exact measured population, v278's static deltas and
+    v216's existing observed-quality comparison. It never asserts market
+    coverage, gameplay effect equivalence or official oil selection.
+    Multiple independent flask families are intentionally not guessed.
+    """
+    out={"schema":"v216_source_only_observed_flask_budget_preview_v1",
+         "status":"AUTO_F_PREVIEW_PENDING",
+         "requires":[],"selected_physical_items_unadmitted":None,
+         "oil_zero_is_preview_assumption_only":True,
+         "highest_available_quality_verified":False,
+         "quality_or_effect_equivalence_verified":False,
+         "user_selectable":False,"environment_ready":False,
+         "native_calls":0,"network_calls":0}
+    if (type(preflight) is not dict or
+            preflight.get("v277_native_G_preprofile_unadmitted") is None or
+            preflight.get("physical_gem_J_arithmetic_unadmitted") is None):
+        out["requires"].append("G_AND_PHYSICAL_J_PREVIEW_REQUIRED")
+        return out
+    if (type(worklist) is not dict or worklist.get("status")!=
+            "MEASURABLE_PHYSICAL_F_O_CANDIDATES_UNADMITTED" or
+            type(worklist.get("flask")) is not list or
+            not worklist["flask"]):
+        out["requires"].append("COMPLETE_SEALED_V281_FLASK_WORKLIST_REQUIRED")
+        return out
+    if (type(native_numeric) is not dict or
+            type(native_numeric.get("flask")) is not list or
+            type(source_choices) is not dict):
+        out["requires"].append("EXACT_NATIVE_FLASK_OBSERVATIONS_REQUIRED")
+        return out
+    planned=worklist["flask"]
+    measured=native_numeric["flask"]
+    planned_by_id={x.get("physical_item_id"):x for x in planned}
+    measured_by_id={x.get("physical_item_id"):x for x in measured}
+    need(len(planned_by_id)==len(planned) and
+         len(measured_by_id)==len(measured),
+         "V216_F_PREVIEW_DUPLICATE_PHYSICAL_ITEMS")
+    if (set(planned_by_id)!=set(measured_by_id) or
+            any(measured_by_id[item_id].get("status")!=
+                 "SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY" or
+                 measured_by_id[item_id].get("simc_input_token")!=
+                 planned_by_id[item_id].get("simc_input_token") or
+                 measured_by_id[item_id].get("crafting_quality")!=
+                 planned_by_id[item_id].get("crafting_quality")
+                 for item_id in planned_by_id)):
+        out["requires"].append("ALL_SAME_BUILD_FLASK_OPTIONS_NOT_YET_MEASURED")
+        return out
+    groups=source_choices.get("flask_quality_groups_observed_unadmitted")
+    if type(groups) is not list or len(groups)!=1:
+        out["requires"].append("FLASK_EFFECT_FAMILY_NOT_UNAMBIGUOUS")
+        return out
+    group=groups[0]
+    chosen=group.get("highest_observed_quality_item_id_unadmitted")
+    if (group.get("status") not in (
+            "TOP_QUALITY_AMONG_OBSERVED_ONLY",
+            "ONLY_ONE_QUALITY_OBSERVED") or
+            chosen not in planned_by_id or
+            set(group.get("observed_item_ids",[]))!=set(planned_by_id)):
+        out["requires"].append("FLASK_STATIC_RATING_QUALITY_COMPARISON_PENDING")
+        return out
+    return {**out,
+            "status":"ONE_OBSERVED_FLASK_NO_OIL_NUMERIC_PREVIEW_UNADMITTED",
+            "selected_physical_items_unadmitted":{
+                "flask_item_id":chosen,"oil_item_ids_by_hand":{}},
+            "requires":["F_HIGHEST_AVAILABLE_QUALITY_AND_EFFECT_PENDING",
+                        "O_SELECTION_AND_WEAPON_ELIGIBILITY_PENDING"]}
 
 
 def _zero_history_selected_F_O_v222_reconcile(*, selected, numeric,
@@ -3571,9 +3645,16 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         effect_observations=[]
         auto_F_calls=0
         if auto_native_F:
+            # If both kinds are requested, reserve up to two O pairs rather
+            # than letting a long F worklist starve all weapon-oil probes.
+            # No extra Native is launched; this only partitions the same 8.
+            oil_work=(source_compilation.get(
+                "automatic_F_O_measurement_candidates_unadmitted") or {}
+                ).get("oil",[]) if auto_native_O else []
+            oil_reserved=min(4,2*len(oil_work))
             auto_rows,auto_state=_auto_F_native_from_sealed_v281(
                 collected=collected,compilation=source_compilation,
-                binary=binary)
+                binary=binary,max_new_native_calls=8-oil_reserved)
             effect_observations.extend(auto_rows)
             auto_F_calls=auto_state["new_native_calls"]
             progress["automatic_F_native_measurements_unadmitted"]=auto_state
@@ -3676,7 +3757,22 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     budget_evidence=zero_history_budget_evidence)
                 progress["selected_physical_F_O_budget_link_unadmitted"]=selected_check
                 source_compilation["selected_physical_F_O_budget_link_unadmitted"]=selected_check
-        if selected_budget_items is not None:
+        # For a web Build with no internal physical selection, a uniquely
+        # measured flask family may supply a *source-only* B/T preview.
+        # No oil is assumed only in that preview; do not turn this into a
+        # default oil choice or product admission.
+        numeric_selection=selected_budget_items
+        if numeric_selection is None and effect_observations:
+            auto_preview=_source_only_one_flask_budget_preview(
+                preflight=preflight,
+                worklist=source_compilation.get(
+                    "automatic_F_O_measurement_candidates_unadmitted"),
+                native_numeric=native_F_O,source_choices=quality_weapon)
+            progress["auto_observed_flask_budget_preview_unadmitted"]=auto_preview
+            source_compilation[
+                "auto_observed_flask_budget_preview_unadmitted"]=auto_preview
+            numeric_selection=auto_preview["selected_physical_items_unadmitted"]
+        if numeric_selection is not None:
             selected_numeric=_zero_history_auto_v222_numeric_preview(
                 preflight=preflight,
                 native_numeric=(
@@ -3685,7 +3781,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 source_choices=(
                     quality_weapon if effect_observations else
                     {"oil_representative_weapon_matches_unadmitted":[]}),
-                selected=selected_budget_items,
+                selected=numeric_selection,
                 gem_ratings=zero_history_gem_ratings,
                 target_ilevel=fresh_collection_inputs[
                     "representative_request"]["target_ilevel"],

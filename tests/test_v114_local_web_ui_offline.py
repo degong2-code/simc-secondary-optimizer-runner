@@ -103,6 +103,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn("auto_native_F_requested",js)
         self.assertIn("auto_native_O_requested",js)
         self.assertIn("O Native",js)
+        self.assertIn("기름 미적용 가정(공식 선택 아님)",js)
         self.assertIn("automatic_F_O_measurement_candidates_unadmitted",js)
         self.assertIn("numeric_preview_only",js)
         self.assertIn("신규 Native",js)

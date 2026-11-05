@@ -629,6 +629,99 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                             "oil_item_ids_by_hand":{"offhand":243734}}})
 
 
+    def test_auto_one_observed_flask_source_only_v222_preview_no_manual_id(self):
+        """Full same-build v281 worklist + G/J permits a preview, not READY."""
+        layout,ratings=self.physical_layout()
+        request,bound,observation=self.physical_effect()
+        plan={"status":"MEASURABLE_PHYSICAL_F_O_CANDIDATES_UNADMITTED",
+              "flask":[{"physical_item_id":bound["physical_item_id"],
+                        "simc_input_token":bound["simc_input_token"],
+                        "crafting_quality":bound["crafting_quality"]}],
+              "oil":[]}
+        with mock.patch.object(build.consumable_simc_relation,
+                               "plan_physical_native_measurements",
+                               return_value=plan):
+            result=self.run_build(
+                proof=False,native_result=self.v277_native_G(),
+                gem_layout=layout,gem_ratings=ratings,
+                effect_requests=[request],effect_resolver=bound,
+                effect_observation=observation)
+        source=result["source_compilation"]
+        chosen=source["auto_observed_flask_budget_preview_unadmitted"]
+        self.assertEqual(chosen["status"],
+                         "ONE_OBSERVED_FLASK_NO_OIL_NUMERIC_PREVIEW_UNADMITTED")
+        self.assertEqual(chosen["selected_physical_items_unadmitted"],
+                         {"flask_item_id":241326,"oil_item_ids_by_hand":{}})
+        self.assertFalse(chosen["highest_available_quality_verified"])
+        self.assertTrue(chosen["oil_zero_is_preview_assumption_only"])
+        numeric=source["selected_auto_v222_numeric_preview_unadmitted"]
+        calc=numeric["calculation"]
+        self.assertEqual((calc["reference_G"],calc["J"],calc["F"]),
+                         (2850,138,165))
+        self.assertEqual((calc["base_B"],calc["final_T"]),(3153,3153))
+        self.assertTrue(calc["numeric_preview_only"])
+        self.assertFalse(calc["environment_ready"])
+        self.assertIsNone(result["F"])
+        self.assertIsNone(result["T"])
+        self.assertFalse(result["zero_history_build"]["environment_ready"])
+
+    def test_auto_flask_preview_never_guesses_multiple_families_or_missing(self):
+        preflight={"v277_native_G_preprofile_unadmitted":{"status":"source"},
+                   "physical_gem_J_arithmetic_unadmitted":{"status":"source"}}
+        first={"physical_item_id":501,"crafting_quality":2,
+               "simc_input_token":"first_flask_2"}
+        second={"physical_item_id":502,"crafting_quality":2,
+                "simc_input_token":"second_flask_2"}
+        plan={"status":"MEASURABLE_PHYSICAL_F_O_CANDIDATES_UNADMITTED",
+              "flask":[first,second]}
+        observed={"flask":[{**first,
+             "status":"SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY"}]}
+        many=build._source_only_one_flask_budget_preview(
+            preflight=preflight,worklist=plan,native_numeric=observed,
+            source_choices={"flask_quality_groups_observed_unadmitted":[{
+                "status":"ONLY_ONE_QUALITY_OBSERVED",
+                "highest_observed_quality_item_id_unadmitted":501,
+                "observed_item_ids":[501]}]})
+        self.assertIsNone(many["selected_physical_items_unadmitted"])
+        self.assertIn("ALL_SAME_BUILD_FLASK_OPTIONS_NOT_YET_MEASURED",
+                      many["requires"])
+        observed["flask"].append({**second,
+            "status":"SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY"})
+        ambiguous=build._source_only_one_flask_budget_preview(
+            preflight=preflight,worklist=plan,native_numeric=observed,
+            source_choices={"flask_quality_groups_observed_unadmitted":[
+                {"status":"ONLY_ONE_QUALITY_OBSERVED",
+                 "highest_observed_quality_item_id_unadmitted":501,
+                 "observed_item_ids":[501]},
+                {"status":"ONLY_ONE_QUALITY_OBSERVED",
+                 "highest_observed_quality_item_id_unadmitted":502,
+                 "observed_item_ids":[502]}]})
+        self.assertIsNone(ambiguous["selected_physical_items_unadmitted"])
+        self.assertIn("FLASK_EFFECT_FAMILY_NOT_UNAMBIGUOUS",
+                      ambiguous["requires"])
+
+    def test_more_than_four_cached_exact_F_rows_do_not_block_v222_source(self):
+        _,bound,observation=self.physical_effect()
+        items=[]
+        for i in range(5):
+            this={**observation,
+                  "physical_item_native_source_unadmitted":{
+                      **bound,"physical_item_id":bound["physical_item_id"]+i}}
+            items.append(this)
+        out=build._zero_history_F_O_native_component_candidates(
+            observations=items,game_build=self.catalog["game_build"],
+            simc_revision=self.catalog["simc_revision"])
+        self.assertEqual(len(out["flask"]),5)
+        self.assertTrue(out["source_only"])
+        self.assertIsNone(out["F"])
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_ZERO_HISTORY_FO_OBSERVATION_COUNT_INVALID"):
+            build._zero_history_F_O_native_component_candidates(
+                observations=items*26,
+                game_build=self.catalog["game_build"],
+                simc_revision=self.catalog["simc_revision"])
+
     def test_auto_v222_new_season_GJFO_without_manual_budget_evidence(self):
         layout,ratings=self.physical_layout()
         req,bound,obs=self.physical_effect()

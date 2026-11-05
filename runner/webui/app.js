@@ -631,6 +631,7 @@ function showSeasonEnvironmentBuild(data) {
   const autoFO=source.automatic_F_O_measurement_candidates_unadmitted;
   const measuredF=source.automatic_F_native_measurements_unadmitted;
   const measuredO=source.automatic_O_native_measurements_unadmitted;
+  const autoFlask=source.auto_observed_flask_budget_preview_unadmitted;
   node.textContent=(ready?"시즌 환경 설치 완료":"원본 수집·검증 진행 결과 (설치 미완료)")+
     " · 요청 빌드 "+(scope.game_build||"–")+
     " · 원본 "+(step.source_stage_status||data?.source_stage?.status||"미확정")+
@@ -645,6 +646,8 @@ function showSeasonEnvironmentBuild(data) {
       " · O Native "+measuredO.attempted+"/"+measuredO.total_source_candidates+
       "건(손별 측정 후보·미승인)":"")+
     " · 신규 Native "+(Number(data?.native_calls)||0)+"회"+
+    (autoFlask?.status==="ONE_OBSERVED_FLASK_NO_OIL_NUMERIC_PREVIEW_UNADMITTED"?
+      " · F 관측 1가족 · 기름 미적용 가정(공식 선택 아님)":"")+
     (numeric?.numeric_preview_only===true&&numeric.environment_ready===false?
        " · 관측 수치(미승인) G="+numeric.reference_G+
        " J="+numeric.J+" F="+numeric.F+
