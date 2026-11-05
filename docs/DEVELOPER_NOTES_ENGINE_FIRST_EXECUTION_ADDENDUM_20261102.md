@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FQ 검증 범위:** [P3-FQ focused #42077020300](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42077020300) **DEV_LEDGER_PASS·288/288 PASS**; [v113 #42076822948](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42076822948) **Ubuntu/Windows 각 219 PASS**; [v212 #42076822914](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42076822914) **양 OS 각 448 PASS/4 SKIP**; v181/v182/v167/v177/v180 **SUCCESS** (v180 Native six cases SKIPPED). 최초 focused ledger 오류는 노트 필드명 보정으로 종료됐으며 새 기능 Python 테스트 자체는 최종 288 PASS. 정확한 기존 영약 F ItemID를 지정할 때만 v281 측정 후보를 1개로 제한하고 동일 token 계열 저품질·미관측 ID는 PENDING. 기존 F Native 캐시/호출 총상한·G/J/O·SimC 특수 효과 책임 불변. 실제 시즌 READY/T1은 여전히 미완료.
+>
+
 > **2026-11-06 P3-FQ 사용자 경로 우선:** [개발 노트](development/notes/2026-11-06_p3-fq-selected-flask-source-scope-to-normal-build.md). 기존 v113 `selected_flask_item_id` 계약을 사용자 고급 웹 입력에 CONNECT. v216의 F Native는 명시된 같은 시즌 영약 ID만 원본 v281에 귀속시키고 기존 v278 paired-cache를 재사용한다. 이미 원본에 더 높은 같은 계열 품질이 있는 저품질/없는 ID는 Native를 낭비하지 않고 PENDING; 미선택 자동 F·O·G·기존 v222/v212 설치 경로/특수보석 SimC 효과 책임 유지. 실제 새 시즌 READY/T1 미완료, 공식 G/J/F/O/자동 정책 A 원본 미인증, 코드 변경 CI 결과는 별도 확인.
 >
 
