@@ -379,6 +379,53 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 "V216_V221_SELECTED_SAME_BUILD_GEM_ITEM_SOURCE_REQUIRED"):
             self.preflight_with_sealed_gem_raw(layout,bad)
 
+    def test_p3_fp_single_stat_cannot_enter_J_even_with_manual_number(self):
+        # A physically selected one-stat ordinary gem may remain on the
+        # SimC socket layout for special-effect activation, but never in J.
+        layout=self.source_selected_future_gems()
+        raw={"status":"ENCHANT_RAW_POINTS_SOURCE_ONLY_J_NOT_APPROVED",
+             "enchant_source_sha256":"4"*64,
+             "selected_gem_raw_points_by_id_unadmitted":{
+                 "311001":20,"311002":30},
+             "selected_gem_all_raw_points_known":True,
+             "selected_ordinary_gem_two_stat_budget_eligible_unadmitted":False,
+             "selected_ordinary_gem_two_stat_by_id_unadmitted":{
+                 "311001":False,"311002":True},
+             "selected_one_stat_gem_activation_only_item_ids":[311001],
+             "selected_gem_v221_item_ids_unadmitted":[311001,311002,311003],
+             "selected_gem_v221_same_build_items_all_present":True,
+             "J":None,"environment_ready":False}
+        # Neither raw (20+20+30) nor a manually provided numeric override
+        # may convert a one-stat activation gem into J budget evidence.
+        for manual in (None,{"311001":20,"311002":30}):
+            with self.subTest(manual=manual):
+                pre=self.preflight_with_sealed_gem_raw(
+                    layout,raw,manual_ratings=manual)
+                self.assertIn("physical_gem_layout_unadmitted",pre)
+                self.assertNotIn("physical_gem_J_arithmetic_unadmitted",pre)
+                self.assertTrue(pre[
+                    "ordinary_gem_J_two_stat_requirement_pending"])
+                self.assertIn(
+                    "ORDINARY_GEM_J_REQUIRES_EXACTLY_TWO_SECONDARY_STATS",
+                    pre["requires"])
+                self.assertIsNone(pre["J"])
+                self.assertFalse(pre["environment_ready"])
+        # Proven two-stat ordinary sources retain the normal numeric
+        # projection, including repeated physical gems in multiple sockets.
+        approved_shape={**raw,
+            "selected_ordinary_gem_two_stat_budget_eligible_unadmitted":True,
+            "selected_ordinary_gem_two_stat_by_id_unadmitted":{
+                "311001":True,"311002":True},
+            "selected_one_stat_gem_activation_only_item_ids":[]}
+        pre=self.preflight_with_sealed_gem_raw(
+            layout,approved_shape)
+        self.assertEqual(pre[
+            "physical_gem_J_arithmetic_unadmitted"][
+                "J_candidate_unadmitted"],70)
+        self.assertNotIn(
+            "ordinary_gem_J_two_stat_requirement_pending",pre)
+        self.assertIsNone(pre["J"])
+
     def test_special_raw_chmv_source_reaches_preflight_without_fake_j(self):
         layout=self.source_selected_future_gems()
         vec={stat:0 for stat in build.season_budget_contract.STATS}
