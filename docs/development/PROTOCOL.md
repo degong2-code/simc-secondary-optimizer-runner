@@ -35,3 +35,9 @@
 - **지금의 완료 Gate:** 하나의 웹앱 `v216` Environment Build가 G/J/F/O·B/T·정책 A 검증 선택지·시즌 설치/READY를 만든다. 이미 개발된 사용자별 v098/v096/v094 DPS 최적화 실행은 **후속 메인 기능**이므로 환경 READY 선행 Gate가 아니다. 최종 제품 목표는 26 DPS 공통 하나의 엔진.
 - P3-DV 코드/오프라인 PASS는 자동 F 후보 측정 연결까지의 증거이지 최고품질·예산 승인 또는 전체 T1 READY가 아니다. 새 채팅 첫 답변은 **읽기 전용 복원 보고만** 하고 **'진행' 전 일체 수정·CI/Native/게임 HTTP/테스트·승격 금지**.
 
+
+## 새 채팅 인계 복원 동작 · P3-EE 후속 정본 (2026-11-05)
+
+- **가장 최근 단일 진입점**: [P3-EE](../CHAT_CONTINUITY_HANDOFF_20261105_P3_EE_ENGINE_FIRST.md), [작업 기록](notes/2026-11-05_p3-ee-engine-continuity-handoff.md). 위 P3-DW/DO는 이전 인계 시점 기록이다. 격리/main 실제 HEAD 각각 조회 → P3-EE → 이 규약 → INDEX → 최근 P3-DX/DY/DZ/EA/EC/ED 및 관련 P3-DN/DM/DS/DT/DU/DV → CURRENT → 개발자 실행 노트 → 승인 v1.4.3 + 최신 사용자 직접 정정 → 실제 코드·원본·CI/Native 영수증 순서.
+- **제품 핵심:** 다음 시즌에도 쓰이는 **26 DPS 공통 하나의 엔진**. 현재 T1 Gate는 사용자 웹 `v216` 새 시즌 G/J/F/O → `v222` 공식 B/T → 정책 A 최고 품질 선택지 실제 발행 → `v212` 설치·READY. 후속 `v098/v096/v094` DPS 실행을 환경 READY 필수 Gate로 만들지 않는다. **특수 보석은 정확히 1개 필수**, P3-EB의 0개 허용은 P3-EC에서 철회. P3-ED는 동일 빌드 물리 ID 확인 **source-only**, 실제 품질/효과/소켓 인증 아님.
+- 첫 응답은 **GitHub 양 HEAD·실제 영수증·Evidence/Integration 완료/미완료·효율·단기/장기 로드맵·권한**을 독립 복원해 보고한 뒤 **STOP**. 사용자 명시적 **'진행' 이전 문서/코드 수정·커밋·원본 수집·Actions/Native/테스트/공식 승격 전면 금지**.
