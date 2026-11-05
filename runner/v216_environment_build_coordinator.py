@@ -2317,6 +2317,15 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
                 and row.get("generic_G_current_season_membership_required") is False
                 and type(row.get("selected_non_tier_season_condition_pending_slots"))
                     is list
+                and type(row.get(
+                    "selected_intrinsic_socket_count_by_slot_source_only")) is dict
+                and set(row["selected_intrinsic_socket_count_by_slot_source_only"])==
+                    set(row.get("selected_G_slot_ids",{}))
+                and all(type(count) is int and 0<=count<=3 for count in
+                    row["selected_intrinsic_socket_count_by_slot_source_only"].values())
+                and row.get("selected_intrinsic_socket_total_source_only")==sum(
+                    row["selected_intrinsic_socket_count_by_slot_source_only"].values())
+                and row.get("added_socket_bonus_and_game_permission_not_proven") is True
                 and row.get("native_physical_and_static_G_still_required") is True and
                 row.get("G") is None and row.get("B") is None
                 and row.get("T") is None and
@@ -2362,6 +2371,11 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
             "candidate_path":str(path.resolve()),
             "source_stage":{k:v for k,v in staged.items() if k!="result"},
             "selected_slot_count":len(observed["selected_G_slot_ids"]),
+            "intrinsic_socket_counts_by_selected_slot_source_only":
+                dict(observed["selected_intrinsic_socket_count_by_slot_source_only"]),
+            "intrinsic_socket_total_source_only":
+                observed["selected_intrinsic_socket_total_source_only"],
+            "added_socket_bonus_and_game_permission_not_proven":True,
             "source_kinds_by_selected_slot":
                 observed["selected_gear_season_source_kinds"],
             "selected_non_tier_source_provenance":

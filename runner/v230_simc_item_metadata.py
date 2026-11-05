@@ -25,6 +25,9 @@ STATS_HEAD=re.compile(r"^static const dbc_item_data_t::stats_t\s+(__[a-zA-Z0-9_]
 CHUNK_HEAD=re.compile(r"^static const std::array<dbc_item_data_t,\s*(\d+)>\s+__[a-zA-Z0-9_]+_data_chunk(\d+)\s*\{\s*\{")
 STAT_ROW=re.compile(r"^\s*\{\s*(-?\d+)\s*,\s*(-?\d+)\s*,\s*([-+.0-9eE]+[fF]?)\s*\},?\s*(?://.*)?$")
 POINTER=re.compile(r"^&(__[a-zA-Z0-9_]+)\[(\d+)\]$")
+# Pinned generator.py field[21]: socket_color_1, socket_color_2, socket_color_3.
+# Intrinsic source sockets only; NOT game permission for a socket bonus.
+SOCKET_COLORS=re.compile(r"^\{\s*([^,{}]+)\s*,\s*([^,{}]+)\s*,\s*([^,{}]+)\s*\}$")
 NON_NEG_INT=re.compile(r"(?:0[xX][0-9a-fA-F]+|[0-9]+)\Z")
 MAX_REQUEST_IDS=750
 
@@ -188,6 +191,13 @@ def parse_exact(raw, *, build, item_ids=None, candidate_filter=None,
                 codes=stats[start:start+count]
             else:
                 need(stats_ptr=="0", "V230_ZERO_STATS_POINTER_NOT_ZERO")
+            sockets=SOCKET_COLORS.fullmatch(fields[21])
+            need(sockets is not None,"V230_ITEM_SOURCE_SOCKET_ARRAY_INVALID")
+            colors=[number(raw_color.strip(),
+                "V230_ITEM_SOURCE_SOCKET_COLOR_INVALID")
+                for raw_color in sockets.groups()]
+            need(all(0<=color<=0xffffffff for color in colors),
+                 "V230_ITEM_SOURCE_SOCKET_COLOR_RANGE")
             found[iid]={
                 "item_id":iid,"name":name[1:-1],
                 "ilevel_unscaled":number(fields[5],"V230_ITEM_ILEVEL_INVALID"),
@@ -199,6 +209,9 @@ def parse_exact(raw, *, build, item_ids=None, candidate_filter=None,
                 "subclass_id":number(fields[12],"V230_ITEM_SUBCLASS_INVALID"),
                 "allowed_class_mask":number(fields[19],"V230_ITEM_MASK_INVALID"),
                 "stat_modifier_codes":codes,
+                "intrinsic_socket_colors_from_simc_source":colors,
+                "intrinsic_socket_count_from_simc_source":sum(
+                    value!=0 for value in colors),
                 "item_set_id":number(fields[24],"V230_ITEM_SET_ID_INVALID"),
                 "source":"SIMC_GENERATED_ITEM_DATA_EXACT_ROW",
             }

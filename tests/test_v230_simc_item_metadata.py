@@ -50,6 +50,10 @@ class SimCExactItemMetadataTests(unittest.TestCase):
         self.assertEqual(result["items"][0]["crafting_quality"],0)
         self.assertEqual(result["items"][0]["item_set_id"],1234)
         self.assertEqual(result["items"][0]["stat_modifier_codes"],[4])
+        self.assertEqual(result["items"][0][
+            "intrinsic_socket_colors_from_simc_source"],[0,0,0])
+        self.assertEqual(result["items"][0][
+            "intrinsic_socket_count_from_simc_source"],0)
         self.assertEqual(result["items"][1]["class_id"],2)
         self.assertEqual(result["items"][1]["subclass_id"],8)
         self.assertEqual(result["G"],None)
@@ -95,6 +99,25 @@ class SimCExactItemMetadataTests(unittest.TestCase):
         self.assertEqual(result["items"][0]["name"],
                          "simc_item_comma, and space")
         self.assertEqual(result["items"][0]["allowed_class_mask"],2)
+
+    def test_intrinsic_socket_count_from_pinned_generated_item_row(self):
+        src=synthetic_item_data()
+        original=b'{ 0, 0, 0 }'
+        self.assertIn(original,src)
+        parsed=item.parse_exact(
+            src.replace(original,b'{ 1, 2, 0 }',1),build=BUILD,
+            item_ids=[9001])
+        row=parsed["items"][0]
+        self.assertEqual(row["intrinsic_socket_colors_from_simc_source"],
+                         [1,2,0])
+        self.assertEqual(row["intrinsic_socket_count_from_simc_source"],2)
+        self.assertIsNone(parsed["G"])
+        self.assertFalse(parsed["environment_ready"])
+        for bad in (b'{ 1, bogus, 0 }',b'{ 1, 2 }',b'{ 1, -1, 0 }'):
+            with self.subTest(value=bad), self.assertRaisesRegex(
+                    item.ItemMetadataBlocked,"SOURCE_SOCKET"):
+                item.parse_exact(src.replace(original,bad,1),build=BUILD,
+                                 item_ids=[9001])
 
     def test_generated_stat_suffix_blank_and_comment_are_accepted(self):
         raw=synthetic_item_data().replace(

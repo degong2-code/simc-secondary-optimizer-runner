@@ -417,6 +417,17 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
         "selected_common":common,
         "selected_weapons":weapons,
         "selected_G_slot_ids":{k:selected[k] for k in sorted(selected)},
+        # Same v230 streaming source; not game-side socket bonus permission.
+        "selected_intrinsic_socket_colors_by_slot_source_only":{
+            slot:list(items[iid]["intrinsic_socket_colors_from_simc_source"])
+            for slot,iid in sorted(selected.items())},
+        "selected_intrinsic_socket_count_by_slot_source_only":{
+            slot:items[iid]["intrinsic_socket_count_from_simc_source"]
+            for slot,iid in sorted(selected.items())},
+        "selected_intrinsic_socket_total_source_only":sum(
+            items[iid]["intrinsic_socket_count_from_simc_source"]
+            for iid in selected.values()),
+        "added_socket_bonus_and_game_permission_not_proven":True,
         "selected_item_unscaled_source_ilevel":{
             slot:items[iid]["ilevel_unscaled"] for slot,iid
             in sorted(selected.items())},

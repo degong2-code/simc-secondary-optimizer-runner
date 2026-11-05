@@ -15,13 +15,15 @@ from tests.test_v229_simc_only_source_seed import BUILD,OLD,REVISION
 from tests.test_v231_simc_tier_item_join import raw_fixture
 
 
-def item_row(iid,inv,cls,sub,primary=4,quality=4,base=335,mask="0x2"):
+def item_row(iid,inv,cls,sub,primary=4,quality=4,base=335,mask="0x2",
+             sockets=(0,0,0)):
     count=1 if primary else 0
     ptr="&__item_stats_data[0]" if primary else "0"
     fields=[f'"rep_{iid}"',str(iid),"0","0","0",str(base),
             "80","0","0",str(quality),str(inv),str(cls),str(sub),
             "0","0.0","0.0","0.0",ptr,str(count),
-            mask,"0x0","{ 0, 0, 0 }","0","0","0","0","0","0"]
+            mask,"0x0","{ "+", ".join(map(str,sockets))+" }",
+            "0","0","0","0","0","0"]
     assert len(fields)==28
     return "  { "+", ".join(fields)+" },\n"
 
@@ -351,6 +353,26 @@ class SourceOnlyRepresentativeTests(unittest.TestCase):
         self.assertIsNone(next["G"])
         self.assertTrue(next["source_item_level_window"][
             "not_an_ilevel_scaling_rule"])
+
+    def test_selected_intrinsic_sockets_reuse_one_pinned_simc_pass(self):
+        src=make_fixture()
+        before=item_row(9020,5,4,4).encode()
+        after=item_row(9020,5,4,4,sockets=(1,0,4)).encode()
+        self.assertIn(before,src["item_data.inc"])
+        src["item_data.inc"]=src["item_data.inc"].replace(before,after,1)
+        self.seed_files(src)
+        picked=self.plan()
+        self.assertEqual(picked[
+            "selected_intrinsic_socket_colors_by_slot_source_only"]["chest"],
+            [1,0,4])
+        self.assertEqual(picked[
+            "selected_intrinsic_socket_count_by_slot_source_only"]["chest"],2)
+        self.assertEqual(picked[
+            "selected_intrinsic_socket_total_source_only"],2)
+        self.assertTrue(picked[
+            "added_socket_bonus_and_game_permission_not_proven"])
+        self.assertFalse(picked["environment_ready"])
+        self.assertIsNone(picked["J"])
 
     def test_single_full_pass_reuses_v230_source_reader(self):
         data=(self.folder/"item_data.inc").read_bytes()

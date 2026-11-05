@@ -98,6 +98,13 @@ class OneSpecInBuild(unittest.TestCase):
         self.assertEqual(first["network_calls_by_stage"],0)
         self.assertEqual(first["native_calls"],0)
         self.assertEqual(first["selected_slot_count"],13)
+        self.assertEqual(first["intrinsic_socket_total_source_only"],0)
+        self.assertEqual(
+            set(first["intrinsic_socket_counts_by_selected_slot_source_only"]),
+            set(json.loads(Path(first["candidate_path"]).read_text())[
+                "selected_G_slot_ids"]))
+        self.assertTrue(first[
+            "added_socket_bonus_and_game_permission_not_proven"])
         self.assertEqual(first["source_kinds_by_selected_slot"]["wrists"],
                          ["raid_journal"])
         self.assertIsNone(first["mplus_world_state_pending"])
