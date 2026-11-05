@@ -4365,6 +4365,211 @@ def _fresh_source_owner_crosscheck_selected_J_F(*, owner_numeric,
     return trusted_budget_evidence
 
 
+
+def _fresh_source_owner_original_J_F_components(*, preflight, compilation,
+                                                 staged, owner_numeric,
+                                                 quality_scope,
+                                                 effect_observations):
+    """Promote only original already-verified J/F sources into v222 components.
+
+    The live Build has authenticated the v221/v266/v230/v232 source stages
+    and v281/v278 paired Native attempts. A J claim needs original ordinary
+    gem numeric IDs, an observed-best comparable effect, and intrinsic
+    sockets covering its exact selected layout. F additionally needs the
+    original selected Native case files and SHA receipts rechecked in place.
+    Missing evidence leaves an individual component pending; this is NOT
+    a new source collector, effect validator or standalone READY decision.
+    """
+    out={}
+    if (type(staged) is not dict or
+            staged.get("status")!="FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED"
+            or staged.get("stage_status") not in
+                ("EXECUTED_AND_SEALED","REUSED_VERIFIED","RECOVERED_VERIFIED")
+            or type(staged.get("stage_receipt_sha256")) is not str or
+            season_budget_contract.SHA.fullmatch(
+                staged["stage_receipt_sha256"]) is None or
+            type(preflight) is not dict or type(compilation) is not dict or
+            type(owner_numeric) is not dict or
+            type(quality_scope) is not dict):
+        return out
+    build=preflight.get("game_build")
+    manifest=preflight.get("source_catalog_manifest_sha256")
+    need(preflight.get("schema")==FRESH_SOURCE_PREFLIGHT_SCHEMA
+         and preflight.get("environment_ready") is False
+         and preflight.get("simc_revision")==compilation.get("simc_revision")
+         and type(build) is str and bool(build)
+         and type(manifest) is str and
+         season_budget_contract.SHA.fullmatch(manifest) is not None,
+         "V216_JF_OWNER_VERIFIED_SAME_BUILD_STAGE_REQUIRED")
+    j=owner_numeric.get("J")
+    jq=quality_scope.get("J")
+    socket=compilation.get("selected_J_intrinsic_socket_origin_unadmitted")
+    if (type(j) is dict and type(jq) is dict and type(socket) is dict and
+            socket.get("status")=="J_INTRINSIC_COUNTS_BOUND_SOURCE_ONLY"
+            and socket.get("additional_socket_proof_required_by_slot")=={}
+            and socket.get("observed_J_unadmitted")==j.get("rating")
+            and type(socket.get("v232_stage_receipt_sha256")) is str and
+            season_budget_contract.SHA.fullmatch(
+                socket["v232_stage_receipt_sha256"]) is not None):
+        ids=j.get("ordinary_gem_item_ids")
+        groups=jq.get("same_enchant_quality_groups_source_only")
+        need(type(ids) is list and bool(ids) and
+             type(groups) is list and
+             type(j.get("rating")) is int and j["rating"]>0 and
+             jq.get("ordinary_gem_item_ids")==ids and
+             type(jq.get("v230_stage_receipt_sha256")) is str and
+             season_budget_contract.SHA.fullmatch(
+                 jq["v230_stage_receipt_sha256"]) is not None and
+             jq.get("v221_stage_receipt_sha256")==
+                 j["v221_stage_receipt_sha256"] and
+             sum(j["per_item_nominal_rating"][str(i)] for i in ids)==
+                 j["rating"] and
+             jq.get("real_socket_proof_required") is True,
+             "V216_JF_OWNER_ORIGINAL_J_NUMERIC_QUALITY_SOCKET_DRIFT")
+        valid=True
+        for group in groups:
+            seen=group.get("observed_item_ids")
+            winner=group.get("best_discovered_effect_item_id_source_only")
+            if not any(i in ids for i in (seen or [])):
+                continue
+            if (type(seen) is not list or
+                    group.get("comparable_effect_source_only") is not True
+                    or winner not in seen
+                    or any(i!=winner for i in ids if i in seen)):
+                valid=False
+        if valid:
+            src={"owner":j["source_identity_sha256"],
+                 "v230_stage_receipt_sha256":jq["v230_stage_receipt_sha256"],
+                 "v232_stage_receipt_sha256":
+                     socket["v232_stage_receipt_sha256"],
+                 "socket_counts":dict(socket["selected_socket_counts"])}
+            out["J"]={
+                "rating":j["rating"],"game_build":build,
+                "source_catalog_manifest_sha256":manifest,
+                "source_sha256":digest(canonical(src).encode("utf8")),
+                "source_verification":"VALID_SAME_SEASON_SOURCE",
+                "budget_policy":"NOMINAL_ORDINARY_GEMS_ONLY",
+                "effect_quality_policy":"BEST_DISCOVERED_COMPARABLE",
+                "original_J_source_sha256":j["source_identity_sha256"],
+                "intrinsic_socket_receipt_sha256":
+                    socket["v232_stage_receipt_sha256"]}
+    f=owner_numeric.get("F")
+    fq=quality_scope.get("F")
+    if (type(f) is dict and type(fq) is dict and
+            fq.get("selected_item_id")==f.get("physical_item_id") and
+            fq.get("discovered_best_effect_accepted_as_quality_policy")
+                is True and
+            type(effect_observations) is list):
+        physical=[row for row in effect_observations
+                  if type(row) is dict and row.get("kind")=="flask"
+                  and type(row.get("physical_item_native_source_unadmitted"))
+                      is dict and
+                  row["physical_item_native_source_unadmitted"].get(
+                      "physical_item_id")==f["physical_item_id"]]
+        if len(physical)==1:
+            row=physical[0]
+            src=row["physical_item_native_source_unadmitted"]
+            recs=row.get("native_case_receipts")
+            need(row.get("status")==
+                 "SIMC_STATIC_CHMV_EFFECT_OBSERVED_NOT_ADMITTED"
+                 and row.get("F_candidate_unadmitted")==f["rating"]
+                 and row.get("static_CHMV_candidate")==
+                     f["static_CHMV_vector"]
+                 and src.get("schema")==
+                     consumable_simc_relation.MEASUREMENT_BINDING_SCHEMA
+                 and src.get("source_only") is True
+                 and src.get("game_build")==build
+                 and src.get("simc_revision")==compilation["simc_revision"]
+                 and src.get("physical_item_id")==f["physical_item_id"]
+                 and src.get("crafting_quality")==f["crafting_quality"]
+                 and src.get("simc_input_token")==f["simc_input_token"]
+                 and src.get("source_candidate_sha256")==
+                     f["source_candidate_sha256"]
+                 and type(recs) is list and len(recs)==2 and
+                 [r.get("receipt_sha256") for r in recs]==
+                     f["native_pair_receipt_sha256"]
+                 and type(row.get("observed")) is dict,
+                 "V216_JF_OWNER_SELECTED_ORIGINAL_F_SOURCE_DRIFT")
+            root=pathlib.Path(compilation["stage_root"]).resolve()
+            need(root.is_dir() and not root.is_symlink(),
+                 "V216_JF_OWNER_NATIVE_STAGE_ROOT_REQUIRED")
+            observed=row["observed"]
+            for variant, rec in zip(("baseline","active"),recs):
+                path=pathlib.Path(rec.get("receipt_path",""))
+                folder=path.parent
+                need(path.is_file() and not path.is_symlink()
+                     and folder.is_dir() and not folder.is_symlink()
+                     and folder.resolve().parent==root/"source"
+                     and folder.name.startswith("v278_"+variant+"_")
+                     and path.name=="receipt.json"
+                     and 0<path.stat().st_size<=native_effect_pair.MAX_RECEIPT,
+                     "V216_JF_OWNER_F_ORIGINAL_NATIVE_RECEIPT_LOCATION")
+                raw=path.read_bytes()
+                need(digest(raw)==rec["receipt_sha256"],
+                     "V216_JF_OWNER_F_ORIGINAL_NATIVE_RECEIPT_SHA_DRIFT")
+                try:
+                    sealed=json.loads(raw)
+                    identity=sealed["identity"]
+                    profile_sha=observed[variant+"_profile_sha256"]
+                except (ValueError,TypeError,KeyError) as exc:
+                    raise EnvironmentBuildBlocked(
+                        "V216_JF_OWNER_F_ORIGINAL_NATIVE_RECEIPT_INVALID"
+                    ) from exc
+                need(sealed.get("schema")==native_effect_pair.SCHEMA
+                     and sealed.get("status")=="NATIVE_JSON2_CAPTURED"
+                     and identity.get("variant")==variant
+                     and identity.get("simc_revision")==
+                         compilation["simc_revision"]
+                     and identity.get("binary_sha256")==
+                         row.get("binary_sha256")
+                     and identity.get("source_profile_sha256")==
+                         row.get("source_profile_sha256")
+                     and identity.get("profile_sha256")==profile_sha
+                     and identity.get("iterations")==1
+                     and type(sealed.get("native_json2_sha256")) is str
+                     and season_budget_contract.SHA.fullmatch(
+                         sealed["native_json2_sha256"]) is not None,
+                     "V216_JF_OWNER_F_ORIGINAL_NATIVE_CASE_IDENTITY_DRIFT")
+                native=folder/"native.json"
+                need(native.is_file() and not native.is_symlink()
+                     and native_effect_pair.file_sha(native)==
+                         sealed["native_json2_sha256"],
+                     "V216_JF_OWNER_F_ORIGINAL_NATIVE_JSON2_SHA_DRIFT")
+            out["F"]={
+                "rating":f["rating"],"game_build":build,
+                "source_catalog_manifest_sha256":manifest,
+                "source_sha256":f["source_identity_sha256"],
+                "source_verification":"EXACT_NATIVE",
+                "selected_flask_item_id":f["physical_item_id"],
+                "native_pair_receipt_sha256":
+                    list(f["native_pair_receipt_sha256"]),
+                "effect_quality_policy":"BEST_DISCOVERED_COMPARABLE"}
+    return out
+
+
+def _fresh_source_owner_merge_original_J_F(*, trusted_budget_evidence,
+                                           owner_components):
+    """Attach authenticated existing J/F once; never override other proofs."""
+    if not owner_components:
+        return trusted_budget_evidence
+    need(type(trusted_budget_evidence) is dict and
+         type(trusted_budget_evidence.get("components")) is dict and
+         type(owner_components) is dict and
+         set(owner_components)<={"J","F"},
+         "V216_JF_OWNER_COMPLETE_BUDGET_EVIDENCE_REQUIRED")
+    parts=trusted_budget_evidence["components"]
+    for name,verified in owner_components.items():
+        previous=parts.get(name)
+        need(previous is None or
+             (type(previous) is dict and all(
+                 previous.get(k)==v for k,v in verified.items())),
+             "V216_JF_OWNER_PROVIDER_"+name+"_CONFLICT")
+    return {**trusted_budget_evidence,
+            "components":{**parts,**{
+                key:parts.get(key) or val
+                for key,val in owner_components.items()}}}
+
+
 def _fresh_source_owner_native_G_component(*, native_G, preflight,
                                            compilation, staged, target_ilevel):
     """Reuse the ORIGINAL v277-verified Native G as one source-owner component.
@@ -5171,6 +5376,17 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     "native_G_source_owner_component_not_full_environment"]=owner_G
                 progress["native_G_source_owner_status"]=(
                     "EXACT_GENERIC_G_NATIVE_PROVENANCE_REUSED_J_F_O_PENDING")
+            # Original source owner may now supply J from v221/v230/v232
+            # nominal/socket evidence and F from exact verified v278 JSON2
+            # cases. An incomplete component never blocks valid G/O reuse.
+            owner_J_F=_fresh_source_owner_original_J_F_components(
+                preflight=preflight,compilation=source_compilation,
+                staged=staged,owner_numeric=jf_numeric,
+                quality_scope=quality_scope,
+                effect_observations=effect_observations)
+            source_compilation[
+                "original_J_F_verified_components_not_full_environment"]=owner_J_F
+            progress["original_J_F_verified_component_names"]=sorted(owner_J_F)
             if verified_install_provider is not None and not source_compilation["missing"]:
                 # Normal Build continuation, not an independent compiler.
                 # Only an internal Python verifier may provide the bundle;
@@ -5194,6 +5410,9 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     trusted_budget=_fresh_source_owner_merge_native_G(
                         trusted_budget_evidence=confirmed["trusted_budget_evidence"],
                         owner_G=owner_G)
+                    trusted_budget=_fresh_source_owner_merge_original_J_F(
+                        trusted_budget_evidence=trusted_budget,
+                        owner_components=owner_J_F)
                     trusted_budget=_fresh_source_owner_exact_no_oil(
                         preflight=preflight,
                         selected_budget_items=selected_budget_items,

@@ -1453,6 +1453,165 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertIn("F_SELECTED_SIMC_NUMERIC_OR_QUALITY_SOURCE_PENDING",
                       missing["missing"])
 
+
+    def test_p3_fd_original_J_verified_from_selected_nominal_and_sockets(self):
+        # An original same-build v221/v266 J, v230 observed-best quality
+        # and original v232 intrinsic counts suffice without Native J.
+        layout=self.source_selected_future_gems()
+        raw={"status":"ENCHANT_RAW_POINTS_SOURCE_ONLY_J_NOT_APPROVED",
+             "enchant_source_sha256":"4"*64,
+             "selected_gem_raw_points_by_id_unadmitted":{
+                 "311001":20,"311002":30},
+             "selected_gem_all_raw_points_known":True,
+             "selected_gem_v221_item_ids_unadmitted":[311001,311002,311003],
+             "selected_gem_v221_same_build_items_all_present":True,
+             "J":None,"environment_ready":False}
+        pre=self.preflight_with_sealed_gem_raw(layout,raw)
+        compiled={"status":"FRESH_V191_V211_V213_COMPILED_UNADMITTED",
+                  "simc_revision":self.catalog["simc_revision"]}
+        owner=build._fresh_source_owner_selected_J_F_numeric(
+            preflight=pre,compilation=compiled,
+            selected_physical_items=None)
+        socket={"status":"J_INTRINSIC_COUNTS_BOUND_SOURCE_ONLY",
+                "selected_socket_counts":layout["socket_counts"],
+                "additional_socket_proof_required_by_slot":{},
+                "observed_J_unadmitted":70,
+                "v232_stage_receipt_sha256":"9"*64}
+        compiled["selected_J_intrinsic_socket_origin_unadmitted"]=socket
+        jq={"ordinary_gem_item_ids":list(layout["ordinary_gem_ids"]),
+            "v230_stage_receipt_sha256":"c"*64,
+            "v221_stage_receipt_sha256":
+                owner["J"]["v221_stage_receipt_sha256"],
+            "same_enchant_quality_groups_source_only":[{
+                "observed_item_ids":[311001,311002],
+                "best_discovered_effect_item_id_source_only":311002,
+                "comparable_effect_source_only":True}],
+            "real_socket_proof_required":True}
+        staged={"status":"FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED",
+                "stage_status":"REUSED_VERIFIED",
+                "stage_receipt_sha256":"8"*64}
+        # A lower-quality same-family gem may not silently become the
+        # official maximum. It remains a user source-only candidate.
+        partial=build._fresh_source_owner_original_J_F_components(
+            preflight=pre,compilation=compiled,staged=staged,
+            owner_numeric=owner,quality_scope={"J":jq},
+            effect_observations=[])
+        self.assertNotIn("J",partial)
+        # A best-discovered comparable family with no lower-ranked
+        # selected gem can be used directly as nominal J.
+        jq["same_enchant_quality_groups_source_only"]=[]
+        result=build._fresh_source_owner_original_J_F_components(
+            preflight=pre,compilation=compiled,staged=staged,
+            owner_numeric=owner,quality_scope={"J":jq},
+            effect_observations=[])
+        self.assertEqual(result["J"]["rating"],70)
+        self.assertEqual(result["J"]["source_verification"],
+                         "VALID_SAME_SEASON_SOURCE")
+        self.assertEqual(result["J"]["budget_policy"],
+                         "NOMINAL_ORDINARY_GEMS_ONLY")
+        merged=build._fresh_source_owner_merge_original_J_F(
+            trusted_budget_evidence={"components":{"G":{"rating":2000}}},
+            owner_components=result)
+        self.assertEqual(merged["components"]["J"],result["J"])
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_JF_OWNER_PROVIDER_J_CONFLICT"):
+            build._fresh_source_owner_merge_original_J_F(
+                trusted_budget_evidence={"components":{
+                    "J":{"rating":71}}},owner_components=result)
+        compiled["selected_J_intrinsic_socket_origin_unadmitted"]={
+            **socket,"additional_socket_proof_required_by_slot":{"head":1}}
+        self.assertEqual(build._fresh_source_owner_original_J_F_components(
+            preflight=pre,compilation=compiled,staged=staged,
+            owner_numeric=owner,quality_scope={"J":jq},
+            effect_observations=[]),{})
+
+    def test_p3_fd_selected_F_requires_original_sealed_native_pair(self):
+        # Synthetic receipt bytes emulate the exact v278 pair solely for
+        # offline validation. No subprocess or same-season approval claim.
+        request,bound,observed=self.physical_effect()
+        native=build._zero_history_F_O_native_component_candidates(
+            observations=[{**observed,
+                "physical_item_native_source_unadmitted":bound}],
+            game_build=self.catalog["game_build"],
+            simc_revision=self.catalog["simc_revision"])
+        selected={"flask_item_id":bound["physical_item_id"],
+                  "oil_item_ids_by_hand":{}}
+        link=build._zero_history_selected_F_O_v222_reconcile(
+            selected=selected,numeric=native,choices={},
+            existing_budget=None,budget_evidence=None)
+        pre={"schema":build.FRESH_SOURCE_PREFLIGHT_SCHEMA,
+             "game_build":self.catalog["game_build"],
+             "simc_revision":self.catalog["simc_revision"],
+             "source_catalog_manifest_sha256":self.catalog["manifest_sha256"],
+             "environment_ready":False}
+        compiled={"simc_revision":self.catalog["simc_revision"],
+                  "stage_root":str(self.root)}
+        staged={"status":"FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED",
+                "stage_status":"REUSED_VERIFIED",
+                "stage_receipt_sha256":"8"*64}
+        quality={"F":{"selected_item_id":bound["physical_item_id"],
+                      "discovered_best_effect_accepted_as_quality_policy":True}}
+        f=link["matched_f"]
+        owner={"F":{"rating":f["rating"],
+                    "physical_item_id":f["physical_item_id"],
+                    "crafting_quality":f["crafting_quality"],
+                    "simc_input_token":f["simc_input_token"],
+                    "source_candidate_sha256":f["source_candidate_sha256"],
+                    "source_identity_sha256":"7"*64,
+                    "static_CHMV_vector":f["static_CHMV_vector"],
+                    "native_pair_receipt_sha256":f[
+                        "simc_native_receipt_sha256"]}}
+        # Without real original case paths, even a plausible digest is
+        # still NOT a certified F budget.
+        self.assertEqual(build._fresh_source_owner_original_J_F_components(
+            preflight=pre,compilation=compiled,staged=staged,
+            owner_numeric=owner,quality_scope=quality,
+            effect_observations=[]),{})
+        cases=[]
+        for variant,idx in (("baseline",0),("active",1)):
+            profile="1"*64 if idx==0 else "2"*64
+            folder=self.root/"source"/("v278_"+variant+"_"+"a"*32)
+            folder.mkdir(parents=True)
+            (folder/"native.json").write_text("{}",encoding="utf8")
+            json_sha=build.native_effect_pair.file_sha(folder/"native.json")
+            receipt={"schema":build.native_effect_pair.SCHEMA,
+                     "status":"NATIVE_JSON2_CAPTURED",
+                     "identity":{"variant":variant,
+                         "simc_revision":self.catalog["simc_revision"],
+                         "binary_sha256":observed["binary_sha256"],
+                         "source_profile_sha256":
+                             observed["source_profile_sha256"],
+                         "profile_sha256":profile,"iterations":1},
+                     "native_json2_sha256":json_sha}
+            contents=build.canonical(receipt).encode("utf8")+b"\n"
+            (folder/"receipt.json").write_bytes(contents)
+            cases.append({"variant":variant,
+                          "receipt_path":str(folder/"receipt.json"),
+                          "receipt_sha256":build.digest(contents)})
+        observed["observed"]["baseline_profile_sha256"]="1"*64
+        observed["observed"]["active_profile_sha256"]="2"*64
+        observed["native_case_receipts"]=cases
+        owner["F"]["native_pair_receipt_sha256"]=[
+            r["receipt_sha256"] for r in cases]
+        fixed=build._fresh_source_owner_original_J_F_components(
+            preflight=pre,compilation=compiled,staged=staged,
+            owner_numeric=owner,quality_scope=quality,
+            effect_observations=[{**observed,
+                "physical_item_native_source_unadmitted":bound}])
+        self.assertEqual(fixed["F"]["rating"],165)
+        self.assertEqual(fixed["F"]["source_verification"],"EXACT_NATIVE")
+        (self.root/"source"/("v278_active_"+"a"*32)/
+            "native.json").write_text("{ }",encoding="utf8")
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "ORIGINAL_NATIVE_JSON2_SHA_DRIFT"):
+            build._fresh_source_owner_original_J_F_components(
+                preflight=pre,compilation=compiled,staged=staged,
+                owner_numeric=owner,quality_scope=quality,
+                effect_observations=[{**observed,
+                    "physical_item_native_source_unadmitted":bound}])
+
     def test_p3_fa_original_J_F_source_owner_numeric_and_provider_conflict(self):
         # Reuse v266 sealed ordinary-item points and v281/v278 same-item F.
         # No real Native, implicit admission, or new effect engine.
