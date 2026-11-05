@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FO 검증 영수증 확정 (제품 코드 `e42c3dc0ec`):** [P3-FO focused #42070530121](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42070530121) **DEV_LEDGER_PASS·286/286 PASS**, [v113 #42070530115](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42070530115) Ubuntu·Windows **각 218 PASS**, [v212 #42070530078](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42070530078) 양 OS **448 PASS/4 SKIP**, [v182 #42070530293](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42070530293) SUCCESS (Windows **94+91+2 PASS**), v181/v169/v167/v177/v180 SUCCESS (v180 Native optional SKIPPED). 검증 범위는 오프라인/기존 계약·웹 API/UI. 실제 새 시즌 소켓/보석 ID·G/J/F/O·정식 v212 READY/T1은 미증명이며 특수보석 효과 별도 Native 검증 없음. 새로운 문서 갱신은 코드 승격이 아니며 main·immutable·Project UI/Work OS를 변경하지 않음.
+>
+
 > **2026-11-06 P3-FO:** [기능 노트](development/notes/2026-11-06_p3-fo-four-stat-web-route-and-ci-recovery.md). 기존 v113 시즌 웹 Build에 선택된 특수보석 물리 ID를 내부 전용 `source_selected_gem_roles`로 전달하여 일반 CHMV 4종을 같은 봉인 v221/v266/v268+v271/v216 흐름에서 배치한다. 추가 특수보석 탐색/효과 측정 없음; 없거나 같은 빌드 증거/소켓 5개 미만이면 PENDING, 허위 READY 금지. P3-FM focused 286건 중 CSV 테스트 separator 1건 오류를 교정·신규 CI 확인 중. 기존 캐시/제품 소유권 불변.
 >
 
