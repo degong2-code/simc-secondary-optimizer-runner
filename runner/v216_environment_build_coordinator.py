@@ -3902,11 +3902,17 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                   "auto_native_O_requested",
                   "auto_native_G_requested"},
              "V216_ZERO_HISTORY_SOURCE_INPUT_FIELDS")
-        # The optional exact G Native probe is distinct from F/O v278
-        # measurements. A shared binary never silently opts the user into G.
-        # Legacy internal callers retain their original binary=>G behavior.
+        # G Native is optional when an existing same-build v222 budget
+        # receipt was supplied. Do not spend a Native call merely because
+        # the same SimC binary is also available for F/O. The original
+        # preflight still checks the supplied G scope before any admission;
+        # bad evidence fails closed instead of silently replacing the source.
+        # With no supplied budget, retain the legacy binary=>G default.
+        # Explicit G opt-in always overrides this efficiency default.
         auto_native_G=fresh_collection_inputs.get(
-            "auto_native_G_requested",binary is not None)
+            "auto_native_G_requested",
+            binary is not None and
+            fresh_collection_inputs.get("same_build_budget_evidence") is None)
         need(type(auto_native_G) is bool and
              (not auto_native_G or binary is not None),
              "V216_AUTO_G_NATIVE_EXPLICIT_BINARY_REQUIRED")

@@ -1,0 +1,10 @@
+# 2026-11-05 · P3-EO · 동일 시즌 G 출처가 있을 때 불필요한 기본 Native 억제
+
+- **Capability:** `G.NUMERIC`, `ENVIRONMENT.WEB`, `BUDGET.GJFO`
+- **Keywords:** P3-EO, G Native, default, same-season budget, v216, v222, optional exact G, reuse, 중복 실행
+- **Prior evidence:** [PROTOCOL](../PROTOCOL.md) → [INDEX](../INDEX.md) → [P3-DZ](2026-11-05_p3-dz-independent-optional-g-vs-fo-native.md) → [P3-EG](2026-11-05_p3-eg-reuse-existing-same-season-g-for-auto-v222.md) → [P3-EH](2026-11-05_p3-eh-v212-dual-g-source-identity.md) → [P3-EN](../../CHAT_CONTINUITY_HANDOFF_20261105_P3_EN_ENGINE_FIRST.md); 기존 `v216.build_environment` 기본값 `binary is not None`는 동일 시즌 G 증거를 이미 제공한 경우에도 v277 Native 호출을 기본 허용.
+- **Decision:** `CONNECT` — 기존 v222 동일 시즌 예산 증거와 v277 명시적 선택을 재사용. 새로운 G 수집·인증기/기본 시즌 값/추가 Native Gate 금지.
+- **Changes:** 내부 `fresh_collection_inputs.same_build_budget_evidence`를 제공한 경우 `auto_native_G_requested` 미지정 기본값을 False로 하여 동일 SimC 바이너리가 F/O에도 쓰일 때 불필요한 G 측정을 막는다. 명시적 True/False가 우선. 기존 증거 미제공+바이너리는 레거시 기본 G 관측 유지. 실제 증거 유효성/빌드·ilvl은 기존 v216→v222 preflight에서 계속 검증하며 부적합하면 FAIL CLOSED. 기본 옵션 이외 계약 불변.
+- **Verification:** 신규 `tests/test_v288_no_redundant_g_native.py`의 4개 분기(증거 있음/없음 × 자동/명시적 opt-in/out)를 mocked G 경계에서 확인하도록 추가. **이번 변경 CI 실행 전 NOT_VERIFIED**. 기존 P3-EM [250 PASS/0 FAIL](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41975213436)는 과거 HEAD 증거. 새로운 실제 Native·게임 HTTP 0회.
+- **Remaining:** 신규 시즌 G/J/F/O 출처 실제 승인·특수 보석 정확1의 게임 소켓/최고품질/SimC 유효 J·F/O 적용성·정책 A 발행·v212 공식 READY/T1은 여전히 PENDING. G 증거 존재만으로 유효성을 주장하지 않는다.
+- **Efficiency:** 이미 확보한 동일 시즌 유효 G가 있는 경우 불필요한 Native 시작 1건 가능성 제거(실 호출 시간 미측정). 원본·캐시·프로필 변경 없음; 기존 F/O 선택 opt-in·G 명시 호출 보존; 단일 26 DPS 엔진 유지. `main`/immutable/Project UI/공식 승격 불변.
