@@ -4692,6 +4692,99 @@ def _fresh_source_owner_merge_native_G(*, trusted_budget_evidence,
 
 
 
+
+def _fresh_original_default_base_install_inputs(*, preflight, staged,
+                                                 original_G, original_J_F,
+                                                 selected_budget_items,
+                                                 target_ilevel, user):
+    """Build the v222 input from ORIGINAL owners for an unenchanted default.
+
+    The normal season-wide local web call cannot supply Python callbacks.
+    Do not promote previews, user values, selected oils, unknown F, or any
+    user-specific special/enchant scenario. The original source-owner and
+    v212/v217 installation validations remain authoritative.
+    """
+    if (user is not None or type(selected_budget_items) is not dict
+            or selected_budget_items.get("oil_item_ids_by_hand")!={}
+            or type(original_G) is not dict
+            or type(original_J_F) is not dict
+            or set(original_J_F)!={"J","F"}):
+        return None
+    need(type(preflight) is dict and
+         preflight.get("schema")==FRESH_SOURCE_PREFLIGHT_SCHEMA
+         and preflight.get("environment_ready") is False
+         and type(staged) is dict
+         and staged.get("status")=="FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED"
+         and staged.get("stage_status") in (
+             "EXECUTED_AND_SEALED","REUSED_VERIFIED","RECOVERED_VERIFIED")
+         and staged.get("original_v216_preflight_sha256")==
+             preflight.get("preflight_sha256")
+         and type(target_ilevel) is int and target_ilevel>0
+         and type(preflight.get("source_artifact_sha256")) is str
+         and season_budget_contract.SHA.fullmatch(
+             preflight["source_artifact_sha256"]) is not None
+         and type(preflight.get("source_catalog_manifest_sha256")) is str
+         and season_budget_contract.SHA.fullmatch(
+             preflight["source_catalog_manifest_sha256"]) is not None,
+         "V216_DEFAULT_BASE_ORIGINAL_STAGE_REQUIRED")
+    selected_flask=selected_budget_items.get("flask_item_id")
+    need(type(selected_flask) is int and selected_flask>0
+         and original_J_F["F"].get("selected_flask_item_id")==
+             selected_flask
+         and original_G.get("source_verification")=="EXACT_NATIVE"
+         and original_J_F["J"].get("source_verification")==
+             "VALID_SAME_SEASON_SOURCE"
+         and original_J_F["F"].get("source_verification")=="EXACT_NATIVE",
+         "V216_DEFAULT_BASE_SELECTED_FLASK_OR_SOURCE_DRIFT")
+    game_build=preflight["game_build"]
+    manifest=preflight["source_catalog_manifest_sha256"]
+    for name,component in (
+            ("G",original_G),("J",original_J_F["J"]),
+            ("F",original_J_F["F"])):
+        need(component.get("game_build")==game_build
+             and component.get("source_catalog_manifest_sha256")==manifest
+             and type(component.get("rating")) is int
+             and component["rating"]>0
+             and type(component.get("source_sha256")) is str
+             and season_budget_contract.SHA.fullmatch(
+                 component["source_sha256"]) is not None,
+             "V216_DEFAULT_BASE_"+name+"_SAME_BUILD_PROVENANCE_DRIFT")
+    standard=original_G.get("standardization")
+    need(type(standard) is dict and
+         standard.get("target_ilevel")==target_ilevel,
+         "V216_DEFAULT_BASE_G_TARGET_ILEVEL_DRIFT")
+    # The v233 default reference has no enchants/specials. This explicit
+    # zero L/E scope is valid ONLY for the user=None season-wide baseline.
+    zero={k:0 for k in season_budget_contract.STATS}
+    no_oil=season_budget_contract.explicit_no_oil_component(
+        game_build=game_build,
+        source_catalog_manifest_sha256=manifest,
+        selected_oil_item_ids_by_hand={})
+    evidence={
+        "schema":season_budget_contract.SCHEMA,
+        "game_build":game_build,
+        "simc_revision":preflight["simc_revision"],
+        "source_catalog_manifest_sha256":manifest,
+        "source_catalog_artifact_sha256":
+            preflight["source_artifact_sha256"],
+        "target_ilevel":target_ilevel,
+        "components":{"G":dict(original_G),
+                      "J":dict(original_J_F["J"]),
+                      "F":dict(original_J_F["F"]),"O":no_oil},
+        "fixed_L":dict(zero),"fixed_E":dict(zero),
+        "G_reference_excludes_selected_E":True,
+        "scope":"UNENCHANTED_REPRESENTATIVE_EXPLICIT_NO_OIL"}
+    # Existing v222 owns arithmetic and source identity; no new budget.
+    season_budget_contract.preprofile_budget(
+        source_catalog={"game_build":game_build,
+            "simc_revision":preflight["simc_revision"],
+            "manifest_sha256":manifest},
+        source_artifact_sha256=preflight["source_artifact_sha256"],
+        evidence=evidence,target_ilevel=target_ilevel)
+    return {"trusted_budget_evidence":evidence,
+            "trusted_policy_A_receipts_by_id":{}}
+
+
 def _fresh_source_owner_merge_policy_A_original_source_relation(
         *,preflight,staged,trusted_policy_A_receipts_by_id):
     """Reuse only the original sealed v217 source family, not three others."""
@@ -5453,16 +5546,25 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             source_compilation[
                 "original_J_F_verified_components_not_full_environment"]=owner_J_F
             progress["original_J_F_verified_component_names"]=sorted(owner_J_F)
-            if verified_install_provider is not None and not source_compilation["missing"]:
-                # Normal Build continuation, not an independent compiler.
-                # Only an internal Python verifier may provide the bundle;
-                # raw request data or a "verified" string cannot install.
-                confirmed=verified_install_provider(
-                    compilation=source_compilation,preflight=preflight,
-                    staged=staged,selected_numeric=staged_numeric,
-                    selected_physical_items=selected_budget_items,
-                    target_ilevel=fresh_collection_inputs[
-                        "representative_request"]["target_ilevel"])
+            if not source_compilation["missing"]:
+                # Default web Build can directly consume the ORIGINAL
+                # four source-owned budget components without a Python
+                # callback; the optional independent provider still wins.
+                if verified_install_provider is None:
+                    confirmed=_fresh_original_default_base_install_inputs(
+                        preflight=preflight,staged=staged,
+                        original_G=owner_G,original_J_F=owner_J_F,
+                        selected_budget_items=selected_budget_items,
+                        target_ilevel=fresh_collection_inputs[
+                            "representative_request"]["target_ilevel"],
+                        user=user)
+                else:
+                    confirmed=verified_install_provider(
+                        compilation=source_compilation,preflight=preflight,
+                        staged=staged,selected_numeric=staged_numeric,
+                        selected_physical_items=selected_budget_items,
+                        target_ilevel=fresh_collection_inputs[
+                            "representative_request"]["target_ilevel"])
                 if confirmed is not None:
                     need(type(confirmed) is dict and set(confirmed)=={
                         "trusted_budget_evidence",

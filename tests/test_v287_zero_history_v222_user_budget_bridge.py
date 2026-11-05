@@ -1338,6 +1338,81 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertIs(merge(preflight=empty,staged=staged,
                             trusted_policy_A_receipts_by_id=provider),provider)
 
+
+    def test_p3_fg_default_web_original_four_budget_without_provider(self):
+        # Complete exact sources can form G/J/F/O, but only in the
+        # unenchanted season-wide no-special/no-oil scope.
+        from runner import v222_season_budget_contract as season
+        data=self.table[334]
+        meta={"schema":build.FRESH_SOURCE_PREFLIGHT_SCHEMA,
+              "game_build":self.catalog["game_build"],
+              "simc_revision":self.catalog["simc_revision"],
+              "source_catalog_manifest_sha256":
+                  self.catalog["manifest_sha256"],
+              "source_artifact_sha256":
+                  data["source_catalog_artifact_sha256"],
+              "preflight_sha256":"a"*64,"environment_ready":False}
+        staged={"status":"FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED",
+                "stage_status":"REUSED_VERIFIED",
+                "original_v216_preflight_sha256":"a"*64}
+        original_G={**data["components"]["G"],
+            "rating":2850,"source_verification":"EXACT_NATIVE",
+            "standardization":season.standardize_representative_G(
+                observed_G_total=2847,target_ilevel=334,
+                source_observation_sha256:
+                    data["components"]["G"]["source_sha256"])}
+        original_J={**data["components"]["J"],
+                    "source_verification":"VALID_SAME_SEASON_SOURCE"}
+        original_F={**data["components"]["F"],
+                    "source_verification":"EXACT_NATIVE",
+                    "selected_flask_item_id":241326}
+        owners={"J":original_J,"F":original_F}
+        selected={"flask_item_id":241326,"oil_item_ids_by_hand":{}}
+        make=build._fresh_original_default_base_install_inputs
+        out=make(preflight=meta,staged=staged,original_G=original_G,
+                 original_J_F=owners,selected_budget_items=selected,
+                 target_ilevel=334,user=None)
+        self.assertEqual(set(out),{
+            "trusted_budget_evidence","trusted_policy_A_receipts_by_id"})
+        self.assertEqual(out["trusted_policy_A_receipts_by_id"],{})
+        proof=out["trusted_budget_evidence"]
+        self.assertEqual(set(proof["components"]),{"G","J","F","O"})
+        self.assertEqual(proof["fixed_L"],
+                         {k:0 for k in season.STATS})
+        self.assertEqual(proof["fixed_E"],
+                         {k:0 for k in season.STATS})
+        self.assertEqual(proof["components"]["O"]["source_verification"],
+                         season.NO_OIL_SOURCE)
+        self.assertIsNone(make(
+            preflight=meta,staged=staged,original_G=original_G,
+            original_J_F=owners,selected_budget_items=selected,
+            target_ilevel=334,user={"target":{
+                "ilevel":334,"final_T":None}}))
+        self.assertIsNone(make(
+            preflight=meta,staged=staged,original_G=original_G,
+            original_J_F=owners,selected_budget_items={
+                "flask_item_id":241326,
+                "oil_item_ids_by_hand":{"main_hand":243734}},
+            target_ilevel=334,user=None))
+        self.assertIsNone(make(
+            preflight=meta,staged=staged,original_G=original_G,
+            original_J_F={"J":original_J},selected_budget_items=selected,
+            target_ilevel=334,user=None))
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_DEFAULT_BASE_SELECTED_FLASK_OR_SOURCE_DRIFT"):
+            make(preflight=meta,staged=staged,original_G=original_G,
+                 original_J_F=owners,selected_budget_items={
+                     "flask_item_id":241327,"oil_item_ids_by_hand":{}},
+                 target_ilevel=334,user=None)
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,
+                "V216_DEFAULT_BASE_ORIGINAL_STAGE_REQUIRED"):
+            make(preflight=meta,staged={**staged,
+                  "original_v216_preflight_sha256":"b"*64},
+                 original_G=original_G,original_J_F=owners,
+                 selected_budget_items=selected,target_ilevel=334,user=None)
+
     def test_verified_install_provider_connects_same_normal_build(self):
         # Existing v217/v216 source stage is a prerequisite. The internal
         # provider returns None until it has actually verified GJFO.
