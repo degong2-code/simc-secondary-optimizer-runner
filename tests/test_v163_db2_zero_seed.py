@@ -25,9 +25,46 @@ class JoinTests(unittest.TestCase):
         self.assertEqual(v163.uniquely_match("Nek'zali the Soulcoiler",rows,'Name_lang'),rows[0])
         self.assertIsNone(v163.uniquely_match('same',[{'Name_lang':'same'}, {'Name_lang':'same'}],'Name_lang'))
 
+    def test_condition_scoped_raid_tier_selected_without_numeric_id_guess(self):
+        def pair(scoped,archive):
+            return [
+                {'JournalTierID':str(scoped),'JournalInstanceID':str(i),
+                 'AvailabilityCondition':'123456'}
+                for i in (110,120,130)]+[
+                {'JournalTierID':str(archive),'JournalInstanceID':str(i),
+                 'AvailabilityCondition':'0'}
+                for i in (110,120,130)]
+        ids={110,120,130}
+        self.assertEqual(
+            v163.resolve_raid_journal_tier(pair(52,8),ids),52)
+        # Deliberately reverse numeric ordering; this is source semantics,
+        # NOT min/max tier or a fixed 505/516 special case.
+        self.assertEqual(
+            v163.resolve_raid_journal_tier(pair(3,888),ids),3)
+        self.assertEqual(
+            v163.resolve_raid_journal_tier(pair(888,3),ids),888)
+        self.assertEqual(v163.resolve_raid_journal_tier(
+            [{'JournalTierID':'123','JournalInstanceID':'110',
+              'AvailabilityCondition':'0'}],{110}),123)
+        second=pair(9,10)
+        second.extend(pair(11,12)[:3])
+        self.assertIsNone(
+            v163.resolve_raid_journal_tier(second,ids))
+        with_unknown=pair(8,9)
+        with_unknown[1]['AvailabilityCondition']='0'
+        self.assertIsNone(
+            v163.resolve_raid_journal_tier(with_unknown,ids))
+        invalid=pair(9,10)
+        invalid[0]['AvailabilityCondition']='not-a-number'
+        self.assertIsNone(
+            v163.resolve_raid_journal_tier(invalid,ids))
+        self.assertIsNone(v163.resolve_raid_journal_tier(pair(9,10),set()))
+
     def test_tiny_end_to_end_snapshot_and_season_join(self):
         rows = {
-            'JournalTierXInstance':[{'ID':'1','JournalTierID':'505','JournalInstanceID':'1','AvailabilityCondition':'0'}],
+            'JournalTierXInstance':[
+                {'ID':'1','JournalTierID':'505','JournalInstanceID':'1','AvailabilityCondition':'123456'},
+                {'ID':'2','JournalTierID':'516','JournalInstanceID':'1','AvailabilityCondition':'0'}],
             'JournalInstance':[{'ID':'1','Name_lang':'Test Raid','MapID':'100'}, {'ID':'2','Name_lang':'Test Dungeon','MapID':'200'}],
             'JournalEncounter':[{'ID':'11','JournalInstanceID':'1','Name_lang':'Hydra'}, {'ID':'22','JournalInstanceID':'2','Name_lang':'Dungeon Boss'}],
             'JournalEncounterItem':[{'ID':'1','JournalEncounterID':'11','ItemID':'1001','DisplaySeasonID':'0','WorldStateExpressionID':'0'}, {'ID':'2','JournalEncounterID':'22','ItemID':'2001','DisplaySeasonID':'37','WorldStateExpressionID':'52104'}, {'ID':'3','JournalEncounterID':'22','ItemID':'2002','DisplaySeasonID':'37','WorldStateExpressionID':'0'},

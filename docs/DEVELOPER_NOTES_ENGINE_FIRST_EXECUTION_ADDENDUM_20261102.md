@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FV:** [노트](development/notes/2026-11-06_p3-fv-conditional-journal-tier-selection.md). P3-FU 동일 70783 원본에서 WCL 활성 Raid 10/10, Tier 505 'Current Season'/조건 156363, Tier 516 'Midnight'/조건 0을 확인. 운영 코드에 숫자 ID나 낡은 시즌값을 넣지 않고, original v163의 두 WCL/DB2 시즌-조인 위치에 공통 조건부·무조건부 tier 판별 함수를 REUSE/CONNECT. 유일 조건부만 선택하고 조건 ID의 실제 활성 의미·전체 시즌 귀속은 인증하지 않음. 모호/복수 조건 Tier는 그대로 PENDING. 검증은 신규 focused CI로 범위 확정, Native/대형 수집 반복 금지. SimC 바이너리 70529/게임 70783 불일치 및 전체 T1은 별도 미완료.
+>
+
 > **2026-11-06 P3-FU:** [기능 노트](development/notes/2026-11-06_p3-fu-current-journal-tier-semantics.md). P3-FT 4 DB2 실전: WCL 활성 raid 1개, 보스 10/10 원본 매칭, JournalTier 505/516 두 개 동시 참조. 같은 시즌 ID 자동 판단을 위한 v163 수정 전 JournalTier 이름/AvailabilityCondition 1소형 표만 추가해 원천 의미를 판별한다. 진단은 새로운 인증 Gate가 아니며 선택값 확정/READY 보증이 아니다. 기존 캐시·v229·Native 사용 보존, 실제 SimC 빌드 차이 독립 해결 필요.
 >
 

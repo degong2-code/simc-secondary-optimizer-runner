@@ -98,6 +98,50 @@ def classify_era(display_season, wse, selected):
     if display_season == 0: return 'UNKNOWN_UNSCOPED_JOURNAL'
     return 'UNKNOWN_OTHER_DISPLAY_SEASON'
 
+def resolve_raid_journal_tier(tier_links, required_instances):
+    """Resolve overlapping raid tiers by their source conditions.
+
+    For a single authenticated WCL raid, a uniform positive seasonal
+    AvailabilityCondition may coexist with unconditional expansion-tier
+    entries. Do not infer by tier ID, or treat this as effect or complete
+    season attestation. Any other ambiguity remains PENDING.
+    """
+    needed=set(required_instances)
+    if not needed or any(type(i) is not int or i<=0 for i in needed):
+        return None
+    links=defaultdict(lambda:defaultdict(set))
+    for row in tier_links:
+        tid=number(row.get("JournalTierID"))
+        iid=number(row.get("JournalInstanceID"))
+        raw=row.get("AvailabilityCondition")
+        # Reject invalid populated condition IDs rather than turning
+        # malformed source data into an unconditional catalog.
+        if raw not in (None,"") and (
+                type(raw) is not str or not raw.isdigit()):
+            return None
+        if tid>0 and iid>0:
+            links[tid][iid].add(number(raw))
+    matches=sorted(t for t,rows in links.items() if needed<=set(rows))
+    if len(matches)==1:
+        return matches[0]
+    if not matches:
+        return None
+    scoped=[]
+    for tid in matches:
+        all_conditions=[links[tid][iid] for iid in needed]
+        if (all(len(c)==1 for c in all_conditions) and
+            len(set().union(*all_conditions))==1 and
+            next(iter(all_conditions[0]))>0):
+            scoped.append(tid)
+    if len(scoped)!=1:
+        return None
+    candidate=scoped[0]
+    if any(any(links[t][iid]!={0} for iid in needed)
+           for t in matches if t!=candidate):
+        return None
+    return candidate
+
+
 def discover_unique_live_scope(folder, report):
     """Derive exact zone, season and expansion IDs from live WCL + DB2.
 
@@ -124,10 +168,7 @@ def discover_unique_live_scope(folder, report):
     fail_if(len(choices)!=1,"LIVE_MPLUS_ZONE_OR_DISPLAY_SEASON_AMBIGUOUS")
     mplus,sid=choices[0]
     encounters=list(read_rows(folder,"JournalEncounter"))
-    tiers=defaultdict(set)
-    for row in read_rows(folder,"JournalTierXInstance"):
-        tiers[number(row["JournalTierID"])].add(
-            number(row["JournalInstanceID"]))
+    tier_links=list(read_rows(folder,"JournalTierXInstance"))
     raidzones=[]
     for zone in zones:
         if zone["zone_id"]==mplus["zone_id"]:continue
@@ -135,9 +176,9 @@ def discover_unique_live_scope(folder, report):
                for e in zone["encounters"]]
         if not found or any(x is None for x in found):continue
         instances={number(x["JournalInstanceID"]) for x in found}
-        tids=[t for t,ids in tiers.items()
-              if t>0 and instances and instances<=ids]
-        if len(tids)==1:raidzones.append((zone,found,tids[0]))
+        tid=resolve_raid_journal_tier(tier_links,instances)
+        if tid is not None:
+            raidzones.append((zone,found,tid))
     fail_if(len(raidzones)!=1,"LIVE_RAID_ZONE_OR_TIER_AMBIGUOUS")
     raid,found,tid=raidzones[0]
     eids={number(x["ID"]) for x in found}
@@ -181,16 +222,16 @@ def build_index(folder, report, *, raid_zone, mplus_zone, build,
             problems.append({'kind':'raid_boss_unmapped','name':wcl['name']})
             continue
         mapped_raid.append((wcl,number(match['ID']), number(match['JournalInstanceID'])))
-    tier = defaultdict(set)
-    for r in read_rows(folder, 'JournalTierXInstance'):
-        iid = number(r['JournalInstanceID']); tid = number(r['JournalTierID'])
-        tier[tid].add(iid)
-    required_instances = {x[2] for x in mapped_raid}
-    matching_tiers = sorted(t for t,s in tier.items() if required_instances and required_instances <= s)
-    # Unrelated old tiers can duplicate an instance; don't guess from largest ID.
-    selected_tier = matching_tiers[0] if len(matching_tiers)==1 else None
+    tier_links=list(read_rows(folder,'JournalTierXInstance'))
+    required_instances={x[2] for x in mapped_raid}
+    matching_tiers=sorted({number(x['JournalTierID'])
+         for x in tier_links if number(x['JournalTierID'])>0
+         and number(x['JournalInstanceID']) in required_instances})
+    selected_tier=resolve_raid_journal_tier(
+        tier_links,required_instances)
     if selected_tier is None:
-        problems.append({'kind':'raid_tier_not_unique','candidates':matching_tiers})
+        problems.append({'kind':'raid_tier_not_unique',
+                         'candidates':matching_tiers})
     challenges = {number(r['ID']):r for r in read_rows(folder,'MapChallengeMode')}
     season_groups = defaultdict(list)
     for r in read_rows(folder,'MythicPlusSeasonTrackedMap'):

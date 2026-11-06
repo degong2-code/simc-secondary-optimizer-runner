@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FV 실제 원본 기반 v163 수정:** [노트](development/notes/2026-11-06_p3-fv-conditional-journal-tier-selection.md). P3-FU [실 5표 영수증 #42137475654](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42137475654): 70783 `JournalTier` 505='Current Season', 516='Midnight'; `JournalTierXInstance` 3개 레이드 인스턴스에 505의 동일 조건 **156363**, 516의 **0**. 따라서 레이드/보스 매칭 자체가 실패한 것이 아니라 원본 Tier 분류의 조건부·무조건부 중복이 근본 원인. 기존 v163 source-only 조인의 2위치에서 **유일 일관 양수 조건 Tier vs 무조건 0의 확장팩 목록**을 구분하고 모호하면 그대로 PENDING, 숫자 505/516 하드코딩·새 Gate/추가 상시 다운로드 없음. P3-FU focused 300 PASS는 역사; 새 P3-FV Actions 결과는 별도 확인. 70529 Docker vs 70783 SimC/실 G/J/F/O READY/T1 미해결. main 불변.
+>
+
 > **2026-11-06 P3-FU 진단 지속:** [노트](development/notes/2026-11-06_p3-fu-current-journal-tier-semantics.md). 실제 P3-FT 원본 영수증([#42136591524](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42136591524))은 KR 12.1.5.70783 레이드 The Venomous Abyss **10/10 보스 매칭 성공**, Journal 인스턴스 1317/1320/1324의 Tier **505,516 동시 매칭**을 확인. 레이드 0/복수 실패가 아니라 Tier 참조 의미 중복이다. v163에 ID 505/516을 하드코딩하지 않고 동일 빌드 JournalTier.csv 이름·JournalTierXInstance.AvailabilityCondition만 더 보는 5표 소형 진단으로 변경 원인 확인. P3-FT focused 299 PASS는 역사 증거, 신규 결과와 구분. 실 SimC 바이너리 70529/빌드 70783 불일치·G/J/F/O/READY/T1 미해결. main·공식 승격 없음.
 >
 
