@@ -183,6 +183,8 @@ def main():
                     "missing_slot":row.get("missing_slot"),
                     "neck_candidate_source_coverage":
                         row.get("neck_candidate_source_coverage"),
+                    "ring_candidate_source_coverage":
+                        row.get("ring_candidate_source_coverage"),
                     "requires":row.get("requires"),
                     "missing":row.get("missing"),
                     "has_candidate":bool(row.get("candidate_path")),

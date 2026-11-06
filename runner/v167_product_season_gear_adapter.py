@@ -193,6 +193,47 @@ def from_v166(source):
             "internal_generic_G_only":True,
             "season_membership_verified":False,
             "ui_selectable":False})
+    rings=source.get("internal_source_only_plain_ring_candidates",[])
+    need(type(rings) is list and len(rings)<=2000
+         and len(rings)==source.get("internal_source_only_plain_ring_count",
+                                   len(rings)),
+         "SOURCE_ONLY_RING_COUNT_INVALID")
+    internal_rings=[]
+    for entry in rings:
+        need(type(entry) is dict
+             and type(entry.get("item_id")) is int
+             and entry["item_id"]>0 and entry["item_id"] not in seen
+             and entry.get("slot")==11 and entry.get("class_id")==4
+             and type(entry.get("subclass_id")) is int
+             and entry["subclass_id"]>=0
+             and entry.get("category")=="plain_representative_candidate"
+             and entry.get("selection_evidence")==
+                "CONDITIONAL_SEASON_NOT_ESTABLISHED"
+             and entry.get("direct_item_effect_record") is False
+             and entry.get("item_set_id")==0
+             and entry.get("source_expansion_id")==source["expansion_id"]
+             and entry.get("internal_generic_G_only") is True
+             and entry.get("user_selectable_candidate") is False
+             and type(entry.get("source_kinds")) is list
+             and bool(entry["source_kinds"])
+             and type(entry.get("source_evidence")) is list
+             and bool(entry["source_evidence"]),
+             "SOURCE_ONLY_RING_ORIGIN_OR_ROLE_INVALID")
+        seen.add(entry["item_id"])
+        internal_rings.append({
+            "item_id":entry["item_id"],"name":entry["name"],
+            "category":"plain_representative_candidate",
+            "inventory_type":11,"class_id":4,
+            "subclass_id":entry["subclass_id"],
+            "allowed_class_mask":entry["allowed_class_mask"],
+            "stat_modifier_codes":entry["stat_modifier_codes"],
+            "item_set_id":0,
+            "source_kinds":entry["source_kinds"],
+            "source_evidence":entry["source_evidence"],
+            "source_expansion_id":entry["source_expansion_id"],
+            "internal_generic_G_only":True,
+            "season_membership_verified":False,
+            "ui_selectable":False})
     summary = {
         "schema": SCHEMA, "status": "CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
         "season_build": source["season_build"],
@@ -205,6 +246,10 @@ def from_v166(source):
         "internal_conditional_mplus_plain_count":len(internal),
         "internal_source_only_plain_neck_candidates":internal_necks,
         "internal_source_only_plain_neck_count":len(internal_necks),
+        "internal_source_only_plain_ring_candidates":internal_rings,
+        "internal_source_only_plain_ring_count":len(internal_rings),
+        "source_ring_role_scope_counts":
+            source.get("source_ring_role_scope_counts",{}),
         "source_neck_role_scope_counts":
             source.get("source_neck_role_scope_counts",{}),
         "conditional_ids_excluded": source.get("conditional_count"),
@@ -323,6 +368,32 @@ def validate(payload):
              and {e.get("source") for e in ev}==set(x["source_kinds"]),
              "PRODUCT_INTERNAL_SOURCE_NECK_NOT_JUSTIFIED")
         ids.add(x["item_id"])
+    generic_rings=payload.get("internal_source_only_plain_ring_candidates",[])
+    need(type(generic_rings) is list and len(generic_rings)<=2000
+         and len(generic_rings)==payload.get(
+             "internal_source_only_plain_ring_count",len(generic_rings)),
+         "PRODUCT_INTERNAL_SOURCE_RING_COUNT_INVALID")
+    for x in generic_rings:
+        ev=x.get("source_evidence",[]) if type(x) is dict else []
+        need(type(x) is dict and type(x.get("item_id")) is int
+             and x["item_id"]>0 and x["item_id"] not in ids
+             and x.get("inventory_type")==11 and x.get("class_id")==4
+             and x.get("item_set_id")==0
+             and x.get("category")=="plain_representative_candidate"
+             and x.get("source_expansion_id")==payload.get("expansion_id")
+             and x.get("internal_generic_G_only") is True
+             and x.get("season_membership_verified") is False
+             and x.get("ui_selectable") is False
+             and type(ev) is list and bool(ev)
+             and type(x.get("source_kinds")) is list
+             and {e.get("source") for e in ev}==set(x["source_kinds"]),
+             "PRODUCT_INTERNAL_SOURCE_RING_NOT_JUSTIFIED")
+        ids.add(x["item_id"])
+    ring_counters=payload.get("source_ring_role_scope_counts",{})
+    need(type(ring_counters) is dict and len(ring_counters)<=30
+         and all(type(k) is str and type(v) is int
+                 and 0<=v<=30000 for k,v in ring_counters.items()),
+         "PRODUCT_SOURCE_RING_DIAGNOSTIC_INVALID")
     counters=payload.get("source_neck_role_scope_counts",{})
     need(type(counters) is dict and len(counters)<=30
          and all(type(k) is str and type(v) is int

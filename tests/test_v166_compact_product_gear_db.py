@@ -153,6 +153,40 @@ class Compact(unittest.TestCase):
             wrong=db.build(source,item,sparse)
             self.assertEqual(wrong["internal_source_only_plain_neck_count"],0)
 
+    def test_internal_plain_ring_same_expansion_not_ui_or_effect(self):
+        with tempfile.TemporaryDirectory() as temp:
+            item,sparse=self.prepare(Path(temp))
+            for file in (item,sparse):
+                with file.open(newline="") as stream:
+                    rows=list(csv.DictReader(stream))
+                for row in rows:
+                    if row["ID"]=="1":
+                        row["InventoryType"]="11"
+                        if "SubclassID" in row:row["SubclassID"]="0"
+                with file.open("w",newline="") as stream:
+                    writer=csv.DictWriter(stream,fieldnames=list(rows[0]))
+                    writer.writeheader();writer.writerows(rows)
+            p=pool()
+            p["items"][0].update({
+                "inventory_type":11,"expansion_id":11,
+                "season_selection":"CONDITIONAL_SEASON_NOT_ESTABLISHED",
+                "user_selectable_candidate":False})
+            row=db.build(p,item,sparse)
+            self.assertEqual(row["internal_source_only_plain_ring_count"],1)
+            self.assertEqual(row["internal_source_only_plain_neck_count"],0)
+            self.assertEqual(row["internal_source_only_plain_ring_candidates"][0]["item_id"],1)
+            self.assertFalse(row["internal_source_only_plain_ring_candidates"][0][
+                "user_selectable_candidate"])
+            p["items"][0].update({"category":"special_effect_gear_candidate",
+                                  "direct_item_effect_record":True})
+            self.assertEqual(db.build(p,item,sparse)[
+                "internal_source_only_plain_ring_count"],0)
+            p["items"][0].update({"category":"plain_representative_candidate",
+                                  "direct_item_effect_record":False,
+                                  "expansion_id":10})
+            self.assertEqual(db.build(p,item,sparse)[
+                "internal_source_only_plain_ring_count"],0)
+
     def test_wrong_item_slot_blocks(self):
         with tempfile.TemporaryDirectory() as d:
             item,sparse=self.prepare(Path(d))

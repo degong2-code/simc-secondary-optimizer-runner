@@ -185,7 +185,8 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
             x["item_id"]:x for x in (
                 verified["items"]+
                 verified.get("internal_conditional_mplus_plain_candidates",[])+
-                verified.get("internal_source_only_plain_neck_candidates",[]))
+                verified.get("internal_source_only_plain_neck_candidates",[])+
+                verified.get("internal_source_only_plain_ring_candidates",[]))
             if x["category"]=="plain_representative_candidate"
             and x.get("source_kinds")
         }
@@ -195,6 +196,24 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
     # P3-GB: zero extra source reads/Native. For a failed neck selection,
     # record only bounded drop-off counts from the SAME v230 streaming pass.
     # Do not assume a missing source ID is an unusable real-world necklace.
+    ring_source_ids={iid for iid,row in provider_by_id.items()
+                     if row["inventory_type"]==11}
+    ring_coverage={
+        "db2_plain_ring_count":len(ring_source_ids),
+        "simc_exact_id_seen":0,
+        "simc_class_mask_rejected":0,
+        "simc_item_set_rejected":0,
+        "simc_plain_ring_accepted":0,
+        "selected_ring_count":0,
+        "upstream_ring_total":sum(
+            verified.get("source_ring_role_scope_counts",{}).values()
+            ) if season_ids is not None else 0,
+        "upstream_plain_conditional":sum(
+            v for k,v in verified.get(
+                "source_ring_role_scope_counts",{}).items()
+            if k=="plain_representative_candidate:CONDITIONAL_SEASON_NOT_ESTABLISHED"
+            ) if season_ids is not None else 0,
+    }
     neck_source_ids={iid for iid,row in provider_by_id.items()
                      if row["inventory_type"]==2}
     neck_coverage={
@@ -227,6 +246,9 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
         # unscaled source-level/quality/slots to actual physical bytes.
         iid=metadata.number(fields[1],"V232_ITEM_ID_INVALID")
         neck=iid in neck_source_ids
+        ring=iid in ring_source_ids
+        if ring:
+            ring_coverage["simc_exact_id_seen"]+=1
         if neck:
             neck_coverage["simc_exact_id_seen"]+=1
         if iid in tier_ids:return True
@@ -250,16 +272,20 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
                 return False
         if metadata.number(fields[24],"V232_ITEM_SET_INVALID")!=0:
             if neck:neck_coverage["simc_item_set_rejected"]+=1
+            if ring:ring_coverage["simc_item_set_rejected"]+=1
             return False
         if (metadata.number(fields[19],"V232_CLASS_MASK_INVALID")
                 & class_mask)!=class_mask:
             if neck:neck_coverage["simc_class_mask_rejected"]+=1
+            if ring:ring_coverage["simc_class_mask_rejected"]+=1
             return False
         sub=metadata.number(fields[12],"V232_SUBCLASS_INVALID")
         if inv in (5,20,9,6,8):
             return kind==4 and sub==chooser.gear.ARMOR_SUBCLASS[
                 contract["family"]]
         if inv in (2,16,11):
+            if ring and kind==4 and inv==11:
+                ring_coverage["simc_plain_ring_accepted"]+=1
             if neck:
                 if kind==4 and inv==2:
                     neck_coverage["simc_plain_neck_accepted"]+=1
@@ -363,6 +389,12 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
             raise SourceRepresentativeBlocked(
                 "V232_COMMON_SLOT_WITHOUT_SIMC_CANDIDATE:neck|"
                 +json.dumps(neck_coverage,sort_keys=True,separators=(",",":")))
+        if not matches and slot in ("finger1","finger2") and season_ids is not None:
+            ring_coverage["selected_ring_count"]=sum(
+                key in common for key in ("finger1","finger2"))
+            raise SourceRepresentativeBlocked(
+                "V232_COMMON_SLOT_WITHOUT_SIMC_CANDIDATE:"+slot+"|"
+                +json.dumps(ring_coverage,sort_keys=True,separators=(",",":")))
         need(bool(matches),"V232_COMMON_SLOT_WITHOUT_SIMC_CANDIDATE:"+slot)
         matches=[iid for iid in matches if matching_primary(iid,slot)]
         need(bool(matches),"V232_COMMON_PRIMARY_STAT_NOT_COMPATIBLE:"+slot)

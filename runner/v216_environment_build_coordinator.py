@@ -2506,7 +2506,12 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
                     "simc_class_mask_rejected","simc_item_set_rejected",
                     "simc_plain_neck_accepted","upstream_neck_total",
                     "upstream_plain_conditional"}
-                if (type(observed) is dict and set(observed)==fields and
+                ring_fields={"db2_plain_ring_count","simc_exact_id_seen",
+                    "simc_class_mask_rejected","simc_item_set_rejected",
+                    "simc_plain_ring_accepted","selected_ring_count",
+                    "upstream_ring_total","upstream_plain_conditional"}
+                if (type(observed) is dict and
+                    set(observed) in (fields,ring_fields) and
                     all(type(v) is int and 0<=v<=100000 for v in observed.values())):
                     coverage=observed
             except (ValueError,TypeError):
@@ -2520,7 +2525,10 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
             else None)
         return {"status":"FRESH_ONE_SPEC_PHYSICAL_SOURCE_OR_COVERAGE_PENDING",
                 "reason":reason,"missing_slot":slot,
-                "neck_candidate_source_coverage":coverage,
+                "neck_candidate_source_coverage":(
+                    coverage if slot=="neck" else None),
+                "ring_candidate_source_coverage":(
+                    coverage if slot in ("finger1","finger2") else None),
                 "network_calls_by_stage":0,"native_calls":0,
                 "environment_ready":False}
     # v217 checked this source-only file's hash even on receipt reuse.

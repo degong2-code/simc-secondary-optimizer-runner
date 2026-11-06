@@ -174,6 +174,56 @@ class SourceOnlyRepresentativeTests(unittest.TestCase):
         self.assertEqual(cov["simc_class_mask_rejected"],1)
         self.assertEqual(cov["simc_plain_neck_accepted"],0)
 
+    def test_two_ring_ids_from_same_build_internal_g_only_then_missing_diagnostic(self):
+        from runner import v167_product_season_gear_adapter as provider
+        allowed={
+            9020:(5,4,4),9011:(9,4,4),9021:(6,4,4),9022:(8,4,4),
+            9023:(2,4,0),9024:(16,4,0),9012:(11,4,0),9010:(17,2,8)}
+        rows=[{
+            "item_id":iid,"name":f"season_{iid}",
+            "category":"plain_representative_candidate",
+            "inventory_type":inv,"class_id":kind,"subclass_id":sub,
+            "allowed_class_mask":2,"source_kinds":["raid_journal"],
+            "item_set_id":0}
+            for iid,(inv,kind,sub) in sorted(allowed.items())]
+        season={
+            "schema":provider.SCHEMA,
+            "status":"CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
+            "no_old_catalog_seed":True,"season_build":BUILD,
+            "item_count":len(rows),
+            "role_counts":{"plain_representative_candidate":len(rows)},
+            "items":rows,"expansion_id":11,
+            "not_certified":{"tier_four_set":True,"simc_item_effects":True},
+            "new_native_calls":0,"new_api_calls":0}
+        with self.assertRaises(builder.SourceRepresentativeBlocked) as missing:
+            builder.find_candidate(
+                seed_directory=self.folder,tier_candidate=self.tier,
+                target_ilevel=335,season_gear_db=season)
+        reason,counts=str(missing.exception).split(":finger2|",1)
+        self.assertEqual(reason,"V232_COMMON_SLOT_WITHOUT_SIMC_CANDIDATE")
+        coverage=json.loads(counts)
+        self.assertEqual(coverage["db2_plain_ring_count"],1)
+        self.assertEqual(coverage["selected_ring_count"],1)
+        self.assertEqual(coverage["simc_exact_id_seen"],1)
+        self.assertEqual(coverage["simc_plain_ring_accepted"],1)
+        season["internal_source_only_plain_ring_candidates"]=[{
+            "item_id":9025,"name":"generic_ring_9025",
+            "category":"plain_representative_candidate",
+            "inventory_type":11,"class_id":4,"subclass_id":0,
+            "allowed_class_mask":2,"item_set_id":0,
+            "source_kinds":["raid_journal"],
+            "source_evidence":[{"source":"raid_journal"}],
+            "source_expansion_id":11,"internal_generic_G_only":True,
+            "season_membership_verified":False,"ui_selectable":False}]
+        season["internal_source_only_plain_ring_count"]=1
+        chosen=builder.find_candidate(
+            seed_directory=self.folder,tier_candidate=self.tier,
+            target_ilevel=335,season_gear_db=season)
+        self.assertEqual(chosen["selected_G_slot_ids"]["finger1"],9012)
+        self.assertEqual(chosen["selected_G_slot_ids"]["finger2"],9025)
+        self.assertFalse(chosen["environment_ready"])
+        self.assertIsNone(chosen["G"])
+
     def test_warrior_fury_titans_grip_requires_two_real_distinct_2h_items(self):
         self.seed_files(make_fixture(warrior=True),
                         cls="warrior",spec="fury")
