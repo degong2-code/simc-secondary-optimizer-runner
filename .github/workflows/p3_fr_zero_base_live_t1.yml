@@ -18,6 +18,12 @@ jobs:
     env:
       PYTHONPATH: runner:.
       SIMC_CLI_WRAPPER: ""
+      # Use only preconfigured repository Secrets. They are not printed,
+      # committed or written into the v217 stage cache.
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -25,7 +31,16 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
+      - name: Check existing v242 season-source inputs before Docker or Wago
+        shell: bash
+        run: |
+          if [[ -z "$BLIZZARD_CLIENT_ID" || -z "$BLIZZARD_CLIENT_SECRET" ||
+                -z "$WCL_CLIENT_ID" || -z "$WCL_CLIENT_SECRET" ]]; then
+            echo "P3_FS_AUTHENTICATED_SEASON_INPUTS_NOT_CONFIGURED"
+            echo "P3_FR_SKIP_SIMC_PULL=true" >> "$GITHUB_ENV"
+          fi
       - name: Obtain official latest SimulationCraft CLI Docker binary if accessible
+        if: env.P3_FR_SKIP_SIMC_PULL != 'true'
         shell: bash
         run: |
           set -euo pipefail

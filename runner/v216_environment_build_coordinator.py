@@ -2005,12 +2005,16 @@ def _reuse_existing_tier_source_stage(*,build,tier_bridge,first_party,
 
 def _resolve_one_spec_simc_commit_stage(*, stage_root, build, gear, tier,
                                        revision_hint=None, transport=None):
-    """One pinned SimC source commit, cached; not a binary or season proof."""
+    """Pin a supplied SimC source revision independently of gear and tier.
+
+    The exact Git commit is an input provenance, NOT game-build, current-
+    season, binary, or representative-item certification. Downstream source
+    and representative stages still enforce their original prerequisites.
+    """
     waiting={"status":"SIMC_SOURCE_COMMIT_NOT_YET_RESOLVABLE_PENDING",
              "simc_revision":None,"network_calls_by_stage":0,
              "environment_ready":False,"binary_attested":False}
-    if (revision_hint is None or not gear.get("candidate_path")
-            or not tier.get("candidate_path")):
+    if revision_hint is None:
         return waiting
     need(type(revision_hint) is str and
          re.fullmatch(r"[a-f0-9]{7,12}|[a-f0-9]{40}",
@@ -5174,7 +5178,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                   "auto_native_G_requested",
                    "verified_install_input_provider",
                    "auto_select_observed_F_no_oil",
-                   "source_selected_gem_roles"},
+                   "source_selected_gem_roles",
+                   "auto_four_stat_source_requested"},
              "V216_ZERO_HISTORY_SOURCE_INPUT_FIELDS")
         # A trusted internal source-owner adapter can provide independently
         # verified GJFO/Policy A input. JSON or HTTP cannot supply a callable.
@@ -5233,6 +5238,13 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         auto_four_stat_default=(
             source_selected_gem_roles is not None and
             source_selected_gem_roles["ordinary_gem_ids"] is None)
+        # A cold-start may collect the same-build raw DBC source without
+        # inventing either special or ordinary ItemIDs. Source acquisition
+        # and role selection/installation are independent contracts.
+        auto_four_stat_source_requested=fresh_collection_inputs.get(
+            "auto_four_stat_source_requested",False)
+        need(type(auto_four_stat_source_requested) is bool,
+             "V216_FOUR_STAT_SOURCE_OPT_IN_BOOL_REQUIRED")
         zero_history_gem_ratings=fresh_collection_inputs.get(
             "gem_rating_by_id")
         selected_budget_items=fresh_collection_inputs.get(
@@ -5312,8 +5324,9 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                          "auto_native_G_requested",
                          "auto_select_observed_F_no_oil",
                          "source_selected_gem_roles",
+                         "auto_four_stat_source_requested",
                          "verified_install_input_provider")}
-        if auto_four_stat_default:
+        if auto_four_stat_default or auto_four_stat_source_requested:
             source_inputs["auto_four_stat_gems"]=True
         collected=collect_wago_new_season_source(
             sessions_root=sessions_root,**source_inputs)

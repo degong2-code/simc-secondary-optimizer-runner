@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FS:** [노트](development/notes/2026-11-06_p3-fs-zero-base-source-input-unblock.md). 우선차단 P3-FR의 v242 인증 4개 필드, v229 exact Git 원본 pin, 일반보석 raw DBC 선택적 수집을 기존 원본 단계에 CONNECT. SimC revision은 기어·티어 후보와 독립적으로 Git 소스 원본을 먼저 pin 가능하게 하고, 실제 이미지 digest와 동일한 공식 태그의 7~12hex hint 외에는 추정하지 않는다. source-only pin은 게임·바이너리 일치 증거가 아니다. 인증 미설정 시 대용량 Wago 반복 없이 사전 PENDING, Secret 자체는 저장/출력 금지. 최신 T1 READY 미완료, 새 Actions 결과와 history를 구분해 기록.
+>
+
 > **2026-11-06 P3-FR:** [제로베이스 실 T1](development/notes/2026-11-06_p3-fr-zero-base-live-t1-current-build.md). 사용자가 빌드와 개발용 ItemID를 입력하지 않은 환경에서 공인 KR Retail 공개 버전의 현재 build를 단 한 번 조회하고, 기존 원본 v161/v217→v216→v222→v212 **원래 경로**를 빈 루트에서 실행한다. 완료 판정은 G/J/F/O/B/T와 버전화 v212 설치 영수증 + environment_ready/installed 모두 true일 때만. 테스트 코드는 실제 Wago/SimC 접근을 허용하지만 결과 확인 전 PASS 미표시. 새로운 Gate·SimC 효과 재구현·구시즌 기본 스탯 복사 금지.
 >
 

@@ -44,7 +44,8 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                   native_result=None,gem_layout=None,gem_ratings=None,
                   effect_requests=None,effect_resolver=None,
                   effect_observation=None,selected_budget_items=None,
-                  raw_gem_source=None,trusted_provider=None):
+                  raw_gem_source=None,trusted_provider=None,
+                  auto_four_stat_source=False):
         inputs={
             "expected_game_build":self.catalog["game_build"],
             "representative_request":{
@@ -53,6 +54,8 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             "simc_revision_hint":None}
         if proof:
             inputs["same_build_budget_evidence"]=self.table[334]
+        if auto_four_stat_source:
+            inputs["auto_four_stat_source_requested"]=True
         if gem_layout is not None:
             inputs["gem_layout_receipt"]=gem_layout
         if gem_ratings is not None:
@@ -97,6 +100,11 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 source_catalog_path=None,bootstrap_result=None,
                 fresh_collection_inputs=inputs)
         self.assertEqual(collect.call_count,1)
+        if auto_four_stat_source:
+            self.assertIs(collect.call_args.kwargs.get("auto_four_stat_gems"),
+                          True)
+            self.assertNotIn("auto_four_stat_source_requested",
+                             collect.call_args.kwargs)
         self.assertEqual(native.call_count,1)
         self.assertEqual(compiler.call_count,1)
         for name in ("same_build_budget_evidence","gem_layout_receipt",
@@ -126,6 +134,44 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             "new_native_calls":0,"full_G_approved":False,
             "environment_ready":False,
         }
+
+    def test_p3_fs_independent_simc_source_commit_reuses_immutable_stage(self):
+        # One known source-prefix is eligible for the existing v229 pin
+        # before any authenticated raid/gear/tier selection has succeeded.
+        # This is not binary or current-season attestation.
+        expected="a"*40
+        with mock.patch.object(
+                build.simc_source,"resolve_exact_commit",
+                return_value=expected) as resolver:
+            first=build._resolve_one_spec_simc_commit_stage(
+                stage_root=self.root,build=self.catalog["game_build"],
+                gear={},tier={},revision_hint="a"*8)
+            second=build._resolve_one_spec_simc_commit_stage(
+                stage_root=self.root,build=self.catalog["game_build"],
+                gear={},tier={},revision_hint="a"*8)
+            self.assertEqual(resolver.call_count,1)
+        self.assertEqual(first["status"],
+            "SIMC_SOURCE_COMMIT_EXACT_PIN_CANDIDATE")
+        self.assertEqual(second["simc_revision"],expected)
+        self.assertFalse(first["binary_attested"])
+        self.assertFalse(first["season_verified"])
+        self.assertFalse(first["environment_ready"])
+        # The mocked resolver performs zero HTTP; actual v257 records each
+        # resolution request via its existing transport when not mocked.
+        self.assertEqual(first["network_calls_by_stage"],0)
+        missing=build._resolve_one_spec_simc_commit_stage(
+            stage_root=self.root,build=self.catalog["game_build"],
+            gear={},tier={},revision_hint=None)
+        self.assertIsNone(missing["simc_revision"])
+        self.assertFalse(missing["environment_ready"])
+
+    def test_p3_fs_zero_base_requests_same_build_gem_DBC_without_role_ID(self):
+        # Source collection is distinct from four-stat ItemID selection and
+        # does not assert J or install a representative SimC profile.
+        result=self.run_build(proof=False,auto_four_stat_source=True)
+        self.assertFalse(result["zero_history_build"]["environment_ready"])
+        self.assertFalse(result["environment_installed"])
+        self.assertIsNone(result["J"])
 
     def test_native_G_without_JFO_proof_is_visible_but_never_ready(self):
         result=self.run_build(proof=False,native_result=self.v277_native_G())

@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FS 제로베이스 원본 준비:** [개발 기록](development/notes/2026-11-06_p3-fs-zero-base-source-input-unblock.md). P3-FR 실전 마지막 T1은 원본 봉인만 PASS, 시즌 인증·SimC revision·보석 DBC 선택 누락으로 G/J/F/O·READY 모두 PENDING. 기존 v242 4-secret 입력을 Actions에 안전 전달(없는 경우 사전 중단), 정확히 받은 SimC Docker digest와 일치하는 배포 태그의 commit prefix만 기존 v229에 전달(이 자체가 binary/시즌 인증 아님), v216의 raw gem CSV 소스를 특수 ItemID 없이 별도 요청할 수 있게 CONNECT. 대표 장비/티어/Native G/J/F/O/Policy A/v212 T1은 여전히 미완료. 신규 CI 결과는 새 SHA 실검증 후에만 확정. main·immutable·Project UI/Work OS 불변.
+>
+
 > **2026-11-06 P3-FR 첫 유효 제로베이스 실전:** [실전 #42081102354](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42081102354)에서 공식 KR 현재 Retail `12.1.5.70783` 식별·Wago `v161/v217 EXECUTED_AND_SEALED` 성공. 그러나 v274 필수 컴파일러 입력 9종 `GEAR_V167, TIER_V168, V189, V190, GENERATED_PERMANENT/TEMPORARY/GEM, SIMC_V211_6_SOURCES, PINNED_SIMC_REVISION` 미확보, Native0·v222 공식 G/J/F/O 없음·v212 READY/T1 **NOT_READY**. 이는 현재 원본을 못 찾는다는 일반론이 아니라 실제 source owner 상태/버전 연결부 병목. 다음 계측은 원본 재수집을 무조건 반복하는 게 아닌 각 기존 owner의 PENDING 이유만 가볍게 기록한다. 소스 원본은 이 실행에서 temp에만 보존되어 별도 실행은 새 영수증 범위임.
 >
 
