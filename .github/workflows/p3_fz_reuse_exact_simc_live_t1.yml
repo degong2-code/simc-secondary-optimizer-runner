@@ -3,6 +3,10 @@
 # If a source timeout recurs, report the first owner; no automatic retry.
 name: P3-FZ reuse exact 70783 CLI for one real zero-history T1 (one-shot)
 on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/requests/p3_gp_f_only_once_20261106.json
   workflow_dispatch:
     inputs:
       exact_flask_item_id:
@@ -22,12 +26,14 @@ concurrency:
   cancel-in-progress: false
 jobs:
   original-v216-once:
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[p3-gp-f-only-once]')
     runs-on: ubuntu-24.04
     timeout-minutes: 23
     env:
       PYTHONPATH: runner:.
-      P3_T1_EXACT_FLASK_ITEM_ID: ${{ inputs.exact_flask_item_id }}
+      P3_T1_EXACT_FLASK_ITEM_ID: ${{ github.event_name == 'push' && '241324' || inputs.exact_flask_item_id }}
       P3_T1_EXISTING_SPECIAL_GEM_ID: ${{ inputs.existing_special_gem_id }}
+      P3_T1_F_ONLY: ${{ github.event_name == 'push' && '1' || '0' }}
       SIMC_PINNED_SOURCE_COMMIT: c20e2ad52e4c33711f74272309a5748125175fe8
       SIMC_PINNED_GAME_BUILD: 12.1.5.70783
       SIMC_PINNED_BINARY_SHA256: 980ed4640cecc3ed78b34ed0dc0363dbff2ed7d703174e9cc01f09d18570d36b
@@ -40,6 +46,30 @@ jobs:
         with: {persist-credentials: false}
       - uses: actions/setup-python@v6
         with: {python-version: '3.12'}
+      - name: Fail closed on any nonexact P3-GP one-shot push
+        if: github.event_name == 'push'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git diff-tree --no-commit-id --name-only -r HEAD)" =             "integration_probes/requests/p3_gp_f_only_once_20261106.json"
+          python3 - <<'PY'
+          import json,pathlib
+          value=json.loads(pathlib.Path(
+            "integration_probes/requests/p3_gp_f_only_once_20261106.json").read_text())
+          expected={
+            "schema":"p3_gp_one_source_verified_flask_native_once_v1",
+            "build":"12.1.5.70783",
+            "selected_flask_item_id":241324,
+            "source_owner":"EXISTING_V216_V281_V278",
+            "max_new_F_native_calls":2,
+            "G_native_requested":False,
+            "gem_effect_validation":False,
+            "complete_GJFO_ready_claim":False,
+            "no_new_simc_binary_compile":True,
+            "no_main_merge":True}
+          assert value==expected,(value,expected)
+          print("P3_GP_EXACT_SOURCE_SCOPED_ONE_SHOT_CONFIRMED")
+          PY
       - name: Verify existing authenticated season inputs before artifact retrieval
         shell: bash
         run: |

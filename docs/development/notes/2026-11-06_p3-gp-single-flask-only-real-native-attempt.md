@@ -1,0 +1,10 @@
+# 2026-11-06 · P3-GP · 기존 T1의 정확한 F 전용 Native 실측 경로
+
+- **Capability:** `F.FLASK`, `SOURCE.SEAL`, `ENVIRONMENT.WEB`
+- **Keywords:** P3-GP, one-shot, exact F, pinned SimC, v216, v281, v278, no-G, sealed JSON2, original receipt
+- **Prior evidence:** [2026-11-06 T1 #42170351404](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42170351404) 원본 F 미완료·Native8 보고·개별 영수증 미보존. [P3-GO v212 focused #42195310609](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42195310609) 347 PASS/2 SKIP, 원본 F 실제 Native 이번 변경 0. 기존 P3-FZ는 `workflow_dispatch`만 가능해 연결된 GitHub API로 직접 시작할 수 없었음.
+- **Decision:** `CONNECT` 정확한 물리 영약 ItemID `241324`를 현재 시즌 공개 참고 후보로 두고(효과/수치 하드코딩 아님), 기존 v281 물리 ItemID→SimC token·품질 소스, v278 baseline/active Native 페어·캐시, v216 F-only original source owner를 실제 기계적으로 확인하는 최소 1회 시도. 재활용 가능한 GitHub Actions 고정 SimC CLI 빌드 `c20e2ad...`, 게임 빌드 `12.1.5.70783`, 바이너리 SHA를 그대로 사용. `F_ONLY`에는 G Native, J 보석 source 자동 입력, O Native, 다종 F 스캔을 제외. 신규 F Native 최대 2회이며 기존 전체 시즌 소스 수집 비용은 원래 v216과 동일.
+- **Changes:** `integration_probes/p3_fr_zero_base_t1_acceptance.py:t1_native_source_controls`와 `P3_T1_F_ONLY`에서 G 없는 F-only 모드를 명시, 1 ItemID만 전달. 실제 원본 `original_J_F_verified_components_not_full_environment.F`가 검증되어도 `F_ONLY_ORIGINAL_SIMC_SOURCE_VERIFIED_NOT_ENVIRONMENT_READY`로 F-only 성공만 보고하며 공식 G/J/F/O/B/T·installed READY를 주장하지 않음. P3-FZ workflow에 격리 브랜치 한정, 경로·커밋 마커·고정 JSON schema·아이템·Native 상한을 모두 확인하는 1회 push 트리거를 추가. 다른 push/경로 또는 workflow_dispatch에는 기존 모드 유지. Artifact는 기존 ZIP/summary만 7일 보존. 신규 바이너리 컴파일 금지.
+- **Verification:** 오프라인 focused/유관 CI를 먼저 확인한 뒤 단 1개 marker request commit으로 1회 워크플로를 시작한다. 그 전에는 실 Native/게임 HTTP 0; 실 결과는 별도 원본 영수증이 있어야 함. 실패 시 전수 재시도 금지, 첫 원인만 보고.
+- **Remaining:** 실 F 값·원본 receipt 관측, G/J/O 통합, 4종 영약 각각의 선택지, 공식 B/T·v212 READY/26 DPS E2E 미완료. 기존 F=165는 원본이 검증하기 전엔 추정치로만 남음.
+- **Efficiency:** 계획상 신규 Native F 0~2회, G 0회, O 0회. 한 번의 source run으로 필요한 F의 정확한 효과만 확인하며 기존 v281/v278 캐시·보존·중단/오류 영수증을 그대로 사용. 게임 데이터 신규 전수 Native 검사·효과 독립 재구현·영구 백그라운드 실행 없음. main/immutable v003/Project UI/Work OS/기존 제품 채팅 소유권 불변.

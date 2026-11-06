@@ -225,6 +225,21 @@ def optional_exact_item_id(environment, name):
     return int(raw)
 
 
+
+def t1_native_source_controls(*, selected_F, f_only, binary_available):
+    """F-only requests exactly one selected v278 pair; no G Native."""
+    if f_only and selected_F is None:
+        raise ValueError("P3_GP_F_ONLY_EXACT_ITEM_ID_REQUIRED")
+    return {
+        "auto_four_stat_source_requested":not f_only,
+        "auto_native_G_requested":binary_available and not f_only,
+        "auto_native_F_requested":binary_available,
+        "auto_native_O_requested":False,
+        "auto_select_observed_F_no_oil":(
+            binary_available and selected_F is None),
+    }
+
+
 def selected_t1_source_inputs(*, exact_flask_item_id, existing_special_gem_id):
     """Delegate selected physical IDs to the original v281/v271 owners."""
     result={}
@@ -324,7 +339,14 @@ def main():
         special=optional_exact_item_id(os.environ,"P3_T1_EXISTING_SPECIAL_GEM_ID")
         rec["user_selected_flask_id"]=exact_f
         rec["user_selected_gem_ids"]=1 if special is not None else 0
-        rec["selected_f_only_native_mode"]=exact_f is not None
+        mode=os.environ.get("P3_T1_F_ONLY","0")
+        if mode not in ("0","1"):
+            raise ValueError("P3_GP_F_ONLY_OPT_IN_INVALID")
+        f_only=(mode=="1")
+        if f_only and exact_f is None:
+            raise ValueError("P3_GP_F_ONLY_EXACT_ITEM_ID_REQUIRED")
+        rec["selected_f_only_native_mode"]=f_only
+        rec["requested_max_F_native_calls"]=2 if f_only else 8
         live=retail.discover(region="KR")
         rec["live_retail_version"]=live
         # These four existing v242 source credentials are required by the
@@ -388,12 +410,9 @@ def main():
                     "target_ilevel":334},
                 "g_probe_character":{"race":"dwarf"},
                 "simc_revision_hint":pin["revision_hint"],
-                "auto_four_stat_source_requested":True,
-                "auto_native_G_requested":candidate is not None,
-                "auto_native_F_requested":candidate is not None,
-                "auto_native_O_requested":False,
-                "auto_select_observed_F_no_oil":(
-                    candidate is not None and exact_f is None),
+                **t1_native_source_controls(
+                    selected_F=exact_f,f_only=f_only,
+                    binary_available=candidate is not None),
                 **selected_t1_source_inputs(
                     exact_flask_item_id=exact_f,
                     existing_special_gem_id=special),
@@ -481,7 +500,16 @@ def main():
                    installed.get("status")==
                        "FRESH_SEASON_VERIFIED_ENVIRONMENT_INSTALLED_READY"
                    and installed.get("stage_output_path"))
-            rec["status"]="ZERO_BASE_T1_PASS" if ready else "ZERO_BASE_T1_NOT_READY"
+            if f_only:
+                # F may be original-v278-proven while G/J/B/T stay absent.
+                # A full environment READY claim is strictly prohibited.
+                f_receipt=rec["original_source_verified_F_uninstalled"]
+                rec["status"]=(
+                    "F_ONLY_ORIGINAL_SIMC_SOURCE_VERIFIED_NOT_ENVIRONMENT_READY"
+                    if f_receipt is not None and not ready
+                    else "F_ONLY_NATIVE_SOURCE_OR_QUALITY_PENDING")
+            else:
+                rec["status"]="ZERO_BASE_T1_PASS" if ready else "ZERO_BASE_T1_NOT_READY"
     except Exception as error:
         rec["status"]="ZERO_BASE_T1_BLOCKED"
         rec["exception_type"]=type(error).__name__
@@ -501,7 +529,9 @@ def main():
                 "original_source_verified_F_uninstalled","environment_ready",
                 "environment_installed")},ensure_ascii=False,default=str),
             flush=True)
-    return 0 if rec["status"]=="ZERO_BASE_T1_PASS" else 2
+    return 0 if rec["status"] in (
+        "ZERO_BASE_T1_PASS",
+        "F_ONLY_ORIGINAL_SIMC_SOURCE_VERIFIED_NOT_ENVIRONMENT_READY") else 2
 
 if __name__=="__main__":
     raise SystemExit(main())

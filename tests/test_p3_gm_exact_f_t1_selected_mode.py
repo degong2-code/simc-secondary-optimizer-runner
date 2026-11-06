@@ -7,6 +7,36 @@ from integration_probes import p3_fr_zero_base_t1_acceptance as p
 
 
 class TargetedFlaskT1Inputs(unittest.TestCase):
+    def test_f_only_original_native_uses_no_native_G_or_gem_search(self):
+        f=p.t1_native_source_controls(
+            selected_F=241324,f_only=True,binary_available=True)
+        self.assertEqual(f,{
+            "auto_four_stat_source_requested":False,
+            "auto_native_G_requested":False,
+            "auto_native_F_requested":True,
+            "auto_native_O_requested":False,
+            "auto_select_observed_F_no_oil":False})
+        with self.assertRaisesRegex(ValueError,
+                                    "P3_GP_F_ONLY_EXACT_ITEM_ID_REQUIRED"):
+            p.t1_native_source_controls(
+                selected_F=None,f_only=True,binary_available=True)
+        broad=p.t1_native_source_controls(
+            selected_F=None,f_only=False,binary_available=True)
+        self.assertTrue(broad["auto_native_G_requested"])
+        self.assertTrue(broad["auto_four_stat_source_requested"])
+        self.assertTrue(broad["auto_select_observed_F_no_oil"])
+
+    def test_one_shot_workflow_requires_exact_f_only_request(self):
+        workflow=(pathlib.Path(__file__).resolve().parents[1]/
+                  ".github/workflows/p3_fz_reuse_exact_simc_live_t1.yml"
+                  ).read_text(encoding="utf8")
+        self.assertIn("p3_gp_f_only_once_20261106.json",workflow)
+        self.assertIn("[p3-gp-f-only-once]",workflow)
+        self.assertIn("P3_T1_F_ONLY:",workflow)
+        self.assertIn("max_new_F_native_calls",workflow)
+        self.assertIn("complete_GJFO_ready_claim",workflow)
+        self.assertNotIn("F=165",workflow)
+
     def test_unchanged_default_opt_in_remains_broad(self):
         self.assertIsNone(p.optional_exact_item_id({},"P3_T1_EXACT_FLASK_ITEM_ID"))
         self.assertEqual(p.selected_t1_source_inputs(
@@ -22,7 +52,7 @@ class TargetedFlaskT1Inputs(unittest.TestCase):
                   ).read_text(encoding="utf8")
         self.assertIn('default: "241324"',workflow)
         self.assertIn("workflow_dispatch:",workflow)
-        self.assertNotIn("\\n  push:",workflow)
+        self.assertIn("  push:",workflow)
         selected=p.optional_exact_item_id(
             {"P3_T1_EXACT_FLASK_ITEM_ID":"241324"},
             "P3_T1_EXACT_FLASK_ITEM_ID")
