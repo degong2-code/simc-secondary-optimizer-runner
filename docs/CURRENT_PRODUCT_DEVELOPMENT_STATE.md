@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FZ 실 영수증 및 P3-GA 진단:** [실 T1 #42148734651](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42148734651)은 70783 실 CLI SHA/소스·Wago 봉인 성공, Native0, 최종 NOT_READY. 실제 최초 차단은 `v163 LIVE_RAID_LOOT_EXPANSION_ID_NOT_UNIQUE`, 대표 gear/tier/J/F/G/O 미실행은 연쇄 결과. P3-GA는 기존 70783 레이드 3 인스턴스 증거를 재사용해 Item/ItemSparse ClassID별 ExpansionID 분포만 원본 4표에서 진단; 신규 시즌 ID 선택·READY는 이 조사가 승인하지 않는다. [P3-GA 노트](development/notes/2026-11-06_p3-ga-raid-loot-expansion-class-scope.md).
+>
+
 > **2026-11-06 P3-FZ 초기 작업:** 동일 시즌 환경 재사용 P3-FY 이후 최초 제로베이스 설치 결손 재검증을 위해 기존 P3-FW 성공한 70783 SimC 실행 바이너리 Artifact SHA·원본 커밋을 재사용하는 한 번의 실 T1 경로 추가. 오래된 Docker 70529 재사용이나 새 SimC 컴파일을 생략하고, 게임 버전 변화 시 원본 Wago 수집 전에 정확히 중단. 인증 G/J/F/O/READY 여부는 새 LIVE 실행 영수증 이전에 **미완료**로 유지. [노트](development/notes/2026-11-06_p3-fz-reuse-exact-simc-live-t1.md).
 >
 

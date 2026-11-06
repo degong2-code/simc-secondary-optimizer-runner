@@ -1,0 +1,32 @@
+name: P3-GA original raid-loot ExpansionID source-only probe (one-shot)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p3_ga_raid_loot_expansion_diagnostic.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: p3-ga-once-loot-expansion
+  cancel-in-progress: false
+jobs:
+  source-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Exact 70783 prior raid 3-instance source-only expansion distribution
+        shell: bash
+        env: {PYTHONPATH: 'runner:.'}
+        run: python -u integration_probes/p3_ga_raid_loot_expansion_diagnostic.py
+      - name: Preserve only compact source distribution (no CSV)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p3-ga-70783-raid-loot-expansion-small-receipt
+          path: p3_ga_raid_loot_expansion_diagnostic.json
+          retention-days: 2
+          if-no-files-found: warn
