@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FX 사용자 승인 및 실 CI:** [기능 노트](development/notes/2026-11-06_p3-fx-same-season-static-versus-simc-runtime.md). 동일 시즌의 주간 SimC/게임 빌드·밸런스 업데이트는 검증된 정적 장비·G/J/F/O와 기존 캐시를 자동 폐기하지 않으며, 새 SimC는 DPS 캐시만 구분한다. 시즌/확장팩 교체 또는 확정된 아이템·콘텐츠 변경 시에만 해당 환경 자료 갱신. `v046/v258/v212/v216` REUSE, 신규 원본 `v229` SHA/게임빌드 검증 유지. [focused #42142392368](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42142392368) 308 tests/2 SKIP·DEV_LEDGER_PASS; [v212 #42142392372](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42142392372) 양 OS 각 450 PASS/4 SKIP; [v113 #42142392464](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42142392464) 양 OS 각 221 PASS. 본 교정이 full cross-build verified installed reuse 경로나 신규 시즌 READY/T1을 구현한 것은 아님. main/immutable/Project UI/공식 승격 불변.
+>
+
 > **2026-11-06 P3-FV 실전 검증:** [Actions #42138850557](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42138850557)에서 현재 WCL 1개 레이드 Tier 원본 중복을 `v163` 코드가 실제 zone53→505로 판정; 기존 Tier 모호성 차단 제거. 이후 `JournalEncounterItem` 파일 요구는 5표 제한 진단에서 예상된 것으로 기존 v161 10표 원본에 포함. 최신 CI 308 tests/2 SKIP, FAIL0, Native0. 정확한 SimC 70783 바이너리/전체 설치·G/J/F/O는 별도 미완료; 일회성 진단과 제품 READY를 혼동하지 않음.
 >
 

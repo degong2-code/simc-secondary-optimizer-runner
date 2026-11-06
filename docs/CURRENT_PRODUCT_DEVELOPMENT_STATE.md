@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FX 최종 검증 영수증:** 제품 코드 [`73e8e5df`](https://github.com/degong2-code/simc-secondary-optimizer-runner/commit/73e8e5df2ad9d0858de2fd4d09d9115a720d51c1), [focused #42142392368](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42142392368) 308 tests/2 SKIP·DEV_LEDGER_PASS, [v212 #42142392372](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42142392372) 양 OS 각 450 PASS/4 SKIP, [v113 #42142392464](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42142392464) 양 OS 각 221 PASS, v181/v182 성공. 동일 시즌 정적 gear/tier/budget SHA 불변·SimC-only 변경을 분리해 표시하고 새 SimC DPS 캐시 정체성만 분리한다. **새 시즌 최초 실제 READY/T1·동일 시즌 cross-game-build 설치 자동 재사용은 아직 미완료.**
+>
+
 > **2026-11-06 P3-FX 최신 사용자 교정:** 동일 시즌 게임 빌드·SimC revision·전문화 밸런스 변경만으로 검증된 장비·마부·보석·영약·기름 및 G/J/F/O 정적 환경을 폐기/전수 재수집하지 않는다. 실제 선택 아이템/콘텐츠 변경은 영향 범위만 갱신, 시즌·확장팩 변경은 환경 재평가. 기존 `v046/v258/v212/v216` 경로를 재사용하여 v212가 봉인 gear/tier/budget SHA와 런타임-only 변경을 분리 표시하고 v216 영수증에 연결. SimC 새 바이너리는 DPS 캐시를 분리. 정적 SHA 동일은 동일시즌 인증이나 T1 READY 보증이 아니다. 후속 SHA CI 별도 확인, main/공식 승격 불변.
 >
 
