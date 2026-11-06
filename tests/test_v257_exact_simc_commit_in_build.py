@@ -121,13 +121,20 @@ class ExactPin(unittest.TestCase):
         self.assertEqual(self.urls,[])
         self.assertFalse(got["binary_attested"])
 
-    def test_missing_gear_or_tier_prevents_http(self):
+    def test_missing_gear_or_tier_still_resolves_explicit_source_hint_once(self):
+        # P3-FS source-only exact commit identity is independent of gear/tier.
+        # It does NOT approve a representative profile or attest a binary.
         a=self.go(gear={"candidate_path":None})
         b=self.go(tier={"candidate_path":None})
-        self.assertEqual(a["status"],"SIMC_SOURCE_COMMIT_NOT_YET_RESOLVABLE_PENDING")
-        self.assertEqual(b["status"],"SIMC_SOURCE_COMMIT_NOT_YET_RESOLVABLE_PENDING")
-        self.assertEqual(self.urls,[])
-        self.assertFalse(list(self.root.glob("source/v257_exact_simc_commit_*.json")))
+        self.assertEqual(a["status"],"SIMC_SOURCE_COMMIT_EXACT_PIN_CANDIDATE")
+        self.assertEqual(b["status"],"SIMC_SOURCE_COMMIT_EXACT_PIN_CANDIDATE")
+        self.assertEqual(a["network_calls_by_stage"],1)
+        self.assertEqual(b["network_calls_by_stage"],0)
+        self.assertFalse(a["binary_attested"])
+        self.assertFalse(b["season_verified"])
+        self.assertEqual(len(self.urls),1)
+        self.assertEqual(len(list(self.root.glob(
+            "source/v257_exact_simc_commit_*.json"))),1)
 
     def test_revision_switch_preserves_previous_sealed_source(self):
         first=self.go()

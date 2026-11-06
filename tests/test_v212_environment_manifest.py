@@ -1110,6 +1110,19 @@ class EnvironmentManifestTests(unittest.TestCase):
                          p.sha(p.canonical({k:v for k,v in first.items()
                              if k!="manifest_sha256"}).encode("utf8")))
 
+    def test_changed_season_budget_source_cannot_be_static_reuse_candidate(self):
+        import copy
+        previous=self.compile()
+        graph=copy.deepcopy(previous["dependency_graph"])
+        before=graph["fingerprints"]["v191_budget_input"]
+        graph["fingerprints"]["v191_budget_input"]=(
+            "e"*64 if before!="e"*64 else "f"*64)
+        changed=p.compare_dependency_graphs(previous,graph)
+        self.assertFalse(changed["season_static_source_unchanged_candidate"])
+        self.assertFalse(changed["simc_runtime_only_change"])
+        self.assertIn("v191_budget_input",changed["changed_inputs"])
+        self.assertIn("v098_budget_plan",changed["invalidated_components"])
+
     def test_v216_normal_build_reuses_static_source_with_new_simc_runtime(self):
         import copy
         user={
