@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FY 코드·회귀 영수증:** 최종 제품 코드 `df3a1914` 이전 설치 재사용 및 동일 빌드 변경 시 stale cache 차단, [focused #42146257105](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42146257105) 306 PASS/2 SKIP·DEV_LEDGER_PASS, [v212 #42146257075](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42146257075) Ubuntu/Windows 각 450 PASS/4 SKIP, [v113 #42146257052](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42146257052) 양 OS 각 222 PASS, [v182 UI #42146257061](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42146257061) 양 OS SUCCESS. **기존 실제 검증 완료 설치 데이터는 아직 없으므로 T1 LIVE 미검증**; 오프라인 합성 설치 테스트로 정상 UI·원본 검증·선택적 갱신 계약만 통과.
+>
+
 > **P3-FY UI 연결 보강 (실 CI 대기):** 시즌 환경 화면에 기존 검증 설치 재사용 기본값 및 새 시즌·확장팩·아이템 콘텐츠 변경의 명시 갱신 선택을 노출. 재사용된 v217 설치 원본 빌드/공식 G/J/F/O/B/T와 신규 네트워크·Native 0회를 표시하되 최신 서버 시즌 자동 재인증 여부는 별도로 명시. 새 소스와 v212 READY는 종전처럼 실제 검증에 종속된다.
 >
 
