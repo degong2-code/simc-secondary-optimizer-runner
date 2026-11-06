@@ -57,6 +57,19 @@ class ExistingNativeCaseArchive(unittest.TestCase):
         self.case(changed=True)
         with self.assertRaisesRegex(ValueError,"P3_GJ_NATIVE_FILE_SHA_MISMATCH"):
             probe.archive_existing_native_attempts(self.root,self.dest)
+        self.assertFalse(self.dest.exists())
+        self.assertFalse(self.dest.with_name(self.dest.name+".pending").exists())
+
+    def test_incomplete_attempt_receipt_is_preserved_as_incomplete(self):
+        folder=self.root/"stage"/"source"/("v278_active_"+"a"*32)
+        folder.mkdir(parents=True)
+        (folder/"input.simc").write_bytes(b"preexisting attempted input")
+        report=probe.archive_existing_native_attempts(self.root,self.dest)
+        self.assertEqual(report["case_count"],1)
+        self.assertEqual(report["new_native_calls"],0)
+        with zipfile.ZipFile(self.dest) as archive:
+            audit=json.loads(archive.read("native_evidence_inventory.json"))
+        self.assertEqual(audit["cases"][0]["receipt_status"],"INCOMPLETE")
 
     def test_no_native_means_no_archive_or_new_calls(self):
         result=probe.archive_existing_native_attempts(self.root,self.dest)
@@ -68,6 +81,8 @@ class ExistingNativeCaseArchive(unittest.TestCase):
         with patch.object(probe,"MAX_NATIVE_FILE_BYTES",1):
             with self.assertRaisesRegex(ValueError,"P3_GJ_NATIVE_FILE_UNSAFE"):
                 probe.archive_existing_native_attempts(self.root,self.dest)
+        self.assertFalse(self.dest.exists())
+        self.assertFalse(self.dest.with_name(self.dest.name+".pending").exists())
 
 
 if __name__=="__main__":

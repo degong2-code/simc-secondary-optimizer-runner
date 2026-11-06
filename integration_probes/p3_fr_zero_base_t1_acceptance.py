@@ -37,6 +37,23 @@ NATIVE_CASE_PREFIXES=("v277_native_G_","v278_baseline_","v278_active_")
 NATIVE_CASE_FILES=("receipt.json","input.simc","native.json","simc.log")
 
 
+
+@contextmanager
+def atomic_native_audit_zip(destination):
+    """Failed verification never leaves an uploadable partial ZIP."""
+    pending=destination.with_name(destination.name+".pending")
+    if pending.exists() or pending.is_symlink():
+        raise ValueError("P3_GJ_NATIVE_ARCHIVE_PENDING_EXISTS")
+    try:
+        with zipfile.ZipFile(pending,"w",compression=zipfile.ZIP_DEFLATED,
+                             compresslevel=6) as output:
+            yield output
+        pending.replace(destination)
+    finally:
+        if pending.exists() or pending.is_symlink():
+            pending.unlink()
+
+
 def archive_existing_native_attempts(root, destination):
     """Retain exact v277/v278 case bytes for later AUDIT, never zero-base input.
 
@@ -66,8 +83,7 @@ def archive_existing_native_attempts(root, destination):
     inventory=[]
     total=0
     count=0
-    with zipfile.ZipFile(destination,"w",compression=zipfile.ZIP_DEFLATED,
-                         compresslevel=6) as archive:
+    with atomic_native_audit_zip(destination) as archive:
         for case in sorted(cases):
             receipt_file=case/"receipt.json"
             receipt=None
