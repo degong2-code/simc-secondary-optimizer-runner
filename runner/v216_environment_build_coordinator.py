@@ -2831,6 +2831,11 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
             credentials=credentials,transport=discovery_transport)
     except discovery_stage.DiscoveryBlocked as exc:
         raise EnvironmentBuildBlocked(str(exc).split(":",1)[0]) from exc
+    except TimeoutError as exc:
+        # Retain the first failed source owner without leaking credentials.
+        # Existing v155/v217 receipts and data remain untouched.
+        raise EnvironmentBuildBlocked(
+            "V216_AUTHENTICATED_SEASON_DISCOVERY_TIMEOUT") from exc
     output_dir=stage_root/"wago"
     need(not output_dir.is_symlink(),
          "V216_FRESH_SOURCE_OUTPUT_SYMLINK_BLOCKED")
@@ -2884,6 +2889,11 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
     except stage_engine.StageExecutionBlocked as exc:
         raise EnvironmentBuildBlocked(
             "V216_FRESH_WAGO_STAGE_BLOCKED:"+str(exc)) from exc
+    except TimeoutError as exc:
+        # No second download or changed v161/v217 fingerprint: next receipt
+        # can distinguish Wago source transport from authenticated discovery.
+        raise EnvironmentBuildBlocked(
+            "V216_FRESH_WAGO_SOURCE_TIMEOUT") from exc
     # Cross-check the original downloader's per-table SHA with the hashes
     # actually sealed by v217. No extra full CSV read.
     receipts=stage_root/".stage_receipts"/"fresh-wago-db2.json"

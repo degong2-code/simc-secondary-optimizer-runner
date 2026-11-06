@@ -307,6 +307,33 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             v216.collect_wago_new_season_source(**args)
         self.assertFalse(args["sessions_root"].exists())
 
+
+    def test_p3_ge_live_source_read_timeout_preserves_first_owner_boundary(self):
+        # No network/Native, no invented season data. A failed external read
+        # must preserve its first owner in the existing T1 error receipt.
+        args={"sessions_root":self.root/"timeout_phase",
+              "expected_game_build":"12.2.0.99999"}
+        with mock.patch.object(v216.discovery_stage,"collect",
+                               side_effect=TimeoutError("secret endpoint")):
+            with self.assertRaisesRegex(
+                v216.EnvironmentBuildBlocked,
+                "^V216_AUTHENTICATED_SEASON_DISCOVERY_TIMEOUT$"):
+                v216.collect_wago_new_season_source(**args)
+        synthetic={"status":"AUTHENTICATED_SEASON_CREDENTIALS_MISSING",
+                   "season_join_ready":False,"network_calls_by_stage":0}
+        with mock.patch.object(v216.discovery_stage,"collect",
+                               return_value=synthetic):
+            with mock.patch.object(v216.stage_engine,"execute_stage",
+                                   side_effect=TimeoutError("long csv read")):
+                with self.assertRaisesRegex(
+                    v216.EnvironmentBuildBlocked,
+                    "^V216_FRESH_WAGO_SOURCE_TIMEOUT$"):
+                    v216.collect_wago_new_season_source(**args)
+        # No unconditional cleanup/purge of same-build or previous receipts.
+        self.assertFalse((args["sessions_root"]/"_fresh_season_sources"/
+                          "wago_12.2.0.99999"/".stage_receipts"/
+                          "fresh-wago-db2.json").exists())
+
     def test_optional_character_level_is_not_resolved_from_season_sources(self):
         # Source-only actual collector must not block on expansion cap.
         # User level is not a normal control; SimC's compiled MAX_LEVEL is.
