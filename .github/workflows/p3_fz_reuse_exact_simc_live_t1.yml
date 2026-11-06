@@ -4,6 +4,15 @@
 name: P3-FZ reuse exact 70783 CLI for one real zero-history T1 (one-shot)
 on:
   workflow_dispatch:
+    inputs:
+      exact_flask_item_id:
+        description: "Optional same-build physical highest-quality flask ItemID; original v281 verifies it"
+        required: false
+        type: string
+      existing_special_gem_id:
+        description: "Optional already-selected gem ItemID; never probes gem effect"
+        required: false
+        type: string
 permissions:
   contents: read
   actions: read
@@ -16,6 +25,8 @@ jobs:
     timeout-minutes: 23
     env:
       PYTHONPATH: runner:.
+      P3_T1_EXACT_FLASK_ITEM_ID: ${{ inputs.exact_flask_item_id }}
+      P3_T1_EXISTING_SPECIAL_GEM_ID: ${{ inputs.existing_special_gem_id }}
       SIMC_PINNED_SOURCE_COMMIT: c20e2ad52e4c33711f74272309a5748125175fe8
       SIMC_PINNED_GAME_BUILD: 12.1.5.70783
       SIMC_PINNED_BINARY_SHA256: 980ed4640cecc3ed78b34ed0dc0363dbff2ed7d703174e9cc01f09d18570d36b
@@ -53,7 +64,7 @@ jobs:
           chmod +x .p3-fz-tools/simc
           echo "SIMC_CLI_WRAPPER=$GITHUB_WORKSPACE/.p3-fz-tools/simc" >> "$GITHUB_ENV"
           echo "P3_FZ_EXISTING_BINARY_SHA_VERIFIED"
-      - name: Original v216 current-Retail zero-history Build, bounded one shot
+      - name: Original v216 current-Retail zero-history Build, optional exact F single item
         shell: bash
         timeout-minutes: 19
         env:

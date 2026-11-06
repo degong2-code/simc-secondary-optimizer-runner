@@ -214,6 +214,57 @@ def summarize_existing_f_and_j(progress, compiled, *, special_gem_id):
     }
 
 
+
+def optional_exact_item_id(environment, name):
+    """Internal T1 diagnostic selection only; numeric rating is NEVER input."""
+    raw=environment.get(name,"")
+    if raw is None or raw=="":
+        return None
+    if type(raw) is not str or re.fullmatch(r"[1-9][0-9]{0,8}",raw) is None:
+        raise ValueError("P3_GM_EXACT_PHYSICAL_ITEM_ID_INVALID")
+    return int(raw)
+
+
+def selected_t1_source_inputs(*, exact_flask_item_id, existing_special_gem_id):
+    """Delegate selected physical IDs to the original v281/v271 owners."""
+    result={}
+    if exact_flask_item_id is not None:
+        result["selected_budget_items"]={
+            "flask_item_id":exact_flask_item_id,
+            "oil_item_ids_by_hand":{}}
+    if existing_special_gem_id is not None:
+        result["source_selected_gem_roles"]={
+            "special_gem_id":existing_special_gem_id,
+            "ordinary_gem_ids":None}
+    return result
+
+
+def original_verified_F_only_uninstalled(compilation, selected_item_id):
+    """Expose a source-verified F number, never product READY or full GJFO."""
+    if selected_item_id is None or type(compilation) is not dict:
+        return None
+    owners=compilation.get(
+        "original_J_F_verified_components_not_full_environment") or {}
+    item=owners.get("F") if type(owners) is dict else None
+    if type(item) is not dict:
+        return None
+    if (item.get("selected_flask_item_id")!=selected_item_id
+            or item.get("source_verification")!="EXACT_NATIVE"
+            or type(item.get("rating")) is not int
+            or item["rating"]<=0
+            or type(item.get("native_pair_receipt_sha256")) is not list
+            or len(item["native_pair_receipt_sha256"])!=2):
+        raise ValueError("P3_GM_ORIGINAL_F_SOURCE_OWNER_IDENTITY_DRIFT")
+    return {"status":"ORIGINAL_SOURCE_VERIFIED_F_NOT_INSTALLED",
+            "selected_physical_item_id":selected_item_id,
+            "F_rating":item["rating"],
+            "source_sha256":item.get("source_sha256"),
+            "native_pair_receipt_sha256":
+                list(item["native_pair_receipt_sha256"]),
+            "official_environment_F":None,
+            "environment_ready":False,"new_native_calls":0}
+
+
 def verified_pinned_cli_source(*, binary_path, live_game_build, environment):
     """Check existing P3-FW executable before zero-history source/Native.
 
@@ -269,6 +320,11 @@ def main():
         "simc_native_opt_in":False,
         "prerequisite_status":"NOT_CHECKED"}
     try:
+        exact_f=optional_exact_item_id(os.environ,"P3_T1_EXACT_FLASK_ITEM_ID")
+        special=optional_exact_item_id(os.environ,"P3_T1_EXISTING_SPECIAL_GEM_ID")
+        rec["user_selected_flask_id"]=exact_f
+        rec["user_selected_gem_ids"]=1 if special is not None else 0
+        rec["selected_f_only_native_mode"]=exact_f is not None
         live=retail.discover(region="KR")
         rec["live_retail_version"]=live
         # These four existing v242 source credentials are required by the
@@ -336,7 +392,11 @@ def main():
                 "auto_native_G_requested":candidate is not None,
                 "auto_native_F_requested":candidate is not None,
                 "auto_native_O_requested":False,
-                "auto_select_observed_F_no_oil":candidate is not None,
+                "auto_select_observed_F_no_oil":(
+                    candidate is not None and exact_f is None),
+                **selected_t1_source_inputs(
+                    exact_flask_item_id=exact_f,
+                    existing_special_gem_id=special),
             }
             result=engine.build_environment(
                 sessions_root=root,session_folder=None,user=None,
@@ -388,7 +448,9 @@ def main():
                 "source_compilation_status":compiled.get("status"),
                 "source_compilation_missing":compiled.get("missing",[]),
                 "F_J_existing_source_diagnostics":summarize_existing_f_and_j(
-                    progress,compiled,special_gem_id=None),
+                    progress,compiled,special_gem_id=special),
+                "original_source_verified_F_uninstalled":
+                    original_verified_F_only_uninstalled(compiled,exact_f),
                 "zero_history_requires":progress.get("requires",[]),
                 "current_build_source_identity":(
                     result.get("expected_game_build")==live["game_build"]),
@@ -434,7 +496,9 @@ def main():
                 "current_build_source_identity",
                 "live_retail_version","source_stage_status",
                 "source_compilation_missing","zero_history_requires",
-                "simc_native_calls_reported","native_evidence_archive","environment_ready",
+                "simc_native_calls_reported","native_evidence_archive",
+                "selected_f_only_native_mode",
+                "original_source_verified_F_uninstalled","environment_ready",
                 "environment_installed")},ensure_ascii=False,default=str),
             flush=True)
     return 0 if rec["status"]=="ZERO_BASE_T1_PASS" else 2
