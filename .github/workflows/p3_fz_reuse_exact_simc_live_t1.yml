@@ -9,6 +9,7 @@ on:
         description: "Optional same-build physical highest-quality flask ItemID; original v281 verifies it"
         required: false
         type: string
+        default: "241324"
       existing_special_gem_id:
         description: "Optional already-selected gem ItemID; never probes gem effect"
         required: false

@@ -13,6 +13,24 @@ class TargetedFlaskT1Inputs(unittest.TestCase):
             exact_flask_item_id=None,existing_special_gem_id=None),{})
         self.assertIsNone(p.original_verified_F_only_uninstalled({},None))
 
+    def test_diagnostic_default_item_not_a_hardcoded_F_rating(self):
+        # Manual T1 defaults to a public-source current-season candidate.
+        # Original v281 must still establish ItemID/token/quality and
+        # v278 must still measure any rating; this is never production F.
+        workflow=(pathlib.Path(__file__).resolve().parents[1]/
+                  ".github/workflows/p3_fz_reuse_exact_simc_live_t1.yml"
+                  ).read_text(encoding="utf8")
+        self.assertIn('default: "241324"',workflow)
+        self.assertIn("workflow_dispatch:",workflow)
+        self.assertNotIn("\\n  push:",workflow)
+        selected=p.optional_exact_item_id(
+            {"P3_T1_EXACT_FLASK_ITEM_ID":"241324"},
+            "P3_T1_EXACT_FLASK_ITEM_ID")
+        inputs=p.selected_t1_source_inputs(
+            exact_flask_item_id=selected,existing_special_gem_id=None)
+        self.assertEqual(inputs["selected_budget_items"]["flask_item_id"],241324)
+        self.assertFalse("F_rating" in inputs)
+
     def test_selected_exact_F_is_not_rating_or_unverified_admission(self):
         f=p.optional_exact_item_id({"EXACT":"241326"},"EXACT")
         self.assertEqual(f,241326)
