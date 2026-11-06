@@ -184,7 +184,8 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
         provider_by_id={
             x["item_id"]:x for x in (
                 verified["items"]+
-                verified.get("internal_conditional_mplus_plain_candidates",[]))
+                verified.get("internal_conditional_mplus_plain_candidates",[])+
+                verified.get("internal_source_only_plain_neck_candidates",[]))
             if x["category"]=="plain_representative_candidate"
             and x.get("source_kinds")
         }
@@ -204,6 +205,14 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
         "simc_class_mask_rejected":0,
         "simc_item_set_rejected":0,
         "simc_plain_neck_accepted":0,
+        "upstream_neck_total":sum(
+            verified.get("source_neck_role_scope_counts",{}).values()
+            ) if season_ids is not None else 0,
+        "upstream_plain_conditional":sum(
+            v for k,v in verified.get(
+                "source_neck_role_scope_counts",{}).items()
+            if k=="plain_representative_candidate:CONDITIONAL_SEASON_NOT_ESTABLISHED"
+            ) if season_ids is not None else 0,
     }
     raw=seed.bounded_read(Path(seed_directory)/"item_data.inc",
                           seed.MAX_ITEM_FILE)
@@ -320,6 +329,10 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
             provider_by_id.get(r["item_id"]),season_display)
         for r in options}
     def source_rank(iid):
+        # A representative G-only physical neck is never promoted to an
+        # obtainable season item. It is the last eligible source option.
+        if provider_by_id.get(iid,{}).get("internal_generic_G_only") is True:
+            return 5
         e=evidence_by_id[iid]
         if e["explicit_db2_match_no_world_state"]:return 0
         if (e["status"]=="WORLD_STATE_EXPRESSION_PENDING"

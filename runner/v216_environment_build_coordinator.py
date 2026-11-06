@@ -2508,7 +2508,8 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
                     "simc_inventory_mismatch",
                     "simc_class_or_subclass_rejected",
                     "simc_class_mask_rejected","simc_item_set_rejected",
-                    "simc_plain_neck_accepted"}
+                    "simc_plain_neck_accepted","upstream_neck_total",
+                    "upstream_plain_conditional"}
                 if (type(observed) is dict and set(observed)==fields and
                     all(type(v) is int and 0<=v<=100000 for v in observed.values())):
                     coverage=observed
