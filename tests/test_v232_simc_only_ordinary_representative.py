@@ -128,7 +128,7 @@ class SourceOnlyRepresentativeTests(unittest.TestCase):
             "item_set_id":0}
             for iid,inv,kind,sub in (
                 (9020,5,4,4),(9021,6,4,4),(9022,8,4,4),
-                (9024,16,4,0),(9012,11,4,0),(9025,11,4,0),
+                (9011,9,4,4),(9024,16,4,0),(9012,11,4,0),(9025,11,4,0),
                 (9010,17,2,8))]
         season={"schema":provider.SCHEMA,
             "status":"CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
