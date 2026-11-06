@@ -96,7 +96,10 @@ class V251PhysicalTierCompiler(unittest.TestCase):
                 "bytes":len(content)}
         (self.wago/"receipt.json").write_text(json.dumps({
             "build":BUILD,"locale":"enUS",
-            "tables":self.verified}),encoding="utf8")
+            "tables":{name:{**record,
+                "source_url":"https://wago.tools/db2/"+name+"/csv?build="+
+                    BUILD+"&locale=enUS"}
+                for name,record in self.verified.items()}}),encoding="utf8")
 
     def collect(self):
         return stage.collect(
@@ -170,6 +173,27 @@ class V251PhysicalTierCompiler(unittest.TestCase):
         self.assertNotIn("TIER_V168",result["missing"])
         self.assertIn("GEAR_V167",result["missing"])
         self.assertFalse(result["environment_ready"])
+
+    def test_v161_url_metadata_does_not_break_real_v217_sha_and_size_reuse(self):
+        # The mock Wago v161 record has a source_url, while original v217
+        # verifies only bytes+sha. Live source reuse must accept that exact
+        # original contract, without rehashing large CSV bytes.
+        self.assertEqual(self.collect()["status"],stage.CANDIDATE_STATUS)
+        receipt_path=self.wago/"receipt.json"
+        receipt=json.loads(receipt_path.read_text("utf8"))
+        receipt["tables"]["Item"]["sha256"]="0"*64
+        receipt_path.write_text(json.dumps(receipt),encoding="utf8")
+        bad=self.collect()
+        # Already sealed v217 candidate may reuse unchanged results even
+        # if external receipt is edited afterward. Require clean stage for
+        # testing the underlying physical_roster source identity directly.
+        with self.assertRaisesRegex(
+            stage.TierCompilerSourceBlocked,
+            "V276_WAGO_ALREADY_SEALED_SOURCE_IDENTITY_REQUIRED"):
+            stage.physical_roster(
+                physical=self.physical,matched=self.exact,
+                selected=self.selected,build=BUILD,wago_folder=self.wago,
+                verified_wago_tables=self.verified)
 
     def test_sparse_wrong_set_or_simc_drift_retains_pending_not_ready(self):
         self._write_db2(changed=("ItemSet",999999))

@@ -127,10 +127,19 @@ def physical_roster(*,physical,matched,selected,build,wago_folder,
     need(receipt_path.is_file() and not receipt_path.is_symlink(),
          "V276_WAGO_SNAPSHOT_RECEIPT_MISSING")
     receipt=json.loads(receipt_path.read_text("utf8"))
+    # The original v161 per-table record also holds a source_url.
+    # The original v217 stage summary carries only SHA+size. Equality of
+    # full dicts therefore rejected genuine, previously sealed LIVE Wago
+    # sources even when both identities were exactly the same bytes.
+    # Use the already verified SHA+size pair; no extra HTTP/hash/read pass.
     need(receipt.get("build")==build and receipt.get("locale")=="enUS" and
          type(verified_wago_tables) is dict and
-         all(receipt.get("tables",{}).get(t)==
-             verified_wago_tables.get(t)
+         all(type(receipt.get("tables",{}).get(t)) is dict and
+             type(verified_wago_tables.get(t)) is dict and
+             receipt["tables"][t].get("sha256")==
+                 verified_wago_tables[t].get("sha256") and
+             receipt["tables"][t].get("bytes")==
+                 verified_wago_tables[t].get("bytes")
              for t in ("Item","ItemSparse")),
          "V276_WAGO_ALREADY_SEALED_SOURCE_IDENTITY_REQUIRED")
     sparse={}

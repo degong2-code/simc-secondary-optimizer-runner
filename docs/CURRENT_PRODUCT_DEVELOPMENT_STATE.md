@@ -1,3 +1,6 @@
+> **2026-11-06 P3-GA 후속 v276 교정:** [실 재시험 #42150062233](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42150062233)에서 시즌 조인·일반 장비 후보·65개 티어 후보·기존 exact tier 선택 성공, Native0·READY=false. 다음 앞쪽 장애물 `v276`은 v161 레코드의 `source_url` 포함과 기존 v217 영수증의 `bytes/sha256`만 포함하는 구조 차이로 원본을 잘못 거절. 이미 인증된 동일 2개 테이블의 bytes/sha만 비교하도록 CONNECT 교정, 추가 Wago/Native 없음. 뒤이어 v232 공통 슬롯 후보, v189 SimC version 식은 각각 별도 미완료; 신규 CI 후 PASS 확인.
+>
+
 > **2026-11-06 P3-GA 실 원본 확인:** [실 Wago 70783 조사 #42149517679](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42149517679): 동일 레이드 드롭 장비 105개는 ExpansionID **11**, 비장비 드롭 26개 ID 11 + 13개 ID -3; Item/ItemSparse 누락 0. 기존 `v163` 전체 드롭의 단일 ExpansionID 제약이 새 실 T1의 첫 실제 차단 근거. 기존 장비 ClassID 2/4만 대표 확장팩 정체성으로 사용하는 최소 교정 적용, 장비 ID가 복수 확장팩이면 차단 유지. **새 실제 T1과 G/J/F/O 및 READY는 미실증.** [노트](development/notes/2026-11-06_p3-ga-raid-loot-expansion-class-scope.md).
 >
 
