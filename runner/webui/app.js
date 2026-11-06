@@ -631,6 +631,18 @@ function showSeasonEnvironmentBuild(data) {
   const unique=[...new Set(needs)];
   const node=$("season-build-stage");
   const ready=scope.environment_ready===true&&scope.environment_installed===true;
+  if(data?.status==="VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED"&&ready){
+    node.textContent="기존 검증 시즌 환경 재사용 완료 · 저장된 원본 빌드 "+
+      data.installed_source_game_build+
+      " · G="+data.G+" J="+data.J+" F="+data.F+
+      " / B="+data.B+" T="+data.T+
+      " · 신규 수집/Native 0회 · 최신 서버 시즌 재인증 없음"+
+      " · SimC DPS 캐시는 사용한 실행 바이너리별 분리";
+    const details=$("season-build-pending");
+    $("season-build-missing").replaceChildren();
+    details.hidden=true;
+    return;
+  }
   const numeric=step.selected_auto_v222_numeric_preview_unadmitted?.calculation;
   const autoFO=source.automatic_F_O_measurement_candidates_unadmitted;
   const measuredF=source.automatic_F_native_measurements_unadmitted;
@@ -681,6 +693,10 @@ async function buildSeasonEnvironment() {
   if(supplied_build&&!/^\d+(?:\.\d+){3}$/.test(supplied_build))
     throw Error("게임 빌드는 네 개의 숫자 그룹 형식이어야 합니다.");
   const game_build=supplied_build||null;
+  const refresh_reason=field("season-refresh-reason")||null;
+  if(refresh_reason!==null&&!["season_change","expansion_change",
+      "item_content_change"].includes(refresh_reason))
+    throw Error("지원하지 않는 시즌 갱신 조건입니다.");
   const target_ilevel=valueInt("season-target-ilevel");
   if(target_ilevel<1||target_ilevel>1000)
     throw Error("목표 ilvl은 1~1000 범위여야 합니다.");
@@ -718,12 +734,15 @@ async function buildSeasonEnvironment() {
   const revision=field("revision");
   if(revision&&!/^(?:[a-f0-9]{7,12}|[a-f0-9]{40})$/.test(revision))
     throw Error("SimC revision은 7~12자리 또는 40자리 소문자 16진수여야 합니다.");
-  if(!window.confirm("새 시즌 원본 수집·검증을 시작할까요? 외부 네트워크를 사용할 수 있습니다."+
+  if(!window.confirm((refresh_reason?
+      "선택한 시즌/콘텐츠 갱신 요청을 시작할까요? 기존 봉인 자료는 보존됩니다. ":
+      "기존 검증 시즌 환경을 우선 재사용하고, 없으면 원본 구축을 시작할까요? ")+
+      "필요 시 외부 네트워크를 사용할 수 있습니다."+
       (nativeRequested?" 기존 G Native 최대 1회 실행될 수 있습니다.":" Native는 기본적으로 실행하지 않습니다.")+
       ((auto_native_F_requested||auto_native_O_requested)?
        " 선택한 F/O 후보의 정적 SimC Native를 요청당 합계 신규 최대 8회 실행할 수 있으며, 기존 결과는 캐시를 재사용합니다. 품질·무기 적합성 승인과 별도입니다.":"")))
     return;
-  $("season-build-stage").textContent="동일 환경 엔진에서 원본 수집·봉인 및 기존 증거 재사용 중…";
+  $("season-build-stage").textContent="기존 설치 영수증 확인 · 필요 시 동일 환경 엔진으로 원본 수집·검증 중…";
   try {
     const report=await api("/api/v1/environment/season-build",
       {method:"POST",payload:{game_build,target_ilevel,native_G_binary,
@@ -731,7 +750,7 @@ async function buildSeasonEnvironment() {
                               auto_native_F_requested,auto_native_O_requested,
                               auto_select_observed_F_no_oil,
                               selected_flask_item_id,
-                              existing_special_gem_id,
+                              existing_special_gem_id,refresh_reason,
                               simc_revision_hint:revision||null}});
     showSeasonEnvironmentBuild(report);
     setNotice("시즌 환경 구축 단계 조회 완료 · READY 여부는 별도 검증 · 개별 DPS 최적화는 시작되지 않았습니다.");

@@ -92,10 +92,14 @@ class RealHTTPPageOffline(unittest.TestCase):
                       "season-native-g","season-native-f","season-native-o",
                       "season-build-btn",
                       "season-build-stage","season-build-missing",
+                      "season-refresh-reason",
                       "season-existing-special-gem-id",
                       "season-selected-flask-id"):
             self.assertIn('id="'+ident+'"',page)
         self.assertIn('"/api/v1/environment/season-build"',js)
+        self.assertIn("const refresh_reason=field",js)
+        self.assertIn("VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED",js)
+        self.assertIn("기존 검증 시즌 환경 재사용",page)
         self.assertIn("BLIZZARD_PUBLIC_RETAIL_KR",js)
         self.assertIn("현재 Retail(KR) 자동 조회",page)
         self.assertIn("const game_build=supplied_build||null",js)

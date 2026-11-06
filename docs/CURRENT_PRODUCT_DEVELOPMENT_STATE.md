@@ -1,3 +1,6 @@
+> **P3-FY UI 연결 보강 (실 CI 대기):** 시즌 환경 화면에 기존 검증 설치 재사용 기본값 및 새 시즌·확장팩·아이템 콘텐츠 변경의 명시 갱신 선택을 노출. 재사용된 v217 설치 원본 빌드/공식 G/J/F/O/B/T와 신규 네트워크·Native 0회를 표시하되 최신 서버 시즌 자동 재인증 여부는 별도로 명시. 새 소스와 v212 READY는 종전처럼 실제 검증에 종속된다.
+>
+
 > **2026-11-06 P3-FY (실 CI 대기):** 기존 v217 봉인 v212 설치 매니페스트가 존재하면 웹 기본 Environment Build에서 원본 v213 SHA·v212 staged/installed 및 v217 영수증을 읽기 전용 검증한 후 기존 시즌 환경을 재사용한다. 명시 `refresh_reason`(season/expansion/item_content)이나 선택 아이템/Native 요청 시 자동 재사용을 건너뛰고 최초 엔진을 실행한다. 검증된 이전 설치가 전제이며 최신 서버 시즌 재인증 또는 최초 READY/T1 성공이 아니다. [작업노트](development/notes/2026-11-06_p3-fy-installed-season-v217-readonly-reuse.md).
 >
 
