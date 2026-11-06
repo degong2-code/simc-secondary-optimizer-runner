@@ -164,6 +164,56 @@ def zero_base_workspace_with_native_audit(receipt):
                     "portable_cache":False,"new_native_calls":0}
 
 
+
+def summarize_existing_f_and_j(progress, compiled, *, special_gem_id):
+    """Diagnose existing v216 source rows, no item discovery or Native."""
+    progress=progress if type(progress) is dict else {}
+    compiled=compiled if type(compiled) is dict else {}
+    row=compiled.get("automatic_F_native_measurements_unadmitted")
+    if type(row) is not dict:
+        row=progress.get("automatic_F_native_measurements_unadmitted")
+    if type(row) is not dict:
+        row={}
+    per_item=row.get("per_item")
+    if type(per_item) is not list:
+        per_item=[]
+    if len(per_item)>8:
+        raise ValueError("P3_GK_F_MEASUREMENT_RECEIPT_COUNT")
+    summary=[]
+    for item in per_item:
+        if type(item) is not dict:
+            raise ValueError("P3_GK_F_MEASUREMENT_ROW")
+        summary.append({
+            k:item.get(k) for k in ("physical_item_id","status",
+                                    "new_native_calls","cache_hit")})
+    source=compiled.get("automatic_F_O_measurement_candidates_unadmitted")
+    work=source.get("flask") if type(source) is dict else None
+    return {
+        "F":{
+            "status":row.get("status"),
+            "attempted":row.get("attempted"),
+            "remaining":row.get("remaining"),
+            "new_native_calls":row.get("new_native_calls"),
+            "source_candidate_count":len(work) if type(work) is list else None,
+            "items":summary,
+            "next_batch_pending":"AUTO_F_NEXT_MEASUREMENT_BATCH_PENDING"
+                in progress.get("requires",[]),
+            "source_only_not_official_F":True,
+        },
+        "J":{
+            "existing_special_gem_id_supplied":(
+                type(special_gem_id) is int and special_gem_id>0),
+            "physical_layout_observed":bool(
+                progress.get("default_intrinsic_gem_layout_unadmitted")),
+            "missing_required_existing_special_gem_id":(
+                special_gem_id is None),
+            "missing_special_id_is_test_input_not_season_absence":True,
+        },
+        "native_calls":0,
+        "source_http_calls":0,
+    }
+
+
 def verified_pinned_cli_source(*, binary_path, live_game_build, environment):
     """Check existing P3-FW executable before zero-history source/Native.
 
@@ -337,6 +387,8 @@ def main():
                     (result.get("source_stage") or {}).get("status")),
                 "source_compilation_status":compiled.get("status"),
                 "source_compilation_missing":compiled.get("missing",[]),
+                "F_J_existing_source_diagnostics":summarize_existing_f_and_j(
+                    progress,compiled,special_gem_id=None),
                 "zero_history_requires":progress.get("requires",[]),
                 "current_build_source_identity":(
                     result.get("expected_game_build")==live["game_build"]),
