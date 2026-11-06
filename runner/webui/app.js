@@ -634,6 +634,9 @@ function showSeasonEnvironmentBuild(data) {
   if(data?.status==="VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED"&&ready){
     node.textContent="기존 검증 시즌 환경 재사용 완료 · 저장된 원본 빌드 "+
       data.installed_source_game_build+
+      (data.official_F_physical_source?.physical_item_id?
+        " · F 영약 ItemID "+data.official_F_physical_source.physical_item_id+
+        " (원본 SimC Native 확인)":"")+
       " · G="+data.G+" J="+data.J+" F="+data.F+
       " / B="+data.B+" T="+data.T+
       " · 신규 수집/Native 0회 · 최신 서버 시즌 재인증 없음"+

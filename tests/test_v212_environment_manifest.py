@@ -457,6 +457,56 @@ class FreshEnvironmentSourceStageTests(unittest.TestCase):
             self.assertEqual(published["official_G"],2800)
             self.assertEqual(published["official_J"],140)
             self.assertEqual(published["official_F"],170)
+            self.assertIsNone(published["official_F_physical_source"])
+            # Synthetic already-authenticated owner metadata; no new Native.
+            physical_F={**trusted_budget["components"]["F"],
+                        "source_verification":"EXACT_NATIVE",
+                        "selected_flask_item_id":501,
+                        "simc_input_token":"flask_of_audited_haste_3",
+                        "crafting_quality":3,
+                        "static_CHMV_vector":{
+                            "crit_rating":0,"haste_rating":170,
+                            "mastery_rating":0,"versatility_rating":0},
+                        "native_pair_receipt_sha256":["a"*64,"b"*64]}
+            with_F={**trusted_budget,"components":{
+                **trusted_budget["components"],"F":physical_F}}
+            published_F=p.compile_fresh_installed_environment(
+                source_catalog=catalog,source_artifact_sha256=artifact_sha,
+                staged_source_environment=staged_data,
+                trusted_budget_evidence=with_F,
+                source_ui=ui_catalog.public_options(source_path),
+                trusted_policy_A_receipts_by_id={},target_ilevel=334)
+            self.assertTrue(p.verify_fresh_installed_environment(published_F))
+            self.assertEqual(published_F["official_B"],3110)
+            self.assertEqual(published_F["official_F"],170)
+            self.assertEqual(published_F["official_F_physical_source"][
+                "physical_item_id"],501)
+            self.assertEqual(published_F["official_F_physical_source"][
+                "v278_native_pair_receipt_sha256"],["a"*64,"b"*64])
+            self.assertNotEqual(published_F["manifest_sha256"],
+                                published["manifest_sha256"])
+            corrupted={**published_F,
+                       "official_F_physical_source":{
+                           **published_F["official_F_physical_source"],
+                           "F_rating":171}}
+            with self.assertRaisesRegex(
+                    p.EnvironmentBlocked,
+                    "FRESH_INSTALL_READY_OR_BUDGET_CONTRACT_DRIFT"):
+                p.verify_fresh_installed_environment(corrupted)
+            wrong_F={**physical_F,
+                     "static_CHMV_vector":{
+                         **physical_F["static_CHMV_vector"],
+                         "haste_rating":171}}
+            with self.assertRaisesRegex(
+                    p.EnvironmentBlocked,
+                    "FRESH_INSTALL_EXACT_F_ORIGINAL_V216_SOURCE_DRIFT"):
+                p.compile_fresh_installed_environment(
+                    source_catalog=catalog,source_artifact_sha256=artifact_sha,
+                    staged_source_environment=staged_data,
+                    trusted_budget_evidence={**with_F,"components":{
+                        **with_F["components"],"F":wrong_F}},
+                    source_ui=ui_catalog.public_options(source_path),
+                    trusted_policy_A_receipts_by_id={},target_ilevel=334)
             self.assertEqual(published["official_O"],zeros)
             self.assertEqual(published["official_B"],3110)
             self.assertEqual(published["official_T"],3110)

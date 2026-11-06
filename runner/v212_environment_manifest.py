@@ -345,6 +345,70 @@ def verify_fresh_source_environment(document):
 FRESH_SEASON_INSTALLED_SCHEMA = "v212_fresh_verified_environment_installed_v1"
 
 
+
+def _selected_verified_F_source(component, official_F):
+    """Project original v216 verified F; this never authenticates effects."""
+    if "selected_flask_item_id" not in component:
+        return None
+    vector=component.get("static_CHMV_vector")
+    pair=component.get("native_pair_receipt_sha256")
+    need(component.get("source_verification")=="EXACT_NATIVE"
+         and type(component.get("selected_flask_item_id")) is int
+         and component["selected_flask_item_id"]>0
+         and type(component.get("simc_input_token")) is str
+         and re.fullmatch(r"[a-z0-9_]{1,90}",
+                          component["simc_input_token"]) is not None
+         and type(component.get("crafting_quality")) is int
+         and component["crafting_quality"]>=0
+         and type(vector) is dict and set(vector)==set(season_budget.STATS)
+         and all(type(vector[stat]) is int and vector[stat]>=0
+                 for stat in season_budget.STATS)
+         and sum(vector.values())==official_F
+         and type(pair) is list and len(pair)==2
+         and all(valid_sha(x) for x in pair)
+         and valid_sha(component.get("source_sha256")),
+         "FRESH_INSTALL_EXACT_F_ORIGINAL_V216_SOURCE_DRIFT")
+    return {"physical_item_id":component["selected_flask_item_id"],
+            "simc_input_token":component["simc_input_token"],
+            "crafting_quality":component["crafting_quality"],
+            "static_CHMV_vector":dict(vector),
+            "F_rating":official_F,
+            "original_F_source_sha256":component["source_sha256"],
+            "v278_native_pair_receipt_sha256":list(pair),
+            "source_verification":"EXACT_NATIVE",
+            "other_flask_effects_unverified_here":True,
+            "source_authentication_created_here":False}
+
+
+def _installed_F_source_consistent(document):
+    """Source projection/accounting consistency, no second evidence gate."""
+    meta=document.get("official_F_physical_source")
+    if meta is None:
+        return True
+    if type(meta) is not dict:
+        return False
+    vec=meta.get("static_CHMV_vector")
+    pair=meta.get("v278_native_pair_receipt_sha256")
+    token=meta.get("simc_input_token")
+    return (type(meta.get("physical_item_id")) is int
+            and meta["physical_item_id"]>0
+            and type(token) is str
+            and re.fullmatch(r"[a-z0-9_]{1,90}",token) is not None
+            and type(meta.get("crafting_quality")) is int
+            and meta["crafting_quality"]>=0
+            and meta.get("source_verification")=="EXACT_NATIVE"
+            and meta.get("source_authentication_created_here") is False
+            and meta.get("other_flask_effects_unverified_here") is True
+            and valid_sha(meta.get("original_F_source_sha256"))
+            and type(pair) is list and len(pair)==2
+            and all(valid_sha(x) for x in pair)
+            and type(vec) is dict and set(vec)==set(season_budget.STATS)
+            and all(type(vec[x]) is int and vec[x]>=0
+                    for x in season_budget.STATS)
+            and meta.get("F_rating")==document.get("official_F")
+            and sum(vec.values())==document.get("official_F"))
+
+
 def compile_fresh_installed_environment(*, source_catalog, source_artifact_sha256,
                                         staged_source_environment,
                                         trusted_budget_evidence, source_ui,
@@ -403,6 +467,7 @@ def compile_fresh_installed_environment(*, source_catalog, source_artifact_sha25
                for row in prepared["verified_option_inputs_unpublished"]]
     oil=budget["fixed_O"]
     components=trusted_budget_evidence["components"]
+    physical_F=_selected_verified_F_source(components["F"],budget["F"])
     payload={
         "schema":FRESH_SEASON_INSTALLED_SCHEMA,
         "status":"FRESH_SEASON_VERIFIED_ENVIRONMENT_INSTALLED_READY",
@@ -427,6 +492,7 @@ def compile_fresh_installed_environment(*, source_catalog, source_artifact_sha25
         "official_effective_G":budget["effective_G"],
         "official_J":budget["J"],
         "official_F":budget["F"],
+        "official_F_physical_source":physical_F,
         "official_O":dict(oil),
         "official_B":budget["base_B"],
         "official_T":budget["final_T"],
@@ -477,6 +543,7 @@ def verify_fresh_installed_environment(document):
          document["official_J"]>=0 and
          type(document.get("official_F")) is int and
          document["official_F"]>=0 and
+         _installed_F_source_consistent(document) and
          type(document.get("official_O")) is dict and
          set(document["official_O"])==set(season_budget.STATS) and
          all(type(i) is int and i>=0
