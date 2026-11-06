@@ -113,6 +113,32 @@ class ProductAdapterTests(unittest.TestCase):
                                     "INTERNAL_MPLUS_SOURCE_NOT_PENDING"):
             adapter.validate(c)
 
+    def test_internal_plain_neck_is_not_user_selectable(self):
+        src=source()
+        src["internal_source_only_plain_neck_candidates"]=[{
+            "item_id":200,"name":"Generic neck","slot":2,
+            "class_id":4,"subclass_id":0,"allowed_class_mask":-1,
+            "stat_modifier_codes":[5],"item_set_id":0,
+            "direct_item_effect_record":False,
+            "category":"plain_representative_candidate",
+            "selection_evidence":"CONDITIONAL_SEASON_NOT_ESTABLISHED",
+            "source_expansion_id":11,"internal_generic_G_only":True,
+            "user_selectable_candidate":False,
+            "source_kinds":["raid_journal"],
+            "source_evidence":[{"source":"raid_journal"}]}]
+        src["internal_source_only_plain_neck_count"]=1
+        row=adapter.from_v166(src)
+        self.assertEqual(row["internal_source_only_plain_neck_count"],1)
+        self.assertNotIn(200,{x["item_id"] for x in row["items"]})
+        visible=adapter.public_options(row)["choices"]
+        self.assertNotIn(200,{x["item_id"] for v in visible.values() for x in v})
+        tampered=copy.deepcopy(row)
+        tampered["internal_source_only_plain_neck_candidates"][0][
+            "ui_selectable"]=True
+        with self.assertRaisesRegex(adapter.GearBlocked,
+                                     "PRODUCT_INTERNAL_SOURCE_NECK_NOT_JUSTIFIED"):
+            adapter.validate(tampered)
+
     def test_unknown_roles_counts_and_tier_fail_closed(self):
         doc=adapter.from_v166(source())
         doc["role_counts"]["trinket"]=20
