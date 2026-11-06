@@ -114,6 +114,45 @@ class Compact(unittest.TestCase):
             "world_state_expression_id"],441)
         self.assertNotIn("name",row["source_evidence"][0])
 
+    def test_internal_same_expansion_neck_only_when_plain_source_proved(self):
+        with tempfile.TemporaryDirectory() as temp:
+            item,sparse=self.prepare(Path(temp))
+            for file in (item,sparse):
+                with file.open(newline="") as stream:
+                    rows=list(csv.DictReader(stream))
+                for row in rows:
+                    if row["ID"]=="1":
+                        row["InventoryType"]="2"
+                        if "SubclassID" in row:
+                            row["SubclassID"]="0"
+                with file.open("w",newline="") as stream:
+                    writer=csv.DictWriter(stream,fieldnames=list(rows[0]))
+                    writer.writeheader()
+                    writer.writerows(rows)
+            source=pool()
+            source["items"][0].update({
+                "inventory_type":2,"expansion_id":11,
+                "season_selection":"CONDITIONAL_SEASON_NOT_ESTABLISHED",
+                "user_selectable_candidate":False})
+            result=db.build(source,item,sparse)
+            self.assertEqual(result["current_candidate_count"],0)
+            self.assertEqual(result["internal_source_only_plain_neck_count"],1)
+            neck=result["internal_source_only_plain_neck_candidates"][0]
+            self.assertEqual(neck["item_id"],1)
+            self.assertTrue(neck["internal_generic_G_only"])
+            self.assertFalse(neck["user_selectable_candidate"])
+            source["items"][0].update({
+                "direct_item_effect_record":True,
+                "category":"special_effect_gear_candidate"})
+            effects=db.build(source,item,sparse)
+            self.assertEqual(effects["internal_source_only_plain_neck_count"],0)
+            source["items"][0].update({
+                "direct_item_effect_record":False,
+                "category":"plain_representative_candidate",
+                "expansion_id":10})
+            wrong=db.build(source,item,sparse)
+            self.assertEqual(wrong["internal_source_only_plain_neck_count"],0)
+
     def test_wrong_item_slot_blocks(self):
         with tempfile.TemporaryDirectory() as d:
             item,sparse=self.prepare(Path(d))
