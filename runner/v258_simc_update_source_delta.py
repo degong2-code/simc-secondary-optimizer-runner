@@ -96,6 +96,10 @@ def compare(*, previous_receipt, next_revision_hint, transport=None):
         "full_simc_equivalence_proven":False,
         "season_membership_verified_by_this_check":False,
         "environment_rebuild_required_by_revision_change_alone":False,
+        "default_same_season_static_action":"KEEP_VERIFIED_STATIC_ENVIRONMENT",
+        "revision_change_triggers_zero_base_collection":False,
+        "selected_item_change_proven_by_metadata_only":False,
+        "new_simc_dps_action":"USE_NEW_BINARY_AND_SEPARATE_DPS_CACHE",
     }
 
 def main(argv=None):

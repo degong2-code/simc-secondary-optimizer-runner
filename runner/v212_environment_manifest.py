@@ -1046,6 +1046,16 @@ def compare_dependency_graphs(previous_manifest, current_graph):
 
     execution_order=[node for node in topological_order
                      if node in invalidated and node in component_nodes]
+    # Sealed ordinary gear/tier/GJFO inputs are distinct from SimC execution.
+    # SHA equality is only a reuse candidate, NOT current-season admission.
+    static_keys=("v191_gear_input","v191_tier_input","v191_budget_input")
+    static_source_unchanged=(
+        previous_manifest is not None and not rules_changed and
+        all(k in old and k in current and old[k]==current[k]
+            for k in static_keys))
+    runtime_only_change=(
+        previous_manifest is not None and bool(changed) and
+        set(changed)<={"simc_binary","simc_revision"})
     return {
         "status":"INITIAL_ENVIRONMENT" if previous_manifest is None else
                  ("DEPENDENCIES_CHANGED" if changed else "UNCHANGED"),
@@ -1056,6 +1066,10 @@ def compare_dependency_graphs(previous_manifest, current_graph):
         "reusable_candidates":reusable,
         "dependency_rules_changed":rules_changed,
         "static_item_cache_preserved":same_static,
+        "season_static_source_unchanged_candidate":static_source_unchanged,
+        "season_static_source_identity_scope":"V191_GEAR_TIER_BUDGET_SHA_ONLY_NOT_SEASON_PROOF",
+        "simc_runtime_only_change":runtime_only_change,
+        "season_source_refresh_triggered_by_simc_only":False,
         "historical_sessions_preserved":True,
         "cache_mutations":0,"native_calls":0,
     }

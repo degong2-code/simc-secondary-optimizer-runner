@@ -6239,6 +6239,13 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 dependency_change.get("reusable_candidates", [])),
             "dependency_rules_changed": dependency_change.get(
                 "dependency_rules_changed", False),
+            "season_static_source_unchanged_candidate":
+                dependency_change.get("season_static_source_unchanged_candidate",False),
+            "season_static_source_identity_scope":
+                dependency_change.get("season_static_source_identity_scope"),
+            "simc_runtime_only_change":
+                dependency_change.get("simc_runtime_only_change",False),
+            "season_source_refresh_triggered_by_simc_only":False,
         },
         "cache_reuse": cache_reuse,
         "readiness": {

@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FX 최신 사용자 교정:** 동일 시즌 게임 빌드·SimC revision·전문화 밸런스 변경만으로 검증된 장비·마부·보석·영약·기름 및 G/J/F/O 정적 환경을 폐기/전수 재수집하지 않는다. 실제 선택 아이템/콘텐츠 변경은 영향 범위만 갱신, 시즌·확장팩 변경은 환경 재평가. 기존 `v046/v258/v212/v216` 경로를 재사용하여 v212가 봉인 gear/tier/budget SHA와 런타임-only 변경을 분리 표시하고 v216 영수증에 연결. SimC 새 바이너리는 DPS 캐시를 분리. 정적 SHA 동일은 동일시즌 인증이나 T1 READY 보증이 아니다. 후속 SHA CI 별도 확인, main/공식 승격 불변.
+>
+
 > **2026-11-06 P3-FV 실전 확인 완료:** [실 원본 #42138850557](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42138850557) **SUCCESS**. 최신 70783 WCL/5표 DB2에서 바뀐 실제 `v163.resolve_raid_journal_tier`는 zone 53 → Tier 505를 자동 선택(코드 ID 하드코딩 없음). 이전 `LIVE_RAID_ZONE_OR_TIER_AMBIGUOUS`는 해소됐고 진단은 5표 제한 때문에 그 다음 필요 파일 `JournalEncounterItem`에서 멈춤; 이는 전체 Wago 10표에서 원래 제공하는 파일이며 추가 수집기 요구 아님. 새 진단 출력의 레거시 eligible-count도 production 선택 함수와 일치하도록 정리하되 대형 live 반복은 생략. 집중 308 tests/2 SKIP/0 FAIL; 실제 전체 v216 READY/T1과 70783 SimC 바이너리는 미완료. 
 >
 

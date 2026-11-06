@@ -66,6 +66,11 @@ class UpdateDiff(unittest.TestCase):
         self.assertEqual(result["native_calls"],0)
         self.assertFalse(result["full_simc_equivalence_proven"])
         self.assertFalse(result["season_membership_verified_by_this_check"])
+        self.assertEqual(result["default_same_season_static_action"],
+                         "KEEP_VERIFIED_STATIC_ENVIRONMENT")
+        self.assertFalse(result["revision_change_triggers_zero_base_collection"])
+        self.assertEqual(result["new_simc_dps_action"],
+                         "USE_NEW_BINARY_AND_SEPARATE_DPS_CACHE")
 
     def test_three_file_seed_does_not_assume_item_data_is_unchanged(self):
         nxt="f"*40
@@ -96,6 +101,9 @@ class UpdateDiff(unittest.TestCase):
             "gem_data.inc"])
         self.assertFalse(result["static_environment_mutated"])
         self.assertFalse(result["environment_rebuild_required_by_revision_change_alone"])
+        self.assertFalse(result["selected_item_change_proven_by_metadata_only"])
+        self.assertEqual(result["default_same_season_static_action"],
+                         "KEEP_VERIFIED_STATIC_ENVIRONMENT")
         self.assertEqual(result["body_downloads"],0)
 
     def test_short_hint_resolution_one_call_when_same_commit(self):
