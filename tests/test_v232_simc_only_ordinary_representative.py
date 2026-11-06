@@ -226,6 +226,32 @@ class SourceOnlyRepresentativeTests(unittest.TestCase):
         self.assertTrue(preferred["generic_G_physical_conditions_verified"])
         self.assertTrue(preferred["generic_G_plain_item_effect_relation_checked"])
         self.assertFalse(preferred["generic_G_current_season_membership_required"])
+        # Equivalent exact same-build neck from original v165 plain source,
+        # not season-obtainability/UI: only the internal G roster may see it.
+        separate=copy.deepcopy(season)
+        neck=next(x for x in separate["items"] if x["item_id"]==9023)
+        separate["items"]=[x for x in separate["items"]
+                           if x["item_id"]!=9023]
+        separate["item_count"]=len(separate["items"])
+        separate["role_counts"]={
+            "plain_representative_candidate":len(separate["items"])}
+        separate["expansion_id"]=11
+        separate["internal_source_only_plain_neck_candidates"]=[{
+            **neck,"source_evidence":[{"source":"raid_journal"}],
+            "source_expansion_id":11,
+            "internal_generic_G_only":True,
+            "ui_selectable":False,"season_membership_verified":False}]
+        separate["internal_source_only_plain_neck_count"]=1
+        internal=builder.find_candidate(
+            seed_directory=self.folder,tier_candidate=self.tier,
+            target_ilevel=335,season_gear_db=separate)
+        self.assertEqual(internal["selected_G_slot_ids"]["neck"],9023)
+        self.assertFalse(internal[
+            "selected_ordinary_source_provenance"]["neck"][
+                "season_membership_authenticated"])
+        self.assertFalse(internal["environment_ready"])
+        self.assertIsNone(internal["G"])
+
         self.assertFalse(preferred["environment_ready"])
         self.assertTrue(preferred["same_season_membership_not_proven"])
         text,receipt=compiler.build(
