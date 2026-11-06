@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FT 신규 진단 (T1 결과 교정):** [작업 노트](development/notes/2026-11-06_p3-ft-current-raid-source-scope-diagnostic.md). [P3-FS 실전 T1 #42135209921](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42135209921)은 **NOT_READY**이지만, 인증정보 4개 공급·KR 12.1.5.70783·Wago v161/v217/보석 DBC SEALED·SimC digest→commit pin 성공. 실제 최초 불일치: v163 `LIVE_RAID_ZONE_OR_TIER_AMBIGUOUS`와 v229 `V229_SET_BONUS_BUILD_OR_HEADER_MISMATCH`(Docker 소스 70529, 실 빌드 70783). 공식 70783용 SimC Git 소스 `c20e2ad52e`는 존재하나 **현재 선택 Docker 바이너리와 동일 증거 아님**. 전체 T1 재반복 대신 기존 v155+4개 소형 Wago DB2 표로 0/복수 레이드 후보를 구별하는 source-only 진단을 격리 branch에 추가. 원본 이름/티어를 임의 결정하거나 Native 효과 별도 검증하지 않음. 새로운 Actions 결과는 별도 확인 전 미검증; G/J/F/O·Policy A·READY/T1 여전히 미완료.
+>
+
 > **2026-11-06 P3-FS 제로베이스 원본 준비:** [개발 기록](development/notes/2026-11-06_p3-fs-zero-base-source-input-unblock.md). P3-FR 실전 마지막 T1은 원본 봉인만 PASS, 시즌 인증·SimC revision·보석 DBC 선택 누락으로 G/J/F/O·READY 모두 PENDING. 기존 v242 4-secret 입력을 Actions에 안전 전달(없는 경우 사전 중단), 정확히 받은 SimC Docker digest와 일치하는 배포 태그의 commit prefix만 기존 v229에 전달(이 자체가 binary/시즌 인증 아님), v216의 raw gem CSV 소스를 특수 ItemID 없이 별도 요청할 수 있게 CONNECT. 대표 장비/티어/Native G/J/F/O/Policy A/v212 T1은 여전히 미완료. 신규 CI 결과는 새 SHA 실검증 후에만 확정. main·immutable·Project UI/Work OS 불변.
 >
 

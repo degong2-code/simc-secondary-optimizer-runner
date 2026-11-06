@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FT root-cause 분리:** [노트](development/notes/2026-11-06_p3-ft-current-raid-source-scope-diagnostic.md). P3-FS focused 297 PASS, 실 T1 NOT_READY. 인증/보석 raw/정확 SimC 커밋 hint 획득은 새 실전 증거로 완료, v163 현재 레이드 후보는 조건에 따라 모호, v229 chosen Docker image는 게임 70783과 다른 70529 소스. 새 시즌 항목/Native 측정은 실제 T1까지 미완료. 한번의 4개 소형 DB2 표 진단으로 오리지널 raid WCL/DB2 후보 0/복수를 구분하며 원본 인증 Gate나 full Wago 재수집을 추가하지 않음. 호환 70783 SimC 바이너리·source pin은 별도 필수; 정확하지 않은 70529 바이너리를 재사용해 PASS 표시 금지.
+>
+
 > **2026-11-06 P3-FS:** [노트](development/notes/2026-11-06_p3-fs-zero-base-source-input-unblock.md). 우선차단 P3-FR의 v242 인증 4개 필드, v229 exact Git 원본 pin, 일반보석 raw DBC 선택적 수집을 기존 원본 단계에 CONNECT. SimC revision은 기어·티어 후보와 독립적으로 Git 소스 원본을 먼저 pin 가능하게 하고, 실제 이미지 digest와 동일한 공식 태그의 7~12hex hint 외에는 추정하지 않는다. source-only pin은 게임·바이너리 일치 증거가 아니다. 인증 미설정 시 대용량 Wago 반복 없이 사전 PENDING, Secret 자체는 저장/출력 금지. 최신 T1 READY 미완료, 새 Actions 결과와 history를 구분해 기록.
 >
 

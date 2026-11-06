@@ -1,0 +1,41 @@
+name: P3-FT exact current-season raid-scope source diagnostic (one-shot)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p3_ft_season_scope_diagnostic.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: p3-ft-raid-scope-source-only
+  cancel-in-progress: false
+jobs:
+  limited-current-season-scope:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      PYTHONPATH: runner:.
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Probe only original v155/WCL and four small DB2 tables
+        shell: bash
+        run: |
+          python -u integration_probes/p3_ft_season_scope_diagnostic.py
+      - name: Preserve only bounded public source-scope diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p3-ft-current-season-raid-scope-small-receipt
+          path: p3_ft_season_scope_diagnostic.json
+          if-no-files-found: ignore
+          retention-days: 2
