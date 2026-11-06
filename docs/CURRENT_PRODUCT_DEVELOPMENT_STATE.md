@@ -1,3 +1,6 @@
+> **2026-11-06 P3-GH 회귀 영수증:** [focused #42170118334](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42170118334) **DEV_LEDGER_PASS·323 PASS/2 SKIP**, [v212 #42170118202](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42170118202) Ubuntu/Windows **각 474 PASS/4 SKIP**. 원래 v233 G 소스와 별도 파생 v269 F/O precombat 소스·봉인·cache 검사 PASS, 실제 70783 F 측정/READY는 별도. 동일 원본 P3-FZ T1 1회 검증 요청, 불필요한 전수 Native/반복 효과 인증 없음.
+>
+
 > **2026-11-06 P3-GH 실제 차단 및 수정:** [실 T1 #42169345660](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42169345660) 70783 원본·v191/v211/v213 성공 후 v269 `SINGLE_PRECOMBAT_SNAPSHOT_REQUIRED`로 자동 F 측정 전 차단. 원본 v233 G 프로필은 precombat APL 없음. v216에서 G 원본 불변 유지, 동일 v217 stage 안에 `flask`→`snapshot_stats` 1회 실행용 파생 소스 프로필을 봉인해 기존 v278/F·O에 연결. 추가 수집/Native 중복 없음, 실제 Native F/O 수치·READY 미확정. [P3-GH](development/notes/2026-11-06_p3-gh-v233-to-v269-precombat-source.md). 신규 CI/실행 증거 별도 확인.
 >
 
