@@ -1,3 +1,6 @@
+> **2026-11-06 P3-GA 실 원본 확인:** [실 Wago 70783 조사 #42149517679](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42149517679): 동일 레이드 드롭 장비 105개는 ExpansionID **11**, 비장비 드롭 26개 ID 11 + 13개 ID -3; Item/ItemSparse 누락 0. 기존 `v163` 전체 드롭의 단일 ExpansionID 제약이 새 실 T1의 첫 실제 차단 근거. 기존 장비 ClassID 2/4만 대표 확장팩 정체성으로 사용하는 최소 교정 적용, 장비 ID가 복수 확장팩이면 차단 유지. **새 실제 T1과 G/J/F/O 및 READY는 미실증.** [노트](development/notes/2026-11-06_p3-ga-raid-loot-expansion-class-scope.md).
+>
+
 > **2026-11-06 P3-FZ 실 영수증 및 P3-GA 진단:** [실 T1 #42148734651](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42148734651)은 70783 실 CLI SHA/소스·Wago 봉인 성공, Native0, 최종 NOT_READY. 실제 최초 차단은 `v163 LIVE_RAID_LOOT_EXPANSION_ID_NOT_UNIQUE`, 대표 gear/tier/J/F/G/O 미실행은 연쇄 결과. P3-GA는 기존 70783 레이드 3 인스턴스 증거를 재사용해 Item/ItemSparse ClassID별 ExpansionID 분포만 원본 4표에서 진단; 신규 시즌 ID 선택·READY는 이 조사가 승인하지 않는다. [P3-GA 노트](development/notes/2026-11-06_p3-ga-raid-loot-expansion-class-scope.md).
 >
 

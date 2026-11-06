@@ -60,6 +60,34 @@ class JoinTests(unittest.TestCase):
             v163.resolve_raid_journal_tier(invalid,ids))
         self.assertIsNone(v163.resolve_raid_journal_tier(pair(9,10),set()))
 
+    def test_equipment_expansion_excludes_non_equipment_tokens(self):
+        loot={1001,1002,1003}
+        items=[{"ID":"1001","ClassID":"4"},
+               {"ID":"1002","ClassID":"2"},
+               {"ID":"1003","ClassID":"15"}]
+        sparse=[{"ID":"1001","ExpansionID":"11"},
+                {"ID":"1002","ExpansionID":"11"},
+                {"ID":"1003","ExpansionID":"-3"}]
+        self.assertEqual(v163.raid_equipment_expansion_id(
+            loot,items,sparse),11)
+        # If a second *weapon* is from another expansion, no guessing.
+        with self.assertRaisesRegex(
+            v163.JoinBlocked,"LIVE_RAID_EQUIPMENT_EXPANSION_ID_NOT_UNIQUE"):
+            v163.raid_equipment_expansion_id(
+                loot,items,[sparse[0],{**sparse[1],"ExpansionID":"12"},
+                            sparse[2]])
+        for broken in (items[:2],items[1:]):
+            with self.assertRaisesRegex(
+                v163.JoinBlocked,"LIVE_RAID_LOOT_ITEM_CLASSES_INCOMPLETE"):
+                v163.raid_equipment_expansion_id(loot,broken,sparse)
+        with self.assertRaisesRegex(
+            v163.JoinBlocked,"LIVE_RAID_EQUIPMENT_EXPANSION_ID_NOT_UNIQUE"):
+            v163.raid_equipment_expansion_id(loot,items,sparse[:1])
+        with self.assertRaisesRegex(
+            v163.JoinBlocked,"LIVE_RAID_EQUIPMENT_LOOT_NOT_FOUND"):
+            v163.raid_equipment_expansion_id(
+                {1003},[items[2]],[sparse[2]])
+
     def test_tiny_end_to_end_snapshot_and_season_join(self):
         rows = {
             'JournalTierXInstance':[

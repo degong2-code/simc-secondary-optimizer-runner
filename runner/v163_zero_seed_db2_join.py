@@ -142,11 +142,36 @@ def resolve_raid_journal_tier(tier_links, required_instances):
     return candidate
 
 
+def raid_equipment_expansion_id(loot, items, sparse):
+    """Select only from actual raid weapon/armor, not raid currency/token IDs.
+
+    The source tables must identify every loot item's class so an unknown
+    loot class cannot be assumed non-equipment. Only ClassID 2/4 may own
+    the representative-gear expansion; unknown/ambiguous equipment blocks.
+    Does not certify an entire active season or any special item effect.
+    """
+    loot=set(loot)
+    classes={number(x.get("ID")):number(x.get("ClassID"))
+             for x in items if number(x.get("ID")) in loot}
+    fail_if(not loot or set(classes)!=loot,
+            "LIVE_RAID_LOOT_ITEM_CLASSES_INCOMPLETE")
+    equipment={iid for iid in loot if classes[iid] in (2,4)}
+    fail_if(not equipment,"LIVE_RAID_EQUIPMENT_LOOT_NOT_FOUND")
+    expansions={number(x.get("ID")):number(x.get("ExpansionID"))
+                for x in sparse if number(x.get("ID")) in equipment}
+    values=set(expansions.values())
+    fail_if(set(expansions)!=equipment or len(values)!=1
+            or next(iter(values))<=0,
+            "LIVE_RAID_EQUIPMENT_EXPANSION_ID_NOT_UNIQUE")
+    return next(iter(values))
+
+
 def discover_unique_live_scope(folder, report):
     """Derive exact zone, season and expansion IDs from live WCL + DB2.
 
-    Fail closed on ambiguous maps/raid tiers/loot expansions; not a proof
-    of global season membership or WorldStateExpression semantics.
+    Fail closed on ambiguous maps, raid tiers or actual equipment loot
+    expansions; non-equipment currency/token IDs are not gear expansion
+    evidence. Not a complete-season/WorldStateExpression certification.
     """
     fail_if(report.get("schema") != "v155_season_discovery_provider_probe_v1"
             or report.get("mode") != "LIVE_AUTHENTICATED_BOUNDED",
@@ -186,15 +211,16 @@ def discover_unique_live_scope(folder, report):
           if number(x["JournalEncounterID"]) in eids
           and number(x["ItemID"])>0}
     fail_if(not loot,"LIVE_RAID_LOOT_IDS_NOT_FOUND")
-    seen={number(x["ID"]):number(x["ExpansionID"])
-          for x in read_rows(folder,"ItemSparse")
-          if number(x["ID"]) in loot}
-    exps=set(seen.values())
-    fail_if(set(seen)!=loot or len(exps)!=1 or next(iter(exps))<=0,
-            "LIVE_RAID_LOOT_EXPANSION_ID_NOT_UNIQUE")
+    # Actual 70783 source proof: 105 weapon/armor rows are ExpansionID 11;
+    # 39 non-equipment rows include 13 special -3 ExpansionIDs. These must
+    # not disqualify the independent representative equipment expansion.
+    # This is source-class semantics, not a fixed-ID/majority rule.
+    expansion_id=raid_equipment_expansion_id(
+        loot,read_rows(folder,"Item"),read_rows(folder,"ItemSparse"))
     return {"raid_zone":raid["zone_name"],
             "mplus_zone":mplus["zone_name"],
-            "expansion_id":next(iter(exps)),
+            "expansion_id":expansion_id,
+            "raid_expansion_scope":"EQUIPMENT_CLASS_2_4_ONLY",
             "db2_display_season_id":sid,
             "raid_journal_tier_id":tid,
             "source_basis":"LIVE_WCL_ACTIVE_ZONES_AND_SAME_BUILD_DB2",
