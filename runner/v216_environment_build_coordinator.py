@@ -3998,6 +3998,58 @@ def _zero_history_v098_profile_source_inputs(*, numeric_preview,
         "oil_by_hand":by_hand}
 
 
+
+def _sealed_v233_precombat_F_O_profile(*,stage_root,source_profile_path):
+    """Reuse the verified G gear but supply v269's precombat snapshot APL.
+
+    v233's input remains pristine for static G, while v278 pairs are keyed
+    by an immutable derived profile and original v217 source identity.
+    This is an APL input connection, NOT a consumable effect implementation.
+    """
+    root=pathlib.Path(stage_root).resolve(strict=True)
+    path=pathlib.Path(source_profile_path)
+    need(root.is_dir() and not root.is_symlink() and
+         path.is_file() and not path.is_symlink() and
+         path.resolve().is_relative_to(root) and
+         0<path.stat().st_size<=4_000_000,
+         "V216_AUTO_F_O_V233_SOURCE_PROFILE_REQUIRED")
+    original=path.read_bytes()
+    try:
+        raw=original.decode("utf8")
+    except UnicodeError as exc:
+        raise EnvironmentBuildBlocked(
+            "V216_AUTO_F_O_V233_PROFILE_UTF8_INVALID") from exc
+    lines=raw.splitlines()
+    need(not any(line.strip().startswith("actions.precombat") for line in lines)
+         and not any(line.partition("=")[0].strip() in
+             ("flask","food","potion","augmentation","temporary_enchant",
+              "iterations","json2","profileset.") for line in lines),
+         "V216_AUTO_F_O_G_SOURCE_PROFILE_ALREADY_HAS_APL_OR_OPTIONS")
+    prepared=(raw.rstrip()+"\n"+
+              "actions.precombat=flask\n"+
+              "actions.precombat+=/snapshot_stats\n")
+    encoded=prepared.encode("utf8")
+    key=simc_source.digest(original)[:24]
+    output="source/v278_v233_precombat_"+key+".simc"
+    saved=root/output
+    receipt=stage_engine.execute_stage(
+        root=root,stage_id="fresh-v278-precombat-"+key,
+        stage_version="v233-v269-flask-before-snapshot-v1",
+        inputs={"source_profile_sha256":simc_source.digest(original),
+                "derived_profile_sha256":simc_source.digest(encoded),
+                "connection":"v269-flask-snapshot-precombat"},
+        outputs={"profile":output},
+        execute=lambda: (saved.parent.mkdir(parents=True,exist_ok=True),
+                         saved.write_bytes(encoded)),
+        validate=lambda files:(
+            not files["profile"].is_symlink() and
+            files["profile"].read_bytes()==encoded))
+    need(receipt.get("status") in
+         ("EXECUTED_AND_SEALED","REUSED_VERIFIED","RECOVERED_VERIFIED"),
+         "V216_AUTO_F_O_PRECOMBAT_PROFILE_SEAL_INVALID")
+    return str(saved.resolve())
+
+
 def _auto_F_native_from_sealed_v281(*,collected,compilation,binary,
                                       kind="flask",max_new_native_calls=8,
                                       selected_item_id=None):
@@ -4034,6 +4086,12 @@ def _auto_F_native_from_sealed_v281(*,collected,compilation,binary,
     elif type(work) is not dict or not work.get(family):
         out["requires"].append("AUTO_"+label+"_EXACT_PHYSICAL_ITEM_PENDING")
     if out["requires"]:return [],out
+    # v233 is a physical G probe without an APL. v269 explicitly requires
+    # flask followed by one snapshot_stats before it can measure static F/O.
+    # Seal a derived measurement-only source; never edit/re-run the G input.
+    source_profile=_sealed_v233_precombat_F_O_profile(
+        stage_root=compilation["stage_root"],
+        source_profile_path=source_profile)
     worklist=work[family]
     if selected_item_id is not None:
         # The existing v281 same-build item relation owns exact ID lookup.

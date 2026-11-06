@@ -1,3 +1,6 @@
+> **2026-11-06 P3-GH 실제 차단 및 수정:** [실 T1 #42169345660](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42169345660) 70783 원본·v191/v211/v213 성공 후 v269 `SINGLE_PRECOMBAT_SNAPSHOT_REQUIRED`로 자동 F 측정 전 차단. 원본 v233 G 프로필은 precombat APL 없음. v216에서 G 원본 불변 유지, 동일 v217 stage 안에 `flask`→`snapshot_stats` 1회 실행용 파생 소스 프로필을 봉인해 기존 v278/F·O에 연결. 추가 수집/Native 중복 없음, 실제 Native F/O 수치·READY 미확정. [P3-GH](development/notes/2026-11-06_p3-gh-v233-to-v269-precombat-source.md). 신규 CI/실행 증거 별도 확인.
+>
+
 > **2026-11-06 P3-GG GitHub API limit 원인 및 범위 교정:** [P3-GF 실전 #42169024445](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42169024445)은 G/F/J 이전 GitHub public tree 원본을 중복 사전 시험하는 단계에서 `HTTP Error 403: rate limit exceeded`로 차단. v229 정확 커밋/트리/blob SHA API 요청에만 Actions 자동 단기 `github.token` 헤더를 사용, Wago/Blizzard/WCL/raw 도메인에 전송하지 않음·영수증에 토큰 남기지 않음. 이미 [#42165803925](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42165803925) 검증된 강제 403 사전시험은 중복 수행하지 않고 원래 v216 T1 1회로 복귀. 기존 본문 source 서명/Native/정적 캐시 수명 규칙 불변. [P3-GG](development/notes/2026-11-06_p3-gg-github-simc-api-token-scope.md). 신규 CI/실 T1 결과 대기.
 >
 

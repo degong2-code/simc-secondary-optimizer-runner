@@ -1,0 +1,10 @@
+# 2026-11-06 · P3-GH · v233 G-only profile → v269 precombat F/O source bridge
+
+- **Capability:** `BUDGET.GJFO`, `ENVIRONMENT.WEB`, `SOURCE.SEAL`
+- **Keywords:** v233, v269, v278, F/O, snapshot_stats, original APL, source-profile, sealed, Native cache
+- **Prior evidence:** [live T1 #42169345660](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42169345660) authenticated 70783 source/compilation reached F Native input, but `V216_AUTO_F_NATIVE_OR_SOURCE_FAILED:V269_SINGLE_PRECOMBAT_SNAPSHOT_REQUIRED`; final receipt does not distinguish earlier G Native calls. The existing G-only `v233.build` writes gear and character without precombat APL, while `v269.prepare` requires flask before exactly one snapshot_stats.
+- **Decision:** `CONNECT` the existing sealed v233 physical representative to original v269/v278 via one deterministic derived source APL; never modify v233 original G profile, implement a new effect system, or run new source/Native merely to certify the APL.
+- **Changes:** `v216._sealed_v233_precombat_F_O_profile` reads the verified G profile within the same v217 workspace; adds only `actions.precombat=flask` and `actions.precombat+=/snapshot_stats` before invoking unchanged v278.measure; stores derived profile under content-keyed v217 source-only receipt. The same derived input is reused for oil; no extra G run or duplicate F/O session.
+- **Verification:** focused offline source profile + v269.prepare acceptance, exact original bytes, v217 reuse and tamper fail-closed; Actions exact SHA pending. No real 70783 F result yet.
+- **Remaining:** Actual current binary must accept derived SimC precombat source and provide JSON2 paired stats; G/J/F/O owners and READY installation remain unproven. Do not claim source-only F measure equals official F budget.
+- **Efficiency:** no new HTTP, no added Native executions, no new effect handler, preserves v278 shared baseline/caching and previously sealed G identity. Main/immutable/Project UI unchanged.

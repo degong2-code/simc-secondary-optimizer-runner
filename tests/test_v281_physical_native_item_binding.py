@@ -35,6 +35,10 @@ class ExactPhysicalNativeInput(unittest.TestCase):
             TMP,build=BUILD,flask_dbc_rows=FLASK)
         self.output=self.root/"source"/"v284_simc_consumable_relations.json"
         self.output.parent.mkdir(parents=True)
+        (self.root/"source"/"probe.simc").write_text(
+            "paladin=simc_source_g_probe\nrace=dwarf\nspec=retribution\n"
+            "main_hand=simc_source_weapon,id=9010,ilevel=334,source=local\n",
+            encoding="utf8")
         def execute():
             self.output.write_text(json.dumps(derived),encoding="utf8")
             (self.root/"source"/"v284_SpellEffect.csv").write_bytes(CSV)
@@ -254,6 +258,28 @@ class ExactPhysicalNativeInput(unittest.TestCase):
         self.assertFalse(report["environment_ready"])
         self.assertIsNone(result["F"])
         self.assertFalse(result["zero_history_build"]["environment_ready"])
+
+    def test_auto_F_measurement_uses_sealed_precombat_without_editing_v233(self):
+        original=self.root/"source"/"probe.simc"
+        raw=original.read_bytes()
+        first=build._sealed_v233_precombat_F_O_profile(
+            stage_root=self.root,source_profile_path=original)
+        second=build._sealed_v233_precombat_F_O_profile(
+            stage_root=self.root,source_profile_path=original)
+        self.assertEqual(first,second)
+        self.assertEqual(raw,original.read_bytes())
+        derived=pathlib.Path(first).read_text("utf8")
+        self.assertEqual(derived.count("actions.precombat=flask"),1)
+        self.assertEqual(derived.count("actions.precombat+=/snapshot_stats"),1)
+        from runner import v269_simc_chmv_effect_snapshot as snapshot
+        f=snapshot.prepare(profile=derived,kind="flask",token="test_flask_3")
+        self.assertTrue(f["other_consumables_explicitly_disabled"])
+        # v217 detects source alteration on the same content-addressed path.
+        pathlib.Path(first).write_text(derived+"actions=wait\n",encoding="utf8")
+        with self.assertRaises(build.stage_engine.StageExecutionBlocked):
+            build._sealed_v233_precombat_F_O_profile(
+                stage_root=self.root,source_profile_path=original)
+        self.assertEqual(raw,original.read_bytes())
 
     def test_auto_F_O_bounded_native_calls_are_counted_once(self):
         """Existing exact v281 F/O worklist binds both hands, 8-run shared cap."""
