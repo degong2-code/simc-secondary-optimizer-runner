@@ -1,3 +1,6 @@
+> **2026-11-06 P3-GG GitHub API limit 원인 및 범위 교정:** [P3-GF 실전 #42169024445](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42169024445)은 G/F/J 이전 GitHub public tree 원본을 중복 사전 시험하는 단계에서 `HTTP Error 403: rate limit exceeded`로 차단. v229 정확 커밋/트리/blob SHA API 요청에만 Actions 자동 단기 `github.token` 헤더를 사용, Wago/Blizzard/WCL/raw 도메인에 전송하지 않음·영수증에 토큰 남기지 않음. 이미 [#42165803925](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42165803925) 검증된 강제 403 사전시험은 중복 수행하지 않고 원래 v216 T1 1회로 복귀. 기존 본문 source 서명/Native/정적 캐시 수명 규칙 불변. [P3-GG](development/notes/2026-11-06_p3-gg-github-simc-api-token-scope.md). 신규 CI/실 T1 결과 대기.
+>
+
 > **2026-11-06 P3-GF 오프라인 검증:** [focused #42168845486](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42168845486) DEV_LEDGER_PASS 322 PASS/2 SKIP; [v212 #42168740514](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42168740514) Ubuntu·Windows 각 471 PASS/4 SKIP; v166/v167 offline PASS. 동일 시즌 내부 반지 source 연결의 단위경계만 입증, 실제 반지 두 ID·G/J/F/O/READY는 아직 실험 전 미확정. 기존 P3-FZ 1회 실제 T1로 검증 요청, native 호출 임의 반복 없음.
 >
 

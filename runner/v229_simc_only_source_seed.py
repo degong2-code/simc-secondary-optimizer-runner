@@ -248,9 +248,26 @@ def inventory(source_bytes, *, simc_revision, expected_build,
         canonical(output).encode("utf8"))}
 
 
+def _github_api_headers(accept):
+    """Optional ephemeral read token for GitHub API only, never raw/Wago.
+
+    Actions supplies this through the step environment; no token is logged,
+    serialized, hashed into static cache identity or sent to other hosts.
+    """
+    headers={"User-Agent":"SIMC-Secondary-source-cold-start/1.0",
+             "Accept":accept}
+    token=os.environ.get("SIMC_SOURCE_GITHUB_API_TOKEN","")
+    if token:
+        need(len(token)<=2048 and token==token.strip() and
+             "\\r" not in token and "\\n" not in token,
+             "V229_GITHUB_API_TOKEN_FORMAT_INVALID")
+        headers["Authorization"]="Bearer "+token
+    return headers
+
+
 def _http_json(url, transport=urlopen):
-    req=Request(url,headers={"User-Agent":
-        "SIMC-Secondary-source-cold-start/1.0","Accept":"application/vnd.github+json"})
+    req=Request(url,headers=_github_api_headers(
+        "application/vnd.github+json"))
     with transport(req,timeout=25) as res:
         need(res.status==200,"V229_UPSTREAM_GIT_TREE_HTTP_INVALID")
         raw=res.read(600_001)
@@ -277,9 +294,8 @@ def resolve_exact_commit(revision_hint, *, transport=urlopen):
         return revision_hint
     url=("https://api.github.com/repos/simulationcraft/simc/commits/"
          +revision_hint)
-    request=Request(url,headers={
-        "User-Agent":"SIMC-Secondary-source-cold-start/1.0",
-        "Accept":"application/vnd.github+json"})
+    request=Request(url,headers=_github_api_headers(
+        "application/vnd.github+json"))
     with transport(request,timeout=25) as response:
         need(response.status==200,"V229_REVISION_LOOKUP_HTTP_INVALID")
         raw=response.read(120_001)
@@ -354,9 +370,8 @@ def fetch_generated_blob(*, revision, name, expected_sha, expected_size,
     # Raw host rejected the request, not the provenance. GitHub's canonical
     # git-blobs API supports raw+json; some intermediaries return JSON anyway.
     # Both representations are accepted ONLY if the exact pinned blob matches.
-    request=Request(GIT_BLOB_BASE+expected_sha,headers={
-        "User-Agent":"SIMC-Secondary-source-cold-start/1.0",
-        "Accept":"application/vnd.github.raw+json"})
+    request=Request(GIT_BLOB_BASE+expected_sha,headers=_github_api_headers(
+        "application/vnd.github.raw+json"))
     max_encoded=((expected_size+2)//3)*4+8192
     with transport(request,timeout=timeout) as response:
         need(response.status==200,"V229_EXACT_GIT_BLOB_API_HTTP")

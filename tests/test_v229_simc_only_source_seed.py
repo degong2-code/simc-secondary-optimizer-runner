@@ -4,6 +4,7 @@ from __future__ import annotations
 import base64
 import copy
 import json
+import os
 import pathlib
 import tempfile
 import unittest
@@ -327,6 +328,32 @@ class SimCCollectorTests(unittest.TestCase):
                     previous_game_build=OLD,
                     dest=pathlib.Path(td)/"tampered",transport=fetch)
             self.assertFalse((pathlib.Path(td)/"tampered").exists())
+
+    def test_ephemeral_read_token_only_goes_to_pinned_github_api(self):
+        token="test_secret_not_to_be_persisted"
+        observed=[]
+        name="gem_data.inc"
+        raw_url=seed.RAW_BASE+REVISION+"/engine/dbc/generated/"+name
+        blob_url=seed.GIT_BLOB_BASE+seed.git_blob(self.raw[name])
+        self.urls[blob_url]=self.raw[name]
+        def fetch(req,timeout=None):
+            observed.append((req.full_url,req.get_header("Authorization")))
+            if req.full_url==raw_url:
+                raise HTTPError(raw_url,403,"Forbidden",{},None)
+            return self.fetch(req,timeout)
+        with patch.dict(os.environ,{"SIMC_SOURCE_GITHUB_API_TOKEN":token}):
+            with tempfile.TemporaryDirectory() as td:
+                destination=pathlib.Path(td)/"seed"
+                row=seed.collect(revision=REVISION,expected_build=BUILD,
+                    previous_game_build=OLD,dest=destination,transport=fetch)
+                self.assertTrue(row["provenance_tree_blob_authenticated"])
+                self.assertNotIn(token,(destination/seed.RECEIPT).read_text())
+        self.assertEqual(len([u for u,a in observed if u==blob_url]),1)
+        self.assertTrue(all(auth=="Bearer "+token
+            for url,auth in observed
+            if url.startswith(seed.BASE) or url.startswith(seed.GIT_BLOB_BASE)))
+        self.assertTrue(all(auth is None for url,auth in observed
+            if url.startswith(seed.RAW_BASE)))
 
     def test_non_403_does_not_try_an_alternate_source(self):
         name="gem_data.inc"
