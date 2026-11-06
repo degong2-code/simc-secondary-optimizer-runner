@@ -249,6 +249,8 @@ def find_verified_installed_season_environment(sessions_root, target_ilevel):
             "target_ilevel":target_ilevel,
             "G":doc["official_G"],"J":doc["official_J"],
             "F":doc["official_F"],"O":doc["official_O"],
+            "official_F_physical_source":
+                doc.get("official_F_physical_source"),
             "B":doc["official_B"],"T":doc["official_T"],
             "published_verified_options":doc["published_verified_options"],
             "published_verified_option_count":
@@ -4997,6 +4999,9 @@ def _fresh_source_owner_original_J_F_components(*, preflight, compilation,
                 "source_sha256":f["source_identity_sha256"],
                 "source_verification":"EXACT_NATIVE",
                 "selected_flask_item_id":f["physical_item_id"],
+                "simc_input_token":f["simc_input_token"],
+                "crafting_quality":f["crafting_quality"],
+                "static_CHMV_vector":dict(f["static_CHMV_vector"]),
                 "native_pair_receipt_sha256":
                     list(f["native_pair_receipt_sha256"]),
                 "effect_quality_policy":"BEST_DISCOVERED_COMPARABLE"}

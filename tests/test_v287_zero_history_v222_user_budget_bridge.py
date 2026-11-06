@@ -2007,6 +2007,11 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 "physical_item_native_source_unadmitted":bound}])
         self.assertEqual(fixed["F"]["rating"],165)
         self.assertEqual(fixed["F"]["source_verification"],"EXACT_NATIVE")
+        self.assertEqual(fixed["F"]["selected_flask_item_id"],241326)
+        self.assertEqual(fixed["F"]["simc_input_token"],f["simc_input_token"])
+        self.assertEqual(fixed["F"]["crafting_quality"],f["crafting_quality"])
+        self.assertEqual(fixed["F"]["static_CHMV_vector"],
+                         f["static_CHMV_vector"])
         (self.root/"source"/("v278_active_"+"a"*32)/
             "native.json").write_text("{ }",encoding="utf8")
         with self.assertRaisesRegex(
