@@ -3,9 +3,6 @@
 # If a source timeout recurs, report the first owner; no automatic retry.
 name: P3-FZ reuse exact 70783 CLI for one real zero-history T1 (one-shot)
 on:
-  push:
-    branches: [probe/chat-cache-v035-20261024]
-    paths: [.github/workflows/p3_fz_reuse_exact_simc_live_t1.yml]
   workflow_dispatch:
 permissions:
   contents: read
@@ -67,6 +64,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: p3-fz-exact-binary-zero-history-t1-receipt
-          path: p3_fr_zero_base_t1_receipt.json
+          path: |
+            p3_fr_zero_base_t1_receipt.json
+            p3_fr_zero_base_t1_native_evidence.zip
           if-no-files-found: ignore
-          retention-days: 2
+          retention-days: 7

@@ -64,6 +64,7 @@ jobs:
             tests.test_v289_retail_live_build_source \
             tests.test_p3_fs_simc_image_revision \
             tests.test_p3_fz_existing_simc_binary_identity \
+            tests.test_p3_gj_existing_native_case_archive \
             tests.test_p3_ga_raid_loot_expansion_diagnostic \
             tests.test_p3_ft_season_scope_diagnostic \
             tests.test_v163_db2_zero_seed \

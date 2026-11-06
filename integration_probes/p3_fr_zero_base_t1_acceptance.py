@@ -13,6 +13,8 @@ import os
 import pathlib
 import re
 import tempfile
+import zipfile
+from contextlib import contextmanager
 from datetime import datetime,timezone
 
 from runner import v216_environment_build_coordinator as engine
@@ -25,6 +27,125 @@ OUT=pathlib.Path("p3_fr_zero_base_t1_receipt.json")
 
 class ExactBinarySourcePending(ValueError):
     pass
+
+
+NATIVE_EVIDENCE_ARCHIVE=pathlib.Path("p3_fr_zero_base_t1_native_evidence.zip")
+MAX_NATIVE_CASES=16
+MAX_NATIVE_FILE_BYTES=20_000_000
+MAX_NATIVE_TOTAL_BYTES=64_000_000
+NATIVE_CASE_PREFIXES=("v277_native_G_","v278_baseline_","v278_active_")
+NATIVE_CASE_FILES=("receipt.json","input.simc","native.json","simc.log")
+
+
+def archive_existing_native_attempts(root, destination):
+    """Retain exact v277/v278 case bytes for later AUDIT, never zero-base input.
+
+    The original v277/v278 owners still validate identity/cache reuse. In
+    particular v278's input has an absolute JSON2 output path; this archive
+    is not a portable cache, never an automatic source of budget approval.
+    """
+    root=pathlib.Path(root).resolve(strict=True)
+    destination=pathlib.Path(destination)
+    cases=[]
+    for source in root.rglob("source"):
+        if not source.is_dir() or source.is_symlink():
+            continue
+        for case in source.iterdir():
+            if case.name.startswith(NATIVE_CASE_PREFIXES):
+                if (case.is_symlink() or not case.is_dir() or
+                        not case.resolve().is_relative_to(root)):
+                    raise ValueError("P3_GJ_UNSAFE_NATIVE_CASE")
+                cases.append(case)
+    if len(cases)>MAX_NATIVE_CASES:
+        raise ValueError("P3_GJ_NATIVE_CASE_LIMIT")
+    if not cases:
+        return {"status":"NO_NATIVE_CASES_TO_ARCHIVE","case_count":0,
+                "new_native_calls":0,"portable_cache":False}
+    if destination.exists() or destination.is_symlink():
+        raise ValueError("P3_GJ_NATIVE_ARCHIVE_ALREADY_EXISTS")
+    inventory=[]
+    total=0
+    count=0
+    with zipfile.ZipFile(destination,"w",compression=zipfile.ZIP_DEFLATED,
+                         compresslevel=6) as archive:
+        for case in sorted(cases):
+            receipt_file=case/"receipt.json"
+            receipt=None
+            if receipt_file.exists():
+                if (receipt_file.is_symlink() or not receipt_file.is_file() or
+                        receipt_file.stat().st_size>200_000):
+                    raise ValueError("P3_GJ_UNSAFE_NATIVE_RECEIPT")
+                receipt=json.loads(receipt_file.read_text("utf8"))
+                if type(receipt) is not dict:
+                    raise ValueError("P3_GJ_NATIVE_RECEIPT_FORMAT")
+            g_case=case.name.startswith("v277_native_G_")
+            identity=receipt.get("identity",{}) if receipt else {}
+            if type(identity) is not dict:
+                raise ValueError("P3_GJ_NATIVE_RECEIPT_IDENTITY")
+            expected={
+                "input.simc":(identity.get("executed_input_sha256")
+                              if g_case else receipt.get("input_sha256")
+                              if receipt else None),
+                "native.json":receipt.get("native_json2_sha256") if receipt else None,
+                "simc.log":(receipt.get("native_log_sha256") if g_case
+                            else receipt.get("log_sha256")) if receipt else None}
+            copied=[]
+            for filename in NATIVE_CASE_FILES:
+                f=case/filename
+                digest=expected.get(filename)
+                if not f.exists():
+                    if digest is not None:
+                        raise ValueError("P3_GJ_RECEIPTED_NATIVE_FILE_MISSING")
+                    continue
+                if (f.is_symlink() or not f.is_file() or
+                        f.stat().st_size>MAX_NATIVE_FILE_BYTES):
+                    raise ValueError("P3_GJ_NATIVE_FILE_UNSAFE_OR_OVERSIZED")
+                raw=f.read_bytes()
+                total+=len(raw)
+                if total>MAX_NATIVE_TOTAL_BYTES:
+                    raise ValueError("P3_GJ_NATIVE_ARCHIVE_TOTAL_LIMIT")
+                observed=hashlib.sha256(raw).hexdigest()
+                if digest is not None and digest!=observed:
+                    raise ValueError("P3_GJ_NATIVE_FILE_SHA_MISMATCH")
+                relative=f.relative_to(root).as_posix()
+                archive.writestr(relative,raw)
+                copied.append({"path":relative,"sha256":observed,
+                               "size_bytes":len(raw)})
+                count+=1
+            inventory.append({"case":case.relative_to(root).as_posix(),
+                              "receipt_status":(receipt.get("status")
+                                                if receipt else "INCOMPLETE"),
+                              "files":copied})
+        audit={"schema":"p3_gj_existing_native_case_audit_v1",
+               "purpose":"read-only audit, NOT portable cache or product admission",
+               "zero_history_inputs_reused":False,
+               "case_count":len(cases),"file_count":count,
+               "cases":inventory}
+        archive.writestr("native_evidence_inventory.json",
+                         json.dumps(audit,sort_keys=True,ensure_ascii=False,
+                                    indent=2).encode("utf8"))
+    sha=hashlib.sha256(destination.read_bytes()).hexdigest()
+    return {"status":"EXISTING_NATIVE_CASE_BYTES_ARCHIVED_AUDIT_ONLY",
+            "case_count":len(cases),"file_count":count,
+            "archive_name":destination.name,"archive_sha256":sha,
+            "portable_cache":False,"new_native_calls":0}
+
+
+@contextmanager
+def zero_base_workspace_with_native_audit(receipt):
+    with tempfile.TemporaryDirectory(prefix="simc-zero-base-t1-") as root:
+        try:
+            yield root
+        finally:
+            try:
+                receipt["native_evidence_archive"]=archive_existing_native_attempts(
+                    root,NATIVE_EVIDENCE_ARCHIVE)
+            except (ValueError,OSError,RuntimeError,zipfile.BadZipFile) as error:
+                receipt["native_evidence_archive"]={
+                    "status":"NATIVE_AUDIT_ARCHIVE_BLOCKED",
+                    "error_type":type(error).__name__,
+                    "error_code":str(error).split(":",1)[0][:120],
+                    "portable_cache":False,"new_native_calls":0}
 
 
 def verified_pinned_cli_source(*, binary_path, live_game_build, environment):
@@ -135,7 +256,7 @@ def main():
             if pin.get("status")=="EXISTING_P3_FW_CLI_SOURCE_AND_BYTES_ATTESTED"
             else "SOURCE_POINTERS_PRESENT_UNVERIFIED")
         # No prior files and no sealed source supplied to the program.
-        with tempfile.TemporaryDirectory(prefix="simc-zero-base-t1-") as temp:
+        with zero_base_workspace_with_native_audit(rec) as temp:
             root=pathlib.Path(temp)
             assert not list(root.iterdir())
             inputs={
@@ -245,7 +366,7 @@ def main():
                 "current_build_source_identity",
                 "live_retail_version","source_stage_status",
                 "source_compilation_missing","zero_history_requires",
-                "simc_native_calls_reported","environment_ready",
+                "simc_native_calls_reported","native_evidence_archive","environment_ready",
                 "environment_installed")},ensure_ascii=False,default=str),
             flush=True)
     return 0 if rec["status"]=="ZERO_BASE_T1_PASS" else 2
