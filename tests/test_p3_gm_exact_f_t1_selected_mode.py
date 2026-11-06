@@ -32,6 +32,7 @@ class TargetedFlaskT1Inputs(unittest.TestCase):
                   ).read_text(encoding="utf8")
         self.assertIn("p3_gp_f_only_once_20261106.json",workflow)
         self.assertIn("[p3-gp-f-only-once]",workflow)
+        self.assertIn("fetch-depth: 2",workflow)
         self.assertIn("P3_T1_F_ONLY:",workflow)
         self.assertIn("max_new_F_native_calls",workflow)
         self.assertIn("complete_GJFO_ready_claim",workflow)

@@ -43,7 +43,9 @@ jobs:
       WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
     steps:
       - uses: actions/checkout@v5
-        with: {persist-credentials: false}
+        with:
+          persist-credentials: false
+          fetch-depth: 2
       - uses: actions/setup-python@v6
         with: {python-version: '3.12'}
       - name: Fail closed on any nonexact P3-GP one-shot push

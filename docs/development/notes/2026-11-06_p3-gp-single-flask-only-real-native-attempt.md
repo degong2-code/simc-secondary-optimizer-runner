@@ -8,3 +8,5 @@
 - **Verification:** 오프라인 focused/유관 CI를 먼저 확인한 뒤 단 1개 marker request commit으로 1회 워크플로를 시작한다. 그 전에는 실 Native/게임 HTTP 0; 실 결과는 별도 원본 영수증이 있어야 함. 실패 시 전수 재시도 금지, 첫 원인만 보고.
 - **Remaining:** 실 F 값·원본 receipt 관측, G/J/O 통합, 4종 영약 각각의 선택지, 공식 B/T·v212 READY/26 DPS E2E 미완료. 기존 F=165는 원본이 검증하기 전엔 추정치로만 남음.
 - **Efficiency:** 계획상 신규 Native F 0~2회, G 0회, O 0회. 한 번의 source run으로 필요한 F의 정확한 효과만 확인하며 기존 v281/v278 캐시·보존·중단/오류 영수증을 그대로 사용. 게임 데이터 신규 전수 Native 검사·효과 독립 재구현·영구 백그라운드 실행 없음. main/immutable v003/Project UI/Work OS/기존 제품 채팅 소유권 불변.
+
+- **1차 실험 결과:** [Actions #42196261600](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42196261600) FAIL은 실 SimC·게임 소스 호출 이전의 one-shot exact-change guard에서 발생. checkout@v5 기본 `fetch-depth:1`로 인해 `git diff-tree HEAD`가 부모를 확인하지 못하여 변경 파일 목록이 비어 있었음. 최초 1회 Native 0, 소스 HTTP 0, 산출물 0. 기존 분리 영수증 보존. 보호장치는 완화하지 않고 checkout을 `fetch-depth:2`로 변경해 실제 직전 커밋 하나만 비교. 기존 요청 JSON 내용/대상/이진 소스/Native 상한 유지, 다음 실행은 동일 정확한 ItemID의 첫 **측정 시도**임.
