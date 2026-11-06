@@ -1,3 +1,6 @@
+> **2026-11-06 P3-GC 내부 G source 연결 (실 T1 재검증 대기):** 실제 [P3-GB #42159679896](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42159679896)에서는 목걸이 0이 SimC 필터가 아니라 기존 v167 원본 공급 문제였음이 확정. v165의 동일 확장팩·같은 빌드·ItemXItemEffect 없음·일반·비세트 목걸이를 v166→v167에서 사용자 목록 밖 **내부 G 대표** 후보로만 재사용하고 v232에서 정확한 SimC ID/직업/물리 속성으로 다시 검증. 프로필·G·J/F/O/READY 강제 성공 없음. [P3-GC 노트](development/notes/2026-11-06_p3-gc-internal-source-only-plain-neck.md); 최종 Actions 영수증 확인 전 실 READY 미검증.
+>
+
 > **2026-11-06 P3-GB 진행 (신규 CI/실전 영수증 대기):** 최신 실제 [P3-FZ #42151165863](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42151165863)은 70783 source/CLI + 209 gear + 65 tier + v191/v211/v213 성공, Native0, READY=false. 최전단 장비 장애물은 `v232 V232_COMMON_SLOT_WITHOUT_SIMC_CANDIDATE:neck`. 추측으로 class mask/DB2 선택 조건을 완화하지 않고, 기존 동일 SimC item_data 단일 pass에서 v167 neck 공급·정확 ID·class mask/set/type 탈락 카운트를 모아 v216/최종 receipt에 보존하는 원본 연결 진단 추가. [노트](development/notes/2026-11-06_p3-gb-exact-neck-candidate-source-boundary.md). 최초 G/J/F/O/READY/T1 여전히 미완료.
 >
 
