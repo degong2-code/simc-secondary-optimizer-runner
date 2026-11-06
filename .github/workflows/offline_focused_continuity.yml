@@ -63,6 +63,7 @@ jobs:
             tests.test_v288_no_redundant_g_native \
             tests.test_v289_retail_live_build_source \
             tests.test_p3_fs_simc_image_revision \
+            tests.test_p3_fz_existing_simc_binary_identity \
             tests.test_p3_ft_season_scope_diagnostic \
             tests.test_v163_db2_zero_seed \
             tests.test_v163_index_bridge \

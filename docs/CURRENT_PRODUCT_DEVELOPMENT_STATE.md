@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FZ 초기 작업:** 동일 시즌 환경 재사용 P3-FY 이후 최초 제로베이스 설치 결손 재검증을 위해 기존 P3-FW 성공한 70783 SimC 실행 바이너리 Artifact SHA·원본 커밋을 재사용하는 한 번의 실 T1 경로 추가. 오래된 Docker 70529 재사용이나 새 SimC 컴파일을 생략하고, 게임 버전 변화 시 원본 Wago 수집 전에 정확히 중단. 인증 G/J/F/O/READY 여부는 새 LIVE 실행 영수증 이전에 **미완료**로 유지. [노트](development/notes/2026-11-06_p3-fz-reuse-exact-simc-live-t1.md).
+>
+
 > **2026-11-06 P3-FY 코드·회귀 영수증:** 최종 제품 코드 `df3a1914` 이전 설치 재사용 및 동일 빌드 변경 시 stale cache 차단, [focused #42146257105](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42146257105) 306 PASS/2 SKIP·DEV_LEDGER_PASS, [v212 #42146257075](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42146257075) Ubuntu/Windows 각 450 PASS/4 SKIP, [v113 #42146257052](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42146257052) 양 OS 각 222 PASS, [v182 UI #42146257061](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42146257061) 양 OS SUCCESS. **기존 실제 검증 완료 설치 데이터는 아직 없으므로 T1 LIVE 미검증**; 오프라인 합성 설치 테스트로 정상 UI·원본 검증·선택적 갱신 계약만 통과.
 >
 

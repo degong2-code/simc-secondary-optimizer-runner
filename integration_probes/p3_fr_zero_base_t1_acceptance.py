@@ -7,9 +7,11 @@ the original v212 installed READY, not merely that a probe script ran.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import pathlib
+import re
 import tempfile
 from datetime import datetime,timezone
 
@@ -19,6 +21,50 @@ from runner import v242_authenticated_season_source_stage as season_auth
 from integration_probes import p3_fs_simc_image_revision as simc_image
 
 OUT=pathlib.Path("p3_fr_zero_base_t1_receipt.json")
+
+
+class ExactBinarySourcePending(ValueError):
+    pass
+
+
+def verified_pinned_cli_source(*, binary_path, live_game_build, environment):
+    """Check existing P3-FW executable before zero-history source/Native.
+
+    GitHub workflow supplies P3-FW's exact upstream SHA, game build and
+    binary SHA. These verify the test prerequisite only; not live season data.
+    All checks are local; no Docker pull, SimC execution or network.
+    """
+    revision=environment.get("SIMC_PINNED_SOURCE_COMMIT") or ""
+    if not revision:
+        return None
+    expected_build=environment.get("SIMC_PINNED_GAME_BUILD") or ""
+    expected_sha=environment.get("SIMC_PINNED_BINARY_SHA256") or ""
+    if re.fullmatch(r"[a-f0-9]{40}",revision) is None or (
+            re.fullmatch(r"[a-f0-9]{64}",expected_sha) is None):
+        raise ExactBinarySourcePending("P3_FZ_PINNED_SOURCE_IDENTITY_INVALID")
+    if expected_build!=live_game_build:
+        raise ExactBinarySourcePending("P3_FZ_CURRENT_RETAIL_BUILD_DIFFERS_FROM_PINNED_BINARY")
+    path=pathlib.Path(binary_path)
+    if path.is_symlink() or not path.is_file():
+        raise ExactBinarySourcePending("P3_FZ_PINNED_BINARY_NOT_REGULAR_FILE")
+    sha=hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda:stream.read(1_048_576),b""):
+            sha.update(chunk)
+    if sha.hexdigest()!=expected_sha:
+        raise ExactBinarySourcePending("P3_FZ_PINNED_BINARY_SHA256_MISMATCH")
+    return {
+        "schema":"p3_fz_verified_existing_simc_binary_source_v1",
+        "status":"EXISTING_P3_FW_CLI_SOURCE_AND_BYTES_ATTESTED",
+        "revision_hint":revision,"source_revision":revision,
+        "game_build":expected_build,
+        "binary_sha256":expected_sha,
+        "image_digest_checked":False,
+        "environment_ready":False,
+        "new_binary_compilations":0,
+        "network_calls":0,"native_calls":0,
+    }
+
 
 def main():
     rec={
@@ -53,22 +99,41 @@ def main():
         if candidate is not None and not candidate.is_file():
             raise RuntimeError("ZERO_BASE_SIMC_BINARY_NOT_AVAILABLE")
         rec["simc_native_opt_in"]=candidate is not None
-        image_ref=os.environ.get("SIMC_IMAGE_REF") or ""
-        if candidate is None or not image_ref:
+        if candidate is None:
             rec["status"]="ZERO_BASE_T1_PREREQUISITES_MISSING"
-            rec["prerequisite_status"]="SIMC_BINARY_IMAGE_PIN_MISSING"
+            rec["prerequisite_status"]="SIMC_BINARY_NOT_SUPPLIED"
             return 2
-        # The source SHA hint belongs to the EXACT Docker digest we pulled,
-        # never the latest unpinned upstream branch or an older-season value.
+        # The historical pinned SimC 70783 CLI was already built and has
+        # a real binary SHA. Reuse it rather than building anew or pulling
+        # an older Docker latest. This branch is diagnostic, not a bypass
+        # of v229's exact newly collected generated-file source checks.
         try:
-            pin=simc_image.discover(
-                image_ref=image_ref,game_build=live["game_build"])
-        except simc_image.SimCImageRevisionPending as exc:
+            pin=verified_pinned_cli_source(
+                binary_path=candidate,live_game_build=live["game_build"],
+                environment=os.environ)
+        except ExactBinarySourcePending as exc:
             rec["status"]="ZERO_BASE_T1_PREREQUISITES_MISSING"
             rec["prerequisite_status"]=str(exc)
             return 2
-        rec["simc_image_source_identity"]=pin
-        rec["prerequisite_status"]="SOURCE_POINTERS_PRESENT_UNVERIFIED"
+        if pin is None:
+            image_ref=os.environ.get("SIMC_IMAGE_REF") or ""
+            if not image_ref:
+                rec["status"]="ZERO_BASE_T1_PREREQUISITES_MISSING"
+                rec["prerequisite_status"]="SIMC_BINARY_IMAGE_PIN_MISSING"
+                return 2
+            try:
+                pin=simc_image.discover(
+                    image_ref=image_ref,game_build=live["game_build"])
+            except simc_image.SimCImageRevisionPending as exc:
+                rec["status"]="ZERO_BASE_T1_PREREQUISITES_MISSING"
+                rec["prerequisite_status"]=str(exc)
+                return 2
+            rec["simc_image_source_identity"]=pin
+        rec["simc_source_identity"]=pin
+        rec["prerequisite_status"]=(
+            "EXACT_PINNED_BINARY_ATTESTED"
+            if pin.get("status")=="EXISTING_P3_FW_CLI_SOURCE_AND_BYTES_ATTESTED"
+            else "SOURCE_POINTERS_PRESENT_UNVERIFIED")
         # No prior files and no sealed source supplied to the program.
         with tempfile.TemporaryDirectory(prefix="simc-zero-base-t1-") as temp:
             root=pathlib.Path(temp)

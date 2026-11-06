@@ -1,0 +1,67 @@
+name: P3-FZ reuse exact 70783 CLI for one real zero-history T1 (one-shot)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p3_fz_reuse_exact_simc_live_t1.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p3-fz-one-shot-live-t1
+  cancel-in-progress: false
+jobs:
+  original-v216-once:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 23
+    env:
+      PYTHONPATH: runner:.
+      SIMC_PINNED_SOURCE_COMMIT: c20e2ad52e4c33711f74272309a5748125175fe8
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_PINNED_BINARY_SHA256: 980ed4640cecc3ed78b34ed0dc0363dbff2ed7d703174e9cc01f09d18570d36b
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Verify existing authenticated season inputs before artifact retrieval
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$BLIZZARD_CLIENT_ID" && test -n "$BLIZZARD_CLIENT_SECRET" &&
+          test -n "$WCL_CLIENT_ID" && test -n "$WCL_CLIENT_SECRET" ||
+          { echo "P3_FZ_SEASON_CREDENTIALS_MISSING"; exit 2; }
+      - name: Reuse previous successful P3-FW CLI artifact (no compile)
+        uses: actions/download-artifact@v4
+        with:
+          name: p3-fw-exact-simc-cli-70783
+          run-id: 42140062861
+          github-token: ${{ github.token }}
+          path: .p3-fz-tools
+      - name: Check exact binary bytes before running original v216
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f .p3-fz-tools/simc
+          SHA="$(sha256sum .p3-fz-tools/simc | cut -d' ' -f1)"
+          test "$SHA" = "$SIMC_PINNED_BINARY_SHA256" ||
+          { echo "P3_FZ_PRIOR_BINARY_SHA_MISMATCH"; exit 2; }
+          chmod +x .p3-fz-tools/simc
+          echo "SIMC_CLI_WRAPPER=$GITHUB_WORKSPACE/.p3-fz-tools/simc" >> "$GITHUB_ENV"
+          echo "P3_FZ_EXISTING_BINARY_SHA_VERIFIED"
+      - name: Original v216 current-Retail zero-history Build, bounded one shot
+        shell: bash
+        timeout-minutes: 19
+        run: python -u integration_probes/p3_fr_zero_base_t1_acceptance.py
+      - name: Retain factual small receipt only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p3-fz-exact-binary-zero-history-t1-receipt
+          path: p3_fr_zero_base_t1_receipt.json
+          if-no-files-found: ignore
+          retention-days: 2
