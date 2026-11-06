@@ -27,7 +27,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - name: Probe v155/WCL and five small DB2 tables including JournalTier
+      - name: Probe v155/WCL and validate v163 condition-scoped tier on 5 small DB2 tables
         shell: bash
         run: |
           python -u integration_probes/p3_ft_season_scope_diagnostic.py

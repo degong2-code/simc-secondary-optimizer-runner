@@ -156,6 +156,15 @@ def main():
             receipt["qualified_raid_zone_count"]=sum(
                 x["qualified_by_original_raid_rule"]
                 for x in receipt["raid_zone_diagnostics"])
+            # Exercise the REAL v163 source-condition resolver on the same
+            # current-build original rows; does not install the environment.
+            receipt["v163_source_condition_tier_resolution_unadmitted"]={
+                str(x["zone_id"]):join.resolve_raid_journal_tier(
+                    links,x["journal_instance_ids"])
+                for x in receipt["raid_zone_diagnostics"]
+                if x["zone_id"]!=mplus_id and
+                   x["fully_matched_to_journal"]
+            }
             receipt.update(related_journal_tier_sources(
                 receipt["raid_zone_diagnostics"],mplus_id,
                 list(join.read_rows(folder,"JournalTier")),links))
