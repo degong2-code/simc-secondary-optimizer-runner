@@ -259,6 +259,78 @@ class ExactPhysicalNativeInput(unittest.TestCase):
         self.assertIsNone(result["F"])
         self.assertFalse(result["zero_history_build"]["environment_ready"])
 
+
+    def test_p3_gn_multi_flask_auto_default_measures_one_exact_item(self):
+        # Normal zero-history engine, not a standalone item scorer:
+        # two distinct high-quality types are present in v281, but the
+        # automatic default measures only the deterministic first family.
+        src={"schema":"v216_fresh_source_stage_v1",
+             "source_stage":{"status":"EXECUTED_AND_SEALED","reused":False},
+             "environment_installed":False,"environment_ready":False,
+             "native_calls":0,"G":None,"J":None,"F":None,"O":None,
+             "B":None,"T":None,"expected_game_build":BUILD,
+             "snapshot_receipt_path":str(self.root/"wago"/"receipt.json"),
+             "fresh_consumable_simc_effect_relation":self.source,
+             "fresh_one_spec_physical_G_probe":{
+                 "profile_path":str(self.root/"source"/"probe.simc"),
+                 "source_stage":{"status":"EXECUTED_AND_SEALED"}}}
+        compiled={"status":"FRESH_V191_V211_V213_COMPILED_UNADMITTED",
+                  "stage_root":str(self.root),"simc_revision":REV,
+                  "source_catalog_path":str(self.root/"catalog.json"),
+                  "missing":[]}
+        base=relation.plan_physical_native_measurements(
+            stage_root=self.root,relation=self.source,
+            build=BUILD,simc_revision=REV)
+        rows=base["flask"]+[
+            {"physical_item_id":502,"simc_input_token":"unrelated_flask_3",
+             "crafting_quality":3}]
+        plan={**base,"flask":rows,"candidate_count":len(rows)}
+        requested={"expected_game_build":BUILD,
+                   "representative_request":{"class":"paladin",
+                       "spec":"retribution","target_ilevel":334},
+                   "g_probe_character":{"race":"dwarf"},
+                   "simc_revision_hint":None,
+                   "auto_native_F_requested":True,
+                   "auto_native_G_requested":False,
+                   "auto_select_observed_F_no_oil":True}
+        called=[]
+        def pair(**kwargs):
+            called.append(kwargs["token"])
+            return {"kind":"flask","token":kwargs["token"],
+                    "status":"SIMC_CONSUMABLE_SOURCE_OR_BINARY_PENDING",
+                    "new_native_calls":0,"F_candidate_unadmitted":None}
+        with mock.patch.object(build,"collect_wago_new_season_source",
+                               return_value=src), \
+             mock.patch.object(build.source_wiring,"compile_collected",
+                               return_value=compiled), \
+             mock.patch.object(build,"preflight_new_season_source",
+                               return_value={"preflight_sha256":"b"*64,
+                                             "status":"FRESH_SOURCE_UNADMITTED"}), \
+             mock.patch.object(build.zero_history_G_native,"collect",
+                               return_value={"status":"PENDING",
+                                             "new_native_calls":0}), \
+             mock.patch.object(relation,"plan_physical_native_measurements",
+                               return_value=plan), \
+             mock.patch.object(build.native_effect_pair,"measure",
+                               side_effect=pair):
+            result=build.build_environment(
+                sessions_root=self.root,session_folder=None,user=None,
+                binary=self.root/"fake_simc",revision=None,static_cache=None,
+                source_catalog_path=None,bootstrap_result=None,
+                fresh_collection_inputs=requested)
+        self.assertEqual(called,["test_flask_3"])
+        comp=result["source_compilation"]
+        default=comp["automatic_default_F_source_selection_unadmitted"]
+        self.assertEqual(default["status"],
+                         "AUTO_DEFAULT_F_SOURCE_ITEM_SELECTED_UNADMITTED")
+        self.assertEqual(default["selected_physical_items_unadmitted"],
+                         {"flask_item_id":501,"oil_item_ids_by_hand":{}})
+        self.assertEqual(comp["automatic_F_native_measurements_unadmitted"]
+                         ["attempted"],1)
+        self.assertIsNone(result["F"])
+        self.assertFalse(result["environment_ready"])
+        self.assertFalse(default["environment_ready"])
+
     def test_auto_F_measurement_uses_sealed_precombat_without_editing_v233(self):
         original=self.root/"source"/"probe.simc"
         raw=original.read_bytes()

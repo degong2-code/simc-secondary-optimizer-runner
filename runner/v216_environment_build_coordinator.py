@@ -4087,6 +4087,59 @@ def _prioritize_highest_source_quality_F(worklist):
             "new_native_calls":0,"network_calls":0}
 
 
+
+def _auto_default_F_from_sealed_v281_worklist(plan):
+    """Pick one representative source-quality F before any Native subprocess.
+
+    Default for the environment B/T baseline, NOT a class preference,
+    effect equivalence assertion, or registration of other F variants.
+    The original v281 binding and v278 Native remain authoritative.
+    """
+    out={"status":"AUTO_DEFAULT_F_PHYSICAL_SOURCE_PENDING",
+         "selected_physical_items_unadmitted":None,"requires":[],
+         "selection_basis":"CANONICAL_HIGHEST_SOURCE_QUALITY_FLASK_FAMILY",
+         "not_spec_default_or_stat_optimization":True,
+         "simc_quality_effect_unverified":True,
+         "environment_ready":False,"new_native_calls":0,"network_calls":0}
+    if (type(plan) is not dict or plan.get("status")!=
+            "MEASURABLE_PHYSICAL_F_O_CANDIDATES_UNADMITTED"
+            or type(plan.get("flask")) is not list or not plan["flask"]):
+        out["requires"].append("AUTO_F_SEALED_PHYSICAL_WORKLIST_PENDING")
+        return out
+    prioritized=_prioritize_highest_source_quality_F(plan["flask"])
+    by_family={}
+    for item in prioritized["selected"]:
+        token,quality=item["simc_input_token"],item["crafting_quality"]
+        suffix="_"+str(quality)
+        # No guessed family: a token without a verified quality suffix is
+        # still measurable by explicit physical ID, not auto selectable.
+        if not token.endswith(suffix) or len(token)<=len(suffix):
+            continue
+        by_family.setdefault(token[:-len(suffix)],[]).append(item)
+    # A tied physical product with the same highest-quality SimC token
+    # requires an explicit selection rather than an arbitrary ItemID.
+    eligible=[item for group in by_family.values() if len(group)==1
+              for item in group]
+    if not eligible:
+        out["requires"].append("AUTO_F_HIGHEST_SOURCE_QUALITY_UNAMBIGUOUS_ITEM_PENDING")
+        return out
+    selected=min(eligible,key=lambda item:(
+        item["simc_input_token"],item["physical_item_id"]))
+    out.update({
+        "status":"AUTO_DEFAULT_F_SOURCE_ITEM_SELECTED_UNADMITTED",
+        "selected_physical_items_unadmitted":{
+            "flask_item_id":selected["physical_item_id"],
+            "oil_item_ids_by_hand":{}},
+        "selected_source_quality":selected["crafting_quality"],
+        "selected_source_token":selected["simc_input_token"],
+        "all_source_candidates":len(plan["flask"]),
+        "highest_source_quality_candidates":
+            prioritized["all_source_candidates"]-
+            prioritized["deferred_lower_source_qualities"],
+        "distinct_flask_families":len(by_family)})
+    return out
+
+
 def _auto_F_native_from_sealed_v281(*,collected,compilation,binary,
                                       kind="flask",max_new_native_calls=8,
                                       selected_item_id=None):
@@ -5796,6 +5849,26 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     +str(exc).split(":",1)[0]) from exc
             progress["automatic_F_O_measurement_candidates_unadmitted"]=measurement_plan
             source_compilation["automatic_F_O_measurement_candidates_unadmitted"]=measurement_plan
+            if auto_select_default_F and selected_budget_items is None:
+                # Select a deterministic top-quality physical F from the
+                # COMPLETE sealed v281 source before opening any v278 case.
+                # Other distinct flask effects remain independent options.
+                default_F=_auto_default_F_from_sealed_v281_worklist(
+                    measurement_plan)
+                progress["automatic_default_F_source_selection_unadmitted"]=default_F
+                source_compilation[
+                    "automatic_default_F_source_selection_unadmitted"]=default_F
+                selected_budget_items=default_F[
+                    "selected_physical_items_unadmitted"]
+                if selected_budget_items is None:
+                    progress["requires"].extend(default_F["requires"])
+                else:
+                    # Explicit default no-oil is a real internal selection,
+                    # not v222's earlier source-only O=0 preview assumption.
+                    progress["requires"]=[
+                        reason for reason in progress["requires"]
+                        if reason!=
+                        "WEAPON_OIL_O_EXACT_APPLICATION_AND_RATING_PENDING"]
         # Source-selected consumables are tested through the original
         # v269 JSON2 before/after comparer, with an immutable shared baseline.
         # No blanket item-quality or weapon-eligibility certification: the
@@ -5811,12 +5884,20 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 "automatic_F_O_measurement_candidates_unadmitted") or {}
                 ).get("oil",[]) if auto_native_O else []
             oil_reserved=min(4,2*len(oil_work))
-            auto_rows,auto_state=_auto_F_native_from_sealed_v281(
-                collected=collected,compilation=source_compilation,
-                binary=binary,max_new_native_calls=8-oil_reserved,
-                selected_item_id=(selected_budget_items["flask_item_id"]
-                                  if selected_budget_items is not None
-                                  else None))
+            if (auto_select_default_F and selected_budget_items is None):
+                auto_rows=[]
+                auto_state={
+                    "status":"AUTO_F_SOURCE_SELECTION_PENDING",
+                    "requires":["AUTO_F_DEFAULT_EXACT_ITEM_SOURCE_PENDING"],
+                    "per_item":[],"new_native_calls":0,
+                    "F_approved":False,"environment_ready":False}
+            else:
+                auto_rows,auto_state=_auto_F_native_from_sealed_v281(
+                    collected=collected,compilation=source_compilation,
+                    binary=binary,max_new_native_calls=8-oil_reserved,
+                    selected_item_id=(selected_budget_items["flask_item_id"]
+                                      if selected_budget_items is not None
+                                      else None))
             effect_observations.extend(auto_rows)
             auto_F_calls=auto_state["new_native_calls"]
             progress["automatic_F_native_measurements_unadmitted"]=auto_state

@@ -68,6 +68,7 @@ jobs:
             tests.test_p3_gk_f_j_diagnostic_receipt \
             tests.test_p3_gl_highest_quality_flask_measurement \
             tests.test_p3_gm_exact_f_t1_selected_mode \
+            tests.test_p3_gn_default_flask_environment_engine \
             tests.test_p3_ga_raid_loot_expansion_diagnostic \
             tests.test_p3_ft_season_scope_diagnostic \
             tests.test_v163_db2_zero_seed \
