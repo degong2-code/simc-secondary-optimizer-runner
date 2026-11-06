@@ -1,3 +1,6 @@
+> **2026-11-06 P3-GD CI 결과·실행 최적화:** 기존 v229 403 대체경로 [focused #42165388443](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42165388443) 322 PASS/2 SKIP·DEV_LEDGER_PASS, [v212 #42165388451](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42165388451) Ubuntu/Windows 각 466 PASS/4 SKIP. 원래 P3-FZ 단일 70783 T1 workflow에 **Wago보다 앞선** 정확한 Git blob API 403 모의·실 응답 SHA 시험을 1회 삽입, 실패하면 대량 원본 수집 전 차단, 성공하면 원래 v216 T1 경로 진행. 신규 제품 gate/효과/Native 엔진 없음; 새 실제 T1 영수증 전 READY 미인증.
+>
+
 > **2026-11-06 P3-GD (신규 코드·CI 확인 대기):** 지난 [실 T1 #42161134821](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42161134821)의 v229 `raw.githubusercontent.com` 403가 목걸이 연결 검증 이전의 최전단 장애. v229가 이미 탐지한 exact Git blob SHA로 GitHub API를 403일 때만 조회하고 SHA/size 검증하도록 원본 코드 재사용; v216 lazy item_data에도 연결. 일반 raw 성공 시 추가 호출 0, fallback 1회, Native0. 실 70783 목걸이/READY 미인증. [P3-GD 노트](development/notes/2026-11-06_p3-gd-exact-git-blob-403-recovery.md).
 >
 

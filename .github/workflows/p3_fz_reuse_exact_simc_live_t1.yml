@@ -1,4 +1,4 @@
-# P3-GC: one bounded exact 70783 T1 after same-build expansion source-only plain neck bridge; no new source, item mechanic or Native sweep.
+# P3-GD: one bounded exact 70783 T1 after v229 raw-403 fixed Git-blob fallback; no new SimC build, new item authority or Native sweep.
 name: P3-FZ reuse exact 70783 CLI for one real zero-history T1 (one-shot)
 on:
   push:
@@ -54,6 +54,31 @@ jobs:
           chmod +x .p3-fz-tools/simc
           echo "SIMC_CLI_WRAPPER=$GITHUB_WORKSPACE/.p3-fz-tools/simc" >> "$GITHUB_ENV"
           echo "P3_FZ_EXISTING_BINARY_SHA_VERIFIED"
+      - name: Before Wago, verify GitHub exact-blob API fallback with forced raw 403 (source only)
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from urllib.error import HTTPError
+          import v229_simc_only_source_seed as source
+          revision=os.environ["SIMC_PINNED_SOURCE_COMMIT"]
+          tree=source.discover_generated_tree(revision)
+          name="item_set_bonus.inc"
+          meta=tree[name]
+          def simulate_raw_403(req,timeout):
+              if req.full_url.startswith(source.RAW_BASE):
+                  raise HTTPError(req.full_url,403,"Simulated raw-host 403",{},None)
+              return source.urlopen(req,timeout=timeout)
+          data=source.fetch_generated_blob(
+              revision=revision,name=name,expected_sha=meta["sha"],
+              expected_size=meta["size"],transport=simulate_raw_403)
+          assert len(data)==meta["size"] and source.git_blob(data)==meta["sha"], (
+              "P3_GD_EXACT_GIT_BLOB_FALLBACK_INVALID")
+          print("P3_GD_FORCED_RAW_403_ACTUAL_GITHUB_BLOB_SHA_PASS",
+                meta["sha"],"NATIVE_0_WAGO_0")
+          PY
       - name: Original v216 current-Retail zero-history Build, bounded one shot
         shell: bash
         timeout-minutes: 19
