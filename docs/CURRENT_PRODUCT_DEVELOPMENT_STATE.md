@@ -1,3 +1,6 @@
+> **2026-11-06 P3-GC 최신 실제 영수증:** [#42161134821](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42161134821) `ZERO_BASE_T1_NOT_READY`. v165→v166→v167→v232 내부 목걸이 경로를 실증하기 전에 기존 v229 SimC pinned 원본 HTTP 403 발생. 해당 도미노로 v275/티어 물리 확인/전체 item_data 및 J/F가 PENDING. 70783 Wago source·보석 raw·65 tier 후보 등은 봉인, Native0. 이는 목걸이 교정의 실전 실패 증거가 아니라 외부 첫-party 원본 접근 문제. 직전 [#42159679896](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42159679896)은 v167 일반 목걸이 공급 0을 실제 확인. [노트](development/notes/2026-11-06_p3-gc-internal-source-only-plain-neck.md). 새 SimC 버전 때문이라는 추정 또는 다른 시즌 자료 대체 금지, 중복 전체 Wago/Native 반복 대신 기존 70783 source SHA와 원본 수집 경로 최소 복구 우선.
+>
+
 > **2026-11-06 P3-GC 내부 G source 연결 (실 T1 재검증 대기):** 실제 [P3-GB #42159679896](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42159679896)에서는 목걸이 0이 SimC 필터가 아니라 기존 v167 원본 공급 문제였음이 확정. v165의 동일 확장팩·같은 빌드·ItemXItemEffect 없음·일반·비세트 목걸이를 v166→v167에서 사용자 목록 밖 **내부 G 대표** 후보로만 재사용하고 v232에서 정확한 SimC ID/직업/물리 속성으로 다시 검증. 프로필·G·J/F/O/READY 강제 성공 없음. [P3-GC 노트](development/notes/2026-11-06_p3-gc-internal-source-only-plain-neck.md); 최종 Actions 영수증 확인 전 실 READY 미검증.
 >
 
