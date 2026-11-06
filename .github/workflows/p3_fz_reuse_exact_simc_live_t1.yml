@@ -1,4 +1,4 @@
-# Post-P3-GA v276/v189 original source-owner fixes; one bounded exact-binary T1 with missing-slot diagnostic.
+# P3-GB: one bounded original T1 only to classify missing neck: v167 DB2 vs exact SimC ID/conditions. No new parser/download/Native sweep.
 name: P3-FZ reuse exact 70783 CLI for one real zero-history T1 (one-shot)
 on:
   push:

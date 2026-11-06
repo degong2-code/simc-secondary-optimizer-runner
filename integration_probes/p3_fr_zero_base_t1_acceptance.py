@@ -181,6 +181,8 @@ def main():
                         if type(row.get("source_stage")) is dict else None),
                     "reason":row.get("reason"),
                     "missing_slot":row.get("missing_slot"),
+                    "neck_candidate_source_coverage":
+                        row.get("neck_candidate_source_coverage"),
                     "requires":row.get("requires"),
                     "missing":row.get("missing"),
                     "has_candidate":bool(row.get("candidate_path")),

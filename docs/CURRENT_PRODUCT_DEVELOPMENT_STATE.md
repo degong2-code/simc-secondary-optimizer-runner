@@ -1,3 +1,6 @@
+> **2026-11-06 P3-GB 진행 (신규 CI/실전 영수증 대기):** 최신 실제 [P3-FZ #42151165863](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42151165863)은 70783 source/CLI + 209 gear + 65 tier + v191/v211/v213 성공, Native0, READY=false. 최전단 장비 장애물은 `v232 V232_COMMON_SLOT_WITHOUT_SIMC_CANDIDATE:neck`. 추측으로 class mask/DB2 선택 조건을 완화하지 않고, 기존 동일 SimC item_data 단일 pass에서 v167 neck 공급·정확 ID·class mask/set/type 탈락 카운트를 모아 v216/최종 receipt에 보존하는 원본 연결 진단 추가. [노트](development/notes/2026-11-06_p3-gb-exact-neck-candidate-source-boundary.md). 최초 G/J/F/O/READY/T1 여전히 미완료.
+>
+
 > **2026-11-06 P3-GA 후속 v189 교정:** 실제 SimC 70783 Git 원본 `unique_gear_midnight.cpp`의 `set_min_version( "12.1.0" )`가 기존 `v189`의 wowv_t-only 파서에서 `UNKNOWN_VERSION_EXPRESSION`을 발생시킴. 의미 동일한 3자리 정수 문자열형 최소버전만 지원하도록 원본 파서 연결 교정; 효과 재구현·새 품질 Gate 없음. v276 source_url/bytes SHA 수정과 함께 새 focused CI 확인 전 최종 PASS 주장 금지.
 >
 

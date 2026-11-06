@@ -118,6 +118,62 @@ class SourceOnlyRepresentativeTests(unittest.TestCase):
         self.assertEqual(row["native_calls"],0)
         self.assertEqual(row["cache_mutations"],0)
 
+    def test_missing_neck_reports_which_existing_source_filter_lost_it(self):
+        from runner import v167_product_season_gear_adapter as provider
+        season_rows=[{
+            "item_id":iid,"name":f"season_{iid}",
+            "category":"plain_representative_candidate",
+            "inventory_type":inv,"class_id":kind,"subclass_id":sub,
+            "allowed_class_mask":2,"source_kinds":["raid_journal"],
+            "item_set_id":0}
+            for iid,inv,kind,sub in (
+                (9020,5,4,4),(9021,6,4,4),(9022,8,4,4),
+                (9024,16,4,0),(9012,11,4,0),(9025,11,4,0),
+                (9010,17,2,8))]
+        season={"schema":provider.SCHEMA,
+            "status":"CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
+            "no_old_catalog_seed":True,"season_build":BUILD,
+            "item_count":len(season_rows),
+            "role_counts":{"plain_representative_candidate":len(season_rows)},
+            "items":season_rows,
+            "not_certified":{"tier_four_set":True,"simc_item_effects":True},
+            "new_native_calls":0,"new_api_calls":0}
+        with self.assertRaises(builder.SourceRepresentativeBlocked) as caught:
+            builder.find_candidate(
+                seed_directory=self.folder,tier_candidate=self.tier,
+                target_ilevel=335,season_gear_db=season)
+        reason,detail=str(caught.exception).split(":neck|",1)
+        self.assertEqual(reason,"V232_COMMON_SLOT_WITHOUT_SIMC_CANDIDATE")
+        cov=json.loads(detail)
+        self.assertEqual(cov["db2_plain_neck_count"],0)
+        self.assertEqual(cov["simc_exact_id_seen"],0)
+        self.assertEqual(cov["simc_plain_neck_accepted"],0)
+
+        season["items"].append({
+            "item_id":9023,"name":"season_9023",
+            "category":"plain_representative_candidate",
+            "inventory_type":2,"class_id":4,"subclass_id":0,
+            "allowed_class_mask":2,"source_kinds":["raid_journal"],
+            "item_set_id":0})
+        season["item_count"]+=1
+        season["role_counts"]["plain_representative_candidate"]+=1
+        with_mask_error=make_fixture()
+        with_mask_error["item_data.inc"]=with_mask_error[
+            "item_data.inc"].replace(
+                b'"rep_9023", 9023, 0, 0, 0, 335, 80, 0, 0, 4, 2, 4, 0, 0, 0.0, 0.0, 0.0, 0, 0, 0x2',
+                b'"rep_9023", 9023, 0, 0, 0, 335, 80, 0, 0, 4, 2, 4, 0, 0, 0.0, 0.0, 0.0, 0, 0, 0x4')
+        self.assertNotEqual(with_mask_error["item_data.inc"],make_fixture()["item_data.inc"])
+        self.seed_files(with_mask_error)
+        with self.assertRaises(builder.SourceRepresentativeBlocked) as rejected:
+            builder.find_candidate(
+                seed_directory=self.folder,tier_candidate=self.tier,
+                target_ilevel=335,season_gear_db=season)
+        cov=json.loads(str(rejected.exception).split(":neck|",1)[1])
+        self.assertEqual(cov["db2_plain_neck_count"],1)
+        self.assertEqual(cov["simc_exact_id_seen"],1)
+        self.assertEqual(cov["simc_class_mask_rejected"],1)
+        self.assertEqual(cov["simc_plain_neck_accepted"],0)
+
     def test_warrior_fury_titans_grip_requires_two_real_distinct_2h_items(self):
         self.seed_files(make_fixture(warrior=True),
                         cls="warrior",spec="fury")

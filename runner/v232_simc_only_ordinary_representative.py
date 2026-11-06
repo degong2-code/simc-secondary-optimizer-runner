@@ -191,6 +191,20 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
         season_ids=set(provider_by_id)
         need(bool(season_ids),
              "V232_OPTIONAL_SEASON_GEAR_HAS_NO_PLAIN_CANDIDATES")
+    # P3-GB: zero extra source reads/Native. For a failed neck selection,
+    # record only bounded drop-off counts from the SAME v230 streaming pass.
+    # Do not assume a missing source ID is an unusable real-world necklace.
+    neck_source_ids={iid for iid,row in provider_by_id.items()
+                     if row["inventory_type"]==2}
+    neck_coverage={
+        "db2_plain_neck_count":len(neck_source_ids),
+        "simc_exact_id_seen":0,
+        "simc_inventory_mismatch":0,
+        "simc_class_or_subclass_rejected":0,
+        "simc_class_mask_rejected":0,
+        "simc_item_set_rejected":0,
+        "simc_plain_neck_accepted":0,
+    }
     raw=seed.bounded_read(Path(seed_directory)/"item_data.inc",
                           seed.MAX_ITEM_FILE)
     item_source=receipt.get("source_files",{}).get("item_data.inc",{})
@@ -203,12 +217,21 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
         # Every requested tier item is also scanned; binds v231's detailed
         # unscaled source-level/quality/slots to actual physical bytes.
         iid=metadata.number(fields[1],"V232_ITEM_ID_INVALID")
+        neck=iid in neck_source_ids
+        if neck:
+            neck_coverage["simc_exact_id_seen"]+=1
         if iid in tier_ids:return True
         if season_ids is not None and iid not in season_ids:return False
         inv=metadata.number(fields[10],"V232_INVENTORY_TYPE_INVALID")
-        if inv not in VALID_INVENTORY:return False
+        if inv not in VALID_INVENTORY:
+            if neck: neck_coverage["simc_inventory_mismatch"]+=1
+            return False
+        if neck and inv!=2:
+            neck_coverage["simc_inventory_mismatch"]+=1
         kind=metadata.number(fields[11],"V232_ITEM_CLASS_INVALID")
-        if kind not in (2,4):return False
+        if kind not in (2,4):
+            if neck:neck_coverage["simc_class_or_subclass_rejected"]+=1
+            return False
         source_level=metadata.number(fields[5],"V232_ITEM_LEVEL_INVALID")
         # Optional DB2 candidates may have different historical base ilvl
         # or quality despite being in the *current rotation* (returning M+).
@@ -217,15 +240,23 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
             if metadata.number(fields[9],"V232_ITEM_QUALITY_INVALID")!=quality:
                 return False
         if metadata.number(fields[24],"V232_ITEM_SET_INVALID")!=0:
+            if neck:neck_coverage["simc_item_set_rejected"]+=1
             return False
         if (metadata.number(fields[19],"V232_CLASS_MASK_INVALID")
                 & class_mask)!=class_mask:
+            if neck:neck_coverage["simc_class_mask_rejected"]+=1
             return False
         sub=metadata.number(fields[12],"V232_SUBCLASS_INVALID")
         if inv in (5,20,9,6,8):
             return kind==4 and sub==chooser.gear.ARMOR_SUBCLASS[
                 contract["family"]]
-        if inv in (2,16,11):return kind==4
+        if inv in (2,16,11):
+            if neck:
+                if kind==4 and inv==2:
+                    neck_coverage["simc_plain_neck_accepted"]+=1
+                else:
+                    neck_coverage["simc_class_or_subclass_rejected"]+=1
+            return kind==4
         if inv in (13,17,15,26):return kind==2
         if inv==14:return kind==4 and sub==6
         if inv==23:return kind==4 and sub==0
@@ -313,6 +344,12 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
     for slot in chooser.COMMON:
         matches=chooser.available_plain(scratch,slot=slot,
                 class_mask=class_mask,used=used)
+        if not matches and slot=="neck" and season_ids is not None:
+            # This diagnostic is NOT a bypass or a season catalog. Values
+            # contain no item IDs, profile, raw source path or credentials.
+            raise SourceRepresentativeBlocked(
+                "V232_COMMON_SLOT_WITHOUT_SIMC_CANDIDATE:neck|"
+                +json.dumps(neck_coverage,sort_keys=True,separators=(",",":")))
         need(bool(matches),"V232_COMMON_SLOT_WITHOUT_SIMC_CANDIDATE:"+slot)
         matches=[iid for iid in matches if matching_primary(iid,slot)]
         need(bool(matches),"V232_COMMON_PRIMARY_STAT_NOT_COMPATIBLE:"+slot)

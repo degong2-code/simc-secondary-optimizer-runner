@@ -2499,15 +2499,31 @@ def _one_spec_ordinary_simc_stage(*, stage_root, build, fresh_gear,
             simc_representative.SourceRepresentativeBlocked,
             EnvironmentBuildBlocked,ValueError,KeyError,OSError) as exc:
         reason,_,detail=str(exc).partition(":")
+        slot_detail, _, coverage_json = detail.partition("|")
+        coverage=None
+        if coverage_json and reason=="V232_COMMON_SLOT_WITHOUT_SIMC_CANDIDATE":
+            try:
+                observed=json.loads(coverage_json)
+                fields={"db2_plain_neck_count","simc_exact_id_seen",
+                    "simc_inventory_mismatch",
+                    "simc_class_or_subclass_rejected",
+                    "simc_class_mask_rejected","simc_item_set_rejected",
+                    "simc_plain_neck_accepted"}
+                if (type(observed) is dict and set(observed)==fields and
+                    all(type(v) is int and 0<=v<=100000 for v in observed.values())):
+                    coverage=observed
+            except (ValueError,TypeError):
+                pass
         # Preserve actionable missing slot without exposing source paths,
         # copying gear from old seasons, or granting a G success.
-        slot=(detail if reason in (
+        slot=(slot_detail if reason in (
             "V232_ORDINARY_SLOT_WITHOUT_SIMC_CANDIDATE",
             "V232_COMMON_SLOT_WITHOUT_SIMC_CANDIDATE")
-            and detail in simc_representative.chooser.contracts.SLOT_ORDER
+            and slot_detail in simc_representative.chooser.contracts.SLOT_ORDER
             else None)
         return {"status":"FRESH_ONE_SPEC_PHYSICAL_SOURCE_OR_COVERAGE_PENDING",
                 "reason":reason,"missing_slot":slot,
+                "neck_candidate_source_coverage":coverage,
                 "network_calls_by_stage":0,"native_calls":0,
                 "environment_ready":False}
     # v217 checked this source-only file's hash even on receipt reuse.
