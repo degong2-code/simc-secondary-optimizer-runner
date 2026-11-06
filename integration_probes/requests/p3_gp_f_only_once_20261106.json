@@ -1,0 +1,12 @@
+{
+  "schema": "p3_gp_one_source_verified_flask_native_once_v1",
+  "build": "12.1.5.70783",
+  "selected_flask_item_id": 241324,
+  "source_owner": "EXISTING_V216_V281_V278",
+  "max_new_F_native_calls": 2,
+  "G_native_requested": false,
+  "gem_effect_validation": false,
+  "complete_GJFO_ready_claim": false,
+  "no_new_simc_binary_compile": true,
+  "no_main_merge": true
+}
