@@ -501,12 +501,19 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                     collected=collected,compilation=compiled,
                     binary=self.root/"fake_simc",
                     kind="temporary_enchant",selected_item_id=8112)
-            # The previous caller with no exact selection is unchanged.
+            # No explicit selection now measures only the top available
+            # source quality per distinct SimC token family. The lower bloom
+            # rank remains in the original v281 source; no effect admission.
             rows,all_candidates=build._auto_F_native_from_sealed_v281(
                 collected=collected,compilation=compiled,
                 binary=self.root/"fake_simc")
-            self.assertEqual(len(rows),3)
-            self.assertEqual(all_candidates["new_native_calls"],6)
+            self.assertEqual([x["physical_item_native_source_unadmitted"][
+                "physical_item_id"] for x in rows],[8112,8223])
+            self.assertEqual(len(rows),2)
+            self.assertEqual(all_candidates["new_native_calls"],4)
+            self.assertEqual(all_candidates["all_source_candidate_count"],3)
+            self.assertEqual(all_candidates["deferred_lower_quality_measurements"],1)
+            self.assertTrue(all_candidates["source_quality_priority_only_not_policy_A"])
             self.assertNotIn("selected_exact_item_id",all_candidates)
 
     def test_p3_fp_single_stat_cannot_enter_J_even_with_manual_number(self):
