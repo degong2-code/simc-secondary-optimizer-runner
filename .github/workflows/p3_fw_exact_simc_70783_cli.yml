@@ -1,0 +1,101 @@
+name: P3-FW exact current-build SimC source and CLI (one-shot)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p3_fw_exact_simc_70783_cli.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: p3-fw-exact-current-build-simc
+  cancel-in-progress: false
+jobs:
+  exact-simc:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    env:
+      PYTHONPATH: runner:.
+      SIMC_COMMIT: c20e2ad52e4c33711f74272309a5748125175fe8
+      GAME_BUILD: 12.1.5.70783
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Restore exact source commit (no latest fallback)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out _vendor
+          git clone --filter=blob:none --no-checkout https://github.com/simulationcraft/simc.git _vendor/simc
+          git -C _vendor/simc checkout --detach "$SIMC_COMMIT"
+          test "$(git -C _vendor/simc rev-parse HEAD)" = "$SIMC_COMMIT"
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,subprocess,sys
+          from runner import v229_simc_only_source_seed as source
+          root=pathlib.Path("_vendor/simc")
+          folder=root/"engine/dbc/generated"
+          data={name:(folder/name).read_bytes() for name in source.SOURCE_FILES}
+          git_shas={}
+          for name in data:
+              git_shas[name]=subprocess.check_output(
+                  ["git","-C",str(root),"rev-parse","HEAD:engine/dbc/generated/"+name],
+                  text=True).strip()
+          doc=source.inventory(data,simc_revision=os.environ["SIMC_COMMIT"],
+              expected_build=os.environ["GAME_BUILD"],expected_git_blob=git_shas,
+              season_event="cold_start")
+          receipt={"schema":"p3_fw_exact_simc_build_v1",
+              "source_commit":os.environ["SIMC_COMMIT"],
+              "game_build":os.environ["GAME_BUILD"],
+              "source_inventory_sha256":hashlib.sha256(
+                  json.dumps(doc,sort_keys=True).encode()).hexdigest(),
+              "generated_source_verified":True,"binary_built":False}
+          pathlib.Path("out/p3_fw_receipt.json").write_text(
+              json.dumps(receipt,sort_keys=True,indent=2)+"\n")
+          print("P3_FW_EXACT_GENERATED_SOURCE_VERIFIED",flush=True)
+          PY
+      - name: Reuse v192 exact-source CMake CLI build method
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake build-essential pkg-config
+          cmake -S _vendor/simc -B _vendor/simc/build -DBUILD_GUI=OFF -DSC_NO_NETWORKING=ON -DCMAKE_BUILD_TYPE=Release >out/cmake_configure.log 2>&1
+          cmake --build _vendor/simc/build --target simc --parallel 2 >out/cmake_build.log 2>&1
+          bin="$(find _vendor/simc/build -type f -name simc -executable | sort | head -1)"
+          test -n "$bin" && test -x "$bin"
+          mkdir -p out/binary
+          cp "$bin" out/binary/simc
+          sha256sum out/binary/simc >out/binary/simc.sha256
+          python3 - <<'PY'
+          import json,os,pathlib,hashlib
+          p=pathlib.Path("out/p3_fw_receipt.json")
+          d=json.loads(p.read_text())
+          b=pathlib.Path("out/binary/simc")
+          d.update(binary_built=True,binary_sha256=hashlib.sha256(b.read_bytes()).hexdigest(),
+                   binary_bytes=b.stat().st_size,
+                   binary_source_commit=os.environ["SIMC_COMMIT"],
+                   environment_ready=False,environment_installed=False,
+                   native_dps_calls=0)
+          p.write_text(json.dumps(d,sort_keys=True,indent=2)+"\n")
+          print("P3_FW_EXACT_BINARY_BUILT",d["binary_sha256"],flush=True)
+          PY
+      - name: Preserve small identity receipt and build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p3-fw-exact-simc-identity
+          path: |
+            out/p3_fw_receipt.json
+            out/cmake_configure.log
+            out/cmake_build.log
+          retention-days: 3
+          if-no-files-found: warn
+      - name: Preserve exact binary only on successful build
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p3-fw-exact-simc-cli-70783
+          path: out/binary/
+          retention-days: 3
+          if-no-files-found: error

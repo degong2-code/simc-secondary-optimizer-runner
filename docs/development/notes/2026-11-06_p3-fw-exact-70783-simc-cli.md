@@ -1,0 +1,7 @@
+# 2026-11-06 · P3-FW · 실제 70783 SimC 바이너리 정합 선행 복구
+
+- **Goal:** P3-FV real v163 season tier resolution is PASS; next independent prerequisite is the 70783 SimC executable. The historical Docker image generated data is 70529 and cannot be passed off as 70783.
+- **Reuse:** exact public upstream `simulationcraft/simc` commit `c20e2ad52e4c33711f74272309a5748125175fe8` identifies build 70783 in the upstream commit title. The one-shot workflow reuses v192's pinned Git checkout and CMake CLI method; existing v229 `inventory` validates all three generated files against the expected build and Git blob IDs before building. No new parsing or effect certification engine.
+- **Output:** bounded JSON identity receipt with exact Git SHA, binary SHA-256 and file size; separate short-lived CLI artifact. The workflow does not run the full Wago download, G/J/F/O, Native DPS or v212 installation. No old binary fallback. On failure preserve logs, report failure without marking binary attested.
+- **Next:** only if build succeeds, reuse the binary with original v216 zero-history T1 after resolving remaining original source owners. Build success is not `environment_ready`; executable compatibility and full T1 must be tested separately. Do not rerun entire expensive T1 merely because a binary exists.
+- **Authority:** isolated branch only; main, immutable sources, Project UI, Work OS, official promotion unchanged.
