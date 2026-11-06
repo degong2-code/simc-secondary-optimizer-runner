@@ -8,3 +8,5 @@
 - **Verification:** 신규 코드/fixture는 집중 오프라인 CI로 검증(실제 영수증 확인 후 결과 기록). 실 Native/웹 수집 이번 변경 0.
 - **Remaining:** 실 시즌 F 정적 수치 확인·J 실제 5소켓 구성과 특수보석·O 선택값·G 및 공식 B/T/정책 A/installed T1 미완료. 후보 순위는 최고 품질 효과 인증이 아니고 v220가 실제 적격 자료만 제품에 등록함.
 - **Efficiency:** 자동 default F에 수십 영약 후보가 있어도 v278 paired Native는 최대 2회(공유 baseline 재사용 시 최대 1회 추가)로 제한, 똑같은 아이템 재실행은 기존 v278 source SHA/case cache가 방지. 새 수집기·효과 엔진·전체 시즌 DB·전 전문화 Native 검증 0. `main`, immutable, Project UI/Work OS/기존 주 제품 채팅 소유권 불변.
+
+- **Web UI CONNECT:** `runner/webui/index.html`의 과거 '발견된 최고 수치 선택' 문구는 여러 종류 F 숫자를 비교해 선택한다는 오해를 불렀으므로 '시즌 기본 영약 대표 1종·전문화별 최적 영약 아님'으로 정정. `app.js`는 원본 ItemID 선택과 기존 v278 검증 F 수치를 별도 상태로 표시하며, 정식 등록 전 단계임을 명확히 함. 자동 모드의 예상 신규 F Native 상한은 2회(선택 G/O 호출 별개)로 설명. 신규 Native, 효과 평가, 설치 인증 추가 0.

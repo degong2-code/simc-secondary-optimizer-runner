@@ -37,6 +37,17 @@ class FAutomaticSourceChoice(unittest.TestCase):
         selected=v._auto_default_F_from_sealed_v281_worklist(self.plan([
             self.row(1,"unlabelled",3)]))
         self.assertIsNone(selected["selected_physical_items_unadmitted"])
+    def test_public_season_ui_distinguishes_source_F_from_official_F(self):
+        root=pathlib.Path(__file__).resolve().parents[1]/"runner"/"webui"
+        html=(root/"index.html").read_text(encoding="utf8")
+        js=(root/"app.js").read_text(encoding="utf8")
+        self.assertIn("시즌 기본 영약 F 자동 선정",html)
+        self.assertIn("전문화별 최적 영약 아님",html)
+        self.assertIn("source.automatic_default_F_source_selection_unadmitted",js)
+        self.assertIn("original_J_F_verified_components_not_full_environment?.F",js)
+        self.assertIn("환경 정식 등록 전",js)
+        self.assertIn("최대 2회 측정",js)
+
     def test_empty_source_is_pending_not_zero_F(self):
         p=v._auto_default_F_from_sealed_v281_worklist(self.plan([]))
         self.assertIn("AUTO_F_SEALED_PHYSICAL_WORKLIST_PENDING",p["requires"])

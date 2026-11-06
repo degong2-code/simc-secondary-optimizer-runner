@@ -648,6 +648,8 @@ function showSeasonEnvironmentBuild(data) {
   const measuredF=source.automatic_F_native_measurements_unadmitted;
   const measuredO=source.automatic_O_native_measurements_unadmitted;
   const autoFlask=source.auto_observed_flask_budget_preview_unadmitted;
+  const sourceDefaultF=source.automatic_default_F_source_selection_unadmitted;
+  const originalVerifiedF=source.original_J_F_verified_components_not_full_environment?.F;
   node.textContent=(ready?"시즌 환경 설치 완료":"원본 수집·검증 진행 결과 (설치 미완료)")+
     " · 요청 빌드 "+(scope.game_build||"–")+
     (scope.selected_flask_item_id?" · 지정 F ItemID "+scope.selected_flask_item_id:"")+
@@ -664,12 +666,17 @@ function showSeasonEnvironmentBuild(data) {
     (measuredO?.status==="AUTO_O_NATIVE_MEASURED_SOURCE_ONLY"?
       " · O Native "+measuredO.attempted+"/"+measuredO.total_source_candidates+
       "건(손별 측정 후보·미승인)":"")+
+    (sourceDefaultF?.status==="AUTO_DEFAULT_F_SOURCE_ITEM_SELECTED_UNADMITTED"?
+        " · 대표 F ItemID "+sourceDefaultF.selected_physical_items_unadmitted.flask_item_id+
+        " (시즌 원본 최고품질 후보·최적 영약 추천 아님)":"")+
+    (originalVerifiedF?.source_verification==="EXACT_NATIVE"?
+        " · F 원본 실측 "+originalVerifiedF.rating+" (환경 정식 등록 전)":"")+
     (scope.four_stat_ordinary_default_requested===true?
         " · 일반보석 4종 기본 배치 요청(특수효과 SimC 담당)":"")+
     " · 신규 Native "+(Number(data?.native_calls)||0)+"회"+
     (autoFlask?.status==="ONE_OBSERVED_FLASK_NO_OIL_NUMERIC_PREVIEW_UNADMITTED"?
       (scope.auto_select_observed_F_no_oil===true?
-        " · F 최고 관측값 선택 요청·기름 미사용(실제 원본 인증 대기)":
+        " · F 관측 1가족 선택 요청·기름 미사용(실제 원본 인증 대기)":
         " · F 관측 1가족 · 기름 미적용 가정(공식 선택 아님)"):"")+
     (numeric?.numeric_preview_only===true&&numeric.environment_ready===false?
        " · 관측 수치(미승인) G="+numeric.reference_G+
@@ -740,7 +747,9 @@ async function buildSeasonEnvironment() {
       "필요 시 외부 네트워크를 사용할 수 있습니다."+
       (nativeRequested?" 기존 G Native 최대 1회 실행될 수 있습니다.":" Native는 기본적으로 실행하지 않습니다.")+
       ((auto_native_F_requested||auto_native_O_requested)?
-       " 선택한 F/O 후보의 정적 SimC Native를 요청당 합계 신규 최대 8회 실행할 수 있으며, 기존 결과는 캐시를 재사용합니다. 품질·무기 적합성 승인과 별도입니다.":"")))
+       (auto_select_observed_F_no_oil?
+         " 기본 영약 F 후보 1종만 신규 SimC Native 최대 2회 측정합니다. 기존 캐시를 재사용하며 공식 F 등록은 별도입니다.":
+         " 선택한 F/O 후보의 정적 SimC Native를 요청당 합계 신규 최대 8회 실행할 수 있으며, 기존 결과는 캐시를 재사용합니다. 품질·무기 적합성 승인과 별도입니다."):"")))
     return;
   $("season-build-stage").textContent="기존 설치 영수증 확인 · 필요 시 동일 환경 엔진으로 원본 수집·검증 중…";
   try {
