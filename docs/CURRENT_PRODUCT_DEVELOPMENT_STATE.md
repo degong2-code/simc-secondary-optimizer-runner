@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FY (실 CI 대기):** 기존 v217 봉인 v212 설치 매니페스트가 존재하면 웹 기본 Environment Build에서 원본 v213 SHA·v212 staged/installed 및 v217 영수증을 읽기 전용 검증한 후 기존 시즌 환경을 재사용한다. 명시 `refresh_reason`(season/expansion/item_content)이나 선택 아이템/Native 요청 시 자동 재사용을 건너뛰고 최초 엔진을 실행한다. 검증된 이전 설치가 전제이며 최신 서버 시즌 재인증 또는 최초 READY/T1 성공이 아니다. [작업노트](development/notes/2026-11-06_p3-fy-installed-season-v217-readonly-reuse.md).
+>
+
 > **2026-11-06 P3-FX 최종 검증 영수증:** 제품 코드 [`73e8e5df`](https://github.com/degong2-code/simc-secondary-optimizer-runner/commit/73e8e5df2ad9d0858de2fd4d09d9115a720d51c1), [focused #42142392368](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42142392368) 308 tests/2 SKIP·DEV_LEDGER_PASS, [v212 #42142392372](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42142392372) 양 OS 각 450 PASS/4 SKIP, [v113 #42142392464](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42142392464) 양 OS 각 221 PASS, v181/v182 성공. 동일 시즌 정적 gear/tier/budget SHA 불변·SimC-only 변경을 분리해 표시하고 새 SimC DPS 캐시 정체성만 분리한다. **새 시즌 최초 실제 READY/T1·동일 시즌 cross-game-build 설치 자동 재사용은 아직 미완료.**
 >
 

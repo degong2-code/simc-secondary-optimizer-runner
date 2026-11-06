@@ -152,6 +152,115 @@ def _verified_manifest(path):
         return None
 
 
+def find_verified_installed_season_environment(sessions_root, target_ilevel):
+    """Read-only v217+v212 reuse; same-season assumption is a caller policy.
+
+    An installed source's game/SimC build is historical provenance, not a
+    restriction on a NEW DPS binary. A season/content refresh must bypass this.
+    """
+    need(type(target_ilevel) is int and 1<=target_ilevel<=1000,
+         "V216_REUSE_TARGET_ILEVEL_INVALID")
+    supplied=pathlib.Path(sessions_root).expanduser()
+    need(not supplied.is_symlink(),"V216_REUSE_SESSION_ROOT_SYMLINK")
+    workspace=supplied.resolve()/"_fresh_season_sources"
+    if not workspace.is_dir() or workspace.is_symlink():
+        return None
+    candidates=[]
+    for folder in workspace.iterdir():
+        if (folder.is_symlink() or not folder.is_dir() or
+            re.fullmatch(r"wago_\d+(?:\.\d+){3}",folder.name) is None):
+            continue
+        docs=folder/"fresh_source"
+        if docs.is_symlink() or not docs.is_dir():
+            continue
+        for count,file in enumerate(docs.glob("v212_installed_*.json")):
+            if count>=64:
+                break
+            if (file.is_symlink() or not file.is_file() or
+                re.fullmatch(r"v212_installed_[a-f0-9]{20}\.json",file.name)
+                   is None):
+                continue
+            try:
+                candidates.append((file.stat().st_mtime,folder,file))
+            except OSError:
+                pass
+    candidates.sort(key=lambda row:(-row[0],row[2].as_posix()))
+    for _,root,file in candidates[:64]:
+        try:
+            if file.stat().st_size>MAX_RECEIPT_BYTES:
+                continue
+            doc,_=environment_manifest.read_json(file,MAX_RECEIPT_BYTES)
+            environment_manifest.verify_fresh_installed_environment(doc)
+            key=doc["manifest_sha256"]
+            if (file.name!="v212_installed_"+key[:20]+".json" or
+                doc["game_build"]!=root.name[5:] or
+                doc["target_ilevel"]!=target_ilevel):
+                continue
+            catalog_path=root/"fresh_source"/"v213_candidate_catalog.json"
+            if catalog_path.is_symlink() or not catalog_path.is_file():
+                continue
+            catalog,raw_sha=environment_manifest.read_json(catalog_path)
+            source_to_catalog.verify_catalog(catalog)
+            if (raw_sha!=doc["source_catalog_artifact_sha256"] or
+                catalog["manifest_sha256"]!=doc["source_catalog_manifest_sha256"] or
+                catalog["game_build"]!=doc["game_build"] or
+                catalog["simc_revision"]!=doc["simc_revision"]):
+                continue
+            staged_sha=doc["staged_source_environment_sha256"]
+            staged=root/"fresh_source"/(
+                "v212_environment_"+staged_sha[:20]+".json")
+            if staged.is_symlink() or not staged.is_file():
+                continue
+            stage_doc,_=environment_manifest.read_json(staged,MAX_RECEIPT_BYTES)
+            environment_manifest.verify_fresh_source_environment(stage_doc)
+            if (stage_doc["manifest_sha256"]!=staged_sha or
+                stage_doc["source_catalog_artifact_sha256"]!=raw_sha or
+                stage_doc["target_ilevel"]!=target_ilevel):
+                continue
+            stage_engine.verify_stage(
+                root=root,stage_id="fresh-v212-environment-"+staged_sha[:20],
+                stage_version="v212-fresh-source-environment-1",
+                inputs={"manifest_sha256":staged_sha,
+                        "v216_preflight_sha256":
+                            stage_doc["original_v216_preflight_sha256"]},
+                outputs={"environment":"fresh_source/"+staged.name})
+            receipt=stage_engine.verify_stage(
+                root=root,stage_id="fresh-v212-installed-"+key[:20],
+                stage_version="v212-fresh-installed-environment-1",
+                inputs={"manifest_sha256":key,
+                        "source_stage_sha256":staged_sha,
+                        "trusted_budget_evidence_sha256":
+                            doc["trusted_budget_evidence_sha256"],
+                        "policy_A_prepared_sha256":
+                            doc["original_v196_prepared_options_sha256"]},
+                outputs={"environment":"fresh_source/"+file.name})
+        except (OSError,ValueError,TypeError,KeyError,
+                stage_engine.StageExecutionBlocked,
+                environment_manifest.EnvironmentBlocked):
+            continue
+        return {
+            "schema":"v216_verified_installed_season_reuse_v1",
+            "status":"VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED",
+            "environment_ready":True,"environment_installed":True,
+            "installed_source_game_build":doc["game_build"],
+            "installed_source_simc_revision":doc["simc_revision"],
+            "installed_manifest_sha256":key,
+            "stage_receipt_sha256":receipt["receipt_sha256"],
+            "target_ilevel":target_ilevel,
+            "G":doc["official_G"],"J":doc["official_J"],
+            "F":doc["official_F"],"O":doc["official_O"],
+            "B":doc["official_B"],"T":doc["official_T"],
+            "published_verified_options":doc["published_verified_options"],
+            "published_verified_option_count":
+                doc["published_verified_option_count"],
+            "active_season_reverified_in_this_lookup":False,
+            "runtime_simc_version_does_not_invalidate_static_source":True,
+            "network_calls":0,"native_calls":0,"cache_mutations":0,
+            "dps_optimization_started":False,
+        }
+    return None
+
+
 def find_previous_environment(sessions_root, current_folder, scope_sha256):
     """Find a prior same-input environment across source-versioned sessions.
 

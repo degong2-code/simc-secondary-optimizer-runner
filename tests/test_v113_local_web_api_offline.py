@@ -229,6 +229,48 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertFalse((self.root/"runs").exists())
 
 
+    def test_p3_fy_web_uses_verified_prior_install_before_retail_and_wago(self):
+        installed={"status":"VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED",
+                   "environment_ready":True,"environment_installed":True,
+                   "installed_source_game_build":"12.1.5.70529",
+                   "installed_source_simc_revision":"a"*40,
+                   "G":2800,"J":140,"F":170,"O":{},
+                   "B":3110,"T":3110,"native_calls":0,"network_calls":0}
+        with mock.patch.object(web.environment_build,
+                "find_verified_installed_season_environment",
+                return_value=installed) as reuse, \
+             mock.patch.object(web.retail_build_source,"discover",
+                side_effect=AssertionError("DO_NOT_POLL_ON_REUSE")), \
+             mock.patch.object(web.environment_build,"build_environment",
+                side_effect=AssertionError("DO_NOT_RECOLLECT_ON_REUSE")):
+            response=self.post("/api/v1/environment/season-build",{})
+        self.assertEqual(response.status_code,200,response.text)
+        self.assertTrue(response.json()["environment_ready"])
+        self.assertEqual(response.json()["web_environment_scope"][
+            "game_build_source"],"PREVIOUS_V217_VERIFIED_INSTALL")
+        reuse.assert_called_once_with(self.app.state.jobs.root,334)
+        with mock.patch.object(web.environment_build,
+                "find_verified_installed_season_environment",
+                side_effect=AssertionError("REFRESH_CANNOT_REUSE")), \
+             mock.patch.object(web.environment_build,"build_environment",
+                return_value={"status":"SOURCE_PENDING","environment_ready":False}):
+            fresh=self.post("/api/v1/environment/season-build",{
+                "game_build":"12.1.5.70783",
+                "refresh_reason":"season_change"})
+        self.assertEqual(fresh.status_code,200,fresh.text)
+        self.assertFalse(fresh.json()["web_environment_scope"][
+            "environment_ready"])
+        with mock.patch.object(web.environment_build,
+                "find_verified_installed_season_environment",
+                side_effect=AssertionError("SELECTED_F_CANNOT_REUSE")), \
+             mock.patch.object(web.environment_build,"build_environment",
+                return_value={"status":"SOURCE_PENDING","environment_ready":False}):
+            item=self.post("/api/v1/environment/season-build",{
+                "game_build":"12.1.5.70783","selected_flask_item_id":241326})
+        self.assertEqual(item.status_code,200,item.text)
+        self.assertEqual(self.post("/api/v1/environment/season-build",{
+            "refresh_reason":"simc_update"}).status_code,422)
+
     def test_p3_fr_zero_base_build_auto_retail_version_from_public_source(self):
         # No user-supplied game_build, historical ID, or client secrets.
         observed={"status":"FRESH_SOURCE_PENDING","environment_ready":False,

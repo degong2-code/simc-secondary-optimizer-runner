@@ -72,6 +72,8 @@ class SeasonEnvironmentBuildRequest(BaseModel):
     existing_special_gem_id: int | None = Field(default=None,ge=1,le=999999999)
     simc_revision_hint: str | None = Field(
         default=None,pattern=r"^(?:[a-f0-9]{7,12}|[a-f0-9]{40})$")
+    refresh_reason: str | None = Field(
+        default=None,pattern=r"^(?:season_change|expansion_change|item_content_change)$")
 
 
 class UserRequest(BaseModel):
@@ -135,7 +137,8 @@ class LocalJobs:
                                  consumable_native_binary=None,
                                  selected_flask_item_id=None,
                                  auto_select_observed_F_no_oil=False,
-                                 existing_special_gem_id=None):
+                                 existing_special_gem_id=None,
+                                 refresh_reason=None):
         """Run original v216 with season inputs, never a user DPS scenario.
 
         One deterministic one-spec reference G probe is NOT season-level
@@ -164,6 +167,36 @@ class LocalJobs:
                 auto_native_F_requested or auto_native_O_requested):
             raise environment_manifest.EnvironmentBlocked(
                 "SEASON_F_O_BINARY_WITHOUT_MEASUREMENT_SELECTION")
+        # Prefer verified original installation on an unchanged season.
+        # Explicit selected items, Native requests and season/content changes
+        # still use original fresh v216 validation; no automatic reapproval.
+        if refresh_reason not in (None,"season_change","expansion_change",
+                                  "item_content_change"):
+            raise environment_manifest.EnvironmentBlocked(
+                "SEASON_REFRESH_REASON_INVALID")
+        if (refresh_reason is None and native_G_binary is None and
+            consumable_native_binary is None and
+            not auto_native_F_requested and not auto_native_O_requested and
+            selected_flask_item_id is None and
+            not auto_select_observed_F_no_oil and
+            existing_special_gem_id is None):
+            with self.season_source_lock:
+                prior=environment_build.find_verified_installed_season_environment(
+                    self.root,target_ilevel)
+            if prior is not None:
+                return {**prior,"web_environment_scope":{
+                    "schema":"v113_web_season_environment_build_scope_v1",
+                    "game_build":prior["installed_source_game_build"],
+                    "game_build_source":"PREVIOUS_V217_VERIFIED_INSTALL",
+                    "requested_game_build":game_build,
+                    "active_season_reverified_in_this_lookup":False,
+                    "retail_build_source_sha256":None,
+                    "target_ilevel":target_ilevel,
+                    "environment_ready":True,"environment_installed":True,
+                    "native_calls":0,"network_calls":0,
+                    "dps_optimization_started":False,
+                    "reused_verified_installed_season":True,
+                    "refresh_reason":None}}
         # Discover public Retail version only when the normal user does not
         # supply a build. No historical build or item ID is a fallback.
         discovered_build=None
@@ -1050,7 +1083,8 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                 selected_flask_item_id=request.selected_flask_item_id,
                 auto_select_observed_F_no_oil=
                     request.auto_select_observed_F_no_oil,
-                existing_special_gem_id=request.existing_special_gem_id)
+                existing_special_gem_id=request.existing_special_gem_id,
+                refresh_reason=request.refresh_reason)
         except Exception as exc:
             raise blocked(exc) from None
 

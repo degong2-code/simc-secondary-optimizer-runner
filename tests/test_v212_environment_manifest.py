@@ -382,7 +382,10 @@ class FreshEnvironmentSourceStageTests(unittest.TestCase):
             catalog=source_bridge.compile_catalog(
                 season,"a"*64,classification,"b"*64)
             artifact_sha=p.sha(p.canonical(catalog).encode("utf8"))
-            source_path=root/"fresh_v213.json"
+            stage_root=root/"_fresh_season_sources"/("wago_"+catalog["game_build"])
+            stage_root.mkdir(parents=True)
+            source_path=stage_root/"fresh_source"/"v213_candidate_catalog.json"
+            source_path.parent.mkdir(parents=True)
             source_path.write_bytes(p.canonical(catalog).encode("utf8"))
             preflight={
                 "schema":"v216_new_season_source_preflight_v1",
@@ -402,7 +405,7 @@ class FreshEnvironmentSourceStageTests(unittest.TestCase):
                 "simc_revision":catalog["simc_revision"],
                 "preflight_sha256":preflight["preflight_sha256"],
                 "environment_ready":False,
-                "stage_root":str(root),
+                "stage_root":str(stage_root),
                 "source_catalog_path":str(source_path),
                 **{key:{"status":"REUSED_VERIFIED",
                          "receipt_sha256":str(i)*64}
@@ -476,6 +479,20 @@ class FreshEnvironmentSourceStageTests(unittest.TestCase):
                 target_ilevel=334,trusted_policy_A_receipts_by_id={})
             self.assertEqual(second["stage_status"],"REUSED_VERIFIED")
             self.assertEqual(second["manifest_sha256"],first["manifest_sha256"])
+            reused=environment_build.find_verified_installed_season_environment(
+                root,334)
+            self.assertIsNotNone(reused)
+            self.assertEqual(reused["installed_manifest_sha256"],
+                             first["manifest_sha256"])
+            self.assertEqual(reused["status"],
+                             "VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED")
+            self.assertEqual(reused["G"],2800)
+            self.assertEqual(reused["B"],3110)
+            self.assertEqual(reused["network_calls"],0)
+            self.assertFalse(reused["active_season_reverified_in_this_lookup"])
+            self.assertIsNone(
+                environment_build.find_verified_installed_season_environment(
+                    root,335))
             manual=p.compile_fresh_installed_environment(
                 source_catalog=catalog,source_artifact_sha256=artifact_sha,
                 staged_source_environment=staged_data,
