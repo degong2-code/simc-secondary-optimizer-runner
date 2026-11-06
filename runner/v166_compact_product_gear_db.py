@@ -56,6 +56,10 @@ def build(pool,item_file,sparse_file):
     sparse=extract(sparse_file,("ID","InventoryType","ExpansionID","AllowableClass",
         "StatModifier_bonusStat_0","ItemSet"),ids)
     selectable=[]; conditional=[]; conditional_mplus=[]
+    internal_plain_necks=[]
+    neck_source_roles=Counter(
+        v["category"]+":"+v["season_selection"]
+        for v in values if v["inventory_type"]==2)
     for v in values:
         iid=v["item_id"];raw=items[iid];extra=sparse[iid]
         slot=integer(raw["InventoryType"])
@@ -110,6 +114,23 @@ def build(pool,item_file,sparse_file):
                     and e["journal_instance_id"]>0
                     for e in data["source_evidence"])):
                 conditional_mplus.append(data)
+            # An internal G representative need not be obtainable in the
+            # active season. Retain exact same-build, same-expansion
+            # physical/plain neck evidence without adding it to USER choices.
+            if (slot==2 and cl==4
+                and v["category"]=="plain_representative_candidate"
+                and v["direct_item_effect_record"] is False
+                and v["item_set_id"]==0
+                and v.get("expansion_id")==pool["expansion_id"]):
+                internal_plain_necks.append({
+                    **data,
+                    "source_expansion_id":v["expansion_id"],
+                    "internal_generic_G_only":True,
+                    "user_selectable_candidate":False})
+    already={row["item_id"] for row in conditional_mplus}
+    internal_plain_necks=[
+        row for row in internal_plain_necks
+        if row["item_id"] not in already]
     role_counts=Counter(v["category"] for v in selectable)
     return {"schema":SCHEMA,"status":"COMPACT_CANDIDATE_DB_WITH_PENDING_GAPS",
       "season_build":pool["build"],"expansion_id":pool["expansion_id"],
@@ -121,6 +142,9 @@ def build(pool,item_file,sparse_file):
       "conditional_count":len(conditional),
       "internal_conditional_mplus_plain_candidates":conditional_mplus,
       "internal_conditional_mplus_plain_count":len(conditional_mplus),
+      "internal_source_only_plain_neck_candidates":internal_plain_necks,
+      "internal_source_only_plain_neck_count":len(internal_plain_necks),
+      "source_neck_role_scope_counts":dict(sorted(neck_source_roles.items())),
       "current_role_counts":dict(sorted(role_counts.items())),
       "consumable_budget_reference":pool["consumable_budget_reference"],
        "consumable_budget_source_mode":pool.get(
