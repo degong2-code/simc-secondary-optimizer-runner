@@ -1,0 +1,10 @@
+# 2026-11-06 · P3-GI · 26 DPS 단일 엔진 연속성 인계
+
+- **Capability:** DEV.CONTINUITY, ENVIRONMENT.WEB, BUDGET.GJFO
+- **Keywords:** new chat, engine-first, zero-history T1, F next batch, Native8, GJFO, read-only, SHA, no new run
+- **Prior evidence:** [INDEX G2/E3/D1](../INDEX.md), [P3-GH](2026-11-06_p3-gh-v233-to-v269-precombat-source.md), [actual T1 #42170351404](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42170351404), Artifact 13480598417; [focused #42170351351](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42170351351) 323 PASS/2 SKIP. Earlier P3-FK is historical.
+- **Decision:** REUSE existing source, Native and installer contracts; CONNECT still-missing J/F/O/G official source owners before next T1. One new [P3-GI canonical handoff](../../CHAT_CONTINUITY_HANDOFF_20261106_P3_GI_ENGINE_FIRST_RESTORE.md), with read-only first chat response and STOP until explicit '진행'. Historical neck/ring/403 failures are not the latest first blocker.
+- **Changes:** Documentation-only single handoff, PROTOCOL, INDEX G1/G2/E3/D1/DEV.CONTINUITY, CURRENT, developer execution note; keep product code d9f05ecd, original sealed sources and main unchanged.
+- **Verification:** Existing #42170351351 focused 325 tests=323 PASS/2 SKIP; #42170118202 v212 each OS 478 tests=474 PASS/4 SKIP at prior SHA; live #42170351404 NOT_READY, Native8 reported, official G/J/F/O/B/T null. No new Native, Wago, DPS, T1 or code tests for this handoff. New docs-only CI is NOT_VERIFIED until successor SHA checked.
+- **Remaining:** F v281/v278 next batch and whether actual detailed Native receipts are persisted; J dual-secondary four-type same-season selection, O exact/no-oil, official G/J/F/O/B/T, policy A published choices, installed v212 READY/T1, and later 26 DPS user E2E. Previous T1 uploads only small verdict JSON; cannot infer preserved detailed cache.
+- **Efficiency:** Minimize redundant full T1/8-call Native and HTTP; reuse INDEX/CI/sealed provenance, test bounded changes only, avoid new optimizer/effect gate. No Project UI/Work OS/main/v003/approved-design promotion.
