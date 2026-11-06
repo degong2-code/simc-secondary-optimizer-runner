@@ -149,6 +149,50 @@ def from_v166(source):
             "provisional_mplus_world_state_only":True,
             "season_membership_verified":False,"ui_selectable":False})
     internal.sort(key=lambda x:x["item_id"])
+    # Separate internal G-only generic necks from all user equipment choices.
+    # These were v165 effect-free same-build/expansion source rows, not
+    # certified obtainable items. A newer SimC and Native must accept them.
+    necks=source.get("internal_source_only_plain_neck_candidates",[])
+    need(type(necks) is list and len(necks)<=2000
+         and len(necks)==source.get("internal_source_only_plain_neck_count",
+                                  len(necks)),
+         "SOURCE_ONLY_NECK_COUNT_INVALID")
+    internal_necks=[]
+    for entry in necks:
+        need(type(entry) is dict
+             and type(entry.get("item_id")) is int
+             and entry["item_id"]>0 and entry["item_id"] not in seen
+             and entry.get("slot")==2 and entry.get("class_id")==4
+             and type(entry.get("subclass_id")) is int
+             and entry["subclass_id"]>=0
+             and entry.get("category")=="plain_representative_candidate"
+             and entry.get("selection_evidence")==
+                "CONDITIONAL_SEASON_NOT_ESTABLISHED"
+             and entry.get("direct_item_effect_record") is False
+             and entry.get("item_set_id")==0
+             and entry.get("source_expansion_id")==source["expansion_id"]
+             and entry.get("internal_generic_G_only") is True
+             and entry.get("user_selectable_candidate") is False
+             and type(entry.get("source_kinds")) is list
+             and bool(entry["source_kinds"])
+             and type(entry.get("source_evidence")) is list
+             and bool(entry["source_evidence"]),
+             "SOURCE_ONLY_NECK_ORIGIN_OR_ROLE_INVALID")
+        seen.add(entry["item_id"])
+        internal_necks.append({
+            "item_id":entry["item_id"],"name":entry["name"],
+            "category":"plain_representative_candidate",
+            "inventory_type":2,"class_id":4,
+            "subclass_id":entry["subclass_id"],
+            "allowed_class_mask":entry["allowed_class_mask"],
+            "stat_modifier_codes":entry["stat_modifier_codes"],
+            "item_set_id":0,
+            "source_kinds":entry["source_kinds"],
+            "source_evidence":entry["source_evidence"],
+            "source_expansion_id":entry["source_expansion_id"],
+            "internal_generic_G_only":True,
+            "season_membership_verified":False,
+            "ui_selectable":False})
     summary = {
         "schema": SCHEMA, "status": "CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
         "season_build": source["season_build"],
@@ -159,6 +203,10 @@ def from_v166(source):
         "items": result,
         "internal_conditional_mplus_plain_candidates":internal,
         "internal_conditional_mplus_plain_count":len(internal),
+        "internal_source_only_plain_neck_candidates":internal_necks,
+        "internal_source_only_plain_neck_count":len(internal_necks),
+        "source_neck_role_scope_counts":
+            source.get("source_neck_role_scope_counts",{}),
         "conditional_ids_excluded": source.get("conditional_count"),
         "consumable_budget_source_mode": source.get(
             "consumable_budget_source_mode","LEGACY_UNRECORDED_SOURCE_MODE"),
@@ -254,6 +302,32 @@ def validate(payload):
                  and e["world_state_expression_id"]>0 for e in ev),
              "PRODUCT_INTERNAL_MPLUS_SOURCE_NOT_PENDING")
         ids.add(x["item_id"])
+    generic_necks=payload.get("internal_source_only_plain_neck_candidates",[])
+    need(type(generic_necks) is list and len(generic_necks)<=2000
+         and len(generic_necks)==payload.get(
+            "internal_source_only_plain_neck_count",len(generic_necks)),
+         "PRODUCT_INTERNAL_SOURCE_NECK_COUNT_INVALID")
+    for x in generic_necks:
+        ev=x.get("source_evidence",[]) if type(x) is dict else []
+        need(type(x) is dict and type(x.get("item_id")) is int
+             and x["item_id"]>0 and x["item_id"] not in ids
+             and x.get("inventory_type")==2 and x.get("class_id")==4
+             and x.get("item_set_id")==0
+             and x.get("category")=="plain_representative_candidate"
+             and x.get("source_expansion_id")==payload.get("expansion_id")
+             and x.get("internal_generic_G_only") is True
+             and x.get("season_membership_verified") is False
+             and x.get("ui_selectable") is False
+             and type(ev) is list and bool(ev)
+             and type(x.get("source_kinds")) is list
+             and {e.get("source") for e in ev}==set(x["source_kinds"]),
+             "PRODUCT_INTERNAL_SOURCE_NECK_NOT_JUSTIFIED")
+        ids.add(x["item_id"])
+    counters=payload.get("source_neck_role_scope_counts",{})
+    need(type(counters) is dict and len(counters)<=30
+         and all(type(k) is str and type(v) is int
+                 and 0<=v<=30000 for k,v in counters.items()),
+         "PRODUCT_SOURCE_NECK_DIAGNOSTIC_INVALID")
     need(payload.get("not_certified", {}).get("tier_four_set") is True and
          payload["not_certified"].get("simc_item_effects") is True,
          "PRODUCT_EFFECT_OR_TIER_OVERCLAIM")
