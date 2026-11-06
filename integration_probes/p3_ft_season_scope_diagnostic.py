@@ -43,6 +43,11 @@ def raid_candidates(report,encounters,tier_links,mplus_zone_id=None):
                    for e in found if e is not None}
         tiers=sorted(t for t,ids in by_tier.items()
                      if t>0 and instances and instances<=ids)
+        # Use the SAME resolver as the production v163 join, not the
+        # historical "exactly one matching tier" diagnostic shortcut.
+        scoped_tier=(join.resolve_raid_journal_tier(tier_links,instances)
+                     if found and all(x is not None for x in found)
+                     else None)
         projected.append({
             "zone_id":z["zone_id"],
             "zone_name":z["zone_name"],
@@ -52,9 +57,10 @@ def raid_candidates(report,encounters,tier_links,mplus_zone_id=None):
             "matching_raid_tier_ids":(
                 tiers if all(e is not None for e in found) else []),
             "fully_matched_to_journal":all(e is not None for e in found),
+            "selected_journal_tier_id_source_only":scoped_tier,
             "qualified_by_original_raid_rule":(
-                z["zone_id"]!=mplus_zone_id and bool(found)
-                and all(e is not None for e in found) and len(tiers)==1),
+                z["zone_id"]!=mplus_zone_id and scoped_tier is not None
+                and all(e is not None for e in found)),
         })
     return projected
 

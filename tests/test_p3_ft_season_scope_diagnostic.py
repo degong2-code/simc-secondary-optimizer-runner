@@ -57,6 +57,11 @@ class CurrentSeasonRaidCandidateDiagnostic(unittest.TestCase):
             {(505,"149388"),(516,"0")})
         self.assertNotIn("selected_tier",out)
         self.assertNotIn("season_verified",out)
+        # Production v163 and the small diagnostic share one resolver,
+        # rather than the old count(tier matches)==1 shortcut.
+        self.assertEqual(
+            scope.join.resolve_raid_journal_tier(
+                links,{1317,1320,1324}),505)
 
     def test_missing_or_ambiguous_journal_match_never_becomes_candidate(self):
         report={"wcl":{"midnight_zones":[

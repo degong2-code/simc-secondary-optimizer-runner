@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FV 실전 확인 완료:** [실 원본 #42138850557](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42138850557) **SUCCESS**. 최신 70783 WCL/5표 DB2에서 바뀐 실제 `v163.resolve_raid_journal_tier`는 zone 53 → Tier 505를 자동 선택(코드 ID 하드코딩 없음). 이전 `LIVE_RAID_ZONE_OR_TIER_AMBIGUOUS`는 해소됐고 진단은 5표 제한 때문에 그 다음 필요 파일 `JournalEncounterItem`에서 멈춤; 이는 전체 Wago 10표에서 원래 제공하는 파일이며 추가 수집기 요구 아님. 새 진단 출력의 레거시 eligible-count도 production 선택 함수와 일치하도록 정리하되 대형 live 반복은 생략. 집중 308 tests/2 SKIP/0 FAIL; 실제 전체 v216 READY/T1과 70783 SimC 바이너리는 미완료. 
+>
+
 > **2026-11-06 P3-FV 코드 영수증:** [v163 dedicated #42138245086](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42138245086) SUCCESS, [집중 #42138369910](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42138369910) **DEV_LEDGER_PASS·308 tests/2 SKIP/0 FAIL**. 코드는 순수 동일 빌드 조건부/무조건부 Tier 중복 해소만 수행, 별도 Gate 아님. 실제 5표 원본에 수정된 `v163` 함수를 적용하는 일회성 확인은 아직 실행 영수증이 필요. 실 G/J/F/O·READY/T1 및 SimC 70783 바이너리 미완료.
 >
 

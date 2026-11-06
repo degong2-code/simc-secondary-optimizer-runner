@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FV 실전 검증:** [Actions #42138850557](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42138850557)에서 현재 WCL 1개 레이드 Tier 원본 중복을 `v163` 코드가 실제 zone53→505로 판정; 기존 Tier 모호성 차단 제거. 이후 `JournalEncounterItem` 파일 요구는 5표 제한 진단에서 예상된 것으로 기존 v161 10표 원본에 포함. 최신 CI 308 tests/2 SKIP, FAIL0, Native0. 정확한 SimC 70783 바이너리/전체 설치·G/J/F/O는 별도 미완료; 일회성 진단과 제품 READY를 혼동하지 않음.
+>
+
 > **2026-11-06 P3-FV:** [노트](development/notes/2026-11-06_p3-fv-conditional-journal-tier-selection.md). P3-FU 동일 70783 원본에서 WCL 활성 Raid 10/10, Tier 505 'Current Season'/조건 156363, Tier 516 'Midnight'/조건 0을 확인. 운영 코드에 숫자 ID나 낡은 시즌값을 넣지 않고, original v163의 두 WCL/DB2 시즌-조인 위치에 공통 조건부·무조건부 tier 판별 함수를 REUSE/CONNECT. 유일 조건부만 선택하고 조건 ID의 실제 활성 의미·전체 시즌 귀속은 인증하지 않음. 모호/복수 조건 Tier는 그대로 PENDING. 검증은 신규 focused CI로 범위 확정, Native/대형 수집 반복 금지. SimC 바이너리 70529/게임 70783 불일치 및 전체 T1은 별도 미완료.
 >
 
