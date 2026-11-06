@@ -426,6 +426,10 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             self.preflight_with_sealed_gem_raw(layout,bad)
 
     def test_p3_fq_selected_F_measures_only_exact_source_and_reuses_v278(self):
+        (self.root/"v233.profile").write_text(
+            "paladin=simc_source_g_probe\nrace=dwarf\nspec=retribution\n"
+            "main_hand=simc_source_weapon,id=9010,ilevel=334,source=local\n",
+            encoding="utf8")
         # The v281 source list already exists. Neither a new fetch nor
         # a competing flask Native measurement is needed for an exact ID.
         candidates=[

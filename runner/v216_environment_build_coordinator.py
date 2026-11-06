@@ -4086,12 +4086,6 @@ def _auto_F_native_from_sealed_v281(*,collected,compilation,binary,
     elif type(work) is not dict or not work.get(family):
         out["requires"].append("AUTO_"+label+"_EXACT_PHYSICAL_ITEM_PENDING")
     if out["requires"]:return [],out
-    # v233 is a physical G probe without an APL. v269 explicitly requires
-    # flask followed by one snapshot_stats before it can measure static F/O.
-    # Seal a derived measurement-only source; never edit/re-run the G input.
-    source_profile=_sealed_v233_precombat_F_O_profile(
-        stage_root=compilation["stage_root"],
-        source_profile_path=source_profile)
     worklist=work[family]
     if selected_item_id is not None:
         # The existing v281 same-build item relation owns exact ID lookup.
@@ -4125,6 +4119,13 @@ def _auto_F_native_from_sealed_v281(*,collected,compilation,binary,
                         "AUTO_F_SELECTED_ITEM_BELOW_OBSERVED_QUALITY")
                     return [],out
         worklist=matches
+    # Only create a derived profile when at least one physical item will be
+    # measured, never for missing IDs / below-observed-quality selections.
+    # The original v233 G input and Native G receipts remain unchanged.
+    if worklist and max_new_native_calls>=2:
+        source_profile=_sealed_v233_precombat_F_O_profile(
+            stage_root=compilation["stage_root"],
+            source_profile_path=source_profile)
     rows=[];receipts=[];new=0
     for item in worklist:
         # A v278 paired measurement may launch 2 new subprocesses. Reserve
