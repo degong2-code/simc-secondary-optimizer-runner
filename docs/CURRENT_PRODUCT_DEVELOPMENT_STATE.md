@@ -1,3 +1,6 @@
+> **2026-11-06 P3-GF 오프라인 검증:** [focused #42168845486](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42168845486) DEV_LEDGER_PASS 322 PASS/2 SKIP; [v212 #42168740514](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42168740514) Ubuntu·Windows 각 471 PASS/4 SKIP; v166/v167 offline PASS. 동일 시즌 내부 반지 source 연결의 단위경계만 입증, 실제 반지 두 ID·G/J/F/O/READY는 아직 실험 전 미확정. 기존 P3-FZ 1회 실제 T1로 검증 요청, native 호출 임의 반복 없음.
+>
+
 > **2026-11-06 P3-GF 실 T1·다음 원본 연결:** [실 #42167956015](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42167956015) 70783 exact SimC/Wago SEALED, v191/v211/v213 COMPILED, 209 gear·65 tier, **neck 통과**, 새 첫 차단 `V232_COMMON_SLOT_WITHOUT_SIMC_CANDIDATE:finger2`. 신규 Native0, G/J/F/O/READY 미달. v166/v167/v232 기존 동일 확장팩 무효과 반지를 내부 G용으로 연결, 서로 다른 ID 두 개 원칙 유지, UI 승격/구시즌 하드코딩 없음; 남은 반지 후보 원본 카운트 v216/T1에 기록. [P3-GF 노트](development/notes/2026-11-06_p3-gf-two-ring-internal-g-source.md). 신규 CI/실 T1 후 증거 별도 확인.
 >
 
