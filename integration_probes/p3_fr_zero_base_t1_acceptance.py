@@ -180,6 +180,7 @@ def main():
                         (row.get("source_stage") or {}).get("status")
                         if type(row.get("source_stage")) is dict else None),
                     "reason":row.get("reason"),
+                    "missing_slot":row.get("missing_slot"),
                     "requires":row.get("requires"),
                     "missing":row.get("missing"),
                     "has_candidate":bool(row.get("candidate_path")),

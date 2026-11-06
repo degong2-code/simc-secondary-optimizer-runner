@@ -1,4 +1,4 @@
-# Post-P3-GA source correction one-shot: 70783 equipment-only expansion scope.
+# Post-P3-GA v276/v189 original source-owner fixes; one bounded exact-binary T1 with missing-slot diagnostic.
 name: P3-FZ reuse exact 70783 CLI for one real zero-history T1 (one-shot)
 on:
   push:
