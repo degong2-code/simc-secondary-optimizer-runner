@@ -1,4 +1,6 @@
-# P3-GD: one bounded exact 70783 T1 after v229 raw-403 fixed Git-blob fallback; no new SimC build, new item authority or Native sweep.
+# P3-GE: one bounded existing 70783 T1 with v216 external timeout source owner diagnostics.
+# Reuse existing P3-FW CLI, no new SimC build, no all-spec Native sweep.
+# If a source timeout recurs, report the first owner; no automatic retry.
 name: P3-FZ reuse exact 70783 CLI for one real zero-history T1 (one-shot)
 on:
   push:
