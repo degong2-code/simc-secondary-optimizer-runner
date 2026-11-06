@@ -1,3 +1,6 @@
+> **2026-11-06 P3-GD (신규 코드·CI 확인 대기):** 지난 [실 T1 #42161134821](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42161134821)의 v229 `raw.githubusercontent.com` 403가 목걸이 연결 검증 이전의 최전단 장애. v229가 이미 탐지한 exact Git blob SHA로 GitHub API를 403일 때만 조회하고 SHA/size 검증하도록 원본 코드 재사용; v216 lazy item_data에도 연결. 일반 raw 성공 시 추가 호출 0, fallback 1회, Native0. 실 70783 목걸이/READY 미인증. [P3-GD 노트](development/notes/2026-11-06_p3-gd-exact-git-blob-403-recovery.md).
+>
+
 > **2026-11-06 P3-GC 최신 실제 영수증:** [#42161134821](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42161134821) `ZERO_BASE_T1_NOT_READY`. v165→v166→v167→v232 내부 목걸이 경로를 실증하기 전에 기존 v229 SimC pinned 원본 HTTP 403 발생. 해당 도미노로 v275/티어 물리 확인/전체 item_data 및 J/F가 PENDING. 70783 Wago source·보석 raw·65 tier 후보 등은 봉인, Native0. 이는 목걸이 교정의 실전 실패 증거가 아니라 외부 첫-party 원본 접근 문제. 직전 [#42159679896](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42159679896)은 v167 일반 목걸이 공급 0을 실제 확인. [노트](development/notes/2026-11-06_p3-gc-internal-source-only-plain-neck.md). 새 SimC 버전 때문이라는 추정 또는 다른 시즌 자료 대체 금지, 중복 전체 Wago/Native 반복 대신 기존 70783 source SHA와 원본 수집 경로 최소 복구 우선.
 >
 

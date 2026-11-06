@@ -1,0 +1,10 @@
+# 2026-11-06 · P3-GD · v229 first-party raw HTTP 403 복구
+
+- **Capability:** `SOURCE.SEAL`, `GEAR.SEASON`, `ENVIRONMENT.WEB`
+- **Keywords:** 70783, pinned SimC, raw.githubusercontent 403, GitHub Git blob, exact SHA, v217 resume, v232 neck
+- **Prior evidence:** [P3-GC](2026-11-06_p3-gc-internal-source-only-plain-neck.md), last [live T1 #42161134821](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42161134821) returned source HTTP 403 before v232; [P3-FW](2026-11-06_p3-fw-exact-70783-simc-cli.md) exact 70783 SimC source/binary proof.
+- **Decision:** `CONNECT` the original immutable v229 Git-tree blob SHA to GitHub's public `/git/blobs/{sha}` raw API **only after raw.githubusercontent.com HTTP 403**; never use `main`, latest branch, alternate SimC revision, guessed item, unverified item data, or general-purpose retries. Keep the preexisting v217 SHA receipts and v229/v216 validation.
+- **Changes:** `v229.fetch_generated_blob` accepts one of three existing small source files or optional item_data; raw is primary and the GitHub raw-blob endpoint is used only on HTTP 403. Either raw bytes or GitHub base64 JSON must match the previously discovered Git blob hash+size. v216's existing lazy full item_data source now calls that same function without repeating the three small collections. No Native or game source changed.
+- **Verification:** focused/offline Actions exact commit pending; tests cover normal raw, 403 binary and base64 blob recovery, corrupt blob blocking, 404 no alternate fetch, v256 single-item-stage reuse and invalid blob PENDING. No real 70783 READY claimed before live acceptance.
+- **Remaining:** Real 70783 exact public API reachability in Actions and new v232 neck candidate fallback still require bounded live T1 proof. If both endpoints 403, preserve PENDING; do not declare static caches invalid or run all-spec Native.
+- **Efficiency:** 0 extra network on original success, exactly one extra GitHub request per raw 403, v217 reused stage 0 HTTP; no persistent mirror, no new collector/season DB and no effect certification.

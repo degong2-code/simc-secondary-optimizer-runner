@@ -2271,13 +2271,9 @@ def _lazy_full_pinned_simc_item_stage(*, stage_root, build, small_seed_dir,
         need(type(expected["size"]) is int and
              0<expected["size"]<=limit,
              "V216_FULL_SIMC_ITEM_DATA_TREE_SIZE_INVALID")
-        req=Request(simc_source.RAW_BASE+revision+
-                    "/engine/dbc/generated/"+item,
-                    headers={"User-Agent":"SIMC-Secondary-source-cold-start/1.0"})
-        with fetch(req,timeout=90) as response:
-            need(response.status==200,
-                 "V216_FULL_SIMC_ITEM_DATA_HTTP_NON_200")
-            data=response.read(limit+1)
+        data=simc_source.fetch_generated_blob(
+            revision=revision,name=item,expected_sha=expected["sha"],
+            expected_size=expected["size"],transport=fetch,timeout=90)
         need(len(data)==expected["size"] and len(data)<=limit and
              simc_source.git_blob(data)==expected["sha"],
              "V216_FULL_SIMC_ITEM_DATA_GIT_BLOB_MISMATCH")

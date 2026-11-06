@@ -14,12 +14,15 @@ promotes the product environment or executes Native.
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
 import hashlib
 import json
 import os
 from pathlib import Path
 import re
 import tempfile
+from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 try:
@@ -49,6 +52,8 @@ SET_ROW = re.compile(
 ITEM_HEAD = re.compile(rb"(?m)^// Items, ilevel [0-9]+-[0-9]+, wow build ([0-9]+(?:\.[0-9]+){3})\r?$")
 BASE = "https://api.github.com/repos/simulationcraft/simc/git/trees/"
 RAW_BASE = "https://raw.githubusercontent.com/simulationcraft/simc/"
+# Same exact Git tree blob, no repo/branch/content search or guessed source.
+GIT_BLOB_BASE = "https://api.github.com/repos/simulationcraft/simc/git/blobs/"
 
 
 class SimCSourceBlocked(ValueError):
@@ -321,6 +326,63 @@ def discover_generated_tree(revision, *, transport=urlopen):
     return known
 
 
+
+def fetch_generated_blob(*, revision, name, expected_sha, expected_size,
+                         transport=urlopen, timeout=90):
+    """Only raw HTTP 403 may use GitHub's SAME verified git-tree blob.
+
+    The exact 40-hex SHA and size must have come from discover_generated_tree,
+    not from a 403 response or caller-selected filename. Original callers
+    retain their final Git-blob/build checks. No general retry or new mirror.
+    """
+    need(type(revision) is str and REV.fullmatch(revision) is not None and
+         name in (*SOURCE_FILES, OPTIONAL_ITEM_FILE) and
+         type(expected_sha) is str and HEX.fullmatch(expected_sha) is not None and
+         type(expected_size) is int and
+         0 < expected_size <= SOURCE_FILES.get(name,MAX_ITEM_FILE),
+         "V229_PINNED_BLOB_REQUEST_INVALID")
+    raw_url=RAW_BASE+revision+"/engine/dbc/generated/"+name
+    request=Request(raw_url,headers={
+        "User-Agent":"SIMC-Secondary-source-cold-start/1.0"})
+    try:
+        with transport(request,timeout=timeout) as response:
+            need(response.status==200,"V229_UPSTREAM_SIMC_SOURCE_HTTP")
+            return response.read(expected_size+1)
+    except HTTPError as exc:
+        if exc.code!=403:
+            raise
+    # Raw host rejected the request, not the provenance. GitHub's canonical
+    # git-blobs API supports raw+json; some intermediaries return JSON anyway.
+    # Both representations are accepted ONLY if the exact pinned blob matches.
+    request=Request(GIT_BLOB_BASE+expected_sha,headers={
+        "User-Agent":"SIMC-Secondary-source-cold-start/1.0",
+        "Accept":"application/vnd.github.raw+json"})
+    max_encoded=((expected_size+2)//3)*4+8192
+    with transport(request,timeout=timeout) as response:
+        need(response.status==200,"V229_EXACT_GIT_BLOB_API_HTTP")
+        candidate=response.read(max_encoded+1)
+    need(0<len(candidate)<=max_encoded,
+         "V229_EXACT_GIT_BLOB_API_RESPONSE_SIZE_INVALID")
+    if (len(candidate)==expected_size and git_blob(candidate)==expected_sha):
+        return candidate
+    try:
+        document=json.loads(candidate)
+        need(type(document) is dict and
+             document.get("sha")==expected_sha and
+             document.get("size")==expected_size and
+             document.get("encoding")=="base64" and
+             type(document.get("content")) is str and
+             len(document["content"])<=((expected_size+2)//3)*4+4096,
+             "V229_EXACT_GIT_BLOB_API_IDENTITY_INVALID")
+        data=base64.b64decode(document["content"],validate=False)
+    except (ValueError,TypeError,UnicodeError,binascii.Error) as exc:
+        raise SimCSourceBlocked(
+            "V229_EXACT_GIT_BLOB_API_CONTENT_INVALID") from exc
+    need(len(data)==expected_size and git_blob(data)==expected_sha,
+         "V229_EXACT_GIT_BLOB_API_CONTENT_SHA_MISMATCH")
+    return data
+
+
 def collect(*, revision, expected_build, dest, previous_game_build,
             season_event="season_change", include_item_data=False,
             transport=urlopen):
@@ -342,11 +404,10 @@ def collect(*, revision, expected_build, dest, previous_game_build,
             limit=SOURCE_FILES.get(name,MAX_ITEM_FILE)
             need(type(size) is int and 0<size<=limit,
                  "V229_UPSTREAM_SIMC_SOURCE_SIZE_LIMIT:"+name)
-            req=Request(RAW_BASE+revision+"/engine/dbc/generated/"+name,
-                headers={"User-Agent":"SIMC-Secondary-source-cold-start/1.0"})
-            with transport(req,timeout=90) as response:
-                need(response.status==200,"V229_UPSTREAM_SIMC_SOURCE_HTTP")
-                data=response.read(limit+1)
+            data=fetch_generated_blob(
+                revision=revision,name=name,
+                expected_sha=candidates[name]["sha"],expected_size=size,
+                transport=transport,timeout=90)
             need(len(data)==size and len(data)<=limit and
                  git_blob(data)==candidates[name]["sha"],
                  "V229_UPSTREAM_SIMC_SOURCE_BLOB_CHANGED:"+name)

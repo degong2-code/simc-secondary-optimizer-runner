@@ -1,11 +1,13 @@
 """v229 strict SimC-generated cold-start source discovery, without legacy sources."""
 from __future__ import annotations
 
+import base64
 import copy
 import json
 import pathlib
 import tempfile
 import unittest
+from urllib.error import HTTPError
 from unittest.mock import patch
 
 from runner import v229_simc_only_source_seed as seed
@@ -274,6 +276,73 @@ class SimCCollectorTests(unittest.TestCase):
                     previous_game_build=OLD,dest=pathlib.Path(td)/"fresh",
                     transport=self.fetch)
             self.assertFalse((pathlib.Path(td)/"fresh").exists())
+
+
+    def test_raw_403_falls_back_to_exact_git_tree_blob_once(self):
+        name="gem_data.inc"
+        raw_url=seed.RAW_BASE+REVISION+"/engine/dbc/generated/"+name
+        blob=seed.git_blob(self.raw[name])
+        api=seed.GIT_BLOB_BASE+blob
+        calls=[]
+        self.urls[api]=self.raw[name]
+        def fetch(req,timeout=None):
+            calls.append(req.full_url)
+            if req.full_url==raw_url:
+                raise HTTPError(raw_url,403,"Forbidden",{},None)
+            return self.fetch(req,timeout)
+        with tempfile.TemporaryDirectory() as td:
+            saved=pathlib.Path(td)/"exact"
+            result=seed.collect(revision=REVISION,expected_build=BUILD,
+                previous_game_build=OLD,dest=saved,transport=fetch)
+            self.assertEqual((saved/name).read_bytes(),self.raw[name])
+            self.assertTrue(result["provenance_tree_blob_authenticated"])
+            self.assertFalse(result["environment_ready"])
+        self.assertEqual(calls.count(raw_url),1)
+        self.assertEqual(calls.count(api),1)
+
+    def test_raw_403_json_blob_uses_sha_and_size_and_rejects_tampering(self):
+        name="gem_data.inc"
+        raw_url=seed.RAW_BASE+REVISION+"/engine/dbc/generated/"+name
+        blob=seed.git_blob(self.raw[name])
+        api=seed.GIT_BLOB_BASE+blob
+        original={"sha":blob,"size":len(self.raw[name]),"encoding":"base64",
+                  "content":base64.b64encode(self.raw[name]).decode()}
+        self.urls[api]=json.dumps(original).encode()
+        def fetch(req,timeout=None):
+            if req.full_url==raw_url:
+                raise HTTPError(raw_url,403,"Forbidden",{},None)
+            return self.fetch(req,timeout)
+        with tempfile.TemporaryDirectory() as td:
+            saved=pathlib.Path(td)/"base64"
+            seed.collect(revision=REVISION,expected_build=BUILD,
+                         previous_game_build=OLD,dest=saved,transport=fetch)
+            self.assertEqual((saved/name).read_bytes(),self.raw[name])
+            self.urls[api]=json.dumps({
+                **original,"content":base64.b64encode(
+                    self.raw[name].replace(b"2686",b"2685",1)).decode()
+            }).encode()
+            with self.assertRaisesRegex(seed.SimCSourceBlocked,
+                                        "CONTENT_SHA_MISMATCH"):
+                seed.collect(revision=REVISION,expected_build=BUILD,
+                    previous_game_build=OLD,
+                    dest=pathlib.Path(td)/"tampered",transport=fetch)
+            self.assertFalse((pathlib.Path(td)/"tampered").exists())
+
+    def test_non_403_does_not_try_an_alternate_source(self):
+        name="gem_data.inc"
+        raw_url=seed.RAW_BASE+REVISION+"/engine/dbc/generated/"+name
+        calls=[]
+        def fetch(req,timeout=None):
+            calls.append(req.full_url)
+            if req.full_url==raw_url:
+                raise HTTPError(raw_url,404,"Not Found",{},None)
+            return self.fetch(req,timeout)
+        with tempfile.TemporaryDirectory() as td:
+            with self.assertRaises(HTTPError):
+                seed.collect(revision=REVISION,expected_build=BUILD,
+                    previous_game_build=OLD,
+                    dest=pathlib.Path(td)/"not_found",transport=fetch)
+        self.assertFalse(any(x.startswith(seed.GIT_BLOB_BASE) for x in calls))
 
     def test_collector_does_not_fetch_unrequested_full_item_data(self):
         with tempfile.TemporaryDirectory() as td:

@@ -7,6 +7,7 @@ import pathlib
 import sys
 import tempfile
 import unittest
+from urllib.error import HTTPError
 
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"runner"))
@@ -113,6 +114,45 @@ class LazyFullPinnedSource(unittest.TestCase):
         self.assertEqual(result["network_calls_by_stage"],5)
         self.assertFalse(result["environment_ready"])
         self.assertIsNone(result["source_dir"])
+
+
+    def test_lazy_full_item_raw_403_uses_same_tree_blob_and_reuses_receipt(self):
+        api=source.GIT_BLOB_BASE+source.git_blob(self.item)
+        self.fake.urls[api]=self.item
+        def fetch(req,timeout):
+            self.calls.append(req.full_url)
+            if req.full_url==self.item_url:
+                raise HTTPError(self.item_url,403,"Forbidden",{},None)
+            return self.fake.fetch(req,timeout=timeout)
+        self.fetch=fetch
+        result=self.run_stage()
+        again=self.run_stage()
+        self.assertEqual(result["status"],
+                         "FRESH_FULL_PINNED_SIMC_ITEM_DATA_SOURCE_ONLY")
+        self.assertEqual(result["network_calls_by_stage"],6)
+        self.assertEqual(again["network_calls_by_stage"],0)
+        self.assertEqual(self.calls.count(api),1)
+        self.assertEqual(self.calls.count(self.item_url),1)
+        self.assertEqual((pathlib.Path(result["source_dir"])/"item_data.inc"
+                         ).read_bytes(),self.item)
+        self.assertFalse(result["environment_ready"])
+
+    def test_lazy_full_raw_403_api_wrong_sha_stays_pending(self):
+        api=source.GIT_BLOB_BASE+source.git_blob(self.item)
+        self.fake.urls[api]=self.item+b"MALFORMED"
+        def fetch(req,timeout):
+            self.calls.append(req.full_url)
+            if req.full_url==self.item_url:
+                raise HTTPError(self.item_url,403,"Forbidden",{},None)
+            return self.fake.fetch(req,timeout=timeout)
+        self.fetch=fetch
+        result=self.run_stage()
+        self.assertEqual(result["status"],
+                         "FRESH_FULL_PINNED_SIMC_SOURCE_PENDING")
+        self.assertEqual(result["reason"],
+                         "V229_EXACT_GIT_BLOB_API_CONTENT_INVALID")
+        self.assertEqual(result["network_calls_by_stage"],6)
+        self.assertFalse(result["environment_ready"])
 
     def test_item_data_from_other_build_cannot_complete_source(self):
         self.fake.urls[self.item_url]=(self.item.replace(
