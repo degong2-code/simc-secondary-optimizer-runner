@@ -206,6 +206,15 @@ class LocalJobs:
             except retail_build_source.RetailVersionBlocked as exc:
                 raise environment_manifest.EnvironmentBlocked(str(exc)) from exc
             game_build=discovered_build["game_build"]
+        # Immutable by-build Wago stage cannot be silently replayed to
+        # claim new item content at the exact same game build. The existing
+        # targeted static correction path must handle a confirmed hotfix.
+        if refresh_reason=="item_content_change":
+            prior=(self.root/"_fresh_season_sources"/("wago_"+game_build)/
+                   ".stage_receipts"/"fresh-wago-db2.json")
+            if prior.exists():
+                raise environment_manifest.EnvironmentBlocked(
+                    "SAME_BUILD_CONTENT_CHANGE_EXACT_SOURCE_CORRECTION_REQUIRED")
         with self.season_source_lock:
             observed=environment_build.build_environment(
                 sessions_root=self.root,session_folder=None,user=None,

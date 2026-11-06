@@ -535,6 +535,24 @@ class FreshEnvironmentSourceStageTests(unittest.TestCase):
                     source_ui=ui_catalog.public_options(source_path),
                     trusted_policy_A_receipts_by_id={},
                     target_ilevel=335)
+            # Neither a tampered installed file nor a modified source catalog
+            # is a trusted READY candidate without the original v217 receipt.
+            installed_file=Path(first["stage_output_path"])
+            original_bytes=installed_file.read_bytes()
+            installed_file.write_bytes(b'{"environment_ready":true}\\n')
+            self.assertIsNone(
+                environment_build.find_verified_installed_season_environment(
+                    root,334))
+            installed_file.write_bytes(original_bytes)
+            self.assertIsNotNone(
+                environment_build.find_verified_installed_season_environment(
+                    root,334))
+            original_source=source_path.read_bytes()
+            source_path.write_bytes(b'{}\\n')
+            self.assertIsNone(
+                environment_build.find_verified_installed_season_environment(
+                    root,334))
+            source_path.write_bytes(original_source)
 
 
 

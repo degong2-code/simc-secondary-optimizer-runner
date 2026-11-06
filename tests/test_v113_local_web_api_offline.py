@@ -270,6 +270,18 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(item.status_code,200,item.text)
         self.assertEqual(self.post("/api/v1/environment/season-build",{
             "refresh_reason":"simc_update"}).status_code,422)
+        receipt=(self.app.state.jobs.root/"_fresh_season_sources"/
+                 "wago_12.1.5.70783"/".stage_receipts"/"fresh-wago-db2.json")
+        receipt.parent.mkdir(parents=True)
+        receipt.write_text("SEALED_HISTORY",encoding="utf8")
+        with mock.patch.object(web.environment_build,"build_environment",
+                side_effect=AssertionError("NO_STALE_SNAPSHOT")):
+            changed=self.post("/api/v1/environment/season-build",{
+                "game_build":"12.1.5.70783",
+                "refresh_reason":"item_content_change"})
+        self.assertEqual(changed.status_code,422,changed.text)
+        self.assertEqual(changed.json()["detail"]["code"],
+                         "SAME_BUILD_CONTENT_CHANGE_EXACT_SOURCE_CORRECTION_REQUIRED")
 
     def test_p3_fr_zero_base_build_auto_retail_version_from_public_source(self):
         # No user-supplied game_build, historical ID, or client secrets.
