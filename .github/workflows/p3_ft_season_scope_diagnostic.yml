@@ -1,4 +1,4 @@
-name: P3-FT exact current-season raid-scope source diagnostic (one-shot)
+name: P3-FT exact current-season raid-tier semantics diagnostic (one-shot)
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
@@ -27,7 +27,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - name: Probe only original v155/WCL and four small DB2 tables
+      - name: Probe v155/WCL and five small DB2 tables including JournalTier
         shell: bash
         run: |
           python -u integration_probes/p3_ft_season_scope_diagnostic.py

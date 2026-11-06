@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FU 진단 지속:** [노트](development/notes/2026-11-06_p3-fu-current-journal-tier-semantics.md). 실제 P3-FT 원본 영수증([#42136591524](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42136591524))은 KR 12.1.5.70783 레이드 The Venomous Abyss **10/10 보스 매칭 성공**, Journal 인스턴스 1317/1320/1324의 Tier **505,516 동시 매칭**을 확인. 레이드 0/복수 실패가 아니라 Tier 참조 의미 중복이다. v163에 ID 505/516을 하드코딩하지 않고 동일 빌드 JournalTier.csv 이름·JournalTierXInstance.AvailabilityCondition만 더 보는 5표 소형 진단으로 변경 원인 확인. P3-FT focused 299 PASS는 역사 증거, 신규 결과와 구분. 실 SimC 바이너리 70529/빌드 70783 불일치·G/J/F/O/READY/T1 미해결. main·공식 승격 없음.
+>
+
 > **2026-11-06 P3-FT 신규 진단 (T1 결과 교정):** [작업 노트](development/notes/2026-11-06_p3-ft-current-raid-source-scope-diagnostic.md). [P3-FS 실전 T1 #42135209921](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42135209921)은 **NOT_READY**이지만, 인증정보 4개 공급·KR 12.1.5.70783·Wago v161/v217/보석 DBC SEALED·SimC digest→commit pin 성공. 실제 최초 불일치: v163 `LIVE_RAID_ZONE_OR_TIER_AMBIGUOUS`와 v229 `V229_SET_BONUS_BUILD_OR_HEADER_MISMATCH`(Docker 소스 70529, 실 빌드 70783). 공식 70783용 SimC Git 소스 `c20e2ad52e`는 존재하나 **현재 선택 Docker 바이너리와 동일 증거 아님**. 전체 T1 재반복 대신 기존 v155+4개 소형 Wago DB2 표로 0/복수 레이드 후보를 구별하는 source-only 진단을 격리 branch에 추가. 원본 이름/티어를 임의 결정하거나 Native 효과 별도 검증하지 않음. 새로운 Actions 결과는 별도 확인 전 미검증; G/J/F/O·Policy A·READY/T1 여전히 미완료.
 >
 

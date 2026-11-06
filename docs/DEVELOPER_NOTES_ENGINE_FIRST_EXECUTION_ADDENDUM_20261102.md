@@ -1,3 +1,6 @@
+> **2026-11-06 P3-FU:** [기능 노트](development/notes/2026-11-06_p3-fu-current-journal-tier-semantics.md). P3-FT 4 DB2 실전: WCL 활성 raid 1개, 보스 10/10 원본 매칭, JournalTier 505/516 두 개 동시 참조. 같은 시즌 ID 자동 판단을 위한 v163 수정 전 JournalTier 이름/AvailabilityCondition 1소형 표만 추가해 원천 의미를 판별한다. 진단은 새로운 인증 Gate가 아니며 선택값 확정/READY 보증이 아니다. 기존 캐시·v229·Native 사용 보존, 실제 SimC 빌드 차이 독립 해결 필요.
+>
+
 > **2026-11-06 P3-FT root-cause 분리:** [노트](development/notes/2026-11-06_p3-ft-current-raid-source-scope-diagnostic.md). P3-FS focused 297 PASS, 실 T1 NOT_READY. 인증/보석 raw/정확 SimC 커밋 hint 획득은 새 실전 증거로 완료, v163 현재 레이드 후보는 조건에 따라 모호, v229 chosen Docker image는 게임 70783과 다른 70529 소스. 새 시즌 항목/Native 측정은 실제 T1까지 미완료. 한번의 4개 소형 DB2 표 진단으로 오리지널 raid WCL/DB2 후보 0/복수를 구분하며 원본 인증 Gate나 full Wago 재수집을 추가하지 않음. 호환 70783 SimC 바이너리·source pin은 별도 필수; 정확하지 않은 70529 바이너리를 재사용해 PASS 표시 금지.
 >
 

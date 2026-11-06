@@ -32,6 +32,32 @@ class CurrentSeasonRaidCandidateDiagnostic(unittest.TestCase):
         self.assertFalse(rows[2]["qualified_by_original_raid_rule"])
         self.assertTrue(all(r["fully_matched_to_journal"] for r in rows))
 
+    def test_current_and_catalog_tiers_are_reported_not_guessed(self):
+        raids=[{
+            "zone_id":53,"fully_matched_to_journal":True,
+            "matching_raid_tier_ids":[505,516],
+            "journal_instance_ids":[1317,1320,1324]}]
+        tiers=[
+            {"ID":"505","Name_lang":"Current Season","Flags":"1"},
+            {"ID":"516","Name_lang":"Midnight","Flags":"0"},
+            {"ID":"999","Name_lang":"Unrelated","Flags":"0"}]
+        links=[
+            {"JournalTierID":str(t),"JournalInstanceID":str(i),
+             "AvailabilityCondition":("149388" if t==505 else "0")}
+            for t in (505,516,999) for i in (1317,1320,1324)]
+        out=scope.related_journal_tier_sources(
+            raids,mplus_zone_id=55,tier_rows=tiers,links=links)
+        self.assertEqual([int(r["ID"])
+                          for r in out["journal_tier_candidate_rows"]],
+                         [505,516])
+        self.assertEqual(len(out["matching_raid_tier_link_rows"]),6)
+        self.assertEqual({
+            (int(row["JournalTierID"]),row["AvailabilityCondition"])
+            for row in out["matching_raid_tier_link_rows"]},
+            {(505,"149388"),(516,"0")})
+        self.assertNotIn("selected_tier",out)
+        self.assertNotIn("season_verified",out)
+
     def test_missing_or_ambiguous_journal_match_never_becomes_candidate(self):
         report={"wcl":{"midnight_zones":[
             {"zone_id":11,"zone_name":"Unmapped","wcl_frozen":False,

@@ -1,7 +1,7 @@
 """One bounded source-only diagnostic of ambiguous WCL/DB2 raid scope.
 
 Uses the EXISTING v155 and v163 logic, not a new season classifier.
-Collects only four small same-build DB2 tables in a temporary directory.
+Collects only five small same-build DB2 tables in a temporary directory.
 No Native, policy admission, secrets, account data, or full Wago download.
 """
 from __future__ import annotations
@@ -20,7 +20,7 @@ from runner import v242_authenticated_season_source_stage as auth
 from runner import v289_retail_live_build_source as retail
 
 TABLES=("MythicPlusSeasonTrackedMap","MapChallengeMode",
-        "JournalEncounter","JournalTierXInstance")
+        "JournalEncounter","JournalTierXInstance","JournalTier")
 MAX_CSV=5_000_000
 OUT=Path("p3_ft_season_scope_diagnostic.json")
 
@@ -57,6 +57,30 @@ def raid_candidates(report,encounters,tier_links,mplus_zone_id=None):
                 and all(e is not None for e in found) and len(tiers)==1),
         })
     return projected
+
+
+def related_journal_tier_sources(raids,mplus_zone_id,tier_rows,links):
+    """Pure projection of same-build metadata, NEVER picks a raid tier."""
+    active=[x for x in raids if x["zone_id"]!=mplus_zone_id
+            and x["fully_matched_to_journal"]]
+    tids={t for raid in active for t in raid["matching_raid_tier_ids"]}
+    iids={iid for raid in active for iid in raid["journal_instance_ids"]}
+    return {
+        "journal_tier_headers":sorted(tier_rows[0]) if tier_rows else [],
+        "journal_tier_candidate_rows":[
+            {k:v for k,v in row.items()
+             if k in ("ID","Name_lang","Flags","Type","ExpansionID",
+                      "AvailabilityCondition","Name")}
+            for row in tier_rows if join.number(row.get("ID")) in tids],
+        "tier_link_headers":sorted(links[0]) if links else [],
+        "matching_raid_tier_link_rows":[
+            {k:v for k,v in row.items()
+             if k in ("ID","JournalTierID","JournalInstanceID",
+                      "AvailabilityCondition","Flags","ExpansionID")}
+            for row in links
+            if join.number(row.get("JournalTierID")) in tids
+            and join.number(row.get("JournalInstanceID")) in iids]
+    }
 
 
 def main():
@@ -132,6 +156,9 @@ def main():
             receipt["qualified_raid_zone_count"]=sum(
                 x["qualified_by_original_raid_rule"]
                 for x in receipt["raid_zone_diagnostics"])
+            receipt.update(related_journal_tier_sources(
+                receipt["raid_zone_diagnostics"],mplus_id,
+                list(join.read_rows(folder,"JournalTier")),links))
             receipt["status"]="SOURCE_ONLY_DIAGNOSTIC_COMPLETE"
     except Exception as e:
         receipt["status"]="DIAGNOSTIC_BLOCKED"
