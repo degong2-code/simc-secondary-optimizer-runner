@@ -53,6 +53,19 @@ class SimCEffectCandidateDiscovery(unittest.TestCase):
              for v in receipt["candidates"].values() for x in v))
         self.assertIn("FOOD_AND_POTION_ITEM_LIST_FROM_SAME_BUILD_SIMC_DBC",
                       receipt["unresolved_requirements"])
+    def test_current_upstream_literal_semver_source_is_not_unknown_expression(self):
+        # c20e2ad52e build 70783 uses set_min_version( "12.1.0" )
+        # rather than the historical wowv_t( 12, 1, 0 ) constructor.
+        changed=SOURCE.replace(
+            "set_min_version( wowv_t( 12, 1, 0 ) );",
+            'set_min_version( "12.1.0" );')
+        parsed=catalog.discover(changed.encode("utf8"),PIN)
+        self.assertEqual(parsed["candidates"]["potion"][1][
+            "minimum_game_version"],[12,1,0])
+        self.assertEqual(parsed["candidates"]["embellishment_or_darkmoon"][2][
+            "minimum_game_version"],[12,1,0])
+        self.assertFalse(parsed["auto_promote_to_user_ui"])
+
     def test_fail_closed_on_schema_or_unparsed_registration(self):
         cases=[
           SOURCE.replace("  // Flasks","  // Flasks MISSING"),

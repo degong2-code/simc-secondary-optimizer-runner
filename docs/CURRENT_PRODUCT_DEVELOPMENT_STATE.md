@@ -1,3 +1,6 @@
+> **2026-11-06 P3-GA 후속 v189 교정:** 실제 SimC 70783 Git 원본 `unique_gear_midnight.cpp`의 `set_min_version( "12.1.0" )`가 기존 `v189`의 wowv_t-only 파서에서 `UNKNOWN_VERSION_EXPRESSION`을 발생시킴. 의미 동일한 3자리 정수 문자열형 최소버전만 지원하도록 원본 파서 연결 교정; 효과 재구현·새 품질 Gate 없음. v276 source_url/bytes SHA 수정과 함께 새 focused CI 확인 전 최종 PASS 주장 금지.
+>
+
 > **2026-11-06 P3-GA 후속 v276 교정:** [실 재시험 #42150062233](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42150062233)에서 시즌 조인·일반 장비 후보·65개 티어 후보·기존 exact tier 선택 성공, Native0·READY=false. 다음 앞쪽 장애물 `v276`은 v161 레코드의 `source_url` 포함과 기존 v217 영수증의 `bytes/sha256`만 포함하는 구조 차이로 원본을 잘못 거절. 이미 인증된 동일 2개 테이블의 bytes/sha만 비교하도록 CONNECT 교정, 추가 Wago/Native 없음. 뒤이어 v232 공통 슬롯 후보, v189 SimC version 식은 각각 별도 미완료; 신규 CI 후 PASS 확인.
 >
 

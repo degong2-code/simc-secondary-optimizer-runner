@@ -19,6 +19,9 @@ MAX_HANDLERS=1000
 RE_COMMIT=re.compile(r"[0-9a-f]{40}\Z")
 REGISTER=re.compile(r"(?:unique_gear::)?register_special_effect\s*\(\s*(\{[^}]+\}|[0-9]+)\s*,\s*((?:consumables|embellishments|darkmoon)::[a-zA-Z0-9_]+|DISABLED_EFFECT)")
 MIN_VERSION=re.compile(r"set_min_version\s*\(\s*wowv_t\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)\s*\)")
+# SimC c20e2ad52e/70783 uses the same literal semantic version via
+# set_min_version("12.1.0"); do not reject this verified source syntax.
+MIN_VERSION_STRING=re.compile(r'set_min_version\s*\(\s*"(\d+)\.(\d+)\.(\d+)"\s*\)')
 RESET_VERSION=re.compile(r"reset_version_check\s*\(\s*\)")
 NORM=re.compile(r"[^a-z0-9]+")
 class DiscoveryBlocked(ValueError):pass
@@ -53,7 +56,7 @@ def extract_region(section,kind):
     for line in section.splitlines():
         stripped=line.strip()
         if not stripped or stripped.startswith("//"):continue
-        m=MIN_VERSION.search(line)
+        m=MIN_VERSION.search(line) or MIN_VERSION_STRING.search(line)
         if m:
             version=[int(m.group(i)) for i in (1,2,3)]
             continue
