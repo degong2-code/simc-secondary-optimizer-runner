@@ -4050,6 +4050,43 @@ def _sealed_v233_precombat_F_O_profile(*,stage_root,source_profile_path):
     return str(saved.resolve())
 
 
+
+def _prioritize_highest_source_quality_F(worklist):
+    """Top source quality per SimC token stem for measurement ONLY.
+
+    No independent same-effect proof, quality admission, or stat mechanism.
+    Ambiguous unmatched names and top-quality ties remain distinct.
+    """
+    need(type(worklist) is list and len(worklist)<=128,
+         "V216_F_SOURCE_QUALITY_WORKLIST_INVALID")
+    groups={}
+    for row in worklist:
+        need(type(row) is dict and type(row.get("physical_item_id")) is int
+             and row["physical_item_id"]>0
+             and type(row.get("simc_input_token")) is str
+             and bool(row["simc_input_token"])
+             and type(row.get("crafting_quality")) is int
+             and row["crafting_quality"]>=0,
+             "V216_F_SOURCE_QUALITY_ROW_INVALID")
+        token,quality=row["simc_input_token"],row["crafting_quality"]
+        suffix="_"+str(quality)
+        key=(("stem",token[:-len(suffix)])
+             if token.endswith(suffix) and len(token)>len(suffix)
+             else ("item",row["physical_item_id"]))
+        groups.setdefault(key,[]).append(row)
+    top={id(row) for rows in groups.values()
+         for row in rows if row["crafting_quality"]==
+         max(x["crafting_quality"] for x in rows)}
+    selected=[row for row in worklist if id(row) in top]
+    need(len(selected)==len(top),"V216_F_QUALITY_ROW_IDENTITY_DRIFT")
+    return {"selected":selected,"all_source_candidates":len(worklist),
+            "deferred_lower_source_qualities":len(worklist)-len(selected),
+            "distinct_source_token_families":len(groups),
+            "effect_equivalence_verified":False,
+            "quality_and_use_admitted":False,
+            "new_native_calls":0,"network_calls":0}
+
+
 def _auto_F_native_from_sealed_v281(*,collected,compilation,binary,
                                       kind="flask",max_new_native_calls=8,
                                       selected_item_id=None):
@@ -4087,6 +4124,10 @@ def _auto_F_native_from_sealed_v281(*,collected,compilation,binary,
         out["requires"].append("AUTO_"+label+"_EXACT_PHYSICAL_ITEM_PENDING")
     if out["requires"]:return [],out
     worklist=work[family]
+    quality_priority=None
+    if not oil and selected_item_id is None:
+        quality_priority=_prioritize_highest_source_quality_F(worklist)
+        worklist=quality_priority["selected"]
     if selected_item_id is not None:
         # The existing v281 same-build item relation owns exact ID lookup.
         # Do not spend Native calls on unrelated flask effects or quality.
@@ -4174,6 +4215,11 @@ def _auto_F_native_from_sealed_v281(*,collected,compilation,binary,
                             if native.get("native_error") else {})})
     out.update({"status":"AUTO_"+label+"_NATIVE_MEASURED_SOURCE_ONLY",
                 "total_source_candidates":len(worklist),
+                 **({"all_source_candidate_count":quality_priority["all_source_candidates"],
+                     "deferred_lower_quality_measurements":quality_priority["deferred_lower_source_qualities"],
+                     "distinct_F_source_token_families":quality_priority["distinct_source_token_families"],
+                     "source_quality_priority_only_not_policy_A":True}
+                    if quality_priority is not None else {}),
                 "attempted":len(receipts),
                 "remaining":len(worklist)-len(receipts),
                 **({"selected_exact_item_id":selected_item_id,

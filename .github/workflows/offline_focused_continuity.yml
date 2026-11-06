@@ -66,6 +66,7 @@ jobs:
             tests.test_p3_fz_existing_simc_binary_identity \
             tests.test_p3_gj_existing_native_case_archive \
             tests.test_p3_gk_f_j_diagnostic_receipt \
+            tests.test_p3_gl_highest_quality_flask_measurement \
             tests.test_p3_ga_raid_loot_expansion_diagnostic \
             tests.test_p3_ft_season_scope_diagnostic \
             tests.test_v163_db2_zero_seed \

@@ -127,7 +127,8 @@ def _player(raw, revision, kind, expected):
         need(type(val) in (int, float) and math.isfinite(val) and val >= 0,
              "V269_BUFFED_CHMV_NUMERIC_INVALID")
         ratings[stat] = float(val)
-    need(any(v > 0 for v in ratings.values()),
+    # Zero CHMV values are valid. Only missing rating fields are invalid.
+    need(any(stat in stats for stat in STATS),
          "V269_BUFFED_CHMV_SNAPSHOT_EMPTY")
     return player.get("name"), ratings
 

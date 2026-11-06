@@ -75,8 +75,18 @@ class NativeSnapshotTests(unittest.TestCase):
             v.compare(baseline_json2=report({},rev="9"*10),
                       active_json2=report({"flask":"new_flask"}),
                       prepared=p,binary_sha256="b"*64,simc_revision="a"*40)
+        observed=v.compare(
+            baseline_json2=report({},crit=0,haste=0,mastery=0,vers=0),
+            active_json2=report({"flask":"new_flask"},
+                                crit=0,haste=165,mastery=0,vers=0),
+            prepared=p,binary_sha256="b"*64,simc_revision="a"*40)
+        self.assertEqual(observed["static_CHMV_candidate"],{
+            "crit_rating":0,"haste_rating":165,
+            "mastery_rating":0,"versatility_rating":0})
+        missing=json.loads(report({}))
+        missing["sim"]["players"][0]["collected_data"]["buffed_stats"]["stats"]={}
         with self.assertRaisesRegex(v.SnapshotBlocked,"SNAPSHOT_EMPTY"):
-            v.compare(baseline_json2=report({},crit=0,haste=0,mastery=0,vers=0),
+            v.compare(baseline_json2=json.dumps(missing).encode("utf8"),
                       active_json2=report({"flask":"new_flask"}),
                       prepared=p,binary_sha256="b"*64,simc_revision="a"*40)
 
