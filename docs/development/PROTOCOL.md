@@ -1,3 +1,9 @@
+## 2026-11-06 최신 단일 인계 P3-GI — 읽기 전용 새 채팅
+
+**최신 단일 진입점:** [P3-GI 인계](../CHAT_CONTINUITY_HANDOFF_20261106_P3_GI_ENGINE_FIRST_RESTORE.md) 및 [노트](notes/2026-11-06_p3-gi-engine-continuity-handoff.md). 아래 P3-FK와 이전 인계의 '최신' 표기는 작성 당시 역사 상태. 새 채팅은 격리와 main 실제 HEAD를 각각 독립 조회 → P3-GI → PROTOCOL → INDEX E3/E2/E1·D1/D2·B3·C1~C4·G1/G2 → CURRENT → 실행 노트 → 관련 P3-GH/GG/GF/FP/FQ/FX/FY/FR 코드/원본·영수증만 확인한다. **첫 응답은 읽기 전용 복원·장단기 로드맵 보고 후 즉시 STOP**, 사용자 '진행' 전 코드/문서 변경, 신규 HTTP/CI/Native/테스트/승격 금지.
+
+**기준 근거:** 제품 코드 d9f05ecd009981ef603ccdfe8bcf0e4042a2f0b4, main 07133e0aaf738d6e4816a6486057b1cd49c018de. 실 #42170351404: 70783 source SEALED·컴파일 성공, Native 8회 보고, F AUTO_F_NEXT_MEASUREMENT_BATCH_PENDING, 공식 G/J/F/O/B/T 모두 null·READY/installed false. 집중 #42170351351 325 tests/2 SKIP(323 PASS), v212 #42170118202 양 OS 478 tests/4 SKIP(474 PASS)는 직전 코드 SHA. 다음은 v281/v278 F worklist·캐시/원본 Native 보존 여부 선조회 후 최소 연결; 무조건 full T1 반복 금지. 최신 직접 정책: 26 DPS, 다음 시즌 재사용 단일 엔진, 특수 1개+일반 4종(각 일반보석은 서로 다른 2개 2차스탯을 가진 경우만 J 귀속), SimC 효과 신뢰, 같은 시즌 SimC 버전 변경만으로 정적 데이터 폐기 금지. **실 READY/T1은 아직 미완료.**
+
 **2026-11-06 사용자 승인 P3-FX 정적 데이터 수명 교정:** 동일 확장팩·시즌의 게임 빌드 또는 SimC revision·밸런스 변경만으로 검증된 장비·티어·보석·영약·기름·마부·G/J/F/O를 폐기하거나 전체 제로베이스 재구축하지 않는다. 관련 아이템·콘텐츠의 실변경이 확정되면 영향 범위만 증분 갱신; 시즌·확장팩 전환 시 환경 재평가. 신규 원본의 `v229` 게임 빌드 검증은 출처 일치용이지 기구축 시즌 DB 재사용 Gate가 아니다. 새 바이너리의 DPS 캐시만 별도 유지. [P3-FX 근거/검증](notes/2026-11-06_p3-fx-same-season-static-versus-simc-runtime.md). 정적 SHAs 동일은 READY 또는 새 시즌 여부 인증이 아니다.
 
 # 개발 연속성 규약 · 2026-11-03 사용자 직접 교정
