@@ -73,6 +73,7 @@ jobs:
             tests.test_p3_gs_real_five_socket_layout_stage \
             tests.test_p3_gt_reuse_existing_socket_item_use_source \
             tests.test_p3_gu_j_socket_source_no_native \
+            tests.test_p3_gw_declared_full_sockets \
             tests.test_v232_simc_only_ordinary_representative \
             tests.test_p3_gn_default_flask_environment_engine \
             tests.test_p3_ga_raid_loot_expansion_diagnostic \
