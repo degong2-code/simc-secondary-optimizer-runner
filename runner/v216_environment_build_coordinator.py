@@ -4462,7 +4462,8 @@ def _existing_v280_season_socket_item_source(collected, compilation):
 def _fresh_default_intrinsic_gem_layout_from_source(*, collected,
                                                     selected_roles,
                                                     target_ilevel,
-                                                    candidate_socket_counts=None):
+                                                    candidate_socket_counts=None,
+                                                    simc_declared_socket_counts=None):
     """Stage one existing special + ordinary gems on original v232 slots.
 
     A separate prospective slot plan can add *unadmitted* bonus slots.
@@ -4521,7 +4522,18 @@ def _fresh_default_intrinsic_gem_layout_from_source(*, collected,
          "V216_DEFAULT_GEM_V232_PHYSICAL_SLOTS_DRIFT")
     selected=selected_roles["ordinary_gem_ids"]
     special=selected_roles["special_gem_id"]
-    proposed=counts if candidate_socket_counts is None else candidate_socket_counts
+    need(candidate_socket_counts is None or
+         simc_declared_socket_counts is None,
+         "V216_SOCKET_SOURCE_SIMC_INTENT_CONFLICT")
+    proposed=(simc_declared_socket_counts if
+              simc_declared_socket_counts is not None else
+              counts if candidate_socket_counts is None else
+              candidate_socket_counts)
+    if simc_declared_socket_counts is not None:
+        need(type(proposed) is dict and set(proposed)==set(ids) and
+             all(type(n) is int and 0<=n<=3 for n in proposed.values()) and
+             sum(proposed.values())>=5,
+             "V216_SIMC_DECLARED_FULL_SOCKET_PLAN_INVALID")
     if candidate_socket_counts is not None:
         # Never mutate the original v232 source: these are only prospective
         # slots, and _fresh_selected_J_intrinsic_socket_source will see
@@ -4551,6 +4563,9 @@ def _fresh_default_intrinsic_gem_layout_from_source(*, collected,
          layout["special_gem_id"]==special and
          layout["environment_ready"] is False,
          "V216_DEFAULT_GEM_V271_INTRINSIC_LAYOUT_DRIFT")
+    if simc_declared_socket_counts is not None:
+        layout["simc_declared_full_socket_policy"]=(
+            "FULL_GEM_ID_PROFILE_SIMC_OWNS")
     return layout
 
 
@@ -4612,8 +4627,13 @@ def _fresh_selected_J_intrinsic_socket_source(*, collected, preflight,
              and type(j.get("J_candidate_unadmitted")) is int
              and j.get("environment_ready") is False,
              "V216_J_V271_NUMERIC_SOURCE_DRIFT")
+    declared=layout.get("simc_declared_full_socket_policy")
+    need(declared in (None,"FULL_GEM_ID_PROFILE_SIMC_OWNS"),
+         "V216_J_SIMC_DECLARED_SOCKET_POLICY_INVALID")
     return {**out,
-            "status":("J_INTRINSIC_COUNTS_BOUND_SOURCE_ONLY" if not extra else
+            "status":("J_SIMC_DECLARED_FULL_GEM_PROFILE_SOURCE_ONLY"
+                      if declared else
+                      "J_INTRINSIC_COUNTS_BOUND_SOURCE_ONLY" if not extra else
                       "J_ADDITIONAL_SOCKET_SOURCE_PROOF_PENDING"),
             "intrinsic_socket_counts_by_slot":dict(counts),
             "additional_socket_proof_required_by_slot":extra,
@@ -4997,8 +5017,15 @@ def _fresh_source_owner_original_J_F_components(*, preflight, compilation,
     jq=quality_scope.get("J")
     socket=compilation.get("selected_J_intrinsic_socket_origin_unadmitted")
     if (type(j) is dict and type(jq) is dict and type(socket) is dict and
-            socket.get("status")=="J_INTRINSIC_COUNTS_BOUND_SOURCE_ONLY"
-            and socket.get("additional_socket_proof_required_by_slot")=={}
+            socket.get("status") in (
+                "J_INTRINSIC_COUNTS_BOUND_SOURCE_ONLY",
+                "J_SIMC_DECLARED_FULL_GEM_PROFILE_SOURCE_ONLY")
+            and (socket.get("additional_socket_proof_required_by_slot")=={}
+                 or (socket.get("status")==
+                     "J_SIMC_DECLARED_FULL_GEM_PROFILE_SOURCE_ONLY" and
+                     (compilation.get("physical_gem_layout_unadmitted")
+                      or {}).get("simc_declared_full_socket_policy")==
+                         "FULL_GEM_ID_PROFILE_SIMC_OWNS"))
             and socket.get("observed_J_unadmitted")==j.get("rating")
             and type(socket.get("v232_stage_receipt_sha256")) is str and
             season_budget_contract.SHA.fullmatch(
@@ -5616,6 +5643,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                    "verified_install_input_provider",
                    "auto_select_observed_F_no_oil",
                    "source_selected_gem_roles",
+                   "source_target_socket_count",
                    "auto_four_stat_source_requested"},
              "V216_ZERO_HISTORY_SOURCE_INPUT_FIELDS")
         # A trusted internal source-owner adapter can provide independently
@@ -5670,6 +5698,12 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                type(source_selected_gem_roles["ordinary_gem_ids"]) is list)
               and user is None and zero_history_gem_layout is None),
              "V216_DEFAULT_GEM_INTERNAL_ROLE_SELECTION_SCOPE_REQUIRED")
+        target_sockets=fresh_collection_inputs.get(
+            "source_target_socket_count",5)
+        need(type(target_sockets) is int and 5<=target_sockets<=64 and
+             (source_selected_gem_roles is not None or
+              "source_target_socket_count" not in fresh_collection_inputs),
+             "V216_DECLARED_FULL_SOCKET_COUNT_REQUIRED")
         # None ordinary IDs => use four types from sealed nominal CHMV source.
         # The existing special ID is consumed, never rediscovered/probed.
         auto_four_stat_default=(
@@ -5761,6 +5795,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                          "auto_native_G_requested",
                          "auto_select_observed_F_no_oil",
                          "source_selected_gem_roles",
+                         "source_target_socket_count",
                          "auto_four_stat_source_requested",
                          "verified_install_input_provider")}
         if auto_four_stat_default or auto_four_stat_source_requested:
@@ -5838,26 +5873,27 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             source_selected_gem_roles["special_gem_id"]],
                         excluded_ordinary_item_id=
                             source_selected_gem_roles["special_gem_id"])
-                    intrinsic_counts=(collected.get(
+                    # Declarative SimC gem_id layout, not game socket unlock.
+                    # Uses the same v232 sealed gear IDs. No v280 item/spell
+                    # lookup and no separate bonus socket eligibility Gate.
+                    selected_slots=(collected.get(
                         "fresh_one_spec_simc_representative") or {}).get(
-                            "intrinsic_socket_counts_by_selected_slot_source_only")
-                    future_sockets=_future_target_five_socket_plan(
-                        intrinsic_counts)
-                    progress["future_five_socket_plan_unadmitted"]=future_sockets
-                    source_compilation[
-                        "future_five_socket_plan_unadmitted"]=future_sockets
-                    if future_sockets["provisional_added_by_slot"]:
-                        existing_socket_items=(
-                            _existing_v280_season_socket_item_source(
-                                collected,source_compilation))
-                        progress["existing_season_socket_item_source_unadmitted"]=(
-                            existing_socket_items)
-                        source_compilation[
-                            "existing_season_socket_item_source_unadmitted"]=(
-                                existing_socket_items)
-                    if not future_sockets["can_place_four"]:
+                            "selected_G_slot_ids")
+                    if type(selected_slots) is not dict or not selected_slots:
                         progress["requires"].append(
-                            "FOUR_ORDINARY_TYPES_NEED_FIVE_PHYSICAL_SOCKETS")
+                            "SIMC_REPRESENTATIVE_GEAR_IDS_PENDING")
+                        declared_counts=None
+                    else:
+                        declared_counts=physical_gems.declared_full_socket_counts(
+                            selected_gear_ids=selected_slots,
+                            socket_total=target_sockets,need=need)
+                        progress["simc_declared_full_socket_counts_source_only"]=(
+                            dict(declared_counts))
+                        source_compilation[
+                            "simc_declared_full_socket_counts_source_only"]=(
+                                dict(declared_counts))
+                    if declared_counts is None:
+                        pass
                     elif not (
                             observed.get(
                                 "selected_gem_v221_same_build_items_all_present")
@@ -5872,7 +5908,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         ordinary=physical_gems.ordinary_four_stat_default(
                             observed_by_stat=observed[
                                 "four_stat_ordinary_best_observed_unadmitted"],
-                            socket_total=future_sockets["planned_socket_total"],
+                            socket_total=target_sockets,
                             special_gem_id=source_selected_gem_roles[
                                 "special_gem_id"],need=need)
                         zero_history_gem_layout=(
@@ -5884,11 +5920,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                                     "ordinary_gem_ids":ordinary},
                                 target_ilevel=fresh_collection_inputs[
                                     "representative_request"]["target_ilevel"],
-                                candidate_socket_counts=future_sockets[
-                                    "planned_socket_counts"]))
-                        if future_sockets["provisional_added_by_slot"]:
-                            progress["requires"].append(
-                                "J_ADDED_SOCKET_SEASON_ITEM_SOURCE_PENDING")
+                                simc_declared_socket_counts=declared_counts))
                         progress["default_intrinsic_gem_layout_unadmitted"]=(
                             zero_history_gem_layout)
                         progress["four_stat_ordinary_source_selection_unadmitted"]=(

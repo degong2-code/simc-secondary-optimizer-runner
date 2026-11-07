@@ -56,8 +56,41 @@ def ordinary_four_stat_default(*, observed_by_stat, socket_total,
              "SOCKET_FOUR_ORDINARY_SOURCE_CANDIDATE_INVALID")
         ids.append(candidate["item_id"])
     need(len(set(ids))==4,"SOCKET_FOUR_ORDINARY_PHYSICAL_IDS_REQUIRED")
-    # Balanced default for extra slots; the optimizer determines actual DPS.
+    # Fixed repeated order. The 26-DPS optimizer never chooses gem types.
     return [ids[i%4] for i in range(socket_total-1)]
+
+
+# Declared SimC gem_id placement: no socket-granting item or spell is needed.
+FULL_SOCKET_SLOT_ORDER=("head","neck","finger1","finger2","wrists",
+                        "waist","feet","hands","legs","shoulders","chest",
+                        "back","main_hand","off_hand")
+
+def declared_full_socket_counts(*,selected_gear_ids,socket_total,need):
+    """Fill all declared slots with a deterministic, spec-independent layout.
+
+    The sealed representative supplies real item IDs. This function neither
+    discovers nor attests intrinsic sockets or special item eligibility.
+    Actual SimC execution owns acceptance of the complete profile.
+    """
+    need(type(selected_gear_ids) is dict and bool(selected_gear_ids) and
+         all(type(s) is str and type(i) is int and i>0
+             for s,i in selected_gear_ids.items()) and
+         type(socket_total) is int and 5<=socket_total<=64,
+         "SOCKET_DECLARED_TARGET_AND_PHYSICAL_GEAR_REQUIRED")
+    ordered=[s for s in FULL_SOCKET_SLOT_ORDER if s in selected_gear_ids]
+    need(len(ordered)==len(selected_gear_ids) and
+         socket_total<=3*len(ordered),
+         "SOCKET_DECLARED_GEAR_SLOT_CAPACITY_EXCEEDED")
+    planned={s:0 for s in sorted(selected_gear_ids)}
+    missing=socket_total
+    for layer in range(3):
+        for s in ordered:
+            if missing==0: break
+            planned[s]+=1
+            missing-=1
+        if missing==0: break
+    need(missing==0,"SOCKET_DECLARED_LAYOUT_COUNT_DRIFT")
+    return planned
 
 
 def intrinsic_source_plan(*, intrinsic_socket_counts, special_gem_id,
