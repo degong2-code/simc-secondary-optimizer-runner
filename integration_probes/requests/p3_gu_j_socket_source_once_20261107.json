@@ -1,0 +1,27 @@
+{
+  "schema": "p3_gu_same_build_J_socket_source_only_v1",
+  "build": "12.1.5.70783",
+  "selected_flask_item_id": 241324,
+  "no_new_simc_binary_compile": true,
+  "no_main_merge": true,
+  "existing_selected_special_gem_id": 240967,
+  "four_ordinary_dual_stat_types": [
+    "crit",
+    "haste",
+    "mastery",
+    "versatility"
+  ],
+  "reused_collectors": [
+    "v161",
+    "v221",
+    "v266",
+    "v280",
+    "v232"
+  ],
+  "G_native_max": 0,
+  "F_native_max": 0,
+  "O_native_max": 0,
+  "no_external_F_rating_injection": true,
+  "no_j_socket_admission_without_season_proof": true,
+  "official_ready_claim": false
+}
