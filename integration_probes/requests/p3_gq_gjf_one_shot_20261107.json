@@ -1,0 +1,21 @@
+{
+  "schema": "p3_gq_one_combined_original_G_J_F_source_once_v1",
+  "build": "12.1.5.70783",
+  "selected_flask_item_id": 241324,
+  "existing_selected_special_gem_id": 240967,
+  "four_ordinary_dual_stat_types": [
+    "crit",
+    "haste",
+    "mastery",
+    "versatility"
+  ],
+  "special_gem_effect_independently_checked": false,
+  "same_season_original_J_socket_source_required": true,
+  "G_native_max": 1,
+  "F_native_max": 2,
+  "O_native_max": 0,
+  "official_ready_only_if_original_v212_installed": true,
+  "no_external_F_rating_injection": true,
+  "no_new_simc_binary_compile": true,
+  "no_main_merge": true
+}
