@@ -65,23 +65,22 @@ FULL_SOCKET_SLOT_ORDER=("head","neck","finger1","finger2","wrists",
                         "waist","feet","hands","legs","shoulders","chest",
                         "back","main_hand","off_hand")
 
-def declared_full_socket_counts(*,selected_gear_ids,socket_total,need):
-    """Fill all declared slots with a deterministic, spec-independent layout.
+def declared_full_socket_counts(*,available_slots,socket_total,need):
+    """Fixed gem_id positions over source-observed representative slot names.
 
-    The sealed representative supplies real item IDs. This function neither
-    discovers nor attests intrinsic sockets or special item eligibility.
-    Actual SimC execution owns acceptance of the complete profile.
+    This is a profile declaration, not proof that equipment has sockets.
+    Item IDs are still authenticated by the original v232 source path.
     """
-    need(type(selected_gear_ids) is dict and bool(selected_gear_ids) and
-         all(type(s) is str and type(i) is int and i>0
-             for s,i in selected_gear_ids.items()) and
-         type(socket_total) is int and 5<=socket_total<=64,
-         "SOCKET_DECLARED_TARGET_AND_PHYSICAL_GEAR_REQUIRED")
-    ordered=[s for s in FULL_SOCKET_SLOT_ORDER if s in selected_gear_ids]
-    need(len(ordered)==len(selected_gear_ids) and
+    need(type(available_slots) in (list,tuple) and bool(available_slots)
+         and all(type(s) is str for s in available_slots)
+         and len(set(available_slots))==len(available_slots)
+         and type(socket_total) is int and 5<=socket_total<=64,
+         "SOCKET_DECLARED_TARGET_AND_PHYSICAL_SLOTS_REQUIRED")
+    ordered=[s for s in FULL_SOCKET_SLOT_ORDER if s in available_slots]
+    need(len(ordered)==len(available_slots) and
          socket_total<=3*len(ordered),
          "SOCKET_DECLARED_GEAR_SLOT_CAPACITY_EXCEEDED")
-    planned={s:0 for s in sorted(selected_gear_ids)}
+    planned={s:0 for s in sorted(available_slots)}
     missing=socket_total
     for layer in range(3):
         for s in ordered:

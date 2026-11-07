@@ -5878,14 +5878,14 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     # lookup and no separate bonus socket eligibility Gate.
                     selected_slots=(collected.get(
                         "fresh_one_spec_simc_representative") or {}).get(
-                            "selected_G_slot_ids")
+                            "intrinsic_socket_counts_by_selected_slot_source_only")
                     if type(selected_slots) is not dict or not selected_slots:
                         progress["requires"].append(
-                            "SIMC_REPRESENTATIVE_GEAR_IDS_PENDING")
+                            "SIMC_REPRESENTATIVE_GEAR_SLOT_NAMES_PENDING")
                         declared_counts=None
                     else:
                         declared_counts=physical_gems.declared_full_socket_counts(
-                            selected_gear_ids=selected_slots,
+                            available_slots=sorted(selected_slots),
                             socket_total=target_sockets,need=need)
                         progress["simc_declared_full_socket_counts_source_only"]=(
                             dict(declared_counts))
