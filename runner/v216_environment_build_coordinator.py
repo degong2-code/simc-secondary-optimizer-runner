@@ -4343,9 +4343,45 @@ def _stage_source_environment_only(*, compilation, preflight,
 
 
 
+def _future_target_five_socket_plan(intrinsic_counts):
+    """Propose target sockets; NEVER authenticate added sockets as intrinsic."""
+    if (type(intrinsic_counts) is not dict or not intrinsic_counts or
+            any(type(k) is not str or type(v) is not int or v<0 or v>3
+                for k,v in intrinsic_counts.items())):
+        return {"status":"J_ORIGINAL_INTRINSIC_SOCKET_SOURCE_PENDING",
+                "can_place_four":False,"planned_socket_counts":None,
+                "provisional_added_by_slot":{},
+                "additional_source_verified":False,
+                "new_native_calls":0,"network_calls":0}
+    original=dict(intrinsic_counts)
+    planned=dict(original)
+    missing=max(0,5-sum(original.values()))
+    additions={}
+    # Slot feasibility is ONLY a proposal. Current-season item/use source
+    # has to verify additions separately; original v232 counts remain exact.
+    for slot in ("wrists","waist","head"):
+        if missing<=0:break
+        if slot in planned and planned[slot]==0:
+            planned[slot]=1
+            additions[slot]=1
+            missing-=1
+    can_place=missing==0
+    return {
+        "status":("FUTURE_FIVE_SOCKET_LAYOUT_SOURCE_ONLY"
+                  if can_place else "FUTURE_FIVE_SOCKET_LAYOUT_INSUFFICIENT"),
+        "can_place_four":can_place,
+        "original_intrinsic_total":sum(original.values()),
+        "planned_socket_total":sum(planned.values()),
+        "planned_socket_counts":planned if can_place else None,
+        "provisional_added_by_slot":additions,
+        "additional_source_verified":not bool(additions),
+        "new_native_calls":0,"network_calls":0}
+
+
 def _fresh_default_intrinsic_gem_layout_from_source(*, collected,
                                                     selected_roles,
-                                                    target_ilevel):
+                                                    target_ilevel,
+                                                    candidate_socket_counts=None):
     """Stage exact one-special + N ordinary on v232 intrinsic slots only.
 
     The caller's role-selected IDs are *not* independently certified here.
@@ -4403,8 +4439,21 @@ def _fresh_default_intrinsic_gem_layout_from_source(*, collected,
          "V216_DEFAULT_GEM_V232_PHYSICAL_SLOTS_DRIFT")
     selected=selected_roles["ordinary_gem_ids"]
     special=selected_roles["special_gem_id"]
+    proposed=counts if candidate_socket_counts is None else candidate_socket_counts
+    if candidate_socket_counts is not None:
+        # Never mutate the original v232 source: these are only prospective
+        # slots, and _fresh_selected_J_intrinsic_socket_source will see
+        # additions and keep official J pending.
+        need(type(proposed) is dict and set(proposed)==set(counts) and
+             all(type(v) is int and counts[k]<=v<=3
+                 for k,v in proposed.items()) and
+             all(proposed[k]==counts[k] or
+                 (k in ("head","waist","wrists") and
+                  counts[k]==0 and proposed[k]==1)
+                 for k in counts) and sum(proposed.values())>=5,
+             "V216_FUTURE_SOCKET_PLAN_ORIGINAL_V232_DRIFT")
     plan=physical_gems.intrinsic_source_plan(
-        intrinsic_socket_counts=counts,
+        intrinsic_socket_counts=proposed,
         special_gem_id=special,ordinary_gem_ids=selected,
         source_observed_gem_item_ids=sorted(set(selected)|{special}),
         need=need)
@@ -5704,10 +5753,15 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             source_selected_gem_roles["special_gem_id"]],
                         excluded_ordinary_item_id=
                             source_selected_gem_roles["special_gem_id"])
-                    socket_total=(collected.get(
+                    intrinsic_counts=(collected.get(
                         "fresh_one_spec_simc_representative") or {}).get(
-                            "intrinsic_socket_total_source_only")
-                    if type(socket_total) is not int or socket_total<5:
+                            "intrinsic_socket_counts_by_selected_slot_source_only")
+                    future_sockets=_future_target_five_socket_plan(
+                        intrinsic_counts)
+                    progress["future_five_socket_plan_unadmitted"]=future_sockets
+                    source_compilation[
+                        "future_five_socket_plan_unadmitted"]=future_sockets
+                    if not future_sockets["can_place_four"]:
                         progress["requires"].append(
                             "FOUR_ORDINARY_TYPES_NEED_FIVE_PHYSICAL_SOCKETS")
                     elif not (
@@ -5724,7 +5778,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         ordinary=physical_gems.ordinary_four_stat_default(
                             observed_by_stat=observed[
                                 "four_stat_ordinary_best_observed_unadmitted"],
-                            socket_total=socket_total,
+                            socket_total=future_sockets["planned_socket_total"],
                             special_gem_id=source_selected_gem_roles[
                                 "special_gem_id"],need=need)
                         zero_history_gem_layout=(
@@ -5735,7 +5789,12 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                                         "special_gem_id"],
                                     "ordinary_gem_ids":ordinary},
                                 target_ilevel=fresh_collection_inputs[
-                                    "representative_request"]["target_ilevel"]))
+                                    "representative_request"]["target_ilevel"],
+                                candidate_socket_counts=future_sockets[
+                                    "planned_socket_counts"]))
+                        if future_sockets["provisional_added_by_slot"]:
+                            progress["requires"].append(
+                                "J_ADDED_SOCKET_SEASON_ITEM_SOURCE_PENDING")
                         progress["default_intrinsic_gem_layout_unadmitted"]=(
                             zero_history_gem_layout)
                         progress["four_stat_ordinary_source_selection_unadmitted"]=(
