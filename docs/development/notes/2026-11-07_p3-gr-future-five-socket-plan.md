@@ -1,0 +1,11 @@
+# 2026-11-07 · P3-GR · 미래 파밍 목표 추가 소켓 J 배치 계획
+
+- **Capability:** `F.FLASK`, `SOURCE.SEAL`, `ENVIRONMENT.WEB`
+- **Keywords:** P3-GR, v232 intrinsic sockets, v271, J gem default, five sockets, Great Vault, Season 2
+- **Prior evidence:** [실 결합 T1 #42332836316](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42332836316), Artifact #13557983542. G Native 1 → **G=2850**, 동일 시즌 F Native 2 → **F=165 haste**, 원본 stage 및 compilation sealed, J에서 `FOUR_ORDINARY_TYPES_NEED_FIVE_PHYSICAL_SOCKETS`, READY=false. 기존 F-only #42196731158는 별도 유효. T1 보존 ZIP은 Native 3 cases/12 files, SHA `6403ca94bf72f9d988d2afe029c23c95976e211db6e5ff7d1db7ff506223dbc9`, portable execution cache 아님.
+- **External observation (not v216 certified):** 시즌 2 <https://www.wowdb.com/items/275707-miasmic-jewelbinder> ItemID 275707, <https://www.wowhead.com/spell=1297709> 시즌 2 PvE helm/bracer/belt 중 소켓 없는 장비에 추가 가능. 시즌 1 다른 socket 아이템을 최신 시즌 검증으로 복사하지 않음. 정확한 해당 시즌 효과·사용 범위·아이템 원본 등록은 별도 소유자가 필요.
+- **Decision:** `CONNECT` 사용자 미래 목표는 초기 장비 스탯 재분배가 아니라 이미 파밍·추가 소켓 적용까지 마친 대표 완성형 프로필. v232 **진짜 기본 소켓**을 불변으로 유지하며 eligible slot 머리/손목/허리의 빈 곳에서 최대 1개씩 계획하여 5개 물리 소켓 후보를 만든다. 이 계획은 정적 J 계산 후보에만 적용하며, 원래 `v216._fresh_selected_J_intrinsic_socket_source`는 v232 초과를 `J_ADDITIONAL_SOCKET_SOURCE_PROOF_PENDING`으로 분명히 차단한다. 실제 시즌 소켓 추가 아이템 source 없이는 official J·B/T·READY 승격 없음.
+- **Changes:** `v216._future_target_five_socket_plan`은 5개 충족 가능성/추가 대상/원래 소켓 합계·미확정 여부만 반환. 기존 `_fresh_default_intrinsic_gem_layout_from_source`에 optional candidate counts만 지원, 원래 v232 identity와 source count 원문은 안 바꾼다. 정상 auto 4종 배치 경로가 부족한 내장 소켓만 이유로 먼저 중단하지 않고 후보를 원래 v271에 연결하되 `J_ADDED_SOCKET_SEASON_ITEM_SOURCE_PENDING`을 출력한다. Source-only. T1 summary에 별도 계획 상태를 노출해 다시 native를 돌리지 않고도 부족 원인을 확인 가능.
+- **Verification:** 신규 focused offline의 PASS/FAIL을 실제 Actions 영수증 확인 후 기록한다. 신규 실 SimC Native/게임 HTTP/외부 효과 인증 0.
+- **Remaining:** 기존 동일 시즌 아이템·주문 소스로 추가 소켓 허용 조건 연결 및 검증을 마쳐야 J 원본 소켓/최고품질·공식 G/J/F/O/READY가 가능. 새로운 시즌의 eligible slot을 그대로 복사하지 않음. 본 작업은 별도 새 optimizer/gem effect engine이 아님.
+- **Efficiency:** 앞선 3 Native·원본 artifact는 그대로 보존; 매번 같은 원본 재수집/재실측 금지. 신규 G/J/F Native0, 독립 인증 Gate0, 전체 26 spec Native sweep0. 격리 브랜치만 변경하며 main/v003/Project UI/Work OS/주 제품 개발 채팅 권한 불변.

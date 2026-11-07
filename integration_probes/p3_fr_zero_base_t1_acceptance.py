@@ -497,6 +497,9 @@ def main():
                     progress,compiled,special_gem_id=special),
                 "GJF_original_source_owner_summary":
                     summarized_existing_GJF_owner_components(compiled),
+                "future_five_socket_plan_unadmitted":(
+                    compiled.get("future_five_socket_plan_unadmitted")
+                    or progress.get("future_five_socket_plan_unadmitted")),
                 "original_source_verified_F_uninstalled":
                     original_verified_F_only_uninstalled(compiled,exact_f),
                 "zero_history_requires":progress.get("requires",[]),
