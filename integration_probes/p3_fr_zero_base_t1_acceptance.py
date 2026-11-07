@@ -280,6 +280,33 @@ def original_verified_F_only_uninstalled(compilation, selected_item_id):
             "environment_ready":False,"new_native_calls":0}
 
 
+def summarized_existing_GJF_owner_components(compilation):
+    """Original verified components only, no installed READY inference."""
+    c=compilation if type(compilation) is dict else {}
+    partial=c.get("original_J_F_verified_components_not_full_environment") or {}
+    if type(partial) is not dict:
+        partial={}
+    output={}
+    for key,item in (("G",c.get("native_G_source_owner_component_not_full_environment")),
+                     ("J",partial.get("J")),("F",partial.get("F"))):
+        if type(item) is dict:
+            output[key]={k:item.get(k) for k in
+                         ("rating","source_verification","source_sha256")}
+            if key=="F":
+                output[key]["physical_item_id"]=item.get("selected_flask_item_id")
+                output[key]["native_pair_receipt_sha256"]=item.get(
+                    "native_pair_receipt_sha256")
+    j=c.get("selected_J_F_source_owner_numeric_unadmitted") or {}
+    sockets=c.get("selected_J_intrinsic_socket_origin_unadmitted") or {}
+    return {"schema":"p3_gq_original_GJF_owner_summary_v1",
+            "verified_components_not_full_environment":output,
+            "selected_J_F_numeric_status":j.get("status"),
+            "selected_J_F_missing":list(j.get("missing",[])),
+            "intrinsic_socket_status":sockets.get("status"),
+            "official_GJFO_B_T_ready_inferred":False,
+            "native_calls":0,"network_calls":0}
+
+
 def verified_pinned_cli_source(*, binary_path, live_game_build, environment):
     """Check existing P3-FW executable before zero-history source/Native.
 
@@ -468,6 +495,8 @@ def main():
                 "source_compilation_missing":compiled.get("missing",[]),
                 "F_J_existing_source_diagnostics":summarize_existing_f_and_j(
                     progress,compiled,special_gem_id=special),
+                "GJF_original_source_owner_summary":
+                    summarized_existing_GJF_owner_components(compiled),
                 "original_source_verified_F_uninstalled":
                     original_verified_F_only_uninstalled(compiled,exact_f),
                 "zero_history_requires":progress.get("requires",[]),

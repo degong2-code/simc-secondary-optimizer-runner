@@ -7,6 +7,7 @@ on:
     branches: [probe/chat-cache-v035-20261024]
     paths:
       - integration_probes/requests/p3_gp_f_only_once_20261106.json
+      - integration_probes/requests/p3_gq_gjf_one_shot_20261107.json
   workflow_dispatch:
     inputs:
       exact_flask_item_id:
@@ -26,14 +27,14 @@ concurrency:
   cancel-in-progress: false
 jobs:
   original-v216-once:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[p3-gp-f-only-once]')
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[p3-gp-f-only-once]') || contains(github.event.head_commit.message, '[p3-gq-gjf-once]')
     runs-on: ubuntu-24.04
     timeout-minutes: 23
     env:
       PYTHONPATH: runner:.
       P3_T1_EXACT_FLASK_ITEM_ID: ${{ github.event_name == 'push' && '241324' || inputs.exact_flask_item_id }}
-      P3_T1_EXISTING_SPECIAL_GEM_ID: ${{ inputs.existing_special_gem_id }}
-      P3_T1_F_ONLY: ${{ github.event_name == 'push' && '1' || '0' }}
+      P3_T1_EXISTING_SPECIAL_GEM_ID: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[p3-gq-gjf-once]') && '240967' || inputs.existing_special_gem_id }}
+      P3_T1_F_ONLY: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[p3-gp-f-only-once]') && '1' || '0' }}
       SIMC_PINNED_SOURCE_COMMIT: c20e2ad52e4c33711f74272309a5748125175fe8
       SIMC_PINNED_GAME_BUILD: 12.1.5.70783
       SIMC_PINNED_BINARY_SHA256: 980ed4640cecc3ed78b34ed0dc0363dbff2ed7d703174e9cc01f09d18570d36b
@@ -53,24 +54,44 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git diff-tree --no-commit-id --name-only -r HEAD)" =             "integration_probes/requests/p3_gp_f_only_once_20261106.json"
           python3 - <<'PY'
-          import json,pathlib
-          value=json.loads(pathlib.Path(
-            "integration_probes/requests/p3_gp_f_only_once_20261106.json").read_text())
-          expected={
-            "schema":"p3_gp_one_source_verified_flask_native_once_v1",
-            "build":"12.1.5.70783",
-            "selected_flask_item_id":241324,
-            "source_owner":"EXISTING_V216_V281_V278",
-            "max_new_F_native_calls":2,
-            "G_native_requested":False,
-            "gem_effect_validation":False,
-            "complete_GJFO_ready_claim":False,
-            "no_new_simc_binary_compile":True,
-            "no_main_merge":True}
-          assert value==expected,(value,expected)
-          print("P3_GP_EXACT_SOURCE_SCOPED_ONE_SHOT_CONFIRMED")
+          import json,pathlib,subprocess
+          files=subprocess.check_output(["git","diff-tree","--no-commit-id",
+              "--name-only","-r","HEAD"],text=True).splitlines()
+          msg=subprocess.check_output(["git","log","-1","--pretty=%s"],
+              text=True).strip()
+          gp="[p3-gp-f-only-once]" in msg
+          gq="[p3-gq-gjf-once]" in msg
+          assert gp != gq,"P3_EXACT_ONE_SHOT_MARKER_REQUIRED"
+          path=("integration_probes/requests/p3_gp_f_only_once_20261106.json"
+                if gp else
+                "integration_probes/requests/p3_gq_gjf_one_shot_20261107.json")
+          assert files==[path],files
+          got=json.loads(pathlib.Path(path).read_text())
+          common={"build":"12.1.5.70783",
+                  "selected_flask_item_id":241324,
+                  "no_new_simc_binary_compile":True,
+                  "no_main_merge":True}
+          if gp:
+              expected={**common,
+                "schema":"p3_gp_one_source_verified_flask_native_once_v1",
+                "source_owner":"EXISTING_V216_V281_V278",
+                "max_new_F_native_calls":2,
+                "G_native_requested":False,"gem_effect_validation":False,
+                "complete_GJFO_ready_claim":False}
+          else:
+              expected={**common,
+                "schema":"p3_gq_one_combined_original_G_J_F_source_once_v1",
+                "existing_selected_special_gem_id":240967,
+                "four_ordinary_dual_stat_types":["crit","haste","mastery","versatility"],
+                "special_gem_effect_independently_checked":False,
+                "same_season_original_J_socket_source_required":True,
+                "G_native_max":1,"F_native_max":2,"O_native_max":0,
+                "official_ready_only_if_original_v212_installed":True,
+                "no_external_F_rating_injection":True}
+          assert got==expected,(got,expected)
+          print("P3_EXACT_ORIGINAL_GJF_ONE_SHOT" if gq
+                else "P3_GP_EXACT_SOURCE_SCOPED_ONE_SHOT_CONFIRMED")
           PY
       - name: Verify existing authenticated season inputs before artifact retrieval
         shell: bash
