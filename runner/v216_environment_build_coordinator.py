@@ -4378,6 +4378,87 @@ def _future_target_five_socket_plan(intrinsic_counts):
         "new_native_calls":0,"network_calls":0}
 
 
+def _existing_v280_season_socket_item_source(collected, compilation):
+    """Read the SAME sealed item-use join for socket-item discovery hints.
+
+    No extra CSV/HTTP, Native, separate effect interpreter, or J admission.
+    Names and on-use spell links only narrow the existing source inspection;
+    they cannot establish season-specific use rights or bonus-slot ownership.
+    """
+    out={"schema":"v216_existing_v280_socket_item_source_v1",
+         "status":"SAME_BUILD_SOCKET_ITEM_SOURCE_PENDING",
+         "physical_candidates_unadmitted":[],"candidate_count":0,
+         "source_sha256":None,"v280_stage_receipt_sha256":None,
+         "same_build_source":False,"slot_application_verified":False,
+         "j_budget_admitted":False,"environment_ready":False,
+         "new_native_calls":0,"network_calls":0}
+    if type(collected) is not dict or type(compilation) is not dict:
+        return out
+    entry=collected.get("fresh_consumable_item_spell_source") or {}
+    stage=entry.get("source_stage") or {}
+    if (entry.get("status")!="ITEM_USE_SPELL_SOURCE_JOINED_UNADMITTED"
+            or stage.get("status") not in
+                ("EXECUTED_AND_SEALED","REUSED_VERIFIED","RECOVERED_VERIFIED")
+            or type(stage.get("receipt_sha256")) is not str or
+            season_budget_contract.SHA.fullmatch(
+                stage["receipt_sha256"]) is None):
+        return out
+    root=pathlib.Path(compilation.get("stage_root") or "").resolve()
+    filename=entry.get("candidate_path")
+    need(type(filename) is str and bool(filename) and root.is_dir() and
+         not root.is_symlink(),"V216_SOCKET_V280_STAGE_ROOT_REQUIRED")
+    candidate=pathlib.Path(filename)
+    need(candidate.is_file() and not candidate.is_symlink() and
+         candidate.resolve().is_relative_to(root) and
+         candidate.resolve().parent==root/"source" and
+         0<candidate.stat().st_size<=10_000_000,
+         "V216_SOCKET_V280_SEALED_CANDIDATE_REQUIRED")
+    raw=candidate.read_bytes()
+    doc=json.loads(raw)
+    build=collected.get("expected_game_build")
+    meta=doc.get("item_use_spell_join") or {}
+    source=doc.get("source") or {}
+    need(doc.get("schema")==consumable_item_candidates.SCHEMA and
+         source.get("wago_snapshot_build")==build and
+         meta.get("schema")==item_spell_bridge.SCHEMA and
+         meta.get("game_build")==build and meta.get("source_only") is True
+         and doc.get("automatic_ui_promotion") is False and
+         type(doc.get("items")) is list and len(doc["items"])<=50000,
+         "V216_SOCKET_V280_SAME_BUILD_ITEM_JOIN_DRIFT")
+    candidates=[]
+    for item in doc["items"]:
+        if type(item) is not dict:
+            continue
+        name=item.get("name_enUS")
+        effect=item.get("item_effect_source") or {}
+        if (type(name) is str and name.casefold().endswith("jewelbinder")
+                and type(item.get("item_id")) is int and item["item_id"]>0
+                and effect.get("status")==
+                    "EXACT_DB2_ITEM_TO_ON_USE_SPELL_SOURCE_ONLY"
+                and type(effect.get("on_use_spell_ids")) is list
+                and bool(effect["on_use_spell_ids"])
+                and all(type(i) is int and i>0
+                        for i in effect["on_use_spell_ids"])):
+            candidates.append({
+                "physical_item_id":item["item_id"],
+                "name_from_same_build":name,
+                "observed_on_use_spell_ids":
+                    sorted(set(effect["on_use_spell_ids"])),
+                "expansion_id":item.get("expansion_id"),
+                "source_only":True})
+    candidates.sort(key=lambda x:(x["physical_item_id"],
+                                  x["name_from_same_build"]))
+    return {**out,
+        "status":("SAME_BUILD_SOCKET_ITEM_USE_CANDIDATES_UNADMITTED"
+                  if candidates else
+                  "NO_MATCH_IN_EXISTING_V280_CONSUMABLE_SCOPE"),
+        "physical_candidates_unadmitted":candidates,
+        "candidate_count":len(candidates),
+        "source_sha256":digest(raw),
+        "v280_stage_receipt_sha256":stage["receipt_sha256"],
+        "same_build_source":True}
+
+
 def _fresh_default_intrinsic_gem_layout_from_source(*, collected,
                                                     selected_roles,
                                                     target_ilevel,
@@ -5765,6 +5846,15 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     progress["future_five_socket_plan_unadmitted"]=future_sockets
                     source_compilation[
                         "future_five_socket_plan_unadmitted"]=future_sockets
+                    if future_sockets["provisional_added_by_slot"]:
+                        existing_socket_items=(
+                            _existing_v280_season_socket_item_source(
+                                collected,source_compilation))
+                        progress["existing_season_socket_item_source_unadmitted"]=(
+                            existing_socket_items)
+                        source_compilation[
+                            "existing_season_socket_item_source_unadmitted"]=(
+                                existing_socket_items)
                     if not future_sockets["can_place_four"]:
                         progress["requires"].append(
                             "FOUR_ORDINARY_TYPES_NEED_FIVE_PHYSICAL_SOCKETS")

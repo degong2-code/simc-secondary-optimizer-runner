@@ -500,6 +500,11 @@ def main():
                 "future_five_socket_plan_unadmitted":(
                     compiled.get("future_five_socket_plan_unadmitted")
                     or progress.get("future_five_socket_plan_unadmitted")),
+                "existing_season_socket_item_source_unadmitted":(
+                    compiled.get(
+                        "existing_season_socket_item_source_unadmitted")
+                    or progress.get(
+                        "existing_season_socket_item_source_unadmitted")),
                 "original_source_verified_F_uninstalled":
                     original_verified_F_only_uninstalled(compiled,exact_f),
                 "zero_history_requires":progress.get("requires",[]),
