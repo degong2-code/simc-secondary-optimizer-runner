@@ -4382,12 +4382,13 @@ def _fresh_default_intrinsic_gem_layout_from_source(*, collected,
                                                     selected_roles,
                                                     target_ilevel,
                                                     candidate_socket_counts=None):
-    """Stage exact one-special + N ordinary on v232 intrinsic slots only.
+    """Stage one existing special + ordinary gems on original v232 slots.
 
-    The caller's role-selected IDs are *not* independently certified here.
-    The same normal preflight still authenticates them against the original
-    sealed v221/v266/v230 source before producing any J source candidate.
-    No historical gem IDs, new sockets, Native or arbitrary UI ID selection.
+    A separate prospective slot plan can add *unadmitted* bonus slots.
+    Original v232 intrinsic counts remain unchanged, and the existing
+    downstream J socket owner detects these extra slots and keeps
+    authoritative J pending until applicable same-season proof is available.
+    No new Native, gem effect engine or assumed physical sockets.
     """
     source=collected.get("fresh_one_spec_simc_representative") or {}
     stage=source.get("source_stage") or {}
@@ -4461,8 +4462,11 @@ def _fresh_default_intrinsic_gem_layout_from_source(*, collected,
                 "ilevel":target_ilevel,"options":{}}
           for slot in sorted(ids)}
     _,layout=physical_gems.arrange(rows,plan,need)
-    need(layout["socket_total"]==sum(counts.values()) and
-         layout["ordinary_count"]==sum(counts.values())-1 and
+    # Compare the staged physical layout against the proposed target counts,
+    # NOT the smaller original intrinsic counts. The downstream source owner
+    # independently compares to original v232 and flags bonus-slot proof.
+    need(layout["socket_total"]==sum(proposed.values()) and
+         layout["ordinary_count"]==sum(proposed.values())-1 and
          layout["special_gem_id"]==special and
          layout["environment_ready"] is False,
          "V216_DEFAULT_GEM_V271_INTRINSIC_LAYOUT_DRIFT")
