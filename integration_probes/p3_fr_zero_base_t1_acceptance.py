@@ -240,6 +240,14 @@ def t1_native_source_controls(*, selected_F, f_only, binary_available):
     }
 
 
+def source_only_J_socket_controls():
+    """Run the original source and J role stages without G/F/O Native."""
+    return {"auto_four_stat_source_requested":True,
+            "auto_native_G_requested":False,"auto_native_F_requested":False,
+            "auto_native_O_requested":False,
+            "auto_select_observed_F_no_oil":False}
+
+
 def selected_t1_source_inputs(*, exact_flask_item_id, existing_special_gem_id):
     """Delegate selected physical IDs to the original v281/v271 owners."""
     result={}
@@ -370,10 +378,18 @@ def main():
         if mode not in ("0","1"):
             raise ValueError("P3_GP_F_ONLY_OPT_IN_INVALID")
         f_only=(mode=="1")
+        source_value=os.environ.get("P3_T1_J_SOCKET_SOURCE_ONLY","0")
+        if source_value not in ("0","1"):
+            raise ValueError("P3_GU_SOURCE_MODE_INVALID")
+        source_only=source_value=="1"
+        if source_only and (f_only or exact_f is None or special is None):
+            raise ValueError("P3_GU_SOURCE_MODE_SELECTED_IDS_REQUIRED")
         if f_only and exact_f is None:
             raise ValueError("P3_GP_F_ONLY_EXACT_ITEM_ID_REQUIRED")
         rec["selected_f_only_native_mode"]=f_only
-        rec["requested_max_F_native_calls"]=2 if f_only else 8
+        rec["selected_J_socket_source_only_mode"]=source_only
+        rec["requested_max_F_native_calls"]=(
+            0 if source_only else 2 if f_only else 8)
         live=retail.discover(region="KR")
         rec["live_retail_version"]=live
         # These four existing v242 source credentials are required by the
@@ -437,9 +453,10 @@ def main():
                     "target_ilevel":334},
                 "g_probe_character":{"race":"dwarf"},
                 "simc_revision_hint":pin["revision_hint"],
-                **t1_native_source_controls(
-                    selected_F=exact_f,f_only=f_only,
-                    binary_available=candidate is not None),
+                **(source_only_J_socket_controls() if source_only else
+                   t1_native_source_controls(
+                       selected_F=exact_f,f_only=f_only,
+                       binary_available=candidate is not None)),
                 **selected_t1_source_inputs(
                     exact_flask_item_id=exact_f,
                     existing_special_gem_id=special),
@@ -500,6 +517,15 @@ def main():
                 "future_five_socket_plan_unadmitted":(
                     compiled.get("future_five_socket_plan_unadmitted")
                     or progress.get("future_five_socket_plan_unadmitted")),
+                "J_four_ordinary_two_stat_sources_unadmitted":(
+                    compiled.get(
+                        "four_stat_ordinary_source_selection_unadmitted")
+                    or progress.get(
+                        "four_stat_ordinary_source_selection_unadmitted")),
+                "J_original_nominal_source_unadmitted":(
+                    (compiled.get(
+                        "selected_J_F_source_owner_numeric_unadmitted") or {}
+                    ).get("J")),
                 "existing_season_socket_item_source_unadmitted":(
                     compiled.get(
                         "existing_season_socket_item_source_unadmitted")
@@ -537,7 +563,15 @@ def main():
                    installed.get("status")==
                        "FRESH_SEASON_VERIFIED_ENVIRONMENT_INSTALLED_READY"
                    and installed.get("stage_output_path"))
-            if f_only:
+            if source_only:
+                rec["status"]=(
+                    "J_SOCKET_SOURCE_ONLY_SEALED_NOT_READY"
+                    if rec["source_compilation_status"]==
+                        "FRESH_V191_V211_V213_COMPILED_UNADMITTED"
+                        and not rec["source_compilation_missing"]
+                        and rec["simc_native_calls_reported"]==0
+                    else "J_SOCKET_SOURCE_ONLY_INCOMPLETE_NOT_READY")
+            elif f_only:
                 # F may be original-v278-proven while G/J/B/T stay absent.
                 # A full environment READY claim is strictly prohibited.
                 f_receipt=rec["original_source_verified_F_uninstalled"]
@@ -563,12 +597,14 @@ def main():
                 "source_compilation_missing","zero_history_requires",
                 "simc_native_calls_reported","native_evidence_archive",
                 "selected_f_only_native_mode",
+                "selected_J_socket_source_only_mode",
                 "original_source_verified_F_uninstalled","environment_ready",
                 "environment_installed")},ensure_ascii=False,default=str),
             flush=True)
     return 0 if rec["status"] in (
         "ZERO_BASE_T1_PASS",
-        "F_ONLY_ORIGINAL_SIMC_SOURCE_VERIFIED_NOT_ENVIRONMENT_READY") else 2
+        "F_ONLY_ORIGINAL_SIMC_SOURCE_VERIFIED_NOT_ENVIRONMENT_READY",
+        "J_SOCKET_SOURCE_ONLY_SEALED_NOT_READY") else 2
 
 if __name__=="__main__":
     raise SystemExit(main())
