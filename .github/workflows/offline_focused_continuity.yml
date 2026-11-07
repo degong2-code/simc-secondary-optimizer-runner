@@ -72,6 +72,7 @@ jobs:
             tests.test_p3_gr_future_five_sockets_source_only \
             tests.test_p3_gs_real_five_socket_layout_stage \
             tests.test_p3_gt_reuse_existing_socket_item_use_source \
+            tests.test_p3_gu_j_socket_source_no_native \
             tests.test_p3_gn_default_flask_environment_engine \
             tests.test_p3_ga_raid_loot_expansion_diagnostic \
             tests.test_p3_ft_season_scope_diagnostic \
