@@ -1,0 +1,10 @@
+# 2026-11-07 · P3-GQ · 기존 원본 G/J/F 최소 결합 시험
+
+- **Capability:** `F.FLASK`, `SOURCE.SEAL`, `ENVIRONMENT.WEB`
+- **Keywords:** P3-GQ, G, J, F, selected special ID, 4 ordinary gems, original v216/v277/v281/v278, real T1, official B/T
+- **Prior evidence:** [P3-GP Native #42196731158](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42196731158): 현 시즌 `12.1.5.70783`, 선택 F ItemID `241324`, 실제 v278 전후 가속 `1005→1170`(+165), 신규 Native2. Archive `e1fcca76770410a3a2ec935424ad6bdd21bc97595e334d2f9023a95969ce1114`는 원본 2 case SHA를 보존하지만 경로 의존으로 portable execution cache 아님. 실제 F 원본 감사 자료와 추후 정상 v216 실행의 source-provenance를 구별할 것.
+- **Decision:** `CONNECT` 새 F 캐시/통합 엔진 작성이나 F=165 강제 주입 대신 **기존 단일 정상 v216 Build**로 원본 G Native 최대 1회, 선정 영약 F Native 최대 2회, 선택 기름 없음 O Native 0회와 J 원본 4종 보석/실제 소켓을 동시에 확인. 특수보석은 기존 v271의 기록된 ID `240967`만 시도하며 신규 식별·효과 인증을 하지 않음. 동일 시즌 v221/v266 source에서 기존 ID/일반보석, v232/v271 5개 실제 소켓이 확인되지 않으면 J는 PENDING으로 둠. 성공해야 원래 v222의 B/T와 v212 실제 installed READY가 발생함.
+- **Changes:** `integration_probes/p3_fr_zero_base_t1_acceptance.py`의 이미 구현된 `f_only=False`, `t1_native_source_controls`, `selected_t1_source_inputs`를 그대로 호출. 원본 검증 G/J/F 컴포넌트·J 결손·실제 소켓상태를 간결하게 기록하는 **read-only 영수증 함수**만 추가. 기존 `p3_fz_reuse_exact_simc_live_t1.yml`에 별도의 *정확히 한 JSON 파일·메시지 마커*인 `p3_gq_gjf_one_shot_20261107.json` 요청만 허용; GP 과거 F-only 보호 조건 유지. 원본 binary artifact + SHA, 자격 증명, 동일 게임 빌드 guard, 임의 F rating 주입 금지.
+- **Verification:** 오프라인 focused가 통과한 이후에만 새 정확한 요청 JSON을 *단일 파일*로 commit/push해 실전 1회 시험. 다른 코드 변경으로는 Native 안 실행. 결과가 실패하면 첫 실패 원인·Native 호출/영수증 범위를 그대로 표기하고 자동 재시도 없음.
+- **Remaining:** 아직 동일 시즌 G/J/정식 B/T·READY 실증은 없음. F-only 이전 Native2는 여전히 유효한 원본 실측이지만 새 워크스페이스의 실행 cache HIT라는 뜻은 아님. F 추가 native2는 full-profile source와 실제 G/J 환경에서 필요한 bounded work; 무조건 다시 측정하는 신규 F 효과 gate는 아님. 타 영약/기름은 옵션별 원본 인증·등록을 별도 유지.
+- **Efficiency:** 시즌 원본 구축을 **한 번** 수집해 G/J/F를 묶고 Native 총 신규 최대 3회(기름 0); 다른 영약 검색/전수 Native/다른 26 spec 테스트/SimC 바이너리 빌드·독립 효과 메커니즘 0. 최소 영수증만 출력, 취소/재개·캐시 소유권 기존 엔진 재사용. `main`/불변 v003/Project UI/Work OS/주 제품 채팅 소유권 변경 없음.
