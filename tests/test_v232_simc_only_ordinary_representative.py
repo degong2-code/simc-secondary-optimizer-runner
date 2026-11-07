@@ -506,7 +506,7 @@ class SourceOnlyRepresentativeTests(unittest.TestCase):
         self.assertFalse(picked["environment_ready"])
         self.assertIsNone(picked["J"])
 
-    def test_p3_gv_source_socket_jewelry_preferred_before_plain_id(self):
+    def test_p3_gw_jewelry_g_identity_not_distorted_by_sockets(self):
         raw=make_fixture()
         for iid,inv in ((9023,2),(9025,11)):
             previous=item_row(iid,inv,4,0,primary=0).encode("utf8")
@@ -518,12 +518,14 @@ class SourceOnlyRepresentativeTests(unittest.TestCase):
         self.seed_files(raw)
         plan=self.plan()
         self.assertEqual(plan["selected_common"]["neck"],9023)
-        # Previously finger1 selected source ID 9012 because it was smaller.
-        # The physical socket on 9025 is now more useful for future J.
-        self.assertEqual(plan["selected_common"]["finger1"],9025)
-        self.assertEqual(plan["selected_common"]["finger2"],9012)
+        # v271 declares gem slots independently; source rank/ID choose G.
+        self.assertEqual(plan["selected_common"]["finger1"],9012)
+        self.assertEqual(plan["selected_common"]["finger2"],9025)
         self.assertEqual(plan[
             "selected_common_socket_source_coverage"]["finger1"][
+            "selected_intrinsic_count"],0)
+        self.assertEqual(plan[
+            "selected_common_socket_source_coverage"]["finger2"][
             "selected_intrinsic_count"],1)
         self.assertEqual(plan[
             "selected_common_socket_source_coverage"]["neck"][

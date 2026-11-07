@@ -399,12 +399,9 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
         need(bool(matches),"V232_COMMON_SLOT_WITHOUT_SIMC_CANDIDATE:"+slot)
         matches=[iid for iid in matches if matching_primary(iid,slot)]
         need(bool(matches),"V232_COMMON_PRIMARY_STAT_NOT_COMPATIBLE:"+slot)
-        # Future-target defaults need real gem locations. On neck/rings,
-        # prefer a physically socketed source candidate if one exists.
-        # Source-season provenance remains the first priority. Socket
-        # preference only breaks ties inside the SAME provenance rank;
-        # do not promote an unresolved/off-season candidate over an
-        # explicitly observed active-season plain item.
+        # Representative G selection is independent of gem/socket count.
+        # Keep the original season-provenance rank and stable item-ID order;
+        # declared SimC gem_id slots are owned by v271, not the gear picker.
         jewelry=slot in ("neck","finger1","finger2")
         if jewelry:
             common_socket_source_candidates[slot]={
@@ -418,12 +415,7 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
                 "non_generic_socketed_count":sum(
                     items[iid]["intrinsic_socket_count_from_simc_source"]>0
                     and source_rank(iid)<5 for iid in matches)}
-            matches.sort(key=lambda iid:(
-                source_rank(iid),
-                items[iid]["intrinsic_socket_count_from_simc_source"]==0,
-                iid))
-        else:
-            matches.sort(key=lambda iid:(source_rank(iid),iid))
+        matches.sort(key=lambda iid:(source_rank(iid),iid))
         common[slot]=matches[0];used.add(matches[0])
     try:
         # Reuse v169 exact weapon-form selection; WSE candidates are
