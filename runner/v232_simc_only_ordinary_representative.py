@@ -401,8 +401,10 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
         need(bool(matches),"V232_COMMON_PRIMARY_STAT_NOT_COMPATIBLE:"+slot)
         # Future-target defaults need real gem locations. On neck/rings,
         # prefer a physically socketed source candidate if one exists.
-        # Never favor an internal generic G-only neck over an actual
-        # same-season source merely because it carries a socket.
+        # Source-season provenance remains the first priority. Socket
+        # preference only breaks ties inside the SAME provenance rank;
+        # do not promote an unresolved/off-season candidate over an
+        # explicitly observed active-season plain item.
         jewelry=slot in ("neck","finger1","finger2")
         if jewelry:
             common_socket_source_candidates[slot]={
@@ -417,9 +419,9 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
                     items[iid]["intrinsic_socket_count_from_simc_source"]>0
                     and source_rank(iid)<5 for iid in matches)}
             matches.sort(key=lambda iid:(
-                source_rank(iid)==5,
+                source_rank(iid),
                 items[iid]["intrinsic_socket_count_from_simc_source"]==0,
-                source_rank(iid),iid))
+                iid))
         else:
             matches.sort(key=lambda iid:(source_rank(iid),iid))
         common[slot]=matches[0];used.add(matches[0])
