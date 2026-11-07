@@ -380,6 +380,7 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
         matches.sort(key=lambda iid:(source_rank(iid),iid))
         ordinary[slot]=matches[0];used.add(matches[0])
     common={}
+    common_socket_source_candidates={}
     for slot in chooser.COMMON:
         matches=chooser.available_plain(scratch,slot=slot,
                 class_mask=class_mask,used=used)
@@ -398,7 +399,29 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
         need(bool(matches),"V232_COMMON_SLOT_WITHOUT_SIMC_CANDIDATE:"+slot)
         matches=[iid for iid in matches if matching_primary(iid,slot)]
         need(bool(matches),"V232_COMMON_PRIMARY_STAT_NOT_COMPATIBLE:"+slot)
-        matches.sort(key=lambda iid:(source_rank(iid),iid))
+        # Future-target defaults need real gem locations. On neck/rings,
+        # prefer a physically socketed source candidate if one exists.
+        # Never favor an internal generic G-only neck over an actual
+        # same-season source merely because it carries a socket.
+        jewelry=slot in ("neck","finger1","finger2")
+        if jewelry:
+            common_socket_source_candidates[slot]={
+                "eligible_count":len(matches),
+                "intrinsic_socketed_count":sum(
+                    items[iid]["intrinsic_socket_count_from_simc_source"]>0
+                    for iid in matches),
+                "best_socket_count":max(
+                    items[iid]["intrinsic_socket_count_from_simc_source"]
+                    for iid in matches),
+                "non_generic_socketed_count":sum(
+                    items[iid]["intrinsic_socket_count_from_simc_source"]>0
+                    and source_rank(iid)<5 for iid in matches)}
+            matches.sort(key=lambda iid:(
+                source_rank(iid)==5,
+                items[iid]["intrinsic_socket_count_from_simc_source"]==0,
+                source_rank(iid),iid))
+        else:
+            matches.sort(key=lambda iid:(source_rank(iid),iid))
         common[slot]=matches[0];used.add(matches[0])
     try:
         # Reuse v169 exact weapon-form selection; WSE candidates are
@@ -497,6 +520,12 @@ def find_candidate(*, seed_directory, tier_candidate, target_ilevel,
         "selected_G_source_candidate_not_approved":True,
         "selected_ordinary":ordinary,
         "selected_common":common,
+        "selected_common_socket_source_coverage":{
+            slot:{**info,"selected_item_id":common[slot],
+                  "selected_intrinsic_count":
+                    items[common[slot]][
+                        "intrinsic_socket_count_from_simc_source"]}
+            for slot,info in sorted(common_socket_source_candidates.items())},
         "selected_weapons":weapons,
         "selected_G_slot_ids":{k:selected[k] for k in sorted(selected)},
         # Same v230 streaming source; not game-side socket bonus permission.

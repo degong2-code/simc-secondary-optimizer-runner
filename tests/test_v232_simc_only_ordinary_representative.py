@@ -506,6 +506,32 @@ class SourceOnlyRepresentativeTests(unittest.TestCase):
         self.assertFalse(picked["environment_ready"])
         self.assertIsNone(picked["J"])
 
+    def test_p3_gv_source_socket_jewelry_preferred_before_plain_id(self):
+        raw=make_fixture()
+        for iid,inv in ((9023,2),(9025,11)):
+            previous=item_row(iid,inv,4,0,primary=0).encode("utf8")
+            replacement=item_row(
+                iid,inv,4,0,primary=0,sockets=(1,0,0)).encode("utf8")
+            self.assertIn(previous,raw["item_data.inc"])
+            raw["item_data.inc"]=raw["item_data.inc"].replace(
+                previous,replacement,1)
+        self.seed_files(raw)
+        plan=self.plan()
+        self.assertEqual(plan["selected_common"]["neck"],9023)
+        # Previously finger1 selected source ID 9012 because it was smaller.
+        # The physical socket on 9025 is now more useful for future J.
+        self.assertEqual(plan["selected_common"]["finger1"],9025)
+        self.assertEqual(plan["selected_common"]["finger2"],9012)
+        self.assertEqual(plan[
+            "selected_common_socket_source_coverage"]["finger1"][
+            "selected_intrinsic_count"],1)
+        self.assertEqual(plan[
+            "selected_common_socket_source_coverage"]["neck"][
+            "selected_intrinsic_count"],1)
+        self.assertEqual(plan["selected_intrinsic_socket_total_source_only"],2)
+        self.assertFalse(plan["environment_ready"])
+        self.assertIsNone(plan["G"])
+
     def test_single_full_pass_reuses_v230_source_reader(self):
         data=(self.folder/"item_data.inc").read_bytes()
         result=item_parser.parse_exact(
