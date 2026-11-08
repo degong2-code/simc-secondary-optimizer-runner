@@ -387,6 +387,37 @@ def requested_t1_character(environment, *, dps_once):
     return {"class":chosen[0],"spec":chosen[1],"race":chosen[2]}
 
 
+
+def optional_full_consumables(environment, *, dps_once, character):
+    """One selected user loadout, without permanent enchant or special gear.
+
+    SimC/v108 owns effects and existing source-pinned token spelling.
+    Enhancement's weapon imbues remain equipped; no oil is selected.
+    """
+    toggle=environment.get("P3_T1_FULL_CONSUMABLES_ONCE","0")
+    if toggle not in ("0","1"):
+        raise ValueError("P3_HU_FULL_CONSUMABLES_OPT_IN_INVALID")
+    if toggle=="0":
+        return None
+    if not dps_once or (character["class"],character["spec"])!=(
+            "shaman","enhancement"):
+        raise ValueError("P3_HU_ONE_SHAMAN_DPS_SCOPE_REQUIRED")
+    from runner import v108_native_consumable_inputs as existing
+    mapping={
+        "food":environment.get("P3_T1_FULL_FOOD"),
+        "potion":environment.get("P3_T1_FULL_POTION"),
+        "augmentation":environment.get("P3_T1_FULL_AUGMENTATION"),
+        "omnium_talents":environment.get("P3_T1_FULL_OMNIUM"),
+    }
+    if any(mapping[k] not in existing.SUPPORTED[k] or
+           mapping[k]=="disabled"
+           for k in ("food","potion","augmentation")):
+        raise ValueError("P3_HU_SOURCE_PINNED_CONSUMABLE_TOKEN_REQUIRED")
+    if mapping["omnium_talents"] not in existing.OMNIUM_PRESETS:
+        raise ValueError("P3_HU_SOURCE_PINNED_OPTIONAL_MODULE_REQUIRED")
+    return mapping
+
+
 def main():
     rec={
         "schema":"p3_fr_real_zero_history_t1_attempt_v1",
@@ -430,6 +461,11 @@ def main():
         rec["user_dps_e2e_requested"]=dps_once
         character=requested_t1_character(os.environ,dps_once=dps_once)
         rec["requested_character"]=character
+        full_consumables=optional_full_consumables(
+            os.environ,dps_once=dps_once,character=character)
+        rec["optional_consumables_requested"]=full_consumables
+        rec["permanent_enchants_requested"]=False
+        rec["special_equipment_requested"]=False
         rec["requested_max_F_native_calls"]=(
             0 if source_only else 2 if f_only else 8)
         live=retail.discover(region="KR")
@@ -624,9 +660,14 @@ def main():
                 user_controls["race"]=character["race"]
                 user=user_sessions.user_scenario(user_controls)
                 user["oil_hands"]=[]
+                if full_consumables is not None and (
+                    user["special_items"] or user["embellishments"] or
+                    "enchant_choices" in user):
+                    raise ValueError("P3_HU_EXCLUDED_EQUIPMENT_OR_ENCHANT_SELECTED")
                 end_to_end=user_boot.run_from_verified_environment_build(
                     user,root/"one_user_dps",candidate,
                     pin["revision_hint"],environment_result=result,
+                    season_controls=full_consumables,
                     execute=True,open_folder=False)
                 applied=end_to_end["input_preparation"]
                 native=end_to_end["native_result"]
@@ -689,6 +730,7 @@ def main():
                 "status","reason","prerequisite_status",
                 "missing_credential_names",
                 "current_build_source_identity","requested_character",
+                "optional_consumables_requested",
                 "budget_evidence","installed_status",
                 "live_retail_version","source_stage_status",
                 "source_compilation_missing","zero_history_requires",
