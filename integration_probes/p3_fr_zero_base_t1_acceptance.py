@@ -482,6 +482,13 @@ def main():
             raise ValueError("P3_HO_REAL_USER_DPS_GJFO_INPUTS_REQUIRED")
         if hy_longrun and not dps_once:
             raise ValueError("P3_HY_MUST_REQUEST_DPS_WITH_VERIFIED_ENVIRONMENT")
+        web_longrun=os.environ.get("P3_T1_WEB_LONGRUN_ONCE","0")
+        if web_longrun not in ("0","1"):
+            raise ValueError("P3_HAJ_EXPLICIT_WEB_OPT_IN_REQUIRED")
+        web_longrun=web_longrun=="1"
+        if web_longrun and (hy_longrun or hag_portable or not dps_once):
+            raise ValueError("P3_HAJ_EXCLUSIVE_REAL_WEB_DPS_REQUIRED")
+        rec["web_longrun_e2e_requested"]=web_longrun
         rec["longrun_v291_native_requested"]=hy_longrun
         rec["user_dps_e2e_requested"]=dps_once
         character=requested_t1_character(os.environ,dps_once=dps_once)
@@ -697,7 +704,29 @@ def main():
                     user["special_items"] or user["embellishments"] or
                     "enchant_choices" in user):
                     raise ValueError("P3_HU_EXCLUDED_EQUIPMENT_OR_ENCHANT_SELECTED")
-                if hy_longrun:
+                if web_longrun:
+                    from integration_probes import p3_haj_real_local_web_native_e2e as web_e2e
+                    web_result=web_e2e.execute(
+                        root,candidate,pin["revision_hint"],live["game_build"],
+                        compiled,receipt_file="p3_haj_web_e2e_receipt.json")
+                    rec["web_local_e2e"]=web_result
+                    if web_result.get("status")!=(
+                            "PASS_REAL_FASTAPI_LONGRUN_PREPARE_RUN_RESUME_CACHE"):
+                        raise ValueError("P3_HAJ_REAL_HTTP_NATIVE_NOT_COMPLETE")
+                    rec["user_dps_e2e"]={
+                        "status":web_result["status"],
+                        "native_calls_cumulative":
+                            web_result["reported"]["native_calls_cumulative"],
+                        "budget_source":"ADMITTED_FRESH_SEASON_GJFO_V212_V217",
+                        "base_B":result["B"],"final_T":result["T"],
+                        "observed_first_choice":{
+                            "absolute_rating_T":
+                                web_result["reported"]["observed_chmv"],
+                            "observed_dps_mean":
+                                web_result["reported"]["dps_mean"],
+                            "simc_sem":web_result["reported"]["sem"]},
+                        "global_optimum_proven":False}
+                elif hy_longrun:
                     # Existing zero-history v212 READY and v098 selected items
                     # supply the unmodified source context. v291 owns Native
                     # checkpoints; v094's six-case test is NOT called.
