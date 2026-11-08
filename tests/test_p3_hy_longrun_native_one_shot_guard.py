@@ -15,5 +15,7 @@ class LiveOneShotGuard(unittest.TestCase):
         self.assertIn("max_new_native_this_invocation=1",p)
         self.assertIn("max_new_native_this_invocation=0,cache_only=True",p)
         self.assertIn("PASS_REAL_V291_NATIVE_AND_DURABLE_RESUME_REPLAY",p)
+        # Offline syntax compile before any live workflow is triggered.
+        compile(p,str(ROOT/"integration_probes/p3_fr_zero_base_t1_acceptance.py"),"exec")
 if __name__=="__main__":
     unittest.main()

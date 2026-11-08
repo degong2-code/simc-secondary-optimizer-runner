@@ -757,12 +757,12 @@ def main():
                             "simc_sem":replay["summary"]["observed_best_sem"]},
                         "global_optimum_proven":False}
                 else:
-                end_to_end=user_boot.run_from_verified_environment_build(
-                    user,root/"one_user_dps",candidate,
-                    pin["revision_hint"],environment_result=result,
-                    season_controls=full_consumables,
-                    exploration_policy=exploration_policy,
-                    execute=True,open_folder=False)
+                    end_to_end=user_boot.run_from_verified_environment_build(
+                        user,root/"one_user_dps",candidate,
+                        pin["revision_hint"],environment_result=result,
+                        season_controls=full_consumables,
+                        exploration_policy=exploration_policy,
+                        execute=True,open_folder=False)
                     applied=end_to_end["input_preparation"]
                     native=end_to_end["native_result"]
                     observed=native["user_result"]

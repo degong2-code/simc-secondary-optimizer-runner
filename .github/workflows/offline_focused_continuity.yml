@@ -77,6 +77,7 @@ jobs:
             tests.test_p3_hv_axis_coverage_offline \
             tests.test_p3_hw_multiscale_policy \
             tests.test_p3_hx_durable_longrun_offline \
+            tests.test_p3_hy_longrun_native_one_shot_guard \
             tests.test_p3_gr_future_five_sockets_source_only \
             tests.test_p3_gs_real_five_socket_layout_stage \
             tests.test_p3_gt_reuse_existing_socket_item_use_source \
