@@ -121,6 +121,49 @@ class V291LongRun(unittest.TestCase):
                 self.assertEqual(replay["completed_cases"],9)
                 self.assertEqual(replay["native_attempts_cumulative"],9)
 
+    def test_short_typed_twelve_reaches_confirmed_pair_and_replays(self):
+        with tempfile.TemporaryDirectory() as folder:
+            ctx,binary,out=self.fixture(folder,cap=12)
+            with mock.patch.object(runner.engine,"execute_one",side_effect=fake_native), \
+                 mock.patch.object(runner.oil,"ingest_native",side_effect=fake_ingest):
+                first=runner.run(ctx,F,binary,out,max_native_calls=12,
+                                 max_new_native_this_invocation=4)
+                self.assertEqual(first["completed_cases"],4)
+                second=runner.run(ctx,F,binary,out,max_native_calls=12,
+                                  max_new_native_this_invocation=6)
+                self.assertEqual(second["completed_cases"],10)
+                rows=runner._load_journal(out/"V291_JOURNAL.jsonl")
+                self.assertEqual([r["phase"] for r in rows[:8]],["scout"]*8)
+                self.assertEqual([r["phase"] for r in rows[8:10]],
+                                 ["precision"]*2)
+                self.assertTrue(all(r["iterations"]==80 for r in rows[8:10]))
+                pair=second["confirmed_selected_pair_95"]
+                self.assertEqual(pair["comparison_scope"],
+                                 "SELECTED_CONFIRMED_PAIR_ONLY")
+                self.assertFalse(pair["distinct_simc_seeds_observed"])
+                self.assertFalse(pair["pairwise_direction_supported"])
+                replay=runner.run(ctx,F,binary,out,max_native_calls=12,
+                                  max_new_native_this_invocation=0,
+                                  cache_only=True)
+                self.assertEqual(replay["new_native_this_invocation"],0)
+                self.assertEqual(replay["confirmed_selected_pair_95"],pair)
+
+    def test_selected_pair_95_checks_real_distinct_seeds(self):
+        def make(target,dps,sem,seed,case):
+            return {"phase":"precision","target":target,"iterations":320,
+                    "dps_mean":dps,"dps_sem":sem,"simc_seed":seed,
+                    "case_key":case}
+        a=make({"crit_rating":1,"haste_rating":1552,
+                "mastery_rating":1553,"versatility_rating":1},
+               186000.,120.,11,"one")
+        b=make({"crit_rating":736,"haste_rating":900,
+                "mastery_rating":736,"versatility_rating":735},
+               182000.,160.,22,"two")
+        pair=runner.confirmed_selected_pair_95([a,b],320)
+        self.assertTrue(pair["pairwise_direction_supported"])
+        self.assertTrue(pair["multiplicity_and_winner_bias_not_corrected"])
+        self.assertFalse(pair["global_optimum_proven"])
+
     def test_fail_closed_on_tampered_real_case_and_session(self):
         with tempfile.TemporaryDirectory() as folder:
             ctx,binary,out=self.fixture(folder)

@@ -1,3 +1,7 @@
+## 2026-11-09 P3-HAE typed12의 95% 확인 연결
+
+[P3-HAE](notes/2026-11-09_p3-hae-short-budget-precision-contract.md): 이전 실제 8개 scout 이후 short budget 10~16에 한해 v290의 precision을 앞당김. v291 95%는 두 confirmed Native 실측 쌍 비교로만 사용하며 독립 seed·선택 편향 표시, 전역 최적 증명은 아님. 구 버전 결과의 임시 경로/정책 SHA 무검증 재사용 불가. 신규 Actions 결과 확인 전 성공으로 표기하지 말 것.
+
 ## 2026-11-09 P3-HAD 첫 >6 실 Native 완료 — 한정 실증
 
 [작업·실 영수증](notes/2026-11-09_p3-had-first-over-six-native-pilot.md): 격리 코드 `a5931d33` [focused #42499184780](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42499184780) 461 PASS/2 SKIP, 요청 `1d480a25`, [real #42499288257](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42499288257) 환경 Native3+고양 DPS Native8(4+4·캐시 재생0 신규), 8 case SHA/엄격한 <50% cap 검증. 기존 2-tier 및 원본 v094 유지. 관측 최고 DPS186630.19±787.11 SEM(35 iterations)이며 전역최적/95% 확정/2000회 수렴이나 별도 프로세스 간 재개·웹 UI 완성 증거가 아니다. 다음은 긴 탐색·정밀화·효율 확인과 제품 사용자 경로 최소 연결. `main`/immutable/Project UI/Work OS/주 개발 소유권 변경 금지.

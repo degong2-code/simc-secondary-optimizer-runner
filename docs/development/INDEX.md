@@ -1,3 +1,5 @@
+> **2026-11-09 P3-HAE 95% 선택적 정밀화 연결(새 CI/Native 검증 대기):** [P3-HAE 작업 기록](notes/2026-11-09_p3-hae-short-budget-precision-contract.md). 소예산 typed10~16에서 8+ 탐색 후 320 iterations 실측 계획, v291 선택된 확인 쌍의 95% 근사 판정/다중선택 편향 표기. 기존 대규모 v290·v094·엔진 봉인 불변.
+
 > **2026-11-09 P3-HAD 최초 8회 실제 v291 Native PASS:** [P3-HAD 기록](notes/2026-11-09_p3-had-first-over-six-native-pilot.md). 격리 코드 `a5931d33` [focused #42499184780](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42499184780) 461 PASS/2 SKIP, 요청 `1d480a25` [실 #42499288257](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42499288257) 환경 Native3+8 DPS Native/4+4/캐시 재생0 신규; 8 SHA 원본 직접 감사 PASS. strict <50%, B=T3107, 최고 관측 186630.19±787.11 SEM/35 iterations, 전역최적·통계확정·UI 완료 아님. `main`/immutable/Project UI 불변.
 
 > **2026-11-09 P3-HAD opt-in eight-case Native pilot:** [P3-HAD 작업 기록](notes/2026-11-09_p3-had-first-over-six-native-pilot.md), `OPTIMIZER.POLICY`·`PRODUCT.E2E`·`SOURCE.SEAL` CONNECT; 12회 총 허용 예산 중 4+4=8회 실측·캐시 재생 계획. CI 및 실 Native는 별도 결과 확인 전 PENDING. 기존 v094/P3-HY/main/immutable 불변.

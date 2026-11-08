@@ -214,8 +214,16 @@ def next_plan(observations, *, total, lower, upper, native_calls_used,
                 "global_optimum_proven": False, "next_request": None}
     unique = len(by_vector)
     desired_global = min(64, max(8, math.ceil(2 * math.sqrt(max_native_calls))))
-    if (len(observations) % 16 in (14, 15) and
-            unique >= min(32, max(8, desired_global // 2))):
+    # Small typed sessions need a selected-pair confirmation *before*
+    # exhausting their Native-call budget. Keep the established long-run
+    # exploration/precision cadence unchanged.
+    small_budget_precision_due = (
+        10 <= max_native_calls <= 16
+        and unique >= max(8, max_native_calls - 4))
+    periodic_precision_due = (
+        len(observations) % 16 in (14, 15)
+        and unique >= min(32, max(8, desired_global // 2)))
+    if small_budget_precision_due or periodic_precision_due:
         precision = _precision_action(
             by_vector, identities, scout_iterations=scout_iterations,
             confirmation_iterations=confirmation_iterations,

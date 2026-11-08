@@ -75,6 +75,37 @@ class Multiscale(unittest.TestCase):
         self.assertEqual(rows[0]["target"],p.legacy.to_target(
             p._apportion(3107,(1,1,1,1),upper,(1,1,1,1))))
 
+    def test_typed_twelve_precision_after_eight_without_changing_2000(self):
+        # Historic eight target coordinates, synthetic DPS/SEM assertions.
+        coords=[(736,900,736,735),(1,165,1388,1553),
+                (1553,165,1,1388),(1,1552,1553,1),
+                (1,1553,1,1552),(1552,1553,1,1),
+                (1388,165,1553,1),(267,615,1553,672)]
+        values=[182360.,171500.,169160.,186630.,166990.,179244.,
+                181589.,179995.]
+        rows=[{"target":p.legacy.to_target(v),"iterations":35,
+               "dps_mean":d,"dps_sem":800.}
+              for v,d in zip(coords,values)]
+        kwargs={"total":3107,"lower":(0,165,0,0),"upper":self.hi,
+                "scout_iterations":35,"confirmation_iterations":320,
+                "max_iterations":320}
+        first=p.next_plan(rows,native_calls_used=8,max_native_calls=12,
+                          **kwargs)
+        self.assertEqual(first["decision"],"UNCERTAINTY_AWARE_REMEASURE")
+        self.assertEqual(first["next_request"]["phase"],"precision")
+        self.assertEqual(first["next_request"]["iterations"],320)
+        self.assertEqual(first["next_request"]["target"],rows[3]["target"])
+        rows.append({"target":first["next_request"]["target"],
+                     "iterations":320,"dps_mean":186000.,"dps_sem":250.})
+        second=p.next_plan(rows,native_calls_used=9,max_native_calls=12,
+                           **kwargs)
+        self.assertEqual(second["next_request"]["phase"],"precision")
+        self.assertNotEqual(second["next_request"]["target"],
+                            first["next_request"]["target"])
+        longrun=p.next_plan(rows[:8],native_calls_used=8,
+                            max_native_calls=2000,**kwargs)
+        self.assertEqual(longrun["next_request"]["phase"],"scout")
+
     def test_multiscale_local_choice_uses_one_history_extrema_pass(self):
         # A local-only policy call with many historical rows: it must not
         # scan the full history for every local neighbor, and it must keep

@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import pathlib
 import sys
@@ -164,6 +165,39 @@ def _summary(observations, context):
         for row in observations
     ]
     return bounded._candidate_summary(records, B, O)
+
+
+def confirmed_selected_pair_95(observations, confirm_iterations):
+    """Normal-approx 95% for two SELECTED confirmed Native candidates only."""
+    by_vector = {}
+    for row in observations:
+        if row["phase"] == "precision" and row["iterations"] == confirm_iterations:
+            vector = constraints.key(row["target"])
+            need(vector not in by_vector, "DUPLICATE_CONFIRMED_VECTOR_IDENTITY")
+            by_vector[vector] = row
+    if len(by_vector) < 2:
+        return None
+    ranked = sorted(by_vector.values(),
+                    key=lambda row: (-row["dps_mean"], row["case_key"]))
+    best, runner_up = ranked[:2]
+    half = search.Z95 * math.hypot(best["dps_sem"], runner_up["dps_sem"])
+    gap = best["dps_mean"] - runner_up["dps_mean"]
+    seeds = (best.get("simc_seed"), runner_up.get("simc_seed"))
+    distinct = all(seed is not None for seed in seeds) and seeds[0] != seeds[1]
+    return {
+        "schema": "v291_selected_confirmed_pair_approx95_v1",
+        "comparison_scope": "SELECTED_CONFIRMED_PAIR_ONLY",
+        "selected_from_multiple_candidates": True,
+        "multiplicity_and_winner_bias_not_corrected": True,
+        "first_target": dict(best["target"]),
+        "second_target": dict(runner_up["target"]),
+        "first_dps": best["dps_mean"], "second_dps": runner_up["dps_mean"],
+        "first_sem": best["dps_sem"], "second_sem": runner_up["dps_sem"],
+        "first_minus_second_dps": gap, "approx_ci95_halfwidth": half,
+        "distinct_simc_seeds_observed": distinct,
+        "pairwise_direction_supported": gap > half and distinct,
+        "global_optimum_proven": False,
+    }
 
 
 def run(context, flask_vector, binary, output, *,
@@ -383,6 +417,8 @@ def run(context, flask_vector, binary, output, *,
               "verified_cache_cases_this_invocation": cached_this_invocation,
               "completed_cases": len(observations),
               "summary": summary,
+              "confirmed_selected_pair_95": confirmed_selected_pair_95(
+                  observations, confirm_iters),
               "confidence_for_display": 0.95,
               "no_global_optimum_proof": True,
               "native_cases_not_to_be_confused_with_iterations": True}

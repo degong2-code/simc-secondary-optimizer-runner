@@ -1,0 +1,10 @@
+# P3-HAE · short-budget Native precision and selected-pair 95% (2026-11-09)
+
+- **Capability:** `OPTIMIZER.POLICY`, `PRODUCT.E2E`, `SOURCE.SEAL`
+- **Keywords:** P3-HAE, v290, v291, typed twelve, precision, 95 percent, SimC, cache replay
+- **Prior evidence:** P3-HAD [Native #42499288257](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42499288257) real 8 candidate scouts, each 35 iterations, strict cap PASS, G2850/J92/F165/O0/B=T3107; [focused #42499639328](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42499639328) 461 PASS/2 SKIP. Original 14/15 precision gate unreachable within typed12.
+- **Decision:** `EXTEND` — only v290 typed budgets 10..16 get precision after at least 8 different scouts, keeping last 4 calls for selective confirmations. Large 2000-call cadence, v291 2-tier exact identity and v094 behavior unchanged.
+- **Changes:** v290 bounded early precision conditional; v291 separate selected-two Native confirmation 95% normal-approx evidence with distinct-seed condition and explicit selection multiplicity caveat. Existing v094 higher-iteration per-vector observation wins over scouts. Synthetic policy and 4+6 durable continuation/replay tests.
+- **Verification:** Focused CI/real Native PENDING until actual GitHub Actions evidence. Existing eight actual candidates are reference coordinates only in offline tests, not remeasured; no effect/proc reimplementation.
+- **Remaining:** Execute exact isolated 8 scout+2 confirm live user path only after CI pass, inspect 320 iteration Native and 95% selected pair, CPU/time, exact SHA and cache replay. Web UI long-run, multi-session portable exact caching and all-26 coverage remain incomplete.
+- **Efficiency:** Prevent losing a typed 12-call budget with zero precision, without altering large-scenario exploration. Prior ZIP embeds ephemeral JSON2 path and policy SHA, so no unverified cross-session Native cache transplant. Main/immutable/Project UI/Work OS/owner unaffected.
