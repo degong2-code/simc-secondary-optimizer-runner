@@ -162,6 +162,56 @@ class V291LongRun(unittest.TestCase):
                                     "SIMC_SEED_NATIVE_JSON_RECEIPT_DRIFT"):
             runner._source_seed({},{"simc_seed":987654321})
 
+    def test_null_seed_legacy_journal_replays_only_after_exact_native_check(self):
+        def seeded_native(req,calibration,binary,folder,progress,**kw):
+            receipt=fake_native(req,calibration,binary,folder,progress,**kw)
+            path=pathlib.Path(folder)/"result.json"
+            doc=json.loads(path.read_bytes())
+            if receipt["source"]=="NEW_NATIVE":
+                doc["sim"]={"options":{"seed":int(req["case_key"][:12],16)}}
+                raw=json.dumps(doc,sort_keys=True).encode()
+                path.write_bytes(raw)
+                receipt["native_json_sha256"]=hashlib.sha256(raw).hexdigest()
+            receipt["simc_seed"]=doc["sim"]["options"]["seed"]
+            return receipt
+        with tempfile.TemporaryDirectory() as folder:
+            ctx,binary,out=self.fixture(folder,cap=12)
+            with mock.patch.object(runner.engine,"execute_one",
+                                   side_effect=seeded_native), \
+                 mock.patch.object(runner.oil,"ingest_native",
+                                   side_effect=fake_ingest):
+                first=runner.run(ctx,F,binary,out,max_native_calls=12,
+                                 max_new_native_this_invocation=10)
+                self.assertEqual(first["completed_cases"],10)
+                self.assertTrue(first["confirmed_selected_pair_95"][
+                    "distinct_simc_seeds_observed"])
+                journal=out/"V291_JOURNAL.jsonl"
+                # Simulate the earlier real v291 null-seed journal, retaining
+                # every other exact Native target/iteration/SHA/source byte.
+                old=[json.loads(x) for x in journal.read_text().splitlines()]
+                for row in old:
+                    row["simc_seed"]=None
+                old_bytes=("".join(json.dumps(x,sort_keys=True,
+                    separators=(",",":"),allow_nan=False)+"\\n"
+                    for x in old)).encode("utf8")
+                journal.write_bytes(old_bytes)
+                replay=runner.run(ctx,F,binary,out,max_native_calls=12,
+                                  max_new_native_this_invocation=0,
+                                  cache_only=True)
+                self.assertEqual(replay["new_native_this_invocation"],0)
+                self.assertTrue(replay["confirmed_selected_pair_95"][
+                    "distinct_simc_seeds_observed"])
+                self.assertEqual(journal.read_bytes(),old_bytes)
+                # Metadata compatibility does not allow any other drift.
+                old[0]["dps_mean"]=1.0
+                journal.write_bytes(("".join(json.dumps(x,sort_keys=True,
+                    separators=(",",":"),allow_nan=False)+"\\n"
+                    for x in old)).encode("utf8"))
+                with self.assertRaisesRegex(runner.LongRunBlocked,
+                                            "RECORDED_NATIVE_CASE_BYTES_OR_SUMMARY_DRIFT"):
+                    runner.run(ctx,F,binary,out,max_native_calls=12,
+                               cache_only=True)
+
     def test_selected_pair_95_checks_real_distinct_seeds(self):
         def make(target,dps,sem,seed,case):
             return {"phase":"precision","target":target,"iterations":320,

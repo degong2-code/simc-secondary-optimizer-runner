@@ -1,3 +1,5 @@
+> **2026-11-09 P3-HAF null-seed journal 보수적 호환 회귀 보강:** [P3-HAF](notes/2026-11-09_p3-haf-native-seed-provenance-recovery.md) [focused #42501485123](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42501485123) 466 PASS/2 SKIP; v291 기존 소스·receipt 검증 뒤 null metadata만 복원해 95% selected-pair에 사용. 이전 원본 저널 무변경·다른 필드 위조 거부 synthetic 시험 추가, 신규 CI 검증 전. 실 Native 신규 0.
+
 > **2026-11-09 P3-HAF 실제 Native seed 복원:** [P3-HAF](notes/2026-11-09_p3-haf-native-seed-provenance-recovery.md) — [P3-HAE 실 #42501052586](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42501052586) 탐색8+확인2 Native PASS. 실제 JSON2 두 seed 서로 다르지만 기존 v291 journal은 `null` 누락. v291 원본 JSON2+receipt SHA 일치한 seed만 복원, 기존 journal 바이트 변경 없이 제한 호환; 코드 신규 CI 결과 별도 확인. 선택된 두 후보 통계 근사만, 전역최적 아님.
 
 > **2026-11-09 P3-HAE 10회 Native 실행 경로 준비(실측 전):** [P3-HAE](notes/2026-11-09_p3-hae-short-budget-precision-contract.md) 기존 v290/v291 정밀화 연결 [focused #42500684707](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42500684707) 464 PASS/2 SKIP; 별도 원본 재사용 4+6=10 Native(8 scout + 2×320 confirm) 요청·감사 아카이브는 신규 CI 검증 전. `main` 불변.
