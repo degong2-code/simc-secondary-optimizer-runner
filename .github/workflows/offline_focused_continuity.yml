@@ -38,6 +38,9 @@ jobs:
           PYTHONPATH: runner:integration_probes:.
         run: |
           python -m unittest -v \
+            tests.test_v094_durable_inclusive_adaptive_runner \
+            tests.test_v096_unified_product_entry \
+            tests.test_v095_material_precision_policy \
             tests.test_v269_simc_chmv_effect_snapshot \
             tests.test_v198_targeted_enchant_native_rating \
             tests.test_v222_season_budget_contract \

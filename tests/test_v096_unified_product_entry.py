@@ -41,6 +41,27 @@ class V096Unified(unittest.TestCase):
         manifest.write_text(json.dumps(document),encoding="utf8")
         return manifest,document
 
+    def test_optional_search_policy_accepts_new_only_and_rejects_unknown(self):
+        # Source and verified static budget remain identical; no SimC calls.
+        with tempfile.TemporaryDirectory() as td:
+            path,raw=self.fixture(td)
+            legacy=entry.source(path)
+            self.assertNotIn(entry.EXPLORATION_FIELD,legacy["manifest"])
+            raw[entry.EXPLORATION_FIELD]="axis_coverage_v1"
+            path.write_text(json.dumps(raw),encoding="utf8")
+            selected=entry.source(path)
+            self.assertEqual(selected["manifest"][entry.EXPLORATION_FIELD],
+                             "axis_coverage_v1")
+            self.assertEqual(selected["plan"]["base_B"],
+                             legacy["plan"]["base_B"])
+            self.assertEqual(selected["plan"]["source_profile_sha256"],
+                             legacy["plan"]["source_profile_sha256"])
+            raw[entry.EXPLORATION_FIELD]="invalid_nonexistent_policy"
+            path.write_text(json.dumps(raw),encoding="utf8")
+            with self.assertRaisesRegex(entry.EntryBlocked,
+                                         "UNKNOWN_ADAPTIVE_EXPLORATION_POLICY"):
+                entry.source(path)
+
     def seasonal_fixture(self, td):
         path,raw=self.fixture(td,"frost")
         source=path.parent/"scenario.json"

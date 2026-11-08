@@ -61,6 +61,33 @@ class V094Durable(unittest.TestCase):
                     binary,output,scouts=1,native_limit=4,cache_only=True)
             self.assertFalse(output.exists())
 
+    def test_axis_coverage_does_not_share_legacy_seal_or_restart(self):
+        with tempfile.TemporaryDirectory() as folder:
+            ctx,binary=self.context(folder)
+            output=pathlib.Path(folder)/"coverage"
+            F={"crit_rating":0,"haste_rating":165,
+               "mastery_rating":0,"versatility_rating":0}
+            with self.assertRaisesRegex(Exception,"CACHE_ONLY_REFUSES_NEW_NATIVE"):
+                runner.run(ctx,[FURY_TARGET,OTHER],F,binary,output,
+                           scouts=1,material_scouts=1,native_limit=6,
+                           cache_only=True,
+                           exploration_policy="axis_coverage_v1")
+            identity=runner.read_json(output/"V094_SESSION_IDENTITY.json")
+            self.assertEqual(identity["exploration_policy"],"axis_coverage_v1")
+            self.assertEqual(runner.read_json(output/"V094_PROGRESS.json")[
+                             "new_native_attempts"],0)
+            with self.assertRaisesRegex(runner.DurableBlocked,
+                                        "DURABLE_SESSION_DRIFT"):
+                runner.run(ctx,[FURY_TARGET,OTHER],F,binary,output,
+                           scouts=1,material_scouts=1,native_limit=6,
+                           cache_only=True)
+            with self.assertRaisesRegex(runner.DurableBlocked,
+                                        "UNKNOWN_ADAPTIVE_EXPLORATION_POLICY"):
+                runner.run(ctx,[FURY_TARGET,OTHER],F,binary,
+                           pathlib.Path(folder)/"invalid",
+                           scouts=1,material_scouts=1,native_limit=6,
+                           exploration_policy="unverified",cache_only=True)
+
     def test_cache_only_and_cancel_block_without_simc(self):
         with tempfile.TemporaryDirectory() as folder:
             ctx,binary=self.context(folder)
