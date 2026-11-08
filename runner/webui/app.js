@@ -61,6 +61,7 @@ const names = {
   embellishment:"장식 토큰"
 };
 const state = { token:"", defaults:[], seasonGear:null, eagleApproved:false, session:"", running:false,
+                longrunEnabled:false, longrunResultReady:false,
                 busy:false, options:null, pollTimer:null, pollBusy:false,
                 pollFailures:0, nextPollAt:0 };
 const number = (value,decimals=0) =>
@@ -572,6 +573,7 @@ function markSession(id) {
     $("progress-pct").textContent="0%";
     $("progress-bar").style.width="0%";
     $("stage-text").textContent="이 세션의 상태를 조회 중입니다.";
+    state.longrunEnabled=false;state.longrunResultReady=false;
   }
   $("session-id").textContent=id;
   $("restore-id").value=id;
@@ -586,7 +588,15 @@ function buttonState(active=false,ready=false) {
   $("start-btn").disabled=busy||active||!state.token;
   $("resume-btn").disabled=busy||active||!state.session;
   $("cache-btn").disabled=busy||active||!state.session||!ready;
-  $("cancel-btn").disabled=busy||!active;
+  $("cancel-btn").disabled=busy||!active||state.longrunEnabled;
+  $("longrun-start-btn").disabled=busy||active||!state.token;
+  $("longrun-resume-btn").disabled=busy||active||!state.session||!state.longrunEnabled;
+  $("longrun-cache-btn").disabled=busy||active||!state.longrunEnabled||
+                                  !state.longrunResultReady;
+  $("longrun-cancel-btn").disabled=busy||!active||!state.longrunEnabled;
+  $("longrun-import-btn").disabled=busy||active||!state.longrunEnabled;
+  $("resume-btn").disabled=busy||active||!state.session||state.longrunEnabled;
+  $("cache-btn").disabled=busy||active||!state.session||!ready||state.longrunEnabled;
   $("restore-btn").disabled=busy;
 }
 async function withBusy(fn) {
@@ -849,6 +859,8 @@ function showPlan(plan) {
     environmentText);
 }
 function renderProgress(data) {
+  state.longrunEnabled=Boolean(data?.enabled);
+  state.longrunResultReady=Boolean(data?.enabled && data?.result_ready);
   const p=data?.progress||{};
   if(!data?.result_ready) {
     $("filled-result").hidden=true;
@@ -872,16 +884,22 @@ function renderProgress(data) {
   const environmentText=environment?" · 환경 "+environment.status:"";
   showEnvironmentBuild(data?.environment_build);
   $("stage-text").textContent=status+" · Native 누적 "+(p.native_attempts||0)+
-                       " · 캐시 "+(p.cache_hits||0)+environmentText;
+                       " · 캐시 "+(p.cache_hits||0)+environmentText+
+                       (state.longrunEnabled?" · v291 장기 세션 (회차별 제한)":"");
   $("run-label").textContent=data.active?"진행 중":
     cancelled?"취소됨 · 재개 가능":
     worker==="BLOCKED_OR_PARTIAL"?"실행 차단":
+    state.longrunEnabled&&data.result_ready?"관측 결과 저장 · 재개 가능":
     data.result_ready&&worker.startsWith("PASS")?"완료":
     data.cancel_requested?"취소 요청":"대기";
   buttonState(Boolean(data.active),Boolean(data.result_ready));
 }
 function renderResult(payload) {
   const r=payload.user_result;
+  const warning=$("result-panel").querySelector(".result-warning");
+  if(warning) warning.textContent=r.selected_pair_95_only
+    ?"관측 1순위 · 선택된 확인 쌍만 95% 근사 비교 (다중선택 보정 없음)"
+    :"관측 1순위 · 전역 최적해 입증 아님";
   if(r.confidence_level!==0.95||r.global_optimum_proven!==false)
     throw Error("ONLY_95_RESULT_ALLOWED");
   const best=r.observed_first_choice;
@@ -935,7 +953,13 @@ function renderResult(payload) {
   $("empty-result").hidden=true;$("filled-result").hidden=false;
 }
 async function readSession(id) {
-  // GET only: no SimC Native or session file writes.
+  // GET only: no SimC Native, no session file writes.
+  const longrun=await api("/api/v1/sessions/"+id+"/longrun/status");
+  if(longrun.enabled===true){
+    const result=longrun.result_ready&&!longrun.active
+      ? await api("/api/v1/sessions/"+id+"/longrun/result") : null;
+    return {progress:longrun,result,longrun:true};
+  }
   const progress=await api("/api/v1/sessions/"+id+"/status");
   const worker=progress.progress?.worker?.status||progress.progress?.status||"";
   const result=progress.result_ready && !progress.active && worker.startsWith("PASS")
@@ -1279,6 +1303,52 @@ function registerHandlers() {
   $("plan-btn").addEventListener("click",()=>withBusy(async()=>{
     const p=await api("/api/v1/sessions/plan",{method:"POST",payload:buildRequest()});
     markSession(p.session_id);showPlan(p);await pollOnce();
+  }));
+  $("longrun-start-btn").addEventListener("click",()=>withBusy(async()=>{
+    const budget=valueInt("longrun-budget");
+    const batch=valueInt("longrun-batch");
+    if(budget<12||budget>2000||batch<1||batch>32)
+      throw Error("장기 탐색 Native 예산은 12~2000, 회차 상한은 1~32여야 합니다.");
+    if(!window.confirm("현재 PC에서 적응형 장기 탐색을 시작할까요? 총 Native 상한 "+budget+"회, 이번 회차 최대 "+batch+"회입니다."))return;
+    const payload={...buildRequest(),max_native_calls:budget,
+                   max_new_native_this_invocation:batch};
+    const response=await api("/api/v1/longrun/start",
+                             {method:"POST",payload});
+    markSession(response.session_id);
+    setNotice("장기 적응형 탐색 시작 · 이번 회차 Native 최대 "+batch+"회");
+    await pollOnce();
+  }));
+  $("longrun-resume-btn").addEventListener("click",()=>withBusy(async()=>{
+    const batch=valueInt("longrun-batch");
+    if(batch<1||batch>32)throw Error("회차 Native 상한은 1~32회여야 합니다.");
+    if(!window.confirm("동일한 장기 세션을 최대 "+batch+"회 신규 SimC로 재개할까요?"))return;
+    await api("/api/v1/sessions/"+state.session+"/longrun/resume",{
+      method:"POST",payload:{max_new_native_this_invocation:batch}});
+    setNotice("장기 세션 재개 · 동일 후보 캐시는 중복 실행하지 않습니다.");
+    await pollOnce();
+  }));
+  $("longrun-cache-btn").addEventListener("click",()=>withBusy(async()=>{
+    await api("/api/v1/sessions/"+state.session+"/longrun/cache-only",{
+      method:"POST",payload:{}});
+    setNotice("기존 장기 Native 결과 SHA 재검증 · 신규 실행 0회");
+    await pollOnce();
+  }));
+  $("longrun-cancel-btn").addEventListener("click",()=>withBusy(async()=>{
+    await api("/api/v1/sessions/"+state.session+"/longrun/cancel",{
+      method:"POST",payload:{}});
+    setNotice("장기 세션 취소 요청 · 현재 Native 1건의 완료 후 중단");
+    await pollOnce();
+  }));
+  $("longrun-import-btn").addEventListener("click",()=>withBusy(async()=>{
+    const archive=field("longrun-archive-path");
+    const sha=field("longrun-archive-sha");
+    if(!archive||!/^[0-9a-f]{64}$/.test(sha))
+      throw Error("정확한 로컬 ZIP 경로와 원본 SHA256을 입력해 주세요.");
+    if(!window.confirm("기존 Native ZIP을 원본·현재 조건으로 검증한 뒤, 신규 Native 0회로 가져올까요?"))return;
+    await api("/api/v1/sessions/"+state.session+"/longrun/import",{
+      method:"POST",payload:{archive_path:archive,archive_sha256:sha}});
+    setNotice("원본 ZIP 및 현재 프로필 검증을 시작했습니다. 신규 DPS Native 0회");
+    await pollOnce();
   }));
   $("start-btn").addEventListener("click",()=>withBusy(async()=>{
     // This is the only new-job action. Never start SimC on page load or refresh.

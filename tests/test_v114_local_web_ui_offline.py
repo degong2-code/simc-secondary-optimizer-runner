@@ -28,6 +28,24 @@ class RealHTTPPageOffline(unittest.TestCase):
         cls.head={"x-simc-local-token":"ui-offline-token",
                   "origin":"http://127.0.0.1:8765"}
 
+    def test_p3_hah_longrun_controls_and_http_routes_are_explicit_only(self):
+        html=(ROOT/"runner/webui/index.html").read_text(encoding="utf8")
+        js=(ROOT/"runner/webui/app.js").read_text(encoding="utf8")
+        for token in ("longrun-panel","longrun-budget","longrun-batch",
+                      "longrun-start-btn","longrun-resume-btn",
+                      "longrun-cache-btn","longrun-cancel-btn",
+                      "longrun-import-btn","longrun-archive-sha"):
+            self.assertIn('id="'+token+'"',html)
+        for token in ("/api/v1/longrun/start","/longrun/resume",
+                      "/longrun/cancel","/longrun/cache-only",
+                      "/longrun/import","/longrun/status",
+                      "/longrun/result",
+                      "selected_pair_95_only"):
+            self.assertIn(token,js)
+        self.assertIn("const longrun=await api(",js)
+        self.assertIn("if(longrun.enabled===true)",js)
+        self.assertIn('''$("start-btn").addEventListener''',js)
+
     def test_browser_root_local_static_no_auth_but_guarded_by_host_and_origin(self):
         result=self.client.get("/")
         self.assertEqual(result.status_code,200)
