@@ -257,16 +257,23 @@ jobs:
                 "strict_final_half_cap":True,
                 "selected_pair_seed_provenance_required":True})
           if haj:
-              expected.update({
+              # This is a NEW Ret-only current-source web test, not the
+              # historical Enhancement/Omnium v291 three-case request.
+              expected={**common,
                 "schema":"p3_haj_one_current_source_real_local_web_native_v1",
-                "adaptive_dps_native_max":4,
+                "existing_selected_special_gem_id":240967,
+                "target_ilevel":334,
                 "user_class":"paladin","user_spec":"retribution",
+                "user_race":"dwarf","declared_socket_count":5,
+                "G_native_max":1,"F_native_max":2,"O_native_max":0,
+                "adaptive_dps_native_max":4,
                 "local_web_backend":"v113_v293_v291",
                 "max_native_calls":12,
                 "first_batch":1,"resume_batch_max":2,
                 "cache_only_new_native_calls":0,
+                "no_special_equipment_or_enchant":True,
                 "real_browser_click_tested":False,
-                "strict_final_half_cap":True})
+                "strict_final_half_cap":True}
           assert got==expected,(got,expected)
           print("P3_HAJ_REAL_LOCAL_HTTP_NATIVE_E2E" if haj else
                 "P3_HAG_V292_REAL_CROSS_JOB_PORTABLE_ZERO_DPS_NATIVE" if hag else
