@@ -1,3 +1,7 @@
+## 2026-11-09 P3-HAG portable verified Native case archive (사용자 '진행')
+
+[P3-HAG](notes/2026-11-09_p3-hag-exact-portable-native-case-replay.md): GitHub job 간 완성된 SimC case를 재사용하기 위한 별도 opt-in v292. 경로 불변 case_key와 원본/현재 path-specific SHA 둘 다 v064 검증; 동일한 source catalog·full scenario/profile/binary/gear/option + v290 policy/iteration sequence와 strict cap만 허용. 원본 zip 및 receipt 무수정, 신규 Native 시도 아님. 현재 확인은 synthetic/실 모두 후속 CI 결과로만 표시, 기존 main·immutable·Project UI·Work OS·소유권 불변.
+
 ## 2026-11-09 P3-HAE/HAF P1-1 실 Native 정밀화 완료 및 정확한 통계 범위
 
 [HAE](notes/2026-11-09_p3-hae-short-budget-precision-contract.md) + [HAF](notes/2026-11-09_p3-haf-native-seed-provenance-recovery.md), 실제 [Actions #42501052586](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42501052586) 환경 Native3 + 고양 DPS Native10=8 scout35+2 confirm320, 4+6 resume/cache replay0 신규, B=T3107/strict <50% 및 전 입력/JSON2 SHA 대사. 두 확인 후보 실제 seed는 다름(v291 이전 journal 누락은 P3-HAF 교정), 95% 쌍 정상근사 차3367.90 > 반폭808.08, 95% 근사 **선택 쌍만**; 전체 후보선택 편향·전역최적/수렴 증거 아님. [focused #42501776798](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42501776798) 467 PASS/2 SKIP, Native0. 기존 v094/대규모 탐색/SimC 효과 소유권 불변, 원본 JSON2 임시경로 때문에 다른 job에 과거 파일을 무검증 이식하지 말 것. 다음은 실 CPU 대비 후보 발굴, cross-job exact 캐시 또는 일반 사용자 UI 연결을 유용성 기준으로 선택. `main`/immutable/Project UI/Work OS/owner 불변.
