@@ -72,6 +72,21 @@ class CombinedOriginalSources(unittest.TestCase):
         self.assertEqual(out["native_calls"],0)
         self.assertEqual(p.summarized_existing_GJF_owner_components({})[
             "verified_components_not_full_environment"],{})
+    def test_one_spec_zero_history_shaman_enhancement_uses_same_engine(self):
+        default=p.requested_t1_character({},dps_once=False)
+        self.assertEqual(default,{"class":"paladin","spec":"retribution",
+                                  "race":"dwarf"})
+        other={"P3_T1_SPEC_CLASS":"shaman",
+               "P3_T1_SPEC_NAME":"enhancement",
+               "P3_T1_SPEC_RACE":"dwarf"}
+        self.assertEqual(p.requested_t1_character(other,dps_once=True),
+                         {"class":"shaman","spec":"enhancement","race":"dwarf"})
+        with self.assertRaisesRegex(ValueError,"REQUIRES_DPS_ONE_SHOT"):
+            p.requested_t1_character(other,dps_once=False)
+        with self.assertRaisesRegex(ValueError,"UNSUPPORTED"):
+            p.requested_t1_character({**other,"P3_T1_SPEC_NAME":"restoration"},
+                                     dps_once=True)
+
     def test_guard_separates_prior_GP_and_new_GQ(self):
         root=pathlib.Path(__file__).resolve().parents[1]
         s=(root/".github/workflows/p3_fz_reuse_exact_simc_live_t1.yml"
@@ -79,6 +94,8 @@ class CombinedOriginalSources(unittest.TestCase):
         self.assertIn("p3_gp_f_only_once_20261106.json",s)
         self.assertIn("p3_gq_gjf_one_shot_20261107.json",s)
         self.assertIn("[p3-gq-gjf-once]",s)
+        self.assertIn("[p3-hs-other-spec-dps-once]",s)
+        self.assertIn("p3_hs_other_spec_user_dps_20261108.json",s)
         self.assertIn("G_native_max",s)
         self.assertIn("special_gem_effect_independently_checked",s)
         self.assertIn("fetch-depth: 2",s)

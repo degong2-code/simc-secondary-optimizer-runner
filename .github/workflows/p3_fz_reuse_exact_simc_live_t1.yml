@@ -10,6 +10,7 @@ on:
       - integration_probes/requests/p3_gq_gjf_one_shot_20261107.json
       - integration_probes/requests/p3_gu_j_socket_source_once_20261107.json
       - integration_probes/requests/p3_ho_one_user_dps_20261108.json
+      - integration_probes/requests/p3_hs_other_spec_user_dps_20261108.json
   workflow_dispatch:
     inputs:
       exact_flask_item_id:
@@ -29,16 +30,19 @@ concurrency:
   cancel-in-progress: false
 jobs:
   original-v216-once:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[p3-gp-f-only-once]') || contains(github.event.head_commit.message, '[p3-gq-gjf-once]') || contains(github.event.head_commit.message, '[p3-gu-j-socket-source-once]') || contains(github.event.head_commit.message, '[p3-ho-one-user-dps-once]')
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[p3-gp-f-only-once]') || contains(github.event.head_commit.message, '[p3-gq-gjf-once]') || contains(github.event.head_commit.message, '[p3-gu-j-socket-source-once]') || contains(github.event.head_commit.message, '[p3-ho-one-user-dps-once]') || contains(github.event.head_commit.message, '[p3-hs-other-spec-dps-once]')
     runs-on: ubuntu-24.04
     timeout-minutes: 23
     env:
       PYTHONPATH: runner:.
       P3_T1_EXACT_FLASK_ITEM_ID: ${{ github.event_name == 'push' && '241324' || inputs.exact_flask_item_id }}
-      P3_T1_EXISTING_SPECIAL_GEM_ID: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[p3-gq-gjf-once]') || contains(github.event.head_commit.message, '[p3-gu-j-socket-source-once]') || contains(github.event.head_commit.message, '[p3-ho-one-user-dps-once]')) && '240967' || inputs.existing_special_gem_id }}
+      P3_T1_EXISTING_SPECIAL_GEM_ID: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[p3-gq-gjf-once]') || contains(github.event.head_commit.message, '[p3-gu-j-socket-source-once]') || contains(github.event.head_commit.message, '[p3-ho-one-user-dps-once]') || contains(github.event.head_commit.message, '[p3-hs-other-spec-dps-once]')) && '240967' || inputs.existing_special_gem_id }}
       P3_T1_J_SOCKET_SOURCE_ONLY: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[p3-gu-j-socket-source-once]') && '1' || '0' }}
       P3_T1_F_ONLY: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[p3-gp-f-only-once]') && '1' || '0' }}
-      P3_T1_DPS_E2E_ONCE: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[p3-ho-one-user-dps-once]') && '1' || '0' }}
+      P3_T1_DPS_E2E_ONCE: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[p3-ho-one-user-dps-once]') || contains(github.event.head_commit.message, '[p3-hs-other-spec-dps-once]')) && '1' || '0' }}
+      P3_T1_SPEC_CLASS: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[p3-hs-other-spec-dps-once]') && 'shaman' || 'paladin' }}
+      P3_T1_SPEC_NAME: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[p3-hs-other-spec-dps-once]') && 'enhancement' || 'retribution' }}
+      P3_T1_SPEC_RACE: dwarf
       SIMC_PINNED_SOURCE_COMMIT: c20e2ad52e4c33711f74272309a5748125175fe8
       SIMC_PINNED_GAME_BUILD: 12.1.5.70783
       SIMC_PINNED_BINARY_SHA256: 980ed4640cecc3ed78b34ed0dc0363dbff2ed7d703174e9cc01f09d18570d36b
@@ -68,14 +72,17 @@ jobs:
           gq="[p3-gq-gjf-once]" in msg
           gu="[p3-gu-j-socket-source-once]" in msg
           ho="[p3-ho-one-user-dps-once]" in msg
-          assert sum((gp,gq,gu,ho))==1,"P3_EXACT_ONE_SHOT_MARKER_REQUIRED"
+          hs="[p3-hs-other-spec-dps-once]" in msg
+          assert sum((gp,gq,gu,ho,hs))==1,"P3_EXACT_ONE_SHOT_MARKER_REQUIRED"
           path=("integration_probes/requests/p3_gp_f_only_once_20261106.json"
                 if gp else
                 "integration_probes/requests/p3_gq_gjf_one_shot_20261107.json"
                 if gq else
                 "integration_probes/requests/p3_gu_j_socket_source_once_20261107.json"
                 if gu else
-                "integration_probes/requests/p3_ho_one_user_dps_20261108.json")
+                "integration_probes/requests/p3_ho_one_user_dps_20261108.json"
+                if ho else
+                "integration_probes/requests/p3_hs_other_spec_user_dps_20261108.json")
           assert files==[path],files
           got=json.loads(pathlib.Path(path).read_text())
           common={"build":"12.1.5.70783",
@@ -109,7 +116,7 @@ jobs:
                 "no_external_F_rating_injection":True,
                 "no_j_socket_admission_without_season_proof":True,
                 "official_ready_claim":False}
-          else:
+          elif ho:
               expected={**common,
                 "schema":"p3_ho_real_one_user_dps_e2e_v1",
                 "existing_selected_special_gem_id":240967,
@@ -120,8 +127,21 @@ jobs:
                 "existing_v216_v212_v098_v096_v094_only":True,
                 "separate_gem_effect_gate":False,
                 "product_ready_and_user_dps_require_real_native":True}
+          else:
+              expected={**common,
+                "schema":"p3_hs_other_spec_zero_history_dps_e2e_v1",
+                "existing_selected_special_gem_id":240967,
+                "target_ilevel":334,"user_class":"shaman",
+                "user_spec":"enhancement","user_race":"dwarf",
+                "declared_socket_count":5,
+                "G_native_max":1,"F_native_max":2,"O_native_max":0,
+                "adaptive_dps_native_max":6,
+                "existing_v216_v212_v098_v096_v094_only":True,
+                "separate_gem_effect_gate":False,
+                "product_ready_and_user_dps_require_real_native":True}
           assert got==expected,(got,expected)
-          print("P3_HO_ONE_USER_DPS_E2E_ONCE" if ho else
+          print("P3_HS_OTHER_SPEC_REAL_DPS_E2E_ONCE" if hs else
+                "P3_HO_ONE_USER_DPS_E2E_ONCE" if ho else
                 "P3_GU_J_SOCKET_SOURCE_NO_NATIVE" if gu else
                 "P3_EXACT_ORIGINAL_GJF_ONE_SHOT" if gq else
                 "P3_GP_EXACT_SOURCE_SCOPED_ONE_SHOT_CONFIRMED")

@@ -17,6 +17,7 @@ import zipfile
 from contextlib import contextmanager
 from datetime import datetime,timezone
 
+from runner import v143_specialization_contracts as spec_contracts
 from runner import v216_environment_build_coordinator as engine
 from runner import v271_user_socket_gem_layout as physical_gems
 from runner import v289_retail_live_build_source as retail
@@ -367,6 +368,25 @@ def verified_pinned_cli_source(*, binary_path, live_game_build, environment):
     }
 
 
+
+def requested_t1_character(environment, *, dps_once):
+    """Exact bounded one-spec test input; the real v216 engine stays generic."""
+    names=("P3_T1_SPEC_CLASS","P3_T1_SPEC_NAME","P3_T1_SPEC_RACE")
+    default=("paladin","retribution","dwarf")
+    chosen=tuple(environment.get(name,value)
+                 for name,value in zip(names,default))
+    if any(type(value) is not str or
+           not re.fullmatch(r"[a-z_]+",value) for value in chosen):
+        raise ValueError("P3_HS_REQUESTED_CHARACTER_INVALID")
+    if not dps_once and chosen!=default:
+        raise ValueError("P3_HS_DIFFERENT_SPEC_REQUIRES_DPS_ONE_SHOT")
+    contract=spec_contracts.lookup(chosen[0],chosen[1])
+    if contract is None or (contract["allowed_races"] is not None
+                           and chosen[2] not in contract["allowed_races"]):
+        raise ValueError("P3_HS_REQUESTED_DPS_SPEC_OR_RACE_UNSUPPORTED")
+    return {"class":chosen[0],"spec":chosen[1],"race":chosen[2]}
+
+
 def main():
     rec={
         "schema":"p3_fr_real_zero_history_t1_attempt_v1",
@@ -408,6 +428,8 @@ def main():
         if dps_once and (source_only or f_only or special is None or exact_f is None):
             raise ValueError("P3_HO_REAL_USER_DPS_GJFO_INPUTS_REQUIRED")
         rec["user_dps_e2e_requested"]=dps_once
+        character=requested_t1_character(os.environ,dps_once=dps_once)
+        rec["requested_character"]=character
         rec["requested_max_F_native_calls"]=(
             0 if source_only else 2 if f_only else 8)
         live=retail.discover(region="KR")
@@ -469,9 +491,9 @@ def main():
             inputs={
                 "expected_game_build":live["game_build"],
                 "representative_request":{
-                    "class":"paladin","spec":"retribution",
+                    "class":character["class"],"spec":character["spec"],
                     "target_ilevel":334},
-                "g_probe_character":{"race":"dwarf"},
+                "g_probe_character":{"race":character["race"]},
                 "simc_revision_hint":pin["revision_hint"],
                 **(source_only_J_socket_controls() if source_only else
                    t1_native_source_controls(
@@ -597,9 +619,10 @@ def main():
                 # No extra J/G/F Native probe or per-spec sweep.
                 import v098_target_user_scenario_bootstrap as user_boot
                 import v106_user_session_controller as user_sessions
-                user=user_sessions.user_scenario(
-                    user_sessions.standard_controls(
-                        ("paladin","retribution")))
+                user_controls=user_sessions.standard_controls(
+                    (character["class"],character["spec"]))
+                user_controls["race"]=character["race"]
+                user=user_sessions.user_scenario(user_controls)
                 user["oil_hands"]=[]
                 end_to_end=user_boot.run_from_verified_environment_build(
                     user,root/"one_user_dps",candidate,
@@ -660,7 +683,8 @@ def main():
             k:rec.get(k) for k in (
                 "status","reason","prerequisite_status",
                 "missing_credential_names",
-                "current_build_source_identity",
+                "current_build_source_identity","requested_character",
+                "budget_evidence","installed_status",
                 "live_retail_version","source_stage_status",
                 "source_compilation_missing","zero_history_requires",
                 "simc_native_calls_reported","native_evidence_archive",
