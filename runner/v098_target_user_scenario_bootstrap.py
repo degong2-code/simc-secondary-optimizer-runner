@@ -76,7 +76,8 @@ def _profile_supplier_registry():
             "supplier_code_sha256":code_hashes}
 
 
-def _current_season_profile_supplier_coverage(season_override, selected_key):
+def _current_season_profile_supplier_coverage(season_override, selected_key, *,
+                                              one_spec_only=False):
     need(type(season_override) is dict and
          type(season_override.get("specializations")) is dict,
          "CURRENT_SEASON_PROFILE_SUPPLIER_CATALOG_MISSING")
@@ -91,7 +92,8 @@ def _current_season_profile_supplier_coverage(season_override, selected_key):
     for name in ("user_input","starter_defaults","season_catalog"):
         need(registry[name] == expected,
              "PROFILE_SUPPLIER_REGISTRY_DRIFT:"+name)
-    need(supplied == expected,
+    need((supplied == (selected_key,) if one_spec_only else
+          supplied == expected),
          "CURRENT_SEASON_PROFILE_SUPPLIER_SET_DRIFT")
     need(selected_key in supplied,
          "SELECTED_SPEC_HAS_NO_CURRENT_SEASON_PROFILE_SUPPLIER")
@@ -685,7 +687,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
           static_special_probe_only=False,source_catalog_path=None,
           season_profile_inputs=None,season_environment_receipt_path=None,
           season_source_bundle=None,season_original_source_paths=None,
-          season_socket_plan=None,fresh_installed_environment_path=None):
+          season_socket_plan=None,fresh_installed_environment_path=None,
+          season_physical_one_spec_candidate=None):
     """Return an already validated internal manifest and v096 plan; no Native."""
     base_accepted=(FIELDS,FIELDS|{IMPORT_FIELD},FIELDS|{CONSUME_FIELD},
                    FIELDS|{IMPORT_FIELD,CONSUME_FIELD})
@@ -749,6 +752,12 @@ def build(user,folder,binary,revision,static_cache_path=None,
          season_environment_receipt_path is None and
          current_season_product and static_cache_path is None),
          "FRESH_SEASON_INSTALLED_REQUIRES_ORIGINAL_SOURCE_LINKS")
+    need(season_physical_one_spec_candidate is None or (
+         fresh_installed_environment_path is not None and
+         type(season_physical_one_spec_candidate) is dict and
+         season_source_bundle is not None and
+         season_original_source_paths is not None),
+         "FRESH_V232_ONE_SPEC_ONLY_WITH_VERIFIED_INSTALLED_SOURCE")
     need(season_environment_receipt_path is None or
          (season_profile_inputs is not None
           and static_cache_path is None),
@@ -837,11 +846,17 @@ def build(user,folder,binary,revision,static_cache_path=None,
             season_override=source_first.season_scope()
             actual_season_build=_profile_supplier_registry()["season_build"]
         else:
-            season_override=source_first.season_scope(
-                db=season_source_bundle["gear"],
-                tier=season_source_bundle["tier"],
-                settings=season_source_bundle["settings"],
-                budget=season_source_bundle["budget"])
+            season_override=(
+                _verified_one_spec_G_profile_scope(
+                    source_bundle=season_source_bundle,
+                    candidate=season_physical_one_spec_candidate,
+                    selected_key=key,target_ilevel=ilvl,revision=revision)
+                if season_physical_one_spec_candidate is not None else
+                source_first.season_scope(
+                    db=season_source_bundle["gear"],
+                    tier=season_source_bundle["tier"],
+                    settings=season_source_bundle["settings"],
+                    budget=season_source_bundle["budget"]))
             actual_season_build=season_source_bundle["gear"]["season_build"]
             observed=season_profile_inputs["v216_numeric_preview"]
             candidate=observed.get("calculation")
@@ -859,7 +874,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
                  "SEASON_SOURCE_BUNDLE_V222_J_F_RATING_DRIFT")
         if current_season_product:
             profile_supplier_coverage=_current_season_profile_supplier_coverage(
-                season_override,"/".join(key))
+                season_override,"/".join(key),
+                one_spec_only=season_physical_one_spec_candidate is not None)
             if season_source_bundle is not None:
                 profile_supplier_coverage={
                     **profile_supplier_coverage,
@@ -896,6 +912,14 @@ def build(user,folder,binary,revision,static_cache_path=None,
              "ORDINARY_VARIANT_CONFLICTS_WITH_USER_SELECTED_ITEM")
         base_profile,cfg,rows,groups,weapon_layout,F=common.source_backed_gear(
             key,folder,ilvl,need,ordinary_variant=ordinary_variant)
+    if season_physical_one_spec_candidate is not None:
+        # The tested G must correspond to exactly the representative item
+        # IDs serialized into this user profile before adding two trinkets.
+        observed={slot:rows[slot]["item_id"] for slot in
+                  season_physical_one_spec_candidate["selected_G_slot_ids"]}
+        need(observed==season_physical_one_spec_candidate[
+                "selected_G_slot_ids"],
+             "FRESH_V232_NATIVE_G_PHYSICAL_PROFILE_ITEMS_CHANGED")
     if season_socket_plan is not None:
         # Reuse v271's physical compositor above; compare the ACTUAL rows
         # with the original v216/v222 item-ID basis before any profile
