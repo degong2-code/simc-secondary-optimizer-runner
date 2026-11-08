@@ -164,5 +164,79 @@ class FreshInstalledV096Bridge(unittest.TestCase):
                         flask_F=flask,oil_hands=[],profile=profile)
 
 
+class OneSpecNativeRepresentativeBridge(unittest.TestCase):
+    def test_original_v232_selected_G_replaces_missing_common_neck(self):
+        import v098_target_user_scenario_bootstrap as boot
+        import v169_source_first_representative_stage as source_first
+        import v232_simc_only_ordinary_representative as physical
+        from tests.test_v287_zero_history_v222_user_budget_bridge import (
+            ZeroHistoryPreprofileUserBudget)
+        bundle=ZeroHistoryPreprofileUserBudget().synthetic_future_season_source_bundle()
+        cls,spec="paladin","retribution"
+        old=source_first.select_class_spec(
+            bundle["gear"],bundle["tier"],cls,spec)
+        # Deliberately remove the *old* plain-neck candidate after obtaining
+        # a v232-style physical selection. This tests the exact real blocker
+        # (v169's unrelated global neck lookup), NOT physical SimC approval.
+        neck_id=old["common_gear"]["neck"]
+        bundle["gear"]["items"]=[
+            item for item in bundle["gear"]["items"]
+            if item["item_id"]!=neck_id]
+        with self.assertRaisesRegex(
+                source_first.RepresentativeBlocked,
+                "PLAIN_COMMON_NOT_AVAILABLE_neck"):
+            source_first.season_scope(
+                db=bundle["gear"],tier=bundle["tier"],
+                settings=bundle["settings"],budget=bundle["budget"])
+        tier_ids=bundle["tier"]["classes"][cls]["pieces"]
+        selected={**{slot:tier_ids[slot] for slot in source_first.FOUR},
+                  **old["ordinary"],**old["common_gear"],**old["weapons"]}
+        candidate={"schema":physical.SCHEMA,
+                   "status":"SIMC_SOURCE_PHYSICAL_CANDIDATE_NOT_ACTUAL_SEASON_PROOF",
+                   "game_build":bundle["gear"]["season_build"],
+                   "simc_revision":"c"*40,
+                   "target_ilevel":334,
+                   "character":{"class":cls,"spec":spec},
+                   "selected_ordinary":old["ordinary"],
+                   "selected_common":old["common_gear"],
+                   "selected_weapons":old["weapons"],
+                   "selected_G_slot_ids":selected}
+        candidate["receipt_sha256"]=physical.seed.digest(
+            physical.seed.canonical(candidate).encode("utf8"))
+        scope=boot._verified_one_spec_G_profile_scope(
+            source_bundle=bundle,candidate=candidate,
+            selected_key=(cls,spec),target_ilevel=334,revision="c"*40)
+        self.assertEqual(scope["common_gear"]["neck"],neck_id)
+        self.assertEqual(list(scope["specializations"]),["paladin/retribution"])
+        coverage=boot._current_season_profile_supplier_coverage(
+            scope,"paladin/retribution",one_spec_only=True)
+        self.assertEqual(coverage["current_season_profile_supplier_count"],1)
+        wrong=copy.deepcopy(candidate)
+        wrong["selected_common"]={"neck":999999,
+             **{k:v for k,v in wrong["selected_common"].items()
+                if k!="neck"}}
+        wrong["receipt_sha256"]=physical.seed.digest(
+            physical.seed.canonical({
+                k:v for k,v in wrong.items() if k!="receipt_sha256"
+            }).encode("utf8"))
+        with self.assertRaisesRegex(
+                boot.UserScenarioBlocked,"FRESH_V232_USER_PHYSICAL_G_SLOT_DRIFT"):
+            boot._verified_one_spec_G_profile_scope(
+                source_bundle=bundle,candidate=wrong,
+                selected_key=(cls,spec),target_ilevel=334,revision="c"*40)
+        changed=copy.deepcopy(candidate)
+        changed["game_build"]="12.2.1.99999"
+        changed["receipt_sha256"]=physical.seed.digest(
+            physical.seed.canonical({
+                k:v for k,v in changed.items() if k!="receipt_sha256"
+            }).encode("utf8"))
+        with self.assertRaisesRegex(
+                boot.UserScenarioBlocked,
+                "FRESH_V232_SELECTED_G_BUILD_SPEC_OR_ILEVEL_DRIFT"):
+            boot._verified_one_spec_G_profile_scope(
+                source_bundle=bundle,candidate=changed,
+                selected_key=(cls,spec),target_ilevel=334,revision="c"*40)
+
+
 if __name__=="__main__":
     unittest.main()
