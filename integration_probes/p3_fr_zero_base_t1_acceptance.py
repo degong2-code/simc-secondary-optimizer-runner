@@ -452,12 +452,19 @@ def main():
             raise ValueError("P3_GP_F_ONLY_EXACT_ITEM_ID_REQUIRED")
         rec["selected_f_only_native_mode"]=f_only
         rec["selected_J_socket_source_only_mode"]=source_only
+        hy_longrun=os.environ.get("P3_T1_V291_LONGRUN_NATIVE_ONCE","0")
+        if hy_longrun not in ("0","1"):
+            raise ValueError("P3_HY_EXACT_LONGRUN_MODE_REQUIRED")
+        hy_longrun=hy_longrun=="1"
         dps_once=os.environ.get("P3_T1_DPS_E2E_ONCE","0")
         if dps_once not in ("0","1"):
             raise ValueError("P3_HO_USER_DPS_OPT_IN_INVALID")
         dps_once=dps_once=="1"
         if dps_once and (source_only or f_only or special is None or exact_f is None):
             raise ValueError("P3_HO_REAL_USER_DPS_GJFO_INPUTS_REQUIRED")
+        if hy_longrun and not dps_once:
+            raise ValueError("P3_HY_MUST_REQUEST_DPS_WITH_VERIFIED_ENVIRONMENT")
+        rec["longrun_v291_native_requested"]=hy_longrun
         rec["user_dps_e2e_requested"]=dps_once
         character=requested_t1_character(os.environ,dps_once=dps_once)
         rec["requested_character"]=character
@@ -672,41 +679,119 @@ def main():
                     user["special_items"] or user["embellishments"] or
                     "enchant_choices" in user):
                     raise ValueError("P3_HU_EXCLUDED_EQUIPMENT_OR_ENCHANT_SELECTED")
+                if hy_longrun:
+                    # Existing zero-history v212 READY and v098 selected items
+                    # supply the unmodified source context. v291 owns Native
+                    # checkpoints; v094's six-case test is NOT called.
+                    from runner import v096_unified_product_entry as entry
+                    from runner import v291_durable_multiscale_native_runner as longrun
+                    prepared=user_boot.run_from_verified_environment_build(
+                        user,root/"one_user_dps",candidate,
+                        pin["revision_hint"],environment_result=result,
+                        season_controls=full_consumables,
+                        execute=False,open_folder=False)
+                    if (prepared.get("status") !=
+                        "READY_SOURCE_BOUND_SEASON_MANIFEST_ZERO_NATIVE" or
+                        prepared.get("fresh_v212_installed_proof_reused") is not True):
+                        raise ValueError("P3_HY_VERIFIED_V098_MANIFEST_REQUIRED")
+                    ready_input=entry.source(prepared["generated_manifest"])
+                    stage=root/"one_user_dps"/"v291_native"
+                    first=longrun.run(
+                        ready_input["context"],ready_input["flask"],
+                        candidate,stage,max_native_calls=6,
+                        max_new_native_this_invocation=2)
+                    second=longrun.run(
+                        ready_input["context"],ready_input["flask"],
+                        candidate,stage,max_native_calls=6,
+                        max_new_native_this_invocation=1)
+                    replay=longrun.run(
+                        ready_input["context"],ready_input["flask"],
+                        candidate,stage,max_native_calls=6,
+                        max_new_native_this_invocation=0,cache_only=True)
+                    if (first["status"]!="PAUSED_INVOCATION_NATIVE_BUDGET"
+                        or first["completed_cases"]!=2
+                        or first["new_native_this_invocation"]!=2
+                        or second["status"]!="PAUSED_INVOCATION_NATIVE_BUDGET"
+                        or second["completed_cases"]!=3
+                        or second["new_native_this_invocation"]!=1
+                        or replay["completed_cases"]!=3
+                        or replay["new_native_this_invocation"]!=0
+                        or replay["native_attempts_cumulative"]!=3
+                        or replay["summary"]!=second["summary"]
+                        or replay["summary"]["underlying_B"]!=result["B"]):
+                        raise ValueError("P3_HY_V291_THREE_NATIVE_RESUME_REPLAY_DRIFT")
+                    archive_path=pathlib.Path("p3_hy_v291_native_evidence.zip")
+                    case_files=("input.simc","result.json","native_receipt.json")
+                    with zipfile.ZipFile(archive_path,"x",
+                                         compression=zipfile.ZIP_DEFLATED,
+                                         compresslevel=6) as archive:
+                        for i in range(3):
+                            folder=longrun.case_folder(stage,i)
+                            for filename in case_files:
+                                src=folder/filename
+                                if not src.is_file() or src.stat().st_size>20_000_000:
+                                    raise ValueError("P3_HY_NATIVE_CASE_BYTES_MISSING")
+                                archive.write(src,"cases/case_%05d/"%i+filename)
+                        for filename in ("V291_SESSION.json","V291_RESULT.json",
+                                         "V291_PROGRESS.json","V291_JOURNAL.jsonl"):
+                            archive.write(stage/filename,filename)
+                    rec["v291_three_native_e2e"]={
+                        "status":"PASS_REAL_V291_NATIVE_AND_DURABLE_RESUME_REPLAY",
+                        "first_calls":2,"second_calls":1,"replay_new_calls":0,
+                        "native_attempts_cumulative":3,
+                        "observed":replay["summary"],
+                        "archive_sha256":hashlib.sha256(
+                            archive_path.read_bytes()).hexdigest(),
+                        "archive_name":archive_path.name,
+                        "global_optimum_proven":False}
+                    rec["user_dps_e2e"]={
+                        "status":"PASS_V291_THREE_REAL_NATIVE",
+                        "native_calls_cumulative":3,
+                        "budget_source":"ADMITTED_FRESH_SEASON_GJFO_V212_V217",
+                        "base_B":result["B"],"final_T":result["T"],
+                        "observed_first_choice":{
+                            "absolute_rating_T":
+                                replay["summary"]["observed_best_T"],
+                            "observed_dps_mean":
+                                replay["summary"]["observed_best_dps"],
+                            "simc_sem":replay["summary"]["observed_best_sem"]},
+                        "global_optimum_proven":False}
+                else:
                 end_to_end=user_boot.run_from_verified_environment_build(
                     user,root/"one_user_dps",candidate,
                     pin["revision_hint"],environment_result=result,
                     season_controls=full_consumables,
                     exploration_policy=exploration_policy,
                     execute=True,open_folder=False)
-                applied=end_to_end["input_preparation"]
-                native=end_to_end["native_result"]
-                observed=native["user_result"]
-                if (not native["status"].startswith("PASS") or
-                    applied["plan"]["budget_source"]!=
-                        "ADMITTED_FRESH_SEASON_GJFO_V212_V217" or
-                    observed["base_B"]!=result["B"] or
-                    observed["final_T"]!=result["T"] or
-                    observed["confidence_level"]!=0.95):
-                    raise ValueError("P3_HO_USER_DPS_SOURCE_OR_RESULT_DRIFT")
-                rec["user_dps_e2e"]={
-                    "status":native["status"],
-                    "native_calls_cumulative":
-                        native["native_calls_cumulative"],
-                    "budget_source":native["budget_source"],
-                    "base_B":observed["base_B"],
-                    "final_T":observed["final_T"],
-                    "observed_first_choice":
-                        observed["observed_first_choice"],
-                    "confirmation_pair_direction_supported_at_95":
-                        observed["confirmation_pair_direction_supported_at_95"],
-                    "global_optimum_proven":
-                        observed["global_optimum_proven"],
-                    "simc_native_gear_consumables_reused":True}
-                if os.environ.get("P3_T1_DPS_NATIVE_AUDIT_ONCE","0")=="1":
-                    from integration_probes import p3_ht_observe_existing_dps_native as observer
-                    rec["dps_native_audit"]=observer.record(
-                        applied,native,root,
-                        output_path=pathlib.Path("p3_ht_dps_native_audit.zip"))
+                    applied=end_to_end["input_preparation"]
+                    native=end_to_end["native_result"]
+                    observed=native["user_result"]
+                    if (not native["status"].startswith("PASS") or
+                        applied["plan"]["budget_source"]!=
+                            "ADMITTED_FRESH_SEASON_GJFO_V212_V217" or
+                        observed["base_B"]!=result["B"] or
+                        observed["final_T"]!=result["T"] or
+                        observed["confidence_level"]!=0.95):
+                        raise ValueError("P3_HO_USER_DPS_SOURCE_OR_RESULT_DRIFT")
+                    rec["user_dps_e2e"]={
+                        "status":native["status"],
+                        "native_calls_cumulative":
+                            native["native_calls_cumulative"],
+                        "budget_source":native["budget_source"],
+                        "base_B":observed["base_B"],
+                        "final_T":observed["final_T"],
+                        "observed_first_choice":
+                            observed["observed_first_choice"],
+                        "confirmation_pair_direction_supported_at_95":
+                            observed["confirmation_pair_direction_supported_at_95"],
+                        "global_optimum_proven":
+                            observed["global_optimum_proven"],
+                        "simc_native_gear_consumables_reused":True}
+                    if os.environ.get("P3_T1_DPS_NATIVE_AUDIT_ONCE","0")=="1":
+                        from integration_probes import p3_ht_observe_existing_dps_native as observer
+                        rec["dps_native_audit"]=observer.record(
+                            applied,native,root,
+                            output_path=pathlib.Path("p3_ht_dps_native_audit.zip"))
             if source_only:
                 rec["status"]=(
                     "J_SOCKET_SOURCE_ONLY_SEALED_NOT_READY"
@@ -750,7 +835,8 @@ def main():
                 "original_source_verified_F_uninstalled",
                 "GJF_original_source_owner_summary","diagnostics",
                 "environment_ready","environment_installed",
-                "user_dps_e2e_requested","user_dps_e2e")},ensure_ascii=False,default=str),
+                "user_dps_e2e_requested","user_dps_e2e",
+                "longrun_v291_native_requested","v291_three_native_e2e")},ensure_ascii=False,default=str),
             flush=True)
     return 0 if rec["status"] in (
         "ZERO_BASE_T1_PASS",
