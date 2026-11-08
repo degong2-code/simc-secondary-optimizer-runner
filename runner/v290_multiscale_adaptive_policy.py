@@ -227,21 +227,35 @@ def next_plan(observations, *, total, lower, upper, native_calls_used,
                     "native_calls_used": native_calls_used,
                     "global_optimum_proven": False}
     observed = set(by_vector)
+    # The original v063/Native JSON2 acceptance requires all four buffed
+    # rating fields to be OBSERVED. SimC may omit a genuine zero field.
+    # Before implementing a zero-special-case in the Native validator,
+    # prefer one-rating interior probes whenever that remains feasible.
+    # A 1-rating boundary proxy is not a proof about an exact zero optimum.
+    observed_lower = tuple(max(1, x) for x in lower)
+    search_lower = (observed_lower
+                    if all(x <= hi for x, hi in zip(observed_lower, upper))
+                    and sum(observed_lower) <= total else lower)
     global_due = unique < desired_global or (
         len(observations) % 23 == 0 and len(observations) > desired_global)
     candidate = None
     decision = None
     if global_due:
-        pool = [v for v in _global_pool(total, lower, upper,
-                                       min(256, max(32, desired_global * 3)))
-                if v not in observed]
-        if pool:
-            # Maximin covers all three independent dimensions of the
-            # fixed-sum CHMV simplex, including feasible boundaries.
-            candidate = max(pool, key=lambda v:(
-                min((_distance(v, x) for x in observed), default=total),
-                tuple(-k for k in v)))
-            decision = "GLOBAL_MAXIMIN_SIMPLEX_COVERAGE"
+        if not observed:
+            # Maximin without an observed center is undefined/informationally
+            # tied; a balanced baseline is the useful first measurement.
+            candidate = _apportion(total, search_lower, upper, (1,1,1,1))
+            decision = "GLOBAL_BALANCED_BASELINE_FIRST"
+        else:
+            pool = [v for v in _global_pool(
+                        total, search_lower, upper,
+                        min(256, max(32, desired_global * 3)))
+                    if v not in observed]
+            if pool:
+                candidate = max(pool, key=lambda v:(
+                    min(_distance(v, x) for x in observed),
+                    tuple(-k for k in v)))
+                decision = "GLOBAL_MAXIMIN_SIMPLEX_COVERAGE"
     if candidate is None and observed:
         ranked = sorted(by_vector, key=lambda v:(
             -(by_vector[v]["dps_mean"] -
@@ -260,7 +274,7 @@ def next_plan(observations, *, total, lower, upper, native_calls_used,
             for level, fraction in enumerate(SCALES):
                 step = max(1, min(total, round(total * fraction)))
                 for nxt in legacy.neighbors(
-                        anchor, step, total, lower, upper, observed):
+                        anchor, step, total, search_lower, upper, observed):
                     gained_axes = sum(
                         before[i] == 0 and
                         (nxt[i] < min(v[i] for v in observed) or
