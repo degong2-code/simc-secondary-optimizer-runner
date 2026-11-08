@@ -592,16 +592,16 @@ class FreshEnvironmentSourceStageTests(unittest.TestCase):
             installed_file.write_bytes(b'{"environment_ready":true}\\n')
             self.assertIsNone(
                 environment_build.find_verified_installed_season_environment(
-                    root,334))
+                    root,334,expected_game_build=catalog["game_build"]))
             installed_file.write_bytes(original_bytes)
             self.assertIsNotNone(
                 environment_build.find_verified_installed_season_environment(
-                    root,334))
+                    root,334,expected_game_build=catalog["game_build"]))
             original_source=source_path.read_bytes()
             source_path.write_bytes(b'{}\\n')
             self.assertIsNone(
                 environment_build.find_verified_installed_season_environment(
-                    root,334))
+                    root,334,expected_game_build=catalog["game_build"]))
             source_path.write_bytes(original_source)
 
 
