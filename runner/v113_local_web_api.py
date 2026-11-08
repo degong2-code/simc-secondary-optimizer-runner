@@ -70,6 +70,8 @@ class SeasonEnvironmentBuildRequest(BaseModel):
     auto_select_observed_F_no_oil: bool = False
     # Optional existing selection; never identify or measure the special effect.
     existing_special_gem_id: int | None = Field(default=None,ge=1,le=999999999)
+    # Declared final gem sockets; the v216 source must still validate gem IDs.
+    source_target_socket_count: int | None = Field(default=None,ge=5,le=64)
     simc_revision_hint: str | None = Field(
         default=None,pattern=r"^(?:[a-f0-9]{7,12}|[a-f0-9]{40})$")
     refresh_reason: str | None = Field(
@@ -138,6 +140,7 @@ class LocalJobs:
                                  selected_flask_item_id=None,
                                  auto_select_observed_F_no_oil=False,
                                  existing_special_gem_id=None,
+                                 source_target_socket_count=None,
                                  refresh_reason=None):
         """Run original v216 with season inputs, never a user DPS scenario.
 
@@ -174,6 +177,15 @@ class LocalJobs:
                                   "item_content_change"):
             raise environment_manifest.EnvironmentBlocked(
                 "SEASON_REFRESH_REASON_INVALID")
+        if (source_target_socket_count is not None and
+                existing_special_gem_id is None):
+            raise environment_manifest.EnvironmentBlocked(
+                "SEASON_DECLARED_SOCKETS_REQUIRE_EXISTING_SPECIAL_GEM")
+        if (source_target_socket_count is not None and
+                (type(source_target_socket_count) is not int or
+                 not 5<=source_target_socket_count<=64)):
+            raise environment_manifest.EnvironmentBlocked(
+                "SEASON_DECLARED_SOCKET_COUNT_INVALID")
         if (refresh_reason is None and native_G_binary is None and
             consumable_native_binary is None and
             not auto_native_F_requested and not auto_native_O_requested and
@@ -245,7 +257,10 @@ class LocalJobs:
                     # same-build gem source and delegates every effect to SimC.
                     **({"source_selected_gem_roles":{
                         "special_gem_id":existing_special_gem_id,
-                        "ordinary_gem_ids":None}}
+                        "ordinary_gem_ids":None},
+                        "source_target_socket_count":(
+                            5 if source_target_socket_count is None else
+                            source_target_socket_count)}
                        if existing_special_gem_id is not None else {})})
         return {**observed,"web_environment_scope":{
             "schema":"v113_web_season_environment_build_scope_v1",
@@ -269,6 +284,11 @@ class LocalJobs:
                 auto_select_observed_F_no_oil,
             "four_stat_ordinary_default_requested":
                 existing_special_gem_id is not None,
+            "source_target_socket_count":(
+                (5 if source_target_socket_count is None else
+                 source_target_socket_count)
+                if existing_special_gem_id is not None else None),
+            "declared_gem_profile_native_verified_here":False,
             "special_gem_effect_verified_here":False,
             "dps_optimization_started":False,
             "user_character_or_trinkets_required":False,
@@ -1093,6 +1113,7 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                 auto_select_observed_F_no_oil=
                     request.auto_select_observed_F_no_oil,
                 existing_special_gem_id=request.existing_special_gem_id,
+                source_target_socket_count=request.source_target_socket_count,
                 refresh_reason=request.refresh_reason)
         except Exception as exc:
             raise blocked(exc) from None

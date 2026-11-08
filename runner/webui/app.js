@@ -656,6 +656,7 @@ function showSeasonEnvironmentBuild(data) {
   node.textContent=(ready?"시즌 환경 설치 완료":"원본 수집·검증 진행 결과 (설치 미완료)")+
     " · 요청 빌드 "+(scope.game_build||"–")+
     (scope.selected_flask_item_id?" · 지정 F ItemID "+scope.selected_flask_item_id:"")+
+    (scope.source_target_socket_count?" · 선언 소켓 "+scope.source_target_socket_count+"개 (SimC 적용 미검증)":"")+
     " · 빌드 "+(scope.game_build||"원본 대기")+
     (scope.game_build_source==="BLIZZARD_PUBLIC_RETAIL_KR"?" (Retail 자동)":"")+
     " · 원본 "+(step.source_stage_status||data?.source_stage?.status||"미확정")+
@@ -732,6 +733,14 @@ async function buildSeasonEnvironment() {
       (!Number.isSafeInteger(existing_special_gem_id)||
        existing_special_gem_id>999999999))
     throw Error("특수보석 ItemID 범위가 올바르지 않습니다.");
+  const requested_sockets=valueInt("season-target-socket-count");
+  if(!Number.isSafeInteger(requested_sockets)||
+     requested_sockets<5||requested_sockets>64)
+    throw Error("선언 소켓 수는 5~64 범위의 정수여야 합니다.");
+  if(existing_special_gem_id===null&&requested_sockets!==5)
+    throw Error("5개가 아닌 선언 소켓 수를 지정하려면 기존 특수보석 ItemID가 필요합니다.");
+  const source_target_socket_count=
+    existing_special_gem_id===null?null:requested_sockets;
   if(auto_select_observed_F_no_oil&&(!auto_native_F_requested||auto_native_O_requested))
     throw Error("영약 자동 선택은 F Native 측정을 켜고 기름 O 측정을 끈 상태에서만 사용할 수 있습니다.");
   const native_F_O_requested=auto_native_F_requested||auto_native_O_requested;
@@ -762,7 +771,8 @@ async function buildSeasonEnvironment() {
                               auto_native_F_requested,auto_native_O_requested,
                               auto_select_observed_F_no_oil,
                               selected_flask_item_id,
-                              existing_special_gem_id,refresh_reason,
+                              existing_special_gem_id,source_target_socket_count,
+                              refresh_reason,
                               simc_revision_hint:revision||null}});
     showSeasonEnvironmentBuild(report);
     setNotice("시즌 환경 구축 단계 조회 완료 · READY 여부는 별도 검증 · 개별 DPS 최적화는 시작되지 않았습니다.");

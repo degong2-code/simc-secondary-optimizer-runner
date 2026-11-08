@@ -358,6 +358,56 @@ class LocalWebAPIOffline(unittest.TestCase):
                 **payload,"existing_special_gem_id":bad})
             self.assertEqual(response.status_code,422,response.text)
 
+    def test_p3_gy_declared_socket_count_web_to_original_v216(self):
+        """The web passes user N to v216, without inferring socket proofs."""
+        stub={"status":"J_SIMC_DECLARED_FULL_GEM_PROFILE_SOURCE_ONLY",
+              "environment_ready":False,"environment_installed":False,
+              "native_calls":0}
+        for n in (5,7,8,64):
+            with self.subTest(n=n), mock.patch.object(
+                    web.environment_build,"build_environment",
+                    return_value=stub) as build:
+                response=self.post("/api/v1/environment/season-build",{
+                    "game_build":"12.1.5.70783",
+                    "existing_special_gem_id":311200,
+                    "source_target_socket_count":n})
+                self.assertEqual(response.status_code,200,response.text)
+                inputs=build.call_args.kwargs["fresh_collection_inputs"]
+                self.assertEqual(inputs["source_target_socket_count"],n)
+                self.assertEqual(inputs["source_selected_gem_roles"],{
+                    "special_gem_id":311200,"ordinary_gem_ids":None})
+                scope=response.json()["web_environment_scope"]
+                self.assertEqual(scope["source_target_socket_count"],n)
+                self.assertFalse(scope["declared_gem_profile_native_verified_here"])
+                self.assertFalse(scope["environment_ready"])
+        with mock.patch.object(web.environment_build,"build_environment",
+                               return_value=stub) as build:
+            default=self.post("/api/v1/environment/season-build",{
+                "game_build":"12.1.5.70783",
+                "existing_special_gem_id":311200})
+            self.assertEqual(default.status_code,200,default.text)
+            self.assertEqual(build.call_args.kwargs["fresh_collection_inputs"][
+                "source_target_socket_count"],5)
+        for bad in (0,4,65,-1,True,"bad"):
+            with self.subTest(bad=bad), mock.patch.object(
+                    web.environment_build,"build_environment",
+                    side_effect=AssertionError("MUST_NOT_COLLECT")) as build:
+                response=self.post("/api/v1/environment/season-build",{
+                    "game_build":"12.1.5.70783",
+                    "existing_special_gem_id":311200,
+                    "source_target_socket_count":bad})
+                self.assertEqual(response.status_code,422,response.text)
+                build.assert_not_called()
+        with mock.patch.object(web.environment_build,"build_environment",
+                               side_effect=AssertionError("MUST_NOT_COLLECT")) as build:
+            no_special=self.post("/api/v1/environment/season-build",{
+                "game_build":"12.1.5.70783",
+                "source_target_socket_count":7})
+            self.assertEqual(no_special.status_code,422,no_special.text)
+            self.assertEqual(no_special.json()["detail"]["code"],
+                             "SEASON_DECLARED_SOCKETS_REQUIRE_EXISTING_SPECIAL_GEM")
+            build.assert_not_called()
+
     def test_p3_fq_exact_F_and_four_stat_j_share_normal_web_build(self):
         payload={"game_build":"12.2.0.99999","target_ilevel":334,
                  "selected_flask_item_id":241326,

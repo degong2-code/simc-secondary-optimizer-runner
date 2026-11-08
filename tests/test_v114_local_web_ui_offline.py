@@ -94,6 +94,7 @@ class RealHTTPPageOffline(unittest.TestCase):
                       "season-build-stage","season-build-missing",
                       "season-refresh-reason",
                       "season-existing-special-gem-id",
+                      "season-target-socket-count",
                       "season-selected-flask-id"):
             self.assertIn('id="'+ident+'"',page)
         self.assertIn('"/api/v1/environment/season-build"',js)
@@ -104,6 +105,9 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn("현재 Retail(KR) 자동 조회",page)
         self.assertIn("const game_build=supplied_build||null",js)
         self.assertIn("existing_special_gem_id",js)
+        self.assertIn("source_target_socket_count",js)
+        self.assertIn('id="season-target-socket-count" type="number" min="5" max="64" step="1" value="5"',page)
+        self.assertIn("SimC 프로필 입력 선언",page)
         self.assertIn("selected_flask_item_id",js)
         self.assertIn("J/F 원본: ",js)
         self.assertIn("J/F 품질: ",js)
