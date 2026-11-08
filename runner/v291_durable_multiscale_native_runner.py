@@ -549,6 +549,10 @@ def main(argv=None):
     p.add_argument("--max-elapsed-seconds", type=float, default=None)
     p.add_argument("--cache-only", action="store_true")
     p.add_argument("--recover-verified-partial", action="store_true")
+    p.add_argument("--portable-archive",
+                   help="Explicit original v291 Native case ZIP (import only)")
+    p.add_argument("--portable-archive-sha256",
+                   help="Approved SHA256 of exact original ZIP")
     args = p.parse_args(argv)
     import v096_unified_product_entry as product
     ready = product.source(args.manifest)
@@ -558,14 +562,30 @@ def main(argv=None):
                                         source_loader=product.source)
     paths = ready["paths"]
     try:
-        result = run(
-            ready["context"], ready["flask"], paths["native_binary"],
-            paths["output_dir"], max_native_calls=args.max_native_calls,
-            max_new_native_this_invocation=args.max_new_native_this_invocation,
-            max_elapsed_seconds=args.max_elapsed_seconds,
-            cancel_file=paths["cancel_file"], cache_only=args.cache_only,
-            recover_verified_partial=args.recover_verified_partial,
-            open_folder=True)
+        need(bool(args.portable_archive) ==
+             bool(args.portable_archive_sha256),
+             "PORTABLE_ARCHIVE_AND_SHA_MUST_BE_PAIRED")
+        if args.portable_archive:
+            # Import only: any new Native after rekeyed SHA validation requires
+            # a separate explicit invocation on the sealed resumed session.
+            need(args.max_new_native_this_invocation in (None, 0) and
+                 args.recover_verified_partial is False,
+                 "PORTABLE_IMPORT_SEPARATE_FROM_NEW_NATIVE_OR_PARTIAL_RECOVERY")
+            import v292_portable_native_case_cache as portable
+            result = portable.import_verified_archive(
+                ready["context"], ready["flask"], paths["native_binary"],
+                paths["output_dir"], args.portable_archive,
+                args.portable_archive_sha256,
+                max_native_calls=args.max_native_calls)
+        else:
+            result = run(
+                ready["context"], ready["flask"], paths["native_binary"],
+                paths["output_dir"], max_native_calls=args.max_native_calls,
+                max_new_native_this_invocation=args.max_new_native_this_invocation,
+                max_elapsed_seconds=args.max_elapsed_seconds,
+                cancel_file=paths["cancel_file"], cache_only=args.cache_only,
+                recover_verified_partial=args.recover_verified_partial,
+                open_folder=True)
         print(json.dumps({"status": result["status"],
                           "completed_cases": result["completed_cases"],
                           "native_attempts_cumulative":

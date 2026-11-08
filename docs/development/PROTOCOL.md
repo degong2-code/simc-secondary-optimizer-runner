@@ -1,3 +1,7 @@
+## 2026-11-09 P3-HAG 실제 v292 cross-job 캐시 이식 PASS
+
+[실 #42504040076](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42504040076): 원본 #42501052586 ZIP sha c53dc..., 새 70783 시즌 환경 G/J/F/O=B/T READY(환경 Native3) 후 구 원본 DPS Native 10개 이식/새 DPS Native0, 최신 요구의 입력 경로에서 원본·현재 양쪽 v064/v065 정적 rating/SimC JSON2 SHA 재검증. 원본·임시 경로 SHA는 분리, candidate case_key·policy·catalog·프로필/스탯·iterations는 동일. 선택된 실제 쌍의 95% 정상근사 차3367.90/반폭808.08, 두 SimC seed 상이; 다중비교/전역최적 주장 금지. v291 import-only CLI는 파일/정확 SHA 명시적 입력, 신규 Native 한 호출에서 동시 실행 금지. 다음은 사용자 Start/Cancel/Resume와 장기 cache 업로드 연결. main/immutable/Project UI/Work OS 불변.
+
 ## 2026-11-09 P3-HAG portable verified Native case archive (사용자 '진행')
 
 [P3-HAG](notes/2026-11-09_p3-hag-exact-portable-native-case-replay.md): GitHub job 간 완성된 SimC case를 재사용하기 위한 별도 opt-in v292. 경로 불변 case_key와 원본/현재 path-specific SHA 둘 다 v064 검증; 동일한 source catalog·full scenario/profile/binary/gear/option + v290 policy/iteration sequence와 strict cap만 허용. 원본 zip 및 receipt 무수정, 신규 Native 시도 아님. 현재 확인은 synthetic/실 모두 후속 CI 결과로만 표시, 기존 main·immutable·Project UI·Work OS·소유권 불변.

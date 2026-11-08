@@ -15,6 +15,14 @@ from test_p3_hx_durable_longrun_offline import V291LongRun,F,fake_native,fake_in
 
 
 class PortableReuse(unittest.TestCase):
+    def test_native_cli_portable_mode_is_separately_opt_in(self):
+        code=(ROOT/"runner/v291_durable_multiscale_native_runner.py").read_text()
+        for phrase in ("--portable-archive", "--portable-archive-sha256",
+                       "portable.import_verified_archive(",
+                       "PORTABLE_IMPORT_SEPARATE_FROM_NEW_NATIVE_OR_PARTIAL_RECOVERY"):
+            self.assertIn(phrase,code)
+        compile(code,"v291_durable_multiscale_native_runner.py","exec")
+
     def fixture(self, folder):
         context,binary,original=V291LongRun().fixture(folder,cap=12)
         with mock.patch.object(reuse.runner.engine,"execute_one",
