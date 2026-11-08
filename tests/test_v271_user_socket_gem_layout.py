@@ -91,6 +91,52 @@ class SocketLayoutTests(unittest.TestCase):
                     source=candidate,game_build="12.1.5.70783",
                     socket_total=5,special_gem_id=311200,need=self.need)
 
+    def test_packaged_current_build_nominal_item_totals_and_missing_next_season(self):
+        # Current fixture records 4 top-rank physical item tooltips,
+        # not a new Native measurement or product admission.
+        source=sockets.load_packaged_season_nominal_source(
+            game_build="12.1.5.70783",need=self.need)
+        self.assertEqual(list(source["by_stat"]),list(sockets.ORDINARY_FOUR_STATS))
+        self.assertEqual({x["rating"] for x in source["by_stat"].values()},{23})
+        self.assertEqual({x["item_id"] for x in source["by_stat"].values()},
+                         {240908,240892,240900,240918})
+        self.assertRegex(source["source_sha256"],r"^[0-9a-f]{64}$")
+        self.assertIsNone(sockets.load_packaged_season_nominal_source(
+            game_build="12.2.0.99999",need=self.need))
+        selection=sockets.nominal_four_stat_from_season_source(
+            source=source,game_build="12.1.5.70783",socket_total=7,
+            special_gem_id=240967,need=self.need)
+        self.assertEqual(selection["J_candidate_unadmitted"],138)
+        self.assertFalse(selection["environment_ready"])
+        self.assertFalse(selection["simc_gem_delta_required"])
+
+    def test_nominal_catalog_bad_build_and_bad_components_block_without_native(self):
+        import json
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            root=pathlib.Path(tmp)
+            src=(ROOT/"data"/"season_ordinary_gem_nominal"/
+                 "12.1.5.70783.json")
+            good=json.loads(src.read_text(encoding="utf8"))
+            for patch in (
+                    {"game_build":"12.1.5.70575"},
+                    {"by_stat":{**good["by_stat"],
+                         "crit_rating":{**good["by_stat"]["crit_rating"],
+                           "secondary_components":{"crit_rating":23}}}},
+                    {"by_stat":{**good["by_stat"],
+                         "crit_rating":{**good["by_stat"]["crit_rating"],
+                           "secondary_components":{"crit_rating":0,
+                                                   "haste_rating":23}}}},
+                    {"by_stat":{**good["by_stat"],
+                         "crit_rating":{**good["by_stat"]["crit_rating"],
+                                      "item_id":240892}}}):
+                payload={**good,**patch}
+                (root/"12.1.5.70783.json").write_text(
+                    json.dumps(payload),encoding="utf8")
+                with self.assertRaises(ValueError):
+                    sockets.load_packaged_season_nominal_source(
+                        game_build="12.1.5.70783",
+                        need=self.need,source_folder=root)
     def test_five_sockets_one_wrist_diamond_four_actual_colors(self):
         before = self.rows()
         plan = {"socket_counts": {"head": 1, "wrists": 2,

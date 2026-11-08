@@ -358,6 +358,37 @@ class LocalWebAPIOffline(unittest.TestCase):
                 **payload,"existing_special_gem_id":bad})
             self.assertEqual(response.status_code,422,response.text)
 
+    def test_p3_hj_web_build_automatically_supplies_same_build_nominal_J(self):
+        """Source-only item totals enter original v216, never user input."""
+        stub={"status":"SOURCE_ONLY_PENDING","environment_ready":False,
+              "environment_installed":False,"native_calls":0}
+        with mock.patch.object(web.environment_build,"build_environment",
+                               return_value=stub) as build:
+            response=self.post("/api/v1/environment/season-build",{
+                "game_build":"12.1.5.70783",
+                "existing_special_gem_id":240967,
+                "source_target_socket_count":7})
+        self.assertEqual(response.status_code,200,response.text)
+        inputs=build.call_args.kwargs["fresh_collection_inputs"]
+        nominal=inputs["source_ordinary_nominal_by_stat"]
+        self.assertEqual(nominal["game_build"],"12.1.5.70783")
+        self.assertEqual({row["rating"] for row in
+                          nominal["by_stat"].values()},{23})
+        scope=response.json()["web_environment_scope"]
+        self.assertTrue(scope["ordinary_nominal_source_only_not_approved"])
+        self.assertEqual(scope["ordinary_nominal_source_sha256"],
+                         nominal["source_sha256"])
+        self.assertFalse(scope["environment_ready"])
+        with mock.patch.object(web.environment_build,"build_environment",
+                               return_value=stub) as future:
+            next_build=self.post("/api/v1/environment/season-build",{
+                "game_build":"12.2.0.99999",
+                "existing_special_gem_id":240967})
+        self.assertEqual(next_build.status_code,200,next_build.text)
+        self.assertNotIn("source_ordinary_nominal_by_stat",
+                         future.call_args.kwargs["fresh_collection_inputs"])
+        self.assertIsNone(next_build.json()["web_environment_scope"][
+            "ordinary_nominal_source_sha256"])
     def test_p3_gy_declared_socket_count_web_to_original_v216(self):
         """The web passes user N to v216, without inferring socket proofs."""
         stub={"status":"J_SIMC_DECLARED_FULL_GEM_PROFILE_SOURCE_ONLY",

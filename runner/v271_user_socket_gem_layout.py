@@ -102,6 +102,80 @@ def nominal_four_stat_from_season_source(*, source, game_build,
             "environment_ready":False,"native_calls":0}
 
 
+def load_packaged_season_nominal_source(*, game_build, need,
+                                        source_folder=None):
+    """Return existing season item-tooltip TOTALS for v216's original J path.
+
+    No HTTP or SimC execution. The exact source bytes are SHA-bound, while
+    actual v221 same-build item ownership, quality and v220 admission remain
+    the existing environment engine's responsibility. Absent season data
+    is PENDING, never zero and never a historical-season substitution.
+    """
+    import hashlib
+    import json
+    import pathlib
+    import re
+
+    need(type(game_build) is str and
+         re.fullmatch(r"[0-9]+(?:[.][0-9]+){3}", game_build) is not None,
+         "SOCKET_NOMINAL_SEASON_GAME_BUILD_INVALID")
+    folder=(pathlib.Path(source_folder) if source_folder is not None else
+            pathlib.Path(__file__).resolve().parents[1]/
+            "data"/"season_ordinary_gem_nominal")
+    path=folder/(game_build+".json")
+    if not path.exists():
+        return None
+    need(path.is_file() and not path.is_symlink() and
+         0<path.stat().st_size<=50000,
+         "SOCKET_NOMINAL_SEASON_SOURCE_FILE_INVALID")
+    raw=path.read_bytes()
+    try:
+        payload=json.loads(raw.decode("utf8"))
+    except (ValueError,UnicodeError) as exc:
+        raise ValueError("SOCKET_NOMINAL_SEASON_JSON_INVALID") from exc
+    need(type(payload) is dict and
+         set(payload)=={"schema","game_build","season_key",
+                        "by_stat","source_scope"} and
+         payload["schema"]=="season_ordinary_gem_nominal_v1" and
+         payload["game_build"]==game_build and
+         type(payload["season_key"]) is str and
+         bool(payload["season_key"]) and
+         payload["source_scope"]=="STATIC_NOMINAL_SOURCE_ONLY_NOT_ADMISSION",
+         "SOCKET_NOMINAL_SEASON_SOURCE_SCOPE_INVALID")
+    by_stat=payload["by_stat"]
+    need(type(by_stat) is dict and
+         set(by_stat)==set(ORDINARY_FOUR_STATS),
+         "SOCKET_NOMINAL_SEASON_FOUR_TYPES_REQUIRED")
+    totals={}
+    for stat in ORDINARY_FOUR_STATS:
+        item=by_stat[stat]
+        need(type(item) is dict and
+             set(item)=={"item_id","quality_rank",
+                         "secondary_components","evidence_url"} and
+             type(item["item_id"]) is int and item["item_id"]>0 and
+             type(item["quality_rank"]) is int and
+             item["quality_rank"]>0 and
+             type(item["evidence_url"]) is str and
+             item["evidence_url"].startswith("https://") and
+             len(item["evidence_url"])<=512,
+             "SOCKET_NOMINAL_SEASON_ITEM_FIELDS_INVALID")
+        components=item["secondary_components"]
+        need(type(components) is dict and len(components)==2 and
+             stat in components and
+             set(components)<=set(ORDINARY_FOUR_STATS) and
+             all(type(n) is int and 0<n<=10000
+                 for n in components.values()) and
+             components[stat]>min(components.values()),
+             "SOCKET_NOMINAL_SEASON_DUAL_STAT_SOURCE_REQUIRED")
+        totals[stat]={"item_id":item["item_id"],
+                      "rating":sum(components.values())}
+    need(len({row["item_id"] for row in totals.values()})==4,
+         "SOCKET_NOMINAL_SEASON_DISTINCT_PHYSICAL_IDS_REQUIRED")
+    return {"game_build":game_build,
+            "source_sha256":hashlib.sha256(raw).hexdigest(),
+            "by_stat":totals}
+
+
 # Declared SimC gem_id placement: no socket-granting item or spell is needed.
 FULL_SOCKET_SLOT_ORDER=("head","neck","finger1","finger2","wrists",
                         "waist","feet","hands","legs","shoulders","chest",

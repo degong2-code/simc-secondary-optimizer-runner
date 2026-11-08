@@ -1,0 +1,44 @@
+{
+  "schema": "season_ordinary_gem_nominal_v1",
+  "game_build": "12.1.5.70783",
+  "season_key": "midnight_s2",
+  "by_stat": {
+    "crit_rating": {
+      "item_id": 240908,
+      "quality_rank": 2,
+      "secondary_components": {
+        "crit_rating": 16,
+        "mastery_rating": 7
+      },
+      "evidence_url": "https://www.wowhead.com/item=240908"
+    },
+    "haste_rating": {
+      "item_id": 240892,
+      "quality_rank": 2,
+      "secondary_components": {
+        "haste_rating": 16,
+        "mastery_rating": 7
+      },
+      "evidence_url": "https://www.wowhead.com/item=240892"
+    },
+    "mastery_rating": {
+      "item_id": 240900,
+      "quality_rank": 2,
+      "secondary_components": {
+        "mastery_rating": 16,
+        "haste_rating": 7
+      },
+      "evidence_url": "https://www.wowhead.com/ko/item=240900"
+    },
+    "versatility_rating": {
+      "item_id": 240918,
+      "quality_rank": 2,
+      "secondary_components": {
+        "versatility_rating": 16,
+        "mastery_rating": 7
+      },
+      "evidence_url": "https://www.wowhead.com/item=240918"
+    }
+  },
+  "source_scope": "STATIC_NOMINAL_SOURCE_ONLY_NOT_ADMISSION"
+}

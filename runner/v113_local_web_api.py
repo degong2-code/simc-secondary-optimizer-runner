@@ -34,6 +34,7 @@ import v208_internal_exact_special_L_hydrator as exact_L
 import v212_environment_manifest as environment_manifest
 import v216_environment_build_coordinator as environment_build
 import v289_retail_live_build_source as retail_build_source
+import v271_user_socket_gem_layout as physical_gems
 import v218_v098_profile_stage_adapter as profile_stage
 
 SCHEMA = "v113_local_web_api_p1_v1"
@@ -228,6 +229,12 @@ class LocalJobs:
                 raise environment_manifest.EnvironmentBlocked(
                     "SAME_BUILD_CONTENT_CHANGE_EXACT_SOURCE_CORRECTION_REQUIRED")
         with self.season_source_lock:
+            # Internal packaged season source: no user numbers or new Native
+            # probes. Missing exact-build data stays PENDING in original v216.
+            nominal_source=(
+                physical_gems.load_packaged_season_nominal_source(
+                    game_build=game_build,need=environment_build.need)
+                if existing_special_gem_id is not None else None)
             observed=environment_build.build_environment(
                 sessions_root=self.root,session_folder=None,user=None,
                 binary=binary,revision=None,static_cache=None,
@@ -260,7 +267,9 @@ class LocalJobs:
                         "ordinary_gem_ids":None},
                         "source_target_socket_count":(
                             5 if source_target_socket_count is None else
-                            source_target_socket_count)}
+                            source_target_socket_count),
+                        **({"source_ordinary_nominal_by_stat":nominal_source}
+                           if nominal_source is not None else {})}
                        if existing_special_gem_id is not None else {})})
         return {**observed,"web_environment_scope":{
             "schema":"v113_web_season_environment_build_scope_v1",
@@ -284,6 +293,11 @@ class LocalJobs:
                 auto_select_observed_F_no_oil,
             "four_stat_ordinary_default_requested":
                 existing_special_gem_id is not None,
+            "ordinary_nominal_source_sha256":(
+                nominal_source["source_sha256"]
+                if nominal_source is not None else None),
+            "ordinary_nominal_source_only_not_approved":
+                nominal_source is not None,
             "source_target_socket_count":(
                 (5 if source_target_socket_count is None else
                  source_target_socket_count)
