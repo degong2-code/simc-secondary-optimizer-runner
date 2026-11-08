@@ -1324,7 +1324,7 @@ def preview_from_environment_build(user,folder,binary,revision,*,
          type(environment_result.get("zero_history_build")) is dict and
          environment_result["zero_history_build"].get("environment_ready")
              in (False,True),
-         "SEASON_V216_NORMAL_BUILD_RESULT_REQUIRED")
+         "SEASON_V216_NORMAL_BUILD_UNADMITTED_RESULT_REQUIRED")
     compilation=environment_result.get("source_compilation")
     need(type(compilation) is dict,
          "SEASON_V216_ORIGINAL_SOURCE_COMPILATION_REQUIRED")
