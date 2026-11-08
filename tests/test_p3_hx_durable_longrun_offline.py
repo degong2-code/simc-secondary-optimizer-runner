@@ -192,7 +192,7 @@ class V291LongRun(unittest.TestCase):
                 for row in old:
                     row["simc_seed"]=None
                 old_bytes=("".join(json.dumps(x,sort_keys=True,
-                    separators=(",",":"),allow_nan=False)+"\\n"
+                    separators=(",",":"),allow_nan=False)+"\n"
                     for x in old)).encode("utf8")
                 journal.write_bytes(old_bytes)
                 replay=runner.run(ctx,F,binary,out,max_native_calls=12,
@@ -205,7 +205,7 @@ class V291LongRun(unittest.TestCase):
                 # Metadata compatibility does not allow any other drift.
                 old[0]["dps_mean"]=1.0
                 journal.write_bytes(("".join(json.dumps(x,sort_keys=True,
-                    separators=(",",":"),allow_nan=False)+"\\n"
+                    separators=(",",":"),allow_nan=False)+"\n"
                     for x in old)).encode("utf8"))
                 with self.assertRaisesRegex(runner.LongRunBlocked,
                                             "RECORDED_NATIVE_CASE_BYTES_OR_SUMMARY_DRIFT"):
