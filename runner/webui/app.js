@@ -589,6 +589,7 @@ function buttonState(active=false,ready=false) {
   $("resume-btn").disabled=busy||active||!state.session;
   $("cache-btn").disabled=busy||active||!state.session||!ready;
   $("cancel-btn").disabled=busy||!active||state.longrunEnabled;
+  $("longrun-prepare-btn").disabled=busy||active||!state.token;
   $("longrun-start-btn").disabled=busy||active||!state.token;
   $("longrun-resume-btn").disabled=busy||active||!state.session||!state.longrunEnabled;
   $("longrun-cache-btn").disabled=busy||active||!state.longrunEnabled||
@@ -1303,6 +1304,17 @@ function registerHandlers() {
   $("plan-btn").addEventListener("click",()=>withBusy(async()=>{
     const p=await api("/api/v1/sessions/plan",{method:"POST",payload:buildRequest()});
     markSession(p.session_id);showPlan(p);await pollOnce();
+  }));
+  $("longrun-prepare-btn").addEventListener("click",()=>withBusy(async()=>{
+    const budget=valueInt("longrun-budget");
+    if(budget<12||budget>2000)throw Error("Native 예산은 12~2,000회여야 합니다.");
+    if(!window.confirm("장기 세션만 준비할까요? DPS Native 0회이며, 미확정 특수장비 L은 기존 정적 Native로 확인할 수 있습니다."))return;
+    const response=await api("/api/v1/longrun/prepare",{
+      method:"POST",payload:{...buildRequest(),max_native_calls:budget}});
+    markSession(response.session_id);
+    setNotice("장기 세션 프로필·예산 봉인 완료 · 새 DPS Native 0회 · "+
+      (response.static_L_native_calls_this_start||0)+"회 정적 L Native");
+    await pollOnce();
   }));
   $("longrun-start-btn").addEventListener("click",()=>withBusy(async()=>{
     const budget=valueInt("longrun-budget");

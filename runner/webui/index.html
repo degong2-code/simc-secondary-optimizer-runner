@@ -110,8 +110,8 @@
                 <div class="field"><label for="longrun-budget">세션 전체 Native 예산 <small>12~2,000회 · 총 허용 상한, 자동 전수 실행 아님</small></label><input type="number" id="longrun-budget" min="12" max="2000" step="1" value="12"></div>
                 <div class="field"><label for="longrun-batch">이번 실행의 신규 Native 상한 <small>1~32회, 이후 명시적 재개</small></label><input type="number" id="longrun-batch" min="1" max="32" step="1" value="4"></div>
               </div>
-              <div class="actions"><button type="button" class="btn primary" id="longrun-start-btn" disabled>장기 탐색 시작</button></div>
-              <p class="hint">첫 회차 이후 같은 봉인 세션에서 일시중단·재개합니다. 세션 전체 예산을 나중에 변경하지 않으며, 중복 Native 실행을 방지합니다. 현재 제품 통합은 검증된 시즌 프로필에서만 실행을 허용합니다.</p>
+              <div class="actions"><button type="button" class="btn secondary" id="longrun-prepare-btn" disabled>장기 세션만 준비 · DPS Native 0회</button><button type="button" class="btn primary" id="longrun-start-btn" disabled>장기 탐색 시작</button></div>
+              <p class="hint">기존 Native ZIP을 이식하려면 먼저 ‘장기 세션만 준비’를 누르고 오른쪽 ‘원본 ZIP 안전 복원’을 사용하세요. 준비는 DPS Native 0회지만 선택 특수장비에 정확한 정적 L이 없을 때는 기존 정적 Native 최대 1회를 수행할 수 있습니다. 최초 계산을 원하면 ‘장기 탐색 시작’을 누르세요. 같은 봉인 세션은 회차별로 재개할 수 있으며 세션 전체 예산은 나중에 변경하지 않습니다.</p>
             </details>
           </form>
         </section>

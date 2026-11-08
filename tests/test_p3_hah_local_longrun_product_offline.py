@@ -104,6 +104,26 @@ class LocalLongRunHTTP(unittest.TestCase):
                          {"archive_path":"/tmp/fixture.zip",
                           "archive_sha256":"wrong"}).status_code,422)
 
+    def test_prepare_before_cache_import_does_not_start_native_worker(self):
+        data={"controls":{},"binary":"c:/simc.exe",
+              "revision":"abc1234","current_season_product":True,
+              "max_native_calls":12}
+        response=self.post("/api/v1/longrun/prepare",data)
+        self.assertEqual(response.status_code,200,response.text)
+        self.assertEqual(response.json()["new_dps_native_calls"],0)
+        self.assertEqual(response.json()["status"],
+                         "LONGRUN_SOURCE_PREPARED_NO_DPS_NATIVE")
+        self.assertIsNotNone(service.config(self.folder))
+        web.subprocess.Popen.assert_not_called()
+        new=self.post("/api/v1/sessions/"+self.folder.name+
+                      "/longrun/import",
+                      {"archive_path":"/tmp/exact.zip",
+                       "archive_sha256":"f"*64})
+        self.assertEqual(new.status_code,200,new.text)
+        self.assertEqual(new.json()["max_new_native_this_invocation"],0)
+        self.assertIn("--portable-archive",web.subprocess.Popen.call_args.args[0])
+        self.assertIn("--cache-only",web.subprocess.Popen.call_args.args[0])
+
     def test_sealed_manifest_tamper_blocks_status_and_resume(self):
         data={"controls":{},"binary":"/simc",
               "revision":"abcd123","current_season_product":True}

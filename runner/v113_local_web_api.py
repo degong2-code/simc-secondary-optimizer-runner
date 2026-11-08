@@ -1003,7 +1003,8 @@ class LocalJobs:
                 "max_new_native_this_invocation":(0 if cache_only else batch),
                 "new_native_execution_permitted":not cache_only}
 
-    def longrun_start(self, request):
+    def longrun_prepare(self, request):
+        """Explicit source-bound session setup; no optimization DPS Native."""
         if request.current_season_product is not True:
             raise HTTPException(422,detail={"code":"V293_VERIFIED_SEASON_REQUIRED"})
         params=UserRequest(
@@ -1012,18 +1013,40 @@ class LocalJobs:
             current_season_product=True)
         folder,hydrated,environment,receipt_info=(
             self.prepare_with_internal_special_L(params))
-        response=self.longrun_launch(
-            folder,budget=request.max_native_calls,
-            batch=request.max_new_native_this_invocation,
-            elapsed=request.max_elapsed_seconds)
-        response["environment_manifest"]=environment
-        response["static_L_native_calls_this_start"]=(
-            hydrated["native_new_calls"] if hydrated else 0)
-        response["static_L_reused_exact_variants"]=(
-            hydrated["cache_reused"] if hydrated else 0)
+        with self.lock:
+            if self.is_active(folder):
+                raise HTTPException(409,detail={"code":"SESSION_ALREADY_RUNNING"})
+            try:
+                self._verify_environment_dependencies(environment,folder)
+                self.args_for_existing(folder)
+                longrun_sessions.establish(folder,request.max_native_calls)
+            except HTTPException:
+                raise
+            except Exception as exc:
+                raise blocked(exc) from None
+        response={"session_id":folder.name,
+                  "status":"LONGRUN_SOURCE_PREPARED_NO_DPS_NATIVE",
+                  "native_attempt_ceiling_cumulative":request.max_native_calls,
+                  "new_dps_native_calls":0,
+                  "environment_manifest":environment,
+                  "static_L_native_calls_this_start":(
+                      hydrated["native_new_calls"] if hydrated else 0),
+                  "static_L_reused_exact_variants":(
+                      hydrated["cache_reused"] if hydrated else 0)}
         if hydrated:
             response["static_L_start_receipt"]=receipt_info
         return response
+
+    def longrun_start(self, request):
+        prepared=self.longrun_prepare(request)
+        launched=self.longrun_launch(
+            self.folder(prepared["session_id"]),
+            budget=request.max_native_calls,
+            batch=request.max_new_native_this_invocation,
+            elapsed=request.max_elapsed_seconds)
+        launched.update({k:v for k,v in prepared.items()
+                         if k not in ("status","new_dps_native_calls")})
+        return launched
 
     def longrun_status(self, folder):
         try:
@@ -1325,6 +1348,10 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                 "environment_manifest":jobs._read_environment_summary(folder),
                 "environment_build":jobs._read_environment_build_summary(folder),
                 "native_calls":0,"network_calls":0}
+
+    @app.post("/api/v1/longrun/prepare")
+    def longrun_prepare(request: LongRunStartRequest):
+        return jobs.longrun_prepare(request)
 
     @app.post("/api/v1/longrun/start")
     def longrun_start(request: LongRunStartRequest):
