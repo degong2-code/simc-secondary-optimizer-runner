@@ -28,6 +28,7 @@ class LocalLongRunHTTP(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         root=pathlib.Path(self.tmp.name)
         self.app=web.create_app(root=root/"runs",token="local-token")
+        self.valid_controls=web.sessions.standard_controls()
         self.client=TestClient(self.app,base_url="http://127.0.0.1:8765")
         self.auth={"x-simc-local-token":"local-token",
                    "origin":"http://127.0.0.1:8765"}
@@ -58,7 +59,7 @@ class LocalLongRunHTTP(unittest.TestCase):
 
     def test_http_start_status_cancel_restart_resume_and_import_only(self):
         endpoint="/api/v1/longrun/start"
-        data={"controls":{},"binary":"c:/simc.exe",
+        data={"controls":self.valid_controls,"binary":"c:/simc.exe",
               "revision":"abc1234","current_season_product":True,
               "max_native_calls":12,"max_new_native_this_invocation":4}
         self.assertEqual(self.client.post(endpoint,json=data).status_code,403)
@@ -105,7 +106,7 @@ class LocalLongRunHTTP(unittest.TestCase):
                           "archive_sha256":"wrong"}).status_code,422)
 
     def test_prepare_before_cache_import_does_not_start_native_worker(self):
-        data={"controls":{},"binary":"c:/simc.exe",
+        data={"controls":self.valid_controls,"binary":"c:/simc.exe",
               "revision":"abc1234","current_season_product":True,
               "max_native_calls":12}
         response=self.post("/api/v1/longrun/prepare",data)
@@ -125,7 +126,7 @@ class LocalLongRunHTTP(unittest.TestCase):
         self.assertIn("--cache-only",web.subprocess.Popen.call_args.args[0])
 
     def test_sealed_manifest_tamper_blocks_status_and_resume(self):
-        data={"controls":{},"binary":"/simc",
+        data={"controls":self.valid_controls,"binary":"/simc",
               "revision":"abcd123","current_season_product":True}
         self.assertEqual(self.post("/api/v1/longrun/start",data).status_code,200)
         (self.folder/"generated"/"manifest.json").write_text('{"tampered":true}')

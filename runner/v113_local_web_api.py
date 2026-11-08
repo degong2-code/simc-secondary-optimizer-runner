@@ -743,7 +743,10 @@ class LocalJobs:
         Never measure special item effects; SimC owns those. Only static L is
         recorded by the pre-existing exact Native cache/receipt path.
         """
-        user=sessions.user_scenario(params.controls)
+        try:
+            user=sessions.user_scenario(params.controls)
+        except Exception as exc:
+            raise blocked(exc) from None
         hydrated=None
         prepared_params=params
         if params.current_season_product and user["special_items"]:
