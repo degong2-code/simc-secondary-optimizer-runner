@@ -24,6 +24,7 @@ FIELDS={"schema","profile_simc","scenario_json","fillers_json",
         "seed_targets_B","native_binary","native_revision","output_dir",
         "scouts","material_scouts","native_limit","step","cancel_file"}
 MANUAL_FIELD="manual_final_T"
+EXPLORATION_FIELD="exploration_policy"
 NATIVE_ENCHANT_FIELD="v202_verified_enchant_choice"
 NONCHMV_ENCHANT_FIELD="v206_source_classified_nonchmv_enchant_choice"
 SEASON_FIELD="admitted_season_budget_source"
@@ -244,10 +245,16 @@ def source(manifest_path):
              tuple(x|{NONCHMV_ENCHANT_FIELD} for x in base_allowed)+
              tuple(x|{SEASON_FIELD} for x in (FIELDS,))+
              tuple(x|{FRESH_SEASON_FIELD} for x in (FIELDS,)))
+    # Opt-in exact search ordering is an additional immutable session input.
+    # Existing manifests are unchanged and continue to accept old semantics.
+    allowed+=tuple(x|{EXPLORATION_FIELD} for x in allowed)
     need(type(user) is dict and set(user) in allowed
          and user.get("schema")==SCHEMA,"ENTRY_SCHEMA_OR_FIELDS")
     if STAGE_FIELD in user:
         need(user[STAGE_FIELD] is True,"STAGED_PROFILE_SEAL_INVALID")
+    need(user.get(EXPLORATION_FIELD,"legacy_v015") in
+         ("legacy_v015","axis_coverage_v1"),
+         "UNKNOWN_ADAPTIVE_EXPLORATION_POLICY")
     manual_T=user.get(MANUAL_FIELD)
     if MANUAL_FIELD in user:
         need(type(manual_T) is int and 1<=manual_T<=100000,
@@ -490,7 +497,8 @@ def run_manifest(manifest_path,*,plan_only=False,cache_only=False,
            step=user["step"],native_limit=user["native_limit"],
            cache_only=cache_only,cancel_file=paths["cancel_file"],
            open_folder=open_folder,
-           recover_verified_partial=bool(witness))
+           recover_verified_partial=bool(witness),
+           exploration_policy=user.get(EXPLORATION_FIELD,"legacy_v015"))
     return {"schema":SCHEMA,"status":result["status"],
         **({"internal_pure_physical_acceptance":witness} if witness else {}),
         "result_path":str(paths["output_dir"]/"V094_RESULT.json"),

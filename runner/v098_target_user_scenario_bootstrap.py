@@ -537,7 +537,8 @@ def _materialize_admitted_season_v096(*, source_only,season_profile_inputs,
                                      binary,revision,static_cache_path,
                                      weapon_layout,fillers,user,ilevel,rows,key,
                                      fresh_installed_environment_path=None,
-                                     original_v191_link=None):
+                                     original_v191_link=None,
+                                     exploration_policy=None):
     """Reuse the ORIGINAL v096 manifest+durable v094 route for an admitted season.
 
     A non-admitted v216 numeric draft can never reach this writer. The
@@ -636,7 +637,9 @@ def _materialize_admitted_season_v096(*, source_only,season_profile_inputs,
               "scouts":1,"material_scouts":1,
               "native_limit":6,"step":100,
               "cancel_file":"CANCEL",
-              source_field:manifest_source}
+              source_field:manifest_source,
+              **({entry.EXPLORATION_FIELD:exploration_policy}
+                 if exploration_policy is not None else {})}
     files={
         "profile.simc":source_only["profile_simc"],
         "scenario.json":canonical(draft["scenario"])+"\n",
@@ -690,7 +693,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
           season_profile_inputs=None,season_environment_receipt_path=None,
           season_source_bundle=None,season_original_source_paths=None,
           season_socket_plan=None,fresh_installed_environment_path=None,
-          season_physical_one_spec_candidate=None):
+          season_physical_one_spec_candidate=None,
+          exploration_policy=None):
     """Return an already validated internal manifest and v096 plan; no Native."""
     base_accepted=(FIELDS,FIELDS|{IMPORT_FIELD},FIELDS|{CONSUME_FIELD},
                    FIELDS|{IMPORT_FIELD,CONSUME_FIELD})
@@ -772,6 +776,12 @@ def build(user,folder,binary,revision,static_cache_path=None,
           and ENCHANT_FIELD not in user
           and SEASON_ENCHANT_FIELD not in user),
          "SEASON_PROFILE_INTERNAL_SOURCE_ONLY_MODE_REQUIRED")
+    # Search policy is an explicitly new session opt-in, never inherited from
+    # an old sealed manifest or a source-only budget preview.
+    need(exploration_policy is None or
+         (exploration_policy=="axis_coverage_v1" and
+          fresh_installed_environment_path is not None),
+         "ADAPTIVE_EXPLORATION_REQUIRES_NEW_INSTALLED_SESSION")
     need(type(current_season_product) is bool,"CURRENT_SEASON_PRODUCT_BOOL_REQUIRED")
     # Separate opt-in product session: NO physical-proof-only stage seal.
     # v176 physically accepted all 26 source-first archetypes. Different
@@ -1055,7 +1065,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
             static_cache_path=static_cache_path,weapon_layout=weapon_layout,
             fillers=fillers,user=user,ilevel=ilvl,rows=rows,key=key,
             fresh_installed_environment_path=fresh_installed_environment_path,
-            original_v191_link=linked_originals)
+            original_v191_link=linked_originals,
+            exploration_policy=exploration_policy)
     if static_special_probe_only:
         # v208 internal on-demand static-L source, never a product plan.
         # Reuses exactly the real user/gear/consumables profile composition
@@ -1398,7 +1409,8 @@ def _season_settings_from_v216(*, compilation, numeric_inputs,
 
 def preview_from_environment_build(user,folder,binary,revision,*,
                                    environment_result,season_settings=None,
-                                   season_controls=None):
+                                   season_controls=None,
+                                   exploration_policy=None):
     """Normal v216 source → v098 preview without manual gear/tier/J/F bundling.
 
     The v216 zero-history Build already compiles v191/v213 gear/tier and
@@ -1532,7 +1544,8 @@ def preview_from_environment_build(user,folder,binary,revision,*,
                      "v271_socket_plan_unadmitted")
                      if derived_settings is not None else None),
                  fresh_installed_environment_path=installed_path,
-                 season_physical_one_spec_candidate=one_spec_candidate)
+                 season_physical_one_spec_candidate=one_spec_candidate,
+                 exploration_policy=exploration_policy)
     proof=result["original_v191_gear_tier_source_unadmitted"]
     need(proof["source_catalog_artifact_sha256"]==
              calc.get("source_catalog_artifact_sha256") and
@@ -1560,6 +1573,7 @@ def preview_from_environment_build(user,folder,binary,revision,*,
 def run_from_verified_environment_build(user,folder,binary,revision,*,
                                         environment_result,
                                         season_controls=None,
+                                        exploration_policy=None,
                                         execute=False,cache_only=False,
                                         open_folder=False):
     """One already-built season -> original v098/v096/v094, no extra G/F Native.
@@ -1570,7 +1584,8 @@ def run_from_verified_environment_build(user,folder,binary,revision,*,
     """
     result=preview_from_environment_build(
         user,folder,binary,revision,environment_result=environment_result,
-        season_controls=season_controls)
+        season_controls=season_controls,
+        exploration_policy=exploration_policy)
     if not execute:
         return result
     need(result.get("status")=="READY_SOURCE_BOUND_SEASON_MANIFEST_ZERO_NATIVE"

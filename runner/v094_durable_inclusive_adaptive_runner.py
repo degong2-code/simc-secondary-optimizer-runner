@@ -84,7 +84,8 @@ def _candidate_summary(observations, B, O, near_loss=0.01, material=0.10):
 
 def run(context, seed_targets, flask_vector, binary, output, *,
         step=100, scouts=1, material_scouts=0, native_limit=None, cache_only=False,
-        cancel_file=None, open_folder=False,recover_verified_partial=False):
+        cancel_file=None, open_folder=False,recover_verified_partial=False,
+        exploration_policy="legacy_v015"):
     """One bounded deterministic session, resumable by same identity.
 
     Native limit is enforced across seeds+scouts+fresh confirmations. Caller
@@ -99,6 +100,8 @@ def run(context, seed_targets, flask_vector, binary, output, *,
     need(type(material_scouts) is int and 0<=material_scouts<=2,
          'BOUNDED_MATERIAL_SCOUT_COUNT_0_TO_2')
     need(type(step) is int and step>0,'SCOUT_STEP_REQUIRED')
+    need(exploration_policy in ("legacy_v015","axis_coverage_v1"),
+         'UNKNOWN_ADAPTIVE_EXPLORATION_POLICY')
     cfg=context['bundle']['prepared']['scenario']
     runtime=cfg['scenario']['runtime']
     max_calls=runtime['max_native_calls']
@@ -124,6 +127,11 @@ def run(context, seed_targets, flask_vector, binary, output, *,
        'step':step,'scout_limit':scouts,
        'material_scout_limit':material_scouts,'native_limit':budget,
        'stat_confidence_for_decision':0.95}
+    # No change to byte-identity of every historical/legacy sealed session.
+    # A new search ordering changes which Native requests are made; separate
+    # opt-in identities BEFORE writing any cache, partial progress or result.
+    if exploration_policy!="legacy_v015":
+        seed_identity["exploration_policy"]=exploration_policy
     # Fail before any SimC attempt if a brand-new session lacks enough
     # permitted calls for two seeds, requested scouts and confirmations.
     if not output.exists() or not any(output.iterdir()):
@@ -201,9 +209,27 @@ def run(context, seed_targets, flask_vector, binary, output, *,
             projected.append(adaptive.project_native_for_v065(req,obs))
         state=adaptive.start_scout(context,projected,step=step,
                                    scout_max=scouts,flask_vector=flask_vector)
+        coverage_choices=[]
         for i in range(scouts):
             folder=main_folder/('scout_%02d'%i)
-            plan=adaptive.next_scout(context,state,flask_vector,folder/'result.json')
+            if exploration_policy=="axis_coverage_v1":
+                B0,lo,hi=policy.bounds(
+                    cfg,adaptive.feasible_budget(context,flask_vector))
+                rows=policy.observations_by_vector(
+                    state['observations'],B0,lo,hi)
+                anchor,chosen,hint=policy.axis_coverage_choice(
+                    rows,step,B0,lo,hi)
+                req=adaptive.request(
+                    context,policy.to_target(chosen),flask_vector,
+                    folder/'result.json',phase="scout")
+                plan={"request":req,"anchor_B":policy.to_target(anchor),
+                      "decision":hint}
+                coverage_choices.append({
+                    "phase":'SCOUT_%02d'%i,"chosen_base_B":policy.to_target(chosen),
+                    "decision":hint})
+            else:
+                plan=adaptive.next_scout(
+                    context,state,flask_vector,folder/'result.json')
             obs=native(plan['request'],folder,'SCOUT_%02d'%i)
             state=adaptive.accept_scout(context,state,plan['request'],obs)
         # Material candidates are deliberately farther in CHMV-space.
@@ -212,7 +238,8 @@ def run(context, seed_targets, flask_vector, binary, output, *,
         material_proposals=[]
         for i in range(material_scouts):
             pp=extended.material_neighbor(cfg,adaptive.feasible_budget(context,flask_vector),
-                 state['observations'],fraction=0.10)
+                 state['observations'],fraction=0.10,
+                 selection_policy=exploration_policy)
             folder=main_folder/('material_%02d'%i)
             req=adaptive.request(context,pp['candidate_B'],flask_vector,
                  folder/'result.json','scout')
@@ -222,7 +249,9 @@ def run(context, seed_targets, flask_vector, binary, output, *,
             material_proposals.append({
                 'base_B':pp['candidate_B'], 'native_T':req['target'],
                 'rating_transferred':pp['rating_transferred'],
-                'measured_dps':obs['dps_mean'], 'measured_sem':obs['dps_sem']})
+                'measured_dps':obs['dps_mean'], 'measured_sem':obs['dps_sem'],
+                **({'axis_coverage_observation':pp['axis_coverage_observation']}
+                   if exploration_policy=="axis_coverage_v1" else {})})
         pair=adaptive.confirmation_plan(context,state,flask_vector,confirm_folder)
         confirmed=[]
         for i,req in enumerate(pair['cases']):
@@ -258,6 +287,9 @@ def run(context, seed_targets, flask_vector, binary, output, *,
                 'scouts_completed':scouts,
                 'material_scouts_completed':material_scouts,
                 'original_v015_v016_product_integrated':False}
+        if exploration_policy=="axis_coverage_v1":
+            report['exploration_policy']=exploration_policy
+            report['axis_coverage_choices']=coverage_choices
         save(report_path,report)
         progress.pop('error',None)
         checkpoint(status)
