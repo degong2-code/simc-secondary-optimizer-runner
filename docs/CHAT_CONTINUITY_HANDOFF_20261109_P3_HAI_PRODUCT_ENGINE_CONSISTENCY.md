@@ -36,6 +36,10 @@
 - 최근 영수증·노트: [HAH](development/notes/2026-11-09_p3-hah-local-longrun-product-web-integration.md), [HAG](development/notes/2026-11-09_p3-hag-exact-portable-native-case-replay.md), [HAE](development/notes/2026-11-09_p3-hae-short-budget-precision-contract.md), [HAF](development/notes/2026-11-09_p3-haf-native-seed-provenance-recovery.md), [HN](development/notes/2026-11-08_p3-hn-real-gjfo-ready-one-case.md). 각 범위의 기존 테스트/Native SHA만 재사용하며 무조건 전수 CI/Native 실행 금지.
 - 각 수정: source/정적/Native 호출·중복·메모리·I/O·iterations/CPU-second·캐시 identity를 확인. 실제 SHA·스탯별 하한/최종 <50%·단일 사용자 세션·95% 판단 범위를 유지. 결과는 `IMPLEMENTED`, `OFFLINE_PASS`, `REAL_NATIVE_PASS`, `HISTORICAL_REUSED`, `NOT_TESTED`, `BLOCKED`를 구분해 기록.
 
+### P3-HAJ 최신 교차검증 업데이트 (2026-11-09)
+
+**P3-HAJ 실제 웹 E2E 시도 BLOCKED:** [Actions #42535096763](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42535096763) 12.1.5.70783 현재 v216 환경 **G2850/J92/F165/O0/B=T3107, Native3, installed READY·소스 누락0**을 다시 확인했으나, 웹 `/api/v1/longrun/prepare`는 `HTTP 422 V216_EXPLICIT_NEW_SEASON_BUILD_REQUIRED`로 중단되어 **웹 DPS Native 신규0회**. [실패 원본 영수증 #13638936573](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42535096763/artifacts/13638936573). 원인: 일반 웹 v113 세션이 이미 인증된 **fresh-v212 설치 증거**를 기존 `v098` 사용자 프로필에 전달하지 않고, fresh-v213에 대해 일반 v216 신규 소스 진입을 다시 요청함. **시즌 환경 엔진 새 개발/인증 Gate 완화 금지**. 정확한 다음 작업은 기존 fresh v212/v217 설치·원본 편성/예산 → v113/v106 → v098/v096 → v293 연결. HAE/HAG 실 DPS 증거와 웹 성공을 혼동하지 않는다. main·권한 불변. 신규 채팅은 이미 구현된 시즌 환경 엔진 대신 `v216/v217/v212` installed READY → `v113/v106` 웹 사용자 세션 → 원래 `v098/v096` 프로필 진입의 정확한 연결을 우선한다. 실 웹 Native0 및 HAE/HAG 이전 Native 증거 구분.
+
 ## 5. 권한 및 다음 단계 경계
 
 - 기존 **주 제품 개발 채팅**이 일반 제품 구현·실 SimC 시험 소유권 유지. 격리 브랜치의 읽기/승인된 개발은 별도 범위. **`main`, v003 immutable, 원본 제품 v016, 공식 Project UI Sources/Instructions·Work OS M0/Shared State·승격은 승인 없이 변경 금지**. WEQUIP 운영 authority/영구 runtime 의존성 도입 금지.

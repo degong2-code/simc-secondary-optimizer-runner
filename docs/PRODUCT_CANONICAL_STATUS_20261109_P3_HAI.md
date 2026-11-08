@@ -46,6 +46,10 @@
 
 **실행 증거의 분리:** 26/26 물리 프로필 통과 ≠ 26/26 장기 최적화 실증. 환경 한 조건 READY ≠ 새 시즌 전체 자동 수집 보증. 2000-call typed 합성 PASS ≠ Native2000 실행. GitHub Actions를 이용한 실 Native ≠ 일반 사용자 로컬 브라우저 버튼 Native 완료. 코드·문서·오프라인 회귀 ≠ 원본 제품 `v016_SCENARIO_CONTRACT` 직접 통합 또는 Project Sources UI 적용.
 
+### P3-HAJ 실제 웹 증거 보충 (2026-11-09)
+
+**P3-HAJ 실제 웹 E2E 시도 BLOCKED:** [Actions #42535096763](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42535096763) 12.1.5.70783 현재 v216 환경 **G2850/J92/F165/O0/B=T3107, Native3, installed READY·소스 누락0**을 다시 확인했으나, 웹 `/api/v1/longrun/prepare`는 `HTTP 422 V216_EXPLICIT_NEW_SEASON_BUILD_REQUIRED`로 중단되어 **웹 DPS Native 신규0회**. [실패 원본 영수증 #13638936573](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42535096763/artifacts/13638936573). 원인: 일반 웹 v113 세션이 이미 인증된 **fresh-v212 설치 증거**를 기존 `v098` 사용자 프로필에 전달하지 않고, fresh-v213에 대해 일반 v216 신규 소스 진입을 다시 요청함. **시즌 환경 엔진 새 개발/인증 Gate 완화 금지**. 정확한 다음 작업은 기존 fresh v212/v217 설치·원본 편성/예산 → v113/v106 → v098/v096 → v293 연결. HAE/HAG 실 DPS 증거와 웹 성공을 혼동하지 않는다. main·권한 불변.
+
 ## 4. 정말 남은 두 주요 작업과 최소 다음 시험
 
 1. **P1-WEB 실사용 마무리:** 최근 코드 재감사보다 `v113→v293→v291` 연결을 실제 *로컬 웹 버튼*의 신뢰할 수 있는 동일 빌드/기본 사용자 조건에서 **한 세션**으로 최소 Native 시험. 세션만 준비 → Start(상한 예: 전체12, 회차4) → Status → Cancel/Resume 또는 회차 완수 → 기존 결과/cache-only → 95% 제한/선택 대안 표시 → 로그/영수증/오류 원문·재실행 호출 수. Windows 사용자 PC 실 실행은 별도 확인, GitHub CI Linux 원본 영수증을 대리 증거로 오표기 금지. 특별 L/E/O/수동 T는 이미 구현된 입력·경계 시험을 재사용하고 새로 깨진 조건만 점검.
