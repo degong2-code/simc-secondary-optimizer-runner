@@ -455,11 +455,11 @@ def stage_extended_manifest(ready, manifest_path, max_native_calls, *,
         "profile.simc":pathlib.Path(paths["profile_simc"]).read_bytes(),
         "scenario.json":(json.dumps(cfg,sort_keys=True,
                                      separators=(",",":"),ensure_ascii=False)
-                         +"\\n").encode("utf8"),
+                         +"\n").encode("utf8"),
         "fillers.json":pathlib.Path(paths["fillers_json"]).read_bytes(),
         "manifest.json":(json.dumps(copied,sort_keys=True,
                                     separators=(",",":"),ensure_ascii=False)
-                         +"\\n").encode("utf8"),
+                         +"\n").encode("utf8"),
     }
     for file,content in inputs.items():
         write_identical(directory/file,content)
