@@ -124,12 +124,16 @@ def record(applied,native,root,*,output_path):
          "P3_HT_EXACT_SIX_NATIVE_PHASES_REQUIRED")
     summaries={}
     selected=None
-    best=max(rows,key=lambda row:row["dps_mean"])
-    requested=(native.get("user_result") or {}).get(
-        "observed_first_choice",{}).get("observed_dps_mean")
-    need(type(requested) in (float,int) and
-         abs(best["dps_mean"]-requested)<0.000001,
-         "P3_HT_OBSERVED_FIRST_CHOICE_RESULT_DRIFT")
+    selected_best=(native.get("user_result") or {}).get(
+        "observed_first_choice",{})
+    requested=selected_best.get("observed_dps_mean")
+    target_B=selected_best.get("base_rating_B")
+    matches=[row for row in rows
+             if type(requested) in (float,int)
+             and abs(row["dps_mean"]-requested)<0.000001
+             and row.get("base_B")==target_B]
+    need(bool(matches),"P3_HT_OBSERVED_FIRST_CHOICE_RESULT_DRIFT")
+    best=max(matches,key=lambda row:(row["samples"],row["case_key"]))
     for row in rows:
         folder=(output/PHASE_FOLDERS[row["phase"]]).resolve(strict=True)
         need(folder.is_relative_to(output) and folder.is_dir(),

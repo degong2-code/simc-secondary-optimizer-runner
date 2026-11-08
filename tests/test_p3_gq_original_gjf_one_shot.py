@@ -4,6 +4,15 @@ sys.path.insert(0,str(pathlib.Path(__file__).resolve().parents[1]))
 from integration_probes import p3_fr_zero_base_t1_acceptance as p
 
 class CombinedOriginalSources(unittest.TestCase):
+    def test_existing_native_audit_module_loaded_without_native(self):
+        from integration_probes import p3_ht_observe_existing_dps_native as audit
+        self.assertEqual(len(audit.PHASE_FOLDERS),6)
+        found=audit._interesting_action_rows({
+            "stats":[{"name":"fire_nova","num_executes":{"mean":2}}],
+            "buffs":[{"name":"short_circuit","start_count":5}]})
+        self.assertEqual(found["stats"][0]["name"],"fire_nova")
+        self.assertEqual(found["buffs"][0]["name"],"short_circuit")
+
     def test_existing_T1_GJF_mode_uses_one_G_one_F_pair_without_oil(self):
         setup=p.t1_native_source_controls(
             selected_F=241324,f_only=False,binary_available=True)
