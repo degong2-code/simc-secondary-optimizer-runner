@@ -1,3 +1,5 @@
+> **2026-11-09 P3-HAE 10회 Native 실행 경로 준비(실측 전):** [P3-HAE](notes/2026-11-09_p3-hae-short-budget-precision-contract.md) 기존 v290/v291 정밀화 연결 [focused #42500684707](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42500684707) 464 PASS/2 SKIP; 별도 원본 재사용 4+6=10 Native(8 scout + 2×320 confirm) 요청·감사 아카이브는 신규 CI 검증 전. `main` 불변.
+
 > **2026-11-09 P3-HAE 95% 선택적 정밀화 연결(새 CI/Native 검증 대기):** [P3-HAE 작업 기록](notes/2026-11-09_p3-hae-short-budget-precision-contract.md). 소예산 typed10~16에서 8+ 탐색 후 320 iterations 실측 계획, v291 선택된 확인 쌍의 95% 근사 판정/다중선택 편향 표기. 기존 대규모 v290·v094·엔진 봉인 불변.
 
 > **2026-11-09 P3-HAD 최초 8회 실제 v291 Native PASS:** [P3-HAD 기록](notes/2026-11-09_p3-had-first-over-six-native-pilot.md). 격리 코드 `a5931d33` [focused #42499184780](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42499184780) 461 PASS/2 SKIP, 요청 `1d480a25` [실 #42499288257](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42499288257) 환경 Native3+8 DPS Native/4+4/캐시 재생0 신규; 8 SHA 원본 직접 감사 PASS. strict <50%, B=T3107, 최고 관측 186630.19±787.11 SEM/35 iterations, 전역최적·통계확정·UI 완료 아님. `main`/immutable/Project UI 불변.
