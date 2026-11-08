@@ -15,7 +15,8 @@ class PlanBlocked(ValueError): pass
 def need(ok,reason):
     if not ok:raise PlanBlocked(reason)
 
-def material_neighbor(normalized,budget,observations,fraction=0.10):
+def material_neighbor(normalized,budget,observations,fraction=0.10,*,
+                      selection_policy="legacy_v015"):
     """Reuse v065 transfer neighbors; require real B-distance from leader.
 
     Original policy chooses next normal scout; here we merely supply an
@@ -24,6 +25,8 @@ def material_neighbor(normalized,budget,observations,fraction=0.10):
     """
     need(type(fraction) in (int,float) and 0<fraction<=0.5,
          "MATERIAL_FRACTION_RANGE")
+    need(selection_policy in ("legacy_v015","axis_coverage_v1"),
+         "UNKNOWN_MATERIAL_SELECTION_POLICY")
     B,lo,hi=policy.bounds(normalized,budget)
     rows=policy.observations_by_vector(observations,B,lo,hi)
     need(rows,"NATIVE_OBSERVED_ANCHOR_REQUIRED")
@@ -32,13 +35,24 @@ def material_neighbor(normalized,budget,observations,fraction=0.10):
     have=set(rows)
     choices=policy.neighbors(leader,moved,B,lo,hi,have)
     need(bool(choices),"NO_NEW_FEASIBLE_MATERIAL_NEIGHBOR")
-    # Same deterministic v065 local mirrored score, no separate optimization.
-    choices.sort(key=lambda v:(-policy.score_direction(leader,v,rows),v))
-    chosen=choices[0]
+    if selection_policy=="axis_coverage_v1":
+        # Reuse original feasible neighbors; reprioritize by unexamined axes.
+        _,chosen,coverage=policy.axis_coverage_choice(
+            rows,moved,B,lo,hi)
+        # v095 promises distance from the *observed DPS leader*.
+        need(chosen in choices,"COVERAGE_MATERIAL_LEADER_DISTANCE_DRIFT")
+    else:
+        # Original deterministic v065 mirror preference stays byte-stable.
+        choices.sort(key=lambda v:(-policy.score_direction(leader,v,rows),v))
+        chosen=choices[0]
+        coverage=None
     need(sum(abs(a-b) for a,b in zip(leader,chosen))/2 >= B*fraction-1,
          "MATERIAL_TRANSFER_DID_NOT_MOVE_REQUESTED_AMOUNT")
     return {"schema":SCHEMA,"status":"MATERIAL_SCOUT_TARGET_NOT_RUN",
-        "source":"v065.neighbors_and_score_direction",
+        "source":("v065.axis_coverage_choice" if coverage is not None
+                  else "v065.neighbors_and_score_direction"),
+        **({"axis_coverage_observation":coverage} if coverage is not None
+           else {}),
         "base_B":B,"anchor_B":policy.to_target(leader),
         "candidate_B":policy.to_target(chosen),
         "rating_transferred":moved,

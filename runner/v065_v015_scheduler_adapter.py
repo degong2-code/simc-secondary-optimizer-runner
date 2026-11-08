@@ -185,6 +185,60 @@ def choose_next(rows,step,total,lower,upper):
         "source_sha256":SOURCE_V015_SHA256,
         "derived_new_module_not_original_v015":True}
 
+
+def axis_coverage_choice(rows,step,total,lower,upper):
+    """Opt-in v015 neighbor ORDERING: pay for distinct CHMV directions.
+
+    Unlike a DPS prediction, coverage is determined entirely from native-
+    observed targets and feasible CHMV geometry. Historical choose_next
+    remains unchanged for existing sessions and sealed cache identities.
+    """
+    eligible_obs={v:obs for v,obs in rows.items()
+                  if eligible(v,total,lower,upper)}
+    need(bool(eligible_obs),"COVERAGE_REQUIRES_OBSERVED_ANCHOR")
+    need(type(step) is int and 1<=step<=total,
+         "COVERAGE_STEP_OUT_OF_RANGE")
+    anchors=[leader(eligible_obs)]
+    anchors.extend(sorted((v for v in eligible_obs if v!=anchors[0]),
+                   key=lambda v:(-last(eligible_obs[v])["dps_mean"],v)))
+    have=set(rows)
+    present=list(eligible_obs)
+    before=tuple(max(v[i] for v in present)-min(v[i] for v in present)
+                 for i in range(4))
+    feasible_span=tuple(upper[i]-lower[i] for i in range(4))
+    best=None
+    for anchor in anchors:
+        for candidate in neighbors(anchor,step,total,lower,upper,have):
+            after=tuple(max(max(v[i] for v in present),candidate[i])-
+                        min(min(v[i] for v in present),candidate[i])
+                        for i in range(4))
+            new_axes=sum(before[i]==0 and after[i]>0 for i in range(4))
+            # Normalize by the *possible* meaningful movement per stat:
+            # cap denominator at step, preserving fixed L/O feasibility.
+            spread_gain=sum((after[i]-before[i])/
+                            max(1,min(step,feasible_span[i]))
+                            for i in range(4))
+            # Never treat mirrored DPS as a new prediction or 95% result.
+            mirror=score_direction(anchor,candidate,rows)
+            ranking=(-new_axes,-round(spread_gain,12),-mirror,
+                     candidate,anchor)
+            if best is None or ranking<best[0]:
+                best=(ranking,anchor,candidate,after,new_axes,spread_gain,mirror)
+    need(best is not None,"COVERAGE_NO_FEASIBLE_UNOBSERVED_NEIGHBOR")
+    _,anchor,chosen,after,new_axes,gain,mirror=best
+    return anchor,chosen,{
+        "method":"V065_OPT_IN_AXIS_COVERAGE_NATIVE_ORDER_ONLY",
+        "coverage_before":to_target(before),
+        "coverage_after":to_target(after),
+        "new_axes_explored":new_axes,
+        "normalized_spread_gain":round(gain,8),
+        "mirror_score_dps":mirror,
+        "observed_vector_count":len(present),
+        "source_sha256":SOURCE_V015_SHA256,
+        "DPS_predictions_or_effect_simulations_created":False,
+        "global_optimum_proven":False}
+
+
 def confirmation_pair(rows,total,lower,upper):
     eligible_obs={v:obs for v,obs in rows.items()
                   if eligible(v,total,lower,upper)}
