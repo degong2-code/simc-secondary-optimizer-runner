@@ -1,3 +1,7 @@
+## 2026-11-09 P3-HAG cross-job 캐시 검증 완료(범위 보존)
+
+[P3-HAG](notes/2026-11-09_p3-hag-exact-portable-native-case-replay.md) [real #42504040076](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42504040076): 같은 시즌·고양334 기존 실제 DPS Native10건을 원본 ZIP SHA+SimC source/JSON2/receipt, 현 실행 프로필/카탈로그/정확 case-key로 다시 검증해 **새 DPS Native0**으로 가져옴(환경 G/F Native3 별도). 검증된 selected pair 95% 정상근사만, 다중선택 보정·전역최적 아님. v291 명시적 ZIP SHA import-only CLI [focused #42504333615](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42504333615) 481 PASS/2 SKIP, Native0; 실 CLI 실행은 아직 미완료. 원본 SHA 재인증·full path-specific input SHA 검사 약화 금지. 새 시즌·다른 카탈로그/프로필/정책/반복수는 이식 차단. main/immutable/Project UI/Work OS/owner 변경 없음.
+
 ## 2026-11-09 P3-HAG 실제 v292 cross-job 캐시 이식 PASS
 
 [실 #42504040076](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42504040076): 원본 #42501052586 ZIP sha c53dc..., 새 70783 시즌 환경 G/J/F/O=B/T READY(환경 Native3) 후 구 원본 DPS Native 10개 이식/새 DPS Native0, 최신 요구의 입력 경로에서 원본·현재 양쪽 v064/v065 정적 rating/SimC JSON2 SHA 재검증. 원본·임시 경로 SHA는 분리, candidate case_key·policy·catalog·프로필/스탯·iterations는 동일. 선택된 실제 쌍의 95% 정상근사 차3367.90/반폭808.08, 두 SimC seed 상이; 다중비교/전역최적 주장 금지. v291 import-only CLI는 파일/정확 SHA 명시적 입력, 신규 Native 한 호출에서 동시 실행 금지. 다음은 사용자 Start/Cancel/Resume와 장기 cache 업로드 연결. main/immutable/Project UI/Work OS 불변.
