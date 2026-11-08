@@ -3,12 +3,7 @@
   "build": "12.1.5.70783",
   "selected_flask_item_id": 241324,
   "existing_selected_special_gem_id": 240967,
-  "four_ordinary_dual_stat_types": [
-    "crit",
-    "haste",
-    "mastery",
-    "versatility"
-  ],
+  "four_ordinary_dual_stat_types": ["crit", "haste", "mastery", "versatility"],
   "special_gem_effect_independently_checked": false,
   "same_season_original_J_socket_source_required": true,
   "G_native_max": 1,
