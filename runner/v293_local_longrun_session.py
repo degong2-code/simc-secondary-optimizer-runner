@@ -128,8 +128,10 @@ def run_worker(folder, budget, batch, *, cache_only=False,
          "V293_ARCHIVE_REQUIRES_APPROVED_SHA")
     need(not portable_archive or (cache_only and batch == 0),
          "V293_IMPORT_MUST_BE_ZERO_NATIVE")
+    acquired = False
     try:
         with sessions.worker_lock(folder):
+            acquired = True
             saved = config(folder)
             need(saved is not None and saved["native_budget"] == budget,
                  "V293_SESSION_CONFIG_NOT_SEALED")
@@ -159,8 +161,11 @@ def run_worker(folder, budget, batch, *, cache_only=False,
                   native_calls=result["new_native_this_invocation"])
             return 0
     except Exception as exc:
-        state(folder, "BLOCKED_OR_PARTIAL",
-              reason=type(exc).__name__+":"+str(exc))
+        # A competing worker owns the shared v106 lock. Never overwrite its
+        # running status or cancel marker when this invocation is rejected.
+        if acquired:
+            state(folder, "BLOCKED_OR_PARTIAL",
+                  reason=type(exc).__name__+":"+str(exc))
         print("V293_LONGRUN_BLOCKED:",type(exc).__name__,str(exc),
               file=sys.stderr,flush=True)
         return 3

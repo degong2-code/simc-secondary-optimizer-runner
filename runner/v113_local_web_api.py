@@ -118,7 +118,8 @@ class UserRequest(BaseModel):
 
 def blocked(exc):
     """Return stable codes, not private absolute paths, talent strings, or tracebacks."""
-    if isinstance(exc, (sessions.SessionBlocked, bootstrap.UserScenarioBlocked,
+    if isinstance(exc, (longrun_sessions.LocalLongRunBlocked,
+                         sessions.SessionBlocked, bootstrap.UserScenarioBlocked,
                         sessions.nonchmv_enchant.EnchantChoiceBlocked,
                         exact_L.StaticLBlocked,
                         environment_manifest.EnvironmentBlocked)):
@@ -1011,11 +1012,18 @@ class LocalJobs:
             elapsed=request.max_elapsed_seconds)
 
     def longrun_status(self, folder):
-        return longrun_sessions.read_status(folder,active=self.is_active(folder))
+        try:
+            return longrun_sessions.read_status(
+                folder,active=self.is_active(folder))
+        except Exception as exc:
+            raise blocked(exc) from None
 
     def longrun_cancel(self, folder):
         with self.lock:
-            saved=longrun_sessions.config(folder)
+            try:
+                saved=longrun_sessions.config(folder)
+            except Exception as exc:
+                raise blocked(exc) from None
             if saved is None or not self.is_active(folder):
                 raise HTTPException(409,detail={"code":"LONGRUN_NOT_RUNNING"})
             worker=longrun_sessions.worker_state_path(folder)
