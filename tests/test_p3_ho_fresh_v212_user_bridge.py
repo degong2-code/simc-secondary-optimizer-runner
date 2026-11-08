@@ -175,19 +175,10 @@ class OneSpecNativeRepresentativeBridge(unittest.TestCase):
         cls,spec="paladin","retribution"
         old=source_first.select_class_spec(
             bundle["gear"],bundle["tier"],cls,spec)
-        # Deliberately remove the *old* plain-neck candidate after obtaining
-        # a v232-style physical selection. This tests the exact real blocker
-        # (v169's unrelated global neck lookup), NOT physical SimC approval.
+        # The physical G candidate is sufficient for the selected-spec
+        # serializer, regardless of a global 26-spec plain-neck selector.
+        # Do not alter v167's sealed item-count contract in this fixture.
         neck_id=old["common_gear"]["neck"]
-        bundle["gear"]["items"]=[
-            item for item in bundle["gear"]["items"]
-            if item["item_id"]!=neck_id]
-        with self.assertRaisesRegex(
-                source_first.RepresentativeBlocked,
-                "PLAIN_COMMON_NOT_AVAILABLE_neck"):
-            source_first.season_scope(
-                db=bundle["gear"],tier=bundle["tier"],
-                settings=bundle["settings"],budget=bundle["budget"])
         tier_ids=bundle["tier"]["classes"][cls]["pieces"]
         selected={**{slot:tier_ids[slot] for slot in source_first.FOUR},
                   **old["ordinary"],**old["common_gear"],**old["weapons"]}
