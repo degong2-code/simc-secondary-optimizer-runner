@@ -127,7 +127,7 @@ def _existing_v268_four_stat_source_diagnostic(*, observed, csv_source):
             "unresolved_enchant_count"),
         "raw_static_zero_across_linked_source":raw_zero_full_source,
         "J_numeric_next_owner":(
-            "SIMC_EFFECTIVE_GEM_RATING_SOURCE_REQUIRED"
+            "SEASON_NOMINAL_ITEM_TOTAL_SOURCE_OR_VERIFIED_REFERENCE_REQUIRED"
             if raw_zero_full_source else None),
         "original_v266_raw_gate_bypassed":False,
         "official_J":None,"environment_ready":False,
@@ -1331,6 +1331,16 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                    "source_v221_stage_receipt_sha256":
                        (gem_source.get("source_stage") or {}).get(
                            "receipt_sha256")}
+        if gem_J is not None and nominal_gem_source is not None:
+            gem_J={**gem_J,
+                   "rating_origin":"SEASON_NOMINAL_PER_ITEM_TOTAL_SOURCE",
+                   "nominal_source_sha256":
+                       nominal_gem_source["source_sha256"],
+                   "nominal_source_game_build":expected_game_build,
+                   "source_v221_stage_receipt_sha256":
+                       gem_source["source_stage"]["receipt_sha256"],
+                   "v266_effect_points_numeric_required":False,
+                   "quality_and_official_admission_verified":False}
         numeric_evidence=(
             ([budget_evidence] if budget_evidence is not None else [])+
             (list(standard_budget_evidence_by_ilevel.values())
@@ -6005,6 +6015,9 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             zero_history_gem_ratings=nominal["rating_by_id"]
                             progress["four_stat_ordinary_nominal_source_unadmitted"]=(
                                 nominal)
+                            j_owner_diagnostic["original_v266_raw_gate_bypassed"]=True
+                            j_owner_diagnostic["J_numeric_next_owner"]=(
+                                "SEASON_NOMINAL_PER_ITEM_TOTAL_SUPPLIED_UNADMITTED")
                         elif observed.get(
                                 "four_stat_ordinary_source_complete_unadmitted"
                                 ) is True:

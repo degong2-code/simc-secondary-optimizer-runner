@@ -59,7 +59,7 @@ class SourceOnlyJSession(unittest.TestCase):
             csv_source={"status":"SOURCE_ITEM_PROPERTY_LINKS_ONLY_NOT_USER_ADMITTED"})
         self.assertTrue(all_unresolved["raw_static_zero_across_linked_source"])
         self.assertEqual(all_unresolved["J_numeric_next_owner"],
-                         "SIMC_EFFECTIVE_GEM_RATING_SOURCE_REQUIRED")
+                         "SEASON_NOMINAL_ITEM_TOTAL_SOURCE_OR_VERIFIED_REFERENCE_REQUIRED")
         self.assertFalse(all_unresolved["original_v266_raw_gate_bypassed"])
         self.assertEqual(all_unresolved["missing_leading_types"],[
             "crit_rating","haste_rating","mastery_rating","versatility_rating"])

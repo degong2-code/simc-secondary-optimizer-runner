@@ -41,6 +41,76 @@ class NormalBuildGemJ(unittest.TestCase):
                     manual_final_T=manual,gem_layout_receipt=layout,
                     gem_rating_by_id=ratings)
 
+    def test_season_nominal_j_bypasses_unresolved_v266_but_not_source_gate(self):
+        """Existing source-bounded v216 J connection needs no new SimC run."""
+        catalog,_,ui=prepared()
+        by_stat={stat:{"item_id":311100+i,"rating":23}
+                 for i,stat in enumerate(gems.ORDINARY_FOUR_STATS)}
+        nominal={"game_build":catalog["game_build"],
+                 "source_sha256":"9"*64,"by_stat":by_stat}
+        selected=gems.nominal_four_stat_from_season_source(
+            source=nominal,game_build=catalog["game_build"],
+            socket_total=5,special_gem_id=311200,need=build.need)
+        rows={slot:{"slot":slot,"item_id":12345,
+                    "ilevel":334,"options":{}}
+              for slot in ("head","wrists","waist","feet","shoulders")}
+        plan={"socket_counts":{"head":1,"wrists":2,"waist":1,"feet":1},
+              "special_gem_id":311200,"special_slot":"head",
+              "ordinary_gem_ids":selected["ordinary_gem_ids"],
+              gems.SOURCE_IDS_FIELD:sorted({311200,*selected["ordinary_gem_ids"]})}
+        _,layout=gems.arrange(rows,plan,build.need)
+        v268={"selected_gem_v221_same_build_items_all_present":True,
+              "selected_gem_v221_item_ids_unadmitted":
+                  sorted({311200,*selected["ordinary_gem_ids"]}),
+              "selected_gem_v221_source_properties_complete":False,
+              "selected_ordinary_gem_two_stat_budget_eligible_unadmitted":False,
+              "selected_gem_all_raw_points_known":False,
+              "enchant_source_sha256":"e"*64}
+        with tempfile.TemporaryDirectory() as tmp:
+            root=pathlib.Path(tmp)
+            source=root/"v213.json"
+            source.write_text("{}",encoding="utf8")
+            with mock.patch.object(build.environment_manifest,"read_json",
+                                   return_value=(catalog,"a"*64)), \\
+                 mock.patch.object(build.source_to_catalog,"verify_catalog"), \\
+                 mock.patch.object(build.user_catalog,"public_options",
+                                   return_value=ui), \\
+                 mock.patch.object(build,"_fresh_gem_item_source_stage",
+                     return_value={"candidate_path":str(root/"source.json"),
+                                   "source_stage":{"receipt_sha256":"b"*64}}), \\
+                 mock.patch.object(build.gem_enchant_stage,"view",
+                                   return_value=v268):
+                kwargs=dict(
+                    source_catalog_path=source,
+                    expected_game_build=catalog["game_build"],
+                    expected_simc_revision=catalog["simc_revision"],
+                    source_snapshot_folder=root,
+                    source_stage_root=root,
+                    gem_layout_receipt=layout,
+                    gem_rating_by_id=selected["rating_by_id"])
+                pending=build.preflight_new_season_source(**kwargs)
+                self.assertNotIn("physical_gem_J_arithmetic_unadmitted",
+                                 pending)
+                result=build.preflight_new_season_source(
+                    **kwargs,nominal_gem_source=nominal)
+                j=result["physical_gem_J_arithmetic_unadmitted"]
+                self.assertEqual(j["J_candidate_unadmitted"],92)
+                self.assertEqual(j["rating_origin"],
+                                 "SEASON_NOMINAL_PER_ITEM_TOTAL_SOURCE")
+                self.assertEqual(j["nominal_source_sha256"],"9"*64)
+                self.assertFalse(j["v266_effect_points_numeric_required"])
+                self.assertFalse(j["quality_and_official_admission_verified"])
+                self.assertIsNone(result["J"])
+                self.assertFalse(result["environment_ready"])
+                self.assertEqual((result["native_calls"],
+                                  result["network_calls"]),(0,0))
+                bad=dict(nominal,game_build="12.1.5.NOT_THIS_BUILD")
+                with self.assertRaisesRegex(
+                        build.EnvironmentBuildBlocked,
+                        "SOCKET_NOMINAL_J_SAME_BUILD_SOURCE_IDENTITY_REQUIRED"):
+                    build.preflight_new_season_source(
+                        **kwargs,nominal_gem_source=bad)
+
     def test_physical_four_colors_reconcile_existing_J_B_T(self):
         layout,ratings=stage()
         _,table,_=prepared()
