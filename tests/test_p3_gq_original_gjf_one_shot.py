@@ -96,6 +96,8 @@ class CombinedOriginalSources(unittest.TestCase):
         self.assertIn("[p3-gq-gjf-once]",s)
         self.assertIn("[p3-hs-other-spec-dps-once]",s)
         self.assertIn("p3_hs_other_spec_user_dps_20261108.json",s)
+        self.assertIn("P3_T1_DPS_NATIVE_AUDIT_ONCE",s)
+        self.assertIn("p3_ht_dps_native_audit.zip",s)
         self.assertIn("G_native_max",s)
         self.assertIn("special_gem_effect_independently_checked",s)
         self.assertIn("fetch-depth: 2",s)

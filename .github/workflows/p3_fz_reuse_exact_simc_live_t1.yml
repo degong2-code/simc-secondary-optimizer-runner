@@ -43,6 +43,7 @@ jobs:
       P3_T1_SPEC_CLASS: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[p3-hs-other-spec-dps-once]') && 'shaman' || 'paladin' }}
       P3_T1_SPEC_NAME: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[p3-hs-other-spec-dps-once]') && 'enhancement' || 'retribution' }}
       P3_T1_SPEC_RACE: dwarf
+      P3_T1_DPS_NATIVE_AUDIT_ONCE: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[p3-hs-other-spec-dps-once]') && '1' || '0' }}
       SIMC_PINNED_SOURCE_COMMIT: c20e2ad52e4c33711f74272309a5748125175fe8
       SIMC_PINNED_GAME_BUILD: 12.1.5.70783
       SIMC_PINNED_BINARY_SHA256: 980ed4640cecc3ed78b34ed0dc0363dbff2ed7d703174e9cc01f09d18570d36b
@@ -185,5 +186,6 @@ jobs:
           path: |
             p3_fr_zero_base_t1_receipt.json
             p3_fr_zero_base_t1_native_evidence.zip
+            p3_ht_dps_native_audit.zip
           if-no-files-found: ignore
           retention-days: 7

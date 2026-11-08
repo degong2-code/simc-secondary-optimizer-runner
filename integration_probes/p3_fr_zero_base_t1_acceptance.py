@@ -652,6 +652,11 @@ def main():
                     "global_optimum_proven":
                         observed["global_optimum_proven"],
                     "simc_native_gear_consumables_reused":True}
+                if os.environ.get("P3_T1_DPS_NATIVE_AUDIT_ONCE","0")=="1":
+                    from integration_probes import p3_ht_observe_existing_dps_native as observer
+                    rec["dps_native_audit"]=observer.record(
+                        applied,native,root,
+                        output_path=pathlib.Path("p3_ht_dps_native_audit.zip"))
             if source_only:
                 rec["status"]=(
                     "J_SOCKET_SOURCE_ONLY_SEALED_NOT_READY"
