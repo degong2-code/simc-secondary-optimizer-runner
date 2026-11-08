@@ -298,6 +298,67 @@ def _v191_raw_gear_tier_link(bundle, originals, revision):
             "environment_ready":False,"native_authorized":False}
 
 
+
+def _verified_one_spec_G_profile_scope(*, source_bundle, candidate,
+                                      selected_key, target_ilevel, revision):
+    """Build the selected v139 physical profile from ORIGINAL v232 G items.
+
+    The actual v216/v217/v212 READY path is required by the calling
+    v098 writer. Do not use v169's unrelated all-26 plain-neck selection,
+    copy historical gear, infer same-season membership or redo Native G.
+    """
+    import v232_simc_only_ordinary_representative as physical
+    need(type(candidate) is dict and
+         candidate.get("schema")==physical.SCHEMA and
+         candidate.get("status")==
+             "SIMC_SOURCE_PHYSICAL_CANDIDATE_NOT_ACTUAL_SEASON_PROOF" and
+         candidate.get("receipt_sha256")==physical.seed.digest(
+             physical.seed.canonical({
+                 k:v for k,v in candidate.items()
+                 if k!="receipt_sha256"}).encode("utf8")) and
+         type(candidate.get("selected_G_slot_ids")) is dict,
+         "FRESH_V232_ORIGINAL_G_PROFILE_SOURCE_RECEIPT_INVALID")
+    cls,spec=selected_key
+    key=cls+"/"+spec
+    gear=source_bundle["gear"]
+    tier=source_bundle["tier"]
+    need(candidate.get("game_build")==gear["season_build"]==
+             tier["retail_build"] and
+         candidate.get("simc_revision")==revision and
+         candidate.get("target_ilevel")==target_ilevel and
+         candidate.get("character",{}).get("class")==cls and
+         candidate.get("character",{}).get("spec")==spec,
+         "FRESH_V232_SELECTED_G_BUILD_SPEC_OR_ILEVEL_DRIFT")
+    tier_ids=tier["classes"][cls]["pieces"]
+    four=source_first.FOUR
+    selected={**{slot:tier_ids[slot] for slot in four},
+              **candidate["selected_ordinary"],
+              **candidate["selected_common"],
+              **candidate["selected_weapons"]}
+    need(selected==candidate["selected_G_slot_ids"] and
+         set(candidate["selected_common"])==set(source_first.COMMON) and
+         set(candidate["selected_ordinary"])==set(source_first.ORDINARY),
+         "FRESH_V232_USER_PHYSICAL_G_SLOT_DRIFT")
+    config=source_bundle["settings"]
+    original=pure.validate_season(config)
+    scope={name:copy.deepcopy(original[name]) for name in
+           ("schema","season","target_ilevel","character_level",
+            "gems","default_consumables")}
+    if original.get("simc_item_db_source") is not None:
+        scope["simc_item_db_source"]=original["simc_item_db_source"]
+    scope["common_gear"]=dict(candidate["selected_common"])
+    scope["specializations"]={key:{
+        "tier_ids":dict(tier_ids),
+        "four_tier_slots":list(four),
+        "ordinary":dict(candidate["selected_ordinary"]),
+        "weapons":dict(candidate["selected_weapons"])}}
+    need(scope["target_ilevel"]==target_ilevel,
+         "FRESH_V232_PROFILE_SETTINGS_TARGET_DRIFT")
+    pure.validate_season(scope)
+    return scope
+
+
+
 def season_profile_source_only(*, profile, cfg, weapon_layout, user,
                                season_profile_inputs, season_build,
                                simc_revision, fillers=None):
