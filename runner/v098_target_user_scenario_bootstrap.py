@@ -1322,11 +1322,23 @@ def preview_from_environment_build(user,folder,binary,revision,*,
     need(type(environment_result) is dict and
          environment_result.get("normal_build_entry") is True and
          type(environment_result.get("zero_history_build")) is dict and
-         environment_result["zero_history_build"].get("environment_ready") is False,
-         "SEASON_V216_NORMAL_BUILD_UNADMITTED_RESULT_REQUIRED")
+         environment_result["zero_history_build"].get("environment_ready")
+             in (False,True),
+         "SEASON_V216_NORMAL_BUILD_RESULT_REQUIRED")
     compilation=environment_result.get("source_compilation")
     need(type(compilation) is dict,
          "SEASON_V216_ORIGINAL_SOURCE_COMPILATION_REQUIRED")
+    installed_path=None
+    if environment_result["zero_history_build"]["environment_ready"] is True:
+        installed=compilation.get("verified_environment_install")
+        need(type(installed) is dict
+             and installed.get("environment_ready") is True
+             and installed.get("environment_installed") is True
+             and installed.get("status")==
+                 "FRESH_SEASON_VERIFIED_ENVIRONMENT_INSTALLED_READY"
+             and type(installed.get("stage_output_path")) is str,
+             "SEASON_V216_READY_WITHOUT_ORIGINAL_FRESH_INSTALL")
+        installed_path=installed["stage_output_path"]
     originals=compilation.get("v191_original_gear_tier_source_paths")
     inputs=compilation.get("v098_source_only_profile_inputs_unadmitted")
     missing=[]
@@ -1414,7 +1426,8 @@ def preview_from_environment_build(user,folder,binary,revision,*,
                  season_profile_inputs=inputs,
                  season_socket_plan=(derived_settings.get(
                      "v271_socket_plan_unadmitted")
-                     if derived_settings is not None else None))
+                     if derived_settings is not None else None),
+                 fresh_installed_environment_path=installed_path)
     proof=result["original_v191_gear_tier_source_unadmitted"]
     need(proof["source_catalog_artifact_sha256"]==
              calc.get("source_catalog_artifact_sha256") and
@@ -1423,6 +1436,8 @@ def preview_from_environment_build(user,folder,binary,revision,*,
          "SEASON_V216_GJFO_SOURCE_CATALOG_SHA_DRIFT")
     return {**result,
             "v216_to_v098_auto_source_linked_preview":True,
+            "fresh_installed_v212_source_reused":installed_path is not None,
+            "user_dps_executed":False,
             "season_settings_source_admitted_here":False,
             "verified_user_default_options_registered":False,
             "season_settings_physical_gem_flask_assembled_unadmitted":
@@ -1434,6 +1449,33 @@ def preview_from_environment_build(user,folder,binary,revision,*,
                 season_settings["default_consumables"]["omnium_talents"]
                 is not None,
             "v216_preflight_sha256":compilation.get("preflight_sha256")}
+
+
+
+def run_from_verified_environment_build(user,folder,binary,revision,*,
+                                        environment_result,
+                                        season_controls=None,
+                                        execute=False,cache_only=False,
+                                        open_folder=False):
+    """One already-built season -> original v098/v096/v094, no extra G/F Native.
+
+    The original v216/v217/v212 install is checked by v096 before the
+    manifest is materialized. Only execution (not planning) invokes SimC.
+    No synthetic source-only preview may authorize an adaptive run.
+    """
+    result=preview_from_environment_build(
+        user,folder,binary,revision,environment_result=environment_result,
+        season_controls=season_controls)
+    if not execute:
+        return result
+    need(result.get("status")=="READY_SOURCE_BOUND_SEASON_MANIFEST_ZERO_NATIVE"
+         and result.get("fresh_v212_installed_proof_reused") is True
+         and type(result.get("generated_manifest")) is str,
+         "FRESH_SEASON_INSTALLED_NATIVE_SOURCE_NOT_READY")
+    actual=entry.run_manifest(
+        result["generated_manifest"],cache_only=cache_only,
+        open_folder=open_folder)
+    return {"input_preparation":result,"native_result":actual}
 
 
 def run(user_path,folder,binary,revision,static_cache_path=None,
