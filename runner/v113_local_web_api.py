@@ -187,6 +187,19 @@ class LocalJobs:
                  not 5<=source_target_socket_count<=64)):
             raise environment_manifest.EnvironmentBlocked(
                 "SEASON_DECLARED_SOCKET_COUNT_INVALID")
+        # Resolve the requested build BEFORE any installed source reuse.
+        # Without an explicit build, recheck Blizzard's inexpensive version
+        # endpoint once. Never silently treat the newest installed *past*
+        # build as the currently active Retail season after a patch.
+        requested_game_build=game_build
+        discovered_build=None
+        if game_build is None:
+            try:
+                discovered_build=retail_build_source.discover(region="KR")
+            except retail_build_source.RetailVersionBlocked as exc:
+                raise environment_manifest.EnvironmentBlocked(str(exc)) from exc
+            game_build=discovered_build["game_build"]
+        version_network_calls=1 if discovered_build is not None else 0
         if (refresh_reason is None and native_G_binary is None and
             consumable_native_binary is None and
             not auto_native_F_requested and not auto_native_O_requested and
@@ -195,30 +208,31 @@ class LocalJobs:
             existing_special_gem_id is None):
             with self.season_source_lock:
                 prior=environment_build.find_verified_installed_season_environment(
-                    self.root,target_ilevel)
+                    self.root,target_ilevel,expected_game_build=game_build)
             if prior is not None:
-                return {**prior,"web_environment_scope":{
+                return {**prior,
+                    "network_calls":version_network_calls,
+                    "web_environment_scope":{
                     "schema":"v113_web_season_environment_build_scope_v1",
-                    "game_build":prior["installed_source_game_build"],
+                    "game_build":game_build,
                     "game_build_source":"PREVIOUS_V217_VERIFIED_INSTALL",
-                    "requested_game_build":game_build,
-                    "active_season_reverified_in_this_lookup":False,
-                    "retail_build_source_sha256":None,
+                    "game_build_resolution":(
+                        "BLIZZARD_PUBLIC_RETAIL_KR"
+                        if discovered_build is not None
+                        else "EXPLICIT_GAME_BUILD"),
+                    "requested_game_build":requested_game_build,
+                    "active_season_reverified_in_this_lookup":
+                        discovered_build is not None,
+                    "retail_build_source_sha256":(
+                        discovered_build["source_sha256"]
+                        if discovered_build is not None else None),
+                    "retail_version_network_calls":version_network_calls,
                     "target_ilevel":target_ilevel,
                     "environment_ready":True,"environment_installed":True,
-                    "native_calls":0,"network_calls":0,
+                    "native_calls":0,"network_calls":version_network_calls,
                     "dps_optimization_started":False,
                     "reused_verified_installed_season":True,
                     "refresh_reason":None}}
-        # Discover public Retail version only when the normal user does not
-        # supply a build. No historical build or item ID is a fallback.
-        discovered_build=None
-        if game_build is None:
-            try:
-                discovered_build=retail_build_source.discover(region="KR")
-            except retail_build_source.RetailVersionBlocked as exc:
-                raise environment_manifest.EnvironmentBlocked(str(exc)) from exc
-            game_build=discovered_build["game_build"]
         # Immutable by-build Wago stage cannot be silently replayed to
         # claim new item content at the exact same game build. The existing
         # targeted static correction path must handle a confirmed hotfix.
@@ -280,6 +294,9 @@ class LocalJobs:
             "retail_build_source_sha256":(
                 discovered_build["source_sha256"]
                 if discovered_build is not None else None),
+            "retail_version_network_calls":version_network_calls,
+            "active_season_reverified_in_this_lookup":
+                discovered_build is not None,
             "internal_numeric_probe":"paladin/retribution",
             "numeric_probe_not_whole_season_G_certification":True,
             "local_native_G_requested":native_G_binary is not None,

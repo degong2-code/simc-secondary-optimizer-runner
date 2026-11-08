@@ -229,26 +229,53 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertFalse((self.root/"runs").exists())
 
 
-    def test_p3_fy_web_uses_verified_prior_install_before_retail_and_wago(self):
+    def test_p3_fy_web_reuse_requires_exact_request_or_live_build(self):
         installed={"status":"VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED",
                    "environment_ready":True,"environment_installed":True,
                    "installed_source_game_build":"12.1.5.70529",
                    "installed_source_simc_revision":"a"*40,
                    "G":2800,"J":140,"F":170,"O":{},
                    "B":3110,"T":3110,"native_calls":0,"network_calls":0}
+        # Explicit pinned build: sealed source reuse requires NO remote
+        # version lookup and reuses the original static season identity.
         with mock.patch.object(web.environment_build,
                 "find_verified_installed_season_environment",
                 return_value=installed) as reuse, \
              mock.patch.object(web.retail_build_source,"discover",
-                side_effect=AssertionError("DO_NOT_POLL_ON_REUSE")), \
+                side_effect=AssertionError("NO_POLL_FOR_EXPLICIT_BUILD")), \
              mock.patch.object(web.environment_build,"build_environment",
                 side_effect=AssertionError("DO_NOT_RECOLLECT_ON_REUSE")):
-            response=self.post("/api/v1/environment/season-build",{})
+            response=self.post("/api/v1/environment/season-build",{
+                "game_build":"12.1.5.70529"})
         self.assertEqual(response.status_code,200,response.text)
         self.assertTrue(response.json()["environment_ready"])
         self.assertEqual(response.json()["web_environment_scope"][
             "game_build_source"],"PREVIOUS_V217_VERIFIED_INSTALL")
-        reuse.assert_called_once_with(self.app.state.jobs.root,334)
+        self.assertEqual(response.json()["web_environment_scope"][
+            "game_build_resolution"],"EXPLICIT_GAME_BUILD")
+        self.assertEqual(response.json()["web_environment_scope"][
+            "network_calls"],0)
+        reuse.assert_called_once_with(
+            self.app.state.jobs.root,334,expected_game_build="12.1.5.70529")
+        # Normal user with no build gets the exact live build identity first.
+        live={"game_build":"12.1.5.70529","source_sha256":"a"*64}
+        with mock.patch.object(web.retail_build_source,"discover",
+                return_value=live) as discovery, \
+             mock.patch.object(web.environment_build,
+                "find_verified_installed_season_environment",
+                return_value=installed) as reuse, \
+             mock.patch.object(web.environment_build,"build_environment",
+                side_effect=AssertionError("NO_RECOLLECTION_ON_SAME_BUILD")):
+            current=self.post("/api/v1/environment/season-build",{})
+        self.assertEqual(current.status_code,200,current.text)
+        discovery.assert_called_once_with(region="KR")
+        reuse.assert_called_once_with(
+            self.app.state.jobs.root,334,expected_game_build="12.1.5.70529")
+        current_scope=current.json()["web_environment_scope"]
+        self.assertTrue(current_scope["active_season_reverified_in_this_lookup"])
+        self.assertEqual(current_scope["retail_version_network_calls"],1)
+        self.assertEqual(current_scope["retail_build_source_sha256"],"a"*64)
+        self.assertEqual(current.json()["network_calls"],1)
         with mock.patch.object(web.environment_build,
                 "find_verified_installed_season_environment",
                 side_effect=AssertionError("REFRESH_CANNOT_REUSE")), \
@@ -282,6 +309,45 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(changed.status_code,422,changed.text)
         self.assertEqual(changed.json()["detail"]["code"],
                          "SAME_BUILD_CONTENT_CHANGE_EXACT_SOURCE_CORRECTION_REQUIRED")
+
+    def test_p3_hl_different_active_build_cannot_reuse_cached_environment(self):
+        """A new live patch must enter the existing season builder, not old READY."""
+        current={"game_build":"12.1.5.70783","source_sha256":"c"*64}
+        fresh={"status":"FRESH_SOURCE_PENDING",
+               "environment_ready":False,
+               "environment_installed":False,"native_calls":0}
+        with mock.patch.object(web.retail_build_source,"discover",
+                               return_value=current) as discover, \
+             mock.patch.object(web.environment_build,
+                 "find_verified_installed_season_environment",
+                 return_value=None) as reuse, \
+             mock.patch.object(web.environment_build,"build_environment",
+                               return_value=fresh) as build:
+            response=self.post("/api/v1/environment/season-build",{})
+        self.assertEqual(response.status_code,200,response.text)
+        discover.assert_called_once_with(region="KR")
+        reuse.assert_called_once_with(self.app.state.jobs.root,334,
+            expected_game_build="12.1.5.70783")
+        self.assertEqual(build.call_args.kwargs["fresh_collection_inputs"][
+            "expected_game_build"],"12.1.5.70783")
+        self.assertFalse(response.json()["environment_ready"])
+        self.assertEqual(response.json()["web_environment_scope"][
+            "retail_version_network_calls"],1)
+        # Explicit pinned build allows an offline check but never scans or
+        # reuses the numerically closest or most recent installed patch.
+        with mock.patch.object(web.retail_build_source,"discover",
+                side_effect=AssertionError("EXPLICIT_NO_DISCOVERY")), \
+             mock.patch.object(web.environment_build,
+                "find_verified_installed_season_environment",
+                return_value=None) as reuse, \
+             mock.patch.object(web.environment_build,"build_environment",
+                return_value=fresh):
+            pinned=self.post("/api/v1/environment/season-build",{
+                "game_build":"12.1.5.70783"})
+        self.assertEqual(pinned.status_code,200,pinned.text)
+        reuse.assert_called_once_with(self.app.state.jobs.root,334,
+            expected_game_build="12.1.5.70783")
+        self.assertFalse(pinned.json()["environment_ready"])
 
     def test_p3_fr_zero_base_build_auto_retail_version_from_public_source(self):
         # No user-supplied game_build, historical ID, or client secrets.

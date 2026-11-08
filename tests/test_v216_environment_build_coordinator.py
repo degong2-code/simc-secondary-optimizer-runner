@@ -81,6 +81,77 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
 
 
 
+    def test_p3_hl_reuse_requires_exact_game_build_even_with_verified_manifest(self):
+        """Exact build selection is structural, not extra SimC validation."""
+        stage_root=self.root/"season-cache"
+        base=stage_root/"_fresh_season_sources"
+        for build,mtime,revision in (
+                ("12.1.5.70575",40,"a"*40),
+                ("12.1.5.70783",30,"b"*40)):
+            root=base/("wago_"+build)
+            docs=root/"fresh_source"
+            docs.mkdir(parents=True)
+            key=("1"*64 if build.endswith("70575") else "2"*64)
+            stage_sha="3"*64
+            installed={
+                "manifest_sha256":key,"game_build":build,
+                "target_ilevel":334,"simc_revision":revision,
+                "source_catalog_artifact_sha256":"4"*64,
+                "source_catalog_manifest_sha256":"5"*64,
+                "staged_source_environment_sha256":stage_sha,
+                "trusted_budget_evidence_sha256":"6"*64,
+                "original_v196_prepared_options_sha256":"7"*64,
+                "official_G":2800,"official_J":92,"official_F":165,
+                "official_O":{},"official_B":3057,"official_T":3057,
+                "published_verified_options":[],
+                "published_verified_option_count":0}
+            file=docs/("v212_installed_"+key[:20]+".json")
+            file.write_text(json.dumps(installed),encoding="utf8")
+            (docs/"v213_candidate_catalog.json").write_text(
+                json.dumps({"game_build":build,"simc_revision":revision,
+                  "manifest_sha256":"5"*64}),encoding="utf8")
+            (docs/("v212_environment_"+stage_sha[:20]+".json")).write_text(
+                json.dumps({"manifest_sha256":stage_sha,
+                    "source_catalog_artifact_sha256":"4"*64,
+                    "target_ilevel":334,
+                    "original_v216_preflight_sha256":"8"*64}),
+                encoding="utf8")
+            import os
+            os.utime(file,(mtime,mtime))
+        def source_json(p,max_bytes=25000000):
+            val=json.loads(pathlib.Path(p).read_text(encoding="utf8"))
+            # Source catalog SHA comes from sealed artifact bytes in the
+            # real environment; this fixture records identity without
+            # recreating an unrelated v217 stage engine.
+            return val,("4"*64 if p.name=="v213_candidate_catalog.json"
+                        else "0"*64)
+        with mock.patch.object(v216.environment_manifest,"read_json",
+                side_effect=source_json), \
+             mock.patch.object(
+                v216.environment_manifest,"verify_fresh_installed_environment"), \
+             mock.patch.object(
+                v216.environment_manifest,"verify_fresh_source_environment"), \
+             mock.patch.object(v216.source_to_catalog,"verify_catalog"), \
+             mock.patch.object(v216.stage_engine,"verify_stage",
+                return_value={"receipt_sha256":"9"*64}):
+            get=lambda b:v216.find_verified_installed_season_environment(
+                stage_root,334,expected_game_build=b)
+            latest=get("12.1.5.70783")
+            self.assertEqual(latest["installed_source_game_build"],
+                             "12.1.5.70783")
+            self.assertEqual(latest["installed_source_simc_revision"],"b"*40)
+            self.assertEqual(get("12.1.5.70575")[
+                "installed_source_game_build"],"12.1.5.70575")
+            self.assertIsNone(get("12.2.0.99999"))
+            self.assertIsNone(v216.find_verified_installed_season_environment(
+                stage_root,335,expected_game_build="12.1.5.70783"))
+        for b in (None,"../70575","12.1.5.70783/..","broken"):
+            with self.subTest(b=b),self.assertRaisesRegex(
+                    v216.EnvironmentBuildBlocked,
+                    "V216_REUSE_EXACT_GAME_BUILD_REQUIRED"):
+                v216.find_verified_installed_season_environment(
+                    stage_root,334,expected_game_build=b)
+
     def test_reuse_sealed_tier_source_in_normal_build_without_new_certifier(self):
         from tests.test_v251_db2_raid_tier_simc_bridge import (
             fixture,pinned_thirteen_class_source,BUILD)

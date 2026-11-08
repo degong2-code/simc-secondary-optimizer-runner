@@ -209,38 +209,44 @@ def _verified_manifest(path):
         return None
 
 
-def find_verified_installed_season_environment(sessions_root, target_ilevel):
-    """Read-only v217+v212 reuse; same-season assumption is a caller policy.
+def find_verified_installed_season_environment(
+        sessions_root, target_ilevel, *, expected_game_build):
+    """Read-only, exact-build v217/v212 reuse across all 26 DPS profiles.
 
-    An installed source's game/SimC build is historical provenance, not a
-    restriction on a NEW DPS binary. A season/content refresh must bypass this.
+    A matching itemlevel alone is NEVER sufficient; even a fully sealed
+    prior installed environment is stale for a different live game build.
+    SimC binary revision changes do not by themselves invalidate static
+    item-source evidence for the same authenticated build. Use the exact
+    season folder to avoid scanning every historical patch and its files.
     """
     need(type(target_ilevel) is int and 1<=target_ilevel<=1000,
          "V216_REUSE_TARGET_ILEVEL_INVALID")
+    need(type(expected_game_build) is str and
+         re.fullmatch(r"\d+(?:\.\d+){3}",expected_game_build) is not None,
+         "V216_REUSE_EXACT_GAME_BUILD_REQUIRED")
     supplied=pathlib.Path(sessions_root).expanduser()
     need(not supplied.is_symlink(),"V216_REUSE_SESSION_ROOT_SYMLINK")
     workspace=supplied.resolve()/"_fresh_season_sources"
     if not workspace.is_dir() or workspace.is_symlink():
         return None
+    folder=workspace/("wago_"+expected_game_build)
+    if folder.is_symlink() or not folder.is_dir():
+        return None
+    docs=folder/"fresh_source"
+    if docs.is_symlink() or not docs.is_dir():
+        return None
     candidates=[]
-    for folder in workspace.iterdir():
-        if (folder.is_symlink() or not folder.is_dir() or
-            re.fullmatch(r"wago_\d+(?:\.\d+){3}",folder.name) is None):
+    for count,file in enumerate(docs.glob("v212_installed_*.json")):
+        if count>=64:
+            break
+        if (file.is_symlink() or not file.is_file() or
+            re.fullmatch(r"v212_installed_[a-f0-9]{20}\.json",file.name)
+               is None):
             continue
-        docs=folder/"fresh_source"
-        if docs.is_symlink() or not docs.is_dir():
-            continue
-        for count,file in enumerate(docs.glob("v212_installed_*.json")):
-            if count>=64:
-                break
-            if (file.is_symlink() or not file.is_file() or
-                re.fullmatch(r"v212_installed_[a-f0-9]{20}\.json",file.name)
-                   is None):
-                continue
-            try:
-                candidates.append((file.stat().st_mtime,folder,file))
-            except OSError:
-                pass
+        try:
+            candidates.append((file.stat().st_mtime,folder,file))
+        except OSError:
+            pass
     candidates.sort(key=lambda row:(-row[0],row[2].as_posix()))
     for _,root,file in candidates[:64]:
         try:
@@ -250,6 +256,7 @@ def find_verified_installed_season_environment(sessions_root, target_ilevel):
             environment_manifest.verify_fresh_installed_environment(doc)
             key=doc["manifest_sha256"]
             if (file.name!="v212_installed_"+key[:20]+".json" or
+                doc["game_build"]!=expected_game_build or
                 doc["game_build"]!=root.name[5:] or
                 doc["target_ilevel"]!=target_ilevel):
                 continue
