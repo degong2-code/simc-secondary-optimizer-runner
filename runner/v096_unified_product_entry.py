@@ -218,7 +218,11 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
             "simc_revision":doc["simc_revision"],
             "target_ilevel":doc["target_ilevel"],
             "base_B":doc["official_B"],"final_T":doc["official_T"],
-            "fixed_O":dict(oil),"J":doc["official_J"],"F":doc["official_F"]}
+            "fixed_O":dict(oil),"J":doc["official_J"],"F":doc["official_F"],
+            "source_catalog_manifest_sha256":
+                doc["source_catalog_manifest_sha256"],
+            "source_catalog_artifact_sha256":
+                doc["source_catalog_artifact_sha256"]}
     return {"season_budget":budget,"season_source_identity":identity,
             "oil_by_hand":{},"fresh_v212_installed":True}
 
