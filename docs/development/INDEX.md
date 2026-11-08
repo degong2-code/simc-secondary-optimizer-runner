@@ -1,3 +1,5 @@
+> **2026-11-08 P3-HA 한정 실 source-only J:** 기존 v216·v268 원본 재수집 및 봉인 PASS(native0, [#42442406954](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42442406954))이나 J 4종 두스탯 owner/배치 결과 null·READY=false. 실제 데이터 누락 vs owner 연결 실패는 현재 영수증만으로 단정 불가. 신규 로직보다 기존 v268 두 조건의 작은 결과 투영/원본 재사용을 우선. [P3-HA](notes/2026-11-08_p3-ha-source-only-j-owner-followup.md).
+
 > **2026-11-08 P3-GZ Native 근거 추가:** 정확한 원래 G SimC 바이너리와 입력을 재사용한 로컬 Native4(exit0), 선언 5 `gem_id`의 JSON2 `buffed_stats`에서 실제 일반보석 CHMV +92 관측. `player.gear`는 보석을 반영하지 않는 수치라 0처럼 보일 수 있음. 이 사례는 소켓 획득 연구나 특수효과 Gate를 요구하지 않지만 최고품질 공식 J·v222 B/T·v212 READY 입증도 아님. [P3-GZ](notes/2026-11-08_p3-gz-pinned-simc-gem5-real-native.md). 기존 C3/C4·E1/E3 경로 재사용 후 J source-owner 연결 우선.
 
 # SIMC SECONDARY OPTIMIZER — 기능 중심 기술 자산 라이브러리
