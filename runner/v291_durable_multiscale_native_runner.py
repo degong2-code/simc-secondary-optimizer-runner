@@ -77,11 +77,11 @@ def _request(context, flask, output, plan):
     return request, folder
 
 
-def _verified_row(req, folder, calibration, *, allow_cache):
+def _verified_row(req, binary, folder, calibration, *, allow_cache):
     # No second Native. Original v065 checks input bytes, JSON2 and receipt
     # against exact v064 case-key and real SimC revision/stat validation.
     receipt = engine.execute_one(
-        req, calibration, folder, {"native_attempts": 0},
+        req, calibration, binary, folder, {"native_attempts": 0},
         cache_only=allow_cache)
     native_bytes = (folder / "result.json").read_bytes()
     actual = oil.ingest_native(req, json.loads(native_bytes), native_bytes)
@@ -248,7 +248,7 @@ def run(context, flask_vector, binary, output, *,
         plan = {k: row[k] for k in ("index", "phase",
                                     "target", "iterations")}
         req, folder = _request(context, flask_vector, output, plan)
-        actual, _ = _verified_row(req, folder, calibration, allow_cache=True)
+        actual, _ = _verified_row(req, binary, folder, calibration, allow_cache=True)
         expected = _compact(req, actual, row["source"], plan)
         need(expected == row, "RECORDED_NATIVE_CASE_BYTES_OR_SUMMARY_DRIFT")
         observations.append(row)
