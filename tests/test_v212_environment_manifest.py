@@ -530,7 +530,7 @@ class FreshEnvironmentSourceStageTests(unittest.TestCase):
             self.assertEqual(second["stage_status"],"REUSED_VERIFIED")
             self.assertEqual(second["manifest_sha256"],first["manifest_sha256"])
             reused=environment_build.find_verified_installed_season_environment(
-                root,334)
+                root,334,expected_game_build=catalog["game_build"])
             self.assertIsNotNone(reused)
             self.assertEqual(reused["installed_manifest_sha256"],
                              first["manifest_sha256"])
@@ -542,7 +542,7 @@ class FreshEnvironmentSourceStageTests(unittest.TestCase):
             self.assertFalse(reused["active_season_reverified_in_this_lookup"])
             self.assertIsNone(
                 environment_build.find_verified_installed_season_environment(
-                    root,335))
+                    root,335,expected_game_build=catalog["game_build"]))
             manual=p.compile_fresh_installed_environment(
                 source_catalog=catalog,source_artifact_sha256=artifact_sha,
                 staged_source_environment=staged_data,
