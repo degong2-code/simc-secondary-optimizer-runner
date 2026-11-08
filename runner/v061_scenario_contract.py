@@ -58,6 +58,22 @@ def vector(v,label):
          label+"_VALUES")
     return dict(v)
 
+def strict_final_half_base_caps(base_B, fixed_O):
+    """Maximum FREE B per stat so final c=B+O is strictly below T/2.
+
+    User-approved global hard cap: 2*(base_s+oil_s)<B+sum(oil).
+    Unlike the scenario's optional max_fraction (on legacy B), this rule
+    is mandatory and applies after fixed non-distributable O is included.
+    Neither oil nor static L/E is added again to B/T.
+    """
+    need(type(base_B) is int and 1<=base_B<=100000,
+         "STRICT_HALF_BASE_B_REQUIRED")
+    oil=vector(fixed_O,"STRICT_HALF_FIXED_O")
+    T=base_B+sum(oil.values())
+    cap=(T-1)//2
+    return {s:cap-oil[s] for s in STATS}
+
+
 def shares(v,label):
     keys_exact(v,STATS,label)
     need(all(type(v[k]) in (float,int) and math.isfinite(v[k])
@@ -205,7 +221,9 @@ def normalize(doc):
     total=target["manual_total"]
     if total is not None:
         min_actual={k:max(manual_mins[k],math.ceil(lows[k]*total-1e-9)) for k in STATS}
-        cap_actual={k:math.floor(highs[k]*total+1e-9) for k in STATS}
+        strict_caps=strict_final_half_base_caps(total,external_oil)
+        cap_actual={k:min(math.floor(highs[k]*total+1e-9),
+                          strict_caps[k]) for k in STATS}
         need(all(min_actual[k]<=cap_actual[k] for k in STATS) and
              sum(min_actual.values())<=total<=sum(cap_actual.values()),
              "UNFEASIBLE_MANUAL_TOTAL_BOUNDS")

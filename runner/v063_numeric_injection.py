@@ -188,7 +188,10 @@ def check_target(contract,budget,target):
     need(sum(target.values())==total,"OFFICIAL_T_TARGET_MISMATCH")
     lows=budget["effective_floor_if_possible"]
     caps=contract["scenario"]["constraints"]["max_fraction"]
-    need(all(lows[k]<=target[k]<=int(math.floor(total*caps[k]+1e-9))
+    strict_caps=scenario.strict_final_half_base_caps(
+        total,contract["budget"]["external_temporary_rating"])
+    need(all(lows[k]<=target[k]<=min(
+                 int(math.floor(total*caps[k]+1e-9)),strict_caps[k])
              for k in STATS),"TARGET_OUTSIDE_SPECIAL_FLOOR_OR_CAP")
     return total
 
