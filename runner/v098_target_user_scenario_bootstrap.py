@@ -671,6 +671,8 @@ def _materialize_admitted_season_v096(*, source_only,season_profile_inputs,
         "output_dir":str(folder/"simc_results"),
         "plan":plan,
         "season_environment_receipt_sha256":source_sha,
+        **({"original_v191_gear_tier_source_unadmitted":original_v191_link}
+           if original_v191_link is not None else {}),
         "user_does_not_supply_full_gear_or_simc_profile":True,
         "season_source_not_full_policy_A_option_coverage":True,
         "fresh_v212_installed_proof_reused":
