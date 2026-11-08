@@ -8,3 +8,5 @@
 - **Verification:** focused new selected packed owner SHA/rating/selected-ID tamper tests, v230 quality match/mismatch test, existing regression suite. Actions proof applies only to focused offline scope; real fresh season v212 READY/native DPS not claimed.
 - **Remaining:** same-season actual v221/v230/v232 stage must produce all receipts; G/F/O source-owner receipts and original v212 installer must all reconcile. Real product single-character DPS E2E still not completed. Selection of multiple special-gem types in catalog/UI remains separate. v220 optional enchant proofs do not block proven baseline.
 - **Efficiency:** 1 small already packaged read re-used in original owner, no new network, no recompiled data source, no full-season gem DB, no Native. No main merge or Project UI change.
+
+- **Focused correction:** #42449343314 DEV_LEDGER passed and original 401 older/focused cases ran; newly added official J test failed on a synthetic preflight missing `environment_ready=False`, not a product proof failure. Restored the original v216 preflight contract in the test fixture; final retest result must be read from next run.

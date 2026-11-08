@@ -183,6 +183,7 @@ class NormalBuildGemJ(unittest.TestCase):
         pre={"schema":build.FRESH_SOURCE_PREFLIGHT_SCHEMA,
              "game_build":"12.1.5.70783",
              "simc_revision":catalog["simc_revision"],
+             "environment_ready":False,
              "source_catalog_manifest_sha256":"a"*64}
         j_preview={
            "rating_origin":"SEASON_NOMINAL_PER_ITEM_TOTAL_SOURCE",
