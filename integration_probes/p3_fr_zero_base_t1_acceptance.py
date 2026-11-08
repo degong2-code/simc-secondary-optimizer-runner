@@ -401,6 +401,13 @@ def main():
             raise ValueError("P3_GP_F_ONLY_EXACT_ITEM_ID_REQUIRED")
         rec["selected_f_only_native_mode"]=f_only
         rec["selected_J_socket_source_only_mode"]=source_only
+        dps_once=os.environ.get("P3_T1_DPS_E2E_ONCE","0")
+        if dps_once not in ("0","1"):
+            raise ValueError("P3_HO_USER_DPS_OPT_IN_INVALID")
+        dps_once=dps_once=="1"
+        if dps_once and (source_only or f_only or special is None or exact_f is None):
+            raise ValueError("P3_HO_REAL_USER_DPS_GJFO_INPUTS_REQUIRED")
+        rec["user_dps_e2e_requested"]=dps_once
         rec["requested_max_F_native_calls"]=(
             0 if source_only else 2 if f_only else 8)
         live=retail.discover(region="KR")
@@ -582,6 +589,46 @@ def main():
                    installed.get("status")==
                        "FRESH_SEASON_VERIFIED_ENVIRONMENT_INSTALLED_READY"
                    and installed.get("stage_output_path"))
+            if dps_once:
+                if not ready:
+                    raise ValueError("P3_HO_INSTALLED_READY_REQUIRED_BEFORE_DPS")
+                # Execute exactly one approved user target through the ORIGINAL
+                # v098/v096/v094 adaptive route. SimC owns effects and DPS.
+                # No extra J/G/F Native probe or per-spec sweep.
+                import v098_target_user_scenario_bootstrap as user_boot
+                import v106_user_session_controller as user_sessions
+                user=user_sessions.user_scenario(
+                    user_sessions.standard_controls(
+                        ("paladin","retribution")))
+                user["oil_hands"]=[]
+                end_to_end=user_boot.run_from_verified_environment_build(
+                    user,root/"one_user_dps",candidate,
+                    pin["revision_hint"],environment_result=result,
+                    execute=True,open_folder=False)
+                applied=end_to_end["input_preparation"]
+                native=end_to_end["native_result"]
+                observed=native["user_result"]
+                if (not native["status"].startswith("PASS") or
+                    applied["plan"]["budget_source"]!=
+                        "ADMITTED_FRESH_SEASON_GJFO_V212_V217" or
+                    observed["base_B"]!=result["B"] or
+                    observed["final_T"]!=result["T"] or
+                    observed["confidence_level"]!=0.95):
+                    raise ValueError("P3_HO_USER_DPS_SOURCE_OR_RESULT_DRIFT")
+                rec["user_dps_e2e"]={
+                    "status":native["status"],
+                    "native_calls_cumulative":
+                        native["native_calls_cumulative"],
+                    "budget_source":native["budget_source"],
+                    "base_B":observed["base_B"],
+                    "final_T":observed["final_T"],
+                    "observed_first_choice":
+                        observed["observed_first_choice"],
+                    "confirmation_pair_direction_supported_at_95":
+                        observed["confirmation_pair_direction_supported_at_95"],
+                    "global_optimum_proven":
+                        observed["global_optimum_proven"],
+                    "simc_native_gear_consumables_reused":True}
             if source_only:
                 rec["status"]=(
                     "J_SOCKET_SOURCE_ONLY_SEALED_NOT_READY"
@@ -599,7 +646,9 @@ def main():
                     if f_receipt is not None and not ready
                     else "F_ONLY_NATIVE_SOURCE_OR_QUALITY_PENDING")
             else:
-                rec["status"]="ZERO_BASE_T1_PASS" if ready else "ZERO_BASE_T1_NOT_READY"
+                rec["status"]=(
+                    "ZERO_BASE_USER_DPS_E2E_PASS" if dps_once and ready else
+                    "ZERO_BASE_T1_PASS" if ready else "ZERO_BASE_T1_NOT_READY")
     except Exception as error:
         rec["status"]="ZERO_BASE_T1_BLOCKED"
         rec["exception_type"]=type(error).__name__
@@ -619,10 +668,12 @@ def main():
                 "selected_J_socket_source_only_mode",
                 "original_source_verified_F_uninstalled",
                 "GJF_original_source_owner_summary","diagnostics",
-                "environment_ready","environment_installed")},ensure_ascii=False,default=str),
+                "environment_ready","environment_installed",
+                "user_dps_e2e_requested","user_dps_e2e")},ensure_ascii=False,default=str),
             flush=True)
     return 0 if rec["status"] in (
         "ZERO_BASE_T1_PASS",
+        "ZERO_BASE_USER_DPS_E2E_PASS",
         "F_ONLY_ORIGINAL_SIMC_SOURCE_VERIFIED_NOT_ENVIRONMENT_READY",
         "J_SOCKET_SOURCE_ONLY_SEALED_NOT_READY") else 2
 
