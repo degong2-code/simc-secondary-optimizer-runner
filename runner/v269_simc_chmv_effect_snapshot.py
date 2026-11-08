@@ -197,8 +197,8 @@ def prepare_ordinary_gem(*, profile, slot, ordinary_gem_id):
          ordinary_gem_id not in (240967,240983),
          "V269_GEM_PHYSICAL_INPUT_REQUIRED")
     need(not re.search(r"(?:^|,)gem_id=",profile,re.MULTILINE) and
-         not re.search(r"(?m)^\\s*gear_(?:crit|haste|mastery|versatility)_rating=",profile) and
-         not re.search(r"(?m)^\\s*(?:copy|profileset\\.|json2|output|html)=",profile),
+         not re.search(r"(?m)^\s*gear_(?:crit|haste|mastery|versatility)_rating=",profile) and
+         not re.search(r"(?m)^\s*(?:copy|profileset\.|json2|output|html)=",profile),
          "V269_GEM_UNCONFOUNDED_NATIVE_INPUT_REQUIRED")
     lines=profile.splitlines(keepends=True)
     located=[(i,line) for i,line in enumerate(lines)
