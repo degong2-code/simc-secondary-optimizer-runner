@@ -468,6 +468,12 @@ def main():
         hae_ten=hae_ten=="1"
         if hae_ten and (not hy_longrun or had_eight):
             raise ValueError("P3_HAE_MUST_USE_EXCLUSIVE_V291_LONGRUN")
+        hag_portable=os.environ.get("P3_T1_V292_PORTABLE_ONCE","0")
+        if hag_portable not in ("0","1"):
+            raise ValueError("P3_HAG_EXACT_PORTABLE_OPT_IN_REQUIRED")
+        hag_portable=hag_portable=="1"
+        if hag_portable and (not hy_longrun or hae_ten or had_eight):
+            raise ValueError("P3_HAG_MUST_USE_EXCLUSIVE_V291_LONGRUN")
         dps_once=os.environ.get("P3_T1_DPS_E2E_ONCE","0")
         if dps_once not in ("0","1"):
             raise ValueError("P3_HO_USER_DPS_OPT_IN_INVALID")
@@ -707,124 +713,175 @@ def main():
                         prepared.get("fresh_v212_installed_proof_reused") is not True):
                         raise ValueError("P3_HY_VERIFIED_V098_MANIFEST_REQUIRED")
                     ready_input=entry.source(prepared["generated_manifest"])
-                    if had_eight or hae_ten:
+                    if had_eight or hae_ten or hag_portable:
                         # v096 reauthenticates a separate higher-budget session.
                         ready_input,_=longrun.stage_extended_manifest(
                             ready_input,prepared["generated_manifest"],12,
                             source_loader=entry.source)
-                    total_cap=12 if (had_eight or hae_ten) else 6
+                    total_cap=12 if (had_eight or hae_ten or hag_portable) else 6
                     batches=((4,6) if hae_ten else
                              (4,4) if had_eight else (2,1))
                     required_cases=sum(batches)
                     stage=root/"one_user_dps"/"v291_native"
-                    try:
-                        first=longrun.run(
+                    if hag_portable:
+                        from runner import v292_portable_native_case_cache as portable
+                        origin_archive=pathlib.Path(
+                            ".p3-hag-origin/p3_hae_v291_native_evidence.zip"
+                        ).resolve(strict=True)
+                        origin_sha=(
+                            "c53dc09015377ccaf3d53f24bb85950e3999efacecc629be756b9f8856ef5fa9")
+                        reused=portable.import_verified_archive(
                             ready_input["context"],ready_input["flask"],
-                            candidate,stage,max_native_calls=total_cap,
-                            max_new_native_this_invocation=batches[0])
-                        second=longrun.run(
-                            ready_input["context"],ready_input["flask"],
-                            candidate,stage,max_native_calls=total_cap,
-                            max_new_native_this_invocation=batches[1])
-                        replay=longrun.run(
-                            ready_input["context"],ready_input["flask"],
-                            candidate,stage,max_native_calls=total_cap,
-                            max_new_native_this_invocation=0,cache_only=True)
-                    except Exception:
-                        # Capture only exact SimC case files while the
-                        # temporary zero-history workspace still exists.
-                        audit_zip=pathlib.Path(
-                            "p3_hae_v291_failure_evidence.zip" if hae_ten else
-                            "p3_hy_v291_failure_evidence.zip")
-                        names={"V291_SESSION.json","V291_PENDING.json",
-                               "V291_JOURNAL.jsonl","V291_PROGRESS.json",
-                               "V291_RESULT.json","V065_PROGRESS.json",
-                               "input.simc","result.json","native_receipt.json",
-                               "stderr.txt"}
-                        budget_bytes=0
-                        with zipfile.ZipFile(audit_zip,"x",
+                            candidate,stage,origin_archive,origin_sha,
+                            max_native_calls=12)
+                        imported=longrun.read_json(stage/"V292_IMPORT.json")
+                        pair=reused.get("confirmed_selected_pair_95")
+                        native_rows=longrun._load_journal(stage/"V291_JOURNAL.jsonl")
+                        if (reused["completed_cases"]!=10
+                            or reused["new_native_this_invocation"]!=0
+                            or reused["native_attempts_cumulative"]!=10
+                            or len(native_rows)!=10
+                            or [row["phase"] for row in native_rows[:8]]!=["scout"]*8
+                            or [row["phase"] for row in native_rows[8:]]!=["precision"]*2
+                            or any(row["iterations"]!=320 for row in native_rows[8:])
+                            or not isinstance(pair,dict)
+                            or pair["distinct_simc_seeds_observed"] is not True
+                            or pair["pairwise_direction_supported"] is not True
+                            or pair["global_optimum_proven"] is not False
+                            or imported["new_native_executions"]!=0):
+                            raise ValueError("P3_HAG_PORTABLE_REAL_NATIVE_REPLAY_DRIFT")
+                        rec["v292_portable_replay_e2e"]={
+                            "status":"PASS_EXACT_CROSS_JOB_NATIVE_REPLAY_ZERO_NEW_DPS",
+                            "source_artifact_run_id":42501052586,
+                            "source_archive_sha256":origin_sha,
+                            "imported_historical_dps_native":10,
+                            "new_dps_native_calls":0,
+                            "new_environment_native_calls":rec["simc_native_calls_reported"],
+                            "selected_pair_95":pair,
+                            "source_catalog_and_full_simc_profile_verified":True}
+                        rec["user_dps_e2e"]={
+                            "status":"PASS_V292_TEN_PORTABLE_NATIVE_ZERO_NEW_DPS",
+                            "native_calls_cumulative":10,
+                            "new_dps_native_calls":0,
+                            "budget_source":"ADMITTED_FRESH_SEASON_GJFO_V212_V217",
+                            "base_B":result["B"],"final_T":result["T"],
+                            "observed_first_choice":{
+                                "absolute_rating_T":reused["summary"]["observed_best_T"],
+                                "observed_dps_mean":reused["summary"]["observed_best_dps"],
+                                "simc_sem":reused["summary"]["observed_best_sem"]},
+                            "global_optimum_proven":False}
+                        pathlib.Path("p3_hag_v292_portable_receipt.json").write_text(
+                            json.dumps(rec["v292_portable_replay_e2e"],
+                                       sort_keys=True,indent=2)+"\n",encoding="utf8")
+                    else:
+                        try:
+                            first=longrun.run(
+                                ready_input["context"],ready_input["flask"],
+                                candidate,stage,max_native_calls=total_cap,
+                                max_new_native_this_invocation=batches[0])
+                            second=longrun.run(
+                                ready_input["context"],ready_input["flask"],
+                                candidate,stage,max_native_calls=total_cap,
+                                max_new_native_this_invocation=batches[1])
+                            replay=longrun.run(
+                                ready_input["context"],ready_input["flask"],
+                                candidate,stage,max_native_calls=total_cap,
+                                max_new_native_this_invocation=0,cache_only=True)
+                        except Exception:
+                            # Capture only exact SimC case files while the
+                            # temporary zero-history workspace still exists.
+                            audit_zip=pathlib.Path(
+                                "p3_hae_v291_failure_evidence.zip" if hae_ten else
+                                "p3_hy_v291_failure_evidence.zip")
+                            names={"V291_SESSION.json","V291_PENDING.json",
+                                   "V291_JOURNAL.jsonl","V291_PROGRESS.json",
+                                   "V291_RESULT.json","V065_PROGRESS.json",
+                                   "input.simc","result.json","native_receipt.json",
+                                   "stderr.txt"}
+                            budget_bytes=0
+                            with zipfile.ZipFile(audit_zip,"x",
+                                                 compression=zipfile.ZIP_DEFLATED,
+                                                 compresslevel=6) as audit:
+                                for src in sorted(stage.rglob("*")):
+                                    if not src.is_file() or src.is_symlink() or src.name not in names:
+                                        continue
+                                    length=src.stat().st_size
+                                    if length>20_000_000 or budget_bytes+length>50_000_000:
+                                        raise ValueError("P3_HY_FAILURE_EVIDENCE_BOUNDS_EXCEEDED")
+                                    budget_bytes+=length
+                                    audit.write(src,src.relative_to(stage).as_posix())
+                            rec["v291_failure_evidence"]={
+                                "name":audit_zip.name,
+                                "sha256":hashlib.sha256(audit_zip.read_bytes()).hexdigest(),
+                                "bytes_uncompressed":budget_bytes}
+                            raise
+                        if (first["status"]!="PAUSED_INVOCATION_NATIVE_BUDGET"
+                            or first["completed_cases"]!=batches[0]
+                            or first["new_native_this_invocation"]!=batches[0]
+                            or second["status"]!="PAUSED_INVOCATION_NATIVE_BUDGET"
+                            or second["completed_cases"]!=required_cases
+                            or second["new_native_this_invocation"]!=batches[1]
+                            or replay["completed_cases"]!=required_cases
+                            or replay["new_native_this_invocation"]!=0
+                            or replay["native_attempts_cumulative"]!=required_cases
+                            or replay["summary"]!=second["summary"]
+                            or replay["summary"]["underlying_B"]!=result["B"]):
+                            raise ValueError("P3_HAD_OR_HY_V291_NATIVE_RESUME_REPLAY_DRIFT")
+                        if hae_ten:
+                            native_rows=longrun._load_journal(
+                                stage/"V291_JOURNAL.jsonl")
+                            pair=replay.get("confirmed_selected_pair_95")
+                            if (len(native_rows)!=10 or
+                                [row["phase"] for row in native_rows[:8]]!=["scout"]*8 or
+                                [row["phase"] for row in native_rows[8:]]!=["precision"]*2 or
+                                any(row["iterations"]!=320 for row in native_rows[8:]) or
+                                not isinstance(pair,dict) or
+                                pair["comparison_scope"]!="SELECTED_CONFIRMED_PAIR_ONLY"):
+                                raise ValueError("P3_HAE_NATIVE_SELECTED_PRECISION_NOT_CONFIRMED")
+                        archive_path=pathlib.Path(
+                            "p3_hae_v291_native_evidence.zip" if hae_ten else
+                            "p3_had_v291_native_evidence.zip" if had_eight else
+                            "p3_hy_v291_native_evidence.zip")
+                        case_files=("input.simc","result.json","native_receipt.json")
+                        with zipfile.ZipFile(archive_path,"x",
                                              compression=zipfile.ZIP_DEFLATED,
-                                             compresslevel=6) as audit:
-                            for src in sorted(stage.rglob("*")):
-                                if not src.is_file() or src.is_symlink() or src.name not in names:
-                                    continue
-                                length=src.stat().st_size
-                                if length>20_000_000 or budget_bytes+length>50_000_000:
-                                    raise ValueError("P3_HY_FAILURE_EVIDENCE_BOUNDS_EXCEEDED")
-                                budget_bytes+=length
-                                audit.write(src,src.relative_to(stage).as_posix())
-                        rec["v291_failure_evidence"]={
-                            "name":audit_zip.name,
-                            "sha256":hashlib.sha256(audit_zip.read_bytes()).hexdigest(),
-                            "bytes_uncompressed":budget_bytes}
-                        raise
-                    if (first["status"]!="PAUSED_INVOCATION_NATIVE_BUDGET"
-                        or first["completed_cases"]!=batches[0]
-                        or first["new_native_this_invocation"]!=batches[0]
-                        or second["status"]!="PAUSED_INVOCATION_NATIVE_BUDGET"
-                        or second["completed_cases"]!=required_cases
-                        or second["new_native_this_invocation"]!=batches[1]
-                        or replay["completed_cases"]!=required_cases
-                        or replay["new_native_this_invocation"]!=0
-                        or replay["native_attempts_cumulative"]!=required_cases
-                        or replay["summary"]!=second["summary"]
-                        or replay["summary"]["underlying_B"]!=result["B"]):
-                        raise ValueError("P3_HAD_OR_HY_V291_NATIVE_RESUME_REPLAY_DRIFT")
-                    if hae_ten:
-                        native_rows=longrun._load_journal(
-                            stage/"V291_JOURNAL.jsonl")
-                        pair=replay.get("confirmed_selected_pair_95")
-                        if (len(native_rows)!=10 or
-                            [row["phase"] for row in native_rows[:8]]!=["scout"]*8 or
-                            [row["phase"] for row in native_rows[8:]]!=["precision"]*2 or
-                            any(row["iterations"]!=320 for row in native_rows[8:]) or
-                            not isinstance(pair,dict) or
-                            pair["comparison_scope"]!="SELECTED_CONFIRMED_PAIR_ONLY"):
-                            raise ValueError("P3_HAE_NATIVE_SELECTED_PRECISION_NOT_CONFIRMED")
-                    archive_path=pathlib.Path(
-                        "p3_hae_v291_native_evidence.zip" if hae_ten else
-                        "p3_had_v291_native_evidence.zip" if had_eight else
-                        "p3_hy_v291_native_evidence.zip")
-                    case_files=("input.simc","result.json","native_receipt.json")
-                    with zipfile.ZipFile(archive_path,"x",
-                                         compression=zipfile.ZIP_DEFLATED,
-                                         compresslevel=6) as archive:
-                        for i in range(required_cases):
-                            folder=longrun.case_folder(stage,i)
-                            for filename in case_files:
-                                src=folder/filename
-                                if not src.is_file() or src.stat().st_size>20_000_000:
-                                    raise ValueError("P3_HY_NATIVE_CASE_BYTES_MISSING")
-                                archive.write(src,"cases/case_%05d/"%i+filename)
-                        for filename in ("V291_SESSION.json","V291_RESULT.json",
-                                         "V291_PROGRESS.json","V291_JOURNAL.jsonl"):
-                            archive.write(stage/filename,filename)
-                    rec["v291_ten_native_e2e" if hae_ten else
-                        "v291_eight_native_e2e" if had_eight else "v291_three_native_e2e"]={
-                        "status":"PASS_REAL_V291_NATIVE_AND_DURABLE_RESUME_REPLAY",
-                        "first_calls":batches[0],"second_calls":batches[1],
-                        "replay_new_calls":0,
-                        "native_attempts_cumulative":required_cases,
-                        "observed":replay["summary"],
-                        "confirmed_selected_pair_95":replay.get("confirmed_selected_pair_95"),
-                        "archive_sha256":hashlib.sha256(
-                            archive_path.read_bytes()).hexdigest(),
-                        "archive_name":archive_path.name,
-                        "global_optimum_proven":False}
-                    rec["user_dps_e2e"]={
-                        "status":("PASS_V291_TEN_REAL_NATIVE_PRECISION" if hae_ten
-                                  else "PASS_V291_EIGHT_REAL_NATIVE" if had_eight
-                                  else "PASS_V291_THREE_REAL_NATIVE"),
-                        "native_calls_cumulative":required_cases,
-                        "budget_source":"ADMITTED_FRESH_SEASON_GJFO_V212_V217",
-                        "base_B":result["B"],"final_T":result["T"],
-                        "observed_first_choice":{
-                            "absolute_rating_T":
-                                replay["summary"]["observed_best_T"],
-                            "observed_dps_mean":
-                                replay["summary"]["observed_best_dps"],
-                            "simc_sem":replay["summary"]["observed_best_sem"]},
-                        "global_optimum_proven":False}
+                                             compresslevel=6) as archive:
+                            for i in range(required_cases):
+                                folder=longrun.case_folder(stage,i)
+                                for filename in case_files:
+                                    src=folder/filename
+                                    if not src.is_file() or src.stat().st_size>20_000_000:
+                                        raise ValueError("P3_HY_NATIVE_CASE_BYTES_MISSING")
+                                    archive.write(src,"cases/case_%05d/"%i+filename)
+                            for filename in ("V291_SESSION.json","V291_RESULT.json",
+                                             "V291_PROGRESS.json","V291_JOURNAL.jsonl"):
+                                archive.write(stage/filename,filename)
+                        rec["v291_ten_native_e2e" if hae_ten else
+                            "v291_eight_native_e2e" if had_eight else "v291_three_native_e2e"]={
+                            "status":"PASS_REAL_V291_NATIVE_AND_DURABLE_RESUME_REPLAY",
+                            "first_calls":batches[0],"second_calls":batches[1],
+                            "replay_new_calls":0,
+                            "native_attempts_cumulative":required_cases,
+                            "observed":replay["summary"],
+                            "confirmed_selected_pair_95":replay.get("confirmed_selected_pair_95"),
+                            "archive_sha256":hashlib.sha256(
+                                archive_path.read_bytes()).hexdigest(),
+                            "archive_name":archive_path.name,
+                            "global_optimum_proven":False}
+                        rec["user_dps_e2e"]={
+                            "status":("PASS_V291_TEN_REAL_NATIVE_PRECISION" if hae_ten
+                                      else "PASS_V291_EIGHT_REAL_NATIVE" if had_eight
+                                      else "PASS_V291_THREE_REAL_NATIVE"),
+                            "native_calls_cumulative":required_cases,
+                            "budget_source":"ADMITTED_FRESH_SEASON_GJFO_V212_V217",
+                            "base_B":result["B"],"final_T":result["T"],
+                            "observed_first_choice":{
+                                "absolute_rating_T":
+                                    replay["summary"]["observed_best_T"],
+                                "observed_dps_mean":
+                                    replay["summary"]["observed_best_dps"],
+                                "simc_sem":replay["summary"]["observed_best_sem"]},
+                            "global_optimum_proven":False}
                 else:
                     end_to_end=user_boot.run_from_verified_environment_build(
                         user,root/"one_user_dps",candidate,
@@ -906,7 +963,8 @@ def main():
                 "environment_ready","environment_installed",
                 "user_dps_e2e_requested","user_dps_e2e",
                 "longrun_v291_native_requested","v291_three_native_e2e",
-                "v291_eight_native_e2e","v291_ten_native_e2e")},ensure_ascii=False,default=str),
+                "v291_eight_native_e2e","v291_ten_native_e2e",
+                "v292_portable_replay_e2e")},ensure_ascii=False,default=str),
             flush=True)
     return 0 if rec["status"] in (
         "ZERO_BASE_T1_PASS",
