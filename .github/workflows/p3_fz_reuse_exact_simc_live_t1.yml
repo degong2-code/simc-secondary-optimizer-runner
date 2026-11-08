@@ -266,5 +266,6 @@ jobs:
             p3_fr_zero_base_t1_native_evidence.zip
             p3_ht_dps_native_audit.zip
             p3_hy_v291_native_evidence.zip
+            p3_hy_v291_failure_evidence.zip
           if-no-files-found: ignore
           retention-days: 7

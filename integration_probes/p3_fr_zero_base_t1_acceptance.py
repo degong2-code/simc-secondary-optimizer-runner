@@ -696,18 +696,45 @@ def main():
                         raise ValueError("P3_HY_VERIFIED_V098_MANIFEST_REQUIRED")
                     ready_input=entry.source(prepared["generated_manifest"])
                     stage=root/"one_user_dps"/"v291_native"
-                    first=longrun.run(
-                        ready_input["context"],ready_input["flask"],
-                        candidate,stage,max_native_calls=6,
-                        max_new_native_this_invocation=2)
-                    second=longrun.run(
-                        ready_input["context"],ready_input["flask"],
-                        candidate,stage,max_native_calls=6,
-                        max_new_native_this_invocation=1)
-                    replay=longrun.run(
-                        ready_input["context"],ready_input["flask"],
-                        candidate,stage,max_native_calls=6,
-                        max_new_native_this_invocation=0,cache_only=True)
+                    try:
+                        first=longrun.run(
+                            ready_input["context"],ready_input["flask"],
+                            candidate,stage,max_native_calls=6,
+                            max_new_native_this_invocation=2)
+                        second=longrun.run(
+                            ready_input["context"],ready_input["flask"],
+                            candidate,stage,max_native_calls=6,
+                            max_new_native_this_invocation=1)
+                        replay=longrun.run(
+                            ready_input["context"],ready_input["flask"],
+                            candidate,stage,max_native_calls=6,
+                            max_new_native_this_invocation=0,cache_only=True)
+                    except Exception:
+                        # Capture only exact SimC case files while the
+                        # temporary zero-history workspace still exists.
+                        audit_zip=pathlib.Path("p3_hy_v291_failure_evidence.zip")
+                        names={"V291_SESSION.json","V291_PENDING.json",
+                               "V291_JOURNAL.jsonl","V291_PROGRESS.json",
+                               "V291_RESULT.json","V065_PROGRESS.json",
+                               "input.simc","result.json","native_receipt.json",
+                               "stderr.txt"}
+                        budget_bytes=0
+                        with zipfile.ZipFile(audit_zip,"x",
+                                             compression=zipfile.ZIP_DEFLATED,
+                                             compresslevel=6) as audit:
+                            for src in sorted(stage.rglob("*")):
+                                if not src.is_file() or src.is_symlink() or src.name not in names:
+                                    continue
+                                length=src.stat().st_size
+                                if length>20_000_000 or budget_bytes+length>50_000_000:
+                                    raise ValueError("P3_HY_FAILURE_EVIDENCE_BOUNDS_EXCEEDED")
+                                budget_bytes+=length
+                                audit.write(src,src.relative_to(stage).as_posix())
+                        rec["v291_failure_evidence"]={
+                            "name":audit_zip.name,
+                            "sha256":hashlib.sha256(audit_zip.read_bytes()).hexdigest(),
+                            "bytes_uncompressed":budget_bytes}
+                        raise
                     if (first["status"]!="PAUSED_INVOCATION_NATIVE_BUDGET"
                         or first["completed_cases"]!=2
                         or first["new_native_this_invocation"]!=2

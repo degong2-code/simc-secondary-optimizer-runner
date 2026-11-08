@@ -9,6 +9,8 @@ class LiveOneShotGuard(unittest.TestCase):
         self.assertIn("p3_hy_longrun_three_native_20261108.json",w)
         self.assertIn("P3_T1_V291_LONGRUN_NATIVE_ONCE",w)
         self.assertIn("p3_hy_v291_native_evidence.zip",w)
+        self.assertIn("p3_hy_v291_failure_evidence.zip",w)
+        self.assertIn("v291_failure_evidence",p)
         self.assertIn("v291_three_native_e2e",p)
         self.assertIn("resume_and_cache_replay_required",w)
         self.assertIn("max_new_native_this_invocation=2",p)
