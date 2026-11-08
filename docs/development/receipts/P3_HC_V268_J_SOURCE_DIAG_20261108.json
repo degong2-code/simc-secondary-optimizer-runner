@@ -1,0 +1,48 @@
+{
+  "schema": "p3_hc_v268_original_source_owner_diagnostic_reused_v1",
+  "evidence_scope": "same-build source-only; no official J/quality/installed",
+  "run_id": 42443197606,
+  "workflow_conclusion": "success",
+  "code_head_sha": "44482373dfeb7c572acc625f27b9f79e52f3f815",
+  "artifact_id": 13602990753,
+  "artifact_zip_sha256": "b8496d5ed2e4c068b81f47014cef79713f45827223717306f0d379cac269bd08",
+  "game_build": "12.1.5.70783",
+  "source_stage": "EXECUTED_AND_SEALED",
+  "compilation": "FRESH_V191_V211_V213_COMPILED_UNADMITTED",
+  "source_compilation_missing": [],
+  "existing_selected_special_item_id": 240967,
+  "selected_special_in_same_build_v221": true,
+  "selected_source_missing_item_ids": [],
+  "linked_gem_item_count": 75,
+  "raw_static_candidate_count": 0,
+  "unresolved_enchant_count": 75,
+  "four_ordinary_two_stat_types_complete": false,
+  "observed_leading_types": [],
+  "missing_leading_types": [
+    "crit_rating",
+    "haste_rating",
+    "mastery_rating",
+    "versatility_rating"
+  ],
+  "candidate_raw_stat_points_by_type_unadmitted": {},
+  "numeric_next_owner": "SIMC_EFFECTIVE_GEM_RATING_SOURCE_REQUIRED",
+  "status": "J_SOCKET_SOURCE_ONLY_SEALED_NOT_READY",
+  "new_native_calls": 0,
+  "source_http_calls_total": "NOT_FULLY_MEASURED_IN_COMPACT_RECEIPT",
+  "official_budget": {
+    "G": null,
+    "J": null,
+    "F": null,
+    "O": null,
+    "B": null,
+    "T": null
+  },
+  "environment_ready": false,
+  "environment_installed": false,
+  "relevant_real_native_history": "P3-GZ exact baseline vs gem5 gives +92 in SimC buffed_stats for example physical IDs only",
+  "no_claims": [
+    "no quality equivalence approved",
+    "no native J for current highest quality items",
+    "no actual season READY"
+  ]
+}
