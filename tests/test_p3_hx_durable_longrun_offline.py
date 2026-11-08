@@ -60,7 +60,19 @@ def fake_ingest(req,doc,raw):
 
 class V291LongRun(unittest.TestCase):
     def fixture(self,folder):
-        ctx,binary=V094Durable().context(folder)
+        from test_v091_weapon_oil_external_adapter import fury, REV
+        import v091_weapon_oil_external_adapter as adapter
+        import v093_inclusive_adaptive_scheduler_bridge as adaptive
+        import v046_static_item_cache as static_cache
+        p,c,f=fury(folder)
+        c["runtime"]["max_native_calls"]=6
+        prepared=adapter.prepare(
+            p,c,f,static_cache.empty_cache(),
+            "dual_two_hand",["main_hand","off_hand"])
+        binary=pathlib.Path(folder)/"dummy-simc"
+        binary.write_bytes(b"synthetic test-only executable SHA")
+        ctx=adaptive.prepare(
+            prepared,hashlib.sha256(binary.read_bytes()).hexdigest(),REV,35,80)
         return ctx,binary,pathlib.Path(folder)/"longrun"
 
     def test_three_native_resume_exact_replay_zero_new_and_cancel(self):
@@ -105,7 +117,8 @@ class V291LongRun(unittest.TestCase):
                 doc=json.loads(path.read_text())
                 doc["dps"]=1.0
                 path.write_text(json.dumps(doc))
-                with self.assertRaises(AssertionError):
+                with self.assertRaisesRegex(runner.LongRunBlocked,
+                                             "RECORDED_NATIVE_CASE_BYTES_OR_SUMMARY_DRIFT"):
                     runner.run(ctx,F,binary,out,max_native_calls=6)
 
     def test_cache_only_no_native_and_partial_attempt_refuses_repeat(self):

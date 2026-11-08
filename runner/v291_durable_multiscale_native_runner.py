@@ -113,7 +113,7 @@ def _load_journal(path):
     result = []
     with path.open("rb") as reader:
         for line in reader:
-            need(line.endswith(b"\\n") and len(line) < 12_000,
+            need(line.endswith(b"\n") and len(line) < 12_000,
                  "TORN_OR_OVERSIZED_JOURNAL_LINE")
             doc = json.loads(line)
             need(type(doc) is dict and doc.get("index") == len(result),
@@ -125,7 +125,7 @@ def _load_journal(path):
 def _append_journal(path, row):
     with path.open("ab") as writer:
         writer.write((json.dumps(row, sort_keys=True, separators=(",", ":"),
-                                 allow_nan=False) + "\\n").encode("utf8"))
+                                 allow_nan=False) + "\n").encode("utf8"))
         writer.flush()
         os.fsync(writer.fileno())
 
