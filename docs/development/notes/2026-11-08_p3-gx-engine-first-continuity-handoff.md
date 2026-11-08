@@ -1,6 +1,6 @@
 # 2026-11-08 · P3-GX · 엔진 중심 단일 인계
-- **Capability:** `ENVIRONMENT.WEB`, `SOURCE.SEAL`
-- **Keywords:** P3-GX, handoff, engine-first, declared gem_id, P3-GW, official J, CI receipts, zero Native
+- **Capability:** `ENVIRONMENT.WEB`, `SOURCE.SEAL`, `SOCKET.LAYOUT`
+- **Keywords:** P3-GX, handoff, engine-first, socket layout, declared gem_id, P3-GW, official J, CI receipts, zero Native
 - **Prior evidence:** 격리 개발 HEAD `1861f9d88f21d694652098e9dee89659d44640d8`; 마지막 제품 코드 `e368944b42803f4894f0ddc40588a338e1c3abe1`; main `07133e0aaf738d6e4816a6486057b1cd49c018de`. [focused #42386036556](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42386036556) 391 PASS/2 SKIP, [v212 #42385936229](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42385936229) SUCCESS, [실 NOT_READY T1 #42332836316](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42332836316) G2850/F165 Native3, [F-only #42196731158](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42196731158) 실제 F165, [source-only #42336047291](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42336047291) Native0.
 - **Decision:** `CONNECT` 인계만 갱신. 26 DPS+다음 시즌 단일 재사용 엔진, 선언 N 소켓 N개 실제 gem_id, 특수1+일반4 최소, 추가 고정 순환, J 이중스탯 rating, SimC 전담 효과; 소켓획득 아이템/사용 주문·보석 조합 DPS 검색 STOP. G/F 과거 원본은 범위 한정, J/READY 미확정.
 - **Changes:** [단일 P3-GX 인계](../../CHAT_CONTINUITY_HANDOFF_20261108_P3_GX_ENGINE_FIRST_RESTORE.md), PROTOCOL 최상단 진입점, INDEX C3/C4·E1/E3·G1/G2·SOCKET.LAYOUT/ENVIRONMENT.WEB, CURRENT 최신 헤더, 개발자 실행 노트를 최신 근거로 정리. 승인 v1.4.3·P3-GI 등 역사 파일은 수정하지 않음.
