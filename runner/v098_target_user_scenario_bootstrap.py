@@ -1504,6 +1504,23 @@ def preview_from_environment_build(user,folder,binary,revision,*,
             "flasks":{"total_F":calc["F"]}}
     bundle={"schema":"v098_internal_season_source_bundle_v1",
             **docs,"budget":budget,"settings":copy.deepcopy(season_settings)}
+    one_spec_candidate=None
+    if installed_path is not None:
+        source=environment_result.get("fresh_one_spec_simc_representative")
+        root=pathlib.Path(compilation["stage_root"]).resolve()
+        need(type(source) is dict and
+             type(source.get("candidate_path")) is str,
+             "FRESH_V232_INSTALLED_G_ORIGINAL_CANDIDATE_PATH_MISSING")
+        path=pathlib.Path(source["candidate_path"]).expanduser()
+        need(path.is_file() and not path.is_symlink()
+             and path.resolve().is_relative_to(root)
+             and 0<path.stat().st_size<=12_000_000,
+             "FRESH_V232_INSTALLED_G_CANDIDATE_OUTSIDE_ORIGINAL_STAGE")
+        try:
+            one_spec_candidate=json.loads(path.read_text("utf8"))
+        except (OSError,ValueError,UnicodeError) as exc:
+            raise UserScenarioBlocked(
+                "FRESH_V232_INSTALLED_G_ORIGINAL_JSON_INVALID") from exc
     result=build(user,folder,binary,revision,
                  current_season_product=True,
                  season_source_bundle=bundle,
@@ -1512,7 +1529,8 @@ def preview_from_environment_build(user,folder,binary,revision,*,
                  season_socket_plan=(derived_settings.get(
                      "v271_socket_plan_unadmitted")
                      if derived_settings is not None else None),
-                 fresh_installed_environment_path=installed_path)
+                 fresh_installed_environment_path=installed_path,
+                 season_physical_one_spec_candidate=one_spec_candidate)
     proof=result["original_v191_gear_tier_source_unadmitted"]
     need(proof["source_catalog_artifact_sha256"]==
              calc.get("source_catalog_artifact_sha256") and
