@@ -59,13 +59,13 @@ def fake_ingest(req,doc,raw):
 
 
 class V291LongRun(unittest.TestCase):
-    def fixture(self,folder):
+    def fixture(self,folder,cap=6):
         from test_v091_weapon_oil_external_adapter import fury, REV
         import v091_weapon_oil_external_adapter as adapter
         import v093_inclusive_adaptive_scheduler_bridge as adaptive
         import v046_static_item_cache as static_cache
         p,c,f=fury(folder)
-        c["runtime"]["max_native_calls"]=6
+        c["runtime"]["max_native_calls"]=cap
         prepared=adapter.prepare(
             p,c,f,static_cache.empty_cache(),
             "dual_two_hand",["main_hand","off_hand"])
@@ -103,6 +103,24 @@ class V291LongRun(unittest.TestCase):
                 self.assertEqual(again["new_native_this_invocation"],0)
                 self.assertEqual(again["completed_cases"],6)
 
+    def test_above_six_native_cases_with_typed_runtime_and_replay(self):
+        with tempfile.TemporaryDirectory() as folder:
+            ctx,binary,out=self.fixture(folder,cap=12)
+            with mock.patch.object(runner.engine,"execute_one",side_effect=fake_native), \
+                 mock.patch.object(runner.oil,"ingest_native",side_effect=fake_ingest):
+                result=runner.run(
+                    ctx,F,binary,out,max_native_calls=12,
+                    max_new_native_this_invocation=9)
+                self.assertEqual(result["completed_cases"],9)
+                self.assertEqual(result["native_attempts_cumulative"],9)
+                self.assertEqual(result["status"],
+                                 "PAUSED_INVOCATION_NATIVE_BUDGET")
+                replay=runner.run(ctx,F,binary,out,
+                                  max_native_calls=12,cache_only=True)
+                self.assertEqual(replay["new_native_this_invocation"],0)
+                self.assertEqual(replay["completed_cases"],9)
+                self.assertEqual(replay["native_attempts_cumulative"],9)
+
     def test_fail_closed_on_tampered_real_case_and_session(self):
         with tempfile.TemporaryDirectory() as folder:
             ctx,binary,out=self.fixture(folder)
@@ -120,6 +138,52 @@ class V291LongRun(unittest.TestCase):
                 with self.assertRaisesRegex(runner.LongRunBlocked,
                                              "RECORDED_NATIVE_CASE_BYTES_OR_SUMMARY_DRIFT"):
                     runner.run(ctx,F,binary,out,max_native_calls=6)
+
+    def test_extended_source_budget_stages_separate_exact_inputs(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root=pathlib.Path(folder)
+            base=root/"original"
+            base.mkdir()
+            (base/"profile.simc").write_text("shaman=test\\n",encoding="utf8")
+            (base/"fillers.json").write_text("[]",encoding="utf8")
+            raw={"runtime":{"max_native_calls":6,"scout_iterations":35,
+                            "confirm_iterations":320}}
+            (base/"scenario.json").write_text(json.dumps(raw),encoding="utf8")
+            (base/"manifest.json").write_text("{}",encoding="utf8")
+            binary=root/"simc_fake";binary.write_bytes(b"test")
+            paths={key:base/name for key,name in (
+                ("profile_simc","profile.simc"),
+                ("scenario_json","scenario.json"),
+                ("fillers_json","fillers.json"))}
+            paths.update({"native_binary":binary,"static_cache_json":None})
+            plan={"base_B":3107,"fixed_O":{"crit_rating":0,"haste_rating":0,
+                 "mastery_rating":0,"versatility_rating":0},
+                 "final_T":3107,"source_profile_sha256":"a"*64,
+                 "budget_source":"test_fixture","binary_sha256":"b"*64,
+                 "scenario_digest":"1"*64}
+            original={"paths":paths,"plan":plan,
+                      "manifest":{"native_limit":6,"schema":"test"}}
+            def admitted(path):
+                candidate=json.loads(path.read_text())
+                data=json.loads(path.with_name("scenario.json").read_text())
+                self.assertEqual(candidate["native_binary"],str(binary))
+                self.assertEqual(data["runtime"]["max_native_calls"],2000)
+                return {"paths":{**paths,"output_dir":path.parent/"simc_results"},
+                        "plan":{**plan,"scenario_digest":"2"*64},
+                        "context":{"bundle":{"prepared":{"scenario":{
+                            "scenario":{"runtime":data["runtime"]}}}}}}
+            ready,path=runner.stage_extended_manifest(
+                original,base/"manifest.json",2000,source_loader=admitted)
+            self.assertTrue(path.is_file())
+            self.assertEqual(ready["plan"]["scenario_digest"],"2"*64)
+            self.assertEqual((base/"scenario.json").read_text(),json.dumps(raw))
+            runner.stage_extended_manifest(
+                original,base/"manifest.json",2000,source_loader=admitted)
+            with self.assertRaisesRegex(runner.LongRunBlocked,
+                                         "LONGRUN_STAGED_SESSION_SOURCE_DRIFT"):
+                (path.parent/"profile.simc").write_text("tampered")
+                runner.stage_extended_manifest(
+                    original,base/"manifest.json",2000,source_loader=admitted)
 
     def test_cache_only_no_native_and_partial_attempt_refuses_repeat(self):
         with tempfile.TemporaryDirectory() as folder:

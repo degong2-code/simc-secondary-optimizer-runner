@@ -402,6 +402,85 @@ def run(context, flask_vector, binary, output, *,
     return report
 
 
+
+def stage_extended_manifest(ready, manifest_path, max_native_calls, *,
+                            source_loader=None):
+    """Fork a verified *input only*, not the old v094/v291 result/cache.
+
+    This is the product user's explicit long-run budget opt-in. Keep exact
+    profile, F/O/J/gear and source evidence byte-identical. The newly typed
+    runtime changes the scenario digest; v096 must reauthenticate it BEFORE
+    accepting any Native candidate. No historical sessions are overwritten.
+    """
+    manifest_path=pathlib.Path(manifest_path).resolve(strict=True)
+    need(type(max_native_calls) is int and
+         6 <= max_native_calls <= 100000,
+         "EXTENDED_NATIVE_BUDGET_RANGE")
+    need(type(ready) is dict and "manifest" in ready and
+         "paths" in ready and "plan" in ready,
+         "VERIFIED_V096_ENTRY_REQUIRED")
+    paths=ready["paths"]
+    cfg=read_json(paths["scenario_json"])
+    existing=cfg["runtime"]["max_native_calls"]
+    need(type(existing) is int and 1<=existing<max_native_calls,
+         "ONLY_INCREASE_VERIFIED_RUNTIME_BUDGET")
+    cfg["runtime"]["max_native_calls"]=max_native_calls
+    original=ready["manifest"]
+    need(type(original) is dict and original["native_limit"]>=6 and
+         original["native_limit"]<=max_native_calls,
+         "EXISTING_TYPED_NATIVE_LIMIT_NOT_COMPATIBLE")
+    copied=dict(original)
+    copied.update({
+        "profile_simc":"profile.simc",
+        "scenario_json":"scenario.json",
+        "fillers_json":"fillers.json",
+        "static_cache_json":(
+            str(paths["static_cache_json"])
+            if paths["static_cache_json"] is not None else None),
+        "native_binary":str(paths["native_binary"]),
+        "output_dir":"simc_results",
+        "cancel_file":"CANCEL",
+    })
+    directory=manifest_path.parent/("v291_longrun_%d"%max_native_calls)
+    need(not directory.is_symlink(),"LONGRUN_STAGE_SYMLINK")
+    directory.mkdir(parents=True,exist_ok=True)
+    def write_identical(path,data):
+        need(not path.is_symlink() and
+             (not path.exists() or path.is_file() and
+              path.read_bytes()==data),
+             "LONGRUN_STAGED_SESSION_SOURCE_DRIFT")
+        if not path.exists():
+            path.write_bytes(data)
+    inputs={
+        "profile.simc":pathlib.Path(paths["profile_simc"]).read_bytes(),
+        "scenario.json":(json.dumps(cfg,sort_keys=True,
+                                     separators=(",",":"),ensure_ascii=False)
+                         +"\\n").encode("utf8"),
+        "fillers.json":pathlib.Path(paths["fillers_json"]).read_bytes(),
+        "manifest.json":(json.dumps(copied,sort_keys=True,
+                                    separators=(",",":"),ensure_ascii=False)
+                         +"\\n").encode("utf8"),
+    }
+    for file,content in inputs.items():
+        write_identical(directory/file,content)
+    if source_loader is None:
+        import v096_unified_product_entry as entry
+        source_loader=entry.source
+    upgraded=source_loader(directory/"manifest.json")
+    old_plan=ready["plan"]
+    new_plan=upgraded["plan"]
+    need(all(new_plan.get(k)==old_plan.get(k) for k in
+             ("base_B","fixed_O","final_T","source_profile_sha256",
+              "budget_source","binary_sha256"))
+         and new_plan["scenario_digest"]!=old_plan["scenario_digest"],
+         "EXTENDED_RUNTIME_MUST_REAUTHENTICATE_SOURCE_NEW_SESSION")
+    new_runtime=upgraded["context"]["bundle"]["prepared"]["scenario"][
+        "scenario"]["runtime"]
+    need(new_runtime["max_native_calls"]==max_native_calls,
+         "EXTENDED_RUNTIME_NOT_EFFECTIVE")
+    return upgraded, directory/"manifest.json"
+
+
 def main(argv=None):
     p = argparse.ArgumentParser(
         description="Long-run v290 Native execution through exact v093/v065")
@@ -414,6 +493,10 @@ def main(argv=None):
     args = p.parse_args(argv)
     import v096_unified_product_entry as product
     ready = product.source(args.manifest)
+    original_runtime=ready["context"]["bundle"]["prepared"]["scenario"]["scenario"]["runtime"]
+    if args.max_native_calls>original_runtime["max_native_calls"]:
+        ready,_=stage_extended_manifest(ready,args.manifest,args.max_native_calls,
+                                        source_loader=product.source)
     paths = ready["paths"]
     try:
         result = run(
