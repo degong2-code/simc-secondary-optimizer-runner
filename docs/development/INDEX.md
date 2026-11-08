@@ -1,3 +1,5 @@
+> **2026-11-09 P3-HAD opt-in eight-case Native pilot:** [P3-HAD 작업 기록](notes/2026-11-09_p3-had-first-over-six-native-pilot.md), `OPTIMIZER.POLICY`·`PRODUCT.E2E`·`SOURCE.SEAL` CONNECT; 12회 총 허용 예산 중 4+4=8회 실측·캐시 재생 계획. CI 및 실 Native는 별도 결과 확인 전 PENDING. 기존 v094/P3-HY/main/immutable 불변.
+
 > **2026-11-09 최신 기능/인계 탐색:** [P3-HAC 단일 정본](../CHAT_CONTINUITY_HANDOFF_20261109_P3_HAC_MULTISCALE_ENGINE_RESTORE.md) · [HAC 기록](notes/2026-11-09_p3-hac-engine-continuity-restore-handoff.md). 아래 A~G 기존 연결을 먼저 검색하고 마지막 OPTIMIZER.POLICY/PRODUCT.E2E 증거에 v290/v291·최종 50% 미만/실 Native3만 적용한다. 기존 제품 Gate의 '현재 미완료' 문구는 **작성 당시** 스냅샷이며 P3-HN/HR/HS/HU에서 한 조건씩 실 READY/DPS 완료됨. **실 장기 >6/새 시즌 전체/일반 사용자 웹 완성은 미검증.** 새로운 채팅은 HEAD 독립 복원 보고 후 '진행' 전 STOP.
 
 > **2026-11-08 P3-HR 실 사용자 DPS E2E 1건 PASS:** [Actions #42466284163](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42466284163) `ZERO_BASE_USER_DPS_E2E_PASS`, 동일 정확 빌드 70783·징벌 성기사 ilvl334의 READY G/J/F/O→v098/v096/v094→적응형 SimC Native6까지 실제 완주. 관측 DPS159089.12·SEM257.76·95% 비교 방향 지지, 전역 최적 아님. [기록](notes/2026-11-08_p3-hr-real-user-dps-e2e-one-case.md). 다른 전문화/수동 T/기름/웹 Start와 다음 시즌은 미검증.

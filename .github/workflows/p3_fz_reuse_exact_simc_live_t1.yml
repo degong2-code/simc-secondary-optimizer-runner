@@ -14,6 +14,7 @@ on:
       - integration_probes/requests/p3_hu_full_no_enchants_20261108.json
       - integration_probes/requests/p3_hv_axis_coverage_dps_20261108.json
       - integration_probes/requests/p3_hy_longrun_three_native_20261108.json
+      - integration_probes/requests/p3_had_eight_native_20261109.json
   workflow_dispatch:
     inputs:
       exact_flask_item_id:
@@ -33,21 +34,22 @@ concurrency:
   cancel-in-progress: false
 jobs:
   original-v216-once:
-    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[p3-gp-f-only-once]') || contains(github.event.head_commit.message, '[p3-gq-gjf-once]') || contains(github.event.head_commit.message, '[p3-gu-j-socket-source-once]') || contains(github.event.head_commit.message, '[p3-ho-one-user-dps-once]') || contains(github.event.head_commit.message, '[p3-hs-other-spec-dps-once]') || contains(github.event.head_commit.message, '[p3-hu-full-nonenchant-dps-once]') || contains(github.event.head_commit.message, '[p3-hv-axis-coverage-dps-once]') || contains(github.event.head_commit.message, '[p3-hy-longrun-three-native-once]')
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[p3-gp-f-only-once]') || contains(github.event.head_commit.message, '[p3-gq-gjf-once]') || contains(github.event.head_commit.message, '[p3-gu-j-socket-source-once]') || contains(github.event.head_commit.message, '[p3-ho-one-user-dps-once]') || contains(github.event.head_commit.message, '[p3-hs-other-spec-dps-once]') || contains(github.event.head_commit.message, '[p3-hu-full-nonenchant-dps-once]') || contains(github.event.head_commit.message, '[p3-hv-axis-coverage-dps-once]') || contains(github.event.head_commit.message, '[p3-hy-longrun-three-native-once]') || contains(github.event.head_commit.message, '[p3-had-eight-native-once]')
     runs-on: ubuntu-24.04
     timeout-minutes: 23
     env:
       PYTHONPATH: runner:.
       P3_T1_EXACT_FLASK_ITEM_ID: ${{ github.event_name == 'push' && '241324' || inputs.exact_flask_item_id }}
-      P3_T1_EXISTING_SPECIAL_GEM_ID: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[p3-gq-gjf-once]') || contains(github.event.head_commit.message, '[p3-gu-j-socket-source-once]') || contains(github.event.head_commit.message, '[p3-ho-one-user-dps-once]') || (contains(github.event.head_commit.message, '[p3-hs-other-spec-dps-once]') || (contains(github.event.head_commit.message, '[p3-hu-full-nonenchant-dps-once]') || (contains(github.event.head_commit.message, '[p3-hv-axis-coverage-dps-once]') || contains(github.event.head_commit.message, '[p3-hy-longrun-three-native-once]'))))) && '240967' || inputs.existing_special_gem_id }}
+      P3_T1_EXISTING_SPECIAL_GEM_ID: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[p3-gq-gjf-once]') || contains(github.event.head_commit.message, '[p3-gu-j-socket-source-once]') || contains(github.event.head_commit.message, '[p3-ho-one-user-dps-once]') || (contains(github.event.head_commit.message, '[p3-hs-other-spec-dps-once]') || (contains(github.event.head_commit.message, '[p3-hu-full-nonenchant-dps-once]') || (contains(github.event.head_commit.message, '[p3-hv-axis-coverage-dps-once]') || (contains(github.event.head_commit.message, '[p3-hy-longrun-three-native-once]') || contains(github.event.head_commit.message, '[p3-had-eight-native-once]')))))) && '240967' || inputs.existing_special_gem_id }}
       P3_T1_J_SOCKET_SOURCE_ONLY: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[p3-gu-j-socket-source-once]') && '1' || '0' }}
       P3_T1_F_ONLY: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[p3-gp-f-only-once]') && '1' || '0' }}
-      P3_T1_DPS_E2E_ONCE: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[p3-ho-one-user-dps-once]') || (contains(github.event.head_commit.message, '[p3-hs-other-spec-dps-once]') || (contains(github.event.head_commit.message, '[p3-hu-full-nonenchant-dps-once]') || (contains(github.event.head_commit.message, '[p3-hv-axis-coverage-dps-once]') || contains(github.event.head_commit.message, '[p3-hy-longrun-three-native-once]'))))) && '1' || '0' }}
-      P3_T1_SPEC_CLASS: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[p3-hs-other-spec-dps-once]') || (contains(github.event.head_commit.message, '[p3-hu-full-nonenchant-dps-once]') || (contains(github.event.head_commit.message, '[p3-hv-axis-coverage-dps-once]') || contains(github.event.head_commit.message, '[p3-hy-longrun-three-native-once]')))) && 'shaman' || 'paladin' }}
-      P3_T1_SPEC_NAME: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[p3-hs-other-spec-dps-once]') || (contains(github.event.head_commit.message, '[p3-hu-full-nonenchant-dps-once]') || (contains(github.event.head_commit.message, '[p3-hv-axis-coverage-dps-once]') || contains(github.event.head_commit.message, '[p3-hy-longrun-three-native-once]')))) && 'enhancement' || 'retribution' }}
+      P3_T1_DPS_E2E_ONCE: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[p3-ho-one-user-dps-once]') || (contains(github.event.head_commit.message, '[p3-hs-other-spec-dps-once]') || (contains(github.event.head_commit.message, '[p3-hu-full-nonenchant-dps-once]') || (contains(github.event.head_commit.message, '[p3-hv-axis-coverage-dps-once]') || (contains(github.event.head_commit.message, '[p3-hy-longrun-three-native-once]') || contains(github.event.head_commit.message, '[p3-had-eight-native-once]')))))) && '1' || '0' }}
+      P3_T1_SPEC_CLASS: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[p3-hs-other-spec-dps-once]') || (contains(github.event.head_commit.message, '[p3-hu-full-nonenchant-dps-once]') || (contains(github.event.head_commit.message, '[p3-hv-axis-coverage-dps-once]') || (contains(github.event.head_commit.message, '[p3-hy-longrun-three-native-once]') || contains(github.event.head_commit.message, '[p3-had-eight-native-once]'))))) && 'shaman' || 'paladin' }}
+      P3_T1_SPEC_NAME: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[p3-hs-other-spec-dps-once]') || (contains(github.event.head_commit.message, '[p3-hu-full-nonenchant-dps-once]') || (contains(github.event.head_commit.message, '[p3-hv-axis-coverage-dps-once]') || (contains(github.event.head_commit.message, '[p3-hy-longrun-three-native-once]') || contains(github.event.head_commit.message, '[p3-had-eight-native-once]'))))) && 'enhancement' || 'retribution' }}
       P3_T1_SPEC_RACE: dwarf
-      P3_T1_FULL_CONSUMABLES_ONCE: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[p3-hu-full-nonenchant-dps-once]') || (contains(github.event.head_commit.message, '[p3-hv-axis-coverage-dps-once]') || contains(github.event.head_commit.message, '[p3-hy-longrun-three-native-once]'))) && '1' || '0' }}
-      P3_T1_V291_LONGRUN_NATIVE_ONCE: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[p3-hy-longrun-three-native-once]') && '1' || '0' }}
+      P3_T1_FULL_CONSUMABLES_ONCE: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[p3-hu-full-nonenchant-dps-once]') || (contains(github.event.head_commit.message, '[p3-hv-axis-coverage-dps-once]') || (contains(github.event.head_commit.message, '[p3-hy-longrun-three-native-once]') || contains(github.event.head_commit.message, '[p3-had-eight-native-once]')))) && '1' || '0' }}
+      P3_T1_V291_LONGRUN_NATIVE_ONCE: ${{ github.event_name == 'push' && (contains(github.event.head_commit.message, '[p3-hy-longrun-three-native-once]') || contains(github.event.head_commit.message, '[p3-had-eight-native-once]')) && '1' || '0' }}
+      P3_T1_V291_EIGHT_NATIVE_ONCE: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[p3-had-eight-native-once]') && '1' || '0' }}
       P3_T1_AXIS_COVERAGE_ONCE: ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[p3-hv-axis-coverage-dps-once]') && '1' || '0' }}
       P3_T1_FULL_FOOD: harandar_celebration
       P3_T1_FULL_POTION: potion_of_recklessness_2
@@ -87,7 +89,8 @@ jobs:
           hu="[p3-hu-full-nonenchant-dps-once]" in msg
           hv="[p3-hv-axis-coverage-dps-once]" in msg
           hy="[p3-hy-longrun-three-native-once]" in msg
-          assert sum((gp,gq,gu,ho,hs,hu,hv,hy))==1,"P3_EXACT_ONE_SHOT_MARKER_REQUIRED"
+          had="[p3-had-eight-native-once]" in msg
+          assert sum((gp,gq,gu,ho,hs,hu,hv,hy,had))==1,"P3_EXACT_ONE_SHOT_MARKER_REQUIRED"
           path=("integration_probes/requests/p3_gp_f_only_once_20261106.json"
                 if gp else
                 "integration_probes/requests/p3_gq_gjf_one_shot_20261107.json"
@@ -102,7 +105,8 @@ jobs:
                 if hu else
                 "integration_probes/requests/p3_hv_axis_coverage_dps_20261108.json"
                 if hv else
-                "integration_probes/requests/p3_hy_longrun_three_native_20261108.json")
+                "integration_probes/requests/p3_hy_longrun_three_native_20261108.json" if hy else
+                "integration_probes/requests/p3_had_eight_native_20261109.json")
           assert files==[path],files
           got=json.loads(pathlib.Path(path).read_text())
           common={"build":"12.1.5.70783",
@@ -215,8 +219,16 @@ jobs:
                 "longrun_backend":"v291",
                 "resume_and_cache_replay_required":True,
                 "global_optimum_proven":False}
+          if had:
+              expected.update({
+                "schema":"p3_had_v291_real_eight_native_resume_v1",
+                "adaptive_dps_native_max":8,
+                "longrun_total_native_budget":12,
+                "native_batches":[4,4],
+                "strict_final_half_cap":True})
           assert got==expected,(got,expected)
-          print("P3_HY_V291_NATIVE_RESUME_E2E_ONCE" if hy else
+          print("P3_HAD_V291_EIGHT_NATIVE_RESUME_E2E_ONCE" if had else
+                "P3_HY_V291_NATIVE_RESUME_E2E_ONCE" if hy else
                 "P3_HV_OPT_IN_AXIS_COVERAGE_DPS_ONCE" if hv else
                 "P3_HU_FULL_NONENCHANTED_DPS_ONCE" if hu else
                 "P3_HS_OTHER_SPEC_REAL_DPS_E2E_ONCE" if hs else
@@ -266,6 +278,7 @@ jobs:
             p3_fr_zero_base_t1_native_evidence.zip
             p3_ht_dps_native_audit.zip
             p3_hy_v291_native_evidence.zip
+            p3_had_v291_native_evidence.zip
             p3_hy_v291_failure_evidence.zip
           if-no-files-found: ignore
           retention-days: 7

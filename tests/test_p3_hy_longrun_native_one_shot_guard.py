@@ -13,8 +13,9 @@ class LiveOneShotGuard(unittest.TestCase):
         self.assertIn("v291_failure_evidence",p)
         self.assertIn("v291_three_native_e2e",p)
         self.assertIn("resume_and_cache_replay_required",w)
-        self.assertIn("max_new_native_this_invocation=2",p)
-        self.assertIn("max_new_native_this_invocation=1",p)
+        self.assertIn("batches=(4,4) if had_eight else (2,1)",p)
+        self.assertIn("max_new_native_this_invocation=batches[0]",p)
+        self.assertIn("max_new_native_this_invocation=batches[1]",p)
         self.assertIn("max_new_native_this_invocation=0,cache_only=True",p)
         self.assertIn("PASS_REAL_V291_NATIVE_AND_DURABLE_RESUME_REPLAY",p)
         # Offline syntax compile before any live workflow is triggered.

@@ -1,0 +1,10 @@
+# P3-HAD · v291 eight-case real Native opt-in pilot (2026-11-09)
+
+- **Capability:** `OPTIMIZER.POLICY`, `PRODUCT.E2E`, `SOURCE.SEAL`
+- **Keywords:** P3-HAD, v291, real 8-case Native, v096, typed max12, strict half, resume, cache replay
+- **Prior evidence:** P3-HAC isolated HEAD daf0a95; focused #42486217556 460 PASS/2 SKIP/Native0; P3-HY #42482151972 real DPS 2+1 Native and cache-only replay before strict half; P3-HZ 9-case synthetic, not real Native.
+- **Decision:** `CONNECT` — reuse v290/v291 and keep the existing two typed scout/confirm iteration identities. Separate opt-in one-shot from historical v094 six-case and old P3-HY three-case scenarios.
+- **Changes:** P3-HAD request-only workflow marker and exact guarded input, verified existing v098→v096 manifest source, `v291.stage_extended_manifest` reauthentication for a separate typed total budget 12, real 4+4 Native attempts across two invocations and cache-only replay0. The new Native target is 8, *not* 12 or 2000. Archive exact input/JSON2/receipt for all 8. Existing original G1/F2 Native3, same-binary SHA and full consumable scenario reused. Strict final rating < T/2 policy is inherited from v061/v065/v063.
+- **Verification:** Code and offline focused CI are PENDING until actual Actions receipt. Real >6 Native NOT_RUN until exactly one request-only follow-up marker commit succeeds. Eight scouts are execution/coverage evidence, not convergence/95% global proof.
+- **Remaining:** Run CI on implementation; check successful new 8-case source-locked run if credentials and current build still match, inspect 8 vectors, final cap, actual Native counts/cache replay, source SHAs and any runtime limits. If blocked, preserve real error and do not blindly rerun.
+- **Efficiency:** Preserve all legacy engine/cache/Native proofs; no compiler rebuild, no all-spec enumeration, no new effects certification or optimizer, one combined 4+4 with bounded archive and local resume verification. Main/immutable/Project UI/Work OS/owner unmodified.
