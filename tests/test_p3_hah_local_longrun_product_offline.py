@@ -116,6 +116,27 @@ class LocalLongRunHTTP(unittest.TestCase):
         self.assertEqual(self.post("/api/v1/sessions/"+self.folder.name+
                          "/longrun/resume",{}).status_code,422)
 
+    def test_longrun_start_shares_exact_static_L_preparation(self):
+        jobs=self.app.state.jobs
+        fake_hydrated={"native_new_calls":1,"cache_reused":0}
+        receipt={"path":"V208_STATIC_L.json"}
+        with mock.patch.object(jobs,"prepare_with_internal_special_L",
+                               return_value=(self.folder,fake_hydrated,
+                                             {"status":"READY"},receipt)) as prepare, \
+             mock.patch.object(jobs,"longrun_launch",
+                               return_value={"session_id":self.folder.name,
+                                             "status":"LONGRUN_WORKER_STARTED"}) as launch:
+            start=self.post("/api/v1/longrun/start",{
+                "controls":{},"binary":"c:/simc.exe",
+                "revision":"abc1234","current_season_product":True,
+                "max_native_calls":12,"max_new_native_this_invocation":4})
+            self.assertEqual(start.status_code,200,start.text)
+            self.assertEqual(start.json()["static_L_native_calls_this_start"],1)
+            self.assertEqual(start.json()["static_L_start_receipt"],receipt)
+            self.assertEqual(start.json()["environment_manifest"],{"status":"READY"})
+            self.assertEqual(prepare.call_count,1)
+            launch.assert_called_once()
+
     def test_insecure_host_is_denied(self):
         response=self.client.get(
             "/api/v1/sessions/"+self.folder.name+"/longrun/status",

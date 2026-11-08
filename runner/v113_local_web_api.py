@@ -737,12 +737,11 @@ class LocalJobs:
         except Exception as exc:
             raise blocked(exc) from None
 
-    def start_with_internal_special_L(self, params):
-        """Explicit /start only: one cached, exact static Native on missing L.
+    def prepare_with_internal_special_L(self, params):
+        """Share the existing exact static-L hydration for both explicit starts.
 
-        Never modify an already sealed old static cache/session. The one
-        physical SimC probe is separate from the six DPS optimizer calls.
-        The ordinary /plan endpoint remains strictly zero Native.
+        Never measure special item effects; SimC owns those. Only static L is
+        recorded by the pre-existing exact Native cache/receipt path.
         """
         user=sessions.user_scenario(params.controls)
         hydrated=None
@@ -775,6 +774,13 @@ class LocalJobs:
             environment=prepared.get("environment_manifest")
         # The environment manifest is sealed before the optimizer worker is
         # launched, so Start never outruns its exact v213/v208 provenance.
+        return folder,hydrated,environment,(
+            receipt_info if hydrated else None)
+
+    def start_with_internal_special_L(self, params):
+        """Existing six-case start, unchanged execution and L contract."""
+        folder,hydrated,environment,receipt_info=(
+            self.prepare_with_internal_special_L(params))
         response=self.launch(folder)
         if hydrated:
             response["static_L_start_receipt"]=receipt_info
@@ -1004,12 +1010,20 @@ class LocalJobs:
             controls=request.controls,binary=request.binary,
             revision=request.revision,static_cache=request.static_cache,
             current_season_product=True)
-        planned=self.plan(params)
-        return self.longrun_launch(
-            self.folder(planned["session_id"]),
-            budget=request.max_native_calls,
+        folder,hydrated,environment,receipt_info=(
+            self.prepare_with_internal_special_L(params))
+        response=self.longrun_launch(
+            folder,budget=request.max_native_calls,
             batch=request.max_new_native_this_invocation,
             elapsed=request.max_elapsed_seconds)
+        response["environment_manifest"]=environment
+        response["static_L_native_calls_this_start"]=(
+            hydrated["native_new_calls"] if hydrated else 0)
+        response["static_L_reused_exact_variants"]=(
+            hydrated["cache_reused"] if hydrated else 0)
+        if hydrated:
+            response["static_L_start_receipt"]=receipt_info
+        return response
 
     def longrun_status(self, folder):
         try:
