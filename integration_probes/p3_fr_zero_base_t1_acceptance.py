@@ -464,6 +464,14 @@ def main():
         full_consumables=optional_full_consumables(
             os.environ,dps_once=dps_once,character=character)
         rec["optional_consumables_requested"]=full_consumables
+        coverage_on=os.environ.get("P3_T1_AXIS_COVERAGE_ONCE","0")
+        if coverage_on not in ("0","1") or (coverage_on=="1" and
+                (not dps_once or character["class"]!="shaman" or
+                 character["spec"]!="enhancement" or full_consumables is None)):
+            raise ValueError("P3_HV_COVERAGE_REQUIRES_FULL_SHAMAN_DPS")
+        exploration_policy=(
+            "axis_coverage_v1" if coverage_on=="1" else None)
+        rec["exploration_policy_requested"]=exploration_policy
         rec["permanent_enchants_requested"]=False
         rec["special_equipment_requested"]=False
         rec["requested_max_F_native_calls"]=(
@@ -668,6 +676,7 @@ def main():
                     user,root/"one_user_dps",candidate,
                     pin["revision_hint"],environment_result=result,
                     season_controls=full_consumables,
+                    exploration_policy=exploration_policy,
                     execute=True,open_folder=False)
                 applied=end_to_end["input_preparation"]
                 native=end_to_end["native_result"]
@@ -731,6 +740,7 @@ def main():
                 "missing_credential_names",
                 "current_build_source_identity","requested_character",
                 "optional_consumables_requested",
+                "exploration_policy_requested",
                 "budget_evidence","installed_status",
                 "live_retail_version","source_stage_status",
                 "source_compilation_missing","zero_history_requires",

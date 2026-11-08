@@ -35,6 +35,17 @@ class NativeBudgetDirectionCoverage(unittest.TestCase):
         self.assertTrue(p.eligible(candidate,3107,lo,hi))
         self.assertNotIn(candidate,prev)
         self.assertTrue(anchor in prev)
+    def test_opt_in_is_exactly_one_new_guarded_dps_request(self):
+        from pathlib import Path
+        root=Path(__file__).resolve().parents[1]
+        wf=(root/".github/workflows/p3_fz_reuse_exact_simc_live_t1.yml").read_text()
+        self.assertIn("[p3-hv-axis-coverage-dps-once]",wf)
+        self.assertIn("p3_hv_axis_coverage_dps_20261108.json",wf)
+        self.assertIn("P3_T1_AXIS_COVERAGE_ONCE",wf)
+        runner=(root/"integration_probes/p3_fr_zero_base_t1_acceptance.py").read_text()
+        self.assertIn("exploration_policy=exploration_policy",runner)
+        self.assertIn("P3_HV_COVERAGE_REQUIRES_FULL_SHAMAN_DPS",runner)
+
     def test_invalid_or_exhausted_feasible_space_fails_closed(self):
         with self.assertRaisesRegex(p.SchedulerBlocked,"COVERAGE_NO_FEASIBLE"):
             p.axis_coverage_choice({(1,1,1,1):[{"dps_mean":1.}]},
