@@ -1,3 +1,9 @@
+## 2026-11-08 최신 단일 인계 P3-GX — 읽기 전용 새 채팅 (P3-GI 후속)
+
+**진입점:** [P3-GX 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261108_P3_GX_ENGINE_FIRST_RESTORE.md) → 이 PROTOCOL → INDEX C3/C4/C1/C2·E3/E2/E1·B3/D1/D2·G1/G2 → CURRENT 최신 상단 → 개발자 실행 노트 → 필요한 코드/원본/실 영수증. 과거 P3-GI 이하 '최신' 표현은 당시 역사. **첫 응답은 격리/main HEAD 독립 조회, Evidence/Integration·병목·장단기 로드맵 읽기 전용 보고 후 즉시 STOP**; 명시적 '진행' 전에 코드/문서 수정, 수집, CI/Actions/Native/테스트, 승격 금지.
+
+**최신 실제 범위:** 제품 코드 `e368944b42803f4894f0ddc40588a338e1c3abe1` (v232 소켓 편향 선택 철회, source-first 대표 장비 복원), 인계 전 격리 HEAD `1861f9d88f21d694652098e9dee89659d44640d8`, main `07133e0aaf738d6e4816a6486057b1cd49c018de`; [focused #42386036556](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42386036556) **391 PASS/2 SKIP, Native0**, [v212 #42385936229](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42385936229) SUCCESS. 실 결합 T1 [#42332836316](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42332836316) **FAILURE/NOT_READY**, 원래 대표 G2850/F165 Native3·J 미확정·공식 B/T/READY 미완료. P3-GW는 **소켓 N개 전부 gem_id, 일반 4종 최소/추가 고정 순환**으로 v216/v271을 수정했으나 실제 SimC/시즌 J 공식값 검증은 아직 안 됨. 기존 특수보석 효과·획득용 소켓 추가 아이템 인증/별도 Gate 금지. user 직접 결정이 역사 intrinsic-only 정책보다 우선. 동일 시즌 정적 재사용·DPS 캐시 분리 유지.
+
 ## 2026-11-06 최신 단일 인계 P3-GI — 읽기 전용 새 채팅
 
 **최신 단일 진입점:** [P3-GI 인계](../CHAT_CONTINUITY_HANDOFF_20261106_P3_GI_ENGINE_FIRST_RESTORE.md) 및 [노트](notes/2026-11-06_p3-gi-engine-continuity-handoff.md). 아래 P3-FK와 이전 인계의 '최신' 표기는 작성 당시 역사 상태. 새 채팅은 격리와 main 실제 HEAD를 각각 독립 조회 → P3-GI → PROTOCOL → INDEX E3/E2/E1·D1/D2·B3·C1~C4·G1/G2 → CURRENT → 실행 노트 → 관련 P3-GH/GG/GF/FP/FQ/FX/FY/FR 코드/원본·영수증만 확인한다. **첫 응답은 읽기 전용 복원·장단기 로드맵 보고 후 즉시 STOP**, 사용자 '진행' 전 코드/문서 변경, 신규 HTTP/CI/Native/테스트/승격 금지.
