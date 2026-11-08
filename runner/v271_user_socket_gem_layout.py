@@ -60,6 +60,48 @@ def ordinary_four_stat_default(*, observed_by_stat, socket_total,
     return [ids[i%4] for i in range(socket_total-1)]
 
 
+def nominal_four_stat_from_season_source(*, source, game_build,
+                                         socket_total, special_gem_id, need):
+    """Project independently sourced ordinary gem TOTAL rating into existing J.
+
+    The upstream season owner supplies four physical IDs and one nominal
+    CHMV total per ID. The source may describe the two stats separately,
+    but neither v266 EffectPointsMin nor a SimC delta is needed to sum J.
+    A source SHA is an identity, NOT proof of quality or admission.
+    """
+    import re
+    need(type(source) is dict and
+         set(source)=={"game_build","source_sha256","by_stat"} and
+         source.get("game_build")==game_build and
+         type(source.get("source_sha256")) is str and
+         re.fullmatch(r"[0-9a-f]{64}",source["source_sha256"]) is not None,
+         "SOCKET_NOMINAL_J_SAME_BUILD_SOURCE_IDENTITY_REQUIRED")
+    by_stat=source["by_stat"]
+    need(type(by_stat) is dict and
+         set(by_stat)==set(ORDINARY_FOUR_STATS) and
+         all(type(row) is dict and set(row)=={"item_id","rating"} and
+             type(row["item_id"]) is int and row["item_id"]>0 and
+             type(row["rating"]) is int and 0<row["rating"]<=10000
+             for row in by_stat.values()),
+         "SOCKET_NOMINAL_J_FOUR_PHYSICAL_TOTALS_REQUIRED")
+    normalized={stat:{"item_id":row["item_id"],
+                      "raw_nominal_points":row["rating"]}
+                for stat,row in by_stat.items()}
+    ordinary=ordinary_four_stat_default(
+        observed_by_stat=normalized,socket_total=socket_total,
+        special_gem_id=special_gem_id,need=need)
+    rating={str(row["item_id"]):row["rating"]
+            for row in by_stat.values()}
+    return {"ordinary_gem_ids":ordinary,
+            "rating_by_id":rating,
+            "J_candidate_unadmitted":sum(rating[str(i)] for i in ordinary),
+            "season_source_sha256":source["source_sha256"],
+            "source_build":game_build,
+            "simc_gem_delta_required":False,
+            "v266_raw_static_rating_required":False,
+            "environment_ready":False,"native_calls":0}
+
+
 # Declared SimC gem_id placement: no socket-granting item or spell is needed.
 FULL_SOCKET_SLOT_ORDER=("head","neck","finger1","finger2","wrists",
                         "waist","feet","hands","legs","shoulders","chest",

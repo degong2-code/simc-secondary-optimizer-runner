@@ -56,6 +56,41 @@ class SocketLayoutTests(unittest.TestCase):
             with self.subTest(wrong=wrong),self.assertRaises(ValueError):
                 sockets.ordinary_four_stat_default(**{**args,**wrong})
 
+    def test_engine_uses_nominal_totals_without_v266_or_native(self):
+        # Season-build identity is an input contract, not proof of quality.
+        source={"game_build":"12.1.5.70783","source_sha256":"a"*64,
+                "by_stat":{
+                    stat:{"item_id":311100+i,"rating":23}
+                    for i,stat in enumerate(sockets.ORDINARY_FOUR_STATS)}}
+        before=copy.deepcopy(source)
+        for sockets_n,total in ((5,92),(7,138)):
+            selection=sockets.nominal_four_stat_from_season_source(
+                source=source,game_build="12.1.5.70783",
+                socket_total=sockets_n,special_gem_id=311200,
+                need=self.need)
+            self.assertEqual(selection["J_candidate_unadmitted"],total)
+            self.assertEqual(selection["ordinary_gem_ids"],
+                             [311100+i%4 for i in range(sockets_n-1)])
+            self.assertEqual(selection["rating_by_id"],
+                             {str(311100+i):23 for i in range(4)})
+            self.assertFalse(selection["environment_ready"])
+            self.assertEqual(selection["native_calls"],0)
+        self.assertEqual(source,before)
+        invalid=[
+            {**source,"game_build":"12.1.5.70575"},
+            {**source,"by_stat":{**source["by_stat"],
+                "crit_rating":{"item_id":311100,"rating":0}}},
+            {**source,"by_stat":{**source["by_stat"],
+                "crit_rating":{"item_id":311101,"rating":23}}},
+            {**source,"by_stat":{k:v for k,v in
+                source["by_stat"].items() if k!="crit_rating"}},
+        ]
+        for candidate in invalid:
+            with self.subTest(candidate=candidate),self.assertRaises(ValueError):
+                sockets.nominal_four_stat_from_season_source(
+                    source=candidate,game_build="12.1.5.70783",
+                    socket_total=5,special_gem_id=311200,need=self.need)
+
     def test_five_sockets_one_wrist_diamond_four_actual_colors(self):
         before = self.rows()
         plan = {"socket_counts": {"head": 1, "wrists": 2,

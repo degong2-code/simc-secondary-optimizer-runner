@@ -1059,6 +1059,7 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                                 simc_effect_snapshot_case=None,
                                 gem_layout_receipt=None,
                                 gem_rating_by_id=None,
+                                nominal_gem_source=None,
                                 zero_history_native_G=None,
                                 policy_A_v217_stages=None,
                                 pinned_gem_simc_source_folder=None):
@@ -1291,6 +1292,24 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
         type(gem_enchant) is dict and gem_enchant.get(
             "selected_ordinary_gem_two_stat_budget_eligible_unadmitted")
         is False)
+    if nominal_gem_source is not None:
+        # Different numeric owner than v266 raw effect points. Only a
+        # matching SAME-BUILD physical v221 link may consume this preview.
+        # This is still UNADMITTED until the existing source/quality and
+        # v222/v212 install provider accepts it.
+        need(type(gem_layout_receipt) is dict and
+             type(source_item_link) is dict and
+             source_item_link.get("same_build_gem_item_join_only") is True,
+             "V216_NOMINAL_J_V221_PHYSICAL_SOURCE_REQUIRED")
+        nominal=physical_gems.nominal_four_stat_from_season_source(
+            source=nominal_gem_source,game_build=expected_game_build,
+            socket_total=gem_layout_receipt["socket_total"],
+            special_gem_id=gem_layout_receipt["special_gem_id"],need=need)
+        need(gem_rating_by_id==nominal["rating_by_id"] and
+             gem_layout_receipt["ordinary_gem_ids"]==
+                nominal["ordinary_gem_ids"],
+             "V216_NOMINAL_J_PHYSICAL_IDS_OR_TOTALS_DRIFT")
+        one_stat_or_ambiguous_J=False
     if gem_layout_receipt is not None:
         if (not one_stat_or_ambiguous_J and gem_enchant is not None
                 and gem_enchant.get(
@@ -5701,7 +5720,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                    "auto_select_observed_F_no_oil",
                    "source_selected_gem_roles",
                    "source_target_socket_count",
-                   "auto_four_stat_source_requested"},
+                   "auto_four_stat_source_requested",
+                   "source_ordinary_nominal_by_stat"},
              "V216_ZERO_HISTORY_SOURCE_INPUT_FIELDS")
         # A trusted internal source-owner adapter can provide independently
         # verified GJFO/Policy A input. JSON or HTTP cannot supply a callable.
@@ -5766,6 +5786,12 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         auto_four_stat_default=(
             source_selected_gem_roles is not None and
             source_selected_gem_roles["ordinary_gem_ids"] is None)
+        nominal_four_stat_source=fresh_collection_inputs.get(
+            "source_ordinary_nominal_by_stat")
+        need(nominal_four_stat_source is None or
+             (auto_four_stat_default and user is None and
+              "gem_rating_by_id" not in fresh_collection_inputs),
+             "V216_NOMINAL_J_ONLY_INTERNAL_FOUR_STAT_SOURCE")
         # A cold-start may collect the same-build raw DBC source without
         # inventing either special or ordinary ItemIDs. Source acquisition
         # and role selection/installation are independent contracts.
@@ -5854,6 +5880,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                          "source_selected_gem_roles",
                          "source_target_socket_count",
                          "auto_four_stat_source_requested",
+                         "source_ordinary_nominal_by_stat",
                          "verified_install_input_provider")}
         if auto_four_stat_default or auto_four_stat_source_requested:
             source_inputs["auto_four_stat_gems"]=True
@@ -5959,25 +5986,40 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         source_compilation[
                             "simc_declared_full_socket_counts_source_only"]=(
                                 dict(declared_counts))
-                    if declared_counts is None:
-                        pass
-                    elif not (
+                    ordinary=None
+                    if declared_counts is not None and (
                             observed.get(
                                 "selected_gem_v221_same_build_items_all_present")
-                            is True and observed.get(
-                                "four_stat_ordinary_source_complete_unadmitted")
                             is True):
+                        if nominal_four_stat_source is not None:
+                            # Reuse independently sourced per-gem nominal
+                            # totals. Raw EffectPointsMin interpretation is
+                            # not the budget owner for this selected season.
+                            nominal=physical_gems.nominal_four_stat_from_season_source(
+                                source=nominal_four_stat_source,
+                                game_build=collected["expected_game_build"],
+                                socket_total=target_sockets,
+                                special_gem_id=source_selected_gem_roles[
+                                    "special_gem_id"],need=need)
+                            ordinary=nominal["ordinary_gem_ids"]
+                            zero_history_gem_ratings=nominal["rating_by_id"]
+                            progress["four_stat_ordinary_nominal_source_unadmitted"]=(
+                                nominal)
+                        elif observed.get(
+                                "four_stat_ordinary_source_complete_unadmitted"
+                                ) is True:
+                            ordinary=physical_gems.ordinary_four_stat_default(
+                                observed_by_stat=observed[
+                                    "four_stat_ordinary_best_observed_unadmitted"],
+                                socket_total=target_sockets,
+                                special_gem_id=source_selected_gem_roles[
+                                    "special_gem_id"],need=need)
+                    if declared_counts is not None and ordinary is None:
                         progress["requires"].append(
                             "FOUR_ORDINARY_TYPES_SAME_BUILD_SOURCE_PENDING")
                         progress["four_stat_ordinary_source_status_unadmitted"]=(
                             observed.get("status"))
-                    else:
-                        ordinary=physical_gems.ordinary_four_stat_default(
-                            observed_by_stat=observed[
-                                "four_stat_ordinary_best_observed_unadmitted"],
-                            socket_total=target_sockets,
-                            special_gem_id=source_selected_gem_roles[
-                                "special_gem_id"],need=need)
+                    if ordinary is not None:
                         zero_history_gem_layout=(
                             _fresh_default_intrinsic_gem_layout_from_source(
                                 collected=collected,
@@ -5991,6 +6033,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         progress["default_intrinsic_gem_layout_unadmitted"]=(
                             zero_history_gem_layout)
                         progress["four_stat_ordinary_source_selection_unadmitted"]=(
+                            nominal_four_stat_source["by_stat"]
+                            if nominal_four_stat_source is not None else
                             observed[
                                 "four_stat_ordinary_best_observed_unadmitted"])
                 preflight=preflight_new_season_source(
@@ -6008,6 +6052,10 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     budget_evidence=zero_history_budget_evidence,
                     gem_layout_receipt=zero_history_gem_layout,
                     gem_rating_by_id=zero_history_gem_ratings,
+                    nominal_gem_source=(
+                        nominal_four_stat_source if
+                        auto_four_stat_default and
+                        zero_history_gem_layout is not None else None),
                     zero_history_native_G=native_G,
                     pinned_gem_simc_source_folder=collected.get(
                         "fresh_lazy_full_pinned_simc_item_source",{}).get(
