@@ -38,7 +38,7 @@ def material_neighbor(normalized,budget,observations,fraction=0.10,*,
     if selection_policy=="axis_coverage_v1":
         # Reuse original feasible neighbors; reprioritize by unexamined axes.
         _,chosen,coverage=policy.axis_coverage_choice(
-            rows,moved,B,lo,hi)
+            rows,moved,B,lo,hi,required_anchor=leader)
         # v095 promises distance from the *observed DPS leader*.
         need(chosen in choices,"COVERAGE_MATERIAL_LEADER_DISTANCE_DRIFT")
     else:

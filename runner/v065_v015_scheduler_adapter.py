@@ -186,7 +186,7 @@ def choose_next(rows,step,total,lower,upper):
         "derived_new_module_not_original_v015":True}
 
 
-def axis_coverage_choice(rows,step,total,lower,upper):
+def axis_coverage_choice(rows,step,total,lower,upper,*,required_anchor=None):
     """Opt-in v015 neighbor ORDERING: pay for distinct CHMV directions.
 
     Unlike a DPS prediction, coverage is determined entirely from native-
@@ -198,9 +198,14 @@ def axis_coverage_choice(rows,step,total,lower,upper):
     need(bool(eligible_obs),"COVERAGE_REQUIRES_OBSERVED_ANCHOR")
     need(type(step) is int and 1<=step<=total,
          "COVERAGE_STEP_OUT_OF_RANGE")
-    anchors=[leader(eligible_obs)]
-    anchors.extend(sorted((v for v in eligible_obs if v!=anchors[0]),
-                   key=lambda v:(-last(eligible_obs[v])["dps_mean"],v)))
+    if required_anchor is None:
+        anchors=[leader(eligible_obs)]
+        anchors.extend(sorted((v for v in eligible_obs if v!=anchors[0]),
+                       key=lambda v:(-last(eligible_obs[v])["dps_mean"],v)))
+    else:
+        need(required_anchor in eligible_obs,
+             "COVERAGE_REQUIRED_ANCHOR_NOT_OBSERVED")
+        anchors=[required_anchor]
     have=set(rows)
     present=list(eligible_obs)
     before=tuple(max(v[i] for v in present)-min(v[i] for v in present)
