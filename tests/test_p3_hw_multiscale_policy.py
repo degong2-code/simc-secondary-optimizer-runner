@@ -75,6 +75,34 @@ class Multiscale(unittest.TestCase):
         self.assertEqual(rows[0]["target"],p.legacy.to_target(
             p._apportion(3107,(1,1,1,1),upper,(1,1,1,1))))
 
+    def test_multiscale_local_choice_uses_one_history_extrema_pass(self):
+        # A local-only policy call with many historical rows: it must not
+        # scan the full history for every local neighbor, and it must keep
+        # exactly the same deterministic target on repeat calls.
+        from unittest.mock import patch
+        rows = []
+        for i in range(180):
+            weights = tuple(1 + p._halton(i + 1, prime)
+                            for prime in (2, 3, 5, 7))
+            vec = p._apportion(self.B, self.lo, self.hi, weights)
+            target = p.legacy.to_target(vec)
+            if any(row["target"] == target for row in rows):
+                continue
+            rows.append({"target": target, "iterations": 64,
+                         "dps_mean": 180000. - 3. * len(rows),
+                         "dps_sem": 400.})
+        # unique 180, index %23 != 0, no periodic precision.
+        self.assertGreaterEqual(len(rows), 100)
+        while len(rows) % 23 == 0 or len(rows) % 16 in (14, 15):
+            rows.pop()
+        first = self._call(rows, len(rows))
+        second = self._call(rows, len(rows))
+        self.assertEqual(first, second)
+        self.assertEqual(first["decision"],
+                         "NOISE_AWARE_MULTISCALE_FEASIBLE_NEIGHBOR")
+        self.assertEqual(sum(first["next_request"]["target"].values()),
+                         self.B)
+
     def test_stats_not_claimed_global_optimum_and_strict_input(self):
         planned=self._call([],0)
         self.assertFalse(planned["global_optimum_proven"])

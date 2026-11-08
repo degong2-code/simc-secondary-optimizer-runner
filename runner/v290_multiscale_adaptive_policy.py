@@ -262,8 +262,12 @@ def next_plan(observations, *, total, lower, upper, native_calls_used,
               min(by_vector[v]["dps_sem"],
                   by_vector[v]["dps_mean"] * .02) * .5), v))
         anchor_count = min(16, max(3, math.ceil(math.sqrt(unique))))
-        before = [max(v[i] for v in observed) -
-                  min(v[i] for v in observed) for i in range(4)]
+        # Scan the observations once. Re-scanning all historical candidates
+        # inside every (anchor, step, neighbor) would make a 2,000-case
+        # session spend avoidable CPU on proposal generation.
+        minima = tuple(min(v[i] for v in observed) for i in range(4))
+        maxima = tuple(max(v[i] for v in observed) for i in range(4))
+        before = tuple(maxima[i] - minima[i] for i in range(4))
         target_level = min(len(SCALES) - 1,
                            int(math.log2(max(1, unique // 24) + 1)))
         best = None
@@ -277,8 +281,7 @@ def next_plan(observations, *, total, lower, upper, native_calls_used,
                         anchor, step, total, search_lower, upper, observed):
                     gained_axes = sum(
                         before[i] == 0 and
-                        (nxt[i] < min(v[i] for v in observed) or
-                         nxt[i] > max(v[i] for v in observed))
+                        (nxt[i] < minima[i] or nxt[i] > maxima[i])
                         for i in range(4))
                     utility = (parent_score +
                                .003 * row["dps_mean"] * gained_axes -
