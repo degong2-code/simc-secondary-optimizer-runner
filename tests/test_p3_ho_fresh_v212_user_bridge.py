@@ -107,7 +107,7 @@ class FreshInstalledV096Bridge(unittest.TestCase):
             self.assertTrue(result["fresh_v212_installed"])
             self.assertEqual(result["season_budget"]["base_B"],3150)
             self.assertEqual(result["season_source_identity"][
-                "fresh_installed_manifest_sha256"],doc["manifest_sha256"])
+                "environment_build_receipt_sha256"],doc["manifest_sha256"])
             self.assertEqual(result["oil_by_hand"],{})
 
     def test_no_v217_proof_or_changed_manifest_blocks(self):
