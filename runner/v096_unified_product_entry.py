@@ -206,13 +206,19 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
          and normalized["budget"]["external_temporary_rating"]==zeros
          and doc["official_B"]+sum(oil.values())==doc["official_T"],
          "FRESH_SEASON_TYPED_GJFO_B_T_O_DRIFT")
+    # Preserve v093/v094's exact durable session/cache identity shape.
+    # The fresh installed v212 SHA occupies the former v216 receipt slot;
+    # include the authenticated v217 stage receipt in source_input_sha256.
     identity={
-        "fresh_installed_manifest_sha256":doc["manifest_sha256"],
-        "fresh_installed_stage_receipt_sha256":bound["stage_receipt_sha256"],
+        "environment_build_receipt_sha256":doc["manifest_sha256"],
+        "environment_manifest_sha256":doc["manifest_sha256"],
         "source_catalog_artifact_sha256":
             doc["source_catalog_artifact_sha256"],
-        "source_input_sha256":hashlib.sha256(json.dumps(
-            doc["trusted_budget_component_source_identities"],
+        "source_input_sha256":hashlib.sha256(json.dumps({
+            "original_budget_source_identities":
+                doc["trusted_budget_component_source_identities"],
+            "original_v217_installed_stage_receipt_sha256":
+                bound["stage_receipt_sha256"]},
             sort_keys=True,separators=(",",":")).encode("utf8")).hexdigest()}
     budget={"game_build":doc["game_build"],
             "simc_revision":doc["simc_revision"],
@@ -385,8 +391,6 @@ def source(manifest_path):
                                 else "OPT_IN_ILVL_REFERENCE_BASE_B")}
     if season_source is not None:
         plan["season_source_receipt_sha256"]=(
-            season_source["season_source_identity"].get(
-                "fresh_installed_manifest_sha256") or
             season_source["season_source_identity"][
                 "environment_build_receipt_sha256"])
         if season_source.get("fresh_v212_installed"):
