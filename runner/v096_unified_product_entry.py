@@ -28,6 +28,8 @@ NATIVE_ENCHANT_FIELD="v202_verified_enchant_choice"
 NONCHMV_ENCHANT_FIELD="v206_source_classified_nonchmv_enchant_choice"
 SEASON_FIELD="admitted_season_budget_source"
 SEASON_SCHEMA="v096_internal_admitted_season_budget_source_v1"
+FRESH_SEASON_FIELD="installed_fresh_season_budget_source"
+FRESH_SEASON_SCHEMA="v096_internal_installed_fresh_v212_source_v1"
 # Optional internal stage seal: no Native until physical SimC acceptance.
 STAGE_FIELD="unverified_pure_profile_plan_only"
 class EntryBlocked(ValueError):pass
@@ -140,6 +142,87 @@ def _admitted_season_source(*, manifest_path, season, revision,
             "oil_by_hand":by_hand}
 
 
+def _admitted_fresh_season_source(*, manifest_path, season, revision,
+                                  user_scenario, flask_F, oil_hands, profile):
+    """Reuse ORIGINAL exact-build v216/v217/v212 installed source, never a preview.
+
+    The caller does not authenticate source data or SimC effects. The existing
+    v216 reusable installer lookup rechecks catalog bytes, stage hashes and
+    both v217 stage receipts before any v094 runtime source is prepared.
+    This first bridge supports the proven O=0 base; physical oils stay pending.
+    """
+    need(type(season) is dict and set(season)=={
+        "schema","installed_environment_path","installed_manifest_sha256",
+        "oil_by_hand"} and season["schema"]==FRESH_SEASON_SCHEMA,
+        "FRESH_SEASON_INTERNAL_SOURCE_FIELDS")
+    path=path_for(pathlib.Path(manifest_path).parent,
+                  season["installed_environment_path"])
+    need(not path.is_symlink() and path.is_file() and len(path.parents)>=4
+         and path.parent.name=="fresh_source"
+         and path.parents[2].name=="_fresh_season_sources"
+         and path.name.startswith("v212_installed_"),
+         "FRESH_SEASON_INSTALLED_PATH_REQUIRED")
+    import v212_environment_manifest as installed_manifest
+    import v216_environment_build_coordinator as environment
+    try:
+        doc,_=installed_manifest.read_json(path,environment.MAX_RECEIPT_BYTES)
+        installed_manifest.verify_fresh_installed_environment(doc)
+        need(path.parent.parent.name=="wago_"+doc["game_build"] and
+             path.name=="v212_installed_"+doc["manifest_sha256"][:20]+".json"
+             and season["installed_manifest_sha256"]==doc["manifest_sha256"],
+             "FRESH_SEASON_INSTALLED_MANIFEST_IDENTITY_DRIFT")
+        bound=environment.find_verified_installed_season_environment(
+            path.parents[3],doc["target_ilevel"],
+            expected_game_build=doc["game_build"])
+    except (OSError,ValueError,TypeError,KeyError) as exc:
+        if isinstance(exc,EntryBlocked):
+            raise
+        raise EntryBlocked("FRESH_SEASON_ORIGINAL_V217_V212_VERIFICATION_FAILED:"
+                           +type(exc).__name__) from exc
+    need(type(bound) is dict and bound.get("environment_ready") is True
+         and bound.get("environment_installed") is True
+         and bound.get("installed_manifest_sha256")==doc["manifest_sha256"],
+         "FRESH_SEASON_V217_INSTALLED_PROOF_NOT_FOUND")
+    normalized=contract.normalize(user_scenario)
+    oil=doc["official_O"]
+    zeros={stat:0 for stat in contract.STATS}
+    physical_f=doc.get("official_F_physical_source")
+    need(type(physical_f) is dict
+         and physical_f.get("static_CHMV_vector")==flask_F
+         and physical_f.get("F_rating")==doc["official_F"]
+         and type(physical_f.get("simc_input_token")) is str
+         and ("flask="+physical_f["simc_input_token"]) in
+             profile.splitlines(),
+         "FRESH_SEASON_SELECTED_PHYSICAL_F_PROFILE_DRIFT")
+    need(season["oil_by_hand"]=={} and oil_hands==[] and oil==zeros
+         and normalized["scenario"]["target"]["mode"]=="manual_total"
+         and normalized["scenario"]["target"]["ilevel"]==
+             doc["target_ilevel"]
+         and normalized["scenario"]["target"]["manual_total"]==
+             doc["official_B"]
+         and normalized["budget"]["T"]==doc["official_B"]
+         and normalized["budget"]["J"]==doc["official_J"]
+         and normalized["budget"]["F"]==doc["official_F"]
+         and normalized["budget"]["external_temporary_rating"]==zeros
+         and doc["official_B"]+sum(oil.values())==doc["official_T"],
+         "FRESH_SEASON_TYPED_GJFO_B_T_O_DRIFT")
+    identity={
+        "fresh_installed_manifest_sha256":doc["manifest_sha256"],
+        "fresh_installed_stage_receipt_sha256":bound["stage_receipt_sha256"],
+        "source_catalog_artifact_sha256":
+            doc["source_catalog_artifact_sha256"],
+        "source_input_sha256":hashlib.sha256(json.dumps(
+            doc["trusted_budget_component_source_identities"],
+            sort_keys=True,separators=(",",":")).encode("utf8")).hexdigest()}
+    budget={"game_build":doc["game_build"],
+            "simc_revision":doc["simc_revision"],
+            "target_ilevel":doc["target_ilevel"],
+            "base_B":doc["official_B"],"final_T":doc["official_T"],
+            "fixed_O":dict(oil),"J":doc["official_J"],"F":doc["official_F"]}
+    return {"season_budget":budget,"season_source_identity":identity,
+            "oil_by_hand":{},"fresh_v212_installed":True}
+
+
 def source(manifest_path):
     """Build the existing typed and SHA-locked Native context; zero SimC calls."""
     manifest_path=pathlib.Path(manifest_path).resolve()
@@ -149,7 +232,8 @@ def source(manifest_path):
     allowed=(base_allowed+
              tuple(x|{NATIVE_ENCHANT_FIELD} for x in base_allowed)+
              tuple(x|{NONCHMV_ENCHANT_FIELD} for x in base_allowed)+
-             tuple(x|{SEASON_FIELD} for x in (FIELDS,)))
+             tuple(x|{SEASON_FIELD} for x in (FIELDS,))+
+             tuple(x|{FRESH_SEASON_FIELD} for x in (FIELDS,)))
     need(type(user) is dict and set(user) in allowed
          and user.get("schema")==SCHEMA,"ENTRY_SCHEMA_OR_FIELDS")
     if STAGE_FIELD in user:
@@ -190,7 +274,13 @@ def source(manifest_path):
             manifest_path=manifest_path,season=user[SEASON_FIELD],
             revision=user["native_revision"],user_scenario=doc,
             flask_F=user["flask_F"],oil_hands=user["oil_hands"])
-        if SEASON_FIELD in user else None)
+        if SEASON_FIELD in user else
+        _admitted_fresh_season_source(
+            manifest_path=manifest_path,season=user[FRESH_SEASON_FIELD],
+            revision=user["native_revision"],user_scenario=doc,
+            flask_F=user["flask_F"],oil_hands=user["oil_hands"],
+            profile=profile)
+        if FRESH_SEASON_FIELD in user else None)
     prepared=oil_adapter.prepare(
         profile,doc,fillers,cache,
         user["weapon_layout"],user["oil_hands"],
@@ -282,16 +372,23 @@ def source(manifest_path):
           "scouts":user["scouts"],"material_scouts":user["material_scouts"],
           "native_called":False,
           "original_product_v015_v016_merged":False,
-          "budget_source":"ADMITTED_SEASON_GJFO_V216_V223" if season_source
+          "budget_source":("ADMITTED_FRESH_SEASON_GJFO_V212_V217"
+                          if season_source.get("fresh_v212_installed") else
+                          "ADMITTED_SEASON_GJFO_V216_V223") if season_source
                           else "USER_MANUAL_FINAL_INCLUDING_OIL" if manual_T is not None
                           else ("OPT_IN_ILVL_REFERENCE_PLUS_VERIFIED_FIXED_E"
                                 if NATIVE_ENCHANT_FIELD in user
                                 else "OPT_IN_ILVL_REFERENCE_BASE_B")}
     if season_source is not None:
         plan["season_source_receipt_sha256"]=(
+            season_source["season_source_identity"].get(
+                "fresh_installed_manifest_sha256") or
             season_source["season_source_identity"][
                 "environment_build_receipt_sha256"])
-        plan["source_links_verified_by_v223"]=True
+        if season_source.get("fresh_v212_installed"):
+            plan["source_links_verified_by_v217_v212"]=True
+        else:
+            plan["source_links_verified_by_v223"]=True
         plan["season_source_same_game_build"]=(
             season_source["season_budget"]["game_build"])
         plan["season_gjfo_source_is_NOT_policy_A_coverage"]=True
