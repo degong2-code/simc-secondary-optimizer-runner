@@ -1,3 +1,5 @@
+> **2026-11-08 P3-GZ Native 근거 추가:** 정확한 원래 G SimC 바이너리와 입력을 재사용한 로컬 Native4(exit0), 선언 5 `gem_id`의 JSON2 `buffed_stats`에서 실제 일반보석 CHMV +92 관측. `player.gear`는 보석을 반영하지 않는 수치라 0처럼 보일 수 있음. 이 사례는 소켓 획득 연구나 특수효과 Gate를 요구하지 않지만 최고품질 공식 J·v222 B/T·v212 READY 입증도 아님. [P3-GZ](notes/2026-11-08_p3-gz-pinned-simc-gem5-real-native.md). 기존 C3/C4·E1/E3 경로 재사용 후 J source-owner 연결 우선.
+
 # SIMC SECONDARY OPTIMIZER — 기능 중심 기술 자산 라이브러리
 
 > **격리 개발용 탐색 정본 · 2026-11-05 · P3-ES**. 신규 기술의 인증서가 아니다. 최신 사용자 직접 결정 > 승인 설계 v1.4.3 > 현재 코드·봉인 원본·실제 Actions/Native > 이 문서 순. [개발 규약](PROTOCOL.md) 및 [이전 상세 INDEX 스냅샷](HISTORICAL_INDEX_20261105_PRE_LIBRARY.md)을 함께 보존한다.

@@ -1,0 +1,90 @@
+{
+  "schema": "p3_gz_pinned_original_G_gem_id_input_native_audit_v1",
+  "execution_environment": "local Linux tool container, no GitHub Actions Native",
+  "previous_real_T1_run": 42332836316,
+  "previous_real_T1_artifact_id": 13557983542,
+  "reused_binary_revision": "c20e2ad52e4c33711f74272309a5748125175fe8",
+  "reused_binary_sha256": "980ed4640cecc3ed78b34ed0dc0363dbff2ed7d703174e9cc01f09d18570d36b",
+  "game_build": "12.1.5.70783",
+  "input_source_original_G": "v277 native case from original #42332836316",
+  "original_G_input_sha256": "271e4ebe939fe1f6191c10dd55e2e79805110e8330ceebf860dea4710b39ac79",
+  "new_native_calls": 4,
+  "new_game_http_calls": 0,
+  "new_actions_dispatches_for_native": 0,
+  "baseline_JSON2_buffed_stats": {
+    "crit": 844,
+    "haste": 1021,
+    "mastery": 1010,
+    "versatility": 168
+  },
+  "native_cases": [
+    {
+      "name": "5gem",
+      "ordinary_ids": [
+        240908,
+        240900,
+        240918,
+        240892
+      ],
+      "special_id": 240967,
+      "gem_count": 5,
+      "input_sha256": "95e961dea563584ec2ea1511148cb4d7e0ac2cbe3cad20673bbafba74c632892",
+      "json2_sha256": "b7a9af764ca0165086d36bc26a63ab78859d43a8d7b185b15911bfb6f31e1dfc",
+      "exit_code": 0,
+      "buffed_delta": {
+        "crit": 16,
+        "haste": 23,
+        "mastery": 37,
+        "versatility": 16
+      },
+      "total_chmv_delta": 92
+    },
+    {
+      "name": "replace_240908_with_240906",
+      "input_sha256": "b45b518188dfa538649986af526c613b40c33a8cf1549a8b6c56ea8130e0e663",
+      "json2_sha256": "24758cab28efec8344100820837b25fff211bab3d5ac8b0661421e7edca3ee4a",
+      "exit_code": 0,
+      "buffed_delta": {
+        "crit": 16,
+        "haste": 30,
+        "mastery": 30,
+        "versatility": 16
+      },
+      "total_chmv_delta": 92
+    },
+    {
+      "name": "add_bonus_13750_to_neck",
+      "input_sha256": "20b1e55e32620a74c7a8d309060d6b93b94a5886be0b7b00800a51c40bfd05e7",
+      "json2_sha256": "90c8a9a6220da3f4747c6aedf1273e2559015c2b5431bcff64fd81a3300a8833",
+      "exit_code": 0,
+      "buffed_delta": {
+        "crit": 16,
+        "haste": 30,
+        "mastery": 30,
+        "versatility": 16
+      },
+      "total_chmv_delta": 92
+    },
+    {
+      "name": "chest_240906_bonus_13750",
+      "input_sha256": "528a20ee98aa13903728ec04dafbe427a473dbdd26b9c9bc82a5ed27d10dd448",
+      "json2_sha256": "e733de5b95ce88eb8cca9d9de04f04a1471407ca951b3b5d6b8f743d9b05adf0",
+      "exit_code": 0,
+      "buffed_delta": {
+        "crit": 16,
+        "haste": 7,
+        "mastery": 0,
+        "versatility": 0
+      },
+      "total_chmv_delta": 23
+    }
+  ],
+  "audit_archive_sha256": "63209258f9895b03cb0011c1c15d608f734f058855205f6a353677399162c727",
+  "audit_zip_bytes": 69848,
+  "notes": [
+    "player.gear item rating excludes ordinary gem contribution on this pinned binary; measure player.collected_data.buffed_stats.stats after baseline.",
+    "These physical source-observed color IDs are input fixtures, not the currently approved highest-quality official J list.",
+    "No independent special gem proc/effect certification, no product READY/installed, and no v222 official G/J/F/O/B/T."
+  ],
+  "no_product_code_changed_after_p3_gy": true
+}

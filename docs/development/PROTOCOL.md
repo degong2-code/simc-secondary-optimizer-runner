@@ -1,3 +1,7 @@
+## 2026-11-08 P3-GZ 최신 범위 교정 (P3-GX 복원·P3-GY 코드 이후)
+
+기존 P3-GX 읽기 경로·권한·인계 신분을 유지한다. [P3-GZ](notes/2026-11-08_p3-gz-pinned-simc-gem5-real-native.md)는 기존 정확 SimC Native G 원본 입력과 바이너리를 재사용해 특수1+일반4 `gem_id`가 JSON2 `buffed_stats`에 CHMV +92를 실제 적용한 **로컬 단일 프로필 증거**다(신규 Native4회, CI 실행과 구분). `gear` 레코드만으로 보석 미적용이라 단정하지 말 것. 동일 시즌 최고품질 일반보석 공식 J source-owner/예산·READY는 미완료. 인게임 소켓 획득 아이템·주문/별도 효과 Gate는 STOP, 원래 v222/v220/v196/v212/v217 CONNECT가 다음 우선. 제품 코드 P3-GY 3ceb2566의 CI는 별도 PASS, 이번 문서 영수증은 새 Native CI가 아님. `main`/immutable/Project UI/Work OS/소유권 변경 없음.
+
 ## 2026-11-08 최신 단일 인계 P3-GX — 읽기 전용 새 채팅 (P3-GI 후속)
 
 **진입점:** [P3-GX 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261108_P3_GX_ENGINE_FIRST_RESTORE.md) → 이 PROTOCOL → INDEX C3/C4/C1/C2·E3/E2/E1·B3/D1/D2·G1/G2 → CURRENT 최신 상단 → 개발자 실행 노트 → 필요한 코드/원본/실 영수증. 과거 P3-GI 이하 '최신' 표현은 당시 역사. **첫 응답은 격리/main HEAD 독립 조회, Evidence/Integration·병목·장단기 로드맵 읽기 전용 보고 후 즉시 STOP**; 명시적 '진행' 전에 코드/문서 수정, 수집, CI/Actions/Native/테스트, 승격 금지.
