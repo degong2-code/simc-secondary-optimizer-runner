@@ -1,0 +1,11 @@
+# P3-HAH · P1-3 Local web longrun product integration (2026-11-09)
+
+- **Capability:** `PRODUCT.E2E`, `OPTIMIZER.POLICY`, `SOURCE.SEAL`
+- **Keywords:** P3-HAH, v293, v113, v106, v096, v291, v292, session, Start, Status, Cancel, Resume
+- **Evidence reuses:** P3-HAG [real #42504040076](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42504040076): restored 10 verified DPS Native in different Actions job with zero new DPS Native (environment Native3). [focused #42504522199](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42504522199): 481 PASS/2 SKIP Native0.
+- **Decision:** CONNECT existing local v113 UserRequest/v106 session identity and browser to v096 exact source and staged v291 longrun; use v292 SHA archive as separate optional zero-Native import. No new optimizer, SimC mechanic gates, server/cloud backend or rewrite of existing 6-case mode.
+- **Changes:** v293 standalone child worker with shared original v106 OS lock, one typed Native budget per sealed session, v291 bounded per-invocation Native batch, local STOP flag, exact source reauthentication on every resume, 95%-only observed result adapter, safe read-only status; separate source-cache-only import via v292. v113 loopback/token/Origin protections unchanged, 7 explicit local long-run routes, legacy six-case endpoints unchanged. Old sessions unaffected until explicit longrun start.
+- **Verification:** PENDING offline focused checks and UI tests. Native0 in tests; historic real v291/v292 receipts reused as historical proof, not claim that browser's integrated 26-spec longrun has been newly executed.
+- **Remaining:** Browser controls, source-bound offline HTTP test including restart/cancel/duplicate guard, then practical real UI session with accepted environment and selected items; ensure no repeated G/F environment Native when same season proof reuses.
+- **Efficiency:** Bounded batch/resume reuses v291 journal/cache; avoid reading native bytes on GET; no v094 code change, no duplicate Native worker, no recursive season DB refresh.
+- **Authority:** Isolated probe branch only; main, immutable sources, Project UI, Work OS, existing main product chat ownership unchanged.

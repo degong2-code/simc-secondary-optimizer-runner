@@ -36,6 +36,7 @@ import v216_environment_build_coordinator as environment_build
 import v289_retail_live_build_source as retail_build_source
 import v271_user_socket_gem_layout as physical_gems
 import v218_v098_profile_stage_adapter as profile_stage
+import v293_local_longrun_session as longrun_sessions
 
 SCHEMA = "v113_local_web_api_p1_v1"
 KEY = re.compile(r"[a-f0-9]{20}\Z")
@@ -77,6 +78,31 @@ class SeasonEnvironmentBuildRequest(BaseModel):
         default=None,pattern=r"^(?:[a-f0-9]{7,12}|[a-f0-9]{40})$")
     refresh_reason: str | None = Field(
         default=None,pattern=r"^(?:season_change|expansion_change|item_content_change)$")
+
+
+class LongRunBatchRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    max_new_native_this_invocation: int = Field(default=4,ge=0,le=32)
+    max_elapsed_seconds: int = Field(default=900,ge=60,le=3600)
+
+
+class LongRunStartRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    controls: dict
+    binary: str = Field(min_length=1,max_length=4096)
+    revision: str = Field(min_length=7,max_length=40)
+    static_cache: str | None = Field(default=None,max_length=4096)
+    current_season_product: bool = True
+    max_native_calls: int = Field(default=12,ge=12,le=2000)
+    max_new_native_this_invocation: int = Field(default=4,ge=1,le=32)
+    max_elapsed_seconds: int = Field(default=900,ge=60,le=3600)
+
+
+class LongRunImportRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    archive_path: str = Field(min_length=1,max_length=4096)
+    archive_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
+    max_elapsed_seconds: int = Field(default=900,ge=60,le=3600)
 
 
 class UserRequest(BaseModel):
@@ -904,6 +930,111 @@ class LocalJobs:
                 "environment_manifest":environment,
                 "environment_build":self._read_environment_build_summary(folder)}
 
+    def longrun_launch(self, folder, *, budget=None, batch=4, elapsed=900,
+                       cache_only=False, archive=None, sha=None):
+        with self.lock:
+            if self.is_active(folder):
+                raise HTTPException(409,detail={"code":"SESSION_ALREADY_RUNNING"})
+            try:
+                self._verify_environment_dependencies(
+                    self._read_environment_summary(folder),folder)
+                self.args_for_existing(folder)
+                previous=longrun_sessions.config(folder)
+                if previous is None:
+                    if budget is None:
+                        raise longrun_sessions.LocalLongRunBlocked(
+                            "V293_LONGRUN_START_REQUIRED")
+                    longrun_sessions.establish(folder,budget)
+                else:
+                    if budget is not None and budget!=previous["native_budget"]:
+                        raise longrun_sessions.LocalLongRunBlocked(
+                            "V293_EXISTING_SESSION_BUDGET_CANNOT_CHANGE")
+                    budget=previous["native_budget"]
+                    longrun_sessions.prepare(folder,budget)
+                if archive is not None and (
+                     not sha or batch!=0 or not cache_only):
+                    raise longrun_sessions.LocalLongRunBlocked(
+                        "V293_IMPORT_MUST_BE_CACHE_ONLY")
+                if cache_only and archive is None:
+                    staged=longrun_sessions.stage_path(folder,budget)
+                    if not (staged/"simc_results"/"V291_JOURNAL.jsonl").is_file():
+                        raise longrun_sessions.LocalLongRunBlocked(
+                            "V293_CACHE_ONLY_REQUIRES_EXISTING_CASES")
+                cancel=longrun_sessions.stage_path(folder,budget)/"CANCEL"
+                if cancel.exists():cancel.unlink()
+                longrun_sessions.state(folder,"QUEUED")
+                cmd=[sys.executable,
+                     str(pathlib.Path(longrun_sessions.__file__).resolve()),
+                     "--session",str(folder),
+                     "--max-native-calls",str(budget),
+                     "--batch",str(batch),
+                     "--max-elapsed-seconds",str(elapsed)]
+                if cache_only:cmd.append("--cache-only")
+                if archive is not None:
+                    cmd.extend(["--portable-archive",archive,
+                                "--portable-sha256",sha])
+                log=folder/"V293_WORKER.log"
+                with log.open("a",encoding="utf8",buffering=1) as stream:
+                    stream.write("\n=== V293 LONGRUN OPT-IN ===\n")
+                    stream.flush()
+                    flags=getattr(subprocess,"CREATE_NO_WINDOW",0) if os.name=="nt" else 0
+                    child=subprocess.Popen(
+                        cmd,stdin=subprocess.DEVNULL,
+                        stdout=stream,stderr=subprocess.STDOUT,
+                        creationflags=flags,
+                        env={**os.environ,"PYTHONIOENCODING":"utf-8"})
+                self.children[folder.name]=child
+            except HTTPException:
+                raise
+            except Exception as exc:
+                raise blocked(exc) from None
+        return {"session_id":folder.name,
+                "status":"LONGRUN_IMPORT_STARTED" if archive is not None
+                    else "LONGRUN_CACHE_ONLY_STARTED" if cache_only
+                    else "LONGRUN_WORKER_STARTED",
+                "native_attempt_ceiling_cumulative":budget,
+                "max_new_native_this_invocation":(0 if cache_only else batch),
+                "new_native_execution_permitted":not cache_only}
+
+    def longrun_start(self, request):
+        if request.current_season_product is not True:
+            raise HTTPException(422,detail={"code":"V293_VERIFIED_SEASON_REQUIRED"})
+        params=UserRequest(
+            controls=request.controls,binary=request.binary,
+            revision=request.revision,static_cache=request.static_cache,
+            current_season_product=True)
+        planned=self.plan(params)
+        return self.longrun_launch(
+            self.folder(planned["session_id"]),
+            budget=request.max_native_calls,
+            batch=request.max_new_native_this_invocation,
+            elapsed=request.max_elapsed_seconds)
+
+    def longrun_status(self, folder):
+        return longrun_sessions.read_status(folder,active=self.is_active(folder))
+
+    def longrun_cancel(self, folder):
+        with self.lock:
+            saved=longrun_sessions.config(folder)
+            if saved is None or not self.is_active(folder):
+                raise HTTPException(409,detail={"code":"LONGRUN_NOT_RUNNING"})
+            worker=longrun_sessions.worker_state_path(folder)
+            doc=(json.loads(worker.read_text(encoding="utf8"))
+                 if worker.is_file() else {})
+            if doc.get("status") not in ("QUEUED","RUNNING"):
+                raise HTTPException(409,detail={"code":"LONGRUN_NOT_RUNNING"})
+            flag=longrun_sessions.stage_path(
+                folder,saved["native_budget"])/"CANCEL"
+            flag.touch(exist_ok=True)
+            return {"session_id":folder.name,
+                    "status":"LONGRUN_CANCEL_REQUESTED_AFTER_CURRENT_NATIVE"}
+
+    def longrun_result(self, folder):
+        try:
+            return longrun_sessions.read_result(folder)
+        except Exception as exc:
+            raise blocked(exc) from None
+
     def cancel(self, folder):
         with self.lock:
             if not self.is_active(folder):
@@ -1172,6 +1303,41 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                 "environment_manifest":jobs._read_environment_summary(folder),
                 "environment_build":jobs._read_environment_build_summary(folder),
                 "native_calls":0,"network_calls":0}
+
+    @app.post("/api/v1/longrun/start")
+    def longrun_start(request: LongRunStartRequest):
+        return jobs.longrun_start(request)
+
+    @app.post("/api/v1/sessions/{session_id}/longrun/resume")
+    def longrun_resume(session_id: str, request: LongRunBatchRequest):
+        return jobs.longrun_launch(
+            jobs.folder(session_id),
+            batch=request.max_new_native_this_invocation,
+            elapsed=request.max_elapsed_seconds)
+
+    @app.post("/api/v1/sessions/{session_id}/longrun/cache-only")
+    def longrun_cache_only(session_id: str):
+        return jobs.longrun_launch(jobs.folder(session_id),
+                                   batch=0,cache_only=True)
+
+    @app.post("/api/v1/sessions/{session_id}/longrun/import")
+    def longrun_import(session_id: str, request: LongRunImportRequest):
+        return jobs.longrun_launch(
+            jobs.folder(session_id),batch=0,cache_only=True,
+            archive=request.archive_path,sha=request.archive_sha256,
+            elapsed=request.max_elapsed_seconds)
+
+    @app.post("/api/v1/sessions/{session_id}/longrun/cancel")
+    def longrun_cancel(session_id: str):
+        return jobs.longrun_cancel(jobs.folder(session_id))
+
+    @app.get("/api/v1/sessions/{session_id}/longrun/status")
+    def longrun_status(session_id: str):
+        return jobs.longrun_status(jobs.folder(session_id))
+
+    @app.get("/api/v1/sessions/{session_id}/longrun/result")
+    def longrun_result(session_id: str):
+        return jobs.longrun_result(jobs.folder(session_id))
 
     @app.post("/api/v1/sessions/plan")
     def plan(request: UserRequest):

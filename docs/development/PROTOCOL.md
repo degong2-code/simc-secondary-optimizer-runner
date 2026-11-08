@@ -1,3 +1,7 @@
+## 2026-11-09 P3-HAH 사용자 로컬 웹 장기 탐색 P1-3 (승인된 '진행')
+
+[P3-HAH](notes/2026-11-09_p3-hah-local-longrun-product-web-integration.md): 기존 v113/v106 사용자 입력/로컬 세션의 기존 임계·보안/동시성 계약을 보존하여 v096 exact source → v291 durable 탐색/취소/재개 및 v292 SHA import-only를 별도 opt-in로 연결. 한 세션 한 typed budget, Native 호출 상한, 원본 SHA/95% 결과/다중후보 선택 불확실성/전역최적 미증명 유지. 기존 6-call UI 및 backend 동작 변경 금지. 신규 검증 전 PASS 주장 금지. main/immutable/Project UI/Work OS/주 제품 채팅 소유권 불변.
+
 ## 2026-11-09 P3-HAG cross-job 캐시 검증 완료(범위 보존)
 
 [P3-HAG](notes/2026-11-09_p3-hag-exact-portable-native-case-replay.md) [real #42504040076](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42504040076): 같은 시즌·고양334 기존 실제 DPS Native10건을 원본 ZIP SHA+SimC source/JSON2/receipt, 현 실행 프로필/카탈로그/정확 case-key로 다시 검증해 **새 DPS Native0**으로 가져옴(환경 G/F Native3 별도). 검증된 selected pair 95% 정상근사만, 다중선택 보정·전역최적 아님. v291 명시적 ZIP SHA import-only CLI [focused #42504333615](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42504333615) 481 PASS/2 SKIP, Native0; 실 CLI 실행은 아직 미완료. 원본 SHA 재인증·full path-specific input SHA 검사 약화 금지. 새 시즌·다른 카탈로그/프로필/정책/반복수는 이식 차단. main/immutable/Project UI/Work OS/owner 변경 없음.
