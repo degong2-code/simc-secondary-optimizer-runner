@@ -34,8 +34,13 @@ class EnchantInsideLegacyBudget(unittest.TestCase):
             n,b,v(h=165),v(h=16),fixed_enchant_E=v(h=30))
         B,lo,hi=scheduler.bounds(n,good)
         self.assertEqual(B,3000)
-        self.assertFalse(scheduler.eligible((200,218,500,2082),B,lo,hi))
-        self.assertTrue(scheduler.eligible((200,219,700,1881),B,lo,hi))
+        # Keep the exact 218 vs 219 proven E/F floor boundary, but use
+        # stat distributions that also obey the user's NEW global <50%
+        # of final T=3016 hard cap. Historical 1881 vers was only valid
+        # before the new global limit and must now be rejected.
+        self.assertFalse(scheduler.eligible((700,218,800,1282),B,lo,hi))
+        self.assertTrue(scheduler.eligible((700,219,800,1281),B,lo,hi))
+        self.assertFalse(scheduler.eligible((200,219,700,1881),B,lo,hi))
         with self.assertRaisesRegex(Exception,"ENCHANT_E_EXCEEDS_AVAILABLE_G"):
             scheduler.budget_with_fixed_components(
                 n,b,v(h=165),v(h=16),fixed_enchant_E=v(h=3000))
