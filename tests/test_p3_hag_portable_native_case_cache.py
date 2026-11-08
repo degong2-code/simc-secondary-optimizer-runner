@@ -24,6 +24,16 @@ class PortableReuse(unittest.TestCase):
             result=reuse.runner.run(context,F,binary,original,
                 max_native_calls=12,max_new_native_this_invocation=4)
             self.assertEqual(result["completed_cases"],4)
+        # v065 real receipts include this mandatory JSON2 content SHA.
+        # The tiny synthetic fake intentionally omits it until this fixture
+        # enriches its receipt to the production cache-verification shape.
+        for i in range(4):
+            case=reuse.runner.case_folder(original,i)
+            rec_path=case/"native_receipt.json"
+            receipt=json.loads(rec_path.read_text())
+            receipt["native_json_sha256"]=hashlib.sha256(
+                (case/"result.json").read_bytes()).hexdigest()
+            rec_path.write_text(json.dumps(receipt),encoding="utf8")
         path=pathlib.Path(folder)/"native-cases.zip"
         with zipfile.ZipFile(path,"w",zipfile.ZIP_DEFLATED) as z:
             for name in ("V291_SESSION.json","V291_JOURNAL.jsonl"):
