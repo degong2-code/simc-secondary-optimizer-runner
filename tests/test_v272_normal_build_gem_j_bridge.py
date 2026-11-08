@@ -111,6 +111,58 @@ class NormalBuildGemJ(unittest.TestCase):
                     build.preflight_new_season_source(
                         **kwargs,nominal_gem_source=bad)
 
+    def test_p3_hk_quality_scope_nominal_pinned_rank_not_simc_effect_gate(self):
+        import v216_environment_build_coordinator as engine
+        from tests.test_v264_environment_standard_budget_integration import prepared
+        catalog,_,_=prepared()
+        # Reuse the same source shape rather than manufacture an effect
+        # certificate or a new simulated season budget.
+        build="12.1.5.70783"
+        nominal=__import__("v271_user_socket_gem_layout").load_packaged_season_nominal_source(
+            game_build=build,need=engine.need)
+        selected=__import__("v271_user_socket_gem_layout").nominal_four_stat_from_season_source(
+            source=nominal,game_build=build,
+            socket_total=5,special_gem_id=240967,need=engine.need)
+        ids=selected["ordinary_gem_ids"]
+        all_ids=sorted(set(ids+[240967]))
+        quality={"quality_source_authenticated":True,
+                 "v230_stage_receipt_sha256":"c"*64,
+                 "game_build":build,
+                 "simc_revision":catalog["simc_revision"],
+                 "selected_item_ids":all_ids,
+                 "selected_item_quality_unadmitted":[
+                    {"item_id":i,"crafting_quality":2} for i in all_ids]}
+        comparison={
+            "schema":"v216_selected_gem_quality_policy_A_preview_v1",
+            "game_build":build,"simc_revision":catalog["simc_revision"],
+            "quality_source_groups_unadmitted":[]}
+        pre={"game_build":build,
+             "simc_revision":catalog["simc_revision"],
+             "selected_v221_gem_item_relation_unadmitted":{
+                 "selected_item_ids":all_ids,
+                 "v221_stage_receipt_sha256":"b"*64,
+                 "selected_simc_gem_quality_source_unadmitted":quality,
+                 "gem_policy_A_source_and_quality_unadmitted":comparison}}
+        j={"ordinary_gem_item_ids":ids,
+           "observed_quality_rank_by_id":
+               nominal["observed_quality_rank_by_id"],
+           "season_nominal_source_sha256":nominal["source_sha256"],
+           "numeric_source_owner":"PACKAGED_SEASON_NOMINAL_PER_ITEM"}
+        owner={"J":j,"F":None}
+        q=engine._fresh_source_owner_observed_J_F_quality(
+            preflight=pre,compilation={"simc_revision":catalog["simc_revision"]},
+            owner_numeric=owner)
+        self.assertTrue(q["J"]["selected_nominal_quality_matches_v230"])
+        self.assertFalse(q["environment_ready"])
+        low=copy.deepcopy(pre)
+        low["selected_v221_gem_item_relation_unadmitted"][
+            "selected_simc_gem_quality_source_unadmitted"][
+                "selected_item_quality_unadmitted"][1]["crafting_quality"]=1
+        q2=engine._fresh_source_owner_observed_J_F_quality(
+            preflight=low,
+            compilation={"simc_revision":catalog["simc_revision"]},
+            owner_numeric=owner)
+        self.assertFalse(q2["J"]["selected_nominal_quality_matches_v230"])
     def test_physical_four_colors_reconcile_existing_J_B_T(self):
         layout,ratings=stage()
         _,table,_=prepared()

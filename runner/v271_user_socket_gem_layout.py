@@ -71,7 +71,9 @@ def nominal_four_stat_from_season_source(*, source, game_build,
     """
     import re
     need(type(source) is dict and
-         set(source)=={"game_build","source_sha256","by_stat"} and
+         set(source) in ({"game_build","source_sha256","by_stat"},
+                        {"game_build","source_sha256","by_stat",
+                         "observed_quality_rank_by_id"}) and
          source.get("game_build")==game_build and
          type(source.get("source_sha256")) is str and
          re.fullmatch(r"[0-9a-f]{64}",source["source_sha256"]) is not None,
@@ -84,6 +86,12 @@ def nominal_four_stat_from_season_source(*, source, game_build,
              type(row["rating"]) is int and 0<row["rating"]<=10000
              for row in by_stat.values()),
          "SOCKET_NOMINAL_J_FOUR_PHYSICAL_TOTALS_REQUIRED")
+    if "observed_quality_rank_by_id" in source:
+        ranks=source["observed_quality_rank_by_id"]
+        need(type(ranks) is dict and
+             set(ranks)=={str(row["item_id"]) for row in by_stat.values()} and
+             all(type(q) is int and q>0 for q in ranks.values()),
+             "SOCKET_NOMINAL_J_QUALITY_RANK_SCOPE_INVALID")
     normalized={stat:{"item_id":row["item_id"],
                       "raw_nominal_points":row["rating"]}
                 for stat,row in by_stat.items()}
@@ -173,7 +181,10 @@ def load_packaged_season_nominal_source(*, game_build, need,
          "SOCKET_NOMINAL_SEASON_DISTINCT_PHYSICAL_IDS_REQUIRED")
     return {"game_build":game_build,
             "source_sha256":hashlib.sha256(raw).hexdigest(),
-            "by_stat":totals}
+            "by_stat":totals,
+            "observed_quality_rank_by_id":{
+                str(by_stat[stat]["item_id"]):by_stat[stat]["quality_rank"]
+                for stat in ORDINARY_FOUR_STATS}}
 
 
 # Declared SimC gem_id placement: no socket-granting item or spell is needed.

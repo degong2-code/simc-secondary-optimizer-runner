@@ -137,6 +137,56 @@ class SocketLayoutTests(unittest.TestCase):
                     sockets.load_packaged_season_nominal_source(
                         game_build="12.1.5.70783",
                         need=self.need,source_folder=root)
+    def test_p3_hk_nominal_J_owner_reuses_package_v221_without_raw_effect_gate(self):
+        """v216 must bind real packaged J to its ORIGINAL numeric owner."""
+        from runner import v216_environment_build_coordinator as engine
+        source=sockets.load_packaged_season_nominal_source(
+            game_build="12.1.5.70783",need=self.need)
+        picked=sockets.nominal_four_stat_from_season_source(
+            source=source,game_build="12.1.5.70783",
+            socket_total=5,special_gem_id=240967,need=self.need)
+        rows=self.rows()
+        plan={"socket_counts":{"head":1,"wrists":2,"waist":1,"feet":1},
+              "special_gem_id":240967,"special_slot":"head",
+              "ordinary_gem_ids":picked["ordinary_gem_ids"],
+              sockets.SOURCE_IDS_FIELD:sorted(
+                  {240967,*picked["ordinary_gem_ids"]})}
+        _,layout=sockets.arrange(rows,plan,self.need)
+        link={"same_build_gem_item_join_only":True,
+              "special_gem_item_id":240967,
+              "selected_item_ids":sorted({240967,*picked["ordinary_gem_ids"]}),
+              "v221_stage_receipt_sha256":"b"*64}
+        pre={"game_build":"12.1.5.70783",
+             "source_catalog_manifest_sha256":"a"*64}
+        j={"rating_origin":"SEASON_NOMINAL_PER_ITEM_TOTAL_SOURCE",
+           "nominal_source_sha256":source["source_sha256"],
+           "nominal_source_game_build":"12.1.5.70783",
+           "source_v221_stage_receipt_sha256":"b"*64,
+           "J_candidate_unadmitted":92,
+           "physical_gem_item_ids":layout["ordinary_gem_ids"],
+           "status":"PHYSICAL_GEM_J_ARITHMETIC_UNADMITTED",
+           "J_accounting_policy":"SUM_SELECTED_ORDINARY_GEM_RATINGS",
+           "special_gem_count_in_J":0}
+        verified=engine._fresh_source_owner_packaged_nominal_J(
+            preflight=pre,layout=layout,link=link,j=j)
+        self.assertEqual(verified["rating"],92)
+        self.assertEqual(verified["per_item_nominal_rating"],
+                         picked["rating_by_id"])
+        self.assertEqual(set(verified["observed_quality_rank_by_id"].values()),
+                         {2})
+        self.assertFalse(verified["highest_available_quality_verified"])
+        self.assertFalse(verified["real_socket_source_verified"])
+        self.assertTrue(verified["nominal_J_not_simc_effective_delta"])
+        for tamper in ({"nominal_source_sha256":"f"*64},
+                       {"J_candidate_unadmitted":91},
+                       {"source_v221_stage_receipt_sha256":"f"*64}):
+            with self.subTest(tamper=tamper),self.assertRaises(
+                    engine.EnvironmentBuildBlocked):
+                engine._fresh_source_owner_packaged_nominal_J(
+                    preflight=pre,layout=layout,link=link,j={**j,**tamper})
+        self.assertIsNone(engine._fresh_source_owner_packaged_nominal_J(
+            preflight={**pre,"game_build":"12.2.0.99999"},
+            layout=layout,link=link,j=j))
     def test_five_sockets_one_wrist_diamond_four_actual_colors(self):
         before = self.rows()
         plan = {"socket_counts": {"head": 1, "wrists": 2,

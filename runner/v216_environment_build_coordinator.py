@@ -3963,6 +3963,11 @@ def _zero_history_auto_v222_numeric_preview(*, preflight, native_numeric,
         j_identity["raw_points_source_sha256"]=j["source_enchant_sha256"]
         j_identity["source_v221_stage_receipt_sha256"]=j.get(
             "source_v221_stage_receipt_sha256")
+    if j.get("rating_origin")=="SEASON_NOMINAL_PER_ITEM_TOTAL_SOURCE":
+        j_identity["season_nominal_source_sha256"]=j[
+            "nominal_source_sha256"]
+        j_identity["source_v221_stage_receipt_sha256"]=j.get(
+            "source_v221_stage_receipt_sha256")
     j_sha=source_sha(kind="physical_gem_layout_and_ratings",
                     items=j_identity)
     f_sha=source_sha(kind="selected_flask_original_v278_receipts",
@@ -4728,6 +4733,70 @@ def _fresh_selected_J_intrinsic_socket_source(*, collected, preflight,
                 j["J_candidate_unadmitted"] if j is not None else None)}
 
 
+def _fresh_source_owner_packaged_nominal_J(*, preflight, layout, link, j):
+    """Bind the same package bytes already selected by v113 to v221/v271.
+
+    Source-only; the original v230 quality and v232 socket owners must still
+    establish admission. Do not read a historical fallback or infer zero.
+    """
+    if j.get("rating_origin")!="SEASON_NOMINAL_PER_ITEM_TOTAL_SOURCE":
+        return None
+    build=preflight["game_build"]
+    stored=physical_gems.load_packaged_season_nominal_source(
+        game_build=build,need=need)
+    if stored is None:
+        return None
+    need(j.get("nominal_source_sha256")==stored["source_sha256"] and
+         j.get("nominal_source_game_build")==build and
+         type(layout.get("ordinary_gem_ids")) is list and
+         type(layout.get("special_gem_id")) is int,
+         "V216_NOMINAL_J_PACKAGED_SOURCE_SHA_OR_BUILD_DRIFT")
+    matched=physical_gems.nominal_four_stat_from_season_source(
+        source=stored,game_build=build,
+        socket_total=layout["socket_total"],
+        special_gem_id=layout["special_gem_id"],need=need)
+    ids=layout["ordinary_gem_ids"]
+    special=layout["special_gem_id"]
+    needs=set(ids+[special])
+    need(ids==matched["ordinary_gem_ids"] and
+         j.get("J_candidate_unadmitted")==matched["J_candidate_unadmitted"]
+         and j.get("physical_gem_item_ids")==ids and
+         j.get("status")=="PHYSICAL_GEM_J_ARITHMETIC_UNADMITTED"
+         and j.get("J_accounting_policy")==
+             "SUM_SELECTED_ORDINARY_GEM_RATINGS"
+         and j.get("special_gem_count_in_J")==0
+         and j.get("source_v221_stage_receipt_sha256")==
+             link.get("v221_stage_receipt_sha256")
+         and link.get("same_build_gem_item_join_only") is True
+         and link.get("special_gem_item_id")==special
+         and link.get("selected_item_ids")==sorted(needs)
+         and type(link.get("v221_stage_receipt_sha256")) is str
+         and season_budget_contract.SHA.fullmatch(
+             link["v221_stage_receipt_sha256"]) is not None,
+         "V216_NOMINAL_J_PACKAGED_V221_LAYOUT_OR_VALUE_DRIFT")
+    original={
+        "kind":"nominal_ordinary_gem_J",
+        "game_build":build,
+        "source_catalog_manifest_sha256":
+            preflight["source_catalog_manifest_sha256"],
+        "v221_stage_receipt_sha256":link["v221_stage_receipt_sha256"],
+        "season_nominal_source_sha256":stored["source_sha256"],
+        "special_gem_item_id":special,
+        "ordinary_gem_item_ids":list(ids),
+        "per_item_nominal_rating":dict(matched["rating_by_id"]),
+        "observed_quality_rank_by_id":dict(
+            stored["observed_quality_rank_by_id"])}
+    return {
+        "rating":matched["J_candidate_unadmitted"],
+        "source_identity_sha256":digest(canonical(original).encode("utf8")),
+        **original,
+        "numeric_source_owner":"PACKAGED_SEASON_NOMINAL_PER_ITEM",
+        "special_gem_contributes_to_J":False,
+        "highest_available_quality_verified":False,
+        "real_socket_source_verified":False,
+        "nominal_J_not_simc_effective_delta":True}
+
+
 def _fresh_source_owner_selected_J_F_numeric(*, preflight, compilation,
                                              selected_physical_items):
     """Bind original J/F numerics for an INTERNAL quality/source owner.
@@ -4806,9 +4875,19 @@ def _fresh_source_owner_selected_J_F_numeric(*, preflight, compilation,
                   "highest_available_quality_verified":False,
                   "real_socket_source_verified":False,
                   "nominal_J_not_simc_effective_delta":True}
+    elif (type(j) is dict and type(layout) is dict and
+          type(link) is dict and
+          j.get("rating_origin")=="SEASON_NOMINAL_PER_ITEM_TOTAL_SOURCE"):
+        nominal=_fresh_source_owner_packaged_nominal_J(
+            preflight=preflight,layout=layout,link=link,j=j)
+        if nominal is None:
+            out["missing"].append(
+                "J_PACKAGED_SAME_BUILD_NOMINAL_SOURCE_PENDING")
+        else:
+            out["J"]=nominal
     else:
         out["missing"].append(
-            "J_ORIGINAL_V266_NUMERIC_OR_HIGHEST_QUALITY_SOURCE_PENDING")
+            "J_ORIGINAL_NOMINAL_NUMERIC_OR_HIGHEST_QUALITY_SOURCE_PENDING")
     if type(selected_physical_items) is dict:
         chosen=selected_physical_items.get("flask_item_id")
         linked=compilation.get(
@@ -4945,8 +5024,23 @@ def _fresh_source_owner_observed_J_F_quality(*, preflight, compilation,
                         "comparable_effect_source_only":
                             group.get("observed_effect_vectors_comparable_source_only")
                                 is True})
+            nominal_ranks=j.get("observed_quality_rank_by_id")
+            nominal_bound=(j.get("numeric_source_owner")==
+                           "PACKAGED_SEASON_NOMINAL_PER_ITEM")
+            # The original v230 sealed item metadata supplies the quality
+            # value. The curated same-build highest-observed reference
+            # supplies the expected rank; raw v266 effect points are not used.
+            quality_matched=(
+                nominal_bound and
+                type(nominal_ranks) is dict and
+                set(nominal_ranks)==set(str(i) for i in ordinary) and
+                all(by_id[i]==nominal_ranks[str(i)] for i in ordinary))
             result["J"]={
                 "ordinary_gem_item_ids":list(ordinary),
+                "selected_nominal_quality_matches_v230":quality_matched,
+                "season_nominal_source_sha256":(
+                    j.get("season_nominal_source_sha256")
+                    if nominal_bound else None),
                 "observed_crafting_quality_by_item_id":{
                     str(item_id):by_id[item_id] for item_id in sorted(set(ordinary))},
                 "v230_stage_receipt_sha256":
@@ -5131,7 +5225,12 @@ def _fresh_source_owner_original_J_F_components(*, preflight, compilation,
                  j["rating"] and
              jq.get("real_socket_proof_required") is True,
              "V216_JF_OWNER_ORIGINAL_J_NUMERIC_QUALITY_SOCKET_DRIFT")
-        valid=True
+        valid=(
+            jq.get("selected_nominal_quality_matches_v230") is True and
+            jq.get("season_nominal_source_sha256")==
+                j.get("season_nominal_source_sha256")
+            if j.get("numeric_source_owner")==
+               "PACKAGED_SEASON_NOMINAL_PER_ITEM" else True)
         for group in groups:
             seen=group.get("observed_item_ids")
             winner=group.get("best_discovered_effect_item_id_source_only")
@@ -5154,7 +5253,11 @@ def _fresh_source_owner_original_J_F_components(*, preflight, compilation,
                 "source_sha256":digest(canonical(src).encode("utf8")),
                 "source_verification":"VALID_SAME_SEASON_SOURCE",
                 "budget_policy":"NOMINAL_ORDINARY_GEMS_ONLY",
-                "effect_quality_policy":"BEST_DISCOVERED_COMPARABLE",
+                "effect_quality_policy":(
+                    "BEST_OBSERVED_NOMINAL_SEASON_SOURCE"
+                    if j.get("numeric_source_owner")==
+                        "PACKAGED_SEASON_NOMINAL_PER_ITEM"
+                    else "BEST_DISCOVERED_COMPARABLE"),
                 "original_J_source_sha256":j["source_identity_sha256"],
                 "intrinsic_socket_receipt_sha256":
                     socket["v232_stage_receipt_sha256"]}
