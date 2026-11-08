@@ -522,6 +522,11 @@ def main():
                         "four_stat_ordinary_source_selection_unadmitted")
                     or progress.get(
                         "four_stat_ordinary_source_selection_unadmitted")),
+                "J_v268_existing_owner_conditions_unadmitted":(
+                    compiled.get(
+                        "four_stat_source_owner_diagnostic_unadmitted")
+                    or progress.get(
+                        "four_stat_source_owner_diagnostic_unadmitted")),
                 "J_original_nominal_source_unadmitted":(
                     (compiled.get(
                         "selected_J_F_source_owner_numeric_unadmitted") or {}

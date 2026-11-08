@@ -78,6 +78,47 @@ def digest(raw):
     return hashlib.sha256(raw).hexdigest()
 
 
+def _existing_v268_four_stat_source_diagnostic(*, observed, csv_source):
+    """Compact, read-only projection of already-computed v268 J candidates.
+
+    Missing data is tri-state: None is unobserved, False is observed absent.
+    Never turns raw EffectPointsMin into verified J or admits a UI choice.
+    """
+    candidate=observed if type(observed) is dict else {}
+    sealed=csv_source if type(csv_source) is dict else {}
+    expected=set(physical_gems.ORDINARY_FOUR_STATS)
+    best=candidate.get("four_stat_ordinary_best_observed_unadmitted")
+    best=best if type(best) is dict else {}
+    known={key:{"item_id":row.get("item_id"),
+                "raw_nominal_points":row.get("raw_nominal_points")}
+           for key,row in best.items()
+           if key in expected and type(row) is dict}
+    missing_source_ids=candidate.get("selected_gem_v221_missing_item_ids")
+    return {
+        "schema":"p3_hb_existing_v268_j_source_diagnostic_v1",
+        "csv_source_status":sealed.get("status"),
+        "v268_status":candidate.get("status"),
+        "v268_reason":candidate.get("reason"),
+        "selected_special_in_same_build_v221":candidate.get(
+            "selected_gem_v221_same_build_items_all_present"),
+        "selected_source_missing_item_ids":(
+            list(missing_source_ids)
+            if type(missing_source_ids) is list else None),
+        "four_ordinary_two_stat_types_complete":candidate.get(
+            "four_stat_ordinary_source_complete_unadmitted"),
+        "observed_leading_types":sorted(known),
+        "missing_leading_types":sorted(expected-set(known)),
+        "observed_nominal_candidates_by_type_unadmitted":known,
+        "v221_linked_gem_item_count":candidate.get("linked_gem_items"),
+        "v266_raw_static_candidate_count":candidate.get(
+            "raw_static_candidate_count"),
+        "v266_unresolved_enchant_count":candidate.get(
+            "unresolved_enchant_count"),
+        "official_J":None,"environment_ready":False,
+        "native_calls":0,"network_calls":0,
+    }
+
+
 def _atomic_write(path, encoded):
     path = pathlib.Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -5873,6 +5914,16 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             source_selected_gem_roles["special_gem_id"]],
                         excluded_ordinary_item_id=
                             source_selected_gem_roles["special_gem_id"])
+                    j_owner_diagnostic=(
+                        _existing_v268_four_stat_source_diagnostic(
+                            observed=observed,csv_source=src))
+                    # Existing source result only: never an extra quality,
+                    # effect, socket or J admission gate.
+                    progress["four_stat_source_owner_diagnostic_unadmitted"]=(
+                        j_owner_diagnostic)
+                    source_compilation[
+                        "four_stat_source_owner_diagnostic_unadmitted"]=(
+                            j_owner_diagnostic)
                     # Declarative SimC gem_id layout, not game socket unlock.
                     # Uses the same v232 sealed gear IDs. No v280 item/spell
                     # lookup and no separate bonus socket eligibility Gate.
