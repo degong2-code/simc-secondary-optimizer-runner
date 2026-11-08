@@ -472,7 +472,9 @@ def season_profile_source_only(*, profile, cfg, weapon_layout, user,
 def _materialize_admitted_season_v096(*, source_only,season_profile_inputs,
                                      season_environment_receipt_path,folder,
                                      binary,revision,static_cache_path,
-                                     weapon_layout,fillers,user,ilevel,rows,key):
+                                     weapon_layout,fillers,user,ilevel,rows,key,
+                                     fresh_installed_environment_path=None,
+                                     original_v191_link=None):
     """Reuse the ORIGINAL v096 manifest+durable v094 route for an admitted season.
 
     A non-admitted v216 numeric draft can never reach this writer. The
@@ -492,24 +494,53 @@ def _materialize_admitted_season_v096(*, source_only,season_profile_inputs,
          and seed.get("runtime_native_authorized") is False
          and len(seed.get("seed_targets_B",[]))==2,
          "SEASON_WRITER_ORIGINAL_SEED_PLAN_REQUIRED")
-    receipt_path=pathlib.Path(season_environment_receipt_path).resolve()
+    receipt_path=pathlib.Path(
+        fresh_installed_environment_path if
+        fresh_installed_environment_path is not None else
+        season_environment_receipt_path).resolve()
     need(receipt_path.is_file() and not receipt_path.is_symlink(),
-         "SEASON_WRITER_V216_RECEIPT_NOT_INSTALLED")
-    import v216_environment_build_coordinator as existing_environment
-    original_receipt=existing_environment.read_receipt(receipt_path)
-    manifest_source={
-        "schema":entry.SEASON_SCHEMA,
-        "environment_receipt_path":str(receipt_path),
-        "environment_receipt_sha256":original_receipt["receipt_sha256"],
-        "oil_by_hand":copy.deepcopy(
-            season_profile_inputs["oil_by_hand"])}
-    # Original v096 rechecks the same v216 receipt and the v223 provenance
-    # before constructing its Native context. This pre-write call also
-    # prevents creating partial files from unadmitted GJFO.
-    source=entry._admitted_season_source(
-        manifest_path=folder/"manifest.json",season=manifest_source,
-        revision=revision,user_scenario=draft["scenario"],
-        flask_F=draft["flask_F"],oil_hands=user["oil_hands"])
+         "SEASON_WRITER_INSTALLED_RECEIPT_REQUIRED")
+    if fresh_installed_environment_path is None:
+        import v216_environment_build_coordinator as existing_environment
+        original_receipt=existing_environment.read_receipt(receipt_path)
+        source_sha=original_receipt["receipt_sha256"]
+        manifest_source={
+            "schema":entry.SEASON_SCHEMA,
+            "environment_receipt_path":str(receipt_path),
+            "environment_receipt_sha256":source_sha,
+            "oil_by_hand":copy.deepcopy(
+                season_profile_inputs["oil_by_hand"])}
+        source=entry._admitted_season_source(
+            manifest_path=folder/"manifest.json",season=manifest_source,
+            revision=revision,user_scenario=draft["scenario"],
+            flask_F=draft["flask_F"],oil_hands=user["oil_hands"])
+        source_field=entry.SEASON_FIELD
+    else:
+        import v212_environment_manifest as installed_manifest
+        doc,_=installed_manifest.read_json(receipt_path)
+        installed_manifest.verify_fresh_installed_environment(doc)
+        need(type(original_v191_link) is dict and
+             original_v191_link.get("source_catalog_artifact_sha256")==
+                 doc["source_catalog_artifact_sha256"] and
+             original_v191_link.get("source_catalog_manifest_sha256")==
+                 doc["source_catalog_manifest_sha256"] and
+             doc["target_ilevel"]==ilevel,
+             "FRESH_SEASON_V191_GEAR_TIER_AND_INSTALLED_CATALOG_DRIFT")
+        source_sha=doc["manifest_sha256"]
+        manifest_source={
+            "schema":entry.FRESH_SEASON_SCHEMA,
+            "installed_environment_path":str(receipt_path),
+            "installed_manifest_sha256":source_sha,
+            "oil_by_hand":copy.deepcopy(
+                season_profile_inputs["oil_by_hand"])}
+        source=entry._admitted_fresh_season_source(
+            manifest_path=folder/"manifest.json",season=manifest_source,
+            revision=revision,user_scenario=draft["scenario"],
+            flask_F=draft["flask_F"],oil_hands=user["oil_hands"],
+            profile=source_only["profile_simc"])
+        source_field=entry.FRESH_SEASON_FIELD
+    # Original v096 source and all v217/v212 seals are checked before
+    # writing mutable user session files or planning Native execution.
     approved=source["season_budget"]
     draft_budget=source_only["budget_preview_unadmitted"]
     need(all(draft_budget.get(k)==approved.get(k)
@@ -542,7 +573,7 @@ def _materialize_admitted_season_v096(*, source_only,season_profile_inputs,
               "scouts":1,"material_scouts":1,
               "native_limit":6,"step":100,
               "cancel_file":"CANCEL",
-              entry.SEASON_FIELD:manifest_source}
+              source_field:manifest_source}
     files={
         "profile.simc":source_only["profile_simc"],
         "scenario.json":canonical(draft["scenario"])+"\n",
@@ -559,12 +590,15 @@ def _materialize_admitted_season_v096(*, source_only,season_profile_inputs,
     for name,content in files.items():
         put_once(folder/name,content)
     plan=entry.run_manifest(folder/"manifest.json",plan_only=True)
-    need(plan.get("budget_source")=="ADMITTED_SEASON_GJFO_V216_V223"
+    need(plan.get("budget_source")==(
+             "ADMITTED_FRESH_SEASON_GJFO_V212_V217" if
+             fresh_installed_environment_path is not None else
+             "ADMITTED_SEASON_GJFO_V216_V223")
          and plan["base_B"]==draft["base_B"]
          and plan["final_T"]==draft["final_T"]
          and plan["fixed_O"]==draft["fixed_O"]
          and plan.get("season_source_receipt_sha256")==
-             original_receipt["receipt_sha256"]
+             source_sha
          and plan["item_slots"]==len(rows),
          "SEASON_WRITER_V096_ORIGINAL_PLAN_DRIFT")
     return {
@@ -573,10 +607,11 @@ def _materialize_admitted_season_v096(*, source_only,season_profile_inputs,
         "generated_manifest":str(folder/"manifest.json"),
         "output_dir":str(folder/"simc_results"),
         "plan":plan,
-        "season_environment_receipt_sha256":
-            original_receipt["receipt_sha256"],
+        "season_environment_receipt_sha256":source_sha,
         "user_does_not_supply_full_gear_or_simc_profile":True,
         "season_source_not_full_policy_A_option_coverage":True,
+        "fresh_v212_installed_proof_reused":
+            fresh_installed_environment_path is not None,
         "existing_v096_v094_execution_reused":True,
         "native_calls":0,
         "source_authentication_created_here":False}
@@ -589,7 +624,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
           static_special_probe_only=False,source_catalog_path=None,
           season_profile_inputs=None,season_environment_receipt_path=None,
           season_source_bundle=None,season_original_source_paths=None,
-          season_socket_plan=None):
+          season_socket_plan=None,fresh_installed_environment_path=None):
     """Return an already validated internal manifest and v096 plan; no Native."""
     base_accepted=(FIELDS,FIELDS|{IMPORT_FIELD},FIELDS|{CONSUME_FIELD},
                    FIELDS|{IMPORT_FIELD,CONSUME_FIELD})
@@ -646,6 +681,13 @@ def build(user,folder,binary,revision,static_cache_path=None,
     need(season_source_bundle is None or
          season_environment_receipt_path is None,
          "SEASON_SOURCE_BUNDLE_ORIGINAL_GEAR_TIER_SHA_ADMISSION_PENDING")
+    need(fresh_installed_environment_path is None or (
+         season_source_bundle is not None and
+         season_original_source_paths is not None and
+         season_profile_inputs is not None and
+         season_environment_receipt_path is None and
+         current_season_product and static_cache_path is None),
+         "FRESH_SEASON_INSTALLED_REQUIRES_ORIGINAL_SOURCE_LINKS")
     need(season_environment_receipt_path is None or
          (season_profile_inputs is not None
           and static_cache_path is None),
@@ -914,7 +956,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
                 "ordinary_gem_ids":list(season_socket_plan["ordinary_gem_ids"]),
                 "game_socket_legality_verified_here":False,
                 "new_native_calls":0}
-        if season_environment_receipt_path is None:
+        if (season_environment_receipt_path is None and
+                fresh_installed_environment_path is None):
             # Unadmitted observations never write a runnable manifest.
             return source_only
         return _materialize_admitted_season_v096(
@@ -923,7 +966,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
             season_environment_receipt_path=season_environment_receipt_path,
             folder=folder,binary=binary,revision=revision,
             static_cache_path=static_cache_path,weapon_layout=weapon_layout,
-            fillers=fillers,user=user,ilevel=ilvl,rows=rows,key=key)
+            fillers=fillers,user=user,ilevel=ilvl,rows=rows,key=key,
+            fresh_installed_environment_path=fresh_installed_environment_path,
+            original_v191_link=linked_originals)
     if static_special_probe_only:
         # v208 internal on-demand static-L source, never a product plan.
         # Reuses exactly the real user/gear/consumables profile composition
