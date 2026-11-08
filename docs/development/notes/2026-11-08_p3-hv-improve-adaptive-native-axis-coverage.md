@@ -1,6 +1,6 @@
 # P3-HV · 기존 v065/v095 후보 선택 Native 호출당 CHMV 방향 커버리지 개선
 
-- **Capability:** `PRODUCT.E2E`, `STAT.DPS`, `CACHE.IDENTITY`
+- **Capability:** `PRODUCT.E2E`, `SOURCE.SEAL`
 - **Keywords:** axis coverage, adaptive SimC, candidate selection, v065, v095, Native efficiency
 - **Prior evidence:** [P3-HT 실 v094 6회](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42470887863), [P3-HU 실 v094 6회](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42472633337)에서 seed2+scout1+material1+confirm2, unique CHMV 최대4. 실제 관측 모든 후보에서 **mastery rating 735 고정**. 초기 두 씨앗은 치명↔가속만 이동하고 기존 score_direction=0 tie가 사전순 candidate를 선택해 최소 6회 Native로 전문화 차이를 포착하기 어려움. 신뢰도 낮은 저반복 scout 34회 / SEM 700~1,000, confirm 약319회 / SEM 280.
 - **Decision:** `CONNECT` — **새 엔진/효과 계산이 아닌**, 원래 v065의 feasible neighbor 중 관측하지 않은 CHMV 축을 우선 탐색하도록 별도 OPT-IN ordering helper 추가. v095 원거리 후보도 같은 policy를 사용하도록 선택형 준비. 기존 `choose_next`·default `material_neighbor`·원본 v015/v016은 바이트/동작 불변. 새 통계 수준은 여전히 95%, 최적해 입증 불가.
