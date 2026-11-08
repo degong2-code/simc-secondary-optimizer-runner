@@ -71,13 +71,13 @@ class NormalBuildGemJ(unittest.TestCase):
             source=root/"v213.json"
             source.write_text("{}",encoding="utf8")
             with mock.patch.object(build.environment_manifest,"read_json",
-                                   return_value=(catalog,"a"*64)), \\
-                 mock.patch.object(build.source_to_catalog,"verify_catalog"), \\
+                                   return_value=(catalog,"a"*64)), \
+                 mock.patch.object(build.source_to_catalog,"verify_catalog"), \
                  mock.patch.object(build.user_catalog,"public_options",
-                                   return_value=ui), \\
+                                   return_value=ui), \
                  mock.patch.object(build,"_fresh_gem_item_source_stage",
                      return_value={"candidate_path":str(root/"source.json"),
-                                   "source_stage":{"receipt_sha256":"b"*64}}), \\
+                                   "source_stage":{"receipt_sha256":"b"*64}}), \
                  mock.patch.object(build.gem_enchant_stage,"view",
                                    return_value=v268):
                 kwargs=dict(
