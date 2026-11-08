@@ -18,6 +18,7 @@ from contextlib import contextmanager
 from datetime import datetime,timezone
 
 from runner import v216_environment_build_coordinator as engine
+from runner import v271_user_socket_gem_layout as physical_gems
 from runner import v289_retail_live_build_source as retail
 from runner import v242_authenticated_season_source_stage as season_auth
 from integration_probes import p3_fs_simc_image_revision as simc_image
@@ -248,8 +249,14 @@ def source_only_J_socket_controls():
             "auto_select_observed_F_no_oil":False}
 
 
-def selected_t1_source_inputs(*, exact_flask_item_id, existing_special_gem_id):
-    """Delegate selected physical IDs to the original v281/v271 owners."""
+def selected_t1_source_inputs(*, exact_flask_item_id, existing_special_gem_id,
+                              game_build=None, target_socket_count=5):
+    """Pass the exact-build nominal J source just like the normal v113 Build.
+
+    This source only supplies season-scoped nominal inputs; the original
+    v216 owners remain responsible for J/quality/socket admission and READY.
+    Missing exact-build package data must remain PENDING, never fallback.
+    """
     result={}
     if exact_flask_item_id is not None:
         result["selected_budget_items"]={
@@ -259,6 +266,12 @@ def selected_t1_source_inputs(*, exact_flask_item_id, existing_special_gem_id):
         result["source_selected_gem_roles"]={
             "special_gem_id":existing_special_gem_id,
             "ordinary_gem_ids":None}
+        if game_build is not None:
+            nominal=physical_gems.load_packaged_season_nominal_source(
+                game_build=game_build,need=engine.need)
+            if nominal is not None:
+                result["source_target_socket_count"]=target_socket_count
+                result["source_ordinary_nominal_by_stat"]=nominal
     return result
 
 
@@ -459,7 +472,8 @@ def main():
                        binary_available=candidate is not None)),
                 **selected_t1_source_inputs(
                     exact_flask_item_id=exact_f,
-                    existing_special_gem_id=special),
+                    existing_special_gem_id=special,
+                    game_build=live["game_build"]),
             }
             result=engine.build_environment(
                 sessions_root=root,session_folder=None,user=None,
@@ -603,8 +617,9 @@ def main():
                 "simc_native_calls_reported","native_evidence_archive",
                 "selected_f_only_native_mode",
                 "selected_J_socket_source_only_mode",
-                "original_source_verified_F_uninstalled","environment_ready",
-                "environment_installed")},ensure_ascii=False,default=str),
+                "original_source_verified_F_uninstalled",
+                "GJF_original_source_owner_summary","diagnostics",
+                "environment_ready","environment_installed")},ensure_ascii=False,default=str),
             flush=True)
     return 0 if rec["status"] in (
         "ZERO_BASE_T1_PASS",

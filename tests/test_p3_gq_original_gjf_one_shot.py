@@ -20,6 +20,33 @@ class CombinedOriginalSources(unittest.TestCase):
         self.assertEqual(selection["source_selected_gem_roles"],
                          {"special_gem_id":240967,"ordinary_gem_ids":None})
         self.assertNotIn("F_rating",selection)
+    def test_real_t1_uses_exact_build_nominal_J_like_normal_web(self):
+        selection=p.selected_t1_source_inputs(
+            exact_flask_item_id=241324,existing_special_gem_id=240967,
+            game_build="12.1.5.70783")
+        self.assertEqual(selection["source_target_socket_count"],5)
+        source=selection["source_ordinary_nominal_by_stat"]
+        self.assertEqual(source["game_build"],"12.1.5.70783")
+        self.assertEqual({row["item_id"] for row in source["by_stat"].values()},
+                         {240908,240892,240900,240918})
+        self.assertEqual({row["rating"] for row in source["by_stat"].values()},
+                         {23})
+        self.assertNotIn("J",selection)
+        self.assertNotIn("environment_ready",selection)
+
+    def test_real_t1_does_not_relabel_nominal_J_across_builds(self):
+        selection=p.selected_t1_source_inputs(
+            exact_flask_item_id=241324,existing_special_gem_id=240967,
+            game_build="12.2.0.99999")
+        self.assertNotIn("source_ordinary_nominal_by_stat",selection)
+        self.assertNotIn("source_target_socket_count",selection)
+        self.assertEqual(selection["source_selected_gem_roles"],
+                         {"special_gem_id":240967,"ordinary_gem_ids":None})
+        self.assertEqual(p.selected_t1_source_inputs(
+            exact_flask_item_id=241324,existing_special_gem_id=None,
+            game_build="12.1.5.70783"),{"selected_budget_items":{
+                "flask_item_id":241324,"oil_item_ids_by_hand":{}}})
+
     def test_verified_summary_is_not_a_new_readiness_gate(self):
         original={
             "G":{"rating":4040,"source_verification":"EXACT_NATIVE",
