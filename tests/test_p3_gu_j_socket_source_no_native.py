@@ -43,10 +43,26 @@ class SourceOnlyJSession(unittest.TestCase):
         self.assertEqual(projected["missing_leading_types"],
                          ["mastery_rating","versatility_rating"])
         self.assertEqual(projected["v266_unresolved_enchant_count"],7)
-        self.assertTrue(projected["raw_static_zero_across_linked_source"])
-        self.assertEqual(projected["J_numeric_next_owner"],
-                         "SIMC_EFFECTIVE_GEM_RATING_SOURCE_REQUIRED")
+        self.assertFalse(projected["raw_static_zero_across_linked_source"])
+        self.assertIsNone(projected["J_numeric_next_owner"])
         self.assertFalse(projected["original_v266_raw_gate_bypassed"])
+        all_unresolved=engine._existing_v268_four_stat_source_diagnostic(
+            observed={
+                "status":"ENCHANT_RAW_POINTS_SOURCE_ONLY_J_NOT_APPROVED",
+                "selected_gem_v221_same_build_items_all_present":True,
+                "selected_gem_v221_missing_item_ids":[],
+                "four_stat_ordinary_source_complete_unadmitted":False,
+                "four_stat_ordinary_best_observed_unadmitted":{},
+                "linked_gem_items":75,
+                "raw_static_candidate_count":0,
+                "unresolved_enchant_count":75},
+            csv_source={"status":"SOURCE_ITEM_PROPERTY_LINKS_ONLY_NOT_USER_ADMITTED"})
+        self.assertTrue(all_unresolved["raw_static_zero_across_linked_source"])
+        self.assertEqual(all_unresolved["J_numeric_next_owner"],
+                         "SIMC_EFFECTIVE_GEM_RATING_SOURCE_REQUIRED")
+        self.assertFalse(all_unresolved["original_v266_raw_gate_bypassed"])
+        self.assertEqual(all_unresolved["missing_leading_types"],[
+            "crit_rating","haste_rating","mastery_rating","versatility_rating"])
         self.assertEqual(projected["v221_gem_relation_source_status"],
                          "GEM_ENCHANT_CSV_SOURCE_SEALED")
         self.assertEqual(projected["official_J"],None)
