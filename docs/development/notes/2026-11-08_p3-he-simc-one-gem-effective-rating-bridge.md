@@ -1,0 +1,10 @@
+# 2026-11-08 · P3-HE · 기존 SimC JSON2로 일반보석 한 개의 실효 rating 확인
+
+- **Capability:** `J.GEM`, `BUDGET.GJFO`, `SOURCE.SEAL`
+- **Keywords:** P3-HE, SimC effective gem, paired JSON2, one gem, v269, v271, J
+- **Prior evidence:** P3-GZ 과거 원본 대표 프로필 실제 SimC `gem_id` 5개 CHMV +92, P3-HC 동일 빌드 v221 GEM 가입75 / v266 raw static0 / unresolved75 / J official null. 기존 v269는 F/O의 실효 스탯에서 `collected_data.buffed_stats.stats`를 사용하며 원본 `EffectPointsMin`을 재해석하지 않음.
+- **Decision:** `CONNECT` — `v269`에 한 일반보석의 물리 slot `gem_id`만 다르게 만든 기존 SimC 입력 쌍과 JSON2 `buffed_stats` 증분을 읽는 **숫자 어댑터**만 추가. 기존 v269 F/O 함수/원본 G/gear_*/재사용 캐시/품질/효과/공식 설치 정책 변경 없음.
+- **Changes:** `prepare_ordinary_gem`은 변경 없는 SimC 기본 물리 장비에 정확히 일반보석 한 ID만 삽입. `compare_ordinary_gem`은 입력 SHA·동일 플레이어/장비·실제 JSON2 encoded gem_id·동일 SimC revision 확인 후 **정수 양수 두 종류의 CHMV**만 `simc_effective_two_stat_rating_unadmitted`로 출력. 특수보석은 해당 J 수치에 넣지 않으며, 유사 효과 품질/시즌 선택/실제 native 실행 영수증의 진위는 **이 함수가 승인하지 않음**.
+- **Verification:** 신규 Native0·게임 HTTP0. 합성 입력 쌍·JSON2 증분 +16/+7, 1스탯 결과 pending, gear override/실제 입력 드리프트 차단 단위시험 추가. 관련 CI 결과는 실제 워크플로 확인 후 분리 보고.
+- **Remaining:** v221/v230에서 해당 시즌 최고품질·효과 조건이 검증된 4개 물리 일반보석 ID를 먼저 고르고, 원래 v277/v269 Native 실행 경로를 재사용해 **해당 4개만** 실 스탯을 수집, 바이트 영수증 고정. 실측값은 기존 v271 `reconcile_observed_J`에 공급하고 N-1 고정 순환의 J 예산, v222 B/T, v220/v196/v212/v217 설치를 이어 연결. 본 함수만으로 G/J/F/O/B/T/READY 확정 금지.
+- **Efficiency:** 기존 v269 모듈에 순수 profile 생성/JSON2 파서만 추가(새 SimC 엔진·효과 해석기·네트워크 수집기/소켓 Gate 없음), 선별된 물리 4종만 향후 최소 측정·반복 소켓 수 N은 캐시 재사용. `main`·immutable·Project UI/Work OS 및 주 제품 개발 소유권 변경 없음.

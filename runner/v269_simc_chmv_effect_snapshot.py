@@ -179,3 +179,147 @@ def compare(*, baseline_json2, active_json2, prepared,
         "budget_ownership_not_assigned_here": True,
         "environment_ready": False, "network_calls": 0,
     }
+
+# P3-HE: read only SimC's actual two-stat result for ONE ordinary physical gem.
+# This supplements (never relaxes) v266 raw-source and highest-quality owners.
+GEM_SLOT_NAMES = frozenset((
+    "head","neck","shoulders","back","chest","wrists","hands","waist",
+    "legs","feet","finger1","finger2","main_hand","off_hand",
+))
+
+
+def prepare_ordinary_gem(*, profile, slot, ordinary_gem_id):
+    """One difference: a single ordinary gem_id on an unchanged SimC item."""
+    need(type(profile) is str and bool(profile.strip()) and
+         len(profile.encode("utf8")) <= 4_000_000 and
+         type(slot) is str and slot in GEM_SLOT_NAMES and
+         type(ordinary_gem_id) is int and 0<ordinary_gem_id<=999999999 and
+         ordinary_gem_id not in (240967,240983),
+         "V269_GEM_PHYSICAL_INPUT_REQUIRED")
+    need(not re.search(r"(?:^|,)gem_id=",profile,re.MULTILINE) and
+         not re.search(r"(?m)^\\s*gear_(?:crit|haste|mastery|versatility)_rating=",profile) and
+         not re.search(r"(?m)^\\s*(?:copy|profileset\\.|json2|output|html)=",profile),
+         "V269_GEM_UNCONFOUNDED_NATIVE_INPUT_REQUIRED")
+    lines=profile.splitlines(keepends=True)
+    located=[(i,line) for i,line in enumerate(lines)
+             if line.startswith(slot+"=")]
+    need(len(located)==1 and re.search(r",id=[1-9][0-9]*",located[0][1])
+         is not None, "V269_GEM_SOURCE_PHYSICAL_SLOT_REQUIRED")
+    index,row=located[0]
+    stable=row.rstrip("\r\n")
+    ending=row[len(stable):]
+    marker=",gem_id="+str(ordinary_gem_id)
+    lines[index]=stable+marker+ending
+    active="".join(lines)
+    need(active.replace(marker,"",1)==profile,
+         "V269_GEM_ONLY_ONE_PHYSICAL_CHANGE_REQUIRED")
+    return {
+        "schema":"v269_one_physical_ordinary_gem_native_pair_v1",
+        "slot":slot,"ordinary_gem_id":ordinary_gem_id,
+        "source_profile_sha256":digest(profile.encode("utf8")),
+        "baseline_profile":profile,
+        "active_profile":active,
+        "baseline_profile_sha256":digest(profile.encode("utf8")),
+        "active_profile_sha256":digest(active.encode("utf8")),
+        "only_changed_option":"ONE_PHYSICAL_GEM_ID",
+        "native_calls":0,"environment_ready":False,
+    }
+
+
+def _gem_native_player(raw, revision):
+    need(type(raw) is bytes and 0<len(raw)<=MAX_JSON,
+         "V269_GEM_JSON2_SIZE_REQUIRED")
+    try:
+        doc=json.loads(raw)
+    except (UnicodeError,ValueError) as exc:
+        raise SnapshotBlocked("V269_GEM_JSON2_DECODE_ERROR") from exc
+    need(type(doc) is dict and type(doc.get("git_revision")) is str and
+         re.fullmatch(r"[a-f0-9]{7,40}",doc["git_revision"]) is not None and
+         revision.startswith(doc["git_revision"]),
+         "V269_GEM_EXACT_SIMC_REVISION_REQUIRED")
+    sim=doc.get("sim")
+    players=sim.get("players") if type(sim) is dict else None
+    need(type(players) is list and len(players)==1 and
+         type(players[0]) is dict,
+         "V269_GEM_SINGLE_PLAYER_JSON2_REQUIRED")
+    player=players[0]
+    gear=player.get("gear")
+    cd=player.get("collected_data")
+    bs=cd.get("buffed_stats") if type(cd) is dict else None
+    stats=bs.get("stats") if type(bs) is dict else None
+    need(type(gear) is dict and type(stats) is dict and
+         all(key in stats and type(stats[key]) in (int,float)
+             and math.isfinite(stats[key]) and stats[key]>=0
+             for key in STATS),
+         "V269_GEM_COMPLETE_BUFFED_CHMV_REQUIRED")
+    ratings={key:float(stats[key]) for key in STATS}
+    return player.get("name"),gear,ratings
+
+
+def compare_ordinary_gem(*, prepared, baseline_json2, active_json2,
+                         simc_revision, binary_sha256):
+    """Source-only SimC delta. Caller still owns exact quality and official J."""
+    need(type(prepared) is dict and prepared.get("schema")==
+         "v269_one_physical_ordinary_gem_native_pair_v1" and
+         prepared.get("only_changed_option")=="ONE_PHYSICAL_GEM_ID" and
+         type(simc_revision) is str and REV.fullmatch(simc_revision) is not None and
+         type(binary_sha256) is str and SHA.fullmatch(binary_sha256) is not None,
+         "V269_GEM_PAIR_IDENTITY_REQUIRED")
+    base=prepared.get("baseline_profile")
+    active=prepared.get("active_profile")
+    slot=prepared.get("slot")
+    item=prepared.get("ordinary_gem_id")
+    need(type(base) is str and type(active) is str and
+         prepared.get("baseline_profile_sha256")==digest(base.encode("utf8")) and
+         prepared.get("active_profile_sha256")==digest(active.encode("utf8")) and
+         active.replace(",gem_id="+str(item),"",1)==base,
+         "V269_GEM_INPUT_HASH_OR_SINGLE_DIFF_DRIFT")
+    # Do not assume the CLI applied a written gem_id: inspect actual JSON2 gear.
+    left,base_gear,base_stats=_gem_native_player(baseline_json2,simc_revision)
+    right,active_gear,active_stats=_gem_native_player(active_json2,simc_revision)
+    need(type(left) is str and left==right and
+         set(base_gear)==set(active_gear) and slot in base_gear and
+         all(type(base_gear[k]) is dict and
+             type(active_gear[k]) is dict and
+             type(base_gear[k].get("encoded_item")) is str and
+             type(active_gear[k].get("encoded_item")) is str
+             for k in base_gear),
+         "V269_GEM_PLAYER_GEAR_IDENTITY_REQUIRED")
+    marker=",gem_id="+str(item)
+    for key in base_gear:
+        b=base_gear[key]["encoded_item"]
+        a=active_gear[key]["encoded_item"]
+        need(not re.search(r"(?:^|,)gem_id=",b) and
+             (a.replace(marker,"",1)==b if key==slot else a==b) and
+             (a.count(marker)==1 if key==slot else marker not in a),
+             "V269_GEM_ACTUAL_SIMC_GEAR_ITEM_DRIFT")
+    delta={stat:round(active_stats[stat]-base_stats[stat],6)
+           for stat in STATS}
+    rounded={stat:int(round(value)) for stat,value in delta.items()}
+    positives=[stat for stat in STATS if delta[stat]>0.05]
+    clean=(len(positives)==2 and
+           all(value>=-0.05 and abs(value-rounded[stat])<=0.05
+               for stat,value in delta.items()) and
+           all(rounded[stat]==0 for stat in STATS if stat not in positives))
+    return {
+        "schema":"v269_one_physical_ordinary_gem_native_delta_v1",
+        "status":("SIMC_ORDINARY_GEM_TWO_STAT_OBSERVED_UNADMITTED" if clean
+                  else "SIMC_ORDINARY_GEM_EFFECTIVE_RATING_PENDING"),
+        "ordinary_gem_id":item,"physical_slot":slot,
+        "baseline_profile_sha256":prepared["baseline_profile_sha256"],
+        "active_profile_sha256":prepared["active_profile_sha256"],
+        "baseline_json2_sha256":digest(baseline_json2),
+        "active_json2_sha256":digest(active_json2),
+        "binary_sha256":binary_sha256,"simc_revision":simc_revision,
+        "observed_delta":delta,
+        "simc_effective_two_stat_rating_unadmitted":(
+            sum(rounded.values()) if clean else None),
+        "simc_effective_two_stat_vector_unadmitted":(
+            rounded if clean else None),
+        "source":"SIMC_JSON2_ACTUAL_GEM_ID_AND_BUFFED_STATS",
+        "native_case_attestation_by_caller_required":True,
+        "same_effect_highest_quality_verified_here":False,
+        "official_J":None,"environment_ready":False,
+        "new_native_calls":0,"network_calls":0,
+    }
+

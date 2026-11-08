@@ -109,4 +109,57 @@ class NativeSnapshotTests(unittest.TestCase):
             v.prepare(profile=PROFILE,kind="temporary_enchant",
                       token="main_hand:abc/off_hand:abc")
 
+
+    def test_p3_he_one_ordinary_gem_simc_numeric_owner_and_no_auto_admit(self):
+        profile=("paladin=sample\n"
+                 "head=sample,id=12345,ilevel=334,source=local\n"
+                 "chest=sample2,id=23456,ilevel=334,source=local\n")
+        prep=v.prepare_ordinary_gem(
+            profile=profile,slot="head",ordinary_gem_id=240906)
+        self.assertEqual(prep["active_profile"].replace(
+            ",gem_id=240906","",1),profile)
+        def gem_report(which,crit=100,haste=200,mastery=300,vers=400):
+            first="sample,id=12345,ilevel=334,source=local"
+            if which=="active":
+                first="sample,id=12345,ilevel=334,gem_id=240906,source=local"
+            return json.dumps({"git_revision":"a"*10,"sim":{"players":[{
+                "name":"sample",
+                "gear":{
+                    "head":{"encoded_item":first},
+                    "chest":{"encoded_item":
+                        "sample2,id=23456,ilevel=334,source=local"}},
+                "collected_data":{"buffed_stats":{"stats":{
+                    "crit_rating":crit,"haste_rating":haste,
+                    "mastery_rating":mastery,"versatility_rating":vers
+                }}}}]}}).encode()
+        baseline=gem_report("baseline")
+        active=gem_report("active",crit=116,haste=207)
+        result=v.compare_ordinary_gem(
+            prepared=prep,baseline_json2=baseline,active_json2=active,
+            binary_sha256="c"*64,simc_revision="a"*40)
+        self.assertEqual(result["status"],
+                         "SIMC_ORDINARY_GEM_TWO_STAT_OBSERVED_UNADMITTED")
+        self.assertEqual(result["simc_effective_two_stat_rating_unadmitted"],23)
+        self.assertEqual(result["simc_effective_two_stat_vector_unadmitted"],{
+            "crit_rating":16,"haste_rating":7,
+            "mastery_rating":0,"versatility_rating":0})
+        self.assertIsNone(result["official_J"])
+        self.assertFalse(result["same_effect_highest_quality_verified_here"])
+        with self.assertRaisesRegex(v.SnapshotBlocked,"GEAR_ITEM_DRIFT"):
+            v.compare_ordinary_gem(
+                prepared=prep,baseline_json2=baseline,
+                active_json2=gem_report("baseline",crit=116,haste=207),
+                binary_sha256="c"*64,simc_revision="a"*40)
+        with self.assertRaisesRegex(v.SnapshotBlocked,"UNCONFOUNDED"):
+            v.prepare_ordinary_gem(
+                profile=profile+"gear_crit_rating=100\n",
+                slot="head",ordinary_gem_id=240906)
+        wrong=v.compare_ordinary_gem(
+            prepared=prep,baseline_json2=baseline,
+            active_json2=gem_report("active",crit=116),
+            binary_sha256="c"*64,simc_revision="a"*40)
+        self.assertEqual(wrong["status"],
+                         "SIMC_ORDINARY_GEM_EFFECTIVE_RATING_PENDING")
+        self.assertIsNone(wrong["simc_effective_two_stat_rating_unadmitted"])
+
 if __name__ == "__main__": unittest.main()
