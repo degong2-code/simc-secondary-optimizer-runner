@@ -1,3 +1,7 @@
+## 2026-11-09 P3-HAH P1-3 제품 사용자 로컬 장기 세션 연결 PASS(범위 한정)
+
+[P3-HAH](notes/2026-11-09_p3-hah-local-longrun-product-web-integration.md): P3-HAG 기존 캐시·v291 Native 기반을 v113 UserRequest/브라우저 + v106 동일 원본 세션 OS 잠금에 연결. 기존 시즌 검증/대표 프로필/정확 정적 L이 준비된 경우에만 장기 실행, 새 Native 전체12~2000 typed 상한/회차 최대32, 세션 준비와 첫 실행/재개/취소/캐시·ZIP 이식 명시 분리. [focused #42506293728](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42506293728) 483 PASS/2 SKIP/Native0, [web #42506293553](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42506293553) Linux/Windows 각233 PASS. 해당 실 Native/선택 95% 출처는 이전 HAE/HAG 별도 Actions 영수증이며 P3-HAH 로컬 웹 실제 Native 실행 미완료를 혼동하지 않는다. 기존 6-case, 95% only/다중선택 우위 제한, SHA·L/E/O 회계, main/immutable/Project UI/Work OS/owner 불변.
+
 ## 2026-11-09 P3-HAH 사용자 로컬 웹 장기 탐색 P1-3 (승인된 '진행')
 
 [P3-HAH](notes/2026-11-09_p3-hah-local-longrun-product-web-integration.md): 기존 v113/v106 사용자 입력/로컬 세션의 기존 임계·보안/동시성 계약을 보존하여 v096 exact source → v291 durable 탐색/취소/재개 및 v292 SHA import-only를 별도 opt-in로 연결. 한 세션 한 typed budget, Native 호출 상한, 원본 SHA/95% 결과/다중후보 선택 불확실성/전역최적 미증명 유지. 기존 6-call UI 및 backend 동작 변경 금지. 신규 검증 전 PASS 주장 금지. main/immutable/Project UI/Work OS/주 제품 채팅 소유권 불변.
