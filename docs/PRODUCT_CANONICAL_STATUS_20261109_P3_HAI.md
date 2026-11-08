@@ -1,0 +1,60 @@
+# SIMC SECONDARY OPTIMIZER — P3-HAI 단일 제품 상태 기준 (2026-11-09)
+
+> **지위:** 승인된 설계 원문을 변경하지 않는 **실제 GitHub 격리 개발 상태의 현재 판정표**. 기존 날짜별 개발 노트·CURRENT 본문·옛 인계는 삭제하지 않고 그 작성 당시의 역사 영수증으로 보존한다. 아래 현재 판정과 충돌하는 과거 `PENDING`, `아직 >6 Native 미실행`, `READY 미완료`는 **해당 기록 시점의 상태**이지 최신 상태가 아니다. 이 문서는 실제 새 시즌/전 전문화/사용자 PC의 완료를 생성하거나 주장하지 않는다.
+>
+> **조회 기준:** 문서 작성 전 직접 조회한 격리 HEAD `672891afe458771124b27606b6f92372cf4962ea`; `main` HEAD `07133e0aaf738d6e4816a6486057b1cd49c018de`. **문서 커밋으로 격리 HEAD는 변경된다**. 매 복원 시 두 브랜치를 독립 재조회하고 `docs/CURRENT_PRODUCT_DEVELOPMENT_STATE.md`와 실제 Actions/Native 원본을 확인한다. 최신 인계: [P3-HAI](CHAT_CONTINUITY_HANDOFF_20261109_P3_HAI_PRODUCT_ENGINE_CONSISTENCY.md). 이전 [P3-HAC](CHAT_CONTINUITY_HANDOFF_20261109_P3_HAC_MULTISCALE_ENGINE_RESTORE.md)는 **2026-11-09 장기 후속 개발 이전의 역사 인계**.
+
+## 1. 유효한 제품·정책·증거 우선순위
+
+1. **최신 사용자 직접 결정**: 주요 미완료 축은 **(A) 웹 제품 실사용 연결·실증**과 **(B) 기존 최적화 알고리즘의 탐색 효율·품질 고도화**이다. 시즌 환경 구축을 다시 독립 대형 신규 엔진 과제로 시작하지 않는다. 이미 구축한 공통 시즌 Environment Build 엔진을 **재사용**하고 신규 시즌 최초 적용 때 실제로 부족한 원본 수급·범위·검증만 증분 보완한다. '엔진 구축됨'과 '모든 미래 시즌 신규 원본 자동 확보·실증 완료'는 구별한다.
+2. 승인 설계: [v1.4.3 시즌 G/J/F/O](SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.3_SEASON_GJFO_AUTO_BUILD_APPROVED_20261102.md), 비충돌 [v1.4.2](DEVELOPER_NOTES_v1.4.2_LATEST_USER_POLICY_ADDENDUM_20261030.md)/v1.4 계열 및 [환경 구축 입력 경계](development/ENVIRONMENT_BUILD_INPUT_SCOPE_20261104.md). 26 DPS 전문화, **증강 기원사·탱커·힐러 제외**. 이전 업로드 v1.4.1의 27 DPS/증강 포함은 오기; 원본 Project UI 적용 여부는 GitHub로 추정하지 않는다.
+3. 구현·실제 증거: 격리 HEAD의 코드, [CURRENT](CURRENT_PRODUCT_DEVELOPMENT_STATE.md) 상단, [INDEX](development/INDEX.md) 기존 기능 A~G, [PROTOCOL](development/PROTOCOL.md), **정확 해당 Actions 실행·Native JSON2/receipt SHA**. 문서 승인·오프라인 PASS·Native 실측·제품 UI 실측을 절대 동치로 간주하지 않는다.
+4. 과거 P3-HA/HM/HAC·v097·v016 기준과 역사 오류는 출처/시점을 명시해 보존하며 최신 적용 상태로 재승격하지 않는다.
+
+**제품 목적:** 사용자는 미래 목표 ilvl(기본334, 현재 코드 참조 266~344) 또는 수동 **최종** CHMV 총량 T와 직업/전문화/종족/특성·장신구2·선택 특수장비·장식 최대2·보석/영약/소모품·기름·전투조건·선택 모듈을 지정한다. 내부 대표 일반장비·주스탯·무기·티어4와 SimC 프로필을 구성하여 **실제 SimC DPS 최대화의 치명/가속/특화/유연 최적 절대 rating**을 찾고, 관측 1위 DPS·SEM·95% 한정 판정·비율·실질적으로 다른 대안을 표시한다. 현재 장비 스탯 재분배·장비 조합/획득 추천·시즌 모든 장비 DB·독자 APL/proc/효과 재현은 **제품 밖**. 업로드 SimC 프로필은 캐릭터/특성 읽기용 선택 기능.
+
+**회계·하한:** `G` 대표 장비/무기, `J` 검증된 일반보석, `F` 검증된 영약, `O` 선택 가능한 기름 비자유분배. `B=G+J+F`, `T=B+O`, `c_final=c_base+o`. 수동 T 우선(`B=T-O`). 선택 특수장비 정적 L과 영구마부 E는 예산 내 고정 하한·중복가산 금지, 장신구 고정 스탯은 자유 G 밖. 최종 각 rating **`c_final[s] < T/2`**, 정수 상한 `(T-1)//2`; fraction 설정으로 완화하지 않는다. 일반 보석 4개(각 CHMV 방향 하나씩)+선택 특수보석 한 개, 그 이상 소켓은 승인된 배열 규칙에 따름. 특수보석 효과 지원/발동 별도 인증 Gate **STOP**, SimC를 신뢰한다. 통계 표시는 95%만 사용한다.
+
+## 2. 기능 단위 단일 최신 판정 — 구현 / 오프라인 / 실제 Native / 미확정
+
+| 제품 영역 | 현재 **판정** | 대표 소스·코드 | 검증된 범위와 남은 실증 |
+|---|---|---|---|
+| **A. 시즌 원본·환경 DB** | **엔진 구현·연결 완료, 현 시즌 실제 READY 한정 검증** | `v161/v191/v211/v213/v229/v242 → v216 → v222 → v212/v217`; [환경 소유표](development/ENVIRONMENT_BUILD_INPUT_SCOPE_20261104.md) | 같은 빌드 대표 장비·무기·티어/G/J/F/O·정적 보존·Policy A 후보 분류 연결. [실 #42460255527](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42460255527): 12.1.5.70783, ilvl334 Ret, G2850 J92 F165 O0, B=T3107, G1/F2 Native3, `installed/READY=true`. 새 시즌의 원본 자동 최초 공급/발행 전 과정을 **새 시즌에서 실증한 것은 아님**. 기존 동일 조건 증거 우선 재사용, 재측정 전수 Gate 금지 |
+| **B. 26 DPS 대표 프로필·무기/티어** | **26개 기본 물리 수용 Native PASS; 다양한 ilvl 소수 실증** | `v143/v167/v169/v230/v232`, `v098` | [실 #40972829357](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40972829357): **26/26** 물리 Native 수용(25 신규+1 역사 재사용) — 최종 적응형 26/26이란 뜻 아님. [실 #40980268952](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40980268952): 26×5=130 프로필 계획 오프라인, 6 전문화/6 ilvl **실 적응형 Native36+캐시36**, 모두 해당 구성 한정 |
+| **C. 일반 보석 J·F·기름 O·L/E/품질·선택 콘텐츠** | **선택·수치 회계/등록 엔진 연결, 실제 인정 항목 범위별 검증** | `v221/v230/v271/v278/v281/v285/v286/v108/v220/v196/v091` | 특수1+일반4의 G/J/F/O, 최고품질/적용 범위는 원본 출처와 실제 조건별 사용. 실 J92/F165은 현재 빌드·구성에만 유효, 기름 미사용 O0은 다른 선택 기름 O가 0이라는 뜻 아님. 영구마부 E 지원, 일반 임시마부 제외, 기름은 별도 지원. Omnium은 선택형 시즌 콘텐츠, SimC 효과 소유. 새로운 시즌 ID·품질·선택지·패치 콘텐츠 동일성은 자동 성공으로 단정하지 않음 |
+| **D. 기존 사용자 적응형 DPS** | **단일 제품 E2E 실 Native 일부 성공** | `v098→v096→v094`, 원본 `v065/v091` | [Ret #42466284163](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42466284163) Native6, [Enh+소모품/Omnium #42472633337](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42472633337) Native6. 전직업·모든 선택 옵션 사용자 웹 실증 아님 |
+| **E. 장기 최적화 정책·Native 실행기** | **기본 탐색/선택 정밀화 실 Native PASS, 품질 최적화 미완료** | `v290_multiscale_adaptive_policy.py`, `v291_durable_multiscale_native_runner.py`, 기존 `v093/v065/v091` | [실 #42499288257](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42499288257) **8×35 scout/4+4**, [실 #42501052586](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42501052586) **8×35 scout +2×320 confirm, 4+6 재개, 신규 DPS Native10**; 원본 JSON2·SHA, strict <50% 확인. 2,000은 가능한 최대 **후보 Native 예산**, 실제 2,000회 수렴/최적 품질·CPU-second 우월성 실증 **없음** |
+| **F. 교차 실행 SHA 캐시/중단·재개** | **v291 기존 재개 Native 실증, v292 교차 Job 실증 PASS** | `v291/v292`, 원본 SHA 영수증 | [실 #42504040076](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42504040076): 다른 Actions Job의 HAE **기존 DPS Native10건 이식, 새 DPS Native0**, 현재 환경 측정 G/F Native3은 별도. 원본 ZIP SHA·이전/새 경로 input SHA와 JSON2·receipt·case_key·옵션/프로필/바이너리/시즌 카탈로그/iterations를 재인증. 범용 다수 ZIP 병합·다른 PC 자동 동기화까지 완료 아님 |
+| **G. 로컬 웹 사용자 장기 흐름** | **코드 통합 및 Linux/Windows HTTP 회귀 PASS, 실제 웹 Native E2E 미실행** | `v113_local_web_api.py`, `v106`, `v293_local_longrun_session.py`, `runner/webui/`, `v096/v291/v292` | ‘세션만 준비’(최적화 DPS Native0; 필요시 L 정적 Native), Start/Status/Cancel/Resume/결과/캐시-only/ZIP SHA import, 총 Native12~2000·회차1~32. [focused #42506549262](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42506549262) **483 PASS/2 SKIP/0 FAIL, Native0**; [web #42506293553](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42506293553) **Linux+Windows 각233 tests PASS**. **실 로컬 웹 버튼→장기 Native→취소/재개→결과는 아직 미검증**. 기존 6회 UI/worker와 별도 |
+
+### 실 95% 통계 영수증 (P3-HAE/HAF/HAG)
+
+- 현 시즌 Enh/dwarf ilvl334 · B=T3107 · 기름 O0 · strict 최종 개별 T/2 미만. 320-iteration 확인 1순위 `crit1/haste1552/mastery1553/vers1` **185,438.66 DPS, SEM 280.54**; 확인 상대 `crit1388/haste165/mastery1553/vers1` **182,070.77 DPS, SEM 302.13**; 차 **3,367.90**, 선택 쌍의 **95% 정규근사 반폭 808.08**.
+- 두 실제 SimC seed는 서로 다름. 초기 v291 journal은 seed 필드 누락으로 `null`이었으나 [P3-HAF focused #42501776798](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42501776798)에서 원본 JSON2/receipt SHA와 맞는 seed 복원·옛 저널 제한 재생 **467 PASS/2 SKIP**, 신규 Native0.
+- **해석:** 이것은 여러 후보에서 *선택한 두 320회 확인 후보에 대한 명목 95% 근사 비교*이며 다중 후보 선택 편향/다중 비교를 보정한 가족단위 95%나 전역 최적 해 증명이 **아니다**. 35회 탐색 DPS는 최종 320회 측정값을 대신하지 않는다.
+
+## 3. 최신 검증 영수증·통제 범위
+
+| Actions ID | 코드/영수증 범위 | 실제 상태 |
+|---|---|---|
+| [#42506549262](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42506549262) | 최신 `672891afe458771124b27606b6f92372cf4962ea` 전체 offline focused | **485 tests 실행 = 483 PASS/2 SKIP/0 FAIL**, `DEV_LEDGER_PASS`, Native0 |
+| [#42506293553](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42506293553) | v113/v293 local web HTTP | Linux Python3.12 **233**, Windows Python3.14 **233** 테스트 각각 PASS, Native0 |
+| [#42501052586](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42501052586) | 70783 HAE, 8+2 실 DPS Native | 환경 Native3+DPS Native10, 95% 확인 쌍; 원본 artifact [#13625920302](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42501052586/artifacts/13625920302), *inner* ZIP SHA `c53dc09015377ccaf3d53f24bb85950e3999efacecc629be756b9f8856ef5fa9` |
+| [#42504040076](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42504040076) | HAG 이전 ZIP을 새 Actions job에 이식 | **DPS Native10 재사용/신규 DPS Native0**, 환경 Native3, [새 영수증 #13627110458](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42504040076/artifacts/13627110458) |
+| [#42460255527](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42460255527) | 해당 빌드·대표 334 환경 설치 | G/J/F/O/B/T READY, 환경 Native3 |
+| [#40972829357](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40972829357), [#40980268952](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40980268952) | 역사 all26 physical와 6전문화/6레벨 adaptive | 각각 26/26 물리 수용, 6세션×6 Native+cache replay |
+
+**실행 증거의 분리:** 26/26 물리 프로필 통과 ≠ 26/26 장기 최적화 실증. 환경 한 조건 READY ≠ 새 시즌 전체 자동 수집 보증. 2000-call typed 합성 PASS ≠ Native2000 실행. GitHub Actions를 이용한 실 Native ≠ 일반 사용자 로컬 브라우저 버튼 Native 완료. 코드·문서·오프라인 회귀 ≠ 원본 제품 `v016_SCENARIO_CONTRACT` 직접 통합 또는 Project Sources UI 적용.
+
+## 4. 정말 남은 두 주요 작업과 최소 다음 시험
+
+1. **P1-WEB 실사용 마무리:** 최근 코드 재감사보다 `v113→v293→v291` 연결을 실제 *로컬 웹 버튼*의 신뢰할 수 있는 동일 빌드/기본 사용자 조건에서 **한 세션**으로 최소 Native 시험. 세션만 준비 → Start(상한 예: 전체12, 회차4) → Status → Cancel/Resume 또는 회차 완수 → 기존 결과/cache-only → 95% 제한/선택 대안 표시 → 로그/영수증/오류 원문·재실행 호출 수. Windows 사용자 PC 실 실행은 별도 확인, GitHub CI Linux 원본 영수증을 대리 증거로 오표기 금지. 특별 L/E/O/수동 T는 이미 구현된 입력·경계 시험을 재사용하고 새로 깨진 조건만 점검.
+2. **P1-OPT 효율·품질 검증과 최소 고도화:** 현재 v290 다해상도 후보 제안·v291 scout/confirm·일반 v094 smoke를 같은 SimC 바이너리·전투·예산·CPU-second에서 비교. 전역/국소 다양성, 탐색 예산 대비 발견된 DPS, SEM, 95% 확인·선택 편향/근접 대안 및 시간·수렴·취소·재개 종료 판단을 측정. **새 엔진을 만들거나 SimC 자체 효과/프로크/APL을 구현하지 않는다**. 2,000회 무조건 실행/26종 전수 재실행 금지.
+3. **시즌 환경 엔진은 유지·증분 정비:** 위 두 축의 내부 의존성. 새 빌드·시즌에선 기존 v216 원본 수집→G/J/F/O/Policy A/설치 경로를 사용, 실제 변경된 정적 자료와 신규 선택 항목만 증명. 같은 시즌 기존 원본·설치 READY·Native 증거 재사용 가능성 선조회, 현 빌드/동일 콘텐츠 증거 없이 다른 빌드 READY 승계는 금지. 사용자 지정 수동 T는 어떠한 자동 예산으로도 덮어쓰지 않음. **현재 단계에서 새 G/J/F/O 엔진 개발을 3번째 주력 과제로 다시 열지 않는다**.
+
+## 5. 문서·개발 지속성·비용 규칙
+
+- **복원 단일 진입점:** [P3-HAI 최신 인계](CHAT_CONTINUITY_HANDOFF_20261109_P3_HAI_PRODUCT_ENGINE_CONSISTENCY.md) → 본 단일 판정표 → [PROTOCOL](development/PROTOCOL.md) 최상단 → [INDEX](development/INDEX.md) A~G 및 해당 기능 → [CURRENT](CURRENT_PRODUCT_DEVELOPMENT_STATE.md) 상단, v1.4.3/사용자 최신 직접 결정 → 정확 해당 코드·테스트·Actions/Native 영수증. **P3-HAC 및 과거 인계 전체를 처음부터 반복 감사하지 않는다.**
+- 각 신규 작업/인계는 **구현/오프라인 PASS/실 Native PASS/재사용된 역사 증거/추정·미구현**을 한 표로 기록한다. 실제 HEAD와 CI run/head SHA, 원본 artifact SHA, 적용 범위, 새 Native 호출 수/캐시 재사용 수를 적는다. 변경마다 source 수집 중복·Native·iterations/CPU·I/O·메모리·cache identity를 평가하고 기존 검사 재사용.
+- 기능별 개발 이력·원본 링크는 [INDEX](development/INDEX.md), [PROTOCOL](development/PROTOCOL.md), [P3-HAH](development/notes/2026-11-09_p3-hah-local-longrun-product-web-integration.md), [P3-HAG](development/notes/2026-11-09_p3-hag-exact-portable-native-case-replay.md), [P3-HAE](development/notes/2026-11-09_p3-hae-short-budget-precision-contract.md), [P3-HN](development/notes/2026-11-08_p3-hn-real-gjfo-ready-one-case.md)에 보존한다. **옛 노트의 작성 당시 PENDING 문구를 일괄 대체하지 않는다.**
+- 기존 주 제품 개발 채팅이 실제 제품 구현·일반 SimC 시험 소유권을 유지. 격리 브랜치 문서 정리 외 **`main` 병합, v003 immutable, 원본 v016, Project Sources/Instructions UI, 공식 Work OS M0·Shared State/승격**은 변경되지 않으며, GitHub 문서 작성으로 적용되었다고 주장하지 않는다.
