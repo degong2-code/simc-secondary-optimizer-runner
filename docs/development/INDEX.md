@@ -1,4 +1,4 @@
-> **2026-11-08 P3-HK:** v216의 기존 **공식 J/F 원본 공급자**가 이제 동일 시즌 packaged 일반보석 명목 rating + v221 봉인 물리 ItemID + v230 품질 rank + v232 소켓 경로를 재사용한다. 숫자 원본 SHA·특수 1개 제외·일반 4종 자동 장착·출처 불일치 보류를 유지하며, v266 raw 스탯 0/75로 명목 J를 차단하지 않는다. G/F/O 전체 설치 및 실제 새 시즌 READY는 아직 별도다. [P3-HK](development/notes/2026-11-08_p3-hk-nominal-j-existing-source-owner.md).
+> **2026-11-08 P3-HK:** v216의 기존 **공식 J/F 원본 공급자**가 이제 동일 시즌 packaged 일반보석 명목 rating + v221 봉인 물리 ItemID + v230 품질 rank + v232 소켓 경로를 재사용한다. 숫자 원본 SHA·특수 1개 제외·일반 4종 자동 장착·출처 불일치 보류를 유지하며, v266 raw 스탯 0/75로 명목 J를 차단하지 않는다. G/F/O 전체 설치 및 실제 새 시즌 READY는 아직 별도다. [P3-HK](notes/2026-11-08_p3-hk-nominal-j-existing-source-owner.md).
 
 > **2026-11-08 P3-HJ:** 원래 4종 보석의 +16/+7 명목 숫자와 최고품질 물리 ID를 by-build 정적 원본 파일로 묶어 `v271` 공통 source reader→`v113` 시즌 Build→`v216` 정적 J 입력으로 자동 연결. 누락/다른 빌드 PENDING, 명목 수치 효과 인증·Native 별도 실측/새 엔진 없음. 실제 v220/v212 환경 완료는 아직 아님. [노트](notes/2026-11-08_p3-hj-nominal-season-source-auto-connect.md).
 

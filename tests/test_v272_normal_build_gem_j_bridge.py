@@ -163,6 +163,82 @@ class NormalBuildGemJ(unittest.TestCase):
             compilation={"simc_revision":catalog["simc_revision"]},
             owner_numeric=owner)
         self.assertFalse(q2["J"]["selected_nominal_quality_matches_v230"])
+    def test_p3_hk_existing_v216_official_J_component_reuses_nominal_owner(self):
+        """Existing v222 J source owner, not a new budget/effect engine."""
+        import v271_user_socket_gem_layout as sockets
+        from tests.test_v264_environment_standard_budget_integration import prepared
+        catalog,_,_=prepared()
+        source=sockets.load_packaged_season_nominal_source(
+            game_build="12.1.5.70783",need=build.need)
+        selected=sockets.nominal_four_stat_from_season_source(
+            source=source,game_build="12.1.5.70783",socket_total=5,
+            special_gem_id=240967,need=build.need)
+        ids=selected["ordinary_gem_ids"]
+        layout={"ordinary_gem_ids":ids,"special_gem_id":240967,
+                "socket_total":5}
+        link={"same_build_gem_item_join_only":True,
+              "special_gem_item_id":240967,
+              "selected_item_ids":sorted(set([240967]+ids)),
+              "v221_stage_receipt_sha256":"b"*64}
+        pre={"schema":build.FRESH_SOURCE_PREFLIGHT_SCHEMA,
+             "game_build":"12.1.5.70783",
+             "simc_revision":catalog["simc_revision"],
+             "source_catalog_manifest_sha256":"a"*64}
+        j_preview={
+           "rating_origin":"SEASON_NOMINAL_PER_ITEM_TOTAL_SOURCE",
+           "nominal_source_sha256":source["source_sha256"],
+           "nominal_source_game_build":pre["game_build"],
+           "source_v221_stage_receipt_sha256":"b"*64,
+           "J_candidate_unadmitted":92,
+           "physical_gem_item_ids":ids,
+           "status":"PHYSICAL_GEM_J_ARITHMETIC_UNADMITTED",
+           "J_accounting_policy":"SUM_SELECTED_ORDINARY_GEM_RATINGS",
+           "special_gem_count_in_J":0}
+        j=build._fresh_source_owner_packaged_nominal_J(
+            preflight=pre,layout=layout,link=link,j=j_preview)
+        quality={"ordinary_gem_item_ids":list(ids),
+                 "v230_stage_receipt_sha256":"c"*64,
+                 "v221_stage_receipt_sha256":"b"*64,
+                 "same_enchant_quality_groups_source_only":[],
+                 "season_nominal_source_sha256":source["source_sha256"],
+                 "selected_nominal_quality_matches_v230":True,
+                 "real_socket_proof_required":True}
+        sock={"status":"J_INTRINSIC_COUNTS_BOUND_SOURCE_ONLY",
+              "selected_socket_counts":{"head":1,"wrists":2,
+                                        "waist":1,"feet":1},
+              "additional_socket_proof_required_by_slot":{},
+              "observed_J_unadmitted":92,
+              "v232_stage_receipt_sha256":"d"*64}
+        compiled={"simc_revision":pre["simc_revision"],
+                  "selected_J_intrinsic_socket_origin_unadmitted":sock}
+        staged={"status":"FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED",
+                "stage_status":"REUSED_VERIFIED",
+                "stage_receipt_sha256":"e"*64}
+        def official(q):
+            return build._fresh_source_owner_original_J_F_components(
+                preflight=pre,compilation=compiled,staged=staged,
+                owner_numeric={"J":j},quality_scope={"J":q},
+                effect_observations=[])
+        accepted=official(quality)
+        self.assertEqual(accepted["J"]["rating"],92)
+        self.assertEqual(accepted["J"]["source_verification"],
+                         "VALID_SAME_SEASON_SOURCE")
+        self.assertEqual(accepted["J"]["effect_quality_policy"],
+                         "BEST_OBSERVED_NOMINAL_SEASON_SOURCE")
+        self.assertNotIn("F",accepted)
+        self.assertNotIn("J",official({
+            **quality,"selected_nominal_quality_matches_v230":False}))
+        self.assertNotIn("J",official({
+            **quality,"season_nominal_source_sha256":"f"*64}))
+        missing=build._fresh_source_owner_original_J_F_components(
+            preflight=pre,compilation={
+                **compiled,"selected_J_intrinsic_socket_origin_unadmitted":
+                {**sock,"status":"J_ADDITIONAL_SOCKET_SOURCE_PROOF_PENDING",
+                 "additional_socket_proof_required_by_slot":{"head":1}}},
+            staged=staged,owner_numeric={"J":j},
+            quality_scope={"J":quality},effect_observations=[])
+        self.assertNotIn("J",missing)
+
     def test_physical_four_colors_reconcile_existing_J_B_T(self):
         layout,ratings=stage()
         _,table,_=prepared()
