@@ -43,6 +43,12 @@ class SourceOnlyJSession(unittest.TestCase):
         self.assertEqual(projected["missing_leading_types"],
                          ["mastery_rating","versatility_rating"])
         self.assertEqual(projected["v266_unresolved_enchant_count"],7)
+        self.assertTrue(projected["raw_static_zero_across_linked_source"])
+        self.assertEqual(projected["J_numeric_next_owner"],
+                         "SIMC_EFFECTIVE_GEM_RATING_SOURCE_REQUIRED")
+        self.assertFalse(projected["original_v266_raw_gate_bypassed"])
+        self.assertEqual(projected["v221_gem_relation_source_status"],
+                         "GEM_ENCHANT_CSV_SOURCE_SEALED")
         self.assertEqual(projected["official_J"],None)
         self.assertFalse(projected["environment_ready"])
         self.assertEqual(projected["native_calls"],0)
@@ -55,6 +61,8 @@ class SourceOnlyJSession(unittest.TestCase):
         self.assertEqual(pending["v268_reason"],
                          "V268_V221_EXACT_JOIN_MISSING")
         self.assertIsNone(pending["v221_linked_gem_item_count"])
+        self.assertFalse(pending["raw_static_zero_across_linked_source"])
+        self.assertIsNone(pending["J_numeric_next_owner"])
 
     def test_workflow_new_source_guard_preserves_prior_gp_and_gq(self):
         src=(pathlib.Path(__file__).resolve().parents[1]/

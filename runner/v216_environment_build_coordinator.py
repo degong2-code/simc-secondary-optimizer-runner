@@ -94,9 +94,20 @@ def _existing_v268_four_stat_source_diagnostic(*, observed, csv_source):
            for key,row in best.items()
            if key in expected and type(row) is dict}
     missing_source_ids=candidate.get("selected_gem_v221_missing_item_ids")
+    # A full same-build link with zero RAW_STATIC classifications is NOT
+    # evidence that those gems have no effective rating. P3-GZ's real SimC
+    # JSON2 buffed_stats already demonstrates an independent physical value.
+    link_count=candidate.get("linked_gem_items")
+    raw_count=candidate.get("raw_static_candidate_count")
+    unresolved_count=candidate.get("unresolved_enchant_count")
+    raw_zero_full_source=(
+        type(link_count) is int and link_count>0 and
+        type(raw_count) is int and raw_count==0 and
+        type(unresolved_count) is int and
+        unresolved_count==link_count)
     return {
         "schema":"p3_hb_existing_v268_j_source_diagnostic_v1",
-        "csv_source_status":sealed.get("status"),
+        "v221_gem_relation_source_status":sealed.get("status"),
         "v268_status":candidate.get("status"),
         "v268_reason":candidate.get("reason"),
         "selected_special_in_same_build_v221":candidate.get(
@@ -114,6 +125,11 @@ def _existing_v268_four_stat_source_diagnostic(*, observed, csv_source):
             "raw_static_candidate_count"),
         "v266_unresolved_enchant_count":candidate.get(
             "unresolved_enchant_count"),
+        "raw_static_zero_across_linked_source":raw_zero_full_source,
+        "J_numeric_next_owner":(
+            "SIMC_EFFECTIVE_GEM_RATING_SOURCE_REQUIRED"
+            if raw_zero_full_source else None),
+        "original_v266_raw_gate_bypassed":False,
         "official_J":None,"environment_ready":False,
         "native_calls":0,"network_calls":0,
     }
