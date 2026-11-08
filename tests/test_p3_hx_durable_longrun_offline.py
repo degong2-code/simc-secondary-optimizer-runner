@@ -148,6 +148,20 @@ class V291LongRun(unittest.TestCase):
                 self.assertEqual(replay["new_native_this_invocation"],0)
                 self.assertEqual(replay["confirmed_selected_pair_95"],pair)
 
+    def test_exact_simc_seed_source_must_match_native_receipt(self):
+        actual={"sim":{"options":{"seed":987654321}}}
+        self.assertEqual(runner._source_seed(
+            actual,{"simc_seed":987654321}),987654321)
+        self.assertEqual(runner._source_seed(
+            actual,{}),987654321)
+        self.assertIsNone(runner._source_seed({},{}))
+        with self.assertRaisesRegex(runner.LongRunBlocked,
+                                    "SIMC_SEED_NATIVE_JSON_RECEIPT_DRIFT"):
+            runner._source_seed(actual,{"simc_seed":123})
+        with self.assertRaisesRegex(runner.LongRunBlocked,
+                                    "SIMC_SEED_NATIVE_JSON_RECEIPT_DRIFT"):
+            runner._source_seed({},{"simc_seed":987654321})
+
     def test_selected_pair_95_checks_real_distinct_seeds(self):
         def make(target,dps,sem,seed,case):
             return {"phase":"precision","target":target,"iterations":320,

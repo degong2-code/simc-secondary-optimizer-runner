@@ -1,3 +1,7 @@
+## 2026-11-09 P3-HAF 실제 SimC seed 원본 보존
+
+[P3-HAF](notes/2026-11-09_p3-haf-native-seed-provenance-recovery.md): 실 Native 10회 [#42501052586](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42501052586) 성공, v291 2개 320 확인 JSON2·v065 Native receipt에는 서로 다른 시드가 있는데 v291 journal 전달이 누락됐음. 새 Native 없이 사실 메타데이터만 정확 복원, 옛 null journal은 해당 1필드 외 모든 SHA 재인증 뒤 조건부 재생. 95% 판정은 선택된 실측 쌍의 정규근사 한정, 다중비교 편향·전역 최적 인정 금지. 신규 코드 CI 미실행이면 PASS로 기록하지 말 것.
+
 ## 2026-11-09 P3-HAE typed12의 95% 확인 연결
 
 [P3-HAE](notes/2026-11-09_p3-hae-short-budget-precision-contract.md): 이전 실제 8개 scout 이후 short budget 10~16에 한해 v290의 precision을 앞당김. v291 95%는 두 confirmed Native 실측 쌍 비교로만 사용하며 독립 seed·선택 편향 표시, 전역 최적 증명은 아님. 구 버전 결과의 임시 경로/정책 SHA 무검증 재사용 불가. 신규 Actions 결과 확인 전 성공으로 표기하지 말 것.

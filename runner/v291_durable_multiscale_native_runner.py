@@ -85,11 +85,24 @@ def _verified_row(req, binary, folder, calibration, *, allow_cache):
         req, calibration, binary, folder, {"native_attempts": 0},
         cache_only=allow_cache)
     native_bytes = (folder / "result.json").read_bytes()
-    actual = oil.ingest_native(req, json.loads(native_bytes), native_bytes)
+    native_doc = json.loads(native_bytes)
+    actual = oil.ingest_native(req, native_doc, native_bytes)
+    actual["simc_seed"] = _source_seed(native_doc, receipt)
     need(actual["native_json_sha256"] == receipt["native_json_sha256"]
          and actual["case_key"] == receipt["case_key"],
          "EXISTING_NATIVE_AND_OIL_VALIDATOR_DISAGREE")
     return actual, receipt["source"]
+
+
+def _source_seed(native_json, accepted_receipt):
+    """Read actual SimC JSON2 seed, never manufacture a seed from the target."""
+    options = (native_json.get("sim") or {}).get("options") or {}
+    observed = options.get("seed")
+    recorded = accepted_receipt.get("simc_seed")
+    if recorded is not None:
+        need(type(observed) is int and recorded == observed,
+             "SIMC_SEED_NATIVE_JSON_RECEIPT_DRIFT")
+    return observed if type(observed) is int else None
 
 
 def _compact(req, native, source, plan):
@@ -284,8 +297,17 @@ def run(context, flask_vector, binary, output, *,
         req, folder = _request(context, flask_vector, output, plan)
         actual, _ = _verified_row(req, binary, folder, calibration, allow_cache=True)
         expected = _compact(req, actual, row["source"], plan)
-        need(expected == row, "RECORDED_NATIVE_CASE_BYTES_OR_SUMMARY_DRIFT")
-        observations.append(row)
+        # Old v291 journals omitted a real seed. When every original
+        # input/JSON2/receipt SHA has been revalidated above, permit only
+        # that single missing metadata field and keep the old journal bytes.
+        if row.get("simc_seed") is None and expected["simc_seed"] is not None:
+            former = dict(expected)
+            former["simc_seed"] = None
+            need(former == row, "RECORDED_NATIVE_CASE_BYTES_OR_SUMMARY_DRIFT")
+            observations.append(expected)
+        else:
+            need(expected == row, "RECORDED_NATIVE_CASE_BYTES_OR_SUMMARY_DRIFT")
+            observations.append(row)
     pending = read_json(pending_path) if pending_path.exists() else None
     if pending is not None and pending["index"] < len(stored):
         row = stored[pending["index"]]
@@ -373,8 +395,9 @@ def run(context, flask_vector, binary, output, *,
                 cancel_file=cancel_file, cache_only=cache_only,
                 recover_verified_partial=recover_verified_partial)
             native_bytes = (folder / "result.json").read_bytes()
-            native = oil.ingest_native(req, json.loads(native_bytes),
-                                       native_bytes)
+            native_doc = json.loads(native_bytes)
+            native = oil.ingest_native(req, native_doc, native_bytes)
+            native["simc_seed"] = _source_seed(native_doc, result)
             need(result["native_json_sha256"] == native["native_json_sha256"]
                  and result["case_key"] == native["case_key"],
                  "NATIVE_DOUBLE_ACCEPTANCE_DRIFT")
