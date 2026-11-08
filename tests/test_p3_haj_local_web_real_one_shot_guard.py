@@ -25,6 +25,17 @@ class WebRealOnceGuard(unittest.TestCase):
                   "all(v*2<total for v in vector.values())",
                   "real_browser_click_tested"):
             self.assertIn(k,q)
+        # Ret web once must not inherit Enh specialization or v291 probe mode.
+        for key in ("P3_T1_SPEC_CLASS:", "P3_T1_SPEC_NAME:",
+                    "P3_T1_FULL_CONSUMABLES_ONCE:",
+                    "P3_T1_V291_LONGRUN_NATIVE_ONCE:"):
+            line=next(x for x in w.splitlines() if x.strip().startswith(key))
+            self.assertNotIn("p3-haj-web-native-once",line)
+        for key in ("P3_T1_EXISTING_SPECIAL_GEM_ID:",
+                    "P3_T1_DPS_E2E_ONCE:",
+                    "P3_T1_WEB_LONGRUN_ONCE:"):
+            line=next(x for x in w.splitlines() if x.strip().startswith(key))
+            self.assertIn("p3-haj-web-native-once",line)
         compile(p,"p3_fr_zero_base_t1_acceptance.py","exec")
         compile(q,"p3_haj_real_local_web_native_e2e.py","exec")
 
