@@ -1,3 +1,7 @@
+## 2026-11-09 P3-HAD 첫 >6 실 Native 완료 — 한정 실증
+
+[작업·실 영수증](notes/2026-11-09_p3-had-first-over-six-native-pilot.md): 격리 코드 `a5931d33` [focused #42499184780](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42499184780) 461 PASS/2 SKIP, 요청 `1d480a25`, [real #42499288257](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42499288257) 환경 Native3+고양 DPS Native8(4+4·캐시 재생0 신규), 8 case SHA/엄격한 <50% cap 검증. 기존 2-tier 및 원본 v094 유지. 관측 최고 DPS186630.19±787.11 SEM(35 iterations)이며 전역최적/95% 확정/2000회 수렴이나 별도 프로세스 간 재개·웹 UI 완성 증거가 아니다. 다음은 긴 탐색·정밀화·효율 확인과 제품 사용자 경로 최소 연결. `main`/immutable/Project UI/Work OS/주 개발 소유권 변경 금지.
+
 ## 2026-11-09 P3-HAC 최신 단일 인계·독립 복원 전용
 
 **최신 진입점:** [P3-HAC](../CHAT_CONTINUITY_HANDOFF_20261109_P3_HAC_MULTISCALE_ENGINE_RESTORE.md) → 이 PROTOCOL 상단 → INDEX 관련 기능/OPTIMIZER.POLICY/PRODUCT.E2E → CURRENT 최상단 → v1.4.3+개발자 실행 노트 → 해당 코드·Actions/Native 원본. P3-HM 이하 '최신'은 **작성 당시 역사 상태**이며, 당시 'READY/DPS 미완료'는 이후 P3-HN~HU 실제 한정 실증으로 일부 해소됨. 현재 P3-HAB 최종 T 기준 **각 스탯 strict 50% 미만**과 v290/v291 장기 엔진 개발 증거가 우선; **실 >6 native/일반 사용자 장기 웹 UI는 미검증**. A~G 기존 원본·코드·영수증을 선조회하고 REUSE/CONNECT/EXTEND/NEW/STOP 결정, 독립 변경 묶기·동일 범위 회귀 재사용. 새 채팅 **첫 응답 읽기 전용 HEAD·증거·장단기 로드맵 보고 후 중단**, 사용자 `진행` 전 개발/수정/수집/CI·Native·테스트/승격 일체 금지. main/v003 immutable/Project UI/Work OS/주 개발 소유권 불변.
