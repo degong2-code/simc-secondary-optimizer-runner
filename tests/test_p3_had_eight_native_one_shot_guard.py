@@ -18,7 +18,8 @@ class HadOptInGuard(unittest.TestCase):
             self.assertIn(token,w)
         for token in ("longrun.stage_extended_manifest(",
                       "source_loader=entry.source",
-                      "batches=(4,4) if had_eight else (2,1)",
+                      "batches=((4,6) if hae_ten else",
+                      "(4,4) if had_eight else (2,1))",
                       "max_new_native_this_invocation=0,cache_only=True",
                       "p3_had_v291_native_evidence.zip"):
             self.assertIn(token,p)
