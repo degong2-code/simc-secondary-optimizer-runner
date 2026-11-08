@@ -1,3 +1,7 @@
+## 2026-11-09 P3-HAC 최신 단일 인계·독립 복원 전용
+
+**최신 진입점:** [P3-HAC](../CHAT_CONTINUITY_HANDOFF_20261109_P3_HAC_MULTISCALE_ENGINE_RESTORE.md) → 이 PROTOCOL 상단 → INDEX 관련 기능/OPTIMIZER.POLICY/PRODUCT.E2E → CURRENT 최상단 → v1.4.3+개발자 실행 노트 → 해당 코드·Actions/Native 원본. P3-HM 이하 '최신'은 **작성 당시 역사 상태**이며, 당시 'READY/DPS 미완료'는 이후 P3-HN~HU 실제 한정 실증으로 일부 해소됨. 현재 P3-HAB 최종 T 기준 **각 스탯 strict 50% 미만**과 v290/v291 장기 엔진 개발 증거가 우선; **실 >6 native/일반 사용자 장기 웹 UI는 미검증**. A~G 기존 원본·코드·영수증을 선조회하고 REUSE/CONNECT/EXTEND/NEW/STOP 결정, 독립 변경 묶기·동일 범위 회귀 재사용. 새 채팅 **첫 응답 읽기 전용 HEAD·증거·장단기 로드맵 보고 후 중단**, 사용자 `진행` 전 개발/수정/수집/CI·Native·테스트/승격 일체 금지. main/v003 immutable/Project UI/Work OS/주 개발 소유권 불변.
+
 ## 2026-11-08 P3-HN 실제 source→v212 READY 성공 및 다음 소유 경계
 
 격리 브랜치 코드 `68daa480`/one-shot `c7fa9789`: 기존 T1에서 빠진 빌드별 `v271` 명목 J 입력을 원래 `v216` Build에 전달. [offline #42460176730](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42460176730) 402 PASS/2 SKIP, [실 T1 #42460255527](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42460255527) `ZERO_BASE_T1_PASS`, 최종 **G2850 J92 F165 O0 B3107 T3107**, `v212/v217` installed/READY TRUE, Native3(G1/F2), compiler missing []. **하나의 70783/334 Ret 기준 사례**만 실증; 기존 실패 #42332836316은 보존. [노트](notes/2026-11-08_p3-hn-real-gjfo-ready-one-case.md). 다음은 신뢰 원본을 새로 만들지 말고 새 v212 설치 타입을 기존 `v098/v096/v094` 실제 DPS 사용자 경로에 연결. 개별 보석 효과 Gate/새 최적화 엔진/무조건 Native 반복 금지. `main`·immutable·Project UI·Work OS·주 개발 소유권 유지.
