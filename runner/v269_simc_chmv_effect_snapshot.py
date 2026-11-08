@@ -198,7 +198,9 @@ def prepare_ordinary_gem(*, profile, slot, ordinary_gem_id):
          "V269_GEM_PHYSICAL_INPUT_REQUIRED")
     need(not re.search(r"(?:^|,)gem_id=",profile,re.MULTILINE) and
          not re.search(r"(?m)^\s*gear_(?:crit|haste|mastery|versatility)_rating=",profile) and
-         not re.search(r"(?m)^\s*(?:copy|profileset\.|json2|output|html)=",profile),
+         not any(line.strip().startswith(("profileset.","copy=",
+              "json2=","output=","html="))
+              for line in profile.splitlines()),
          "V269_GEM_UNCONFOUNDED_NATIVE_INPUT_REQUIRED")
     lines=profile.splitlines(keepends=True)
     located=[(i,line) for i,line in enumerate(lines)
@@ -274,6 +276,12 @@ def compare_ordinary_gem(*, prepared, baseline_json2, active_json2,
          prepared.get("active_profile_sha256")==digest(active.encode("utf8")) and
          active.replace(",gem_id="+str(item),"",1)==base,
          "V269_GEM_INPUT_HASH_OR_SINGLE_DIFF_DRIFT")
+    expected=prepare_ordinary_gem(
+        profile=base,slot=slot,ordinary_gem_id=item)
+    need(expected["active_profile"]==active and
+         expected["active_profile_sha256"]==
+             prepared["active_profile_sha256"],
+         "V269_GEM_EXPECTED_ONE_ITEM_INPUT_DRIFT")
     # Do not assume the CLI applied a written gem_id: inspect actual JSON2 gear.
     left,base_gear,base_stats=_gem_native_player(baseline_json2,simc_revision)
     right,active_gear,active_stats=_gem_native_player(active_json2,simc_revision)

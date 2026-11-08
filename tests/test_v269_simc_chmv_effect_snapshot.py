@@ -154,6 +154,10 @@ class NativeSnapshotTests(unittest.TestCase):
             v.prepare_ordinary_gem(
                 profile=profile+"gear_crit_rating=100\n",
                 slot="head",ordinary_gem_id=240906)
+        with self.assertRaisesRegex(v.SnapshotBlocked,"UNCONFOUNDED"):
+            v.prepare_ordinary_gem(
+                profile=profile+"profileset.variant=copy\n",
+                slot="head",ordinary_gem_id=240906)
         wrong=v.compare_ordinary_gem(
             prepared=prep,baseline_json2=baseline,
             active_json2=gem_report("active",crit=116),
