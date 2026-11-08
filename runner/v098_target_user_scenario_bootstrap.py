@@ -302,7 +302,7 @@ def _v191_raw_gear_tier_link(bundle, originals, revision):
 
 
 def _verified_one_spec_G_profile_scope(*, source_bundle, candidate,
-                                      selected_key, target_ilevel, revision):
+                                      selected_key, target_ilevel, source_revision):
     """Build the selected v139 physical profile from ORIGINAL v232 G items.
 
     The actual v216/v217/v212 READY path is required by the calling
@@ -326,7 +326,7 @@ def _verified_one_spec_G_profile_scope(*, source_bundle, candidate,
     tier=source_bundle["tier"]
     need(candidate.get("game_build")==gear["season_build"]==
              tier["retail_build"] and
-         candidate.get("simc_revision")==revision and
+         candidate.get("simc_revision")==source_revision and
          candidate.get("target_ilevel")==target_ilevel and
          candidate.get("character",{}).get("class")==cls and
          candidate.get("character",{}).get("spec")==spec,
@@ -862,7 +862,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
                 _verified_one_spec_G_profile_scope(
                     source_bundle=season_source_bundle,
                     candidate=season_physical_one_spec_candidate,
-                    selected_key=key,target_ilevel=ilvl,revision=revision)
+                    selected_key=key,target_ilevel=ilvl,
+                    source_revision=season_profile_inputs[
+                        "v216_numeric_preview"]["calculation"]["simc_revision"])
                 if season_physical_one_spec_candidate is not None else
                 source_first.season_scope(
                     db=season_source_bundle["gear"],
@@ -1482,7 +1484,7 @@ def preview_from_environment_build(user,folder,binary,revision,*,
          numeric.get("numeric_preview_only") is True and
          numeric.get("environment_ready") is False and
          type(calc) is dict and calc.get("numeric_preview_only") is True and
-         calc.get("simc_revision")==compilation.get("simc_revision")==revision and
+         calc.get("simc_revision")==compilation.get("simc_revision") and
          type(calc.get("J")) is int and calc["J"]>0 and
          type(calc.get("F")) is int and calc["F"]>0,
          "SEASON_V216_NUMERIC_GJFO_SOURCE_NOT_RECONCILED")

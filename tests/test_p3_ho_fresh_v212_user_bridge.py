@@ -196,8 +196,16 @@ class OneSpecNativeRepresentativeBridge(unittest.TestCase):
             physical.seed.canonical(candidate).encode("utf8"))
         scope=boot._verified_one_spec_G_profile_scope(
             source_bundle=bundle,candidate=candidate,
-            selected_key=(cls,spec),target_ilevel=334,revision="c"*40)
+            selected_key=(cls,spec),target_ilevel=334,source_revision="c"*40)
         self.assertEqual(scope["common_gear"]["neck"],neck_id)
+        with self.assertRaisesRegex(
+                boot.UserScenarioBlocked,
+                "FRESH_V232_SELECTED_G_BUILD_SPEC_OR_ILEVEL_DRIFT"):
+            boot._verified_one_spec_G_profile_scope(
+                source_bundle=bundle,candidate=candidate,
+                selected_key=(cls,spec),target_ilevel=334,
+                source_revision="d"*40)
+
         self.assertEqual(list(scope["specializations"]),["paladin/retribution"])
         coverage=boot._current_season_profile_supplier_coverage(
             scope,"paladin/retribution",one_spec_only=True)
@@ -214,7 +222,7 @@ class OneSpecNativeRepresentativeBridge(unittest.TestCase):
                 boot.UserScenarioBlocked,"FRESH_V232_USER_PHYSICAL_G_SLOT_DRIFT"):
             boot._verified_one_spec_G_profile_scope(
                 source_bundle=bundle,candidate=wrong,
-                selected_key=(cls,spec),target_ilevel=334,revision="c"*40)
+                selected_key=(cls,spec),target_ilevel=334,source_revision="c"*40)
         changed=copy.deepcopy(candidate)
         changed["game_build"]="12.2.1.99999"
         changed["receipt_sha256"]=physical.seed.digest(
@@ -226,7 +234,7 @@ class OneSpecNativeRepresentativeBridge(unittest.TestCase):
                 "FRESH_V232_SELECTED_G_BUILD_SPEC_OR_ILEVEL_DRIFT"):
             boot._verified_one_spec_G_profile_scope(
                 source_bundle=bundle,candidate=changed,
-                selected_key=(cls,spec),target_ilevel=334,revision="c"*40)
+                selected_key=(cls,spec),target_ilevel=334,source_revision="c"*40)
 
 
 if __name__=="__main__":

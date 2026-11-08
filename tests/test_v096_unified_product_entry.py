@@ -145,6 +145,26 @@ class V096Unified(unittest.TestCase):
             self.assertFalse((path.parent/"output").exists())
             self.assertEqual(entry.run_manifest(path,plan_only=True),plan)
 
+    def test_simc_runtime_revision_changes_without_invalidating_season_source(self):
+        with tempfile.TemporaryDirectory() as td:
+            path,raw,receipt=self.seasonal_fixture(td)
+            old=entry.source(path)
+            source_bytes=(path.parent/"environment_build_receipt.json").read_bytes()
+            runtime="d"*40
+            self.assertNotEqual(runtime,receipt["source"]["simc_revision"])
+            raw["native_revision"]=runtime
+            path.write_text(json.dumps(raw),encoding="utf8")
+            new=entry.source(path)
+            self.assertEqual(new["plan"]["season_source_receipt_sha256"],
+                             old["plan"]["season_source_receipt_sha256"])
+            self.assertEqual(new["plan"]["base_B"],old["plan"]["base_B"])
+            self.assertEqual(new["plan"]["final_T"],old["plan"]["final_T"])
+            self.assertNotEqual(new["context"]["identity"],
+                                old["context"]["identity"])
+            self.assertEqual(source_bytes,(path.parent/
+                             "environment_build_receipt.json").read_bytes())
+            self.assertFalse((path.parent/"output").exists())
+
     def test_seasonal_source_requires_v223_links_and_exact_rating(self):
         with tempfile.TemporaryDirectory() as td:
             path,raw,receipt=self.seasonal_fixture(td)

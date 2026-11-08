@@ -88,8 +88,7 @@ def _admitted_season_source(*, manifest_path, season, revision,
          and b.get("source_catalog_artifact_sha256")==
              src.get("artifact_sha256")
          and b.get("game_build")==src.get("game_build")
-         and b.get("simc_revision")==revision==
-             src.get("simc_revision"),
+         and b.get("simc_revision")==src.get("simc_revision"),
          "SEASON_V223_ACTUAL_SOURCE_LINKS_NOT_VERIFIED")
     normalized=contract.normalize(user_scenario)
     budget=normalized["budget"]
