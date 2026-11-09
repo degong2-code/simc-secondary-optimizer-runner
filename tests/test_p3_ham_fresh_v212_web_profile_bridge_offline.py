@@ -202,7 +202,7 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
             target=root/relative
             raw=json.loads(target.read_text(encoding="utf8"))
             raw["environment_result"]["verified_target_ilevel"]=335
-            target.write_text(web.stage_engine.canonical(raw)+"\n")
+            target.write_bytes((web.stage_engine.canonical(raw)+"\n").encode("utf8"))
             restarted=web.LocalJobs(self.root)
             with self.assertRaises(web.stage_engine.StageExecutionBlocked):
                 restarted.restore_verified_fresh_profile(
