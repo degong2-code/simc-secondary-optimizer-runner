@@ -1000,9 +1000,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
                  default_choice["flask"]=="source_default" and
                  default_choice["diamond_id"]==0 and
                  default_choice["omnium_talents"]=="source_default" and
-                 all((bound[k]=="disabled" if
-                      default_choice[k]=="source_default" else
-                      bound[k]==default_choice[k]) for k in
+                 all(default_choice[k]=="source_default" or
+                     bound[k]==default_choice[k] for k in
                      ("food","potion","augmentation"))),
                  "SEASON_PROFILE_SELECTED_CONSUMABLES_NOT_SOURCE_BOUND")
     selected_nonchmv=None
