@@ -194,7 +194,9 @@ class Multiscale(unittest.TestCase):
         a=(736,900,736,735)
         b=(245,1450,795,617)
         c=(1430,305,700,672)
-        d=(1,1553,1552,1)
+        d=(50,1553,1503,1)
+        e=(1090,1250,400,367)
+        f=(350,650,1200,907)
         cases={
             "single_smooth":((a,190000.,.007),),
             "separated_interior":((a,188000.,.009),
@@ -204,6 +206,10 @@ class Multiscale(unittest.TestCase):
             "three_disjoint":((a,188000.,.009),
                                (b,192000.,.032),
                                (c,191500.,.030)),
+            "off_axis_narrow":((a,188000.,.008),
+                                (e,194000.,.055)),
+            "off_axis_broad":((a,189000.,.008),
+                               (f,192000.,.015)),
         }
         def run(peaks,extra_global_every):
             rows=[]
@@ -250,6 +256,7 @@ class Multiscale(unittest.TestCase):
             return {"calls":len(rows),"unique":len(unique),
                     "extra_or_regular_global_proposals":global_proposals,
                     "best_oracle_value":round(best,3),
+                    "oracle_regret":round(max(height for _,height,_ in peaks)-best,3),
                     "best_target":best_vector,
                     "nearest_known_peak":min(
                         p._distance(best_vector,peak) for peak,_,_ in peaks)}
