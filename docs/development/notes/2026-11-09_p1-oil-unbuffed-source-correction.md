@@ -1,17 +1,10 @@
-# P1 · 기름 O 원본 정적 rating 교정 (2026-11-09)
+# P1 · 기름 O의 특성 오염 관측 제거와 시즌 정적 원본 연결 (2026-11-09)
 
-## 사용자 결정과 원인
-- 과거 냉기 마법사 buffed JSON2 관측 `치명+16/가속+17`은 냉법 특성에 의한 오염 가능성이 지적된 자료이며 **기름의 공식 정적 O로 재사용 금지**.
-- 이전 관측 영수증은 역사로만 보존. 과거 자료 일치 여부를 별도 필수 Gate로 만들지 않음.
-- 원본 시즌 SimC DBC의 직접 정적 값만 해당 범위에서 사용. SimC 소스의 scaling이 필요한 수치는 임의 16/16으로 추정하지 않음.
-
-## 실제 코드·검증
-- `runner/v296_pinned_oil_static_rating_source.py`: 이미 봉인된 `v275` `spell_item_enchantment.inc`를 읽고 `v211` 원본 파서를 재사용. 특성/버프가 섞인 v278 JSON2 관측과 독립된 후보 `static_CHMV_vector`를 산출; 스케일링·혼합 효과는 보류. `v281` 물리 아이템과는 ID·손·출처 일치 조건에서만 연결하며 등록은 별도 미완료.
-- `tests/test_v296_pinned_oil_static_rating_source.py`에서 정적 16/16 예시와 오염된 16/17 관측을 구별. **이 합성 16/16은 70783 실 원본의 최종 확정 O가 아님.**
-- `894d76950577`에서 변경된 scaled-ID 처리와 시험 fixture가 불일치해 focused FAIL(512 중 1 FAIL/1 ERROR). 후속 `bb8de1b3caf2`에서 실제 스케일링 필드에 맞게 테스트만 교정. [focused #42579722294](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42579722294) **510 PASS / 2 SKIP / 0 FAIL, DEV_LEDGER_PASS**, 신규 Native0.
-- 실제 [70783 unbuffed 원본 #42577642495](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42577642495) PASS. [별도 SimC 정적 보고 #42578223479](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42578223479) PASS. 이 두 범위 증거가 전체 O>0 시즌 자동 설치·사용자 선택·DPS PASS를 의미하지 않음.
-
-## 남은 P1
-현재 `v296`의 결과는 **미승격 후보**. 원본 스케일링에 대한 SimC 자체 계산값, 정확한 물리 ID·적용 손/무기·최고 품질·CHMV 예산 소유권을 확인한 선택지만 기존 `v216→v222→v212→v113→v098/v096` 경로로 등록해야 함. 필수 O 미확정 항목은 보류하고 O=0 정상 환경을 차단하지 않음. 기존 사용자 수동 T·캐시/취소/재개 보존, 추가 Native 전수 반복 금지.
-
-격리 브랜치만 변경. main, v003 immutable, Project UI, Work OS, 주 제품 개발 채팅 소유권 불변.
+- **Capability:** `O.OIL`, `BUDGET.GJFO`, `SOURCE.SEAL`, `PRODUCT.E2E`.
+- **Keywords:** weapon oil, buffed_stats, Frost Mage, 16/17, 16/16, v296, v281, v216, scaled item enchant, rank, original SimC, P1.
+- **Prior evidence:** 사용자 직접 정정: 냉기 마법사에 의한 +1 오염 가능성을 지닌 과거 `16/17`을 기름의 정적 O 소유권 근거로 **다시 사용하지 않음**. 역사의 v269/v278 냉법 관측은 그대로 보존하되 승인·승격 근거에서 배제. 70783 기존 SimC `c20e2ad52e4c33711f74272309a5748125175fe8`, v275 sealed compiler, v211 파서, v281 물리 ID/손, v285/v286 기존 무기 호환 구조를 재사용.
+- **Decision:** `CORRECT_AND_CONNECT` — SimC JSON2의 `collected_data.buffed_stats` delta는 O 정적 원본이 아님. 시즌별 생성 `spell_item_enchantment.inc`의 `ITEM_ENCHANTMENT_STAT`와 현재 소스 SHA로 우선 분류, 직접 고정 정수인 경우에만 후보 수치를 얻음. SimC 내부 스케일링 필요 시 `O`를 **보류**, 기존 16/17·임의 16/16을 정적 예산에 복사하지 않음. SimC 스케일링/효과를 별도 엔진으로 재구현하지 않음.
+- **Changes:** `runner/v296_pinned_oil_static_rating_source.py`가 이미 수집된 v275 원본과 v211 파서를 재사용해 마부 ID별 정적 타입/스케일링 분류·SHA·원본 범위를 생성. `v216`은 과거 v278 oil 측정을 `buffed_CHMV_observation_unadmitted` 진단에만 보존하고 정적 O로 사용하지 않으며, `SIMC_RAW_STATIC_NUMBER_SOURCE_ONLY` 후보만 기존 v286 마스크·v222 예산 후보/프로필로 전달. v281 실제 SimC 파서는 기름 rank2에 `_2` 접미사를 요구하므로 `main_hand:thalassian_phoenix_oil_2`로 수정; v216 조인과 관련 synthetic regression도 교정. O-only 자동 Build 요청은 원본 소스 확인으로 처리하고 **이전 효과없는 O용 buffed Native 호출 0회**; F 측정은 기존 Native 경로 유지. `runner/webui/`의 O 전용 선택/설명도 Native-free 원본 확인을 반영.
+- **Verification:** [원본 #42577642495](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42577642495) **SUCCESS, 신규 Native0**. 정확한 70783 Phoenix Oil 품질2 enchant `8052`의 `ench_type=[5,5,0]`·`ench_prop=[32,36,0]`·`id_scaling=-7`·`ench_coeff=[0.4757,0.4757,0]` 확인. 이 값들은 **치명/가속 양쪽이 SimC 스케일링 대상**임을 뜻하고 곧바로 고정 16/16이나 16/17을 산출하지 않음. Oil of Dawn 품질2 `8054`는 별도의 주문 효과 타입으로 정적 CHMV를 추정하지 않음. [원본+합성 focused #42579722294](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42579722294) 512건 중 **510 PASS/2 SKIP/0 FAIL**, 해당 SHA의 신규 Native0. [기존 #42578223479](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42578223479) SimC 프로세스는 exit0이지만, **`main_hand:thalassian_phoenix_oil` 토큰이 rank 미지정으로 enchant_id0, 실제 무시된 사례**이므로 O Native 검증으로 취급 금지. 후속 [#42578562372](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42578562372)는 `_2` 교정 후 SimC exit0/JSON2 성공이나 item_t static vector가 stdout에 노출되지 않아 별도 assertion FAIL; O 정확 rating 미확정. 합성 테스트의 `16/16`은 사용자 정책 예시이며 **실 70783 공식 O 승인 영수증이 아님**. 최신 코드/오프라인 CI는 HEAD별 별도 확인.
+- **Remaining:** SimC가 실제로 계산한 *무기 자체*의 스케일된 정적 `temp_enchant_stats`를 특성 오염 없이 취득하는 원본 경로, 그 게임 빌드의 물리 아이템·손/무기·품질 범위에 대한 등록, `v216→v222→v212→v113→v098/v096`의 사용자 선택 O>0 설치와 한정 실 Native E2E. v216 기본 설치는 O0. 미확정 기름은 선택지에서 보류하되 기존 O0 READY/수동 T/캐시·취소/재개는 유지. **추가 Native나 과거 SHA 재실행을 필수 Gate로 하지 않음**.
+- **Efficiency:** v275 원본·v211 파서·v281/286 조인을 한 번 재사용하고 buffed delta로는 정확한 O가 나오지 않는 자동 oil v278 Native를 제거. O-only 요청에 별도 SimC 실행 파일 필요 없음; F Native 상한은 기름과 예산 분리. 중복 SimC 실행·대형 원본 재수집·새 효과 엔진·26전문화 전수 검증 없음. main, v003 immutable, Project UI/Work OS, 주 제품 개발 채팅 소유권 불변.
