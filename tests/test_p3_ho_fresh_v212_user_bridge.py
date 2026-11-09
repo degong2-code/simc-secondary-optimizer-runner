@@ -173,7 +173,8 @@ class FreshInstalledV096Bridge(unittest.TestCase):
             "reference_G":doc["official_G"],
             "effective_G":doc["official_effective_G"],
             "J":doc["official_J"],"F":doc["official_F"],
-            "fixed_O":zeros,"fixed_L":zeros,"fixed_E":zeros,
+            "fixed_O":dict(zeros),"fixed_L":dict(zeros),
+            "fixed_E":dict(zeros),
             "reference_B":doc["official_B"],
             "base_B":doc["official_B"],"final_T":doc["official_T"],
             "game_build":doc["game_build"],
@@ -332,7 +333,8 @@ class FreshInstalledV096Bridge(unittest.TestCase):
             user={"target":{"ilevel":334,"final_T":3500}}
             settings={"default_consumables":{
                 "gem_budget_J":doc["official_J"],
-                "flask_budget_F":doc["official_F"]}}
+                "flask_budget_F":doc["official_F"],
+                "omnium_talents":None}}
             with mock.patch.object(bootstrap,"build",side_effect=build):
                 result=bootstrap.preview_from_environment_build(
                     user,root/"session",root/"fake_simc","runtime",
