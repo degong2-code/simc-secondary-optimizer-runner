@@ -8,3 +8,13 @@
 - **Verification:** [focused #42583968034](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42583968034) **513 tests / 511 PASS / 2 SKIP / 0 FAIL**, DEV_LEDGER_PASS. synthetic v297 parser·캐시 재사용(new Native0)·v296 scaled source 영수증 ID/스탯 종류 방어·v216 무기 마스크 후보 연결 검사. [선행 전체 연계 CI #42583722027](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42583722027) focused 511 PASS/2 SKIP, v113 API / v212 manifest / v181 Windows / v182 UI도 동일 코드 SHA에서 PASS; 테스트 단계 새 Native0. **#42582755601의 실제 Native는 기존 단발 워크플로 경로이고 v297 런타임 메서드에 대한 별도 실 Native E2E 증거는 아직 아님.**
 - **Remaining:** `v216` 기본 공식 시즌 설치는 여전히 O0. v281 실제 물리 아이템 ID·일치하는 손과 무기 마스크·품질 구분, `v212` **O>0 공식 검증 설치**, `v113` 사용자 선택 및 `v098/v096` 실행 최종 프로필과 DPS, 95% 최적화 결과까지 **실 종단 검증 없음**. 현재 확인된 O16/16을 다른 기름·다른 빌드·아이템레벨의 자동 상수로 확장하지 않는다. 선택 미승인 항목은 보류하고 **선택 불필요한 기름까지 전수 Native 시험하지 않는다.**
 - **Efficiency:** 기존 v275 소스·v281 물리 ID 조인·v278 영수증·v286 마스크·v222 예산·v217 캐시 사용, 과거 냉법 16/17 재검증 Gate 없음. main·v003·Project UI·Work OS·주 제품 개발 채팅 소유권 변경 없음.
+
+## P1 범용 엔진 연결 보강 · 2026-11-09
+
+**Capability:** `O.OIL`, `BUDGET.GJFO`, `SOURCE.SEAL`, `PRODUCT.E2E`. 이번 변경은 70783 특정 기름의 재시험이 아니라 매 시즌·물리 아이템·손 선택에 재사용되는 엔진 경로다.
+
+**Decision / Changes:** `v113` 시즌 Build는 `selected_oil_item_ids_by_hand`를 물리 ID로만 받으며 API/HTTP에서 O 수치나 검증 영수증을 받지 않는다. `v216`은 `v281` 봉인 아이템→SimC 마부·품질 ID, `v286` 같은 시즌 대표 무기/손/장착 마스크, `v296` DBC 정적 수치 또는 스케일될 때 기존 `v297`의 실제 SimC 전투 전 장비 수치와 `v278` 변경 없는 실행 캐시를 사용한다. 적용 대표 무기 ID·목표 ilvl·정적 rating·SimC revision/게임 빌드·원본 SHA가 일치하는 선택만 내부 `O` 소유자 후보가 된다. 이를 기존 `v222`의 `B=G+J+F, T=B+O`와 `v212` 검증 설치 계약에 연결한다. 기존 O0 설치/영약 F와 수동 최종 T 우선, `B=T-O` 회계 유지. 무의미한 표본 Native 전수 반복, 효과 재구현, 별도 인증 Gate, 현재 장비 수집 없음.
+
+**Verification:** 공통 focused [#42586492832](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42586492832) **522 tests = 520 PASS / 2 SKIP / 0 FAIL**, DEV_LEDGER_PASS / 신규 Native0, 원본 재수집0. 기존 v113 API·v212 manifest·Windows 패키지·UI 관련 CI [코드 변경 테스트군 #42586023675 / #42586023823 / #42586023629 / #42586023699](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42586023675) SUCCESS. 이전 실제 SimC 16/16 #42582755601 증거는 정확히 그 조건의 관측 영수증이며 **이번 generic 연결의 실제 O>0 설치/최적화 PASS라고 주장하지 않는다**.
+
+**Remaining / Efficiency:** 오프라인 소스 결합·예산 계산 경로는 연결되었지만, **실제 원본 증거가 모두 충족된 시즌의 `v216→v212` 양의 O 설치와 `v113→v098/v096→SimC DPS` 실행**, 시즌별 검증된 최고 품질 기름의 사용자용 목록/선택 UX, 사용자가 새 환경으로 진행하는 경로는 미완료/미실증으로 구분한다. 관련 후속은 새로운 16/16 확인보다 일반 사용자 흐름 P1 완결을 우선. main/Project UI/immutable 변경 없음.
