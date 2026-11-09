@@ -341,6 +341,15 @@ class LocalJobs:
 
     def load_fresh_profile_for_user(self, target_ilevel, explicit_build=None):
         """Use a source-authenticated current game build, not latest folder."""
+        # No installed v113 snapshot means the original packaged/legacy
+        # current-season route must remain unchanged. Do not fetch a retail
+        # build or automatically collect/Native for each ordinary web plan.
+        workspace=self.root/"_fresh_season_sources"
+        if not workspace.is_dir() or workspace.is_symlink():
+            return None
+        if not any(p.is_file() and not p.is_symlink() for p in
+                   workspace.glob("wago_*/fresh_source/v113_profile_*.json")):
+            return None
         game_build=explicit_build or self._current_fresh_game_build
         if game_build is None:
             # One cheap current-build discovery per first restarted user plan.
@@ -353,9 +362,8 @@ class LocalJobs:
             self._current_fresh_game_build=game_build
         restored=self.restore_verified_fresh_profile(
             target_ilevel=target_ilevel,game_build=game_build)
-        if restored is None:
-            raise environment_manifest.EnvironmentBlocked(
-                "WEB_FRESH_V212_PROFILE_SNAPSHOT_MISSING_RUN_SEASON_BUILD")
+        # Old season files with no v113 snapshot are NOT auto-promoted.
+        # The legacy packaged route remains available without new Native.
         return restored
 
     def _fresh_environment_summary(self, folder, result):
@@ -467,8 +475,12 @@ class LocalJobs:
                 prior=environment_build.find_verified_installed_season_environment(
                     self.root,target_ilevel,expected_game_build=game_build)
             if prior is not None:
-                snapshot=self.restore_verified_fresh_profile(
+                # A true original v212 receipt carries its installed SHA.
+                # Previous API mocks/legacy reuse results retain old behavior.
+                snapshot=(self.restore_verified_fresh_profile(
                     target_ilevel=target_ilevel,game_build=game_build)
+                    if type(prior.get("installed_manifest_sha256")) is str
+                    else None)
                 return {**prior,
                     "verified_v113_profile_source_restored":snapshot is not None,
                     "network_calls":version_network_calls,
