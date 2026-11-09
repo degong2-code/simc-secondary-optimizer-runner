@@ -136,6 +136,101 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
                 self.jobs._verify_environment_dependencies(summary,folder)
 
 
+    def test_v217_source_snapshot_recovers_fresh_new_session_after_restart(self):
+        with (
+            mock.patch.object(web.environment_manifest,
+                              "verify_fresh_installed_environment"),
+            mock.patch.object(web.environment_build,
+                "find_verified_installed_season_environment",
+                return_value={"installed_manifest_sha256":self.digest})
+        ):
+            self.jobs.remember_verified_fresh_environment(self.original)
+            receipt=self.jobs.persist_verified_fresh_profile()
+            self.assertEqual(receipt["status"],"EXECUTED_AND_SEALED")
+            self.assertEqual(receipt["new_native_calls"],0)
+            again=self.jobs.persist_verified_fresh_profile()
+            self.assertEqual(again["status"],"REUSED_VERIFIED")
+            restarted=web.LocalJobs(self.root)
+            self.assertIsNone(restarted._verified_fresh_profile_result)
+            recovered=restarted.restore_verified_fresh_profile(
+                target_ilevel=334,game_build=self.build)
+            self.assertEqual(recovered["verified_target_ilevel"],334)
+            self.assertEqual(recovered["source_compilation"][
+                "verified_environment_install"]["manifest_sha256"],self.digest)
+            self.assertEqual(restarted._current_fresh_game_build,self.build)
+            # A second application process needs neither source collection
+            # nor fresh G/F Native to serve new user planning.
+            user_result={"plan":{"class":"paladin","spec":"retribution",
+                                 "base_B":3107,"fixed_O":{},
+                                 "final_T":3107,"native_limit":6}}
+            fake=self.root/"simc.bin"
+            fake.write_bytes(b"offline fixture never executed")
+            folder=self.root/("c"*20)
+            folder.mkdir()
+            form=web.UserRequest(controls=web.sessions.standard_controls(),
+                binary=str(fake),revision="abcdef0",
+                current_season_product=True,fresh_season_build=self.build)
+            with (
+                mock.patch.object(web.sessions,"store_session",
+                                  return_value=folder) as store,
+                mock.patch.object(web.profile_stage,"build_or_reuse",
+                    return_value=(user_result,{})) as stage,
+                mock.patch.object(restarted,"_fresh_environment_summary",
+                                  return_value={"status":"READY"})
+            ):
+                response=restarted.plan(form)
+            self.assertEqual(response["status"],"READY_ZERO_NATIVE")
+            self.assertEqual(response["native_calls"],0)
+            self.assertEqual(store.call_args.kwargs[
+                "fresh_installed_manifest_sha256"],self.digest)
+            self.assertEqual(stage.call_args.kwargs[
+                "verified_fresh_environment_result"][
+                    "verified_target_ilevel"],334)
+
+    def test_restarted_snapshot_tampering_blocks_and_does_not_rebuild(self):
+        with (
+            mock.patch.object(web.environment_manifest,
+                              "verify_fresh_installed_environment"),
+            mock.patch.object(web.environment_build,
+                "find_verified_installed_season_environment",
+                return_value={"installed_manifest_sha256":self.digest})
+        ):
+            self.jobs.remember_verified_fresh_environment(self.original)
+            self.jobs.persist_verified_fresh_profile()
+            root,_,relative=self.jobs._verified_profile_stage(
+                self.installed_doc)
+            target=root/relative
+            raw=json.loads(target.read_text(encoding="utf8"))
+            raw["environment_result"]["verified_target_ilevel"]=335
+            target.write_text(web.stage_engine.canonical(raw)+"\n")
+            restarted=web.LocalJobs(self.root)
+            with self.assertRaises(web.stage_engine.StageExecutionBlocked):
+                restarted.restore_verified_fresh_profile(
+                    target_ilevel=334,game_build=self.build)
+
+    def test_verified_prior_environment_without_snapshot_stays_no_native(self):
+        with (
+            mock.patch.object(web.environment_build,
+                "find_verified_installed_season_environment",
+                return_value={"installed_manifest_sha256":self.digest,
+                              "target_ilevel":334,"environment_ready":True,
+                              "environment_installed":True,
+                              "G":2850,"J":92,"F":165,"B":3107,"T":3107}),
+            mock.patch.object(web.environment_build,"build_environment") as build,
+            mock.patch.object(web.environment_manifest,
+                              "verify_fresh_installed_environment")
+        ):
+            result=self.jobs.build_season_environment(
+                game_build=self.build,target_ilevel=334)
+            self.assertTrue(result["environment_ready"])
+            self.assertFalse(result["verified_v113_profile_source_restored"])
+            self.assertIsNone(self.jobs._verified_fresh_profile_result)
+            build.assert_not_called()
+            with self.assertRaises(web.environment_manifest.EnvironmentBlocked):
+                self.jobs.load_fresh_profile_for_user(
+                    334,explicit_build=self.build)
+
+
 class SeasonNoOilBrowserDefaults(unittest.TestCase):
     def test_zero_o_baseline_does_not_auto_select_legacy_main_hand(self):
         from fastapi.testclient import TestClient
