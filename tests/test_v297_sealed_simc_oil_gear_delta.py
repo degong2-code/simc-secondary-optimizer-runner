@@ -116,4 +116,103 @@ class GearStatOwner(unittest.TestCase):
         self.assertFalse(joined["environment_ready"])
         self.assertFalse(joined["user_selectable"])
 
+    def test_engine_source_owned_selected_O_updates_shared_v222_B_T_once(self):
+        # Generic source/Native owner wiring, NOT a fresh proof about a
+        # particular game's oil. Original source + hand mask + same gear
+        # must match before the existing budget calculator can use O.
+        import v216_environment_build_coordinator as build
+        import v222_season_budget_contract as budget
+        game="12.9.0.99999"
+        rev="d"*40
+        manifest="a"*64
+        vec={"crit_rating":3,"haste_rating":5,
+             "mastery_rating":0,"versatility_rating":0}
+        selected={"flask_item_id":101,
+                  "oil_item_ids_by_hand":{"main_hand":209}}
+        token="main_hand:sample_engine_oil_3"
+        source={"schema":"v296_pinned_simc_raw_oil_static_rating_v1",
+                "source_unbuffed":True,"game_build":game,
+                "simc_revision":rev,"source_sha256":"b"*64,
+                "items":[{"enchant_id":309,
+                          "static_CHMV_vector":None}]}
+        row={"physical_item_id":209,"selected_hand":"main_hand",
+             "simc_enchant_id":309,"simc_input_token":token,
+             "crafting_quality":3,
+             "status":"SIMC_PRECOMBAT_GEAR_NUMBER_SOURCE_ONLY",
+             "static_CHMV_vector_unadmitted":vec,
+             "source_min_ilevel":10,"source_max_ilevel":0,
+             "static_O_unbuffed_source_sha256":"b"*64,
+             "game_build":game,"simc_revision":rev,
+             "physical_item_source_candidate_sha256":"c"*64,
+             "simc_native_receipt_sha256":["1"*64,"2"*64]}
+        numeric={"oil":[row]}
+        match={"physical_item_id":209,"hand":"main_hand",
+               "status":"SAME_BUILD_REPRESENTATIVE_WEAPON_MASK_MATCH_SOURCE_ONLY",
+               "static_O_for_hand_unadmitted":vec,
+               "selected_representative_weapon_id_unadmitted":409}
+        masks={"game_build":game,"simc_revision":rev,
+               "oil_representative_weapon_matches_unadmitted":[match],
+               "oil_source_stage_identities":{"OIL":{"stage_receipt_sha256":"3"*64}}}
+        measurement={"status":"SIMC_PRECOMBAT_TOTAL_GEAR_STATIC_NUMBER_SOURCE_ONLY",
+                     "simc_input_token":token,"enchant_id":309,
+                     "game_build":game,"simc_revision":rev,
+                     "selected_hand":"main_hand",
+                     "representative_weapon_id":409,"target_ilevel":334,
+                     "talent_buffed_stats_not_used":True,
+                     "static_CHMV_vector_unadmitted":vec}
+        call=dict(preflight={"game_build":game,"simc_revision":rev,
+                              "source_catalog_manifest_sha256":manifest},
+                  staged={"status":"FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED"},
+                  compilation={"simc_revision":rev},
+                  selected=selected,original_oil=source,numeric=numeric,
+                  choices=masks,
+                  scaled_native_gear=[{"physical_item_id":209,
+                                      "selected_hand":"main_hand",
+                                      "measurement":measurement}],
+                  target_ilevel=334)
+        owner=build._fresh_source_owner_selected_O_component(**call)
+        self.assertEqual(owner["rating"],vec)
+        self.assertTrue(owner["weapon_applicability_verified"])
+        self.assertEqual(owner["selected_oil_item_ids_by_hand"],
+                         selected["oil_item_ids_by_hand"])
+        self.assertEqual(owner["oil_by_hand"]["main_hand"][
+            "simc_input_token"],token)
+        def component(amount,kind):
+            return {"rating":amount,"game_build":game,
+                    "source_catalog_manifest_sha256":manifest,
+                    "source_sha256":"e"*64,"source_verification":kind}
+        evidence={"schema":budget.SCHEMA,
+                  "game_build":game,"simc_revision":rev,
+                  "source_catalog_manifest_sha256":manifest,
+                  "source_catalog_artifact_sha256":"f"*64,
+                  "target_ilevel":334,"components":{
+                    "G":component(1000,"EXACT_NATIVE"),
+                    "J":component(100,"VALID_SAME_SEASON_SOURCE"),
+                    "F":component(100,"EXACT_NATIVE"),
+                    "O":owner},
+                  "fixed_L":{x:0 for x in budget.STATS},
+                  "fixed_E":{x:0 for x in budget.STATS},
+                  "G_reference_excludes_selected_E":True}
+        common=dict(source_catalog={"game_build":game,
+                     "simc_revision":rev,"manifest_sha256":manifest},
+                    source_artifact_sha256":"f"*64,
+                    evidence=evidence,target_ilevel=334)
+        automatic=budget.preprofile_budget(**common)
+        self.assertEqual((automatic["base_B"],automatic["final_T"]),
+                         (1200,1208))
+        manual=budget.preprofile_budget(**common,manual_final_T=1300)
+        self.assertEqual((manual["base_B"],manual["final_T"]),
+                         (1292,1300))
+        # Wrong actual representative weapon or missing source must not
+        # turn a source-only mask into a verified product selection.
+        with self.assertRaisesRegex(build.EnvironmentBuildBlocked,
+                                    "SIMC_WEAPON_PROFILE"):
+            build._fresh_source_owner_selected_O_component(
+                **{**call,"scaled_native_gear":[{
+                    "physical_item_id":209,"selected_hand":"main_hand",
+                    "measurement":{**measurement,
+                                   "representative_weapon_id":410}}]})
+        self.assertIsNone(build._fresh_source_owner_selected_O_component(
+            **{**call,"numeric":{"oil":[]}}))
+
 if __name__=="__main__":unittest.main()

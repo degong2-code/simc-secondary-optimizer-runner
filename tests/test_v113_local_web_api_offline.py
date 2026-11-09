@@ -561,6 +561,29 @@ class LocalWebAPIOffline(unittest.TestCase):
             "selected_flask_item_id"],241326)
         self.assertTrue(response.json()["web_environment_scope"][
             "explicit_no_oil_with_selected_flask"])
+        # The same season Build must also pass an explicit hand-selected
+        # physical item ID to the original v216 source-owner engine.
+        # HTTP never supplies an O rating, trusted receipt, or SimC token.
+        oil_choice={"main_hand":243734}
+        with mock.patch.object(web.environment_build,"build_environment",
+                               return_value=result) as with_oil:
+            positive=self.post("/api/v1/environment/season-build",{
+                **payload,"selected_oil_item_ids_by_hand":oil_choice})
+        self.assertEqual(positive.status_code,200,positive.text)
+        self.assertEqual(with_oil.call_args.kwargs["fresh_collection_inputs"][
+            "selected_budget_items"],{
+                "flask_item_id":241326,
+                "oil_item_ids_by_hand":oil_choice})
+        self.assertFalse(positive.json()["web_environment_scope"][
+            "explicit_no_oil_with_selected_flask"])
+        self.assertEqual(positive.json()["web_environment_scope"][
+            "selected_oil_item_ids_by_hand"],oil_choice)
+        self.assertEqual(self.post("/api/v1/environment/season-build",
+            {**payload,"selected_oil_item_ids_by_hand":{
+                "offhand":243734}}).status_code,422)
+        self.assertEqual(self.post("/api/v1/environment/season-build",
+            {"game_build":"12.2.0.99999",
+             "selected_oil_item_ids_by_hand":oil_choice}).status_code,422)
         self.assertEqual(self.post("/api/v1/environment/season-build",
             {**payload,"selected_flask_item_id":0}).status_code,422)
         self.assertEqual(self.post("/api/v1/environment/season-build",

@@ -5673,19 +5673,38 @@ def _fresh_source_owner_selected_O_component(*, preflight, staged,
         "source_owner":"ORIGINAL_V281_V286_V296_AND_OPTIONAL_V297"}
 
 
+def _fresh_source_owner_merge_selected_O(*,trusted_budget_evidence,
+                                         original_O):
+    """Attach exactly the same internally verified O owner, once."""
+    if original_O is None:return trusted_budget_evidence
+    need(type(trusted_budget_evidence) is dict
+         and type(trusted_budget_evidence.get("components")) is dict
+         and type(original_O) is dict,
+         "V216_SELECTED_O_OWNER_BUDGET_INPUT_REQUIRED")
+    existing=trusted_budget_evidence["components"].get("O")
+    need(existing is None or (type(existing) is dict
+         and all(existing.get(k)==v for k,v in original_O.items())),
+         "V216_SELECTED_O_PROVIDER_SOURCE_CONFLICT")
+    return {**trusted_budget_evidence,
+            "components":{**trusted_budget_evidence["components"],
+                          "O":existing or dict(original_O)}}
+
+
 def _fresh_original_default_base_install_inputs(*, preflight, staged,
                                                  original_G, original_J_F,
                                                  selected_budget_items,
-                                                 target_ilevel, user):
-    """Build the v222 input from ORIGINAL owners for an unenchanted default.
+                                                 target_ilevel, user,
+                                                 original_O=None):
+    """Build v222 input from already verified G/J/F/selected O source owners.
 
     The normal season-wide local web call cannot supply Python callbacks.
-    Do not promote previews, user values, selected oils, unknown F, or any
-    user-specific special/enchant scenario. The original source-owner and
-    v212/v217 installation validations remain authoritative.
+    A positive selected oil requires an authenticated original O component;
+    unmeasured/static source-only previews cannot install. No user-supplied
+    numbers, new effect engine, or special gear L/E enter this baseline.
     """
     if (user is not None or type(selected_budget_items) is not dict
-            or selected_budget_items.get("oil_item_ids_by_hand")!={}
+            or (bool(selected_budget_items.get("oil_item_ids_by_hand"))
+                and type(original_O) is not dict)
             or type(original_G) is not dict
             or type(original_J_F) is not dict
             or set(original_J_F)!={"J","F"}):
@@ -5737,10 +5756,18 @@ def _fresh_original_default_base_install_inputs(*, preflight, staged,
     # Therefore fixed L/E=0 applies only to this season-wide baseline.
     # Exactly one SPECIAL GEM is still mandatory, only excluded from J.
     zero={k:0 for k in season_budget_contract.STATS}
-    no_oil=season_budget_contract.explicit_no_oil_component(
-        game_build=game_build,
-        source_catalog_manifest_sha256=manifest,
-        selected_oil_item_ids_by_hand={})
+    selected_oils=selected_budget_items["oil_item_ids_by_hand"]
+    selected_O=(dict(original_O) if selected_oils else
+        season_budget_contract.explicit_no_oil_component(
+            game_build=game_build,
+            source_catalog_manifest_sha256=manifest,
+            selected_oil_item_ids_by_hand={}))
+    if selected_oils:
+        need(selected_O.get("selected_oil_item_ids_by_hand")==selected_oils
+             and selected_O.get("weapon_applicability_verified") is True
+             and selected_O.get("game_build")==game_build
+             and selected_O.get("source_catalog_manifest_sha256")==manifest,
+             "V216_DEFAULT_SELECTED_O_AUTHENTICATED_SOURCE_DRIFT")
     evidence={
         "schema":season_budget_contract.SCHEMA,
         "game_build":game_build,
@@ -5751,10 +5778,12 @@ def _fresh_original_default_base_install_inputs(*, preflight, staged,
         "target_ilevel":target_ilevel,
         "components":{"G":dict(original_G),
                       "J":dict(original_J_F["J"]),
-                      "F":dict(original_J_F["F"]),"O":no_oil},
+                      "F":dict(original_J_F["F"]),"O":selected_O},
         "fixed_L":dict(zero),"fixed_E":dict(zero),
         "G_reference_excludes_selected_E":True,
-        "scope":"UNENCHANTED_REPRESENTATIVE_EXPLICIT_NO_OIL"}
+        "scope":("REPRESENTATIVE_WITH_SOURCE_VERIFIED_SELECTED_O"
+                 if selected_oils else
+                 "UNENCHANTED_REPRESENTATIVE_EXPLICIT_NO_OIL")}
     # Existing v222 owns arithmetic and source identity; no new budget.
     season_budget_contract.preprofile_budget(
         source_catalog={"game_build":game_build,
@@ -6894,6 +6923,24 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             source_compilation[
                 "original_J_F_verified_components_not_full_environment"]=owner_J_F
             progress["original_J_F_verified_component_names"]=sorted(owner_J_F)
+            owner_O=_fresh_source_owner_selected_O_component(
+                preflight=preflight,staged=staged,
+                compilation=source_compilation,
+                selected=selected_budget_items,
+                original_oil=source_compilation.get(
+                    "unbuffed_oil_original_simc_source_unadmitted"),
+                numeric=source_compilation.get(
+                    "physical_F_O_native_source_candidates_unadmitted"),
+                choices=source_compilation.get(
+                    "observed_quality_weapon_choices_unadmitted"),
+                scaled_native_gear=scaled_native_gear,
+                target_ilevel=fresh_collection_inputs[
+                    "representative_request"]["target_ilevel"])
+            if owner_O is not None:
+                source_compilation[
+                    "original_selected_O_verified_component_not_full_environment"]=owner_O
+                progress["original_selected_O_source_owner_status"]=(
+                    "SELECTED_PHYSICAL_O_SAME_BUILD_SOURCE_VERIFIED")
             if not source_compilation["missing"]:
                 # Default web Build can directly consume the ORIGINAL
                 # four source-owned budget components without a Python
@@ -6902,6 +6949,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     confirmed=_fresh_original_default_base_install_inputs(
                         preflight=preflight,staged=staged,
                         original_G=owner_G,original_J_F=owner_J_F,
+                        original_O=owner_O,
                         selected_budget_items=selected_budget_items,
                         target_ilevel=fresh_collection_inputs[
                             "representative_request"]["target_ilevel"],
@@ -6929,6 +6977,9 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     trusted_budget=_fresh_source_owner_merge_original_J_F(
                         trusted_budget_evidence=trusted_budget,
                         owner_components=owner_J_F)
+                    trusted_budget=_fresh_source_owner_merge_selected_O(
+                        trusted_budget_evidence=trusted_budget,
+                        original_O=owner_O)
                     trusted_budget=_fresh_source_owner_exact_no_oil(
                         preflight=preflight,
                         selected_budget_items=selected_budget_items,
