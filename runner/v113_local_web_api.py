@@ -753,8 +753,16 @@ class LocalJobs:
                          key in bootstrap.ARCHETYPES)
             independent_level=(not current_season and user["target"]["ilevel"]!=334 and
                                key in sessions.SUPPORTED)
-            source_catalog_path=self.source_catalog_path()
-            package_manifest_path=self.package_manifest_path()
+            fresh=self._verified_fresh_profile_result if current_season else None
+            if fresh is not None:
+                installed=fresh["source_compilation"]["verified_environment_install"]
+                if user["target"]["ilevel"]!=installed["target_ilevel"]:
+                    fresh=None
+            source_catalog_path=(pathlib.Path(
+                fresh["source_compilation"]["source_catalog_path"])
+                if fresh is not None else self.source_catalog_path())
+            package_manifest_path=(None if fresh is not None
+                                   else self.package_manifest_path())
             folder = sessions.store_session(user,self.root,binary,params.revision,
                                             resolved_static,
                                             independent_334=independent,
@@ -764,7 +772,12 @@ class LocalJobs:
                                                 if current_season else None),
                                             package_manifest_path=(package_manifest_path
                                                 if current_season and source_catalog_path
-                                                else None))
+                                                else None),
+                                            fresh_installed_manifest_sha256=(
+                                                fresh["source_compilation"][
+                                                    "verified_environment_install"][
+                                                        "manifest_sha256"]
+                                                if fresh is not None else None))
             # Session identity binds CACHE CONTENT, not its user-visible
             # path. If the same bytes are passed via a different path later,
             # honor the already-sealed manifest path rather than rewriting
@@ -787,10 +800,14 @@ class LocalJobs:
                     independent_334=independent,
                     independent_target_level=independent_level,
                     current_season_product=current_season,
-                    source_catalog_path=source_catalog_path)
+                    source_catalog_path=source_catalog_path,
+                    verified_fresh_environment_result=fresh)
             plan=bootstrap_result["plan"]
-            environment=(self._seal_environment_manifest(
-                folder,bootstrap_result,profile_stage_receipt=profile_stage_receipt)
+            environment=(self._fresh_environment_summary(folder,fresh)
+                         if fresh is not None else
+                         self._seal_environment_manifest(
+                             folder,bootstrap_result,
+                             profile_stage_receipt=profile_stage_receipt)
                          if current_season else None)
             environment_build_receipt=(
                 self._read_environment_build_summary(folder)
