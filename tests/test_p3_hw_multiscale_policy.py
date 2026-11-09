@@ -179,6 +179,97 @@ class Multiscale(unittest.TestCase):
         self.assertEqual(sum(first["next_request"]["target"].values()),
                          self.B)
 
+    def test_multimodal_equal_budget_non_native_strategy_audit(self):
+        """Compare proposal schedules only; never interpret oracle as SimC.
+
+        Two genuinely distinct strategies receive identical CHMV bounds and
+        equal case budgets. A second schedule occasionally requests an extra
+        existing global maximin candidate; it is NOT a proposed product policy.
+        Neither observations nor SEM in this synthetic audit are Native data.
+        """
+        import json
+        import math
+        cap=112
+        desired=min(64,max(8,math.ceil(2*math.sqrt(cap))))
+        a=(736,900,736,735)
+        b=(245,1450,795,617)
+        c=(1430,305,700,672)
+        d=(1,1553,1552,1)
+        cases={
+            "single_smooth":((a,190000.,.007),),
+            "separated_interior":((a,188000.,.009),
+                                  (b,192000.,.032)),
+            "separated_boundary":((a,188000.,.009),
+                                  (d,193000.,.028)),
+            "three_disjoint":((a,188000.,.009),
+                               (b,192000.,.032),
+                               (c,191500.,.030)),
+        }
+        def run(peaks,extra_global_every):
+            rows=[]
+            unique=set()
+            global_proposals=0
+            best=-float("inf")
+            best_vector=None
+            for i in range(cap):
+                proposal=p.next_plan(
+                    rows,total=self.B,lower=self.lo,upper=self.hi,
+                    native_calls_used=i,max_native_calls=cap,
+                    scout_iterations=35,confirmation_iterations=320,
+                    max_iterations=320)
+                self.assertEqual(proposal["status"],"NEXT_NATIVE_PROPOSED")
+                q=proposal["next_request"]
+                vector=tuple(q["target"][s] for s in p.STATS)
+                decision=proposal["decision"]
+                if (extra_global_every and len(unique)>=desired
+                        and (i+1)%extra_global_every==0
+                        and q["phase"]=="scout"):
+                    alternate=p._unobserved_global_maximin(
+                        self.B,self.lo,self.hi,desired,unique)
+                    if alternate is not None:
+                        vector=alternate
+                        q={"phase":"scout","iterations":35,
+                           "target":p.legacy.to_target(vector)}
+                        decision="AUDIT_ONLY_EXTRA_GLOBAL"
+                self.assertTrue(p.legacy.eligible(
+                    vector,self.B,self.lo,self.hi))
+                self.assertFalse(vector in unique and q["phase"]=="scout")
+                if ("GLOBAL" in decision):
+                    global_proposals+=1
+                # Oracle is a geometric *synthetic* max of smooth separated
+                # peaks, not predicted or simulated DPS.
+                value=max(height-penalty*p._distance(vector,peak)**2
+                          for peak,height,penalty in peaks)
+                if value>best:
+                    best,best_vector=value,vector
+                unique.add(vector)
+                rows.append({"target":q["target"],
+                             "iterations":q["iterations"],
+                             "dps_mean":value,
+                             "dps_sem":500. if q["phase"]=="scout" else 150.})
+            return {"calls":len(rows),"unique":len(unique),
+                    "extra_or_regular_global_proposals":global_proposals,
+                    "best_oracle_value":round(best,3),
+                    "best_target":best_vector,
+                    "nearest_known_peak":min(
+                        p._distance(best_vector,peak) for peak,_,_ in peaks)}
+        for name,peaks in cases.items():
+            with self.subTest(synthetic_shape=name):
+                self.assertTrue(all(
+                    sum(peak)==self.B and
+                    p.legacy.eligible(peak,self.B,self.lo,self.hi)
+                    for peak,_,_ in peaks))
+                existing=run(peaks,None)
+                exploratory=run(peaks,9)
+                self.assertEqual(existing["calls"],cap)
+                self.assertEqual(exploratory["calls"],cap)
+                self.assertGreater(exploratory["extra_or_regular_global_proposals"],
+                                   existing["extra_or_regular_global_proposals"])
+                print("P2_SYNTHETIC_MULTIMODAL_AUDIT "+
+                      json.dumps({"shape":name,"existing":existing,
+                                  "audit_more_global":exploratory},
+                                 sort_keys=True),flush=True)
+
     def test_stats_not_claimed_global_optimum_and_strict_input(self):
         planned=self._call([],0)
         self.assertFalse(planned["global_optimum_proven"])
