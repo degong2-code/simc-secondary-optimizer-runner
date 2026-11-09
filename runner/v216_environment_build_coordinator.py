@@ -28,6 +28,7 @@ import v274_zero_history_source_compiler_wiring as source_wiring
 import v275_pinned_simc_compiler_inputs as pinned_compiler_source
 import v295_season_runeforge_source as dk_rune_source
 import v296_pinned_oil_static_rating_source as oil_raw_source
+import v297_sealed_simc_oil_gear_delta as oil_precombat_gear
 import v276_sealed_tier_compiler_source as compiler_tier_source
 import v277_zero_history_native_G_stage as zero_history_G_native
 import v278_sealed_simc_consumable_native_pair as native_effect_pair
@@ -3599,7 +3600,9 @@ def _zero_history_quality_weapon_candidate_join(*, numeric, weapon_source,
             "static_O_for_hand_unadmitted":(
                 dict(option["rating_candidate_unadmitted"])
                 if selected is not None and
-                   option["status"] == "SIMC_RAW_STATIC_NUMBER_SOURCE_ONLY"
+                   option["status"] in (
+                     "SIMC_RAW_STATIC_NUMBER_SOURCE_ONLY",
+                     "SIMC_PRECOMBAT_GEAR_NUMBER_SOURCE_ONLY")
                 else None),
             "weapon_min_ilevel_and_use_conditions_verified":False,
             "official_budget_ownership_verified":False,
@@ -3829,8 +3832,9 @@ def _zero_history_selected_F_O_v222_reconcile(*, selected, numeric,
         need(len(observed)<=1 and len(matched)<=1,
              "V216_SELECTED_OIL_DUPLICATE_PHYSICAL_HAND_OBSERVATION")
         if (len(observed)!=1 or len(matched)!=1 or
-                observed[0]["status"]!=(
-                    "SIMC_RAW_STATIC_NUMBER_SOURCE_ONLY") or
+                observed[0]["status"] not in (
+                    "SIMC_RAW_STATIC_NUMBER_SOURCE_ONLY",
+                    "SIMC_PRECOMBAT_GEAR_NUMBER_SOURCE_ONLY") or
                 observed[0]["rating_candidate_unadmitted"]!=
                     matched[0]["static_O_for_hand_unadmitted"]):
             out["missing"].append("SELECTED_OIL_"+hand.upper()+
@@ -3938,7 +3942,9 @@ def _zero_history_auto_v222_numeric_preview(*, preflight, native_numeric,
         need(len(observed)<=1 and len(matched)<=1,
              "V216_AUTO_SELECTED_OIL_DUPLICATED")
         if (len(observed)!=1 or len(matched)!=1 or
-            observed[0]["status"]!="SIMC_RAW_STATIC_NUMBER_SOURCE_ONLY"
+            observed[0]["status"] not in (
+                "SIMC_RAW_STATIC_NUMBER_SOURCE_ONLY",
+                "SIMC_PRECOMBAT_GEAR_NUMBER_SOURCE_ONLY")
             or observed[0]["rating_candidate_unadmitted"]!=
                matched[0]["static_O_for_hand_unadmitted"]):
             out["requires"].append("SELECTED_OIL_"+hand.upper()+
@@ -4088,8 +4094,9 @@ def _zero_history_v098_profile_source_inputs(*, numeric_preview,
         options=[row for row in physical_sources.get("oil",[])
                  if row.get("physical_item_id")==item_id and
                  row.get("selected_hand")==hand]
-        need(len(options)==1 and options[0].get("status")==(
-                 "SIMC_RAW_STATIC_NUMBER_SOURCE_ONLY"),
+        need(len(options)==1 and options[0].get("status") in (
+                 "SIMC_RAW_STATIC_NUMBER_SOURCE_ONLY",
+                 "SIMC_PRECOMBAT_GEAR_NUMBER_SOURCE_ONLY"),
              "V216_V098_SELECTED_OIL_SOURCE_DRIFT")
         row=options[0]
         by_hand[hand]={
@@ -6404,21 +6411,88 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             source_compilation[
                 "automatic_F_native_measurements_unadmitted"]=auto_state
             progress["requires"].extend(auto_state["requires"])
+        scaled_native_gear=[]
         if auto_native_O:
-            # v269/v278 buffed-stat oil comparisons are not a static O
-            # source. Preserve the user request as a source-only inspection,
-            # not a hidden Native that cannot certify the desired number.
+            # A selected v281 physical oil may resolve its v296 scaled stat
+            # using the same SimC Native's *precombat* total gear stats.
+            # The old talent-buffed v269/v278 delta is NEVER budget O.
             original=source_compilation.get(
                 "unbuffed_oil_original_simc_source_unadmitted")
-            unresolved=(type(original) is not dict or
+            selected_oils=(selected_budget_items or {}).get(
+                "oil_item_ids_by_hand",{})
+            pending_hands=[]
+            measured=[]
+            if selected_oils and type(original) is dict:
+                planned=source_compilation[
+                    "automatic_F_O_measurement_candidates_unadmitted"]["oil"]
+                by_id={r["enchant_id"]:r for r in original["items"]}
+                probe=collected.get("fresh_one_spec_physical_G_probe")
+                profile=(probe.get("profile_path")
+                         if type(probe) is dict else None)
+                for hand,item_id in sorted(selected_oils.items()):
+                    order=[r for r in planned
+                           if r.get("physical_item_id")==item_id
+                           and r.get("selected_hand")==hand]
+                    need(len(order)<=1,
+                         "V216_SELECTED_OIL_DUPLICATE_SOURCE_WORK_ORDER")
+                    chosen=order[0] if order else None
+                    raw=(by_id.get(chosen["simc_enchant_id"])
+                         if chosen is not None else None)
+                    if raw is None:
+                        pending_hands.append(hand)
+                        continue
+                    if raw.get("static_CHMV_vector") is not None:
+                        continue
+                    if (raw.get("source_reason_codes")!=[
+                            "SIMC_ITEM_ENCHANT_SCALING_REQUIRED"] or
+                            binary is None or profile is None):
+                        pending_hands.append(hand)
+                        continue
+                    try:
+                        observation=oil_precombat_gear.measure(
+                            stage_root=source_compilation["stage_root"],
+                            source_profile_path=profile,
+                            binary=binary,
+                            simc_revision=source_compilation["simc_revision"],
+                            game_build=collected["expected_game_build"],
+                            target_ilevel=fresh_collection_inputs[
+                                "representative_request"]["target_ilevel"],
+                            oil_token=chosen["simc_input_token"],
+                            enchant_id=chosen["simc_enchant_id"])
+                    except (oil_precombat_gear.OilGearBlocked,
+                            OSError,ValueError,KeyError,TypeError) as exc:
+                        pending_hands.append(hand)
+                        progress["requires"].append(
+                            "SELECTED_OIL_"+hand.upper()+
+                            "_SIMC_GEAR_SOURCE_PENDING:"+
+                            str(exc).split(":",1)[0])
+                        continue
+                    progress["new_native_calls"]+=observation["new_native_calls"]
+                    measured.append({
+                        "physical_item_id":item_id,"hand":hand,
+                        "status":observation["status"],
+                        "new_native_calls":observation["new_native_calls"]})
+                    if observation["status"]!=(
+                            "SIMC_PRECOMBAT_TOTAL_GEAR_STATIC_NUMBER_SOURCE_ONLY"):
+                        pending_hands.append(hand)
+                        continue
+                    scaled_native_gear.append({
+                        "physical_item_id":item_id,
+                        "selected_hand":hand,"measurement":observation})
+            elif selected_oils:
+                pending_hands.extend(selected_oils)
+            unresolved=(bool(pending_hands) if selected_oils else
+                type(original) is not dict or
                 any(r.get("static_CHMV_vector") is None
                     for r in original.get("items",[])))
             oil_state={
-                "status":"O_BUFFED_NATIVE_SKIPPED_STATIC_SOURCE_ONLY",
-                "requires":(
-                    ["O_SIMC_SCALED_STATIC_RATING_PENDING"]
-                    if unresolved else []),
-                "per_item":[],"new_native_calls":0,
+                "status":("O_SIMC_PRECOMBAT_GEAR_SOURCE_REUSED"
+                          if scaled_native_gear else
+                          "O_BUFFED_NATIVE_SKIPPED_STATIC_SOURCE_ONLY"),
+                "requires":(["O_SIMC_SCALED_STATIC_RATING_PENDING"]
+                            if unresolved else []),
+                "per_item":measured,
+                "new_native_calls":sum(r["new_native_calls"] for r in measured),
                 "legacy_buffed_native_not_used_as_static_O":True,
                 "O_approved":False,"environment_ready":False}
             progress["automatic_O_native_measurements_unadmitted"]=oil_state
@@ -6500,7 +6574,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     source=unbuffed,
                     worklist=source_compilation[
                         "automatic_F_O_measurement_candidates_unadmitted"],
-                    native_numeric=native_F_O)
+                    native_numeric=native_F_O,
+                    scaled_simc_gear_measurements=scaled_native_gear)
             progress["physical_F_O_native_source_candidates_unadmitted"]=native_F_O
             source_compilation["physical_F_O_native_source_candidates_unadmitted"]=native_F_O
             quality_weapon=_zero_history_quality_weapon_candidate_join(

@@ -79,6 +79,55 @@ class SeasonOilStaticSource(unittest.TestCase):
         self.assertEqual(row["unresolved_simc_scaled_static_stats"][
                          "haste_rating"]["simc_coefficient"],0.4757)
 
+    def test_scaled_simc_precombat_gear_measurement_reuses_source_without_buffed_delta(self):
+        # Synthetic receipt: only the actual Native run confirms 70783 16/16.
+        scaled=(
+          "// spell item enchantments, wow build "+BUILD+"\n"
+          '{ 8052, 0, -7, 0, 80, 120, 0, 0, 0, '
+          '{ 5, 5, 0 }, { 12, 0, 0 }, { 32, 36, 0 }, '
+          '{ 0.4757, 0.4757, 0 }, 0, "Thalassian Phoenix Oil" },\n'
+        )
+        src=oil.extract(generated_text=scaled,game_build=BUILD,
+                        simc_revision=REV,enchant_ids={8052})
+        self.assertIsNone(src["items"][0]["static_CHMV_vector"])
+        choice=selected()
+        measured={"schema":"v297_sealed_simc_oil_precombat_gear_delta_v1",
+                  "status":"SIMC_PRECOMBAT_TOTAL_GEAR_STATIC_NUMBER_SOURCE_ONLY",
+                  "game_build":BUILD,"simc_revision":REV,
+                  "enchant_id":8052,
+                  "simc_input_token":choice["simc_input_token"],
+                  "talent_buffed_stats_not_used":True,
+                  "binary_sha256":"c"*64,
+                  "source_profile_sha256":"d"*64,
+                  "native_case_receipt_sha256":["e"*64,"f"*64],
+                  "static_CHMV_vector_unadmitted":{
+                      "crit_rating":16,"haste_rating":16,
+                      "mastery_rating":0,"versatility_rating":0}}
+        numeric={"status":"PHYSICAL_ITEM_SIMC_F_O_CANDIDATES_UNADMITTED",
+                 "flask":[],"oil":[]}
+        def join(row):
+            return oil.project_source_oils(
+                source=src,worklist={"oil":[choice]},native_numeric=numeric,
+                scaled_simc_gear_measurements=[{
+                    "physical_item_id":243734,"selected_hand":"main_hand",
+                    "measurement":row}])
+        linked=join(measured)
+        out=linked["oil"][0]
+        self.assertEqual(out["status"],
+                         "SIMC_PRECOMBAT_GEAR_NUMBER_SOURCE_ONLY")
+        self.assertEqual(out["rating_candidate_unadmitted"],
+                         measured["static_CHMV_vector_unadmitted"])
+        self.assertEqual(out["simc_native_receipt_sha256"],
+                         ["e"*64,"f"*64])
+        self.assertFalse(out["source_admitted"])
+        self.assertIsNone(linked["O"])
+        with self.assertRaisesRegex(oil.OilSourceBlocked,"STAT_KIND"):
+            join({**measured,"static_CHMV_vector_unadmitted":{
+                "crit_rating":16,"haste_rating":16,"mastery_rating":1,
+                "versatility_rating":0}})
+        with self.assertRaisesRegex(oil.OilSourceBlocked,"IDENTITY_DRIFT"):
+            join({**measured,"simc_revision":"a"*40})
+
     def test_build_change_and_missing_8052_fail(self):
         with self.assertRaises(oil.OilSourceBlocked):
             oil.extract(generated_text=FIXTURE,game_build="12.2.0.71000",

@@ -156,7 +156,8 @@ def from_v275(*,pinned_source,stage_root,game_build,
          "O_RAW_V275_SOURCE_SHA_DRIFT")
     return answer
 
-def project_source_oils(*,source,worklist,native_numeric):
+def project_source_oils(*,source,worklist,native_numeric,
+                        scaled_simc_gear_measurements=None):
     """Replace buffed-JSON2 oil candidates with original unbuffed DBC points.
 
     Reuses exact v281 physical-item work orders. Other v278 numeric families
@@ -170,6 +171,22 @@ def project_source_oils(*,source,worklist,native_numeric):
          native_numeric.get("status")==
              "PHYSICAL_ITEM_SIMC_F_O_CANDIDATES_UNADMITTED",
          "O_RAW_PROJECT_SOURCE_AND_NATIVE_REQUIRED")
+    # Optional original SimC precombat gear measurements are stage-owned,
+    # never user-provided rating inputs. Their only use here is to resolve
+    # v296's explicitly scaled DBC rows without copying talent-buffed JSON2.
+    native=scaled_simc_gear_measurements or []
+    need(type(native) is list and len(native)<=2,
+         "O_RAW_PROJECT_NATIVE_GEAR_MEASUREMENTS_INVALID")
+    by_native={}
+    for sample in native:
+        need(type(sample) is dict and
+             type(sample.get("physical_item_id")) is int and
+             sample.get("selected_hand") in ("main_hand","off_hand") and
+             type(sample.get("measurement")) is dict,
+             "O_RAW_PROJECT_NATIVE_GEAR_SELECTION_INVALID")
+        key=(sample["physical_item_id"],sample["selected_hand"])
+        need(key not in by_native,"O_RAW_PROJECT_NATIVE_GEAR_DUPLICATE")
+        by_native[key]=sample["measurement"]
     by_id={r["enchant_id"]:r for r in source["items"]}
     need(len(by_id)==len(source["items"]) and
          set(by_id)==set(source["selected_enchant_ids"]),
@@ -212,6 +229,37 @@ def project_source_oils(*,source,worklist,native_numeric):
                  selected["source_stage_receipt_sha256"]))),
                  "O_RAW_PROJECT_ORIGINAL_V281_V278_IDENTITY_DRIFT")
         vector=origin["static_CHMV_vector"]
+        from_simc=None
+        if vector is None and key in by_native:
+            from_simc=by_native[key]
+            need(origin["source_reason_codes"]==[
+                    "SIMC_ITEM_ENCHANT_SCALING_REQUIRED"] and
+                 from_simc.get("schema")==
+                    "v297_sealed_simc_oil_precombat_gear_delta_v1" and
+                 from_simc.get("status")==
+                    "SIMC_PRECOMBAT_TOTAL_GEAR_STATIC_NUMBER_SOURCE_ONLY" and
+                 from_simc.get("game_build")==source["game_build"] and
+                 from_simc.get("simc_revision")==source["simc_revision"] and
+                 from_simc.get("enchant_id")==selected["simc_enchant_id"] and
+                 from_simc.get("simc_input_token")==selected["simc_input_token"] and
+                 from_simc.get("talent_buffed_stats_not_used") is True and
+                 type(from_simc.get("binary_sha256")) is str and
+                 SHA.fullmatch(from_simc["binary_sha256"]) and
+                 type(from_simc.get("source_profile_sha256")) is str and
+                 SHA.fullmatch(from_simc["source_profile_sha256"]) and
+                 type(from_simc.get("native_case_receipt_sha256")) is list and
+                 len(from_simc["native_case_receipt_sha256"])==2 and
+                 all(type(h) is str and SHA.fullmatch(h)
+                     for h in from_simc["native_case_receipt_sha256"]),
+                 "O_RAW_PROJECT_SIMC_SCALED_SOURCE_IDENTITY_DRIFT")
+            measured=from_simc["static_CHMV_vector_unadmitted"]
+            need(type(measured) is dict and set(measured)==set(STATS) and
+                 all(type(v) is int and v>=0 for v in measured.values()) and
+                 sum(measured.values())>0 and
+                 set(k for k,v in measured.items() if v>0)==
+                    set(origin["unresolved_simc_scaled_static_stats"]),
+                 "O_RAW_PROJECT_SIMC_SCALED_STAT_KIND_DRIFT")
+            vector=dict(measured)
         # Preserve the discrepancy for diagnosis; NEVER use the 16/17-like
         # buffed delta as the selected static O rating or force equality.
         observed=prev.get("buffed_CHMV_observation_unadmitted") if prev else None
@@ -228,7 +276,9 @@ def project_source_oils(*,source,worklist,native_numeric):
               selected["source_stage_receipt_sha256"],
           "physical_item_source_candidate_sha256":
               selected["source_candidate_sha256"],
-          "status":("SIMC_RAW_STATIC_NUMBER_SOURCE_ONLY"
+          "status":("SIMC_PRECOMBAT_GEAR_NUMBER_SOURCE_ONLY"
+                    if from_simc is not None else
+                    "SIMC_RAW_STATIC_NUMBER_SOURCE_ONLY"
                     if vector is not None else
                     "SIMC_RAW_NONSTATIC_OIL_SOURCE_PENDING"),
           "rating_candidate_unadmitted":dict(vector) if vector else None,
@@ -241,7 +291,11 @@ def project_source_oils(*,source,worklist,native_numeric):
               (observed != vector if observed is not None
                and vector is not None else None),
           "simc_native_receipt_sha256":(
+              list(from_simc["native_case_receipt_sha256"])
+              if from_simc is not None else
               list(prev.get("simc_native_receipt_sha256",[])) if prev else []),
+          "static_O_original_SimC_precombat_binary_sha256":(
+              from_simc["binary_sha256"] if from_simc is not None else None),
           "same_effect_quality_group_verified":False,
           "weapon_and_hand_applicability_verified":False,
           "budget_ownership_verified":False,
