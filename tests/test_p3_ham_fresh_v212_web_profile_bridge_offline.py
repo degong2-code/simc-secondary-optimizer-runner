@@ -171,7 +171,7 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
                 selected_oil_item_ids_by_hand=selected)
         self.assertEqual(result["verified_target_ilevel"],334)
         lookup.assert_called_once_with(
-            self.root,334,expected_game_build=self.build,
+            self.jobs.root,334,expected_game_build=self.build,
             selected_oil_item_ids_by_hand=selected)
         restore.assert_called_once_with(
             target_ilevel=334,game_build=self.build,
