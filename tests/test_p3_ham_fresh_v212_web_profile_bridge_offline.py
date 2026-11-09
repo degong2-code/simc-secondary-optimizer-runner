@@ -116,6 +116,33 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
         summary.assert_called_once()
         self.assertEqual(response["environment_manifest"]["status"],"READY")
 
+    def test_manual_final_t_changes_real_v106_session_cache_identity(self):
+        """User-facing target must never reuse a different-T DPS session."""
+        fake=self.root/"simc.bin"
+        fake.write_bytes(b"native-not-executed")
+        variants=[]
+        for chosen in (None,3107,3500,3501):
+            controls=web.sessions.standard_controls()
+            controls["final_T"]=chosen
+            user=web.sessions.user_scenario(controls)
+            self.assertEqual(user["target"]["final_T"],chosen)
+            with (
+                mock.patch.object(web.sessions,"source_catalog_identity",
+                    return_value={"source_catalog_sha256":"c"*64}),
+                mock.patch.object(web.sessions.profile_stage,
+                    "session_identity",
+                    return_value={"identity_sha256":"e"*64})
+            ):
+                key,identity=web.sessions.session_key(
+                    user,fake,"abcdef0",current_season_product=True,
+                    source_catalog_path=self.catalog,
+                    fresh_installed_manifest_sha256=self.digest)
+            self.assertEqual(identity[
+                "fresh_v212_installed_manifest_sha256"],self.digest)
+            self.assertEqual(identity["user"]["target"]["final_T"],chosen)
+            variants.append(key)
+        self.assertEqual(len(set(variants)),len(variants))
+
     def test_start_resume_uses_original_v217_installed_manifest_sha(self):
         folder=self.root/("f"*20)
         folder.mkdir()
