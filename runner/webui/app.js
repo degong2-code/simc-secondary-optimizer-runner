@@ -880,7 +880,9 @@ function showSeasonEnvironmentBuild(data) {
     (originalVerifiedF?.source_verification==="EXACT_NATIVE"?
         " · F 원본 실측 "+originalVerifiedF.rating+" (환경 정식 등록 전)":"")+
     (scope.four_stat_ordinary_default_requested===true?
-        " · 일반보석 4종 기본 배치 요청(특수효과 SimC 담당)":"")+
+        " · 일반보석 4종 기본 배치 요청(특수효과 SimC 담당)":
+      scope.four_stat_ordinary_source_requested===true?
+        " · 일반보석 4종 시즌 원본 수집 요청(J 승인·배치 별도)":"")+
     " · 신규 Native "+(Number(data?.native_calls)||0)+"회"+
     (autoFlask?.status==="ONE_OBSERVED_FLASK_NO_OIL_NUMERIC_PREVIEW_UNADMITTED"?
       (scope.auto_select_observed_F_no_oil===true?

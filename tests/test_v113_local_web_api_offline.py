@@ -336,6 +336,8 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertFalse(result["web_environment_scope"]["dps_optimization_started"])
         self.assertFalse(result["web_environment_scope"]["user_character_or_trinkets_required"])
         self.assertFalse(result["web_environment_scope"]["local_native_G_requested"])
+        self.assertTrue(result["web_environment_scope"]["four_stat_ordinary_source_requested"])
+        self.assertFalse(result["web_environment_scope"]["four_stat_ordinary_default_requested"])
         kwargs=stage.call_args.kwargs
         self.assertIsNone(kwargs["user"])
         self.assertIsNone(kwargs["binary"])
@@ -348,7 +350,8 @@ class LocalWebAPIOffline(unittest.TestCase):
             "g_probe_character":{"race":"dwarf"},"simc_revision_hint":None,
             "auto_native_F_requested":False,
             "auto_native_O_requested":False,
-            "auto_native_G_requested":False})
+            "auto_native_G_requested":False,
+            "auto_four_stat_source_requested":True})
         self.assertFalse((self.root/"runs").exists())
 
 

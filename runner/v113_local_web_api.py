@@ -601,6 +601,11 @@ class LocalJobs:
                     "auto_native_F_requested":auto_native_F_requested,
                     "auto_native_O_requested":auto_native_O_requested,
                     "auto_native_G_requested":native_G_binary is not None,
+                    # Cold-start always collects the same-build ordinary
+                    # four-stat source, even without an optional special
+                    # gem ID. This does not place gems or approve J; the
+                    # original v221/v266/v230/v232 owner retains that gate.
+                    "auto_four_stat_source_requested":True,
                     # Explicit flask choice + no selected oil. Normal v216
                     # checks the same-build physical F and original Native
                     # receipts BEFORE any official v222 install. Do not
@@ -652,6 +657,7 @@ class LocalJobs:
                 auto_select_observed_F_no_oil,
             "four_stat_ordinary_default_requested":
                 existing_special_gem_id is not None,
+            "four_stat_ordinary_source_requested":True,
             "ordinary_nominal_source_sha256":(
                 nominal_source["source_sha256"]
                 if nominal_source is not None else None),
