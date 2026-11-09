@@ -958,19 +958,36 @@ class LocalJobs:
             variant = recorded.get("ordinary_variant")
             current_season=bool(recorded.get("current_season_product",False))
             has_source=("current_season_source_catalog" in recorded)
-            source_path=(self.source_catalog_path()
-                         if current_season and has_source else None)
             source_record=recorded.get("current_season_source_catalog") or {}
-            package_path=(self.package_manifest_path()
-                          if type(source_record) is dict and
-                             source_record.get("package_manifest_sha256") else None)
+            fresh_sha=recorded.get("fresh_v212_installed_manifest_sha256")
+            if fresh_sha is not None:
+                # Original exact build path, never a path supplied by the UI
+                # or an unchecked filename from an old session.
+                build=source_record.get("game_build")
+                if (type(build) is not str or
+                    re.fullmatch(r"\d+(?:\.\d+){3}",build) is None):
+                    raise sessions.SessionBlocked(
+                        "FRESH_V212_SESSION_BUILD_INVALID")
+                source_path=(self.root/"_fresh_season_sources"/
+                    ("wago_"+build)/"fresh_source"/"v213_candidate_catalog.json")
+                package_path=None
+                self._verify_environment_dependencies(
+                    self._read_environment_summary(folder),folder)
+            else:
+                source_path=(self.source_catalog_path()
+                             if current_season and has_source else None)
+                package_path=(self.package_manifest_path()
+                              if type(source_record) is dict and
+                                 source_record.get("package_manifest_sha256")
+                              else None)
             key, check = sessions.session_key(
                 user,binary,rev,static,ordinary_variant=variant,
                 independent_334=recorded.get("independent_334",False),
                 independent_target_level=recorded.get("independent_target_level",False),
                 current_season_product=current_season,
                 source_catalog_path=source_path,
-                package_manifest_path=package_path)
+                package_manifest_path=package_path,
+                fresh_installed_manifest_sha256=fresh_sha)
             recorded_base={k:v for k,v in recorded.items() if k!="profile_stage"}
             current_base={k:v for k,v in check.items() if k!="profile_stage"}
             recorded_key=sessions.sha(
