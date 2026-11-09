@@ -1,0 +1,105 @@
+# Bounded one Native SimC report of weapon's own parsed temp enchant stats.
+# This is NOT the v269 talent-buffed snapshot: item_t.temp_enchant_stats
+# is calculated by SimC's existing enchant scaling routine.
+name: P1 O 70783 one SimC unbuffed weapon-static report
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p1_oil_70783_simc_weapon_static_once.yml]
+permissions:
+  contents: read
+  actions: read
+jobs:
+  one-weapon-enchant:
+    if: contains(github.event.head_commit.message, '[p1-o-item-report-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: runner:integration_probes:.
+      SIMC_PINNED_SOURCE_COMMIT: c20e2ad52e4c33711f74272309a5748125175fe8
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse actual source-bound 70783 existing SimC binary
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42552942329
+          name: p3-har-verified-source-new-binary-short-lived
+          path: out/binary
+          github-token: ${{ github.token }}
+      - name: Run only one existing representative Ret profile with chosen oil
+        shell: bash
+        timeout-minutes: 9
+        run: |
+          set -euo pipefail
+          sha256sum -c out/binary/simc.sha256
+          chmod +x out/binary/simc
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,subprocess
+          import v098_target_user_scenario_bootstrap as boot
+          import v106_user_session_controller as controls
+          import v140_pure_profile_physical_native_smoke as physical
+          root=pathlib.Path("out/oil_static_one").resolve()
+          root.mkdir(parents=True,exist_ok=True)
+          binary=pathlib.Path("out/binary/simc").resolve()
+          revision=os.environ["SIMC_PINNED_SOURCE_COMMIT"]
+          user_controls=controls.standard_controls(("paladin","retribution"))
+          user_controls["oil_hands"]=[]
+          user=controls.user_scenario(user_controls)
+          plan=boot.build(user,root/"stage",binary,revision,
+                          pure_stage=True,source_first_stage=True)
+          native_json=root/"simc.json"
+          source=physical.physical_input(
+              (root/"stage"/"profile.simc").read_text(encoding="utf8"),
+              native_json,1)
+          source="\n".join(line for line in source.splitlines()
+              if not line.startswith("temporary_enchant="))+"\n"
+          source+="temporary_enchant=main_hand:thalassian_phoenix_oil\n"
+          source+="report_details=1\nthreads=1\n"
+          path=root/"active.simc"
+          path.write_text(source,encoding="utf8")
+          with (root/"simc_stdout.txt").open("wb") as log:
+              ran=subprocess.run([str(binary),str(path)],cwd=root,
+                  stdout=log,stderr=subprocess.STDOUT,timeout=180)
+          lines=(root/"simc_stdout.txt").read_text(
+              encoding="utf8",errors="replace").splitlines()
+          snippets=[x for x in lines
+                   if any(token in x.lower() for token in (
+                       "temporary_enchant","thalassian","16crit","16haste",
+                       "enchant={","enchant ="))]
+          print("P1_O_SIMC_ITEM_LINES",json.dumps(snippets[-45:],
+                ensure_ascii=False),flush=True)
+          receipt={"schema":"p1_o_simc_item_static_70783_once_v1",
+             "game_build":"12.1.5.70783",
+             "simc_revision":revision,
+             "binary_sha256":hashlib.sha256(binary.read_bytes()).hexdigest(),
+             "user_profile_sha256":hashlib.sha256(
+                 source.encode("utf8")).hexdigest(),
+             "native_returncode":ran.returncode,
+             "native_calls":1,
+             "weapon_temp_item_report_lines":snippets[-45:],
+             "report_stdout_sha256":hashlib.sha256(
+                 (root/"simc_stdout.txt").read_bytes()).hexdigest(),
+             "talent_buffed_snapshot_not_static_owner":True,
+             "user_O_not_auto_registered_by_this_test":True}
+          (root/"receipt.json").write_text(
+              json.dumps(receipt,sort_keys=True,indent=2)+"\n")
+          print("P1_O_ONE_SIMC_REPORT",json.dumps(receipt,
+                ensure_ascii=False,sort_keys=True),flush=True)
+          if ran.returncode:
+              print("SIMC_ORIGINAL_ERROR_TAIL","\n".join(lines[-30:]))
+              raise SystemExit(ran.returncode)
+          assert native_json.is_file(),"SimC did not emit native JSON2"
+          PY
+      - name: Preserve small source report receipt, not a new binary
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-70783-one-simc-oil-item-static-report
+          path: |
+            out/oil_static_one/receipt.json
+            out/oil_static_one/active.simc
+          if-no-files-found: ignore
+          retention-days: 5
