@@ -625,6 +625,8 @@ async function withBusy(fn) {
           "선택 특수장비의 보석·마부 옵션이 정적 스탯 L과 섞여 있어 안전하게 분리할 수 없습니다. 임의로 합산하지 않으며, 현재 이 조합은 차단합니다.",
         "SELECTED_SPECIAL_FLOOR_UNFEASIBLE":
           "선택 장비의 고정 스탯 하한 L과 입력 총량 T가 충돌합니다.",
+        "SEASON_PROFILE_OIL_PHYSICAL_ITEMS_OR_HANDS_DRIFT":
+          "선택한 무기 기름의 정확한 시즌 아이템·무기 적용 조건·고정 O가 현재 설치 환경과 일치하지 않습니다. 새 세션에서 기름을 해제하거나 정확한 기름이 등록된 환경을 사용하세요. 검증되지 않은 O를 0으로 처리하지 않습니다.",
         "FIVE_TIER_LAYOUT_OUTSIDE_FOUR_ROW_CONTRACT":
           "기본 티어 4세트에 다섯 번째 티어 아이템이 추가되었습니다. 이미 포함된 티어 부위로 선택하거나 다른 특수장비 슬롯을 사용하세요."
       };

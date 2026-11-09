@@ -52,6 +52,8 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('id="oil_main" type="checkbox"',html)
         self.assertNotIn('id="oil_main" type="checkbox" checked',html)
         self.assertIn("새 최적화 세션은 기본적으로 기름을 사용하지 않습니다(O=0)",html)
+        self.assertIn("SEASON_PROFILE_OIL_PHYSICAL_ITEMS_OR_HANDS_DRIFT",js)
+        self.assertIn("검증되지 않은 O를 0으로 처리하지 않습니다.",js)
         new_default=js.split("function fillDefault(item) {",1)[1].split(
             "function oilCompatibility()",1)[0]
         self.assertIn('$("oil_main").checked=false;',new_default)
