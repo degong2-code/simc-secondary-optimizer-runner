@@ -42,7 +42,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          (cd out/binary && sha256sum -c simc.sha256)
+          sha256sum -c out/binary/simc.sha256
           actual="$(sha256sum out/binary/simc | cut -d' ' -f1)"
           test "$actual" = "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6"
           chmod +x out/binary/simc
