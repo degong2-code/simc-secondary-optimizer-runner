@@ -228,7 +228,8 @@ def optional_exact_item_id(environment, name):
 
 
 
-def t1_native_source_controls(*, selected_F, f_only, binary_available):
+def t1_native_source_controls(*, selected_F, f_only, binary_available,
+                              selected_oil_items=None):
     """F-only requests exactly one selected v278 pair; no G Native."""
     if f_only and selected_F is None:
         raise ValueError("P3_GP_F_ONLY_EXACT_ITEM_ID_REQUIRED")
@@ -236,7 +237,7 @@ def t1_native_source_controls(*, selected_F, f_only, binary_available):
         "auto_four_stat_source_requested":not f_only,
         "auto_native_G_requested":binary_available and not f_only,
         "auto_native_F_requested":binary_available,
-        "auto_native_O_requested":False,
+        "auto_native_O_requested":(binary_available and bool(selected_oil_items)),
         "auto_select_observed_F_no_oil":(
             binary_available and selected_F is None),
     }
@@ -251,7 +252,8 @@ def source_only_J_socket_controls():
 
 
 def selected_t1_source_inputs(*, exact_flask_item_id, existing_special_gem_id,
-                              game_build=None, target_socket_count=5):
+                              game_build=None, target_socket_count=5,
+                              selected_oil_item_ids_by_hand=None):
     """Pass the exact-build nominal J source just like the normal v113 Build.
 
     This source only supplies season-scoped nominal inputs; the original
@@ -262,7 +264,7 @@ def selected_t1_source_inputs(*, exact_flask_item_id, existing_special_gem_id,
     if exact_flask_item_id is not None:
         result["selected_budget_items"]={
             "flask_item_id":exact_flask_item_id,
-            "oil_item_ids_by_hand":{}}
+            "oil_item_ids_by_hand":dict(selected_oil_item_ids_by_hand or {})}
     if existing_special_gem_id is not None:
         result["source_selected_gem_roles"]={
             "special_gem_id":existing_special_gem_id,
@@ -436,6 +438,11 @@ def main():
     try:
         exact_f=optional_exact_item_id(os.environ,"P3_T1_EXACT_FLASK_ITEM_ID")
         special=optional_exact_item_id(os.environ,"P3_T1_EXISTING_SPECIAL_GEM_ID")
+        selected_oil_main=optional_exact_item_id(
+            os.environ,"P3_T1_SELECTED_OIL_MAIN_ITEM_ID")
+        selected_oils=({"main_hand":selected_oil_main}
+                       if selected_oil_main is not None else {})
+        rec["user_selected_oil_item_ids_by_hand"]=selected_oils
         rec["user_selected_flask_id"]=exact_f
         rec["user_selected_gem_ids"]=1 if special is not None else 0
         mode=os.environ.get("P3_T1_F_ONLY","0")
@@ -486,6 +493,9 @@ def main():
         if web_longrun not in ("0","1"):
             raise ValueError("P3_HAJ_EXPLICIT_WEB_OPT_IN_REQUIRED")
         web_longrun=web_longrun=="1"
+        if selected_oils and (not web_longrun or source_only or f_only
+                              or exact_f is None or special is None):
+            raise ValueError("P1_O_REAL_WEB_SOURCE_AND_DPS_REQUIRED")
         if web_longrun and (hy_longrun or hag_portable or not dps_once):
             raise ValueError("P3_HAJ_EXCLUSIVE_REAL_WEB_DPS_REQUIRED")
         rec["web_longrun_e2e_requested"]=web_longrun
@@ -574,11 +584,13 @@ def main():
                 **(source_only_J_socket_controls() if source_only else
                    t1_native_source_controls(
                        selected_F=exact_f,f_only=f_only,
-                       binary_available=candidate is not None)),
+                       binary_available=candidate is not None,
+                       selected_oil_items=selected_oils)),
                 **selected_t1_source_inputs(
                     exact_flask_item_id=exact_f,
                     existing_special_gem_id=special,
-                    game_build=live["game_build"]),
+                    game_build=live["game_build"],
+                    selected_oil_item_ids_by_hand=selected_oils),
             }
             result=engine.build_environment(
                 sessions_root=root,session_folder=None,user=None,
@@ -699,7 +711,7 @@ def main():
                     (character["class"],character["spec"]))
                 user_controls["race"]=character["race"]
                 user=user_sessions.user_scenario(user_controls)
-                user["oil_hands"]=[]
+                user["oil_hands"]=sorted(selected_oils)
                 if full_consumables is not None and (
                     user["special_items"] or user["embellishments"] or
                     "enchant_choices" in user):
@@ -712,7 +724,8 @@ def main():
                     web_result=web_e2e.execute(
                         root,candidate,pin["revision_hint"],live["game_build"],
                         result,receipt_file="p3_haj_web_e2e_receipt.json",
-                        manual_final_T=user_manual_T)
+                        manual_final_T=user_manual_T,
+                        selected_oil_item_ids_by_hand=selected_oils)
                     rec["web_local_e2e"]=web_result
                     if web_result.get("status")!=(
                             "PASS_REAL_FASTAPI_LONGRUN_PREPARE_RUN_RESUME_CACHE"):
