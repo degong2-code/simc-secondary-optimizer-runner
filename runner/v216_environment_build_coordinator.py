@@ -4086,7 +4086,7 @@ def _zero_history_v098_profile_source_inputs(*, numeric_preview,
                  if row.get("physical_item_id")==item_id and
                  row.get("selected_hand")==hand]
         need(len(options)==1 and options[0].get("status")==(
-                 "SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY"),
+                 "SIMC_RAW_STATIC_NUMBER_SOURCE_ONLY"),
              "V216_V098_SELECTED_OIL_SOURCE_DRIFT")
         row=options[0]
         by_hand[hand]={

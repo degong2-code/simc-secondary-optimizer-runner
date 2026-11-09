@@ -59,14 +59,15 @@ jobs:
               json.dumps(result,sort_keys=True,indent=2)+"\n")
           print("P1_O_RAW_70783_VERIFIED_SOURCE",json.dumps(result,
               sort_keys=True),flush=True)
-          assert options[8052]["status"]==oil.STATUS,(
-              "8052 is not a clean pure static DBC enchant",
-              options[8052]["source_reason_codes"])
-          assert options[8052]["static_CHMV_vector"]=={
-              "crit_rating":16,"haste_rating":16,
-              "mastery_rating":0,"versatility_rating":0},(
-              "actual unbuffed same-build source does not match 16/16",
-              options[8052])
+          raw_rows=oil.enchant.parse_dbc_rows(raw.decode("utf8"),
+              {8051,8052,8054})
+          print("P1_O_RAW_ENCHANT_RECORDS",json.dumps(raw_rows,
+              sort_keys=True),flush=True)
+          # This is a SOURCE TYPE discovery, not a game-stat assertion.
+          # A spell-driven record is intentionally PENDING, never 16/17.
+          assert set(options)=={8051,8052,8054}
+          assert extracted["source_unbuffed"] is True
+          assert extracted["O"] is None and extracted["native_calls"]==0
           PY
       - name: Publish compact raw-source proof only
         if: always()

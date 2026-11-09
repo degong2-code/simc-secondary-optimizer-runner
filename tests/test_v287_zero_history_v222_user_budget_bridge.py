@@ -2263,6 +2263,9 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         numeric,choices=self.selected_physical_pair()
         source=copy.deepcopy(self.table[334])
         source["components"]["O"]["applied_hands"]=["main_hand"]
+        # Only a genuinely DIFFERENT static source is now a conflict.
+        # The synthetic standard v222 fixture itself already says 16/16.
+        source["components"]["O"]["rating"]["haste_rating"]=15
         original=build.season_budget_contract.preprofile_budget(
             source_catalog=self.catalog,source_artifact_sha256="a"*64,
             evidence=source,target_ilevel=334,manual_final_T=3300)
