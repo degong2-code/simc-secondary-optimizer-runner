@@ -1449,7 +1449,10 @@ class LocalJobs:
                 if type(restored_oils) is not dict:
                     raise environment_manifest.EnvironmentBlocked(
                         "WEB_FRESH_SESSION_INSTALL_SHA_DRIFT")
-                verified_build=summary["game_build"]
+                # Historic sealed/mocked session summaries may omit the
+                # display build; existing exact v212 validation still owns
+                # authority. Do not fail read-only restore on optional UI data.
+                verified_build=summary.get("game_build")
             return {"schema": "v116_local_session_inputs_read_only_v1",
                     "session_id": folder.name, "user": user,
                     "binary": manifest["native_binary"],

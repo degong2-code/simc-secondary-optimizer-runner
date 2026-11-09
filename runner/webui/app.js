@@ -1236,12 +1236,12 @@ async function restore(id) {
     readSession(id),api("/api/v1/sessions/"+id+"/inputs")
   ]);
   fillSessionInputs(inputs);
+  markSession(id);
   // The local dropdown scope follows the restored sealed build; avoid
   // showing loadouts from a previous page selection.
   try{await refreshInstalledOilLoadouts();}
   catch(error){$("optimizer-oil-loadout-status").textContent=
     "검증 설치 기름 목록 조회 실패 · 복원한 세션은 그대로 유지";}
-  markSession(id);
   state.pollFailures=0;state.nextPollAt=0;
   $("filled-result").hidden=true;$("empty-result").hidden=false;
   renderProgress(snapshot.progress);
