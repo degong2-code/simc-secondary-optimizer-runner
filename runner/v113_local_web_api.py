@@ -97,6 +97,8 @@ class LongRunStartRequest(BaseModel):
     revision: str = Field(min_length=7,max_length=40)
     static_cache: str | None = Field(default=None,max_length=4096)
     current_season_product: bool = True
+    # Exact IDs are optional; legacy hand-only sessions remain supported.
+    selected_oil_item_ids_by_hand: dict[str,int] = Field(default_factory=dict)
     max_native_calls: int = Field(default=12,ge=12,le=2000)
     max_new_native_this_invocation: int = Field(default=4,ge=1,le=32)
     max_elapsed_seconds: int = Field(default=900,ge=60,le=3600)
@@ -116,6 +118,8 @@ class UserRequest(BaseModel):
     revision: str = Field(min_length=7, max_length=40)
     static_cache: str | None = Field(default=None, max_length=4096)
     current_season_product: bool = False
+    # Optional exact physical IDs, matched only against sealed v212 installs.
+    selected_oil_item_ids_by_hand: dict[str,int] = Field(default_factory=dict)
     # Opt-in normal-source collection only; never grants new environment READY.
     fresh_season_build: str | None = Field(
         default=None,max_length=32,pattern=r"^\d+(?:\.\d+){3}$")
@@ -352,7 +356,7 @@ class LocalJobs:
 
     def load_fresh_profile_for_user(
             self, target_ilevel, explicit_build=None,
-            selected_oil_hands=None):
+            selected_oil_hands=None, selected_oil_item_ids_by_hand=None):
         """Find the exact verified oil variant, never a newest-file guess."""
         # No installed v113 snapshot means the original packaged/legacy
         # current-season route must remain unchanged. Do not fetch a retail
@@ -374,10 +378,23 @@ class LocalJobs:
             game_build=observed["game_build"]
             self._current_fresh_game_build=game_build
         selected_ids=None
-        if selected_oil_hands is not None:
-            # The end-user selects hands; an installed positive-O source
-            # supplies the exact physical IDs. Ambiguous choices require
-            # a separate item selection rather than arbitrary latest-file.
+        if selected_oil_item_ids_by_hand:
+            # Prefer a user's exact physical item/hand identity. v216
+            # authenticates the matching installed v212 source and SHA.
+            if (selected_oil_hands is not None and
+                    set(selected_oil_hands)!=set(selected_oil_item_ids_by_hand)):
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_FRESH_EXACT_OIL_HAND_ID_SELECTION_INVALID")
+            selected=environment_build.find_verified_installed_season_environment(
+                self.root,target_ilevel,expected_game_build=game_build,
+                selected_oil_item_ids_by_hand=selected_oil_item_ids_by_hand)
+            if selected is None:
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_FRESH_SELECTED_OIL_ITEM_IDS_NOT_INSTALLED")
+            selected_ids=selected["selected_oil_item_ids_by_hand"]
+        elif selected_oil_hands is not None:
+            # Old hand-only users can reuse exactly one verified physical
+            # combination; ambiguity still blocks instead of guessing.
             selected=environment_build.find_verified_installed_season_environment(
                 self.root,target_ilevel,expected_game_build=game_build,
                 selected_oil_hands=selected_oil_hands)
@@ -1024,6 +1041,15 @@ class LocalJobs:
     def plan(self, params):
         try:
             user = sessions.user_scenario(params.controls)
+            exact_oils=params.selected_oil_item_ids_by_hand
+            if exact_oils and (
+                not params.current_season_product or
+                set(exact_oils)!=set(user["oil_hands"]) or
+                len(exact_oils)>2 or
+                any(type(value) is not int or value<=0
+                    for value in exact_oils.values())):
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_FRESH_EXACT_OIL_HAND_ID_SELECTION_INVALID")
             binary = pathlib.Path(params.binary).expanduser().resolve()
             resolved_static=self.default_static_cache(user,params.static_cache)
             # 24 source-independent v147-proven representative archetypes:
@@ -1058,7 +1084,11 @@ class LocalJobs:
                               self._current_fresh_game_build))):
                 fresh=self.load_fresh_profile_for_user(
                     user["target"]["ilevel"],params.fresh_season_build,
-                    selected_oil_hands=user["oil_hands"])
+                    selected_oil_hands=user["oil_hands"],
+                    selected_oil_item_ids_by_hand=exact_oils or None)
+            if exact_oils and fresh is None:
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_FRESH_SELECTED_OIL_ITEM_IDS_NOT_INSTALLED")
             # A legacy/packaged product with no installed v113 snapshot
             # retains its historical v098 oil path. A *verified fresh*
             # snapshot already rejects missing or ambiguous physical O
@@ -1434,7 +1464,8 @@ class LocalJobs:
         params=UserRequest(
             controls=request.controls,binary=request.binary,
             revision=request.revision,static_cache=request.static_cache,
-            current_season_product=True)
+            current_season_product=True,
+            selected_oil_item_ids_by_hand=request.selected_oil_item_ids_by_hand)
         folder,hydrated,environment,receipt_info=(
             self.prepare_with_internal_special_L(params))
         with self.lock:
