@@ -116,8 +116,12 @@ def verified_current_catalog(original,game_build):
             path.unlink()
 
 
-def execute(root,binary,revision,game_build,environment_result,*,receipt_file):
+def execute(root,binary,revision,game_build,environment_result,*,receipt_file,
+            manual_final_T=None):
     root=pathlib.Path(root).resolve()
+    need(manual_final_T is None or (
+         type(manual_final_T) is int and 1<=manual_final_T<=100000),
+         "P3_HAR_MANUAL_FINAL_T_INPUT_INVALID")
     compilation=environment_result.get("source_compilation") or {}
     candidate=compilation.get("source_catalog_path")
     need(type(candidate) is str and candidate,
@@ -127,6 +131,7 @@ def execute(root,binary,revision,game_build,environment_result,*,receipt_file):
             "real_browser_click_tested":False,
             "web_layer":"FASTAPI_LOCAL_TESTCLIENT_AND_REAL_SUBPROCESS",
             "new_native_dps_calls":0,
+            "manual_final_T_requested":manual_final_T,
             "existing_environment_native_calls_excluded":True}
     receipt_file=pathlib.Path(receipt_file)
     try:
@@ -141,6 +146,8 @@ def execute(root,binary,revision,game_build,environment_result,*,receipt_file):
             # This installed v212 baseline is explicit NO OIL (O=0).
             # Do not silently apply the legacy starter main_hand oil selection.
             controls["oil_hands"]=[]
+            if manual_final_T is not None:
+                controls["final_T"]=manual_final_T
             args={"controls":controls,"binary":str(pathlib.Path(binary).resolve()),
                   "revision":revision,"current_season_product":True,
                   "max_native_calls":12,
@@ -170,6 +177,9 @@ def execute(root,binary,revision,game_build,environment_result,*,receipt_file):
                                       payload=args)
                 need(prepared["status"]=="LONGRUN_SOURCE_PREPARED_NO_DPS_NATIVE",
                      "WEB_PREPARE_NO_DPS_NATIVE_NOT_OBSERVED")
+                if manual_final_T is not None:
+                    need(prepared["plan"]["final_T"]==manual_final_T,
+                         "P3_HAR_WEB_PREPARE_MANUAL_T_DRIFT")
                 session=prepared["session_id"]
                 record["session_id"]=session
                 record["prepare_status"]=prepared["status"]
@@ -242,6 +252,9 @@ def execute(root,binary,revision,game_build,environment_result,*,receipt_file):
                      and all(v*2<total for v in vector.values())
                      and final["native_calls_cumulative"]==count,
                      "WEB_RESULT_STATISTICS_OR_CHMV_DRIFT")
+                if manual_final_T is not None:
+                    need(total==manual_final_T,
+                         "P3_HAR_WEB_FINAL_MANUAL_T_DRIFT")
                 record["reported"]={
                     "native_calls_cumulative":count,
                     "cache_only_new_native":0,
