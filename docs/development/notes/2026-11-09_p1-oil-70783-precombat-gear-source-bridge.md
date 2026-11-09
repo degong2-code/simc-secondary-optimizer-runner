@@ -32,3 +32,14 @@
 - **범용 수정:** `v216.find_verified_installed_season_environment`에 손 집합 기반 조회를 추가하고 동일 손 집합에 **다른 물리 기름 ItemID 조합이 둘 이상 확인되면 임의 선택하지 않음**. 유일한 검증된 원본 조합에서만 v212 봉인 영수증·SHA를 재사용. `v113`은 메모리에서 이미 검증된 기름 손 정체성을 이용하며, 신규 시즌 환경 선택이 변경되면 동일 원본 프로필 스냅샷을 복원한다. 구형 packaged 경로는 유지. 신규 시즌 고급 입력에 **선택한 주/보조무기 기름 물리 ItemID**를 넣어 기존 v216 필드로 직접 전달하되 임의 O 수치/토큰/장비 원본은 HTTP에서 받지 않음.
 - **검증 재사용:** 첫 합성 fixture 교정 전 web test는 레거시 기본 `oil_hands`를 O0 봉인 환경에도 적용하려 하여 차단되었음. 신규 전용 Gate를 만들지 않고 **기존 O0 fixture의 손 선택만 공란으로 일치**시키고, 새 계층의 구형 제품 경로까지 단정적으로 차단하던 조건을 제거. 결과 [focused #42589425632](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42589425632) **520 PASS/2 SKIP/0 FAIL** · DEV_LEDGER_PASS. [v113 API #42589425542](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42589425542), [Windows #42589425679](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42589425679), v167/v169/v177/v180 기존 공통 CI PASS. 이 후속에서는 실 Native 새로 실행하지 않음.
 - **남은 제품 작업:** 검증된 자동 시즌 옵션에 사용자 친화적인 기름 종류 목록을 직접 노출하는 선택 UI, 다종 기름의 실제 원본 등록, 검증된 O>0 사용자 세션의 **실제 SimC DPS→95% 결과** 종단 실행은 별도 미완료. 일부 숫자 소스 연결/미리보기 PASS를 공식 환경 설치 완료나 최적화 전역최적 증거로 취급하지 않음. main/Project UI/원본 불변.
+
+## 2026-11-09 P1-WEB 범용 기름 물리 ID → 사용자 세션 연결 (후속 소규모 변경)
+
+- **Capability:** `O.OIL`, `PRODUCT.E2E`, `ENVIRONMENT.WEB`, `SOURCE.SEAL`, `DEV.CONTINUITY`.
+- **Keywords:** exact oil physical ID, per-hand, browser user plan, longrun, v113, v106 identity, v212 install SHA, session read-only restore, O0 legacy.
+- **Prior evidence:** P3-HAU 단일 인계·기존 INDEX/PROTOCOL·이 문서의 70783 Native2 한정 증거 및 기존 focused 520 PASS/2 SKIP; 앞선 API-only `d9a4c545`/`be587ed0`. **사용자 종단 O>0 실제 SimC DPS는 여전히 미실증**.
+- **Decision:** `CONNECT` — 기존 검증된 물리 ItemID/손→v212 봉인 설치/세션 계약만 재사용. 기름의 효과·수치·품질을 브라우저에서 추측하거나 검증 없이 공개 목록에 올리지 않는다.
+- **Changes:** 새 코드는 일반 최적화 화면의 선택형 고급 주/보조무기 기름 ItemID를 기존 `buildRequest`에서 검증하고 동일 함수의 6-case/장기 prepare/start에 전달. 비어 있는 경우 원래 손-only/O0/legacy 경로 유지. 새 세션 값은 `v113`의 기존 SHA 확인된 설치원본만 선택하고, 저장된 세션 복원 GET은 기존 `_verify_environment_dependencies`를 읽기 전용 재사용해 원본 손별 물리 ID를 화면으로 반환한다. 적용 손과 입력 ID 불일치·없는 설치·복수 후보는 임의 선택하지 않는다.
+- **Verification:** GitHub 변경 코드는 `runner/webui/index.html`, `runner/webui/app.js`, `runner/v113_local_web_api.py`; 기존 `tests/test_v114_local_web_ui_offline.py`, `tests/test_p3_ham_fresh_v212_web_profile_bridge_offline.py`에 범위 한정 회귀 추가. **이 기록 시점 신규 테스트/CI/실 Native 실행 결과 미확정**, 과거 PASS를 새 HEAD의 PASS로 승격하지 않음.
+- **Remaining:** 변경 HEAD의 실제 오프라인 회귀 결과 확인, 검증된 최고품질 기름 사용자 친화적 dropdown, **실 O>0 사용자 웹→v212→DPS/SEM/95%/취소·재개·캐시 종단 Native**, 일부 L/E, Windows 실 PC 및 26/26 웹 장기/검색 품질 증거 별도. 신규 기름 ID와 O 값은 임의 도출 금지.
+- **Efficiency:** `v281/v286/v296/v297→v216/v222/v212` 및 `v113/v106/v098/v096` 전체 재사용. 새로운 Native·Wago 수집·정적 16/16 재검증·전문화 전수·전용 인증 Gate 0. GET restore의 기존 봉인 확인만 사용하며 같은 요청에서 SimC/네트워크/캐시 변경 없음. `main`·v003 immutable·v016·Project UI·Work OS·기존 주 제품 개발 소유권 변경 없음.
