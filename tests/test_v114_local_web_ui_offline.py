@@ -65,6 +65,27 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('u.oil_hands.includes("off_hand")',restore)
         self.assertIn('oil_hands:["main_hand","off_hand"].filter(',js)
 
+    def test_exact_verified_oil_ids_reach_both_web_optimizer_routes(self):
+        """Only physical IDs are carried; browser supplies no numeric O."""
+        html=self.client.get("/").text
+        js=self.client.get("/assets/app.js").text
+        for ident in ("optimizer-oil-exact-panel",
+                      "optimizer-oil-main-id","optimizer-oil-off-id"):
+            self.assertIn('id="'+ident+'"',html)
+        self.assertIn("const exactOils={};",js)
+        self.assertIn("if(!controls.oil_hands.includes(hand))",js)
+        self.assertIn("Object.keys(exactOils).length!==controls.oil_hands.length",js)
+        self.assertIn("request.selected_oil_item_ids_by_hand=exactOils",js)
+        self.assertIn("...buildRequest(),max_native_calls:budget",js)
+        self.assertIn("const payload={...buildRequest(),max_native_calls:budget,",js)
+        self.assertIn("payload.verified_oil_item_ids_by_hand||{}",js)
+        self.assertIn('$("optimizer-oil-main-id").value="";',js)
+        self.assertIn('$("optimizer-oil-off-id").value="";',js)
+        self.assertIn("WEB_FRESH_SELECTED_OIL_ITEM_IDS_NOT_INSTALLED",js)
+        # Neither free-form oil ratings nor arbitrary SimC effects are accepted.
+        self.assertNotIn('controls.fixed_O=',js)
+        self.assertNotIn('request.static_CHMV_vector=',js)
+
     def test_dk_runeforge_ui_selection_restore_and_distinct_oil(self):
         page=self.client.get("/").text
         js=self.client.get("/assets/app.js").text
