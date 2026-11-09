@@ -119,6 +119,45 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
         summary.assert_called_once()
         self.assertEqual(response["environment_manifest"]["status"],"READY")
 
+    def test_user_pinned_installed_build_reaches_sealed_v212_profile(self):
+        """Positive selection: same exact build to short/long-run core.
+
+        The original v212 owner and session SHA are reused; no SimC starts.
+        """
+        self.remember()
+        source=self.jobs._verified_fresh_profile_result
+        binary=self.root/"pinned-simc.exe"
+        binary.write_bytes(b"no-native")
+        controls=web.sessions.standard_controls()
+        controls["oil_hands"]=[]
+        params=web.UserRequest(
+            controls=controls,binary=str(binary),revision="abcdef0",
+            current_season_product=True,
+            installed_season_game_build=self.build)
+        folder=self.root/("a"*20)
+        folder.mkdir()
+        plan={"plan":{"class":"paladin","spec":"retribution",
+                      "base_B":3107,"fixed_O":{},"final_T":3107,
+                      "native_limit":6}}
+        with (mock.patch.object(self.jobs,"load_fresh_profile_for_user",
+                                return_value=source) as restore,
+              mock.patch.object(web.retail_build_source,"discover",
+                                side_effect=AssertionError("NO_LIVE_BUILD_GUESS")),
+              mock.patch.object(web.sessions,"store_session",
+                                return_value=folder) as seal,
+              mock.patch.object(web.profile_stage,"build_or_reuse",
+                                return_value=(plan,{})),
+              mock.patch.object(self.jobs,"_fresh_environment_summary",
+                                return_value={"status":"READY"})):
+            response=self.jobs.plan(params)
+        self.assertEqual(response["status"],"READY_ZERO_NATIVE")
+        self.assertEqual(response["native_calls"],0)
+        restore.assert_called_once_with(
+            334,self.build,selected_oil_hands=[],
+            selected_oil_item_ids_by_hand=None)
+        self.assertEqual(seal.call_args.kwargs[
+            "fresh_installed_manifest_sha256"],self.digest)
+
     def test_manual_final_t_changes_real_v106_session_cache_identity(self):
         """User-facing target must never reuse a different-T DPS session."""
         fake=self.root/"simc.bin"
@@ -222,7 +261,8 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
                   "static_cache_json":None}
         (generated/"manifest.json").write_text(json.dumps(manifest))
         selected={"main_hand":245678}
-        summary={"fresh_v212_installed_manifest_sha256":self.digest}
+        summary={"fresh_v212_installed_manifest_sha256":self.digest,
+                 "game_build":self.build}
         with (
             mock.patch.object(self.jobs,"_read_environment_summary",
                               return_value=summary) as read,
@@ -231,6 +271,7 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
         ):
             result=self.jobs.inputs(folder)
         self.assertEqual(result["verified_oil_item_ids_by_hand"],selected)
+        self.assertEqual(result["installed_season_game_build"],self.build)
         self.assertFalse(result["native_called"])
         read.assert_called_once_with(folder)
         checked.assert_called_once_with(summary,folder)
@@ -242,6 +283,7 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
         ):
             old=self.jobs.inputs(folder)
         self.assertEqual(old["verified_oil_item_ids_by_hand"],{})
+        self.assertIsNone(old["installed_season_game_build"])
         self.assertFalse(old["native_called"])
 
     def test_start_resume_uses_original_v217_installed_manifest_sha(self):
