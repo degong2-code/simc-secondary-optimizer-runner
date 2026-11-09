@@ -297,7 +297,8 @@ def v098_inputs(character,trinkets,*,target_ilevel=334,combat=None,
         # New seasons must not be rejected solely for not using Midnight
         # gem IDs/Omnium preset tokens. Actual sockets, quality and SimC
         # effects are proven by the separate season source, NOT this plan.
-        need(gem>0,"SEASON_SOURCE_GEM_ID_REQUIRED")
+        need(gem is None or (type(gem) is int and gem>0),
+             "SEASON_SOURCE_GEM_ID_REQUIRED")
     else:
         need(gem in consumer.DIAMONDS,"STAGED_PRIMARY_DIAMOND_REQUIRED")
         # Exact previous-season behavior and receipts remain unchanged.
