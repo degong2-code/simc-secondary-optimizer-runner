@@ -362,8 +362,12 @@ class LocalJobs:
             self._current_fresh_game_build=game_build
         restored=self.restore_verified_fresh_profile(
             target_ilevel=target_ilevel,game_build=game_build)
-        # Old season files with no v113 snapshot are NOT auto-promoted.
-        # The legacy packaged route remains available without new Native.
+        # When a fresh v113 snapshot exists, do not silently fall back to
+        # an old packaged profile for a different current build or target.
+        # The no-snapshot legacy path returned early above without network.
+        if restored is None:
+            raise environment_manifest.EnvironmentBlocked(
+                "WEB_FRESH_TARGET_BUILD_NOT_INSTALLED_RUN_SEASON_BUILD")
         return restored
 
     def _fresh_environment_summary(self, folder, result):
