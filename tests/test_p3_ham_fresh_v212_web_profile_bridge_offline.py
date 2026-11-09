@@ -50,7 +50,7 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
                 "preflight_sha256":self.catalog_digest,
                 "verified_environment_install":{
                     "stage_output_path":str(self.installed),
-                    "manifest_sha256":self.digest,"target_ilevel":334,
+                    "manifest_sha256":self.digest,
                     "official_T":3107,"environment_ready":True}},
             "fresh_one_spec_simc_representative":{"candidate_path":"probe"}}
 
@@ -71,6 +71,7 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
         self.assertEqual(result["source_compilation"][
             "verified_environment_install"]["manifest_sha256"],self.digest)
         self.assertTrue(result["normal_build_entry"])
+        self.assertEqual(result["verified_target_ilevel"],334)
         with (
             mock.patch.object(web.environment_manifest,
                               "verify_fresh_installed_environment"),
