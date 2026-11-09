@@ -32,7 +32,7 @@ jobs:
           build="12.1.5.70783"
           path="engine/dbc/generated/spell_item_enchantment.inc"
           meta=pinned.pinned_git_blobs(revision=revision,
-              paths={"oil":path})["oil"]
+              paths={"oil":path},transport=lambda req,timeout: urlopen(req,timeout=timeout))["oil"]
           request=Request(seed.RAW_BASE+revision+"/"+path,headers={
               "User-Agent":"SIMC-Secondary-P1-O-70783/1.0",
               "Accept":"text/plain"})

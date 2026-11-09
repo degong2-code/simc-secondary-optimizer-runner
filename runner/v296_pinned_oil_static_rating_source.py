@@ -227,7 +227,7 @@ def project_source_oils(*,source,worklist,native_numeric):
               (observed != vector if observed is not None
                and vector is not None else None),
           "simc_native_receipt_sha256":(
-              list(prev["simc_native_receipt_sha256"]) if prev else []),
+              list(prev.get("simc_native_receipt_sha256",[])) if prev else []),
           "same_effect_quality_group_verified":False,
           "weapon_and_hand_applicability_verified":False,
           "budget_ownership_verified":False,

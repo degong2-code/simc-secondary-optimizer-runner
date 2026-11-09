@@ -1065,8 +1065,11 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                               effect_resolver=bound,effect_observation=observed)
         native=result["zero_history_build"][
             "physical_F_O_native_source_candidates_unadmitted"]
-        self.assertEqual(native["oil"][0]["rating_candidate_unadmitted"]
-                         ["haste_rating"],17)
+        self.assertIsNone(native["oil"][0]["rating_candidate_unadmitted"])
+        self.assertEqual(native["oil"][0][
+            "buffed_CHMV_observation_unadmitted"]["haste_rating"],17)
+        self.assertEqual(native["oil"][0]["status"],
+                         "SIMC_BUFFED_O_OBSERVED_NOT_STATIC_SOURCE")
         self.assertFalse(native["oil"][0][
             "weapon_and_hand_applicability_verified"])
         self.assertIsNone(native["O"])
@@ -1213,8 +1216,9 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             "SAME_BUILD_REPRESENTATIVE_WEAPON_MASK_MATCH_SOURCE_ONLY")
         self.assertEqual(record[
             "selected_representative_weapon_id_unadmitted"],9101)
-        self.assertEqual(record[
-            "static_O_for_hand_unadmitted"]["haste_rating"],17)
+        self.assertIsNone(record["static_O_for_hand_unadmitted"])
+        self.assertEqual(record["status"],
+                         "SAME_BUILD_REPRESENTATIVE_WEAPON_MASK_MATCH_SOURCE_ONLY")
         self.assertFalse(record["user_selectable"])
         self.assertIsNone(quality["O"])
         self.assertFalse(out["zero_history_build"]["environment_ready"])
@@ -2196,6 +2200,34 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 {**o_obs,"physical_item_native_source_unadmitted":o_bound}],
             game_build=self.catalog["game_build"],
             simc_revision=self.catalog["simc_revision"])
+        # The historical v269 snapshot in o_obs was buffed +16/+17.
+        # Source-only budget tests must now attach an INDEPENDENT generated
+        # stat enchant record (+16/+16) before any O accounting.
+        import v296_pinned_oil_static_rating_source as raw_oil
+        simc_row=('// spell item enchantments, wow build '+
+                  self.catalog["game_build"]+'\n'+
+                  '{ 8052, 0, 0, 0, 0, 0, 0, 0, 0, '+
+                  '{ 5, 5, 0 }, { 16, 16, 0 }, { 32, 36, 0 }, '+
+                  '{ 0, 0, 0 }, 1237006, "Thalassian Phoenix Oil" },\n')
+        source=raw_oil.extract(
+            generated_text=simc_row,
+            game_build=self.catalog["game_build"],
+            simc_revision=self.catalog["simc_revision"],
+            enchant_ids={8052})
+        numeric=raw_oil.project_source_oils(
+            source=source,
+            worklist={"oil":[{
+                "kind":"temporary_enchant",
+                "physical_item_id":o_bound["physical_item_id"],
+                "selected_hand":o_bound["selected_hand"],
+                "simc_input_token":o_bound["simc_input_token"],
+                "simc_enchant_id":o_bound["simc_enchant_id"],
+                "crafting_quality":o_bound["crafting_quality"],
+                "source_candidate_sha256":
+                    o_bound["source_candidate_sha256"],
+                "source_stage_receipt_sha256":
+                    o_bound["source_stage_receipt_sha256"]}]},
+            native_numeric=numeric)
         masks=self.existing_oil_mask_fixture()
         choices=build._zero_history_quality_weapon_candidate_join(
             numeric=numeric,weapon_source=masks,
@@ -2207,7 +2239,7 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         numeric,choices=self.selected_physical_pair()
         source=copy.deepcopy(self.table[334])
         source["components"]["O"]["rating"]={
-            "crit_rating":16,"haste_rating":17,
+            "crit_rating":16,"haste_rating":16,
             "mastery_rating":0,"versatility_rating":0}
         source["components"]["O"]["applied_hands"]=["main_hand"]
         original=build.season_budget_contract.preprofile_budget(
@@ -2220,8 +2252,8 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             existing_budget=original,budget_evidence=source)
         self.assertTrue(linked["v222_numbers_reconciled"])
         self.assertEqual(linked["v222_arithmetic_unadmitted"]["fixed_O"][
-            "haste_rating"],17)
-        self.assertEqual(linked["v222_arithmetic_unadmitted"]["base_B"],3300)
+            "haste_rating"],16)
+        self.assertEqual(linked["v222_arithmetic_unadmitted"]["base_B"],3301)
         self.assertEqual(linked["v222_arithmetic_unadmitted"]["final_T"],3333)
         self.assertEqual(linked["matched_o_by_hand"]["main_hand"][
             "representative_weapon_id"],9101)
@@ -2651,9 +2683,9 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             gem_ratings=ratings,target_ilevel=334,manual_final_T=3333)
         calc=auto["calculation"]
         self.assertEqual((calc["reference_B"],calc["base_B"],calc["final_T"]),
-                         (3153,3300,3333))
+                         (3153,3301,3333))
         self.assertEqual(calc["fixed_O"]["crit_rating"],16)
-        self.assertEqual(calc["fixed_O"]["haste_rating"],17)
+        self.assertEqual(calc["fixed_O"]["haste_rating"],16)
         self.assertEqual(calc["fixed_O"]["mastery_rating"],0)
         self.assertFalse(calc["environment_ready"])
         self.assertFalse(auto["policy_A_registered"])
@@ -2976,7 +3008,7 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         payload=build._zero_history_v098_profile_source_inputs(
             numeric_preview=auto,physical_sources=numeric)
         self.assertEqual(payload["oil_by_hand"]["main_hand"][
-            "static_CHMV_vector"]["haste_rating"],17)
+            "static_CHMV_vector"]["haste_rating"],16)
         self.assertEqual(payload["oil_by_hand"]["main_hand"][
             "simc_input_token"],"main_hand:thalassian_phoenix_oil")
         pending={**auto,
