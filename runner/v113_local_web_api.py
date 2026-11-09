@@ -1463,6 +1463,10 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
         archetypes=[]
         for pair in sessions.SUPPORTED:
             controls=sessions.standard_controls(pair)
+            # The default season environment installs no weapon oil (O=0).
+            # The browser must not silently request the legacy main-hand oil.
+            # User-selected oil remains explicit and source-bound at prepare.
+            controls["oil_hands"]=[]
             scope=("SOURCE_INDEPENDENT_SEASON_CATALOG"
                    if pair in bootstrap.PURE_PRODUCT_SPECS else
                    "SOURCE_INDEPENDENT_TARGET334_VALIDATED_BATCH")
