@@ -174,9 +174,16 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
              path.name=="v212_installed_"+doc["manifest_sha256"][:20]+".json"
              and season["installed_manifest_sha256"]==doc["manifest_sha256"],
              "FRESH_SEASON_INSTALLED_MANIFEST_IDENTITY_DRIFT")
+        # v217's default lookup intentionally means O=0. For a sealed
+        # positive-O plan, select the exact physical item map from the
+        # authenticated v212 document, never the newest same-build install.
+        physical_o=doc.get("official_O_physical_source")
+        selected_ids=(physical_o["selected_oil_item_ids_by_hand"]
+                      if type(physical_o) is dict else {})
         bound=environment.find_verified_installed_season_environment(
             path.parents[3],doc["target_ilevel"],
-            expected_game_build=doc["game_build"])
+            expected_game_build=doc["game_build"],
+            selected_oil_item_ids_by_hand=selected_ids)
     except (OSError,ValueError,TypeError,KeyError) as exc:
         if isinstance(exc,EntryBlocked):
             raise
