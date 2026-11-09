@@ -516,7 +516,34 @@ class LocalJobs:
     def _read_environment_summary(self, folder):
         path=pathlib.Path(folder)/"generated"/"environment_manifest.json"
         if not path.is_file():
-            return None
+            # Fresh v212 admission lives in the original v096 manifest,
+            # not in the legacy v216 environment_manifest.json.
+            manifest=pathlib.Path(folder)/"generated"/"manifest.json"
+            if not manifest.is_file():
+                return None
+            try:
+                data=json.loads(manifest.read_text(encoding="utf8"))
+                fresh=data.get(bootstrap.entry.FRESH_SEASON_FIELD)
+                if type(fresh) is not dict:
+                    return None
+                installed=pathlib.Path(fresh["installed_environment_path"])
+                if installed.is_symlink() or not installed.is_file():
+                    raise environment_manifest.EnvironmentBlocked(
+                        "WEB_FRESH_V212_INSTALLED_FILE_MISSING")
+                doc,_=environment_manifest.read_json(installed)
+                environment_manifest.verify_fresh_installed_environment(doc)
+                if doc["manifest_sha256"]!=fresh.get("installed_manifest_sha256"):
+                    raise environment_manifest.EnvironmentBlocked(
+                        "WEB_FRESH_V212_SEALED_MANIFEST_CHANGED")
+                return {"schema":"v113_web_fresh_v212_installed_session_v1",
+                        "status":doc["status"],"game_build":doc["game_build"],
+                        "target_ilevel":doc["target_ilevel"],
+                        "fresh_v212_installed_manifest_sha256":
+                            doc["manifest_sha256"],
+                        "native_calls":0,"network_calls":0}
+            except (OSError,ValueError,TypeError,KeyError) as exc:
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_FRESH_ENVIRONMENT_MANIFEST_INVALID") from exc
         try:
             document=json.loads(path.read_text(encoding="utf8"))
             if type(document) is not dict:
@@ -528,6 +555,25 @@ class LocalJobs:
 
     def _verify_environment_dependencies(self, summary, folder=None):
         if not summary:
+            return
+        if summary.get("fresh_v212_installed_manifest_sha256") is not None:
+            if folder is None:
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_FRESH_V212_SESSION_FOLDER_REQUIRED")
+            verified=environment_build.find_verified_installed_season_environment(
+                self.root,summary["target_ilevel"],
+                expected_game_build=summary["game_build"])
+            if (verified is None or
+                verified["installed_manifest_sha256"]!=
+                    summary["fresh_v212_installed_manifest_sha256"]):
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_FRESH_V217_INSTALLED_RECEIPT_CHANGED")
+            identity=json.loads((pathlib.Path(folder)/
+                "V106_SESSION_IDENTITY.json").read_text(encoding="utf8"))
+            if (identity.get("fresh_v212_installed_manifest_sha256")!=
+                summary["fresh_v212_installed_manifest_sha256"]):
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_FRESH_SESSION_INSTALL_SHA_DRIFT")
             return
         source_path=self.source_catalog_path()
         if summary.get("source_catalog_sha256"):
