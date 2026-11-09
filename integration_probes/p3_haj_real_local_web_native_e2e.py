@@ -137,6 +137,9 @@ def execute(root,binary,revision,game_build,environment_result,*,receipt_file):
             app.state.jobs.remember_verified_fresh_environment(environment_result)
             controls=users.standard_controls(("paladin","retribution"))
             controls["race"]="dwarf"
+            # This installed v212 baseline is explicit NO OIL (O=0).
+            # Do not silently apply the legacy starter main_hand oil selection.
+            controls["oil_hands"]=[]
             args={"controls":controls,"binary":str(pathlib.Path(binary).resolve()),
                   "revision":revision,"current_season_product":True,
                   "max_native_calls":12,
