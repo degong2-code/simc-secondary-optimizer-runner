@@ -1,0 +1,91 @@
+# One bounded real public pinned source read; NEVER executes SimC Native.
+# This proves v295 consumes the SAME exact 70783 source as P3-HAR,
+# rather than merely passing a synthetic enum snippet.
+name: P1 DK 70783 real pinned runeforge source once (NO Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p1_dk_70783_pinned_source_once.yml]
+permissions:
+  contents: read
+concurrency:
+  group: p1-dk-real-source-once
+  cancel-in-progress: false
+jobs:
+  exact-original-source:
+    if: contains(github.event.head_commit.message, '[p1-dk-real-source-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      PYTHONPATH: runner:.
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+      SIMC_PINNED_SOURCE_COMMIT: c20e2ad52e4c33711f74272309a5748125175fe8
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Collect real source with v295 original Git blob and cache replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,pathlib,tempfile
+          import v295_season_runeforge_source as dk
+          import v212_environment_manifest as environment
+          commit=os.environ["SIMC_PINNED_SOURCE_COMMIT"]
+          game=os.environ["SIMC_PINNED_GAME_BUILD"]
+          observed_source_blob="957ca636688d97c70603b9b9b11328f7d253c34d"
+          expected_ids=[3368,3370,3847,6241,6242,6244,6245]
+          with tempfile.TemporaryDirectory() as folder:
+              root=pathlib.Path(folder)
+              source_dir=root/"source"/"v275_pinned_simc_compiler_inputs"
+              source_dir.mkdir(parents=True)
+              # Only the v275 receipt identity is simulated here.
+              # The SimC class module itself is the real Git-blob-verified
+              # original, downloaded and checked by v295 in this run.
+              seed={"status":"PINNED_V211_AND_GENERATED_SOURCES_SEALED",
+                    "source_dir":str(source_dir),"simc_revision":commit,
+                    "source_stage":{"status":"REUSED_VERIFIED",
+                                    "receipt_sha256":"a"*64}}
+              one=dk.collect(stage_root=root,game_build=game,pinned_source=seed)
+              assert one["status"]=="PINNED_SIMC_DK_RUNEFORGE_OPTIONS_SEALED",one
+              catalog=json.loads(pathlib.Path(one["catalog_path"]).read_text())
+              assert dk.verify(catalog,game_build=game,simc_revision=commit)
+              assert catalog["source_git_blob_sha1"]==observed_source_blob
+              assert [x["enchant_id"] for x in catalog["items"]]==expected_ids
+              assert environment._project_season_dk_runes(
+                  {**catalog,"source_stage_receipt_sha256":
+                      one["source_stage_receipt_sha256"]},
+                  game_build=game,simc_revision=commit)
+              two=dk.collect(stage_root=root,game_build=game,pinned_source=seed)
+              assert two["manifest_sha256"]==one["manifest_sha256"]
+              assert two["network_calls"]==0,two
+              receipt={"schema":"p1_dk_actual_70783_pinned_source_v1",
+                       "game_build":game,"simc_revision":commit,
+                       "source_git_blob_sha1":catalog["source_git_blob_sha1"],
+                       "source_sha256":catalog["source_sha256"],
+                       "catalog_manifest_sha256":catalog["manifest_sha256"],
+                       "count":catalog["count"],
+                       "runeforge_ids":expected_ids,
+                       "first_network_calls":one["network_calls"],
+                       "replay_network_calls":two["network_calls"],
+                       "native_calls":0,
+                       "real_source_compile_verified":True,
+                       "simulated_upstream_v275_receipt":True,
+                       "actual_v216_full_environment_build_run":False,
+                       "actual_dk_dps_native_run":False}
+              pathlib.Path("p1_dk_70783_source_receipt.json").write_text(
+                  json.dumps(receipt,sort_keys=True,indent=2)+"\n")
+              print("P1_DK_REAL_PINNED_SOURCE_PASS",json.dumps(receipt,
+                    sort_keys=True),flush=True)
+          PY
+      - name: Upload bounded real source receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-dk-70783-pinned-source-proof
+          path: p1_dk_70783_source_receipt.json
+          if-no-files-found: ignore
+          retention-days: 5
