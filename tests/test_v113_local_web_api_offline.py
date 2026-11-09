@@ -297,6 +297,60 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertFalse((self.root/"runs").exists())
 
 
+    def test_p1_explicit_installed_build_separate_from_source_collection(self):
+        """Exact build is carried through short and long-run plans, no Native.
+
+        Build X must not silently use in-memory/default Y or packaged legacy.
+        The existing fresh_season_build field remains source-collection-only.
+        """
+        jobs=self.app.state.jobs
+        build="12.1.5.70529"
+        rejected=self.post("/api/v1/sessions/plan",{
+            **self.payload,"installed_season_game_build":build})
+        self.assertEqual(rejected.status_code,422,rejected.text)
+        self.assertEqual(rejected.json()["detail"]["code"],
+                         "WEB_INSTALLED_SEASON_SELECTION_REQUIRES_CURRENT_PRODUCT")
+        self.assertEqual(self.post("/api/v1/sessions/plan",{
+            **self.payload,"current_season_product":True,
+            "installed_season_game_build":"broken"}).status_code,422)
+        # A user-requested installed build must fail closed when there is
+        # no matching v113/v212 snapshot; cannot fall back to packaged.
+        pinned={**self.payload,"current_season_product":True,
+                "installed_season_game_build":build}
+        with (mock.patch.object(jobs,"load_fresh_profile_for_user",
+                                return_value=None) as loader,
+              mock.patch.object(web.retail_build_source,"discover",
+                                side_effect=AssertionError("NO_LIVE_LOOKUP")),
+              mock.patch.object(web.subprocess,"Popen",
+                                side_effect=AssertionError("NO_NATIVE"))):
+            missing=self.post("/api/v1/sessions/plan",pinned)
+        self.assertEqual(missing.status_code,422,missing.text)
+        self.assertEqual(missing.json()["detail"]["code"],
+                         "WEB_SELECTED_INSTALLED_SEASON_BUILD_NOT_FOUND")
+        loader.assert_called_once_with(
+            self.controls["ilevel"],build,
+            selected_oil_hands=self.controls["oil_hands"],
+            selected_oil_item_ids_by_hand=None)
+        # Long-running prepare must forward the same explicit build rather
+        # than dropping it when mapping to the shared UserRequest.
+        long_request={**pinned,"max_native_calls":12}
+        with (mock.patch.object(jobs,"load_fresh_profile_for_user",
+                                return_value=None) as long_loader,
+              mock.patch.object(web.retail_build_source,"discover",
+                                side_effect=AssertionError("NO_LIVE_LOOKUP")),
+              mock.patch.object(web.subprocess,"Popen",
+                                side_effect=AssertionError("NO_NATIVE"))):
+            long_missing=self.post("/api/v1/longrun/prepare",long_request)
+        self.assertEqual(long_missing.status_code,422,long_missing.text)
+        self.assertEqual(long_missing.json()["detail"]["code"],
+                         "WEB_SELECTED_INSTALLED_SEASON_BUILD_NOT_FOUND")
+        long_loader.assert_called_once_with(
+            self.controls["ilevel"],build,
+            selected_oil_hands=self.controls["oil_hands"],
+            selected_oil_item_ids_by_hand=None)
+        self.assertEqual(self.post("/api/v1/sessions/plan",{
+            **pinned,"fresh_season_build":build}).status_code,422)
+
     def test_p3_fy_web_reuse_requires_exact_request_or_live_build(self):
         installed={"status":"VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED",
                    "environment_ready":True,"environment_installed":True,

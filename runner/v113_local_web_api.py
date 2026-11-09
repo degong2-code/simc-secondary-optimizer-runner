@@ -99,6 +99,9 @@ class LongRunStartRequest(BaseModel):
     current_season_product: bool = True
     # Exact IDs are optional; legacy hand-only sessions remain supported.
     selected_oil_item_ids_by_hand: dict[str,int] = Field(default_factory=dict)
+    # Select an ALREADY INSTALLED/VERIFIED environment, not fresh collection.
+    installed_season_game_build: str | None = Field(
+        default=None,max_length=32,pattern=r"^\d+(?:\.\d+){3}$")
     max_native_calls: int = Field(default=12,ge=12,le=2000)
     max_new_native_this_invocation: int = Field(default=4,ge=1,le=32)
     max_elapsed_seconds: int = Field(default=900,ge=60,le=3600)
@@ -120,6 +123,8 @@ class UserRequest(BaseModel):
     current_season_product: bool = False
     # Optional exact physical IDs, matched only against sealed v212 installs.
     selected_oil_item_ids_by_hand: dict[str,int] = Field(default_factory=dict)
+    installed_season_game_build: str | None = Field(
+        default=None,max_length=32,pattern=r"^\d+(?:\.\d+){3}$")
     # Opt-in normal-source collection only; never grants new environment READY.
     fresh_season_build: str | None = Field(
         default=None,max_length=32,pattern=r"^\d+(?:\.\d+){3}$")
@@ -1143,6 +1148,10 @@ class LocalJobs:
             ch=user["character"]
             key=(ch["class"],ch["spec"])
             current_season=params.current_season_product
+            pinned_build=params.installed_season_game_build
+            if pinned_build is not None and not current_season:
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_INSTALLED_SEASON_SELECTION_REQUIRES_CURRENT_PRODUCT")
             independent=(not current_season and user["target"]["ilevel"]==334 and
                          key in bootstrap.ARCHETYPES)
             independent_level=(not current_season and user["target"]["ilevel"]!=334 and
@@ -1158,6 +1167,7 @@ class LocalJobs:
                 sorted(fresh.get("verified_oil_item_ids_by_hand",{}))
                 if type(fresh) is dict else [])
             if current_season and (
+                pinned_build is not None or
                 fresh is None or
                 user["target"]["ilevel"]!=fresh["verified_target_ilevel"] or
                 sorted(user["oil_hands"])!=remembered_hands or
@@ -1168,9 +1178,15 @@ class LocalJobs:
                          .get("installed_source_game_build",
                               self._current_fresh_game_build))):
                 fresh=self.load_fresh_profile_for_user(
-                    user["target"]["ilevel"],params.fresh_season_build,
+                    user["target"]["ilevel"],
+                    pinned_build or params.fresh_season_build,
                     selected_oil_hands=user["oil_hands"],
                     selected_oil_item_ids_by_hand=exact_oils or None)
+            if pinned_build is not None and fresh is None:
+                # An explicit installed build must NEVER silently fall back
+                # to a packaged/default/current or earlier season profile.
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_SELECTED_INSTALLED_SEASON_BUILD_NOT_FOUND")
             if exact_oils and fresh is None:
                 raise environment_manifest.EnvironmentBlocked(
                     "WEB_FRESH_SELECTED_OIL_ITEM_IDS_NOT_INSTALLED")
@@ -1422,15 +1438,18 @@ class LocalJobs:
                 not isinstance(manifest.get("static_cache_json"), (str, type(None)))):
                 raise sessions.SessionBlocked("SESSION_INPUTS_OR_MANIFEST_DRIFT")
             restored_oils={}
+            verified_build=None
             if recorded.get("fresh_v212_installed_manifest_sha256") is not None:
                 # The existing start/resume proof validates the original
                 # v212 SHA, source, chosen hand+physical IDs and session.
                 # Reusing it on a read-only restore avoids a second selector.
+                summary=self._read_environment_summary(folder)
                 restored_oils=self._verify_environment_dependencies(
-                    self._read_environment_summary(folder),folder)
+                    summary,folder)
                 if type(restored_oils) is not dict:
                     raise environment_manifest.EnvironmentBlocked(
                         "WEB_FRESH_SESSION_INSTALL_SHA_DRIFT")
+                verified_build=summary["game_build"]
             return {"schema": "v116_local_session_inputs_read_only_v1",
                     "session_id": folder.name, "user": user,
                     "binary": manifest["native_binary"],
@@ -1439,6 +1458,7 @@ class LocalJobs:
                     "current_season_product":bool(
                         recorded.get("current_season_product",False)),
                     "verified_oil_item_ids_by_hand":restored_oils,
+                    "installed_season_game_build":verified_build,
                     "native_called": False}
         except Exception as exc:
             raise blocked(exc) from None
@@ -1561,7 +1581,8 @@ class LocalJobs:
             controls=request.controls,binary=request.binary,
             revision=request.revision,static_cache=request.static_cache,
             current_season_product=True,
-            selected_oil_item_ids_by_hand=request.selected_oil_item_ids_by_hand)
+            selected_oil_item_ids_by_hand=request.selected_oil_item_ids_by_hand,
+            installed_season_game_build=request.installed_season_game_build)
         folder,hydrated,environment,receipt_info=(
             self.prepare_with_internal_special_L(params))
         with self.lock:

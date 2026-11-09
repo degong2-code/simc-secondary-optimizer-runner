@@ -84,6 +84,16 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertNotIn("request.fixed_O=",js)
         self.assertIn("품질 우위를 추정하지 않습니다",html)
 
+    def test_installed_build_is_a_bound_session_choice_not_collection(self):
+        js=self.client.get("/assets/app.js").text
+        self.assertIn('request.installed_season_game_build=installedBuild;',js)
+        self.assertIn('const installedBuild=field("season-game-build");',js)
+        self.assertIn('payload.installed_season_game_build??""',js)
+        self.assertIn('try{await refreshInstalledOilLoadouts();}',js)
+        self.assertNotIn('request.fresh_season_build=',js)
+        self.assertIn('...buildRequest(),max_native_calls:budget',js)
+        self.assertIn('const payload={...buildRequest(),max_native_calls:budget,',js)
+
     def test_exact_verified_oil_ids_reach_both_web_optimizer_routes(self):
         """Only physical IDs are carried; browser supplies no numeric O."""
         html=self.client.get("/").text

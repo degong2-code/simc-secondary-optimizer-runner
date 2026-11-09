@@ -513,6 +513,9 @@ function fillSessionInputs(payload) {
   $("talents").value=c.talents;
   showCharacterDefaultHint();
   $("ilevel").value=t.ilevel;
+  // Exact v212 installation is recovered from the sealed session, never
+  // from whichever build happens to be selected on the current page.
+  $("season-game-build").value=payload.installed_season_game_build??"";
   $("final_T").value=t.final_T??"";
   setTrinketSelection("trinket1",u.trinkets[0].item_id,true);
   setTrinketSelection("trinket2",u.trinkets[1].item_id,true);
@@ -671,6 +674,14 @@ function buildRequest() {
   const request={controls,binary:field("binary"),revision:field("revision"),
                  static_cache:field("static_cache")||null,
                  current_season_product:true};
+  // Explicit Build UI selection binds the following session to that exact
+  // ALREADY INSTALLED season. This never asks v216 to collect fresh sources.
+  const installedBuild=field("season-game-build");
+  if(installedBuild) {
+    if(!/^\d+(?:\.\d+){3}$/.test(installedBuild))
+      throw Error("설치 시즌 게임 빌드 형식이 올바르지 않습니다.");
+    request.installed_season_game_build=installedBuild;
+  }
   if(Object.keys(exactOils).length)
     request.selected_oil_item_ids_by_hand=exactOils;
   return request;
@@ -1225,6 +1236,11 @@ async function restore(id) {
     readSession(id),api("/api/v1/sessions/"+id+"/inputs")
   ]);
   fillSessionInputs(inputs);
+  // The local dropdown scope follows the restored sealed build; avoid
+  // showing loadouts from a previous page selection.
+  try{await refreshInstalledOilLoadouts();}
+  catch(error){$("optimizer-oil-loadout-status").textContent=
+    "검증 설치 기름 목록 조회 실패 · 복원한 세션은 그대로 유지";}
   markSession(id);
   state.pollFailures=0;state.nextPollAt=0;
   $("filled-result").hidden=true;$("empty-result").hidden=false;
