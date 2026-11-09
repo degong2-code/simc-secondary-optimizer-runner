@@ -58,11 +58,14 @@ class PositiveInstalledOil(unittest.TestCase):
                 "selected_oil_item_ids_by_hand"],{"main_hand":243734})
             with mock.patch.object(coordinator,
                     "find_verified_installed_season_environment",
-                    return_value=attested):
+                    return_value=attested) as lookup:
                 admitted=entry._admitted_fresh_season_source(
                     manifest_path=root/"manifest.json",season=selection,
                     revision="runtime-changed",user_scenario=cfg,
                     flask_F=flask,oil_hands=["main_hand"],profile=profile)
+                lookup.assert_called_once_with(
+                    root,334,expected_game_build="12.1.5.70783",
+                    selected_oil_item_ids_by_hand={"main_hand":243734})
                 self.assertEqual(admitted["season_budget"]["fixed_O"],
                                  doc["official_O"])
                 self.assertEqual(admitted["season_budget"]["base_B"],3150)
