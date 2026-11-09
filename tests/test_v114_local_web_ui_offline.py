@@ -65,6 +65,25 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('u.oil_hands.includes("off_hand")',restore)
         self.assertIn('oil_hands:["main_hand","off_hand"].filter(',js)
 
+
+    def test_verified_oil_dropdown_reuses_exact_id_web_request(self):
+        html=self.client.get("/").text
+        js=self.client.get("/assets/app.js").text
+        for ident in ("optimizer-oil-loadout","optimizer-oil-loadout-status"):
+            self.assertIn('id="'+ident+'"',html)
+        for token in ("/api/v1/verified-oil-loadouts?ilevel=",
+                      "VERIFIED_INSTALLED_OIL_LOADOUTS",
+                      "chooseInstalledOilLoadout",
+                      "state.oilLoadouts.find(",
+                      '$( "optimizer-oil-main-id")'):
+            self.assertIn(token.replace('$( "','$("'),js)
+        self.assertIn("ids.main_hand??",js)
+        self.assertIn("ids.off_hand??",js)
+        self.assertIn("renderInstalledOilLoadouts(state.oilCatalog)",js)
+        self.assertIn("request.selected_oil_item_ids_by_hand=exactOils",js)
+        self.assertNotIn("request.fixed_O=",js)
+        self.assertIn("품질 우위를 추정하지 않습니다",html)
+
     def test_exact_verified_oil_ids_reach_both_web_optimizer_routes(self):
         """Only physical IDs are carried; browser supplies no numeric O."""
         html=self.client.get("/").text
