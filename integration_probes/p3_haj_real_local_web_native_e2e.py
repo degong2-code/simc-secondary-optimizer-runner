@@ -112,9 +112,10 @@ def verified_current_catalog(original,game_build):
             path.unlink()
 
 
-def execute(root,binary,revision,game_build,compiled,*,receipt_file):
+def execute(root,binary,revision,game_build,environment_result,*,receipt_file):
     root=pathlib.Path(root).resolve()
-    candidate=compiled.get("source_catalog_path")
+    compilation=environment_result.get("source_compilation") or {}
+    candidate=compilation.get("source_catalog_path")
     need(type(candidate) is str and candidate,
          "V216_COMPILED_SOURCE_CATALOG_MISSING")
     record={"schema":"p3_haj_real_local_web_native_e2e_v1",
@@ -128,6 +129,9 @@ def execute(root,binary,revision,game_build,compiled,*,receipt_file):
         with verified_current_catalog(candidate,game_build) as source:
             record["catalog"]=source
             app=web.create_app(root=root,token="p3-haj-one-test-token")
+            # Match the real season Build -> same-process local web flow.
+            # Recheck the pre-existing v217/v212 install before profile admission.
+            app.state.jobs.remember_verified_fresh_environment(environment_result)
             controls=users.standard_controls(("paladin","retribution"))
             controls["race"]="dwarf"
             args={"controls":controls,"binary":str(pathlib.Path(binary).resolve()),
