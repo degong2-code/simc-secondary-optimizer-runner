@@ -1517,10 +1517,8 @@ function registerHandlers() {
     if(selected)fillDefault(selected);
     renderInstalledOilLoadouts(state.oilCatalog);
   });
-  $("ilevel").addEventListener("change",()=>{
-    showRepresentativeScope();
-    withBusy(refreshInstalledOilLoadouts);
-  });
+  $("ilevel").addEventListener("change",showRepresentativeScope);
+  $("ilevel").addEventListener("change",()=>withBusy(refreshInstalledOilLoadouts));
   $("season-game-build").addEventListener("change",()=>
     withBusy(refreshInstalledOilLoadouts));
   $("plan-btn").addEventListener("click",()=>withBusy(async()=>{
