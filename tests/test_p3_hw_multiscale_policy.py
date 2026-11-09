@@ -53,12 +53,14 @@ class Multiscale(unittest.TestCase):
         self.assertIn("precision",phases)
         self.assertEqual(self._call(rows,2000)["status"],"BUDGET_EXHAUSTED")
 
-    def test_zero_allowed_bounds_choose_positive_real_json2_ratings(self):
-        # The existing v063 native accepter requires four observed stats.
-        # Positive proxies do not assert exact 0-rating optimality.
+    def test_zero_allowed_bounds_include_exact_zero_native_candidates(self):
+        # Source-matched SimC JSON2 omits 0 fields. The existing v063
+        # validator now accepts those only with actual Native stats and
+        # exact rating reconciliation; never turn an unobserved case into DPS.
         lower=(0,0,0,0)
         upper=(1553,1553,1553,1553)
         rows=[]
+        visited_zero=False
         for call in range(42):
             proposal=p.next_plan(rows,total=3107,lower=lower,upper=upper,
                                  native_calls_used=call,max_native_calls=2000,
@@ -68,12 +70,14 @@ class Multiscale(unittest.TestCase):
             q=proposal["next_request"]
             v=tuple(q["target"][s] for s in p.STATS)
             self.assertEqual(sum(v),3107)
-            self.assertTrue(all(x>=1 for x in v),q)
+            self.assertTrue(all(x>=0 for x in v),q)
+            visited_zero=visited_zero or any(x==0 for x in v)
             rows.append({"target":q["target"],"iterations":q["iterations"],
                          "dps_mean":180000.-float(call*9),
                          "dps_sem":650. if q["phase"]=="scout" else 250.})
+        self.assertTrue(visited_zero,"global coverage must include real zero boundaries")
         self.assertEqual(rows[0]["target"],p.legacy.to_target(
-            p._apportion(3107,(1,1,1,1),upper,(1,1,1,1))))
+            p._apportion(3107,lower,upper,(1,1,1,1))))
 
     def test_typed_twelve_precision_after_eight_without_changing_2000(self):
         # Historic eight target coordinates, synthetic DPS/SEM assertions.

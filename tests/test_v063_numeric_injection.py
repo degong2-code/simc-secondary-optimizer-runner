@@ -147,6 +147,41 @@ class NumericInjection(unittest.TestCase):
             native["sim"]["players"][0]["collected_data"]["buffed_stats"]["stats"]["crit_rating"]+=1
             with self.assertRaisesRegex(p.InjectionError,"FINAL_NUMERIC_RATING_MISMATCH"):
                 p.validate_native(native,rendered,cal)
+    def test_simc_json2_zero_omission_is_exact_but_missing_native_is_not(self):
+        # Pinned SimC report_json.cpp writes ratings with add_non_zero.
+        # Input/SimC revision/DPS and final four-stat target remain required.
+        cal=p.calibrate(witness())
+        target={"crit_rating":0,"haste_rating":1108,
+                "mastery_rating":1115,"versatility_rating":329}
+        with tempfile.TemporaryDirectory() as d:
+            rendered=p.render_candidate(BASE,cal,target,
+                                        pathlib.Path(d)/"zero.json",60)
+            self.assertEqual(rendered["raw_gear_override"]["crit_rating"],0)
+            native=fake_doc(rendered["input"])
+            stats=native["sim"]["players"][0]["collected_data"][
+                "buffed_stats"]["stats"]
+            self.assertEqual(stats.pop("crit_rating"),0)
+            result=p.validate_native(native,rendered,cal)
+            self.assertEqual(result["actual_buffed_stats_rating"],target)
+            # Missing nonzero remains a hard exact-target mismatch.
+            wrong=copy.deepcopy(native)
+            wrong["sim"]["players"][0]["collected_data"][
+                "buffed_stats"]["stats"].pop("mastery_rating")
+            with self.assertRaisesRegex(p.InjectionError,
+                                        "FINAL_NUMERIC_RATING_MISMATCH"):
+                p.validate_native(wrong,rendered,cal)
+            # No complete Native stats object can be silently read as 0.
+            empty=copy.deepcopy(native)
+            empty["sim"]["players"][0]["collected_data"][
+                "buffed_stats"]["stats"]={}
+            with self.assertRaisesRegex(p.InjectionError,"NATIVE_RATING_UNOBSERVED"):
+                p.validate_native(empty,rendered,cal)
+            malformed=copy.deepcopy(native)
+            malformed["sim"]["players"][0]["collected_data"][
+                "buffed_stats"]["stats"]["haste_rating"]="1108"
+            with self.assertRaisesRegex(p.InjectionError,"NATIVE_RATING_UNOBSERVED"):
+                p.validate_native(malformed,rendered,cal)
+
     def test_native_static_revision_short_git_hash_matches_declared_commit_only(self):
         target={"crit_rating":600,"haste_rating":1140,
                 "mastery_rating":1115,"versatility_rating":329}

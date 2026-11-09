@@ -27,11 +27,25 @@ def sha(data):
     return hashlib.sha256(data.encode("utf8") if isinstance(data,str) else data).hexdigest()
 
 def read_rating(player):
-    s=(player.get("collected_data") or {}).get("buffed_stats",{}).get("stats",{})
-    need(all(type(s.get(k)) in (int,float) and math.isfinite(s[k])
-             and abs(s[k]-round(s[k]))<0.0001 for k in STATS),
+    """SimC JSON2 add_non_zero omits genuine zero secondary ratings.
+
+    Require the actual buffed-stats object and at least one observed rating;
+    absent individual keys then mean 0, NOT an absent Native measurement.
+    An unexpected omitted nonzero rating still fails final target equality.
+    """
+    collected=player.get("collected_data") if type(player) is dict else None
+    buffed=collected.get("buffed_stats") if type(collected) is dict else None
+    stats=buffed.get("stats") if type(buffed) is dict else None
+    need(type(stats) is dict and any(k in stats for k in STATS),
          "NATIVE_RATING_UNOBSERVED")
-    return {k:int(round(s[k])) for k in STATS}
+    result={}
+    for k in STATS:
+        value=stats[k] if k in stats else 0
+        need(type(value) in (int,float) and math.isfinite(value)
+             and abs(value-round(value))<0.0001,
+             "NATIVE_RATING_UNOBSERVED")
+        result[k]=int(round(value))
+    return result
 
 def input_parts(source,*,allow_missing_json2_template=False):
     """Allow missing json2= only for stored templates, never Native inputs.
