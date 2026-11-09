@@ -828,7 +828,9 @@ class LocalJobs:
                 summary["fresh_v212_installed_manifest_sha256"]):
                 raise environment_manifest.EnvironmentBlocked(
                     "WEB_FRESH_SESSION_INSTALL_SHA_DRIFT")
-            return
+            # Reuse the already authenticated source identity when a
+            # saved user form is restored. No additional SimC or collection.
+            return dict(selected_oils)
         source_path=self.source_catalog_path()
         if summary.get("source_catalog_sha256"):
             if source_path is None or folder is None:
@@ -1336,6 +1338,16 @@ class LocalJobs:
                 not manifest["native_binary"] or
                 not isinstance(manifest.get("static_cache_json"), (str, type(None)))):
                 raise sessions.SessionBlocked("SESSION_INPUTS_OR_MANIFEST_DRIFT")
+            restored_oils={}
+            if recorded.get("fresh_v212_installed_manifest_sha256") is not None:
+                # The existing start/resume proof validates the original
+                # v212 SHA, source, chosen hand+physical IDs and session.
+                # Reusing it on a read-only restore avoids a second selector.
+                restored_oils=self._verify_environment_dependencies(
+                    self._read_environment_summary(folder),folder)
+                if type(restored_oils) is not dict:
+                    raise environment_manifest.EnvironmentBlocked(
+                        "WEB_FRESH_SESSION_INSTALL_SHA_DRIFT")
             return {"schema": "v116_local_session_inputs_read_only_v1",
                     "session_id": folder.name, "user": user,
                     "binary": manifest["native_binary"],
@@ -1343,6 +1355,7 @@ class LocalJobs:
                     "static_cache": manifest["static_cache_json"],
                     "current_season_product":bool(
                         recorded.get("current_season_product",False)),
+                    "verified_oil_item_ids_by_hand":restored_oils,
                     "native_called": False}
         except Exception as exc:
             raise blocked(exc) from None
