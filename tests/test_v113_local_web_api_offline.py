@@ -55,6 +55,61 @@ class LocalWebAPIOffline(unittest.TestCase):
             self.client.get("/api/v1/verified-oil-loadouts?ilevel=334").status_code,
             403)
 
+    def test_verified_flask_choices_reuse_same_v212_installs_and_zero_o(self):
+        """Read-only verified F from a sealed O=0 installation, not DB2."""
+        build="12.1.5.70783"
+        docs=self.app.state.jobs.root/"_fresh_season_sources"/("wago_"+build)/"fresh_source"
+        docs.mkdir(parents=True)
+        digest="d"*64
+        (docs/("v212_installed_"+digest[:20]+".json")).write_text("{}")
+        (docs/("v113_profile_"+digest[:20]+".json")).write_text("{}")
+        physical={"physical_item_id":241326,"simc_input_token":"flask_example_3",
+                  "crafting_quality":3,"F_rating":165}
+        doc={"manifest_sha256":digest,"game_build":build,"target_ilevel":334,
+             "official_F_physical_source":physical,
+             "official_O_physical_source":None}
+        proof={"installed_manifest_sha256":digest}
+        with (mock.patch.object(web.environment_manifest,"read_json",
+                                return_value=(doc,"sha")),
+              mock.patch.object(web.environment_manifest,
+                                "verify_fresh_installed_environment",
+                                return_value=True) as verifier,
+              mock.patch.object(web.environment_build,
+                                "find_verified_installed_season_environment",
+                                return_value=proof) as finder,
+              mock.patch.object(web.subprocess,"Popen",
+                                side_effect=AssertionError("NO_NATIVE"))):
+            res=self.client.get(
+                "/api/v1/verified-oil-loadouts?ilevel=334&game_build="+build,
+                headers=self.headers)
+        self.assertEqual(res.status_code,200,res.text)
+        self.assertEqual(res.json()["items"],[])
+        self.assertEqual(res.json()["verified_flasks"],[physical])
+        self.assertEqual(res.json()["native_calls"],0)
+        self.assertEqual(res.json()["network_calls"],0)
+        verifier.assert_called_once_with(doc)
+        finder.assert_called_once_with(
+            self.app.state.jobs.root,334,expected_game_build=build,
+            selected_oil_item_ids_by_hand={})
+        proof["installed_manifest_sha256"]="e"*64
+        with (mock.patch.object(web.environment_manifest,"read_json",
+                                return_value=(doc,"sha")),
+              mock.patch.object(web.environment_manifest,
+                                "verify_fresh_installed_environment",return_value=True),
+              mock.patch.object(web.environment_build,
+                                "find_verified_installed_season_environment",
+                                return_value=proof)):
+            mismatched=self.client.get(
+                "/api/v1/verified-oil-loadouts?ilevel=334&game_build="+build,
+                headers=self.headers)
+        self.assertEqual(mismatched.json()["verified_flasks"],[])
+        (docs/("v113_profile_"+digest[:20]+".json")).unlink()
+        self.assertEqual(self.client.get(
+            "/api/v1/verified-oil-loadouts?ilevel=334&game_build="+build,
+            headers=self.headers).json()["verified_flasks"],[])
+        self.assertEqual(self.client.get(
+            "/api/v1/verified-oil-loadouts?ilevel=334").status_code,403)
+
     def test_oil_loadout_only_if_exact_installed_and_profile_saved(self):
         build="12.1.5.70783"
         docs=(self.app.state.jobs.root/"_fresh_season_sources"/

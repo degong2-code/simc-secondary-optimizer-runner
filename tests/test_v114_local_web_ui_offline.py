@@ -66,6 +66,26 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('oil_hands:["main_hand","off_hand"].filter(',js)
 
 
+    def test_verified_installed_flask_selects_existing_F_id_without_new_proof(self):
+        html=self.client.get("/").text
+        js=self.client.get("/assets/app.js").text
+        for token in ("season-verified-flask","season-verified-flask-status",
+                      "season-selected-flask-id"):
+            self.assertIn('id="'+token+'"',html)
+        for token in ("function renderInstalledFlaskChoices(data)",
+                      "function chooseInstalledFlask()",
+                      'data.verified_flasks||[]',
+                      '$("season-selected-flask-id").value=field("season-verified-flask")',
+                      'const flaskData=seasonLevel===ilevel?data:',
+                      '"season-target-ilevel").addEventListener("change"',
+                      "renderInstalledFlaskChoices(flaskData)"):
+            self.assertIn(token,js)
+        self.assertIn("기존 검증 설치 영약",html)
+        self.assertNotIn("request.F_rating=",js)
+        self.assertNotIn("request.verified_flasks=",js)
+        # Same v216 takes the physical ID through existing Build input.
+        self.assertIn("selected_flask_item_id,",js)
+
     def test_verified_oil_dropdown_reuses_exact_id_web_request(self):
         html=self.client.get("/").text
         js=self.client.get("/assets/app.js").text

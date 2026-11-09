@@ -716,7 +716,8 @@ class LocalJobs:
         result={"schema":"v113_verified_installed_oil_loadouts_v1",
                 "status":"NO_VERIFIED_OIL_LOADOUTS",
                 "game_build":build,"target_ilevel":ilevel,
-                "items":[],"native_calls":0,"network_calls":0}
+                "items":[],"verified_flasks":[],
+                "native_calls":0,"network_calls":0}
         if build is None:
             result["status"]="SELECT_LOCAL_INSTALLED_BUILD"
             return result
@@ -732,6 +733,8 @@ class LocalJobs:
             try:candidates.append((path.stat().st_mtime,path))
             except OSError:continue
         seen=set()
+        flasks_by_id={}
+        conflicting_flasks=set()
         for _,path in sorted(candidates,key=lambda p:(-p[0],str(p[1]))):
             try:
                 if path.stat().st_size>environment_build.MAX_RECEIPT_BYTES:
@@ -742,11 +745,12 @@ class LocalJobs:
                 positive=doc.get("official_O_physical_source")
                 if (doc["game_build"]!=build or doc["target_ilevel"]!=ilevel
                     or path.name!="v212_installed_"+
-                       doc["manifest_sha256"][:20]+".json"
-                    or type(positive) is not dict):
+                       doc["manifest_sha256"][:20]+".json"):
                     continue
-                ids=positive["selected_oil_item_ids_by_hand"]
-                if not ids:continue
+                # O=0 installs are valid owners of a verified physical F.
+                # Keep the same v212+v113 saved-profile admission as oils.
+                ids=(positive["selected_oil_item_ids_by_hand"]
+                     if type(positive) is dict else {})
                 # Without a saved v113 profile the user's plan cannot resume.
                 snapshot=docs/("v113_profile_"+
                                doc["manifest_sha256"][:20]+".json")
@@ -757,6 +761,23 @@ class LocalJobs:
                     selected_oil_item_ids_by_hand=ids)
                 if (match is None or match["installed_manifest_sha256"]
                     !=doc["manifest_sha256"]):continue
+                flask=doc.get("official_F_physical_source")
+                if type(flask) is dict:
+                    physical=flask["physical_item_id"]
+                    if physical not in conflicting_flasks:
+                        row={"physical_item_id":physical,
+                             "simc_input_token":flask["simc_input_token"],
+                             "crafting_quality":flask["crafting_quality"],
+                             "F_rating":flask["F_rating"]}
+                        prior=flasks_by_id.get(physical)
+                        if prior is not None and prior!=row:
+                            # One physical ID with inconsistent authenticated
+                            # projections is not a user-selectable option.
+                            flasks_by_id.pop(physical,None)
+                            conflicting_flasks.add(physical)
+                        else:
+                            flasks_by_id[physical]=row
+                if not ids:continue
                 key=tuple(sorted(ids.items()))
                 if key in seen:continue
                 seen.add(key)
@@ -775,6 +796,8 @@ class LocalJobs:
             except (OSError,ValueError,TypeError,KeyError,
                     environment_manifest.EnvironmentBlocked):
                 continue
+        result["verified_flasks"]=[
+            flasks_by_id[k] for k in sorted(flasks_by_id)]
         if result["items"]:
             result["status"]="VERIFIED_INSTALLED_OIL_LOADOUTS"
         return result

@@ -319,6 +319,35 @@ function oilCompatibility() {
   $("oil_off").title=supportsOff?"두 무기에 기름 적용 가능":"이 전문화의 보조무기에는 기름을 사용할 수 없습니다.";
 }
 
+function renderInstalledFlaskChoices(data) {
+  const selector=$("season-verified-flask");
+  const prior=field("season-selected-flask-id");
+  selector.replaceChildren(option("","검증 설치 영약 선택 (선택 · 없으면 고급 ItemID 유지)"));
+  if(data?.schema==="v113_verified_installed_oil_loadouts_v1" &&
+     Number(data.target_ilevel)===Number(field("season-target-ilevel"))) {
+    for(const item of data.verified_flasks||[]) {
+      if(!Number.isSafeInteger(item.physical_item_id)||
+         item.physical_item_id<=0 ||
+         !Number.isInteger(item.crafting_quality)||
+         item.crafting_quality<0 ||
+         !Number.isInteger(item.F_rating)||item.F_rating<0 ||
+         !/^[a-z0-9_]{1,90}$/.test(item.simc_input_token||""))continue;
+      selector.appendChild(option(item.physical_item_id,
+        item.simc_input_token.replace(/_/g," ")+" · 검증 품질 "+
+        item.crafting_quality+" · F "+item.F_rating));
+    }
+  }
+  selector.value=Array.from(selector.options).some(x=>x.value===prior)?prior:"";
+  const count=selector.options.length-1;
+  $("season-verified-flask-status").textContent=count?
+    "이 PC에 검증 설치된 영약 "+count+"종 · 같은 빌드/ilvl에서만 표시 · "+
+    "새 환경 요청 시 기존 원본 엔진이 다시 확인":
+    "이 빌드/ilvl에서 검증 설치 영약이 없습니다. 원본 수집·검증 후 표시되며 "+
+    "미검증 아이템은 자동 등록하지 않습니다.";
+}
+function chooseInstalledFlask() {
+  $("season-selected-flask-id").value=field("season-verified-flask");
+}
 function renderInstalledOilLoadouts(data) {
   state.oilCatalog=data;
   const selector=$("optimizer-oil-loadout");
@@ -361,10 +390,16 @@ function renderInstalledOilLoadouts(data) {
 }
 async function refreshInstalledOilLoadouts() {
   const ilevel=valueInt("ilevel");
+  const seasonLevel=valueInt("season-target-ilevel");
   const build=field("season-game-build");
   const extra=build?"&game_build="+encodeURIComponent(build):"";
   const data=await api("/api/v1/verified-oil-loadouts?ilevel="+ilevel+extra);
   renderInstalledOilLoadouts(data);
+  // One local receipt scan when both target levels agree. If not, issue
+  // only one extra read-only scan for the independent Environment Build.
+  const flaskData=seasonLevel===ilevel?data:
+    await api("/api/v1/verified-oil-loadouts?ilevel="+seasonLevel+extra);
+  renderInstalledFlaskChoices(flaskData);
 }
 function chooseInstalledOilLoadout() {
   const chosen=state.oilLoadouts.find(item=>
@@ -1518,6 +1553,10 @@ function registerHandlers() {
   $("simc-rollback-btn").addEventListener("click",()=>withBusy(rollbackSimcUpdater));
   $("simc-import-btn").addEventListener("click",()=>withBusy(importSimcCharacter));
   $("season-build-btn").addEventListener("click",()=>withBusy(buildSeasonEnvironment));
+  $("season-verified-flask").addEventListener("change",chooseInstalledFlask);
+  $("season-selected-flask-id").addEventListener("input",()=>{
+    $("season-verified-flask").value="";
+  });
   $("optimizer-oil-loadout").addEventListener("change",chooseInstalledOilLoadout);
   for(const [check,id] of [["oil_main","optimizer-oil-main-id"],
                            ["oil_off","optimizer-oil-off-id"]]) {
@@ -1535,6 +1574,8 @@ function registerHandlers() {
   });
   $("ilevel").addEventListener("change",showRepresentativeScope);
   $("ilevel").addEventListener("change",()=>withBusy(refreshInstalledOilLoadouts));
+  $("season-target-ilevel").addEventListener("change",()=>
+    withBusy(refreshInstalledOilLoadouts));
   $("season-game-build").addEventListener("change",()=>
     withBusy(refreshInstalledOilLoadouts));
   $("plan-btn").addEventListener("click",()=>withBusy(async()=>{
