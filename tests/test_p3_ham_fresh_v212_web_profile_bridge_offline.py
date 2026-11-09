@@ -146,6 +146,58 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
             variants.append(key)
         self.assertEqual(len(set(variants)),len(variants))
 
+    def test_exact_oil_id_uses_verified_installed_variant_not_hand_guess(self):
+        """An explicit physical item ID resolves only its signed v212 variant."""
+        self.remember()
+        self.jobs.persist_verified_fresh_profile()
+        selected={"main_hand":245678}
+        with (
+            mock.patch.object(
+                web.environment_build,
+                "find_verified_installed_season_environment",
+                return_value={"selected_oil_item_ids_by_hand":selected}) as lookup,
+            mock.patch.object(
+                self.jobs,"restore_verified_fresh_profile",
+                return_value={"verified_target_ilevel":334}) as restore
+        ):
+            result=self.jobs.load_fresh_profile_for_user(
+                334,self.build,selected_oil_hands=["main_hand"],
+                selected_oil_item_ids_by_hand=selected)
+        self.assertEqual(result["verified_target_ilevel"],334)
+        lookup.assert_called_once_with(
+            self.root,334,expected_game_build=self.build,
+            selected_oil_item_ids_by_hand=selected)
+        restore.assert_called_once_with(
+            target_ilevel=334,game_build=self.build,
+            selected_oil_item_ids_by_hand=selected)
+
+    def test_exact_oil_selection_requires_same_hands_and_real_install(self):
+        """No O=0 substitution or legacy fallback for a named positive oil."""
+        fake=self.root/"simc.exe"
+        fake.write_bytes(b"never executed")
+        controls=web.sessions.standard_controls()
+        controls["oil_hands"]=["main_hand"]
+        form=web.UserRequest(
+            controls=controls,binary=str(fake),revision="abcdef0",
+            current_season_product=True,
+            selected_oil_item_ids_by_hand={"off_hand":245678})
+        with self.assertRaises(web.HTTPException) as error:
+            self.jobs.plan(form)
+        self.assertEqual(error.exception.status_code,422)
+        self.assertEqual(error.exception.detail["code"],
+                         "WEB_FRESH_EXACT_OIL_HAND_ID_SELECTION_INVALID")
+        form=form.model_copy(update={
+            "selected_oil_item_ids_by_hand":{"main_hand":245678}})
+        with self.assertRaises(web.HTTPException) as error:
+            self.jobs.plan(form)
+        self.assertEqual(error.exception.detail["code"],
+                         "WEB_FRESH_SELECTED_OIL_ITEM_IDS_NOT_INSTALLED")
+        longrun=web.LongRunStartRequest(
+            controls=controls,binary=str(fake),revision="abcdef0",
+            selected_oil_item_ids_by_hand={"main_hand":245678})
+        self.assertEqual(longrun.selected_oil_item_ids_by_hand,
+                         {"main_hand":245678})
+
     def test_start_resume_uses_original_v217_installed_manifest_sha(self):
         folder=self.root/("f"*20)
         folder.mkdir()
