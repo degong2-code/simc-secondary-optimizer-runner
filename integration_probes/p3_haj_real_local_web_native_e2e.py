@@ -178,7 +178,11 @@ def execute(root,binary,revision,game_build,environment_result,*,receipt_file,
                 need(prepared["status"]=="LONGRUN_SOURCE_PREPARED_NO_DPS_NATIVE",
                      "WEB_PREPARE_NO_DPS_NATIVE_NOT_OBSERVED")
                 if manual_final_T is not None:
-                    need(prepared["plan"]["final_T"]==manual_final_T,
+                    # /longrun/prepare intentionally excludes the plan.
+                    # Read the already sealed user inputs, no extra Native.
+                    checked=response(client,"GET",
+                        "/api/v1/sessions/"+prepared["session_id"]+"/inputs")
+                    need(checked["user"]["target"]["final_T"]==manual_final_T,
                          "P3_HAR_WEB_PREPARE_MANUAL_T_DRIFT")
                 session=prepared["session_id"]
                 record["session_id"]=session
