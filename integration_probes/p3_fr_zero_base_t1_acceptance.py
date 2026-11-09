@@ -706,9 +706,13 @@ def main():
                     raise ValueError("P3_HU_EXCLUDED_EQUIPMENT_OR_ENCHANT_SELECTED")
                 if web_longrun:
                     from integration_probes import p3_haj_real_local_web_native_e2e as web_e2e
+                    manual_target=os.environ.get("P3_HAR_USER_MANUAL_FINAL_T")
+                    user_manual_T=(int(manual_target) if manual_target
+                                   else None)
                     web_result=web_e2e.execute(
                         root,candidate,pin["revision_hint"],live["game_build"],
-                        result,receipt_file="p3_haj_web_e2e_receipt.json")
+                        result,receipt_file="p3_haj_web_e2e_receipt.json",
+                        manual_final_T=user_manual_T)
                     rec["web_local_e2e"]=web_result
                     if web_result.get("status")!=(
                             "PASS_REAL_FASTAPI_LONGRUN_PREPARE_RUN_RESUME_CACHE"):
@@ -718,7 +722,12 @@ def main():
                         "native_calls_cumulative":
                             web_result["reported"]["native_calls_cumulative"],
                         "budget_source":"ADMITTED_FRESH_SEASON_GJFO_V212_V217",
-                        "base_B":result["B"],"final_T":result["T"],
+                        "base_B":(web_result["reported"]["final_T"]-
+                                  (result["T"]-result["B"])),
+                        "final_T":web_result["reported"]["final_T"],
+                        "installed_reference_B":result["B"],
+                        "installed_reference_T":result["T"],
+                        "user_manual_final_T":user_manual_T,
                         "observed_first_choice":{
                             "absolute_rating_T":
                                 web_result["reported"]["observed_chmv"],
