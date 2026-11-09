@@ -150,15 +150,19 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
             {"fresh_v212_installed_manifest_sha256":self.digest}))
         summary={"fresh_v212_installed_manifest_sha256":self.digest,
                  "target_ilevel":334,"game_build":self.build}
-        with mock.patch.object(web.environment_build,
-            "find_verified_installed_season_environment",
-            return_value={"installed_manifest_sha256":self.digest}):
+        with mock.patch.object(web.environment_manifest,
+                               "verify_fresh_installed_environment"), \
+             mock.patch.object(web.environment_build,
+                "find_verified_installed_season_environment",
+                return_value={"installed_manifest_sha256":self.digest}):
             self.jobs._verify_environment_dependencies(summary,folder)
         (folder/"V106_SESSION_IDENTITY.json").write_text(json.dumps(
             {"fresh_v212_installed_manifest_sha256":"f"*64}))
-        with mock.patch.object(web.environment_build,
-            "find_verified_installed_season_environment",
-            return_value={"installed_manifest_sha256":self.digest}):
+        with mock.patch.object(web.environment_manifest,
+                               "verify_fresh_installed_environment"), \
+             mock.patch.object(web.environment_build,
+                "find_verified_installed_season_environment",
+                return_value={"installed_manifest_sha256":self.digest}):
             with self.assertRaises(web.environment_manifest.EnvironmentBlocked):
                 self.jobs._verify_environment_dependencies(summary,folder)
 
