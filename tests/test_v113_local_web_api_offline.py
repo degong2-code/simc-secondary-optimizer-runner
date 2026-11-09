@@ -43,6 +43,74 @@ class LocalWebAPIOffline(unittest.TestCase):
         return r.json()
 
 
+
+    def test_verified_installed_oil_loadouts_are_read_only_and_empty(self):
+        got=self.client.get("/api/v1/verified-oil-loadouts?ilevel=334",
+                            headers=self.headers)
+        self.assertEqual(got.status_code,200,got.text)
+        self.assertEqual(got.json()["items"],[])
+        self.assertEqual(got.json()["native_calls"],0)
+        self.assertEqual(got.json()["network_calls"],0)
+        self.assertEqual(
+            self.client.get("/api/v1/verified-oil-loadouts?ilevel=334").status_code,
+            403)
+
+    def test_oil_loadout_only_if_exact_installed_and_profile_saved(self):
+        build="12.1.5.70783"
+        docs=(self.app.state.jobs.root/"_fresh_season_sources"/
+              ("wago_"+build)/"fresh_source")
+        docs.mkdir(parents=True)
+        sha="a"*64
+        (docs/("v212_installed_"+sha[:20]+".json")).write_text("{}")
+        profile=docs/("v113_profile_"+sha[:20]+".json")
+        profile.write_text("{}")
+        physical={"selected_oil_item_ids_by_hand":{"main_hand":243734},
+                  "oil_by_hand":{"main_hand":{
+                     "physical_item_id":243734,
+                     "simc_input_token":"main_hand:thalassian_phoenix_oil_2"}}}
+        doc={"manifest_sha256":sha,"game_build":build,
+             "target_ilevel":334,"official_O_physical_source":physical}
+        proof={"installed_manifest_sha256":sha}
+        with (mock.patch.object(web.environment_manifest,"read_json",
+                                return_value=(doc,"sha")),
+              mock.patch.object(web.environment_manifest,
+                                "verify_fresh_installed_environment",
+                                return_value=True) as verifier,
+              mock.patch.object(web.environment_build,
+                                "find_verified_installed_season_environment",
+                                return_value=proof) as finder):
+            result=self.client.get(
+                "/api/v1/verified-oil-loadouts?ilevel=334&game_build="+build,
+                headers=self.headers)
+        self.assertEqual(result.status_code,200,result.text)
+        choices=result.json()
+        self.assertEqual(choices["status"],"VERIFIED_INSTALLED_OIL_LOADOUTS")
+        self.assertEqual(len(choices["items"]),1)
+        self.assertEqual(choices["items"][0]["selected_oil_item_ids_by_hand"],
+                         {"main_hand":243734})
+        verifier.assert_called_once_with(doc)
+        finder.assert_called_once_with(
+            self.app.state.jobs.root,334,expected_game_build=build,
+            selected_oil_item_ids_by_hand={"main_hand":243734})
+        # No source verification, no list. Never turn a raw ID into an option.
+        proof["installed_manifest_sha256"]="b"*64
+        with (mock.patch.object(web.environment_manifest,"read_json",
+                                return_value=(doc,"sha")),
+              mock.patch.object(web.environment_manifest,
+                                "verify_fresh_installed_environment",
+                                return_value=True),
+              mock.patch.object(web.environment_build,
+                                "find_verified_installed_season_environment",
+                                return_value=proof)):
+            rejected=self.client.get(
+                "/api/v1/verified-oil-loadouts?ilevel=334&game_build="+build,
+                headers=self.headers)
+        self.assertEqual(rejected.json()["items"],[])
+        profile.unlink()
+        self.assertEqual(self.client.get(
+            "/api/v1/verified-oil-loadouts?ilevel=334&game_build="+build,
+            headers=self.headers).json()["items"],[])
+
     def test_controlled_cold_start_web_real_collector_and_rebuild(self):
         """P3-DS T0: web -> original v216/v161/v217 in a virgin workspace.
 
