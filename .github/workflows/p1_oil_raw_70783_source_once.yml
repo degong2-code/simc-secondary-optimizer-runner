@@ -1,0 +1,78 @@
+# One pinned SimC-generated source read; no Wago DB rebuild, no Native.
+name: P1 O unbuffed 70783 original source once (NO Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p1_oil_raw_70783_source_once.yml]
+permissions: {contents: read}
+jobs:
+  original-oil-rating:
+    if: contains(github.event.head_commit.message, '[p1-o-raw-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      PYTHONPATH: runner:.
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Pin original Git-tree blob and read raw ITEM_ENCHANTMENT_STAT
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,pathlib
+          from urllib.request import Request,urlopen
+          import v229_simc_only_source_seed as seed
+          import v275_pinned_simc_compiler_inputs as pinned
+          import v296_pinned_oil_static_rating_source as oil
+          revision="c20e2ad52e4c33711f74272309a5748125175fe8"
+          build="12.1.5.70783"
+          path="engine/dbc/generated/spell_item_enchantment.inc"
+          meta=pinned.pinned_git_blobs(revision=revision,
+              paths={"oil":path})["oil"]
+          request=Request(seed.RAW_BASE+revision+"/"+path,headers={
+              "User-Agent":"SIMC-Secondary-P1-O-70783/1.0",
+              "Accept":"text/plain"})
+          with urlopen(request,timeout=90) as response:
+              assert response.status==200
+              raw=response.read(oil.enchant.MAX_SOURCE+1)
+          assert len(raw)==meta["size"] and seed.git_blob(raw)==meta["sha"]
+          extracted=oil.extract(generated_text=raw.decode("utf8"),
+              game_build=build,simc_revision=revision,
+              enchant_ids={8051,8052,8054},
+              original_git_blob_sha1=meta["sha"])
+          options={row["enchant_id"]:row for row in extracted["items"]}
+          result={"schema":"p1_o_raw_source_70783_v1",
+              "simc_commit":revision,"game_build":build,
+              "original_git_blob_sha1":meta["sha"],
+              "source_sha256":extracted["source_sha256"],
+              "candidate_options":options,
+              "raw_source_manifest_sha256":extracted["manifest_sha256"],
+              "native_calls":0,"recompiled_binary":False,
+              "talent_buffed_snapshot_not_used":True,
+              "physical_item_and_weapon_scope_verified":False,
+              "user_product_O_registered":False}
+          pathlib.Path("p1_o_raw_70783_receipt.json").write_text(
+              json.dumps(result,sort_keys=True,indent=2)+"\n")
+          print("P1_O_RAW_70783_VERIFIED_SOURCE",json.dumps(result,
+              sort_keys=True),flush=True)
+          assert options[8052]["status"]==oil.STATUS,(
+              "8052 is not a clean pure static DBC enchant",
+              options[8052]["source_reason_codes"])
+          assert options[8052]["static_CHMV_vector"]=={
+              "crit_rating":16,"haste_rating":16,
+              "mastery_rating":0,"versatility_rating":0},(
+              "actual unbuffed same-build source does not match 16/16",
+              options[8052])
+          PY
+      - name: Publish compact raw-source proof only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-70783-unbuffed-oil-original-source-proof
+          path: p1_o_raw_70783_receipt.json
+          if-no-files-found: ignore
+          retention-days: 5

@@ -27,6 +27,7 @@ import v271_user_socket_gem_layout as physical_gems
 import v274_zero_history_source_compiler_wiring as source_wiring
 import v275_pinned_simc_compiler_inputs as pinned_compiler_source
 import v295_season_runeforge_source as dk_rune_source
+import v296_pinned_oil_static_rating_source as oil_raw_source
 import v276_sealed_tier_compiler_source as compiler_tier_source
 import v277_zero_history_native_G_stage as zero_history_G_native
 import v278_sealed_simc_consumable_native_pair as native_effect_pair
@@ -3443,18 +3444,21 @@ def _zero_history_F_O_native_component_candidates(*, observations,
                  and sum(vector.values()) > 0
                  and vector == row.get("static_CHMV_candidate"),
                  "V216_ZERO_HISTORY_FO_STATIC_VECTOR_DRIFT")
-            candidate["static_CHMV_vector_unadmitted"] = dict(vector)
             if row["kind"] == "flask":
+                candidate["static_CHMV_vector_unadmitted"] = dict(vector)
                 need(row.get("F_candidate_unadmitted") ==
                          sum(vector.values()),
                      "V216_ZERO_HISTORY_F_NATIVE_TOTAL_DRIFT")
                 candidate["rating_candidate_unadmitted"] = sum(
                     vector.values())
+                candidate["status"] = "SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY"
             elif row["kind"] == "temporary_enchant":
                 need(row.get("O_candidate_unadmitted") == vector,
                      "V216_ZERO_HISTORY_O_NATIVE_VECTOR_DRIFT")
-                candidate["rating_candidate_unadmitted"] = dict(vector)
-            candidate["status"] = "SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY"
+                # v269's buffed rating includes talent rounding. It cannot
+                # authorize a static unbuffed O value, even if it is integer.
+                candidate["buffed_CHMV_observation_unadmitted"] = dict(vector)
+                candidate["status"] = "SIMC_BUFFED_O_OBSERVED_NOT_STATIC_SOURCE"
             candidate["simc_native_receipt_sha256"] = [
                 rec["receipt_sha256"]
                 for rec in row["native_case_receipts"]]
@@ -3592,7 +3596,7 @@ def _zero_history_quality_weapon_candidate_join(*, numeric, weapon_source,
             "static_O_for_hand_unadmitted":(
                 dict(option["rating_candidate_unadmitted"])
                 if selected is not None and
-                   option["status"] == "SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY"
+                   option["status"] == "SIMC_RAW_STATIC_NUMBER_SOURCE_ONLY"
                 else None),
             "weapon_min_ilevel_and_use_conditions_verified":False,
             "official_budget_ownership_verified":False,
@@ -3823,7 +3827,7 @@ def _zero_history_selected_F_O_v222_reconcile(*, selected, numeric,
              "V216_SELECTED_OIL_DUPLICATE_PHYSICAL_HAND_OBSERVATION")
         if (len(observed)!=1 or len(matched)!=1 or
                 observed[0]["status"]!=(
-                    "SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY") or
+                    "SIMC_RAW_STATIC_NUMBER_SOURCE_ONLY") or
                 observed[0]["rating_candidate_unadmitted"]!=
                     matched[0]["static_O_for_hand_unadmitted"]):
             out["missing"].append("SELECTED_OIL_"+hand.upper()+
@@ -3931,7 +3935,7 @@ def _zero_history_auto_v222_numeric_preview(*, preflight, native_numeric,
         need(len(observed)<=1 and len(matched)<=1,
              "V216_AUTO_SELECTED_OIL_DUPLICATED")
         if (len(observed)!=1 or len(matched)!=1 or
-            observed[0]["status"]!="SIMC_NATIVE_STATIC_NUMBER_SOURCE_ONLY"
+            observed[0]["status"]!="SIMC_RAW_STATIC_NUMBER_SOURCE_ONLY"
             or observed[0]["rating_candidate_unadmitted"]!=
                matched[0]["static_O_for_hand_unadmitted"]):
             out["requires"].append("SELECTED_OIL_"+hand.upper()+
@@ -6318,6 +6322,32 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     +str(exc).split(":",1)[0]) from exc
             progress["automatic_F_O_measurement_candidates_unadmitted"]=measurement_plan
             source_compilation["automatic_F_O_measurement_candidates_unadmitted"]=measurement_plan
+            # Exact static O comes from the v275 pinned DBC, not buffed JSON2.
+            oil_work=measurement_plan.get("oil",[])
+            if oil_work:
+                upstream=collected.get("fresh_pinned_v211_source")
+                if (type(upstream) is dict and upstream.get("status")==
+                        "PINNED_V211_AND_GENERATED_SOURCES_SEALED"):
+                    try:
+                        original_oil=oil_raw_source.from_v275(
+                            pinned_source=upstream,
+                            stage_root=source_compilation["stage_root"],
+                            game_build=collected["expected_game_build"],
+                            simc_revision=source_compilation["simc_revision"],
+                            enchant_ids={r["simc_enchant_id"]
+                                         for r in oil_work})
+                    except (oil_raw_source.OilSourceBlocked,
+                            OSError,ValueError,KeyError,TypeError) as exc:
+                        raise EnvironmentBuildBlocked(
+                            "V216_ORIGINAL_OIL_SOURCE_DRIFT:"
+                            +str(exc).split(":",1)[0]) from exc
+                    source_compilation[
+                        "unbuffed_oil_original_simc_source_unadmitted"]=original_oil
+                    progress[
+                        "unbuffed_oil_original_simc_source_unadmitted"]=original_oil
+                else:
+                    progress["requires"].append(
+                        "SAME_BUILD_PINNED_SIMC_OIL_STATIC_SOURCE_PENDING")
             if auto_select_default_F and selected_budget_items is None:
                 # Select a deterministic top-quality physical F from the
                 # COMPLETE sealed v281 source before opening any v278 case.
@@ -6450,6 +6480,14 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 observations=effect_observations,
                 game_build=collected["expected_game_build"],
                 simc_revision=source_compilation["simc_revision"])
+            unbuffed=source_compilation.get(
+                "unbuffed_oil_original_simc_source_unadmitted")
+            if unbuffed is not None:
+                native_F_O=oil_raw_source.project_source_oils(
+                    source=unbuffed,
+                    worklist=source_compilation[
+                        "automatic_F_O_measurement_candidates_unadmitted"],
+                    native_numeric=native_F_O)
             progress["physical_F_O_native_source_candidates_unadmitted"]=native_F_O
             source_compilation["physical_F_O_native_source_candidates_unadmitted"]=native_F_O
             quality_weapon=_zero_history_quality_weapon_candidate_join(
