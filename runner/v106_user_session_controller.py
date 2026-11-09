@@ -301,7 +301,8 @@ def standard_controls(key=("paladin","retribution")):
 def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
                 independent_334=False,independent_target_level=False,
                 current_season_product=False,source_catalog_path=None,
-                package_manifest_path=None):
+                package_manifest_path=None,
+                 fresh_installed_manifest_sha256=None):
     binary=pathlib.Path(binary).expanduser().resolve()
     need(binary.is_file(),"SIMC_BINARY_NOT_FOUND")
     need(type(revision) is str and re.fullmatch(r"[0-9a-fA-F]{7,40}",revision),
@@ -319,6 +320,11 @@ def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
          "V213_SOURCE_CATALOG_ONLY_CURRENT_SEASON_PRODUCT")
     need(package_manifest_path is None or source_catalog_path is not None,
          "V181_PACKAGE_MANIFEST_WITHOUT_V213_SOURCE")
+    need(fresh_installed_manifest_sha256 is None or (
+          current_season_product and source_catalog_path is not None and
+          type(fresh_installed_manifest_sha256) is str and
+          re.fullmatch(r"[0-9a-f]{64}",fresh_installed_manifest_sha256)),
+          "FRESH_V212_INSTALL_IDENTITY_INVALID")
     need(not current_season_product or (
          not independent_334 and not independent_target_level and
          ordinary_variant is None and
@@ -399,6 +405,9 @@ def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
             source_catalog_path,revision,package_manifest_path)
         if source_identity is not None:
             identity["current_season_source_catalog"]=source_identity
+        if fresh_installed_manifest_sha256 is not None:
+            identity["fresh_v212_installed_manifest_sha256"]=(
+                fresh_installed_manifest_sha256)
     identity["profile_stage"]=profile_stage.session_identity(
         user,independent_334=independent_334,
         independent_target_level=independent_target_level,
@@ -409,27 +418,31 @@ def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
 def session_path(user,root,binary,revision,static_cache=None,*,
                  ordinary_variant=None,independent_334=False,independent_target_level=False,
                  current_season_product=False,source_catalog_path=None,
-                 package_manifest_path=None):
+                 package_manifest_path=None,
+                 fresh_installed_manifest_sha256=None):
     key,identity=session_key(user,binary,revision,static_cache,
                              ordinary_variant=ordinary_variant,
                              independent_334=independent_334,
                              independent_target_level=independent_target_level,
                              current_season_product=current_season_product,
                              source_catalog_path=source_catalog_path,
-                             package_manifest_path=package_manifest_path)
+                             package_manifest_path=package_manifest_path,
+                              fresh_installed_manifest_sha256=fresh_installed_manifest_sha256)
     return pathlib.Path(root).expanduser().resolve()/key,identity
 
 def store_session(user,root,binary,revision,static_cache=None,*,
                   ordinary_variant=None,independent_334=False,independent_target_level=False,
                   current_season_product=False,source_catalog_path=None,
-                  package_manifest_path=None):
+                  package_manifest_path=None,
+                 fresh_installed_manifest_sha256=None):
     folder,identity=session_path(user,root,binary,revision,static_cache,
                                  ordinary_variant=ordinary_variant,
                                  independent_334=independent_334,
                                  independent_target_level=independent_target_level,
                                  current_season_product=current_season_product,
                                  source_catalog_path=source_catalog_path,
-                                 package_manifest_path=package_manifest_path)
+                                 package_manifest_path=package_manifest_path,
+                                  fresh_installed_manifest_sha256=fresh_installed_manifest_sha256)
     folder.mkdir(parents=True,exist_ok=True)
     target=folder/"user.json"
     raw=canonical(user)+"\n"
