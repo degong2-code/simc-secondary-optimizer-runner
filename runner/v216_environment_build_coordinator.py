@@ -214,7 +214,7 @@ def _verified_manifest(path):
 
 def find_verified_installed_season_environment(
         sessions_root, target_ilevel, *, expected_game_build,
-        selected_oil_item_ids_by_hand=None):
+        selected_oil_item_ids_by_hand=None, selected_oil_hands=None):
     """Read-only, exact-build v217/v212 reuse across all 26 DPS profiles.
 
     A matching itemlevel alone is NEVER sufficient; even a fully sealed
@@ -224,6 +224,8 @@ def find_verified_installed_season_environment(
     season folder to avoid scanning every historical patch and its files.
     A missing selection means explicit O=0. Multiple O variants of the
     same season/ilevel must NEVER be interchangeable on a cache hit.
+    Hand-only user input is resolved only if EXACTLY ONE physical oil item
+    map is verified for that hand set, not by whichever file is newest.
     """
     need(type(target_ilevel) is int and 1<=target_ilevel<=1000,
          "V216_REUSE_TARGET_ILEVEL_INVALID")
@@ -237,6 +239,15 @@ def find_verified_installed_season_environment(
          and set(requested_oils)<={"main_hand","off_hand"}
          and all(type(v) is int and v>0 for v in requested_oils.values()),
          "V216_REUSE_EXACT_OIL_HAND_SELECTION_REQUIRED")
+    need(selected_oil_hands is None or
+         (selected_oil_item_ids_by_hand is None and
+          type(selected_oil_hands) is list and
+          len(selected_oil_hands)<=2 and
+          len(set(selected_oil_hands))==len(selected_oil_hands) and
+          set(selected_oil_hands)<={"main_hand","off_hand"}),
+         "V216_REUSE_OIL_HANDS_EXACT_SELECTION_REQUIRED")
+    requested_hands=(set(selected_oil_hands)
+                     if selected_oil_hands is not None else None)
     supplied=pathlib.Path(sessions_root).expanduser()
     need(not supplied.is_symlink(),"V216_REUSE_SESSION_ROOT_SYMLINK")
     workspace=supplied.resolve()/"_fresh_season_sources"
@@ -261,6 +272,7 @@ def find_verified_installed_season_environment(
         except OSError:
             pass
     candidates.sort(key=lambda row:(-row[0],row[2].as_posix()))
+    matched=None
     for _,root,file in candidates[:64]:
         try:
             if file.stat().st_size>MAX_RECEIPT_BYTES:
@@ -277,7 +289,12 @@ def find_verified_installed_season_environment(
             installed_oils=(
                 physical_O.get("selected_oil_item_ids_by_hand")
                 if type(physical_O) is dict else {})
-            if installed_oils!=requested_oils:
+            if (requested_hands is None and
+                    installed_oils!=requested_oils):
+                continue
+            if (requested_hands is not None and
+                    (type(installed_oils) is not dict or
+                     set(installed_oils)!=requested_hands)):
                 continue
             catalog_path=root/"fresh_source"/"v213_candidate_catalog.json"
             if catalog_path.is_symlink() or not catalog_path.is_file():
@@ -321,7 +338,7 @@ def find_verified_installed_season_environment(
                 stage_engine.StageExecutionBlocked,
                 environment_manifest.EnvironmentBlocked):
             continue
-        return {
+        found={
             "schema":"v216_verified_installed_season_reuse_v1",
             "status":"VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED",
             "environment_ready":True,"environment_installed":True,
@@ -332,7 +349,7 @@ def find_verified_installed_season_environment(
             "target_ilevel":target_ilevel,
             "G":doc["official_G"],"J":doc["official_J"],
             "F":doc["official_F"],"O":doc["official_O"],
-            "selected_oil_item_ids_by_hand":dict(requested_oils),
+            "selected_oil_item_ids_by_hand":dict(installed_oils),
             "official_O_physical_source":doc.get("official_O_physical_source"),
             "official_F_physical_source":
                 doc.get("official_F_physical_source"),
@@ -345,7 +362,17 @@ def find_verified_installed_season_environment(
             "network_calls":0,"native_calls":0,"cache_mutations":0,
             "dps_optimization_started":False,
         }
-    return None
+        if requested_hands is None:
+            return found
+        if matched is not None:
+            # Same hand set with two different physical item maps requires
+            # an explicit oil ID choice. Never infer the user-selected oil.
+            need(matched["selected_oil_item_ids_by_hand"]==
+                     found["selected_oil_item_ids_by_hand"],
+                 "V216_REUSE_OIL_HANDS_MULTIPLE_VERIFIED_ITEMS_SELECT_ID")
+        else:
+            matched=found
+    return matched
 
 
 def find_previous_environment(sessions_root, current_folder, scope_sha256):

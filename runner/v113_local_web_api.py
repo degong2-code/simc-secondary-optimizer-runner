@@ -215,7 +215,8 @@ class LocalJobs:
             "source_compilation":{k:compilation[k] for k in names},
             "fresh_one_spec_simc_representative":
                 result.get("fresh_one_spec_simc_representative"),
-            "verified_target_ilevel":doc["target_ilevel"]}
+            "verified_target_ilevel":doc["target_ilevel"],
+            "verified_oil_item_ids_by_hand":dict(installed_oils)}
         return doc["manifest_sha256"]
 
 
@@ -349,8 +350,10 @@ class LocalJobs:
         self._current_fresh_game_build=game_build
         return self._verified_fresh_profile_result
 
-    def load_fresh_profile_for_user(self, target_ilevel, explicit_build=None):
-        """Use a source-authenticated current game build, not latest folder."""
+    def load_fresh_profile_for_user(
+            self, target_ilevel, explicit_build=None,
+            selected_oil_hands=None):
+        """Find the exact verified oil variant, never a newest-file guess."""
         # No installed v113 snapshot means the original packaged/legacy
         # current-season route must remain unchanged. Do not fetch a retail
         # build or automatically collect/Native for each ordinary web plan.
@@ -370,8 +373,21 @@ class LocalJobs:
                     "WEB_FRESH_CURRENT_GAME_BUILD_UNAVAILABLE") from exc
             game_build=observed["game_build"]
             self._current_fresh_game_build=game_build
+        selected_ids=None
+        if selected_oil_hands is not None:
+            # The end-user selects hands; an installed positive-O source
+            # supplies the exact physical IDs. Ambiguous choices require
+            # a separate item selection rather than arbitrary latest-file.
+            selected=environment_build.find_verified_installed_season_environment(
+                self.root,target_ilevel,expected_game_build=game_build,
+                selected_oil_hands=selected_oil_hands)
+            if selected is None:
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_FRESH_SELECTED_OIL_HANDS_NOT_INSTALLED")
+            selected_ids=selected["selected_oil_item_ids_by_hand"]
         restored=self.restore_verified_fresh_profile(
-            target_ilevel=target_ilevel,game_build=game_build)
+            target_ilevel=target_ilevel,game_build=game_build,
+            selected_oil_item_ids_by_hand=selected_ids)
         # When a fresh v113 snapshot exists, do not silently fall back to
         # an old packaged profile for a different current build or target.
         # The no-snapshot legacy path returned early above without network.
@@ -1021,16 +1037,31 @@ class LocalJobs:
             independent_level=(not current_season and user["target"]["ilevel"]!=334 and
                                key in sessions.SUPPORTED)
             fresh=self._verified_fresh_profile_result if current_season else None
+            # The user-facing controls currently select O by hand, not by
+            # arbitrary rating. Resolve that selection against exactly one
+            # verified physical oil map before binding a v212 manifest.
+            # On O=0, keep the prior in-memory fast path when it matches.
+            # The in-memory source identity was verified and retained at
+            # environment installation/restore; avoid per-plan disk reads.
+            remembered_hands=(
+                sorted(fresh.get("verified_oil_item_ids_by_hand",{}))
+                if type(fresh) is dict else [])
             if current_season and (
                 fresh is None or
                 user["target"]["ilevel"]!=fresh["verified_target_ilevel"] or
+                sorted(user["oil_hands"])!=remembered_hands or
+                bool(user["oil_hands"]) or
                 (params.fresh_season_build is not None and
                  params.fresh_season_build!=
                      fresh["source_compilation"]["verified_environment_install"]
                          .get("installed_source_game_build",
                               self._current_fresh_game_build))):
                 fresh=self.load_fresh_profile_for_user(
-                    user["target"]["ilevel"],params.fresh_season_build)
+                    user["target"]["ilevel"],params.fresh_season_build,
+                    selected_oil_hands=user["oil_hands"])
+            if current_season and user["oil_hands"] and fresh is None:
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_FRESH_SELECTED_OIL_HANDS_NOT_INSTALLED")
             source_catalog_path=(pathlib.Path(
                 fresh["source_compilation"]["source_catalog_path"])
                 if fresh is not None else self.source_catalog_path())

@@ -694,6 +694,10 @@ function showSeasonEnvironmentBuild(data) {
         " · F 영약 ItemID "+data.official_F_physical_source.physical_item_id+
         " (원본 SimC Native 확인)":"")+
       " · G="+data.G+" J="+data.J+" F="+data.F+
+      (data.selected_oil_item_ids_by_hand&&
+        Object.keys(data.selected_oil_item_ids_by_hand).length?
+        " · 확인된 기름 "+Object.entries(data.selected_oil_item_ids_by_hand)
+          .map(([hand,id])=>hand+" #"+id).join(", "):"")+
       " / B="+data.B+" T="+data.T+
       " · 신규 수집/Native 0회 · 최신 서버 시즌 재인증 없음"+
       " · SimC DPS 캐시는 사용한 실행 바이너리별 분리";
@@ -712,6 +716,10 @@ function showSeasonEnvironmentBuild(data) {
   node.textContent=(ready?"시즌 환경 설치 완료":"원본 수집·검증 진행 결과 (설치 미완료)")+
     " · 요청 빌드 "+(scope.game_build||"–")+
     (scope.selected_flask_item_id?" · 지정 F ItemID "+scope.selected_flask_item_id:"")+
+    (scope.selected_oil_item_ids_by_hand&&
+      Object.keys(scope.selected_oil_item_ids_by_hand).length?
+      " · 선택 기름 "+Object.entries(scope.selected_oil_item_ids_by_hand)
+        .map(([hand,id])=>hand+" #"+id).join(", "):"")+
     (scope.source_target_socket_count?" · 선언 소켓 "+scope.source_target_socket_count+"개 (SimC 적용 미검증)":"")+
     " · 빌드 "+(scope.game_build||"원본 대기")+
     (scope.game_build_source==="BLIZZARD_PUBLIC_RETAIL_KR"?" (Retail 자동)":"")+
@@ -781,6 +789,27 @@ async function buildSeasonEnvironment() {
     throw Error("영약 ItemID 범위가 올바르지 않습니다.");
   if(selected_flask_item_id!==null&&auto_select_observed_F_no_oil)
     throw Error("정확한 영약 ItemID 선택과 영약 자동 선택은 함께 사용할 수 없습니다.");
+  // The advanced oil controls select physical item identities only. Their
+  // static CHMV values, spell syntax, quality and eligibility are *never*
+  // supplied by the browser; existing season source owners determine them.
+  const selected_oil_item_ids_by_hand={};
+  for(const [hand,node] of [["main_hand","season-oil-main-id"],
+                           ["off_hand","season-oil-off-id"]]) {
+    const value=field(node);
+    if(value&&!/^[1-9][0-9]*$/.test(value))
+      throw Error("선택한 기름 ItemID는 양의 정수여야 합니다.");
+    if(value){
+      const physical=Number(value);
+      if(!Number.isSafeInteger(physical)||physical>999999999)
+        throw Error("선택한 기름 ItemID 범위가 올바르지 않습니다.");
+      selected_oil_item_ids_by_hand[hand]=physical;
+    }
+  }
+  const oilHands=Object.keys(selected_oil_item_ids_by_hand);
+  if(oilHands.length&&selected_flask_item_id===null)
+    throw Error("기름을 선택한 시즌 환경은 정확한 영약 ItemID도 지정해야 합니다.");
+  if(oilHands.length&&auto_select_observed_F_no_oil)
+    throw Error("기름 선택과 기름 미사용 영약 자동 선택은 함께 실행할 수 없습니다.");
   const existingSpecial=field("season-existing-special-gem-id");
   if(existingSpecial&&!/^[1-9][0-9]*$/.test(existingSpecial))
     throw Error("기존 특수보석 ItemID는 양의 정수여야 합니다.");
@@ -799,12 +828,13 @@ async function buildSeasonEnvironment() {
     existing_special_gem_id===null?null:requested_sockets;
   if(auto_select_observed_F_no_oil&&(!auto_native_F_requested||auto_native_O_requested))
     throw Error("영약 자동 선택은 F Native 측정을 켜고 기름 O 측정을 끈 상태에서만 사용할 수 있습니다.");
-  // O source inspection reuses the pinned season source, NOT the old
-  // talent-buffed SimC Native. Only G/F require a local executable.
-  const native_F_O_requested=auto_native_F_requested;
-  const executable=(nativeRequested||auto_native_F_requested)?field("binary"):null;
-  if((nativeRequested||auto_native_F_requested)&&!executable)
-    throw Error("G/F Native 측정을 선택한 경우 SimC 실행 파일 경로가 필요합니다.");
+  // A selected, scaled oil uses only the existing SimC precombat gear
+  // runner/cache. Unselected oil candidates remain pinned-source-only.
+  const selectedOilNative=oilHands.length>0&&auto_native_O_requested;
+  const native_F_O_requested=auto_native_F_requested||selectedOilNative;
+  const executable=(nativeRequested||native_F_O_requested)?field("binary"):null;
+  if((nativeRequested||native_F_O_requested)&&!executable)
+    throw Error("G/F 또는 선택된 기름의 정적 SimC 측정에는 실행 파일 경로가 필요합니다.");
   // G is truly optional even if F/O uses the same executable.
   const native_G_binary=nativeRequested?executable:null;
   const consumable_native_binary=native_F_O_requested?executable:null;
@@ -821,7 +851,9 @@ async function buildSeasonEnvironment() {
          " 기본 영약 F 후보 1종만 신규 SimC Native 최대 2회 측정합니다. 기존 캐시를 재사용하며 공식 F 등록은 별도입니다.":
          " 영약 F 후보만 최대 8회 신규 Native로 관측할 수 있습니다. 기름은 Native를 실행하지 않습니다."):"")+
       (auto_native_O_requested?
-       " 기름 O는 검증된 시즌 SimC 정적 마부 원본만 확인합니다(신규 Native 0회). 스케일링 미확정이면 보류됩니다.":"")))
+       (selectedOilNative?
+        " 선택한 기름의 스케일링 값은 기존 실행 캐시를 먼저 재사용하고, 필요한 손에만 SimC 측정을 수행합니다.":
+        " 선택한 기름이 없으므로 SimC 원본 확인만 수행하며 O Native는 실행하지 않습니다."):"")))
     return;
   $("season-build-stage").textContent="기존 설치 영수증 확인 · 필요 시 동일 환경 엔진으로 원본 수집·검증 중…";
   try {
@@ -831,6 +863,7 @@ async function buildSeasonEnvironment() {
                               auto_native_F_requested,auto_native_O_requested,
                               auto_select_observed_F_no_oil,
                               selected_flask_item_id,
+                              selected_oil_item_ids_by_hand,
                               existing_special_gem_id,source_target_socket_count,
                               refresh_reason,
                               simc_revision_hint:revision||null}});
