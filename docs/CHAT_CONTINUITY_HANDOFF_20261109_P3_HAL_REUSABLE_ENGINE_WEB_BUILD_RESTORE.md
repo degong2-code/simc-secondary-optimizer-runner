@@ -47,6 +47,8 @@ P3-HAK `v096` legacy `v216/v223` source revision vs 실제 실행 SimC revision 
 
 **효율 대안:** 현 P1 장애 해결에 새 v216 Build/웹 실행기/옵션 DB를 개발하는 것은 중복. 기존 `v098`의 fresh-installed 허용 경로를 `v113` 소유의 session·문서 아답터로 연결하고 v106 단일 잠금/기존 v291 캐시 그대로 활용. 어떤 변경도 Native 횟수·중복 호출·메모리·I/O·시간/구조 단순화를 검토.
 
+**P3-HAL 문서 통합 실제 검증:** [Actions #42538187430](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42538187430) **SUCCESS / DEV_LEDGER_PASS / 487 tests=485 PASS+2 SKIP/0 FAIL / 신규 Native0·네트워크0**. 이 범위는 인계 문서·정적/오프라인 회귀 확인이며 웹 Native E2E 성공·Project UI 반영을 뜻하지 않는다.
+
 ## 6. 작업·기록·권한·인계 지속성
 
 - 매 작업 **INDEX 기능 A~G 및 개발 로그/코드/원본/실 Actions/Native 영수증을 먼저 조회**. `REUSE`, `CONNECT`, `EXTEND`, `NEW`, `STOP` 판정. 독립 작업을 묶어 처리하고 **동일한 테스트/Native 완료 판정·이미 확보한 영수증 재사용**. 변경하지 않은 부분을 재실행하지 않는다. 결과는 `IMPLEMENTED / OFFLINE_PASS / REAL_NATIVE_PASS / HISTORICAL_REUSED / BLOCKED / NOT_TESTED`로 분리.
