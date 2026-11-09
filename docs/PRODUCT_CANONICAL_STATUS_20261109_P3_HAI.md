@@ -1,3 +1,5 @@
+> **2026-11-10 P1 수정 완료 — 설치 예산과 보석 SimC 프로필 정체성 분리:** [수정 근거·정확 회귀 증거](development/notes/2026-11-10_p1-gem-variant-install-reuse-identity.md). 원래 검증 설치된 v212 G/J/F/O *예산* 캐시는 그대로 보존한다. v113에 검증·저장된 프로필이 있는 경우 **요청 보석 4종/소켓 배치와 기존 보석 변형을 확인**한 뒤에만 사용자 SimC 프로필까지 READY 재사용하고, 불일치 시 원래 v216 경로에서 정확 설치를 찾는다. 다양한 동일 빌드·ilvl 설치본은 원래 v212 SHA로 확인해 혼동 방지. **기존 프로필이 없는 설치는 예산 READY/Native0 가능하지만 사용자 프로필 READY가 아니다.** code HEAD fe73eed, focused [#42661091632](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42661091632) 524 PASS/2 SKIP, Web [#42661091545](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42661091545) Linux/Windows 각263 PASS. 신규 Native0, 첫 신규 시즌 전체 환경 GJFO→원본 Policy A→실 사용자 DPS Native는 여전히 미실증. 아래 기존 큰 틀 환경 기능 **구현 완료**, 같은 단절 재개발 금지.
+
 # 최신 단일 판정 보충 — 2026-11-10 · 구현·실증·결함·검증 공백 분리
 
 > **우선권:** 2026-11-10 사용자 직접 결정 및 본 최신 보충 → 아래 A~G 역사 판정(작성 시점) → 일자별 개발 기록. 이 문서는 **개발 의사결정 정리**이지 설계 v1.4.3 개정, 새 코드 구현, 새 Native 영수증, Project Sources 등록 또는 공식 제품 승격이 아니다. 최신 HEAD는 매번 독립 조회한다. 본 보충 직전 격리 HEAD `17d9fce13bee26117b5d860c9b85dad7008c5603`, main `07133e0aaf738d6e4816a6486057b1cd49c018de`.
