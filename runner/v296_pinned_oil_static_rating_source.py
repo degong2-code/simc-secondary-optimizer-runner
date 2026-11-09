@@ -71,13 +71,14 @@ def extract(*,generated_text,game_build,simc_revision,enchant_ids,
                 row["ench_type"],row["ench_amount"],
                 row["ench_prop"],row["ench_coeff"]):
             if typ==0:continue
-            if (typ!=KIND or property_id not in MAPPING or\n                    amount<0 or coeff<0 or (amount==0 and coeff==0)):
+            if (typ!=KIND or property_id not in MAPPING or
+                    amount<0 or coeff<0 or (amount==0 and coeff==0)):
                 exact=False
                 reasons.append("NOT_A_PURE_STATIC_CHMV_COMPONENT")
                 continue
             known_stat_count+=1
             stat=MAPPING[property_id]
-            if row["id_scaling"]!=0 or coeff!=0:
+            if row["id_scaling"] not in (0,-1):
                 # v296 must never approximate the SimC-owned negative
                 # spell-scaling ID/coefficient, even when a tooltip says 16.
                 exact=False
