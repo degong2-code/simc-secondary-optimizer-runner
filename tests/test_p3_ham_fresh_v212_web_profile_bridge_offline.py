@@ -1,0 +1,139 @@
+"""P3-HAM: fresh v212-installed source reaches web user planning without Native."""
+import hashlib
+import json
+import pathlib
+import sys
+import tempfile
+import unittest
+from unittest import mock
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]/"runner"))
+import v113_local_web_api as web
+
+
+class VerifiedFreshWebProfileBridge(unittest.TestCase):
+    def setUp(self):
+        self.tmp=tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.root=pathlib.Path(self.tmp.name)/"runs"
+        self.root.mkdir()
+        self.jobs=web.LocalJobs(self.root)
+        self.build="12.1.5.70783"
+        self.digest="a"*64
+        self.catalog_digest="b"*64
+        fresh=self.root/"_fresh_season_sources"/("wago_"+self.build)/"fresh_source"
+        fresh.mkdir(parents=True)
+        self.catalog=fresh/"v213_candidate_catalog.json"
+        self.catalog.write_text(json.dumps(
+            {"game_build":self.build,"manifest_sha256":self.catalog_digest}))
+        raw_digest=hashlib.sha256(self.catalog.read_bytes()).hexdigest()
+        self.installed=fresh/("v212_installed_"+self.digest[:20]+".json")
+        self.installed_doc={
+            "manifest_sha256":self.digest,"game_build":self.build,
+            "target_ilevel":334,
+            "source_catalog_artifact_sha256":raw_digest,
+            "source_catalog_manifest_sha256":self.catalog_digest}
+        self.installed.write_text(json.dumps(self.installed_doc))
+        self.original={
+            "normal_build_entry":True,
+            "zero_history_build":{"environment_ready":True},
+            "source_compilation":{
+                "status":"FRESH_V191_V211_V213_COMPILED_UNADMITTED",
+                "source_catalog_path":str(self.catalog),
+                "stage_root":str(fresh.parent),
+                "simc_revision":"abcdef0",
+                "v191_original_gear_tier_source_paths":{},
+                "v098_source_only_profile_inputs_unadmitted":{},
+                "physical_gem_layout_unadmitted":{},
+                "physical_gem_J_arithmetic_unadmitted":{},
+                "selected_v221_gem_item_relation_unadmitted":{},
+                "preflight_sha256":self.catalog_digest,
+                "verified_environment_install":{
+                    "stage_output_path":str(self.installed),
+                    "manifest_sha256":self.digest,"target_ilevel":334,
+                    "official_T":3107,"environment_ready":True}},
+            "fresh_one_spec_simc_representative":{"candidate_path":"probe"}}
+
+    def remember(self):
+        with (
+            mock.patch.object(web.environment_manifest,
+                              "verify_fresh_installed_environment"),
+            mock.patch.object(
+                web.environment_build,
+                "find_verified_installed_season_environment",
+                return_value={"installed_manifest_sha256":self.digest})
+        ):
+            return self.jobs.remember_verified_fresh_environment(self.original)
+
+    def test_only_original_verified_v212_receipt_is_accepted(self):
+        self.assertEqual(self.remember(),self.digest)
+        result=self.jobs._verified_fresh_profile_result
+        self.assertEqual(result["source_compilation"][
+            "verified_environment_install"]["manifest_sha256"],self.digest)
+        self.assertTrue(result["normal_build_entry"])
+        with (
+            mock.patch.object(web.environment_manifest,
+                              "verify_fresh_installed_environment"),
+            mock.patch.object(
+                web.environment_build,
+                "find_verified_installed_season_environment",
+                return_value={"installed_manifest_sha256":"e"*64})
+        ):
+            with self.assertRaises(web.environment_manifest.EnvironmentBlocked):
+                self.jobs.remember_verified_fresh_environment(self.original)
+
+    def test_fresh_plan_uses_verified_profile_owner_not_legacy_v216(self):
+        self.remember()
+        source=self.jobs._verified_fresh_profile_result
+        binfile=self.root/"simc.exe"
+        binfile.write_bytes(b"fake executable never executed")
+        controls=web.sessions.standard_controls()
+        params=web.UserRequest(controls=controls,binary=str(binfile),
+                               revision="abcdef0",current_season_product=True)
+        folder=self.root/("a"*20)
+        folder.mkdir()
+        user_result={"plan":{"class":"paladin","spec":"retribution",
+                             "base_B":3107,"fixed_O":{},
+                             "final_T":3107,"native_limit":6}}
+        with (
+            mock.patch.object(web.sessions,"store_session",return_value=folder)
+                as store,
+            mock.patch.object(web.profile_stage,"build_or_reuse",
+                              return_value=(user_result,{})) as stage,
+            mock.patch.object(self.jobs,"_fresh_environment_summary",
+                              return_value={"status":"READY"}) as summary
+        ):
+            response=self.jobs.plan(params)
+        self.assertEqual(response["status"],"READY_ZERO_NATIVE")
+        self.assertEqual(response["native_calls"],0)
+        self.assertEqual(store.call_args.kwargs[
+            "fresh_installed_manifest_sha256"],self.digest)
+        self.assertEqual(store.call_args.kwargs[
+            "source_catalog_path"],self.catalog)
+        self.assertIs(stage.call_args.kwargs[
+            "verified_fresh_environment_result"],source)
+        summary.assert_called_once()
+        self.assertEqual(response["environment_manifest"]["status"],"READY")
+
+    def test_start_resume_uses_original_v217_installed_manifest_sha(self):
+        folder=self.root/("f"*20)
+        folder.mkdir()
+        (folder/"V106_SESSION_IDENTITY.json").write_text(json.dumps(
+            {"fresh_v212_installed_manifest_sha256":self.digest}))
+        summary={"fresh_v212_installed_manifest_sha256":self.digest,
+                 "target_ilevel":334,"game_build":self.build}
+        with mock.patch.object(web.environment_build,
+            "find_verified_installed_season_environment",
+            return_value={"installed_manifest_sha256":self.digest}):
+            self.jobs._verify_environment_dependencies(summary,folder)
+        (folder/"V106_SESSION_IDENTITY.json").write_text(json.dumps(
+            {"fresh_v212_installed_manifest_sha256":"f"*64}))
+        with mock.patch.object(web.environment_build,
+            "find_verified_installed_season_environment",
+            return_value={"installed_manifest_sha256":self.digest}):
+            with self.assertRaises(web.environment_manifest.EnvironmentBlocked):
+                self.jobs._verify_environment_dependencies(summary,folder)
+
+
+if __name__=="__main__":
+    unittest.main()
