@@ -232,6 +232,26 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
             # its previous source-backed browser path (no new Native).
 
 
+    def test_existing_fresh_snapshot_cannot_fall_back_to_wrong_target(self):
+        with (
+            mock.patch.object(web.environment_manifest,
+                              "verify_fresh_installed_environment"),
+            mock.patch.object(web.environment_build,
+                "find_verified_installed_season_environment",
+                return_value={"installed_manifest_sha256":self.digest})
+        ):
+            self.jobs.remember_verified_fresh_environment(self.original)
+            self.jobs.persist_verified_fresh_profile()
+        restarted=web.LocalJobs(self.root)
+        with mock.patch.object(web.environment_build,
+            "find_verified_installed_season_environment",return_value=None):
+            with self.assertRaisesRegex(
+                    web.environment_manifest.EnvironmentBlocked,
+                    "WEB_FRESH_TARGET_BUILD_NOT_INSTALLED_RUN_SEASON_BUILD"):
+                restarted.load_fresh_profile_for_user(
+                    335,explicit_build=self.build)
+
+
 class SeasonNoOilBrowserDefaults(unittest.TestCase):
     def test_zero_o_baseline_does_not_auto_select_legacy_main_hand(self):
         from fastapi.testclient import TestClient
