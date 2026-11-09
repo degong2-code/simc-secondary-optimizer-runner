@@ -1,3 +1,5 @@
+> **2026-11-10 P1 최초 Build 일반보석 4종 엔진 연결 (격리):** [기능별 코드·증거·남은 전주기](development/notes/2026-11-10_p1-ordinary-only-default-engine-bridge.md). 새 시즌 사용자 기본 설정은 일반보석 4종 각1개, 명시 특수보석은 optional. 기존 v271 물리 소켓 배치→v216 정확 동일 시즌 v221/v266/v230 원본→v222 J→v098 프로필에 전달. 기존 70783 Native/예산/캐시·95%를 새로운 시즌 증명으로 과장하지 않음. 첫 시즌 G/J/F/O 전주기 원본 자동 설치 및 실제 웹 Native는 신규 HEAD에서 **미실증**. main/Project UI/기존 주 제품 개발 채팅 소유권 불변.
+
 > **2026-11-10 P1 단일 최초 Build의 기존 G/F 연결 (격리):** [엔진 연결·미검증 범위](development/notes/2026-11-10_p1-auto-first-build-core-connection.md). 일반 사용자 Build에서 동일 v212 설치는 Native0 재사용, 캐시 미스일 때만 기존 G 최대1/F 대표 최고 소스 품질 후보 paired 최대2 요청. J 실제 배치·정식 최고품질/정책 A 및 신규 시즌 실제 전체 READY/E2E는 **미완료**. CI 결과는 신규 HEAD별 독립 확인; main/Project UI/주 제품 채팅 소유권 유지.
 
 > **2026-11-10 P1 최초 시즌 일반보석 4종 소스 연결 (격리, 실 Native0):** [범위·남은 J 배치/승인](development/notes/2026-11-10_p1-cold-start-four-stat-source-default.md). 일반 `v113` Build가 특수보석 ID 없이도 기존 `v216` 네 종류 일반보석의 시즌 원본 수집을 요청. **원본 수집 요청 ≠ J 배치/정식 승인 ≠ 신규 시즌 READY**. 이전 설치된 v212/기름·영약·실 DPS는 기존 근거 재사용; 새 HEAD 오프라인 CI 결과 확인 전 PASS 주장 금지. `main`·Project UI·주 개발 소유권 유지.

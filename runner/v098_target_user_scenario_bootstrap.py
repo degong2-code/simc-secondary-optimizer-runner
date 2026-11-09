@@ -1361,11 +1361,15 @@ def _season_settings_from_v216(*, compilation, numeric_inputs,
                     "settings":None}
     # v271/v139 already support variable N and a non-head special slot.
     # Unsupported source IDs remain pending rather than being invented.
+    with_special=special is not None
     if (type(counts) is not dict or type(ordinary) is not list or
-        type(special) is not int or special<=0 or
-        type(where) is not str or counts.get(where,0)<1 or
-        sum(counts.values())!=len(ordinary)+1 or
-        not 1<=sum(counts.values())<=64):
+        (with_special and
+         (type(special) is not int or special<=0 or
+          type(where) is not str or counts.get(where,0)<1)) or
+        (not with_special and (where is not None or
+                               len(set(ordinary[:4]))!=4)) or
+        sum(counts.values())!=len(ordinary)+int(with_special) or
+        not (5 if with_special else 4)<=sum(counts.values())<=64):
         return {"status":"SEASON_SETTINGS_SOURCE_PENDING",
                 "missing":["V271_PHYSICAL_SOCKET_PLAN_SOURCE_PENDING"],
                 "settings":None}
@@ -1382,9 +1386,10 @@ def _season_settings_from_v216(*, compilation, numeric_inputs,
     source_gems={}
     consumed=iter(ordinary)
     for slot in sorted(counts):
-        item_ids=[special] if slot==where else []
+        item_ids=[special] if with_special and slot==where else []
         item_ids.extend(next(consumed) for _ in
-                        range(counts[slot]-(1 if slot==where else 0)))
+                        range(counts[slot]-
+                              (1 if with_special and slot==where else 0)))
         if item_ids:
             source_gems[slot]="/".join(map(str,item_ids))
     flask=numeric_inputs["flask"]

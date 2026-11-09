@@ -1,3 +1,5 @@
+> **2026-11-10 P1 일반보석 4종 기본(특수보석 선택형) 시즌 공통 엔진:** [범위·이전 영수증 재사용·미실증](notes/2026-11-10_p1-ordinary-only-default-engine-bridge.md). `v271/v216/v222/v098` 같은 시즌 원본·물리 보석 J·소켓·사용자 SimC 프로필 체인을 확장해 특수보석 ID 없이 일반보석 치명/가속/특화/유연 각 1개를 기본 배치. 기존 명시 특수보석 경로의 역사 SHA 보호, 별도 효과 Native/Gate 및 새 DB 없음. 새 시즌 전체 READY/실 Native 미실증 여부는 CI와 분리; main/공식 승격/Project UI 불변.
+
 > **2026-11-10 P1 일반 사용자 최초 시즌 Build → 기존 G/F bounded 측정 자동 연결:** [구현·증거](notes/2026-11-10_p1-auto-first-build-core-connection.md). G/F 수집기 신규 제작 없이 v113에서 기존 v216 사용, 동일 시즌 v212 READY 우선 Native0 재사용. 최고품질 F 후보 한 종류만 측정, 실제 J 배치/증명·전문 26 사용자 Native·새 시즌 전주기 READY는 별개. main/승격 불변.
 
 > **2026-11-10 P1 최초 시즌 기본 Build의 일반보석 4종 원본 수집 연결:** [결정·구현·검증 범위](notes/2026-11-10_p1-cold-start-four-stat-source-default.md). 기존 `v216` 시즌별 원본 수집 경로를 `v113` 일반 Build에서도 특수보석 ID 없이 요청하도록 연결(`CONNECT`); `v221/v266/v230`의 승인 경계 유지. `J` 실제 배치·인증, 신규 시즌 READY, 26 DPS 웹 E2E는 별개. 실 Native 0회. 커밋 SHA별 신규 CI 결과는 작업 후속 대조; 기존 영수증을 새 기능 PASS로 재사용하지 않는다.

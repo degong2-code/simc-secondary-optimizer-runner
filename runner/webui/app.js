@@ -962,12 +962,10 @@ async function buildSeasonEnvironment() {
     throw Error("특수보석 ItemID 범위가 올바르지 않습니다.");
   const requested_sockets=valueInt("season-target-socket-count");
   if(!Number.isSafeInteger(requested_sockets)||
-     requested_sockets<5||requested_sockets>64)
-    throw Error("선언 소켓 수는 5~64 범위의 정수여야 합니다.");
-  if(existing_special_gem_id===null&&requested_sockets!==5)
-    throw Error("5개가 아닌 선언 소켓 수를 지정하려면 기존 특수보석 ItemID가 필요합니다.");
-  const source_target_socket_count=
-    existing_special_gem_id===null?null:requested_sockets;
+     requested_sockets<(existing_special_gem_id===null?4:5)||
+     requested_sockets>64)
+    throw Error("일반보석은 4개 이상, 선택 특수보석까지 넣는 경우 5개 이상이 필요합니다.");
+  const source_target_socket_count=requested_sockets;
   if(auto_select_observed_F_no_oil&&(!auto_native_F_requested||auto_native_O_requested))
     throw Error("영약 자동 선택은 F Native 측정을 켜고 기름 O 측정을 끈 상태에서만 사용할 수 있습니다.");
   // A selected, scaled oil uses only the existing SimC precombat gear

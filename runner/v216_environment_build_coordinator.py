@@ -1320,7 +1320,8 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
             "special_gem_source_property_unadmitted":(
                 next(row for row in source_properties
                      if row["item_id"]==gem_layout_receipt["special_gem_id"])
-                if source_properties is not None else None),
+                if source_properties is not None and
+                   gem_layout_receipt["special_gem_id"] is not None else None),
             "special_gem_item_id":gem_layout_receipt["special_gem_id"],
             "v221_stage_receipt_sha256":
                 gem_source["source_stage"]["receipt_sha256"],
@@ -3957,8 +3958,8 @@ def _zero_history_auto_v222_numeric_preview(*, preflight, native_numeric,
         preflight=preflight,target_ilevel=target_ilevel)
     j = preflight.get("physical_gem_J_arithmetic_unadmitted")
     # Policy: J is the ordinary-gem NOMINAL secondary-rating budget.
-    # Exactly one special gem remains equipped for SimC effect mechanics.
-    # Its optional raw-static observation is NOT an extra J component or
+    # No special is needed for the four ordinary gem default.
+    # An optional special's raw-static observation is NOT an extra J component or
     # a reason to block J arithmetic. Native candidate reconciliation still
     # owns the final 4-stat vector; do not reimplement the special effect.
     out["J_accounting_policy"]="ORDINARY_GEM_NOMINAL_SECONDARY_SUM_ONLY"
@@ -4634,8 +4635,9 @@ def _fresh_default_intrinsic_gem_layout_from_source(*, collected,
     stage=source.get("source_stage") or {}
     need(type(selected_roles) is dict and set(selected_roles)=={
         "special_gem_id","ordinary_gem_ids"} and
-         type(selected_roles["special_gem_id"]) is int and
-         selected_roles["special_gem_id"]>0 and
+         (selected_roles["special_gem_id"] is None or
+          (type(selected_roles["special_gem_id"]) is int and
+           selected_roles["special_gem_id"]>0)) and
          type(selected_roles["ordinary_gem_ids"]) is list and
          source.get("status")==
              "FRESH_ONE_SPEC_SIMC_G_SOURCE_CANDIDATE_PENDING_NATIVE"
@@ -4690,7 +4692,8 @@ def _fresh_default_intrinsic_gem_layout_from_source(*, collected,
     if simc_declared_socket_counts is not None:
         need(type(proposed) is dict and set(proposed)==set(ids) and
              all(type(n) is int and 0<=n<=3 for n in proposed.values()) and
-             sum(proposed.values())>=5,
+             sum(proposed.values())>=(
+                 4 if special is None else 5),
              "V216_SIMC_DECLARED_FULL_SOCKET_PLAN_INVALID")
     if candidate_socket_counts is not None:
         # Never mutate the original v232 source: these are only prospective
@@ -4707,7 +4710,8 @@ def _fresh_default_intrinsic_gem_layout_from_source(*, collected,
     plan=physical_gems.intrinsic_source_plan(
         intrinsic_socket_counts=proposed,
         special_gem_id=special,ordinary_gem_ids=selected,
-        source_observed_gem_item_ids=sorted(set(selected)|{special}),
+        source_observed_gem_item_ids=sorted(
+            set(selected)|({special} if special is not None else set())),
         need=need)
     rows={slot:{"slot":slot,"item_id":ids[slot],
                 "ilevel":target_ilevel,"options":{}}
@@ -4717,7 +4721,8 @@ def _fresh_default_intrinsic_gem_layout_from_source(*, collected,
     # NOT the smaller original intrinsic counts. The downstream source owner
     # independently compares to original v232 and flags bonus-slot proof.
     need(layout["socket_total"]==sum(proposed.values()) and
-         layout["ordinary_count"]==sum(proposed.values())-1 and
+         layout["ordinary_count"]==sum(proposed.values())-int(
+             special is not None) and
          layout["special_gem_id"]==special and
          layout["environment_ready"] is False,
          "V216_DEFAULT_GEM_V271_INTRINSIC_LAYOUT_DRIFT")
@@ -4739,9 +4744,12 @@ def _fresh_selected_J_intrinsic_socket_source(*, collected, preflight,
          and type(layout.get("ordinary_gem_ids")) is list
          and type(layout.get("socket_counts")) is dict
          and layout.get("ordinary_count")==len(layout["ordinary_gem_ids"])
-         and layout.get("socket_total")==len(layout["ordinary_gem_ids"])+1
+         and layout.get("socket_total")==len(layout["ordinary_gem_ids"])+int(
+             layout.get("special_gem_id") is not None)
          and sum(layout["socket_counts"].values())==layout["socket_total"]
-         and layout["socket_counts"].get(layout["special_slot"],0)>0,
+         and (layout.get("special_gem_id") is None and
+              layout.get("special_slot") is None or
+              layout["socket_counts"].get(layout["special_slot"],0)>0),
          "V216_J_ORIGINAL_V271_LAYOUT_REQUIRED")
     out={"schema":"v216_selected_J_intrinsic_source_v1",
          "status":"J_V232_INTRINSIC_SOURCE_PENDING",
@@ -4816,7 +4824,8 @@ def _fresh_source_owner_packaged_nominal_J(*, preflight, layout, link, j):
     need(j.get("nominal_source_sha256")==stored["source_sha256"] and
          j.get("nominal_source_game_build")==build and
          type(layout.get("ordinary_gem_ids")) is list and
-         type(layout.get("special_gem_id")) is int,
+         (layout.get("special_gem_id") is None or
+          type(layout.get("special_gem_id")) is int),
          "V216_NOMINAL_J_PACKAGED_SOURCE_SHA_OR_BUILD_DRIFT")
     matched=physical_gems.nominal_four_stat_from_season_source(
         source=stored,game_build=build,
@@ -4824,7 +4833,7 @@ def _fresh_source_owner_packaged_nominal_J(*, preflight, layout, link, j):
         special_gem_id=layout["special_gem_id"],need=need)
     ids=layout["ordinary_gem_ids"]
     special=layout["special_gem_id"]
-    needs=set(ids+[special])
+    needs=set(ids+([special] if special is not None else []))
     need(ids==matched["ordinary_gem_ids"] and
          j.get("J_candidate_unadmitted")==matched["J_candidate_unadmitted"]
          and j.get("physical_gem_item_ids")==ids and
@@ -4903,7 +4912,8 @@ def _fresh_source_owner_selected_J_F_numeric(*, preflight, compilation,
         special=layout.get("special_gem_id")
         need(type(ids) is list and bool(ids) and len(ids)<=64
              and all(type(x) is int and x>0 for x in ids)
-             and type(special) is int and special>0 and special not in ids
+             and (special is None or
+                  type(special) is int and special>0 and special not in ids)
              and j.get("physical_gem_item_ids")==ids
              and j.get("status")=="PHYSICAL_GEM_J_ARITHMETIC_UNADMITTED"
              and j.get("J_accounting_policy")==
@@ -4915,7 +4925,8 @@ def _fresh_source_owner_selected_J_F_numeric(*, preflight, compilation,
                  j.get("J_candidate_unadmitted")
              and link.get("same_build_gem_item_join_only") is True
              and link.get("special_gem_item_id")==special
-             and link.get("selected_item_ids")==sorted(set(ids+[special]))
+             and link.get("selected_item_ids")==sorted(set(
+                 ids+([special] if special is not None else [])))
              and type(link.get("enchant_source_sha256")) is str
              and season_budget_contract.SHA.fullmatch(
                  link["enchant_source_sha256"]) is not None
@@ -5799,7 +5810,7 @@ def _fresh_original_default_base_install_inputs(*, preflight, staged,
          "V216_DEFAULT_BASE_G_TARGET_ILEVEL_DRIFT")
     # v233's base has no selected enchant or optional SPECIAL EQUIPMENT.
     # Therefore fixed L/E=0 applies only to this season-wide baseline.
-    # Exactly one SPECIAL GEM is still mandatory, only excluded from J.
+    # An optional existing special remains excluded from J.
     zero={k:0 for k in season_budget_contract.STATS}
     selected_oils=selected_budget_items["oil_item_ids_by_hand"]
     selected_O=(dict(original_O) if selected_oils else
@@ -6149,15 +6160,20 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
              (type(source_selected_gem_roles) is dict and
               set(source_selected_gem_roles)=={
                   "special_gem_id","ordinary_gem_ids"} and
-              type(source_selected_gem_roles["special_gem_id"]) is int and
-              source_selected_gem_roles["special_gem_id"]>0 and
+              (source_selected_gem_roles["special_gem_id"] is None or
+               (type(source_selected_gem_roles["special_gem_id"]) is int and
+                source_selected_gem_roles["special_gem_id"]>0)) and
               (source_selected_gem_roles["ordinary_gem_ids"] is None or
                type(source_selected_gem_roles["ordinary_gem_ids"]) is list)
               and user is None and zero_history_gem_layout is None),
              "V216_DEFAULT_GEM_INTERNAL_ROLE_SELECTION_SCOPE_REQUIRED")
+        default_sockets=(4 if source_selected_gem_roles is not None and
+                         source_selected_gem_roles["special_gem_id"] is None
+                         else 5)
         target_sockets=fresh_collection_inputs.get(
-            "source_target_socket_count",5)
-        need(type(target_sockets) is int and 5<=target_sockets<=64 and
+            "source_target_socket_count",default_sockets)
+        need(type(target_sockets) is int and
+             default_sockets<=target_sockets<=64 and
              (source_selected_gem_roles is not None or
               "source_target_socket_count" not in fresh_collection_inputs),
              "V216_DECLARED_FULL_SOCKET_COUNT_REQUIRED")
@@ -6353,8 +6369,10 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         stage_root=source_compilation["stage_root"],
                         v221_candidate_path=src["candidate_path"],
                         build=collected["expected_game_build"],
-                        selected_source_gem_item_ids=[
-                            source_selected_gem_roles["special_gem_id"]],
+                        selected_source_gem_item_ids=(
+                            [source_selected_gem_roles["special_gem_id"]]
+                            if source_selected_gem_roles["special_gem_id"]
+                               is not None else None),
                         excluded_ordinary_item_id=
                             source_selected_gem_roles["special_gem_id"])
                     j_owner_diagnostic=(
@@ -6388,7 +6406,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                                 dict(declared_counts))
                     ordinary=None
                     if declared_counts is not None and (
-                            observed.get(
+                            source_selected_gem_roles["special_gem_id"] is None
+                            or observed.get(
                                 "selected_gem_v221_same_build_items_all_present")
                             is True):
                         if nominal_four_stat_source is not None:

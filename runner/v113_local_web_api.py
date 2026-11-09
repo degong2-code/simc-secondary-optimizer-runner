@@ -81,7 +81,7 @@ class SeasonEnvironmentBuildRequest(BaseModel):
     # Optional existing selection; never identify or measure the special effect.
     existing_special_gem_id: int | None = Field(default=None,ge=1,le=999999999)
     # Declared final gem sockets; the v216 source must still validate gem IDs.
-    source_target_socket_count: int | None = Field(default=None,ge=5,le=64)
+    source_target_socket_count: int | None = Field(default=None,ge=4,le=64)
     simc_revision_hint: str | None = Field(
         default=None,pattern=r"^(?:[a-f0-9]{7,12}|[a-f0-9]{40})$")
     refresh_reason: str | None = Field(
@@ -531,12 +531,9 @@ class LocalJobs:
             raise environment_manifest.EnvironmentBlocked(
                 "SEASON_REFRESH_REASON_INVALID")
         if (source_target_socket_count is not None and
-                existing_special_gem_id is None):
-            raise environment_manifest.EnvironmentBlocked(
-                "SEASON_DECLARED_SOCKETS_REQUIRE_EXISTING_SPECIAL_GEM")
-        if (source_target_socket_count is not None and
                 (type(source_target_socket_count) is not int or
-                 not 5<=source_target_socket_count<=64)):
+                 not (5 if existing_special_gem_id is not None else 4)
+                     <=source_target_socket_count<=64)):
             raise environment_manifest.EnvironmentBlocked(
                 "SEASON_DECLARED_SOCKET_COUNT_INVALID")
         # Resolve the requested build BEFORE any installed source reuse.
@@ -625,8 +622,7 @@ class LocalJobs:
             # probes. Missing exact-build data stays PENDING in original v216.
             nominal_source=(
                 physical_gems.load_packaged_season_nominal_source(
-                    game_build=game_build,need=environment_build.need)
-                if existing_special_gem_id is not None else None)
+                    game_build=game_build,need=environment_build.need))
             observed=environment_build.build_environment(
                 sessions_root=self.root,session_folder=None,user=None,
                 binary=binary,revision=None,static_cache=None,
@@ -656,18 +652,18 @@ class LocalJobs:
                        if selected_flask_item_id is not None else {}),
                     **({"auto_select_observed_F_no_oil":True}
                        if auto_select_observed_F_no_oil else {}),
-                    # Existing special selection only; the normal v216 path
-                    # obtains four ordinary types from the already sealed
-                    # same-build gem source and delegates every effect to SimC.
-                    **({"source_selected_gem_roles":{
+                    # Default: four source-observed ordinary gems and no
+                    # required special. A chosen existing special remains
+                    # optional; all effects are delegated to SimC.
+                    "source_selected_gem_roles":{
                         "special_gem_id":existing_special_gem_id,
                         "ordinary_gem_ids":None},
-                        "source_target_socket_count":(
-                            5 if source_target_socket_count is None else
-                            source_target_socket_count),
-                        **({"source_ordinary_nominal_by_stat":nominal_source}
-                           if nominal_source is not None else {})}
-                       if existing_special_gem_id is not None else {})})
+                    "source_target_socket_count":(
+                        (5 if existing_special_gem_id is not None else 4)
+                        if source_target_socket_count is None
+                        else source_target_socket_count),
+                    **({"source_ordinary_nominal_by_stat":nominal_source}
+                       if nominal_source is not None else {})})
         if observed.get("environment_ready") is True:
             self.remember_verified_fresh_environment(observed)
             self.persist_verified_fresh_profile()
@@ -698,8 +694,7 @@ class LocalJobs:
             "auto_initial_core_build_requested":auto_initial_core_build,
             "auto_initial_core_native_requested_on_cache_miss":
                 auto_initial_core_build,
-            "four_stat_ordinary_default_requested":
-                existing_special_gem_id is not None,
+            "four_stat_ordinary_default_requested":True,
             "four_stat_ordinary_source_requested":True,
             "ordinary_nominal_source_sha256":(
                 nominal_source["source_sha256"]
@@ -707,9 +702,9 @@ class LocalJobs:
             "ordinary_nominal_source_only_not_approved":
                 nominal_source is not None,
             "source_target_socket_count":(
-                (5 if source_target_socket_count is None else
-                 source_target_socket_count)
-                if existing_special_gem_id is not None else None),
+                (5 if existing_special_gem_id is not None else 4)
+                if source_target_socket_count is None else
+                source_target_socket_count),
             "declared_gem_profile_native_verified_here":False,
             "special_gem_effect_verified_here":False,
             "dps_optimization_started":False,

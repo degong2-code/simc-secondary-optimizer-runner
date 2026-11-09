@@ -35,9 +35,14 @@ def ordinary_four_stat_default(*, observed_by_stat, socket_total,
     v268 projects these nominal source-only candidates from v221/v266.
     SimC owns runtime effects; no special gem classification happens here.
     """
-    need(type(socket_total) is int and 5<=socket_total<=64,
-         "SOCKET_FOUR_ORDINARY_TYPES_NEED_FIVE_PHYSICAL_SOCKETS")
-    need(type(special_gem_id) is int and special_gem_id>0,
+    # The normal product has four ordinary types; one existing special
+    # is optional and remains entirely SimC-owned.
+    with_special=special_gem_id is not None
+    need(type(socket_total) is int and
+         (5 if with_special else 4)<=socket_total<=64,
+         "SOCKET_FOUR_ORDINARY_TYPES_SOCKET_COUNT_REQUIRED")
+    need(not with_special or
+         (type(special_gem_id) is int and special_gem_id>0),
          "SOCKET_EXISTING_SPECIAL_ID_REQUIRED")
     need(type(observed_by_stat) is dict and
          set(observed_by_stat)==set(ORDINARY_FOUR_STATS),
@@ -57,7 +62,7 @@ def ordinary_four_stat_default(*, observed_by_stat, socket_total,
         ids.append(candidate["item_id"])
     need(len(set(ids))==4,"SOCKET_FOUR_ORDINARY_PHYSICAL_IDS_REQUIRED")
     # Fixed repeated order. The 26-DPS optimizer never chooses gem types.
-    return [ids[i%4] for i in range(socket_total-1)]
+    return [ids[i%4] for i in range(socket_total-int(with_special))]
 
 
 def nominal_four_stat_from_season_source(*, source, game_build,
@@ -201,7 +206,7 @@ def declared_full_socket_counts(*,available_slots,socket_total,need):
     need(type(available_slots) in (list,tuple) and bool(available_slots)
          and all(type(s) is str for s in available_slots)
          and len(set(available_slots))==len(available_slots)
-         and type(socket_total) is int and 5<=socket_total<=64,
+         and type(socket_total) is int and 4<=socket_total<=64,
          "SOCKET_DECLARED_TARGET_AND_PHYSICAL_SLOTS_REQUIRED")
     ordered=[s for s in FULL_SOCKET_SLOT_ORDER if s in available_slots]
     need(len(ordered)==len(available_slots) and
@@ -236,19 +241,24 @@ def intrinsic_source_plan(*, intrinsic_socket_counts, special_gem_id,
          "SOCKET_INTRINSIC_SOURCE_COUNTS_INVALID")
     available={slot:n for slot,n in sorted(counts.items()) if n>0}
     total=sum(available.values())
-    need(2<=total<=64, "SOCKET_INTRINSIC_ONE_SPECIAL_PLUS_ORDINARY_REQUIRED")
-    need(type(special_gem_id) is int and special_gem_id>0 and
+    with_special=special_gem_id is not None
+    need((2 if with_special else 4)<=total<=64,
+         "SOCKET_INTRINSIC_ORDINARY_COUNT_REQUIRED")
+    need((not with_special or
+          (type(special_gem_id) is int and special_gem_id>0)) and
          type(ordinary_gem_ids) is list and
-         len(ordinary_gem_ids)==total-1 and
+         len(ordinary_gem_ids)==total-int(with_special) and
          all(type(i) is int and i>0 and i!=special_gem_id
-             and i not in DIAMONDS for i in ordinary_gem_ids),
+             and i not in DIAMONDS for i in ordinary_gem_ids) and
+         (with_special or len(set(ordinary_gem_ids[:4]))==4),
          "SOCKET_INTRINSIC_SPECIAL_AND_ORDINARY_IDS_REQUIRED")
     observed=source_observed_gem_item_ids
-    ids=sorted(set(ordinary_gem_ids)|{special_gem_id})
+    ids=sorted(set(ordinary_gem_ids)|(
+        {special_gem_id} if with_special else set()))
     need(type(observed) is list and observed==ids,
          "SOCKET_INTRINSIC_EXACT_SOURCE_ITEM_IDS_REQUIRED")
-    # This is a stable position, NOT a head-only special requirement.
-    position="head" if available.get("head",0)>0 else sorted(available)[0]
+    # An existing special keeps its legacy position; ordinary-only uses None.
+    position=("head" if available.get("head",0)>0 else sorted(available)[0]) if with_special else None
     return {"socket_counts":available,
             "special_gem_id":special_gem_id,
             "special_slot":position,
@@ -288,19 +298,25 @@ def arrange(rows, plan, need, *, observed_rating_per_ordinary=None):
     need(1 <= total <= 64, "SOCKET_TOTAL_INPUT_BOUNDS")
     special = plan["special_gem_id"]
     where = plan["special_slot"]
-    need(type(special) is int and special>0 and
-         (special in source_ids if source_mode else special in DIAMONDS) and
-         type(where) is str and counts.get(where, 0) >= 1,
+    ordinary_only=source_mode and special is None and where is None
+    need(ordinary_only or
+         (type(special) is int and special>0 and
+          (special in source_ids if source_mode else special in DIAMONDS) and
+          type(where) is str and counts.get(where, 0) >= 1),
          "SOCKET_SINGLE_SPECIAL_GEM_POSITION_REQUIRED")
     ordinary = plan["ordinary_gem_ids"]
     # SOURCE_GEM_COLOR is used only for the existing four-color special
     # effect; it is NOT a restriction on which open socket accepts a gem.
     source_colors = representative.SOURCE_GEM_COLOR
-    need(type(ordinary) is list and len(ordinary) == total - 1 and
+    need(type(ordinary) is list and
+         len(ordinary)==total-int(not ordinary_only) and
          all(type(g) is int and g!=special and g not in DIAMONDS and
              (g in source_ids if source_mode else g in source_colors)
              for g in ordinary) and
-         (not source_mode or source_ids==set(ordinary)|{special}),
+         (not source_mode or
+          source_ids==set(ordinary)|({special} if not ordinary_only else set())) and
+         (not ordinary_only or
+          (total>=4 and len(set(ordinary[:4]))==4)),
          "SOCKET_ORDINARY_GEMS_SOURCE_OBSERVED_AND_COUNTED")
     need(observed_rating_per_ordinary is None or
          (type(observed_rating_per_ordinary) is int and
@@ -313,10 +329,11 @@ def arrange(rows, plan, need, *, observed_rating_per_ordinary=None):
     cursor = iter(ordinary)
     for slot in sorted(counts):
         chosen = []
-        if slot == where:
+        if slot == where and not ordinary_only:
             chosen.append(special)
         chosen.extend(next(cursor) for _ in
-                      range(counts[slot] - (1 if slot == where else 0)))
+                      range(counts[slot] -
+                            (1 if slot == where and not ordinary_only else 0)))
         if chosen:
             staged[slot]["options"]["gem_id"] = "/".join(map(str, chosen))
 
@@ -348,7 +365,8 @@ def arrange(rows, plan, need, *, observed_rating_per_ordinary=None):
                 need(False, "SOCKET_SECOND_SPECIAL_GEM")
             elif slot in physical:
                 actual.append(gem)
-    need(special_count == 1 and len(actual) == total - 1,
+    need(special_count==int(not ordinary_only) and
+         len(actual)==total-int(not ordinary_only),
          "SOCKET_ACTUAL_PHYSICAL_GEM_COUNT_DRIFT")
     colors = {source_colors[g] for g in actual if g in source_colors}
     complete = special == 240967 and set(
@@ -398,7 +416,9 @@ def reconcile_observed_J(layout, per_gem_rating_by_id, need):
           1<=len(source_ids)<=64 and
           all(type(g) is int and g>0 for g in source_ids) and
           len(set(source_ids))==len(source_ids) and
-          set(source_ids)==set(ids)|{layout.get("special_gem_id")}),
+          set(source_ids)==set(ids)|(
+              {layout["special_gem_id"]}
+              if layout.get("special_gem_id") is not None else set())),
          "GEM_J_V221_SOURCE_ITEM_ID_SELECTION_DRIFT")
     need(type(ids) is list and
          all(type(gem) is int and gem not in DIAMONDS and
@@ -408,14 +428,18 @@ def reconcile_observed_J(layout, per_gem_rating_by_id, need):
          type(counts) is dict and
          all(type(n) is int and n>=0 for n in counts.values()) and
          layout.get("ordinary_count")==len(ids) and
-         layout.get("socket_total")==len(ids)+1 and
-         sum(counts.values())==len(ids)+1 and
-         ((type(layout.get("special_gem_id")) is int and
-           layout["special_gem_id"]>0 and
-           layout["special_gem_id"] in source_ids) if source_mode else
-          layout.get("special_gem_id") in DIAMONDS) and
-         type(layout.get("special_slot")) is str and
-         counts.get(layout["special_slot"],0)>=1,
+         layout.get("socket_total")==len(ids)+int(
+             layout.get("special_gem_id") is not None) and
+         sum(counts.values())==layout.get("socket_total") and
+         ((layout.get("special_gem_id") is None and
+           layout.get("special_slot") is None and source_mode and
+           len(ids)>=4 and len(set(ids[:4]))==4) or
+          ((type(layout.get("special_gem_id")) is int and
+            layout["special_gem_id"]>0 and
+            (layout["special_gem_id"] in source_ids if source_mode
+             else layout["special_gem_id"] in DIAMONDS)) and
+           type(layout.get("special_slot")) is str and
+           counts.get(layout["special_slot"],0)>=1)),
          "GEM_J_LAYOUT_COUNTS_OR_IDS_DRIFT")
     need(type(per_gem_rating_by_id) is dict and
          set(per_gem_rating_by_id)=={str(gem) for gem in ids} and

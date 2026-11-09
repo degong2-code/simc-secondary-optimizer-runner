@@ -28,6 +28,48 @@ class SocketLayoutTests(unittest.TestCase):
                        "ilevel": 334, "options": {"gem_id": "240908"}}
                 for slot in ("head", "wrists", "waist", "feet", "shoulders")}
 
+    def test_default_four_ordinary_without_special_source_only_j_and_profile(self):
+        """Source-owned default 4 CHMV types, no invented special/effect gate."""
+        source={
+            stat:{"item_id":311100+i,"raw_nominal_points":23}
+            for i,stat in enumerate(sockets.ORDINARY_FOUR_STATS)}
+        selected=sockets.ordinary_four_stat_default(
+            observed_by_stat=source,socket_total=4,
+            special_gem_id=None,need=self.need)
+        self.assertEqual(selected,[311100,311101,311102,311103])
+        counts={"head":1,"wrists":1,"waist":1,"feet":1}
+        plan=sockets.intrinsic_source_plan(
+            intrinsic_socket_counts=counts,special_gem_id=None,
+            ordinary_gem_ids=selected,
+            source_observed_gem_item_ids=selected,need=self.need)
+        self.assertIsNone(plan["special_gem_id"])
+        self.assertIsNone(plan["special_slot"])
+        before=self.rows()
+        placed,layout=sockets.arrange(before,plan,self.need)
+        self.assertEqual(before,self.rows())
+        self.assertEqual(layout["socket_total"],4)
+        self.assertEqual(layout["ordinary_gem_ids"],selected)
+        self.assertEqual(layout["ordinary_count"],4)
+        self.assertIsNone(layout["special_gem_id"])
+        observed=sockets.reconcile_observed_J(
+            layout,{str(i):23 for i in selected},self.need)
+        self.assertEqual(observed["J_candidate_unadmitted"],92)
+        self.assertFalse(observed["environment_ready"])
+        self.assertFalse(layout["CHMV_J_source_authenticated"])
+        self.assertEqual(placed["head"]["options"]["gem_id"],"311100")
+        self.assertEqual(placed["wrists"]["options"]["gem_id"],"311103")
+        character={"class":"druid","spec":"balance",
+                   "race":"night_elf","talents":"CAAAABBB11122"}
+        trinkets=[{"slot":"trinket1","item_id":270175,"options":{}},
+                  {"slot":"trinket2","item_id":270173,"options":{}}]
+        profile,cfg,rows,_,_,_,_,_=pure.v098_inputs(
+            character,trinkets,socket_plan=plan,
+            source_only_season_consumables=True)
+        self.assertIn("gem_id=311100",profile)
+        self.assertIn("gem_id=311103",profile)
+        self.assertNotIn("gem_id=240967",profile)
+        self.assertEqual(rows["head"]["options"]["gem_id"],"311100")
+
     def test_p3_fm_four_stat_default_uses_each_nominal_type_once(self):
         source={
             stat:{"item_id":311100+i,"raw_nominal_points":40+i}

@@ -337,7 +337,7 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertFalse(result["web_environment_scope"]["user_character_or_trinkets_required"])
         self.assertFalse(result["web_environment_scope"]["local_native_G_requested"])
         self.assertTrue(result["web_environment_scope"]["four_stat_ordinary_source_requested"])
-        self.assertFalse(result["web_environment_scope"]["four_stat_ordinary_default_requested"])
+        self.assertTrue(result["web_environment_scope"]["four_stat_ordinary_default_requested"])
         kwargs=stage.call_args.kwargs
         self.assertIsNone(kwargs["user"])
         self.assertIsNone(kwargs["binary"])
@@ -351,7 +351,10 @@ class LocalWebAPIOffline(unittest.TestCase):
             "auto_native_F_requested":False,
             "auto_native_O_requested":False,
             "auto_native_G_requested":False,
-            "auto_four_stat_source_requested":True})
+            "auto_four_stat_source_requested":True,
+            "source_selected_gem_roles":{
+                "special_gem_id":None,"ordinary_gem_ids":None},
+            "source_target_socket_count":4})
         self.assertFalse((self.root/"runs").exists())
 
 
@@ -614,8 +617,11 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(args["fresh_collection_inputs"][
             "expected_game_build"],"12.1.5.70783")
         self.assertIsNone(args["binary"])
-        self.assertNotIn("source_selected_gem_roles",
-                         args["fresh_collection_inputs"])
+        self.assertEqual(args["fresh_collection_inputs"][
+            "source_selected_gem_roles"],{
+                "special_gem_id":None,"ordinary_gem_ids":None})
+        self.assertEqual(args["fresh_collection_inputs"][
+            "source_target_socket_count"],4)
         self.assertNotIn("selected_budget_items",
                          args["fresh_collection_inputs"])
         scope=result.json()["web_environment_scope"]
@@ -743,14 +749,16 @@ class LocalWebAPIOffline(unittest.TestCase):
                 self.assertEqual(response.status_code,422,response.text)
                 build.assert_not_called()
         with mock.patch.object(web.environment_build,"build_environment",
-                               side_effect=AssertionError("MUST_NOT_COLLECT")) as build:
-            no_special=self.post("/api/v1/environment/season-build",{
+                               return_value=stub) as build:
+            ordinary_only=self.post("/api/v1/environment/season-build",{
                 "game_build":"12.1.5.70783",
-                "source_target_socket_count":7})
-            self.assertEqual(no_special.status_code,422,no_special.text)
-            self.assertEqual(no_special.json()["detail"]["code"],
-                             "SEASON_DECLARED_SOCKETS_REQUIRE_EXISTING_SPECIAL_GEM")
-            build.assert_not_called()
+                "source_target_socket_count":4})
+            self.assertEqual(ordinary_only.status_code,200,ordinary_only.text)
+            self.assertEqual(build.call_args.kwargs["fresh_collection_inputs"][
+                "source_selected_gem_roles"],{
+                    "special_gem_id":None,"ordinary_gem_ids":None})
+            self.assertEqual(build.call_args.kwargs["fresh_collection_inputs"][
+                "source_target_socket_count"],4)
 
     def test_p3_fq_exact_F_and_four_stat_j_share_normal_web_build(self):
         payload={"game_build":"12.2.0.99999","target_ilevel":334,
