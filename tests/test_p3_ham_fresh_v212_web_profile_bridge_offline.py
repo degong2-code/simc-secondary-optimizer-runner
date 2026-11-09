@@ -226,9 +226,10 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
             self.assertFalse(result["verified_v113_profile_source_restored"])
             self.assertIsNone(self.jobs._verified_fresh_profile_result)
             build.assert_not_called()
-            with self.assertRaises(web.environment_manifest.EnvironmentBlocked):
-                self.jobs.load_fresh_profile_for_user(
-                    334,explicit_build=self.build)
+            self.assertIsNone(self.jobs.load_fresh_profile_for_user(
+                334,explicit_build=self.build))
+            # An older environment without a v113 profile snapshot retains
+            # its previous source-backed browser path (no new Native).
 
 
 class SeasonNoOilBrowserDefaults(unittest.TestCase):
