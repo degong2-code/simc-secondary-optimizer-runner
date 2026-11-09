@@ -47,6 +47,7 @@ jobs:
             tests.test_v294_dk_runeforge_selection \
             tests.test_v295_season_runeforge_source \
             tests.test_v296_pinned_oil_static_rating_source \
+            tests.test_v297_sealed_simc_oil_gear_delta \
             tests.test_p1_oil_positive_bridge_offline \
             tests.test_v264_environment_standard_budget_integration \
             tests.test_v266_v268_gem_enchant_source_reuse \
