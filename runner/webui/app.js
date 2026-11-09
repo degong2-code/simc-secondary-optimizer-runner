@@ -298,6 +298,7 @@ function fillDefault(item) {
   $("optimizer-oil-off-id").value="";
   $("optimizer-oil-loadout").value="";
   oilCompatibility();
+  renderInstalledOilLoadouts(state.oilCatalog);
   $("dk_rune_main").value="";
   $("dk_rune_off").value="";
   runeCompatibility();
@@ -1515,7 +1516,6 @@ function registerHandlers() {
   $("spec").addEventListener("change",()=>{
     const selected=state.defaults.find(d=>d.class+"/"+d.spec===field("spec"));
     if(selected)fillDefault(selected);
-    renderInstalledOilLoadouts(state.oilCatalog);
   });
   $("ilevel").addEventListener("change",showRepresentativeScope);
   $("ilevel").addEventListener("change",()=>withBusy(refreshInstalledOilLoadouts));
