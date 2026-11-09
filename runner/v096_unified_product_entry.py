@@ -209,8 +209,31 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
          and ("flask="+physical_f["simc_input_token"]) in
              profile.splitlines(),
          "FRESH_SEASON_SELECTED_PHYSICAL_F_PROFILE_DRIFT")
-    need(season["oil_by_hand"]=={} and oil_hands==[] and oil==zeros
-         and normalized["scenario"]["target"]["mode"]=="manual_total"
+    selected_oil=season["oil_by_hand"]
+    sealed_o=doc.get("official_O_physical_source")
+    if oil==zeros:
+        # Identical previous signed no-oil admission contract.
+        need(selected_oil=={} and oil_hands==[] and sealed_o is None,
+             "FRESH_SEASON_TYPED_GJFO_B_T_O_DRIFT")
+    else:
+        # v212 projected the ORIGINAL v216 verified O source, not a
+        # source-only v286 mask or an unverified user-selected token.
+        need(type(selected_oil) is dict and
+             type(sealed_o) is dict and
+             selected_oil==sealed_o.get("oil_by_hand") and
+             set(selected_oil)==set(oil_hands) and bool(oil_hands),
+             "FRESH_SEASON_POSITIVE_O_VERIFIED_PHYSICAL_SOURCE_DRIFT")
+        selected_tokens=[]
+        for hand in ("main_hand","off_hand"):
+            if hand in selected_oil:
+                token=selected_oil[hand]["simc_input_token"].split(":")[-1]
+                selected_tokens.append(hand+":"+token)
+        expected_token="/".join(selected_tokens)
+        need("temporary_enchant="+expected_token in profile.splitlines()
+             and normalized["scenario"]["consumables"][
+                 "weapon_temporary"]==expected_token,
+             "FRESH_SEASON_POSITIVE_O_SIMC_PROFILE_DRIFT")
+    need(normalized["scenario"]["target"]["mode"]=="manual_total"
          and normalized["scenario"]["target"]["ilevel"]==
              doc["target_ilevel"]
          and normalized["scenario"]["target"]["manual_total"]==
@@ -218,7 +241,7 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
          and normalized["budget"]["T"]==approved_B
          and normalized["budget"]["J"]==doc["official_J"]
          and normalized["budget"]["F"]==doc["official_F"]
-         and normalized["budget"]["external_temporary_rating"]==zeros
+         and normalized["budget"]["external_temporary_rating"]==oil
          and approved_B+sum(oil.values())==approved_T
          and (user_final_T is None or user_final_T==approved_T),
          "FRESH_SEASON_TYPED_GJFO_B_T_O_DRIFT")
@@ -248,7 +271,7 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
             "source_catalog_artifact_sha256":
                 doc["source_catalog_artifact_sha256"]}
     return {"season_budget":budget,"season_source_identity":identity,
-            "oil_by_hand":{},"fresh_v212_installed":True,
+            "oil_by_hand":selected_oil,"fresh_v212_installed":True,
             "user_manual_final_T":user_final_T}
 
 

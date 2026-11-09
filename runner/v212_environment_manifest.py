@@ -409,6 +409,100 @@ def _installed_F_source_consistent(document):
             and sum(vec.values())==document.get("official_F"))
 
 
+def _selected_verified_O_source(component, official_O):
+    """Project an upstream source-verified selected oil; no new effect Gate.
+
+    Positive O must already belong to a verified physical item and hand. The
+    published map is needed to bind the original v091/v098 SimC input to the
+    sealed v212 budget; the old explicit-OFF installed bytes stay unchanged.
+    """
+    if sum(official_O.values())==0:
+        return None
+    hands=component.get("applied_hands")
+    items=component.get("selected_oil_item_ids_by_hand")
+    by_hand=component.get("oil_by_hand")
+    need(component.get("source_verification") in
+             ("EXACT_NATIVE","VALID_SAME_SEASON_REFERENCE",
+              "VALID_SAME_SEASON_SOURCE") and
+         component.get("weapon_applicability_verified") is True and
+         valid_sha(component.get("source_sha256")) and
+         type(hands) is list and hands and len(hands)<=2 and
+         len(set(hands))==len(hands) and
+         set(hands)<={"main_hand","off_hand"} and
+         type(items) is dict and set(items)==set(hands) and
+         type(by_hand) is dict and set(by_hand)==set(hands),
+         "FRESH_INSTALL_POSITIVE_O_ORIGINAL_SOURCE_REQUIRED")
+    observed={stat:0 for stat in season_budget.STATS}
+    normalized={}
+    for hand in ("main_hand","off_hand"):
+        if hand not in by_hand:
+            continue
+        row=by_hand[hand]
+        need(type(row) is dict and
+             set(row)=={"physical_item_id","simc_input_token",
+                         "static_CHMV_vector"} and
+             type(row["physical_item_id"]) is int and
+             row["physical_item_id"]>0 and
+             items[hand]==row["physical_item_id"] and
+             type(row["simc_input_token"]) is str,
+             "FRESH_INSTALL_POSITIVE_O_PHYSICAL_ITEM_ID_DRIFT")
+        prefix=("main_hand:" if hand=="main_hand"
+                else "main_hand:disabled/off_hand:")
+        token=row["simc_input_token"]
+        need(token.startswith(prefix) and
+             re.fullmatch(r"[a-z0-9_]{1,90}",
+                          token[len(prefix):]) is not None,
+             "FRESH_INSTALL_POSITIVE_O_SIMC_HAND_TOKEN_DRIFT")
+        vector=row["static_CHMV_vector"]
+        need(type(vector) is dict and
+             set(vector)==set(season_budget.STATS) and
+             all(type(x) is int and x>=0 for x in vector.values()) and
+             sum(vector.values())>0,
+             "FRESH_INSTALL_POSITIVE_O_NATIVE_VECTOR_REQUIRED")
+        normalized[hand]={"physical_item_id":row["physical_item_id"],
+             "simc_input_token":token,"static_CHMV_vector":dict(vector)}
+        for stat in observed:
+            observed[stat]+=vector[stat]
+    need(observed==official_O,
+         "FRESH_INSTALL_POSITIVE_O_TOTAL_OR_HAND_DRIFT")
+    return {"oil_by_hand":normalized,
+            "selected_oil_item_ids_by_hand":dict(items),
+            "original_O_source_sha256":component["source_sha256"],
+            "source_verification":component["source_verification"],
+            "weapon_applicability_verified":True}
+
+
+def _installed_O_source_consistent(document):
+    """Only the same attested positive source can back an O>0 plan."""
+    oil=document.get("official_O")
+    if type(oil) is not dict or set(oil)!=set(season_budget.STATS):
+        return False
+    meta=document.get("official_O_physical_source")
+    if sum(oil.values())==0:
+        return meta is None
+    if type(meta) is not dict:
+        return False
+    owner=document.get("trusted_budget_component_source_identities",{}).get("O")
+    if (type(owner) is not dict or
+        meta.get("original_O_source_sha256")!=owner.get("source_sha256") or
+        meta.get("source_verification")!=owner.get("source_verification")):
+        return False
+    try:
+        rows=meta.get("oil_by_hand")
+        expected=_selected_verified_O_source({
+            "source_verification":meta.get("source_verification"),
+            "source_sha256":meta.get("original_O_source_sha256"),
+            "weapon_applicability_verified":
+                meta.get("weapon_applicability_verified"),
+            "applied_hands":list(rows) if type(rows) is dict else None,
+            "selected_oil_item_ids_by_hand":
+                meta.get("selected_oil_item_ids_by_hand"),
+            "oil_by_hand":rows},oil)
+    except (EnvironmentBlocked,TypeError,KeyError):
+        return False
+    return expected==meta
+
+
 def compile_fresh_installed_environment(*, source_catalog, source_artifact_sha256,
                                         staged_source_environment,
                                         trusted_budget_evidence, source_ui,
@@ -468,6 +562,7 @@ def compile_fresh_installed_environment(*, source_catalog, source_artifact_sha25
     oil=budget["fixed_O"]
     components=trusted_budget_evidence["components"]
     physical_F=_selected_verified_F_source(components["F"],budget["F"])
+    physical_O=_selected_verified_O_source(components["O"],oil)
     payload={
         "schema":FRESH_SEASON_INSTALLED_SCHEMA,
         "status":"FRESH_SEASON_VERIFIED_ENVIRONMENT_INSTALLED_READY",
@@ -494,6 +589,8 @@ def compile_fresh_installed_environment(*, source_catalog, source_artifact_sha25
         "official_F":budget["F"],
         "official_F_physical_source":physical_F,
         "official_O":dict(oil),
+        **({"official_O_physical_source":physical_O}
+           if physical_O is not None else {}),
         "official_B":budget["base_B"],
         "official_T":budget["final_T"],
         "manual_final_T_authoritative":
@@ -548,6 +645,7 @@ def verify_fresh_installed_environment(document):
          set(document["official_O"])==set(season_budget.STATS) and
          all(type(i) is int and i>=0
              for i in document["official_O"].values()) and
+         _installed_O_source_consistent(document) and
          type(document.get("official_B")) is int and
          type(document.get("official_T")) is int and
          document["official_B"]+sum(document["official_O"].values())==

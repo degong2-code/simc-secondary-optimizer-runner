@@ -1,3 +1,5 @@
+> **2026-11-09 P1-O 기름 O>0 검증 설치 소스 접합:** [기록](notes/2026-11-09_p1-oil-positive-installed-source-bridge.md). 동일 시즌 실제 v212 O>0 source owner가 물리 ID/손/정적 벡터를 갖춘 때만 v096에 연결. O0 기존 설치 SHA/캐시는 보존하고, v286 source-only 후보와 과거 70575 Native를 70783의 승인 선택으로 승격하지 않는다. 사용자 실제 O>0 Native 미실증; main/Project UI/주 개발 소유권 불변.
+
 > **2026-11-09 P1-DK 무기 강화 입력 접합:** [기록](notes/2026-11-09_p1-dk-runeforge-user-bridge.md). 사용자 명시 DK 룬 선택→기존 SimC enchant_id/프로필·세션 SHA 연결, 기본 룬 추정/효과 인증 Gate 없음. O>0은 기존 O 원본·손/무기 검증 전까지 미연결, O0 유지. 코드 CI·실 Native 판정은 HEAD별 구분. main/불변/Project UI/주 제품 소유권 불변.
 
 > **2026-11-09 P3-HAT 최신 인계:** [단일 인계](../CHAT_CONTINUITY_HANDOFF_20261109_P3_HAT_ENGINE_FIRST_RESTORE.md) / [실제 영수증](notes/2026-11-09_p3-hat-handoff-evidence-reconciliation.md). 사용자 T3500 실 웹 SimC Native2 성공 #42552942329, 현재 웹 새 기름 기본 O0/세션 복원, Linux·Windows 각247 PASS #42560987527·focused489 PASS/2 SKIP #42560987504. 다음 P1은 기존 v281/v278/v286 source 증거 선조회 후 **검증된 O>0 사용자 손/무기/O→v096/v098 연결**; 기름 미검증 선택은 보류하되 O0 경로 차단 금지. P2는 결과 신뢰성 1순위·알고리즘 교체 자유. 과거 빌드 SHA·ZIP 재현/반복 G/F Native는 제품 Gate가 아니며 원본·예산·캐시 identity 검증은 유지. 새 채팅 최초 독립 HEAD/증거·로드맵 보고 후 '진행' 전 전면 STOP. 이하 옛 HTTP422/웹 Native0는 역사 기록.
