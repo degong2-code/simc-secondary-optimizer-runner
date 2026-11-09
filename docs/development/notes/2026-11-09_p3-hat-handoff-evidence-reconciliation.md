@@ -1,9 +1,9 @@
 # P3-HAT · 2026-11-09 인계 독립 HEAD·영수증 대사
 
-- **Capability:** DEV.CONTINUITY, PRODUCT.E2E, BUDGET.GJFO, OPTIMIZER.POLICY.
+- **Capability:** `DEV.CONTINUITY`, `PRODUCT.E2E`, `BUDGET.GJFO`, `OPTIMIZER.POLICY`.
 - **Keywords:** handoff, HEAD, user manual final T, local SimC, O0 UI, source identity, Native receipt, reuse.
 - **Prior evidence:** P3-HAL/HAI 상세 A~G, P3-HAR 실 Native, P3-HAS UI, P3-HAO 효율 정책, P2-OPT 신뢰성 정책, 현재 사용자 제공 마지막 대화. 사용자 제공 요약은 실제 Actions의 대체 증거로 사용하지 않음.
-- **Decision:** REUSE/CONNECT. P3-HAT가 최신 상태 포인터이며 이전 P3-HAL/HAI의 역사 원본과 승인 v1.4.3을 덮어쓰지 않는다.
+- **Decision:** `REUSE` — 기존 원본·증거를 유지하면서 현재 필요한 접합만 `CONNECT`. P3-HAT가 최신 상태 포인터이며 이전 P3-HAL/HAI의 역사 원본과 승인 v1.4.3을 덮어쓰지 않는다.
 - **HEAD verified independently:** 격리 85e31cf1e6792c9d66837dcae7ffc2d2166d3a62; main 07133e0aaf738d6e4816a6486057b1cd49c018de. UI code HEAD 0dbfdae0e4fc56074bc15f432e79ca5d1a9b4faf→격리 HEAD GitHub compare 3 commits/4 documentation files only. 인계 문서 작성 후 새 격리 HEAD 필수 재조회.
 - **Real Native receipt:** [Actions #42552942329](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42552942329) SUCCESS, run/head a1cb60aba91173fa79e26fed9cf5e3c8cf80e41f; 로그 P3_FR_T1_VERDICT status ZERO_BASE_USER_DPS_E2E_PASS, 실 binary SHA 6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6, v212 설치 G2850/J92/F165/O0/B=T3107 환경 Native3, 사용자 B=T3500/징벌334 웹 DPS Native2, rating 834/998/834/834, DPS171497.55384056296, SEM641.5533242169575, FastAPI prepare→run→resume→cache-only→result, global_optimum_proven false. 95% 형식 PASS ≠ 탐색 품질·전역수렴.
 - **Offline receipts:** [web #42560987527](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42560987527) Linux/Windows 각247 PASS; [focused #42560987504](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42560987504) 491개 중2 SKIP/0 FAIL/DEV_LEDGER_PASS; [UI #42560987522](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42560987522) 양 OS PASS. 이 P3-HAS 수정 신규 Native0. 이 로그의 합성 샘플 DPS는 신규 실제 Native 영수증 아님.
