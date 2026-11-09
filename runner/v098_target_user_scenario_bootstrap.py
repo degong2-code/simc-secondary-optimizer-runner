@@ -981,18 +981,30 @@ def build(user,folder,binary,revision,static_cache_path=None,
         # not be silently ignored or assumed to match the old season.
         # The verified v212 flask/gem budget and optional season module
         # remain independent and are not overridden here.
-        bound=season_source_bundle["settings"]["default_consumables"]
-        need(default_choice is None or (
-             type(default_choice) is dict and
-             set(default_choice)==consumer.CHOICE_FIELDS and
-             default_choice["flask"]=="source_default" and
-             default_choice["diamond_id"]==0 and
-             default_choice["omnium_talents"]=="source_default" and
-             all((bound[k]=="disabled" if
-                  default_choice[k]=="source_default" else
-                  bound[k]==default_choice[k]) for k in
-                 ("food","potion","augmentation"))),
-             "SEASON_PROFILE_SELECTED_CONSUMABLES_NOT_SOURCE_BOUND")
+        if season_source_bundle is None:
+            # Keep historical unadmitted source-only previews strict: they
+            # have no verified selected seasonal settings to bind against.
+            need(default_choice is None or (
+                 type(default_choice) is dict and
+                 set(default_choice)==consumer.CHOICE_FIELDS and
+                 all(default_choice[k]=="source_default" for k in
+                     ("flask","food","potion","augmentation",
+                      "omnium_talents")) and
+                 default_choice["diamond_id"]==0),
+                 "SEASON_PROFILE_NONDEFAULT_CONSUMABLES_NOT_SOURCE_BOUND")
+        else:
+            bound=season_source_bundle["settings"]["default_consumables"]
+            need(default_choice is None or (
+                 type(default_choice) is dict and
+                 set(default_choice)==consumer.CHOICE_FIELDS and
+                 default_choice["flask"]=="source_default" and
+                 default_choice["diamond_id"]==0 and
+                 default_choice["omnium_talents"]=="source_default" and
+                 all((bound[k]=="disabled" if
+                      default_choice[k]=="source_default" else
+                      bound[k]==default_choice[k]) for k in
+                     ("food","potion","augmentation"))),
+                 "SEASON_PROFILE_SELECTED_CONSUMABLES_NOT_SOURCE_BOUND")
     selected_nonchmv=None
     if SEASON_ENCHANT_FIELD in user:
         selected_nonchmv=nonchmv_enchant.apply(
