@@ -113,6 +113,18 @@ def measure(*,stage_root,source_profile_path,binary,simc_revision,
     source=profile.read_text(encoding="utf8")
     actor=_actor_from_v233(source)
     lines=source.splitlines()
+    hand=("off_hand" if "/off_hand:" in oil_token else "main_hand")
+    weapon_lines=[x for x in lines if x.startswith(hand+"=")]
+    need(len(weapon_lines)==1,
+         "V297_SELECTED_WEAPON_NOT_IN_ORIGINAL_PROFILE")
+    weapon_id=re.search(r"(?:^|,)id=(\d+)(?:,|$)",
+                        weapon_lines[0])
+    weapon_ilvl=re.search(r"(?:^|,)ilevel=(\d+)(?:,|$)",
+                          weapon_lines[0])
+    need(weapon_id is not None and weapon_ilvl is not None
+         and int(weapon_id.group(1))>0
+         and int(weapon_ilvl.group(1))==target_ilevel,
+         "V297_SELECTED_ORIGINAL_WEAPON_ID_OR_ILEVEL_DRIFT")
     need(any(line.startswith("main_hand=") for line in lines)
          and ("/off_hand:" not in oil_token or
               any(line.startswith("off_hand=") for line in lines))
@@ -165,6 +177,8 @@ def measure(*,stage_root,source_profile_path,binary,simc_revision,
         "status":"SIMC_PRECOMBAT_TOTAL_GEAR_STATIC_NUMBER_SOURCE_ONLY",
         "simc_revision":simc_revision,"game_build":game_build,
         "target_ilevel":target_ilevel,
+        "selected_hand":hand,
+        "representative_weapon_id":int(weapon_id.group(1)),
         "enchant_id":enchant_id,"simc_input_token":oil_token,
         "binary_sha256":binary_sha,
         "source_profile_sha256":source_sha,

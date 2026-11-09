@@ -242,6 +242,11 @@ def project_source_oils(*,source,worklist,native_numeric,
                  from_simc.get("simc_revision")==source["simc_revision"] and
                  from_simc.get("enchant_id")==selected["simc_enchant_id"] and
                  from_simc.get("simc_input_token")==selected["simc_input_token"] and
+                 from_simc.get("selected_hand")==selected["selected_hand"] and
+                 type(from_simc.get("representative_weapon_id")) is int and
+                 from_simc["representative_weapon_id"]>0 and
+                 type(from_simc.get("target_ilevel")) is int and
+                 1<=from_simc["target_ilevel"]<=1000 and
                  from_simc.get("talent_buffed_stats_not_used") is True and
                  type(from_simc.get("binary_sha256")) is str and
                  SHA.fullmatch(from_simc["binary_sha256"]) and

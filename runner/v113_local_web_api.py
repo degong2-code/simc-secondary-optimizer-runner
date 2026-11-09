@@ -70,6 +70,9 @@ class SeasonEnvironmentBuildRequest(BaseModel):
     # The user's selected flask is an exact physical ID, NOT trusted F
     # evidence. A missing selection leaves the normal Build pending.
     selected_flask_item_id: int | None = Field(default=None,ge=1,le=999999999)
+    # Exact physical item IDs by selected weapon hand, NEVER user O ratings.
+    # Absent/empty retains the existing explicit no-oil behavior.
+    selected_oil_item_ids_by_hand: dict[str,int] = Field(default_factory=dict)
     auto_select_observed_F_no_oil: bool = False
     # Optional existing selection; never identify or measure the special effect.
     existing_special_gem_id: int | None = Field(default=None,ge=1,le=999999999)
@@ -408,6 +411,7 @@ class LocalJobs:
                                  auto_native_O_requested=False,
                                  consumable_native_binary=None,
                                  selected_flask_item_id=None,
+                                 selected_oil_item_ids_by_hand=None,
                                  auto_select_observed_F_no_oil=False,
                                  existing_special_gem_id=None,
                                  source_target_socket_count=None,
@@ -431,8 +435,21 @@ class LocalJobs:
                 raise environment_manifest.EnvironmentBlocked(
                     "SEASON_NATIVE_G_F_O_BINARY_MISMATCH")
             binary=resolved
+        # Source-bound oil selection, not a backdoor for CHMV numbers.
+        # An absent oil map is an explicit NONE for a selected F, while a
+        # positive map must be reconciled to physical v281/v286 originals.
+        selected_oils=(
+            {} if selected_oil_item_ids_by_hand is None
+            else selected_oil_item_ids_by_hand)
+        if (type(selected_oils) is not dict or len(selected_oils)>2
+                or not set(selected_oils)<={"main_hand","off_hand"}
+                or any(type(v) is not int or v<=0 or v>999999999
+                       for v in selected_oils.values())
+                or (selected_oils and selected_flask_item_id is None)):
+            raise environment_manifest.EnvironmentBlocked(
+                "SEASON_SELECTED_OIL_PHYSICAL_IDS_AND_FLASK_REQUIRED")
         if auto_select_observed_F_no_oil and (
-                selected_flask_item_id is not None
+                selected_flask_item_id is not None or selected_oils
                 or not auto_native_F_requested or auto_native_O_requested):
             raise environment_manifest.EnvironmentBlocked(
                 "SEASON_AUTO_F_REQUIRES_EXPLICIT_F_NATIVE_AND_NO_OIL")
@@ -472,7 +489,7 @@ class LocalJobs:
         if (refresh_reason is None and native_G_binary is None and
             consumable_native_binary is None and
             not auto_native_F_requested and not auto_native_O_requested and
-            selected_flask_item_id is None and
+            selected_flask_item_id is None and not selected_oils and
             not auto_select_observed_F_no_oil and
             existing_special_gem_id is None):
             with self.season_source_lock:
@@ -545,7 +562,7 @@ class LocalJobs:
                     # pass an unverified F amount or a receipt from HTTP.
                     **({"selected_budget_items":{
                         "flask_item_id":selected_flask_item_id,
-                        "oil_item_ids_by_hand":{}}}
+                        "oil_item_ids_by_hand":dict(selected_oils)}}
                        if selected_flask_item_id is not None else {}),
                     **({"auto_select_observed_F_no_oil":True}
                        if auto_select_observed_F_no_oil else {}),
@@ -583,8 +600,9 @@ class LocalJobs:
             "auto_native_F_requested":auto_native_F_requested,
             "auto_native_O_requested":auto_native_O_requested,
             "selected_flask_item_id":selected_flask_item_id,
+            "selected_oil_item_ids_by_hand":dict(selected_oils),
             "explicit_no_oil_with_selected_flask":
-                selected_flask_item_id is not None,
+                selected_flask_item_id is not None and not selected_oils,
             "auto_select_observed_F_no_oil":
                 auto_select_observed_F_no_oil,
             "four_stat_ordinary_default_requested":
@@ -1704,6 +1722,8 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                 auto_native_F_requested=request.auto_native_F_requested,
                 auto_native_O_requested=request.auto_native_O_requested,
                 selected_flask_item_id=request.selected_flask_item_id,
+                selected_oil_item_ids_by_hand=
+                    request.selected_oil_item_ids_by_hand,
                 auto_select_observed_F_no_oil=
                     request.auto_select_observed_F_no_oil,
                 existing_special_gem_id=request.existing_special_gem_id,

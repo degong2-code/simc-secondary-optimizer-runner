@@ -5524,6 +5524,155 @@ def _fresh_source_owner_merge_native_G(*, trusted_budget_evidence,
 
 
 
+def _fresh_source_owner_selected_O_component(*, preflight, staged,
+                                             compilation, selected,
+                                             original_oil, numeric, choices,
+                                             scaled_native_gear,
+                                             target_ilevel):
+    """Use existing exact SimC/DB2/weapon owners for selected physical O.
+
+    This is the normal source-owner connection into v222/v212, not an effect
+    simulator or an independent certification Gate. No new Native/network:
+    the original v296 raw static source or v297 measured SimC precombat
+    stat is already in the same v216 execution. An unmatched selection
+    remains pending rather than being interpreted as O=0.
+    """
+    oils=(selected or {}).get("oil_item_ids_by_hand") or {}
+    if not oils:
+        return None
+    if not (type(preflight) is dict and type(staged) is dict
+            and staged.get("status")==
+                "FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED"
+            and type(compilation) is dict
+            and type(original_oil) is dict
+            and original_oil.get("schema")==oil_raw_source.SCHEMA
+            and original_oil.get("source_unbuffed") is True
+            and type(numeric) is dict and type(choices) is dict
+            and type(scaled_native_gear) is list):
+        return None
+    build=preflight.get("game_build")
+    revision=preflight.get("simc_revision")
+    manifest=preflight.get("source_catalog_manifest_sha256")
+    need(original_oil.get("game_build")==build
+         and original_oil.get("simc_revision")==revision
+         and choices.get("game_build")==build
+         and choices.get("simc_revision")==revision
+         and compilation.get("simc_revision")==revision
+         and type(manifest) is str
+         and season_budget_contract.SHA.fullmatch(manifest) is not None,
+         "V216_SELECTED_O_ORIGINAL_SEASON_DRIFT")
+    by_enchant={r["enchant_id"]:r for r in original_oil["items"]}
+    need(len(by_enchant)==len(original_oil["items"]),
+         "V216_SELECTED_O_ORIGINAL_ENCHANT_DUPLICATE")
+    matches=choices.get("oil_representative_weapon_matches_unadmitted",[])
+    need(type(matches) is list,
+         "V216_SELECTED_O_WEAPON_MASK_SOURCE_INVALID")
+    rows=numeric.get("oil",[])
+    need(type(rows) is list,"V216_SELECTED_O_NUMERIC_SOURCE_INVALID")
+    measured={(x["physical_item_id"],x["selected_hand"]):x["measurement"]
+              for x in scaled_native_gear}
+    need(len(measured)==len(scaled_native_gear),
+         "V216_SELECTED_O_DUPLICATE_SIMC_GEAR_MEASUREMENT")
+    by_hand={}
+    identities=[]
+    for hand,item_id in sorted(oils.items()):
+        candidates=[r for r in rows
+                    if r.get("physical_item_id")==item_id and
+                    r.get("selected_hand")==hand]
+        weapons=[r for r in matches
+                 if r.get("physical_item_id")==item_id
+                 and r.get("hand")==hand
+                 and r.get("status")==(
+                    "SAME_BUILD_REPRESENTATIVE_WEAPON_MASK_MATCH_SOURCE_ONLY")]
+        need(len(candidates)<=1 and len(weapons)<=1,
+             "V216_SELECTED_O_ORIGINAL_ITEM_OR_HAND_DUPLICATE")
+        if len(candidates)!=1 or len(weapons)!=1:
+            return None
+        row,weapon=candidates[0],weapons[0]
+        origin=by_enchant.get(row.get("simc_enchant_id"))
+        if origin is None or row.get("status") not in (
+                "SIMC_RAW_STATIC_NUMBER_SOURCE_ONLY",
+                "SIMC_PRECOMBAT_GEAR_NUMBER_SOURCE_ONLY"):
+            return None
+        low,high=row.get("source_min_ilevel"),row.get("source_max_ilevel")
+        need(type(low) is int and type(high) is int
+             and low>=0 and high>=0,
+             "V216_SELECTED_O_ILVL_RESTRICTIONS_INVALID")
+        if (low>0 and target_ilevel<low) or (
+                high>0 and target_ilevel>high):
+            return None
+        vec=row.get("static_CHMV_vector_unadmitted")
+        need(type(vec) is dict
+             and set(vec)==set(season_budget_contract.STATS)
+             and all(type(v) is int and v>=0 for v in vec.values())
+             and sum(vec.values())>0
+             and vec==weapon.get("static_O_for_hand_unadmitted")
+             and row.get("static_O_unbuffed_source_sha256")==
+                 original_oil["source_sha256"]
+             and row.get("game_build")==build
+             and row.get("simc_revision")==revision
+             and type(row.get("physical_item_source_candidate_sha256")) is str
+             and season_budget_contract.SHA.fullmatch(
+                 row["physical_item_source_candidate_sha256"]) is not None,
+             "V216_SELECTED_O_STATIC_SOURCE_OR_MASK_DRIFT")
+        actual_weapon=weapon.get(
+            "selected_representative_weapon_id_unadmitted")
+        need(type(actual_weapon) is int and actual_weapon>0,
+             "V216_SELECTED_O_REPRESENTATIVE_WEAPON_MISSING")
+        pair=measured.get((item_id,hand))
+        if row["status"]=="SIMC_PRECOMBAT_GEAR_NUMBER_SOURCE_ONLY":
+            need(type(pair) is dict
+                 and pair.get("status")==(
+                     "SIMC_PRECOMBAT_TOTAL_GEAR_STATIC_NUMBER_SOURCE_ONLY")
+                 and pair.get("simc_input_token")==row["simc_input_token"]
+                 and pair.get("enchant_id")==row["simc_enchant_id"]
+                 and pair.get("game_build")==build
+                 and pair.get("simc_revision")==revision
+                 and pair.get("selected_hand")==hand
+                 and pair.get("representative_weapon_id")==actual_weapon
+                 and pair.get("target_ilevel")==target_ilevel
+                 and pair.get("talent_buffed_stats_not_used") is True
+                 and pair.get("static_CHMV_vector_unadmitted")==vec,
+                 "V216_SELECTED_O_SIMC_WEAPON_PROFILE_OR_STATIC_DRIFT")
+        else:
+            # A direct integer DBC stat needs no SimC scaling process,
+            # but still uses the same v281 physical identity + v286 masks.
+            need(origin.get("static_CHMV_vector")==vec,
+                 "V216_SELECTED_O_RAW_STATIC_SOURCE_DRIFT")
+        by_hand[hand]={
+            "physical_item_id":item_id,
+            "simc_input_token":row["simc_input_token"],
+            "static_CHMV_vector":dict(vec)}
+        identities.append({
+            "hand":hand,"physical_item_id":item_id,
+            "crafting_quality":row["crafting_quality"],
+            "simc_enchant_id":row["simc_enchant_id"],
+            "candidate_sha256":row[
+                "physical_item_source_candidate_sha256"],
+            "representative_weapon_id":actual_weapon,
+            "native_receipts":list(row.get(
+                "simc_native_receipt_sha256",[])),
+            "vector":dict(vec)})
+    total={stat:sum(row["static_CHMV_vector"][stat]
+                    for row in by_hand.values())
+           for stat in season_budget_contract.STATS}
+    identity={
+        "source_sha256":original_oil["source_sha256"],
+        "weapon_mask_stage_identities":
+            choices.get("oil_source_stage_identities"),
+        "selected_original_physical_items":identities}
+    return {
+        "rating":total,"game_build":build,
+        "source_catalog_manifest_sha256":manifest,
+        "source_sha256":digest(canonical(identity).encode("utf8")),
+        "source_verification":"VALID_SAME_SEASON_SOURCE",
+        "selected_oil_item_ids_by_hand":dict(oils),
+        "applied_hands":sorted(oils),
+        "weapon_applicability_verified":True,
+        "oil_by_hand":by_hand,
+        "source_owner":"ORIGINAL_V281_V286_V296_AND_OPTIONAL_V297"}
+
+
 def _fresh_original_default_base_install_inputs(*, preflight, staged,
                                                  original_G, original_J_F,
                                                  selected_budget_items,
