@@ -355,6 +355,73 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertFalse((self.root/"runs").exists())
 
 
+    def test_p1_first_install_core_reuses_original_g_f_stages(self):
+        """Automatic cold-start selection calls original Build, not a new engine."""
+        payload={"game_build":"12.2.0.99999","target_ilevel":334,
+                 "auto_initial_core_build":True,
+                 "auto_initial_core_simc_binary":str(self.binary)}
+        source={"status":"SOURCE_ONLY_PENDING","environment_ready":False,
+                "environment_installed":False,"native_calls":0}
+        with mock.patch.object(web.environment_build,"build_environment",
+                               return_value=source) as build:
+            response=self.post("/api/v1/environment/season-build",payload)
+        self.assertEqual(response.status_code,200,response.text)
+        params=build.call_args.kwargs
+        self.assertEqual(params["binary"],self.binary.resolve())
+        self.assertIsNone(params["user"])
+        fresh=params["fresh_collection_inputs"]
+        self.assertTrue(fresh["auto_native_G_requested"])
+        self.assertTrue(fresh["auto_native_F_requested"])
+        self.assertTrue(fresh["auto_select_observed_F_no_oil"])
+        self.assertTrue(fresh["auto_four_stat_source_requested"])
+        self.assertNotIn("selected_budget_items",fresh)
+        self.assertTrue(response.json()["web_environment_scope"][
+            "auto_initial_core_build_requested"])
+        self.assertFalse(response.json()["web_environment_scope"][
+            "environment_ready"])
+
+        with mock.patch.object(
+                web.environment_build,"find_verified_installed_season_environment",
+                return_value={
+                    "status":"VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED",
+                    "environment_ready":True,"environment_installed":True,
+                    "installed_manifest_sha256":"a"*64}) as prior, \
+             mock.patch.object(
+                 self.app.state.jobs,"restore_verified_fresh_profile",
+                 return_value={"status":"REUSED"}) as restore, \
+             mock.patch.object(
+                 web.environment_build,"build_environment",
+                 side_effect=AssertionError("NO_SOURCE_NATIVE_OR_DPS")) as build:
+            cached=self.post("/api/v1/environment/season-build",{
+                **payload,"auto_initial_core_simc_binary":
+                    str(self.root/"missing.exe")})
+        self.assertEqual(cached.status_code,200,cached.text)
+        self.assertTrue(cached.json()["web_environment_scope"][
+            "auto_initial_core_native_skipped_existing_ready"])
+        build.assert_not_called()
+        prior.assert_called_once()
+        restore.assert_called_once()
+
+        for update in (
+            {"auto_initial_core_simc_binary":None},
+            {"auto_initial_core_simc_binary":str(self.root/"missing.exe")},
+            {"selected_flask_item_id":241326},
+            {"auto_native_F_requested":True}):
+            with self.subTest(update=update),mock.patch.object(
+                    web.environment_build,"build_environment",
+                    side_effect=AssertionError("NO_SOURCE")) as stage:
+                rejected=self.post("/api/v1/environment/season-build",
+                                   {**payload,**update})
+                self.assertEqual(rejected.status_code,422,rejected.text)
+                stage.assert_not_called()
+        with mock.patch.object(web.environment_build,"build_environment",
+                               side_effect=AssertionError("NO_SOURCE")) as stage:
+            stray=self.post("/api/v1/environment/season-build",{
+                "game_build":"12.2.0.99999",
+                "auto_initial_core_simc_binary":str(self.binary)})
+            self.assertEqual(stray.status_code,422,stray.text)
+            stage.assert_not_called()
+
     def test_p1_explicit_installed_build_separate_from_source_collection(self):
         """Exact build is carried through short and long-run plans, no Native.
 

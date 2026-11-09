@@ -74,6 +74,10 @@ class SeasonEnvironmentBuildRequest(BaseModel):
     # Absent/empty retains the existing explicit no-oil behavior.
     selected_oil_item_ids_by_hand: dict[str,int] = Field(default_factory=dict)
     auto_select_observed_F_no_oil: bool = False
+    # Existing v216 G/F measurement sources on first Build; off for legacy clients.
+    auto_initial_core_build: bool = False
+    auto_initial_core_simc_binary: str | None = Field(
+        default=None,min_length=1,max_length=4096)
     # Optional existing selection; never identify or measure the special effect.
     existing_special_gem_id: int | None = Field(default=None,ge=1,le=999999999)
     # Declared final gem sockets; the v216 source must still validate gem IDs.
@@ -458,6 +462,8 @@ class LocalJobs:
                                  selected_flask_item_id=None,
                                  selected_oil_item_ids_by_hand=None,
                                  auto_select_observed_F_no_oil=False,
+                                 auto_initial_core_build=False,
+                                 auto_initial_core_simc_binary=None,
                                  existing_special_gem_id=None,
                                  source_target_socket_count=None,
                                  refresh_reason=None):
@@ -466,6 +472,21 @@ class LocalJobs:
         One deterministic one-spec reference G probe is NOT season-level
         validation, Fury-TG proof or a user character/profile input.
         """
+        # One normal user Build: first try verified v212 reuse; only on a
+        # cache miss invoke existing receipt-backed G/F stages. Explicit
+        # advanced selections remain separate and require their own proof.
+        if (type(auto_initial_core_build) is not bool or
+                (not auto_initial_core_build and
+                 auto_initial_core_simc_binary is not None) or
+                (auto_initial_core_build and (
+                    native_G_binary is not None or
+                    consumable_native_binary is not None or
+                    auto_native_F_requested or auto_native_O_requested or
+                    auto_select_observed_F_no_oil or
+                    selected_flask_item_id is not None or
+                    bool(selected_oil_item_ids_by_hand)))):
+            raise environment_manifest.EnvironmentBlocked(
+                "SEASON_INITIAL_CORE_ADVANCED_SELECTION_CONFLICT")
         binary=None
         for label,requested in (
                 ("SEASON_NATIVE_G_BINARY_INVALID",native_G_binary),
@@ -570,6 +591,10 @@ class LocalJobs:
                     "native_calls":0,"network_calls":version_network_calls,
                     "dps_optimization_started":False,
                     "reused_verified_installed_season":True,
+                    "auto_initial_core_build_requested":
+                        auto_initial_core_build,
+                    "auto_initial_core_native_skipped_existing_ready":
+                        auto_initial_core_build,
                     "refresh_reason":None}}
         # Immutable by-build Wago stage cannot be silently replayed to
         # claim new item content at the exact same game build. The existing
@@ -580,6 +605,21 @@ class LocalJobs:
             if prior.exists():
                 raise environment_manifest.EnvironmentBlocked(
                     "SAME_BUILD_CONTENT_CHANGE_EXACT_SOURCE_CORRECTION_REQUIRED")
+        if auto_initial_core_build:
+            # Resolve an executable only on a cache miss. A verified READY
+            # install does not need its original SimC binary to be present.
+            if auto_initial_core_simc_binary is None:
+                raise environment_manifest.EnvironmentBlocked(
+                    "SEASON_INITIAL_CORE_SIMC_BINARY_REQUIRED")
+            supplied=pathlib.Path(auto_initial_core_simc_binary).expanduser()
+            if supplied.is_symlink() or not supplied.is_file():
+                raise environment_manifest.EnvironmentBlocked(
+                    "SEASON_INITIAL_CORE_SIMC_BINARY_INVALID")
+            binary=supplied.resolve()
+            native_G_binary=binary
+            consumable_native_binary=binary
+            auto_native_F_requested=True
+            auto_select_observed_F_no_oil=True
         with self.season_source_lock:
             # Internal packaged season source: no user numbers or new Native
             # probes. Missing exact-build data stays PENDING in original v216.
@@ -655,6 +695,9 @@ class LocalJobs:
                 selected_flask_item_id is not None and not selected_oils,
             "auto_select_observed_F_no_oil":
                 auto_select_observed_F_no_oil,
+            "auto_initial_core_build_requested":auto_initial_core_build,
+            "auto_initial_core_native_requested_on_cache_miss":
+                auto_initial_core_build,
             "four_stat_ordinary_default_requested":
                 existing_special_gem_id is not None,
             "four_stat_ordinary_source_requested":True,
@@ -1979,6 +2022,9 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                     request.selected_oil_item_ids_by_hand,
                 auto_select_observed_F_no_oil=
                     request.auto_select_observed_F_no_oil,
+                auto_initial_core_build=request.auto_initial_core_build,
+                auto_initial_core_simc_binary=
+                    request.auto_initial_core_simc_binary,
                 existing_special_gem_id=request.existing_special_gem_id,
                 source_target_socket_count=request.source_target_socket_count,
                 refresh_reason=request.refresh_reason)

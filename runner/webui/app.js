@@ -980,6 +980,16 @@ async function buildSeasonEnvironment() {
   // G is truly optional even if F/O uses the same executable.
   const native_G_binary=nativeRequested?executable:null;
   const consumable_native_binary=native_F_O_requested?executable:null;
+  // Existing v216 source-owned G/F measurements, never a new effect engine.
+  // Advanced item/native selection takes precedence over this default.
+  const explicitAdvanced=Boolean(nativeRequested||auto_native_F_requested||
+      auto_native_O_requested||auto_select_observed_F_no_oil||
+      selected_flask_item_id!==null||oilHands.length);
+  const auto_initial_core_build=$("season-auto-core").checked&&!explicitAdvanced;
+  const auto_initial_core_simc_binary=
+      auto_initial_core_build?(field("binary")||null):null;
+  if(auto_initial_core_build&&!auto_initial_core_simc_binary)
+    throw Error("최초 G/F 자동 구축에는 SimC 실행파일 경로가 필요합니다. 경로를 지정하거나 자동 구축 선택을 해제하면 원본만 수집할 수 있습니다.");
   const revision=field("revision");
   if(revision&&!/^(?:[a-f0-9]{7,12}|[a-f0-9]{40})$/.test(revision))
     throw Error("SimC revision은 7~12자리 또는 40자리 소문자 16진수여야 합니다.");
@@ -987,7 +997,9 @@ async function buildSeasonEnvironment() {
       "선택한 시즌/콘텐츠 갱신 요청을 시작할까요? 기존 봉인 자료는 보존됩니다. ":
       "기존 검증 시즌 환경을 우선 재사용하고, 없으면 원본 구축을 시작할까요? ")+
       "필요 시 외부 네트워크를 사용할 수 있습니다."+
-      (nativeRequested?" 기존 G Native 최대 1회 실행될 수 있습니다.":" Native는 기본적으로 실행하지 않습니다.")+
+      (auto_initial_core_build?
+       " 검증 설치 재사용 시 Native 0회; 신규 시즌에는 기존 G 최대 1회와 대표 영약 F 최대 2회만 측정할 수 있습니다. 원본 검증이 부족하면 설치하지 않습니다.":
+       (nativeRequested?" 기존 G Native 최대 1회 실행될 수 있습니다.":" Native는 기본적으로 실행하지 않습니다."))+
       (auto_native_F_requested?
        (auto_select_observed_F_no_oil?
          " 기본 영약 F 후보 1종만 신규 SimC Native 최대 2회 측정합니다. 기존 캐시를 재사용하며 공식 F 등록은 별도입니다.":
@@ -1002,6 +1014,7 @@ async function buildSeasonEnvironment() {
     const report=await api("/api/v1/environment/season-build",
       {method:"POST",payload:{game_build,target_ilevel,native_G_binary,
                               consumable_native_binary,
+                              auto_initial_core_build,auto_initial_core_simc_binary,
                               auto_native_F_requested,auto_native_O_requested,
                               auto_select_observed_F_no_oil,
                               selected_flask_item_id,

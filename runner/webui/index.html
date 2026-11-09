@@ -45,6 +45,7 @@
           </div>
           <p class="hint">일반적인 장비 선택 항목이 아닙니다. 기름을 지정하면 같은 시즌의 실제 아이템·품질·손/무기 적용 조건과 SimC 정적 rating을 기존 환경 엔진에서 확인합니다. 영약 ID도 함께 지정해야 하며, 검증이 끝나지 않은 항목은 등록하지 않습니다. 기름 종류가 같은 손에 여러 개 설치된 경우 일반 사용자 세션에서 임의로 하나를 고르지 않습니다.</p>
         </details>
+        <div class="check-row"><label><input id="season-auto-core" type="checkbox" checked> 처음 설치할 때 기존 G/F 자동 구축 <small>같은 시즌·ilvl 검증 설치를 발견하면 Native 0회로 재사용합니다. 미설치 시 로컬 SimC로 기존 G 최대 1회 + 대표 최고품질 후보 영약 F 최대 2회만 측정합니다. J·품질·예산 원본이 미확정이면 READY로 표시하지 않습니다. 아래 고급 측정/품목을 직접 선택한 경우 자동 모드를 사용하지 않습니다.</small></label></div>
         <div class="check-row"><label><input id="season-native-g" type="checkbox"> 기존 G Native 단일 실측 시도 <small>(아래 SimC 실행 파일 경로 사용 · 별도 명시 선택)</small></label></div>
         <div class="check-row"><label><input id="season-native-f" type="checkbox"> 영약 F 후보의 정적 SimC Native 측정 <small>(G 실측 불필요 · SimC 실행 파일 경로 필요 · F 최대 8회/요청 · 기름 O는 원본 확인만 · 품질·등록 별도 검증)</small></label></div>
         <div class="check-row"><label><input id="season-native-o" type="checkbox"> 기름 O의 정적 SimC 원본 확인 <small>(기름을 선택하지 않으면 Native 0회 · 정확한 ItemID 지정 시 스케일링이 필요한 선택 손만 기존 SimC 캐시·Native로 확인 · 무기 적합성·품질은 기존 엔진 처리)</small></label></div>

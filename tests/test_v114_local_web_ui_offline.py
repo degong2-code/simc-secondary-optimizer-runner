@@ -215,7 +215,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         js=self.client.get("/assets/app.js").text
         for ident in ("season-game-build","season-target-ilevel",
                       "season-native-g","season-native-f","season-native-o",
-                      "season-build-btn",
+                      "season-auto-core","season-build-btn",
                       "season-build-stage","season-build-missing",
                       "season-refresh-reason",
                       "season-existing-special-gem-id",
@@ -250,6 +250,9 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn("F/O 자동 발견",js)
         self.assertIn("F Native",js)
         self.assertIn("auto_native_F_requested",js)
+        self.assertIn('id="season-auto-core" type="checkbox" checked',page)
+        self.assertIn("auto_initial_core_build",js)
+        self.assertIn("auto_initial_core_simc_binary",js)
         self.assertIn("auto_native_O_requested",js)
         self.assertIn("consumable_native_binary",js)
         self.assertIn("G 실측 불필요",page)
