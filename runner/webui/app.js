@@ -294,6 +294,8 @@ function fillDefault(item) {
   // session are handled by fillSessionInputs, not this new-user default.
   $("oil_main").checked=false;
   $("oil_off").checked=false;
+  $("optimizer-oil-main-id").value="";
+  $("optimizer-oil-off-id").value="";
   oilCompatibility();
   $("dk_rune_main").value="";
   $("dk_rune_off").value="";
@@ -459,6 +461,11 @@ function fillSessionInputs(payload) {
   $("raid_buffs").checked=b.raid_buffs;
   $("oil_main").checked=u.oil_hands.includes("main_hand");
   $("oil_off").checked=u.oil_hands.includes("off_hand");
+  // The server derives these exact IDs from this session's sealed v212
+  // install, never from untrusted browser memory or a latest-oil guess.
+  const restoredOils=payload.verified_oil_item_ids_by_hand||{};
+  $("optimizer-oil-main-id").value=restoredOils.main_hand??"";
+  $("optimizer-oil-off-id").value=restoredOils.off_hand??"";
   oilCompatibility();
   runeCompatibility();
   // Saved historical choices remain legible but are not auto-promoted to
@@ -583,9 +590,29 @@ function buildRequest() {
   }
   if(!Number.isInteger(controls.ilevel)||controls.ilevel<266||controls.ilevel>344)
     throw Error("최신 시즌 대표장비의 목표 ilvl은 266~344입니다.");
-  return {controls,binary:field("binary"),revision:field("revision"),
-          static_cache:field("static_cache")||null,
-          current_season_product:true};
+  const exactOils={};
+  for(const [hand,node] of [["main_hand","optimizer-oil-main-id"],
+                            ["off_hand","optimizer-oil-off-id"]]) {
+    const input=field(node);
+    if(!input)continue;
+    if(!/^[1-9][0-9]*$/.test(input))
+      throw Error("기름 ItemID는 양의 정수여야 합니다.");
+    const id=Number(input);
+    if(!Number.isSafeInteger(id)||id>999999999)
+      throw Error("기름 ItemID 범위가 올바르지 않습니다.");
+    if(!controls.oil_hands.includes(hand))
+      throw Error("기름 ItemID를 지정한 무기 손도 체크해 주세요.");
+    exactOils[hand]=id;
+  }
+  if(Object.keys(exactOils).length&&
+     Object.keys(exactOils).length!==controls.oil_hands.length)
+    throw Error("기름 ItemID를 지정하려면 선택한 모든 손의 ID가 필요합니다.");
+  const request={controls,binary:field("binary"),revision:field("revision"),
+                 static_cache:field("static_cache")||null,
+                 current_season_product:true};
+  if(Object.keys(exactOils).length)
+    request.selected_oil_item_ids_by_hand=exactOils;
+  return request;
 }
 async function api(path,{method="GET",payload=null,publicRoute=false}={}) {
   const headers={"Accept":"application/json"};
@@ -666,6 +693,12 @@ async function withBusy(fn) {
           "선택 장비의 고정 스탯 하한 L과 입력 총량 T가 충돌합니다.",
         "SEASON_PROFILE_OIL_PHYSICAL_ITEMS_OR_HANDS_DRIFT":
           "선택한 무기 기름의 정확한 시즌 아이템·무기 적용 조건·고정 O가 현재 설치 환경과 일치하지 않습니다. 새 세션에서 기름을 해제하거나 정확한 기름이 등록된 환경을 사용하세요. 검증되지 않은 O를 0으로 처리하지 않습니다.",
+        "WEB_FRESH_SELECTED_OIL_ITEM_IDS_NOT_INSTALLED":
+          "선택한 물리 기름 ItemID·무기 손과 정확히 일치하는 검증된 시즌 환경이 설치되어 있지 않습니다. 시즌 환경 구축에서 해당 기름을 검증한 뒤 다시 선택하세요.",
+        "WEB_FRESH_EXACT_OIL_HAND_ID_SELECTION_INVALID":
+          "기름 ItemID와 체크한 무기 손이 서로 다릅니다. 선택한 모든 손에 정확한 ItemID를 지정하세요.",
+        "V216_REUSE_OIL_HANDS_MULTIPLE_VERIFIED_ITEMS_SELECT_ID":
+          "같은 손에 서로 다른 검증 기름이 있습니다. 고급 기름 ItemID 항목에 정확한 물리 ID를 지정하세요.",
         "FIVE_TIER_LAYOUT_OUTSIDE_FOUR_ROW_CONTRACT":
           "기본 티어 4세트에 다섯 번째 티어 아이템이 추가되었습니다. 이미 포함된 티어 부위로 선택하거나 다른 특수장비 슬롯을 사용하세요."
       };
