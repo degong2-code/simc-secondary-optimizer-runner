@@ -3,7 +3,7 @@
 - **Capability:** `ENVIRONMENT.WEB`, `BUDGET.GJFO`, `PRODUCT.E2E`, `DEV.CONTINUITY`.
 - **Keywords:** profile gem identity, four ordinary gems, optional special, exact v212 manifest SHA, installed reuse, no snapshot, Native0.
 - **Prior evidence:** 기존 70783 v212 실 설치·O>0 사용자 웹 DPS, 원래 v217/v113 저장 프로필·budget-only 무Native 재사용, 최신 4종 기본 J→v098 합성 오프라인 증거와 #42652697431.
-- **Decision:** `FIX` — 실제 설치 원본의 보석 프로필 정체성만 구분, 기존 환경 엔진/효과 엔진/Native 재검증 신설 금지.
+- **Decision:** `CONNECT` — 검증된 기존 설치본과 사용자 보석 프로필을 정확히 접합하도록 재사용 경계의 실제 결함을 수정. 기존 환경 엔진/효과 엔진/Native 재검증 신설 금지.
 - **Changes:** 기존 v113 저장된 v271 보석 배치와 요청 기본 소켓을 비교하고, v216 설치 조회에 선택적 정확 SHA 필터를 추가. 프로필 없는 v212 기존 예산 재사용은 유지.
 - **Verification:** 격리 fe73eed focused #42661091632 524 PASS/2 SKIP/0 FAIL; v113 Linux/Windows #42661091545 각263 PASS. 중간 a4c CI에서 기존 budget-only 계약 1건 회귀를 확인하여 fe73eed에서 교정. 신규 Native/원본 수집0.
 - **Remaining:** 미관측 신규 시즌 첫 정상 Build G/J/F/O→검증 등록→사용자 프로필·실 DPS Native 종단; 이 미실증은 미구현 판정 아님.
