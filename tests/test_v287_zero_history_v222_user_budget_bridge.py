@@ -238,7 +238,7 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         if kind=="temporary_enchant":
             vec["haste_rating"]=17
         token=("test_flask_2" if kind=="flask" else
-               "main_hand:thalassian_phoenix_oil")
+               "main_hand:thalassian_phoenix_oil_2")
         item_id=241326 if kind=="flask" else 243734
         bound={
             "schema":build.consumable_simc_relation.MEASUREMENT_BINDING_SCHEMA,
@@ -2754,7 +2754,7 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                              "mastery_rating":0,"versatility_rating":0}},
                 "oil_by_hand":{"main_hand":{
                     "physical_item_id":243734,
-                    "simc_input_token":"main_hand:thalassian_phoenix_oil",
+                    "simc_input_token":"main_hand:thalassian_phoenix_oil_2",
                     "static_CHMV_vector":{"crit_rating":16,"haste_rating":17,
                          "mastery_rating":0,"versatility_rating":0}}}
                     if oil else {}}
@@ -2779,7 +2779,7 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 "SEASON_PROFILE_COMPOSED_NOT_ADMITTED_NO_NATIVE")
             self.assertIn("flask=flask_of_the_shattered_sun_2",
                           result["profile_simc"])
-            self.assertIn("temporary_enchant=main_hand:thalassian_phoenix_oil",
+            self.assertIn("temporary_enchant=main_hand:thalassian_phoenix_oil_2",
                           result["profile_simc"])
             self.assertEqual(result["scenario"]["consumables"][
                 "gem_budget_J"],143)
@@ -2914,7 +2914,7 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                     season_oil_by_hand={"off_hand":{
                         "physical_item_id":243734,
                         "simc_input_token":
-                            "main_hand:disabled/off_hand:thalassian_phoenix_oil",
+                            "main_hand:disabled/off_hand:thalassian_phoenix_oil_2",
                         "static_CHMV_vector":
                             sample["main_hand"]["static_CHMV_vector"]}})
 
@@ -3013,7 +3013,7 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         self.assertEqual(payload["oil_by_hand"]["main_hand"][
             "static_CHMV_vector"]["haste_rating"],16)
         self.assertEqual(payload["oil_by_hand"]["main_hand"][
-            "simc_input_token"],"main_hand:thalassian_phoenix_oil")
+            "simc_input_token"],"main_hand:thalassian_phoenix_oil_2")
         pending={**auto,
             "status":"GJFO_SELECTED_NUMERIC_OBSERVATIONS_PENDING",
             "calculation":None}

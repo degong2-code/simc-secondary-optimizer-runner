@@ -56,7 +56,7 @@ jobs:
               native_json,1)
           source="\n".join(line for line in source.splitlines()
               if not line.startswith("temporary_enchant="))+"\n"
-          source+="temporary_enchant=main_hand:thalassian_phoenix_oil\n"
+          source+="temporary_enchant=main_hand:thalassian_phoenix_oil_2\n"
           source+="report_details=1\nthreads=1\n"
           path=root/"active.simc"
           path.write_text(source,encoding="utf8")
@@ -92,6 +92,10 @@ jobs:
               print("SIMC_ORIGINAL_ERROR_TAIL","\n".join(lines[-30:]))
               raise SystemExit(ran.returncode)
           assert native_json.is_file(),"SimC did not emit native JSON2"
+          assert not any("invalid temporary enchant" in x.lower()
+                         for x in lines),"SimC silently ignored the oil"
+          assert any("temporary_enchant={" in x.lower()
+                         for x in lines),"No SimC item_t temporary stat report"
           PY
       - name: Preserve small source report receipt, not a new binary
         if: always()

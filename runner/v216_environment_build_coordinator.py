@@ -3576,7 +3576,10 @@ def _zero_history_quality_weapon_candidate_join(*, numeric, weapon_source,
                     if w.get("oil_item_id") == option["physical_item_id"]
                     and w.get("quality_rank") == option["crafting_quality"]
                     and w.get("simc_enchant_id") == option["simc_enchant_id"]
-                    and w.get("simc_token") == stripped
+                    and stripped==(
+                        w.get("simc_token")+"_"+str(option["crafting_quality"])
+                        if option["crafting_quality"]>0 else
+                        w.get("simc_token"))
                     and w.get("hand") == hand
                     and w.get("matched_same_build_spell_equipped_masks") is True
                     and w.get("user_selectable") is False]

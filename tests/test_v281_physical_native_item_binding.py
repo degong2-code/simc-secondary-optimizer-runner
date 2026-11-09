@@ -101,12 +101,12 @@ class ExactPhysicalNativeInput(unittest.TestCase):
         self.assertEqual(f["source_stage_receipt_sha256"],
                          self.source["source_stage"]["receipt_sha256"])
         o=self.choose("temporary_enchant",601,"main_hand")
-        self.assertEqual(o["simc_input_token"],"main_hand:thalassian_phoenix_oil")
+        self.assertEqual(o["simc_input_token"],"main_hand:thalassian_phoenix_oil_2")
         self.assertEqual(o["simc_enchant_id"],8052)
         self.assertEqual(o["crafting_quality"],2)
         off=self.choose("temporary_enchant",601,"off_hand")
         self.assertEqual(off["simc_input_token"],
-                         "main_hand:disabled/off_hand:thalassian_phoenix_oil")
+                         "main_hand:disabled/off_hand:thalassian_phoenix_oil_2")
         for item in (f,o,off):
             self.assertTrue(item["source_only"])
             self.assertFalse(item["same_effect_quality_group_verified"])
@@ -183,7 +183,7 @@ class ExactPhysicalNativeInput(unittest.TestCase):
                 static_cache=None,source_catalog_path=None,
                 bootstrap_result=None,fresh_collection_inputs=parameters)
         self.assertEqual([x["token"] for x in called],
-                         ["test_flask_3","main_hand:thalassian_phoenix_oil"])
+                         ["test_flask_3","main_hand:thalassian_phoenix_oil_2"])
         actual=result["native_effect_numeric_sources_unadmitted"]
         self.assertEqual(len(actual),2)
         self.assertEqual(actual[0]["physical_item_native_source_unadmitted"][
@@ -405,8 +405,8 @@ class ExactPhysicalNativeInput(unittest.TestCase):
         self.assertEqual(called[0],("flask","test_flask_3"))
         self.assertEqual({token for kind,token in called
                           if kind=="temporary_enchant"},
-                         {"main_hand:thalassian_phoenix_oil",
-                          "main_hand:disabled/off_hand:thalassian_phoenix_oil"})
+                         {"main_hand:thalassian_phoenix_oil_2",
+                          "main_hand:disabled/off_hand:thalassian_phoenix_oil_2"})
         self.assertNotIn("auto_native_O_requested",collector.call_args.kwargs)
         self.assertEqual(result["native_calls"],6)
         self.assertEqual(result["zero_history_build"]["new_native_calls"],6)

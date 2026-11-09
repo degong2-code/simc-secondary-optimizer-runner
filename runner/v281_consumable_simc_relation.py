@@ -650,8 +650,13 @@ def resolve_native_input(*,stage_root,relation,build,simc_revision,
         # Names do NOT certify game effects or weapon applicability.
         need("oil" in token.split("_"),
              "V281_NATIVE_GENERAL_TEMP_ENCHANT_OUT_OF_PRODUCT_SCOPE")
+        # The native SimC parser resolves a rank from the final _<quality>
+        # suffix. Without it, multiple ranks of the same oil name resolve
+        # to enchant_id=0 and SimC may silently ignore the requested oil.
+        # Keep the source's unranked base token unchanged in v281/v285 DBC.
         token=(("main_hand:" if hand=="main_hand" else
-                "main_hand:disabled/off_hand:")+token)
+                "main_hand:disabled/off_hand:")+
+               token+("_"+str(quality) if quality>0 else ""))
     return {
         "schema":MEASUREMENT_BINDING_SCHEMA,
         "game_build":build,"simc_revision":simc_revision,
