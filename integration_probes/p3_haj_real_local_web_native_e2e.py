@@ -74,7 +74,8 @@ def save_cases(root,session,output_file):
     output=longrun.stage_path(root/session,saved["native_budget"])/"simc_results"
     files=["V291_SESSION.json","V291_JOURNAL.jsonl",
            "V291_RESULT.json","V291_PROGRESS.json"]
-    cases=sorted(output.glob("cases/case_*/*"))
+    # v291.case_folder: cases/case_00001/native/{input.simc,result.json,native_receipt.json}
+    cases=sorted(output.glob("cases/case_*/native/*"))
     for name in files:
         need((output/name).is_file(),"MISSING_NATIVE_EVIDENCE:"+name)
     allowed={"input.simc","result.json","native_receipt.json"}
