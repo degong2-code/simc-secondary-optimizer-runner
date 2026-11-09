@@ -651,6 +651,25 @@ class LocalWebAPIOffline(unittest.TestCase):
                          json={"game_build":"12.2.0.99999"},
                          headers={"content-type":"application/json"}).status_code,403)
 
+    def test_season_oil_static_source_only_without_executable(self):
+        # v296 reuses the season's pinned SimC compiler data, not v269's
+        # talent-buffed O Native. An O-only Build must require no executable.
+        payload={"game_build":"12.2.0.99999","target_ilevel":334,
+                 "auto_native_O_requested":True}
+        source={"status":"SOURCE_ONLY_PENDING",
+                "environment_ready":False,"environment_installed":False,
+                "native_calls":0}
+        with mock.patch.object(web.environment_build,"build_environment",
+                               return_value=source) as stage:
+            response=self.post("/api/v1/environment/season-build",payload)
+        self.assertEqual(response.status_code,200,response.text)
+        self.assertIsNone(stage.call_args.kwargs["binary"])
+        args=stage.call_args.kwargs["fresh_collection_inputs"]
+        self.assertTrue(args["auto_native_O_requested"])
+        self.assertFalse(args["auto_native_F_requested"])
+        self.assertFalse(args["auto_native_G_requested"])
+        self.assertFalse(response.json()["environment_ready"])
+
     def test_web_F_O_only_native_uses_existing_binary_without_G_probe(self):
         payload={"game_build":"12.2.0.99999","target_ilevel":334,
                  "consumable_native_binary":str(self.binary),

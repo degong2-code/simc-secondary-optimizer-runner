@@ -5899,11 +5899,13 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
               fresh_collection_inputs.get("effect_probe_requests") is None),
              "V216_AUTO_F_NATIVE_EXPLICIT_BINARY_REQUIRED")
         auto_native_O=fresh_collection_inputs.get("auto_native_O_requested",False)
+        # O now uses existing pinned SimC stat source (v296), without the
+        # talent-buffed v278 Native. This flag is a source-inspection opt-in
+        # retained for API compatibility; no binary is required for O alone.
         need(type(auto_native_O) is bool and
-             (not auto_native_O or binary is not None) and
              (not auto_native_O or
               fresh_collection_inputs.get("effect_probe_requests") is None),
-             "V216_AUTO_O_NATIVE_EXPLICIT_BINARY_REQUIRED")
+             "V216_AUTO_O_SOURCE_ONLY_NO_EXPLICIT_PROBES")
         effect_probe_requests=fresh_collection_inputs.get("effect_probe_requests")
         # Same-build evidence is internal. The ORIGINAL catalog preflight
         # audits the source and v222 arithmetic only after v191/v211/v213.
@@ -6379,13 +6381,9 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         effect_observations=[]
         auto_F_calls=0
         if auto_native_F:
-            # If both kinds are requested, reserve up to two O pairs rather
-            # than letting a long F worklist starve all weapon-oil probes.
-            # No extra Native is launched; this only partitions the same 8.
-            oil_work=(source_compilation.get(
-                "automatic_F_O_measurement_candidates_unadmitted") or {}
-                ).get("oil",[]) if auto_native_O else []
-            oil_reserved=min(4,2*len(oil_work))
+            # The buffed v278 oil measurement is no longer an O budget
+            # source, so no F Native calls need to be reserved for it.
+            oil_reserved=0
             if (auto_select_default_F and selected_budget_items is None):
                 auto_rows=[]
                 auto_state={
@@ -6407,11 +6405,22 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 "automatic_F_native_measurements_unadmitted"]=auto_state
             progress["requires"].extend(auto_state["requires"])
         if auto_native_O:
-            oil_rows,oil_state=_auto_F_native_from_sealed_v281(
-                collected=collected,compilation=source_compilation,
-                binary=binary,kind="temporary_enchant",
-                max_new_native_calls=8-auto_F_calls)
-            effect_observations.extend(oil_rows)
+            # v269/v278 buffed-stat oil comparisons are not a static O
+            # source. Preserve the user request as a source-only inspection,
+            # not a hidden Native that cannot certify the desired number.
+            original=source_compilation.get(
+                "unbuffed_oil_original_simc_source_unadmitted")
+            unresolved=(type(original) is not dict or
+                any(r.get("static_CHMV_vector") is None
+                    for r in original.get("items",[])))
+            oil_state={
+                "status":"O_BUFFED_NATIVE_SKIPPED_STATIC_SOURCE_ONLY",
+                "requires":(
+                    ["O_SIMC_SCALED_STATIC_RATING_PENDING"]
+                    if unresolved else []),
+                "per_item":[],"new_native_calls":0,
+                "legacy_buffed_native_not_used_as_static_O":True,
+                "O_approved":False,"environment_ready":False}
             progress["automatic_O_native_measurements_unadmitted"]=oil_state
             source_compilation[
                 "automatic_O_native_measurements_unadmitted"]=oil_state
@@ -6466,7 +6475,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             **observation,
                             "physical_item_native_source_unadmitted":bound_item}
                     effect_observations.append(observation)
-        if effect_observations:
+        if effect_observations or type(source_compilation.get(
+                "unbuffed_oil_original_simc_source_unadmitted")) is dict:
             # Count automatic and explicit v278 measurements exactly once.
             # This block also runs without manual effect_probe_requests.
             progress["new_native_calls"]+=sum(

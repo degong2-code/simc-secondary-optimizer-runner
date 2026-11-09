@@ -38,8 +38,8 @@
           <p class="hint">선택한 경우 기존 같은 시즌 v281 원본에서 이 영약만 찾아 F Native 측정(별도 선택)을 진행합니다. 없는 ID나 관측상 더 낮은 품질은 보류하며, 다른 영약 전체를 측정하지 않습니다. 정확한 ID를 모르면 비워 두세요.</p>
         </details>
         <div class="check-row"><label><input id="season-native-g" type="checkbox"> 기존 G Native 단일 실측 시도 <small>(아래 SimC 실행 파일 경로 사용 · 별도 명시 선택)</small></label></div>
-        <div class="check-row"><label><input id="season-native-f" type="checkbox"> 영약 F 후보의 정적 SimC Native 측정 <small>(G 실측 불필요 · SimC 실행 파일 경로 필요 · 기름 O와 합계 최대 8회/요청 · 품질·등록 별도 검증)</small></label></div>
-        <div class="check-row"><label><input id="season-native-o" type="checkbox"> 기름 O 후보의 손별 정적 SimC Native 측정 <small>(G 실측 불필요 · SimC 실행 파일 경로 필요 · F 측정과 호출 예산 공유 · 무기 적합성·품질·등록 별도 검증)</small></label></div>
+        <div class="check-row"><label><input id="season-native-f" type="checkbox"> 영약 F 후보의 정적 SimC Native 측정 <small>(G 실측 불필요 · SimC 실행 파일 경로 필요 · F 최대 8회/요청 · 기름 O는 원본 확인만 · 품질·등록 별도 검증)</small></label></div>
+        <div class="check-row"><label><input id="season-native-o" type="checkbox"> 기름 O 후보의 시즌 정적 원본 확인 <small>(기존 SimC 마부 소스 재사용 · 기름 신규 Native 0회 · 스케일링 미확정 항목 보류 · 무기 적합성·품질·등록 별도)</small></label></div>
         <div class="check-row"><label><input id="season-auto-f-no-oil" type="checkbox"> 시즌 기본 영약 F 자동 선정 · 기름 미사용 <small>(같은 시즌 최고 품질 후보 중 대표 1종만 측정 · 전문화별 최적 영약 아님 · F Native 필요 · G/J/F 원본 확인 후에만 설치)</small></label></div>
         <div class="actions"><button type="button" id="season-build-btn" class="btn secondary" disabled>시즌 환경 확인·구축 실행</button></div>
         <p id="season-build-stage" class="hint" role="status" aria-live="polite">기본: 검증된 기존 설치를 재사용하며, 설치가 없거나 갱신이 필요하면 원본 수집·검증을 수행합니다. 최적화 세션은 시작하지 않습니다.</p>

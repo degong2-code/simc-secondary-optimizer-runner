@@ -799,10 +799,12 @@ async function buildSeasonEnvironment() {
     existing_special_gem_id===null?null:requested_sockets;
   if(auto_select_observed_F_no_oil&&(!auto_native_F_requested||auto_native_O_requested))
     throw Error("영약 자동 선택은 F Native 측정을 켜고 기름 O 측정을 끈 상태에서만 사용할 수 있습니다.");
-  const native_F_O_requested=auto_native_F_requested||auto_native_O_requested;
-  const executable=(nativeRequested||native_F_O_requested)?field("binary"):null;
-  if((nativeRequested||native_F_O_requested)&&!executable)
-    throw Error("Native 측정을 선택한 경우 SimC 실행 파일 경로가 필요합니다.");
+  // O source inspection reuses the pinned season source, NOT the old
+  // talent-buffed SimC Native. Only G/F require a local executable.
+  const native_F_O_requested=auto_native_F_requested;
+  const executable=(nativeRequested||auto_native_F_requested)?field("binary"):null;
+  if((nativeRequested||auto_native_F_requested)&&!executable)
+    throw Error("G/F Native 측정을 선택한 경우 SimC 실행 파일 경로가 필요합니다.");
   // G is truly optional even if F/O uses the same executable.
   const native_G_binary=nativeRequested?executable:null;
   const consumable_native_binary=native_F_O_requested?executable:null;
@@ -814,10 +816,12 @@ async function buildSeasonEnvironment() {
       "기존 검증 시즌 환경을 우선 재사용하고, 없으면 원본 구축을 시작할까요? ")+
       "필요 시 외부 네트워크를 사용할 수 있습니다."+
       (nativeRequested?" 기존 G Native 최대 1회 실행될 수 있습니다.":" Native는 기본적으로 실행하지 않습니다.")+
-      ((auto_native_F_requested||auto_native_O_requested)?
+      (auto_native_F_requested?
        (auto_select_observed_F_no_oil?
          " 기본 영약 F 후보 1종만 신규 SimC Native 최대 2회 측정합니다. 기존 캐시를 재사용하며 공식 F 등록은 별도입니다.":
-         " 선택한 F/O 후보의 정적 SimC Native를 요청당 합계 신규 최대 8회 실행할 수 있으며, 기존 결과는 캐시를 재사용합니다. 품질·무기 적합성 승인과 별도입니다."):"")))
+         " 영약 F 후보만 최대 8회 신규 Native로 관측할 수 있습니다. 기름은 Native를 실행하지 않습니다."):"")+
+      (auto_native_O_requested?
+       " 기름 O는 검증된 시즌 SimC 정적 마부 원본만 확인합니다(신규 Native 0회). 스케일링 미확정이면 보류됩니다.":"")))
     return;
   $("season-build-stage").textContent="기존 설치 영수증 확인 · 필요 시 동일 환경 엔진으로 원본 수집·검증 중…";
   try {
