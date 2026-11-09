@@ -147,6 +147,86 @@ class LocalJobs:
         self.static_lock = threading.Lock()
         self.profile_stage_lock = threading.Lock()
         self.season_source_lock = threading.Lock()
+        self._verified_fresh_profile_result = None
+
+    def remember_verified_fresh_environment(self, result):
+        """Reuse only original v216/v212 installed READY, never user-supplied JSON."""
+        compilation=(result.get("source_compilation")
+                     if type(result) is dict else None)
+        progress=(result.get("zero_history_build")
+                  if type(result) is dict else None)
+        installed=(compilation.get("verified_environment_install")
+                   if type(compilation) is dict else None)
+        if (result.get("normal_build_entry") is not True
+            or type(progress) is not dict
+            or progress.get("environment_ready") is not True
+            or type(installed) is not dict
+            or installed.get("environment_ready") is not True
+            or type(installed.get("stage_output_path")) is not str):
+            raise environment_manifest.EnvironmentBlocked(
+                "WEB_FRESH_ORIGINAL_V216_INSTALLED_RESULT_REQUIRED")
+        path=pathlib.Path(installed["stage_output_path"])
+        if path.is_symlink() or not path.is_file():
+            raise environment_manifest.EnvironmentBlocked(
+                "WEB_FRESH_V212_INSTALLED_FILE_MISSING")
+        doc,_=environment_manifest.read_json(path)
+        environment_manifest.verify_fresh_installed_environment(doc)
+        verified=environment_build.find_verified_installed_season_environment(
+            self.root,doc["target_ilevel"],
+            expected_game_build=doc["game_build"])
+        if (verified is None or
+            verified["installed_manifest_sha256"]!=doc["manifest_sha256"] or
+            installed.get("manifest_sha256")!=doc["manifest_sha256"]):
+            raise environment_manifest.EnvironmentBlocked(
+                "WEB_FRESH_V217_ORIGINAL_RECEIPT_MISMATCH")
+        source=pathlib.Path(compilation["source_catalog_path"])
+        if source.is_symlink() or not source.is_file():
+            raise environment_manifest.EnvironmentBlocked(
+                "WEB_FRESH_V213_CATALOG_MISSING")
+        catalog,actual_sha=environment_manifest.read_json(source)
+        if (actual_sha!=doc["source_catalog_artifact_sha256"] or
+            catalog.get("manifest_sha256")!=
+                doc["source_catalog_manifest_sha256"] or
+            catalog.get("game_build")!=doc["game_build"]):
+            raise environment_manifest.EnvironmentBlocked(
+                "WEB_FRESH_V213_INSTALLED_CATALOG_DRIFT")
+        names=("status","source_catalog_path","stage_root","simc_revision",
+               "v191_original_gear_tier_source_paths",
+               "v098_source_only_profile_inputs_unadmitted",
+               "physical_gem_layout_unadmitted",
+               "physical_gem_J_arithmetic_unadmitted",
+               "selected_v221_gem_item_relation_unadmitted",
+               "preflight_sha256","verified_environment_install")
+        if any(k not in compilation for k in names):
+            raise environment_manifest.EnvironmentBlocked(
+                "WEB_FRESH_V098_ORIGINAL_PROFILE_INPUT_MISSING")
+        self._verified_fresh_profile_result={
+            "normal_build_entry":True,
+            "zero_history_build":{"environment_ready":True},
+            "source_compilation":{k:compilation[k] for k in names},
+            "fresh_one_spec_simc_representative":
+                result.get("fresh_one_spec_simc_representative")}
+        return doc["manifest_sha256"]
+
+    def _fresh_environment_summary(self, folder, result):
+        installed=result["source_compilation"]["verified_environment_install"]
+        doc,_=environment_manifest.read_json(
+            pathlib.Path(installed["stage_output_path"]))
+        environment_manifest.verify_fresh_installed_environment(doc)
+        manifest=json.loads((pathlib.Path(folder)/"generated"/"manifest.json")
+                            .read_text(encoding="utf8"))
+        seal=manifest.get(bootstrap.entry.FRESH_SEASON_FIELD)
+        if (type(seal) is not dict or
+            seal.get("installed_manifest_sha256")!=doc["manifest_sha256"] or
+            seal.get("installed_environment_path")!=installed["stage_output_path"]):
+            raise environment_manifest.EnvironmentBlocked(
+                "WEB_FRESH_V096_INSTALLED_MANIFEST_MISMATCH")
+        return {"schema":"v113_web_fresh_v212_installed_session_v1",
+                "status":"FRESH_SEASON_VERIFIED_ENVIRONMENT_INSTALLED_READY",
+                "fresh_v212_installed_manifest_sha256":doc["manifest_sha256"],
+                "game_build":doc["game_build"],
+                "target_ilevel":doc["target_ilevel"],
+                "native_calls":0,"network_calls":0}
 
     def default_static_cache(self, user, requested):
         """Reuse an existing same-PC static cache; never create L or call SimC.
@@ -312,6 +392,8 @@ class LocalJobs:
                         **({"source_ordinary_nominal_by_stat":nominal_source}
                            if nominal_source is not None else {})}
                        if existing_special_gem_id is not None else {})})
+        if observed.get("environment_ready") is True:
+            self.remember_verified_fresh_environment(observed)
         return {**observed,"web_environment_scope":{
             "schema":"v113_web_season_environment_build_scope_v1",
             "game_build":game_build,"target_ilevel":target_ilevel,
