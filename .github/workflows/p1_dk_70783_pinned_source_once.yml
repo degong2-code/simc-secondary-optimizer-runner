@@ -89,3 +89,107 @@ jobs:
           path: p1_dk_70783_source_receipt.json
           if-no-files-found: ignore
           retention-days: 5
+
+  dk-rune-physical-native:
+    if: contains(github.event.head_commit.message, '[p1-dk-native-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 16
+    permissions:
+      contents: read
+      actions: read
+    env:
+      PYTHONPATH: runner:integration_probes:.
+      SIMC_PINNED_SOURCE_COMMIT: c20e2ad52e4c33711f74272309a5748125175fe8
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse original 70783 binary artifact, no rebuild
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42552942329
+          name: p3-har-verified-source-new-binary-short-lived
+          path: out/binary
+          github-token: ${{ github.token }}
+      - name: Verify exact binary bytes and local source dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd out/binary
+          sha256sum -c simc.sha256
+          chmod +x ./simc
+          cd ../..
+          python3 -m pip install -r requirements-web-test.txt
+      - name: Run two bounded DK user-selected rune physical SimC cases
+        timeout-minutes: 10
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib
+          import v106_user_session_controller as sessions
+          import v145_targeted_pure_physical_native as native
+          binary=pathlib.Path("out/binary/simc").resolve()
+          revision=os.environ["SIMC_PINNED_SOURCE_COMMIT"]
+          out=pathlib.Path("out/p1_dk_rune_native")
+          cases=(
+            (("deathknight","frost"),{"main_hand":3368,"off_hand":3370}),
+            (("deathknight","unholy"),{"main_hand":3368}),
+          )
+          rows=[]
+          for (cls,spec),selected in cases:
+              controls=sessions.standard_controls((cls,spec))
+              controls["oil_hands"]=[]
+              controls["runeforge_by_hand"]=selected
+              user=sessions.user_scenario(controls)
+              result=native.run(user,binary,out,revision,
+                  iterations=1,max_new=1,source_first_stage=True)
+              raw_path=pathlib.Path(result["physical_input"])
+              raw=raw_path.read_text(encoding="utf8")
+              for hand,enchant in selected.items():
+                  prefix=("main_hand=" if hand=="main_hand" else "off_hand=")
+                  matching=[line for line in raw.splitlines()
+                            if line.startswith(prefix)]
+                  assert len(matching)==1 and (
+                      "enchant_id="+str(enchant) in matching[0]),(hand,matching)
+              row={"spec":cls+"/"+spec,"status":result["status"],
+                   "selected_enchant_ids_by_hand":selected,
+                   "source_first_stage":True,
+                   "simc_commit":revision,
+                   "binary_sha256":hashlib.sha256(binary.read_bytes()).hexdigest(),
+                   "input_sha256":hashlib.sha256(raw.encode()).hexdigest(),
+                   "new_native_calls":result["new_native_calls"],
+                   "physical_sample_only":True,
+                   "simc_owns_effects":True,
+                   "user_optimization_proved":False}
+              rows.append(row)
+              if result["status"]!="PASS_PHYSICAL_SIMC":
+                  logfile=result.get("raw_log")
+                  if logfile and pathlib.Path(logfile).is_file():
+                      print("DK_NATIVE_ORIGINAL_LOG",
+                            pathlib.Path(logfile).read_text(
+                                errors="replace")[-4500:],flush=True)
+                  raise RuntimeError("DK_NATIVE_FAILED:"+str(result["status"]))
+          report={"schema":"p1_dk_70783_two_selected_rune_native_v1",
+                  "game_build":"12.1.5.70783",
+                  "source_commit":revision,"cases":rows,
+                  "total_new_native_calls":sum(x["new_native_calls"]
+                     for x in rows),"adaptive_dps_optimization_run":False,
+                  "new_environment_native_calls":0}
+          receipt=out/"P1_DK_SELECTED_RUNES_SUMMARY.json"
+          receipt.write_text(json.dumps(report,sort_keys=True,indent=2)+"\n")
+          print("P1_DK_SELECTED_RUNE_NATIVE_PASS",
+                json.dumps(report,sort_keys=True),flush=True)
+          PY
+      - name: Upload only small DK proof receipts (not the executable)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-dk-70783-selected-runeforge-physical-native
+          path: |
+            out/p1_dk_rune_native/**/receipt.json
+            out/p1_dk_rune_native/**/SUMMARY.json
+            out/p1_dk_rune_native/P1_DK_SELECTED_RUNES_SUMMARY.json
+          if-no-files-found: ignore
+          retention-days: 5
