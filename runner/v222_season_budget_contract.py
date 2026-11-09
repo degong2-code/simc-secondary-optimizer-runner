@@ -129,6 +129,67 @@ def _component(proof, name, build, manifest_sha, numeric_preview_only=False):
     return proof
 
 
+def _target_total(reference_B,J,F,fixed_L,fixed_E,O,manual_final_T):
+    """Existing v222 B/T arithmetic shared by normal build and user plan."""
+    need(manual_final_T is None or
+         (type(manual_final_T) is int and manual_final_T>0),
+         "GJFO_MANUAL_FINAL_T_INVALID")
+    B=reference_B if manual_final_T is None else manual_final_T-O
+    T=B+O
+    need(B>=J+F+sum(fixed_L.values())+sum(fixed_E.values()),
+         "GJFO_FIXED_MINIMA_EXCEED_TOTAL")
+    return B,T
+
+
+def retarget_verified_install(*,document,manual_final_T):
+    """User session only: v212/v217 already independently authenticated.
+
+    This function never changes installed bytes or certifies original sources.
+    Both v098 and v096 run it against the same sealed v212 document.
+    """
+    need(type(document) is dict and
+         document.get("status")==
+             "FRESH_SEASON_VERIFIED_ENVIRONMENT_INSTALLED_READY" and
+         document.get("environment_ready") is True and
+         document.get("environment_installed") is True and
+         type(document.get("v222_reconciled_budget")) is dict,
+         "GJFO_MANUAL_INSTALLED_SOURCE_REQUIRED")
+    original=document["v222_reconciled_budget"]
+    oil=_vector(document.get("official_O"),"O")
+    fixed_L=_vector(original.get("fixed_L"),"L")
+    fixed_E=_vector(original.get("fixed_E"),"E")
+    need(all(type(document.get(k)) is int for k in
+             ("official_G","official_effective_G","official_J",
+              "official_F","official_B","official_T")),
+         "GJFO_MANUAL_INSTALLED_NUMERIC_FIELDS")
+    reference_B=(document["official_effective_G"]+
+                 document["official_J"]+document["official_F"])
+    need(all(original.get(k)==document[v] for k,v in (
+              ("reference_G","official_G"),
+              ("effective_G","official_effective_G"),
+              ("J","official_J"),("F","official_F"),
+              ("base_B","official_B"),("final_T","official_T"),
+              ("fixed_O","official_O"))) and
+         original.get("reference_B")==reference_B and
+         document["official_B"]+sum(oil.values())==document["official_T"] and
+         original.get("game_build")==document.get("game_build") and
+         original.get("target_ilevel")==document.get("target_ilevel") and
+         original.get("source_catalog_manifest_sha256")==
+             document.get("source_catalog_manifest_sha256") and
+         original.get("source_catalog_artifact_sha256")==
+             document.get("source_catalog_artifact_sha256"),
+         "GJFO_MANUAL_INSTALLED_ORIGINAL_BUDGET_DRIFT")
+    B,T=_target_total(reference_B,document["official_J"],
+                      document["official_F"],fixed_L,fixed_E,
+                      sum(oil.values()),manual_final_T)
+    return {**original,"base_B":B,"final_T":T,
+            "manual_final_T_authoritative":manual_final_T is not None,
+            "user_budget_source_installed_manifest_sha256":
+                document["manifest_sha256"],
+            "installed_reference_B":document["official_B"],
+            "installed_reference_T":document["official_T"]}
+
+
 def preprofile_budget(*, source_catalog, source_artifact_sha256, evidence,
                       target_ilevel, manual_final_T=None,
                       numeric_preview_only=False):
@@ -231,14 +292,8 @@ def preprofile_budget(*, source_catalog, source_artifact_sha256, evidence,
          "GJFO_L_E_EXCEEDS_EFFECTIVE_G")
     reference_B = g_effective + amounts["J"] + amounts["F"]
     O = sum(oil.values())
-    need(manual_final_T is None or
-         (type(manual_final_T) is int and manual_final_T > 0),
-         "GJFO_MANUAL_FINAL_T_INVALID")
-    B = reference_B if manual_final_T is None else manual_final_T - O
-    T = B + O
-    need(B >= amounts["J"] + amounts["F"] +
-         sum(fixed_L.values()) + sum(fixed_E.values()),
-         "GJFO_FIXED_MINIMA_EXCEED_TOTAL")
+    B,T = _target_total(reference_B,amounts["J"],amounts["F"],
+                        fixed_L,fixed_E,O,manual_final_T)
     return {
         "schema": SCHEMA,
         "status": ("NUMERIC_PREVIEW_UNADMITTED_NO_SOURCE_AUTHENTICATION"

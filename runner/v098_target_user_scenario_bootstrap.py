@@ -23,6 +23,8 @@ import v169_source_first_representative_stage as source_first
 import v213_source_to_catalog as original_catalog
 import v202_one_enchant_admission as verified_enchant
 import v206_nonchmv_eagle_selection as nonchmv_enchant
+import v212_environment_manifest as installed_manifest
+import v222_season_budget_contract as budget_contract
 
 SCHEMA="v098_target_ilevel_user_scenario_v1"
 FIELDS={"schema","character","target","trinkets","special_items",
@@ -596,7 +598,9 @@ def _materialize_admitted_season_v096(*, source_only,season_profile_inputs,
             "installed_environment_path":str(receipt_path),
             "installed_manifest_sha256":source_sha,
             "oil_by_hand":copy.deepcopy(
-                season_profile_inputs["oil_by_hand"])}
+                season_profile_inputs["oil_by_hand"]),
+            **({"user_final_T":user["target"]["final_T"]}
+               if user["target"]["final_T"] is not None else {})}
         source=entry._admitted_fresh_season_source(
             manifest_path=folder/"manifest.json",season=manifest_source,
             revision=revision,user_scenario=draft["scenario"],
@@ -1496,6 +1500,38 @@ def preview_from_environment_build(user,folder,binary,revision,*,
          inputs.get("schema")=="v098_internal_season_profile_inputs_v1" and
          type(inputs.get("v216_numeric_preview")) is dict,
          "SEASON_V216_SOURCE_PATHS_OR_INPUTS_DRIFT")
+    # Signed v212 environment remains immutable; only the user session
+    # retargets B/T. Original v096 checks source-owner proofs once more.
+    if installed_path is not None and user["target"]["final_T"] is not None:
+        original=inputs["v216_numeric_preview"]["calculation"]
+        p=pathlib.Path(installed_path)
+        need(p.is_file() and not p.is_symlink(),
+             "FRESH_USER_T_INSTALLED_PATH_INVALID")
+        doc,_=installed_manifest.read_json(p)
+        installed_manifest.verify_fresh_installed_environment(doc)
+        need(doc["manifest_sha256"]==compilation[
+                 "verified_environment_install"]["manifest_sha256"] and
+             original["base_B"]==doc["official_B"] and
+             original["final_T"]==doc["official_T"] and
+             original["J"]==doc["official_J"] and
+             original["F"]==doc["official_F"] and
+             original["fixed_O"]==doc["official_O"] and
+             original["source_catalog_manifest_sha256"]==
+                 doc["source_catalog_manifest_sha256"] and
+             original["source_catalog_artifact_sha256"]==
+                 doc["source_catalog_artifact_sha256"],
+             "FRESH_USER_T_ORIGINAL_SOURCE_DRIFT")
+        try:
+            adjusted=budget_contract.retarget_verified_install(
+                document=doc,manual_final_T=user["target"]["final_T"])
+        except budget_contract.SeasonBudgetBlocked as exc:
+            raise UserScenarioBlocked(
+                "FRESH_USER_T_FIXED_BUDGET_INVALID:"+str(exc)) from exc
+        inputs=copy.deepcopy(inputs)
+        inputs["v216_numeric_preview"]["calculation"].update({
+            "base_B":adjusted["base_B"],
+            "final_T":adjusted["final_T"],
+            "manual_final_T_authoritative":True})
     numeric=inputs["v216_numeric_preview"]
     calc=numeric.get("calculation")
     need(numeric.get("schema")==

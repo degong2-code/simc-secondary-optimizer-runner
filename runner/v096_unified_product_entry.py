@@ -17,6 +17,7 @@ import v141_verified_pure_native_pilot as pure_pilot
 import v202_one_enchant_admission as verified_enchant
 import v204_selected_enchant_reference_budget as enchant_reference
 import v206_nonchmv_eagle_selection as nonchmv_enchant
+import v222_season_budget_contract as budget_contract
 
 SCHEMA="v096_user_scenario_unified_entry_v1"
 FIELDS={"schema","profile_simc","scenario_json","fillers_json",
@@ -151,10 +152,12 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
     both v217 stage receipts before any v094 runtime source is prepared.
     This first bridge supports the proven O=0 base; physical oils stay pending.
     """
-    need(type(season) is dict and set(season)=={
-        "schema","installed_environment_path","installed_manifest_sha256",
-        "oil_by_hand"} and season["schema"]==FRESH_SEASON_SCHEMA,
-        "FRESH_SEASON_INTERNAL_SOURCE_FIELDS")
+    fields={"schema","installed_environment_path",
+            "installed_manifest_sha256","oil_by_hand"}
+    need(type(season) is dict and set(season) in
+         (fields,fields|{"user_final_T"}) and
+         season.get("schema")==FRESH_SEASON_SCHEMA,
+         "FRESH_SEASON_INTERNAL_SOURCE_FIELDS")
     path=path_for(pathlib.Path(manifest_path).parent,
                   season["installed_environment_path"])
     need(not path.is_symlink() and path.is_file() and len(path.parents)>=4
@@ -186,6 +189,18 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
     normalized=contract.normalize(user_scenario)
     oil=doc["official_O"]
     zeros={stat:0 for stat in contract.STATS}
+    user_final_T=season.get("user_final_T")
+    if user_final_T is not None:
+        try:
+            adjusted=budget_contract.retarget_verified_install(
+                document=doc,manual_final_T=user_final_T)
+        except budget_contract.SeasonBudgetBlocked as exc:
+            raise EntryBlocked("FRESH_SEASON_USER_BUDGET_INVALID:"+str(exc)) from exc
+        approved_B=adjusted["base_B"]
+        approved_T=adjusted["final_T"]
+    else:
+        approved_B=doc["official_B"]
+        approved_T=doc["official_T"]
     physical_f=doc.get("official_F_physical_source")
     need(type(physical_f) is dict
          and physical_f.get("static_CHMV_vector")==flask_F
@@ -199,12 +214,13 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
          and normalized["scenario"]["target"]["ilevel"]==
              doc["target_ilevel"]
          and normalized["scenario"]["target"]["manual_total"]==
-             doc["official_B"]
-         and normalized["budget"]["T"]==doc["official_B"]
+             approved_B
+         and normalized["budget"]["T"]==approved_B
          and normalized["budget"]["J"]==doc["official_J"]
          and normalized["budget"]["F"]==doc["official_F"]
          and normalized["budget"]["external_temporary_rating"]==zeros
-         and doc["official_B"]+sum(oil.values())==doc["official_T"],
+         and approved_B+sum(oil.values())==approved_T
+         and (user_final_T is None or user_final_T==approved_T),
          "FRESH_SEASON_TYPED_GJFO_B_T_O_DRIFT")
     # Preserve v093/v094's exact durable session/cache identity shape.
     # The fresh installed v212 SHA occupies the former v216 receipt slot;
@@ -218,19 +234,22 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
             "original_budget_source_identities":
                 doc["trusted_budget_component_source_identities"],
             "original_v217_installed_stage_receipt_sha256":
-                bound["stage_receipt_sha256"]},
+                bound["stage_receipt_sha256"],
+            **({"user_final_T":user_final_T,"derived_base_B":approved_B}
+                if user_final_T is not None else {})},
             sort_keys=True,separators=(",",":")).encode("utf8")).hexdigest()}
     budget={"game_build":doc["game_build"],
             "simc_revision":doc["simc_revision"],
             "target_ilevel":doc["target_ilevel"],
-            "base_B":doc["official_B"],"final_T":doc["official_T"],
+            "base_B":approved_B,"final_T":approved_T,
             "fixed_O":dict(oil),"J":doc["official_J"],"F":doc["official_F"],
             "source_catalog_manifest_sha256":
                 doc["source_catalog_manifest_sha256"],
             "source_catalog_artifact_sha256":
                 doc["source_catalog_artifact_sha256"]}
     return {"season_budget":budget,"season_source_identity":identity,
-            "oil_by_hand":{},"fresh_v212_installed":True}
+            "oil_by_hand":{},"fresh_v212_installed":True,
+            "user_manual_final_T":user_final_T}
 
 
 def source(manifest_path):
@@ -415,7 +434,11 @@ def source(manifest_path):
         plan["selected_enchant_budget_policy"]=(
             "MANUAL_FINAL_T_UNCHANGED_FIXED_E" if manual_T is not None
             else "DERIVED_REFERENCE_B_PLUS_E_ONCE")
-    if manual_T is not None:
+    if season_source is not None and season_source.get(
+            "user_manual_final_T") is not None:
+        plan["user_manual_final_T"]=season_source["user_manual_final_T"]
+        plan["legacy_v061_base_B"]=B
+    elif manual_T is not None:
         plan["user_manual_final_T"]=manual_T
         plan["legacy_v061_base_B"]=B
     return {"manifest":user,"context":context,"seeds":seeds,
