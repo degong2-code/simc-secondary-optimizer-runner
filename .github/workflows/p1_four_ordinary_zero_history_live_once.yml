@@ -1,0 +1,151 @@
+# One bounded real current-Retail zero-HISTORY normal Build.
+# Existing v113 -> v216 -> v212 -> v098, four ordinary gems, no special.
+# This is NOT proof of a different/future season. No engine rebuild or DPS sweep.
+name: P1 one actual zero-history four-ordinary normal Build (bounded)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p1_four_ordinary_zero_history_live_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-four-ordinary-zero-history-build-once
+  cancel-in-progress: false
+jobs:
+  original-normal-build:
+    if: contains(github.event.head_commit.message, '[p1-four-ordinary-build-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      PYTHONPATH: runner:.
+      SIMC_PINNED_SOURCE_COMMIT: c20e2ad52e4c33711f74272309a5748125175fe8
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse existing exact-binary artifact, do not compile SimC
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42552942329
+          name: p3-har-verified-source-new-binary-short-lived
+          path: out/binary
+          github-token: ${{ github.token }}
+      - name: Validate existing exact binary and web dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd out/binary && sha256sum -c simc.sha256)
+          actual="$(sha256sum out/binary/simc | cut -d' ' -f1)"
+          test "$actual" = "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6"
+          chmod +x out/binary/simc
+          python -m pip install -r requirements-web-test.txt
+          echo "P1_EXACT_SOURCE_BINARY_REUSED"
+      - name: Original v113 normal Build from empty workspace, one Ret334, four ordinary gems
+        timeout-minutes: 20
+        shell: bash
+        run: |
+          python -u - <<'PY'
+          import json, pathlib, tempfile, os, sys
+          from runner import v113_local_web_api as web
+          from runner import v289_retail_live_build_source as retail
+          from runner import v216_environment_build_coordinator as engine
+
+          path=pathlib.Path("p1_four_ordinary_zero_history_receipt.json")
+          receipt={"schema":"p1_four_ordinary_zero_history_real_source_v1",
+                   "status":"NOT_RUN","environment_ready":False,
+                   "user_profile_ready":False,"target_ilevel":334,
+                   "ordinary_gem_count_required":4,
+                   "special_gem_selected":False,
+                   "native_limit":3,"same_build_historical_numeric_reused":False,
+                   "new_season_completion_claim":False}
+          exit_code=2
+          try:
+              live=retail.discover(region="KR")
+              build=live["game_build"]
+              receipt["live_retail_build"]=build
+              if build!="12.1.5.70783":
+                  receipt["status"]="LIVE_BUILD_CHANGED_EXACT_BINARY_SOURCE_NOT_MATCHED"
+              elif not all(os.environ.get(x) for x in
+                           ("BLIZZARD_CLIENT_ID","BLIZZARD_CLIENT_SECRET",
+                            "WCL_CLIENT_ID","WCL_CLIENT_SECRET")):
+                  receipt["status"]="AUTHENTICATED_SOURCE_CREDS_NOT_CONFIGURED"
+              else:
+                  binary=pathlib.Path("out/binary/simc").resolve()
+                  with tempfile.TemporaryDirectory(prefix="p1-four-ordinary-clean-") as td:
+                      root=pathlib.Path(td)
+                      assert not list(root.iterdir()), "ZERO_HISTORY_ROOT_NOT_EMPTY"
+                      jobs=web.LocalJobs(root)
+                      result=jobs.build_season_environment(
+                          game_build=build,target_ilevel=334,
+                          auto_initial_core_build=True,
+                          auto_initial_core_simc_binary=str(binary),
+                          simc_revision_hint=os.environ["SIMC_PINNED_SOURCE_COMMIT"],
+                          existing_special_gem_id=None,
+                          source_target_socket_count=4)
+                      progress=result.get("zero_history_build") or {}
+                      compiled=result.get("source_compilation") or {}
+                      layout=compiled.get("physical_gem_layout_unadmitted") or {}
+                      installed=compiled.get("verified_environment_install") or {}
+                      receipt.update({
+                          "status":"REAL_SOURCE_PROCESSED",
+                          "source_stage_status":(result.get("source_stage") or {}).get("status"),
+                          "compiler_status":compiled.get("status"),
+                          "compiler_missing":compiled.get("missing",[]),
+                          "requires":progress.get("requires",[]),
+                          "J_component_names":progress.get("original_J_F_verified_component_names",[]),
+                          "G_native_status":progress.get("native_G_status"),
+                          "source_selected_flask_id":progress.get("automatic_observed_F_explicit_no_oil_selected_item_id"),
+                          "native_calls":result.get("native_calls"),
+                          "budget":{k:result.get(k) for k in ("G","J","F","O","B","T")},
+                          "physical_layout":{
+                              "special_gem_id":layout.get("special_gem_id"),
+                              "socket_total":layout.get("socket_total"),
+                              "ordinary_count":len(layout.get("ordinary_gem_ids") or []),
+                              "distinct_first_four":len(set((layout.get("ordinary_gem_ids") or [])[:4]))},
+                          "installed_status":installed.get("status"),
+                          "environment_ready":result.get("environment_ready") is True,
+                          "environment_installed":result.get("environment_installed") is True,
+                      })
+                      if type(result.get("native_calls")) is int and result["native_calls"]>3:
+                          raise AssertionError("P1_BOUNDED_NATIVE_3_EXCEEDED")
+                      if receipt["environment_ready"] and receipt["environment_installed"]:
+                          assert layout.get("special_gem_id") is None, "SPECIAL_GEM_NOT_DEFAULT_OFF"
+                          assert layout.get("socket_total")==4, "FOUR_SOCKETS_NOT_MATCHED"
+                          assert len(layout.get("ordinary_gem_ids") or [])==4, "FOUR_ORDINARY_NOT_PRESENT"
+                          assert len(set(layout["ordinary_gem_ids"]))==4, "FOUR_TYPES_NOT_DISTINCT"
+                          assert result["J"]>0, "OFFICIAL_J_UNAVAILABLE"
+                          fresh=jobs.load_fresh_profile_for_user(334,explicit_build=build)
+                          assert fresh is not None, "VERIFIED_V113_PROFILE_MISSING"
+                          receipt["user_profile_ready"]=True
+                          receipt["status"]="REAL_SOURCE_FOUR_ORDINARY_INSTALLED_PROFILE_READY"
+                          exit_code=0
+                      else:
+                          receipt["status"]="REAL_SOURCE_FOUR_ORDINARY_NOT_READY"
+          except Exception as exc:
+              receipt["status"]="EXACT_ORIGINAL_ENGINE_BLOCKED"
+              receipt["first_exception_type"]=type(exc).__name__
+              receipt["first_exception_code"]=str(exc).split(":",1)[0][:170]
+          finally:
+              path.write_text(json.dumps(receipt,ensure_ascii=False,
+                          sort_keys=True,indent=2)+"\n",encoding="utf8")
+              print("P1_FOUR_ORDINARY_FIRST_BUILD_RECEIPT",
+                    json.dumps(receipt,ensure_ascii=False,sort_keys=True),
+                    flush=True)
+          sys.exit(exit_code)
+          PY
+      - name: Retain only small factual receipt (never large DB2 or SimC cache)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-four-ordinary-zero-history-build-scope-receipt
+          path: p1_four_ordinary_zero_history_receipt.json
+          if-no-files-found: ignore
+          retention-days: 5
