@@ -18,3 +18,10 @@
 **Verification:** 공통 focused [#42586492832](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42586492832) **522 tests = 520 PASS / 2 SKIP / 0 FAIL**, DEV_LEDGER_PASS / 신규 Native0, 원본 재수집0. 기존 v113 API·v212 manifest·Windows 패키지·UI 관련 CI [코드 변경 테스트군 #42586023675 / #42586023823 / #42586023629 / #42586023699](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42586023675) SUCCESS. 이전 실제 SimC 16/16 #42582755601 증거는 정확히 그 조건의 관측 영수증이며 **이번 generic 연결의 실제 O>0 설치/최적화 PASS라고 주장하지 않는다**.
 
 **Remaining / Efficiency:** 오프라인 소스 결합·예산 계산 경로는 연결되었지만, **실제 원본 증거가 모두 충족된 시즌의 `v216→v212` 양의 O 설치와 `v113→v098/v096→SimC DPS` 실행**, 시즌별 검증된 최고 품질 기름의 사용자용 목록/선택 UX, 사용자가 새 환경으로 진행하는 경로는 미완료/미실증으로 구분한다. 관련 후속은 새로운 16/16 확인보다 일반 사용자 흐름 P1 완결을 우선. main/Project UI/immutable 변경 없음.
+
+### 동일 시즌 O 선택별 설치·복원 캐시 정체성 교정
+
+- `v216.find_verified_installed_season_environment`는 같은 게임 빌드/목표 ilvl이라도 **선택된 손별 물리 기름 ID가 다르면 다른 설치본**으로 취급한다. 선택 인자를 생략한 일반 사용자 기본 호출은 명시적 O=0 전용이다. O>0이 최근 설치됐어도 기본 O=0 요청에 재사용되지 않는다.
+- `v113`는 검증된 v212 `official_O_physical_source.selected_oil_item_ids_by_hand`에 따라 설치 완료 영수증을 확인하고, 소스 프로필 복원도 같은 선택 정체성을 사용한다. 기존 세션 재개는 v212 매니페스트의 확정 SHA와 게임 빌드/ilvl을 사용하며 재실행하지 않는다.
+- 변경은 **공통 엔진의 캐시 정체성** 교정이지 특정 기름 신규 실험이 아니다. [공통 focused](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42587691331) SUCCESS, 신규 Native0. [웹 API Linux/Windows](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42587691337) 최종 결과는 해당 Actions 영수증을 기준으로 한다. 기존 합성 세션 의존성 테스트는 v212의 독립 실 문서 검사 범위를 중복하는 가짜 문서 때문에 실패했으므로, 그 mock의 문서 인증만 기존 테스트 내부에서 대체하여 세션 매니페스트 비교와 실제 코드 경계는 유지했다.
+- **아직 미완료:** 새 시즌의 기름 종류별 자동 품질 비교/사용자 선택 목록, O>0 설치 및 실제 사용자 DPS 종단 영수증. 실 검증 범위 미확대를 준수한다.
