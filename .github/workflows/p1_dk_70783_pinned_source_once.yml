@@ -116,10 +116,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cd out/binary
-          sha256sum -c simc.sha256
-          chmod +x ./simc
-          cd ../..
+          sha256sum -c out/binary/simc.sha256
+          chmod +x out/binary/simc
           python3 -m pip install -r requirements-web-test.txt
       - name: Run two bounded DK user-selected rune physical SimC cases
         timeout-minutes: 10
