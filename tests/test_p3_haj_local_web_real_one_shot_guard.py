@@ -39,5 +39,21 @@ class WebRealOnceGuard(unittest.TestCase):
         compile(p,"p3_fr_zero_base_t1_acceptance.py","exec")
         compile(q,"p3_haj_real_local_web_native_e2e.py","exec")
 
+
+    def test_manual_t_test_reuses_real_api_and_new_executable_sha(self):
+        workflow=(ROOT/".github/workflows/p3_har_manual_t_native_once.yml").read_text()
+        probe=(ROOT/"integration_probes/p3_haj_real_local_web_native_e2e.py").read_text()
+        launcher=(ROOT/"integration_probes/p3_fr_zero_base_t1_acceptance.py").read_text()
+        self.assertIn("P3_HAR_USER_MANUAL_FINAL_T: '3500'",workflow)
+        self.assertIn("SIMC_PINNED_BINARY_SHA256=$SHA",workflow)
+        self.assertIn("P3_HAR_NEW_BINARY_SHA",workflow)
+        self.assertIn("manual_final_T=user_manual_T",launcher)
+        self.assertIn('"/api/v1/sessions/"+prepared["session_id"]+"/inputs"',probe)
+        self.assertIn('checked["user"]["target"]["final_T"]==manual_final_T',probe)
+        self.assertNotIn('prepared["plan"]["final_T"]',probe)
+        compile(probe,"p3_haj_real_local_web_native_e2e.py","exec")
+        compile(launcher,"p3_fr_zero_base_t1_acceptance.py","exec")
+
+
 if __name__=="__main__":
     unittest.main()
