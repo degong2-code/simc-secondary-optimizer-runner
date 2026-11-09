@@ -1,0 +1,82 @@
+# One bounded real O>0 user path, using the EXISTING same-source SimC binary.
+# Selected physical ItemID is a request, NOT an approval of stats/effects.
+# v281/v286/v296/(if needed)v297 -> v222/v212 -> v113/v106 -> v098/v096/v291.
+name: P1 one selected physical oil via real web to SimC DPS (bounded)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p1_oil_positive_user_web_native_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-selected-oil-real-web-native-once
+  cancel-in-progress: false
+jobs:
+  existing-engine-positive-o:
+    if: contains(github.event.head_commit.message, '[p1-o-web-native-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 38
+    env:
+      PYTHONPATH: runner:integration_probes:.
+      SIMC_PINNED_SOURCE_COMMIT: c20e2ad52e4c33711f74272309a5748125175fe8
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      GAME_BUILD: 12.1.5.70783
+      P3_T1_EXACT_FLASK_ITEM_ID: '241324'
+      P3_T1_EXISTING_SPECIAL_GEM_ID: '240967'
+      P3_T1_SELECTED_OIL_MAIN_ITEM_ID: '243734'
+      P3_HAR_USER_MANUAL_FINAL_T: '3500'
+      P3_T1_DPS_E2E_ONCE: '1'
+      P3_T1_WEB_LONGRUN_ONCE: '1'
+      P3_T1_SPEC_CLASS: paladin
+      P3_T1_SPEC_NAME: retribution
+      P3_T1_SPEC_RACE: dwarf
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse previously compiled verified 70783 executable
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42552942329
+          name: p3-har-verified-source-new-binary-short-lived
+          path: out/binary
+          github-token: ${{ github.token }}
+      - name: Verify actual binary bytes and keep existing SHA identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha256sum -c out/binary/simc.sha256
+          observed="$(sha256sum out/binary/simc | cut -d' ' -f1)"
+          test "$observed" = "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6"
+          chmod +x out/binary/simc
+          echo "SIMC_CLI_WRAPPER=$GITHUB_WORKSPACE/out/binary/simc" >> "$GITHUB_ENV"
+          echo "SIMC_PINNED_BINARY_SHA256=$observed" >> "$GITHUB_ENV"
+          echo "P1_O_EXACT_EXISTING_BINARY_REUSED=$observed"
+      - name: Install only existing web test dependencies
+        run: python -m pip install -r requirements-web-test.txt
+      - name: Original selected O environment and one real local-web DPS path
+        timeout-minutes: 25
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -u integration_probes/p3_fr_zero_base_t1_acceptance.py
+      - name: Keep bounded receipts, no new executable or season database
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-selected-oil-v212-to-real-web-dps-scope-receipt
+          path: |
+            p3_fr_zero_base_t1_receipt.json
+            p3_haj_web_e2e_receipt.json
+            p3_fr_zero_base_t1_native_evidence.zip
+            p3_haj_web_native_evidence.zip
+            out/binary/simc.sha256
+          if-no-files-found: ignore
+          retention-days: 5
