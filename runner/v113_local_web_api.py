@@ -205,7 +205,8 @@ class LocalJobs:
             "zero_history_build":{"environment_ready":True},
             "source_compilation":{k:compilation[k] for k in names},
             "fresh_one_spec_simc_representative":
-                result.get("fresh_one_spec_simc_representative")}
+                result.get("fresh_one_spec_simc_representative"),
+            "verified_target_ilevel":doc["target_ilevel"]}
         return doc["manifest_sha256"]
 
     def _fresh_environment_summary(self, folder, result):
@@ -802,7 +803,7 @@ class LocalJobs:
             fresh=self._verified_fresh_profile_result if current_season else None
             if fresh is not None:
                 installed=fresh["source_compilation"]["verified_environment_install"]
-                if user["target"]["ilevel"]!=installed["target_ilevel"]:
+                if user["target"]["ilevel"]!=fresh["verified_target_ilevel"]:
                     fresh=None
             source_catalog_path=(pathlib.Path(
                 fresh["source_compilation"]["source_catalog_path"])
