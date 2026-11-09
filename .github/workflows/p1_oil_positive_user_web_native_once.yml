@@ -1,6 +1,8 @@
 # One bounded real O>0 user path, using the EXISTING same-source SimC binary.
 # Selected physical ItemID is a request, NOT an approval of stats/effects.
 # v281/v286/v296/(if needed)v297 -> v222/v212 -> v113/v106 -> v098/v096/v291.
+# Retry scope: v096 now selects exact physical-O map in verified v217 lookup;
+# prior source READY on #42597370476; its temporary Runner files are not portable.
 name: P1 one selected physical oil via real web to SimC DPS (bounded)
 on:
   push:
