@@ -25,6 +25,7 @@ import v202_one_enchant_admission as verified_enchant
 import v206_nonchmv_eagle_selection as nonchmv_enchant
 import v212_environment_manifest as installed_manifest
 import v222_season_budget_contract as budget_contract
+import v294_dk_runeforge_selection as runeforge_mod
 
 SCHEMA="v098_target_ilevel_user_scenario_v1"
 FIELDS={"schema","character","target","trinkets","special_items",
@@ -39,6 +40,7 @@ IMPORT_FIELD="import_simc_profile"
 CONSUME_FIELD="consumable_choices"
 ENCHANT_FIELD="verified_enchant"
 SEASON_ENCHANT_FIELD=nonchmv_enchant.FIELD
+RUNEFORGE_FIELD="runeforge_by_hand"
 TIER_FIVE=common.TIER_FIVE
 FIFTH_TIER=common.FIFTH_TIER
 
@@ -707,6 +709,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
     accepted=(base_accepted+
               tuple(x|{ENCHANT_FIELD} for x in base_accepted)+
               tuple(x|{SEASON_ENCHANT_FIELD} for x in base_accepted))
+    accepted=accepted+tuple(x|{RUNEFORGE_FIELD} for x in accepted)
     need(type(user) is dict and set(user) in accepted
          and user.get("schema")==SCHEMA,"USER_SCENARIO_FIELDS")
     using_import=IMPORT_FIELD in user
@@ -967,6 +970,10 @@ def build(user,folder,binary,revision,static_cache_path=None,
     else:
         restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
             key,rows,groups,user,ilvl,need)
+    # DK user rune is permanent enchant_id, not temporary oil O.
+    # The profile and durable cache identity change only for explicit choice.
+    runeforge_mod.apply(rows=rows,selection=user.get(RUNEFORGE_FIELD),
+                        class_name=key[0],weapon_form=weapon_layout,need=need)
     # 240967 requires four distinct ordinary Midnight gem colors for its
     # crit-effectiveness bonus. These are real SimC gem IDs, not locked CHMV.
     # Existing 240983 profiles and already-four-color source rows stay intact.

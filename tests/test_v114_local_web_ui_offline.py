@@ -65,6 +65,16 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('u.oil_hands.includes("off_hand")',restore)
         self.assertIn('oil_hands:["main_hand","off_hand"].filter(',js)
 
+    def test_dk_runeforge_ui_selection_restore_and_distinct_oil(self):
+        page=self.client.get("/").text
+        js=self.client.get("/assets/app.js").text
+        for name in ("dk-runeforge-panel","dk_rune_main","dk_rune_off"):
+            self.assertIn('id="'+name+'"',page)
+        self.assertIn("function runeCompatibility()",js)
+        self.assertIn("controls.runeforge_by_hand=runeByHand",js)
+        self.assertIn("u.runeforge_by_hand?.main_hand",js)
+        self.assertIn("기름 O와 별개인 영구 강화",page)
+
     def test_browser_root_local_static_no_auth_but_guarded_by_host_and_origin(self):
         result=self.client.get("/")
         self.assertEqual(result.status_code,200)

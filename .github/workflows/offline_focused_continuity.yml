@@ -44,6 +44,7 @@ jobs:
             tests.test_v269_simc_chmv_effect_snapshot \
             tests.test_v198_targeted_enchant_native_rating \
             tests.test_v222_season_budget_contract \
+            tests.test_v294_dk_runeforge_selection \
             tests.test_v264_environment_standard_budget_integration \
             tests.test_v266_v268_gem_enchant_source_reuse \
             tests.test_v101_common_representative_equipment \

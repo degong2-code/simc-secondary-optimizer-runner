@@ -28,7 +28,8 @@ PURE_TRINKET_IDS=(250215,281215)
 # Extended UI selected equipment is a pass-through to v098's exact
 # source-backed item/tier/native-L checks, not a second selector.
 OPTIONAL_CONTROLS=frozenset(("special_items","embellishments",
-                             "consumable_choices","enchant_choices"))
+                             "consumable_choices","enchant_choices",
+                             "runeforge_by_hand"))
 DUAL_FORMS=frozenset(("dual_two_hand","dual_one_hand"))
 
 class SessionBlocked(ValueError):pass
@@ -284,6 +285,10 @@ def user_scenario(controls):
     if "enchant_choices" in controls:
         nonchmv_enchant.check_choice(controls["enchant_choices"])
         output[nonchmv_enchant.FIELD]=dict(controls["enchant_choices"])
+    if "runeforge_by_hand" in controls:
+        output["runeforge_by_hand"]=bootstrap.runeforge_mod.normalize(
+            selection=controls["runeforge_by_hand"],class_name=key[0],
+            weapon_form=weapons,need=need)
     return output
 
 def standard_controls(key=("paladin","retribution")):

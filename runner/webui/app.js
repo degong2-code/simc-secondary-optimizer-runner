@@ -295,6 +295,9 @@ function fillDefault(item) {
   $("oil_main").checked=false;
   $("oil_off").checked=false;
   oilCompatibility();
+  $("dk_rune_main").value="";
+  $("dk_rune_off").value="";
+  runeCompatibility();
   for (const id of ["food","potion","augmentation","diamond","omnium"]) $(id).selectedIndex=0;
   $("season_enchant_finger1").value="";
   // Reset optional slots on specialization changes, including hidden extra rows.
@@ -310,6 +313,16 @@ function oilCompatibility() {
   $("oil_off").disabled=!supportsOff;
   if(!supportsOff)$("oil_off").checked=false;
   $("oil_off").title=supportsOff?"두 무기에 기름 적용 가능":"이 전문화의 보조무기에는 기름을 사용할 수 없습니다.";
+}
+function runeCompatibility() {
+  const key=field("spec");
+  const isDK=key.startsWith("deathknight/");
+  $("dk-runeforge-panel").hidden=!isDK;
+  const dual=state.seasonGear?.weapon_forms?.[key]==="dual_one_hand";
+  $("dk_rune_main").disabled=!isDK;
+  $("dk_rune_off").disabled=!isDK||!dual;
+  if(!isDK)$("dk_rune_main").value="";
+  if(!dual)$("dk_rune_off").value="";
 }
 function craftSlot(item) {
   if(item.slot_hint)return item.slot_hint;
@@ -446,6 +459,9 @@ function fillSessionInputs(payload) {
   $("oil_main").checked=u.oil_hands.includes("main_hand");
   $("oil_off").checked=u.oil_hands.includes("off_hand");
   oilCompatibility();
+  runeCompatibility();
+  $("dk_rune_main").value=String(u.runeforge_by_hand?.main_hand??"");
+  $("dk_rune_off").value=String(u.runeforge_by_hand?.off_hand??"");
   const choices=u.consumable_choices||{};
   for(const key of ["food","potion","augmentation"])
     $(key).value=choices[key]??"source_default";
@@ -537,6 +553,12 @@ function buildRequest() {
       diamond_id:Number(field("diamond")),omnium_talents:field("omnium")
     }
   };
+  if(source.class==="deathknight") {
+    const runeByHand={};
+    if(field("dk_rune_main"))runeByHand.main_hand=Number(field("dk_rune_main"));
+    if(field("dk_rune_off"))runeByHand.off_hand=Number(field("dk_rune_off"));
+    if(Object.keys(runeByHand).length)controls.runeforge_by_hand=runeByHand;
+  }
   if(field("season_enchant_finger1")) {
     if(!state.eagleApproved||field("season_enchant_finger1")!=="7967")
       throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
