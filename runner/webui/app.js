@@ -60,7 +60,7 @@ const names = {
   redirected_base_stats:"촉매 원본 ID",crafted_stats:"제작 스탯",
   embellishment:"장식 토큰"
 };
-const state = { token:"", defaults:[], seasonGear:null, dkRuneIds:new Set(), eagleApproved:false, session:"", running:false,
+const state = { token:"", defaults:[], seasonGear:null, dkRuneIds:new Set(), oilLoadouts:[], oilCatalog:null, eagleApproved:false, session:"", running:false,
                 longrunEnabled:false, longrunResultReady:false,
                 busy:false, options:null, pollTimer:null, pollBusy:false,
                 pollFailures:0, nextPollAt:0 };
@@ -296,6 +296,7 @@ function fillDefault(item) {
   $("oil_off").checked=false;
   $("optimizer-oil-main-id").value="";
   $("optimizer-oil-off-id").value="";
+  $("optimizer-oil-loadout").value="";
   oilCompatibility();
   $("dk_rune_main").value="";
   $("dk_rune_off").value="";
@@ -315,6 +316,64 @@ function oilCompatibility() {
   $("oil_off").disabled=!supportsOff;
   if(!supportsOff)$("oil_off").checked=false;
   $("oil_off").title=supportsOff?"두 무기에 기름 적용 가능":"이 전문화의 보조무기에는 기름을 사용할 수 없습니다.";
+}
+
+function renderInstalledOilLoadouts(data) {
+  state.oilCatalog=data;
+  const selector=$("optimizer-oil-loadout");
+  selector.replaceChildren(option("","기름 사용 안 함 (O=0)"));
+  const form=state.seasonGear?.weapon_forms?.[field("spec")];
+  const offAllowed=form==="dual_one_hand"||form==="dual_two_hand";
+  state.oilLoadouts=[];
+  if(data?.schema==="v113_verified_installed_oil_loadouts_v1" &&
+     data.status==="VERIFIED_INSTALLED_OIL_LOADOUTS" &&
+     Number(data.target_ilevel)===Number(field("ilevel"))) {
+    for(const item of data.items||[]) {
+      const ids=item.selected_oil_item_ids_by_hand||{};
+      if(!/^[a-f0-9]{64}$/.test(item.installed_manifest_sha256||"") ||
+         !Object.keys(ids).length||Object.keys(ids).length>2||
+         (ids.off_hand&&!offAllowed)||
+         Object.values(ids).some(v=>!Number.isSafeInteger(v)||v<=0))continue;
+      state.oilLoadouts.push(item);
+      selector.appendChild(option(item.installed_manifest_sha256,
+        item.display_name+" · 설치 확인"));
+    }
+  }
+  const current={};
+  for(const [hand,id] of [["main_hand","optimizer-oil-main-id"],
+                          ["off_hand","optimizer-oil-off-id"]]) {
+    if(field(id))current[hand]=Number(field(id));
+  }
+  const exact=state.oilLoadouts.find(item=>{
+    const ids=item.selected_oil_item_ids_by_hand;
+    return Object.keys(ids).length===Object.keys(current).length&&
+      Object.entries(ids).every(([hand,id])=>current[hand]===id);
+  });
+  selector.value=exact?.installed_manifest_sha256||"";
+  const count=state.oilLoadouts.length;
+  $("optimizer-oil-loadout-status").textContent=count?
+    "이 PC에 봉인된 "+count+"개 기름 조합 · 저장된 게임 빌드 "+
+    data.game_build+" / ilvl "+data.target_ilevel+
+    " · 실제 시즌·무기 적용은 실행 때 재검증":
+    "현재 조건에 검증 설치 기름 조합 없음 · 기본 O=0 유지. "+
+    "필요하면 시즌 환경 구축에서 먼저 검증하세요.";
+}
+async function refreshInstalledOilLoadouts() {
+  const ilevel=valueInt("ilevel");
+  const build=field("season-game-build");
+  const extra=build?"&game_build="+encodeURIComponent(build):"";
+  const data=await api("/api/v1/verified-oil-loadouts?ilevel="+ilevel+extra);
+  renderInstalledOilLoadouts(data);
+}
+function chooseInstalledOilLoadout() {
+  const chosen=state.oilLoadouts.find(item=>
+    item.installed_manifest_sha256===field("optimizer-oil-loadout"));
+  const ids=chosen?.selected_oil_item_ids_by_hand||{};
+  $("oil_main").checked=Boolean(ids.main_hand);
+  $("oil_off").checked=Boolean(ids.off_hand);
+  $("optimizer-oil-main-id").value=ids.main_hand??"";
+  $("optimizer-oil-off-id").value=ids.off_hand??"";
+  oilCompatibility();
 }
 function runeCompatibility() {
   const key=field("spec");
@@ -467,6 +526,7 @@ function fillSessionInputs(payload) {
   $("optimizer-oil-main-id").value=restoredOils.main_hand??"";
   $("optimizer-oil-off-id").value=restoredOils.off_hand??"";
   oilCompatibility();
+  renderInstalledOilLoadouts(state.oilCatalog);
   runeCompatibility();
   // Saved historical choices remain legible but are not auto-promoted to
   // the newest installed season's selectable list.
@@ -906,6 +966,9 @@ async function buildSeasonEnvironment() {
     try{renderSeasonOptionCatalog(await api("/api/v1/season-option-catalog"));}
     catch(error){$("dk-runeforge-status").textContent=
       "시즌 룬 원본 조회 실패 · 선택 잠금";}
+    try{await refreshInstalledOilLoadouts();}
+    catch(error){$("optimizer-oil-loadout-status").textContent=
+      "검증 설치 기름 목록 조회 실패 · 고급 입력 유지";}
     setNotice("시즌 환경 구축 단계 조회 완료 · READY 여부는 별도 검증 · 개별 DPS 최적화는 시작되지 않았습니다.");
   }catch(err){
     $("season-build-stage").textContent="시즌 환경 구축 단계 차단/오류 · "+err.message+
@@ -1438,11 +1501,28 @@ function registerHandlers() {
   $("simc-rollback-btn").addEventListener("click",()=>withBusy(rollbackSimcUpdater));
   $("simc-import-btn").addEventListener("click",()=>withBusy(importSimcCharacter));
   $("season-build-btn").addEventListener("click",()=>withBusy(buildSeasonEnvironment));
+  $("optimizer-oil-loadout").addEventListener("change",chooseInstalledOilLoadout);
+  for(const [check,id] of [["oil_main","optimizer-oil-main-id"],
+                           ["oil_off","optimizer-oil-off-id"]]) {
+    $(check).addEventListener("change",()=>{
+      $("optimizer-oil-loadout").value="";
+      if(!$(check).checked)$(id).value="";
+    });
+    $(id).addEventListener("input",()=>{
+      $("optimizer-oil-loadout").value="";
+    });
+  }
   $("spec").addEventListener("change",()=>{
     const selected=state.defaults.find(d=>d.class+"/"+d.spec===field("spec"));
     if(selected)fillDefault(selected);
+    renderInstalledOilLoadouts(state.oilCatalog);
   });
-  $("ilevel").addEventListener("change",showRepresentativeScope);
+  $("ilevel").addEventListener("change",()=>{
+    showRepresentativeScope();
+    withBusy(refreshInstalledOilLoadouts);
+  });
+  $("season-game-build").addEventListener("change",()=>
+    withBusy(refreshInstalledOilLoadouts));
   $("plan-btn").addEventListener("click",()=>withBusy(async()=>{
     const p=await api("/api/v1/sessions/plan",{method:"POST",payload:buildRequest()});
     markSession(p.session_id);showPlan(p);await pollOnce();
@@ -1561,6 +1641,10 @@ async function initialize() {
       $("season-option-catalog-status").textContent=
         "시즌 마법부여 데이터 조회 실패 · 기존 승인 선택을 유지합니다: "+err.message;
     }
+    // Read-only local choices. No SimC, new approval or source downloads.
+    try{await refreshInstalledOilLoadouts();}
+    catch(err){$("optimizer-oil-loadout-status").textContent=
+      "검증 설치 기름 목록 조회 실패: "+err.message;}
     // Read-only local status. No remote release lookup on page load.
     try{await refreshSimcUpdater(false);}catch(err){
       $("simc-update-status").textContent="SimC 관리 상태 조회 오류: "+err.message;
