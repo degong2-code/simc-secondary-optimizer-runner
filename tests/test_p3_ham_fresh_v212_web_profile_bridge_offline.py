@@ -136,5 +136,42 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
                 self.jobs._verify_environment_dependencies(summary,folder)
 
 
+class NativeCaseArchiveLayout(unittest.TestCase):
+    def test_original_v291_nested_case_directory_is_preserved_in_zip(self):
+        from integration_probes import p3_haj_real_local_web_native_e2e as real_web
+        import v293_local_longrun_session as longrun
+        import zipfile
+
+        with tempfile.TemporaryDirectory() as scratch:
+            root=pathlib.Path(scratch)/"sessions"
+            root.mkdir()
+            session="a"*20
+            (root/session).mkdir()
+            stage=root/session/"longrun_12"
+            output=stage/"simc_results"
+            output.mkdir(parents=True)
+            for name in ("V291_SESSION.json","V291_JOURNAL.jsonl",
+                         "V291_RESULT.json","V291_PROGRESS.json"):
+                (output/name).write_text("{}")
+            for index in (1,2):
+                directory=output/"cases"/("case_%05d"%index)/"native"
+                directory.mkdir(parents=True)
+                for name in ("input.simc","result.json","native_receipt.json"):
+                    (directory/name).write_text("witness")
+            destination=pathlib.Path(scratch)/"archive.zip"
+            with (
+                mock.patch.object(longrun,"config",
+                                  return_value={"native_budget":12}),
+                mock.patch.object(longrun,"stage_path",return_value=stage)
+            ):
+                receipt=real_web.save_cases(root,session,destination)
+            self.assertEqual(receipt["native_case_files"],6)
+            with zipfile.ZipFile(destination) as z:
+                names=set(z.namelist())
+                self.assertIn("cases/case_00001/native/result.json",names)
+                self.assertIn("cases/case_00002/native/native_receipt.json",names)
+                self.assertEqual(len(names),10)
+
+
 if __name__=="__main__":
     unittest.main()
