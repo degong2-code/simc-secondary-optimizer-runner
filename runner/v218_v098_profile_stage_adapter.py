@@ -96,6 +96,36 @@ def _validate(paths,user):
         return True
     except Exception:return False
 
+def _verified_fresh_season_consumables(user):
+    """Forward actual user F/O-safe optional SimC tokens, not old J/F budgets.
+
+    The source-v212 installed flask and physical gems remain authoritative.
+    Optional food/potion/augmentation effects are native SimC assignments.
+    Unadmitted module/alternate flask/diamond choices must not disappear
+    silently from a runnable web plan.
+    """
+    chosen=user.get(bootstrap.CONSUME_FIELD)
+    if chosen is None:
+        return None
+    bootstrap.need(type(chosen) is dict and
+                   set(chosen)==bootstrap.consumer.CHOICE_FIELDS,
+                   "FRESH_SEASON_USER_CONSUMABLE_FIELDS_INVALID")
+    bootstrap.need(chosen["flask"]=="source_default" and
+                   chosen["diamond_id"]==0 and
+                   chosen["omnium_talents"]=="source_default",
+                   "FRESH_SEASON_FLASK_DIAMOND_OR_MODULE_NOT_ADMITTED")
+    optional={}
+    for name in ("food","potion","augmentation"):
+        token=chosen[name]
+        if token=="source_default":
+            token="disabled"
+        bootstrap.need(type(token) is str and
+                       token in bootstrap.consumer.SUPPORTED[name],
+                       "FRESH_SEASON_SIMC_OPTION_UNSUPPORTED:"+name)
+        optional[name]=token
+    return optional
+
+
 def build_or_reuse(*,user,session_folder,binary,revision,static_cache,
         independent_334=False,independent_target_level=False,
         current_season_product=False,source_catalog_path=None,
@@ -120,6 +150,7 @@ def build_or_reuse(*,user,session_folder,binary,revision,static_cache,
             result=bootstrap.run_from_verified_environment_build(
                 user,generated,binary,revision,
                 environment_result=verified_fresh_environment_result,
+                season_controls=_verified_fresh_season_consumables(user),
                 execute=False)
         else:
             result=bootstrap.build(user,generated,binary,revision,static_cache,
