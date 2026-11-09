@@ -52,8 +52,8 @@ class SeasonOilStaticSource(unittest.TestCase):
                         simc_revision=REV,enchant_ids=[8052])
         self.assertIsNone(doc["items"][0]["static_CHMV_vector"])
         self.assertEqual(doc["items"][0]["status"],oil.PENDING)
-        scaled=FIXTURE.replace("{ 0, 0, 0 }, 1237006",
-                               "{ 1, 0, 0 }, 1237006")
+        scaled=FIXTURE.replace("{ 8052, 0, 0, 0, 0, 0, 0, 0, 0, ",
+                               "{ 8052, 0, -7, 0, 80, 120, 0, 0, 0, ")
         doc=oil.extract(generated_text=scaled,game_build=BUILD,
                         simc_revision=REV,enchant_ids=[8052])
         self.assertIsNone(doc["items"][0]["static_CHMV_vector"])
@@ -62,10 +62,10 @@ class SeasonOilStaticSource(unittest.TestCase):
         # Simplified verbatim field-shape from 70783 generated DBC. The
         # -7 scaling ID and 0.4757 coefficients are SimC-owned operations.
         scaled=(
-          "// spell item enchantments, wow build "+BUILD+"\\n"
+          "// spell item enchantments, wow build "+BUILD+"\n"
           '{ 8052, 0, -7, 0, 80, 120, 0, 0, 0, '
           '{ 5, 5, 0 }, { 12, 0, 0 }, { 32, 36, 0 }, '
-          '{ 0.4757, 0.4757, 0 }, 0, "Thalassian Phoenix Oil" },\\n'
+          '{ 0.4757, 0.4757, 0 }, 0, "Thalassian Phoenix Oil" },\n'
         )
         doc=oil.extract(generated_text=scaled,game_build=BUILD,
                         simc_revision=REV,enchant_ids={8052})
