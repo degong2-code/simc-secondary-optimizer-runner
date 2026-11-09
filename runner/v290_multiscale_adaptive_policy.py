@@ -105,6 +105,20 @@ def _global_pool(total, lower, upper, count):
             yield candidate
 
 
+def _unobserved_global_maximin(total, lower, upper, desired_global, observed):
+    """Reuse the SAME bounded global pool when local neighbors run dry.
+
+    The proposal is not a new Native measurement or convergence certificate.
+    Keep the existing maximin tie-breaking and ignore already observed cases.
+    """
+    pool=(v for v in _global_pool(
+        total,lower,upper,min(256,max(32,desired_global*3)))
+          if v not in observed)
+    return max(pool,key=lambda v:(
+        min(_distance(v,x) for x in observed),
+        tuple(-k for k in v)),default=None)
+
+
 def _row(row, total, lower, upper):
     need(type(row) is dict and type(row.get("target")) is dict,
          "MEASURED_TARGET_REQUIRED")
@@ -249,14 +263,9 @@ def next_plan(observations, *, total, lower, upper, native_calls_used,
             candidate = _apportion(total, lower, upper, (1,1,1,1))
             decision = "GLOBAL_BALANCED_BASELINE_FIRST"
         else:
-            pool = [v for v in _global_pool(
-                        total, lower, upper,
-                        min(256, max(32, desired_global * 3)))
-                    if v not in observed]
-            if pool:
-                candidate = max(pool, key=lambda v:(
-                    min(_distance(v, x) for x in observed),
-                    tuple(-k for k in v)))
+            candidate = _unobserved_global_maximin(
+                total,lower,upper,desired_global,observed)
+            if candidate is not None:
                 decision = "GLOBAL_MAXIMIN_SIMPLEX_COVERAGE"
     if candidate is None and observed:
         ranked = sorted(by_vector, key=lambda v:(
@@ -295,8 +304,17 @@ def next_plan(observations, *, total, lower, upper, native_calls_used,
         if best is not None:
             candidate = best[1]
             decision = "NOISE_AWARE_MULTISCALE_FEASIBLE_NEIGHBOR"
+    if candidate is None and observed and not global_due:
+        # Local fixed-step neighbors can be exhausted even though distant
+        # feasible vectors remain. Do not terminate a user's long-run search
+        # on local exhaustion alone; reuse the existing global candidate pool.
+        candidate = _unobserved_global_maximin(
+            total,lower,upper,desired_global,observed)
+        if candidate is not None:
+            decision = "GLOBAL_MAXIMIN_AFTER_LOCAL_EXHAUSTION"
     if candidate is None:
-        # All step candidates may be exhausted. Never forge a result.
+        # Both existing bounded proposal pools exhausted; do NOT infer a
+        # global optimum or spend an unapproved new Native request.
         return {"schema": SCHEMA, "status": "NO_NEW_FEASIBLE_POLICY_CANDIDATE",
                 "native_calls_used": native_calls_used,
                 "global_optimum_proven": False, "next_request": None}

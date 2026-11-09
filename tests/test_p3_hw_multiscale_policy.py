@@ -110,6 +110,47 @@ class Multiscale(unittest.TestCase):
                             max_native_calls=2000,**kwargs)
         self.assertEqual(longrun["next_request"]["phase"],"scout")
 
+
+    def test_exhausted_local_steps_do_not_hide_unseen_global_regions(self):
+        """Offline counterexample: 16 leaders' every preset neighbor measured.
+
+        This is a *geometry* witness, not fabricated SimC evidence. The
+        existing finite global pool still has feasible unseen candidates.
+        Previously next_plan prematurely returned NO_NEW despite spare cap.
+        """
+        pool=list(p._global_pool(self.B,self.lo,self.hi,256))
+        anchors=pool[:16]
+        self.assertEqual(len(anchors),16)
+        observed=set(anchors)
+        for anchor in anchors:
+            for fraction in p.SCALES:
+                step=max(1,min(self.B,round(self.B*fraction)))
+                observed.update(p.legacy.neighbors(
+                    anchor,step,self.B,self.lo,self.hi,set()))
+        # Avoid the already-established every-23rd-request global cadence:
+        # this regression exercises the *local* branch's exhaustion.
+        while len(observed)%23==0:
+            extra=next(v for v in pool if v not in observed)
+            observed.add(extra)
+        self.assertGreaterEqual(len(observed),64)
+        self.assertLess(len(observed),2000)
+        unseen={v for v in pool if v not in observed}
+        self.assertTrue(unseen)
+        rows=[{"target":p.legacy.to_target(v),"iterations":320,
+               "dps_mean":200000. if v in anchors else 100000.,
+               "dps_sem":100.} for v in sorted(observed)]
+        before=self._call(rows,len(rows))
+        again=self._call(rows,len(rows))
+        self.assertEqual(before,again)
+        self.assertEqual(before["status"],"NEXT_NATIVE_PROPOSED")
+        self.assertEqual(before["decision"],
+                         "GLOBAL_MAXIMIN_AFTER_LOCAL_EXHAUSTION")
+        target=tuple(before["next_request"]["target"][s] for s in p.STATS)
+        self.assertIn(target,unseen)
+        self.assertTrue(p.legacy.eligible(
+            target,self.B,self.lo,self.hi))
+        self.assertFalse(before["global_optimum_proven"])
+
     def test_multiscale_local_choice_uses_one_history_extrema_pass(self):
         # A local-only policy call with many historical rows: it must not
         # scan the full history for every local neighbor, and it must keep
