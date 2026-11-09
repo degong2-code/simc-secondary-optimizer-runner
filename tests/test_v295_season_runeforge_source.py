@@ -1,5 +1,6 @@
 """Season runeforges are discovered from pinned SimC module IDs; no Native."""
-import copy,pathlib,sys,unittest
+import copy,pathlib,sys,tempfile,unittest
+from unittest import mock
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"runner"))
 import v295_season_runeforge_source as source

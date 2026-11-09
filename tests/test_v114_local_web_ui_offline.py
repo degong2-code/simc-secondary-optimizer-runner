@@ -72,7 +72,7 @@ class RealHTTPPageOffline(unittest.TestCase):
             self.assertIn('id="'+name+'"',page)
         self.assertIn("function runeCompatibility()",js)
         self.assertIn("controls.runeforge_by_hand=runeByHand",js)
-        self.assertIn("u.runeforge_by_hand?.main_hand",js)
+        self.assertIn("u.runeforge_by_hand?.[hand]",js)
         self.assertIn("기름 O와 별개인 영구 강화",page)
         self.assertNotIn('value="3368"',page)
         self.assertIn('state.dkRuneIds=new Set()',js)

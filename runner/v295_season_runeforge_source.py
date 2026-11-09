@@ -48,7 +48,7 @@ def compile_source(raw,*,game_build,simc_revision):
          "DK_RUNEFORGE_ENUM_DUPLICATE_OR_INVALID")
     # No source-independent list of rune IDs. Future additions/removals are
     # discovered at the next pinned SimC source build.
-    items=[{"enchant_id":value,"token":name.lower(),
+    items=[{"enchant_id":int(value),"token":name.lower(),
             "display_name":"Rune of "+name.replace("_"," ").title(),
             "class":"deathknight","weapon_hands":["main_hand","off_hand"]}
            for name,value in entries]
