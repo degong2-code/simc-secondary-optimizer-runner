@@ -40,6 +40,33 @@ class WebRealOnceGuard(unittest.TestCase):
         compile(q,"p3_haj_real_local_web_native_e2e.py","exec")
 
 
+    def test_one_selected_oil_uses_original_build_flags_and_web_session(self):
+        # The same T1 compiler, v216 installer and v113 user API serve O0
+        # and positive O. Do not add a second O calculator or trust HTTP O.
+        from integration_probes import p3_fr_zero_base_t1_acceptance as once
+        exact={"main_hand":243734}
+        source=once.selected_t1_source_inputs(
+            exact_flask_item_id=241324,existing_special_gem_id=240967,
+            selected_oil_item_ids_by_hand=exact)
+        self.assertEqual(source["selected_budget_items"]["oil_item_ids_by_hand"],
+                         exact)
+        flags=once.t1_native_source_controls(
+            selected_F=241324,f_only=False,binary_available=True,
+            selected_oil_items=exact)
+        self.assertTrue(flags["auto_native_O_requested"])
+        self.assertTrue(flags["auto_native_F_requested"])
+        self.assertFalse(once.t1_native_source_controls(
+            selected_F=241324,f_only=False,binary_available=True
+        )["auto_native_O_requested"])
+        self.assertEqual(once.selected_t1_source_inputs(
+            exact_flask_item_id=241324,existing_special_gem_id=240967
+        )["selected_budget_items"]["oil_item_ids_by_hand"],{})
+        probe=(ROOT/"integration_probes/p3_haj_real_local_web_native_e2e.py").read_text()
+        self.assertIn('args["selected_oil_item_ids_by_hand"]=selected_oils',probe)
+        self.assertIn('app.state.jobs.persist_verified_fresh_profile()',probe)
+        self.assertIn('"P1_O_WEB_FINAL_B_T_ACCOUNTING_DRIFT"',probe)
+        self.assertNotIn('"static_CHMV_vector": {"crit_rating":16',probe)
+
     def test_manual_t_test_reuses_real_api_and_new_executable_sha(self):
         workflow=(ROOT/".github/workflows/p3_har_manual_t_native_once.yml").read_text()
         probe=(ROOT/"integration_probes/p3_haj_real_local_web_native_e2e.py").read_text()
