@@ -58,6 +58,27 @@ class SeasonOilStaticSource(unittest.TestCase):
                         simc_revision=REV,enchant_ids=[8052])
         self.assertIsNone(doc["items"][0]["static_CHMV_vector"])
 
+    def test_real_70783_scaled_source_stays_pending_not_12_or_16_or_17(self):
+        # Simplified verbatim field-shape from 70783 generated DBC. The
+        # -7 scaling ID and 0.4757 coefficients are SimC-owned operations.
+        scaled=(
+          "// spell item enchantments, wow build "+BUILD+"\\n"
+          '{ 8052, 0, -7, 0, 80, 120, 0, 0, 0, '
+          '{ 5, 5, 0 }, { 12, 0, 0 }, { 32, 36, 0 }, '
+          '{ 0.4757, 0.4757, 0 }, 0, "Thalassian Phoenix Oil" },\\n'
+        )
+        doc=oil.extract(generated_text=scaled,game_build=BUILD,
+                        simc_revision=REV,enchant_ids={8052})
+        row=doc["items"][0]
+        self.assertIsNone(row["static_CHMV_vector"])
+        self.assertEqual(row["status"],oil.PENDING)
+        self.assertIn("SIMC_ITEM_ENCHANT_SCALING_REQUIRED",
+                      row["source_reason_codes"])
+        self.assertEqual(set(row["unresolved_simc_scaled_static_stats"]),
+                         {"crit_rating","haste_rating"})
+        self.assertEqual(row["unresolved_simc_scaled_static_stats"][
+                         "haste_rating"]["simc_coefficient"],0.4757)
+
     def test_build_change_and_missing_8052_fail(self):
         with self.assertRaises(oil.OilSourceBlocked):
             oil.extract(generated_text=FIXTURE,game_build="12.2.0.71000",

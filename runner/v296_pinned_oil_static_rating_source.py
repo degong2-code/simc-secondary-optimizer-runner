@@ -62,20 +62,32 @@ def extract(*,generated_text,game_build,simc_revision,enchant_ids,
     for ident in sorted(wanted):
         row=rows[ident]
         vector={stat:0 for stat in STATS}
-        exact=(row["id_scaling"]==0 and
-               row["req_skill"]==0 and row["req_skill_value"]==0)
+        exact=(row["req_skill"]==0 and row["req_skill_value"]==0)
         reasons=[]
-        if not exact:reasons.append("SCALING_OR_SKILL_CONDITION")
+        if not exact:reasons.append("REQUIRED_PROFESSION_CONDITION_PENDING")
+        scaled={}
+        known_stat_count=0
         for typ,amount,property_id,coeff in zip(
                 row["ench_type"],row["ench_amount"],
                 row["ench_prop"],row["ench_coeff"]):
             if typ==0:continue
-            if typ!=KIND or property_id not in MAPPING or amount<=0 or coeff!=0:
+            if (typ!=KIND or property_id not in MAPPING or\n                    amount<0 or coeff<0 or (amount==0 and coeff==0)):
                 exact=False
                 reasons.append("NOT_A_PURE_STATIC_CHMV_COMPONENT")
+                continue
+            known_stat_count+=1
+            stat=MAPPING[property_id]
+            if row["id_scaling"]!=0 or coeff!=0:
+                # v296 must never approximate the SimC-owned negative
+                # spell-scaling ID/coefficient, even when a tooltip says 16.
+                exact=False
+                reasons.append("SIMC_ITEM_ENCHANT_SCALING_REQUIRED")
+                scaled[stat]={"dbc_base_amount":amount,
+                              "simc_scaling_id":row["id_scaling"],
+                              "simc_coefficient":coeff}
             else:
-                vector[MAPPING[property_id]]+=amount
-        if not any(vector.values()):
+                vector[stat]+=amount
+        if not known_stat_count:
             exact=False;reasons.append("NO_STATIC_CHMV_COMPONENT")
         # This rejects a generated row with a minimum/maximum item level
         # outside its actual game's usable range only at application time.
@@ -84,6 +96,7 @@ def extract(*,generated_text,game_build,simc_revision,enchant_ids,
           "enchant_id":ident,
           "status":STATUS if exact else PENDING,
           "static_CHMV_vector":dict(vector) if exact else None,
+          "unresolved_simc_scaled_static_stats":scaled,
           "source_min_ilevel":row["min_ilevel"],
           "source_max_ilevel":row["max_ilevel"],
           "source_reason_codes":sorted(set(reasons)),
