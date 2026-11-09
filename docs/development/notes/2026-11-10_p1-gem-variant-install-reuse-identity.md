@@ -1,6 +1,13 @@
 # P1 · 설치본 보석 변형 정체성 교정 (2026-11-10)
 
 - **Capability:** `ENVIRONMENT.WEB`, `BUDGET.GJFO`, `PRODUCT.E2E`, `DEV.CONTINUITY`.
+- **Keywords:** profile gem identity, four ordinary gems, optional special, exact v212 manifest SHA, installed reuse, no snapshot, Native0.
+- **Prior evidence:** 기존 70783 v212 실 설치·O>0 사용자 웹 DPS, 원래 v217/v113 저장 프로필·budget-only 무Native 재사용, 최신 4종 기본 J→v098 합성 오프라인 증거와 #42652697431.
+- **Decision:** `FIX` — 실제 설치 원본의 보석 프로필 정체성만 구분, 기존 환경 엔진/효과 엔진/Native 재검증 신설 금지.
+- **Changes:** 기존 v113 저장된 v271 보석 배치와 요청 기본 소켓을 비교하고, v216 설치 조회에 선택적 정확 SHA 필터를 추가. 프로필 없는 v212 기존 예산 재사용은 유지.
+- **Verification:** 격리 fe73eed focused #42661091632 524 PASS/2 SKIP/0 FAIL; v113 Linux/Windows #42661091545 각263 PASS. 중간 a4c CI에서 기존 budget-only 계약 1건 회귀를 확인하여 fe73eed에서 교정. 신규 Native/원본 수집0.
+- **Remaining:** 미관측 신규 시즌 첫 정상 Build G/J/F/O→검증 등록→사용자 프로필·실 DPS Native 종단; 이 미실증은 미구현 판정 아님.
+- **Efficiency:** 기존 v212/v217 소스·Native 증거 그대로 재사용, 불일치 프로필에 한해서만 원래 v216 경로로 이동, 반복 Native/전체 시즌 DB/새 Gate 없음.
 - **Status:** `FIX` — 기존 v212 시즌 매니페스트의 G/J/F/O READY만으로 새 기본 SimC 보석 프로필의 일치를 보장할 수 없던 재사용 경계. 새로운 원본/G/J/F/O/품질 엔진을 만들지 않음.
 - **확인한 코드 문제:** `v216.find_verified_installed_season_environment`는 게임빌드·ilvl·기름 ID를 조회하지만 같은 범위의 J/소켓/특수보석 변형을 설치 프로필 수준에서 구분하지 않음. `v113.build_season_environment`의 빠른 재사용 경로는 이를 그대로 READY로 받을 수 있었음. `v113.remember_verified_fresh_environment`의 확인 조회도 원래 정확 v212 SHA를 요구하지 않아 여러 설치본을 만나면 잘못된 변형을 고를 수 있었음.
 - **적용한 최소 교정:** 원래 v271 원본 봉인 프로필에 저장된 `special_gem_id`, 소켓 총수, 보통보석 기본4종을 v113 동일 시즌 Build 재사용 때 확인. **스냅샷이 실제 존재하고 요청 배치와 다를 때에만** 기존 READY 프로필 복원을 거절하고 원래 v216 신규 Build 경로로 보냄(기존 v217 정적 소스 캐시 재사용). **스냅샷 자체가 없는 역사 v212 설치본은 검증된 시즌 *예산* READY/Native0 조회를 보존**하되 사용자 SimC 프로필 복원 완료라고 주장하지 않음. `remember_verified_fresh_environment`은 원래 설치된 v212 매니페스트 **정확 SHA**를 찾아 검증, 무관한 다른 v212 설치본 선택 방지. 새로운 source/Native/UI 효과 Gate 없음.
