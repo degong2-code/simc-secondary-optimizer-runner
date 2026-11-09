@@ -1,3 +1,41 @@
+# 최신 단일 판정 보충 — 2026-11-10 · 구현·실증·결함·검증 공백 분리
+
+> **우선권:** 2026-11-10 사용자 직접 결정 및 본 최신 보충 → 아래 A~G 역사 판정(작성 시점) → 일자별 개발 기록. 이 문서는 **개발 의사결정 정리**이지 설계 v1.4.3 개정, 새 코드 구현, 새 Native 영수증, Project Sources 등록 또는 공식 제품 승격이 아니다. 최신 HEAD는 매번 독립 조회한다. 본 보충 직전 격리 HEAD `17d9fce13bee26117b5d860c9b85dad7008c5603`, main `07133e0aaf738d6e4816a6486057b1cd49c018de`.
+
+## 0. 지금의 결론 및 종료 기준
+
+- **시즌 환경 구축의 핵심 엔진은 이미 구현됐다.** `v216/v222/v212/v217` 시즌 source/G/J/F/O/예산/설치, `v196/v220` 품질·정책 A, 대표 장비/프로필, 검증 설치본의 웹/SimC 연결을 **신규 대형 개발 과제**로 다시 등록하지 않는다.
+- **새 시즌 최초 정상 Build의 완전 자동 G/J/F/O→검증 선택지→사용자 SimC 종단은 미실증**이다. 이는 곧바로 '엔진 미구현'이나 '실제 코드 결함 발견'을 뜻하지 않는다. 최근 4종 일반보석(특수보석 optional) 기본 경로는 소스 J→v098까지 **합성 오프라인 관통 PASS**, 실제 신규 시즌 첫 설치/Native는 아직 아니다.
+- **최신 사용자 우선순위:** 이미 만든 환경 엔진의 실제 남은 결함·연결을 최소 수정하고 신규 시즌 최초 구축 경로의 필수 검증을 끝내 **환경 구축 단계 종료** → 그다음 기존 `v290/v291` **최적화 알고리즘의 발견 품질·효율 개선**으로 복귀. 검증하지 않은 것을 완료라 주장하지도, 검증만 미완료인 항목을 신규 기능으로 개발하지도 않는다.
+
+## 1. 기능별 네 칸 판정 — 최신 HEAD 기준
+
+| 기능 | 구현 상태 | 기존 실제 증거 (재사용) | 확인된 구현/연결 잔여 | 검증만 미완료 또는 적용 범위 제한 |
+|---|---|---|---|---|
+| **A 시즌 원본·G/J/F/O·설치** | **핵심 구현**: v216/v222/v212/v217, 동일 시즌 출처·SHA, B=G+J+F/T=B+O | 70783 징벌334 G2850/J92/F165/O0 Native3 [#42460255527](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42460255527), 양의 O 설치 [#42598051977](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42598051977) | 범용 소스/품질/설치에서 **실패가 재현된 연결만** 결함으로 확정; 현 단계에서 엔진 전체 결함 단정 금지 | 소스·설치 이력 없는 신규 시즌의 **최초 정상 Build 전주기** 미실증. 다른 시즌에 70783 숫자 승계 금지 |
+| **B 26 DPS 대표 프로필** | **기본 프로필 구현**; 전체 현재 장비 요구 없음 | 26/26 기본 물리 SimC 수용 [#40972829357](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40972829357) | 새 시즌 대표 장비/무기/티어 원본이 실제 입력에 반영되지 않는 경우만 수리 | 26/26 개별 실제 사용자 웹 장시간 실행 미실증; 시즌 환경 구축 종료를 위한 **무조건 전수 Native Gate 아님** |
+| **C 4종 일반보석·F·O·L/E 회계** | **회계 핵심 구현**. 4종 보석 각1개 기본/특수 optional → v271→v216 J→v098 연결(최근); 선택 F/O 및 일부 L/E 경로 존재 | 해당 기름·손 70783 O=치16/가16 Native2 [#42582755601](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42582755601); 4종 기본 J→v098 **합성 offline** [#42652697431](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42652697431) | **일부 선택 특수 L/E 및 새 시즌 품목의 실제 연결 여부를 구분 점검**; 증거 없는 수치를 구현해 넣지 않음 | 새 시즌 일반 4종 실제 소켓/J 및 모든 품질·기름 선택의 조건별 실증 미완료. 기존 70783 O를 타 시즌으로 일반화 금지 |
+| **D 품질·정책 A·웹 Build/선택지** | **품질/등록·사용자 Build 경로 구현**, 검증 설치 F/O 목록 UI 작동. 최초 Build G/F 원본 요청·일반 4종 소스/J 연결됨 | 설치된 환경 → 실제 웹 SimC DPS [#42598051977](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42598051977); 웹/품목 선택 offline CI 재사용 | 새 시즌 최초 Build에서 선택지 발표·정식 등록이 실제 막히는 지점이 확인될 때만 CONNECT/FIX | 새 시즌 첫 수집→**최고 품질 판별·정책 A 승인된 선택지만 공개**→설치→웹 종단은 아직 하나로 실증되지 않음 |
+| **E 적응형 최적화·95%** | **엔진 구현** v290/v291, 0-rating, 지역 소진→전역 후보 fallback | 8×35 scout + 2×320 confirm 실제 Native10 [#42501052586](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42501052586) | 지금 환경 구축을 위해 탐색 엔진 변경 필요 **없음** | 다봉형 고점 누락률·전역 최적·다중 후보 선택 편향의 보편적 95% 보증 미확정; 환경 단계 종료 **후** P2 연구 |
+| **F 세션·캐시·취소·재개** | **구현** v106/v291/v292/v293; 원본/시즌/프로필/바이너리/후보/iterations 구분 | DPS10 교차-job 신규 Native0 [#42504040076](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42504040076), 양의 O 실 웹 캐시·재개 [#42598051977](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42598051977) | 재현되는 identity 오용·실패만 수리 | 신규 시즌 최초 장시간 사용자 경로의 운영 검증 미완료 |
+| **G 로컬 UI/Windows 배포** | **로컬 웹·Windows 포장 구현** | Windows packaging [#42623497934](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42623497934), Linux/Windows UI CI [#42623498001](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42623498001) | 실제 새 시즌 UI 조작 시 재현된 입출력 결함만 수리 | 개인 사용자 Windows 직접 클릭/전체 26종 실사용은 **제품 출시 검증**이며 환경 엔진 신규 개발의 증거 아님 |
+
+**영수증 분리:** 최신 코드 `17d9fce...`의 offline focused [#42652697431](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42652697431) **524 PASS·2 SKIP·0 FAIL**, `DEV_LEDGER_PASS`; 해당 SHA의 **신규 Native0**. 이전 70783 실제 Native/웹 종단 증거는 **기존 범위에서만 재사용**, 최신 4종 보석 기본 경로의 실 시즌 증명으로 합성하지 않는다.
+
+## 2. 개발 착수 전 필수 판정 — 누락 증거를 신규 구현으로 오인 금지
+
+모든 제안은 먼저 **대상 기능/입력·시즌·빌드/정확 현재 코드 경로/기존 원본·캐시·Native·Actions**를 확인하고, 별도로 네 칸을 채운다.
+
+1. **코드 구현:** 있는가? 기능이 존재하면 '미구현'이라고 하지 않는다.
+2. **실제 증거:** offline / real source+Native / 사용자 웹 E2E 중 **어디까지** 입증했는가? 서로 대체하지 않는다.
+3. **재현된 결함·누락 연결:** 실제 실패 입력·단계·오류·기대 동작이 있는가? **없으면 신규 개발 과제 등록 금지**. 미실증은 검증 항목으로만 기록.
+4. **최소 다음 행위:** `REUSE`(현재 증거 유효), `VERIFY`(실행 한정), `CONNECT`(실제 단절 확인), `FIX`(재현 버그), `EXTEND/REPLACE/NEW`(기존 수단 불가를 입증한 때만), `STOP`(중복·범위 밖) 중 하나. 승인 정책과 소유권을 확인한다.
+
+**종료 판정:** 실제 시즌 최초 정상 Build 한 경로에서 정확 시즌 대표 일반 장비·무기·티어/G, 일반보석 J·검증 최고품질 영약 F·선택 기름 O(미선택 O0 허용), B/T/수동 T/L/E/O 단일 소유권, 검증된 선택지 Policy A 등록, v212 설치·대표 v098 SimC 프로필→사용자 DPS 실행의 **필수 경계**를 확인한다. 기존 같은 시즌/조건의 봉인 Native는 재사용하고 **새로 깨진 부분만 최소 실측**. 선택적 품목의 증거 부족은 해당 품목만 보류; 별도 효과 인증 Gate·26전문화 Native 전수/모든 미래 시즌 사전 증명·Windows 개인 PC 실사용을 환경 구축의 필수 선행 Gate로 추가하지 않는다.
+
+**다음 단일 우선 과제:** 기존 `v113→v216→v212→v098/v096→v291`의 **원래 사용자 Build 경로**로 초기 데이터 없는 시즌을 한 건 통제 실행하고, 실패하면 첫 실제 blocker를 위 네 칸으로 분류해 최소 수정. 소스 수집/Native 비용이 큰 경우 같은 시즌 원본 캐시·영수증 선조회; 기존에 이미 확인된 70783 G/F/O/DPS 재실험을 기본값으로 반복하지 않는다. **엔진 구축 신규 과제는 열지 않는다.** 필수 경계가 충족되면 환경 Build 완료를 증거 범위와 함께 보고하고 P2 최적화 품질 개선으로 이동한다.
+
+---
 > **2026-11-09 P3-HAV 새 채팅 단일 인계(갱신 전 격리 7a89f2d7ef7c):** [단일 최신 읽기 전용 복원/시작 프롬프트](CHAT_CONTINUITY_HANDOFF_20261109_P3_HAV_ENGINE_FIRST_RESTORE.md) / [HEAD·원본·기능별 증거 대사](development/notes/2026-11-09_p3-hav-engine-first-handoff-evidence.md). 최신 HEAD focused [#42623963325](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42623963325) 522 PASS+2 SKIP·ledger PASS. 이미 검증 설치된 영약/기름 선택 UI·정확 빌드/v212 SHA/웹 세션·실 O>0 DPS와 P2 Native10/캐시 경로는 재사용. **새 시즌 첫 설치 원본 G/J/F/O→정책 A 최고품질→선택지→동일 사용자 SimC까지 전주기 입증은 미완료**; 추가 L/E·26 DPS 웹 장기 실 Native·사용자 Windows PC 클릭도 별도. 승인 v1.4.3·main·원본 v003/v016·Project UI/Work OS/주 개발 소유권 **변경 없음**. 새 채팅 첫 HEAD/증거·A~G/병목/로드맵 보고 후 반드시 STOP, 사용자 '진행' 이전 코드/문서/Actions/Native/커밋 금지.
 
 > **2026-11-09 P1 검증 설치 영약 F 일반 사용자 선택 연결 (격리):** [한정 코드·검증](development/notes/2026-11-09_p1-installed-verified-flask-ui-reuse.md). 기존 v113 로컬 v212 설치/저장 프로필/조회 exact SHA를 재사용해 O=0 포함 같은 빌드·ilvl의 `official_F_physical_source`를 **읽기 전용 영약 목록**으로 제공하고 환경 Build의 기존 물리 영약 ItemID 칸에 자동 입력. 임의 F rating/등급 우위/새 아이템 등록 없음, 실제 v216 다시 검증. 원본 미설치 항목은 잠금; 일반 고급 입력 유지. [focused #42623498384](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42623498384) **522 PASS+2 SKIP·ledger PASS**, [웹 양 OS #42623497925](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42623497925) 각각 261 PASS, [UI 양 OS #42623498001](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42623498001), [Windows #42623497934](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42623497934) 성공. 신규 Native/원본 수집 0; 새 시즌 전체 품질 인증·사용자 PC GUI 실 클릭 미검증. `main`·권한/소유권 변경 없음.

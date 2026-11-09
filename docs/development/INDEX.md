@@ -1,3 +1,5 @@
+> **2026-11-10 기능별 최신 상태/중복개발 방지의 단일 입구:** [제품 A~G 구현·Native/웹 실증·재현 결함·검증 공백 판정표](../PRODUCT_CANONICAL_STATUS_20261109_P3_HAI.md) 최상단과 [착수 규칙](PROTOCOL.md) 최상단을 먼저 읽는다. 아래 일자별 기능 레코드는 **역사 증거**로 유지하며 과거 `PENDING`을 현재 미구현으로 해석하지 않는다. 시즌 G/J/F/O 엔진과 정책 A/사용자 Build/SimC 브리지의 기존 코드를 선조회한 후 실패 재현이 없다면 **VERIFY 또는 REUSE**, 새 대형 시즌 엔진 개발 금지. 일반보석 4종 기본 소스 J→v098 합성 offline 및 focused #42652697431 성공, 실제 신규 시즌 READY/E2E는 미실증. 필수 환경 Build 전주기 검증 완료 후 P2 최적화 고도화 복귀.
+
 > **2026-11-10 P1 일반보석 4종 기본(특수보석 선택형) 시즌 공통 엔진:** [범위·이전 영수증 재사용·미실증](notes/2026-11-10_p1-ordinary-only-default-engine-bridge.md). `v271/v216/v222/v098` 같은 시즌 원본·물리 보석 J·소켓·사용자 SimC 프로필 체인을 확장해 특수보석 ID 없이 일반보석 치명/가속/특화/유연 각 1개를 기본 배치. 기존 명시 특수보석 경로의 역사 SHA 보호, 별도 효과 Native/Gate 및 새 DB 없음. 새 시즌 전체 READY/실 Native 미실증 여부는 CI와 분리; main/공식 승격/Project UI 불변.
 
 > **2026-11-10 P1 일반 사용자 최초 시즌 Build → 기존 G/F bounded 측정 자동 연결:** [구현·증거](notes/2026-11-10_p1-auto-first-build-core-connection.md). G/F 수집기 신규 제작 없이 v113에서 기존 v216 사용, 동일 시즌 v212 READY 우선 Native0 재사용. 최고품질 F 후보 한 종류만 측정, 실제 J 배치/증명·전문 26 사용자 Native·새 시즌 전주기 READY는 별개. main/승격 불변.
