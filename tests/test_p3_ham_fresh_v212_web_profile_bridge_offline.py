@@ -252,6 +252,77 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
                     335,explicit_build=self.build)
 
 
+
+class FreshOptionalConsumableForwarding(unittest.TestCase):
+    def _user(self, **chosen):
+        controls=web.sessions.standard_controls()
+        controls["consumable_choices"].update(chosen)
+        return web.sessions.user_scenario(controls)
+
+    def test_default_uses_disabled_and_selected_simc_tokens_survive(self):
+        serialize=web.profile_stage._verified_fresh_season_consumables
+        self.assertEqual(serialize(self._user()),{
+            "food":"disabled","potion":"disabled","augmentation":"disabled"})
+        chosen=self._user(food="royal_roast",
+                          potion="potion_of_recklessness_2",
+                          augmentation="void_touched")
+        self.assertEqual(serialize(chosen),{
+            "food":"royal_roast",
+            "potion":"potion_of_recklessness_2",
+            "augmentation":"void_touched"})
+
+    def test_unadmitted_option_never_silently_changes_profile(self):
+        serialize=web.profile_stage._verified_fresh_season_consumables
+        with self.assertRaisesRegex(web.bootstrap.UserScenarioBlocked,
+                                    "FRESH_SEASON_FLASK_DIAMOND_OR_MODULE_NOT_ADMITTED"):
+            serialize(self._user(omnium_talents="row4_crit"))
+        with self.assertRaisesRegex(web.bootstrap.UserScenarioBlocked,
+                                    "FRESH_SEASON_SIMC_OPTION_UNSUPPORTED"):
+            serialize(self._user(food="unverified_food_item"))
+
+    def test_stage_passes_exact_user_choices_to_existing_v098_builder(self):
+        user=self._user(food="royal_roast",augmentation="void_touched")
+        with tempfile.TemporaryDirectory() as scratch:
+            folder=pathlib.Path(scratch)/("e"*20)
+            folder.mkdir()
+            (folder/"V106_SESSION_IDENTITY.json").write_text(json.dumps(
+                {"profile_stage":{"identity_sha256":"c"*64}}))
+            recorded={}
+            def source_plan(*args,**kwargs):
+                recorded.update(kwargs)
+                generated=pathlib.Path(args[1])
+                return {"schema":web.bootstrap.SCHEMA,
+                        "generated_manifest":str(generated/"manifest.json"),
+                        "plan":{"class":"paladin","spec":"retribution"}}
+            def stage(*,execute,**kwargs):
+                result=execute()
+                return {"result":result,"status":"EXECUTED_AND_SEALED",
+                        "executed":True,"reused":False,"recovered":False,
+                        "input_fingerprint":"a"*64,"receipt_sha256":"b"*64,
+                        "output_count":5,"output_bytes":0,"receipt_writes":2}
+            with (
+                mock.patch.object(web.profile_stage.bootstrap,
+                                  "run_from_verified_environment_build",
+                                  side_effect=source_plan) as builder,
+                mock.patch.object(web.profile_stage.engine,
+                                  "execute_stage",side_effect=stage)
+            ):
+                data,receipt=web.profile_stage.build_or_reuse(
+                    user=user,session_folder=folder,binary=folder/"simc",
+                    revision="abcdeff",static_cache=None,
+                    current_season_product=True,
+                    verified_fresh_environment_result={
+                        "normal_build_entry":True})
+            self.assertEqual(builder.call_count,1)
+            self.assertEqual(recorded["season_controls"],{
+                "food":"royal_roast","potion":"disabled",
+                "augmentation":"void_touched"})
+            self.assertFalse(recorded["execute"])
+            self.assertEqual(receipt["native_calls"],0)
+
+
+
+
 class SeasonNoOilBrowserDefaults(unittest.TestCase):
     def test_zero_o_baseline_does_not_auto_select_legacy_main_hand(self):
         from fastapi.testclient import TestClient
