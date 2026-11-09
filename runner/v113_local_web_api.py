@@ -691,6 +691,89 @@ class LocalJobs:
         candidate=pathlib.Path(__file__).resolve().parents[1]/"data"/"current_season_source_to_catalog.json"
         return candidate if candidate.is_file() else None
 
+
+    def installed_oil_loadouts(self, ilevel, game_build=None):
+        """List complete, sealed local oil combinations; no new approval/Native."""
+        if type(ilevel) is not int or not 1<=ilevel<=1000 or (
+            game_build is not None and
+            re.fullmatch(r"\d+(?:\.\d+){3}",game_build) is None):
+            raise environment_manifest.EnvironmentBlocked(
+                "WEB_OIL_CHOICES_SCOPE_INVALID")
+        base=self.root/"_fresh_season_sources"
+        build=game_build or self._current_fresh_game_build
+        if build is None and base.is_dir() and not base.is_symlink():
+            # One stored build is NOT evidence that Retail is still on it.
+            folders=[p.name[5:] for p in base.iterdir()
+                     if p.is_dir() and not p.is_symlink() and
+                     re.fullmatch(r"wago_\d+(?:\.\d+){3}",p.name)]
+            if len(folders)==1:
+                build=folders[0]
+        result={"schema":"v113_verified_installed_oil_loadouts_v1",
+                "status":"NO_VERIFIED_OIL_LOADOUTS",
+                "game_build":build,"target_ilevel":ilevel,
+                "items":[],"native_calls":0,"network_calls":0}
+        if build is None:
+            result["status"]="SELECT_LOCAL_INSTALLED_BUILD"
+            return result
+        docs=base/("wago_"+build)/"fresh_source"
+        if not docs.is_dir() or docs.is_symlink():
+            return result
+        candidates=[]
+        for path in docs.glob("v212_installed_*.json"):
+            if len(candidates)>=64:break
+            if (path.is_symlink() or not path.is_file() or
+                re.fullmatch(r"v212_installed_[a-f0-9]{20}\.json",path.name)
+                    is None):continue
+            try:candidates.append((path.stat().st_mtime,path))
+            except OSError:continue
+        seen=set()
+        for _,path in sorted(candidates,key=lambda p:(-p[0],str(p[1]))):
+            try:
+                if path.stat().st_size>environment_build.MAX_RECEIPT_BYTES:
+                    continue
+                doc,_=environment_manifest.read_json(
+                    path,environment_build.MAX_RECEIPT_BYTES)
+                environment_manifest.verify_fresh_installed_environment(doc)
+                positive=doc.get("official_O_physical_source")
+                if (doc["game_build"]!=build or doc["target_ilevel"]!=ilevel
+                    or path.name!="v212_installed_"+
+                       doc["manifest_sha256"][:20]+".json"
+                    or type(positive) is not dict):
+                    continue
+                ids=positive["selected_oil_item_ids_by_hand"]
+                if not ids:continue
+                # Without a saved v113 profile the user's plan cannot resume.
+                snapshot=docs/("v113_profile_"+
+                               doc["manifest_sha256"][:20]+".json")
+                if (snapshot.is_symlink() or not snapshot.is_file() or
+                    not 0<snapshot.stat().st_size<=8_000_000):continue
+                match=environment_build.find_verified_installed_season_environment(
+                    self.root,ilevel,expected_game_build=build,
+                    selected_oil_item_ids_by_hand=ids)
+                if (match is None or match["installed_manifest_sha256"]
+                    !=doc["manifest_sha256"]):continue
+                key=tuple(sorted(ids.items()))
+                if key in seen:continue
+                seen.add(key)
+                description=[]
+                for hand,row in sorted(positive["oil_by_hand"].items()):
+                    token=row["simc_input_token"].rsplit(":",1)[-1]
+                    description.append(
+                        ("주무기" if hand=="main_hand" else "보조무기")+
+                        " · "+token.replace("_"," ")+
+                        " (#"+str(row["physical_item_id"])+")")
+                result["items"].append({
+                    "installed_manifest_sha256":doc["manifest_sha256"],
+                    "selected_oil_item_ids_by_hand":dict(ids),
+                    "display_name":" / ".join(description),
+                    "game_build":build,"target_ilevel":ilevel})
+            except (OSError,ValueError,TypeError,KeyError,
+                    environment_manifest.EnvironmentBlocked):
+                continue
+        if result["items"]:
+            result["status"]="VERIFIED_INSTALLED_OIL_LOADOUTS"
+        return result
+
     def package_manifest_path(self):
         """Return the exact package-root manifest, never infer from a ZIP filename."""
         candidate=pathlib.Path(__file__).resolve().parents[1]/"V181_PACKAGE_MANIFEST.json"
@@ -1681,6 +1764,14 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
     @app.post("/api/v1/simc-updates/rollback")
     def simc_update_rollback():
         return updates_action(updater.rollback)
+
+
+    @app.get("/api/v1/verified-oil-loadouts")
+    def verified_oil_loadouts(ilevel: int = 334, game_build: str | None = None):
+        try:
+            return jobs.installed_oil_loadouts(ilevel,game_build)
+        except environment_manifest.EnvironmentBlocked as exc:
+            raise blocked(exc) from None
 
     @app.get("/api/v1/season-option-catalog")
     def season_option_catalog():
