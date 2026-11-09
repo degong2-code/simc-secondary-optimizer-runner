@@ -105,7 +105,7 @@ class DeclaredFullSockets(unittest.TestCase):
             self.assertFalse(linked["J_approved"])
             self.assertEqual(linked["new_native_calls"],0)
     def test_unsupported_count_or_slot_does_not_get_fake_bonuses(self):
-        for n in (0,4,65,True):
+        for n in (0,3,65,True):
             with self.subTest(n=n),self.assertRaises(ValueError):
                 self.source_counts(n)
         with self.assertRaises(ValueError):

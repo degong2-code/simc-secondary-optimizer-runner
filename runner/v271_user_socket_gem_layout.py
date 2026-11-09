@@ -40,7 +40,9 @@ def ordinary_four_stat_default(*, observed_by_stat, socket_total,
     with_special=special_gem_id is not None
     need(type(socket_total) is int and
          (5 if with_special else 4)<=socket_total<=64,
-         "SOCKET_FOUR_ORDINARY_TYPES_SOCKET_COUNT_REQUIRED")
+         ("SOCKET_FOUR_ORDINARY_TYPES_NEED_FIVE_PHYSICAL_SOCKETS"
+          if with_special else
+          "SOCKET_FOUR_ORDINARY_TYPES_SOCKET_COUNT_REQUIRED"))
     need(not with_special or
          (type(special_gem_id) is int and special_gem_id>0),
          "SOCKET_EXISTING_SPECIAL_ID_REQUIRED")

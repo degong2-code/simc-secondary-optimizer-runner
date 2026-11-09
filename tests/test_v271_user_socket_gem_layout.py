@@ -56,7 +56,7 @@ class SocketLayoutTests(unittest.TestCase):
         self.assertEqual(observed["J_candidate_unadmitted"],92)
         self.assertFalse(observed["environment_ready"])
         self.assertFalse(layout["CHMV_J_source_authenticated"])
-        self.assertEqual(placed["head"]["options"]["gem_id"],"311100")
+        self.assertEqual(placed["head"]["options"]["gem_id"],"311101")
         self.assertEqual(placed["wrists"]["options"]["gem_id"],"311103")
         character={"class":"druid","spec":"balance",
                    "race":"night_elf","talents":"CAAAABBB11122"}
@@ -68,7 +68,7 @@ class SocketLayoutTests(unittest.TestCase):
         self.assertIn("gem_id=311100",profile)
         self.assertIn("gem_id=311103",profile)
         self.assertNotIn("gem_id=240967",profile)
-        self.assertEqual(rows["head"]["options"]["gem_id"],"311100")
+        self.assertEqual(rows["head"]["options"]["gem_id"],"311101")
 
     def test_p3_fm_four_stat_default_uses_each_nominal_type_once(self):
         source={

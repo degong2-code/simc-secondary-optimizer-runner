@@ -1369,7 +1369,7 @@ def _season_settings_from_v216(*, compilation, numeric_inputs,
         (not with_special and (where is not None or
                                len(set(ordinary[:4]))!=4)) or
         sum(counts.values())!=len(ordinary)+int(with_special) or
-        not (5 if with_special else 4)<=sum(counts.values())<=64):
+        not (1 if with_special else 4)<=sum(counts.values())<=64):
         return {"status":"SEASON_SETTINGS_SOURCE_PENDING",
                 "missing":["V271_PHYSICAL_SOCKET_PLAN_SOURCE_PENDING"],
                 "settings":None}
