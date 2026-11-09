@@ -1,6 +1,6 @@
 # P1 · 70783 Phoenix Oil 정적 O 16/16 실 SimC 및 원본 Build 연결 (2026-11-09)
 
-- **Capability:** `O.OIL` / `SIMC.PRECOMBAT` / `BUDGET.GJFO` / `SOURCE.SEAL`. 개발 격리 브랜치만. 사용자가 정정한 냉법의 과거 `치명+16/가속+17` buffed 관측은 공식 O 예산 증거에서 계속 제외한다.
+- **Capability:** `O.OIL` / `PRODUCT.E2E` / `BUDGET.GJFO` / `SOURCE.SEAL`. 개발 격리 브랜치만. 사용자가 정정한 냉법의 과거 `치명+16/가속+17` buffed 관측은 공식 O 예산 증거에서 계속 제외한다.
 - **Keywords:** oil, O, precombat total gear, SimC 70783, 16/16, v297, v296, v216, sealed Native, source verification, weapon hand, v222, cache.
 - **Prior evidence:** [Actions #42582755601](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42582755601) **SUCCESS**. 기존 70783 바이너리 SHA256 `6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6`, SimC 소스 revision `c20e2ad52e4c33711f74272309a5748125175fe8` 재사용; 신규 컴파일0, **실 Native 2회**. 같은 징벌 성기사 대표 물리 장비, temporary_enchant OFF 및 `main_hand:thalassian_phoenix_oil_2` ON. 원본 `player_t::init_initial_stats`의 `total gear stats`은 OFF 치명1217/가속820 → ON 치명1233/가속836, 특화533/유연358 및 다른 장비 스탯 불변. **기름 정적 O = 치명16 + 가속16, 총32** (해당 빌드·대표 조건·주무기 1개). `buffed_stats` 미사용, 과거 16/17 재사용0. [기존 실패 #42578562372]은 stdout에 item_t 요약이 없는 문제였고, 본 실측은 SimC 자체 전투 전 장비 수치 출력으로 해결했다.
 - **Changes:** `runner/v297_sealed_simc_oil_gear_delta.py` 신규: 실제 `v233` 물리 대표 프로필/선택 손·SimC revision/바이너리 SHA를 바탕으로 기존 `v278.run_case`의 **content-addressed Native attempt/검증 캐시**를 재사용. `debug=1`의 SimC `total gear stats` OFF/ON을 동일 gear/액터 조건에서 비교; CHMV가 아닌 장비 변화, 소수·음수, 누락·중복을 차단. 동일 조건 반복 Native0. 특성 효과 계산·마부 스케일링을 재구현하지 않음.
