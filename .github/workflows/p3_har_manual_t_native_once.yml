@@ -1,0 +1,129 @@
+# P3-HAR: one user-facing manual T=3500 through actual local SimC.
+# Different executable SHA is a NEW cache identity, not a historical binary.
+# This one-shot is bounded to one Ret profile, no 26-spec sweep.
+name: P3-HAR one real manual final T via new SHA-scoped SimC
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p3_har_manual_t_native_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p3-har-one-user-manual-t-native
+  cancel-in-progress: false
+jobs:
+  manual-t-one-shot:
+    if: contains(github.event.head_commit.message, '[p3-har-manual-t-native-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    env:
+      PYTHONPATH: runner:.
+      SIMC_COMMIT: c20e2ad52e4c33711f74272309a5748125175fe8
+      SIMC_PINNED_SOURCE_COMMIT: c20e2ad52e4c33711f74272309a5748125175fe8
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      GAME_BUILD: 12.1.5.70783
+      P3_HAR_USER_MANUAL_FINAL_T: '3500'
+      P3_T1_EXACT_FLASK_ITEM_ID: '241324'
+      P3_T1_EXISTING_SPECIAL_GEM_ID: '240967'
+      P3_T1_DPS_E2E_ONCE: '1'
+      P3_T1_WEB_LONGRUN_ONCE: '1'
+      P3_T1_SPEC_CLASS: paladin
+      P3_T1_SPEC_NAME: retribution
+      P3_T1_SPEC_RACE: dwarf
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Restore exact source commit (no latest fallback)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out _vendor
+          git clone --filter=blob:none --no-checkout https://github.com/simulationcraft/simc.git _vendor/simc
+          git -C _vendor/simc checkout --detach "$SIMC_COMMIT"
+          test "$(git -C _vendor/simc rev-parse HEAD)" = "$SIMC_COMMIT"
+          python3 - <<'PY'
+          import hashlib,json,os,pathlib,subprocess,sys
+          from runner import v229_simc_only_source_seed as source
+          root=pathlib.Path("_vendor/simc")
+          folder=root/"engine/dbc/generated"
+          data={name:(folder/name).read_bytes() for name in source.SOURCE_FILES}
+          git_shas={}
+          for name in data:
+              git_shas[name]=subprocess.check_output(
+                  ["git","-C",str(root),"rev-parse","HEAD:engine/dbc/generated/"+name],
+                  text=True).strip()
+          doc=source.inventory(data,simc_revision=os.environ["SIMC_COMMIT"],
+              expected_build=os.environ["GAME_BUILD"],expected_git_blob=git_shas,
+              season_event="cold_start")
+          receipt={"schema":"p3_fw_exact_simc_build_v1",
+              "source_commit":os.environ["SIMC_COMMIT"],
+              "game_build":os.environ["GAME_BUILD"],
+              "source_inventory_sha256":hashlib.sha256(
+                  json.dumps(doc,sort_keys=True).encode()).hexdigest(),
+              "generated_source_verified":True,"binary_built":False}
+          pathlib.Path("out/p3_fw_receipt.json").write_text(
+              json.dumps(receipt,sort_keys=True,indent=2)+"\n")
+          print("P3_FW_EXACT_GENERATED_SOURCE_VERIFIED",flush=True)
+          PY
+      - name: Build one current-source executable under its OWN SHA identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq cmake build-essential pkg-config
+          cmake -S _vendor/simc -B _vendor/simc/build -DBUILD_GUI=OFF -DSC_NO_NETWORKING=ON -DCMAKE_BUILD_TYPE=Release >out/cmake_configure.log 2>&1
+          cmake --build _vendor/simc/build --target simc --parallel 2 >out/cmake_build.log 2>&1
+          bin="$(find _vendor/simc/build -type f -name simc -executable | sort | head -1)"
+          test -n "$bin" && test -x "$bin"
+          mkdir -p out/binary
+          cp "$bin" out/binary/simc
+          sha256sum out/binary/simc >out/binary/simc.sha256
+          # Actual executable SHA is NEW: never import old DPS cache receipts.
+          SHA="$(cut -d' ' -f1 out/binary/simc.sha256)"
+          test "${#SHA}" -eq 64
+          echo "SIMC_PINNED_BINARY_SHA256=$SHA" >> "$GITHUB_ENV"
+          echo "SIMC_CLI_WRAPPER=$GITHUB_WORKSPACE/out/binary/simc" >> "$GITHUB_ENV"
+          echo "P3_HAR_NEW_BINARY_SHA=$SHA"
+          python3 - <<'PY'
+          import json,os,pathlib,hashlib
+          p=pathlib.Path("out/p3_fw_receipt.json")
+          d=json.loads(p.read_text())
+          b=pathlib.Path("out/binary/simc")
+          d.update(binary_built=True,binary_sha256=hashlib.sha256(b.read_bytes()).hexdigest(),
+                   binary_bytes=b.stat().st_size,
+                   binary_source_commit=os.environ["SIMC_COMMIT"],
+                   environment_ready=False,environment_installed=False,
+                   native_dps_calls=0)
+          p.write_text(json.dumps(d,sort_keys=True,indent=2)+"\n")
+          print("P3_FW_EXACT_BINARY_BUILT",d["binary_sha256"],flush=True)
+          PY
+      - name: Install existing web dependencies
+        run: python -m pip install -r requirements-web-test.txt
+      - name: Original v216 season install and one manual T local web Native
+        timeout-minutes: 23
+        env:
+          SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -u integration_probes/p3_fr_zero_base_t1_acceptance.py
+      - name: Preserve bounded factual receipts only, not the executable
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p3-har-manual-t-native-once-receipt
+          path: |
+            out/p3_fw_receipt.json
+            out/binary/simc.sha256
+            p3_fr_zero_base_t1_receipt.json
+            p3_haj_web_e2e_receipt.json
+            p3_haj_web_native_evidence.zip
+          if-no-files-found: ignore
+          retention-days: 7
