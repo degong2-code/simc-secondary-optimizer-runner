@@ -67,6 +67,11 @@ jobs:
           mkdir -p out/binary
           cp "$bin" out/binary/simc
           sha256sum out/binary/simc >out/binary/simc.sha256
+          # Expired 3-day artifact can be reproduced only at this exact
+          # revision/source/build/SHA. Never silently accept drift for cache.
+          test "$(cut -d' ' -f1 out/binary/simc.sha256)" = \
+            "980ed4640cecc3ed78b34ed0dc0363dbff2ed7d703174e9cc01f09d18570d36b" || \
+          { echo "P3_FW_REBUILT_BINARY_SHA_NOT_ORIGINAL_PIN"; exit 2; }
           python3 - <<'PY'
           import json,os,pathlib,hashlib
           p=pathlib.Path("out/p3_fw_receipt.json")
@@ -89,7 +94,7 @@ jobs:
             out/p3_fw_receipt.json
             out/cmake_configure.log
             out/cmake_build.log
-          retention-days: 3
+          retention-days: 14
           if-no-files-found: warn
       - name: Preserve exact binary only on successful build
         if: success()
@@ -97,5 +102,5 @@ jobs:
         with:
           name: p3-fw-exact-simc-cli-70783
           path: out/binary/
-          retention-days: 3
+          retention-days: 14
           if-no-files-found: error
