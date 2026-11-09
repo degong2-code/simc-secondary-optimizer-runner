@@ -82,6 +82,7 @@ jobs:
             tests.test_p3_hag_portable_one_shot_guard \
             tests.test_p3_hah_local_longrun_worker_offline \
             tests.test_p3_haj_local_web_real_one_shot_guard \
+            tests.test_p3_ham_fresh_v212_web_profile_bridge_offline \
             tests.test_p3_hy_longrun_native_one_shot_guard \
             tests.test_p3_had_eight_native_one_shot_guard \
             tests.test_p3_hae_ten_native_one_shot_guard \
