@@ -976,13 +976,23 @@ def build(user,folder,binary,revision,static_cache_path=None,
         # Do not require historical Midnight-specific four-color diamonds
         # merely to compile a NON-executable source-only preview.
         default_choice=user.get(CONSUME_FIELD)
+        # The v218 bridge maps selected food/potion/augmentation to the
+        # exact settings used by the v139/SimC profile composer. They must
+        # not be silently ignored or assumed to match the old season.
+        # The verified v212 flask/gem budget and optional season module
+        # remain independent and are not overridden here.
+        bound=season_source_bundle["settings"]["default_consumables"]
         need(default_choice is None or (
              type(default_choice) is dict and
              set(default_choice)==consumer.CHOICE_FIELDS and
-             all(default_choice[k]=="source_default" for k in
-                 ("flask","food","potion","augmentation","omnium_talents"))
-             and default_choice["diamond_id"]==0),
-             "SEASON_PROFILE_NONDEFAULT_CONSUMABLES_NOT_SOURCE_BOUND")
+             default_choice["flask"]=="source_default" and
+             default_choice["diamond_id"]==0 and
+             default_choice["omnium_talents"]=="source_default" and
+             all((bound[k]=="disabled" if
+                  default_choice[k]=="source_default" else
+                  bound[k]==default_choice[k]) for k in
+                 ("food","potion","augmentation"))),
+             "SEASON_PROFILE_SELECTED_CONSUMABLES_NOT_SOURCE_BOUND")
     selected_nonchmv=None
     if SEASON_ENCHANT_FIELD in user:
         selected_nonchmv=nonchmv_enchant.apply(
