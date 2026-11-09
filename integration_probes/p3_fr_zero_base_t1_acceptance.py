@@ -708,7 +708,7 @@ def main():
                     from integration_probes import p3_haj_real_local_web_native_e2e as web_e2e
                     web_result=web_e2e.execute(
                         root,candidate,pin["revision_hint"],live["game_build"],
-                        compiled,receipt_file="p3_haj_web_e2e_receipt.json")
+                        result,receipt_file="p3_haj_web_e2e_receipt.json")
                     rec["web_local_e2e"]=web_result
                     if web_result.get("status")!=(
                             "PASS_REAL_FASTAPI_LONGRUN_PREPARE_RUN_RESUME_CACHE"):
