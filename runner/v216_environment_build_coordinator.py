@@ -214,7 +214,8 @@ def _verified_manifest(path):
 
 def find_verified_installed_season_environment(
         sessions_root, target_ilevel, *, expected_game_build,
-        selected_oil_item_ids_by_hand=None, selected_oil_hands=None):
+        selected_oil_item_ids_by_hand=None, selected_oil_hands=None,
+        expected_installed_manifest_sha256=None):
     """Read-only, exact-build v217/v212 reuse across all 26 DPS profiles.
 
     A matching itemlevel alone is NEVER sufficient; even a fully sealed
@@ -239,6 +240,11 @@ def find_verified_installed_season_environment(
          and set(requested_oils)<={"main_hand","off_hand"}
          and all(type(v) is int and v>0 for v in requested_oils.values()),
          "V216_REUSE_EXACT_OIL_HAND_SELECTION_REQUIRED")
+    need(expected_installed_manifest_sha256 is None or
+         (type(expected_installed_manifest_sha256) is str and
+          season_budget_contract.SHA.fullmatch(
+              expected_installed_manifest_sha256) is not None),
+         "V216_REUSE_EXPECTED_INSTALL_SHA_INVALID")
     need(selected_oil_hands is None or
          (selected_oil_item_ids_by_hand is None and
           type(selected_oil_hands) is list and
@@ -280,6 +286,9 @@ def find_verified_installed_season_environment(
             doc,_=environment_manifest.read_json(file,MAX_RECEIPT_BYTES)
             environment_manifest.verify_fresh_installed_environment(doc)
             key=doc["manifest_sha256"]
+            if (expected_installed_manifest_sha256 is not None and
+                    key!=expected_installed_manifest_sha256):
+                continue
             if (file.name!="v212_installed_"+key[:20]+".json" or
                 doc["game_build"]!=expected_game_build or
                 doc["game_build"]!=root.name[5:] or

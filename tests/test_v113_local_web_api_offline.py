@@ -358,6 +358,46 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertFalse((self.root/"runs").exists())
 
 
+    def test_normal_four_gems_refuse_old_special_profile_reuse(self):
+        """A matching build/ilevel/O does not prove a matching gem layout."""
+        def snapshot(special, count, ids):
+            return {"source_compilation":{"physical_gem_layout_unadmitted":{
+                "schema":"v271_user_socket_gem_layout_stage_v1",
+                "status":"PHYSICAL_GEMS_STAGED_SOURCE_AND_SOCKET_PROOFS_PENDING",
+                "special_gem_id":special,"socket_total":count,
+                "ordinary_gem_ids":ids}}}
+        good=snapshot(None,4,[101,102,103,104])
+        legacy=snapshot(240967,5,[101,102,103,104])
+        self.assertTrue(web._verified_snapshot_gem_layout_matches(
+            good,special_gem_id=None,socket_total=4))
+        self.assertFalse(web._verified_snapshot_gem_layout_matches(
+            legacy,special_gem_id=None,socket_total=4))
+        self.assertFalse(web._verified_snapshot_gem_layout_matches(
+            good,special_gem_id=None,socket_total=6))
+        self.assertTrue(web._verified_snapshot_gem_layout_matches(
+            legacy,special_gem_id=240967,socket_total=5))
+        source={"status":"SOURCE_ONLY_PENDING","environment_ready":False,
+                "environment_installed":False,"native_calls":0}
+        installed={"status":"VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED",
+                   "environment_ready":True,"environment_installed":True,
+                   "installed_manifest_sha256":"a"*64}
+        with mock.patch.object(web.environment_build,
+                "find_verified_installed_season_environment",
+                return_value=installed), mock.patch.object(
+                self.app.state.jobs,"restore_verified_fresh_profile",
+                return_value=None) as restore, mock.patch.object(
+                web.environment_build,"build_environment",
+                return_value=source) as original_build:
+            response=self.post("/api/v1/environment/season-build",{
+                "game_build":"12.2.0.99999","target_ilevel":334})
+        self.assertEqual(response.status_code,200,response.text)
+        self.assertFalse(response.json()["web_environment_scope"][
+            "environment_ready"])
+        restore.assert_called_once_with(
+            target_ilevel=334,game_build="12.2.0.99999",
+            required_gem_layout={"special_gem_id":None,"socket_total":4})
+        original_build.assert_called_once()
+
     def test_p1_first_install_core_reuses_original_g_f_stages(self):
         """Automatic cold-start selection calls original Build, not a new engine."""
         payload={"game_build":"12.2.0.99999","target_ilevel":334,

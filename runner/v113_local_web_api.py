@@ -45,6 +45,27 @@ LOCAL_HOST = "127.0.0.1"
 WEB_ASSETS = pathlib.Path(__file__).resolve().parent / "webui"
 PUBLIC_STATIC = frozenset(("/", "/assets/app.js", "/assets/styles.css"))
 
+def _verified_snapshot_gem_layout_matches(result, *, special_gem_id,
+                                          socket_total):
+    """Reject a verified-budget cache hit for a different SimC gem profile."""
+    compilation=(result.get("source_compilation")
+                 if type(result) is dict else None)
+    layout=(compilation.get("physical_gem_layout_unadmitted")
+            if type(compilation) is dict else None)
+    if (type(layout) is not dict or
+            layout.get("schema")!="v271_user_socket_gem_layout_stage_v1"):
+        return False
+    ordinary=layout.get("ordinary_gem_ids")
+    return (
+        layout.get("status")==
+            "PHYSICAL_GEMS_STAGED_SOURCE_AND_SOCKET_PROOFS_PENDING"
+        and layout.get("special_gem_id")==special_gem_id
+        and layout.get("socket_total")==socket_total
+        and type(ordinary) is list and len(ordinary)>=4
+        and len(set(ordinary[:4]))==4
+        and len(ordinary)+int(special_gem_id is not None)==socket_total)
+
+
 class UpdateInstallRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     filename: str = Field(min_length=12,max_length=140)
@@ -195,7 +216,8 @@ class LocalJobs:
         verified=environment_build.find_verified_installed_season_environment(
             self.root,doc["target_ilevel"],
             expected_game_build=doc["game_build"],
-            selected_oil_item_ids_by_hand=installed_oils)
+            selected_oil_item_ids_by_hand=installed_oils,
+            expected_installed_manifest_sha256=doc["manifest_sha256"])
         if (verified is None or
             verified["installed_manifest_sha256"]!=doc["manifest_sha256"] or
             installed.get("manifest_sha256")!=doc["manifest_sha256"]):
@@ -299,7 +321,7 @@ class LocalJobs:
 
     def restore_verified_fresh_profile(
             self, *, target_ilevel, game_build,
-            selected_oil_item_ids_by_hand=None):
+            selected_oil_item_ids_by_hand=None, required_gem_layout=None):
         """Recover only the exact selected installed environment, no Native."""
         found=environment_build.find_verified_installed_season_environment(
             self.root,target_ilevel,expected_game_build=game_build,
@@ -356,6 +378,16 @@ class LocalJobs:
         if type(original) is not dict:
             raise environment_manifest.EnvironmentBlocked(
                 "WEB_FRESH_PROFILE_SNAPSHOT_RESULT_INVALID")
+        if required_gem_layout is not None:
+            if (type(required_gem_layout) is not dict or
+                    set(required_gem_layout)!={"special_gem_id","socket_total"}):
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_FRESH_REQUIRED_GEM_LAYOUT_INVALID")
+            if not _verified_snapshot_gem_layout_matches(
+                    original,**required_gem_layout):
+                # Reject mismatched legacy/special sockets without mutating
+                # this process's verified user profile.
+                return None
         self.remember_verified_fresh_environment(original)
         if self._verified_fresh_profile_result["verified_target_ilevel"]!=target_ilevel:
             raise environment_manifest.EnvironmentBlocked(
@@ -562,10 +594,20 @@ class LocalJobs:
                 # A true original v212 receipt carries its installed SHA.
                 # Previous API mocks/legacy reuse results retain old behavior.
                 snapshot=(self.restore_verified_fresh_profile(
-                    target_ilevel=target_ilevel,game_build=game_build)
+                    target_ilevel=target_ilevel,game_build=game_build,
+                    required_gem_layout={
+                        "special_gem_id":None,
+                        "socket_total":(
+                            source_target_socket_count
+                            if source_target_socket_count is not None else 4)})
                     if type(prior.get("installed_manifest_sha256")) is str
                     else None)
-                return {**prior,
+                # Legacy mocks without a v212 digest retain old behavior.
+                # A real sealed install cannot masquerade as a different
+                # source-verified SimC gem layout.
+                if (snapshot is not None or
+                        type(prior.get("installed_manifest_sha256")) is not str):
+                    return {**prior,
                     "verified_v113_profile_source_restored":snapshot is not None,
                     "network_calls":version_network_calls,
                     "web_environment_scope":{

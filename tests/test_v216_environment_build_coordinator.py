@@ -143,6 +143,15 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             self.assertEqual(get("12.1.5.70575")[
                 "installed_source_game_build"],"12.1.5.70575")
             self.assertIsNone(get("12.2.0.99999"))
+            self.assertEqual(
+                v216.find_verified_installed_season_environment(
+                    stage_root,334,expected_game_build="12.1.5.70783",
+                    expected_installed_manifest_sha256="2"*64)[
+                        "installed_manifest_sha256"],"2"*64)
+            self.assertIsNone(
+                v216.find_verified_installed_season_environment(
+                    stage_root,334,expected_game_build="12.1.5.70783",
+                    expected_installed_manifest_sha256="1"*64))
             self.assertIsNone(v216.find_verified_installed_season_environment(
                 stage_root,335,expected_game_build="12.1.5.70783"))
         for b in (None,"../70575","12.1.5.70783/..","broken"):
