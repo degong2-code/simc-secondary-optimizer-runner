@@ -149,7 +149,13 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
     def test_exact_oil_id_uses_verified_installed_variant_not_hand_guess(self):
         """An explicit physical item ID resolves only its signed v212 variant."""
         self.remember()
-        self.jobs.persist_verified_fresh_profile()
+        # The preexisting fixture uses a deliberately minimal installed
+        # document; only its v212 authenticity check is mocked here.
+        # The selection lookup under test remains the real v113 path.
+        with mock.patch.object(
+            web.environment_manifest,"verify_fresh_installed_environment"
+        ):
+            self.jobs.persist_verified_fresh_profile()
         selected={"main_hand":245678}
         with (
             mock.patch.object(
