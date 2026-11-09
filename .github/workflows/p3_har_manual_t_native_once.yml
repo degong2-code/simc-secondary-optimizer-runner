@@ -1,4 +1,7 @@
 # P3-HAR: one user-facing manual T=3500 through actual local SimC.
+# Retry after #42551948409: source+environment READY/Native3; only test collector
+# accessed nonexistent prepare.plan. Current probe checks sealed /inputs instead.
+# This retry is scoped to obtaining the first actual user T=3500 DPS Native proof.
 # Different executable SHA is a NEW cache identity, not a historical binary.
 # This one-shot is bounded to one Ret profile, no 26-spec sweep.
 name: P3-HAR one real manual final T via new SHA-scoped SimC
@@ -125,5 +128,13 @@ jobs:
             p3_fr_zero_base_t1_receipt.json
             p3_haj_web_e2e_receipt.json
             p3_haj_web_native_evidence.zip
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Retain NEW SHA SimC executable for narrowly justified follow-up only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p3-har-verified-source-new-binary-short-lived
+          path: out/binary/
           if-no-files-found: ignore
           retention-days: 7
