@@ -98,7 +98,8 @@ def _validate(paths,user):
 
 def build_or_reuse(*,user,session_folder,binary,revision,static_cache,
         independent_334=False,independent_target_level=False,
-        current_season_product=False,source_catalog_path=None):
+        current_season_product=False,source_catalog_path=None,
+        verified_fresh_environment_result=None):
     folder=pathlib.Path(session_folder).expanduser().resolve()
     generated=folder/"generated"
     generated.mkdir(parents=True,exist_ok=True)
@@ -112,11 +113,20 @@ def build_or_reuse(*,user,session_folder,binary,revision,static_cache,
         raise engine.StageExecutionBlocked("V218_PROFILE_STAGE_IDENTITY_MISSING")
     paths={name:generated/relative for name,relative in OUTPUTS.items()}
     def execute():
-        result=bootstrap.build(user,generated,binary,revision,static_cache,
-            independent_334=independent_334,
-            independent_target_level=independent_target_level,
-            current_season_product=current_season_product,
-            source_catalog_path=(source_catalog_path if current_season_product else None))
+        if verified_fresh_environment_result is not None:
+            if not current_season_product or static_cache is not None:
+                raise engine.StageExecutionBlocked(
+                    "V218_FRESH_INSTALLED_PROFILE_MODE_MISMATCH")
+            result=bootstrap.run_from_verified_environment_build(
+                user,generated,binary,revision,
+                environment_result=verified_fresh_environment_result,
+                execute=False)
+        else:
+            result=bootstrap.build(user,generated,binary,revision,static_cache,
+                independent_334=independent_334,
+                independent_target_level=independent_target_level,
+                current_season_product=current_season_product,
+                source_catalog_path=(source_catalog_path if current_season_product else None))
         encoded=json.dumps(result,sort_keys=True,ensure_ascii=False,
                            indent=2,allow_nan=False)+"\n"
         bootstrap.put_once(paths["bootstrap_result"],encoded)
