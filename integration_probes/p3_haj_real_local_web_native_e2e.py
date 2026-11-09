@@ -295,7 +295,7 @@ def execute(root,binary,revision,game_build,environment_result,*,receipt_file,
                     need(total==manual_final_T,
                          "P3_HAR_WEB_FINAL_MANUAL_T_DRIFT")
                 if selected_oils:
-                    need(final["base_B"]==total-
+                    need(user_result["base_B"]==total-
                          record["installed_reference_positive_O"],
                          "P1_O_WEB_FINAL_B_T_ACCOUNTING_DRIFT")
                 record["reported"]={
