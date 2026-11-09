@@ -12,6 +12,9 @@ import json
 import pathlib
 import shutil
 import time
+import traceback
+import re
+from unittest import mock
 import zipfile
 
 from fastapi.testclient import TestClient
@@ -139,9 +142,28 @@ def execute(root,binary,revision,game_build,environment_result,*,receipt_file):
                   "max_native_calls":12,
                   "max_new_native_this_invocation":1,
                   "max_elapsed_seconds":360}
+            # Diagnostics only for this pinned public Ret one-shot. The
+            # product HTTP API continues to redact paths and internal errors.
+            # Capture type + source locations (not exception messages, input
+            # profiles, credentials or absolute filesystem paths).
+            normal_blocked=web.blocked
+            def observed_precheck(exc):
+                frames=traceback.extract_tb(exc.__traceback__)[-8:]
+                safe={"exception_kind":type(exc).__name__,
+                      "frames":[{"file":pathlib.Path(f.filename).name,
+                                  "function":f.name,"line":f.lineno}
+                                 for f in frames]}
+                reason=str(exc)
+                if re.fullmatch(r"[A-Z][A-Z0-9_]{2,100}",reason):
+                    safe["stable_error_code"]=reason
+                record["blocked_precheck_diagnostic"]=safe
+                print("P3_HAJ_SAFE_PRECHECK_DIAGNOSTIC",
+                      json.dumps(safe,sort_keys=True),flush=True)
+                return normal_blocked(exc)
             with TestClient(app,base_url="http://127.0.0.1:8765") as client:
-                prepared=response(client,"POST","/api/v1/longrun/prepare",
-                                  payload=args)
+                with mock.patch.object(web,"blocked",side_effect=observed_precheck):
+                    prepared=response(client,"POST","/api/v1/longrun/prepare",
+                                      payload=args)
                 need(prepared["status"]=="LONGRUN_SOURCE_PREPARED_NO_DPS_NATIVE",
                      "WEB_PREPARE_NO_DPS_NATIVE_NOT_OBSERVED")
                 session=prepared["session_id"]
