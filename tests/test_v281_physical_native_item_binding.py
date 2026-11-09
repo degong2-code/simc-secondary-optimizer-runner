@@ -353,8 +353,8 @@ class ExactPhysicalNativeInput(unittest.TestCase):
                 stage_root=self.root,source_profile_path=original)
         self.assertEqual(raw,original.read_bytes())
 
-    def test_auto_F_O_bounded_native_calls_are_counted_once(self):
-        """Existing exact v281 F/O worklist binds both hands, 8-run shared cap."""
+    def test_auto_F_native_and_O_source_only_calls_once(self):
+        """F may need SimC Native; scaled O's old buffed Native is skipped."""
         src={"schema":"v216_fresh_source_stage_v1",
              "source_stage":{"status":"EXECUTED_AND_SEALED","reused":False},
              "environment_installed":False,"environment_ready":False,
@@ -399,22 +399,19 @@ class ExactPhysicalNativeInput(unittest.TestCase):
                 binary=self.root/"simc_mock",revision=None,
                 static_cache=None,source_catalog_path=None,
                 bootstrap_result=None,fresh_collection_inputs=params)
-        self.assertEqual(len(called),3)
-        # F/O use the same executable while G Native is truly disabled.
+        self.assertEqual(called,[("flask","test_flask_3")])
+        # F alone is measured; G and oil O do not launch Native.
         self.assertIsNone(g_native.call_args.kwargs["binary"])
-        self.assertEqual(called[0],("flask","test_flask_3"))
-        self.assertEqual({token for kind,token in called
-                          if kind=="temporary_enchant"},
-                         {"main_hand:thalassian_phoenix_oil_2",
-                          "main_hand:disabled/off_hand:thalassian_phoenix_oil_2"})
         self.assertNotIn("auto_native_O_requested",collector.call_args.kwargs)
-        self.assertEqual(result["native_calls"],6)
-        self.assertEqual(result["zero_history_build"]["new_native_calls"],6)
+        self.assertEqual(result["native_calls"],2)
+        self.assertEqual(result["zero_history_build"]["new_native_calls"],2)
         reports=result["source_compilation"]
         self.assertEqual(reports["automatic_F_native_measurements_unadmitted"]
                          ["new_native_calls"],2)
         self.assertEqual(reports["automatic_O_native_measurements_unadmitted"]
-                         ["new_native_calls"],4)
+                         ["new_native_calls"],0)
+        self.assertEqual(reports["automatic_O_native_measurements_unadmitted"]
+                         ["status"],"O_BUFFED_NATIVE_SKIPPED_STATIC_SOURCE_ONLY")
         self.assertFalse(reports["automatic_O_native_measurements_unadmitted"]
                          ["O_approved"])
         self.assertFalse(result["zero_history_build"]["environment_ready"])
@@ -435,15 +432,15 @@ class ExactPhysicalNativeInput(unittest.TestCase):
                     source_catalog_path=None,bootstrap_result=None,
                     fresh_collection_inputs=inputs)
 
-    def test_auto_O_native_without_binary_blocks_before_collection(self):
+    def test_auto_O_static_source_without_binary_reaches_collection(self):
         params={"expected_game_build":BUILD,"representative_request":None,
                 "g_probe_character":None,"simc_revision_hint":None,
-                "auto_native_O_requested":True}
+                "auto_native_O_requested":True,
+                "auto_native_G_requested":False}
         with mock.patch.object(build,"collect_wago_new_season_source",
-                               side_effect=AssertionError("NO_SOURCE_FETCH")):
-            with self.assertRaisesRegex(
-                    build.EnvironmentBuildBlocked,
-                    "AUTO_O_NATIVE_EXPLICIT_BINARY_REQUIRED"):
+                               side_effect=AssertionError("SOURCE_REACHED")):
+            # Source collection is attempted without a local binary.
+            with self.assertRaisesRegex(AssertionError,"SOURCE_REACHED"):
                 build.build_environment(
                     sessions_root=self.root,session_folder=None,user=None,
                     binary=None,revision=None,static_cache=None,
