@@ -195,7 +195,7 @@ class GearStatOwner(unittest.TestCase):
                   "G_reference_excludes_selected_E":True}
         common=dict(source_catalog={"game_build":game,
                      "simc_revision":rev,"manifest_sha256":manifest},
-                    source_artifact_sha256":"f"*64,
+                    source_artifact_sha256="f"*64,
                     evidence=evidence,target_ilevel=334)
         automatic=budget.preprofile_budget(**common)
         self.assertEqual((automatic["base_B"],automatic["final_T"]),
