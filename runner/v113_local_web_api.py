@@ -176,9 +176,13 @@ class LocalJobs:
                 "WEB_FRESH_V212_INSTALLED_FILE_MISSING")
         doc,_=environment_manifest.read_json(path)
         environment_manifest.verify_fresh_installed_environment(doc)
+        physical_O=doc.get("official_O_physical_source")
+        installed_oils=(physical_O.get("selected_oil_item_ids_by_hand")
+                        if type(physical_O) is dict else {})
         verified=environment_build.find_verified_installed_season_environment(
             self.root,doc["target_ilevel"],
-            expected_game_build=doc["game_build"])
+            expected_game_build=doc["game_build"],
+            selected_oil_item_ids_by_hand=installed_oils)
         if (verified is None or
             verified["installed_manifest_sha256"]!=doc["manifest_sha256"] or
             installed.get("manifest_sha256")!=doc["manifest_sha256"]):
@@ -279,10 +283,13 @@ class LocalJobs:
                 "installed_manifest_sha256":doc["manifest_sha256"],
                 "new_native_calls":0}
 
-    def restore_verified_fresh_profile(self, *, target_ilevel, game_build):
-        """Recover verified source-owner inputs after app restart (no Native)."""
+    def restore_verified_fresh_profile(
+            self, *, target_ilevel, game_build,
+            selected_oil_item_ids_by_hand=None):
+        """Recover only the exact selected installed environment, no Native."""
         found=environment_build.find_verified_installed_season_environment(
-            self.root,target_ilevel,expected_game_build=game_build)
+            self.root,target_ilevel,expected_game_build=game_build,
+            selected_oil_item_ids_by_hand=selected_oil_item_ids_by_hand)
         if found is None:
             return None
         digest=found["installed_manifest_sha256"]
@@ -748,9 +755,35 @@ class LocalJobs:
             if folder is None:
                 raise environment_manifest.EnvironmentBlocked(
                     "WEB_FRESH_V212_SESSION_FOLDER_REQUIRED")
+            # A session is bound to a specific v212 manifest, not merely
+            # season+ilevel. Derive the oil selection from that sealed
+            # manifest before looking up the corresponding cached variant.
+            digest=summary["fresh_v212_installed_manifest_sha256"]
+            if (type(digest) is not str or
+                    re.fullmatch(r"[a-f0-9]{64}",digest) is None):
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_FRESH_SESSION_INSTALL_SHA_INVALID")
+            root=self.root/"_fresh_season_sources"/(
+                "wago_"+summary["game_build"])/"fresh_source"
+            selected_file=root/("v212_installed_"+digest[:20]+".json")
+            if selected_file.is_symlink() or not selected_file.is_file():
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_FRESH_SESSION_INSTALL_MISSING")
+            selected_doc,_=environment_manifest.read_json(selected_file)
+            environment_manifest.verify_fresh_installed_environment(
+                selected_doc)
+            if (selected_doc["manifest_sha256"]!=digest or
+                selected_doc["game_build"]!=summary["game_build"] or
+                selected_doc["target_ilevel"]!=summary["target_ilevel"]):
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_FRESH_SESSION_INSTALL_DOCUMENT_DRIFT")
+            physical_O=selected_doc.get("official_O_physical_source")
+            selected_oils=(physical_O.get("selected_oil_item_ids_by_hand")
+                           if type(physical_O) is dict else {})
             verified=environment_build.find_verified_installed_season_environment(
                 self.root,summary["target_ilevel"],
-                expected_game_build=summary["game_build"])
+                expected_game_build=summary["game_build"],
+                selected_oil_item_ids_by_hand=selected_oils)
             if (verified is None or
                 verified["installed_manifest_sha256"]!=
                     summary["fresh_v212_installed_manifest_sha256"]):
