@@ -164,6 +164,189 @@ class FreshInstalledV096Bridge(unittest.TestCase):
                         flask_F=flask,oil_hands=[],profile=profile)
 
 
+    def signed_budget_case(self,root):
+        """Build one synthetic v212 document with its actual v222 budget row."""
+        path,doc,cfg,flask,profile,selection,attested=self.make_case(root)
+        old_path=path
+        zeros={stat:0 for stat in contract.STATS}
+        budget={
+            "reference_G":doc["official_G"],
+            "effective_G":doc["official_effective_G"],
+            "J":doc["official_J"],"F":doc["official_F"],
+            "fixed_O":zeros,"fixed_L":zeros,"fixed_E":zeros,
+            "reference_B":doc["official_B"],
+            "base_B":doc["official_B"],"final_T":doc["official_T"],
+            "game_build":doc["game_build"],
+            "target_ilevel":doc["target_ilevel"],
+            "source_catalog_manifest_sha256":
+                doc["source_catalog_manifest_sha256"],
+            "source_catalog_artifact_sha256":
+                doc["source_catalog_artifact_sha256"],
+            "manual_final_T_authoritative":False
+        }
+        payload={k:v for k,v in doc.items() if k!="manifest_sha256"}
+        payload["v222_reconciled_budget"]=budget
+        doc={**payload,"manifest_sha256":installed.sha(
+            installed.canonical(payload).encode("utf8"))}
+        self.assertTrue(installed.verify_fresh_installed_environment(doc))
+        path=old_path.with_name(
+            "v212_installed_"+doc["manifest_sha256"][:20]+".json")
+        old_path.unlink()
+        path.write_text(installed.canonical(doc)+"\n",encoding="utf8")
+        selection["installed_environment_path"]=str(path)
+        selection["installed_manifest_sha256"]=doc["manifest_sha256"]
+        attested["installed_manifest_sha256"]=doc["manifest_sha256"]
+        return path,doc,cfg,flask,profile,selection,attested
+
+    def test_user_final_T_retargets_only_session_and_separates_cache_source(self):
+        import v222_season_budget_contract as budget
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            path,doc,cfg,flask,profile,selection,proof=(
+                self.signed_budget_case(root))
+            original_bytes=path.read_bytes()
+            numeric=budget.retarget_verified_install(
+                document=doc,manual_final_T=3500)
+            self.assertEqual(numeric["base_B"],3500)
+            self.assertEqual(numeric["final_T"],3500)
+            self.assertTrue(numeric["manual_final_T_authoritative"])
+            self.assertEqual(numeric["installed_reference_T"],3150)
+            selected=copy.deepcopy(selection)
+            selected["user_final_T"]=3500
+            requested=copy.deepcopy(cfg)
+            requested["target"]["manual_total"]=3500
+            with mock.patch.object(coordinator,
+                 "find_verified_installed_season_environment",
+                 return_value=proof):
+                baseline=entry._admitted_fresh_season_source(
+                    manifest_path=root/"manifest.json",season=selection,
+                    revision="runtime-updated",user_scenario=cfg,
+                    flask_F=flask,oil_hands=[],profile=profile)
+                manual=entry._admitted_fresh_season_source(
+                    manifest_path=root/"manifest.json",season=selected,
+                    revision="runtime-updated",user_scenario=requested,
+                    flask_F=flask,oil_hands=[],profile=profile)
+                self.assertEqual(manual["season_budget"]["base_B"],3500)
+                self.assertEqual(manual["season_budget"]["final_T"],3500)
+                self.assertEqual(manual["user_manual_final_T"],3500)
+                self.assertNotEqual(
+                    manual["season_source_identity"]["source_input_sha256"],
+                    baseline["season_source_identity"]["source_input_sha256"])
+                with self.assertRaisesRegex(
+                     entry.EntryBlocked,"FRESH_SEASON_TYPED_GJFO_B_T_O_DRIFT"):
+                    entry._admitted_fresh_season_source(
+                        manifest_path=root/"manifest.json",season=selected,
+                        revision="runtime-updated",user_scenario=cfg,
+                        flask_F=flask,oil_hands=[],profile=profile)
+            self.assertEqual(path.read_bytes(),original_bytes)
+            self.assertEqual(doc["official_B"],3150)
+
+    def test_manual_T_too_low_and_fixed_L_E_are_not_silently_dropped(self):
+        import v222_season_budget_contract as budget
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            path,doc,cfg,flask,profile,selection,proof=(
+                self.signed_budget_case(root))
+            floor=doc["official_J"]+doc["official_F"]
+            with self.assertRaisesRegex(
+                 budget.SeasonBudgetBlocked,"GJFO_FIXED_MINIMA_EXCEED_TOTAL"):
+                budget.retarget_verified_install(
+                    document=doc,manual_final_T=floor-1)
+            constrained=copy.deepcopy(doc)
+            constrained["v222_reconciled_budget"]["fixed_L"][
+                "crit_rating"]=250
+            constrained["v222_reconciled_budget"]["fixed_E"][
+                "haste_rating"]=50
+            with self.assertRaisesRegex(
+                 budget.SeasonBudgetBlocked,"GJFO_FIXED_MINIMA_EXCEED_TOTAL"):
+                budget.retarget_verified_install(
+                    document=constrained,manual_final_T=floor+299)
+            mismatch=copy.deepcopy(doc)
+            mismatch["v222_reconciled_budget"]["J"]+=1
+            with self.assertRaisesRegex(
+                 budget.SeasonBudgetBlocked,
+                 "GJFO_MANUAL_INSTALLED_ORIGINAL_BUDGET_DRIFT"):
+                budget.retarget_verified_install(
+                    document=mismatch,manual_final_T=3500)
+
+    def test_v098_manual_preview_uses_signed_budget_not_unadmitted_guess(self):
+        import v098_target_user_scenario_bootstrap as bootstrap
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            path,doc,cfg,flask,profile,selection,proof=(
+                self.signed_budget_case(root))
+            stage_root=path.parent.parent
+            candidate=stage_root/"case_G.json"
+            candidate.write_text("{}")
+            gear=root/"gear.json"
+            tier=root/"tier.json"
+            gear.write_text(json.dumps({"season_build":doc["game_build"]}))
+            tier.write_text(json.dumps({"retail_build":doc["game_build"]}))
+            catalog=root/"catalog.json"
+            catalog.write_text("{}")
+            original_calc={
+                "game_build":doc["game_build"],
+                "simc_revision":doc["simc_revision"],
+                "target_ilevel":334,"numeric_preview_only":True,
+                "J":doc["official_J"],"F":doc["official_F"],
+                "base_B":doc["official_B"],"final_T":doc["official_T"],
+                "fixed_O":doc["official_O"],
+                "source_catalog_manifest_sha256":
+                    doc["source_catalog_manifest_sha256"],
+                "source_catalog_artifact_sha256":
+                    doc["source_catalog_artifact_sha256"]}
+            compilation={
+                "status":"FRESH_V191_V211_V213_COMPILED_UNADMITTED",
+                "source_catalog_path":str(catalog),
+                "stage_root":str(stage_root),
+                "simc_revision":doc["simc_revision"],
+                "v191_original_gear_tier_source_paths":{
+                    "catalog":str(catalog),"gear":str(gear),"tier":str(tier)},
+                "v098_source_only_profile_inputs_unadmitted":{
+                    "schema":"v098_internal_season_profile_inputs_v1",
+                    "v216_numeric_preview":{
+                        "schema":"v216_zero_history_selected_v222_numeric_preview_v1",
+                        "status":"SELECTED_GJFO_V222_ARITHMETIC_PREVIEW_UNADMITTED",
+                        "numeric_preview_only":True,"environment_ready":False,
+                        "calculation":original_calc}},
+                "verified_environment_install":{
+                    "status":"FRESH_SEASON_VERIFIED_ENVIRONMENT_INSTALLED_READY",
+                    "environment_ready":True,"environment_installed":True,
+                    "stage_output_path":str(path),
+                    "manifest_sha256":doc["manifest_sha256"]},
+                "preflight_sha256":"3"*64}
+            env={"normal_build_entry":True,
+                 "zero_history_build":{"environment_ready":True},
+                 "source_compilation":compilation,
+                 "fresh_one_spec_simc_representative":{
+                     "candidate_path":str(candidate)}}
+            captured={}
+            def build(*args,**kwargs):
+                captured.update(kwargs)
+                return {
+                    "original_v191_gear_tier_source_unadmitted":{
+                        "source_catalog_artifact_sha256":
+                            doc["source_catalog_artifact_sha256"],
+                        "source_catalog_manifest_sha256":
+                            doc["source_catalog_manifest_sha256"]}}
+            user={"target":{"ilevel":334,"final_T":3500}}
+            settings={"default_consumables":{
+                "gem_budget_J":doc["official_J"],
+                "flask_budget_F":doc["official_F"]}}
+            with mock.patch.object(bootstrap,"build",side_effect=build):
+                result=bootstrap.preview_from_environment_build(
+                    user,root/"session",root/"fake_simc","runtime",
+                    environment_result=env,season_settings=settings)
+            adjusted=captured["season_profile_inputs"][
+                "v216_numeric_preview"]["calculation"]
+            self.assertEqual(adjusted["base_B"],3500)
+            self.assertEqual(adjusted["final_T"],3500)
+            self.assertTrue(adjusted["manual_final_T_authoritative"])
+            self.assertEqual(original_calc["final_T"],3150)
+            self.assertEqual(doc["official_T"],3150)
+            self.assertTrue(result["fresh_installed_v212_source_reused"])
+
+
 class OneSpecNativeRepresentativeBridge(unittest.TestCase):
     def test_original_v232_selected_G_replaces_missing_common_neck(self):
         import v098_target_user_scenario_bootstrap as boot
