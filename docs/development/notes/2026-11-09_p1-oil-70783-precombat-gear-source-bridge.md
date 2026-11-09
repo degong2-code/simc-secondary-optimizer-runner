@@ -35,11 +35,11 @@
 
 ## 2026-11-09 P1-WEB 범용 기름 물리 ID → 사용자 세션 연결 (후속 소규모 변경)
 
-- **Capability:** `O.OIL`, `PRODUCT.E2E`, `ENVIRONMENT.WEB`, `SOURCE.SEAL`, `DEV.CONTINUITY`.
-- **Keywords:** exact oil physical ID, per-hand, browser user plan, longrun, v113, v106 identity, v212 install SHA, session read-only restore, O0 legacy.
-- **Prior evidence:** P3-HAU 단일 인계·기존 INDEX/PROTOCOL·이 문서의 70783 Native2 한정 증거 및 기존 focused 520 PASS/2 SKIP; 앞선 API-only `d9a4c545`/`be587ed0`. **사용자 종단 O>0 실제 SimC DPS는 여전히 미실증**.
-- **Decision:** `CONNECT` — 기존 검증된 물리 ItemID/손→v212 봉인 설치/세션 계약만 재사용. 기름의 효과·수치·품질을 브라우저에서 추측하거나 검증 없이 공개 목록에 올리지 않는다.
-- **Changes:** 새 코드는 일반 최적화 화면의 선택형 고급 주/보조무기 기름 ItemID를 기존 `buildRequest`에서 검증하고 동일 함수의 6-case/장기 prepare/start에 전달. 비어 있는 경우 원래 손-only/O0/legacy 경로 유지. 새 세션 값은 `v113`의 기존 SHA 확인된 설치원본만 선택하고, 저장된 세션 복원 GET은 기존 `_verify_environment_dependencies`를 읽기 전용 재사용해 원본 손별 물리 ID를 화면으로 반환한다. 적용 손과 입력 ID 불일치·없는 설치·복수 후보는 임의 선택하지 않는다.
-- **Verification:** GitHub 변경 코드는 `runner/webui/index.html`, `runner/webui/app.js`, `runner/v113_local_web_api.py`; 기존 `tests/test_v114_local_web_ui_offline.py`, `tests/test_p3_ham_fresh_v212_web_profile_bridge_offline.py`에 범위 한정 회귀 추가. **이 기록 시점 신규 테스트/CI/실 Native 실행 결과 미확정**, 과거 PASS를 새 HEAD의 PASS로 승격하지 않음.
-- **Remaining:** 변경 HEAD의 실제 오프라인 회귀 결과 확인, 검증된 최고품질 기름 사용자 친화적 dropdown, **실 O>0 사용자 웹→v212→DPS/SEM/95%/취소·재개·캐시 종단 Native**, 일부 L/E, Windows 실 PC 및 26/26 웹 장기/검색 품질 증거 별도. 신규 기름 ID와 O 값은 임의 도출 금지.
-- **Efficiency:** `v281/v286/v296/v297→v216/v222/v212` 및 `v113/v106/v098/v096` 전체 재사용. 새로운 Native·Wago 수집·정적 16/16 재검증·전문화 전수·전용 인증 Gate 0. GET restore의 기존 봉인 확인만 사용하며 같은 요청에서 SimC/네트워크/캐시 변경 없음. `main`·v003 immutable·v016·Project UI·Work OS·기존 주 제품 개발 소유권 변경 없음.
+- **관련 기능:** `O.OIL`, `PRODUCT.E2E`, `ENVIRONMENT.WEB`, `SOURCE.SEAL`, `DEV.CONTINUITY`.
+- **검색 키워드:** exact oil physical ID, per-hand, browser user plan, longrun, v113, v106 identity, v212 install SHA, session read-only restore, O0 legacy.
+- **기존 증거:** P3-HAU 단일 인계·기존 INDEX/PROTOCOL·이 문서의 70783 Native2 한정 증거 및 기존 focused 520 PASS/2 SKIP; 앞선 API-only `d9a4c545`/`be587ed0`. **사용자 종단 O>0 실제 SimC DPS는 여전히 미실증**.
+- **선택 방향:** `CONNECT` — 기존 검증된 물리 ItemID/손→v212 봉인 설치/세션 계약만 재사용. 기름의 효과·수치·품질을 브라우저에서 추측하거나 검증 없이 공개 목록에 올리지 않는다.
+- **변경 범위:** 새 코드는 일반 최적화 화면의 선택형 고급 주/보조무기 기름 ItemID를 기존 `buildRequest`에서 검증하고 동일 함수의 6-case/장기 prepare/start에 전달. 비어 있는 경우 원래 손-only/O0/legacy 경로 유지. 새 세션 값은 `v113`의 기존 SHA 확인된 설치원본만 선택하고, 저장된 세션 복원 GET은 기존 `_verify_environment_dependencies`를 읽기 전용 재사용해 원본 손별 물리 ID를 화면으로 반환한다. 적용 손과 입력 ID 불일치·없는 설치·복수 후보는 임의 선택하지 않는다.
+- **검증 상태:** GitHub 변경 코드는 `runner/webui/index.html`, `runner/webui/app.js`, `runner/v113_local_web_api.py`; 기존 `tests/test_v114_local_web_ui_offline.py`, `tests/test_p3_ham_fresh_v212_web_profile_bridge_offline.py`에 범위 한정 회귀 추가. **이 기록 시점 신규 테스트/CI/실 Native 실행 결과 미확정**, 과거 PASS를 새 HEAD의 PASS로 승격하지 않음.
+- **남은 작업:** 변경 HEAD의 실제 오프라인 회귀 결과 확인, 검증된 최고품질 기름 사용자 친화적 dropdown, **실 O>0 사용자 웹→v212→DPS/SEM/95%/취소·재개·캐시 종단 Native**, 일부 L/E, Windows 실 PC 및 26/26 웹 장기/검색 품질 증거 별도. 신규 기름 ID와 O 값은 임의 도출 금지.
+- **효율·권한:** `v281/v286/v296/v297→v216/v222/v212` 및 `v113/v106/v098/v096` 전체 재사용. 새로운 Native·Wago 수집·정적 16/16 재검증·전문화 전수·전용 인증 Gate 0. GET restore의 기존 봉인 확인만 사용하며 같은 요청에서 SimC/네트워크/캐시 변경 없음. `main`·v003 immutable·v016·Project UI·Work OS·기존 주 제품 개발 소유권 변경 없음.
