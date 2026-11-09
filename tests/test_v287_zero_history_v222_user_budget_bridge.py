@@ -662,6 +662,65 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                          "ORDINARY_GEM_NOMINAL_SECONDARY_SUM_ONLY")
         self.assertFalse(candidate["environment_ready"])
 
+    def test_p1_ordinary_only_v216_preflight_to_v098_source_profile(self):
+        """Single existing source chain: four ordinary J -> SimC inputs, Native0.
+
+        The sealed v221/raw source views are synthetic and mocked here;
+        no admission, game/socket quality claim or user DPS follows.
+        """
+        import v098_target_user_scenario_bootstrap as boot
+        item_ids=[311001,311002,311004,311005]
+        rows={slot:{"slot":slot,"item_id":100001,
+                    "ilevel":334,"options":{}}
+              for slot in ("head","waist","wrists")}
+        plan={"socket_counts":{"head":1,"waist":1,"wrists":2},
+              "special_gem_id":None,"special_slot":None,
+              "ordinary_gem_ids":list(item_ids),
+              "source_observed_gem_item_ids":list(item_ids)}
+        _,layout=build.physical_gems.arrange(rows,plan,build.need)
+        source={"status":"ENCHANT_RAW_POINTS_SOURCE_ONLY_J_NOT_APPROVED",
+                "enchant_source_sha256":"4"*64,
+                "selected_gem_raw_points_by_id_unadmitted":{
+                    str(i):20+k for k,i in enumerate(item_ids)},
+                "selected_gem_all_raw_points_known":True,
+                "selected_gem_v221_item_ids_unadmitted":list(item_ids),
+                "selected_gem_v221_same_build_items_all_present":True,
+                "selected_ordinary_gem_two_stat_budget_eligible_unadmitted":True,
+                "J":None,"environment_ready":False}
+        pre=self.preflight_with_sealed_gem_raw(layout,source)
+        self.assertFalse(pre["environment_ready"])
+        self.assertIsNone(pre["selected_v221_gem_item_relation_unadmitted"][
+            "special_gem_item_id"])
+        self.assertEqual(pre["selected_v221_gem_item_relation_unadmitted"][
+            "selected_item_ids"],item_ids)
+        j=pre["physical_gem_J_arithmetic_unadmitted"]
+        self.assertEqual(j["J_candidate_unadmitted"],86)
+        self.assertEqual(j["special_gem_count_in_J"],0)
+        self.assertIsNone(pre["J"])
+        compiled={"physical_gem_layout_unadmitted":layout,
+                  "physical_gem_J_arithmetic_unadmitted":j,
+                  "selected_v221_gem_item_relation_unadmitted":
+                      pre["selected_v221_gem_item_relation_unadmitted"]}
+        numeric={"v216_numeric_preview":{"calculation":{
+                    "J":86,"F":165,
+                    "game_build":self.catalog["game_build"],
+                    "target_ilevel":334}},
+                 "flask":{"simc_input_token":"flask_of_the_shattered_sun_2",
+                          "static_CHMV_vector":{
+                            "crit_rating":165,"haste_rating":0,
+                            "mastery_rating":0,"versatility_rating":0}}}
+        derived=boot._season_settings_from_v216(
+            compilation=compiled,numeric_inputs=numeric,need=boot.need)
+        self.assertEqual(derived["status"],
+                         "SEASON_SETTINGS_PHYSICAL_GEMS_FLASK_COMPOSED_UNADMITTED")
+        self.assertEqual(derived["settings"]["default_consumables"]["gem_budget_J"],
+                         86)
+        self.assertEqual(derived["settings"]["gems"],{
+            "head":"311001","waist":"311002","wrists":"311004/311005"})
+        self.assertIsNone(derived["v271_socket_plan_unadmitted"]["special_gem_id"])
+        self.assertEqual(derived["native_calls"],0) if "native_calls" in derived else None
+
+
     def test_p3_ei_source_property_rows_reach_v216_and_v098_unadmitted(self):
         import v098_target_user_scenario_bootstrap as boot
         layout=self.source_selected_future_gems()
