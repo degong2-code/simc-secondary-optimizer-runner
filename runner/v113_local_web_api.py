@@ -36,6 +36,7 @@ import v216_environment_build_coordinator as environment_build
 import v289_retail_live_build_source as retail_build_source
 import v271_user_socket_gem_layout as physical_gems
 import v218_v098_profile_stage_adapter as profile_stage
+import v217_stage_execution_engine as stage_engine
 import v293_local_longrun_session as longrun_sessions
 
 SCHEMA = "v113_local_web_api_p1_v1"
@@ -148,6 +149,7 @@ class LocalJobs:
         self.profile_stage_lock = threading.Lock()
         self.season_source_lock = threading.Lock()
         self._verified_fresh_profile_result = None
+        self._current_fresh_game_build = None
 
     def remember_verified_fresh_environment(self, result):
         """Reuse only original v216/v212 installed READY, never user-supplied JSON."""
@@ -208,6 +210,153 @@ class LocalJobs:
                 result.get("fresh_one_spec_simc_representative"),
             "verified_target_ilevel":doc["target_ilevel"]}
         return doc["manifest_sha256"]
+
+
+    def _verified_profile_stage(self, document):
+        """Fixed local v217 stage location, derived from v212 only, never HTTP."""
+        build=document["game_build"]
+        digest=document["manifest_sha256"]
+        if (type(build) is not str or
+            re.fullmatch(r"\d+(?:\.\d+){3}",build) is None or
+            type(digest) is not str or
+            re.fullmatch(r"[a-f0-9]{64}",digest) is None):
+            raise environment_manifest.EnvironmentBlocked(
+                "WEB_FRESH_V212_STAGE_IDENTITY_INVALID")
+        root=self.root/"_fresh_season_sources"/("wago_"+build)
+        key=digest[:20]
+        return (root,"fresh-v113-profile-"+key,
+                "fresh_source/v113_profile_"+key+".json")
+
+    def persist_verified_fresh_profile(self):
+        """One compact v217-sealed source-owner snapshot; NO Native/network."""
+        result=self._verified_fresh_profile_result
+        if type(result) is not dict:
+            raise environment_manifest.EnvironmentBlocked(
+                "WEB_FRESH_PROFILE_RESULT_NOT_VERIFIED")
+        installed=result["source_compilation"]["verified_environment_install"]
+        doc,_=environment_manifest.read_json(installed["stage_output_path"])
+        environment_manifest.verify_fresh_installed_environment(doc)
+        root,stage_id,out=self._verified_profile_stage(doc)
+        expected=root/"fresh_source"/("v212_installed_"+
+                                     doc["manifest_sha256"][:20]+".json")
+        if (expected.resolve()!=pathlib.Path(
+            installed["stage_output_path"]).resolve() or
+            not root.is_dir() or root.is_symlink()):
+            raise environment_manifest.EnvironmentBlocked(
+                "WEB_FRESH_PROFILE_INSTALLED_LOCATION_CHANGED")
+        payload={"schema":"v113_verified_v212_profile_source_snapshot_v1",
+                 "installed_manifest_sha256":doc["manifest_sha256"],
+                 "source_catalog_artifact_sha256":
+                     doc["source_catalog_artifact_sha256"],
+                 "environment_result":result}
+        raw=(stage_engine.canonical(payload)+"\n").encode("utf8")
+        if not 0<len(raw)<=8_000_000:
+            raise environment_manifest.EnvironmentBlocked(
+                "WEB_FRESH_PROFILE_SNAPSHOT_SIZE_INVALID")
+        inputs={"installed_manifest_sha256":doc["manifest_sha256"],
+                "source_catalog_artifact_sha256":
+                    doc["source_catalog_artifact_sha256"],
+                "snapshot_sha256":stage_engine.digest(raw)}
+        def write():
+            dest=root/out
+            dest.parent.mkdir(parents=True,exist_ok=True)
+            if dest.exists() or dest.is_symlink():
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_FRESH_PROFILE_SNAPSHOT_EXISTS_UNRECEIPTED")
+            dest.write_bytes(raw)
+        def validate(files):
+            return files["snapshot"].read_bytes()==raw
+        receipt=stage_engine.execute_stage(
+            root=root,stage_id=stage_id,
+            stage_version="v113-fresh-v212-profile-snapshot-1",
+            inputs=inputs,outputs={"snapshot":out},
+            execute=write,validate=validate)
+        self._current_fresh_game_build=doc["game_build"]
+        return {"status":receipt["status"],
+                "installed_manifest_sha256":doc["manifest_sha256"],
+                "new_native_calls":0}
+
+    def restore_verified_fresh_profile(self, *, target_ilevel, game_build):
+        """Recover verified source-owner inputs after app restart (no Native)."""
+        found=environment_build.find_verified_installed_season_environment(
+            self.root,target_ilevel,expected_game_build=game_build)
+        if found is None:
+            return None
+        digest=found["installed_manifest_sha256"]
+        root=self.root/"_fresh_season_sources"/("wago_"+game_build)
+        installed_path=(root/"fresh_source"/
+                        ("v212_installed_"+digest[:20]+".json"))
+        if installed_path.is_symlink() or not installed_path.is_file():
+            raise environment_manifest.EnvironmentBlocked(
+                "WEB_FRESH_PROFILE_INSTALLED_FILE_MISSING")
+        doc,_=environment_manifest.read_json(installed_path)
+        environment_manifest.verify_fresh_installed_environment(doc)
+        if (doc["manifest_sha256"]!=digest or
+            doc["target_ilevel"]!=target_ilevel or
+            doc["game_build"]!=game_build):
+            raise environment_manifest.EnvironmentBlocked(
+                "WEB_FRESH_PROFILE_INSTALLED_DOCUMENT_DRIFT")
+        root,stage_id,out=self._verified_profile_stage(doc)
+        file=root/out
+        if not file.exists():
+            return None
+        if (file.is_symlink() or not file.is_file() or
+            file.stat().st_size>8_000_000):
+            raise environment_manifest.EnvironmentBlocked(
+                "WEB_FRESH_PROFILE_SNAPSHOT_FILE_INVALID")
+        raw=file.read_bytes()
+        try:
+            payload=json.loads(raw)
+        except (ValueError,UnicodeError) as exc:
+            raise environment_manifest.EnvironmentBlocked(
+                "WEB_FRESH_PROFILE_SNAPSHOT_JSON_INVALID") from exc
+        if (type(payload) is not dict or
+            payload.get("schema")!=
+                "v113_verified_v212_profile_source_snapshot_v1" or
+            payload.get("installed_manifest_sha256")!=digest or
+            payload.get("source_catalog_artifact_sha256")!=
+                doc["source_catalog_artifact_sha256"] or
+            not raw.endswith(b"\n") or
+            raw!=(stage_engine.canonical(payload)+"\n").encode("utf8")):
+            raise environment_manifest.EnvironmentBlocked(
+                "WEB_FRESH_PROFILE_SNAPSHOT_CONTENT_INVALID")
+        stage_engine.verify_stage(
+            root=root,stage_id=stage_id,
+            stage_version="v113-fresh-v212-profile-snapshot-1",
+            inputs={"installed_manifest_sha256":digest,
+                    "source_catalog_artifact_sha256":
+                        doc["source_catalog_artifact_sha256"],
+                    "snapshot_sha256":stage_engine.digest(raw)},
+            outputs={"snapshot":out})
+        original=payload.get("environment_result")
+        if type(original) is not dict:
+            raise environment_manifest.EnvironmentBlocked(
+                "WEB_FRESH_PROFILE_SNAPSHOT_RESULT_INVALID")
+        self.remember_verified_fresh_environment(original)
+        if self._verified_fresh_profile_result["verified_target_ilevel"]!=target_ilevel:
+            raise environment_manifest.EnvironmentBlocked(
+                "WEB_FRESH_PROFILE_TARGET_CHANGED")
+        self._current_fresh_game_build=game_build
+        return self._verified_fresh_profile_result
+
+    def load_fresh_profile_for_user(self, target_ilevel, explicit_build=None):
+        """Use a source-authenticated current game build, not latest folder."""
+        game_build=explicit_build or self._current_fresh_game_build
+        if game_build is None:
+            # One cheap current-build discovery per first restarted user plan.
+            try:
+                observed=retail_build_source.discover(region="KR")
+            except retail_build_source.RetailVersionBlocked as exc:
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_FRESH_CURRENT_GAME_BUILD_UNAVAILABLE") from exc
+            game_build=observed["game_build"]
+            self._current_fresh_game_build=game_build
+        restored=self.restore_verified_fresh_profile(
+            target_ilevel=target_ilevel,game_build=game_build)
+        if restored is None:
+            raise environment_manifest.EnvironmentBlocked(
+                "WEB_FRESH_V212_PROFILE_SNAPSHOT_MISSING_RUN_SEASON_BUILD")
+        return restored
 
     def _fresh_environment_summary(self, folder, result):
         installed=result["source_compilation"]["verified_environment_install"]
@@ -318,7 +467,10 @@ class LocalJobs:
                 prior=environment_build.find_verified_installed_season_environment(
                     self.root,target_ilevel,expected_game_build=game_build)
             if prior is not None:
+                snapshot=self.restore_verified_fresh_profile(
+                    target_ilevel=target_ilevel,game_build=game_build)
                 return {**prior,
+                    "verified_v113_profile_source_restored":snapshot is not None,
                     "network_calls":version_network_calls,
                     "web_environment_scope":{
                     "schema":"v113_web_season_environment_build_scope_v1",
@@ -395,6 +547,7 @@ class LocalJobs:
                        if existing_special_gem_id is not None else {})})
         if observed.get("environment_ready") is True:
             self.remember_verified_fresh_environment(observed)
+            self.persist_verified_fresh_profile()
         return {**observed,"web_environment_scope":{
             "schema":"v113_web_season_environment_build_scope_v1",
             "game_build":game_build,"target_ilevel":target_ilevel,
@@ -801,10 +954,16 @@ class LocalJobs:
             independent_level=(not current_season and user["target"]["ilevel"]!=334 and
                                key in sessions.SUPPORTED)
             fresh=self._verified_fresh_profile_result if current_season else None
-            if fresh is not None:
-                installed=fresh["source_compilation"]["verified_environment_install"]
-                if user["target"]["ilevel"]!=fresh["verified_target_ilevel"]:
-                    fresh=None
+            if current_season and (
+                fresh is None or
+                user["target"]["ilevel"]!=fresh["verified_target_ilevel"] or
+                (params.fresh_season_build is not None and
+                 params.fresh_season_build!=
+                     fresh["source_compilation"]["verified_environment_install"]
+                         .get("installed_source_game_build",
+                              self._current_fresh_game_build))):
+                fresh=self.load_fresh_profile_for_user(
+                    user["target"]["ilevel"],params.fresh_season_build)
             source_catalog_path=(pathlib.Path(
                 fresh["source_compilation"]["source_catalog_path"])
                 if fresh is not None else self.source_catalog_path())
