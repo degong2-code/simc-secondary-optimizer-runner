@@ -89,6 +89,9 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
         binfile=self.root/"simc.exe"
         binfile.write_bytes(b"fake executable never executed")
         controls=web.sessions.standard_controls()
+        # This sealed v212 fixture has explicit O=0; a hand-only positive
+        # request must not be silently assigned this no-oil environment.
+        controls["oil_hands"]=[]
         params=web.UserRequest(controls=controls,binary=str(binfile),
                                revision="abcdef0",current_season_product=True)
         folder=self.root/("a"*20)
@@ -198,7 +201,9 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
             fake.write_bytes(b"offline fixture never executed")
             folder=self.root/("c"*20)
             folder.mkdir()
-            form=web.UserRequest(controls=web.sessions.standard_controls(),
+            controls=web.sessions.standard_controls()
+            controls["oil_hands"]=[]
+            form=web.UserRequest(controls=controls,
                 binary=str(fake),revision="abcdef0",
                 current_season_product=True,fresh_season_build=self.build)
             with (

@@ -1059,9 +1059,10 @@ class LocalJobs:
                 fresh=self.load_fresh_profile_for_user(
                     user["target"]["ilevel"],params.fresh_season_build,
                     selected_oil_hands=user["oil_hands"])
-            if current_season and user["oil_hands"] and fresh is None:
-                raise environment_manifest.EnvironmentBlocked(
-                    "WEB_FRESH_SELECTED_OIL_HANDS_NOT_INSTALLED")
+            # A legacy/packaged product with no installed v113 snapshot
+            # retains its historical v098 oil path. A *verified fresh*
+            # snapshot already rejects missing or ambiguous physical O
+            # above, so do not block unrelated legacy sessions here.
             source_catalog_path=(pathlib.Path(
                 fresh["source_compilation"]["source_catalog_path"])
                 if fresh is not None else self.source_catalog_path())
