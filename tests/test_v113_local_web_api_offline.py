@@ -376,6 +376,13 @@ class LocalWebAPIOffline(unittest.TestCase):
             good,special_gem_id=None,socket_total=6))
         self.assertTrue(web._verified_snapshot_gem_layout_matches(
             legacy,special_gem_id=240967,socket_total=5))
+        # The older variant HAS a saved profile; it must not be treated as
+        # a four-ordinary default when its authenticated socket layout differs.
+        profile=(self.app.state.jobs.root/"_fresh_season_sources"/
+                 "wago_12.2.0.99999"/"fresh_source"/
+                 ("v113_profile_"+("a"*20)+".json"))
+        profile.parent.mkdir(parents=True,exist_ok=True)
+        profile.write_text("OLD_SPECIAL_PROFILE",encoding="utf8")
         source={"status":"SOURCE_ONLY_PENDING","environment_ready":False,
                 "environment_installed":False,"native_calls":0}
         installed={"status":"VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED",

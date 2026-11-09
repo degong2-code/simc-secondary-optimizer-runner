@@ -602,11 +602,14 @@ class LocalJobs:
                             if source_target_socket_count is not None else 4)})
                     if type(prior.get("installed_manifest_sha256")) is str
                     else None)
-                # Legacy mocks without a v212 digest retain old behavior.
-                # A real sealed install cannot masquerade as a different
-                # source-verified SimC gem layout.
-                if (snapshot is not None or
-                        type(prior.get("installed_manifest_sha256")) is not str):
+                # A sealed profile must match its gems. A verified v212
+                # budget with no saved v113 profile remains budget-READY
+                # (no Native), but does NOT prove a usable SimC user profile.
+                digest=prior.get("installed_manifest_sha256")
+                has_profile=(type(digest) is str and
+                    (self.root/"_fresh_season_sources"/("wago_"+game_build)/
+                     "fresh_source"/("v113_profile_"+digest[:20]+".json")).exists())
+                if snapshot is not None or not has_profile:
                     return {**prior,
                     "verified_v113_profile_source_restored":snapshot is not None,
                     "network_calls":version_network_calls,
