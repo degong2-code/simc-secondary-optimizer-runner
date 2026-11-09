@@ -117,11 +117,22 @@ def verified_current_catalog(original,game_build):
 
 
 def execute(root,binary,revision,game_build,environment_result,*,receipt_file,
-            manual_final_T=None):
+            manual_final_T=None,selected_oil_item_ids_by_hand=None):
     root=pathlib.Path(root).resolve()
     need(manual_final_T is None or (
          type(manual_final_T) is int and 1<=manual_final_T<=100000),
          "P3_HAR_MANUAL_FINAL_T_INPUT_INVALID")
+    selected_oils=dict(selected_oil_item_ids_by_hand or {})
+    need(set(selected_oils)<={"main_hand","off_hand"}
+         and len(selected_oils)<=2
+         and all(type(item_id) is int and 0<item_id<=999999999
+                 for item_id in selected_oils.values()),
+         "P1_O_EXACT_OIL_ITEM_IDS_INVALID")
+    if selected_oils:
+        need(type(environment_result.get("B")) is int
+             and type(environment_result.get("T")) is int
+             and environment_result["T"]>environment_result["B"],
+             "P1_O_POSITIVE_VERIFIED_ENVIRONMENT_REQUIRED")
     compilation=environment_result.get("source_compilation") or {}
     candidate=compilation.get("source_catalog_path")
     need(type(candidate) is str and candidate,
@@ -132,6 +143,10 @@ def execute(root,binary,revision,game_build,environment_result,*,receipt_file,
             "web_layer":"FASTAPI_LOCAL_TESTCLIENT_AND_REAL_SUBPROCESS",
             "new_native_dps_calls":0,
             "manual_final_T_requested":manual_final_T,
+            "selected_oil_item_ids_by_hand":selected_oils,
+            "installed_reference_positive_O":(
+                environment_result["T"]-environment_result["B"]
+                if selected_oils else 0),
             "existing_environment_native_calls_excluded":True}
     receipt_file=pathlib.Path(receipt_file)
     try:
@@ -141,11 +156,18 @@ def execute(root,binary,revision,game_build,environment_result,*,receipt_file,
             # Match the real season Build -> same-process local web flow.
             # Recheck the pre-existing v217/v212 install before profile admission.
             app.state.jobs.remember_verified_fresh_environment(environment_result)
+            if selected_oils:
+                need(app.state.jobs._verified_fresh_profile_result[
+                    "verified_oil_item_ids_by_hand"]==selected_oils,
+                     "P1_O_VERIFIED_INSTALLED_PHYSICAL_IDS_DRIFT")
+                # Normal season Build already does this; use its same
+                # v113/v217-sealed snapshot path for exact positive O.
+                app.state.jobs.persist_verified_fresh_profile()
             controls=users.standard_controls(("paladin","retribution"))
             controls["race"]="dwarf"
-            # This installed v212 baseline is explicit NO OIL (O=0).
-            # Do not silently apply the legacy starter main_hand oil selection.
-            controls["oil_hands"]=[]
+            # Use only hands backed by the actual v212 installed O source.
+            # Empty map retains the historical explicit O0 behavior.
+            controls["oil_hands"]=sorted(selected_oils)
             if manual_final_T is not None:
                 controls["final_T"]=manual_final_T
             args={"controls":controls,"binary":str(pathlib.Path(binary).resolve()),
@@ -153,6 +175,8 @@ def execute(root,binary,revision,game_build,environment_result,*,receipt_file,
                   "max_native_calls":12,
                   "max_new_native_this_invocation":1,
                   "max_elapsed_seconds":360}
+            if selected_oils:
+                args["selected_oil_item_ids_by_hand"]=selected_oils
             # Diagnostics only for this pinned public Ret one-shot. The
             # product HTTP API continues to redact paths and internal errors.
             # Capture type + source locations (not exception messages, input
@@ -177,13 +201,24 @@ def execute(root,binary,revision,game_build,environment_result,*,receipt_file,
                                       payload=args)
                 need(prepared["status"]=="LONGRUN_SOURCE_PREPARED_NO_DPS_NATIVE",
                      "WEB_PREPARE_NO_DPS_NATIVE_NOT_OBSERVED")
-                if manual_final_T is not None:
+                if manual_final_T is not None or selected_oils:
                     # /longrun/prepare intentionally excludes the plan.
                     # Read the already sealed user inputs, no extra Native.
                     checked=response(client,"GET",
                         "/api/v1/sessions/"+prepared["session_id"]+"/inputs")
-                    need(checked["user"]["target"]["final_T"]==manual_final_T,
-                         "P3_HAR_WEB_PREPARE_MANUAL_T_DRIFT")
+                    if manual_final_T is not None:
+                        need(checked["user"]["target"]["final_T"]==manual_final_T,
+                             "P3_HAR_WEB_PREPARE_MANUAL_T_DRIFT")
+                    if selected_oils:
+                        need(checked["user"]["oil_hands"]==sorted(selected_oils)
+                             and checked["verified_oil_item_ids_by_hand"]
+                                 ==selected_oils,
+                             "P1_O_WEB_SESSION_PHYSICAL_ITEMS_DRIFT")
+                        need(prepared["environment_manifest"][
+                            "fresh_v212_installed_manifest_sha256"]==
+                            compilation["verified_environment_install"][
+                                "manifest_sha256"],
+                             "P1_O_WEB_SESSION_V212_SHA_DRIFT")
                 session=prepared["session_id"]
                 record["session_id"]=session
                 record["prepare_status"]=prepared["status"]
@@ -259,6 +294,10 @@ def execute(root,binary,revision,game_build,environment_result,*,receipt_file,
                 if manual_final_T is not None:
                     need(total==manual_final_T,
                          "P3_HAR_WEB_FINAL_MANUAL_T_DRIFT")
+                if selected_oils:
+                    need(final["base_B"]==total-
+                         record["installed_reference_positive_O"],
+                         "P1_O_WEB_FINAL_B_T_ACCOUNTING_DRIFT")
                 record["reported"]={
                     "native_calls_cumulative":count,
                     "cache_only_new_native":0,
