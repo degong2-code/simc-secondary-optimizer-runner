@@ -198,6 +198,46 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
         self.assertEqual(longrun.selected_oil_item_ids_by_hand,
                          {"main_hand":245678})
 
+    def test_saved_session_restores_exact_oil_ids_using_existing_sealed_proof(self):
+        """Read-only form restore cannot invent a different physical oil."""
+        folder=self.root/("e"*20)
+        generated=folder/"generated"
+        generated.mkdir(parents=True)
+        controls=web.sessions.standard_controls()
+        controls["oil_hands"]=["main_hand"]
+        user=web.sessions.user_scenario(controls)
+        (folder/"user.json").write_text(json.dumps(user))
+        identity={"schema":web.sessions.SCHEMA,"user":user,
+                  "simc_revision":"abcdef0",
+                  "fresh_v212_installed_manifest_sha256":self.digest}
+        (folder/"V106_SESSION_IDENTITY.json").write_text(json.dumps(identity))
+        manifest={"native_revision":"abcdef0",
+                  "native_binary":"fake-simc-not-executed",
+                  "static_cache_json":None}
+        (generated/"manifest.json").write_text(json.dumps(manifest))
+        selected={"main_hand":245678}
+        summary={"fresh_v212_installed_manifest_sha256":self.digest}
+        with (
+            mock.patch.object(self.jobs,"_read_environment_summary",
+                              return_value=summary) as read,
+            mock.patch.object(self.jobs,"_verify_environment_dependencies",
+                              return_value=selected) as checked
+        ):
+            result=self.jobs.inputs(folder)
+        self.assertEqual(result["verified_oil_item_ids_by_hand"],selected)
+        self.assertFalse(result["native_called"])
+        read.assert_called_once_with(folder)
+        checked.assert_called_once_with(summary,folder)
+        identity.pop("fresh_v212_installed_manifest_sha256")
+        (folder/"V106_SESSION_IDENTITY.json").write_text(json.dumps(identity))
+        with mock.patch.object(
+            self.jobs,"_verify_environment_dependencies",
+            side_effect=AssertionError("OLD_SESSION_SHOULD_NOT_VERIFY_FRESH")
+        ):
+            old=self.jobs.inputs(folder)
+        self.assertEqual(old["verified_oil_item_ids_by_hand"],{})
+        self.assertFalse(old["native_called"])
+
     def test_start_resume_uses_original_v217_installed_manifest_sha(self):
         folder=self.root/("f"*20)
         folder.mkdir()
