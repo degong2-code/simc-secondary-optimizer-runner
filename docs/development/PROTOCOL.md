@@ -1,3 +1,5 @@
+> **2026-11-09 P1-시즌 무기 선택지 엔진:** [짧은 기록](notes/2026-11-09_p1-season-weapon-source-automatic-registration.md). DK 룬 목록은 현재 SimC revision의 원본 클래스 모듈을 검증·봉인하는 v295→v216→v212→v113 경로에서 생성, 웹 ID 하드코딩 제거. 기존 v294 명시 선택을 검증 설치 목록에 묶음. 기름 O는 v212 실제 검증 설치 손/물리 항목만 읽기 전용 표시, 사용자별 O>0 자유 선택/기본 DK 룬 자동 선정은 아직 미완료. 신규 Native 0 및 실제 소스 수집 여부 별도 구분. main/Project UI/소유권 불변.
+
 > **2026-11-09 P1-O 기름 O>0 검증 설치 소스 접합:** [기록](notes/2026-11-09_p1-oil-positive-installed-source-bridge.md). 동일 시즌 실제 v212 O>0 source owner가 물리 ID/손/정적 벡터를 갖춘 때만 v096에 연결. O0 기존 설치 SHA/캐시는 보존하고, v286 source-only 후보와 과거 70575 Native를 70783의 승인 선택으로 승격하지 않는다. 사용자 실제 O>0 Native 미실증; main/Project UI/주 개발 소유권 불변.
 
 > **2026-11-09 P1-DK 무기 강화 입력 접합:** [기록](notes/2026-11-09_p1-dk-runeforge-user-bridge.md). 사용자 명시 DK 룬 선택→기존 SimC enchant_id/프로필·세션 SHA 연결, 기본 룬 추정/효과 인증 Gate 없음. O>0은 기존 O 원본·손/무기 검증 전까지 미연결, O0 유지. 코드 CI·실 Native 판정은 HEAD별 구분. main/불변/Project UI/주 제품 소유권 불변.

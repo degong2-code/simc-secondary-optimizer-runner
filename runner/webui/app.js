@@ -60,7 +60,7 @@ const names = {
   redirected_base_stats:"촉매 원본 ID",crafted_stats:"제작 스탯",
   embellishment:"장식 토큰"
 };
-const state = { token:"", defaults:[], seasonGear:null, eagleApproved:false, session:"", running:false,
+const state = { token:"", defaults:[], seasonGear:null, dkRuneIds:new Set(), eagleApproved:false, session:"", running:false,
                 longrunEnabled:false, longrunResultReady:false,
                 busy:false, options:null, pollTimer:null, pollBusy:false,
                 pollFailures:0, nextPollAt:0 };
@@ -319,8 +319,9 @@ function runeCompatibility() {
   const isDK=key.startsWith("deathknight/");
   $("dk-runeforge-panel").hidden=!isDK;
   const dual=state.seasonGear?.weapon_forms?.[key]==="dual_one_hand";
-  $("dk_rune_main").disabled=!isDK;
-  $("dk_rune_off").disabled=!isDK||!dual;
+  const sourceReady=state.dkRuneIds.size>0;
+  $("dk_rune_main").disabled=!isDK||!sourceReady;
+  $("dk_rune_off").disabled=!isDK||!dual||!sourceReady;
   if(!isDK)$("dk_rune_main").value="";
   if(!dual)$("dk_rune_off").value="";
 }
@@ -460,8 +461,20 @@ function fillSessionInputs(payload) {
   $("oil_off").checked=u.oil_hands.includes("off_hand");
   oilCompatibility();
   runeCompatibility();
-  $("dk_rune_main").value=String(u.runeforge_by_hand?.main_hand??"");
-  $("dk_rune_off").value=String(u.runeforge_by_hand?.off_hand??"");
+  // Saved historical choices remain legible but are not auto-promoted to
+  // the newest installed season's selectable list.
+  for(const [id,hand] of [["dk_rune_main","main_hand"],
+                          ["dk_rune_off","off_hand"]]) {
+    const value=String(u.runeforge_by_hand?.[hand]??"");
+    const node=$(id);
+    for(const prior of Array.from(node.options))
+      if(prior.dataset.historic==="true")prior.remove();
+    if(value&&!Array.from(node.options).some(x=>x.value===value)) {
+      const old=option(value,"이전 세션 룬 #"+value+" · 새 선택은 시즌 검증 필요");
+      old.dataset.historic="true";node.appendChild(old);
+    }
+    node.value=value;
+  }
   const choices=u.consumable_choices||{};
   for(const key of ["food","potion","augmentation"])
     $(key).value=choices[key]??"source_default";
@@ -557,7 +570,11 @@ function buildRequest() {
     const runeByHand={};
     if(field("dk_rune_main"))runeByHand.main_hand=Number(field("dk_rune_main"));
     if(field("dk_rune_off"))runeByHand.off_hand=Number(field("dk_rune_off"));
-    if(Object.keys(runeByHand).length)controls.runeforge_by_hand=runeByHand;
+    if(Object.keys(runeByHand).length) {
+      if(!Object.values(runeByHand).every(id=>state.dkRuneIds.has(id)))
+        throw Error("이번 시즌 검증된 죽음의 기사 룬만 새 세션에 적용할 수 있습니다.");
+      controls.runeforge_by_hand=runeByHand;
+    }
   }
   if(field("season_enchant_finger1")) {
     if(!state.eagleApproved||field("season_enchant_finger1")!=="7967")
@@ -814,6 +831,11 @@ async function buildSeasonEnvironment() {
                               refresh_reason,
                               simc_revision_hint:revision||null}});
     showSeasonEnvironmentBuild(report);
+    // A verified new installation may supply a different season rune roster.
+    // Refresh read-only options only, never launch optimization on Build.
+    try{renderSeasonOptionCatalog(await api("/api/v1/season-option-catalog"));}
+    catch(error){$("dk-runeforge-status").textContent=
+      "시즌 룬 원본 조회 실패 · 선택 잠금";}
     setNotice("시즌 환경 구축 단계 조회 완료 · READY 여부는 별도 검증 · 개별 DPS 최적화는 시작되지 않았습니다.");
   }catch(err){
     $("season-build-stage").textContent="시즌 환경 구축 단계 차단/오류 · "+err.message+
@@ -1077,6 +1099,28 @@ async function restore(id) {
   setNotice("기존 세션·입력 복원 성공 · "+id+" · 새 Native 계산 0회");
 }
 function renderSeasonOptionCatalog(catalog) {
+  const runeSource=catalog?.verified_weapon_enhancements?.dk_runeforges;
+  const runes=(runeSource?.status==="PINNED_DK_RUNES_INSTALLED" &&
+       Array.isArray(runeSource.items))?runeSource.items:[];
+  state.dkRuneIds=new Set();
+  for(const name of ["dk_rune_main","dk_rune_off"]) {
+    const node=$(name);
+    node.replaceChildren(option("","사용자 선택 없음 (기존 SimC 입력)"));
+    for(const row of runes) {
+      if(!Number.isSafeInteger(row.enchant_id)||row.enchant_id<=0||
+         row.class!=="deathknight"||
+         !Array.isArray(row.weapon_hands)||
+         !row.weapon_hands.includes(name==="dk_rune_main"?"main_hand":"off_hand"))
+        continue;
+      state.dkRuneIds.add(row.enchant_id);
+      node.appendChild(option(row.enchant_id,
+        row.display_name+" · #"+row.enchant_id));
+    }
+  }
+  $("dk-runeforge-status").textContent=state.dkRuneIds.size?
+    "현재 시즌 SimC 원본 검증 룬 "+state.dkRuneIds.size+"종 선택 가능":
+    "이번 시즌 검증된 룬 원본이 설치되지 않아 신규 선택 잠금";
+  runeCompatibility();
   const status=$("season-option-catalog-status");
   const host=$("season-enchant-groups");
   const selector=$("season_enchant_finger1");

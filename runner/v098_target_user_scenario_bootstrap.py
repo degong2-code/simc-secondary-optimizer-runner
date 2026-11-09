@@ -972,8 +972,24 @@ def build(user,folder,binary,revision,static_cache_path=None,
             key,rows,groups,user,ilvl,need)
     # DK user rune is permanent enchant_id, not temporary oil O.
     # The profile and durable cache identity change only for explicit choice.
+    admitted_dk_ids=runeforge_mod.RUNE_IDS  # unchanged older sessions only
+    if RUNEFORGE_FIELD in user and fresh_installed_environment_path is not None:
+        # New/future-season DK selections must use the current verified
+        # v212 registry, never the old static fallback list.
+        fresh_path=pathlib.Path(fresh_installed_environment_path).resolve()
+        need(fresh_path.is_file() and not fresh_path.is_symlink(),
+             "FRESH_DK_INSTALLED_SOURCE_FILE_REQUIRED")
+        dk_install,_=installed_manifest.read_json(fresh_path)
+        installed_manifest.verify_fresh_installed_environment(dk_install)
+        dk_source=dk_install.get("verified_DK_runeforges")
+        need(type(dk_source) is dict and
+             dk_install["game_build"]==actual_season_build and
+             dk_install["target_ilevel"]==ilvl,
+             "FRESH_DK_RUNEFORGE_SOURCE_NOT_INSTALLED")
+        admitted_dk_ids={row["enchant_id"] for row in dk_source["items"]}
     runeforge_mod.apply(rows=rows,selection=user.get(RUNEFORGE_FIELD),
-                        class_name=key[0],weapon_form=weapon_layout,need=need)
+                        class_name=key[0],weapon_form=weapon_layout,need=need,
+                        admitted_ids=admitted_dk_ids)
     # 240967 requires four distinct ordinary Midnight gem colors for its
     # crit-effectiveness bonus. These are real SimC gem IDs, not locked CHMV.
     # Existing 240983 profiles and already-four-color source rows stay intact.

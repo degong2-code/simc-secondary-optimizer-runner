@@ -1559,8 +1559,50 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
     def season_option_catalog():
         """Local, read-only versioned source catalogue; no Native or approvals."""
         try:
-            source_path=jobs.source_catalog_path()
-            return ui_catalog.public_options(source_path) if source_path else ui_catalog.public_options()
+            fresh=jobs._verified_fresh_profile_result
+            compilation=(fresh.get("source_compilation")
+                         if type(fresh) is dict else None)
+            source_path=(pathlib.Path(compilation["source_catalog_path"])
+                         if type(compilation) is dict and
+                         type(compilation.get("source_catalog_path")) is str
+                         else jobs.source_catalog_path())
+            published=(ui_catalog.public_options(source_path)
+                       if source_path else ui_catalog.public_options())
+            # Only the actual verified installed v212 environment can expose
+            # new-season runeforges. A v213 source-only candidate is not a
+            # selectable item. Never fall back to hardcoded web IDs.
+            choices={"status":"DK_RUNEFORGE_NOT_INSTALLED","items":[]}
+            oil={"status":"NO_POSITIVE_O_INSTALLED","items":[]}
+            if type(compilation) is dict:
+                installation=compilation.get("verified_environment_install")
+                if type(installation) is dict:
+                    path=pathlib.Path(installation["stage_output_path"])
+                    if path.is_file() and not path.is_symlink():
+                        doc,_=environment_manifest.read_json(path)
+                        environment_manifest.verify_fresh_installed_environment(doc)
+                        if (doc["manifest_sha256"]==installation["manifest_sha256"]
+                            and doc["source_catalog_manifest_sha256"]==
+                            published.get("source_catalog",{}).get(
+                                "manifest_sha256")):
+                            source=doc.get("verified_DK_runeforges")
+                            if type(source) is dict:
+                                choices={"status":"PINNED_DK_RUNES_INSTALLED",
+                                         "items":source["items"],
+                                         "source_sha256":source["source_sha256"],
+                                         "source_manifest_sha256":
+                                             source["manifest_sha256"],
+                                         "game_build":source["game_build"]}
+                            positive=doc.get("official_O_physical_source")
+                            if type(positive) is dict:
+                                oil={"status":"VERIFIED_INSTALLED_O_HAND_SET_ONLY",
+                                     "items":[{"hand":hand,**row}
+                                         for hand,row in sorted(
+                                             positive["oil_by_hand"].items())],
+                                     "source_sha256":
+                                         positive["original_O_source_sha256"],
+                                     "user_selectable_individually":False}
+            return {**published,"verified_weapon_enhancements":{
+                "dk_runeforges":choices,"weapon_oils":oil}}
         except (ui_catalog.CatalogBlocked, OSError, ValueError, KeyError,
                 AssertionError) as exc:
             return {"schema":ui_catalog.SCHEMA,

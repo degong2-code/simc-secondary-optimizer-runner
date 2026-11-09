@@ -286,7 +286,7 @@ def user_scenario(controls):
         nonchmv_enchant.check_choice(controls["enchant_choices"])
         output[nonchmv_enchant.FIELD]=dict(controls["enchant_choices"])
     if "runeforge_by_hand" in controls:
-        output["runeforge_by_hand"]=bootstrap.runeforge_mod.normalize(
+        output["runeforge_by_hand"]=bootstrap.runeforge_mod.check_input(
             selection=controls["runeforge_by_hand"],class_name=key[0],
             weapon_form=weapons,need=need)
     return output

@@ -19,6 +19,7 @@ import v196_current_season_user_catalog as ui_catalog
 import v206_nonchmv_eagle_selection as eagle
 import v213_source_to_catalog as source_bridge
 import v222_season_budget_contract as season_budget
+import v295_season_runeforge_source as dk_season_source
 
 SCHEMA = "v212_simc_environment_manifest_v2"
 V098 = "v098_target_ilevel_user_scenario_v1"
@@ -503,11 +504,33 @@ def _installed_O_source_consistent(document):
     return expected==meta
 
 
+def _project_season_dk_runes(source, *, game_build, simc_revision):
+    """Existing pinned SimC class-module source options, no effect Gate.
+
+    The source collector's v217 SHA receipt belongs to the internal Build.
+    Absent optional rune source never blocks a valid G/J/F/O environment.
+    """
+    if source is None:return None
+    need(type(source) is dict and
+         type(source.get("source_stage_receipt_sha256")) is str and
+         valid_sha(source["source_stage_receipt_sha256"]),
+         "FRESH_DK_ORIGINAL_SOURCE_STAGE_REQUIRED")
+    original={k:v for k,v in source.items()
+              if k!="source_stage_receipt_sha256"}
+    try:
+        dk_season_source.verify(original,game_build=game_build,
+                                simc_revision=simc_revision)
+    except dk_season_source.RuneforgeSourceBlocked as exc:
+        raise EnvironmentBlocked("FRESH_DK_PINNED_SOURCE_DRIFT:"+str(exc)) from exc
+    return source
+
+
 def compile_fresh_installed_environment(*, source_catalog, source_artifact_sha256,
                                         staged_source_environment,
                                         trusted_budget_evidence, source_ui,
                                         trusted_policy_A_receipts_by_id,
-                                        target_ilevel, manual_final_T=None):
+                                        target_ilevel, manual_final_T=None,
+                                        verified_DK_runeforge_source=None):
     """Assemble the actual fresh-season install from existing verified owners.
 
     INTERNAL ONLY: trusted_budget_evidence must originate from verified
@@ -563,6 +586,10 @@ def compile_fresh_installed_environment(*, source_catalog, source_artifact_sha25
     components=trusted_budget_evidence["components"]
     physical_F=_selected_verified_F_source(components["F"],budget["F"])
     physical_O=_selected_verified_O_source(components["O"],oil)
+    dk_runes=_project_season_dk_runes(
+        verified_DK_runeforge_source,
+        game_build=source_catalog["game_build"],
+        simc_revision=source_catalog["simc_revision"])
     payload={
         "schema":FRESH_SEASON_INSTALLED_SCHEMA,
         "status":"FRESH_SEASON_VERIFIED_ENVIRONMENT_INSTALLED_READY",
@@ -589,6 +616,8 @@ def compile_fresh_installed_environment(*, source_catalog, source_artifact_sha25
         "official_F":budget["F"],
         "official_F_physical_source":physical_F,
         "official_O":dict(oil),
+        **({"verified_DK_runeforges":dk_runes}
+           if dk_runes is not None else {}),
         **({"official_O_physical_source":physical_O}
            if physical_O is not None else {}),
         "official_B":budget["base_B"],
@@ -646,6 +675,11 @@ def verify_fresh_installed_environment(document):
          all(type(i) is int and i>=0
              for i in document["official_O"].values()) and
          _installed_O_source_consistent(document) and
+         (document.get("verified_DK_runeforges") is None or
+          _project_season_dk_runes(
+              document["verified_DK_runeforges"],
+              game_build=document.get("game_build"),
+              simc_revision=document.get("simc_revision")) is not None) and
          type(document.get("official_B")) is int and
          type(document.get("official_T")) is int and
          document["official_B"]+sum(document["official_O"].values())==

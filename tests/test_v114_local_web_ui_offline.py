@@ -74,6 +74,14 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn("controls.runeforge_by_hand=runeByHand",js)
         self.assertIn("u.runeforge_by_hand?.main_hand",js)
         self.assertIn("기름 O와 별개인 영구 강화",page)
+        self.assertNotIn('value="3368"',page)
+        self.assertIn('state.dkRuneIds=new Set()',js)
+        self.assertIn('PINNED_DK_RUNES_INSTALLED',js)
+        self.assertIn('이번 시즌 검증된 죽음의 기사 룬만 새 세션',js)
+        catalog=self.client.get("/api/v1/season-option-catalog",
+                                headers=self.head)
+        self.assertEqual(catalog.status_code,200,catalog.text)
+        self.assertIn("verified_weapon_enhancements",catalog.json())
 
     def test_browser_root_local_static_no_auth_but_guarded_by_host_and_origin(self):
         result=self.client.get("/")

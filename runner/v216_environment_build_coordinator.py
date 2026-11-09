@@ -26,6 +26,7 @@ import v268_gem_enchant_existing_source_stage as gem_enchant_stage
 import v271_user_socket_gem_layout as physical_gems
 import v274_zero_history_source_compiler_wiring as source_wiring
 import v275_pinned_simc_compiler_inputs as pinned_compiler_source
+import v295_season_runeforge_source as dk_rune_source
 import v276_sealed_tier_compiler_source as compiler_tier_source
 import v277_zero_history_native_G_stage as zero_history_G_native
 import v278_sealed_simc_consumable_native_pair as native_effect_pair
@@ -5737,13 +5738,33 @@ def _install_verified_fresh_environment_only(*, compilation, staged,
          "V216_FRESH_INSTALL_STAGED_SOURCE_RECEIPT_DRIFT")
     # Same original v196 normal product catalog and v220 Policy A pipeline.
     ui=user_catalog.public_options(source_path)
+    # DK permanent runes originate ONLY from the current pinned SimC class
+    # module collected within this Build. No user JSON or previous-season ID.
+    dk_stage=compilation.get("dk_runeforge_source_options")
+    verified_dk=None
+    if (type(dk_stage) is dict and dk_stage.get("status")==
+            "PINNED_SIMC_DK_RUNEFORGE_OPTIONS_SEALED"):
+        dk_path=pathlib.Path(dk_stage["catalog_path"]).resolve()
+        need(dk_path.is_relative_to(stage_root.resolve()) and
+             dk_path.is_file() and not dk_path.is_symlink(),
+             "V216_DK_PINNED_SOURCE_OUTSIDE_ORIGINAL_BUILD")
+        doc=json.loads(dk_path.read_text(encoding="utf8"))
+        dk_rune_source.verify(doc,game_build=catalog["game_build"],
+                              simc_revision=catalog["simc_revision"])
+        need(doc["manifest_sha256"]==dk_stage["manifest_sha256"] and
+             type(dk_stage.get("source_stage_receipt_sha256")) is str and
+             len(dk_stage["source_stage_receipt_sha256"])==64,
+             "V216_DK_PINNED_SOURCE_OR_STAGE_SHA_DRIFT")
+        verified_dk={**doc,"source_stage_receipt_sha256":
+                    dk_stage["source_stage_receipt_sha256"]}
     installed=environment_manifest.compile_fresh_installed_environment(
         source_catalog=catalog,source_artifact_sha256=catalog_sha,
         staged_source_environment=sealed,
         trusted_budget_evidence=trusted_budget_evidence,
         source_ui=ui,
         trusted_policy_A_receipts_by_id=trusted_policy_A_receipts_by_id,
-        target_ilevel=target_ilevel,manual_final_T=manual_final_T)
+        target_ilevel=target_ilevel,manual_final_T=manual_final_T,
+        verified_DK_runeforge_source=verified_dk)
     key=installed["manifest_sha256"][:20]
     stage_id="fresh-v212-installed-"+key
     output="fresh_source/v212_installed_"+key+".json"
@@ -6057,6 +6078,26 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         try:
             source_compilation=source_wiring.compile_collected(
                 collected,compiler=fresh_stage.compile_fresh_candidate)
+            if source_compilation["status"]==(
+                    "FRESH_V191_V211_V213_COMPILED_UNADMITTED"):
+                # Optional one-source-v217 collector. Missing DK source must
+                # not invalidate a correctly verified normal G/J/F/O Build.
+                # Exact byte identity is pinned to this current SimC revision.
+                try:
+                    rune_options=dk_rune_source.collect(
+                        stage_root=source_compilation["stage_root"],
+                        game_build=collected["expected_game_build"],
+                        pinned_source=collected.get(
+                            "fresh_pinned_v211_source"))
+                except (dk_rune_source.RuneforgeSourceBlocked,
+                        stage_engine.StageExecutionBlocked,
+                        OSError,ValueError,KeyError,TypeError) as exc:
+                    rune_options={
+                        "status":"DK_RUNEFORGE_PINNED_SOURCE_PENDING",
+                        "reason":type(exc).__name__+":"+str(exc).split(":",1)[0],
+                        "items":[],"native_calls":0,"network_calls":0}
+                source_compilation["dk_runeforge_source_options"]=rune_options
+                progress["dk_runeforge_source_options"]=rune_options
             if source_compilation["status"]==(
                     "FRESH_V191_V211_V213_COMPILED_UNADMITTED"):
                 if auto_four_stat_default:
