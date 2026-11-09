@@ -288,8 +288,12 @@ function fillDefault(item) {
   $("targets").value=item.targets;
   $("duration").value=item.duration_seconds;
   $("raid_buffs").checked=item.raid_buffs;
-  $("oil_main").checked=item.oil_hands.includes("main_hand");
-  $("oil_off").checked=item.oil_hands.includes("off_hand");
+  // New current-season v212 verified defaults can contain O=0 even when
+  // the historical v106 starter lists oil hands. Never auto-select an
+  // unproved positive O. Explicit choices restored from a sealed old
+  // session are handled by fillSessionInputs, not this new-user default.
+  $("oil_main").checked=false;
+  $("oil_off").checked=false;
   oilCompatibility();
   for (const id of ["food","potion","augmentation","diamond","omnium"]) $(id).selectedIndex=0;
   $("season_enchant_finger1").value="";

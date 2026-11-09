@@ -46,6 +46,23 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn("if(longrun.enabled===true)",js)
         self.assertIn('''$("start-btn").addEventListener''',js)
 
+    def test_new_current_season_oil_defaults_never_override_verified_zero_o(self):
+        html=self.client.get("/").text
+        js=self.client.get("/assets/app.js").text
+        self.assertIn('id="oil_main" type="checkbox"',html)
+        self.assertNotIn('id="oil_main" type="checkbox" checked',html)
+        self.assertIn("새 최적화 세션은 기본적으로 기름을 사용하지 않습니다(O=0)",html)
+        new_default=js.split("function fillDefault(item) {",1)[1].split(
+            "function oilCompatibility()",1)[0]
+        self.assertIn('$("oil_main").checked=false;',new_default)
+        self.assertIn('$("oil_off").checked=false;',new_default)
+        self.assertNotIn('item.oil_hands.includes(',new_default)
+        restore=js.split("function fillSessionInputs(payload) {",1)[1].split(
+            "function ",1)[0]
+        self.assertIn('u.oil_hands.includes("main_hand")',restore)
+        self.assertIn('u.oil_hands.includes("off_hand")',restore)
+        self.assertIn('oil_hands:["main_hand","off_hand"].filter(',js)
+
     def test_browser_root_local_static_no_auth_but_guarded_by_host_and_origin(self):
         result=self.client.get("/")
         self.assertEqual(result.status_code,200)
