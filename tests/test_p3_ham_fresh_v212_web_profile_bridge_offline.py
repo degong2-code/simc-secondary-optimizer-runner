@@ -136,6 +136,22 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
                 self.jobs._verify_environment_dependencies(summary,folder)
 
 
+class SeasonNoOilBrowserDefaults(unittest.TestCase):
+    def test_zero_o_baseline_does_not_auto_select_legacy_main_hand(self):
+        from fastapi.testclient import TestClient
+        with tempfile.TemporaryDirectory() as scratch:
+            app=web.create_app(root=pathlib.Path(scratch),
+                               token="web-default-oil-test-token")
+            with TestClient(app,base_url="http://127.0.0.1:8765") as client:
+                response=client.get("/api/v1/defaults",headers={
+                    "x-simc-local-token":"web-default-oil-test-token",
+                    "origin":"http://127.0.0.1:8765"})
+                self.assertEqual(response.status_code,200)
+                archetypes=response.json()["archetypes"]
+                self.assertEqual(len(archetypes),26)
+                self.assertTrue(all(row["oil_hands"]==[] for row in archetypes))
+
+
 class NativeCaseArchiveLayout(unittest.TestCase):
     def test_original_v291_nested_case_directory_is_preserved_in_zip(self):
         from integration_probes import p3_haj_real_local_web_native_e2e as real_web
