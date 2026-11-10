@@ -247,6 +247,7 @@ def run(context, flask_vector, binary, output, *,
         hybrid_region_grid_neighbors=False,
         seed_retained_coarse_escape_regions=False,
         dense_nested_grid_max_level=None,
+        dense_nested_grid_full_scan=False,
         adaptive_initial_global_calls=160, adaptive_confirmation_calls=8):
     """Resume an exact source-bound session, or execute one Native per plan.
 
@@ -281,6 +282,9 @@ def run(context, flask_vector, binary, output, *,
     region_enabled = (adaptive_region_resources or hybrid_region_grid_neighbors
                       or seed_retained_coarse_escape_regions)
     grid_enabled = dense_nested_grid_max_level is not None
+    need(type(dense_nested_grid_full_scan) is bool and
+         (grid_enabled or not dense_nested_grid_full_scan),
+         "V307_FULL_SCAN_REQUIRES_EXPLICIT_GRID_OPT_IN")
     need(not grid_enabled or (
          type(dense_nested_grid_max_level) is int and
          dense_nested_grid_max_level in dense_grid.LEVELS and
@@ -393,6 +397,7 @@ def run(context, flask_vector, binary, output, *,
             "v302_geometry_sha256": hashlib.sha256(
                 pathlib.Path(region_geometry.__file__).read_bytes()).hexdigest(),
             "max_level": dense_nested_grid_max_level,
+            "complete_grid_first": dense_nested_grid_full_scan,
             "levels": [level for level in dense_grid.LEVELS
                        if level <= dense_nested_grid_max_level],
             "budget": dense_grid.budget(max_native_calls),
@@ -498,7 +503,8 @@ def run(context, flask_vector, binary, output, *,
                 observations, total=B, lower=lower, upper=upper,
                 max_native_calls=max_native_calls, scout_iterations=scout_iters,
                 confirmation_iterations=confirm_iters,
-                max_level=dense_nested_grid_max_level)
+                max_level=dense_nested_grid_max_level,
+                complete_grid_first=dense_nested_grid_full_scan)
         else:
             proposed_pending = region_planner.next_plan(
                 observations, total=B, lower=lower, upper=upper,
@@ -562,7 +568,8 @@ def run(context, flask_vector, binary, output, *,
                         max_native_calls=max_native_calls,
                         scout_iterations=scout_iters,
                         confirmation_iterations=confirm_iters,
-                        max_level=dense_nested_grid_max_level)
+                        max_level=dense_nested_grid_max_level,
+                complete_grid_first=dense_nested_grid_full_scan)
                 elif region_enabled:
                     proposed = region_planner.next_plan(
                         observations, total=B, lower=lower, upper=upper,
@@ -845,6 +852,8 @@ def main(argv=None):
     p.add_argument("--dense-nested-grid-max-level", type=int,
                    choices=dense_grid.LEVELS, default=None,
                    help="EXPERIMENTAL v307 nested coverage grid, 6/11/21/41/81")
+    p.add_argument("--dense-nested-grid-full-scan", action="store_true",
+                   help="EXPERIMENTAL v307 complete finite lattice before local zoom")
     p.add_argument("--adaptive-global-calls", type=int, default=160)
     p.add_argument("--adaptive-confirm-calls", type=int, default=8)
     p.add_argument("--portable-archive",
@@ -887,6 +896,7 @@ def main(argv=None):
                 hybrid_region_grid_neighbors=args.hybrid_region_grid_neighbors,
                 seed_retained_coarse_escape_regions=args.seed_retained_coarse_escape_regions,
                 dense_nested_grid_max_level=args.dense_nested_grid_max_level,
+                dense_nested_grid_full_scan=args.dense_nested_grid_full_scan,
                 adaptive_initial_global_calls=args.adaptive_global_calls,
                 adaptive_confirmation_calls=args.adaptive_confirm_calls,
                 open_folder=True)
