@@ -1,0 +1,66 @@
+# Bounded one-shot REAL SimC: full feasible level-6 finite CHMV grid.
+# No season recalibration per candidate; v113/v216 Build once, v291 validates
+# every JSON2 case; existing v290 product default is left unchanged.
+name: P2 v307 finite coarse grid full coverage actual product SimC
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p2_v307_dense_real_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p2-v307-coarse-complete-real-once
+  cancel-in-progress: false
+jobs:
+  dense-real-source-native:
+    if: contains(github.event.head_commit.message, '[p2-v307-dense-real-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      PYTHONPATH: runner:integration_probes:.
+      SIMC_PINNED_SOURCE_COMMIT: c20e2ad52e4c33711f74272309a5748125175fe8
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse approved same-build binary not any historical character source
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42552942329
+          name: p3-har-verified-source-new-binary-short-lived
+          path: out/binary
+          github-token: ${{ github.token }}
+      - name: Verify binary SHA and v307 offline contracts before Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f out/binary/simc
+          test "$(sha256sum out/binary/simc | cut -d' ' -f1)" = "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6"
+          chmod +x out/binary/simc
+          python -m pip install -r requirements-web-test.txt
+          python -m py_compile integration_probes/p2_v307_dense_real_once.py
+          python -m unittest -v tests.test_v307_dense_nested_coverage_offline
+          echo P2_V307_REAL_OFFLINE_PREFLIGHT_PASS_ZERO_NATIVE
+      - name: ONE same-profile real SimC 520-case dense finite grid
+        timeout-minutes: 25
+        env:
+          P2_V307_DENSE_REAL_ONCE: '1'
+          BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+          BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+          WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+          WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+        run: python -u integration_probes/p2_v307_dense_real_once.py
+      - name: Retain SHA-scoped compact receipt and two raw accepted SimC proofs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-v307-new-destruction-level6-complete-real-receipt
+          path: |
+            out/p2_v307_dense_real_once/receipt.json
+            out/p2_v307_dense_real_once/top_confirm_native_bytes.zip
+          if-no-files-found: warn
+          retention-days: 7
