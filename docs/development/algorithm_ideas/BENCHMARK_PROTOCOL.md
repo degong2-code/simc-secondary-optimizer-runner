@@ -51,3 +51,11 @@
 **추가 계측 설계 (본 커밋 구현 아님):** Native 요청마다 `(start_monotonic, finish_monotonic, exact_iterations, phase, cache_source, case_key_sha)`를 별도 append-only 로그로 남기고, planner 후보 계산·SimC subprocess·JSON2 검증·캐시/체크포인트 I/O를 분리한다. 취소·재개 후 전역 시간 정체성/누적 계산량이 왜곡되지 않도록 기존 sealed cache와 진행 counter에 결합한다. 추가 로그의 CPU/파일 비용 자체도 측정한다. 본 지표가 충족된 이후에만 IDEA-001의 적응형 35/120/320 승급 또는 시간 예산 예측을 실전으로 시험한다.
 
 **결론:** 계산량은 'iterations로 공정하게 비교', 제품은 '동일 실제 시간으로 비교'의 **두 축을 각각 검증**한다. 수치가 동등하지 않은 결과는 승격 근거로 사용하지 않는다. 사용자 작업 v313→v314 기존 순서와 v290 기본은 변함없음.
+
+## v316 옵트인 계측의 실제 활용 조건 (2026-11-11)
+
+- **계측 구현:** [v316 time trace](../../../runner/v316_optin_case_time_trace.py)와 [원본 v291](../../../runner/v291_durable_multiscale_native_runner.py)의 `case_timing_trace=True`. V291_SESSION/저널·원본 SimC SHA를 변경하지 않으며, 기록을 활성화하지 않은 기존 실험에서는 과거 시점을 조작해 보완하지 않는다.
+- **공정 300/600초 판정:** 단일 프로세스 실행에서 기록이 모든 저널 case를 덮고, 본래 원본 SimC에서 완료된 정밀 후보만 기준으로 시점별 관측 최고 DPS·SEM를 사용. 기록 누락·취소/재개·cache replay나 여러 invocation이 섞이면 `UNAVAILABLE`로 거절한다. 실제 사용자 클릭→시즌 환경/프로필 생성은 별도 시간이다.
+- **시뮬레이션 비용 측정:** planner/pending, request/preflight, v065 engine.execute_one (subprocess 및 source/cache 포함), original JSON2 ingest, journal/checkpoint 구간을 독립 기록. 이 계측도 append/fsync 비용을 추가하므로 Native-only 처리시간으로 과장하지 않는다.
+- **단계적 아이디어 검증:** IDEA-001은 기존 v290 확인 정책을 대체하지 않고 정확한 시간·iterations 예산을 관측한 후에만 다음 35→120→320 승급 옵션 실험 가능. 현재 original runner는 `scout_iterations`/ `confirm_iterations` 두 exact case ID만 허용하므로 새로운 120 단계의 캐시 키/취소/재개 확장 시험이 사전 필수다.
+- **증거 범위:** 신규 실 Native 계측 실행 **미실시**. 오프라인 synthetic 계약 시험만 통과하는 것은 더 빠른 최적화 성능이나 95% 우위가 아니다. 기존 v313·v314의 1008 Native 동등 실험은 여전히 **서로 다른 iterations 예산**이다.
