@@ -1,0 +1,64 @@
+# Gated single actual native pilot: one new destruction user profile and
+# exact equal-budget v290-normalized proposal vs v306 seed-retained experiment.
+# Previous offline focused run 42804522961: 602 tests, 600 PASS/2 SKIP.
+# Never start native without a dedicated one-shot commit marker.
+name: P2 v306 fresh destruction user profile same-source equal Native
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p2_v306_new_warlock_equal_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p2-v306-new-destruction-equal-one-shot
+  cancel-in-progress: false
+jobs:
+  new-user-equal-native:
+    if: contains(github.event.head_commit.message, '[p2-v306-new-user-native-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    env:
+      PYTHONPATH: runner:integration_probes:.
+      SIMC_PINNED_SOURCE_COMMIT: c20e2ad52e4c33711f74272309a5748125175fe8
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse pinned same-season actual SimC binary not old character
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42552942329
+          name: p3-har-verified-source-new-binary-short-lived
+          path: out/binary
+          github-token: ${{ github.token }}
+      - name: Verify SHA and new policy/offline fairness before any Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f out/binary/simc
+          test "$(sha256sum out/binary/simc | cut -d' ' -f1)" = "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6"
+          chmod +x out/binary/simc
+          python -m pip install -r requirements-web-test.txt
+          python -m unittest -v tests.test_p2_v306_new_user_equal_offline tests.test_p2_v306_seed_retained_offline
+          echo P2_V306_NEW_WARLOCK_FAIR_PRECHECK_PASS_NO_NATIVE
+      - name: Fresh v113-v216-v212-v098 source-backed Destruction then matched real SimC
+        timeout-minutes: 25
+        env:
+          P2_V306_NEW_USER_EQUAL_NATIVE_ONCE: '1'
+          BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+          BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+          WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+          WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+        run: python -u integration_probes/p2_v306_new_user_equal_native_once.py
+      - name: Persist compact accepted DPS SEM and source identity, no bulky JSON2
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-v306-new-destruction-equal-native-compact
+          path: out/p2_v306_new_product_equal_once/receipt.json
+          if-no-files-found: warn
+          retention-days: 7
