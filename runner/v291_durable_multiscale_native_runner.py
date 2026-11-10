@@ -37,6 +37,7 @@ import v307_dense_nested_coverage_grid as dense_grid
 import v309_prior_anchored_level21_progressive as progressive21
 import v310_external_frontier_50_only as frontier50
 import v311_external_frontier_100_only as frontier100
+import v312_model_guided_multiregion_policy as model_guided
 
 SCHEMA = "v291_durable_multiscale_native_runner_v1"
 
@@ -156,6 +157,10 @@ def _compact(req, native, source, plan):
         need(all(k in plan for k in frontier100.METADATA),
              "V311_PENDING_FRONTIER_METADATA_MISSING")
         row.update({k: plan[k] for k in frontier100.METADATA})
+    if "surrogate_stage" in plan:
+        need(all(k in plan for k in model_guided.METADATA),
+             "V312_PENDING_SURROGATE_METADATA_MISSING")
+        row.update({k: plan[k] for k in model_guided.METADATA})
     return row
 
 
@@ -268,6 +273,7 @@ def run(context, flask_vector, binary, output, *,
         v309_prior_raw_checkpoint_sha256=None,
         v310_frontier_manifest_path=None,
         v311_three_source_manifest_path=None,
+        model_guided_multiregion=False,
         adaptive_initial_global_calls=160, adaptive_confirmation_calls=8):
     """Resume an exact source-bound session, or execute one Native per plan.
 
@@ -308,6 +314,13 @@ def run(context, flask_vector, binary, output, *,
     progressive_enabled=any(x is not None for x in p309_fields)
     frontier50_enabled=v310_frontier_manifest_path is not None
     frontier100_enabled=v311_three_source_manifest_path is not None
+    need(type(model_guided_multiregion) is bool and
+         (not model_guided_multiregion or
+          not (region_enabled or grid_enabled or percent_enabled or
+               multiregion_percent_grid or nested_percent_grid or
+               progressive_enabled or frontier50_enabled or
+               frontier100_enabled)),
+         "V312_EXCLUSIVE_EXPLICIT_MODEL_GUIDED_OPT_IN")
     need(not frontier100_enabled or
          (type(v311_three_source_manifest_path) is str and
           bool(v311_three_source_manifest_path) and
@@ -339,7 +352,7 @@ def run(context, flask_vector, binary, output, *,
          "V307_EXCLUSIVE_DENSE_GRID_OPT_IN")
     special_enabled = (region_enabled or grid_enabled or
                        progressive_enabled or frontier50_enabled or
-                       frontier100_enabled)
+                       frontier100_enabled or model_guided_multiregion)
     need(not (region_enabled and
               (percent_enabled or multiregion_percent_grid or nested_percent_grid)),
          "V304_EXCLUSIVE_ADAPTIVE_REGION_OPT_IN")
@@ -350,7 +363,8 @@ def run(context, flask_vector, binary, output, *,
     region_planner = (seed_escape_regions if seed_retained_coarse_escape_regions
                       else hybrid_regions if hybrid_region_grid_neighbors
                       else durable_regions)
-    metadata_keys = (frontier100.METADATA if frontier100_enabled else
+    metadata_keys = (model_guided.METADATA if model_guided_multiregion else
+                     frontier100.METADATA if frontier100_enabled else
                      frontier50.METADATA if frontier50_enabled else
                      progressive21.METADATA if progressive_enabled else
                      dense_grid.METADATA if grid_enabled else
@@ -358,6 +372,11 @@ def run(context, flask_vector, binary, output, *,
                                       if (hybrid_region_grid_neighbors or
                                           seed_retained_coarse_escape_regions)
                                       else ()))
+    if model_guided_multiregion:
+        need(adaptive_initial_global_calls == 160 and
+             adaptive_confirmation_calls == 8,
+             "V312_NO_REGION_POLICY_OPTIONS_WITH_MODEL_GUIDED")
+        model_opts=model_guided.options(max_native_calls)
     if region_enabled:
         region_opts = durable_regions.options(
             max_native_calls, adaptive_initial_global_calls,
@@ -497,6 +516,18 @@ def run(context, flask_vector, binary, output, *,
                        if level <= dense_nested_grid_max_level],
             "budget": dense_grid.budget(max_native_calls),
         }
+    if model_guided_multiregion:
+        seal["experimental_model_guided_regions"] = {
+            "schema":model_guided.SCHEMA,
+            "source_sha256":hashlib.sha256(pathlib.Path(
+                model_guided.__file__).read_bytes()).hexdigest(),
+            "v290_global_sha256":hashlib.sha256(pathlib.Path(
+                search.__file__).read_bytes()).hexdigest(),
+            "v307_pool_sha256":hashlib.sha256(pathlib.Path(
+                dense_grid.__file__).read_bytes()).hexdigest(),
+            "settings":model_opts,
+            "prediction_is_only_a_candidate_heuristic":True,
+        }
     if frontier100_enabled:
         seal["experimental_external_frontier100"]={
             "schema":frontier100.SCHEMA,
@@ -614,8 +645,18 @@ def run(context, flask_vector, binary, output, *,
                  not any(k in row for k in (*V304_METADATA,"hybrid_method",
                                            *dense_grid.METADATA,
                                            *progressive21.METADATA,
-                                           "frontier_stage","new21_cursor")),
+                                           "frontier_stage","new21_cursor",
+                                           *model_guided.METADATA)),
                  "V311_JOURNAL_FRONTIER_METADATA_MISSING")
+            plan.update({k: row[k] for k in metadata_keys})
+        elif model_guided_multiregion:
+            need(all(k in row for k in metadata_keys) and
+                 not any(k in row for k in (*V304_METADATA,"hybrid_method",
+                                           *dense_grid.METADATA,
+                                           *progressive21.METADATA,
+                                           *frontier50.METADATA,
+                                           *frontier100.METADATA)),
+                 "V312_JOURNAL_SURROGATE_METADATA_MISSING_OR_FOREIGN")
             plan.update({k: row[k] for k in metadata_keys})
         else:
             need(not any(k in row for k in
@@ -623,7 +664,8 @@ def run(context, flask_vector, binary, output, *,
                           *dense_grid.METADATA,
                           *progressive21.METADATA,
                           *frontier50.METADATA,
-                          *frontier100.METADATA)),
+                          *frontier100.METADATA,
+                          *model_guided.METADATA)),
                  "V307_UNSEALED_METADATA_IN_LEGACY_JOURNAL")
         req, folder = _request(context, flask_vector, output, plan)
         actual, _ = _verified_row(req, binary, folder, calibration, allow_cache=True)
@@ -639,6 +681,12 @@ def run(context, flask_vector, binary, output, *,
         else:
             need(expected == row, "RECORDED_NATIVE_CASE_BYTES_OR_SUMMARY_DRIFT")
             observations.append(row)
+    if model_guided_multiregion:
+        model_guided.audit_recorded_history(
+            observations,total=B,lower=lower,upper=upper,
+            max_native_calls=max_native_calls,
+            scout_iterations=scout_iters,
+            confirmation_iterations=confirm_iters)
     if frontier100_enabled:
         frontier100.audit_recorded_history(
             observations,total=B,lower=lower,upper=upper,
@@ -682,7 +730,13 @@ def run(context, flask_vector, binary, output, *,
     if special_enabled and pending is not None:
         # A persisted pending request is a source of truth ONLY after its
         # exact deterministic plan is reconstructed from verified journal.
-        if frontier100_enabled:
+        if model_guided_multiregion:
+            proposed_pending=model_guided.next_plan(
+                observations,total=B,lower=lower,upper=upper,
+                max_native_calls=max_native_calls,
+                scout_iterations=scout_iters,
+                confirmation_iterations=confirm_iters)
+        elif frontier100_enabled:
             proposed_pending=frontier100.next_plan(
                 observations,total=B,lower=lower,upper=upper,
                 max_native_calls=max_native_calls,scout_iterations=scout_iters,
@@ -761,7 +815,13 @@ def run(context, flask_vector, binary, output, *,
                 status = "BUDGET_EXHAUSTED"
                 break
             if pending is None:
-                if frontier100_enabled:
+                if model_guided_multiregion:
+                    proposed=model_guided.next_plan(
+                        observations,total=B,lower=lower,upper=upper,
+                        max_native_calls=max_native_calls,
+                        scout_iterations=scout_iters,
+                        confirmation_iterations=confirm_iters)
+                elif frontier100_enabled:
                     proposed=frontier100.next_plan(
                         observations,total=B,lower=lower,upper=upper,
                         max_native_calls=max_native_calls,
@@ -931,7 +991,8 @@ def run(context, flask_vector, binary, output, *,
         raise
     summary = _summary(observations, context)
     report = {"schema": SCHEMA, "status": status,
-              "policy": (frontier100.SCHEMA if frontier100_enabled
+              "policy": (model_guided.SCHEMA if model_guided_multiregion
+                         else frontier100.SCHEMA if frontier100_enabled
                          else frontier50.SCHEMA if frontier50_enabled
                          else progressive21.SCHEMA if progressive_enabled
                          else dense_grid.SCHEMA if grid_enabled
@@ -955,6 +1016,9 @@ def run(context, flask_vector, binary, output, *,
               "confidence_for_display": 0.95,
               "no_global_optimum_proof": True,
               "native_cases_not_to_be_confused_with_iterations": True}
+    if model_guided_multiregion:
+        report["model_guided_progress"]=model_guided.coverage(
+            observations,max_native_calls=max_native_calls)
     if frontier100_enabled:
         report["frontier100_coverage"]=frontier100.coverage(
             observations,total=B,lower=lower,upper=upper,
@@ -1089,6 +1153,8 @@ def main(argv=None):
                    help="EXPERIMENTAL v307 nested coverage grid, 6/11/21/41/81")
     p.add_argument("--dense-nested-grid-full-scan", action="store_true",
                    help="EXPERIMENTAL v307 complete finite lattice before local zoom")
+    p.add_argument("--model-guided-multiregion", action="store_true",
+                   help="EXPERIMENTAL v312 cubic surrogate and diverse regional SimC proposals")
     p.add_argument("--adaptive-global-calls", type=int, default=160)
     p.add_argument("--adaptive-confirm-calls", type=int, default=8)
     p.add_argument("--portable-archive",
@@ -1132,6 +1198,7 @@ def main(argv=None):
                 seed_retained_coarse_escape_regions=args.seed_retained_coarse_escape_regions,
                 dense_nested_grid_max_level=args.dense_nested_grid_max_level,
                 dense_nested_grid_full_scan=args.dense_nested_grid_full_scan,
+                model_guided_multiregion=args.model_guided_multiregion,
                 adaptive_initial_global_calls=args.adaptive_global_calls,
                 adaptive_confirmation_calls=args.adaptive_confirm_calls,
                 open_folder=True)
