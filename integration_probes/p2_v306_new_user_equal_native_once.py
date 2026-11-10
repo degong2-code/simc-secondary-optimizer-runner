@@ -23,10 +23,8 @@ import tempfile
 import time
 from collections import Counter
 
-from fastapi.testclient import TestClient
 
 from runner import v106_user_session_controller as users
-from runner import v113_local_web_api as web
 from runner import v289_retail_live_build_source as retail
 from runner import v291_durable_multiscale_native_runner as durable
 from runner import v293_local_longrun_session as longrun
@@ -35,7 +33,6 @@ from runner import v303_adaptive_region_resource_policy as regional
 from runner import v304_v303_durable_adapter as v304
 from runner import v306_seed_retained_coarse_escape_regions as v306
 from integration_probes import p2_new_profile_product_e2e_once as fresh
-from integration_probes import p3_haj_real_local_web_native_e2e as web_probe
 
 SCHEMA="p2_v306_new_destruction_product_equal_simc_v1"
 CASE_ID="destruction_warlock_4ordinary_T3400"
@@ -144,6 +141,11 @@ def compare_selected(a,b):
 def main():
     need(os.getenv("P2_V306_NEW_USER_EQUAL_NATIVE_ONCE")=="1",
          "EXPLICIT_P2_NEW_USER_REAL_NATIVE_OPT_IN_REQUIRED")
+    # Offline proposal/tests must import without web dependencies; only the
+    # explicitly opted-in actual product trial loads FastAPI/TestClient.
+    from fastapi.testclient import TestClient
+    from runner import v113_local_web_api as web
+    from integration_probes import p3_haj_real_local_web_native_e2e as web_probe
     case,controls=fresh.selected_case(CASE_ID)
     need((case["character_class"],case["character_spec"],case["final_T"],
           case["sockets"],case["special_gem"])==
