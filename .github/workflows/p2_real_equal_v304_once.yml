@@ -1,0 +1,73 @@
+# Exactly one bounded opt-in real SimC study, no background schedule.
+# 70783 Enhancement historical profile; NOT current four-ordinary default.
+# Any mismatch must block before first new Native subprocess.
+name: P2 v304 equal-iterations historical real SimC pilot once
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p2_real_equal_v304_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p2-real-equal-v304-one-time
+  cancel-in-progress: false
+jobs:
+  sha-pinned-equal-budget-real:
+    if: contains(github.event.head_commit.message, '[p2-equal-real-v304-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      PYTHONPATH: runner:integration_probes:.
+      P2_REAL_EQUAL_BUDGET_ONCE: '1'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Reuse exact immutable prior SimC binary, no compilation
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42552942329
+          name: p3-har-verified-source-new-binary-short-lived
+          path: out/binary
+          github-token: ${{ github.token }}
+      - name: Reuse exact 70783 Enhancement profile Native source archive
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42501052586
+          name: p3-fz-exact-binary-zero-history-t1-receipt
+          path: out/previous
+          github-token: ${{ github.token }}
+      - name: Reuse previous actual 100-case compact Native evidence
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42752264747
+          name: p2-nested-11-21-real-simc-timing-once-receipt
+          path: out/previous_100
+          github-token: ${{ github.token }}
+      - name: Exact SHA/archive preflight and zero-Native comparison tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f out/binary/simc
+          test -f out/previous/p3_hae_v291_native_evidence.zip
+          test -f out/previous_100/receipt.json
+          test "$(sha256sum out/binary/simc | cut -d' ' -f1)" = "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6"
+          test "$(sha256sum out/previous/p3_hae_v291_native_evidence.zip | cut -d' ' -f1)" = "c53dc09015377ccaf3d53f24bb85950e3999efacecc629be756b9f8856ef5fa9"
+          chmod +x out/binary/simc
+          python -m unittest -v tests.test_p2_real_equal_v304_offline
+          echo P2_REAL_V304_SOURCE_PIN_AND_OFFLINE_PRECHECK_PASS
+      - name: One bounded real SimC same-iterations pilot
+        timeout-minutes: 8
+        run: python -u integration_probes/p2_real_equal_v304_once.py
+      - name: Preserve compact real JSON2 measurements and source identity only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-real-v304-32x32-equal-iterations-compact-receipt
+          path: out/p2_real_equal_v304_once/receipt.json
+          if-no-files-found: warn
+          retention-days: 7
