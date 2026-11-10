@@ -36,7 +36,7 @@ _SPECS=(
 CASES={
     f"{key}__{variant}":{
         "id":f"{key}__{variant}",
-        "class":cl,"spec":sp,"race":"human","ilevel":334,
+        "class":cl,"spec":sp,"race":("dwarf" if sp=="elemental" else "human"),"ilevel":334,
         "final_T":low if variant=="wide" else high,
         "max_single_stat_percent":60 if variant=="wide" else 45,
         "ordinary_gems":4,"special_gem_id":None,"weapon_oil":None,
