@@ -1,3 +1,7 @@
+> **2026-11-10 현재 지식 지도(격리 개발만):** [START_HERE](docs/development/START_HERE.md) → [INDEX](docs/development/INDEX.md) → [FILE_MAP](docs/development/FILE_MAP.md) → [EVIDENCE_INDEX](docs/development/EVIDENCE_INDEX.md) → [DECISIONS](docs/development/DECISIONS.md). 아래 v033/v18x README 안내는 역사 호환 설명으로 최신 제품 판정이 아니다. [P3-HAW](docs/CHAT_CONTINUITY_HANDOFF_20261110_P3_HAW_OPTIMIZER_RESUME_ENGINE_FIRST.md) 기준. main/Project UI/공식 승격 변경 아님.
+
+---
+
 > **2026-10-30 최신 v182/v183:** 사용자용 Windows 베타는 [v182 갱신 ZIP (7일 보관)](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40986181287/artifacts/12946803072)이며, 기존 v181 ZIP은 역사 버전입니다. [현재 상태 CURRENT](docs/CURRENT_PRODUCT_DEVELOPMENT_STATE.md), [새 채팅 정본 인계·시작 프롬프트](docs/CHAT_CONTINUITY_HANDOFF_20261030_V183.md), [최신 개발자 노트 보충](docs/DEVELOPER_NOTES_v1.4.2_LATEST_USER_POLICY_ADDENDUM_20261030.md), [설치 절차](WINDOWS_BETA_START_HERE.md). **26 DPS/증강 제외, 목표 ilvl266–344, 사용자 장비 ID/bonus 수동 부담 제거, 옴니움 4열 선택**. UI 회귀 Windows·Ubuntu PASS, 유연 옴니움 최초 SimC 오류는 정확 source ID 교정으로 Native1회 PASS. 별도 Windows 사용자 냉법 낮은 DPS 원인과 실제 티어/효과 입력 정합은 아직 미확정입니다. **본 README·GitHub 갱신은 Project Sources/Instructions 실제 UI 적용이 아닙니다.**
 
 > **2026-10-30 Windows 로컬 웹 베타 v181:** [다운로드/실행 안내](WINDOWS_BETA_START_HERE.md) · [실제 Windows 3.12/3.14 ZIP/HTTP PASS 증거](docs/V181_P1D_WINDOWS_LOCAL_BETA_PACKAGE_REAL_HTTP_20261030.md). 설치형 EXE가 아닌 **소스 ZIP**이며 사용자 Windows SimC CLI가 필요합니다. 계획/복원/보안은 Windows 실측, 새 시즌 사용자 SimC Native 계산은 기존 Linux v180 증거와 구분합니다.
