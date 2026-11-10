@@ -11,7 +11,7 @@
 | IDEA-003 | 적응형 층화 탐색 (Adaptive Stratified Exploration) | [상세](IDEA-003-adaptive-stratified-exploration.md) | `IDEA_ONLY` | 전역 공간 셀별 탐사 예산 |
 | IDEA-004 | 비용 인지형 지식 기울기 탐색 (Cost-aware Knowledge Gradient) | [상세](IDEA-004-cost-aware-knowledge-gradient.md) | `IDEA_ONLY` | 확인 DPS 순위 개선의 기대 정보 가치 / SimC 실행비용 |
 | IDEA-005 | 조건부 짝시드 실측 분산 감소 (Paired Seed CRN) | [상세](IDEA-005-conditional-paired-rng-variance-reduction.md) | `IDEA_ONLY · HOLD_FOR_FEASIBILITY` | 재측정 후보 쌍 DPS 차이의 **실제 양의 공분산** 검증 |
-| IDEA-006 | 국소 민감도 비등방성 탐색 (Active Subspace) | [상세](IDEA-006-anisotropic-active-subspace-search.md) | `IDEA_ONLY · INTEGRATE_ABLATION_FIRST` | 방향별 이동 스텝과 유효 후보 발견 효율 |
+| IDEA-006 | 국소 민감도 비등방성 탐색 (Active Subspace) | [상세](IDEA-006-anisotropic-active-subspace-search.md) | `OFFLINE_SCREENED · LOCAL_QUADRATIC_HOLD` (Native 0) | 기존 9,906 scout/48 precision: 국소 모델 정확도 미개선·방향 안정성 제한; 실제 방향 탐색 우위 미검증 |
 | IDEA-007 | 다중 정책 온라인 포트폴리오 (Policy Bandit) | [상세](IDEA-007-online-policy-portfolio-bandit.md) | `IDEA_ONLY · INTEGRATE_LATER` | 탐색 생성기별 예산 배분과 최악 성능 완화 |
 
 ## 중복성·통합 효율 사전 심사 (2026-11-11)
@@ -32,7 +32,7 @@
 | ID | 기존 기능/아이디어 중복 | 검증 전 결론 | 기존 엔진과 통합할 최소 단위 | 핵심 반증 |
 |---|---|---|---|---|
 | IDEA-005 | v290 정밀 재측정·IDEA-001 승급과 부분 중복 | **HOLD** | v291 최종 A/B 확인 방법의 실험 옵션 | 같은 seed의 실제 짝공분산이 양수인지, 실행비용 포함 CI가 더 좁아지는지 |
-| IDEA-006 | v290 pairwise·v303 반경·v312 곡면과 부분 중복 | **우선 ablation** | v303의 한 지역 후보 생성방향만 비등방성으로 대체 | 동일 iterations·wall 시간에서 최종 확인 DPS/후보 중복률 개선 여부 |
+| IDEA-006 | v290 pairwise·v303 반경·v312 곡면과 부분 중복 | **국소 독립 fit HOLD; 기존 cubic 미분 방향만 후속 연구** | v312 기존 3차 모델의 gradient/Hessian 재활용으로 v303 지역 후보 생성방향만 변경 | 역사 48 precision RMSE 악화 및 8영역 중 4곳 방향 일치도 0.8미만; 실제 320+ 탐색 우위 미검증 |
 | IDEA-007 | v303 지역 자원 배분·v312 후보 유형 배분과 구조적 중복 | **후순위 통합 연구** | v291 단일 세션 아래 *후보 생성기* 예산 선택기 | 전략 간 후보 상보성이 없거나 journal/cache 복잡성만 늘어나는지 |
 
 - **권장 순서:** 먼저 IDEA-006 단독 옵션을 기존 v290/v303 기준으로 비교 → IDEA-005 짝공분산의 가능성만 최소 Native로 판정 → IDEA-007은 후보 생성기 순수화와 정확한 cache/journal 재개가 확보될 때 검토. 개발 순서는 v313→v314 현재 사용자가 지시한 **기존 실제 시험 순서를 바꾸지 않는다**.
@@ -52,6 +52,10 @@
 7. **증거 상태:** `IDEA_ONLY`·오프라인 구현·실제 Native·전문화 간 검증을 분리. 앞선 대화의 아이디어를 다시 이름만 바꾸어 신규 건수로 세지 않는다.
 
 이 기준을 통과하지 못하면 **이번 채팅에는 신규 아이디어 없음**이라고 설명하고 중복 제안의 통합/보류 사유를 제시한다. 제품 기본 v290과 보호된 main을 임의로 변경하지 않는다.
+
+## IDEA-006 음성 오프라인 스크린 결과 (2026-11-11)
+
+[원본 9,906 scout35/48 precision320 검증 #42856597090](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42856597090) SUCCESS, 신규 Native 0. 국소 2차 회귀의 정밀 48건 예측 RMSE는 학습 128/400/1200에서 각각 **303.929/286.451/279.108 DPS**, 같은 표본의 기존 v312 전역 3차는 **227.863/282.815/248.605**. 8개 영역의 가장 평탄한 Hessian 방향을 절반 표본으로 구했을 때 **4/8이 abs cosine 0.8 미만**. 사후 반경 선택은 독립 검증이 아니며, **국소 모델 정확도 실패를 실제 비등방성 좌표 탐색의 실패라고 과장하지 않음**. [상세 기록](../notes/2026-11-11_p2-idea006-real9906-localfit-holdout-negative.md).
 
 ## 기존 실험 기준군 (새 아이디어가 아님)
 
