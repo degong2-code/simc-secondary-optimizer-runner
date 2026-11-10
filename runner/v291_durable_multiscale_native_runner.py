@@ -27,6 +27,7 @@ import v290_multiscale_adaptive_policy as search
 import v298_adaptive_percent_grid as percent_grid
 import v299_multiregion_percent_policy as multiregion_grid
 import v300_multiregion_throughput_resolution as measured_resolution
+import v301_nested_multiregion_policy as nested_regions
 
 SCHEMA = "v291_durable_multiscale_native_runner_v1"
 
@@ -220,7 +221,8 @@ def run(context, flask_vector, binary, output, *,
         max_native_calls, max_new_native_this_invocation=None,
         cache_only=False, cancel_file=None, max_elapsed_seconds=None,
         recover_verified_partial=False, open_folder=False,
-        percentage_grid_points=None, multiregion_percent_grid=False):
+        percentage_grid_points=None, multiregion_percent_grid=False,
+        nested_percent_grid=False):
     """Resume an exact source-bound session, or execute one Native per plan.
 
     A previously committed journal is always re-validated against ORIGINAL
@@ -246,6 +248,13 @@ def run(context, flask_vector, binary, output, *,
     need(type(multiregion_percent_grid) is bool and
          (not multiregion_percent_grid or percent_enabled),
          "MULTIREGION_REQUIRES_PERCENT_GRID_OPT_IN")
+    need(type(nested_percent_grid) is bool and
+         (not nested_percent_grid or multiregion_percent_grid),
+         "NESTED_GRID_REQUIRES_MULTIREGION_OPT_IN")
+    need(not nested_percent_grid or percentage_grid_points == "auto" or
+         (type(percentage_grid_points) is int and
+          percentage_grid_points in nested_regions.LEVELS),
+         "NESTED_GRID_LEVEL_6_11_21_41_ONLY")
     need(percentage_grid_points is None or
          percentage_grid_points == "auto" or
          (type(percentage_grid_points) is int and
@@ -302,6 +311,13 @@ def run(context, flask_vector, binary, output, *,
                     pathlib.Path(measured_resolution.__file__).read_bytes()
                 ).hexdigest(),
             }
+            if nested_percent_grid:
+                seal["experimental_multiregion"]["nested_grid"] = {
+                    "schema": nested_regions.SCHEMA,
+                    "source_sha256": hashlib.sha256(
+                        pathlib.Path(nested_regions.__file__).read_bytes()
+                    ).hexdigest(),
+                }
     if output.exists():
         need(not output.is_symlink(), "OUTPUT_SYMLINK_NOT_ALLOWED")
     output.mkdir(parents=True, exist_ok=True)
@@ -392,7 +408,8 @@ def run(context, flask_vector, binary, output, *,
                 status = "BUDGET_EXHAUSTED"
                 break
             if pending is None:
-                planner = (multiregion_grid.next_plan if multiregion_percent_grid
+                planner = (nested_regions.next_plan if nested_percent_grid
+                           else multiregion_grid.next_plan if multiregion_percent_grid
                            else percent_grid.next_plan if percent_enabled
                            else search.next_plan)
                 point_count = percentage_grid_points
@@ -406,7 +423,10 @@ def run(context, flask_vector, binary, output, *,
                             if remaining_seconds is not None else None),
                     }
                     if multiregion_percent_grid:
-                        point_count = measured_resolution.choose_points_from_throughput(
+                        estimator = (nested_regions.choose_points_from_throughput
+                                     if nested_percent_grid else
+                                     measured_resolution.choose_points_from_throughput)
+                        point_count = estimator(
                             [hint["seconds"] for hint in timings],
                             confirmation_to_scout_iterations=(
                                 confirm_iters/scout_iters),
@@ -522,7 +542,8 @@ def run(context, flask_vector, binary, output, *,
         raise
     summary = _summary(observations, context)
     report = {"schema": SCHEMA, "status": status,
-              "policy": (multiregion_grid.SCHEMA if multiregion_percent_grid
+              "policy": (nested_regions.SCHEMA if nested_percent_grid
+                         else multiregion_grid.SCHEMA if multiregion_percent_grid
                          else percent_grid.SCHEMA if percent_enabled
                          else "v290_multiscale_noisy_simplex_policy_v1"),
               "official_formula": "T=G+J+F+O",

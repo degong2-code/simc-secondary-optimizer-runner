@@ -188,6 +188,44 @@ class V291LongRun(unittest.TestCase):
                         percentage_grid_points=None,multiregion_percent_grid=True,
                         max_new_native_this_invocation=0)
 
+    def test_nested_11_21_grid_session_identity_and_exact_resume(self):
+        # Fake Native. Historical v298/v299/v300 seals stay separately valid.
+        with tempfile.TemporaryDirectory() as folder:
+            ctx,binary,out=self.fixture(folder,cap=12)
+            with mock.patch.object(runner.engine,"execute_one",
+                                   side_effect=fake_native), \
+                 mock.patch.object(runner.oil,"ingest_native",
+                                   side_effect=fake_ingest):
+                first=runner.run(
+                    ctx,F,binary,out,max_native_calls=12,
+                    percentage_grid_points=21,multiregion_percent_grid=True,
+                    nested_percent_grid=True,max_new_native_this_invocation=4)
+                self.assertEqual(first["policy"],runner.nested_regions.SCHEMA)
+                self.assertEqual(first["completed_cases"],4)
+                seal=runner.read_json(out/"V291_SESSION.json")
+                self.assertEqual(seal["experimental_percent_grid"]["resolution"],21)
+                self.assertIn("nested_grid",seal["experimental_multiregion"])
+                resumed=runner.run(
+                    ctx,F,binary,out,max_native_calls=12,
+                    percentage_grid_points=21,multiregion_percent_grid=True,
+                    nested_percent_grid=True,max_new_native_this_invocation=0,
+                    cache_only=True)
+                self.assertEqual(resumed["new_native_this_invocation"],0)
+                with self.assertRaisesRegex(
+                        runner.LongRunBlocked,"SEALED_SESSION_IDENTITY_DRIFT"):
+                    runner.run(ctx,F,binary,out,max_native_calls=12,
+                               percentage_grid_points=21,
+                               multiregion_percent_grid=True,
+                               nested_percent_grid=False,
+                               max_new_native_this_invocation=0)
+                with self.assertRaisesRegex(
+                        runner.LongRunBlocked,"NESTED_GRID_LEVEL_6_11_21_41_ONLY"):
+                    runner.run(ctx,F,binary,out,max_native_calls=12,
+                               percentage_grid_points=22,
+                               multiregion_percent_grid=True,
+                               nested_percent_grid=True,
+                               max_new_native_this_invocation=0)
+
     def test_above_six_native_cases_with_typed_runtime_and_replay(self):
         with tempfile.TemporaryDirectory() as folder:
             ctx,binary,out=self.fixture(folder,cap=12)

@@ -84,6 +84,7 @@ jobs:
             tests.test_v298_adaptive_percent_grid \
             tests.test_v299_multiregion_percent_policy \
             tests.test_v300_multiregion_throughput_resolution \
+            tests.test_v301_nested_multiregion_policy \
             tests.test_p3_hab_strict_final_half_cap \
             tests.test_p3_hx_durable_longrun_offline \
             tests.test_p3_hag_portable_native_case_cache \
