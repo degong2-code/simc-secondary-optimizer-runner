@@ -78,6 +78,20 @@ class GridPolicyAudit(unittest.TestCase):
                 "planning_elapsed_seconds":round(time.monotonic()-start,3),
                 "best":best_vec}
 
+    def blended(self, every_nth_global):
+        """Keep most original global targets; selectively inject grid targets."""
+        count=[0]
+        def plan(rows, **kwargs):
+            regular=baseline.next_plan(rows,**kwargs)
+            if (regular["status"] == "NEXT_NATIVE_PROPOSED" and
+                    regular["next_request"]["phase"] == "scout" and
+                    "GLOBAL" in regular["decision"]):
+                count[0]+=1
+                if count[0] % every_nth_global == 0:
+                    return grid.next_plan(rows,**kwargs)
+            return regular
+        return plan
+
     def test_equal_case_budget_synthetic_multimodal_comparison(self):
         records={}
         for name,peaks in self.PEAKS.items():
@@ -85,16 +99,21 @@ class GridPolicyAudit(unittest.TestCase):
                 self.assertEqual(sum(p),self.B)
                 self.assertTrue(baseline.legacy.eligible(
                     p,self.B,self.LOWER,self.UPPER))
-            old=self.compare(peaks,baseline.next_plan)
-            new=self.compare(peaks,grid.next_plan)
-            self.assertEqual(old["native_requests"],new["native_requests"])
-            self.assertEqual(old["native_requests"],112)
+            modes={"v290":baseline.next_plan,
+                   "v298_opt_in":grid.next_plan,
+                   "grid_every_2_global":self.blended(2),
+                   "grid_every_3_global":self.blended(3),
+                   "grid_every_4_global":self.blended(4)}
+            results={name:self.compare(peaks,strategy)
+                     for name,strategy in modes.items()}
+            self.assertTrue(all(v["native_requests"] == 112
+                                for v in results.values()))
             # A difference in total requested iterations is reported,
             # never relabeled as an equal-CPU/equal-iteration victory.
-            records[name]={"v290":old,"v298_opt_in":new}
+            records[name]=results
             print("P2_PERCENT_GRID_SYNTHETIC "+
-                  json.dumps({"shape":name,"v290":old,"v298_opt_in":new},
-                             sort_keys=True),flush=True)
+                  json.dumps({"shape":name,**results},sort_keys=True),
+                  flush=True)
         self.assertEqual(set(records),set(self.PEAKS))
 
 
