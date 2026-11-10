@@ -37,7 +37,7 @@
 | F | [v098_target_user_scenario_bootstrap.py](../../runner/v098_target_user_scenario_bootstrap.py) | 사용자 시나리오 | [test_v098_target_user_scenario_bootstrap.py](../../tests/test_v098_target_user_scenario_bootstrap.py) |
 | F | [v096_unified_product_entry.py](../../runner/v096_unified_product_entry.py) | SimC 제품 진입 | [test_v096_unified_product_entry.py](../../tests/test_v096_unified_product_entry.py) |
 | F | [v094_durable_inclusive_adaptive_runner.py](../../runner/v094_durable_inclusive_adaptive_runner.py) | 기존 Native 평가 | [test_v094_durable_inclusive_adaptive_runner.py](../../tests/test_v094_durable_inclusive_adaptive_runner.py) |
-| F | [v290_multiscale_adaptive_policy.py](../../runner/v290_multiscale_adaptive_policy.py) | 다중해상도 후보 | [test_p3_hw_multiscale_policy.py](../../tests/test_p3_hw_multiscale_policy.py) |
+| F | [v290_multiscale_adaptive_policy.py](../../runner/v290_multiscale_adaptive_policy.py) | B 총량 비율 기반 다중해상도·L/E/F/최종 50% 경계에 맞춘 이동량 clipping | [test_p3_hw_multiscale_policy.py](../../tests/test_p3_hw_multiscale_policy.py) |
 | F | [v291_durable_multiscale_native_runner.py](../../runner/v291_durable_multiscale_native_runner.py) | 영속 Native/95% | [test_p3_hx_durable_longrun_offline.py](../../tests/test_p3_hx_durable_longrun_offline.py) |
 | F | [v292_portable_native_case_cache.py](../../runner/v292_portable_native_case_cache.py) | cross-job case 캐시 | [test_p3_hag_portable_native_case_cache.py](../../tests/test_p3_hag_portable_native_case_cache.py) |
 | F | [v293_local_longrun_session.py](../../runner/v293_local_longrun_session.py) | 취소/재개 장기 세션 | [test_p3_hah_local_longrun_product_offline.py](../../tests/test_p3_hah_local_longrun_product_offline.py) |
@@ -48,5 +48,5 @@
 ## 구현 근거·역사 결정의 역방향 검색
 
 - 환경: [승인 v1.4.3](../SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.3_SEASON_GJFO_AUTO_BUILD_APPROVED_20261102.md) · [실 무이력 Build](notes/2026-11-10_p1-four-ordinary-real-zero-history-ready.md) · [일반 4보석 변경](notes/2026-11-10_p1-ordinary-only-default-engine-bridge.md) · [프로필 보석 SHA 재사용](notes/2026-11-10_p1-gem-variant-install-reuse-identity.md).
-- P2: [신뢰성·알고리즘 비고정](notes/2026-11-09_p2-opt-reliability-first-open-search-policy.md) · [실 Native10 한계](notes/2026-11-09_p2-real-native-ten-case-region-audit.md) · [합성 다봉형](notes/2026-11-09_p2-multimodal-equal-count-offline-audit.md).
+- P2: [비율 경계 적응형 후보 변경](notes/2026-11-10_p2-fractional-bounded-neighbor-proposals.md) · [신뢰성·알고리즘 비고정](notes/2026-11-09_p2-opt-reliability-first-open-search-policy.md) · [실 Native10 한계](notes/2026-11-09_p2-real-native-ten-case-region-audit.md) · [합성 다봉형](notes/2026-11-09_p2-multimodal-equal-count-offline-audit.md).
 - 작업 시 source의 해당 함수와 실제 test import를 확인한다. **유사한 이름의 테스트를 자동으로 진짜 관련 테스트나 PASS로 간주하지 않는다.**

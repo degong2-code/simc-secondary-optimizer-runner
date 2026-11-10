@@ -29,6 +29,57 @@ class Multiscale(unittest.TestCase):
         self.assertEqual(len(pool),len(set(pool)))
         self.assertGreaterEqual(len(pool),50)
 
+    def test_relative_steps_clip_to_valid_bounds_at_two_total_levels(self):
+        # Regression: old exact-step neighbors discard all large percentage
+        # moves near L/E/F floors and final-T <50% caps, despite legal moves.
+        # This is offline geometry, NOT a simulated or predicted SimC DPS.
+        first=None
+        for factor in (1, 2):
+            total=self.B*factor
+            lower=tuple(x*factor for x in (1200,1500,0,0))
+            upper=tuple(x*factor for x in (1553,1553,500,500))
+            anchor=tuple(x*factor for x in (1300,1500,160,147))
+            step=round(total*.24)
+            self.assertTrue(p.legacy.eligible(anchor,total,lower,upper))
+            self.assertEqual(p.legacy.neighbors(
+                anchor,step,total,lower,upper,set()),[])
+            result=list(p._bounded_fraction_neighbors(
+                anchor,step,total,lower,upper,set()))
+            self.assertGreaterEqual(len(result),6)
+            self.assertEqual(len(result),len({v for v,_ in result}))
+            for v,moved in result:
+                self.assertGreater(moved,0)
+                self.assertLess(moved,step)
+                self.assertEqual(sum(v),total)
+                self.assertTrue(p.legacy.eligible(v,total,lower,upper))
+                self.assertTrue(all(x<total/2 for x in v))
+                self.assertEqual(p._distance(v,anchor),moved)
+            # Doubling the item-level budget scales legal moves and preserves
+            # the SAME shares, without a new absolute-rating threshold.
+            scaled={(tuple(x//factor for x in v),moved//factor)
+                    for v,moved in result}
+            if first is None:
+                first=scaled
+            else:
+                self.assertEqual(scaled,first)
+            self.assertEqual(list(p._bounded_fraction_neighbors(
+                anchor,step,total,lower,upper,{v for v,_ in result})),[])
+
+    def test_relative_clipping_keeps_exact_zero_and_fixed_floor(self):
+        total=3107
+        lower=(0,165,0,0)
+        upper=(1553,1553,1553,1553)
+        anchor=(1,1553,1552,1)
+        self.assertTrue(p.legacy.eligible(anchor,total,lower,upper))
+        expanded=list(p._bounded_fraction_neighbors(
+            anchor,round(total*.24),total,lower,upper,set()))
+        self.assertTrue(expanded)
+        self.assertTrue(any(0 in vector for vector,_ in expanded))
+        self.assertTrue(all(vector[1]>=165 and
+                            all(x<=1553 for x in vector)
+                            for vector,_ in expanded))
+        self.assertTrue(all(sum(v)==total for v,_ in expanded))
+
     def test_budget_2000_does_not_mean_six_and_candidates_vary(self):
         rows=[]; seen=set(); phases=set()
         for k in range(128):
@@ -125,11 +176,11 @@ class Multiscale(unittest.TestCase):
         for anchor in anchors:
             for fraction in p.SCALES:
                 step=max(1,min(self.B,round(self.B*fraction)))
-                observed.update(p.legacy.neighbors(
+                observed.update(v for v, moved in p._bounded_fraction_neighbors(
                     anchor,step,self.B,self.lo,self.hi,set()))
         # Avoid the already-established every-23rd-request global cadence:
         # this regression exercises the *local* branch's exhaustion.
-        while len(observed)%23==0:
+        while len(observed)%23==0 or len(observed)%16 in (14,15):
             extra=next(v for v in pool if v not in observed)
             observed.add(extra)
         self.assertGreaterEqual(len(observed),64)

@@ -154,6 +154,42 @@ def _distance(first, second):
     return sum(abs(a - b) for a, b in zip(first, second)) / 2
 
 
+def _bounded_fraction_neighbors(anchor, desired_step, total, lower, upper,
+                                observed):
+    """Proportional pair transfers, clipped by verified per-stat floors/caps.
+
+    The desired step is a percentage of B, never an unqualified fixed rating.
+    Near a locked L/E/F floor or the strict final-T half cap, the *feasible*
+    part of that step remains a valid candidate rather than disappearing.
+    Each result still has exactly B integer ratings and no altered fixed O.
+    """
+    need(legacy.eligible(anchor, total, lower, upper),
+         "FRACTION_NEIGHBOR_ANCHOR_OUTSIDE_BOUNDS")
+    need(type(desired_step) is int and 1 <= desired_step <= total,
+         "FRACTION_NEIGHBOR_STEP")
+    emitted = set()
+    for source in range(4):
+        available = anchor[source] - lower[source]
+        if available <= 0:
+            continue
+        for dest in range(4):
+            if source == dest:
+                continue
+            moved = min(desired_step, available, upper[dest] - anchor[dest])
+            if moved <= 0:
+                continue
+            candidate = list(anchor)
+            candidate[source] -= moved
+            candidate[dest] += moved
+            vector = tuple(candidate)
+            if vector in observed or vector in emitted:
+                continue
+            need(legacy.eligible(vector, total, lower, upper),
+                 "FRACTION_NEIGHBOR_INELIGIBLE")
+            emitted.add(vector)
+            yield vector, moved
+
+
 def _closest_challenger(by_vector, incumbent):
     remaining = [v for v in by_vector if v != incumbent]
     if not remaining:
@@ -282,23 +318,33 @@ def next_plan(observations, *, total, lower, upper, native_calls_used,
         target_level = min(len(SCALES) - 1,
                            int(math.log2(max(1, unique // 24) + 1)))
         best = None
+        # Relative to B, not a fixed rating: the same geometry works at
+        # different target item levels or when the user enters final T.
+        target_step = max(1, min(total, round(total * SCALES[target_level])))
         for anchor in ranked[:anchor_count]:
             row = by_vector[anchor]
             parent_score = row["dps_mean"] - .5 * min(
                 row["dps_sem"], row["dps_mean"] * .02)
-            for level, fraction in enumerate(SCALES):
+            seen_from_anchor = set()
+            for fraction in SCALES:
                 step = max(1, min(total, round(total * fraction)))
-                for nxt in legacy.neighbors(
+                for nxt, moved in _bounded_fraction_neighbors(
                         anchor, step, total, lower, upper, observed):
+                    if nxt in seen_from_anchor:
+                        continue
+                    seen_from_anchor.add(nxt)
                     gained_axes = sum(
                         before[i] == 0 and
                         (nxt[i] < minima[i] or nxt[i] > maxima[i])
                         for i in range(4))
+                    # Clipping a 24% request to a 1% feasible move must NOT
+                    # score as a 24% move. Judge the *actual* moved share
+                    # against the desired exploration resolution.
+                    scale_error = abs(math.log2(moved / target_step))
                     utility = (parent_score +
                                .003 * row["dps_mean"] * gained_axes -
-                               .0005 * row["dps_mean"] *
-                               abs(level - target_level))
-                    score = (utility, _distance(nxt, anchor), nxt)
+                               .0005 * row["dps_mean"] * scale_error)
+                    score = (utility, moved / total, nxt)
                     if best is None or score > best[0]:
                         best = (score, nxt)
         if best is not None:
