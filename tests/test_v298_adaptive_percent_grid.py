@@ -68,11 +68,30 @@ class PercentageGrid(unittest.TestCase):
         self.assertEqual(grid.choose_points_from_throughput(
             [0.5,0.6],remaining_calls=200,seconds_available=500),11)
         self.assertEqual(grid.choose_points_from_throughput(
-            [1.,1.,1.],remaining_calls=200,seconds_available=500),11)
+            [0.5,0.5,0.5],remaining_calls=200,seconds_available=None),11)
+        # 200-call example: measured fast scout and reserved 20% higher
+        # iterations can raise the lattice resolution to EXACTLY 22 points.
         self.assertEqual(grid.choose_points_from_throughput(
-            [1.,1.,1.],remaining_calls=1000,seconds_available=500),15)
+            [.5,.5,.5],remaining_calls=200,seconds_available=600,
+            confirmation_to_scout_iterations=320/35),22)
+        self.assertEqual(grid.choose_points_from_throughput(
+            [.5,.5,.5],remaining_calls=200,seconds_available=300,
+            confirmation_to_scout_iterations=320/35),11)
+        self.assertEqual(grid.choose_points_from_throughput(
+            [.5,.5,.5],remaining_calls=200,seconds_available=1600,
+            confirmation_to_scout_iterations=320/35),31)
+        self.assertEqual(grid.choose_points_from_throughput(
+            [.5,.5,.5],remaining_calls=200,seconds_available=2500,
+            confirmation_to_scout_iterations=320/35),41)
         self.assertEqual(grid.choose_points_from_throughput(
             [20.,20.,20.],remaining_calls=200,seconds_available=500),5)
+        self.assertEqual(grid.choose_points_from_throughput(
+            [1.,1.,1.],remaining_calls=10,seconds_available=1000),7)
+        with self.assertRaisesRegex(old.PolicyBlocked,
+                                    "PERCENT_GRID_ITERATION_RATIO"):
+            grid.choose_points_from_throughput(
+                [1.,1.,1.],remaining_calls=200,seconds_available=1000,
+                confirmation_to_scout_iterations=0.5)
 
     def test_opt_in_no_change_to_default_first_or_precision(self):
         params=dict(total=3107,lower=(0,0,0,0),

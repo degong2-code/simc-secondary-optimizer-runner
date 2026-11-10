@@ -216,12 +216,14 @@ def reference_pool(total, lower, upper, points=11, max_pool=2048):
 
 
 def choose_points_from_throughput(native_scout_seconds, *,
-                                   remaining_calls, seconds_available=None):
-    """Provisional, explicitly opt-in budget heuristic; no guessed timings.
+                                   remaining_calls, seconds_available=None,
+                                   confirmation_to_scout_iterations=1.0):
+    """Opt-in resolution based on actual fresh-scout wall time and headroom.
 
-    Only actual NEW_NATIVE scout durations should enter the sample. With no
-    adequate sample the initial 11-point design remains unchanged. The tiers
-    are replaceable after measured multi-spec quality/runtime comparison.
+    Eleven is the initial *number of normalized per-stat reference points*,
+    not eleven Native candidates. A fast 200-call session may choose 22,
+    without exhausting all lattice candidates. Missing actual timings or a
+    wall-time budget never authorizes an artificial speed-up.
     """
     _need(type(remaining_calls) is int and remaining_calls >= 0,
           "PERCENT_GRID_REMAINING_CALLS")
@@ -229,24 +231,38 @@ def choose_points_from_throughput(native_scout_seconds, *,
           (type(seconds_available) in (int, float) and
            math.isfinite(seconds_available) and seconds_available > 0),
           "PERCENT_GRID_WALL_BUDGET")
+    _need(type(confirmation_to_scout_iterations) in (int, float) and
+          math.isfinite(confirmation_to_scout_iterations) and
+          confirmation_to_scout_iterations >= 1,
+          "PERCENT_GRID_ITERATION_RATIO")
     sample = [float(t) for t in native_scout_seconds
               if type(t) in (int, float) and math.isfinite(t) and t > 0]
     if len(sample) < 3 or seconds_available is None:
         return 11
-    # Robust to an occasional slow process startup; only *measured* new Native.
-    estimate = statistics.median(sample[-11:])
-    affordable = min(remaining_calls, int(seconds_available / estimate))
-    if affordable < 40:
-        return 5
-    if affordable < 90:
+    if remaining_calls < 24:
         return 7
-    if affordable < 160:
-        return 9
-    if affordable < 320:
+    # Median reduces single-call process startup spikes. Confirmation calls
+    # are typically much longer than scout; reserve an explicit 20% of the
+    # remaining call budget at the *requested* higher iteration count.
+    scout_time = statistics.median(sample[-11:])
+    forecast = (scout_time * remaining_calls *
+                (0.8 + 0.2 * confirmation_to_scout_iterations))
+    headroom = seconds_available / max(forecast, 1.e-9)
+    if headroom < 0.50:
+        return 5
+    if headroom < 0.85:
+        return 7
+    if headroom < 1.40:
         return 11
-    if affordable < 700:
+    if headroom < 2.25:
         return 15
-    return 21
+    if headroom < 4.00:
+        return 22
+    if remaining_calls >= 120 and headroom >= 7.00:
+        return 41
+    if remaining_calls >= 80:
+        return 31
+    return 22
 
 
 def next_plan(observations, *, total, lower, upper, native_calls_used,

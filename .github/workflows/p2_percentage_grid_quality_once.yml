@@ -1,4 +1,4 @@
-# One bounded OPTIONAL comparison: legacy, full grid, and 2/3/4 global mixes.
+# One bounded OPTIONAL comparison: legacy, grid, 2/3/4 mixes and multiregion 11/22.
 # This is SYNTHETIC offline geometry + grid-CPU microbenchmark, not SimC.
 # No secrets, native runtime, WoW source fetch, or persistent mandatory gate.
 name: P2 optional percentage grid synthetic equal-case audit

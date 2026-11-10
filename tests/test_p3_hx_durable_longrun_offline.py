@@ -152,6 +152,42 @@ class V291LongRun(unittest.TestCase):
                                  max_new_native_this_invocation=0)
                 self.assertEqual(again["new_native_this_invocation"],0)
 
+    def test_multiregion_opt_in_separate_seal_and_auto_22_ready(self):
+        # Synthetic Native fakes only; no real DPS claim.
+        with tempfile.TemporaryDirectory() as folder:
+            ctx,binary,out=self.fixture(folder,cap=12)
+            with mock.patch.object(runner.engine,"execute_one",
+                                   side_effect=fake_native), \
+                 mock.patch.object(runner.oil,"ingest_native",
+                                   side_effect=fake_ingest):
+                first=runner.run(
+                    ctx,F,binary,out,max_native_calls=12,
+                    percentage_grid_points=22,multiregion_percent_grid=True,
+                    max_new_native_this_invocation=4)
+                self.assertEqual(first["policy"],runner.multiregion_grid.SCHEMA)
+                self.assertEqual(first["completed_cases"],4)
+                seal=runner.read_json(out/"V291_SESSION.json")
+                self.assertIn("experimental_multiregion",seal)
+                self.assertEqual(seal["experimental_percent_grid"]["resolution"],22)
+                resumed=runner.run(
+                    ctx,F,binary,out,max_native_calls=12,
+                    percentage_grid_points=22,multiregion_percent_grid=True,
+                    max_new_native_this_invocation=0,cache_only=True)
+                self.assertEqual(resumed["completed_cases"],4)
+                self.assertEqual(resumed["new_native_this_invocation"],0)
+                with self.assertRaisesRegex(
+                        runner.LongRunBlocked,"SEALED_SESSION_IDENTITY_DRIFT"):
+                    runner.run(
+                        ctx,F,binary,out,max_native_calls=12,
+                        percentage_grid_points=22,multiregion_percent_grid=False,
+                        max_new_native_this_invocation=0)
+                with self.assertRaisesRegex(
+                        runner.LongRunBlocked,"MULTIREGION_REQUIRES_PERCENT_GRID_OPT_IN"):
+                    runner.run(
+                        ctx,F,binary,out,max_native_calls=12,
+                        percentage_grid_points=None,multiregion_percent_grid=True,
+                        max_new_native_this_invocation=0)
+
     def test_above_six_native_cases_with_typed_runtime_and_replay(self):
         with tempfile.TemporaryDirectory() as folder:
             ctx,binary,out=self.fixture(folder,cap=12)

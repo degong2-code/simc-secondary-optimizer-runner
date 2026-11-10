@@ -25,6 +25,7 @@ import v093_inclusive_adaptive_scheduler_bridge as adaptive
 import v094_durable_inclusive_adaptive_runner as bounded
 import v290_multiscale_adaptive_policy as search
 import v298_adaptive_percent_grid as percent_grid
+import v299_multiregion_percent_policy as multiregion_grid
 
 SCHEMA = "v291_durable_multiscale_native_runner_v1"
 
@@ -218,7 +219,7 @@ def run(context, flask_vector, binary, output, *,
         max_native_calls, max_new_native_this_invocation=None,
         cache_only=False, cancel_file=None, max_elapsed_seconds=None,
         recover_verified_partial=False, open_folder=False,
-        percentage_grid_points=None):
+        percentage_grid_points=None, multiregion_percent_grid=False):
     """Resume an exact source-bound session, or execute one Native per plan.
 
     A previously committed journal is always re-validated against ORIGINAL
@@ -241,6 +242,9 @@ def run(context, flask_vector, binary, output, *,
     # New, explicitly opt-in experimental candidate strategy. Default None
     # means the original v290 session seal and journal remain byte-compatible.
     percent_enabled = percentage_grid_points is not None
+    need(type(multiregion_percent_grid) is bool and
+         (not multiregion_percent_grid or percent_enabled),
+         "MULTIREGION_REQUIRES_PERCENT_GRID_OPT_IN")
     need(percentage_grid_points is None or
          percentage_grid_points == "auto" or
          (type(percentage_grid_points) is int and
@@ -288,6 +292,12 @@ def run(context, flask_vector, binary, output, *,
                 pathlib.Path(percent_grid.__file__).read_bytes()).hexdigest(),
             "resolution": percentage_grid_points,
         }
+        if multiregion_percent_grid:
+            seal["experimental_multiregion"] = {
+                "schema": multiregion_grid.SCHEMA,
+                "source_sha256": hashlib.sha256(
+                    pathlib.Path(multiregion_grid.__file__).read_bytes()).hexdigest(),
+            }
     if output.exists():
         need(not output.is_symlink(), "OUTPUT_SYMLINK_NOT_ALLOWED")
     output.mkdir(parents=True, exist_ok=True)
@@ -378,7 +388,9 @@ def run(context, flask_vector, binary, output, *,
                 status = "BUDGET_EXHAUSTED"
                 break
             if pending is None:
-                planner = percent_grid.next_plan if percent_enabled else search.next_plan
+                planner = (multiregion_grid.next_plan if multiregion_percent_grid
+                           else percent_grid.next_plan if percent_enabled
+                           else search.next_plan)
                 point_count = percentage_grid_points
                 if percentage_grid_points == "auto":
                     remaining_seconds = (
@@ -389,7 +401,9 @@ def run(context, flask_vector, binary, output, *,
                         remaining_calls=max(0, max_native_calls-attempts),
                         seconds_available=(max(0.001, remaining_seconds)
                                            if remaining_seconds is not None
-                                           else None))
+                                           else None),
+                        confirmation_to_scout_iterations=(
+                            confirm_iters/scout_iters))
                 proposed = planner(
                     [{"target": row["target"], "iterations": row["iterations"],
                       "dps_mean": row["dps_mean"], "dps_sem": row["dps_sem"]}
@@ -495,8 +509,9 @@ def run(context, flask_vector, binary, output, *,
         raise
     summary = _summary(observations, context)
     report = {"schema": SCHEMA, "status": status,
-              "policy": (percent_grid.SCHEMA if percent_enabled else
-                         "v290_multiscale_noisy_simplex_policy_v1"),
+              "policy": (multiregion_grid.SCHEMA if multiregion_percent_grid
+                         else percent_grid.SCHEMA if percent_enabled
+                         else "v290_multiscale_noisy_simplex_policy_v1"),
               "official_formula": "T=G+J+F+O",
               "base_B": B, "fixed_O": identity["oil_vector"],
               "final_T": identity["approved_final_T"],

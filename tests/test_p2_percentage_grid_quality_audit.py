@@ -14,6 +14,7 @@ ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"runner"))
 import v290_multiscale_adaptive_policy as baseline
 import v298_adaptive_percent_grid as grid
+import v299_multiregion_percent_policy as multiregion
 
 
 class GridPolicyAudit(unittest.TestCase):
@@ -42,6 +43,8 @@ class GridPolicyAudit(unittest.TestCase):
         best_vec=None
         requested_iterations=0
         global_calls=0
+        first_hit_by_peak=[None]*len(peaks)
+        best_at_5000=None
         start=time.monotonic()
         for used in range(budget):
             plan=candidate_policy(
@@ -63,6 +66,15 @@ class GridPolicyAudit(unittest.TestCase):
             if observed>best:
                 best,best_vec=observed,vec
             requested_iterations+=q["iterations"]
+            if requested_iterations<=5000:
+                best_at_5000=max(best if best_at_5000 is None else
+                                 best_at_5000,observed)
+            for pi,(peak,_,_) in enumerate(peaks):
+                if (first_hit_by_peak[pi] is None and
+                        baseline._distance(vec,peak)<=self.B*.05):
+                    first_hit_by_peak[pi]={
+                        "call":used+1,
+                        "cumulative_iterations":requested_iterations}
             rows.append({"target":q["target"],"iterations":q["iterations"],
                          "dps_mean":observed,
                          "dps_sem":500. if q["phase"]=="scout" else 150.})
@@ -72,6 +84,10 @@ class GridPolicyAudit(unittest.TestCase):
                                        for x in rows}),
                 "global_proposals":global_calls,
                 "best_synthetic_score":round(best,3),
+                "first_hit_per_peak_5pct_B":first_hit_by_peak,
+                "best_at_5000_iterations":(
+                    round(best_at_5000,3)
+                    if best_at_5000 is not None else None),
                 "distance_from_nearest_peak":min(
                     baseline._distance(best_vec,peak)
                     for peak,_,_ in peaks),
@@ -124,7 +140,11 @@ class GridPolicyAudit(unittest.TestCase):
                    "v298_opt_in":grid.next_plan,
                    "grid_every_2_global":self.blended(2),
                    "grid_every_3_global":self.blended(3),
-                   "grid_every_4_global":self.blended(4)}
+                   "grid_every_4_global":self.blended(4),
+                   "regional_grid_11":multiregion.next_plan,
+                   "regional_grid_22":lambda rows,**kw:
+                       multiregion.next_plan(
+                           rows,reference_points=22,**kw)}
             results={name:self.compare(peaks,strategy)
                      for name,strategy in modes.items()}
             self.assertTrue(all(v["native_requests"] == 112
