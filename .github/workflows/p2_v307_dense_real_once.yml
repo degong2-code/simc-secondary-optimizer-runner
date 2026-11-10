@@ -62,5 +62,6 @@ jobs:
           path: |
             out/p2_v307_dense_real_once/receipt.json
             out/p2_v307_dense_real_once/top_confirm_native_bytes.zip
+            out/p2_v307_dense_real_once/all_accepted_compact_cases.jsonl
           if-no-files-found: warn
           retention-days: 7
