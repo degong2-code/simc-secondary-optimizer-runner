@@ -42,7 +42,7 @@ class V314CrossSpecMatrixOffline(unittest.TestCase):
         self.assertEqual(specs,{
             ("hunter","marksmanship"),("hunter","beast_mastery"),
             ("mage","arcane"),("mage","frost"),("mage","fire"),
-            ("death_knight","frost"),("rogue","subtlety"),
+            ("deathknight","frost"),("rogue","subtlety"),
             ("rogue","assassination")})
         self.assertEqual(matrix.CASES[
             "frost_death_knight__wide"]["race"],"human")
