@@ -59,3 +59,8 @@
 - **시뮬레이션 비용 측정:** planner/pending, request/preflight, v065 engine.execute_one (subprocess 및 source/cache 포함), original JSON2 ingest, journal/checkpoint 구간을 독립 기록. 이 계측도 append/fsync 비용을 추가하므로 Native-only 처리시간으로 과장하지 않는다.
 - **단계적 아이디어 검증:** IDEA-001은 기존 v290 확인 정책을 대체하지 않고 정확한 시간·iterations 예산을 관측한 후에만 다음 35→120→320 승급 옵션 실험 가능. 현재 original runner는 `scout_iterations`/ `confirm_iterations` 두 exact case ID만 허용하므로 새로운 120 단계의 캐시 키/취소/재개 확장 시험이 사전 필수다.
 - **증거 범위:** 신규 실 Native 계측 실행 **미실시**. 오프라인 synthetic 계약 시험만 통과하는 것은 더 빠른 최적화 성능이나 95% 우위가 아니다. 기존 v313·v314의 1008 Native 동등 실험은 여전히 **서로 다른 iterations 예산**이다.
+
+## 2026-11-11 직접 정책 교정 — 최종 품질/효율, 10분 유연한 목표
+- **5/10분은 필수 관측 체크포인트이지 HARD STOP/탈락선이 아니다.** 600초 이후의 품질 개선은 폐기하지 않는다. 장시간 연구가 유효하면 900/1800초 또는 적응형 종료 시점의 확인 DPS/SEM을 추가 기록한다. 실제 사용자의 일반 목표 5~10분과 여러 시간의 연구 허용을 혼동하지 않는다.
+- **평가 순서:** (1) 정확한 입력/Native/캐시 봉인·중단 재개, (2) 동일 총 SimC iterations 비교, (3) 동일 실제 300/600초 및 추가 시점 비교, (4) 확인 DPS/SEM와 CPU·메모리·I/O까지 표시한 시간-품질 Pareto 분석, (5) 여러 전문화·총량/상한의 실패·부분 완료 포함 재현성. 단일 척도로 허위 승자 판정하지 않고 선택된 후보 95%의 다중비교 한계를 명시한다.
+- **IDEA-001 통합 가설:** 별도 IDEA ID 또는 실행기 없이 v316 per-case 측정으로 정밀 확인 기회를 보호하는 선택형 예약만 먼저 검증. 새 120 iteration 단계는 기존 v291 35/320 identity/seal/replay 계약 변경을 수반하므로 선행 검증 전 구현 금지.
