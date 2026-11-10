@@ -1,0 +1,87 @@
+# ONE real dual-policy research pilot. Same source context, fixed 1008 case cap
+# and <=540s Native/coordinator runtime PER policy, not combined. v290 stays
+# production default; v312 must be explicitly enabled. No history imports.
+name: P2 v312 vs v290 matched 1008 real Native under 9min cap
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p2_v312_equal_1008_real_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p2-v312-equal-native-1008-research-only
+  cancel-in-progress: false
+jobs:
+  same-user-real-simc-v312-v290:
+    if: contains(github.event.head_commit.message, '[p2-v312-equal-1008-native-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 32
+    env:
+      PYTHONPATH: runner:integration_probes:.
+      SIMC_PINNED_SOURCE_COMMIT: c20e2ad52e4c33711f74272309a5748125175fe8
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Same vetted SimC source binary as original full11
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42552942329
+          name: p3-har-verified-source-new-binary-short-lived
+          path: out/binary
+          github-token: ${{ github.token }}
+      - name: Preflight profile source, v312 offline policy test and SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(sha256sum out/binary/simc | cut -d' ' -f1)" = "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6"
+          chmod +x out/binary/simc
+          python -m pip install -r requirements-web-test.txt
+          python -m py_compile runner/v312_model_guided_multiregion_policy.py integration_probes/p2_v312_real_equal_1008_native_once.py integration_probes/p2_v312_equal_checkpoint_always.py
+          python -m unittest -v tests.test_v312_model_guided_multiregion_offline
+          echo V312_EQUAL_AB_ZERO_NATIVE_PRECHECK_PASS
+      - name: Bounded real new-user 1008 v312 and 1008 v290 each <=540s
+        timeout-minutes: 25
+        env:
+          P2_V312_EQUAL_NATIVE_ONCE: '1'
+          BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+          BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+          WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+          WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+        run: python -u integration_probes/p2_v312_real_equal_1008_native_once.py
+      - name: Export exact original accepted policy-wise JSON2 even if partial
+        if: always()
+        timeout-minutes: 8
+        run: python -u integration_probes/p2_v312_equal_checkpoint_always.py
+      - name: Preserve measured DPS, SEM, 95 and original Native SHA proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-v312-v290-real-1008-equal-original-compact-receipt
+          path: |
+            out/p2_v312_real_equal_1008_once/receipt.json
+            out/p2_v312_real_equal_1008_once/checkpoint_proof.json
+            out/p2_v312_real_equal_1008_once/product_workspace/*/generated/v291_longrun_1008/v312_real_ab_v312_model_guided/V291_JOURNAL.jsonl
+            out/p2_v312_real_equal_1008_once/product_workspace/*/generated/v291_longrun_1008/v312_real_ab_v290_original/V291_JOURNAL.jsonl
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Preserve new v312 real original input JSON2 native receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-v312-real-1008-original-native-checkpoint
+          path: out/p2_v312_real_equal_1008_once/v312_model_exact_original_native_checkpoint.zip
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Preserve v290 matched baseline original input JSON2 native receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-v290-equal-1008-original-native-checkpoint
+          path: out/p2_v312_real_equal_1008_once/v290_original_exact_original_native_checkpoint.zip
+          if-no-files-found: warn
+          retention-days: 7
