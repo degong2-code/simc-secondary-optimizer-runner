@@ -1,10 +1,10 @@
 # SIMC SECONDARY OPTIMIZER · 개발 지식 시작점
 
-> 2026-11-10 격리 브랜치 검색 진입점. 파일·Actions·Native 현재 여부는 매 작업 실제 HEAD와 비교. **본 문서는 새 제품 코드/Native PASS를 의미하지 않는다.**
+> 2026-11-11 최신 P2 인계 연결을 반영한 격리 브랜치 검색 진입점. 파일·Actions·Native 현재 여부는 매 작업 실제 HEAD와 비교. **본 문서는 새 제품 코드/Native PASS를 의미하지 않는다.**
 
 | 질문 | 문서 |
 |---|---|
-| 지금 무엇을 구현했고 남았나 | [제품 최신 A~G 정본](../PRODUCT_CANONICAL_STATUS_20261109_P3_HAI.md), [최신 P2 신규 Frost E2E·v305 인계](../CHAT_CONTINUITY_HANDOFF_20261110_P2_FRESH_FROST_V305_NEXT.md) (직전 [P3-HAX 역사 인계](../CHAT_CONTINUITY_HANDOFF_20261110_P3_HAX_ADAPTIVE_MULTI_REGION_NEXT.md)) |
+| 지금 무엇을 구현했고 남았나 | [제품 최신 A~G 정본](../PRODUCT_CANONICAL_STATUS_20261109_P3_HAI.md), [2026-11-11 최신 P2 v316·v314 실측 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P2_V316_V314_RESULTS.md) ([2026-11-10 P2 v305 역사 인계](../CHAT_CONTINUITY_HANDOFF_20261110_P2_FRESH_FROST_V305_NEXT.md)) |
 | 어떤 코드·테스트를 먼저 봐야 하나 | [INDEX](INDEX.md) → [FILE_MAP](FILE_MAP.md) |
 | 특정 파일이 어디 있나 | [전체 FILE_INVENTORY](FILE_INVENTORY.md) → [핵심 FILE_MAP](FILE_MAP.md) |
 | 실제 CI·Native PASS 범위 | [EVIDENCE_INDEX](EVIDENCE_INDEX.md) → GitHub 원본 영수증 |
@@ -12,7 +12,11 @@
 | 개발·인계 규칙 | [PROTOCOL](PROTOCOL.md) |
 | 과거 경과와 이전 인계 | [원래 INDEX 기록](HISTORICAL_INDEX_20261110_PRE_KNOWLEDGE_LAYER.md), [원래 PROTOCOL 기록](HISTORICAL_PROTOCOL_20261110_PRE_KNOWLEDGE_LAYER.md), [개발 노트](notes/), [누적 CURRENT](../CURRENT_PRODUCT_DEVELOPMENT_STATE.md) |
 
-## 현 시점의 중요한 판정
+## 2026-11-11 확인된 P2 실측 및 계측 경계
+
+- [단일 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P2_V316_V314_RESULTS.md)가 v313 8/8, **v314 15/16 완전 + 암살 도적 wide 540s 부분**, v315 10개 조건 비용, v316 opt-in 계측 635 PASS/2 SKIP·실 Native 계측0의 최신 기록이다. 아래 2026-11-10 ‘현 시점’ 항목은 **그 당시 역사 기록**이며 최신 실험 상태를 대신하지 않는다.
+
+## 2026-11-10 역사 시점의 중요한 판정
 
 - **P2 최신 v312 5~10분 적응형 알고리즘 실제 A/B:** [Actions #42838011084](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42838011084) 신규 동일 Destruction Warlock/ilvl334/수동T3400/일반보석4·O0/SimC SHA·프로필 동일, **각 1008 DPS Native**, 원본 캐시전용 재확인 Native0, v312 연구 모델 **285.557초/확인320 최고181384.94±SEM238.71** vs **기본 v290 270.490초/최고182000.24±SEM253.46**, 차이615.31 < 선택쌍 명목95 반폭682.40. v290는 **121개 정밀확인/69765 총 iterations**, v312 **16개/39840 총 iterations**: 같은 calls이지만 **확인 예산과 총 iterations가 다르므로 v312 탐색 자체 열등을 확정하지 않는다**. 신규 v312 기본 승격 금지, 제품 기본 v290/ main·불변 자료/Project UI 불변. [회귀 #42836800413](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42836800413) 620 PASS/2 SKIP, [원본 9906/48 holdout #42837263874](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42837263874) 신규 Native0·모델예측 RMSE228≠실제 탐색 우위. [정확 영수증·상한](EVIDENCE_INDEX.md), [상세 노트](notes/2026-11-10_p2-v312-surrogate-5to10min-adaptive.md).
 - **21단계 고밀도 잔여 전수는 최신 사용자 지시로 중단:** 과거 [11단계 전수 2784](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42814969237), [25% 4953](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42822653731), [50% 9906](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42826070351) 실측 완료. **21단계 19812 중 나머지 9906**은 실행하지 않는다. v312는 11/21 격자를 후보 목록으로만 재사용하고 SimC는 선택된 후보에만 실행한다.
