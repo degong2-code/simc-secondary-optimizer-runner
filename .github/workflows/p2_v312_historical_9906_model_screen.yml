@@ -1,5 +1,6 @@
 # Pure offline cross-source study, no Native/Blizzard/WCL credentials.
 # The 48 original independent 320-iteration results are held out.
+# Artifacts are extracted to directories by download-artifact@v4.
 name: P2 v312 9906 real historical scouts surrogate holdout offline
 on:
   push:
