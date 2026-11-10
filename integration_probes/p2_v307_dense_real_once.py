@@ -13,6 +13,7 @@ import json
 import os
 import pathlib
 import re
+import shutil
 import tempfile
 import time
 import zipfile
@@ -32,6 +33,7 @@ CASE = "destruction_warlock_4ordinary_T3400"
 OUTPUT = pathlib.Path("out/p2_v307_dense_real_once").resolve()
 RECEIPT = OUTPUT / "receipt.json"
 PROOF_ZIP = OUTPUT / "top_confirm_native_bytes.zip"
+COMPACT_JOURNAL = OUTPUT / "all_accepted_compact_cases.jsonl"
 MAX_DPS_NATIVE = 520
 MAX_SECS = 720
 
@@ -235,6 +237,14 @@ def main():
                     rows=durable._load_journal(output/"V291_JOURNAL.jsonl")
                     need(len(rows)==MAX_DPS_NATIVE,
                          "P2_V307_NATIVE_JOURNAL_COUNT_DRIFT")
+                    # Preserve ALL compact observations for later spatial
+                    # coverage/anytime analysis without uploading 520 large
+                    # raw JSON2 files. Compact rows are evidence, not a
+                    # substitute for v291 exact-original cross-session cache.
+                    shutil.copyfile(output/"V291_JOURNAL.jsonl",COMPACT_JOURNAL)
+                    result["all_compact_cases_sha256"]=digest(
+                        COMPACT_JOURNAL.read_bytes())
+                    result["all_compact_cases_count"]=len(rows)
                     require={
                         "scout":ident["scout_iterations"],
                         "precision":ident["confirm_iterations"]}
