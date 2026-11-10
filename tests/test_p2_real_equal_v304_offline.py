@@ -82,8 +82,15 @@ class EqualBudgetPilotOffline(unittest.TestCase):
             vec=tuple(pilot.v290.legacy.key(r["target"]))
             history.append(pilot.to_v304_row(
                 self.fake(vec, mean=190100+step*6),r))
-        self.assertEqual(stages.count("global_reserve"),8)
-        self.assertEqual(stages.count("regional"),24)
+        # v304 reserves ceil(15%) for SMALL sessions (5 of 32);
+        # its 160-post main study reserves 24. Do not hardcode 8 here.
+        regional_options=pilot.v304.options(
+            pilot.GLOBAL+pilot.POST+pilot.CONFIRM,
+            pilot.GLOBAL,pilot.CONFIRM)
+        self.assertEqual(stages.count("global_reserve"),
+                         regional_options["global_reserve_calls"])
+        self.assertEqual(stages.count("regional"),
+                         regional_options["regional_calls"])
         for step in range(pilot.CONFIRM):
             p=pilot.v304.next_plan(
                 history, total=pilot.B, lower=pilot.LOWER, upper=pilot.UPPER,
