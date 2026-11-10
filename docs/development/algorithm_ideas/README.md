@@ -17,6 +17,7 @@
 | IDEA-005 | 조건부 짝시드 실측 분산 감소 (Paired Seed CRN) | [상세](IDEA-005-conditional-paired-rng-variance-reduction.md) | `IDEA_ONLY · HOLD_FOR_FEASIBILITY` | 재측정 후보 쌍 DPS 차이의 **실제 양의 공분산** 검증 |
 | IDEA-006 | 국소 민감도 비등방성 탐색 (Active Subspace) | [상세](IDEA-006-anisotropic-active-subspace-search.md) | `OFFLINE_SCREENED · LOCAL_QUADRATIC_HOLD` (Native 0) | 기존 9,906 scout/48 precision: 국소 모델 정확도 미개선·방향 안정성 제한; 실제 방향 탐색 우위 미검증 |
 | IDEA-007 | 다중 정책 온라인 포트폴리오 (Policy Bandit) | [상세](IDEA-007-online-policy-portfolio-bandit.md) | `IDEA_ONLY · INTEGRATE_LATER` | 탐색 생성기별 예산 배분과 최악 성능 완화 |
+| IDEA-008 | 최종 후보 독립 홀드아웃 확인 (Post-Selection Holdout) | [상세](IDEA-008-postselection-independent-holdout-confirmation.md) | `IDEA_ONLY · INTEGRATE_FINAL_DECISION_ONLY` | 선정 표본과 검증 표본 분리, 명목95와 가족단위95 구분, 추가 비용 대비 신뢰도 |
 
 ## 중복성·통합 효율 사전 심사 (2026-11-11)
 
@@ -60,6 +61,15 @@
 ## IDEA-006 음성 오프라인 스크린 결과 (2026-11-11)
 
 [원본 9,906 scout35/48 precision320 검증 #42856597090](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42856597090) SUCCESS, 신규 Native 0. 국소 2차 회귀의 정밀 48건 예측 RMSE는 학습 128/400/1200에서 각각 **303.929/286.451/279.108 DPS**, 같은 표본의 기존 v312 전역 3차는 **227.863/282.815/248.605**. 8개 영역의 가장 평탄한 Hessian 방향을 절반 표본으로 구했을 때 **4/8이 abs cosine 0.8 미만**. 사후 반경 선택은 독립 검증이 아니며, **국소 모델 정확도 실패를 실제 비등방성 좌표 탐색의 실패라고 과장하지 않음**. [상세 기록](../notes/2026-11-11_p2-idea006-real9906-localfit-holdout-negative.md).
+
+
+## 2026-11-11 v317 개발 채팅의 단일 신규 아이디어 — IDEA-008
+
+**근거:** [v313](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42843524976)/[v314](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42846073820) 23개 완전 Native 비교 중 명목 선택쌍 95 우위 확정 0. v291의 선정된 후보를 같은 표본으로 판정한 경우 선택편향과 다중비교가 미교정이다.
+
+**중복 반론 검토:** IDEA-001은 재측정 예산, IDEA-005는 seed pairing 분산 감소, 기존 benchmark 홀드아웃은 새 프로필 간 일반화. 이 세 기능으로 **같은 세션에서 최종 선택한 CHMV를 미사용 Native 표본으로 검증**하는 단계가 제공되지는 않는다. 따라서 이 문제를 독립 통계적 결정 단계로 한정해 **신규 IDEA-008 한 건**에 등록한다. 새 탐색 엔진을 만들지 않는다.
+
+**통합/반증:** v291의 단일 예약기·원본 Native 캐시/봉인을 확장할 때만 가능. 먼저 v317 단일 사용자 프로필 실제 계측 → 오프라인 독립 표본 재사용 금지 계약 → 소수 후보만 별도 seed로 최소 Native 확인 → 같은 iterations·실제 wall·장시간 품질-비용 Pareto. 추가 비용 대비 독립 승자/근접대안 신뢰성 개선이 미증명되면 HOLD. [상세](IDEA-008-postselection-independent-holdout-confirmation.md).
 
 ## 기존 실험 기준군 (새 아이디어가 아님)
 
