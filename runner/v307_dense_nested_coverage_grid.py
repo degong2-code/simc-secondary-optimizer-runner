@@ -328,6 +328,80 @@ def next_plan(observations, *, total, lower, upper, max_native_calls,
         "global_optimum_proven":False}
 
 
+
+def audit_recorded_history(observations, *, total, lower, upper,
+                           max_level=DEFAULT_MAX_LEVEL):
+    """Audit committed *metadata* independently of original Native bytes.
+
+    v291 authenticates the original SimC input/JSON2/receipt for each case.
+    This pass additionally rejects missing/skipped global lattice cells,
+    fabricated survey cursors, local anchors not previously measured and
+    repeated confirmation vectors. One linear pass over sealed journal and
+    cached finite level-order tuples; no SimC and no per-row full policy replay.
+    """
+    lower, upper = _params(total, lower, upper, max_level)
+    need(type(observations) is list, "V307_HISTORY_AUDIT_LIST_REQUIRED")
+    seen, confirmed = set(), set()
+    last_cursor = {}
+    precisions_started = False
+    scans, locals_ = 0, 0
+    for r in observations:
+        v = _vector(r)
+        need(base.legacy.eligible(v,total,lower,upper),
+             "V307_RECORDED_RATING_OUTSIDE_BOUNDS")
+        stage = r.get("grid_stage")
+        need(stage in (SURVEY,LOCAL,CONFIRM) and
+             all(k in r for k in METADATA),
+             "V307_RECORDED_STAGE_FIELDS_REQUIRED")
+        if stage == CONFIRM:
+            precisions_started = True
+            need(r.get("phase") == "precision" and
+                 v in seen and v not in confirmed and
+                 all(r[k] is None for k in
+                     ("grid_level","grid_cursor","grid_origin")),
+                 "V307_RECORDED_CONFIRM_TARGET_DRIFT")
+            confirmed.add(v)
+            continue
+        need(not precisions_started and r.get("phase") == "scout" and
+             v not in seen, "V307_RECORDED_SCOUT_SEQUENCE_DRIFT")
+        if stage == SURVEY:
+            expected = None
+            for level in LEVELS:
+                if level > max_level:
+                    break
+                order=ordered_new_level(total,lower,upper,level)
+                cursor=last_cursor.get(level,-1)+1
+                while cursor < len(order) and order[cursor] in seen:
+                    cursor+=1
+                if cursor < len(order):
+                    expected=(order[cursor],level,cursor)
+                    break
+            need(expected is not None and
+                 (v,r["grid_level"],r["grid_cursor"])==expected and
+                 r["grid_origin"] is None,
+                 "V307_RECORDED_SURVEY_SEQUENCE_DRIFT")
+            last_cursor[r["grid_level"]]=r["grid_cursor"]
+            scans+=1
+        else:
+            anchor=r["grid_origin"]
+            need(type(anchor) in (list,tuple) and len(anchor)==4 and
+                 all(type(x) is int for x in anchor),
+                 "V307_RECORDED_LOCAL_ANCHOR_TYPE")
+            center=tuple(anchor)
+            need(center in seen and r["grid_level"]==6 and
+                 r["grid_cursor"] is None and
+                 v in geometry.residual_lattice(
+                     total,lower,upper,6,center=center,
+                     radius=max(1,round(total*.05))),
+                 "V307_RECORDED_LOCAL_GEOMETRY_OR_PROOF_DRIFT")
+            locals_+=1
+        seen.add(v)
+    return {"verified_metadata_rows":len(observations),
+            "surveys":scans,"locals":locals_,
+            "confirmations":len(confirmed),
+            "unique_scouts":len(seen),
+            "source_native_bytes_reauthenticated_here":False}
+
 def coverage(observations, *, total, lower, upper, max_level=DEFAULT_MAX_LEVEL):
     """Truthful geometric coverage. Only observed, unique scout vectors count."""
     lower, upper = _params(total,lower,upper,max_level)
