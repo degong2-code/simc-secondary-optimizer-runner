@@ -34,6 +34,7 @@ import v304_v303_durable_adapter as durable_regions
 import v305_grid_pairwise_adaptive_hybrid as hybrid_regions
 import v306_seed_retained_coarse_escape_regions as seed_escape_regions
 import v307_dense_nested_coverage_grid as dense_grid
+import v309_prior_anchored_level21_progressive as progressive21
 
 SCHEMA = "v291_durable_multiscale_native_runner_v1"
 
@@ -141,6 +142,10 @@ def _compact(req, native, source, plan):
         need(all(k in plan for k in dense_grid.METADATA),
              "V307_PENDING_GRID_METADATA_MISSING")
         row.update({k: plan[k] for k in dense_grid.METADATA})
+    if "new_level_stage" in plan:
+        need(all(k in plan for k in progressive21.METADATA),
+             "V309_PENDING_PROGRESSIVE_METADATA_MISSING")
+        row.update({k: plan[k] for k in progressive21.METADATA})
     return row
 
 
@@ -248,6 +253,9 @@ def run(context, flask_vector, binary, output, *,
         seed_retained_coarse_escape_regions=False,
         dense_nested_grid_max_level=None,
         dense_nested_grid_full_scan=False,
+        v309_prior_compact_artifact_zip=None,
+        v309_prior_raw_checkpoint_zip=None,
+        v309_prior_raw_checkpoint_sha256=None,
         adaptive_initial_global_calls=160, adaptive_confirmation_calls=8):
     """Resume an exact source-bound session, or execute one Native per plan.
 
@@ -282,6 +290,15 @@ def run(context, flask_vector, binary, output, *,
     region_enabled = (adaptive_region_resources or hybrid_region_grid_neighbors
                       or seed_retained_coarse_escape_regions)
     grid_enabled = dense_nested_grid_max_level is not None
+    p309_fields=(v309_prior_compact_artifact_zip,
+                 v309_prior_raw_checkpoint_zip,
+                 v309_prior_raw_checkpoint_sha256)
+    progressive_enabled=any(x is not None for x in p309_fields)
+    need(not progressive_enabled or
+         (all(type(x) is str and bool(x) for x in p309_fields)
+          and not (region_enabled or grid_enabled or percent_enabled or
+                   multiregion_percent_grid or nested_percent_grid)),
+         "V309_EXCLUSIVE_VERIFIED_PRIOR_PROOF_REQUIRED")
     need(type(dense_nested_grid_full_scan) is bool and
          (grid_enabled or not dense_nested_grid_full_scan),
          "V307_FULL_SCAN_REQUIRES_EXPLICIT_GRID_OPT_IN")
@@ -293,7 +310,7 @@ def run(context, flask_vector, binary, output, *,
          adaptive_initial_global_calls == 160 and
          adaptive_confirmation_calls == 8),
          "V307_EXCLUSIVE_DENSE_GRID_OPT_IN")
-    special_enabled = region_enabled or grid_enabled
+    special_enabled = region_enabled or grid_enabled or progressive_enabled
     need(not (region_enabled and
               (percent_enabled or multiregion_percent_grid or nested_percent_grid)),
          "V304_EXCLUSIVE_ADAPTIVE_REGION_OPT_IN")
@@ -304,7 +321,8 @@ def run(context, flask_vector, binary, output, *,
     region_planner = (seed_escape_regions if seed_retained_coarse_escape_regions
                       else hybrid_regions if hybrid_region_grid_neighbors
                       else durable_regions)
-    metadata_keys = (dense_grid.METADATA if grid_enabled else
+    metadata_keys = (progressive21.METADATA if progressive_enabled else
+                     dense_grid.METADATA if grid_enabled else
                      V304_METADATA + (("hybrid_method",)
                                       if (hybrid_region_grid_neighbors or
                                           seed_retained_coarse_escape_regions)
@@ -348,6 +366,21 @@ def run(context, flask_vector, binary, output, *,
     B, lower, upper = constraints.bounds(
         normalized, adaptive.feasible_budget(context, flask_vector))
     need(B == identity["base_B"], "APPROVED_B_CHANGED")
+    prior_v309=None
+    if progressive_enabled:
+        prior_v309=progressive21.load_original_prior(*p309_fields)
+        need(prior_v309["source_profile_sha256"]==
+                 identity["source_profile_sha256"] and
+             prior_v309["binary_sha256"]==identity["binary_sha256"] and
+             prior_v309["revision"]==identity["revision"] and
+             prior_v309["B"]==B and
+             tuple(prior_v309["lower"])==tuple(lower) and
+             tuple(prior_v309["upper"])==tuple(upper) and
+             prior_v309["scout_iterations"]==identity["scout_iterations"] and
+             prior_v309["confirm_iterations"]==identity["confirm_iterations"] and
+             max_native_calls==progressive21.geometry(
+                 B,tuple(lower),tuple(upper))["total_calls"],
+             "V309_ORIGINAL_SOURCE_PROFILE_BINARY_BOUNDS_OR_CAP_DRIFT")
     # Existing runtime provides only two exact iteration identities for now.
     scout_iters = identity["scout_iterations"]
     confirm_iters = identity["confirm_iterations"]
@@ -402,8 +435,21 @@ def run(context, flask_vector, binary, output, *,
                        if level <= dense_nested_grid_max_level],
             "budget": dense_grid.budget(max_native_calls),
         }
+    if progressive_enabled:
+        seal["experimental_prior_anchored_21"] = {
+            "schema":progressive21.SCHEMA,
+            "source_sha256":hashlib.sha256(pathlib.Path(
+                progressive21.__file__).read_bytes()).hexdigest(),
+            "v307_geometry_sha256":hashlib.sha256(pathlib.Path(
+                dense_grid.__file__).read_bytes()).hexdigest(),
+            "v308_raw_proof_sha256":hashlib.sha256(pathlib.Path(
+                progressive21.raw_checkpoint.__file__).read_bytes()).hexdigest(),
+            "origin":json.loads(json.dumps(prior_v309,sort_keys=True,
+                                          allow_nan=False)),
+            "coverage":progressive21.geometry(
+                B,tuple(lower),tuple(upper))["milestone_targets"],
+        }
     if percent_enabled:
-        seal["experimental_percent_grid"] = {
             "schema": percent_grid.SCHEMA,
             "source_sha256": hashlib.sha256(
                 pathlib.Path(percent_grid.__file__).read_bytes()).hexdigest(),
@@ -458,13 +504,21 @@ def run(context, flask_vector, binary, output, *,
             plan.update({k: row[k] for k in metadata_keys})
         elif grid_enabled:
             need(all(k in row for k in metadata_keys) and
-                 not any(k in row for k in (*V304_METADATA,"hybrid_method")),
+                 not any(k in row for k in (*V304_METADATA,"hybrid_method",
+                                           *progressive21.METADATA)),
                  "V307_JOURNAL_GRID_METADATA_MISSING")
+            plan.update({k: row[k] for k in metadata_keys})
+        elif progressive_enabled:
+            need(all(k in row for k in metadata_keys) and
+                 not any(k in row for k in (*V304_METADATA,"hybrid_method",
+                                           *dense_grid.METADATA)),
+                 "V309_JOURNAL_PROGRESSIVE_METADATA_MISSING")
             plan.update({k: row[k] for k in metadata_keys})
         else:
             need(not any(k in row for k in
                          (*V304_METADATA, "hybrid_method",
-                          *dense_grid.METADATA)),
+                          *dense_grid.METADATA,
+                          *progressive21.METADATA)),
                  "V307_UNSEALED_METADATA_IN_LEGACY_JOURNAL")
         req, folder = _request(context, flask_vector, output, plan)
         actual, _ = _verified_row(req, binary, folder, calibration, allow_cache=True)
@@ -480,6 +534,12 @@ def run(context, flask_vector, binary, output, *,
         else:
             need(expected == row, "RECORDED_NATIVE_CASE_BYTES_OR_SUMMARY_DRIFT")
             observations.append(row)
+    if progressive_enabled:
+        progressive21.audit_committed_history(
+            observations,total=B,lower=lower,upper=upper,
+            max_native_calls=max_native_calls,
+            scout_iterations=scout_iters,
+            confirmation_iterations=confirm_iters)
     if grid_enabled:
         # Exact per-case Native input/JSON2/receipt is already authenticated
         # above; also reject a forged historical grid cursor or anchor that
@@ -505,7 +565,12 @@ def run(context, flask_vector, binary, output, *,
     if special_enabled and pending is not None:
         # A persisted pending request is a source of truth ONLY after its
         # exact deterministic plan is reconstructed from verified journal.
-        if grid_enabled:
+        if progressive_enabled:
+            proposed_pending=progressive21.next_plan(
+                observations,total=B,lower=lower,upper=upper,
+                max_native_calls=max_native_calls,scout_iterations=scout_iters,
+                confirmation_iterations=confirm_iters)
+        elif grid_enabled:
             proposed_pending = dense_grid.next_plan(
                 observations, total=B, lower=lower, upper=upper,
                 max_native_calls=max_native_calls, scout_iterations=scout_iters,
@@ -569,7 +634,13 @@ def run(context, flask_vector, binary, output, *,
                 status = "BUDGET_EXHAUSTED"
                 break
             if pending is None:
-                if grid_enabled:
+                if progressive_enabled:
+                    proposed=progressive21.next_plan(
+                        observations,total=B,lower=lower,upper=upper,
+                        max_native_calls=max_native_calls,
+                        scout_iterations=scout_iters,
+                        confirmation_iterations=confirm_iters)
+                elif grid_enabled:
                     proposed = dense_grid.next_plan(
                         observations, total=B, lower=lower, upper=upper,
                         max_native_calls=max_native_calls,
@@ -721,7 +792,8 @@ def run(context, flask_vector, binary, output, *,
         raise
     summary = _summary(observations, context)
     report = {"schema": SCHEMA, "status": status,
-              "policy": (dense_grid.SCHEMA if grid_enabled
+              "policy": (progressive21.SCHEMA if progressive_enabled
+                         else dense_grid.SCHEMA if grid_enabled
                          else seed_escape_regions.SCHEMA if seed_retained_coarse_escape_regions
                          else hybrid_regions.SCHEMA if hybrid_region_grid_neighbors
                          else durable_regions.SCHEMA if adaptive_region_resources
@@ -742,6 +814,11 @@ def run(context, flask_vector, binary, output, *,
               "confidence_for_display": 0.95,
               "no_global_optimum_proof": True,
               "native_cases_not_to_be_confused_with_iterations": True}
+    if progressive_enabled:
+        report["progressive_level21_coverage"]=progressive21.coverage(
+            observations,total=B,lower=lower,upper=upper,
+            prior_count=prior_v309["prior_level11_count"])
+        report["origin11_artifact_sha256"]=prior_v309["raw_archive_sha256"]
     if grid_enabled:
         report["dense_grid_coverage"] = dense_grid.coverage(
             observations, total=B, lower=lower, upper=upper,
