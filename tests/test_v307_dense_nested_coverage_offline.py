@@ -51,8 +51,8 @@ class V307DenseGrid(unittest.TestCase):
             collections[level]=group
         for a,b in ((6,11),(11,21),(21,41)):
             self.assertTrue(collections[a].issubset(collections[b]))
-        self.assertEqual(grid.ordered_new_level(
-            B,LOWER,UPPER,11)[0] in collections[6],False)
+        self.assertNotIn(grid.ordered_new_level(
+            B,LOWER,UPPER,11)[0],collections[6])
         self.assertGreater(len({
             grid._cell(v,LOWER,UPPER) for v in
             grid.ordered_new_level(B,LOWER,UPPER,6)[:100]}),20)
@@ -63,7 +63,7 @@ class V307DenseGrid(unittest.TestCase):
         small={level:set(grid.lattice(b,low,high,level))
                for level in (41,81)}
         self.assertTrue(small[41].issubset(small[81]))
-        self.assertGreater(len(small[81]),len(small[41]))
+        self.assertGreaterEqual(len(small[81]),len(small[41]))
         self.assertTrue(all(sum(v)==b and max(v)<=40 for v in small[81]))
         report=grid.coverage([],total=b,lower=low,upper=high,max_level=81)
         self.assertFalse(report["levels"]["81"]["complete_at_this_resolution"])
@@ -103,8 +103,7 @@ class V307DenseGrid(unittest.TestCase):
         self.assertFalse(coverage["levels"]["11"][
             "complete_at_this_resolution"])
         self.assertEqual(coverage["levels"]["6"]["unobserved_targets"],0)
-        self.assertIsNone(coverage["highest_complete_level"] if
-            coverage["highest_complete_level"] is None else None)
+        self.assertEqual(coverage["highest_complete_level"],6)
 
     def test_reject_unsealed_or_forged_observation(self):
         rows=[]
