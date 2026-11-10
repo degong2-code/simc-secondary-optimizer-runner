@@ -1,0 +1,65 @@
+# Only verified existing compact Native receipts, no SimC binary/credentials.
+# Same Native count does not identify per-startup or per-iteration cost.
+name: P2 v315 real Native receipt iterations vs wall audit OFFLINE
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p2_v315_iteration_wall_real_receipts_offline_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p2-v315-real-receipt-cost-audit
+  cancel-in-progress: false
+jobs:
+  source-bound-budget-report:
+    if: contains(github.event.head_commit.message, '[p2-v315-iteration-wall-offline-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: runner:integration_probes:.
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Download eight verified new-profile v313 compact receipts (zero Native)
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42843524976
+          pattern: v313-multispec-*-compact
+          path: out/v315_measured/v313
+          github-token: ${{ github.token }}
+          merge-multiple: false
+      - name: Download completed current new-profile v314 compact receipts (zero Native)
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42846073820
+          pattern: v314-multispec-*-compact
+          path: out/v315_measured/v314
+          github-token: ${{ github.token }}
+          merge-multiple: false
+      - name: Unit validation without Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile integration_probes/p2_v315_iteration_wall_real_receipt_analysis_offline.py tests/test_p2_v315_iterations_wall_audit_offline.py
+          python -m unittest -v tests.test_p2_v315_iterations_wall_audit_offline
+      - name: Measured original cost ratios, never imply equal iterations
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -u integration_probes/p2_v315_iteration_wall_real_receipt_analysis_offline.py \
+            --root out/v315_measured \
+            --min-v313 8 \
+            --min-v314 2 \
+            --output out/p2_v315_cost_receipts/receipt.json
+          echo P2_V315_ORIGINAL_NATIVE_COST_EVIDENCE_ONLY_NO_NEW_NATIVE
+      - name: Publish individual source-bound cases and non-identifiability caveats
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-v315-iteration-versus-wall-original-source-cost-audit
+          path: out/p2_v315_cost_receipts/receipt.json
+          retention-days: 7
+          if-no-files-found: warn
