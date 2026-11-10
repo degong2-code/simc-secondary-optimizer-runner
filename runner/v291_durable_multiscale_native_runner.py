@@ -32,6 +32,7 @@ import v302_weak_multiregion_zoom as region_geometry
 import v303_adaptive_region_resource_policy as region_resources
 import v304_v303_durable_adapter as durable_regions
 import v305_grid_pairwise_adaptive_hybrid as hybrid_regions
+import v306_seed_retained_coarse_escape_regions as seed_escape_regions
 
 SCHEMA = "v291_durable_multiscale_native_runner_v1"
 
@@ -239,6 +240,7 @@ def run(context, flask_vector, binary, output, *,
         percentage_grid_points=None, multiregion_percent_grid=False,
         nested_percent_grid=False, adaptive_region_resources=False,
         hybrid_region_grid_neighbors=False,
+        seed_retained_coarse_escape_regions=False,
         adaptive_initial_global_calls=160, adaptive_confirmation_calls=8):
     """Resume an exact source-bound session, or execute one Native per plan.
 
@@ -266,7 +268,12 @@ def run(context, flask_vector, binary, output, *,
          type(adaptive_region_resources) is bool and
          not (adaptive_region_resources and hybrid_region_grid_neighbors),
          "V305_SEPARATE_EXPERIMENTAL_POLICY_OPT_INS")
-    region_enabled = adaptive_region_resources or hybrid_region_grid_neighbors
+    need(type(seed_retained_coarse_escape_regions) is bool and
+         not (seed_retained_coarse_escape_regions and
+              (adaptive_region_resources or hybrid_region_grid_neighbors)),
+         "V306_EXCLUSIVE_EXPERIMENTAL_POLICY_OPT_INS")
+    region_enabled = (adaptive_region_resources or hybrid_region_grid_neighbors
+                      or seed_retained_coarse_escape_regions)
     need(not (region_enabled and
               (percent_enabled or multiregion_percent_grid or nested_percent_grid)),
          "V304_EXCLUSIVE_ADAPTIVE_REGION_OPT_IN")
@@ -274,10 +281,13 @@ def run(context, flask_vector, binary, output, *,
          (adaptive_initial_global_calls == 160 and
           adaptive_confirmation_calls == 8),
          "V304_OPTIONS_REQUIRE_EXPLICIT_OPT_IN")
-    region_planner = (hybrid_regions if hybrid_region_grid_neighbors
+    region_planner = (seed_escape_regions if seed_retained_coarse_escape_regions
+                      else hybrid_regions if hybrid_region_grid_neighbors
                       else durable_regions)
     metadata_keys = V304_METADATA + (("hybrid_method",)
-                                      if hybrid_region_grid_neighbors else ())
+                                      if (hybrid_region_grid_neighbors or
+                                          seed_retained_coarse_escape_regions)
+                                      else ())
     if region_enabled:
         region_opts = durable_regions.options(
             max_native_calls, adaptive_initial_global_calls,
@@ -349,6 +359,14 @@ def run(context, flask_vector, binary, output, *,
                 "source_sha256": hashlib.sha256(
                     pathlib.Path(hybrid_regions.__file__).read_bytes()).hexdigest(),
             }
+        if seed_retained_coarse_escape_regions:
+            seal["experimental_adaptive_regions"]["seed_retained_v306"] = {
+                "schema": seed_escape_regions.SCHEMA,
+                "source_sha256": hashlib.sha256(
+                    pathlib.Path(seed_escape_regions.__file__).read_bytes()).hexdigest(),
+                "v305_dependency_sha256": hashlib.sha256(
+                    pathlib.Path(hybrid_regions.__file__).read_bytes()).hexdigest(),
+            }
     if percent_enabled:
         seal["experimental_percent_grid"] = {
             "schema": percent_grid.SCHEMA,
@@ -397,7 +415,9 @@ def run(context, flask_vector, binary, output, *,
                                     "target", "iterations")}
         if region_enabled:
             need(all(k in row for k in metadata_keys) and
-                 (hybrid_region_grid_neighbors or "hybrid_method" not in row),
+                 (hybrid_region_grid_neighbors or
+                  seed_retained_coarse_escape_regions or
+                  "hybrid_method" not in row),
                  "V305_JOURNAL_REGION_METADATA_MISSING")
             plan.update({k: row[k] for k in metadata_keys})
         else:
@@ -636,7 +656,8 @@ def run(context, flask_vector, binary, output, *,
         raise
     summary = _summary(observations, context)
     report = {"schema": SCHEMA, "status": status,
-              "policy": (hybrid_regions.SCHEMA if hybrid_region_grid_neighbors
+              "policy": (seed_escape_regions.SCHEMA if seed_retained_coarse_escape_regions
+                         else hybrid_regions.SCHEMA if hybrid_region_grid_neighbors
                          else durable_regions.SCHEMA if adaptive_region_resources
                          else nested_regions.SCHEMA if nested_percent_grid
                          else multiregion_grid.SCHEMA if multiregion_percent_grid
@@ -763,6 +784,8 @@ def main(argv=None):
                    help="EXPERIMENTAL, opt-in v303 region resource policy")
     p.add_argument("--hybrid-region-grid-neighbors", action="store_true",
                    help="EXPERIMENTAL, opt-in v305 grid + v290 regional moves")
+    p.add_argument("--seed-retained-coarse-escape-regions", action="store_true",
+                   help="EXPERIMENTAL, opt-in v306 seed retention and 12/24 pct B escapes")
     p.add_argument("--adaptive-global-calls", type=int, default=160)
     p.add_argument("--adaptive-confirm-calls", type=int, default=8)
     p.add_argument("--portable-archive",
@@ -803,6 +826,7 @@ def main(argv=None):
                 recover_verified_partial=args.recover_verified_partial,
                 adaptive_region_resources=args.adaptive_region_resources,
                 hybrid_region_grid_neighbors=args.hybrid_region_grid_neighbors,
+                seed_retained_coarse_escape_regions=args.seed_retained_coarse_escape_regions,
                 adaptive_initial_global_calls=args.adaptive_global_calls,
                 adaptive_confirmation_calls=args.adaptive_confirm_calls,
                 open_folder=True)
