@@ -30,3 +30,13 @@
 - **단점/중복·통합:** 원래 v290 `_precision_action`과 IDEA-001 승급은 중복성이 있다. 35/120/320을 한 번에 적용하면 현재 v291의 **정확한 scout/confirm 두 iteration identity** 및 cache/replay seal이 깨지므로 독립 엔진을 도입하기보다 기존 정밀도 계획자에 선택형 승급을 신중하게 설계해야 한다. 처리속도 추정이 틀리면 남은 10분 내 정밀 확인이 실패할 수 있다.
 - **연구 결론:** `IDEA_ONLY / OFFLINE_COST_AUDIT_VERIFIED`. iteration-vs-wall 측정 방법만 오프라인 구현·실증됐으며 **IDEA-001의 최적화 개선 여부는 미측정**. [연구 상세](../notes/2026-11-11_p2-v315-original-iteration-wall-evidence.md).
 - **반증 조건:** 충분한 요청별 duration/phase 로그가 확보된 뒤 동일 iterations 및 동일 5/10분에서 v290 대비 320+ 확인 DPS·SEM·유효 확인 후보 수·총 CPU/IO 비용이 개선되지 않으면 단계적 승급은 채택하지 않는다.
+
+## v316 실행시간 계측 선행조건 구현 — 2026-11-11
+
+- [v316 측정 모듈](../../../runner/v316_optin_case_time_trace.py)과 [실행기 연결](../../../runner/v291_durable_multiscale_native_runner.py)에 **기존 Native/후보 정책 변경 없는 실측 옵션 `case_timing_trace=True`**를 구현했다. 상세 [개발 노트](../notes/2026-11-11_p2-v316-optin-per-case-wall-trace-and-confirmed-checkpoints.md).
+- **원인·작동 이유:** v315 10개 실측에서 v312 반복량이 43.1% 적어도 wall은 중앙값 약 1.3%만 짧았으므로, 후보별 실제 wall-clock과 320+ 정밀 확인 완료 시점을 모르면 5/10분 효율 비교가 불가능하다. 기존 v298의 scout-only 최근 11개 타이밍 기록은 5/10분 전체 확인 경로와 다르다.
+- **추가 기능:** 원본 SHA·phase·iterations에 결속된 opt-in sidecar, planner/preflight/engine/ingest/checkpoint 5구간 시간; 단일 프로세스의 중단 없는 타이밍만 300/600초까지 완료된 정밀 결과로 집계. 재개/누락 시간/캐시를 측정 결과로 보정하지 않고 명시적으로 판정 불가 처리한다.
+- **장점:** 새 SimC 없이 오프라인에서 정합성 검증 가능, v290/v312 본래 탐색기·캐시·저널·세션 SHA 원형 유지. **단점:** 타이머로 인한 append/fsync I/O 추가, 순수 SimC 내부 계산시간과 engine 호출시간은 같지 않음, 측정 예산 시작 전 환경·프로필 준비시간 별도.
+- **기존 기능/아이디어 중복:** v298 throughput hint와 측정 범위가 일부 겹치지만 현재의 *모든 phase·완료 시각·확인 DPS 시점*은 기존 v298에 없는 정보다. IDEA-001의 최적화 정책 자체를 구현한 것은 아니므로 기존 v290 precision scheduler와 중복된 엔진을 추가하지 않는다.
+- **실증 범위:** 오프라인 **합성 executor/fake Native만** 검증. 현실 v313/v314에 회귀적으로 실제 시각을 삽입하거나 단일 10분 시점 최고점으로 과장하지 않는다. 이 계측을 활성화한 신규 실 Native 비교가 완료돼야 시간예산 기반 정밀 승급이 유효한지 판단 가능.
+- **다음 승인 검증:** 같은 신규 프로필에서 original v290/v312 동등 iterations 및 원본 확인 DPS·SEM 실측, Opt-in trace가 있으면 300/600초의 precision 후보 수·최고값을 비교. 35→120→320 3단계는 기존 두 exact iteration ID/캐시·재개 계약의 안전한 확장이 완료되기 전까지 기능 승격 금지.
