@@ -124,5 +124,75 @@ class V316IndependentNativeCaseTrace(unittest.TestCase):
                     "untraced_journal_indices"],[0])
 
 
+    def test_single_process_wall_checkpoint_is_confirmed_only(self):
+        import copy
+        invocation="b"*32
+        journal=[]
+        timing=[]
+        for i,(phase,elapsed,dps,sem,seed) in enumerate((
+                ("scout",100.,182000.,650.,1),
+                ("precision",210.,185000.,100.,3),
+                ("precision",480.,186000.,100.,4))):
+            row={
+                "index":i,"phase":phase,
+                "iterations":35 if phase=="scout" else 320,
+                "case_key":f"fake-{i}","input_sha256":"a"*64,
+                "native_sha256":"c"*64,"source":"NEW_NATIVE",
+                "simc_seed":seed,"dps_mean":dps,"dps_sem":sem,
+            }
+            journal.append(row)
+            timing.append(trace.record(
+                row,session_sha256="d"*64,plan_pending_seconds=.01,
+                engine_execute_seconds=elapsed/10,
+                native_json_ingest_seconds=.002,
+                journal_checkpoint_seconds=.003,
+                invocation_elapsed_seconds=elapsed,
+                resumed_pending=False,invocation_id=invocation))
+        ck=trace.checkpoints(timing,journal,320)
+        self.assertTrue(ck["exact_5_10_minute_result_available"])
+        at300=ck["checkpoints"]["300"]
+        at600=ck["checkpoints"]["600"]
+        self.assertEqual(at300["highest_observed_confirmed_dps"],185000.)
+        self.assertEqual(at300["confirmed_320_or_configured_iteration_candidates"],1)
+        self.assertEqual(at600["highest_observed_confirmed_dps"],186000.)
+        self.assertEqual(at600["confirmed_320_or_configured_iteration_candidates"],2)
+        self.assertTrue(at600["selected_pair_95"][
+            "selected_pair_nominal_95_separated"])
+        self.assertTrue(at600["selected_pair_95"][
+            "multiplicity_and_selection_bias_not_corrected"])
+        changed=copy.deepcopy(timing)
+        changed[2]["invocation_id"]="e"*32
+        other=trace.checkpoints(changed,journal,320)
+        self.assertFalse(other["exact_5_10_minute_result_available"])
+        changed=copy.deepcopy(timing)
+        changed[2]["invocation_elapsed_seconds"]=150.
+        other=trace.checkpoints(changed,journal,320)
+        self.assertFalse(other["exact_5_10_minute_result_available"])
+        self.assertFalse(trace.checkpoints(timing[1:],journal,320)[
+            "exact_5_10_minute_result_available"])
+
+    def test_whole_uninterrupted_fake_run_reports_real_clock_structure(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ctx,binary,out=fake.V291LongRun().fixture(tmp,cap=12)
+            with mock.patch.object(durable.engine,"execute_one",
+                                   side_effect=fake.fake_native), \
+                 mock.patch.object(durable.oil,"ingest_native",
+                                   side_effect=fake.fake_ingest):
+                result=durable.run(ctx,fake.F,binary,out,max_native_calls=12,
+                                   case_timing_trace=True)
+                self.assertEqual(result["completed_cases"],12)
+                self.assertTrue(result["experimental_case_timing_trace"][
+                    "complete_original_journal_trace"])
+                checkpoints=result["experimental_wall_confirmed_checkpoints"]
+                self.assertTrue(checkpoints[
+                    "exact_5_10_minute_result_available"])
+                self.assertGreater(checkpoints["checkpoints"]["300"][
+                    "confirmed_320_or_configured_iteration_candidates"],0)
+                self.assertFalse(checkpoints["global_optimum_proven"])
+                journal=durable._load_journal(out/"V291_JOURNAL.jsonl")
+                self.assertTrue(all("engine_execute_seconds" not in row
+                                    for row in journal))
+                self.assertNotIn("v316",str((out/"V291_SESSION.json").read_text()).lower())
+
 if __name__=="__main__":
     unittest.main()
