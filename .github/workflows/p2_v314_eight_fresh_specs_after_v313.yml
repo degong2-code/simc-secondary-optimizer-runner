@@ -1,12 +1,13 @@
-# Research-only 8 requested DPS specs x 2 T/cap conditions. No Warlock/previous
-# Native history passed as a seed. Each arm has <=1008 real cases, <=540s
-# planning+SimC; real iterations and best precision-320 are logged separately.
-# Products defaults and main never change. Expensive real cases are one-shot.
+# ONLY AFTER original v313 release: exact SAME workflow concurrency group.
+# Each of 16 cases builds a NEW user source profile from verified same-season
+# inputs; neither existing completed .simc nor historical Native DPS is imported.
+# 8 requested DPS specs x 2 distributions, max1008 calls/540s per policy.
+# All native inputs/JSON2/receipts are preserved for scoped audit.
 name: P2 v314 eight FRESH profiles x2 Native comparison AFTER v313
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
-    paths: [.github/workflows/p2_v314_multispec_8x2_real_once.yml]
+    paths: [.github/workflows/p2_v314_eight_fresh_specs_after_v313.yml]
 permissions:
   contents: read
   actions: read
