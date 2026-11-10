@@ -1,4 +1,4 @@
-"""v314 diverse DPS 4x2 matrix and statistical reporting, OFFLINE ONLY.
+"""v314 fresh user-built DPS 8x2 matrix and statistical reporting, OFFLINE ONLY.
 
 No synthetic value in this file is passed off as a real SimC observation.
 """
@@ -10,7 +10,7 @@ import unittest
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"runner"))
 
-import v314_fresh_sixteen_spec_matrix_contract as matrix
+import v314_fresh_eight_spec_matrix_contract as matrix
 
 
 def fake_trial(policy,dps,sem,seed):
