@@ -1,0 +1,10 @@
+# P2 v311 — 21단계 최종 50%→100% 전수 준비 (2026-11-10)
+
+- **Capability:** `OPTIMIZER.POLICY`, `DEV.CONTINUITY`, `PRODUCT.E2E`.
+- **Keywords:** v311, 21-level 100pct, 9906 never before measured, original11/25/50 independently source-attested, 16 confirmations, v308 original JSON2, v291 journal and pending, no re-run, 95 percent.
+- **Prior evidence:** [원본11 실 Native 2800 #42814969237](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42814969237) [실 25% 2185 #42822653731](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42822653731) [50% Native 시험 #42826070351](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42826070351) **진행 중/영수증 확정 전**, [v310 source 검증](2026-11-10_p2-v310-sha-verified-historical-frontier-50pct.md). 
+- **Decision:** `EXTEND` research-only opt-in v311, **실제 50% 원본 결과를 검증하기 전에는 100% 신규 Native 절대 실행하지 않는다.** 이전 세 세션은 각각 original JSON2·input·receipt SHA로 검증된 별도 역사 자료이지 새 v291의 동일 런타임 exact cache가 아니다. 검증된 좌표는 전부 제외한다. 기본 v290을 교체하지 않는다.
+- **Changes:** `runner/v311_external_frontier_100_only.py`는 v310의 기존 원본11·25 자료를 재검증하고 50% raw ZIP·compact 저널·receipt·세션 seal·완료 4953 새 scout/16 confirmation를 별도 검증한다. 기존 9906/19812 CHMV 조합을 격자에서 제외한 **남은 9906개만 35-iteration 실제 SimC 대상으로** 생성하고 16개 신규 320-iteration 확인 후 누적19812/19812(유한 21격자)를 표시한다. `runner/v291_durable_multiscale_native_runner.py` opt-in `v311_three_source_manifest_path`가 별도 SHA seal·journal/pending·캐시전용 재인증·취소/재개를 연결한다. 새 세션 최대 9922 calls, 기존 세션 영향/소스변경 없음.
+- **Verification:** `PENDING` offline `tests/test_v311_external_frontier_100_offline.py` — 9906 new targets complete, 16 확인, original11/25/50 배제, fake Native 저장·재개·변조거부; **신규 실제 Native 0**.
+- **Remaining:** 최초 50% 실측을 원본 영수증까지 완료로 확정한 뒤, 50% 측정 증가 추세 및 Native 비용을 비교하고 100% 실제 실행 여부를 판단한다. 100%라 하더라도 유한 격자만 완료하며 전 정수 rating/연속영역 최적·다중선택 편향을 보정한95% 우위는 증명하지 않는다. 9922 원본 ZIP의 압축/전개 용량·저장소 보존기간도 반드시 별도 점검.
+- **Efficiency:** 기존 첫11 2784 + 이후25 2169 + 이후50 4953 = **9906 완전 별도 실측**을 다시 실행하지 않는다. v311에는 가장 후반의 **9922 NEW Native(9906×35+16×320)**만 요청하며 동일 시즌 Native 원본/프로필·전투/B/lo/hi/바이너리를 가드한다. 다른 전문화 전수나 498 역사 재시험 없음. 21단계보다 촘촘한41/81은 본 실험 범위 밖이다.
