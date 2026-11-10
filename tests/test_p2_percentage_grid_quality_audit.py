@@ -92,6 +92,27 @@ class GridPolicyAudit(unittest.TestCase):
             return regular
         return plan
 
+    def test_reference_pool_generation_cost_and_bounds(self):
+        # CPU-only microbenchmark: these are NOT SimC runtime seconds.
+        for lo,hi,label in (
+                ((0,165,0,0),(1864,1864,1864,1864),"flask_floor"),
+                ((1200,1500,0,0),(1864,1864,500,500),
+                 "asymmetric_locked")):
+            for points in (7,11,21,41):
+                started=time.monotonic()
+                candidates=grid.reference_pool(
+                    self.B,lo,hi,points,max_pool=2048)
+                elapsed=time.monotonic()-started
+                self.assertTrue(candidates)
+                self.assertLessEqual(len(candidates),2048)
+                self.assertTrue(all(baseline.legacy.eligible(
+                    vec,self.B,lo,hi) for vec,_,_ in candidates))
+                print("P2_GRID_POOL_CPU_ONLY "+
+                      json.dumps({"bounds":label,"points":points,
+                                  "candidate_count":len(candidates),
+                                  "elapsed_seconds":round(elapsed,4)},
+                                 sort_keys=True),flush=True)
+
     def test_equal_case_budget_synthetic_multimodal_comparison(self):
         records={}
         for name,peaks in self.PEAKS.items():

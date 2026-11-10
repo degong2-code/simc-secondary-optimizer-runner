@@ -171,7 +171,12 @@ def reference_pool(total, lower, upper, points=11, max_pool=2048):
     # floor is reached. For the symmetric T2000/m11 example the first shell
     # already provides hundreds of candidates and no widening is needed.
     diversity_goal = min(max_pool, max(32, points * points // 2))
-    while frontier and len(unique) < diversity_goal:
+    raw_attempts = 0
+    # Even pathological asymmetric caps must not consume unlimited CPU in a
+    # large 41-point grid. Reuse existing v290 coverage if this pool is thin.
+    raw_limit = max_pool * 8
+    while (frontier and len(unique) < diversity_goal and
+           raw_attempts < raw_limit):
         shell = -frontier[0][0]
         shell_pairs = []
         while frontier and -frontier[0][0] == shell:
@@ -184,7 +189,7 @@ def reference_pool(total, lower, upper, points=11, max_pool=2048):
         # Rank raw grid indices with stable hashing when a thick shell has
         # more options than the memory bound; don't prefer lexicographic axes.
         sampled = heapq.nsmallest(
-            max_pool,
+            min(max_pool, raw_limit - raw_attempts),
             ((_priority((a, b, c, d)), (a, b, c, d),
               (aval, bval, cval, dval))
              for fst, snd in shell_pairs
@@ -192,6 +197,7 @@ def reference_pool(total, lower, upper, points=11, max_pool=2048):
              for c, d, cval, dval in second[snd]),
             key=lambda record: (record[0], record[1]))
         for _, index, raw in sampled:
+            raw_attempts += 1
             vector = bounded_proportional(total, lower, upper, raw)
             if vector in unique:
                 old_index, count = unique[vector]

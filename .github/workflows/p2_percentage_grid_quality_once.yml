@@ -1,5 +1,5 @@
 # One bounded OPTIONAL comparison: legacy, full grid, and 2/3/4 global mixes.
-# This is SYNTHETIC offline geometry, never measured SimC DPS.
+# This is SYNTHETIC offline geometry + grid-CPU microbenchmark, not SimC.
 # No secrets, native runtime, WoW source fetch, or persistent mandatory gate.
 name: P2 optional percentage grid synthetic equal-case audit
 on:
