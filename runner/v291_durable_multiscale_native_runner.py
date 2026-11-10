@@ -24,6 +24,7 @@ import v091_weapon_oil_external_adapter as oil
 import v093_inclusive_adaptive_scheduler_bridge as adaptive
 import v094_durable_inclusive_adaptive_runner as bounded
 import v290_multiscale_adaptive_policy as search
+import v298_adaptive_percent_grid as percent_grid
 
 SCHEMA = "v291_durable_multiscale_native_runner_v1"
 
@@ -216,7 +217,8 @@ def confirmed_selected_pair_95(observations, confirm_iterations):
 def run(context, flask_vector, binary, output, *,
         max_native_calls, max_new_native_this_invocation=None,
         cache_only=False, cancel_file=None, max_elapsed_seconds=None,
-        recover_verified_partial=False, open_folder=False):
+        recover_verified_partial=False, open_folder=False,
+        percentage_grid_points=None):
     """Resume an exact source-bound session, or execute one Native per plan.
 
     A previously committed journal is always re-validated against ORIGINAL
@@ -236,6 +238,14 @@ def run(context, flask_vector, binary, output, *,
          (type(max_elapsed_seconds) in (int, float) and
           0 < max_elapsed_seconds <= 86400),
          "ELAPSED_SECONDS_CAP")
+    # New, explicitly opt-in experimental candidate strategy. Default None
+    # means the original v290 session seal and journal remain byte-compatible.
+    percent_enabled = percentage_grid_points is not None
+    need(percentage_grid_points is None or
+         percentage_grid_points == "auto" or
+         (type(percentage_grid_points) is int and
+          3 <= percentage_grid_points <= 41),
+         "PERCENT_GRID_OPT_IN_POINTS_3_TO_41_OR_AUTO")
     need(context.get("schema") == adaptive.SCHEMA and
          context.get("status") == "READY_TO_SELECT_B_SCOUT_WITH_FINAL_T_NATIVE",
          "ADMITTED_ADAPTIVE_CONTEXT_REQUIRED")
@@ -271,6 +281,13 @@ def run(context, flask_vector, binary, output, *,
         "upper": constraints.to_target(upper),
         "statistical_confidence": 0.95,
     }
+    if percent_enabled:
+        seal["experimental_percent_grid"] = {
+            "schema": percent_grid.SCHEMA,
+            "source_sha256": hashlib.sha256(
+                pathlib.Path(percent_grid.__file__).read_bytes()).hexdigest(),
+            "resolution": percentage_grid_points,
+        }
     if output.exists():
         need(not output.is_symlink(), "OUTPUT_SYMLINK_NOT_ALLOWED")
     output.mkdir(parents=True, exist_ok=True)
@@ -328,6 +345,26 @@ def run(context, flask_vector, binary, output, *,
     cached_this_invocation = len(stored)
     started = time.monotonic()
     status = "STARTED"
+    # Optional throughput telemetry, not part of a native-DPS receipt or
+    # the exact-cache identity. A lost/malformed hint must never block resume.
+    timing_path = output / "V298_NATIVE_TIMINGS.json"
+    timings = []
+    if percent_enabled and timing_path.is_file():
+        try:
+            hints = read_json(timing_path)
+            if type(hints) is list:
+                for hint in hints[-11:]:
+                    if (type(hint) is dict and
+                            type(hint.get("index")) is int and
+                            type(hint.get("seconds")) in (float, int) and
+                            0 <= hint["index"] < len(observations) and
+                            observations[hint["index"]]["phase"] == "scout" and
+                            observations[hint["index"]]["source"] == "NEW_NATIVE" and
+                            math.isfinite(hint["seconds"]) and
+                            0 < hint["seconds"] <= 240):
+                        timings.append(hint)
+        except (OSError, ValueError, TypeError):
+            pass
     try:
         while True:
             if cancel_file and pathlib.Path(cancel_file).exists():
@@ -341,7 +378,19 @@ def run(context, flask_vector, binary, output, *,
                 status = "BUDGET_EXHAUSTED"
                 break
             if pending is None:
-                proposed = search.next_plan(
+                planner = percent_grid.next_plan if percent_enabled else search.next_plan
+                point_count = percentage_grid_points
+                if percentage_grid_points == "auto":
+                    remaining_seconds = (
+                        max_elapsed_seconds - (time.monotonic() - started)
+                        if max_elapsed_seconds is not None else None)
+                    point_count = percent_grid.choose_points_from_throughput(
+                        [hint["seconds"] for hint in timings],
+                        remaining_calls=max(0, max_native_calls-attempts),
+                        seconds_available=(max(0.001, remaining_seconds)
+                                           if remaining_seconds is not None
+                                           else None))
+                proposed = planner(
                     [{"target": row["target"], "iterations": row["iterations"],
                       "dps_mean": row["dps_mean"], "dps_sem": row["dps_sem"]}
                      for row in observations],
@@ -350,7 +399,9 @@ def run(context, flask_vector, binary, output, *,
                     max_native_calls=max_native_calls,
                     scout_iterations=scout_iters,
                     confirmation_iterations=confirm_iters,
-                    max_iterations=confirm_iters)
+                    max_iterations=confirm_iters,
+                    **({"reference_points": point_count}
+                       if percent_enabled else {}))
                 if proposed["next_request"] is None:
                     status = proposed["status"]
                     break
@@ -390,10 +441,12 @@ def run(context, flask_vector, binary, output, *,
             # v065 is a scoped per-case executor; per-case marker resides in a
             # unique parent, and v291 owns the global multi-case limit.
             progress = {"native_attempts": prior_attempt}
+            native_started = time.monotonic()
             result = engine.execute_one(
                 req, calibration, binary, folder, progress,
                 cancel_file=cancel_file, cache_only=cache_only,
                 recover_verified_partial=recover_verified_partial)
+            native_elapsed = time.monotonic() - native_started
             native_bytes = (folder / "result.json").read_bytes()
             native_doc = json.loads(native_bytes)
             native = oil.ingest_native(req, native_doc, native_bytes)
@@ -411,6 +464,17 @@ def run(context, flask_vector, binary, output, *,
             _append_journal(journal_path, row)
             observations.append(row)
             pending_path.unlink()
+            if (percent_enabled and source == "NEW_NATIVE" and
+                    row["phase"] == "scout" and
+                    math.isfinite(native_elapsed) and native_elapsed > 0):
+                timings.append({"index": row["index"],
+                                "seconds": round(native_elapsed, 6)})
+                timings = timings[-11:]
+                try:
+                    atomic(timing_path, timings)
+                except OSError:
+                    # Optional pacing telemetry never invalidates real Native.
+                    pass
             pending = None
             atomic(progress_path, {
                 "schema": SCHEMA, "status": "CHECKPOINTED",
@@ -431,7 +495,8 @@ def run(context, flask_vector, binary, output, *,
         raise
     summary = _summary(observations, context)
     report = {"schema": SCHEMA, "status": status,
-              "policy": "v290_multiscale_noisy_simplex_policy_v1",
+              "policy": (percent_grid.SCHEMA if percent_enabled else
+                         "v290_multiscale_noisy_simplex_policy_v1"),
               "official_formula": "T=G+J+F+O",
               "base_B": B, "fixed_O": identity["oil_vector"],
               "final_T": identity["approved_final_T"],

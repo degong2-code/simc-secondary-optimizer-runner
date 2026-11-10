@@ -103,6 +103,55 @@ class V291LongRun(unittest.TestCase):
                 self.assertEqual(again["new_native_this_invocation"],0)
                 self.assertEqual(again["completed_cases"],6)
 
+    def test_experimental_percent_grid_opt_in_seal_and_resume(self):
+        # Pure fake executor only; NO real SimC or new DPS evidence.
+        with tempfile.TemporaryDirectory() as folder:
+            ctx,binary,out=self.fixture(folder,cap=12)
+            with mock.patch.object(runner.engine,"execute_one",
+                                   side_effect=fake_native), \
+                 mock.patch.object(runner.oil,"ingest_native",
+                                   side_effect=fake_ingest):
+                first=runner.run(ctx,F,binary,out,max_native_calls=12,
+                    percentage_grid_points=11,max_new_native_this_invocation=4)
+                self.assertEqual(first["completed_cases"],4)
+                self.assertEqual(first["policy"],runner.percent_grid.SCHEMA)
+                seal=runner.read_json(out/"V291_SESSION.json")
+                self.assertEqual(seal["experimental_percent_grid"]["resolution"],11)
+                self.assertTrue((out/"V298_NATIVE_TIMINGS.json").is_file())
+                second=runner.run(ctx,F,binary,out,max_native_calls=12,
+                    percentage_grid_points=11,max_new_native_this_invocation=0)
+                self.assertEqual(second["new_native_this_invocation"],0)
+                self.assertEqual(second["completed_cases"],4)
+                with self.assertRaisesRegex(
+                        runner.LongRunBlocked,"SEALED_SESSION_IDENTITY_DRIFT"):
+                    runner.run(ctx,F,binary,out,max_native_calls=12,
+                               percentage_grid_points=None,
+                               max_new_native_this_invocation=0)
+                with self.assertRaisesRegex(
+                        runner.LongRunBlocked,"SEALED_SESSION_IDENTITY_DRIFT"):
+                    runner.run(ctx,F,binary,out,max_native_calls=12,
+                               percentage_grid_points=9,
+                               max_new_native_this_invocation=0)
+        # "auto" uses only actual NEW_NATIVE scouting durations; this
+        # synthetic fake tests the plumbing, not real throughput thresholds.
+        with tempfile.TemporaryDirectory() as folder:
+            ctx,binary,out=self.fixture(folder,cap=12)
+            with mock.patch.object(runner.engine,"execute_one",
+                                   side_effect=fake_native), \
+                 mock.patch.object(runner.oil,"ingest_native",
+                                   side_effect=fake_ingest):
+                first=runner.run(ctx,F,binary,out,max_native_calls=12,
+                                 percentage_grid_points="auto",
+                                 max_elapsed_seconds=300,
+                                 max_new_native_this_invocation=5)
+                self.assertEqual(first["completed_cases"],5)
+                self.assertEqual(first["policy"],runner.percent_grid.SCHEMA)
+                again=runner.run(ctx,F,binary,out,max_native_calls=12,
+                                 percentage_grid_points="auto",
+                                 max_elapsed_seconds=300,
+                                 max_new_native_this_invocation=0)
+                self.assertEqual(again["new_native_this_invocation"],0)
+
     def test_above_six_native_cases_with_typed_runtime_and_replay(self):
         with tempfile.TemporaryDirectory() as folder:
             ctx,binary,out=self.fixture(folder,cap=12)
