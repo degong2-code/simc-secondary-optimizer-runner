@@ -1,0 +1,80 @@
+# One bounded real SimC v305 hybrid comparison to exact previously completed
+# three-arm 4520-iteration cohort. No default promotion or repeated global32.
+name: P2 v305 hybrid equal-4520 real SimC one-shot
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p2_real_hybrid_v305_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p2-hybrid-v305-real-one-shot
+  cancel-in-progress: false
+jobs:
+  exact-source-hybrid-real:
+    if: contains(github.event.head_commit.message, '[p2-v305-hybrid-real-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PYTHONPATH: runner:integration_probes:.
+      P2_V305_HYBRID_REAL_ONCE: '1'
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse exact pinned 70783 SimC binary, no compile
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42552942329
+          name: p3-har-verified-source-new-binary-short-lived
+          path: out/binary
+          github-token: ${{ github.token }}
+      - name: Restore original Enhancement source profile from archive
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42501052586
+          name: p3-fz-exact-binary-zero-history-t1-receipt
+          path: out/previous
+          github-token: ${{ github.token }}
+      - name: Restore prior 100 real SimC compact facts
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42752264747
+          name: p2-nested-11-21-real-simc-timing-once-receipt
+          path: out/previous_100
+          github-token: ${{ github.token }}
+      - name: Restore prior 127 real SimC and identical global32 receipts
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42772775449
+          name: p2-real-v304-32x32-equal-iterations-compact-receipt
+          path: out/previous_v304
+          github-token: ${{ github.token }}
+      - name: Validate exact historical binary/profile/receipt SHA and offline hybrid
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f out/binary/simc
+          test -f out/previous/p3_hae_v291_native_evidence.zip
+          test -f out/previous_100/receipt.json
+          test -f out/previous_v304/receipt.json
+          test "$(sha256sum out/binary/simc | cut -d' ' -f1)" = "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6"
+          test "$(sha256sum out/previous/p3_hae_v291_native_evidence.zip | cut -d' ' -f1)" = "c53dc09015377ccaf3d53f24bb85950e3999efacecc629be756b9f8856ef5fa9"
+          test "$(sha256sum out/previous_100/receipt.json | cut -d' ' -f1)" = "eaa608b3612a81daed7e33e4032793b43dc5fff3e07ed9b797157708f7d60799"
+          test "$(sha256sum out/previous_v304/receipt.json | cut -d' ' -f1)" = "1dfcafd734d673edf956b247d4118359b081b2bb3cc3787ca1c04d0e4356878f"
+          chmod +x out/binary/simc
+          python -m unittest -v tests.test_v305_hybrid_durable_offline tests.test_p2_v305_hybrid_offline
+          echo P2_V305_PRIOR_SOURCE_SHA_AND_HYBRID_OFFLINE_PRECHECK_PASS
+      - name: Run ONE bounded actual SimC hybrid 4520-iterations compare
+        timeout-minutes: 5
+        run: python -u integration_probes/p2_real_hybrid_v305_once.py
+      - name: Save SHA-scoped compact DPS/SEM/seed/wall fact receipt only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-v305-hybrid-real-equal4520-compact-receipt
+          path: out/p2_v305_real_hybrid_once/receipt.json
+          if-no-files-found: warn
+          retention-days: 7
