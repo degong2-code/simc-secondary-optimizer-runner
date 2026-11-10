@@ -38,6 +38,7 @@ import v309_prior_anchored_level21_progressive as progressive21
 import v310_external_frontier_50_only as frontier50
 import v311_external_frontier_100_only as frontier100
 import v312_model_guided_multiregion_policy as model_guided
+import v316_optin_case_time_trace as time_trace
 
 SCHEMA = "v291_durable_multiscale_native_runner_v1"
 
@@ -274,7 +275,8 @@ def run(context, flask_vector, binary, output, *,
         v310_frontier_manifest_path=None,
         v311_three_source_manifest_path=None,
         model_guided_multiregion=False,
-        adaptive_initial_global_calls=160, adaptive_confirmation_calls=8):
+        adaptive_initial_global_calls=160, adaptive_confirmation_calls=8,
+        case_timing_trace=False):
     """Resume an exact source-bound session, or execute one Native per plan.
 
     A previously committed journal is always re-validated against ORIGINAL
@@ -283,6 +285,8 @@ def run(context, flask_vector, binary, output, *,
     """
     binary = pathlib.Path(binary).resolve(strict=True)
     output = pathlib.Path(output).resolve()
+    need(type(case_timing_trace) is bool,
+         "V316_CASE_TIMING_TRACE_BOOL_REQUIRED")
     need(type(max_native_calls) is int and
          1 <= max_native_calls <= 100000,
          "EXPLICIT_TOTAL_NATIVE_BUDGET_REQUIRED")
@@ -782,6 +786,13 @@ def run(context, flask_vector, binary, output, *,
     cached_this_invocation = len(stored)
     started = time.monotonic()
     status = "STARTED"
+    # Opt-in telemetry is not part of the policy, cache, or source seal.
+    # Missing case timestamps after a crash are visible gaps, not estimates.
+    original_trace_path = output / time_trace.NAME
+    timing_sha = (time_trace.identity_hash(seal_path)
+                  if case_timing_trace else None)
+    traced_cases = (time_trace.load(original_trace_path, observations,
+                                    timing_sha) if case_timing_trace else [])
     # Optional throughput telemetry, not part of a native-DPS receipt or
     # the exact-cache identity. A lost/malformed hint must never block resume.
     timing_path = output / "V298_NATIVE_TIMINGS.json"
@@ -804,6 +815,9 @@ def run(context, flask_vector, binary, output, *,
             pass
     try:
         while True:
+            planning_started=(time.monotonic() if case_timing_trace else None)
+            existing_pending = pending is not None
+            plan_elapsed = 0.0
             if cancel_file and pathlib.Path(cancel_file).exists():
                 status = "PAUSED_USER_CANCEL"
                 break
@@ -908,6 +922,8 @@ def run(context, flask_vector, binary, output, *,
                 if special_enabled:
                     pending.update({key: action[key] for key in metadata_keys})
                 atomic(pending_path, pending)
+                if case_timing_trace:
+                    plan_elapsed=time.monotonic()-planning_started
             req, folder = _request(context, flask_vector, output, pending)
             previous_marker = folder.parent / "V065_PROGRESS.json"
             prior_attempt = (read_json(previous_marker).get("native_attempts")
@@ -943,6 +959,7 @@ def run(context, flask_vector, binary, output, *,
                 cancel_file=cancel_file, cache_only=cache_only,
                 recover_verified_partial=recover_verified_partial)
             native_elapsed = time.monotonic() - native_started
+            ingest_started = (time.monotonic() if case_timing_trace else None)
             native_bytes = (folder / "result.json").read_bytes()
             native_doc = json.loads(native_bytes)
             native = oil.ingest_native(req, native_doc, native_bytes)
@@ -957,6 +974,9 @@ def run(context, flask_vector, binary, output, *,
             else:
                 cached_this_invocation += 1
             row = _compact(req, native, source, pending)
+            ingest_elapsed = (time.monotonic()-ingest_started
+                              if case_timing_trace else 0.0)
+            commit_started = (time.monotonic() if case_timing_trace else None)
             _append_journal(journal_path, row)
             observations.append(row)
             pending_path.unlink()
@@ -980,6 +1000,17 @@ def run(context, flask_vector, binary, output, *,
                 "verified_cached_this_invocation": cached_this_invocation,
                 "last_case_key": req["case_key"],
                 "global_optimum_proven": False})
+            if case_timing_trace:
+                entry=time_trace.record(
+                    row,session_sha256=timing_sha,
+                    plan_pending_seconds=plan_elapsed,
+                    engine_execute_seconds=native_elapsed,
+                    native_json_ingest_seconds=ingest_elapsed,
+                    journal_checkpoint_seconds=time.monotonic()-commit_started,
+                    invocation_elapsed_seconds=time.monotonic()-started,
+                    resumed_pending=existing_pending)
+                time_trace.append(original_trace_path,entry)
+                traced_cases.append(entry)
     except Exception as exc:
         status = "PARTIAL_OR_BLOCKED"
         atomic(progress_path, {
@@ -1016,6 +1047,9 @@ def run(context, flask_vector, binary, output, *,
               "confidence_for_display": 0.95,
               "no_global_optimum_proof": True,
               "native_cases_not_to_be_confused_with_iterations": True}
+    if case_timing_trace:
+        report["experimental_case_timing_trace"]=time_trace.summary(
+            traced_cases,observations)
     if model_guided_multiregion:
         report["model_guided_progress"]=model_guided.coverage(
             observations,max_native_calls=max_native_calls)
