@@ -13,7 +13,7 @@ from unittest import mock
 
 from tests import test_p3_hx_durable_longrun_offline as fake
 from runner import v291_durable_multiscale_native_runner as durable
-from runner import v316_optin_case_time_trace as trace
+trace = durable.time_trace  # exact module instance used by the runner
 
 
 class V316IndependentNativeCaseTrace(unittest.TestCase):
