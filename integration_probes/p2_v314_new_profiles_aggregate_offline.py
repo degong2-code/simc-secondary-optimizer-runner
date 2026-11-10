@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Aggregate eight independently reported cross-spec real SimC v314 trials.
+"""Aggregate sixteen independently reported cross-spec real SimC v314 trials.
 
 Read-only, does NOT open old cross-session Native caches, claim a familywise
 95% statement, or treat missing/failed cases as optimizer losses. Never
@@ -23,7 +23,7 @@ def main():
     details={}
     for path in found:
         report=json.loads(path.read_text())
-        if report.get("schema")!="p2_v314_source_first_4spec_x2_distribution_real_AB_v1":
+        if report.get("schema")!="p2_v314_source_first_8spec_x2_distribution_real_AB_v1":
             continue
         identifier=report["case"]["id"]
         if identifier in cases or identifier not in matrix.CASES:
@@ -63,7 +63,7 @@ def main():
         "policy_change_approved":False,
         "default_v290_retained":True,
         "no_global_or_familywise_95_claim":True,
-        "statistical_power_not_established_from_eight_cases":True})
+        "statistical_power_not_established_from_sixteen_cases":True})
     out=pathlib.Path(args.output)
     out.parent.mkdir(parents=True,exist_ok=True)
     out.write_text(json.dumps(
