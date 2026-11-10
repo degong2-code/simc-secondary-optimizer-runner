@@ -2,6 +2,8 @@
 # No historical HAE profile, no copied result cache, no all-26 sweep.
 # Bounded retry: v098 now preserves SHA-verified representative G as reference
 # and generates spec-specific gear from authenticated original season source.
+# Recovery retry: selected spec is composed with existing v216 ONE-SPEC pinned
+# Wago/SimC source; never require v169 all-26 source completeness.
 name: P2 one fresh Frost Mage 4-ordinary product user SimC E2E
 on:
   push:
