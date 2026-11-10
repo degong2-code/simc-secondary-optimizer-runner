@@ -278,12 +278,17 @@ def next_plan(observations, *, total, lower, upper, max_native_calls,
     coarse_total = len(ordered_new_level(
         total, lower, upper, LEVELS[0]))
     coarse_completed = completed_surveys >= coarse_total
+    # If a small session barely finishes the coarse layer, guarantee a
+    # meaningful slice of the next nested level rather than spending every
+    # remaining scout on local zoom just because the 84% quota was reached.
+    survey_target = max(opts["survey_target"], min(opts["scout"],
+        coarse_total + max(1, round(max(0, opts["scout"]-coarse_total)*.60))))
     # Coverage-first: complete the lowest feasible lattice before zoom.
     # Thereafter spend ~1 in 7 post-coarse scouts on local zoom, unless
     # global quota exhausted. Never discard unscanned regions by DPS score.
     should_local = (coarse_completed and
                     completed_local < opts["local_target"] and
-                    (completed_surveys >= opts["survey_target"] or
+                    (completed_surveys >= survey_target or
                      (len(observations) - coarse_total) % 7 == 6 or
                      fresh is None))
     chosen = _local_next(observations, measured, total=total,
