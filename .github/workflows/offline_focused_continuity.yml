@@ -98,6 +98,7 @@ jobs:
             tests.test_v308_dense_raw_checkpoint_offline \
             tests.test_v308_full_native_case_members_offline \
             tests.test_v309_progressive_21_milestones_offline \
+            tests.test_v310_25_to_50_external_frontier_offline \
             tests.test_p2_fresh_user_profile_case_offline \
             tests.test_v098_cross_spec_installed_G_source \
             tests.test_v098_source_only_one_spec_user_bridge \
