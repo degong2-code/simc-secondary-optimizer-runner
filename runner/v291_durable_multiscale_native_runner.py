@@ -606,7 +606,7 @@ def run(context, flask_vector, binary, output, *,
                  not any(k in row for k in (*V304_METADATA,"hybrid_method",
                                            *dense_grid.METADATA,
                                            *progressive21.METADATA,
-                                           *frontier100.METADATA)),
+                                           "frontier100_stage","level21_new_cursor")),
                  "V310_JOURNAL_FRONTIER_METADATA_MISSING")
             plan.update({k: row[k] for k in metadata_keys})
         elif frontier100_enabled:
@@ -614,7 +614,7 @@ def run(context, flask_vector, binary, output, *,
                  not any(k in row for k in (*V304_METADATA,"hybrid_method",
                                            *dense_grid.METADATA,
                                            *progressive21.METADATA,
-                                           *frontier50.METADATA)),
+                                           "frontier_stage","new21_cursor")),
                  "V311_JOURNAL_FRONTIER_METADATA_MISSING")
             plan.update({k: row[k] for k in metadata_keys})
         else:
