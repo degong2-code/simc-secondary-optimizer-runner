@@ -1,0 +1,10 @@
+# P2 IDEA-001~004 사전심사 정책 보강 (2026-11-11)
+
+- **Capability:** `OPTIMIZER.POLICY`, `DEV.CONTINUITY`.
+- **Keywords:** idea review, strengths, weaknesses, rationale, evidence, duplicate, integration, ablation, execution cost, 95, future benchmark, IDEA-001, IDEA-002, IDEA-003, IDEA-004.
+- **Prior evidence:** [v290↔v312 동일 1008 Native 실제 비교](2026-11-10_p2-v312-surrogate-5to10min-adaptive.md)에서 서로 다른 총 iterations; [v303](../../../runner/v303_adaptive_region_resource_policy.py) 지역별 radius/budget, [v306](../../../runner/v306_seed_retained_coarse_escape_regions.py) 비국소 탈출, [v312](../../../runner/v312_model_guided_multiregion_policy.py) surrogate UCB와 전역 reserve 기존 구현을 확인했다. [v313](2026-11-11_p2-v313-four-spec-eight-distribution-fair-comparison.md)와 [v314](2026-11-11_p2-v314-eight-fresh-profiles-after-v313.md) 단독 검증 순서는 변경하지 않는다.
+- **Decision:** `REUSE/INTEGRATE` 우선. 사용자의 신규 기준으로 추론 근거 없는 매 채팅 의무 아이디어 추가 폐기, **최대 하나의 차별성·타당성 검증된 새 아이디어**만 추가. 실측 동기, 장/단점, 기존 아이디어와 중복, 통합 이득 발생 조건, SimC 비용·오버헤드, 기각 기준을 독립 문서에 기록한다.
+- **Changes:** [아이디어 목록](../algorithm_ideas/README.md)에 7항목 quality gate와 4개 아이디어 간 비교표 추가. [IDEA-001](../algorithm_ideas/IDEA-001-multifidelity-successive-halving.md)은 v290 precision 일정 옵션, [IDEA-002](../algorithm_ideas/IDEA-002-multistart-trust-region.md)은 기존 v303/v306의 반경 ablation, [IDEA-003](../algorithm_ideas/IDEA-003-adaptive-stratified-exploration.md)은 기존 global reserve 후보 옵션으로 통합 제안. [IDEA-004](../algorithm_ideas/IDEA-004-cost-aware-knowledge-gradient.md)는 불확실성 보정 증거 부족 및 계산 오버헤드 가능성으로 HOLD. [통합 벤치마크](../algorithm_ideas/BENCHMARK_PROTOCOL.md)는 부품별 독립 ablation 후 조합 비교, 5/10분/iterations/320+ 확인 DPS/SEM를 명시.
+- **Verification:** `DOC_ONLY` 본 변경에서 신규 SimC Native 실행 0, 기존 Actions 결과나 실증되지 않은 알고리즘에 새 PASS를 부여하지 않음. focused 레저 및 CI 원본 상태는 Actions 별도.
+- **Remaining:** 각 옵션의 계산량 및 신규 프로필 범용성 반증 시험 전 새 엔진 채택 금지. 사용자 지정 v313→v314 순서, 기존 v290 기본, `main`과 불변 자료 권한 유지.
+- **Efficiency:** 전체 21-grid 추가 수집 없음. 중복 엔진 개발·Native 재측정을 피하고 기존 SHA/캐시/재개 구조 재사용, 구현될 때마다 CPU/메모리/I/O/예상 실행시간을 심사한다.
