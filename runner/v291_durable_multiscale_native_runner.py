@@ -26,6 +26,7 @@ import v094_durable_inclusive_adaptive_runner as bounded
 import v290_multiscale_adaptive_policy as search
 import v298_adaptive_percent_grid as percent_grid
 import v299_multiregion_percent_policy as multiregion_grid
+import v300_multiregion_throughput_resolution as measured_resolution
 
 SCHEMA = "v291_durable_multiscale_native_runner_v1"
 
@@ -297,6 +298,9 @@ def run(context, flask_vector, binary, output, *,
                 "schema": multiregion_grid.SCHEMA,
                 "source_sha256": hashlib.sha256(
                     pathlib.Path(multiregion_grid.__file__).read_bytes()).hexdigest(),
+                "throughput_sha256": hashlib.sha256(
+                    pathlib.Path(measured_resolution.__file__).read_bytes()
+                ).hexdigest(),
             }
     if output.exists():
         need(not output.is_symlink(), "OUTPUT_SYMLINK_NOT_ALLOWED")
@@ -396,14 +400,23 @@ def run(context, flask_vector, binary, output, *,
                     remaining_seconds = (
                         max_elapsed_seconds - (time.monotonic() - started)
                         if max_elapsed_seconds is not None else None)
-                    point_count = percent_grid.choose_points_from_throughput(
-                        [hint["seconds"] for hint in timings],
-                        remaining_calls=max(0, max_native_calls-attempts),
-                        seconds_available=(max(0.001, remaining_seconds)
-                                           if remaining_seconds is not None
-                                           else None),
-                        confirmation_to_scout_iterations=(
-                            confirm_iters/scout_iters))
+                    estimate_kwargs = {
+                        "remaining_calls": max(0, max_native_calls-attempts),
+                        "seconds_available": (max(0.001, remaining_seconds)
+                            if remaining_seconds is not None else None),
+                    }
+                    if multiregion_percent_grid:
+                        point_count = measured_resolution.choose_points_from_throughput(
+                            [hint["seconds"] for hint in timings],
+                            confirmation_to_scout_iterations=(
+                                confirm_iters/scout_iters),
+                            **estimate_kwargs)
+                    else:
+                        # Existing experimental v298 auto sessions retain
+                        # their original exact v298 code SHA/algorithm.
+                        point_count = percent_grid.choose_points_from_throughput(
+                            [hint["seconds"] for hint in timings],
+                            **estimate_kwargs)
                 proposed = planner(
                     [{"target": row["target"], "iterations": row["iterations"],
                       "dps_mean": row["dps_mean"], "dps_sem": row["dps_sem"]}
