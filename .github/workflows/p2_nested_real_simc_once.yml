@@ -1,0 +1,61 @@
+# P2 historical fixed-70783 Enhancement profile, ONE bounded real-native
+# experiment. Pin exact previous artifact and executable SHA; no compilation,
+# no new seasonal item collection, no WCL/Blizzard creds, no all-spec sweep.
+name: P2 nested 11-21 real SimC scout timing and comparison once
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p2_nested_real_simc_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p2-nested-real-simc-pilot-once
+  cancel-in-progress: false
+jobs:
+  verified-historical-profile-native:
+    if: contains(github.event.head_commit.message, '[p2-nested-real-simc-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: runner:.
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse exact prior 70783 SimC binary (no source build)
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42552942329
+          name: p3-har-verified-source-new-binary-short-lived
+          path: out/binary
+          github-token: ${{ github.token }}
+      - name: Reuse archived 10-case verified real SimC inputs
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42501052586
+          name: p3-fz-exact-binary-zero-history-t1-receipt
+          path: out/previous
+          github-token: ${{ github.token }}
+      - name: Exact executable SHA preflight before any Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f out/binary/simc
+          test "$(sha256sum out/binary/simc | cut -d' ' -f1)" = "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6"
+          chmod +x out/binary/simc
+          test -f out/previous/p3_hae_v291_native_evidence.zip
+          test "$(sha256sum out/previous/p3_hae_v291_native_evidence.zip | cut -d' ' -f1)" = "c53dc09015377ccaf3d53f24bb85950e3999efacecc629be756b9f8856ef5fa9"
+          echo P2_EXACT_ARCHIVED_NATIVE_SOURCE_REUSED
+      - name: One exact same-profile real SimC candidate discovery pilot
+        timeout-minutes: 12
+        run: python -u integration_probes/p2_nested_real_simc_timing_once.py
+      - name: Retain only small factual receipts and timing, no binary or giant JSON2
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-nested-11-21-real-simc-timing-once-receipt
+          path: out/p2_nested_real_pilot/receipt.json
+          if-no-files-found: warn
+          retention-days: 7
