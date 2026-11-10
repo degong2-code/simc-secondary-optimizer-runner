@@ -54,7 +54,7 @@ def _metrics(region, rows, total, median_sem):
         delta = score(recent) - score(prior)
         improvement_z = delta / max(math.hypot(prior["dps_sem"], recent["dps_sem"]), 1e-9)
         stable = vector(prior) == vector(recent)
-    best = vector(recent)
+    best = vector(max(ordered, key=score))
     radius = max(1, round(total * radius_fraction))
     edge_ratio = max(abs(best[i] - center[i]) / radius for i in range(4))
     sem_ratio = recent["dps_sem"] / median_sem if median_sem else 0.0
@@ -82,13 +82,27 @@ def _metrics(region, rows, total, median_sem):
             "rank_stable": stable, "edge_ratio": edge_ratio, "stagnation": stagnant,
             "scout_used": sum(r["phase"] == "scout" for r in ordered)}
 
-def _allocate(regions, weights, budget, max_share):
+def _allocate(regions, weights, budget, max_share, already=None):
+    """Rebalance only UNCOMMITTED calls: never erase spent regional Native."""
     ids = [r["region_id"] for r in regions]
+    already = {} if already is None else already
+    result = {rid: already.get(rid, 0) for rid in ids}
+    need(all(type(v) is int and v >= 0 for v in result.values())
+         and sum(result.values()) <= budget, "REGIONAL_SPENT_BUDGET")
+    if not ids:
+        return {}
     if len(ids) == 1:
         return {ids[0]: budget}
-    cap = max(1, math.ceil(budget * max(max_share, 1 / len(ids))))
-    result, left, active = {rid: 0 for rid in ids}, budget, list(ids)
-    while left and active:
+    left = budget - sum(result.values())
+    cap = max(max(result.values()), math.ceil(
+        budget * max(float(max_share), 1 / len(ids))))
+    while left:
+        active = [rid for rid in ids if result[rid] < cap]
+        if not active:
+            # Relax only when surviving regions cannot absorb remaining
+            # allocation, e.g. other regions became exhausted.
+            cap += max(1, math.ceil(left / len(ids)))
+            continue
         total_weight = sum(weights[rid] for rid in active)
         shares = {rid: left * weights[rid] / total_weight for rid in active}
         saturated = [rid for rid in active if shares[rid] >= cap - result[rid]]
@@ -97,20 +111,21 @@ def _allocate(regions, weights, budget, max_share):
                 amount = cap - result[rid]
                 result[rid] += amount
                 left -= amount
-                active.remove(rid)
             continue
         floors = {rid: math.floor(shares[rid]) for rid in active}
         for rid, amount in floors.items():
             result[rid] += amount
             left -= amount
-        order = sorted(active, key=lambda rid: (-(shares[rid] - floors[rid]), -weights[rid], rid))
+        order = sorted(active, key=lambda rid: (
+            -(shares[rid] - floors[rid]), -weights[rid], rid))
         for rid in order:
             if left and result[rid] < cap:
                 result[rid] += 1
                 left -= 1
-        break
-    need(left == 0, "REGIONAL_BUDGET_APPORTIONMENT_DRIFT")
+        need(left == 0, "REGIONAL_REMAINDER_NOT_ALLOCATED")
+    need(sum(result.values()) == budget, "REGIONAL_BUDGET_APPORTIONMENT_DRIFT")
     return result
+
 
 def _candidate(total, lower, upper, center, radius_fraction, observed):
     radius, maximum = max(1, round(total * radius_fraction)), round(total * MAX_RADIUS)
@@ -217,8 +232,10 @@ def next_plan(observations, *, total, lower, upper, regions, total_scout_calls,
                 "global_fallback_policy": base.SCHEMA, "global_optimum_proven": False}
 
     weights = {r["region_id"]: metrics[r["region_id"]]["weight"] for r in active}
-    allocations = _allocate(active, weights, regional_budget, max_region_share)
     used = {r["region_id"]: metrics[r["region_id"]]["scout_used"] for r in active}
+    inactive_spent = regional_used - sum(used.values())
+    allocations = _allocate(active, weights, regional_budget - inactive_spent,
+                            max_region_share, already=used)
     left = regional_budget - regional_used
     eligible = [rid for rid in allocations if allocations[rid] > used[rid]]
     selected = (sorted(eligible, key=lambda rid: (-(allocations[rid] - used[rid]),
@@ -236,7 +253,7 @@ def next_plan(observations, *, total, lower, upper, regions, total_scout_calls,
     rows = []
     for rid in sorted(region_map):
         m = metrics[rid]
-        rows.append({"region_id": rid, "target_scout_calls": allocations.get(rid, 0),
+        rows.append({"region_id": rid, "target_scout_calls": allocations.get(rid, m["scout_used"]),
             "used_scout_calls": m["scout_used"], "weight": round(m["weight"], 8),
             "center": list(m["center"]), "radius_fraction": round(m["radius_fraction"], 8),
             "improvement_z_heuristic": round(m.get("improvement_z", 0), 8),

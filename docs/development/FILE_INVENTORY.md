@@ -276,6 +276,7 @@
 | [v301_nested_multiregion_policy.py](../../runner/v301_nested_multiregion_policy.py) | Nested 11→21→41 candidate policy |
 | [v302_weak_multiregion_zoom.py](../../runner/v302_weak_multiregion_zoom.py) | Global shortlist and local-six geometry |
 | [v303_adaptive_region_resource_policy.py](../../runner/v303_adaptive_region_resource_policy.py) | Adaptive radius/scout allocation and fair-comparison contract |
+| [v304_v303_durable_adapter.py](../../runner/v304_v303_durable_adapter.py) | Durable stage/region adapter for v291 opt-in |
 
 | Tests | Coverage |
 |---|---|
@@ -285,6 +286,7 @@
 | [test_v301_nested_multiregion_policy.py](../../tests/test_v301_nested_multiregion_policy.py) | Existing v301 regression |
 | [test_v302_weak_multiregion_zoom.py](../../tests/test_v302_weak_multiregion_zoom.py) | Existing v302 regression |
 | [test_v303_adaptive_region_resource_policy.py](../../tests/test_v303_adaptive_region_resource_policy.py) | New adaptive resource/budget-contract regression |
+| [test_v304_v303_v291_bridge_offline.py](../../tests/test_v304_v303_v291_bridge_offline.py) | New opt-in Native-fake integration / cancel / resume / pending guard |
 
 ## 역사 원문 찾기
 

@@ -190,6 +190,29 @@ class AdaptiveRegionResources(unittest.TestCase):
                                     "OBSERVATION_UNKNOWN_REGION"):
             self.plan([dict(row, region_id="unknown")], regions)
 
+    def test_spent_region_calls_cannot_be_reallocated(self):
+        active = [{"region_id": name} for name in ("r0", "r1", "r2")]
+        weights = {"r0": 0.05, "r1": 0.9, "r2": 0.05}
+        spent = {"r0": 8, "r1": 0, "r2": 0}
+        allocation = adaptive._allocate(
+            active, weights, 20, 0.40, already=spent)
+        self.assertEqual(sum(allocation.values()), 20)
+        self.assertGreaterEqual(allocation["r0"], 8)
+        self.assertLessEqual(max(allocation.values()), 8)
+
+    def test_weaker_recent_region_does_not_discard_prior_leader(self):
+        center = (800, 800, 800, 707)
+        region = {"region_id": "r0", "center": center,
+                  "radius_fraction": .08}
+        rows = [
+            self.row("r0", center, 191000, 100, 0),
+            self.row("r0", (810, 790, 800, 707), 190500, 100, 1),
+            self.row("r0", (820, 780, 800, 707), 189000, 100, 2),
+            self.row("r0", (830, 770, 800, 707), 189100, 100, 3),
+        ]
+        metric = adaptive._metrics(region, rows, self.B, 100.0)
+        self.assertEqual(metric["center"], center)
+
     def test_equal_iteration_comparison_contract_and_receipts(self):
         contract = adaptive.comparison_budget_contract(
             initial_global_calls=160, scout_iterations=35,

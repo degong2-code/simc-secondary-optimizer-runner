@@ -28,6 +28,9 @@ import v298_adaptive_percent_grid as percent_grid
 import v299_multiregion_percent_policy as multiregion_grid
 import v300_multiregion_throughput_resolution as measured_resolution
 import v301_nested_multiregion_policy as nested_regions
+import v302_weak_multiregion_zoom as region_geometry
+import v303_adaptive_region_resource_policy as region_resources
+import v304_v303_durable_adapter as durable_regions
 
 SCHEMA = "v291_durable_multiscale_native_runner_v1"
 
@@ -109,8 +112,12 @@ def _source_seed(native_json, accepted_receipt):
     return observed if type(observed) is int else None
 
 
+V304_METADATA = ("adaptive_stage", "region_id",
+                 "region_center", "region_radius_fraction")
+
+
 def _compact(req, native, source, plan):
-    return {
+    row = {
         "index": plan["index"], "phase": plan["phase"],
         "target": dict(plan["target"]), "iterations": plan["iterations"],
         "v092_base_target": dict(req["v092_base_target"]),
@@ -121,6 +128,11 @@ def _compact(req, native, source, plan):
         "samples": native["dps_samples"], "source": source,
         "simc_seed": native.get("simc_seed"),
     }
+    if "adaptive_stage" in plan:
+        need(all(key in plan for key in V304_METADATA),
+             "V304_PENDING_REGION_METADATA_MISSING")
+        row.update({key: plan[key] for key in V304_METADATA})
+    return row
 
 
 def _load_journal(path):
@@ -222,7 +234,8 @@ def run(context, flask_vector, binary, output, *,
         cache_only=False, cancel_file=None, max_elapsed_seconds=None,
         recover_verified_partial=False, open_folder=False,
         percentage_grid_points=None, multiregion_percent_grid=False,
-        nested_percent_grid=False):
+        nested_percent_grid=False, adaptive_region_resources=False,
+        adaptive_initial_global_calls=160, adaptive_confirmation_calls=8):
     """Resume an exact source-bound session, or execute one Native per plan.
 
     A previously committed journal is always re-validated against ORIGINAL
@@ -245,6 +258,18 @@ def run(context, flask_vector, binary, output, *,
     # New, explicitly opt-in experimental candidate strategy. Default None
     # means the original v290 session seal and journal remain byte-compatible.
     percent_enabled = percentage_grid_points is not None
+    need(type(adaptive_region_resources) is bool and
+         not (adaptive_region_resources and
+              (percent_enabled or multiregion_percent_grid or nested_percent_grid)),
+         "V304_EXCLUSIVE_ADAPTIVE_REGION_OPT_IN")
+    need(adaptive_region_resources or
+         (adaptive_initial_global_calls == 160 and
+          adaptive_confirmation_calls == 8),
+         "V304_OPTIONS_REQUIRE_EXPLICIT_OPT_IN")
+    if adaptive_region_resources:
+        region_opts = durable_regions.options(
+            max_native_calls, adaptive_initial_global_calls,
+            adaptive_confirmation_calls)
     need(type(multiregion_percent_grid) is bool and
          (not multiregion_percent_grid or percent_enabled),
          "MULTIREGION_REQUIRES_PERCENT_GRID_OPT_IN")
@@ -295,6 +320,17 @@ def run(context, flask_vector, binary, output, *,
         "upper": constraints.to_target(upper),
         "statistical_confidence": 0.95,
     }
+    if adaptive_region_resources:
+        seal["experimental_adaptive_regions"] = {
+            "schema": durable_regions.SCHEMA,
+            "v302_sha256": hashlib.sha256(
+                pathlib.Path(region_geometry.__file__).read_bytes()).hexdigest(),
+            "v303_sha256": hashlib.sha256(
+                pathlib.Path(region_resources.__file__).read_bytes()).hexdigest(),
+            "v304_sha256": hashlib.sha256(
+                pathlib.Path(durable_regions.__file__).read_bytes()).hexdigest(),
+            **region_opts,
+        }
     if percent_enabled:
         seal["experimental_percent_grid"] = {
             "schema": percent_grid.SCHEMA,
@@ -341,6 +377,13 @@ def run(context, flask_vector, binary, output, *,
     for row in stored:
         plan = {k: row[k] for k in ("index", "phase",
                                     "target", "iterations")}
+        if adaptive_region_resources:
+            need(all(k in row for k in V304_METADATA),
+                 "V304_JOURNAL_REGION_METADATA_MISSING")
+            plan.update({k: row[k] for k in V304_METADATA})
+        else:
+            need(not any(k in row for k in V304_METADATA),
+                 "V304_UNSEALED_METADATA_IN_LEGACY_JOURNAL")
         req, folder = _request(context, flask_vector, output, plan)
         actual, _ = _verified_row(req, binary, folder, calibration, allow_cache=True)
         expected = _compact(req, actual, row["source"], plan)
@@ -359,15 +402,36 @@ def run(context, flask_vector, binary, output, *,
     if pending is not None and pending["index"] < len(stored):
         row = stored[pending["index"]]
         need(all(row[k] == pending[k] for k in
-                 ("index", "target", "iterations", "phase")),
+                 ("index", "target", "iterations", "phase",
+                  *(V304_METADATA if adaptive_region_resources else ()))),
              "ALREADY_COMMITTED_PENDING_DISAGREES")
         pending_path.unlink()
         pending = None
     need(pending is None or
          (pending["index"] == len(stored) and
-          set(pending) == {"index", "target", "iterations", "phase",
-                           "decision"}),
+          set(pending) == ({"index", "target", "iterations", "phase",
+                            "decision"} |
+                           (set(V304_METADATA) if adaptive_region_resources else set()))),
          "PENDING_CASE_NOT_CONTIGUOUS")
+    if adaptive_region_resources and pending is not None:
+        # A persisted pending request is a source of truth ONLY after its
+        # exact deterministic plan is reconstructed from verified journal.
+        proposed_pending = durable_regions.next_plan(
+            observations, total=B, lower=lower, upper=upper,
+            max_native_calls=max_native_calls, scout_iterations=scout_iters,
+            confirmation_iterations=confirm_iters,
+            initial_global_calls=adaptive_initial_global_calls,
+            confirmation_calls=adaptive_confirmation_calls)
+        need(proposed_pending["next_request"] is not None,
+             "V304_PENDING_PLAN_DRIFT")
+        action = proposed_pending["next_request"]
+        expected_pending = {
+            "index": len(observations), "phase": action["phase"],
+            "target": action["target"], "iterations": action["iterations"],
+            "decision": proposed_pending["decision"],
+            **{key: action[key] for key in V304_METADATA},
+        }
+        need(pending == expected_pending, "V304_PENDING_PLAN_DRIFT")
     attempts = _count_attempts(output)
     need(attempts <= max_native_calls, "PREVIOUS_NATIVE_ATTEMPTS_EXCEED_BUDGET")
     need(attempts >= len(stored), "JOURNAL_WITHOUT_NATIVE_ATTEMPT")
@@ -408,47 +472,55 @@ def run(context, flask_vector, binary, output, *,
                 status = "BUDGET_EXHAUSTED"
                 break
             if pending is None:
-                planner = (nested_regions.next_plan if nested_percent_grid
-                           else multiregion_grid.next_plan if multiregion_percent_grid
-                           else percent_grid.next_plan if percent_enabled
-                           else search.next_plan)
-                point_count = percentage_grid_points
-                if percentage_grid_points == "auto":
-                    remaining_seconds = (
-                        max_elapsed_seconds - (time.monotonic() - started)
-                        if max_elapsed_seconds is not None else None)
-                    estimate_kwargs = {
-                        "remaining_calls": max(0, max_native_calls-attempts),
-                        "seconds_available": (max(0.001, remaining_seconds)
-                            if remaining_seconds is not None else None),
-                    }
-                    if multiregion_percent_grid:
-                        estimator = (nested_regions.choose_points_from_throughput
-                                     if nested_percent_grid else
-                                     measured_resolution.choose_points_from_throughput)
-                        point_count = estimator(
-                            [hint["seconds"] for hint in timings],
-                            confirmation_to_scout_iterations=(
-                                confirm_iters/scout_iters),
-                            **estimate_kwargs)
-                    else:
-                        # Existing experimental v298 auto sessions retain
-                        # their original exact v298 code SHA/algorithm.
-                        point_count = percent_grid.choose_points_from_throughput(
-                            [hint["seconds"] for hint in timings],
-                            **estimate_kwargs)
-                proposed = planner(
-                    [{"target": row["target"], "iterations": row["iterations"],
-                      "dps_mean": row["dps_mean"], "dps_sem": row["dps_sem"]}
-                     for row in observations],
-                    total=B, lower=lower, upper=upper,
-                    native_calls_used=attempts,
-                    max_native_calls=max_native_calls,
-                    scout_iterations=scout_iters,
-                    confirmation_iterations=confirm_iters,
-                    max_iterations=confirm_iters,
-                    **({"reference_points": point_count}
-                       if percent_enabled else {}))
+                if adaptive_region_resources:
+                    proposed = durable_regions.next_plan(
+                        observations, total=B, lower=lower, upper=upper,
+                        max_native_calls=max_native_calls,
+                        scout_iterations=scout_iters,
+                        confirmation_iterations=confirm_iters,
+                        initial_global_calls=adaptive_initial_global_calls,
+                        confirmation_calls=adaptive_confirmation_calls)
+                else:
+                    planner = (nested_regions.next_plan if nested_percent_grid
+                               else multiregion_grid.next_plan if multiregion_percent_grid
+                               else percent_grid.next_plan if percent_enabled
+                               else search.next_plan)
+                    point_count = percentage_grid_points
+                    if percentage_grid_points == "auto":
+                        remaining_seconds = (
+                            max_elapsed_seconds - (time.monotonic() - started)
+                            if max_elapsed_seconds is not None else None)
+                        estimate_kwargs = {
+                            "remaining_calls": max(0, max_native_calls-attempts),
+                            "seconds_available": (max(0.001, remaining_seconds)
+                                if remaining_seconds is not None else None),
+                        }
+                        if multiregion_percent_grid:
+                            estimator = (nested_regions.choose_points_from_throughput
+                                         if nested_percent_grid else
+                                         measured_resolution.choose_points_from_throughput)
+                            point_count = estimator(
+                                [hint["seconds"] for hint in timings],
+                                confirmation_to_scout_iterations=(
+                                    confirm_iters/scout_iters),
+                                **estimate_kwargs)
+                        else:
+                            # Existing v298 auto sessions retain source SHA/algorithm.
+                            point_count = percent_grid.choose_points_from_throughput(
+                                [hint["seconds"] for hint in timings],
+                                **estimate_kwargs)
+                    proposed = planner(
+                        [{"target": row["target"], "iterations": row["iterations"],
+                          "dps_mean": row["dps_mean"], "dps_sem": row["dps_sem"]}
+                         for row in observations],
+                        total=B, lower=lower, upper=upper,
+                        native_calls_used=attempts,
+                        max_native_calls=max_native_calls,
+                        scout_iterations=scout_iters,
+                        confirmation_iterations=confirm_iters,
+                        max_iterations=confirm_iters,
+                        **({"reference_points": point_count}
+                           if percent_enabled else {}))
                 if proposed["next_request"] is None:
                     status = proposed["status"]
                     break
@@ -458,6 +530,8 @@ def run(context, flask_vector, binary, output, *,
                            "iterations": action["iterations"],
                            "phase": action["phase"],
                            "decision": proposed["decision"]}
+                if adaptive_region_resources:
+                    pending.update({key: action[key] for key in V304_METADATA})
                 atomic(pending_path, pending)
             req, folder = _request(context, flask_vector, output, pending)
             previous_marker = folder.parent / "V065_PROGRESS.json"
@@ -542,7 +616,8 @@ def run(context, flask_vector, binary, output, *,
         raise
     summary = _summary(observations, context)
     report = {"schema": SCHEMA, "status": status,
-              "policy": (nested_regions.SCHEMA if nested_percent_grid
+              "policy": (durable_regions.SCHEMA if adaptive_region_resources
+                         else nested_regions.SCHEMA if nested_percent_grid
                          else multiregion_grid.SCHEMA if multiregion_percent_grid
                          else percent_grid.SCHEMA if percent_enabled
                          else "v290_multiscale_noisy_simplex_policy_v1"),
@@ -663,6 +738,10 @@ def main(argv=None):
     p.add_argument("--max-elapsed-seconds", type=float, default=None)
     p.add_argument("--cache-only", action="store_true")
     p.add_argument("--recover-verified-partial", action="store_true")
+    p.add_argument("--adaptive-region-resources", action="store_true",
+                   help="EXPERIMENTAL, opt-in v303 region resource policy")
+    p.add_argument("--adaptive-global-calls", type=int, default=160)
+    p.add_argument("--adaptive-confirm-calls", type=int, default=8)
     p.add_argument("--portable-archive",
                    help="Explicit original v291 Native case ZIP (import only)")
     p.add_argument("--portable-archive-sha256",
@@ -699,6 +778,9 @@ def main(argv=None):
                 max_elapsed_seconds=args.max_elapsed_seconds,
                 cancel_file=paths["cancel_file"], cache_only=args.cache_only,
                 recover_verified_partial=args.recover_verified_partial,
+                adaptive_region_resources=args.adaptive_region_resources,
+                adaptive_initial_global_calls=args.adaptive_global_calls,
+                adaptive_confirmation_calls=args.adaptive_confirm_calls,
                 open_folder=True)
         print(json.dumps({"status": result["status"],
                           "completed_cases": result["completed_cases"],
