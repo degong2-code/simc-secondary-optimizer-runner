@@ -3,7 +3,7 @@
 - **Capability:** `OPTIMIZER.POLICY`, `DEV.CONTINUITY`.
 - **Keywords:** v306 preflight, v305 seed loss, 12pct B, 24pct B, region allocation, real Native compact offline, season 70783.
 - **Prior evidence:** [v305 actual compact #42776992650](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42776992650); [v304/v290/fixed compact #42772775449](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42772775449); v305 and v303 source.
-- **Decision:** Investigate separate v306 opt-in. Preserve default v290, previous v305 source/session seals; no performance or 95% proof yet.
+- **Decision:** `EXTEND` in isolated branch through a separate v306 opt-in experiment. Preserve default v290, prior v305 SHA/session seals; no performance or 95% proof yet.
 - **Changes:** Offline measured-coverage audit and bounded v306 candidate policy/test added only on isolated branch; no new Native.
 - **Verification:** Two original compact receipts independently read by archive SHA and measured-row identity; GitHub Actions initially stopped at missing note ledger fields, so focused tests have not yet been reached; recheck required.
 - **Remaining:** Complete focused offline CI; fix source/test defects if any; then plan a distinct-specialization controlled Native user scenario only if warranted.
