@@ -1475,6 +1475,41 @@ def _season_settings_from_v216(*, compilation, numeric_inputs,
             "simc_compiled_default_level_used":True}
 
 
+def _choose_user_specific_fresh_G_source(candidate, *, user, calculation):
+    """A one-spec measured physical G reference cannot be copied to another spec.
+
+    Keep the same-build reference budget for normal-target B/T. For a different
+    class/spec, route profile composition through the source-backed 26-spec
+    v169 gear/tier selection. Neither route makes a new G-Native claim.
+    """
+    import v232_simc_only_ordinary_representative as physical
+    import v229_simc_only_source_seed as source_seed
+    need(type(candidate) is dict and
+         candidate.get("schema")==physical.SCHEMA and
+         candidate.get("status")==
+             "SIMC_SOURCE_PHYSICAL_CANDIDATE_NOT_ACTUAL_SEASON_PROOF"
+         and candidate.get("receipt_sha256")==source_seed.digest(
+             source_seed.canonical({k:v for k,v in candidate.items()
+                                    if k!="receipt_sha256"}).encode("utf8"))
+         and candidate.get("game_build")==calculation["game_build"]
+         and candidate.get("simc_revision")==calculation["simc_revision"]
+         and candidate.get("target_ilevel")==calculation["target_ilevel"]
+         and type(candidate.get("character")) is dict
+         and type(candidate.get("selected_G_slot_ids")) is dict,
+         "FRESH_V232_REFERENCE_SOURCE_HASH_OR_SCOPE_DRIFT")
+    need(type(user) is dict and type(user.get("character")) is dict,
+         "FRESH_V232_USER_CHARACTER_MISSING")
+    measured=(candidate["character"].get("class"),
+              candidate["character"].get("spec"))
+    selected=(user["character"].get("class"),
+              user["character"].get("spec"))
+    need(selected in set(ARCHETYPES)|PURE_PRODUCT_SPECS,
+         "FRESH_V232_USER_SPEC_UNSUPPORTED")
+    if measured==selected:
+        return candidate,False
+    return None,True
+
+
 def preview_from_environment_build(user,folder,binary,revision,*,
                                    environment_result,season_settings=None,
                                    season_controls=None,
@@ -1635,6 +1670,11 @@ def preview_from_environment_build(user,folder,binary,revision,*,
         except (OSError,ValueError,UnicodeError) as exc:
             raise UserScenarioBlocked(
                 "FRESH_V232_INSTALLED_G_ORIGINAL_JSON_INVALID") from exc
+        one_spec_candidate,other_spec_general_source=(
+            _choose_user_specific_fresh_G_source(
+                one_spec_candidate,user=user,calculation=calc))
+    else:
+        other_spec_general_source=False
     result=build(user,folder,binary,revision,
                  current_season_product=True,
                  season_source_bundle=bundle,
@@ -1655,6 +1695,10 @@ def preview_from_environment_build(user,folder,binary,revision,*,
     return {**result,
             "v216_to_v098_auto_source_linked_preview":True,
             "fresh_installed_v212_source_reused":installed_path is not None,
+            "fresh_general_G_reference_used_for_other_spec":
+                other_spec_general_source,
+            "fresh_selected_spec_exact_native_G_not_claimed":
+                other_spec_general_source,
             "user_dps_executed":False,
             "season_settings_source_admitted_here":False,
             "verified_user_default_options_registered":False,

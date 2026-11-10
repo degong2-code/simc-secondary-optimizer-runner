@@ -1,5 +1,6 @@
 """Fresh user profile selection contract; no source API, no Native."""
 import unittest
+from unittest import mock
 from integration_probes import p2_new_profile_product_e2e_once as e2e
 
 
@@ -34,10 +35,12 @@ class FreshProductScenarioOffline(unittest.TestCase):
             e2e.selected_case("")
 
     def test_binary_and_explicit_native_opt_in_required(self):
-        with self.assertRaisesRegex(
-                e2e.ProductCaseBlocked,
-                "EXPLICIT_FRESH_PRODUCT_NATIVE_OPT_IN_REQUIRED"):
-            e2e.run()
+        # Workflow tests must NEVER inherit the one-shot experiment's opt-in.
+        with mock.patch.dict("os.environ",{"P2_NEW_PRODUCT_PROFILE_ONCE":"0"}):
+            with self.assertRaisesRegex(
+                    e2e.ProductCaseBlocked,
+                    "EXPLICIT_FRESH_PRODUCT_NATIVE_OPT_IN_REQUIRED"):
+                e2e.run()
 
 
 if __name__=="__main__":
