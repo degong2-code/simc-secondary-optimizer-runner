@@ -450,6 +450,7 @@ def run(context, flask_vector, binary, output, *,
                 B,tuple(lower),tuple(upper))["milestone_targets"],
         }
     if percent_enabled:
+        seal["experimental_percent_grid"] = {
             "schema": percent_grid.SCHEMA,
             "source_sha256": hashlib.sha256(
                 pathlib.Path(percent_grid.__file__).read_bytes()).hexdigest(),
