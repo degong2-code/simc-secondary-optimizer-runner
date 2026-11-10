@@ -4,7 +4,7 @@
 
 ## 2026-11-11 최신 승인 — 품질/실행 효율 우선, 10분 초과는 폐기 사유 아님
 - **최신 사용자 직접 결정:** 5~10분은 바람직한 사용자 목표지만 하드 제한이 아니다. 더 높은 정확한 SimC 확인 DPS를 합리적인 실행 비용으로 얻는 정책은 10분을 넘더라도 비교·채택 후보로 유지한다. 정확한 iterations·wall·CPU·메모리·I/O·캐시/재개 및 SEM/95 한계를 함께 기록. 연구 실행과 제품 기본 사용 시간은 별도.
-- **이 채팅의 단일 아이디어 판정:** IDEA-001의 확인 예산 `quality–cost Pareto / anytime reserve`를 고도화, **새 ID 생성 없음**. 원본 [IDEA-001 상세](algorithm_ideas/IDEA-001-multifidelity-successive-halving.md)에 근거·중복·반증·단계별 최소 실증을 기록. 현재 `IDEA_ONLY`; v316 Native 실측이 먼저.
+- **이 채팅의 단일 아이디어 판정:** IDEA-001의 확인 예산 `quality–cost Pareto / anytime reserve`를 고도화, **새 ID 생성 없음**. 원본 [IDEA-001 상세](IDEA-001-multifidelity-successive-halving.md)에 근거·중복·반증·단계별 최소 실증을 기록. 현재 `IDEA_ONLY`; v316 Native 실측이 먼저.
 
 ## 순서 및 상태
 

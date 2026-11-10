@@ -12,6 +12,8 @@
 | 개발·인계 규칙 | [PROTOCOL](PROTOCOL.md) |
 | 과거 경과와 이전 인계 | [원래 INDEX 기록](HISTORICAL_INDEX_20261110_PRE_KNOWLEDGE_LAYER.md), [원래 PROTOCOL 기록](HISTORICAL_PROTOCOL_20261110_PRE_KNOWLEDGE_LAYER.md), [개발 노트](notes/), [누적 CURRENT](../CURRENT_PRODUCT_DEVELOPMENT_STATE.md) |
 
+> **v317 새 시험 경계:** [격리 코드](https://github.com/degong2-code/simc-secondary-optimizer-runner/commit/ff8b1da8a5781664a1fa5d616d23533cc9f0d7d6)·[Native 워크플로](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/workflows/p2_v317_single_profile_timing_native_once.yml) 등록됨, **실제 run ID/Native 영수증 확인 전 PENDING**. 10분 하드 탈락 폐기, 품질/비용 우선. [IDEA-001 고도화](algorithm_ideas/IDEA-001-multifidelity-successive-halving.md), [IDEA-008 선택편향 홀드아웃 제안](algorithm_ideas/IDEA-008-postselection-independent-holdout-confirmation.md) 모두 실증 개선 미확정.
+
 ## 2026-11-11 확인된 P2 실측 및 계측 경계
 
 - [단일 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P2_V316_V314_RESULTS.md)가 v313 8/8, **v314 15/16 완전 + 암살 도적 wide 540s 부분**, v315 10개 조건 비용, v316 opt-in 계측 635 PASS/2 SKIP·실 Native 계측0의 최신 기록이다. 아래 2026-11-10 ‘현 시점’ 항목은 **그 당시 역사 기록**이며 최신 실험 상태를 대신하지 않는다.
