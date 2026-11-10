@@ -446,8 +446,8 @@ def run(context, flask_vector, binary, output, *,
                 progressive21.raw_checkpoint.__file__).read_bytes()).hexdigest(),
             "origin":json.loads(json.dumps(prior_v309,sort_keys=True,
                                           allow_nan=False)),
-            "coverage":progressive21.geometry(
-                B,tuple(lower),tuple(upper))["milestone_targets"],
+            "coverage":list(progressive21.geometry(
+                B,tuple(lower),tuple(upper))["milestone_targets"]),
         }
     if percent_enabled:
         seal["experimental_percent_grid"] = {
