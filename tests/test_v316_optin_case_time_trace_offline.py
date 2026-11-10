@@ -143,6 +143,7 @@ class V316IndependentNativeCaseTrace(unittest.TestCase):
             journal.append(row)
             timing.append(trace.record(
                 row,session_sha256="d"*64,plan_pending_seconds=.01,
+                request_preflight_seconds=.02,
                 engine_execute_seconds=elapsed/10,
                 native_json_ingest_seconds=.002,
                 journal_checkpoint_seconds=.003,
