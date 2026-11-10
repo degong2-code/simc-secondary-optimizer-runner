@@ -46,16 +46,25 @@ def v(row):
 
 def source(zip_path,index):
     zip_path=pathlib.Path(zip_path).resolve(strict=True)
-    with zipfile.ZipFile(zip_path) as z:
-        names=z.namelist()
-        need("receipt.json" in names and
-             len([n for n in names if n.endswith("V291_JOURNAL.jsonl") or
-                  n=="all_accepted_compact_cases.jsonl"])==1,
-             "V312_ACCEPTED_COMPACT_SOURCE_MISSING")
-        name=next(n for n in names if n.endswith("V291_JOURNAL.jsonl")
-                  or n=="all_accepted_compact_cases.jsonl")
-        receipt=json.loads(z.read("receipt.json"))
-        raw=z.read(name)
+    if zip_path.is_dir():
+        accepted=list(zip_path.rglob("V291_JOURNAL.jsonl"))+list(
+            zip_path.rglob("all_accepted_compact_cases.jsonl"))
+        need((zip_path/"receipt.json").is_file() and len(accepted)==1
+             and accepted[0].is_file(),
+             "V312_ACCEPTED_EXTRACTED_COMPACT_SOURCE_MISSING")
+        receipt=json.loads((zip_path/"receipt.json").read_bytes())
+        raw=accepted[0].read_bytes()
+    else:
+        with zipfile.ZipFile(zip_path) as z:
+            names=z.namelist()
+            need("receipt.json" in names and
+                 len([n for n in names if n.endswith("V291_JOURNAL.jsonl") or
+                      n=="all_accepted_compact_cases.jsonl"])==1,
+                 "V312_ACCEPTED_COMPACT_SOURCE_MISSING")
+            name=next(n for n in names if n.endswith("V291_JOURNAL.jsonl")
+                      or n=="all_accepted_compact_cases.jsonl")
+            receipt=json.loads(z.read("receipt.json"))
+            raw=z.read(name)
     hashkey=("all_compact_cases_sha256" if index==0 else
              "new_compact_journal_sha256")
     need(sha(raw)==receipt[hashkey],
