@@ -1200,6 +1200,8 @@ def main(argv=None):
                    help="EXPERIMENTAL v307 complete finite lattice before local zoom")
     p.add_argument("--model-guided-multiregion", action="store_true",
                    help="EXPERIMENTAL v312 cubic surrogate and diverse regional SimC proposals")
+    p.add_argument("--case-timing-trace", action="store_true",
+                   help="RESEARCH ONLY v316 original per-case elapsed times, extra fsync")
     p.add_argument("--adaptive-global-calls", type=int, default=160)
     p.add_argument("--adaptive-confirm-calls", type=int, default=8)
     p.add_argument("--portable-archive",
@@ -1244,6 +1246,7 @@ def main(argv=None):
                 dense_nested_grid_max_level=args.dense_nested_grid_max_level,
                 dense_nested_grid_full_scan=args.dense_nested_grid_full_scan,
                 model_guided_multiregion=args.model_guided_multiregion,
+                case_timing_trace=args.case_timing_trace,
                 adaptive_initial_global_calls=args.adaptive_global_calls,
                 adaptive_confirmation_calls=args.adaptive_confirm_calls,
                 open_folder=True)
