@@ -335,7 +335,14 @@ class FreshInstalledV096Bridge(unittest.TestCase):
                 "gem_budget_J":doc["official_J"],
                 "flask_budget_F":doc["official_F"],
                 "omnium_talents":None}}
-            with mock.patch.object(bootstrap,"build",side_effect=build):
+            # This older test validates ONLY signed manual-T arithmetic.
+            # Its synthetic "{}" one-spec G fixture is not a real source
+            # receipt; bypass THAT unrelated source helper in this isolated
+            # unit test, never weaken the production SHA fail-closed policy.
+            with (mock.patch.object(bootstrap,"build",side_effect=build),
+                  mock.patch.object(
+                      bootstrap,"_choose_user_specific_fresh_G_source",
+                      return_value=(None,True))):
                 result=bootstrap.preview_from_environment_build(
                     user,root/"session",root/"fake_simc","runtime",
                     environment_result=env,season_settings=settings)
