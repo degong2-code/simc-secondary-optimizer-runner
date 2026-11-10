@@ -1,0 +1,65 @@
+# Pure offline cross-source study, no Native/Blizzard/WCL credentials.
+# The 48 original independent 320-iteration results are held out.
+name: P2 v312 9906 real historical scouts surrogate holdout offline
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p2_v312_historical_9906_model_screen.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p2-v312-historical-9906-model-screen
+  cancel-in-progress: false
+jobs:
+  original-native-history-no-new-simc:
+    if: contains(github.event.head_commit.message, '[p2-v312-9906-holdout-offline-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      PYTHONPATH: runner:integration_probes:.
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Download original 11 full 2800 compact accepted Native journal
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42814969237
+          name: p2-v307-full11-2800-compact-coverage-receipt
+          path: out/v312_origin11
+          github-token: ${{ github.token }}
+      - name: Download first25 added 2185 Native compact original journal
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42822653731
+          name: p2-v309-level21-25pct-new-only-compact-evidence
+          path: out/v312_origin25
+          github-token: ${{ github.token }}
+      - name: Download first50 added 4969 Native compact original journal
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42826070351
+          name: p2-v310-level21-50pct-new-only-compact-evidence
+          path: out/v312_origin50
+          github-token: ${{ github.token }}
+      - name: SHA-authenticated historical 48 precision holdout, ZERO Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile runner/v312_model_guided_multiregion_policy.py integration_probes/p2_v312_historical_9906_model_screen_offline.py
+          python -u integration_probes/p2_v312_historical_9906_model_screen_offline.py \
+            --original11-compact out/v312_origin11 \
+            --original25-compact out/v312_origin25 \
+            --original50-compact out/v312_origin50 \
+            --output out/p2_v312_historical_study/receipt.json
+          echo V312_HISTORICAL_SCREEN_OFFLINE_NO_NEW_NATIVE
+      - name: Persist original 35/320 held-out fitting benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-v312-9906-original-native-48-holdout-model-evidence
+          path: out/p2_v312_historical_study/receipt.json
+          if-no-files-found: warn
+          retention-days: 7
