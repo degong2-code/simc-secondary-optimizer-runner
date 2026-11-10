@@ -1,6 +1,6 @@
 # 코드/테스트 전체 파일 인벤토리 — 2026-11-10 격리 SHA 스냅샷
 
-> 스냅샷 기준 `1b59ec52af9658218e90fd5ce652d99cd1d304fc`. 실제 트리의 runner 최상위 파일 175개와 tests Python 237개를 전부 기재. 아래 연관 테스트는 **이름/버전명 후보**로만 표시하며 실제 import·완료·PASS 증거가 아니다. [핵심 FILE_MAP](FILE_MAP.md)과 [증거 지도](EVIDENCE_INDEX.md)를 함께 본다. 새 HEAD 파일은 실제 Git 트리로 다시 조회해야 한다.
+> 스냅샷 기준 `1b59ec52af9658218e90fd5ce652d99cd1d304fc`. 실제 트리의 runner 최상위 파일 175개와 tests Python 237개를 전부 기재. 아래 연관 테스트는 **이름/버전명 후보**로만 표시하며 실제 import·완료·PASS 증거가 아니다. [핵심 FILE_MAP](FILE_MAP.md)과 [증거 지도](EVIDENCE_INDEX.md)를 함께 본다. 새 HEAD 파일은 실제 Git 트리로 다시 조회해야 한다. 2026-11-10 P2 v298–v303 추가 파일은 아래 delta 섹션에 보충하며, 위 역사 스냅샷 수량을 현재 전체 수량으로 해석하지 않는다.
 
 ## Runner 파일 전체
 
@@ -265,6 +265,26 @@
 | [test_v285_consumable_weapon_source.py](../../tests/test_v285_consumable_weapon_source.py) | [test_v286_representative_oil_source_binding.py](../../tests/test_v286_representative_oil_source_binding.py) | [test_v287_zero_history_v222_user_budget_bridge.py](../../tests/test_v287_zero_history_v222_user_budget_bridge.py) |
 | [test_v288_no_redundant_g_native.py](../../tests/test_v288_no_redundant_g_native.py) | [test_v289_retail_live_build_source.py](../../tests/test_v289_retail_live_build_source.py) | [test_v294_dk_runeforge_selection.py](../../tests/test_v294_dk_runeforge_selection.py) |
 | [test_v295_season_runeforge_source.py](../../tests/test_v295_season_runeforge_source.py) | [test_v296_pinned_oil_static_rating_source.py](../../tests/test_v296_pinned_oil_static_rating_source.py) | [test_v297_sealed_simc_oil_gear_delta.py](../../tests/test_v297_sealed_simc_oil_gear_delta.py) |
+
+## 2026-11-10 P2 experimental delta (not included in historical counts)
+
+| Runner | Role |
+|---|---|
+| [v298_adaptive_percent_grid.py](../../runner/v298_adaptive_percent_grid.py) | Adaptive percentage-grid candidate generation |
+| [v299_multiregion_percent_policy.py](../../runner/v299_multiregion_percent_policy.py) | Multi-region percentage policy |
+| [v300_multiregion_throughput_resolution.py](../../runner/v300_multiregion_throughput_resolution.py) | Throughput/resolution research |
+| [v301_nested_multiregion_policy.py](../../runner/v301_nested_multiregion_policy.py) | Nested 11→21→41 candidate policy |
+| [v302_weak_multiregion_zoom.py](../../runner/v302_weak_multiregion_zoom.py) | Global shortlist and local-six geometry |
+| [v303_adaptive_region_resource_policy.py](../../runner/v303_adaptive_region_resource_policy.py) | Adaptive radius/scout allocation and fair-comparison contract |
+
+| Tests | Coverage |
+|---|---|
+| [test_v298_adaptive_percent_grid.py](../../tests/test_v298_adaptive_percent_grid.py) | Existing v298 regression |
+| [test_v299_multiregion_percent_policy.py](../../tests/test_v299_multiregion_percent_policy.py) | Existing v299 regression |
+| [test_v300_multiregion_throughput_resolution.py](../../tests/test_v300_multiregion_throughput_resolution.py) | Existing v300 regression |
+| [test_v301_nested_multiregion_policy.py](../../tests/test_v301_nested_multiregion_policy.py) | Existing v301 regression |
+| [test_v302_weak_multiregion_zoom.py](../../tests/test_v302_weak_multiregion_zoom.py) | Existing v302 regression |
+| [test_v303_adaptive_region_resource_policy.py](../../tests/test_v303_adaptive_region_resource_policy.py) | New adaptive resource/budget-contract regression |
 
 ## 역사 원문 찾기
 
