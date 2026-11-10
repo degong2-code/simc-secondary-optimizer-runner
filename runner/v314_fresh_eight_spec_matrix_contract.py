@@ -33,7 +33,7 @@ _SPECS=(
     ("arcane_mage","mage","arcane",3180,3620),
     ("frost_mage","mage","frost",3280,3710),
     ("fire_mage","mage","fire",3320,3730),
-    ("frost_death_knight","death_knight","frost",3220,3660),
+    ("frost_death_knight","deathknight","frost",3220,3660),
     ("subtlety_rogue","rogue","subtlety",3350,3770),
     ("assassination_rogue","rogue","assassination",3210,3590),
 )
