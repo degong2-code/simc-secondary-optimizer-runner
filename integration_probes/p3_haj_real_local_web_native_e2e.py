@@ -317,8 +317,10 @@ def execute(root,binary,revision,game_build,environment_result,*,receipt_file,
                 need(user_result["confidence_level"]==0.95
                      and user_result["global_optimum_proven"] is False
                      and sum(vector.values())==total
-                     and all(type(v) is int and v>=0 and v<=int(total*.60)
-                             for v in vector.values())
+                     and (all(v*2<total for v in vector.values())
+                          if expected_socket_count is None else
+                          all(type(v) is int and v>=0 and v<=int(total*.60)
+                              for v in vector.values()))
                      and final["native_calls_cumulative"]==count,
                      "WEB_RESULT_STATISTICS_OR_CHMV_DRIFT")
                 if manual_final_T is not None:

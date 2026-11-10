@@ -18,7 +18,6 @@ import tempfile
 import zipfile
 
 from runner import v106_user_session_controller as users
-from runner import v113_local_web_api as web
 from runner import v289_retail_live_build_source as retail
 from runner import v063_numeric_injection as numeric
 
@@ -106,6 +105,7 @@ def run():
         with tempfile.TemporaryDirectory(prefix="p2-fresh-product-") as temporary:
             root=pathlib.Path(temporary)
             need(not list(root.iterdir()),"FRESH_PRODUCT_WORKSPACE_NOT_EMPTY")
+            from runner import v113_local_web_api as web
             jobs=web.LocalJobs(root)
             environment=jobs.build_season_environment(
                 game_build=BUILD,
