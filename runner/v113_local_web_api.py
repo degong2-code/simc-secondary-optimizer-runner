@@ -250,6 +250,15 @@ class LocalJobs:
             "source_compilation":{k:compilation[k] for k in names},
             "fresh_one_spec_simc_representative":
                 result.get("fresh_one_spec_simc_representative"),
+            # Reuse the ORIGINAL v216 pinned same-build source for
+            # a different user's physical representative, never the old
+            # measured representative's gear. Source-only v251/v232 can
+            # generate a second spec in the same stage at ZERO new Native.
+            "fresh_ordinary_gear":result.get("fresh_ordinary_gear"),
+            "fresh_tier_simc_candidate_bridge":
+                result.get("fresh_tier_simc_candidate_bridge"),
+            "fresh_lazy_full_pinned_simc_item_source":
+                result.get("fresh_lazy_full_pinned_simc_item_source"),
             "verified_target_ilevel":doc["target_ilevel"],
             "verified_oil_item_ids_by_hand":dict(installed_oils)}
         return doc["manifest_sha256"]

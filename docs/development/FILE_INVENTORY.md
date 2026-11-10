@@ -291,6 +291,7 @@
 | [test_v302_weak_multiregion_zoom.py](../../tests/test_v302_weak_multiregion_zoom.py) | Existing v302 regression |
 | [test_v303_adaptive_region_resource_policy.py](../../tests/test_v303_adaptive_region_resource_policy.py) | New adaptive resource/budget-contract regression |
 | [test_v305_hybrid_durable_offline.py](../../tests/test_v305_hybrid_durable_offline.py) | v305 durable/geometry/cancel/resume regression | 
+| [test_v098_source_only_one_spec_user_bridge.py](../../tests/test_v098_source_only_one_spec_user_bridge.py) | Native-zero selected-spec authenticated v216 source; error fallbacks | 
 | [test_v098_cross_spec_installed_G_source.py](../../tests/test_v098_cross_spec_installed_G_source.py) | Cross-spec source seal, same-spec retention, different-spec fallback |
 | [test_p2_fresh_user_profile_case_offline.py](../../tests/test_p2_fresh_user_profile_case_offline.py) | New independent-spec case selected no-Native preflight |
 | [test_p2_v305_hybrid_offline.py](../../tests/test_p2_v305_hybrid_offline.py) | v305 32+32+4 real pilot pure offline preflight | 

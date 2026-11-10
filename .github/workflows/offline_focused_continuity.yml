@@ -93,6 +93,7 @@ jobs:
             tests.test_p2_v305_hybrid_offline \
             tests.test_p2_fresh_user_profile_case_offline \
             tests.test_v098_cross_spec_installed_G_source \
+            tests.test_v098_source_only_one_spec_user_bridge \
             tests.test_p3_hab_strict_final_half_cap \
             tests.test_p3_hx_durable_longrun_offline \
             tests.test_p3_hag_portable_native_case_cache \

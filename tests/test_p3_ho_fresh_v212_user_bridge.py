@@ -342,7 +342,10 @@ class FreshInstalledV096Bridge(unittest.TestCase):
             with (mock.patch.object(bootstrap,"build",side_effect=build),
                   mock.patch.object(
                       bootstrap,"_choose_user_specific_fresh_G_source",
-                      return_value=(None,True))):
+                      return_value=(None,True)),
+                  mock.patch.object(
+                      bootstrap,"_select_v216_source_only_user_spec",
+                      return_value={"selected_G_slot_ids":{}})):
                 result=bootstrap.preview_from_environment_build(
                     user,root/"session",root/"fake_simc","runtime",
                     environment_result=env,season_settings=settings)

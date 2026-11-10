@@ -1510,6 +1510,72 @@ def _choose_user_specific_fresh_G_source(candidate, *, user, calculation):
     return None,True
 
 
+def _select_v216_source_only_user_spec(candidate, *, user,
+                                      environment_result, calculation):
+    """Select ONE user-spec source from the SAME pinned v216 Build, Native0.
+
+    v216's G/B/T remains a general reference; candidate gear for each
+    actual DPS spec comes from the same pinned SimC item data/tier and Wago
+    files. No 26-spec all-or-nothing catalog, no historical gear fallback,
+    no copied static rating certification for the user's spec.
+    """
+    import v216_environment_build_coordinator as builder
+    source=environment_result
+    need(type(source) is dict and
+         type(source.get("source_compilation")) is dict,
+         "FRESH_SELECTED_SPEC_SOURCE_CONTEXT_MISSING")
+    root=pathlib.Path(source["source_compilation"]["stage_root"]).resolve()
+    need(root.is_dir() and not root.is_symlink(),
+         "FRESH_SELECTED_SPEC_STAGE_ROOT_MISSING")
+    gear=source.get("fresh_ordinary_gear")
+    tier=source.get("fresh_tier_simc_candidate_bridge")
+    full=source.get("fresh_lazy_full_pinned_simc_item_source")
+    need(all(type(x) is dict for x in (gear,tier,full)) and
+         all(type(x.get("candidate_path")) is str and x.get("candidate_path")
+             for x in (gear,tier)) and
+         type(full.get("source_dir")) is str and full["source_dir"],
+         "FRESH_SELECTED_SPEC_PINNED_SOURCE_NOT_RETAINED")
+    seed=pathlib.Path(full["source_dir"]).resolve()
+    paths=(pathlib.Path(gear["candidate_path"]).resolve(),
+           pathlib.Path(tier["candidate_path"]).resolve(),seed)
+    need(all(x.is_relative_to(root) and x.exists() and not x.is_symlink()
+             for x in paths) and seed.is_dir() and
+         (seed/"item_data.inc").is_file() and
+         not (seed/"item_data.inc").is_symlink(),
+         "FRESH_SELECTED_SPEC_SOURCE_OUTSIDE_PINNED_STAGE")
+    request={"class":user["character"]["class"],
+             "spec":user["character"]["spec"],
+             "target_ilevel":calculation["target_ilevel"]}
+    result=builder._one_spec_ordinary_simc_stage(
+        stage_root=root,build=calculation["game_build"],
+        fresh_gear=gear,tier_bridge=tier,seed_directory=seed,
+        request=request)
+    need(result.get("status")==
+             "FRESH_ONE_SPEC_SIMC_G_SOURCE_CANDIDATE_PENDING_NATIVE" and
+         result.get("native_calls")==0 and
+         type(result.get("candidate_path")) is str,
+         "FRESH_SELECTED_SPEC_SOURCE_ONLY_NOT_READY:"+str(result.get("reason")))
+    path=pathlib.Path(result["candidate_path"]).resolve()
+    need(path.is_relative_to(root) and path.is_file() and
+         not path.is_symlink() and 0<path.stat().st_size<=12_000_000,
+         "FRESH_SELECTED_SPEC_SOURCE_CANDIDATE_PATH_INVALID")
+    try:
+        chosen=json.loads(path.read_text(encoding="utf8"))
+    except (OSError,ValueError,UnicodeError) as exc:
+        raise UserScenarioBlocked(
+            "FRESH_SELECTED_SPEC_SOURCE_CANDIDATE_JSON_INVALID") from exc
+    # Reuse the existing original per-spec SHA, build, revision and
+    # exact selected physical-slot validation (in v098.build).
+    need(chosen.get("game_build")==calculation["game_build"] and
+         chosen.get("simc_revision")==calculation["simc_revision"] and
+         chosen.get("target_ilevel")==calculation["target_ilevel"] and
+         (chosen.get("character",{}).get("class"),
+          chosen.get("character",{}).get("spec"))==
+         (request["class"],request["spec"]),
+         "FRESH_SELECTED_SPEC_NEW_SOURCE_IDENTITY_DRIFT")
+    return chosen
+
+
 def preview_from_environment_build(user,folder,binary,revision,*,
                                    environment_result,season_settings=None,
                                    season_controls=None,
@@ -1673,6 +1739,10 @@ def preview_from_environment_build(user,folder,binary,revision,*,
         one_spec_candidate,other_spec_general_source=(
             _choose_user_specific_fresh_G_source(
                 one_spec_candidate,user=user,calculation=calc))
+        if other_spec_general_source:
+            one_spec_candidate=_select_v216_source_only_user_spec(
+                one_spec_candidate,user=user,
+                environment_result=environment_result,calculation=calc)
     else:
         other_spec_general_source=False
     result=build(user,folder,binary,revision,
