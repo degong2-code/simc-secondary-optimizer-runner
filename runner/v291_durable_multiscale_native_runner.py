@@ -36,6 +36,7 @@ import v306_seed_retained_coarse_escape_regions as seed_escape_regions
 import v307_dense_nested_coverage_grid as dense_grid
 import v309_prior_anchored_level21_progressive as progressive21
 import v310_external_frontier_50_only as frontier50
+import v311_external_frontier_100_only as frontier100
 
 SCHEMA = "v291_durable_multiscale_native_runner_v1"
 
@@ -151,6 +152,10 @@ def _compact(req, native, source, plan):
         need(all(k in plan for k in frontier50.METADATA),
              "V310_PENDING_FRONTIER_METADATA_MISSING")
         row.update({k: plan[k] for k in frontier50.METADATA})
+    if "frontier100_stage" in plan:
+        need(all(k in plan for k in frontier100.METADATA),
+             "V311_PENDING_FRONTIER_METADATA_MISSING")
+        row.update({k: plan[k] for k in frontier100.METADATA})
     return row
 
 
@@ -262,6 +267,7 @@ def run(context, flask_vector, binary, output, *,
         v309_prior_raw_checkpoint_zip=None,
         v309_prior_raw_checkpoint_sha256=None,
         v310_frontier_manifest_path=None,
+        v311_three_source_manifest_path=None,
         adaptive_initial_global_calls=160, adaptive_confirmation_calls=8):
     """Resume an exact source-bound session, or execute one Native per plan.
 
@@ -301,6 +307,14 @@ def run(context, flask_vector, binary, output, *,
                  v309_prior_raw_checkpoint_sha256)
     progressive_enabled=any(x is not None for x in p309_fields)
     frontier50_enabled=v310_frontier_manifest_path is not None
+    frontier100_enabled=v311_three_source_manifest_path is not None
+    need(not frontier100_enabled or
+         (type(v311_three_source_manifest_path) is str and
+          bool(v311_three_source_manifest_path) and
+          not (frontier50_enabled or progressive_enabled or region_enabled or
+               grid_enabled or percent_enabled or multiregion_percent_grid or
+               nested_percent_grid)),
+         "V311_EXCLUSIVE_THREE_SOURCE_FRONTIER_REQUIRED")
     need(not frontier50_enabled or
          (type(v310_frontier_manifest_path) is str and
           bool(v310_frontier_manifest_path) and
@@ -324,7 +338,8 @@ def run(context, flask_vector, binary, output, *,
          adaptive_confirmation_calls == 8),
          "V307_EXCLUSIVE_DENSE_GRID_OPT_IN")
     special_enabled = (region_enabled or grid_enabled or
-                       progressive_enabled or frontier50_enabled)
+                       progressive_enabled or frontier50_enabled or
+                       frontier100_enabled)
     need(not (region_enabled and
               (percent_enabled or multiregion_percent_grid or nested_percent_grid)),
          "V304_EXCLUSIVE_ADAPTIVE_REGION_OPT_IN")
@@ -335,7 +350,8 @@ def run(context, flask_vector, binary, output, *,
     region_planner = (seed_escape_regions if seed_retained_coarse_escape_regions
                       else hybrid_regions if hybrid_region_grid_neighbors
                       else durable_regions)
-    metadata_keys = (frontier50.METADATA if frontier50_enabled else
+    metadata_keys = (frontier100.METADATA if frontier100_enabled else
+                     frontier50.METADATA if frontier50_enabled else
                      progressive21.METADATA if progressive_enabled else
                      dense_grid.METADATA if grid_enabled else
                      V304_METADATA + (("hybrid_method",)
@@ -383,6 +399,22 @@ def run(context, flask_vector, binary, output, *,
     need(B == identity["base_B"], "APPROVED_B_CHANGED")
     prior_v309=None
     frontier_v310=None
+    frontier_v311=None
+    if frontier100_enabled:
+        frontier_v311=frontier100.load_three_original_sources(
+            v311_three_source_manifest_path)
+        need(frontier_v311["source_profile_sha256"]==
+                 identity["source_profile_sha256"] and
+             frontier_v311["binary_sha256"]==identity["binary_sha256"] and
+             frontier_v311["revision"]==identity["revision"] and
+             frontier_v311["B"]==B and
+             tuple(frontier_v311["lower"])==tuple(lower) and
+             tuple(frontier_v311["upper"])==tuple(upper) and
+             frontier_v311["scout_iterations"]==identity["scout_iterations"] and
+             frontier_v311["confirm_iterations"]==identity["confirm_iterations"] and
+             max_native_calls==frontier100.geometry(
+                 B,tuple(lower),tuple(upper))["calls"],
+             "V311_ORIGINAL_THREE_SOURCE_PROFILE_OR_BUDGET_DRIFT")
     if frontier50_enabled:
         frontier_v310=frontier50.load_frontier(v310_frontier_manifest_path)
         need(frontier_v310["source_profile_sha256"]==
@@ -464,6 +496,18 @@ def run(context, flask_vector, binary, output, *,
             "levels": [level for level in dense_grid.LEVELS
                        if level <= dense_nested_grid_max_level],
             "budget": dense_grid.budget(max_native_calls),
+        }
+    if frontier100_enabled:
+        seal["experimental_external_frontier100"]={
+            "schema":frontier100.SCHEMA,
+            "source_sha256":hashlib.sha256(pathlib.Path(
+                frontier100.__file__).read_bytes()).hexdigest(),
+            "geometry_sha256":hashlib.sha256(pathlib.Path(
+                progressive21.__file__).read_bytes()).hexdigest(),
+            "original_native_verifier_sha256":hashlib.sha256(pathlib.Path(
+                frontier100.raw_checkpoint.__file__).read_bytes()).hexdigest(),
+            "verified_original_three_source_frontier":json.loads(json.dumps(
+                frontier_v311,sort_keys=True,allow_nan=False)),
         }
     if frontier50_enabled:
         seal["experimental_external_frontier50"]={
@@ -561,15 +605,25 @@ def run(context, flask_vector, binary, output, *,
             need(all(k in row for k in metadata_keys) and
                  not any(k in row for k in (*V304_METADATA,"hybrid_method",
                                            *dense_grid.METADATA,
-                                           *progressive21.METADATA)),
+                                           *progressive21.METADATA,
+                                           *frontier100.METADATA)),
                  "V310_JOURNAL_FRONTIER_METADATA_MISSING")
+            plan.update({k: row[k] for k in metadata_keys})
+        elif frontier100_enabled:
+            need(all(k in row for k in metadata_keys) and
+                 not any(k in row for k in (*V304_METADATA,"hybrid_method",
+                                           *dense_grid.METADATA,
+                                           *progressive21.METADATA,
+                                           *frontier50.METADATA)),
+                 "V311_JOURNAL_FRONTIER_METADATA_MISSING")
             plan.update({k: row[k] for k in metadata_keys})
         else:
             need(not any(k in row for k in
                          (*V304_METADATA, "hybrid_method",
                           *dense_grid.METADATA,
                           *progressive21.METADATA,
-                          *frontier50.METADATA)),
+                          *frontier50.METADATA,
+                          *frontier100.METADATA)),
                  "V307_UNSEALED_METADATA_IN_LEGACY_JOURNAL")
         req, folder = _request(context, flask_vector, output, plan)
         actual, _ = _verified_row(req, binary, folder, calibration, allow_cache=True)
@@ -585,6 +639,12 @@ def run(context, flask_vector, binary, output, *,
         else:
             need(expected == row, "RECORDED_NATIVE_CASE_BYTES_OR_SUMMARY_DRIFT")
             observations.append(row)
+    if frontier100_enabled:
+        frontier100.audit_recorded_history(
+            observations,total=B,lower=lower,upper=upper,
+            max_native_calls=max_native_calls,
+            scout_iterations=scout_iters,
+            confirmation_iterations=confirm_iters)
     if frontier50_enabled:
         frontier50.audit_recorded_history(
             observations,total=B,lower=lower,upper=upper,
@@ -622,7 +682,12 @@ def run(context, flask_vector, binary, output, *,
     if special_enabled and pending is not None:
         # A persisted pending request is a source of truth ONLY after its
         # exact deterministic plan is reconstructed from verified journal.
-        if frontier50_enabled:
+        if frontier100_enabled:
+            proposed_pending=frontier100.next_plan(
+                observations,total=B,lower=lower,upper=upper,
+                max_native_calls=max_native_calls,scout_iterations=scout_iters,
+                confirmation_iterations=confirm_iters)
+        elif frontier50_enabled:
             proposed_pending=frontier50.next_plan(
                 observations,total=B,lower=lower,upper=upper,
                 max_native_calls=max_native_calls,scout_iterations=scout_iters,
@@ -696,7 +761,13 @@ def run(context, flask_vector, binary, output, *,
                 status = "BUDGET_EXHAUSTED"
                 break
             if pending is None:
-                if frontier50_enabled:
+                if frontier100_enabled:
+                    proposed=frontier100.next_plan(
+                        observations,total=B,lower=lower,upper=upper,
+                        max_native_calls=max_native_calls,
+                        scout_iterations=scout_iters,
+                        confirmation_iterations=confirm_iters)
+                elif frontier50_enabled:
                     proposed=frontier50.next_plan(
                         observations,total=B,lower=lower,upper=upper,
                         max_native_calls=max_native_calls,
@@ -860,7 +931,8 @@ def run(context, flask_vector, binary, output, *,
         raise
     summary = _summary(observations, context)
     report = {"schema": SCHEMA, "status": status,
-              "policy": (frontier50.SCHEMA if frontier50_enabled
+              "policy": (frontier100.SCHEMA if frontier100_enabled
+                         else frontier50.SCHEMA if frontier50_enabled
                          else progressive21.SCHEMA if progressive_enabled
                          else dense_grid.SCHEMA if grid_enabled
                          else seed_escape_regions.SCHEMA if seed_retained_coarse_escape_regions
@@ -883,6 +955,11 @@ def run(context, flask_vector, binary, output, *,
               "confidence_for_display": 0.95,
               "no_global_optimum_proof": True,
               "native_cases_not_to_be_confused_with_iterations": True}
+    if frontier100_enabled:
+        report["frontier100_coverage"]=frontier100.coverage(
+            observations,total=B,lower=lower,upper=upper,
+            prior=frontier_v311)
+        report["origin50_raw_sha256"]=frontier_v311["third50_raw_sha256"]
     if frontier50_enabled:
         report["frontier50_coverage"]=frontier50.coverage(
             observations,total=B,lower=lower,upper=upper,
