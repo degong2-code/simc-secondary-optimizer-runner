@@ -480,6 +480,13 @@ def run(context, flask_vector, binary, output, *,
         else:
             need(expected == row, "RECORDED_NATIVE_CASE_BYTES_OR_SUMMARY_DRIFT")
             observations.append(row)
+    if grid_enabled:
+        # Exact per-case Native input/JSON2/receipt is already authenticated
+        # above; also reject a forged historical grid cursor or anchor that
+        # would silently skip unmeasured lattice cells after restart.
+        dense_grid.audit_recorded_history(
+            observations,total=B,lower=lower,upper=upper,
+            max_level=dense_nested_grid_max_level)
     pending = read_json(pending_path) if pending_path.exists() else None
     if pending is not None and pending["index"] < len(stored):
         row = stored[pending["index"]]
