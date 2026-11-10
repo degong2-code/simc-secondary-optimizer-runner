@@ -1,0 +1,72 @@
+# IDEA-006 exploration only, historical validated actual SimC files.
+# No SimC binary, credentials, model promotion or Native invocation.
+name: P2 IDEA006 local direction vs original 48 precision holdout offline
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p2_idea006_historical_geometry_offline_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p2-idea006-offline-original-historic-screen
+  cancel-in-progress: false
+jobs:
+  verified-9906-real-historic-screen:
+    if: contains(github.event.head_commit.message, '[p2-idea006-9906-offline-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      PYTHONPATH: runner:integration_probes:.
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Original full11/2800 compact accepted SimC records
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42814969237
+          name: p2-v307-full11-2800-compact-coverage-receipt
+          path: out/idea006_origin11
+          github-token: ${{ github.token }}
+      - name: Original 21-grid 25 percent additional SimC records
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42822653731
+          name: p2-v309-level21-25pct-new-only-compact-evidence
+          path: out/idea006_origin25
+          github-token: ${{ github.token }}
+      - name: Original 21-grid 50 percent additional SimC records
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42826070351
+          name: p2-v310-level21-50pct-new-only-compact-evidence
+          path: out/idea006_origin50
+          github-token: ${{ github.token }}
+      - name: Offline-only geometric screen dependencies and synthetic tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install 'numpy>=1.26,<3'
+          python -m py_compile integration_probes/p2_idea006_historical_local_geometry_screen_offline.py tests/test_p2_idea006_local_geometry_offline.py
+          python -m unittest -v tests.test_p2_idea006_local_geometry_offline
+          echo IDEA006_SYNTHETIC_ONLY_OFFLINE_CONTRACT_PASS
+      - name: Exact original SHA 9906/48 screen with zero NEW Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -u integration_probes/p2_idea006_historical_local_geometry_screen_offline.py \
+            --original11-compact out/idea006_origin11 \
+            --original25-compact out/idea006_origin25 \
+            --original50-compact out/idea006_origin50 \
+            --output out/idea006_historical_study/receipt.json
+          echo IDEA006_SOURCE_AUTHENTICATED_RESEARCH_ONLY_NO_NEW_NATIVE
+      - name: Preserve exploratory negative/positive evidence and boundaries
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-idea006-9906-real-historical-local-hessian-study
+          path: out/idea006_historical_study/receipt.json
+          if-no-files-found: warn
+          retention-days: 7
