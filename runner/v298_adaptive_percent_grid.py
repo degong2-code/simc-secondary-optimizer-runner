@@ -129,8 +129,9 @@ def reference_pool(total, lower, upper, points=11, max_pool=2048):
 
     Levels use exact integer numerators over (points-1), so odd rating totals
     do not drift due to floating grid arithmetic. A two-pair sum lookup finds
-    the maximal feasible shell in O(points^2 log(points)); enumeration is
-    limited to that shell, not the 4D Cartesian product.
+    the maximal feasible shell in O(points^2 log(points)); asymmetrical
+    grids expand to nearby lower shells only as needed for candidate diversity.
+    No full 4D Cartesian product is materialized.
     """
     lower, upper = _bounds(total, lower, upper)
     _need(type(points) is int and 3 <= points <= 41 and
@@ -154,31 +155,51 @@ def reference_pool(total, lower, upper, points=11, max_pool=2048):
             second.setdefault(cval + dval, []).append((c, d, cval, dval))
     second_sums = sorted(second)
     limit = total * denominator
-    shell = None
+    # Merge each first-pair's descending feasible second-pair sums. Avoid
+    # materializing an O(points^4) Cartesian product or all possible shells.
+    frontier = []
     for amount in first:
         pos = bisect_right(second_sums, limit - amount) - 1
         if pos >= 0:
-            candidate = amount + second_sums[pos]
-            if shell is None or candidate > shell:
-                shell = candidate
-    _need(shell is not None, "PERCENT_GRID_EMPTY_SHELL")
-    sampled = heapq.nsmallest(
-        max_pool,
-        (( _priority((a, b, c, d)), (a, b, c, d),
-            (aval, bval, cval, dval))
-         for fst, left in first.items()
-         if shell - fst in second
-         for a, b, aval, bval in left
-         for c, d, cval, dval in second[shell - fst]),
-        key=lambda record: (record[0], record[1]))
+            heapq.heappush(frontier, (-(amount + second_sums[pos]),
+                                      amount, pos))
+    _need(bool(frontier), "PERCENT_GRID_EMPTY_SHELL")
     unique = {}
-    for _, index, raw in sampled:
-        vector = bounded_proportional(total, lower, upper, raw)
-        if vector in unique:
-            old_index, count = unique[vector]
-            unique[vector] = (old_index, count + 1)
-        else:
-            unique[vector] = (index, 1)
+    # A mathematically exact top shell may contain just ONE lattice point
+    # when the four ranges differ; that is not acceptable global coverage.
+    # Use the largest shell first, then widen only until a useful diversity
+    # floor is reached. For the symmetric T2000/m11 example the first shell
+    # already provides hundreds of candidates and no widening is needed.
+    diversity_goal = min(max_pool, max(32, points * points // 2))
+    while frontier and len(unique) < diversity_goal:
+        shell = -frontier[0][0]
+        shell_pairs = []
+        while frontier and -frontier[0][0] == shell:
+            _, fst, pos = heapq.heappop(frontier)
+            snd = second_sums[pos]
+            shell_pairs.append((fst, snd))
+            if pos > 0:
+                heapq.heappush(frontier,
+                               (-(fst + second_sums[pos - 1]), fst, pos - 1))
+        # Rank raw grid indices with stable hashing when a thick shell has
+        # more options than the memory bound; don't prefer lexicographic axes.
+        sampled = heapq.nsmallest(
+            max_pool,
+            ((_priority((a, b, c, d)), (a, b, c, d),
+              (aval, bval, cval, dval))
+             for fst, snd in shell_pairs
+             for a, b, aval, bval in first[fst]
+             for c, d, cval, dval in second[snd]),
+            key=lambda record: (record[0], record[1]))
+        for _, index, raw in sampled:
+            vector = bounded_proportional(total, lower, upper, raw)
+            if vector in unique:
+                old_index, count = unique[vector]
+                unique[vector] = (old_index, count + 1)
+            elif len(unique) < max_pool:
+                unique[vector] = (index, 1)
+        if len(unique) == max_pool:
+            break
     if not unique:
         # For the degenerate all-zero shell, use the existing feasible
         # center rather than dividing by a zero sum or stopping a session.
