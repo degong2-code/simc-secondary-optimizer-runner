@@ -165,8 +165,9 @@ def verify_checkpoint(archive,expected_sha256):
         need(len(names)==len(set(names)) and
              "V308_CHECKPOINT_MANIFEST.json" in names,
              "V308_DUPLICATE_OR_MISSING_MANIFEST")
+        meta=z.getinfo("V308_CHECKPOINT_MANIFEST.json")
+        need(meta.file_size<=5_000_000,"V308_MANIFEST_SIZE_CAP")
         raw=z.read("V308_CHECKPOINT_MANIFEST.json")
-        need(len(raw)<=5_000_000,"V308_MANIFEST_SIZE_CAP")
         doc=json.loads(raw)
         need(doc.get("schema")==SCHEMA and
              type(doc.get("committed_cases")) is int and
@@ -180,6 +181,27 @@ def verify_checkpoint(archive,expected_sha256):
              set(names)==set(member)|{"V308_CHECKPOINT_MANIFEST.json"} and
              {"V291_SESSION.json","V291_JOURNAL.jsonl"}<=set(member),
              "V308_MISSING_OR_FOREIGN_MEMBERS")
+        # The manifest is not a self-authenticating certificate that all
+        # Native cases exist: bind its declared case count to the original
+        # journal and insist on ALL raw case input/JSON2/receipt/progress
+        # members before accepting a re-packed SHA-correct but incomplete ZIP.
+        journal_info=z.getinfo("V291_JOURNAL.jsonl")
+        need(journal_info.file_size<=20_000_000,
+             "V308_JOURNAL_SIZE_CAP")
+        lines=z.read("V291_JOURNAL.jsonl").splitlines()
+        need(len(lines)==doc["committed_cases"],
+             "V308_MANIFEST_CASE_COUNT_JOURNAL_DRIFT")
+        required={
+            "cases/case_%05d/%s"%(i,p)
+            for i in range(doc["committed_cases"])
+            for p in ("V065_PROGRESS.json","native/input.simc",
+                      "native/result.json","native/native_receipt.json")
+        }
+        need(required <= set(member),
+             "V308_MISSING_COMPLETE_ORIGINAL_RAW_CASE")
+        need(type(doc.get("original_output_path")) is str and
+             pathlib.Path(doc["original_output_path"]).is_absolute(),
+             "V308_ORIGINAL_OUTPUT_ABSOLUTE_REQUIRED")
         expanded=0
         for item in infos:
             path=item.filename
