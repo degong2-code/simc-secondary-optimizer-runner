@@ -488,7 +488,7 @@ def run(context, flask_vector, binary, output, *,
          (pending["index"] == len(stored) and
           set(pending) == ({"index", "target", "iterations", "phase",
                             "decision"} |
-                           (set(metadata_keys) if region_enabled else set()))),
+                           (set(metadata_keys) if special_enabled else set()))),
          "PENDING_CASE_NOT_CONTIGUOUS")
     if special_enabled and pending is not None:
         # A persisted pending request is a source of truth ONLY after its
