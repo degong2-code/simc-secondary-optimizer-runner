@@ -1,0 +1,109 @@
+# 21-level geometric coverage 50%=9906/19812. Historical 11 and first25
+# original SHA records are provenance only, not current v291 exact cache.
+# ONE job executes 4953 NEVER-BEFORE 35 iterations +16 fresh 320 checks.
+name: P2 v310 level21 50pct historical frontier new-only real SimC
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p2_v310_21_50_real_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p2-v310-new50-original-verified
+  cancel-in-progress: false
+jobs:
+  new-only-level21-50-native:
+    if: contains(github.event.head_commit.message, '[p2-v310-new21-50-native-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 48
+    env:
+      PYTHONPATH: runner:integration_probes:.
+      SIMC_PINNED_SOURCE_COMMIT: c20e2ad52e4c33711f74272309a5748125175fe8
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Exactly same pinned SimC binary across old11 and first25
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42552942329
+          name: p3-har-verified-source-new-binary-short-lived
+          path: out/binary
+          github-token: ${{ github.token }}
+      - name: First source cohort 2800 full original JSON2
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42814969237
+          name: p2-v307-full11-2800-raw-native-original-checkpoint
+          path: out/v310_old11_raw
+          github-token: ${{ github.token }}
+      - name: First source cohort 2800 full compact journal
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42814969237
+          name: p2-v307-full11-2800-compact-coverage-receipt
+          path: out/v310_old11_compact
+          github-token: ${{ github.token }}
+      - name: Second source cohort first25 full original 2185 JSON2
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42822653731
+          name: p2-v309-level21-25pct-new-only-raw-original-checkpoint
+          path: out/v310_old25_raw
+          github-token: ${{ github.token }}
+      - name: Second source cohort first25 compact accepted journal
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42822653731
+          name: p2-v309-level21-25pct-new-only-compact-evidence
+          path: out/v310_old25_compact
+          github-token: ${{ github.token }}
+      - name: Verify binary old ZIP SHA and exact 25to50 offline contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f out/binary/simc
+          test "$(sha256sum out/binary/simc | cut -d' ' -f1)" = "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6"
+          test "$(sha256sum out/v310_old11_raw/full_original_v291_cases.zip | cut -d' ' -f1)" = "faefc35a52607bd947ec4ca93dcd86806e2012849f116d768c0dea1ff0069b40"
+          test "$(sha256sum out/v310_old25_raw/new21_original_exact_native_checkpoint.zip | cut -d' ' -f1)" = "e7a0f59c2a183f8eca8229dfa27f80958f02a3b847982fa4fc4fe2a07bbfdccc"
+          chmod +x out/binary/simc
+          python -m pip install -r requirements-web-test.txt
+          python -m py_compile runner/v310_external_frontier_50_only.py integration_probes/p2_v310_21grid_50percent_real_once.py integration_probes/p2_v310_checkpoint_always.py
+          python -m unittest -v tests.test_v310_25_to_50_external_frontier_offline
+          echo V310_VERIFIED_SOURCE_PRECHECK_PASS_0_NEW_NATIVE
+      - name: ONE real 25to50 new-only 4953 scouts 16 checks SimC
+        timeout-minutes: 38
+        env:
+          P2_V310_50_REAL_ONCE: '1'
+          BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+          BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+          WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+          WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+        run: python -u integration_probes/p2_v310_21grid_50percent_real_once.py
+      - name: Always checkpoint new exact original Native bytes even partial
+        if: always()
+        timeout-minutes: 12
+        run: python -u integration_probes/p2_v310_checkpoint_always.py
+      - name: Preserve 50pct result provenance compact accepted journal
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-v310-level21-50pct-new-only-compact-evidence
+          path: |
+            out/p2_v310_new21_50_once/receipt.json
+            out/p2_v310_new21_50_once/new50_original_exact_checkpoint_proof.json
+            out/p2_v310_new21_50_once/product_workspace/*/generated/v291_longrun_4969/simc_results/V291_JOURNAL.jsonl
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Preserve ALL 4969 accepted new Native JSON2 inputs receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-v310-level21-50pct-new-only-raw-original-checkpoint
+          path: out/p2_v310_new21_50_once/new50_original_exact_native_checkpoint.zip
+          if-no-files-found: warn
+          retention-days: 7
