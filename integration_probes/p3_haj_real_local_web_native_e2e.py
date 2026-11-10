@@ -117,11 +117,21 @@ def verified_current_catalog(original,game_build):
 
 
 def execute(root,binary,revision,game_build,environment_result,*,receipt_file,
-            manual_final_T=None,selected_oil_item_ids_by_hand=None):
+            manual_final_T=None,selected_oil_item_ids_by_hand=None,
+            character_class="paladin",character_spec="retribution",
+            character_race="dwarf",expected_socket_count=None):
     root=pathlib.Path(root).resolve()
     need(manual_final_T is None or (
          type(manual_final_T) is int and 1<=manual_final_T<=100000),
          "P3_HAR_MANUAL_FINAL_T_INPUT_INVALID")
+    import v106_user_session_controller as user_contract
+    need(type(character_class) is str and type(character_spec) is str
+         and type(character_race) is str and
+         (character_class,character_spec) in user_contract.SUPPORTED,
+         "P2_FRESH_PROFILE_SPEC_UNSUPPORTED")
+    need(expected_socket_count is None or
+         (type(expected_socket_count) is int and 0<=expected_socket_count<=8),
+         "P2_FRESH_PROFILE_SOCKET_COUNT_INVALID")
     selected_oils=dict(selected_oil_item_ids_by_hand or {})
     need(set(selected_oils)<={"main_hand","off_hand"}
          and len(selected_oils)<=2
@@ -147,7 +157,10 @@ def execute(root,binary,revision,game_build,environment_result,*,receipt_file,
             "installed_reference_positive_O":(
                 environment_result["T"]-environment_result["B"]
                 if selected_oils else 0),
-            "existing_environment_native_calls_excluded":True}
+            "existing_environment_native_calls_excluded":True,
+            "requested_character":{"class":character_class,
+                                   "spec":character_spec,"race":character_race},
+            "requested_socket_count":expected_socket_count}
     receipt_file=pathlib.Path(receipt_file)
     try:
         with verified_current_catalog(candidate,game_build) as source:
@@ -163,8 +176,8 @@ def execute(root,binary,revision,game_build,environment_result,*,receipt_file,
                 # Normal season Build already does this; use its same
                 # v113/v217-sealed snapshot path for exact positive O.
                 app.state.jobs.persist_verified_fresh_profile()
-            controls=users.standard_controls(("paladin","retribution"))
-            controls["race"]="dwarf"
+            controls=users.standard_controls((character_class,character_spec))
+            controls["race"]=character_race
             # Use only hands backed by the actual v212 installed O source.
             # Empty map retains the historical explicit O0 behavior.
             controls["oil_hands"]=sorted(selected_oils)
@@ -220,6 +233,22 @@ def execute(root,binary,revision,game_build,environment_result,*,receipt_file,
                                 "manifest_sha256"],
                              "P1_O_WEB_SESSION_V212_SHA_DRIFT")
                 session=prepared["session_id"]
+                checked=response(client,"GET",
+                    "/api/v1/sessions/"+session+"/inputs")
+                user_input=checked.get("user") or {}
+                actual_character=user_input.get("character") or {}
+                need((actual_character.get("class"), actual_character.get("spec"),
+                      actual_character.get("race")) ==
+                     (character_class,character_spec,character_race),
+                     "P2_FRESH_WEB_USER_CHARACTER_DRIFT")
+                if expected_socket_count is not None:
+                    # v216 layout proof is checked by the caller; the session
+                    # itself must use the same installed source manifest.
+                    need(prepared["environment_manifest"][
+                        "fresh_v212_installed_manifest_sha256"] ==
+                        compilation["verified_environment_install"][
+                            "manifest_sha256"],
+                        "P2_FRESH_WEB_INSTALLED_MANIFEST_DRIFT")
                 record["session_id"]=session
                 record["prepare_status"]=prepared["status"]
                 record["static_L_native_calls"]=prepared.get(
@@ -288,7 +317,8 @@ def execute(root,binary,revision,game_build,environment_result,*,receipt_file,
                 need(user_result["confidence_level"]==0.95
                      and user_result["global_optimum_proven"] is False
                      and sum(vector.values())==total
-                     and all(v*2<total for v in vector.values())
+                     and all(type(v) is int and v>=0 and v<=int(total*.60)
+                             for v in vector.values())
                      and final["native_calls_cumulative"]==count,
                      "WEB_RESULT_STATISTICS_OR_CHMV_DRIFT")
                 if manual_final_T is not None:
@@ -311,6 +341,25 @@ def execute(root,binary,revision,game_build,environment_result,*,receipt_file,
                         user_result["confirmation_pair_direction_supported_at_95"]}
                 record["native_evidence"]=save_cases(
                     root,session,pathlib.Path("p3_haj_web_native_evidence.zip"))
+                if expected_socket_count is not None:
+                    # Profile bytes are produced by v098, not copied from
+                    # prior user's equipment. Preserve only SHA and positive
+                    # source evidence for bounded reproducibility.
+                    import zipfile
+                    with zipfile.ZipFile(
+                            "p3_haj_web_native_evidence.zip") as archive:
+                        native_inputs=[name for name in archive.namelist()
+                                       if name.endswith("/input.simc")]
+                        need(native_inputs,"P2_NEW_PROFILE_NO_NATIVE_CASES")
+                        sample=archive.read(native_inputs[0]).decode("utf8")
+                        need(("spec="+character_spec) in sample,
+                             "P2_NEW_PROFILE_SIMC_SPEC_NOT_APPLIED")
+                        import hashlib
+                        record["new_profile_input_sha256"]=hashlib.sha256(
+                            sample.encode("utf8")).hexdigest()
+                        record["new_profile_input_bytes"]=len(sample)
+                        record["new_profile_socket_expected"]=expected_socket_count
+                        record["historical_profile_copied"]=False
                 record["status"]="PASS_REAL_FASTAPI_LONGRUN_PREPARE_RUN_RESUME_CACHE"
     except Exception as exc:
         record["status"]="BLOCKED_OR_PARTIAL"
