@@ -15,6 +15,7 @@ import os
 import pathlib
 import sys
 import time
+import uuid
 
 import v046_static_item_cache as cache
 import v061_scenario_contract as scenario
@@ -791,6 +792,7 @@ def run(context, flask_vector, binary, output, *,
     original_trace_path = output / time_trace.NAME
     timing_sha = (time_trace.identity_hash(seal_path)
                   if case_timing_trace else None)
+    trace_invocation_id = (uuid.uuid4().hex if case_timing_trace else None)
     traced_cases = (time_trace.load(original_trace_path, observations,
                                     timing_sha) if case_timing_trace else [])
     # Optional throughput telemetry, not part of a native-DPS receipt or
@@ -1008,7 +1010,8 @@ def run(context, flask_vector, binary, output, *,
                     native_json_ingest_seconds=ingest_elapsed,
                     journal_checkpoint_seconds=time.monotonic()-commit_started,
                     invocation_elapsed_seconds=time.monotonic()-started,
-                    resumed_pending=existing_pending)
+                    resumed_pending=existing_pending,
+                    invocation_id=trace_invocation_id)
                 time_trace.append(original_trace_path,entry)
                 traced_cases.append(entry)
     except Exception as exc:
@@ -1050,6 +1053,8 @@ def run(context, flask_vector, binary, output, *,
     if case_timing_trace:
         report["experimental_case_timing_trace"]=time_trace.summary(
             traced_cases,observations)
+        report["experimental_wall_confirmed_checkpoints"]=time_trace.checkpoints(
+            traced_cases,observations,confirm_iters)
     if model_guided_multiregion:
         report["model_guided_progress"]=model_guided.coverage(
             observations,max_native_calls=max_native_calls)
