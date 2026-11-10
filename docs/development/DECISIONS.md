@@ -4,6 +4,7 @@
 
 | 결정 | 현재 적용 | 개발 이유·관련 자료 |
 |---|---|---|
+| 독립 탐색 실험의 프로필 구성 (2026-11-10) | **매번 새 사용자 시나리오를 제품 v113→v216/v212→v098/v291 경로에서 구성**해 장비·옵션/예산/SimC 오류를 탐지한다. 다만 **같은 실험에서 두 탐색 정책은 같은 프로필·바이너리·환경·iterations를 사용**한다. 과거 exact Native는 회귀·캐시 근거로만 재사용. | [Frost 새 프로필 #42785318578](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42785318578) 실 G3/DPS2 통과, [정책과 실패 교정](notes/2026-11-10_p2-fresh-four-ordinary-cross-profile.md), 26전문화 인증 아님. |
 | 제품 범위 | 26 DPS, 목표 ilvl/수동 최종 T에서 CHMV **절대 rating** SimC DPS 최대화 | [설계 승인](../SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.3_SEASON_GJFO_AUTO_BUILD_APPROVED_20261102.md); 장비 조합 추천/현재 장비 재배분은 범위 밖 |
 | 공식 회계 | G/J/F/O 매 시즌 소스; B=G+J+F, T=B+O; 수동 T 우선·L/E/O 이중 가산 금지 | 기존 다른 시즌 79×2·J/F 숫자 복사 금지 |
 | 보석 | 일반 치·가·특·유 각1, 특수보석 **선택** | 과거 `특수1+일반N 필수`·독립 효과 인증은 역사/철회. [일반4 소스](notes/2026-11-10_p1-ordinary-only-default-engine-bridge.md) |
