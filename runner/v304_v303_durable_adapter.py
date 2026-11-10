@@ -178,6 +178,16 @@ def next_plan(observations, *, total, lower, upper, max_native_calls,
                     for r in observations[:opts["initial_global_calls"]]],
                     total=total)
                 seeds = initial["regions"]
+            # Continue from the last SEALED regional proposal, not from
+            # the initial seed on every invocation. The accepted region
+            # center/radius live in the authenticated v291 journal.
+            state = {r["region_id"]: dict(r) for r in seeds}
+            for old in observations[opts["initial_global_calls"]:]:
+                if old["adaptive_stage"] == "regional":
+                    item = state[old["region_id"]]
+                    item["center"] = tuple(old["region_center"])
+                    item["radius_fraction"] = old["region_radius_fraction"]
+            seeds = [state[r["region_id"]] for r in seeds]
             local = regions.next_plan([
                 {"target": r["target"], "sequence": i,
                  "phase": r["phase"], "iterations": r["iterations"],

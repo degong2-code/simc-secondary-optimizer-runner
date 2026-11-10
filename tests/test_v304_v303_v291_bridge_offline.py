@@ -9,8 +9,12 @@ from unittest import mock
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(ROOT / "runner"), str(ROOT / "tests")]
 import v291_durable_multiscale_native_runner as runner
-from test_p3_hx_durable_longrun_offline import (
-    V291LongRun, F, fake_native, fake_ingest)
+# Access fixture through its module to avoid unittest discovering the
+# imported legacy TestCase again in this test module (duplicate CI work).
+import test_p3_hx_durable_longrun_offline as fixture_module
+F, fake_native, fake_ingest = (fixture_module.F,
+                               fixture_module.fake_native,
+                               fixture_module.fake_ingest)
 
 
 class V304DurableRegionalBridge(unittest.TestCase):
@@ -19,7 +23,7 @@ class V304DurableRegionalBridge(unittest.TestCase):
     CONFIRM = 3
 
     def fixture(self, folder):
-        return V291LongRun().fixture(folder, cap=self.TOTAL)
+        return fixture_module.V291LongRun().fixture(folder, cap=self.TOTAL)
 
     def call(self, context, binary, folder, **options):
         return runner.run(
@@ -122,6 +126,28 @@ class V304DurableRegionalBridge(unittest.TestCase):
                                   cache_only=True)
                 self.assertEqual(check["completed_cases"], 10)
                 self.assertEqual(check["new_native_this_invocation"], 0)
+
+    def test_cold_resume_reconstructs_region_radius_and_same_pending(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            ctx, binary, out = self.fixture(tmp)
+            with self.patcher()[0], self.patcher()[1]:
+                first = self.call(ctx, binary, out,
+                                  max_new_native_this_invocation=14)
+                self.assertEqual(first["completed_cases"], 14)
+                journal = runner._load_journal(out / "V291_JOURNAL.jsonl")
+                self.assertTrue(any(r["adaptive_stage"] == "regional"
+                                    for r in journal))
+                paused = self.call(ctx, binary, out, cache_only=True)
+                self.assertEqual(paused["status"], "PAUSED_CACHE_ONLY")
+                pending = runner.read_json(out / "V291_PENDING.json")
+                # Simulate process restart: discard the only in-memory global
+                # lattice cache; state comes from source SHA + accepted journal.
+                runner.durable_regions._global_order.cache_clear()
+                replay = self.call(ctx, binary, out, cache_only=True)
+                self.assertEqual(replay["status"], "PAUSED_CACHE_ONLY")
+                self.assertEqual(
+                    runner.read_json(out / "V291_PENDING.json"), pending)
+                self.assertEqual(replay["new_native_this_invocation"], 0)
 
     def test_adaptive_pending_replay_guards_metadata_and_target(self):
         with tempfile.TemporaryDirectory() as tmp:
