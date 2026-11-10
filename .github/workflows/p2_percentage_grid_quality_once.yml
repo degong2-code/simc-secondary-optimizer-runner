@@ -1,0 +1,27 @@
+# One bounded OPTIONAL comparison of two proposal schedules.
+# This is SYNTHETIC offline geometry, never measured SimC DPS.
+# No secrets, native runtime, WoW source fetch, or persistent mandatory gate.
+name: P2 optional percentage grid synthetic equal-case audit
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p2_percentage_grid_quality_once.yml]
+permissions:
+  contents: read
+concurrency:
+  group: p2-percentage-grid-synthetic-once
+  cancel-in-progress: false
+jobs:
+  compare:
+    if: contains(github.event.head_commit.message, '[p2-grid-audit-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Synthetic comparison of identical 112 proposal counts
+        env:
+          PYTHONPATH: runner:.
+        run: python -m unittest -v tests.test_p2_percentage_grid_quality_audit
