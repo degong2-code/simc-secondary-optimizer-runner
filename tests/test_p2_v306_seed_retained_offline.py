@@ -56,8 +56,10 @@ class V306SeedRetained(unittest.TestCase):
                 self.assertNotIn(vec,
                     {tuple(v290.legacy.key(r["target"])) for r in history
                      if r["phase"]=="scout"})
-            mean=(199000.0 if i==31 else
-                  183000.0+(i%11)*12 if i<32 else
+            # Keep other real-measurement stand-ins within the v303
+            # 3%-relative-loss region eligibility window: test eight modes.
+            mean=(189000.0 if i==31 else
+                  186000.0+(i%11)*12 if i<32 else
                   175000.0+(i%7)*10)
             history.append(dict(
                 target=req["target"],phase=req["phase"],
