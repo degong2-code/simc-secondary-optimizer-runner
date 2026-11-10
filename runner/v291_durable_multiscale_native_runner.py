@@ -926,6 +926,8 @@ def run(context, flask_vector, binary, output, *,
                 atomic(pending_path, pending)
                 if case_timing_trace:
                     plan_elapsed=time.monotonic()-planning_started
+            request_preflight_started = (
+                time.monotonic() if case_timing_trace else None)
             req, folder = _request(context, flask_vector, output, pending)
             previous_marker = folder.parent / "V065_PROGRESS.json"
             prior_attempt = (read_json(previous_marker).get("native_attempts")
@@ -956,6 +958,9 @@ def run(context, flask_vector, binary, output, *,
             # unique parent, and v291 owns the global multi-case limit.
             progress = {"native_attempts": prior_attempt}
             native_started = time.monotonic()
+            request_preflight_elapsed = (
+                native_started-request_preflight_started
+                if case_timing_trace else 0.0)
             result = engine.execute_one(
                 req, calibration, binary, folder, progress,
                 cancel_file=cancel_file, cache_only=cache_only,
@@ -1006,6 +1011,7 @@ def run(context, flask_vector, binary, output, *,
                 entry=time_trace.record(
                     row,session_sha256=timing_sha,
                     plan_pending_seconds=plan_elapsed,
+                    request_preflight_seconds=request_preflight_elapsed,
                     engine_execute_seconds=native_elapsed,
                     native_json_ingest_seconds=ingest_elapsed,
                     journal_checkpoint_seconds=time.monotonic()-commit_started,
