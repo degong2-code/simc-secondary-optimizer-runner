@@ -1,0 +1,84 @@
+# Diagnostic only: reproducibility of original v309 25% 2185 raw JSON2
+# into fresh GitHub runner with SAME absolute paths and regenerated v216
+# installed environment. No new DPS Native may be run by this workflow.
+name: P2 v309 zero-DPS cross-job 25pct original Native reauthentication
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p2_v309_cross_job_cache_probe.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p2-v309-zero-native-replay-probe
+  cancel-in-progress: false
+jobs:
+  exact-original-cache-replay:
+    if: contains(github.event.head_commit.message, '[p2-v309-cross-job-cache-probe-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      PYTHONPATH: runner:integration_probes:.
+      SIMC_PINNED_SOURCE_COMMIT: c20e2ad52e4c33711f74272309a5748125175fe8
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Same vetted SimC binary as 11+25 percent experiments
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42552942329
+          name: p3-har-verified-source-new-binary-short-lived
+          path: out/binary
+          github-token: ${{ github.token }}
+      - name: Old11 raw original evidence - historical only
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42814969237
+          name: p2-v307-full11-2800-raw-native-original-checkpoint
+          path: out/v309_origin11_raw
+          github-token: ${{ github.token }}
+      - name: Old11 compact and scenario anchor
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42814969237
+          name: p2-v307-full11-2800-compact-coverage-receipt
+          path: out/v309_origin11_compact
+          github-token: ${{ github.token }}
+      - name: First25 full original Native new session checkpoint
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42822653731
+          name: p2-v309-level21-25pct-new-only-raw-original-checkpoint
+          path: out/v309_25_new_raw
+          github-token: ${{ github.token }}
+      - name: Exact SHA syntax and runtime prerequisites - no native
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(sha256sum out/binary/simc | cut -d' ' -f1)" = "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6"
+          test "$(sha256sum out/v309_origin11_raw/full_original_v291_cases.zip | cut -d' ' -f1)" = "faefc35a52607bd947ec4ca93dcd86806e2012849f116d768c0dea1ff0069b40"
+          test "$(sha256sum out/v309_25_new_raw/new21_original_exact_native_checkpoint.zip | cut -d' ' -f1)" = "e7a0f59c2a183f8eca8229dfa27f80958f02a3b847982fa4fc4fe2a07bbfdccc"
+          chmod +x out/binary/simc
+          python -m pip install -r requirements-web-test.txt
+          python -m py_compile integration_probes/p2_v309_cross_job_cache_only_probe.py
+      - name: Rebuild v216 authority and attempt only Native cache validation
+        timeout-minutes: 18
+        env:
+          P2_V309_CROSS_JOB_CACHE_PROBE: '1'
+          BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+          BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+          WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+          WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+        run: python -u integration_probes/p2_v309_cross_job_cache_only_probe.py
+      - name: Preserve exact cross-job BLOCK or zero-Native PASS evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-v309-cross-job-exact-cache-only-probe-receipt
+          path: out/p2_v309_21_progressive_once/cross_job_cache_probe_receipt.json
+          if-no-files-found: warn
+          retention-days: 7
