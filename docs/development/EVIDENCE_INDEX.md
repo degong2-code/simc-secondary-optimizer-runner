@@ -4,6 +4,7 @@
 
 | 증거 원본 | 실제 범위 | 입증하지 않는 것 |
 |---|---|---|
+| [P2 비율 경계 후속 #42730376972](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42730376972), [개발노트](notes/2026-11-10_p2-fractional-bounded-neighbor-proposals.md) | HEAD `f1ab1651`의 528 tests=526 PASS/2 SKIP/0 FAIL·DEV_LEDGER_PASS. B3107/B6214 상대 이동 clipping 및 0 경계·fallback 회귀 | 신규 SimC Native0. 실제 DPS 최적 조합 발견 성능·전역 최적/95% 선택편향 해결 증거가 아님 |
 | [무이력 4보석 Build #42664089225](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42664089225), [노트](notes/2026-11-10_p1-four-ordinary-real-zero-history-ready.md) | 실 70783 Ret334 O0, G2850/J92/F165/T3107, Native3·검증 설치/프로필 PASS | 다른 시즌·이 구성의 실 DPS·Windows 개인 클릭 |
 | [focused #42723497273](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42723497273) | HEAD 1b59ec52에서 526 tests=524 PASS/2 SKIP/0 FAIL·DEV_LEDGER_PASS | 새 Native·전문 26개 웹 E2E |
 | [실 P2 Native10 #42501052586](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42501052586), [감사](notes/2026-11-09_p2-real-native-ten-case-region-audit.md) | 8 scout×35 + 2 confirm×320; 정확 당시 profile/binary/seed, **선택된 두 후보만** 명목 95% 비교 | 먼 고점 부재·family-wise 95%·전역 최적 |
