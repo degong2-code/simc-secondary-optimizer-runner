@@ -1,6 +1,6 @@
 # P2 v304 — v303 선택형 영속 실행 연결 (2026-11-10)
 
-- **Capability:** `OPTIMIZER.POLICY`, `RUNNER.NATIVE`, `DEV.CONTINUITY`.
+- **Capability:** `OPTIMIZER.POLICY`, `DEV.CONTINUITY`.
 - **Keywords:** v304, v303, v291, adaptive regional resources, opt-in, journal, pending, resume, 95%, global reserve.
 - **Prior evidence:** [v303 구현 및 오프라인 CI](2026-11-10_p2-adaptive-region-resource-policy.md), [과거 498 Native 연구](2026-11-10_p2-real-simc-global21-local6-gp-comparison.md), [v291 실행기](../../../runner/v291_durable_multiscale_native_runner.py).
 - **Decision:** `CONNECT` only via explicit opt-in. Never replace default v290 without real equal-cost DPS and wall-clock evidence.
