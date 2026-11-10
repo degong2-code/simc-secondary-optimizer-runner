@@ -216,9 +216,12 @@ def _local_next(rows, measured, *, total, lower, upper):
 
 
 def next_plan(observations, *, total, lower, upper, max_native_calls,
-              scout_iterations, confirmation_iterations, max_level=DEFAULT_MAX_LEVEL):
+              scout_iterations, confirmation_iterations, max_level=DEFAULT_MAX_LEVEL,
+              complete_grid_first=False):
     lower, upper = _params(total, lower, upper, max_level)
     opts = budget(max_native_calls)
+    need(type(complete_grid_first) is bool,
+         "V307_COMPLETE_GRID_FIRST_BOOL_REQUIRED")
     need(type(observations) is list and
          type(scout_iterations) is int and
          type(confirmation_iterations) is int and
@@ -283,10 +286,14 @@ def next_plan(observations, *, total, lower, upper, max_native_calls,
     # remaining scout on local zoom just because the 84% quota was reached.
     survey_target = max(opts["survey_target"], min(opts["scout"],
         coarse_total + max(1, round(max(0, opts["scout"]-coarse_total)*.60))))
+    # Full-survey opt-in visits all available nested global targets before
+    # optional local work. A typed budget of len(level11)+confirmations is
+    # then sufficient for *complete* level11; the legacy 84% scheduling is
+    # retained unchanged without this explicit option.
     # Coverage-first: complete the lowest feasible lattice before zoom.
     # Thereafter spend ~1 in 7 post-coarse scouts on local zoom, unless
     # global quota exhausted. Never discard unscanned regions by DPS score.
-    should_local = (coarse_completed and
+    should_local = (not complete_grid_first and coarse_completed and
                     completed_local < opts["local_target"] and
                     (completed_surveys >= survey_target or
                      (len(observations) - coarse_total) % 7 == 6 or
