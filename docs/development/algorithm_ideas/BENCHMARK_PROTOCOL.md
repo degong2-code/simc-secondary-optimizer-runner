@@ -37,3 +37,17 @@
 **별도의 측정 인프라 비용:** IDEA-005는 seed 블록별 실제 A/B 실측이 필요하므로 실증 전 제품에 넣지 않는다. IDEA-006은 기존 원본 9906개의 지역 holdout **오프라인 적합 검토**를 먼저 하되 이를 신규 전문화 실측이나 최적화 PASS로 표시하지 않는다. IDEA-007은 기존 v291의 정책별 완전 고정 실행 순서·audit를 수정해야 하므로 독립 비교 시험을 대체하지 않는다.
 
 **중복 측정 방지:** IDEA-001~007의 모든 반복 Native가 끝난 것처럼 한꺼번에 '동일 캐시 공유 실험'하지 않는다. 실제 새로운 source SHA, SimC binary/build, (candidate, iterations, seed·thread mode), 환경/전투 설정이 다르면 캐시 정체성이 달라질 수 있다. 실험 설계에서 각 arm은 독립 오리지널 SimC 비교군으로 관리한다.
+
+## v315 iterations vs wall-clock: 두 정식 평가축과 계측 요구조건 (2026-11-11)
+
+**실측 근거:** [v315 원본 신규 프로필 10건 #42859573357](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42859573357) `SUCCESS`. v313 전부 8 + v314 사격사냥꾼 완료 2; 두 알고리즘 각각 1,008 호출. v312/v290 **iterations 비율 중앙값 0.568737**, **실제 wall 비율 중앙값 0.987107**, v312가 실제로 빨랐던 조건 **7/10**. 확인 후보 간 명목95 격차 확정 0/10. 상세 [개발 기록](../notes/2026-11-11_p2-v315-original-iteration-wall-evidence.md). 추가 Native 0.
+
+**정식 제품 성능:** 새 사용자 프로필 같은 시나리오에서 시작시점부터 **5분/10분(300/600초)** 각각까지 원본 SimC가 완전히 완료된 320+ 정밀 확인 후보 중 최고 DPS·SEM·관측 1순위를 기록한다. 실제 CPU/월 타임 측정을 우선하고 엔진 계획·파일 처리·동시 호출·전투시간·SimC thread 등 환경을 봉인한다. 해당 시점에 320+ 후보가 없으면 `NO_CONFIRMED_CANDIDATE_AT_CHECKPOINT`로 보고, 이후 결과를 과거 시점으로 소급하지 않는다.
+
+**정식 계산 효율:** 동일한 **총 SimC iterations**를 소모한 상태에서 위와 같은 확인 DPS·SEM/95를 비교한다. 후보 개수·반복 분포·Native 호출·planner/I/O 시간을 별도로 표시하고, 동일 iterations라도 종료시간이 다를 수 있음을 명시한다.
+
+**현 증거의 한계:** v313/v314는 1,008 Native 호출만 맞췄을 뿐 *정식 동일 iterations* 또는 *동일 300/600초 체크포인트* 실험을 수행하지 않았다. 전체 wall 총계와 반복 수 두 점에서 스타트업 호출비용 및 한 iteration 처리시간 계수를 따로 추정하는 것은 **식별 불가능**하다. 비교자가 서로 다른 알고리즘·재측정 비율인 경우 오버헤드와 겹친다.
+
+**추가 계측 설계 (본 커밋 구현 아님):** Native 요청마다 `(start_monotonic, finish_monotonic, exact_iterations, phase, cache_source, case_key_sha)`를 별도 append-only 로그로 남기고, planner 후보 계산·SimC subprocess·JSON2 검증·캐시/체크포인트 I/O를 분리한다. 취소·재개 후 전역 시간 정체성/누적 계산량이 왜곡되지 않도록 기존 sealed cache와 진행 counter에 결합한다. 추가 로그의 CPU/파일 비용 자체도 측정한다. 본 지표가 충족된 이후에만 IDEA-001의 적응형 35/120/320 승급 또는 시간 예산 예측을 실전으로 시험한다.
+
+**결론:** 계산량은 'iterations로 공정하게 비교', 제품은 '동일 실제 시간으로 비교'의 **두 축을 각각 검증**한다. 수치가 동등하지 않은 결과는 승격 근거로 사용하지 않는다. 사용자 작업 v313→v314 기존 순서와 v290 기본은 변함없음.
