@@ -94,6 +94,7 @@ jobs:
             tests.test_p2_v306_seed_retained_offline \
             tests.test_p2_v306_new_user_equal_offline \
             tests.test_v307_dense_nested_coverage_offline \
+            tests.test_v307_dense_full_level11_resume_audit \
             tests.test_p2_fresh_user_profile_case_offline \
             tests.test_v098_cross_spec_installed_G_source \
             tests.test_v098_source_only_one_spec_user_bridge \
