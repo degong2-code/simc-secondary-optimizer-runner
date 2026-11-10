@@ -101,6 +101,7 @@ jobs:
             tests.test_v310_25_to_50_external_frontier_offline \
             tests.test_v311_external_frontier_100_offline \
             tests.test_v312_model_guided_multiregion_offline \
+            tests.test_v313_multispec_matrix_offline \
             tests.test_p2_fresh_user_profile_case_offline \
             tests.test_v098_cross_spec_installed_G_source \
             tests.test_v098_source_only_one_spec_user_bridge \
