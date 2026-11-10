@@ -33,6 +33,7 @@ import v303_adaptive_region_resource_policy as region_resources
 import v304_v303_durable_adapter as durable_regions
 import v305_grid_pairwise_adaptive_hybrid as hybrid_regions
 import v306_seed_retained_coarse_escape_regions as seed_escape_regions
+import v307_dense_nested_coverage_grid as dense_grid
 
 SCHEMA = "v291_durable_multiscale_native_runner_v1"
 
@@ -136,6 +137,10 @@ def _compact(req, native, source, plan):
         row.update({key: plan[key] for key in V304_METADATA})
         if "hybrid_method" in plan:
             row["hybrid_method"] = plan["hybrid_method"]
+    if "grid_stage" in plan:
+        need(all(k in plan for k in dense_grid.METADATA),
+             "V307_PENDING_GRID_METADATA_MISSING")
+        row.update({k: plan[k] for k in dense_grid.METADATA})
     return row
 
 
@@ -241,6 +246,7 @@ def run(context, flask_vector, binary, output, *,
         nested_percent_grid=False, adaptive_region_resources=False,
         hybrid_region_grid_neighbors=False,
         seed_retained_coarse_escape_regions=False,
+        dense_nested_grid_max_level=None,
         adaptive_initial_global_calls=160, adaptive_confirmation_calls=8):
     """Resume an exact source-bound session, or execute one Native per plan.
 
@@ -274,6 +280,16 @@ def run(context, flask_vector, binary, output, *,
          "V306_EXCLUSIVE_EXPERIMENTAL_POLICY_OPT_INS")
     region_enabled = (adaptive_region_resources or hybrid_region_grid_neighbors
                       or seed_retained_coarse_escape_regions)
+    grid_enabled = dense_nested_grid_max_level is not None
+    need(not grid_enabled or (
+         type(dense_nested_grid_max_level) is int and
+         dense_nested_grid_max_level in dense_grid.LEVELS and
+         not (region_enabled or percent_enabled or multiregion_percent_grid or
+              nested_percent_grid) and
+         adaptive_initial_global_calls == 160 and
+         adaptive_confirmation_calls == 8),
+         "V307_EXCLUSIVE_DENSE_GRID_OPT_IN")
+    special_enabled = region_enabled or grid_enabled
     need(not (region_enabled and
               (percent_enabled or multiregion_percent_grid or nested_percent_grid)),
          "V304_EXCLUSIVE_ADAPTIVE_REGION_OPT_IN")
@@ -284,10 +300,11 @@ def run(context, flask_vector, binary, output, *,
     region_planner = (seed_escape_regions if seed_retained_coarse_escape_regions
                       else hybrid_regions if hybrid_region_grid_neighbors
                       else durable_regions)
-    metadata_keys = V304_METADATA + (("hybrid_method",)
+    metadata_keys = (dense_grid.METADATA if grid_enabled else
+                     V304_METADATA + (("hybrid_method",)
                                       if (hybrid_region_grid_neighbors or
                                           seed_retained_coarse_escape_regions)
-                                      else ())
+                                      else ()))
     if region_enabled:
         region_opts = durable_regions.options(
             max_native_calls, adaptive_initial_global_calls,
@@ -367,6 +384,19 @@ def run(context, flask_vector, binary, output, *,
                 "v305_dependency_sha256": hashlib.sha256(
                     pathlib.Path(hybrid_regions.__file__).read_bytes()).hexdigest(),
             }
+    if grid_enabled:
+        dense_grid.budget(max_native_calls)
+        seal["experimental_dense_nested_grid"] = {
+            "schema": dense_grid.SCHEMA,
+            "source_sha256": hashlib.sha256(
+                pathlib.Path(dense_grid.__file__).read_bytes()).hexdigest(),
+            "v302_geometry_sha256": hashlib.sha256(
+                pathlib.Path(region_geometry.__file__).read_bytes()).hexdigest(),
+            "max_level": dense_nested_grid_max_level,
+            "levels": [level for level in dense_grid.LEVELS
+                       if level <= dense_nested_grid_max_level],
+            "budget": dense_grid.budget(max_native_calls),
+        }
     if percent_enabled:
         seal["experimental_percent_grid"] = {
             "schema": percent_grid.SCHEMA,
@@ -417,13 +447,20 @@ def run(context, flask_vector, binary, output, *,
             need(all(k in row for k in metadata_keys) and
                  (hybrid_region_grid_neighbors or
                   seed_retained_coarse_escape_regions or
-                  "hybrid_method" not in row),
+                  "hybrid_method" not in row) and
+                 not any(k in row for k in dense_grid.METADATA),
                  "V305_JOURNAL_REGION_METADATA_MISSING")
+            plan.update({k: row[k] for k in metadata_keys})
+        elif grid_enabled:
+            need(all(k in row for k in metadata_keys) and
+                 not any(k in row for k in (*V304_METADATA,"hybrid_method")),
+                 "V307_JOURNAL_GRID_METADATA_MISSING")
             plan.update({k: row[k] for k in metadata_keys})
         else:
             need(not any(k in row for k in
-                         (*V304_METADATA, "hybrid_method")),
-                 "V304_UNSEALED_METADATA_IN_LEGACY_JOURNAL")
+                         (*V304_METADATA, "hybrid_method",
+                          *dense_grid.METADATA)),
+                 "V307_UNSEALED_METADATA_IN_LEGACY_JOURNAL")
         req, folder = _request(context, flask_vector, output, plan)
         actual, _ = _verified_row(req, binary, folder, calibration, allow_cache=True)
         expected = _compact(req, actual, row["source"], plan)
@@ -443,7 +480,7 @@ def run(context, flask_vector, binary, output, *,
         row = stored[pending["index"]]
         need(all(row[k] == pending[k] for k in
                  ("index", "target", "iterations", "phase",
-                  *(metadata_keys if region_enabled else ()))),
+                  *(metadata_keys if special_enabled else ()))),
              "ALREADY_COMMITTED_PENDING_DISAGREES")
         pending_path.unlink()
         pending = None
@@ -453,15 +490,22 @@ def run(context, flask_vector, binary, output, *,
                             "decision"} |
                            (set(metadata_keys) if region_enabled else set()))),
          "PENDING_CASE_NOT_CONTIGUOUS")
-    if region_enabled and pending is not None:
+    if special_enabled and pending is not None:
         # A persisted pending request is a source of truth ONLY after its
         # exact deterministic plan is reconstructed from verified journal.
-        proposed_pending = region_planner.next_plan(
-            observations, total=B, lower=lower, upper=upper,
-            max_native_calls=max_native_calls, scout_iterations=scout_iters,
-            confirmation_iterations=confirm_iters,
-            initial_global_calls=adaptive_initial_global_calls,
-            confirmation_calls=adaptive_confirmation_calls)
+        if grid_enabled:
+            proposed_pending = dense_grid.next_plan(
+                observations, total=B, lower=lower, upper=upper,
+                max_native_calls=max_native_calls, scout_iterations=scout_iters,
+                confirmation_iterations=confirm_iters,
+                max_level=dense_nested_grid_max_level)
+        else:
+            proposed_pending = region_planner.next_plan(
+                observations, total=B, lower=lower, upper=upper,
+                max_native_calls=max_native_calls, scout_iterations=scout_iters,
+                confirmation_iterations=confirm_iters,
+                initial_global_calls=adaptive_initial_global_calls,
+                confirmation_calls=adaptive_confirmation_calls)
         need(proposed_pending["next_request"] is not None,
              "V304_PENDING_PLAN_DRIFT")
         action = proposed_pending["next_request"]
@@ -512,7 +556,14 @@ def run(context, flask_vector, binary, output, *,
                 status = "BUDGET_EXHAUSTED"
                 break
             if pending is None:
-                if region_enabled:
+                if grid_enabled:
+                    proposed = dense_grid.next_plan(
+                        observations, total=B, lower=lower, upper=upper,
+                        max_native_calls=max_native_calls,
+                        scout_iterations=scout_iters,
+                        confirmation_iterations=confirm_iters,
+                        max_level=dense_nested_grid_max_level)
+                elif region_enabled:
                     proposed = region_planner.next_plan(
                         observations, total=B, lower=lower, upper=upper,
                         max_native_calls=max_native_calls,
@@ -570,7 +621,7 @@ def run(context, flask_vector, binary, output, *,
                            "iterations": action["iterations"],
                            "phase": action["phase"],
                            "decision": proposed["decision"]}
-                if region_enabled:
+                if special_enabled:
                     pending.update({key: action[key] for key in metadata_keys})
                 atomic(pending_path, pending)
             req, folder = _request(context, flask_vector, output, pending)
@@ -656,7 +707,8 @@ def run(context, flask_vector, binary, output, *,
         raise
     summary = _summary(observations, context)
     report = {"schema": SCHEMA, "status": status,
-              "policy": (seed_escape_regions.SCHEMA if seed_retained_coarse_escape_regions
+              "policy": (dense_grid.SCHEMA if grid_enabled
+                         else seed_escape_regions.SCHEMA if seed_retained_coarse_escape_regions
                          else hybrid_regions.SCHEMA if hybrid_region_grid_neighbors
                          else durable_regions.SCHEMA if adaptive_region_resources
                          else nested_regions.SCHEMA if nested_percent_grid
@@ -676,6 +728,10 @@ def run(context, flask_vector, binary, output, *,
               "confidence_for_display": 0.95,
               "no_global_optimum_proof": True,
               "native_cases_not_to_be_confused_with_iterations": True}
+    if grid_enabled:
+        report["dense_grid_coverage"] = dense_grid.coverage(
+            observations, total=B, lower=lower, upper=upper,
+            max_level=dense_nested_grid_max_level)
     atomic(report_path, report)
     atomic(progress_path, {
         "schema": SCHEMA, "status": status,
@@ -786,6 +842,9 @@ def main(argv=None):
                    help="EXPERIMENTAL, opt-in v305 grid + v290 regional moves")
     p.add_argument("--seed-retained-coarse-escape-regions", action="store_true",
                    help="EXPERIMENTAL, opt-in v306 seed retention and 12/24 pct B escapes")
+    p.add_argument("--dense-nested-grid-max-level", type=int,
+                   choices=dense_grid.LEVELS, default=None,
+                   help="EXPERIMENTAL v307 nested coverage grid, 6/11/21/41/81")
     p.add_argument("--adaptive-global-calls", type=int, default=160)
     p.add_argument("--adaptive-confirm-calls", type=int, default=8)
     p.add_argument("--portable-archive",
@@ -827,6 +886,7 @@ def main(argv=None):
                 adaptive_region_resources=args.adaptive_region_resources,
                 hybrid_region_grid_neighbors=args.hybrid_region_grid_neighbors,
                 seed_retained_coarse_escape_regions=args.seed_retained_coarse_escape_regions,
+                dense_nested_grid_max_level=args.dense_nested_grid_max_level,
                 adaptive_initial_global_calls=args.adaptive_global_calls,
                 adaptive_confirmation_calls=args.adaptive_confirm_calls,
                 open_folder=True)
