@@ -1,5 +1,7 @@
 # One actual NEW profile via original zero-history product Build and FastAPI.
 # No historical HAE profile, no copied result cache, no all-26 sweep.
+# Bounded retry: v098 now preserves SHA-verified representative G as reference
+# and generates spec-specific gear from authenticated original season source.
 name: P2 one fresh Frost Mage 4-ordinary product user SimC E2E
 on:
   push:
