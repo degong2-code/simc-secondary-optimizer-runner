@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import pathlib
 import re
@@ -243,11 +244,11 @@ def main():
                 output=staged["paths"]["output_dir"]
                 # Alternate execution order by distribution to reduce the
                 # possibility of systematic first-arm host/thermal bias.
-                order=(("v290_original",False),
-                       ("v312_model_guided",True)) if
-                       case_id.endswith("__wide") else (
-                       ("v312_model_guided",True),
-                       ("v290_original",False))
+                order=((("v290_original",False),
+                        ("v312_model_guided",True))
+                       if case_id.endswith("__wide") else
+                       (("v312_model_guided",True),
+                        ("v290_original",False)))
                 for label,experiment in order:
                     _trial(label,context=context,flask=flask,
                            binary=binary,base_output=output,
@@ -278,5 +279,4 @@ def main():
 
 
 if __name__=="__main__":
-    import math
     main()
