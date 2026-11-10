@@ -92,6 +92,7 @@ jobs:
             tests.test_v305_hybrid_durable_offline \
             tests.test_p2_v305_hybrid_offline \
             tests.test_p2_v306_seed_retained_offline \
+            tests.test_p2_v306_new_user_equal_offline \
             tests.test_p2_fresh_user_profile_case_offline \
             tests.test_v098_cross_spec_installed_G_source \
             tests.test_v098_source_only_one_spec_user_bridge \
