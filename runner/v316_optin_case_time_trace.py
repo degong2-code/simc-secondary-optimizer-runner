@@ -16,8 +16,9 @@ import pathlib
 
 SCHEMA="v316_original_native_case_wall_trace_v1"
 NAME="V316_CASE_WALL_TRACE.jsonl"
-PARTS=("plan_pending_seconds","engine_execute_seconds",
-       "native_json_ingest_seconds","journal_checkpoint_seconds",
+PARTS=("plan_pending_seconds","request_preflight_seconds",
+       "engine_execute_seconds","native_json_ingest_seconds",
+       "journal_checkpoint_seconds",
        "invocation_elapsed_seconds")
 
 
@@ -41,7 +42,8 @@ def number(x):
 
 
 def record(row, *, session_sha256, plan_pending_seconds,
-           engine_execute_seconds, native_json_ingest_seconds,
+           request_preflight_seconds, engine_execute_seconds,
+           native_json_ingest_seconds,
            journal_checkpoint_seconds, invocation_elapsed_seconds,
            resumed_pending, invocation_id):
     need(type(row) is dict and type(row.get("index")) is int
@@ -59,6 +61,7 @@ def record(row, *, session_sha256, plan_pending_seconds,
         "source":row["source"],
         "pending_existed_at_invocation":bool(resumed_pending),
         "plan_pending_seconds":float(plan_pending_seconds),
+        "request_preflight_seconds":float(request_preflight_seconds),
         "engine_execute_seconds":float(engine_execute_seconds),
         "native_json_ingest_seconds":float(native_json_ingest_seconds),
         "journal_checkpoint_seconds":float(journal_checkpoint_seconds),
@@ -144,6 +147,9 @@ def summary(trace,journal):
         "complete_original_journal_trace":len(trace)==len(journal),
         "observed_process_invocations":len({x["invocation_id"] for x in trace}),
         "per_phase":phases,
+        "observed_segment_totals_seconds":{
+            key:round(sum(x[key] for x in new),6)
+            for key in PARTS if key!="invocation_elapsed_seconds"},
         "not_a_new_native_execution":True,
         "not_a_source_of_simc_dps":True,
         "cannot_claim_total_wall_checkpoint_across_process_resumes":True,
@@ -165,7 +171,7 @@ def checkpoints(trace,journal,confirmation_iterations,thresholds=(300,600)):
          and confirmation_iterations>0,
          "EXACT_CONFIRMED_ITERATION_IDENTITY")
     need(type(thresholds) is tuple and len(thresholds)>0
-         and all(number(x) and x>0 for x in thresholds)
+         and all(type(x) is int and x>0 for x in thresholds)
          and list(thresholds)==sorted(set(thresholds)),
          "FIXED_ASCENDING_WALL_CHECKPOINTS")
     valid=(len(trace)==len(journal) and bool(trace)
