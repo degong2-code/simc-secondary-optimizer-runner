@@ -31,6 +31,7 @@ import v301_nested_multiregion_policy as nested_regions
 import v302_weak_multiregion_zoom as region_geometry
 import v303_adaptive_region_resource_policy as region_resources
 import v304_v303_durable_adapter as durable_regions
+import v305_grid_pairwise_adaptive_hybrid as hybrid_regions
 
 SCHEMA = "v291_durable_multiscale_native_runner_v1"
 
@@ -132,6 +133,8 @@ def _compact(req, native, source, plan):
         need(all(key in plan for key in V304_METADATA),
              "V304_PENDING_REGION_METADATA_MISSING")
         row.update({key: plan[key] for key in V304_METADATA})
+        if "hybrid_method" in plan:
+            row["hybrid_method"] = plan["hybrid_method"]
     return row
 
 
@@ -235,6 +238,7 @@ def run(context, flask_vector, binary, output, *,
         recover_verified_partial=False, open_folder=False,
         percentage_grid_points=None, multiregion_percent_grid=False,
         nested_percent_grid=False, adaptive_region_resources=False,
+        hybrid_region_grid_neighbors=False,
         adaptive_initial_global_calls=160, adaptive_confirmation_calls=8):
     """Resume an exact source-bound session, or execute one Native per plan.
 
@@ -258,15 +262,23 @@ def run(context, flask_vector, binary, output, *,
     # New, explicitly opt-in experimental candidate strategy. Default None
     # means the original v290 session seal and journal remain byte-compatible.
     percent_enabled = percentage_grid_points is not None
-    need(type(adaptive_region_resources) is bool and
-         not (adaptive_region_resources and
+    need(type(hybrid_region_grid_neighbors) is bool and
+         type(adaptive_region_resources) is bool and
+         not (adaptive_region_resources and hybrid_region_grid_neighbors),
+         "V305_SEPARATE_EXPERIMENTAL_POLICY_OPT_INS")
+    region_enabled = adaptive_region_resources or hybrid_region_grid_neighbors
+    need(not (region_enabled and
               (percent_enabled or multiregion_percent_grid or nested_percent_grid)),
          "V304_EXCLUSIVE_ADAPTIVE_REGION_OPT_IN")
-    need(adaptive_region_resources or
+    need(region_enabled or
          (adaptive_initial_global_calls == 160 and
           adaptive_confirmation_calls == 8),
          "V304_OPTIONS_REQUIRE_EXPLICIT_OPT_IN")
-    if adaptive_region_resources:
+    region_planner = (hybrid_regions if hybrid_region_grid_neighbors
+                      else durable_regions)
+    metadata_keys = V304_METADATA + (("hybrid_method",)
+                                      if hybrid_region_grid_neighbors else ())
+    if region_enabled:
         region_opts = durable_regions.options(
             max_native_calls, adaptive_initial_global_calls,
             adaptive_confirmation_calls)
@@ -320,7 +332,7 @@ def run(context, flask_vector, binary, output, *,
         "upper": constraints.to_target(upper),
         "statistical_confidence": 0.95,
     }
-    if adaptive_region_resources:
+    if region_enabled:
         seal["experimental_adaptive_regions"] = {
             "schema": durable_regions.SCHEMA,
             "v302_sha256": hashlib.sha256(
@@ -331,6 +343,12 @@ def run(context, flask_vector, binary, output, *,
                 pathlib.Path(durable_regions.__file__).read_bytes()).hexdigest(),
             **region_opts,
         }
+        if hybrid_region_grid_neighbors:
+            seal["experimental_adaptive_regions"]["hybrid_v305"] = {
+                "schema": hybrid_regions.SCHEMA,
+                "source_sha256": hashlib.sha256(
+                    pathlib.Path(hybrid_regions.__file__).read_bytes()).hexdigest(),
+            }
     if percent_enabled:
         seal["experimental_percent_grid"] = {
             "schema": percent_grid.SCHEMA,
@@ -377,12 +395,14 @@ def run(context, flask_vector, binary, output, *,
     for row in stored:
         plan = {k: row[k] for k in ("index", "phase",
                                     "target", "iterations")}
-        if adaptive_region_resources:
-            need(all(k in row for k in V304_METADATA),
-                 "V304_JOURNAL_REGION_METADATA_MISSING")
-            plan.update({k: row[k] for k in V304_METADATA})
+        if region_enabled:
+            need(all(k in row for k in metadata_keys) and
+                 (hybrid_region_grid_neighbors or "hybrid_method" not in row),
+                 "V305_JOURNAL_REGION_METADATA_MISSING")
+            plan.update({k: row[k] for k in metadata_keys})
         else:
-            need(not any(k in row for k in V304_METADATA),
+            need(not any(k in row for k in
+                         (*V304_METADATA, "hybrid_method")),
                  "V304_UNSEALED_METADATA_IN_LEGACY_JOURNAL")
         req, folder = _request(context, flask_vector, output, plan)
         actual, _ = _verified_row(req, binary, folder, calibration, allow_cache=True)
@@ -403,7 +423,7 @@ def run(context, flask_vector, binary, output, *,
         row = stored[pending["index"]]
         need(all(row[k] == pending[k] for k in
                  ("index", "target", "iterations", "phase",
-                  *(V304_METADATA if adaptive_region_resources else ()))),
+                  *(metadata_keys if region_enabled else ()))),
              "ALREADY_COMMITTED_PENDING_DISAGREES")
         pending_path.unlink()
         pending = None
@@ -411,12 +431,12 @@ def run(context, flask_vector, binary, output, *,
          (pending["index"] == len(stored) and
           set(pending) == ({"index", "target", "iterations", "phase",
                             "decision"} |
-                           (set(V304_METADATA) if adaptive_region_resources else set()))),
+                           (set(metadata_keys) if region_enabled else set()))),
          "PENDING_CASE_NOT_CONTIGUOUS")
-    if adaptive_region_resources and pending is not None:
+    if region_enabled and pending is not None:
         # A persisted pending request is a source of truth ONLY after its
         # exact deterministic plan is reconstructed from verified journal.
-        proposed_pending = durable_regions.next_plan(
+        proposed_pending = region_planner.next_plan(
             observations, total=B, lower=lower, upper=upper,
             max_native_calls=max_native_calls, scout_iterations=scout_iters,
             confirmation_iterations=confirm_iters,
@@ -429,7 +449,7 @@ def run(context, flask_vector, binary, output, *,
             "index": len(observations), "phase": action["phase"],
             "target": action["target"], "iterations": action["iterations"],
             "decision": proposed_pending["decision"],
-            **{key: action[key] for key in V304_METADATA},
+            **{key: action[key] for key in metadata_keys},
         }
         need(pending == expected_pending, "V304_PENDING_PLAN_DRIFT")
     attempts = _count_attempts(output)
@@ -472,8 +492,8 @@ def run(context, flask_vector, binary, output, *,
                 status = "BUDGET_EXHAUSTED"
                 break
             if pending is None:
-                if adaptive_region_resources:
-                    proposed = durable_regions.next_plan(
+                if region_enabled:
+                    proposed = region_planner.next_plan(
                         observations, total=B, lower=lower, upper=upper,
                         max_native_calls=max_native_calls,
                         scout_iterations=scout_iters,
@@ -530,8 +550,8 @@ def run(context, flask_vector, binary, output, *,
                            "iterations": action["iterations"],
                            "phase": action["phase"],
                            "decision": proposed["decision"]}
-                if adaptive_region_resources:
-                    pending.update({key: action[key] for key in V304_METADATA})
+                if region_enabled:
+                    pending.update({key: action[key] for key in metadata_keys})
                 atomic(pending_path, pending)
             req, folder = _request(context, flask_vector, output, pending)
             previous_marker = folder.parent / "V065_PROGRESS.json"
@@ -616,7 +636,8 @@ def run(context, flask_vector, binary, output, *,
         raise
     summary = _summary(observations, context)
     report = {"schema": SCHEMA, "status": status,
-              "policy": (durable_regions.SCHEMA if adaptive_region_resources
+              "policy": (hybrid_regions.SCHEMA if hybrid_region_grid_neighbors
+                         else durable_regions.SCHEMA if adaptive_region_resources
                          else nested_regions.SCHEMA if nested_percent_grid
                          else multiregion_grid.SCHEMA if multiregion_percent_grid
                          else percent_grid.SCHEMA if percent_enabled
@@ -740,6 +761,8 @@ def main(argv=None):
     p.add_argument("--recover-verified-partial", action="store_true")
     p.add_argument("--adaptive-region-resources", action="store_true",
                    help="EXPERIMENTAL, opt-in v303 region resource policy")
+    p.add_argument("--hybrid-region-grid-neighbors", action="store_true",
+                   help="EXPERIMENTAL, opt-in v305 grid + v290 regional moves")
     p.add_argument("--adaptive-global-calls", type=int, default=160)
     p.add_argument("--adaptive-confirm-calls", type=int, default=8)
     p.add_argument("--portable-archive",
@@ -779,6 +802,7 @@ def main(argv=None):
                 cancel_file=paths["cancel_file"], cache_only=args.cache_only,
                 recover_verified_partial=args.recover_verified_partial,
                 adaptive_region_resources=args.adaptive_region_resources,
+                hybrid_region_grid_neighbors=args.hybrid_region_grid_neighbors,
                 adaptive_initial_global_calls=args.adaptive_global_calls,
                 adaptive_confirmation_calls=args.adaptive_confirm_calls,
                 open_folder=True)

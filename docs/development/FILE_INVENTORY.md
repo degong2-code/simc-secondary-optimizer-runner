@@ -276,7 +276,9 @@
 | [v301_nested_multiregion_policy.py](../../runner/v301_nested_multiregion_policy.py) | Nested 11→21→41 candidate policy |
 | [v302_weak_multiregion_zoom.py](../../runner/v302_weak_multiregion_zoom.py) | Global shortlist and local-six geometry |
 | [v303_adaptive_region_resource_policy.py](../../runner/v303_adaptive_region_resource_policy.py) | Adaptive radius/scout allocation and fair-comparison contract |
+| [v305_grid_pairwise_adaptive_hybrid.py](../../runner/v305_grid_pairwise_adaptive_hybrid.py) | v302 six-grid + v290 pairwise, v304 resource/radius, opt-in | 
 | [v304_v303_durable_adapter.py](../../runner/v304_v303_durable_adapter.py) | Durable stage/region adapter for v291 opt-in |
+| [p2_real_hybrid_v305_once.py](../../integration_probes/p2_real_hybrid_v305_once.py) | Scoped real SimC hybrid equal-iterations replay, exact historical SHA | 
 | [p2_real_equal_v304_once.py](../../integration_probes/p2_real_equal_v304_once.py) | Bounded one-shot historical-SHA real Native comparator (integration_probes) |
 
 | Tests | Coverage |
@@ -287,6 +289,8 @@
 | [test_v301_nested_multiregion_policy.py](../../tests/test_v301_nested_multiregion_policy.py) | Existing v301 regression |
 | [test_v302_weak_multiregion_zoom.py](../../tests/test_v302_weak_multiregion_zoom.py) | Existing v302 regression |
 | [test_v303_adaptive_region_resource_policy.py](../../tests/test_v303_adaptive_region_resource_policy.py) | New adaptive resource/budget-contract regression |
+| [test_v305_hybrid_durable_offline.py](../../tests/test_v305_hybrid_durable_offline.py) | v305 durable/geometry/cancel/resume regression | 
+| [test_p2_v305_hybrid_offline.py](../../tests/test_p2_v305_hybrid_offline.py) | v305 32+32+4 real pilot pure offline preflight | 
 | [test_v304_v303_v291_bridge_offline.py](../../tests/test_v304_v303_v291_bridge_offline.py) | New opt-in Native-fake integration / cancel / resume / pending guard |
 | [test_p2_real_equal_v304_offline.py](../../tests/test_p2_real_equal_v304_offline.py) | New no-Native 32+32+4 comparator preflight |
 
