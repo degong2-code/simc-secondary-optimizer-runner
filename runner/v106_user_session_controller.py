@@ -29,7 +29,7 @@ PURE_TRINKET_IDS=(250215,281215)
 # source-backed item/tier/native-L checks, not a second selector.
 OPTIONAL_CONTROLS=frozenset(("special_items","embellishments",
                              "consumable_choices","enchant_choices",
-                             "runeforge_by_hand"))
+                             "runeforge_by_hand","max_single_stat_percent"))
 DUAL_FORMS=frozenset(("dual_two_hand","dual_one_hand"))
 
 class SessionBlocked(ValueError):pass
@@ -234,6 +234,9 @@ def user_scenario(controls):
     bootstrap.scenario.text_token(race,"USER_RACE")
     bootstrap.scenario.text_token(talents,"USER_TALENTS")
     ilvl=controls["ilevel"];final=controls["final_T"]
+    stat_cap=controls.get("max_single_stat_percent")
+    need(stat_cap is None or (type(stat_cap) is int and
+         25<=stat_cap<=100),"USER_MAX_SINGLE_STAT_PERCENT_25_TO_100")
     need(type(ilvl) is int and 266<=ilvl<=344,"ILVL_OUT_OF_REFERENCE")
     need(final is None or type(final) is int and 1<=final<=100000,
          "USER_FINAL_T_INVALID")
@@ -282,6 +285,7 @@ def user_scenario(controls):
             "combat":{"targets":targets,"duration_seconds":duration,
                       "raid_buffs":controls["raid_buffs"]}}
     if choice is not None:output["consumable_choices"]=dict(choice)
+    if stat_cap is not None:output["max_single_stat_percent"]=stat_cap
     if "enchant_choices" in controls:
         nonchmv_enchant.check_choice(controls["enchant_choices"])
         output[nonchmv_enchant.FIELD]=dict(controls["enchant_choices"])
@@ -295,7 +299,8 @@ def standard_controls(key=("paladin","retribution")):
     d=source_defaults(key)
     return {k:v for k,v in d.items()
             if k in ("class","spec","race","talents","oil_hands")} | {
-            "ilevel":334,"final_T":None,"trinket_ids":d["trinket_ids"],
+            "ilevel":334,"final_T":None,"max_single_stat_percent":60,
+            "trinket_ids":d["trinket_ids"],
             "targets":1,"duration_seconds":300,"raid_buffs":True,
             "special_items":[],"embellishments":[],
             "consumable_choices":{

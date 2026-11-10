@@ -46,11 +46,16 @@ def bounds(normalized,budget):
     need(type(total) is int and total>0,"OFFICIAL_T_NOT_CALCULATED")
     floors=budget["effective_floor_if_possible"]
     need(type(floors) is dict,"STATIC_L_FLOOR_MISSING")
-    strict_caps=contract.strict_final_half_base_caps(
-        total,normalized["budget"]["external_temporary_rating"])
-    caps={s:min(math.floor(total*normalized["scenario"]["constraints"]
-                          ["max_fraction"][s]+1e-9),
-                strict_caps[s]) for s in STATS}
+    cap_config=normalized["scenario"]["constraints"]
+    stat_cap_percent=cap_config.get("max_single_stat_percent")
+    final_caps=(contract.strict_final_half_base_caps(
+                    total,normalized["budget"]["external_temporary_rating"])
+                if stat_cap_percent is None else
+                contract.configurable_final_stat_caps(
+                    total,normalized["budget"]["external_temporary_rating"],
+                    stat_cap_percent))
+    caps={s:min(math.floor(total*cap_config["max_fraction"][s]+1e-9),
+                final_caps[s]) for s in STATS}
     lower=tuple(floors[s] for s in STATS)
     upper=tuple(caps[s] for s in STATS)
     need(all(0<=a<=b for a,b in zip(lower,upper)) and

@@ -28,6 +28,15 @@ class RealHTTPPageOffline(unittest.TestCase):
         cls.head={"x-simc-local-token":"ui-offline-token",
                   "origin":"http://127.0.0.1:8765"}
 
+    def test_configurable_stat_cap_is_visible_and_restores_old_sessions(self):
+        html=(ROOT/"runner/webui/index.html").read_text(encoding="utf8")
+        js=(ROOT/"runner/webui/app.js").read_text(encoding="utf8")
+        self.assertIn('id="max-single-stat-percent"',html)
+        self.assertIn('value="60" required',html)
+        self.assertIn('max_single_stat_percent:valueInt("max-single-stat-percent")',js)
+        self.assertIn('u.max_single_stat_percent??50',js)
+        self.assertIn('item.max_single_stat_percent??60',js)
+
     def test_p3_hah_longrun_controls_and_http_routes_are_explicit_only(self):
         html=(ROOT/"runner/webui/index.html").read_text(encoding="utf8")
         js=(ROOT/"runner/webui/app.js").read_text(encoding="utf8")

@@ -285,6 +285,7 @@ function fillDefault(item) {
   setTrinketSelection("trinket2",item.trinket_ids[1]);
   $("ilevel").value=item.ilevel;
   $("final_T").value=item.final_T??"";
+  $("max-single-stat-percent").value=item.max_single_stat_percent??60;
   $("targets").value=item.targets;
   $("duration").value=item.duration_seconds;
   $("raid_buffs").checked=item.raid_buffs;
@@ -552,6 +553,9 @@ function fillSessionInputs(payload) {
   // from whichever build happens to be selected on the current page.
   $("season-game-build").value=payload.installed_season_game_build??"";
   $("final_T").value=t.final_T??"";
+  // A sealed pre-policy session has an implicit strict <50% rule.
+  // Its restoration must display 50, never silently claim the new 60.
+  $("max-single-stat-percent").value=u.max_single_stat_percent??50;
   setTrinketSelection("trinket1",u.trinkets[0].item_id,true);
   setTrinketSelection("trinket2",u.trinkets[1].item_id,true);
   $("targets").value=b.targets;
@@ -659,6 +663,7 @@ function buildRequest() {
     class:source.class,spec:source.spec,
     race:field("race"),talents:field("talents"),
     ilevel:valueInt("ilevel"),final_T:field("final_T") ? valueInt("final_T"):null,
+    max_single_stat_percent:valueInt("max-single-stat-percent"),
     trinket_ids:[valueInt("trinket1"),valueInt("trinket2")],
     oil_hands:["main_hand","off_hand"].filter(
       hand=>$(hand==="main_hand"?"oil_main":"oil_off").checked),

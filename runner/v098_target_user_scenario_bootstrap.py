@@ -41,6 +41,7 @@ CONSUME_FIELD="consumable_choices"
 ENCHANT_FIELD="verified_enchant"
 SEASON_ENCHANT_FIELD=nonchmv_enchant.FIELD
 RUNEFORGE_FIELD="runeforge_by_hand"
+STAT_CAP_FIELD="max_single_stat_percent"
 TIER_FIVE=common.TIER_FIVE
 FIFTH_TIER=common.FIFTH_TIER
 
@@ -710,8 +711,13 @@ def build(user,folder,binary,revision,static_cache_path=None,
               tuple(x|{ENCHANT_FIELD} for x in base_accepted)+
               tuple(x|{SEASON_ENCHANT_FIELD} for x in base_accepted))
     accepted=accepted+tuple(x|{RUNEFORGE_FIELD} for x in accepted)
+    accepted=accepted+tuple(x|{STAT_CAP_FIELD} for x in accepted)
     need(type(user) is dict and set(user) in accepted
          and user.get("schema")==SCHEMA,"USER_SCENARIO_FIELDS")
+    if STAT_CAP_FIELD in user:
+        need(type(user[STAT_CAP_FIELD]) is int and
+             25<=user[STAT_CAP_FIELD]<=100,
+             "MAX_SINGLE_STAT_PERCENT_25_TO_100")
     using_import=IMPORT_FIELD in user
     if using_import:
         need(type(user[IMPORT_FIELD]) is str and bool(user[IMPORT_FIELD].strip()),
@@ -933,6 +939,13 @@ def build(user,folder,binary,revision,static_cache_path=None,
              "ORDINARY_VARIANT_CONFLICTS_WITH_USER_SELECTED_ITEM")
         base_profile,cfg,rows,groups,weapon_layout,F=common.source_backed_gear(
             key,folder,ilvl,need,ordinary_variant=ordinary_variant)
+    if STAT_CAP_FIELD in user:
+        # New product sessions use the explicit user cap on FINAL T.
+        # The old per-stat B max_fraction template remains for sealed legacy
+        # sessions only, and must not silently override a new 60% selection.
+        # The user cap is separately bound into the scenario SHA and caches.
+        cfg["constraints"]["max_single_stat_percent"]=user[STAT_CAP_FIELD]
+        cfg["constraints"]["max_fraction"]={stat:1.0 for stat in scenario.STATS}
     if season_physical_one_spec_candidate is not None:
         # The tested G must correspond to exactly the representative item
         # IDs serialized into this user profile before adding two trinkets.

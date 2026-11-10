@@ -426,6 +426,26 @@ class UserSessionControls(unittest.TestCase):
         with self.assertRaisesRegex(ux.SessionBlocked,"DPS_ARCHETYPE_NOT_READY"):
             ux.user_scenario(c)
 
+    def test_user_stat_cap_default_custom_and_invalid(self):
+        controls=ux.standard_controls()
+        self.assertEqual(controls["max_single_stat_percent"],60)
+        user=ux.user_scenario(controls)
+        self.assertEqual(user["max_single_stat_percent"],60)
+        controls["max_single_stat_percent"]=50
+        self.assertEqual(ux.user_scenario(controls)["max_single_stat_percent"],50)
+        controls["max_single_stat_percent"]=100
+        self.assertEqual(ux.user_scenario(controls)["max_single_stat_percent"],100)
+        for invalid in (24,101,60.5,True):
+            controls["max_single_stat_percent"]=invalid
+            with self.assertRaisesRegex(ux.SessionBlocked,
+                                        "USER_MAX_SINGLE_STAT_PERCENT"):
+                ux.user_scenario(controls)
+        # Previously sealed controls with no new field retain their original
+        # implicit <50% semantics rather than being silently reinterpreted.
+        del controls["max_single_stat_percent"]
+        self.assertNotIn("max_single_stat_percent",
+                         ux.user_scenario(controls))
+
     def test_format_only_proven_95_result_never_claim_global(self):
         msg=ux.format_result(fake_native())
         self.assertIn("179,171.8",msg)

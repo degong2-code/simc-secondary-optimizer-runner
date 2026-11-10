@@ -78,6 +78,7 @@
             <p class="hint">최신 시즌 대표 장비·직업별 티어 4세트·무기는 항상 내부 구성합니다. 목표 아이템레벨 266~344에 맞춘 독립 세션입니다.</p>
             <p class="hint">실제 SimC 대표 프로필 26/26 수용 검증. 기본 경로의 기존 세션·캐시는 유지하며, 새 선택은 별도 캐시에서 기존 6후보 최적화를 실행합니다. 다른 특성·장신구·특수효과 조합의 성공 여부는 각 SimC 실행으로 판단합니다.</p>
             <div class="field"><label for="final_T">수동 최종 CHMV T <small>선택 · 비우면 목표 ilvl 예산</small></label><input id="final_T" type="number" min="1" max="100000" placeholder="자동 산정"></div>
+            <div class="field"><label for="max-single-stat-percent">개별 2차스탯 최대 비율 <small>최종 T 기준 · 기본 60% 이하 · 25~100% 설정 가능</small></label><input id="max-single-stat-percent" type="number" min="25" max="100" step="1" value="60" required><p class="hint">치명·가속·특화·유연에 공통 적용합니다. 선택한 기름(O)까지 포함한 최종 rating에 적용되며 고정 L/E/F/O는 재분배되지 않습니다.</p></div>
             <div class="two"><div class="field"><label for="targets">대상 수</label><input id="targets" type="number" min="1" max="40" value="1" required></div><div class="field"><label for="duration">전투 길이 (초)</label><input id="duration" type="number" min="1" max="3600" value="300" required></div></div>
             <div class="check-row"><label><input id="raid_buffs" type="checkbox" checked> 공대 버프</label><label><input id="oil_main" type="checkbox"> 주무기 기름</label><label><input id="oil_off" type="checkbox"> 보조무기 기름</label></div>
              <p class="hint">새 최적화 세션은 기본적으로 기름을 사용하지 않습니다(O=0). 기름은 선택한 시즌·무기에 대한 정확한 SimC 입력과 고정 O가 검증된 환경에서만 적용되며, 미검증 선택은 임의의 0으로 처리하지 않고 차단합니다.</p>

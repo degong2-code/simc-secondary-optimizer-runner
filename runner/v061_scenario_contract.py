@@ -74,6 +74,23 @@ def strict_final_half_base_caps(base_B, fixed_O):
     return {s:cap-oil[s] for s in STATS}
 
 
+def configurable_final_stat_caps(base_B, fixed_O, max_single_stat_percent):
+    """Inclusive per-stat FINAL-T cap, exposed by newly sealed user sessions.
+
+    T=B+sum(O), and oil is fixed rather than a distributable candidate stat.
+    Integer percent and floor-division avoid float boundary drift (<=).
+    """
+    need(type(base_B) is int and 1 <= base_B <= 100000,
+         "STAT_CAP_BASE_B_REQUIRED")
+    need(type(max_single_stat_percent) is int and
+         25 <= max_single_stat_percent <= 100,
+         "STAT_CAP_PERCENT_25_TO_100_REQUIRED")
+    oil=vector(fixed_O,"STAT_CAP_FIXED_O")
+    total=base_B+sum(oil.values())
+    maximum=(total*max_single_stat_percent)//100
+    return {stat:maximum-oil[stat] for stat in STATS}
+
+
 def shares(v,label):
     keys_exact(v,STATS,label)
     need(all(type(v[k]) in (float,int) and math.isfinite(v[k])
@@ -210,8 +227,16 @@ def normalize(doc):
     for t in combat["external_buffs"]+combat["events"]:
         text_token(t,"EXTRA_COMBAT")
 
-    bounds=keys_exact(doc["constraints"],
-        ("min_fraction","max_fraction","minimum_rating"),"CONSTRAINTS")
+    bounds=doc["constraints"]
+    need(type(bounds) is dict and set(bounds) in (
+        {"min_fraction","max_fraction","minimum_rating"},
+        {"min_fraction","max_fraction","minimum_rating",
+         "max_single_stat_percent"}),"CONSTRAINTS_FIELDS")
+    stat_cap_percent=bounds.get("max_single_stat_percent")
+    if stat_cap_percent is not None:
+        need(type(stat_cap_percent) is int and
+             25 <= stat_cap_percent <= 100,
+             "STAT_CAP_PERCENT_25_TO_100_REQUIRED")
     lows=shares(bounds["min_fraction"],"LOW_FRACTIONS")
     highs=shares(bounds["max_fraction"],"HIGH_FRACTIONS")
     manual_mins=vector(bounds["minimum_rating"],"MIN_RATING")
@@ -221,9 +246,12 @@ def normalize(doc):
     total=target["manual_total"]
     if total is not None:
         min_actual={k:max(manual_mins[k],math.ceil(lows[k]*total-1e-9)) for k in STATS}
-        strict_caps=strict_final_half_base_caps(total,external_oil)
+        final_caps=(strict_final_half_base_caps(total,external_oil)
+                    if stat_cap_percent is None else
+                    configurable_final_stat_caps(total,external_oil,
+                                                 stat_cap_percent))
         cap_actual={k:min(math.floor(highs[k]*total+1e-9),
-                          strict_caps[k]) for k in STATS}
+                          final_caps[k]) for k in STATS}
         need(all(min_actual[k]<=cap_actual[k] for k in STATS) and
              sum(min_actual.values())<=total<=sum(cap_actual.values()),
              "UNFEASIBLE_MANUAL_TOTAL_BOUNDS")

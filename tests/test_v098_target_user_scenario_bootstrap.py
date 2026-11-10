@@ -54,6 +54,30 @@ class InternalOrdinaryVariantPipeline(unittest.TestCase):
         user=sessions.user_scenario(sessions.standard_controls(which))
         return user,binary
 
+    def test_user_percent_cap_flows_to_sealed_scenario_not_simc_native(self):
+        import v106_user_session_controller as sessions
+        with tempfile.TemporaryDirectory() as temp:
+            root=pathlib.Path(temp)
+            user,binary=self.fixture(root)
+            self.assertEqual(user["max_single_stat_percent"],60)
+            prepared=boot.build(user,root/"sixty",binary,"7bc1071")
+            raw=json.loads((root/"sixty"/"scenario.json").read_text("utf8"))
+            self.assertEqual(raw["constraints"]["max_single_stat_percent"],60)
+            self.assertEqual(set(raw["constraints"]["max_fraction"].values()),{1.0})
+            older=dict(user)
+            older.pop("max_single_stat_percent")
+            boot.build(older,root/"legacy",binary,"7bc1071")
+            previous=json.loads((root/"legacy"/"scenario.json").read_text("utf8"))
+            self.assertNotIn("max_single_stat_percent",previous["constraints"])
+            other=dict(user,max_single_stat_percent=50)
+            boot.build(other,root/"fifty",binary,"7bc1071")
+            raw50=json.loads((root/"fifty"/"scenario.json").read_text("utf8"))
+            self.assertEqual(raw50["constraints"]["max_single_stat_percent"],50)
+            self.assertNotEqual(scenario.normalize(raw)["scenario_digest"],
+                                scenario.normalize(raw50)["scenario_digest"])
+            self.assertNotEqual(scenario.normalize(raw)["scenario_digest"],
+                                scenario.normalize(previous)["scenario_digest"])
+
     def test_havoc_v137_accepted_feet_flows_through_existing_v098_manifest(self):
         import v137_leather_feet_isolated_variant as staged
         with tempfile.TemporaryDirectory() as temp:

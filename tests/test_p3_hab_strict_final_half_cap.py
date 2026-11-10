@@ -19,6 +19,57 @@ from test_v064_adaptive_evaluator_port import make_fixture
 
 
 class FinalStrictHalf(unittest.TestCase):
+    def test_new_configurable_inclusive_caps_and_legacy_preservation(self):
+        z={s:0 for s in sc.STATS}
+        self.assertEqual(set(sc.configurable_final_stat_caps(
+            2000,z,50).values()),{1000})
+        self.assertEqual(set(sc.configurable_final_stat_caps(
+            2000,z,60).values()),{1200})
+        self.assertEqual(set(sc.strict_final_half_base_caps(
+            2000,z).values()),{999})
+        oil=dict(z,crit_rating=16,haste_rating=16)
+        # T=2032, 60% inclusive => max final 1219 and oil already reserved.
+        caps=sc.configurable_final_stat_caps(2000,oil,60)
+        self.assertEqual(caps["crit_rating"],1203)
+        self.assertEqual(caps["mastery_rating"],1219)
+        self.assertTrue(all(caps[s]+oil[s]<=1219 for s in sc.STATS))
+        for bad in (24,101,60.0,True):
+            with self.assertRaisesRegex(sc.ScenarioInvalid,
+                                        "STAT_CAP_PERCENT_25_TO_100"):
+                sc.configurable_final_stat_caps(2000,z,bad)
+
+    def test_normalized_manual_cap_and_scheduler_bound_share_one_policy(self):
+        doc=manual()
+        doc["constraints"]["max_fraction"]={s:1.0 for s in sc.STATS}
+        doc["constraints"]["max_single_stat_percent"]=60
+        doc["constraints"]["minimum_rating"]["crit_rating"]=1700
+        normalized=sc.normalize(doc)
+        self.assertEqual(normalized["scenario"]["constraints"][
+            "max_single_stat_percent"],60)
+        doc["constraints"]["max_single_stat_percent"]=50
+        with self.assertRaisesRegex(sc.ScenarioInvalid,
+                                    "UNFEASIBLE_MANUAL_TOTAL_BOUNDS"):
+            sc.normalize(doc)
+        doc["constraints"]["max_single_stat_percent"]=60
+        doc["constraints"]["minimum_rating"]["crit_rating"]=0
+        normalized=sc.normalize(doc)
+        c,b,_,_=make_fixture()
+        b=copy.deepcopy(b)
+        b["scenario_digest"]=normalized["scenario_digest"]
+        b["effective_floor_if_possible"]={s:0 for s in sc.STATS}
+        b["budget"]["T_official"]=3000
+        B,lo,hi=search.bounds(normalized,b)
+        self.assertEqual(B,3000)
+        self.assertEqual(hi[0],1803)
+        self.assertEqual(hi[2],1819)
+        self.assertTrue(search.eligible((1700,500,400,400),B,lo,hi))
+        # Same current scenario with 50% inclusive cannot admit 1700 crit.
+        doc["constraints"]["max_single_stat_percent"]=50
+        lower=sc.normalize(doc)
+        b["scenario_digest"]=lower["scenario_digest"]
+        _,_,tight=search.bounds(lower,b)
+        self.assertLess(tight[0],1700)
+
     def test_integer_boundary_even_odd_and_oil(self):
         z={s:0 for s in sc.STATS}
         even=sc.strict_final_half_base_caps(3000,z)
