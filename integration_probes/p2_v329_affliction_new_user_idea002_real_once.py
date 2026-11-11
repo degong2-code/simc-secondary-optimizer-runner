@@ -281,6 +281,11 @@ def run_ab(doc,binary,root,context,flask):
 def main():
     need(os.getenv("P2_V329_IDEA002_FRESH_AFFLICTION_ONCE")=="1",
          "NEW_SPEC_NATIVE_ONCE_OPT_IN_REQUIRED")
+    # v329's 267 Native receipts belong exclusively to v328-v1 source code.
+    # v328-v2 must receive a fresh campaign id/new spec, never silently
+    # reinterpret this historical, SHA-sealed pilot as a v2 experiment.
+    need(idea.SCHEMA=="v328_idea002_evidence_gated_radius_optin_v1",
+         "PILOT_V329_V1_EXACT_SOURCE_RETIRED")
     return fresh.main(
         case_id=CASE,expected_spec=SPEC,
         output_root=ROOT,receipt_path=ROOT/"receipt.json",

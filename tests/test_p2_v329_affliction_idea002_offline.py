@@ -19,6 +19,12 @@ class Idea002E2EOffline(unittest.TestCase):
             ("monk","windwalker"),("priest","shadow"),
             ("druid","balance"),("evoker","devastation"),
             ("demonhunter","havoc"),("warlock","destruction")})
+    def test_completed_v329_v1_campaign_cannot_be_replayed_with_v328_v2(self):
+        with mock.patch.dict(os.environ,
+            {"P2_V329_IDEA002_FRESH_AFFLICTION_ONCE":"1"}):
+            with self.assertRaisesRegex(study.V329Blocked,
+                "PILOT_V329_V1_EXACT_SOURCE_RETIRED"):
+                study.main()
     def test_equal_budget_regional_ablation_is_exact_4520(self):
         self.assertEqual(study.BUDGET,64)
         self.assertEqual(study.START_GLOBAL,16)

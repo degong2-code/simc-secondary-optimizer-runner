@@ -40,6 +40,25 @@ class Tests(unittest.TestCase):
         self.assertEqual(result["schema"],policy.SCHEMA)
         self.assertEqual(result["decision"],"V328_IDEA002_EXPAND_UNCERTAIN")
         self.assertEqual(tuple(result["next_request"]["target"].values()),candidate)
+    def test_source_pairwise_method_is_preserved_exactly(self):
+        center=(800,800,800,700)
+        req={"adaptive_stage":"regional","region_id":"r0",
+             "target":policy.base.legacy.to_target(center),
+             "region_center":list(center),"region_radius_fraction":.065,
+             "hybrid_method":policy.previous.PAIRFINE,
+             "phase":"scout","iterations":35}
+        original={"next_request":req,"decision":"V306_ORIGINAL_PAIR"}
+        with mock.patch.object(policy.previous,"next_plan",
+             return_value=original), \
+             mock.patch.object(policy.previous,"_measured_region_state",
+             side_effect=AssertionError("Should not mutate or even inspect pair")):
+            out=policy.next_plan([],total=3100,lower=(0,0,0,0),
+                upper=(2000,2000,2000,2000),max_native_calls=64,
+                scout_iterations=35,confirmation_iterations=320,
+                initial_global_calls=16,confirmation_calls=8)
+        self.assertEqual(out["next_request"],req)
+        self.assertEqual(out["decision"],original["decision"])
+        self.assertEqual(out["schema"],policy.SCHEMA)
     def test_invalid_original_budget_fails_closed(self):
         with self.assertRaises(policy.PolicyBlocked):
             policy.radius_decision(self.state(),total=3101)

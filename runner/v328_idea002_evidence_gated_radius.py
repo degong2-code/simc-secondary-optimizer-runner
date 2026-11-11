@@ -11,7 +11,7 @@ import v290_multiscale_adaptive_policy as base
 import v303_adaptive_region_resource_policy as resources
 import v306_seed_retained_coarse_escape_regions as previous
 
-SCHEMA="v328_idea002_evidence_gated_radius_optin_v1"
+SCHEMA="v328_idea002_evidence_gated_radius_optin_v2"
 class PolicyBlocked(ValueError):pass
 def need(ok,why):
     if not ok:raise PolicyBlocked("V328_"+why)
@@ -63,6 +63,14 @@ def next_plan(observations,*,total,lower,upper,max_native_calls,
     request=proposal.get("next_request")
     if request is None or request.get("adaptive_stage")!="regional":
         return dict(proposal,schema=SCHEMA)
+    # v329-v1 changed pairwise methods into GRID during some expansions.
+    # v2 preserves the existing v306 pairwise coordinates and method/cadence;
+    # change ONLY genuine GRID/FALLBACK region proposals.
+    if request.get("hybrid_method") in previous.PAIRS:
+        return dict(proposal,schema=SCHEMA)
+    need(request.get("hybrid_method") in
+         (previous.GRID,previous.FALLBACK),
+         "UNKNOWN_REGIONAL_METHOD_NOT_RADIUS_ABLATION")
     state=previous._measured_region_state(
         observations,total=total,initial_global_calls=initial_global_calls)
     rid=request["region_id"]

@@ -1,4 +1,5 @@
 name: P2 v328 IDEA-002 radius ablation focused offline
+# v2 preserves all v306 pairwise coordinate/method proposals; source v1 pilot is historical.
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
@@ -23,5 +24,5 @@ jobs:
         run: |
           set -euo pipefail
           python -m py_compile runner/v328_idea002_evidence_gated_radius.py runner/v291_durable_multiscale_native_runner.py tests/test_p2_v328_idea002_radius_offline.py
-          python -m unittest -v tests.test_p2_v328_idea002_radius_offline tests.test_p2_v306_seed_retained_offline tests.test_p2_v306_new_user_equal_offline tests.test_v304_v303_v291_bridge_offline tests.test_p2_v318_sem_precision_optin_offline
+          python -m unittest -v tests.test_p2_v328_idea002_radius_offline tests.test_p2_v329_affliction_idea002_offline tests.test_p2_v306_seed_retained_offline tests.test_p2_v306_new_user_equal_offline tests.test_v304_v303_v291_bridge_offline tests.test_p2_v318_sem_precision_optin_offline
           python tools/check_development_ledger.py
