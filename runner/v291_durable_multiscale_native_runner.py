@@ -35,6 +35,7 @@ import v303_adaptive_region_resource_policy as region_resources
 import v304_v303_durable_adapter as durable_regions
 import v305_grid_pairwise_adaptive_hybrid as hybrid_regions
 import v306_seed_retained_coarse_escape_regions as seed_escape_regions
+import v328_idea002_evidence_gated_radius as idea002_radius
 import v307_dense_nested_coverage_grid as dense_grid
 import v309_prior_anchored_level21_progressive as progressive21
 import v310_external_frontier_50_only as frontier50
@@ -269,6 +270,7 @@ def run(context, flask_vector, binary, output, *,
         nested_percent_grid=False, adaptive_region_resources=False,
         hybrid_region_grid_neighbors=False,
         seed_retained_coarse_escape_regions=False,
+        idea002_radius_optin=False,
         dense_nested_grid_max_level=None,
         dense_nested_grid_full_scan=False,
         v309_prior_compact_artifact_zip=None,
@@ -313,8 +315,13 @@ def run(context, flask_vector, binary, output, *,
          not (seed_retained_coarse_escape_regions and
               (adaptive_region_resources or hybrid_region_grid_neighbors)),
          "V306_EXCLUSIVE_EXPERIMENTAL_POLICY_OPT_INS")
+    need(type(idea002_radius_optin) is bool and
+         not (idea002_radius_optin and
+              (adaptive_region_resources or hybrid_region_grid_neighbors
+               or seed_retained_coarse_escape_regions)),
+         "V328_EXCLUSIVE_IDEA002_OPT_IN")
     region_enabled = (adaptive_region_resources or hybrid_region_grid_neighbors
-                      or seed_retained_coarse_escape_regions)
+                      or seed_retained_coarse_escape_regions or idea002_radius_optin)
     grid_enabled = dense_nested_grid_max_level is not None
     p309_fields=(v309_prior_compact_artifact_zip,
                  v309_prior_raw_checkpoint_zip,
@@ -374,7 +381,8 @@ def run(context, flask_vector, binary, output, *,
          (adaptive_initial_global_calls == 160 and
           adaptive_confirmation_calls == 8),
          "V304_OPTIONS_REQUIRE_EXPLICIT_OPT_IN")
-    region_planner = (seed_escape_regions if seed_retained_coarse_escape_regions
+    region_planner = (idea002_radius if idea002_radius_optin
+                      else seed_escape_regions if seed_retained_coarse_escape_regions
                       else hybrid_regions if hybrid_region_grid_neighbors
                       else durable_regions)
     metadata_keys = (model_guided.METADATA if model_guided_multiregion else
@@ -384,7 +392,8 @@ def run(context, flask_vector, binary, output, *,
                      dense_grid.METADATA if grid_enabled else
                      V304_METADATA + (("hybrid_method",)
                                       if (hybrid_region_grid_neighbors or
-                                          seed_retained_coarse_escape_regions)
+                                          seed_retained_coarse_escape_regions or
+                                          idea002_radius_optin)
                                       else ()))
     if model_guided_multiregion:
         need(adaptive_initial_global_calls == 160 and
@@ -517,13 +526,21 @@ def run(context, flask_vector, binary, output, *,
                 "source_sha256": hashlib.sha256(
                     pathlib.Path(hybrid_regions.__file__).read_bytes()).hexdigest(),
             }
-        if seed_retained_coarse_escape_regions:
+        if seed_retained_coarse_escape_regions or idea002_radius_optin:
             seal["experimental_adaptive_regions"]["seed_retained_v306"] = {
                 "schema": seed_escape_regions.SCHEMA,
                 "source_sha256": hashlib.sha256(
                     pathlib.Path(seed_escape_regions.__file__).read_bytes()).hexdigest(),
                 "v305_dependency_sha256": hashlib.sha256(
                     pathlib.Path(hybrid_regions.__file__).read_bytes()).hexdigest(),
+            }
+        if idea002_radius_optin:
+            seal["experimental_adaptive_regions"]["idea002_v328"] = {
+                "schema": idea002_radius.SCHEMA,
+                "source_sha256": hashlib.sha256(pathlib.Path(
+                    idea002_radius.__file__).read_bytes()).hexdigest(),
+                "same_two_native_iteration_identities": True,
+                "new_native_executor": False,
             }
     if grid_enabled:
         dense_grid.budget(max_native_calls)
@@ -638,7 +655,7 @@ def run(context, flask_vector, binary, output, *,
         if region_enabled:
             need(all(k in row for k in metadata_keys) and
                  (hybrid_region_grid_neighbors or
-                  seed_retained_coarse_escape_regions or
+                  seed_retained_coarse_escape_regions or idea002_radius_optin or
                   "hybrid_method" not in row) and
                  not any(k in row for k in dense_grid.METADATA),
                  "V305_JOURNAL_REGION_METADATA_MISSING")
@@ -1074,6 +1091,7 @@ def run(context, flask_vector, binary, output, *,
                          else frontier50.SCHEMA if frontier50_enabled
                          else progressive21.SCHEMA if progressive_enabled
                          else dense_grid.SCHEMA if grid_enabled
+                         else idea002_radius.SCHEMA if idea002_radius_optin
                          else seed_escape_regions.SCHEMA if seed_retained_coarse_escape_regions
                          else hybrid_regions.SCHEMA if hybrid_region_grid_neighbors
                          else durable_regions.SCHEMA if adaptive_region_resources
@@ -1232,6 +1250,8 @@ def main(argv=None):
                    help="EXPERIMENTAL, opt-in v305 grid + v290 regional moves")
     p.add_argument("--seed-retained-coarse-escape-regions", action="store_true",
                    help="EXPERIMENTAL, opt-in v306 seed retention and 12/24 pct B escapes")
+    p.add_argument("--idea002-radius-optin", action="store_true",
+                   help="EXPERIMENTAL, opt-in v328 measured regional radius")
     p.add_argument("--dense-nested-grid-max-level", type=int,
                    choices=dense_grid.LEVELS, default=None,
                    help="EXPERIMENTAL v307 nested coverage grid, 6/11/21/41/81")
@@ -1282,6 +1302,7 @@ def main(argv=None):
                 adaptive_region_resources=args.adaptive_region_resources,
                 hybrid_region_grid_neighbors=args.hybrid_region_grid_neighbors,
                 seed_retained_coarse_escape_regions=args.seed_retained_coarse_escape_regions,
+                idea002_radius_optin=args.idea002_radius_optin,
                 dense_nested_grid_max_level=args.dense_nested_grid_max_level,
                 dense_nested_grid_full_scan=args.dense_nested_grid_full_scan,
                 model_guided_multiregion=args.model_guided_multiregion,
