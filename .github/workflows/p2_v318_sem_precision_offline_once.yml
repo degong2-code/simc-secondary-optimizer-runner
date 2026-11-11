@@ -1,0 +1,30 @@
+name: P2 v318 SEM-confirmation opt-in offline tests
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p2_v318_sem_precision_offline_once.yml]
+permissions:
+  contents: read
+concurrency:
+  group: p2-v318-sem-precision-offline-guard
+  cancel-in-progress: false
+jobs:
+  focused-offline:
+    if: contains(github.event.head_commit.message, '[p2-v318-sem-precision-offline]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      PYTHONPATH: runner:integration_probes:.
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - run: python -m pip install -r requirements-web-test.txt
+      - name: Exact opt-in, existing v290, v291 durable and timing regression, Native0
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile runner/v318_sem_distance_precision_priority.py runner/v291_durable_multiscale_native_runner.py tests/test_p2_v318_sem_precision_optin_offline.py
+          python -m unittest -v tests.test_p2_v318_sem_precision_optin_offline tests.test_p3_hw_multiscale_policy tests.test_v316_optin_case_time_trace_offline
+          echo P2_V318_FOCUSED_OFFLINE_DONE_NATIVE_ZERO

@@ -58,3 +58,9 @@
 - 프로세스 wall 중앙값 비전 (0.159/0.431/0.956초), 야수 (0.194/0.476/1.070초). 320 1회가 실제 35 5.5~6회 비용에 상당하며 순수 iterations 9.14배로 과대 추정 금지.
 - 120→320 승급은 2번의 SimC 호출과 cache/seed identity를 필요로 한다. 120회 단계 실행비가 바로 320회 실행의 약45%이므로, 320 확인까지 올라가는 비율이 약55% 미만이고 진짜 DPS 고점을 잃지 않을 때만 유리할 가능성. **현재 보류**, v291 35/320 원형 유지.
 - 다음 실험은 35/320에서 v290 정밀 확인 reserve/cadence만 opt-in ablation. 별도 엔진, 신규 아이디어 ID, 기본 제품 코드 변경 없음. 실측18회가 정책 개선 증명이라고 말하지 않음.
+
+## 2026-11-11 v318 실제 코드 연결 — SEM·분포 거리 정밀 후보 우선순위 (검증 대기)
+
+- [v318 pure opt-in source](../../../runner/v318_sem_distance_precision_priority.py), [v291 durable 연결](../../../runner/v291_durable_multiscale_native_runner.py), [개발 노트](../notes/2026-11-11_p2-v318-sem-distance-precision-optin.md).
+- 기존 35/320 요청·v290 정밀 주기 **그대로** 유지; Native 실행 대상의 순서를 오차/근접대안 가치로 바꿔보는 저위험 선행 실험이다. `sem_precision_priority_optin=False` 기본값 불변, opt-in은 별도 세션 seal·pending 재검증.
+- 본 변경은 **코드 및 오프라인 시험 계약 준비**이지 실 Native A/B 개선·통계 확정 아님. 120 단계 도입·확인 주기·호출수 감소도 아직 없음. 기존 v290 source SHA/영수증 보존.

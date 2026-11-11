@@ -25,6 +25,7 @@ import v091_weapon_oil_external_adapter as oil
 import v093_inclusive_adaptive_scheduler_bridge as adaptive
 import v094_durable_inclusive_adaptive_runner as bounded
 import v290_multiscale_adaptive_policy as search
+import v318_sem_distance_precision_priority as sem_priority
 import v298_adaptive_percent_grid as percent_grid
 import v299_multiregion_percent_policy as multiregion_grid
 import v300_multiregion_throughput_resolution as measured_resolution
@@ -277,7 +278,7 @@ def run(context, flask_vector, binary, output, *,
         v311_three_source_manifest_path=None,
         model_guided_multiregion=False,
         adaptive_initial_global_calls=160, adaptive_confirmation_calls=8,
-        case_timing_trace=False):
+        case_timing_trace=False, sem_precision_priority_optin=False):
     """Resume an exact source-bound session, or execute one Native per plan.
 
     A previously committed journal is always re-validated against ORIGINAL
@@ -288,6 +289,8 @@ def run(context, flask_vector, binary, output, *,
     output = pathlib.Path(output).resolve()
     need(type(case_timing_trace) is bool,
          "V316_CASE_TIMING_TRACE_BOOL_REQUIRED")
+    need(type(sem_precision_priority_optin) is bool,
+         "V318_EXPLICIT_SEM_PRECISION_OPTIN_BOOL_REQUIRED")
     need(type(max_native_calls) is int and
          1 <= max_native_calls <= 100000,
          "EXPLICIT_TOTAL_NATIVE_BUDGET_REQUIRED")
@@ -355,6 +358,12 @@ def run(context, flask_vector, binary, output, *,
          adaptive_initial_global_calls == 160 and
          adaptive_confirmation_calls == 8),
          "V307_EXCLUSIVE_DENSE_GRID_OPT_IN")
+    need(not sem_precision_priority_optin or not (
+         region_enabled or grid_enabled or progressive_enabled or
+         frontier50_enabled or frontier100_enabled or
+         model_guided_multiregion or percent_enabled or
+         multiregion_percent_grid or nested_percent_grid),
+         "V318_ONLY_PLAIN_V290_POLICY_WITH_EXPLICIT_OPTIN")
     special_enabled = (region_enabled or grid_enabled or
                        progressive_enabled or frontier50_enabled or
                        frontier100_enabled or model_guided_multiregion)
@@ -482,6 +491,15 @@ def run(context, flask_vector, binary, output, *,
         "upper": constraints.to_target(upper),
         "statistical_confidence": 0.95,
     }
+    if sem_precision_priority_optin:
+        seal["experimental_v318_sem_precision_priority"] = {
+            "schema": sem_priority.SCHEMA,
+            "source_sha256": hashlib.sha256(pathlib.Path(
+                sem_priority.__file__).read_bytes()).hexdigest(),
+            "baseline_v290_policy_sha256": policy_sha,
+            "same_35_320_iteration_identities": True,
+            "no_change_to_v290_scout_and_precision_cadence": True,
+        }
     if region_enabled:
         seal["experimental_adaptive_regions"] = {
             "schema": durable_regions.SCHEMA,
@@ -732,6 +750,25 @@ def run(context, flask_vector, binary, output, *,
                             "decision"} |
                            (set(metadata_keys) if special_enabled else set()))),
          "PENDING_CASE_NOT_CONTIGUOUS")
+    if sem_precision_priority_optin and pending is not None:
+        replan = sem_priority.next_plan(
+            [{"target": row["target"], "iterations": row["iterations"],
+              "dps_mean": row["dps_mean"], "dps_sem": row["dps_sem"]}
+             for row in observations],
+            total=B, lower=lower, upper=upper,
+            native_calls_used=len(observations),
+            max_native_calls=max_native_calls,
+            scout_iterations=scout_iters,
+            confirmation_iterations=confirm_iters,
+            max_iterations=confirm_iters)
+        action = replan.get("next_request")
+        need(action is not None and pending == {
+            "index": len(observations),
+            "target": action["target"],
+            "iterations": action["iterations"],
+            "phase": action["phase"],
+            "decision": replan["decision"]},
+            "V318_PENDING_REPLAN_OR_SESSION_IDENTITY_DRIFT")
     if special_enabled and pending is not None:
         # A persisted pending request is a source of truth ONLY after its
         # exact deterministic plan is reconstructed from verified journal.
@@ -875,6 +912,7 @@ def run(context, flask_vector, binary, output, *,
                     planner = (nested_regions.next_plan if nested_percent_grid
                                else multiregion_grid.next_plan if multiregion_percent_grid
                                else percent_grid.next_plan if percent_enabled
+                               else sem_priority.next_plan if sem_precision_priority_optin
                                else search.next_plan)
                     point_count = percentage_grid_points
                     if percentage_grid_points == "auto":
