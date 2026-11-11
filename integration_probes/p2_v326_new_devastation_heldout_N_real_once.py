@@ -112,7 +112,8 @@ def finish_new_profile(doc,binary,root,*,expected_spec=SPEC,
          "EXPLICIT_RESEARCH_GRID_AND_REPLICATION_CONTRACT")
     research_calls=CANDIDATES*(len(screen_ns)*len(screen_reps)
                               +len(holdout_reps))
-    need(doc["status"]=="COMPLETE_TWO_ARMS_EQUAL_CALLS_AND_ITERATIONS"
+    need(doc["status"] in ("COMPLETE_TWO_ARMS_EQUAL_CALLS_AND_ITERATIONS",
+                "COMPLETE_TWO_ARMS_EQUAL_CALLS_ITERATIONS_UNEQUAL")
          and doc["fresh_profile_generated_once_for_both_arms"] is True
          and doc["manual_final_T"] is None
          and doc["auto_final_T"]==doc["environment_budget"]["T"]

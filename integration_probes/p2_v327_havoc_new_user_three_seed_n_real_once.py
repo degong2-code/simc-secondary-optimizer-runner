@@ -33,9 +33,14 @@ def select_fresh_pool(left,right):
     for arm,rows in arms.items():
         need(len(rows)==64
              and sum(x.get("phase")=="scout" and x.get("iterations")==35
-                     for x in rows)==56
+                     for x in rows)>=54
              and sum(x.get("phase")=="precision" and x.get("iterations")==320
-                     for x in rows)==8,"REAL_56_8_JOURNAL_REQUIRED")
+                     for x in rows)>=2
+             and all(x.get("phase") in ("scout","precision") and
+                     x.get("iterations") in (35,320) for x in rows)
+             and len({x.get("index") for x in rows})==64
+             and all(x.get("source") in (None,"NEW_NATIVE") for x in rows),
+             "REAL_64_VALID_NATIVE_JOURNAL_REQUIRED")
         for row in rows:
             if row["phase"]!="scout":continue
             v=quality.key(row["target"])

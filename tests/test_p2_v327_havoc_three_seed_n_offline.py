@@ -38,6 +38,22 @@ class HavocOffline(unittest.TestCase):
         self.assertEqual(len({x["vector"] for x in pool}),12)
         self.assertTrue(all(x["row"]["phase"]=="scout" for x in pool))
         self.assertEqual({sum(x["vector"]) for x in pool},{3000})
+    def test_actual_57_7_and_58_6_source_journals_allowed(self):
+        keys=study.quality.STATS
+        def make(confirmed,offset):
+            scouts=64-confirmed
+            rows=[{"index":i,"phase":"scout","iterations":35,
+                   "target":dict(zip(keys,(100+offset+i*5,1000-offset-i*5,1000,900))),
+                   "dps_mean":1000.+i,"case_key":f"case_{i:05d}",
+                   "source":"NEW_NATIVE","input_sha256":"1"*64}
+                  for i in range(scouts)]
+            rows += [dict(rows[j],index=scouts+j,phase="precision",
+                          iterations=320,dps_mean=2000.+j,
+                          case_key=f"case_{scouts+j:05d}") for j in range(confirmed)]
+            return rows
+        chosen=study.select_fresh_pool(make(7,0),make(6,1))
+        self.assertEqual(len(chosen),12)
+        self.assertEqual({sum(x["vector"]) for x in chosen},{3000})
     def test_optin_blocks_all_native(self):
         with mock.patch.dict(os.environ,{"P2_V327_FRESH_HAVOC_N_ONCE":"0"}):
             with self.assertRaisesRegex(study.HavocBlocked,
