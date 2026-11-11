@@ -220,8 +220,8 @@ def run(zip_path,exe,out):
             sid=plan["session_id"]
             report["saved_session_id_sha256"]=hashlib.sha256(sid.encode()).hexdigest()
             report["plan_native_calls"]=plan["native_calls"]
-            report["initial_user_spec"]=payload["controls"]["class"]+"/"+
-                                        payload["controls"]["spec"]
+            report["initial_user_spec"]=(payload["controls"]["class"]+"/"+
+                                         payload["controls"]["spec"])
             st,snapshot=http_json("/api/v1/sessions/"+sid+"/inputs",
                                   token=ui["token"])
             need(st==200 and snapshot["user"]["target"]["ilevel"]==334,
