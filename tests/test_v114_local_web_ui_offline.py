@@ -466,6 +466,17 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('interrupted?"실행 중단 · 재개 가능"',js)
         self.assertIn("저장된 세션을 재개할 수 있습니다",js)
 
+    def test_v342_cancelled_and_full_budget_are_distinct_from_idle(self):
+        js=self.client.get("/assets/app.js").text
+        self.assertIn('worker==="PAUSED_USER_CANCEL"',js)
+        self.assertIn('worker==="BUDGET_EXHAUSTED" && data.result_ready===true',js)
+        self.assertIn('finished?"탐색 상한 완료 · 결과 저장"',js)
+        self.assertIn('paused?"회차 중단 · 재개 가능"',js)
+        self.assertIn('state.longrunCompleted=Boolean(finished);',js)
+        self.assertIn('!state.session||state.longrunCompleted',js)
+        self.assertIn('!state.longrunEnabled||state.longrunCompleted',js)
+        self.assertIn('state.longrunCompleted=false;',js)
+
     def test_near_alternative_presentation_reuses_native_result_statistics(self):
         # No new SimC calculations: existing v096 user_result fields only.
         js=self.client.get("/assets/app.js").text

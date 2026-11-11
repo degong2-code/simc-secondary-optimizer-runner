@@ -1,0 +1,77 @@
+name: P1 v342 Windows Chrome 64-click UI and official SimC source preflight (zero DPS Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p1_v342_windows_browser64_source_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v342-browser-and-source-one-shot
+  cancel-in-progress: false
+jobs:
+  browser64:
+    if: contains(github.event.head_commit.message, '[v342-user-ui-once]')
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 13
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Existing Python web tools plus Chrome Selenium (no SimC)
+        run: python -m pip install -r requirements-web-test.txt "selenium>=4.24,<5"
+      - name: Actual browser clicks start/cancel/resume/64-result/restore; synthetic HTTP worker
+        run: python integration_probes/p1_v342_windows_browser64_clicks.py
+      - name: Preserve compact browser click contract only
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v342-browser64-${{ matrix.os }}
+          path: out/v342/V342_BROWSER64_RECEIPT.json
+          retention-days: 7
+          if-no-files-found: warn
+  official-windows-source-no-dps:
+    if: contains(github.event.head_commit.message, '[v342-user-ui-once]')
+    runs-on: windows-2022
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse exact official SimC-publish 2026-11-11 run artifact
+        uses: actions/download-artifact@v4
+        with:
+          repository: simulationcraft/simc-publish
+          run-id: 42956947906
+          name: simc-nightly-win64-midnight
+          path: .simc-v342
+          github-token: ${{ github.token }}
+      - name: Verify and inspect source of official Windows CLI without a profile
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $archives=@(Get-ChildItem .simc-v342 -Filter *.7z -File -Recurse)
+          if ($archives.Count -ne 1) { throw 'V342_EXACT_ONE_OFFICIAL_ARCHIVE_REQUIRED' }
+          $seven='C:\Program Files\7-Zip\7z.exe'
+          if (!(Test-Path $seven)) { throw 'V342_7ZIP_NOT_INSTALLED' }
+          New-Item -ItemType Directory -Force -Path .simc-v342-extracted | Out-Null
+          & $seven x '-o.simc-v342-extracted' -y -bd $archives[0].FullName | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'V342_ARCHIVE_EXTRACT_FAILED' }
+          $exes=@(Get-ChildItem .simc-v342-extracted -Filter simc.exe -File -Recurse)
+          if ($exes.Count -ne 1) { throw 'V342_CLI_EXE_COUNT_MISMATCH' }
+          python integration_probes/p1_v342_official_windows_source_probe.py --archive "$($archives[0].FullName)" --simc "$($exes[0].FullName)" --out out/v342/V342_OFFICIAL_WINDOWS_SOURCE.json
+          if ($LASTEXITCODE -ne 0) { throw 'V342_OFFICIAL_SOURCE_PROBE_FAILED' }
+      - name: Preserve source SHA metadata, no SimC binary
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v342-official-windows-source
+          path: out/v342/V342_OFFICIAL_WINDOWS_SOURCE.json
+          retention-days: 7
+          if-no-files-found: warn

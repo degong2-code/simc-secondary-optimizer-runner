@@ -144,6 +144,7 @@ const names = {
 };
 const state = { token:"", defaults:[], allowedRacesBySpec:{}, seasonGear:null, dkRuneIds:new Set(), oilLoadouts:[], oilCatalog:null, eagleApproved:false, session:"", running:false,
                 longrunEnabled:false, longrunResultReady:false,
+                longrunCompleted:false,
                 busy:false, options:null, pollTimer:null, pollBusy:false,
                 pollFailures:0, nextPollAt:0 };
 const number = (value,decimals=0) =>
@@ -1002,6 +1003,7 @@ function markSession(id) {
     $("progress-bar").style.width="0%";
     $("stage-text").textContent="이 세션의 상태를 조회 중입니다.";
     state.longrunEnabled=false;state.longrunResultReady=false;
+    state.longrunCompleted=false;
   }
   $("session-id").textContent=id;
   $("restore-id").value=id;
@@ -1014,17 +1016,18 @@ function buttonState(active=false,ready=false) {
   $("plan-btn").disabled=busy||active||!state.token;
   $("season-build-btn").disabled=busy||!state.token;
   $("start-btn").disabled=busy||active||!state.token;
-  $("resume-btn").disabled=busy||active||!state.session;
+  $("resume-btn").disabled=busy||active||!state.session||state.longrunCompleted;
   $("cache-btn").disabled=busy||active||!state.session||!ready;
   $("cancel-btn").disabled=busy||!active;
   $("longrun-prepare-btn").disabled=busy||active||!state.token;
   $("longrun-start-btn").disabled=busy||active||!state.token;
-  $("longrun-resume-btn").disabled=busy||active||!state.session||!state.longrunEnabled;
+  $("longrun-resume-btn").disabled=busy||active||!state.session||
+                                   !state.longrunEnabled||state.longrunCompleted;
   $("longrun-cache-btn").disabled=busy||active||!state.longrunEnabled||
                                   !state.longrunResultReady;
   $("longrun-cancel-btn").disabled=busy||!active||!state.longrunEnabled;
   $("longrun-import-btn").disabled=busy||active||!state.longrunEnabled;
-  $("resume-btn").disabled=busy||active||!state.session;
+  $("resume-btn").disabled=busy||active||!state.session||state.longrunCompleted;
   $("cache-btn").disabled=busy||active||!state.session||!ready||state.longrunEnabled;
   $("restore-btn").disabled=busy;
 }
@@ -1388,7 +1391,15 @@ function renderProgress(data) {
   const worker=p.worker?.status||p.status||"NOT_STARTED";
   // A failed resumed worker may stop before v094 overwrites old progress.
   // Show its NEW reason, rather than repeating an older Native error forever.
-  const cancelled=!data.active && worker==="CANCELLED_PARTIAL";
+  const cancelled=!data.active && (worker==="CANCELLED_PARTIAL"||
+                                      worker==="PAUSED_USER_CANCEL");
+  // A sealed budget that reached the user-selected ceiling cannot advance.
+  const finished=!data.active && state.longrunEnabled &&
+    worker==="BUDGET_EXHAUSTED" && data.result_ready===true;
+  const paused=!data.active && state.longrunEnabled &&
+    (worker==="PAUSED_ELAPSED_BUDGET"||
+     worker==="PAUSED_INVOCATION_NATIVE_BUDGET");
+  state.longrunCompleted=Boolean(finished);
   // After an interrupted Windows server/worker lifetime, the sealed worker
   // file can still say RUNNING or QUEUED while no OS worker is active.
   // Its stored N56 session remains resumable; never label it as idle.
@@ -1406,7 +1417,9 @@ function renderProgress(data) {
     interrupted?"작업자가 실행 중이지 않습니다 · 저장된 세션을 재개할 수 있습니다":
     ({BUDGET_EXHAUSTED:"탐색 완료",PAUSED_USER_CANCEL:"중단됨 · 재개 가능",PAUSED_ELAPSED_BUDGET:"시간 제한 도달 · 재개 가능",PAUSED_INVOCATION_NATIVE_BUDGET:"중단된 계산 · 재개 가능",NOT_STARTED:"계산 대기"})[worker]||status;
   $("run-label").textContent=data.active?"진행 중":
+    finished?"탐색 상한 완료 · 결과 저장":
     cancelled?"취소됨 · 재개 가능":
+    paused?"회차 중단 · 재개 가능":
     interrupted?"실행 중단 · 재개 가능":
     worker==="BLOCKED_OR_PARTIAL"?"실행 차단":
     state.longrunEnabled&&data.result_ready?"관측 결과 저장 · 재개 가능":
