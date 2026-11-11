@@ -126,7 +126,13 @@ def run():
              second_names.get("new_official_name_records")==0 and
              second_terms.get("network_calls_now")==0,
              "SECOND_BUILD_DUPLICATE_OFFICIAL_API")
+        must(second_names.get("selected_item_count")==
+             ko.get("selected_item_count") and
+             second_names.get("verified_names")==ko.get("verified_names") and
+             second_names.get("pending_names")==ko.get("pending_names"),
+             "SECOND_BUILD_LOCALE_WORKLIST_SHRANK")
         result["second_zero_native_and_zero_locale_network"]=True
+        result["second_worklist_exactly_retained"]=True
 
         # Different future-season build ID cannot inherit the known 70783
         # localization. Never construct a fake READY season to pass this.

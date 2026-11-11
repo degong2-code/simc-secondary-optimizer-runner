@@ -1137,6 +1137,44 @@ class LocalWebAPIOffline(unittest.TestCase):
             self.assertIsNone(jobs.source_catalog_path())
 
 
+    def test_v337_sealed_snapshot_restores_ko_gem_worklist(self):
+        """Core v212 reuse without v113 gem context must not shrink names."""
+        jobs=web.LocalJobs(self.root/"runs")
+        build="12.1.5.70783"
+        prior={"environment_ready":True,"environment_installed":True,
+               "G":2850,"J":92,"F":165,"B":3107,"T":3107,
+               "installed_manifest_sha256":"a"*64}
+        sealed_compilation={
+            "verified_environment_install":{
+                "stage_output_path":"/test/verified-v212.json",
+                "manifest_sha256":"a"*64},
+            "physical_gem_layout_unadmitted":{
+                "ordinary_gem_ids":[280011,280012,280013,280014],
+                "special_gem_id":None}}
+        def observe(root,game_build,source,*,target_ilevel):
+            self.assertEqual(game_build,build)
+            self.assertEqual(target_ilevel,334)
+            self.assertEqual(source["installed_manifest_sha256"],"a"*64)
+            self.assertEqual(source["source_compilation"][
+                "physical_gem_layout_unadmitted"]["ordinary_gem_ids"],
+                [280011,280012,280013,280014])
+            return {"schema":web.official_ko_env.SCHEMA,
+                    "status":"VERIFIED_OFFICIAL_NAMES_COMPLETE",
+                    "selected_item_count":5,"verified_names":5,
+                    "network_calls_now":0,"native_calls_now":0}
+        with mock.patch.object(web.official_ko_env,
+                               "build_for_environment",
+                               side_effect=observe) as checked:
+            result=jobs._with_verified_ko_localization(
+                build,334,prior,verified_profile_compilation=sealed_compilation)
+        checked.assert_called_once()
+        self.assertNotIn("source_compilation",result)
+        self.assertEqual(result["T"],3107)
+        self.assertEqual(result["official_ko_localization"][
+                         "selected_item_count"],5)
+        self.assertEqual(result["official_ko_localization"][
+                         "network_calls_now"],0)
+
     def test_v335_environment_localization_is_additive_and_read_only(self):
         from runner import v335_environment_official_ko_localization as locale
         build="12.1.5.70783"
