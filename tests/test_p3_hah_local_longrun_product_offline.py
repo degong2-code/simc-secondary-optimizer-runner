@@ -75,13 +75,13 @@ class LocalLongRunHTTP(unittest.TestCase):
         # Explicitly spelling an old build never creates an installed
         # profile; the existing source owner must validate it.
         data["installed_season_game_build"]="12.1.5.70575"
-        with mock.patch.object(
-                self.app.state.jobs,"prepare_with_internal_special_L"
-                ) as original:
-            original.side_effect=web.environment_manifest.EnvironmentBlocked(
-                "WEB_SELECTED_INSTALLED_SEASON_BUILD_NOT_FOUND")
-            missing=self.post("/api/v1/longrun/start",data)
+        # A real empty local installation returns the original v212
+        # source error through LocalJobs.plan() / blocked(). Do not raise a
+        # synthetic EnvironmentBlocked outside the method that catches it.
+        missing=self.post("/api/v1/longrun/start",data)
         self.assertEqual(missing.status_code,422,missing.text)
+        self.assertEqual(missing.json()["detail"]["code"],
+                         "WEB_SELECTED_INSTALLED_SEASON_BUILD_NOT_FOUND")
         web.subprocess.Popen.assert_not_called()
 
     def test_existing_64_source_only_resume_fails_before_native(self):
