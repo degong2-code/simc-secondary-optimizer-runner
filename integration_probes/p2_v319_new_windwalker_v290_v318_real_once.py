@@ -192,7 +192,7 @@ def main():
                      and re.search(r"(?m)^spec=windwalker$",profile) is not None,
                      "V319_NEW_SPEC_SIMC_PROFILE_NOT_ACTUALLY_CREATED")
                 doc["source_profile_sha256"]=identity["source_profile_sha256"]
-                doc["source_profile_stable_sha256"]=hashlib.sha256(
+                doc["source_profile_raw_sha256"]=hashlib.sha256(
                     profile.encode("utf8")).hexdigest()
                 doc["source_scenario_digest"]=identity["scenario_digest"]
                 doc["flask_F"]=flask
