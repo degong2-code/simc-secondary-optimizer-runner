@@ -36,6 +36,22 @@ const specLabels = {
   "druid/balance":"드루이드 · 조화",
   "evoker/devastation":"기원사 · 황폐"
 };
+// Verified Korean display strings: Blizzard Korea's playable-races page.
+// A race name is display only; its exact SimC token goes into user controls.
+const raceNames={
+  human:"인간", dwarf:"드워프", night_elf:"나이트 엘프", gnome:"노움",
+  draenei:"드레나이", worgen:"늑대인간", pandaren:"판다렌",
+  orc:"오크", undead:"언데드", tauren:"타우렌", troll:"트롤",
+  blood_elf:"블러드 엘프", goblin:"고블린", dracthyr:"드랙티르",
+  void_elf:"공허 엘프", lightforged_draenei:"빛벼림 드레나이",
+  dark_iron_dwarf:"검은무쇠 드워프", kul_tiran:"쿨 티란",
+  mechagnome:"기계노움", earthen:"토석인", nightborne:"나이트본",
+  highmountain_tauren:"높은산 타우렌", maghar_orc:"마그하르 오크",
+  zandalari_troll:"잔달라 트롤", vulpera:"불페라"
+};
+const raceTokens=new Map(Object.entries(raceNames).map(([token,label])=>[label,token]));
+function simcRace(value){return raceTokens.get(value.trim())||value.trim();}
+function displayRace(token){return raceNames[token]||token;}
 const statOptions = ["head","neck","shoulders","back","chest","wrists","hands",
                      "waist","legs","feet","finger1","finger2","main_hand","off_hand"];
 const slotNames={head:"머리",neck:"목",shoulders:"어깨",back:"등",chest:"가슴",
@@ -133,7 +149,7 @@ async function importSimcCharacter() {
     // Same reset behavior as a manual specialization change.
     fillDefault(parsed.defaults);
   }
-  $("race").value=parsed.race;
+  $("race").value=displayRace(parsed.race);
   $("talents").value=parsed.talents;
   showCharacterDefaultHint();
   setNotice("SimC 캐릭터 정보만 적용됨 · 미입력 종족/특성은 기본값 사용 · 장비/스탯은 가져오지 않음 · Native 0회");
@@ -185,9 +201,9 @@ function installSeasonGearHints(catalog) {
     node.textContent="시즌 선택 목록이 없습니다. 새 장신구·특수효과 선택은 보류됩니다. 기존 세션 조회는 가능합니다.";
     return;
   }
-  node.textContent="장신구 "+(current.trinket?.length||0)+"개 · 특수효과 "+
+  node.textContent="장신구 "+(current.trinket?.length||0)+"종 · 특수 장비 "+
     (current.special_effect_gear_candidate?.length||0)+
-    "개를 시즌 목록에서 선택 · 신화+ 후보 포함(드롭 조건 미확정) · 일반장비 자동 구성 · 정확 ID 직접 입력은 제작장비만 예외";
+    "종. 공식 한국어 이름이 확인되지 않은 아이템은 원본 이름으로 표시합니다.";
 }
 // Item.InventoryType determines special equipment slot. Ring and dual
 // weapons have equivalent hands, so select the next free valid slot.
@@ -543,7 +559,7 @@ function fillSessionInputs(payload) {
   if(!state.defaults.some(item=>item.class+"/"+item.spec===spec))
     throw Error("SESSION_SPEC_NOT_SUPPORTED");
   $("spec").value=spec;
-  $("race").value=c.race;
+  $("race").value=displayRace(c.race);
   $("talents").value=c.talents;
   showCharacterDefaultHint();
   $("ilevel").value=t.ilevel;
@@ -652,14 +668,14 @@ function buildRequest() {
   const source=state.defaults.find(d=>d.class+"/"+d.spec===spec);
   if(!source) throw Error("지원되는 전문화를 선택해 주세요.");
   if(["druid","demonhunter","evoker"].includes(source.class)&&
-     (!field("race")||field("race")==="dwarf"))
+     (!field("race")||simcRace(field("race"))==="dwarf"))
     throw Error("이 직업은 dwarf를 사용할 수 없습니다. 종족을 직접 선택해 주세요.");
   if(!seasonChoice("trinket",valueInt("trinket1"))||
      !seasonChoice("trinket",valueInt("trinket2")))
     throw Error("장신구 2개를 이번 시즌 목록에서 선택해 주세요.");
   const controls={
     class:source.class,spec:source.spec,
-    race:field("race"),talents:field("talents"),
+    race:simcRace(field("race")),talents:field("talents"),
     ilevel:valueInt("ilevel"),final_T:field("final_T") ? valueInt("final_T"):null,
     max_single_stat_percent:valueInt("max-single-stat-percent"),
     trinket_ids:[valueInt("trinket1"),valueInt("trinket2")],
@@ -1728,6 +1744,7 @@ async function initialize() {
     try{await refreshSimcUpdater(false);}catch(err){
       $("simc-update-status").textContent="SimC 관리 상태 조회 오류: "+err.message;
     }
+    $("simc-technical-panel").open=!field("binary")||!field("revision");
     try{await loadRecentSessions();}
     catch(err){$("recent-session-note").textContent="세션 목록 조회 오류: "+err.message;}
     const paladin=state.defaults.find(v=>v.class==="paladin"&&v.spec==="retribution");

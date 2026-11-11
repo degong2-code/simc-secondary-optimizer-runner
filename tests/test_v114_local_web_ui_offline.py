@@ -219,8 +219,21 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn("cache-only",js.text)
         self.assertIn("result",js.text)
         self.assertIn('"/api/v1/longrun/start"',js.text)
-        self.assertIn('window.confirm("이 PC에서 실제 SimC',js.text)
+        self.assertIn('window.confirm("이 PC에서 최적화를 시작할까요?',js.text)
         self.assertEqual(self.client.get("/assets/missing.js").status_code,403)
+
+    def test_simple_korean_product_surface_and_race_value_seal(self):
+        page=self.client.get("/").text
+        js=self.client.get("/assets/app.js").text
+        self.assertIn('id="race-list"',page)
+        self.assertIn('value="드랙티르"',page)
+        self.assertIn('id="simc-technical-panel"',page)
+        self.assertIn('id="season-setup-details"',page)
+        self.assertIn("최적 스탯 찾기",page)
+        self.assertIn("function simcRace(value)",js)
+        self.assertIn('race:simcRace(field("race"))',js)
+        self.assertIn("현재 시즌 장신구 선택",js)
+        self.assertIn('"/api/v1/longrun/start"',js)
 
     def test_environment_build_surface_is_not_optimizer_plan(self):
         page=self.client.get("/").text
