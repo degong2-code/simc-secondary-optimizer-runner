@@ -293,16 +293,34 @@ def run(binary,out):
                  "CANCELLED_PARTIAL_AND_OS_STATE_NOT_VERIFIED")
             before=paused["progress"]["native_attempts"]
             report["native_attempts_at_cancel"]=before
+            report["new_dps_native"]=before
+            report["actual_simc_native"]=before>0
             report["cancel_actual_browser"]=True
+            save()
             # A real HTTP process restart, not a second in-memory app only.
             stop_server(server,thread)
             server=thread=None
             app,server,thread=start_server(root)
             browser.refresh()
             browser.execute_script("window.confirm=()=>true;")
-            elapsed_wait(browser,
-                  'state.session === "'+sid+'" && !state.busy && !state.running',40)
+            # A fresh page's initialize() sets state.session in markSession
+            # BEFORE awaited restore() finishes reading/restoring progress.
+            # Waiting only for the session ID samples a transient disabled
+            # state. Wait for the actual user-visible "cancelled/resumable"
+            # state and store the last UI state if that never arrives.
+            try:
+                elapsed_wait(browser,
+                    'state.session === "'+sid+'" && state.longrunEnabled && '+
+                    '!state.busy && !state.running && '+
+                    '!document.getElementById("resume-btn").disabled && '+
+                    'document.getElementById("run-label").textContent.includes("취소")',
+                    timeout=60)
+            except Exception:
+                report["browser_restart_unready_state"]=read_ui(browser)
+                save()
+                raise RuntimeError("V344_RESTART_VISIBLE_STATE_NOT_READY") from None
             status=read_ui(browser)
+            report["browser_restart_visible_state"]=status
             need(status["longrun"] and
                  "취소" in status["label"] and not status["resume_disabled"],
                  "REAL_RESTART_NOT_RESUMABLE_IN_BROWSER")

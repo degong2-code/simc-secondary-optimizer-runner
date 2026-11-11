@@ -1,3 +1,4 @@
+# v344 real Windows browser restart readiness wait; previously paused N56 Native2.
 # v344 revised: visible Korean search/listbox preflight before expensive environment collection.
 # v344 retry: observe original HTTP Build report, not compact restored profile metadata.
 # v344 retry: explicit input blur/read-only oil refresh before action, preserving original GUI clicks.
