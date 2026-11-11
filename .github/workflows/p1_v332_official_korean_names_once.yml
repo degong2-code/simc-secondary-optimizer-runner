@@ -1,0 +1,37 @@
+name: P1 official Korean names (77 visible item IDs only)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v332_blizzard_ko_item_labels.py
+      - tests/test_v332_blizzard_ko_item_labels.py
+      - .github/workflows/p1_v332_official_korean_names_once.yml
+permissions:
+  contents: read
+jobs:
+  official-ko-source:
+    if: contains(github.event.head_commit.message, '[v332-ko-source-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      PYTHONPATH: runner:.
+      P1_KO_ITEM_SOURCE_ONCE: '1'
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Offline provenance regression (zero network)
+        run: python -m unittest -v tests.test_v332_blizzard_ko_item_labels
+      - name: Exact official ko_KR item IDs and names (no Native)
+        run: python -u runner/v332_blizzard_ko_item_labels.py --out out/v332_ko_names.json
+      - name: Preserve source-only names and individual response SHA
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v332-verified-korean-item-names
+          path: out/v332_ko_names.json
+          if-no-files-found: ignore
+          retention-days: 7

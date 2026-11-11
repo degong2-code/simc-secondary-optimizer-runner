@@ -376,7 +376,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn("최신 시즌 대표 장비·직업별 티어 4세트를 내부 생성",js)
         self.assertIn("334 이외 목표 ilvl: 최신 시즌 대표 장비·티어·무기를 선택 레벨",js)
         self.assertNotIn('id="current_season_product"',page)
-        self.assertIn('  showRepresentativeScope();\n}',js)
+        self.assertIn('  showRepresentativeScope();\n  syncSearchChoices();\n}',js)
         self.assertIn('function fillSessionInputs(payload)',js)
         self.assertNotIn("innerHTML",js)
 

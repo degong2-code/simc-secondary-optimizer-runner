@@ -309,9 +309,8 @@ function installSeasonGearHints(catalog) {
     node.textContent="시즌 선택 목록이 없습니다. 새 장신구·특수효과 선택은 보류됩니다. 기존 세션 조회는 가능합니다.";
     return;
   }
-  node.textContent="장신구 "+(current.trinket?.length||0)+"종 · 특수 장비 "+
-    (current.special_effect_gear_candidate?.length||0)+
-    "종. 공식 한국어 이름이 확인되지 않은 아이템은 원본 이름으로 표시합니다.";
+  node.textContent="장신구와 특수 장비를 이름으로 검색하세요. 공식 한국어 이름 검증 "+
+    Number(state.seasonGear?.verified_ko_item_names||0)+"종 · 나머지는 원본 이름 표시.";
 }
 // Item.InventoryType determines special equipment slot. Ring and dual
 // weapons have equivalent hands, so select the next free valid slot.

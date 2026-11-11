@@ -409,12 +409,18 @@ def public_options(payload):
     db = validate(payload)
     visible = ("trinket","special_effect_gear_candidate","selectable_stat_craft")
     choices = {key: [] for key in visible}
+    # Source-proven display-only Korean translations. Never modify ID/role/budget.
+    import v332_blizzard_ko_item_labels as labels_ko
+    eligible = {x["item_id"] for x in db["items"] if x["category"] in
+                ("trinket","special_effect_gear_candidate")}
+    korean = labels_ko.installed_names(db["season_build"], eligible)
     for x in db["items"]:
         if x["category"] not in choices:
             continue
         choices[x["category"]].append({
             "item_id": x["item_id"],
             "name": x["name"],
+            **({"name_ko":korean[x["item_id"]]} if x["item_id"] in korean else {}),
             "inventory_type": x["inventory_type"],
             "slot_hint": x["slot_hint"],
             # ItemClass and subclass are current-season source metadata;
@@ -441,6 +447,7 @@ def public_options(payload):
         "ordinary_equipment_user_selectable": False,
         "full_season_completeness_confirmed": False,
         "native_calls_now": 0,
+        "verified_ko_item_names": len(korean),
     }
 
 def ordinary_candidates(payload, family, *, slots=REPRESENTATIVE_SLOTS):
