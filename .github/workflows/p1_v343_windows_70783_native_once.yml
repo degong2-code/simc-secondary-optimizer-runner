@@ -1,3 +1,4 @@
+# One bounded retry after v281 HTTP IncompleteRead fix: maximum one same-source stream retry.
 name: P1 v343 one current Retail 70783 Windows GJFO + N56 DPS12 real Native
 on:
   push:
