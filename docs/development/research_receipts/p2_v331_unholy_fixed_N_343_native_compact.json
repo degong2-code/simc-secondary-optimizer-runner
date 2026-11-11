@@ -1,0 +1,311 @@
+{
+  "schema": "p2_v331_unholy_fixed_N_343_native_compact_v1",
+  "status": "VERIFIED_COMPLETE_343_NATIVE_DEFAULT_NOT_CHANGED",
+  "action_run": 42969029964,
+  "action_head": "844457983731556663bf6fc2fa8f69560508431d",
+  "artifact_id": 13833315993,
+  "artifact_expiry_utc": "2026-11-18T06:05:22Z",
+  "artifact_sha256": "f424f9871fd1f6420801ecbd88647b75fc4f0e486552ca3bd20bec87ab20a2a5",
+  "receipt_sha256": "f82fa38c2026496a8b079fe7138fc527c8e548a81963188974eaa97c1d211962",
+  "progress_sha256": "516e51398f06171eee8683ced0a135b5f8059056ed0147c998030d6bb0a2633f",
+  "source": {
+    "spec": "deathknight/unholy",
+    "race": "human",
+    "target_ilvl": 334,
+    "manual_final_T": null,
+    "ordinary_gems": 4,
+    "special_gem": null,
+    "source_profile_sha256": "0553a99f209ba5374fe6c4d8eeec0db2547d6c2d20c6d9bd52e0408c6c14dd2a",
+    "build": "12.1.5.70783",
+    "revision": "c20e2ad52e4c33711f74272309a5748125175fe8",
+    "binary_sha256": "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6",
+    "G": 2850,
+    "J": 92,
+    "F": 165,
+    "O": 0,
+    "B": 3107,
+    "T": 3107
+  },
+  "native_counts": {
+    "environment": 3,
+    "policy": 320,
+    "holdout": 20,
+    "total": 343,
+    "distinct_DPS_seeds": 340,
+    "cache_only_new_native_per_arm": 0
+  },
+  "all_320_policy_and_20_holdout_original_input_JSON2_SHA_seed_sample_count_and_DPS_SEM_verified": true,
+  "all_common_prefix_metrics_recomputed_from_original_journals_and_trace": true,
+  "arm_order": [
+    56,
+    48,
+    35,
+    32,
+    64
+  ],
+  "same_initial_eight_CHMV": true,
+  "independent_seeds_between_arms": true,
+  "confirmation_N": 320,
+  "common_iterations_budget": 4352,
+  "common_wall_seconds": 51.29804326300001,
+  "holdout": {
+    "N": 640,
+    "reps": 2,
+    "unique_CHMV": 10,
+    "near_band": 0.005,
+    "near_count": 5,
+    "best_DPS": 155384.65287993685,
+    "rows_columns": [
+      "CHMV",
+      "DPS",
+      "SEM",
+      "source_N",
+      "source_index0"
+    ],
+    "rows": [
+      [
+        "1025/519/1398/165",
+        153666.148561,
+        122.120054,
+        48,
+        51
+      ],
+      [
+        "1212/373/1211/311",
+        154156.569516,
+        125.775854,
+        64,
+        37
+      ],
+      [
+        "1398/146/1398/165",
+        154981.125442,
+        123.860023,
+        48,
+        63
+      ],
+      [
+        "1398/332/1212/165",
+        155275.377441,
+        126.825145,
+        48,
+        62
+      ],
+      [
+        "1398/333/1211/165",
+        155384.65288,
+        125.589177,
+        56,
+        62
+      ],
+      [
+        "1398/372/1026/311",
+        154269.752341,
+        125.391513,
+        35,
+        46
+      ],
+      [
+        "1398/372/1172/165",
+        155314.405306,
+        122.750745,
+        35,
+        62
+      ],
+      [
+        "1398/518/1026/165",
+        154688.29576,
+        128.136574,
+        35,
+        57
+      ],
+      [
+        "1398/519/1025/165",
+        154521.237961,
+        126.896758,
+        56,
+        46
+      ],
+      [
+        "1398/706/838/165",
+        153660.933645,
+        126.325479,
+        56,
+        55
+      ]
+    ]
+  },
+  "arm_columns": [
+    "N",
+    "scouts",
+    "confirmations",
+    "total_iterations",
+    "full_wall_s",
+    "trace_s",
+    "first_near_case_1based",
+    "first_near_wall_s",
+    "winner_CHMV",
+    "observed_320_DPS",
+    "observed_320_SEM",
+    "heldout_DPS",
+    "heldout_SEM",
+    "winner_regret_pct",
+    "equal_iteration_completed_cases",
+    "equal_iteration_discovery_regret_pct",
+    "equal_wall_completed_cases",
+    "equal_wall_discovery_regret_pct",
+    "session_sha256",
+    "journal_sha256"
+  ],
+  "arms": [
+    [
+      32,
+      56,
+      8,
+      4352,
+      51.492036273,
+      51.298043263,
+      53,
+      40.974197414,
+      [
+        1398,
+        332,
+        1212,
+        165
+      ],
+      155210.25085489638,
+      251.34480145429248,
+      155275.37744121708,
+      126.82514548924357,
+      0.07032576042385193,
+      64,
+      0.07032576042385193,
+      64,
+      0.07032576042385193,
+      "5b6b8a4a6542945456fc0426e598f133fad5132d7d8555a53b8ff846bf01adc9",
+      "cb43a2f3217ffb7cfbb5bcf106daf77ad00e5b51d72a7f698d49b2f94921210c"
+    ],
+    [
+      35,
+      56,
+      8,
+      4520,
+      52.885409909,
+      52.692104867,
+      58,
+      44.152192361,
+      [
+        1398,
+        372,
+        1172,
+        165
+      ],
+      154698.51928422772,
+      265.19041169286265,
+      155314.405305803,
+      122.75074543262794,
+      0.04520882392943647,
+      63,
+      0.04520882392943647,
+      63,
+      0.04520882392943647,
+      "7f7cb9117aa54fbdcd00071ca354b81e9119db198e3e7752dcc2a2636c5db9a0",
+      "15a4a798b3308d8135e7b237c7a4d3f438f7b30dd74c6395b1c7966728f9f614"
+    ],
+    [
+      48,
+      56,
+      8,
+      5248,
+      60.00515778,
+      59.811827478,
+      50,
+      46.29778905,
+      [
+        1398,
+        332,
+        1212,
+        165
+      ],
+      154982.74822016704,
+      242.86813537908137,
+      155275.37744121708,
+      126.82514548924357,
+      0.07032576042385193,
+      56,
+      0.2596958129190757,
+      58,
+      0.07032576042385193,
+      "ad45593c15774b3d5fae959393cd1e96d0b55f858f3ac11603388cc940221f09",
+      "98b0380c36fb8f2ad2135b5e9d5436e2c29b60ccd31681c2cbd732c8785e91ba"
+    ],
+    [
+      56,
+      57,
+      7,
+      5432,
+      62.313982564,
+      62.120993229,
+      42,
+      36.707303527,
+      [
+        1398,
+        333,
+        1211,
+        165
+      ],
+      155460.49128476175,
+      251.10332411212417,
+      155384.65287993685,
+      125.58917704488883,
+      0,
+      54,
+      0.2596958129190757,
+      55,
+      0,
+      "1c5706a6c3950686dc3e61cda3d30186bbf5bf25b0fe97c410faf8ade2c2c2b6",
+      "afad7d410cb57aeb9cac3263430eb16f1ec6b7e2a1317e540b5bbd4b016149ae"
+    ],
+    [
+      64,
+      57,
+      7,
+      5888,
+      66.356720714,
+      66.161345711,
+      43,
+      43.013591102,
+      [
+        1398,
+        332,
+        1212,
+        165
+      ],
+      155300.20711435334,
+      270.48418552791304,
+      155275.37744121708,
+      126.82514548924357,
+      0.07032576042385193,
+      47,
+      0.2596958129190757,
+      47,
+      0.2596958129190757,
+      "a5d493aee5d7b8cab1d8142cc456e2bc34cb1ac077ac0a25357302ae482e55a8",
+      "8aa8ad596de8e55bbecbeb028ea4904d49340717a02e4241456946840d146846"
+    ]
+  ],
+  "decision": {
+    "recommendation": "v290 / fixed scout N56 / confirm320; engineering recommendation, not applied",
+    "actual_product_default_at_handoff": 35,
+    "universal_N_optimum_proven": false,
+    "global_optimum_proven": false,
+    "familywise95_proven": false
+  },
+  "limitations": [
+    "One full trajectory per N; one new spec; independent seeds; same initial geometry but not identical observations.",
+    "Same 64 logical calls not equal iterations; prefix evaluation not separate same-wall runs.",
+    "10 selected holdout vectors only; 0.5% operational band not statistical equivalence.",
+    "N32/48/64 identical winner; N56 only one rating transfer; 0.070% point difference is not proven quality advantage. N56 full runtime longer than N32/35; equal iterations prefix worse than N35 in this case.",
+    "Environment Native3 count from authenticated run receipt; independent raw audit covers 340 DPS Native, not a new environment audit."
+  ]
+}

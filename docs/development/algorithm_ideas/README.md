@@ -10,14 +10,14 @@
 
 | 고정 ID | 알고리즘 | 문서 | 상태 | 비교에 필요한 주요 축 |
 |---|---|---|---|---|
-| IDEA-001 | 다중 정밀도 경쟁 탐색 (Successive Halving) | [상세](IDEA-001-multifidelity-successive-halving.md) | `IDEA_ONLY` | 측정 반복 수/승급 조건 |
+| IDEA-001 | 다중 정밀도 경쟁 탐색 (Successive Halving) | [상세](IDEA-001-multifidelity-successive-halving.md) | `FIXED_N_REAL_STUDY_COMPLETE / DEFAULT_PENDING` | v318 opt-in·120 연구·v331 343 Native; N56 권고, 120 미통합 |
 | IDEA-002 | 다중 시작점 신뢰영역 (Multi-start Trust Region) | [상세](IDEA-002-multistart-trust-region.md) | `v329 REAL_NATIVE_PILOT_HOLD / v328-v2 OFFLINE_ONLY` | 반경과 pairwise 후보 생성·초기 seed 교란 분리 필요, 기본 v290 불변 |
 | IDEA-003 | 적응형 층화 탐색 (Adaptive Stratified Exploration) | [상세](IDEA-003-adaptive-stratified-exploration.md) | `v330 REAL_NATIVE_PILOT_HOLD` | 신규 Feral 124 Native, 19 공통 관측 재사용, v306 대비 발견 우위 없음 |
 | IDEA-004 | 비용 인지형 지식 기울기 탐색 (Cost-aware Knowledge Gradient) | [상세](IDEA-004-cost-aware-knowledge-gradient.md) | `IDEA_ONLY` | 확인 DPS 순위 개선의 기대 정보 가치 / SimC 실행비용 |
 | IDEA-005 | 조건부 짝시드 실측 분산 감소 (Paired Seed CRN) | [상세](IDEA-005-conditional-paired-rng-variance-reduction.md) | `IDEA_ONLY · HOLD_FOR_FEASIBILITY` | 재측정 후보 쌍 DPS 차이의 **실제 양의 공분산** 검증 |
 | IDEA-006 | 국소 민감도 비등방성 탐색 (Active Subspace) | [상세](IDEA-006-anisotropic-active-subspace-search.md) | `OFFLINE_SCREENED · LOCAL_QUADRATIC_HOLD` (Native 0) | 기존 9,906 scout/48 precision: 국소 모델 정확도 미개선·방향 안정성 제한; 실제 방향 탐색 우위 미검증 |
 | IDEA-007 | 다중 정책 온라인 포트폴리오 (Policy Bandit) | [상세](IDEA-007-online-policy-portfolio-bandit.md) | `IDEA_ONLY · INTEGRATE_LATER` | 탐색 생성기별 예산 배분과 최악 성능 완화 |
-| IDEA-008 | 최종 후보 독립 홀드아웃 확인 (Post-Selection Holdout) | [상세](IDEA-008-postselection-independent-holdout-confirmation.md) | `IDEA_ONLY · INTEGRATE_FINAL_DECISION_ONLY` | 선정 표본과 검증 표본 분리, 명목95와 가족단위95 구분, 추가 비용 대비 신뢰도 |
+| IDEA-008 | 최종 후보 독립 홀드아웃 확인 (Post-Selection Holdout) | [상세](IDEA-008-postselection-independent-holdout-confirmation.md) | `RESEARCH_NATIVE_VERIFIED / PRODUCT_NOT_INTEGRATED` | 선정 표본과 검증 표본 분리, 명목95와 가족단위95 구분, 추가 비용 대비 신뢰도 |
 
 ## 중복성·통합 효율 사전 심사 (2026-11-11)
 
@@ -98,3 +98,7 @@
 
 - [고통 흑마법사 v329 실 Native267](../research_receipts/p2_v329_affliction_idea002_267_native_compact.json), [Actions SUCCESS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42962010689): v306/v328-v1 각 64 Native·4520 iterations 및 별도 N640×2×4후보. 우위 미증명. v328-v1은 pairwise/grid 후보 방식이 섞였고 초기 Native seed도 독립. **HOLD**.
 - v328-v2는 기존 v306 pairwise 좌표·방법을 그대로 유지하도록 **오프라인에서만 수정**. 새로운 전문화·seed-통제 실 Native 시험 전 v328를 제품 기본으로 승격하지 않는다.
+
+## 최신 사용자 결정 — 알고리즘 연구 종료·제품 완성 전환
+
+[단일 인계](../../CHAT_CONTINUITY_HANDOFF_20261111_P2_V331_PRODUCT_FINALIZATION.md) 및 [v331 343 Native](../research_receipts/p2_v331_unholy_fixed_N_343_native_compact.json) 우선. 마지막 고정 N 연구 완료. v290 유지·N56/320 공학적 권고(미적용). 기존 IDEA-002/003 HOLD, IDEA-006 offline 음성, 004/005/007 후순위. 120·가변 N·IDEA-008 제품 통합은 미실시. 이전 일괄 비교/채팅별 아이디어 의무는 현 제품 마무리의 필수 과제가 아니다. 강한 개선 근거가 있을 때만 별도 재개.

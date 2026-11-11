@@ -38,3 +38,8 @@ main·immutable v003·원본 v016·Project Sources/Instructions·Work OS·공식
 - 첫 적용 캠페인: 기존 v313/v314 10전문화 밖의 **풍운 수도사 (monk/windwalker)**, 사용자형 신규 **자동 T(G+J+F+O)** / ilvl334 / 일반 보석4 / 특수0 / O0. 임의 수동 +343은 철회; 실제 사용자 입력 `final_T=null`로 검증된 환경 Build 숫자를 적용하고, 전문화별 G를 사전에 추정하지 않는다. 실험 진행 영수증 및 새로운 Native PASS는 별도 확인해야 한다.
 
 - **수동 T는 사용자 명시 요청에만 허용:** 알고리즘 실험은 원칙적으로 대상 전문화·시즌의 **검증된 환경 Build 자동 T**를 사용한다. 실험 설계자가 편의로 +rating을 수동 입력해 자동 예산을 덮어쓰지 않는다. 사용자가 직접 수동 T를 요청한 별도 실험은 자동 실험과 구분하여 이유·원본 budget owner·SHA를 기록한다.
+
+## 2026-11-11 P2 종료 이후 제품 마무리 (최신 사용자 결정)
+
+- v331 마지막 N 연구 완료 후 실질적인 새로운 개선 근거가 없으면 추가 알고리즘 실험을 의무화하지 않는다. 기존 아이디어 registry는 보존하고 중복/숫자 늘리기 금지. 좋은 CHMV 발견·누락 방지 우선, 95% 공식 판정 유지, 5~10분 soft target. 기존 환경/대표 프로필/옵션 엔진을 재개발하지 않으며 실제 결함만 CONNECT/FIX. [단일 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P2_V331_PRODUCT_FINALIZATION.md).
+- N은 후보당 iterations, 초기 CHMV 수·고유 후보 수·Native 호출 수와 구별. 동일 CHMV의 DPS 관측 차이는 새 해답의 우열 아님; 도달시간/비용 평가. 동일 캠페인의 정확한 공통 관측은 SHA/seed/identity 검증 시 재사용 가능; 이전 완성 프로필/DPS 무단 복사 금지. 기존 N35 session/cache를 새 default N으로 재해석 금지.

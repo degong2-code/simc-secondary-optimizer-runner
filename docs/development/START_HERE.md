@@ -4,7 +4,7 @@
 
 | 질문 | 문서 |
 |---|---|
-| 지금 무엇을 구현했고 남았나 | [제품 최신 A~G 정본](../PRODUCT_CANONICAL_STATUS_20261109_P3_HAI.md), [2026-11-11 최신 P2 v316·v314 실측 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P2_V316_V314_RESULTS.md) ([2026-11-10 P2 v305 역사 인계](../CHAT_CONTINUITY_HANDOFF_20261110_P2_FRESH_FROST_V305_NEXT.md)) |
+| 지금 무엇을 구현했고 남았나 | [제품 최신 A~G 정본](../PRODUCT_CANONICAL_STATUS_20261109_P3_HAI.md), [2026-11-11 최신 P2 v331 종료·제품 완성 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P2_V331_PRODUCT_FINALIZATION.md) ([2026-11-10 P2 v305 역사 인계](../CHAT_CONTINUITY_HANDOFF_20261110_P2_FRESH_FROST_V305_NEXT.md)) |
 | 어떤 코드·테스트를 먼저 봐야 하나 | [INDEX](INDEX.md) → [FILE_MAP](FILE_MAP.md) |
 | 특정 파일이 어디 있나 | [전체 FILE_INVENTORY](FILE_INVENTORY.md) → [핵심 FILE_MAP](FILE_MAP.md) |
 | 실제 CI·Native PASS 범위 | [EVIDENCE_INDEX](EVIDENCE_INDEX.md) → GitHub 원본 영수증 |
@@ -12,7 +12,7 @@
 | v318 오차·다른 CHMV 후보 확인 정책 | [v319 신규 풍운 수도사 실 Native A/B](notes/2026-11-11_p2-v319-new-windwalker-real-v290-v318-ab.md), [영구 compact 원본 대사](research_receipts/p2_v319_windwalker_auto_T_real_v290_v318_compact.json) — 최고 CHMV 동일·95 우위 없음 |
 | 최신 실 Native 성공/비용·원본 범위 | [v319 실제 Actions SUCCESS #42941245130](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42941245130), [증거 지도](EVIDENCE_INDEX.md) |
 | v321 신규 Shadow Priest 128+3 Native 실측 | [영구 compact·원본 SHA](research_receipts/p2_v321_shadow_auto_T_35_120_320_compact.json), [Action 실패·별도 120 복구 기록](notes/2026-11-11_p2-v321-new-shadow-priest-120-native.md) — 제품 120 단계 미통합 |
-| v331 마지막 N32/35/48/56/64 실 v290 비교 | [신규 부정 죽기 연구](notes/2026-11-11_p2-v331-unholy-fixed-scout-n-final-study.md) — Native 결과 확인 전 |
+| v331 마지막 N32/35/48/56/64 실 v290 비교 | [343 Native 검증 compact](research_receipts/p2_v331_unholy_fixed_N_343_native_compact.json), [Actions SUCCESS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42969029964) — N56 공학적 권고, 실제 기본35 유지, 제품 완성 전환 |
 | v330 IDEA-003 신규 야성 드루이드 실제 124 Native | [검증 compact](research_receipts/p2_v330_feral_idea003_124_native_compact.json), [Actions SUCCESS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42965880663) — 19회 동일 관측 재사용, 발견력 우위 없음 HOLD |
 | v329 IDEA-002 신규 고통 흑마법사 267 Native | [원본 SHA·독립 홀드아웃·제약](research_receipts/p2_v329_affliction_idea002_267_native_compact.json), [Actions PASS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42962010689) — 우위 미입증, radius-only 판정 보류 |
 | v327 Havoc 신규 프로필·N32~96×3시드 | [299회 실제 Native·N별 후회도](research_receipts/p2_v327_havoc_auto_T_299_native_compact.json), [원본 재활용 연구 SUCCESS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42957270859) — N32/48 모두 유망, 기본 미변경 |
@@ -27,7 +27,11 @@
 
 > **v317 새 시험 경계:** [격리 코드](https://github.com/degong2-code/simc-secondary-optimizer-runner/commit/ff8b1da8a5781664a1fa5d616d23533cc9f0d7d6)·[Native 워크플로](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/workflows/p2_v317_single_profile_timing_native_once.yml) 등록됨, **실제 run ID/Native 영수증 확인 전 PENDING**. 10분 하드 탈락 폐기, 품질/비용 우선. [IDEA-001 고도화](algorithm_ideas/IDEA-001-multifidelity-successive-halving.md), [IDEA-008 선택편향 홀드아웃 제안](algorithm_ideas/IDEA-008-postselection-independent-holdout-confirmation.md) 모두 실증 개선 미확정.
 
-## 2026-11-11 확인된 P2 실측 및 계측 경계
+## 2026-11-11 최종 P2 판정
+
+[최신 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P2_V331_PRODUCT_FINALIZATION.md)를 우선한다. v331 완료, 새 N56 제품 적용은 다음 작업. 아래 v316/v314 설명은 **역사 기록**이며 후속 v329/v330/v331 실제 timing trace를 부정하지 않는다. 기존 환경/대표프로필/선택 기능 재개발 금지.
+
+## 2026-11-11 역사 P2 실측 및 계측 경계
 
 - [단일 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P2_V316_V314_RESULTS.md)가 v313 8/8, **v314 15/16 완전 + 암살 도적 wide 540s 부분**, v315 10개 조건 비용, v316 opt-in 계측 635 PASS/2 SKIP·실 Native 계측0의 최신 기록이다. 아래 2026-11-10 ‘현 시점’ 항목은 **그 당시 역사 기록**이며 최신 실험 상태를 대신하지 않는다.
 
