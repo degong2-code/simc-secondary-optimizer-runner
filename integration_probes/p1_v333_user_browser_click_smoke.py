@@ -91,7 +91,7 @@ def main():
             # The ID is inside a deliberately hidden developer-only node;
             # Selenium .text omits hidden text even when no job was started.
             need(driver.find_element(By.ID,"session-id").
-                 get_dom_property("textContent").strip()=="없음",
+                 get_property("textContent").strip()=="없음",
                  "UNEXPECTED_JOB")
             api_traffic=driver.execute_script(
                 "return performance.getEntriesByType('resource').filter("+
