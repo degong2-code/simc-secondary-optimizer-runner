@@ -350,6 +350,14 @@ class LocalWebAPIOffline(unittest.TestCase):
             self.assertEqual(third.json()["native_calls"],0)
             self.assertFalse(third.json()["environment_ready"])
             self.assertFalse(list(root.glob("fresh_source/v212_installed_*.json")))
+            correction=self.post("/api/v1/environment/season-build",
+                {"game_build":build,"target_ilevel":334,
+                 "refresh_reason":"item_content_change"})
+            self.assertEqual(correction.status_code,422,correction.text)
+            self.assertEqual(correction.json()["detail"]["code"],
+                "SAME_BUILD_CONTENT_CHANGE_EXACT_SOURCE_CORRECTION_REQUIRED")
+            self.assertEqual(len(attempts),before)
+            self.assertEqual(json.loads(stage.read_text())["status"],"COMPLETE")
 
     def test_controlled_cold_start_corrupted_source_not_silently_refetched(self):
         """P3-DS T0 tamper: original v217 must reject changed source bytes."""

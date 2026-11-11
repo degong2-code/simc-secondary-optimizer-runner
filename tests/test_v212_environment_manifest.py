@@ -445,6 +445,28 @@ class FreshEnvironmentSourceStageTests(unittest.TestCase):
                 "fixed_L":zeros,"fixed_E":zeros,
                 "G_reference_excludes_selected_E":True,
             }
+            # v338: all four numeric components are mandatory to
+            # proclaim READY; optional Policy-A evidence remains separate.
+            # Exercise the original v222→v212 barrier, not a mock outcome.
+            for missing in ("G","J","F","O"):
+                with self.subTest(missing_required_component=missing):
+                    reduced={key:value for key,value in
+                             trusted_budget["components"].items()
+                             if key!=missing}
+                    with self.assertRaisesRegex(
+                            p.EnvironmentBlocked,
+                            "FRESH_INSTALL_OFFICIAL_GJFO_RECONCILIATION_BLOCKED"):
+                        p.compile_fresh_installed_environment(
+                            source_catalog=catalog,
+                            source_artifact_sha256=artifact_sha,
+                            staged_source_environment=staged_data,
+                            trusted_budget_evidence={
+                                **trusted_budget,"components":reduced},
+                            source_ui=ui_catalog.public_options(source_path),
+                            trusted_policy_A_receipts_by_id={},
+                            target_ilevel=334)
+            self.assertFalse(list((stage_root/"fresh_source").glob(
+                "v212_installed_*.json")))
             published=p.compile_fresh_installed_environment(
                 source_catalog=catalog,
                 source_artifact_sha256=artifact_sha,
