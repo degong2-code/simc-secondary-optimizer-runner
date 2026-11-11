@@ -1,0 +1,379 @@
+{
+  "schema": "p2_v324_new_balance_druid_variable_n_compact_verified_v1",
+  "source_action_id": 42949922419,
+  "source_action_conclusion": "success",
+  "original_action_artifact_id": 13824178632,
+  "original_action_zip_sha256": "2417defc4fd19dc065d65608cc5640a01a5d65e4387553a778a99e10940caa8d",
+  "source_new_user_profile_sha256": "b42065dd8ce7744b636f6f9dbf05c4f067555ea31c14379c91c7402f97072cac",
+  "game_build": "12.1.5.70783",
+  "character": "druid/balance",
+  "target_ilvl": 334,
+  "manual_final_T": null,
+  "budget": {
+    "G": 2850,
+    "J": 92,
+    "F": 165,
+    "O": 0,
+    "B": 3107,
+    "T": 3107
+  },
+  "environment_native": 3,
+  "dps_native": {
+    "v290": 64,
+    "v318": 64,
+    "each_iterations": 4520,
+    "each_scout35": 56,
+    "each_confirm320": 8
+  },
+  "baseline_best": {
+    "v290": {
+      "chmv": [
+        488,
+        1056,
+        1398,
+        165
+      ],
+      "dps": 176065.99042832784,
+      "sem": 271.35126748209876,
+      "optimizer_wall": 25.23634
+    },
+    "v318": {
+      "chmv": [
+        185,
+        1242,
+        1398,
+        282
+      ],
+      "dps": 175929.6182771357,
+      "sem": 256.34252595710063,
+      "optimizer_wall": 23.28649
+    }
+  },
+  "observed_v318_minus_v290_dps": -136.37215119213215,
+  "nominal95_selected_pair_halfwidth": 731.6285944451109,
+  "observed_best_CHMV_not_same": true,
+  "statistically_separated": false,
+  "research_N": [
+    20,
+    32,
+    48,
+    80,
+    128,
+    200,
+    480,
+    640
+  ],
+  "research_candidates": 4,
+  "research_native": 32,
+  "research_requested_iterations": 6512,
+  "same_host_wall_model": {
+    "intercept_seconds": 0.09920845956041091,
+    "slope_seconds_per_iteration": 0.002824776765059406,
+    "points": 32
+  },
+  "median_SEM_and_process_wall_by_N": {
+    "20": [
+      1038.77,
+      0.1566
+    ],
+    "32": [
+      823.16,
+      0.1881
+    ],
+    "48": [
+      673.54,
+      0.2346
+    ],
+    "80": [
+      531.75,
+      0.3243
+    ],
+    "128": [
+      414.37,
+      0.4549
+    ],
+    "200": [
+      334.09,
+      0.6703
+    ],
+    "480": [
+      205.99,
+      1.4527
+    ],
+    "640": [
+      190.85,
+      1.9255
+    ]
+  },
+  "provisional_best_of_four_at_N640": [
+    488,
+    1056,
+    1398,
+    165
+  ],
+  "four_candidate_rank_top_at_N": {
+    "20": [
+      302,
+      1242,
+      1398,
+      165
+    ],
+    "32": [
+      488,
+      1056,
+      1398,
+      165
+    ],
+    "48": [
+      372,
+      869,
+      1398,
+      468
+    ],
+    "80": [
+      488,
+      1056,
+      1398,
+      165
+    ],
+    "128": [
+      488,
+      1056,
+      1398,
+      165
+    ],
+    "200": [
+      488,
+      1056,
+      1398,
+      165
+    ],
+    "480": [
+      488,
+      1056,
+      1398,
+      165
+    ],
+    "640": [
+      488,
+      1056,
+      1398,
+      165
+    ]
+  },
+  "original_research_native_zip_sha256": "f98d08a510274edca1a3478140d9312e8d1e10fb81fa3661f23db1243d679c94",
+  "measurements_N_DPS_SEM_seconds_rounded": {
+    "302/1242/1398/165": [
+      [
+        20,
+        175604.9249,
+        1202.4369,
+        0.15901
+      ],
+      [
+        32,
+        175563.2125,
+        867.6799,
+        0.198347
+      ],
+      [
+        48,
+        174376.3857,
+        682.6779,
+        0.235245
+      ],
+      [
+        80,
+        174943.816,
+        501.4891,
+        0.326101
+      ],
+      [
+        128,
+        176177.7523,
+        425.1586,
+        0.475379
+      ],
+      [
+        200,
+        175806.701,
+        325.0169,
+        0.687135
+      ],
+      [
+        480,
+        175816.944,
+        218.4346,
+        1.48179
+      ],
+      [
+        640,
+        175626.648,
+        188.4843,
+        1.934011
+      ]
+    ],
+    "372/869/1398/468": [
+      [
+        20,
+        174100.554,
+        1096.2486,
+        0.154173
+      ],
+      [
+        32,
+        175456.2335,
+        778.6315,
+        0.186624
+      ],
+      [
+        48,
+        176069.2001,
+        664.3983,
+        0.229782
+      ],
+      [
+        80,
+        175277.4587,
+        587.9857,
+        0.31765
+      ],
+      [
+        128,
+        175702.7559,
+        355.9272,
+        0.454172
+      ],
+      [
+        200,
+        175623.0654,
+        354.2204,
+        0.643763
+      ],
+      [
+        480,
+        175219.0221,
+        216.0494,
+        1.396424
+      ],
+      [
+        640,
+        175515.7064,
+        194.5355,
+        1.823511
+      ]
+    ],
+    "488/1056/1398/165": [
+      [
+        20,
+        174225.3235,
+        920.1036,
+        0.153829
+      ],
+      [
+        32,
+        177337.9812,
+        970.9767,
+        0.188136
+      ],
+      [
+        48,
+        175865.695,
+        720.5844,
+        0.233965
+      ],
+      [
+        80,
+        176066.4099,
+        562.0157,
+        0.322493
+      ],
+      [
+        128,
+        176439.2674,
+        490.312,
+        0.450418
+      ],
+      [
+        200,
+        176894.2656,
+        343.1596,
+        0.665757
+      ],
+      [
+        480,
+        176310.4977,
+        195.9247,
+        1.423803
+      ],
+      [
+        640,
+        175932.3958,
+        193.2161,
+        1.917026
+      ]
+    ],
+    "710/1088/1033/276": [
+      [
+        20,
+        173998.2113,
+        981.2841,
+        0.160036
+      ],
+      [
+        32,
+        173308.467,
+        511.2924,
+        0.188088
+      ],
+      [
+        48,
+        174541.5888,
+        654.3841,
+        0.236178
+      ],
+      [
+        80,
+        173813.7588,
+        500.3364,
+        0.336753
+      ],
+      [
+        128,
+        174057.6241,
+        403.5794,
+        0.455663
+      ],
+      [
+        200,
+        174282.8074,
+        308.6978,
+        0.674846
+      ],
+      [
+        480,
+        174289.1316,
+        195.742,
+        1.481579
+      ],
+      [
+        640,
+        174006.4439,
+        182.8873,
+        1.97793
+      ]
+    ]
+  },
+  "v323_v1_identical_CHMV_N_suggestion_invalidated": true,
+  "v323_v2_corrects_target_identity_and_no_simc_rerun": true,
+  "v290_default_and_v291_exact_35_320_unchanged": true,
+  "selection_bias_95_corrected": false,
+  "global_optimum_proven": false,
+  "research_N_optimality_proven": false,
+  "limitations": [
+    "Each N×CHMV cell has one independent SimC seed; 640-best of only four is not global truth.",
+    "N-specific median includes process startup and CPU/IO; only one Actions host.",
+    "Original v323-v1 suggested N based on DPS noise of identical CHMV; the suggestion is superseded by v2 code, not a valid result.",
+    "Exact input/JSON2 SHA remain in short-lived Actions ZIP; rounded compact values are research summaries."
+  ]
+}
