@@ -69,6 +69,8 @@
 | F | [v106_user_session_controller.py](../../runner/v106_user_session_controller.py) | 사용자 세션 | [test_v106_user_session_controller.py](../../tests/test_v106_user_session_controller.py) |
 | G | [v289_retail_live_build_source.py](../../runner/v289_retail_live_build_source.py) | 현재 게임 build | [test_v289_retail_live_build_source.py](../../tests/test_v289_retail_live_build_source.py) |
 
+`v212 검증 설치 READY → v335 공식 ko_KR 이름 증분 조회·캐시(선택지 승인·수치 분리) → v113 검증된 선택지 한글 표기`
+
 ## 구현 근거·역사 결정의 역방향 검색
 
 - 환경: [승인 v1.4.3](../SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.3_SEASON_GJFO_AUTO_BUILD_APPROVED_20261102.md) · [실 무이력 Build](notes/2026-11-10_p1-four-ordinary-real-zero-history-ready.md) · [일반 4보석 변경](notes/2026-11-10_p1-ordinary-only-default-engine-bridge.md) · [프로필 보석 SHA 재사용](notes/2026-11-10_p1-gem-variant-install-reuse-identity.md).
