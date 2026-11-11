@@ -179,7 +179,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertEqual(page.scripts,[{"src":"/assets/app.js","defer":None}])
         self.assertEqual(page.links,[{"rel":"stylesheet","href":"/assets/styles.css"}])
         required=("optimizer-form","spec","simc-import-text","simc-import-file",
-          "simc-import-btn","race","talents","trinket1",
+          "simc-import-btn","class-choice","race","talents","trinket1",
           "trinket2","ilevel","final_T","targets","duration",
           "raid_buffs","oil_main","oil_off","binary","revision","static_cache",
           "special-rows","crafted-rows","food","potion","augmentation",
@@ -226,12 +226,18 @@ class RealHTTPPageOffline(unittest.TestCase):
         page=self.client.get("/").text
         js=self.client.get("/assets/app.js").text
         self.assertIn('id="race-list"',page)
+        self.assertIn('id="class-choice"',page)
         self.assertIn('value="드랙티르"',page)
         self.assertIn('id="simc-technical-panel"',page)
         self.assertIn('id="season-setup-details"',page)
         self.assertIn("최적 스탯 찾기",page)
         self.assertIn("function simcRace(value)",js)
-        self.assertIn('race:simcRace(field("race"))',js)
+        self.assertIn("function installClassSpecChoices()",js)
+        self.assertIn("function populateSpecializationsForClass(cls,selectedKey",js)
+        self.assertIn("function setRaceSuggestions(item)",js)
+        self.assertIn('$("race").value=displayRace(item.race)',js)
+        self.assertIn('$("simc-technical-panel").open=true',js)
+        self.assertIn("race:resolvedRace",js)
         self.assertIn("이번 시즌 장신구 선택",js)
         self.assertIn('"/api/v1/longrun/start"',js)
 

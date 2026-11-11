@@ -1160,6 +1160,12 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(status_counts,{
             "SOURCE_INDEPENDENT_TARGET334_VALIDATED_BATCH":24,
             "SOURCE_INDEPENDENT_SEASON_CATALOG":2})
+        by_key={(x["class"],x["spec"]):x for x in defaults.json()["archetypes"]}
+        self.assertEqual(by_key[("druid","balance")]["race"],"night_elf")
+        self.assertEqual(by_key[("evoker","devastation")]["race"],"dracthyr")
+        self.assertEqual(by_key[("evoker","devastation")]["allowed_races"],
+                         ["dracthyr","dracthyr_visage"])
+        self.assertIsNone(by_key[("mage","frost")]["allowed_races"])
         self.assertFalse((self.root/"runs").exists())
 
     def test_web_remains_usable_with_no_legacy_complete_simc_fixtures(self):

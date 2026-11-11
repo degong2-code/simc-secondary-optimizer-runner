@@ -2054,6 +2054,7 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                    if pair in bootstrap.PURE_PRODUCT_SPECS else
                    "SOURCE_INDEPENDENT_TARGET334_VALIDATED_BATCH")
             archetypes.append({"class":pair[0],"spec":pair[1],**controls,
+                               "allowed_races":bootstrap.pure.contracts.lookup(*pair)["allowed_races"],
                                "representative_scope":scope})
         return {"archetypes":archetypes,
                 "unavailable_missing_legacy_fixtures":[]}

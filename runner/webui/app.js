@@ -38,6 +38,12 @@ const specLabels = {
 };
 // Verified Korean display strings: Blizzard Korea's playable-races page.
 // A race name is display only; its exact SimC token goes into user controls.
+const classNames={
+  deathknight:"죽음의 기사",demonhunter:"악마사냥꾼",druid:"드루이드",
+  evoker:"기원사",hunter:"사냥꾼",mage:"마법사",monk:"수도사",
+  paladin:"성기사",priest:"사제",rogue:"도적",shaman:"주술사",
+  warlock:"흑마법사",warrior:"전사"
+};
 const raceNames={
   human:"인간", dwarf:"드워프", night_elf:"나이트 엘프", gnome:"노움",
   draenei:"드레나이", worgen:"늑대인간", pandaren:"판다렌",
@@ -200,7 +206,7 @@ function enhanceSelect(select){
   searchChoices.set(select,{sync});sync();
 }
 function initializeSearchChoices(){
-  for(const id of ["spec","trinket1","trinket2","food","potion",
+  for(const id of ["class-choice","spec","trinket1","trinket2","food","potion",
     "augmentation","diamond","omnium","optimizer-oil-loadout",
     "dk_rune_main","dk_rune_off","season_enchant_finger1"])
     enhanceSelect($(id));
@@ -261,11 +267,12 @@ async function importSimcCharacter() {
   const source=file?await file.text():$("simc-import-text").value;
   const parsed=parseSimcCharacter(source);
   if(field("spec")!==parsed.key) {
-    $("spec").value=parsed.key;
+    $("class-choice").value=parsed.defaults.class;
+    populateSpecializationsForClass(parsed.defaults.class,parsed.key);
     // Same reset behavior as a manual specialization change.
     fillDefault(parsed.defaults);
   }
-  $("race").value=displayRace(parsed.race);
+  if(parsed.race)$("race").value=displayRace(parsed.race);
   $("talents").value=parsed.talents;
   showCharacterDefaultHint();
   setNotice("SimC 캐릭터 정보만 적용됨 · 미입력 종족/특성은 기본값 사용 · 장비/스탯은 가져오지 않음 · Native 0회");
@@ -300,16 +307,19 @@ function installSeasonGearHints(catalog) {
     ? catalog : null;
   const node=$("season-gear-note");
   const current=state.seasonGear?.choices||{};
+  const sortedKorean=items=>[...(items||[])].sort((a,b)=>
+    (a.name_ko||a.name).localeCompare(b.name_ko||b.name,"ko-KR")||
+    a.item_id-b.item_id);
   for(const fieldId of ["trinket1","trinket2"]) {
     const node=$(fieldId);
     node.replaceChildren(option("","이번 시즌 장신구 선택"));
-    for(const item of current.trinket||[])
+    for(const item of sortedKorean(current.trinket))
       node.appendChild(option(item.item_id,(item.name_ko||item.name)));
   }
   for(const row of $("special-rows").querySelectorAll(".gear-row")) {
     const element=row.querySelector('[data-field="item_id"]');
     element.replaceChildren(option("","이번 시즌 특수효과 장비 선택"));
-    for(const item of current.special_effect_gear_candidate||[])
+    for(const item of sortedKorean(current.special_effect_gear_candidate))
       element.appendChild(option(item.item_id,(item.name_ko||item.name)));
   }
   refreshSpecialSlots();
@@ -391,23 +401,57 @@ function showRepresentativeScope() {
   note.hidden=!item;
   if(!item)return;
   note.textContent=Number(field("ilevel"))===334?
-    "최신 시즌 대표 장비·직업별 티어 4세트를 내부 생성합니다. 26개 전문화 기본 프로필은 실제 SimC 수용 확인. 사용자 선택 옵션은 실제 SimC 입력으로 평가하며 결과는 세션마다 다릅니다.":
-    "334 이외 목표 ilvl: 최신 시즌 대표 장비·티어·무기를 선택 레벨로 구성합니다. 기존 334 Native 결과를 다른 레벨로 확대하지 않으며, 해당 조건의 수용 여부는 실제 SimC 실행으로 판정합니다.";
+    "일반 장비·무기·티어 4세트는 자동 구성합니다.":
+    "선택한 목표 레벨의 대표 장비를 자동 구성합니다. 실제 결과는 SimC에서 확인합니다.";
 }
 
 function showCharacterDefaultHint() {
   const item=state.defaults.find(d=>d.class+"/"+d.spec===field("spec"));
-  const unavailable=item&&["druid","demonhunter","evoker"].includes(item.class);
-  $("race-default-note").textContent=unavailable?
-    "이 직업은 dwarf 종족을 선택할 수 없습니다. 종족을 직접 입력해 주세요.":
-    "종족 미입력 시 dwarf를 사용합니다.";
+  const allowed=Array.isArray(item?.allowed_races);
+  $("race-default-note").textContent=!item?"전문화 선택 후 종족을 지정할 수 있습니다.":
+    "대표 종족 "+displayRace(item.race)+" 선택됨 · "+
+    (allowed?"해당 전문화의 확인된 종족만 목록에 표시합니다.":
+     "다른 종족은 실행 시 실제 SimC 적용 여부를 확인합니다.");
   $("talents-default-note").textContent=
     "특성 미입력 시 선택한 전문화의 검증된 기본 대표 특성을 사용합니다.";
 }
+function setRaceSuggestions(item) {
+  const roster=$("race-list");
+  const allowed=Array.isArray(item?.allowed_races)?new Set(item.allowed_races):null;
+  const entries=Object.entries(raceNames).filter(([token])=>!allowed||allowed.has(token))
+    .sort((a,b)=>a[1].localeCompare(b[1],"ko-KR"));
+  roster.replaceChildren(...entries.map(([token,name])=>{
+    const opt=document.createElement("option");
+    opt.value=name;opt.label=token;return opt;
+  }));
+}
+function populateSpecializationsForClass(cls,selectedKey=""){
+  const available=state.defaults.filter(x=>x.class===cls);
+  const selected=available.some(x=>x.class+"/"+x.spec===selectedKey)
+    ?selectedKey:(available[0]?cls+"/"+available[0].spec:"");
+  $("spec").replaceChildren(...available.map(item=>{
+    const key=item.class+"/"+item.spec;
+    const full=specLabels[key]||key;
+    return option(key,full.includes(" · ")?full.split(" · ")[1]:full);
+  }));
+  $("spec").value=selected;
+  $("spec").disabled=!available.length;
+  syncSearchChoices();
+}
+function installClassSpecChoices() {
+  const classes=[...new Set(state.defaults.map(x=>x.class))]
+    .sort((a,b)=>(classNames[a]||a).localeCompare(classNames[b]||b,"ko-KR"));
+  populateSelect("class-choice",classes,cls=>classNames[cls]||cls);
+  $("class-choice").disabled=false;
+  const first=classes.includes("paladin")?"paladin":classes[0];
+  $("class-choice").value=first;
+  populateSpecializationsForClass(first);
+}
 function fillDefault(item) {
-  // Keep optional character choices visibly unset. The backend will
-  // resolve dwarf and the verified representative talents when absent.
-  $("race").value="";
+  // Explicitly display the SOURCE-approved race instead of letting the
+  // server silently choose dwarf (invalid for druid/DH/evoker).
+  setRaceSuggestions(item);
+  $("race").value=displayRace(item.race);
   $("talents").value="";
   showCharacterDefaultHint();
   setTrinketSelection("trinket1",item.trinket_ids[0]);
@@ -674,7 +718,10 @@ function fillSessionInputs(payload) {
   const spec=c.class+"/"+c.spec;
   if(!state.defaults.some(item=>item.class+"/"+item.spec===spec))
     throw Error("SESSION_SPEC_NOT_SUPPORTED");
+  $("class-choice").value=c.class;
+  populateSpecializationsForClass(c.class,spec);
   $("spec").value=spec;
+  setRaceSuggestions(state.defaults.find(x=>x.class+"/"+x.spec===spec));
   $("race").value=displayRace(c.race);
   $("talents").value=c.talents;
   showCharacterDefaultHint();
@@ -784,15 +831,19 @@ function buildRequest() {
   const spec=field("spec");
   const source=state.defaults.find(d=>d.class+"/"+d.spec===spec);
   if(!source) throw Error("지원되는 전문화를 선택해 주세요.");
+  const resolvedRace=simcRace(field("race"));
+  if(Array.isArray(source.allowed_races)&&
+     !source.allowed_races.includes(resolvedRace))
+    throw Error("이 전문화에서 확인된 종족을 선택해 주세요.");
   if(["druid","demonhunter","evoker"].includes(source.class)&&
-     (!field("race")||simcRace(field("race"))==="dwarf"))
-    throw Error("이 직업은 dwarf를 사용할 수 없습니다. 종족을 직접 선택해 주세요.");
+     (!resolvedRace||resolvedRace==="dwarf"))
+    throw Error("이 전문화에서 사용할 수 있는 종족을 선택해 주세요.");
   if(!seasonChoice("trinket",valueInt("trinket1"))||
      !seasonChoice("trinket",valueInt("trinket2")))
     throw Error("장신구 2개를 이번 시즌 목록에서 선택해 주세요.");
   const controls={
     class:source.class,spec:source.spec,
-    race:simcRace(field("race")),talents:field("talents"),
+    race:resolvedRace,talents:field("talents"),
     ilevel:valueInt("ilevel"),final_T:field("final_T") ? valueInt("final_T"):null,
     max_single_stat_percent:valueInt("max-single-stat-percent"),
     trinket_ids:[valueInt("trinket1"),valueInt("trinket2")],
@@ -1716,6 +1767,11 @@ function registerHandlers() {
       $("optimizer-oil-loadout").value="";
     });
   }
+  $("class-choice").addEventListener("change",()=>{
+    populateSpecializationsForClass(field("class-choice"));
+    const selected=state.defaults.find(d=>d.class+"/"+d.spec===field("spec"));
+    if(selected)fillDefault(selected);
+  });
   $("spec").addEventListener("change",()=>{
     const selected=state.defaults.find(d=>d.class+"/"+d.spec===field("spec"));
     if(selected)fillDefault(selected);
@@ -1789,6 +1845,12 @@ function registerHandlers() {
   }));
   $("start-btn").addEventListener("click",()=>withBusy(async()=>{
     // This is the only new-job action. Never start SimC on page load or refresh.
+    if(!field("binary")||!field("revision")) {
+      $("simc-technical-panel").open=true;
+      const missing=!field("binary")?"binary":"revision";
+      $(missing).focus();
+      throw Error("SimulationCraft 연결 설정을 먼저 완료해 주세요.");
+    }
     if(!window.confirm("이 PC에서 최적화를 시작할까요? 계산 중에도 중단할 수 있습니다."))return;
     const p=await api("/api/v1/longrun/start",{method:"POST",payload:{...buildRequest(),max_native_calls:64,continuous:true}});
     markSession(p.session_id);$("filled-result").hidden=true;
@@ -1833,11 +1895,7 @@ async function initialize() {
     const [d,opt,gear]=await Promise.all([api("/api/v1/defaults"),api("/api/v1/options"),
       api("/api/v1/season-gear").catch(()=>null)]);
     state.defaults=d.archetypes;
-    $("spec").replaceChildren(...state.defaults.map(item=>
-      option(item.class+"/"+item.spec,
-             (specLabels[item.class+"/"+item.spec]||
-               item.class+" · "+item.spec).split(" (")[0])));
-    $("spec").disabled=false;
+    installClassSpecChoices();
     installOptions(opt);
     installSeasonGearHints(gear);
     try{renderSeasonOptionCatalog(await api("/api/v1/season-option-catalog"));}
@@ -1858,9 +1916,15 @@ async function initialize() {
     catch(err){$("recent-session-note").textContent="세션 목록 조회 오류: "+err.message;}
     const paladin=state.defaults.find(v=>v.class==="paladin"&&v.spec==="retribution");
     if(paladin) {
-      $("spec").value=paladin.class+"/"+paladin.spec;
+      $("class-choice").value=paladin.class;
+      populateSpecializationsForClass(paladin.class,paladin.class+"/"+paladin.spec);
       fillDefault(paladin);
-    }else if(state.defaults.length)fillDefault(state.defaults[0]);
+    }else if(state.defaults.length) {
+      const first=state.defaults[0];
+      $("class-choice").value=first.class;
+      populateSpecializationsForClass(first.class,first.class+"/"+first.spec);
+      fillDefault(first);
+    }
     buttonState();
     beginPolling();
     let previous=null;
