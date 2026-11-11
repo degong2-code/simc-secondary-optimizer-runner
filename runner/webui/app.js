@@ -1056,6 +1056,8 @@ async function withBusy(fn) {
           "선택한 무기 기름의 정확한 시즌 아이템·무기 적용 조건·고정 O가 현재 설치 환경과 일치하지 않습니다. 새 세션에서 기름을 해제하거나 정확한 기름이 등록된 환경을 사용하세요. 검증되지 않은 O를 0으로 처리하지 않습니다.",
         "WEB_FRESH_SELECTED_OIL_ITEM_IDS_NOT_INSTALLED":
           "선택한 물리 기름 ItemID·무기 손과 정확히 일치하는 검증된 시즌 환경이 설치되어 있지 않습니다. 시즌 환경 구축에서 해당 기름을 검증한 뒤 다시 선택하세요.",
+        "WEB_PRIMARY_VERIFIED_SEASON_INSTALL_REQUIRED":
+          "기본 최적화(64회)를 시작하려면 현재 게임 빌드의 G/J/F/O 검증 시즌 환경이 먼저 설치돼 있어야 합니다. ‘시즌 환경 확인·설치’를 완료한 뒤 시작하세요. ZIP에 들어 있는 과거 카탈로그는 현재 시즌 READY를 증명하지 않습니다.",
         "WEB_FRESH_EXACT_OIL_HAND_ID_SELECTION_INVALID":
           "기름 ItemID와 체크한 무기 손이 서로 다릅니다. 선택한 모든 손에 정확한 ItemID를 지정하세요.",
         "V216_REUSE_OIL_HANDS_MULTIPLE_VERIFIED_ITEMS_SELECT_ID":

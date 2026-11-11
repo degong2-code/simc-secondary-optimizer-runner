@@ -1,0 +1,11 @@
+# v346 — 기본 64회 현재 시즌 설치 검증 경계 + 인증 선택성
+
+- **Capability:** `PRODUCT.E2E`, `ENVIRONMENT.WEB`, `DEV.CONTINUITY`.
+- **Keywords:** v346, P1, Windows ZIP, 70575, 70783, fresh v212, verified GJFO, 64 default, continuous, fail closed, credentials optional, no new Native.
+- **Prior evidence:** [v345 배포 ZIP Windows CMD·Chrome 계획 Native0](2026-11-12_p1-v345-windows-zip-cmd-chrome-zero-native.md), [v344 Windows Chrome N56 Native64·재개 실증](2026-11-12_p1-v344-real-windows-browser-native64-once.md), v216 기존 자격증명 미설정·Wago 수집 시험.
+- **Decision:** `REUSE` — v345 ZIP의 v213 카탈로그는 70575 역사 원본이고 실제 현 Windows SimC 70783 환경 설치 자료가 아니다. 읽기 전용 카탈로그·역사 계획·캐시·기존 소규모 명시 장기 세션은 보존한다. **일반 사용자 기본 64회/continuous 계산을 시작하거나 재개할 때만** 선택된 같은 빌드의 검증 v212 설치 manifest를 필수로 한다. 새 Native 효과 인증·시즌 엔진·서버 원격 호출은 만들지 않는다.
+- **Changes:** v113 `longrun_prepare`가 기본 64/continuous 요청에 `installed_season_game_build`가 없으면 **프로필 스테이징·정적 L·DPS 실행 전에** `WEB_PRIMARY_VERIFIED_SEASON_INSTALL_REQUIRED` 422로 차단한다. 필드가 있어도 기존 `load_fresh_profile_for_user`와 v212/v217 manifest 검증을 반드시 통과해야 한다. v293 기존 세션 재개에서도 새 Native 실행 전 원본 v212 설치 요약이 없으면 같은 코드로 차단한다. 일반 사용자 UI에 한국어 복구 안내를 추가한다. 12회 역사 옵션, 읽기 전용 카탈로그·계획·결과/캐시 조회는 변경하지 않는다.
+- **Verification:** 신규 GitHub Windows/Linux 오프라인 실측 완료 이전에는 **PENDING**. v113/p3-hah 회귀는 64회 시작에서 인가되지 않은 70575 패키지 fallback을 거부·Native0·프로필0, 이전에 만들어진 64회 source-only 세션 재개 Native0 차단, 명시된 설치 빌드가 허위이면 기존 원본 검증 경로 거부, 역사적 12회 경로 유지까지 확인한다. [v344 실제 Windows Native64](2026-11-12_p1-v344-real-windows-browser-native64-once.md)는 이미 검증된 v212 환경 사용의 양성 실증으로 재사용한다.
+- **Credentials:** v216의 원본 `v242_authenticated_season_source_stage.collect`는 Blizzard/WCL 자격증명이 모두 없으면 `AUTHENTICATED_SEASON_CREDENTIALS_MISSING`를 반환하고 Wago 수집을 계속한다(기존 `test_unscoped_db2_tier_discovery_no_blizzard_wcl_credentials`). 일부 자격증명만 설정하면 잘못된 혼합 상태로 차단한다. **자격증명 없이 현재 70783의 G/J/F/O READY까지 실제 Windows Native로 완료됐다는 증거는 아직 없음**; 이런 상태에서는 READY를 추정하거나 비밀키를 ZIP에 포함하지 않는다.
+- **Remaining:** 개인 Windows PC·새 시즌에서 자격증명 없는 원본 수집이 전체 필수 G/J/F/O까지 READY로 봉인되는 실제 양성 검증, 역사 70575 카탈로그 단독 시작 경로의 다른 legacy/API 정책 결정, 26전문화·선택품목 전체 검증, 새 시즌 일반화는 별도. 고객 PC 설치 완료·main 승격은 주장하지 않는다.
+- **Efficiency:** 신규 Native0, 중복 Wago 수집0, 문서·서버 preflight/UI 안내·초점 회귀만 변경. 이미 검증된 v344 64회와 동일 시즌 정적 캐시는 불변. 서버는 Native 전에 현재 설치 source identity만 확인한다.

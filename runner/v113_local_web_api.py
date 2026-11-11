@@ -1712,10 +1712,24 @@ class LocalJobs:
             if self.is_active(folder):
                 raise HTTPException(409,detail={"code":"SESSION_ALREADY_RUNNING"})
             try:
-                self._verify_environment_dependencies(
-                    self._read_environment_summary(folder),folder)
-                self.args_for_existing(folder)
+                environment=self._read_environment_summary(folder)
+                self._verify_environment_dependencies(environment,folder)
                 previous=longrun_sessions.config(folder)
+                requested_budget=(previous["native_budget"]
+                                  if previous is not None else budget)
+                # The default user 64-case run must never be launched or
+                # resumed from the packaged, historically pinned v213
+                # source-only catalog.  Existing 12-case legacy sessions and
+                # read-only cache/report access remain unchanged.
+                if (not cache_only and
+                    (continuous or (type(requested_budget) is int and
+                                   requested_budget>=64)) and
+                    (type(environment) is not dict or
+                     not environment.get(
+                         "fresh_v212_installed_manifest_sha256"))):
+                    raise HTTPException(422,detail={"code":
+                        "WEB_PRIMARY_VERIFIED_SEASON_INSTALL_REQUIRED"})
+                self.args_for_existing(folder)
                 if previous is None:
                     if budget is None:
                         raise longrun_sessions.LocalLongRunBlocked(
@@ -1777,6 +1791,14 @@ class LocalJobs:
         """Explicit source-bound session setup; no optimization DPS Native."""
         if request.current_season_product is not True:
             raise HTTPException(422,detail={"code":"V293_VERIFIED_SEASON_REQUIRED"})
+        # Older Windows source ZIPs can still create historical v213 plans.
+        # The default 64/continuous product run is different: require an
+        # explicitly selected same-build v212 installed READY environment.
+        # Refuse before profile staging, L Native, or any DPS subprocess.
+        if ((request.continuous or request.max_native_calls>=64) and
+                request.installed_season_game_build is None):
+            raise HTTPException(422,detail={"code":
+                "WEB_PRIMARY_VERIFIED_SEASON_INSTALL_REQUIRED"})
         params=UserRequest(
             controls=request.controls,binary=request.binary,
             revision=request.revision,static_cache=request.static_cache,

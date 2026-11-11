@@ -57,6 +57,48 @@ class LocalLongRunHTTP(unittest.TestCase):
         return self.client.post(path,json=data,
                                 headers=self.auth|{"content-type":"application/json"})
 
+    def test_primary64_cannot_use_packaged_source_without_fresh_v212(self):
+        """No old v213 source-only plan may launch the default product worker."""
+        data={"controls":self.valid_controls,"binary":"c:/simc.exe",
+              "revision":"abc1234","current_season_product":True,
+              "max_native_calls":64,"continuous":True}
+        with mock.patch.object(
+                self.app.state.jobs,"prepare_with_internal_special_L"
+                ) as stage:
+            response=self.post("/api/v1/longrun/start",data)
+        self.assertEqual(response.status_code,422,response.text)
+        self.assertEqual(response.json()["detail"]["code"],
+                         "WEB_PRIMARY_VERIFIED_SEASON_INSTALL_REQUIRED")
+        stage.assert_not_called()
+        web.subprocess.Popen.assert_not_called()
+        self.assertIsNone(service.config(self.folder))
+        # Explicitly spelling an old build never creates an installed
+        # profile; the existing source owner must validate it.
+        data["installed_season_game_build"]="12.1.5.70575"
+        with mock.patch.object(
+                self.app.state.jobs,"prepare_with_internal_special_L"
+                ) as original:
+            original.side_effect=web.environment_manifest.EnvironmentBlocked(
+                "WEB_SELECTED_INSTALLED_SEASON_BUILD_NOT_FOUND")
+            missing=self.post("/api/v1/longrun/start",data)
+        self.assertEqual(missing.status_code,422,missing.text)
+        web.subprocess.Popen.assert_not_called()
+
+    def test_existing_64_source_only_resume_fails_before_native(self):
+        """Preexisting historical long-run artifacts remain readable only."""
+        service.establish(self.folder,64)
+        jobs=self.app.state.jobs
+        with mock.patch.object(jobs,"_read_environment_summary",
+                               return_value={"status":"READY_WITH_LIMITATIONS"}):
+            result=self.post(
+                "/api/v1/sessions/"+self.folder.name+"/longrun/resume",
+                {"continuous":True})
+        self.assertEqual(result.status_code,422,result.text)
+        self.assertEqual(result.json()["detail"]["code"],
+                         "WEB_PRIMARY_VERIFIED_SEASON_INSTALL_REQUIRED")
+        web.subprocess.Popen.assert_not_called()
+        self.assertEqual(service.config(self.folder)["native_budget"],64)
+
     def test_http_start_status_cancel_restart_resume_and_import_only(self):
         endpoint="/api/v1/longrun/start"
         data={"controls":self.valid_controls,"binary":"c:/simc.exe",
