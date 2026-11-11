@@ -24,5 +24,5 @@ jobs:
         run: |
           set -euo pipefail
           python -m py_compile runner/v325_independent_holdout_quality_arrival.py
-          python -m unittest -v tests.test_p2_v325_independent_holdout_replay_offline tests.test_p2_v324_balance_new_user_variable_n_offline tests.test_p2_v323_chmv_arrival_and_n_offline tests.test_p2_v319_new_windwalker_ab_offline
+          python -m unittest -v tests.test_p2_v327_havoc_recovery_offline tests.test_p2_v327_havoc_three_seed_n_offline tests.test_p2_v326_new_devastation_offline tests.test_p2_v325_independent_holdout_replay_offline tests.test_p2_v324_balance_new_user_variable_n_offline tests.test_p2_v323_chmv_arrival_and_n_offline tests.test_p2_v319_new_windwalker_ab_offline
           python tools/check_development_ledger.py
