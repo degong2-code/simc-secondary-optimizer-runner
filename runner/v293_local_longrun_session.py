@@ -17,6 +17,11 @@ import v106_user_session_controller as sessions
 import v291_durable_multiscale_native_runner as durable
 
 SCHEMA = "v293_local_longrun_session_v1"
+# Existing configs without a field are permanently legacy N35.
+# Keep the current default until the v331 actual Native study is evaluated.
+LEGACY_SCOUT_ITERATIONS = 35
+DEFAULT_SCOUT_ITERATIONS = 35
+ALLOWED_SCOUT_ITERATIONS = (35, 48, 56, 64)
 
 
 class LocalLongRunBlocked(ValueError):
@@ -55,14 +60,39 @@ def config(folder):
     need(not path.is_symlink() and path.stat().st_size <= 16384,
          "V293_CONFIG_INVALID_FILE")
     doc = json.loads(path.read_text(encoding="utf8"))
-    need(type(doc) is dict and set(doc) == {
-         "schema","native_budget","manifest_sha256"} and
+    fields={"schema","native_budget","manifest_sha256"}
+    need(type(doc) is dict and set(doc) in (fields,fields|{"scout_iterations"}) and
+         type(doc.get("scout_iterations",LEGACY_SCOUT_ITERATIONS)) is int and
+         doc.get("scout_iterations",LEGACY_SCOUT_ITERATIONS) in ALLOWED_SCOUT_ITERATIONS and
          doc["schema"] == SCHEMA and
          type(doc["native_budget"]) is int and
          12 <= doc["native_budget"] <= 2000 and
          doc["manifest_sha256"] == source_identity(folder),
          "V293_SEALED_CONFIG_OR_MANIFEST_DRIFT")
     return doc
+
+
+def selected_scout_iterations(saved):
+    # The legacy absence means 35, not "follow future global default".
+    n=(DEFAULT_SCOUT_ITERATIONS if saved is None else
+       saved.get("scout_iterations",LEGACY_SCOUT_ITERATIONS))
+    need(type(n) is int and n in ALLOWED_SCOUT_ITERATIONS,
+         "V293_SEALED_SCOUT_ITERATIONS_INVALID")
+    return n
+
+
+def rebind_scout_iterations(context, n):
+    old=context["identity"]
+    need(type(n) is int and n in ALLOWED_SCOUT_ITERATIONS,
+         "V293_SCOUT_N_INVALID")
+    if old["scout_iterations"]==n:
+        return context
+    rebound=durable.adaptive.prepare(context["bundle"],old["binary_sha256"],
+        old["revision"],scout_iterations=n,
+        confirm_iterations=old["confirm_iterations"])
+    need(rebound["identity"]==dict(old,scout_iterations=n),
+         "V293_SCOUT_N_CHANGED_NON_ITERATION_IDENTITY")
+    return rebound
 
 
 def stage_path(folder, budget):
@@ -89,7 +119,8 @@ def prepare(folder, budget):
          staged["context"]["identity"]["approved_final_T"] ==
             ready["context"]["identity"]["approved_final_T"],
          "V293_STAGE_OR_APPROVED_BUDGET_DRIFT")
-    return staged
+    n=selected_scout_iterations(config(folder))
+    return dict(staged,context=rebind_scout_iterations(staged["context"],n))
 
 
 def establish(folder, budget):
@@ -102,6 +133,11 @@ def establish(folder, budget):
     document = {"schema": SCHEMA, "native_budget": budget,
                 "manifest_sha256": source_identity(folder)}
     if existing is None:
+        n=selected_scout_iterations(None)
+        # Explicitly seal a changed new default; old N35 config bytes stay
+        # compatible with the prior product and portable-cache workflow.
+        if n!=LEGACY_SCOUT_ITERATIONS:
+            document["scout_iterations"]=n
         durable.atomic(config_path(folder), document)
     return prepared
 
@@ -196,6 +232,7 @@ def read_status(folder, active=False):
         "result_ready": result_file.is_file(),
         "native_calls_now": 0,
         "native_budget": budget,
+        "scout_iterations_per_CHMV":selected_scout_iterations(saved),
         "progress": {
             "status": progress.get("status","NOT_STARTED"),
             "completed_jobs": completed, "planned_jobs": budget,
@@ -258,6 +295,7 @@ def read_result(folder):
             "status":report["status"],
             "native_calls_cumulative":report["native_attempts_cumulative"],
             "cache_hits_this_run":report["verified_cache_cases_this_invocation"],
+            "scout_iterations_per_CHMV":selected_scout_iterations(saved),
             "user_result":user_result(report),
             "confirmed_selected_pair_95":report.get("confirmed_selected_pair_95"),
             "selected_from_multiple_candidates":True,
