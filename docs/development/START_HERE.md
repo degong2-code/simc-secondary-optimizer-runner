@@ -8,6 +8,8 @@
 | 어떤 코드·테스트를 먼저 봐야 하나 | [INDEX](INDEX.md) → [FILE_MAP](FILE_MAP.md) |
 | 특정 파일이 어디 있나 | [전체 FILE_INVENTORY](FILE_INVENTORY.md) → [핵심 FILE_MAP](FILE_MAP.md) |
 | 실제 CI·Native PASS 범위 | [EVIDENCE_INDEX](EVIDENCE_INDEX.md) → GitHub 원본 영수증 |
+| 영구 보관된 시즌 Build 최소 영수증 | [70783 Ret334 검증 범위](environment_receipts/README.md) — 전체 환경 DB 복원은 별개 |
+| 실제 35/120/320 비용 계측 | [18회 Native 실측 노트](notes/2026-11-11_p2-18-real-request-cost.md) |
 | 왜 그렇게 만들고 무엇을 철회했나 | [DECISIONS](DECISIONS.md) → 근거 노트 |
 | 개발·인계 규칙 | [PROTOCOL](PROTOCOL.md) |
 | 과거 경과와 이전 인계 | [원래 INDEX 기록](HISTORICAL_INDEX_20261110_PRE_KNOWLEDGE_LAYER.md), [원래 PROTOCOL 기록](HISTORICAL_PROTOCOL_20261110_PRE_KNOWLEDGE_LAYER.md), [개발 노트](notes/), [누적 CURRENT](../CURRENT_PRODUCT_DEVELOPMENT_STATE.md) |

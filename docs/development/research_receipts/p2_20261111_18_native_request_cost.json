@@ -1,0 +1,165 @@
+{
+  "schema": "p2_real_native_v314_historical_profiles_35_120_320_local_cost_probe_compact_v1",
+  "status": "LOCAL_REAL_SIMC_NATIVE_TIMING_ONLY",
+  "date": "2026-11-11",
+  "source_v314_actions_run": 42846073820,
+  "source_inputs_sha256": {
+    "arcane_mage__narrow": "f6040b2205dbb95278aea8652f88641f7de8e7d8f7f18b54b5621398f6f7da8c",
+    "beast_mastery_hunter__narrow": "7c48b37b5ea9a5660ad212fde6faef6e67a4a7a88ed78bd5b4a4b09d857dc97d"
+  },
+  "binary_sha256": "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6",
+  "revision": "c20e2ad52e4c33711f74272309a5748125175fe8",
+  "execution": {
+    "os": "Linux-6.18.57-x86_64-with-glibc2.41",
+    "cpu": "AMD EPYC 9V74 80-Core Processor",
+    "reported_cpus": 5,
+    "threads": 1,
+    "source_changes": [
+      "iterations",
+      "json2_output_location"
+    ],
+    "repetitions_per_case_iteration": 3,
+    "real_new_native": 18,
+    "sample_counts_for_iterations": {
+      "35": 34,
+      "120": 119,
+      "320": 319
+    }
+  },
+  "rows": [
+    {
+      "case_id": "arcane_mage__narrow",
+      "iterations": 35,
+      "replicate": 1,
+      "process_wall_seconds": 0.159053,
+      "simc_internal_wall_seconds": 0.103146495
+    },
+    {
+      "case_id": "arcane_mage__narrow",
+      "iterations": 35,
+      "replicate": 2,
+      "process_wall_seconds": 0.158215,
+      "simc_internal_wall_seconds": 0.101948587
+    },
+    {
+      "case_id": "arcane_mage__narrow",
+      "iterations": 35,
+      "replicate": 3,
+      "process_wall_seconds": 0.1616,
+      "simc_internal_wall_seconds": 0.101812292
+    },
+    {
+      "case_id": "arcane_mage__narrow",
+      "iterations": 120,
+      "replicate": 1,
+      "process_wall_seconds": 0.407273,
+      "simc_internal_wall_seconds": 0.345326656
+    },
+    {
+      "case_id": "arcane_mage__narrow",
+      "iterations": 120,
+      "replicate": 2,
+      "process_wall_seconds": 0.431128,
+      "simc_internal_wall_seconds": 0.368244867
+    },
+    {
+      "case_id": "arcane_mage__narrow",
+      "iterations": 120,
+      "replicate": 3,
+      "process_wall_seconds": 0.527462,
+      "simc_internal_wall_seconds": 0.339278971
+    },
+    {
+      "case_id": "arcane_mage__narrow",
+      "iterations": 320,
+      "replicate": 1,
+      "process_wall_seconds": 0.956375,
+      "simc_internal_wall_seconds": 0.897848403
+    },
+    {
+      "case_id": "arcane_mage__narrow",
+      "iterations": 320,
+      "replicate": 2,
+      "process_wall_seconds": 0.916314,
+      "simc_internal_wall_seconds": 0.858596767
+    },
+    {
+      "case_id": "arcane_mage__narrow",
+      "iterations": 320,
+      "replicate": 3,
+      "process_wall_seconds": 1.021712,
+      "simc_internal_wall_seconds": 0.955066747
+    },
+    {
+      "case_id": "beast_mastery_hunter__narrow",
+      "iterations": 35,
+      "replicate": 1,
+      "process_wall_seconds": 0.182399,
+      "simc_internal_wall_seconds": 0.124193655
+    },
+    {
+      "case_id": "beast_mastery_hunter__narrow",
+      "iterations": 35,
+      "replicate": 2,
+      "process_wall_seconds": 0.193648,
+      "simc_internal_wall_seconds": 0.130451753
+    },
+    {
+      "case_id": "beast_mastery_hunter__narrow",
+      "iterations": 35,
+      "replicate": 3,
+      "process_wall_seconds": 0.200755,
+      "simc_internal_wall_seconds": 0.133094665
+    },
+    {
+      "case_id": "beast_mastery_hunter__narrow",
+      "iterations": 120,
+      "replicate": 1,
+      "process_wall_seconds": 0.461474,
+      "simc_internal_wall_seconds": 0.400074069
+    },
+    {
+      "case_id": "beast_mastery_hunter__narrow",
+      "iterations": 120,
+      "replicate": 2,
+      "process_wall_seconds": 0.476049,
+      "simc_internal_wall_seconds": 0.404512606
+    },
+    {
+      "case_id": "beast_mastery_hunter__narrow",
+      "iterations": 120,
+      "replicate": 3,
+      "process_wall_seconds": 0.495242,
+      "simc_internal_wall_seconds": 0.426995413
+    },
+    {
+      "case_id": "beast_mastery_hunter__narrow",
+      "iterations": 320,
+      "replicate": 1,
+      "process_wall_seconds": 1.060856,
+      "simc_internal_wall_seconds": 0.998398061
+    },
+    {
+      "case_id": "beast_mastery_hunter__narrow",
+      "iterations": 320,
+      "replicate": 2,
+      "process_wall_seconds": 1.070229,
+      "simc_internal_wall_seconds": 1.01257064
+    },
+    {
+      "case_id": "beast_mastery_hunter__narrow",
+      "iterations": 320,
+      "replicate": 3,
+      "process_wall_seconds": 1.087683,
+      "simc_internal_wall_seconds": 1.022406109
+    }
+  ],
+  "extended_local_receipt_sha256": "58b0dc7b782e384a2bb8d6c45a7c529fe8a86dfc1dfa1dac60a04d8118986947",
+  "extended_local_receipt_is_not_in_this_repository": true,
+  "limitations": [
+    "Only two old v314 character inputs, not newly generated user profiles or independent cross-spec optimizer evaluation.",
+    "Wall time includes process launch; internal SimC WallSeconds is not the process wall. CPU/host variability can change ratios.",
+    "No policy improved DPS, no 95% better or global optimum shown. No 300/600s product E2E claim.",
+    "Same game build and binary reference, no new-season verification or season DB recreation."
+  ]
+}
