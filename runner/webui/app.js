@@ -95,6 +95,114 @@ function option(value,label) {
   el.value=String(value); el.textContent=label ?? String(value);
   return el;
 }
+// Exact original SELECT remains the only SimC/season ID owner.
+// An accessible searchable listbox is presentation-only.
+const searchChoices=new Map();
+function syncSearchChoices(){for(const x of searchChoices.values())x.sync();}
+function enhanceSelect(select){
+  if(!select||searchChoices.has(select))return;
+  const box=document.createElement("div");box.className="choice-picker";
+  const input=document.createElement("input");input.type="search";
+  input.id="choice-"+(select.id||"row-"+searchChoices.size);
+  input.autocomplete="off";input.placeholder="이름으로 검색";
+  const label=select.getAttribute("aria-label")||
+    select.labels?.[0]?.textContent?.trim()||"항목";
+  input.setAttribute("aria-label",label+" 검색");
+  input.setAttribute("role","combobox");
+  input.setAttribute("aria-autocomplete","list");
+  input.setAttribute("aria-expanded","false");
+  const menu=document.createElement("div");menu.id=input.id+"-results";
+  menu.className="choice-results";menu.setAttribute("role","listbox");
+  menu.hidden=true;input.setAttribute("aria-controls",menu.id);
+  box.append(input,menu);
+  (select.closest(".gear-row")?select.closest("label"):select).after(box);
+  select.classList.add("choice-native-select");
+  select.setAttribute("aria-hidden","true");select.tabIndex=-1;
+  let shown=false,index=0;
+  const norm=s=>String(s).normalize("NFKC").toLocaleLowerCase("ko-KR").trim();
+  const sync=()=>{
+    if(!shown){const selected=select.selectedOptions?.[0];
+      input.value=selected?.value?selected.textContent:"";}
+    input.disabled=select.disabled;
+  };
+  function close(){
+    shown=false;menu.hidden=true;
+    input.setAttribute("aria-expanded","false");sync();
+  }
+  function choose(opt){
+    select.value=opt.value;select.dispatchEvent(new Event("change",{bubbles:true}));
+    close();input.focus();
+  }
+  function draw(query){
+    menu.replaceChildren();
+    const q=norm(query);
+    const matches=Array.from(select.options).filter(opt=>
+      !opt.disabled&&(!q||norm(opt.textContent).includes(q)||norm(opt.value).includes(q)));
+    const visible=matches.slice(0,50);
+    index=Math.min(index,Math.max(0,visible.length-1));
+    for(const [i,opt] of visible.entries()){
+      const b=document.createElement("button");b.type="button";
+      b.className="choice-result";b.textContent=opt.textContent;
+      b.setAttribute("role","option");
+      b.setAttribute("aria-selected",String(opt.value===select.value));
+      if(i===index)b.classList.add("choice-active");
+      b.addEventListener("mousedown",e=>e.preventDefault());
+      b.addEventListener("click",()=>choose(opt));menu.appendChild(b);
+    }
+    if(!matches.length||matches.length>visible.length){
+      const p=document.createElement("p");p.className="choice-empty";
+      p.textContent=!matches.length?"검색 결과가 없습니다.":
+        matches.length+"개 중 50개 표시 · 더 구체적으로 검색해 주세요.";
+      menu.appendChild(p);
+    }
+  }
+  const open=(query="")=>{
+    if(select.disabled)return;
+    shown=true;menu.hidden=false;index=0;
+    input.setAttribute("aria-expanded","true");draw(query);
+  };
+  input.addEventListener("focus",()=>{input.select();open();});
+  input.addEventListener("input",()=>open(input.value));
+  input.addEventListener("keydown",e=>{
+    if(e.key==="Escape"){e.preventDefault();close();input.blur();}
+    if(e.key==="ArrowDown"||e.key==="ArrowUp"){
+      e.preventDefault();if(!shown)open();
+      const rows=Array.from(menu.querySelectorAll(".choice-result"));
+      if(rows.length){
+        index=(index+(e.key==="ArrowDown"?1:-1)+rows.length)%rows.length;
+        rows.forEach((r,i)=>r.classList.toggle("choice-active",i===index));
+        rows[index].scrollIntoView({block:"nearest"});
+      }
+    }
+    if(e.key==="Enter"&&shown){
+      const rows=menu.querySelectorAll(".choice-result");
+      if(rows.length){e.preventDefault();rows[index].click();}
+    }
+  });
+  input.addEventListener("blur",()=>setTimeout(()=>{
+    if(!box.contains(document.activeElement))close();
+  },0));
+  document.addEventListener("click",e=>{if(shown&&!box.contains(e.target))close();});
+  select.addEventListener("change",close);
+  select.addEventListener("invalid",()=>{
+    input.setAttribute("aria-invalid","true");input.focus();
+  });
+  new MutationObserver(()=>{if(shown)draw(input.value);else sync();}).observe(
+    select,{subtree:true,childList:true,attributes:true,attributeFilter:["disabled"]});
+  searchChoices.set(select,{sync});sync();
+}
+function initializeSearchChoices(){
+  for(const id of ["spec","trinket1","trinket2","food","potion",
+    "augmentation","diamond","omnium","optimizer-oil-loadout",
+    "dk_rune_main","dk_rune_off","season_enchant_finger1"])
+    enhanceSelect($(id));
+  for(const row of document.querySelectorAll(".gear-row")){
+    const fields=row.dataset.group==="special-rows"?["item_id"]:["embellishment","slot"];
+    for(const key of fields)enhanceSelect(
+      row.querySelector('select[data-field="'+key+'"]'));
+  }
+}
+
 function populateSelect(id, values, labeler) {
   const el=$(id); el.replaceChildren();
   for (const value of values) el.appendChild(option(value,labeler(value)));
@@ -324,6 +432,7 @@ function fillDefault(item) {
   fillGearRows("crafted-rows",[]);
   for(const row of $("crafted-rows").querySelectorAll(".gear-row"))syncCraftRow(row);
   showRepresentativeScope();
+  syncSearchChoices();
 }
 function oilCompatibility() {
   const key=field("spec");
@@ -624,6 +733,7 @@ function fillSessionInputs(payload) {
   $("revision").value=payload.revision;
   $("static_cache").value=payload.static_cache??"";
   showRepresentativeScope();
+  syncSearchChoices();
 }
 function selectedGear(nodeId, group) {
   const result=[],isCraft=group==="embellishments";
@@ -1709,15 +1819,7 @@ function registerHandlers() {
 async function initialize() {
   for(const [id,config] of Object.entries(gearGroups))gearInputs(id,config);
   registerHandlers();
-  // Native select remains the source of truth; search never changes selection.
-  for(const id of ["spec","trinket1","trinket2","food","potion","augmentation","diamond","optimizer-oil-loadout","season_enchant_finger1"]){
-    const select=$(id), search=document.createElement("input");
-    search.type="search";search.placeholder="이름 검색";search.setAttribute("aria-label",select.labels?.[0]?.textContent+" 검색");
-    select.before(search);
-    const filter=()=>{const q=search.value.trim().toLocaleLowerCase("ko-KR");for(const opt of select.options)opt.hidden=Boolean(q&&opt.value!==select.value&&!opt.textContent.toLocaleLowerCase("ko-KR").includes(q));};
-    search.addEventListener("input",filter);select.addEventListener("change",()=>{search.value="";filter();});
-    new MutationObserver(filter).observe(select,{childList:true,subtree:true});
-  }
+  initializeSearchChoices();
   try {
     const boot=await api("/api/v1/bootstrap",{publicRoute:true});
     state.token=boot.session_token;

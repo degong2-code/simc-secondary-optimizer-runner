@@ -232,8 +232,19 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn("최적 스탯 찾기",page)
         self.assertIn("function simcRace(value)",js)
         self.assertIn('race:simcRace(field("race"))',js)
-        self.assertIn("현재 시즌 장신구 선택",js)
+        self.assertIn("이번 시즌 장신구 선택",js)
         self.assertIn('"/api/v1/longrun/start"',js)
+
+    def test_searchable_choices_preserve_exact_ids_and_keyboard(self):
+        js=self.client.get("/assets/app.js").text
+        css=self.client.get("/assets/styles.css").text
+        self.assertIn("function enhanceSelect(select)",js)
+        self.assertIn("function initializeSearchChoices()",js)
+        self.assertIn('select.dispatchEvent(new Event("change",{bubbles:true}))',js)
+        self.assertIn('input.setAttribute("role","combobox")',js)
+        self.assertIn('menu.className="choice-results"',js)
+        self.assertIn('e.key==="ArrowDown"',js)
+        self.assertIn(".choice-native-select",css)
 
     def test_environment_build_surface_is_not_optimizer_plan(self):
         page=self.client.get("/").text
