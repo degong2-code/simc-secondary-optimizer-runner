@@ -11,6 +11,7 @@ from urllib.request import urlopen
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select,WebDriverWait
 import uvicorn
 
@@ -148,11 +149,21 @@ def run(binary,out):
             field(browser,"binary",binary)
             field(browser,"revision",REV)
             field(browser,"season-game-build",BUILD)
+            # A real <input> 'change' event fires on blur and starts an
+            # asynchronous read-only installed-oil refresh. Allow it to
+            # settle BEFORE the main Build click: the v113 UI intentionally
+            # rejects a second withBusy action while one is active.
+            browser.find_element(By.ID,"season-game-build").send_keys(Keys.TAB)
+            elapsed_wait(browser,'!state.busy',timeout=35)
             # Real user-facing Environment Build click: all HTTP/data/native
             # work remains owned by v113/v216, with no internal call shortcut.
             browser.find_element(By.ID,"season-build-btn").click()
             elapsed_wait(browser,'!state.busy',timeout=480)
-            need("시즌 환경 구축 단계 조회 완료" in read_ui(browser)["notice"],
+            report["season_build_ui_notice"]=read_ui(browser)["notice"][:260]
+            report["season_build_ui_stage"]=browser.find_element(
+                By.ID,"season-build-stage").text[:260]
+            need("시즌 환경 구축 단계 조회 완료" in
+                 report["season_build_ui_notice"],
                  "BROWSER_ENVIRONMENT_BUILD_NOT_COMPLETE")
             installed=app.state.jobs._verified_fresh_profile_result
             need(type(installed) is dict,"BROWSER_BUILD_DID_NOT_INSTALL_SOURCE")
