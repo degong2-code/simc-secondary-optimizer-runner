@@ -13,7 +13,8 @@ class V319NewSpecializationOffline(unittest.TestCase):
         c, controls=pilot.new_user_case()
         self.assertEqual((c["character_class"],c["character_spec"]),
                          ("monk","windwalker"))
-        self.assertEqual(c["final_T"],3450)
+        self.assertIsNone(c["final_T"])
+        self.assertIsNone(controls["final_T"])
         self.assertEqual(c["sockets"],4)
         self.assertIsNone(c["special_gem"])
         self.assertEqual(controls["max_single_stat_percent"],45)
@@ -21,6 +22,27 @@ class V319NewSpecializationOffline(unittest.TestCase):
         self.assertEqual(controls["consumable_choices"]["diamond_id"],0)
         self.assertEqual(controls["special_items"],[])
         self.assertEqual(controls["embellishments"],[])
+
+    def test_season_engine_auto_budget_overrides_nothing(self):
+        from runner import v106_user_session_controller as users
+        controls=users.standard_controls(("monk","windwalker"))
+        self.assertIsNone(controls["final_T"])
+        source={"G":2850,"J":92,"F":165,"O":{
+            "crit_rating":0,"haste_rating":0,
+            "mastery_rating":0,"versatility_rating":0},
+            "B":3107,"T":3107}
+        self.assertEqual(pilot.verified_automatic_T(source,controls),3107)
+        source2={**source,"G":3182,"B":3439,"T":3439}
+        self.assertEqual(pilot.verified_automatic_T(source2,controls),3439)
+        controls["final_T"]=3450
+        with self.assertRaisesRegex(pilot.V319Blocked,
+                                    "MANUAL_FINAL_T_NOT_ALLOWED"):
+            pilot.verified_automatic_T(source,controls)
+        controls["final_T"]=None
+        source2["T"]=3450
+        with self.assertRaisesRegex(pilot.V319Blocked,
+                                    "GJFO_FORMULA_DRIFT"):
+            pilot.verified_automatic_T(source2,controls)
 
     def test_new_profile_optin_fails_before_binary_native_or_web(self):
         with mock.patch.dict(os.environ,

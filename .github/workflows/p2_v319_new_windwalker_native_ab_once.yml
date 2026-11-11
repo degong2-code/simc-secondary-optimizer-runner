@@ -1,6 +1,6 @@
-# One NEW specialization (Windwalker Monk) built by P1, same source in both arms.
+# One NEW specialization (Windwalker Monk) built by P1, AUTO G/J/F/O T, same source in both arms.
 # Standalone one-shot, no generic recurring 26-spec Native repeat.
-name: P2 v319 fresh Windwalker user profile v290-v318 real Native AB
+name: P2 v319 fresh Windwalker automatic GJFO T v290-v318 real Native AB
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   fresh-windwalker-ab:
-    if: contains(github.event.head_commit.message, '[p2-v319-new-windwalker-native-once]')
+    if: contains(github.event.head_commit.message, '[p2-v319-auto-T-native-once]')
     runs-on: ubuntu-24.04
     timeout-minutes: 48
     env:
@@ -57,9 +57,9 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: p2-v319-fresh-windwalker-v290-v318-real-native-evidence
+          name: p2-v319-auto-T-fresh-windwalker-v290-v318-native-evidence
           path: |
-            out/p2_v319_windwalker_new_user_AB/receipt.json
-            out/p2_v319_windwalker_new_user_AB/*_original_native.zip
+            out/p2_v319_windwalker_auto_T_new_user_AB/receipt.json
+            out/p2_v319_windwalker_auto_T_new_user_AB/*_original_native.zip
           retention-days: 7
           if-no-files-found: warn

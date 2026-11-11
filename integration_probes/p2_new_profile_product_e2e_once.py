@@ -33,9 +33,9 @@ CASES={
         dict(character_class="warrior",character_spec="arms",character_race="human",
              target_ilevel=334,final_T=3250,sockets=4,special_gem=None),
     # v319: brand-new user-produced spec, not among v313/v314 10 distinct DPS.
-    "windwalker_monk_4ordinary_T3450":
+    "windwalker_monk_4ordinary_auto_T":
         dict(character_class="monk",character_spec="windwalker",
-             character_race="human",target_ilevel=334,final_T=3450,
+             character_race="human",target_ilevel=334,final_T=None,
              sockets=4,special_gem=None),
     "destruction_warlock_4ordinary_T3400":
         dict(character_class="warlock",character_spec="destruction",

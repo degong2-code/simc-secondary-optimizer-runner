@@ -27,9 +27,9 @@ from runner import v318_sem_distance_precision_priority as sem_policy
 from integration_probes import p2_new_profile_product_e2e_once as fresh
 from integration_probes import p3_haj_real_local_web_native_e2e as web_probe
 
-ROOT = pathlib.Path("out/p2_v319_windwalker_new_user_AB").resolve()
+ROOT = pathlib.Path("out/p2_v319_windwalker_auto_T_new_user_AB").resolve()
 RECEIPT = ROOT / "receipt.json"
-CASE_ID = "windwalker_monk_4ordinary_T3450"
+CASE_ID = "windwalker_monk_4ordinary_auto_T"
 MAX_NATIVE_PER_ARM = 64
 ITER_SCOUT = 35
 ITER_CONFIRM = 320
@@ -66,7 +66,7 @@ def new_user_case():
              former313.CASES,former314.CASES)
              for row in previous.values()),
          "V319_MUST_USE_NEW_UNTESTED_DPS_SPECIALIZATION")
-    need(case["target_ilevel"]==334 and case["final_T"]==3450
+    need(case["target_ilevel"]==334 and case["final_T"] is None
          and case["special_gem"] is None and case["sockets"]==4,
          "V319_SELECTED_NEW_CASE_CHANGED")
     controls.update({"max_single_stat_percent":45,"oil_hands":[]})
@@ -74,7 +74,27 @@ def new_user_case():
          and not controls.get("profile_path")
          and not controls.get("simc_profile"),
          "V319_NO_OLD_COMPLETED_PROFILE_ALLOWED")
+    need(controls["final_T"] is None, "V319_PRODUCT_CONTROLS_MUST_USE_AUTO_T")
     return case,controls
+
+def verified_automatic_T(environment, controls):
+    """Use season-engine G/J/F/O, never a manually inflated test budget."""
+    need(controls.get("final_T") is None,
+         "V319_MANUAL_FINAL_T_NOT_ALLOWED")
+    numbers=("G","J","F","B","T")
+    need(type(environment) is dict and all(
+         type(environment.get(k)) is int and environment[k]>=0
+         for k in numbers),
+         "V319_AUTO_SEASON_BUDGET_NUMERIC_REQUIRED")
+    oil=environment.get("O")
+    need(type(oil) is dict and set(oil)==set(STATS)
+         and all(type(x) is int and x>=0 for x in oil.values()),
+         "V319_AUTO_SEASON_O_VECTOR_REQUIRED")
+    need(environment["B"]==sum(environment[k] for k in ("G","J","F"))
+         and environment["T"]==environment["B"]+sum(oil.values())
+         and environment["T"]>0,
+         "V319_AUTO_SEASON_GJFO_FORMULA_DRIFT")
+    return environment["T"]
 
 def main():
     need(os.getenv("P2_V319_ONE_FRESH_SPEC_AB_ONCE")=="1",
@@ -86,7 +106,9 @@ def main():
         "status":"STARTED","case":CASE_ID,"character":case,
         "source_build":fresh.BUILD,"revision":fresh.REVISION,
         "simc_binary_sha256":fresh.BINARY_SHA,
-        "manual_final_T":case["final_T"],
+        "manual_final_T":None,
+        "target_budget_mode":"VERIFIED_AUTO_GJFO_NO_MANUAL_OVERRIDE",
+        "auto_final_T":None,
         "scout_iterations":ITER_SCOUT,"confirmation_iterations":ITER_CONFIRM,
         "native_cap_each_arm":MAX_NATIVE_PER_ARM,
         "fresh_profile_generated_once_for_both_arms":False,
@@ -125,6 +147,7 @@ def main():
         doc["environment_budget"]={k:env.get(k)
                                    for k in ("G","J","F","O","B","T")}
         doc["environment_manifest_sha256"]=installed.get("manifest_sha256")
+        doc["auto_final_T"]=verified_automatic_T(env,controls)
         save(doc)
         need(env.get("environment_ready") is True
              and env.get("environment_installed") is True
@@ -168,7 +191,7 @@ def main():
                     headers=headers)
                 need(confirmation.status_code==200
                      and confirmation.json()["user"]["target"]["final_T"]
-                        ==case["final_T"]
+                        is None
                      and confirmation.json()["user"]["character"]["class"]=="monk"
                      and confirmation.json()["user"]["character"]["spec"]=="windwalker",
                      "V319_PRODUCT_USER_INPUT_LOST")
@@ -179,7 +202,8 @@ def main():
                     source_loader=longrun.entry.source)
                 context,flask=staged["context"],staged["flask"]
                 identity=context["identity"]
-                need(identity["approved_final_T"]==case["final_T"]
+                need(identity["approved_final_T"]==doc["auto_final_T"]
+                     and identity["base_B"]==env["B"]
                      and identity["scout_iterations"]==ITER_SCOUT
                      and identity["confirm_iterations"]==ITER_CONFIRM
                      and identity["binary_sha256"]==fresh.BINARY_SHA
@@ -191,6 +215,7 @@ def main():
                 need(re.search(r"(?m)^monk=",profile) is not None
                      and re.search(r"(?m)^spec=windwalker$",profile) is not None,
                      "V319_NEW_SPEC_SIMC_PROFILE_NOT_ACTUALLY_CREATED")
+                doc["verified_auto_T_matches_v291_profile"]=True
                 doc["source_profile_sha256"]=identity["source_profile_sha256"]
                 doc["source_profile_raw_sha256"]=hashlib.sha256(
                     profile.encode("utf8")).hexdigest()
