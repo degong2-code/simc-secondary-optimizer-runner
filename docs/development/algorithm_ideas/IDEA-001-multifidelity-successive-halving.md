@@ -64,3 +64,9 @@
 - [v318 pure opt-in source](../../../runner/v318_sem_distance_precision_priority.py), [v291 durable 연결](../../../runner/v291_durable_multiscale_native_runner.py), [개발 노트](../notes/2026-11-11_p2-v318-sem-distance-precision-optin.md).
 - 기존 35/320 요청·v290 정밀 주기 **그대로** 유지; Native 실행 대상의 순서를 오차/근접대안 가치로 바꿔보는 저위험 선행 실험이다. `sem_precision_priority_optin=False` 기본값 불변, opt-in은 별도 세션 seal·pending 재검증.
 - 본 변경은 **코드 및 오프라인 시험 계약 준비**이지 실 Native A/B 개선·통계 확정 아님. 120 단계 도입·확인 주기·호출수 감소도 아직 없음. 기존 v290 source SHA/영수증 보존.
+
+## 2026-11-11 v320 pure SEM budget advisory (아직 Native 단계 미통합)
+
+- [v320 근거·오차 기반 반복수 계획](../notes/2026-11-11_p2-v320-sem-tier-advisory.md), [오프라인 진단 코드](../../../runner/v320_idea001_sem_tier_advisory.py).
+- 실제 JSON2 **samples/SEM와 비교 320 기준의 SEM 바닥**을 사용해 후보가 35/120/320 중 어느 단계의 해상도를 요구할지 추정한다. 120은 이미 35로 평가한 후보를 **별도 Native로 재실행하는 연구 가설**이며 v291 `UNTYPED_SIMC_ITERATION_IDENTITY` 때문에 지금은 실행 불가능. 추정값은 SimC 사실/미래 순위 확정이 아님.
+- 새 전문화 Native에서 120-tier의 실제 비용·탈락률을 측정해 이득이 있을 때만 35/120/320 별도 정확 시드·캐시/재개 계약을 연결하고, 실제 최고의 320 확인 DPS 및 동일 시간/iterations 비교 후에만 승격한다. v290 기본·v318 opt-in 불변.
