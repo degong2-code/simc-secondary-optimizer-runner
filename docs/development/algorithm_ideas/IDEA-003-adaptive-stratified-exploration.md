@@ -20,3 +20,8 @@
 - **통합 우선안:** **v312의 배치당 전역 후보 3개를 셀별 부족한 커버리지 기준으로 고르는 옵션** 또는 v303 global reserve 교체. IDEA-002의 새 지역 요청에 셀 샘플을 제공하되, 둘 다 동시에 할당량을 이중 소유하지 않도록 계획자 하나가 예산을 관리.
 - **기각/보류 기준:** 원래 v290 maximin 또는 v312 고정 global reserve 대비 동일 비용에서 새 고점 발견률·인접 셀 커버리지·최저 5/10분 확인 DPS가 개선되지 않고 빈 셀만 측정한다면 보류.
 - **심사 결론:** `INTEGRATE_COVERAGE_OPTION` / 기존 탐색 reserve의 소규모 교체 실험이 우선. **독립 엔진 실험 전 중복성 확인.**
+
+## v330 — 기존 전역 reserve만 층화 후보 선택으로 교체 (실측 전)
+
+- [선택형 코드](../../../runner/v330_idea003_stratified_reserve.py), [실험 계약](../notes/2026-11-11_p2-v330-idea003-feral-shared-history-fork.md). v290과 동일한 bounded pool의 finite-pool-mass 정규화 12 Voronoi 셀, 부족도 이후 maximin. 초기 전역16개·지역/정밀 후보와 reserve 슬롯 수는 변경하지 않는다.
+- v329의 독립 초기 시드·후보 방식 혼합 교란을 피하기 위해 신규 야성 드루이드에서 동일한 실제 관측 prefix를 첫 다른 reserve까지 공유한다. 현재 세션 원본 Native bytes만 재검증하여 재사용. 각 arm 64 logical Native/4520 iter, physical Native separately. v290/v318 별도 불필요 재실행 없음. 실제 Native 결과 확인 전 성능 우위 주장 금지.
