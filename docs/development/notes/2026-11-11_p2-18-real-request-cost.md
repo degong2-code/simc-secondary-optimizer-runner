@@ -1,5 +1,14 @@
 # P2 2026-11-11 — 실제 Native 18회, 35/120/320 반복 비용 실측
 
+- **Capability:** `OPTIMIZER.POLICY`, `DEV.CONTINUITY`.
+- **Keywords:** SimC, v315, 18 real Native, 35/120/320, iterations, startup, wall-clock, IDEA-001.
+- **Prior evidence:** [v314 source proof](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42846073820) and [original compact 18 timings](../research_receipts/p2_20261111_18_native_request_cost.json).
+- **Decision:** `REUSE` original v290 35/320 until 120-step or precision cadence improves actual confirmed DPS per wall/iterations.
+- **Changes:** Preserve 18 measured request timings linked to two existing v314 profiles in Git research ledger; source and binary pinned.
+- **Verification:** 18 real local SimC Native cost measurements, 2 specs × 3 iteration levels × 3 repeats; NOT new-profile optimizer A/B.
+- **Remaining:** Verify v316/v317 trace and test novel-specialization algorithm comparison at equal iterations and wall time.
+- **Efficiency:** No repeated season DB scrape or 26-spec Native sweep; 120 extra phase not introduced.
+
 - **IDEA-001 고도화**, 새로운 알고리즘 ID는 추가하지 않음. **Native 실측18회**, 알고리즘 간 공정 DPS A/B **0회**.
 - 기존 v314 신규 프로필 연구 원본 `arcane_mage__narrow`와 `beast_mastery_hunter__narrow`의 **동일 CHMV/아이템/특성/전투조건**을 보존했다. 각 원본 input SHA는 [소형 실측 표](../research_receipts/p2_20261111_18_native_request_cost.json)에 있고, binary SHA `6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6` 확인.
 - `iterations=35,120,320`과 출력 JSON2 경로만 교체해 각 전문화×iteration마다 3회씩 실제 SimC 실행, 총18회. JSON2 원본 player DPS samples=34/119/319 확인. SimC 소스·revision `c20e2ad52e`, threads1, single target 300s.

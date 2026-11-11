@@ -1,5 +1,14 @@
 # v319 신규 풍운 수도사 프로필 기반 v290/v318 Native A/B — 실행 계약
 
+- **Capability:** `PRODUCT.E2E`, `OPTIMIZER.POLICY`, `DEV.CONTINUITY`.
+- **Keywords:** v319, new Windwalker Monk, auto G/J/F/O/T, v216, v212, v098, real Native, v290/v318 35/320.
+- **Prior evidence:** [First auto-T Action #42939598332](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42939598332) offline 43 PASS/1 ERROR, Native SKIPPED; [ledger #42939598253](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42939598253) failed.
+- **Decision:** `CONNECT` current environmental budget Build to a genuinely new Monk/Windwalker generated profile, share that exact profile between v290/v318; do not insert manual T.
+- **Changes:** New case T=null; verification that generated context B/T equal environment G+J+F+O; 64 Native per arm planned, separate exact archives.
+- **Verification:** Initial new-Windwalker contract tests passed, but the v318 exception alias test failed; actual environment Build and Native not reached.
+- **Remaining:** Fix tests and ledger, rerun Actions, verify source/profile SHA and 320 DPS/SEM actual after success before judging v318.
+- **Efficiency:** Reuse valid season source/pinned SimC binary; new user profile per campaign, no old completed profile or DPS cache; main/v290 unchanged.
+
 - **사용자 직접 승인:** 모든 후속 실제 Native 알고리즘 비교에서 새로운 **전문화 사용자 프로필을 환경 구축 엔진 v113→v216/v217→v212→v098으로 직접 생성**한다. 역사 완성 프로필·최고 CHMV·DPS 결과는 입력에 주입하지 않는다. 단일 실험 내 v290/v318은 동일 새 profile SHA 사용.
 - **이번 신규 전문화:** `monk/windwalker` (풍운 수도사), v313 4전문화 및 v314 8전문화 어디에도 없는 대상. 인간, ilvl334, **수동 T 미지정(final_T=null)**, 환경 구축에서 계산된 **자동 T=G+J+F+O**, 보석 일반4/특수 없음, Oil0, 치/가/특/유 최종 상한45%, 단일 타깃300초, 기본 제공 특성·장신구. 실제 제품 사용자 source controls 및 검증된 시즌 데이터 사용. 기존 70783 source/Native 프로필 파일 재생·재사용 아님.
 - **구현:** [한 번만 실행되는 source-first A/B](../../../integration_probes/p2_v319_new_windwalker_v290_v318_real_once.py); 64 Native/arm, 총128 최대; 각각 35 scout/320 confirm, v316 timing optin. `v291` 별도 seal/cache-only 재생 0 new Native, 각 arm 원본 input·JSON2·journal·timing ZIP 보존 7일. 환경 G/J/F/O 실 Native 상한3, 일치 확인 후 동일 `context` 재사용. current season live build drift·인증정보 미비 시 원문 차단.

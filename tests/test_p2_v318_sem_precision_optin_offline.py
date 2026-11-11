@@ -75,6 +75,11 @@ class V318Precision(unittest.TestCase):
         rows.append(dict(rows[0]))
         with self.assertRaisesRegex(old.PolicyBlocked,
                                     "DUPLICATE_TARGET_ITERATION_IDENTITY"):
+            self.call(old.next_plan,rows,15)
+        # v318 uses the unqualified v290 import; exception class identity
+        # may differ from the package-qualified import above.
+        with self.assertRaisesRegex(policy.baseline.PolicyBlocked,
+                                    "DUPLICATE_TARGET_ITERATION_IDENTITY"):
             self.call(policy.next_plan,rows,15)
 
     def test_v291_optin_seal_prevents_cross_policy_replay_and_native_duplicate(self):
