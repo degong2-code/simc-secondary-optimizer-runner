@@ -25,3 +25,8 @@
 
 - [v328 measured radius opt-in](../../../runner/v328_idea002_evidence_gated_radius.py)과 [v291 별도 session seal](../../../runner/v291_durable_multiscale_native_runner.py)로 v306 다중 시작점/seed 보호/전역 reserve를 그대로 재사용한다. 실측된 local vs seed DPS 차이와 결합 SEM을 **방향 탐색용 휴리스틱**으로만 사용해 저확신 지역 반경을 ×1.6까지 넓히고, 장기간 안정된 경우만 조심스럽게 축소한다. 이 수치는 공식 통계95 판정이 아님.
 - [개발 기록](../notes/2026-11-11_p2-v328-idea002-radius-ablation.md). 새 전문화 Native 0회, 실제 후보 품질·누락 개선은 미입증. 다음 신규 프로필에서 v306와 v328 16 global+40 other/8 precision, 동일 iterations, 별도 고유 seal/원본 SimC input 비교 후 효능 판정. 기본 v290·v306 캐시 세션 불변.
+
+## v329 신규 Affliction 동일 4520-iteration 실제 평가 등록 (실행 전)
+
+- [새 P1 source와 v306/v328 동일 본당 64 Native/4520 iterations](../notes/2026-11-11_p2-v329-idea002-new-affliction-native.md). **두 지역 정책 모두 완전히 같은 16 초기 전역 후보·8 정밀확인 슬롯**을 가지며 SimC 독립 시드는 일부 경로 분기를 유발할 수 있다. 첫 원본 v290/v318 64×2는 P1 검증용이지 equal-iterations 지역 비교의 승패 대상이 아니다.
+- 실제 Native 결과 전에는 고점 발견·속도 우위를 표시하지 않는다. SimC 확인320 우수 후보의 안정성/분산을 독립 N640×2 확인해 한 전문화의 winner bias를 줄이되, 결과는 전역 최적·familywise95 증명이 아니다.
