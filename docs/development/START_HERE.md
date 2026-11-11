@@ -12,6 +12,7 @@
 | v318 오차·다른 CHMV 후보 확인 정책 | [v319 신규 풍운 수도사 실 Native A/B](notes/2026-11-11_p2-v319-new-windwalker-real-v290-v318-ab.md), [영구 compact 원본 대사](research_receipts/p2_v319_windwalker_auto_T_real_v290_v318_compact.json) — 최고 CHMV 동일·95 우위 없음 |
 | 최신 실 Native 성공/비용·원본 범위 | [v319 실제 Actions SUCCESS #42941245130](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42941245130), [증거 지도](EVIDENCE_INDEX.md) |
 | v321 신규 Shadow Priest 128+3 Native 실측 | [영구 compact·원본 SHA](research_receipts/p2_v321_shadow_auto_T_35_120_320_compact.json), [Action 실패·별도 120 복구 기록](notes/2026-11-11_p2-v321-new-shadow-priest-120-native.md) — 제품 120 단계 미통합 |
+| v331 마지막 N32/35/48/56/64 실 v290 비교 | [신규 부정 죽기 연구](notes/2026-11-11_p2-v331-unholy-fixed-scout-n-final-study.md) — Native 결과 확인 전 |
 | v330 IDEA-003 신규 야성 드루이드 실제 124 Native | [검증 compact](research_receipts/p2_v330_feral_idea003_124_native_compact.json), [Actions SUCCESS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42965880663) — 19회 동일 관측 재사용, 발견력 우위 없음 HOLD |
 | v329 IDEA-002 신규 고통 흑마법사 267 Native | [원본 SHA·독립 홀드아웃·제약](research_receipts/p2_v329_affliction_idea002_267_native_compact.json), [Actions PASS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42962010689) — 우위 미입증, radius-only 판정 보류 |
 | v327 Havoc 신규 프로필·N32~96×3시드 | [299회 실제 Native·N별 후회도](research_receipts/p2_v327_havoc_auto_T_299_native_compact.json), [원본 재활용 연구 SUCCESS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42957270859) — N32/48 모두 유망, 기본 미변경 |
