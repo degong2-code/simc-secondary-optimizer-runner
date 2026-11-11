@@ -1188,7 +1188,8 @@ class LocalWebAPIOffline(unittest.TestCase):
                 headers={"x-simc-local-token":"offline-only-token",
                          "origin":"http://127.0.0.1:8765"})
             self.assertEqual(ok.status_code,200,ok.text)
-            self.assertEqual(ok.json()["names"]["spec"],{})
+            self.assertEqual(len(ok.json()["names"]["spec"]),26)
+            self.assertEqual(ok.json()["names"]["spec"]["demonhunter/devourer"],"포식")
             self.assertEqual(ok.json()["native_calls_now"],0)
             denied=client.get("/api/v1/environment/official-game-terms",
                 params={"game_build":"../../other"},
