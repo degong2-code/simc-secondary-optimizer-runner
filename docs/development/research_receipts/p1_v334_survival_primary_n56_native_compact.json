@@ -1,0 +1,82 @@
+{
+  "schema": "p1_v334_primary_survival_native_compact_v1",
+  "product": "SIMC_SECONDARY_OPTIMIZER",
+  "scope": "one_fresh_survival_hunter_auto_T_334_four_ordinary_gems",
+  "verification_level": "REAL_FASTAPI_PRIMARY_CONTINUOUS_SIMC_NATIVE_PASS",
+  "actions_run_id": 42983978567,
+  "actions_url": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42983978567",
+  "actions_conclusion": "success",
+  "commit_head_at_run": "47776874911501334e334a5200825aa9bdb7ee53",
+  "binary": {
+    "game_build": "12.1.5.70783",
+    "simc_revision": "c20e2ad52e4c33711f74272309a5748125175fe8",
+    "binary_sha256": "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6"
+  },
+  "profile": {
+    "class": "hunter",
+    "specialization": "survival",
+    "race": "human",
+    "target_ilevel": 334,
+    "final_T_manual": null,
+    "ordinary_gems": 4,
+    "special_gem": null,
+    "fresh_product_profile_stable_sha256": "c6ce259514c79fe97c68dcf98bcd732463ee1840fa46cf92454bd019e3b74861"
+  },
+  "environment_budget": {
+    "G": 2850,
+    "J": 92,
+    "F": 165,
+    "O": {
+      "crit_rating": 0,
+      "haste_rating": 0,
+      "mastery_rating": 0,
+      "versatility_rating": 0
+    },
+    "B": 3107,
+    "T": 3107
+  },
+  "engine": {
+    "v290": true,
+    "v291": true,
+    "v293": true,
+    "endpoint": "POST /api/v1/longrun/start",
+    "continuous": true,
+    "scout_iterations_per_CHMV": 56,
+    "confirmation_iterations_per_CHMV_policy": 320,
+    "native_cap_test": 12,
+    "native_cap_user_web": 64,
+    "worker_status": "BUDGET_EXHAUSTED",
+    "environment_native_calls": 3,
+    "dps_native_calls": 12
+  },
+  "observation": {
+    "observed_best_dps_mean": 173172.96962741594,
+    "sem": 305.8194828289087,
+    "absolute_rating_T": {
+      "crit_rating": 1072,
+      "haste_rating": 38,
+      "mastery_rating": 1577,
+      "versatility_rating": 420
+    },
+    "final_T": 3107,
+    "confidence_level": 0.95,
+    "selected_pair_direction_supported_at_95": false,
+    "global_optimum_proven": false
+  },
+  "artifact": {
+    "github_artifact_id": 13838801980,
+    "name": "p1-v334-survival-primary-n56-real-native",
+    "size_in_bytes": 600698,
+    "zip_digest": "sha256:b9b00668efd605c65179a89b07b4ca65d9a8a9999aa85136d02c0ee52df794ab",
+    "expires_at": "2026-11-18T08:04:54Z"
+  },
+  "evidence_limitation": [
+    "Single specialization and fresh product scenario only",
+    "12 DPS Native calls; not a 64-call final user run",
+    "95 percent selected-pair direction not supported",
+    "No proof of global optimum or familywise confidence",
+    "No human-operated Windows browser with installed SimC and full real-DPS run",
+    "Original Native JSON2 archived temporarily in Actions; this compact record is not raw Native proof"
+  ],
+  "provenance": "Derived from successful Actions job 130400688656 console receipt and GitHub artifact metadata; not independent archive-byte re-audit."
+}

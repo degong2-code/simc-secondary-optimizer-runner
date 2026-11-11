@@ -29,7 +29,7 @@
 
 ## 2026-11-11 최종 P2 판정
 
-[최신 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P2_V331_PRODUCT_FINALIZATION.md)를 우선한다. [제품 한국어 웹·77개 공식명·검증](notes/2026-11-11_product-korean-simple-ui.md) 추가(2026-11-11); v331 완료, 신규 v293 기본 N56 적용. [최신 제품 통합 노트](notes/2026-11-11_p2-product-v290-default-n56.md); 실제 CI/Native 검증 상태는 해당 영수증 기준. 아래 v316/v314 설명은 **역사 기록**이며 후속 v329/v330/v331 실제 timing trace를 부정하지 않는다. 기존 환경/대표프로필/선택 기능 재개발 금지.
+[최신 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P2_V331_PRODUCT_FINALIZATION.md)를 우선한다. [v333 Chrome 실클릭](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42983424219)과 [v334 기본 v290/N56 Native12 실증](notes/2026-11-11_p1-v334-primary-n56-native-once.md) 완료(2026-11-11); [한국어 웹·77개 공식명](notes/2026-11-11_product-korean-simple-ui.md) 보존; v331 완료, 신규 v293 기본 N56 적용. [최신 제품 통합 노트](notes/2026-11-11_p2-product-v290-default-n56.md); 실제 CI/Native 검증 상태는 해당 영수증 기준. 아래 v316/v314 설명은 **역사 기록**이며 후속 v329/v330/v331 실제 timing trace를 부정하지 않는다. 기존 환경/대표프로필/선택 기능 재개발 금지.
 
 ## 2026-11-11 역사 P2 실측 및 계측 경계
 
