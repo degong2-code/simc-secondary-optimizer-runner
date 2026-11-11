@@ -1,0 +1,65 @@
+name: P2 v327 recover verified Havoc 128 and run only N research 168
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p2_v327_havoc_recovery_n168_only.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p2-v327-havoc-verified-recovery
+  cancel-in-progress: false
+jobs:
+  recovery-only:
+    if: contains(github.event.head_commit.message, '[p2-v327-havoc-recovery168-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    env:
+      PYTHONPATH: runner:integration_probes:.
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse exact pinned SimC binary, no source rebuild
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42552942329
+          name: p3-har-verified-source-new-binary-short-lived
+          path: out/binary
+          github-token: ${{ github.token }}
+      - name: Download original v327 action artifact with BOTH completed 64 Native arms
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42955908381
+          name: p2-v327-new-havoc-autoT-N32-48-64-96-3seed-holdout
+          path: out/v327_original_actions
+          github-token: ${{ github.token }}
+      - name: Verify regression and recovery safety before new Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(sha256sum out/binary/simc | cut -d' ' -f1)" = "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6"
+          chmod +x out/binary/simc
+          python -m pip install -r requirements-web-test.txt
+          python -m py_compile integration_probes/p2_v327_havoc_recover_original_128_only_n168.py
+          python -m unittest -v tests.test_p2_v327_havoc_recovery_offline tests.test_p2_v327_havoc_three_seed_n_offline tests.test_p2_v325_independent_holdout_replay_offline tests.test_p2_v326_new_devastation_offline tests.test_p2_v319_new_windwalker_ab_offline
+          python tools/check_development_ledger.py
+      - name: Verify all 128 originals SHA then run only 168 NEW N Native
+        timeout-minutes: 46
+        env:
+          P2_V327_REUSE_ORIGINAL_128_NATIVE_ONLY: '1'
+        run: python -u integration_probes/p2_v327_havoc_recover_original_128_only_n168.py
+      - name: Preserve original and new research exact inputs and JSON2
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-v327-original128-verified-recovered168-research
+          path: |
+            out/p2_v327_havoc_autoT_three_seed_n/recovery_receipt.json
+            out/p2_v327_havoc_autoT_three_seed_n/original_failed_action_receipt.json
+            out/p2_v327_havoc_autoT_three_seed_n/research_progress.json
+            out/p2_v327_havoc_autoT_three_seed_n/*_original_native.zip
+            out/p2_v327_havoc_autoT_three_seed_n/research_cases/
+          retention-days: 7
+          if-no-files-found: warn
