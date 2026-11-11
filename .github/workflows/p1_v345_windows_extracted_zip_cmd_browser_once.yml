@@ -1,3 +1,4 @@
+# v345 retry: wait for actual app initialization before requesting browser form; native 0.
 # v345 one bounded retry after standalone test-script Python syntax repair; no new Native.
 name: P1 v345 Windows extracted ZIP CMD + real Chrome saved-session restore (Native 0)
 on:
