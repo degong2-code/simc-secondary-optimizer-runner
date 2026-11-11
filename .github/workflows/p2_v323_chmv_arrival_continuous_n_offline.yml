@@ -1,5 +1,6 @@
 name: P2 v323 CHMV arrival and variable N research offline
 # v323-v2: same CHMV must not create false DPS-gap N decisions.
+# Focused test update: all candidate/reference inputs require exact target.
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]

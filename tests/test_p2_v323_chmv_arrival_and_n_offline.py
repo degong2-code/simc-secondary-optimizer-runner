@@ -49,7 +49,7 @@ class ArrivalN(unittest.TestCase):
                         (out["next_direct_N_suggestion"]-16)%8==0)
         self.assertFalse(out["fixed_35_120_320_tiers_required"])
     def test_reference_noise_floor_prevents_false_precision(self):
-        c={"iterations":35,"samples":34,"dps_mean":11010.,"dps_sem":300.}
+        c={"iterations":35,"samples":34,"dps_mean":11010.,"dps_sem":300.,"target":dict(zip(K,(300,300,300,100)))}
         r={"iterations":320,"samples":319,"dps_mean":11000.,"dps_sem":100.,"target":dict(zip(K,(100,400,300,200)))}
         self.assertEqual(n.recommend(c,r)["status"],
                          "CANNOT_RESOLVE_WITH_CANDIDATE_N_ALONE")
