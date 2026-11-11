@@ -1080,6 +1080,7 @@ def run(context, flask_vector, binary, output, *,
                          else nested_regions.SCHEMA if nested_percent_grid
                          else multiregion_grid.SCHEMA if multiregion_percent_grid
                          else percent_grid.SCHEMA if percent_enabled
+                         else sem_priority.SCHEMA if sem_precision_priority_optin
                          else "v290_multiscale_noisy_simplex_policy_v1"),
               "official_formula": "T=G+J+F+O",
               "base_B": B, "fixed_O": identity["oil_vector"],

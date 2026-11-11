@@ -89,6 +89,7 @@ class V318Precision(unittest.TestCase):
                     max_new_native_this_invocation=2,
                     sem_precision_priority_optin=True)
                 self.assertEqual(first["new_native_this_invocation"],2)
+                self.assertEqual(first["policy"], policy.SCHEMA)
                 seal=json.loads((out/"V291_SESSION.json").read_text())
                 self.assertIn("experimental_v318_sem_precision_priority",seal)
                 with self.assertRaisesRegex(durable.LongRunBlocked,

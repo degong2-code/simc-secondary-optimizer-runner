@@ -8,3 +8,5 @@
 - **위험:** 큰 SEM 후보의 우연한 UCB로 확인 slot 낭비, 멀리 떨어진 경합 후보 편향, early high scout mean 민감성. threshold 8%/z=-1.96은 조정 가능한 검증 전 정책값으로 제품 95% 통계적 보증 아님. 이 실험은 정밀 확인 *횟수나 주기*를 바꾸지 않아 계산비 감소가 자동 실현되는 것도 아니다.
 - **시험:** 새 `tests/test_p2_v318_sem_precision_optin_offline.py`로 pure ordering/입력 검증 및 synthetic v291 Native0 replay·다른 알고리즘/기존 seal 분리를 검증하도록 코드를 추가. Workflow [v318 opt-in focused](../../.github/workflows/p2_v318_sem_precision_offline_once.yml)는 push sentinel 시 GitHub CI 실행, 결과 PASS는 실행 영수증 확인 뒤 기록. 새 Native0, 실제 DPS 향상 증거0.
 - **다음 순서:** v317 실 Native 타이밍 확인 → 이 v318 focused/offline CI PASS → 실제 새 사용자 프로필에서 원본 v290 vs opt-in v318의 동일 iterations, 동일 wall 별도 최소 A/B. 품질 개선 확인 전 default 바꾸지 않음.
+
+- **출력 표시 교정:** v291 실행 결과 `report["policy"]`에서도 opt-in v318 schema를 별도 표시하도록 연결했다. 기본 v290 report label과 기존 원본 v290 source SHA는 변하지 않는다. 실제 Actions 테스트 결과·실 SimC 성능 우위는 아직 검증 전이다.
