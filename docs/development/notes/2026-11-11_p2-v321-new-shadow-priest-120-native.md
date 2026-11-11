@@ -1,0 +1,10 @@
+# P2 v321 새 암흑 사제 사용자 프로필 · 실제 SimC 35/120/320 오차 비용 검증
+
+- **Capability:** `OPTIMIZER.POLICY`, `PRODUCT.E2E`, `DEV.CONTINUITY`.
+- **Keywords:** v321, priest/shadow, source-first 26 DPS, v216/v212, auto T, exact source SHA, v290/v318, v320 SEM, 35/120/320, Native.
+- **Prior evidence:** [v319 새 Windwalker 실제 Native 131 PASS](../research_receipts/p2_v319_windwalker_auto_T_real_v290_v318_compact.json), [v320 오프라인 CI PASS #42944016948](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42944016948).
+- **Decision:** `REUSE` the original v319 source-first Build/user Web/v291 dual arm harness with a **different new DPS specialization**: priest/shadow, human, ilvl334, final_T=null, ordinary gem4/special0/oil0, 45% stat cap. 120-tier remains research-only, not v291 exact session.
+- **Changes:** [new one-shot](../../../integration_probes/p2_v321_shadow_priest_new_user_sem120_real_once.py) + [offline test](../../../tests/test_p2_v321_shadow_new_user_120_offline.py) + [push workflow](../../../.github/workflows/p2_v321_new_shadow_sem120_native_once.yml). Reuse parameterized v319 exact-source path; after same new profile 64+64/4520+4520 requested iterations, sample three distinct current-run 35+320 confirmed CHMV at **new 120 iterations**, with only iteration/json2 path modified, full input/raw JSON2/seed/SHA archived. New Native maximum: environment3 + DPS128 + research120 three = **134**, not repeated history.
+- **Verification:** Proposed push-only; new Shadow original SimC Native/DPS results unverified until Actions SUCCESS, original input SHA and archived JSON2 inspected. Past v319 source/confirmed DPS not reused as experiment data.
+- **Remaining:** After real run, confirm exact new user profile SHA, observed G/J/F/O/T, 35/120/320 actual SEM·wall and v320 advisory counts; only then decide if 120 economics justify new typed v291 phase and independent seed caching.
+- **Efficiency:** Same 70783 static source retrieval code/binary, new environment evidence by actual build, no 26-DPS sweep. Three independent new 120 SimC probes reusing current-run exact v291 320 profile/buffs/gear, no 120 execution claimed by v291 itself.

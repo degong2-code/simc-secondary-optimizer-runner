@@ -1,0 +1,64 @@
+# One-shot **new** Shadow Priest from P1 70783 source Build, auto T; 120-tiers
+# are RESEARCH ONLY from current-run exact v291 original 320 input. No default.
+name: P2 v321 new Shadow Priest source-first real 35-120-320 SEM study
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p2_v321_new_shadow_sem120_native_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p2-v321-shadow-new-user-120-native-once
+  cancel-in-progress: false
+jobs:
+  new-shadow-priest:
+    if: contains(github.event.head_commit.message, '[p2-v321-new-shadow-120-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 50
+    env:
+      PYTHONPATH: runner:integration_probes:.
+      SIMC_PINNED_SOURCE_COMMIT: c20e2ad52e4c33711f74272309a5748125175fe8
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse exact pinned SimC artifact
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42552942329
+          name: p3-har-verified-source-new-binary-short-lived
+          path: out/binary
+          github-token: ${{ github.token }}
+      - name: Fresh Shadow + v319 backward compat + v320 pure advisor offline, Native0
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(sha256sum out/binary/simc | cut -d' ' -f1)" = "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6"
+          chmod +x out/binary/simc
+          python -m pip install -r requirements-web-test.txt
+          python -m py_compile integration_probes/p2_v319_new_windwalker_v290_v318_real_once.py integration_probes/p2_v321_shadow_priest_new_user_sem120_real_once.py tests/test_p2_v321_shadow_new_user_120_offline.py
+          python -m unittest -v tests.test_p2_v321_shadow_new_user_120_offline tests.test_p2_v319_new_windwalker_ab_offline tests.test_p2_v320_sem_tier_advisory_offline tests.test_p2_v318_sem_precision_optin_offline tests.test_p3_hw_multiscale_policy tests.test_v316_optin_case_time_trace_offline
+          python tools/check_development_ledger.py
+      - name: Real NEW Shadow environment/profile, 64+64 original Native, 3 extra120 Native
+        timeout-minutes: 42
+        env:
+          P2_V321_NEW_SHADOW_SEM120_ONCE: '1'
+          BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+          BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+          WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+          WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+        run: python -u integration_probes/p2_v321_shadow_priest_new_user_sem120_real_once.py
+      - name: Short-lived exact current-run source and 35/120/320 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-v321-new-shadow-auto-T-35-120-320-native
+          path: |
+            out/p2_v321_shadow_auto_T_new_user_AB/receipt.json
+            out/p2_v321_shadow_auto_T_new_user_AB/*_original_native.zip
+          retention-days: 7
+          if-no-files-found: warn
