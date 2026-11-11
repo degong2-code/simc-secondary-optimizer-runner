@@ -1,4 +1,5 @@
 name: P2 v318 SEM-confirmation opt-in offline tests
+# Trigger latest report policy-label change focused revision; Native0.
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
