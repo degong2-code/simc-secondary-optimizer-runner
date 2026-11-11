@@ -508,9 +508,11 @@ function renderInstalledFlaskChoices(data) {
          item.crafting_quality<0 ||
          !Number.isInteger(item.F_rating)||item.F_rating<0 ||
          !/^[a-z0-9_]{1,90}$/.test(item.simc_input_token||""))continue;
+      const official=(typeof item.official_name_ko==="string" &&
+        item.official_name_ko.trim())?item.official_name_ko:null;
       selector.appendChild(option(item.physical_item_id,
-        item.simc_input_token.replace(/_/g," ")+" · 검증 품질 "+
-        item.crafting_quality+" · F "+item.F_rating));
+        (official||item.simc_input_token.replace(/_/g," "))+
+        " · 검증 품질 "+item.crafting_quality+" · F "+item.F_rating));
     }
   }
   selector.value=Array.from(selector.options).some(x=>x.value===prior)?prior:"";

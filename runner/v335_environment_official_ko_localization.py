@@ -80,6 +80,9 @@ def _read(root,build):
         raise LocalizationBlocked("CACHE_JSON_INVALID") from exc
     need(type(doc) is dict and doc.get("schema")==SCHEMA and
          doc.get("game_build")==build and
+         doc.get("locale")=="ko_KR" and
+         doc.get("provider")=="BLIZZARD_OFFICIAL_GAME_DATA_API" and
+         doc.get("api_namespace")=="static-kr" and
          type(doc.get("items")) is list and
          len(doc["items"])<=MAX_IDS and
          type(doc.get("requested_item_ids")) is list and

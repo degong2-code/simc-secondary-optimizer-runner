@@ -108,6 +108,17 @@ class EnvironmentKoTests(unittest.TestCase):
                          "메레크타의 송곳니")
         get.assert_not_called()
 
+    def test_verified_catalog_name_projection_preserves_simc_item_ids(self):
+        source=gear.read()
+        official_names={158367:"메레크타의 송곳니"}
+        choices=gear.public_options(source,official_names=official_names)
+        row=next(x for x in choices["choices"]["trinket"]
+                 if x["item_id"]==158367)
+        self.assertEqual(row["name_ko"],"메레크타의 송곳니")
+        self.assertEqual(row["item_id"],158367)
+        with self.assertRaises(gear.GearBlocked):
+            gear.public_options(source,official_names={999999:"임의명"})
+
     def test_no_candidate_does_not_create_empty_cache(self):
         empty=install()
         empty["official_F_physical_source"]=None

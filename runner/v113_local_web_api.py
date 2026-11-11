@@ -915,15 +915,26 @@ class LocalJobs:
             except (OSError,ValueError,TypeError,KeyError,
                     environment_manifest.EnvironmentBlocked):
                 continue
-        # Official names are presentation-only and come from the same
-        # verified game-build cache; never infer from SimC tokens.
+        # One source-sealed cache read for all visible flask/oil IDs.
+        # Missing official names retain the historical SimC-token labels.
+        oil_ids={item_id for entry in result["items"]
+                 for item_id in
+                 entry["selected_oil_item_ids_by_hand"].values()}
         official_names=official_ko_env.read_names(
-            self.root,build,set(flasks_by_id))
+            self.root,build,set(flasks_by_id)|oil_ids)
         result["verified_flasks"]=[
             {**flasks_by_id[k],
              **({"official_name_ko":official_names[k]}
                 if k in official_names else {})}
             for k in sorted(flasks_by_id)]
+        for entry in result["items"]:
+            items=entry["selected_oil_item_ids_by_hand"]
+            if items and all(item_id in official_names
+                             for item_id in items.values()):
+                entry["display_name"]=" / ".join(
+                    ("주무기" if hand=="main_hand" else "보조무기")+
+                    " · "+official_names[item_id]
+                    for hand,item_id in sorted(items.items()))
         if result["items"]:
             result["status"]="VERIFIED_INSTALLED_OIL_LOADOUTS"
         return result
