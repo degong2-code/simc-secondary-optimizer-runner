@@ -1,0 +1,70 @@
+name: P1 v341 Windows real N56 start cancel resume one time
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p1_v341_windows_n56_resume_native_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v341-one-windows-native
+  cancel-in-progress: false
+jobs:
+  windows-n56-one-case:
+    if: contains(github.event.head_commit.message, '[v341-windows-native-once]')
+    runs-on: windows-2022
+    timeout-minutes: 26
+    steps:
+      - name: Preserve source bytes on Windows
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install current local web dependencies
+        run: python -m pip install -r requirements-web-test.txt
+      - name: Reuse official exact prior Windows SimC (no build)
+        uses: actions/download-artifact@v4
+        with:
+          repository: simulationcraft/simc-publish
+          run-id: 40999844143
+          name: simc-nightly-win64-midnight
+          path: .simc-v341
+          github-token: ${{ github.token }}
+      - name: Verify official archive and exe SHA
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $src=Join-Path $PWD '.simc-v341/simc-1210.01.710c240-win64.7z'
+          if (!(Test-Path $src)) { throw 'V341_PINNED_ARCHIVE_MISSING' }
+          if ((Get-FileHash -Algorithm SHA256 $src).Hash.ToLowerInvariant() -ne '386b2827c537a0447ac09a158e14c63b1d71d73e8e29f6e8ab404416861aab89') { throw 'V341_PINNED_ARCHIVE_SHA_DRIFT' }
+          $seven='C:\Program Files\7-Zip\7z.exe'
+          if (!(Test-Path $seven)) { throw 'V341_7ZIP_MISSING' }
+          New-Item -ItemType Directory -Force -Path .simc-v341-extracted | Out-Null
+          & $seven x '-o.simc-v341-extracted' -y -bd $src | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'V341_7ZIP_EXTRACT_FAILED' }
+          $exes=@(Get-ChildItem .simc-v341-extracted -Recurse -Filter simc.exe -File)
+          if ($exes.Count -ne 1) { throw 'V341_ONE_EXE_REQUIRED' }
+          if ((Get-FileHash -Algorithm SHA256 $exes[0].FullName).Hash.ToLowerInvariant() -ne '0ad16368cd1effb19c793dbce63518ccb72fec89c72f6ef75d9afca239a039e8') { throw 'V341_EXE_SHA_DRIFT' }
+          "V341_SIMC_EXE=$($exes[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: One actual Windows N56 start cancel resume result replay
+        timeout-minutes: 19
+        shell: pwsh
+        run: |
+          python integration_probes/p1_v341_windows_n56_resume_once.py --simc "$env:V341_SIMC_EXE" --out out/v341
+          if ($LASTEXITCODE -ne 0) { throw 'V341_WINDOWS_NATIVE_E2E_FAILED' }
+      - name: Preserve original JSON2 and compact receipt
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: v341-one-real-windows-n56
+          path: |
+            out/v341/V341_WINDOWS_N56_COMPACT.json
+            out/v341/V341_ORIGINAL_NATIVE_JSON2.zip
+          retention-days: 7
+          if-no-files-found: warn
