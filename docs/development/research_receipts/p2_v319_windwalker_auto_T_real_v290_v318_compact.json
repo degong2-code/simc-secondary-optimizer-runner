@@ -1,0 +1,135 @@
+{
+  "schema": "p2_v319_new_user_windwalker_autoT_v290_v318_compact_research_evidence_v1",
+  "status": "VERIFIED_FROM_ORIGINAL_GITHUB_ACTIONS_RECEIPT_AND_TWO_SHA_CHECKED_NATIVE_ARCHIVES",
+  "action_run_id": 42941245130,
+  "action_url": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42941245130",
+  "head_sha": "671b5f720530104005c1a1d67253bd91bf9ec93d",
+  "artifact_id": 13820093261,
+  "artifact_expiry_utc": "2026-11-18T01:47:43Z",
+  "source_archive_sha256": "541b242c99f74af5799c9a9a242b3d0d99dd5281a1ce3de12e94372e9869a451",
+  "original_receipt_bytes": 11625,
+  "original_receipt_sha256": "e50f1500ffa51d82d2f62594394f71fb55a3b73d96cfc35dddbe9edae7711fc0",
+  "game_build": "12.1.5.70783",
+  "spec": "monk/windwalker",
+  "race": "human",
+  "target_ilvl": 334,
+  "manual_final_T": null,
+  "stat_cap_percent": 45,
+  "ordinary_gems": 4,
+  "special_gem": null,
+  "environment": {
+    "G": 2850,
+    "J": 92,
+    "F": 165,
+    "O": {
+      "crit_rating": 0,
+      "haste_rating": 0,
+      "mastery_rating": 0,
+      "versatility_rating": 0
+    },
+    "B": 3107,
+    "T": 3107,
+    "environment_new_native": 3,
+    "installed_manifest_sha256": "c801d530b9bb95b6924439c6106cdf676c63b3d1892f74c845d53d90fc850dc1"
+  },
+  "profile_sha256": "008c2a392b96ac39540d2d6b4b1ceb01877297900c108dbf462296d12a2239cd",
+  "scenario_digest_sha256": "5988b6b4cdb29505cdf2455b1431acb88b2e952355237ccc0c693bdbebc0df54",
+  "simc_revision": "c20e2ad52e4c33711f74272309a5748125175fe8",
+  "simc_binary_sha256": "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6",
+  "combat": {
+    "targets": 1,
+    "seconds": 300,
+    "threads": 1,
+    "full_raid_buffs": true
+  },
+  "verified_flask_vector": {
+    "crit_rating": 0,
+    "haste_rating": 0,
+    "mastery_rating": 0,
+    "versatility_rating": 165
+  },
+  "arms": {
+    "v290_original": {
+      "policy": "v290_multiscale_noisy_simplex_policy_v1",
+      "native": 64,
+      "scout35": 56,
+      "precision320": 8,
+      "requested_iterations": 4520,
+      "optimization_wall_seconds": 23.159803,
+      "best_CHMV": [
+        710,
+        1088,
+        1033,
+        276
+      ],
+      "best_dps": 183394.77298340562,
+      "sem": 259.6333754335658,
+      "seed": 2940137300058326000,
+      "best_native_json_sha256": "4e61f4a684f23a085f09b47edd387f539d49ddf815add0c86aed2111949b0fb6",
+      "journal_sha256": "c5fbce4f1b08ada113cf5446aeb70a49b8d69424978e61de29087c040f0810a9",
+      "original_native_zip_sha256": "51adc70cbbc57fe6d663dc8524492e836f1afb416104ea6eb8c625d4dbe0832f",
+      "cache_replay_new_native": 0
+    },
+    "v318_idea001": {
+      "policy": "v318_idea001_sem_and_material_distance_confirmation_v1",
+      "native": 64,
+      "scout35": 56,
+      "precision320": 8,
+      "requested_iterations": 4520,
+      "optimization_wall_seconds": 23.182611,
+      "best_CHMV": [
+        710,
+        1088,
+        1033,
+        276
+      ],
+      "best_dps": 183161.3644087644,
+      "sem": 279.6832111146071,
+      "seed": 14932200917574700000,
+      "best_native_json_sha256": "b490828feea342df29e2f18bc60aafac01520b58a69e5f9e1cd1077f00e15838",
+      "journal_sha256": "644de4e676a2c0b6e10621d9de3d7e201c8c56381a92fc7ebb44b66b9cb5764c",
+      "original_native_zip_sha256": "c86024758f08bb416b58b091032bd68b02821bc302b009a1ff58f2496ef84650",
+      "cache_replay_new_native": 0
+    }
+  },
+  "comparison": {
+    "same_new_profile": true,
+    "without_prior_completed_profile_and_DPS_cache": true,
+    "equal_native": true,
+    "equal_total_iterations": true,
+    "different_wall_seconds_v318_minus_v290": 0.022808,
+    "observed_v318_minus_v290_dps": -233.40857464122,
+    "observed_relative_difference_pct": -0.12727111620696865,
+    "selected_pair_independent_seeds": true,
+    "nominal_95_difference_halfwidth": 747.957254,
+    "selected_pair_95_separated": false,
+    "winner_selection_bias_corrected": false,
+    "global_optimum_proven": false,
+    "product_default_v290_changed": false,
+    "scout_candidate_sets": {
+      "v290": 56,
+      "v318": 56,
+      "overlap": 37
+    },
+    "precision_candidate_sets": {
+      "v290": 8,
+      "v318": 8,
+      "overlap": 4
+    },
+    "first_different_target_index_0based": 41,
+    "note": "Same best CHMV; separate SimC seeds create DPS noise. 19 scout targets and four precision targets differ, but independent noise affects path; this single run does not isolate causal policy benefit."
+  },
+  "verification": [
+    "Both original compressed Native ZIP SHA256 match the per-arm receipt.",
+    "64 original Native journal rows and their journal SHA256 match the original Actions receipt for each arm.",
+    "Exact best 320 Native JSON2 SHA256 and identical target CHMV match summary.",
+    "Original best case_00014 input uses gear_versatility_rating=111 and flask F vers165, yielding final versatility276 once.",
+    "All 44 focused offline regressions passed on run. Shared development ledger passed independently on #42941245238."
+  ],
+  "limitations": [
+    "Action attachment retention is 7 days; this compact derivative is Git tracked but full original two Native ZIPs are not permanently in Git.",
+    "No equal wall-time stop policy implemented; measured wall per arm differs by 0.022808 seconds and excludes environment/profile Build.",
+    "Only one new specialization and independent SimC seeds; selected pair nominal95 is not multiple-comparison-corrected. No global optimum or v318 promotion.",
+    "G2850 is exact auto environment reference for this build/ilvl, not Native measurement of every Windwalker gear combination."
+  ]
+}

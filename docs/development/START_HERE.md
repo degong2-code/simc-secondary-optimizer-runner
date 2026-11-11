@@ -9,7 +9,8 @@
 | 특정 파일이 어디 있나 | [전체 FILE_INVENTORY](FILE_INVENTORY.md) → [핵심 FILE_MAP](FILE_MAP.md) |
 | 실제 CI·Native PASS 범위 | [EVIDENCE_INDEX](EVIDENCE_INDEX.md) → GitHub 원본 영수증 |
 | 영구 보관된 시즌 Build 최소 영수증 | [70783 Ret334 검증 범위](environment_receipts/README.md) — 전체 환경 DB 복원은 별개 |
-| v318 오차·다른 CHMV 후보 확인 정책 | [격리 구현·상태](notes/2026-11-11_p2-v318-sem-distance-precision-optin.md), [집중 CI](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/workflows/p2_v318_sem_precision_offline_once.yml) — 영수증 전 결과 PENDING |
+| v318 오차·다른 CHMV 후보 확인 정책 | [v319 신규 풍운 수도사 실 Native A/B](notes/2026-11-11_p2-v319-new-windwalker-real-v290-v318-ab.md), [영구 compact 원본 대사](research_receipts/p2_v319_windwalker_auto_T_real_v290_v318_compact.json) — 최고 CHMV 동일·95 우위 없음 |
+| 최신 실 Native 성공/비용·원본 범위 | [v319 실제 Actions SUCCESS #42941245130](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42941245130), [증거 지도](EVIDENCE_INDEX.md) |
 | 실제 35/120/320 비용 계측 | [18회 Native 실측 노트](notes/2026-11-11_p2-18-real-request-cost.md) |
 | 왜 그렇게 만들고 무엇을 철회했나 | [DECISIONS](DECISIONS.md) → 근거 노트 |
 | 개발·인계 규칙 | [PROTOCOL](PROTOCOL.md) |

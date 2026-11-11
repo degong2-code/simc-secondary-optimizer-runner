@@ -5,8 +5,8 @@
 - **Prior evidence:** [v315 measured cost](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42859573357) and [18-request timing](../research_receipts/p2_20261111_18_native_request_cost.json).
 - **Decision:** `EXTEND` v290 precision target priority only, with opt-in source-bound v291 seal; retain default v290, scout generation, 35/320 and cadence.
 - **Changes:** Pure v318 SEM/distance prioritizer, explicit v291 run flag, exact pending replan, separate SHA seal and policy report label, fake-Native tests.
-- **Verification:** [v318 initial offline #42935926047](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42935926047) failed 1 exception-alias assertion; no real Native validation.
-- **Remaining:** Repair test import-path mismatch and ledger; rerun focused regression; novel-specialization v290/v318 real Native comparison.
+- **Verification:** [v319 new Windwalker real A/B #42941245130](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42941245130) 44/44 offline PASS + 64/arm Native, same new profile and equal 4520/arm iterations. Best confirmed CHMV identical, nominal95 difference unresolved; compact [v319 evidence](../research_receipts/p2_v319_windwalker_auto_T_real_v290_v318_compact.json). Earlier #42935926047 exception-alias test failure is historical and fixed.
+- **Remaining:** One new spec is insufficient. v318 distance-first priority not promoted; next study should generate a different new 26-DPS specialization and address independent-seed trajectory noise, with fair total iterations and true wall budgets separately.
 - **Efficiency:** No SimC calls or additional iteration stage from this implementation; existing static cache and source reused.
 
 - **재사용 정책:** 기존 v290 고유 탐색 / 글로벌 reserve / 35·320 iterations / 기존 정밀 확인 주기 그대로. 별도 v318 pure policy는 **기존 v290에서 precision 액션을 만든 시점에만** 확정 320 후보 중 무엇을 먼저 재측정할지 정한다. 같은 Native 호출 횟수, 다른 정밀 후보의 실제 DPS 개선 가능성이 가설이다.
