@@ -263,7 +263,8 @@ def build_from_verified_install(root,installed,physical_layout=None,
     query=needed[:MAX_FETCH] if allow_network else []
     collected,errors,network_calls=_fetch_ids(query) if query else ([],[],0)
     for row in collected:old[row["item_id"]]=row
-    _store(root,game_build,list(old.values()),chosen,roles)
+    if chosen or old:
+        _store(root,game_build,list(old.values()),chosen,roles)
     complete=sum(i in old for i in chosen)
     status=(STATUS_READY if complete==len(chosen) and chosen else
             "PENDING_VERIFIED_CHOICE_SOURCE" if not chosen else STATUS_PARTIAL)
@@ -280,6 +281,24 @@ def build_from_verified_install(root,installed,physical_layout=None,
             "network_calls_now":network_calls,"native_calls_now":0,
             "source_only_names_not_item_approval":True,
             "errors":errors[:MAX_FETCH]}
+
+
+def cache_status(root,build):
+    """No network: provider/status/count metadata only, not raw item contents."""
+    try:
+        doc=_read(root,build)
+        if doc is None:
+            return {"schema":SCHEMA,"status":"OFFICIAL_KO_CACHE_NOT_INSTALLED",
+                    "game_build":build,"verified_item_names":0,
+                    "native_calls_now":0,"network_calls_now":0}
+        return {"schema":SCHEMA,"status":"READ_ONLY_VERIFIED_OFFICIAL_NAMES",
+                "game_build":build,"verified_item_names":len(doc["items"]),
+                "source_membership_sha256":doc["source_membership_sha256"],
+                "native_calls_now":0,"network_calls_now":0}
+    except (LocalizationBlocked,OSError,ValueError,TypeError):
+        return {"schema":SCHEMA,"status":"OFFICIAL_KO_CACHE_INVALID",
+                "game_build":build,"verified_item_names":0,
+                "native_calls_now":0,"network_calls_now":0}
 
 def build_for_environment(root,game_build,result,*,target_ilevel):
     """v113 bridge for an already verified v212 installation or reuse.

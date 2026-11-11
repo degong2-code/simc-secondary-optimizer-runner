@@ -2030,14 +2030,7 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
             return {"schema":official_ko_env.SCHEMA,
                     "status":"SEASON_BUILD_NOT_SELECTED",
                     "native_calls_now":0,"network_calls_now":0}
-        names=official_ko_env.read_names(
-            jobs.root,build,set())
-        # Do not return an unbounded raw cache or allow user input as IDs.
-        return {"schema":official_ko_env.SCHEMA,
-                "game_build":build,
-                "status":"READ_ONLY_LOCALIZATION_CACHE",
-                "verified_subset_count":len(names),
-                "native_calls_now":0,"network_calls_now":0}
+        return official_ko_env.cache_status(jobs.root,build)
 
     @app.get("/api/v1/season-gear")
     def current_season_gear():

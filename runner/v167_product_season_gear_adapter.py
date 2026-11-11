@@ -415,13 +415,14 @@ def public_options(payload, *, official_names=None):
                 ("trinket","special_effect_gear_candidate")}
     korean = labels_ko.installed_names(db["season_build"], eligible)
     if official_names is not None:
+        possible={r["item_id"] for r in db["items"]}
         need(type(official_names) is dict and all(
-            type(item_id) is int and item_id in {r["item_id"] for r in db["items"]}
+            type(item_id) is int and item_id in possible
             and type(name) is str and 0<len(name)<=200
             for item_id,name in official_names.items()),
             "OFFICIAL_NAMES_NOT_BOUND_TO_SEASON_ITEMS")
         korean.update({i:name for i,name in official_names.items()
-                       if i in {r["item_id"] for r in db["items"]}})
+                       if i in possible})
     for x in db["items"]:
         if x["category"] not in choices:
             continue
