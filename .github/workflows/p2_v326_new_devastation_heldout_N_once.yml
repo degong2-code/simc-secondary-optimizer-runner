@@ -1,0 +1,64 @@
+name: P2 v326 NEW Devastation Evoker source-first heldout N Native
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p2_v326_new_devastation_heldout_N_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p2-v326-new-devastation-heldout-only
+  cancel-in-progress: false
+jobs:
+  new-devastation:
+    if: contains(github.event.head_commit.message, '[p2-v326-new-devastation-native-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    env:
+      PYTHONPATH: runner:integration_probes:.
+      SIMC_PINNED_SOURCE_COMMIT: c20e2ad52e4c33711f74272309a5748125175fe8
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse exact source-compatible SimC binary
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42552942329
+          name: p3-har-verified-source-new-binary-short-lived
+          path: out/binary
+          github-token: ${{ github.token }}
+      - name: New Evoker user source and heldout quality replay offline regression, Native0
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(sha256sum out/binary/simc | cut -d' ' -f1)" = "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6"
+          chmod +x out/binary/simc
+          python -m pip install -r requirements-web-test.txt
+          python -m py_compile integration_probes/p2_v326_new_devastation_heldout_N_real_once.py tests/test_p2_v326_new_devastation_offline.py
+          python -m unittest -v tests.test_p2_v326_new_devastation_offline tests.test_p2_v325_independent_holdout_replay_offline tests.test_p2_v324_balance_new_user_variable_n_offline tests.test_p2_v319_new_windwalker_ab_offline tests.test_p2_v323_chmv_arrival_and_n_offline
+          python tools/check_development_ledger.py
+      - name: NEW Devastation auto-T profile and 128+120 original Native
+        timeout-minutes: 49
+        env:
+          P2_V326_NEW_DEVASTATION_ONCE: '1'
+          BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+          BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+          WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+          WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+        run: python -u integration_probes/p2_v326_new_devastation_heldout_N_real_once.py
+      - name: Retain new Devastation input/JSON2 and bounded incremental recovery
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-v326-new-devastation-auto-T-independent-holdout-N
+          path: |
+            out/p2_v326_devastation_fresh_autoT_quality/receipt.json
+            out/p2_v326_devastation_fresh_autoT_quality/research_progress.json
+            out/p2_v326_devastation_fresh_autoT_quality/*_original_native.zip
+            out/p2_v326_devastation_fresh_autoT_quality/research_cases/
+          retention-days: 7
+          if-no-files-found: warn
