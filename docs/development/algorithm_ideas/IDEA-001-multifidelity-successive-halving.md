@@ -75,3 +75,9 @@
 
 - [실제 원본의 정확 CHMV 첫 도달](../notes/2026-11-11_p2-v323-arrival-continuous-n.md). 같은 CHMV를 발견한 알고리즘의 DPS 노이즈 차이로 승자를 지정하지 않는다. 동일 후보 최초 35 발견, 320 확인까지의 순서·누적 iterations·실시간을 비교. 근접 L1 rating은 같은 DPS의 확정 증거가 아님.
 - [v323 연속 N 계획](../../../runner/v323_continuous_n_sem_wall_advisory.py)에서 35/120/320은 고정 스케줄이 아닌 실측 calibration. candidate+reference SEM과 reference noise floor, 동일 CPU/호스트의 기동비 포함 process wall을 이용한다. 고정 N 대안은 새 전문화에서 실제 Native 측정 후 판단. 기본 v290/v291 안전 동작과 원본 SHA 불변.
+
+## 2026-11-11 v326 신독립 640×2 holdout의 N별 선별 경제성
+
+- [Devastation 실제 251 Native·원본 SHA·N별 성공률](../research_receipts/p2_v326_devastation_auto_T_heldout_251_compact.json), [워크플로 SUCCESS #42953218111](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42953218111). 새 전문화 P1 자동 T3107, 정책별 원본 Native 각64, 같은 새 소스의 후보12×N24/48/96/192/640×2 독립 측정.
+- 참조 640×2 best-of-12의 **0.5% 이내**를 near-quality 운영 지표로 사전 설정. 최종 선별 N24 1/2(2.09s), N48 2/2(2.97s), N96 2/2(4.74s), N192 2/2(8.24s). 품질 최초 안정 도달은 N48 약1.01s. **이 12개/2시드에서 N48이 실측상 가장 유망할 뿐** 적정 N 확정 아님. 동일 CHMV SimC seed DPS 노이즈로 알고리즘 우열 판정 금지.
+- 다음에는 **또 다른 신규 전문화 프로필**에서 최소 2 독립 N screening replicates + 다른 후보 구성/holdout으로 재검증. 통계적 동등성·가족단위95·전역 최적을 주장하지 않으며, v291 Native 정확 iter/cache·v290 기본은 이번 변경에서 보존.

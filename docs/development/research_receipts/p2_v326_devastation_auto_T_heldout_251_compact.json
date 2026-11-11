@@ -1,0 +1,191 @@
+{
+  "schema": "p2_v326_fresh_devastation_heldout_quality_251_native_compact_v1",
+  "date": "2026-11-11",
+  "status": "ORIGINAL_NATIVE_ZIP_AND_ALL_120_JSON2_INPUTS_VERIFIED",
+  "action_run_id": 42953218111,
+  "action_url": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42953218111",
+  "action_head_sha": "4b786ca85bb48b77aa2e6b10592ad08cb709878d",
+  "action_conclusion": "success",
+  "action_artifact_id": 13826336680,
+  "action_artifact_expiry_utc": "2026-11-18T03:34:29Z",
+  "action_original_outer_zip_sha256": "a65f9a11d43a533017363340d1cdbf8f5be60c15eec4478145d79973651876f4",
+  "research_original_zip_sha256": "1a5622783c0a52fc909160a230c6d1e67ba06c3cc16fef8be27438d8b4a202a5",
+  "source": {
+    "game_build": "12.1.5.70783",
+    "specialization": "evoker/devastation",
+    "race": "dracthyr",
+    "target_ilvl": 334,
+    "manual_final_T": null,
+    "G": 2850,
+    "J": 92,
+    "F": 165,
+    "O": 0,
+    "B": 3107,
+    "T": 3107,
+    "environment_new_native": 3,
+    "fresh_profile_sha256": "7febe9bf9d3844cd82a1e3de1d2c6d9f7741b3e6b9820bc5fd7d173861889c1b",
+    "environment_manifest_sha256": "4dbe6f219bffa64d9681f963ba01864a9cc70b3b9c6d5aa64846ab7fe702b50c",
+    "scenario_digest_sha256": "03c9114a6b9c65c5254a62270532aa72715e47ec4153ea87336207980213bb87",
+    "simc_revision": "c20e2ad52e4c33711f74272309a5748125175fe8",
+    "simc_binary_sha256": "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6"
+  },
+  "arms": {
+    "v290": {
+      "native": 64,
+      "scout35": 56,
+      "confirm320": 8,
+      "requested_iterations": 4520,
+      "optimizer_wall_seconds": 22.355097,
+      "original_archive_sha256": "13de1e377287325412d68591253d1de698c35c46124b06be9f7125db2016eb95",
+      "journal_sha256": "bbf610029b7acd332f72e50bf490b86696c62cc036769d745eb0b95ec2062b3b",
+      "best_confirmed_CHMV": [
+        1398,
+        291,
+        1098,
+        320
+      ],
+      "best_confirmed_DPS": 176321.552483,
+      "SEM": 189.992163,
+      "first_known_holdout_near_quality_scout": {
+        "index_zero_based": 21,
+        "iterations": 1340,
+        "wall_seconds": 7.111693
+      },
+      "first_known_holdout_near_quality_confirmation": {
+        "index_zero_based": 30,
+        "iterations": 1940,
+        "wall_seconds": 10.075897
+      },
+      "cache_only_replay_new_native": 0
+    },
+    "v318": {
+      "native": 64,
+      "scout35": 56,
+      "confirm320": 8,
+      "requested_iterations": 4520,
+      "optimizer_wall_seconds": 22.553443,
+      "original_archive_sha256": "73e02f752f864ece7239c3dd837dda3649f0091e96de0a5bd08f16590f77159b",
+      "journal_sha256": "21557d52d42b60ba92f8532c339c2f65dacea9caf3027e842e4ba63114224d77",
+      "best_confirmed_CHMV": [
+        1398,
+        291,
+        1005,
+        413
+      ],
+      "best_confirmed_DPS": 176135.338976,
+      "SEM": 210.941141,
+      "first_known_holdout_near_quality_scout": {
+        "index_zero_based": 20,
+        "iterations": 1305,
+        "wall_seconds": 6.91521
+      },
+      "first_known_holdout_near_quality_confirmation": {
+        "index_zero_based": 30,
+        "iterations": 1940,
+        "wall_seconds": 10.135269
+      },
+      "cache_only_replay_new_native": 0
+    }
+  },
+  "study": {
+    "selection": "12 distinct CHMV from combined NEW current-run v290/v318 top-confirm and fixed-position scouts, no holdout lookahead",
+    "holdout": "independent 2 x N640 SimC per CHMV, quality benchmark among ONLY 12",
+    "raw_screen_N": [
+      24,
+      48,
+      96,
+      192
+    ],
+    "screen_reps_per_N": 2,
+    "holdout_reps_per_CHMV": 2,
+    "candidate_count": 12,
+    "research_new_native": 120,
+    "research_requested_iterations": 24000,
+    "total_new_native_including_environment": 251,
+    "full_research_native_inputs_and_JSON2_sha256_validated": 120,
+    "same_source_except_iterations_and_json2_path": true,
+    "all_120_research_native_seeds_distinct": true,
+    "research_only_not_v291_cache": true,
+    "reference_best_CHMV_among_12": [
+      1398,
+      291,
+      1098,
+      320
+    ],
+    "reference_best_holdout_mean_DPS": 176081.746471,
+    "reference_best_holdout_combined_SEM": 100.412993,
+    "quality_band_fraction": 0.005,
+    "quality_threshold_DPS": 175201.337739,
+    "candidates_within_band": 5,
+    "same_host_process_wall_excludes_profile_environment": true,
+    "by_N": {
+      "24": {
+        "final_successes_of_two": 1,
+        "screen_iterations_per_rep": 288,
+        "median_screen12_wall_seconds": 2.094363,
+        "first_stable_good_screen_wall_seconds": [
+          0.699626,
+          null
+        ],
+        "median_individual_native_SEM": 698.11438,
+        "median_individual_native_process_wall_seconds": 0.173725,
+        "successes_by_2s_of_two": 1
+      },
+      "48": {
+        "final_successes_of_two": 2,
+        "screen_iterations_per_rep": 576,
+        "median_screen12_wall_seconds": 2.972493,
+        "first_stable_good_screen_wall_seconds": [
+          1.011561,
+          1.00881
+        ],
+        "median_individual_native_SEM": 521.167835,
+        "median_individual_native_process_wall_seconds": 0.246499,
+        "successes_by_2s_of_two": 2
+      },
+      "96": {
+        "final_successes_of_two": 2,
+        "screen_iterations_per_rep": 1152,
+        "median_screen12_wall_seconds": 4.738627,
+        "first_stable_good_screen_wall_seconds": [
+          1.606102,
+          1.607791
+        ],
+        "median_individual_native_SEM": 369.26148,
+        "median_individual_native_process_wall_seconds": 0.390408,
+        "successes_by_2s_of_two": 2
+      },
+      "192": {
+        "final_successes_of_two": 2,
+        "screen_iterations_per_rep": 2304,
+        "median_screen12_wall_seconds": 8.244581,
+        "first_stable_good_screen_wall_seconds": [
+          2.789916,
+          2.806343
+        ],
+        "median_individual_native_SEM": 265.571367,
+        "median_individual_native_process_wall_seconds": 0.678826,
+        "successes_by_2s_of_two": 0
+      }
+    },
+    "holdout_N640": {
+      "per_candidate_reps": 2,
+      "total_calls": 24,
+      "median_individual_native_SEM": 142.413858,
+      "median_individual_native_process_wall_seconds": 2.010995
+    },
+    "reference_best_is_global_optimum": false,
+    "operational_band_is_statistical_equivalence_95": false,
+    "sample_sufficiency_for_general_best_N": false,
+    "original_data_available_in_short_retention_actions_zip": true
+  },
+  "limitations": [
+    "N=48 is most promising under this finite 12-candidate, two-seed and 0.5%-band condition, NOT proven optimal N.",
+    "Holdout best is selected from 12 preselected candidates only; no global-optimum claim.",
+    "Pairwise selected DPS differences are subject to sample noise and multiplicity; no familywise 95 proof.",
+    "Original v290/v318 first-near-quality arrival uses only the five CHMV with independently evaluated N640 holdout; other unmeasured original candidates are unclassified.",
+    "Original two policy runtimes include v291 overhead, while research N wall is per SimC subprocess only; do not directly compare the absolute clock scopes.",
+    "Full raw SimC originals expire with Actions artifact; only compact SHA and research conclusions persisted in Git.",
+    "This research did NOT integrate variable N into product v291 or modify default v290."
+  ]
+}
