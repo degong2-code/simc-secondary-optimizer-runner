@@ -1,0 +1,45 @@
+{
+  "G_native_status": "G_NATIVE_NUMERIC_REFERENCE_OBSERVED_JFO_PENDING",
+  "J_component_names": [
+    "F",
+    "J"
+  ],
+  "budget": {
+    "B": 3107,
+    "F": 165,
+    "G": 2850,
+    "J": 92,
+    "O": {
+      "crit_rating": 0,
+      "haste_rating": 0,
+      "mastery_rating": 0,
+      "versatility_rating": 0
+    },
+    "T": 3107
+  },
+  "compiler_missing": [],
+  "compiler_status": "FRESH_V191_V211_V213_COMPILED_UNADMITTED",
+  "environment_installed": true,
+  "environment_ready": true,
+  "installed_status": "FRESH_SEASON_VERIFIED_ENVIRONMENT_INSTALLED_READY",
+  "live_retail_build": "12.1.5.70783",
+  "native_calls": 3,
+  "native_limit": 3,
+  "new_season_completion_claim": false,
+  "ordinary_gem_count_required": 4,
+  "physical_layout": {
+    "distinct_first_four": 4,
+    "ordinary_count": 4,
+    "socket_total": 4,
+    "special_gem_id": null
+  },
+  "requires": [],
+  "same_build_historical_numeric_reused": false,
+  "schema": "p1_four_ordinary_zero_history_real_source_v1",
+  "source_selected_flask_id": null,
+  "source_stage_status": "EXECUTED_AND_SEALED",
+  "special_gem_selected": false,
+  "status": "REAL_SOURCE_FOUR_ORDINARY_INSTALLED_PROFILE_READY",
+  "target_ilevel": 334,
+  "user_profile_ready": true
+}
