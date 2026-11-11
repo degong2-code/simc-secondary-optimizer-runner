@@ -1163,6 +1163,39 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(status.json()["native_calls_now"],0)
         request.assert_not_called()
 
+
+    def test_v336_official_game_terms_is_readonly_and_never_changes_user_controls(self):
+        from runner import v336_environment_ko_playable_terms as term
+        app=web.create_app(root=self.root,token="offline-only-token")
+        with mock.patch.object(web.official_playable_terms,"build_for_environment",
+                               return_value={"schema":term.SCHEMA,
+                                 "status":"CREDENTIALS_UNAVAILABLE_TERMS_PENDING",
+                                 "network_calls_now":0,"native_calls_now":0}) as collect:
+            jobs=app.state.jobs
+            payload=jobs._with_verified_ko_localization(
+                "12.1.5.70783",334,
+                {"environment_ready":True,"environment_installed":True,
+                 "G":2850,"J":92,"F":165,"B":3107,"T":3107,
+                 "official_ko_localization":{"schema":web.official_ko_env.SCHEMA,
+                                            "status":"VERIFIED_OFFICIAL_NAMES_COMPLETE"}})
+        self.assertEqual(payload["T"],3107)
+        self.assertEqual(payload["official_ko_terms"]["status"],
+                         "CREDENTIALS_UNAVAILABLE_TERMS_PENDING")
+        collect.assert_called_once()
+        with TestClient(app,base_url="http://127.0.0.1:8765") as client:
+            ok=client.get("/api/v1/environment/official-game-terms",
+                params={"game_build":"12.1.5.70783"},
+                headers={"x-simc-local-token":"offline-only-token",
+                         "origin":"http://127.0.0.1:8765"})
+            self.assertEqual(ok.status_code,200,ok.text)
+            self.assertEqual(ok.json()["names"]["spec"],{})
+            self.assertEqual(ok.json()["native_calls_now"],0)
+            denied=client.get("/api/v1/environment/official-game-terms",
+                params={"game_build":"../../other"},
+                headers={"x-simc-local-token":"offline-only-token",
+                         "origin":"http://127.0.0.1:8765"})
+            self.assertEqual(denied.status_code,422)
+
     def test_bootstrap_health_and_all_26_dps_defaults_no_simc(self):
         health=self.client.get("/api/v1/health")
         self.assertEqual(health.status_code,200)

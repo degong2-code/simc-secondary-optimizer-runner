@@ -266,6 +266,19 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertEqual(next(x["name_ko"] for x in visible if x["item_id"]==158367),
                          "메레크타의 송곳니")
 
+    def test_v336_official_source_terms_are_not_simc_control_tokens(self):
+        page=self.client.get("/").text
+        js=self.client.get("/assets/app.js").text
+        self.assertIn('id="season-terms-status"',page)
+        self.assertIn("function applyOfficialGameTerms(doc)",js)
+        self.assertIn("function refreshOfficialGameTerms(build)",js)
+        self.assertIn('verifiedTerms.spec[token]',js)
+        self.assertIn('verifiedTerms.race[token]',js)
+        self.assertIn("refreshOfficialGameTerms(state.oilCatalog.game_build)",js)
+        self.assertIn("refreshOfficialGameTerms(report.web_environment_scope.game_build)",js)
+        self.assertIn("function simcRace(value)",js)
+        self.assertNotIn("verifiedTerms.spec[field",js)
+
     def test_official_korean_names_are_environment_build_stage(self):
         page=self.client.get("/").text
         js=self.client.get("/assets/app.js").text

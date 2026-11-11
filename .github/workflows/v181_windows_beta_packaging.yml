@@ -11,6 +11,8 @@ on:
       - runner/v193_simc_local_updater.py
       - runner/v113_local_web_api.py
       - runner/v335_environment_official_ko_localization.py
+      - runner/v336_environment_ko_playable_terms.py
+      - tests/test_v336_environment_ko_playable_terms.py
       - tests/test_v335_environment_official_ko_localization.py
       - runner/v196_current_season_user_catalog.py
       - runner/v208_internal_exact_special_L_hydrator.py

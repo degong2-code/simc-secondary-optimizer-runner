@@ -135,4 +135,5 @@ jobs:
             tests.test_v190_consumable_item_snapshot_join \
             tests.test_v191_unified_season_data_update \
             tests.test_v332_blizzard_ko_item_labels \
-            tests.test_v335_environment_official_ko_localization
+            tests.test_v335_environment_official_ko_localization \
+            tests.test_v336_environment_ko_playable_terms
