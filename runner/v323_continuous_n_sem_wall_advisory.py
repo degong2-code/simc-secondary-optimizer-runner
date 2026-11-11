@@ -5,7 +5,15 @@ Offline planner only. No new v291 SimC phase or product-default change.
 """
 from __future__ import annotations
 import math
-SCHEMA="v323_continuous_candidate_n_sem_wall_advisory_v1"
+SCHEMA="v323_continuous_candidate_n_sem_wall_advisory_v2"
+STATS=("crit_rating","haste_rating","mastery_rating","versatility_rating")
+def exact_CHMV(row):
+    x=row.get("target")
+    need(type(x) is dict and set(x)==set(STATS)
+         and all(type(x[k]) is int and x[k]>=0 for k in STATS),
+         "EXACT_CHMV_REQUIRED")
+    return tuple(x[k] for k in STATS)
+
 Z95=1.959963984540054
 class NPlanBlocked(ValueError): pass
 def need(ok,why):
@@ -49,6 +57,11 @@ def recommend(candidate,reference,*,min_n=16,max_n=640,step=8,
                      and math.isfinite(row[k]) and row[k]>=0
                      for k in ("dps_mean","dps_sem")),
              "MEASURED_DPS_AND_SEM_REQUIRED")
+        exact_CHMV(row)
+    a,b=exact_CHMV(candidate),exact_CHMV(reference)
+    need(sum(a)==sum(b),"DIFFERENT_CHMV_BUDGET_NOT_COMPARABLE")
+    moved=sum(abs(x-y) for x,y in zip(a,b))
+    need(type(moved) is int and moved%2==0,"CHMV_TRANSFER_NOT_CONSERVED")
     need(type(min_n) is int and type(max_n) is int and type(step) is int
          and 3<=min_n<max_n<=100000 and step>=1,
          "VALID_INTEGER_N_BOUNDS")
@@ -64,7 +77,13 @@ def recommend(candidate,reference,*,min_n=16,max_n=640,step=8,
     delta=abs(candidate["dps_mean"]-reference["dps_mean"])
     # Reference SEM is an irreducible floor unless reference is also rerun.
     denom=(delta/Z95)**2-reference["dps_sem"]**2
-    if delta==0 or denom<=0:
+    if moved==0:
+        estimate=None
+        status="IDENTICAL_CHMV_SEM_CALIBRATION_ONLY"
+    elif moved<=2:
+        estimate=None
+        status="NEAR_CHMV_RETAIN_ALTERNATIVE_NO_FORCED_DPS_CONTEST"
+    elif delta==0 or denom<=0:
         estimate=None
         status="CANNOT_RESOLVE_WITH_CANDIDATE_N_ALONE"
     else:
@@ -80,6 +99,9 @@ def recommend(candidate,reference,*,min_n=16,max_n=640,step=8,
             "projected_SEM_at_feasible_highest_N":projected_sem(
                 candidate["dps_sem"],candidate["samples"],choices[-1]),
             "observed_absolute_DPS_gap":delta,
+            "CHMV_L1_rating_distance":moved,
+            "same_CHMV_simc_noise_not_performance_gap":moved==0,
+            "near_CHMV_not_proven_same_DPS":moved<=2,
             "reference_SEM_floor":reference["dps_sem"],
             "fixed_35_120_320_tiers_required":False,
             "v291_typed_35_320_unchanged":True,

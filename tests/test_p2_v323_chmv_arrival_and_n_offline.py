@@ -42,17 +42,34 @@ class ArrivalN(unittest.TestCase):
         self.assertAlmostEqual(model["slope_seconds_per_iteration"],0.003)
         self.assertAlmostEqual(model["intercept_seconds"],0.12)
     def test_n_is_not_hardcoded_to_35_120_320(self):
-        c={"iterations":35,"samples":34,"dps_mean":11000.,"dps_sem":300.}
-        r={"iterations":320,"samples":319,"dps_mean":10400.,"dps_sem":100.}
+        c={"iterations":35,"samples":34,"dps_mean":11000.,"dps_sem":300.,"target":dict(zip(K,(300,300,300,100)))}
+        r={"iterations":320,"samples":319,"dps_mean":10400.,"dps_sem":100.,"target":dict(zip(K,(100,400,300,200)))}
         out=n.recommend(c,r,min_n=16,max_n=640,step=8)
         self.assertTrue(out["next_direct_N_suggestion"] is None or
                         (out["next_direct_N_suggestion"]-16)%8==0)
         self.assertFalse(out["fixed_35_120_320_tiers_required"])
     def test_reference_noise_floor_prevents_false_precision(self):
         c={"iterations":35,"samples":34,"dps_mean":11010.,"dps_sem":300.}
-        r={"iterations":320,"samples":319,"dps_mean":11000.,"dps_sem":100.}
+        r={"iterations":320,"samples":319,"dps_mean":11000.,"dps_sem":100.,"target":dict(zip(K,(100,400,300,200)))}
         self.assertEqual(n.recommend(c,r)["status"],
                          "CANNOT_RESOLVE_WITH_CANDIDATE_N_ALONE")
+    def test_identical_chmv_seeds_must_not_drive_n(self):
+        x={"iterations":32,"samples":31,"dps_mean":177000.,"dps_sem":900.,"target":dict(zip(K,(488,1056,1398,165)))}
+        y={"iterations":640,"samples":639,"dps_mean":175900.,"dps_sem":190.,"target":dict(x["target"])}
+        result=n.recommend(x,y)
+        self.assertIsNone(result["next_direct_N_suggestion"])
+        self.assertEqual(result["status"],"IDENTICAL_CHMV_SEM_CALIBRATION_ONLY")
+        self.assertTrue(result["same_CHMV_simc_noise_not_performance_gap"])
+    def test_near_one_rating_transfer_protected(self):
+        x={"iterations":32,"samples":31,"dps_mean":177000.,"dps_sem":900.,"target":dict(zip(K,(488,1056,1398,165)))}
+        y={"iterations":640,"samples":639,"dps_mean":175900.,"dps_sem":190.,"target":dict(zip(K,(487,1057,1398,165)))}
+        self.assertEqual(n.recommend(x,y)["status"],
+            "NEAR_CHMV_RETAIN_ALTERNATIVE_NO_FORCED_DPS_CONTEST")
+    def test_missing_chmv_identity_denied(self):
+        x={"iterations":32,"samples":31,"dps_mean":177000.,"dps_sem":900.}
+        y={"iterations":640,"samples":639,"dps_mean":175900.,"dps_sem":190.,"target":dict(zip(K,(487,1057,1398,165)))}
+        with self.assertRaisesRegex(n.NPlanBlocked,"EXACT_CHMV_REQUIRED"):
+            n.recommend(x,y)
     def test_invalid_measurements_blocked(self):
         with self.assertRaises(n.NPlanBlocked):
             n.fit_wall([{"iterations":35,"wall_seconds":.1}])

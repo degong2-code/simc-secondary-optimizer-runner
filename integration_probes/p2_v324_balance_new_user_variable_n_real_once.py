@@ -172,9 +172,11 @@ def finish_current_campaign(doc,binary,root):
     for vec,group in clusters.items():
         first=group[32]
         cost_reference={"iterations":640,"samples":639,
-                        "dps_mean":reference["DPS"],"dps_sem":reference["SEM"]}
+                        "dps_mean":reference["DPS"],"dps_sem":reference["SEM"],
+                        "target":dict(zip(STATS,reference["CHMV"]))}
         cost_candidate={"iterations":32,"samples":31,
-                        "dps_mean":first["DPS"],"dps_sem":first["SEM"]}
+                        "dps_mean":first["DPS"],"dps_sem":first["SEM"],
+                        "target":dict(zip(STATS,vec))}
         advice=advisory.recommend(
             cost_candidate,cost_reference,min_n=16,max_n=640,
             step=8,cost=fit)
