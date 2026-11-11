@@ -4,6 +4,12 @@ from unittest import mock
 from runner import v293_local_longrun_session as p
 
 class FixedScoutSession(unittest.TestCase):
+    def test_product_default_is_56_and_legacy_is_35(self):
+        self.assertEqual(p.DEFAULT_SCOUT_ITERATIONS,56)
+        self.assertEqual(p.LEGACY_SCOUT_ITERATIONS,35)
+        self.assertEqual(p.selected_scout_iterations(None),56)
+        self.assertEqual(p.selected_scout_iterations({}),35)
+
     def test_old_config_keeps_35_when_new_default_changes(self):
         with tempfile.TemporaryDirectory() as d:
             folder=pathlib.Path(d);generated=folder/"generated";generated.mkdir()
@@ -37,7 +43,7 @@ class FixedScoutSession(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             folder=pathlib.Path(d);generated=folder/"generated";generated.mkdir()
             (generated/"manifest.json").write_text("{}")
-            with mock.patch.object(p,"DEFAULT_SCOUT_ITERATIONS",56), mock.patch.object(p,"prepare",return_value={}):
+            with mock.patch.object(p,"prepare",return_value={}):
                 p.establish(folder,64)
             self.assertEqual(p.config(folder)["scout_iterations"],56)
             with mock.patch.object(p,"DEFAULT_SCOUT_ITERATIONS",64):

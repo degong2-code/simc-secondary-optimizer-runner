@@ -18,9 +18,9 @@ import v291_durable_multiscale_native_runner as durable
 
 SCHEMA = "v293_local_longrun_session_v1"
 # Existing configs without a field are permanently legacy N35.
-# Keep the current default until the v331 actual Native study is evaluated.
+# v331 engineering selection: new v290 sessions N56; old sessions stay N35.
 LEGACY_SCOUT_ITERATIONS = 35
-DEFAULT_SCOUT_ITERATIONS = 35
+DEFAULT_SCOUT_ITERATIONS = 56
 ALLOWED_SCOUT_ITERATIONS = (35, 48, 56, 64)
 
 

@@ -53,6 +53,8 @@ class RealHTTPPageOffline(unittest.TestCase):
             self.assertIn(token,js)
         self.assertIn("const longrun=await api(",js)
         self.assertIn("if(longrun.enabled===true)",js)
+        self.assertIn("data?.scout_iterations_per_CHMV",js)
+        self.assertIn("payload.scout_iterations_per_CHMV",js)
         self.assertIn('''$("start-btn").addEventListener''',js)
 
     def test_new_current_season_oil_defaults_never_override_verified_zero_o(self):

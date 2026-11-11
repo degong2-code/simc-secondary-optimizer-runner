@@ -10,7 +10,7 @@
 
 | 고정 ID | 알고리즘 | 문서 | 상태 | 비교에 필요한 주요 축 |
 |---|---|---|---|---|
-| IDEA-001 | 다중 정밀도 경쟁 탐색 (Successive Halving) | [상세](IDEA-001-multifidelity-successive-halving.md) | `FIXED_N_REAL_STUDY_COMPLETE / DEFAULT_PENDING` | v318 opt-in·120 연구·v331 343 Native; N56 권고, 120 미통합 |
+| IDEA-001 | 다중 정밀도 경쟁 탐색 (Successive Halving) | [상세](IDEA-001-multifidelity-successive-halving.md) | `FIXED_N_REAL_STUDY_COMPLETE / NEW_V293_DEFAULT_56` | v318 opt-in·120 연구·v331 343 Native; N56 권고, 120 미통합 |
 | IDEA-002 | 다중 시작점 신뢰영역 (Multi-start Trust Region) | [상세](IDEA-002-multistart-trust-region.md) | `v329 REAL_NATIVE_PILOT_HOLD / v328-v2 OFFLINE_ONLY` | 반경과 pairwise 후보 생성·초기 seed 교란 분리 필요, 기본 v290 불변 |
 | IDEA-003 | 적응형 층화 탐색 (Adaptive Stratified Exploration) | [상세](IDEA-003-adaptive-stratified-exploration.md) | `v330 REAL_NATIVE_PILOT_HOLD` | 신규 Feral 124 Native, 19 공통 관측 재사용, v306 대비 발견 우위 없음 |
 | IDEA-004 | 비용 인지형 지식 기울기 탐색 (Cost-aware Knowledge Gradient) | [상세](IDEA-004-cost-aware-knowledge-gradient.md) | `IDEA_ONLY` | 확인 DPS 순위 개선의 기대 정보 가치 / SimC 실행비용 |

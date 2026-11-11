@@ -8,7 +8,7 @@
 
 | 기능 | 소스 파일 | 용도 | 같은 이름/기존 연관 테스트 검색 진입 |
 |---|---|---|---|
-| F-P2 | [v331 실험](../../integration_probes/p2_v331_unholy_fixed_N_real_once.py) · [v293 제품 N 봉인](../../runner/v293_local_longrun_session.py) | v290 fixed N32/35/48/56/64 실험 343 Native, 실제 제품 v293 새 세션 허용35/48/56/64, legacy missing-field35, 기본35. N56 권고 미적용. | [실험 테스트](../../tests/test_p2_v331_fixed_N_offline.py), [제품 봉인 테스트](../../tests/test_p2_v331_product_scout_n_seal_offline.py), [결과](research_receipts/p2_v331_unholy_fixed_N_343_native_compact.json) |
+| F-P2 | [v331 실험](../../integration_probes/p2_v331_unholy_fixed_N_real_once.py) · [v293 제품 N 봉인](../../runner/v293_local_longrun_session.py) | v290 fixed N32/35/48/56/64 실험 343 Native, 실제 제품 v293 새 세션 허용35/48/56/64, legacy missing-field35, 신규 기본56/320 적용. [제품 변경·검증 상태](notes/2026-11-11_p2-product-v290-default-n56.md). | [실험 테스트](../../tests/test_p2_v331_fixed_N_offline.py), [제품 봉인 테스트](../../tests/test_p2_v331_product_scout_n_seal_offline.py), [결과](research_receipts/p2_v331_unholy_fixed_N_343_native_compact.json) |
 | A | [v161_wago_db2_snapshot.py](../../runner/v161_wago_db2_snapshot.py) | 시즌 DB2 원본 | [테스트 전체](FILE_INVENTORY.md) |
 | A | [v229_simc_only_source_seed.py](../../runner/v229_simc_only_source_seed.py) | SimC source identity | [테스트 전체](FILE_INVENTORY.md) |
 | A | [v191_unified_season_data_update.py](../../runner/v191_unified_season_data_update.py) | 시즌 원본→후보 | [test_v191_unified_season_data_update.py](../../tests/test_v191_unified_season_data_update.py) |

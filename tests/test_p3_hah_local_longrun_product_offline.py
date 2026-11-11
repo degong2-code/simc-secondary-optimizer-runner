@@ -70,6 +70,10 @@ class LocalLongRunHTTP(unittest.TestCase):
         self.assertEqual(first.status_code,200,first.text)
         self.assertEqual(first.json()["max_new_native_this_invocation"],4)
         self.assertEqual(service.config(self.folder)["native_budget"],12)
+        self.assertEqual(service.config(self.folder)["scout_iterations"],56)
+        self.assertEqual(self.client.get(
+            "/api/v1/sessions/"+self.folder.name+"/longrun/status",
+            headers=self.auth).json()["scout_iterations_per_CHMV"],56)
         self.assertTrue(self.client.get(
             "/api/v1/sessions/"+self.folder.name+"/longrun/status",
             headers=self.auth).json()["active"])
@@ -88,6 +92,7 @@ class LocalLongRunHTTP(unittest.TestCase):
         self.assertEqual(resumed.status_code,200,resumed.text)
         self.assertFalse((self.stage/"CANCEL").exists())
         self.assertEqual(resumed.json()["max_new_native_this_invocation"],2)
+        self.assertEqual(service.config(self.folder)["scout_iterations"],56)
         self.child.exit_code=0
         imp=self.post("/api/v1/sessions/"+self.folder.name+
                       "/longrun/import",

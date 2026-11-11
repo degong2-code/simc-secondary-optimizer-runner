@@ -1134,7 +1134,9 @@ function renderProgress(data) {
   showEnvironmentBuild(data?.environment_build);
   $("stage-text").textContent=status+" · Native 누적 "+(p.native_attempts||0)+
                        " · 캐시 "+(p.cache_hits||0)+environmentText+
-                       (state.longrunEnabled?" · v291 장기 세션 (회차별 제한)":"");
+                       (state.longrunEnabled?" · v291 장기 세션 (회차별 제한)":"")+
+                       (Number.isInteger(data?.scout_iterations_per_CHMV)?
+                         " · 탐색 N"+data.scout_iterations_per_CHMV:"");
   $("run-label").textContent=data.active?"진행 중":
     cancelled?"취소됨 · 재개 가능":
     worker==="BLOCKED_OR_PARTIAL"?"실행 차단":
@@ -1157,7 +1159,9 @@ function renderResult(payload) {
   $("sem").textContent=number(best.simc_sem,2);
   const oil=Object.values(r.fixed_O).reduce((a,x)=>a+x,0);
   $("budget").textContent="최종 CHMV T "+number(total)+
-      "  ·  B="+number(r.base_B)+" + 고정 기름 O="+number(oil);
+      "  ·  B="+number(r.base_B)+" + 고정 기름 O="+number(oil)+
+      (Number.isInteger(payload.scout_iterations_per_CHMV)?
+        " · 탐색 N"+payload.scout_iterations_per_CHMV:"");
   const bars=$("stat-bars");bars.replaceChildren();
   for(const [key,label,color] of statOrder){
     const value=best.absolute_rating_T[key],pct=best.percent_of_final_T[key];
