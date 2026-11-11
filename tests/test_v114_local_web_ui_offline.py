@@ -245,6 +245,9 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('menu.className="choice-results"',js)
         self.assertIn('e.key==="ArrowDown"',js)
         self.assertIn(".choice-native-select",css)
+        self.assertIn("fieldWrap.className=\"gear-choice-field\"",js)
+        self.assertIn("gearLabel.before(fieldWrap);fieldWrap.append(gearLabel,box)",js)
+        self.assertIn('textContent="평가 "+n+"회 · 최대 "+limit+"회"',js)
 
     def test_official_item_names_bound_to_current_ids(self):
         response=self.client.get("/api/v1/season-gear",headers=self.head)

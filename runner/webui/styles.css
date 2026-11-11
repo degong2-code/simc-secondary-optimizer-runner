@@ -143,4 +143,6 @@ summary small{font-size:10px;color:var(--muted);font-weight:450}
 .choice-result:hover,.choice-result.choice-active{background:#ebf4ee}
 .choice-result[aria-selected=true]{font-weight:750}
 .choice-empty{padding:10px 12px;margin:0;font-size:11px;color:var(--muted)}
-.gear-fields>.choice-picker{align-self:end;min-width:0}
+.gear-choice-field{min-width:0}
+.gear-choice-field>label{display:block}
+.gear-choice-field .choice-picker{margin-top:4px}

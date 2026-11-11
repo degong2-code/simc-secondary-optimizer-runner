@@ -115,7 +115,14 @@ function enhanceSelect(select){
   menu.className="choice-results";menu.setAttribute("role","listbox");
   menu.hidden=true;input.setAttribute("aria-controls",menu.id);
   box.append(input,menu);
-  (select.closest(".gear-row")?select.closest("label"):select).after(box);
+  const gearLabel=select.closest(".gear-row")?select.closest("label"):null;
+  if(gearLabel){
+    // A gear control must occupy ONE grid cell with its own label.
+    // Moving the label retains the native SELECT, data-field and listeners.
+    const fieldWrap=document.createElement("div");
+    fieldWrap.className="gear-choice-field";
+    gearLabel.before(fieldWrap);fieldWrap.append(gearLabel,box);
+  }else select.after(box);
   select.classList.add("choice-native-select");
   select.setAttribute("aria-hidden","true");select.tabIndex=-1;
   let shown=false,index=0;
@@ -875,7 +882,7 @@ function markSession(id) {
     $("filled-result").hidden=true;
     $("empty-result").hidden=false;
     $("run-label").textContent="대기";
-    $("progress-label").textContent="0 / 6 후보";
+    $("progress-label").textContent="평가 0회";
     $("progress-pct").textContent="0%";
     $("progress-bar").style.width="0%";
     $("stage-text").textContent="이 세션의 상태를 조회 중입니다.";
@@ -1241,7 +1248,7 @@ function renderProgress(data) {
   }
   const n=Number(p.completed_jobs)||0,limit=Number(p.planned_jobs)||6;
   const pct=Number(p.progress_percent)||0;
-  $("progress-label").textContent=n+" / "+limit+" 후보";
+  $("progress-label").textContent="평가 "+n+"회 · 최대 "+limit+"회";
   $("progress-pct").textContent=number(pct,0)+"%";
   $("progress-bar").style.width=Math.max(0,Math.min(100,pct))+"%";
   const worker=p.worker?.status||p.status||"NOT_STARTED";
@@ -1353,7 +1360,7 @@ function handlePollFailure(err,id) {
     state.session="";
     $("session-id").textContent="없음";
     $("run-label").textContent="기록 없음";
-    $("progress-label").textContent="– / – 후보";
+    $("progress-label").textContent="평가 기록 없음";
     $("progress-pct").textContent="–";
     $("progress-bar").style.width="0%";
     $("stage-text").textContent="현재 PC에 세션 파일이 없습니다.";
