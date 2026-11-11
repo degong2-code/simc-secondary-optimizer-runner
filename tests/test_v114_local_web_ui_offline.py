@@ -271,7 +271,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         js=self.client.get("/assets/app.js").text
         self.assertIn('id="season-locale-status"',page)
         self.assertIn("report.official_ko_localization",js)
-        self.assertIn("공식 한국어 이름 확인 완료",js)
+        self.assertIn("현재 검증된 선택 목록의 한국어 명칭",js)
         self.assertIn("미확정 명칭은 원본 이름을 표시합니다.",js)
         self.assertIn('item.official_name_ko',js)
 

@@ -1215,8 +1215,8 @@ async function buildSeasonEnvironment() {
     const localization=report.official_ko_localization;
     const localized=$("season-locale-status");
     if(localization?.status==="VERIFIED_OFFICIAL_NAMES_COMPLETE") {
-      localized.textContent="공식 한국어 이름 확인 완료 · "+
-        localization.verified_names+"종 · 기존 이름 재사용 "+
+      localized.textContent="현재 검증된 선택 목록의 한국어 명칭 "+
+        localization.verified_names+"종 확인 완료 · 기존 이름 재사용 "+
         localization.existing_same_build_name_records_reused+"종";
     }else if(localization) {
       localized.textContent="한국어 이름 구축: "+

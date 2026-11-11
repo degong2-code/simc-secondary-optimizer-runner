@@ -188,6 +188,7 @@ class LocalJobs:
         self.static_lock = threading.Lock()
         self.profile_stage_lock = threading.Lock()
         self.season_source_lock = threading.Lock()
+        self.locale_cache_lock = threading.Lock()
         self._verified_fresh_profile_result = None
         self._current_fresh_game_build = None
 
@@ -502,8 +503,11 @@ class LocalJobs:
         # Environment localization is a dependent, source-owned stage.
         # An OPTIONAL unobserved name never invalidates verified G/J/F/O.
         try:
-            localization=official_ko_env.build_for_environment(
-                self.root,game_build,outcome,target_ilevel=target_ilevel)
+            # Serializes same-process incremental label cache updates and
+            # avoids duplicate official requests for concurrent Build calls.
+            with self.locale_cache_lock:
+                localization=official_ko_env.build_for_environment(
+                    self.root,game_build,outcome,target_ilevel=target_ilevel)
         except (official_ko_env.LocalizationBlocked,
                 environment_manifest.EnvironmentBlocked,
                 OSError,ValueError,TypeError,KeyError):
