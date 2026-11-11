@@ -1,4 +1,5 @@
 # source-first new Balance Druid, automatic T; N=20..640 for research only.
+# Correct exact input field-only comparison and developer note filename before Native.
 name: P2 v324 NEW Balance Druid source-first continuous N Native study
 on:
   push:

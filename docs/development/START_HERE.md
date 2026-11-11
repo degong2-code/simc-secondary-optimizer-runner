@@ -12,7 +12,7 @@
 | v318 오차·다른 CHMV 후보 확인 정책 | [v319 신규 풍운 수도사 실 Native A/B](notes/2026-11-11_p2-v319-new-windwalker-real-v290-v318-ab.md), [영구 compact 원본 대사](research_receipts/p2_v319_windwalker_auto_T_real_v290_v318_compact.json) — 최고 CHMV 동일·95 우위 없음 |
 | 최신 실 Native 성공/비용·원본 범위 | [v319 실제 Actions SUCCESS #42941245130](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42941245130), [증거 지도](EVIDENCE_INDEX.md) |
 | v321 신규 Shadow Priest 128+3 Native 실측 | [영구 compact·원본 SHA](research_receipts/p2_v321_shadow_auto_T_35_120_320_compact.json), [Action 실패·별도 120 복구 기록](notes/2026-11-11_p2-v321-new-shadow-priest-120-native.md) — 제품 120 단계 미통합 |
-| v324 신규 조화 드루이드 가변 N 원본 실험 | [신규 자동 T·N20~640](notes/2026-11-11_p2-v324-new-balance-continuous-N.md), [Native Actions](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/workflows/p2_v324_new_balance_continuous_n_native_once.yml) — 원본 영수증 확인 전 |
+| v324 신규 조화 드루이드 가변 N 원본 실험 | [신규 자동 T·N20~640](notes/2026-11-11_p2-v324-new-balance-continuous-n.md), [Native Actions](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/workflows/p2_v324_new_balance_continuous_n_native_once.yml) — 원본 영수증 확인 전 |
 | v322/v323 CHMV 최초 도달·연속 N 선택 | [도달시간·가변 N 연구](notes/2026-11-11_p2-v323-arrival-continuous-n.md) — 동일 CHMV 소요시간 우선, Native 적용 전 |
 | v320 SEM 기반 35/120/320 연구 진단 | [IDEA-001 단계 선택 진단](notes/2026-11-11_p2-v320-sem-tier-advisory.md) — 120 단계 실행 아직 미통합 |
 | 실제 35/120/320 비용 계측 | [18회 Native 실측 노트](notes/2026-11-11_p2-18-real-request-cost.md) |

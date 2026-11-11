@@ -56,7 +56,7 @@ def update_input(original,n,out):
                      lambda _: "json2="+str(out.resolve()),converted)
     # Full source byte-equivalent modulo the only two allowed changes.
     norm=lambda s: re.sub(r"(?m)^json2=.+$","json2=REMOVED",
-                           re.sub(r"(?m)^iterations=\\d+$",
+                           re.sub(r"(?m)^iterations=\d+$",
                                   "iterations=REMOVED",s))
     need(norm(converted)==norm(original),
          "OTHER_PROFILE_GEAR_FLASK_TALENTS_CHANGED")
