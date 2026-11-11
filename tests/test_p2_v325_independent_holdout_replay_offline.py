@@ -36,6 +36,26 @@ class V325Replay(unittest.TestCase):
             self.assertEqual(len(result["two_independent_screen_replicates"]),2)
             self.assertEqual(result["two_independent_screen_replicates"][0]["screen_iterations"] %
                              len(candidates),0)
+    def test_new_havoc_grid_three_reps_without_changing_v326_contract(self):
+        candidates,_=fake()
+        rows=[]
+        grid=(32,48,64,96)
+        for i,target in enumerate(candidates):
+            for n in grid+(640,):
+                for rep in ((0,1) if n==640 else (0,1,2)):
+                    rows.append({"CHMV":target,"n":n,"rep":rep,
+                        "samples":n-1,"dps":100000+i*100+rep,
+                        "sem":400/n**.5,"wall_seconds":0.12+.003*n,
+                        "seed":i*100000+n*100+rep,
+                        "native_sha256":("%064x"%(i*100000+n*100+rep))})
+        result=m.evaluate(candidates,rows,grid=grid,
+                          screen_reps=(0,1,2),holdout_reps=(0,1))
+        self.assertEqual(result["actual_independent_Native"],168)
+        self.assertEqual(result["screen_repetitions"],3)
+        self.assertEqual(result["holdout_replicates"],2)
+        for n in grid:
+            self.assertEqual(len(result["by_N"][str(n)]["screen_runs"]),3)
+            self.assertIsNone(result["by_N"][str(n)]["two_independent_screen_replicates"])
     def test_reject_missing_or_duplicate_native_without_fabrication(self):
         candidates,rows=fake()
         with self.assertRaisesRegex(m.ReplayBlocked,

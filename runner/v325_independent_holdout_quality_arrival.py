@@ -27,23 +27,31 @@ def key(chmv):
     return tuple(chmv[x] for x in STATS)
 
 def evaluate(candidates, observations, *, band=QUALITY_BAND,
-             grid=GRID, holdout_n=HOLDOUT_N):
+             grid=GRID, holdout_n=HOLDOUT_N,
+             screen_reps=REPS, holdout_reps=REPS):
     need(type(candidates) is list and len(candidates)==12
          and all(type(x) is dict for x in candidates)
          and type(observations) is list
          and type(band) in (float,int) and 0<band<0.05
-         and tuple(grid)==GRID and holdout_n==HOLDOUT_N,
+         and tuple(grid) in (GRID,(32,48,64,96))
+         and holdout_n==HOLDOUT_N
+         and tuple(screen_reps) in (REPS,(0,1,2))
+         and tuple(holdout_reps)==REPS,
          "PRECOMMITTED_NEW_USER_COHORT_REQUIRED")
     order=[key(c) for c in candidates]
     need(len(set(order))==len(order) and
          len({sum(x) for x in order})==1,
          "UNIQUE_SAME_BUDGET_CHMV_REQUIRED")
+    grid=tuple(grid)
+    screen_reps=tuple(screen_reps)
+    holdout_reps=tuple(holdout_reps)
     table={}
     for row in observations:
         need(type(row) is dict
-             and row.get("n") in GRID+(HOLDOUT_N,)
+             and row.get("n") in grid+(holdout_n,)
              and type(row.get("rep")) is int
-             and row["rep"] in REPS
+             and row["rep"] in (holdout_reps if row["n"]==holdout_n
+                                else screen_reps)
              and type(row.get("samples")) is int
              and row["samples"]==row["n"]-1
              and all(type(row.get(f)) in (int,float)
@@ -58,14 +66,14 @@ def evaluate(candidates, observations, *, band=QUALITY_BAND,
         ident=(v,row["n"],row["rep"])
         need(ident not in table,"DUPLICATE_EXACT_RESEARCH_IDENTITY")
         table[ident]=row
-    expected={(v,n,r) for v in order for n in GRID+(HOLDOUT_N,)
-              for r in REPS}
+    expected={(v,n,r) for v in order for n in grid+(holdout_n,)
+              for r in (holdout_reps if n==holdout_n else screen_reps)}
     need(set(table)==expected and
          len({x["seed"] for x in table.values()})==len(table),
          "COMPLETE_DISTINCT_NATIVE_SEEDS_AND_ALL_TARGET_N_REQUIRED")
     held={}
     for v in order:
-        a,b=(table[(v,HOLDOUT_N,r)] for r in REPS)
+        a,b=(table[(v,holdout_n,r)] for r in holdout_reps)
         held[v]={"mean":(a["dps"]+b["dps"])/2,
                  "independent_sem":math.hypot(a["sem"],b["sem"])/2}
     best=max(x["mean"] for x in held.values())
@@ -73,9 +81,9 @@ def evaluate(candidates, observations, *, band=QUALITY_BAND,
     good={v for v in order if held[v]["mean"]>=threshold}
     need(bool(good),"REFERENCE_BAND_EMPTY")
     out={}
-    for n in GRID:
+    for n in grid:
         runs=[]
-        for rep in REPS:
+        for rep in screen_reps:
             prefix=[]
             elapsed=0.
             history=[]
@@ -118,7 +126,8 @@ def evaluate(candidates, observations, *, band=QUALITY_BAND,
                 "good_at_wall_budget":by_budget,
             })
         out[str(n)]={
-            "two_independent_screen_replicates":runs,
+            "screen_runs":runs,
+            "two_independent_screen_replicates":(runs if len(screen_reps)==2 else None),
             "final_success_fraction":sum(
                 x["final_selected"]["reference_good_band"] for x in runs)/len(runs),
             "median_end_to_end_screen_wall_seconds":statistics.median(
@@ -127,13 +136,13 @@ def evaluate(candidates, observations, *, band=QUALITY_BAND,
                 x["first_persistent_good_selected"] is not None for x in runs)}
     return {
         "schema":SCHEMA,"source_user_candidates":len(order),
-        "screen_repetitions":len(REPS),
+        "screen_repetitions":len(screen_reps),
         "actual_independent_Native":len(table),
         "same_current_profile_required":True,
         "quality_band_fraction":band,
         "quality_band_is_operational_not_95_equivalence":True,
-        "holdout_N":HOLDOUT_N,
-        "holdout_replicates":len(REPS),
+        "holdout_N":holdout_n,
+        "holdout_replicates":len(holdout_reps),
         "holdout_best_of_only_12_CHMV_dps":best,
         "heldout_good_candidate_count":len(good),
         "holdout_selected_best_is_global_optimum":False,
