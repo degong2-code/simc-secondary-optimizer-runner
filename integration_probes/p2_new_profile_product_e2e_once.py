@@ -37,6 +37,11 @@ CASES={
         dict(character_class="monk",character_spec="windwalker",
              character_race="human",target_ilevel=334,final_T=None,
              sockets=4,special_gem=None),
+    # v320: new 26-DPS specialization (not v313/v314/v319).
+    "shadow_priest_4ordinary_auto_T":
+        dict(character_class="priest",character_spec="shadow",
+             character_race="human",target_ilevel=334,final_T=None,
+             sockets=4,special_gem=None),
     "destruction_warlock_4ordinary_T3400":
         dict(character_class="warlock",character_spec="destruction",
              character_race="human",target_ilevel=334,final_T=3400,

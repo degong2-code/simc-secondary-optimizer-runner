@@ -57,12 +57,12 @@ def save(doc):
                                indent=2,allow_nan=False)+"\n",encoding="utf8")
     temp.replace(RECEIPT)
 
-def new_user_case():
+def new_user_case(case_id=CASE_ID, expected_spec=("monk","windwalker")):
     from runner import v313_multispec_matrix_contract as former313
     from runner import v314_fresh_eight_spec_matrix_contract as former314
-    case, controls = fresh.selected_case(CASE_ID)
+    case, controls = fresh.selected_case(case_id)
     key = (case["character_class"],case["character_spec"])
-    need(key==("monk","windwalker") and
+    need(key==expected_spec and
          all(key!=(row["class"],row["spec"]) for previous in (
              former313.CASES,former314.CASES)
              for row in previous.values()),
@@ -97,14 +97,26 @@ def verified_automatic_T(environment, controls):
          "V319_AUTO_SEASON_GJFO_FORMULA_DRIFT")
     return environment["T"]
 
-def main():
-    need(os.getenv("P2_V319_ONE_FRESH_SPEC_AB_ONCE")=="1",
+def main(*, case_id=CASE_ID, expected_spec=("monk","windwalker"),
+         output_root=ROOT, receipt_path=RECEIPT,
+         required_env="P2_V319_ONE_FRESH_SPEC_AB_ONCE",
+         campaign_schema="p2_v319_one_new_windwalker_user_native_v290_v318_ab_v1",
+         post_run_hook=None):
+    # Previously verified v319 defaults stay intact; new campaigns must
+    # supply new specialization, output folder and one-shot env guard.
+    def save(doc):
+        output_root.mkdir(parents=True,exist_ok=True)
+        temp=receipt_path.with_suffix(".tmp")
+        temp.write_text(json.dumps(doc,sort_keys=True,ensure_ascii=False,
+                                   indent=2,allow_nan=False)+"\n",encoding="utf8")
+        temp.replace(receipt_path)
+    need(os.getenv(required_env)=="1",
          "V319_EXPLICIT_ONE_SHOT_NATIVE_OPT_IN_REQUIRED")
-    case, controls = new_user_case()
-    need(not ROOT.exists(),"V319_NO_REUSE_OF_COMPLETED_WORKSPACE")
+    case, controls = new_user_case(case_id,expected_spec)
+    need(not output_root.exists(),"V319_NO_REUSE_OF_COMPLETED_WORKSPACE")
     doc={
-        "schema":"p2_v319_one_new_windwalker_user_native_v290_v318_ab_v1",
-        "status":"STARTED","case":CASE_ID,"character":case,
+        "schema":campaign_schema,
+        "status":"STARTED","case":case_id,"character":case,
         "source_build":fresh.BUILD,"revision":fresh.REVISION,
         "simc_binary_sha256":fresh.BINARY_SHA,
         "manual_final_T":None,
@@ -131,7 +143,7 @@ def main():
              "BLIZZARD_CLIENT_ID","BLIZZARD_CLIENT_SECRET",
              "WCL_CLIENT_ID","WCL_CLIENT_SECRET")),
              "V319_SOURCE_CREDENTIALS_REQUIRED")
-        root=ROOT/"fresh_user_workspace"
+        root=output_root/"fresh_user_workspace"
         root.mkdir()
         env=web.LocalJobs(root).build_season_environment(
             game_build=fresh.BUILD,
@@ -194,8 +206,8 @@ def main():
                 need(confirmation.status_code==200
                      and confirmation.json()["user"]["target"]["final_T"]
                         is None
-                     and confirmation.json()["user"]["character"]["class"]=="monk"
-                     and confirmation.json()["user"]["character"]["spec"]=="windwalker",
+                     and confirmation.json()["user"]["character"]["class"]==expected_spec[0]
+                     and confirmation.json()["user"]["character"]["spec"]==expected_spec[1],
                      "V319_PRODUCT_USER_INPUT_LOST")
                 manifest=longrun.source_manifest(session)
                 original=longrun.entry.source(manifest)
@@ -214,8 +226,8 @@ def main():
                      and sum(identity["oil_vector"].values())==0,
                      "V319_NEW_USER_CONTEXT_BUDGET_OR_EXACT_IDENTITY")
                 profile=context["bundle"]["oil"]["profile"]
-                need(re.search(r"(?m)^monk=",profile) is not None
-                     and re.search(r"(?m)^spec=windwalker$",profile) is not None,
+                need(re.search(r"(?m)^"+re.escape(expected_spec[0])+r"=",profile) is not None
+                     and re.search(r"(?m)^spec="+re.escape(expected_spec[1])+r"$",profile) is not None,
                      "V319_NEW_SPEC_SIMC_PROFILE_NOT_ACTUALLY_CREATED")
                 doc["verified_auto_T_matches_v291_profile"]=True
                 doc["source_profile_sha256"]=identity["source_profile_sha256"]
@@ -227,7 +239,7 @@ def main():
                 save(doc)
                 for name,flag in (
                         ("v290_original",False),("v318_idea001",True)):
-                    output=ROOT/name
+                    output=output_root/name
                     start=time.monotonic()
                     result=durable.run(
                         context,flask,binary,output,
@@ -289,7 +301,7 @@ def main():
                     }
                     # Retain exact 35/320 original inputs, Native JSON2,
                     # journal, session seal and timing, not just rounded DPS.
-                    archive=ROOT/(name+"_original_native.zip")
+                    archive=output_root/(name+"_original_native.zip")
                     with zipfile.ZipFile(
                             archive,"w",compression=zipfile.ZIP_DEFLATED,
                             compresslevel=5) as z:
@@ -356,6 +368,10 @@ def main():
                     "pairwise":doc["pairwise"],
                     "environment_native":doc["environment_native_calls"],
                 },sort_keys=True),flush=True)
+                if post_run_hook is not None:
+                    need(callable(post_run_hook),"V320_POST_RUN_HOOK_REQUIRED")
+                    doc["new_native_research_tier_120"]=post_run_hook(doc,binary,output_root)
+                    save(doc)
                 return doc
     except BaseException as exc:
         doc["status"]="BLOCKED_OR_PARTIAL_"+type(exc).__name__
