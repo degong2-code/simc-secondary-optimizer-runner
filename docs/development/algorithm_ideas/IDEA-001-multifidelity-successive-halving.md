@@ -70,3 +70,8 @@
 - [v320 근거·오차 기반 반복수 계획](../notes/2026-11-11_p2-v320-sem-tier-advisory.md), [오프라인 진단 코드](../../../runner/v320_idea001_sem_tier_advisory.py).
 - 실제 JSON2 **samples/SEM와 비교 320 기준의 SEM 바닥**을 사용해 후보가 35/120/320 중 어느 단계의 해상도를 요구할지 추정한다. 120은 이미 35로 평가한 후보를 **별도 Native로 재실행하는 연구 가설**이며 v291 `UNTYPED_SIMC_ITERATION_IDENTITY` 때문에 지금은 실행 불가능. 추정값은 SimC 사실/미래 순위 확정이 아님.
 - 새 전문화 Native에서 120-tier의 실제 비용·탈락률을 측정해 이득이 있을 때만 35/120/320 별도 정확 시드·캐시/재개 계약을 연결하고, 실제 최고의 320 확인 DPS 및 동일 시간/iterations 비교 후에만 승격한다. v290 기본·v318 opt-in 불변.
+
+## 2026-11-11 사용자 직접 개선: identical CHMV → time/iterations metric, N 최적화
+
+- [실제 원본의 정확 CHMV 첫 도달](../notes/2026-11-11_p2-v323-arrival-continuous-n.md). 같은 CHMV를 발견한 알고리즘의 DPS 노이즈 차이로 승자를 지정하지 않는다. 동일 후보 최초 35 발견, 320 확인까지의 순서·누적 iterations·실시간을 비교. 근접 L1 rating은 같은 DPS의 확정 증거가 아님.
+- [v323 연속 N 계획](../../../runner/v323_continuous_n_sem_wall_advisory.py)에서 35/120/320은 고정 스케줄이 아닌 실측 calibration. candidate+reference SEM과 reference noise floor, 동일 CPU/호스트의 기동비 포함 process wall을 이용한다. 고정 N 대안은 새 전문화에서 실제 Native 측정 후 판단. 기본 v290/v291 안전 동작과 원본 SHA 불변.

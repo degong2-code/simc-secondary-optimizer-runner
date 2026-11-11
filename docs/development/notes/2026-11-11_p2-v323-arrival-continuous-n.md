@@ -1,0 +1,10 @@
+# P2 2026-11-11 — v322/v323 동일 CHMV 도달 속도 및 연속 N 비용 진단
+
+- **Capability:** `OPTIMIZER.POLICY`, `DEV.CONTINUITY`.
+- **Keywords:** IDEA-001, v322 first CHMV, v323 variable N, v290, v318, fresh Windwalker and Shadow, real Native timing, source SHA, 35/120/320 not fixed.
+- **Prior evidence:** [v319 actual source profile Native](../research_receipts/p2_v319_windwalker_auto_T_real_v290_v318_compact.json) and [v321 Shadow actual+separate120](../research_receipts/p2_v321_shadow_auto_T_35_120_320_compact.json), both source archives verified in the model container, run URLs #42941245130/#42945184377.
+- **Decision:** `EXTEND` IDEA-001 research: compare time / cumulative SimC iterations to first **exact or near CHMV**, not two noisy observed DPS estimates for a shared CHMV. Treat N=35/120/320 as calibration points, **not fixed product optimum**.
+- **Changes:** Pure [v322 source-bound arrival evaluator](../../../runner/v322_verified_chmv_arrival.py) and [v323 continuous integer N SEM+measured startup cost planner](../../../runner/v323_continuous_n_sem_wall_advisory.py). No v291 SimC phase/cache/session change; no global optimum or post-selection 95 claim.
+- **Verification:** Source ZIPs and 64-row original Native journal/traces inspected. Windwalker both final exact CHMV reached on scout index9/confirmed index14 (v290 2.378/4.519s vs v318 2.390/4.609s; 350/810 iterations); Shadow v290 near scout50/confirmed62 (25.333/30.833s;3495/4200), v318 near scout60/confirmed62 (29.070/31.269s;3845/4200). New focused CI result must be checked separately.
+- **Remaining:** New specialization with auto T must test actual multiple N across same candidate source and same host; choose N from observed precision-versus-cost rather than hardcode. Preserve new specialization each Native experiment.
+- **Efficiency:** Existing original two campaign archives reused read-only; zero new Native for v322/v323. No repeated season DB for offline analysis. Timing excludes user profile/season Build and post hoc reference is not a proven global optimum.
