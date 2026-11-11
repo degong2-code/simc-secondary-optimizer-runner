@@ -1,0 +1,52 @@
+{
+  "schema": "p1_v345_real_extracted_windows_zip_cmd_chrome_restore_compact_v1",
+  "status": "PASS_EXTRACTED_WIN_CMD_REAL_CHROME_SAVED_SESSION_ZERO_NATIVE",
+  "tested_head": "b60b05b767a99303bb0df483f317e27a8d3c0a84",
+  "actions_run_id": 43118748950,
+  "focused_ci_run_id": 43118748907,
+  "prior_v181_windows_packaging_regression_id": 43117965870,
+  "actions_platform": "windows-2022",
+  "source_only_windows_beta": true,
+  "source_zip_file_count": 270,
+  "archive_manifest_additional_file_count": 1,
+  "source_zip_sha256": "47df901955abc622dec94b29ca1542b2b019dd8b9f450105cd7f1fdc151a218c",
+  "outer_github_artifact_zip_sha256": "858fb8135ea2dcde82a08a55a033e8a6b2cb4fb0cc3d15bbf683044fcd108e74",
+  "source_catalog": {
+    "game_build": "12.1.5.70575",
+    "verified_source_bytes_sha256": "57f8c51b98ea0bebd2d35bf24865568f0e34074ac85eca5fad7cfe500e0c1095",
+    "manifest_sha256": "b837e24a3c593be7e9f681bc82d2a845ffddfb52dfc15b4875654f510ac98f15",
+    "confirmed_not_retail_70783_source": true
+  },
+  "external_simc": {
+    "binary_sha256": "1fc927d2be7f1b6064c75f004b5b22245b064a6b3e56e572af4048ba822a986d",
+    "revision": "de11f57df75dda668bae6ac7043a43b98831fa96",
+    "no_profile_banner_build": "12.1.5.70783",
+    "binary_bundled_in_zip": false
+  },
+  "real_windows_acceptance": {
+    "source_runtime_exact_sha_as_tested_head": true,
+    "extracted_windows_cmd_check_pass": true,
+    "extracted_cmd_launched_real_loopback_http": true,
+    "actual_chrome_loaded_26_dps": true,
+    "saved_source_user_scenario": "paladin/retribution/334",
+    "native0_plan_http_true": true,
+    "saved_inputs_roundtrip": true,
+    "session_stored_outside_zip_in_isolated_userprofile": true,
+    "same_cmd_zip_server_restarted_new_process": true,
+    "chrome_selected_recent_session_and_restored_same_inputs": true,
+    "native_calls_on_restored_saved_session": 0,
+    "used_synthetic_http": false
+  },
+  "new_dps_native_calls": 0,
+  "new_environment_native_calls": 0,
+  "prior_v344_real_64_native_receipt_reused_not_reexecuted": true,
+  "source_zip_artifact_id": 13899457613,
+  "artifact_expires_at": "2026-11-18T23:19:36Z",
+  "limits": {
+    "historical_packaged_catalog_not_70783_ready": true,
+    "real_70783_season_build_from_clean_personal_pc_unproven": true,
+    "personal_pc_install_proven": false,
+    "full_completed_result_reopened_by_this_test": false,
+    "all_26_dps_simc_native_proven": false
+  }
+}

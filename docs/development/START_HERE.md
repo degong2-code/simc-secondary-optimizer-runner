@@ -2,6 +2,8 @@
 
 > **2026-11-11 최신 단일 인계 정본:** [v338 제품 완성·공식 한국어·제로베이스 최신 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P1_V338_PRODUCT_FINALIZATION.md). 기존 v331 인계는 제품 N 연구 완료 당시의 역사 스냅샷이고, 최신 제품 상태(v332~v338)는 신규 인계를 우선한다.
 
+[v345 **배포 ZIP 그대로 압축 해제·CMD 실행·Chrome 저장 계획 세션 복원 Windows PASS**](notes/2026-11-12_p1-v345-windows-zip-cmd-chrome-zero-native.md) — source ZIP 270개 SHA 검증, Native0, 역사적 포함 v213 카탈로그는 빌드 70575이며 현재 70783 환경 READY는 사용자 시즌 Build 별도 필수. 실제 Native64 증거는 v344 참조.
+
 [v344 **실제 Windows Chrome→현재 70783 시즌 자동 GJFO3→N56 64회·취소·HTTP 서버 재시작·재개·결과 재열기 PASS**](notes/2026-11-12_p1-v344-real-windows-browser-native64-once.md) — GitHub Actions Windows-2022 생존 사냥꾼 한 사용자 조건, 실제 SimC DPS64·SEM·95% 기록. 개인 PC 설치·미래 시즌 일반화·전역 최적해는 미입증.
 
 [v343 현 Retail70783 Windows GJFO3 + 생존 사냥꾼 기본N56/12 실제 Native PASS](notes/2026-11-11_p1-v343-current-70783-windows-source-native-once.md) — 단일 전문화 실제 Windows FastAPI→SimC; 개인 PC Chrome 64회는 미검증.
