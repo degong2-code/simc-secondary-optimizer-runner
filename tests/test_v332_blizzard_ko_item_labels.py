@@ -28,6 +28,19 @@ class OfficialKoreanNames(unittest.TestCase):
         with self.assertRaises(loc.LocaleBlocked):
             loc.verified_names(doc,"12.1.5.70575",{268249,268250},"b"*64)
 
+    def test_official_installed_77_names_bound_to_exact_source(self):
+        build,ids=loc.selected_ids()
+        names=loc.installed_names(build,set(ids))
+        self.assertEqual(len(ids),77)
+        self.assertEqual(len(names),77)
+        self.assertEqual(names[158367],"메레크타의 송곳니")
+        from runner import v167_product_season_gear_adapter as adapter
+        public=adapter.public_options(adapter.read())
+        self.assertEqual(public["verified_ko_item_names"],77)
+        self.assertTrue(all("name_ko" in item
+            for role in ("trinket","special_effect_gear_candidate")
+            for item in public["choices"][role]))
+
     def test_missing_or_unverified_file_never_blocks_original_choices(self):
         with tempfile.TemporaryDirectory() as tmp:
             p=pathlib.Path(tmp)/"ko.json"

@@ -1,0 +1,552 @@
+{
+  "schema": "v332_official_ko_KR_item_names_v1",
+  "locale": "ko_KR",
+  "provider": "BLIZZARD_OFFICIAL_GAME_DATA_API",
+  "api_namespace": "static-kr",
+  "catalog_build": "12.1.5.70575",
+  "catalog_sha256": "02f064829a866e0a18271510deccae848bea1cdffa364f5da7110efafa4631a9",
+  "status": "COMPLETE",
+  "requested_item_ids": [
+    158367,
+    158368,
+    158374,
+    159288,
+    159617,
+    159618,
+    159644,
+    193748,
+    193757,
+    193762,
+    248583,
+    250214,
+    250215,
+    250224,
+    250225,
+    250228,
+    250229,
+    250238,
+    250243,
+    250244,
+    250245,
+    250248,
+    250254,
+    250255,
+    250259,
+    251782,
+    251783,
+    251784,
+    251785,
+    251786,
+    251787,
+    251788,
+    251789,
+    251790,
+    251791,
+    251792,
+    252957,
+    259896,
+    264694,
+    264701,
+    264878,
+    265657,
+    268249,
+    268250,
+    268251,
+    268252,
+    268265,
+    270160,
+    270161,
+    270162,
+    270163,
+    270164,
+    270165,
+    270166,
+    270167,
+    270168,
+    270169,
+    270170,
+    270171,
+    270173,
+    270174,
+    270175,
+    271092,
+    271093,
+    273649,
+    273778,
+    273794,
+    273795,
+    273796,
+    273797,
+    275070,
+    280617,
+    280799,
+    280835,
+    281029,
+    281056,
+    281215
+  ],
+  "items": [
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/158367?namespace=static-kr&locale=ko_KR",
+      "item_id": 158367,
+      "name_ko": "메레크타의 송곳니",
+      "response_canonical_sha256": "b4ac53cc6fbf5bc69f87258207baf3e8727cf8c4119975429212b549f01a3f9e"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/158368?namespace=static-kr&locale=ko_KR",
+      "item_id": 158368,
+      "name_ko": "세스랄리스의 더럽혀진 유물",
+      "response_canonical_sha256": "6d0d3d09358f11880b6eac87990aaadef61116b5bb573828b882d8037c2d3e68"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/158374?namespace=static-kr&locale=ko_KR",
+      "item_id": 158374,
+      "name_ko": "단지 안의 전자정령",
+      "response_canonical_sha256": "1d2b9709ddbd0bc0b7ccc86d4be8cfaeb5129afc4d252c733c6aef81fc5d97d2"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/159288?namespace=static-kr&locale=ko_KR",
+      "item_id": 159288,
+      "name_ko": "잠 못 드는 부족의 망토",
+      "response_canonical_sha256": "09a558ceb02d8e98308f6d811641fffc95fc94ecae0c2feb2bbf89b675be1c60"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/159617?namespace=static-kr&locale=ko_KR",
+      "item_id": 159617,
+      "name_ko": "반짝이는 금빛 깃털",
+      "response_canonical_sha256": "70d8171a28e784bf391e89c7400185018f4bbb4d64b8ddeb7efe1739c6001696"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/159618?namespace=static-kr&locale=ko_KR",
+      "item_id": 159618,
+      "name_ko": "음침바의 의식 붕대",
+      "response_canonical_sha256": "d67b1fef2f209f78c639508c45a2444a2fd53ae72c15275aa7b632e3247e80f3"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/159644?namespace=static-kr&locale=ko_KR",
+      "item_id": 159644,
+      "name_ko": "죽음의 날붙이 게티이쿠",
+      "response_canonical_sha256": "0c64232b39d5b8c53be59fc248a28358d64fdf566f23ceda72b30dc418c26d58"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/193748?namespace=static-kr&locale=ko_KR",
+      "item_id": 193748,
+      "name_ko": "카이락카의 불타는 잿불",
+      "response_canonical_sha256": "703887d89c97b6eb29a09c01b42867d4335b57f9edd8b7b717e8625487fa784a"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/193757?namespace=static-kr&locale=ko_KR",
+      "item_id": 193757,
+      "name_ko": "루비 새끼용 알껍질",
+      "response_canonical_sha256": "1a7a77e5e1fd898ba031c8a9ce99fefee3ce593d95115cc9a5facd3ed3d11be7"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/193762?namespace=static-kr&locale=ko_KR",
+      "item_id": 193762,
+      "name_ko": "불길결속자의 발굽",
+      "response_canonical_sha256": "945450f8d53b9300129b4f98ab6656f00a76fd3b29aeb121b155410fb9a6e9e1"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/248583?namespace=static-kr&locale=ko_KR",
+      "item_id": 248583,
+      "name_ko": "새로운 유대의 북",
+      "response_canonical_sha256": "f07abdfdbdca98b15c548750977734462eca26be59456cc00fe58a8094d920d5"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/250214?namespace=static-kr&locale=ko_KR",
+      "item_id": 250214,
+      "name_ko": "빛첨탑 핵",
+      "response_canonical_sha256": "e4e3cb8eedd652df680b768181cfa306a36e850f9004b3f48cbcd4047a2cd4bd"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/250215?namespace=static-kr&locale=ko_KR",
+      "item_id": 250215,
+      "name_ko": "화물 운반꾼의 영약",
+      "response_canonical_sha256": "cb998e75f55a6f5801f63977434211b54ab1a75f4701d283778371664dccec62"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/250224?namespace=static-kr&locale=ko_KR",
+      "item_id": 250224,
+      "name_ko": "정신관통자의 인장",
+      "response_canonical_sha256": "b899f0bbbd7d4867824c4f438fddcfba61db3e6427fe77f2214631f3171382f5"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/250225?namespace=static-kr&locale=ko_KR",
+      "item_id": 250225,
+      "name_ko": "공허 처형 명령",
+      "response_canonical_sha256": "6529af37a92a4147658d66f5b133eb1a73e96475a65d0b40b151a919aed7b6db"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/250228?namespace=static-kr&locale=ko_KR",
+      "item_id": 250228,
+      "name_ko": "공명의 울림석",
+      "response_canonical_sha256": "78045d34b868bccb8a598719efe2a61b6d32958b8175892fbf3993c886d0ec59"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/250229?namespace=static-kr&locale=ko_KR",
+      "item_id": 250229,
+      "name_ko": "전쟁의 로아의 우상",
+      "response_canonical_sha256": "ff185d65fa61956ecd268aca9adf495711bc636a6864c4acc4f0bdc0a7b397d6"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/250238?namespace=static-kr&locale=ko_KR",
+      "item_id": 250238,
+      "name_ko": "포식하는 자연의 씨앗",
+      "response_canonical_sha256": "b83c0c444fcf03772cfb501b32b92bdfc88c5f7a313eca52f6fc2aa630876427"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/250243?namespace=static-kr&locale=ko_KR",
+      "item_id": 250243,
+      "name_ko": "마나하트의 구속의 불길",
+      "response_canonical_sha256": "d58d0aaaed9a4abbeeec259923d1f1c7411df6a5aa6d688c7ea876ce40f53f1d"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/250244?namespace=static-kr&locale=ko_KR",
+      "item_id": 250244,
+      "name_ko": "영구 결빙의 정수",
+      "response_canonical_sha256": "ebd26c1d390b1b4c5186ddef22a89f1c7741ce91a73388f37793dec56ef44c6b"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/250245?namespace=static-kr&locale=ko_KR",
+      "item_id": 250245,
+      "name_ko": "무리의 종양",
+      "response_canonical_sha256": "292a311902a2b67837b9350a87406cea518540db492f98c38da5901d4d8ec8bb"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/250248?namespace=static-kr&locale=ko_KR",
+      "item_id": 250248,
+      "name_ko": "산화 방지 의약품",
+      "response_canonical_sha256": "a3c962930c5afba6f3371e4594e26dddf4c399504cd54aa2425fcf2b3ab2cf1e"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/250254?namespace=static-kr&locale=ko_KR",
+      "item_id": 250254,
+      "name_ko": "찬란한 희망의 씨앗",
+      "response_canonical_sha256": "5507f85916f096cc0c86f08d980d6ec29abb7dea7c09fc49d0b5c9aa086dfdb2"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/250255?namespace=static-kr&locale=ko_KR",
+      "item_id": 250255,
+      "name_ko": "불안정한 지옥심장 수정",
+      "response_canonical_sha256": "04e95bc3d4e44eeb1cc9e50b4d056ea4edf595bf5ad6fcec7a32d85329dd84f4"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/250259?namespace=static-kr&locale=ko_KR",
+      "item_id": 250259,
+      "name_ko": "여명뿌리의 묘목",
+      "response_canonical_sha256": "ac1b12df60c26a89813bf1c68dc83d4a0b7d3eb9c7bf78585efcf630ceb647e6"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/251782?namespace=static-kr&locale=ko_KR",
+      "item_id": 251782,
+      "name_ko": "말라버린 샙터의 발",
+      "response_canonical_sha256": "f674b614610e66e866b6157541a5ac015cb876cf7687b390c8bf8b9f39502acc"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/251783?namespace=static-kr&locale=ko_KR",
+      "item_id": 251783,
+      "name_ko": "잃어버린 하셰이의 우상",
+      "response_canonical_sha256": "5a3185989acc538388675f32b1553ad76018c6a8185eeb82cd09a9a5aaeeb380"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/251784?namespace=static-kr&locale=ko_KR",
+      "item_id": 251784,
+      "name_ko": "녹음 와크라푸쿠",
+      "response_canonical_sha256": "38bc7b31af4110dd03236d4cc37fb0c6e8d36df8fe1380589cd1d49f7db567a5"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/251785?namespace=static-kr&locale=ko_KR",
+      "item_id": 251785,
+      "name_ko": "공허 사신의 성서",
+      "response_canonical_sha256": "b027ce0cfc0e9f31e67fe682ccc183728361bb57da33ab100e1245c002c5f8eb"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/251786?namespace=static-kr&locale=ko_KR",
+      "item_id": 251786,
+      "name_ko": "끝없이 붕괴하는 공허 균열",
+      "response_canonical_sha256": "59e09726fb18646defd1d3f1ef46f4d2f91fa690e3f309babb160f9bdf14fe7b"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/251787?namespace=static-kr&locale=ko_KR",
+      "item_id": 251787,
+      "name_ko": "봉인된 혼돈 항아리",
+      "response_canonical_sha256": "b4432c88ec7fa22c13d00f025cc36d92a64018c9c9368012d858d2e4bcfd0703"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/251788?namespace=static-kr&locale=ko_KR",
+      "item_id": 251788,
+      "name_ko": "빛의 선물",
+      "response_canonical_sha256": "28a076696dd1da9ebf79b0e3b0d316ab191a0e5fa90aa5e8bacac4d95a2dc07a"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/251789?namespace=static-kr&locale=ko_KR",
+      "item_id": 251789,
+      "name_ko": "축성된 성배",
+      "response_canonical_sha256": "d56db42f98e6b444f126090aa0883c2326a8f39dc83577d286dfb01bdfb670bf"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/251790?namespace=static-kr&locale=ko_KR",
+      "item_id": 251790,
+      "name_ko": "더럽혀진 성배",
+      "response_canonical_sha256": "c93df35f3fdff2d32f1044569cacce2532eb3fb505262f634f3a9f0e83dbd495"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/251791?namespace=static-kr&locale=ko_KR",
+      "item_id": 251791,
+      "name_ko": "신성한 응징자의 명령",
+      "response_canonical_sha256": "a746eea7a4d321e463d6066021185eff37e4b69b007540d67283a7e952336e1a"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/251792?namespace=static-kr&locale=ko_KR",
+      "item_id": 251792,
+      "name_ko": "영광스러운 성전사의 기념품",
+      "response_canonical_sha256": "846538b7f33fd44054b41f3a30f8f054014bb3ba089bcf568fd776d07f98985b"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/252957?namespace=static-kr&locale=ko_KR",
+      "item_id": 252957,
+      "name_ko": "뒤얽힌 생기 넘치는 덩굴",
+      "response_canonical_sha256": "21e821205c2f2c05ab4285baaba22d8bad1c34b373bc1c2f48f452e65e7b2c84"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/259896?namespace=static-kr&locale=ko_KR",
+      "item_id": 259896,
+      "name_ko": "수호자 나무의 껍질",
+      "response_canonical_sha256": "5cbab43e47c82338446b51dd0b26d7de0f89db7e1830e1b76845d0582e8b64c0"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/264694?namespace=static-kr&locale=ko_KR",
+      "item_id": 264694,
+      "name_ko": "울트라돈 흉갑",
+      "response_canonical_sha256": "53926fe95176ac9eec2c949adfc042947c9115f0ee42ea2d643ba99f59ba7e4e"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/264701?namespace=static-kr&locale=ko_KR",
+      "item_id": 264701,
+      "name_ko": "우주의 종",
+      "response_canonical_sha256": "d40bba11997e3613d1e57b922a8c3cbdcfc5d3149ee92ef3e809b672c414f15d"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/264878?namespace=static-kr&locale=ko_KR",
+      "item_id": 264878,
+      "name_ko": "아스탈로르의 고뇌 자극기",
+      "response_canonical_sha256": "f10d283846d1f8c22d43a23bb8949a973da906e89a24d83fbecf85ce15613e79"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/265657?namespace=static-kr&locale=ko_KR",
+      "item_id": 265657,
+      "name_ko": "살아있는 고뇌의 섬유",
+      "response_canonical_sha256": "57f6c692c02b342400660e21a605ae1773bb8d3eccf1905bc2f4866a0846a876"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/268249?namespace=static-kr&locale=ko_KR",
+      "item_id": 268249,
+      "name_ko": "추악한 연금술사의 고리",
+      "response_canonical_sha256": "2993430e2bb200b8db729b67a15ef57aa34ba4711e7d570d1033bfc529f14796"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/268250?namespace=static-kr&locale=ko_KR",
+      "item_id": 268250,
+      "name_ko": "파수꾼의 부식성 사슬",
+      "response_canonical_sha256": "352ff17cbf2bcd30687884fe187f8812cf4d69a378302335765c9ba7e375a882"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/268251?namespace=static-kr&locale=ko_KR",
+      "item_id": 268251,
+      "name_ko": "쌍둥이 송곳니의 아뮬렛",
+      "response_canonical_sha256": "ab738cdcd7f10df41e443f5a71c937aeb96ccce94c2c49f851e14f2cb9cb6dcc"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/268252?namespace=static-kr&locale=ko_KR",
+      "item_id": 268252,
+      "name_ko": "최상위 투사의 발톱 반지",
+      "response_canonical_sha256": "c50b8d96b13a09b01033ee9bcbfabee8d0b8b6635344fccce749a949d27c51a9"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/268265?namespace=static-kr&locale=ko_KR",
+      "item_id": 268265,
+      "name_ko": "아퀴르파멸 성물함",
+      "response_canonical_sha256": "5f90de097ade692e0a1fb2bc24e6792507316426d38c1b0d114bdc21a1a7b225"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/270160?namespace=static-kr&locale=ko_KR",
+      "item_id": 270160,
+      "name_ko": "일등항해사의 껍질수호물",
+      "response_canonical_sha256": "690a49ee2b28f56f66323e1f23709e5b2772a5ccc73ab1bf20bb0872a2ff9d2c"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/270161?namespace=static-kr&locale=ko_KR",
+      "item_id": 270161,
+      "name_ko": "암영의 악의 송곳니",
+      "response_canonical_sha256": "25dbad4884faaaeca957a2fab7b081576164c6b9628b4220f21d0b7aa8eb5e19"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/270162?namespace=static-kr&locale=ko_KR",
+      "item_id": 270162,
+      "name_ko": "영혼살무사 의식 그릇",
+      "response_canonical_sha256": "72236cb08514b3272f1b621afdca1b8338be1e66792f836c38144e28aea02538"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/270163?namespace=static-kr&locale=ko_KR",
+      "item_id": 270163,
+      "name_ko": "스조라크의 야성",
+      "response_canonical_sha256": "6f4541f4735f578e75fc25da22db072d613536087ec0158d3eaeb543fff1f8de"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/270164?namespace=static-kr&locale=ko_KR",
+      "item_id": 270164,
+      "name_ko": "게보의 무한의 가방",
+      "response_canonical_sha256": "779bb344a7c48ac628696ec6a617454584a07827efc7ec8a8cae9e98713b9d00"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/270165?namespace=static-kr&locale=ko_KR",
+      "item_id": 270165,
+      "name_ko": "수호자의 끓어오르는 핵",
+      "response_canonical_sha256": "d2d750161a4e8a7c212ef3fe22de72529b9d5cdad8edd20e4e84a0b77e781bff"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/270166?namespace=static-kr&locale=ko_KR",
+      "item_id": 270166,
+      "name_ko": "바쉬니크의 핏빛 원한",
+      "response_canonical_sha256": "1f00e66b590c01ad93b4d25b3cfe04997999ee316f701e506c1202fb3daa219d"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/270167?namespace=static-kr&locale=ko_KR",
+      "item_id": 270167,
+      "name_ko": "파도소환사의 바다석",
+      "response_canonical_sha256": "c43351ed55bdef18c542f6949bdec85665b50ab6d3202bf9d8702eca8fa41acd"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/270168?namespace=static-kr&locale=ko_KR",
+      "item_id": 270168,
+      "name_ko": "맹독의 분노 샘",
+      "response_canonical_sha256": "6a4e3bb660f8c6908284536faf4779d993f7b488a7ef5c608e73f7982c37ae5d"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/270169?namespace=static-kr&locale=ko_KR",
+      "item_id": 270169,
+      "name_ko": "사술 군주의 파멸 우상",
+      "response_canonical_sha256": "dd09cde17bf4c967b91426f47e4864861d495eef8a78863d0e05c08fb0a65fc6"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/270170?namespace=static-kr&locale=ko_KR",
+      "item_id": 270170,
+      "name_ko": "벡슐의 끝없이 흐르는 분비샘",
+      "response_canonical_sha256": "3d1b7e4dcff61d835a6aa17b8e8193538d24f1b3c1be41cd45d6c831d18b3882"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/270171?namespace=static-kr&locale=ko_KR",
+      "item_id": 270171,
+      "name_ko": "범상치 않은 해독제",
+      "response_canonical_sha256": "12969392d2b96a30e1484cbc15a71d4dc52524fd6e04de9ddb36e978c81a7449"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/270173?namespace=static-kr&locale=ko_KR",
+      "item_id": 270173,
+      "name_ko": "줄진의 단두 기술",
+      "response_canonical_sha256": "1f7200e13c6627bb642c694d460448d8d69d672f7378a1e6703079f76848db68"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/270174?namespace=static-kr&locale=ko_KR",
+      "item_id": 270174,
+      "name_ko": "울부짖는 연결체의 우상",
+      "response_canonical_sha256": "b730128248af582252cd36bce8e3c18785126dfd7e191e1be70ef9bad9c438a3"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/270175?namespace=static-kr&locale=ko_KR",
+      "item_id": 270175,
+      "name_ko": "탐식을 일삼는 울라텍의 심장",
+      "response_canonical_sha256": "e66a50de66fd586f4a532e34af00852e3358f35fd8a560ffdfc4e1893a6577e2"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/271092?namespace=static-kr&locale=ko_KR",
+      "item_id": 271092,
+      "name_ko": "잔스라제트 - 영혼의 송곳니",
+      "response_canonical_sha256": "43ef252f5699d135a57f67e87e524742c10158dc0133d4f1a223809c885eba23"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/271093?namespace=static-kr&locale=ko_KR",
+      "item_id": 271093,
+      "name_ko": "자타테크 - 타락의 숨결",
+      "response_canonical_sha256": "01308feb047a3de7f13df154a67caa2c8ecdef25d5c71707489fce27fdf51fb3"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/273649?namespace=static-kr&locale=ko_KR",
+      "item_id": 273649,
+      "name_ko": "폭풍결속 다자르의 문장",
+      "response_canonical_sha256": "e8fc63838f6bc115003e975ca06e53f611ce95d3f2c11183294f5f1d178f56e6"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/273778?namespace=static-kr&locale=ko_KR",
+      "item_id": 273778,
+      "name_ko": "광택 나는 빛나무 역술검",
+      "response_canonical_sha256": "2a7c773d1817b491eac445393c01bc4ef177c010a2a9584a6ef10037d3b013e6"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/273794?namespace=static-kr&locale=ko_KR",
+      "item_id": 273794,
+      "name_ko": "몸부림치는 뱀의 매듭",
+      "response_canonical_sha256": "ef6a4804e2b7fa4c05837db217cd3ee1d65e535323844d187e6b754f3df09e85"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/273795?namespace=static-kr&locale=ko_KR",
+      "item_id": 273795,
+      "name_ko": "똬리 송곳니석",
+      "response_canonical_sha256": "e7b76223c124a050d375aa6c853bd32ef86b18bad9510bea0053d539612d85eb"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/273796?namespace=static-kr&locale=ko_KR",
+      "item_id": 273796,
+      "name_ko": "불안정한 맹독이 담긴 악의의 약병",
+      "response_canonical_sha256": "271fc4d46804886702248b23c3496da10b921a7cf9f817c232a3eb1b68f59b80"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/273797?namespace=static-kr&locale=ko_KR",
+      "item_id": 273797,
+      "name_ko": "너덜너덜한 아마니 전쟁 깃발",
+      "response_canonical_sha256": "4e54bfb1458388488a62c4abc319890b9631f5f36606fe5ca298ea1ed682d912"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/275070?namespace=static-kr&locale=ko_KR",
+      "item_id": 275070,
+      "name_ko": "날카로운 빛나무 절단기",
+      "response_canonical_sha256": "0f7e4ba9d3c0f4c2bc49d396808ea882c0d071830233363c79f4b56e60a5b9f8"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/280617?namespace=static-kr&locale=ko_KR",
+      "item_id": 280617,
+      "name_ko": "빛의 전도사의 방패 파편",
+      "response_canonical_sha256": "7bf68da0972f5ec092e01f6090ba17254b96b3d63f5b091b48ac747b91ac670e"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/280799?namespace=static-kr&locale=ko_KR",
+      "item_id": 280799,
+      "name_ko": "루셀라마 - 빛의 심판",
+      "response_canonical_sha256": "b9eee49f27021fb7265e03953d6b72f4674ebf6f834eb2449def197f341626a8"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/280835?namespace=static-kr&locale=ko_KR",
+      "item_id": 280835,
+      "name_ko": "임박한 일월식의 인장",
+      "response_canonical_sha256": "2973c24b86798684d398ded4ec99e73f3cbf861c32a64b91a8c9e126da5c42ac"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/281029?namespace=static-kr&locale=ko_KR",
+      "item_id": 281029,
+      "name_ko": "무리소환사의 고리",
+      "response_canonical_sha256": "8212e34df7c1f27d589e7340020acf1458cccc617eb379f9f2a3dfb4c751e937"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/281056?namespace=static-kr&locale=ko_KR",
+      "item_id": 281056,
+      "name_ko": "축성된 기사의 불사조칼날",
+      "response_canonical_sha256": "599c189b3829916ac9c046c22a5dcb300c6749b32f97cd6034a4416d8c70e0d2"
+    },
+    {
+      "api_url": "https://kr.api.blizzard.com/data/wow/item/281215?namespace=static-kr&locale=ko_KR",
+      "item_id": 281215,
+      "name_ko": "뒤틀린 공포의 촉수",
+      "response_canonical_sha256": "ce14bded45ce5012c9c0dc896ed1e57cd2c5db6be26198291ee149c1b0f75dfa"
+    }
+  ]
+}
