@@ -101,7 +101,8 @@ def main(*, case_id=CASE_ID, expected_spec=("monk","windwalker"),
          output_root=ROOT, receipt_path=RECEIPT,
          required_env="P2_V319_ONE_FRESH_SPEC_AB_ONCE",
          campaign_schema="p2_v319_one_new_windwalker_user_native_v290_v318_ab_v1",
-         post_run_hook=None, post_run_context_hook=None):
+         post_run_hook=None, post_run_context_hook=None,
+         source_only_context_hook=None):
     # Previously verified v319 defaults stay intact; new campaigns must
     # supply new specialization, output folder and one-shot env guard.
     def save(doc):
@@ -237,6 +238,21 @@ def main(*, case_id=CASE_ID, expected_spec=("monk","windwalker"),
                 doc["flask_F"]=flask
                 doc["fresh_profile_generated_once_for_both_arms"]=True
                 save(doc)
+                # New independent research campaigns can use the actual
+                # fresh product context directly, without repeating an
+                # irrelevant v290/v318 comparator pair.
+                if source_only_context_hook is not None:
+                    need(callable(source_only_context_hook)
+                         and post_run_hook is None
+                         and post_run_context_hook is None,
+                         "EXCLUSIVE_FRESH_SOURCE_ONLY_HOOK")
+                    doc["status"]="FRESH_PRODUCT_SOURCE_READY_NO_DPS_NATIVE"
+                    save(doc)
+                    doc["new_native_policy_ab"]=source_only_context_hook(
+                        doc,binary,output_root,context,flask)
+                    doc["status"]="FRESH_SOURCE_RESEARCH_CAMPAIGN_COMPLETE"
+                    save(doc)
+                    return doc
                 for name,flag in (
                         ("v290_original",False),("v318_idea001",True)):
                     output=output_root/name

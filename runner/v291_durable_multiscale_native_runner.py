@@ -36,6 +36,7 @@ import v304_v303_durable_adapter as durable_regions
 import v305_grid_pairwise_adaptive_hybrid as hybrid_regions
 import v306_seed_retained_coarse_escape_regions as seed_escape_regions
 import v328_idea002_evidence_gated_radius as idea002_radius
+import v330_idea003_stratified_reserve as idea003_reserve
 import v307_dense_nested_coverage_grid as dense_grid
 import v309_prior_anchored_level21_progressive as progressive21
 import v310_external_frontier_50_only as frontier50
@@ -271,6 +272,7 @@ def run(context, flask_vector, binary, output, *,
         hybrid_region_grid_neighbors=False,
         seed_retained_coarse_escape_regions=False,
         idea002_radius_optin=False,
+        idea003_stratified_reserve_optin=False,
         dense_nested_grid_max_level=None,
         dense_nested_grid_full_scan=False,
         v309_prior_compact_artifact_zip=None,
@@ -320,8 +322,14 @@ def run(context, flask_vector, binary, output, *,
               (adaptive_region_resources or hybrid_region_grid_neighbors
                or seed_retained_coarse_escape_regions)),
          "V328_EXCLUSIVE_IDEA002_OPT_IN")
+    need(type(idea003_stratified_reserve_optin) is bool and
+         not (idea003_stratified_reserve_optin and
+              (adaptive_region_resources or hybrid_region_grid_neighbors
+               or seed_retained_coarse_escape_regions or idea002_radius_optin)),
+         "V330_EXCLUSIVE_IDEA003_OPT_IN")
     region_enabled = (adaptive_region_resources or hybrid_region_grid_neighbors
-                      or seed_retained_coarse_escape_regions or idea002_radius_optin)
+                      or seed_retained_coarse_escape_regions or idea002_radius_optin
+                      or idea003_stratified_reserve_optin)
     grid_enabled = dense_nested_grid_max_level is not None
     p309_fields=(v309_prior_compact_artifact_zip,
                  v309_prior_raw_checkpoint_zip,
@@ -381,7 +389,8 @@ def run(context, flask_vector, binary, output, *,
          (adaptive_initial_global_calls == 160 and
           adaptive_confirmation_calls == 8),
          "V304_OPTIONS_REQUIRE_EXPLICIT_OPT_IN")
-    region_planner = (idea002_radius if idea002_radius_optin
+    region_planner = (idea003_reserve if idea003_stratified_reserve_optin
+                      else idea002_radius if idea002_radius_optin
                       else seed_escape_regions if seed_retained_coarse_escape_regions
                       else hybrid_regions if hybrid_region_grid_neighbors
                       else durable_regions)
@@ -393,7 +402,8 @@ def run(context, flask_vector, binary, output, *,
                      V304_METADATA + (("hybrid_method",)
                                       if (hybrid_region_grid_neighbors or
                                           seed_retained_coarse_escape_regions or
-                                          idea002_radius_optin)
+                                          idea002_radius_optin or
+                                          idea003_stratified_reserve_optin)
                                       else ()))
     if model_guided_multiregion:
         need(adaptive_initial_global_calls == 160 and
@@ -526,7 +536,9 @@ def run(context, flask_vector, binary, output, *,
                 "source_sha256": hashlib.sha256(
                     pathlib.Path(hybrid_regions.__file__).read_bytes()).hexdigest(),
             }
-        if seed_retained_coarse_escape_regions or idea002_radius_optin:
+
+        if (seed_retained_coarse_escape_regions or idea002_radius_optin or
+                idea003_stratified_reserve_optin):
             seal["experimental_adaptive_regions"]["seed_retained_v306"] = {
                 "schema": seed_escape_regions.SCHEMA,
                 "source_sha256": hashlib.sha256(
@@ -541,6 +553,14 @@ def run(context, flask_vector, binary, output, *,
                     idea002_radius.__file__).read_bytes()).hexdigest(),
                 "same_two_native_iteration_identities": True,
                 "new_native_executor": False,
+            }
+        if idea003_stratified_reserve_optin:
+            seal["experimental_adaptive_regions"]["idea003_v330"] = {
+                "schema": idea003_reserve.SCHEMA,
+                "source_sha256": hashlib.sha256(pathlib.Path(
+                    idea003_reserve.__file__).read_bytes()).hexdigest(),
+                "settings": idea003_reserve.SETTINGS,
+                "only_global_reserve_candidate_changed": True,
             }
     if grid_enabled:
         dense_grid.budget(max_native_calls)
@@ -656,7 +676,7 @@ def run(context, flask_vector, binary, output, *,
             need(all(k in row for k in metadata_keys) and
                  (hybrid_region_grid_neighbors or
                   seed_retained_coarse_escape_regions or idea002_radius_optin or
-                  "hybrid_method" not in row) and
+                  idea003_stratified_reserve_optin or "hybrid_method" not in row) and
                  not any(k in row for k in dense_grid.METADATA),
                  "V305_JOURNAL_REGION_METADATA_MISSING")
             plan.update({k: row[k] for k in metadata_keys})
@@ -1091,6 +1111,7 @@ def run(context, flask_vector, binary, output, *,
                          else frontier50.SCHEMA if frontier50_enabled
                          else progressive21.SCHEMA if progressive_enabled
                          else dense_grid.SCHEMA if grid_enabled
+                         else idea003_reserve.SCHEMA if idea003_stratified_reserve_optin
                          else idea002_radius.SCHEMA if idea002_radius_optin
                          else seed_escape_regions.SCHEMA if seed_retained_coarse_escape_regions
                          else hybrid_regions.SCHEMA if hybrid_region_grid_neighbors
