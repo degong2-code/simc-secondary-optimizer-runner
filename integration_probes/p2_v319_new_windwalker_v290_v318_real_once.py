@@ -101,7 +101,7 @@ def main(*, case_id=CASE_ID, expected_spec=("monk","windwalker"),
          output_root=ROOT, receipt_path=RECEIPT,
          required_env="P2_V319_ONE_FRESH_SPEC_AB_ONCE",
          campaign_schema="p2_v319_one_new_windwalker_user_native_v290_v318_ab_v1",
-         post_run_hook=None):
+         post_run_hook=None, post_run_context_hook=None):
     # Previously verified v319 defaults stay intact; new campaigns must
     # supply new specialization, output folder and one-shot env guard.
     def save(doc):
@@ -371,6 +371,12 @@ def main(*, case_id=CASE_ID, expected_spec=("monk","windwalker"),
                 if post_run_hook is not None:
                     need(callable(post_run_hook),"V320_POST_RUN_HOOK_REQUIRED")
                     doc["new_native_research_tier_120"]=post_run_hook(doc,binary,output_root)
+                    save(doc)
+                if post_run_context_hook is not None:
+                    need(callable(post_run_context_hook),
+                         "V329_CONTEXT_HOOK_MUST_BE_EXPLICIT")
+                    doc["new_native_policy_ab"]=post_run_context_hook(
+                        doc,binary,output_root,context,flask)
                     save(doc)
                 return doc
     except BaseException as exc:
