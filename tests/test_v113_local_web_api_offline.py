@@ -1163,9 +1163,12 @@ class LocalWebAPIOffline(unittest.TestCase):
         by_key={(x["class"],x["spec"]):x for x in defaults.json()["archetypes"]}
         self.assertEqual(by_key[("druid","balance")]["race"],"night_elf")
         self.assertEqual(by_key[("evoker","devastation")]["race"],"dracthyr")
-        self.assertEqual(by_key[("evoker","devastation")]["allowed_races"],
+        restrictions=defaults.json()["allowed_races_by_spec"]
+        self.assertEqual(restrictions["evoker/devastation"],
                          ["dracthyr","dracthyr_visage"])
-        self.assertIsNone(by_key[("mage","frost")]["allowed_races"])
+        self.assertNotIn("mage/frost",restrictions)
+        self.assertTrue(all("allowed_races" not in row
+                            for row in defaults.json()["archetypes"]))
         self.assertFalse((self.root/"runs").exists())
 
     def test_web_remains_usable_with_no_legacy_complete_simc_fixtures(self):

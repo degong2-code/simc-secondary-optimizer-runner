@@ -82,7 +82,7 @@ const names = {
   redirected_base_stats:"촉매 원본 ID",crafted_stats:"제작 스탯",
   embellishment:"장식 토큰"
 };
-const state = { token:"", defaults:[], seasonGear:null, dkRuneIds:new Set(), oilLoadouts:[], oilCatalog:null, eagleApproved:false, session:"", running:false,
+const state = { token:"", defaults:[], allowedRacesBySpec:{}, seasonGear:null, dkRuneIds:new Set(), oilLoadouts:[], oilCatalog:null, eagleApproved:false, session:"", running:false,
                 longrunEnabled:false, longrunResultReady:false,
                 busy:false, options:null, pollTimer:null, pollBusy:false,
                 pollFailures:0, nextPollAt:0 };
@@ -407,7 +407,7 @@ function showRepresentativeScope() {
 
 function showCharacterDefaultHint() {
   const item=state.defaults.find(d=>d.class+"/"+d.spec===field("spec"));
-  const allowed=Array.isArray(item?.allowed_races);
+  const allowed=Array.isArray(state.allowedRacesBySpec[item?.class+"/"+item?.spec]);
   $("race-default-note").textContent=!item?"전문화 선택 후 종족을 지정할 수 있습니다.":
     "대표 종족 "+displayRace(item.race)+" 선택됨 · "+
     (allowed?"해당 전문화의 확인된 종족만 목록에 표시합니다.":
@@ -417,7 +417,8 @@ function showCharacterDefaultHint() {
 }
 function setRaceSuggestions(item) {
   const roster=$("race-list");
-  const allowed=Array.isArray(item?.allowed_races)?new Set(item.allowed_races):null;
+  const approved=state.allowedRacesBySpec[item?.class+"/"+item?.spec];
+  const allowed=Array.isArray(approved)?new Set(approved):null;
   const entries=Object.entries(raceNames).filter(([token])=>!allowed||allowed.has(token))
     .sort((a,b)=>a[1].localeCompare(b[1],"ko-KR"));
   roster.replaceChildren(...entries.map(([token,name])=>{
@@ -832,8 +833,9 @@ function buildRequest() {
   const source=state.defaults.find(d=>d.class+"/"+d.spec===spec);
   if(!source) throw Error("지원되는 전문화를 선택해 주세요.");
   const resolvedRace=simcRace(field("race"));
-  if(Array.isArray(source.allowed_races)&&
-     !source.allowed_races.includes(resolvedRace))
+  const provenRaces=state.allowedRacesBySpec[spec];
+  if(Array.isArray(provenRaces)&&
+     !provenRaces.includes(resolvedRace))
     throw Error("이 전문화에서 확인된 종족을 선택해 주세요.");
   if(["druid","demonhunter","evoker"].includes(source.class)&&
      (!resolvedRace||resolvedRace==="dwarf"))
@@ -1895,6 +1897,7 @@ async function initialize() {
     const [d,opt,gear]=await Promise.all([api("/api/v1/defaults"),api("/api/v1/options"),
       api("/api/v1/season-gear").catch(()=>null)]);
     state.defaults=d.archetypes;
+    state.allowedRacesBySpec=d.allowed_races_by_spec||{};
     installClassSpecChoices();
     installOptions(opt);
     installSeasonGearHints(gear);

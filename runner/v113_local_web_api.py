@@ -2054,9 +2054,14 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                    if pair in bootstrap.PURE_PRODUCT_SPECS else
                    "SOURCE_INDEPENDENT_TARGET334_VALIDATED_BATCH")
             archetypes.append({"class":pair[0],"spec":pair[1],**controls,
-                               "allowed_races":bootstrap.pure.contracts.lookup(*pair)["allowed_races"],
                                "representative_scope":scope})
+        # Metadata is not part of reusable /plan user controls.
+        known_races={"/".join(pair):list(info["allowed_races"])
+                     for pair in sessions.SUPPORTED
+                     if (info:=bootstrap.pure.contracts.lookup(*pair)) is not None
+                     and info["allowed_races"] is not None}
         return {"archetypes":archetypes,
+                "allowed_races_by_spec":known_races,
                 "unavailable_missing_legacy_fixtures":[]}
 
     @app.post("/api/v1/environment/season-build")

@@ -361,7 +361,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('if(name==="copy")',js)
         self.assertIn('if(field("spec")!==parsed.key)',js)
         self.assertIn('fillDefault(parsed.defaults);',js)
-        self.assertIn('  $("race").value=displayRace(parsed.race);',js)
+        self.assertIn('  if(parsed.race)$("race").value=displayRace(parsed.race);',js)
         self.assertIn('  $("talents").value=parsed.talents;',js)
         self.assertIn('withBusy(importSimcCharacter)',js)
         self.assertNotIn("FormData(",js)
@@ -393,7 +393,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         page=self.client.get("/").text
         js=self.client.get("/assets/app.js").text
         self.assertIn('id="gear-scope-note"',page)
-        self.assertIn("최신 시즌 대표 장비·직업별 티어 4세트를 내부 생성",js)
+        self.assertIn("일반 장비·무기·티어 4세트는 자동 구성합니다.",js)
         self.assertIn("334 이외 목표 ilvl: 최신 시즌 대표 장비·티어·무기를 선택 레벨",js)
         self.assertNotIn('id="current_season_product"',page)
         self.assertIn('  showRepresentativeScope();\n  syncSearchChoices();\n}',js)
