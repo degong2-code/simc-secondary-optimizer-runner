@@ -85,7 +85,8 @@ class OfficialPlayableTerms(unittest.TestCase):
         details[dk]["playable_class"]["id"]=self.classes["mage"]
         row=terms.compile_terms(BUILD,self.data,details)
         self.assertIn("deathknight/frost",row["missing"]["spec"])
-        self.assertIn("mage/frost",row["names"]["spec"])
+        self.assertIn("mage/frost",row["missing"]["spec"])
+        self.assertNotIn("mage/frost",row["names"]["spec"])
         self.assertEqual(row["status"],"PARTIAL_VERIFIED_NAMES")
 
     def test_index_locale_id_drift_and_untranslated_english_fail_closed(self):
