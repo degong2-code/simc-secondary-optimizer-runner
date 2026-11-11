@@ -8,3 +8,5 @@
 - **Verification:** Proposed push-only; new Shadow original SimC Native/DPS results unverified until Actions SUCCESS, original input SHA and archived JSON2 inspected. Past v319 source/confirmed DPS not reused as experiment data.
 - **Remaining:** After real run, confirm exact new user profile SHA, observed G/J/F/O/T, 35/120/320 actual SEM·wall and v320 advisory counts; only then decide if 120 economics justify new typed v291 phase and independent seed caching.
 - **Efficiency:** Same 70783 static source retrieval code/binary, new environment evidence by actual build, no 26-DPS sweep. Three independent new 120 SimC probes reusing current-run exact v291 320 profile/buffs/gear, no 120 execution claimed by v291 itself.
+
+- **오프라인 원본 형식 사전 교정:** JSON2의 `git_revision`은 원본에서 10자 short hash일 수 있고 `specialization`은 `Shadow Priest`처럼 클래스명을 포함한다. 전체 revision prefix+최소10자와 실제 직업·전문화 문자열로 대사하도록 사전 수정. 기존 등록된 Actions의 HEAD는 불변이므로, 그 실행 결과는 별도 원본 영수증으로 판정한다.

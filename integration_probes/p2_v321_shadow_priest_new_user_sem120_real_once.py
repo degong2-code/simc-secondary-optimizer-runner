@@ -117,10 +117,12 @@ def after_both_arms(doc,binary,root):
         sim=native.get("sim") or {}
         players=sim.get("players") or []
         opts=sim.get("options") or {}
-        need(native.get("git_revision")==doc["revision"] and
+        need(type(native.get("git_revision")) is str and
+             doc["revision"].startswith(native["git_revision"]) and
+             len(native["git_revision"])>=10 and
              opts.get("iterations")==MIDDLE and
              len(players)==1 and
-             str(players[0].get("specialization","")).lower()=="shadow",
+             str(players[0].get("specialization","")).lower()=="shadow priest",
              "V321_EXACT_SIMC_REV_SPEC_ITERATIONS_REQUIRED")
         dps=((players[0].get("collected_data") or {}).get("dps") or {})
         need(dps.get("count")==119
