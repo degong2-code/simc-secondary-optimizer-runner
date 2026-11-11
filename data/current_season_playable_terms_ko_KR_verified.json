@@ -1,0 +1,403 @@
+{
+  "game_build": "12.1.5.70783",
+  "index_response_sha256": {
+    "class": {
+      "en_US": "f16455fcb3fc4e8441778b4f5c6e3918ae407ede9c060af96c7781900e0ecc2c",
+      "ko_KR": "70c12b679859e7c313663c2c23520c52e88381e5f8cec42ff6c42fcc5a5f3113"
+    },
+    "race": {
+      "en_US": "afdecbbb275331c3b77e17830e6d6ab78c4ad9b586c42a4b548f53a9826b1cc7",
+      "ko_KR": "b768a461f7a2453edfd3888b7261a6b22bf62117288b52e07f022634b2f29d7d"
+    },
+    "spec": {
+      "en_US": "2a8159b5dcf28e3872c449ce6c288f105de34f7117944d5295b536dd4cf3d281",
+      "ko_KR": "89a5bb85d6a0a4349041e4edfb556b3b007cd5e8f30692f7a33e2e13913aef59"
+    }
+  },
+  "locale": "ko_KR",
+  "manifest_sha256": "1170ae45c6cc1b50968d2138a542da781f99ca85e6126f40cfff50661e92edf9",
+  "missing": {
+    "class": [],
+    "race": [],
+    "spec": []
+  },
+  "names": {
+    "class": {
+      "deathknight": {
+        "id": 6,
+        "name_ko": "죽음의 기사"
+      },
+      "demonhunter": {
+        "id": 12,
+        "name_ko": "악마사냥꾼"
+      },
+      "druid": {
+        "id": 11,
+        "name_ko": "드루이드"
+      },
+      "evoker": {
+        "id": 13,
+        "name_ko": "기원사"
+      },
+      "hunter": {
+        "id": 3,
+        "name_ko": "사냥꾼"
+      },
+      "mage": {
+        "id": 8,
+        "name_ko": "마법사"
+      },
+      "monk": {
+        "id": 10,
+        "name_ko": "수도사"
+      },
+      "paladin": {
+        "id": 2,
+        "name_ko": "성기사"
+      },
+      "priest": {
+        "id": 5,
+        "name_ko": "사제"
+      },
+      "rogue": {
+        "id": 4,
+        "name_ko": "도적"
+      },
+      "shaman": {
+        "id": 7,
+        "name_ko": "주술사"
+      },
+      "warlock": {
+        "id": 9,
+        "name_ko": "흑마법사"
+      },
+      "warrior": {
+        "id": 1,
+        "name_ko": "전사"
+      }
+    },
+    "race": {
+      "blood_elf": {
+        "ids": [
+          10
+        ],
+        "name_ko": "블러드 엘프"
+      },
+      "dark_iron_dwarf": {
+        "ids": [
+          34
+        ],
+        "name_ko": "검은무쇠 드워프"
+      },
+      "dracthyr": {
+        "ids": [
+          52,
+          70
+        ],
+        "name_ko": "드랙티르"
+      },
+      "draenei": {
+        "ids": [
+          11
+        ],
+        "name_ko": "드레나이"
+      },
+      "dwarf": {
+        "ids": [
+          3
+        ],
+        "name_ko": "드워프"
+      },
+      "earthen": {
+        "ids": [
+          84,
+          85
+        ],
+        "name_ko": "토석인"
+      },
+      "gnome": {
+        "ids": [
+          7
+        ],
+        "name_ko": "노움"
+      },
+      "goblin": {
+        "ids": [
+          9
+        ],
+        "name_ko": "고블린"
+      },
+      "highmountain_tauren": {
+        "ids": [
+          28
+        ],
+        "name_ko": "높은산 타우렌"
+      },
+      "human": {
+        "ids": [
+          1
+        ],
+        "name_ko": "인간"
+      },
+      "kul_tiran": {
+        "ids": [
+          32
+        ],
+        "name_ko": "쿨 티란"
+      },
+      "lightforged_draenei": {
+        "ids": [
+          30
+        ],
+        "name_ko": "빛벼림 드레나이"
+      },
+      "maghar_orc": {
+        "ids": [
+          36
+        ],
+        "name_ko": "마그하르 오크"
+      },
+      "mechagnome": {
+        "ids": [
+          37
+        ],
+        "name_ko": "기계노움"
+      },
+      "night_elf": {
+        "ids": [
+          4
+        ],
+        "name_ko": "나이트 엘프"
+      },
+      "nightborne": {
+        "ids": [
+          27
+        ],
+        "name_ko": "나이트본"
+      },
+      "orc": {
+        "ids": [
+          2
+        ],
+        "name_ko": "오크"
+      },
+      "pandaren": {
+        "ids": [
+          24,
+          25,
+          26
+        ],
+        "name_ko": "판다렌"
+      },
+      "tauren": {
+        "ids": [
+          6
+        ],
+        "name_ko": "타우렌"
+      },
+      "troll": {
+        "ids": [
+          8
+        ],
+        "name_ko": "트롤"
+      },
+      "undead": {
+        "ids": [
+          5
+        ],
+        "name_ko": "언데드"
+      },
+      "void_elf": {
+        "ids": [
+          29
+        ],
+        "name_ko": "공허 엘프"
+      },
+      "vulpera": {
+        "ids": [
+          35
+        ],
+        "name_ko": "불페라"
+      },
+      "worgen": {
+        "ids": [
+          22
+        ],
+        "name_ko": "늑대인간"
+      },
+      "zandalari_troll": {
+        "ids": [
+          31
+        ],
+        "name_ko": "잔달라 트롤"
+      }
+    },
+    "spec": {
+      "deathknight/frost": {
+        "class_id": 6,
+        "id": 251,
+        "name_ko": "냉기"
+      },
+      "deathknight/unholy": {
+        "class_id": 6,
+        "id": 252,
+        "name_ko": "부정"
+      },
+      "demonhunter/devourer": {
+        "class_id": 12,
+        "id": 1480,
+        "name_ko": "포식"
+      },
+      "demonhunter/havoc": {
+        "class_id": 12,
+        "id": 577,
+        "name_ko": "파멸"
+      },
+      "druid/balance": {
+        "class_id": 11,
+        "id": 102,
+        "name_ko": "조화"
+      },
+      "druid/feral": {
+        "class_id": 11,
+        "id": 103,
+        "name_ko": "야성"
+      },
+      "evoker/devastation": {
+        "class_id": 13,
+        "id": 1467,
+        "name_ko": "황폐"
+      },
+      "hunter/beast_mastery": {
+        "class_id": 3,
+        "id": 253,
+        "name_ko": "야수"
+      },
+      "hunter/marksmanship": {
+        "class_id": 3,
+        "id": 254,
+        "name_ko": "사격"
+      },
+      "hunter/survival": {
+        "class_id": 3,
+        "id": 255,
+        "name_ko": "생존"
+      },
+      "mage/arcane": {
+        "class_id": 8,
+        "id": 62,
+        "name_ko": "비전"
+      },
+      "mage/fire": {
+        "class_id": 8,
+        "id": 63,
+        "name_ko": "화염"
+      },
+      "mage/frost": {
+        "class_id": 8,
+        "id": 64,
+        "name_ko": "냉기"
+      },
+      "monk/windwalker": {
+        "class_id": 10,
+        "id": 269,
+        "name_ko": "풍운"
+      },
+      "paladin/retribution": {
+        "class_id": 2,
+        "id": 70,
+        "name_ko": "징벌"
+      },
+      "priest/shadow": {
+        "class_id": 5,
+        "id": 258,
+        "name_ko": "암흑"
+      },
+      "rogue/assassination": {
+        "class_id": 4,
+        "id": 259,
+        "name_ko": "암살"
+      },
+      "rogue/outlaw": {
+        "class_id": 4,
+        "id": 260,
+        "name_ko": "무법"
+      },
+      "rogue/subtlety": {
+        "class_id": 4,
+        "id": 261,
+        "name_ko": "잠행"
+      },
+      "shaman/elemental": {
+        "class_id": 7,
+        "id": 262,
+        "name_ko": "정기"
+      },
+      "shaman/enhancement": {
+        "class_id": 7,
+        "id": 263,
+        "name_ko": "고양"
+      },
+      "warlock/affliction": {
+        "class_id": 9,
+        "id": 265,
+        "name_ko": "고통"
+      },
+      "warlock/demonology": {
+        "class_id": 9,
+        "id": 266,
+        "name_ko": "악마"
+      },
+      "warlock/destruction": {
+        "class_id": 9,
+        "id": 267,
+        "name_ko": "파괴"
+      },
+      "warrior/arms": {
+        "class_id": 1,
+        "id": 71,
+        "name_ko": "무기"
+      },
+      "warrior/fury": {
+        "class_id": 1,
+        "id": 72,
+        "name_ko": "분노"
+      }
+    }
+  },
+  "namespace": "static-kr",
+  "new_native_calls": 0,
+  "provider": "BLIZZARD_OFFICIAL_GAME_DATA_API",
+  "roster_sha256": "b456a9ec0d16c1dac2e80e1dd8a874ee431a70c422ba0fc8525af786f5b38194",
+  "schema": "v336_verified_official_playable_terms_ko_KR_v1",
+  "source_only_not_new_character_admission": true,
+  "spec_detail_response_sha256": {
+    "62": "be24a34f8efae89c3ec977dd8137d010acf73e360dda8840d3b4cf87fcb27abd",
+    "63": "e9b599d2dbed1883ae0dc75c10ac380587d63cbb47b859817100e1dd7591c360",
+    "64": "e1d18cc6e7ab6a9398000eb85cd472060d1276ecf14ac419d42195dc195e2605",
+    "70": "d20a3b407436856e32bb2c609dfea0ac1f1b170c73fa87252d37c0f864ab37ca",
+    "71": "ceecea412a7a5df058a141a798927713cdc6dd9e002413776aedfd962ac4634e",
+    "72": "9c00ee3fdf003ad8aa38854de3c73647721caf8bae2b173345926b5bee6860e9",
+    "102": "10d12a434ec4c20741132d669385de347122d13007fd3468f05d6c7844ede670",
+    "103": "3b8c18dd2b793f561c08c4b701954d82db19151b5cd6cda264be544ef58f3075",
+    "251": "e73b3027cbcc4d5bc8ed30c2a924f08caf9e24de8cfb69026a2cdd7c7a1a43b5",
+    "252": "3c7099117b1880543d09c3947f06a8ecf278f84a36b912c3982abfa9cfed14ee",
+    "253": "f0ff46791fdbb1bffe03f410fb01ff0abbbe06bbdd21a1243104314c80ed223d",
+    "254": "6029d983c169c5a2fb376ec965d2aa9c560572422d21564d27a89a716d0df24c",
+    "255": "2f3e8696788f67b234bc376b2a8a6d9bf9975efc407b2b96d5e275d0616e0cd6",
+    "258": "3ffcbe08d5777c1934728dcac357ab67310b2564a04616f4b64d338590e7c58e",
+    "259": "77213ad8194cb31accae12bfa25f8bc75942fc950344322f1ac9a0434c0365d0",
+    "260": "3d2da947e35f56c02dbe29631c51f396d946c1ae6c12e12e65f45e3bbf3af0c9",
+    "261": "5960d835fbdb9f003cb0f118298f7586573dfe4c6f90403e3c625efb06d49f9d",
+    "262": "2446a43f57c236ba3a29e9226e1ac49a508875f6500567088ff98cd1c269e2ae",
+    "263": "cfb8574e1bcd44d9d131806a6b861dcd87815cb82cb860958d445c164400550d",
+    "265": "f13c3086dbe85d3944160b08fbdfa119c4e887d91d5085416bb572052d846d28",
+    "266": "392793971a160ba169036509839861668856298ef9d5ea08a6ccc0aa5e268dfb",
+    "267": "a3836cc9959a16ad3cfb21ddbc9c90f452a88bdfecba79c9df61fe285d0024c7",
+    "269": "b0801b380a79b632de44d635aa4fa2a35c6c8bd8db127b9ec10d5d0f1088b568",
+    "577": "a46196810e8c6867b542fc7ef0e080c453e387e455a970d441eecfad4995bd12",
+    "1467": "95a8ce64af4519fcb3257a022c6c4c4fbcd4c1bd0c69191b688f5678b6ba7e85",
+    "1480": "f0964100efb95ac327ba160878f0e643a288e19c01ab1a6421cd58636471f2ce"
+  },
+  "status": "COMPLETE"
+}
