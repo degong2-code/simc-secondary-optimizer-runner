@@ -1,3 +1,4 @@
+# v342 retry: real restore summary click; publisher SHA != engine revision.
 name: P1 v342 Windows Chrome 64-click UI and official SimC source preflight (zero DPS Native)
 on:
   push:

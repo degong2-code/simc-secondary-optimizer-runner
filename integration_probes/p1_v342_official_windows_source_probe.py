@@ -26,9 +26,10 @@ def run(archive,binary,target):
     binary=pathlib.Path(binary).resolve(strict=True)
     m=re.fullmatch(r"simc-\d+\.\d+\.([0-9a-f]{7,12})-win64\.7z",
                    archive.name,re.I)
-    if (m is None or binary.name.lower()!="simc.exe" or
-        not UPSTREAM_COMMIT.startswith(m.group(1).lower())):
-        raise RuntimeError("OFFICIAL_SOURCE_FILENAME_OR_REVISION_DRIFT")
+    # SimC-publish repository HEAD describes the artifact publisher,
+    # not necessarily the SimulationCraft engine revision in the filename.
+    if m is None or binary.name.lower()!="simc.exe":
+        raise RuntimeError("OFFICIAL_SOURCE_FILENAME_OR_EXECUTABLE_INVALID")
     # The executable receives no SimC profile or simulation options.
     p=subprocess.run([str(binary)],input="",text=True,
        capture_output=True,errors="replace",cwd=binary.parent,timeout=25)
@@ -43,7 +44,8 @@ def run(archive,binary,target):
        "upstream_run_id":RUN_ID,
        "upstream_artifact_id":ARTIFACT_ID,
        "upstream_artifact_zip_digest_sha256":ARTIFACT_ZIP_SHA,
-       "upstream_commit":UPSTREAM_COMMIT,
+       "publisher_repository_head_sha":UPSTREAM_COMMIT,
+       "publisher_head_is_not_simc_engine_revision":True,
        "archive_filename":archive.name,
        "archive_sha256":sha256(archive),
        "binary_sha256":sha256(binary),

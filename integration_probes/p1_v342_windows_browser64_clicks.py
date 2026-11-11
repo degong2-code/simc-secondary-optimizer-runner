@@ -198,6 +198,10 @@ def run():
               document.getElementById("filled-result").hidden=true;
               document.getElementById("empty-result").hidden=false;
             """)
+            # The ID restore control sits inside a collapsed <details>.
+            # Use the actual user action rather than a forced hidden click.
+            driver.find_element(By.CSS_SELECTOR,"details.restore > summary").click()
+            wait.until(lambda d:d.find_element(By.ID,"restore-btn").is_displayed())
             driver.find_element(By.ID,"restore-btn").click()
             wait.until(lambda d: not d.find_element(By.ID,"filled-result").
                        get_property("hidden"))
