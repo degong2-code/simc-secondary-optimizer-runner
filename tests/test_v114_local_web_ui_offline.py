@@ -53,8 +53,9 @@ class RealHTTPPageOffline(unittest.TestCase):
             self.assertIn(token,js)
         self.assertIn("const longrun=await api(",js)
         self.assertIn("if(longrun.enabled===true)",js)
-        self.assertIn("data?.scout_iterations_per_CHMV",js)
-        self.assertIn("payload.scout_iterations_per_CHMV",js)
+        self.assertIn("max_native_calls:64,continuous:true",js)
+        self.assertIn('state.longrunEnabled?"/longrun/resume":"/resume"',js)
+        self.assertIn('state.longrunEnabled?"/longrun/cancel":"/cancel"',js)
         self.assertIn('''$("start-btn").addEventListener''',js)
 
     def test_new_current_season_oil_defaults_never_override_verified_zero_o(self):
@@ -217,7 +218,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('localStorage.setItem("simc_secondary_session_id"',js.text)
         self.assertIn("cache-only",js.text)
         self.assertIn("result",js.text)
-        self.assertIn('"/api/v1/sessions/start"',js.text)
+        self.assertIn('"/api/v1/longrun/start"',js.text)
         self.assertIn('window.confirm("이 PC에서 실제 SimC',js.text)
         self.assertEqual(self.client.get("/assets/missing.js").status_code,403)
 
