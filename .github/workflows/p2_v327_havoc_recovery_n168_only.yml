@@ -1,4 +1,5 @@
 name: P2 v327 recover verified Havoc 128 and run only N research 168
+# Correct verified v291 final_T vector accounting: sum(CHMV)==auto T.
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]

@@ -80,7 +80,12 @@ def restore(d):
             inp=folder/"input.simc"
             output=folder/"result.json"
             need(r["source"]=="NEW_NATIVE"
-                 and r["final_T"]==3107
+                 and type(r["final_T"]) is dict
+                 and set(r["final_T"])==set(study.quality.STATS)
+                 and all(type(v) is int and v>=0
+                         for v in r["final_T"].values())
+                 and sum(r["final_T"].values())==3107
+                 and r["final_T"]==r["target"]
                  and sha_file(inp)==r["input_sha256"]
                  and sha_file(output)==r["native_sha256"],
                  "EXACT_ORIGINAL_NATIVE_INPUT_JSON_SHA")

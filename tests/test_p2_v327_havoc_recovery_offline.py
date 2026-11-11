@@ -13,6 +13,12 @@ class Recovery(unittest.TestCase):
     def test_fails_closed_on_tampered_receipt(self):
         with self.assertRaisesRegex(r.RecoveryBlocked,"ORIGINAL_ACTION_RECEIPT_SHA"):
             r.original_receipt(b'{}')
+    def test_real_v291_final_T_is_a_four_rating_vector_not_scalar(self):
+        from integration_probes import p2_v327_havoc_new_user_three_seed_n_real_once as study
+        vector=dict(zip(study.quality.STATS,(1398,93,1305,311)))
+        self.assertEqual(sum(vector.values()),3107)
+        self.assertIsInstance(vector,dict)
+        self.assertNotEqual(vector,3107)
     def test_no_native_without_explicit_optin(self):
         with mock.patch.dict(os.environ,{"P2_V327_REUSE_ORIGINAL_128_NATIVE_ONLY":"0"}):
             with self.assertRaisesRegex(r.RecoveryBlocked,"EXPLICIT_RECOVERY_NATIVE_ONCE"):
