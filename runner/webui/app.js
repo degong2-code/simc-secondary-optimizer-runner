@@ -124,6 +124,7 @@ function enhanceSelect(select){
     if(!shown){const selected=select.selectedOptions?.[0];
       input.value=selected?.value?selected.textContent:"";}
     input.disabled=select.disabled;
+    if(!select.validity||select.validity.valid)input.removeAttribute("aria-invalid");
   };
   function close(){
     shown=false;menu.hidden=true;

@@ -67,6 +67,10 @@ class WindowsBetaPackageOffline(unittest.TestCase):
                                      rec["sha256"],rec["path"])
                 self.assertIn(pack.PREFIX+"/runner/webui/index.html",names)
                 self.assertIn(pack.PREFIX+"/data/current_season_product_gear_db.json",names)
+                self.assertIn(pack.PREFIX+"/data/current_season_gear_ko_KR_verified.json",names)
+                ko=json.loads(archive.read(pack.PREFIX+"/data/current_season_gear_ko_KR_verified.json"))
+                self.assertEqual(ko["status"],"COMPLETE")
+                self.assertEqual(len(ko["items"]),77)
 
     def test_missing_critical_file_fails_closed(self):
         with tempfile.TemporaryDirectory() as temp:

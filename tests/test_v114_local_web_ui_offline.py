@@ -246,6 +246,18 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('e.key==="ArrowDown"',js)
         self.assertIn(".choice-native-select",css)
 
+    def test_official_item_names_bound_to_current_ids(self):
+        with self.client as client:
+            response=client.get("/api/v1/season-gear")
+        self.assertEqual(response.status_code,200)
+        data=response.json()
+        self.assertEqual(data["verified_ko_item_names"],77)
+        visible=data["choices"]["trinket"]+data["choices"]["special_effect_gear_candidate"]
+        self.assertEqual(len(visible),77)
+        self.assertTrue(all("name_ko" in item for item in visible))
+        self.assertEqual(next(x["name_ko"] for x in visible if x["item_id"]==158367),
+                         "메레크타의 송곳니")
+
     def test_environment_build_surface_is_not_optimizer_plan(self):
         page=self.client.get("/").text
         js=self.client.get("/assets/app.js").text
