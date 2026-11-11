@@ -32,6 +32,9 @@ class V325Replay(unittest.TestCase):
         self.assertEqual(out["heldout_good_candidate_count"],6)
         self.assertEqual(set(out["by_N"]),set(map(str,m.GRID)))
         self.assertTrue(out["quality_band_is_operational_not_95_equivalence"])
+        self.assertIn("first_candidate_already_near_quality",out)
+        for n in m.GRID:
+            self.assertEqual(len(out["by_N"][str(n)]["final_holdout_regret_pct_by_rep"]),2)
         for result in out["by_N"].values():
             self.assertEqual(len(result["two_independent_screen_replicates"]),2)
             self.assertEqual(result["two_independent_screen_replicates"][0]["screen_iterations"] %

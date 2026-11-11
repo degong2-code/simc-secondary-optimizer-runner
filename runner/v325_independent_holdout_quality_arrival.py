@@ -127,6 +127,12 @@ def evaluate(candidates, observations, *, band=QUALITY_BAND,
             })
         out[str(n)]={
             "screen_runs":runs,
+            "final_holdout_regret_pct_by_rep":[
+                100*(1-x["final_selected"]["quality_reference_fraction"])
+                for x in runs],
+            "median_final_holdout_regret_pct":statistics.median(
+                100*(1-x["final_selected"]["quality_reference_fraction"])
+                for x in runs),
             "two_independent_screen_replicates":(runs if len(screen_reps)==2 else None),
             "final_success_fraction":sum(
                 x["final_selected"]["reference_good_band"] for x in runs)/len(runs),
@@ -145,6 +151,8 @@ def evaluate(candidates, observations, *, band=QUALITY_BAND,
         "holdout_replicates":len(holdout_reps),
         "holdout_best_of_only_12_CHMV_dps":best,
         "heldout_good_candidate_count":len(good),
+        "first_candidate_already_near_quality":order[0] in good,
+        "first_arrival_metric_has_trivial_good_first_candidate":order[0] in good,
         "holdout_selected_best_is_global_optimum":False,
         "raw_holdout":{"/".join(map(str,v)):held[v] for v in order},
         "by_N":out}

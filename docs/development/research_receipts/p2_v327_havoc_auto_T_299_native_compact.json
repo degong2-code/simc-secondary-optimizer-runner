@@ -1,0 +1,182 @@
+{
+  "schema": "p2_v327_havoc_new_user_299_native_source_reuse_compact_v1",
+  "status": "VERIFIED_ORIGINAL_128_PLUS_RECOVERY_RESEARCH_168_REAL_NATIVE",
+  "original_failed_action_run": 42955908381,
+  "recovery_success_action_run": 42957270859,
+  "original_action_artifact_id": 13827380652,
+  "recovery_artifact_id": 13827347443,
+  "recovery_outer_actions_zip_sha256": "f086e34bfe823e2e1c234034ca5f16404ee25fa67f200342c3baa63f90dcce53",
+  "original_failed_receipt_sha256": "2737b8933c18b2a99f7daa8f77c6bcd9dfaa139e102c4e639c878881f2740b4d",
+  "source_profile_sha256": "6536559211045e6574cb80c66d651a7976777be863a448891ac437882435ef05",
+  "game_build": "12.1.5.70783",
+  "specialization": "demonhunter/havoc",
+  "race": "night_elf",
+  "target_ilevel": 334,
+  "manual_final_T": null,
+  "environment_budget": {
+    "G": 2850,
+    "J": 92,
+    "F": 165,
+    "O": 0,
+    "B": 3107,
+    "T": 3107
+  },
+  "simc_binary_sha256": "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6",
+  "native_count": {
+    "environment": 3,
+    "original_v290": 64,
+    "original_v318": 64,
+    "additional_3seed_study": 168,
+    "total_across_two_actions": 299,
+    "original_reexecuted_on_recovery": 0
+  },
+  "arms": {
+    "v290": {
+      "original_native_zip_sha256": "0e00b79f75e6840984d4e50dba77b5ba92f547d8699748ad0ca5fcd4e9cc1c0c",
+      "journal_sha256": "ee9cad02b066d856b83cf07c166b524c697a15f6dd968e5543699ac268c1ab9e",
+      "scout35": 57,
+      "confirm320": 7,
+      "actual_iterations": 4235,
+      "best_CHMV": [
+        1398,
+        93,
+        1305,
+        311
+      ],
+      "observed_best_DPS": 181884.81202431605,
+      "SEM": 227.00068985064846
+    },
+    "v318": {
+      "original_native_zip_sha256": "6b88f3f0fb450367e47d8e9510155507937f8a8197705aecb00e8c7d6d6a3b18",
+      "journal_sha256": "58e61ff0b311dfa07dc9a3168c9404651b9c3e78c9ebaff2a0bf8aa0d7156edc",
+      "scout35": 58,
+      "confirm320": 6,
+      "actual_iterations": 3950,
+      "best_CHMV": [
+        1398,
+        146,
+        1398,
+        165
+      ],
+      "observed_best_DPS": 182008.42862448998,
+      "SEM": 232.97214328438196
+    }
+  },
+  "comparison": {
+    "equal_native_calls": true,
+    "equal_iterations": false,
+    "nominal_95_pair_halfwidth": 637.531826,
+    "dps_delta_v318_minus_v290": 123.6166,
+    "nominal_95_separated": false,
+    "performance_win_proven": false,
+    "global_optimum_proven": false
+  },
+  "research": {
+    "candidates": 12,
+    "near_quality_candidates": 4,
+    "holdout_N": 640,
+    "holdout_reps": 2,
+    "screen_grid": [
+      32,
+      48,
+      64,
+      96
+    ],
+    "screen_reps": 3,
+    "requested_research_iterations": 24000,
+    "research_new_native": 168,
+    "raw_168_inputs_JSON2_sha_seeds_verified": true,
+    "all_168_profiles_differ_only_in_N_and_json2_path_from_same_new_user_scout": true,
+    "by_N": {
+      "32": {
+        "successes": 3,
+        "replicates": 3,
+        "wall_median_seconds": 3.058185,
+        "first_persistent_good_index": [
+          1,
+          1,
+          1
+        ],
+        "regret_pct_by_rep": [
+          0.09934,
+          0.27105,
+          0.27105
+        ],
+        "mean_regret_pct": 0.213813
+      },
+      "48": {
+        "successes": 3,
+        "replicates": 3,
+        "wall_median_seconds": 3.951524,
+        "first_persistent_good_index": [
+          1,
+          1,
+          1
+        ],
+        "regret_pct_by_rep": [
+          0.09934,
+          0,
+          0
+        ],
+        "mean_regret_pct": 0.033113
+      },
+      "64": {
+        "successes": 3,
+        "replicates": 3,
+        "wall_median_seconds": 4.876528,
+        "first_persistent_good_index": [
+          1,
+          1,
+          1
+        ],
+        "regret_pct_by_rep": [
+          0.09934,
+          0.27105,
+          0
+        ],
+        "mean_regret_pct": 0.123463
+      },
+      "96": {
+        "successes": 3,
+        "replicates": 3,
+        "wall_median_seconds": 6.684054,
+        "first_persistent_good_index": [
+          1,
+          1,
+          1
+        ],
+        "regret_pct_by_rep": [
+          0,
+          0,
+          0.09934
+        ],
+        "mean_regret_pct": 0.033113
+      }
+    },
+    "original_candidate_order_first_is_near_quality": true,
+    "posthoc_fixed_shuffle_first_persistent_good_index": [
+      6,
+      6,
+      6
+    ],
+    "posthoc_shuffle_successes_at_2s": {
+      "N32": 3,
+      "N48": 1,
+      "N64": 0,
+      "N96": 0
+    },
+    "posthoc_shuffle_confirmatory_proof": false,
+    "original_research_zip_sha_from_receipt_only": "212873d6e04f8ff9a1491c87b149bbefd231de02af4fa3292863a7cfab12b8b2",
+    "original_research_zip_was_uploaded": false,
+    "individual_168_raw_input_and_JSON2_were_uploaded": true
+  },
+  "limitations": [
+    "N640x2 reference is best-of-only12, not global truth or 95% equivalence.",
+    "3 independent screening seeds is too small for N32 vs N48 generalized superiority.",
+    "First candidate already good makes time-to-first-quality in original ordering non-discriminative.",
+    "Alternative candidate order is post hoc counterfactual reusing the same measurements, not real chronological execution.",
+    "Original policy experiments 4235 vs3950 iterations are not equal-budget comparison.",
+    "Full original 168 raw input/JSON2 in short-lived GitHub Actions artifact; inner research_168_original.zip not uploaded though its SHA was in receipt.",
+    "v290/v291 original product and fixed 35/320 typed execution unchanged."
+  ]
+}

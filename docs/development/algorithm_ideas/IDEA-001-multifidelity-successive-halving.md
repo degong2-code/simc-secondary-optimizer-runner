@@ -81,3 +81,8 @@
 - [Devastation 실제 251 Native·원본 SHA·N별 성공률](../research_receipts/p2_v326_devastation_auto_T_heldout_251_compact.json), [워크플로 SUCCESS #42953218111](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42953218111). 새 전문화 P1 자동 T3107, 정책별 원본 Native 각64, 같은 새 소스의 후보12×N24/48/96/192/640×2 독립 측정.
 - 참조 640×2 best-of-12의 **0.5% 이내**를 near-quality 운영 지표로 사전 설정. 최종 선별 N24 1/2(2.09s), N48 2/2(2.97s), N96 2/2(4.74s), N192 2/2(8.24s). 품질 최초 안정 도달은 N48 약1.01s. **이 12개/2시드에서 N48이 실측상 가장 유망할 뿐** 적정 N 확정 아님. 동일 CHMV SimC seed DPS 노이즈로 알고리즘 우열 판정 금지.
 - 다음에는 **또 다른 신규 전문화 프로필**에서 최소 2 독립 N screening replicates + 다른 후보 구성/holdout으로 재검증. 통계적 동등성·가족단위95·전역 최적을 주장하지 않으며, v291 Native 정확 iter/cache·v290 기본은 이번 변경에서 보존.
+
+## 2026-11-11 v327 신규 Havoc 3시드 및 도달 지표 식별성
+
+- [새 Havoc 자동 T3107·원본128회 완전 재사용·추가168 Native](../research_receipts/p2_v327_havoc_auto_T_299_native_compact.json). 실제 12후보에서 N32/48/64/96이 모두 3시드 중3회 0.5% 운영 근접군 선택. median wall 3.058/3.952/4.877/6.684초, 평균 후회도 0.214/0.033/0.123/0.033%. N32는 시간 효율, N48은 더 작은 관측 후회도: **Pareto 대안 유지**, 특정 N 자동 승격 금지.
+- 가장 먼저 기록한 후보가 이미 홀드아웃 근접 품질군이면 첫 안정 도달시간은 변별력이 없다. 후보순서에 민감한 지표는 미래 신규 전문화에서 무작위 후보순서·실측 Native 순서를 사전 봉인하고 평가. 현재 순서 재배열은 후향 분석만 가능하며 전역 최적·95% 동등성 아님. 기존 v290/v291 정책 불변.

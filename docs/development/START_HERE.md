@@ -12,6 +12,7 @@
 | v318 오차·다른 CHMV 후보 확인 정책 | [v319 신규 풍운 수도사 실 Native A/B](notes/2026-11-11_p2-v319-new-windwalker-real-v290-v318-ab.md), [영구 compact 원본 대사](research_receipts/p2_v319_windwalker_auto_T_real_v290_v318_compact.json) — 최고 CHMV 동일·95 우위 없음 |
 | 최신 실 Native 성공/비용·원본 범위 | [v319 실제 Actions SUCCESS #42941245130](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42941245130), [증거 지도](EVIDENCE_INDEX.md) |
 | v321 신규 Shadow Priest 128+3 Native 실측 | [영구 compact·원본 SHA](research_receipts/p2_v321_shadow_auto_T_35_120_320_compact.json), [Action 실패·별도 120 복구 기록](notes/2026-11-11_p2-v321-new-shadow-priest-120-native.md) — 제품 120 단계 미통합 |
+| v327 Havoc 신규 프로필·N32~96×3시드 | [299회 실제 Native·N별 후회도](research_receipts/p2_v327_havoc_auto_T_299_native_compact.json), [원본 재활용 연구 SUCCESS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42957270859) — N32/48 모두 유망, 기본 미변경 |
 | v325/v326 신규 황폐 기원사 251 Native·N 선별 성공률 | [원본 SHA·N24~192 비교](research_receipts/p2_v326_devastation_auto_T_heldout_251_compact.json), [Actions SUCCESS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42953218111) — N48 유망, 제품 미승격 |
 | v324 조화 드루이드 새 프로필+N20~640 실측 | [163 Native 성공·N별 데이터](research_receipts/p2_v324_balance_auto_T_variable_n_32_compact.json), [v323 동일 CHMV 오류 교정·판정](notes/2026-11-11_p2-v324-new-balance-continuous-n.md) — 변수 N 자동 통합 전 |
 | v322/v323 CHMV 최초 도달·연속 N 선택 | [도달시간·가변 N 연구](notes/2026-11-11_p2-v323-arrival-continuous-n.md) — 동일 CHMV 소요시간 우선, Native 적용 전 |
