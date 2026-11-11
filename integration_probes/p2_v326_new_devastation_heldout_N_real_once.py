@@ -93,13 +93,31 @@ def select_pooled_candidates(left,right):
     chosen.sort(key=lambda x:(x["index"],x["vector"]))
     return chosen
 
-def finish_new_profile(doc,binary,root):
+def finish_new_profile(doc,binary,root,*,expected_spec=SPEC,
+                       screen_ns=N_GRID,screen_reps=REPS,
+                       holdout_reps=REPS,selector=select_pooled_candidates,
+                       research_schema="v326_new_devastation_original_120_research_native_v1",
+                       selection_label="top3_confirm_per_arm_plus_fixed_scout_steps_then_distance",
+                       archive_name="research_120_original.zip",
+                       shuffle_seed=20261111):
+    # Preserve original v326 defaults while enabling new source-first studies.
+    screen_ns=tuple(screen_ns)
+    screen_reps=tuple(screen_reps)
+    holdout_reps=tuple(holdout_reps)
+    need(screen_ns in (N_GRID,(32,48,64,96))
+         and screen_reps in (REPS,(0,1,2))
+         and holdout_reps==REPS
+         and callable(selector)
+         and type(archive_name) is str and archive_name.endswith(".zip"),
+         "EXPLICIT_RESEARCH_GRID_AND_REPLICATION_CONTRACT")
+    research_calls=CANDIDATES*(len(screen_ns)*len(screen_reps)
+                              +len(holdout_reps))
     need(doc["status"]=="COMPLETE_TWO_ARMS_EQUAL_CALLS_AND_ITERATIONS"
          and doc["fresh_profile_generated_once_for_both_arms"] is True
          and doc["manual_final_T"] is None
          and doc["auto_final_T"]==doc["environment_budget"]["T"]
-         and doc["character"]["character_class"]==SPEC[0]
-         and doc["character"]["character_spec"]==SPEC[1]
+         and doc["character"]["character_class"]==expected_spec[0]
+         and doc["character"]["character_spec"]==expected_spec[1]
          and doc["source_from_old_completed_simc_profile"] is False
          and doc["historical_dps_native_cache_imported"] is False
          and sha(binary)==SIMC_BINARY_SHA
@@ -109,23 +127,24 @@ def finish_new_profile(doc,binary,root):
     raw={
         arm:durable._load_journal(root/arm/"V291_JOURNAL.jsonl")
         for arm in ("v290_original","v318_idea001")}
-    chosen=select_pooled_candidates(raw["v290_original"],raw["v318_idea001"])
+    chosen=selector(raw["v290_original"],raw["v318_idea001"])
     T=doc["auto_final_T"]
     need(all(sum(x["vector"])==T for x in chosen),
          "SOURCE_CANDIDATES_NOT_ALL_SAME_AUTO_T")
     dest=root/"research_cases"
     dest.mkdir(exist_ok=False)
     tasks=[(i,n,rep) for i in range(CANDIDATES)
-           for n in N_GRID+(HOLDOUT_N,) for rep in REPS]
-    random.Random(20261111).shuffle(tasks)
+           for n in screen_ns+(HOLDOUT_N,)
+           for rep in (holdout_reps if n==HOLDOUT_N else screen_reps)]
+    random.Random(shuffle_seed).shuffle(tasks)
     metadata={
-        "schema":"v326_new_devastation_original_120_research_native_v1",
+        "schema":research_schema,
         "status":"STARTED",
         "new_profile_sha256":doc["source_profile_sha256"],
         "manual_final_T":None,"auto_final_T":T,
         "scenario_revision":doc["revision"],
         "exact_binary_sha256":sha(binary),
-        "candidate_selection":"top3_confirm_per_arm_plus_fixed_scout_steps_then_distance",
+        "candidate_selection":selection_label,
         "candidate_order":"ascending_original_earliest_scout_index",
         "selected_candidates":[{
             "CHMV":dict(zip(quality.STATS,x["vector"])),
@@ -133,10 +152,11 @@ def finish_new_profile(doc,binary,root):
             "source_case_index":x["index"],
             "source_input_sha256":x["row"]["input_sha256"]}
             for x in chosen],
-        "screen_N":list(N_GRID),
+        "screen_N":list(screen_ns),
         "holdout_N":HOLDOUT_N,
-        "replicates_per_N":len(REPS),
-        "expected_additional_native":TOTAL_RESEARCH_NATIVE,
+        "screen_replicates_per_N":len(screen_reps),
+        "holdout_replicates":len(holdout_reps),
+        "expected_additional_native":research_calls,
         "measured_native_count":0,
         "native_rows":[],
         "no_global_optimum_proven":True,
@@ -161,7 +181,7 @@ def finish_new_profile(doc,binary,root):
         output=outdir/"simc.json"
         profile=source_input.update_input(
             native_input.read_text(encoding="utf8"),n,output,
-            source_iterations=35,allowed_N=N_GRID+(HOLDOUT_N,))
+            source_iterations=35,allowed_N=screen_ns+(HOLDOUT_N,))
         input_file=outdir/"input.simc"
         input_file.write_text(profile,encoding="utf8")
         tic=time.monotonic()
@@ -183,8 +203,7 @@ def finish_new_profile(doc,binary,root):
         need(type(revision) is str and len(revision)>=10
              and doc["revision"].startswith(revision)
              and len(players)==1 and opt.get("iterations")==n
-             and str(players[0].get("specialization","")).lower() in
-                     ("devastation evoker","devastation"),
+             and str(players[0].get("specialization","")).lower().startswith(expected_spec[1]),
              "NEW_EVOCATION_SIMC_REV_SPEC_N_DRIFT")
         dps=(players[0].get("collected_data") or {}).get("dps") or {}
         need(dps.get("count")==n-1
@@ -206,17 +225,18 @@ def finish_new_profile(doc,binary,root):
         metadata["native_rows"].append(row)
         metadata["measured_native_count"]+=1
         checkpoint()
-        if (job+1)%12==0 or job+1==TOTAL_RESEARCH_NATIVE:
+        if (job+1)%12==0 or job+1==research_calls:
             print("V326_NEW_DEVASTATION_NATIVE_PROGRESS",
-                  job+1,"/",TOTAL_RESEARCH_NATIVE,flush=True)
-    need(metadata["measured_native_count"]==TOTAL_RESEARCH_NATIVE,
+                  job+1,"/",research_calls,flush=True)
+    need(metadata["measured_native_count"]==research_calls,
          "INCOMPLETE_120_NEW_NATIVE_BUDGET")
     summary=quality.evaluate(
         [dict(zip(quality.STATS,x["vector"])) for x in chosen],
-        metadata["native_rows"])
+        metadata["native_rows"],grid=screen_ns,
+        screen_reps=screen_reps,holdout_reps=holdout_reps)
     metadata["status"]="COMPLETE_CURRENT_PROFILE_120_NEW_NATIVE"
     metadata["quality_replay"]=summary
-    z=root/"research_120_original.zip"
+    z=root/archive_name
     with zipfile.ZipFile(z,"w",compression=zipfile.ZIP_DEFLATED,
                          compresslevel=5) as archive:
         for p in sorted(dest.rglob("*")):
@@ -228,7 +248,7 @@ def finish_new_profile(doc,binary,root):
           json.dumps({
               "source_SHA":doc["source_profile_sha256"],
               "auto_T":T,
-              "total_new_native":TOTAL_RESEARCH_NATIVE,
+              "total_new_native":research_calls,
               "good_candidate_count":summary["heldout_good_candidate_count"],
               "by_N":{n:{
                   "final_success_fraction":v["final_success_fraction"],
@@ -238,7 +258,7 @@ def finish_new_profile(doc,binary,root):
     return {
         "schema":SCHEMA,"status":metadata["status"],
         "source_profile_sha256":doc["source_profile_sha256"],
-        "research_native_count":TOTAL_RESEARCH_NATIVE,
+        "research_native_count":research_calls,
         "original_research_zip_sha256":sha(z),
         "same_new_profile_two_algorithm_arms":True,
         "quality_replay":summary,
