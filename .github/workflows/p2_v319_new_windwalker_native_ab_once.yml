@@ -1,0 +1,65 @@
+# One NEW specialization (Windwalker Monk) built by P1, same source in both arms.
+# Standalone one-shot, no generic recurring 26-spec Native repeat.
+name: P2 v319 fresh Windwalker user profile v290-v318 real Native AB
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p2_v319_new_windwalker_native_ab_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p2-v319-one-new-windwalker-v290-v318
+  cancel-in-progress: false
+jobs:
+  fresh-windwalker-ab:
+    if: contains(github.event.head_commit.message, '[p2-v319-new-windwalker-native-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 48
+    env:
+      PYTHONPATH: runner:integration_probes:.
+      SIMC_PINNED_SOURCE_COMMIT: c20e2ad52e4c33711f74272309a5748125175fe8
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Download already-verified pinned SimC binary (no new compile)
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42552942329
+          name: p3-har-verified-source-new-binary-short-lived
+          path: out/binary
+          github-token: ${{ github.token }}
+      - name: First run full focused regression without ANY Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f out/binary/simc
+          test "$(sha256sum out/binary/simc | cut -d' ' -f1)" = "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6"
+          chmod +x out/binary/simc
+          python -m pip install -r requirements-web-test.txt
+          python -m py_compile integration_probes/p2_v319_new_windwalker_v290_v318_real_once.py runner/v318_sem_distance_precision_priority.py runner/v291_durable_multiscale_native_runner.py tests/test_p2_v319_new_windwalker_ab_offline.py
+          python -m unittest -v tests.test_p2_v319_new_windwalker_ab_offline tests.test_p2_v318_sem_precision_optin_offline tests.test_p3_hw_multiscale_policy tests.test_p3_hx_durable_longrun_offline tests.test_v316_optin_case_time_trace_offline
+          echo P2_V319_NEW_SPEC_BASELINE_V318_OFFLINE_REGRESSION_PASS_NATIVE0
+      - name: Real fresh Windwalker source environment & equal-call A/B
+        timeout-minutes: 40
+        env:
+          P2_V319_ONE_FRESH_SPEC_AB_ONCE: '1'
+          BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+          BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+          WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+          WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+        run: python -u integration_probes/p2_v319_new_windwalker_v290_v318_real_once.py
+      - name: Retain compact new source and original 35/320 evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-v319-fresh-windwalker-v290-v318-real-native-evidence
+          path: |
+            out/p2_v319_windwalker_new_user_AB/receipt.json
+            out/p2_v319_windwalker_new_user_AB/*_original_native.zip
+          retention-days: 7
+          if-no-files-found: warn
