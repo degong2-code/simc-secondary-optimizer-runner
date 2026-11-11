@@ -1,0 +1,65 @@
+# source-first new Balance Druid, automatic T; N=20..640 for research only.
+name: P2 v324 NEW Balance Druid source-first continuous N Native study
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p2_v324_new_balance_continuous_n_native_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p2-v324-new-balance-n-native
+  cancel-in-progress: false
+jobs:
+  new-balance-variable-N:
+    if: contains(github.event.head_commit.message, '[p2-v324-new-balance-native-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 52
+    env:
+      PYTHONPATH: runner:integration_probes:.
+      SIMC_PINNED_SOURCE_COMMIT: c20e2ad52e4c33711f74272309a5748125175fe8
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Download verified pinned SimC binary
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42552942329
+          name: p3-har-verified-source-new-binary-short-lived
+          path: out/binary
+          github-token: ${{ github.token }}
+      - name: Offline new user, original v319, N policy, cache and source regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(sha256sum out/binary/simc | cut -d' ' -f1)" = "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6"
+          chmod +x out/binary/simc
+          python -m pip install -r requirements-web-test.txt
+          python -m py_compile integration_probes/p2_v324_balance_new_user_variable_n_real_once.py tests/test_p2_v324_balance_new_user_variable_n_offline.py
+          python -m unittest -v tests.test_p2_v324_balance_new_user_variable_n_offline tests.test_p2_v323_chmv_arrival_and_n_offline tests.test_p2_v319_new_windwalker_ab_offline tests.test_p2_v318_sem_precision_optin_offline tests.test_p3_hw_multiscale_policy
+          python tools/check_development_ledger.py
+      - name: Real NEW Balance Druid profile and 64+64 baseline, 32 research N
+        timeout-minutes: 45
+        env:
+          P2_V324_NEW_BALANCE_N_SWEEP_ONCE: '1'
+          BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+          BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+          WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+          WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+        run: python -u integration_probes/p2_v324_balance_new_user_variable_n_real_once.py
+      - name: Save exact current-run native originals and compact research N
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-v324-new-balance-auto-T-continuous-N-real-native
+          path: |
+            out/p2_v324_balance_auto_T_variable_N/receipt.json
+            out/p2_v324_balance_auto_T_variable_N/research_progress.json
+            out/p2_v324_balance_auto_T_variable_N/*_original_native.zip
+            out/p2_v324_balance_auto_T_variable_N/research_variable_N_original.zip
+          retention-days: 7
+          if-no-files-found: warn
