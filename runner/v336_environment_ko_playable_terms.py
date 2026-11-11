@@ -37,6 +37,7 @@ BUILD=re.compile(r"\d+(?:\.\d+){3}\Z")
 KOREAN=re.compile(r"[가-힣]")
 SHA=re.compile(r"[a-f0-9]{64}\Z")
 MAX_DOC=750_000
+PACKAGED=pathlib.Path(__file__).resolve().parents[1]/"data"/"current_season_playable_terms_ko_KR_verified.json"
 MAX_INDEX_ROWS=350
 SOURCE="BLIZZARD_OFFICIAL_GAME_DATA_API"
 
@@ -251,12 +252,23 @@ def validate(doc,build):
     return doc
 
 def read(root,build):
+    """Prioritize local source; exact-build packaged 64-name proof is fallback.
+
+    A corrupted local file must NOT silently fall back to packaged material.
+    A different game-build is never used as implicit season verification.
+    """
     try:
-        path=path_for(root,build)
-        if not path.is_file() or path.is_symlink() or \
-           not 0<path.stat().st_size<=MAX_DOC:return None
-        doc=json.loads(path.read_text(encoding="utf8"))
-        return validate(doc,build)
+        local=path_for(root,build)
+        for path in (local,PACKAGED):
+            if not path.exists():continue
+            if (not path.is_file() or path.is_symlink() or
+                    not 0<path.stat().st_size<=MAX_DOC):
+                return None
+            doc=json.loads(path.read_text(encoding="utf8"))
+            if path==PACKAGED and doc.get("game_build")!=build:
+                continue
+            return validate(doc,build)
+        return None
     except (TermBlocked,TypeError,ValueError,OSError,KeyError):return None
 
 def public(root,build):

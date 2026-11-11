@@ -26,6 +26,7 @@ on:
       - runner/v332_blizzard_ko_item_labels.py
       - runner/v335_environment_official_ko_localization.py
       - runner/v336_environment_ko_playable_terms.py
+      - data/current_season_playable_terms_ko_KR_verified.json
       - tests/test_v336_environment_ko_playable_terms.py
       - tests/test_v335_environment_official_ko_localization.py
       - runner/v167_product_season_gear_adapter.py

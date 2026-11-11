@@ -103,13 +103,14 @@ class OfficialPlayableTerms(unittest.TestCase):
     def test_only_source_enko_index_ids_create_user_display_names(self):
         calls=[]
         fetch=request_fixture(self.data,self.details,calls)
-        first=terms.build_for_environment(self.root,BUILD,token="UNIT_ONLY",
+        tested_build="12.2.0.99999"
+        first=terms.build_for_environment(self.root,tested_build,token="UNIT_ONLY",
                                           request_json=fetch)
         self.assertEqual(first["status"],"COMPLETE")
         self.assertEqual(first["native_calls_now"],0)
         self.assertEqual(first["network_calls_now"],6+26)
         self.assertEqual(len(calls),32)
-        public=terms.public(self.root,BUILD)
+        public=terms.public(self.root,tested_build)
         self.assertEqual(public["verified_count"],64)
         self.assertEqual(public["names"]["class"]["paladin"],
                          "공식 가상 Paladin")
@@ -117,34 +118,53 @@ class OfficialPlayableTerms(unittest.TestCase):
                          "공식 가상 Frost")
         self.assertNotIn("id",public["names"]["spec"]["mage/frost"])
         self.assertEqual(public["native_calls_now"],0)
-        again=terms.build_for_environment(self.root,BUILD,token="UNIT_ONLY",
+        again=terms.build_for_environment(self.root,tested_build,token="UNIT_ONLY",
                                           request_json=fetch)
         self.assertTrue(again["reused_same_build_cache"])
         self.assertEqual(again["network_calls_now"],0)
         self.assertEqual(len(calls),32)
-        self.assertEqual(terms.public(self.root,"12.1.5.70784")["status"],
+        self.assertEqual(terms.public(self.root,"12.2.0.99998")["status"],
                          "NO_VERIFIED_OFFICIAL_TERMS")
 
     def test_corrupted_cache_and_changed_roster_not_exposed(self):
-        terms.build_for_environment(self.root,BUILD,token="UNIT_ONLY",
+        tested_build="12.2.0.99999"
+        terms.build_for_environment(self.root,tested_build,token="UNIT_ONLY",
             request_json=request_fixture(self.data,self.details,[]))
-        path=terms.path_for(self.root,BUILD)
+        path=terms.path_for(self.root,tested_build)
         doc=json.loads(path.read_text("utf8"))
         doc["names"]["spec"]["mage/frost"]["name_ko"]="부정확한 변경"
         path.write_text(json.dumps(doc),encoding="utf8")
-        self.assertIsNone(terms.read(self.root,BUILD))
-        self.assertEqual(terms.public(self.root,BUILD)["names"]["spec"],{})
+        self.assertIsNone(terms.read(self.root,tested_build))
+        self.assertEqual(terms.public(self.root,tested_build)["names"]["spec"],{})
 
     def test_missing_credentials_avoid_all_network_and_do_not_block(self):
         with mock.patch.dict(os.environ,{"BLIZZARD_ACCESS_TOKEN":"",
                                        "BLIZZARD_CLIENT_ID":"",
                                        "BLIZZARD_CLIENT_SECRET":""}):
             with mock.patch.object(terms.blizzard,"request_json") as get:
-                doc=terms.build_for_environment(self.root,BUILD)
+                doc=terms.build_for_environment(self.root,"12.2.0.99999")
         self.assertEqual(doc["status"],"CREDENTIALS_UNAVAILABLE_TERMS_PENDING")
         self.assertEqual(doc["network_calls_now"],0)
         self.assertEqual(doc["native_calls_now"],0)
         get.assert_not_called()
+
+    def test_actual_64_official_terms_are_installed_without_api_credentials(self):
+        proven=terms.read(self.root,BUILD)
+        self.assertIsNotNone(proven)
+        self.assertEqual(proven["status"],"COMPLETE")
+        self.assertEqual(proven["manifest_sha256"],
+                         "1170ae45c6cc1b50968d2138a542da781f99ca85e6126f40cfff50661e92edf9")
+        self.assertEqual(len(proven["names"]["class"]),13)
+        self.assertEqual(len(proven["names"]["spec"]),26)
+        self.assertEqual(len(proven["names"]["race"]),25)
+        self.assertEqual(proven["names"]["spec"]["demonhunter/devourer"]["id"],1480)
+        self.assertEqual(proven["names"]["race"]["pandaren"]["ids"],[24,25,26])
+        with mock.patch.object(terms.blizzard,"request_json") as get:
+            resumed=terms.build_for_environment(self.root,BUILD)
+        self.assertEqual(resumed["status"],"COMPLETE")
+        self.assertEqual(resumed["network_calls_now"],0)
+        get.assert_not_called()
+        self.assertEqual(terms.public(self.root,BUILD)["verified_count"],64)
 
     def test_namespace_endpoints_and_api_id_request_scope(self):
         self.assertEqual(terms.url_for("class","ko_KR"),
