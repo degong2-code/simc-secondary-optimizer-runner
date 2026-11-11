@@ -2,6 +2,8 @@
 
 > **2026-11-11 최신 단일 인계 정본:** [v338 제품 완성·공식 한국어·제로베이스 최신 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P1_V338_PRODUCT_FINALIZATION.md). 기존 v331 인계는 제품 N 연구 완료 당시의 역사 스냅샷이고, 최신 제품 상태(v332~v338)는 신규 인계를 우선한다.
 
+[v344 **실제 Windows Chrome→현재 70783 시즌 자동 GJFO3→N56 64회·취소·HTTP 서버 재시작·재개·결과 재열기 PASS**](notes/2026-11-12_p1-v344-real-windows-browser-native64-once.md) — GitHub Actions Windows-2022 생존 사냥꾼 한 사용자 조건, 실제 SimC DPS64·SEM·95% 기록. 개인 PC 설치·미래 시즌 일반화·전역 최적해는 미입증.
+
 [v343 현 Retail70783 Windows GJFO3 + 생존 사냥꾼 기본N56/12 실제 Native PASS](notes/2026-11-11_p1-v343-current-70783-windows-source-native-once.md) — 단일 전문화 실제 Windows FastAPI→SimC; 개인 PC Chrome 64회는 미검증.
 
 [v342 Windows·Linux Chrome 64회 클릭(합성) 및 공식 Windows 70783 바이너리 소스 SHA PASS](notes/2026-11-11_p1-v342-browser64-windows-source-preflight.md) — 신규 DPS Native0; 70783 Windows 환경·SimC DPS 통합 아직 미검증.

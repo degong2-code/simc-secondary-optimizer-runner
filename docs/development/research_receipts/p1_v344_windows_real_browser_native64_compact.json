@@ -1,0 +1,75 @@
+{
+  "schema": "p1_v344_windows_browser_real_70783_64_native_compact_v1",
+  "status": "PASS_REAL_WIN_BROWSER_LOCAL_SERVER_70783_NATIVE64",
+  "tested_commit": "d8620d733140b148deb534975485f45ee22cf118",
+  "actions_run_id": 43114134208,
+  "focused_ci_run_id": 43114134211,
+  "actions_platform": "windows-2022",
+  "actual_chrome_visible_ui": true,
+  "synthetic_http_worker": false,
+  "simc_dps_actual_native": true,
+  "source_build": "12.1.5.70783",
+  "simc_engine_revision": "de11f57df75dda668bae6ac7043a43b98831fa96",
+  "simc_exe_sha256": "1fc927d2be7f1b6064c75f004b5b22245b064a6b3e56e572af4048ba822a986d",
+  "character": "hunter/survival",
+  "target_ilevel": 334,
+  "manual_final_T": null,
+  "environment": {
+    "G": 2850,
+    "J": 92,
+    "F": 165,
+    "O": {
+      "crit_rating": 0,
+      "haste_rating": 0,
+      "mastery_rating": 0,
+      "versatility_rating": 0
+    },
+    "B": 3107,
+    "T": 3107,
+    "native_calls": 3,
+    "installed_manifest_sha256": "278d3c52d4c9c272d8d2c89d7b02cff4abe05db1639bde80b58b14d99f4f4294"
+  },
+  "native_sequence": {
+    "total_actual_dps_native": 64,
+    "scout_iterations_per_CHMV": 56,
+    "at_first_browser_cancel": 2,
+    "after_browser_resume": 62,
+    "http_server_restarted": true,
+    "same_session_restored_in_real_chrome": true,
+    "ui_cancelled_resumable_label": "취소됨 · 재개 가능",
+    "ui_finished_label": "탐색 상한 완료 · 결과 저장",
+    "finished_result_reopened_equal": true,
+    "previous_v343_budget12_cache_not_imported": true
+  },
+  "result": {
+    "observed_dps": 180202.97447030045,
+    "simc_sem": 307.3169501313466,
+    "first_chmv_T": {
+      "crit_rating": 944,
+      "haste_rating": 792,
+      "mastery_rating": 1206,
+      "versatility_rating": 165
+    },
+    "confidence_level": 0.95,
+    "selected_pair_direction_supported_at_95": false,
+    "global_optimum_proven": false
+  },
+  "original_provenance": {
+    "input_simc_files": 64,
+    "simc_json2_files": 64,
+    "native_receipt_files": 64,
+    "first_input_sha256": "4c144c7100fc3864108eaa59948a4df887ce8da79a2c8ec6fe719a47d0145a86",
+    "json2_sha_list_newline_sha256": "2b5f2d88b33e6f991dd32fa4ac671f9f70f955bb9d1e0604d708b74e39f23239",
+    "native_input_json2_receipts_zip_sha256": "9dc7f1f310c1fef3db486d1e528993c2f23a3eec137afe113036b9d9c4f44bd7",
+    "actions_artifact_id": 13897178782,
+    "actions_artifact_expiry": "2026-11-18",
+    "archive_groups_verified": 64
+  },
+  "limits": {
+    "personal_pc_install_proven": false,
+    "all_26_dps_native_proven": false,
+    "future_season_ready_proven": false,
+    "global_optimum_proven": false,
+    "real_near_alternative_count_verified_in_this_run": false
+  }
+}
