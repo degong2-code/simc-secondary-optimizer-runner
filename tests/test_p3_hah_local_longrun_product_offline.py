@@ -75,13 +75,14 @@ class LocalLongRunHTTP(unittest.TestCase):
         # Explicitly spelling an old build never creates an installed
         # profile; the existing source owner must validate it.
         data["installed_season_game_build"]="12.1.5.70575"
-        # A real empty local installation returns the original v212
-        # source error through LocalJobs.plan() / blocked(). Do not raise a
-        # synthetic EnvironmentBlocked outside the method that catches it.
+        # The suite's plan fixture intentionally bypasses the real v212
+        # profile lookup and presents an old source-only stored session.
+        # Even with an explicit string claiming build 70575, launch MUST
+        # reject that session before a SimC worker is spawned.
         missing=self.post("/api/v1/longrun/start",data)
         self.assertEqual(missing.status_code,422,missing.text)
         self.assertEqual(missing.json()["detail"]["code"],
-                         "WEB_SELECTED_INSTALLED_SEASON_BUILD_NOT_FOUND")
+                         "WEB_PRIMARY_VERIFIED_SEASON_INSTALL_REQUIRED")
         web.subprocess.Popen.assert_not_called()
 
     def test_existing_64_source_only_resume_fails_before_native(self):
