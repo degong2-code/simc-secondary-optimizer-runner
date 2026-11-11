@@ -76,6 +76,27 @@ def main():
             roster=[o.get_attribute("value") for o in
                 driver.find_elements(By.CSS_SELECTOR,"#race-list option")]
             need(roster==["드랙티르"],"EVOKER_ROSTER")
+            # v336: actual browser fetches the immutable 64/64 official
+            # Blizzard source by exact installed game build, with no Native.
+            verified=driver.execute_async_script("""
+                const done=arguments[0];
+                refreshOfficialGameTerms('12.1.5.70783').then(()=>
+                    done({status:document.getElementById('season-terms-status').textContent,
+                          spec:document.getElementById('spec').value,
+                          race:document.getElementById('race').value}))
+                .catch(e=>done({error:String(e)}));
+            """)
+            need(not verified.get("error") and
+                 "공식 한국어 게임 용어 확인 64종" in verified["status"],
+                 "V336_VERIFIED_KO_TERMS_NOT_APPLIED")
+            need(verified["spec"]=="evoker/devastation" and
+                 verified["race"]=="드랙티르",
+                 "V336_SOURCE_CHANGED_SIMC_CHARACTER_SELECTION")
+            select_label(driver,"class-choice","악마사냥꾼","악마사냥꾼")
+            select_label(driver,"spec","포식","포식")
+            need(driver.find_element(By.ID,"spec").get_attribute("value")==
+                 "demonhunter/devourer","V336_DEVOURER_OFFICIAL_NAME_ID_DRIFT")
+            select_label(driver,"class-choice","기원사","기원사")
             need(len(driver.find_elements(By.CSS_SELECTOR,
                  "#trinket1 option"))==64,"TRINKETS_63")
             select_label(driver,"trinket1","메레크타","메레크타의 송곳니")
@@ -98,6 +119,8 @@ def main():
                 "e=>e.name.includes('/longrun/start')).length")
             need(api_traffic==0,"UNEXPECTED_NATIVE_START_REQUEST")
             report.update(status="PASS",classes=13,supported_dps=26,
+                          verified_official_game_terms=64,
+                          verified_source_build="12.1.5.70783",
                           displayed_official_trinkets=63,selected_item_id=158367,
                           known_evoker_races=roster)
         finally:
