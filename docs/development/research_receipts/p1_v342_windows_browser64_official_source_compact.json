@@ -1,0 +1,47 @@
+{
+  "schema": "p1_v342_window_browser_64_and_pinned_simc_source_compact_v1",
+  "tested_code_sha": "6fce170ba7f7f740b682a90d9c8bfd6967174933",
+  "actions_run_id": 43046174810,
+  "actions_conclusion": "success",
+  "browser": {
+    "windows_2022": "PASS_REAL_BROWSER_SYNTHETIC_64_WORKFLOW",
+    "ubuntu_24_04": "PASS_REAL_BROWSER_SYNTHETIC_64_WORKFLOW",
+    "actual_chrome_clicks": true,
+    "synthetic_http_worker": true,
+    "click_sequence": [
+      "start",
+      "cancel",
+      "resume",
+      "result",
+      "restore"
+    ],
+    "simulated_native_ceiling": 64,
+    "real_server_sessions_created": 0,
+    "actual_dps_native_calls": 0,
+    "windows_artifact_id": 13868455000,
+    "linux_artifact_id": 13866159860
+  },
+  "simc_windows_official_nightly": {
+    "upstream_repo": "simulationcraft/simc-publish",
+    "run_id": 42956947906,
+    "artifact_id": 13827649795,
+    "upstream_artifact_zip_sha256": "f4ddea2bf7825749e4063cacbae65d5f2177fa56dc0bcbdbf5173016101f91be",
+    "publisher_repo_head_sha": "17e4d74676a0b45525906b5cb1acdb1af2c851e1",
+    "simc_engine_commit_sha_from_matching_github_commit": "de11f57df75dda668bae6ac7043a43b98831fa96",
+    "archive_name": "simc-1210.01.de11f57-win64.7z",
+    "archive_sha256": "a4c4d5e7b349172d80897721daa3e849ce25874a82bbdfb96aeab4dbdc560eb0",
+    "simc_exe_sha256": "1fc927d2be7f1b6064c75f004b5b22245b064a6b3e56e572af4048ba822a986d",
+    "no_profile_cli_exit_code": 0,
+    "no_profile_cli_banner": "Nothing to sim! SimulationCraft 1210-01 for World of Warcraft 12.1.5.70783 Live (hotfix 2026-11-04/70783)",
+    "current_game_build_banner_matches_70783": true,
+    "gjfo_installed_against_this_exact_binary": false,
+    "new_native_dps_calls": 0,
+    "source_artifact_id": 13867516099
+  },
+  "limitations": {
+    "current_70783_windows_native_dps_proven": false,
+    "real_browser_64_native_run_proven": false,
+    "future_season_ready_proven": false,
+    "global_optimum_proven": false
+  }
+}

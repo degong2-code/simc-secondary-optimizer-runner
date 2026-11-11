@@ -2,6 +2,8 @@
 
 > **2026-11-11 최신 단일 인계 정본:** [v338 제품 완성·공식 한국어·제로베이스 최신 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P1_V338_PRODUCT_FINALIZATION.md). 기존 v331 인계는 제품 N 연구 완료 당시의 역사 스냅샷이고, 최신 제품 상태(v332~v338)는 신규 인계를 우선한다.
 
+[v342 Windows·Linux Chrome 64회 클릭(합성) 및 공식 Windows 70783 바이너리 소스 SHA PASS](notes/2026-11-11_p1-v342-browser64-windows-source-preflight.md) — 신규 DPS Native0; 70783 Windows 환경·SimC DPS 통합 아직 미검증.
+
 [v341 실제 Windows N56/12 원본 SHA·취소·재개·캐시 PASS](notes/2026-11-11_p1-v341-windows-n56-native-once.md) — 과거 고정 SimC 바이너리 한 전문화; 현재 70783·사용자 브라우저 64회 전주기 실증은 아님.
 
 [v338 통제 필수 시즌 원본 실패→정상 봉인·재사용, G/J/F/O 누락 차단 — Linux/Windows PASS](notes/2026-11-11_p1-v338-negative-season-source-recovery.md). 새 시즌 전체 원본 READY 실증은 아님.
