@@ -1,6 +1,6 @@
 # IDEA-003 — 적응형 층화 탐색 (Adaptive Stratified Exploration)
 
-- **제안:** 2026-11-11 이번 채팅의 새 아이디어. **상태:** `IDEA_ONLY`; 코드·실측 없음.
+- **제안:** 2026-11-11 이번 채팅의 새 아이디어. **상태:** `V330_REAL_NATIVE_PILOT_HOLD` — 신규 Feral 124 Native, 우위 미입증.
 - **가설:** 적합한 DPS 지형이 서로 다른 전문화에서도, 전체 허용 CHMV 공간을 먼저 몇 개의 층(stratum)으로 분리하고 지역별 정보 부족량과 관측 DPS를 함께 평가하면 일부 고점에 편중되지 않고 보다 일관되게 탐색할 수 있다.
 - **방법:** `B=G+J+F` 고정·O/L/E 하한에 맞는 3차원 제약 단체(simplex)를 8–16개 대략 동등한 공간 셀로 나눔 → 셀당 최소 1개 SimC 확인 → 상위 DPS/SEM과 해당 셀의 거리·측정 밀도·최근 개선량으로 다음 후보 배분 → 셀 내부는 v290 정수 pairwise 지역 탐색.
 - **탐사 유지:** 한 셀의 단일 35-iteration 높은 관측값만으로 다른 셀 제거 금지; 탐색/이용 비율과 최소 셀 표본 수를 먼저 고정해 누출을 막는다.
@@ -25,3 +25,9 @@
 
 - [선택형 코드](../../../runner/v330_idea003_stratified_reserve.py), [실험 계약](../notes/2026-11-11_p2-v330-idea003-feral-shared-history-fork.md). v290과 동일한 bounded pool의 finite-pool-mass 정규화 12 Voronoi 셀, 부족도 이후 maximin. 초기 전역16개·지역/정밀 후보와 reserve 슬롯 수는 변경하지 않는다.
 - v329의 독립 초기 시드·후보 방식 혼합 교란을 피하기 위해 신규 야성 드루이드에서 동일한 실제 관측 prefix를 첫 다른 reserve까지 공유한다. 현재 세션 원본 Native bytes만 재검증하여 재사용. 각 arm 64 logical Native/4520 iter, physical Native separately. v290/v318 별도 불필요 재실행 없음. 실제 Native 결과 확인 전 성능 우위 주장 금지.
+
+## v330 실제 Native 파일럿 완료 — HOLD
+
+- [실제 124 Native·원본 SHA](../research_receipts/p2_v330_feral_idea003_124_native_compact.json), [Actions SUCCESS #42965880663](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42965880663). 동일 실제 19개 측정값 공유, 20번째부터 reserve 차이, 64 logical/4520 각 arm, 실제64+45+12 holdout+3env. 원본 전부 확인, cache-only0.
+- v306과 v330 모두 12/12 cell·35번째 첫 좋은 후보, 동일 best-of-six CHMV379/1398/1103/227 DPS198326.54. 선정1순위 독립 평균197898.61 vs197841.08, nominal95 미분리; v306 near4 vs v330 near3. postfork28.15/28.07s. 기존 maximin을 대체할 효능 미입증. 단일 전문화·6 reserve 슬롯이라 층화 가설 전체 기각 아님.
+- **HOLD** v330. 35/320 및 v290/v306 기본 불변. 이후 실험도 현재 source에서 동일 관측 prefix 재사용을 검토하되, 분기 이후 seed noise 및 공유 prefix 시간의 한계를 표기. 별도 N48/56/64 실험 미실시.

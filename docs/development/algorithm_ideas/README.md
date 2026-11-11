@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | IDEA-001 | 다중 정밀도 경쟁 탐색 (Successive Halving) | [상세](IDEA-001-multifidelity-successive-halving.md) | `IDEA_ONLY` | 측정 반복 수/승급 조건 |
 | IDEA-002 | 다중 시작점 신뢰영역 (Multi-start Trust Region) | [상세](IDEA-002-multistart-trust-region.md) | `v329 REAL_NATIVE_PILOT_HOLD / v328-v2 OFFLINE_ONLY` | 반경과 pairwise 후보 생성·초기 seed 교란 분리 필요, 기본 v290 불변 |
-| IDEA-003 | 적응형 층화 탐색 (Adaptive Stratified Exploration) | [상세](IDEA-003-adaptive-stratified-exploration.md) | `IDEA_ONLY` | 전역 공간 셀별 탐사 예산 |
+| IDEA-003 | 적응형 층화 탐색 (Adaptive Stratified Exploration) | [상세](IDEA-003-adaptive-stratified-exploration.md) | `v330 REAL_NATIVE_PILOT_HOLD` | 신규 Feral 124 Native, 19 공통 관측 재사용, v306 대비 발견 우위 없음 |
 | IDEA-004 | 비용 인지형 지식 기울기 탐색 (Cost-aware Knowledge Gradient) | [상세](IDEA-004-cost-aware-knowledge-gradient.md) | `IDEA_ONLY` | 확인 DPS 순위 개선의 기대 정보 가치 / SimC 실행비용 |
 | IDEA-005 | 조건부 짝시드 실측 분산 감소 (Paired Seed CRN) | [상세](IDEA-005-conditional-paired-rng-variance-reduction.md) | `IDEA_ONLY · HOLD_FOR_FEASIBILITY` | 재측정 후보 쌍 DPS 차이의 **실제 양의 공분산** 검증 |
 | IDEA-006 | 국소 민감도 비등방성 탐색 (Active Subspace) | [상세](IDEA-006-anisotropic-active-subspace-search.md) | `OFFLINE_SCREENED · LOCAL_QUADRATIC_HOLD` (Native 0) | 기존 9,906 scout/48 precision: 국소 모델 정확도 미개선·방향 안정성 제한; 실제 방향 탐색 우위 미검증 |

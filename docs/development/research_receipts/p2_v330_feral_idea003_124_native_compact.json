@@ -1,0 +1,312 @@
+{
+  "schema": "p2_v330_verified_fresh_feral_idea003_124_native_compact_v1",
+  "status": "REAL_NATIVE_124_VERIFIED_IDEA003_HOLD",
+  "run": 42965880663,
+  "run_result": "success",
+  "action_head": "5942a8a10e8eec32a657540fc49add6057723bff",
+  "first_preflight_failed_run": 42965801716,
+  "first_preflight_new_native": 0,
+  "common_offline_run": 42965880718,
+  "artifact_id": 13830774695,
+  "artifact_expiry": "2026-11-18T05:32:57Z",
+  "artifact_sha256": "b45868abb7a5e1709563ed834d45125c133ee826ba147b5aeaf57fb73ca51910",
+  "receipt_sha256": "505a4ca91c3bc349174029ad3e1c1f18baa36994e571d065d204fea01a86427f",
+  "study_sha256": "8c2d1bc787546f96874617d187299eef41007d0b0664793e0f45b5bd0d9843dd",
+  "character": "druid/feral",
+  "race": "night_elf",
+  "target_ilvl": 334,
+  "manual_final_T": null,
+  "build": "12.1.5.70783",
+  "source_profile_sha256": "0ac63e3c61499fb72980912d7a49622667c69022556a62fa29dac9432cbd4a3a",
+  "simc_binary_sha256": "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6",
+  "revision": "c20e2ad52e4c33711f74272309a5748125175fe8",
+  "G": 2850,
+  "J": 92,
+  "F": 165,
+  "O": 0,
+  "B": 3107,
+  "T": 3107,
+  "initial_CHMV_count": 16,
+  "scout_iterations_per_CHMV": 35,
+  "confirm_iterations_per_CHMV": 320,
+  "logical_calls_per_arm": 64,
+  "logical_scouts_per_arm": 56,
+  "logical_confirmations_per_arm": 8,
+  "logical_iterations_per_arm": 4520,
+  "regional_scouts": 34,
+  "global_reserve_slots": 6,
+  "cell_count": 12,
+  "new_native": {
+    "environment": 3,
+    "v306": 64,
+    "v330": 45,
+    "holdout": 12,
+    "total": 124,
+    "unique_dps_seeds": 121
+  },
+  "same_campaign_reused_prefix": {
+    "count": 19,
+    "requested_iterations_saved": 665,
+    "first_different_index0": 19,
+    "first_different_stage": "global_reserve",
+    "old_CHMV": [
+      1213,
+      206,
+      698,
+      990
+    ],
+    "new_CHMV": [
+      1222,
+      225,
+      639,
+      1021
+    ],
+    "identical_DPS_SEM_seed_JSON2": true,
+    "all_128_logical_inputs_JSON2_receipts_verified": true,
+    "only_json2_output_path_rekeyed": true,
+    "previous_profile_cache_reused": false
+  },
+  "v306": {
+    "schema": "v306_seed_retained_coarse_escape_regions_opt_in_v1",
+    "policy_source_sha256": "f93dd891784d9703b20547f52ec98a1432fd6e5eaeccd06e5aaee5d402b22bdb",
+    "seal_sha256": "f1e66d1fa3c6c18a05d459805deb45c7ba846d29926dc1f4ae490d3434a2c378",
+    "journal_sha256": "5e0403c9e85419b1a7a15c2d0100d58345534204c49199360ddac58d643a3964",
+    "raw_zip_sha256": "348aed6db0117bb3ad8b0c578784a0ae67097424abdf0414493984264c64d66f",
+    "best_confirmed_320": {
+      "CHMV": [
+        404,
+        994,
+        1398,
+        311
+      ],
+      "DPS": 198508.394871357,
+      "SEM": 278.650873002642
+    },
+    "winner_holdout": {
+      "DPS": 197898.6091899629,
+      "SEM": 144.98621188621377,
+      "regret_pct": 0.21577095409971545
+    },
+    "occupied_cells": 12,
+    "cell_counts": [
+      6,
+      10,
+      2,
+      2,
+      2,
+      1,
+      2,
+      4,
+      3,
+      2,
+      9,
+      13
+    ],
+    "first_near_index0": 34,
+    "first_near_trace_seconds": 12.53095837799998,
+    "near_shortlist_candidates_discovered": 4,
+    "best_discovered_shortlist_DPS": 198326.5402581108,
+    "postfork_trace_seconds": 28.151891566000018,
+    "full_trace_seconds": 35.10516175600003,
+    "physical_iterations": 4520,
+    "cache_only_new_native": 0
+  },
+  "v330": {
+    "schema": "v330_idea003_stratified_global_reserve_optin_v1",
+    "policy_source_sha256": "df3bcef600834c149e2b64a07e0f50c0cb9d9dfc890062e0d20c077388be60b6",
+    "seal_sha256": "c4dc2a78482f4308842e8215be30c4e1ca69620adf06a3c93952c122ddc4f702",
+    "journal_sha256": "8124cee28b04a34caa2af8768c689668e3991d2b588550492944224a3ae03467",
+    "raw_zip_sha256": "e817fabe9d743ea25528b8863710eef498a82ba6cd6bad28caa924c3c0d35fe7",
+    "best_confirmed_320": {
+      "CHMV": [
+        563,
+        1196,
+        910,
+        438
+      ],
+      "DPS": 197673.84661156364,
+      "SEM": 283.3830974969951
+    },
+    "winner_holdout": {
+      "DPS": 197841.08129376423,
+      "SEM": 138.87660194580022,
+      "regret_pct": 0.24477760954976643
+    },
+    "occupied_cells": 12,
+    "cell_counts": [
+      4,
+      10,
+      2,
+      2,
+      3,
+      3,
+      3,
+      3,
+      2,
+      2,
+      8,
+      14
+    ],
+    "first_near_index0": 34,
+    "first_near_logical_reconstructed_trace_seconds": 12.53227739099998,
+    "near_shortlist_candidates_discovered": 3,
+    "best_discovered_shortlist_DPS": 198326.5402581108,
+    "postfork_trace_seconds": 28.067989844000067,
+    "physical_iterations": 3855,
+    "cache_only_new_native": 0
+  },
+  "holdout": {
+    "N": 640,
+    "replicates": 2,
+    "unique_CHMV": 6,
+    "new_native": 12,
+    "raw_zip_sha256": "46b205f5c033243d6321b565d0a56adbed89466bcab50020cc3a58ede3b56818",
+    "best_of_shortlist": {
+      "CHMV": [
+        379,
+        1398,
+        1103,
+        227
+      ],
+      "DPS": 198326.5402581108,
+      "SEM": 134.79108479510626
+    },
+    "near_quality_operational_band": 0.005,
+    "near_candidates": 4,
+    "winner_difference_v330_minus_v306": -57.5278961986769,
+    "nominal95_halfwidth": 393.497670377326,
+    "selected_pair_separated": false,
+    "all_12_source_input_JSON2_seeds_verified": true,
+    "rows": [
+      {
+        "CHMV": [
+          287,
+          1158,
+          456,
+          1206
+        ],
+        "source": "v330",
+        "index0": 32,
+        "DPS": 192366.5109135576,
+        "SEM": 136.59485485137887,
+        "seeds": [
+          "9860307587991953642",
+          "7240485568241827157"
+        ],
+        "native_shas": [
+          "6650b6f12315ac8c9e3b1aad5a7ac582463314c6db150c12d11d7d6ce5b989f9",
+          "f882dd626f1e89621a1493cb439ccb37c248b889a43f392ccc74221bd016951c"
+        ]
+      },
+      {
+        "CHMV": [
+          379,
+          1398,
+          1103,
+          227
+        ],
+        "source": "v306",
+        "index0": 58,
+        "DPS": 198326.5402581108,
+        "SEM": 134.79108479510626,
+        "seeds": [
+          "6469640302288819918",
+          "13696136666823348028"
+        ],
+        "native_shas": [
+          "0c60f62b0af5b576467016ef97fee2259abb796d68f6efd706e397735d3b3f22",
+          "8a462083d80e2c4b4486304321c798dcfcf390631f5e3afb4d22f8d2400700d4"
+        ]
+      },
+      {
+        "CHMV": [
+          404,
+          994,
+          1398,
+          311
+        ],
+        "source": "v306",
+        "index0": 59,
+        "DPS": 197898.6091899629,
+        "SEM": 144.98621188621377,
+        "seeds": [
+          "16301199248515701950",
+          "1949302732212134606"
+        ],
+        "native_shas": [
+          "6e8319c40a31921d413372ea849661cddce6e582097882b6305ab8c9fddb8782",
+          "1261fa01c0d5e03923df68702188fa7538f38673aaa6178b3126f44b4e8a6515"
+        ]
+      },
+      {
+        "CHMV": [
+          551,
+          1398,
+          300,
+          858
+        ],
+        "source": "v306",
+        "index0": 25,
+        "DPS": 192939.1690305465,
+        "SEM": 131.80472253168983,
+        "seeds": [
+          "6890813739045103718",
+          "12571551551985749742"
+        ],
+        "native_shas": [
+          "c61d153f24a12f44371669968dacd6420c1a073e4248dd5e271b262934c4b324",
+          "a86c4e710902c519a1b73686fcf6b5504d457905444548866e846cb7e9dbd277"
+        ]
+      },
+      {
+        "CHMV": [
+          558,
+          1196,
+          901,
+          452
+        ],
+        "source": "v330",
+        "index0": 58,
+        "DPS": 197369.9469525327,
+        "SEM": 136.5779029851451,
+        "seeds": [
+          "13922960652259334317",
+          "13461188797362659054"
+        ],
+        "native_shas": [
+          "18be1da11c179226271df73f732e956669c61e76faebbc68f2f8eb6c1b9b4827",
+          "6c26ffb8e32514804d6df892b63a99db63b7b71e6c969702d709a9043978b504"
+        ]
+      },
+      {
+        "CHMV": [
+          563,
+          1196,
+          910,
+          438
+        ],
+        "source": "v330",
+        "index0": 61,
+        "DPS": 197841.08129376423,
+        "SEM": 138.87660194580022,
+        "seeds": [
+          "12001809132539107270",
+          "8792065422392689409"
+        ],
+        "native_shas": [
+          "9f64233b53948de14568e518f692bd70aef28b79206018d28073e5262a161766",
+          "c946dc6f90c4facb05ca93fb70e15ee40a788851a178b6672e5434a1aaf251de"
+        ]
+      }
+    ]
+  },
+  "limitations": [
+    "First divergent reserve is isolated on exactly common measured history; later independent seeds still confound complete trajectory effects.",
+    "Shared prefix means no independent full-wall comparison; post-fork trace times and reconstructed prefix+suffix are explicitly separate.",
+    "6 selected holdout vectors are not global ground truth, coverage uses 12 finite-pool Voronoi cells, not equal-volume proof.",
+    "Single fresh Feral scenario and six changed reserve slots do not prove broad IDEA003 utility. Both policies find best of holdout; v306 finds 4 near vs v330 3. HOLD, not general rejection.",
+    "N35/320 unchanged, N48/56/64 not evaluated here; product v290 unchanged."
+  ],
+  "global_optimum_proven": false,
+  "familywise_95_proven": false
+}
