@@ -500,7 +500,8 @@ class LocalJobs:
         candidate=exact_L.source_cache(self.root,None)
         return str(candidate) if candidate is not None else None
 
-    def _with_verified_ko_localization(self, game_build, target_ilevel, outcome):
+    def _with_verified_ko_localization(self, game_build, target_ilevel, outcome,
+                                       *, verified_profile_compilation=None):
         # Distinct source families: exact physical item names (v335) and
         # English/Korean Blizzard playable terminology (v336). Both are
         # dependent read-only display metadata; neither changes item admission.
@@ -525,8 +526,17 @@ class LocalJobs:
             # Serializes same-process incremental label cache updates and
             # avoids duplicate official requests for concurrent Build calls.
             with self.locale_cache_lock:
+                # Reused v212 numeric receipts omit physical gem layout.
+                # Supply it only from the already restored, sealed v113
+                # source-owner profile snapshot; never guess IDs from the
+                # existing name cache or silently narrow the worklist.
+                localization_source=outcome
+                if verified_profile_compilation is not None:
+                    localization_source={**outcome,
+                        "source_compilation":verified_profile_compilation}
                 localization=official_ko_env.build_for_environment(
-                    self.root,game_build,outcome,target_ilevel=target_ilevel)
+                    self.root,game_build,localization_source,
+                    target_ilevel=target_ilevel)
         except (official_ko_env.LocalizationBlocked,
                 environment_manifest.EnvironmentBlocked,
                 OSError,ValueError,TypeError,KeyError):
@@ -689,7 +699,10 @@ class LocalJobs:
                         auto_initial_core_build,
                     "auto_initial_core_native_skipped_existing_ready":
                         auto_initial_core_build,
-                    "refresh_reason":None}})
+                    "refresh_reason":None}},
+                        verified_profile_compilation=(
+                            snapshot.get("source_compilation")
+                            if snapshot is not None else None))
         # Immutable by-build Wago stage cannot be silently replayed to
         # claim new item content at the exact same game build. The existing
         # targeted static correction path must handle a confirmed hotfix.
