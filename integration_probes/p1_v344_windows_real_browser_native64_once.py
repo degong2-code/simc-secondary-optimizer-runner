@@ -89,6 +89,21 @@ def elapsed_wait(browser,expression,timeout=180):
     return WebDriverWait(browser,timeout,poll_frequency=.25).until(
         lambda d:d.execute_script("return ("+expression+")"))
 
+def choose_visible_search(browser,field_name,query,exact_label):
+    """Use the product's real visible search/listbox, not the hidden select."""
+    input_box=WebDriverWait(browser,20).until(
+        lambda d:d.find_element(By.ID,"choice-"+field_name))
+    need(input_box.is_displayed(),"VISIBLE_CHOICE_NOT_AVAILABLE")
+    input_box.click()
+    input_box.send_keys(Keys.CONTROL,"a")
+    input_box.send_keys(query)
+    matches=WebDriverWait(browser,20).until(
+        lambda d:d.find_elements(By.CSS_SELECTOR,
+         "#choice-"+field_name+"-results button.choice-result"))
+    exact=[x for x in matches if x.text.strip()==exact_label]
+    need(len(exact)==1,"AMBIGUOUS_VISIBLE_CHOICE_"+field_name)
+    exact[0].click()
+
 def read_ui(browser):
     return browser.execute_script("""
       return {
@@ -155,6 +170,34 @@ def run(binary,out):
             # rejects a second withBusy action while one is active.
             browser.find_element(By.ID,"season-game-build").send_keys(Keys.TAB)
             elapsed_wait(browser,'!state.busy',timeout=35)
+            # Validate every user selection *before* any expensive season
+            # source collection. Use the same visible Korean listbox as
+            # normal browser users; no hidden native-select mutation.
+            # The product renders hidden native <select> for accessibility
+            # and a visible Korean search/listbox. Selenium Select on the
+            # hidden node does not dispatch the UI's change handler.
+            choose_visible_search(browser,"class-choice","사냥꾼","사냥꾼")
+            need(browser.find_element(By.ID,"class-choice").get_attribute(
+                 "value")=="hunter","VISIBLE_CLASS_CHOICE_NOT_HUNTER")
+            choose_visible_search(browser,"spec","생존","생존")
+            need(browser.find_element(By.ID,"spec").get_attribute(
+                 "value")=="hunter/survival","VISIBLE_SPEC_CHOICE_NOT_SURVIVAL")
+            chosen=browser.execute_script("""
+              const r=buildRequest();
+              return {controls:r.controls,product:r.current_season_product,
+                      pinned:r.installed_season_game_build};
+            """)
+            controls=chosen["controls"]
+            need(chosen["product"] and chosen["pinned"]==BUILD and
+                 controls["class"]=="hunter" and
+                 controls["spec"]=="survival" and
+                 controls["ilevel"]==334 and
+                 controls["final_T"] is None and
+                 controls["oil_hands"]==[] and
+                 len(controls["trinket_ids"])==2,
+                 "ACTUAL_BROWSER_DEFAULT_USER_SCENARIO_DRIFT")
+            report["browser_actual_user_controls_verified"]=True
+
             # Observe the *actual* returned environment report at its
             # existing presentation boundary; pass it unchanged to the
             # product UI. No synthetic fetch, modified HTTP or Native mocks.
@@ -216,24 +259,11 @@ def run(binary,out):
                  "EXACT_SEASON_BUDGET_DRIFT")
             report["browser_environment_build_clicked"]=True
             save()
-            # Actual native <select> events: not a synthetic JS input stub.
-            Select(browser.find_element(By.ID,"class-choice")).select_by_value("hunter")
-            Select(browser.find_element(By.ID,"spec")).select_by_value("hunter/survival")
-            chosen=browser.execute_script("""
-              const r=buildRequest();
-              return {controls:r.controls,product:r.current_season_product,
-                      pinned:r.installed_season_game_build};
-            """)
-            controls=chosen["controls"]
-            need(chosen["product"] and chosen["pinned"]==BUILD and
-                 controls["class"]=="hunter" and
-                 controls["spec"]=="survival" and
-                 controls["ilevel"]==334 and
-                 controls["final_T"] is None and
-                 controls["oil_hands"]==[] and
-                 len(controls["trinket_ids"])==2,
-                 "ACTUAL_BROWSER_DEFAULT_USER_SCENARIO_DRIFT")
-            report["browser_actual_user_controls_verified"]=True
+            need(browser.find_element(By.ID,"class-choice").get_attribute(
+                 "value")=="hunter" and
+                 browser.find_element(By.ID,"spec").get_attribute(
+                 "value")=="hunter/survival",
+                 "SOURCE_BUILD_CHANGED_SELECTED_USER_SPEC")
             # PRIMARY button, never the opt-in 12-Native panel or an API fake.
             browser.find_element(By.ID,"start-btn").click()
             sid=elapsed_wait(browser,
