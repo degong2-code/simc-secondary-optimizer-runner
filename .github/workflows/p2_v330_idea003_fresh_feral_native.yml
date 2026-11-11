@@ -65,3 +65,4 @@ jobs:
             out/p2_v330_feral_idea003/holdout/
           retention-days: 7
           if-no-files-found: warn
+# Native preflight retry: prior run failed in mock namespace, Native0.

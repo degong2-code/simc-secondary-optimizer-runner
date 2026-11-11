@@ -29,7 +29,7 @@ class Tests(unittest.TestCase):
                     "iterations":320 if stage=="confirmation" else 35,
                     "hybrid_method":"preserved"}
             proposal={"schema":old.SCHEMA,"decision":"old","next_request":action}
-            with mock.patch.object(old,"next_plan",return_value=proposal):
+            with mock.patch.object(p.prior,"next_plan",return_value=proposal):
                 answer=p.next_plan(rows,**KW)
                 self.assertEqual(answer["schema"],p.SCHEMA)
                 if stage=="global_reserve":
