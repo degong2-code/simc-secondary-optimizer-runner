@@ -20,3 +20,8 @@
 - **통합 우선안:** **v303/v306 위에 반경 확대·축소 신뢰 판정만 붙이는 `ablation`**. IDEA-003의 층화 공간 커버리지는 중복 없이 '새 시작점 요청'에만 활용 가능. v312의 무조건 8/5/3 고정 배분을 바꾸는 실험은 별도 비교.
 - **기각/보류 기준:** 단일 지역 집중/현 상태 v303-v306 대비 독립 시작점 수·고점 발견 속도·총 iterations와 planning CPU overhead가 개선되지 않거나, 동일 영역 중복 Native가 증가하면 채택하지 않는다.
 - **심사 결론:** `REUSE_AND_ABLATE` / v303-v306의 기존 코드 재사용 우선. **새 구현·성능 우위는 아직 없음.**
+
+## 2026-11-11 v328 선택형 실험 코드 (Native 효능 검증 전)
+
+- [v328 measured radius opt-in](../../../runner/v328_idea002_evidence_gated_radius.py)과 [v291 별도 session seal](../../../runner/v291_durable_multiscale_native_runner.py)로 v306 다중 시작점/seed 보호/전역 reserve를 그대로 재사용한다. 실측된 local vs seed DPS 차이와 결합 SEM을 **방향 탐색용 휴리스틱**으로만 사용해 저확신 지역 반경을 ×1.6까지 넓히고, 장기간 안정된 경우만 조심스럽게 축소한다. 이 수치는 공식 통계95 판정이 아님.
+- [개발 기록](../notes/2026-11-11_p2-v328-idea002-radius-ablation.md). 새 전문화 Native 0회, 실제 후보 품질·누락 개선은 미입증. 다음 신규 프로필에서 v306와 v328 16 global+40 other/8 precision, 동일 iterations, 별도 고유 seal/원본 SimC input 비교 후 효능 판정. 기본 v290·v306 캐시 세션 불변.

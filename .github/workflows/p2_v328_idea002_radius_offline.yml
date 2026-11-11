@@ -1,0 +1,27 @@
+name: P2 v328 IDEA-002 radius ablation focused offline
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p2_v328_idea002_radius_offline.yml]
+permissions:
+  contents: read
+jobs:
+  focused:
+    if: contains(github.event.head_commit.message, '[p2-v328-idea002-offline]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: runner:integration_probes:.
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - run: python -m pip install -r requirements-web-test.txt
+      - name: Exactly source-sealed IDEA002 region and v306/v291 regressions, no Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile runner/v328_idea002_evidence_gated_radius.py runner/v291_durable_multiscale_native_runner.py tests/test_p2_v328_idea002_radius_offline.py
+          python -m unittest -v tests.test_p2_v328_idea002_radius_offline tests.test_p2_v306_seed_retained_offline tests.test_p2_v306_new_user_equal_offline tests.test_v304_v303_v291_bridge_offline tests.test_p2_v318_sem_precision_optin_offline
+          python tools/check_development_ledger.py
