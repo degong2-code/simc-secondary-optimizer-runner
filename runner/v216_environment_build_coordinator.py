@@ -7090,6 +7090,29 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             progress["requires"].extend(
                 "FRESH_COMPILER_INPUT_"+name+"_PENDING"
                 for name in source_compilation["missing"])
+        # Source-proven official ko_KR item names are an Environment Build
+        # derivative, not a separate web feature or an admission gate.
+        # The already-verified v212 install remains the one numeric authority.
+        official_ko=None
+        if progress.get("environment_ready") is True:
+            try:
+                import v335_environment_official_ko_localization as locale
+                official_ko=locale.build_for_environment(
+                    sessions_root,fresh_collection_inputs[
+                        "expected_game_build"],{
+                        "environment_ready":True,
+                        "environment_installed":True,
+                        "source_compilation":source_compilation},
+                    target_ilevel=fresh_collection_inputs[
+                        "representative_request"]["target_ilevel"])
+            except Exception:
+                # Missing network credentials or optional label source cannot
+                # revoke G/J/F/O, v212, or start unwanted Native retries.
+                official_ko={
+                    "schema":"v335_incremental_environment_ko_KR_names_v1",
+                    "status":"OFFICIAL_KO_SOURCE_OR_CACHE_REQUIRES_REVIEW",
+                    "native_calls_now":0,"network_calls_now":0}
+            progress["official_ko_localization"]=official_ko
         return {**collected,
                 **({key:progress[key] for key in (
                     "G","J","F","O","B","T","environment_ready",
@@ -7099,6 +7122,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 "native_effect_numeric_sources_unadmitted":effect_observations,
                 "native_calls":progress["new_native_calls"],
                 "zero_history_build":progress,
+                **({"official_ko_localization":official_ko}
+                   if official_ko is not None else {}),
                 "normal_build_entry":True}
     # Existing v217 stages assemble the same v211/v213 source candidate
     # inside this original Build request. No session is created before the

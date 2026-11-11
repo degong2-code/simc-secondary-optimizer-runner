@@ -500,8 +500,13 @@ class LocalJobs:
         return str(candidate) if candidate is not None else None
 
     def _with_verified_ko_localization(self, game_build, target_ilevel, outcome):
-        # Environment localization is a dependent, source-owned stage.
-        # An OPTIONAL unobserved name never invalidates verified G/J/F/O.
+        # Reuse v216's exact Environment Build result. The web adapter must
+        # never re-fetch these labels or create a parallel source of truth.
+        already=outcome.get("official_ko_localization")
+        if type(already) is dict and already.get("schema")==official_ko_env.SCHEMA:
+            return outcome
+        # Verified v212 installed-season reuse has no fresh v216 invocation;
+        # run only the missing derived localization stage.
         try:
             # Serializes same-process incremental label cache updates and
             # avoids duplicate official requests for concurrent Build calls.
