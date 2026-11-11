@@ -1,6 +1,6 @@
 # SIMC SECONDARY OPTIMIZER — 검색 가능한 개발 기능 지도
 
-> 최신 상태는 [START_HERE](START_HERE.md) → [최신 독립 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P2_V331_PRODUCT_FINALIZATION.md) → [현재 A~G 정본](../PRODUCT_CANONICAL_STATUS_20261109_P3_HAI.md) → [FILE_MAP](FILE_MAP.md) → [EVIDENCE_INDEX](EVIDENCE_INDEX.md) 순서로 확인. 이전 INDEX 본문·누적 일자별 배너는 [역사 원본](HISTORICAL_INDEX_20261110_PRE_KNOWLEDGE_LAYER.md)에 **그대로 보존**했다. 아래 17개 Capability 호환표의 HISTORICAL/PARTIAL은 현재 제품 상태 판정이 아니다.
+> 최신 상태는 [START_HERE](START_HERE.md) → [최신 독립 인계 v338](../CHAT_CONTINUITY_HANDOFF_20261111_P1_V338_PRODUCT_FINALIZATION.md) → [현재 A~G 정본](../PRODUCT_CANONICAL_STATUS_20261109_P3_HAI.md) → [FILE_MAP](FILE_MAP.md) → [EVIDENCE_INDEX](EVIDENCE_INDEX.md) 순서로 확인. 이전 INDEX 본문·누적 일자별 배너는 [역사 원본](HISTORICAL_INDEX_20261110_PRE_KNOWLEDGE_LAYER.md)에 **그대로 보존**했다. 아래 17개 Capability 호환표의 HISTORICAL/PARTIAL은 현재 제품 상태 판정이 아니다.
 
 > [v317 1조건 Native 계측 최소 실증 (실제 영수증 전 PENDING)](notes/2026-11-11_p2-v317-one-case-real-v316-trace.md): v316 opt-in, 최초 Arms Warrior 신규 소스, 12-call 상한, v290 기본 불변.
 

@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER · 개발 지식 시작점
 
+> **2026-11-11 최신 단일 인계 정본:** [v338 제품 완성·공식 한국어·제로베이스 최신 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P1_V338_PRODUCT_FINALIZATION.md). 기존 v331 인계는 제품 N 연구 완료 당시의 역사 스냅샷이고, 최신 제품 상태(v332~v338)는 신규 인계를 우선한다.
+
 [v338 통제 필수 시즌 원본 실패→정상 봉인·재사용, G/J/F/O 누락 차단 — Linux/Windows PASS](notes/2026-11-11_p1-v338-negative-season-source-recovery.md). 새 시즌 전체 원본 READY 실증은 아님.
 
 [v337 **무이력 설치→한국어 원본 자동 구축→무중복 재사용** 실 Native PASS #43000049793](notes/2026-11-11_p1-v337-real-coldstart-environment-ko-reuse.md) — 현재 70783 한 조건 한정, 미래 시즌 원본 인증 아님.
@@ -8,7 +10,7 @@
 
 | 질문 | 문서 |
 |---|---|
-| 지금 무엇을 구현했고 남았나 | [제품 최신 A~G 정본](../PRODUCT_CANONICAL_STATUS_20261109_P3_HAI.md), [2026-11-11 최신 P2 v331 종료·제품 완성 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P2_V331_PRODUCT_FINALIZATION.md) ([2026-11-10 P2 v305 역사 인계](../CHAT_CONTINUITY_HANDOFF_20261110_P2_FRESH_FROST_V305_NEXT.md)) |
+| 지금 무엇을 구현했고 남았나 | [제품 최신 A~G 정본](../PRODUCT_CANONICAL_STATUS_20261109_P3_HAI.md), [2026-11-11 최신 P1 v338 제품 완성·현지화·제로베이스 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P1_V338_PRODUCT_FINALIZATION.md), [P2 v331 연구 종료 역사 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P2_V331_PRODUCT_FINALIZATION.md) ([2026-11-10 P2 v305 역사 인계](../CHAT_CONTINUITY_HANDOFF_20261110_P2_FRESH_FROST_V305_NEXT.md)) |
 | 어떤 코드·테스트를 먼저 봐야 하나 | [INDEX](INDEX.md) → [FILE_MAP](FILE_MAP.md) |
 | 특정 파일이 어디 있나 | [전체 FILE_INVENTORY](FILE_INVENTORY.md) → [핵심 FILE_MAP](FILE_MAP.md) |
 | 실제 CI·Native PASS 범위 | [EVIDENCE_INDEX](EVIDENCE_INDEX.md) → GitHub 원본 영수증 |
