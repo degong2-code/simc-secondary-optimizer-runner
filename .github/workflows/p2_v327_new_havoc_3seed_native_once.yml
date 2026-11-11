@@ -1,0 +1,64 @@
+name: P2 v327 new Havoc three-seed N48 repeatability Native
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p2_v327_new_havoc_3seed_native_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p2-v327-havoc-fresh-once
+  cancel-in-progress: false
+jobs:
+  new-havoc:
+    if: contains(github.event.head_commit.message, '[p2-v327-new-havoc-native-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    env:
+      PYTHONPATH: runner:integration_probes:.
+      SIMC_PINNED_SOURCE_COMMIT: c20e2ad52e4c33711f74272309a5748125175fe8
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse exact SimC binary
+        uses: actions/download-artifact@v4
+        with:
+          run-id: 42552942329
+          name: p3-har-verified-source-new-binary-short-lived
+          path: out/binary
+          github-token: ${{ github.token }}
+      - name: Offline fresh Havoc and v326/v325 regressions, Native0
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(sha256sum out/binary/simc | cut -d' ' -f1)" = "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6"
+          chmod +x out/binary/simc
+          python -m pip install -r requirements-web-test.txt
+          python -m py_compile integration_probes/p2_v327_havoc_new_user_three_seed_n_real_once.py tests/test_p2_v327_havoc_three_seed_n_offline.py
+          python -m unittest -v tests.test_p2_v327_havoc_three_seed_n_offline tests.test_p2_v325_independent_holdout_replay_offline tests.test_p2_v326_new_devastation_offline tests.test_p2_v324_balance_new_user_variable_n_offline tests.test_p2_v319_new_windwalker_ab_offline
+          python tools/check_development_ledger.py
+      - name: Real NEW Havoc auto-T P1 + v290/v318 64+64 + research168
+        timeout-minutes: 48
+        env:
+          P2_V327_FRESH_HAVOC_N_ONCE: '1'
+          BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+          BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+          WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+          WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+        run: python -u integration_probes/p2_v327_havoc_new_user_three_seed_n_real_once.py
+      - name: Save current-run original JSON2 input journals and native
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-v327-new-havoc-autoT-N32-48-64-96-3seed-holdout
+          path: |
+            out/p2_v327_havoc_autoT_three_seed_n/receipt.json
+            out/p2_v327_havoc_autoT_three_seed_n/research_progress.json
+            out/p2_v327_havoc_autoT_three_seed_n/*_original_native.zip
+            out/p2_v327_havoc_autoT_three_seed_n/research_cases/
+          retention-days: 7
+          if-no-files-found: warn

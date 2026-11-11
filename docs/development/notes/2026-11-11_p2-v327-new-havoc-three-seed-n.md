@@ -1,0 +1,10 @@
+# P2 v327 — 신규 Havoc 악마사냥꾼 N48 전후 재현성
+
+- **Capability:** `PRODUCT.E2E`, `OPTIMIZER.POLICY`, `DEV.CONTINUITY`.
+- **Keywords:** NEW demonhunter/havoc, 26 DPS, auto T, v327, N32/48/64/96 three screening replicates, 640 holdout two replicates, candidate arrival.
+- **Prior evidence:** [v326 new Devastation native251](../research_receipts/p2_v326_devastation_auto_T_heldout_251_compact.json) and [v324 Balance independent N](../research_receipts/p2_v324_balance_auto_T_variable_n_32_compact.json).
+- **Decision:** `EXTEND` IDEA-001 v325 independent holdout with different new specialist and candidate composition; old v290/default and v291 35/320/cache/seed identity unchanged. New user druid? **No: demonhunter/havoc night_elf**, target334, manual T null; actual environment GJFO determines T.
+- **Changes:** Reuse existing v319 P1+user profile and parameterized v326 source-locked Native runner; [new v327 wrapper](../../../integration_probes/p2_v327_havoc_new_user_three_seed_n_real_once.py), [tests](../../../tests/test_p2_v327_havoc_three_seed_n_offline.py), [push workflow](../../../.github/workflows/p2_v327_new_havoc_3seed_native_once.yml). Select 12 current-run CHMV before holdout from top2 confirmed per policy, scout positions7/19/37/53 and L1 diversity fallback; screen N32/48/64/96 each3 seeds, reference 640×2. Exact 168 new N Native / 24000 requested research iterations.
+- **Verification:** Created code and predeclared trial only. Real new-profile Native and independent N PASS must be established by next Action's original JSON2, input, profile SHA and 64+64 journal evidence, never inferred from push.
+- **Remaining:** Compare screen 3/3 success, first persistent near-quality, total Native process wall and 0.5% near best-of-12 holdout. This band is operational, not 95% DPS equivalence; 3 seeds cannot prove universal N48 superiority.
+- **Efficiency:** One new spec only; max environment3+baseline128+research168=299 Native; 24000 research iterations same as v326 but additional startup from 168 vs120 calls. No old spec reruns; preserve static source and immutable v003.
