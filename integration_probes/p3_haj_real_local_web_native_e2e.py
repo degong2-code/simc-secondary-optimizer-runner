@@ -119,7 +119,8 @@ def verified_current_catalog(original,game_build):
 def execute(root,binary,revision,game_build,environment_result,*,receipt_file,
             manual_final_T=None,selected_oil_item_ids_by_hand=None,
             character_class="paladin",character_spec="retribution",
-            character_race="dwarf",expected_socket_count=None):
+            character_race="dwarf",expected_socket_count=None,
+            primary_continuous=False):
     root=pathlib.Path(root).resolve()
     need(manual_final_T is None or (
          type(manual_final_T) is int and 1<=manual_final_T<=100000),
@@ -148,7 +149,7 @@ def execute(root,binary,revision,game_build,environment_result,*,receipt_file,
     need(type(candidate) is str and candidate,
          "V216_COMPILED_SOURCE_CATALOG_MISSING")
     record={"schema":"p3_haj_real_local_web_native_e2e_v1",
-            "status":"NOT_STARTED","native_ceiling":4,
+            "status":"NOT_STARTED","native_ceiling":(12 if primary_continuous else 4),
             "real_browser_click_tested":False,
             "web_layer":"FASTAPI_LOCAL_TESTCLIENT_AND_REAL_SUBPROCESS",
             "new_native_dps_calls":0,
@@ -209,6 +210,65 @@ def execute(root,binary,revision,game_build,environment_result,*,receipt_file,
                       json.dumps(safe,sort_keys=True),flush=True)
                 return normal_blocked(exc)
             with TestClient(app,base_url="http://127.0.0.1:8765") as client:
+                if primary_continuous:
+                    # User's primary POST /longrun/start, not old prepare/resume.
+                    # Only 12 calls in this bounded probe; user UI cap stays 64.
+                    one={**args,"continuous":True,"max_native_calls":12,
+                         "max_elapsed_seconds":360}
+                    start=response(client,"POST","/api/v1/longrun/start",
+                                   payload=one)
+                    session=start["session_id"]
+                    record["session_id"]=session
+                    checked=response(client,"GET",
+                        "/api/v1/sessions/"+session+"/inputs")
+                    ch=checked["user"]["character"]
+                    need((ch["class"],ch["spec"],ch["race"])==
+                         (character_class,character_spec,character_race),
+                         "PRIMARY_USER_CHARACTER_DRIFT")
+                    record["static_L_native_calls"]=start.get(
+                        "static_L_native_calls_this_start",0)
+                    need(record["static_L_native_calls"]==0,
+                         "PRIMARY_UNEXPECTED_STATIC_L_NATIVE")
+                    after=finish(client,session,timeout=430)
+                    status=after["progress"]["worker"]["status"]
+                    need(status=="BUDGET_EXHAUSTED",
+                         "PRIMARY_NOT_BUDGET_EXHAUSTED:"+status)
+                    count=after["progress"]["native_attempts"]
+                    need(count==12 and after.get("result_ready"),
+                         "PRIMARY_12_NATIVE_NOT_CHECKPOINTED")
+                    need(after["scout_iterations_per_CHMV"]==56,
+                         "PRIMARY_DEFAULT_N56_DRIFT")
+                    final=response(client,"GET",
+                        "/api/v1/sessions/"+session+"/longrun/result")
+                    result=final["user_result"]
+                    best=result["observed_first_choice"]
+                    T=result["final_T"]
+                    vector=best["absolute_rating_T"]
+                    need(result["confidence_level"]==0.95 and
+                         result["global_optimum_proven"] is False and
+                         sum(vector.values())==T and
+                         final["native_calls_cumulative"]==count,
+                         "PRIMARY_CHMV_DPS_STATISTICS_INVALID")
+                    if manual_final_T is not None:
+                        need(T==manual_final_T,"PRIMARY_MANUAL_T_DRIFT")
+                    record["new_native_dps_calls"]=count
+                    record["reported"]={
+                        "native_calls_cumulative":count,
+                        "final_T":T,"observed_chmv":vector,
+                        "dps_mean":best["observed_dps_mean"],
+                        "sem":best["simc_sem"],
+                        "confidence_level":result["confidence_level"],
+                        "global_optimum_proven":False,
+                        "selected_pair_direction_supported_95":
+                            result["confirmation_pair_direction_supported_at_95"],
+                        "scout_N":after["scout_iterations_per_CHMV"]}
+                    record["native_evidence"]=save_cases(root,session,
+                        pathlib.Path("p3_haj_web_native_evidence.zip"))
+                    record["status"]="PASS_REAL_FASTAPI_PRIMARY_CONTINUOUS_N56"
+                    print("P1_PRIMARY_N56_NATIVE_PROOF",
+                          json.dumps(record["reported"],sort_keys=True),
+                          flush=True)
+                    return record
                 with mock.patch.object(web,"blocked",side_effect=observed_precheck):
                     prepared=response(client,"POST","/api/v1/longrun/prepare",
                                       payload=args)

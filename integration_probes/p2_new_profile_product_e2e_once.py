@@ -72,6 +72,11 @@ CASES={
         dict(character_class="deathknight",character_spec="unholy",
              character_race="human",target_ilevel=334,final_T=None,
              sockets=4,special_gem=None),
+    # v334: fresh Survival product user for primary N56 route only.
+    "survival_hunter_4ordinary_auto_T":
+        dict(character_class="hunter",character_spec="survival",
+             character_race="human",target_ilevel=334,final_T=None,
+             sockets=4,special_gem=None),
     "destruction_warlock_4ordinary_T3400":
         dict(character_class="warlock",character_spec="destruction",
              character_race="human",target_ilevel=334,final_T=3400,
@@ -114,6 +119,7 @@ def run():
     need(os.getenv("P2_NEW_PRODUCT_PROFILE_ONCE")=="1",
          "EXPLICIT_FRESH_PRODUCT_NATIVE_OPT_IN_REQUIRED")
     case_id=os.getenv("P2_FRESH_PROFILE_CASE","")
+    primary_mode=os.getenv("P1_PRIMARY_N56_ONCE")=="1"
     case,controls=selected_case(case_id)
     binary=pathlib.Path("out/binary/simc").resolve(strict=True)
     need(hashlib.sha256(binary.read_bytes()).hexdigest()==BINARY_SHA,
@@ -198,7 +204,8 @@ def run():
                 character_class=case["character_class"],
                 character_spec=case["character_spec"],
                 character_race=case["character_race"],
-                expected_socket_count=case["sockets"])
+                expected_socket_count=case["sockets"],
+                primary_continuous=primary_mode)
             report["web_execution_status"]=result["status"]
             report["new_product_dps_native_calls"]=result[
                 "new_native_dps_calls"]
@@ -206,10 +213,15 @@ def run():
             report["generated_input_sha256"]=result.get(
                 "new_profile_input_sha256")
             report["native_evidence"]=result.get("native_evidence")
-            need(result["status"]==
-                 "PASS_REAL_FASTAPI_LONGRUN_PREPARE_RUN_RESUME_CACHE" and
-                 2<=report["new_product_dps_native_calls"]<=4 and
-                 report["product_result"]["final_T"]==case["final_T"],
+            expected_status=("PASS_REAL_FASTAPI_PRIMARY_CONTINUOUS_N56"
+                             if primary_mode else
+                             "PASS_REAL_FASTAPI_LONGRUN_PREPARE_RUN_RESUME_CACHE")
+            call_count=(report["new_product_dps_native_calls"]==12
+                        if primary_mode else
+                        2<=report["new_product_dps_native_calls"]<=4)
+            need(result["status"]==expected_status and call_count and
+                 (case["final_T"] is None or
+                  report["product_result"]["final_T"]==case["final_T"]),
                  "FRESH_PRODUCT_WEB_NATIVE_RESULT_INVALID")
             with zipfile.ZipFile(
                     "p3_haj_web_native_evidence.zip") as archive:
@@ -226,9 +238,12 @@ def run():
                 # evidence is already in a bounded archive for diagnostics.
                 report["new_profile_stable_sha256"]=segments["stable_sha256"]
                 report["source_from_product_v098"]=True
-            report["status"]="PASS_NEW_SPEC_FOUR_ORDINARY_REAL_PRODUCT_NATIVE"
+            report["status"]=("PASS_PRIMARY_N56_REAL_USER_PRODUCT_NATIVE"
+                              if primary_mode else
+                              "PASS_NEW_SPEC_FOUR_ORDINARY_REAL_PRODUCT_NATIVE")
             save()
-            print("P2_FRESH_PRODUCT_REAL_NATIVE_PASS",
+            print(("P1_PRIMARY_N56_REAL_NATIVE_PASS" if primary_mode else
+                   "P2_FRESH_PRODUCT_REAL_NATIVE_PASS"),
                   json.dumps({k:report[k] for k in (
                       "status","case_id","new_environment_native_calls",
                       "new_product_dps_native_calls","environment_budget",
