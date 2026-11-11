@@ -259,6 +259,98 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(len(list(stage.rglob("*.csv"))),
                          len(web.environment_build.wago_snapshot.TABLES))
 
+    def test_v338_required_db2_missing_mid_fetch_fail_closed_then_recovery(self):
+        """Real v161+v217+v216+web path, injected external Wago response only.
+
+        A missing mandatory table never becomes READY, an interrupted RUNNING
+        receipt is not cache approval, recovery refetches and seals all tables,
+        and a third identical request is a zero-fetch source reuse.
+        """
+        import io
+        import socket
+        from urllib.parse import parse_qs, urlsplit
+        build="12.2.0.99999"  # fixture-only identity, NOT real season proof
+        missing="MapChallengeMode"
+        attempts=[]
+        fault=[True]
+        class Response(io.BytesIO):
+            def __init__(self,data,status=200):
+                super().__init__(data)
+                self.status=status
+            def __enter__(self):return self
+            def __exit__(self,*args):self.close()
+        def external(req,timeout):
+            url=urlsplit(req.full_url)
+            self.assertEqual(url.hostname,"wago.tools")
+            self.assertEqual(parse_qs(url.query)["build"],[build])
+            table=url.path.split("/")[-2]
+            self.assertIn(table,web.environment_build.wago_snapshot.TABLES)
+            attempts.append(table)
+            if fault[0] and table==missing:
+                return Response(b"",503)
+            return Response(("ID,Name\n1,"+table+"\n").encode("utf8"))
+        original=web.environment_build.collect_wago_new_season_source
+        def collector(**kwargs):
+            return original(
+                **kwargs,fetch=external,
+                credentials={name:"" for name in
+                             web.environment_build.discovery_stage.FIELDS})
+        original_connect=socket.socket.connect
+        def block_nonloopback(sock,address):
+            if sock.family in (socket.AF_INET,socket.AF_INET6) and (
+                not isinstance(address,tuple) or
+                address[0] not in ("127.0.0.1","::1","localhost")):
+                raise AssertionError("NO_EXTERNAL_NETWORK_IN_NEGATIVE_TEST")
+            return original_connect(sock,address)
+        with (mock.patch.object(web.environment_build,
+                                "collect_wago_new_season_source",
+                                side_effect=collector),
+              mock.patch.object(socket.socket,"connect",
+                                new=block_nonloopback),
+              mock.patch.object(self.app.state.jobs,"plan",
+                                side_effect=AssertionError("NO_DPS_PLAN"))):
+            first=self.post("/api/v1/environment/season-build",
+                            {"game_build":build,"target_ilevel":334})
+            self.assertEqual(first.status_code,422,first.text)
+            self.assertEqual(first.json()["detail"]["code"],
+                             "V216_FRESH_WAGO_SOURCE_FETCH_UNAVAILABLE")
+            root=self.root/"runs"/"_fresh_season_sources"/("wago_"+build)
+            stage=root/".stage_receipts"/"fresh-wago-db2.json"
+            self.assertTrue(stage.is_file())
+            self.assertEqual(json.loads(stage.read_text())["status"],"RUNNING")
+            self.assertFalse((root/"wago"/"receipt.json").exists())
+            self.assertEqual(len(attempts),
+                             web.environment_build.wago_snapshot.TABLES.index(
+                                 missing)+1)
+            self.assertFalse(list(root.glob("fresh_source/v212_installed_*.json")))
+            self.assertFalse(list(root.glob("fresh_source/v113_profile_*.json")))
+            self.assertFalse((self.root/"runs"/"manifest.json").exists())
+            fault[0]=False
+            before=len(attempts)
+            second=self.post("/api/v1/environment/season-build",
+                             {"game_build":build,"target_ilevel":334})
+            self.assertEqual(second.status_code,200,second.text)
+            self.assertEqual(len(attempts)-before,
+                             len(web.environment_build.wago_snapshot.TABLES))
+            body=second.json()
+            self.assertEqual(body["source_stage"]["status"],
+                             "EXECUTED_AND_SEALED")
+            self.assertFalse(body["environment_ready"])
+            self.assertFalse(body["environment_installed"])
+            self.assertEqual(body["native_calls"],0)
+            self.assertTrue(body["zero_history_build"]["requires"])
+            self.assertEqual(json.loads(stage.read_text())["status"],"COMPLETE")
+            before=len(attempts)
+            third=self.post("/api/v1/environment/season-build",
+                            {"game_build":build,"target_ilevel":334})
+            self.assertEqual(third.status_code,200,third.text)
+            self.assertEqual(third.json()["source_stage"]["status"],
+                             "REUSED_VERIFIED")
+            self.assertEqual(len(attempts),before)
+            self.assertEqual(third.json()["native_calls"],0)
+            self.assertFalse(third.json()["environment_ready"])
+            self.assertFalse(list(root.glob("fresh_source/v212_installed_*.json")))
+
     def test_controlled_cold_start_corrupted_source_not_silently_refetched(self):
         """P3-DS T0 tamper: original v217 must reject changed source bytes."""
         import io

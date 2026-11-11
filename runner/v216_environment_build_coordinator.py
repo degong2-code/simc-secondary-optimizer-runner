@@ -3055,6 +3055,15 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         # can distinguish Wago source transport from authenticated discovery.
         raise EnvironmentBuildBlocked(
             "V216_FRESH_WAGO_SOURCE_TIMEOUT") from exc
+    except (OSError,ValueError) as exc:
+        # Wago returns status/transport/size errors before all ten tables
+        # are sealed. Report a stable, safe source error instead of exposing
+        # transport internals through the generic web 409. The original
+        # v217 RUNNING receipt remains recoverable on the next attempt.
+        code=("V216_FRESH_WAGO_SOURCE_SIZE_LIMIT"
+              if str(exc)=="CSV_DOWNLOAD_LIMIT_EXCEEDED"
+              else "V216_FRESH_WAGO_SOURCE_FETCH_UNAVAILABLE")
+        raise EnvironmentBuildBlocked(code) from exc
     # Cross-check the original downloader's per-table SHA with the hashes
     # actually sealed by v217. No extra full CSV read.
     receipts=stage_root/".stage_receipts"/"fresh-wago-db2.json"
