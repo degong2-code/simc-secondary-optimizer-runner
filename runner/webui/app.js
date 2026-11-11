@@ -172,15 +172,13 @@ function installSeasonGearHints(catalog) {
     const node=$(fieldId);
     node.replaceChildren(option("","이번 시즌 장신구 선택"));
     for(const item of current.trinket||[])
-      node.appendChild(option(item.item_id,item.name+" · #"+item.item_id+
-        (item.season_list_basis?" · 시즌 신화+ 후보":"")));
+      node.appendChild(option(item.item_id,(item.name_ko||item.name)));
   }
   for(const row of $("special-rows").querySelectorAll(".gear-row")) {
     const element=row.querySelector('[data-field="item_id"]');
     element.replaceChildren(option("","이번 시즌 특수효과 장비 선택"));
     for(const item of current.special_effect_gear_candidate||[])
-      element.appendChild(option(item.item_id,item.name+" · #"+item.item_id+
-        (item.season_list_basis?" · 시즌 신화+ 후보":"")));
+      element.appendChild(option(item.item_id,(item.name_ko||item.name)));
   }
   refreshSpecialSlots();
   if(!state.seasonGear) {
@@ -770,7 +768,7 @@ function buttonState(active=false,ready=false) {
   $("start-btn").disabled=busy||active||!state.token;
   $("resume-btn").disabled=busy||active||!state.session;
   $("cache-btn").disabled=busy||active||!state.session||!ready;
-  $("cancel-btn").disabled=busy||!active||state.longrunEnabled;
+  $("cancel-btn").disabled=busy||!active;
   $("longrun-prepare-btn").disabled=busy||active||!state.token;
   $("longrun-start-btn").disabled=busy||active||!state.token;
   $("longrun-resume-btn").disabled=busy||active||!state.session||!state.longrunEnabled;
@@ -778,7 +776,7 @@ function buttonState(active=false,ready=false) {
                                   !state.longrunResultReady;
   $("longrun-cancel-btn").disabled=busy||!active||!state.longrunEnabled;
   $("longrun-import-btn").disabled=busy||active||!state.longrunEnabled;
-  $("resume-btn").disabled=busy||active||!state.session||state.longrunEnabled;
+  $("resume-btn").disabled=busy||active||!state.session;
   $("cache-btn").disabled=busy||active||!state.session||!ready||state.longrunEnabled;
   $("restore-btn").disabled=busy;
 }
@@ -1132,11 +1130,8 @@ function renderProgress(data) {
   const environment=data?.environment_manifest;
   const environmentText=environment?" · 환경 "+environment.status:"";
   showEnvironmentBuild(data?.environment_build);
-  $("stage-text").textContent=status+" · Native 누적 "+(p.native_attempts||0)+
-                       " · 캐시 "+(p.cache_hits||0)+environmentText+
-                       (state.longrunEnabled?" · v291 장기 세션 (회차별 제한)":"")+
-                       (Number.isInteger(data?.scout_iterations_per_CHMV)?
-                         " · 탐색 N"+data.scout_iterations_per_CHMV:"");
+  $("stage-text").textContent=data.active?"최적 스탯을 탐색하는 중입니다.":
+    ({BUDGET_EXHAUSTED:"탐색 완료",PAUSED_USER_CANCEL:"중단됨 · 재개 가능",PAUSED_ELAPSED_BUDGET:"시간 제한 도달 · 재개 가능",PAUSED_INVOCATION_NATIVE_BUDGET:"중단된 계산 · 재개 가능",NOT_STARTED:"계산 대기"})[worker]||status;
   $("run-label").textContent=data.active?"진행 중":
     cancelled?"취소됨 · 재개 가능":
     worker==="BLOCKED_OR_PARTIAL"?"실행 차단":
@@ -1159,9 +1154,7 @@ function renderResult(payload) {
   $("sem").textContent=number(best.simc_sem,2);
   const oil=Object.values(r.fixed_O).reduce((a,x)=>a+x,0);
   $("budget").textContent="최종 CHMV T "+number(total)+
-      "  ·  B="+number(r.base_B)+" + 고정 기름 O="+number(oil)+
-      (Number.isInteger(payload.scout_iterations_per_CHMV)?
-        " · 탐색 N"+payload.scout_iterations_per_CHMV:"");
+      "  ·  B="+number(r.base_B)+" + 고정 기름 O="+number(oil);
   const bars=$("stat-bars");bars.replaceChildren();
   for(const [key,label,color] of statOrder){
     const value=best.absolute_rating_T[key],pct=best.percent_of_final_T[key];
@@ -1663,8 +1656,8 @@ function registerHandlers() {
   }));
   $("start-btn").addEventListener("click",()=>withBusy(async()=>{
     // This is the only new-job action. Never start SimC on page load or refresh.
-    if(!window.confirm("이 PC에서 실제 SimC 최적화를 시작할까요? (세션 누적 Native 최대 6회)"))return;
-    const p=await api("/api/v1/sessions/start",{method:"POST",payload:buildRequest()});
+    if(!window.confirm("이 PC에서 최적화를 시작할까요? 계산 중에도 중단할 수 있습니다."))return;
+    const p=await api("/api/v1/longrun/start",{method:"POST",payload:{...buildRequest(),max_native_calls:64,continuous:true}});
     markSession(p.session_id);$("filled-result").hidden=true;
     $("empty-result").hidden=false;
     setNotice("로컬 SimC 작업 시작. 계산은 이 PC에서 수행됩니다.");
@@ -1672,8 +1665,8 @@ function registerHandlers() {
   }));
   $("resume-btn").addEventListener("click",()=>withBusy(async()=>{
     if(!window.confirm("동일 세션을 재개할까요? 캐시가 없으면 남은 Native 계산이 실행될 수 있습니다."))return;
-    await api("/api/v1/sessions/"+state.session+"/resume",
-              {method:"POST",payload:{}});
+    await api("/api/v1/sessions/"+state.session+(state.longrunEnabled?"/longrun/resume":"/resume"),
+              {method:"POST",payload:state.longrunEnabled?{continuous:true}:{}});
     setNotice("동일 세션 재개 요청됨.");await pollOnce();
   }));
   $("cache-btn").addEventListener("click",()=>withBusy(async()=>{
@@ -1683,7 +1676,7 @@ function registerHandlers() {
     await pollOnce();
   }));
   $("cancel-btn").addEventListener("click",()=>withBusy(async()=>{
-    await api("/api/v1/sessions/"+state.session+"/cancel",
+    await api("/api/v1/sessions/"+state.session+(state.longrunEnabled?"/longrun/cancel":"/cancel"),
               {method:"POST",payload:{}});
     setNotice("취소 요청됨 · 현재 SimC 한 건의 완료 후 다음 후보부터 중단.");
     await pollOnce();
@@ -1700,6 +1693,15 @@ function registerHandlers() {
 async function initialize() {
   for(const [id,config] of Object.entries(gearGroups))gearInputs(id,config);
   registerHandlers();
+  // Native select remains the source of truth; search never changes selection.
+  for(const id of ["spec","trinket1","trinket2","food","potion","augmentation","diamond","optimizer-oil-loadout","season_enchant_finger1"]){
+    const select=$(id), search=document.createElement("input");
+    search.type="search";search.placeholder="이름 검색";search.setAttribute("aria-label",select.labels?.[0]?.textContent+" 검색");
+    select.before(search);
+    const filter=()=>{const q=search.value.trim().toLocaleLowerCase("ko-KR");for(const opt of select.options)opt.hidden=Boolean(q&&opt.value!==select.value&&!opt.textContent.toLocaleLowerCase("ko-KR").includes(q));};
+    search.addEventListener("input",filter);select.addEventListener("change",()=>{search.value="";filter();});
+    new MutationObserver(filter).observe(select,{childList:true,subtree:true});
+  }
   try {
     const boot=await api("/api/v1/bootstrap",{publicRoute:true});
     state.token=boot.session_token;

@@ -42,6 +42,8 @@ class LocalLongRunWorkerOffline(unittest.TestCase):
                 self.assertEqual(executor.call_args.kwargs[
                     "max_new_native_this_invocation"],2)
                 self.assertFalse(executor.call_args.kwargs["cache_only"])
+                self.assertEqual(service.run_worker(folder,12,2,continuous=True),0)
+                self.assertIsNone(executor.call_args.kwargs["max_new_native_this_invocation"])
                 state=service.durable.read_json(
                     service.worker_state_path(folder))
                 self.assertEqual(state["status"],"PAUSED_INVOCATION_NATIVE_BUDGET")

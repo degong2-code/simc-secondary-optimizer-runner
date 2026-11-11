@@ -153,13 +153,15 @@ def state(folder, status, *, reason=None, native_calls=None):
 
 def run_worker(folder, budget, batch, *, cache_only=False,
                portable_archive=None, portable_sha256=None,
-               max_elapsed_seconds=900):
+               max_elapsed_seconds=900, continuous=False):
     folder = pathlib.Path(folder).resolve(strict=True)
     need(type(batch) is int and 0 <= batch <= 32,
          "V293_NATIVE_BATCH_LIMIT")
     need(type(max_elapsed_seconds) is int and
          60 <= max_elapsed_seconds <= 3600,
          "V293_ELAPSED_BOUND")
+    need(not continuous or (not cache_only and not portable_archive),
+         "V293_CONTINUOUS_REQUIRES_NATIVE_MODE")
     need(bool(portable_archive) == bool(portable_sha256),
          "V293_ARCHIVE_REQUIRES_APPROVED_SHA")
     need(not portable_archive or (cache_only and batch == 0),
@@ -187,7 +189,7 @@ def run_worker(folder, budget, batch, *, cache_only=False,
                     prepared["context"], prepared["flask"],
                     path["native_binary"], output,
                     max_native_calls=budget,
-                    max_new_native_this_invocation=(0 if cache_only else batch),
+                    max_new_native_this_invocation=(0 if cache_only else None if continuous else batch),
                     cache_only=cache_only,
                     cancel_file=path["cancel_file"],
                     max_elapsed_seconds=max_elapsed_seconds,
@@ -309,6 +311,7 @@ def main(argv=None):
     p.add_argument("--batch",type=int,default=4)
     p.add_argument("--max-elapsed-seconds",type=int,default=900)
     p.add_argument("--cache-only",action="store_true")
+    p.add_argument("--continuous",action="store_true")
     p.add_argument("--portable-archive")
     p.add_argument("--portable-sha256")
     x=p.parse_args(argv)
@@ -316,7 +319,7 @@ def main(argv=None):
                       cache_only=x.cache_only,
                       portable_archive=x.portable_archive,
                       portable_sha256=x.portable_sha256,
-                      max_elapsed_seconds=x.max_elapsed_seconds)
+                      max_elapsed_seconds=x.max_elapsed_seconds,continuous=x.continuous)
 
 
 if __name__=="__main__":

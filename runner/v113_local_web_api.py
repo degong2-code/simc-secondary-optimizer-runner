@@ -111,12 +111,14 @@ class SeasonEnvironmentBuildRequest(BaseModel):
 
 class LongRunBatchRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    continuous: bool = False
     max_new_native_this_invocation: int = Field(default=4,ge=0,le=32)
     max_elapsed_seconds: int = Field(default=900,ge=60,le=3600)
 
 
 class LongRunStartRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    continuous: bool = False
     controls: dict
     binary: str = Field(min_length=1,max_length=4096)
     revision: str = Field(min_length=7,max_length=40)
@@ -1632,7 +1634,7 @@ class LocalJobs:
                 "environment_build":self._read_environment_build_summary(folder)}
 
     def longrun_launch(self, folder, *, budget=None, batch=4, elapsed=900,
-                       cache_only=False, archive=None, sha=None):
+                       cache_only=False, archive=None, sha=None, continuous=False):
         with self.lock:
             if self.is_active(folder):
                 raise HTTPException(409,detail={"code":"SESSION_ALREADY_RUNNING"})
@@ -1670,6 +1672,7 @@ class LocalJobs:
                      "--max-native-calls",str(budget),
                      "--batch",str(batch),
                      "--max-elapsed-seconds",str(elapsed)]
+                if continuous:cmd.append("--continuous")
                 if cache_only:cmd.append("--cache-only")
                 if archive is not None:
                     cmd.extend(["--portable-archive",archive,
@@ -1739,7 +1742,7 @@ class LocalJobs:
             self.folder(prepared["session_id"]),
             budget=request.max_native_calls,
             batch=request.max_new_native_this_invocation,
-            elapsed=request.max_elapsed_seconds)
+            elapsed=request.max_elapsed_seconds,continuous=request.continuous)
         launched.update({k:v for k,v in prepared.items()
                          if k not in ("status","new_dps_native_calls")})
         return launched
@@ -2117,7 +2120,7 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
         return jobs.longrun_launch(
             jobs.folder(session_id),
             batch=request.max_new_native_this_invocation,
-            elapsed=request.max_elapsed_seconds)
+            elapsed=request.max_elapsed_seconds,continuous=request.continuous)
 
     @app.post("/api/v1/sessions/{session_id}/longrun/cache-only")
     def longrun_cache_only(session_id: str):
