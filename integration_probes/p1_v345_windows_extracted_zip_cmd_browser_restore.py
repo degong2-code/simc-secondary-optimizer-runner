@@ -80,9 +80,14 @@ def actual_chrome():
         opt.add_argument(arg)
     driver=webdriver.Chrome(options=opt)
     driver.get(URL+"/")
-    WebDriverWait(driver,35).until(
+    # defaults.length and token become visible *before* initialize()
+    # populates default class/spec/gear and calls buttonState(). Wait for
+    # the exact fully initialized primary user flow as the v344 browser did.
+    WebDriverWait(driver,45).until(
        lambda d:d.execute_script(
-          "return state.defaults.length===26 && !!state.token && !state.busy"))
+          "return state.defaults.length===26 && !!state.token && "+
+          "!state.busy && !!field('spec') && !!field('race') && "+
+          "!document.getElementById('start-btn').disabled"))
     return driver
 
 def http_json(path,token=None,body=None):
@@ -205,6 +210,18 @@ def run(zip_path,exe,out):
               document.getElementById("binary").value=arguments[0];
               document.getElementById("revision").value=arguments[1];
             """,str(exe),REV)
+            invalid=driver.execute_script("""
+              return Array.from(document.querySelectorAll(
+                '#optimizer-form input, #optimizer-form select'))
+                .filter(e=>e.willValidate && !e.validity.valid)
+                .map(e=>({id:e.id||e.dataset.field||"unknown",
+                          flags:{missing:e.validity.valueMissing,
+                            mismatch:e.validity.patternMismatch,
+                            range:e.validity.rangeOverflow||
+                                  e.validity.rangeUnderflow}}));
+            """)
+            report["browser_invalid_input_fields"]=invalid
+            need(not invalid,"READY_BROWSER_FORM_INVALID_BEFORE_PLAN")
             payload=driver.execute_script("return buildRequest();")
             need(payload["current_season_product"] is True and
                  payload["binary"]==str(exe) and payload["revision"]==REV and
