@@ -1136,6 +1136,33 @@ class LocalWebAPIOffline(unittest.TestCase):
         with mock.patch.object(pathlib.Path,"is_file",catalog_absent):
             self.assertIsNone(jobs.source_catalog_path())
 
+
+    def test_v335_environment_localization_is_additive_and_read_only(self):
+        from runner import v335_environment_official_ko_localization as locale
+        build="12.1.5.70783"
+        with mock.patch.object(web.official_ko_env,
+                               "build_for_environment",
+                               side_effect=web.official_ko_env.LocalizationBlocked(
+                                   "SIMULATED_OFFICIAL_ITEM_SOURCE_FAILURE")):
+            jobs=web.LocalJobs(self.root)
+            core={"environment_ready":True,"environment_installed":True,
+                  "G":2850,"J":92,"F":165,"B":3107,"T":3107}
+            result=jobs._with_verified_ko_localization(build,334,core)
+        self.assertEqual(result["B"],3107)
+        self.assertTrue(result["environment_ready"])
+        self.assertEqual(result["official_ko_localization"]["status"],
+                         "OFFICIAL_KO_SOURCE_OR_CACHE_REQUIRES_REVIEW")
+        with mock.patch.object(web.official_ko_env.blizzard,
+                               "request_json") as request:
+            status=self.client.get(
+                "/api/v1/environment/official-ko-localization",
+                params={"game_build":build},headers=self.headers)
+        self.assertEqual(status.status_code,200,status.text)
+        self.assertEqual(status.json()["status"],
+                         "OFFICIAL_KO_CACHE_NOT_INSTALLED")
+        self.assertEqual(status.json()["native_calls_now"],0)
+        request.assert_not_called()
+
     def test_bootstrap_health_and_all_26_dps_defaults_no_simc(self):
         health=self.client.get("/api/v1/health")
         self.assertEqual(health.status_code,200)

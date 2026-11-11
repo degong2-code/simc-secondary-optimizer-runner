@@ -8,7 +8,6 @@ from unittest import mock
 from runner import v335_environment_official_ko_localization as loc
 from runner import v332_blizzard_ko_item_labels as v332
 from runner import v167_product_season_gear_adapter as gear
-from runner import v113_local_web_api as web
 
 
 def install(build="12.1.5.70783",id=280001):
@@ -129,15 +128,6 @@ class EnvironmentKoTests(unittest.TestCase):
                          "OFFICIAL_KO_CACHE_INVALID")
         with self.assertRaises(loc.LocalizationBlocked):
             loc.build_from_verified_install(self.root,b,allow_network=False)
-        jobs=web.LocalJobs(self.root)
-        with mock.patch.object(web.official_ko_env,"build_for_environment",
-                               side_effect=web.official_ko_env.LocalizationBlocked("bad")):
-            result=jobs._with_verified_ko_localization(
-                b["game_build"],334,{"environment_ready":True,"G":2850,
-                    "J":92,"F":165,"B":3107,"T":3107})
-        self.assertEqual(result["B"],3107)
-        self.assertEqual(result["official_ko_localization"]["status"],
-                         "OFFICIAL_KO_SOURCE_OR_CACHE_REQUIRES_REVIEW")
 
     def test_sealed_v212_bridge_is_not_a_user_item_admission_endpoint(self):
         doc=install()
@@ -158,20 +148,5 @@ class EnvironmentKoTests(unittest.TestCase):
             loc.build_for_environment(
                 self.root,doc["game_build"],result,target_ilevel=335)
 
-    def test_readonly_endpoint_does_not_network_or_create_session(self):
-        with mock.patch.object(loc.blizzard,"request_json") as get:
-            client=web.create_app(root=self.root,token="v335-token")
-            from fastapi.testclient import TestClient
-            with TestClient(client,base_url="http://127.0.0.1:8765") as api:
-                response=api.get(
-                    "/api/v1/environment/official-ko-localization",
-                    params={"game_build":"12.1.5.70783"},
-                    headers={"x-simc-local-token":"v335-token",
-                             "origin":"http://127.0.0.1:8765"})
-            self.assertEqual(response.status_code,200,response.text)
-            self.assertEqual(response.json()["status"],
-                             "OFFICIAL_KO_CACHE_NOT_INSTALLED")
-            self.assertEqual(response.json()["native_calls_now"],0)
-            get.assert_not_called()
 
 if __name__=="__main__":unittest.main()

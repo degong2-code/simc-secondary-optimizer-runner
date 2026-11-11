@@ -4,6 +4,6 @@
 - **Prior evidence:** [v332 공식 이름 77/77](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42980205042), [현재 UI](2026-11-11_product-korean-simple-ui.md), [v334 실제 제품 Native](2026-11-11_p1-v334-primary-n56-native-once.md).
 - **Decision:** `CONNECT` — 사용자의 한국어 명칭 확인은 UI 일회성 작업이 아닌 정규 시즌 환경 Build 단계. 기존 v212 G/J/F/O·Policy-A로 이미 검증한 물리 ID 및 동일 빌드 v167 사용자 선택 목록에만 연결. Blizzard 공식 static-kr/ko_KR 응답 ID·SHA 확인, 이름만 별도 등록. 한글명 자체는 아이템/효과/등급 승인 증거가 아님.
 - **Changes:** v335 정규 엔진: 최신 검증 설치 v212 및 v216 선택 G/J/F/O(보석·영약·기름), v212 발행 허용 선택, 같은 빌드 v167 trinket/special/craft를 공통 ID worklist로 수집. 같은 빌드 v332 공식 77개 재사용, 신규 ID만 OAuth 최대1+동시4, 요청당 신규128회 제한. 결과는 게임 빌드별 매니페스트 SHA 원자 저장, SimC revision 변경 무효화 안 함. /environment/season-build 성공·기존 설치 재사용 양쪽에서 실행, /season-gear 및 설치 영약 목록은 검증 이름만 표시, 사용 UI에서 별도 완료/보류 표기.
-- **Verification:** 이번 HEAD의 Linux/Windows API·Windows ZIP·source-only/offline focused CI 결과 확인 전 PASS 미표시. 새 검증 7개 테스트(중복 요청 금지/새 ID 증분/시즌 간 분리/위변조/기름·보석·영약/Policy A 원본 경계/0 Native).
+- **Verification:** 이번 HEAD의 Linux/Windows API·Windows ZIP·source-only/offline focused CI 결과 확인 전 PASS 미표시. 새 소스 전용 테스트와 기존 웹 API 테스트를 분리(중복 요청 금지/새 ID 증분/시즌 간 분리/위변조/기름·보석·영약/Policy A 원본 경계/0 Native).
 - **Remaining:** 정확한 새 시즌 보석·영약·품질별 전체 선택지 등록에는 기존 v220 검증·v167 시즌별 카탈로그 구축이 선행해야 함. v335는 신규 선택지를 자체 승인·발굴하지 않음. 직업/전문화 등 비아이템 공식 용어는 별도 소스 엔진 연동 필요. 신규 시즌 실 실제 Blizzard 조회·Windows 사용자 실클릭은 이 변경만으로 미입증.
 - **Efficiency:** 요청/프로세스마다 목록 0~128 ID만 신규 조회, 동일 시즌 공식명 SHA 캐시 재사용. Native 0·기존 수치/SimC 입력/세션 identity 불변. 자격증명 없으면 보류만 표시, 검증된 코어 환경 차단하지 않음.
