@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import http.client
 import json
 import re
 from pathlib import Path
@@ -353,21 +354,35 @@ def collect(*,stage_root,build,consumables,compiler_source,
         request=Request(url,headers={
             "User-Agent":"SIMC-Secondary-v281-ConsumableJoin/1.0",
             "Accept":"text/csv"})
-        calls[0]+=1
         target=root/outputs["spell_effect"]
         target.parent.mkdir(parents=True,exist_ok=True)
-        total=0
-        with (urlopen if transport is None else transport)(request,timeout=75) as resp:
-            need(resp.status==200,"V281_WAGO_SPELL_EFFECT_HTTP_NOT_200")
-            with target.open("wb") as f:
-                while True:
-                    part=resp.read(262144)
-                    if not part:break
-                    total+=len(part)
-                    need(total<=SPELL_EFFECT_SIZE_LIMIT,
-                         "V281_SPELL_EFFECT_SIZE_LIMIT")
-                    f.write(part)
-        need(total>0,"V281_SPELL_EFFECT_EMPTY")
+        # Upstream chunked CSV can end mid-chunk (real Windows 70783
+        # IncompleteRead). Discard unverified partial bytes and retry the
+        # identical source once, within this same v217 RUNNING stage. Do not
+        # validate, publish or cache a partial CSV as a completed source.
+        for attempt in range(2):
+            calls[0]+=1
+            total=0
+            try:
+                with (urlopen if transport is None else transport)(
+                        request,timeout=75) as resp:
+                    need(resp.status==200,"V281_WAGO_SPELL_EFFECT_HTTP_NOT_200")
+                    with target.open("wb") as f:
+                        while True:
+                            part=resp.read(262144)
+                            if not part:break
+                            total+=len(part)
+                            need(total<=SPELL_EFFECT_SIZE_LIMIT,
+                                 "V281_SPELL_EFFECT_SIZE_LIMIT")
+                            f.write(part)
+                need(total>0,"V281_SPELL_EFFECT_EMPTY")
+                break
+            except http.client.IncompleteRead:
+                if target.exists():
+                    target.unlink()
+                if attempt:
+                    raise SimCRelationBlocked(
+                        "V281_WAGO_SPELL_EFFECT_STREAM_INCOMPLETE") from None
         simc_rows,status,validated_item_sha=_flask_from_sealed_item_data(
             full_simc_item_source,build)
         need(validated_item_sha==item_sha,"V281_ITEM_IDENTITY_CHANGED")

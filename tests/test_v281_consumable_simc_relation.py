@@ -1,5 +1,5 @@
 """P3-CL: exact on-use SpellEffect-to-SimC identity, no Native/UI."""
-import io,json,pathlib,sys,tempfile,unittest
+import http.client,io,json,pathlib,sys,tempfile,unittest
 from unittest import mock
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"runner"))
@@ -113,6 +113,89 @@ class ConsumptionRelation(unittest.TestCase):
                 self.assertEqual(blocked["status"],"CONSUMABLE_SIMC_RELATION_SOURCE_PENDING")
                 self.assertEqual(blocked["network_calls_by_stage"],0)
                 self.assertEqual(len(hits),1)
+    def test_wago_spell_effect_chunked_incomplete_retries_once_and_seals(self):
+        # Reproduces the real v343 Win http.client.IncompleteRead while
+        # keeping source identity, output SHA and zero Native unchanged.
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td);(root/"source").mkdir()
+            candidate=root/"source"/"v280.json"
+            candidate.write_text(json.dumps(SOURCE))
+            compiler=root/"simc";compiler.mkdir()
+            (compiler/"temporary_enchant.inc").write_bytes(TEMP)
+            src={"candidate_path":str(candidate),"source_stage":{
+                 "status":"EXECUTED_AND_SEALED","receipt_sha256":"a"*64}}
+            comp={"source_dir":str(compiler),"source_stage":{
+                  "status":"EXECUTED_AND_SEALED","receipt_sha256":"b"*64}}
+            full={"source_dir":str(root/"full"),"source_stage":{
+                  "status":"EXECUTED_AND_SEALED","receipt_sha256":"c"*64}}
+            calls=[]
+            class Interrupted(io.BytesIO):
+                status=200
+                def read(self,n=-1):
+                    raise http.client.IncompleteRead(b"truncated",5)
+            def transport(req,timeout):
+                calls.append(req.full_url)
+                return Interrupted() if len(calls)==1 else Response(CSV)
+            arguments=dict(stage_root=root,build=BUILD,consumables=src,
+                           compiler_source=comp,full_simc_item_source=full,
+                           transport=transport)
+            with mock.patch.object(v281,"_full_seed_identity",return_value="f"*64), \
+                 mock.patch.object(v281,"_flask_from_sealed_item_data",
+                                   return_value=(FLASK,"EXACT","f"*64)):
+                ok=v281.collect(**arguments)
+                self.assertEqual(ok["status"],"SIMC_CONSUMABLE_RELATIONS_SOURCE_ONLY")
+                self.assertEqual(ok["network_calls_by_stage"],2)
+                self.assertEqual(len(calls),2)
+                self.assertEqual((root/v281.OUT["spell_effect"]).read_bytes(),CSV)
+                reused=v281.collect(**arguments)
+                self.assertEqual(reused["network_calls_by_stage"],0)
+                self.assertEqual(reused["source_stage"]["status"],"REUSED_VERIFIED")
+                self.assertEqual(len(calls),2)
+    def test_wago_spell_effect_both_truncated_fail_closed_and_can_resume(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td);(root/"source").mkdir()
+            candidate=root/"source"/"v280.json"
+            candidate.write_text(json.dumps(SOURCE))
+            compiler=root/"simc";compiler.mkdir()
+            (compiler/"temporary_enchant.inc").write_bytes(TEMP)
+            src={"candidate_path":str(candidate),"source_stage":{
+                 "status":"EXECUTED_AND_SEALED","receipt_sha256":"a"*64}}
+            comp={"source_dir":str(compiler),"source_stage":{
+                  "status":"EXECUTED_AND_SEALED","receipt_sha256":"b"*64}}
+            full={"source_dir":str(root/"full"),"source_stage":{
+                  "status":"EXECUTED_AND_SEALED","receipt_sha256":"c"*64}}
+            calls=[]
+            class Interrupted(io.BytesIO):
+                status=200
+                def read(self,n=-1):
+                    raise http.client.IncompleteRead(b"truncated",5)
+            def failed(req,timeout):
+                calls.append(1)
+                return Interrupted()
+            arguments=dict(stage_root=root,build=BUILD,consumables=src,
+                           compiler_source=comp,full_simc_item_source=full,
+                           transport=failed)
+            with mock.patch.object(v281,"_full_seed_identity",return_value="f"*64), \
+                 mock.patch.object(v281,"_flask_from_sealed_item_data",
+                                   return_value=(FLASK,"EXACT","f"*64)):
+                partial=v281.collect(**arguments)
+                self.assertEqual(partial["status"],"CONSUMABLE_SIMC_RELATION_SOURCE_PENDING")
+                self.assertEqual(partial["reason"],"V281_WAGO_SPELL_EFFECT_STREAM_INCOMPLETE")
+                self.assertIsNone(partial["F"])
+                self.assertIsNone(partial["O"])
+                self.assertFalse(partial["environment_ready"])
+                self.assertEqual(partial["network_calls_by_stage"],2)
+                self.assertFalse((root/v281.OUT["spell_effect"]).exists())
+                self.assertEqual(len(calls),2)
+                # v217 RUNNING intent survives; retry with complete bytes on
+                # the SAME root, without reusing the partial or changing keys.
+                arguments["transport"]=lambda req,timeout:Response(CSV)
+                recovered=v281.collect(**arguments)
+                self.assertEqual(recovered["status"],
+                                 "SIMC_CONSUMABLE_RELATIONS_SOURCE_ONLY")
+                self.assertEqual(recovered["network_calls_by_stage"],1)
+                self.assertEqual(recovered["source_stage"]["status"],
+                                 "EXECUTED_AND_SEALED")
     def test_v284_successor_only_for_real_other_source_stage(self):
         with tempfile.TemporaryDirectory() as td:
             root=pathlib.Path(td)
