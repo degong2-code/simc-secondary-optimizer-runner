@@ -88,8 +88,15 @@ def main():
                        d.find_element(By.ID,"notice").text)
             need(driver.find_element(By.ID,"simc-technical-panel").
                  get_attribute("open") is not None,"SIMC_SETUP_NOT_SHOWN")
-            need(driver.find_element(By.ID,"session-id").text=="없음",
+            # The ID is inside a deliberately hidden developer-only node;
+            # Selenium .text omits hidden text even when no job was started.
+            need(driver.find_element(By.ID,"session-id").
+                 get_dom_property("textContent").strip()=="없음",
                  "UNEXPECTED_JOB")
+            api_traffic=driver.execute_script(
+                "return performance.getEntriesByType('resource').filter("+
+                "e=>e.name.includes('/longrun/start')).length")
+            need(api_traffic==0,"UNEXPECTED_NATIVE_START_REQUEST")
             report.update(status="PASS",classes=13,supported_dps=26,
                           displayed_official_trinkets=63,selected_item_id=158367,
                           known_evoker_races=roster)
