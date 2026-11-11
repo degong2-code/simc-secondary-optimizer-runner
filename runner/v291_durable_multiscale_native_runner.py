@@ -1179,7 +1179,7 @@ def run(context, flask_vector, binary, output, *,
 
 
 def stage_extended_manifest(ready, manifest_path, max_native_calls, *,
-                            source_loader=None):
+                            source_loader=None, research_scout_floor=None):
     """Fork a verified *input only*, not the old v094/v291 result/cache.
 
     This is the product user's explicit long-run budget opt-in. Keep exact
@@ -1200,6 +1200,15 @@ def stage_extended_manifest(ready, manifest_path, max_native_calls, *,
     need(type(existing) is int and 1<=existing<max_native_calls,
          "ONLY_INCREASE_VERIFIED_RUNTIME_BUDGET")
     cfg["runtime"]["max_native_calls"]=max_native_calls
+    # Bounded research-only opt-in for the fixed-N comparison. Re-authenticate
+    # the new runtime via v096 instead of mutating an accepted identity.
+    # Normal user staging and old session paths are byte-compatible.
+    if research_scout_floor is not None:
+        need(type(research_scout_floor) is int and research_scout_floor==32
+             and cfg["runtime"]["scout_iterations"]==35
+             and cfg["runtime"]["confirm_iterations"]==320,
+             "V331_EXPLICIT_RESEARCH_SCOUT_FLOOR_32_ONLY")
+        cfg["runtime"]["scout_iterations"]=research_scout_floor
     original=ready["manifest"]
     need(type(original) is dict and original["native_limit"]>=6 and
          original["native_limit"]<=max_native_calls,
@@ -1216,7 +1225,9 @@ def stage_extended_manifest(ready, manifest_path, max_native_calls, *,
         "output_dir":"simc_results",
         "cancel_file":"CANCEL",
     })
-    directory=manifest_path.parent/("v291_longrun_%d"%max_native_calls)
+    directory=manifest_path.parent/(
+        ("v291_longrun_%d"%max_native_calls) if research_scout_floor is None
+        else ("v331_research_longrun_%d_floor%d"%(max_native_calls,research_scout_floor)))
     need(not directory.is_symlink(),"LONGRUN_STAGE_SYMLINK")
     directory.mkdir(parents=True,exist_ok=True)
     def write_identical(path,data):
@@ -1251,7 +1262,9 @@ def stage_extended_manifest(ready, manifest_path, max_native_calls, *,
          "EXTENDED_RUNTIME_MUST_REAUTHENTICATE_SOURCE_NEW_SESSION")
     new_runtime=upgraded["context"]["bundle"]["prepared"]["scenario"][
         "scenario"]["runtime"]
-    need(new_runtime["max_native_calls"]==max_native_calls,
+    need(new_runtime["max_native_calls"]==max_native_calls and
+         (research_scout_floor is None or
+          new_runtime["scout_iterations"]==research_scout_floor),
          "EXTENDED_RUNTIME_NOT_EFFECTIVE")
     return upgraded, directory/"manifest.json"
 

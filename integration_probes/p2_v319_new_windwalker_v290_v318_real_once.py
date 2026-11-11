@@ -102,7 +102,7 @@ def main(*, case_id=CASE_ID, expected_spec=("monk","windwalker"),
          required_env="P2_V319_ONE_FRESH_SPEC_AB_ONCE",
          campaign_schema="p2_v319_one_new_windwalker_user_native_v290_v318_ab_v1",
          post_run_hook=None, post_run_context_hook=None,
-         source_only_context_hook=None):
+         source_only_context_hook=None, research_scout_floor=None):
     # Previously verified v319 defaults stay intact; new campaigns must
     # supply new specialization, output folder and one-shot env guard.
     def save(doc):
@@ -113,6 +113,11 @@ def main(*, case_id=CASE_ID, expected_spec=("monk","windwalker"),
         temp.replace(receipt_path)
     need(os.getenv(required_env)=="1",
          "V319_EXPLICIT_ONE_SHOT_NATIVE_OPT_IN_REQUIRED")
+    need(research_scout_floor is None or
+         (type(research_scout_floor) is int and research_scout_floor==32
+          and callable(source_only_context_hook)
+          and post_run_hook is None and post_run_context_hook is None),
+         "V331_RESEARCH_RUNTIME_ONLY_WITH_SOURCE_ONLY_HOOK")
     case, controls = new_user_case(case_id,expected_spec)
     need(not output_root.exists(),"V319_NO_REUSE_OF_COMPLETED_WORKSPACE")
     doc={
@@ -123,7 +128,8 @@ def main(*, case_id=CASE_ID, expected_spec=("monk","windwalker"),
         "manual_final_T":None,
         "target_budget_mode":"VERIFIED_AUTO_GJFO_NO_MANUAL_OVERRIDE",
         "auto_final_T":None,
-        "scout_iterations":ITER_SCOUT,"confirmation_iterations":ITER_CONFIRM,
+        "scout_iterations":research_scout_floor or ITER_SCOUT,
+        "confirmation_iterations":ITER_CONFIRM,
         "native_cap_each_arm":MAX_NATIVE_PER_ARM,
         "fresh_profile_generated_once_for_both_arms":False,
         "source_from_old_completed_simc_profile":False,
@@ -214,12 +220,13 @@ def main(*, case_id=CASE_ID, expected_spec=("monk","windwalker"),
                 original=longrun.entry.source(manifest)
                 staged,_=durable.stage_extended_manifest(
                     original,manifest,MAX_NATIVE_PER_ARM,
-                    source_loader=longrun.entry.source)
+                    source_loader=longrun.entry.source,
+                    research_scout_floor=research_scout_floor)
                 context,flask=staged["context"],staged["flask"]
                 identity=context["identity"]
                 need(identity["approved_final_T"]==doc["auto_final_T"]
                      and identity["base_B"]==env["B"]
-                     and identity["scout_iterations"]==ITER_SCOUT
+                     and identity["scout_iterations"]==(research_scout_floor or ITER_SCOUT)
                      and identity["confirm_iterations"]==ITER_CONFIRM
                      and identity["binary_sha256"]==fresh.BINARY_SHA
                      and identity["revision"]==fresh.REVISION
