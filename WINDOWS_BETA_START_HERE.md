@@ -1,5 +1,21 @@
 # SIMC Secondary Optimizer — Windows 로컬 베타 시작
 
+## 2026-11-12 현재 배포 ZIP 사용법 — v344 확인 범위 및 v345 재검증
+
+**현재 제품의 일반 실행은 26개 DPS 전문화에서 목표 ilvl(기본 334) 또는 수동 최종 T를 기준으로 최적 절대 CHMV rating을 찾는 작업입니다.** 현재 착용 장비를 재분배하거나 장비 조합을 추천하지 않습니다. 기본 버튼 **‘최적 스탯 찾기’는 N56 적응형 SimC 탐색의 세션 누적 Native 상한 64회**이며, 아래의 2026-10-30 기록 중 “6회 기본” 문구는 당시 제품의 역사적 동작입니다.
+
+1. ZIP을 압축 해제하고 **Python 3.12+**와 `requirements-web.txt` 의존성을 본인이 직접 설치한 뒤 `START_SIMC_OPTIMIZER_WEB_WINDOWS.cmd --check`로 점검합니다. ZIP 안에서 CMD를 직접 실행하지 않습니다.
+2. 같은 CMD를 더블클릭해 **본인 PC의 127.0.0.1:8765** 웹화면을 엽니다. Windows 방화벽 외부 공개 서비스가 아니며, 앱은 자동으로 pip 패키지나 SimC 바이너리를 무단 설치하지 않습니다.
+3. 별도로 확보한 실제 Windows `simc.exe` 경로와 그 실행파일의 **정확한 Git revision**을 지정합니다. SimC 관리 패널의 공식 설치 경로도 선택할 수 있으나 해당 출처/검증 상태를 확인해야 합니다. 소스 ZIP에는 `simc.exe`를 포함하지 않습니다.
+4. **시즌 환경 확인·설치**에서 현재 KR 게임 빌드에 맞는 대표 일반 장비·티어·G/J/F/O 원본 및 품질을 검증하고 READY인지 확인합니다. 외부 원본 API/네트워크 설정이 충족되지 않아 차단되면 READY나 G/J/F/O를 추정하지 않습니다. GitHub Actions의 검증용 소스 자격증명이 개인 PC에 자동 제공되는 것은 아닙니다.
+5. 직업·전문화·종족·특성, 목표 ilvl/수동 T, 장신구2개, 선택 특수장비·장식·보석·영약·기름·전투조건을 입력한 다음 최적화를 명시적으로 시작합니다. 표시는 관측 DPS·SEM·95% 구별·근접 대안·절대 CHMV 및 비율이며 전역 최적해 증명은 아닙니다.
+6. 완료 또는 중단 후 로컬 세션은 **`%USERPROFILE%\SIMC_Secondary_Optimizer\runs`**에 독립 보존됩니다. ZIP 업그레이드 시 이 경로를 덮어쓰지 말고 `이 PC의 이전 세션 불러오기`에서 동일 세션을 열거나 취소한 계산만 재개합니다. SimC 바이너리·프로필·시즌·예산·iterations 정체성이 다른 원본 결과를 강제로 병합하지 않습니다.
+
+**검증 경계:** [v344 Windows Actions #43114134208](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43114134208)은 공식 Windows SimC `de11f57`, KR 12.1.5.70783, 생존 사냥꾼334, 환경 Native3 + 브라우저 시작·취소·서버 재시작·재개를 포함한 **실제 DPS Native64 PASS**입니다. 이는 GitHub Windows 러너 실증이며 사용자의 개인 PC 설치/실사용까지 증명하지 않습니다. **v345는 위 소스 ZIP을 실제 압축 해제한 실행기로 시작·저장·재열기를 신규 DPS Native 0회로 검증하는 범위**이므로 실 Native64를 다시 반복하지 않습니다. 아래 오래된 v181~v212 안내는 작성 당시의 역사적 설명입니다.
+
+---
+
+
 > **P3-A v212 개발 진척:** 격리 소스에는 v191/v211/v196/v098 산출물을 SHA와 schema/build/revision으로 묶는 내부 Environment Manifest assembler가 추가됐고 Ubuntu·Windows 각 9/9 오프라인 PASS, compile PASS, Native0입니다. 최종 Actions #41160002104의 테스트는 synthetic JSON fixtures와 dummy binary 기반 계약 검증이며 실제 v191/v211/v196/v098 산출물 종단 간 실행은 아닙니다. 이 모듈은 아직 Windows 베타의 사용자 Build 버튼/API에 연결되지 않았으며, 기존 ZIP에 자동 반영되지 않습니다. 실제 원클릭 환경 구축 기능이 이미 배포됐다는 의미가 아닙니다. [설계·남은 통합 단계](docs/P3_ENVIRONMENT_BUILDER_TARGET_ARCHITECTURE_20261031.md).
 >
 

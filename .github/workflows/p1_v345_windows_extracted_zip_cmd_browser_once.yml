@@ -1,0 +1,103 @@
+name: P1 v345 Windows extracted ZIP CMD + real Chrome saved-session restore (Native 0)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p1_v345_windows_extracted_zip_cmd_browser_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v345-window-extracted-zip-user-path-once
+  cancel-in-progress: false
+jobs:
+  actual-zip-user-path:
+    if: contains(github.event.head_commit.message, '[v345-win-package-once]')
+    runs-on: windows-2022
+    timeout-minutes: 20
+    steps:
+      - name: Preserve original source bytes across Windows checkout
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse original verified v213 source catalog, not new season admission
+        uses: actions/download-artifact@v4
+        with:
+          repository: degong2-code/simc-secondary-optimizer-runner
+          run-id: 41360273361
+          name: v213-source-to-catalog-41360273361
+          path: .v345-original-source
+          github-token: ${{ github.token }}
+      - name: Match packaged v213 bytes to original source schema and SHA
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $source=Join-Path $PWD '.v345-original-source/v213_current_season_source_to_catalog.json'
+          if (!(Test-Path $source -PathType Leaf)) { throw 'V345_ORIGINAL_CATALOG_ARTIFACT_MISSING' }
+          Copy-Item $source 'data/current_season_source_to_catalog.json' -Force
+          python -c "import sys,json;sys.path.insert(0,'runner');import v213_source_to_catalog as v;p=json.load(open('data/current_season_source_to_catalog.json',encoding='utf8'));assert v.verify_catalog(p);assert p['native_calls']==0 and p['network_calls']==0 and p['automatic_ui_promotion'] is False;print('V345_HISTORICAL_SOURCE_CATALOG_SHA_OK',p['manifest_sha256'])"
+          if ($LASTEXITCODE -ne 0) { throw 'V345_V213_CATALOG_PROVENANCE_INVALID' }
+      - name: Reuse official exact Windows SimC exe only as external path and CLI banner
+        uses: actions/download-artifact@v4
+        with:
+          repository: simulationcraft/simc-publish
+          run-id: 42956947906
+          name: simc-nightly-win64-midnight
+          path: .v345-simc-download
+          github-token: ${{ github.token }}
+      - name: Extract and verify separate official Windows SimC bytes
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $a=Join-Path $PWD '.v345-simc-download/simc-1210.01.de11f57-win64.7z'
+          if (!(Test-Path $a -PathType Leaf)) { throw 'V345_SOURCE_ARCHIVE_MISSING' }
+          if ((Get-FileHash -Algorithm SHA256 $a).Hash.ToLowerInvariant() -ne 'a4c4d5e7b349172d80897721daa3e849ce25874a82bbdfb96aeab4dbdc560eb0') { throw 'V345_SOURCE_ARCHIVE_SHA_DRIFT' }
+          $seven='C:\Program Files\7-Zip\7z.exe'
+          if (!(Test-Path $seven)) { throw 'V345_7ZIP_REQUIRED' }
+          New-Item -ItemType Directory -Force .v345-external-simc | Out-Null
+          & $seven x '-o.v345-external-simc' -y -bd $a | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'V345_EXTRACT_EXTERNAL_SIMC_FAILED' }
+          $exe=@(Get-ChildItem .v345-external-simc -Recurse -File -Filter simc.exe)
+          if ($exe.Count -ne 1) { throw 'V345_EXPECTED_ONE_EXTERNAL_SIMC' }
+          if ((Get-FileHash -Algorithm SHA256 $exe[0].FullName).Hash.ToLowerInvariant() -ne '1fc927d2be7f1b6064c75f004b5b22245b064a6b3e56e572af4048ba822a986d') { throw 'V345_EXTERNAL_SIMC_EXE_SHA_DRIFT' }
+          "V345_EXTERNAL_SIMC_EXE=$($exe[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Python web and Selenium only; no unattended dependency install inside ZIP
+        shell: pwsh
+        run: |
+          python -m pip install -r requirements-web-test.txt 'selenium>=4.24,<5'
+          if ($LASTEXITCODE -ne 0) { throw 'V345_PYTHON_DEPENDENCY_INSTALL_FAILED' }
+          python -m py_compile integration_probes/p1_v345_windows_extracted_zip_cmd_browser_restore.py
+          if ($LASTEXITCODE -ne 0) { throw 'V345_PROBE_SYNTAX_FAIL' }
+      - name: Verify deterministic Windows source-only ZIP and original per-file SHA
+        shell: pwsh
+        run: |
+          python -m unittest -q tests.test_v181_windows_beta_package_offline
+          if ($LASTEXITCODE -ne 0) { throw 'V345_PACKAGER_SOURCE_TESTS_FAIL' }
+          New-Item -ItemType Directory -Force dist | Out-Null
+          python integration_probes/v181_windows_beta_packager.py --out dist/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip
+          if ($LASTEXITCODE -ne 0) { throw 'V345_WINDOWS_BETA_PACKAGE_FAILED' }
+      - name: Reuse legacy extracted HTTP and three plan zero-native smoke
+        shell: pwsh
+        run: |
+          python -u integration_probes/v181_windows_beta_live_http.py --zip dist/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip
+          if ($LASTEXITCODE -ne 0) { throw 'V345_REUSED_V181_PACKAGE_SMOKE_FAILED' }
+      - name: ACTUAL extracted CMD startup and Chrome saved scenario after server restart
+        shell: pwsh
+        timeout-minutes: 9
+        run: |
+          python -u integration_probes/p1_v345_windows_extracted_zip_cmd_browser_restore.py --zip dist/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip --simc "$env:V345_EXTERNAL_SIMC_EXE" --out out/v345
+          if ($LASTEXITCODE -ne 0) { throw 'V345_PACKAGE_CMD_CHROME_RESTORE_FAILED' }
+      - name: Retain source-only distribution ZIP and compact receipt; no SimC executable or session
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v345-windows-beta-source-zip-and-acceptance
+          path: |
+            dist/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip
+            out/v345/V345_WINDOWS_PACKAGE_CMD_BROWSER_RECEIPT.json
+          retention-days: 7
+          if-no-files-found: warn
