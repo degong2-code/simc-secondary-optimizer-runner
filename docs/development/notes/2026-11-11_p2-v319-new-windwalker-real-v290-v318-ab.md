@@ -5,8 +5,8 @@
 - **Prior evidence:** [First auto-T Action #42939598332](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42939598332) offline 43 PASS/1 ERROR, Native SKIPPED; [ledger #42939598253](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42939598253) failed.
 - **Decision:** `CONNECT` current environmental budget Build to a genuinely new Monk/Windwalker generated profile, share that exact profile between v290/v318; do not insert manual T.
 - **Changes:** New case T=null; verification that generated context B/T equal environment G+J+F+O; 64 Native per arm planned, separate exact archives.
-- **Verification:** Initial new-Windwalker contract tests passed, but the v318 exception alias test failed; actual environment Build and Native not reached.
-- **Remaining:** Fix tests and ledger, rerun Actions, verify source/profile SHA and 320 DPS/SEM actual after success before judging v318.
+- **Verification:** [v319 #42940793935](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42940793935) 44/44 focused PASS, real new environment READY (3 Native, G2850/J92/F165/O0/T3107, original manifest SHA); Web prepare HTTP422 on per-invocation Native request64 > API cap32; no new profile/DPS A/B. Common ledger [#42940793969](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42940793969) SUCCESS.
+- **Remaining:** Limit only Web prepare batch to32, preserve v291 direct64/arm, rerun fresh source profile/Native and confirm original 320 DPS/SEM with source SHA.
 - **Efficiency:** Reuse valid season source/pinned SimC binary; new user profile per campaign, no old completed profile or DPS cache; main/v290 unchanged.
 
 - **사용자 직접 승인:** 모든 후속 실제 Native 알고리즘 비교에서 새로운 **전문화 사용자 프로필을 환경 구축 엔진 v113→v216/v217→v212→v098으로 직접 생성**한다. 역사 완성 프로필·최고 CHMV·DPS 결과는 입력에 주입하지 않는다. 단일 실험 내 v290/v318은 동일 새 profile SHA 사용.
@@ -17,3 +17,5 @@
 - **효율:** v290 원형 유지, 추가 120 iterations 단계 없음, 원본 26/1008 전수 재실행 없음. v318 실효성은 선행 focused synthetic PASS + 새 전문화 독립 Real A/B 이후 판정.
 
 - **2026-11-11 사용자 정정(이전 v319 T3450 계획 철회):** 임의로 더한 +343 rating은 실제 시즌·풍운 수도사 예산 근거가 없으므로 자동 실험에서 제거. 프로필과 v291 세션을 만들기 전 `verified_automatic_T()`로 정확한 환경 Build 산출 `G/J/F/O/B/T`를 검증하고, 사용자 controls의 `final_T=null`, 생성 세션 원본 user target도 `null`, 실제 승인 `approved_final_T=env["T"]`와 `base_B=env["B"]`를 반드시 대사. **실제 풍운 수도사 자동 T 숫자는 Build 완료 전 미확정**이며 과거 Ret G2850과 동일하다고 가정 금지. 새 실험 ID `windwalker_monk_4ordinary_auto_T`, 신규 루트·아티팩트로 T3450 과거 계획과 분리. 증거 미확인 시 실 Native PASS 미주장.
+
+- **HTTP422 최소 교정:** v113 `LongRunPrepareRequest.max_new_native_this_invocation`의 정규 상한은32. v319 제품 프로필 준비 요청만 `min(64,32)`로 수정하며, 기존 64 Native/arm 연구 실행 예산 및 사용자 API 상한 자체는 변경하지 않는다. 환경 원본 G2850/J92/F165/O0/T3107은 이번 환경의 대표 장비 기준 관측치이며 전 전문화 정확 G라고 주장하지 않는다.

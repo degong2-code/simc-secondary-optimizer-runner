@@ -31,6 +31,7 @@ ROOT = pathlib.Path("out/p2_v319_windwalker_auto_T_new_user_AB").resolve()
 RECEIPT = ROOT / "receipt.json"
 CASE_ID = "windwalker_monk_4ordinary_auto_T"
 MAX_NATIVE_PER_ARM = 64
+WEB_PREPARE_BATCH_LIMIT = 32  # v113 FastAPI LongRunPrepareRequest cap
 ITER_SCOUT = 35
 ITER_CONFIRM = 320
 EXPECTED_POLICIES = {
@@ -170,7 +171,8 @@ def main():
                 "revision":fresh.REVISION,
                 "current_season_product":True,
                 "max_native_calls":MAX_NATIVE_PER_ARM,
-                "max_new_native_this_invocation":MAX_NATIVE_PER_ARM,
+                "max_new_native_this_invocation":min(
+                    MAX_NATIVE_PER_ARM,WEB_PREPARE_BATCH_LIMIT),
                 "max_elapsed_seconds":1200}
             with TestClient(app,base_url="http://127.0.0.1:8765") as client:
                 headers={"x-simc-local-token":"v319-new-spec-only",

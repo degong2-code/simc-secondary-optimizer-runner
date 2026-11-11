@@ -56,6 +56,9 @@ class V319NewSpecializationOffline(unittest.TestCase):
                          {"v290_original","v318_idea001"})
         self.assertEqual((pilot.ITER_SCOUT,pilot.ITER_CONFIRM),(35,320))
         self.assertGreaterEqual(pilot.MAX_NATIVE_PER_ARM,16)
+        self.assertEqual(pilot.WEB_PREPARE_BATCH_LIMIT,32)
+        self.assertEqual(min(pilot.MAX_NATIVE_PER_ARM,
+                             pilot.WEB_PREPARE_BATCH_LIMIT),32)
         self.assertIn("sem_precision_priority_optin",
                       inspect.signature(durable.run).parameters)
         self.assertEqual(fresh.BUILD,"12.1.5.70783")
