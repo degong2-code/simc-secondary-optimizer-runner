@@ -394,7 +394,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         js=self.client.get("/assets/app.js").text
         self.assertIn('id="gear-scope-note"',page)
         self.assertIn("일반 장비·무기·티어 4세트는 자동 구성합니다.",js)
-        self.assertIn("334 이외 목표 ilvl: 최신 시즌 대표 장비·티어·무기를 선택 레벨",js)
+        self.assertIn("선택한 목표 레벨의 대표 장비를 자동 구성합니다.",js)
         self.assertNotIn('id="current_season_product"',page)
         self.assertIn('  showRepresentativeScope();\n  syncSearchChoices();\n}',js)
         self.assertIn('function fillSessionInputs(payload)',js)
