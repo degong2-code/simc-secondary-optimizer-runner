@@ -1,0 +1,107 @@
+{
+  "first": {
+    "budget": {
+      "B": 3107,
+      "F": 165,
+      "G": 2850,
+      "J": 92,
+      "O": {
+        "crit_rating": 0,
+        "haste_rating": 0,
+        "mastery_rating": 0,
+        "versatility_rating": 0
+      },
+      "T": 3107
+    },
+    "environment_installed": true,
+    "environment_ready": true,
+    "ko_items": {
+      "existing_same_build_name_records_reused": 0,
+      "network_calls_now": 6,
+      "new_official_name_records": 5,
+      "pending_names": 0,
+      "selected_item_count": 5,
+      "status": "VERIFIED_OFFICIAL_NAMES_COMPLETE",
+      "verified_names": 5
+    },
+    "ko_terms": {
+      "missing_count": 0,
+      "network_calls_now": 0,
+      "reused_same_build_cache": true,
+      "status": "COMPLETE",
+      "verified_count": 64
+    },
+    "native_calls": 3,
+    "source_reused": null
+  },
+  "first_environment_with_localization_ready": true,
+  "first_user_profile_ready": true,
+  "foreign_build_does_not_reuse_old_names": true,
+  "fresh_root_confirmed": true,
+  "future_season_proven": false,
+  "historical_packaged_same_build_locale_seed_allowed": true,
+  "max_new_environment_native_calls": 3,
+  "new_user_dps_native_calls": 0,
+  "observed_retail_KR_build": "12.1.5.70783",
+  "schema": "v337_real_empty_installed_environment_with_official_ko_v1",
+  "second": {
+    "budget": {
+      "B": 3107,
+      "F": 165,
+      "G": 2850,
+      "J": 92,
+      "O": {
+        "crit_rating": 0,
+        "haste_rating": 0,
+        "mastery_rating": 0,
+        "versatility_rating": 0
+      },
+      "T": 3107
+    },
+    "environment_installed": true,
+    "environment_ready": true,
+    "ko_items": {
+      "existing_same_build_name_records_reused": 5,
+      "network_calls_now": 0,
+      "new_official_name_records": 0,
+      "pending_names": 0,
+      "selected_item_count": 5,
+      "status": "VERIFIED_OFFICIAL_NAMES_COMPLETE",
+      "verified_names": 5
+    },
+    "ko_terms": {
+      "missing_count": 0,
+      "network_calls_now": 0,
+      "reused_same_build_cache": true,
+      "status": "COMPLETE",
+      "verified_count": 64
+    },
+    "native_calls": 0,
+    "source_reused": true
+  },
+  "second_worklist_exactly_retained": true,
+  "second_zero_native_and_zero_locale_network": true,
+  "status": "PASS_REAL_INSTALLED_STATE_COLD_START_AND_REUSE",
+  "tampered_label_fails_closed_without_numeric_damage": true,
+  "provenance": {
+    "actions_run_id": 43000049793,
+    "actions_job_id": 130453646118,
+    "commit_sha_at_run": "6ed95a21e1c92b5aa65999ea1b682487e01e0674",
+    "artifact_id": 13845203640,
+    "artifact_digest": "sha256:5654f4541faa21e504f194ade8bd300471930c7508c4f8a4637d4e2eb25b19b1",
+    "artifact_expires_at": "2026-11-18T10:02:43Z",
+    "retrieved_from": "GitHub Actions job stdout and GitHub artifact metadata",
+    "earlier_attempt": {
+      "actions_run_id": 42999037211,
+      "first_item_name_scope": 5,
+      "reuse_item_name_scope": 1,
+      "fixed_in_v113": true
+    },
+    "scope_limits": [
+      "one real currently live Retail build only",
+      "same-build proven physical sources and packaged official terminology reused",
+      "names cover exactly four ordinary gems and one flask",
+      "no next-season source, full user option catalog or DPS Native verified"
+    ]
+  }
+}
