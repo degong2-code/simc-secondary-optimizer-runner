@@ -1,4 +1,4 @@
-# 알고리즘 통합 비교 계획 — 아직 실행하지 않은 평가 계약
+# 알고리즘 통합 비교 계획 — 전체 통합 벤치마크 미완료 (IDEA-002 단일 Native 파일럿 완료)
 
 **적용 범위:** 기존 기본 v290, 기존 opt-in v312, IDEA-001·002·003·004·005·006·007·008 및 앞으로 별도 파일로 추가되는 후보. 아이디어는 구현·실측 결과가 나올 때까지 벤치마크 점수를 비워 둔다.
 
@@ -71,3 +71,7 @@
 - IDEA-008 채택 후보에서는 탐색 결과로 고정한 최종 소수 CHMV 벡터를 **Native 실행 전 sealed manifest**에 기록하고, 각 벡터에 신규 seed/iterations 및 source/build/전투 조건을 붙인 **미사용 독립 SimC 표본**으로 판정한다. v291 exact-case Native 재개·중복 방지 우선, 한 확인을 이전 탐색 품질 향상 데이터와 독립 검증으로 이중 사용하지 않는다.
 - 효율 판단은 추가 실제 확인 Native/iterations·elapsed/CPU/I/O 비용과 `독립 표본의 후보 순위 안정도, 확인 DPS·SEM, 미해결/95`를 함께 보고, 600초 초과는 자동 폐기가 아니다. 가족단위95 조정 미실시/불가 시 **명목95 한계 유지**.
 - 다른 프로필에서의 알고리즘 일반화용 holdout과 같은 프로필의 post-selection 확인 holdout은 별개; 새 탐색 엔진·SimC 효과 재구현 없음. [상세](IDEA-008-postselection-independent-holdout-confirmation.md).
+
+## 2026-11-11 IDEA-002 파일럿과 전체 벤치마크의 구분
+
+- [v329 신규 Affliction 동일4520 iter·독립 N640×2](../research_receipts/p2_v329_affliction_idea002_267_native_compact.json)은 **v306 vs v328-v1 단일 전문화 실험**이다. 8개 아이디어의 공동 8×2 조건·동일 초기 SimC 난수·다중 비교 95%는 실증하지 않았다. v328-v1의 pairwise→grid 혼합은 순수 반경 인과효과가 아니므로 clean ablation PASS로 계산하지 않는다.

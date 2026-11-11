@@ -11,7 +11,7 @@
 | 고정 ID | 알고리즘 | 문서 | 상태 | 비교에 필요한 주요 축 |
 |---|---|---|---|---|
 | IDEA-001 | 다중 정밀도 경쟁 탐색 (Successive Halving) | [상세](IDEA-001-multifidelity-successive-halving.md) | `IDEA_ONLY` | 측정 반복 수/승급 조건 |
-| IDEA-002 | 다중 시작점 신뢰영역 (Multi-start Trust Region) | [상세](IDEA-002-multistart-trust-region.md) | `IDEA_ONLY` | 여러 지역 반경·정체·탈출 |
+| IDEA-002 | 다중 시작점 신뢰영역 (Multi-start Trust Region) | [상세](IDEA-002-multistart-trust-region.md) | `v329 REAL_NATIVE_PILOT_HOLD / v328-v2 OFFLINE_ONLY` | 반경과 pairwise 후보 생성·초기 seed 교란 분리 필요, 기본 v290 불변 |
 | IDEA-003 | 적응형 층화 탐색 (Adaptive Stratified Exploration) | [상세](IDEA-003-adaptive-stratified-exploration.md) | `IDEA_ONLY` | 전역 공간 셀별 탐사 예산 |
 | IDEA-004 | 비용 인지형 지식 기울기 탐색 (Cost-aware Knowledge Gradient) | [상세](IDEA-004-cost-aware-knowledge-gradient.md) | `IDEA_ONLY` | 확인 DPS 순위 개선의 기대 정보 가치 / SimC 실행비용 |
 | IDEA-005 | 조건부 짝시드 실측 분산 감소 (Paired Seed CRN) | [상세](IDEA-005-conditional-paired-rng-variance-reduction.md) | `IDEA_ONLY · HOLD_FOR_FEASIBILITY` | 재측정 후보 쌍 DPS 차이의 **실제 양의 공분산** 검증 |
@@ -93,3 +93,8 @@
 
 - 채팅당 **최대 1개**, 새 발상 이유·장단점·구현 중복·통합 가능성·효율 작동 조건·반증 실험을 먼저 심사한 경우에만 해당 ID를 발급해 **별도 상세 파일을 생성**한다. 설득력 없는 중복 제안은 새 ID 없이 보류한다. 이전 ID나 제안 원문을 수정할 때에는 근거를 보존하고 변경 이력을 기록한다.
 - 나중에 모든 알고리즘을 한 번에 비교하도록 통합 평가표를 유지하되, 시나리오·seed·time/iteration 설정과 동일 조건 여부가 다른 실험의 성적을 섞지 않는다. 비교 문서: [벤치마크 설계](BENCHMARK_PROTOCOL.md).
+
+## 2026-11-11 IDEA-002 실제 상태
+
+- [고통 흑마법사 v329 실 Native267](../research_receipts/p2_v329_affliction_idea002_267_native_compact.json), [Actions SUCCESS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42962010689): v306/v328-v1 각 64 Native·4520 iterations 및 별도 N640×2×4후보. 우위 미증명. v328-v1은 pairwise/grid 후보 방식이 섞였고 초기 Native seed도 독립. **HOLD**.
+- v328-v2는 기존 v306 pairwise 좌표·방법을 그대로 유지하도록 **오프라인에서만 수정**. 새로운 전문화·seed-통제 실 Native 시험 전 v328를 제품 기본으로 승격하지 않는다.
