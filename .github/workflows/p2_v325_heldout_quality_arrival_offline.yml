@@ -1,0 +1,27 @@
+name: P2 v325 heldout quality-arrival pure offline
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p2_v325_heldout_quality_arrival_offline.yml]
+permissions:
+  contents: read
+jobs:
+  focused:
+    if: contains(github.event.head_commit.message, '[p2-v325-heldout-offline]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      PYTHONPATH: runner:integration_probes:.
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - run: python -m pip install -r requirements-web-test.txt
+      - name: New 12 candidate heldout replay, old v324 source and v319 user profile tests, Native0
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile runner/v325_independent_holdout_quality_arrival.py
+          python -m unittest -v tests.test_p2_v325_independent_holdout_replay_offline tests.test_p2_v324_balance_new_user_variable_n_offline tests.test_p2_v323_chmv_arrival_and_n_offline tests.test_p2_v319_new_windwalker_ab_offline
+          python tools/check_development_ledger.py

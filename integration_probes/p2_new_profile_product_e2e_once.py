@@ -47,6 +47,11 @@ CASES={
         dict(character_class="druid",character_spec="balance",
              character_race="night_elf",target_ilevel=334,final_T=None,
              sockets=4,special_gem=None),
+    # v325: distinct 26-DPS specialization, never before benchmarked here.
+    "devastation_evoker_4ordinary_auto_T":
+        dict(character_class="evoker",character_spec="devastation",
+             character_race="dracthyr",target_ilevel=334,final_T=None,
+             sockets=4,special_gem=None),
     "destruction_warlock_4ordinary_T3400":
         dict(character_class="warlock",character_spec="destruction",
              character_race="human",target_ilevel=334,final_T=3400,

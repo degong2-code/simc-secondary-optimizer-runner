@@ -44,13 +44,20 @@ def sha(path):
 def vect(row):
     return tuple(row["target"][k] for k in STATS)
 
-def update_input(original,n,out):
+def update_input(original,n,out,*,source_iterations=320,allowed_N=None):
+    # Backward-compatible v324 320-source default. Later NEW campaigns
+    # may reuse source-bound 35 case input while keeping all other bytes.
+    valid_N=N_GRID if allowed_N is None else allowed_N
     need(type(original) is str and type(n) is int
-         and n in N_GRID
-         and len(re.findall(r"(?m)^iterations=320$",original))==1
+         and type(source_iterations) is int
+         and source_iterations in (35,320)
+         and type(valid_N) in (tuple,list)
+         and n in valid_N
+         and len(re.findall(r"(?m)^iterations="+str(source_iterations)+r"$",
+                            original))==1
          and len(re.findall(r"(?m)^json2=.+$",original))==1,
          "EXACT_CURRENT_PROFILE_NATIVE320_INPUT_REQUIRED")
-    converted=re.sub(r"(?m)^iterations=320$",
+    converted=re.sub(r"(?m)^iterations="+str(source_iterations)+r"$",
                      "iterations="+str(n),original)
     converted=re.sub(r"(?m)^json2=.+$",
                      lambda _: "json2="+str(out.resolve()),converted)
