@@ -130,8 +130,8 @@ class EnvironmentKoTests(unittest.TestCase):
         with self.assertRaises(loc.LocalizationBlocked):
             loc.build_from_verified_install(self.root,b,allow_network=False)
         jobs=web.LocalJobs(self.root)
-        with mock.patch.object(loc,"build_for_environment",
-                               side_effect=loc.LocalizationBlocked("bad")):
+        with mock.patch.object(web.official_ko_env,"build_for_environment",
+                               side_effect=web.official_ko_env.LocalizationBlocked("bad")):
             result=jobs._with_verified_ko_localization(
                 b["game_build"],334,{"environment_ready":True,"G":2850,
                     "J":92,"F":165,"B":3107,"T":3107})

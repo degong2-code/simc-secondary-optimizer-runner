@@ -67,6 +67,7 @@ class WindowsBetaPackageOffline(unittest.TestCase):
                                      rec["sha256"],rec["path"])
                 self.assertIn(pack.PREFIX+"/runner/webui/index.html",names)
                 self.assertIn(pack.PREFIX+"/data/current_season_product_gear_db.json",names)
+                self.assertIn(pack.PREFIX+"/runner/v335_environment_official_ko_localization.py",names)
                 self.assertIn(pack.PREFIX+"/data/current_season_gear_ko_KR_verified.json",names)
                 ko=json.loads(archive.read(pack.PREFIX+"/data/current_season_gear_ko_KR_verified.json"))
                 self.assertEqual(ko["status"],"COMPLETE")

@@ -266,6 +266,14 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertEqual(next(x["name_ko"] for x in visible if x["item_id"]==158367),
                          "메레크타의 송곳니")
 
+    def test_official_korean_names_are_environment_build_stage(self):
+        page=self.client.get("/").text
+        js=self.client.get("/assets/app.js").text
+        self.assertIn('id="season-locale-status"',page)
+        self.assertIn("report.official_ko_localization",js)
+        self.assertIn("공식 한국어 이름 확인 완료",js)
+        self.assertIn("미확정 명칭은 원본 이름을 표시합니다.",js)
+
     def test_environment_build_surface_is_not_optimizer_plan(self):
         page=self.client.get("/").text
         js=self.client.get("/assets/app.js").text
