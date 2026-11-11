@@ -1,0 +1,139 @@
+{
+  "schema": "p2_v321_shadow_new_user_autoT_native_recovery_compact_v1",
+  "date": "2026-11-11",
+  "source_action_run": 42945184377,
+  "source_action_result": "FAILURE_AFTER_ORIGINAL_128_NATIVE_SUCCESS",
+  "source_action_artifact_id": 13822626235,
+  "source_action_artifact_sha256": "0266616119f68bbf778addefd4b5eafc78415f01767bcf99519cedf102c096a2",
+  "new_dps_specialization": "priest/shadow",
+  "new_profile_sha256": "f09cccc81186dbf76eb7657fcd1ca90b60f4b1b084e5d0e2f0d76059a40d0eb4",
+  "game_build": "12.1.5.70783",
+  "target_ilevel": 334,
+  "manual_T": null,
+  "G": 2850,
+  "J": 92,
+  "F": 165,
+  "O": 0,
+  "B": 3107,
+  "T": 3107,
+  "environment_new_native": 3,
+  "simc_binary_sha256": "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6",
+  "arms": {
+    "v290": {
+      "native": 64,
+      "iterations": 4520,
+      "scout35": 56,
+      "confirm320": 8,
+      "best_chmv": [
+        524,
+        909,
+        1398,
+        276
+      ],
+      "dps": 163607.04223104756,
+      "sem": 133.04790716726157,
+      "wall_seconds_actions": 32.781359,
+      "original_zip_sha256": "5a8cafef4aed99b735a6553e960756ec5166bf68394311ef12d5da99be56b4d8"
+    },
+    "v318": {
+      "native": 64,
+      "iterations": 4520,
+      "scout35": 56,
+      "confirm320": 8,
+      "best_chmv": [
+        523,
+        910,
+        1398,
+        276
+      ],
+      "dps": 163734.48463564372,
+      "sem": 130.42912984740795,
+      "wall_seconds_actions": 33.197217,
+      "original_zip_sha256": "584d37d669030b42f52dbc236d2995fce738807418f9aae4d432ded146ea19f8"
+    }
+  },
+  "selected_pair": {
+    "delta_v318_minus_v290": 127.442405,
+    "nominal_95_halfwidth": 365.171869,
+    "statistically_separated": false,
+    "selection_bias_corrected": false
+  },
+  "research_120": {
+    "execution": "LOCAL_LINUX_SEPARATE_CPU_FROM_ACTIONS",
+    "new_native": 3,
+    "iterations_added": 360,
+    "research_only_not_v291_cache": true,
+    "original_full_receipt_sha256": "1a62f780f7f165a1f3bd2e08489f242778b7055fbb4d2430c2c1a70bdae0d683",
+    "original_three_native_zip_sha256": "4bbf536ff0ea200ebe222c1a5ba560a3640ae105120be0e0b21ba856bfef5c42",
+    "samples120_per_candidate": 119,
+    "chmv_and_observed_sem35_120_320": [
+      {
+        "chmv": [
+          524,
+          909,
+          1398,
+          276
+        ],
+        "sem": [
+          363.577,
+          200.919,
+          133.048
+        ],
+        "dps120": 163590.408
+      },
+      {
+        "chmv": [
+          897,
+          536,
+          1398,
+          276
+        ],
+        "sem": [
+          461.645,
+          211.864,
+          129.622
+        ],
+        "dps120": 163187.289
+      },
+      {
+        "chmv": [
+          558,
+          496,
+          1398,
+          655
+        ],
+        "sem": [
+          309.176,
+          216.244,
+          135.104
+        ],
+        "dps120": 161894.738
+      }
+    ],
+    "median_sem35_over120": 1.809569,
+    "median_sem120_over320": 1.600572,
+    "local_120_wall_mean_seconds": 0.507894,
+    "retrospective_v320_56_scout_advisory": {
+      "v290": {
+        "low35": 47,
+        "potential120": 3,
+        "direct320": 1,
+        "unresolved320": 4,
+        "same_reference": 1
+      },
+      "v318": {
+        "low35": 51,
+        "potential120": 0,
+        "unresolved320": 4,
+        "same_reference": 1
+      }
+    }
+  },
+  "limitations": [
+    "Do not compare local 120 process wall directly to GitHub Actions 320 wall.",
+    "Action FAILURE is a validation-string mismatch AFTER original 128 verified Native, not a successful complete Action.",
+    "No 120-phase integration in v291; new 120 requests are research only.",
+    "One new profile, selected post hoc, no familywise 95% claim or proven global optimum.",
+    "Full original raw ZIPs remain in short-lived Actions/artifact and local files, only compact data permanently recorded here."
+  ]
+}
