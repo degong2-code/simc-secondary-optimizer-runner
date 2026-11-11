@@ -1,6 +1,6 @@
 # IDEA-002 — 다중 시작점 신뢰영역 탐색 (Multi-start Trust Region)
 
-- **제안:** 현재 대화, 2026-11-11. **상태:** `IDEA_ONLY`; 신규 알고리즘 구현·Native 실측 **없음**. v303/v305의 기존 지역/반경 코드는 재사용 검토 대상이지 이 제안의 PASS가 아니다.
+- **제안:** 현재 대화, 2026-11-11. **상태:** `V328_V1_REAL_NATIVE_PILOT_HOLD` (원본 v329 267 Native, 우위 미입증). 기존 v303/v306 재사용, 제품 미승격. v303/v305의 기존 지역/반경 코드는 재사용 검토 대상이지 이 제안의 PASS가 아니다.
 - **가설:** 서로 떨어진 여러 시작 영역을 유지하고, 실측 개선 방향에 따라 각 영역의 탐색 반경을 조절하면 단일 대리모델보다 전문화별 비선형 DPS 지형에 안정적으로 적응할 수 있다.
 - **후보 절차:** 넓은 전역 표본으로 4–8개 분리된 지역 시작 → 지역별 치/가/특/유의 두 스탯 이동(총 B와 고정 하한 유지) → 실제 SimC 개선·SEM·정체 정도로 반경 확대/축소 → 일정 시간마다 무관측 영역에 새 시작점 배치.
 - **지역 예산:** 개선 유망 지역에 추가 Native를 할당하되 전역 탐색의 일부 예비 예산을 유지; 단일 관측 최고 DPS에 예산을 몰아주지 않는다.
@@ -30,3 +30,9 @@
 
 - [새 P1 source와 v306/v328 동일 본당 64 Native/4520 iterations](../notes/2026-11-11_p2-v329-idea002-new-affliction-native.md). **두 지역 정책 모두 완전히 같은 16 초기 전역 후보·8 정밀확인 슬롯**을 가지며 SimC 독립 시드는 일부 경로 분기를 유발할 수 있다. 첫 원본 v290/v318 64×2는 P1 검증용이지 equal-iterations 지역 비교의 승패 대상이 아니다.
 - 실제 Native 결과 전에는 고점 발견·속도 우위를 표시하지 않는다. SimC 확인320 우수 후보의 안정성/분산을 독립 N640×2 확인해 한 전문화의 winner bias를 줄이되, 결과는 전역 최적·familywise95 증명이 아니다.
+
+## 2026-11-11 신규 Affliction 실제 v329 267 Native — v328-v1 판정
+
+- [원본 256 정책 Native+8 독립 N640 홀드아웃 SHA compact](../research_receipts/p2_v329_affliction_idea002_267_native_compact.json), [Actions SUCCESS #42962010689](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42962010689). 같은 새 source auto T3107, baseline v306 vs v328-v1 64호출·4520 requested iterations 동일, 16 global 시작 CHMV 동일, cache-only0.
+- 원본 v306 320확인 최고 183822.01±238.61 vs v328 183178.73±250.30, 명목95 분리 실패. 독립 N640×2 선택 1순위 v306 183075.70±132.72 vs v328 183113.50±129.79, 명목95 분리 실패. **전역 최고 발견력 우위 없음**.
+- 독립 시드의 초기16 측정으로 정책 CHMV가 index16부터 다르고 반경 첫 유의 확대는 index26. v328-v1에서 pairwise fine 14→10, grid15→19로 이동 방법도 함께 바뀜. 따라서 IDEA-002 반경 조절만의 인과 효과라고 주장하지 않는다. **HOLD**; 차기 실험은 pairwise 보존+초기 시드 동등성/공정 예산을 분리. 기본 v290 및 기존 v306 원본 캐시 변경 금지.

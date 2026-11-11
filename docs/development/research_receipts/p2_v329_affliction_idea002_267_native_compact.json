@@ -1,0 +1,188 @@
+{
+  "schema": "p2_v329_affliction_new_user_v306_vs_idea002_v328_original_267_compact_v1",
+  "status": "REAL_NATIVE_267_VERIFIED_ONE_NEW_PROFILE_IDEA002_PILOT_HOLD",
+  "game_build": "12.1.5.70783",
+  "action_run": 42962010689,
+  "action_result": "success",
+  "action_head_sha": "d3a3d9aaee244a423dbe4c53715c602c541b32fc",
+  "artifact_id": 13828933552,
+  "artifact_expires_utc": "2026-11-18T04:55:55Z",
+  "outer_original_artifact_sha256": "e2e5bb962093287eca9a4ef1c4f721956c7e5eed4b0a5972643868f2dca3ef1e",
+  "receipt_json_sha256": "57ec741a1cd6f6d6df4b41c05e209b0cba0647fe5230c7f7a17c0d761326b962",
+  "study_json_sha256": "0756e9ae328e45f1b79a49b1b064f14f2ae7e9ad70294781df4a10f5957816c6",
+  "character": "warlock/affliction",
+  "race": "human",
+  "target_ilevel": 334,
+  "manual_final_T": null,
+  "source_profile_sha256": "5ad0134305aad411ea08fe861fcb46911710d30774fe55711415e51d9bc4538f",
+  "simc_binary_sha256": "6b83e4d5d2216faf91511fb00ae712cdf4cc0224b0c83107e8c9c7358c24bfc6",
+  "simc_revision": "c20e2ad52e4c33711f74272309a5748125175fe8",
+  "auto_environment": {
+    "G": 2850,
+    "J": 92,
+    "F": 165,
+    "O": 0,
+    "B": 3107,
+    "T": 3107,
+    "new_environment_native": 3
+  },
+  "new_native": {
+    "environment": 3,
+    "product_v290": 64,
+    "product_v318": 64,
+    "baseline_v306": 64,
+    "idea002_v328": 64,
+    "independent_holdout_640": 8,
+    "total": 267,
+    "old_completed_profile_native_repeated": 0
+  },
+  "exact_all_256_session_original_input_json_shas_verified": true,
+  "all_264_DPS_native_simc_seeds_distinct": true,
+  "scout_N": 35,
+  "confirmation_N": 320,
+  "product_source_checks": {
+    "v290": {
+      "native": 64,
+      "iterations": 4520,
+      "best_dps": 183630.67488670643,
+      "sem": 237.63316450545912,
+      "wall_seconds": 24.318285,
+      "original_zip_sha256": "8461e977e0acd42bb03a062c873bbc88306564c7e4e6de2a3e1c3985f1c420c6"
+    },
+    "v318": {
+      "native": 64,
+      "iterations": 4520,
+      "best_dps": 183542.90827956778,
+      "sem": 241.69673932798221,
+      "wall_seconds": 24.146037,
+      "original_zip_sha256": "ab59e95f94e94fefa0357d1d31e65cb7c0cbee5b86ad2f06f1ac9d874e830e3b"
+    }
+  },
+  "idea002_regional_ab": {
+    "same_initial_global_CHMV_16": true,
+    "same_initial_global_simc_seed": false,
+    "calls_per_arm": 64,
+    "scout35_per_arm": 56,
+    "confirm320_per_arm": 8,
+    "requested_iterations_per_arm": 4520,
+    "regional_calls_per_arm": 34,
+    "global_reserve_calls_per_arm": 6,
+    "distinct_regions_per_arm": 7,
+    "unique_scout_vectors_per_arm": 56,
+    "first_different_CHMV_index0": 16,
+    "first_measured_radius_expansion_greater_than_0_075_index0": 26,
+    "different_CHMV_positions_out_of64": 42,
+    "baseline_v306": {
+      "policy": "v306_seed_retained_coarse_escape_regions_opt_in_v1",
+      "wall_seconds": 25.761447,
+      "confirmed_dps": 183822.0130234705,
+      "sem": 238.6097298100901,
+      "confirmed_CHMV": [
+        1236,
+        1196,
+        202,
+        473
+      ],
+      "grid_proposals": 15,
+      "pairwise_fine_proposals": 14,
+      "region_r0_r1_radius_min_max": [
+        0.065,
+        0.065
+      ],
+      "zip_sha256": "dd5ae9ec18cf1af6191d8a21f462c451896ec8c594ae2dc0aa0d545258c2701c",
+      "cache_only_replay_new_native": 0
+    },
+    "idea002_v328_v1": {
+      "policy": "v328_idea002_evidence_gated_radius_optin_v1",
+      "source_module_sha256": "17aae11070654f91b31f0c71ffacd1737f66ef3df432fe6e9c5f8ae068abd78e",
+      "wall_seconds": 24.874149,
+      "confirmed_dps": 183178.72950790467,
+      "sem": 250.303973020543,
+      "confirmed_CHMV": [
+        1196,
+        1196,
+        202,
+        513
+      ],
+      "grid_proposals": 19,
+      "pairwise_fine_proposals": 10,
+      "region_r0_r1_radius_min_max": [
+        0.065,
+        0.25
+      ],
+      "zip_sha256": "b3ee0915bafc7825ebe8053b69074a68a3544dbafb4585ef6f0f6ec988ffce0e",
+      "cache_only_replay_new_native": 0
+    },
+    "selected_320_delta_v328_minus_v306": -643.283515565825,
+    "selected_320_nominal95_halfwidth": 677.7811701980114,
+    "selected_320_nominal95_separated": false,
+    "not_global_optimum_proven": true,
+    "not_clean_radius_only_causal_attribution": true,
+    "familywise_95_proven": false
+  },
+  "independent_holdout": {
+    "new_native": 8,
+    "iterations_per_native": 640,
+    "unique_current_profile_selected_CHMV": 4,
+    "all_8_json2_input_seed_and_sha_validated": true,
+    "source_320_input_changed_only_iterations_and_json2": true,
+    "raw_zip_sha256": "cb12dc0568151845b03d94a08d17fc8cbec8eb76535e200dd998b39ef8ef06ff",
+    "observed": [
+      {
+        "source": "v328",
+        "CHMV": [
+          1196,
+          1196,
+          202,
+          513
+        ],
+        "mean_DPS": 183113.4990258856,
+        "combined_SEM": 129.78828173554155
+      },
+      {
+        "source": "v306",
+        "CHMV": [
+          1236,
+          1196,
+          202,
+          473
+        ],
+        "mean_DPS": 183075.69500193084,
+        "combined_SEM": 132.72016268174926
+      },
+      {
+        "source": "v306",
+        "CHMV": [
+          1305,
+          1398,
+          0,
+          404
+        ],
+        "mean_DPS": 183169.96066552293,
+        "combined_SEM": 125.08556176276832
+      },
+      {
+        "source": "v328",
+        "CHMV": [
+          1398,
+          1398,
+          0,
+          311
+        ],
+        "mean_DPS": 183060.1198930936,
+        "combined_SEM": 126.97332140921783
+      }
+    ],
+    "best_original_confirmed_pair_holdout_delta_v328_minus_v306": 37.804023954755394,
+    "best_original_confirmed_pair_holdout_nominal95_halfwidth": 363.8341472741032,
+    "selected_pair_statistically_separated": false,
+    "independent_holdout_only_4_candidates_not_global_truth": true
+  },
+  "limitations": [
+    "Both policies' first 16 CHMV values are identical, but independent SimC seeds give different observed DPS: vector difference begins at index16, before material v328 radius expansion index26. Region path divergence cannot be assigned causally to radius change alone.",
+    "v328-v1 changes some pairwise selections into grid selections (fine pairwise 14->10, grid 15->19), so it is not a pure radius-only ablation; future v2 must protect pairwise proposal type.",
+    "Two equal-iteration 64-case runs in one specialization cannot prove better discovery across 26 DPS or global optimum.",
+    "Same-CHMV DPS observation noise and winner selection multiplicity remain; independent N640 holdout only four preselected CHMV.",
+    "v328 remains opt-in HOLD; v290 default unchanged, original prior policy sessions and cache not replaced."
+  ]
+}
