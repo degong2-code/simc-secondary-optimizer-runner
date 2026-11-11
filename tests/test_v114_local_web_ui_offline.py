@@ -175,7 +175,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertEqual(result.headers["x-content-type-options"],"nosniff")
         page=PageParser();page.feed(result.text)
         self.assertEqual(page.forms,1)
-        self.assertIn("특수효과 장비 부위 자동 결정 · 장식 종류별 적용 부위 제한",result.text)
+        self.assertIn("특수효과 장비 · 장식",result.text)
         self.assertEqual(page.scripts,[{"src":"/assets/app.js","defer":None}])
         self.assertEqual(page.links,[{"rel":"stylesheet","href":"/assets/styles.css"}])
         required=("optimizer-form","spec","simc-import-text","simc-import-file",
@@ -341,7 +341,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('if(name==="copy")',js)
         self.assertIn('if(field("spec")!==parsed.key)',js)
         self.assertIn('fillDefault(parsed.defaults);',js)
-        self.assertIn('  $("race").value=parsed.race;',js)
+        self.assertIn('  $("race").value=displayRace(parsed.race);',js)
         self.assertIn('  $("talents").value=parsed.talents;',js)
         self.assertIn('withBusy(importSimcCharacter)',js)
         self.assertNotIn("FormData(",js)
