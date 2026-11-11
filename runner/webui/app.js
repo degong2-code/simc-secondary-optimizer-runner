@@ -1210,6 +1210,18 @@ async function buildSeasonEnvironment() {
                               refresh_reason,
                               simc_revision_hint:revision||null}});
     showSeasonEnvironmentBuild(report);
+    const localization=report.official_ko_localization;
+    const localized=$("season-locale-status");
+    if(localization?.status==="VERIFIED_OFFICIAL_NAMES_COMPLETE") {
+      localized.textContent="공식 한국어 이름 확인 완료 · "+
+        localization.verified_names+"종 · 기존 이름 재사용 "+
+        localization.existing_same_build_name_records_reused+"종";
+    }else if(localization) {
+      localized.textContent="한국어 이름 구축: "+
+        (localization.verified_names||0)+"종 확인 · "+
+        (localization.pending_names||0)+"종 확인 보류 · "+
+        "미확정 명칭은 원본 이름을 표시합니다.";
+    }
     // A verified new installation may supply a different season rune roster.
     // Refresh read-only options only, never launch optimization on Build.
     try{renderSeasonOptionCatalog(await api("/api/v1/season-option-catalog"));}

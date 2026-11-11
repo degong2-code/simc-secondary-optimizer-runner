@@ -404,7 +404,7 @@ def validate(payload):
          "PRODUCT_EFFECT_OR_TIER_OVERCLAIM")
     return payload
 
-def public_options(payload):
+def public_options(payload, *, official_names=None):
     """Selection-only public roles. Plain equipment remains an internal DB input."""
     db = validate(payload)
     visible = ("trinket","special_effect_gear_candidate","selectable_stat_craft")
@@ -414,6 +414,14 @@ def public_options(payload):
     eligible = {x["item_id"] for x in db["items"] if x["category"] in
                 ("trinket","special_effect_gear_candidate")}
     korean = labels_ko.installed_names(db["season_build"], eligible)
+    if official_names is not None:
+        need(type(official_names) is dict and all(
+            type(item_id) is int and item_id in {r["item_id"] for r in db["items"]}
+            and type(name) is str and 0<len(name)<=200
+            for item_id,name in official_names.items()),
+            "OFFICIAL_NAMES_NOT_BOUND_TO_SEASON_ITEMS")
+        korean.update({i:name for i,name in official_names.items()
+                       if i in {r["item_id"] for r in db["items"]}})
     for x in db["items"]:
         if x["category"] not in choices:
             continue

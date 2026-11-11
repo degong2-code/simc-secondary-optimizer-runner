@@ -38,6 +38,7 @@ import v271_user_socket_gem_layout as physical_gems
 import v218_v098_profile_stage_adapter as profile_stage
 import v217_stage_execution_engine as stage_engine
 import v293_local_longrun_session as longrun_sessions
+import v335_environment_official_ko_localization as official_ko_env
 
 SCHEMA = "v113_local_web_api_p1_v1"
 KEY = re.compile(r"[a-f0-9]{20}\Z")
@@ -497,6 +498,22 @@ class LocalJobs:
         candidate=exact_L.source_cache(self.root,None)
         return str(candidate) if candidate is not None else None
 
+    def _with_verified_ko_localization(self, game_build, target_ilevel, outcome):
+        # Environment localization is a dependent, source-owned stage.
+        # An OPTIONAL unobserved name never invalidates verified G/J/F/O.
+        try:
+            localization=official_ko_env.build_for_environment(
+                self.root,game_build,outcome,target_ilevel=target_ilevel)
+        except (official_ko_env.LocalizationBlocked,
+                environment_manifest.EnvironmentBlocked,
+                OSError,ValueError,TypeError,KeyError):
+            localization={
+                "schema":official_ko_env.SCHEMA,
+                "game_build":game_build,
+                "status":"OFFICIAL_KO_SOURCE_OR_CACHE_REQUIRES_REVIEW",
+                "native_calls_now":0,"network_calls_now":0}
+        return {**outcome,"official_ko_localization":localization}
+
     def build_season_environment(self, game_build=None, target_ilevel=334,
                                  native_G_binary=None, simc_revision_hint=None,
                                  auto_native_F_requested=False,
@@ -621,7 +638,8 @@ class LocalJobs:
                     (self.root/"_fresh_season_sources"/("wago_"+game_build)/
                      "fresh_source"/("v113_profile_"+digest[:20]+".json")).exists())
                 if snapshot is not None or not has_profile:
-                    return {**prior,
+                    return self._with_verified_ko_localization(
+                        game_build,target_ilevel,{**prior,
                     "verified_v113_profile_source_restored":snapshot is not None,
                     "network_calls":version_network_calls,
                     "web_environment_scope":{
@@ -648,7 +666,7 @@ class LocalJobs:
                         auto_initial_core_build,
                     "auto_initial_core_native_skipped_existing_ready":
                         auto_initial_core_build,
-                    "refresh_reason":None}}
+                    "refresh_reason":None}})
         # Immutable by-build Wago stage cannot be silently replayed to
         # claim new item content at the exact same game build. The existing
         # targeted static correction path must handle a confirmed hotfix.
@@ -723,7 +741,8 @@ class LocalJobs:
         if observed.get("environment_ready") is True:
             self.remember_verified_fresh_environment(observed)
             self.persist_verified_fresh_profile()
-        return {**observed,"web_environment_scope":{
+        return self._with_verified_ko_localization(
+            game_build,target_ilevel,{**observed,"web_environment_scope":{
             "schema":"v113_web_season_environment_build_scope_v1",
             "game_build":game_build,"target_ilevel":target_ilevel,
             "game_build_source":(
@@ -766,7 +785,7 @@ class LocalJobs:
             "dps_optimization_started":False,
             "user_character_or_trinkets_required":False,
             "environment_installed":observed.get("environment_installed") is True,
-            "environment_ready":observed.get("environment_ready") is True}}
+            "environment_ready":observed.get("environment_ready") is True}})
 
     def collect_fresh_source(self, build, controls, revision_hint=None):
         # Reuse the product's existing user validator; never ask users for
@@ -896,8 +915,15 @@ class LocalJobs:
             except (OSError,ValueError,TypeError,KeyError,
                     environment_manifest.EnvironmentBlocked):
                 continue
+        # Official names are presentation-only and come from the same
+        # verified game-build cache; never infer from SimC tokens.
+        official_names=official_ko_env.read_names(
+            self.root,build,set(flasks_by_id))
         result["verified_flasks"]=[
-            flasks_by_id[k] for k in sorted(flasks_by_id)]
+            {**flasks_by_id[k],
+             **({"official_name_ko":official_names[k]}
+                if k in official_names else {})}
+            for k in sorted(flasks_by_id)]
         if result["items"]:
             result["status"]="VERIFIED_INSTALLED_OIL_LOADOUTS"
         return result
@@ -1991,11 +2017,40 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
             "embellishments":choice_labels.public_embellishments()
         }
 
+
+    @app.get("/api/v1/environment/official-ko-localization")
+    def official_ko_localization_status(game_build: str | None = None):
+        """Read-only verified Korean label cache; no network or new Native."""
+        import re as _re
+        if game_build is not None and (
+            _re.fullmatch(r"\d+(?:\.\d+){3}",game_build) is None):
+            raise HTTPException(422,detail={"code":"GAME_BUILD_FORMAT_INVALID"})
+        build=game_build or jobs._current_fresh_game_build
+        if not build:
+            return {"schema":official_ko_env.SCHEMA,
+                    "status":"SEASON_BUILD_NOT_SELECTED",
+                    "native_calls_now":0,"network_calls_now":0}
+        names=official_ko_env.read_names(
+            jobs.root,build,set())
+        # Do not return an unbounded raw cache or allow user input as IDs.
+        return {"schema":official_ko_env.SCHEMA,
+                "game_build":build,
+                "status":"READ_ONLY_LOCALIZATION_CACHE",
+                "verified_subset_count":len(names),
+                "native_calls_now":0,"network_calls_now":0}
+
     @app.get("/api/v1/season-gear")
     def current_season_gear():
         """User-facing seasonal effect choices; plain items stay internal."""
         try:
-            return season_gear.public_options(season_gear.read())
+            catalog=season_gear.read()
+            ids={row["item_id"] for row in catalog["items"]
+                 if row["category"] in ("trinket",
+                      "special_effect_gear_candidate","selectable_stat_craft")}
+            names=official_ko_env.read_names(
+                jobs.root,catalog["season_build"],ids)
+            return season_gear.public_options(catalog,
+                                              official_names=names)
         except (season_gear.GearBlocked, ValueError, OSError, KeyError) as exc:
             return {"schema":season_gear.SCHEMA,
                     "status":"SEASON_GEAR_CATALOG_UNAVAILABLE",

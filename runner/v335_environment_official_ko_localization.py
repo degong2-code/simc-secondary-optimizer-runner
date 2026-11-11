@@ -168,11 +168,16 @@ def exact_product_catalog(game_build):
 def _static_seed(build,roles):
     """Historical 77/77 is reused only in its matching source/build scope."""
     if build!=_static_build():return []
-    names=official.installed_names(build,set(roles))
+    # Static 77 receipt is sealed to ITS original 77-item selection set.
+    # Intersect later with the build worklist; never spoof its expected IDs.
+    source_build,source_ids=official.selected_ids()
+    need(source_build==build,"STATIC_SOURCE_BUILD_DRIFT")
+    names=official.installed_names(build,set(source_ids))
     try:
         doc=json.loads(official.DEST.read_text(encoding="utf8"))
         rows=doc.get("items") if names else []
-        return [row for row in rows if row["item_id"] in names]
+        return [row for row in rows if row["item_id"] in names and
+                row["item_id"] in roles]
     except (OSError,ValueError,TypeError,KeyError):
         return []
 
@@ -276,7 +281,7 @@ def build_from_verified_install(root,installed,physical_layout=None,
             "source_only_names_not_item_approval":True,
             "errors":errors[:MAX_FETCH]}
 
-def build_for_environment(root,game_build,result):
+def build_for_environment(root,game_build,result,*,target_ilevel):
     """v113 bridge for an already verified v212 installation or reuse.
 
     Verifies the existing original v212 receipt again only to obtain its
@@ -304,8 +309,7 @@ def build_for_environment(root,game_build,result):
     doc=json.loads(path.read_text(encoding="utf8"))
     manifests.verify_fresh_installed_environment(doc)
     need(doc["game_build"]==game_build and
-         doc["target_ilevel"]==result.get("target_ilevel",
-                       result.get("web_environment_scope",{}).get("target_ilevel")),
+         doc["target_ilevel"]==target_ilevel,
          "V212_INSTALLED_SCOPE_DRIFT")
     source=result.get("installed_manifest_sha256") or install.get("manifest_sha256")
     need(source==doc["manifest_sha256"],"V212_SOURCE_MANIFEST_DRIFT")
