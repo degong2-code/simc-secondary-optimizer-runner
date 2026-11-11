@@ -105,7 +105,7 @@ class SimpleUserInputs(unittest.TestCase):
 
             self.assertIn(marker,js)
         self.assertIn("label.hidden=isPrivate",js)
-        self.assertIn("장식 종류별 적용 부위 제한",html)
+        self.assertIn("특수효과 장비 · 장식",html)
         self.assertIn("Omnium Folio · 4열 스탯",html)
 
 if __name__=="__main__":unittest.main()

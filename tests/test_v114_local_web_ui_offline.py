@@ -247,8 +247,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn(".choice-native-select",css)
 
     def test_official_item_names_bound_to_current_ids(self):
-        with self.client as client:
-            response=client.get("/api/v1/season-gear")
+        response=self.client.get("/api/v1/season-gear",headers=self.head)
         self.assertEqual(response.status_code,200)
         data=response.json()
         self.assertEqual(data["verified_ko_item_names"],77)
