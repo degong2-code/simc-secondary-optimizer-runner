@@ -1,0 +1,57 @@
+name: P1 v336 Blizzard official playable Korean terms source (once, zero Native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p1_v336_official_terms_source_once.yml
+permissions:
+  contents: read
+jobs:
+  official-playable-terms:
+    if: contains(github.event.head_commit.message, '[v336-source-once]')
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      PYTHONPATH: runner:.
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      P1_TERMS_TARGET_GAME_BUILD: '12.1.5.70783'
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Offline v336 Korean/source identity regression (zero Native)
+        run: python -m unittest -v tests.test_v336_environment_ko_playable_terms
+      - name: One exact Blizzard official 6-index plus selected-spec detail acquisition
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json,os,pathlib,shutil,sys
+          import v336_environment_ko_playable_terms as terms
+          build=os.environ["P1_TERMS_TARGET_GAME_BUILD"]
+          root=pathlib.Path("out/v336-sealed-local-source")
+          receipt=terms.build_for_environment(root,build)
+          print("V336_OFFICIAL_TERMS_SOURCE_SUMMARY "+json.dumps(receipt,ensure_ascii=False,sort_keys=True),flush=True)
+          doc=terms.read(root,build)
+          if doc is not None:
+              pathlib.Path("out").mkdir(exist_ok=True)
+              dest=pathlib.Path("out/v336_official_playable_ko_KR.json")
+              shutil.copy2(terms.path_for(root,build),dest)
+              print("V336_VERIFIED_DISPLAY "+json.dumps({
+                k:{token:record["name_ko"] for token,record in doc["names"][k].items()}
+                for k in terms.KINDS},ensure_ascii=False,sort_keys=True),flush=True)
+              print("V336_MISSING "+json.dumps(doc["missing"],sort_keys=True),flush=True)
+              print("V336_ORIGINAL_MANIFEST_SHA256 "+doc["manifest_sha256"],flush=True)
+          if doc is None or receipt["status"] not in ("COMPLETE","PARTIAL_VERIFIED_NAMES"):
+              raise SystemExit("V336_OFFICIAL_TERMS_FETCH_BLOCKED")
+          PY
+      - name: Preserve exact index source hashes and source-bound display labels
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-v336-official-playable-terms-source-no-native
+          path: out/v336_official_playable_ko_KR.json
+          if-no-files-found: ignore
+          retention-days: 7
