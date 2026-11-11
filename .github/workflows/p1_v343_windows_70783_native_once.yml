@@ -1,0 +1,82 @@
+name: P1 v343 one current Retail 70783 Windows GJFO + N56 DPS12 real Native
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p1_v343_windows_70783_native_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v343-current-windows-70783-one-case
+  cancel-in-progress: false
+jobs:
+  current-windows-source-first:
+    if: contains(github.event.head_commit.message, '[v343-70783-win-native-once]')
+    runs-on: windows-2022
+    timeout-minutes: 27
+    env:
+      PYTHONPATH: runner;integration_probes;.
+      SIMC_PINNED_SOURCE_COMMIT: de11f57df75dda668bae6ac7043a43b98831fa96
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - name: Preserve exact authored file bytes on Windows
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse exact official Windows 2026-11-11 source artifact, not rebuild SimC
+        uses: actions/download-artifact@v4
+        with:
+          repository: simulationcraft/simc-publish
+          run-id: 42956947906
+          name: simc-nightly-win64-midnight
+          path: .simc-v343
+          github-token: ${{ github.token }}
+      - name: Verify exact original archive and Windows executable hashes
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $archive=Join-Path $PWD '.simc-v343/simc-1210.01.de11f57-win64.7z'
+          if (!(Test-Path $archive -PathType Leaf)) { throw 'V343_OFFICIAL_SOURCE_FILENAME_DRIFT' }
+          if ((Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant() -ne 'a4c4d5e7b349172d80897721daa3e849ce25874a82bbdfb96aeab4dbdc560eb0') { throw 'V343_ARCHIVE_SHA_DRIFT' }
+          $seven='C:\Program Files\7-Zip\7z.exe'
+          if (!(Test-Path $seven)) { throw 'V343_7ZIP_MISSING' }
+          New-Item -ItemType Directory -Force -Path .simc-v343-extracted | Out-Null
+          & $seven x '-o.simc-v343-extracted' -y -bd $archive | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'V343_ARCHIVE_EXTRACTION_FAILED' }
+          $exes=@(Get-ChildItem .simc-v343-extracted -Recurse -Filter simc.exe -File)
+          if ($exes.Count -ne 1) { throw 'V343_SIMC_EXE_COUNT_INVALID' }
+          $hash=(Get-FileHash -Algorithm SHA256 $exes[0].FullName).Hash.ToLowerInvariant()
+          if ($hash -ne '1fc927d2be7f1b6064c75f004b5b22245b064a6b3e56e572af4048ba822a986d') { throw 'V343_EXE_SHA_DRIFT' }
+          "V343_SIMC_EXE=$($exes[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Reuse current tested dependencies, not an engine rebuild
+        shell: pwsh
+        run: |
+          python -m pip install -r requirements-web-test.txt
+          if ($LASTEXITCODE -ne 0) { throw 'V343_WEB_DEPENDENCIES_FAILED' }
+      - name: One current KR-70783 Windows GJFO and Survival N56/12 native
+        timeout-minutes: 19
+        shell: pwsh
+        run: |
+          python -u integration_probes/p1_v343_windows_70783_real_native_once.py --simc "$env:V343_SIMC_EXE" --out out/v343
+          if ($LASTEXITCODE -ne 0) { throw 'V343_REAL_WINDOWS_NATIVE_FAILED' }
+      - name: Retain compact result and original 12 Native inputs/JSON2 for 7 days
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v343-windows-70783-fresh-one-user-native
+          path: |
+            out/v343/V343_WINDOWS_70783_COMPACT.json
+            out/v343/V343_WEB_NATIVE_RESULT.json
+            out/v343/V343_NATIVE_INPUT_JSON2_RECEIPT.zip
+          retention-days: 7
+          if-no-files-found: warn
