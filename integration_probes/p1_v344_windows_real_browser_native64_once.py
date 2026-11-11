@@ -126,7 +126,7 @@ def run(binary,out):
         "game_build":BUILD,"binary_sha256":EXE_SHA,"revision":REV,
         "character":"hunter/survival","target_ilevel":334,
         "source":"ACTUAL_CHROME_CLICKS_AND_ORIGINAL_LOCAL_HTTP",
-        "synthetic_worker":False,"actual_simc_native":True,
+        "synthetic_worker":False,"actual_simc_native":False,
         "new_environment_native":0,"new_dps_native":0,
         "max_dps_native":64,"global_optimum_proven":False,
         "old_v343_12_case_imported":False,
@@ -155,6 +155,17 @@ def run(binary,out):
             # rejects a second withBusy action while one is active.
             browser.find_element(By.ID,"season-game-build").send_keys(Keys.TAB)
             elapsed_wait(browser,'!state.busy',timeout=35)
+            # Observe the *actual* returned environment report at its
+            # existing presentation boundary; pass it unchanged to the
+            # product UI. No synthetic fetch, modified HTTP or Native mocks.
+            browser.execute_script("""
+              window.__v344_displayed_environment=null;
+              const originalShow=showSeasonEnvironmentBuild;
+              showSeasonEnvironmentBuild=function(data){
+                window.__v344_displayed_environment=data;
+                return originalShow(data);
+              };
+            """)
             # Real user-facing Environment Build click: all HTTP/data/native
             # work remains owned by v113/v216, with no internal call shortcut.
             browser.find_element(By.ID,"season-build-btn").click()
@@ -165,22 +176,43 @@ def run(binary,out):
             need("시즌 환경 구축 단계 조회 완료" in
                  report["season_build_ui_notice"],
                  "BROWSER_ENVIRONMENT_BUILD_NOT_COMPLETE")
+            # v113's in-memory verified *profile* is intentionally a
+            # compact subset: it does not contain numeric G/J/F/O.
+            # Use only the original v216 HTTP Build report captured above.
+            observed=browser.execute_script("""
+              const data=window.__v344_displayed_environment;
+              if(!data)return null;
+              const c=data.source_compilation||{};
+              const installed=c.verified_environment_install||{};
+              return {
+                status:data.status,environment_ready:data.environment_ready,
+                environment_installed:data.environment_installed,
+                native_calls:data.native_calls,
+                G:data.G,J:data.J,F:data.F,O:data.O,B:data.B,T:data.T,
+                manifest_sha256:installed.manifest_sha256
+              };
+            """)
+            report["original_environment_report"]=observed
             installed=app.state.jobs._verified_fresh_profile_result
-            need(type(installed) is dict,"BROWSER_BUILD_DID_NOT_INSTALL_SOURCE")
+            need(type(installed) is dict and
+                 type(observed) is dict,
+                 "BROWSER_BUILD_DID_NOT_INSTALL_SOURCE")
             source=installed.get("source_compilation") or {}
             env_install=source.get("verified_environment_install") or {}
             report["installed_manifest_sha256"]=env_install.get("manifest_sha256")
             report["environment_budget"]={
-                k:installed.get(k) for k in ("G","J","F","O","B","T")}
-            report["new_environment_native"]=installed.get("native_calls",0)
-            need(installed.get("environment_ready") is True and
-                 installed.get("environment_installed") is True and
+                k:observed.get(k) for k in ("G","J","F","O","B","T")}
+            report["new_environment_native"]=observed.get("native_calls")
+            need(observed.get("environment_ready") is True and
+                 observed.get("environment_installed") is True and
+                 observed.get("manifest_sha256")==
+                   report["installed_manifest_sha256"] and
                  type(report["new_environment_native"]) is int and
                  0<=report["new_environment_native"]<=3,
                  "UI_FRESH_SEASON_NOT_READY_OR_NATIVE_LIMIT")
-            need(all(installed[k]==v for k,v in
+            need(all(observed[k]==v for k,v in
                      (("G",2850),("J",92),("F",165),("B",3107),("T",3107))) and
-                 sum(installed["O"].values())==0,
+                 sum(observed["O"].values())==0,
                  "EXACT_SEASON_BUDGET_DRIFT")
             report["browser_environment_build_clicked"]=True
             save()
@@ -276,6 +308,7 @@ def run(binary,out):
                  top["observed_dps_mean"]>0 and top["simc_sem"]>=0,
                  "TRUE64_DPS_SEM_95_CHMV_INVALID")
             report["new_dps_native"]=64
+            report["actual_simc_native"]=True
             report["observed"]={
                 "chmv":top["absolute_rating_T"],"dps":top["observed_dps_mean"],
                 "sem":top["simc_sem"],"confidence":user["confidence_level"],

@@ -1,3 +1,4 @@
+# v344 retry: observe original HTTP Build report, not compact restored profile metadata.
 # v344 retry: explicit input blur/read-only oil refresh before action, preserving original GUI clicks.
 name: P1 v344 Real Windows Chrome -> Season Build -> Default 64 Native -> Cancel/Restart/Resume
 on:
