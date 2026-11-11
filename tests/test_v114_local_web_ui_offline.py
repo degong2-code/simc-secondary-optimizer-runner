@@ -434,8 +434,17 @@ class RealHTTPPageOffline(unittest.TestCase):
         js=self.client.get("/assets/app.js").text
         self.assertIn("const changed=id!==state.session;",js)
         self.assertIn('if(changed) {\n    // A new plan is not the result',js)
-        self.assertIn('if(!data?.result_ready) {\n    $("filled-result").hidden=true;',js)
+        self.assertIn('if(data?.active || !data?.result_ready) {\n    $("filled-result").hidden=true;',js)
         self.assertIn('markSession(p.session_id);showPlan(p);await pollOnce();',js)
+        self.assertIn('if(snapshot.result)renderResult(snapshot.result);',js)
+
+    def test_running_resume_never_shows_saved_partial_result_as_current(self):
+        # The v293 status endpoint can report result_ready from a prior batch
+        # while a newly resumed worker is active. Browser presentation must
+        # hide that older result without deleting or changing the real data.
+        js=self.client.get("/assets/app.js").text
+        self.assertIn("data?.active || !data?.result_ready",js)
+        self.assertIn("const result=longrun.result_ready&&!longrun.active",js)
         self.assertIn('if(snapshot.result)renderResult(snapshot.result);',js)
 
     def test_blocked_worker_is_not_shown_as_idle_waiting(self):

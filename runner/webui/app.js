@@ -1374,7 +1374,9 @@ function renderProgress(data) {
   state.longrunEnabled=Boolean(data?.enabled);
   state.longrunResultReady=Boolean(data?.enabled && data?.result_ready);
   const p=data?.progress||{};
-  if(!data?.result_ready) {
+  // A resumed v291 run may leave its previous V291_RESULT.json in place.
+  // Do not present that older observation as the active run's final result.
+  if(data?.active || !data?.result_ready) {
     $("filled-result").hidden=true;
     $("empty-result").hidden=false;
   }

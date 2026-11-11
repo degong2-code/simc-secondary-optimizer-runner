@@ -118,7 +118,28 @@ def main():
                 "return performance.getEntriesByType('resource').filter("+
                 "e=>e.name.includes('/longrun/start')).length")
             need(api_traffic==0,"UNEXPECTED_NATIVE_START_REQUEST")
+            # Browser runtime regression: a previous V291_RESULT.json remains
+            # ready while the same sealed session is being resumed. Do not
+            # show the old "final" DPS as the active worker's new result.
+            # Synthetic display state only: no API start, session or Native.
+            active_view=driver.execute_script("""
+                const filled=document.getElementById('filled-result');
+                filled.hidden=false;
+                renderProgress({enabled:true,active:true,result_ready:true,
+                  progress:{status:'RUNNING',planned_jobs:64,
+                    completed_jobs:16,progress_percent:25,
+                    worker:{status:'RUNNING'}}});
+                return {filled_hidden:filled.hidden,
+                  empty_visible:!document.getElementById('empty-result').hidden,
+                  running:document.getElementById('run-label').textContent,
+                  progress:document.getElementById('progress-label').textContent};
+            """)
+            need(active_view["filled_hidden"] and active_view["empty_visible"]
+                 and active_view["running"]=="진행 중"
+                 and "평가 16회" in active_view["progress"],
+                 "ACTIVE_RESUME_STALE_RESULT_VISIBLE")
             report.update(status="PASS",classes=13,supported_dps=26,
+                          active_resume_stale_result_hidden=True,
                           verified_official_game_terms=64,
                           verified_source_build="12.1.5.70783",
                           displayed_official_trinkets=63,selected_item_id=158367,
