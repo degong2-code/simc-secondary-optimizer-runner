@@ -1,0 +1,83 @@
+name: P1 v344 Real Windows Chrome -> Season Build -> Default 64 Native -> Cancel/Restart/Resume
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p1_v344_windows_real_browser_native64_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v344-windows-real-browser-native64-once
+  cancel-in-progress: false
+jobs:
+  one-70783-win-real-browser-native:
+    if: contains(github.event.head_commit.message, '[v344-win-browser-native64-once]')
+    runs-on: windows-2022
+    timeout-minutes: 32
+    env:
+      PYTHONPATH: runner;integration_probes;.
+      SIMC_PINNED_SOURCE_COMMIT: de11f57df75dda668bae6ac7043a43b98831fa96
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - name: Preserve exact source bytes on Windows
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Reuse exact current-season official Windows SimC
+        uses: actions/download-artifact@v4
+        with:
+          repository: simulationcraft/simc-publish
+          run-id: 42956947906
+          name: simc-nightly-win64-midnight
+          path: .simc-v344
+          github-token: ${{ github.token }}
+      - name: Verify original archive and actual Windows simc.exe SHA
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $archive=Join-Path $PWD '.simc-v344/simc-1210.01.de11f57-win64.7z'
+          if (!(Test-Path $archive -PathType Leaf)) { throw 'V344_OFFICIAL_ARCHIVE_MISSING' }
+          if ((Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant() -ne 'a4c4d5e7b349172d80897721daa3e849ce25874a82bbdfb96aeab4dbdc560eb0') { throw 'V344_PINNED_ARCHIVE_SHA_DRIFT' }
+          $seven='C:\Program Files\7-Zip\7z.exe'
+          if (!(Test-Path $seven)) { throw 'V344_7ZIP_MISSING' }
+          New-Item -ItemType Directory -Force -Path .simc-v344-unpacked | Out-Null
+          & $seven x '-o.simc-v344-unpacked' -y -bd $archive | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'V344_UNPACK_FAILED' }
+          $exes=@(Get-ChildItem .simc-v344-unpacked -Recurse -Filter simc.exe -File)
+          if ($exes.Count -ne 1) { throw 'V344_SIMC_EXE_COUNT_INVALID' }
+          if ((Get-FileHash -Algorithm SHA256 $exes[0].FullName).Hash.ToLowerInvariant() -ne '1fc927d2be7f1b6064c75f004b5b22245b064a6b3e56e572af4048ba822a986d') { throw 'V344_SIMC_EXE_SHA_DRIFT' }
+          "V344_SIMC_EXE=$($exes[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Validate probe syntax and reuse pinned Web/Selenium dependencies
+        shell: pwsh
+        run: |
+          python -m py_compile integration_probes/p1_v344_windows_real_browser_native64_once.py
+          if ($LASTEXITCODE -ne 0) { throw 'V344_PYTHON_SYNTAX_FAILED' }
+          python -m pip install -r requirements-web-test.txt 'selenium>=4.24,<5'
+          if ($LASTEXITCODE -ne 0) { throw 'V344_DEPS_FAILED' }
+      - name: ONE real Chrome Build / primary N56 Native 64 / cancel / server restart / resume / restore
+        shell: pwsh
+        timeout-minutes: 26
+        run: |
+          python -u integration_probes/p1_v344_windows_real_browser_native64_once.py --simc "$env:V344_SIMC_EXE" --out out/v344
+          if ($LASTEXITCODE -ne 0) { throw 'V344_REAL_BROWSER_64_NATIVE_FAILED' }
+      - name: Preserve compact proof and 64 original input-JSON2-receipt groups
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v344-windows-real-browser-native64
+          path: |
+            out/v344/V344_WINDOWS_REAL_BROWSER64_COMPACT.json
+            out/v344/V344_NATIVE64_INPUT_JSON2_RECEIPTS.zip
+          retention-days: 7
+          if-no-files-found: warn
