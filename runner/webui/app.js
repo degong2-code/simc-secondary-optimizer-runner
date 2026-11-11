@@ -1389,6 +1389,11 @@ function renderProgress(data) {
   // A failed resumed worker may stop before v094 overwrites old progress.
   // Show its NEW reason, rather than repeating an older Native error forever.
   const cancelled=!data.active && worker==="CANCELLED_PARTIAL";
+  // After an interrupted Windows server/worker lifetime, the sealed worker
+  // file can still say RUNNING or QUEUED while no OS worker is active.
+  // Its stored N56 session remains resumable; never label it as idle.
+  const interrupted=!data.active && state.longrunEnabled &&
+    (worker==="RUNNING"||worker==="QUEUED");
   const status=data.active?worker:
     cancelled?"사용자 요청으로 중단 · 완료한 후보 보존 · 같은 세션 재개 가능":
     worker==="BLOCKED_OR_PARTIAL"?
@@ -1398,9 +1403,11 @@ function renderProgress(data) {
   const environmentText=environment?" · 환경 "+environment.status:"";
   showEnvironmentBuild(data?.environment_build);
   $("stage-text").textContent=data.active?"최적 스탯을 탐색하는 중입니다.":
+    interrupted?"작업자가 실행 중이지 않습니다 · 저장된 세션을 재개할 수 있습니다":
     ({BUDGET_EXHAUSTED:"탐색 완료",PAUSED_USER_CANCEL:"중단됨 · 재개 가능",PAUSED_ELAPSED_BUDGET:"시간 제한 도달 · 재개 가능",PAUSED_INVOCATION_NATIVE_BUDGET:"중단된 계산 · 재개 가능",NOT_STARTED:"계산 대기"})[worker]||status;
   $("run-label").textContent=data.active?"진행 중":
     cancelled?"취소됨 · 재개 가능":
+    interrupted?"실행 중단 · 재개 가능":
     worker==="BLOCKED_OR_PARTIAL"?"실행 차단":
     state.longrunEnabled&&data.result_ready?"관측 결과 저장 · 재개 가능":
     data.result_ready&&worker.startsWith("PASS")?"완료":

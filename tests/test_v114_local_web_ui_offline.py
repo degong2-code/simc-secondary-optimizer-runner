@@ -457,6 +457,15 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('cancelled?"취소됨 · 재개 가능"',js)
         self.assertIn('완료한 후보 보존 · 같은 세션 재개 가능',js)
 
+    def test_inactive_stale_running_longrun_is_resumable_not_idle(self):
+        # Worker state survives an HTTP server restart; OS activity is the
+        # authority, not the prior V293_WORKER_STATE.json word RUNNING.
+        js=self.client.get("/assets/app.js").text
+        self.assertIn("const interrupted=!data.active && state.longrunEnabled",js)
+        self.assertIn('worker==="RUNNING"||worker==="QUEUED"',js)
+        self.assertIn('interrupted?"실행 중단 · 재개 가능"',js)
+        self.assertIn("저장된 세션을 재개할 수 있습니다",js)
+
     def test_near_alternative_presentation_reuses_native_result_statistics(self):
         # No new SimC calculations: existing v096 user_result fields only.
         js=self.client.get("/assets/app.js").text

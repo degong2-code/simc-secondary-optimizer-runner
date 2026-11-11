@@ -110,6 +110,76 @@ class LocalLongRunHTTP(unittest.TestCase):
                          {"archive_path":"/tmp/fixture.zip",
                           "archive_sha256":"wrong"}).status_code,422)
 
+    def test_restart_with_stale_running_status_preserves_result_and_resume(self):
+        # Windows process restart boundary. Fake worker & synthetic V291
+        # report ONLY; never execute SimC or modify a verified Native cache.
+        req={"controls":self.valid_controls,"binary":"c:/simc.exe",
+             "revision":"abc1234","current_season_product":True,
+             "max_native_calls":12,"max_new_native_this_invocation":4}
+        started=self.post("/api/v1/longrun/start",req)
+        self.assertEqual(started.status_code,200,started.text)
+        self.child.exit_code=1  # worker no longer owns a live OS process
+        service.state(self.folder,"RUNNING")
+        result_dir=self.stage/"simc_results"
+        result_dir.mkdir(parents=True,exist_ok=True)
+        base={"crit_rating":1,"haste_rating":1552,
+              "mastery_rating":1553,"versatility_rating":1}
+        report={"status":"PAUSED_INVOCATION_NATIVE_BUDGET",
+                "confidence_for_display":0.95,
+                "no_global_optimum_proof":True,
+                "summary":{"final_T":3107,"underlying_B":3107,
+                           "fixed_O":{k:0 for k in base},
+                           "observed_best_T":base,
+                           "observed_best_dps":185438.66,
+                           "observed_best_sem":280.53,
+                           "observed_unique_targets":8,
+                           "material_alternatives":[]},
+                "native_attempts_cumulative":10,
+                "verified_cache_cases_this_invocation":0}
+        (result_dir/"V291_RESULT.json").write_text(
+            json.dumps(report),encoding="utf8")
+        (result_dir/"V291_PROGRESS.json").write_text(
+            json.dumps({"completed_cases":10,"native_attempts_cumulative":10,
+                        "status":"RUNNING"}),encoding="utf8")
+        watched=[service.config_path(self.folder),service.worker_state_path(self.folder),
+                 result_dir/"V291_RESULT.json",result_dir/"V291_PROGRESS.json"]
+        before={str(p):p.read_bytes() for p in watched}
+        # New in-memory FastAPI instance using the exact same local sessions.
+        # No hidden import, session re-key, or new profile constructor.
+        second=web.create_app(root=self.folder.parent,token="local-token")
+        client=TestClient(second,base_url="http://127.0.0.1:8765")
+        uri="/api/v1/sessions/"+self.folder.name+"/longrun"
+        status=client.get(uri+"/status",headers=self.auth)
+        self.assertEqual(status.status_code,200,status.text)
+        self.assertTrue(status.json()["enabled"])
+        self.assertFalse(status.json()["active"])
+        self.assertTrue(status.json()["result_ready"])
+        self.assertEqual(status.json()["progress"]["worker"]["status"],"RUNNING")
+        self.assertEqual(status.json()["scout_iterations_per_CHMV"],56)
+        self.assertEqual(status.json()["progress"]["completed_jobs"],10)
+        prior=client.get(uri+"/result",headers=self.auth)
+        self.assertEqual(prior.status_code,200,prior.text)
+        self.assertEqual(prior.json()["native_calls_cumulative"],10)
+        self.assertEqual(prior.json()["user_result"]["confidence_level"],0.95)
+        self.assertFalse(prior.json()["user_result"]["global_optimum_proven"])
+        self.assertEqual(before,{str(p):p.read_bytes() for p in watched})
+        self.assertEqual(web.subprocess.Popen.call_count,1)
+        with mock.patch.object(second.state.jobs,
+                               "_verify_environment_dependencies",return_value=None), \
+             mock.patch.object(second.state.jobs,"args_for_existing",
+                               return_value=(self.folder/"simc.exe","abc1234",None)):
+            resumed=client.post(uri+"/resume",
+                headers=self.auth|{"content-type":"application/json"},
+                json={"max_new_native_this_invocation":2})
+        self.assertEqual(resumed.status_code,200,resumed.text)
+        self.assertEqual(resumed.json()["max_new_native_this_invocation"],2)
+        self.assertEqual(service.config(self.folder)["scout_iterations"],56)
+        self.assertEqual(web.subprocess.Popen.call_count,2)
+        self.assertIn("--max-native-calls",
+                      web.subprocess.Popen.call_args.args[0])
+        self.assertEqual((result_dir/"V291_RESULT.json").read_bytes(),
+                         before[str(result_dir/"V291_RESULT.json")])
+
     def test_prepare_before_cache_import_does_not_start_native_worker(self):
         data={"controls":self.valid_controls,"binary":"c:/simc.exe",
               "revision":"abc1234","current_season_product":True,

@@ -138,8 +138,24 @@ def main():
                  and active_view["running"]=="진행 중"
                  and "평가 16회" in active_view["progress"],
                  "ACTIVE_RESUME_STALE_RESULT_VISIBLE")
+            # Simulated restart: V293 saved RUNNING, but the OS worker is
+            # inactive. The prior sealed session must not appear simply idle.
+            orphan_view=driver.execute_script("""
+                renderProgress({enabled:true,active:false,result_ready:true,
+                  progress:{status:'RUNNING',planned_jobs:64,
+                    completed_jobs:16,progress_percent:25,
+                    worker:{status:'RUNNING'}}});
+                return {label:document.getElementById('run-label').textContent,
+                  stage:document.getElementById('stage-text').textContent,
+                  can_resume:!document.getElementById('resume-btn').disabled};
+            """)
+            need("실행 중단" in orphan_view["label"] and
+                 "재개 가능" in orphan_view["label"] and
+                 "저장된 세션을 재개할 수 있습니다" in orphan_view["stage"],
+                 "INACTIVE_STALE_WORKER_MISLABELLED_IDLE")
             report.update(status="PASS",classes=13,supported_dps=26,
                           active_resume_stale_result_hidden=True,
+                          inactive_stale_worker_resumable_label=True,
                           verified_official_game_terms=64,
                           verified_source_build="12.1.5.70783",
                           displayed_official_trinkets=63,selected_item_id=158367,
