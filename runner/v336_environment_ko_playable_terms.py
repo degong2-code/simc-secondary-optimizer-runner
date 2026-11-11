@@ -164,8 +164,8 @@ def compile_terms(build,source,details):
         hits=[i for i,name in race_en.items()
               if normalize(name)==normalize(token)]
         localized={race_ko[i] for i in hits}
-        if hits and len(localized)==1 and
-           KOREAN.search(next(iter(localized))):
+        if (hits and len(localized)==1 and
+                KOREAN.search(next(iter(localized)))):
             races[token]={"ids":sorted(hits),
                           "name_ko":_display(next(iter(localized)))}
     out={"schema":SCHEMA,"game_build":build,"locale":"ko_KR",
