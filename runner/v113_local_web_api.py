@@ -39,6 +39,7 @@ import v218_v098_profile_stage_adapter as profile_stage
 import v217_stage_execution_engine as stage_engine
 import v293_local_longrun_session as longrun_sessions
 import v335_environment_official_ko_localization as official_ko_env
+import v336_environment_ko_playable_terms as official_playable_terms
 
 SCHEMA = "v113_local_web_api_p1_v1"
 KEY = re.compile(r"[a-f0-9]{20}\Z")
@@ -500,13 +501,26 @@ class LocalJobs:
         return str(candidate) if candidate is not None else None
 
     def _with_verified_ko_localization(self, game_build, target_ilevel, outcome):
+        # Distinct source families: exact physical item names (v335) and
+        # English/Korean Blizzard playable terminology (v336). Both are
+        # dependent read-only display metadata; neither changes item admission.
+        terms=outcome.get("official_ko_terms")
+        if type(terms) is not dict or terms.get("schema")!=official_playable_terms.SCHEMA:
+            try:
+                with self.locale_cache_lock:
+                    terms=official_playable_terms.build_for_environment(
+                        self.root,game_build)
+            except Exception:
+                terms={"schema":official_playable_terms.SCHEMA,
+                       "status":"OFFICIAL_TERMS_SOURCE_REQUIRES_REVIEW",
+                       "network_calls_now":0,"native_calls_now":0}
+            outcome={**outcome,"official_ko_terms":terms}
         # Reuse v216's exact Environment Build result. The web adapter must
-        # never re-fetch these labels or create a parallel source of truth.
+        # never re-fetch these names or create a parallel source of truth.
         already=outcome.get("official_ko_localization")
         if type(already) is dict and already.get("schema")==official_ko_env.SCHEMA:
             return outcome
-        # Verified v212 installed-season reuse has no fresh v216 invocation;
-        # run only the missing derived localization stage.
+        # Verified v212 installed-season reuse has no fresh v216 invocation.
         try:
             # Serializes same-process incremental label cache updates and
             # avoids duplicate official requests for concurrent Build calls.
@@ -2037,6 +2051,21 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
             "embellishments":choice_labels.public_embellishments()
         }
 
+
+
+    @app.get("/api/v1/environment/official-game-terms")
+    def official_game_terms(game_build: str | None = None):
+        """Read-only validated Blizzard ko_KR playable labels, no network."""
+        if game_build is not None and (
+            re.fullmatch(r"\d+(?:\.\d+){3}",game_build) is None):
+            raise HTTPException(422,detail={"code":"GAME_BUILD_FORMAT_INVALID"})
+        build=game_build or jobs._current_fresh_game_build
+        if build is None:
+            return {"schema":official_playable_terms.SCHEMA,
+                    "status":"SEASON_BUILD_NOT_SELECTED",
+                    "names":{"class":{},"spec":{},"race":{}},
+                    "native_calls_now":0,"network_calls_now":0}
+        return official_playable_terms.public(jobs.root,build)
 
     @app.get("/api/v1/environment/official-ko-localization")
     def official_ko_localization_status(game_build: str | None = None):

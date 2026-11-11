@@ -7113,6 +7113,19 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     "status":"OFFICIAL_KO_SOURCE_OR_CACHE_REQUIRES_REVIEW",
                     "native_calls_now":0,"network_calls_now":0}
             progress["official_ko_localization"]=official_ko
+            # Display terms have a different source lifecycle than item names.
+            # Official en_US/ko_KR indices are cross-joined by Blizzard IDs;
+            # SimC tokens, DPS, B/T and installed manifests remain unchanged.
+            try:
+                import v336_environment_ko_playable_terms as playable_ko
+                official_terms=playable_ko.build_for_environment(
+                    sessions_root,fresh_collection_inputs["expected_game_build"])
+            except Exception:
+                official_terms={
+                    "schema":"v336_verified_official_playable_terms_ko_KR_v1",
+                    "status":"OFFICIAL_TERMS_SOURCE_REQUIRES_REVIEW",
+                    "network_calls_now":0,"native_calls_now":0}
+            progress["official_ko_terms"]=official_terms
         return {**collected,
                 **({key:progress[key] for key in (
                     "G","J","F","O","B","T","environment_ready",
@@ -7122,7 +7135,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 "native_effect_numeric_sources_unadmitted":effect_observations,
                 "native_calls":progress["new_native_calls"],
                 "zero_history_build":progress,
-                **({"official_ko_localization":official_ko}
+                **({"official_ko_localization":official_ko,
+                    "official_ko_terms":official_terms}
                    if official_ko is not None else {}),
                 "normal_build_entry":True}
     # Existing v217 stages assemble the same v211/v213 source candidate

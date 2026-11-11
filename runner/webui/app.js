@@ -56,8 +56,68 @@ const raceNames={
   zandalari_troll:"잔달라 트롤", vulpera:"불페라"
 };
 const raceTokens=new Map(Object.entries(raceNames).map(([token,label])=>[label,token]));
+const verifiedTerms={class:{},spec:{},race:{}};
 function simcRace(value){return raceTokens.get(value.trim())||value.trim();}
-function displayRace(token){return raceNames[token]||token;}
+function displayRace(token){return verifiedTerms.race[token]||raceNames[token]||token;}
+function classLabel(token){return verifiedTerms.class[token]||classNames[token]||token;}
+function specLabel(token) {
+  return verifiedTerms.spec[token]||
+    (specLabels[token]||token).split(" · ").slice(-1)[0];
+}
+function applyOfficialGameTerms(doc) {
+  const legalKeys={
+    class:new Set(state.defaults.map(x=>x.class)),
+    spec:new Set(state.defaults.map(x=>x.class+"/"+x.spec)),
+    race:new Set(Object.keys(raceNames))
+  };
+  if(doc?.schema!=="v336_verified_official_playable_terms_ko_KR_v1"||
+    !["COMPLETE","PARTIAL_VERIFIED_NAMES"].includes(doc.status)||
+    !doc.names||typeof doc.names!=="object")return false;
+  const before=simcRace(field("race"));
+  const selectedClass=field("class-choice");
+  const selectedSpec=field("spec");
+  for(const kind of ["class","spec","race"]) {
+    const rows=doc.names[kind];
+    if(!rows||typeof rows!=="object")continue;
+    const safe={};
+    for(const [key,label] of Object.entries(rows)) {
+      if(!legalKeys[kind].has(key)||typeof label!=="string"||
+         label.length>120||!/[가-힣]/.test(label))continue;
+      safe[key]=label;
+    }
+    verifiedTerms[kind]=safe;
+  }
+  // Preserve old official/manual labels in reverse lookup for older sessions.
+  raceTokens.clear();
+  for(const [token,label] of Object.entries(raceNames))
+    raceTokens.set(label,token);
+  for(const [token,label] of Object.entries(verifiedTerms.race))
+    if(!raceTokens.has(label)||raceTokens.get(label)===token)
+      raceTokens.set(label,token);
+  const classes=[...new Set(state.defaults.map(x=>x.class))]
+    .sort((a,b)=>classLabel(a).localeCompare(classLabel(b),"ko-KR"));
+  populateSelect("class-choice",classes,classLabel);
+  $("class-choice").value=classes.includes(selectedClass)?selectedClass:classes[0];
+  populateSpecializationsForClass(field("class-choice"),selectedSpec);
+  const item=state.defaults.find(x=>x.class+"/"+x.spec===field("spec"));
+  if(item) {
+    setRaceSuggestions(item);
+    $("race").value=before?displayRace(before):displayRace(item.race);
+    showCharacterDefaultHint();
+  }
+  return true;
+}
+async function refreshOfficialGameTerms(build) {
+  if(!/^\d+(?:\.\d+){3}$/.test(build||""))return;
+  const catalog=await api("/api/v1/environment/official-game-terms?game_build="+
+    encodeURIComponent(build));
+  const installed=applyOfficialGameTerms(catalog);
+  $("season-terms-status").textContent=installed?
+    "공식 한국어 게임 용어 확인 "+Object.values(catalog.names)
+      .reduce((n,group)=>n+Object.keys(group).length,0)+
+    "종 · 미확인 항목은 기존 표기 유지":
+    "공식 한국어 게임 용어 원본 확인 보류 · 기존 표기 유지";
+}
 const statOptions = ["head","neck","shoulders","back","chest","wrists","hands",
                      "waist","legs","feet","finger1","finger2","main_hand","off_hand"];
 const slotNames={head:"머리",neck:"목",shoulders:"어깨",back:"등",chest:"가슴",
@@ -419,7 +479,8 @@ function setRaceSuggestions(item) {
   const roster=$("race-list");
   const approved=state.allowedRacesBySpec[item?.class+"/"+item?.spec];
   const allowed=Array.isArray(approved)?new Set(approved):null;
-  const entries=Object.entries(raceNames).filter(([token])=>!allowed||allowed.has(token))
+  const entries=Object.keys(raceNames).filter(token=>!allowed||allowed.has(token))
+    .map(token=>[token,displayRace(token)])
     .sort((a,b)=>a[1].localeCompare(b[1],"ko-KR"));
   roster.replaceChildren(...entries.map(([token,name])=>{
     const opt=document.createElement("option");
@@ -432,8 +493,7 @@ function populateSpecializationsForClass(cls,selectedKey=""){
     ?selectedKey:(available[0]?cls+"/"+available[0].spec:"");
   $("spec").replaceChildren(...available.map(item=>{
     const key=item.class+"/"+item.spec;
-    const full=specLabels[key]||key;
-    return option(key,full.includes(" · ")?full.split(" · ")[1]:full);
+    return option(key,specLabel(key));
   }));
   $("spec").value=selected;
   $("spec").disabled=!available.length;
@@ -441,8 +501,8 @@ function populateSpecializationsForClass(cls,selectedKey=""){
 }
 function installClassSpecChoices() {
   const classes=[...new Set(state.defaults.map(x=>x.class))]
-    .sort((a,b)=>(classNames[a]||a).localeCompare(classNames[b]||b,"ko-KR"));
-  populateSelect("class-choice",classes,cls=>classNames[cls]||cls);
+    .sort((a,b)=>classLabel(a).localeCompare(classLabel(b),"ko-KR"));
+  populateSelect("class-choice",classes,classLabel);
   $("class-choice").disabled=false;
   const first=classes.includes("paladin")?"paladin":classes[0];
   $("class-choice").value=first;
@@ -1224,6 +1284,11 @@ async function buildSeasonEnvironment() {
         (localization.pending_names||0)+"종 확인 보류 · "+
         "미확정 명칭은 원본 이름을 표시합니다.";
     }
+    if(report.web_environment_scope?.game_build) {
+      try {await refreshOfficialGameTerms(report.web_environment_scope.game_build);}
+      catch(error){$("season-terms-status").textContent=
+        "공식 한국어 게임 용어 조회 오류 · 기존 표기 유지";}
+    }
     // A verified new installation may supply a different season rune roster.
     // Refresh read-only options only, never launch optimization on Build.
     try{renderSeasonOptionCatalog(await api("/api/v1/season-option-catalog"));}
@@ -1924,6 +1989,12 @@ async function initialize() {
     try{await refreshInstalledOilLoadouts();}
     catch(err){$("optimizer-oil-loadout-status").textContent=
       "검증 설치 기름 목록 조회 실패: "+err.message;}
+    // Local verified season only: zero external API calls on web startup.
+    if(state.oilCatalog?.game_build) {
+      try{await refreshOfficialGameTerms(state.oilCatalog.game_build);}
+      catch(err){$("season-terms-status").textContent=
+        "공식 한국어 용어 조회 오류 · 기존 표기 유지";}
+    }
     // Read-only local status. No remote release lookup on page load.
     try{await refreshSimcUpdater(false);}catch(err){
       $("simc-update-status").textContent="SimC 관리 상태 조회 오류: "+err.message;
