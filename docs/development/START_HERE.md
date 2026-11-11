@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER · 개발 지식 시작점
 
+[v338 통제 필수 시즌 원본 실패→정상 봉인·재사용, G/J/F/O 누락 차단 — Linux/Windows PASS](notes/2026-11-11_p1-v338-negative-season-source-recovery.md). 새 시즌 전체 원본 READY 실증은 아님.
+
 [v337 **무이력 설치→한국어 원본 자동 구축→무중복 재사용** 실 Native PASS #43000049793](notes/2026-11-11_p1-v337-real-coldstart-environment-ko-reuse.md) — 현재 70783 한 조건 한정, 미래 시즌 원본 인증 아님.
 
 > 2026-11-11 최신 P2 인계 연결을 반영한 격리 브랜치 검색 진입점. 파일·Actions·Native 현재 여부는 매 작업 실제 HEAD와 비교. **본 문서는 새 제품 코드/Native PASS를 의미하지 않는다.**
