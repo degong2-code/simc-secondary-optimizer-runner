@@ -154,6 +154,113 @@ class ZeroHistoryNormalBuild(unittest.TestCase):
                               result["requires"])
                 self.assertFalse(result["environment_ready"])
 
+    def test_required_information_scope_tracks_actual_selected_items(self):
+        scope=engine._fresh_required_information_scope
+        base={"representative_request":{"target_ilevel":334}}
+        unselected=scope(**base)
+        self.assertEqual(unselected["oil_source_mode"],
+                         "UNSELECTED_PENDING_CHOICE")
+        self.assertIsNone(unselected["selected_physical_sources"]["flask_item_id"])
+        self.assertFalse(unselected["environment_ready"])
+        self.assertTrue(unselected["season_wide_item_membership_not_required"])
+        self.assertTrue(unselected[
+            "nonselected_WSE_and_unrelated_loot_may_remain_unknown"])
+        no_oil=scope(**base,selected_budget_items={
+            "flask_item_id":500,"oil_item_ids_by_hand":{}})
+        self.assertEqual(no_oil["oil_source_mode"],"EXPLICIT_NO_OIL_PROOF")
+        self.assertTrue(no_oil["unselected_oil_item_proofs_not_needed"])
+        self.assertFalse(no_oil["selected_oil_item_and_hand_proof_needed"])
+        for hands in ({"main_hand":901},
+                      {"main_hand":901,"off_hand":902}):
+            with self.subTest(hands=hands):
+                selected=scope(**base,selected_budget_items={
+                    "flask_item_id":500,"oil_item_ids_by_hand":hands},
+                    selected_gem_roles={"ordinary_gem_ids":[701,702],
+                                        "special_gem_id":703})
+                self.assertEqual(selected["selected_physical_sources"][
+                    "oil_item_ids_by_hand"],hands)
+                self.assertTrue(selected[
+                    "selected_oil_item_and_hand_proof_needed"])
+                self.assertEqual(selected["selected_physical_sources"][
+                    "ordinary_gem_ids"],[701,702])
+                self.assertEqual(selected["selected_physical_sources"][
+                    "special_gem_id"],703)
+                self.assertFalse(selected["environment_ready"])
+
+    def test_selected_physical_data_needs_real_target_before_collect(self):
+        with tempfile.TemporaryDirectory() as td:
+            kwargs={"sessions_root":pathlib.Path(td)/"new",
+                    "session_folder":None,"user":None,"binary":None,
+                    "revision":None,"static_cache":None,
+                    "source_catalog_path":None,"bootstrap_result":None}
+            req={"expected_game_build":"12.2.0.99999",
+                 "representative_request":None,
+                 "g_probe_character":None,"simc_revision_hint":None}
+            for selected in (
+                {"selected_budget_items":{
+                    "flask_item_id":501,"oil_item_ids_by_hand":{}}},
+                {"source_selected_gem_roles":{
+                    "ordinary_gem_ids":[501],"special_gem_id":None}}):
+                with self.subTest(selected=selected),mock.patch.object(
+                        engine,"collect_wago_new_season_source",
+                        side_effect=AssertionError("UNWANTED_SOURCE_FETCH")):
+                    with self.assertRaisesRegex(
+                            engine.EnvironmentBuildBlocked,
+                            "V216_REQUIRED_SELECTION_TARGET_REPRESENTATIVE_REQUIRED"):
+                        engine.build_environment(**kwargs,
+                            fresh_collection_inputs={**req,**selected})
+
+    def test_scope_changes_do_not_refetch_one_same_build_source(self):
+        class Response(io.BytesIO):
+            status=200
+            def __enter__(self): return self
+            def __exit__(self,*exc): self.close()
+        builds=[];build="12.2.0.99999"
+        def fake_fetch(req,timeout):
+            url=urlsplit(req.full_url)
+            self.assertEqual(url.hostname,"wago.tools")
+            self.assertEqual(parse_qs(url.query)["build"],[build])
+            table=url.path.split("/")[-2]
+            self.assertIn(table,engine.wago_snapshot.TABLES)
+            builds.append(table)
+            return Response(("ID,Name\\n1,"+table+"\\n").encode("utf8"))
+        with tempfile.TemporaryDirectory() as td:
+            kwargs={"sessions_root":pathlib.Path(td)/"new",
+                    "session_folder":None,"user":None,"binary":None,
+                    "revision":None,"static_cache":None,
+                    "source_catalog_path":None,"bootstrap_result":None}
+            inputs={"expected_game_build":build,
+                    "representative_request":{
+                        "class":"paladin","spec":"retribution",
+                        "target_ilevel":334},
+                    "g_probe_character":None,"simc_revision_hint":None,
+                    "credentials":{name:"" for name in
+                                   engine.discovery_stage.FIELDS},
+                    "fetch":fake_fetch}
+            for mode,selection in (
+                    ("UNSELECTED_PENDING_CHOICE",None),
+                    ("EXPLICIT_NO_OIL_PROOF",{
+                        "flask_item_id":501,"oil_item_ids_by_hand":{}}),
+                    ("SELECTED_OIL_ITEM_AND_HAND_EVIDENCE",{
+                        "flask_item_id":501,"oil_item_ids_by_hand":{
+                            "main_hand":900}})):
+                with self.subTest(mode=mode):
+                    params=dict(inputs)
+                    if selection is not None:
+                        params["selected_budget_items"]=selection
+                    out=engine.build_environment(
+                        **kwargs,fresh_collection_inputs=params)
+                    report=out["zero_history_build"]
+                    self.assertEqual(report["required_information_scope"][
+                        "oil_source_mode"],mode)
+                    self.assertFalse(report["environment_ready"])
+                    self.assertEqual(
+                        "WEAPON_OIL_O_EXACT_APPLICATION_AND_RATING_PENDING"
+                        in report["requires"],
+                        mode!="EXPLICIT_NO_OIL_PROOF")
+            self.assertEqual(len(builds),len(engine.wago_snapshot.TABLES))
+            self.assertEqual(len(set(builds)),len(builds))
+
     def test_premature_ready_or_unsealed_stage_never_advances(self):
         source={"schema":"v216_fresh_source_stage_v1",
                 "source_stage":{"status":"EXECUTED_AND_SEALED","reused":False},

@@ -3327,6 +3327,52 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
     }
 
 
+def _fresh_required_information_scope(*, representative_request=None,
+                                     selected_budget_items=None,
+                                     selected_gem_roles=None):
+    """Describe only facts CONSUMED by this product request, not all loot.
+
+    A source requirement is NOT a source proof. The existing v217 source
+    receipts, G/J/F/O owners, v220 item proof and v222/v212 verifier remain
+    authoritative. This inventory is reusable for fresh-season collecting,
+    reporting, and choosing which optional owner is actually needed.
+    """
+    target=(representative_request.get("target_ilevel")
+            if type(representative_request) is dict else None)
+    chosen=(selected_budget_items if type(selected_budget_items) is dict
+            else None)
+    oils=(chosen.get("oil_item_ids_by_hand") if chosen is not None else None)
+    flask=(chosen.get("flask_item_id") if chosen is not None else None)
+    roles=(selected_gem_roles if type(selected_gem_roles) is dict else {})
+    oil_mode=("UNSELECTED_PENDING_CHOICE" if oils is None
+              else "SELECTED_OIL_ITEM_AND_HAND_EVIDENCE" if oils
+              else "EXPLICIT_NO_OIL_PROOF")
+    # The same four budget owners are always needed; O=0 has an explicit
+    # absence proof, and must NOT require a physical oil/weapon source.
+    return {
+        "schema":"v216_product_required_information_scope_v1",
+        "target_ilevel":target,
+        "core_required_facts":[
+            "SAME_BUILD_REPRESENTATIVE_GENERAL_GEAR_AND_WEAPON",
+            "REPRESENTATIVE_TIER_FOUR_PIECE",
+            "G_AT_TARGET_ILEVEL","J_SELECTED_GEM_CONFIGURATION",
+            "F_SELECTED_FLASK","O_EFFECTIVE_SELECTED_HANDS",
+            "B_T_ACCOUNTING_AND_VERSIONED_INSTALL"],
+        "selected_physical_sources":{
+            "flask_item_id":flask,
+            "oil_item_ids_by_hand":(dict(oils) if oils is not None else None),
+            "ordinary_gem_ids":roles.get("ordinary_gem_ids"),
+            "special_gem_id":roles.get("special_gem_id")},
+        "oil_source_mode":oil_mode,
+        "selected_oil_item_and_hand_proof_needed":bool(oils),
+        "unselected_oil_item_proofs_not_needed":oils=={},
+        "season_wide_item_membership_not_required":True,
+        "unselected_optional_item_proofs_not_required":True,
+        "nonselected_WSE_and_unrelated_loot_may_remain_unknown":True,
+        "source_scope_is_not_verification":True,
+        "environment_ready":False}
+
+
 def _zero_history_source_progress(source):
     """Report the real one-engine source stage without inventing G/J/F/O.
 
@@ -6256,6 +6302,17 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
               all(type(item_id) is int and item_id>0 for item_id in
                   selected_budget_items["oil_item_ids_by_hand"].values())),
              "V216_SELECTED_PHYSICAL_BUDGET_ITEM_FIELDS_INVALID")
+        # Any physical/role selection depends on a real target-ilvl
+        # representative. A pure source-only discovery may omit it, but
+        # do not defer a selected-item request to a later NoneType crash.
+        if (selected_budget_items is not None or
+                source_selected_gem_roles is not None or
+                auto_select_default_F):
+            representative=fresh_collection_inputs["representative_request"]
+            need(type(representative) is dict and
+                 type(representative.get("target_ilevel")) is int and
+                 1<=representative["target_ilevel"]<=1000,
+                 "V216_REQUIRED_SELECTION_TARGET_REPRESENTATIVE_REQUIRED")
         need(zero_history_budget_evidence is None or
              (type(zero_history_budget_evidence) is dict and
               type(fresh_collection_inputs["representative_request"]) is dict
@@ -6321,6 +6378,15 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         collected=collect_wago_new_season_source(
             sessions_root=sessions_root,**source_inputs)
         progress=_zero_history_source_progress(collected)
+        # A consumer-defined scope, not every raw loot/quality/WSE row,
+        # controls the remaining *needed* work. This is a collection plan
+        # only; no evidence is authenticated by computing it.
+        required_scope=_fresh_required_information_scope(
+            representative_request=fresh_collection_inputs[
+                "representative_request"],
+            selected_budget_items=selected_budget_items,
+            selected_gem_roles=source_selected_gem_roles)
+        progress["required_information_scope"]=required_scope
         if source_selected_gem_roles is not None and not auto_four_stat_default:
             zero_history_gem_layout=(
                 _fresh_default_intrinsic_gem_layout_from_source(
@@ -6333,8 +6399,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         # Explicit NONE is an actual user selection, not the O=0 preview
         # assumption. The old physical-weapon applicability task is then
         # irrelevant; incomplete F/G/J evidence stays pending as before.
-        if (selected_budget_items is not None and
-                not selected_budget_items["oil_item_ids_by_hand"]):
+        if required_scope["unselected_oil_item_proofs_not_needed"]:
             progress["requires"]=[
                 requirement for requirement in progress["requires"]
                 if requirement!="WEAPON_OIL_O_EXACT_APPLICATION_AND_RATING_PENDING"]
@@ -6654,12 +6719,20 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 if selected_budget_items is None:
                     progress["requires"].extend(default_F["requires"])
                 else:
-                    # Explicit default no-oil is a real internal selection,
-                    # not v222's earlier source-only O=0 preview assumption.
-                    progress["requires"]=[
-                        reason for reason in progress["requires"]
-                        if reason!=
-                        "WEAPON_OIL_O_EXACT_APPLICATION_AND_RATING_PENDING"]
+                    # The source owner has selected F and explicit NO OIL.
+                    # Refresh the same request-scoped requirement inventory:
+                    # unknown/other oils are not required for this base.
+                    required_scope=_fresh_required_information_scope(
+                        representative_request=fresh_collection_inputs[
+                            "representative_request"],
+                        selected_budget_items=selected_budget_items,
+                        selected_gem_roles=source_selected_gem_roles)
+                    progress["required_information_scope"]=required_scope
+                    if required_scope["unselected_oil_item_proofs_not_needed"]:
+                        progress["requires"]=[
+                            reason for reason in progress["requires"]
+                            if reason!=
+                            "WEAPON_OIL_O_EXACT_APPLICATION_AND_RATING_PENDING"]
         # Source-selected consumables are tested through the original
         # v269 JSON2 before/after comparer, with an immutable shared baseline.
         # No blanket item-quality or weapon-eligibility certification: the
@@ -6682,9 +6755,10 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 auto_rows,auto_state=_auto_F_native_from_sealed_v281(
                     collected=collected,compilation=source_compilation,
                     binary=binary,max_new_native_calls=8-oil_reserved,
-                    selected_item_id=(selected_budget_items["flask_item_id"]
-                                      if selected_budget_items is not None
-                                      else None))
+                    # Measure only the selected physical flask when
+                    # known; all other qualities remain source candidates.
+                    selected_item_id=required_scope[
+                        "selected_physical_sources"]["flask_item_id"])
             effect_observations.extend(auto_rows)
             auto_F_calls=auto_state["new_native_calls"]
             progress["automatic_F_native_measurements_unadmitted"]=auto_state
@@ -7025,7 +7099,25 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             source_compilation[
                 "original_J_F_verified_components_not_full_environment"]=owner_J_F
             progress["original_J_F_verified_component_names"]=sorted(owner_J_F)
-            owner_O=_fresh_source_owner_selected_O_component(
+            # No selected oil hand has NO physical item to authenticate.
+            # The v222 exact explicit-none proof is created later; do not
+            # perform optional source-owner O verification to install base.
+            # Automatic source-owner flask selection can happen BEFORE
+            # the optional later measurement preview. Re-evaluate the same
+            # requested scope at the point where its owners are consumed.
+            required_scope=_fresh_required_information_scope(
+                representative_request=fresh_collection_inputs[
+                    "representative_request"],
+                selected_budget_items=selected_budget_items,
+                selected_gem_roles=source_selected_gem_roles)
+            progress["required_information_scope"]=required_scope
+            if required_scope["unselected_oil_item_proofs_not_needed"]:
+                progress["requires"]=[
+                    x for x in progress["requires"]
+                    if x!="WEAPON_OIL_O_EXACT_APPLICATION_AND_RATING_PENDING"]
+            owner_O=(None if required_scope[
+                "unselected_oil_item_proofs_not_needed"] else
+                _fresh_source_owner_selected_O_component(
                 preflight=preflight,staged=staged,
                 compilation=source_compilation,
                 selected=selected_budget_items,
@@ -7037,7 +7129,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     "observed_quality_weapon_choices_unadmitted"),
                 scaled_native_gear=scaled_native_gear,
                 target_ilevel=fresh_collection_inputs[
-                    "representative_request"]["target_ilevel"])
+                    "representative_request"]["target_ilevel"]))
             if owner_O is not None:
                 source_compilation[
                     "original_selected_O_verified_component_not_full_environment"]=owner_O
