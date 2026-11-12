@@ -310,6 +310,31 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertNotIn('id="season-build-percent"',html)
         self.assertNotIn("환경 구축 100%",js)
 
+    def test_v350_approved_common_season_vs_individual_inputs_separation(self):
+        page=self.client.get("/").text
+        js=self.client.get("/assets/app.js").text
+        common=page.split('<section class="panel environment-setup"',1)[1].split(
+            '</section>',1)[0]
+        optimization=page.split('<form id="optimizer-form"',1)[1].split(
+            '</form>',1)[0]
+        for ident in ("season-target-socket-count","season-existing-special-gem-id",
+                      "season-verified-flask","season-selected-flask-id",
+                      "optimizer-season-itemid-expert","user-variant-prepare-btn"):
+            self.assertNotIn('id="'+ident+'"',common)
+            self.assertIn('id="'+ident+'"',optimization)
+        self.assertIn("시즌 환경 자동 확인·구축",common)
+        self.assertIn("전체 보석 소켓 수 (일반 + 특수 포함)",optimization)
+        self.assertIn("시즌 공통 원본·아이템·품질·적용 조건",common)
+        self.assertIn('async function buildSeasonEnvironment(forUserVariant=false)',js)
+        self.assertIn('const requested_sockets=forUserVariant?valueInt("season-target-socket-count"):4',js)
+        self.assertIn('const selectedFlask=forUserVariant?field("season-selected-flask-id"):""',js)
+        self.assertIn('user_socket_total:gemSocketTotal',js)
+        self.assertIn('user_special_gem_id:userSpecialGem',js)
+        self.assertIn('selected_flask_item_id:flaskId',js)
+        self.assertIn('buildSeasonEnvironment(true)',js)
+        self.assertIn('payload.verified_user_variant',js)
+        self.assertNotIn("data.environment_ready=true",js)
+
     def test_v347_unscoped_credentialless_season_is_pending_not_ready(self):
         """Real v347 negative evidence gets an actionable user-facing reason."""
         js=(ROOT/"runner/webui/app.js").read_text(encoding="utf8")
@@ -336,7 +361,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('"/api/v1/environment/season-build"',js)
         self.assertIn("const refresh_reason=field",js)
         self.assertIn("VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED",js)
-        self.assertIn("기존 검증 시즌 환경 재사용",page)
+        self.assertIn("시즌 환경 자동 확인·구축 (검증된 동일 시즌 원본 재사용)",page)
         self.assertIn("BLIZZARD_PUBLIC_RETAIL_KR",js)
         self.assertIn("현재 Retail(KR) 자동 조회",page)
         self.assertIn("const game_build=supplied_build||null",js)
