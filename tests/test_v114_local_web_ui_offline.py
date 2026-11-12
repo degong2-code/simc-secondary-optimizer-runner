@@ -357,12 +357,14 @@ eval(context+raw.slice(start,end)+"\n"+test);
         self.assertIn('state.longrunEnabled?"/longrun/cancel":"/cancel"',js)
         self.assertIn('''$("start-btn").addEventListener''',js)
 
-    def test_new_current_season_oil_defaults_never_override_verified_zero_o(self):
+    def test_default_oil_on_does_not_invent_fixed_O_or_override_restored_zero_o(self):
         html=self.client.get("/").text
         js=self.client.get("/assets/app.js").text
         self.assertIn('id="oil_main" type="checkbox"',html)
         self.assertNotIn('id="oil_main" type="checkbox" checked',html)
-        self.assertIn("새 최적화 세션은 기본적으로 기름을 사용하지 않습니다(O=0)",html)
+        self.assertIn("새 최적화 세션은 기름 사용이 기본입니다.",html)
+        self.assertIn('id="optimizer-oil-enabled" type="checkbox" checked',html)
+        self.assertIn("if(oilUseIntent&&!selectedFullVerifiedOil())",js)
         self.assertIn("SEASON_PROFILE_OIL_PHYSICAL_ITEMS_OR_HANDS_DRIFT",js)
         self.assertIn("검증되지 않은 O를 0으로 처리하지 않습니다.",js)
         new_default=js.split("function fillDefault(item) {",1)[1].split(
@@ -370,10 +372,12 @@ eval(context+raw.slice(start,end)+"\n"+test);
         self.assertIn('$("oil_main").checked=false;',new_default)
         self.assertIn('$("oil_off").checked=false;',new_default)
         self.assertNotIn('item.oil_hands.includes(',new_default)
+        self.assertIn("oilUseIntent=true;",new_default)
         restore=js.split("function fillSessionInputs(payload) {",1)[1].split(
             "function ",1)[0]
         self.assertIn('u.oil_hands.includes("main_hand")',restore)
         self.assertIn('u.oil_hands.includes("off_hand")',restore)
+        self.assertIn("oilUseIntent=u.oil_hands.length>0;",restore)
         self.assertIn('oil_hands:["main_hand","off_hand"].filter(',js)
 
 
