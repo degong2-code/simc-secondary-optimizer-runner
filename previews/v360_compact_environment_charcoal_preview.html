@@ -1,0 +1,1182 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>SIMC SECONDARY · v360 컴팩트 환경 구성 미리보기</title>
+  <style>
+/* v352 — SIMC Dark Tactical Dashboard. Original controls and state contracts retained. */
+:root {
+  color-scheme:dark;
+  --bg:#1D1F24;--header:#09090B;--paper:#24262B;--input:#1A1C20;
+  --line:#49443D;--line-soft:#39383A;--ink:#F4F1EB;--muted:#A8A7AA;
+  --accent:#E8B34B;--accent-dark:#C89536;--accent-ink:#17130B;
+  --sage:#9CB9A2;--purple:#AC94CE;--danger:#E79A96;
+  --soft:#302C28;--radius:12px;--gutter:30px;
+  font-family:Inter,"Pretendard","Noto Sans KR","Malgun Gothic",system-ui,sans-serif;
+  color:var(--ink);background:var(--bg)
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:100px}
+body{margin:0;line-height:1.6;min-height:100vh;background:var(--bg)}
+body::before{content:"";position:absolute;top:0;left:0;right:0;height:81px;background:var(--header);pointer-events:none;z-index:0}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+button:disabled{cursor:not-allowed;opacity:.48}
+[hidden]{display:none!important}
+a{color:var(--accent)}
+a:hover{text-decoration-color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.shell{max-width:1390px;margin:0 auto;padding:0 var(--gutter) 52px;position:relative}
+.topbar{
+  display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:32px;
+  position:sticky;top:0;z-index:90;min-height:81px;
+  padding:15px var(--gutter);margin:0 calc(-1 * var(--gutter));
+  background:var(--header);border-bottom:1px solid #3E3424
+}
+.brand{display:flex;align-items:center;gap:11px;min-width:0}
+.brand strong{display:block;font-size:13px;font-weight:820;letter-spacing:.095em;line-height:1.3;white-space:nowrap}
+.brand small{display:block;color:#A29B8D;font-size:10px;letter-spacing:.115em;margin-top:3px;white-space:nowrap}
+.brand-mark{
+  width:41px;height:41px;flex:0 0 41px;background:#221D15;
+  color:var(--accent);border:1px solid #75603A;border-radius:9px;
+  display:grid;place-items:center;font-weight:850;font-size:21px;position:relative
+}
+.brand-mark span{position:absolute;right:3px;top:0;font-size:9px;color:var(--accent)}
+.top-nav{display:flex;justify-content:center;gap:5px;min-width:0}
+.top-nav a{
+  display:inline-flex;align-items:center;min-height:36px;padding:7px 12px;
+  border:1px solid transparent;border-radius:8px;color:#C0BCB4;
+  font-size:12px;font-weight:680;text-decoration:none;white-space:nowrap
+}
+.top-nav a:hover,.top-nav a:focus-visible{color:var(--accent);border-color:#58482F;background:#231F1A}
+.local-indicator{
+  display:inline-flex;align-items:center;white-space:nowrap;
+  border:1px solid #474037;background:#1D1B1B;border-radius:8px;
+  padding:8px 11px;font-size:11px;color:#D7D1C4;font-weight:650
+}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--sage);margin-right:8px;box-shadow:0 0 0 2px #29362B}
+.intro{display:grid;grid-template-columns:minmax(0,1fr) minmax(240px,310px);gap:30px;align-items:center;padding:31px 0 25px}
+.eyebrow{font-size:10px;font-weight:800;letter-spacing:.17em;color:var(--accent);margin:0 0 7px;text-transform:uppercase}
+h1,h2,p{margin-top:0}
+h1{font-size:clamp(25px,3vw,37px);font-weight:780;letter-spacing:-.043em;line-height:1.35;margin-bottom:10px}
+h1 em{font-style:normal;color:var(--accent)}
+.intro-desc{color:#B8B8BB;font-size:12px;max-width:790px;line-height:1.85;margin:0}
+.callout{border:1px solid #514637;border-left:3px solid var(--accent);background:#272521;border-radius:9px;padding:14px 17px;display:grid;gap:5px}
+.callout strong{font-size:12px;font-weight:730}
+.callout span{font-size:11px;line-height:1.7;color:#BBB4A8}
+.notice{padding:10px 14px;border:1px solid #495744;background:#27312A;color:#C3D7C4;border-radius:8px;font-size:12px;margin:0 0 17px;white-space:pre-wrap}
+.notice.error{border-color:#8E5859;color:#F3C2BF;background:#3A272A}
+.columns{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(335px,.95fr);align-items:start;gap:17px}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:var(--radius);box-shadow:none;padding:23px;min-width:0}
+.environment-setup{border-top:2px solid #8E6C37;margin-bottom:17px;padding-top:20px}
+.workspace{display:grid;gap:17px;min-width:0}
+.inputs{border-top:2px solid #51463A}
+.run-card{border-top:2px solid #6C634F}
+.results{border-top:2px solid var(--accent)}
+.section-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:19px}
+h2{font-size:19px;letter-spacing:-.03em;margin:0;font-weight:760}
+.micro{font-size:11px;color:var(--muted)}
+.field{display:flex;flex-direction:column;gap:6px;margin:0 0 14px;min-width:0}
+.field label{font-size:12px;font-weight:690;color:#E0DBD2}
+.field label small{font-size:10px;color:#AAA6A0;font-weight:450;margin-left:5px}
+input:not([type=checkbox]),select,textarea{
+  border:1px solid #55514C;background:var(--input);border-radius:8px;
+  color:var(--ink);outline:none;padding:10px 11px;font-size:12px;width:100%;min-height:43px
+}
+input::placeholder,textarea::placeholder{color:#918C88;opacity:1}
+input:not([type=checkbox]):focus,select:focus,textarea:focus{
+  border-color:var(--accent);box-shadow:0 0 0 2px rgba(232,179,75,.16)
+}
+input:disabled,select:disabled,textarea:disabled{background:#252528;color:#8B898C}
+select{padding-right:23px}
+select option{background:#232327;color:var(--ink)}
+textarea{min-height:63px;resize:vertical;overflow-wrap:anywhere}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.check-row{display:flex;flex-wrap:wrap;gap:11px 17px;margin:4px 0 17px}
+.check-row label{font-size:12px;display:flex;gap:7px;align-items:flex-start;cursor:pointer;line-height:1.5}
+.check-row label small{color:var(--muted);font-size:11px}
+input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px;flex:0 0 16px;margin-top:2px}
+.fold,.restore{border:1px solid #454340;border-radius:9px;margin-bottom:12px;background:#222327;min-width:0}
+.fold summary,.restore summary{padding:12px 14px;cursor:pointer;font-size:12px;font-weight:720;display:flex;justify-content:space-between;gap:10px;align-items:center;color:#E3DED6}
+.fold summary:hover,.restore summary:hover{color:var(--accent);background:#292824}
+summary small{font-size:10px;color:var(--muted);font-weight:450}
+.fold[open] summary,.restore[open] summary{border-bottom:1px solid var(--line-soft)}
+.fold>p,.fold>.two,.fold>.field,.fold>.gear-group{margin:14px}
+.fold>.two{margin-bottom:2px}
+.gear-group{margin:14px 12px 20px}
+.gear-group h3{font-size:12px;margin:0 0 10px;font-weight:750}
+.gear-row{padding:11px;background:#2B2B2E;border:1px solid #424141;border-radius:8px;margin-bottom:8px}
+.gear-row-title{color:#C4B29C;font-size:10px;font-weight:700;margin:0 0 8px}
+.gear-fields{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.gear-fields label{font-size:10px;color:#ACA9A7}
+.gear-fields input,.gear-fields select{font-size:11px;padding:8px;min-height:36px;margin-top:3px}
+.hint{font-size:11px;color:#A8A7AA;line-height:1.7;margin:6px 0 0;overflow-wrap:anywhere}
+.rule{border-bottom:1px solid #49443D;margin:19px 0 17px}
+.actions{display:flex;gap:9px;margin-top:19px}
+.btn{
+  border:1px solid #5A5348;background:#343330;color:#EEE7DA;
+  font-size:12px;font-weight:730;padding:10px 13px;border-radius:8px;
+  transition:background-color .14s,border-color .14s;min-height:42px
+}
+.btn:hover:not(:disabled){background:#403B32;border-color:#9F7C40}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:820}
+.btn.primary:hover:not(:disabled){background:#F0C266;border-color:#F0C266}
+.btn.secondary{background:#302F30}
+.btn.secondary:hover:not(:disabled){background:#403A32}
+.btn.danger{border-color:#7D5050;color:#EBA9A5;background:#302426;width:100%;margin-top:9px}
+.btn.danger:hover:not(:disabled){background:#422B2C;border-color:#B87273}
+.actions .btn{flex:1}
+.pill{border:1px solid #6A5634;color:var(--accent);background:#302A21;border-radius:7px;padding:4px 9px;font-size:10px;font-weight:750;white-space:nowrap}
+.session-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted);padding-bottom:16px}
+.session-meta code{font-size:11px;color:#E8DAC5;max-width:205px;overflow:hidden;text-overflow:ellipsis}
+.progress-info{display:flex;justify-content:space-between;font-size:12px;margin-bottom:8px;font-variant-numeric:tabular-nums}
+.progress-info strong{color:var(--ink)}
+.progress-track{height:7px;border-radius:4px;background:#393838;overflow:hidden}
+#progress-bar{width:0%;height:100%;background:var(--accent);border-radius:4px;transition:width .35s}
+.subtle{font-size:12px;color:var(--muted);margin:10px 0 16px;min-height:20px;white-space:pre-wrap}
+.two-button{display:flex;gap:8px}
+.two-button .btn{flex:1}
+.restore{margin:18px 0 0}
+.restore summary{color:#D1C8BA;font-weight:690}
+.restore-controls{display:flex;gap:8px;padding:0 12px}
+.restore-controls input{min-width:0}
+.restore-controls button{flex-shrink:0}
+.restore .hint{margin:10px 12px 13px}
+.empty{color:#B1ADB0;font-size:12px;text-align:center;padding:58px 7px 54px;line-height:1.9}
+.result-warning{background:#362F23;border:1px solid #695536;border-radius:7px;padding:9px 11px;font-size:11px;color:#EBD1A0;font-weight:670;margin:0 0 14px}
+.metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.metrics>div{padding:14px;border:1px solid #534839;border-top:2px solid #A78247;border-radius:8px;background:#2B2928;min-width:0}
+.metrics span{display:block;color:#B5B1A9;font-size:10px;margin-bottom:4px}
+.metrics strong{display:block;font-size:clamp(21px,2.7vw,27px);letter-spacing:-.025em;line-height:1.25;color:var(--ink);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.metrics>div:first-child strong{color:#F0C56D}
+.budget{font-size:11px;color:#C0BAAE;margin:14px 0 19px;overflow-wrap:anywhere}
+.stat-bars{display:grid;gap:13px}
+.stat-heading{display:flex;align-items:center;justify-content:space-between;gap:9px;font-size:12px;margin-bottom:7px;font-variant-numeric:tabular-nums}
+.stat-label{display:flex;align-items:center;gap:8px;font-weight:730}
+.stat-dot{width:9px;height:9px;display:inline-block;border-radius:2px}
+.stat-line{height:9px;background:#39383B;border-radius:3px;overflow:hidden}
+.stat-fill{height:100%;border-radius:3px}
+.result-footer{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;margin:20px 0 10px;padding-top:15px;border-top:1px solid var(--line)}
+.result-footer>div{display:grid;gap:4px;border:1px solid var(--line-soft);border-radius:8px;padding:11px;background:#2A2A2D}
+.result-footer span{font-size:10px;color:var(--muted)}
+.result-footer strong{font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.alt-list{display:grid;gap:8px;margin-top:10px}
+.alt-row{background:#2A2A2D;border:1px solid #44413C;border-radius:8px;font-size:11px;padding:9px}
+.footnote{text-align:center;color:#AAA7A4;font-size:11px;line-height:1.85;padding:15px 0}
+@media(max-width:1080px){
+  .topbar{grid-template-columns:auto 1fr;gap:10px}
+  .top-nav{justify-content:flex-end}
+  .local-indicator{grid-column:1/-1;justify-self:end;font-size:10px;padding:4px 8px}
+  body::before{height:105px}
+  .columns{grid-template-columns:minmax(0,1fr)}
+  .intro{grid-template-columns:minmax(0,1fr)}
+  .callout{max-width:680px}
+}
+@media(max-width:680px){
+  :root{--gutter:15px}
+  body::before{height:114px}
+  .topbar{gap:8px;padding-top:11px;padding-bottom:10px;min-height:114px}
+  .top-nav{grid-row:2;grid-column:1/-1;justify-content:stretch;gap:5px;overflow-x:auto}
+  .top-nav a{flex:1;justify-content:center;padding:6px 9px;min-width:0;font-size:11px}
+  .local-indicator{grid-row:1;grid-column:2;justify-self:end;font-size:0;padding:7px 10px}
+  .dot{margin:0}
+  .shell{padding-bottom:34px}
+  .panel{padding:17px}
+  .intro{padding:22px 0 19px}
+  .section-head{margin-bottom:15px;align-items:flex-start}
+  .two,.gear-fields{grid-template-columns:minmax(0,1fr)}
+  .actions,.two-button{flex-direction:column}
+  .fold summary{align-items:start;flex-direction:column;gap:3px}
+  .metrics strong{font-size:22px}
+  html{scroll-padding-top:130px}
+}
+@media(max-width:380px){
+  .brand strong{font-size:11px}
+  .brand small{font-size:9px;letter-spacing:.06em}
+  .brand-mark{width:34px;height:34px;flex-basis:34px;font-size:17px}
+  .metrics{grid-template-columns:minmax(0,1fr)}
+}
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  #progress-bar,.btn{transition:none}
+}
+
+/* Copied Windows Native evidence is a separate READ-ONLY surface. */
+.batch-evidence .hint{margin:0 0 13px}
+.batch-evidence .field{margin-top:12px}
+#batch-open-btn{width:100%}
+#batch-status{margin:12px 0}
+.batch-table{overflow:auto;max-width:100%;border-top:1px solid var(--line)}
+.batch-table table{width:100%;border-collapse:collapse;font-size:11px;min-width:580px}
+.batch-table th,.batch-table td{padding:9px 7px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.batch-table th{font-size:10px;color:var(--muted);font-weight:750}
+.batch-table td:first-child{font-weight:700}
+
+/* Existing local sessions: compact selection, no new run semantics. */
+.recent-session-controls{margin:8px 12px 9px}
+.recent-session-controls select{font-size:11px}
+#recent-open-btn,#recent-refresh-btn{min-width:0;flex:1}
+#recent-session-note{margin:10px 12px}
+@media(max-width:540px){.restore-controls:has(#recent-open-btn){flex-direction:column}}
+
+/* v193: user-consented local SimC version management. */
+.simc-update-panel{margin-top:14px}
+.simc-update-actions{display:flex;flex-wrap:wrap;gap:8px;margin:12px}
+.simc-update-actions .btn{flex:1 1 145px}
+.simc-update-panel .hint{overflow-wrap:anywhere}
+.simc-update-panel a{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+
+/* Search choices: original select retains IDs, validation and restored value. */
+.choice-picker{position:relative;width:100%;min-width:0;margin-bottom:3px}
+.choice-picker input[type=search]{background:var(--input);width:100%}
+.choice-picker input[aria-invalid=true]{border-color:var(--danger)}
+.choice-native-select{position:absolute!important;width:1px!important;height:1px!important;
+ min-height:1px!important;padding:0!important;opacity:0!important;pointer-events:none!important;
+ clip-path:inset(50%)}
+.choice-results{position:absolute;z-index:60;left:0;right:0;top:calc(100% + 3px);
+ max-height:245px;overflow-y:auto;border:1px solid #62533E;border-radius:9px;
+ background:#262529;box-shadow:0 10px 18px rgba(0,0,0,.3)}
+.choice-result{width:100%;display:block;text-align:left;background:#262529;border:0;
+ border-bottom:1px solid #3D3A36;padding:11px 12px;font-size:12px;color:var(--ink);
+ line-height:1.5;cursor:pointer}
+.choice-result:hover,.choice-result.choice-active{background:#43382A;color:#FFF2D5}
+.choice-result[aria-selected=true]{font-weight:750}
+.choice-empty{padding:10px 12px;margin:0;font-size:11px;color:var(--muted)}
+.gear-choice-field{min-width:0}
+.gear-choice-field>label{display:block}
+.gear-choice-field .choice-picker{margin-top:4px}
+
+
+/* v349: honest indeterminate season activity, never a fabricated completion %. */
+.season-running{padding:12px 14px;border:1px solid #675435;border-radius:9px;background:#2D2923;margin:12px 0}
+.season-running-head{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:#F2D099}
+.season-running-head span{font-variant-numeric:tabular-nums;color:#C4BAA8}
+.season-activity-track{height:5px;overflow:hidden;border-radius:3px;background:#444039;margin-top:10px}
+.season-activity-track span{display:block;width:35%;height:100%;border-radius:10px;background:var(--accent);animation:season-work 1.9s ease-in-out infinite alternate}
+@keyframes season-work{from{transform:translateX(-90%)}to{transform:translateX(285%)}}
+@media(prefers-reduced-motion:reduce){.season-activity-track span{animation:none;width:100%;opacity:.5}}
+#season-build-summary{font-size:12px;font-weight:650;color:#E6D0A4;margin:10px 0}
+#season-itemid-expert>.fold,#season-gem-layout>.fold{margin:10px 12px}
+#season-itemid-expert>.fold>p{margin:12px}
+
+
+/* v353 navigation & single-task layout. Visual-only panel rearrangement. */
+:root{--gutter:24px}
+body::before{display:none}
+.topbar{
+  position:sticky;top:0;z-index:90;min-height:58px;
+  margin:0;padding:0 20px;
+  border-bottom:1px solid #3E3424;background:var(--header);
+  display:block;width:100%
+}
+.topbar-inner{width:100%;max-width:1390px;margin:auto;min-height:58px;
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:20px;align-items:center}
+.brand-mark{width:34px;height:34px;flex-basis:34px;font-size:17px;border-radius:8px}
+.brand small{font-size:9px;letter-spacing:.065em;margin-top:1px}
+.top-nav{display:flex;justify-content:center;align-items:stretch;gap:9px;min-width:0}
+.top-nav .nav-item{
+  border:0;border-bottom:2px solid transparent;background:transparent;
+  color:#C6C1B7;font-size:12px;font-weight:740;padding:14px 15px;
+  min-height:57px;border-radius:0;white-space:nowrap
+}
+.top-nav .nav-item:hover{color:var(--accent);background:#1B1916}
+.top-nav .nav-item.is-active{color:var(--accent);border-bottom-color:var(--accent)}
+.local-indicator{font-size:11px;border-color:#40372C;background:#1B1A1B}
+.shell{padding-top:17px;max-width:1250px}
+.notice{margin:0 0 14px}
+.view-intro{display:flex;justify-content:space-between;align-items:center;gap:18px;margin:5px 0 19px}
+.view-intro h1{font-size:clamp(22px,2.3vw,29px);margin:0 0 5px}
+.view-intro p.intro-desc{font-size:12px}
+.view-intro .btn{flex-shrink:0}
+.optimizer-environment-strip{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  border:1px solid #514735;border-radius:8px;background:#2B2925;
+  padding:9px 12px;margin-bottom:14px;font-size:11px;color:#D0C4AF
+}
+.optimizer-environment-strip .btn{font-size:11px;min-height:32px;padding:6px 11px}
+#optimizer-form{display:grid;gap:15px}
+#optimizer-form>.panel{width:100%}
+.profile-panel,.conditions-panel,.fixed-gear-panel{border-top:2px solid #705931}
+.profile-panel .section-head,.conditions-panel .section-head,.fixed-gear-panel .section-head{margin-bottom:17px}
+.profile-panel .class-spec-fields,.profile-panel>.two{max-width:100%}
+.profile-panel>.fold:first-of-type{border-color:#67563F;background:#2B2925}
+.budget-mode{margin:10px 0 19px;padding:14px;border:1px solid #584B36;background:#2A2825;border-radius:9px}
+.budget-mode-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:14px}
+.budget-mode-heading strong{font-size:13px;color:var(--ink)}
+.budget-mode-heading .hint{margin:4px 0 9px}
+.manual-toggle{display:flex;align-items:center;gap:7px;font-size:11px;color:#EDD9AF;font-weight:700;white-space:nowrap;cursor:pointer}
+.budget-figure{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;border-top:1px solid #494038;padding-top:9px}
+.budget-figure span{font-size:11px;color:var(--muted)}
+.budget-figure strong{font-size:18px;color:var(--accent);font-variant-numeric:tabular-nums}
+#manual-t-field{margin-top:14px}
+.conditions-panel>.eyebrow,.conditions-panel>.fold,.conditions-panel>.two,.conditions-panel>.field{max-width:100%}
+.fixed-gear-panel .equipment-source .choice-picker{display:none!important}
+.fixed-gear-panel .equipment-source select{position:absolute!important;opacity:0!important;width:1px!important;height:1px!important;pointer-events:none!important}
+.fixed-gear-panel .equipment-source .equipment-open{width:100%;text-align:left;min-height:54px;background:#2D2C2A;border-color:#66553E}
+.equipment-selected{font-size:11px;color:#C5C1B9;margin:4px 0 0}
+.fixed-gear-panel .gear-group{margin:18px 0}
+.fixed-gear-panel .gear-row{position:relative}
+.submit-panel{border-top:2px solid var(--accent)}
+.submit-panel>.actions{max-width:540px;margin-left:auto;margin-right:auto}
+.submit-panel #start-btn{font-size:14px;min-height:49px}
+.result-workspace{display:grid;gap:16px}
+.result-workspace .run-card,.result-workspace .results{width:100%}
+.result-workspace .metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+.result-workspace .stat-bars{max-width:880px}
+.simc-settings-panel{margin-top:15px}
+.simc-settings-panel .simc-technical-panel{margin-bottom:0}
+.equipment-dialog{width:min(94vw,870px);max-height:86vh;overflow:auto;
+  border:1px solid #6B5939;border-radius:12px;background:#24262B;color:var(--ink);
+  padding:21px;box-shadow:0 24px 70px rgba(0,0,0,.58)}
+.equipment-dialog::backdrop{background:rgba(0,0,0,.75)}
+.equipment-dialog-head{display:flex;align-items:center;justify-content:space-between;gap:15px;margin-bottom:17px}
+.equipment-dialog-head h2{font-size:19px}
+.equipment-gallery{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0}
+.equipment-card{background:#2D2C2D;border:1px solid #55514B;border-radius:9px;min-height:122px;
+  display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:12px;text-align:left;color:var(--ink);
+  overflow-wrap:anywhere}
+.equipment-card:hover,.equipment-card:focus-visible{border-color:var(--accent);background:#36312A}
+.equipment-card[aria-pressed=true]{border-color:var(--accent);background:#3B3222}
+.equipment-card:disabled{opacity:.45}
+.equipment-placeholder{height:40px;width:40px;border:1px solid #77706A;border-radius:7px;background:#3A3732;
+  display:grid;place-items:center;font-weight:800;font-size:20px;color:#BEB3A3}
+.equipment-card-name{font-size:12px;font-weight:700;line-height:1.35}
+.equipment-card-meta{font-size:10px;color:var(--muted)}
+.equipment-gallery-empty{grid-column:1/-1;color:var(--muted);text-align:center;padding:32px 10px;font-size:12px}
+@media(max-width:1080px){
+ .topbar{min-height:58px}
+ .topbar-inner{grid-template-columns:auto minmax(0,1fr) auto;gap:10px}
+ .top-nav{justify-content:center}
+ .local-indicator{grid-column:auto;padding:6px 8px}
+}
+@media(max-width:680px){
+ :root{--gutter:12px}
+ .topbar{padding:0 12px;min-height:100px}
+ .topbar-inner{grid-template-columns:auto 1fr;min-height:100px;gap:3px 8px}
+ .top-nav{grid-row:2;grid-column:1/-1;justify-content:space-around;gap:2px}
+ .top-nav .nav-item{min-height:42px;font-size:11px;padding:9px 10px}
+ .local-indicator{grid-row:1;grid-column:2;justify-self:end}
+ .view-intro{align-items:flex-start;flex-direction:column;gap:9px}
+ .view-intro .btn{align-self:flex-end;min-height:33px}
+ .budget-mode-heading{flex-direction:column}
+ .equipment-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}
+ html{scroll-padding-top:120px}
+}
+@media(max-width:380px){.equipment-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* v354: image-free quick-select class/spec buttons, equipment card fields */
+.profile-panel .class-spec-fields{display:none}
+.profile-panel .class-tile-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:12px 0}
+.profile-panel .spec-tile-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0 19px}
+.class-choice-tile,.spec-choice-tile{
+  min-height:41px;display:flex;align-items:center;justify-content:center;
+  background:#302E2D;border:1px solid #575047;color:#E8E3DA;border-radius:8px;
+  padding:8px;font-size:12px;font-weight:730;text-align:center;cursor:pointer
+}
+.class-choice-tile:hover,.spec-choice-tile:hover{background:#3D362B;border-color:#AD8748}
+.class-choice-tile[aria-pressed=true],.spec-choice-tile[aria-pressed=true]{
+  border-color:var(--accent);color:#F4CA77;background:#3B3222;
+  box-shadow:inset 0 0 0 1px #9E7E48
+}
+.equipment-dialog-actions{display:flex;gap:7px;flex-wrap:wrap}
+.fixed-gear-panel .gear-row[data-group="special-rows"] .gear-fields{display:none}
+.fixed-gear-panel .gear-row[data-group="special-rows"] .special-equipment-open{
+  display:block;width:100%;background:#302C27;border-color:#76603E;text-align:left;
+  min-height:49px;white-space:normal
+}
+.fixed-gear-panel .equipment-source>.choice-picker{display:none}
+.fixed-gear-panel .equipment-source>.choice-native-select{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important}
+@media(max-width:900px){
+ .profile-panel .class-tile-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .profile-panel .spec-tile-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:540px){
+ .profile-panel .class-tile-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .profile-panel .spec-tile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .class-choice-tile,.spec-choice-tile{font-size:11px}
+}
+
+/* v355 grouped settings: reduce scanning cost without duplicating controls */
+.condition-group{border:1px solid #44403A;border-radius:10px;padding:17px;margin:0 0 16px;background:#252529}
+.condition-group:last-child{margin-bottom:0}
+.condition-group-heading{display:flex;align-items:baseline;justify-content:space-between;gap:10px;border-bottom:1px solid #46413B;padding-bottom:11px;margin-bottom:17px}
+.condition-group-heading h3{font-size:14px;color:#F2DFC0;margin:0;font-weight:770}
+.condition-group-heading span{font-size:11px;color:var(--muted)}
+.condition-group .fold{background:#29292C}
+.condition-group .gear-group{margin:12px 0}
+.condition-group .gear-group .gear-row{background:#303034}
+.condition-group .gear-row-title{color:#DBCBAD}
+.condition-group .legacy-gem{background:#27282A}
+@media(max-width:680px){
+ .condition-group{padding:12px}
+ .condition-group-heading{flex-direction:column;gap:3px}
+}
+
+
+/* v356 result interpretation: visual grouping only; source stats unchanged. */
+.alt-row{padding:15px;border-color:#584B3B;background:#2B2928}
+.alt-row-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+.alt-row-head strong{font-size:13px}
+.alt-verdict{font-size:11px;color:#EFC67E;border:1px solid #725A35;padding:4px 8px;border-radius:6px}
+.alt-row-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.alt-metric{display:grid;gap:3px;border:1px solid #4E463C;border-radius:7px;padding:10px;min-width:0}
+.alt-metric span{color:var(--muted);font-size:10px}
+.alt-metric strong{font-size:13px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.alt-stat-summary{color:#D7D0C5;font-size:11px;line-height:1.7;border-top:1px solid #514A40;padding-top:10px;margin:12px 0 0}
+@media(max-width:800px){.alt-row-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:540px){.alt-row-head{align-items:flex-start;flex-direction:column;gap:6px}}
+
+
+/* v358 Compact input sheet — one glance: 1 | 2 above, 3 below.
+   No game-item assets are loaded; controls keep original IDs and meaning. */
+#view-optimizer .view-intro{margin:0 0 8px;gap:10px}
+#view-optimizer .view-intro .eyebrow{display:none}
+#view-optimizer .view-intro h1{font-size:21px;line-height:1.25;margin:0 0 2px}
+#view-optimizer .view-intro .intro-desc{font-size:11px;line-height:1.4}
+#view-optimizer .view-intro .btn{min-height:30px;padding:5px 9px;font-size:11px}
+#view-optimizer .optimizer-environment-strip{
+  margin-bottom:9px;padding:5px 8px;min-height:30px;
+  background:transparent;border:0;border-bottom:1px solid #444039;border-radius:0
+}
+#view-optimizer .optimizer-environment-strip .btn{min-height:26px;padding:3px 8px}
+#optimizer-form{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  align-items:stretch;gap:10px
+}
+#optimizer-form>.panel{
+  min-width:0;width:100%;padding:14px 15px;
+  border:1px solid #4A443B;border-top:2px solid #816638;border-radius:9px;
+  box-shadow:none;background:var(--paper)
+}
+#optimizer-form>.profile-panel{grid-column:1;grid-row:1}
+#optimizer-form>.conditions-panel{grid-column:2;grid-row:1}
+#optimizer-form>.fixed-gear-panel{grid-column:1/-1;grid-row:2}
+#optimizer-form>.submit-panel{grid-column:1/-1;grid-row:3;padding:10px 14px}
+#optimizer-form .section-head{margin:0 0 9px;min-height:24px;align-items:center}
+#optimizer-form .section-head>div{display:flex;align-items:center;gap:9px}
+#optimizer-form .section-head .eyebrow{
+  display:grid;place-items:center;min-width:26px;height:24px;
+  margin:0;color:var(--accent);background:#332B20;border-radius:4px;
+  font-size:11px;letter-spacing:.03em
+}
+#optimizer-form .section-head h2{font-size:16px;line-height:1.3;letter-spacing:-.02em}
+#optimizer-form .section-head .micro{font-size:10px}
+#optimizer-form .class-spec-fields{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+#optimizer-form #class-choice-tiles,#optimizer-form #spec-choice-tiles{display:none!important}
+#optimizer-form .two{gap:8px}
+#optimizer-form .field{gap:3px;margin:0 0 8px}
+#optimizer-form .field label{font-size:11px;color:#D8D3CB;font-weight:650}
+#optimizer-form .field label small{font-size:9px;color:#9F9B96}
+#optimizer-form input:not([type=checkbox]),
+#optimizer-form select,
+#optimizer-form textarea{
+  min-height:34px;padding:6px 9px;border-radius:5px;
+  font-size:12px;background:#1D1E21;border-color:#554E44
+}
+#optimizer-form textarea#talents{min-height:48px;max-height:90px}
+#optimizer-form input[type=file]{font-size:11px;min-height:34px}
+#optimizer-form .choice-picker input{min-height:34px}
+#optimizer-form .fold{
+  margin:0 0 7px;border:1px solid #49453F;border-radius:6px;background:transparent
+}
+#optimizer-form .fold>summary{padding:6px 9px;min-height:30px;font-size:11px;gap:7px}
+#optimizer-form .fold>summary small{font-size:9px}
+#optimizer-form .fold[open]>summary{border-bottom-color:#49433B}
+#optimizer-form .profile-import{margin-bottom:9px}
+#optimizer-form .profile-import>summary{color:#D3C9B8}
+#optimizer-form .profile-import[open]{padding-bottom:8px}
+#optimizer-form .profile-import>.field{margin:8px 10px}
+#optimizer-form .profile-import>button{margin-left:10px}
+#optimizer-form .profile-import>p.hint{margin:5px 10px}
+#optimizer-form .hint{font-size:10px;line-height:1.45;margin:3px 0 6px;color:#AAA6A2}
+#optimizer-form .check-row{margin:2px 0 7px;gap:8px}
+#optimizer-form .check-row label{font-size:11px;gap:5px;align-items:center}
+#optimizer-form .check-row input[type=checkbox]{width:14px;height:14px;flex-basis:14px;margin:0}
+#optimizer-form .budget-mode{
+  margin:1px 0 8px;padding:7px 10px;background:#292724;
+  border:0;border-left:2px solid #A48443;border-radius:3px
+}
+#optimizer-form .budget-mode-heading{align-items:center;gap:8px}
+#optimizer-form .budget-mode-heading strong{font-size:11px}
+#optimizer-form .budget-mode-heading .hint{font-size:9px;margin:2px 0 3px}
+#optimizer-form .budget-figure{border:0;padding:0;gap:9px}
+#optimizer-form .budget-figure span{font-size:10px}
+#optimizer-form .budget-figure strong{font-size:13px}
+#optimizer-form .manual-toggle{font-size:10px;white-space:normal;gap:5px}
+#optimizer-form .manual-toggle input{width:13px;height:13px}
+#optimizer-form #manual-t-field{margin:6px 0 0}
+#optimizer-form .compact-guidance{margin:2px 0 6px;border:0;background:transparent;font-size:10px}
+#optimizer-form .compact-guidance summary{cursor:pointer;color:#AC9A7E;font-size:10px}
+#optimizer-form .compact-guidance p.hint{padding:4px 8px;margin:3px 0;background:#292824}
+#optimizer-form .condition-group{
+  margin:0;padding:0;background:transparent;border:0;border-radius:0
+}
+#optimizer-form .condition-group + .condition-group{margin-top:9px}
+#optimizer-form .condition-group-heading{
+  margin:0 0 6px;padding:0 0 4px;border-bottom:1px solid #4A443A;
+  display:block
+}
+#optimizer-form .condition-group-heading h3{
+  color:#E6CE9D;font-size:11px;font-weight:720;margin:0
+}
+#optimizer-form .condition-group-heading span{display:none}
+#optimizer-form #season-gem-layout{border:0;background:transparent;margin:0 0 4px}
+#optimizer-form #season-gem-layout>summary{
+  padding:2px 0 4px;font-size:11px;color:#D5D0C8;border:0
+}
+#optimizer-form #season-gem-layout>.field{
+  flex-direction:row;align-items:center;justify-content:space-between;gap:8px
+}
+#optimizer-form #season-gem-layout>.field label{flex:1;line-height:1.35}
+#optimizer-form #season-target-socket-count{width:88px;flex:0 0 88px}
+#optimizer-form #season-socket-breakdown{font-size:10px;color:#B8B09E}
+#optimizer-form .compact-subheading{margin:2px 0 5px;font-size:10px;letter-spacing:.06em}
+#optimizer-form #season-verified-flask-status,
+#optimizer-form #optimizer-oil-loadout-status{font-size:10px;line-height:1.35}
+#optimizer-form #optimizer-oil-loadout{width:100%}
+#optimizer-form #user-variant-prepare-btn{min-height:30px}
+#optimizer-form #user-variant-status{font-size:10px}
+#optimizer-form .actions{margin-top:7px;gap:7px}
+#optimizer-form .btn{min-height:32px;padding:6px 10px;font-size:11px;border-radius:5px}
+#optimizer-form .rule{display:none}
+#optimizer-form .equipment-source>.equipment-open{min-height:39px;font-size:11px}
+#optimizer-form .equipment-source .equipment-selected{margin:0;color:#B9AFA2;font-size:10px}
+#optimizer-form .fixed-gear-panel .condition-group{margin-bottom:8px}
+#optimizer-form .fixed-gear-panel .condition-group-heading{margin:0 0 7px}
+#optimizer-form .fixed-gear-panel .gear-row{padding:8px}
+#optimizer-form .fixed-gear-panel .gear-group{margin:9px 0}
+#optimizer-form .submit-panel>.actions{max-width:440px;margin:0 0 0 auto}
+#optimizer-form #optimizer-submit-note{margin:0 0 5px;font-size:11px}
+#optimizer-form #start-btn{min-height:38px;font-size:12px}
+@media(max-width:970px){
+  #optimizer-form{grid-template-columns:minmax(0,1fr)}
+  #optimizer-form>.profile-panel,#optimizer-form>.conditions-panel,
+  #optimizer-form>.fixed-gear-panel,#optimizer-form>.submit-panel{
+    grid-column:1;grid-row:auto
+  }
+}
+@media(max-width:540px){
+  #optimizer-form>.panel{padding:12px}
+  #optimizer-form .budget-mode-heading{flex-direction:column;align-items:start}
+  #optimizer-form .section-head{align-items:start}
+  #optimizer-form .fixed-gear-panel .section-head .micro{max-width:150px;text-align:right}
+}
+
+
+
+/* v360 — brighter charcoal/gold, dense inputs; Wythic+ data contrast
+   without copying site graphics, gradients or product behavior. */
+:root{
+ --bg:#22232A;--header:#0A0A0D;--paper:#292A30;--input:#1B1D23;
+ --line:#514B47;--line-soft:#46423F;--ink:#F5F3EF;--muted:#BDB9BA;
+ --accent:#E8B34B;--accent-dark:#CB9339;--accent-ink:#1A1510;
+ --sage:#B6C9B4;--purple:#BBA7CE;--danger:#E8A6A2;
+ --soft:#33302D;--radius:8px
+}
+body{background:radial-gradient(ellipse 80% 30% at 51% -15%,rgba(124,102,76,.12),transparent 80%),#23242B}
+.topbar{background:#09090C;border-bottom:1px solid rgba(225,174,84,.18)}
+.local-indicator{color:#E8DCC7;background:#231F1B;border-color:#5D4F3A}
+.local-indicator .dot{background:#C6B78E}
+.top-nav .nav-item{color:#D7D4CF}
+.top-nav .nav-item.is-active{color:#EFC073}
+.notice{background:#302D29;border-color:#5F5445;color:#E8E0D2;padding:7px 11px}
+.notice.error{background:#402D2E;border-color:#9B6060;color:#F0C7C5}
+#view-optimizer .intro-desc,#view-optimizer .view-intro .intro-desc{color:#BFBAB8}
+#view-optimizer .optimizer-environment-strip{color:#C6BEB1;border-bottom-color:#534A3E}
+#optimizer-form{column-gap:12px;row-gap:11px}
+#optimizer-form>.panel{
+ background:rgba(44,44,50,.88);border:1px solid #504A44;
+ border-top:1px solid #796345;border-radius:9px;
+ padding:14px 16px;box-shadow:none
+}
+#optimizer-form .section-head{
+ border-bottom:1px solid #504940;padding-bottom:8px;margin-bottom:12px
+}
+#optimizer-form .section-head .eyebrow{
+ background:transparent;color:#EBB55C;font-size:13px;
+ font-weight:800;border-radius:0;border-right:1px solid #80663F;
+ padding:0 9px 0 0;min-width:18px
+}
+#optimizer-form .section-head h2{color:#F5F1E9;font-size:16px}
+#optimizer-form .field label{color:#E4DFDB;font-size:11px}
+#optimizer-form .field label small{color:#B1AAA6;font-size:10px}
+#optimizer-form .field{margin:0 0 4px;gap:3px}
+#optimizer-form input:not([type=checkbox]),#optimizer-form select,#optimizer-form textarea{
+ background:#1D1E24;color:#F4F1EC;border:1px solid #605A53;
+ border-radius:5px;font-size:12px;min-height:32px;padding:5px 8px
+}
+#optimizer-form input::placeholder,#optimizer-form textarea::placeholder{color:#9E9693}
+#optimizer-form input:focus,#optimizer-form select:focus,#optimizer-form textarea:focus{border-color:#E8B34B}
+#optimizer-form .fold{background:transparent;border-color:#514A43}
+#optimizer-form .fold>summary{color:#E5DCCF}
+#optimizer-form .fold>summary:hover{color:#F7C773;background:#33302C}
+#optimizer-form .profile-import{background:#26262A;border-color:#514942}
+#optimizer-form .budget-mode{background:#373127;border-left:2px solid #E8B34B}
+#optimizer-form .budget-mode strong{color:#F4D9A5}
+#optimizer-form .budget-figure strong{color:#FFD17B}
+#optimizer-form .manual-toggle{color:#E8D7B7}
+#optimizer-form .stat-cap-line{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 7px;padding:3px 0 8px;border-bottom:1px solid #50473E}
+#optimizer-form .stat-cap-line>label{font-size:11px;color:#DAD4CB}
+#optimizer-form .stat-cap-control{display:flex;align-items:center;gap:6px}
+#optimizer-form #max-single-stat-percent{width:62px;min-height:28px;text-align:right;padding:3px 6px}
+#optimizer-form .stat-cap-control span{color:#C9C0B4;font-size:12px}
+#optimizer-form .hint{font-size:10px;line-height:1.4;color:#B1ABA5}
+#optimizer-form .btn.primary{background:#E8B34B;border-color:#E8B34B;color:#211708}
+#optimizer-form .btn.primary:hover:not(:disabled){background:#F4C56A}
+#optimizer-form .conditions-panel .env-input-grid{
+ display:grid;grid-template-columns:repeat(6,minmax(0,1fr));
+ gap:7px 10px;align-items:start
+}
+#optimizer-form .env-input-grid>.env-grid-cell{grid-column:span 3;min-width:0}
+#optimizer-form .env-input-grid>.env-grid-cell:nth-child(n+5):nth-child(-n+7){grid-column:span 2}
+#optimizer-form .env-input-grid>.env-omnium{grid-column:1/-1}
+#optimizer-form .env-grid-cell .field{margin:0}
+#optimizer-form .env-grid-cell .hint:not([role=status]){display:none}
+#optimizer-form .env-grid-cell [role=status].hint{
+ display:block;font-size:9px;color:#AFA89F;
+ overflow:hidden;white-space:nowrap;text-overflow:ellipsis;margin:2px 0 0
+}
+#optimizer-form .env-grid-cell #season-gem-layout{border:0;margin:0;background:transparent}
+#optimizer-form .env-grid-cell #season-gem-layout>summary{display:none}
+#optimizer-form .env-grid-cell #season-gem-layout>.field{display:flex;flex-direction:column}
+#optimizer-form .env-grid-cell #season-target-socket-count{width:100%;flex:auto}
+#optimizer-form .env-grid-cell #season-special-gem-expert,
+#optimizer-form .env-grid-cell .compact-guidance{display:none}
+#optimizer-form .env-bottom-row{
+ display:flex;gap:10px;align-items:flex-end;
+ padding:8px 0;margin-top:6px;border-top:1px solid #514A43
+}
+#optimizer-form .env-bottom-row>.field{flex:1;max-width:240px}
+#optimizer-form .env-bottom-row>.check-row{flex:1;margin:0;align-self:center}
+#optimizer-form .env-bottom-row .check-row label{font-size:11px}
+#optimizer-form .env-enchant-panel{border:0;border-top:1px solid #514A43;border-radius:0;padding:0;margin:1px 0 0}
+#optimizer-form .env-enchant-panel>summary{
+ padding:6px 0 5px;font-size:11px;font-weight:760;display:flex;
+ justify-content:space-between;border:0;min-height:24px;color:#E8BD73
+}
+#optimizer-form .env-enchant-panel>summary small{font-size:9px;color:#B6AEA5}
+#optimizer-form .env-enchant-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 9px}
+#optimizer-form .env-enchant-grid>.field{margin:0}
+#optimizer-form .env-enchant-grid>.field label{font-size:10px}
+#optimizer-form .env-enchant-grid select{min-height:29px;padding:3px 5px;font-size:10px}
+#optimizer-form .env-enchant-grid select:disabled{background:#282830;color:#AAA4A1;opacity:.82}
+#optimizer-form .env-variant-action{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:7px}
+#optimizer-form .env-variant-action .actions{margin:0}
+#optimizer-form .env-variant-action #user-variant-prepare-btn{
+ min-height:29px;padding:5px 9px;background:#36312C;
+ color:#DFD0BB;border-color:#6B5741;font-size:10px
+}
+#optimizer-form #user-variant-status{margin:0;flex:1;min-width:140px;max-height:2.8em;overflow:hidden;color:#ADA5A0;font-size:9px}
+#optimizer-form .env-advanced-controls{
+ border:0;margin:5px 0 0;background:transparent
+}
+#optimizer-form .env-advanced-controls>summary{
+ color:#9F9792;font-size:10px;padding:4px 0;border:0;min-height:21px
+}
+#optimizer-form .env-advanced-controls[open]{
+ background:#29272A;border:1px solid #51483E;padding:7px
+}
+#optimizer-form #dk-runeforge-panel{margin:6px 0}
+#optimizer-form .conditions-panel .hint:not([role="status"]){display:none}
+#optimizer-form .conditions-panel [role="status"].hint{color:#B4AA9E}
+#optimizer-form .fixed-gear-panel .condition-group{border:0;background:transparent}
+#optimizer-form .fixed-gear-panel .condition-group+.condition-group{border-top:1px solid #514940;padding-top:9px;margin-top:8px}
+#optimizer-form .fixed-gear-panel .condition-group-heading{border:0;padding:0;margin:0 0 7px}
+#optimizer-form .fixed-gear-panel .condition-group-heading h3{color:#E9C78B}
+#optimizer-form .fixed-gear-panel .equipment-source .equipment-open{background:#29282D;border-color:#625747;color:#E9E2D5}
+#optimizer-form .fixed-gear-panel .equipment-source .equipment-open[aria-pressed=true]{background:#3D3227;border-color:#D69B41;color:#F3D09A}
+#optimizer-form .fixed-gear-panel .equipment-selected{color:#B7B0A6}
+#optimizer-form .fixed-gear-panel .equipment-filter{display:block;max-width:300px;margin:4px 0 7px}
+#optimizer-form .fixed-gear-panel .inline-equipment-grid{
+ display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+ gap:6px;max-height:240px;overflow-y:auto;align-content:start;
+ scrollbar-width:thin;scrollbar-color:#786C59 transparent;padding:2px
+}
+#optimizer-form .fixed-gear-panel .inline-item{
+ display:flex;gap:7px;align-items:center;min-width:0;min-height:40px;
+ border:1px solid #514A45;border-radius:5px;background:#25252B;
+ color:#E7E2DB;font-size:11px;padding:5px 7px;text-align:left
+}
+#optimizer-form .fixed-gear-panel .inline-item:hover:not(:disabled){background:#322F2E;border-color:#B79258}
+#optimizer-form .fixed-gear-panel .inline-item[aria-pressed=true]{background:#423329;border-color:#DCA74F;color:#FFE4B0}
+#optimizer-form .fixed-gear-panel .inline-item:disabled{opacity:.4}
+#optimizer-form .fixed-gear-panel .inline-item-icon{
+ display:grid;place-items:center;width:27px;height:27px;min-width:27px;
+ border:1px solid #76604B;background:linear-gradient(135deg,#3D342C,#29292D);
+ border-radius:4px;color:#C5B49B;font-size:13px
+}
+#optimizer-form .fixed-gear-panel .inline-item-label{
+ min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:660
+}
+#optimizer-form .fixed-gear-panel .inline-item-mark{color:#EFC06D;font-size:12px}
+#optimizer-form .fixed-gear-panel .equipment-inline-status,
+#optimizer-form .fixed-gear-panel .equipment-inline-empty{color:#B6AFA5;font-size:10px;margin:4px 0}
+#optimizer-form .fixed-gear-panel #season-gear-note{font-size:10px;color:#AEA69E}
+#view-settings .panel,#view-results .panel{background:#292A30;border-color:#514B46}
+#view-results .metrics>div{background:#332F2B;border-color:#796347}
+.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:1120px){
+ #optimizer-form .fixed-gear-panel .inline-equipment-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:680px){
+ #optimizer-form .env-input-grid>.env-grid-cell:nth-child(n+5):nth-child(-n+7){grid-column:span 3}
+ #optimizer-form .env-enchant-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #optimizer-form .fixed-gear-panel .inline-equipment-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ #optimizer-form .env-bottom-row{align-items:stretch;flex-wrap:wrap}
+ #optimizer-form .env-bottom-row>.field{max-width:none;min-width:200px}
+}
+@media(max-width:400px){
+ #optimizer-form .env-input-grid>.env-grid-cell{grid-column:1/-1!important}
+ #optimizer-form .env-enchant-grid{grid-template-columns:1fr 1fr}
+ #optimizer-form .fixed-gear-panel .inline-equipment-grid{grid-template-columns:1fr}
+}
+
+</style>
+  
+</head>
+<body>
+  <header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand"><div class="brand-mark" aria-hidden="true">S<span>✦</span></div><div><strong>SIMC SECONDARY</strong><small>SECONDARY STAT OPTIMIZER</small></div></div>
+    <nav class="top-nav" aria-label="화면 구획 이동">
+      <button type="button" class="nav-item is-active" data-view="optimizer" aria-current="page">2차 스탯 최적화</button>
+      <button type="button" class="nav-item" data-view="settings">환경 설정</button>
+      <button type="button" class="nav-item" data-view="results" id="results-nav-btn" hidden>결과 확인</button>
+    </nav>
+    <div class="local-indicator"><span class="dot"></span> 로컬 SimC</div>
+  </div>
+</header>
+  <div class="shell">
+   <main>
+    <div id="notice" class="notice" role="status" aria-live="polite" style="background:#34302A;border-color:#655341;color:#F0DABA">v360 배치 검토 · 장비와 클래스 선택은 예시입니다. 시즌 데이터·SimC 실행과 연결되지 않았습니다.</div>
+    <section id="view-optimizer" data-view-panel="optimizer">
+      <div class="view-intro">
+ <div><p class="eyebrow">TARGET-LEVEL · SIMC DPS</p><h1>목표 2차 스탯 <em>최적화</em></h1><p class="intro-desc">현재 장비 재분배가 아닌 미래 목표 ilvl·T 기준 치명·가속·특화·유연 절대 rating을 탐색합니다.</p></div>
+ <button type="button" class="btn secondary" data-view="settings">시즌·SimC 설정</button>
+</div>
+      <div class="optimizer-environment-strip"><span id="optimizer-environment-state">시즌 검증 상태는 환경 설정에서 확인</span><button type="button" class="btn secondary" data-view="settings">환경 상태 확인</button></div>
+      <form id="optimizer-form" autocomplete="off">
+  <section class="panel profile-panel" aria-labelledby="input-title">
+    <div class="section-head"><div><p class="eyebrow">01</p><h2 id="input-title">캐릭터 프로필</h2></div></div>
+    <details class="fold profile-import"><summary><span>SimC 프로필 가져오기</span><small>현재 장비·스탯은 가져오지 않음</small></summary>
+              <div class="field"><label for="simc-import-text">SimC 프로필 텍스트 붙여넣기</label><textarea id="simc-import-text" rows="4" spellcheck="false" maxlength="250000" placeholder="druid=character&#10;spec=feral&#10;race=night_elf&#10;talents=..."></textarea></div>
+              <div class="field"><label for="simc-import-file">또는 로컬 SimC 프로필 파일 선택</label><input id="simc-import-file" type="file" accept=".simc,.txt,text/plain"></div>
+              <button type="button" id="simc-import-btn" class="btn secondary">직업·전문화·종족·특성만 적용</button>
+              <p class="hint">원본 파일은 브라우저 내부에서만 열며 서버에 전송하거나 저장하지 않습니다. 장비·장신구·보석·현재 CHMV 데이터는 가져와 적용하지 않습니다. 전문화가 변경되면 해당 전문화 기본 입력으로 전환됩니다.</p>
+            </details>
+            
+    <div class="two class-spec-fields">
+              <div class="field"><label for="class-choice">직업</label><select id="class-choice" required disabled><option value="">직업 조회 중…</option></select></div>
+              <div class="field"><label for="spec">전문화</label><select id="spec" required disabled><option value="">전문화 조회 중…</option></select></div>
+            </div>
+            
+  <div class="class-tile-grid" id="class-choice-tiles" hidden role="group" aria-label="직업 빠른 선택"><p class="hint">지원 직업 불러오는 중…</p></div>
+  <div class="spec-tile-grid" id="spec-choice-tiles" hidden role="group" aria-label="전문화 빠른 선택"><p class="hint">전문화 불러오는 중…</p></div>
+  <p id="gear-scope-note" class="hint" role="note" hidden></p>
+            
+    <div class="two">
+              <div class="field"><label for="race">종족 <small>대표 종족 자동 선택 · 변경 가능</small></label><input id="race" list="race-list" placeholder="예: 드워프" spellcheck="false"><datalist id="race-list"><option value="인간" label="human"></option><option value="드워프" label="dwarf"></option><option value="나이트 엘프" label="night_elf"></option><option value="노움" label="gnome"></option><option value="드레나이" label="draenei"></option><option value="늑대인간" label="worgen"></option><option value="판다렌" label="pandaren"></option><option value="오크" label="orc"></option><option value="언데드" label="undead"></option><option value="타우렌" label="tauren"></option><option value="트롤" label="troll"></option><option value="블러드 엘프" label="blood_elf"></option><option value="고블린" label="goblin"></option><option value="드랙티르" label="dracthyr"></option><option value="공허 엘프" label="void_elf"></option><option value="빛벼림 드레나이" label="lightforged_draenei"></option><option value="검은무쇠 드워프" label="dark_iron_dwarf"></option><option value="쿨 티란" label="kul_tiran"></option><option value="기계노움" label="mechagnome"></option><option value="토석인" label="earthen"></option><option value="나이트본" label="nightborne"></option><option value="높은산 타우렌" label="highmountain_tauren"></option><option value="마그하르 오크" label="maghar_orc"></option><option value="잔달라 트롤" label="zandalari_troll"></option><option value="불페라" label="vulpera"></option></datalist><p class="hint" id="race-default-note">종족 미입력 시 dwarf를 사용합니다.</p></div>
+              <div class="field"><label for="ilevel">목표 아이템레벨</label><input id="ilevel" type="number" min="266" max="344" step="1" value="334" required></div>
+            </div>
+            
+    <div class="budget-mode">
+  <div class="budget-mode-heading">
+    <div><strong>최종 2차 스탯 총량 (T)</strong><p id="budget-preview-note" class="hint">검증된 시즌·사용자 구성에 한해 계산값을 표시합니다. 미확정 값을 추정하지 않습니다.</p></div>
+    <label class="manual-toggle"><input id="manual-t-mode" type="checkbox"> 2차 스탯 합계 직접 입력</label>
+  </div>
+  <div id="budget-preview" class="budget-figure" role="status" aria-live="polite"><span>자동 계산</span><strong id="budget-preview-total">시즌 검증 후 표시</strong></div>
+  <div class="field" id="manual-t-field" hidden><label for="final_T">직접 입력할 최종 T <small>기름 O 포함 · 수동 입력이 자동 계산보다 우선</small></label><input id="final_T" type="number" min="1" max="100000" placeholder="최종 2차스탯 합계"></div>
+</div>
+    <div class="stat-cap-line">
+      <label for="max-single-stat-percent">개별 스탯 최대 비율</label>
+      <div class="stat-cap-control"><input id="max-single-stat-percent" type="number" min="25" max="100" step="1" value="60" required><span>%</span></div>
+    </div>
+            <details class="compact-guidance"><summary>자동 예산·구성 변경 유의사항</summary><p class="hint">소켓 수·특수보석·영약·기름은 개별 최적화 조건입니다. 선택을 바꾸면 해당 시즌의 J/F/O와 실행 프로필을 다시 검증해야 하며, 검증 전에는 자동으로 이전 구성의 예산을 적용하지 않습니다.</p></details>
+        
+    <div class="field"><label for="talents">특성 코드 <small>선택 · 비우면 기본 대표 특성</small></label><textarea id="talents" rows="2" placeholder="직접 입력하지 않으면 기본 대표 특성 사용" spellcheck="false"></textarea><p class="hint" id="talents-default-note">특성 미입력 시 선택한 전문화의 검증된 기본 대표 특성을 사용합니다.</p></div>
+            
+  </section>
+  <section class="panel conditions-panel" aria-labelledby="conditions-title">
+ <div class="section-head"><div><p class="eyebrow">02</p><h2 id="conditions-title">환경 구성</h2></div></div>
+ <div class="env-input-grid" aria-label="전투 및 소모품 입력">
+   <div class="env-grid-cell"><div class="field"><label for="targets">대상 수</label><input id="targets" type="number" min="1" max="40" value="1" required></div></div>
+   <div class="env-grid-cell"><details class="fold" id="season-gem-layout" open>
+          <summary>보석 소켓</summary>
+          
+          <div class="field"><label for="season-target-socket-count">보석 소켓 수 <small>특수보석 포함</small></label><input id="season-target-socket-count" type="number" min="4" max="64" step="1" value="4" inputmode="numeric"></div>
+          <p id="season-socket-breakdown" class="hint" role="status" aria-live="polite">일반보석 4개 + 특수보석 0개 = 전체 소켓 4개</p>
+
+          
+          <details class="compact-guidance"><summary>소켓 및 보석 예산 규칙</summary><p class="hint">이 수치는 <strong>특수보석을 포함한 전체 소켓 수</strong>입니다. 기본 4개는 치명·가속·특화·유연 일반보석 각 1개이며, 선택 특수보석 1개를 포함하려면 총 5개 이상이어야 합니다. 변경할 때마다 새 J 예산·보석 배치가 검증되어야 하며, 이미 저장된 과거 최적화 세션에는 소급 적용하지 않습니다.</p><p class="hint">일반보석은 4종을 기본으로 배치하고 소켓이 더 많으면 4종을 순환합니다. 확정 J는 해당 시즌의 실제 보석·품질·소켓 근거로만 등록합니다. 모든 효과 계산은 SimC가 담당합니다.</p></details>
+        </details></div>
+   <div class="env-grid-cell"><div class="field"><label for="duration">전투 길이 (초)</label><input id="duration" type="number" min="1" max="3600" value="300" required></div></div>
+   <div class="env-grid-cell"><div class="field"><label for="optimizer-oil-loadout">무기 기름</label>
+              <select id="optimizer-oil-loadout"><option value="">기름 사용 안 함 (O=0)</option></select>
+              <p id="optimizer-oil-loadout-status" class="hint" role="status" aria-live="polite">이 PC의 검증 설치 목록을 확인하는 중…</p>
+            </div></div>
+   <div class="env-grid-cell"><div class="field"><label for="food">음식</label><select id="food"></select></div></div>
+   <div class="env-grid-cell"><div class="field"><label for="season-verified-flask">영약</label><select id="season-verified-flask"><option value="">검증 설치 영약 조회 중…</option></select><p class="hint" id="season-verified-flask-status" role="status">기존 설치 영약만 표시하며 최고 품질 우위를 추정하지 않습니다.</p></div></div>
+   <div class="env-grid-cell"><div class="field"><label for="potion">물약</label><select id="potion"></select></div></div>
+   <div class="env-grid-cell env-omnium"><div class="field"><label for="omnium">Omnium Folio · 4열 스탯</label><select id="omnium"></select></div></div>
+ </div>
+ <div class="env-bottom-row">
+  <div class="field"><label for="augmentation">증강 룬</label><select id="augmentation"></select></div>
+  <div class="check-row"><label><input id="raid_buffs" type="checkbox" checked> 공대 버프</label></div>
+ </div>
+ <details class="fold env-enchant-panel" id="env-enchant-panel" open>
+   <summary>마법부여 <small>검증된 선택지만 활성화</small></summary>
+   <div class="env-enchant-grid">
+     <div class="field"><label for="season_enchant_finger1">반지 1 영구 마법부여 <small>선택 · 미선택은 기존 예산/캐시 유지</small></label><select id="season_enchant_finger1" disabled><option value="">마법부여 없음 (기존 설정)</option></select><p class="hint">독수리의 눈(치명타 효과 강화)은 고정 CHMV rating 증가가 없어 B/T를 바꾸지 않습니다. 효과 및 DPS는 SimC가 처리하며, 다른 37종은 아직 미검증 선택 잠금입니다.</p></div>
+     <div class="field env-enchant-cell"><label for="env-enchant-weapon">주무기</label><select id="env-enchant-weapon" disabled aria-label="주무기 마법부여 · 미검증"><option>선택 준비 중</option></select></div>
+<div class="field env-enchant-cell"><label for="env-enchant-helm">머리</label><select id="env-enchant-helm" disabled aria-label="머리 마법부여 · 미검증"><option>선택 준비 중</option></select></div>
+<div class="field env-enchant-cell"><label for="env-enchant-shoulders">어깨</label><select id="env-enchant-shoulders" disabled aria-label="어깨 마법부여 · 미검증"><option>선택 준비 중</option></select></div>
+<div class="field env-enchant-cell"><label for="env-enchant-chest">가슴</label><select id="env-enchant-chest" disabled aria-label="가슴 마법부여 · 미검증"><option>선택 준비 중</option></select></div>
+<div class="field env-enchant-cell"><label for="env-enchant-boots">장화</label><select id="env-enchant-boots" disabled aria-label="장화 마법부여 · 미검증"><option>선택 준비 중</option></select></div>
+   </div>
+ </details>
+ <details class="fold" id="dk-runeforge-panel" hidden><summary>죽음의 기사 룬벼리기 · 영구 무기 강화</summary><p class="hint">기름 O와 별개인 영구 강화입니다. 기본 룬을 추정하지 않습니다. 이번 시즌 검증된 SimC 소스의 룬만 선택할 수 있습니다. 선택한 룬은 해당 무기의 enchant_id에 반영하고, 효과와 DPS는 SimC가 처리합니다. <span id="dk-runeforge-status">검증된 시즌 룬 목록 확인 중</span></p><div class="two"><div class="field"><label for="dk_rune_main">주무기 룬</label><select id="dk_rune_main"><option value="">현재 시즌 검증 목록 확인 중</option></select></div><div class="field"><label for="dk_rune_off">보조무기 룬 (냉기)</label><select id="dk_rune_off"><option value="">현재 시즌 검증 목록 확인 중</option></select></div></div></details>
+ <div class="env-variant-action"><div class="actions"><button type="button" id="user-variant-prepare-btn" class="btn secondary" disabled>변경한 소켓·영약·기름 구성 검증·준비</button></div><p id="user-variant-status" class="hint" role="status" aria-live="polite">기본 4개 일반보석·기름 미사용 구성은 기본 환경의 검증 결과를 사용합니다. 변경한 구성은 같은 시즌 원본으로 다시 확인해야 합니다.</p></div>
+ <details class="fold env-advanced-controls"><summary>기타 직접 입력 · 고급 옵션</summary>
+<details class="fold" id="season-special-gem-expert"><summary>고급 입력: 이미 선택한 특수보석 ItemID (일반 사용자 입력 불필요)</summary>
+            <div class="field"><label for="season-existing-special-gem-id">이미 선택된 특수보석 ItemID <small>새 특수보석을 탐색하거나 효과를 측정하지 않습니다</small></label><input id="season-existing-special-gem-id" type="number" min="1" max="999999999" step="1" placeholder="기존에 지정된 ItemID" inputmode="numeric"></div>
+            <p class="hint">아이템 ID를 직접 알고 있어 특정 소켓 구성을 재현할 때만 입력합니다. 일반 사용자는 입력하지 않아도 되며, 특수보석 효과 계산은 SimC가 담당합니다.</p>
+          </details>
+<p hidden>새 최적화 세션은 기본적으로 기름을 사용하지 않습니다(O=0). 기름은 검증된 손·물리 ID만 사용하며 검증 전 O를 추정하지 않습니다.</p>
+   <details class="fold" id="optimizer-season-itemid-expert">
+          <summary>미등록 품목 검증 준비 · 정확한 ItemID 입력 (고급)</summary>
+          <p class="hint">영약·무기 기름의 물리 ItemID는 일반 사용자가 시즌 구축을 위해 조사하는 항목이 아닙니다. 환경 엔진이 시즌 원본을 수집·검증하고, 검증된 선택지는 캐릭터 설정에서 이름으로 선택하는 것이 제품의 목표입니다. 아래 입력은 이미 정확한 ID를 알고 있는 제한적 재현·검증 경로이며, 현재 자동 품목 등록이 모두 완성됐음을 의미하지 않습니다.</p>
+        <details class="fold"><summary>신규 영약 ItemID 검증 준비 (고급)</summary>
+          <div class="field"><label for="season-selected-flask-id">선택한 영약 ItemID <small>시즌 원본으로 검증 · 실제 검증된 선택지 등록과 별개</small></label><input id="season-selected-flask-id" type="number" min="1" max="999999999" step="1" inputmode="numeric" placeholder="이미 알고 있는 영약 ItemID"></div>
+          <p class="hint">위 검증된 영약 목록에서 선택하면 정확한 물리 ID가 자동으로 입력됩니다. 새 환경 요청은 원본 v216이 다시 검증하며, 설치 영약이라는 이유만으로 다른 조합의 승인을 부여하지 않습니다. 직접 입력도 유지합니다. 선택한 경우 기존 같은 시즌 v281 원본에서 이 영약만 찾아 F Native 측정(별도 선택)을 진행합니다. 없는 ID나 관측상 더 낮은 품질은 보류하며, 다른 영약 전체를 측정하지 않습니다. 정확한 ID를 모르면 비워 두세요.</p>
+        </details>
+        <details class="fold"><summary>신규 무기 기름 ItemID 검증 준비 (고급)</summary>
+          <div class="two season-build-fields">
+            <div class="field"><label for="season-oil-main-id">주무기 기름 ItemID <small>같은 시즌 SimC·아이템 원본으로 자동 대조</small></label><input id="season-oil-main-id" type="number" min="1" max="999999999" step="1" inputmode="numeric" placeholder="선택한 기름 물리 ItemID"></div>
+            <div class="field"><label for="season-oil-off-id">보조무기 기름 ItemID <small>해당 무기와 손의 적용 조건 검증 필요</small></label><input id="season-oil-off-id" type="number" min="1" max="999999999" step="1" inputmode="numeric" placeholder="적용할 때만 입력"></div>
+          </div>
+          <p class="hint">일반적인 장비 선택 항목이 아닙니다. 기름을 지정하면 같은 시즌의 실제 아이템·품질·손/무기 적용 조건과 SimC 정적 rating을 기존 환경 엔진에서 확인합니다. 영약 ID도 함께 지정해야 하며, 검증이 끝나지 않은 항목은 등록하지 않습니다. 기름 종류가 같은 손에 여러 개 설치된 경우 일반 사용자 세션에서 임의로 하나를 고르지 않습니다.</p>
+        </details>
+        </details>
+   <div class="check-row"><label><input id="oil_main" type="checkbox"> 주무기 기름</label><label><input id="oil_off" type="checkbox"> 보조무기 기름</label></div>
+   <details class="fold" id="optimizer-oil-exact-panel" hidden><summary>검증된 무기 기름 ItemID 지정 (선택형 고급 설정)</summary>
+              <div class="two">
+                <div class="field"><label for="optimizer-oil-main-id">주무기 기름 물리 ItemID</label><input id="optimizer-oil-main-id" type="number" min="1" max="999999999" step="1" placeholder="주무기 기름을 선택한 경우"></div>
+                <div class="field"><label for="optimizer-oil-off-id">보조무기 기름 물리 ItemID</label><input id="optimizer-oil-off-id" type="number" min="1" max="999999999" step="1" placeholder="보조무기 기름을 선택한 경우"></div>
+              </div>
+              <p class="hint">위에서 적용할 무기 손을 먼저 체크하세요. ItemID를 입력하면 해당 손의 검증·설치된 v212 시즌 기름과 정확히 대조합니다. 여러 손을 선택하면 각 손의 ID를 모두 지정해야 합니다. ID를 비우면 기존 손별 선택 방식이 유지되며, 같은 손에 검증된 기름이 여러 종류면 임의 선택하지 않습니다. 기름의 효과·정적 rating은 직접 입력하지 않습니다. 위 목록은 봉인된 설치 조합만 표시하며 품질 우위를 추정하지 않습니다.</p>
+            </details>
+   
+   <details class="fold"><summary>이전 시즌 호환 · 에버송 다이아몬드 (고급)</summary><div class="field"><label for="diamond">에버송 다이아몬드</label><select id="diamond"></select></div></details>
+   <details class="fold" id="season-option-catalog-panel"><summary><span>마법부여</span><small>확인된 효과만 선택</small></summary>
+              <p class="hint">확인된 음식·물약·증강룬·다이아몬드와 방어구 안감은 위 선택 항목에 이미 연결되어 있습니다. 최고 품질 마법부여는 부위별 목록을 확보했지만, 선택 시 CHMV 예산에 반영될 정확한 정적 수치와 Native 수용 확인 전까지 잠금 상태로 표시합니다.</p>
+              <p class="hint" id="season-option-catalog-status" role="status" aria-live="polite">시즌 데이터와 SimC 출처를 확인하는 중…</p>
+              
+              <div id="season-enchant-groups"></div>
+              <p class="hint">영약 F, 일반 보석 J 및 무기 기름 O의 기존 예산은 그대로 유지됩니다. 원시 DB2 후보를 임의로 유효한 SimC 선택으로 표시하지 않습니다.</p>
+            </details>
+ </details>
+
+</section>
+<section class="panel fixed-gear-panel" aria-labelledby="equipment-title">
+    <div class="section-head"><div><p class="eyebrow">03</p><h2 id="equipment-title">고정 장비 선택</h2></div><span class="micro">장신구 2개 필수 · 특수효과/장식은 선택</span></div>
+    <div class="condition-group"><div class="condition-group-heading"><h3>장신구 · 2개 필수</h3><span>선택된 장신구를 카드로 확인하고 변경</span></div>
+<div class="two">
+              <div class="field equipment-source"><label for="trinket1">장신구 1 · 필수</label><select id="trinket1" required><option value="">시즌 목록 확인 중…</option></select><button type="button" class="btn equipment-open" data-equip-select="trinket1">장신구 선택 · 카드 목록 열기</button><p class="equipment-selected" data-equip-label="trinket1">선택된 장신구 없음</p></div>
+              <div class="field equipment-source"><label for="trinket2">장신구 2 · 필수</label><select id="trinket2" required><option value="">시즌 목록 확인 중…</option></select><button type="button" class="btn equipment-open" data-equip-select="trinket2">장신구 선택 · 카드 목록 열기</button><p class="equipment-selected" data-equip-label="trinket2">선택된 장신구 없음</p></div>
+            </div>
+            <div class="inline-equipment">
+  <label class="equipment-filter"><span class="visually-hidden">장신구 검색</span><input id="equipment-trinket-search" type="search" autocomplete="off" placeholder="장신구 이름·ItemID 검색" aria-controls="equipment-trinket-grid"></label>
+  <div id="equipment-trinket-grid" class="inline-equipment-grid" role="group" aria-label="이번 시즌 장신구 바로 선택">
+    <p class="equipment-inline-empty">장신구 목록 확인 중…</p>
+  </div>
+  <p id="equipment-trinket-status" class="equipment-inline-status" role="status" aria-live="polite"></p>
+</div>
+<p class="hint" id="season-gear-note">이번 시즌 장신구·특수효과 선택 목록 확인 중 · 일반장비·티어·무기는 내부 자동 구성</p>
+            <p class="hint" hidden>최신 시즌 대표 장비·직업별 티어 4세트·무기는 항상 내부 구성합니다. 목표 아이템레벨 266~344에 맞춘 독립 세션입니다.</p>
+            <p class="hint" hidden>실제 SimC 대표 프로필 26/26 수용 검증. 기존 계산은 저장되며 같은 조건에서 재사용됩니다. 다른 특성·장신구·특수효과 조합의 성공 여부는 각 SimC 실행으로 판단합니다.</p>
+            
+    
+</div><div class="condition-group"><div class="condition-group-heading"><h3>특수효과 장비 · 장식</h3><span>검증된 부위·장착 제한에 따라 선택</span></div>
+<div class="inline-equipment inline-equipment-special">
+  <label class="equipment-filter"><span class="visually-hidden">특수효과 장비 검색</span><input id="equipment-special-search" type="search" autocomplete="off" placeholder="특수효과 장비 이름·ItemID 검색" aria-controls="equipment-special-grid"></label>
+  <div id="equipment-special-grid" class="inline-equipment-grid" role="group" aria-label="이번 시즌 특수효과 장비 바로 선택">
+    <p class="equipment-inline-empty">특수효과 장비 목록 확인 중…</p>
+  </div>
+  <p id="equipment-special-status" class="equipment-inline-status" role="status" aria-live="polite"></p>
+</div>
+<details class="fold"><summary><span>제작 장식 및 선택 장비 세부 설정</span><small>필요할 때 펼치기</small></summary><p class="hint" hidden>일반 장비·티어4세트와 선택한 장식 제작장비의 정확한 ID는 내부에서 구성합니다. 특수장비의 보너스·촉매 원본 ID도 일반 사용자에게 입력받지 않습니다. 이미 저장된 로컬 정적 캐시는 자동으로 찾아 사용하며, 정확한 L이 있는 경우 그대로 재사용합니다. 누락된 경우 '예산 미리 확인'(Native 0회)은 차단될 수 있으나, 사용자가 'SimC 최적화 실행'을 승인하면 내부 생성한 대표 프로필에서 정적 SimC Native 최대 1회로 선택 장비의 정확한 L을 확보·캐시합니다. 이후 최적화 계산을 진행하며, 미확정 L을 0으로 간주하지 않습니다. 현재 검증된 장식은 일반 방어구용 안감 2종입니다. 목걸이·반지·무기용 장식은 별도의 실제 호환 토큰이 검증되기 전까지 선택할 수 없습니다.</p><div id="special-rows"></div><p id="craft-compatibility-note" class="hint" role="note">장식별 장착 가능한 부위만 표시됩니다. 장신구·무기 장식은 검증된 선택지가 아직 없습니다.</p><div id="crafted-rows"></div></details>
+            
+  
+</div></section>
+<section class="panel submit-panel" aria-label="최적화 실행">
+    <p class="hint" id="optimizer-submit-note">필수 항목을 선택하세요. 환경 검증과 최종 실행 가능 여부는 서버가 결정합니다.</p>
+    <div class="actions"><button type="button" id="plan-btn" hidden class="btn secondary" disabled>최적화 예산 미리 확인 · Native 0회</button><button type="button" id="start-btn" class="btn primary" disabled>최적 스탯 찾기</button></div>
+            <details class="fold" id="longrun-panel" hidden><summary><span>장기 적응형 SimC 탐색 · 중단/재개</span><small>일반 최적화와 별개인 고급 실행</small></summary>
+              <p class="hint">시즌 환경이 검증·설치된 경우 기존 대표 프로필을 재사용합니다. 자유분배 CHMV는 목표 T·고정 L/E/O·사용자가 정한 개별 스탯 상한을 적용합니다. 후보 품질과 실제 DPS·SEM은 SimC가 결정합니다. 장기 실행은 현재 PC에서만 진행하며, 통계적 1순위가 전역 최적해의 증명은 아닙니다.</p>
+              <div class="two">
+                <div class="field"><label for="longrun-budget">세션 전체 Native 예산 <small>12~2,000회 · 총 허용 상한, 자동 전수 실행 아님</small></label><input type="number" id="longrun-budget" min="12" max="2000" step="1" value="12"></div>
+                <div class="field"><label for="longrun-batch">이번 실행의 신규 Native 상한 <small>1~32회, 이후 명시적 재개</small></label><input type="number" id="longrun-batch" min="1" max="32" step="1" value="4"></div>
+              </div>
+              <div class="actions"><button type="button" class="btn secondary" id="longrun-prepare-btn" disabled>장기 세션만 준비 · DPS Native 0회</button><button type="button" class="btn primary" id="longrun-start-btn" disabled>장기 탐색 시작</button></div>
+              <p class="hint">기존 Native ZIP을 이식하려면 먼저 ‘장기 세션만 준비’를 누르고 오른쪽 ‘원본 ZIP 안전 복원’을 사용하세요. 준비는 DPS Native 0회지만 선택 특수장비에 정확한 정적 L이 없을 때는 기존 정적 Native 최대 1회를 수행할 수 있습니다. 최초 계산을 원하면 ‘장기 탐색 시작’을 누르세요. 같은 봉인 세션은 회차별로 재개할 수 있으며 세션 전체 예산은 나중에 변경하지 않습니다.</p>
+            </details>
+          
+  </section>
+</form>
+    </section>
+    <section id="view-settings" data-view-panel="settings" hidden>
+ <div class="view-intro"><div><p class="eyebrow">ENVIRONMENT & SIMULATIONCRAFT</p><h1>환경 <em>설정</em></h1><p class="intro-desc">시즌 원본·G/J/F/O 구축과 SimC 버전·경로는 여기에서 관리합니다.</p></div><button type="button" class="btn secondary" data-view="optimizer">최적화 화면으로</button></div>
+       <section class="panel environment-setup" aria-labelledby="season-build-title">
+        <div class="section-head"><div><p class="eyebrow">준비 단계</p><h2 id="season-build-title">시즌 환경</h2></div><span class="micro">시즌 최초 1회 구축 · 이후 재사용</span></div>
+        <details class="fold" id="season-credentials-panel">
+          <summary>내 Blizzard·Warcraft Logs API 인증정보 설정 (Windows · 선택)</summary>
+          <p class="hint">본인에게 발급된 Client ID와 Client Secret을 Windows 자격 증명 관리자에만 보관합니다. 한 번 저장하면 이후 시즌 업데이트에서 재사용합니다. 기존 시즌·캐시 이용에는 인증이 필요하지 않습니다. 현재 시즌·레이드가 검증되지 않으면 키를 저장해도 READY로 처리하지 않습니다.</p>
+          <p class="hint" id="source-credentials-status" role="status" aria-live="polite">로컬 인증정보 상태 확인 중…</p>
+          <div class="two">
+            <div class="field"><label for="source-blizzard-id">Blizzard Client ID</label><input id="source-blizzard-id" type="password" autocomplete="new-password" spellcheck="false"></div>
+            <div class="field"><label for="source-blizzard-secret">Blizzard Client Secret</label><input id="source-blizzard-secret" type="password" autocomplete="new-password" spellcheck="false"></div>
+            <div class="field"><label for="source-wcl-id">Warcraft Logs Client ID</label><input id="source-wcl-id" type="password" autocomplete="new-password" spellcheck="false"></div>
+            <div class="field"><label for="source-wcl-secret">Warcraft Logs Client Secret</label><input id="source-wcl-secret" type="password" autocomplete="new-password" spellcheck="false"></div>
+          </div>
+          <div class="actions"><button type="button" class="btn secondary" id="source-credentials-save-btn" disabled>내 API 인증정보 저장</button><button type="button" class="btn secondary" id="source-credentials-clear-btn" disabled>저장된 인증정보 삭제</button></div>
+          <p class="hint">비밀키는 브라우저에 다시 표시하지 않습니다. 암호화 파일을 ZIP에 넣지 않고 Windows 계정별 보안 저장소를 사용합니다. 동일 Windows 계정의 다른 프로그램은 접근할 수 있으므로 신뢰하는 PC에서만 사용하세요.</p>
+        </details>
+        <details class="fold season-setup-details" id="season-setup-details"><summary>시즌 변경·원본 검증 상세 설정 (고급)</summary>
+        <p class="hint">이 단계는 시즌 공통 원본·아이템·품질·적용 조건을 확인합니다. 사용자별 소켓·특수보석·영약·기름은 아래 최적화 조건에서 설정합니다. 이미 검증·설치한 동일 시즌 환경이 있으면 먼저 재사용합니다. 동일 시즌 검증 정적 원본은 SimC revision 변경만으로 폐기하지 않습니다. 게임 빌드가 달라지면 시즌·출처 일치 여부를 다시 확인합니다. 새 시즌이나 실제 콘텐츠 변경 시 아래 갱신을 선택하세요. 설치한 환경이 없으면 기존 v216 엔진으로 처음부터 구축합니다.</p>
+        <div class="two season-build-fields">
+          <div class="field"><label for="season-game-build">대상 게임 빌드 <small>비우면 현재 Retail(KR) 자동 조회 · 입력하면 해당 검증 설치본만 새 세션에 사용</small></label><input id="season-game-build" placeholder="현재 시즌 자동 조회 (선택적 빌드 직접 입력)" pattern="[0-9]+(\.[0-9]+){3}" spellcheck="false" autocomplete="off"></div>
+          <div class="field"><label for="season-target-ilevel">시즌 공통 환경 목표 ilvl <small>기본 334 · 개인별 구성 검증은 아래 최적화 목표 ilvl 사용</small></label><input id="season-target-ilevel" type="number" min="1" max="1000" value="334"></div>
+        </div>
+        <div class="field"><label for="season-refresh-reason">환경 갱신 <small>일반적인 SimC/밸런스 패치에는 필요 없음</small></label><select id="season-refresh-reason"><option value="">시즌 환경 자동 확인·구축 (검증된 동일 시즌 원본 재사용)</option><option value="season_change">시즌 변경 · 환경 새로 구축</option><option value="expansion_change">확장팩 변경 · 환경 새로 구축</option><option value="item_content_change">아이템/콘텐츠 변경 · 원본 재확인 (동일 빌드 교정 별도)</option></select></div>
+        <div class="check-row"><label><input id="season-auto-core" type="checkbox" checked> 검증된 설치가 없을 때 시즌 G/F 자동 산출 <small>같은 시즌·ilvl 검증 설치를 발견하면 Native 0회로 재사용합니다. 미설치 시 로컬 SimC로 기존 G 최대 1회 + 대표 최고품질 후보 영약 F 최대 2회만 측정합니다. J·품질·예산 원본이 미확정이면 READY로 표시하지 않습니다. 아래 고급 측정/품목을 직접 선택한 경우 자동 모드를 사용하지 않습니다.</small></label></div>
+        <div class="check-row"><label><input id="season-native-g" type="checkbox"> 기존 G Native 단일 실측 시도 <small>(아래 SimC 실행 파일 경로 사용 · 별도 명시 선택)</small></label></div>
+        <div class="check-row"><label><input id="season-native-f" type="checkbox"> 영약 F 후보의 정적 SimC Native 측정 <small>(G 실측 불필요 · SimC 실행 파일 경로 필요 · F 최대 8회/요청 · 기름 O는 원본 확인만 · 품질·등록 별도 검증)</small></label></div>
+        <div class="check-row"><label><input id="season-native-o" type="checkbox"> 기름 O의 정적 SimC 원본 확인 <small>(기름을 선택하지 않으면 Native 0회 · 정확한 ItemID 지정 시 스케일링이 필요한 선택 손만 기존 SimC 캐시·Native로 확인 · 무기 적합성·품질은 기존 엔진 처리)</small></label></div>
+        <div class="check-row"><label><input id="season-auto-f-no-oil" type="checkbox"> 시즌 기본 영약 F 자동 선정 · 기름 미사용 <small>(같은 시즌 최고 품질 후보 중 대표 1종만 측정 · 전문화별 최적 영약 아님 · F Native 필요 · G/J/F 원본 확인 후에만 설치)</small></label></div>
+        </details>
+        <div class="actions"><button type="button" id="season-build-btn" class="btn secondary" disabled>시즌 환경 확인·설치</button></div>
+        <div id="season-build-running" class="season-running" role="status" aria-live="polite" hidden>
+          <div class="season-running-head"><strong>시즌 환경 원본 수집·검증 실행 중</strong><span id="season-build-elapsed">0초 경과</span></div>
+          <div class="season-activity-track" aria-hidden="true"><span></span></div>
+          <p class="hint">외부 API 인증과 Wago DB2 원본 수집은 시간이 걸릴 수 있습니다. 여기에는 임의의 진행률(%)을 표시하지 않습니다. 정확한 단계별 결과는 서버 응답이 도착하면 아래에 표시됩니다. 페이지를 닫지 마세요.</p>
+        </div>
+        <p id="season-build-stage" class="hint" role="status" aria-live="polite">기본: 검증된 기존 설치를 재사용하며, 설치가 없거나 갱신이 필요하면 원본 수집·검증을 수행합니다. 최적화 세션은 시작하지 않습니다.</p>
+        <details class="fold" id="season-build-technical-panel" hidden><summary>원본 수집·검증 세부 기록 (고급)</summary><p id="season-build-technical" class="hint"></p></details>
+        <p id="season-locale-status" class="hint" role="status" aria-live="polite">공식 한국어 아이템명은 시즌 환경 구축에서 검증합니다.</p>
+        <p id="season-terms-status" class="hint" role="status" aria-live="polite">직업·전문화·종족의 공식 한국어 명칭도 환경 구축에서 확인합니다.</p>
+        <p id="season-build-summary" class="hint" role="status" aria-live="polite">시즌 환경 확인·설치를 누르면 검증된 결과와 미완료 이유를 여기서 요약합니다.</p>
+        <details id="season-build-pending" class="fold" hidden><summary>구축 미완료 항목 · 원본 단계 진단</summary><ul id="season-build-missing"></ul></details>
+      </section>
+
+ 
+<section class="panel simc-settings-panel" aria-labelledby="simc-settings-title">
+ <div class="section-head"><div><p class="eyebrow">시뮬레이터</p><h2 id="simc-settings-title">SimulationCraft 설정</h2></div></div>
+ <details class="fold simc-technical-panel" id="simc-technical-panel"><summary>SimulationCraft 연결 및 업데이트 <small>처음 사용하거나 버전을 바꿀 때</small></summary><div class="field"><label for="binary">simc.exe 경로 <small>실행 파일은 서버로 업로드하지 않습니다</small></label><input id="binary" placeholder="C:\SimC\simc.exe" required spellcheck="false"></div>
+            <div class="two"><div class="field"><label for="revision">SimC Git revision</label><input id="revision" required pattern="[a-fA-F0-9]{7,40}" placeholder="7bc1071" spellcheck="false"></div><div class="field"><label for="static_cache">정적 캐시 JSON 경로 <small>고급 · 선택</small></label><input id="static_cache" spellcheck="false" placeholder="기본 로컬 정적 캐시가 있으면 자동 사용"></div></div>
+            <details class="fold simc-update-panel" id="simc-update-panel"><summary><span>설정 · SimulationCraft 관리</span><small>사용자 승인 후에만 다운로드·설치</small></summary>
+              <p class="hint">공식 Windows x64 nightly만 사용합니다. 현재 지정한 simc.exe는 덮어쓰지 않고, 앱 전용 폴더에 새 버전을 보관합니다. 버전 변경은 시즌 DB 재조사를 자동 실행하지 않습니다.</p>
+              <p class="hint" id="simc-update-status" role="status" aria-live="polite">관리 중인 SimC 조회 전 · 기존 직접 지정 경로도 계속 사용할 수 있습니다.</p>
+              <p class="hint" id="simc-update-candidate">새 버전 확인은 버튼을 누른 경우에만 인터넷에 접속합니다.</p>
+              <div class="simc-update-actions">
+                <button type="button" class="btn secondary" id="simc-check-btn">공식 업데이트 확인</button>
+                <button type="button" class="btn primary" id="simc-install-btn" disabled>확인한 버전 설치</button>
+                <button type="button" class="btn secondary" id="simc-rollback-btn" disabled>이전 버전 복원</button>
+              </div>
+              <div class="field"><label for="simc-local-archive">공식 사이트에서 직접 내려받은 .7z 경로 <small>자동 조회가 실패할 때 사용</small></label><input id="simc-local-archive" spellcheck="false" placeholder="C:\\Users\\...\\Downloads\\simc-1215-01-win64-xxxxxxx.7z"></div>
+              <button type="button" class="btn secondary" id="simc-install-local-btn">내 PC의 .7z 파일 설치</button>
+              <p class="hint">로컬 파일 설치는 파일명·형식·압축 경로·SHA를 검사하지만, 공식 출처나 배포 서명을 독립 확인하지 못합니다. 반드시 공식 페이지에서 직접 다운로드한 파일만 선택하세요.</p>
+              <p class="hint">공식 배포가 .7z이므로 PC에 7-Zip이 설치되어 있어야 합니다. 아카이브 서명 검증은 제공되지 않으며, HTTPS 공식 배포 출처·형식·다운로드 SHA 및 실행 파일 SHA를 검사합니다. <a href="https://www.simulationcraft.org/download.html" target="_blank" rel="noopener noreferrer">공식 다운로드 안내</a> · <a href="https://github.com/simulationcraft/simc-publish/actions" target="_blank" rel="noopener noreferrer">공식 nightly 배포 기록</a></p>
+            </details>
+            </details>
+            
+ </section>
+</section>
+    <section id="view-results" data-view-panel="results" hidden>
+ <div class="view-intro"><div><p class="eyebrow">SIMC RUN & 95% RESULT</p><h1>실행 및 <em>결과</em></h1><p class="intro-desc">관측된 DPS·SEM과 근접 대안을 확인하세요. 관측 1순위가 전역 최적해를 증명하지는 않습니다.</p></div><button type="button" class="btn secondary" data-view="optimizer">조건 수정</button></div>
+ <div class="result-workspace"><section class="panel run-card" aria-labelledby="run-title">
+            <div class="section-head"><div><p class="eyebrow">2 · 실행</p><h2 id="run-title">실행 현황</h2></div><span id="run-label" class="pill">대기</span></div>
+            <div class="session-meta" hidden><span>세션 ID</span><code id="session-id">없음</code></div>
+            <div class="progress-info"><strong id="progress-label">평가 0회</strong><span id="progress-pct">0%</span></div><div class="progress-track"><div id="progress-bar"></div></div>
+            <p id="stage-text" class="subtle">기존 세션이나 새 조건을 선택해 주세요.</p>
+            <p id="environment-build-status" class="hint" role="status" aria-live="polite">환경 구축 전 · 설치된 시즌 데이터의 검증 상태를 확인합니다.</p>
+            <div class="two-button"><button class="btn secondary" id="resume-btn" type="button" disabled>계산 재개</button><button class="btn secondary" id="cache-btn" hidden type="button" disabled>캐시 6/6 재검증</button></div><button class="btn danger" id="cancel-btn" type="button" disabled>계산 중단</button>
+            <details class="fold" id="longrun-controls" hidden><summary>장기 탐색 작업 관리 · 0 Native 캐시 재생</summary>
+              <p class="hint">장기 탐색을 시작한 세션에서는 아래 버튼으로만 재개·중단합니다. 각 회차의 신규 SimC 호출 상한은 왼쪽 ‘이번 실행’ 수치를 따릅니다.</p>
+              <div class="actions"><button id="longrun-resume-btn" type="button" class="btn secondary" disabled>장기 탐색 재개</button><button id="longrun-cache-btn" type="button" class="btn secondary" disabled>장기 캐시만 재검증</button><button id="longrun-cancel-btn" type="button" class="btn danger" disabled>장기 탐색 취소</button></div>
+              <details class="fold"><summary>원본 Native ZIP 안전 복원 (고급)</summary>
+                <div class="field"><label for="longrun-archive-path">이 PC의 이전 Native ZIP 경로</label><input id="longrun-archive-path" type="text" spellcheck="false" placeholder="이전에 보존한 검증된 ZIP 경로"></div>
+                <div class="field"><label for="longrun-archive-sha">원본 ZIP SHA256 (64자리 소문자)</label><input id="longrun-archive-sha" type="text" minlength="64" maxlength="64" pattern="[a-f0-9]{64}" spellcheck="false" placeholder="정확한 원본 SHA256"></div>
+                <button id="longrun-import-btn" type="button" class="btn secondary" disabled>검증된 캐시만 가져오기 · 신규 DPS Native 0회</button>
+                <p class="hint">같은 SimC·프로필·시즌 소스·후보 순서가 검증될 때만 새 경로에 저장합니다. 원본 ZIP을 변경하지 않으며, 가져온 호출 수는 전체 세션 누적 예산에 포함됩니다.</p>
+              </details>
+            </details>
+            <details class="restore"><summary>이 PC의 이전 세션 불러오기</summary>
+              <div class="field recent-session-controls"><label for="recent-session-id">최근 저장된 세션 (Native 0회 조회)</label><select id="recent-session-id"><option value="">저장된 세션 조회 중…</option></select></div>
+              <div class="restore-controls"><button id="recent-open-btn" type="button" class="btn secondary" disabled>선택한 세션 불러오기</button><button id="recent-refresh-btn" type="button" class="btn secondary">목록 새로고침</button></div>
+              <p class="hint" id="recent-session-note">목록에는 이 PC에 저장된 세션만 표시합니다. 결과를 불러와도 새 SimC는 실행하지 않습니다.</p>
+              <div class="restore-controls"><input id="restore-id" aria-label="기존 세션 ID" maxlength="20" placeholder="기존 20자리 세션 ID 직접 입력" spellcheck="false"><button id="restore-btn" type="button" class="btn tiny">ID로 열기</button></div>
+              <p class="hint">과거 세션의 특성·SimC 경로는 목록 응답에 포함하지 않고, 선택 시에만 기존 서버 인증 경로로 가져옵니다. 다른 PC의 세션은 여기에 자동 표시되지 않습니다.</p>
+            </details>
+          </section>
+          
+<section class="panel results" id="result-panel" aria-labelledby="result-title">
+            <div class="section-head"><div><p class="eyebrow">3 · 최적화 결과</p><h2 id="result-title">관측 결과</h2></div><span class="pill">95% 판정</span></div>
+            <div id="empty-result" class="empty">아직 표시할 결과가 없습니다.<br>완료된 기존 세션을 불러오거나 새 계산을 실행해 주세요.</div>
+            <div id="filled-result" hidden>
+              <p class="result-warning">관측 1순위 · 전역 최적해 입증 아님</p>
+              <div class="metrics"><div><span>관측 DPS</span><strong id="dps">–</strong></div><div><span>표준오차 (SEM)</span><strong id="sem">–</strong></div></div>
+              <p class="budget" id="budget">–</p>
+              <div id="stat-bars" class="stat-bars"></div>
+              <div class="result-footer"><div><span>95% 비교 결과</span><strong id="conf95">–</strong></div><div><span>관측된 근접 대안</span><strong id="alt-count">–</strong></div></div>
+              <div id="alt-list" class="alt-list"></div><p class="hint">미관측은 대안이 없다는 뜻이 아닙니다. DPS·효과는 SimC가 계산합니다.</p>
+            </div>
+          </section>
+          </div>
+</section>
+    <div class="footnote">SIMC SECONDARY OPTIMIZER · 개인용 로컬 웹앱 베타 · 검증되지 않은 입력은 실행 전에 차단합니다.</div>
+   </main>
+  </div>
+  <dialog id="equipment-dialog" class="equipment-dialog" aria-labelledby="equipment-dialog-title">
+  <div class="equipment-dialog-head"><div><p class="eyebrow">시즌 장비 후보 · 실행 시 검증</p><h2 id="equipment-dialog-title">장신구 · 특수효과 장비</h2></div><div class="equipment-dialog-actions"><button id="equipment-dialog-clear" type="button" class="btn secondary">선택 해제</button><button id="equipment-dialog-close" type="button" class="btn secondary">닫기</button></div></div>
+  <label class="field" for="equipment-search"><span>이름 또는 ItemID로 검색</span><input id="equipment-search" type="search" autocomplete="off" placeholder="검증된 목록에서 검색"></label>
+  <p class="hint" id="equipment-dialog-status" role="status">현재 시즌 카탈로그를 확인하세요.</p>
+  <div id="equipment-gallery" class="equipment-gallery"></div>
+  <p class="hint">아이콘 원본은 UI·실행 검증 후 연결합니다. 현재는 이름과 정확한 ID만 표시합니다.</p>
+</dialog>
+<script>
+"use strict";
+(function(){
+  const $=id=>document.getElementById(id);
+  const classes={"죽음의 기사":["냉기","부정"],"악마사냥꾼":["파멸","포식"],
+    "드루이드":["조화","야성"],"기원사":["황폐"],
+    "사냥꾼":["야수","사격","생존"],"마법사":["비전","화염","냉기"],
+    "수도사":["풍운"],"성기사":["징벌"],"사제":["암흑"],
+    "도적":["암살","무법","잠행"],"주술사":["고양","정기"],
+    "흑마법사":["고통","악마","파괴"],"전사":["무기","분노"]};
+  const classEl=$("class-choice"),specEl=$("spec");
+  let currentClass="드루이드",activeTrinket="trinket1";
+  const chosenSpecial=new Set();
+  function addOption(value,label){const o=document.createElement("option");o.value=value;o.textContent=label;return o;}
+  function fillClass(){
+    classEl.disabled=false;
+    classEl.replaceChildren(...Object.keys(classes).map(x=>addOption(x,x)));
+    classEl.value=currentClass;fillSpec();
+  }
+  function fillSpec(){
+    specEl.disabled=false;specEl.replaceChildren(...classes[currentClass].map(x=>addOption(x,x)));
+    specEl.value=classes[currentClass][0];
+  }
+  classEl.addEventListener("change",()=>{currentClass=classEl.value;fillSpec();});
+  fillClass();$("race").value="나이트 엘프";
+  $("season-verified-flask").replaceChildren(addOption("","검증된 시즌 영약 미연결"));
+  $("optimizer-oil-loadout").replaceChildren(addOption("","기름 사용 안 함"));
+  $("food").replaceChildren(addOption("","현재 시즌 선택지 미연결"));
+  $("potion").replaceChildren(addOption("","현재 시즌 선택지 미연결"));
+  $("augmentation").replaceChildren(addOption("","선택 안 함"));
+  $("omnium").replaceChildren(addOption("","시즌 특수 콘텐츠 미연결"));
+  $("budget-preview-total").textContent="시즌 검증 후 표시";
+  $("optimizer-environment-state").textContent="시즌 환경 검증 미연결 · 미리보기";
+  $("simc-technical-panel").open=false;
+  $("env-enchant-panel").open=true;
+  $("season-verified-flask").disabled=false;
+  const manual=$("manual-t-mode");
+  manual.addEventListener("change",()=>{
+    $("manual-t-field").hidden=!manual.checked;
+    $("final_T").disabled=!manual.checked;
+    $("budget-preview-total").textContent=manual.checked?"수동 T 입력 대기":"시즌 검증 후 표시";
+  });
+  for(const b of document.querySelectorAll("[data-view]")){
+    b.addEventListener("click",()=>{
+      const target=b.dataset.view;
+      document.querySelectorAll("[data-view-panel]").forEach(p=>p.hidden=p.dataset.viewPanel!==target);
+      document.querySelectorAll("[data-view]").forEach(x=>{
+        x.classList.toggle("is-active",x.dataset.view===target);
+        if(x.dataset.view===target)x.setAttribute("aria-current","page");
+        else x.removeAttribute("aria-current");
+      });
+      window.scrollTo(0,0);
+    });
+  }
+  $("results-nav-btn").hidden=false;
+  $("results-nav-btn").textContent="결과 배치";
+  const trinketOptions=Array.from({length:18},(_,i)=>({id:String(900001+i),
+    name:"미리보기 장신구 "+String(i+1).padStart(2,"0")}));
+  const specialOptions=Array.from({length:12},(_,i)=>({id:String(910001+i),
+    name:"미리보기 특수장비 "+String(i+1).padStart(2,"0")}));
+  for(const id of ["trinket1","trinket2"]){
+    $(id).replaceChildren(addOption("","미선택"),...trinketOptions.map(x=>addOption(x.id,x.name)));
+  }
+  function itemButton(entry,pressed,disabled,onClick){
+    const b=document.createElement("button");b.type="button";b.className="inline-item";
+    b.setAttribute("aria-pressed",String(pressed));b.disabled=disabled;
+    const ico=document.createElement("span");ico.className="inline-item-icon";ico.textContent="◆";
+    const label=document.createElement("span");label.className="inline-item-label";label.textContent=entry.name;
+    const tick=document.createElement("span");tick.className="inline-item-mark";tick.textContent=pressed?"✓":"";
+    b.append(ico,label,tick);b.addEventListener("click",onClick);return b;
+  }
+  function render(){
+    const tt=$("equipment-trinket-grid");tt.replaceChildren();
+    const q=$("equipment-trinket-search").value.trim().toLocaleLowerCase("ko-KR");
+    for(const entry of trinketOptions.filter(x=>x.name.toLocaleLowerCase("ko-KR").includes(q)||x.id.includes(q))){
+      const chosen1=$("trinket1").value===entry.id,chosen2=$("trinket2").value===entry.id;
+      tt.appendChild(itemButton(entry,chosen1||chosen2,
+        activeTrinket==="trinket1"?chosen2:chosen1,()=>{
+        const select=$(activeTrinket);
+        select.value=select.value===entry.id?"":entry.id;
+        if(activeTrinket==="trinket1"&&!$("trinket2").value)activeTrinket="trinket2";
+        render();
+      }));
+    }
+    $("equipment-trinket-status").textContent="미리보기 선택 "+
+      (Number(!!$("trinket1").value)+Number(!!$("trinket2").value))+"/2";
+    for(const button of document.querySelectorAll("[data-equip-select]")){
+      const active=button.dataset.equipSelect===activeTrinket;
+      button.setAttribute("aria-pressed",String(active));
+      const select=$(button.dataset.equipSelect);
+      button.textContent=select.value?select.selectedOptions[0].textContent:
+        (button.dataset.equipSelect==="trinket1"?"장신구 1 선택":"장신구 2 선택");
+    }
+    const ss=$("equipment-special-grid");ss.replaceChildren();
+    const filter=$("equipment-special-search").value.trim().toLocaleLowerCase("ko-KR");
+    for(const entry of specialOptions.filter(x=>x.name.toLocaleLowerCase("ko-KR").includes(filter)||x.id.includes(filter))){
+      const pressed=chosenSpecial.has(entry.id);
+      ss.appendChild(itemButton(entry,pressed,false,()=>{
+        if(pressed)chosenSpecial.delete(entry.id);
+        else chosenSpecial.add(entry.id);
+        render();
+      }));
+    }
+    $("equipment-special-status").textContent="미리보기 특수장비 "+chosenSpecial.size+"개 선택";
+  }
+  for(const id of ["equipment-trinket-search","equipment-special-search"])
+    $(id).addEventListener("input",render);
+  for(const button of document.querySelectorAll("[data-equip-select]"))
+    button.addEventListener("click",()=>{activeTrinket=button.dataset.equipSelect;render();$("equipment-trinket-search").focus();});
+  render();
+  $("season-gear-note").textContent="예시 아이템 표시 · 실제 아이템명 및 아이콘 미연결";
+  // Preserve native inputs for visual review only; never start a server operation.
+  for(const b of document.querySelectorAll('button:not([data-view]):not([data-equip-select]):not(.inline-item)')){
+    b.disabled=true;b.title="오프라인 UI 미리보기 · 기능 실행 불가";
+  }
+  $("empty-result").hidden=true;$("filled-result").hidden=false;
+  $("dps").textContent="–";$("sem").textContent="–";
+  $("budget").textContent="결과 레이아웃만 제공 · 계산 없음";
+  $("conf95").textContent="미계산";$("alt-count").textContent="미계산";
+  for(const name of ["치명","가속","특화","유연"]){
+    const wrap=document.createElement("div");
+    const head=document.createElement("div");head.className="stat-heading";
+    const label=document.createElement("span");label.textContent=name;
+    const n=document.createElement("span");n.textContent="–";
+    head.append(label,n);
+    const track=document.createElement("div");track.className="stat-line";
+    const fill=document.createElement("div");fill.className="stat-fill";fill.style.width="0";
+    track.append(fill);wrap.append(head,track);$("stat-bars").append(wrap);
+  }
+  $("run-label").textContent="미리보기";
+  $("stage-text").textContent="실제 SimC 실행은 연결되어 있지 않습니다.";
+})();
+</script>
+</body>
+</html>
