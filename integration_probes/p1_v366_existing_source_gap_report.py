@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 from pathlib import Path
 
 V163_SCHEMA = "v163_zero_seed_db2_join_v1"
@@ -17,6 +18,27 @@ PROGRESS_SCHEMA = "v216_zero_history_normal_build_progress_v1"
 MAX_ITEM_IDS = 64
 MAX_EVIDENCE_PER_ITEM = 32
 MAX_FILE_BYTES = 25_000_000
+SAFE_COMPILER_INPUT_KEYS = frozenset((
+    "GEAR_V167", "TIER_V168", "V189", "V190", "GENERATED_PERMANENT",
+    "GENERATED_TEMPORARY", "GENERATED_GEM",
+    "SIMC_V211_SIX_SOURCE_FILES_AND_MANIFEST", "PINNED_SIMC_REVISION"))
+SAFE_STAGE_REQUIREMENTS = frozenset((
+    "SOURCE_SEASON_JOIN_PENDING", "REPRESENTATIVE_TIER_SOURCE_PENDING",
+    "REPRESENTATIVE_GEAR_SOURCE_PENDING", "G_NATIVE_RATING_OBSERVATION_PENDING",
+    "HIGHEST_QUALITY_GEM_J_SOURCE_PENDING",
+    "HIGHEST_QUALITY_FLASK_F_SOURCE_PENDING",
+    "WEAPON_OIL_O_EXACT_APPLICATION_AND_RATING_PENDING",
+    "SAME_SEASON_GJFO_B_T_AND_VERSIONED_INSTALL_PENDING",
+    "SAME_BUILD_V191_V211_V213_V212_INSTALL_PENDING"))
+SAFE_ACQUISITION_ENUMS = {
+    "source": frozenset(("raid_journal", "mplus_journal",
+                         "selectable_stat_craft")),
+    "season_evidence": frozenset(("UNKNOWN_WORLD_STATE_EXPRESSION",
+        "DB2_DISPLAY_SEASON_MATCH", "UNKNOWN_UNSCOPED_JOURNAL",
+        "UNKNOWN_OTHER_DISPLAY_SEASON")),
+    "classification": frozenset(("PROVISIONAL_SIMC_BATCH_REVIEW",)),
+}
+GAME_BUILD = re.compile(r"[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{1,2}\.[0-9]{4,8}\Z")
 
 
 class DiagnosticInputError(ValueError):
@@ -91,10 +113,15 @@ def summarize_gap(v163: dict, equipment_ids: list[int], *,
                 if type(origin) is not dict:
                     raise DiagnosticInputError("V163_ACQUISITION_ROW_INVALID")
                 # Safe allowlist: do not propagate arbitrary original contents.
-                proofs.append({k: origin[k] for k in (
-                    "source", "season_evidence", "display_season_id",
-                    "world_state_expression_id", "classification")
-                    if k in origin and type(origin[k]) in (int, str)})
+                clean = {}
+                for key, accepted in SAFE_ACQUISITION_ENUMS.items():
+                    if type(origin.get(key)) is str and origin[key] in accepted:
+                        clean[key] = origin[key]
+                for key in ("display_season_id", "world_state_expression_id"):
+                    value = origin.get(key)
+                    if type(value) is int and value >= 0:
+                        clean[key] = value
+                proofs.append(clean)
         unresolved = sorted({p["world_state_expression_id"]
             for p in proofs if p.get("season_evidence") ==
             "UNKNOWN_WORLD_STATE_EXPRESSION" and
@@ -118,20 +145,38 @@ def summarize_gap(v163: dict, equipment_ids: list[int], *,
             type(requires) is not list or
             any(type(x) is not str for x in requires)):
         raise DiagnosticInputError("V216_PROGRESS_REQUIRES_INVALID")
+    build = v163.get("build")
+    build = (build if type(build) is str and GAME_BUILD.fullmatch(build)
+             else None)
+    db2_season = v163.get("db2_display_season_id")
+    db2_season = (db2_season if type(db2_season) is int and db2_season >= 0
+                  else None)
     return {
         "schema": "p1_v366_existing_season_join_gap_report_v1",
         "status": "SOURCE_GAP_DIAGNOSTIC_ONLY_NOT_ADMITTED",
-        "build": v163.get("build") if type(v163.get("build")) is str else None,
-        "db2_display_season_id": v163.get("db2_display_season_id"),
+        "build": build,
+        "db2_display_season_id": db2_season,
         "wcl_zone_ids": {k: v for k, v in
             (v163.get("wcl_zone_ids") or {}).items()
             if k in ("raid", "mplus") and type(v) is int}
             if type(v163.get("wcl_zone_ids")) is dict else {},
         "v163_unverified_world_state_expressions":
-            v163.get("unverified_world_state_expressions"),
+            (v163.get("unverified_world_state_expressions")
+             if type(v163.get("unverified_world_state_expressions")) is bool
+             else None),
         "selected_equipment": rows,
-        "v274_compiler_input_files_missing": missing,
-        "v216_stage_requirements": requires,
+        "v274_compiler_input_files_missing": (
+            [code for code in missing if code in SAFE_COMPILER_INPUT_KEYS]
+            if missing is not None else None),
+        "v274_unrecognized_missing_count": (
+            sum(code not in SAFE_COMPILER_INPUT_KEYS for code in missing)
+            if missing is not None else None),
+        "v216_stage_requirements": (
+            [code for code in requires if code in SAFE_STAGE_REQUIREMENTS]
+            if requires is not None else None),
+        "v216_other_requirement_count": (
+            sum(code not in SAFE_STAGE_REQUIREMENTS for code in requires)
+            if requires is not None else None),
         "compiler_missing_is_not_season_membership_evidence": True,
         "v163_candidate_absence_is_not_season_absence": True,
         "consumable_J_F_O_not_in_v163_equipment_scope": True,

@@ -67,6 +67,25 @@ class SelectedSourceGapTest(unittest.TestCase):
         with self.assertRaises(DiagnosticInputError):
             summarize_gap({"schema": "incorrect", "items": []}, [1])
 
+    def test_unexpected_source_text_is_not_redisclosed(self):
+        row = self.v163["items"][0]["acquisition_sources"][0]
+        row["season_evidence"] = "Bearer SECRET_WSE"
+        row["classification"] = {"Bearer": "SECRET_CLASS"}
+        self.v163["build"] = "Bearer SECRET_BUILD"
+        self.v163["db2_display_season_id"] = {"password": "SECRET_DB2"}
+        self.v163["unverified_world_state_expressions"] = "SECRET_WSE_FLAG"
+        result = summarize_gap(
+            self.v163, [1001],
+            compilation={"schema":
+                "v274_v216_collected_to_v241_fresh_compile_inputs_v1",
+                "missing": ["SECRET_COMPILER_INPUT"]},
+            progress={"schema": "v216_zero_history_normal_build_progress_v1",
+                      "requires": ["Authorization: SECRET_TOKEN"]})
+        self.assertNotIn("SECRET", json.dumps(result))
+        self.assertEqual(result["v274_unrecognized_missing_count"], 1)
+        self.assertEqual(result["v216_other_requirement_count"], 1)
+        self.assertFalse(result["environment_ready"])
+
     def test_read_existing_json_sha_no_mutation(self):
         with tempfile.TemporaryDirectory() as temp:
             p = Path(temp)/"source.json"
