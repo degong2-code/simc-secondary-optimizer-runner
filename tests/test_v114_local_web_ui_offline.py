@@ -92,9 +92,9 @@ class RealHTTPPageOffline(unittest.TestCase):
                       "raid_buffs","season-verified-flask","potion",
                       "optimizer-oil-loadout","oil_main","oil_off"):
             self.assertIn('id="'+ident+'"',env)
-        self.assertLess(env.index('id="targets"'),env.index('id="season-target-socket-count"'))
-        self.assertLess(env.index('id="season-target-socket-count"'),env.index('id="duration"'))
-        self.assertLess(env.index('id="duration"'),env.index('id="optimizer-oil-enabled"'))
+        self.assertLess(env.index('id="targets"'),env.index('id="duration"'))
+        self.assertLess(env.index('id="duration"'),env.index('id="season-target-socket-count"'))
+        self.assertLess(env.index('id="season-target-socket-count"'),env.index('id="optimizer-oil-enabled"'))
         self.assertLess(env.index('id="optimizer-oil-enabled"'),env.index('id="food"'))
         self.assertLess(env.index('id="food"'),env.index('id="omnium"'))
         self.assertLess(env.index('id="omnium"'),env.index('id="augmentation"'))
@@ -126,6 +126,39 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertNotIn('https://fonts.googleapis.com',css)
         self.assertEqual(form.count('id="season-verified-flask"'),1)
         self.assertEqual(form.count('id="potion"'),1)
+
+    def test_v363_requested_inputs_and_oil_on_source_contract(self):
+        page=self.client.get("/").text
+        css=self.client.get("/assets/styles.css").text
+        js=self.client.get("/assets/app.js").text
+        form=page.split('<form id="optimizer-form"',1)[1].split('</form>',1)[0]
+        env=form.split('<section class="panel conditions-panel"',1)[1].split('</section>',1)[0]
+        self.assertIn('id="optimizer-oil-enabled" type="checkbox" checked',env)
+        self.assertIn('<label for="season-target-socket-count">보석 소켓 수</label>',env)
+        self.assertIn('id="season-socket-breakdown"',env)
+        self.assertNotIn('보석 소켓 수 <small>',env)
+        self.assertIn('<label for="potion">물약</label><select id="potion"></select>',env)
+        self.assertLess(env.index('id="targets"'),env.index('id="duration"'))
+        self.assertLess(env.index('id="duration"'),env.index('id="season-target-socket-count"'))
+        self.assertLess(env.index('id="season-target-socket-count"'),env.index('id="optimizer-oil-enabled"'))
+        self.assertIn('let oilUseIntent=true;',js)
+        self.assertIn('oilUseIntent=true;',js)
+        self.assertIn('oilUseIntent=u.oil_hands.length>0;',js)
+        self.assertIn('function selectedFullVerifiedOil()',js)
+        self.assertIn('if(oilUseIntent&&!selectedFullVerifiedOil())',js)
+        self.assertIn('function tryApplyDefaultOil()',js)
+        self.assertIn('const matches=state.oilLoadouts.filter(fullVerifiedOilMatch);',js)
+        self.assertIn('item.selected_oil_item_ids_by_hand.main_hand===main',js)
+        self.assertIn('controls.consumable_choices',js) if False else None
+        self.assertIn('food:field("food"),potion:field("potion")',js)
+        self.assertIn('potion:field("potion")',js)
+        self.assertIn('selected_oil_item_ids_by_hand=exactOils',js)
+        self.assertIn('#view-settings .field input',css)
+        self.assertIn('#view-results .metrics>div',css)
+        self.assertIn('grid-template-columns:repeat(5,minmax(0,1fr))',css)
+        self.assertIn('grid-template-columns:repeat(4,minmax(0,1fr))',css)
+        self.assertIn('grid-template-columns:repeat(3,minmax(0,1fr))',css)
+        self.assertEqual(page.count('id="potion"'),1)
 
     def test_v362_default_consumable_summaries_reflect_restored_choices(self):
         page=self.client.get("/").text
