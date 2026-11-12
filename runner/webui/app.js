@@ -193,6 +193,119 @@ function updateBudgetPreview() {
 }
 
 
+
+/* v359: image slots and names in always-visible source-bound item lists.
+   Preserve the original selects as the only session/SimC ID owners. */
+let activeTrinketSlot="trinket1";
+function inlineEquipmentCard(item,{type,selected,disabled,reason="",onSelect}){
+  const b=document.createElement("button");
+  b.type="button";b.className="inline-item";
+  b.dataset.itemId=String(item.item_id);
+  b.disabled=disabled;
+  b.setAttribute("aria-pressed",String(selected));
+  const icon=document.createElement("span");
+  icon.className="inline-item-icon";icon.setAttribute("aria-hidden","true");
+  // No fetched icon can be inferred from a numeric ItemID.
+  icon.textContent="◆";
+  const text=document.createElement("span");text.className="inline-item-label";
+  text.textContent=item.name_ko||item.name||"아이템 #"+item.item_id;
+  const mark=document.createElement("span");mark.className="inline-item-mark";
+  mark.textContent=selected?"✓":"";
+  b.append(icon,text,mark);
+  b.title=text.textContent+(reason?" · "+reason:"");
+  b.addEventListener("click",onSelect);
+  return b;
+}
+function drawInlineEquipment(){
+  const trinketGrid=$("equipment-trinket-grid");
+  const specialGrid=$("equipment-special-grid");
+  if(!trinketGrid||!specialGrid)return;
+  const blank=(parent,message)=>{
+    parent.replaceChildren();
+    const p=document.createElement("p");p.className="equipment-inline-empty";
+    p.textContent=message;parent.appendChild(p);
+  };
+  const trinkets=eligibleEquipment("trinket");
+  const tQuery=equipNorm($("equipment-trinket-search").value);
+  const tFiltered=trinkets.filter(x=>!tQuery||
+    equipNorm(x.name_ko||x.name).includes(tQuery)||String(x.item_id).includes(tQuery));
+  trinketGrid.replaceChildren();
+  if(!tFiltered.length)blank(trinketGrid,state.seasonGear?
+    "검색 결과가 없습니다.":"시즌 장신구 목록을 불러오지 못했습니다.");
+  for(const item of tFiltered.slice(0,80)){
+    const id=String(item.item_id);
+    const used1=field("trinket1")===id,used2=field("trinket2")===id;
+    const selected=used1||used2;
+    const other=activeTrinketSlot==="trinket1"?"trinket2":"trinket1";
+    const disabled=field(other)===id;
+    const b=inlineEquipmentCard(item,{type:"trinket",selected,
+      disabled,reason:disabled?"다른 장신구 칸에서 선택됨":"",
+      onSelect:()=>{
+        const node=$(activeTrinketSlot);
+        node.value=node.value===id?"":id;
+        node.dispatchEvent(new Event("change",{bubbles:true}));
+        if(activeTrinketSlot==="trinket1"&&!field("trinket2"))activeTrinketSlot="trinket2";
+        drawInlineEquipment();
+      }});
+    if(used1)b.dataset.slot="1";
+    if(used2)b.dataset.slot="2";
+    trinketGrid.appendChild(b);
+  }
+  $("equipment-trinket-status").textContent=state.seasonGear?
+    "장신구 "+(field("trinket1")?1:0)+(field("trinket2")?1:0)+"/2 선택"+
+    (tFiltered.length>80?" · 검색하여 나머지 확인":""):
+    "시즌 선택지 미확인";
+
+  const rows=[...$("special-rows").querySelectorAll(".gear-row")];
+  const selectedRows=rows.map(row=>({
+    row,select:row.querySelector('select[data-field="item_id"]'),
+    slot:row.querySelector('select[data-field="slot"]')
+  }));
+  const selectedIds=new Set(selectedRows.filter(x=>x.select?.value).map(x=>x.select.value));
+  const occupiedSlots=new Set(selectedRows.filter(x=>x.select?.value&&x.slot?.value).map(x=>x.slot.value));
+  const specials=eligibleEquipment("special_effect_gear_candidate");
+  const sQuery=equipNorm($("equipment-special-search").value);
+  const sFiltered=specials.filter(x=>!sQuery||
+    equipNorm(x.name_ko||x.name).includes(sQuery)||String(x.item_id).includes(sQuery));
+  specialGrid.replaceChildren();
+  if(!sFiltered.length)blank(specialGrid,state.seasonGear?
+    "검색 결과가 없습니다.":"시즌 특수효과 장비 목록이 없습니다.");
+  for(const item of sFiltered.slice(0,80)){
+    const id=String(item.item_id),selected=selectedIds.has(id);
+    const valid=specialAllowedSlots(item);
+    const slotFree=valid.some(v=>!occupiedSlots.has(v));
+    const noRoom=selectedIds.size>=rows.length;
+    const disabled=!selected&&(!slotFree||noRoom);
+    const b=inlineEquipmentCard(item,{type:"special",selected,disabled,
+      reason:!selected&&(!slotFree?"장착할 수 있는 부위 없음":noRoom?"최대 8개 선택":"")||"",
+      onSelect:()=>{
+        if(selected){
+          const entry=selectedRows.find(x=>x.select?.value===id);
+          if(entry){
+            entry.select.value="";
+            entry.select.dispatchEvent(new Event("change",{bubbles:true}));
+          }
+        }else{
+          const entry=selectedRows.find(x=>!x.select?.value);
+          if(!entry)return;
+          entry.row.hidden=false;
+          entry.select.value=id;
+          entry.select.dispatchEvent(new Event("change",{bubbles:true}));
+        }
+        refreshSpecialSlots();refreshEquipmentSelectionUI();
+        buttonState(state.running,state.longrunResultReady);
+      }});
+    specialGrid.appendChild(b);
+  }
+  $("equipment-special-status").textContent=state.seasonGear?
+    "특수효과 장비 "+selectedIds.size+"개 선택"+(sFiltered.length>80?
+    " · 나머지는 검색":""):"선택 사항";
+  for(const btn of document.querySelectorAll("[data-equip-select]")){
+    const active=btn.dataset.equipSelect===activeTrinketSlot;
+    btn.setAttribute("aria-pressed",String(active));
+  }
+}
+
 /* v354 — image-free card chooser. Every actual selected ID stays in the
    original native SELECT; the browser only displays eligible source candidates. */
 let equipmentDialogTarget=null;
@@ -223,6 +336,7 @@ function refreshEquipmentSelectionUI(){
     btn.textContent=opt?.value?opt.textContent+" · 변경":"특수효과 장비 선택 (선택 사항)";
     btn.disabled=!state.seasonGear;
   }
+  drawInlineEquipment();
 }
 function equipmentKind(select){
   return ["trinket1","trinket2"].includes(select?.id)?
@@ -237,18 +351,17 @@ function closeEquipmentDialog(){
 }
 function openEquipmentPicker(select,opener=null){
   if(!select)return;
-  equipmentDialogTarget=select;equipmentDialogOpener=opener||document.activeElement;
   const type=equipmentKind(select);
-  $("equipment-dialog-title").textContent=type==="trinket"?
-    "장신구 "+(select.id==="trinket1"?"1":"2")+" 선택":"특수효과 장비 선택";
-  $("equipment-dialog-clear").hidden=type==="trinket"&&!select.value;
-  $("equipment-search").value="";
-  renderEquipmentGallery("");
-  const dlg=$("equipment-dialog");
-  if(typeof dlg.showModal==="function"&&!dlg.open)dlg.showModal();
-  else dlg.setAttribute("open","");
-  $("equipment-search").focus();
+  if(type==="trinket"){
+    activeTrinketSlot=select.id;
+    drawInlineEquipment();
+    $("equipment-trinket-search").focus();
+  }else{
+    drawInlineEquipment();
+    $("equipment-special-search").focus();
+  }
 }
+
 function renderEquipmentGallery(query){
   const select=equipmentDialogTarget,grid=$("equipment-gallery");
   grid.replaceChildren();
@@ -588,8 +701,7 @@ function installSeasonGearHints(catalog) {
     node.textContent="시즌 선택 목록이 없습니다. 새 장신구·특수효과 선택은 보류됩니다. 기존 세션 조회는 가능합니다.";
     return;
   }
-  node.textContent="장신구와 특수 장비를 이름으로 검색하세요. 공식 한국어 이름 검증 "+
-    Number(state.seasonGear?.verified_ko_item_names||0)+"종 · 나머지는 원본 이름 표시.";
+  node.textContent="시즌 장신구와 특수효과 장비를 아래에서 선택하세요.";
 }
 // Item.InventoryType determines special equipment slot. Ring and dual
 // weapons have equivalent hands, so select the next free valid slot.
@@ -914,7 +1026,7 @@ function gearInputs(nodeId, config) {
       input.dataset.field=name;
       if(name==="item_id"&&isSpecial) {
         input.appendChild(option("","이번 시즌 특수효과 장비 선택"));
-        input.addEventListener("change",refreshSpecialSlots);
+        input.addEventListener("change",()=>{refreshSpecialSlots();refreshEquipmentSelectionUI();});
       }else if(name==="slot") {
         input.appendChild(option("","미선택"));
         for(const slot of statOptions)input.appendChild(option(slot,slotNames[slot]));
@@ -2282,6 +2394,8 @@ async function rollbackSimcUpdater() {
   setNotice("SimC 관리 버전 복원 완료 · 사용자 원본 설치는 유지됩니다.");
 }
 function registerHandlers() {
+  $("equipment-trinket-search").addEventListener("input",drawInlineEquipment);
+  $("equipment-special-search").addEventListener("input",drawInlineEquipment);
   for(const launch of document.querySelectorAll("[data-equip-select]"))
     launch.addEventListener("click",()=>openEquipmentPicker(
       $(launch.dataset.equipSelect),launch));
