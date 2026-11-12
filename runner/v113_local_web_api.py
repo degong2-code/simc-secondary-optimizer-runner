@@ -1422,6 +1422,21 @@ class LocalJobs:
         try:
             user = sessions.user_scenario(params.controls)
             exact_oils=params.selected_oil_item_ids_by_hand
+            sockets=params.user_socket_total
+            special=params.user_special_gem_id
+            flask_id=params.selected_flask_item_id
+            if ((special is not None and
+                    (sockets is None or sockets<5)) or
+                    (sockets is not None and not 4<=sockets<=64)):
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_USER_TOTAL_SOCKETS_INCLUDE_SPECIAL_INVALID")
+            if (not params.current_season_product and
+                    (sockets not in (None,4) or special is not None or
+                     flask_id is not None)):
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_USER_VARIANT_VERIFIED_SEASON_ONLY")
+            gem_choice=(None if sockets is None else
+                        {"socket_total":sockets,"special_gem_id":special})
             if exact_oils and (
                 not params.current_season_product or
                 set(exact_oils)!=set(user["oil_hands"]) or
@@ -1456,12 +1471,32 @@ class LocalJobs:
             remembered_hands=(
                 sorted(fresh.get("verified_oil_item_ids_by_hand",{}))
                 if type(fresh) is dict else [])
+            gem_matches=(gem_choice is None or
+                         _verified_snapshot_gem_layout_matches(
+                             fresh,**gem_choice))
+            flask_matches=True
+            if fresh is not None and flask_id is not None:
+                # User F choice must bind to the verified v212 physical ID,
+                # never merely the default string token in a web control.
+                original=fresh["source_compilation"][
+                    "verified_environment_install"]["stage_output_path"]
+                doc,_=environment_manifest.read_json(pathlib.Path(original))
+                environment_manifest.verify_fresh_installed_environment(doc)
+                selected_F=doc.get("official_F_physical_source")
+                flask_matches=(type(selected_F) is dict and
+                               selected_F.get("physical_item_id")==flask_id)
+            variant_args={}
+            if gem_choice is not None:
+                variant_args["required_gem_layout"]=gem_choice
+            if flask_id is not None:
+                variant_args["selected_flask_item_id"]=flask_id
             if current_season and (
                 pinned_build is not None or
                 fresh is None or
                 user["target"]["ilevel"]!=fresh["verified_target_ilevel"] or
                 sorted(user["oil_hands"])!=remembered_hands or
                 bool(user["oil_hands"]) or
+                not gem_matches or not flask_matches or
                 (params.fresh_season_build is not None and
                  params.fresh_season_build!=
                      fresh["source_compilation"]["verified_environment_install"]
@@ -1471,7 +1506,13 @@ class LocalJobs:
                     user["target"]["ilevel"],
                     pinned_build or params.fresh_season_build,
                     selected_oil_hands=user["oil_hands"],
-                    selected_oil_item_ids_by_hand=exact_oils or None)
+                    selected_oil_item_ids_by_hand=exact_oils or None,
+                    **variant_args)
+            if current_season and fresh is None and (
+                    special is not None or sockets not in (None,4) or
+                    flask_id is not None):
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_USER_VARIANT_REQUIRES_VERIFIED_SEASON_INSTALL")
             if pinned_build is not None and fresh is None:
                 # An explicit installed build must NEVER silently fall back
                 # to a packaged/default/current or earlier season profile.
@@ -1480,6 +1521,12 @@ class LocalJobs:
             if exact_oils and fresh is None:
                 raise environment_manifest.EnvironmentBlocked(
                     "WEB_FRESH_SELECTED_OIL_ITEM_IDS_NOT_INSTALLED")
+            if fresh is not None and (
+                    (gem_choice is not None and
+                     not _verified_snapshot_gem_layout_matches(
+                         fresh,**gem_choice))):
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_USER_GEM_LAYOUT_NOT_VERIFIED")
             # A legacy/packaged product with no installed v113 snapshot
             # retains its historical v098 oil path. A *verified fresh*
             # snapshot already rejects missing or ambiguous physical O
