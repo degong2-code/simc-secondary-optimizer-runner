@@ -843,10 +843,9 @@ function fillDefault(item) {
   $("targets").value=item.targets;
   $("duration").value=item.duration_seconds;
   $("raid_buffs").checked=item.raid_buffs;
-  // New current-season v212 verified defaults can contain O=0 even when
-  // the historical v106 starter lists oil hands. Never auto-select an
-  // unproved positive O. Explicit choices restored from a sealed old
-  // session are handled by fillSessionInputs, not this new-user default.
+  // Fresh user intent defaults to oil ON. Never assume or invent O:
+  // an installed, exact full-hand manifest must satisfy this preference.
+  oilUseIntent=true;
   $("oil_main").checked=false;
   $("oil_off").checked=false;
   $("optimizer-oil-main-id").value="";
@@ -870,56 +869,78 @@ function fillDefault(item) {
   refreshEquipmentSelectionUI();
 }
 
-/* v361: The public oil switch chooses ONE uniquely installed source-bound
-   full-weapon loadout. Ambiguous/absent sources remain fail closed; no
-   guessed flask, oil or fixed O. Exact identity stays in original controls. */
+/* v363: default-on is USER INTENT, not an assertion of validated O.
+   Only source-verified, full-hand physical IDs can fulfill that intent. */
+let oilUseIntent=true;
+function oilNeedsOffhand() {
+  const form=state.seasonGear?.weapon_forms?.[field("spec")];
+  return form==="dual_one_hand"||form==="dual_two_hand";
+}
+function fullVerifiedOilMatch(item) {
+  const form=state.seasonGear?.weapon_forms?.[field("spec")];
+  if(!form)return false;
+  const needOff=oilNeedsOffhand();
+  const ids=item?.selected_oil_item_ids_by_hand||{};
+  return Number.isSafeInteger(ids.main_hand)&&ids.main_hand>0&&
+    Boolean(ids.off_hand)===needOff&&
+    Object.keys(ids).length===(needOff?2:1);
+}
+function selectedFullVerifiedOil() {
+  if(!$("oil_main").checked ||
+      $("oil_off").checked!==oilNeedsOffhand())return null;
+  const main=Number(field("optimizer-oil-main-id"));
+  const off=Number(field("optimizer-oil-off-id"));
+  if(!Number.isSafeInteger(main)||main<=0 ||
+     (oilNeedsOffhand()&&(!Number.isSafeInteger(off)||off<=0)))return null;
+  return state.oilLoadouts.find(item=>
+    fullVerifiedOilMatch(item)&&
+    item.selected_oil_item_ids_by_hand.main_hand===main &&
+    (!oilNeedsOffhand()||
+      item.selected_oil_item_ids_by_hand.off_hand===off))||null;
+}
 function syncOilUseToggle(){
-  const hands=["main_hand","off_hand"].filter(hand=>
-    $(hand==="main_hand"?"oil_main":"oil_off").checked);
-  const control=$("optimizer-oil-enabled");
-  if(!control)return;
-  control.checked=hands.length>0;
-  $("optimizer-oil-toggle-status").textContent=hands.length?
-    (hands.length===2?"양쪽 무기 적용":"주무기 적용"):"미사용";
+  const box=$("optimizer-oil-enabled");
+  if(!box)return;
+  box.checked=oilUseIntent;
+  const verified=oilUseIntent?selectedFullVerifiedOil():null;
+  $("optimizer-oil-toggle-status").textContent=!oilUseIntent?"미사용":
+    verified?(oilNeedsOffhand()?"양쪽 무기 적용":"주무기 적용"):
+      "기름 검증·선택 필요";
+}
+function tryApplyDefaultOil(){
+  if(!oilUseIntent){syncOilUseToggle();return;}
+  // A restored or deliberately configured selection must not be overwritten
+  // by another season installation, even if the latest catalog differs.
+  if($("oil_main").checked||$("oil_off").checked){
+    syncOilUseToggle();return;
+  }
+  const matches=state.oilLoadouts.filter(fullVerifiedOilMatch);
+  if(matches.length!==1){syncOilUseToggle();return;}
+  $("optimizer-oil-loadout").value=matches[0].installed_manifest_sha256;
+  chooseInstalledOilLoadout();
+  updateBudgetPreview();
 }
 function applyOilUseToggle(){
-  const enabled=$("optimizer-oil-enabled").checked;
-  if(!enabled){
+  oilUseIntent=$("optimizer-oil-enabled").checked;
+  if(!oilUseIntent){
     $("optimizer-oil-loadout").value="";
     $("oil_main").checked=false;$("oil_off").checked=false;
     $("optimizer-oil-main-id").value="";
     $("optimizer-oil-off-id").value="";
-    oilCompatibility();
-    syncOilUseToggle();updateBudgetPreview();
-    return;
+    oilCompatibility();syncOilUseToggle();updateBudgetPreview();return;
   }
-  const weapon=state.seasonGear?.weapon_forms?.[field("spec")];
-  if(!weapon){
-    $("optimizer-oil-enabled").checked=false;
-    $("optimizer-oil-toggle-status").textContent="무기 정보 미검증";
-    throw Error("이 전문화의 무기 형태 확인 후 기름을 사용할 수 있습니다.");
-  }
-  const off=weapon==="dual_one_hand"||weapon==="dual_two_hand";
-  const matches=state.oilLoadouts.filter(item=>{
-    const ids=item.selected_oil_item_ids_by_hand||{};
-    return Boolean(ids.main_hand)&&Boolean(ids.off_hand)===off&&
-      Object.keys(ids).length===(off?2:1);
-  });
-  if(matches.length!==1){
-    $("optimizer-oil-enabled").checked=false;
-    $("optimizer-oil-toggle-status").textContent=matches.length?
-      "복수 조합 · 고급 설정에서 선택":"검증된 기름 없음";
+  tryApplyDefaultOil();
+  const matches=state.oilLoadouts.filter(fullVerifiedOilMatch);
+  if(matches.length!==1&&!selectedFullVerifiedOil()){
     if(matches.length>1){
       const advanced=document.querySelector("#optimizer-form .env-advanced-controls");
       if(advanced)advanced.open=true;
       $("env-oil-options").open=true;
     }
-    throw Error(matches.length?
-      "검증된 기름 종류가 여러 개입니다. 기타 직접 입력에서 정확한 조합을 선택해 주세요.":
-      "현재 시즌·전문화의 사용 가능한 기름 조합이 검증되지 않았습니다.");
+    setNotice(matches.length?
+      "기름 사용 기본값은 켜져 있습니다. 검증된 조합이 여러 개라 직접 고르세요.":
+      "기름 사용 기본값은 켜져 있지만 검증된 조합이 없습니다. 시즌 환경 검증 또는 기름 미사용을 선택하세요.");
   }
-  $("optimizer-oil-loadout").value=matches[0].installed_manifest_sha256;
-  chooseInstalledOilLoadout();
   syncOilUseToggle();updateBudgetPreview();
 }
 
@@ -1010,7 +1031,7 @@ function renderInstalledOilLoadouts(data) {
   });
   selector.value=exact?.installed_manifest_sha256||"";
   const count=state.oilLoadouts.length;
-  syncOilUseToggle();
+  tryApplyDefaultOil();
   $("optimizer-oil-loadout-status").textContent=count?
     "이 PC에 봉인된 "+count+"개 기름 조합 · 저장된 게임 빌드 "+
     data.game_build+" / ilvl "+data.target_ilevel+
@@ -1032,6 +1053,7 @@ function chooseInstalledOilLoadout() {
   const chosen=state.oilLoadouts.find(item=>
     item.installed_manifest_sha256===field("optimizer-oil-loadout"));
   const ids=chosen?.selected_oil_item_ids_by_hand||{};
+  oilUseIntent=Boolean(chosen);
   $("oil_main").checked=Boolean(ids.main_hand);
   $("oil_off").checked=Boolean(ids.off_hand);
   $("optimizer-oil-main-id").value=ids.main_hand??"";
@@ -1208,6 +1230,7 @@ function fillSessionInputs(payload) {
   $("targets").value=b.targets;
   $("duration").value=b.duration_seconds;
   $("raid_buffs").checked=b.raid_buffs;
+  oilUseIntent=u.oil_hands.length>0;
   $("oil_main").checked=u.oil_hands.includes("main_hand");
   $("oil_off").checked=u.oil_hands.includes("off_hand");
   // The server derives these exact IDs from this session's sealed v212
@@ -1361,6 +1384,11 @@ function buildRequest() {
   }
   if(!Number.isInteger(controls.ilevel)||controls.ilevel<266||controls.ilevel>344)
     throw Error("최신 시즌 대표장비의 목표 ilvl은 266~344입니다.");
+  // A checked, default-on oil switch cannot silently turn into O=0.
+  // Only a fully source-bound manifest for this class, hand count and
+  // current ilvl is eligible for a NEW optimizer session.
+  if(oilUseIntent&&!selectedFullVerifiedOil())
+    throw Error("무기 기름 사용이 선택되어 있지만 이 시즌·전문화의 검증된 전체 무기 조합이 없습니다. 환경 구축 또는 미사용을 선택하세요.");
   const exactOils={};
   for(const [hand,node] of [["main_hand","optimizer-oil-main-id"],
                             ["off_hand","optimizer-oil-off-id"]]) {
@@ -2530,6 +2558,7 @@ function registerHandlers() {
   for(const [check,id] of [["oil_main","optimizer-oil-main-id"],
                            ["oil_off","optimizer-oil-off-id"]]) {
     $(check).addEventListener("change",()=>{
+      oilUseIntent=$("oil_main").checked||$("oil_off").checked;
       syncOilUseToggle();
       $("optimizer-oil-loadout").value="";
       if(!$(check).checked)$(id).value="";
