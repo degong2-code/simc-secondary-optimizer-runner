@@ -204,7 +204,7 @@ class RealHTTPPageOffline(unittest.TestCase):
                       '"season-target-ilevel").addEventListener("change"',
                       "renderInstalledFlaskChoices(data)"):
             self.assertIn(token,js)
-        self.assertIn("기존 검증 설치 영약",html)
+        self.assertIn('id="season-verified-flask"',html)
         self.assertNotIn("request.F_rating=",js)
         self.assertNotIn("request.verified_flasks=",js)
         # Same v216 takes the physical ID through existing Build input.
@@ -441,7 +441,7 @@ class RealHTTPPageOffline(unittest.TestCase):
             self.assertNotIn('id="'+ident+'"',common)
             self.assertIn('id="'+ident+'"',optimization)
         self.assertIn("시즌 환경 자동 확인·구축",common)
-        self.assertIn("전체 보석 소켓 수 (일반 + 특수 포함)",optimization)
+        self.assertIn("보석 소켓 수",optimization)
         self.assertIn("시즌 공통 원본·아이템·품질·적용 조건",common)
         self.assertIn('async function buildSeasonEnvironment(forUserVariant=false)',js)
         self.assertIn('const requested_sockets=forUserVariant?valueInt("season-target-socket-count"):4',js)
@@ -491,7 +491,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn("existing_special_gem_id",js)
         self.assertIn("source_target_socket_count",js)
         self.assertIn('id="season-target-socket-count" type="number" min="4" max="64" step="1" value="4"',page)
-        self.assertIn("전체 보석 소켓 수 (일반 + 특수 포함)",page)
+        self.assertIn("보석 소켓 수",page)
         self.assertIn("selected_flask_item_id",js)
         self.assertIn("J/F 원본: ",js)
         self.assertIn("J/F 품질: ",js)
