@@ -74,24 +74,26 @@
  <div class="section-head"><div><p class="eyebrow">02</p><h2 id="conditions-title">환경 구성</h2></div></div>
  <div class="env-input-grid" aria-label="전투 및 소모품 입력">
    <div class="env-grid-cell"><div class="field"><label for="targets">대상 수</label><input id="targets" type="number" min="1" max="40" value="1" required></div></div>
+   <div class="env-grid-cell"><div class="field"><label for="duration">전투 시간 (초)</label><input id="duration" type="number" min="1" max="3600" value="300" required></div></div>
    <div class="env-grid-cell"><details class="fold" id="season-gem-layout" open>
           <summary>보석 소켓</summary>
           
-          <div class="field"><label for="season-target-socket-count">보석 소켓 수 <small>특수보석 포함</small></label><input id="season-target-socket-count" type="number" min="4" max="64" step="1" value="4" inputmode="numeric"></div>
-          <p id="season-socket-breakdown" class="hint" role="status" aria-live="polite">일반보석 4개 + 특수보석 0개 = 전체 소켓 4개</p>
+          <div class="field"><label for="season-target-socket-count">보석 소켓 수</label><input id="season-target-socket-count" type="number" min="4" max="64" step="1" value="4" inputmode="numeric"></div>
+          <p id="season-socket-breakdown" class="hint" role="status" aria-live="polite" hidden></p>
 
           
           <details class="compact-guidance"><summary>소켓 및 보석 예산 규칙</summary><p class="hint">이 수치는 <strong>특수보석을 포함한 전체 소켓 수</strong>입니다. 기본 4개는 치명·가속·특화·유연 일반보석 각 1개이며, 선택 특수보석 1개를 포함하려면 총 5개 이상이어야 합니다. 변경할 때마다 새 J 예산·보석 배치가 검증되어야 하며, 이미 저장된 과거 최적화 세션에는 소급 적용하지 않습니다.</p><p class="hint">일반보석은 4종을 기본으로 배치하고 소켓이 더 많으면 4종을 순환합니다. 확정 J는 해당 시즌의 실제 보석·품질·소켓 근거로만 등록합니다. 모든 효과 계산은 SimC가 담당합니다.</p></details>
         </details></div>
-   <div class="env-grid-cell"><div class="field"><label for="duration">전투 길이 (초)</label><input id="duration" type="number" min="1" max="3600" value="300" required></div></div>
+
+   
    <div class="env-grid-cell"><div class="field env-onoff-cell">
  <span class="env-field-title">무기 기름</span>
- <label class="env-onoff"><input id="optimizer-oil-enabled" type="checkbox"> 사용</label>
+ <label class="env-onoff"><input id="optimizer-oil-enabled" type="checkbox" checked> 사용</label>
  <span id="optimizer-oil-toggle-status" class="env-compact-status" role="status">미사용</span>
  </div></div>
    <div class="env-grid-cell"><div class="field"><label for="food">음식</label><select id="food"></select></div></div>
    <div class="env-grid-cell"><div class="field"><span class="env-field-title">영약</span><span class="env-auto-value" id="env-flask-summary">시즌 기본값</span></div></div>
-   <div class="env-grid-cell"><div class="field"><span class="env-field-title">물약</span><span class="env-auto-value" id="env-potion-summary">전문화 기본값</span></div></div>
+   <div class="env-grid-cell"><div class="field"><label for="potion">물약</label><select id="potion"></select><span id="env-potion-summary" hidden></span></div></div>
    <div class="env-grid-cell env-omnium"><div class="field"><label for="omnium" title="Omnium Folio · 4열 스탯">Omnium Folio <small>4열 선택</small></label><select id="omnium"></select></div></div>
  </div>
  <div class="env-bottom-row">
@@ -115,7 +117,7 @@
  <details class="fold env-advanced-controls"><summary>기타 직접 입력 · 고급 옵션</summary>
 <div class="env-advanced-consumables">
  <div class="field"><label for="season-verified-flask">영약 변경</label><select id="season-verified-flask"><option value="">검증 설치 영약 조회 중…</option></select><p class="hint" id="season-verified-flask-status" role="status">이번 시즌 검증 설치 영약만 선택할 수 있습니다.</p></div>
- <div class="field"><label for="potion">물약 변경</label><select id="potion"></select></div>
+ 
  <details class="fold" id="env-oil-options">
   <summary>다른 기름 조합 지정</summary>
    <div class="field"><label for="optimizer-oil-loadout">검증된 기름 조합</label><select id="optimizer-oil-loadout"><option value="">기름 사용 안 함 (O=0)</option></select><p id="optimizer-oil-loadout-status" class="hint" role="status" aria-live="polite">검증된 기름 조합 확인 중…</p></div>
@@ -125,7 +127,7 @@
             <div class="field"><label for="season-existing-special-gem-id">이미 선택된 특수보석 ItemID <small>새 특수보석을 탐색하거나 효과를 측정하지 않습니다</small></label><input id="season-existing-special-gem-id" type="number" min="1" max="999999999" step="1" placeholder="기존에 지정된 ItemID" inputmode="numeric"></div>
             <p class="hint">아이템 ID를 직접 알고 있어 특정 소켓 구성을 재현할 때만 입력합니다. 일반 사용자는 입력하지 않아도 되며, 특수보석 효과 계산은 SimC가 담당합니다.</p>
           </details>
-<p hidden>새 최적화 세션은 기본적으로 기름을 사용하지 않습니다(O=0). 기름은 검증된 손·물리 ID만 사용하며 검증 전 O를 추정하지 않습니다.</p>
+<p hidden>새 최적화 세션은 기름 사용이 기본입니다. 동일 시즌에 검증된 손별 기름 O가 없다면 자동으로 0을 넣지 않고 검증 또는 미사용 선택을 요청합니다.</p>
    <details class="fold" id="optimizer-season-itemid-expert">
           <summary>미등록 품목 검증 준비 · 정확한 ItemID 입력 (고급)</summary>
           <p class="hint">영약·무기 기름의 물리 ItemID는 일반 사용자가 시즌 구축을 위해 조사하는 항목이 아닙니다. 환경 엔진이 시즌 원본을 수집·검증하고, 검증된 선택지는 캐릭터 설정에서 이름으로 선택하는 것이 제품의 목표입니다. 아래 입력은 이미 정확한 ID를 알고 있는 제한적 재현·검증 경로이며, 현재 자동 품목 등록이 모두 완성됐음을 의미하지 않습니다.</p>
