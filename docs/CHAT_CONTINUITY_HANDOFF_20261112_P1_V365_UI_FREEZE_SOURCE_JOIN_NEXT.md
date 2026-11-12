@@ -1,0 +1,64 @@
+# SIMC SECONDARY OPTIMIZER — 2026-11-12 P1 v365 UI 동결·시즌 원본 조인 다음 작업 단일 인계
+
+> **이 문서가 최신 단일 인계 정본이다.** 이전 [v350 사용자별 시즌 환경 분리 단일 인계](CHAT_CONTINUITY_HANDOFF_20261112_P1_V350_USER_VARIANT_FINALIZATION.md)는 v350 당시 기준·상세 과거 영수증으로 **보존**한다. 이 문서 자체가 코드/Native PASS나 Project UI/공식 승격의 증거가 아니다. 새로운 채팅은 처음 **읽기 전용 복원·보고 후 STOP**, 사용자 별도 '진행' 전 개발·실행·수집·테스트·커밋 금지.
+
+## 1. 실제 확인한 저장소·브랜치·권한
+- 저장소: `degong2-code/simc-secondary-optimizer-runner`; 유일한 현재 격리 개발 브랜치: `probe/chat-cache-v035-20261024`. **인계 작성 직전 실제 HEAD `cec2f5504978a925903a2b05601f3637c380af18`** (v365 문서 반영), 마지막 제품/테스트 변경 `55716a1a851c7f773c54b7209acd6aafea42f3dd`, 파서 코드 변경 `2fa04c3f645d4b9b132e1653cfe464e1b6378458`. **인계 커밋 뒤 HEAD가 바뀐다**. 새 채팅은 인계 시 적힌 SHA를 최신이라고 가정하지 말고 GitHub ref 재조회.
+- 기준 `main` 실제 HEAD `07133e0aaf738d6e4816a6486057b1cd49c018de` (2026-11-12 확인), 현재 격리 작업은 별도 브랜치. `main`에 v350~v365 변경이 병합되었다는 근거 없음. 새 채팅으로 이동한다고 자동으로 GitHub main 병합하지 않는다.
+- 최신 사용자 직접 승인 > [승인 개발자 노트 v1.4.3](SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.3_SEASON_GJFO_AUTO_BUILD_APPROVED_20261102.md) 및 충돌 없는 v1.4 계열 > GitHub 실제 코드·영수증 > 과거 인계. **26 DPS만**: 증강 기원사·탱커·힐러 제외. 구 v1.4.1 '27 DPS'는 역사 자료. Project Sources 실제 등록 여부는 GitHub 문서로 확인할 수 없음.
+- 주 제품 개발 소유권은 기존 주 제품 개발 채팅의 권한을 유지. 이번 인계는 채팅 교체·공식 승격 승인 아님. `main`, immutable v003, 원본 v016, Work OS M0/Shared State, Project Sources/Instructions 실제 적용은 **별도 권한**. Blizzard/WCL 개인 API 비밀키는 Windows Credential Manager 소유이며 GitHub/채팅/Actions 비밀키 내장 금지.
+
+## 2. 제품 최종 목적·고정 계약
+- 미래 목표 ilvl(기본334) 또는 **사용자 직접 입력 최종 T**에서 치명/가속/특화/유연의 **최적 절대 rating**을 SimC DPS로 탐색. 통계는 DPS/SEM·95% 판정·관측 1순위·실질적으로 다른 근접 대안·비율 표시. 관측 최고와 통계적 확정·전역 최적 증명을 구별.
+- 사용자는 직업/전문화/종족/특성, 목표 ilvl 또는 수동 T, **장신구2**, 선택 특수효과 장비·장식 최대2, 소켓/특수보석/소모품/기름/전투 조건만 선택. 현재 착용 장비 스탯 재분배, 전 슬롯 장비 선택, 파밍 장소/장비 추천, 전체 시즌 장비 DB 확장 금지. 대표 일반 장비·무기·4티어·기준 G는 내부 생성.
+- 공식 회계: `G` 대표 일반 비장신구/무기, `J` 검증 기본 보석, `F` 최고 품질 영약, `O` 손별 검증 기름 고정치. **`B=G+J+F`, `T=B+O`, `c_final=c_base+o`**. 사용자 수동 최종 T 최우선, `B=T-O` 변환. 정확 L은 G 안 포함/하한 보호, 정적 E 및 O 1회만 반영, 장신구 고정 스탯은 자유 G 밖, 제작 50:50을 L로 잠그지 않음. 새 시즌에 구 79×2·F165·J138·기름16/16 등을 복사 금지.
+- SimC가 효과/proc/APL/DPS를 계산; 앱은 실제 ItemID/옵션·예산·중복·JSON2 rating·탐색·95% 통계·캐시/취소/재개. 별도 효과 인증 Gate·새 탐색기 연구 금지. 기존 v290 기본 적응형 N56/최종320, 레거시 N35 세션, v291/v293 캐시 및 재개를 재사용. 같은 시즌 정적 아이템 캐시는 SimC revision만으로 폐기하지 않되 DPS 캐시는 실제 바이너리/프로필/전투/후보/iterations/O identity 분리.
+
+## 3. 최신 구현·증거 상태 (완료와 Native 미실증 분리)
+| 구분 | 현재 실체·영수증 | 입증 한계 |
+|---|---|---|
+| **기존 정상 제품 사용 범위 / 실제 Native PASS** | [v337 실제 현재 빌드 70783 빈 root 환경 G2850/J92/F165/O0·B=T3107, 환경 Native3](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43000049793); [v344 Windows Chrome→시즌 Build→생존 사냥꾼 신규 기본 N56/DPS64·취소·재개·결과 재열기 PASS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43114134208) | **해당 시즌·빌드·기본 조건의 실제 실행 범위**. 새로운 사용자 8소켓/F/O 조합·개인 PC·새 시즌 전체 26 DPS의 READY 증명이 아님 |
+| **v348~v350 공통 시즌/사용자 변형 분리 / Windows·API PASS** | v348 개인 WinCred 실제 저장/삭제·비반사. v350 사용자 소켓 총수(특수 포함)·특수보석·영약·기름은 최적화 설정으로 분리; v113은 동일 빌드·ilvl의 정확 v212 설치 SHA/snapshot 변형 아니면 422·Native0. [v350 Windows ZIP #43141083314](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43141083314), [API #43141083312](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43141083312) | 새 8소켓·변경 F/O를 실제 v212로 최초 READY 설치하고 SimC DPS가 출력된 **양성 Native 영수증 없음** |
+| **v351~v364 UI·운영 개편 / 오프라인·Windows 검증 PASS** | 사용자 입력 중심 **① 캐릭터 프로필 | ② 환경 구성 / 아래 ③ 고정장비**; 실행/결과 및 시즌·SimC 환경 설정 화면 분리. WoW 차콜·골드/박스 없는 구분선·밑줄, 4개 환경 입력 한 줄(대상·시간·소켓·기름), 물약 직접 선택, 5열 아이템, 장신구 owner 기준 재클릭 해제·장신구/특수장비/장식 분리, 반지1/2 표시(2는 검증 대기), T 아래 개별 스탯 상한. **v364** 라벨/밑줄/행열·선 겹침 최소 보수, 기존 DOM ID183/183 유지. [v364 Windows·API/UI/focused 등 7/7 SUCCESS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43194906902), [v364 노트](development/notes/2026-11-12_p1-v364-ui-spacing-freeze-and-source-gap-resumption.md). | 기존 폼·API 회귀와 미리보기 통과이지 개인 PC 실측 브라우저 배치·새 시즌 환경 READY/Native 성공이 아님. 최신 **v364 UI CSS를 v363 오프라인 미리보기와 동일물로 간주하지 않음** |
+| **v363 기름 기본 사용과 증강 룬·물약 범위 / 부분 구현** | 기본 기름 **ON**(가능한 쌍수 양손); 유일한 같은 시즌 검증 전체 손별 manifest에 일치하면 O 적용, 후보 없음/복수/불일치 시 의사만 ON 유지하고 새 세션 실행 차단, O=0 무단 대체 금지. 저장 세션 OFF/ON 복원. 물약은 선택 가능하나 비기본 토큰이 항상 현 시즌 승인인 것은 아님. 증강 룬 최고 품질 단일 ID 검증 전 체크박스 자동화 보류. [v363 노트](development/notes/2026-11-12_p1-v363-oil-default-input-end-to-end-audit.md). | PI(마주) 외부 버프 타이밍/캐시 경로, 주술사 무기 강화와 기름 충돌, 반지2 실제 마부 선택·Native 정합, 전체 최고 품질 선택지 자동 등록 미완 |
+| **v365 재현된 시즌 소속 파서 결함 수정 / 실제 focused PASS** | `runner/v163_zero_seed_db2_join.py::exact_world_state_expression_id`: WSE 결측/빈값/음수/비정수는 `JOURNAL_WORLD_STATE_EXPRESSION_SOURCE_INVALID` 차단, CSV 명시적 0만 0, 양의 WSE는 `UNKNOWN_WORLD_STATE_EXPRESSION`. [v163 #43203517263](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43203517263), [focused #43203516915](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43203516915), [v212 #43203516903](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43203516903), [v113 #43203516856](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43203516856) **4/4 실제 GitHub SUCCESS**, 신규 Native0. [v365 노트](development/notes/2026-11-12_p1-v365-db2-conditional-season-parse.md). | WSE 양의 ID가 의미하는 게임 조건 자체의 참/거짓, 현 사용자 원본의 시즌/레이드 최종 소속, 새로운 G/J/F/O 확정·설치 또는 DPS E2E 검증은 **아님** |
+
+**검증 신분:** 구현/CI·Windows 가상 또는 특정 실조건 PASS/새 Native/사용자 로컬 PC 실증을 따로 표시한다. v365 Actions는 코드/테스트 SHA `55716a1a`에서 실행됐으며 최종 문서 SHA `cec2f550` 자체의 새 테스트가 아니다. **v365 변경의 신규 Native=0, 신규 외부 원본 수집=0**.
+
+## 4. 최신 사용자 결정 및 시행착오 교정
+- v350 사용자 승인: 시즌 환경 원본·G/J/F/O/대표 장비·티어 검증은 **공통**, 개인 전체 소켓·특수보석·영약·기름은 **최적화 설정**. 같은 시즌 캐시를 활용, 구시즌 수치 복사 금지. 검증된 최고 품질만 사용자 목록에 보이고 개발 원본 ID는 고급에서만.
+- v351~v364 사용자 화면 검토: 처음부터 실행 상태·관측 결과를 띄우지 말고 **입력에 집중**. `장비 최적화 / 환경 설정` 상위 탭, 최적화 진입 시 ① 캐릭터 / ② 환경(대상→전투시간→소켓→기름, 음식/영약/물약)/③ 장신구·특수효과 장비·장식. 실행하면 결과 화면에서 자연어 진행·DPS/SEM·대안. 드롭다운 대신 직접 장비 목록(가상 아이콘은 임시 placeholder); 선택 항목 클릭 해제; 박스 카드 중첩 제거; 밝은 녹색 테마 폐기하고 차분한 다크 차콜·골드, 얇은 선/일관된 기준선. **UI 추가 디자인은 v364에서 동결**, 기능 검증 후에만 결함 보수.
+- 기름 **기본 ON**은 환경 공통 Build의 내부 **기름0 기준**과 서로 다른 의미. 사용자 고유 최적화에서 검증된 물리 ID·손·O가 없으면 실행을 차단한다. 눈에 보이는 기름 ON 자체가 현재 설치 G/J/F/O READY를 뜻하지 않는다.
+- 증강 룬에 체크박스만 그려 놓고 검증 없는 최고 품질을 임의 선택하지 않는다. 물약은 사용자 선택 허용하되 현재 `/api/v1/options`의 과거 토큰이 모두 현 시즌 `settings.default_consumables`에 source-bound인 것은 아니므로 서버가 차단할 수 있다. 장식/프로필 UI의 각 유효 항목과 비활성 항목을 실제 API/SimC 원본과 맞춘다.
+- 시즌 무키 Wago·SimC 수집 성공, 인증 WCL/Blizzard 조회, 같은 빌드 WCL/DB2 후보 조인은 **활성 시즌 개별 아이템·티어의 최종 소속 입증이 아님**. 과거 '미해결 27건'은 독립 결함27개나 진행률27%가 아니라 상위 조인 실패에서 비롯된 연쇄 PENDING일 수 있다.
+- v365에서 **범용 숫자 파서**가 손상된 조건값을 0으로 바꿔 자격 오류를 감춘 것이 실제 재현된 **수정 완료 결함**이다. 반면 원본 부족으로 시즌 JOIN이 PENDING인 것은 아직 검증하지 않은 환경 사실을 허위 승인하지 않는 의도된 동작으로 보존한다.
+
+## 5. 현재 핵심 병목과 중단된 P1 작업 — 정확한 재개점
+- **사용자 Windows 실관측:** Blizzard/WCL 인증 후에도 `AUTHENTICATED_SOURCE_DISCOVERED_SEASON_JOIN_PENDING`, `DB2_WCL_CANDIDATES_JOINED_SEASON_CONDITIONS_PENDING`, 최종 `SOURCE_SEASON_JOIN_PENDING`. 이는 개인 키/후보 접근 성공이지만 활성 레이드/현재 시즌의 필수 장비 아이템 소속과 특수효과·품질 조건까지 모두 확인된 것은 아니다.
+- 기존 `runner/v216_environment_build_coordinator.py::_join_authenticated_season_source`는 v163 DB2/WCL 후보를 연결하되 시즌 소속 미확정 시 `season_membership_verified=False` 유지. `_zero_history_source_progress`의 `source_compilation.missing`은 JOIN 이외에 대표 일반 장비/4티어, G Native 또는 동일 시즌 유효 참조, J/F 최고 품질, O 실제 무기 손/정적 rating, B/T 계산, v212 설치 증거까지 구분한다. **JOIN 해소만으로 READY 아님.**
+- **첫 작업:** 새 인증/수집보다 먼저 사용자의 기존 **봉인된 원본 v217·v161/WCL/Blizzard**와 v163 `season_evidence`·`unverified_world_state_expressions`·raid journal/tier 조건, v216 `source_compilation.missing`을 **선택된 필수 아이템과 조건에 대해서만** 대조. 실제 사용자 PC 보안 저장소·비밀키/토큰은 현재 GitHub 컨텍스트에서 접근 확인되지 않았으므로 절대로 확보했다고 주장하거나 채팅/로그에 복사하지 않는다.
+- **다음 작업:** WSE 양의 값은 같은 빌드의 권위 있는 조건 소스에서 해석·입증 가능할 때만 시즌 소속으로 승격. 부족한 필수 G·J·F·O 원본과 정확한 소켓/무기 조건을 기존 수집·캐시로 최소 보완; v222 `B/T`·`L/E/O` 중복 방지 후 기존 `v191→v211→v213→v212` Policy A 검증 설치와 `v098` 프로필·`v290/v293` SimC 연결. 기존 성공한 현재70783 단일조건 Native3/64를 무조건 반복하지 않는다.
+- **미실증:** 새 계정의 사용자 선택 **8소켓/특수보석/새 F/O** 실제 환경 READY·J/F/O/B/T·정적 JSON2·DPS·SEM Native 양성, 26 DPS 전체, 개인 PC 새 시즌 최초 설치. 사용자 기본 선택과 수동 T 일치/캐시 SHA·취소·재개도 그 새 변형에 대해서는 확인되지 않았다. 증거 없는 항목만 PENDING, 검증된 기본 환경 자체는 선택형 미확정으로 무조건 차단하지 않는다.
+
+## 6. 개발 지식 지도·핵심 코드·검증 위치
+1. **먼저 읽기**: 이 문서 → [START_HERE](development/START_HERE.md) → [INDEX](development/INDEX.md) → [FILE_MAP](development/FILE_MAP.md) → [EVIDENCE_INDEX](development/EVIDENCE_INDEX.md) → [PRODUCT_CANONICAL_STATUS](PRODUCT_CANONICAL_STATUS_20261109_P3_HAI.md)의 최신 상단/역사 본문 분리 → [DECISIONS](development/DECISIONS.md) → [PROTOCOL](development/PROTOCOL.md) → [승인 v1.4.3](SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.3_SEASON_GJFO_AUTO_BUILD_APPROVED_20261102.md) → v365·v364·v363·v350 [증분 개발 노트](development/notes/2026-11-12_p1-v365-db2-conditional-season-parse.md). 누적 CURRENT·과거 인계를 **처음부터 전수 재감사하지 않는다**.
+2. **A–E 시즌**: `runner/v161_wago_db2_snapshot.py` → `v242_authenticated_season_source_stage.py` (WCL/Blizzard 인증 수집) → `v163_zero_seed_db2_join.py` (WSE/시즌 소속 후보) → `v216_environment_build_coordinator.py` / `v217_stage_execution_engine.py` → `v191/v211/v213` 선택지·품질 → `v222_season_budget_contract.py` G/J/F/O·B/T → `v212_environment_manifest.py` 설치, `v271_user_socket_gem_layout.py`.
+3. **F–G 사용자/실행**: `runner/v348_windows_user_source_credentials.py`; `runner/v113_local_web_api.py` / `runner/webui/index.html`·`styles.css`·`app.js`; `runner/v098_target_user_scenario_bootstrap.py` / `v139_pure_target_profile_composer.py` / `v096_unified_product_entry.py`; `v094_durable_inclusive_adaptive_runner.py` / `v290_multiscale_adaptive_policy.py` / `v291`·`v293`. Windows `START_HERE_AUTO_SETUP_AND_RUN.bat` / `integration_probes/v181_windows_beta_packager.py`.
+4. **Focused tests/receipt**: `tests/test_v163_db2_zero_seed.py`, `test_v216_environment_build_coordinator.py`, `test_v212_environment_manifest.py`, `test_v113_local_web_api_offline.py`, `test_v114_local_web_ui_offline.py`; GitHub Actions 정확한 run은 §3 및 [EVIDENCE_INDEX](development/EVIDENCE_INDEX.md) 참조. 오프라인 test PASS는 실제 User/Native PASS 아님.
+5. **비용/재사용**: 동일 시즌 같은 SHA 정적 원본/Native 캐시 재사용, 정적 수정은 사용자 명시 교정 필요. DPS 캐시는 실제 설치/환경/프로필/바이너리/기름/전투/iterations 정체성. 네트워크 인증·전수 아이템 DB·26 DPS Native 반복·신규 게이트/알고리즘 연구를 **인계 때문에 실행하지 않는다**.
+
+## 7. 다음 개발 로드맵
+1. **P1-A / REUSE → CONNECT:** 시즌 JOIN의 원본별 미충족 조건을 현재 사용자의 봉인 자료/기존 영수증에서 최소 범위 확인. 인증 키 재입력을 기본값으로 요구하지 말고, 실제 source gap이 없으면 시즌 parser/조인의 구체 오류만 고침. 조건 근거 없으면 계속 PENDING.
+2. **P1-B / CONNECT:** 대표 일반장비/무기/티어의 정확한 시즌 G·J/F 최고 품질·기름 O 및 손별 stat, L/E/O 중복 검증. 새 시즌에 과거 79×2/J138/F165/O16+16 전용 값을 그대로 사용 금지. v222 예산·수동 최종 T·Policy A 승인/보류 연결.
+3. **P1-C / CONNECT:** 기존 v216→v212 검증 설치와 **한 가지 새 사용자 변형**(소켓 수·특수보석·영약·기름) v113→v098 대표 프로필·SimC DPS/SEM·95%·관측 1순위/대안·캐시/취소·재개까지 검증. 기존 제품의 기본 Native 증거를 재사용하면서 실제 무효화된 지점만 최소 추가.
+4. **P1-D / 최소 UX 회귀:** 유효한 최고 품질 일반 사용자 이름/선택 항목은 자동 등록, 고급 ItemID 노출을 줄임. 사용자 PC 실제 클릭·모바일/키보드 접근성에서 기능 결함 확인 후 보수; UI 디자인 연구는 **동결**, 게임 아이콘/직업·보석 이미지 추가는 본 흐름 끝난 뒤. 상세 시즌 진행률은 실제 stage receipt에 근거하는 범위만 표시.
+5. **장기:** 매 시즌 G/J/F/O 원본 자동 구축·환경 실증, 26 DPS 실제 사용자 조건 확장·성능/중복/캐시 검증, 선택형 시즌 모듈(Omnium 등) 버전 관리. 장비 추천/전체 DB/별도 SimC 메커니즘·새 N 연구는 범위 외.
+
+## 8. 권한·현재 작업 중지선
+- 인계 문서 갱신은 사용자 요청으로 허용; 새 인계 채팅의 **최초 응답은 실제 GitHub 최신 HEAD와 영수증을 읽기 전용 복원한 보고**만 하고 STOP. 사용자 **별도 “진행”** 이전 코드/문서 수정, 테스트/Actions/Native, 외부 인증/수집, 고비용 실행, 커밋/병합/Project UI·공식 승격 금지.
+- 현재 v365 코드/테스트 검증 4 SUCCESS 이후 인계용 **문서만 추가**하므로 새 Native/Actions PASS를 만들어 내거나 재표기하지 않는다. 기록 자체를 제품 READY로 오인하지 않는다.
+- GitHub 문서 작성·링크 복원은 Project Sources 실제 등록을 의미하지 않는다. 기존 주 개발 채팅은 구현 소유권을 유지하며 새 채팅이 이를 무단으로 가져오지 않는다.
+
+## 9. 새 채팅 첫 메시지 (복사해 사용)
+
+> **SIMC SECONDARY OPTIMIZER — 최신 실제 GitHub 기준 읽기 전용 독립 복원.** `degong2-code/simc-secondary-optimizer-runner`의 격리 브랜치 `probe/chat-cache-v035-20261024`와 `main`의 **실제 최신 HEAD**를 먼저 조회하라(인계 작성 전 브랜치 HEAD `cec2f5504978a925903a2b05601f3637c380af18`, 문서 커밋 후 달라질 수 있음). **최신 단일 인계 정본:** `docs/CHAT_CONTINUITY_HANDOFF_20261112_P1_V365_UI_FREEZE_SOURCE_JOIN_NEXT.md`. 첫 읽기: 그 정본 → `docs/development/START_HERE.md` → `INDEX.md` → `FILE_MAP.md` → `EVIDENCE_INDEX.md` → `docs/PRODUCT_CANONICAL_STATUS_20261109_P3_HAI.md` → `DECISIONS.md` → `PROTOCOL.md` → 승인 `docs/SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.3_SEASON_GJFO_AUTO_BUILD_APPROVED_20261102.md` → v365/v364/v363/v350 노트 및 실제 Actions. v350 옛 인계·CURRENT를 처음부터 다시 전수 감사하지 마라. **26 DPS만**(증강/탱커/힐러 제외), 목표 ilvl334 또는 수동 최종 T에서 SimC DPS 최대화 CHMV 절대 rating. `B=G+J+F,T=B+O`, 수동 T 우선; UI v364 정렬·시즌 Build 공통/사용자 변형 분리·v363 기름 기본 ON·v365 WSE 파서 음성검증을 구분하고 7 UI/Windows+4 DB2/source Actions PASS는 각 범위만 인정. 기존 v216/v212·v290/N56·v293·Native·캐시/취소재개를 재사용. 실제 사용자 인증 후 `SOURCE_SEASON_JOIN_PENDING`은 아직 미해결이며 새 8소켓/F/O 설치·DPS Native 양성 없음. 첫 응답은 **실제 완료/부분·미실증·재현 결함·권한·병목·다음 최소 P1 단계의 읽기 전용 복원 보고만 수행하고 즉시 STOP**하라. 별도로 내가 **“진행”**이라고 승인하기 전 **코드/문서 변경, 테스트, Actions, Native, 외부 수집, 비밀키 취급, 커밋·병합·공식 승격을 시작하지 마라.**

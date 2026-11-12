@@ -1,6 +1,6 @@
 # SIMC SECONDARY OPTIMIZER · 개발 지식 시작점
 
-> **2026-11-12 최신 단일 인계 정본:** [2026-11-12 P1 v350 사용자 변형 제품 마무리·Windows 실사용 최신 단일 인계](../docs/CHAT_CONTINUITY_HANDOFF_20261112_P1_V350_USER_VARIANT_FINALIZATION.md). 직전 v338은 역사 스냅샷이며 v350 실증·개인 Windows 시즌 JOIN PENDING까지 이 문서가 우선이다.
+> **최신 단일 인계 정본 (2026-11-12, P1 v365까지):** [2026-11-12 P1 v365 UI 동결·시즌 원본 조인 미완료 최신 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261112_P1_V365_UI_FREEZE_SOURCE_JOIN_NEXT.md). v350 이전 인계는 역사가 되며 v350의 실증·v364 UI 동결·v365 원본 조건 4 PASS·실제 시즌 JOIN PENDING을 별도 구분한다.
 
 > **2026-11-11 역사 인계:** [v338 제품 완성·공식 한국어·제로베이스 최신 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P1_V338_PRODUCT_FINALIZATION.md). 기존 v331 인계는 제품 N 연구 완료 당시의 역사 스냅샷이고, 최신 제품 상태(v332~v338)는 신규 인계를 우선한다.
 

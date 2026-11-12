@@ -1,4 +1,4 @@
-> **2026-11-12 최신 단일 인계:** [P1 v350 사용자별 보석·영약·기름 구성과 공통 환경 분리, Windows ZIP 검증 및 JOIN PENDING](CHAT_CONTINUITY_HANDOFF_20261112_P1_V350_USER_VARIANT_FINALIZATION.md). 기존 v338/v331은 역사 자료, A~G 장기 본문은 당시 시점의 상태다. v350 연결 코드·오프라인/Windows 검증을 실제 8소켓 GJFO 양성 Native나 개인 시즌 JOIN READY로 확대하지 않는다.
+> **2026-11-12 최신 단일 인계 (v365까지):** [P1 v365 UI 동결·시즌 조건 파서 교정·JOIN PENDING 다음 작업](CHAT_CONTINUITY_HANDOFF_20261112_P1_V365_UI_FREEZE_SOURCE_JOIN_NEXT.md). 이전 [v350 당시 인계](CHAT_CONTINUITY_HANDOFF_20261112_P1_V350_USER_VARIANT_FINALIZATION.md)는 역사 스냅샷. 아래 A~G 본문의 2026-11-09/10 상태는 작성 당시 기록이며 실제 최신 HEAD/Actions와 v365 인계를 우선한다.
 
 > **2026-11-11 역사 단일 인계:** [P1 v338 환경 구축·공식 한국어·실 제로베이스·제품 최종화](CHAT_CONTINUITY_HANDOFF_20261111_P1_V338_PRODUCT_FINALIZATION.md). [이전 P2 v331 연구 종료 인계](CHAT_CONTINUITY_HANDOFF_20261111_P2_V331_PRODUCT_FINALIZATION.md)는 역사 자료. 아래 보충과 A~G 장기 자료의 작성 당시 판정은 실제 HEAD/Actions 및 최신 인계를 우선해 해석.
 
