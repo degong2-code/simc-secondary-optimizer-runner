@@ -19,6 +19,8 @@ import tempfile
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.exception_handlers import request_validation_exception_handler
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -1933,6 +1935,16 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                 version="113.0",openapi_url=None,docs_url=None,redoc_url=None)
     app.state.jobs=jobs
     app.state.simc_updates=updater
+
+    @app.exception_handler(RequestValidationError)
+    async def redact_source_credential_validation(request: Request, exc):
+        # FastAPI's normal validation body includes a copy of the submitted
+        # input. Never echo any part of Client ID/Secret on this one route.
+        if request.url.path=="/api/v1/source-credentials/save":
+            return JSONResponse(
+                {"detail":{"code":"SOURCE_API_CREDENTIAL_FIELDS_INVALID"}},
+                status_code=422)
+        return await request_validation_exception_handler(request,exc)
 
     @app.middleware("http")
     async def localhost_firewall(request: Request, call_next):
