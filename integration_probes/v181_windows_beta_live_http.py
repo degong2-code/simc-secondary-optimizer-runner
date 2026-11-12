@@ -115,7 +115,8 @@ def run(archive_path):
                      b'id="current_season_product"' not in html and
                      b"simc-import-file" in html and
                      b"craft-compatibility-note" in html and
-                     b"simc-update-panel" in html,
+                     b"simc-update-panel" in html and
+                     b'id="source-credentials-panel"' in html,
                      "BROWSER_UI_NOT_SERVED")
                 status,js=http(base,"/assets/app.js")
                 need(status==200 and b"current_season_product" in js,
@@ -124,6 +125,56 @@ def run(archive_path):
                 need(status==200 and len(auth["supported"])==26,
                      "BOOTSTRAP_26_DPS_FAILED")
                 token=auth["session_token"]
+                # v348: validate the actual EXTRACTED Windows CMD/HTTP
+                # application writes into this OS account's Credential Manager
+                # rather than a plaintext file, and never echoes any secret.
+                secret_map={
+                    "blizzard_client_id":"v348-real-http-blizzard-client-id",
+                    "blizzard_client_secret":"v348-real-http-blizzard-secret",
+                    "wcl_client_id":"v348-real-http-wcl-client-id",
+                    "wcl_client_secret":"v348-real-http-wcl-secret"}
+                status,visible=http(base,"/api/v1/source-credentials/status",
+                                    token=token)
+                need(status==200 and visible.get("supported") is True
+                     and visible.get("storage")=="WINDOWS_CREDENTIAL_MANAGER",
+                     "V348_WINDOWS_CREDENTIAL_STATUS_MISSING")
+                status,none=http(base,"/api/v1/source-credentials/status")
+                need(status==403,"V348_LOCAL_SOURCE_STATUS_TOKEN_REQUIRED")
+                origin={"Origin":base}
+                bad={k:v for k,v in secret_map.items()
+                     if k!="wcl_client_secret"}
+                status,rejected=http(base,"/api/v1/source-credentials/save",
+                                     token=token,payload=bad,extra=origin)
+                need(status==422 and rejected.get("detail",{}).get("code")==
+                     "SOURCE_API_CREDENTIAL_FIELDS_INVALID" and
+                     not any(value in json.dumps(rejected)
+                             for value in secret_map.values()),
+                     "V348_SOURCE_VALIDATION_SECRET_REFLECTION")
+                try:
+                    status,saved=http(base,"/api/v1/source-credentials/save",
+                                      token=token,payload=secret_map,extra=origin)
+                    need(status==200 and saved.get("configured") is True
+                         and not any(value in json.dumps(saved)
+                                     for value in secret_map.values()),
+                         "V348_REAL_HTTP_CREDENTIAL_SAVE_FAILED")
+                    status,yes=http(base,"/api/v1/source-credentials/status",
+                                    token=token)
+                    need(status==200 and yes.get("configured") is True
+                         and not any(value in json.dumps(yes)
+                                     for value in secret_map.values()),
+                         "V348_REAL_HTTP_CREDENTIAL_READBACK_FAILED")
+                finally:
+                    deleted_code,deleted=http(
+                        base,"/api/v1/source-credentials/clear",
+                        token=token,payload={},extra=origin)
+                    need(deleted_code==200 and deleted.get("configured") is False,
+                         "V348_WINDOWS_CREDENTIAL_CLEANUP_FAILED")
+                status,cleared=http(base,"/api/v1/source-credentials/status",
+                                    token=token)
+                need(status==200 and cleared.get("configured") is False,
+                     "V348_WINDOWS_CREDENTIAL_SECRET_STILL_PRESENT")
+                print("V348_EXTRACTED_WINDOWS_REAL_HTTP_WIN_CREDENTIAL_MANAGER_PASS",
+                      "native 0",flush=True)
                 status,defaults=http(base,"/api/v1/defaults",token=token)
                 need(status==200 and len(defaults["archetypes"])==26,
                      "USER_DEFAULTS_26_DPS_FAILED")
