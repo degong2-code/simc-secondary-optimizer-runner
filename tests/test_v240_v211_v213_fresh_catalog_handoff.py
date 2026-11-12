@@ -160,9 +160,10 @@ class SameFreshCatalogChain(unittest.TestCase):
             receipts["chmv_budget"].update({
                 "no_double_count":True,"unknown_static_chmv":False})
             proofs={91001:receipts}
-            # Exact v220 eligibility alone still needs the selected observed
-            # rank/source and a usable SimC application scope, but NOT a
-            # complete market inventory or independent use-condition Gate.
+            # v220 eligibility alone is not a highest-quality proof.
+            # The SAME product_input receipt must also attest comparable
+            # effect/use scope, non-inferior numeric effects and real slot.
+            # No full-market inventory or independent certificate is added.
             not_quality=ui.prepare_verified_fresh_choices(
                 artifact,fresh,proofs)
             self.assertEqual(not_quality[
@@ -176,6 +177,17 @@ class SameFreshCatalogChain(unittest.TestCase):
                 "exact_application_scope_verified":True,
                 "quality_source_sha256":"f"*64,
                 "verified_quality_rank":row["highest_source_quality_rank"]})
+            # A rank and SHA, even with four v220 status receipts, are not
+            # proof of same-effect/use conditions and numeric non-inferiority.
+            rank_only=ui.prepare_verified_fresh_choices(
+                artifact,fresh,proofs)
+            self.assertEqual(rank_only[
+                "verified_option_inputs_unpublished"],[])
+            self.assertEqual(rank_only[
+                "quality_use_scope_pending_item_ids"],[91001])
+            receipts["product_input"].update({
+                "same_effect_and_use_conditions_verified":True,
+                "no_inferior_effect_components_verified":True})
             staged,policy_preview=ui.prepare_verified_fresh_choices(
                 artifact,fresh,proofs,return_policy_A_preview=True)
             self.assertEqual(policy_preview["automatically_eligible"],1)
@@ -214,13 +226,28 @@ class SameFreshCatalogChain(unittest.TestCase):
             self.assertEqual(ui.prepare_verified_fresh_choices(
                 artifact,fresh,unsuitable)[
                 "verified_option_inputs_unpublished"],[])
-            # Missing previous exhaustive/use-condition flags is now legal
-            # once original four receipts + comparable source rank and slot
-            # are checked by the trusted installer.
+            # No exhaustive market inventory or extra standalone certificate;
+            # original product_input MUST attest equivalence/use and numeric
+            # non-inferiority, not merely a source quality rank.
             self.assertNotIn("highest_available_quality_verified",
                              proofs[91001]["product_input"])
-            self.assertNotIn("same_effect_and_use_conditions_verified",
-                             proofs[91001]["product_input"])
+            for field in ("same_effect_and_use_conditions_verified",
+                          "no_inferior_effect_components_verified"):
+                missing=copy.deepcopy(proofs)
+                missing[91001]["product_input"].pop(field)
+                self.assertEqual(ui.prepare_verified_fresh_choices(
+                    artifact,fresh,missing)[
+                    "verified_option_inputs_unpublished"],[])
+                negative=copy.deepcopy(proofs)
+                negative[91001]["product_input"][field]=False
+                self.assertEqual(ui.prepare_verified_fresh_choices(
+                    artifact,fresh,negative)[
+                    "quality_use_scope_pending_item_ids"],[91001])
+            incorrect_rank=copy.deepcopy(proofs)
+            incorrect_rank[91001]["product_input"]["verified_quality_rank"]=True
+            self.assertEqual(ui.prepare_verified_fresh_choices(
+                artifact,fresh,incorrect_rank)[
+                "verified_option_inputs_unpublished"],[])
             forged=copy.deepcopy(fresh)
             next(x for x in forged["enchant_candidates"]["items"]
                  if x["enchant_id"]==91002)["source_slots"]=["feet"]
@@ -333,6 +360,12 @@ class SameFreshCatalogChain(unittest.TestCase):
             v191["sha256_by_input"]={
                 "gear":"1"*64,"tier":"2"*64,"budget":None,
                 "v189":"3"*64,"v190":"4"*64}
+            # Historical fixture omits raw effect magnitude; source-only
+            # export must retain it as unknown, never invent a value.
+            self.assertEqual(
+                len(v191["enchants"]["permanent"]["source_records"]),2)
+            self.assertTrue(all(r["effect_magnitude"]=="UNRESOLVED"
+                for r in v191["enchants"]["permanent"]["source_records"]))
             self.assertIsNone(v191["consumables"]["flask"]["reference"])
             self.assertIsNone(v191["consumables"]["general_gems"]["reference"])
             self.assertEqual(v191["source_budget_state"],

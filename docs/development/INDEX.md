@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER — 검색 가능한 개발 기능 지도
 
+> [v371 v196 품질 원본·비열등성 확인 및 v191 누락 효과 크기 호환성](notes/2026-11-12_p1-v371-policy-a-quality-evidence-contract.md) — v220 기존 product_input 안의 동일 효과/사용조건·비열등성 명시 증거 요구. 출처/순위 SHA만으로 승격 금지, 원본 미관측 UNRESOLVED. 정적 대조만 수행; 자동 품질 원본 공급·시즌 JOIN/READY는 계속 PENDING.
+
 > [v370 v191 품질 rank 축약·효과 수치 비열등성·원본 후보 보존](notes/2026-11-12_p1-v370-v191-quality-source-preservation.md) — 후보 단계의 랭크/효과 역전 오선택 가능성 보수, permanent 전체 원본 rank 보존. 헬퍼 발췌 합성 6 PASS; 저장소 전체 CI·실 시즌 품질 승인 미완료.
 
 > [v369 DB2 시즌 ID 0 가짜 시즌 일치 차단](notes/2026-11-12_p1-v369-db2-zero-season-false-match.md) — v163 시즌0은 미범위, 양수 시즌만 선택; 잘못된 DisplaySeasonID 원문은 0으로 대체하지 않고 차단. 소스·테스트 국소 변경, 사용자 실제 시즌 JOIN/READY는 여전히 PENDING.

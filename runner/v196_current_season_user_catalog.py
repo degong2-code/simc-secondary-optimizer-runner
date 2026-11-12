@@ -199,16 +199,22 @@ def prepare_verified_fresh_choices(source_catalog, source_ui,
         if item_id not in admissible:
             continue
         candidate=auto_admission.candidate_from_source_enchant(context,row)
-        # New approved policy: best DISCOVERED comparable source rank is
-        # enough; full-market discovery and a second use-conditions certificate
-        # are NOT admission gates. Original v220 trusted product_input and
-        # exact application slot remain mandatory for valid SimC input.
+        # Only the original trusted product_input owner may attest quality.
+        # A selected rank and arbitrary SHA shape do not prove that variants
+        # have the SAME effect/use scope or that the higher-quality variant
+        # is non-inferior in every relevant numeric effect component.
+        # This stays inside v220's existing product_input family: no second
+        # certificate or full-market discovery is required. Unknown source
+        # comparisons leave only this optional item pending.
         product=trusted_internal_receipts_by_id[item_id]["product_input"]
         if (product.get("exact_application_scope_verified") is not True
+            or product.get("same_effect_and_use_conditions_verified") is not True
+            or product.get("no_inferior_effect_components_verified") is not True
             or not (type(product.get("quality_source_sha256")) is str
                     and auto_admission.HEX64.fullmatch(
                         product["quality_source_sha256"]))
-            or product.get("verified_quality_rank")!=
+            or type(product.get("verified_quality_rank")) is not int
+            or product["verified_quality_rank"]!=
                     row["highest_source_quality_rank"]):
             quality_pending.append(item_id)
             continue

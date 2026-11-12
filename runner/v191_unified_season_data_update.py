@@ -331,10 +331,12 @@ def compile_catalog(gear,tier,budget,effects,consumables,generated,*,event):
                   "permanent":{"source_rows":generated["permanent_enchant"]["declared_rows"],
                     "highest_rank_candidates":permanent,
                     "source_records":[
-                        {k:row[k] for k in (
+                        {**{k:row[k] for k in (
                             "enchant_id","quality_rank","item_class",
                             "inventory_type_mask","item_subclass_mask",
-                            "simc_token","effect_magnitude")}
+                            "simc_token")},
+                         "effect_magnitude":row.get(
+                             "effect_magnitude","UNRESOLVED")}
                         for row in generated["permanent_enchant"]["rows"]],
                     "quality_effect_equivalence_verified":False,
                     "stage":"SIMC_ENCHANT_SLOT_MASK_KNOWN_SEASON_EFFECT_UNVERIFIED"},

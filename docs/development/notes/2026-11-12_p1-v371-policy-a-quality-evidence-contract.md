@@ -1,0 +1,10 @@
+# v371 — v196 품질 증거 내용 점검 및 v370 후보 원본 호환성 수정
+
+- **Capability:** `ENVIRONMENT.SEASON`, `ENCHANT.QUALITY`, `PRODUCT.E2E`, `DEV.CONTINUITY`.
+- **Keywords:** v371, v196, v220, v217, quality source, same effect, use conditions, noninferior, v191 compatibility, P1.
+- **Prior evidence:** 최신 사용자 직접 결정(2026-11-12): 환경 구축 엔진 전역은 프로그램이 입수한 Blizzard/WCL API·동일 빌드 DB2·SimC 증거만 승인 근거. 최고 품질은 **동일 효과와 사용 조건, 모든 관련 수치의 비열등성**이 실제 검증된 경우에만 표시. v370 HEAD `354fa2998a008ddb53eb25d736db85cc7d484a91`. 기존 `v216._v217_policy_A_source_relation_receipts`는 정확한 출처·ID·토큰·마스크 관계만 인증하고 `product_input`/품질/Native/CHMV를 인증하지 않는다고 명시. 기본 신규 시즌 provider는 선택 증거 `{}`를 반환하고, 원본 relation만 합치므로 자동 승격되지 않음.
+- **Decision:** 확인된 승인 경계의 논리 결함만 수정. 이전 `v196.prepare_verified_fresh_choices`는 v220의 상태 영수증이 형식상 통과한 경우 `quality_source_sha256` 64hex, `verified_quality_rank` 값 및 적용 슬롯 플래그만으로 품질 추가 검사를 통과할 수 있었음. 그러나 출처 SHA 모양과 순위가 동일 효과·사용 조건·비열등성 자체의 증명은 아님. `v220`의 기존 trusted `product_input` 증거 범위 내 조건을 강화하고, 새로운 독립 인증 Gate·전체 시장 전수·추가 Native는 만들지 않음.
+- **Changes:** `v196`에서 기존 `product_input`의 `same_effect_and_use_conditions_verified is True`, `no_inferior_effect_components_verified is True`, 정확한 정수 품질 rank, 실물 적용 슬롯, 품질 출처 SHA를 모두 요구. 부족하면 **그 옵션만** `quality_use_scope_pending_item_ids`로 보류. `v191`의 전체 원본 후보 보존에서 효과 크기 필드가 없는 역사/합성 원본은 `UNRESOLVED`로 유지해 v370 키 오류 회피(0으로 추정 금지). 기존 `tests/test_v240_v211_v213_fresh_catalog_handoff.py`에 rank+SHA만 있는 음성, 명시 조건 양성, 각 누락/False 및 잘못된 rank 음성, 미관측 효과 크기 회귀 추가.
+- **Verification:** GitHub 반환 소스/테스트 바이트와 변경된 관련 분기·계약을 정적 대조. 새 전체 unittest/Windows/API/E2E/Actions/Native는 **미실행**; 관련 4개 소스·테스트·문서 외에는 코드 수정 없음. 예전 v370의 발췌 합성 시험 6 PASS를 본 변경의 PASS로 재사용하지 않음. 신규 HTTP/DB2/Native 0회.
+- **Remaining:** 플래그나 해시 자체는 인증 원본이 아님. 신뢰할 수 있는 **기존 source owner**가 같은 빌드의 실제 품질·효과 구조·사용 조건·수치를 검증하고 봉인한 뒤 `product_input`을 공급해야만 양성 등록 가능. 기본 v216은 아직 source_relation만 제공하므로 현 시즌 자동 품질 등록·전체 G/J/F/O READY는 PENDING. 다른 G/J/F/O/선택품 품질 경로도 동일 원칙으로 점검 필요.
+- **Efficiency:** 기존 v191/v196 코드와 v240 연계 테스트만 국소 수정. 다른 시즌/정적 원본/캐시를 재수집하거나 지우지 않고, 정확한 변경 코드 영역에서만 향후 기존 오프라인 CI 검증. 사용자 세션/권한/main 불변.
