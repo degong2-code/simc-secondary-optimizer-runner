@@ -1804,12 +1804,27 @@ class LocalJobs:
                             installed_file.is_file() and
                             not installed_file.is_symlink()):
                         try:
-                            snapshot=json.loads(snapshot_file.read_text("utf8"))
+                            raw=snapshot_file.read_bytes()
+                            snapshot=json.loads(raw.decode("utf8"))
                             installed,_=environment_manifest.read_json(installed_file)
                             environment_manifest.verify_fresh_installed_environment(
                                 installed)
-                            if (installed["manifest_sha256"]==digest and
-                                    snapshot.get("installed_manifest_sha256")==digest):
+                            stage_root,stage_id,out=self._verified_profile_stage(
+                                installed)
+                            if (snapshot_file!=stage_root/out or
+                                snapshot.get("installed_manifest_sha256")!=digest or
+                                raw!=(stage_engine.canonical(snapshot)+"\\n").encode("utf8")):
+                                raise environment_manifest.EnvironmentBlocked(
+                                    "WEB_USER_VARIANT_SAVED_SNAPSHOT_INVALID")
+                            stage_engine.verify_stage(
+                                root=stage_root,stage_id=stage_id,
+                                stage_version="v113-fresh-v212-profile-snapshot-1",
+                                inputs={"installed_manifest_sha256":digest,
+                                        "source_catalog_artifact_sha256":
+                                            installed["source_catalog_artifact_sha256"],
+                                        "snapshot_sha256":stage_engine.digest(raw)},
+                                outputs={"snapshot":out})
+                            if installed["manifest_sha256"]==digest:
                                 original=snapshot.get("environment_result") or {}
                                 compilation=original.get("source_compilation") or {}
                                 gem=compilation.get(
@@ -1826,6 +1841,7 @@ class LocalJobs:
                                         "flask_item_id":flask.get(
                                             "physical_item_id")}
                         except (OSError,ValueError,TypeError,KeyError,
+                                stage_engine.StageExecutionBlocked,
                                 environment_manifest.EnvironmentBlocked):
                             pass
             return {"schema": "v116_local_session_inputs_read_only_v1",
