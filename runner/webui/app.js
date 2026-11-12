@@ -1100,7 +1100,7 @@ function showSeasonEnvironmentBuild(data) {
   const joined=data?.season_join?.status||"원본 단계 미보고";
   const wago=step.source_stage_status||data?.source_stage?.status||"원본 단계 미보고";
   if(ready) {
-    headline.textContent="설치 완료 · 같은 시즌 G/J/F/O와 실행 프로필을 검증했습니다.";
+    headline.textContent="시즌 G/J/F/O 검증 환경 설치 완료 · 새 최적화 실행 프로필은 해당 소켓 구성과 일치해야 합니다.";
   } else if(joined==="AUTHENTICATED_SEASON_JOIN_NOT_READY"){
     headline.textContent="설치 보류 · 활성 시즌·레이드 연결이 아직 확인되지 않았습니다. 인증정보가 저장됐는지만으로는 확인 완료가 아닙니다. "+
       "원본 수집 상태: "+wago+" · Blizzard/WCL 단계: "+discovery+". "+
