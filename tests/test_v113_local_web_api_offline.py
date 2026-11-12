@@ -415,6 +415,43 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(len(calls),len(web.environment_build.wago_snapshot.TABLES))
         self.assertEqual(artifact.read_bytes(),b"CORRUPTED_SOURCE")
 
+    def test_v350_user_socket_and_flask_variants_fail_closed_before_session(self):
+        """An uninstalled individual layout may not reuse a historical v213 B/T."""
+        inputs=(
+            ({"user_socket_total":8},"WEB_USER_VARIANT_REQUIRES_VERIFIED_SEASON_INSTALL"),
+            ({"user_socket_total":5,"user_special_gem_id":240983},
+             "WEB_USER_VARIANT_REQUIRES_VERIFIED_SEASON_INSTALL"),
+            ({"user_socket_total":4,"selected_flask_item_id":241326},
+             "WEB_USER_VARIANT_REQUIRES_VERIFIED_SEASON_INSTALL"),
+            ({"user_socket_total":4,"user_special_gem_id":240983},
+             "WEB_USER_TOTAL_SOCKETS_INCLUDE_SPECIAL_INVALID"),
+        )
+        with mock.patch.object(web.subprocess,"Popen",
+                               side_effect=AssertionError("NATIVE_FORBIDDEN")):
+            for choice,expected in inputs:
+                reply=self.post("/api/v1/sessions/plan",
+                                {**self.payload,"current_season_product":True,
+                                 **choice})
+                self.assertEqual(reply.status_code,422,reply.text)
+                self.assertEqual(reply.json()["detail"]["code"],expected)
+        self.assertFalse((self.root/"runs").exists())
+
+    def test_v350_verified_gem_snapshot_exact_socket_special_match(self):
+        """A source gem layout is not a universal season-wide J/SimC profile."""
+        observed={"source_compilation":{"physical_gem_layout_unadmitted":{
+            "schema":"v271_user_socket_gem_layout_stage_v1",
+            "status":"PHYSICAL_GEMS_STAGED_SOURCE_AND_SOCKET_PROOFS_PENDING",
+            "socket_total":8,"special_gem_id":240983,
+            "ordinary_gem_ids":[201,202,203,204,201,202,203]}}}
+        checker=web._verified_snapshot_gem_layout_matches
+        self.assertTrue(checker(observed,special_gem_id=240983,
+                                socket_total=8))
+        for want in ({"special_gem_id":None,"socket_total":8},
+                     {"special_gem_id":240983,"socket_total":7},
+                     {"special_gem_id":None,"socket_total":4}):
+            self.assertFalse(checker(observed,**want))
+        self.assertFalse(checker({},special_gem_id=None,socket_total=4))
+
     def test_web_season_environment_build_no_dps_inputs_and_no_native(self):
         payload={"game_build":"12.2.0.99999","target_ilevel":334}
         source={"status":"FRESH_WAGO_DB2_COLLECTED_MORE_SOURCES_PENDING",
