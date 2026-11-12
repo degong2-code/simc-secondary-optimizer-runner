@@ -1776,6 +1776,7 @@ class LocalJobs:
                 raise sessions.SessionBlocked("SESSION_INPUTS_OR_MANIFEST_DRIFT")
             restored_oils={}
             verified_build=None
+            verified_user_variant=None
             if recorded.get("fresh_v212_installed_manifest_sha256") is not None:
                 # The existing start/resume proof validates the original
                 # v212 SHA, source, chosen hand+physical IDs and session.
@@ -1790,6 +1791,43 @@ class LocalJobs:
                 # display build; existing exact v212 validation still owns
                 # authority. Do not fail read-only restore on optional UI data.
                 verified_build=summary.get("game_build")
+                # Restore only already-sealed v113/v212 source identity. No
+                # new source acquisition, budget recalculation or Native.
+                digest=recorded["fresh_v212_installed_manifest_sha256"]
+                if verified_build and type(digest) is str:
+                    directory=(self.root/"_fresh_season_sources"/
+                               ("wago_"+verified_build)/"fresh_source")
+                    snapshot_file=directory/("v113_profile_"+digest[:20]+".json")
+                    installed_file=directory/("v212_installed_"+digest[:20]+".json")
+                    if (snapshot_file.is_file() and
+                            not snapshot_file.is_symlink() and
+                            installed_file.is_file() and
+                            not installed_file.is_symlink()):
+                        try:
+                            snapshot=json.loads(snapshot_file.read_text("utf8"))
+                            installed,_=environment_manifest.read_json(installed_file)
+                            environment_manifest.verify_fresh_installed_environment(
+                                installed)
+                            if (installed["manifest_sha256"]==digest and
+                                    snapshot.get("installed_manifest_sha256")==digest):
+                                original=snapshot.get("environment_result") or {}
+                                compilation=original.get("source_compilation") or {}
+                                gem=compilation.get(
+                                    "physical_gem_layout_unadmitted") or {}
+                                sockets=gem.get("socket_total")
+                                special=gem.get("special_gem_id")
+                                flask=installed.get("official_F_physical_source")
+                                if (type(sockets) is int and
+                                        4<=sockets<=64 and
+                                        type(flask) is dict):
+                                    verified_user_variant={
+                                        "socket_total":sockets,
+                                        "special_gem_id":special,
+                                        "flask_item_id":flask.get(
+                                            "physical_item_id")}
+                        except (OSError,ValueError,TypeError,KeyError,
+                                environment_manifest.EnvironmentBlocked):
+                            pass
             return {"schema": "v116_local_session_inputs_read_only_v1",
                     "session_id": folder.name, "user": user,
                     "binary": manifest["native_binary"],
@@ -1799,6 +1837,7 @@ class LocalJobs:
                         recorded.get("current_season_product",False)),
                     "verified_oil_item_ids_by_hand":restored_oils,
                     "installed_season_game_build":verified_build,
+                    "verified_user_variant":verified_user_variant,
                     "native_called": False}
         except Exception as exc:
             raise blocked(exc) from None
