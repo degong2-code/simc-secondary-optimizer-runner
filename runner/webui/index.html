@@ -84,13 +84,14 @@
           <details class="compact-guidance"><summary>소켓 및 보석 예산 규칙</summary><p class="hint">이 수치는 <strong>특수보석을 포함한 전체 소켓 수</strong>입니다. 기본 4개는 치명·가속·특화·유연 일반보석 각 1개이며, 선택 특수보석 1개를 포함하려면 총 5개 이상이어야 합니다. 변경할 때마다 새 J 예산·보석 배치가 검증되어야 하며, 이미 저장된 과거 최적화 세션에는 소급 적용하지 않습니다.</p><p class="hint">일반보석은 4종을 기본으로 배치하고 소켓이 더 많으면 4종을 순환합니다. 확정 J는 해당 시즌의 실제 보석·품질·소켓 근거로만 등록합니다. 모든 효과 계산은 SimC가 담당합니다.</p></details>
         </details></div>
    <div class="env-grid-cell"><div class="field"><label for="duration">전투 길이 (초)</label><input id="duration" type="number" min="1" max="3600" value="300" required></div></div>
-   <div class="env-grid-cell"><div class="field"><label for="optimizer-oil-loadout">무기 기름</label>
-              <select id="optimizer-oil-loadout"><option value="">기름 사용 안 함 (O=0)</option></select>
-              <p id="optimizer-oil-loadout-status" class="hint" role="status" aria-live="polite">이 PC의 검증 설치 목록을 확인하는 중…</p>
-            </div></div>
+   <div class="env-grid-cell"><div class="field env-onoff-cell">
+ <span class="env-field-title">무기 기름</span>
+ <label class="env-onoff"><input id="optimizer-oil-enabled" type="checkbox"> 사용</label>
+ <span id="optimizer-oil-toggle-status" class="env-compact-status" role="status">미사용</span>
+ </div></div>
    <div class="env-grid-cell"><div class="field"><label for="food">음식</label><select id="food"></select></div></div>
-   <div class="env-grid-cell"><div class="field"><label for="season-verified-flask">영약</label><select id="season-verified-flask"><option value="">검증 설치 영약 조회 중…</option></select><p class="hint" id="season-verified-flask-status" role="status">기존 설치 영약만 표시하며 최고 품질 우위를 추정하지 않습니다.</p></div></div>
-   <div class="env-grid-cell"><div class="field"><label for="potion">물약</label><select id="potion"></select></div></div>
+   <div class="env-grid-cell"><div class="field"><span class="env-field-title">영약</span><span class="env-auto-value">시즌 기본값</span></div></div>
+   <div class="env-grid-cell"><div class="field"><span class="env-field-title">물약</span><span class="env-auto-value">전문화 기본값</span></div></div>
    <div class="env-grid-cell env-omnium"><div class="field"><label for="omnium" title="Omnium Folio · 4열 스탯">Omnium Folio <small>4열 선택</small></label><select id="omnium"></select></div></div>
  </div>
  <div class="env-bottom-row">
@@ -112,6 +113,11 @@
  <details class="fold" id="dk-runeforge-panel" hidden><summary>죽음의 기사 룬벼리기 · 영구 무기 강화</summary><p class="hint">기름 O와 별개인 영구 강화입니다. 기본 룬을 추정하지 않습니다. 이번 시즌 검증된 SimC 소스의 룬만 선택할 수 있습니다. 선택한 룬은 해당 무기의 enchant_id에 반영하고, 효과와 DPS는 SimC가 처리합니다. <span id="dk-runeforge-status">검증된 시즌 룬 목록 확인 중</span></p><div class="two"><div class="field"><label for="dk_rune_main">주무기 룬</label><select id="dk_rune_main"><option value="">현재 시즌 검증 목록 확인 중</option></select></div><div class="field"><label for="dk_rune_off">보조무기 룬 (냉기)</label><select id="dk_rune_off"><option value="">현재 시즌 검증 목록 확인 중</option></select></div></div></details>
  <div class="env-variant-action"><div class="actions"><button type="button" id="user-variant-prepare-btn" class="btn secondary" disabled>선택 환경 검증·준비</button></div><p id="user-variant-status" class="hint" role="status" aria-live="polite">환경 선택을 변경하면 다시 검증해 주세요.</p></div>
  <details class="fold env-advanced-controls"><summary>기타 직접 입력 · 고급 옵션</summary>
+<div class="env-advanced-consumables">
+ <div class="field"><label for="season-verified-flask">영약 변경</label><select id="season-verified-flask"><option value="">검증 설치 영약 조회 중…</option></select><p class="hint" id="season-verified-flask-status" role="status">이번 시즌 검증 설치 영약만 선택할 수 있습니다.</p></div>
+ <div class="field"><label for="potion">물약 변경</label><select id="potion"></select></div>
+ <div class="field"><label for="optimizer-oil-loadout">검증된 기름 조합</label><select id="optimizer-oil-loadout"><option value="">기름 사용 안 함 (O=0)</option></select><p id="optimizer-oil-loadout-status" class="hint" role="status" aria-live="polite">검증된 기름 조합 확인 중…</p></div>
+</div>
 <details class="fold" id="season-special-gem-expert"><summary>고급 입력: 이미 선택한 특수보석 ItemID (일반 사용자 입력 불필요)</summary>
             <div class="field"><label for="season-existing-special-gem-id">이미 선택된 특수보석 ItemID <small>새 특수보석을 탐색하거나 효과를 측정하지 않습니다</small></label><input id="season-existing-special-gem-id" type="number" min="1" max="999999999" step="1" placeholder="기존에 지정된 ItemID" inputmode="numeric"></div>
             <p class="hint">아이템 ID를 직접 알고 있어 특정 소켓 구성을 재현할 때만 입력합니다. 일반 사용자는 입력하지 않아도 되며, 특수보석 효과 계산은 SimC가 담당합니다.</p>
