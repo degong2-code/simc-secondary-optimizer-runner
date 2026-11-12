@@ -68,6 +68,66 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertNotIn('--bg:#f5f6f4',css)
         self.assertNotIn('https://fonts.googleapis.com',css)
 
+    def test_v379_source_candidate_join_is_not_presented_as_global_install_gate(self):
+        """Execute the actual UI diagnosis against v343-like and pending cases."""
+        import shutil,subprocess
+        binary=shutil.which("node")
+        if binary is None:
+            self.skipTest("node is not installed on this runner")
+        harness=r"""
+const fs=require('fs'),assert=require('assert');
+const raw=fs.readFileSync(process.argv[1],'utf8');
+const start=raw.indexOf('function diagnoseSeasonBuildEvidence(data) {');
+const end=raw.indexOf('\nfunction showSeasonEnvironmentBuild(',start);
+assert(start>=0&&end>start,'UI diagnosis function is missing');
+const diagnose=Function(raw.slice(start,end)+
+    '\nreturn diagnoseSeasonBuildEvidence;')();
+const joined='DB2_WCL_CANDIDATES_JOINED_SEASON_CONDITIONS_PENDING';
+const base={
+ web_environment_scope:{auto_initial_core_build_requested:true,
+                        environment_ready:false,environment_installed:false},
+ season_join:{status:joined},
+ zero_history_build:{
+    season_content_candidate_join_sealed:true,
+    requires:['SOURCE_SEASON_JOIN_PENDING',
+              'HIGHEST_QUALITY_GEM_J_SOURCE_PENDING']},
+ source_compilation:{status:'COLLECTED_COMPILER_INPUTS_PENDING',
+                     missing:['SIMC_PERMANENT_ENCHANT_SOURCE']}};
+const one=diagnose(base);
+assert.strictEqual(one.contentCandidatesJoined,true);
+assert.strictEqual(one.sourceSealed,true);
+assert.strictEqual(one.mode,'기본 자동 G/F 구축 요청');
+assert.strictEqual(one.compilerMissingCount,1);
+assert(one.firstMissing.includes('SIMC_PERMANENT_ENCHANT_SOURCE'));
+assert.strictEqual(one.requiredMissingCount,1);
+assert.strictEqual(one.isEnvironmentReady,false);
+const noCompiler={...base,
+  source_compilation:{status:'FRESH_V191_V211_V213_COMPILED_UNADMITTED',
+                      missing:[]}};
+assert(diagnose(noCompiler).firstMissing.includes(
+    'HIGHEST_QUALITY_GEM_J_SOURCE_PENDING'));
+const ready={...noCompiler,web_environment_scope:{
+  auto_initial_core_build_requested:true,
+  environment_ready:true,environment_installed:true}};
+assert.strictEqual(diagnose(ready).isEnvironmentReady,true);
+const advanced={...base,web_environment_scope:{
+  local_native_G_requested:true,auto_initial_core_build_requested:false}};
+assert.strictEqual(diagnose(advanced).mode,'고급 선택 Native 요청');
+const sourceOnly={...base,web_environment_scope:{
+  auto_initial_core_build_requested:false}};
+assert.strictEqual(diagnose(sourceOnly).mode,'원본 확인·수집 요청');
+const noSeal={...base,zero_history_build:{
+  season_content_candidate_join_sealed:false,
+  requires:['SOURCE_SEASON_JOIN_PENDING']}};
+assert.strictEqual(diagnose(noSeal).requiredMissingCount,1);
+assert(!raw.includes('활성 시즌·레이드 적용 조건 미확정으로 설치를 보류합니다.'));
+assert(raw.includes('diagnosed.firstMissing'));
+"""
+        result=subprocess.run([binary,"-e",harness,
+              str(ROOT/"runner/webui/app.js")],
+              capture_output=True,text=True,timeout=15,check=False)
+        self.assertEqual(result.returncode,0,result.stderr)
+
     def test_v357_client_javascript_syntax_and_contract_when_node_available(self):
         import shutil,subprocess
         binary=shutil.which("node")

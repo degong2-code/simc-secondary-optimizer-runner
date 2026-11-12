@@ -1550,11 +1550,46 @@ async function withBusy(fn) {
   }
   finally{state.busy=false;buttonState(state.running,$("filled-result").hidden===false);}
 }
+function diagnoseSeasonBuildEvidence(data) {
+  // UI-only, read-only classification. v212/v216 own ALL real admission.
+  // A sealed DB2/WCL content-candidate join is NOT evidence that every loot
+  // item belongs to this season; neither is an unknown optional WSE a global
+  // blocker for an otherwise fully proven G/J/F/O installation.
+  const scope=data?.web_environment_scope||{};
+  const compiled=data?.source_compilation||{};
+  const step=data?.zero_history_build||{};
+  const join=data?.season_join?.status||"";
+  const contentCandidatesJoined=
+    join==="DB2_WCL_CANDIDATES_JOINED_SEASON_CONDITIONS_PENDING";
+  const sourceSealed=step.season_content_candidate_join_sealed===true;
+  const mode=(scope.auto_initial_core_build_requested===true?
+    "기본 자동 G/F 구축 요청":
+    scope.local_native_G_requested===true||
+    scope.auto_native_F_requested===true||
+    scope.auto_native_O_requested===true?
+    "고급 선택 Native 요청":
+    "원본 확인·수집 요청");
+  const missing=Array.isArray(compiled.missing)?compiled.missing:[];
+  const requires=Array.isArray(step.requires)?
+    step.requires.filter(v=>!(sourceSealed&&v==="SOURCE_SEASON_JOIN_PENDING")):[];
+  const firstMissing=(missing.length?
+    "소스 컴파일 입력: "+String(missing[0]):
+    requires.length?"후속 검증: "+String(requires[0]):
+    "필수 원본의 상세 미완료 항목 미보고");
+  return {mode,contentCandidatesJoined,sourceSealed,
+          firstMissing,compilerMissingCount:missing.length,
+          requiredMissingCount:requires.length,
+          isEnvironmentReady:scope.environment_ready===true&&
+                             scope.environment_installed===true};
+}
 function showSeasonEnvironmentBuild(data,forUserVariant=false) {
   const scope=data?.web_environment_scope||{};
   const step=data?.zero_history_build||{};
   const source=data?.source_compilation||{};
-  const needs=[...(Array.isArray(step.requires)?step.requires:[]),
+  const diagnosed=diagnoseSeasonBuildEvidence(data);
+  const needs=[...(Array.isArray(step.requires)?
+    step.requires.filter(v=>!(diagnosed.sourceSealed&&
+                            v==="SOURCE_SEASON_JOIN_PENDING")):[]),
     ...(Array.isArray(source.missing)?source.missing.map(x=>"SOURCE_COMPILER:"+x):[]),
     ...(Array.isArray(source.selected_J_F_source_owner_numeric_unadmitted?.missing)?
       source.selected_J_F_source_owner_numeric_unadmitted.missing.map(x=>"J/F 원본: "+x):[]),
@@ -1596,8 +1631,10 @@ function showSeasonEnvironmentBuild(data,forUserVariant=false) {
       "원본 수집 상태: "+wago+" · Blizzard/WCL 단계: "+discovery+". "+
       "아래 1차 미완료 원인 때문에 후속 티어·장비·G/J/F/O 조건이 함께 보류될 수 있습니다.";
   } else if(joined==="DB2_WCL_CANDIDATES_JOINED_SEASON_CONDITIONS_PENDING"){
-    headline.textContent="시즌 원본 후보 결합 완료 · 하지만 현재 활성 시즌·레이드 소속과 적용 조건이 아직 검증되지 않아 설치를 보류합니다. "+
-      "후속 장비·G/J/F/O 미완료는 이 원인에서 연쇄 발생할 수 있습니다. 기존 검증 세션과 캐시는 보존됩니다.";
+    headline.textContent="시즌 콘텐츠 후보 결합 완료 · 일부 개별 아이템 조건은 미해석 상태입니다. "+
+      "미선택 후보의 미해석은 그 자체로 환경 전체의 설치 차단 근거가 아닙니다. "+
+      diagnosed.mode+" · "+diagnosed.firstMissing+
+      " · 실제 설치는 선택된 필수 G/J/F/O·티어 증거로 판정합니다.";
   } else if(joined==="LIVE_SEASON_SCOPE_AMBIGUOUS_PENDING"){
     headline.textContent="설치 보류 · 원본은 조회했지만 활성 시즌 범위를 하나로 확정할 수 없습니다. "+
       "Blizzard/WCL 단계: "+discovery+" · Wago DB2 단계: "+wago+".";
@@ -1661,6 +1698,7 @@ function showSeasonEnvironmentBuild(data,forUserVariant=false) {
         " · 일반보석 4종 기본 배치 요청(특수효과 SimC 담당)":
       scope.four_stat_ordinary_source_requested===true?
         " · 일반보석 4종 시즌 원본 수집 요청(J 승인·배치 별도)":"")+
+    " · 실행 경로 "+diagnosed.mode+
     " · 신규 Native "+(Number(data?.native_calls)||0)+"회"+
     (autoFlask?.status==="ONE_OBSERVED_FLASK_NO_OIL_NUMERIC_PREVIEW_UNADMITTED"?
       (scope.auto_select_observed_F_no_oil===true?
@@ -1682,8 +1720,10 @@ function showSeasonEnvironmentBuild(data,forUserVariant=false) {
   node.textContent=ready?
     "시즌 G/J/F/O 검증 환경 설치 완료 · 새 세션의 소켓·영약·기름 구성은 별도로 확인합니다.":
     joined==="DB2_WCL_CANDIDATES_JOINED_SEASON_CONDITIONS_PENDING"?
-    "시즌 원본 후보 결합 완료 · 활성 시즌·레이드 적용 조건 미확정으로 설치를 보류합니다.":
-    "시즌 환경 설치 보류 · 세부 원본 단계와 연쇄 진단은 아래에서 확인할 수 있습니다.";
+    "시즌 콘텐츠 후보 결합 완료 · "+diagnosed.mode+
+    " · "+diagnosed.firstMissing:
+    "시즌 환경 설치 보류 · "+diagnosed.mode+
+    " · "+diagnosed.firstMissing;
   const details=$("season-build-pending"),list=$("season-build-missing");
   list.replaceChildren();
   for(const missing of unique){
