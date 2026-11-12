@@ -2,6 +2,8 @@
 
 > 최신 상태는 [START_HERE](START_HERE.md) → [2026-11-12 v350 최신 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261112_P1_V350_USER_VARIANT_FINALIZATION.md) → [역사 v338](../CHAT_CONTINUITY_HANDOFF_20261111_P1_V338_PRODUCT_FINALIZATION.md) → [현재 A~G 정본](../PRODUCT_CANONICAL_STATUS_20261109_P3_HAI.md) → [FILE_MAP](FILE_MAP.md) → [EVIDENCE_INDEX](EVIDENCE_INDEX.md) 순서로 확인. 이전 INDEX 본문·누적 일자별 배너는 [역사 원본](HISTORICAL_INDEX_20261110_PRE_KNOWLEDGE_LAYER.md)에 **그대로 보존**했다. 아래 17개 Capability 호환표의 HISTORICAL/PARTIAL은 현재 제품 상태 판정이 아니다.
 
+> [v358 1|2 상단, 3 전체폭 하단 컴팩트 UI](notes/2026-11-12_p1-v358-compact-two-up-layout.md) — 모든 기존 입력 ID165개 보존, UI/API/Windows ZIP 7 Actions SUCCESS, 신규 Native0, 장비 아이콘 추가 연기.
+
 > [v357 입력 중심 다크 골드 UI/직업·전문화 타일/장비 카드/실행 후 결과 화면 분리](notes/2026-11-12_p1-v357-task-first-dark-card-ui.md) — UI/API/Windows ZIP/focused 7/7 SUCCESS, 신규 Native0. 역사 v350 정본을 제품 개발 상태와 혼동하지 않는다.
 
 > [v317 1조건 Native 계측 최소 실증 (실제 영수증 전 PENDING)](notes/2026-11-11_p2-v317-one-case-real-v316-trace.md): v316 opt-in, 최초 Arms Warrior 신규 소스, 12-call 상한, v290 기본 불변.
