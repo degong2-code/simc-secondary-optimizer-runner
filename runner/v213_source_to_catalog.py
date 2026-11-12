@@ -717,6 +717,10 @@ def compile_catalog(season, season_sha, classification, classification_sha):
             "status": classification["status"],
             "counts": classification["counts"],
             "rows": classification["rows"],
+            **({"static_quality_comparison_source_only":
+                    classification["static_quality_comparison_source_only"]}
+               if classification.get("static_quality_comparison_source_only") is not None
+               else {}),
             **({"source_manifest_sha256":classification["source_manifest_sha256"]}
                if classification.get("source_manifest_sha256") is not None
                else {}),

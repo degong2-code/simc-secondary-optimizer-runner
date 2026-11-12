@@ -114,6 +114,94 @@ class NewSeasonV211Tests(unittest.TestCase):
         self.assertEqual(result["rows"][1]["dynamic_chmv_proc_roles"],
                          ["TEMPORARY_HASTE_RATING_PROC"])
 
+    def test_original_raw_rank_variants_are_compared_only_in_same_static_scope(self):
+        # All three original raw rows are source candidates, but the final
+        # v191 catalog selects only the observed highest rank for each token.
+        # v211 must use the lower raw rank without publishing it.
+        def scenario(top_amount, lower_amount, *, scaling=0):
+            season,generated=fixture_source()
+            top=season["enchants"]["current_season"][
+                "highest_rank_candidates"][0]
+            lower={**top,"enchant_id":91003,"quality_rank":1}
+            weapon=season["enchants"]["current_season"][
+                "highest_rank_candidates"][1]
+            season["enchants"]["permanent"]={
+                "source_rows":3,
+                "source_records":[top,lower,weapon]}
+            generated["permanent_enchant.inc"]+=(
+                '{ 91003, 1, 4, 0x800, 0x1f, "enchant_ring__new_haste" },\n')
+            def static_row(id_,value,scaled):
+                return (f'{{ {id_}, 0, {scaled}, 0, 80, 120, 0, 0, 0, '
+                        f'{{ 5, 0, 0 }}, {{ {value}, 0, 0 }}, '
+                        f'{{ 36, 0, 0 }}, {{ 0.0000f, 0.0000f, 0.0000f }}, '
+                        f'0, "Rank {id_}" }},')
+            rows=[]
+            for line in generated["spell_item_enchantment.inc"].splitlines():
+                if line.startswith("{ 91001,"):
+                    rows.append(static_row(91001,top_amount,scaling))
+                else:
+                    rows.append(line)
+            rows.append(static_row(91003,lower_amount,scaling))
+            generated["spell_item_enchantment.inc"]="\n".join(rows)+"\n"
+            with tempfile.TemporaryDirectory() as td:
+                folder=pathlib.Path(td)
+                manifest=put_sources(folder,generated)
+                return v.compile_fresh_season(season,folder,manifest)
+        good=scenario(120,100)
+        quality=good["static_quality_comparison_source_only"]
+        self.assertFalse(quality["policy_A_product_input_verified"])
+        self.assertFalse(quality["ui_selectable"])
+        rows={r["selected_enchant_id"]:r for r in quality["observations"]}
+        self.assertEqual(rows[91001]["observed_rank_count"],2)
+        self.assertEqual(rows[91001]["status"],
+                         "STATIC_DBC_SOURCE_NONINFERIOR_UNADMITTED")
+        self.assertTrue(rows[91001]["source_only_noninferior"])
+        self.assertEqual(rows[91002]["status"],
+                         "SOURCE_EFFECT_OR_USE_CONDITIONS_PENDING")
+        self.assertFalse(good["automatic_ui_promotion"])
+        weaker=scenario(70,100)
+        by_id={r["selected_enchant_id"]:r for r in weaker[
+            "static_quality_comparison_source_only"]["observations"]}
+        self.assertEqual(by_id[91001]["status"],
+                         "STATIC_DBC_SOURCE_LOWER_RANK_STRONGER_UNADMITTED")
+        self.assertFalse(by_id[91001]["source_only_noninferior"])
+        scaling=scenario(120,100,scaling=-7)
+        by_id={r["selected_enchant_id"]:r for r in scaling[
+            "static_quality_comparison_source_only"]["observations"]}
+        self.assertFalse(by_id[91001]["source_only_noninferior"])
+        self.assertEqual(by_id[91001]["status"],
+                         "SOURCE_EFFECT_OR_USE_CONDITIONS_PENDING")
+
+    def test_raw_rank_source_absent_stays_pending_not_fake_proof(self):
+        with tempfile.TemporaryDirectory() as d:
+            season,generated=fixture_source()
+            manifest=put_sources(pathlib.Path(d),generated)
+            result=v.compile_fresh_season(season,pathlib.Path(d),manifest)
+        quality=result["static_quality_comparison_source_only"]
+        self.assertEqual(quality["status"],
+                         "RAW_PERMANENT_RANK_SOURCE_NOT_PRESENT")
+        self.assertEqual(quality["observations"],[])
+        self.assertFalse(quality["policy_A_product_input_verified"])
+
+    def test_mismatched_optional_rank_source_never_blocks_base_classifier(self):
+        season,generated=fixture_source()
+        season["enchants"]["permanent"]={
+            "source_rows":1,
+            "source_records":[{"enchant_id":999999,
+                "quality_rank":3,"simc_token":"wrong_source",
+                "item_class":4,"inventory_type_mask":0x800,
+                "item_subclass_mask":31}]}
+        with tempfile.TemporaryDirectory() as d:
+            root=pathlib.Path(d)
+            manifest=put_sources(root,generated)
+            compiled=v.compile_fresh_season(season,root,manifest)
+        quality=compiled["static_quality_comparison_source_only"]
+        self.assertEqual(quality["status"],
+                         "OPTIONAL_SOURCE_QUALITY_COMPARISON_PENDING")
+        self.assertFalse(quality["policy_A_product_input_verified"])
+        self.assertFalse(compiled["automatic_ui_promotion"])
+        self.assertEqual(compiled["counts"]["total"],2)
+
     def test_wrong_build_raw_file_hash_and_manifest_commit_are_blocked(self):
         with tempfile.TemporaryDirectory() as d:
             folder=pathlib.Path(d)

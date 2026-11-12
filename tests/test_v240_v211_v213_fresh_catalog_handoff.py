@@ -60,6 +60,14 @@ class SameFreshCatalogChain(unittest.TestCase):
         self.assertEqual(artifact["catalog"]["enchants"]["selection_policy"][
                          "developer_only"],[])
         self.assertFalse(artifact["automatic_ui_promotion"])
+        self.assertIn("static_quality_comparison_source_only",
+                      artifact["enchant_classification"])
+        source_only=artifact["enchant_classification"][
+            "static_quality_comparison_source_only"]
+        self.assertEqual(source_only["status"],
+                         "RAW_PERMANENT_RANK_SOURCE_NOT_PRESENT")
+        self.assertFalse(source_only["policy_A_product_input_verified"])
+        self.assertFalse(source_only["ui_selectable"])
         self.assertEqual(artifact["native_calls"],0)
         self.assertEqual(artifact["network_calls"],0)
         self.assertTrue(all(not x["ui_selectable"] for x

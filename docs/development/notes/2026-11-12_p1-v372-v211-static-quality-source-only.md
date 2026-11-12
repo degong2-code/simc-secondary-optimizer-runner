@@ -1,0 +1,10 @@
+# v372 — 동일 SimC 원본의 마부 정적 품질 비교 관측 연결 (미승인)
+
+- **Capability:** `ENVIRONMENT.SEASON`, `ENCHANT.QUALITY`, `PRODUCT.E2E`, `DEV.CONTINUITY`.
+- **Keywords:** v372, v191 raw rank, v211 DBC, v213 sealed source, static noninferiority, source-only, product_input, no Native.
+- **Prior evidence:** v368~v371 사용자 정책과 수정: GPT 수동 웹 대조를 실행 제품 승인 증거로 사용 금지, 최고 품질은 동일 효과·적용 조건과 모든 관련 수치의 비열등성 확인 후에만 사용자 선택지 표시. 실제 `v216`은 봉인된 `source_relation`만 자동 공급하고 `product_input` 등 다른 세 증거를 생성하지 않음. `v191`은 v370부터 영구 마부 전체 raw rank `source_records` 보존, `v211`은 정확한 SimC 빌드의 `spell_item_enchantment.inc`·`permanent_enchant.inc` 분석 수행.
+- **Decision:** 기존 v211 분류기에서 **정적·비스케일링 효과의 동일 raw 계열에만** source-only 비교를 수행. SimC 효과/발동/DPS를 재구현하거나 전체 시장 탐색·새 인증 Gate/수집을 도입하지 않음. 실제 아이템의 시즌 소속·실제 게임 사용 조건·SimC 적용까지 검증된 `product_input`은 생성하지 않음.
+- **Changes:** `v211._fresh_static_quality_source_only` 추가: `v191.enchants.permanent.source_records`의 동일 token/장비 class/slot/subclass 계열을 원본 pinned SimC 목록과 정확히 대조하고, 동일 사용 제한·동일 정적 stat 종류·스케일링/주문/미해석 유형 부재 시에만 raw DBC 수치를 2개 이상 등급에 비교. 상위 등급이 수치상 뒤처지면 `LOWER_RANK_STRONGER_UNADMITTED`; 정적 동률/비열등이면 `NONINFERIOR_UNADMITTED`; 그 외 `PENDING`. 결과는 `policy_A_product_input_verified=False`, `ui_selectable=False`, Native0. 낮은 등급 DBC 원본 누락/선택 계열 불일치는 별도 품질 후보만 PENDING 처리해 일반 빌드 차단 금지. 기존 v213 `enchant_classification`에 비교 결과를 SHA 봉인 가능한 소스 관측으로 전달하되 승인하지 않음.
+- **Verification:** `tests/test_v239_v211_fresh_season_dynamic_classifier.py`에 새 raw rank 정상 비열등/상위 등급 숫자 열등/스케일링 보류/원본 미존재/보조 계열 손상 보류 추가. `tests/test_v240_v211_v213_fresh_catalog_handoff.py`에 v213 전달과 비승인 검증. 브랜치 커밋 시 GitHub blob 해시와 변경 범위 확인. 신규 전체 unittest/Actions/Windows E2E/Native **실행 전**이며 실행하지 않은 PASS는 기록하지 않음.
+- **Remaining:** v211 관측은 효과 구조의 일부만 비교하므로 **사용자 승인 증거가 아님**. 검증된 DB2 실제 적용 ItemID/범위, 소스 시점·빌드·봉인과 제품 사용 조건을 기존 trusted `product_input`의 소유자가 연결해야만 최종 승인 가능. 기본 빌드는 여전히 `source_relation`만 제공하며 시즌 JOIN 및 G/J/F/O READY는 PENDING.
+- **Efficiency:** 기존 수집·봉인 v191→v211→v213 경로 재사용, 동일 pinned source 파일 읽기 후 소수 선택 후보 ID만 추가 DBC 분석. Native/HTTP/DB2 재수집0, 전체 시즌 인증 Gate 추가0, 사용자 캐시/main 불변.

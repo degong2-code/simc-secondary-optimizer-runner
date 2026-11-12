@@ -390,6 +390,21 @@ def compile_catalog(candidates,source_dir,proof_8025,proof_7967):
              "V191_CANDIDATE_VS_PINNED_PERMANENT_SOURCE_DRIFT:"+str(row["enchant_id"]))
     dbc=parse_dbc_rows(sources["spell_item_enchantment.inc"],ids)
     enums=parse_enums(sources["data_enums.hh"])
+    # Quality comparison is OPTIONAL evidence. An incomplete lower-rank
+    # source cannot block otherwise validated base season collection.
+    # Selected-row core parsing above remains strict and authoritative.
+    try:
+        quality_source_only=_fresh_static_quality_source_only(
+            season,candidates,permanent,
+            sources["spell_item_enchantment.inc"],enums)
+    except SourceBlocked as exc:
+        quality_source_only={
+            "schema":"v211_static_quality_source_only_v1",
+            "status":"OPTIONAL_SOURCE_QUALITY_COMPARISON_PENDING",
+            "reason_code":str(exc),
+            "observations":[],
+            "policy_A_product_input_verified":False,
+            "ui_selectable":False,"native_calls":0}
     spelltexts=parse_spelltexts(sources["spelltext_data.inc"])
     handlers=parse_custom_handlers(sources["unique_gear_midnight.cpp"])
     enchant_pipeline=sources["enchants.cpp"]
@@ -571,6 +586,121 @@ def candidates_from_v191_fresh(season):
     return rows
 
 
+def _fresh_static_quality_source_only(season,candidates,permanent,dbc_text,enums):
+    """Compare source-observed rank variants; NEVER emit a Policy A proof.
+
+    The existing v191 raw permanent records retain the lower-ranked variants.
+    A source-only numerical comparison is possible only with the same exact
+    SimC token/masks, stable DBC use restrictions, non-scaled static stats and
+    no spell/unknown effect components. Physical item/season membership and
+    actual user applicability are outside this projection.
+    """
+    permanent_source=season.get("enchants",{}).get("permanent",{})
+    raw=permanent_source.get("source_records")
+    if raw is None:
+        return {"schema":"v211_static_quality_source_only_v1",
+                "status":"RAW_PERMANENT_RANK_SOURCE_NOT_PRESENT",
+                "observations":[],"policy_A_product_input_verified":False,
+                "ui_selectable":False,"native_calls":0}
+    need(type(raw) is list and
+         type(permanent_source.get("source_rows")) is int and
+         permanent_source["source_rows"]==len(raw) and len(raw)<=10000,
+         "FRESH_QUALITY_RAW_SOURCE_COUNT_DRIFT")
+    fields=("enchant_id","quality_rank","item_class",
+            "inventory_type_mask","item_subclass_mask","simc_token")
+    observations=[]
+    all_families=[]
+    for selected in candidates:
+        key=(selected["token"],selected["item_class"],
+             selected["inventory_type_mask"],selected["item_subclass_mask"])
+        family=[x for x in raw if type(x) is dict and
+                (x.get("simc_token"),x.get("item_class"),
+                 x.get("inventory_type_mask"),x.get("item_subclass_mask"))==key]
+        need(bool(family) and
+             all(type(x.get("enchant_id")) is int and x["enchant_id"]>0 and
+                 type(x.get("quality_rank")) is int and x["quality_rank"]>=0
+                 for x in family) and
+             len({x["enchant_id"] for x in family})==len(family) and
+             any(x["enchant_id"]==selected["enchant_id"] and
+                 x["quality_rank"]==selected["quality_rank"]
+                 for x in family) and
+             selected["quality_rank"]==max(x["quality_rank"] for x in family),
+             "FRESH_QUALITY_SELECTED_RANK_OR_SOURCE_FAMILY_DRIFT")
+        for row in family:
+            expected={k:row[k] for k in fields}
+            observed=[x for x in permanent.get(row["enchant_id"],[])
+                      if (x["enchant_id"],x["quality_rank"],
+                          x["item_class"],x["inventory_type_mask"],
+                          x["item_subclass_mask"],x["token"])==
+                         (expected["enchant_id"],expected["quality_rank"],
+                          expected["item_class"],expected["inventory_type_mask"],
+                          expected["item_subclass_mask"],expected["simc_token"])]
+            need(len(observed)==1,"FRESH_QUALITY_RAW_PINNED_SIMC_DRIFT")
+        all_families.append((selected,family))
+    ids={x["enchant_id"] for _,family in all_families for x in family}
+    dbc=parse_dbc_rows(dbc_text,ids)
+    stat_type=enums["ITEM_ENCHANTMENT_STAT"]
+    condition_keys=("id_gem","min_scaling_level","max_scaling_level",
+                    "min_ilevel","max_ilevel","req_skill","req_skill_value")
+    for selected,family in all_families:
+        ordered=sorted(family,key=lambda x:(-x["quality_rank"],x["enchant_id"]))
+        vectors=[]
+        use_scope=[]
+        static_only=True
+        for row in ordered:
+            record=dbc[row["enchant_id"]]
+            use_scope.append(tuple(record[k] for k in condition_keys))
+            if record["id_scaling"]!=0 or record["id_spell"]!=0:
+                static_only=False
+            vector={}
+            for typ,amount,prop,coeff in zip(
+                    record["ench_type"],record["ench_amount"],
+                    record["ench_prop"],record["ench_coeff"]):
+                if typ==0:
+                    continue
+                if (typ!=stat_type or coeff!=0.0 or amount<0 or prop<=0):
+                    static_only=False
+                    continue
+                vector[prop]=vector.get(prop,0)+amount
+            if not vector:
+                static_only=False
+            vectors.append(vector)
+        same_effect=(len(ordered)>=2 and static_only and
+                     len(set(use_scope))==1 and
+                     all(set(v)==set(vectors[0]) for v in vectors))
+        chosen=next(i for i,r in enumerate(ordered)
+                    if r["enchant_id"]==selected["enchant_id"])
+        noninferior=(same_effect and
+                     all(all(vectors[chosen][k]>=v[k] for k in vectors[chosen])
+                         for v in vectors))
+        status=("STATIC_DBC_SOURCE_NONINFERIOR_UNADMITTED"
+                if same_effect and noninferior else
+                "STATIC_DBC_SOURCE_LOWER_RANK_STRONGER_UNADMITTED"
+                if same_effect else "SOURCE_EFFECT_OR_USE_CONDITIONS_PENDING")
+        evidence={"game_build":season["game_build"],
+                  "simc_revision":season["simc_revision"],
+                  "selected_enchant_id":selected["enchant_id"],
+                  "observed_ranks":[{"enchant_id":r["enchant_id"],
+                                     "quality_rank":r["quality_rank"],
+                                     "raw_stat_mod_amounts":vectors[i]}
+                                    for i,r in enumerate(ordered)],
+                  "source_use_restrictions_identical":len(set(use_scope))==1,
+                  "static_unscaled_same_stat_kinds":bool(same_effect)}
+        observations.append({
+            "selected_enchant_id":selected["enchant_id"],
+            "status":status,
+            "source_only_noninferior":bool(noninferior),
+            "source_observation_sha256":sha256(canonical(evidence).encode("utf8")),
+            "observed_rank_count":len(ordered),
+            "policy_A_product_input_verified":False,
+            "ui_selectable":False})
+    return {"schema":"v211_static_quality_source_only_v1",
+            "status":"PINNED_STATIC_DBC_RANK_COMPARISON_NOT_GAME_ADMISSION",
+            "observations":observations,
+            "policy_A_product_input_verified":False,
+            "ui_selectable":False,"native_calls":0}
+
+
 def compile_fresh_season(season,source_dir,manifest):
     """New season source-bound classification, without old 38/native E pins.
 
@@ -631,6 +761,7 @@ def compile_fresh_season(season,source_dir,manifest):
        "season_game_build":build,
        "simc_commit":commit,
        "source_files":source_receipt,
+       "static_quality_comparison_source_only":quality_source_only,
        "simc_item_enchant_pipeline":{
            "static_stat_path":"ITEM_ENCHANTMENT_STAT",
            "spell_effect_path":"ITEM_ENCHANTMENT_EQUIP_SPELL",
