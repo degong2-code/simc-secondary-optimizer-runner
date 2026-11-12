@@ -236,15 +236,21 @@ function drawInlineEquipment(){
     const id=String(item.item_id);
     const used1=field("trinket1")===id,used2=field("trinket2")===id;
     const selected=used1||used2;
-    const other=activeTrinketSlot==="trinket1"?"trinket2":"trinket1";
-    const disabled=field(other)===id;
     const b=inlineEquipmentCard(item,{type:"trinket",selected,
-      disabled,reason:disabled?"다른 장신구 칸에서 선택됨":"",
+      disabled:false,
+      reason:used1?"장신구 1 선택 · 다시 클릭하여 해제":
+        used2?"장신구 2 선택 · 다시 클릭하여 해제":"",
       onSelect:()=>{
-        const node=$(activeTrinketSlot);
-        node.value=node.value===id?"":id;
+        // A second click on an already-selected item must clear the slot
+        // that actually owns that item, regardless of the current focus.
+        const owned=used1?"trinket1":used2?"trinket2":null;
+        const target=owned||(!field("trinket1")?"trinket1":
+          !field("trinket2")?"trinket2":activeTrinketSlot);
+        const node=$(target);
+        node.value=owned?"":id;
+        activeTrinketSlot=owned||(!field("trinket1")?"trinket1":
+          !field("trinket2")?"trinket2":target);
         node.dispatchEvent(new Event("change",{bubbles:true}));
-        if(activeTrinketSlot==="trinket1"&&!field("trinket2"))activeTrinketSlot="trinket2";
         drawInlineEquipment();
       }});
     if(used1)b.dataset.slot="1";
@@ -300,10 +306,9 @@ function drawInlineEquipment(){
   $("equipment-special-status").textContent=state.seasonGear?
     "특수효과 장비 "+selectedIds.size+"개 선택"+(sFiltered.length>80?
     " · 나머지는 검색":""):"선택 사항";
-  for(const btn of document.querySelectorAll("[data-equip-select]")){
-    const active=btn.dataset.equipSelect===activeTrinketSlot;
-    btn.setAttribute("aria-pressed",String(active));
-  }
+  // Native slot controls are maintained only for the original API,
+  // not used as an extra, redundant user-facing selection bar.
+
 }
 
 /* v354 — image-free card chooser. Every actual selected ID stays in the
