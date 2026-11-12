@@ -869,6 +869,56 @@ function fillDefault(item) {
   drawClassSpecTiles();
   refreshEquipmentSelectionUI();
 }
+
+/* v361: The public oil switch chooses ONE uniquely installed source-bound
+   full-weapon loadout. Ambiguous/absent sources remain fail closed; no
+   guessed flask, oil or fixed O. Exact identity stays in original controls. */
+function syncOilUseToggle(){
+  const hands=["main_hand","off_hand"].filter(hand=>
+    $(hand==="main_hand"?"oil_main":"oil_off").checked);
+  const control=$("optimizer-oil-enabled");
+  if(!control)return;
+  control.checked=hands.length>0;
+  $("optimizer-oil-toggle-status").textContent=hands.length?
+    (hands.length===2?"양쪽 무기 적용":"주무기 적용"):"미사용";
+}
+function applyOilUseToggle(){
+  const enabled=$("optimizer-oil-enabled").checked;
+  if(!enabled){
+    $("optimizer-oil-loadout").value="";
+    $("oil_main").checked=false;$("oil_off").checked=false;
+    $("optimizer-oil-main-id").value="";
+    $("optimizer-oil-off-id").value="";
+    oilCompatibility();
+    syncOilUseToggle();updateBudgetPreview();
+    return;
+  }
+  const weapon=state.seasonGear?.weapon_forms?.[field("spec")];
+  if(!weapon){
+    $("optimizer-oil-enabled").checked=false;
+    $("optimizer-oil-toggle-status").textContent="무기 정보 미검증";
+    throw Error("이 전문화의 무기 형태 확인 후 기름을 사용할 수 있습니다.");
+  }
+  const off=weapon==="dual_one_hand"||weapon==="dual_two_hand";
+  const matches=state.oilLoadouts.filter(item=>{
+    const ids=item.selected_oil_item_ids_by_hand||{};
+    return Boolean(ids.main_hand)&&Boolean(ids.off_hand)===off&&
+      Object.keys(ids).length===(off?2:1);
+  });
+  if(matches.length!==1){
+    $("optimizer-oil-enabled").checked=false;
+    $("optimizer-oil-toggle-status").textContent=matches.length?
+      "복수 조합 · 고급 설정에서 선택":"검증된 기름 없음";
+    if(matches.length>1)$("env-oil-options").open=true;
+    throw Error(matches.length?
+      "검증된 기름 종류가 여러 개입니다. 기타 직접 입력에서 정확한 조합을 선택해 주세요.":
+      "현재 시즌·전문화의 사용 가능한 기름 조합이 검증되지 않았습니다.");
+  }
+  $("optimizer-oil-loadout").value=matches[0].installed_manifest_sha256;
+  chooseInstalledOilLoadout();
+  syncOilUseToggle();updateBudgetPreview();
+}
+
 function oilCompatibility() {
   const key=field("spec");
   const form=state.seasonGear?.weapon_forms?.[key];
@@ -876,6 +926,7 @@ function oilCompatibility() {
   $("oil_off").disabled=!supportsOff;
   if(!supportsOff)$("oil_off").checked=false;
   $("oil_off").title=supportsOff?"두 무기에 기름 적용 가능":"이 전문화의 보조무기에는 기름을 사용할 수 없습니다.";
+  syncOilUseToggle();
 }
 
 function renderInstalledFlaskChoices(data) {
@@ -942,6 +993,7 @@ function renderInstalledOilLoadouts(data) {
   });
   selector.value=exact?.installed_manifest_sha256||"";
   const count=state.oilLoadouts.length;
+  syncOilUseToggle();
   $("optimizer-oil-loadout-status").textContent=count?
     "이 PC에 봉인된 "+count+"개 기름 조합 · 저장된 게임 빌드 "+
     data.game_build+" / ilvl "+data.target_ilevel+
@@ -968,6 +1020,7 @@ function chooseInstalledOilLoadout() {
   $("optimizer-oil-main-id").value=ids.main_hand??"";
   $("optimizer-oil-off-id").value=ids.off_hand??"";
   oilCompatibility();
+  syncOilUseToggle();
 }
 function runeCompatibility() {
   const key=field("spec");
@@ -2399,6 +2452,7 @@ async function rollbackSimcUpdater() {
   setNotice("SimC 관리 버전 복원 완료 · 사용자 원본 설치는 유지됩니다.");
 }
 function registerHandlers() {
+  $("optimizer-oil-enabled").addEventListener("change",()=>withBusy(applyOilUseToggle));
   $("equipment-trinket-search").addEventListener("input",drawInlineEquipment);
   $("equipment-special-search").addEventListener("input",drawInlineEquipment);
   for(const launch of document.querySelectorAll("[data-equip-select]"))
@@ -2456,6 +2510,7 @@ function registerHandlers() {
   for(const [check,id] of [["oil_main","optimizer-oil-main-id"],
                            ["oil_off","optimizer-oil-off-id"]]) {
     $(check).addEventListener("change",()=>{
+      syncOilUseToggle();
       $("optimizer-oil-loadout").value="";
       if(!$(check).checked)$(id).value="";
     });
