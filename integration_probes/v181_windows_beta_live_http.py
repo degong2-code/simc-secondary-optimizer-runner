@@ -116,7 +116,7 @@ def run(archive_path):
                      b"simc-import-file" in html and
                      b"craft-compatibility-note" in html and
                      b"simc-update-panel" in html and
-                     b'id="source-credentials-panel"' in html,
+                     b'id="season-credentials-panel"' in html,
                      "BROWSER_UI_NOT_SERVED")
                 status,js=http(base,"/assets/app.js")
                 need(status==200 and b"current_season_product" in js,
