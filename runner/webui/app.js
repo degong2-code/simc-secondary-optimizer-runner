@@ -958,7 +958,26 @@ function buildRequest() {
   if(Object.keys(exactOils).length&&
      Object.keys(exactOils).length!==controls.oil_hands.length)
     throw Error("기름 ItemID를 지정하려면 선택한 모든 손의 ID가 필요합니다.");
+  const gemSocketTotal=valueInt("season-target-socket-count");
+  const specialText=field("season-existing-special-gem-id");
+  if(specialText&&!/^[1-9][0-9]*$/.test(specialText))
+    throw Error("특수보석 ItemID는 양의 정수여야 합니다.");
+  const userSpecialGem=specialText?Number(specialText):null;
+  if(!Number.isSafeInteger(gemSocketTotal)||gemSocketTotal<4||
+     gemSocketTotal>64||
+     (userSpecialGem!==null&&(!Number.isSafeInteger(userSpecialGem)||
+      userSpecialGem>999999999||gemSocketTotal<5)))
+    throw Error("전체 소켓은 4~64개이며 특수보석 사용 시 최소 5개입니다.");
+  const flaskText=field("season-selected-flask-id");
+  if(flaskText&&!/^[1-9][0-9]*$/.test(flaskText))
+    throw Error("영약 ID는 검증된 양의 정수여야 합니다.");
+  const flaskId=flaskText?Number(flaskText):null;
+  if(flaskId!==null&&(!Number.isSafeInteger(flaskId)||flaskId>999999999))
+    throw Error("영약 ID 범위가 잘못됐습니다.");
   const request={controls,binary:field("binary"),revision:field("revision"),
+                 user_socket_total:gemSocketTotal,
+                 user_special_gem_id:userSpecialGem,
+                 selected_flask_item_id:flaskId,
                  static_cache:field("static_cache")||null,
                  current_season_product:true};
   // Explicit Build UI selection binds the following session to that exact
@@ -1015,6 +1034,7 @@ function buttonState(active=false,ready=false) {
   const busy=state.busy;
   $("plan-btn").disabled=busy||active||!state.token;
   $("season-build-btn").disabled=busy||!state.token;
+  $("user-variant-prepare-btn").disabled=busy||!state.token;
   if(busy){
     $("source-credentials-save-btn").disabled=true;
     $("source-credentials-clear-btn").disabled=true;
@@ -1254,7 +1274,7 @@ function beginSeasonBuildActivity() {
   const clock=window.setInterval(redraw,1000);
   return ()=>{window.clearInterval(clock);section.hidden=true;};
 }
-async function buildSeasonEnvironment() {
+async function buildSeasonEnvironment(forUserVariant=false) {
   const supplied_build=field("season-game-build");
   if(supplied_build&&!/^\d+(?:\.\d+){3}$/.test(supplied_build))
     throw Error("게임 빌드는 네 개의 숫자 그룹 형식이어야 합니다.");
@@ -1267,10 +1287,11 @@ async function buildSeasonEnvironment() {
   if(target_ilevel<1||target_ilevel>1000)
     throw Error("목표 ilvl은 1~1000 범위여야 합니다.");
   const nativeRequested=$("season-native-g").checked;
-  const auto_native_F_requested=$("season-native-f").checked;
+  const auto_native_F_requested=$("season-native-f").checked||
+    (forUserVariant&&Boolean(field("season-selected-flask-id")));
   const auto_native_O_requested=$("season-native-o").checked;
   const auto_select_observed_F_no_oil=$("season-auto-f-no-oil").checked;
-  const selectedFlask=field("season-selected-flask-id");
+  const selectedFlask=forUserVariant?field("season-selected-flask-id"):"";
   if(selectedFlask&&!/^[1-9][0-9]*$/.test(selectedFlask))
     throw Error("영약 ItemID는 양의 정수여야 합니다.");
   const selected_flask_item_id=selectedFlask?Number(selectedFlask):null;
@@ -1286,7 +1307,7 @@ async function buildSeasonEnvironment() {
   const selected_oil_item_ids_by_hand={};
   for(const [hand,node] of [["main_hand","season-oil-main-id"],
                            ["off_hand","season-oil-off-id"]]) {
-    const value=field(node);
+    const value=forUserVariant?field(node):"";
     if(value&&!/^[1-9][0-9]*$/.test(value))
       throw Error("선택한 기름 ItemID는 양의 정수여야 합니다.");
     if(value){
@@ -1301,7 +1322,7 @@ async function buildSeasonEnvironment() {
     throw Error("기름을 선택한 시즌 환경은 정확한 영약 ItemID도 지정해야 합니다.");
   if(oilHands.length&&auto_select_observed_F_no_oil)
     throw Error("기름 선택과 기름 미사용 영약 자동 선택은 함께 실행할 수 없습니다.");
-  const existingSpecial=field("season-existing-special-gem-id");
+  const existingSpecial=forUserVariant?field("season-existing-special-gem-id"):"";
   if(existingSpecial&&!/^[1-9][0-9]*$/.test(existingSpecial))
     throw Error("기존 특수보석 ItemID는 양의 정수여야 합니다.");
   const existing_special_gem_id=existingSpecial?Number(existingSpecial):null;
@@ -1309,7 +1330,7 @@ async function buildSeasonEnvironment() {
       (!Number.isSafeInteger(existing_special_gem_id)||
        existing_special_gem_id>999999999))
     throw Error("특수보석 ItemID 범위가 올바르지 않습니다.");
-  const requested_sockets=valueInt("season-target-socket-count");
+  const requested_sockets=forUserVariant?valueInt("season-target-socket-count"):4;
   if(!Number.isSafeInteger(requested_sockets)||
      requested_sockets<(existing_special_gem_id===null?4:5)||
      requested_sockets>64)
@@ -1374,6 +1395,10 @@ async function buildSeasonEnvironment() {
                               simc_revision_hint:revision||null}});
     stopSeasonActivity();
     showSeasonEnvironmentBuild(report);
+    if(forUserVariant) $("user-variant-status").textContent=(
+      report.web_environment_scope?.environment_ready===true?
+        "선택 구성의 J/F/O와 G/B/T 검증 설치 완료 · 최적화 단계에서도 같은 구성·SHA를 재확인합니다.":
+        "선택 구성 검증 보류 · 시즌 원본 또는 품목·보석의 근거가 부족합니다. 이전 예산을 대신 사용하지 않습니다.");
     const localization=report.official_ko_localization;
     const localized=$("season-locale-status");
     if(localization?.status==="VERIFIED_OFFICIAL_NAMES_COMPLETE") {
@@ -1956,7 +1981,8 @@ function registerHandlers() {
   $("simc-install-local-btn").addEventListener("click",()=>withBusy(installLocalSimcUpdater));
   $("simc-rollback-btn").addEventListener("click",()=>withBusy(rollbackSimcUpdater));
   $("simc-import-btn").addEventListener("click",()=>withBusy(importSimcCharacter));
-  $("season-build-btn").addEventListener("click",()=>withBusy(buildSeasonEnvironment));
+  $("season-build-btn").addEventListener("click",()=>withBusy(()=>buildSeasonEnvironment(false)));
+  $("user-variant-prepare-btn").addEventListener("click",()=>withBusy(()=>buildSeasonEnvironment(true)));
   $("season-target-socket-count").addEventListener("input",updateSeasonSocketBreakdown);
   $("season-existing-special-gem-id").addEventListener("input",updateSeasonSocketBreakdown);
   updateSeasonSocketBreakdown();
