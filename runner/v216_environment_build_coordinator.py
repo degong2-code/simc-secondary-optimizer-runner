@@ -3345,7 +3345,21 @@ def _zero_history_source_progress(source):
          all(source.get(name) is None for name in ("G","J","F","O","B","T")),
          "V216_ZERO_HISTORY_PREMATURE_BUDGET_OR_READY")
     # Only completed source stage receipts indicate reuse. PENDING fields are
-    # not proof that the season has no matching items.
+    # not proof that the season has no matching items. A sealed v163 source
+    # join may have unresolved OPTIONAL WSE/loot rows. Its candidate status
+    # is not itself a required whole-season approval gate: actual v212
+    # installation remains owned by exact selected G/J/F/O/tier evidence.
+    joined=source.get("season_join")
+    scoped_candidates_joined=(
+        type(joined) is dict and
+        joined.get("status")==
+            "DB2_WCL_CANDIDATES_JOINED_SEASON_CONDITIONS_PENDING" and
+        joined.get("season_membership_verified") is False and
+        type(joined.get("candidate_path")) is str and
+        bool(joined["candidate_path"]) and
+        type(joined.get("stage")) is dict and
+        joined["stage"].get("status") in (
+            "EXECUTED_AND_SEALED","REUSED_VERIFIED","RECOVERED_VERIFIED"))
     pending=[]
     components=(
         ("season_source","season_join","SOURCE_SEASON_JOIN_PENDING"),
@@ -3369,9 +3383,12 @@ def _zero_history_source_progress(source):
         elif label in ("J_gems","F_flask"):
             # A source candidate or raw effect table does not certify J/F.
             pending.append(reason)
-        elif label=="season_source" and row.get(
-                "status","").endswith("_PENDING"):
-            pending.append(reason)
+        elif label=="season_source":
+            # Do not report a missing season CONTENT join when its original
+            # candidate source is already sealed. Unscoped individual loot
+            # remains unapproved, but cannot become a global prerequisite.
+            if not scoped_candidates_joined:
+                pending.append(reason)
         elif label=="representative_tier" and not row.get(
                 "source_evidence_reused",False):
             pending.append(reason)
@@ -3394,6 +3411,9 @@ def _zero_history_source_progress(source):
         "source_stage_status":source["source_stage"]["status"],
         "same_build_cache_reuse":source["source_stage"].get("reused",False),
         "no_historical_budget_defaults":True,
+        "season_content_candidate_join_sealed":bool(scoped_candidates_joined),
+        "season_item_membership_completely_verified":False,
+        "unresolved_unselected_item_conditions_not_base_gate":True,
         "requires":pending,
         "G":None,"J":None,"F":None,"O":None,"B":None,"T":None,
         "environment_ready":False,"environment_installed":False,

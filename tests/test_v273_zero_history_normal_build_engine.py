@@ -114,6 +114,46 @@ class ZeroHistoryNormalBuild(unittest.TestCase):
                             engine.build_environment(**{**base,**override})
             self.assertFalse(root.exists())
 
+    def test_sealed_content_join_is_not_whole_season_item_gate(self):
+        source={"schema":"v216_fresh_source_stage_v1",
+                "source_stage":{"status":"REUSED_VERIFIED","reused":True},
+                "environment_installed":False,"environment_ready":False,
+                "native_calls":0,"G":None,"J":None,"F":None,"O":None,
+                "B":None,"T":None,
+                "season_join":{
+                    "status":"DB2_WCL_CANDIDATES_JOINED_SEASON_CONDITIONS_PENDING",
+                    "candidate_path":"source/v163_unapproved_candidates.json",
+                    "season_membership_verified":False,
+                    "stage":{"status":"REUSED_VERIFIED"}}}
+        report=engine._zero_history_source_progress(source)
+        self.assertTrue(report["season_content_candidate_join_sealed"])
+        self.assertFalse(report["season_item_membership_completely_verified"])
+        self.assertTrue(report[
+            "unresolved_unselected_item_conditions_not_base_gate"])
+        self.assertNotIn("SOURCE_SEASON_JOIN_PENDING",report["requires"])
+        self.assertIn("REPRESENTATIVE_TIER_SOURCE_PENDING",report["requires"])
+        self.assertIn("G_NATIVE_RATING_OBSERVATION_PENDING",report["requires"])
+        self.assertIn("HIGHEST_QUALITY_GEM_J_SOURCE_PENDING",report["requires"])
+        self.assertIn("HIGHEST_QUALITY_FLASK_F_SOURCE_PENDING",report["requires"])
+        self.assertFalse(report["environment_ready"])
+        self.assertTrue(all(report[k] is None for k in
+                            ("G","J","F","O","B","T")))
+        for altered in (
+            {"stage":{"status":"RUNNING"}},
+            {"candidate_path":None},
+            {"status":"LIVE_SEASON_SCOPE_AMBIGUOUS_PENDING"},
+            {"season_membership_verified":True},
+        ):
+            with self.subTest(altered=altered):
+                wrong={**source,"season_join":{
+                    **source["season_join"],**altered}}
+                result=engine._zero_history_source_progress(wrong)
+                self.assertFalse(result[
+                    "season_content_candidate_join_sealed"])
+                self.assertIn("SOURCE_SEASON_JOIN_PENDING",
+                              result["requires"])
+                self.assertFalse(result["environment_ready"])
+
     def test_premature_ready_or_unsealed_stage_never_advances(self):
         source={"schema":"v216_fresh_source_stage_v1",
                 "source_stage":{"status":"EXECUTED_AND_SEALED","reused":False},

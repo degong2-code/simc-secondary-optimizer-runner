@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER — 검색 가능한 개발 기능 지도
 
+> [v374 최소 충분 원본·부분 미해석 범위 판정](notes/2026-11-13_p1-v374-minimum-required-source-scope.md) — v163 콘텐츠 후보 JOIN 봉인과 개별 장비 소속 미확정을 분리. 무관한 WSE/전수 조건은 환경 전체 Gate 아님; 필수 G/J/F/O 및 v212는 그대로 증거 요구. 로컬 수정 함수 15 assertions PASS, 전체 CI/실제 READY 미완료.
+
 > [v373 v211 하위 rank 원본 누락/재라벨 안전성](notes/2026-11-12_p1-v373-v211-complete-pinned-quality-family.md) — v191 raw rank 계열을 동일 핀 SimC 전체 계열과 대조; 불일치 시 해당 품질 비교만 PENDING. 로컬 단위 로직 합성 6 PASS/0 FAIL, 저장소 전체 CI·Native0.
 
 > [v372 v211 정적 마부 품질 원본 비교 관측](notes/2026-11-12_p1-v372-v211-static-quality-source-only.md) — 동일 빌드 SimC DBC 및 v191의 전체 raw rank를 기존 v211→v213 봉인 경로에서 비교. 정적/비스케일링의 관측 비열등성만 표시하며 product_input/UI/READY 승격 금지. 회귀 테스트 추가, 신규 Native/HTTP0; 전체 실행 실증 별도.
