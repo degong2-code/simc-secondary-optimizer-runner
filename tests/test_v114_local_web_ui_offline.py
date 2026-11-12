@@ -295,7 +295,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         css=(ROOT/"runner/webui/styles.css").read_text(encoding="utf8")
         for ident in ("season-build-running","season-build-elapsed",
                       "season-build-summary","season-socket-breakdown",
-                      "season-gem-layout","season-itemid-expert"):
+                      "season-gem-layout","optimizer-season-itemid-expert"):
             self.assertIn('id="'+ident+'"',html)
         self.assertIn("특수보석을 포함한 전체 소켓 수",html)
         self.assertIn("새 J 예산·보석 배치가 검증",html)
