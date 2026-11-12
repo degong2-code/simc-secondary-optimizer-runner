@@ -78,6 +78,90 @@ class RealHTTPPageOffline(unittest.TestCase):
               capture_output=True,text=True,timeout=15,check=False)
         self.assertEqual(result.returncode,0,result.stderr)
 
+    def test_v363_oil_default_on_verified_full_hand_real_js_functions(self):
+        """Execute the actual source-bound JS functions with a minimal DOM."""
+        import shutil,subprocess
+        binary=shutil.which("node")
+        if binary is None:
+            self.skipTest("node is not installed on this runner")
+        harness=r"""
+const fs=require('fs'),assert=require('assert');
+const raw=fs.readFileSync(process.argv[1],'utf8');
+const start=raw.indexOf('let oilUseIntent=true;');
+const end=raw.indexOf('\nfunction runeCompatibility()',start);
+assert(start>=0 && end>start,'oil function block not found');
+const context=String.raw`
+const state={seasonGear:{weapon_forms:{
+  "warrior/fury":"dual_two_hand","paladin/retribution":"single_one_hand"
+}},oilLoadouts:[],oilCatalog:null};
+const nodes=Object.create(null);
+function $(id){
+  return nodes[id]||(nodes[id]={
+    value:"",checked:false,disabled:false,textContent:"",open:false,options:[],
+    replaceChildren(...xs){this.options=[...xs];this.value=xs[0]?.value||"";},
+    appendChild(o){this.options.push(o);}
+  });
+}
+function field(id){return String($(id).value).trim()}
+function option(value,label){return {value:String(value),textContent:String(label)}}
+function updateBudgetPreview(){}
+function setNotice(){}
+const document={querySelector(){return {open:false}}};
+$("spec").value="warrior/fury";
+$("ilevel").value="334";
+`;
+const test=String.raw`
+const source=items=>({schema:"v113_verified_installed_oil_loadouts_v1",
+ status:"VERIFIED_INSTALLED_OIL_LOADOUTS",target_ilevel:334,
+ game_build:"12.2.0.0",items});
+const item=(id,ids)=>({
+  installed_manifest_sha256:id.repeat(64),display_name:id,
+  selected_oil_item_ids_by_hand:ids
+});
+renderInstalledOilLoadouts(source([item("a",{main_hand:1001,off_hand:1002})]));
+assert.strictEqual($("optimizer-oil-enabled").checked,true);
+assert.strictEqual($("oil_main").checked,true);
+assert.strictEqual($("oil_off").checked,true);
+assert.strictEqual($("optimizer-oil-main-id").value,1001);
+assert.strictEqual($("optimizer-oil-off-id").value,1002);
+assert(selectedFullVerifiedOil());
+$("optimizer-oil-enabled").checked=false;
+applyOilUseToggle();
+assert.strictEqual($("oil_main").checked,false);
+assert.strictEqual($("oil_off").checked,false);
+assert.strictEqual($("optimizer-oil-enabled").checked,false);
+$("spec").value="paladin/retribution";
+oilUseIntent=true;
+renderInstalledOilLoadouts(source([item("b",{main_hand:2001})]));
+assert.strictEqual($("optimizer-oil-enabled").checked,true);
+assert.strictEqual($("oil_main").checked,true);
+assert.strictEqual($("oil_off").checked,false);
+assert(selectedFullVerifiedOil());
+$("spec").value="warrior/fury";
+$("oil_main").checked=false;$("oil_off").checked=false;
+$("optimizer-oil-main-id").value="";
+$("optimizer-oil-off-id").value="";
+oilUseIntent=true;
+renderInstalledOilLoadouts(source([item("a",{main_hand:1001,off_hand:1002}),
+  item("c",{main_hand:1003,off_hand:1004})]));
+assert.strictEqual($("optimizer-oil-enabled").checked,true);
+assert.strictEqual($("oil_main").checked,false);
+assert.strictEqual($("oil_off").checked,false);
+assert.strictEqual(selectedFullVerifiedOil(),null);
+$("oil_main").checked=false;$("oil_off").checked=false;
+oilUseIntent=true;
+renderInstalledOilLoadouts(source([item("d",{main_hand:1005})]));
+assert.strictEqual($("optimizer-oil-enabled").checked,true);
+assert.strictEqual(selectedFullVerifiedOil(),null);
+assert.strictEqual($("oil_main").checked,false);
+`;
+eval(context+raw.slice(start,end)+"\n"+test);
+"""
+        result=subprocess.run([binary,"-e",harness,
+              str(ROOT/"runner/webui/app.js")],
+              capture_output=True,text=True,timeout=15,check=False)
+        self.assertEqual(result.returncode,0,result.stderr)
+
     def test_v361_linear_layout_and_approved_input_boundaries(self):
         page=self.client.get("/").text
         css=self.client.get("/assets/styles.css").text
