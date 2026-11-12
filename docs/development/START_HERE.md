@@ -4,6 +4,8 @@
 
 > **2026-11-11 역사 인계:** [v338 제품 완성·공식 한국어·제로베이스 최신 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P1_V338_PRODUCT_FINALIZATION.md). 기존 v331 인계는 제품 N 연구 완료 당시의 역사 스냅샷이고, 최신 제품 상태(v332~v338)는 신규 인계를 우선한다.
 
+[v360 **차콜·골드 복원·02 환경 입력 압축·부위별 마법부여 드롭다운, Windows/API/UI/Focused 7/7 SUCCESS**](notes/2026-11-12_p1-v360-compact-environment-charcoal-enchants.md) — [단일 HTML 미리보기](https://github.com/degong2-code/simc-secondary-optimizer-runner/blob/probe/chat-cache-v035-20261024/previews/v360_compact_environment_charcoal_preview.html), 기존 사용자별 ID/기름/수동 T 보존, 이미지/신규 Native0.
+
 [v359 **투명 고대비 다크 테마·환경 입력 정리·고정 장비 본문 직접 선택, UI/API/Windows 회귀 7/7 SUCCESS**](notes/2026-11-12_p1-v359-glass-compact-inline-equipment.md) — [새 단일 HTML 미리보기](https://github.com/degong2-code/simc-secondary-optimizer-runner/blob/probe/chat-cache-v035-20261024/previews/v359_high_contrast_inline_gear_preview.html), 정확한 ItemID/SELECT·예산·세션 유지, 아이콘 외부 수집 0, 시즌 JOIN/새 개인 변형 READY 미검증.
 
 [v358 **2열 컴팩트 입력 화면(1 캐릭터 | 2 환경 / 하단 3 고정장비), 기존 Windows/API/UI 회귀 7/7 SUCCESS**](notes/2026-11-12_p1-v358-compact-two-up-layout.md) — [실제 CSS 기반 단일 HTML 미리보기](https://github.com/degong2-code/simc-secondary-optimizer-runner/blob/probe/chat-cache-v035-20261024/previews/v358_compact_two_up_offline_preview.html), 이미지 수집은 UI 검토 후. 신규 Native0, 시즌 JOIN PENDING 유지.
