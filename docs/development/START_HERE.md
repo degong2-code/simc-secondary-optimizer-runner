@@ -4,6 +4,8 @@
 
 > **2026-11-11 역사 인계:** [v338 제품 완성·공식 한국어·제로베이스 최신 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P1_V338_PRODUCT_FINALIZATION.md). 기존 v331 인계는 제품 N 연구 완료 당시의 역사 스냅샷이고, 최신 제품 상태(v332~v338)는 신규 인계를 우선한다.
 
+[v351 **최적화 ilvl 오적용 교정·검증 영약/기름 단일 조회·시즌/개인 UI 정리, Windows ZIP/API/UI 회귀 PASS**](notes/2026-11-12_p1-v351-user-variant-level-ui-clarity.md) — 제품 엔진·기존 세션 유지, 신규 Native0. 시즌 JOIN PENDING·새 개인 변형 READY 미실증.
+
 [v350 **시즌 공통 구축과 개인별 소켓·특수보석·영약·기름 선택 분리, 검증 설치 변형 없으면 422 차단 PASS**](notes/2026-11-12_p1-v350-common-season-user-variant-split.md) — Windows 3.12/3.14 실제 추출 ZIP 272개 소스 SHA, UI/API/ledger CI PASS; 새 시즌 70783 가입/원본 확정과 개별 변화 Native는 여전히 미실증.
 
 [v349 **실사용 시즌 환경 UI: 진행 중임·경과시간·시즌 JOIN 보류 원인·소켓 총수·수동 ItemID 고급 설정 분리 PASS**](notes/2026-11-12_p1-v349-user-season-progress-sockets-sourceitem-ux.md) — Windows ZIP 자체 원클릭 BAT 보존, 272개 소스 SHA 검증, Native0; 실제 단계별 진행 퍼센트 및 개인 사용자 키 READY는 미검증.
