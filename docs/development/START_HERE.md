@@ -1,6 +1,8 @@
 # SIMC SECONDARY OPTIMIZER · 개발 지식 시작점
 
-> **2026-11-11 최신 단일 인계 정본:** [v338 제품 완성·공식 한국어·제로베이스 최신 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P1_V338_PRODUCT_FINALIZATION.md). 기존 v331 인계는 제품 N 연구 완료 당시의 역사 스냅샷이고, 최신 제품 상태(v332~v338)는 신규 인계를 우선한다.
+> **2026-11-12 최신 단일 인계 정본:** [2026-11-12 P1 v350 사용자 변형 제품 마무리·Windows 실사용 최신 단일 인계](../docs/CHAT_CONTINUITY_HANDOFF_20261112_P1_V350_USER_VARIANT_FINALIZATION.md). 직전 v338은 역사 스냅샷이며 v350 실증·개인 Windows 시즌 JOIN PENDING까지 이 문서가 우선이다.
+
+> **2026-11-11 역사 인계:** [v338 제품 완성·공식 한국어·제로베이스 최신 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P1_V338_PRODUCT_FINALIZATION.md). 기존 v331 인계는 제품 N 연구 완료 당시의 역사 스냅샷이고, 최신 제품 상태(v332~v338)는 신규 인계를 우선한다.
 
 [v350 **시즌 공통 구축과 개인별 소켓·특수보석·영약·기름 선택 분리, 검증 설치 변형 없으면 422 차단 PASS**](notes/2026-11-12_p1-v350-common-season-user-variant-split.md) — Windows 3.12/3.14 실제 추출 ZIP 272개 소스 SHA, UI/API/ledger CI PASS; 새 시즌 70783 가입/원본 확정과 개별 변화 Native는 여전히 미실증.
 
