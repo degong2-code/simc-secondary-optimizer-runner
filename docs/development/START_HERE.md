@@ -4,6 +4,8 @@
 
 > **2026-11-11 역사 인계:** [v338 제품 완성·공식 한국어·제로베이스 최신 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P1_V338_PRODUCT_FINALIZATION.md). 기존 v331 인계는 제품 N 연구 완료 당시의 역사 스냅샷이고, 최신 제품 상태(v332~v338)는 신규 인계를 우선한다.
 
+[v363 **기름 기본 사용·쌍수 원본 검증·물약 직접 선택·장비 5열·환경/결과 선형 UI, 7/7 SUCCESS**](notes/2026-11-12_p1-v363-oil-default-input-end-to-end-audit.md) — [오프라인 HTML 미리보기](https://github.com/degong2-code/simc-secondary-optimizer-runner/blob/probe/chat-cache-v035-20261024/previews/v363_oil_default_potion_five_column_flat_preview.html). 기존 G/J/F/O·183 입력 ID 유지, 현 시즌 JOIN·물약 비기본 항목 승인은 여전히 별도 확인.
+
 [v362 **박스 없는 선형 컴팩트 UI·장신구 선택/해제 수정·무기 기름 검증 토글, 7/7 Windows/API/UI 성공**](notes/2026-11-12_p1-v362-flat-compact-gear-flow.md) — [브라우저 미리보기](https://github.com/degong2-code/simc-secondary-optimizer-runner/blob/probe/chat-cache-v035-20261024/previews/v362_borderless_compact_preview.html), 기존 G/J/F/O·세션/캐시 유지, 증강룬·PI·주술사/반지2 확장은 검증 대기.
 
 [v360 **차콜·골드 복원·02 환경 입력 압축·부위별 마법부여 드롭다운, Windows/API/UI/Focused 7/7 SUCCESS**](notes/2026-11-12_p1-v360-compact-environment-charcoal-enchants.md) — [단일 HTML 미리보기](https://github.com/degong2-code/simc-secondary-optimizer-runner/blob/probe/chat-cache-v035-20261024/previews/v360_compact_environment_charcoal_preview.html), 기존 사용자별 ID/기름/수동 T 보존, 이미지/신규 Native0.

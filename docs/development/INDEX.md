@@ -2,6 +2,8 @@
 
 > 최신 상태는 [START_HERE](START_HERE.md) → [2026-11-12 v350 최신 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261112_P1_V350_USER_VARIANT_FINALIZATION.md) → [역사 v338](../CHAT_CONTINUITY_HANDOFF_20261111_P1_V338_PRODUCT_FINALIZATION.md) → [현재 A~G 정본](../PRODUCT_CANONICAL_STATUS_20261109_P3_HAI.md) → [FILE_MAP](FILE_MAP.md) → [EVIDENCE_INDEX](EVIDENCE_INDEX.md) 순서로 확인. 이전 INDEX 본문·누적 일자별 배너는 [역사 원본](HISTORICAL_INDEX_20261110_PRE_KNOWLEDGE_LAYER.md)에 **그대로 보존**했다. 아래 17개 Capability 호환표의 HISTORICAL/PARTIAL은 현재 제품 상태 판정이 아니다.
 
+> [v363 기름 사용 기본값·직접 물약·5열 장비·설정/결과 박스 제거](notes/2026-11-12_p1-v363-oil-default-input-end-to-end-audit.md) — Windows/Linux API/UI/ZIP 7 Actions SUCCESS, 소스 JS 실동작 Node 테스트 추가, 신규 Native 0, 시즌 JOIN 미해결.
+
 > [v362 선형 4-up 입력·기름 토글·3개 장비 구획·장신구 해제](notes/2026-11-12_p1-v362-flat-compact-gear-flow.md) — 기존 정확한 177 UI IDs 보존, 추가 UI 183, 원본 HTTP/API·Windows UI/focused 7 PASS, 신규 Native0.
 
 > [v360 차콜 골드 컴팩트 환경 구성·마법부여 승인 한계 표시](notes/2026-11-12_p1-v360-compact-environment-charcoal-enchants.md) — 실제 사용자 입력 우선, ID171/171 보존(추가 UI 포함177), API/UI/Windows ZIP 7 Actions SUCCESS, Native0.
