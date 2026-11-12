@@ -120,6 +120,19 @@ const noSeal={...base,zero_history_build:{
   season_content_candidate_join_sealed:false,
   requires:['SOURCE_SEASON_JOIN_PENDING']}};
 assert.strictEqual(diagnose(noSeal).requiredMissingCount,1);
+const coreOwners={...base,zero_history_build:{
+  ...base.zero_history_build,
+  required_core_source_owner_report:{
+    original_source_owner_numeric_present:{
+      G:true,J:false,F:true,O:false},
+    explicit_no_oil_awaits_v222:true
+  }}};
+const ownerStatus=diagnose(coreOwners).coreOwnerSummary;
+assert(ownerStatus.includes('G=원본 확인'));
+assert(ownerStatus.includes('J=증거 대기'));
+assert(ownerStatus.includes('F=원본 확인'));
+assert(ownerStatus.includes('O=기름 미사용·v222 확정 전'));
+assert.strictEqual(diagnose(base).coreOwnerSummary,null);
 assert(!raw.includes('활성 시즌·레이드 적용 조건 미확정으로 설치를 보류합니다.'));
 assert(raw.includes('diagnosed.firstMissing'));
 """

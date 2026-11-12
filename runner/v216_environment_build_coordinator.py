@@ -3390,6 +3390,71 @@ def _fresh_required_information_scope(*, representative_request=None,
         "environment_ready":False}
 
 
+
+def _fresh_required_core_source_owner_report(*, compilation, selected):
+    """Read existing original G/J/F/O owner outputs, not their substitutes.
+
+    Reports the required facts for an actual selected environment request.
+    Only v212's verified install can report READY. No fresh authentication,
+    Native execution, source collection, or item-list-wide proof happens here.
+    """
+    need(type(compilation) is dict and type(compilation.get("missing")) is list,
+         "V216_CORE_OWNER_REPORT_COMPILATION_REQUIRED")
+    owners=compilation.get("original_J_F_verified_components_not_full_environment")
+    if type(owners) is not dict:
+        owners={}
+    original={
+        "G":compilation.get("native_G_source_owner_component_not_full_environment"),
+        "J":owners.get("J"),
+        "F":owners.get("F"),
+        "O":compilation.get("original_selected_O_verified_component_not_full_environment"),
+    }
+    numeric_verified={
+        name:type(value) is dict and
+        value.get("source_verification") in (
+            "EXACT_NATIVE","VALID_SAME_SEASON_SOURCE")
+        for name,value in original.items()}
+    chosen_oil=(selected.get("oil_item_ids_by_hand")
+                if type(selected) is dict else None)
+    oil_explicit_none=(type(selected) is dict and chosen_oil=={})
+    # O=0 has no physical oil source to verify. Its separate, definitive
+    # explicit-none evidence is created by v222 at the installation boundary,
+    # not by treating absent oil observations as measured zero.
+    mode=("EXPLICIT_NO_OIL_AWAITING_V222"
+          if oil_explicit_none else
+          "SELECTED_OIL_SOURCE_REQUIRED" if chosen_oil else
+          "OIL_SELECTION_PENDING")
+    installed=compilation.get("verified_environment_install")
+    installed_ready=(type(installed) is dict and
+                     installed.get("status")==
+                         "FRESH_SEASON_VERIFIED_ENVIRONMENT_INSTALLED_READY" and
+                     installed.get("environment_ready") is True and
+                     installed.get("environment_installed") is True)
+    if installed_ready:
+        numeric_verified={key:True for key in ("G","J","F","O")}
+        mode=("EXPLICIT_NO_OIL_VERIFIED_V222"
+              if oil_explicit_none else
+              "SELECTED_OIL_VERIFIED" if chosen_oil else
+              "INSTALLED_SELECTION_VERIFIED")
+    missing=[
+        name for name in ("G","J","F","O")
+        if not numeric_verified[name] and
+        not (name=="O" and oil_explicit_none)]
+    return {
+        "schema":"v216_request_scoped_original_budget_owners_v1",
+        "catalog_compiler_status":compilation.get("status"),
+        "catalog_input_missing":list(compilation["missing"]),
+        "original_source_owner_numeric_present":dict(numeric_verified),
+        "original_source_owner_missing_for_selected_request":missing,
+        "explicit_no_oil_awaits_v222":oil_explicit_none and not installed_ready,
+        "oil_selection_status":mode,
+        "full_environment_installed_verified_by_v212":installed_ready,
+        "numeric_owner_report_is_not_source_authentication":True,
+        "unknown_unselected_items_are_not_required":True,
+        "native_calls_by_report":0,"network_calls_by_report":0,
+    }
+
+
 def _zero_history_source_progress(source):
     """Report the real one-engine source stage without inventing G/J/F/O.
 
@@ -7222,6 +7287,11 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         "O":dict(installed["official_O"]),
                         "B":installed["official_B"],"T":installed["official_T"],
                         "versioned_environment_installed":installed})
+        progress["required_core_source_owner_report"]=(
+            _fresh_required_core_source_owner_report(
+                compilation=source_compilation,selected=selected_budget_items))
+        source_compilation["required_core_source_owner_report"]=(
+            progress["required_core_source_owner_report"])
         progress["source_compilation_status"]=source_compilation["status"]
         progress["source_compilation_missing"]=source_compilation["missing"]
         if source_compilation["missing"]:

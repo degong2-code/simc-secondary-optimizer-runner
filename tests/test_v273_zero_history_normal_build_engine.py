@@ -281,6 +281,56 @@ class ZeroHistoryNormalBuild(unittest.TestCase):
             self.assertEqual(len(builds),len(engine.wago_snapshot.TABLES))
             self.assertEqual(len(set(builds)),len(builds))
 
+    def test_requested_GJFO_original_owner_coverage_never_grants_ready(self):
+        summary=engine._fresh_required_core_source_owner_report
+        partial={"status":"COLLECTED_COMPILER_INPUTS_PENDING",
+                 "missing":["GENERATED_PERMANENT"]}
+        empty=summary(compilation=partial,selected=None)
+        self.assertEqual(empty["catalog_input_missing"],["GENERATED_PERMANENT"])
+        self.assertEqual(empty["original_source_owner_missing_for_selected_request"],
+                         ["G","J","F","O"])
+        self.assertFalse(empty["full_environment_installed_verified_by_v212"])
+        self.assertFalse(empty["original_source_owner_numeric_present"]["G"])
+        with_oil={**partial,
+                  "status":"FRESH_V191_V211_V213_COMPILED_UNADMITTED",
+                  "missing":[],
+                  "native_G_source_owner_component_not_full_environment":{
+                      "source_verification":"EXACT_NATIVE","rating":2850},
+                  "original_J_F_verified_components_not_full_environment":{
+                      "J":{"source_verification":"VALID_SAME_SEASON_SOURCE",
+                           "rating":92},
+                      "F":{"source_verification":"EXACT_NATIVE","rating":165}}}
+        explicit_none={"flask_item_id":241324,"oil_item_ids_by_hand":{}}
+        without_oil=summary(compilation=with_oil,selected=explicit_none)
+        self.assertEqual(without_oil["original_source_owner_missing_for_selected_request"],[])
+        self.assertTrue(without_oil["explicit_no_oil_awaits_v222"])
+        self.assertEqual(without_oil["oil_selection_status"],
+                         "EXPLICIT_NO_OIL_AWAITING_V222")
+        self.assertFalse(without_oil["original_source_owner_numeric_present"]["O"])
+        self.assertFalse(without_oil["full_environment_installed_verified_by_v212"])
+        selected_oil={"flask_item_id":241324,
+                      "oil_item_ids_by_hand":{"main_hand":241325}}
+        oil_pending=summary(compilation=with_oil,selected=selected_oil)
+        self.assertEqual(oil_pending["original_source_owner_missing_for_selected_request"],
+                         ["O"])
+        oil_owner={**with_oil,
+                   "original_selected_O_verified_component_not_full_environment":{
+                       "source_verification":"VALID_SAME_SEASON_SOURCE",
+                       "rating":{"crit_rating":16,"haste_rating":16,
+                                 "mastery_rating":0,"versatility_rating":0}}}
+        proven_oil=summary(compilation=oil_owner,selected=selected_oil)
+        self.assertEqual(proven_oil["original_source_owner_missing_for_selected_request"],[])
+        self.assertFalse(proven_oil["full_environment_installed_verified_by_v212"])
+        installed={**with_oil,"verified_environment_install":{
+            "status":"FRESH_SEASON_VERIFIED_ENVIRONMENT_INSTALLED_READY",
+            "environment_ready":True,"environment_installed":True}}
+        verified=summary(compilation=installed,selected=explicit_none)
+        self.assertEqual(verified["oil_selection_status"],
+                         "EXPLICIT_NO_OIL_VERIFIED_V222")
+        self.assertFalse(verified["explicit_no_oil_awaits_v222"])
+        self.assertTrue(verified["full_environment_installed_verified_by_v212"])
+        self.assertTrue(verified["original_source_owner_numeric_present"]["O"])
+
     def test_premature_ready_or_unsealed_stage_never_advances(self):
         source={"schema":"v216_fresh_source_stage_v1",
                 "source_stage":{"status":"EXECUTED_AND_SEALED","reused":False},

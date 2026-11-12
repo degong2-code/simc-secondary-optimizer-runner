@@ -1576,8 +1576,17 @@ function diagnoseSeasonBuildEvidence(data) {
     "소스 컴파일 입력: "+String(missing[0]):
     requires.length?"후속 검증: "+String(requires[0]):
     "필수 원본의 상세 미완료 항목 미보고");
+  const owners=step.required_core_source_owner_report;
+  const observedOwners=owners?.original_source_owner_numeric_present;
+  const coreOwnerSummary=observedOwners&&
+      ["G","J","F","O"].every(key=>typeof observedOwners[key]==="boolean")?
+    ["G","J","F","O"].map(key=>
+      key+"="+(observedOwners[key]?"원본 확인":
+        key==="O"&&owners.explicit_no_oil_awaits_v222?
+          "기름 미사용·v222 확정 전":"증거 대기")).join(" / "):null;
   return {mode,contentCandidatesJoined,sourceSealed,
-          firstMissing,compilerMissingCount:missing.length,
+          firstMissing,coreOwnerSummary,
+          compilerMissingCount:missing.length,
           requiredMissingCount:requires.length,
           isEnvironmentReady:scope.environment_ready===true&&
                              scope.environment_installed===true};
@@ -1698,6 +1707,8 @@ function showSeasonEnvironmentBuild(data,forUserVariant=false) {
         " · 일반보석 4종 기본 배치 요청(특수효과 SimC 담당)":
       scope.four_stat_ordinary_source_requested===true?
         " · 일반보석 4종 시즌 원본 수집 요청(J 승인·배치 별도)":"")+
+    (diagnosed.coreOwnerSummary?
+      " · 필수 G/J/F/O 원본 "+diagnosed.coreOwnerSummary:"")+
     " · 실행 경로 "+diagnosed.mode+
     " · 신규 Native "+(Number(data?.native_calls)||0)+"회"+
     (autoFlask?.status==="ONE_OBSERVED_FLASK_NO_OIL_NUMERIC_PREVIEW_UNADMITTED"?
