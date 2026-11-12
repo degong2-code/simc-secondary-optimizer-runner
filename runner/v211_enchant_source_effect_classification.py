@@ -626,6 +626,19 @@ def _fresh_static_quality_source_only(season,candidates,permanent,dbc_text,enums
                  for x in family) and
              selected["quality_rank"]==max(x["quality_rank"] for x in family),
              "FRESH_QUALITY_SELECTED_RANK_OR_SOURCE_FAMILY_DRIFT")
+        # Verify the WHOLE selected family against the independently pinned
+        # SimC table. Otherwise a lower-rank variant could be omitted or
+        # relabeled in v191 and falsely appear non-inferior by comparison
+        # with only the remaining ranks.
+        original_family=sorted(
+            (p["enchant_id"],p["quality_rank"])
+            for variants in permanent.values() for p in variants
+            if (p["token"],p["item_class"],p["inventory_type_mask"],
+                p["item_subclass_mask"])==key)
+        actual_family=sorted((x["enchant_id"],x["quality_rank"])
+                             for x in family)
+        need(actual_family==original_family,
+             "FRESH_QUALITY_FULL_PINNED_RANK_FAMILY_COVERAGE_DRIFT")
         for row in family:
             expected={k:row[k] for k in fields}
             observed=[x for x in permanent.get(row["enchant_id"],[])

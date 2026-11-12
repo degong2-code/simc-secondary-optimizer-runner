@@ -118,7 +118,8 @@ class NewSeasonV211Tests(unittest.TestCase):
         # All three original raw rows are source candidates, but the final
         # v191 catalog selects only the observed highest rank for each token.
         # v211 must use the lower raw rank without publishing it.
-        def scenario(top_amount, lower_amount, *, scaling=0):
+        def scenario(top_amount, lower_amount, *, scaling=0,
+                     tamper_lower_source=False):
             season,generated=fixture_source()
             top=season["enchants"]["current_season"][
                 "highest_rank_candidates"][0]
@@ -127,7 +128,9 @@ class NewSeasonV211Tests(unittest.TestCase):
                 "highest_rank_candidates"][1]
             season["enchants"]["permanent"]={
                 "source_rows":3,
-                "source_records":[top,lower,weapon]}
+                "source_records":[
+                    top,{**lower,"simc_token":"wrong_rank_family"}
+                    if tamper_lower_source else lower,weapon]}
             generated["permanent_enchant.inc"]+=(
                 '{ 91003, 1, 4, 0x800, 0x1f, "enchant_ring__new_haste" },\n')
             def static_row(id_,value,scaled):
@@ -171,6 +174,14 @@ class NewSeasonV211Tests(unittest.TestCase):
         self.assertFalse(by_id[91001]["source_only_noninferior"])
         self.assertEqual(by_id[91001]["status"],
                          "SOURCE_EFFECT_OR_USE_CONDITIONS_PENDING")
+        incomplete=scenario(120,100,tamper_lower_source=True)
+        self.assertEqual(incomplete[
+            "static_quality_comparison_source_only"]["status"],
+            "OPTIONAL_SOURCE_QUALITY_COMPARISON_PENDING")
+        self.assertEqual(incomplete[
+            "static_quality_comparison_source_only"]["observations"],[])
+        self.assertFalse(incomplete["automatic_ui_promotion"])
+        self.assertEqual(incomplete["counts"]["total"],2)
 
     def test_raw_rank_source_absent_stays_pending_not_fake_proof(self):
         with tempfile.TemporaryDirectory() as d:

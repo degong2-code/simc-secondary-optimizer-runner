@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER — 검색 가능한 개발 기능 지도
 
+> [v373 v211 하위 rank 원본 누락/재라벨 안전성](notes/2026-11-12_p1-v373-v211-complete-pinned-quality-family.md) — v191 raw rank 계열을 동일 핀 SimC 전체 계열과 대조; 불일치 시 해당 품질 비교만 PENDING. 로컬 단위 로직 합성 6 PASS/0 FAIL, 저장소 전체 CI·Native0.
+
 > [v372 v211 정적 마부 품질 원본 비교 관측](notes/2026-11-12_p1-v372-v211-static-quality-source-only.md) — 동일 빌드 SimC DBC 및 v191의 전체 raw rank를 기존 v211→v213 봉인 경로에서 비교. 정적/비스케일링의 관측 비열등성만 표시하며 product_input/UI/READY 승격 금지. 회귀 테스트 추가, 신규 Native/HTTP0; 전체 실행 실증 별도.
 
 > [v371 v196 품질 원본·비열등성 확인 및 v191 누락 효과 크기 호환성](notes/2026-11-12_p1-v371-policy-a-quality-evidence-contract.md) — v220 기존 product_input 안의 동일 효과/사용조건·비열등성 명시 증거 요구. 출처/순위 SHA만으로 승격 금지, 원본 미관측 UNRESOLVED. 정적 대조만 수행; 자동 품질 원본 공급·시즌 JOIN/READY는 계속 PENDING.
