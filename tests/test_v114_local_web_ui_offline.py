@@ -78,6 +78,32 @@ class RealHTTPPageOffline(unittest.TestCase):
               capture_output=True,text=True,timeout=15,check=False)
         self.assertEqual(result.returncode,0,result.stderr)
 
+    def test_v359_inline_equipment_and_stat_cap_location(self):
+        page=self.client.get("/").text
+        js=self.client.get("/assets/app.js").text
+        css=self.client.get("/assets/styles.css").text
+        self.assertEqual(page.count('id="max-single-stat-percent"'),1)
+        self.assertLess(page.index('id="budget-preview-total"'),
+                        page.index('id="max-single-stat-percent"'))
+        self.assertLess(page.index('id="max-single-stat-percent"'),
+                        page.index('id="conditions-title"'))
+        for ident in ("equipment-trinket-grid","equipment-special-grid",
+                      "equipment-trinket-search","equipment-special-search",
+                      "equipment-trinket-status","equipment-special-status"):
+            self.assertIn('id="'+ident+'"',page)
+        self.assertIn('function drawInlineEquipment()',js)
+        self.assertIn('function inlineEquipmentCard(item,',js)
+        self.assertIn('equipment-inline-grid',css)
+        self.assertIn('activeTrinketSlot',js)
+        self.assertIn('data-equip-select="trinket1"',page)
+        self.assertIn('data-equip-select="trinket2"',page)
+        self.assertIn('function openEquipmentPicker(select,opener=null)',js)
+        self.assertIn('#optimizer-form .conditions-panel .hint:not([role="status"])',css)
+        self.assertIn('role="status"',page)
+        self.assertIn('document.createElement("button")',js)
+        self.assertIn('item.name_ko||item.name',js)
+        self.assertNotIn('https://wow.zamimg.com/images/wow/icons',js)
+
     def test_v358_compact_form_is_two_up_then_full_width_equipment(self):
         page=self.client.get("/").text
         css=self.client.get("/assets/styles.css").text
@@ -102,7 +128,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         page=self.client.get("/").text
         p=PageParser();p.feed(page)
         self.assertEqual(p.forms,1)
-        self.assertEqual(len(p.ids),165)
+        self.assertEqual(len(p.ids),171)
         for ident in ("class-choice","spec","race","ilevel","talents","final_T",
                       "trinket1","trinket2","special-rows","crafted-rows",
                       "season-target-socket-count","season-verified-flask",
