@@ -28,6 +28,26 @@ class RealHTTPPageOffline(unittest.TestCase):
         cls.head={"x-simc-local-token":"ui-offline-token",
                   "origin":"http://127.0.0.1:8765"}
 
+    def test_v352_dark_tactical_theme_and_real_navigation_are_accessible(self):
+        page=self.client.get("/").text
+        css=self.client.get("/assets/styles.css").text
+        self.assertIn('<meta name="color-scheme" content="dark">',page)
+        self.assertIn('aria-label="화면 구획 이동"',page)
+        for anchor in ('#season-build-title','#input-title','#result-title'):
+            self.assertIn('href="'+anchor+'"',page)
+            self.assertIn('id="'+anchor[1:]+'"',page)
+        for color in ("#1D1F24","#09090B","#24262B","#E8B34B"):
+            self.assertIn(color,css)
+        self.assertIn(':focus-visible',css)
+        self.assertIn('@media(max-width:680px)',css)
+        self.assertIn('@media(prefers-reduced-motion:reduce)',css)
+        self.assertNotIn('--bg:#f5f6f4',css)
+        self.assertNotIn('https://fonts.googleapis.com',css)
+        for old_id in ("season-build-btn","start-btn","resume-btn",
+                       "season-target-socket-count","season-verified-flask",
+                       "optimizer-oil-loadout","dps","sem","conf95"):
+            self.assertIn('id="'+old_id+'"',page)
+
     def test_configurable_stat_cap_is_visible_and_restores_old_sessions(self):
         html=(ROOT/"runner/webui/index.html").read_text(encoding="utf8")
         js=(ROOT/"runner/webui/app.js").read_text(encoding="utf8")
