@@ -78,6 +78,26 @@ class RealHTTPPageOffline(unittest.TestCase):
               capture_output=True,text=True,timeout=15,check=False)
         self.assertEqual(result.returncode,0,result.stderr)
 
+    def test_v358_compact_form_is_two_up_then_full_width_equipment(self):
+        page=self.client.get("/").text
+        css=self.client.get("/assets/styles.css").text
+        js=self.client.get("/assets/app.js").text
+        self.assertIn('#optimizer-form{\n  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)',css)
+        self.assertIn('#optimizer-form>.profile-panel{grid-column:1;grid-row:1}',css)
+        self.assertIn('#optimizer-form>.conditions-panel{grid-column:2;grid-row:1}',css)
+        self.assertIn('#optimizer-form>.fixed-gear-panel{grid-column:1/-1;grid-row:2}',css)
+        self.assertIn('@media(max-width:970px)',css)
+        self.assertIn('<details class="fold profile-import">',page)
+        self.assertIn('id="class-choice-tiles" hidden',page)
+        self.assertIn('id="spec-choice-tiles" hidden',page)
+        self.assertIn('function drawClassSpecTiles()',js)
+        self.assertIn('if($("class-choice-tiles")?.hidden && $("spec-choice-tiles")?.hidden)return;',js)
+        self.assertIn('id="season-gem-layout" open',page)
+        self.assertIn('id="trinket1"',page)
+        self.assertIn('id="trinket2"',page)
+        self.assertIn('id="simc-import-btn"',page)
+        self.assertIn('id="start-btn"',page)
+
     def test_v357_single_form_and_exact_controls_preserved_across_views(self):
         page=self.client.get("/").text
         p=PageParser();p.feed(page)

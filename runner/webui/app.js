@@ -306,6 +306,9 @@ function renderEquipmentGallery(query){
   }
 }
 function drawClassSpecTiles(){
+  // A compact native-select presentation is active. Avoid rebuilding 13+
+  // decorative tile buttons on every class/spec update when hidden.
+  if($("class-choice-tiles")?.hidden && $("spec-choice-tiles")?.hidden)return;
   if(!state.defaults.length)return;
   const cls=$("class-choice"),spec=$("spec");
   const classes=$("class-choice-tiles");classes.replaceChildren();

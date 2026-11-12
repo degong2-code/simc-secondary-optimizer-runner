@@ -419,3 +419,139 @@ body::before{display:none}
 .alt-stat-summary{color:#D7D0C5;font-size:11px;line-height:1.7;border-top:1px solid #514A40;padding-top:10px;margin:12px 0 0}
 @media(max-width:800px){.alt-row-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:540px){.alt-row-head{align-items:flex-start;flex-direction:column;gap:6px}}
+
+
+/* v358 Compact input sheet — one glance: 1 | 2 above, 3 below.
+   No game-item assets are loaded; controls keep original IDs and meaning. */
+#view-optimizer .view-intro{margin:0 0 8px;gap:10px}
+#view-optimizer .view-intro .eyebrow{display:none}
+#view-optimizer .view-intro h1{font-size:21px;line-height:1.25;margin:0 0 2px}
+#view-optimizer .view-intro .intro-desc{font-size:11px;line-height:1.4}
+#view-optimizer .view-intro .btn{min-height:30px;padding:5px 9px;font-size:11px}
+#view-optimizer .optimizer-environment-strip{
+  margin-bottom:9px;padding:5px 8px;min-height:30px;
+  background:transparent;border:0;border-bottom:1px solid #444039;border-radius:0
+}
+#view-optimizer .optimizer-environment-strip .btn{min-height:26px;padding:3px 8px}
+#optimizer-form{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  align-items:stretch;gap:10px
+}
+#optimizer-form>.panel{
+  min-width:0;width:100%;padding:14px 15px;
+  border:1px solid #4A443B;border-top:2px solid #816638;border-radius:9px;
+  box-shadow:none;background:var(--paper)
+}
+#optimizer-form>.profile-panel{grid-column:1;grid-row:1}
+#optimizer-form>.conditions-panel{grid-column:2;grid-row:1}
+#optimizer-form>.fixed-gear-panel{grid-column:1/-1;grid-row:2}
+#optimizer-form>.submit-panel{grid-column:1/-1;grid-row:3;padding:10px 14px}
+#optimizer-form .section-head{margin:0 0 9px;min-height:24px;align-items:center}
+#optimizer-form .section-head>div{display:flex;align-items:center;gap:9px}
+#optimizer-form .section-head .eyebrow{
+  display:grid;place-items:center;min-width:26px;height:24px;
+  margin:0;color:var(--accent);background:#332B20;border-radius:4px;
+  font-size:11px;letter-spacing:.03em
+}
+#optimizer-form .section-head h2{font-size:16px;line-height:1.3;letter-spacing:-.02em}
+#optimizer-form .section-head .micro{font-size:10px}
+#optimizer-form .class-spec-fields{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+#optimizer-form #class-choice-tiles,#optimizer-form #spec-choice-tiles{display:none!important}
+#optimizer-form .two{gap:8px}
+#optimizer-form .field{gap:3px;margin:0 0 8px}
+#optimizer-form .field label{font-size:11px;color:#D8D3CB;font-weight:650}
+#optimizer-form .field label small{font-size:9px;color:#9F9B96}
+#optimizer-form input:not([type=checkbox]),
+#optimizer-form select,
+#optimizer-form textarea{
+  min-height:34px;padding:6px 9px;border-radius:5px;
+  font-size:12px;background:#1D1E21;border-color:#554E44
+}
+#optimizer-form textarea#talents{min-height:48px;max-height:90px}
+#optimizer-form input[type=file]{font-size:11px;min-height:34px}
+#optimizer-form .choice-picker input{min-height:34px}
+#optimizer-form .fold{
+  margin:0 0 7px;border:1px solid #49453F;border-radius:6px;background:transparent
+}
+#optimizer-form .fold>summary{padding:6px 9px;min-height:30px;font-size:11px;gap:7px}
+#optimizer-form .fold>summary small{font-size:9px}
+#optimizer-form .fold[open]>summary{border-bottom-color:#49433B}
+#optimizer-form .profile-import{margin-bottom:9px}
+#optimizer-form .profile-import>summary{color:#D3C9B8}
+#optimizer-form .profile-import[open]{padding-bottom:8px}
+#optimizer-form .profile-import>.field{margin:8px 10px}
+#optimizer-form .profile-import>button{margin-left:10px}
+#optimizer-form .profile-import>p.hint{margin:5px 10px}
+#optimizer-form .hint{font-size:10px;line-height:1.45;margin:3px 0 6px;color:#AAA6A2}
+#optimizer-form .check-row{margin:2px 0 7px;gap:8px}
+#optimizer-form .check-row label{font-size:11px;gap:5px;align-items:center}
+#optimizer-form .check-row input[type=checkbox]{width:14px;height:14px;flex-basis:14px;margin:0}
+#optimizer-form .budget-mode{
+  margin:1px 0 8px;padding:7px 10px;background:#292724;
+  border:0;border-left:2px solid #A48443;border-radius:3px
+}
+#optimizer-form .budget-mode-heading{align-items:center;gap:8px}
+#optimizer-form .budget-mode-heading strong{font-size:11px}
+#optimizer-form .budget-mode-heading .hint{font-size:9px;margin:2px 0 3px}
+#optimizer-form .budget-figure{border:0;padding:0;gap:9px}
+#optimizer-form .budget-figure span{font-size:10px}
+#optimizer-form .budget-figure strong{font-size:13px}
+#optimizer-form .manual-toggle{font-size:10px;white-space:normal;gap:5px}
+#optimizer-form .manual-toggle input{width:13px;height:13px}
+#optimizer-form #manual-t-field{margin:6px 0 0}
+#optimizer-form .compact-guidance{margin:2px 0 6px;border:0;background:transparent;font-size:10px}
+#optimizer-form .compact-guidance summary{cursor:pointer;color:#AC9A7E;font-size:10px}
+#optimizer-form .compact-guidance p.hint{padding:4px 8px;margin:3px 0;background:#292824}
+#optimizer-form .condition-group{
+  margin:0;padding:0;background:transparent;border:0;border-radius:0
+}
+#optimizer-form .condition-group + .condition-group{margin-top:9px}
+#optimizer-form .condition-group-heading{
+  margin:0 0 6px;padding:0 0 4px;border-bottom:1px solid #4A443A;
+  display:block
+}
+#optimizer-form .condition-group-heading h3{
+  color:#E6CE9D;font-size:11px;font-weight:720;margin:0
+}
+#optimizer-form .condition-group-heading span{display:none}
+#optimizer-form #season-gem-layout{border:0;background:transparent;margin:0 0 4px}
+#optimizer-form #season-gem-layout>summary{
+  padding:2px 0 4px;font-size:11px;color:#D5D0C8;border:0
+}
+#optimizer-form #season-gem-layout>.field{
+  flex-direction:row;align-items:center;justify-content:space-between;gap:8px
+}
+#optimizer-form #season-gem-layout>.field label{flex:1;line-height:1.35}
+#optimizer-form #season-target-socket-count{width:88px;flex:0 0 88px}
+#optimizer-form #season-socket-breakdown{font-size:10px;color:#B8B09E}
+#optimizer-form .compact-subheading{margin:2px 0 5px;font-size:10px;letter-spacing:.06em}
+#optimizer-form #season-verified-flask-status,
+#optimizer-form #optimizer-oil-loadout-status{font-size:10px;line-height:1.35}
+#optimizer-form #optimizer-oil-loadout{width:100%}
+#optimizer-form #user-variant-prepare-btn{min-height:30px}
+#optimizer-form #user-variant-status{font-size:10px}
+#optimizer-form .actions{margin-top:7px;gap:7px}
+#optimizer-form .btn{min-height:32px;padding:6px 10px;font-size:11px;border-radius:5px}
+#optimizer-form .rule{display:none}
+#optimizer-form .equipment-source>.equipment-open{min-height:39px;font-size:11px}
+#optimizer-form .equipment-source .equipment-selected{margin:0;color:#B9AFA2;font-size:10px}
+#optimizer-form .fixed-gear-panel .condition-group{margin-bottom:8px}
+#optimizer-form .fixed-gear-panel .condition-group-heading{margin:0 0 7px}
+#optimizer-form .fixed-gear-panel .gear-row{padding:8px}
+#optimizer-form .fixed-gear-panel .gear-group{margin:9px 0}
+#optimizer-form .submit-panel>.actions{max-width:440px;margin:0 0 0 auto}
+#optimizer-form #optimizer-submit-note{margin:0 0 5px;font-size:11px}
+#optimizer-form #start-btn{min-height:38px;font-size:12px}
+@media(max-width:970px){
+  #optimizer-form{grid-template-columns:minmax(0,1fr)}
+  #optimizer-form>.profile-panel,#optimizer-form>.conditions-panel,
+  #optimizer-form>.fixed-gear-panel,#optimizer-form>.submit-panel{
+    grid-column:1;grid-row:auto
+  }
+}
+@media(max-width:540px){
+  #optimizer-form>.panel{padding:12px}
+  #optimizer-form .budget-mode-heading{flex-direction:column;align-items:start}
+  #optimizer-form .section-head{align-items:start}
+  #optimizer-form .fixed-gear-panel .section-head .micro{max-width:150px;text-align:right}
+}
