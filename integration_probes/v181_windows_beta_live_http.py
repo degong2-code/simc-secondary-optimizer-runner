@@ -122,8 +122,18 @@ def run(archive_path):
                      b"simc-import-file" in html and
                      b"craft-compatibility-note" in html and
                      b"simc-update-panel" in html and
-                     b'id="season-credentials-panel"' in html,
+                     b'id="season-credentials-panel"' in html and
+                     b'id="user-variant-prepare-btn"' in html,
                      "BROWSER_UI_NOT_SERVED")
+                season_section=html.split(
+                    b'<section class="panel environment-setup"',1)[1].split(
+                    b'</section>',1)[0]
+                optimizer_form=html.split(b'<form id="optimizer-form"',1)[1].split(
+                    b'</form>',1)[0]
+                need(b'id="season-target-socket-count"' not in season_section
+                     and b'id="season-target-socket-count"' in optimizer_form
+                     and b'id="season-verified-flask"' in optimizer_form,
+                     "V350_SEASON_USER_CONTROLS_NOT_SEPARATED")
                 status,js=http(base,"/assets/app.js")
                 need(status==200 and b"current_season_product" in js,
                      "JS_NOT_SERVED")
@@ -224,7 +234,18 @@ def run(archive_path):
                     # unknown HTTP keys are introduced.
                     payload={"controls":controls,"binary":str(fake),
                              "revision":source_meta["simc_revision"],
+                             "user_socket_total":4,
                              "current_season_product":True}
+                    if not seen:
+                        st,blocked=http(base,"/api/v1/sessions/plan",
+                            token=token,payload={
+                                **payload,"user_socket_total":8})
+                        need(st==422 and
+                             blocked.get("detail",{}).get("code")==
+                             "WEB_USER_VARIANT_REQUIRES_VERIFIED_SEASON_INSTALL",
+                             "V350_UNVERIFIED_SOCKETS_FALLBACK_NOT_BLOCKED")
+                        print("V350_WINDOWS_REAL_HTTP_VARIANT_BLOCKED_NO_NATIVE",
+                              flush=True)
                     st,result=http(base,"/api/v1/sessions/plan",
                                    token=token,payload=payload)
                     need(st==200,"CURRENT_SEASON_REAL_HTTP_PLAN_FAILED:"
