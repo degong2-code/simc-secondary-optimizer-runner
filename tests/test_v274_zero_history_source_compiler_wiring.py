@@ -107,6 +107,38 @@ class ZeroHistorySourceCompilerWiring(unittest.TestCase):
         self.assertEqual(result["network_calls"],0)
         self.assertFalse(result["environment_ready"])
 
+    def test_compiler_missing_source_reports_existing_owner_not_fake_budget_gate(self):
+        """An optional catalog file can be missing without inventing G/J/F/O proof."""
+        self.assertEqual(set(wiring.COMPILER_INPUT_OWNER),set(wiring.NEEDED))
+        absent=wiring.discover(self.source)
+        impact=absent["compiler_input_impact"]
+        self.assertTrue(impact["full_catalog_compilation_pending"])
+        self.assertFalse(impact["base_GJFO_numeric_evidence_verified_here"])
+        self.assertFalse(impact["individual_optional_item_quality_approval_verified_here"])
+        self.assertTrue(impact["unused_season_item_membership_not_required"])
+        self.assertEqual(len(impact["catalog_input_missing"]),len(wiring.NEEDED))
+        self.complete_producer_outputs()
+        complete=wiring.discover(self.source)
+        self.assertEqual(complete["status"],"COLLECTED_COMPILER_INPUTS_COMPLETE")
+        self.assertEqual(complete["compiler_input_impact"][
+            "catalog_input_missing"],[])
+        self.assertFalse(complete["compiler_input_impact"][
+            "base_GJFO_numeric_evidence_verified_here"])
+        source=(self.stage/"source"/"v229_pinned_generated"/
+                "permanent_enchant.inc")
+        source.unlink()
+        pending=wiring.discover(self.source)
+        self.assertEqual(pending["missing"],["GENERATED_PERMANENT"])
+        self.assertEqual(pending["compiler_input_impact"][
+            "catalog_input_missing"],[{
+                "input":"GENERATED_PERMANENT",
+                "existing_producer":"v275",
+                "catalog_role":"OPTIONAL_PERMANENT_ENCHANT_CATALOG"}])
+        self.assertTrue(pending["compiler_input_impact"][
+            "full_catalog_compilation_pending"])
+        self.assertFalse(pending["environment_ready"])
+        self.assertIsNone(pending["inputs"])
+
     def test_same_build_auto_assembly_calls_original_v241_not_new_compiler(self):
         self.complete_producer_outputs()
         path=self.emit("fresh_source/v213_candidate_catalog.json",{})

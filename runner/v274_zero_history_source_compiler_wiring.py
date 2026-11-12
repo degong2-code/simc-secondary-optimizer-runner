@@ -23,6 +23,45 @@ NEEDED = ("GEAR_V167", "TIER_V168", "V189", "V190",
           "GENERATED_PERMANENT", "GENERATED_TEMPORARY", "GENERATED_GEM",
           "SIMC_V211_SIX_SOURCE_FILES_AND_MANIFEST", "PINNED_SIMC_REVISION")
 
+# ORIGINAL v191/v211/v213 catalog compiler dependencies: NOT nine separate
+# item-season/quality proofs or the selected G/J/F/O numeric source owners.
+COMPILER_INPUT_OWNER = {
+    "GEAR_V167":("v216/v167","REPRESENTATIVE_GEAR_CATALOG_SOURCE"),
+    "TIER_V168":("v216/v251/v276","ALL_FIVE_TIER_SLOTS_CATALOG_SOURCE"),
+    "V189":("v216/v189","SIMC_CONSUMABLE_HANDLER_SOURCE"),
+    "V190":("v216/v190/v281/v285","CONSUMABLE_PHYSICAL_ITEM_SOURCE"),
+    "GENERATED_PERMANENT":("v275","OPTIONAL_PERMANENT_ENCHANT_CATALOG"),
+    "GENERATED_TEMPORARY":("v229/v275","TEMPORARY_ENCHANT_CATALOG"),
+    "GENERATED_GEM":("v229/v275","GEM_ENCHANT_CATALOG"),
+    "SIMC_V211_SIX_SOURCE_FILES_AND_MANIFEST":
+        ("v275","ENCHANT_EFFECT_CLASSIFIER_SOURCE"),
+    "PINNED_SIMC_REVISION":("v229","PINNED_SOURCE_VERSION_IDENTITY"),
+}
+
+
+def compiler_input_impact(missing):
+    """Report exactly which ORIGINAL compiler file/producer is missing.
+
+    A missing optional enchant catalog file still blocks the all-in-one v213
+    compiler today, but does not prove a selected G/J/F/O rating is unknown.
+    Do not infer a new certification Gate, source approval, or partial READY.
+    """
+    if type(missing) is not list or len(set(missing))!=len(missing) or any(
+            x not in COMPILER_INPUT_OWNER for x in missing):
+        raise ValueError("V274_COMPILER_MISSING_INPUT_KEYS_INVALID")
+    return {
+        "schema":"v274_original_compiler_input_impact_v1",
+        "catalog_input_missing":[
+            {"input":name,"existing_producer":COMPILER_INPUT_OWNER[name][0],
+             "catalog_role":COMPILER_INPUT_OWNER[name][1]}
+            for name in missing],
+        "full_catalog_compilation_pending":bool(missing),
+        "base_GJFO_numeric_evidence_verified_here":False,
+        "individual_optional_item_quality_approval_verified_here":False,
+        "unused_season_item_membership_not_required":True,
+        "new_collector_or_native_requested_here":False,
+    }
+
 
 def _safe_file(value, stage_root):
     if not isinstance(value, (str, Path)):
@@ -82,21 +121,25 @@ def discover(collected):
     if not isinstance(collected, dict) or collected.get("schema") != (
         "v216_fresh_source_stage_v1"):
         return {"schema": SCHEMA, "status": "COLLECTED_SOURCE_REQUIRED",
-                "missing": list(NEEDED), "inputs": None, "network_calls": 0}
+                "missing": list(NEEDED), "inputs": None, "network_calls": 0,
+                "compiler_input_impact":compiler_input_impact(list(NEEDED))}
     snapshot = collected.get("snapshot_receipt_path")
     if not isinstance(snapshot, str):
         return {"schema": SCHEMA, "status": "COLLECTED_SOURCE_ROOT_PENDING",
-                "missing": list(NEEDED), "inputs": None, "network_calls": 0}
+                "missing": list(NEEDED), "inputs": None, "network_calls": 0,
+                "compiler_input_impact":compiler_input_impact(list(NEEDED))}
     receipt = Path(snapshot).expanduser()
     if (receipt.name != "receipt.json" or receipt.parent.name != "wago" or
             not receipt.is_file() or receipt.is_symlink() or
             receipt.parent.is_symlink()):
         return {"schema": SCHEMA, "status": "COLLECTED_SOURCE_ROOT_PENDING",
-                "missing": list(NEEDED), "inputs": None, "network_calls": 0}
+                "missing": list(NEEDED), "inputs": None, "network_calls": 0,
+                "compiler_input_impact":compiler_input_impact(list(NEEDED))}
     root = receipt.parent.parent.resolve()
     if not root.is_dir() or root.is_symlink():
         return {"schema": SCHEMA, "status": "COLLECTED_SOURCE_ROOT_PENDING",
-                "missing": list(NEEDED), "inputs": None, "network_calls": 0}
+                "missing": list(NEEDED), "inputs": None, "network_calls": 0,
+                "compiler_input_impact":compiler_input_impact(list(NEEDED))}
 
     gear = _from_sealed_candidate(collected.get("fresh_ordinary_gear"),
                                   root, "v167_product_season_gear_db_v1")
@@ -211,6 +254,7 @@ def discover(collected):
         return {
             "schema": SCHEMA, "status": "COLLECTED_COMPILER_INPUTS_PENDING",
             "missing": missing,
+            "compiler_input_impact":compiler_input_impact(missing),
             "available": [key for key in NEEDED if key not in missing],
             "inputs": None, "network_calls": 0,
             "environment_ready": False,
@@ -218,6 +262,7 @@ def discover(collected):
     return {
         "schema": SCHEMA, "status": "COLLECTED_COMPILER_INPUTS_COMPLETE",
         "missing": [], "available": list(NEEDED),
+        "compiler_input_impact":compiler_input_impact([]),
         "inputs": {
             "stage_root": root,
             "fresh_v191_inputs": {
@@ -258,6 +303,7 @@ def compile_collected(collected, *, compiler):
             "representative_oil_source_options_unadmitted":oil_sources,
             "status": "FRESH_V191_V211_V213_COMPILED_UNADMITTED",
             "missing": [], "available": list(NEEDED),
+            "compiler_input_impact":compiler_input_impact([]),
             "source_catalog_path": compiled["source_catalog_path"],
             **({"v191_original_gear_tier_source_paths": links}
                if links is not None else {}),
