@@ -1813,7 +1813,7 @@ class LocalJobs:
                                 installed)
                             if (snapshot_file!=stage_root/out or
                                 snapshot.get("installed_manifest_sha256")!=digest or
-                                raw!=(stage_engine.canonical(snapshot)+"\\n").encode("utf8")):
+                                raw!=(stage_engine.canonical(snapshot)+"\n").encode("utf8")):
                                 raise environment_manifest.EnvironmentBlocked(
                                     "WEB_USER_VARIANT_SAVED_SNAPSHOT_INVALID")
                             stage_engine.verify_stage(
