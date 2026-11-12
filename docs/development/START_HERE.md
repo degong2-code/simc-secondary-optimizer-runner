@@ -4,6 +4,8 @@
 
 > **2026-11-11 역사 인계:** [v338 제품 완성·공식 한국어·제로베이스 최신 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P1_V338_PRODUCT_FINALIZATION.md). 기존 v331 인계는 제품 N 연구 완료 당시의 역사 스냅샷이고, 최신 제품 상태(v332~v338)는 신규 인계를 우선한다.
 
+[v357 **사용자 입력 중심 다크 UI·장비 카드·실행/결과 화면 분리, Windows ZIP/API/UI 회귀 7/7 SUCCESS**](notes/2026-11-12_p1-v357-task-first-dark-card-ui.md) — [단일 HTML 오프라인 배치 미리보기](https://github.com/degong2-code/simc-secondary-optimizer-runner/blob/probe/chat-cache-v035-20261024/previews/v357_task_first_dark_offline_preview.html), 기존 입력·SimC/세션 보존, 이미지 수집 보류, 신규 Native0. 시즌 JOIN 및 신규 개인 변형 READY는 미검증.
+
 [v352 **WoW Dark Tactical Dashboard 외관·모바일·가독성 보수, Windows ZIP/API/UI 회귀 SUCCESS**](notes/2026-11-12_p1-v352-dark-tactical-ui.md) — CSS·탐색만 변경, HTML 기존 ID142개 유지, 새 Native0. 시즌 JOIN PENDING·신규 사용자 변형 READY는 별도.
 
 [v351 **최적화 ilvl 오적용 교정·검증 영약/기름 단일 조회·시즌/개인 UI 정리, Windows ZIP/API/UI 회귀 PASS**](notes/2026-11-12_p1-v351-user-variant-level-ui-clarity.md) — 제품 엔진·기존 세션 유지, 신규 Native0. 시즌 JOIN PENDING·새 개인 변형 READY 미실증.
