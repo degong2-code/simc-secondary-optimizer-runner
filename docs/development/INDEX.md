@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER — 검색 가능한 개발 기능 지도
 
+> [v369 DB2 시즌 ID 0 가짜 시즌 일치 차단](notes/2026-11-12_p1-v369-db2-zero-season-false-match.md) — v163 시즌0은 미범위, 양수 시즌만 선택; 잘못된 DisplaySeasonID 원문은 0으로 대체하지 않고 차단. 소스·테스트 국소 변경, 사용자 실제 시즌 JOIN/READY는 여전히 PENDING.
+
 > [v368 환경 구축 A~G 전역 원본 증거 정책·부분 감사](notes/2026-11-12_p1-v368-global-environment-source-proof-contract.md) — GPT 수동 웹 대조를 자동 승인 근거에서 배제; Blizzard/WCL API·동일 빌드 DB2·SimC 출처의 필드별 증명만 인정. 정책 문서 반영이며 전역 감사/시즌 JOIN/READY 미완료.
 
 

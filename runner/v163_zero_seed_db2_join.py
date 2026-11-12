@@ -105,7 +105,21 @@ def exact_world_state_expression_id(value):
     return int(value)
 
 
+def exact_display_season_id(value):
+    """Season evidence must be an explicit nonnegative DB2 integer.
+
+    In particular, a malformed value must not silently become the unscoped
+    season 0. Season 0 itself is valid source data but never a selected season.
+    """
+    fail_if(type(value) is not str or
+            re.fullmatch(r'[0-9]{1,12}',value) is None,
+            'DB2_DISPLAY_SEASON_SOURCE_INVALID')
+    return int(value)
+
+
 def classify_era(display_season, wse, selected):
+    fail_if(type(selected) is not int or selected<=0,
+            'DB2_DISPLAY_SEASON_NOT_POSITIVE')
     if wse: return 'UNKNOWN_WORLD_STATE_EXPRESSION'
     if display_season == selected: return 'DB2_DISPLAY_SEASON_MATCH'
     if display_season == 0: return 'UNKNOWN_UNSCOPED_JOURNAL'
@@ -197,10 +211,11 @@ def discover_unique_live_scope(folder, report):
     for row in read_rows(folder,"MythicPlusSeasonTrackedMap"):
         fail_if(not {"DisplaySeasonID","MapChallengeModeID"}<=set(row),
                 "LIVE_MPLUS_DB2_SOURCE_SCHEMA_PENDING")
-        sid=number(row["DisplaySeasonID"])
         mode=challenge.get(number(row["MapChallengeModeID"]))
-        if sid>0 and mode and mode.get("Name_lang"):
-            groups[sid].add(norm(mode["Name_lang"]))
+        if mode and mode.get("Name_lang"):
+            sid=exact_display_season_id(row["DisplaySeasonID"])
+            if sid>0:
+                groups[sid].add(norm(mode["Name_lang"]))
     choices=[(z,sid) for z in zones for sid,names in groups.items()
              if names and {norm(x["name"]) for x in z["encounters"]}==names]
     fail_if(len(choices)!=1,"LIVE_MPLUS_ZONE_OR_DISPLAY_SEASON_AMBIGUOUS")
@@ -275,7 +290,10 @@ def build_index(folder, report, *, raid_zone, mplus_zone, build,
     season_groups = defaultdict(list)
     for r in read_rows(folder,'MythicPlusSeasonTrackedMap'):
         c = challenges.get(number(r['MapChallengeModeID']))
-        if c: season_groups[number(r['DisplaySeasonID'])].append(c)
+        if c:
+            sid=exact_display_season_id(r.get('DisplaySeasonID'))
+            # Zero is an unscoped DB2 value, not an active season to select.
+            if sid>0: season_groups[sid].append(c)
     wcl_mplus_names = {norm(x['name']) for x in mplus['encounters']}
     matching_seasons = [sid for sid,cs in season_groups.items() if
         {norm(x['Name_lang']) for x in cs} == wcl_mplus_names]
@@ -306,7 +324,7 @@ def build_index(folder, report, *, raid_zone, mplus_zone, build,
     for r in read_rows(folder,'JournalEncounterItem'):
         eid = number(r['JournalEncounterID']); item_id=number(r['ItemID'])
         if item_id<=0 or (eid not in raid_by_enc and eid not in mplus_by_enc):continue
-        season = number(r['DisplaySeasonID'])
+        season=exact_display_season_id(r.get('DisplaySeasonID'))
         wse=exact_world_state_expression_id(r.get('WorldStateExpressionID'))
         era = classify_era(season,wse,season_id)
         for wcl,iid in raid_by_enc[eid]:

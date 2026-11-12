@@ -19,6 +19,20 @@ class JoinTests(unittest.TestCase):
         self.assertEqual(v163.classify_era(0,0,37),'UNKNOWN_UNSCOPED_JOURNAL')
         self.assertEqual(v163.classify_era(37,0,37),'DB2_DISPLAY_SEASON_MATCH')
         self.assertEqual(v163.classify_era(34,0,37),'UNKNOWN_OTHER_DISPLAY_SEASON')
+        # A missing/zero selected season must never certify an unscoped row.
+        with self.assertRaisesRegex(
+                v163.JoinBlocked,'DB2_DISPLAY_SEASON_NOT_POSITIVE'):
+            v163.classify_era(0,0,0)
+
+    def test_display_season_source_must_be_explicit_and_nonnegative(self):
+        self.assertEqual(v163.exact_display_season_id('0'),0)
+        self.assertEqual(v163.exact_display_season_id('37'),37)
+        for invalid in ('', ' ', 'garbage', '-1', '0.0',
+                        '0x0', None, 0, '1'*13):
+            with self.subTest(value=invalid):
+                with self.assertRaisesRegex(
+                        v163.JoinBlocked,'DB2_DISPLAY_SEASON_SOURCE_INVALID'):
+                    v163.exact_display_season_id(invalid)
 
     def test_world_state_expression_source_must_not_fallback_to_zero(self):
         self.assertEqual(v163.exact_world_state_expression_id('0'),0)
@@ -177,6 +191,50 @@ class JoinTests(unittest.TestCase):
                 build='12.1.5.70575',expansion_id=11)
             self.assertFalse(clean['unverified_world_state_expressions'])
             self.assertFalse(clean['full_season_completeness_confirmed'])
+
+            # An otherwise perfectly name-matched DB2 season 0 was
+            # previously accepted as the unique season, which could label
+            # unscoped journal loot DB2_DISPLAY_SEASON_MATCH.
+            tracked=folder/'MythicPlusSeasonTrackedMap.csv'
+            tracked_text=tracked.read_text(encoding='utf8')
+            self.assertIn('1,9,37',tracked_text)
+            for bogus, code in (('0','DB2_DISPLAY_SEASON_NOT_UNIQUE'),
+                                ('bogus','DB2_DISPLAY_SEASON_SOURCE_INVALID')):
+                tracked.write_text(
+                    tracked_text.replace('1,9,37','1,9,'+bogus),encoding='utf8')
+                raw=tracked.read_bytes()
+                receipt['tables']['MythicPlusSeasonTrackedMap']={
+                    'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()}
+                (folder/'receipt.json').write_text(json.dumps(receipt))
+                with self.subTest(season=bogus):
+                    with self.assertRaisesRegex(v163.JoinBlocked,code):
+                        v163.build_index(folder,season_report,
+                            raid_zone='Test Raid',mplus_zone='Mythic+ S2',
+                            build='12.1.5.70575',expansion_id=11)
+            tracked.write_text(tracked_text,encoding='utf8')
+            raw=tracked.read_bytes()
+            receipt['tables']['MythicPlusSeasonTrackedMap']={
+                'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()}
+            (folder/'receipt.json').write_text(json.dumps(receipt))
+
+            # Malformed journal DisplaySeasonID must never fall back to 0.
+            journal.write_text(no_conditional.replace('2002,37,0',
+                              '2002,invalid,0'),encoding='utf8')
+            raw=journal.read_bytes()
+            receipt['tables']['JournalEncounterItem']={
+                'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()}
+            (folder/'receipt.json').write_text(json.dumps(receipt))
+            with self.assertRaisesRegex(
+                    v163.JoinBlocked,'DB2_DISPLAY_SEASON_SOURCE_INVALID'):
+                v163.build_index(folder,season_report,
+                    raid_zone='Test Raid',mplus_zone='Mythic+ S2',
+                    build='12.1.5.70575',expansion_id=11)
+
+            journal.write_text(no_conditional,encoding='utf8')
+            raw=journal.read_bytes()
+            receipt['tables']['JournalEncounterItem']={
+                'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()}
+            (folder/'receipt.json').write_text(json.dumps(receipt))
 
             broken=no_conditional.replace('2002,37,0',
                                           '2002,37,not-a-number')
