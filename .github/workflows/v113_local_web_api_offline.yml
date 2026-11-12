@@ -18,6 +18,8 @@ on:
       - runner/v139_pure_target_profile_composer.py
       - tests/test_v150_local_saved_session_index_offline.py
       - tests/test_v113_local_web_api_offline.py
+      - tests/test_v348_user_source_credentials_offline.py
+      - runner/v348_windows_user_source_credentials.py
       - tests/test_p3_hah_local_longrun_product_offline.py
       - tests/test_p3_ham_fresh_v212_web_profile_bridge_offline.py
       - runner/v293_local_longrun_session.py
