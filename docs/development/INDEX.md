@@ -1,5 +1,8 @@
 # SIMC SECONDARY OPTIMIZER — 검색 가능한 개발 기능 지도
 
+> [v368 환경 구축 A~G 전역 원본 증거 정책·부분 감사](notes/2026-11-12_p1-v368-global-environment-source-proof-contract.md) — GPT 수동 웹 대조를 자동 승인 근거에서 배제; Blizzard/WCL API·동일 빌드 DB2·SimC 출처의 필드별 증명만 인정. 정책 문서 반영이며 전역 감사/시즌 JOIN/READY 미완료.
+
+
 > [v367 기존 시즌 원본 진단 출력 비밀 문자열 차단](notes/2026-11-12_p1-v367-season-gap-safe-output.md) — 로컬 unittest 5 PASS, 신규 Native/Actions 0. P1-A 시즌 JOIN 검증은 봉인된 사용자 원본 확인 전 계속 PENDING.
 
 > [v366 기존 v163/v274/v216 소스 JSON 선택 장비 JOIN 증거 갭 순수 진단](notes/2026-11-12_p1-v366-existing-season-gap-readonly-diagnostic.md) — 로컬 unittest 4 PASS, 신규 HTTP·Native0. 사용자 PC 실제 봉인 원본·시즌 READY는 미검증; v365 단일 인계는 계속 최신 정본.
