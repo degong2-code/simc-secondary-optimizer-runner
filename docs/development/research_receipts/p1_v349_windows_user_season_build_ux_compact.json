@@ -1,0 +1,27 @@
+{
+  "schema": "p1_v349_windows_user_season_build_ux_evidence_v1",
+  "status": "OFFLINE_UI_AND_REAL_WINDOWS_ZIP_PASS",
+  "tested_head": "9da1c2c3a7fb676151e9e970228220371bdb0fe2",
+  "windows_beta_run_id": 43136010863,
+  "web_api_run_id": 43136010737,
+  "ui_run_id": 43136010755,
+  "focused_run_id": 43136010815,
+  "source_zip_artifact_id": 13907850816,
+  "source_zip_file_count": 272,
+  "source_zip_sha256": "b3048ccb2c5dff73ba2dc7e35417b438c67e632b2b0c101444488f417eb57b79",
+  "real_extracted_windows_python": [
+    "3.12",
+    "3.14"
+  ],
+  "original_one_click_bat_retained": true,
+  "real_user_v348_one_click_install_reported_success": true,
+  "user_private_keys_disclosed": false,
+  "new_simc_native": 0,
+  "season_build_indeterminate_elapsed_indicator": true,
+  "final_source_season_join_explanation": true,
+  "socket_total_includes_special": true,
+  "manual_itemids_advanced_only": true,
+  "actual_user_browser_interaction_v349_tested": false,
+  "actual_live_70783_auth_ready_verified": false,
+  "full_stage_progress_percent_available": false
+}

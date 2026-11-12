@@ -2,6 +2,8 @@
 
 > **2026-11-11 최신 단일 인계 정본:** [v338 제품 완성·공식 한국어·제로베이스 최신 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P1_V338_PRODUCT_FINALIZATION.md). 기존 v331 인계는 제품 N 연구 완료 당시의 역사 스냅샷이고, 최신 제품 상태(v332~v338)는 신규 인계를 우선한다.
 
+[v349 **실사용 시즌 환경 UI: 진행 중임·경과시간·시즌 JOIN 보류 원인·소켓 총수·수동 ItemID 고급 설정 분리 PASS**](notes/2026-11-12_p1-v349-user-season-progress-sockets-sourceitem-ux.md) — Windows ZIP 자체 원클릭 BAT 보존, 272개 소스 SHA 검증, Native0; 실제 단계별 진행 퍼센트 및 개인 사용자 키 READY는 미검증.
+
 [v348 **Windows 본인 Blizzard/WCL 키를 로컬 Credential Manager에 등록하고 기존 v216 시즌 Build에 전달·삭제·비밀키 비노출 PASS**](notes/2026-11-12_p1-v348-user-owned-credentials.md) — 실제 Windows CMD/HTTP·WinCred 왕복, Native0. 실제 발급키를 이용한 70783 READY 현장 시험은 미실증.
 
 [v347 **비밀키 없는 현재 KR70783 시즌 Build는 Wago·SimC 수집 후 시즌·레이드 범위 미확정으로 PENDING**](notes/2026-11-12_p1-v347-credentialless-gjfo-current-once.md) — 환경/DPs Native0, 실제 사용자 무키 READY 미구현, 추정 예산·역사70575 fallback 금지.
