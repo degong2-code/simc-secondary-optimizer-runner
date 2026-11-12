@@ -100,7 +100,8 @@
  <details class="fold env-enchant-panel" id="env-enchant-panel" open>
    <summary>마법부여 <small>검증된 선택지만 활성화</small></summary>
    <div class="env-enchant-grid">
-     <div class="field"><label for="season_enchant_finger1">반지 1 영구 마법부여 <small>선택 · 미선택은 기존 예산/캐시 유지</small></label><select id="season_enchant_finger1" disabled><option value="">마법부여 없음 (기존 설정)</option></select><p class="hint">독수리의 눈(치명타 효과 강화)은 고정 CHMV rating 증가가 없어 B/T를 바꾸지 않습니다. 효과 및 DPS는 SimC가 처리하며, 다른 37종은 아직 미검증 선택 잠금입니다.</p></div>
+<div class="field env-enchant-cell"><label for="env-enchant-finger2">반지 2</label><select id="env-enchant-finger2" disabled aria-label="반지 2 마법부여 · 검증 대기"><option value="">검증 후 선택</option></select></div>
+     <div class="field"><label for="season_enchant_finger1">반지 1</label><select id="season_enchant_finger1" disabled><option value="">마법부여 없음 (기존 설정)</option></select></div>
      <div class="field env-enchant-cell"><label for="env-enchant-weapon">주무기</label><select id="env-enchant-weapon" disabled aria-label="주무기 마법부여 · 미검증"><option>선택 준비 중</option></select></div>
 <div class="field env-enchant-cell"><label for="env-enchant-helm">머리</label><select id="env-enchant-helm" disabled aria-label="머리 마법부여 · 미검증"><option>선택 준비 중</option></select></div>
 <div class="field env-enchant-cell"><label for="env-enchant-shoulders">어깨</label><select id="env-enchant-shoulders" disabled aria-label="어깨 마법부여 · 미검증"><option>선택 준비 중</option></select></div>
@@ -153,35 +154,39 @@
 </section>
 <section class="panel fixed-gear-panel" aria-labelledby="equipment-title">
     <div class="section-head"><div><p class="eyebrow">03</p><h2 id="equipment-title">고정 장비 선택</h2></div><span class="micro">장신구 2개 필수 · 특수효과/장식은 선택</span></div>
-    <div class="condition-group"><div class="condition-group-heading"><h3>장신구 · 2개 필수</h3><span>선택된 장신구를 카드로 확인하고 변경</span></div>
-<div class="two">
+    
+<div class="gear-section gear-trinkets">
+  <div class="gear-section-heading"><h3>장신구</h3><span>2개 필수</span></div>
+  <div class="equipment-source-controls"><div class="two">
               <div class="field equipment-source"><label for="trinket1">장신구 1 · 필수</label><select id="trinket1" required><option value="">시즌 목록 확인 중…</option></select><button type="button" class="btn equipment-open" data-equip-select="trinket1">장신구 선택 · 카드 목록 열기</button><p class="equipment-selected" data-equip-label="trinket1">선택된 장신구 없음</p></div>
               <div class="field equipment-source"><label for="trinket2">장신구 2 · 필수</label><select id="trinket2" required><option value="">시즌 목록 확인 중…</option></select><button type="button" class="btn equipment-open" data-equip-select="trinket2">장신구 선택 · 카드 목록 열기</button><p class="equipment-selected" data-equip-label="trinket2">선택된 장신구 없음</p></div>
-            </div>
-            <div class="inline-equipment">
+            </div></div>
+  <div class="inline-equipment">
   <label class="equipment-filter"><span class="visually-hidden">장신구 검색</span><input id="equipment-trinket-search" type="search" autocomplete="off" placeholder="장신구 이름·ItemID 검색" aria-controls="equipment-trinket-grid"></label>
   <div id="equipment-trinket-grid" class="inline-equipment-grid" role="group" aria-label="이번 시즌 장신구 바로 선택">
     <p class="equipment-inline-empty">장신구 목록 확인 중…</p>
   </div>
   <p id="equipment-trinket-status" class="equipment-inline-status" role="status" aria-live="polite"></p>
+</div><p class="hint" id="season-gear-note">이번 시즌 장신구·특수효과 선택 목록 확인 중 · 일반장비·티어·무기는 내부 자동 구성</p>
 </div>
-<p class="hint" id="season-gear-note">이번 시즌 장신구·특수효과 선택 목록 확인 중 · 일반장비·티어·무기는 내부 자동 구성</p>
-            <p class="hint" hidden>최신 시즌 대표 장비·직업별 티어 4세트·무기는 항상 내부 구성합니다. 목표 아이템레벨 266~344에 맞춘 독립 세션입니다.</p>
-            <p class="hint" hidden>실제 SimC 대표 프로필 26/26 수용 검증. 기존 계산은 저장되며 같은 조건에서 재사용됩니다. 다른 특성·장신구·특수효과 조합의 성공 여부는 각 SimC 실행으로 판단합니다.</p>
-            
-    
-</div><div class="condition-group"><div class="condition-group-heading"><h3>특수효과 장비 · 장식</h3><span>검증된 부위·장착 제한에 따라 선택</span></div>
-<div class="inline-equipment inline-equipment-special">
+<div class="gear-section gear-special">
+  <div class="gear-section-heading"><h3>특수효과 장비</h3><span>선택</span></div>
+  <div class="inline-equipment inline-equipment-special">
   <label class="equipment-filter"><span class="visually-hidden">특수효과 장비 검색</span><input id="equipment-special-search" type="search" autocomplete="off" placeholder="특수효과 장비 이름·ItemID 검색" aria-controls="equipment-special-grid"></label>
   <div id="equipment-special-grid" class="inline-equipment-grid" role="group" aria-label="이번 시즌 특수효과 장비 바로 선택">
     <p class="equipment-inline-empty">특수효과 장비 목록 확인 중…</p>
   </div>
   <p id="equipment-special-status" class="equipment-inline-status" role="status" aria-live="polite"></p>
 </div>
-<details class="fold"><summary><span>제작 장식 및 선택 장비 세부 설정</span><small>필요할 때 펼치기</small></summary><p class="hint" hidden>일반 장비·티어4세트와 선택한 장식 제작장비의 정확한 ID는 내부에서 구성합니다. 특수장비의 보너스·촉매 원본 ID도 일반 사용자에게 입력받지 않습니다. 이미 저장된 로컬 정적 캐시는 자동으로 찾아 사용하며, 정확한 L이 있는 경우 그대로 재사용합니다. 누락된 경우 '예산 미리 확인'(Native 0회)은 차단될 수 있으나, 사용자가 'SimC 최적화 실행'을 승인하면 내부 생성한 대표 프로필에서 정적 SimC Native 최대 1회로 선택 장비의 정확한 L을 확보·캐시합니다. 이후 최적화 계산을 진행하며, 미확정 L을 0으로 간주하지 않습니다. 현재 검증된 장식은 일반 방어구용 안감 2종입니다. 목걸이·반지·무기용 장식은 별도의 실제 호환 토큰이 검증되기 전까지 선택할 수 없습니다.</p><div id="special-rows"></div><p id="craft-compatibility-note" class="hint" role="note">장식별 장착 가능한 부위만 표시됩니다. 장신구·무기 장식은 검증된 선택지가 아직 없습니다.</p><div id="crafted-rows"></div></details>
-            
-  
-</div></section>
+<details class="fold gear-special-details"><summary>부위별 상세 설정</summary>
+<p class="hint" hidden>일반 장비·티어4세트와 선택한 장식 제작장비의 정확한 ID는 내부에서 구성합니다. 특수장비의 보너스·촉매 원본 ID도 일반 사용자에게 입력받지 않습니다. 이미 저장된 로컬 정적 캐시는 자동으로 찾아 사용하며, 정확한 L이 있는 경우 그대로 재사용합니다. 누락된 경우 '예산 미리 확인'(Native 0회)은 차단될 수 있으나, 사용자가 'SimC 최적화 실행'을 승인하면 내부 생성한 대표 프로필에서 정적 SimC Native 최대 1회로 선택 장비의 정확한 L을 확보·캐시합니다. 이후 최적화 계산을 진행하며, 미확정 L을 0으로 간주하지 않습니다. 현재 검증된 장식은 일반 방어구용 안감 2종입니다. 목걸이·반지·무기용 장식은 별도의 실제 호환 토큰이 검증되기 전까지 선택할 수 없습니다.</p><div id="special-rows"></div>
+</details>
+</div>
+<div class="gear-section gear-embellishments">
+  <div class="gear-section-heading"><h3>장식</h3><span>최대 2개</span></div>
+  <p id="craft-compatibility-note" class="hint" role="note">장식별 장착 가능한 부위만 표시됩니다. 장신구·무기 장식은 검증된 선택지가 아직 없습니다.</p><div id="crafted-rows"></div>
+</div>
+</section>
 <section class="panel submit-panel" aria-label="최적화 실행">
     <p class="hint" id="optimizer-submit-note">필수 항목을 선택하세요. 환경 검증과 최종 실행 가능 여부는 서버가 결정합니다.</p>
     <div class="actions"><button type="button" id="plan-btn" hidden class="btn secondary" disabled>최적화 예산 미리 확인 · Native 0회</button><button type="button" id="start-btn" class="btn primary" disabled>최적 스탯 찾기</button></div>
