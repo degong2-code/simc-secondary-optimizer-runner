@@ -858,6 +858,7 @@ function fillDefault(item) {
   $("dk_rune_off").value="";
   runeCompatibility();
   for (const id of ["food","potion","augmentation","diamond","omnium"]) $(id).selectedIndex=0;
+  refreshDefaultConsumableSummaries();
   $("season_enchant_finger1").value="";
   // Reset optional slots on specialization changes, including hidden extra rows.
   fillGearRows("special-rows",[]);
@@ -908,7 +909,11 @@ function applyOilUseToggle(){
     $("optimizer-oil-enabled").checked=false;
     $("optimizer-oil-toggle-status").textContent=matches.length?
       "복수 조합 · 고급 설정에서 선택":"검증된 기름 없음";
-    if(matches.length>1)$("env-oil-options").open=true;
+    if(matches.length>1){
+      const advanced=document.querySelector("#optimizer-form .env-advanced-controls");
+      if(advanced)advanced.open=true;
+      $("env-oil-options").open=true;
+    }
     throw Error(matches.length?
       "검증된 기름 종류가 여러 개입니다. 기타 직접 입력에서 정확한 조합을 선택해 주세요.":
       "현재 시즌·전문화의 사용 가능한 기름 조합이 검증되지 않았습니다.");
@@ -926,6 +931,17 @@ function oilCompatibility() {
   if(!supportsOff)$("oil_off").checked=false;
   $("oil_off").title=supportsOff?"두 무기에 기름 적용 가능":"이 전문화의 보조무기에는 기름을 사용할 수 없습니다.";
   syncOilUseToggle();
+}
+
+
+function refreshDefaultConsumableSummaries(){
+  const fid=field("season-selected-flask-id");
+  const fOption=[...$("season-verified-flask").options].find(o=>o.value===fid);
+  $("env-flask-summary").textContent=fid?
+    (fOption?.textContent||"영약 #"+fid+" · 검증 필요"):"시즌 기본값";
+  const potion=$("potion"),chosen=field("potion");
+  $("env-potion-summary").textContent=!chosen||chosen==="source_default"?
+    "전문화 기본값":potion.selectedOptions?.[0]?.textContent||chosen;
 }
 
 function renderInstalledFlaskChoices(data) {
@@ -950,6 +966,7 @@ function renderInstalledFlaskChoices(data) {
   }
   selector.value=Array.from(selector.options).some(x=>x.value===prior)?prior:"";
   const count=selector.options.length-1;
+  refreshDefaultConsumableSummaries();
   $("season-verified-flask-status").textContent=count?
     "이 PC에 검증 설치된 영약 "+count+"종 · 같은 빌드/ilvl에서만 표시 · "+
     "새 환경 요청 시 기존 원본 엔진이 다시 확인":
@@ -958,6 +975,7 @@ function renderInstalledFlaskChoices(data) {
 }
 function chooseInstalledFlask() {
   $("season-selected-flask-id").value=field("season-verified-flask");
+  refreshDefaultConsumableSummaries();
 }
 function renderInstalledOilLoadouts(data) {
   state.oilCatalog=data;
@@ -2302,6 +2320,7 @@ function installOptions(options) {
      source_default:"전문화 기본 Omnium 4열 유지",row4_crit:"치명",
      row4_haste:"가속",row4_mastery:"특화",row4_vers:"유연"
   })[v]);
+  refreshDefaultConsumableSummaries();
   for(const row of $("crafted-rows").querySelectorAll(".gear-row")){
     const selector=row.querySelector('[data-field="embellishment"]');
     selector.replaceChildren(option("","장식 종류 선택"));
@@ -2502,8 +2521,10 @@ function registerHandlers() {
   $("source-credentials-save-btn").addEventListener("click",()=>withBusy(saveSourceCredentials));
   $("source-credentials-clear-btn").addEventListener("click",()=>withBusy(clearSourceCredentials));
   $("season-verified-flask").addEventListener("change",chooseInstalledFlask);
+  $("potion").addEventListener("change",refreshDefaultConsumableSummaries);
   $("season-selected-flask-id").addEventListener("input",()=>{
     $("season-verified-flask").value="";
+    refreshDefaultConsumableSummaries();
   });
   $("optimizer-oil-loadout").addEventListener("change",chooseInstalledOilLoadout);
   for(const [check,id] of [["oil_main","optimizer-oil-main-id"],

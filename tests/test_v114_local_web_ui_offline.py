@@ -127,6 +127,18 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertEqual(form.count('id="season-verified-flask"'),1)
         self.assertEqual(form.count('id="potion"'),1)
 
+    def test_v362_default_consumable_summaries_reflect_restored_choices(self):
+        page=self.client.get("/").text
+        js=self.client.get("/assets/app.js").text
+        for ident in ("env-flask-summary","env-potion-summary","env-oil-options"):
+            self.assertIn('id="'+ident+'"',page)
+        self.assertIn('function refreshDefaultConsumableSummaries()',js)
+        self.assertIn('refreshDefaultConsumableSummaries();',js)
+        self.assertIn('advanced.open=true;',js)
+        self.assertIn('$("env-oil-options").open=true;',js)
+        self.assertIn('function applyOilUseToggle()',js)
+        self.assertIn('if(matches.length!==1)',js)
+
     def test_v361_trinket_toggle_uses_owning_slot_not_current_focus(self):
         js=self.client.get("/assets/app.js").text
         self.assertIn('const owned=used1?"trinket1":used2?"trinket2":null;',js)
@@ -186,7 +198,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         page=self.client.get("/").text
         p=PageParser();p.feed(page)
         self.assertEqual(p.forms,1)
-        self.assertEqual(len(p.ids),181)
+        self.assertEqual(len(p.ids),183)
         for ident in ("class-choice","spec","race","ilevel","talents","final_T",
                       "trinket1","trinket2","special-rows","crafted-rows",
                       "season-target-socket-count","season-verified-flask",
