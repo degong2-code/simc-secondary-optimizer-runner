@@ -152,6 +152,45 @@ const number = (value,decimals=0) =>
     value.toLocaleString("ko-KR",{minimumFractionDigits:decimals,
       maximumFractionDigits:decimals}) : "–";
 
+
+/* v353: task-first views. A tab switch never changes a SimC session. */
+let currentView="optimizer";
+function switchView(view) {
+  if(!["optimizer","settings","results"].includes(view))return;
+  if(view==="results"&&!state.session)return;
+  currentView=view;
+  for(const panel of document.querySelectorAll("[data-view-panel]"))
+    panel.hidden=panel.dataset.viewPanel!==view;
+  for(const button of document.querySelectorAll("[data-view]")) {
+    const active=button.dataset.view===view;
+    button.classList.toggle("is-active",active);
+    if(active)button.setAttribute("aria-current","page");
+    else button.removeAttribute("aria-current");
+  }
+  if(view==="results")$("results-nav-btn").hidden=false;
+  window.scrollTo({top:0,behavior:"auto"});
+}
+function refreshResultNavigation() {
+  $("results-nav-btn").hidden=!state.session;
+}
+function updateManualTMode() {
+  const manual=$("manual-t-mode").checked;
+  $("manual-t-field").hidden=!manual;
+  $("final_T").disabled=!manual;
+  if(!manual)$("final_T").value="";
+  updateBudgetPreview();
+}
+function updateBudgetPreview() {
+  const manual=$("manual-t-mode").checked;
+  const t=Number(field("final_T"));
+  $("budget-preview-total").textContent=manual?
+    (Number.isSafeInteger(t)&&t>0?number(t)+" rating (수동 T)":"수동 T 입력 대기"):
+    "시즌 구성 검증 후 표시";
+  $("budget-preview-note").textContent=manual?
+    "수동 입력 T가 자동 예산보다 우선합니다. 기름 O 포함, 고정치·분배 가능성은 실행 전 검증합니다.":
+    "시즌 G/J/F/O와 선택 장비의 근거가 검증되면 T를 확정합니다. 미검증 값은 추정하지 않습니다.";
+}
+
 function setNotice(message, error=false) {
   const node=$("notice");
   node.textContent=message;
@@ -520,6 +559,8 @@ function fillDefault(item) {
   setTrinketSelection("trinket2",item.trinket_ids[1]);
   $("ilevel").value=item.ilevel;
   $("final_T").value=item.final_T??"";
+  $("manual-t-mode").checked=Boolean($("final_T").value);
+  updateManualTMode();
   $("max-single-stat-percent").value=item.max_single_stat_percent??60;
   $("targets").value=item.targets;
   $("duration").value=item.duration_seconds;
@@ -796,6 +837,8 @@ function fillSessionInputs(payload) {
   $("season-selected-flask-id").value=userVariant?.flask_item_id??"";
   updateSeasonSocketBreakdown();
   $("final_T").value=t.final_T??"";
+  $("manual-t-mode").checked=Boolean($("final_T").value);
+  updateManualTMode();
   // A sealed pre-policy session has an implicit strict <50% rule.
   // Its restoration must display 50, never silently claim the new 60.
   $("max-single-stat-percent").value=u.max_single_stat_percent??50;
@@ -1027,6 +1070,8 @@ function markSession(id) {
     state.longrunCompleted=false;
   }
   $("session-id").textContent=id;
+  refreshResultNavigation();
+  switchView("results");
   $("restore-id").value=id;
   // Only the opaque ID (not talents, paths or other personal details) persists.
   try{localStorage.setItem("simc_secondary_session_id",id);}catch{}
@@ -1532,6 +1577,10 @@ function showPlan(plan) {
     " · 미해결 "+(environment.unresolved_dependencies||[]).length+
     supplierText:
     "";
+  if(!$("manual-t-mode").checked) {
+    $("budget-preview-total").textContent=number(plan.plan.final_T)+" rating · 검증된 계획";
+    $("budget-preview-note").textContent="선택한 조건의 서버 계획 결과입니다. 입력 변경 시 다시 확인해야 합니다.";
+  }
   setNotice("계산 준비 확인 · B "+number(plan.plan.base_B)+
     " + 고정 기름 O "+number(o)+" = 최종 T "+number(plan.plan.final_T)+
     " · 계획 Native 최대 "+plan.plan.native_limit+"회 (지금 실행 0회)"+
@@ -1606,6 +1655,10 @@ function renderResult(payload) {
   $("dps").textContent=number(best.observed_dps_mean,1);
   $("sem").textContent=number(best.simc_sem,2);
   const oil=Object.values(r.fixed_O).reduce((a,x)=>a+x,0);
+  if(!$("manual-t-mode").checked) {
+    $("budget-preview-total").textContent=number(total)+" rating · 검증된 세션";
+    $("budget-preview-note").textContent="현재 표시된 값은 이 세션의 확정된 T입니다. 입력을 변경하면 재검증해야 합니다.";
+  }
   $("budget").textContent="최종 CHMV T "+number(total)+
       "  ·  B="+number(r.base_B)+" + 고정 기름 O="+number(oil);
   const bars=$("stat-bars");bars.replaceChildren();
@@ -2015,6 +2068,14 @@ async function rollbackSimcUpdater() {
   setNotice("SimC 관리 버전 복원 완료 · 사용자 원본 설치는 유지됩니다.");
 }
 function registerHandlers() {
+  for(const button of document.querySelectorAll("[data-view]"))
+    button.addEventListener("click",()=>switchView(button.dataset.view));
+  $("manual-t-mode").addEventListener("change",updateManualTMode);
+  $("final_T").addEventListener("input",updateBudgetPreview);
+  for(const id of ["ilevel","season-target-socket-count","season-selected-flask-id",
+    "optimizer-oil-loadout","oil_main","oil_off","spec","trinket1","trinket2"])
+    $(id).addEventListener("change",updateBudgetPreview);
+
   $("simc-check-btn").addEventListener("click",()=>withBusy(checkSimcUpdater));
   $("simc-install-btn").addEventListener("click",()=>withBusy(installSimcUpdater));
   $("simc-install-local-btn").addEventListener("click",()=>withBusy(installLocalSimcUpdater));
@@ -2121,6 +2182,7 @@ function registerHandlers() {
   $("start-btn").addEventListener("click",()=>withBusy(async()=>{
     // This is the only new-job action. Never start SimC on page load or refresh.
     if(!field("binary")||!field("revision")) {
+      switchView("settings");
       $("simc-technical-panel").open=true;
       const missing=!field("binary")?"binary":"revision";
       $(missing).focus();
