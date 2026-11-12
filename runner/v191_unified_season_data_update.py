@@ -7,7 +7,7 @@ SimC owns effects. This code owns IDs, options, slot masks, version evidence
 and deterministic high-quality reduction. No Native, API fetch or UI promotion.
 """
 from __future__ import annotations
-import argparse,collections,hashlib,json,re
+import argparse,collections,hashlib,json,math,re
 from pathlib import Path
 
 SCHEMA="v191_unified_patch_season_expansion_data_candidates_v1"
@@ -109,10 +109,12 @@ def highest_known_quality(rows,name):
                  x["enchant_id"]))
 
 def highest_effect_variants(rows):
-    """Only comparable, verified SAME-effect + SAME-slot numeric variants.
+    """Keep non-dominated scalar candidates within the same effect/slot family.
 
-    Unknown strength? Preserve all ambiguous variants, never falsely infer
-    higher item level, quality or a generic primary stat is more DPS.
+    A higher quality rank does not outweigh an inferior numeric effect.
+    Unknown, NaN or infinite strength means source comparison is pending:
+    keep the full family. This pure helper never certifies use conditions or
+    publishes a user option; those proofs belong to the source/Policy A join.
     """
     families=collections.defaultdict(list)
     for row in rows:
@@ -126,14 +128,25 @@ def highest_effect_variants(rows):
     for group in families.values():
         if len(group)==1:kept.extend(group);continue
         comparable=all(type(x["quality_rank"]) is int and
-                       type(x["effect_strength"]) in (int,float)
+                       x["quality_rank"]>=0 and
+                       (type(x["effect_strength"]) is int or
+                        (type(x["effect_strength"]) is float and
+                         math.isfinite(x["effect_strength"])))
                        for x in group)
         if not comparable:
             kept.extend(group)
             continue
-        best=max((v["quality_rank"],v["effect_strength"]) for v in group)
-        kept.extend(v for v in group
-                    if (v["quality_rank"],v["effect_strength"])==best)
+        # Pareto dominance: rank and effect strength must BOTH be at least
+        # as good. Equal rank/strength records may represent distinct IDs.
+        for item in group:
+            dominated=any(
+                (other["quality_rank"]>=item["quality_rank"] and
+                 other["effect_strength"]>=item["effect_strength"] and
+                 (other["quality_rank"]>item["quality_rank"] or
+                  other["effect_strength"]>item["effect_strength"]))
+                for other in group)
+            if not dominated:
+                kept.append(item)
     return kept
 
 def current_season_enchant_candidates(generated_permanent):
@@ -311,14 +324,23 @@ def compile_catalog(gear,tier,budget,effects,consumables,generated,*,event):
                     "current_season_midnight"):{
                     "highest_rank_candidates":season_enchants,
                     "count":len(season_enchants),
+                    "quality_effect_equivalence_verified":False,
                     "stage":("SIMC_CURRENT_BUILD_TOKEN_AND_SLOT_MASK_CANDIDATE_NOT_NATIVE_UI"
                              if budget_pending else
                              "SIMC_MIDNIGHT_TOKEN_AND_SLOT_MASK_CANDIDATE_NOT_NATIVE_UI")},
                   "permanent":{"source_rows":generated["permanent_enchant"]["declared_rows"],
                     "highest_rank_candidates":permanent,
+                    "source_records":[
+                        {k:row[k] for k in (
+                            "enchant_id","quality_rank","item_class",
+                            "inventory_type_mask","item_subclass_mask",
+                            "simc_token","effect_magnitude")}
+                        for row in generated["permanent_enchant"]["rows"]],
+                    "quality_effect_equivalence_verified":False,
                     "stage":"SIMC_ENCHANT_SLOT_MASK_KNOWN_SEASON_EFFECT_UNVERIFIED"},
                   "temporary":{"source_rows":generated["temporary_enchant"]["declared_rows"],
                     "highest_rank_candidates":temporary,
+                    "quality_effect_equivalence_verified":False,
                     "source_records":[
                         {k:row[k] for k in ("enchant_id","quality_rank",
                                           "effect_spell_id","simc_token")}

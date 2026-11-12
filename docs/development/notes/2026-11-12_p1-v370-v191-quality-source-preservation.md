@@ -1,0 +1,10 @@
+# v370 — v191 품질 축약의 효과 열등성·원본 후보 손실 방지
+
+- **Capability:** `ENVIRONMENT.SEASON`, `ENCHANT.QUALITY`, `PRODUCT.E2E`, `DEV.CONTINUITY`.
+- **Keywords:** v370, v191, highest quality, source provenance, numeric dominance, rank-only, Policy A, v196/v220/v212.
+- **Prior evidence:** 사용자 2026-11-12 전역 v368 정책: GPT 수동 공식 웹 대조를 제품 자동 승인 근거로 쓰지 않음. `runner/v191_unified_season_data_update.py`의 `highest_known_quality`는 `effect_magnitude=UNRESOLVED`에도 동일 SimC 토큰/마스크의 최고 rank만 임시 후보로 남기고, `permanent` 섹션에는 떨어진 원본 행 자체가 보존되지 않음. `highest_effect_variants`는 `max((quality_rank,effect_strength))` 사전식 선택으로 '등급 높음/효과 수치 낮음'을 우선할 수 있음. v196/v220/v212는 별도 원본·제품·품질·회계 증거 없이 신규 시즌 선택지를 공개하지 않도록 설계됨.
+- **Decision:** 랭크 축약을 실제 최고 품질 '검증'으로 오해하지 않고, **후보 단계의 정보 손실 및 비열등성 오판**만 국소 수리. 효과 구조·사용 조건 검증 또는 자동 READY 승격을 새로운 독립 Gate로 만들지 않음.
+- **Changes:** `v191.highest_effect_variants`는 동일 효과 fingerprint/적용 슬롯에서 유한한 단일 강도 비교가 가능할 때에만 2축 Pareto dominance 사용: 높은 rank여도 숫자가 낮으면 두 후보 모두 유지; 미해석/NaN/Inf는 가족 전체 보류. `compile_catalog`의 permanent enchant에 전체 `source_records`(원본 ItemID·rank·mask·token·UNRESOLVED magnitude)를 보존하고, permanent·temporary 및 current season rank-only projection에 `quality_effect_equivalence_verified=False` 명시. `tests/test_v191_unified_season_data_update.py`에 랭크 역전·미해석/비유한 숫자·원본 다중 rank 보존 회귀 추가. `v191` 하위의 사용자 자동 공개나 시즌 설치 방식 불변.
+- **Verification:** 수정된 헬퍼의 동일 알고리즘 발췌를 Python으로 실행한 **합성 6 PASS/0 FAIL**(전체 저장소 테스트 대체 불가). 원본 파서/테스트가 들어간 GitHub blob 무결성 및 문법은 정확한 ZIP 실행 영수증으로 아직 확인하지 못함. `tests.test_v191_unified_season_data_update` 전체와 `v191→v211→v213→v196` 통합 GitHub Actions 신규 실행 **미실시/미확인**; CI는 pinned SimC 파일 재다운로드가 발생하므로 본 정책 수정을 위해 무조건 재실행하지 않음. 신규 Native·실 게임 API/DB2 수집 **0**.
+- **Remaining:** `v191.highest_known_quality`의 최고 랭크 후보는 여전히 **미승인 projection**이며 실제 동일 효과·수치상 비열등성 증명은 v196 내부 Policy A 원본 증거의 책임이다. 낮은 품질의 더 강력한 효과가 발견될 때까지 자동 UI 등록을 막는 기존 계약은 유지. 영구 마부 실물 ItemID/SimC handler 관계와 선택지 품질 검증이 완료되었다고 주장하지 않음. 실제 사용자 v163 시즌 JOIN·G/J/F/O 설치도 PENDING. 고정 38 history source를 새 시즌의 자동 완전 데이터로 취급 금지.
+- **Efficiency:** v191+기존 unittest만 변경, 원본 full CSV/SimC/Native 신규 실행 없고 기존 봉인·캐시 불변. 다음 경로는 현존 sealed v217/v196 품질 영수증 확인·재사용 후에만 필요 최소 실제 소스 검사.

@@ -78,6 +78,33 @@ class UnifiedCatalogTest(unittest.TestCase):
         ukn=dict(x,id=6,effect_strength="UNKNOWN")
         keep=u.highest_effect_variants([x,ukn])
         self.assertEqual(len(keep),2)
+
+    def test_higher_rank_with_weaker_stat_is_not_dominant(self):
+        # Rank alone cannot remove a stronger numeric effect.
+        low={"kind":"food","effect_fingerprint":"haste_buff",
+             "allowed_slots":[],"quality_rank":2,
+             "effect_strength":120,"id":1}
+        high=dict(low,id=2,quality_rank=3,effect_strength=100)
+        self.assertEqual(
+            {v["id"] for v in u.highest_effect_variants([low,high])},
+            {1,2})
+        high_equal=dict(high,effect_strength=120)
+        self.assertEqual(
+            [v["id"] for v in u.highest_effect_variants([low,high_equal])],
+            [2])
+
+    def test_unbounded_or_unknown_numeric_effect_remains_unreduced(self):
+        src={"kind":"food","effect_fingerprint":"haste_buff",
+             "allowed_slots":[],"quality_rank":2,
+             "effect_strength":120,"id":1}
+        for unresolved in (float("nan"),float("inf"),"UNRESOLVED"):
+            with self.subTest(strength=repr(unresolved)):
+                other=dict(src,id=2,quality_rank=3,
+                           effect_strength=unresolved)
+                self.assertEqual(
+                    {x["id"] for x in u.highest_effect_variants([src,other])},
+                    {1,2})
+
     def test_bad_incomplete_enchant_source_fails_not_silent(self):
         with self.assertRaisesRegex(u.CatalogBlocked,"ROW_COUNT_MISMATCH"):
             u.parse_generated("permanent_enchant",
@@ -183,12 +210,26 @@ class UnifiedCatalogTest(unittest.TestCase):
         self.assertTrue(all(len(x["sha256"])==64
                             for x in result["simc_generated_sources"].values()))
         self.assertEqual(result["gem_properties"]["source_count"],2)
+        # All raw rank variants survive in the unpublished source catalog.
+        # The one-rank display projection is not numeric effect equivalence.
+        permanent=result["enchants"]["permanent"]
+        self.assertEqual(permanent["source_rows"],len(permanent["source_records"]))
+        self.assertEqual(
+            {r["enchant_id"] for r in permanent["source_records"]},
+            {6614,6615,6616,7777,8765})
+        self.assertFalse(permanent["quality_effect_equivalence_verified"])
+        self.assertFalse(result["enchants"]["current_season_midnight"][
+            "quality_effect_equivalence_verified"])
+        self.assertTrue(all(r["effect_magnitude"]=="UNRESOLVED"
+                            for r in permanent["source_records"]))
         self.assertEqual([x["gem_property_id"]
                           for x in result["gem_properties"]["source_records"]],
                          [12345,12346])
         self.assertFalse(any("gem_item_id" in row for row in
                          result["gem_properties"]["source_records"]))
         self.assertEqual(len(result["enchants"]["temporary"]["source_records"]),3)
+        self.assertFalse(result["enchants"]["temporary"][
+            "quality_effect_equivalence_verified"])
         self.assertEqual(result["enchants"]["temporary"]["source_records"][0]
                          ["effect_spell_id"],1212345)
         self.assertEqual(result["related_source_counts"],{
