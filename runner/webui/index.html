@@ -32,7 +32,7 @@
       <form id="optimizer-form" autocomplete="off">
   <section class="panel profile-panel" aria-labelledby="input-title">
     <div class="section-head"><div><p class="eyebrow">01 · 캐릭터와 목표</p><h2 id="input-title">캐릭터 프로필</h2></div><span class="micro">선택한 현재 장비는 최적화 예산으로 사용하지 않음</span></div>
-    <details class="fold"><summary><span>SimC 프로필에서 캐릭터 정보 가져오기 (선택)</span><small>현재 장비·스탯은 가져오지 않음</small></summary>
+    <details class="fold profile-import" open><summary><span>SimC 프로필 가져오기 (선택)</span><small>현재 장비·스탯은 가져오지 않음</small></summary>
               <div class="field"><label for="simc-import-text">SimC 프로필 텍스트 붙여넣기</label><textarea id="simc-import-text" rows="4" spellcheck="false" maxlength="250000" placeholder="druid=character&#10;spec=feral&#10;race=night_elf&#10;talents=..."></textarea></div>
               <div class="field"><label for="simc-import-file">또는 로컬 SimC 프로필 파일 선택</label><input id="simc-import-file" type="file" accept=".simc,.txt,text/plain"></div>
               <button type="button" id="simc-import-btn" class="btn secondary">직업·전문화·종족·특성만 적용</button>
@@ -43,7 +43,10 @@
               <div class="field"><label for="class-choice">직업</label><select id="class-choice" required disabled><option value="">직업 조회 중…</option></select></div>
               <div class="field"><label for="spec">전문화</label><select id="spec" required disabled><option value="">전문화 조회 중…</option></select></div>
             </div>
-            <p id="gear-scope-note" class="hint" role="note" hidden></p>
+            
+  <div class="class-tile-grid" id="class-choice-tiles" role="group" aria-label="직업 빠른 선택"></div>
+  <div class="spec-tile-grid" id="spec-choice-tiles" role="group" aria-label="전문화 빠른 선택"></div>
+  <p id="gear-scope-note" class="hint" role="note" hidden></p>
             
     <div class="two">
               <div class="field"><label for="race">종족 <small>대표 종족 자동 선택 · 변경 가능</small></label><input id="race" list="race-list" placeholder="예: 드워프" spellcheck="false"><datalist id="race-list"><option value="인간" label="human"></option><option value="드워프" label="dwarf"></option><option value="나이트 엘프" label="night_elf"></option><option value="노움" label="gnome"></option><option value="드레나이" label="draenei"></option><option value="늑대인간" label="worgen"></option><option value="판다렌" label="pandaren"></option><option value="오크" label="orc"></option><option value="언데드" label="undead"></option><option value="타우렌" label="tauren"></option><option value="트롤" label="troll"></option><option value="블러드 엘프" label="blood_elf"></option><option value="고블린" label="goblin"></option><option value="드랙티르" label="dracthyr"></option><option value="공허 엘프" label="void_elf"></option><option value="빛벼림 드레나이" label="lightforged_draenei"></option><option value="검은무쇠 드워프" label="dark_iron_dwarf"></option><option value="쿨 티란" label="kul_tiran"></option><option value="기계노움" label="mechagnome"></option><option value="토석인" label="earthen"></option><option value="나이트본" label="nightborne"></option><option value="높은산 타우렌" label="highmountain_tauren"></option><option value="마그하르 오크" label="maghar_orc"></option><option value="잔달라 트롤" label="zandalari_troll"></option><option value="불페라" label="vulpera"></option></datalist><p class="hint" id="race-default-note">종족 미입력 시 dwarf를 사용합니다.</p></div>
@@ -273,7 +276,7 @@
    </main>
   </div>
   <dialog id="equipment-dialog" class="equipment-dialog" aria-labelledby="equipment-dialog-title">
-  <div class="equipment-dialog-head"><div><p class="eyebrow">검증된 시즌 장비 선택</p><h2 id="equipment-dialog-title">장신구 · 특수효과 장비</h2></div><button id="equipment-dialog-close" type="button" class="btn secondary">닫기</button></div>
+  <div class="equipment-dialog-head"><div><p class="eyebrow">시즌 장비 후보 · 실행 시 검증</p><h2 id="equipment-dialog-title">장신구 · 특수효과 장비</h2></div><div class="equipment-dialog-actions"><button id="equipment-dialog-clear" type="button" class="btn secondary">선택 해제</button><button id="equipment-dialog-close" type="button" class="btn secondary">닫기</button></div></div>
   <label class="field" for="equipment-search"><span>이름 또는 ItemID로 검색</span><input id="equipment-search" type="search" autocomplete="off" placeholder="검증된 목록에서 검색"></label>
   <p class="hint" id="equipment-dialog-status" role="status">현재 시즌 카탈로그를 확인하세요.</p>
   <div id="equipment-gallery" class="equipment-gallery"></div>

@@ -357,3 +357,35 @@ body::before{display:none}
  html{scroll-padding-top:120px}
 }
 @media(max-width:380px){.equipment-gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* v354: image-free quick-select class/spec buttons, equipment card fields */
+.profile-panel .class-spec-fields{display:none}
+.profile-panel .class-tile-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:12px 0}
+.profile-panel .spec-tile-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:8px 0 19px}
+.class-choice-tile,.spec-choice-tile{
+  min-height:41px;display:flex;align-items:center;justify-content:center;
+  background:#302E2D;border:1px solid #575047;color:#E8E3DA;border-radius:8px;
+  padding:8px;font-size:12px;font-weight:730;text-align:center;cursor:pointer
+}
+.class-choice-tile:hover,.spec-choice-tile:hover{background:#3D362B;border-color:#AD8748}
+.class-choice-tile[aria-pressed=true],.spec-choice-tile[aria-pressed=true]{
+  border-color:var(--accent);color:#F4CA77;background:#3B3222;
+  box-shadow:inset 0 0 0 1px #9E7E48
+}
+.equipment-dialog-actions{display:flex;gap:7px;flex-wrap:wrap}
+.fixed-gear-panel .gear-row[data-group="special-rows"] .gear-fields{display:none}
+.fixed-gear-panel .gear-row[data-group="special-rows"] .special-equipment-open{
+  display:block;width:100%;background:#302C27;border-color:#76603E;text-align:left;
+  min-height:49px;white-space:normal
+}
+.fixed-gear-panel .equipment-source>.choice-picker{display:none}
+.fixed-gear-panel .equipment-source>.choice-native-select{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important}
+@media(max-width:900px){
+ .profile-panel .class-tile-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .profile-panel .spec-tile-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:540px){
+ .profile-panel .class-tile-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .profile-panel .spec-tile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .class-choice-tile,.spec-choice-tile{font-size:11px}
+}
