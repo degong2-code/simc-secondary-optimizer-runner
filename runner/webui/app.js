@@ -99,6 +99,7 @@ function applyOfficialGameTerms(doc) {
   populateSelect("class-choice",classes,classLabel);
   $("class-choice").value=classes.includes(selectedClass)?selectedClass:classes[0];
   populateSpecializationsForClass(field("class-choice"),selectedSpec);
+  drawClassSpecTiles();
   const item=state.defaults.find(x=>x.class+"/"+x.spec===field("spec"));
   if(item) {
     setRaceSuggestions(item);
@@ -189,6 +190,158 @@ function updateBudgetPreview() {
   $("budget-preview-note").textContent=manual?
     "수동 입력 T가 자동 예산보다 우선합니다. 기름 O 포함, 고정치·분배 가능성은 실행 전 검증합니다.":
     "시즌 G/J/F/O와 선택 장비의 근거가 검증되면 T를 확정합니다. 미검증 값은 추정하지 않습니다.";
+}
+
+
+/* v354 — image-free card chooser. Every actual selected ID stays in the
+   original native SELECT; the browser only displays eligible source candidates. */
+let equipmentDialogTarget=null;
+let equipmentDialogOpener=null;
+const equipNorm=x=>String(x??"").normalize("NFKC").toLocaleLowerCase("ko-KR").trim();
+function eligibleEquipment(group){
+  return [...(state.seasonGear?.choices?.[group]||[])]
+    .filter(x=>Number.isSafeInteger(Number(x.item_id))&&Number(x.item_id)>0)
+    .sort((a,b)=>String(a.name_ko||a.name||"").localeCompare(
+      String(b.name_ko||b.name||""),"ko-KR")||a.item_id-b.item_id);
+}
+function refreshEquipmentSelectionUI(){
+  for(const id of ["trinket1","trinket2"]){
+    const select=$(id),btn=document.querySelector('[data-equip-select="'+id+'"]');
+    const label=document.querySelector('[data-equip-label="'+id+'"]');
+    if(!btn)continue;
+    const chosen=select?.selectedOptions?.[0];
+    btn.textContent=chosen?.value?chosen.textContent:"장신구 목록 열기 · 카드로 선택";
+    if(label)label.textContent=chosen?.value?
+      "ItemID "+select.value:"아직 선택한 장신구가 없습니다.";
+    btn.disabled=!state.seasonGear;
+  }
+  for(const row of $("special-rows").querySelectorAll(".gear-row")){
+    const select=row.querySelector('select[data-field="item_id"]');
+    const btn=row.querySelector(".special-equipment-open");
+    if(!btn)continue;
+    const opt=select?.selectedOptions?.[0];
+    btn.textContent=opt?.value?opt.textContent+" · 변경":"특수효과 장비 선택 (선택 사항)";
+    btn.disabled=!state.seasonGear;
+  }
+}
+function equipmentKind(select){
+  return ["trinket1","trinket2"].includes(select?.id)?
+    "trinket":"special_effect_gear_candidate";
+}
+function closeEquipmentDialog(){
+  const dlg=$("equipment-dialog"),opener=equipmentDialogOpener;
+  if(dlg.open&&typeof dlg.close==="function")dlg.close();
+  else dlg.removeAttribute("open");
+  equipmentDialogTarget=null;equipmentDialogOpener=null;
+  if(opener?.isConnected)opener.focus();
+}
+function openEquipmentPicker(select,opener=null){
+  if(!select)return;
+  equipmentDialogTarget=select;equipmentDialogOpener=opener||document.activeElement;
+  const type=equipmentKind(select);
+  $("equipment-dialog-title").textContent=type==="trinket"?
+    "장신구 "+(select.id==="trinket1"?"1":"2")+" 선택":"특수효과 장비 선택";
+  $("equipment-dialog-clear").hidden=type==="trinket"&&!select.value;
+  $("equipment-search").value="";
+  renderEquipmentGallery("");
+  const dlg=$("equipment-dialog");
+  if(typeof dlg.showModal==="function"&&!dlg.open)dlg.showModal();
+  else dlg.setAttribute("open","");
+  $("equipment-search").focus();
+}
+function renderEquipmentGallery(query){
+  const select=equipmentDialogTarget,grid=$("equipment-gallery");
+  grid.replaceChildren();
+  if(!select)return;
+  const group=equipmentKind(select);
+  const all=eligibleEquipment(group);
+  const q=equipNorm(query);
+  const items=all.filter(item=>!q||equipNorm(item.name_ko||item.name).includes(q)||
+    String(item.item_id).includes(q));
+  const visible=items.slice(0,48);
+  $("equipment-dialog-status").textContent=!state.seasonGear?
+    "현재 시즌 후보 목록이 없습니다. 환경 설정의 시즌 설치 상태를 확인하세요.":
+    "시즌 후보 "+all.length+"종 · 검색 일치 "+items.length+"종"+
+    (items.length>visible.length?" · 처음 48종만 표시, 검색어를 좁혀 주세요":"")+
+    " · 아이템 실장착과 예산은 서버 검증";
+  if(!visible.length){
+    const empty=document.createElement("p");empty.className="equipment-gallery-empty";
+    empty.textContent="선택 가능한 후보가 없습니다. 검색어 또는 시즌 환경을 확인하세요.";
+    grid.appendChild(empty);return;
+  }
+  const other=group==="trinket"?
+    field(select.id==="trinket1"?"trinket2":"trinket1"):"";
+  const specialOther=new Set();
+  if(group!=="trinket")
+    for(const row of $("special-rows").querySelectorAll(".gear-row")){
+      const item=row.querySelector('select[data-field="item_id"]');
+      if(item&&item!==select&&item.value)specialOther.add(item.value);
+    }
+  for(const item of visible){
+    const id=String(item.item_id);
+    const dup=group==="trinket"?id===other:specialOther.has(id);
+    const compatible=group==="trinket"||specialAllowedSlots(item).length>0;
+    const card=document.createElement("button");
+    card.type="button";card.className="equipment-card";
+    card.disabled=dup||!compatible;
+    card.setAttribute("aria-pressed",String(id===select.value));
+    const placeholder=document.createElement("span");
+    placeholder.className="equipment-placeholder";
+    placeholder.textContent="◆";placeholder.setAttribute("aria-hidden","true");
+    const label=document.createElement("span");label.className="equipment-card-name";
+    label.textContent=item.name_ko||item.name||"아이템 #"+id;
+    const meta=document.createElement("span");meta.className="equipment-card-meta";
+    meta.textContent="ItemID "+id+(dup?" · 다른 칸에 선택됨":
+      !compatible?" · 무기/부위 비호환":"");
+    card.title=label.textContent+" · "+meta.textContent;
+    card.append(placeholder,label,meta);
+    card.addEventListener("click",()=>{
+      select.value=id;
+      select.dispatchEvent(new Event("change",{bubbles:true}));
+      refreshEquipmentSelectionUI();
+      updateBudgetPreview();
+      closeEquipmentDialog();
+    });
+    grid.appendChild(card);
+  }
+}
+function drawClassSpecTiles(){
+  if(!state.defaults.length)return;
+  const cls=$("class-choice"),spec=$("spec");
+  const classes=$("class-choice-tiles");classes.replaceChildren();
+  for(const opt of Array.from(cls.options).filter(x=>x.value)){
+    const btn=document.createElement("button");btn.type="button";
+    btn.className="class-choice-tile";btn.textContent=opt.textContent;
+    btn.setAttribute("aria-pressed",String(opt.value===cls.value));
+    btn.addEventListener("click",()=>{
+      if(cls.value!==opt.value){
+        cls.value=opt.value;
+        cls.dispatchEvent(new Event("change",{bubbles:true}));
+      }
+      drawClassSpecTiles();
+    });
+    classes.appendChild(btn);
+  }
+  const specs=$("spec-choice-tiles");specs.replaceChildren();
+  for(const opt of Array.from(spec.options).filter(x=>x.value)){
+    const btn=document.createElement("button");btn.type="button";
+    btn.className="spec-choice-tile";btn.textContent=opt.textContent;
+    btn.setAttribute("aria-pressed",String(opt.value===spec.value));
+    btn.addEventListener("click",()=>{
+      if(spec.value!==opt.value){
+        spec.value=opt.value;
+        spec.dispatchEvent(new Event("change",{bubbles:true}));
+      }
+      drawClassSpecTiles();
+    });
+    specs.appendChild(btn);
+  }
+}
+function hasRequiredSelections(){
+  return Boolean(state.token&&field("spec")&&field("race")&&
+    field("trinket1")&&field("trinket2")&&
+    field("trinket1")!==field("trinket2")&&
+    Number.isInteger(Number(field("ilevel")))&&Number(field("ilevel"))>0);
 }
 
 function setNotice(message, error=false) {
@@ -374,6 +527,7 @@ async function importSimcCharacter() {
   }
   if(parsed.race)$("race").value=displayRace(parsed.race);
   $("talents").value=parsed.talents;
+  drawClassSpecTiles();
   showCharacterDefaultHint();
   setNotice("SimC 캐릭터 정보만 적용됨 · 미입력 종족/특성은 기본값 사용 · 장비/스탯은 가져오지 않음 · Native 0회");
 }
@@ -389,6 +543,7 @@ function setTrinketSelection(fieldId,itemId,restored=false) {
     if(opt.dataset.historic==="true")opt.remove();
   if(seasonChoice("trinket",value)) {
     node.value=value;
+    refreshEquipmentSelectionUI();
     return;
   }
   // Show an earlier session's exact identity without silently substituting
@@ -398,9 +553,11 @@ function setTrinketSelection(fieldId,itemId,restored=false) {
     old.dataset.historic="true";
     node.appendChild(old);
     node.value=value;
+    refreshEquipmentSelectionUI();
     return;
   }
   node.value="";
+  refreshEquipmentSelectionUI();
 }
 function installSeasonGearHints(catalog) {
   state.seasonGear=catalog?.status==="CURRENT_SEASON_CANDIDATE_SELECTION_ONLY"
@@ -423,6 +580,7 @@ function installSeasonGearHints(catalog) {
       element.appendChild(option(item.item_id,(item.name_ko||item.name)));
   }
   refreshSpecialSlots();
+  refreshEquipmentSelectionUI();
   if(!state.seasonGear) {
     node.textContent="시즌 선택 목록이 없습니다. 새 장신구·특수효과 선택은 보류됩니다. 기존 세션 조회는 가능합니다.";
     return;
@@ -538,6 +696,7 @@ function populateSpecializationsForClass(cls,selectedKey=""){
   $("spec").value=selected;
   $("spec").disabled=!available.length;
   syncSearchChoices();
+  drawClassSpecTiles();
 }
 function installClassSpecChoices() {
   const classes=[...new Set(state.defaults.map(x=>x.class))]
@@ -587,6 +746,8 @@ function fillDefault(item) {
   for(const row of $("crafted-rows").querySelectorAll(".gear-row"))syncCraftRow(row);
   showRepresentativeScope();
   syncSearchChoices();
+  drawClassSpecTiles();
+  refreshEquipmentSelectionUI();
 }
 function oilCompatibility() {
   const key=field("spec");
@@ -773,6 +934,14 @@ function gearInputs(nodeId, config) {
     row.appendChild(note);group.appendChild(row);
   }
   if(isSpecial) {
+    for(const row of group.querySelectorAll(".gear-row")){
+      const launch=document.createElement("button");
+      launch.type="button";launch.className="btn equipment-open special-equipment-open";
+      launch.textContent="특수효과 장비 선택 (선택 사항)";
+      launch.addEventListener("click",()=>openEquipmentPicker(
+        row.querySelector('select[data-field="item_id"]'),launch));
+      row.querySelector(".gear-fields").before(launch);
+    }
     const add=document.createElement("button");add.type="button";
     add.className="btn secondary";add.textContent="+ 특수효과 장비 추가";
     add.addEventListener("click",()=>{
@@ -814,6 +983,7 @@ function fillGearRows(nodeId, entries) {
   if(add)add.disabled=!rows.some(row=>row.hidden);
   if(nodeId==="special-rows")refreshSpecialSlots();
   else for(const row of rows)syncCraftRow(row,!!entries.length);
+  refreshEquipmentSelectionUI();
 }
 function fillSessionInputs(payload) {
   const u=payload.user,c=u.character,t=u.target,b=u.combat;
@@ -823,6 +993,7 @@ function fillSessionInputs(payload) {
   $("class-choice").value=c.class;
   populateSpecializationsForClass(c.class,spec);
   $("spec").value=spec;
+  drawClassSpecTiles();
   setRaceSuggestions(state.defaults.find(x=>x.class+"/"+x.spec===spec));
   $("race").value=displayRace(c.race);
   $("talents").value=c.talents;
@@ -936,6 +1107,11 @@ function selectedGear(nodeId, group) {
   return result;
 }
 function buildRequest() {
+  if(!field("trinket1")||!field("trinket2")){
+    switchView("optimizer");
+    openEquipmentPicker($(!field("trinket1")?"trinket1":"trinket2"));
+    throw Error("장신구 두 개를 이번 시즌 목록에서 선택해 주세요.");
+  }
   if(!$("optimizer-form").reportValidity()) throw Error("필수 입력과 수치 범위를 확인해 주세요.");
   const spec=field("spec");
   const source=state.defaults.find(d=>d.class+"/"+d.spec===spec);
@@ -1086,7 +1262,7 @@ function buttonState(active=false,ready=false) {
     $("source-credentials-save-btn").disabled=true;
     $("source-credentials-clear-btn").disabled=true;
   }
-  $("start-btn").disabled=busy||active||!state.token;
+  $("start-btn").disabled=busy||active||!hasRequiredSelections();
   $("resume-btn").disabled=busy||active||!state.session||state.longrunCompleted;
   $("cache-btn").disabled=busy||active||!state.session||!ready;
   $("cancel-btn").disabled=busy||!active;
@@ -2068,6 +2244,26 @@ async function rollbackSimcUpdater() {
   setNotice("SimC 관리 버전 복원 완료 · 사용자 원본 설치는 유지됩니다.");
 }
 function registerHandlers() {
+  for(const launch of document.querySelectorAll("[data-equip-select]"))
+    launch.addEventListener("click",()=>openEquipmentPicker(
+      $(launch.dataset.equipSelect),launch));
+  $("equipment-dialog-close").addEventListener("click",closeEquipmentDialog);
+  $("equipment-dialog-clear").addEventListener("click",()=>{
+    if(!equipmentDialogTarget)return;
+    equipmentDialogTarget.value="";
+    equipmentDialogTarget.dispatchEvent(new Event("change",{bubbles:true}));
+    refreshEquipmentSelectionUI();updateBudgetPreview();
+    closeEquipmentDialog();
+  });
+  $("equipment-search").addEventListener("input",()=>renderEquipmentGallery(field("equipment-search")));
+  $("equipment-dialog").addEventListener("close",()=>{
+    equipmentDialogTarget=null;equipmentDialogOpener=null;
+  });
+  for(const id of ["trinket1","trinket2"])
+    $(id).addEventListener("change",()=>{
+      refreshEquipmentSelectionUI();
+      buttonState(state.running,state.longrunResultReady);
+    });
   for(const button of document.querySelectorAll("[data-view]"))
     button.addEventListener("click",()=>switchView(button.dataset.view));
   $("manual-t-mode").addEventListener("change",updateManualTMode);
@@ -2107,10 +2303,12 @@ function registerHandlers() {
     populateSpecializationsForClass(field("class-choice"));
     const selected=state.defaults.find(d=>d.class+"/"+d.spec===field("spec"));
     if(selected)fillDefault(selected);
+    drawClassSpecTiles();
   });
   $("spec").addEventListener("change",()=>{
     const selected=state.defaults.find(d=>d.class+"/"+d.spec===field("spec"));
     if(selected)fillDefault(selected);
+    drawClassSpecTiles();
   });
   $("ilevel").addEventListener("change",showRepresentativeScope);
   $("ilevel").addEventListener("change",()=>withBusy(refreshInstalledOilLoadouts));
