@@ -389,3 +389,19 @@ body::before{display:none}
  .profile-panel .spec-tile-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
  .class-choice-tile,.spec-choice-tile{font-size:11px}
 }
+
+/* v355 grouped settings: reduce scanning cost without duplicating controls */
+.condition-group{border:1px solid #44403A;border-radius:10px;padding:17px;margin:0 0 16px;background:#252529}
+.condition-group:last-child{margin-bottom:0}
+.condition-group-heading{display:flex;align-items:baseline;justify-content:space-between;gap:10px;border-bottom:1px solid #46413B;padding-bottom:11px;margin-bottom:17px}
+.condition-group-heading h3{font-size:14px;color:#F2DFC0;margin:0;font-weight:770}
+.condition-group-heading span{font-size:11px;color:var(--muted)}
+.condition-group .fold{background:#29292C}
+.condition-group .gear-group{margin:12px 0}
+.condition-group .gear-group .gear-row{background:#303034}
+.condition-group .gear-row-title{color:#DBCBAD}
+.condition-group .legacy-gem{background:#27282A}
+@media(max-width:680px){
+ .condition-group{padding:12px}
+ .condition-group-heading{flex-direction:column;gap:3px}
+}
