@@ -3,7 +3,7 @@
 - **Capability:** `PRODUCT.E2E`, `ENVIRONMENT.WEB`, `DEV.CONTINUITY`.
 - **Keywords:** Dark Tactical Dashboard, WoW style, gold, charcoal, mobile, accessibility, focus-visible, v352, no Native, visual-only.
 - **Prior evidence:** v351 UI/ilvl 검증 완료 [#43152226503](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43152226503). 당시 출발 HEAD `06de1ee026072e04db135d94bc8bd0e4c39ec12c`.
-- **Decision:** 다크 골드 시각 언어만 차용; 현재 프로젝트 기능·프로필·세션·API는 불변, main·공식 Project UI/Work OS 승격 없음.
+- **Decision:** `CONNECT` — 다크 골드 시각 언어만 차용; 현재 프로젝트 기능·프로필·세션·API는 불변, main·공식 Project UI/Work OS 승격 없음.
 - **Changes:** `styles.css` 디자인 토큰·입력·결과·반응형, `index.html` 3개 이동 앵커 및 dark color scheme, 기존 DOM ID142개 유지, JS 계산 변경 없음.
 - **Verification:** 원본 코드 HEAD `1dca6a60` v113/v181/v182/v180/v177/v167/focused 7 Actions SUCCESS. 신규 Native 0; v180 실제 6-case Native SKIPPED.
 - **Remaining:** 개인 PC 실제 화면 확인, SOURCE_SEASON_JOIN_PENDING, 신규 개인 구성 8소켓/F/O의 Native 양성 확인 별도.
