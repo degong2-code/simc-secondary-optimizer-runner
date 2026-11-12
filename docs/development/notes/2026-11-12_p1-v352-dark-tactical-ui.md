@@ -2,6 +2,12 @@
 
 - **Capability:** `PRODUCT.E2E`, `ENVIRONMENT.WEB`, `DEV.CONTINUITY`.
 - **Keywords:** Dark Tactical Dashboard, WoW style, gold, charcoal, mobile, accessibility, focus-visible, v352, no Native, visual-only.
+- **Prior evidence:** v351 UI/ilvl 검증 완료 [#43152226503](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43152226503). 당시 출발 HEAD `06de1ee026072e04db135d94bc8bd0e4c39ec12c`.
+- **Decision:** 다크 골드 시각 언어만 차용; 현재 프로젝트 기능·프로필·세션·API는 불변, main·공식 Project UI/Work OS 승격 없음.
+- **Changes:** `styles.css` 디자인 토큰·입력·결과·반응형, `index.html` 3개 이동 앵커 및 dark color scheme, 기존 DOM ID142개 유지, JS 계산 변경 없음.
+- **Verification:** 원본 코드 HEAD `1dca6a60` v113/v181/v182/v180/v177/v167/focused 7 Actions SUCCESS. 신규 Native 0; v180 실제 6-case Native SKIPPED.
+- **Remaining:** 개인 PC 실제 화면 확인, SOURCE_SEASON_JOIN_PENDING, 신규 개인 구성 8소켓/F/O의 Native 양성 확인 별도.
+- **Efficiency:** 기존 CSS/HTML 2파일과 UI 단언만 변경; 외부 이미지/폰트·원본 재수집·SimC 실행·캐시 무효화 0.
 - **User decision:** WEQUIP H_UI의 Dark Tactical *시각 언어만* 재사용한다. WEQUIP 장비 추천·Spark·Joint Solver·운영 의존성은 가져오지 않는다. SIMC 목표는 26 DPS 목표 ilvl/수동 T에서 CHMV 절대 rating의 SimC DPS 최적화이며, 이미 구현된 v350/v351 경로를 보존한다.
 - **Pre-change baseline:** isolated `probe/chat-cache-v035-20261024` HEAD `06de1ee026072e04db135d94bc8bd0e4c39ec12c`. 기존 UI는 연녹색/화이트 색상 토큰과 밝은 카드/선택 목록이었다.
 - **Implementation:** [style commit `1dca6a60`](https://github.com/degong2-code/simc-secondary-optimizer-runner/commit/1dca6a60fb44f1735e0d7b7b562acd152bf47c81). `runner/webui/styles.css`에 자체 완결적인 다크 디자인 시스템(배경 `#1D1F24`, 헤더 `#09090B`, 패널 `#24262B`, 절제한 골드 `#E8B34B`), 평면 카드·얇은 테두리·검색 팝업·실행 상태·DPS/SEM·95% 결과·반응형 모바일/태블릿 재배치·키보드 초점/모션 감소 처리. `index.html`에 native anchor 3개로 시즌 환경/최적화 설정/결과 이동, `color-scheme=dark`; CSS 외 추가 JS·네트워크 폰트·이미지 fetch·무기/장비 슬롯 복제 없음.
