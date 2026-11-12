@@ -1036,8 +1036,8 @@ function renderInstalledOilLoadouts(data) {
     "이 PC에 봉인된 "+count+"개 기름 조합 · 저장된 게임 빌드 "+
     data.game_build+" / ilvl "+data.target_ilevel+
     " · 실제 시즌·무기 적용은 실행 때 재검증":
-    "현재 조건에 검증 설치 기름 조합 없음 · 기본 O=0 유지. "+
-    "필요하면 시즌 환경 구축에서 먼저 검증하세요.";
+    "현재 조건에 검증된 기름 조합이 없습니다. 기름 사용이 선택된 동안은 실행 전에 검증이 필요합니다. "+
+    "기름을 사용하지 않으려면 체크를 해제하세요.";
 }
 async function refreshInstalledOilLoadouts() {
   const ilevel=valueInt("ilevel");
