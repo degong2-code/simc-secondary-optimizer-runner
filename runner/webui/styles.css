@@ -405,3 +405,17 @@ body::before{display:none}
  .condition-group{padding:12px}
  .condition-group-heading{flex-direction:column;gap:3px}
 }
+
+
+/* v356 result interpretation: visual grouping only; source stats unchanged. */
+.alt-row{padding:15px;border-color:#584B3B;background:#2B2928}
+.alt-row-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px}
+.alt-row-head strong{font-size:13px}
+.alt-verdict{font-size:11px;color:#EFC67E;border:1px solid #725A35;padding:4px 8px;border-radius:6px}
+.alt-row-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.alt-metric{display:grid;gap:3px;border:1px solid #4E463C;border-radius:7px;padding:10px;min-width:0}
+.alt-metric span{color:var(--muted);font-size:10px}
+.alt-metric strong{font-size:13px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.alt-stat-summary{color:#D7D0C5;font-size:11px;line-height:1.7;border-top:1px solid #514A40;padding-top:10px;margin:12px 0 0}
+@media(max-width:800px){.alt-row-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:540px){.alt-row-head{align-items:flex-start;flex-direction:column;gap:6px}}

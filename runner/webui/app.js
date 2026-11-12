@@ -1107,6 +1107,15 @@ function selectedGear(nodeId, group) {
   return result;
 }
 function buildRequest() {
+  // v356: binary/revision moved into settings and are no longer form descendants.
+  // Keep their same required/pattern validation before any session request.
+  if(!$("binary").checkValidity()||!$("revision").checkValidity()){
+    switchView("settings");
+    $("simc-technical-panel").open=true;
+    const invalid=!$("binary").checkValidity()?$("binary"):$("revision");
+    invalid.reportValidity();invalid.focus();
+    throw Error("SimulationCraft 실행 파일 경로와 Git revision을 확인해 주세요.");
+  }
   if(!field("trinket1")||!field("trinket2")){
     switchView("optimizer");
     openEquipmentPicker($(!field("trinket1")?"trinket1":"trinket2"));
@@ -1334,6 +1343,17 @@ function showSeasonEnvironmentBuild(data,forUserVariant=false) {
     ...(Array.isArray(source.selected_J_F_source_owner_quality_unadmitted?.missing)?
       source.selected_J_F_source_owner_quality_unadmitted.missing.map(x=>"J/F 품질: "+x):[])];
   const ready=scope.environment_ready===true&&scope.environment_installed===true;
+  $("optimizer-environment-state").textContent=ready?
+    "시즌 G/J/F/O 검증 설치 확인 · 선택한 개인 조건은 별도 검증":
+    "시즌 환경 설치·검증 미완료 · 환경 설정에서 원인을 확인하세요";
+  // Only a user-specific installed v212 READY report can show this T.
+  // Source-only numeric previews or unadmitted candidate joins are not budgets.
+  if(ready&&forUserVariant&&!$("manual-t-mode").checked&&
+     Number.isSafeInteger(Number(data?.T))&&Number(data.T)>0){
+    $("budget-preview-total").textContent=number(Number(data.T))+" rating · 개인 구성 검증";
+    $("budget-preview-note").textContent=
+      "같은 시즌 원본에서 검증한 G/J/F/O · B/T입니다. 구성 변경 후에는 다시 확인해야 합니다.";
+  }
   // v347: public Wago DB2 + pinned SimC source may be sealed, but without
   // independently verified season/raid membership cannot approve G/J/F/O.
   // Explain a real PENDING result without asking users for developer keys.
@@ -1804,7 +1824,7 @@ function renderProgress(data) {
   const environment=data?.environment_manifest;
   const environmentText=environment?" · 환경 "+environment.status:"";
   showEnvironmentBuild(data?.environment_build);
-  $("stage-text").textContent=data.active?"최적 스탯을 탐색하는 중입니다.":
+  $("stage-text").textContent=data.active?"SimC에서 후보를 평가 중입니다. 현재 "+n+"회 완료 / 세션 상한 "+limit+"회 · 확정된 관측만 결과에 표시합니다.":
     interrupted?"작업자가 실행 중이지 않습니다 · 저장된 세션을 재개할 수 있습니다":
     ({BUDGET_EXHAUSTED:"탐색 완료",PAUSED_USER_CANCEL:"중단됨 · 재개 가능",PAUSED_ELAPSED_BUDGET:"시간 제한 도달 · 재개 가능",PAUSED_INVOCATION_NATIVE_BUDGET:"중단된 계산 · 재개 가능",NOT_STARTED:"계산 대기"})[worker]||status;
   $("run-label").textContent=data.active?"진행 중":
@@ -1865,17 +1885,31 @@ function renderResult(payload) {
     list.appendChild(row);
   }
   for(const [index,alt] of alts.entries()) {
-    const row=document.createElement("div");row.className="alt-row";
+    const row=document.createElement("article");row.className="alt-row";
     const pairLabel=alt.pairwise_95_label==="OBSERVED_NEAR_BUT_LOWER_AT_95"
       ?"95% 기준 낮음":alt.pairwise_95_label==="OBSERVED_NEAR_UNRESOLVED_AT_95"
       ?"95% 우열 미확정":"95% 비교 미확인";
-    row.textContent="대안 "+(index+1)+" · DPS "+number(alt.observed_dps_mean,1)+
-       " · SEM ±"+number(alt.simc_sem,2)+
-       " · 관측 DPS 손실 "+number(alt.observed_dps_loss_pct,3)+"%"+
-       " · 분배 이동 "+number(100*alt.rating_moved_fraction_B,1)+"%"+
-       " · "+statOrder.map(([key,label])=>label+" "+number(alt.absolute_rating_T[key])+
-       " ("+number(alt.percent_of_final_T[key],2)+"%)").join(" / ")+
-       " · "+pairLabel;
+    const head=document.createElement("div");head.className="alt-row-head";
+    const title=document.createElement("strong");
+    title.textContent="관측 근접 대안 "+(index+1);
+    const verdict=document.createElement("span");verdict.textContent=pairLabel;
+    verdict.className="alt-verdict";head.append(title,verdict);
+    const metrics=document.createElement("div");metrics.className="alt-row-metrics";
+    for(const [label,value] of [
+      ["DPS",number(alt.observed_dps_mean,1)],
+      ["SEM","±"+number(alt.simc_sem,2)],
+      ["관측 DPS 차이",number(alt.observed_dps_loss_pct,3)+"%"],
+      ["분배 이동",number(100*alt.rating_moved_fraction_B,1)+"%"]]){
+      const kv=document.createElement("div");kv.className="alt-metric";
+      const k=document.createElement("span");k.textContent=label;
+      const v=document.createElement("strong");v.textContent=value;
+      kv.append(k,v);metrics.appendChild(kv);
+    }
+    const stats=document.createElement("p");stats.className="alt-stat-summary";
+    stats.textContent=statOrder.map(([key,label])=>label+" "+
+      number(alt.absolute_rating_T[key])+" ("+
+      number(alt.percent_of_final_T[key],2)+"%)").join(" · ");
+    row.append(head,metrics,stats);
     list.appendChild(row);
   }
   $("empty-result").hidden=true;$("filled-result").hidden=false;
@@ -1914,6 +1948,7 @@ function handlePollFailure(err,id) {
     $("progress-bar").style.width="0%";
     $("stage-text").textContent="현재 PC에 세션 파일이 없습니다.";
     $("filled-result").hidden=true;$("empty-result").hidden=false;
+    refreshResultNavigation();
     try{localStorage.removeItem("simc_secondary_session_id");}catch{}
     buttonState(false,false);
     setNotice("현재 PC에 해당 세션이 없습니다. 다른 컴퓨터에서 만든 세션일 수 있습니다.",true);
@@ -2304,12 +2339,16 @@ function registerHandlers() {
     const selected=state.defaults.find(d=>d.class+"/"+d.spec===field("spec"));
     if(selected)fillDefault(selected);
     drawClassSpecTiles();
+    buttonState(state.running,state.longrunResultReady);
   });
   $("spec").addEventListener("change",()=>{
     const selected=state.defaults.find(d=>d.class+"/"+d.spec===field("spec"));
     if(selected)fillDefault(selected);
     drawClassSpecTiles();
+    buttonState(state.running,state.longrunResultReady);
   });
+  $("race").addEventListener("change",()=>buttonState(state.running,state.longrunResultReady));
+  $("ilevel").addEventListener("input",()=>buttonState(state.running,state.longrunResultReady));
   $("ilevel").addEventListener("change",showRepresentativeScope);
   $("ilevel").addEventListener("change",()=>withBusy(refreshInstalledOilLoadouts));
   $("season-target-ilevel").addEventListener("change",()=>
