@@ -288,6 +288,28 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn("미확정 명칭은 원본 이름을 표시합니다.",js)
         self.assertIn('item.official_name_ko',js)
 
+    def test_v349_season_build_activity_socket_total_and_advanced_ids(self):
+        """Activity is indeterminate; user scope is separate from source IDs."""
+        html=self.client.get("/").text
+        js=self.client.get("/assets/app.js").text
+        css=(ROOT/"runner/webui/styles.css").read_text(encoding="utf8")
+        for ident in ("season-build-running","season-build-elapsed",
+                      "season-build-summary","season-socket-breakdown",
+                      "season-gem-layout","season-itemid-expert"):
+            self.assertIn('id="'+ident+'"',html)
+        self.assertIn("특수보석을 포함한 전체 소켓 수",html)
+        self.assertIn("새 J 예산·보석 배치가 검증",html)
+        self.assertIn("일반 사용자가 시즌 구축을 위해 조사하는 항목이 아닙니다",html)
+        self.assertIn("일반보석 "+'"+ordinary+"'+"개 + 특수보석",js)
+        self.assertIn('stopSeasonActivity=beginSeasonBuildActivity()',js)
+        self.assertIn('stopSeasonActivity();',js)
+        self.assertIn("실제 진행률은 서버 결과에서 확인",js)
+        self.assertIn("시즌 원본과 예산의 필수 검증이 남았습니다",js)
+        self.assertIn("아래 1차 미완료 원인",js)
+        self.assertIn("season-activity-track",css)
+        self.assertNotIn('id="season-build-percent"',html)
+        self.assertNotIn("환경 구축 100%",js)
+
     def test_v347_unscoped_credentialless_season_is_pending_not_ready(self):
         """Real v347 negative evidence gets an actionable user-facing reason."""
         js=(ROOT/"runner/webui/app.js").read_text(encoding="utf8")

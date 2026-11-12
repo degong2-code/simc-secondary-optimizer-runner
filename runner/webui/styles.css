@@ -146,3 +146,16 @@ summary small{font-size:10px;color:var(--muted);font-weight:450}
 .gear-choice-field{min-width:0}
 .gear-choice-field>label{display:block}
 .gear-choice-field .choice-picker{margin-top:4px}
+
+
+/* v349: honest indeterminate season activity, never a fabricated completion %. */
+.season-running{padding:12px 14px;border:1px solid #d8e7dc;border-radius:10px;background:#f6faf7;margin:12px 0}
+.season-running-head{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:#375b48}
+.season-running-head span{font-variant-numeric:tabular-nums;color:#607b6a}
+.season-activity-track{height:5px;overflow:hidden;border-radius:10px;background:#e5efe8;margin-top:10px}
+.season-activity-track span{display:block;width:35%;height:100%;border-radius:10px;background:var(--accent);animation:season-work 1.9s ease-in-out infinite alternate}
+@keyframes season-work{from{transform:translateX(-90%)}to{transform:translateX(285%)}}
+@media(prefers-reduced-motion:reduce){.season-activity-track span{animation:none;width:100%;opacity:.5}}
+#season-build-summary{font-size:12px;font-weight:600;color:#446356;margin:10px 0}
+#season-itemid-expert>.fold,#season-gem-layout>.fold{margin:10px 12px}
+#season-itemid-expert>.fold>p{margin:12px}

@@ -1095,6 +1095,24 @@ function showSeasonEnvironmentBuild(data) {
     "현재 시즌·레이드 범위를 검증할 공인 원본이 부족합니다. 개발자용 비밀키를 입력하는 대신 검증된 시즌 자료 업데이트가 필요합니다. 환경 READY 전에는 기본 계산을 시작할 수 없습니다."
   ]:[])])];
   const node=$("season-build-stage");
+  const headline=$("season-build-summary");
+  const discovery=data?.season_discovery?.status||"원본 단계 미보고";
+  const joined=data?.season_join?.status||"원본 단계 미보고";
+  const wago=step.source_stage_status||data?.source_stage?.status||"원본 단계 미보고";
+  if(ready) {
+    headline.textContent="설치 완료 · 같은 시즌 G/J/F/O와 실행 프로필을 검증했습니다.";
+  } else if(joined==="AUTHENTICATED_SEASON_JOIN_NOT_READY"){
+    headline.textContent="설치 보류 · 활성 시즌·레이드 연결이 아직 확인되지 않았습니다. 인증정보가 저장됐는지만으로는 확인 완료가 아닙니다. "+
+      "원본 수집 상태: "+wago+" · Blizzard/WCL 단계: "+discovery+". "+
+      "아래 1차 미완료 원인 때문에 후속 티어·장비·G/J/F/O 조건이 함께 보류될 수 있습니다.";
+  } else if(joined==="LIVE_SEASON_SCOPE_AMBIGUOUS_PENDING"){
+    headline.textContent="설치 보류 · 원본은 조회했지만 활성 시즌 범위를 하나로 확정할 수 없습니다. "+
+      "Blizzard/WCL 단계: "+discovery+" · Wago DB2 단계: "+wago+".";
+  } else {
+    headline.textContent="설치 보류 · 시즌 원본과 예산의 필수 검증이 남았습니다. "+
+      "Blizzard/WCL 단계: "+discovery+" · 시즌 연결: "+joined+
+      " · Wago DB2 단계: "+wago+".";
+  }
   if(data?.status==="VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED"&&ready){
     node.textContent="기존 검증 시즌 환경 재사용 완료 · 저장된 원본 빌드 "+
       data.installed_source_game_build+
@@ -1213,6 +1231,29 @@ async function clearSourceCredentials() {
   setNotice("API 인증정보 삭제 완료 · 저장된 시즌 결과는 변경하지 않았습니다.");
   await refreshSourceCredentialStatus();
 }
+function updateSeasonSocketBreakdown() {
+  const total=Number(field("season-target-socket-count"));
+  const special=field("season-existing-special-gem-id")!==""?1:0;
+  const ordinary=total-special;
+  $("season-socket-breakdown").textContent=(
+    !Number.isSafeInteger(total)||total<4||total>64?
+      "전체 소켓 수는 4~64개여야 합니다.":
+    ordinary<4?
+      "일반보석 4종을 유지하려면 특수보석 포함 총 5개 이상을 선택해야 합니다.":
+      "일반보석 "+ordinary+"개 + 특수보석 "+special+
+      "개 = 전체 소켓 "+total+"개 · 변경 시 새 구성 재검증 필요");
+}
+function beginSeasonBuildActivity() {
+  const section=$("season-build-running");
+  const elapsed=$("season-build-elapsed");
+  const started=Date.now();
+  section.hidden=false;
+  const redraw=()=>{elapsed.textContent=Math.floor((Date.now()-started)/1000)+
+    "초 경과 · 단계별 실제 진행률은 서버 결과에서 확인";};
+  redraw();
+  const clock=window.setInterval(redraw,1000);
+  return ()=>{window.clearInterval(clock);section.hidden=true;};
+}
 async function buildSeasonEnvironment() {
   const supplied_build=field("season-game-build");
   if(supplied_build&&!/^\d+(?:\.\d+){3}$/.test(supplied_build))
@@ -1315,7 +1356,10 @@ async function buildSeasonEnvironment() {
         " 선택한 기름의 스케일링 값은 기존 실행 캐시를 먼저 재사용하고, 필요한 손에만 SimC 측정을 수행합니다.":
         " 선택한 기름이 없으므로 SimC 원본 확인만 수행하며 O Native는 실행하지 않습니다."):"")))
     return;
-  $("season-build-stage").textContent="기존 설치 영수증 확인 · 필요 시 동일 환경 엔진으로 원본 수집·검증 중…";
+  $("season-build-stage").textContent="시즌 환경 요청 처리 중 · 응답을 받으면 원본 단계 결과를 구분해서 표시합니다…";
+  $("season-build-pending").hidden=true;
+  $("season-build-summary").textContent="검증 진행 중 · 결과 미확정 (READY 아님)";
+  const stopSeasonActivity=beginSeasonBuildActivity();
   try {
     const report=await api("/api/v1/environment/season-build",
       {method:"POST",payload:{game_build,target_ilevel,native_G_binary,
@@ -1328,6 +1372,7 @@ async function buildSeasonEnvironment() {
                               existing_special_gem_id,source_target_socket_count,
                               refresh_reason,
                               simc_revision_hint:revision||null}});
+    stopSeasonActivity();
     showSeasonEnvironmentBuild(report);
     const localization=report.official_ko_localization;
     const localized=$("season-locale-status");
@@ -1356,9 +1401,12 @@ async function buildSeasonEnvironment() {
       "검증 설치 기름 목록 조회 실패 · 고급 입력 유지";}
     setNotice("시즌 환경 구축 단계 조회 완료 · READY 여부는 별도 검증 · 개별 DPS 최적화는 시작되지 않았습니다.");
   }catch(err){
+    $("season-build-summary").textContent="요청 차단 또는 오류 · 실행 완료가 아닙니다. 오류 코드를 확인하세요.";
     $("season-build-stage").textContent="시즌 환경 구축 단계 차단/오류 · "+err.message+
       " · 기존 영수증은 보존됩니다.";
     throw err;
+  } finally {
+    stopSeasonActivity();
   }
 }
 function showEnvironmentBuild(build) {
@@ -1909,6 +1957,9 @@ function registerHandlers() {
   $("simc-rollback-btn").addEventListener("click",()=>withBusy(rollbackSimcUpdater));
   $("simc-import-btn").addEventListener("click",()=>withBusy(importSimcCharacter));
   $("season-build-btn").addEventListener("click",()=>withBusy(buildSeasonEnvironment));
+  $("season-target-socket-count").addEventListener("input",updateSeasonSocketBreakdown);
+  $("season-existing-special-gem-id").addEventListener("input",updateSeasonSocketBreakdown);
+  updateSeasonSocketBreakdown();
   $("source-credentials-save-btn").addEventListener("click",()=>withBusy(saveSourceCredentials));
   $("source-credentials-clear-btn").addEventListener("click",()=>withBusy(clearSourceCredentials));
   $("season-verified-flask").addEventListener("change",chooseInstalledFlask);
