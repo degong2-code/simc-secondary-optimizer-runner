@@ -116,7 +116,10 @@
 <div class="env-advanced-consumables">
  <div class="field"><label for="season-verified-flask">영약 변경</label><select id="season-verified-flask"><option value="">검증 설치 영약 조회 중…</option></select><p class="hint" id="season-verified-flask-status" role="status">이번 시즌 검증 설치 영약만 선택할 수 있습니다.</p></div>
  <div class="field"><label for="potion">물약 변경</label><select id="potion"></select></div>
- <div class="field"><label for="optimizer-oil-loadout">검증된 기름 조합</label><select id="optimizer-oil-loadout"><option value="">기름 사용 안 함 (O=0)</option></select><p id="optimizer-oil-loadout-status" class="hint" role="status" aria-live="polite">검증된 기름 조합 확인 중…</p></div>
+ <details class="fold" id="env-oil-options">
+  <summary>다른 기름 조합 지정</summary>
+   <div class="field"><label for="optimizer-oil-loadout">검증된 기름 조합</label><select id="optimizer-oil-loadout"><option value="">기름 사용 안 함 (O=0)</option></select><p id="optimizer-oil-loadout-status" class="hint" role="status" aria-live="polite">검증된 기름 조합 확인 중…</p></div>
+ </details>
 </div>
 <details class="fold" id="season-special-gem-expert"><summary>고급 입력: 이미 선택한 특수보석 ItemID (일반 사용자 입력 불필요)</summary>
             <div class="field"><label for="season-existing-special-gem-id">이미 선택된 특수보석 ItemID <small>새 특수보석을 탐색하거나 효과를 측정하지 않습니다</small></label><input id="season-existing-special-gem-id" type="number" min="1" max="999999999" step="1" placeholder="기존에 지정된 ItemID" inputmode="numeric"></div>

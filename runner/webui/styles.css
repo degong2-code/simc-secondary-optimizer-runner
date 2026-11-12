@@ -922,3 +922,35 @@ body{background:#24252B;color:var(--ink)}
  #optimizer-form .conditions-panel .env-input-grid>.env-grid-cell:nth-child(n+5):nth-child(-n+7){grid-column:span 6}
  #optimizer-form .gear-section .inline-equipment-grid{grid-template-columns:1fr}
 }
+
+
+/* v361: actual on/off and auto-source labels, no extra boxes. */
+#optimizer-form .conditions-panel .env-onoff-cell{
+ display:flex;flex-direction:column;gap:3px;min-height:56px
+}
+#optimizer-form .conditions-panel .env-field-title{
+ color:#DDD4CA;font-size:10px;font-weight:700
+}
+#optimizer-form .conditions-panel .env-onoff{
+ display:inline-flex;align-items:center;gap:7px;cursor:pointer;
+ font-size:11px;min-height:26px;border-bottom:1px solid #655D52
+}
+#optimizer-form .conditions-panel .env-onoff input[type=checkbox]{
+ width:14px;height:14px;accent-color:#E8B34B;flex:none;margin:0
+}
+#optimizer-form .conditions-panel .env-compact-status{
+ color:#AAA49D;font-size:9px;line-height:1.2
+}
+#optimizer-form .conditions-panel .env-auto-value{
+ color:#E5D6BF;font-size:11px;line-height:24px;
+ display:block;border-bottom:1px solid #655D52;
+ white-space:nowrap;text-overflow:ellipsis;overflow:hidden
+}
+#optimizer-form .env-advanced-consumables{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 12px}
+#optimizer-form .env-advanced-consumables #env-oil-options{grid-column:1/-1;border:0}
+#optimizer-form .env-advanced-consumables #env-oil-options>summary{font-size:10px;padding:4px 0}
+#optimizer-form .env-advanced-consumables>.field{min-width:0}
+#optimizer-form .equipment-source-controls *{pointer-events:none}
+@media(max-width:480px){
+ #optimizer-form .env-advanced-consumables{grid-template-columns:1fr}
+}

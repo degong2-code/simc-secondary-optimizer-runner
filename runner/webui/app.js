@@ -251,7 +251,6 @@ function drawInlineEquipment(){
         activeTrinketSlot=owned||(!field("trinket1")?"trinket1":
           !field("trinket2")?"trinket2":target);
         node.dispatchEvent(new Event("change",{bubbles:true}));
-        drawInlineEquipment();
       }});
     if(used1)b.dataset.slot="1";
     if(used2)b.dataset.slot="2";
