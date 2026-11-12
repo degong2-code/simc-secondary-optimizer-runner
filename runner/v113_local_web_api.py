@@ -139,6 +139,10 @@ class LongRunStartRequest(BaseModel):
     current_season_product: bool = True
     # Exact IDs are optional; legacy hand-only sessions remain supported.
     selected_oil_item_ids_by_hand: dict[str,int] = Field(default_factory=dict)
+    # Per-user final socket/consumable selections; never season DB identities.
+    user_socket_total: int | None = Field(default=None,ge=4,le=64)
+    user_special_gem_id: int | None = Field(default=None,ge=1,le=999999999)
+    selected_flask_item_id: int | None = Field(default=None,ge=1,le=999999999)
     # Select an ALREADY INSTALLED/VERIFIED environment, not fresh collection.
     installed_season_game_build: str | None = Field(
         default=None,max_length=32,pattern=r"^\d+(?:\.\d+){3}$")
@@ -163,6 +167,9 @@ class UserRequest(BaseModel):
     current_season_product: bool = False
     # Optional exact physical IDs, matched only against sealed v212 installs.
     selected_oil_item_ids_by_hand: dict[str,int] = Field(default_factory=dict)
+    user_socket_total: int | None = Field(default=None,ge=4,le=64)
+    user_special_gem_id: int | None = Field(default=None,ge=1,le=999999999)
+    selected_flask_item_id: int | None = Field(default=None,ge=1,le=999999999)
     installed_season_game_build: str | None = Field(
         default=None,max_length=32,pattern=r"^\d+(?:\.\d+){3}$")
     # Opt-in normal-source collection only; never grants new environment READY.
@@ -350,11 +357,13 @@ class LocalJobs:
 
     def restore_verified_fresh_profile(
             self, *, target_ilevel, game_build,
-            selected_oil_item_ids_by_hand=None, required_gem_layout=None):
+            selected_oil_item_ids_by_hand=None, required_gem_layout=None,
+            expected_installed_manifest_sha256=None):
         """Recover only the exact selected installed environment, no Native."""
         found=environment_build.find_verified_installed_season_environment(
             self.root,target_ilevel,expected_game_build=game_build,
-            selected_oil_item_ids_by_hand=selected_oil_item_ids_by_hand)
+            selected_oil_item_ids_by_hand=selected_oil_item_ids_by_hand,
+            expected_installed_manifest_sha256=expected_installed_manifest_sha256)
         if found is None:
             return None
         digest=found["installed_manifest_sha256"]
@@ -1827,6 +1836,9 @@ class LocalJobs:
             revision=request.revision,static_cache=request.static_cache,
             current_season_product=True,
             selected_oil_item_ids_by_hand=request.selected_oil_item_ids_by_hand,
+            user_socket_total=request.user_socket_total,
+            user_special_gem_id=request.user_special_gem_id,
+            selected_flask_item_id=request.selected_flask_item_id,
             installed_season_game_build=request.installed_season_game_build)
         folder,hydrated,environment,receipt_info=(
             self.prepare_with_internal_special_L(params))
