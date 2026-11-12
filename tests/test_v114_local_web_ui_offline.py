@@ -78,6 +78,40 @@ class RealHTTPPageOffline(unittest.TestCase):
               capture_output=True,text=True,timeout=15,check=False)
         self.assertEqual(result.returncode,0,result.stderr)
 
+    def test_v360_environment_grid_uses_only_approved_inputs(self):
+        page=self.client.get("/").text
+        css=self.client.get("/assets/styles.css").text
+        js=self.client.get("/assets/app.js").text
+        form=page.split('<form id="optimizer-form"',1)[1].split('</form>',1)[0]
+        env=form.split('<section class="panel conditions-panel"',1)[1].split('</section>',1)[0]
+        self.assertIn('class="env-input-grid"',env)
+        self.assertIn('class="env-bottom-row"',env)
+        self.assertIn('id="env-enchant-panel" open',env)
+        self.assertIn('grid-template-columns:repeat(6,minmax(0,1fr))',css)
+        self.assertLess(env.index('id="targets"'),env.index('id="season-target-socket-count"'))
+        self.assertLess(env.index('id="season-target-socket-count"'),env.index('id="duration"'))
+        self.assertLess(env.index('id="duration"'),env.index('id="optimizer-oil-loadout"'))
+        self.assertLess(env.index('id="optimizer-oil-loadout"'),env.index('id="food"'))
+        self.assertLess(env.index('id="food"'),env.index('id="season-verified-flask"'))
+        self.assertLess(env.index('id="potion"'),env.index('id="omnium"'))
+        self.assertLess(env.index('id="omnium"'),env.index('id="augmentation"'))
+        self.assertLess(env.index('id="augmentation"'),env.index('id="raid_buffs"'))
+        self.assertIn('id="season_enchant_finger1" disabled',env)
+        for slot in ("weapon","helm","shoulders","chest","boots"):
+            self.assertIn('id="env-enchant-'+slot+'" disabled',env)
+        self.assertIn('id="optimizer-season-itemid-expert"',env)
+        self.assertIn('id="season-existing-special-gem-id"',env)
+        self.assertIn('id="oil_main" type="checkbox"',env)
+        self.assertIn('id="dk-runeforge-panel" hidden',env)
+        self.assertIn('function renderSeasonOptionCatalog(catalog)',js)
+        self.assertIn('selector.disabled=true;',js)
+        self.assertIn('selector.disabled=false;',js)
+        self.assertIn('--bg:#22232A',css)
+        self.assertIn('--accent:#E8B34B',css)
+        self.assertNotIn('--bg:#101715',css)
+        self.assertNotIn('https://fonts.googleapis.com',css)
+        self.assertEqual(form.count('id="season-verified-flask"'),1)
+
     def test_v359_inline_equipment_and_stat_cap_location(self):
         page=self.client.get("/").text
         js=self.client.get("/assets/app.js").text
@@ -128,7 +162,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         page=self.client.get("/").text
         p=PageParser();p.feed(page)
         self.assertEqual(p.forms,1)
-        self.assertEqual(len(p.ids),171)
+        self.assertEqual(len(p.ids),177)
         for ident in ("class-choice","spec","race","ilevel","talents","final_T",
                       "trinket1","trinket2","special-rows","crafted-rows",
                       "season-target-socket-count","season-verified-flask",
