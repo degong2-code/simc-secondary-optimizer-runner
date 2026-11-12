@@ -161,6 +161,37 @@ class JoinTests(unittest.TestCase):
                     v163.JoinBlocked,"LIVE_RAID_ZONE_OR_TIER_AMBIGUOUS"):
                 v163.discover_unique_live_scope(folder,duplicated)
 
+            # Real same-build CSV join, including receipt hash updates:
+            # no opaque condition -> diagnostic False, not season approval.
+            journal=folder/'JournalEncounterItem.csv'
+            original=journal.read_text(encoding='utf8')
+            self.assertIn('2001,37,52104',original)
+            no_conditional=original.replace('2001,37,52104','2001,37,0')
+            journal.write_text(no_conditional,encoding='utf8')
+            raw=journal.read_bytes()
+            receipt['tables']['JournalEncounterItem']={
+                'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()}
+            (folder/'receipt.json').write_text(json.dumps(receipt))
+            clean=v163.build_index(folder,season_report,
+                raid_zone='Test Raid',mplus_zone='Mythic+ S2',
+                build='12.1.5.70575',expansion_id=11)
+            self.assertFalse(clean['unverified_world_state_expressions'])
+            self.assertFalse(clean['full_season_completeness_confirmed'])
+
+            broken=no_conditional.replace('2002,37,0',
+                                          '2002,37,not-a-number')
+            self.assertNotEqual(broken,no_conditional)
+            journal.write_text(broken,encoding='utf8')
+            raw=journal.read_bytes()
+            receipt['tables']['JournalEncounterItem']={
+                'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()}
+            (folder/'receipt.json').write_text(json.dumps(receipt))
+            with self.assertRaisesRegex(v163.JoinBlocked,
+                    'JOURNAL_WORLD_STATE_EXPRESSION_SOURCE_INVALID'):
+                v163.build_index(folder,season_report,
+                    raid_zone='Test Raid',mplus_zone='Mythic+ S2',
+                    build='12.1.5.70575',expansion_id=11)
+
     def test_real_snapshot_when_supplied(self):
         folder=os.environ.get('SIMC_V161_SNAPSHOT_DIR')
         report_path=os.environ.get('SIMC_V155_SEASON_REPORT')
