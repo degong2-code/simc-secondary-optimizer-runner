@@ -365,7 +365,8 @@ class RealHTTPPageOffline(unittest.TestCase):
                       "season-selected-flask-id"):
             self.assertIn('id="'+ident+'"',page)
         self.assertIn('"/api/v1/environment/season-build"',js)
-        self.assertIn("const refresh_reason=field",js)
+        self.assertIn("const refresh_reason=forUserVariant?null:",js)
+        self.assertIn('(field("season-refresh-reason")||null);',js)
         self.assertIn("VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED",js)
         self.assertIn("시즌 환경 자동 확인·구축 (검증된 동일 시즌 원본 재사용)",page)
         self.assertIn("BLIZZARD_PUBLIC_RETAIL_KR",js)
