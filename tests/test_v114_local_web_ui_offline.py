@@ -88,15 +88,21 @@ class RealHTTPPageOffline(unittest.TestCase):
                       "function chooseInstalledFlask()",
                       'data.verified_flasks||[]',
                       '$("season-selected-flask-id").value=field("season-verified-flask")',
-                      'const flaskData=seasonLevel===ilevel?data:',
+                      'Number(data.target_ilevel)===Number(field("ilevel"))',
                       '"season-target-ilevel").addEventListener("change"',
-                      "renderInstalledFlaskChoices(flaskData)"):
+                      "renderInstalledFlaskChoices(data)"):
             self.assertIn(token,js)
         self.assertIn("기존 검증 설치 영약",html)
         self.assertNotIn("request.F_rating=",js)
         self.assertNotIn("request.verified_flasks=",js)
         # Same v216 takes the physical ID through existing Build input.
         self.assertIn("selected_flask_item_id,",js)
+        self.assertIn('const target_ilevel=forUserVariant?valueInt("ilevel"):',js)
+        self.assertIn('valueInt("season-target-ilevel");',js)
+        self.assertNotIn("const flaskData=seasonLevel===ilevel?data:",js)
+        self.assertIn('id="season-gem-layout" open',html)
+        self.assertNotIn("영약은 검증된 원본 고정치 F=165",html)
+        self.assertNotIn("기존 6회 실행과 별개",html)
 
     def test_verified_oil_dropdown_reuses_exact_id_web_request(self):
         html=self.client.get("/").text

@@ -561,7 +561,7 @@ function renderInstalledFlaskChoices(data) {
   const prior=field("season-selected-flask-id");
   selector.replaceChildren(option("","검증 설치 영약 선택 (선택 · 없으면 고급 ItemID 유지)"));
   if(data?.schema==="v113_verified_installed_oil_loadouts_v1" &&
-     Number(data.target_ilevel)===Number(field("season-target-ilevel"))) {
+     Number(data.target_ilevel)===Number(field("ilevel"))) {
     for(const item of data.verified_flasks||[]) {
       if(!Number.isSafeInteger(item.physical_item_id)||
          item.physical_item_id<=0 ||
@@ -629,16 +629,13 @@ function renderInstalledOilLoadouts(data) {
 }
 async function refreshInstalledOilLoadouts() {
   const ilevel=valueInt("ilevel");
-  const seasonLevel=valueInt("season-target-ilevel");
   const build=field("season-game-build");
   const extra=build?"&game_build="+encodeURIComponent(build):"";
   const data=await api("/api/v1/verified-oil-loadouts?ilevel="+ilevel+extra);
   renderInstalledOilLoadouts(data);
-  // One local receipt scan when both target levels agree. If not, issue
-  // only one extra read-only scan for the independent Environment Build.
-  const flaskData=seasonLevel===ilevel?data:
-    await api("/api/v1/verified-oil-loadouts?ilevel="+seasonLevel+extra);
-  renderInstalledFlaskChoices(flaskData);
+  // Flask and oil choices use the optimization target ilvl.
+  // A single local verified-install scan is sufficient.
+  renderInstalledFlaskChoices(data);
 }
 function chooseInstalledOilLoadout() {
   const chosen=state.oilLoadouts.find(item=>
@@ -1084,7 +1081,13 @@ async function withBusy(fn) {
         "SEASON_PROFILE_OIL_PHYSICAL_ITEMS_OR_HANDS_DRIFT":
           "선택한 무기 기름의 정확한 시즌 아이템·무기 적용 조건·고정 O가 현재 설치 환경과 일치하지 않습니다. 새 세션에서 기름을 해제하거나 정확한 기름이 등록된 환경을 사용하세요. 검증되지 않은 O를 0으로 처리하지 않습니다.",
         "WEB_FRESH_SELECTED_OIL_ITEM_IDS_NOT_INSTALLED":
-          "선택한 물리 기름 ItemID·무기 손과 정확히 일치하는 검증된 시즌 환경이 설치되어 있지 않습니다. 시즌 환경 구축에서 해당 기름을 검증한 뒤 다시 선택하세요.",
+          "선택한 물리 기름 ItemID·무기 손과 정확히 일치하는 검증된 시즌 환경이 설치되어 있지 않습니다. ‘변경한 소켓·영약·기름 구성 검증·준비’에서 해당 조합을 검증한 뒤 선택하세요.",
+        "WEB_USER_VARIANT_REQUIRES_VERIFIED_SEASON_INSTALL":
+          "선택한 소켓·특수보석·영약·기름 구성과 정확히 일치하는 검증 설치본이 없습니다. ‘변경한 소켓·영약·기름 구성 검증·준비’를 먼저 실행하세요. 기존 4소켓 구성의 J/F/O를 대신 적용하지 않습니다.",
+        "WEB_USER_TOTAL_SOCKETS_INCLUDE_SPECIAL_INVALID":
+          "전체 소켓 수는 일반보석 4개에 특수보석을 더한 수입니다. 특수보석을 넣으면 총 5개 이상이어야 합니다.",
+        "WEB_USER_VARIANT_NOT_INSTALLED_OR_AMBIGUOUS":
+          "현재 최적화 조건에 맞는 검증 설치본이 없거나 둘 이상입니다. 선택한 품목과 시즌·ilvl을 확인하고 해당 구성만 검증·준비하세요.",
         "WEB_PRIMARY_VERIFIED_SEASON_INSTALL_REQUIRED":
           "기본 최적화(64회)를 시작하려면 현재 게임 빌드의 G/J/F/O 검증 시즌 환경이 먼저 설치돼 있어야 합니다. ‘시즌 환경 확인·설치’를 완료한 뒤 시작하세요. ZIP에 들어 있는 과거 카탈로그는 현재 시즌 READY를 증명하지 않습니다.",
         "WEB_FRESH_EXACT_OIL_HAND_ID_SELECTION_INVALID":
@@ -1130,6 +1133,9 @@ function showSeasonEnvironmentBuild(data,forUserVariant=false) {
     headline.textContent="설치 보류 · 활성 시즌·레이드 연결이 아직 확인되지 않았습니다. 인증정보가 저장됐는지만으로는 확인 완료가 아닙니다. "+
       "원본 수집 상태: "+wago+" · Blizzard/WCL 단계: "+discovery+". "+
       "아래 1차 미완료 원인 때문에 후속 티어·장비·G/J/F/O 조건이 함께 보류될 수 있습니다.";
+  } else if(joined==="DB2_WCL_CANDIDATES_JOINED_SEASON_CONDITIONS_PENDING"){
+    headline.textContent="시즌 원본 후보 결합 완료 · 하지만 현재 활성 시즌·레이드 소속과 적용 조건이 아직 검증되지 않아 설치를 보류합니다. "+
+      "후속 장비·G/J/F/O 미완료는 이 원인에서 연쇄 발생할 수 있습니다. 기존 검증 세션과 캐시는 보존됩니다.";
   } else if(joined==="LIVE_SEASON_SCOPE_AMBIGUOUS_PENDING"){
     headline.textContent="설치 보류 · 원본은 조회했지만 활성 시즌 범위를 하나로 확정할 수 없습니다. "+
       "Blizzard/WCL 단계: "+discovery+" · Wago DB2 단계: "+wago+".";
@@ -1172,7 +1178,6 @@ function showSeasonEnvironmentBuild(data,forUserVariant=false) {
       " · 선택 기름 "+Object.entries(scope.selected_oil_item_ids_by_hand)
         .map(([hand,id])=>hand+" #"+id).join(", "):"")+
     (scope.source_target_socket_count?" · "+(forUserVariant?"개별 선택":"시즌 내부 대표")+" 소켓 "+scope.source_target_socket_count+"개 (SimC 적용 미검증)":"")+
-    " · 빌드 "+(scope.game_build||"원본 대기")+
     (scope.game_build_source==="BLIZZARD_PUBLIC_RETAIL_KR"?" (Retail 자동)":"")+
     " · 원본 "+(step.source_stage_status||data?.source_stage?.status||"미확정")+
     " · 컴파일 "+(source.status||step.source_compilation_status||"대기")+
@@ -1205,7 +1210,7 @@ function showSeasonEnvironmentBuild(data,forUserVariant=false) {
        " O="+Object.values(numeric.fixed_O||{}).reduce((a,b)=>a+Number(b||0),0)+
        " / B="+numeric.base_B+" T="+numeric.final_T:"")+
     " · 환경 매니페스트 "+(step.versioned_environment_source_stage?.stage_status||"입력 대기")+
-    " · 미해결 "+unique.length+"건 · DPS 최적화 0회"+
+    " · 진단 항목 "+unique.length+"개(연쇄 포함) · DPS 최적화 0회"+
     (scope.user_character_or_trinkets_required===false?" · 사용자 장비 입력 없음":"")+
     (missingSeasonScope?" · 현재 시즌·레이드 범위 미검증(환경 설치 보류)":"");
   const details=$("season-build-pending"),list=$("season-build-missing");
@@ -1284,11 +1289,13 @@ async function buildSeasonEnvironment(forUserVariant=false) {
   if(supplied_build&&!/^\d+(?:\.\d+){3}$/.test(supplied_build))
     throw Error("게임 빌드는 네 개의 숫자 그룹 형식이어야 합니다.");
   const game_build=supplied_build||null;
-  const refresh_reason=field("season-refresh-reason")||null;
+  const refresh_reason=forUserVariant?null:
+    (field("season-refresh-reason")||null);
   if(refresh_reason!==null&&!["season_change","expansion_change",
       "item_content_change"].includes(refresh_reason))
     throw Error("지원하지 않는 시즌 갱신 조건입니다.");
-  const target_ilevel=valueInt("season-target-ilevel");
+  const target_ilevel=forUserVariant?valueInt("ilevel"):
+    valueInt("season-target-ilevel");
   if(target_ilevel<1||target_ilevel>1000)
     throw Error("목표 ilvl은 1~1000 범위여야 합니다.");
   // This is a separate explicit per-user numeric/source preparation.
