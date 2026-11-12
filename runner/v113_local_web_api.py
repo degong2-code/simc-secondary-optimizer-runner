@@ -435,7 +435,8 @@ class LocalJobs:
 
     def load_fresh_profile_for_user(
             self, target_ilevel, explicit_build=None,
-            selected_oil_hands=None, selected_oil_item_ids_by_hand=None):
+            selected_oil_hands=None, selected_oil_item_ids_by_hand=None,
+            required_gem_layout=None, selected_flask_item_id=None):
         """Find the exact verified oil variant, never a newest-file guess."""
         # No installed v113 snapshot means the original packaged/legacy
         # current-season route must remain unchanged. Do not fetch a retail
@@ -481,9 +482,70 @@ class LocalJobs:
                 raise environment_manifest.EnvironmentBlocked(
                     "WEB_FRESH_SELECTED_OIL_HANDS_NOT_INSTALLED")
             selected_ids=selected["selected_oil_item_ids_by_hand"]
-        restored=self.restore_verified_fresh_profile(
-            target_ilevel=target_ilevel,game_build=game_build,
-            selected_oil_item_ids_by_hand=selected_ids)
+        if required_gem_layout is not None or selected_flask_item_id is not None:
+            # This user's socket/flask selection is not season-wide data.
+            # Select only a v212 installation with an exact matching signed
+            # snapshot; do not accidentally reuse the latest four-gem F/O
+            # budget or turn the requested selection into a different item.
+            candidates=[]
+            directory=workspace/("wago_"+game_build)/"fresh_source"
+            if directory.is_dir() and not directory.is_symlink():
+                for path in sorted(directory.glob("v212_installed_*.json"))[:64]:
+                    if (path.is_symlink() or not path.is_file() or
+                            path.stat().st_size>environment_build.MAX_RECEIPT_BYTES):
+                        continue
+                    try:
+                        installed,_=environment_manifest.read_json(
+                            path,environment_build.MAX_RECEIPT_BYTES)
+                        environment_manifest.verify_fresh_installed_environment(
+                            installed)
+                        digest=installed["manifest_sha256"]
+                        if (path.name!="v212_installed_"+digest[:20]+".json"
+                                or installed["game_build"]!=game_build or
+                                installed["target_ilevel"]!=target_ilevel):
+                            continue
+                        oils=installed.get("official_O_physical_source")
+                        actual_oils=(oils.get("selected_oil_item_ids_by_hand")
+                                     if type(oils) is dict else {})
+                        if actual_oils!=(selected_ids or {}):
+                            continue
+                        if selected_flask_item_id is not None:
+                            flask=installed.get("official_F_physical_source")
+                            if (type(flask) is not dict or
+                                    flask.get("physical_item_id")!=
+                                        selected_flask_item_id):
+                                continue
+                        source=directory/("v113_profile_"+digest[:20]+".json")
+                        if (source.is_symlink() or not source.is_file() or
+                                not 0<source.stat().st_size<=8_000_000):
+                            continue
+                        snapshot=json.loads(source.read_text("utf8"))
+                        original=snapshot.get("environment_result")
+                        if (required_gem_layout is not None and
+                                not _verified_snapshot_gem_layout_matches(
+                                    original,**required_gem_layout)):
+                            continue
+                        verified=environment_build.find_verified_installed_season_environment(
+                            self.root,target_ilevel,expected_game_build=game_build,
+                            selected_oil_item_ids_by_hand=(selected_ids or {}),
+                            expected_installed_manifest_sha256=digest)
+                        if verified is not None:
+                            candidates.append(digest)
+                    except (OSError,ValueError,TypeError,KeyError,
+                            environment_manifest.EnvironmentBlocked):
+                        continue
+            if len(candidates)!=1:
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_USER_VARIANT_NOT_INSTALLED_OR_AMBIGUOUS")
+            restored=self.restore_verified_fresh_profile(
+                target_ilevel=target_ilevel,game_build=game_build,
+                selected_oil_item_ids_by_hand=selected_ids,
+                expected_installed_manifest_sha256=candidates[0],
+                required_gem_layout=required_gem_layout)
+        else:
+            restored=self.restore_verified_fresh_profile(
+                target_ilevel=target_ilevel,game_build=game_build,
+                selected_oil_item_ids_by_hand=selected_ids)
         # When a fresh v113 snapshot exists, do not silently fall back to
         # an old packaged profile for a different current build or target.
         # The no-snapshot legacy path returned early above without network.
