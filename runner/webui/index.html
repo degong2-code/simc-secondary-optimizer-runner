@@ -111,8 +111,9 @@
 <div class="field env-enchant-cell"><label for="env-enchant-boots">장화</label><select id="env-enchant-boots" disabled aria-label="장화 마법부여 · 미검증"><option>선택 준비 중</option></select></div>
    </div>
  </details>
+ <details class="fold" id="dk-runeforge-panel" hidden><summary>죽음의 기사 룬벼리기 · 영구 무기 강화</summary><p class="hint">기름 O와 별개인 영구 강화입니다. 기본 룬을 추정하지 않습니다. 이번 시즌 검증된 SimC 소스의 룬만 선택할 수 있습니다. 선택한 룬은 해당 무기의 enchant_id에 반영하고, 효과와 DPS는 SimC가 처리합니다. <span id="dk-runeforge-status">검증된 시즌 룬 목록 확인 중</span></p><div class="two"><div class="field"><label for="dk_rune_main">주무기 룬</label><select id="dk_rune_main"><option value="">현재 시즌 검증 목록 확인 중</option></select></div><div class="field"><label for="dk_rune_off">보조무기 룬 (냉기)</label><select id="dk_rune_off"><option value="">현재 시즌 검증 목록 확인 중</option></select></div></div></details>
  <div class="env-variant-action"><div class="actions"><button type="button" id="user-variant-prepare-btn" class="btn secondary" disabled>변경한 소켓·영약·기름 구성 검증·준비</button></div><p id="user-variant-status" class="hint" role="status" aria-live="polite">기본 4개 일반보석·기름 미사용 구성은 기본 환경의 검증 결과를 사용합니다. 변경한 구성은 같은 시즌 원본으로 다시 확인해야 합니다.</p></div>
- <div class="env-advanced-controls" hidden>
+ <details class="fold env-advanced-controls"><summary>기타 직접 입력 · 고급 옵션</summary>
    <details class="fold" id="optimizer-season-itemid-expert">
           <summary>미등록 품목 검증 준비 · 정확한 ItemID 입력 (고급)</summary>
           <p class="hint">영약·무기 기름의 물리 ItemID는 일반 사용자가 시즌 구축을 위해 조사하는 항목이 아닙니다. 환경 엔진이 시즌 원본을 수집·검증하고, 검증된 선택지는 캐릭터 설정에서 이름으로 선택하는 것이 제품의 목표입니다. 아래 입력은 이미 정확한 ID를 알고 있는 제한적 재현·검증 경로이며, 현재 자동 품목 등록이 모두 완성됐음을 의미하지 않습니다.</p>
@@ -136,7 +137,7 @@
               </div>
               <p class="hint">위에서 적용할 무기 손을 먼저 체크하세요. ItemID를 입력하면 해당 손의 검증·설치된 v212 시즌 기름과 정확히 대조합니다. 여러 손을 선택하면 각 손의 ID를 모두 지정해야 합니다. ID를 비우면 기존 손별 선택 방식이 유지되며, 같은 손에 검증된 기름이 여러 종류면 임의 선택하지 않습니다. 기름의 효과·정적 rating은 직접 입력하지 않습니다. 위 목록은 봉인된 설치 조합만 표시하며 품질 우위를 추정하지 않습니다.</p>
             </details>
-   <details class="fold" id="dk-runeforge-panel" hidden><summary>죽음의 기사 룬벼리기 · 영구 무기 강화</summary><p class="hint">기름 O와 별개인 영구 강화입니다. 기본 룬을 추정하지 않습니다. 이번 시즌 검증된 SimC 소스의 룬만 선택할 수 있습니다. 선택한 룬은 해당 무기의 enchant_id에 반영하고, 효과와 DPS는 SimC가 처리합니다. <span id="dk-runeforge-status">검증된 시즌 룬 목록 확인 중</span></p><div class="two"><div class="field"><label for="dk_rune_main">주무기 룬</label><select id="dk_rune_main"><option value="">현재 시즌 검증 목록 확인 중</option></select></div><div class="field"><label for="dk_rune_off">보조무기 룬 (냉기)</label><select id="dk_rune_off"><option value="">현재 시즌 검증 목록 확인 중</option></select></div></div></details>
+   
    <details class="fold"><summary>이전 시즌 호환 · 에버송 다이아몬드 (고급)</summary><div class="field"><label for="diamond">에버송 다이아몬드</label><select id="diamond"></select></div></details>
    <details class="fold" id="season-option-catalog-panel"><summary><span>마법부여</span><small>확인된 효과만 선택</small></summary>
               <p class="hint">확인된 음식·물약·증강룬·다이아몬드와 방어구 안감은 위 선택 항목에 이미 연결되어 있습니다. 최고 품질 마법부여는 부위별 목록을 확보했지만, 선택 시 CHMV 예산에 반영될 정확한 정적 수치와 Native 수용 확인 전까지 잠금 상태로 표시합니다.</p>
@@ -145,7 +146,8 @@
               <div id="season-enchant-groups"></div>
               <p class="hint">영약 F, 일반 보석 J 및 무기 기름 O의 기존 예산은 그대로 유지됩니다. 원시 DB2 후보를 임의로 유효한 SimC 선택으로 표시하지 않습니다.</p>
             </details>
- </div>
+ </details>
+
 </section>
 <section class="panel fixed-gear-panel" aria-labelledby="equipment-title">
     <div class="section-head"><div><p class="eyebrow">03</p><h2 id="equipment-title">고정 장비 선택</h2></div><span class="micro">장신구 2개 필수 · 특수효과/장식은 선택</span></div>
