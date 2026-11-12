@@ -1,0 +1,31 @@
+{
+  "schema": "p1_v350_approved_user_variant_boundary_windows_receipt_v1",
+  "status": "PASS_OFFLINE_AND_REAL_WINDOWS_HTTP_NATIVE_ZERO",
+  "tested_head": "36e558a8fcfff0dbb633e0ba7e30f969fcd4262a",
+  "windows_v181_run_id": 43141083314,
+  "windows_api_run_id": 43141083312,
+  "ui_run_id": 43141083245,
+  "season_gear_run_id": 43141083284,
+  "focused_run_id": 43141083276,
+  "source_zip_artifact_id": 13910170045,
+  "source_zip_file_count": 272,
+  "app_zip_sha256": "3d7aab753718a992421288eaf906fa9517f703a23170dfb55aed45b4d9a5ddb9",
+  "windows_python_versions": [
+    "3.12",
+    "3.14"
+  ],
+  "user_controls_inside_optimizer_only": true,
+  "season_common_default_sockets": 4,
+  "manual_final_T_still_user_authoritative": true,
+  "verified_user_variant_requires_exact_v212_manifest": true,
+  "same_season_source_cache_reused": true,
+  "unverified_8socket_http_422_verified": true,
+  "unverified_special_gem_http_422_verified": true,
+  "normal_three_user_session_plans_resumed": true,
+  "private_api_secret_in_package": false,
+  "new_native_calls": 0,
+  "live_current_season_raid_join_ready": false,
+  "real_8socket_verified_v212_positive_native": false,
+  "real_user_device_v350_clicked": false,
+  "official_main_promotion": false
+}
