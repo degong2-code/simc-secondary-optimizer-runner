@@ -1015,6 +1015,10 @@ function buttonState(active=false,ready=false) {
   const busy=state.busy;
   $("plan-btn").disabled=busy||active||!state.token;
   $("season-build-btn").disabled=busy||!state.token;
+  if(busy){
+    $("source-credentials-save-btn").disabled=true;
+    $("source-credentials-clear-btn").disabled=true;
+  }
   $("start-btn").disabled=busy||active||!state.token;
   $("resume-btn").disabled=busy||active||!state.session||state.longrunCompleted;
   $("cache-btn").disabled=busy||active||!state.session||!ready;
@@ -1169,6 +1173,45 @@ function showSeasonEnvironmentBuild(data) {
     list.appendChild(item);
   }
   details.hidden=unique.length===0;
+}
+const sourceCredentialFields=[
+  ["source-blizzard-id","blizzard_client_id"],
+  ["source-blizzard-secret","blizzard_client_secret"],
+  ["source-wcl-id","wcl_client_id"],
+  ["source-wcl-secret","wcl_client_secret"]
+];
+async function refreshSourceCredentialStatus() {
+  const status=await api("/api/v1/source-credentials/status");
+  $("source-credentials-status").textContent=(
+    !status.supported?"Windows 자격 증명 관리자 전용 기능입니다.":
+    status.configured?"Blizzard·WCL API 인증정보가 이 Windows 계정에 저장되어 있습니다.":
+    "저장된 API 인증정보가 없습니다. 새 시즌 갱신에 인증이 필요할 경우 등록하세요.");
+  $("source-credentials-save-btn").disabled=!status.supported||!state.token;
+  $("source-credentials-clear-btn").disabled=!status.supported||!status.configured||!state.token;
+}
+async function saveSourceCredentials() {
+  const payload={};
+  for(const [id,key] of sourceCredentialFields){
+    payload[key]=$(id).value;
+    if(!payload[key]||payload[key].trim()!==payload[key])
+      throw Error("네 개의 API 인증정보를 모두 정확히 입력해야 합니다.");
+  }
+  if(!window.confirm("이 Windows 계정의 자격 증명 관리자에 API 인증정보를 저장할까요? 외부 서버로 키를 전송하지 않습니다."))return;
+  try {
+    await api("/api/v1/source-credentials/save",{method:"POST",payload});
+    setNotice("내 API 인증정보 저장 완료 · 실제 시즌 조회는 ‘시즌 환경 확인·설치’에서만 수행됩니다.");
+    await refreshSourceCredentialStatus();
+  } finally {
+    for(const [id] of sourceCredentialFields)$(id).value="";
+    for(const key of Object.keys(payload))payload[key]="";
+  }
+}
+async function clearSourceCredentials() {
+  if(!window.confirm("이 Windows 계정에 저장된 두 API 인증정보를 삭제할까요? 기존 시즌 데이터·세션은 보존됩니다."))return;
+  await api("/api/v1/source-credentials/clear",{method:"POST",payload:{}});
+  for(const [id] of sourceCredentialFields)$(id).value="";
+  setNotice("API 인증정보 삭제 완료 · 저장된 시즌 결과는 변경하지 않았습니다.");
+  await refreshSourceCredentialStatus();
 }
 async function buildSeasonEnvironment() {
   const supplied_build=field("season-game-build");
@@ -1866,6 +1909,8 @@ function registerHandlers() {
   $("simc-rollback-btn").addEventListener("click",()=>withBusy(rollbackSimcUpdater));
   $("simc-import-btn").addEventListener("click",()=>withBusy(importSimcCharacter));
   $("season-build-btn").addEventListener("click",()=>withBusy(buildSeasonEnvironment));
+  $("source-credentials-save-btn").addEventListener("click",()=>withBusy(saveSourceCredentials));
+  $("source-credentials-clear-btn").addEventListener("click",()=>withBusy(clearSourceCredentials));
   $("season-verified-flask").addEventListener("change",chooseInstalledFlask);
   $("season-selected-flask-id").addEventListener("input",()=>{
     $("season-verified-flask").value="";
@@ -2013,6 +2058,8 @@ async function initialize() {
     installClassSpecChoices();
     installOptions(opt);
     installSeasonGearHints(gear);
+    try{await refreshSourceCredentialStatus();}catch(err){
+      $("source-credentials-status").textContent="로컬 인증정보 상태 조회 오류: "+err.message;}
     try{renderSeasonOptionCatalog(await api("/api/v1/season-option-catalog"));}
     catch(err){
       $("season-option-catalog-status").textContent=

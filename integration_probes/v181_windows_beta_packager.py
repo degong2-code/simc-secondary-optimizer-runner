@@ -35,6 +35,7 @@ CATEGORIES=(
 BANNED=(".env",".key",".pfx",".pem",".exe",".dll",".zip",".log",".db",".sqlite")
 MANDATORY=(
     "runner/v113_local_web_api.py",
+    "runner/v348_windows_user_source_credentials.py",
     "runner/v106_user_session_controller.py",
     "runner/v098_target_user_scenario_bootstrap.py",
     "runner/v208_internal_exact_special_L_hydrator.py",

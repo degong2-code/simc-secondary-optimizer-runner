@@ -34,6 +34,7 @@ import v208_internal_exact_special_L_hydrator as exact_L
 import v212_environment_manifest as environment_manifest
 import v216_environment_build_coordinator as environment_build
 import v289_retail_live_build_source as retail_build_source
+import v348_windows_user_source_credentials as local_source_keys
 import v271_user_socket_gem_layout as physical_gems
 import v218_v098_profile_stage_adapter as profile_stage
 import v217_stage_execution_engine as stage_engine
@@ -75,6 +76,14 @@ class UpdateInstallRequest(BaseModel):
 class UpdateLocalArchiveRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
     archive_path: str = Field(min_length=8,max_length=4096)
+
+class LocalSourceCredentialsRequest(BaseModel):
+    """Never echoed, written into a session, or accepted as season evidence."""
+    model_config = ConfigDict(extra="forbid")
+    blizzard_client_id: str = Field(min_length=1,max_length=500)
+    blizzard_client_secret: str = Field(min_length=1,max_length=500)
+    wcl_client_id: str = Field(min_length=1,max_length=500)
+    wcl_client_secret: str = Field(min_length=1,max_length=500)
 
 class SeasonEnvironmentBuildRequest(BaseModel):
     """Season-wide Build, independent of DPS scenario/trinket/target optimization."""
@@ -164,7 +173,8 @@ def blocked(exc):
                          sessions.SessionBlocked, bootstrap.UserScenarioBlocked,
                         sessions.nonchmv_enchant.EnchantChoiceBlocked,
                         exact_L.StaticLBlocked,
-                        environment_manifest.EnvironmentBlocked)):
+                        environment_manifest.EnvironmentBlocked,
+                        local_source_keys.CredentialBlocked)):
         code = str(exc).split(":", 1)[0].split("\n", 1)[0]
         return HTTPException(422, detail={"code": code})
     # Exact special L is a user-actionable, pre-Native input mismatch.
@@ -182,8 +192,11 @@ def blocked(exc):
                                        "kind":type(exc).__name__})
 
 class LocalJobs:
-    def __init__(self, root):
+    def __init__(self, root, source_credential_store=None):
         self.root = pathlib.Path(root).expanduser().resolve()
+        self.source_credential_store=(
+            source_credential_store if source_credential_store is not None
+            else local_source_keys.WindowsSourceCredentialStore())
         self.lock = threading.Lock()
         self.children = {}
         self.static_lock = threading.Lock()
@@ -728,6 +741,12 @@ class LocalJobs:
             auto_native_F_requested=True
             auto_select_observed_F_no_oil=True
         with self.season_source_lock:
+            # Only on a season cache miss, read the Windows user's
+            # Credential Manager. No environment-variable mutation, process
+            # spawning, receipt writing or API response contains these keys.
+            # A missing local entry preserves the original optional v216
+            # environment-variable path for developer CI and legacy uses.
+            source_credentials=self.source_credential_store.load()
             # Internal packaged season source: no user numbers or new Native
             # probes. Missing exact-build data stays PENDING in original v216.
             nominal_source=(
@@ -744,6 +763,8 @@ class LocalJobs:
                         "target_ilevel":target_ilevel},
                     "g_probe_character":{"race":"dwarf"},
                     "simc_revision_hint":simc_revision_hint,
+                    **({"credentials":source_credentials}
+                       if source_credentials is not None else {}),
                     "auto_native_F_requested":auto_native_F_requested,
                     "auto_native_O_requested":auto_native_O_requested,
                     "auto_native_G_requested":native_G_binary is not None,
@@ -1900,8 +1921,9 @@ class LocalJobs:
             raise blocked(exc) from None
 
 def create_app(*,root=None, token=None, batch_root=None, update_root=None,
-               update_platform=None):
-    jobs=LocalJobs(root or sessions.DEFAULT_ROOT)
+               update_platform=None, source_credential_store=None):
+    jobs=LocalJobs(root or sessions.DEFAULT_ROOT,
+                   source_credential_store=source_credential_store)
     updater=simc_updates.SimCManager(
         update_root or (jobs.root.parent/"simc-managed"),platform=update_platform)
     snapshots=(pathlib.Path(batch_root).expanduser().resolve() if batch_root
@@ -2195,6 +2217,35 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
         return {"archetypes":archetypes,
                 "allowed_races_by_spec":known_races,
                 "unavailable_missing_legacy_fixtures":[]}
+
+    @app.get("/api/v1/source-credentials/status")
+    def source_credentials_status():
+        """No identifiers, secret values, credential path, or external IO."""
+        try:
+            return jobs.source_credential_store.status()
+        except local_source_keys.CredentialBlocked as exc:
+            raise blocked(exc) from None
+
+    @app.post("/api/v1/source-credentials/save")
+    def source_credentials_save(request: LocalSourceCredentialsRequest):
+        """User opt-in. Windows Credential Manager only; no secret echo."""
+        try:
+            values={
+                "BLIZZARD_CLIENT_ID":request.blizzard_client_id,
+                "BLIZZARD_CLIENT_SECRET":request.blizzard_client_secret,
+                "WCL_CLIENT_ID":request.wcl_client_id,
+                "WCL_CLIENT_SECRET":request.wcl_client_secret}
+            return jobs.source_credential_store.save(values)
+        except local_source_keys.CredentialBlocked as exc:
+            raise blocked(exc) from None
+
+    @app.post("/api/v1/source-credentials/clear")
+    def source_credentials_clear():
+        """User-requested clear; no season/candidate/session cache deletion."""
+        try:
+            return jobs.source_credential_store.clear()
+        except local_source_keys.CredentialBlocked as exc:
+            raise blocked(exc) from None
 
     @app.post("/api/v1/environment/season-build")
     def season_environment_build(request: SeasonEnvironmentBuildRequest):

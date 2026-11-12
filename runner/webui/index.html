@@ -22,6 +22,19 @@
       <div id="notice" class="notice" role="status" aria-live="polite">로컬 서버에 연결 중…</div>
       <section class="panel environment-setup" aria-labelledby="season-build-title">
         <div class="section-head"><div><p class="eyebrow">준비 단계</p><h2 id="season-build-title">시즌 환경</h2></div><span class="micro">시즌 최초 1회 구축 · 이후 재사용</span></div>
+        <details class="fold" id="season-credentials-panel">
+          <summary>내 Blizzard·Warcraft Logs API 인증정보 설정 (Windows · 선택)</summary>
+          <p class="hint">본인에게 발급된 Client ID와 Client Secret을 Windows 자격 증명 관리자에만 보관합니다. 한 번 저장하면 이후 시즌 업데이트에서 재사용합니다. 기존 시즌·캐시 이용에는 인증이 필요하지 않습니다. 현재 시즌·레이드가 검증되지 않으면 키를 저장해도 READY로 처리하지 않습니다.</p>
+          <p class="hint" id="source-credentials-status" role="status" aria-live="polite">로컬 인증정보 상태 확인 중…</p>
+          <div class="two">
+            <div class="field"><label for="source-blizzard-id">Blizzard Client ID</label><input id="source-blizzard-id" type="password" autocomplete="new-password" spellcheck="false"></div>
+            <div class="field"><label for="source-blizzard-secret">Blizzard Client Secret</label><input id="source-blizzard-secret" type="password" autocomplete="new-password" spellcheck="false"></div>
+            <div class="field"><label for="source-wcl-id">Warcraft Logs Client ID</label><input id="source-wcl-id" type="password" autocomplete="new-password" spellcheck="false"></div>
+            <div class="field"><label for="source-wcl-secret">Warcraft Logs Client Secret</label><input id="source-wcl-secret" type="password" autocomplete="new-password" spellcheck="false"></div>
+          </div>
+          <div class="actions"><button type="button" class="btn secondary" id="source-credentials-save-btn" disabled>내 API 인증정보 저장</button><button type="button" class="btn secondary" id="source-credentials-clear-btn" disabled>저장된 인증정보 삭제</button></div>
+          <p class="hint">비밀키는 브라우저에 다시 표시하지 않습니다. 암호화 파일을 ZIP에 넣지 않고 Windows 계정별 보안 저장소를 사용합니다. 동일 Windows 계정의 다른 프로그램은 접근할 수 있으므로 신뢰하는 PC에서만 사용하세요.</p>
+        </details>
         <details class="fold season-setup-details" id="season-setup-details"><summary>시즌 변경·보석·영약 상세 설정</summary>
         <p class="hint">이미 검증·설치한 동일 시즌 환경이 있으면 먼저 재사용합니다. SimC/게임 빌드만 달라졌다는 이유로 장비·G/J/F/O를 다시 수집하지 않습니다. 새 시즌이나 실제 콘텐츠 변경 시 아래 갱신을 선택하세요. 설치한 환경이 없으면 기존 v216 엔진으로 처음부터 구축합니다.</p>
         <div class="two season-build-fields">
