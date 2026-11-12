@@ -954,3 +954,170 @@ body{background:#24252B;color:var(--ink)}
 @media(max-width:480px){
  #optimizer-form .env-advanced-consumables{grid-template-columns:1fr}
 }
+
+
+/* v363 — full-workspace line-based UI; the only bounding surfaces are the
+   accessible focus outlines, not decorative cards. */
+#optimizer-form .gear-section .inline-equipment-grid{
+  grid-template-columns:repeat(5,minmax(0,1fr));column-gap:12px
+}
+#optimizer-form .env-grid-cell #season-socket-breakdown[hidden]{display:none!important}
+#optimizer-form .env-grid-cell label{white-space:normal}
+#optimizer-form .conditions-panel #potion{
+  border:0!important;border-bottom:1px solid #655D52!important;
+  border-radius:0!important;background:transparent!important
+}
+#view-settings .view-intro,#view-results .view-intro{
+  border-bottom:1px solid #5B5349;padding-bottom:10px;margin-bottom:11px
+}
+#view-settings .view-intro h1,#view-results .view-intro h1{
+  font-size:21px;line-height:1.25
+}
+#view-settings .view-intro .eyebrow,#view-results .view-intro .eyebrow{
+  color:#CAA56C;font-size:10px
+}
+#view-settings .panel,#view-results .panel{
+  border:0!important;border-bottom:1px solid #625749!important;
+  border-radius:0!important;box-shadow:none!important;
+  background:transparent!important;padding:15px 6px 18px!important
+}
+#view-settings .panel+.panel{margin-top:6px}
+#view-settings .section-head,#view-results .section-head{
+  margin:0 0 11px;border:0;border-bottom:1px solid #5E564C;
+  padding:0 0 9px
+}
+#view-settings .section-head h2,#view-results .section-head h2{font-size:16px}
+#view-settings .micro,#view-results .micro{font-size:10px;color:#B3ABA0}
+#view-settings .fold,#view-results .fold,#view-results .restore{
+  border:0!important;border-bottom:1px solid #514B45!important;
+  background:transparent!important;border-radius:0!important;
+  box-shadow:none!important;margin:0 0 8px
+}
+#view-settings .fold summary,#view-results .fold summary,
+#view-results .restore summary{
+  border:0!important;padding:9px 2px;color:#E1D8CC;font-size:11.5px
+}
+#view-settings .fold summary:hover,#view-results .fold summary:hover,
+#view-results .restore summary:hover{
+  background:rgba(228,171,78,.045);color:#F0C986
+}
+#view-settings .fold[open]>summary,#view-results .fold[open]>summary,
+#view-results .restore[open]>summary{
+  border-bottom:1px solid #514A41!important
+}
+#view-settings .field,#view-results .field{margin:0 0 10px;gap:4px}
+#view-settings .field label,#view-results .field label{font-size:11px;color:#DFD6CC}
+#view-settings .field input,#view-settings .field select,
+#view-settings .field textarea,#view-results .field input,
+#view-results .field select,#view-results .field textarea{
+  border:0!important;border-bottom:1px solid #665D51!important;
+  border-radius:0!important;background:transparent!important;
+  box-shadow:none!important;min-height:32px;padding:5px 2px;
+  font-size:11.5px;color:#F0EBE3
+}
+#view-settings .field :is(input,select,textarea):focus,
+#view-results .field :is(input,select,textarea):focus{
+  border-bottom-color:#E8B34B!important;outline-offset:1px
+}
+#view-settings :is(.two,.season-build-fields),#view-results .two{
+  gap:11px
+}
+#view-settings .check-row,#view-results .check-row{
+  margin:4px 0 10px;gap:7px 18px;border:0
+}
+#view-settings .check-row label,#view-results .check-row label{
+  font-size:11px;line-height:1.55;color:#E4DCD0
+}
+#view-settings .season-running{
+  border:0!important;border-left:2px solid #D7A452!important;
+  border-radius:0;background:transparent!important;padding:8px 0 8px 12px
+}
+#view-settings .season-activity-track,#view-results .progress-track{
+  border-radius:0;background:#494640;height:5px
+}
+#view-settings .season-activity-track>span,#view-results #progress-bar{
+  border-radius:0
+}
+#view-settings .hint,#view-results .hint{
+  line-height:1.5;color:#ABA49C;font-size:10.5px
+}
+#view-results .session-meta{
+  padding:3px 0 9px;border-bottom:1px solid #4D4842
+}
+#view-results .session-meta code{color:#D5BE98}
+#view-results .pill{
+  border:0!important;border-bottom:1px solid #B88C49!important;
+  border-radius:0!important;background:transparent!important;
+  padding:4px 2px;color:#F2CB86
+}
+#view-results .result-warning{
+  border:0!important;border-left:2px solid #D7A452!important;
+  border-radius:0!important;background:transparent!important;
+  padding:4px 0 4px 9px;color:#F2C982
+}
+#view-results .metrics{gap:12px;margin:8px 0 10px}
+#view-results .metrics>div{
+  border:0!important;border-bottom:1px solid #645648!important;
+  border-radius:0!important;background:transparent!important;
+  padding:10px 3px
+}
+#view-results .result-footer{
+  border:0;border-top:1px solid #5F5246;padding:10px 0 0;
+  gap:12px;margin:13px 0
+}
+#view-results .result-footer>div{
+  border:0!important;border-bottom:1px solid #574D43!important;
+  border-radius:0!important;background:transparent!important;
+  padding:7px 3px
+}
+#view-results .alt-list{gap:4px}
+#view-results .alt-row{
+  border:0!important;border-bottom:1px solid #5B5045!important;
+  border-radius:0!important;background:transparent!important;
+  box-shadow:none!important;padding:10px 2px
+}
+#view-results .alt-row-metrics{gap:7px}
+#view-results .alt-metric{
+  border:0!important;border-right:1px solid #524941!important;
+  border-radius:0!important;background:transparent!important
+}
+#view-results .alt-verdict{
+  border:0!important;border-bottom:1px solid #8D7149!important;
+  border-radius:0!important;padding:3px 2px
+}
+#view-results .empty{
+  border:0;border-bottom:1px solid #4F4942;padding:45px 6px
+}
+#optimizer-form .btn.secondary,#view-settings .btn,
+#view-results .btn,.view-intro>.btn{
+  border:0!important;border-bottom:1px solid #79684C!important;
+  border-radius:0!important;background:transparent!important;
+  color:#E8D8BE;box-shadow:none!important;min-height:31px
+}
+#optimizer-form .btn.secondary:hover:not(:disabled),
+#view-settings .btn:hover:not(:disabled),
+#view-results .btn:hover:not(:disabled),.view-intro>.btn:hover:not(:disabled){
+  border-bottom-color:#E8B34B!important;color:#FFD99B
+}
+#view-results .btn.danger{border-bottom-color:#AB6D68!important;color:#EAB5AD}
+@media(max-width:1050px){
+  #optimizer-form .gear-section .inline-equipment-grid{
+    grid-template-columns:repeat(4,minmax(0,1fr))
+  }
+}
+@media(max-width:850px){
+  #optimizer-form .gear-section .inline-equipment-grid{
+    grid-template-columns:repeat(3,minmax(0,1fr))
+  }
+}
+@media(max-width:640px){
+  #optimizer-form .gear-section .inline-equipment-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))
+  }
+  #view-settings .panel,#view-results .panel{padding:12px 0 15px!important}
+}
+@media(max-width:370px){
+  #optimizer-form .gear-section .inline-equipment-grid{
+    grid-template-columns:minmax(0,1fr)
+  }
+}
