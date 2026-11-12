@@ -1,4 +1,6 @@
 # SIMC SECONDARY OPTIMIZER — 검색 가능한 개발 기능 지도
+
+> [v376 티어 5부위 원본 + 영약·기름 최고 품질 CHMV 수치 계약](notes/2026-11-13_p1-v376-tier-five-flask-oil-numeric-contract.md) — v375 4-piece 필수 범위 오류 수정; v168/v251 5부위 원본 재사용, v232 고정 4부위는 유동 장착 미구현. F/O 값의 효과별 재사용은 출처 증명 조건. 로컬 14 helper assertions / 3 smoke PASS, 전체 CI/READY 미실증.
 > [v375 제품이 실제 소비하는 필수 정보 범위·선택형 수집/검증](notes/2026-11-13_p1-v375-product-required-source-scope.md) — v216에서 대표 장비·4세트·G/J/F/O와 선택한 영약·보석·기름 손만 요청 범위로 명시, 선택 영약 측정·기름 소유자 호출 재사용. 3회 빌드 로컬 스모크 PASS/동일 10표 1회 수집, 전체 CI·실 시즌 READY 별도.
 
 

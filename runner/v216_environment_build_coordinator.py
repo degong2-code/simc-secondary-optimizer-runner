@@ -3354,10 +3354,27 @@ def _fresh_required_information_scope(*, representative_request=None,
         "target_ilevel":target,
         "core_required_facts":[
             "SAME_BUILD_REPRESENTATIVE_GENERAL_GEAR_AND_WEAPON",
-            "REPRESENTATIVE_TIER_FOUR_PIECE",
+            "REPRESENTATIVE_TIER_FIVE_SLOT_SOURCE",
             "G_AT_TARGET_ILEVEL","J_SELECTED_GEM_CONFIGURATION",
-            "F_SELECTED_FLASK","O_EFFECTIVE_SELECTED_HANDS",
+            "F_MAX_QUALITY_STATIC_CHMV_NUMERIC_BY_EFFECT",
+            "O_MAX_QUALITY_STATIC_CHMV_NUMERIC_BY_EFFECT_AND_HAND",
             "B_T_ACCOUNTING_AND_VERSIONED_INSTALL"],
+        "tier_source_requirement":{
+            "all_five_slots":["head","shoulders","chest","hands","legs"],
+            "source_piece_count":5,
+            "four_piece_bonus_threshold":4,
+            "equip_subset_depends_on_special_gear_and_embellishments":True,
+            "four_piece_source_only_is_not_enough":True},
+        "consumable_numeric_requirement":{
+            # Stat overrides need the selected effect's exact highest-quality
+            # rating vector, NOT a full collection of alternative item IDs.
+            # Identical numbers may be reused ONLY if source-proven.
+            "flask":"MAX_QUALITY_VERIFIED_CHMV_VECTOR_PER_EFFECT_FAMILY",
+            "oil":"MAX_QUALITY_VERIFIED_STATIC_CHMV_VECTOR_PER_EFFECT_AND_HAND",
+            "same_quality_numbers_reusable_only_when_source_proven":True,
+            "oil_static_override_owns_O_once":True,
+            "flask_effect_not_reimplemented":True,
+            "source_numeric_verified_here":False},
         "selected_physical_sources":{
             "flask_item_id":flask,
             "oil_item_ids_by_hand":(dict(oils) if oils is not None else None),

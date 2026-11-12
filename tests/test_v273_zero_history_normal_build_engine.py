@@ -162,6 +162,26 @@ class ZeroHistoryNormalBuild(unittest.TestCase):
                          "UNSELECTED_PENDING_CHOICE")
         self.assertIsNone(unselected["selected_physical_sources"]["flask_item_id"])
         self.assertFalse(unselected["environment_ready"])
+        self.assertIn("REPRESENTATIVE_TIER_FIVE_SLOT_SOURCE",
+                      unselected["core_required_facts"])
+        self.assertNotIn("REPRESENTATIVE_TIER_FOUR_PIECE",
+                         unselected["core_required_facts"])
+        tier=unselected["tier_source_requirement"]
+        self.assertEqual(tier["source_piece_count"],5)
+        self.assertEqual(tier["all_five_slots"],
+                         ["head","shoulders","chest","hands","legs"])
+        self.assertEqual(tier["four_piece_bonus_threshold"],4)
+        self.assertTrue(tier[
+            "equip_subset_depends_on_special_gear_and_embellishments"])
+        numeric=unselected["consumable_numeric_requirement"]
+        self.assertEqual(numeric["flask"],
+            "MAX_QUALITY_VERIFIED_CHMV_VECTOR_PER_EFFECT_FAMILY")
+        self.assertEqual(numeric["oil"],
+            "MAX_QUALITY_VERIFIED_STATIC_CHMV_VECTOR_PER_EFFECT_AND_HAND")
+        self.assertTrue(numeric[
+            "same_quality_numbers_reusable_only_when_source_proven"])
+        self.assertTrue(numeric["oil_static_override_owns_O_once"])
+        self.assertFalse(numeric["source_numeric_verified_here"])
         self.assertTrue(unselected["season_wide_item_membership_not_required"])
         self.assertTrue(unselected[
             "nonselected_WSE_and_unrelated_loot_may_remain_unknown"])
