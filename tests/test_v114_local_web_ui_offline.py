@@ -68,6 +68,32 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertNotIn('--bg:#f5f6f4',css)
         self.assertNotIn('https://fonts.googleapis.com',css)
 
+    def test_v357_client_javascript_syntax_and_contract_when_node_available(self):
+        import shutil,subprocess
+        binary=shutil.which("node")
+        if binary is None:
+            self.skipTest("node is not installed on this runner")
+        result=subprocess.run([binary,"--check",
+              str(ROOT/"runner/webui/app.js")],
+              capture_output=True,text=True,timeout=15,check=False)
+        self.assertEqual(result.returncode,0,result.stderr)
+
+    def test_v357_single_form_and_exact_controls_preserved_across_views(self):
+        page=self.client.get("/").text
+        p=PageParser();p.feed(page)
+        self.assertEqual(p.forms,1)
+        self.assertEqual(len(p.ids),165)
+        for ident in ("class-choice","spec","race","ilevel","talents","final_T",
+                      "trinket1","trinket2","special-rows","crafted-rows",
+                      "season-target-socket-count","season-verified-flask",
+                      "optimizer-oil-loadout","binary","revision","start-btn",
+                      "run-label","progress-label","dps","sem","conf95",
+                      "result-panel","results-nav-btn","equipment-dialog"):
+            self.assertIn(ident,p.ids)
+        self.assertIn('data-view-panel="optimizer"',page)
+        self.assertIn('data-view-panel="settings" hidden',page)
+        self.assertIn('data-view-panel="results" hidden',page)
+
     def test_configurable_stat_cap_is_visible_and_restores_old_sessions(self):
         html=(ROOT/"runner/webui/index.html").read_text(encoding="utf8")
         js=(ROOT/"runner/webui/app.js").read_text(encoding="utf8")

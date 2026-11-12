@@ -2303,9 +2303,16 @@ function registerHandlers() {
     button.addEventListener("click",()=>switchView(button.dataset.view));
   $("manual-t-mode").addEventListener("change",updateManualTMode);
   $("final_T").addEventListener("input",updateBudgetPreview);
-  for(const id of ["ilevel","season-target-socket-count","season-selected-flask-id",
-    "optimizer-oil-loadout","oil_main","oil_off","spec","trinket1","trinket2"])
+  // A verified T is scoped to the exact user choices. Any CHMV ownership
+  // change invalidates its visual preview, never just the backend cache key.
+  for(const id of ["ilevel","season-target-socket-count","season-existing-special-gem-id",
+    "season-selected-flask-id","season-verified-flask","optimizer-oil-loadout",
+    "optimizer-oil-main-id","optimizer-oil-off-id","oil_main","oil_off",
+    "spec","trinket1","trinket2","season_enchant_finger1",
+    "diamond","omnium"])
     $(id).addEventListener("change",updateBudgetPreview);
+  for(const group of ["special-rows","crafted-rows"])
+    $(group).addEventListener("change",updateBudgetPreview);
 
   $("simc-check-btn").addEventListener("click",()=>withBusy(checkSimcUpdater));
   $("simc-install-btn").addEventListener("click",()=>withBusy(installSimcUpdater));
