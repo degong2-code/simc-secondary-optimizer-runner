@@ -819,7 +819,7 @@ body{background:radial-gradient(ellipse 80% 30% at 51% -15%,rgba(124,102,76,.12)
    <div class="env-grid-cell"><div class="field"><label for="food">음식</label><select id="food"></select></div></div>
    <div class="env-grid-cell"><div class="field"><label for="season-verified-flask">영약</label><select id="season-verified-flask"><option value="">검증 설치 영약 조회 중…</option></select><p class="hint" id="season-verified-flask-status" role="status">기존 설치 영약만 표시하며 최고 품질 우위를 추정하지 않습니다.</p></div></div>
    <div class="env-grid-cell"><div class="field"><label for="potion">물약</label><select id="potion"></select></div></div>
-   <div class="env-grid-cell env-omnium"><div class="field"><label for="omnium">Omnium Folio · 4열 스탯</label><select id="omnium"></select></div></div>
+   <div class="env-grid-cell env-omnium"><div class="field"><label for="omnium">Omnium Folio <small>4열 선택</small></label><select id="omnium"></select></div></div>
  </div>
  <div class="env-bottom-row">
   <div class="field"><label for="augmentation">증강 룬</label><select id="augmentation"></select></div>
@@ -837,7 +837,7 @@ body{background:radial-gradient(ellipse 80% 30% at 51% -15%,rgba(124,102,76,.12)
    </div>
  </details>
  <details class="fold" id="dk-runeforge-panel" hidden><summary>죽음의 기사 룬벼리기 · 영구 무기 강화</summary><p class="hint">기름 O와 별개인 영구 강화입니다. 기본 룬을 추정하지 않습니다. 이번 시즌 검증된 SimC 소스의 룬만 선택할 수 있습니다. 선택한 룬은 해당 무기의 enchant_id에 반영하고, 효과와 DPS는 SimC가 처리합니다. <span id="dk-runeforge-status">검증된 시즌 룬 목록 확인 중</span></p><div class="two"><div class="field"><label for="dk_rune_main">주무기 룬</label><select id="dk_rune_main"><option value="">현재 시즌 검증 목록 확인 중</option></select></div><div class="field"><label for="dk_rune_off">보조무기 룬 (냉기)</label><select id="dk_rune_off"><option value="">현재 시즌 검증 목록 확인 중</option></select></div></div></details>
- <div class="env-variant-action"><div class="actions"><button type="button" id="user-variant-prepare-btn" class="btn secondary" disabled>변경한 소켓·영약·기름 구성 검증·준비</button></div><p id="user-variant-status" class="hint" role="status" aria-live="polite">기본 4개 일반보석·기름 미사용 구성은 기본 환경의 검증 결과를 사용합니다. 변경한 구성은 같은 시즌 원본으로 다시 확인해야 합니다.</p></div>
+ <div class="env-variant-action"><div class="actions"><button type="button" id="user-variant-prepare-btn" class="btn secondary" disabled>선택 환경 검증·준비</button></div><p id="user-variant-status" class="hint" role="status" aria-live="polite">환경 선택을 변경하면 다시 검증해 주세요.</p></div>
  <details class="fold env-advanced-controls"><summary>기타 직접 입력 · 고급 옵션</summary>
 <details class="fold" id="season-special-gem-expert"><summary>고급 입력: 이미 선택한 특수보석 ItemID (일반 사용자 입력 불필요)</summary>
             <div class="field"><label for="season-existing-special-gem-id">이미 선택된 특수보석 ItemID <small>새 특수보석을 탐색하거나 효과를 측정하지 않습니다</small></label><input id="season-existing-special-gem-id" type="number" min="1" max="999999999" step="1" placeholder="기존에 지정된 ItemID" inputmode="numeric"></div>
