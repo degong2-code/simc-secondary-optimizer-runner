@@ -70,6 +70,12 @@ def run(archive_path):
         root=work/"SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA"
         need((root/"START_SIMC_OPTIMIZER_WEB_WINDOWS.cmd").is_file(),
              "EXTRACTED_LAUNCHER_MISSING")
+        easy_start=root/"START_HERE_AUTO_SETUP_AND_RUN.bat"
+        need(easy_start.is_file() and
+             b'VENV_DIR=%LOCALAPPDATA%' in easy_start.read_bytes() and
+             b'--open-browser' in easy_start.read_bytes() and
+             b'pip install' in easy_start.read_bytes(),
+             "EXTRACTED_USER_TESTED_EASY_START_MISSING_OR_DRIFT")
         need((root/"runner/v113_local_web_api.py").is_file(),
              "EXTRACTED_SERVER_MISSING")
         need((root/"runner/v193_simc_local_updater.py").is_file(),

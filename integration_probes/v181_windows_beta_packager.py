@@ -19,6 +19,7 @@ import v213_source_to_catalog as source_bridge
 PREFIX="SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA"
 SCHEMA="v181_windows_local_web_beta_source_package_v1"
 BASE_FILES=(
+    "START_HERE_AUTO_SETUP_AND_RUN.bat",
     "START_SIMC_OPTIMIZER_WEB_WINDOWS.cmd",
     "requirements-web.txt",
     "WINDOWS_BETA_START_HERE.md",
