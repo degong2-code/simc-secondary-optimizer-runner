@@ -343,7 +343,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn("existing_special_gem_id",js)
         self.assertIn("source_target_socket_count",js)
         self.assertIn('id="season-target-socket-count" type="number" min="4" max="64" step="1" value="4"',page)
-        self.assertIn("특수보석을 사용자가 명시할 때만",page)
+        self.assertIn("전체 보석 소켓 수 (일반 + 특수 포함)",page)
         self.assertIn("selected_flask_item_id",js)
         self.assertIn("J/F 원본: ",js)
         self.assertIn("J/F 품질: ",js)

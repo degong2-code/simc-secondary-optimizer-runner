@@ -1,6 +1,6 @@
 # v349 — 실사용 시즌 환경 UX 피드백: 진행 중 상태·소켓 총량·ID 입력 분리
 
-- **Capability:** `ENVIRONMENT.WEB`, `PRODUCT.USER_FLOW`, `DEV.CONTINUITY`.
+- **Capability:** `ENVIRONMENT.WEB`, `PRODUCT.E2E`, `DEV.CONTINUITY`.
 - **Keywords:** v349, real-user screenshot, progress, pending diagnosis, full socket count, special gem, advanced ItemID, Wago DB2, user feedback.
 - **Prior evidence:** 사용자의 2026-11-12 Windows 실제 베타 스크린샷에서 `12.1.5.70783` Wago `EXECUTED_AND_SEALED`, 원본 컴파일 PENDING, 미해결 27건 확인. v348 Windows API 저장·실 HTTP 시험 완료, 유효 사용자키 70783 READY 실증 없음. 기존 `v216` 보석 기본 4종+특수 1개의 소켓 총량 제한과 `v113` 사용자 UI 확인.
 - **Decision:** `CONNECT` — 원본 환경 자동 검증과 캐릭터별 품목 선택을 명확히 분리한다. 일반 사용자에게 특수보석·영약·기름 ItemID 조사를 요구하지 않고, 정확한 수동 ItemID를 기존 내부 재현용 고급 경로로만 보존한다. 소켓 입력은 특별 보석을 **포함한 전체 소켓 수**, 바꾸면 해당 J와 SimC 프로필에 대해 재검증 필요. 현재 `4` 일반보석 기본과 고급의 특수보석 지정·총 5 이상 기존 원칙은 변경하지 않는다.
