@@ -1291,11 +1291,19 @@ async function buildSeasonEnvironment(forUserVariant=false) {
   const target_ilevel=valueInt("season-target-ilevel");
   if(target_ilevel<1||target_ilevel>1000)
     throw Error("목표 ilvl은 1~1000 범위여야 합니다.");
-  const nativeRequested=$("season-native-g").checked;
-  const auto_native_F_requested=$("season-native-f").checked||
-    (forUserVariant&&Boolean(field("season-selected-flask-id")));
-  const auto_native_O_requested=$("season-native-o").checked;
-  const auto_select_observed_F_no_oil=$("season-auto-f-no-oil").checked;
+  // This is a separate explicit per-user numeric/source preparation.
+  // A new selectable budget cannot silently borrow G/J/F/O from the
+  // canonical four-gem season environment.
+  const nativeRequested=$("season-native-g").checked||forUserVariant;
+  const auto_native_F_requested=$("season-native-f").checked||forUserVariant;
+  const auto_native_O_requested=$("season-native-o").checked||
+    (forUserVariant&&(Boolean(field("season-oil-main-id"))||
+                      Boolean(field("season-oil-off-id"))||
+                      Boolean(field("optimizer-oil-main-id"))||
+                      Boolean(field("optimizer-oil-off-id"))));
+  const auto_select_observed_F_no_oil=$("season-auto-f-no-oil").checked||
+    (forUserVariant&&!field("season-selected-flask-id")&&
+     !auto_native_O_requested);
   const selectedFlask=forUserVariant?field("season-selected-flask-id"):"";
   if(selectedFlask&&!/^[1-9][0-9]*$/.test(selectedFlask))
     throw Error("영약 ItemID는 양의 정수여야 합니다.");
