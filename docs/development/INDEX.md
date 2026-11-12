@@ -1,4 +1,13 @@
 # SIMC SECONDARY OPTIMIZER — 검색 가능한 개발 기능 지도
+
+## 먼저 찾을 기존 성과 (신규 연구 전 필수 역방향 확인)
+
+| 주제 | 코드·검증된 과거 성과 | 아직 입증하지 못한 범위 |
+|---|---|---|
+| 영약 F·하한·gear 0 | [P3-GL: 실제 gear_* 0·최고품질 측정 순서](notes/2026-11-06_p3-gl-flask-highest-quality-first-and-zero-gear.md) · [P3-GN: 시즌 기본 F 1종 자동 선택](notes/2026-11-06_p3-gn-auto-f-environment-source-connection.md) · [P3-GP: ItemID 241324 가속+165 실 Native 2회](notes/2026-11-06_p3-gp-single-flask-only-real-native-attempt.md) · [v350: 개인별 F 변경·정확 설치 변형](notes/2026-11-12_p1-v350-common-season-user-variant-split.md) · [v065 경계 테스트](../../tests/test_v124_fixed_component_candidate_bounds.py) | 대표 기본 F가 전문화별 최적임을 증명하지 않음; 모든 영약 F 변경 비교/실시즌 READY는 별도 |
+| 티어 5→4 유동 장착 | [v101 구현](../../runner/v101_common_representative_equipment.py) · [v098 연결](../../runner/v098_target_user_scenario_bootstrap.py) · [v187 기존 26 DPS 회귀](../../tests/test_v187_current_season_tier_overlay.py) | 신규 시즌 `season_profile_inputs`의 특수/장식 입력 제한 연결은 별도 |
+
+> 이 표는 **과거 실증으로 바로 이동하는 지도**이지 새 인증 결과가 아니다. 인덱스에 날짜순 노트를 추가했다고 과거 미구현이 되지 않는다. 먼저 [FILE_MAP](FILE_MAP.md)·[EVIDENCE_INDEX](EVIDENCE_INDEX.md)에서 책임 코드와 영수증을 대조한다.
 > [v377 기존 5티어 유동 조합 및 영약/기름/주술사 규칙 정정](notes/2026-11-13_p1-v377-five-tier-existing-and-imbue-flask-correction.md) — v101/v098 유동 기능과 v187 이력 확인, 새 시즌 특수/장식 입력 연결만 미완료. 기름 치명=가속 q·손별 주술사 강화 충돌, 최종 F 하한과 자유분배0 구별. 정적 감사/문서 정정, 신규 Native0.
 
 
@@ -73,7 +82,7 @@
 | `GEAR.SEASON` | 대표 장비, 무기, WoW, 시즌, G | `HISTORICAL` | `PARTIAL` | [원래 기록](HISTORICAL_INDEX_20261110_PRE_KNOWLEDGE_LAYER.md) | [참조 노트](notes/2026-11-05_p3-er-existing-simc-intrinsic-socket-source-connection.md) · [현 판정](START_HERE.md) |
 | `G.NUMERIC` | G, Native, ilvl, 예산, 참조 | `HISTORICAL` | `PARTIAL` | [원래 기록](HISTORICAL_INDEX_20261110_PRE_KNOWLEDGE_LAYER.md) | [참조 노트](notes/2026-11-05_p3-ex-native-g-source-owner-reuse.md) · [현 판정](START_HERE.md) |
 | `J.GEM` | 보석, gem, J, 품질, 소켓 | `HISTORICAL` | `PARTIAL` | [원래 기록](HISTORICAL_INDEX_20261110_PRE_KNOWLEDGE_LAYER.md) | [참조 노트](notes/2026-11-05_p3-ez-jf-numeric-policy.md) · [현 판정](START_HERE.md) |
-| `F.FLASK` | flask, 영약, 품질, F | `HISTORICAL` | `PARTIAL` | [원래 기록](HISTORICAL_INDEX_20261110_PRE_KNOWLEDGE_LAYER.md) | [참조 노트](notes/2026-11-05_p3-ez-jf-numeric-policy.md) · [현 판정](START_HERE.md) |
+| `F.FLASK` | flask, 영약, 최고품질, gear_* 0, F 하한, 변형 | `HISTORICAL` | `PARTIAL` | [원래 기록](HISTORICAL_INDEX_20261110_PRE_KNOWLEDGE_LAYER.md) | [실 F+165 Native](notes/2026-11-06_p3-gp-single-flask-only-real-native-attempt.md) · [최고품질/0기어](notes/2026-11-06_p3-gl-flask-highest-quality-first-and-zero-gear.md) · [기본 F 1종](notes/2026-11-06_p3-gn-auto-f-environment-source-connection.md) · [개인별 F](notes/2026-11-12_p1-v350-common-season-user-variant-split.md) · [예산 하한](../../tests/test_v124_fixed_component_candidate_bounds.py) |
 | `O.OIL` | oil, 기름, temporary_enchant, O | `HISTORICAL` | `PARTIAL` | [원래 기록](HISTORICAL_INDEX_20261110_PRE_KNOWLEDGE_LAYER.md) | [참조 노트](notes/2026-11-08_p3-hu-applicable-full-consumables-no-enchants.md) · [현 판정](START_HERE.md) |
 | `BUDGET.GJFO` | GJFO, CHMV, B, T, L, E, O | `HISTORICAL` | `PARTIAL` | [원래 기록](HISTORICAL_INDEX_20261110_PRE_KNOWLEDGE_LAYER.md) | [참조 노트](notes/2026-11-05_p3-ep-special-gem-raw-static-j-ownership.md) · [현 판정](START_HERE.md) |
 | `SOURCE.SEAL` | SHA, 캐시, 봉인, v217 | `HISTORICAL` | `PARTIAL` | [원래 기록](HISTORICAL_INDEX_20261110_PRE_KNOWLEDGE_LAYER.md) | [참조 노트](notes/2026-11-05_p3-er-existing-simc-intrinsic-socket-source-connection.md) · [현 판정](START_HERE.md) |

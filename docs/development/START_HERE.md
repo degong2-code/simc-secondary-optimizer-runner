@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER · 개발 지식 시작점
 
+> **인계 기준과 이후 증분 구별:** 아래의 v365 문서는 최신 *단일 인계*이고 최신 코드 HEAD라는 뜻이 아니다. 2026-11-13 v377 이후 검증/수정 증분은 [기능별 INDEX](INDEX.md)의 재사용 앵커와 [FILE_MAP](FILE_MAP.md)·[EVIDENCE_INDEX](EVIDENCE_INDEX.md)에서 실제 HEAD로 확인한다. 특히 영약 F/gear_* 0/개인별 영약 변경과 5티어 유동 기능은 **기존 구현·Native를 먼저 재사용**한다.
+
 > **최신 단일 인계 정본 (2026-11-12, P1 v365까지):** [2026-11-12 P1 v365 UI 동결·시즌 원본 조인 미완료 최신 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261112_P1_V365_UI_FREEZE_SOURCE_JOIN_NEXT.md). v350 이전 인계는 역사가 되며 v350의 실증·v364 UI 동결·v365 원본 조건 4 PASS·실제 시즌 JOIN PENDING을 별도 구분한다.
 
 > **2026-11-11 역사 인계:** [v338 제품 완성·공식 한국어·제로베이스 최신 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P1_V338_PRODUCT_FINALIZATION.md). 기존 v331 인계는 제품 N 연구 완료 당시의 역사 스냅샷이고, 최신 제품 상태(v332~v338)는 신규 인계를 우선한다.
