@@ -1038,8 +1038,8 @@ function buttonState(active=false,ready=false) {
   state.running=active;
   const busy=state.busy;
   $("plan-btn").disabled=busy||active||!state.token;
-  $("season-build-btn").disabled=busy||!state.token;
-  $("user-variant-prepare-btn").disabled=busy||!state.token;
+  $("season-build-btn").disabled=busy||active||!state.token;
+  $("user-variant-prepare-btn").disabled=busy||active||!state.token;
   if(busy){
     $("source-credentials-save-btn").disabled=true;
     $("source-credentials-clear-btn").disabled=true;
@@ -1099,7 +1099,7 @@ async function withBusy(fn) {
   }
   finally{state.busy=false;buttonState(state.running,$("filled-result").hidden===false);}
 }
-function showSeasonEnvironmentBuild(data) {
+function showSeasonEnvironmentBuild(data,forUserVariant=false) {
   const scope=data?.web_environment_scope||{};
   const step=data?.zero_history_build||{};
   const source=data?.source_compilation||{};
@@ -1171,7 +1171,7 @@ function showSeasonEnvironmentBuild(data) {
       Object.keys(scope.selected_oil_item_ids_by_hand).length?
       " · 선택 기름 "+Object.entries(scope.selected_oil_item_ids_by_hand)
         .map(([hand,id])=>hand+" #"+id).join(", "):"")+
-    (scope.source_target_socket_count?" · 선언 소켓 "+scope.source_target_socket_count+"개 (SimC 적용 미검증)":"")+
+    (scope.source_target_socket_count?" · "+(forUserVariant?"개별 선택":"시즌 내부 대표")+" 소켓 "+scope.source_target_socket_count+"개 (SimC 적용 미검증)":"")+
     " · 빌드 "+(scope.game_build||"원본 대기")+
     (scope.game_build_source==="BLIZZARD_PUBLIC_RETAIL_KR"?" (Retail 자동)":"")+
     " · 원본 "+(step.source_stage_status||data?.source_stage?.status||"미확정")+
@@ -1414,7 +1414,7 @@ async function buildSeasonEnvironment(forUserVariant=false) {
                               refresh_reason,
                               simc_revision_hint:revision||null}});
     stopSeasonActivity();
-    showSeasonEnvironmentBuild(report);
+    showSeasonEnvironmentBuild(report,forUserVariant);
     if(forUserVariant) $("user-variant-status").textContent=(
       report.web_environment_scope?.environment_ready===true?
         "선택 구성의 J/F/O와 G/B/T 검증 설치 완료 · 최적화 단계에서도 같은 구성·SHA를 재확인합니다.":
