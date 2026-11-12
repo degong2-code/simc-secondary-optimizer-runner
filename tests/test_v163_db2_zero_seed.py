@@ -20,6 +20,18 @@ class JoinTests(unittest.TestCase):
         self.assertEqual(v163.classify_era(37,0,37),'DB2_DISPLAY_SEASON_MATCH')
         self.assertEqual(v163.classify_era(34,0,37),'UNKNOWN_OTHER_DISPLAY_SEASON')
 
+    def test_world_state_expression_source_must_not_fallback_to_zero(self):
+        self.assertEqual(v163.exact_world_state_expression_id('0'),0)
+        self.assertEqual(v163.exact_world_state_expression_id('52104'),52104)
+        for invalid in ('', ' ', 'not-a-number', '-1', '0.0',
+                        '0x0', None, 0, '1'*13):
+            with self.subTest(value=invalid):
+                with self.assertRaisesRegex(v163.JoinBlocked,
+                        'JOURNAL_WORLD_STATE_EXPRESSION_SOURCE_INVALID'):
+                    v163.exact_world_state_expression_id(invalid)
+        self.assertEqual(v163.classify_era(37,52104,37),
+                         'UNKNOWN_WORLD_STATE_EXPRESSION')
+
     def test_no_ambiguous_prefix_match(self):
         rows=[{'Name_lang':"Nek'zali"},{'Name_lang':'Nek'}]
         self.assertEqual(v163.uniquely_match("Nek'zali the Soulcoiler",rows,'Name_lang'),rows[0])
@@ -133,6 +145,7 @@ class JoinTests(unittest.TestCase):
             self.assertTrue(all(item['item_id']!=4001 for item in result['items']))
             self.assertEqual(result['db2_display_season_id'],37)
             self.assertEqual(result['blizzard_keystone_season_id'],18)
+            self.assertTrue(result['unverified_world_state_expressions'])
             self.assertIn('UNKNOWN_WORLD_STATE_EXPRESSION',[x['season_evidence'] for i in result['items'] for x in i['acquisition_sources'] if x['source']=='mplus_journal'])
             self.assertEqual(result['simc_native_calls'],0)
             scope=v163.discover_unique_live_scope(folder,season_report)

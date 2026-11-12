@@ -92,6 +92,19 @@ def uniquely_match(name, candidates, key):
               and norm(name).startswith(norm(x[key]))]
     return prefix[0] if len(prefix) == 1 else None
 
+def exact_world_state_expression_id(value):
+    """A malformed conditional DB2 value is NOT an unconditional 0.
+
+    The general number() helper defaults to zero for optional fields.
+    WorldStateExpressionID affects season eligibility and must instead be
+    an explicit nonnegative integer in the pinned same-build CSV.
+    """
+    fail_if(type(value) is not str or
+            re.fullmatch(r'[0-9]{1,12}',value) is None,
+            'JOURNAL_WORLD_STATE_EXPRESSION_SOURCE_INVALID')
+    return int(value)
+
+
 def classify_era(display_season, wse, selected):
     if wse: return 'UNKNOWN_WORLD_STATE_EXPRESSION'
     if display_season == selected: return 'DB2_DISPLAY_SEASON_MATCH'
@@ -293,7 +306,8 @@ def build_index(folder, report, *, raid_zone, mplus_zone, build,
     for r in read_rows(folder,'JournalEncounterItem'):
         eid = number(r['JournalEncounterID']); item_id=number(r['ItemID'])
         if item_id<=0 or (eid not in raid_by_enc and eid not in mplus_by_enc):continue
-        season = number(r['DisplaySeasonID']); wse=number(r['WorldStateExpressionID'])
+        season = number(r['DisplaySeasonID'])
+        wse=exact_world_state_expression_id(r.get('WorldStateExpressionID'))
         era = classify_era(season,wse,season_id)
         for wcl,iid in raid_by_enc[eid]:
             sources[item_id].append({'source':'raid_journal','name':wcl['name'],
@@ -366,7 +380,10 @@ def build_index(folder, report, *, raid_zone, mplus_zone, build,
             raid_non_equipment,key=lambda r:r['item_id']),
         'raid_non_equipment_tier_tokens_verified':False,
         'raid_non_equipment_in_user_gear_catalog':False,
-        'unknown':problems,'unverified_world_state_expressions':True,
+        'unknown':problems,
+        'unverified_world_state_expressions':any(
+            x['season_evidence']=='UNKNOWN_WORLD_STATE_EXPRESSION'
+            for entries in sources.values() for x in entries),
         'full_season_completeness_confirmed':False,
         'old_item_catalog_imported':False,'simc_native_calls':0}
 
