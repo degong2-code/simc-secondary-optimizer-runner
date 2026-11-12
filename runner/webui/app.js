@@ -1124,6 +1124,9 @@ function showSeasonEnvironmentBuild(data,forUserVariant=false) {
   ]:[])])];
   const node=$("season-build-stage");
   const headline=$("season-build-summary");
+  const technicalPanel=$("season-build-technical-panel");
+  const technical=$("season-build-technical");
+  technical.textContent="";technicalPanel.hidden=true;
   const discovery=data?.season_discovery?.status||"원본 단계 미보고";
   const joined=data?.season_join?.status||"원본 단계 미보고";
   const wago=step.source_stage_status||data?.source_stage?.status||"원본 단계 미보고";
@@ -1213,6 +1216,15 @@ function showSeasonEnvironmentBuild(data,forUserVariant=false) {
     " · 진단 항목 "+unique.length+"개(연쇄 포함) · DPS 최적화 0회"+
     (scope.user_character_or_trinkets_required===false?" · 사용자 장비 입력 없음":"")+
     (missingSeasonScope?" · 현재 시즌·레이드 범위 미검증(환경 설치 보류)":"");
+  // Preserve full source/Native diagnostics for troubleshooting, without
+  // treating dependent PENDING rows as separate user-facing failures.
+  technical.textContent=node.textContent;
+  technicalPanel.hidden=false;
+  node.textContent=ready?
+    "시즌 G/J/F/O 검증 환경 설치 완료 · 새 세션의 소켓·영약·기름 구성은 별도로 확인합니다.":
+    joined==="DB2_WCL_CANDIDATES_JOINED_SEASON_CONDITIONS_PENDING"?
+    "시즌 원본 후보 결합 완료 · 활성 시즌·레이드 적용 조건 미확정으로 설치를 보류합니다.":
+    "시즌 환경 설치 보류 · 세부 원본 단계와 연쇄 진단은 아래에서 확인할 수 있습니다.";
   const details=$("season-build-pending"),list=$("season-build-missing");
   list.replaceChildren();
   for(const missing of unique){
