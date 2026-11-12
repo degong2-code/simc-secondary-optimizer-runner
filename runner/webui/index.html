@@ -61,6 +61,10 @@
   <div id="budget-preview" class="budget-figure" role="status" aria-live="polite"><span>자동 계산</span><strong id="budget-preview-total">시즌 검증 후 표시</strong></div>
   <div class="field" id="manual-t-field" hidden><label for="final_T">직접 입력할 최종 T <small>기름 O 포함 · 수동 입력이 자동 계산보다 우선</small></label><input id="final_T" type="number" min="1" max="100000" placeholder="최종 2차스탯 합계"></div>
 </div>
+    <div class="stat-cap-line">
+      <label for="max-single-stat-percent">개별 스탯 최대 비율</label>
+      <div class="stat-cap-control"><input id="max-single-stat-percent" type="number" min="25" max="100" step="1" value="60" required><span>%</span></div>
+    </div>
             <details class="compact-guidance"><summary>자동 예산·구성 변경 유의사항</summary><p class="hint">소켓 수·특수보석·영약·기름은 개별 최적화 조건입니다. 선택을 바꾸면 해당 시즌의 J/F/O와 실행 프로필을 다시 검증해야 하며, 검증 전에는 자동으로 이전 구성의 예산을 적용하지 않습니다.</p></details>
         
     <div class="field"><label for="talents">특성 코드 <small>선택 · 비우면 기본 대표 특성</small></label><textarea id="talents" rows="2" placeholder="직접 입력하지 않으면 기본 대표 특성 사용" spellcheck="false"></textarea><p class="hint" id="talents-default-note">특성 미입력 시 선택한 전문화의 검증된 기본 대표 특성을 사용합니다.</p></div>
@@ -68,44 +72,26 @@
   </section>
   <section class="panel conditions-panel" aria-labelledby="conditions-title">
     <div class="section-head"><div><p class="eyebrow">02</p><h2 id="conditions-title">환경 구성</h2></div></div>
-    <div class="condition-group"><div class="condition-group-heading"><h3>전투 설정</h3><span>대상 수 · 전투 길이 · 공대 버프</span></div>
+    <div class="condition-group"><div class="condition-group-heading"><h3>전투</h3></div>
 <div class="two"><div class="field"><label for="targets">대상 수</label><input id="targets" type="number" min="1" max="40" value="1" required></div><div class="field"><label for="duration">전투 길이 (초)</label><input id="duration" type="number" min="1" max="3600" value="300" required></div></div>
             <div class="check-row"><label><input id="raid_buffs" type="checkbox" checked> 공대 버프</label></div>
-             <details class="fold fine-tuning"><summary>최적화 상세 설정</summary><div class="field"><label for="max-single-stat-percent">개별 2차스탯 최대 비율 <small>최종 T 기준 · 기본 60% 이하 · 25~100% 설정 가능</small></label><input id="max-single-stat-percent" type="number" min="25" max="100" step="1" value="60" required><p class="hint">치명·가속·특화·유연에 공통 적용합니다. 선택한 기름(O)까지 포함한 최종 rating에 적용되며 고정 L/E/F/O는 재분배되지 않습니다.</p></div>
-            </details>
-</div><div class="condition-group"><div class="condition-group-heading"><h3>보석 · 영약 · 무기 기름</h3><span>고정 J/F/O 및 사용자별 소켓 구성</span></div>
+             
+</div><div class="condition-group"><div class="condition-group-heading"><h3>보석 · 영약 · 기름</h3></div>
 <details class="fold" id="season-gem-layout" open>
-          <summary>보석 소켓 · 기본 4개</summary>
+          <summary>보석 소켓</summary>
           
-          <div class="field"><label for="season-target-socket-count">전체 보석 소켓 수 (일반 + 특수 포함) <small>기본 4 · 4~64 · 언제든 수정 후 재확인</small></label><input id="season-target-socket-count" type="number" min="4" max="64" step="1" value="4" inputmode="numeric"></div>
+          <div class="field"><label for="season-target-socket-count">보석 소켓 수 <small>특수보석 포함</small></label><input id="season-target-socket-count" type="number" min="4" max="64" step="1" value="4" inputmode="numeric"></div>
           <p id="season-socket-breakdown" class="hint" role="status" aria-live="polite">일반보석 4개 + 특수보석 0개 = 전체 소켓 4개</p>
-          <details class="fold" id="season-special-gem-expert"><summary>고급 입력: 이미 선택한 특수보석 ItemID (일반 사용자 입력 불필요)</summary>
-            <div class="field"><label for="season-existing-special-gem-id">이미 선택된 특수보석 ItemID <small>새 특수보석을 탐색하거나 효과를 측정하지 않습니다</small></label><input id="season-existing-special-gem-id" type="number" min="1" max="999999999" step="1" placeholder="기존에 지정된 ItemID" inputmode="numeric"></div>
-            <p class="hint">아이템 ID를 직접 알고 있어 특정 소켓 구성을 재현할 때만 입력합니다. 일반 사용자는 입력하지 않아도 되며, 특수보석 효과 계산은 SimC가 담당합니다.</p>
-          </details>
+          
           <details class="compact-guidance"><summary>소켓 및 보석 예산 규칙</summary><p class="hint">이 수치는 <strong>특수보석을 포함한 전체 소켓 수</strong>입니다. 기본 4개는 치명·가속·특화·유연 일반보석 각 1개이며, 선택 특수보석 1개를 포함하려면 총 5개 이상이어야 합니다. 변경할 때마다 새 J 예산·보석 배치가 검증되어야 하며, 이미 저장된 과거 최적화 세션에는 소급 적용하지 않습니다.</p><p class="hint">일반보석은 4종을 기본으로 배치하고 소켓이 더 많으면 4종을 순환합니다. 확정 J는 해당 시즌의 실제 보석·품질·소켓 근거로만 등록합니다. 모든 효과 계산은 SimC가 담당합니다.</p></details>
         </details>
-        <p class="eyebrow compact-subheading">영약</p>
-        <div class="field"><label for="season-verified-flask">기존 검증 설치 영약 <small>같은 게임 빌드·목표 ilvl · 물리 ID 자동 입력</small></label><select id="season-verified-flask"><option value="">검증 설치 영약 조회 중…</option></select><p class="hint" id="season-verified-flask-status" role="status">기존 설치 영약만 표시하며 최고 품질 우위를 추정하지 않습니다.</p></div>
-        <details class="fold" id="optimizer-season-itemid-expert">
-          <summary>미등록 품목 검증 준비 · 정확한 ItemID 입력 (고급)</summary>
-          <p class="hint">영약·무기 기름의 물리 ItemID는 일반 사용자가 시즌 구축을 위해 조사하는 항목이 아닙니다. 환경 엔진이 시즌 원본을 수집·검증하고, 검증된 선택지는 캐릭터 설정에서 이름으로 선택하는 것이 제품의 목표입니다. 아래 입력은 이미 정확한 ID를 알고 있는 제한적 재현·검증 경로이며, 현재 자동 품목 등록이 모두 완성됐음을 의미하지 않습니다.</p>
-        <details class="fold"><summary>신규 영약 ItemID 검증 준비 (고급)</summary>
-          <div class="field"><label for="season-selected-flask-id">선택한 영약 ItemID <small>시즌 원본으로 검증 · 실제 검증된 선택지 등록과 별개</small></label><input id="season-selected-flask-id" type="number" min="1" max="999999999" step="1" inputmode="numeric" placeholder="이미 알고 있는 영약 ItemID"></div>
-          <p class="hint">위 검증된 영약 목록에서 선택하면 정확한 물리 ID가 자동으로 입력됩니다. 새 환경 요청은 원본 v216이 다시 검증하며, 설치 영약이라는 이유만으로 다른 조합의 승인을 부여하지 않습니다. 직접 입력도 유지합니다. 선택한 경우 기존 같은 시즌 v281 원본에서 이 영약만 찾아 F Native 측정(별도 선택)을 진행합니다. 없는 ID나 관측상 더 낮은 품질은 보류하며, 다른 영약 전체를 측정하지 않습니다. 정확한 ID를 모르면 비워 두세요.</p>
-        </details>
-        <details class="fold"><summary>신규 무기 기름 ItemID 검증 준비 (고급)</summary>
-          <div class="two season-build-fields">
-            <div class="field"><label for="season-oil-main-id">주무기 기름 ItemID <small>같은 시즌 SimC·아이템 원본으로 자동 대조</small></label><input id="season-oil-main-id" type="number" min="1" max="999999999" step="1" inputmode="numeric" placeholder="선택한 기름 물리 ItemID"></div>
-            <div class="field"><label for="season-oil-off-id">보조무기 기름 ItemID <small>해당 무기와 손의 적용 조건 검증 필요</small></label><input id="season-oil-off-id" type="number" min="1" max="999999999" step="1" inputmode="numeric" placeholder="적용할 때만 입력"></div>
-          </div>
-          <p class="hint">일반적인 장비 선택 항목이 아닙니다. 기름을 지정하면 같은 시즌의 실제 아이템·품질·손/무기 적용 조건과 SimC 정적 rating을 기존 환경 엔진에서 확인합니다. 영약 ID도 함께 지정해야 하며, 검증이 끝나지 않은 항목은 등록하지 않습니다. 기름 종류가 같은 손에 여러 개 설치된 경우 일반 사용자 세션에서 임의로 하나를 고르지 않습니다.</p>
-        </details>
-        </details>
+        
+        <div class="field"><label for="season-verified-flask">영약</label><select id="season-verified-flask"><option value="">검증 설치 영약 조회 중…</option></select><p class="hint" id="season-verified-flask-status" role="status">기존 설치 영약만 표시하며 최고 품질 우위를 추정하지 않습니다.</p></div>
+        
             <div class="actions"><button type="button" id="user-variant-prepare-btn" class="btn secondary" disabled>변경한 소켓·영약·기름 구성 검증·준비</button></div>
             <p id="user-variant-status" class="hint" role="status" aria-live="polite">기본 4개 일반보석·기름 미사용 구성은 기본 환경의 검증 결과를 사용합니다. 변경한 구성은 같은 시즌 원본으로 다시 확인해야 합니다.</p>
             <p class="hint" hidden>새 최적화 세션은 기본적으로 기름을 사용하지 않습니다(O=0). 기름은 선택한 시즌·무기에 대한 정확한 SimC 입력과 고정 O가 검증된 환경에서만 적용되며, 미검증 선택은 임의의 0으로 처리하지 않고 차단합니다.</p>
-            <div class="field"><label for="optimizer-oil-loadout">검증된 설치 기름 조합 <small>선택 · 무기 손과 ItemID 자동 입력</small></label>
+            <div class="field"><label for="optimizer-oil-loadout">무기 기름</label>
               <select id="optimizer-oil-loadout"><option value="">기름 사용 안 함 (O=0)</option></select>
               <p id="optimizer-oil-loadout-status" class="hint" role="status" aria-live="polite">이 PC의 검증 설치 목록을 확인하는 중…</p>
             </div>
@@ -121,13 +107,13 @@
             <details class="fold" id="dk-runeforge-panel" hidden><summary>죽음의 기사 룬벼리기 · 영구 무기 강화</summary><p class="hint">기름 O와 별개인 영구 강화입니다. 기본 룬을 추정하지 않습니다. 이번 시즌 검증된 SimC 소스의 룬만 선택할 수 있습니다. 선택한 룬은 해당 무기의 enchant_id에 반영하고, 효과와 DPS는 SimC가 처리합니다. <span id="dk-runeforge-status">검증된 시즌 룬 목록 확인 중</span></p><div class="two"><div class="field"><label for="dk_rune_main">주무기 룬</label><select id="dk_rune_main"><option value="">현재 시즌 검증 목록 확인 중</option></select></div><div class="field"><label for="dk_rune_off">보조무기 룬 (냉기)</label><select id="dk_rune_off"><option value="">현재 시즌 검증 목록 확인 중</option></select></div></div></details>
             
     
-</div><div class="condition-group"><div class="condition-group-heading"><h3>소모품 · 특수 콘텐츠</h3><span>음식 · 물약 · 마법부여 · 선택 모듈</span></div>
-<details class="fold"><summary><span>음식 · 물약 · 증강 룬 · 시즌 특수 콘텐츠</span><small>선택</small></summary><div class="two">
+</div><div class="condition-group"><div class="condition-group-heading"><h3>소모품 · 강화</h3></div>
+<div class="consumable-inputs"><div class="two">
               <div class="field"><label for="food">음식</label><select id="food"></select></div>
               <div class="field"><label for="potion">물약</label><select id="potion"></select></div>
               <div class="field"><label for="augmentation">증강 룬</label><select id="augmentation"></select></div>
               <details class="fold"><summary>이전 시즌 호환 · 에버송 다이아몬드 (고급)</summary><div class="field"><label for="diamond">에버송 다이아몬드</label><select id="diamond"></select></div></details>
-            </div><div class="field"><label for="omnium">Omnium Folio · 4열 스탯</label><select id="omnium"></select></div><p class="hint">영약 F는 선택한 시즌 검증 설치본의 정적 rating을 따르며, 다른 구성에 과거 F 값을 복사하지 않습니다. Omnium은 기존 다른 열을 유지하고 4열의 치명·가속·특화·유연만 선택합니다. 새 조합의 SimC 수용 여부는 실행 결과로 확인합니다.</p></details>
+            </div><div class="field"><label for="omnium">Omnium Folio · 4열 스탯</label><select id="omnium"></select></div><p class="hint">영약 F는 선택한 시즌 검증 설치본의 정적 rating을 따르며, 다른 구성에 과거 F 값을 복사하지 않습니다. Omnium은 기존 다른 열을 유지하고 4열의 치명·가속·특화·유연만 선택합니다. </p></div>
             
     <details class="fold" id="season-option-catalog-panel"><summary><span>마법부여</span><small>확인된 효과만 선택</small></summary>
               <p class="hint">확인된 음식·물약·증강룬·다이아몬드와 방어구 안감은 위 선택 항목에 이미 연결되어 있습니다. 최고 품질 마법부여는 부위별 목록을 확보했지만, 선택 시 CHMV 예산에 반영될 정확한 정적 수치와 Native 수용 확인 전까지 잠금 상태로 표시합니다.</p>
@@ -149,13 +135,27 @@
               <div class="field equipment-source"><label for="trinket1">장신구 1 · 필수</label><select id="trinket1" required><option value="">시즌 목록 확인 중…</option></select><button type="button" class="btn equipment-open" data-equip-select="trinket1">장신구 선택 · 카드 목록 열기</button><p class="equipment-selected" data-equip-label="trinket1">선택된 장신구 없음</p></div>
               <div class="field equipment-source"><label for="trinket2">장신구 2 · 필수</label><select id="trinket2" required><option value="">시즌 목록 확인 중…</option></select><button type="button" class="btn equipment-open" data-equip-select="trinket2">장신구 선택 · 카드 목록 열기</button><p class="equipment-selected" data-equip-label="trinket2">선택된 장신구 없음</p></div>
             </div>
-            <p class="hint" id="season-gear-note">이번 시즌 장신구·특수효과 선택 목록 확인 중 · 일반장비·티어·무기는 내부 자동 구성</p>
+            <div class="inline-equipment">
+  <label class="equipment-filter"><span class="visually-hidden">장신구 검색</span><input id="equipment-trinket-search" type="search" autocomplete="off" placeholder="장신구 이름·ItemID 검색" aria-controls="equipment-trinket-grid"></label>
+  <div id="equipment-trinket-grid" class="inline-equipment-grid" role="group" aria-label="이번 시즌 장신구 바로 선택">
+    <p class="equipment-inline-empty">장신구 목록 확인 중…</p>
+  </div>
+  <p id="equipment-trinket-status" class="equipment-inline-status" role="status" aria-live="polite"></p>
+</div>
+<p class="hint" id="season-gear-note">이번 시즌 장신구·특수효과 선택 목록 확인 중 · 일반장비·티어·무기는 내부 자동 구성</p>
             <p class="hint" hidden>최신 시즌 대표 장비·직업별 티어 4세트·무기는 항상 내부 구성합니다. 목표 아이템레벨 266~344에 맞춘 독립 세션입니다.</p>
             <p class="hint" hidden>실제 SimC 대표 프로필 26/26 수용 검증. 기존 계산은 저장되며 같은 조건에서 재사용됩니다. 다른 특성·장신구·특수효과 조합의 성공 여부는 각 SimC 실행으로 판단합니다.</p>
             
     
 </div><div class="condition-group"><div class="condition-group-heading"><h3>특수효과 장비 · 장식</h3><span>검증된 부위·장착 제한에 따라 선택</span></div>
-<details class="fold"><summary><span>특수효과 장비 · 제작 장식</span><small>선택 항목 펼치기</small></summary><p class="hint" hidden>일반 장비·티어4세트와 선택한 장식 제작장비의 정확한 ID는 내부에서 구성합니다. 특수장비의 보너스·촉매 원본 ID도 일반 사용자에게 입력받지 않습니다. 이미 저장된 로컬 정적 캐시는 자동으로 찾아 사용하며, 정확한 L이 있는 경우 그대로 재사용합니다. 누락된 경우 '예산 미리 확인'(Native 0회)은 차단될 수 있으나, 사용자가 'SimC 최적화 실행'을 승인하면 내부 생성한 대표 프로필에서 정적 SimC Native 최대 1회로 선택 장비의 정확한 L을 확보·캐시합니다. 이후 최적화 계산을 진행하며, 미확정 L을 0으로 간주하지 않습니다. 현재 검증된 장식은 일반 방어구용 안감 2종입니다. 목걸이·반지·무기용 장식은 별도의 실제 호환 토큰이 검증되기 전까지 선택할 수 없습니다.</p><div id="special-rows"></div><p id="craft-compatibility-note" class="hint" role="note">장식별 장착 가능한 부위만 표시됩니다. 장신구·무기 장식은 검증된 선택지가 아직 없습니다.</p><div id="crafted-rows"></div></details>
+<div class="inline-equipment inline-equipment-special">
+  <label class="equipment-filter"><span class="visually-hidden">특수효과 장비 검색</span><input id="equipment-special-search" type="search" autocomplete="off" placeholder="특수효과 장비 이름·ItemID 검색" aria-controls="equipment-special-grid"></label>
+  <div id="equipment-special-grid" class="inline-equipment-grid" role="group" aria-label="이번 시즌 특수효과 장비 바로 선택">
+    <p class="equipment-inline-empty">특수효과 장비 목록 확인 중…</p>
+  </div>
+  <p id="equipment-special-status" class="equipment-inline-status" role="status" aria-live="polite"></p>
+</div>
+<details class="fold"><summary><span>제작 장식 및 선택 장비 세부 설정</span><small>필요할 때 펼치기</small></summary><p class="hint" hidden>일반 장비·티어4세트와 선택한 장식 제작장비의 정확한 ID는 내부에서 구성합니다. 특수장비의 보너스·촉매 원본 ID도 일반 사용자에게 입력받지 않습니다. 이미 저장된 로컬 정적 캐시는 자동으로 찾아 사용하며, 정확한 L이 있는 경우 그대로 재사용합니다. 누락된 경우 '예산 미리 확인'(Native 0회)은 차단될 수 있으나, 사용자가 'SimC 최적화 실행'을 승인하면 내부 생성한 대표 프로필에서 정적 SimC Native 최대 1회로 선택 장비의 정확한 L을 확보·캐시합니다. 이후 최적화 계산을 진행하며, 미확정 L을 0으로 간주하지 않습니다. 현재 검증된 장식은 일반 방어구용 안감 2종입니다. 목걸이·반지·무기용 장식은 별도의 실제 호환 토큰이 검증되기 전까지 선택할 수 없습니다.</p><div id="special-rows"></div><p id="craft-compatibility-note" class="hint" role="note">장식별 장착 가능한 부위만 표시됩니다. 장신구·무기 장식은 검증된 선택지가 아직 없습니다.</p><div id="crafted-rows"></div></details>
             
   
 </div></section>
@@ -219,7 +219,29 @@
         <details id="season-build-pending" class="fold" hidden><summary>구축 미완료 항목 · 원본 단계 진단</summary><ul id="season-build-missing"></ul></details>
       </section>
 
- <section class="panel simc-settings-panel" aria-labelledby="simc-settings-title">
+ <details class="fold season-advanced-settings">
+  <summary>고급 아이템 ID 입력 · 직접 재현</summary>
+  <details class="fold" id="optimizer-season-itemid-expert">
+          <summary>미등록 품목 검증 준비 · 정확한 ItemID 입력 (고급)</summary>
+          <p class="hint">영약·무기 기름의 물리 ItemID는 일반 사용자가 시즌 구축을 위해 조사하는 항목이 아닙니다. 환경 엔진이 시즌 원본을 수집·검증하고, 검증된 선택지는 캐릭터 설정에서 이름으로 선택하는 것이 제품의 목표입니다. 아래 입력은 이미 정확한 ID를 알고 있는 제한적 재현·검증 경로이며, 현재 자동 품목 등록이 모두 완성됐음을 의미하지 않습니다.</p>
+        <details class="fold"><summary>신규 영약 ItemID 검증 준비 (고급)</summary>
+          <div class="field"><label for="season-selected-flask-id">선택한 영약 ItemID <small>시즌 원본으로 검증 · 실제 검증된 선택지 등록과 별개</small></label><input id="season-selected-flask-id" type="number" min="1" max="999999999" step="1" inputmode="numeric" placeholder="이미 알고 있는 영약 ItemID"></div>
+          <p class="hint">위 검증된 영약 목록에서 선택하면 정확한 물리 ID가 자동으로 입력됩니다. 새 환경 요청은 원본 v216이 다시 검증하며, 설치 영약이라는 이유만으로 다른 조합의 승인을 부여하지 않습니다. 직접 입력도 유지합니다. 선택한 경우 기존 같은 시즌 v281 원본에서 이 영약만 찾아 F Native 측정(별도 선택)을 진행합니다. 없는 ID나 관측상 더 낮은 품질은 보류하며, 다른 영약 전체를 측정하지 않습니다. 정확한 ID를 모르면 비워 두세요.</p>
+        </details>
+        <details class="fold"><summary>신규 무기 기름 ItemID 검증 준비 (고급)</summary>
+          <div class="two season-build-fields">
+            <div class="field"><label for="season-oil-main-id">주무기 기름 ItemID <small>같은 시즌 SimC·아이템 원본으로 자동 대조</small></label><input id="season-oil-main-id" type="number" min="1" max="999999999" step="1" inputmode="numeric" placeholder="선택한 기름 물리 ItemID"></div>
+            <div class="field"><label for="season-oil-off-id">보조무기 기름 ItemID <small>해당 무기와 손의 적용 조건 검증 필요</small></label><input id="season-oil-off-id" type="number" min="1" max="999999999" step="1" inputmode="numeric" placeholder="적용할 때만 입력"></div>
+          </div>
+          <p class="hint">일반적인 장비 선택 항목이 아닙니다. 기름을 지정하면 같은 시즌의 실제 아이템·품질·손/무기 적용 조건과 SimC 정적 rating을 기존 환경 엔진에서 확인합니다. 영약 ID도 함께 지정해야 하며, 검증이 끝나지 않은 항목은 등록하지 않습니다. 기름 종류가 같은 손에 여러 개 설치된 경우 일반 사용자 세션에서 임의로 하나를 고르지 않습니다.</p>
+        </details>
+        </details>
+  <details class="fold" id="season-special-gem-expert"><summary>고급 입력: 이미 선택한 특수보석 ItemID (일반 사용자 입력 불필요)</summary>
+            <div class="field"><label for="season-existing-special-gem-id">이미 선택된 특수보석 ItemID <small>새 특수보석을 탐색하거나 효과를 측정하지 않습니다</small></label><input id="season-existing-special-gem-id" type="number" min="1" max="999999999" step="1" placeholder="기존에 지정된 ItemID" inputmode="numeric"></div>
+            <p class="hint">아이템 ID를 직접 알고 있어 특정 소켓 구성을 재현할 때만 입력합니다. 일반 사용자는 입력하지 않아도 되며, 특수보석 효과 계산은 SimC가 담당합니다.</p>
+          </details>
+</details>
+<section class="panel simc-settings-panel" aria-labelledby="simc-settings-title">
  <div class="section-head"><div><p class="eyebrow">시뮬레이터</p><h2 id="simc-settings-title">SimulationCraft 설정</h2></div></div>
  <details class="fold simc-technical-panel" id="simc-technical-panel"><summary>SimulationCraft 연결 및 업데이트 <small>처음 사용하거나 버전을 바꿀 때</small></summary><div class="field"><label for="binary">simc.exe 경로 <small>실행 파일은 서버로 업로드하지 않습니다</small></label><input id="binary" placeholder="C:\SimC\simc.exe" required spellcheck="false"></div>
             <div class="two"><div class="field"><label for="revision">SimC Git revision</label><input id="revision" required pattern="[a-fA-F0-9]{7,40}" placeholder="7bc1071" spellcheck="false"></div><div class="field"><label for="static_cache">정적 캐시 JSON 경로 <small>고급 · 선택</small></label><input id="static_cache" spellcheck="false" placeholder="기본 로컬 정적 캐시가 있으면 자동 사용"></div></div>
