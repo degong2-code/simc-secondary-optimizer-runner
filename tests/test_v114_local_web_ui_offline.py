@@ -93,7 +93,7 @@ class RealHTTPPageOffline(unittest.TestCase):
             self.assertIn('id="'+ident+'"',page)
         self.assertIn('function drawInlineEquipment()',js)
         self.assertIn('function inlineEquipmentCard(item,',js)
-        self.assertIn('equipment-inline-grid',css)
+        self.assertIn('inline-equipment-grid',css)
         self.assertIn('activeTrinketSlot',js)
         self.assertIn('data-equip-select="trinket1"',page)
         self.assertIn('data-equip-select="trinket2"',page)
