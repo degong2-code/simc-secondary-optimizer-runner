@@ -4,6 +4,8 @@
 
 > **2026-11-11 역사 인계:** [v338 제품 완성·공식 한국어·제로베이스 최신 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261111_P1_V338_PRODUCT_FINALIZATION.md). 기존 v331 인계는 제품 N 연구 완료 당시의 역사 스냅샷이고, 최신 제품 상태(v332~v338)는 신규 인계를 우선한다.
 
+[v365 **시즌 WorldStateExpressionID 손상값을 0으로 오분류하던 오류 수정, 조건 원본 검증 4/4 PASS**](notes/2026-11-12_p1-v365-db2-conditional-season-parse.md) — 원래 v163·v216 조인 유지, 새 시즌 JOIN/READY는 계속 보류, 신규 Native0.
+
 [v364 **UI 줄간격·행열·중복 선 최종 보수, 7/7 PASS; P1 시즌 G/J/F/O 증거 갭 복귀**](notes/2026-11-12_p1-v364-ui-spacing-freeze-and-source-gap-resumption.md) — 입력 ID183/183·원래 SimC/세션 그대로, 신규 Native0. 현 시즌 JOIN과 J/F/O 최고품질·실행 실증은 PENDING.
 
 [v363 **기름 기본 사용·쌍수 원본 검증·물약 직접 선택·장비 5열·환경/결과 선형 UI, 7/7 SUCCESS**](notes/2026-11-12_p1-v363-oil-default-input-end-to-end-audit.md) — [오프라인 HTML 미리보기](https://github.com/degong2-code/simc-secondary-optimizer-runner/blob/probe/chat-cache-v035-20261024/previews/v363_oil_default_potion_five_column_flat_preview.html). 기존 G/J/F/O·183 입력 ID 유지, 현 시즌 JOIN·물약 비기본 항목 승인은 여전히 별도 확인.
