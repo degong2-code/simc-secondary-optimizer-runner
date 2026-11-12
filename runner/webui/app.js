@@ -793,6 +793,11 @@ function fillSessionInputs(payload) {
   // Exact v212 installation is recovered from the sealed session, never
   // from whichever build happens to be selected on the current page.
   $("season-game-build").value=payload.installed_season_game_build??"";
+  const userVariant=payload.verified_user_variant;
+  $("season-target-socket-count").value=userVariant?.socket_total??4;
+  $("season-existing-special-gem-id").value=userVariant?.special_gem_id??"";
+  $("season-selected-flask-id").value=userVariant?.flask_item_id??"";
+  updateSeasonSocketBreakdown();
   $("final_T").value=t.final_T??"";
   // A sealed pre-policy session has an implicit strict <50% rule.
   // Its restoration must display 50, never silently claim the new 60.
@@ -1307,7 +1312,12 @@ async function buildSeasonEnvironment(forUserVariant=false) {
   const selected_oil_item_ids_by_hand={};
   for(const [hand,node] of [["main_hand","season-oil-main-id"],
                            ["off_hand","season-oil-off-id"]]) {
-    const value=forUserVariant?field(node):"";
+    const runtimeId=hand==="main_hand"?"optimizer-oil-main-id":
+      "optimizer-oil-off-id";
+    const advanced=field(node),userSelected=field(runtimeId);
+    if(forUserVariant&&advanced&&userSelected&&advanced!==userSelected)
+      throw Error("사용자 기름 ItemID와 고급 검증 ID가 서로 다릅니다.");
+    const value=forUserVariant?(advanced||userSelected):"";
     if(value&&!/^[1-9][0-9]*$/.test(value))
       throw Error("선택한 기름 ItemID는 양의 정수여야 합니다.");
     if(value){
@@ -1378,6 +1388,8 @@ async function buildSeasonEnvironment(forUserVariant=false) {
         " 선택한 기름이 없으므로 SimC 원본 확인만 수행하며 O Native는 실행하지 않습니다."):"")))
     return;
   $("season-build-stage").textContent="시즌 환경 요청 처리 중 · 응답을 받으면 원본 단계 결과를 구분해서 표시합니다…";
+  if(forUserVariant) $("user-variant-status").textContent=
+    "선택한 개별 구성의 시즌 원본·J/F/O 예산 재검증 요청 중…";
   $("season-build-pending").hidden=true;
   $("season-build-summary").textContent="검증 진행 중 · 결과 미확정 (READY 아님)";
   const stopSeasonActivity=beginSeasonBuildActivity();
