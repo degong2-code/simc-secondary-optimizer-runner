@@ -23,7 +23,7 @@
 ## 4. 최근 구현·검증의 확정 영수증과 한계
 | 버전/범위 | 구현·실행 근거 | 입증하지 않는 것 |
 |---|---|---|
-| v337/v338 시즌 환경 | [v337 Windows 현재70783 빈 설치 root G2850/J92/F165/O0, B=T3107 Native3](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43000049793); [v338 통제 원본 실패·재시도·누락 차단](development/notes/2026-11-11_p1-v338-negative-season-source-recovery.md) | 미출시 미래 시즌의 모든 외부 원본 신규 READY |
+| v337/v338 시즌 환경 | [v337 Ubuntu 24.04 현재70783 빈 설치 root G2850/J92/F165/O0, B=T3107 Native3](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43000049793); [v338 통제 원본 실패·재시도·누락 차단](development/notes/2026-11-11_p1-v338-negative-season-source-recovery.md) | 미출시 미래 시즌의 모든 외부 원본 신규 READY |
 | v344 실제 Windows DPS | [Windows Chrome→70783 G/J/F/O Native3 → 생존 N56·DPS Native64·중단/재개/결과 재열기 PASS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43114134208) | 개인 사용자 PC의 같은 조건, 전 26 DPS 전수 |
 | v345 배포 ZIP | [실제 추출 ZIP CMD→Chrome 세션 저장/재열기 Native0](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43118748950); 역사 포함 v213 카탈로그 `70575` | 포함 카탈로그가 현 `70783` 시즌 READY라는 주장 |
 | v346~v347 안전장치/무키 | v346 기본 64회/재개 v212 검증 설치 없으면 차단 [API PASS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43122643207); [v347 무비밀키 Wago/SimC 수집 성공·시즌 JOIN 불확정 PENDING](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43123280869), 환경/DPS Native0 | 공개 DB2만으로 활성 시즌·레이드 확정 |
