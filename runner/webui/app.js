@@ -1080,9 +1080,17 @@ function showSeasonEnvironmentBuild(data) {
       source.selected_J_F_source_owner_numeric_unadmitted.missing.map(x=>"J/F 원본: "+x):[]),
     ...(Array.isArray(source.selected_J_F_source_owner_quality_unadmitted?.missing)?
       source.selected_J_F_source_owner_quality_unadmitted.missing.map(x=>"J/F 품질: "+x):[])];
-  const unique=[...new Set(needs)];
-  const node=$("season-build-stage");
   const ready=scope.environment_ready===true&&scope.environment_installed===true;
+  // v347: public Wago DB2 + pinned SimC source may be sealed, but without
+  // independently verified season/raid membership cannot approve G/J/F/O.
+  // Explain a real PENDING result without asking users for developer keys.
+  const missingSeasonScope=!ready&&
+    data?.season_discovery?.status==="AUTHENTICATED_SEASON_CREDENTIALS_MISSING"&&
+    data?.season_join?.status==="AUTHENTICATED_SEASON_JOIN_NOT_READY";
+  const unique=[...new Set([...needs,...(missingSeasonScope?[
+    "현재 시즌·레이드 범위를 검증할 공인 원본이 부족합니다. 개발자용 비밀키를 입력하는 대신 검증된 시즌 자료 업데이트가 필요합니다. 환경 READY 전에는 기본 계산을 시작할 수 없습니다."
+  ]:[])])];
+  const node=$("season-build-stage");
   if(data?.status==="VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED"&&ready){
     node.textContent="기존 검증 시즌 환경 재사용 완료 · 저장된 원본 빌드 "+
       data.installed_source_game_build+
@@ -1151,7 +1159,8 @@ function showSeasonEnvironmentBuild(data) {
        " / B="+numeric.base_B+" T="+numeric.final_T:"")+
     " · 환경 매니페스트 "+(step.versioned_environment_source_stage?.stage_status||"입력 대기")+
     " · 미해결 "+unique.length+"건 · DPS 최적화 0회"+
-    (scope.user_character_or_trinkets_required===false?" · 사용자 장비 입력 없음":"");
+    (scope.user_character_or_trinkets_required===false?" · 사용자 장비 입력 없음":"")+
+    (missingSeasonScope?" · 현재 시즌·레이드 범위 미검증(환경 설치 보류)":"");
   const details=$("season-build-pending"),list=$("season-build-missing");
   list.replaceChildren();
   for(const missing of unique){

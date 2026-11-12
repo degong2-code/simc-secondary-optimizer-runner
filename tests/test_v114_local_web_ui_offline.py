@@ -288,6 +288,17 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn("미확정 명칭은 원본 이름을 표시합니다.",js)
         self.assertIn('item.official_name_ko',js)
 
+    def test_v347_unscoped_credentialless_season_is_pending_not_ready(self):
+        """Real v347 negative evidence gets an actionable user-facing reason."""
+        js=(ROOT/"runner/webui/app.js").read_text(encoding="utf8")
+        self.assertIn("AUTHENTICATED_SEASON_CREDENTIALS_MISSING",js)
+        self.assertIn("AUTHENTICATED_SEASON_JOIN_NOT_READY",js)
+        self.assertIn("missingSeasonScope",js)
+        self.assertIn("현재 시즌·레이드 범위 미검증(환경 설치 보류)",js)
+        self.assertIn("환경 READY 전에는 기본 계산을 시작할 수 없습니다.",js)
+        self.assertIn("WEB_PRIMARY_VERIFIED_SEASON_INSTALL_REQUIRED",js)
+        self.assertNotIn("data.environment_ready=true",js)
+
     def test_environment_build_surface_is_not_optimizer_plan(self):
         page=self.client.get("/").text
         js=self.client.get("/assets/app.js").text
