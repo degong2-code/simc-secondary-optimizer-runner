@@ -111,7 +111,7 @@ class RealHTTPPageOffline(unittest.TestCase):
         self.assertIn('function syncOilUseToggle()',js)
         self.assertIn('function applyOilUseToggle()',js)
         self.assertIn('if(matches.length!==1)',js)
-        self.assertIn('Number.isSafeInteger(Number(item.physical_item_id))',js)
+        self.assertIn('Number.isSafeInteger(item.physical_item_id)',js)
         self.assertIn('function renderSeasonOptionCatalog(catalog)',js)
         self.assertIn('selector.disabled=true;',js)
         self.assertIn('selector.disabled=false;',js)
