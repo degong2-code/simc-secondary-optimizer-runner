@@ -1121,3 +1121,152 @@ body{background:#24252B;color:var(--ink)}
     grid-template-columns:minmax(0,1fr)
   }
 }
+
+
+/* v364 final UI alignment pass: shared field baselines and one separator
+   per logical section. Pure presentation; no executable input changes. */
+#optimizer-form>.profile-panel,
+#optimizer-form>.conditions-panel{padding-top:15px}
+#optimizer-form .section-head{
+  min-height:32px;display:flex;align-items:center;
+  padding-bottom:9px;margin-bottom:13px
+}
+#optimizer-form .profile-panel>.two,
+#optimizer-form .profile-panel>.class-spec-fields{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:0 14px;align-items:start
+}
+#optimizer-form .profile-panel>.two>.field,
+#optimizer-form .class-spec-fields>.field{
+  display:grid;grid-template-rows:17px minmax(33px,auto);
+  row-gap:4px;min-width:0;margin:0 0 11px
+}
+#optimizer-form .profile-panel>.two>.field>label,
+#optimizer-form .class-spec-fields>.field>label{
+  min-height:17px;line-height:17px;margin:0
+}
+#optimizer-form .profile-panel>.two>.field>input,
+#optimizer-form .profile-panel>.two>.field>select,
+#optimizer-form .class-spec-fields>.field>select{
+  min-height:33px;padding:7px 4px 8px;line-height:17px;
+  align-self:end;box-sizing:border-box
+}
+#optimizer-form .conditions-panel .env-input-grid{
+  align-items:start;row-gap:11px;column-gap:15px
+}
+#optimizer-form .conditions-panel .env-grid-cell{
+  min-width:0;align-self:start
+}
+#optimizer-form .conditions-panel .env-grid-cell>.field,
+#optimizer-form .conditions-panel #season-gem-layout>.field{
+  display:grid!important;grid-template-rows:17px 33px;
+  row-gap:4px;align-items:start;margin:0!important;min-width:0
+}
+#optimizer-form .conditions-panel .env-grid-cell .field>label,
+#optimizer-form .conditions-panel .env-grid-cell .env-field-title{
+  display:block;min-height:17px;line-height:17px;margin:0;
+  align-self:start;white-space:nowrap
+}
+#optimizer-form .conditions-panel .env-grid-cell input:not([type=checkbox]),
+#optimizer-form .conditions-panel .env-grid-cell select,
+#optimizer-form .conditions-panel .env-grid-cell .env-auto-value,
+#optimizer-form .conditions-panel .env-grid-cell .env-onoff{
+  height:33px;min-height:33px;line-height:20px;
+  padding:5px 3px 8px;align-self:end;box-sizing:border-box;
+  margin:0
+}
+#optimizer-form .conditions-panel #season-gem-layout{
+  margin:0!important;padding:0!important;border:0!important
+}
+#optimizer-form .conditions-panel .env-onoff-cell{
+  display:grid!important;grid-template-rows:17px 33px auto;
+  gap:4px;min-height:0
+}
+#optimizer-form .conditions-panel .env-onoff input[type=checkbox]{
+  width:14px!important;height:14px!important;min-height:14px!important;
+  padding:0!important;flex:none;margin:0 6px 0 0;vertical-align:middle
+}
+#optimizer-form .conditions-panel .env-compact-status{
+  line-height:1.45;margin:0;font-size:9px
+}
+#optimizer-form .conditions-panel .env-omnium{
+  margin-top:0;min-width:0
+}
+#optimizer-form .env-bottom-row{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  column-gap:15px;align-items:end;
+  margin-top:8px;padding:8px 0 12px;
+  border-top:1px solid #534D45;border-bottom:0
+}
+#optimizer-form .env-bottom-row>.field{max-width:none;margin:0!important}
+#optimizer-form .env-bottom-row>.check-row{
+  margin:0;align-self:end;min-height:33px;display:flex;align-items:center
+}
+#optimizer-form .env-enchant-panel{
+  margin:0!important;padding:0 0 8px!important;
+  border-top:0!important;border-bottom:0!important
+}
+#optimizer-form .env-enchant-panel>summary{
+  min-height:30px;padding:8px 0 5px;line-height:17px
+}
+#optimizer-form .env-enchant-panel[open]>summary{
+  border-bottom:0!important
+}
+#optimizer-form .env-enchant-grid{
+  display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:8px 12px;align-items:start;margin:4px 0 9px
+}
+#optimizer-form .env-enchant-grid>.field{
+  display:grid;grid-template-rows:16px 31px;
+  row-gap:3px;margin:0!important
+}
+#optimizer-form .env-enchant-grid .field>label{
+  min-height:16px;line-height:16px;margin:0
+}
+#optimizer-form .env-enchant-grid select{
+  min-width:0;height:31px;min-height:31px!important;
+  padding:5px 2px 7px!important;align-self:end
+}
+#optimizer-form .env-variant-action{
+  margin:0;padding:8px 0 5px;border-top:1px solid #554C43
+}
+#optimizer-form .env-advanced-controls{
+  margin-top:5px!important;border-bottom:0!important
+}
+#optimizer-form .profile-panel label[for="race"] small,
+#optimizer-form .profile-panel label[for="talents"] small,
+#optimizer-form .conditions-panel .env-omnium label small,
+#optimizer-form #talents-default-note,
+#optimizer-form #craft-compatibility-note,
+#optimizer-form #season-gear-note{display:none!important}
+#optimizer-form .profile-panel #talents{
+  margin-top:4px;padding:7px 4px 9px
+}
+#optimizer-form .gear-section-heading{margin-bottom:10px}
+#optimizer-form .gear-section .equipment-inline-status{
+  padding:5px 0 0;margin:0;min-height:0
+}
+#optimizer-form .gear-section .equipment-filter input{
+  padding:6px 2px 9px!important;height:33px
+}
+@media(max-width:970px){
+  #optimizer-form .profile-panel>.two,
+  #optimizer-form .profile-panel>.class-spec-fields{gap:0 12px}
+}
+@media(max-width:650px){
+  #optimizer-form .env-enchant-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))
+  }
+}
+@media(max-width:400px){
+  #optimizer-form .conditions-panel .env-input-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr))
+  }
+  #optimizer-form .conditions-panel .env-input-grid>.env-grid-cell,
+  #optimizer-form .conditions-panel .env-input-grid>.env-grid-cell:nth-child(n+5):nth-child(-n+7){
+    grid-column:span 1!important
+  }
+  #optimizer-form .conditions-panel .env-input-grid>.env-omnium{
+    grid-column:1/-1!important
+  }
+}

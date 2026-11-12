@@ -211,6 +211,22 @@ eval(context+raw.slice(start,end)+"\n"+test);
         self.assertEqual(form.count('id="season-verified-flask"'),1)
         self.assertEqual(form.count('id="potion"'),1)
 
+    def test_v364_field_baselines_single_separator_and_preserved_enchants(self):
+        page=self.client.get("/").text
+        css=self.client.get("/assets/styles.css").text
+        self.assertLess(page.index('id="season_enchant_finger1"'),
+                        page.index('id="env-enchant-finger2"'))
+        self.assertIn('grid-template-rows:17px 33px;',css)
+        self.assertIn('grid-template-columns:repeat(4,minmax(0,1fr))',css)
+        self.assertIn('border-top:0!important;border-bottom:0!important',css)
+        self.assertIn('#optimizer-form #talents-default-note',css)
+        self.assertIn('#optimizer-form .gear-section-heading{margin-bottom:10px}',css)
+        self.assertIn('@media(max-width:400px)',css)
+        self.assertIn('id="trinket1"',page)
+        self.assertIn('id="trinket2"',page)
+        self.assertIn('id="oil_main"',page)
+        self.assertIn('id="optimizer-oil-enabled" type="checkbox" checked',page)
+
     def test_v363_requested_inputs_and_oil_on_source_contract(self):
         page=self.client.get("/").text
         css=self.client.get("/assets/styles.css").text
