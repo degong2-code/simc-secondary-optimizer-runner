@@ -284,6 +284,165 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
             "user_manual_final_T":user_final_T}
 
 
+
+def preflight_selected_fresh_source_only(*, selected, composed, fillers,
+                                         native_cache, installed_document,
+                                         season_profile_inputs, weapon_layout,
+                                         oil_hands):
+    """v434: reuse v091/v090/v065 on an exact selected v098 profile, Native0.
+
+    This is NOT _admitted_fresh_season_source: the v217 installed owner seals
+    the baseline G, not a replaced-gear G. Never convert this result into
+    a v096 manifest or DPS/cache identity without a separate admitted source.
+    """
+    import v212_environment_manifest as installed
+    need(type(selected) is dict and
+         selected.get("schema")==
+             "v433_v098_selected_user_physical_budget_preflight_v1"
+         and selected.get("status")==
+             "B8_SELECTED_PROFILE_BUDGET_RECONCILED_NOT_ADMITTED"
+         and selected.get("runtime_manifest_created") is False
+         and selected.get("native_execution_authorized") is False,
+         "B8_V096_SELECTED_NONADMITTED_V433_SOURCE_REQUIRED")
+    installed.verify_fresh_installed_environment(installed_document)
+    proof=selected.get("budget_preflight")
+    bound=selected.get("bound_source_identity")
+    need(type(proof) is dict and type(bound) is dict
+         and proof.get("status")==
+             "B8_SELECTED_PHYSICAL_G_L_RECONCILED_NOT_ADMITTED"
+         and proof.get("missing_exact_native_variants")==[]
+         and bound.get("schema")==
+             "v433_b8_selected_profile_budget_source_binding_v1"
+         and bound.get("installed_v212_manifest_sha256")==
+             installed_document["manifest_sha256"]
+         and proof.get("installed_v212_manifest_sha256")==
+             installed_document["manifest_sha256"]
+         and bound.get("selected_budget_identity_sha256")==
+             proof.get("selected_budget_identity_sha256")
+         and selected.get("bound_source_identity_sha256")==
+             item_cache.digest(bound)
+         and type(bound.get("static_cache_content_sha256")) is str
+         and contract.HASH_RE.fullmatch(
+             bound["static_cache_content_sha256"]) is not None
+         and type(proof.get("base_B")) is int and
+             type(proof.get("final_T")) is int,
+         "B8_V096_SELECTED_PROOF_INSTALLED_OR_SHA_DRIFT")
+    need(type(composed) is dict and
+         composed.get("schema")==
+             "v098_source_only_season_profile_plan_v1"
+         and composed.get("status")==
+             "SEASON_PROFILE_COMPOSED_NOT_ADMITTED_NO_NATIVE"
+         and type(composed.get("v096_typed_input_unadmitted")) is dict
+         and type(composed.get("profile_simc")) is str
+         and type(composed.get("scenario")) is dict and
+         type(fillers) is list and type(native_cache) is dict,
+         "B8_V096_SELECTED_FULL_SEASON_PROFILE_REQUIRED")
+    item_cache.check_cache(native_cache)
+    need(proof.get("static_cache_season")==native_cache["season"]
+         and native_cache["season"]==item_cache.SEASON,
+         "B8_V096_SELECTED_STATIC_CACHE_SEASON_DRIFT")
+    typed=composed["v096_typed_input_unadmitted"]
+    profile=composed["profile_simc"]
+    raw_scenario=typed["scenario"]
+    normalized=contract.normalize(raw_scenario)
+    B=proof["base_B"]
+    O=contract.vector(proof["fixed_O"],"B8_V096_FIXED_O")
+    L=contract.vector(proof["fixed_L_in_G_once"],"B8_V096_L")
+    E=contract.vector(proof["fixed_E"],"B8_V096_E")
+    F=contract.vector(typed["flask_F"],"B8_V096_NATIVE_F")
+    need(hashlib.sha256(profile.encode("utf8")).hexdigest()==
+             composed["source_profile_sha256"]==
+             raw_scenario["source"]["profile_sha256"]==
+             typed["source_profile_sha256"]
+         and typed["scenario_digest"]==normalized["scenario_digest"]
+         and typed["base_B"]==B and typed["final_T"]==
+             proof["final_T"]
+         and typed["fixed_O"]==O
+         and sum(F.values())==proof["F"]
+         and normalized["budget"]["T"]==B
+         and normalized["budget"]["J"]==proof["J"]
+         and normalized["budget"]["F"]==proof["F"]
+         and normalized["budget"]["external_temporary_rating"]==O
+         and normalized["scenario"]["target"]["mode"]=="manual_total"
+         and normalized["scenario"]["target"]["manual_total"]==B
+         and B+sum(O.values())==proof["final_T"]
+         and installed_document["official_J"]==proof["J"]
+         and installed_document["official_F"]==proof["F"]
+         and installed_document["official_O"]==O
+         and installed_document["game_build"]==proof["game_build"]
+         and installed_document["target_ilevel"]==proof["target_ilevel"],
+         "B8_V096_SELECTED_PROFILE_J_F_O_B_T_OR_SHA_DRIFT")
+    # The native physical F source and per-hand O must match v212, not a
+    # user-invented token with the same arithmetic total.
+    physical_f=installed_document.get("official_F_physical_source")
+    physical_o=installed_document.get("official_O_physical_source")
+    sources=season_profile_inputs
+    need(type(sources) is dict and
+         type(sources.get("flask")) is dict and
+         type(sources.get("oil_by_hand")) is dict and
+         type(physical_f) is dict and
+         sources["flask"]["physical_item_id"]==
+             physical_f.get("physical_item_id") and
+         sources["flask"]["static_CHMV_vector"]==F==
+             physical_f.get("static_CHMV_vector") and
+         sources["flask"]["simc_input_token"]==
+             physical_f.get("simc_input_token") and
+         "flask="+physical_f["simc_input_token"] in profile.splitlines(),
+         "B8_V096_SELECTED_INSTALLED_F_ITEM_OR_TOKEN_DRIFT")
+    by_hand=sources["oil_by_hand"]
+    need(type(oil_hands) is list
+         and set(by_hand)==set(oil_hands)
+         and (by_hand=={} and physical_o is None or
+              type(physical_o) is dict and
+              by_hand==physical_o.get("oil_by_hand")),
+         "B8_V096_SELECTED_INSTALLED_O_PHYSICAL_HAND_DRIFT")
+    need(normalized["scenario"]["equipment"]==
+             selected["selected_equipment"]==
+             composed["scenario"]["equipment"],
+         "B8_V096_SELECTED_PHYSICAL_EQUIPMENT_DRIFT")
+    # This is the ORIGINAL v091 -> v090 -> v062 profile/static bridge,
+    # with v065's existing L/F/O/E floor policy. No new optimizer or SimC.
+    prepared=oil_adapter.prepare(
+        profile,raw_scenario,fillers,native_cache,weapon_layout,oil_hands,
+        season_oil_by_hand=by_hand,season_base_B=B)
+    native_budget=prepared["prepared"]["static_budget"]
+    locked=native_budget["locked_L_when_all_specials_observed"]
+    need(locked==L and
+         prepared["oil"]["profile_sha256"]==
+             composed["source_profile_sha256"] and
+         prepared["oil"]["declared_O"]==O and
+         prepared["approved_total"]["base_B"]==B and
+         prepared["approved_total"]["final_T"]==proof["final_T"] and
+         prepared["prepared"]["T"]==B,
+         "B8_V096_SELECTED_EXACT_L_OR_PREPARED_TOTAL_DRIFT")
+    feasible=scheduler.budget_with_fixed_components(
+        prepared["prepared"]["scenario"],native_budget,F,O,
+        **({"fixed_enchant_E":E} if sum(E.values()) else {}))
+    total,lower,upper=scheduler.bounds(
+        prepared["prepared"]["scenario"],feasible)
+    need(total==B,"B8_V096_SELECTED_ADAPTIVE_B_DRIFT")
+    return {
+        "schema":"v434_v096_selected_fresh_nonadmitted_preflight_v1",
+        "status":"B8_V096_SOURCE_ONLY_PROFILE_AND_STATIC_BOUNDS_VALIDATED",
+        "base_B":B,"final_T":proof["final_T"],
+        "fixed_L_once":dict(L),"fixed_E":dict(E),
+        "fixed_O":dict(O),"flask_F":dict(F),
+        "lower_B":dict(zip(contract.STATS,lower)),
+        "upper_B":dict(zip(contract.STATS,upper)),
+        "selected_budget_identity_sha256":
+            proof["selected_budget_identity_sha256"],
+        "installed_v212_manifest_sha256":
+            installed_document["manifest_sha256"],
+        "source_profile_sha256":composed["source_profile_sha256"],
+        "scenario_digest":normalized["scenario_digest"],
+        "old_season_reference_not_used":True,
+        "physical_variant_native_receipts_reused":True,
+        "runtime_manifest_created":False,
+        "native_execution_authorized":False,
+        "user_session_created":False,
+        "native_calls":0,"network_calls":0}
+
+
 def source(manifest_path):
     """Build the existing typed and SHA-locked Native context; zero SimC calls."""
     manifest_path=pathlib.Path(manifest_path).resolve()

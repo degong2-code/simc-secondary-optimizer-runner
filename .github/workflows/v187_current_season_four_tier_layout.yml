@@ -12,6 +12,8 @@ on:
       - tests/test_v433_selected_profile_budget_integration.py
       - runner/v218_v098_profile_stage_adapter.py
       - runner/v113_local_web_api.py
+      - runner/v096_unified_product_entry.py
+      - tests/test_v434_selected_v096_source_only.py
       - tests/test_v106_user_session_controller.py
       - .github/workflows/v187_current_season_four_tier_layout.yml
 permissions:
@@ -34,10 +36,12 @@ jobs:
           python3 -m py_compile runner/v101_common_representative_equipment.py \
             runner/v098_target_user_scenario_bootstrap.py runner/v106_user_session_controller.py \
             runner/v432_selected_4pc_budget_bridge.py \
-            runner/v218_v098_profile_stage_adapter.py runner/v113_local_web_api.py
+            runner/v218_v098_profile_stage_adapter.py runner/v113_local_web_api.py \
+            runner/v096_unified_product_entry.py
           python3 -m unittest -v tests.test_v187_current_season_tier_overlay \
             tests.test_v432_selected_4pc_budget_bridge \
-            tests.test_v433_selected_profile_budget_integration
+            tests.test_v433_selected_profile_budget_integration \
+            tests.test_v434_selected_v096_source_only
           python3 -m unittest -q tests.test_v106_user_session_controller \
             tests.test_v169_source_first_representative_stage \
             tests.test_v172_current_season_v098_stage

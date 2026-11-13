@@ -311,7 +311,9 @@ def _v191_raw_gear_tier_link(bundle, originals, revision):
 def _selected_season_profile_budget_preflight(*, user, profile, cfg, rows,
                                               groups, catalyst, baseline_rows,
                                               candidate, class_tier_five, original_v191_link,
-                                              installed_path, cache_path):
+                                              installed_path, cache_path,
+                                              season_profile_inputs=None,
+                                              weapon_layout=None,fillers=None):
     """Bind actual v101 overlaid user profile to v432 G/L: NO session/Native.
 
     This is deliberately separate from v096. Existing v212 installed G is a
@@ -386,7 +388,7 @@ def _selected_season_profile_budget_preflight(*, user, profile, cfg, rows,
             canonical(selected_equipment).encode("utf8")).hexdigest(),
     }
     bind_sha=hashlib.sha256(canonical(bound).encode("utf8")).hexdigest()
-    return {
+    result={
         "schema":"v433_v098_selected_user_physical_budget_preflight_v1",
         "status":("B8_SELECTED_PROFILE_STATIC_VARIANTS_PENDING_NO_NATIVE"
                   if proof["missing_exact_native_variants"] else
@@ -406,6 +408,73 @@ def _selected_season_profile_budget_preflight(*, user, profile, cfg, rows,
         "native_calls":0,
         "network_calls":0,
     }
+    # Preserve the old v433 introspection when no source-only v216
+    # consumable inputs were supplied. Runtime v216 passes the exact
+    # signed F/O source: compose it BEFORE v096 validates the typed B.
+    if proof["missing_exact_native_variants"] or season_profile_inputs is None:
+        return result
+    need(type(fillers) is list and type(weapon_layout) is str,
+         "B8_SELECTED_V096_EXACT_FILLERS_AND_WEAPON_REQUIRED")
+    adjusted=copy.deepcopy(season_profile_inputs)
+    calc=adjusted["v216_numeric_preview"]["calculation"]
+    need(calc.get("game_build")==doc["game_build"]
+         and calc.get("target_ilevel")==doc["target_ilevel"]
+         and calc.get("source_catalog_manifest_sha256")==
+             doc["source_catalog_manifest_sha256"]
+         and calc.get("source_catalog_artifact_sha256")==
+             doc["source_catalog_artifact_sha256"]
+         and calc.get("J")==proof["J"] and calc.get("F")==proof["F"]
+         and calc.get("fixed_O")==proof["fixed_O"],
+         "B8_SELECTED_BASELINE_V216_J_F_O_SOURCE_DRIFT")
+    calc.update({
+        "base_B":proof["base_B"],"final_T":proof["final_T"],
+        "manual_final_T_authoritative":
+            proof["manual_final_T_authoritative"]})
+    composed=season_profile_source_only(
+        profile=profile,cfg=cfg,weapon_layout=weapon_layout,user=user,
+        season_profile_inputs=adjusted,
+        season_build=doc["game_build"],
+        simc_revision=doc["simc_revision"],fillers=None)
+    verified=entry.preflight_selected_fresh_source_only(
+        selected=result,composed=composed,fillers=fillers,
+        native_cache=cached,installed_document=doc,
+        season_profile_inputs=adjusted,weapon_layout=weapon_layout,
+        oil_hands=user["oil_hands"])
+    B=verified["base_B"]
+    lo=tuple(verified["lower_B"][stat] for stat in scenario.STATS)
+    hi=tuple(verified["upper_B"][stat] for stat in scenario.STATS)
+    seeds=initial_seeds(B,lo,hi)
+    need(len(seeds)==2 and seeds[0]!=seeds[1] and
+         all(scheduler.eligible(
+             tuple(row[stat] for stat in scenario.STATS),B,lo,hi)
+             for row in seeds),
+         "B8_SELECTED_V096_EXISTING_ADAPTIVE_SEED_FEASIBILITY_DRIFT")
+    final_identity={
+        "schema":"v434_b8_selected_full_native_profile_source_binding_v1",
+        "v433_preconsumable_source_sha256":bind_sha,
+        "verified_v096_preflight_sha256":hashlib.sha256(
+            canonical(verified).encode("utf8")).hexdigest(),
+        "final_profile_sha256":composed["source_profile_sha256"],
+        "final_scenario_digest":
+            composed["v096_typed_input_unadmitted"]["scenario_digest"],
+        "seed_targets_B":seeds,
+        "installed_v212_manifest_sha256":doc["manifest_sha256"],
+        "selected_budget_identity_sha256":
+            proof["selected_budget_identity_sha256"]}
+    return {**result,
+        "status":"B8_SELECTED_V096_COMPLETE_PROFILE_BUDGET_NOT_ADMITTED",
+        "profile_simc":composed["profile_simc"],
+        "source_profile_sha256":composed["source_profile_sha256"],
+        "scenario_source_only":composed["scenario"],
+        "v096_typed_input_unadmitted":
+            composed["v096_typed_input_unadmitted"],
+        "v096_selected_source_only_preflight":verified,
+        "seed_targets_B_unadmitted":seeds,
+        "final_source_identity":final_identity,
+        "final_source_identity_sha256":hashlib.sha256(
+            canonical(final_identity).encode("utf8")).hexdigest(),
+        "runtime_manifest_created":False,
+        "native_execution_authorized":False}
 
 
 def _verified_one_spec_G_profile_scope(*, source_bundle, candidate,
@@ -1228,7 +1297,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
             class_tier_five=tier_data,
             original_v191_link=linked_originals,
             installed_path=fresh_installed_environment_path,
-            cache_path=season_selected_static_cache_path)
+            cache_path=season_selected_static_cache_path,
+            season_profile_inputs=season_profile_inputs,
+            weapon_layout=weapon_layout,fillers=fillers)
     if season_profile_inputs is not None:
         source_only=season_profile_source_only(
             profile=profile,cfg=cfg,weapon_layout=weapon_layout,user=user,
