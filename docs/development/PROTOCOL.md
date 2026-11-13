@@ -1,3 +1,5 @@
+> **v405 확인된 재현 가능한 운영 원칙:** [A7 정상 `v216` Build가 WCL/DB2 일치로 선택 후보를 스스로 구성·v405가 source 후보(내부 포함)와 공개 역할을 대조하고 v217로 봉인](notes/2026-11-13_p1-v405-a7-automated-current-source-selection-verified.md). AI/사람의 개별 item ID 검증을 자동 수집의 필수 의존성으로 만들지 않는다. 실 KR70783 [Actions #43375839959](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43375839959) 209 자동 확인/134 공개·동일 입력 HTTP0 재사용. [정본 78 JSON](78_ELEMENT_COMPLETION_CONTRACTS.json): A7 generic/current_source=PASS, product_integration=PENDING. **실 user→SimC 결과 전까지는 A7 전체 COMPLETE나 환경 준비 완료 선언 금지**, 다음 A8 원본 리비전 정합. WSE 진단 전용 정책 계속 유효.
+
 > **최신 A7 정책 v404 (매 채팅/매 시즌 강제):** [WSE는 보조 관측, 현재 아이템 소속의 필수 인증/차단 Gate가 아님](notes/2026-11-13_p1-v404-a7-wse-diagnostic-only-source-first-membership.md). 엔진은 Blizzard/WCL 활성 레이드·쐐기와 동일 빌드 DB2 Item/Journal/DisplaySeason 관계 및 SimC 사용 조건을 **자동 처리**한다. 누락된 소속 근거만 해당 선택 항목에서 보류; WSE 자체·선택하지 않은 아이템 때문에 전체 환경을 차단하지 않는다. GPT 수동 WSE 판정, 미래 WSE 전수/별도 효과 엔진/Native 반복 금지. [focused #43373512035](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43373512035) 회귀 통과; 사용자 E2E는 아직 미검증.
 
 # SIMC 개발 지속성·지식 유지 프로토콜
