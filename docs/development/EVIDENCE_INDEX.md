@@ -1,3 +1,5 @@
+> **2026-11-13 v406 인계 기준:** [78요소 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261113_P1_V406_A8_78ELEMENT_READONLY_RESTORE.md) / [상태 원장](78_ELEMENT_COMPLETION_CONTRACTS.json) / [A7 현재 원본 영수증 범위](notes/2026-11-13_p1-v405-a7-automated-current-source-selection-verified.md). A7 자동 후보 시즌 source 검증은 generic/current_source만 PASS, 실 사용자 제품 E2E 미실행. 하단 기존 Native는 조건 일치 시 재사용; 새 Native 재실행 없이 인계.
+
 # Native·Actions 증거 지도 — 범위별 재사용
 
 > 각 run은 당시 정확한 HEAD/바이너리/프로필/시즌/iterations 범위의 역사 증거다. 이 문서를 만드는 것은 신규 PASS가 아니다.
