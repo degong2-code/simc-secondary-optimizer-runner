@@ -1,0 +1,30 @@
+name: p1 v414 installed season L and snapshot identity offline
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v113_local_web_api.py
+      - tests/test_p3_ham_fresh_v212_web_profile_bridge_offline.py
+      - .github/workflows/p1_v414_fresh_special_L_user_session_focused.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  fresh-special-L:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Existing web offline dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements-web-test.txt
+      - name: P1 exact installed source for special L and resume, Native 0
+        env:
+          PYTHONPATH: runner:integration_probes:.
+        run: |
+          python -m unittest -v \
+            tests.test_p3_ham_fresh_v212_web_profile_bridge_offline.VerifiedFreshWebProfileBridge.test_fresh_resume_uses_exact_install_sha_even_with_other_same_oil \
+            tests.test_p3_ham_fresh_v212_web_profile_bridge_offline.VerifiedFreshWebProfileBridge.test_fresh_special_L_uses_selected_catalog_and_keeps_v212_environment \
+            tests.test_p3_ham_fresh_v212_web_profile_bridge_offline.VerifiedFreshWebProfileBridge.test_missing_pinned_v212_installed_source_blocks_before_special_L_native

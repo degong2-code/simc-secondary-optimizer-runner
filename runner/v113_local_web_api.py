@@ -1201,10 +1201,14 @@ class LocalJobs:
             physical_O=selected_doc.get("official_O_physical_source")
             selected_oils=(physical_O.get("selected_oil_item_ids_by_hand")
                            if type(physical_O) is dict else {})
+            # Session already carries its exact v212 installation SHA.
+            # Selecting by oil alone can pick another valid F/gem variant,
+            # blocking resume or reusing unrelated product conditions.
             verified=environment_build.find_verified_installed_season_environment(
                 self.root,summary["target_ilevel"],
                 expected_game_build=summary["game_build"],
-                selected_oil_item_ids_by_hand=selected_oils)
+                selected_oil_item_ids_by_hand=selected_oils,
+                expected_installed_manifest_sha256=digest)
             if (verified is None or
                 verified["installed_manifest_sha256"]!=
                     summary["fresh_v212_installed_manifest_sha256"]):
@@ -1620,6 +1624,38 @@ class LocalJobs:
         except Exception as exc:
             raise blocked(exc) from None
 
+    def _catalog_for_selected_special_L(self, user, params):
+        """Reuse the same installed v212 catalog as normal user planning.
+
+        This executes only for an explicitly selected special item. An
+        uninstalled/legacy session retains its packaged catalog path; an
+        explicitly pinned installed build never falls back to that package.
+        No SimC/Native or independent authentication is added here.
+        """
+        gems=(None if params.user_socket_total is None else {
+            "socket_total":params.user_socket_total,
+            "special_gem_id":params.user_special_gem_id})
+        if (params.user_special_gem_id is not None and
+                (params.user_socket_total is None or
+                 params.user_socket_total<5)):
+            raise environment_manifest.EnvironmentBlocked(
+                "WEB_USER_TOTAL_SOCKETS_INCLUDE_SPECIAL_INVALID")
+        verified=self.load_fresh_profile_for_user(
+            user["target"]["ilevel"],
+            params.installed_season_game_build or params.fresh_season_build,
+            selected_oil_hands=user["oil_hands"],
+            selected_oil_item_ids_by_hand=(
+                params.selected_oil_item_ids_by_hand or None),
+            required_gem_layout=gems,
+            selected_flask_item_id=params.selected_flask_item_id)
+        if verified is None:
+            if params.installed_season_game_build is not None:
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_SELECTED_INSTALLED_SEASON_BUILD_NOT_FOUND")
+            return self.source_catalog_path()
+        return pathlib.Path(
+            verified["source_compilation"]["source_catalog_path"])
+
     def prepare_with_internal_special_L(self, params):
         """Share the existing exact static-L hydration for both explicit starts.
 
@@ -1637,10 +1673,12 @@ class LocalJobs:
             with self.static_lock:
                 source=self.default_static_cache(user,params.static_cache)
                 try:
+                    selected_catalog=self._catalog_for_selected_special_L(
+                        user,params)
                     hydrated=exact_L.hydrate(
                         user,self.root,binary,params.revision,
                         existing=source,
-                        source_catalog_path=self.source_catalog_path())
+                        source_catalog_path=selected_catalog)
                 except Exception as exc:
                     raise blocked(exc) from None
                 prepared_params=params.model_copy(update={
@@ -1651,11 +1689,19 @@ class LocalJobs:
             receipt_info=exact_L.write_start_receipt(
                 folder,hydrated["start_receipt"])
             self._record_v208_receipt(folder,receipt_info)
-            bootstrap_path=folder/"generated"/"v098_bootstrap_result.json"
-            bootstrap_result=json.loads(bootstrap_path.read_text(encoding="utf8"))
-            environment=self._seal_environment_manifest(
-                folder,bootstrap_result,folder/receipt_info["path"],
-                prepared.get("profile_stage"))
+            # Fresh v212 session is already source-bound by v098/v096.
+            # Re-running the legacy packaged v216 manifest here can reject
+            # a correct new-season L variant and mix previous-season sources.
+            environment=prepared.get("environment_manifest")
+            if (type(environment) is not dict or
+                    environment.get(
+                        "fresh_v212_installed_manifest_sha256") is None):
+                bootstrap_path=folder/"generated"/"v098_bootstrap_result.json"
+                bootstrap_result=json.loads(
+                    bootstrap_path.read_text(encoding="utf8"))
+                environment=self._seal_environment_manifest(
+                    folder,bootstrap_result,folder/receipt_info["path"],
+                    prepared.get("profile_stage"))
         else:
             environment=prepared.get("environment_manifest")
         # The environment manifest is sealed before the optimizer worker is

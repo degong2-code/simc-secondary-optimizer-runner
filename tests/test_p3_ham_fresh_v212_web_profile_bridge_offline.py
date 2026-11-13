@@ -435,6 +435,88 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
         self.assertEqual(restored.call_args.kwargs[
             "expected_installed_manifest_sha256"],self.digest)
 
+    def test_fresh_resume_uses_exact_install_sha_even_with_other_same_oil(self):
+        session=self.root/("d"*20)
+        session.mkdir()
+        (session/"V106_SESSION_IDENTITY.json").write_text(json.dumps({
+            "fresh_v212_installed_manifest_sha256":self.digest}),encoding="utf8")
+        summary={"game_build":self.build,"target_ilevel":334,
+                 "fresh_v212_installed_manifest_sha256":self.digest}
+        with mock.patch.object(web.environment_manifest,
+                "verify_fresh_installed_environment"), \
+             mock.patch.object(web.environment_build,
+                "find_verified_installed_season_environment",
+                return_value={"installed_manifest_sha256":self.digest}) as find:
+            selected=self.jobs._verify_environment_dependencies(summary,session)
+        self.assertEqual(selected,{})
+        self.assertEqual(find.call_args.kwargs[
+            "expected_installed_manifest_sha256"],self.digest)
+        self.assertEqual(find.call_args.kwargs[
+            "selected_oil_item_ids_by_hand"],{})
+
+    def test_fresh_special_L_uses_selected_catalog_and_keeps_v212_environment(self):
+        self.remember()
+        verified=self.jobs._verified_fresh_profile_result
+        controls=web.sessions.standard_controls()
+        controls["special_items"]=[{
+            "slot":"back","item_id":159288,"options":{}}]
+        params=web.UserRequest(
+            controls=controls,binary=str(self.root/"unused-simc"),
+            revision="abcdef0",current_season_product=True,
+            installed_season_game_build=self.build)
+        folder=self.root/("d"*20)
+        folder.mkdir()
+        ready={"schema":"v113_web_fresh_v212_installed_session_v1",
+               "fresh_v212_installed_manifest_sha256":self.digest}
+        receipt={"path":"start-receipts/v208-selected.json",
+                 "receipt_sha256":"c"*64}
+        with mock.patch.object(self.jobs,"load_fresh_profile_for_user",
+                return_value=verified) as select, \
+             mock.patch.object(self.jobs,"default_static_cache",
+                return_value=None), \
+             mock.patch.object(web.exact_L,"hydrate",return_value={
+                "static_cache_path":str(self.root/"static-L.json"),
+                "start_receipt":{},"native_new_calls":0,
+                "cache_reused":1}) as hydrate, \
+             mock.patch.object(self.jobs,"plan",return_value={
+                "session_id":folder.name,
+                "environment_manifest":ready}) as plan, \
+             mock.patch.object(self.jobs,"folder",return_value=folder), \
+             mock.patch.object(web.exact_L,"write_start_receipt",
+                return_value=receipt), \
+             mock.patch.object(self.jobs,"_record_v208_receipt"), \
+             mock.patch.object(self.jobs,"_seal_environment_manifest",
+                side_effect=AssertionError("PACKAGED_SEASON_MUST_NOT_RUN")):
+            prepared=self.jobs.prepare_with_internal_special_L(params)
+        self.assertEqual(prepared[2],ready)
+        self.assertEqual(prepared[3],receipt)
+        self.assertEqual(hydrate.call_args.kwargs[
+            "source_catalog_path"],self.catalog)
+        self.assertEqual(hydrate.call_args.kwargs["existing"],None)
+        self.assertEqual(plan.call_count,1)
+        self.assertEqual(select.call_args.args[:2],(334,self.build))
+
+    def test_missing_pinned_v212_installed_source_blocks_before_special_L_native(self):
+        controls=web.sessions.standard_controls()
+        controls["special_items"]=[{
+            "slot":"back","item_id":159288,"options":{}}]
+        params=web.UserRequest(
+            controls=controls,binary=str(self.root/"unused-simc"),
+            revision="abcdef0",current_season_product=True,
+            installed_season_game_build=self.build)
+        with mock.patch.object(self.jobs,"load_fresh_profile_for_user",
+                return_value=None), \
+             mock.patch.object(self.jobs,"default_static_cache",
+                return_value=None), \
+             mock.patch.object(web.exact_L,"hydrate",
+                side_effect=AssertionError("NO_UNVERIFIED_SPECIAL_L_NATIVE")) as native:
+            with self.assertRaises(web.HTTPException) as raised:
+                self.jobs.prepare_with_internal_special_L(params)
+        self.assertEqual(raised.exception.status_code,422)
+        self.assertEqual(raised.exception.detail["code"],
+                         "WEB_SELECTED_INSTALLED_SEASON_BUILD_NOT_FOUND")
+        native.assert_not_called()
+
     def test_existing_fresh_snapshot_cannot_fall_back_to_wrong_target(self):
         with (
             mock.patch.object(web.environment_manifest,
