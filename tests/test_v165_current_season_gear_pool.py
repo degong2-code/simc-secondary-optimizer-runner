@@ -121,8 +121,12 @@ class Roles(unittest.TestCase):
                 "display_season_id":37,"world_state_expression_id":0,
                 "journal_encounter_id":11,"journal_instance_id":1
             },37,raid=True))
-            self.assertFalse(gear._journal_origin_current(raid,42,raid=True)
-                             and raid["display_season_id"]!=0)
+            future={
+                "source":"raid_journal","season_evidence":"DB2_DISPLAY_SEASON_MATCH",
+                "display_season_id":37,"world_state_expression_id":0,
+                "journal_encounter_id":11,"journal_instance_id":1}
+            self.assertFalse(gear._journal_origin_current(
+                future,42,raid=True))
 
     def test_no_effect_table_does_not_assert_plain(self):
         with tempfile.TemporaryDirectory() as d:
