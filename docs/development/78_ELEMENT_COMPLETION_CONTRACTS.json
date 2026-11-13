@@ -6,7 +6,7 @@
     "current_source_acceptance": "actual current game-build provider source + exact SHA + correct consumed scope",
     "product_acceptance": "actual user input through season environment and SimC DPS/SEM/95% output; separate final product E2E",
     "optional_acceptance": "NOT_APPLICABLE only with concrete feature-specific reason and owner evidence; no blanket exemptions",
-    "next_review": "A4",
+    "next_review": "A7",
     "a7_may_be_next_only_after_generic_review_of": [
       "A4",
       "A5",
@@ -106,6 +106,33 @@
         "A11",
         "G2"
       ]
+    },
+    "a4_generic": {
+      "kind": "GENERALIZATION_REGRESSION",
+      "note": "docs/development/notes/2026-11-13_p1-v402-a4-a6-generic-scope-reassessment.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43364420119",
+      "tested_sha": "5d5af73907c3a912e1a7ded46e1e1e5d46696a65",
+      "supports": [
+        "A4"
+      ]
+    },
+    "a5_generic": {
+      "kind": "GENERALIZATION_REGRESSION",
+      "note": "docs/development/notes/2026-11-13_p1-v402-a4-a6-generic-scope-reassessment.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43365447503",
+      "tested_sha": "0bc84c7bb14b636cb703244b6495946b6506cb23",
+      "supports": [
+        "A5"
+      ]
+    },
+    "a6_generic": {
+      "kind": "GENERALIZATION_REGRESSION",
+      "note": "docs/development/notes/2026-11-13_p1-v402-a4-a6-generic-scope-reassessment.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43366468001",
+      "tested_sha": "d21cbed88975f2cb471cf91d4583c9b073f27428",
+      "supports": [
+        "A6"
+      ]
     }
   },
   "elements": [
@@ -196,8 +223,11 @@
       "scope": "BASE",
       "acceptance": "선택한 필수 아이템·콘텐츠에 필요한 인증 API 영수증",
       "generic": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "a4_source",
+          "a4_generic"
+        ]
       },
       "current_source": {
         "state": "PASS",
@@ -220,8 +250,11 @@
       "scope": "BASE",
       "acceptance": "필수 레이드·던전 보조 관계·수집 조건",
       "generic": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "a5_source",
+          "a5_generic"
+        ]
       },
       "current_source": {
         "state": "PASS",
@@ -244,8 +277,11 @@
       "scope": "BASE",
       "acceptance": "동일 빌드 필요 테이블·SHA·재사용",
       "generic": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "a6_source",
+          "a6_generic"
+        ]
       },
       "current_source": {
         "state": "PASS",
