@@ -105,5 +105,92 @@ class SelectedWebSession(unittest.TestCase):
         self.assertIn("WEB_SELECTED_B8_EXACT_STATIC_CACHE_REQUIRED",
                       str(caught.exception.detail))
 
+
+    def _selected_saved_session(self):
+        import json
+        self.base.installed_doc["status"]=(
+            "FRESH_SEASON_VERIFIED_ENVIRONMENT_INSTALLED_READY")
+        self.base.installed.write_text(json.dumps(
+            self.base.installed_doc),encoding="utf8")
+        identity={"schema":web.sessions.SCHEMA,
+                  "fresh_v212_installed_manifest_sha256":self.base.digest,
+                  "v435_selected_source_identity":{"schema":"v435_test_source"}}
+        digest=web.sessions.sha(web.sessions.canonical(
+            identity).encode("utf8"))
+        folder=self.base.root/digest[:20]
+        generated=folder/"generated"
+        generated.mkdir(parents=True)
+        (folder/"V106_SESSION_IDENTITY.json").write_text(
+            web.sessions.canonical(identity)+"\n",encoding="utf8")
+        manifest={"schema":web.bootstrap.entry.SCHEMA,
+                  web.bootstrap.entry.SELECTED_FRESH_SEASON_FIELD:{
+                    "schema":web.bootstrap.entry.SELECTED_FRESH_SEASON_SCHEMA,
+                    "installed_environment_path":str(self.base.installed),
+                    "installed_manifest_sha256":self.base.digest,
+                    "selected_v435_identity_sha256":digest}}
+        (generated/"manifest.json").write_text(
+            web.sessions.canonical(manifest)+"\n",encoding="utf8")
+        return folder,manifest,identity
+
+    def test_v438_selected_source_returns_installed_environment_summary(self):
+        folder,manifest,identity=self._selected_saved_session()
+        with mock.patch.object(
+                web.environment_manifest,
+                "verify_fresh_installed_environment") as installed:
+            summary=self.jobs._read_environment_summary(folder)
+        self.assertEqual(summary[
+            "fresh_v212_installed_manifest_sha256"],self.base.digest)
+        self.assertEqual(summary["game_build"],self.base.build)
+        self.assertEqual(summary["target_ilevel"],334)
+        installed.assert_called_once()
+
+    def test_v438_selected_start_rechecks_real_v217_install_not_none(self):
+        folder,manifest,identity=self._selected_saved_session()
+        with (
+            mock.patch.object(web.environment_manifest,
+                              "verify_fresh_installed_environment"),
+            mock.patch.object(web.environment_build,
+               "find_verified_installed_season_environment",
+               return_value={"installed_manifest_sha256":
+                             self.base.digest}) as v217
+        ):
+            summary=self.jobs._read_environment_summary(folder)
+            self.jobs._verify_environment_dependencies(summary,folder)
+        v217.assert_called_once()
+        self.assertEqual(v217.call_args.kwargs[
+            "expected_installed_manifest_sha256"],self.base.digest)
+
+    def test_v438_selected_manifest_without_v435_seal_fails_closed(self):
+        folder,manifest,identity=self._selected_saved_session()
+        identity.pop("v435_selected_source_identity")
+        (folder/"V106_SESSION_IDENTITY.json").write_text(
+            web.sessions.canonical(identity)+"\n",encoding="utf8")
+        with self.assertRaisesRegex(
+                web.environment_manifest.EnvironmentBlocked,
+                "WEB_B8_SELECTED_SOURCE_OR_SESSION_SHA_DRIFT"):
+            self.jobs._read_environment_summary(folder)
+
+    def test_v438_selected_manifest_changed_v435_sha_fails_closed(self):
+        folder,manifest,identity=self._selected_saved_session()
+        manifest[web.bootstrap.entry.SELECTED_FRESH_SEASON_FIELD][
+            "selected_v435_identity_sha256"]="0"*64
+        (folder/"generated"/"manifest.json").write_text(
+            web.sessions.canonical(manifest)+"\n",encoding="utf8")
+        with self.assertRaisesRegex(
+                web.environment_manifest.EnvironmentBlocked,
+                "WEB_B8_SELECTED_SOURCE_OR_SESSION_SHA_DRIFT"):
+            self.jobs._read_environment_summary(folder)
+
+    def test_v438_two_installed_fields_do_not_suppress_verifier(self):
+        folder,manifest,identity=self._selected_saved_session()
+        manifest[web.bootstrap.entry.FRESH_SEASON_FIELD]={
+            "installed_environment_path":str(self.base.installed)}
+        (folder/"generated"/"manifest.json").write_text(
+            web.sessions.canonical(manifest)+"\n",encoding="utf8")
+        with self.assertRaisesRegex(
+                web.environment_manifest.EnvironmentBlocked,
+                "WEB_FRESH_MULTIPLE_INSTALLED_SOURCE_FIELDS"):
+            self.jobs._read_environment_summary(folder)
+
 if __name__=="__main__":
     unittest.main()

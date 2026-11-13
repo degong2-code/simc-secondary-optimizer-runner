@@ -1140,9 +1140,39 @@ class LocalJobs:
                 return None
             try:
                 data=json.loads(manifest.read_text(encoding="utf8"))
-                fresh=data.get(bootstrap.entry.FRESH_SEASON_FIELD)
-                if type(fresh) is not dict:
+                # v438: selected v436 manifests use the separate installed
+                # field but MUST receive the same v212/v217 pre-start
+                # verification as baseline fresh sessions. A missing summary
+                # used to silently skip _verify_environment_dependencies.
+                selected=data.get(
+                    bootstrap.entry.SELECTED_FRESH_SEASON_FIELD)
+                normal=data.get(bootstrap.entry.FRESH_SEASON_FIELD)
+                if selected is not None and normal is not None:
+                    raise environment_manifest.EnvironmentBlocked(
+                        "WEB_FRESH_MULTIPLE_INSTALLED_SOURCE_FIELDS")
+                fresh=selected if selected is not None else normal
+                if fresh is None:
                     return None
+                if type(fresh) is not dict:
+                    raise environment_manifest.EnvironmentBlocked(
+                        "WEB_FRESH_INSTALLED_SOURCE_MUST_BE_OBJECT")
+                if selected is not None:
+                    identity_path=pathlib.Path(folder)/"V106_SESSION_IDENTITY.json"
+                    if identity_path.is_symlink() or not identity_path.is_file():
+                        raise environment_manifest.EnvironmentBlocked(
+                            "WEB_B8_SELECTED_V435_SESSION_IDENTITY_MISSING")
+                    identity=json.loads(identity_path.read_text(encoding="utf8"))
+                    selected_bound=identity.get("v435_selected_source_identity")
+                    if (type(selected_bound) is not dict
+                        or fresh.get("schema")!=
+                           bootstrap.entry.SELECTED_FRESH_SEASON_SCHEMA
+                        or fresh.get("selected_v435_identity_sha256")!=
+                           sessions.sha(sessions.canonical(identity).encode(
+                               "utf8"))
+                        or sessions.sha(sessions.canonical(identity).encode(
+                               "utf8"))[:20]!=pathlib.Path(folder).name):
+                        raise environment_manifest.EnvironmentBlocked(
+                            "WEB_B8_SELECTED_SOURCE_OR_SESSION_SHA_DRIFT")
                 installed=pathlib.Path(fresh["installed_environment_path"])
                 if installed.is_symlink() or not installed.is_file():
                     raise environment_manifest.EnvironmentBlocked(
