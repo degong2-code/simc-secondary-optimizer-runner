@@ -114,10 +114,17 @@ def assess(*, source, catalog, expected_game_build, source_report_sha256,
                  "A7_PUBLIC_ITEM_WITHOUT_AUTHENTICATED_SOURCE")
             raw_sources=original.get("acquisition_sources")
             known_sources=candidate.get("source_evidence")
+            # v166 intentionally retains only the small consumer-relevant
+            # subset of each original v163 source (not WCL names or WSE
+            # diagnostic raw strings). Compare that exact projection.
             need(type(raw_sources) is list and type(known_sources) is list
                  and all(type(s) is dict for s in raw_sources+known_sources)
-                 and all(sha(s) in {sha(x) for x in raw_sources}
-                         for s in known_sources),
+                 and all(
+                     any(all(k in original_source and
+                             original_source[k]==value
+                             for k,value in observed.items())
+                         for original_source in raw_sources)
+                     for observed in known_sources),
                  "A7_PUBLIC_ITEM_SOURCE_EVIDENCE_DRIFT")
             eligible=[]
             for src in raw_sources:
