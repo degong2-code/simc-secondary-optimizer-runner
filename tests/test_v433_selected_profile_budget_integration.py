@@ -125,8 +125,7 @@ class SelectedSourceProfileBridge(unittest.TestCase):
         with self.assertRaisesRegex(bootstrap.UserScenarioBlocked,
                                     "B8_SELECTED_EXACT_STATIC_CACHE_INVALID"):
             self.preflight()
-        self.fx=B8BudgetPreflight()
-        self.fx.setUp()
+        first["static_digest"]=cache_mod.digest(first["static"])
         self.refresh_cache()
         self.fx.link["source_catalog_artifact_sha256"]="e"*64
         with self.assertRaisesRegex(bootstrap.UserScenarioBlocked,

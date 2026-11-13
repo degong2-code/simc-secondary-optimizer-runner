@@ -345,10 +345,12 @@ def _selected_season_profile_budget_preflight(*, user, profile, cfg, rows,
     need(install.is_file() and not install.is_symlink(),
          "B8_SELECTED_VERIFIED_INSTALL_FILE_REQUIRED")
     doc,_=installed_manifest.read_json(install)
-    installed_manifest.verify_fresh_installed_environment(doc)
-    need(doc["game_build"]==candidate.get("game_build") and
-         doc["target_ilevel"]==user["target"]["ilevel"] and
-         doc["simc_revision"]==candidate.get("simc_revision"),
+    # v432.reconcile verifies the immutable v212 document exactly once.
+    # Avoid duplicate full validation; its source SHA check is authoritative.
+    need(type(doc) is dict and
+         doc.get("game_build")==candidate.get("game_build") and
+         doc.get("target_ilevel")==user["target"]["ilevel"] and
+         doc.get("simc_revision")==candidate.get("simc_revision"),
          "B8_SELECTED_INSTALLED_BUILD_REVISION_OR_ILEVEL_DRIFT")
     selected_equipment,_=common.physical_gear_groups(
         rows,groups,catalyst)
