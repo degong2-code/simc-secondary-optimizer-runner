@@ -31,7 +31,7 @@
 
 | ID · 요소 | 적용 영역 | 반드시 준비할 정보/수락 조건 | 과거 감사 판정 | 기존 근거 (기능/버전) | 우선 재개 작업 | 이번 인계 준비 판정 |
 |---|---|---|---|---|---|---|
-| **A1 확장팩·시즌** | BASE | 확장팩/활성 시즌 ID, 갱신 이벤트와 정확한 원본 유효범위 | 부분 구현/검증 | `v216·v242·v289` | [v385 동일빌드 이벤트 보호](notes/2026-11-13_p1-v385-a1-season-identity-refresh-boundary.md) + [v387 확장팩명 하드코딩 제거](notes/2026-11-13_p1-v387-a1-all-expansion-source-discovery.md): v155 전체 WCL zone 확장팩 ID·v163 DB2 동시즌 조인 연결; 순수 함수 10 스모크 PASS, Python CI/실제 정상 키 ZERO-SOURCE 미실행 | **PENDING_SCOPE** |
+| **A1 확장팩·시즌** | BASE | 확장팩/활성 시즌 ID, 갱신 이벤트와 정확한 원본 유효범위 | 부분 구현/검증 | `v216·v242·v289` | [v385 동일빌드 이벤트 보호](notes/2026-11-13_p1-v385-a1-season-identity-refresh-boundary.md) + [v387 확장팩명 하드코딩 제거](notes/2026-11-13_p1-v387-a1-all-expansion-source-discovery.md): v155 전체 WCL zone 확장팩 ID·v163 DB2 동시즌 조인 연결; 순수 함수 10 스모크 PASS, Python CI/실제 정상 키 ZERO-SOURCE 미실행; [v388 국소 Python 실제 CI](notes/2026-11-13_p1-v388-a1-and-app-filelist-real-offline-ci.md) 74 PASS/1 SKIP·TXT272, 실제 현 시즌 ZERO-SOURCE 아직 미실행 | **PENDING_SCOPE** |
 | **A2 현재 게임 빌드** | BASE | 지역/Retail 빌드 번호·원본 빌드 정합 | 과거 범위한정 실증 | `v289` | 최신 Build 요청에 동일 빌드 전달 확인 | **PENDING_SCOPE** |
 | **A3 활성 콘텐츠** | BASE | 실제로 쓰는 레이드·던전만 시즌 관계 입증 | 부분 구현/검증 | `v163·v242` | 미선택 콘텐츠 미해석은 전역 Gate 제외 | **PENDING_SCOPE** |
 | **A4 Blizzard 원본** | BASE | 선택한 필수 아이템·콘텐츠에 필요한 인증 API 영수증 | 부분 구현/검증 | `v242` | 기존 인증/봉인 재사용, 부족 필드만 수집 | **PENDING_SCOPE** |
