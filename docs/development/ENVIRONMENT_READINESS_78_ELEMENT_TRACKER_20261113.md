@@ -1,6 +1,6 @@
 # SIMC SECONDARY OPTIMIZER — 78개 준비 요소 기준 추적표 (2026-11-13)
 
-> **2026-11-13 v383 증거 재조회:** A10/A11/G2 **3개는 `READY_SCOPED`의 역사 70783 해당 실행 범위로만 표시**한다 ([원본 Actions ZIP 재대조](notes/2026-11-13_p1-v383-a10-a11-g2-archived-native-receipt-reuse.md)). 나머지 **75개는 PENDING_SCOPE**이며 해당 3개도 최신 격리 HEAD·현 사용자 Windows 요청·미래 시즌·선택 변형의 일반 READY를 의미하지 않는다. 78개 상태에서 `READY_SCOPED` 개수는 범위별이고, 전역 완료 카운트가 아니다.
+> **2026-11-13 v395 최신 개별 판정:** **A1·A2 = 2개 `ENGINE_AUTODISCOVERY_PASS — CURRENT_KR_70783_ZERO_SOURCE_SCOPE`** ([A1 실제 WCL·10 DB2 유일 조인](notes/2026-11-13_p1-v394-a1-current-zero-source-engine-pass.md) · [A2 공식 BPSV/전달](notes/2026-11-13_p1-v395-a2-current-retail-build-source-and-propagation-pass.md)). **A10/A11/G2 = 3개 역사 70783 조건만 `READY_SCOPED`** ([v383 원본 Actions ZIP](notes/2026-11-13_p1-v383-a10-a11-g2-archived-native-receipt-reuse.md)). **나머지 73개 `PENDING_SCOPE`**. 범용 기능 A1/A2 PASS ≠ A7 개별 아이템/미관측 WSE·GJFO 설치·최종 사용자 ZERO-SOURCE→E2E PASS. 미래 미출시 자료의 사전 실측은 기능 완료 선행 Gate가 아니다.
 
 
 > **상시 운영 규칙:** 각 READY 판정 전 [범용 개발·정합성·검증 운영 헌장](OPERATING_CHARTER_FUTURE_SEASONS_AND_EVIDENCE_20261113.md)에서 제로베이스 엄격도·증거 종류·BASE/USER/RUN 분리·최소 제품 소비 필드·최초 결함 경계 원칙을 확인한다. **이 링크 추가는 78개 항목의 상태 변경, 신규 시험, READY 승격이 아니다.**
