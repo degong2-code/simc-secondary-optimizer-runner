@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER — 검색 가능한 개발 기능 지도
 
+> **v403 A7 결함 수정/실물 인수 보류:** [WSE guarded raid item 분류 유실 제거·선택 목록 전파 테스트](notes/2026-11-13_p1-v403-a7-selected-season-wse-propagation-gap.md). 실제 국소 [Actions #43371062757](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43371062757) **134 PASS/3 SKIP**, 합성 아이템/시즌 시험은 실제 current item 조건 인증이 아니다. A7 generic/current_source/product_integration **PENDING**, 이후 실 선택 아이템에 한해 영수증 확인. A1~A6 기존 축별 PASS 및 최종 USER-E2E PENDING 유지.
+
 > **v402 최신 상태·검증 체계:** [강제 완료 계약](POLICY_78_ELEMENT_COMPLETION_GATE_V401.md) / [기계 정본](78_ELEMENT_COMPLETION_CONTRACTS.json) / [자동 생성 현황](78_ELEMENT_STATUS_GENERATED.md) / [A4~A6 현실 원본+변경 시즌·빌드 회귀 재판정](notes/2026-11-13_p1-v402-a4-a6-generic-scope-reassessment.md). **6개 범용 엔진(활성 식별 A1~A3/일반 원본 수집 A4~A6) PASS, 6개 실제 현재 원본 PASS, 3개 과거 해당 범위 PASS, 제품 통합 0/78, 나머지 69개 generic PENDING**, 다음 A7. 이전 v400 이하의 READY/카운트 표기는 작성 시점 이력으로 읽는다.
 
 > **A6 DB2 원본 v400 현재 KR70783 BASE READY:** [실 Wago 10개 CSV·62,280,767B·10개 SHA와 v216/v217 sealed cache/product 경로 검증](notes/2026-11-13_p1-v400-a6-db2-ten-table-source-provenance-scoped-ready.md). [실 원본 #43357639329](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43357639329)과 [A6 focused CI #43366468001](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43366468001) **109 PASS/1 SKIP/0 FAIL**. **10개 테이블 실제 재다운로드·Native 0**, 새 DB2 엔진 없음. 현 원장 **A1–A3 ENGINE 3 / A4–A6 CURRENT READY 3 / A10·A11·G2 역사 READY 3 / 69 PENDING**, 다음 A7 아이템/WSE 시즌 관계(전체 아이템 단일 인증 Gate 금지).
