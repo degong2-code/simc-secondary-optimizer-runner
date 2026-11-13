@@ -18,6 +18,10 @@
 
 ## 제품·검증 불변
 
+> **최종 인수 및 증거 역추적 의무 (2026-11-13):** [운영 헌장 §11](OPERATING_CHARTER_FUTURE_SEASONS_AND_EVIDENCE_20261113.md)에 따라 `READY_SCOPED`는 (1) 정확한 코드/테스트 HEAD·출처/빌드·SHA/실행 조건 (2) 입력→원본→컴파일→예산→설치→JSON2/DPS 실행 절차 (3) 실제 기대·관측과 PASS 범위 (4) 미관측 사항·재검증 트리거를 연결한다. **78개 필요 범위를 정리한 다음 현재 실제 시즌의 빈 소스 root ZERO-SOURCE→USER-E2E 최종 PASS**가 별도로 필요하다. 역사 `READY_SCOPED`는 현재 범용 PASS와 구분한다. 실패 시 최초 불일치 stage와 관련 ID/과거 증거를 대조한다.
+
+
+
 - 26 DPS, 목표 ilvl(기본334) 또는 수동 최종 T의 절대 CHMV rating SimC DPS 최적화. 전체 착용 장비 재분배/장비 조합 추천/전체 시즌 DB는 제외.
 - 새 시즌의 G/J/F/O·원본 증명; `B=G+J+F`, `T=B+O`, 수동 T 우선, L/E/O 고정 소유·중복 금지. 기본 일반 보석 치명/가속/특화/유연 각1·특수 선택형.
 - SimC가 APL/proc/아이템 효과/DPS 소유. 효과 메커니즘 재구현·별도 효과 인증 Gate·근거 없는 Native 전수/비슷한 시즌 수치 복사 금지.
