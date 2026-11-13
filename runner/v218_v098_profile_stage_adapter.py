@@ -130,6 +130,14 @@ def build_or_reuse(*,user,session_folder,binary,revision,static_cache,
         independent_334=False,independent_target_level=False,
         current_season_product=False,source_catalog_path=None,
         verified_fresh_environment_result=None):
+    # v433 can compose selected user profile + G/L with v432 without a
+    # runtime manifest. Until v096 validates that *revised* B and cache
+    # identity, do not let the web stage mistake the unadmitted preview
+    # for a runnable fresh v212 user session or invoke v208 Native first.
+    if verified_fresh_environment_result is not None and (
+            user["special_items"] or user["embellishments"]):
+        raise engine.StageExecutionBlocked(
+            "V218_FRESH_B8_SELECTED_PROFILE_BUDGET_NOT_RUNTIME_ADMITTED")
     folder=pathlib.Path(session_folder).expanduser().resolve()
     generated=folder/"generated"
     generated.mkdir(parents=True,exist_ok=True)

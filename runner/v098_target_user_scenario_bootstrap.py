@@ -25,6 +25,7 @@ import v202_one_enchant_admission as verified_enchant
 import v206_nonchmv_eagle_selection as nonchmv_enchant
 import v212_environment_manifest as installed_manifest
 import v222_season_budget_contract as budget_contract
+import v432_selected_4pc_budget_bridge as selected_budget
 import v294_dk_runeforge_selection as runeforge_mod
 
 SCHEMA="v098_target_ilevel_user_scenario_v1"
@@ -304,6 +305,105 @@ def _v191_raw_gear_tier_link(bundle, originals, revision):
             "raw_source_sha256":sha,
             "environment_ready":False,"native_authorized":False}
 
+
+
+
+def _selected_season_profile_budget_preflight(*, user, profile, cfg, rows,
+                                              groups, catalyst, baseline_rows,
+                                              candidate, class_tier_five, original_v191_link,
+                                              installed_path, cache_path):
+    """Bind actual v101 overlaid user profile to v432 G/L: NO session/Native.
+
+    This is deliberately separate from v096. Existing v212 installed G is a
+    representative reference, not the selected user G. A v432 delta cannot
+    be silently passed to the old unselected v096 source admission contract.
+    """
+    need(type(candidate) is dict and
+         type(candidate.get("selected_G_slot_ids")) is dict and
+         type(original_v191_link) is dict and
+         type(baseline_rows) is dict,
+         "B8_SELECTED_PROFILE_ORIGINAL_V232_V191_SOURCES_REQUIRED")
+    cache_file=pathlib.Path(cache_path).expanduser()
+    need(cache_file.is_file() and not cache_file.is_symlink() and
+         0<cache_file.stat().st_size<=25_000_000,
+         "B8_SELECTED_STATIC_CACHE_SOURCE_FILE_REQUIRED")
+    raw=cache_file.read_bytes()
+    need(0<len(raw)<=25_000_000,
+         "B8_SELECTED_STATIC_CACHE_SOURCE_BYTES_INVALID")
+    try:
+        cached=json.loads(raw)
+        cache_mod.check_cache(cached)
+    except (ValueError,TypeError,KeyError,UnicodeError) as exc:
+        raise UserScenarioBlocked(
+            "B8_SELECTED_EXACT_STATIC_CACHE_INVALID:"+type(exc).__name__) from exc
+    # Same-season v046 static entries are independent of the SimC revision.
+    # A different cache season needs an explicit verified owner migration;
+    # never assume its identically named item IDs are equivalent.
+    need(cached["season"]==cache_mod.SEASON,
+         "B8_SELECTED_CACHE_SEASON_NOT_VERIFIED_FOR_CURRENT_BUILD")
+    install=pathlib.Path(installed_path).expanduser()
+    need(install.is_file() and not install.is_symlink(),
+         "B8_SELECTED_VERIFIED_INSTALL_FILE_REQUIRED")
+    doc,_=installed_manifest.read_json(install)
+    installed_manifest.verify_fresh_installed_environment(doc)
+    need(doc["game_build"]==candidate.get("game_build") and
+         doc["target_ilevel"]==user["target"]["ilevel"] and
+         doc["simc_revision"]==candidate.get("simc_revision"),
+         "B8_SELECTED_INSTALLED_BUILD_REVISION_OR_ILEVEL_DRIFT")
+    selected_equipment,_=common.physical_gear_groups(
+        rows,groups,catalyst)
+    need(cfg.get("equipment")==selected_equipment and
+         cfg.get("source",{}).get("profile_sha256")==
+             hashlib.sha256(profile.encode("utf8")).hexdigest(),
+         "B8_SELECTED_PHYSICAL_PROFILE_EQUIPMENT_OR_SHA_DRIFT")
+    try:
+        proof=selected_budget.reconcile(
+            baseline_rows=baseline_rows,
+            final_rows=rows,final_groups=groups,user=user,
+            class_tier_five=class_tier_five,
+            baseline_slot_ids=candidate["selected_G_slot_ids"],
+            installed_document=doc,
+            original_v191_link=original_v191_link,
+            native_cache=cached,
+            expected_cache_season=cache_mod.SEASON)
+    except selected_budget.SelectedBudgetBlocked as exc:
+        raise UserScenarioBlocked(
+            "B8_SELECTED_G_L_PREFLIGHT_BLOCKED:"+str(exc)) from exc
+    profile_sha=cfg["source"]["profile_sha256"]
+    budget_identity=proof.get("selected_budget_identity_sha256")
+    bound={
+        "schema":"v433_b8_selected_profile_budget_source_binding_v1",
+        "installed_v212_manifest_sha256":doc["manifest_sha256"],
+        "original_v191_raw_gear_tier_sha256":
+            original_v191_link["raw_source_sha256"],
+        "selected_v232_receipt_sha256":candidate["receipt_sha256"],
+        "selected_profile_sha256":profile_sha,
+        "static_cache_content_sha256":hashlib.sha256(raw).hexdigest(),
+        "selected_budget_identity_sha256":budget_identity,
+        "physical_equipment_sha256":hashlib.sha256(
+            canonical(selected_equipment).encode("utf8")).hexdigest(),
+    }
+    bind_sha=hashlib.sha256(canonical(bound).encode("utf8")).hexdigest()
+    return {
+        "schema":"v433_v098_selected_user_physical_budget_preflight_v1",
+        "status":("B8_SELECTED_PROFILE_STATIC_VARIANTS_PENDING_NO_NATIVE"
+                  if proof["missing_exact_native_variants"] else
+                  "B8_SELECTED_PROFILE_BUDGET_RECONCILED_NOT_ADMITTED"),
+        "source_profile_sha256":profile_sha,
+        "profile_simc":profile,
+        "scenario_source_only":cfg,
+        "selected_equipment":selected_equipment,
+        "budget_preflight":proof,
+        "bound_source_identity":bound,
+        "bound_source_identity_sha256":bind_sha,
+        "runtime_manifest_created":False,
+        "native_execution_authorized":False,
+        "environment_ready_for_selected_user":False,
+        "user_session_created":False,
+        "static_cache_modified":False,
+        "native_calls":0,
+        "network_calls":0,
+    }
 
 
 def _verified_one_spec_G_profile_scope(*, source_bundle, candidate,
@@ -701,6 +801,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
           season_source_bundle=None,season_original_source_paths=None,
           season_socket_plan=None,fresh_installed_environment_path=None,
           season_physical_one_spec_candidate=None,
+          season_selected_static_cache_path=None,
           exploration_policy=None):
     """Return an already validated internal manifest and v096 plan; no Native."""
     base_accepted=(FIELDS,FIELDS|{IMPORT_FIELD},FIELDS|{CONSUME_FIELD},
@@ -781,13 +882,23 @@ def build(user,folder,binary,revision,static_cache_path=None,
          (season_profile_inputs is not None
           and static_cache_path is None),
          "SEASON_WRITER_INTERNAL_SOURCE_AND_NO_STATIC_CACHE_REQUIRED")
+    selected_season_items=bool(user["special_items"] or user["embellishments"])
+    # B8 selected profile is intentionally NON-executable. Do not weaken
+    # the ordinary v212/v096 user session or accept uninstalled v216 previews.
+    need(season_selected_static_cache_path is None or (
+         season_profile_inputs is not None and selected_season_items
+         and fresh_installed_environment_path is not None
+         and season_physical_one_spec_candidate is not None
+         and season_original_source_paths is not None),
+         "B8_SELECTED_INTERNAL_CACHE_ONLY_WITH_VERIFIED_V232_INSTALL")
     need(season_profile_inputs is None or
          (type(season_profile_inputs) is dict and current_season_product
           and not source_first_stage and not pure_stage
           and not static_special_probe_only
-          and not user["special_items"] and not user["embellishments"]
           and ENCHANT_FIELD not in user
-          and SEASON_ENCHANT_FIELD not in user),
+          and SEASON_ENCHANT_FIELD not in user
+          and (not selected_season_items or
+               season_selected_static_cache_path is not None)),
          "SEASON_PROFILE_INTERNAL_SOURCE_ONLY_MODE_REQUIRED")
     # Search policy is an explicitly new session opt-in, never inherited from
     # an old sealed manifest or a source-only budget preview.
@@ -975,6 +1086,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
         need(actual_special==season_socket_plan["special_gem_id"] and
              actually_ordinary==season_socket_plan["ordinary_gem_ids"],
              "SEASON_V271_PHYSICAL_GEM_IDS_CHANGED_AFTER_J")
+    original_selected_baseline_rows=(copy.deepcopy(rows)
+        if season_selected_static_cache_path is not None else None)
     if pure_stage or source_free:
         restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
             key,rows,groups,user,ilvl,need,
@@ -1104,6 +1217,16 @@ def build(user,folder,binary,revision,static_cache_path=None,
     cfg["source"]={"kind":"user_supplied",
                    "profile_sha256":hashlib.sha256(profile.encode("utf8")).hexdigest()}
     scenario.normalize(cfg)
+    if season_selected_static_cache_path is not None:
+        return _selected_season_profile_budget_preflight(
+            user=user,profile=profile,cfg=cfg,rows=rows,
+            groups=groups,catalyst=catalyst_origin_rows,
+            baseline_rows=original_selected_baseline_rows,
+            candidate=season_physical_one_spec_candidate,
+            class_tier_five=tier_data,
+            original_v191_link=linked_originals,
+            installed_path=fresh_installed_environment_path,
+            cache_path=season_selected_static_cache_path)
     if season_profile_inputs is not None:
         source_only=season_profile_source_only(
             profile=profile,cfg=cfg,weapon_layout=weapon_layout,user=user,
@@ -1583,6 +1706,7 @@ def _select_v216_source_only_user_spec(candidate, *, user,
 def preview_from_environment_build(user,folder,binary,revision,*,
                                    environment_result,season_settings=None,
                                    season_controls=None,
+                                   selected_static_cache_path=None,
                                    exploration_policy=None):
     """Normal v216 source → v098 preview without manual gear/tier/J/F bundling.
 
@@ -1611,6 +1735,21 @@ def preview_from_environment_build(user,folder,binary,revision,*,
              and type(installed.get("stage_output_path")) is str,
              "SEASON_V216_READY_WITHOUT_ORIGINAL_FRESH_INSTALL")
         installed_path=installed["stage_output_path"]
+    selected_items=bool(user["special_items"] or user["embellishments"])
+    if selected_items and (installed_path is None or
+                           selected_static_cache_path is None):
+        return {
+            "schema":"v433_v098_selected_user_physical_budget_preflight_v1",
+            "status":"B8_SELECTED_VERIFIED_INSTALL_OR_EXACT_CACHE_PENDING",
+            "missing":([
+                "B8_SELECTED_FRESH_V212_INSTALLED_SOURCE_REQUIRED"
+                ] if installed_path is None else [])+([
+                "B8_SELECTED_EXACT_V046_CACHE_REQUIRED"
+                ] if selected_static_cache_path is None else []),
+            "user_session_created":False,
+            "native_calls":0,"network_calls":0,
+            "native_execution_authorized":False,
+        }
     originals=compilation.get("v191_original_gear_tier_source_paths")
     inputs=compilation.get("v098_source_only_profile_inputs_unadmitted")
     missing=[]
@@ -1759,6 +1898,8 @@ def preview_from_environment_build(user,folder,binary,revision,*,
                      if derived_settings is not None else None),
                  fresh_installed_environment_path=installed_path,
                  season_physical_one_spec_candidate=one_spec_candidate,
+                 season_selected_static_cache_path=(
+                     selected_static_cache_path if selected_items else None),
                  exploration_policy=exploration_policy)
     proof=result["original_v191_gear_tier_source_unadmitted"]
     need(proof["source_catalog_artifact_sha256"]==
