@@ -99,21 +99,28 @@ def parse_wcl_expansions(doc):
         valid.append({"id":row["id"],"name":row["name"]})
     return valid
 
-def select_midnight_expansion(exps):
-    matches=[x for x in exps if "midnight" in x["name"].casefold()]
-    return matches[0]["id"] if len(matches)==1 else None
-
-def parse_wcl_zones(doc):
+def parse_wcl_zones(doc, *, require_expansion=False):
+    """One bounded WCL zone query across expansion IDs, never a named seed."""
     need(not doc.get("errors"),"WCL_GRAPHQL_ERRORS")
     data=doc.get("data")
     need(type(data) is dict and type(data.get("worldData")) is dict,
          "WCL_WORLD_DATA_INVALID")
     zones=data["worldData"].get("zones")
-    need(type(zones) is list and len(zones)<=200,"WCL_ZONE_LIST_INVALID")
-    out=[]
+    need(type(zones) is list and 0<len(zones)<=1500,
+         "WCL_ZONE_LIST_INVALID")
+    out=[]; seen=set()
     for zone in zones:
         need(type(zone) is dict and type(zone.get("id")) is int and
-             type(zone.get("name")) is str, "WCL_ZONE_ROW_INVALID")
+             zone["id"]>0 and zone["id"] not in seen and
+             type(zone.get("name")) is str and zone["name"].strip() and
+             type(zone.get("frozen")) is bool,"WCL_ZONE_ROW_INVALID")
+        seen.add(zone["id"])
+        expansion=zone.get("expansion")
+        expansion_id=(expansion.get("id")
+                      if type(expansion) is dict else None)
+        if require_expansion:
+            need(type(expansion_id) is int and expansion_id>0,
+                 "WCL_ZONE_EXPANSION_ID_REQUIRED")
         encounters=zone.get("encounters") or []
         need(type(encounters) is list and len(encounters)<=80,
              "WCL_ENCOUNTERS_INVALID")
@@ -127,9 +134,11 @@ def parse_wcl_zones(doc):
             entries.append({"wcl_encounter_id":encounter["id"],
                 "blizzard_journal_encounter_id":encounter["journalID"],
                 "name":encounter["name"]})
-        out.append({"zone_id":zone["id"],"zone_name":zone["name"],
-                    "wcl_frozen":zone.get("frozen"),
-                    "encounters":entries})
+        row={"zone_id":zone["id"],"zone_name":zone["name"],
+             "wcl_frozen":zone["frozen"],"encounters":entries}
+        if expansion_id is not None:
+            row["expansion_id"]=expansion_id
+        out.append(row)
     return out
 
 def run_probe(blizzard_id,blizzard_secret,wcl_id=None,wcl_secret=None,
@@ -186,24 +195,30 @@ def run_probe(blizzard_id,blizzard_secret,wcl_id=None,wcl_secret=None,
             exps=parse_wcl_expansions(graphql(
                 "{ worldData { expansions { id name } } }"))
             report["wcl"]["expansions"]=exps
-            midnight_id=select_midnight_expansion(exps)
-            report["wcl"]["midnight_expansion_id"]=midnight_id
-            if midnight_id is not None:
-                zone_query="""query($expansion: Int) {
-                  worldData { zones(expansion_id: $expansion) {
-                    id name frozen encounters { id name journalID }
-                  } } }"""
-                report["wcl"]["midnight_zones"]=parse_wcl_zones(
-                    graphql(zone_query,{"expansion":midnight_id}))
-                report["wcl"]["status"]="ZONES_WITH_JOURNAL_IDS_RETURNED"
-            else:
-                report["wcl"]["status"]="MIDNIGHT_EXPANSION_NOT_UNIQUELY_FOUND"
+            # WCL documents zones(expansion_id: Int) as optional.
+            # Fetch all WCL expansions in one bounded request, then let
+            # same-build DB2/Blizzard relationships select the active scope;
+            # never pick a new expansion by its name, highest ID or date.
+            zone_query="""{ worldData { zones {
+              id name frozen expansion { id }
+              encounters { id name journalID }
+            } } }"""
+            zone_rows=parse_wcl_zones(graphql(zone_query),
+                                      require_expansion=True)
+            valid_ids={x["id"] for x in exps}
+            need(all(x["expansion_id"] in valid_ids for x in zone_rows),
+                 "WCL_ZONE_EXPANSION_NOT_IN_SOURCE_INDEX")
+            report["wcl"]["zones"]=zone_rows
+            report["wcl"]["zone_source_scope"]="ALL_WCL_EXPANSIONS"
+            report["wcl"]["status"]="ZONES_WITH_JOURNAL_IDS_RETURNED"
         except ProbeBlocked as e:
             report["wcl"]["status"]="NOT_VERIFIED"
             report["wcl"]["error_code"]=str(e)
     report["interpretation"]={
         "keystone_index_is_not_proof_of_rotation":True,
         "wcl_zone_frozen_is_not_raid_season_membership":True,
+        "wcl_expansion_id_not_db2_expansion_id":True,
+        "wcl_all_expansions_are_candidates_not_active_season":True,
         "blizzard_journal_raid_and_delve_loot_unverified":True,
         "no_prior_wequip_data_auto_promoted":True}
     return report
