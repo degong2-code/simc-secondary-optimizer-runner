@@ -170,6 +170,19 @@ class CompletionContractTests(unittest.TestCase):
             {"PRODUCT_INTEGRATION_REAL"})
         self.assertEqual(doc["policy"]["full_product_e2e"],"PENDING")
 
+    def test_a11_receipt_proofs_preserve_history_and_separate_axes(self):
+        doc=self.scenario()
+        row=self.row(doc,"A11")
+        self.assertTrue(gate.complete(row))
+        self.assertEqual({doc["evidence"][key]["kind"]
+            for key in row["generic"]["evidence"]},
+            {"CURRENT_SOURCE_REAL","GENERALIZATION_REGRESSION"})
+        self.assertEqual({doc["evidence"][key]["kind"]
+            for key in row["product_integration"]["evidence"]},
+            {"PRODUCT_INTEGRATION_REAL"})
+        self.assertEqual(row["historical"]["state"],"PASS")
+        self.assertEqual(doc["policy"]["full_product_e2e"],"PENDING")
+
     def test_a10_cannot_skip_a9_generic_source(self):
         doc=self.scenario()
         self.row(doc,"A9")["generic"]={"state":"PENDING","evidence":[]}

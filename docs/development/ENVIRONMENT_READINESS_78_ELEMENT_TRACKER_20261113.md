@@ -1,3 +1,5 @@
+> **2026-11-13 v422 A11 범위 완료:** [v422 근거](notes/2026-11-13_p1-v422-a11-source-stage-receipt-reuse-three-axis.md), [78 JSON 정본](78_ELEMENT_COMPLETION_CONTRACTS.json): generic11/current_source11/product_integration4/historical4, COMPLETE A8·A9·A10·A11(4/78), 다음 B1, 전체 E2E PENDING. 앞선 v421/v402 수치는 그 시점 역사 기록.
+
 > **2026-11-13 v421 A10 범위 완료:** [v421 근거](notes/2026-11-13_p1-v421-a10-source-compiler-reuse-three-axis-evidence.md). [78 JSON 단일 정본](78_ELEMENT_COMPLETION_CONTRACTS.json) generic10/current_source10/product_integration3/historical4, COMPLETE A8·A9·A10(3/78), 다음 A11, 최종 E2E PENDING. 아래 v402 통계는 역사.
 
 # SIMC SECONDARY OPTIMIZER — 78개 준비 요소 기준 추적표 (2026-11-13)
@@ -43,7 +45,7 @@
 | **A8 SimC 실행 식별·결과 스냅샷** | BASE | SimC 바이너리 SHA·버전 기록, DPS 캐시 구별, 저장된 결과 표시; 게임 빌드 번호 일치/컴파일 계보 인증 불필요 | 역사 실증 뒤 최신 70783 Windows 실제 사용자 DPS/스냅샷 재실행 확인 | `v106`·`v291`·`v293`·`v417` | [v419 실제 SimC·SHA/캐시/스냅샷 검토](notes/2026-11-13_p1-v419-a8-runtime-sha-cache-snapshot-evidence.md), A9 소스 검토로 진행 | **ENGINE_GENERALIZATION_PASS — CURRENT_KR_70783_A8_SHA_SNAPSHOT_SCOPE** ([v419](notes/2026-11-13_p1-v419-a8-runtime-sha-cache-snapshot-evidence.md)); 다른 77개/전 제품 완료 별도 |
 | **A9 SimC 원본 파일** | BASE | 필요 DBC·생성 데이터·효과/마부 입력 원본 | v229/v275 필수 소스 blob SHA·원본 재사용과 v417 실제 70783 소비 확인 | `v229`·`v275`·`v211`·`v417` | [v420 원본 범위 증거](notes/2026-11-13_p1-v420-a9-simc-source-bytes-scope.md), 다음 A10 실제 컴파일 소비 확인 | **ENGINE_GENERALIZATION_PASS — CURRENT_KR_70783_A9_REQUIRED_FILES_SCOPE** ([v420](notes/2026-11-13_p1-v420-a9-simc-source-bytes-scope.md)) |
 | **A10 원본 통합 컴파일** | BASE | v191·v211·v213 필요 입력/검증/카탈로그 결과 | v274/v241/v191/v211/v213 원본·가변 컴파일 회귀, v417 실제 제품 소비 확인 | `v241·v274·v275·v380` | 카탈로그9입력≠G/J/F/O 수치; 다음 A11 소스 영수증 검토 | **ENGINE_GENERALIZATION_PASS — CURRENT_KR_70783_A10_COMPILER_SCOPE** ([v421 증거](notes/2026-11-13_p1-v421-a10-source-compiler-reuse-three-axis-evidence.md)); v344 역사 별도 |
-| **A11 원본 영수증** | BASE | 소스·빌드·SHA·봉인·재개와 관측 범위 | 과거 범위한정 실증 | `v217` | 새 변형의 누락된 영수증만 보완 | **READY_SCOPED — HISTORY_70783_V337_V344_ONLY** ([v383 봉인·manifest](notes/2026-11-13_p1-v383-a10-a11-g2-archived-native-receipt-reuse.md)): v217 봉인/동시즌 재사용·v212 설치 SHA 관측, 개별 stage 원본 SHA 최신 요청 미확인 |
+| **A11 원본 영수증** | BASE | 소스·빌드·SHA·봉인·재개와 관측 범위 | v217 입력/출력 SHA 봉인·재개 회귀, v417 실 v212 소비 확인 | `v217` | 개별 stage 원본 바이트 이번 재다운로드 없음; B1 다음 검토 | **ENGINE_GENERALIZATION_PASS — CURRENT_KR_70783_A11_RECEIPT_SCOPE** ([v422 증거](notes/2026-11-13_p1-v422-a11-source-stage-receipt-reuse-three-axis.md)); 역사 v344 범위 한정 |
 ### B. 대표 장비·무기·티어 (12)
 
 | ID · 요소 | 적용 영역 | 반드시 준비할 정보/수락 조건 | 과거 감사 판정 | 기존 근거 (기능/버전) | 우선 재개 작업 | 이번 인계 준비 판정 |
