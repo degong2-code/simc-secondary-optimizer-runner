@@ -38,6 +38,28 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_v163_db2_zero_seed.py' -v
       - name: A1 v113 HTTP boundary (offline fixtures only)
         run: python -m unittest discover -s tests -p 'test_v113_local_web_api_offline.py' -v
+      - name: Stage v213 catalog from existing SYNTHETIC test fixture (CI only)
+        run: |
+          python - <<'PY'
+          import json, pathlib, sys
+          sys.path.insert(0, str(pathlib.Path("tests").resolve()))
+          from test_v213_source_to_catalog import SourceToCatalogTests
+          SourceToCatalogTests.setUpClass()
+          fixture=SourceToCatalogTests(
+              "test_actual_source_rows_join_and_v196_preserves_approval_boundary"
+          )
+          document=fixture.compile()
+          from v213_source_to_catalog import verify_catalog
+          assert verify_catalog(document)
+          assert document["native_calls"] == 0
+          assert document["automatic_ui_promotion"] is False
+          path=pathlib.Path("data/current_season_source_to_catalog.json")
+          assert not path.exists(), "Do not overwrite original v213 source"
+          path.write_text(json.dumps(
+              document,sort_keys=True,ensure_ascii=False,indent=2
+          )+"\n",encoding="utf8")
+          print("CI_SYNTHETIC_V213_TEST_FIXTURE_ONLY",document["manifest_sha256"])
+          PY
       - name: App TXT list vs existing ZIP selector
         run: python -m unittest discover -s tests -p 'test_v181_windows_beta_package_offline.py' -v
       - name: Publish exact focused test result for evidence lookup
