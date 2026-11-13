@@ -302,7 +302,7 @@
       "id": "A7",
       "name": "시즌 관계 검증",
       "scope": "BASE",
-      "acceptance": "제품에서 소비하는 장비의 시즌 소속·해당 조건",
+      "acceptance": "현재 레이드·쐐기/동일 빌드 DB2의 실제 소비 아이템 출처·시즌 관계; WSE는 비차단 진단 정보",
       "generic": {
         "state": "PENDING",
         "evidence": []
