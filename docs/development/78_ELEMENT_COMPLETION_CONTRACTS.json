@@ -19,61 +19,93 @@
       "kind": "CURRENT_SOURCE_REAL",
       "note": "docs/development/notes/2026-11-13_p1-v394-a1-current-zero-source-engine-pass.md",
       "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43357639329",
-      "tested_sha": "b92b11f186fc3201286f8e30a0b4684d1dc0b203"
+      "tested_sha": "b92b11f186fc3201286f8e30a0b4684d1dc0b203",
+      "supports": [
+        "A1"
+      ]
     },
     "a1_generic": {
       "kind": "GENERALIZATION_REGRESSION",
       "note": "docs/development/notes/2026-11-13_p1-v394-a1-current-zero-source-engine-pass.md",
       "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43358446211",
-      "tested_sha": "842af7ca53c7663c1fab348834def8d78a9c9eca"
+      "tested_sha": "842af7ca53c7663c1fab348834def8d78a9c9eca",
+      "supports": [
+        "A1"
+      ]
     },
     "a2_source": {
       "kind": "CURRENT_SOURCE_REAL",
       "note": "docs/development/notes/2026-11-13_p1-v395-a2-current-retail-build-source-and-propagation-pass.md",
       "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43357639329",
-      "tested_sha": "b92b11f186fc3201286f8e30a0b4684d1dc0b203"
+      "tested_sha": "b92b11f186fc3201286f8e30a0b4684d1dc0b203",
+      "supports": [
+        "A2"
+      ]
     },
     "a2_generic": {
       "kind": "GENERALIZATION_REGRESSION",
       "note": "docs/development/notes/2026-11-13_p1-v395-a2-current-retail-build-source-and-propagation-pass.md",
       "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43358446211",
-      "tested_sha": "842af7ca53c7663c1fab348834def8d78a9c9eca"
+      "tested_sha": "842af7ca53c7663c1fab348834def8d78a9c9eca",
+      "supports": [
+        "A2"
+      ]
     },
     "a3_source": {
       "kind": "CURRENT_SOURCE_REAL",
       "note": "docs/development/notes/2026-11-13_p1-v396-a3-active-raid-mplus-current-source-scope-pass.md",
       "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43357639329",
-      "tested_sha": "b92b11f186fc3201286f8e30a0b4684d1dc0b203"
+      "tested_sha": "b92b11f186fc3201286f8e30a0b4684d1dc0b203",
+      "supports": [
+        "A3"
+      ]
     },
     "a3_generic": {
       "kind": "GENERALIZATION_REGRESSION",
       "note": "docs/development/notes/2026-11-13_p1-v396-a3-active-raid-mplus-current-source-scope-pass.md",
       "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43358446211",
-      "tested_sha": "842af7ca53c7663c1fab348834def8d78a9c9eca"
+      "tested_sha": "842af7ca53c7663c1fab348834def8d78a9c9eca",
+      "supports": [
+        "A3"
+      ]
     },
     "a4_source": {
       "kind": "CURRENT_SOURCE_REAL",
       "note": "docs/development/notes/2026-11-13_p1-v398-a4-blizzard-source-owner-base-scoped-ready.md",
       "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43359408019",
-      "tested_sha": "bd62689adb03cb21b56247964904540cf9f558cc"
+      "tested_sha": "bd62689adb03cb21b56247964904540cf9f558cc",
+      "supports": [
+        "A4"
+      ]
     },
     "a5_source": {
       "kind": "CURRENT_SOURCE_REAL",
       "note": "docs/development/notes/2026-11-13_p1-v399-a5-wcl-original-graphql-source-ready.md",
       "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43365490208",
-      "tested_sha": "b4dc028c661a6e5effee8db99b5ad58fa70dacfa"
+      "tested_sha": "b4dc028c661a6e5effee8db99b5ad58fa70dacfa",
+      "supports": [
+        "A5"
+      ]
     },
     "a6_source": {
       "kind": "CURRENT_SOURCE_REAL",
       "note": "docs/development/notes/2026-11-13_p1-v400-a6-db2-ten-table-source-provenance-scoped-ready.md",
       "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43357639329",
-      "tested_sha": "b92b11f186fc3201286f8e30a0b4684d1dc0b203"
+      "tested_sha": "b92b11f186fc3201286f8e30a0b4684d1dc0b203",
+      "supports": [
+        "A6"
+      ]
     },
     "legacy_v344": {
       "kind": "HISTORICAL_SCOPED",
       "note": "docs/development/notes/2026-11-13_p1-v383-a10-a11-g2-archived-native-receipt-reuse.md",
       "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43114134208",
-      "tested_sha": "d8620d733140b148deb534975485f45ee22cf118"
+      "tested_sha": "d8620d733140b148deb534975485f45ee22cf118",
+      "supports": [
+        "A10",
+        "A11",
+        "G2"
+      ]
     }
   },
   "elements": [
