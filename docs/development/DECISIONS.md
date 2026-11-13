@@ -1,3 +1,5 @@
+> **2026-11-13 v406 인계 기준(하단 v402 기록보다 우선):** [최신 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261113_P1_V406_A8_78ELEMENT_READONLY_RESTORE.md) · [78개 상태 JSON](78_ELEMENT_COMPLETION_CONTRACTS.json). **WSE는 비차단 원본 진단**이며 활성 raid/M+·동일 빌드 DB2/저널·아이템 source가 실제 현재 후보 근거. GPT/사용자가 미래 시즌 아이템·WSE를 일일이 검증하는 런타임 의존성 금지. A7 v405 원본 자동 발견·봉인·실 시험 generic/current_source PASS, product PENDING. 상태 **7/7/3/0**, next A8; 기존 A4~A6의 범용 누락은 v401 완료 계약 자동 검사로 재발 방지. 사용자 새 채팅 인계는 먼저 **읽기 전용 복원 후 STOP**, `진행` 전 개발/Actions/Native 불가. 제품 26 DPS/목표 절대 CHMV/시즌 GJFO 자동 구축/기존 적응형 SimC 기본, main/v003/Project UI/공식 승격 권한 변화 없음.
+
 > **최신 사용자 결정 v401/v402:** [정책 → 78개 JSON 완료 계약 → 상태 자동 생성 → GitHub Actions 정합 검사](POLICY_78_ELEMENT_COMPLETION_GATE_V401.md). A4~A6 **실 현재 원본 + 다른 빌드/확장팩 합성 회귀** 재판정 [근거 v402](notes/2026-11-13_p1-v402-a4-a6-generic-scope-reassessment.md). 개별 generic/current_source/product_integration/historical 분리, 일관성 검사 누락시 READY 진척 금지, **next A7**, 제품 E2E는 0 PASS. main/Project UI/정식 승격 무변경.
 
 # 제품·기술 결정 지도 — 현재와 철회된 역사 구분
