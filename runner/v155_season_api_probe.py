@@ -144,8 +144,12 @@ def parse_wcl_zones(doc, *, require_expansion=False):
             # null; do not abort *all* expansion discovery for that reason.
             # v163 still requires an exact current encounter/name/raid/DB2
             # relation before using a zone as source evidence.
-            need(journal_id is None or
-                 (type(journal_id) is int and journal_id>0),
+            # WCL's journalID is GraphQL Int!, but historical
+            # non-raid encounters can use 0 / other nonpositive integer
+            # sentinels. Retain the original source integer as evidence,
+            # not a valid Blizzard JournalEncounter ID. Only >0 qualifies
+            # for source-backed journal ID cross-checks.
+            need(journal_id is None or type(journal_id) is int,
                  "WCL_JOURNAL_ID_INVALID")
             entries.append({"wcl_encounter_id":encounter["id"],
                 "blizzard_journal_encounter_id":journal_id,
@@ -153,7 +157,8 @@ def parse_wcl_zones(doc, *, require_expansion=False):
         row={"zone_id":zone["id"],"zone_name":zone["name"],
              "wcl_frozen":zone.get("frozen"),"encounters":entries,
              "journal_id_fields_complete":all(
-                 x["blizzard_journal_encounter_id"] is not None
+                 type(x["blizzard_journal_encounter_id"]) is int and
+                 x["blizzard_journal_encounter_id"]>0
                  for x in entries)}
         if expansion_id is not None:
             row["expansion_id"]=expansion_id
