@@ -1,3 +1,5 @@
+> **앱 파일 목록·담당 기능 최신 규칙 (2026-11-13 격리 개발):** [단일 배포 파일 선정 + 자동 TXT 목록 + 78개 기능 대응](docs/development/APP_PACKAGE_FILE_REGISTRY_20261113.md). `python integration_probes/v181_windows_beta_packager.py --list-files APP_BETA_FILE_LIST.txt`로 **현재 Windows 베타 ZIP 후보 파일명**을 얻는다. 원본 복사/수동 중복 목록 없이 실제 ZIP의 `V181_PACKAGE_MANIFEST.json`이 바이트 SHA를 보관한다. 배포 후보 ≠ 최종 앱 READY. 실제 준비 상태는 [78개 원장](docs/development/ENVIRONMENT_READINESS_78_ELEMENT_TRACKER_20261113.md), 최신 인계는 [v386](docs/CHAT_CONTINUITY_HANDOFF_20261113_P1_V386_ZERO_SOURCE_GENERALIZATION.md)이며 신규 CI/Windows PASS를 주장하지 않는다. 아래 README의 v033/v18x 내용은 역사 자료다.
+
 > **2026-11-10 현재 지식 지도(격리 개발만):** [START_HERE](docs/development/START_HERE.md) → [INDEX](docs/development/INDEX.md) → [FILE_MAP](docs/development/FILE_MAP.md) → [EVIDENCE_INDEX](docs/development/EVIDENCE_INDEX.md) → [DECISIONS](docs/development/DECISIONS.md). 아래 v033/v18x README 안내는 역사 호환 설명으로 최신 제품 판정이 아니다. [P3-HAW](docs/CHAT_CONTINUITY_HANDOFF_20261110_P3_HAW_OPTIMIZER_RESUME_ENGINE_FIRST.md) 기준. main/Project UI/공식 승격 변경 아님.
 
 ---
