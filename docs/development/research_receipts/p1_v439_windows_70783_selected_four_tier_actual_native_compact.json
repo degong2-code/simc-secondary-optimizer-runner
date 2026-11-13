@@ -1,0 +1,172 @@
+{
+  "schema": "p1_v439_windows_70783_selected_four_tier_actual_native_compact_v1",
+  "evidence_status": "PASS_REAL_70783_SELECTED_FOUR_TIER_DPS6_CACHE6",
+  "scope": "ONE hunter/survival ilvl334 real selected crafted-head 4-of-5 tier; not all 26 specs, not global optimum",
+  "verified_by": "GitHub Actions Windows-2022 pinned native and read-back of original artifact",
+  "commit_sha": "bad415de407671898b26001869478bcdb1ab047e",
+  "run_id": 43466966207,
+  "run_url": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43466966207",
+  "artifact_id": 14059197320,
+  "artifact_name": "p1-v439-b8-one-selected-70783-native-43466966207",
+  "artifact_outer_zip_sha256": "ac5f41298515d22121e635e57531e599164acdd97f3b00193becc7bae5311d76",
+  "game_build": "12.1.5.70783",
+  "live_observed_build": "12.1.5.70783",
+  "simc_revision": "de11f57df75dda668bae6ac7043a43b98831fa96",
+  "simc_binary_sha256": "1fc927d2be7f1b6064c75f004b5b22245b064a6b3e56e572af4048ba822a986d",
+  "character": "hunter/survival",
+  "race": "human",
+  "target_ilevel": 334,
+  "manual_final_T": null,
+  "user_selected_crafted_item": {
+    "slot": "head",
+    "item_id": 244579,
+    "options": {
+      "crafted_stats": "32/36",
+      "embellishment": "arcanoweave_lining"
+    },
+    "static_source": "exact one-iteration same-build Native JSON2"
+  },
+  "original_installed_manifest_sha256": "7bf92311cded1e7b66695b7976ae5cbfc0f6dcc9db025105c4d90d955e434bb5",
+  "source_profile_sha256": "af335682763c858701e400917893377d32552e369bdc77075a5da7dd42e21c53",
+  "tier_four_slots": [
+    "chest",
+    "hands",
+    "legs",
+    "shoulders"
+  ],
+  "tier_gear_item_ids": {
+    "chest": 271495,
+    "shoulders": 271490,
+    "hands": 271493,
+    "legs": 271491
+  },
+  "actual_native_profile_head": {
+    "item_id": 244579,
+    "ilevel": 334,
+    "crafted_stats": "32/36",
+    "embellishment": "arcanoweave_lining",
+    "gem_id": 240900
+  },
+  "budget": {
+    "reference_G_projected_not_full_exact": 2849,
+    "verified_changed_slots_delta": -1,
+    "J": 92,
+    "F": 165,
+    "O": {
+      "crit_rating": 0,
+      "haste_rating": 0,
+      "mastery_rating": 0,
+      "versatility_rating": 0
+    },
+    "B": 3106,
+    "T": 3106,
+    "crafted_initial_50_50_as_fixed_L": false,
+    "fixed_L": {
+      "crit_rating": 0,
+      "haste_rating": 0,
+      "mastery_rating": 0,
+      "versatility_rating": 0
+    }
+  },
+  "new_native_calls": {
+    "environment": 3,
+    "changed_slot_static": 4,
+    "adaptive_DPS": 6,
+    "total": 13,
+    "cache_only_replay": 0
+  },
+  "static_variant_proofs": [
+    {
+      "slot": "chest",
+      "item_id": 268223,
+      "ilevel": 334,
+      "stat": {
+        "crit_rating": 66,
+        "haste_rating": 135,
+        "mastery_rating": 0,
+        "versatility_rating": 0
+      },
+      "native_json2_sha256": "75fccfdbd938292b5e1072ec72557b710197743e10facd9e3e8fa19098cc155d"
+    },
+    {
+      "slot": "chest",
+      "item_id": 271495,
+      "ilevel": 334,
+      "stat": {
+        "crit_rating": 0,
+        "haste_rating": 64,
+        "mastery_rating": 137,
+        "versatility_rating": 0
+      },
+      "native_json2_sha256": "7ea9122c6a5ede4398482401c9c0eac5eded50ba2a4a26612eca6dbbbe085a6d"
+    },
+    {
+      "slot": "head",
+      "item_id": 244579,
+      "ilevel": 334,
+      "stat": {
+        "crit_rating": 100,
+        "haste_rating": 100,
+        "mastery_rating": 0,
+        "versatility_rating": 0
+      },
+      "native_json2_sha256": "922f77edba05ef55565c8c11498d263b23fd20e452333de640c40ebc593ba0c0"
+    },
+    {
+      "slot": "head",
+      "item_id": 271492,
+      "ilevel": 334,
+      "stat": {
+        "crit_rating": 0,
+        "haste_rating": 143,
+        "mastery_rating": 58,
+        "versatility_rating": 0
+      },
+      "native_json2_sha256": "88c735b02b3c69ed4beaa8033e87a1fb0e96073659425ab41a34e6566b95d6f0"
+    }
+  ],
+  "observed_first": {
+    "absolute_rating_T": {
+      "crit_rating": 736,
+      "haste_rating": 735,
+      "mastery_rating": 735,
+      "versatility_rating": 900
+    },
+    "observed_dps_mean": 173604.779751951,
+    "simc_sem": 310.81209947602576,
+    "confidence_level": 0.95
+  },
+  "global_optimum_proven": false,
+  "confirmation_pair_direction_at_95": "NOT_RECORDED_IN_COMPACT_RECEIPT; actual product asserts confidence_level 0.95",
+  "DPS_native_json2_sha256": {
+    "confirmations/confirm_00/result.json": "46c3f272bee2578fa156365bc1e4018a18b8fcecc13d52aa8b08bea2e350d2f8",
+    "confirmations/confirm_01/result.json": "62b0f94dd369773dbf44398000dbc504b2f9a88a8672869e54f7e9071f148b08",
+    "search/material_00/result.json": "2a4b4de4a25eae1e31bcaa40603b6fe2c4631e37070481f2f2a847ae519beac0",
+    "search/scout_00/result.json": "3716fdc7da2ffab58930c637a166f77d310398ff6a200c64af03a8382fd64656",
+    "search/seed_00/result.json": "cdb546e27ffc7a13f4f7216dec12038f9fa15624edab7810c82bab8decd83ff6",
+    "search/seed_01/result.json": "5c2d141527988542c250adb3ecc13a88be907029e9646d86f4d97906f899c25b"
+  },
+  "native_evidence_zip_sha256": "fcffd42b5f818a0e4fac296cd715afec628ebef35426823f9b737dd50ccceb52",
+  "native_evidence_counts": {
+    "input_simc": 6,
+    "result_json": 6,
+    "native_receipt_json": 6
+  },
+  "static_cache_snapshot_sha256": "517cd212fe3d3011593a3fae0b2a2c06ff5865a40145e2279f04eb8820e132e8",
+  "cache_replay": {
+    "native_hits": 6,
+    "new_native_calls": 0,
+    "semantic_result_unchanged": true,
+    "original_json2_hashes_verified": true,
+    "static_cache_unchanged": true
+  },
+  "limits_and_open_items": {
+    "max_environment_native": 3,
+    "max_changed_static_native": 4,
+    "max_dps_native": 6,
+    "full_26_spec_native_matrix": false,
+    "real_browser_click_tested": false,
+    "full_product_E2E_complete": false,
+    "B8_generic_and_other_specs_unproven": true
+  }
+}
