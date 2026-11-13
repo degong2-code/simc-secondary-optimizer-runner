@@ -1,3 +1,5 @@
+> **이 문서는 역사 v382 인계입니다. 2026-11-13 최신 사용자 결정과 이후 v383–v386 개발을 승계한 [v386 최신 독립 인계](CHAT_CONTINUITY_HANDOFF_20261113_P1_V386_ZERO_SOURCE_GENERALIZATION.md)를 먼저 읽으십시오.** 범용 기능의 완료 판정은 [현재 시즌 ZERO-SOURCE 자동 발견 PASS 정책](development/POLICY_ZERO_SOURCE_AUTODISCOVERY_GENERALIZATION_20261113.md)가 우선하며, 미래 시즌 미출시 사실만으로 해당 ENGINE 기능을 계속 PENDING으로 둘 수 없습니다. 아래 시점·HEAD·'첫 작업'은 역사가 된 정보이므로 최신 GitHub HEAD/78원장 확인이 필요합니다.
+
 # SIMC SECONDARY OPTIMIZER — 2026-11-13 단일 인계 정본
 ## v382 · 78개 준비 요소별 완료 관리·기존 실증 재사용·P1 제품 통합
 
