@@ -102,8 +102,10 @@ class FreshInstalledV096Bridge(unittest.TestCase):
                     revision="different-runtime-revision",
                     user_scenario=cfg,flask_F=flask,oil_hands=[],
                     profile=profile)
+            # Windows TemporaryDirectory may expose 8.3 alias spelling;
+            # v096 resolves the real installed parent before its finder call.
             verify.assert_called_once_with(
-                root,334,expected_game_build="12.1.5.70783",
+                root.resolve(),334,expected_game_build="12.1.5.70783",
                 expected_installed_manifest_sha256=doc["manifest_sha256"])
             self.assertTrue(result["fresh_v212_installed"])
             self.assertEqual(result["season_budget"]["base_B"],3150)
