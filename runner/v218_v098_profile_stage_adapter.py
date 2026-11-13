@@ -133,7 +133,8 @@ def build_or_reuse(*,user,session_folder,binary,revision,static_cache,
     # v433 can compose selected user profile + G/L with v432 without a
     # runtime manifest. Until v096 validates that *revised* B and cache
     # identity, do not let the web stage mistake the unadmitted preview
-    # for a runnable fresh v212 user session or invoke v208 Native first.
+    # for a runnable fresh v212 user session. Existing v208 static-L
+    # hydration remains a separate, unchanged explicit Start owner.
     if verified_fresh_environment_result is not None and (
             user["special_items"] or user["embellishments"]):
         raise engine.StageExecutionBlocked(
