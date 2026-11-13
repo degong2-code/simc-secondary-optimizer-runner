@@ -1,0 +1,1824 @@
+{
+  "schema": "simc_78_element_completion_contract_v401",
+  "policy": {
+    "authority": "JSON status contract; legacy tracker details are checked against it; GENERATED markdown is rendered from JSON",
+    "generic_acceptance": "current-season ZERO-SOURCE + source-driven alternative season/build/ID regression, where applicable; no future unreleased season required",
+    "current_source_acceptance": "actual current game-build provider source + exact SHA + correct consumed scope",
+    "product_acceptance": "actual user input through season environment and SimC DPS/SEM/95% output; separate final product E2E",
+    "optional_acceptance": "NOT_APPLICABLE only with concrete feature-specific reason and owner evidence; no blanket exemptions",
+    "next_review": "A4",
+    "a7_may_be_next_only_after_generic_review_of": [
+      "A4",
+      "A5",
+      "A6"
+    ],
+    "full_product_e2e": "PENDING"
+  },
+  "evidence": {
+    "a1_source": {
+      "kind": "CURRENT_SOURCE_REAL",
+      "note": "docs/development/notes/2026-11-13_p1-v394-a1-current-zero-source-engine-pass.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43357639329",
+      "tested_sha": "b92b11f186fc3201286f8e30a0b4684d1dc0b203"
+    },
+    "a1_generic": {
+      "kind": "GENERALIZATION_REGRESSION",
+      "note": "docs/development/notes/2026-11-13_p1-v394-a1-current-zero-source-engine-pass.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43358446211",
+      "tested_sha": "842af7ca53c7663c1fab348834def8d78a9c9eca"
+    },
+    "a2_source": {
+      "kind": "CURRENT_SOURCE_REAL",
+      "note": "docs/development/notes/2026-11-13_p1-v395-a2-current-retail-build-source-and-propagation-pass.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43357639329",
+      "tested_sha": "b92b11f186fc3201286f8e30a0b4684d1dc0b203"
+    },
+    "a2_generic": {
+      "kind": "GENERALIZATION_REGRESSION",
+      "note": "docs/development/notes/2026-11-13_p1-v395-a2-current-retail-build-source-and-propagation-pass.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43358446211",
+      "tested_sha": "842af7ca53c7663c1fab348834def8d78a9c9eca"
+    },
+    "a3_source": {
+      "kind": "CURRENT_SOURCE_REAL",
+      "note": "docs/development/notes/2026-11-13_p1-v396-a3-active-raid-mplus-current-source-scope-pass.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43357639329",
+      "tested_sha": "b92b11f186fc3201286f8e30a0b4684d1dc0b203"
+    },
+    "a3_generic": {
+      "kind": "GENERALIZATION_REGRESSION",
+      "note": "docs/development/notes/2026-11-13_p1-v396-a3-active-raid-mplus-current-source-scope-pass.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43358446211",
+      "tested_sha": "842af7ca53c7663c1fab348834def8d78a9c9eca"
+    },
+    "a4_source": {
+      "kind": "CURRENT_SOURCE_REAL",
+      "note": "docs/development/notes/2026-11-13_p1-v398-a4-blizzard-source-owner-base-scoped-ready.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43359408019",
+      "tested_sha": "bd62689adb03cb21b56247964904540cf9f558cc"
+    },
+    "a5_source": {
+      "kind": "CURRENT_SOURCE_REAL",
+      "note": "docs/development/notes/2026-11-13_p1-v399-a5-wcl-original-graphql-source-ready.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43365490208",
+      "tested_sha": "b4dc028c661a6e5effee8db99b5ad58fa70dacfa"
+    },
+    "a6_source": {
+      "kind": "CURRENT_SOURCE_REAL",
+      "note": "docs/development/notes/2026-11-13_p1-v400-a6-db2-ten-table-source-provenance-scoped-ready.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43357639329",
+      "tested_sha": "b92b11f186fc3201286f8e30a0b4684d1dc0b203"
+    },
+    "legacy_v344": {
+      "kind": "HISTORICAL_SCOPED",
+      "note": "docs/development/notes/2026-11-13_p1-v383-a10-a11-g2-archived-native-receipt-reuse.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43114134208",
+      "tested_sha": "d8620d733140b148deb534975485f45ee22cf118"
+    }
+  },
+  "elements": [
+    {
+      "id": "A1",
+      "name": "확장팩·시즌",
+      "scope": "BASE",
+      "acceptance": "확장팩/활성 시즌 ID, 갱신 이벤트와 정확한 원본 유효범위",
+      "generic": {
+        "state": "PASS",
+        "evidence": [
+          "a1_source",
+          "a1_generic"
+        ]
+      },
+      "current_source": {
+        "state": "PASS",
+        "evidence": [
+          "a1_source"
+        ]
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "A2",
+      "name": "현재 게임 빌드",
+      "scope": "BASE",
+      "acceptance": "지역/Retail 빌드 번호·원본 빌드 정합",
+      "generic": {
+        "state": "PASS",
+        "evidence": [
+          "a2_source",
+          "a2_generic"
+        ]
+      },
+      "current_source": {
+        "state": "PASS",
+        "evidence": [
+          "a2_source"
+        ]
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "A3",
+      "name": "활성 콘텐츠",
+      "scope": "BASE",
+      "acceptance": "실제로 쓰는 레이드·던전만 시즌 관계 입증",
+      "generic": {
+        "state": "PASS",
+        "evidence": [
+          "a3_source",
+          "a3_generic"
+        ]
+      },
+      "current_source": {
+        "state": "PASS",
+        "evidence": [
+          "a3_source"
+        ]
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "A4",
+      "name": "Blizzard 원본",
+      "scope": "BASE",
+      "acceptance": "선택한 필수 아이템·콘텐츠에 필요한 인증 API 영수증",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PASS",
+        "evidence": [
+          "a4_source"
+        ]
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "A5",
+      "name": "WCL 원본",
+      "scope": "BASE",
+      "acceptance": "필수 레이드·던전 보조 관계·수집 조건",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PASS",
+        "evidence": [
+          "a5_source"
+        ]
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "A6",
+      "name": "DB2 원본",
+      "scope": "BASE",
+      "acceptance": "동일 빌드 필요 테이블·SHA·재사용",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PASS",
+        "evidence": [
+          "a6_source"
+        ]
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "A7",
+      "name": "시즌 관계 검증",
+      "scope": "BASE",
+      "acceptance": "제품에서 소비하는 장비의 시즌 소속·해당 조건",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "A8",
+      "name": "SimC revision",
+      "scope": "BASE",
+      "acceptance": "정확한 revision·소스/실행 바이너리 빌드 관계",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "A9",
+      "name": "SimC 원본 파일",
+      "scope": "BASE",
+      "acceptance": "필요 DBC·생성 데이터·효과/마부 입력 원본",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "A10",
+      "name": "원본 통합 컴파일",
+      "scope": "BASE",
+      "acceptance": "v191·v211·v213 필요 입력/검증/카탈로그 결과",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PASS",
+        "evidence": [
+          "legacy_v344"
+        ]
+      }
+    },
+    {
+      "id": "A11",
+      "name": "원본 영수증",
+      "scope": "BASE",
+      "acceptance": "소스·빌드·SHA·봉인·재개와 관측 범위",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PASS",
+        "evidence": [
+          "legacy_v344"
+        ]
+      }
+    },
+    {
+      "id": "B1",
+      "name": "26 DPS 계약",
+      "scope": "BASE",
+      "acceptance": "증강 제외 26 전문화 및 장비/무기 규칙",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "B2",
+      "name": "목표 ilvl",
+      "scope": "BASE",
+      "acceptance": "기본334 및 목표 ilvl 일관된 전달",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "B3",
+      "name": "일반 방어구",
+      "scope": "BASE",
+      "acceptance": "대표 방어구 부위별 ID·타입·ilvl",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "B4",
+      "name": "무기 형태",
+      "scope": "BASE",
+      "acceptance": "한손/양손/쌍수/원거리/보조·Fury TG",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "B5",
+      "name": "무기 성능",
+      "scope": "BASE",
+      "acceptance": "정확한 item·ilvl·무기 피해·공격 형태",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "B6",
+      "name": "주능력치",
+      "scope": "BASE",
+      "acceptance": "전문화별 대표 장비·주능력치 값",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "B7",
+      "name": "티어 5부위 원본",
+      "scope": "BASE",
+      "acceptance": "직업별 머리/어깨/가슴/손/다리 5개 ID",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "B8",
+      "name": "티어 4세트 착용",
+      "scope": "USER",
+      "acceptance": "특수/장식 충돌을 고려한 5개 중 실제 4pc",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "B9",
+      "name": "촉매 변환",
+      "scope": "USER",
+      "acceptance": "원본 ID/티어 인정/특수효과 충돌",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "B10",
+      "name": "대표 소켓",
+      "scope": "BASE+USER",
+      "acceptance": "부위별 소켓과 개인별 변경 소켓 구분",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "B11",
+      "name": "G 자동 예산",
+      "scope": "BASE",
+      "acceptance": "목표 ilvl·대표 장비/무기의 시즌별 검증 G",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "B12",
+      "name": "G 시즌별 참조",
+      "scope": "BASE",
+      "acceptance": "같은 시즌 참조의 유효성·근사/정밀 구분",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "C1",
+      "name": "일반 보석 최고품질",
+      "scope": "BASE",
+      "acceptance": "효과·사용조건 동등성 및 최고 품질/ItemID",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "C2",
+      "name": "보석 예산 J",
+      "scope": "BASE",
+      "acceptance": "실제 기본 소켓 수×검증 보석 rating",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "C3",
+      "name": "소켓·보석 배치",
+      "scope": "BASE+USER",
+      "acceptance": "소켓 부위·개수·색상·실제 SimC 배치",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "C4",
+      "name": "특수보석",
+      "scope": "USER",
+      "acceptance": "선택된 특수보석 ID·주능력치·효과/소켓",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "C5",
+      "name": "보석 색상 조건",
+      "scope": "USER",
+      "acceptance": "실제 색상 조합과 SimC 효과 입력",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "C6",
+      "name": "영약 F 수치",
+      "scope": "BASE+USER",
+      "acceptance": "최고 품질 효과별 정확한 고정 CHMV rating",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "C7",
+      "name": "대표 기본 영약",
+      "scope": "BASE",
+      "acceptance": "검증 가능한 시즌 대표 1종과 F",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "C8",
+      "name": "다른 영약 선택",
+      "scope": "USER",
+      "acceptance": "변경 F 벡터·프로필·설치/캐시 변형",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "C9",
+      "name": "기름 O 수치",
+      "scope": "BASE+USER",
+      "acceptance": "최고 품질 기름 치명=가속 rating q/손",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "C10",
+      "name": "기름 적용",
+      "scope": "USER",
+      "acceptance": "실제 무기 손·기름 사용/미사용·O 한 번",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "C11",
+      "name": "직업 무기 강화",
+      "scope": "USER",
+      "acceptance": "DK 룬벼리기/주술사 질풍·불꽃혓바닥의 손별 충돌",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "C12",
+      "name": "영구 마부 E",
+      "scope": "BASE+USER",
+      "acceptance": "부위·효과·최고품질·정적 CHMV 소유",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "C13",
+      "name": "음식·물약",
+      "scope": "USER",
+      "acceptance": "검증된 최고 품질·정확한 SimC 입력",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "C14",
+      "name": "증강 룬·기타 임시 효과",
+      "scope": "OPTION",
+      "acceptance": "선택 증강 룬의 효과/조건; 일반 임시 마부는 지원 제외",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "D1",
+      "name": "장신구 두 개",
+      "scope": "USER",
+      "acceptance": "정확한 2 ItemID·ilvl·옵션·장착",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "D2",
+      "name": "장신구 고정 스탯",
+      "scope": "USER",
+      "acceptance": "G 밖 소유·미관측 JSON2를 0으로 단정 금지",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "D3",
+      "name": "선택 특수효과 장비",
+      "scope": "USER",
+      "acceptance": "ID·부위·효과 입력·정확한 고정 L",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "D4",
+      "name": "제작장비",
+      "scope": "USER",
+      "acceptance": "ID·ilvl·옵션·스탯 총량; 초기 50:50 잠금 금지",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "D5",
+      "name": "장식 최대 2개",
+      "scope": "USER",
+      "acceptance": "장식 효과·제작 부위·두 개 제한",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "D6",
+      "name": "장착 부위 충돌",
+      "scope": "USER",
+      "acceptance": "티어 4pc·선택 특수/장식 동시 장착 가능성",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "D7",
+      "name": "시즌 특수 모듈",
+      "scope": "OPTION",
+      "acceptance": "적용/해제·CHMV·SimC·버전·캐시 정체성",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "D8",
+      "name": "정확한 수동 ItemID",
+      "scope": "USER",
+      "acceptance": "목록 밖 아이템의 exact variant 입력·필요 수치",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "D9",
+      "name": "검증 선택지 자동 등록",
+      "scope": "BASE+USER",
+      "acceptance": "ID·시즌 빌드·효과/품질/SimC·예산 소유",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "E1",
+      "name": "기본 예산 B",
+      "scope": "BASE",
+      "acceptance": "검증 G+J+F의 정수 산술",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "E2",
+      "name": "최종 T",
+      "scope": "BASE+USER",
+      "acceptance": "T=B+O 및 O 중복 없음",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "E3",
+      "name": "수동 최종 T",
+      "scope": "USER",
+      "acceptance": "수동 T 최우선, B=T−O, 제약 가능성",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "E4",
+      "name": "특수장비 고정 L",
+      "scope": "USER",
+      "acceptance": "G 내부 정확한 L과 스탯별 하한",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "E5",
+      "name": "영구 마부 E",
+      "scope": "BASE+USER",
+      "acceptance": "E가 기존 예산 내 포함/추가인지 검증 후 1회",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "E6",
+      "name": "영약·기름 고정 하한",
+      "scope": "BASE+USER",
+      "acceptance": "고정 F/O 하한 보존, 자유 장비 분배 0 허용",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "E7",
+      "name": "후보 분배 가능성",
+      "scope": "RUN",
+      "acceptance": "정수 rating 합계·상/하한·경계값",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "E8",
+      "name": "gear_* 정적 주입",
+      "scope": "RUN",
+      "acceptance": "O 한 번·F와 SimC 스탯 분리·중복 방지",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "E9",
+      "name": "JSON2 정적 검증",
+      "scope": "RUN",
+      "acceptance": "목표 최종 rating vs 관측 gear/static·buffed 분리",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "F1",
+      "name": "캐릭터 정보",
+      "scope": "USER",
+      "acceptance": "26 DPS 클래스/전문화·종족·특성",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "F2",
+      "name": "SimC 프로필 업로드",
+      "scope": "USER",
+      "acceptance": "선택 업로드에서 캐릭터·특성만 가져오기",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "F3",
+      "name": "APL",
+      "scope": "RUN",
+      "acceptance": "pinned SimC 기본 APL 및 사용자 구성과 정합",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "F4",
+      "name": "기본 전투조건",
+      "scope": "RUN",
+      "acceptance": "Patchwerk 1대상 300초 기본 버프",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "F5",
+      "name": "고급 전투조건",
+      "scope": "USER",
+      "acceptance": "대상 수·시간 변화·외부 버프/이벤트",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "F6",
+      "name": "실 SimC 바이너리",
+      "scope": "RUN",
+      "acceptance": "실행 경로·SHA·버전·build·실행 가능",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "F7",
+      "name": "최종 사용자 프로필",
+      "scope": "USER",
+      "acceptance": "장신구·소켓·영약·기름·특수/장식이 모두 반영",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "G1",
+      "name": "수집 스테이지 실행",
+      "scope": "BASE",
+      "acceptance": "필요 원본 fetch·봉인·캐시·중단 재개",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "G2",
+      "name": "기본 환경 READY",
+      "scope": "BASE",
+      "acceptance": "필수 G/J/F/O·티어·정확한 v212 설치",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PASS",
+        "evidence": [
+          "legacy_v344"
+        ]
+      }
+    },
+    {
+      "id": "G3",
+      "name": "개인별 환경 설치",
+      "scope": "USER",
+      "acceptance": "기본과 다른 소켓/F/O 구성 정확 install SHA",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "G4",
+      "name": "정적 아이템 캐시",
+      "scope": "BASE+USER",
+      "acceptance": "시즌+item exact variant, rev-only 폐기 금지",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "G5",
+      "name": "환경/DPS 캐시 identity",
+      "scope": "BASE+RUN",
+      "acceptance": "소스/프로필/바이너리/옵션/후보/iterations",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "G6",
+      "name": "API 인증정보",
+      "scope": "BASE",
+      "acceptance": "사용자 Windows WinCred 저장·삭제·비노출",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "G7",
+      "name": "환경 구축 UI",
+      "scope": "BASE+USER",
+      "acceptance": "구성·실행·진단·실제 검증 상태 표시",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "G8",
+      "name": "공식 한국어 표시",
+      "scope": "BASE+USER",
+      "acceptance": "검증된 직업/아이템 공식 ko_KR 명칭",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "G9",
+      "name": "시즌·SimC 갱신",
+      "scope": "BASE",
+      "acceptance": "시즌 이벤트·필요 원본·바이너리만 증분 갱신",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "G10",
+      "name": "오류·복구·배포",
+      "scope": "BASE+RUN",
+      "acceptance": "원문 실패·취소/재개·Windows 배포·재실행",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "H1",
+      "name": "적응형 CHMV 최적화",
+      "scope": "RUN",
+      "acceptance": "최종 절대 rating 후보·SimC DPS 비교",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "H2",
+      "name": "실행 자원 관리",
+      "scope": "RUN",
+      "acceptance": "iterations·Native 상한·실행시간 비용",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "H3",
+      "name": "95% 통계",
+      "scope": "RUN",
+      "acceptance": "DPS·SEM·명목 95%·관측 1순위 분리",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "H4",
+      "name": "근접 대안",
+      "scope": "RUN",
+      "acceptance": "DPS 근접하되 스탯 분배 실질적 다른 후보",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "H5",
+      "name": "취소·재개",
+      "scope": "RUN",
+      "acceptance": "체크포인트·캐시 SHA·중단 후 재시작",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    },
+    {
+      "id": "H6",
+      "name": "사용자 결과",
+      "scope": "RUN",
+      "acceptance": "최종 rating·비율·DPS·SEM·95%·한계",
+      "generic": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "current_source": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "product_integration": {
+        "state": "PENDING",
+        "evidence": []
+      },
+      "historical": {
+        "state": "PENDING",
+        "evidence": []
+      }
+    }
+  ]
+}
