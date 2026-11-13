@@ -84,6 +84,25 @@ class AllExpansionSourceTests(unittest.TestCase):
             probe.parse_wcl_zones({"data":{"worldData":{"zones":[invalid]}}},
                                   require_expansion=True)
 
+    def test_wcl_zone_source_shape_is_aggregate_only(self):
+        old_frozen=zone(7,"Secret Name Unused",1,[])
+        old_frozen["expansion"]=None
+        old_frozen["frozen"]=True
+        unscoped=zone(8,"Unknown New Content",999,[])
+        unscoped["expansion"]={"id":0}
+        valid=zone(9,"Active Named",31,[])
+        payload={"data":{"worldData":{
+            "zones":[old_frozen,unscoped,valid]}}}
+        shape=probe.summarize_wcl_zone_shape(payload)
+        self.assertEqual(shape["total_zones"],3)
+        self.assertEqual(shape["zone_groups"],{
+            "FROZEN_MISSING_ID":1,
+            "UNFROZEN_NONPOSITIVE_ID":1,
+            "UNFROZEN_POSITIVE_ID":1,
+        })
+        self.assertNotIn("Secret Name Unused",str(shape))
+        self.assertNotIn("Unknown New Content",str(shape))
+
     def test_authenticated_probe_uses_two_bounded_wcl_requests_not_named_seed(self):
         requests=[]
         exps={"data":{"worldData":{"expansions":[
