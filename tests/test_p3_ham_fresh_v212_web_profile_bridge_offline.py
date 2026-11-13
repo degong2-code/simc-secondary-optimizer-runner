@@ -408,6 +408,33 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
             # its previous source-backed browser path (no new Native).
 
 
+    def test_v413_fresh_flask_variant_beyond_64_reuses_saved_profile(self):
+        root=self.installed.parent
+        self.installed_doc["official_F_physical_source"]={
+            "physical_item_id":9001}
+        self.installed.write_text(json.dumps(self.installed_doc),encoding="utf8")
+        (root/("v113_profile_"+self.digest[:20]+".json")).write_text(
+            json.dumps({"environment_result":self.original}),encoding="utf8")
+        for i in range(65):
+            digest=f"{i+1:020x}"+"b"*44
+            old={**self.installed_doc,"manifest_sha256":digest,
+                 "official_F_physical_source":{"physical_item_id":1}}
+            (root/("v212_installed_"+digest[:20]+".json")).write_text(
+                json.dumps(old),encoding="utf8")
+        with mock.patch.object(web.environment_manifest,
+                 "verify_fresh_installed_environment"), \
+             mock.patch.object(web.environment_build,
+                 "find_verified_installed_season_environment",
+                 return_value={"installed_manifest_sha256":self.digest}), \
+             mock.patch.object(self.jobs,"restore_verified_fresh_profile",
+                 return_value={"verified_target_ilevel":334}) as restored:
+            value=self.jobs.load_fresh_profile_for_user(
+                334,explicit_build=self.build,selected_flask_item_id=9001)
+        self.assertEqual(value["verified_target_ilevel"],334)
+        self.assertEqual(restored.call_count,1)
+        self.assertEqual(restored.call_args.kwargs[
+            "expected_installed_manifest_sha256"],self.digest)
+
     def test_existing_fresh_snapshot_cannot_fall_back_to_wrong_target(self):
         with (
             mock.patch.object(web.environment_manifest,

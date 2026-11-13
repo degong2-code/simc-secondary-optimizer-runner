@@ -266,10 +266,15 @@ def find_verified_installed_season_environment(
     docs=folder/"fresh_source"
     if docs.is_symlink() or not docs.is_dir():
         return None
+    # Exact session identity already identifies one installed receipt.
+    # When selecting by user oils/hands, inspect all receipts instead of
+    # dropping valid variants (or ambiguity) after an arbitrary first 64.
+    files=((docs/("v212_installed_"+
+                  expected_installed_manifest_sha256[:20]+".json"),)
+           if expected_installed_manifest_sha256 is not None else
+           docs.glob("v212_installed_*.json"))
     candidates=[]
-    for count,file in enumerate(docs.glob("v212_installed_*.json")):
-        if count>=64:
-            break
+    for file in files:
         if (file.is_symlink() or not file.is_file() or
             re.fullmatch(r"v212_installed_[a-f0-9]{20}\.json",file.name)
                is None):
@@ -280,7 +285,7 @@ def find_verified_installed_season_environment(
             pass
     candidates.sort(key=lambda row:(-row[0],row[2].as_posix()))
     matched=None
-    for _,root,file in candidates[:64]:
+    for _,root,file in candidates:
         try:
             if file.stat().st_size>MAX_RECEIPT_BYTES:
                 continue

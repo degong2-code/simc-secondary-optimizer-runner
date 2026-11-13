@@ -161,6 +161,68 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                 v216.find_verified_installed_season_environment(
                     stage_root,334,expected_game_build=b)
 
+    def test_v413_oil_variant_after_64_is_reused_by_source_and_exact_sha(self):
+        build="12.2.0.99999"
+        root=self.root/"many-variants"
+        docs=root/"_fresh_season_sources"/("wago_"+build)/"fresh_source"
+        docs.mkdir(parents=True)
+        key="f"*64
+        stage_sha="3"*64
+        (docs/"v213_candidate_catalog.json").write_text(
+            json.dumps({"game_build":build,"simc_revision":"b"*40,
+                        "manifest_sha256":"5"*64}),encoding="utf8")
+        (docs/("v212_environment_"+stage_sha[:20]+".json")).write_text(
+            json.dumps({"manifest_sha256":stage_sha,
+                        "source_catalog_artifact_sha256":"4"*64,
+                        "target_ilevel":334,
+                        "original_v216_preflight_sha256":"8"*64}),
+            encoding="utf8")
+        for digest,oil in [(f"{i+1:020x}"+"b"*44,{})
+                           for i in range(65)]+[
+                           (key,{"main_hand":998877})]:
+            doc={"manifest_sha256":digest,"game_build":build,
+                 "target_ilevel":334,"simc_revision":"b"*40,
+                 "source_catalog_artifact_sha256":"4"*64,
+                 "source_catalog_manifest_sha256":"5"*64,
+                 "staged_source_environment_sha256":stage_sha,
+                 "trusted_budget_evidence_sha256":"6"*64,
+                 "original_v196_prepared_options_sha256":"7"*64,
+                 "official_G":2800,"official_J":92,"official_F":165,
+                 "official_O":{},"official_B":3057,"official_T":3057,
+                 "official_O_physical_source":{
+                     "selected_oil_item_ids_by_hand":oil},
+                 "published_verified_options":[],
+                 "published_verified_option_count":0}
+            (docs/("v212_installed_"+digest[:20]+".json")).write_text(
+                json.dumps(doc),encoding="utf8")
+        reads=[]
+        def read_json(path,max_bytes=25000000):
+            path=pathlib.Path(path)
+            reads.append(path.name)
+            return json.loads(path.read_text("utf8")),(
+                "4"*64 if path.name=="v213_candidate_catalog.json"
+                else "0"*64)
+        with mock.patch.object(v216.environment_manifest,"read_json",
+                 side_effect=read_json), \
+             mock.patch.object(v216.environment_manifest,
+                 "verify_fresh_installed_environment"), \
+             mock.patch.object(v216.environment_manifest,
+                 "verify_fresh_source_environment"), \
+             mock.patch.object(v216.source_to_catalog,"verify_catalog"), \
+             mock.patch.object(v216.stage_engine,"verify_stage",
+                 return_value={"receipt_sha256":"9"*64}):
+            selected=v216.find_verified_installed_season_environment(
+                root,334,expected_game_build=build,
+                selected_oil_item_ids_by_hand={"main_hand":998877})
+            self.assertEqual(selected["installed_manifest_sha256"],key)
+            reads.clear()
+            selected=v216.find_verified_installed_season_environment(
+                root,334,expected_game_build=build,
+                expected_installed_manifest_sha256=key,
+                selected_oil_item_ids_by_hand={"main_hand":998877})
+        self.assertEqual(selected["installed_manifest_sha256"],key)
+        self.assertEqual(len(reads),3) # install, catalog, staged; no Native
+
     def test_reuse_sealed_tier_source_in_normal_build_without_new_certifier(self):
         from tests.test_v251_db2_raid_tier_simc_bridge import (
             fixture,pinned_thirteen_class_source,BUILD)

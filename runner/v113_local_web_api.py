@@ -490,7 +490,9 @@ class LocalJobs:
             candidates=[]
             directory=workspace/("wago_"+game_build)/"fresh_source"
             if directory.is_dir() and not directory.is_symlink():
-                for path in sorted(directory.glob("v212_installed_*.json"))[:64]:
+                # User-selected flask/gem variants are not limited to
+                # the first 64 installation filenames.
+                for path in directory.glob("v212_installed_*.json"):
                     if (path.is_symlink() or not path.is_file() or
                             path.stat().st_size>environment_build.MAX_RECEIPT_BYTES):
                         continue
