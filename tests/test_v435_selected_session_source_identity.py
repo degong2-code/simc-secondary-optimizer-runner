@@ -172,5 +172,74 @@ class SelectedFutureSessionKey(unittest.TestCase):
                                     "V434_SOURCE_ONLY_IDENTITY"):
             self.preview()
 
+
+    def test_v098_top_level_selected_preview_forwards_exact_v106_key(self):
+        import v098_target_user_scenario_bootstrap as bootstrap
+        expected={
+            "schema":"v435_selected_fresh_session_key_preview_v1",
+            "status":"B8_SELECTED_SESSION_KEY_SOURCE_ONLY_NOT_ADMITTED",
+            "native_execution_authorized":False,
+            "runtime_manifest_created":False,
+            "session_folder_created":False,
+            "session_key_preview":"c"*20}
+        compilation={
+            "source_catalog_path":str(self.source),
+            "verified_environment_install":{"manifest_sha256":self.install}}
+        with mock.patch.object(
+                sessions,"preview_selected_fresh_session_identity",
+                return_value=expected) as inner:
+            out=bootstrap._attach_selected_future_session_identity_unadmitted(
+                user=self.user,binary=self.binary,revision="c"*40,
+                cache_path=self.static,compilation=compilation,
+                result=self.selected)
+        self.assertEqual(out["v435_future_v106_session_key_unadmitted"],
+                         expected)
+        self.assertTrue(out[
+            "v435_isolated_selected_dps_cache_identity_preview_only"])
+        self.assertFalse(out["native_execution_authorized"])
+        self.assertFalse(out["runtime_manifest_created"])
+        self.assertIs(inner.call_args.kwargs["selected_source"],
+                      self.selected)
+        self.assertEqual(inner.call_args.kwargs[
+            "installed_manifest_sha256"],self.install)
+        self.assertEqual(inner.call_args.kwargs[
+            "static_cache"],self.static)
+
+    def test_v098_pending_selected_variant_never_derives_future_session(self):
+        import v098_target_user_scenario_bootstrap as bootstrap
+        self.selected["status"]=(
+            "B8_SELECTED_PROFILE_STATIC_VARIANTS_PENDING_NO_NATIVE")
+        with mock.patch.object(
+                sessions,"preview_selected_fresh_session_identity",
+                side_effect=AssertionError("NO_KEY_FOR_PENDING")):
+            out=bootstrap._attach_selected_future_session_identity_unadmitted(
+                user=self.user,binary=self.binary,revision="c"*40,
+                cache_path=None,compilation={},result=self.selected)
+        self.assertEqual(out["status"],self.selected["status"])
+        self.assertNotIn("v435_future_v106_session_key_unadmitted",out)
+
+    def test_v098_cannot_promote_future_key_to_runtime_ready(self):
+        import v098_target_user_scenario_bootstrap as bootstrap
+        forbidden={
+            "schema":"v435_selected_fresh_session_key_preview_v1",
+            "status":"B8_SELECTED_SESSION_KEY_SOURCE_ONLY_NOT_ADMITTED",
+            "native_execution_authorized":True,
+            "runtime_manifest_created":False,
+            "session_folder_created":False}
+        with mock.patch.object(
+                sessions,"preview_selected_fresh_session_identity",
+                return_value=forbidden):
+            with self.assertRaisesRegex(
+                    bootstrap.UserScenarioBlocked,
+                    "FUTURE_SESSION_MUST_STAY_SOURCE_ONLY"):
+                bootstrap._attach_selected_future_session_identity_unadmitted(
+                    user=self.user,binary=self.binary,revision="c"*40,
+                    cache_path=self.static,
+                    compilation={
+                        "source_catalog_path":str(self.source),
+                        "verified_environment_install":{
+                            "manifest_sha256":self.install}},
+                    result=self.selected)
+
 if __name__=="__main__":
     unittest.main()

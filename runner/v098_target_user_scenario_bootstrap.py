@@ -400,6 +400,8 @@ def _selected_season_profile_budget_preflight(*, user, profile, cfg, rows,
         "budget_preflight":proof,
         "bound_source_identity":bound,
         "bound_source_identity_sha256":bind_sha,
+        "original_v191_gear_tier_source_unadmitted":
+            copy.deepcopy(original_v191_link),
         "runtime_manifest_created":False,
         "native_execution_authorized":False,
         "environment_ready_for_selected_user":False,
@@ -1777,6 +1779,44 @@ def _select_v216_source_only_user_spec(candidate, *, user,
     return chosen
 
 
+
+def _attach_selected_future_session_identity_unadmitted(
+        *,user,binary,revision,cache_path,compilation,result):
+    """v435 strict season-preview caller → v106 future key, no folder/Native.
+
+    The original v106 session identity and web runtime stage remain
+    unchanged; only a completed selected v434 source-only preview acquires
+    an isolated future selected session key with exact static-cache bytes.
+    """
+    need(type(result) is dict and type(compilation) is dict,
+         "B8_FUTURE_SESSION_PREVIEW_SOURCE_REQUIRED")
+    if result.get("status")!=(
+            "B8_SELECTED_V096_COMPLETE_PROFILE_BUDGET_NOT_ADMITTED"):
+        return result
+    installed=compilation.get("verified_environment_install")
+    need(type(installed) is dict and
+         type(installed.get("manifest_sha256")) is str and
+         type(compilation.get("source_catalog_path")) is str and
+         cache_path is not None,
+         "B8_FUTURE_SESSION_INSTALLED_CATALOG_CACHE_REQUIRED")
+    import v106_user_session_controller as sessions
+    future=sessions.preview_selected_fresh_session_identity(
+        user=user,binary=binary,revision=revision,static_cache=cache_path,
+        selected_source=result,
+        source_catalog_path=compilation["source_catalog_path"],
+        installed_manifest_sha256=installed["manifest_sha256"])
+    need(future.get("schema")==
+             "v435_selected_fresh_session_key_preview_v1" and
+         future.get("status")==
+             "B8_SELECTED_SESSION_KEY_SOURCE_ONLY_NOT_ADMITTED" and
+         future.get("native_execution_authorized") is False and
+         future.get("runtime_manifest_created") is False and
+         future.get("session_folder_created") is False,
+         "B8_FUTURE_SESSION_MUST_STAY_SOURCE_ONLY")
+    return {**result,"v435_future_v106_session_key_unadmitted":future,
+            "v435_isolated_selected_dps_cache_identity_preview_only":True}
+
+
 def preview_from_environment_build(user,folder,binary,revision,*,
                                    environment_result,season_settings=None,
                                    season_controls=None,
@@ -1975,6 +2015,13 @@ def preview_from_environment_build(user,folder,binary,revision,*,
                  season_selected_static_cache_path=(
                      selected_static_cache_path if selected_items else None),
                  exploration_policy=exploration_policy)
+    # The selected v434 profile+budget must never inherit the old v106
+    # session folder/DPS cache key. This is an identity-only preview.
+    if selected_items:
+        result=_attach_selected_future_session_identity_unadmitted(
+            user=user,binary=binary,revision=revision,
+            cache_path=selected_static_cache_path,
+            compilation=compilation,result=result)
     proof=result["original_v191_gear_tier_source_unadmitted"]
     need(proof["source_catalog_artifact_sha256"]==
              calc.get("source_catalog_artifact_sha256") and
