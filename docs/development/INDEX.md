@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER — 검색 가능한 개발 기능 지도
 
+> **개발 운영 고정 기준:** [범용 개발·미래 시즌 검증·READY 판정 운영 헌장](OPERATING_CHARTER_FUTURE_SEASONS_AND_EVIDENCE_20261113.md)을 검색/작업 전에 참조한다. 새 시즌 원본 실증과 미래 시즌 계약 시험을 혼동하지 않고 실제 소비 정보만 READY Gate로 판단한다.
+
 > **가장 먼저 확인할 현재 개발 기준:** [2026-11-13 v382 새 채팅 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261113_P1_V382_78_ELEMENT_READINESS.md) · [A~G 환경72 + H 최적화6 = **78개 항목별 준비·증거 추적표**](ENVIRONMENT_READINESS_78_ELEMENT_TRACKER_20261113.md). 기존 29개 개요보다 **이 78개를 사용자 지정 우선 실행 계획**으로 삼는다. `REUSE/CONNECT/EXTEND/REPLACE/NEW/STOP`으로 기존 코드·시험·Native 영수증을 재사용, 기능별 완료 범위를 구분. 새 인계 자체는 Native/Actions PASS가 아니다.
 
 
