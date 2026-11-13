@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER · 개발 지식 시작점
 
+> **현재 A1 코드 증분 v387:** [전체 확장팩 WCL 원본/동일 출처 DB2 JOIN, MIDNIGHT 하드코딩 제거](notes/2026-11-13_p1-v387-a1-all-expansion-source-discovery.md). **수정 코드·테스트 추가**, 원본 함수 10 스모크 PASS, 전체 Python CI/실 API ZERO-SOURCE **미실행**, A1 PENDING. 다음 채팅에서 v386 인계 문서의 v385 코드 스냅샷보다 **v387 최신 실제 HEAD/테스트**를 우선 재조회.
+
 > **2026-11-13 최상위 최신 사용자 결정 / 새 채팅 정본:** [v386 독립 인계](../CHAT_CONTINUITY_HANDOFF_20261113_P1_V386_ZERO_SOURCE_GENERALIZATION.md) → [현재 제로베이스 PASS = 범용 미래 시즌 대응 엔진 기능 PASS 정책](POLICY_ZERO_SOURCE_AUTODISCOVERY_GENERALIZATION_20261113.md) → [운영 헌장](OPERATING_CHARTER_FUTURE_SEASONS_AND_EVIDENCE_20261113.md) → [78개 원장](ENVIRONMENT_READINESS_78_ELEMENT_TRACKER_20261113.md). **현재 시즌·확장팩을 ID/정답/GJFO 캐시 미주입·AI 개입 없이 승인 원본/API 키로 자동 발견·검증하는 실제 ZERO-SOURCE 성공**이면 미래 시즌 대응 **ENGINE 기능 완료를 인정**하며, 미래 미출시 데이터 실측 부족을 미완료 사유로 쓰지 않는다. A1부터 78개 순차 개발, 현재 상태 역사 READY_SCOPED 3/78, A1은 진행 중. 이 텍스트 자체는 PASS/Project UI 반영 증거가 아니다.
 
 > **상시 우선 확인 · 최신 사용자 결정 (2026-11-13):** [범용 개발·정합성·검증 운영 헌장](OPERATING_CHARTER_FUTURE_SEASONS_AND_EVIDENCE_20261113.md)을 **모든 개발 사이클 착수 전 먼저 읽는다**. 아직 존재하지 않는 미래 시즌의 실제 READY를 현재 증명하려 하지 않고, 현재 실제 원본의 ZERO-INSTALL / 엄격 ZERO-SOURCE / 합성 ZERO-CONTRACT를 구별한다. BASE/USER/RUN 증거 범위와 재사용 우선 원칙을 따른다. 이 헌장은 제품 승인 v1.4.3이나 78개 실제 상태 원장을 대체하지 않는다.
