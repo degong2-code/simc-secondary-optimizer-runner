@@ -1,0 +1,25 @@
+name: p1 v415 exact installed v096 DPS source offline
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v096_unified_product_entry.py
+      - tests/test_p3_ho_fresh_v212_user_bridge.py
+      - .github/workflows/p1_v415_v096_exact_installed_dps_source_focused.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  v096-exact-install:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Existing v096 fresh installed source/retarget tests; no Native
+        env:
+          PYTHONPATH: runner:integration_probes:.
+        run: |
+          python -m unittest -v tests.test_p3_ho_fresh_v212_user_bridge

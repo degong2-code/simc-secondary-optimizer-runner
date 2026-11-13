@@ -183,6 +183,7 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
         bound=environment.find_verified_installed_season_environment(
             path.parents[3],doc["target_ilevel"],
             expected_game_build=doc["game_build"],
+            expected_installed_manifest_sha256=doc["manifest_sha256"],
             **({"selected_oil_item_ids_by_hand":selected_ids}
                if selected_ids else {}))
     except (OSError,ValueError,TypeError,KeyError) as exc:
