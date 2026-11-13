@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER — 검색 가능한 개발 기능 지도
 
+> **78개 순차 개발 최신 v396:** **A1/확장팩·시즌** [v394](notes/2026-11-13_p1-v394-a1-current-zero-source-engine-pass.md), **A2/공식 KR 빌드** [v395](notes/2026-11-13_p1-v395-a2-current-retail-build-source-and-propagation-pass.md), **A3/현재 활성 레이드·M+** [v396](notes/2026-11-13_p1-v396-a3-active-raid-mplus-current-source-scope-pass.md)은 *현재 실제 ZERO-SOURCE 해당 기능* `ENGINE_AUTODISCOVERY_PASS` (각 수락 범위만). 역사 3개 `READY_SCOPED`는 별개, **72개 PENDING**. 다음은 A4 Blizzard 원본 각 요청 필드·원본 영수증. `v163`의 미해석 아이템 WSE/A7·GJFO·최종 사용자 E2E는 아직 완료 아님.
+
 > **A1 현 시즌 ZERO-SOURCE 자동 발견 ENGINE PASS — v394:** [원본/Actions 70783 빌드·Blizzard 시즌18·WCL확장팩7·DB2확장팩11/DisplaySeason37·Tier505, 레이드10/던전8 실조인 증거](notes/2026-11-13_p1-v394-a1-current-zero-source-engine-pass.md). 미래 미출시 시즌 실측 Gate 불필요. 그러나 A7 개별 아이템 시즌 소속·G/J/F/O/최종 E2E는 별도. 원장 A1 `ENGINE_AUTODISCOVERY_PASS`, 나머지 항목 상태 유지. 다음 A2 순차 검증.
 
 > **v388 A1+앱 파일 목록 실제 CI:** [최초 source catalog 결손 FAIL → 임시 합성 v213 테스트 fixture로 회복 → Python 74 PASS/1 SKIP·TXT 272개](notes/2026-11-13_p1-v388-a1-and-app-filelist-real-offline-ci.md). [최종 Actions #43354231732](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43354231732) · [파일명 TXT artifact](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43354231732/artifacts/14005122868). 출처·일반화 정책 불변, 실제 인증 API ZERO-SOURCE/Windows Native 시험은 여전히 미실행; A1 PENDING_SCOPE.
