@@ -7,6 +7,8 @@
 
 > **v384 원본 진단 복사 경로:** [사용자 요청별 안전한 소스·G/J/F/O 누락 영수증 복사](notes/2026-11-13_p1-v384-season-evidence-copy-diagnostic.md)는 기존 v113→v216 원본 응답의 **읽기 전용 UI 단축**이다. 사용자 실제 Windows 요청의 `source_compilation.missing` 미관측을 해결할 수 있게 한다. **최신 현장 READY·실 Windows 테스트·추가 Native PASS가 아니라 V8 국소 검증**이며 A10/A11/G2 역사 제한 유지.
 
+> **78개 순차 검토 A1 첫 사이클 (v385):** [확장팩·시즌 소스 정체성/동일 빌드 갱신 재사용 방지](notes/2026-11-13_p1-v385-a1-season-identity-refresh-boundary.md) — v155 Midnight 고정과 v163 시즌 후보·멤버십 정합을 구별. v113 명시 시즌/확장팩 갱신 시 같은 빌드 이전 v217 영수증 사용 차단. **A1 PENDING_SCOPE**, 신규 테스트 코드 추가·실행 PASS 미확인, 신규 Native/API 0.
+
 ## 먼저 찾을 기존 성과 (신규 연구 전 필수 역방향 확인)
 
 | 주제 | 코드·검증된 과거 성과 | 아직 입증하지 못한 범위 |
