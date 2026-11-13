@@ -121,6 +121,7 @@ class A7AutoConsumerProofs(unittest.TestCase):
                 for row in product["items"]:
                     if row["item_id"]==104:
                         row["source_evidence"]=[journal(kind,SEASON+1,0)]
+                        row["source_kinds"]=[kind]
                 with self.assertRaisesRegex(
                     audit.SourceContractBlocked,
                     "A7_NO_CURRENT_JOURNAL_OR_CRAFT_ORIGIN"):
