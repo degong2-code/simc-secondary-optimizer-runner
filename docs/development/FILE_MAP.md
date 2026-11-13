@@ -2,6 +2,8 @@
 
 > [START_HERE](START_HERE.md) · [INDEX](INDEX.md). 아래는 **기본 진입점**이며 전수 파일 목록은 [FILE_INVENTORY](FILE_INVENTORY.md). 테스트 링크는 실행/PASS를 입증하지 않는다. 각 소스의 실제 호출·영수증은 별도 확인한다.
 
+> **완성 앱 소스 선정/출시 추적:** [앱 파일 자동 TXT·기능 대응 정본](APP_PACKAGE_FILE_REGISTRY_20261113.md). 실제 패키지 후보는 `integration_probes/v181_windows_beta_packager.py::select`, 생성한 TXT는 경로 목록만, ZIP `V181_PACKAGE_MANIFEST.json`은 각 바이트의 SHA256. 한 78요소가 여러 파일/한 파일이 여러 요소에 연결될 수 있으므로 이 지도와 원장·회귀를 사용한다. 현재 넓은 `runner` 포함 방식은 **베타 후보**이며 최종 출시 준비 증거가 아니다.
+
 ## 책임 흐름 (개념적, 함수 단위 trace 아님)
 
 `웹 사용자 입력 v113 → 시즌 source/Build v216·v217 → B/T v222 → 설치 v212 → 프로필 v098·v139 → SimC v096·v094 → 탐색 v290·v291 → 캐시·재개 v292·v293 → 웹 UI`
