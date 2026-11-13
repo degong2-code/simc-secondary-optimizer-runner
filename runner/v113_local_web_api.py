@@ -1453,7 +1453,12 @@ class LocalJobs:
                     for value in exact_oils.values())):
                 raise environment_manifest.EnvironmentBlocked(
                     "WEB_FRESH_EXACT_OIL_HAND_ID_SELECTION_INVALID")
-            binary = pathlib.Path(params.binary).expanduser().resolve()
+            # The user-supplied spelling is security-relevant: resolve()
+            # hides a symlink alias before v106 seals executable bytes.
+            supplied_binary=pathlib.Path(params.binary).expanduser()
+            if supplied_binary.is_symlink():
+                raise sessions.SessionBlocked("WEB_SIMC_BINARY_SYMLINK_BLOCKED")
+            binary=supplied_binary.resolve()
             resolved_static=self.default_static_cache(user,params.static_cache)
             # 24 source-independent v147-proven representative archetypes:
             # user-selected target334 gets its own sealed product identity.
@@ -1684,7 +1689,12 @@ class LocalJobs:
             user = json.loads((folder / "user.json").read_text(encoding="utf8"))
             recorded = json.loads((folder / "V106_SESSION_IDENTITY.json").read_text(
                 encoding="utf8"))
-            binary = pathlib.Path(manifest["native_binary"]).resolve()
+            # Recheck stored user-session input before any worker launch;
+            # resolving first would hide a subsequently inserted symlink.
+            saved_binary=pathlib.Path(manifest["native_binary"]).expanduser()
+            if saved_binary.is_symlink():
+                raise sessions.SessionBlocked("SESSION_BINARY_SYMLINK_BLOCKED")
+            binary=saved_binary.resolve()
             rev = manifest["native_revision"]
             static = manifest["static_cache_json"]
             # A manually staged, internal ordinary-gear variant may be

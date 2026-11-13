@@ -1573,6 +1573,46 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(r.status_code,415)
         self.assertFalse((self.root/"runs").exists())
 
+    def test_a8_binary_symlink_cannot_enter_user_plan_or_spawn_native(self):
+        # The real target exists: only the user-supplied alias is rejected.
+        alias=self.root/"user_binary_alias.exe"
+        try:
+            alias.symlink_to(self.binary)
+        except (OSError,NotImplementedError) as exc:
+            self.skipTest("symlink unavailable: "+str(exc))
+        with mock.patch.object(web.subprocess,"Popen",
+                side_effect=AssertionError("NATIVE_MUST_NOT_START")) as worker:
+            response=self.post("/api/v1/sessions/plan",
+                {**self.payload,"binary":str(alias)})
+        self.assertEqual(response.status_code,422,response.text)
+        self.assertEqual(response.json()["detail"]["code"],
+                         "WEB_SIMC_BINARY_SYMLINK_BLOCKED")
+        worker.assert_not_called()
+        self.assertFalse(list((self.root/"runs").glob("*/generated/manifest.json"))
+                         if (self.root/"runs").exists() else False)
+
+    def test_a8_saved_binary_symlink_is_blocked_on_resume_preflight(self):
+        # Do not conflate the same executable bytes with an approved path
+        # mutation. This exercises original v106 source/session validation
+        # without launching a worker or collecting any data.
+        planned=self.plan()
+        folder=self.root/"runs"/planned["session_id"]
+        original=folder/"generated"/"manifest.json"
+        manifest=json.loads(original.read_text(encoding="utf8"))
+        alias=self.root/"saved_binary_alias.exe"
+        try:
+            alias.symlink_to(self.binary)
+        except (OSError,NotImplementedError) as exc:
+            self.skipTest("symlink unavailable: "+str(exc))
+        manifest["native_binary"]=str(alias)
+        original.write_text(json.dumps(manifest),encoding="utf8")
+        with mock.patch.object(web.subprocess,"Popen",
+                side_effect=AssertionError("NATIVE_MUST_NOT_START")) as worker:
+            with self.assertRaisesRegex(web.sessions.SessionBlocked,
+                         "SESSION_BINARY_SYMLINK_BLOCKED"):
+                self.app.state.jobs.args_for_existing(folder)
+        worker.assert_not_called()
+
     def test_plan_builds_real_pinned_paladin_manifest_without_native(self):
         with mock.patch.object(web.subprocess,"Popen") as spawn:
             planned=self.plan()
