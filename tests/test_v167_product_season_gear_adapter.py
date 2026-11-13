@@ -95,6 +95,12 @@ class ProductAdapterTests(unittest.TestCase):
                 "journal_encounter_id":10,"journal_instance_id":20}]}]
         source_doc["internal_conditional_mplus_plain_count"]=1
         c=adapter.from_v166(source_doc)
+        without_wse=copy.deepcopy(source_doc)
+        without_wse["internal_conditional_mplus_plain_candidates"][0][
+            "source_evidence"][0]["world_state_expression_id"]=None
+        # WSE is no longer an admission or internal-fallback requirement.
+        self.assertEqual(adapter.from_v166(without_wse)[
+            "internal_conditional_mplus_plain_count"],1)
         self.assertEqual(c["internal_conditional_mplus_plain_count"],1)
         self.assertNotIn(200,{x["item_id"] for x in c["items"]})
         self.assertFalse(c["internal_conditional_mplus_plain_candidates"][0][
