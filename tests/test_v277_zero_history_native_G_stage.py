@@ -134,18 +134,21 @@ class OneGNativeReuse(unittest.TestCase):
         self.assertEqual({x.name for x in self.root.iterdir()},
                          {"_fresh_season_sources","simc_exe"})
 
-    def test_binary_symlink_rejected_before_native_even_with_valid_target(self):
+    def test_binary_alias_reuses_same_sha_cache_without_new_native(self):
         alias=self.root/"simc_alias"
         try:
             alias.symlink_to(self.binary)
         except (OSError,NotImplementedError) as exc:
             self.skipTest("symlinks unavailable: "+str(exc))
         with mock.patch.object(stage.native.subprocess,"run",
-                               side_effect=AssertionError("NO_NATIVE")) as native:
-            with self.assertRaisesRegex(stage.GNativeStageBlocked,
-                                        "V277_NATIVE_BINARY_FILE_REQUIRED"):
-                self.call(binary=alias)
-        native.assert_not_called()
+                               side_effect=self.fake_process) as native:
+            original=self.call()
+            alias_result=self.call(binary=alias)
+        self.assertEqual(native.call_count,1)
+        self.assertEqual(original["new_native_calls"],1)
+        self.assertEqual(alias_result["new_native_calls"],0)
+        self.assertTrue(alias_result["cache_reused"])
+        self.assertEqual(alias_result["standardized_G"],original["standardized_G"])
 
     def test_absent_binary_does_not_generate_or_guess_G(self):
         with mock.patch.object(stage.native.subprocess,"run",

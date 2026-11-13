@@ -1,3 +1,5 @@
+> **v409 사용자 결정 — A8 간소화:** 게임 빌드와 SimC 내부 빌드 번호의 일치나 SimC 소스→실행 바이너리 컴파일 계보 인증은 필수 Gate가 아니다. 실제 SimC 버전·SHA는 DPS 캐시를 분리하는 메타데이터로 기록한다. 기존 `V106_USER_RESULT.json`/`V291_RESULT.json` 결과를 저장·표시하며 조회 시 SimC 재실행을 요구하지 않는다. 시즌 G/J/F/O 원본 수치·선택 조건·오류 처리는 유지한다. 78축의 미완료 상태는 과장하지 않되 별도 A8 인증을 제품 P1 통합의 선행 Gate로 삼지 않는다. [변경 노트](notes/2026-11-13_p1-v409-a8-simc-metadata-and-result-snapshot-policy.md).
+
 > **v405 최신 진행 규칙:** [A7 실제 원본 ZERO-SOURCE + 변경 시즌/빌드 regression](notes/2026-11-13_p1-v405-a7-automated-current-source-selection-verified.md)으로 `generic/current_source=PASS`일 때만 `next_review=A8`을 허용하도록 [v401 validator](../../integration_probes/v401_completion_contract_gate.py)와 부정 테스트를 개정. **A7 product_integration=PENDING**은 사라지지 않고 78개 요소 COMPLETE/전체 E2E를 차단한다. A8 검토는 미완료 downstream user→SimC 통합의 승인이나 완료가 아님. [정책 CI #43376626773](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43376626773) **16 PASS**.
 
 # 78개 요소 완료 계약: 정책이 실제 진행을 통제하는 최소 강제 절차 (v401)

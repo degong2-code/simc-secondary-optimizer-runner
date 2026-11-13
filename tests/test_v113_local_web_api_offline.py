@@ -1573,8 +1573,8 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(r.status_code,415)
         self.assertFalse((self.root/"runs").exists())
 
-    def test_a8_binary_symlink_cannot_enter_user_plan_or_spawn_native(self):
-        # The real target exists: only the user-supplied alias is rejected.
+    def test_a8_binary_alias_reuses_same_sha_bound_plan_without_native(self):
+        original=self.plan()
         alias=self.root/"user_binary_alias.exe"
         try:
             alias.symlink_to(self.binary)
@@ -1584,17 +1584,12 @@ class LocalWebAPIOffline(unittest.TestCase):
                 side_effect=AssertionError("NATIVE_MUST_NOT_START")) as worker:
             response=self.post("/api/v1/sessions/plan",
                 {**self.payload,"binary":str(alias)})
-        self.assertEqual(response.status_code,422,response.text)
-        self.assertEqual(response.json()["detail"]["code"],
-                         "WEB_SIMC_BINARY_SYMLINK_BLOCKED")
+        self.assertEqual(response.status_code,200,response.text)
+        self.assertEqual(response.json()["session_id"],original["session_id"])
+        self.assertEqual(response.json()["native_calls"],0)
         worker.assert_not_called()
-        self.assertFalse(list((self.root/"runs").glob("*/generated/manifest.json"))
-                         if (self.root/"runs").exists() else False)
 
-    def test_a8_saved_binary_symlink_is_blocked_on_resume_preflight(self):
-        # Do not conflate the same executable bytes with an approved path
-        # mutation. This exercises original v106 source/session validation
-        # without launching a worker or collecting any data.
+    def test_a8_saved_binary_alias_resumes_with_same_executable_sha(self):
         planned=self.plan()
         folder=self.root/"runs"/planned["session_id"]
         original=folder/"generated"/"manifest.json"
@@ -1608,11 +1603,8 @@ class LocalWebAPIOffline(unittest.TestCase):
         original.write_text(json.dumps(manifest),encoding="utf8")
         with mock.patch.object(web.subprocess,"Popen",
                 side_effect=AssertionError("NATIVE_MUST_NOT_START")) as worker:
-            with self.assertRaises(web.HTTPException) as caught:
-                self.app.state.jobs.args_for_existing(folder)
-        self.assertEqual(caught.exception.status_code,422)
-        self.assertEqual(caught.exception.detail["code"],
-                         "SESSION_BINARY_SYMLINK_BLOCKED")
+            recovered=self.app.state.jobs.args_for_existing(folder)
+        self.assertEqual(recovered,(self.binary.resolve(),"7bc1071",None))
         worker.assert_not_called()
 
     def test_plan_builds_real_pinned_paladin_manifest_without_native(self):

@@ -356,7 +356,7 @@
       "id": "A8",
       "name": "SimC revision",
       "scope": "BASE",
-      "acceptance": "정확한 revision·소스/실행 바이너리 빌드 관계",
+      "acceptance": "실행한 SimC 바이너리 SHA·버전/리비전을 메타데이터와 DPS 캐시 정체성에 기록. 저장된 결과 스냅샷 표시에는 SimC 재실행이 불필요. 게임 빌드 번호 일치·소스↔실행 바이너리 컴파일 계보 인증은 필수 조건 아님",
       "generic": {
         "state": "PENDING",
         "evidence": []
