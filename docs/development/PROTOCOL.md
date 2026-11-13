@@ -2,7 +2,9 @@
 
 > [START_HERE](START_HERE.md) · [INDEX](INDEX.md) · [FILE_MAP](FILE_MAP.md) · [EVIDENCE_INDEX](EVIDENCE_INDEX.md). 이전 누적 일자별 '최신' 설명·원문은 [역사 PROTOCOL](HISTORICAL_PROTOCOL_20261110_PRE_KNOWLEDGE_LAYER.md)에 보존한다.
 
-## 매 작업 착수 전> **필수 운영 헌장:** [OPERATING CHARTER FUTURE SEASONS AND EVIDENCE 20261113](OPERATING_CHARTER_FUTURE_SEASONS_AND_EVIDENCE_20261113.md)의 시즌 독립 ENGINE / 실제 SEASON / USER-RUN 계층, 제로베이스 3수준, 78개 상태·증거 분리, 최초 실패 경계 분석, M0–M4 및 변경 비용 원칙을 개발 전 확인한다. 사용자 '진행' 전 코드/Actions/Native는 시작하지 않는다.
+## 매 작업 착수 전
+
+> **필수 운영 헌장:** [범용 개발·정합성·검증 운영 헌장](OPERATING_CHARTER_FUTURE_SEASONS_AND_EVIDENCE_20261113.md)의 시즌 독립 ENGINE / 실제 SEASON / USER-RUN 계층, 제로베이스 3수준, 78개 상태·증거 분리, 최초 실패 경계 분석, M0–M4 및 변경 비용 원칙을 개발 전 확인한다. 사용자 '진행' 전 코드/Actions/Native는 시작하지 않는다.
 
 
 
