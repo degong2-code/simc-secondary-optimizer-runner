@@ -1,5 +1,7 @@
 # SIMC 개발 지속성·지식 유지 프로토콜
 
+> **모든 작업 착수/완료 필수 v401-v402 강제 기준:** [78개 기계 판독 DoD 및 증거 일치 Gate](POLICY_78_ELEMENT_COMPLETION_GATE_V401.md) → [유일한 상태 정본 JSON](78_ELEMENT_COMPLETION_CONTRACTS.json) → [자동 생성 상태표](78_ELEMENT_STATUS_GENERATED.md). **해당 ID의 generic/current_source/product_integration/historical 네 축을 독립 판정**하고 근거는 실제 실행 SHA·Actions·원본 문서와 정확 ID를 결속한다. PASS 근거가 부족하면 보류, 전역/미선택 아이템을 신규 Gate로 만들지 않는다. **A4~A6의 범용성 누락은 [v402](notes/2026-11-13_p1-v402-a4-a6-generic-scope-reassessment.md)에서 실제 원본·변형 회귀로 재판정해 해결, 다음 A7**. 어떤 채팅에서든 상태 변경 전 `python integration_probes/v401_completion_contract_gate.py --check` 및 [자동 Actions](../../.github/workflows/p1_v401_completion_contract_policy_gate.yml) 통과 필요. **CI 정합 통과 ≠ 실제 API/Native/제품 E2E PASS**.
+
 > [START_HERE](START_HERE.md) · [INDEX](INDEX.md) · [FILE_MAP](FILE_MAP.md) · [EVIDENCE_INDEX](EVIDENCE_INDEX.md). 이전 누적 일자별 '최신' 설명·원문은 [역사 PROTOCOL](HISTORICAL_PROTOCOL_20261110_PRE_KNOWLEDGE_LAYER.md)에 보존한다.
 
 > **최신 사용자 일반화 합격 판정·인계 필수:** [현재 ZERO-SOURCE 범용 발견 PASS 정책](POLICY_ZERO_SOURCE_AUTODISCOVERY_GENERALIZATION_20261113.md)과 [최신 v386 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261113_P1_V386_ZERO_SOURCE_GENERALIZATION.md)를 매번 먼저 읽는다. 정상 승인 API 키/접속 가능 조건에서 **현재 실제 시즌 무정답 ZERO-SOURCE 성공 + 하드코딩 방지 다른 시즌 변형 회귀**는 미래 시즌 대응 **ENGINE 기능**의 PASS; 미공개 미래 시즌 자료 미실측 자체는 미완료 사유 아님. 현재 시즌 아이템/예산 SEASON READY 및 전체 USER-E2E는 별도 증거. A1부터 A~H 78개 누락 없이 처리, 각 ID/원본/SHA/실제 실행 범위/후속 재개 조건을 기록한다.
