@@ -9,6 +9,7 @@
 
 | 주제 | 코드·검증된 과거 성과 | 아직 입증하지 못한 범위 |
 |---|---|---|
+| A10/A11/G2 원본 컴파일·봉인·기본 설치 | [v274/v275 기존 원본 컴파일](../../runner/v274_zero_history_source_compiler_wiring.py) · [v216 기존 원본 소유자 보고](../../runner/v216_environment_build_coordinator.py) · [v383 역사 70783 실제 ZIP SHA 재조회](notes/2026-11-13_p1-v383-a10-a11-g2-archived-native-receipt-reuse.md) · [v343 실제 Windows](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43049564271) · [v344 실제 Chrome](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43114134208) | 70783/ilvl334/기본 4보석/O0 역사 범위에서만 READY_SCOPED. 최신 사용자 Windows `source_compilation.missing`과 G/J/F/O owner/변형, 최신 HEAD 및 미래 시즌 READY는 미확정 |
 | 영약 F·하한·gear 0 | [P3-GL: 실제 gear_* 0·최고품질 측정 순서](notes/2026-11-06_p3-gl-flask-highest-quality-first-and-zero-gear.md) · [P3-GN: 시즌 기본 F 1종 자동 선택](notes/2026-11-06_p3-gn-auto-f-environment-source-connection.md) · [P3-GP: ItemID 241324 가속+165 실 Native 2회](notes/2026-11-06_p3-gp-single-flask-only-real-native-attempt.md) · [v350: 개인별 F 변경·정확 설치 변형](notes/2026-11-12_p1-v350-common-season-user-variant-split.md) · [v065 경계 테스트](../../tests/test_v124_fixed_component_candidate_bounds.py) | 대표 기본 F가 전문화별 최적임을 증명하지 않음; 모든 영약 F 변경 비교/실시즌 READY는 별도 |
 | 티어 5→4 유동 장착 | [v101 구현](../../runner/v101_common_representative_equipment.py) · [v098 연결](../../runner/v098_target_user_scenario_bootstrap.py) · [v187 기존 26 DPS 회귀](../../tests/test_v187_current_season_tier_overlay.py) | 신규 시즌 `season_profile_inputs`의 특수/장식 입력 제한 연결은 별도 |
 
