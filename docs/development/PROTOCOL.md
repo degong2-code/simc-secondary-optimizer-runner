@@ -2,7 +2,9 @@
 
 > [START_HERE](START_HERE.md) · [INDEX](INDEX.md) · [FILE_MAP](FILE_MAP.md) · [EVIDENCE_INDEX](EVIDENCE_INDEX.md). 이전 누적 일자별 '최신' 설명·원문은 [역사 PROTOCOL](HISTORICAL_PROTOCOL_20261110_PRE_KNOWLEDGE_LAYER.md)에 보존한다.
 
-## 매 작업 착수 전
+## 매 작업 착수 전> **필수 운영 헌장:** [OPERATING CHARTER FUTURE SEASONS AND EVIDENCE 20261113](OPERATING_CHARTER_FUTURE_SEASONS_AND_EVIDENCE_20261113.md)의 시즌 독립 ENGINE / 실제 SEASON / USER-RUN 계층, 제로베이스 3수준, 78개 상태·증거 분리, 최초 실패 경계 분석, M0–M4 및 변경 비용 원칙을 개발 전 확인한다. 사용자 '진행' 전 코드/Actions/Native는 시작하지 않는다.
+
+
 
 > **2026-11-13 직접 지시·새 후속 일반 채팅 운영:** [78개 요소별 준비 관리 정본](ENVIRONMENT_READINESS_78_ELEMENT_TRACKER_20261113.md)와 [단일 인계](../CHAT_CONTINUITY_HANDOFF_20261113_P1_V382_78_ELEMENT_READINESS.md)가 새로운 순차 개발의 중심이다. 예전 일반 인계 프롬프트보다 이 목표가 우선. A–G 72개의 시즌 공통/개인 선택 환경과 H 6개의 후속 최적화를 구분하고, **각 요소마다 기존 코드/증거 → 실제 필요조건 → 연결/최소 구현 → 검증 결과 → `READY_SCOPED` 범위**를 기록한다. 역사 PASS를 새 PASS로 쓰지 않고 사용자 미선택 항목을 전체 READY Gate로 만들지 않는다. 새 채팅 첫 응답은 읽기 전용 복원 후 STOP, 별도 사용자 '진행' 이후에만 실제 작업.
 
