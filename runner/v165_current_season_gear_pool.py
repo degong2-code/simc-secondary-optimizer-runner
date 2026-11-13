@@ -93,30 +93,33 @@ def _budget_source(source,build):
 
 
 def _journal_origin_current(row, display_season, *, raid):
-    """Only a source-backed, unconditional journal occurrence may qualify.
+    """Use actual active raid/M+ provenance, never opaque WSE eligibility.
 
-    A currently observed raid zone is not evidence that an item guarded by
-    WorldStateExpressionID is obtainable. An unscoped raid item is allowed
-    only when WCL/DB2 already selected that active raid in v163; unscoped
-    M+ loot must never be inferred current merely from a dungeon's name.
-    Other independent journal origins can still establish eligibility.
+    v163 has already matched the raid to the active WCL zone and same-build
+    journal, and M+ to the active DB2 DisplaySeasonID. Preserve WSE in the
+    source record for diagnostics, but do not evaluate, require, or filter it.
+    An unscoped M+ source is not proof of current-season membership.
     """
     if type(row) is not dict or type(display_season) is not int or display_season<=0:
         return False
     if row.get("source") != ("raid_journal" if raid else "mplus_journal"):
         return False
-    if (type(row.get("world_state_expression_id")) is not int or
-            row["world_state_expression_id"]!=0 or
-            type(row.get("display_season_id")) is not int):
+    if type(row.get("display_season_id")) is not int:
         return False
     if any(type(row.get(key)) is not int or row[key]<=0
            for key in ("journal_encounter_id","journal_instance_id")):
         return False
     season=row["display_season_id"]
     evidence=row.get("season_evidence")
-    return (
-        (season==display_season and evidence=="DB2_DISPLAY_SEASON_MATCH") or
-        (raid and season==0 and evidence=="UNKNOWN_UNSCOPED_JOURNAL"))
+    # Old sealed v163 reports encoded WSE>0 as UNKNOWN_WORLD_STATE_EXPRESSION.
+    # The underlying same-season/raid occurrence remains a valid source.
+    # New v163 reports classify DisplaySeasonID regardless of optional WSE.
+    if season==display_season:
+        return evidence in ("DB2_DISPLAY_SEASON_MATCH",
+                            "UNKNOWN_WORLD_STATE_EXPRESSION")
+    return (raid and season==0
+            and evidence in ("UNKNOWN_UNSCOPED_JOURNAL",
+                             "UNKNOWN_WORLD_STATE_EXPRESSION"))
 
 
 def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALLED):
