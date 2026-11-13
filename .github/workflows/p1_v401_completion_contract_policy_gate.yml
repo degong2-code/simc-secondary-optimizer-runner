@@ -1,0 +1,53 @@
+name: p1 v401 78-element completion contract consistency
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  completion-policy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate all 78 proof states and exact generated human view
+        run: python integration_probes/v401_completion_contract_gate.py --check
+      - name: Check negative regressions for false READY and stale reports
+        run: python -m unittest discover -s tests -p 'test_v401_completion_contract_gate.py' -v
+      - name: Post exact scope-policy status to invoking commit
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          python - <<'PY'
+          import json, os, urllib.request
+          repo=os.environ["GITHUB_REPOSITORY"]
+          sha=os.environ["GITHUB_SHA"]
+          state="success" if os.environ["JOB_STATUS"]=="success" else "failure"
+          body={
+              "state":state,
+              "context":"p1-v401-78-completion-contract-scope-gate",
+              "description":"Provenance/claims consistency only; NOT real Native or E2E",
+              "target_url":(
+                  f"https://github.com/{repo}/actions/runs/"
+                  f"{os.environ['GITHUB_RUN_ID']}")
+          }
+          req=urllib.request.Request(
+              f"https://api.github.com/repos/{repo}/statuses/{sha}",
+              json.dumps(body).encode(),method="POST",
+              headers={"Authorization":f"Bearer {os.environ['GH_TOKEN']}",
+                       "Accept":"application/vnd.github+json",
+                       "Content-Type":"application/json"})
+          with urllib.request.urlopen(req,timeout=12) as response:
+              assert response.status==201
+          print("V401_STATUS_RECORDED",state,sha)
+          PY
