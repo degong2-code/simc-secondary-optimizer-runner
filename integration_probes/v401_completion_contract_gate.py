@@ -64,6 +64,11 @@ def validate(data,root=ROOT):
         sha=proof.get("tested_sha")
         need(type(sha) is str and re.fullmatch(r"[a-f0-9]{40}",sha),
              "TESTED_COMMIT_SHA_REQUIRED:"+key)
+        supports=proof.get("supports")
+        need(type(supports) is list and bool(supports) and
+             len(supports)==len(set(supports)) and
+             all(type(eid) is str and eid in ALL_IDS for eid in supports),
+             "EVIDENCE_SUPPORTED_ELEMENT_IDS_INVALID:"+key)
     entries=data.get("elements")
     need(type(entries) is list and len(entries)==78,
          "EXACTLY_78_CONTRACTS_REQUIRED")
@@ -94,6 +99,8 @@ def validate(data,root=ROOT):
                 kinds={evidence[key]["kind"] for key in refs}
                 need(KINDS[axis].issubset(kinds),
                      "PASS_MISSING_REQUIRED_EVIDENCE_KIND:"+eid+":"+axis)
+                need(all(eid in evidence[key]["supports"] for key in refs),
+                     "EVIDENCE_NOT_SCOPED_TO_ELEMENT:"+eid+":"+axis)
                 need(not dim.get("reason"),"PASS_CANNOT_HAVE_NA_REASON")
             elif state=="PENDING":
                 need(not refs and not dim.get("reason"),
@@ -119,6 +126,11 @@ def validate(data,root=ROOT):
     expected=unresolved[0] if unresolved else "A7"
     need(policy.get("next_review")==expected,
          "NEXT_REVIEW_SKIPPED_GENERIC_VALIDATION:"+expected)
+    if unresolved:
+        row_a7=entries[ALL_IDS.index("A7")]
+        need(all(row_a7[k]["state"]=="PENDING"
+                 for k in ("generic","current_source","product_integration")),
+             "A7_PREMATURE_VERIFIED_CLAIM_BEFORE_A4_A6_GENERIC")
     if policy["full_product_e2e"]=="PASS":
         need(all(complete(row) for row in entries),
              "FINAL_E2E_CANNOT_PASS_WHILE_ELEMENTS_INCOMPLETE")
