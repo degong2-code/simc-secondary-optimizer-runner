@@ -191,6 +191,12 @@ def execute(root,binary,revision,game_build,environment_result,*,receipt_file,
                   "max_elapsed_seconds":360}
             if selected_oils:
                 args["selected_oil_item_ids_by_hand"]=selected_oils
+            if primary_continuous:
+                # Default 64-case user path requires selecting the already
+                # installed season; this is NOT a SimC-vs-game build Gate.
+                args["installed_season_game_build"]=game_build
+                if expected_socket_count is not None:
+                    args["user_socket_total"]=expected_socket_count
             # Diagnostics only for this pinned public Ret one-shot. The
             # product HTTP API continues to redact paths and internal errors.
             # Capture type + source locations (not exception messages, input

@@ -1,4 +1,5 @@
 # v417 retry: Windows short/long Temp path alias regression test fixed; first trial Native0.
+# v417 retry 2: legacy probe passed no installed season ID for continuous 12-case start.
 # One bounded post-v414/v415 product E2E. Reuses v343's already-tested
 # native probe and v344's official Windows SimC package; no new engine.
 name: P1 v417 Actual installed GJFO to v096 DPS and saved snapshot once
