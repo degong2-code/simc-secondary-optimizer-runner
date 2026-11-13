@@ -5,6 +5,8 @@ is NO new season/expansion name/ID seed, network access or installation.
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import pathlib
 import sys
 import unittest
@@ -128,6 +130,32 @@ class AllExpansionSourceTests(unittest.TestCase):
                 probe.parse_wcl_zones({"data":{"worldData":{
                     "zones":[invalid,current]}}},require_expansion=True)
 
+    def test_blizzard_original_http_body_sha_is_opt_in_and_not_token(self):
+        """A4 exact HTTP body identity without requests, OAuth or Native."""
+        payload=json.dumps({"current_season":{"id":73},
+                            "seasons":[{"id":73}]},
+                           separators=(",",":")).encode("utf8")
+        class Response:
+            status=200
+            def __enter__(self):return self
+            def __exit__(self,*args):return False
+            def read(self,maximum):return payload[:maximum]
+        captured=[]
+        def transport(req,timeout):
+            captured.append((req.full_url,timeout))
+            return Response()
+        proof={}
+        result=probe.request_json(
+            probe.BLIZZARD_BASE+
+            "/data/wow/mythic-keystone/season/index?namespace=dynamic-kr",
+            transport=transport,source_proof=proof)
+        self.assertEqual(result["current_season"]["id"],73)
+        self.assertEqual(proof,{
+            "raw_response_sha256":hashlib.sha256(payload).hexdigest(),
+            "raw_response_bytes":len(payload)})
+        self.assertEqual(len(captured),1)
+        self.assertNotIn("access_token",str(proof))
+
     def test_authenticated_probe_uses_two_bounded_wcl_requests_not_named_seed(self):
         requests=[]
         exps={"data":{"worldData":{"expansions":[
@@ -137,7 +165,7 @@ class AllExpansionSourceTests(unittest.TestCase):
             zone(40,"Old Zone",7,[(10,"Old Boss")],frozen=True),
             zone(41,"New Zone",41,[(11,"New Boss")])]}}}
         def local_request(url,*,method="GET",headers=None,data=None,
-                          transport=None):
+                          transport=None,source_proof=None):
             requests.append((url,method,data))
             if url.startswith(probe.BLIZZARD_BASE+"/"):
                 return {"current_season":{"id":991}}
@@ -171,7 +199,7 @@ class AllExpansionSourceTests(unittest.TestCase):
 
     def test_unindexed_wcl_expansion_is_not_silently_promoted(self):
         def local_request(url,*,method="GET",headers=None,data=None,
-                          transport=None):
+                          transport=None,source_proof=None):
             if url.startswith(probe.BLIZZARD_BASE+"/"):
                 return {"current_season":{"id":991}}
             if b"expansions" in data:
