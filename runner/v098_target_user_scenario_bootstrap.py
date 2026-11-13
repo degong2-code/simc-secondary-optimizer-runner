@@ -2069,7 +2069,7 @@ def materialize_selected_verified_environment(*,user,folder,binary,revision,
     """
     folder=pathlib.Path(folder).expanduser().resolve()
     need(folder.name=="generated" and
-         type(selected_static_cache_path) in (str,pathlib.Path),
+         isinstance(selected_static_cache_path,(str,pathlib.Path)),
          "B8_SELECTED_V436_GENERATED_DIR_AND_CACHE_REQUIRED")
     cache=pathlib.Path(selected_static_cache_path).expanduser().resolve()
     need(cache.is_file() and not cache.is_symlink(),
