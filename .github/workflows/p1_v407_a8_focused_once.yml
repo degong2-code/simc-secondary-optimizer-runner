@@ -1,0 +1,33 @@
+name: p1 v407 A8 focused source-binary offline regression once
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - .github/workflows/p1_v407_a8_focused_once.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  a8-focused:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Existing source, pinned revision, binary identity and symlink negative tests
+        env:
+          PYTHONPATH: runner:integration_probes:.
+        run: |
+          python -m unittest -v \
+            tests.test_v229_simc_only_source_seed \
+            tests.test_v257_exact_simc_commit_in_build \
+            tests.test_v275_pinned_simc_compiler_inputs \
+            tests.test_v277_zero_history_native_G_stage \
+            tests.test_p3_fz_existing_simc_binary_identity
+      - name: Existing 78-element claim consistency
+        run: python integration_probes/v401_completion_contract_gate.py --check

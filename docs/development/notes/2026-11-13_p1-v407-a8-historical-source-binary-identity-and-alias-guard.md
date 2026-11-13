@@ -1,5 +1,14 @@
 # v407 — A8 SimC revision·소스/실행 바이너리: 역사 영수증 재사용 및 별칭 경로 보수
 
+- **Capability:** `SOURCE.SEAL` (A8: existing pinned SimC source / executable relation)
+- **Keywords:** A8, SimC revision, source Git SHA, binary SHA, v217, CLI build, v277
+- **Prior evidence:** [v342 original Windows CLI](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43046174810) · [v344 Native64](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43114134208)
+- **Decision:** `REUSE` history only; `EXTEND` original binary-path alias check; other A8 axes PENDING
+- **Changes:** v277 pre-resolve symlink guard; one negative regression; scoped JSON/tracker/generated update
+- **Verification:** real prior v342/v344 jobs SUCCESS independently re-read; v407 code-focused CI pending (no new Native)
+- **Remaining:** A8 generic/current_source/product integration need real exact consumer proof; USER-E2E pending
+- **Efficiency:** new SimC Native 0; new DB2/HTTP source retrieval 0; unchanged static and DPS caches
+
 **범위:** A8 `historical=PASS`(한 조건), `generic/current_source/product_integration=PENDING`, `policy.next_review=A8`, USER-E2E=PENDING. 기존 실행·원본 바이트를 재다운로드하거나 Native를 실행한 것은 아니다. 기존 `v229/v275/v241/v217/v216` 소스 검증과 `v234/v277/v291` Native/캐시를 재사용한다.
 
 ## 기존 영수증 — 같은 바이너리·빌드 한 조건

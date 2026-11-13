@@ -35,8 +35,10 @@ class CompletionContractTests(unittest.TestCase):
         self.assertEqual(sum(x["generic"]["state"]=="PASS" for x in rows),7)
         self.assertEqual(sum(x["current_source"]["state"]=="PASS"
                              for x in rows),7)
-        self.assertEqual(sum(x["historical"]["state"]=="PASS"
-                             for x in rows),3)
+        historical={x["id"] for x in rows
+                    if x["historical"]["state"]=="PASS"}
+        # New scope-backed history is additive, not a fixed count forever.
+        self.assertTrue({"A8","A10","A11","G2"}.issubset(historical))
         self.assertFalse(any(gate.complete(x) for x in rows))
 
     def test_a4_a6_generic_pass_is_scoped_and_product_unverified(self):
@@ -136,6 +138,17 @@ class CompletionContractTests(unittest.TestCase):
         with self.assertRaisesRegex(gate.ContractInvalid,
                                     "PASS_MISSING_REQUIRED_EVIDENCE_KIND:A10:current_source"):
             gate.validate(doc)
+
+    def test_a8_history_cannot_prove_current_source_or_generic(self):
+        data=self.scenario()
+        key="a8_historical_v342_v344"
+        row=self.row(data,"A8")
+        self.assertEqual(row["historical"]["state"],"PASS")
+        self.assertEqual(data["evidence"][key]["supports"],["A8"])
+        row["current_source"]={"state":"PASS","evidence":[key]}
+        with self.assertRaisesRegex(gate.ContractInvalid,
+                 "PASS_MISSING_REQUIRED_EVIDENCE_KIND:A8:current_source"):
+            gate.validate(data)
 
     def test_not_applicable_requires_specific_policy_evidence(self):
         doc=self.scenario()
