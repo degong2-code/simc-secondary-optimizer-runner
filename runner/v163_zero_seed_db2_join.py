@@ -76,11 +76,30 @@ def verify_snapshot(folder, build, *, verified_tables=None):
                 'V217_VERIFIED_TABLE_PROVENANCE_MISMATCH_'+table)
     return receipt
 
-def named_zone(report, name):
-    zones = (report.get('wcl') or {}).get('midnight_zones') or []
-    found = [z for z in zones if norm(z.get('zone_name','')) == norm(name)
-             and z.get('wcl_frozen') is False]
-    fail_if(len(found) != 1, 'ACTIVE_WCL_ZONE_NOT_UNIQUE_'+name)
+def wcl_zone_sources(report):
+    """Use WCL's all-expansion source when supplied; historical receipts stay legible.
+
+    New provider reports MUST include exact WCL expansion IDs. Old
+    midnight_zones are historical only, never synthesized as generic proof.
+    """
+    wcl=report.get('wcl') or {}
+    if 'zones' in wcl:
+        zones=wcl['zones']
+        fail_if(type(zones) is not list or not zones or
+                any(type(z) is not dict or
+                    type(z.get('expansion_id')) is not int or
+                    z['expansion_id']<=0 for z in zones),
+                'WCL_ALL_EXPANSION_SOURCE_INVALID')
+        return zones
+    return wcl.get('midnight_zones') or []
+
+def named_zone(report, name, *, wcl_expansion_id=None):
+    zones=wcl_zone_sources(report)
+    found=[z for z in zones if norm(z.get('zone_name',''))==norm(name)
+           and z.get('wcl_frozen') is False and
+           (wcl_expansion_id is None or
+            z.get('expansion_id')==wcl_expansion_id)]
+    fail_if(len(found)!=1,'ACTIVE_WCL_ZONE_NOT_UNIQUE_'+name)
     return found[0]
 
 def uniquely_match(name, candidates, key):
@@ -203,7 +222,7 @@ def discover_unique_live_scope(folder, report):
     fail_if(report.get("schema") != "v155_season_discovery_provider_probe_v1"
             or report.get("mode") != "LIVE_AUTHENTICATED_BOUNDED",
             "LIVE_SEASON_REPORT_REQUIRED")
-    zones=[z for z in (report.get("wcl",{}).get("midnight_zones") or [])
+    zones=[z for z in wcl_zone_sources(report)
            if z.get("wcl_frozen") is False and z.get("encounters")]
     fail_if(not zones,"LIVE_ACTIVE_WCL_ZONES_NOT_PROVEN")
     challenge={number(x["ID"]):x for x in read_rows(folder,"MapChallengeMode")}
@@ -220,11 +239,17 @@ def discover_unique_live_scope(folder, report):
              if names and {norm(x["name"]) for x in z["encounters"]}==names]
     fail_if(len(choices)!=1,"LIVE_MPLUS_ZONE_OR_DISPLAY_SEASON_AMBIGUOUS")
     mplus,sid=choices[0]
+    # Retail DB2 and WCL expansion IDs are different namespaces. Constrain
+    # candidate raid/dungeon pairs to one source WCL expansion; never map
+    # the WCL ID directly onto ItemSparse.ExpansionID.
+    wcl_expansion_id=mplus.get("expansion_id")
     encounters=list(read_rows(folder,"JournalEncounter"))
     tier_links=list(read_rows(folder,"JournalTierXInstance"))
     raidzones=[]
     for zone in zones:
         if zone["zone_id"]==mplus["zone_id"]:continue
+        if (wcl_expansion_id is not None and
+                zone.get("expansion_id")!=wcl_expansion_id):continue
         found=[uniquely_match(e["name"],encounters,"Name_lang")
                for e in zone["encounters"]]
         if not found or any(x is None for x in found):continue
@@ -247,6 +272,7 @@ def discover_unique_live_scope(folder, report):
         loot,read_rows(folder,"Item"),read_rows(folder,"ItemSparse"))
     return {"raid_zone":raid["zone_name"],
             "mplus_zone":mplus["zone_name"],
+            "wcl_expansion_id":wcl_expansion_id,
             "expansion_id":expansion_id,
             "raid_expansion_scope":"EQUIPMENT_CLASS_2_4_ONLY",
             "db2_display_season_id":sid,
@@ -257,14 +283,17 @@ def discover_unique_live_scope(folder, report):
 
 
 def build_index(folder, report, *, raid_zone, mplus_zone, build,
-                expansion_id, verified_tables=None):
+                expansion_id, verified_tables=None,
+                wcl_expansion_id=None):
     fail_if(report.get('schema') != 'v155_season_discovery_provider_probe_v1'
             or report.get('mode') != 'LIVE_AUTHENTICATED_BOUNDED',
             'LIVE_SEASON_REPORT_REQUIRED')
     receipt = verify_snapshot(folder, build,
                               verified_tables=verified_tables)
-    raid = named_zone(report, raid_zone)
-    mplus = named_zone(report, mplus_zone)
+    raid = named_zone(report, raid_zone,
+                      wcl_expansion_id=wcl_expansion_id)
+    mplus = named_zone(report, mplus_zone,
+                       wcl_expansion_id=wcl_expansion_id)
     fail_if(not raid.get('encounters') or not mplus.get('encounters'),
             'WCL_ENCOUNTERS_EMPTY')
     journal_instances = {number(r['ID']):r for r in read_rows(folder,'JournalInstance')}
