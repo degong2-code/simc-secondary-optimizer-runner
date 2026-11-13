@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER · 개발 지식 시작점
 
+> **v397 A4 현재 선행 경계:** [실 Blizzard 네 API 원문 HTTP byte SHA/크기 증명](notes/2026-11-13_p1-v397-a4-blizzard-original-http-body-provenance-progress.md) — [Actions #43359408019](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43359408019). A4는 이 4개 인덱스 원본 확보까지 실 PASS지만 **선택한 필수 item/contents 출처 정합이 미확정이므로 PENDING_SCOPE**. 다음 A4 원본 소비 필드별 추적, Wago 10개/Native 중복 수집 금지.
+
 > **최신 v396 (이전 A1/A2 PENDING 서술보다 우선):** [A1 실 제로베이스 범용 자동 식별 PASS](notes/2026-11-13_p1-v394-a1-current-zero-source-engine-pass.md) → [A2 공식 Retail KR 버전/동일 원본 전파 PASS](notes/2026-11-13_p1-v395-a2-current-retail-build-source-and-propagation-pass.md) → [A3 실제 활성 raid/M+ 유일 조인 PASS](notes/2026-11-13_p1-v396-a3-active-raid-mplus-current-source-scope-pass.md). 세 항목은 해당 ENGINE 기능 범위만; A7 시즌 아이템 소속/원본 WSE와 GJFO·최종 E2E 미완료. **78개 원장: 3 ENGINE PASS + 3 역사 READY_SCOPED + 72 PENDING. 다음 A4.**
 
 > **v394 A1 순차 완료 / 다음 A2:** [현재 KR 70783 실제 ZERO-SOURCE 원본 유일 자동 시즌 조인·ENGINE PASS](notes/2026-11-13_p1-v394-a1-current-zero-source-engine-pass.md). WCL all-expansion에서 frozen 과거 2개 비양수 ID만 제외, 현재 활성 WCL 2 zone+공식 Blizzard season 18+Wago 10 DB2(62,280,767바이트)에서 expansion11/DisplaySeason37/tier505, raid10/던전8 정확 발견. **A7 개별 아이템 WSE/전체 시즌 READY는 아님.** 상태 집계는 원장 최신 확인. 다음 채팅은 과거 A1 PENDING 안내 대신 **A2 현재 게임 빌드**부터 진행.
