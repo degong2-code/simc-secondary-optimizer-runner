@@ -112,10 +112,14 @@ def parse_wcl_zones(doc, *, require_expansion=False):
          "WCL_ZONE_LIST_INVALID")
     out=[]; seen=set()
     for zone in zones:
+        # WCL may return null for older/inactive source metadata.
+        # Only an explicit frozen=False is treated as an active candidate
+        # by v163; unknown is never silently promoted to active.
         need(type(zone) is dict and type(zone.get("id")) is int and
              zone["id"]>0 and zone["id"] not in seen and
              type(zone.get("name")) is str and zone["name"].strip() and
-             type(zone.get("frozen")) is bool,"WCL_ZONE_ROW_INVALID")
+             (type(zone.get("frozen")) is bool or
+              zone.get("frozen") is None),"WCL_ZONE_ROW_INVALID")
         seen.add(zone["id"])
         expansion=zone.get("expansion")
         expansion_id=(expansion.get("id")
@@ -130,14 +134,27 @@ def parse_wcl_zones(doc, *, require_expansion=False):
         for encounter in encounters:
             need(type(encounter) is dict and
                  type(encounter.get("id")) is int and
-                 type(encounter.get("journalID")) is int and
-                 type(encounter.get("name")) is str,
-                 "WCL_JOURNAL_ID_NOT_AVAILABLE")
+                 encounter["id"]>0 and
+                 type(encounter.get("name")) is str and
+                 encounter["name"].strip(),
+                 "WCL_ENCOUNTER_ROW_INVALID")
+            journal_id=encounter.get("journalID")
+            # JournalID is optional provider metadata, not the selected
+            # source's DB2 season join key. An old unrelated zone may have
+            # null; do not abort *all* expansion discovery for that reason.
+            # v163 still requires an exact current encounter/name/raid/DB2
+            # relation before using a zone as source evidence.
+            need(journal_id is None or
+                 (type(journal_id) is int and journal_id>0),
+                 "WCL_JOURNAL_ID_INVALID")
             entries.append({"wcl_encounter_id":encounter["id"],
-                "blizzard_journal_encounter_id":encounter["journalID"],
+                "blizzard_journal_encounter_id":journal_id,
                 "name":encounter["name"]})
         row={"zone_id":zone["id"],"zone_name":zone["name"],
-             "wcl_frozen":zone["frozen"],"encounters":entries}
+             "wcl_frozen":zone.get("frozen"),"encounters":entries,
+             "journal_id_fields_complete":all(
+                 x["blizzard_journal_encounter_id"] is not None
+                 for x in entries)}
         if expansion_id is not None:
             row["expansion_id"]=expansion_id
         out.append(row)
