@@ -6,7 +6,7 @@
     "current_source_acceptance": "actual current game-build provider source + exact SHA + correct consumed scope",
     "product_acceptance": "actual user input through season environment and SimC DPS/SEM/95% output; separate final product E2E",
     "optional_acceptance": "NOT_APPLICABLE only with concrete feature-specific reason and owner evidence; no blanket exemptions",
-    "next_review": "B7",
+    "next_review": "B8",
     "a7_may_be_next_only_after_generic_review_of": [
       "A4",
       "A5",
@@ -492,6 +492,51 @@
       "tested_sha": "9a54499b18d433d74c980a09a977e0309139ac89",
       "supports": [
         "B6"
+      ]
+    },
+    "b7_generic_v276": {
+      "kind": "GENERALIZATION_REGRESSION",
+      "note": "docs/development/notes/2026-11-13_p1-v429-b7-tier-five-13x5-source-product-scope.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41628248531",
+      "tested_sha": "dadf683c3b495e4c4e18c2891099c0817f59a7d7",
+      "supports": [
+        "B7"
+      ]
+    },
+    "b7_generic_v212": {
+      "kind": "GENERALIZATION_REGRESSION",
+      "note": "docs/development/notes/2026-11-13_p1-v429-b7-tier-five-13x5-source-product-scope.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43388059919",
+      "tested_sha": "0240a1796ba1f0898ec2512e58de8af330571442",
+      "supports": [
+        "B7"
+      ]
+    },
+    "b7_current_v417": {
+      "kind": "CURRENT_SOURCE_REAL",
+      "note": "docs/development/notes/2026-11-13_p1-v429-b7-tier-five-13x5-source-product-scope.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43394408756",
+      "tested_sha": "89d4810baf5e05f1c5c6f355f39a5f35ca9ec4e7",
+      "supports": [
+        "B7"
+      ]
+    },
+    "b7_product_v417": {
+      "kind": "PRODUCT_INTEGRATION_REAL",
+      "note": "docs/development/notes/2026-11-13_p1-v429-b7-tier-five-13x5-source-product-scope.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43394408756",
+      "tested_sha": "89d4810baf5e05f1c5c6f355f39a5f35ca9ec4e7",
+      "supports": [
+        "B7"
+      ]
+    },
+    "b7_history_v251": {
+      "kind": "HISTORICAL_SCOPED",
+      "note": "docs/development/notes/2026-11-13_p1-v429-b7-tier-five-13x5-source-product-scope.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41454624275",
+      "tested_sha": "1dc1b4ccdb3c38924fe321ccdc1ef4927f8fcb1d",
+      "supports": [
+        "B7"
       ]
     }
   },
@@ -996,20 +1041,29 @@
       "scope": "BASE",
       "acceptance": "직업별 머리/어깨/가슴/손/다리 5개 ID",
       "generic": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "b7_generic_v276",
+          "b7_generic_v212"
+        ]
       },
       "current_source": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "b7_current_v417"
+        ]
       },
       "product_integration": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "b7_product_v417"
+        ]
       },
       "historical": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "b7_history_v251"
+        ]
       }
     },
     {

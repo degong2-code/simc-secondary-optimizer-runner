@@ -1,3 +1,5 @@
+> **2026-11-13 v429 B7 티어 5부위 원본 범위 COMPLETE / 다음 B8:** [v429 same-build 13×5·현재 70783 원시 Native 4pc](notes/2026-11-13_p1-v429-b7-tier-five-13x5-source-product-scope.md), [78 JSON 정본](78_ELEMENT_COMPLETION_CONTRACTS.json): generic18/current_source18/product7/historical11, COMPLETE7/78(A8·A9·A10·A11·B2·B3·B7); B8의 사용자별 4-of-5 충돌 규칙 미완료, 전 제품 E2E PENDING. 신규 Native0.
+
 > **2026-11-13 v428 B6 주능력치 범위 검토 · 다음 B7:** [v428 현재70783 생존 12 JSON2 민첩2596 등 실측](notes/2026-11-13_p1-v428-b6-primary-stat-profile-native-scope.md), [78 JSON 정본](78_ELEMENT_COMPLETION_CONTRACTS.json): 17/17/6/10 PASS, COMPLETE 6/78(A8·A9·A10·A11·B2·B3), B6 제품통합 PENDING, USER-E2E PENDING. 신규 Native0. 이전 수치는 당시 역사.
 
 > **2026-11-13 v427 B5 검토 / B6 다음:** [v427 현재 v417 실 무기 ID/ilvl/auto_attack SHA 확인](notes/2026-11-13_p1-v427-b5-weapon-performance-native-scope.md), [78 JSON 정본](78_ELEMENT_COMPLETION_CONTRACTS.json): 16/16/6/9 PASS, 완료 A8·A9·A10·A11·B2·B3 6/78; B5 product_integration PENDING, 최종 E2E PENDING. 신규 Native0, 시뮬레이터 피해 재구현 없음.

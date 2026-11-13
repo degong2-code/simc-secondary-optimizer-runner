@@ -4,13 +4,13 @@
 
 > 각 축의 PASS는 전체 제품 완료가 아닙니다. 역사 실행은 범용성이나 현재 시즌 검증을 대체하지 않습니다.
 
-- 범용 기능 PASS: **17/78**
-- 현재 원본 검증 PASS: **17/78** (범용 PASS와 중복 집계 가능)
-- 개별 제품 통합 PASS: **6/78**
-- 역사적 범위 PASS: **10/78**
-- 세 축을 모두 완료한 요소: **6/78**
+- 범용 기능 PASS: **18/78**
+- 현재 원본 검증 PASS: **18/78** (범용 PASS와 중복 집계 가능)
+- 개별 제품 통합 PASS: **7/78**
+- 역사적 범위 PASS: **11/78**
+- 세 축을 모두 완료한 요소: **7/78**
 - 최종 제품 E2E: **PENDING**
-- 다음 검토 요소: **B7** (순차 범용·현재 원본 검토 진행; 제품 통합은 독립 축)
+- 다음 검토 요소: **B8** (순차 범용·현재 원본 검토 진행; 제품 통합은 독립 축)
 
 | ID | 기능 | 적용 | 범용성 | 현재 원본 | 제품 통합 | 역사 증거 | 요소 완료 |
 |---|---|---|---|---|---|---|---|
@@ -31,7 +31,7 @@
 | B4 | 무기 형태 | BASE | PASS | PASS | PENDING | PASS | INCOMPLETE |
 | B5 | 무기 성능 | BASE | PASS | PASS | PENDING | PASS | INCOMPLETE |
 | B6 | 주능력치 | BASE | PASS | PASS | PENDING | PASS | INCOMPLETE |
-| B7 | 티어 5부위 원본 | BASE | PENDING | PENDING | PENDING | PENDING | INCOMPLETE |
+| B7 | 티어 5부위 원본 | BASE | PASS | PASS | PASS | PASS | COMPLETE |
 | B8 | 티어 4세트 착용 | USER | PENDING | PENDING | PENDING | PENDING | INCOMPLETE |
 | B9 | 촉매 변환 | USER | PENDING | PENDING | PENDING | PENDING | INCOMPLETE |
 | B10 | 대표 소켓 | BASE+USER | PENDING | PENDING | PENDING | PENDING | INCOMPLETE |
@@ -112,4 +112,5 @@
 - **B4**: [CURRENT_SOURCE_REAL](notes/2026-11-13_p1-v426-b4-weapon-forms-v184-receipt-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43394408756)), [GENERALIZATION_REGRESSION](notes/2026-11-13_p1-v426-b4-weapon-forms-v184-receipt-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41006525649)), [GENERALIZATION_REGRESSION](notes/2026-11-13_p1-v426-b4-weapon-forms-v184-receipt-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43388059919)), [HISTORICAL_SCOPED](notes/2026-11-13_p1-v426-b4-weapon-forms-v184-receipt-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40972829357))
 - **B5**: [CURRENT_SOURCE_REAL](notes/2026-11-13_p1-v427-b5-weapon-performance-native-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43394408756)), [GENERALIZATION_REGRESSION](notes/2026-11-13_p1-v427-b5-weapon-performance-native-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43388059919)), [HISTORICAL_SCOPED](notes/2026-11-13_p1-v427-b5-weapon-performance-native-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41007713360)), [HISTORICAL_SCOPED](notes/2026-11-13_p1-v427-b5-weapon-performance-native-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41008699490))
 - **B6**: [GENERALIZATION_REGRESSION](notes/2026-11-13_p1-v428-b6-primary-stat-profile-native-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41006525649)), [GENERALIZATION_REGRESSION](notes/2026-11-13_p1-v428-b6-primary-stat-profile-native-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43388059919)), [CURRENT_SOURCE_REAL](notes/2026-11-13_p1-v428-b6-primary-stat-profile-native-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43394408756)), [HISTORICAL_SCOPED](notes/2026-11-13_p1-v428-b6-primary-stat-profile-native-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41007713360)), [HISTORICAL_SCOPED](notes/2026-11-13_p1-v428-b6-primary-stat-profile-native-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41008699490))
+- **B7**: [GENERALIZATION_REGRESSION](notes/2026-11-13_p1-v429-b7-tier-five-13x5-source-product-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41628248531)), [GENERALIZATION_REGRESSION](notes/2026-11-13_p1-v429-b7-tier-five-13x5-source-product-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43388059919)), [CURRENT_SOURCE_REAL](notes/2026-11-13_p1-v429-b7-tier-five-13x5-source-product-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43394408756)), [PRODUCT_INTEGRATION_REAL](notes/2026-11-13_p1-v429-b7-tier-five-13x5-source-product-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43394408756)), [HISTORICAL_SCOPED](notes/2026-11-13_p1-v429-b7-tier-five-13x5-source-product-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41454624275))
 - **G2**: [HISTORICAL_SCOPED](notes/2026-11-13_p1-v383-a10-a11-g2-archived-native-receipt-reuse.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43114134208))

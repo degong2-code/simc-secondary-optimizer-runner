@@ -275,7 +275,23 @@ class CompletionContractTests(unittest.TestCase):
                          {"HISTORICAL_SCOPED"})
         self.assertFalse(gate.complete(row))
         self.assertFalse(gate.complete(self.row(doc,"B5")))
-        self.assertEqual(doc["policy"]["next_review"],"B7")
+        self.assertNotEqual(doc["policy"]["next_review"],"B6")
+        self.assertEqual(doc["policy"]["full_product_e2e"],"PENDING")
+
+    def test_b7_source_13x5_and_selected_real_four_piece_scoped(self):
+        doc=self.scenario()
+        row=self.row(doc,"B7")
+        self.assertTrue(gate.complete(row))
+        self.assertEqual({doc["evidence"][k]["kind"] for k in
+                          row["generic"]["evidence"]},
+                         {"GENERALIZATION_REGRESSION"})
+        self.assertEqual({doc["evidence"][k]["kind"] for k in
+                          row["product_integration"]["evidence"]},
+                         {"PRODUCT_INTEGRATION_REAL"})
+        self.assertEqual(row["historical"]["state"],"PASS")
+        self.assertFalse(gate.complete(self.row(doc,"B8")))
+        self.assertFalse(gate.complete(self.row(doc,"B1")))
+        self.assertEqual(doc["policy"]["next_review"],"B8")
         self.assertEqual(doc["policy"]["full_product_e2e"],"PENDING")
 
     def test_a10_cannot_skip_a9_generic_source(self):
