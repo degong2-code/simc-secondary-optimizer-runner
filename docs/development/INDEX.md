@@ -1,3 +1,5 @@
+> **v404 최신 설계·A7 진행:** [WSE 비차단·현재 raid/M+·DB2 소유권 우선](notes/2026-11-13_p1-v404-a7-wse-diagnostic-only-source-first-membership.md). `v163/v165/v166/v167`가 자동 ID·출처 관계로 현재 장비 후보를 결정하고, WSE는 원문 진단용. [CI #43373512035](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43373512035) 134 PASS/3 SKIP/0 FAIL, API·Native 새 호출0. **A7 아직 PENDING / 제품 전체 E2E PENDING**, 기존 사용자 선택지·표준 일반 장비를 혼동하지 않음.
+
 # SIMC SECONDARY OPTIMIZER — 검색 가능한 개발 기능 지도
 
 > **v403 A7 결함 수정/실물 인수 보류:** [WSE guarded raid item 분류 유실 제거·선택 목록 전파 테스트](notes/2026-11-13_p1-v403-a7-selected-season-wse-propagation-gap.md). 실제 국소 [Actions #43371062757](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43371062757) **134 PASS/3 SKIP**, 합성 아이템/시즌 시험은 실제 current item 조건 인증이 아니다. A7 generic/current_source/product_integration **PENDING**, 이후 실 선택 아이템에 한해 영수증 확인. A1~A6 기존 축별 PASS 및 최종 USER-E2E PENDING 유지.
