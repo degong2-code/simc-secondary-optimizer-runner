@@ -1,3 +1,5 @@
+> **최신 v404 A7 사용자 결정·구현(이전 v403보다 우선):** [현재 raid/M+·동일 빌드 DB2 출처로 시즌 후보 자동 판정, WSE는 비차단 진단만](notes/2026-11-13_p1-v404-a7-wse-diagnostic-only-source-first-membership.md). `v163→v165→v166→v167`의 WSE 필수 검사/차단을 제거하고 0·양수·누락·형식 오류, 다른 시즌/미매핑, 내부 대표 후보/사용자 선택 분리를 검증. [Actions #43373512035](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43373512035) **134 PASS/3 SKIP**, 신규 Native/API/62MB 다운로드 0. [78개 계약 JSON](78_ELEMENT_COMPLETION_CONTRACTS.json) A7 모든 축 `PENDING` (합성 회귀≠실 현재 사용자 프로필 E2E), `next_review=A7`. **GPT 수동 WSE 확인·WSE 전수 해석을 제품 요구사항으로 만들지 않는다.**
+
 # SIMC SECONDARY OPTIMIZER · 개발 지식 시작점
 
 > **v403 A7 최신 작업(아직 READY 아님):** [WSE>0 레이드 획득 출처의 사용자 선택 오승격 수정·v165→v166→v167 end-to-end 합성 회귀](notes/2026-11-13_p1-v403-a7-selected-season-wse-propagation-gap.md). [Actions #43371062757](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43371062757) **134 PASS/3 SKIP/0 FAIL**. `v163` WSE 보류와 `v165` 소스 선정 결과가 이제 일치하며, 실제 70783 **선택 아이템별 WSE·same-build 원본 SHA·실 제품 경로**는 미확인. [상태 JSON](78_ELEMENT_COMPLETION_CONTRACTS.json) A7 모든 축 `PENDING`, `next_review=A7`. 전 품목/Native 반복 금지. 아래 v402 이전 문서의 상태·진척은 역사 기록.
