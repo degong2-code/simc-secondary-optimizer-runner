@@ -124,11 +124,7 @@ def from_v166(source):
              and type(entry.get("subclass_id")) is int
              and type(entry.get("source_evidence")) is list
              and any(e.get("source")=="mplus_journal"
-                 and e.get("season_evidence")==
-                     "UNKNOWN_WORLD_STATE_EXPRESSION"
                  and e.get("display_season_id")==source.get("display_season_id")
-                 and type(e.get("world_state_expression_id")) is int
-                 and e["world_state_expression_id"]>0
                  and type(e.get("journal_encounter_id")) is int
                  and e["journal_encounter_id"]>0
                  and type(e.get("journal_instance_id")) is int
@@ -339,12 +335,12 @@ def validate(payload):
              and x.get("ui_selectable") is False and type(ev) is list
              and any(type(e) is dict
                  and e.get("source")=="mplus_journal"
-                 and e.get("season_evidence")==
-                     "UNKNOWN_WORLD_STATE_EXPRESSION"
                  and e.get("display_season_id")==
                      payload.get("db2_display_season_id")
-                 and type(e.get("world_state_expression_id")) is int
-                 and e["world_state_expression_id"]>0 for e in ev),
+                 and type(e.get("journal_encounter_id")) is int
+                 and e["journal_encounter_id"]>0
+                 and type(e.get("journal_instance_id")) is int
+                 and e["journal_instance_id"]>0 for e in ev),
              "PRODUCT_INTERNAL_MPLUS_SOURCE_NOT_PENDING")
         ids.add(x["item_id"])
     generic_necks=payload.get("internal_source_only_plain_neck_candidates",[])
