@@ -13,10 +13,12 @@ def fixture():
           "items":[
             {"item_id":1001,"name":"Boss ordinary","slot":5,"acquisition_sources":[
               {"source":"raid_journal","season_evidence":"UNKNOWN_UNSCOPED_JOURNAL",
-               "world_state_expression_id":0}]},
+               "world_state_expression_id":0,"display_season_id":0,
+               "journal_encounter_id":11,"journal_instance_id":1}]},
             {"item_id":1002,"name":"Special boss sword","slot":13,"acquisition_sources":[
               {"source":"raid_journal","season_evidence":"UNKNOWN_UNSCOPED_JOURNAL",
-               "world_state_expression_id":0}]},
+               "world_state_expression_id":0,"display_season_id":0,
+               "journal_encounter_id":11,"journal_instance_id":1}]},
             {"item_id":1003,"name":"New craft","slot":6,"acquisition_sources":[
               {"source":"selectable_stat_craft","classification":"PROVISIONAL_SIMC_BATCH_REVIEW"}]},
             {"item_id":1004,"name":"Previous expansion uncertain M+","slot":12,
@@ -65,6 +67,62 @@ class Roles(unittest.TestCase):
         self.assertEqual(pool["consumable_budget_reference"]["ordinary_gem"]["total_J"],138)
         self.assertEqual(pool["consumable_budget_reference"]["flasks"]["total_F"],165)
         self.assertFalse(pool["fully_implemented_special_item_list_certified"])
+
+    def test_a7_raid_world_state_and_other_seasons_are_never_current(self):
+        import copy
+        with tempfile.TemporaryDirectory() as d:
+            sparse,effect=self.make(Path(d))
+            w,l=fixture()
+            raid=w["items"][0]["acquisition_sources"][0]
+            self.assertTrue(gear._journal_origin_current(raid,37,raid=True))
+            variants=[
+                ("positive_world_state",{"world_state_expression_id":441,
+                    "season_evidence":"UNKNOWN_WORLD_STATE_EXPRESSION",
+                    "display_season_id":37}),
+                ("other_display_season",{"world_state_expression_id":0,
+                    "season_evidence":"UNKNOWN_OTHER_DISPLAY_SEASON",
+                    "display_season_id":34}),
+                ("missing_wse",{"world_state_expression_id":None}),
+                ("wrong_journal_origin",{"journal_encounter_id":0}),
+                ("unscoped_mplus_only",{"source":"mplus_journal",
+                    "season_evidence":"UNKNOWN_UNSCOPED_JOURNAL"})
+            ]
+            for name,edits in variants:
+                with self.subTest(name=name):
+                    alternate=copy.deepcopy(w)
+                    origin=alternate["items"][0]["acquisition_sources"][0]
+                    origin.update(edits)
+                    self.assertFalse(gear._journal_origin_current(
+                        origin,37,raid=origin["source"]=="raid_journal"))
+                    pool=gear.compile_pool(
+                        alternate,l,sparse,effect,budget_source=None)
+                    item=next(x for x in pool["items"]
+                              if x["item_id"]==1001)
+                    self.assertEqual(item["season_selection"],
+                        "CONDITIONAL_SEASON_NOT_ESTABLISHED")
+                    self.assertFalse(item["user_selectable_candidate"])
+                    # A different, demonstrably unconditional current-season
+                    # acquisition source may independently admit this ID.
+                    if name=="positive_world_state":
+                        alternate["items"][0]["acquisition_sources"].append({
+                            "source":"mplus_journal",
+                            "season_evidence":"DB2_DISPLAY_SEASON_MATCH",
+                            "display_season_id":37,"world_state_expression_id":0,
+                            "journal_encounter_id":23,"journal_instance_id":2})
+                        linked=gear.compile_pool(
+                            alternate,l,sparse,effect,budget_source=None)
+                        chosen=next(x for x in linked["items"]
+                                    if x["item_id"]==1001)
+                        self.assertEqual(chosen["season_selection"],
+                                         "CURRENT_CANDIDATE")
+                        self.assertTrue(chosen["user_selectable_candidate"])
+            self.assertTrue(gear._journal_origin_current({
+                "source":"raid_journal","season_evidence":"DB2_DISPLAY_SEASON_MATCH",
+                "display_season_id":37,"world_state_expression_id":0,
+                "journal_encounter_id":11,"journal_instance_id":1
+            },37,raid=True))
+            self.assertFalse(gear._journal_origin_current(raid,42,raid=True)
+                             and raid["display_season_id"]!=0)
 
     def test_no_effect_table_does_not_assert_plain(self):
         with tempfile.TemporaryDirectory() as d:
