@@ -308,6 +308,20 @@ class CompletionContractTests(unittest.TestCase):
         self.assertEqual(doc["policy"]["next_review"],"B8")
         self.assertEqual(doc["policy"]["full_product_e2e"],"PENDING")
 
+    def test_b8_existing_source_injection_cannot_promote_current_real(self):
+        doc=self.scenario()
+        row=self.row(doc,"B8")
+        self.assertEqual(len(row["historical"]["evidence"]),2)
+        self.assertEqual({doc["evidence"][key]["kind"] for key
+                          in row["historical"]["evidence"]},
+                         {"HISTORICAL_SCOPED"})
+        self.assertTrue(any("v431" in doc["evidence"][key]["note"]
+                            for key in row["historical"]["evidence"]))
+        for key in ("generic","current_source","product_integration"):
+            self.assertEqual(row[key]["state"],"PENDING")
+        self.assertFalse(gate.complete(row))
+        self.assertEqual(doc["policy"]["next_review"],"B8")
+
     def test_a10_cannot_skip_a9_generic_source(self):
         doc=self.scenario()
         self.row(doc,"A9")["generic"]={"state":"PENDING","evidence":[]}

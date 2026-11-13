@@ -547,6 +547,15 @@
       "supports": [
         "B8"
       ]
+    },
+    "b8_history_v431": {
+      "kind": "HISTORICAL_SCOPED",
+      "note": "docs/development/notes/2026-11-13_p1-v431-b8-sealed-season-injection-code-offline.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43428273777",
+      "tested_sha": "922bdb84393db4684f6850a1c50b9faf3209ae9c",
+      "supports": [
+        "B8"
+      ]
     }
   },
   "elements": [
@@ -1096,7 +1105,8 @@
       "historical": {
         "state": "PASS",
         "evidence": [
-          "b8_history_v187"
+          "b8_history_v187",
+          "b8_history_v431"
         ]
       }
     },
