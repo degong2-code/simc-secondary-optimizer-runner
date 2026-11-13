@@ -1,3 +1,5 @@
+> **최신 사용자 결정 v401/v402:** [정책 → 78개 JSON 완료 계약 → 상태 자동 생성 → GitHub Actions 정합 검사](POLICY_78_ELEMENT_COMPLETION_GATE_V401.md). A4~A6 **실 현재 원본 + 다른 빌드/확장팩 합성 회귀** 재판정 [근거 v402](notes/2026-11-13_p1-v402-a4-a6-generic-scope-reassessment.md). 개별 generic/current_source/product_integration/historical 분리, 일관성 검사 누락시 READY 진척 금지, **next A7**, 제품 E2E는 0 PASS. main/Project UI/정식 승격 무변경.
+
 # 제품·기술 결정 지도 — 현재와 철회된 역사 구분
 
 > 현재 사용자 직접 결정 > [승인 v1.4.3](../SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.3_SEASON_GJFO_AUTO_BUILD_APPROVED_20261102.md) > 실제 코드·Native/Actions > 과거 노트. 이 표는 승인 정책의 대체 원본이 아니다.
