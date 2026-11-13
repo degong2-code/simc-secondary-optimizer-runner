@@ -500,7 +500,7 @@ def _admitted_selected_fresh_source(*, manifest_path, season, revision,
          "selected_v435_identity_sha256"} and
          season.get("schema")==SELECTED_FRESH_SEASON_SCHEMA,
          "B8_SELECTED_V096_MANIFEST_EXACT_SOURCE_FIELDS")
-    need(type(cache_path) is pathlib.Path and cache_path.is_file()
+    need(isinstance(cache_path,pathlib.Path) and cache_path.is_file()
          and not cache_path.is_symlink() and
          type(fillers) is list and type(profile) is str,
          "B8_SELECTED_V096_EXACT_CACHE_AND_FILLERS_REQUIRED")
