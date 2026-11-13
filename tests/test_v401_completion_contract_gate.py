@@ -284,7 +284,7 @@ class CompletionContractTests(unittest.TestCase):
         self.assertTrue(gate.complete(row))
         self.assertEqual({doc["evidence"][k]["kind"] for k in
                           row["generic"]["evidence"]},
-                         {"GENERALIZATION_REGRESSION"})
+                         {"GENERALIZATION_REGRESSION","CURRENT_SOURCE_REAL"})
         self.assertEqual({doc["evidence"][k]["kind"] for k in
                           row["product_integration"]["evidence"]},
                          {"PRODUCT_INTEGRATION_REAL"})

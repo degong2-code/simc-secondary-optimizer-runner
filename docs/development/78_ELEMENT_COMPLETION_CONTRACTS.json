@@ -1044,7 +1044,8 @@
         "state": "PASS",
         "evidence": [
           "b7_generic_v276",
-          "b7_generic_v212"
+          "b7_generic_v212",
+          "b7_current_v417"
         ]
       },
       "current_source": {
