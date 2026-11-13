@@ -1,6 +1,11 @@
 """v332: never manufacture or drift official localized item IDs."""
-import tempfile,pathlib,json,unittest
+import tempfile,pathlib,json,unittest,sys
 from unittest import mock
+
+# Production v332 is a runner-local script (v155/v167 top-level imports).
+# The standalone unittest discovery process does not add runner/ itself.
+ROOT=pathlib.Path(__file__).resolve().parents[1]
+sys.path.insert(0,str(ROOT/"runner"))
 from runner import v332_blizzard_ko_item_labels as loc
 
 class OfficialKoreanNames(unittest.TestCase):
