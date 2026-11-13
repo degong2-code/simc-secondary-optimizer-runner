@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER — 범용 개발·정합성·검증 운영 헌장
 
+> **v401-v402 최신 사용자 직접 결정 우선:** [78개 완료 계약·자동 정책 검사](POLICY_78_ELEMENT_COMPLETION_GATE_V401.md)의 `generic/current_source/product_integration/historical` 개별 판정은 이 문서의 구 `READY_SCOPED` 단일 칸 절차보다 우선한다. 상태의 **유일 기계 판독 정본은 [JSON](78_ELEMENT_COMPLETION_CONTRACTS.json)**이고 [생성 현황](78_ELEMENT_STATUS_GENERATED.md)으로 독립 재구성하며, 기존 [78개 상세 추적표](ENVIRONMENT_READINESS_78_ELEMENT_TRACKER_20261113.md)는 CI가 이 정본과 대조하는 수락 조건·상세 역사 기록이다. A1~A6 해당 엔진/원본 범용성 PASS 6([v402 재평가](notes/2026-11-13_p1-v402-a4-a6-generic-scope-reassessment.md)), 현재 source PASS 6, 제품 통합 0; 다음 A7. 구 '원장이 유일'이라는 표현은 **이전 시점 이력**으로 읽는다. 정책 일치 GitHub Actions 통과는 새 실제 원본/제품 E2E 성공을 대신하지 않는다.
+
 > **최신 사용자 직접 결정 — 범용 기능 완료 판정:** [현재 제로베이스 자동 발견 PASS로 미래 시즌 대응 엔진 기능 검증 완료](POLICY_ZERO_SOURCE_AUTODISCOVERY_GENERALIZATION_20261113.md)를 **§2·§3·§11보다 우선 적용**한다. 미래 시즌이 아직 출시되지 않았다는 이유만으로 현재 엄격 ZERO-SOURCE를 통과한 범용 기능을 PENDING으로 남기지 않는다. 새 시즌 미공개 데이터/개별 아이템을 실제로 인증했다는 뜻은 아니다.
 
 > **2026-11-13 최신 사용자 직접 결정에 따른 개발 운영 기준.** 이 문서는 개발·검증의 운영 절차를 고정하며, 제품 범위·예산·아이템 정책의 승인 원본인 [v1.4.3](../SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.3_SEASON_GJFO_AUTO_BUILD_APPROVED_20261102.md) 및 충돌 없는 최신 사용자 결정을 대체하지 않는다. [78개 준비 추적표](ENVIRONMENT_READINESS_78_ELEMENT_TRACKER_20261113.md)는 항목별 실제 상태의 유일한 원장이고, 이 헌장은 항목별 상태를 자동 승격하지 않는다.
