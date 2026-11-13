@@ -1,3 +1,5 @@
+> **v405 최신 사례:** WSE는 진단으로만 보존. 동일 시즌 블리자드/WCL/DB2의 원본 아이템을 프로그램이 자동 연결하는 `v216→v405` 원본 소비/봉인 시험 [#43375839959](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43375839959) 성공. [A7 정본 기록](notes/2026-11-13_p1-v405-a7-automated-current-source-selection-verified.md) 참조. A7 generic/current_source=PASS·user profile/SimC 통합=PENDING, 이후 A8 가능. 영구 GPT 수동 확인이나 미선택 WSE·전체 장비 DB 선행 Gate를 만들지 않는다.
+
 # SIMC SECONDARY OPTIMIZER — 범용 개발·정합성·검증 운영 헌장
 
 > **v401-v402 최신 사용자 직접 결정 우선:** [78개 완료 계약·자동 정책 검사](POLICY_78_ELEMENT_COMPLETION_GATE_V401.md)의 `generic/current_source/product_integration/historical` 개별 판정은 이 문서의 구 `READY_SCOPED` 단일 칸 절차보다 우선한다. 상태의 **유일 기계 판독 정본은 [JSON](78_ELEMENT_COMPLETION_CONTRACTS.json)**이고 [생성 현황](78_ELEMENT_STATUS_GENERATED.md)으로 독립 재구성하며, 기존 [78개 상세 추적표](ENVIRONMENT_READINESS_78_ELEMENT_TRACKER_20261113.md)는 CI가 이 정본과 대조하는 수락 조건·상세 역사 기록이다. A1~A6 해당 엔진/원본 범용성 PASS 6([v402 재평가](notes/2026-11-13_p1-v402-a4-a6-generic-scope-reassessment.md)), 현재 source PASS 6, 제품 통합 0; 다음 A7. 구 '원장이 유일'이라는 표현은 **이전 시점 이력**으로 읽는다. 정책 일치 GitHub Actions 통과는 새 실제 원본/제품 E2E 성공을 대신하지 않는다.
