@@ -24,6 +24,64 @@ class DiscoveryBlocked(ValueError):pass
 def need(ok,code):
     if not ok:raise DiscoveryBlocked(code)
 
+# These are fixed source *types*, not a current-season/expansion seed.
+# The selected gear/consumable item IDs and numeric effects come from the
+# same-build Wago DB2 and pinned SimC chains downstream in v216/v163.
+BLIZZARD_INDEX_OWNERS={
+    "keystone_season_index":"CURRENT_KEYSTONE_SEASON_ID_CONTEXT",
+    "keystone_dungeon_index":"DUNGEON_INDEX_SOURCE_CONTEXT_ONLY",
+    "keystone_period_index":"PERIOD_INDEX_SOURCE_CONTEXT_ONLY",
+    "journal_instance_index":"JOURNAL_INSTANCE_INDEX_SOURCE_CONTEXT_ONLY",
+}
+SOURCE_LINEAGE_SCHEMA="v242_blizzard_source_consumption_lineage_v1"
+
+def blizzard_source_lineage(report):
+    """Read-only source-owner trace, no new fetch and no admission gate.
+
+    A successful index GET is not proof that the Blizzard API supplied the
+    selected item IDs or their numeric ratings. Historical v155 reports
+    without per-HTTP-body SHA remain usable but explicitly unproven here.
+    """
+    endpoints=(report.get("blizzard",{}).get("endpoints",{})
+               if type(report) is dict else {})
+    if type(endpoints) is not dict:
+        endpoints={}
+    indexes={}
+    for name,consumption in BLIZZARD_INDEX_OWNERS.items():
+        row=endpoints.get(name,{})
+        if type(row) is not dict:
+            row={}
+        raw=row.get("original_http_body")
+        proof=(raw if type(raw) is dict and
+               type(raw.get("raw_response_sha256")) is str and
+               re.fullmatch(r"[a-f0-9]{64}",raw["raw_response_sha256"])
+               and type(raw.get("raw_response_bytes")) is int and
+               0<raw["raw_response_bytes"]<=probe.MAX_RESPONSE_BYTES
+               and row.get("status")=="HTTP_200" else None)
+        indexes[name]={
+            "source_role":consumption,
+            "status":("ORIGINAL_HTTP_BODY_SHA_OBSERVED"
+                      if proof is not None else "ORIGINAL_HTTP_BODY_NOT_VERIFIED"),
+            "response_sha256":(
+                proof["raw_response_sha256"] if proof is not None else None),
+            "response_bytes":(
+                proof["raw_response_bytes"] if proof is not None else None)}
+    return {
+        "schema":SOURCE_LINEAGE_SCHEMA,
+        "blizzard_index_originals_verified":all(
+            row["status"]=="ORIGINAL_HTTP_BODY_SHA_OBSERVED"
+            for row in indexes.values()),
+        "indices":indexes,
+        "selected_item_id_and_stats_blizzard_proof_claimed":False,
+        "selected_item_data_owner":"SAME_BUILD_WAGO_DB2_AND_PINNED_SIMC_DOWNSTREAM",
+        "blizzard_item_detail_runtime_required_for_base":False,
+        "optional_ko_name_owner":"V332_ID_BOUND_DISPLAY_ONLY",
+        "optional_ko_name_missing_blocks_base":False,
+        "current_season_membership_certified_here":False,
+        "additional_blizzard_requests":0,
+        "native_calls":0}
+
+
 def collect(*, stage_root, expected_game_build, credentials,
             transport=None):
     """Return explicit pending without credentials; no prior-season seed.
@@ -90,8 +148,8 @@ def collect(*, stage_root, expected_game_build, credentials,
             =="ZONES_WITH_JOURNAL_IDS_RETURNED"
             and doc.get("blizzard",{}).get("endpoints",{})
               .get("keystone_season_index",{}).get("status")=="HTTP_200")
-    # The probe is explicitly scoped to Midnight zones; a good HTTP
-    # response does not establish what raid/rotation is in season.
+    # WCL zones are all-expansion candidates. Current raid/rotation
+    # membership is resolved downstream by the same-build DB2 v163 join.
     return {"schema":SCHEMA,
         "status":("AUTHENTICATED_SOURCE_DISCOVERED_SEASON_JOIN_PENDING"
                   if joined else
@@ -104,6 +162,7 @@ def collect(*, stage_root, expected_game_build, credentials,
         "authenticated_provider_response":True,
         "current_season_membership_verified":False,
         "provider_zone_scope":"ALL_WCL_EXPANSIONS_PENDING_DB2_JOIN",
+        "blizzard_source_lineage":blizzard_source_lineage(doc),
         "season_join_ready":bool(joined),
         "native_calls":0,
         "environment_installed":False}
