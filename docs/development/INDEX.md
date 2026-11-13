@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER — 검색 가능한 개발 기능 지도
 
+> **v388 A1+앱 파일 목록 실제 CI:** [최초 source catalog 결손 FAIL → 임시 합성 v213 테스트 fixture로 회복 → Python 74 PASS/1 SKIP·TXT 272개]( notes/2026-11-13_p1-v388-a1-and-app-filelist-real-offline-ci.md ). [최종 Actions #43354231732](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43354231732) · [파일명 TXT artifact](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43354231732/artifacts/14005122868). 출처·일반화 정책 불변, 실제 인증 API ZERO-SOURCE/Windows Native 시험은 여전히 미실행; A1 PENDING_SCOPE.
+
 > **완성 앱 파일 관리 결정:** [실제 ZIP 선정 로직→자동 TXT 파일명 목록→78개 기능·코드 대응](APP_PACKAGE_FILE_REGISTRY_20261113.md). 원본 파일 복제 금지. 기존 `v181_windows_beta_packager.select()`에서 `--list-files APP_BETA_FILE_LIST.txt` 출력, ZIP 안 `V181_PACKAGE_MANIFEST.json` SHA와 기능별 `FILE_MAP`·78개 원장을 각각 재사용. **베타 패키지 포함 ≠ 완성 품질 승인**, 추가 Native0.
 
 > **최신 사용자 직접 결정·독립 인계 v386:** [현재 ZERO-SOURCE의 자동 시즌 발견 PASS로 미래 시즌 대응 ENGINE 완료 인정](POLICY_ZERO_SOURCE_AUTODISCOVERY_GENERALIZATION_20261113.md) · [v386 인계 정본](../CHAT_CONTINUITY_HANDOFF_20261113_P1_V386_ZERO_SOURCE_GENERALIZATION.md). A1 이후 모든 78 ID에 적용. 정상 API 키/원본 접근은 허용하고, 현재 시즌/확장팩 ID·정답·기존 소스/캐시 주입·GPT 런타임 판정은 금지. 실제 코드·원본·관계·SHA와 다른 시즌 변형 회귀로 PASS를 판정한다. 단순 미공개 미래 시즌 자료 부족은 ENGINE 미완료 사유가 아님.
