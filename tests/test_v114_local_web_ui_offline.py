@@ -141,6 +141,92 @@ assert(raw.includes('diagnosed.firstMissing'));
               capture_output=True,text=True,timeout=15,check=False)
         self.assertEqual(result.returncode,0,result.stderr)
 
+    def test_v384_source_diagnostic_copy_is_explicit_bounded_and_read_only(self):
+        """Actual UI JS: pending/READY/unknown evidence without path/secret echo."""
+        import shutil,subprocess
+        page=self.client.get("/").text
+        self.assertIn('id="season-diagnostic-copy-btn"',page)
+        self.assertIn('id="season-diagnostic-copy-btn" class="btn secondary" disabled',page)
+        binary=shutil.which("node")
+        if binary is None:
+            self.skipTest("node is not installed on this runner")
+        harness=r"""
+const fs=require('fs'),assert=require('assert');
+const raw=fs.readFileSync(process.argv[1],'utf8');
+const start=raw.indexOf('function compactSeasonBuildReceipt(data,forUserVariant=false) {');
+const end=raw.indexOf('\nasync function copySeasonBuildDiagnostic()',start);
+assert(start>=0&&end>start,'diagnostic function missing');
+const compact=Function(raw.slice(start,end)+
+  '\nreturn compactSeasonBuildReceipt;')();
+const first={
+ web_environment_scope:{
+   game_build:'12.1.5.70783',target_ilevel:334,
+   environment_ready:false,environment_installed:false,
+   auto_initial_core_build_requested:true},
+ source_compilation:{
+   status:'COLLECTED_COMPILER_INPUTS_PENDING',
+   missing:['GENERATED_PERMANENT'],
+   source_catalog_path:'C:\\private\\source\\credential.json'},
+ zero_history_build:{
+   native_G_status:'G_NATIVE_RATING_OBSERVATION_PENDING',
+   requires:['SOURCE_SEASON_JOIN_PENDING','G_NATIVE_RATING_OBSERVATION_PENDING'],
+   required_core_source_owner_report:{
+     original_source_owner_numeric_present:{G:true,J:false,F:true,O:false},
+     original_source_owner_missing_for_selected_request:['J','O'],
+     oil_selection_status:'EXPLICIT_NO_OIL_AWAITING_V222',
+     explicit_no_oil_awaits_v222:true,
+     full_environment_installed_verified_by_v212:false}},
+ blizzard_client_secret:'THIS_SHOULD_NOT_LEAK',
+ native_G_binary:'C:\\private\\simc.exe'
+};
+const p=JSON.parse(compact(first));
+assert.strictEqual(p.game_build,'12.1.5.70783');
+assert.strictEqual(p.target_ilevel,334);
+assert.deepStrictEqual(p.compiler_missing,['GENERATED_PERMANENT']);
+assert.deepStrictEqual(p.core_numeric_owner_missing,['J','O']);
+assert.strictEqual(p.core_numeric_owner_present.G,true);
+assert.strictEqual(p.core_numeric_owner_present.J,false);
+assert.strictEqual(p.installed_by_v212,false);
+assert.strictEqual(p.explicit_no_oil_awaits_v222,true);
+assert.strictEqual(p.verified_budget,null);
+assert.strictEqual(p.environment_ready,false);
+assert.strictEqual(p.source_mode.native_O,null);
+assert(!compact(first).includes('private'));
+assert(!compact(first).includes('THIS_SHOULD_NOT_LEAK'));
+assert(!compact(first).includes('simc.exe'));
+const cached=JSON.parse(compact({
+ web_environment_scope:{
+   environment_ready:true,environment_installed:true,
+   reused_verified_installed_season:true},
+ status:'VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED',
+ installed_manifest_sha256:'a'.repeat(64),
+ G:2850,J:92,F:165,B:3107,T:3107,
+ O:{crit_rating:0,haste_rating:0,mastery_rating:0,versatility_rating:0}
+}));
+assert.strictEqual(cached.environment_ready,true);
+assert.strictEqual(cached.compiler_missing,null);
+assert.strictEqual(cached.core_numeric_owner_present,null);
+assert.strictEqual(cached.installed_by_v212,null);
+assert.strictEqual(cached.verified_budget.T,3107);
+assert.strictEqual(cached.installed_manifest_sha256,'a'.repeat(64));
+assert.strictEqual(cached.new_native_calls,null);
+const invalid=JSON.parse(compact({
+ source_compilation:{missing:['C:\\PRIVATE\\TOKEN','GENERATED_GEM']},
+ zero_history_build:{requires:['V216_INTERNAL:TOPSECRET','J_SOURCE_PENDING']}
+}));
+assert.deepStrictEqual(invalid.compiler_missing,['GENERATED_GEM']);
+assert.deepStrictEqual(invalid.requires,['J_SOURCE_PENDING']);
+assert(!compact(invalid).includes('TOPSECRET'));
+assert(raw.includes('lastSeasonDiagnosticReceipt=null;'));
+assert(raw.includes('navigator.clipboard.writeText(lastSeasonDiagnosticReceipt)'));
+assert(raw.includes('$("season-diagnostic-copy-btn").addEventListener("click",copySeasonBuildDiagnostic)'));
+assert(raw.includes('"REQUEST_FAILED_NO_SOURCE_REPORT"'));
+"""
+        result=subprocess.run([binary,"-e",harness,
+              str(ROOT/"runner/webui/app.js")],
+              capture_output=True,text=True,timeout=15,check=False)
+        self.assertEqual(result.returncode,0,result.stderr)
+
     def test_v357_client_javascript_syntax_and_contract_when_node_available(self):
         import shutil,subprocess
         binary=shutil.which("node")
@@ -404,7 +490,7 @@ eval(context+raw.slice(start,end)+"\n"+test);
         page=self.client.get("/").text
         p=PageParser();p.feed(page)
         self.assertEqual(p.forms,1)
-        self.assertEqual(len(p.ids),183)
+        self.assertEqual(len(p.ids),184)
         for ident in ("class-choice","spec","race","ilevel","talents","final_T",
                       "trinket1","trinket2","special-rows","crafted-rows",
                       "season-target-socket-count","season-verified-flask",
