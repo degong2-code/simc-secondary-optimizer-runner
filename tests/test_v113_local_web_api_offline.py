@@ -744,6 +744,45 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(changed.json()["detail"]["code"],
                          "SAME_BUILD_CONTENT_CHANGE_EXACT_SOURCE_CORRECTION_REQUIRED")
 
+    def test_a1_same_build_season_expansion_refresh_never_reuses_prior_source(self):
+        """A1: event identity cannot silently reuse an old sealed build-only stage.
+
+        No external HTTP, no Native, no source overwrite. A genuinely new
+        game build must still enter the existing v216 cold source path.
+        """
+        build="12.1.5.70783"
+        stage=(self.app.state.jobs.root/"_fresh_season_sources"/
+               ("wago_"+build)/".stage_receipts"/"fresh-wago-db2.json")
+        stage.parent.mkdir(parents=True)
+        original=b'PRIOR_SEALED_SEASON_SOURCE_RECEIPT_UNTOUCHED'
+        stage.write_bytes(original)
+        for event in ("season_change","expansion_change"):
+            with self.subTest(event=event), \
+                 mock.patch.object(web.environment_build,"build_environment",
+                     side_effect=AssertionError("STALE_BUILD_SOURCE_NOT_REUSED")) as b, \
+                 mock.patch.object(web.retail_build_source,"discover",
+                     side_effect=AssertionError("EXPLICIT_BUILD_NO_DISCOVERY")):
+                resp=self.post("/api/v1/environment/season-build",{
+                    "game_build":build,"refresh_reason":event})
+            self.assertEqual(resp.status_code,422,resp.text)
+            self.assertEqual(resp.json()["detail"]["code"],
+                "SAME_BUILD_SEASON_EVENT_EXACT_SOURCE_REFRESH_REQUIRED")
+            b.assert_not_called()
+            self.assertEqual(stage.read_bytes(),original)
+        pending={"status":"SOURCE_PENDING","environment_ready":False,
+                 "environment_installed":False,"native_calls":0}
+        changed_build="12.1.5.70784"
+        with mock.patch.object(web.environment_build,"build_environment",
+                               return_value=pending) as b:
+            fresh=self.post("/api/v1/environment/season-build",{
+                "game_build":changed_build,"refresh_reason":"season_change"})
+        self.assertEqual(fresh.status_code,200,fresh.text)
+        self.assertFalse(fresh.json()["web_environment_scope"][
+            "environment_ready"])
+        self.assertEqual(b.call_args.kwargs["fresh_collection_inputs"][
+            "expected_game_build"],changed_build)
+        self.assertEqual(stage.read_bytes(),original)
+
     def test_p3_hl_different_active_build_cannot_reuse_cached_environment(self):
         """A new live patch must enter the existing season builder, not old READY."""
         current={"game_build":"12.1.5.70783","source_sha256":"c"*64}
