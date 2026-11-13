@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER — v386 최신 단일 인계 (2026-11-13)
 
+> **v386 작성 후 A1 코드 증분 (v387):** [WCL 전체 확장팩 원본 기반 탐색·같은 확장팩 raid/M+·DB2 조인 연결](development/notes/2026-11-13_p1-v387-a1-all-expansion-source-discovery.md). `v155.select_midnight_expansion` 제거, `v155 → v242 → v163 → v216` 후보 원본 경로 갱신·새/보강 오프라인 회귀 작성, **선택 순수 함수 10 스모크 PASS**. 아직 전체 Python/Actions/정상 API 키 실제 ZERO-SOURCE 미실행이므로 **A1 PENDING_SCOPE**. 아래의 'v155 Midnight 하드코딩 남음'과 '다음 제거' 문구는 이 증분 **이전 이력**이므로 우선 읽지 말고 최신 실제 GitHub HEAD/이 노트를 따른다. 다음 작업은 **새 회귀 실제 실행 및 권한 있는 현 시즌 실 원본/조인 증거 확보**다.
+
 ## 0. 이 문서를 새 채팅에서 가장 먼저 읽기
 
 **최신 사용자 직접 결정 및 작업 지시:**
