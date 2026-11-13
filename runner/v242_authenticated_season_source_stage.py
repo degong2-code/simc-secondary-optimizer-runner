@@ -82,6 +82,68 @@ def blizzard_source_lineage(report):
         "native_calls":0}
 
 
+WCL_SOURCE_LINEAGE_SCHEMA="v242_wcl_source_consumption_lineage_v1"
+WCL_GRAPHQL_SOURCE_ROLES={
+    "expansion_index":"PROVIDER_EXPANSION_ID_NAMESPACE_CANDIDATES",
+    "all_expansion_zones":"PROVIDER_ZONES_WITH_FROZEN_EXPANSION_AND_JOURNAL_RELATIONS",
+}
+
+def wcl_source_lineage(report):
+    """Describe *observed* WCL request/response originals, not season proof.
+
+    The v155 GraphQL query is fixed and bounded. It does not establish
+    current raid/dungeon or item membership: v163 must uniquely join
+    the provider candidate against the exact current Wago DB2 build.
+    Old v155 reports remain readable, but missing raw HTTP digests are
+    NOT silently inferred from a sealed JSON stage/report hash.
+    """
+    wcl=report.get("wcl",{}) if type(report) is dict else {}
+    if type(wcl) is not dict:
+        wcl={}
+    source=wcl.get("original_graphql_http_bodies")
+    if type(source) is not dict:
+        source={}
+    entries={}
+    complete=(wcl.get("status")=="ZONES_WITH_JOURNAL_IDS_RETURNED"
+              and wcl.get("requests")==2)
+    for key,role in WCL_GRAPHQL_SOURCE_ROLES.items():
+        raw=source.get(key)
+        valid=(type(raw) is dict
+               and type(raw.get("request_body_sha256")) is str
+               and re.fullmatch(r"[a-f0-9]{64}",raw["request_body_sha256"])
+               and type(raw.get("raw_response_sha256")) is str
+               and re.fullmatch(r"[a-f0-9]{64}",raw["raw_response_sha256"])
+               and type(raw.get("raw_response_bytes")) is int
+               and 0<raw["raw_response_bytes"]<=probe.MAX_RESPONSE_BYTES)
+        entries[key]={
+            "source_role":role,
+            "status":("ORIGINAL_GRAPHQL_HTTP_BODY_SHA_OBSERVED"
+                      if valid else "ORIGINAL_GRAPHQL_HTTP_BODY_NOT_VERIFIED"),
+            "request_body_sha256":(
+                raw["request_body_sha256"] if valid else None),
+            "response_sha256":(
+                raw["raw_response_sha256"] if valid else None),
+            "response_bytes":(
+                raw["raw_response_bytes"] if valid else None)}
+        complete=complete and bool(valid)
+    zones=wcl.get("zones")
+    return {
+        "schema":WCL_SOURCE_LINEAGE_SCHEMA,
+        "wcl_original_graphql_bodies_verified":complete,
+        "queries":entries,
+        "zone_source_scope":wcl.get("zone_source_scope"),
+        "zone_candidates":len(zones) if type(zones) is list else None,
+        "unfrozen_zone_candidates":(
+            sum(z.get("wcl_frozen") is False for z in zones
+                if type(z) is dict) if type(zones) is list else None),
+        "wcl_namespace_equals_db2_expansion_id":False,
+        "season_membership_certified_here":False,
+        "exact_same_build_db2_join_required":True,
+        "all_items_current_season_approved":False,
+        "native_calls":0,
+        "additional_graphql_requests":0}
+
+
 def collect(*, stage_root, expected_game_build, credentials,
             transport=None):
     """Return explicit pending without credentials; no prior-season seed.
@@ -163,6 +225,7 @@ def collect(*, stage_root, expected_game_build, credentials,
         "current_season_membership_verified":False,
         "provider_zone_scope":"ALL_WCL_EXPANSIONS_PENDING_DB2_JOIN",
         "blizzard_source_lineage":blizzard_source_lineage(doc),
+        "wcl_source_lineage":wcl_source_lineage(doc),
         "season_join_ready":bool(joined),
         "native_calls":0,
         "environment_installed":False}
