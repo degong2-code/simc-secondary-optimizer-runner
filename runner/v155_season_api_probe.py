@@ -101,6 +101,39 @@ def parse_wcl_expansions(doc):
         valid.append({"id":row["id"],"name":row["name"]})
     return valid
 
+def summarize_wcl_zone_shape(doc):
+    """Bounded public provider schema diagnostics, no zone names/IDs or keys.
+
+    This is never proof that an unscoped zone is inactive or safe to
+    admit. It only identifies the first source-semantic mismatch.
+    """
+    data=doc.get("data") if type(doc) is dict else None
+    world=data.get("worldData") if type(data) is dict else None
+    zones=world.get("zones") if type(world) is dict else None
+    if type(zones) is not list or len(zones)>1500:
+        return {"status":"WCL_ZONE_SHAPE_NOT_AVAILABLE"}
+    counts={}
+    for row in zones:
+        if type(row) is not dict:
+            kind="INVALID_ROW"
+        else:
+            frozen=row.get("frozen")
+            group=("FROZEN" if frozen is True else
+                   "UNFROZEN" if frozen is False else "UNKNOWN_FROZEN")
+            expansion=row.get("expansion")
+            expansion_id=(expansion.get("id") if type(expansion) is dict
+                          else None)
+            identity=("POSITIVE_ID" if type(expansion_id) is int and
+                      expansion_id>0 else
+                      "NONPOSITIVE_ID" if type(expansion_id) is int else
+                      "MISSING_ID")
+            kind=group+"_"+identity
+        counts[kind]=counts.get(kind,0)+1
+    return {"status":"PROVIDER_ZONE_SHAPE_COUNT_ONLY",
+            "total_zones":len(zones),
+            "zone_groups":dict(sorted(counts.items()))}
+
+
 def parse_wcl_zones(doc, *, require_expansion=False):
     """One bounded WCL zone query across expansion IDs, never a named seed."""
     need(not doc.get("errors"),"WCL_GRAPHQL_ERRORS")
@@ -227,8 +260,10 @@ def run_probe(blizzard_id,blizzard_secret,wcl_id=None,wcl_secret=None,
               id name frozen expansion { id }
               encounters { id name journalID }
             } } }"""
-            zone_rows=parse_wcl_zones(graphql(zone_query),
-                                      require_expansion=True)
+            zone_doc=graphql(zone_query)
+            report["wcl"]["zone_source_shape"]=summarize_wcl_zone_shape(
+                zone_doc)
+            zone_rows=parse_wcl_zones(zone_doc,require_expansion=True)
             valid_ids={x["id"] for x in exps}
             need(all(x["expansion_id"] in valid_ids for x in zone_rows),
                  "WCL_ZONE_EXPANSION_NOT_IN_SOURCE_INDEX")
