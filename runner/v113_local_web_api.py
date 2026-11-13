@@ -1624,7 +1624,7 @@ class LocalJobs:
         except Exception as exc:
             raise blocked(exc) from None
 
-    def _catalog_for_selected_special_L(self, user, params, *, with_fresh_status=False):
+    def _catalog_for_selected_special_L(self, user, params):
         """Reuse the same installed v212 catalog as normal user planning.
 
         This executes only for an explicitly selected special item. An
@@ -1652,11 +1652,9 @@ class LocalJobs:
             if params.installed_season_game_build is not None:
                 raise environment_manifest.EnvironmentBlocked(
                     "WEB_SELECTED_INSTALLED_SEASON_BUILD_NOT_FOUND")
-            result=self.source_catalog_path()
-            return (result,False) if with_fresh_status else result
-        result=pathlib.Path(
+            return self.source_catalog_path()
+        return pathlib.Path(
             verified["source_compilation"]["source_catalog_path"])
-        return (result,True) if with_fresh_status else result
 
     def prepare_with_internal_special_L(self, params):
         """Share the existing exact static-L hydration for both explicit starts.
@@ -1675,16 +1673,8 @@ class LocalJobs:
             with self.static_lock:
                 source=self.default_static_cache(user,params.static_cache)
                 try:
-                    selected_catalog,installed_selected=(
-                        self._catalog_for_selected_special_L(
-                            user,params,with_fresh_status=True))
-                    # The fresh-v212 selected B8 profile has no admitted
-                    # v096 source identity yet. Do not spend even one v208
-                    # Native static-L call before the selected G/L budget
-                    # is admitted and the runtime manifest can use it.
-                    if installed_selected:
-                        raise environment_manifest.EnvironmentBlocked(
-                            "WEB_FRESH_B8_SELECTED_G_L_RUNTIME_ADMISSION_PENDING")
+                    selected_catalog=self._catalog_for_selected_special_L(
+                        user,params)
                     hydrated=exact_L.hydrate(
                         user,self.root,binary,params.revision,
                         existing=source,
