@@ -753,8 +753,10 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         self.assertEqual(first["season_discovery"]["status"],
                          "AUTHENTICATED_SOURCE_INCOMPLETE_SEASON_JOIN_PENDING")
         self.assertFalse(first["season_discovery"]["current_season_membership_verified"])
+        # Incomplete authenticated provider bodies never reach season
+        # ambiguity resolution; the join correctly remains NOT_READY.
         self.assertEqual(first["season_join"]["status"],
-                         "LIVE_SEASON_SCOPE_AMBIGUOUS_PENDING")
+                         "AUTHENTICATED_SEASON_JOIN_NOT_READY")
         self.assertFalse(first["season_join"]["season_membership_verified"])
         self.assertFalse(first["environment_installed"])
         report=pathlib.Path(first["season_discovery"]["source_report_path"])
