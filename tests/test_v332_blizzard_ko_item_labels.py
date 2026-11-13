@@ -46,6 +46,30 @@ class OfficialKoreanNames(unittest.TestCase):
             for role in ("trinket","special_effect_gear_candidate")
             for item in public["choices"][role]))
 
+    def test_a4_missing_optional_blizzard_labels_keep_exact_item_choices(self):
+        """BASE gear selections are DB2-owned, never blocked by v332 HTTP."""
+        import v167_product_season_gear_adapter as adapter
+        import v332_blizzard_ko_item_labels as labels
+        catalog=adapter.read()
+        with mock.patch.object(labels,"installed_names",return_value={}) as get:
+            with mock.patch.object(labels.blizzard,"request_json",
+                                   side_effect=AssertionError(
+                                       "DISPLAY_ONLY_DOES_NOT_FETCH")):
+                without=adapter.public_options(catalog)
+        get.assert_called_once()
+        self.assertEqual(without["verified_ko_item_names"],0)
+        with mock.patch.object(labels,"installed_names",return_value={
+            158367:"한글 표시명"}):
+            with_names=adapter.public_options(catalog)
+        self.assertEqual(set(without["choices"]),set(with_names["choices"]))
+        for role in without["choices"]:
+            self.assertEqual([r["item_id"] for r in without["choices"][role]],
+                             [r["item_id"] for r in with_names["choices"][role]])
+        self.assertFalse(any("name_ko" in r for role in without["choices"]
+                             for r in without["choices"][role]))
+        self.assertFalse(without["ordinary_equipment_user_selectable"])
+        self.assertFalse(without["full_season_completeness_confirmed"])
+
     def test_missing_or_unverified_file_never_blocks_original_choices(self):
         with tempfile.TemporaryDirectory() as tmp:
             p=pathlib.Path(tmp)/"ko.json"
