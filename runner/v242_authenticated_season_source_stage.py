@@ -26,11 +26,11 @@ def need(ok,code):
 
 def collect(*, stage_root, expected_game_build, credentials,
             transport=None):
-    """Return explicit pending if credentials unavailable; never reuse old data.
+    """Return explicit pending without credentials; no prior-season seed.
 
-    v155's current WCL zone query is Midnight-scoped. Future expansion
-    discovery/season membership remains unverified and must be separate from
-    the authenticity of the actual received HTTP source.
+    v155 collects bounded WCL zones with expansion IDs (not active-season
+    proof); v163 same-build sources must establish an unambiguous current
+    scope. Received HTTP provenance and season membership remain separate.
     """
     need(type(expected_game_build) is str and
          BUILD_RE.fullmatch(expected_game_build) is not None,
@@ -103,7 +103,7 @@ def collect(*, stage_root, expected_game_build, credentials,
             2 if stage["executed"] else 0),
         "authenticated_provider_response":True,
         "current_season_membership_verified":False,
-        "provider_zone_scope":"MIDNIGHT_ONLY_UNTIL_EXPANSION_PROOF",
+        "provider_zone_scope":"ALL_WCL_EXPANSIONS_PENDING_DB2_JOIN",
         "season_join_ready":bool(joined),
         "native_calls":0,
         "environment_installed":False}
