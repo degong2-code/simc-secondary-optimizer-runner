@@ -39,6 +39,8 @@
 4. 패키지 대상이 바뀌면 `v181.select()` 하나만 갱신하고 TXT 목록 재생성 + 기존 SHA ZIP/Windows 추출·실행 테스트. **원본 복제/손수 TXT 추가와 패키지 선정 불일치 금지**.
 5. 최종 단독 앱의 배포 범위/설치 형태(EXE 여부)는 전체 78 요소 및 최종 현재 시즌 ZERO-SOURCE→USER-E2E 통합 시험과 별도로 배포 시험을 거쳐 확정. 현재 배포는 **Python 소스 Windows 베타 ZIP이며 독립 설치형 EXE 아님**, Windows SimC CLI는 별도이며 키·기밀·사용자 캐시는 ZIP에 포함하지 않는다.
 
+> **2026-11-13 v388 실제 실행 후속:** [v388 최초 FAIL→회귀 복구·272개 TXT artifact·74 PASS/1 SKIP](notes/2026-11-13_p1-v388-a1-and-app-filelist-real-offline-ci.md). `--list-files`와 ZIP `select()` 동일성은 [Actions #43354231732](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43354231732)에서 **실제 실행**했고, 272개 파일명이 담긴 [TXT artifact #14005122868](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43354231732/artifacts/14005122868)를 SHA로 재확인했다. 테스트용 v213 합성 원본은 CI 임시 공간에만 준비한 것이므로 **ZERO-SOURCE·시즌 READY/최종 배포 승인 아님**. 아래 §4의 '미실행'은 원래 v181 TXT 기능 추가 시점의 역사 기록.
+
 ## 4. 이번 변경의 실제 검증 범위
 
 - **구현:** 기존 `v181_windows_beta_packager.py`의 `select()`를 재사용해 `--list-files`로 별도의 TXT *출력물* 생성. 기존 `--out OUTPUT.zip` 경로 불변.
