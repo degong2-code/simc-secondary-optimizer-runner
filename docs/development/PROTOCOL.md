@@ -1,3 +1,5 @@
+> **최신 A7 정책 v404 (매 채팅/매 시즌 강제):** [WSE는 보조 관측, 현재 아이템 소속의 필수 인증/차단 Gate가 아님](notes/2026-11-13_p1-v404-a7-wse-diagnostic-only-source-first-membership.md). 엔진은 Blizzard/WCL 활성 레이드·쐐기와 동일 빌드 DB2 Item/Journal/DisplaySeason 관계 및 SimC 사용 조건을 **자동 처리**한다. 누락된 소속 근거만 해당 선택 항목에서 보류; WSE 자체·선택하지 않은 아이템 때문에 전체 환경을 차단하지 않는다. GPT 수동 WSE 판정, 미래 WSE 전수/별도 효과 엔진/Native 반복 금지. [focused #43373512035](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43373512035) 회귀 통과; 사용자 E2E는 아직 미검증.
+
 # SIMC 개발 지속성·지식 유지 프로토콜
 
 > **A7 최신 v403:** [동일 출처에서 WSE 양수 raid item을 현재 시즌 후보로 오승격하던 실제 결함 수정](notes/2026-11-13_p1-v403-a7-selected-season-wse-propagation-gap.md), [focused 실제 CI #43371062757](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43371062757) 134 PASS/3 SKIP. 앞으로 **모든 item 선택 또는 보류 근거가 다음 `v165→v166→v167` 호출 경계에서 유지되는지** 교차 검사한다. 네 증거 축 중 A7은 아직 PASS 아님. 전체 시즌 WSE 자동 해석기 신규 Gate 금지.
