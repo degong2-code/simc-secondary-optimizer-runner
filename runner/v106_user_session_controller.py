@@ -558,7 +558,12 @@ def preview_selected_fresh_session_identity(user,binary,revision,static_cache,*,
         "native_binary_sha256":base_identity["simc_binary_sha256"],
         "simc_revision":revision,
     }
-    final_sha=sha(canonical(payload).encode("utf8"))
+    # The complete v106 identity (rather than a detached payload-only SHA)
+    # is sealable in V106_SESSION_IDENTITY.json and readable by the worker.
+    # Legacy non-selected session keys are left untouched.
+    full_session_identity={**base_identity,
+                           "v435_selected_source_identity":payload}
+    final_sha=sha(canonical(full_session_identity).encode("utf8"))
     need(final_sha[:20]!=base_key,
          "B8_SELECTED_SESSION_KEY_COLLIDES_WITH_LEGACY")
     return {"schema":payload["schema"],
@@ -566,11 +571,50 @@ def preview_selected_fresh_session_identity(user,binary,revision,static_cache,*,
             "session_key_preview":final_sha[:20],
             "identity_sha256":final_sha,
             "identity_components":payload,
+            "full_session_identity":full_session_identity,
             "old_v106_session_key_not_reused":True,
             "native_execution_authorized":False,
             "session_folder_created":False,
             "runtime_manifest_created":False,
             "cache_mutations":0,"new_native_calls":0}
+
+
+
+def store_selected_fresh_session(user,root,binary,revision,static_cache, *,
+                                 selected_source,source_catalog_path,
+                                 installed_manifest_sha256):
+    """Store only the separately keyed source-backed selected session.
+
+    No Native and no V094/old-session migration. v096 replays the original
+    v191/v232/v432/v217/v212 sources after the stage writes a manifest.
+    """
+    proof=preview_selected_fresh_session_identity(
+        user,binary,revision,static_cache,
+        selected_source=selected_source,
+        source_catalog_path=source_catalog_path,
+        installed_manifest_sha256=installed_manifest_sha256)
+    identity=proof["full_session_identity"]
+    key=proof["session_key_preview"]
+    need(sha(canonical(identity).encode("utf8"))[:20]==key,
+         "B8_SELECTED_FULL_SESSION_SHA_OR_KEY_DRIFT")
+    folder=pathlib.Path(root).expanduser().resolve()/key
+    need(not folder.is_symlink(),"B8_SELECTED_SESSION_FOLDER_SYMLINK")
+    user_bytes=canonical(user)+"\n"
+    identity_bytes=canonical(identity)+"\n"
+    for name,expected in (("user.json",user_bytes),
+                          ("V106_SESSION_IDENTITY.json",identity_bytes)):
+        target=folder/name
+        need(not target.is_symlink() and
+             (not target.exists() or
+              target.is_file() and target.read_text("utf8")==expected),
+             "B8_SELECTED_EXISTING_SEALED_SESSION_CHANGED:"+name)
+    folder.mkdir(parents=True,exist_ok=True)
+    for name,expected in (("user.json",user_bytes),
+                          ("V106_SESSION_IDENTITY.json",identity_bytes)):
+        target=folder/name
+        if not target.exists():
+            target.write_text(expected,encoding="utf8")
+    return folder
 
 
 def session_path(user,root,binary,revision,static_cache=None,*,
@@ -825,8 +869,34 @@ def _worker_locked(folder,binary,revision,static_cache,cache_only):
                 need(identity.get("current_season_tier_layout_policy")==
                      bootstrap.common.CURRENT_SEASON_TIER_LAYOUT_POLICY,
                      "OLD_TIER_LAYOUT_SESSION_START_NEW_CORRECTED_SESSION")
-        source_path,package_path=_installed_source_paths(identity)
-        actual_key,now=session_key(user,binary,revision,static_cache,
+        selected_fresh=type(identity.get(
+            "v435_selected_source_identity")) is dict
+        if selected_fresh:
+            need(identity.get("schema")==SCHEMA and
+                 identity.get("user")==user and
+                 sha(canonical(identity).encode("utf8"))[:20]==folder.name and
+                 identity.get("simc_binary_sha256")==
+                     sha(pathlib.Path(binary).read_bytes()) and
+                 identity.get("simc_revision")==revision and
+                 isinstance(static_cache,(str,pathlib.Path)) and
+                 pathlib.Path(static_cache).is_file() and
+                 identity.get("static_cache_sha256")==
+                     sha(pathlib.Path(static_cache).read_bytes()),
+                 "B8_SELECTED_WORKER_SESSION_BINARY_CACHE_OR_USER_DRIFT")
+            selected_manifest=folder/"generated"/"manifest.json"
+            need(selected_manifest.is_file() and
+                 not selected_manifest.is_symlink(),
+                 "B8_SELECTED_WORKER_REPLAY_MANIFEST_REQUIRED")
+            requested=json.loads(selected_manifest.read_text("utf8"))
+            need(requested.get("installed_selected_fresh_v212_source",{}).
+                     get("selected_v435_identity_sha256")==
+                 sha(canonical(identity).encode("utf8")),
+                 "B8_SELECTED_WORKER_V435_SOURCE_IDENTITY_MISMATCH")
+            source_path,package_path=None,None
+            actual_key,now=folder.name,identity
+        else:
+            source_path,package_path=_installed_source_paths(identity)
+            actual_key,now=session_key(user,binary,revision,static_cache,
                                    ordinary_variant=variant,
                                    independent_334=independent,
                                    independent_target_level=independent_level,
@@ -840,9 +910,13 @@ def _worker_locked(folder,binary,revision,static_cache,cache_only):
         stage_receipt=(folder/"generated"/".stage_receipts"/
                        "v098_target_profile.json")
         use_prepared=stage_receipt.is_file()
+        if selected_fresh:
+            # New selected route has an independently revalidated v096
+            # source replay instead of the old v218 legacy stage receipt.
+            use_prepared=True
         if source_path is not None:
             need(use_prepared,"V217_PRODUCT_PROFILE_STAGE_RECEIPT_MISSING")
-        if use_prepared:
+        if use_prepared and not selected_fresh:
             need("profile_stage" in identity,"V217_STAGE_IDENTITY_MISSING")
             profile_stage.verify_existing(folder,identity)
         cached_before=cache_only_preflight(folder) if cache_only else None

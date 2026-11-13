@@ -16,6 +16,7 @@ on:
       - tests/test_v434_selected_v096_source_only.py
       - tests/test_v435_selected_session_source_identity.py
       - tests/test_v436_selected_v096_admission.py
+      - tests/test_v437_selected_web_session_bridge.py
       - tests/test_v106_user_session_controller.py
       - .github/workflows/v187_current_season_four_tier_layout.yml
 permissions:
@@ -45,7 +46,8 @@ jobs:
             tests.test_v433_selected_profile_budget_integration \
             tests.test_v434_selected_v096_source_only \
             tests.test_v435_selected_session_source_identity \
-            tests.test_v436_selected_v096_admission
+            tests.test_v436_selected_v096_admission \
+            tests.test_v437_selected_web_session_bridge
           python3 -m unittest -q tests.test_v106_user_session_controller \
             tests.test_v169_source_first_representative_stage \
             tests.test_v172_current_season_v098_stage

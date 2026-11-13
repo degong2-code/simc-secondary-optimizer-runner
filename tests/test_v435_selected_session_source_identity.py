@@ -241,5 +241,57 @@ class SelectedFutureSessionKey(unittest.TestCase):
                             "manifest_sha256":self.install}},
                     result=self.selected)
 
+
+    def _stored(self):
+        with (
+            mock.patch.object(sessions,"source_catalog_identity",
+                              return_value={"game_build":"12.1.5.70783"}),
+            mock.patch.object(sessions.profile_stage,"session_identity",
+                              return_value={"identity_sha256":"f"*64}),
+            mock.patch.object(sessions.bootstrap.scenario,"normalize",
+                              return_value=self.normalized)
+        ):
+            return sessions.store_selected_fresh_session(
+                self.user,pathlib.Path(self.fixture.fx.dir.name)/"separate",
+                self.binary,"c"*40,self.static,
+                selected_source=self.selected,
+                source_catalog_path=self.source,
+                installed_manifest_sha256=self.install)
+
+    def test_selected_session_store_persists_only_new_full_identity(self):
+        folder=self._stored()
+        seal=__import__("json").loads(
+            (folder/"V106_SESSION_IDENTITY.json").read_text("utf8"))
+        self.assertEqual(seal["schema"],sessions.SCHEMA)
+        self.assertEqual(seal["user"],self.user)
+        self.assertIn("v435_selected_source_identity",seal)
+        self.assertEqual(digest(seal)[:20],folder.name)
+        self.assertTrue((folder/"user.json").is_file())
+        self.assertFalse((folder/"generated"/"manifest.json").exists())
+
+    def test_selected_session_store_is_idempotent_and_rejects_user_drift(self):
+        folder=self._stored()
+        self.assertEqual(self._stored(),folder)
+        (folder/"user.json").write_text("{}\n",encoding="utf8")
+        with self.assertRaisesRegex(sessions.SessionBlocked,
+                                    "EXISTING_SEALED_SESSION_CHANGED"):
+            self._stored()
+
+    def test_selected_worker_missing_native_manifest_fails_without_dps(self):
+        folder=self._stored()
+        with mock.patch.object(sessions.bootstrap.entry,"run_manifest",
+                               side_effect=AssertionError("NO_NATIVE")):
+            self.assertEqual(sessions.worker(
+                folder,self.binary,"c"*40,self.static),3)
+        self.assertFalse((folder/"generated"/"manifest.json").exists())
+
+    def test_selected_worker_changed_static_cache_bytes_rejected_pre_native(self):
+        folder=self._stored()
+        self.static.write_bytes(self.static.read_bytes()+b"\n")
+        with mock.patch.object(sessions.bootstrap.entry,"run_manifest",
+                               side_effect=AssertionError("NO_NATIVE")):
+            self.assertEqual(sessions.worker(
+                folder,self.binary,"c"*40,self.static),3)
+
 if __name__=="__main__":
     unittest.main()

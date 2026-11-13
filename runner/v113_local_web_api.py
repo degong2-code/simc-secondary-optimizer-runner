@@ -563,7 +563,8 @@ class LocalJobs:
         environment_manifest.verify_fresh_installed_environment(doc)
         manifest=json.loads((pathlib.Path(folder)/"generated"/"manifest.json")
                             .read_text(encoding="utf8"))
-        seal=manifest.get(bootstrap.entry.FRESH_SEASON_FIELD)
+        seal=(manifest.get(bootstrap.entry.FRESH_SEASON_FIELD) or
+              manifest.get(bootstrap.entry.SELECTED_FRESH_SEASON_FIELD))
         if (type(seal) is not dict or
             seal.get("installed_manifest_sha256")!=doc["manifest_sha256"] or
             seal.get("installed_environment_path")!=installed["stage_output_path"]):
@@ -1551,45 +1552,98 @@ class LocalJobs:
                 if fresh is not None else self.source_catalog_path())
             package_manifest_path=(None if fresh is not None
                                    else self.package_manifest_path())
-            folder = sessions.store_session(user,self.root,binary,params.revision,
-                                            resolved_static,
-                                            independent_334=independent,
-                                            independent_target_level=independent_level,
-                                            current_season_product=current_season,
-                                            source_catalog_path=(source_catalog_path
-                                                if current_season else None),
-                                            package_manifest_path=(package_manifest_path
-                                                if current_season and source_catalog_path
-                                                else None),
-                                            fresh_installed_manifest_sha256=(
-                                                fresh["source_compilation"][
-                                                    "verified_environment_install"][
-                                                        "manifest_sha256"]
-                                                if fresh is not None else None))
-            # Session identity binds CACHE CONTENT, not its user-visible
-            # path. If the same bytes are passed via a different path later,
-            # honor the already-sealed manifest path rather than rewriting
-            # immutable generated files or causing a needless new session.
-            prior=folder/"generated"/"manifest.json"
-            if resolved_static and prior.is_file():
-                previous=json.loads(prior.read_text(encoding="utf8"))
-                saved=previous.get("static_cache_json")
-                if (type(saved) is str and saved!=str(
-                        pathlib.Path(resolved_static).resolve())):
-                    old=pathlib.Path(saved)
-                    if (old.is_file() and
-                        sessions.sha(old.read_bytes())==
-                        sessions.sha(pathlib.Path(resolved_static).read_bytes())):
-                        resolved_static=saved
-            with self.profile_stage_lock:
-                bootstrap_result, profile_stage_receipt = profile_stage.build_or_reuse(
-                    user=user,session_folder=folder,binary=binary,
-                    revision=params.revision,static_cache=resolved_static,
-                    independent_334=independent,
-                    independent_target_level=independent_level,
-                    current_season_product=current_season,
+            selected_fresh=bool(fresh is not None and (
+                user["special_items"] or user["embellishments"]))
+            if selected_fresh:
+                # A crafted-only user may reuse the existing same-season
+                # v046 cache without invoking the special-only v208 probe.
+                if resolved_static is None:
+                    candidate=exact_L.source_cache(self.root,None)
+                    resolved_static=(str(candidate) if candidate is not None
+                                     else None)
+                # Selected replacement of G/L must be calculated and
+                # source-bound BEFORE any persistent folder is created.
+                # No old unselected v106 key may hold a selected profile.
+                if resolved_static is None:
+                    raise environment_manifest.EnvironmentBlocked(
+                        "WEB_SELECTED_B8_EXACT_STATIC_CACHE_REQUIRED")
+                controls=profile_stage._verified_fresh_season_consumables(user)
+                preview=bootstrap.preview_from_environment_build(
+                    user,self.root/"_b8_unwritten_preview",
+                    binary,params.revision,environment_result=fresh,
+                    season_controls=controls,
+                    selected_static_cache_path=resolved_static)
+                if preview.get("status")!=(
+                        "B8_SELECTED_V096_COMPLETE_PROFILE_BUDGET_NOT_ADMITTED"):
+                    raise environment_manifest.EnvironmentBlocked(
+                        "WEB_SELECTED_B8_PROFILE_OR_STATIC_VARIANTS_PENDING")
+                selected_v435=preview.get(
+                    "v435_future_v106_session_key_unadmitted")
+                if type(selected_v435) is not dict:
+                    raise environment_manifest.EnvironmentBlocked(
+                        "WEB_SELECTED_B8_SEPARATE_SESSION_KEY_REQUIRED")
+                folder=sessions.store_selected_fresh_session(
+                    user,self.root,binary,params.revision,resolved_static,
+                    selected_source=preview,
                     source_catalog_path=source_catalog_path,
-                    verified_fresh_environment_result=fresh)
+                    installed_manifest_sha256=fresh[
+                        "source_compilation"]["verified_environment_install"][
+                            "manifest_sha256"])
+                with self.profile_stage_lock:
+                    bootstrap_result=(
+                        bootstrap.materialize_selected_verified_environment(
+                            user=user,folder=folder/"generated",
+                            binary=binary,revision=params.revision,
+                            environment_result=fresh,
+                            selected_static_cache_path=resolved_static,
+                            season_controls=controls,
+                            preview_result=preview))
+                profile_stage_receipt={
+                    "schema":"v436_selected_v096_replay_stage_v1",
+                    "status":"SELECTED_FRESH_SOURCE_REPLAY_VERIFIED_NO_NATIVE",
+                    "stage_id":"v436_selected_fresh_v096",
+                    "native_calls":0,"network_calls":0,
+                    "session_key":folder.name}
+            else:
+                folder = sessions.store_session(user,self.root,binary,params.revision,
+                                                resolved_static,
+                                                independent_334=independent,
+                                                independent_target_level=independent_level,
+                                                current_season_product=current_season,
+                                                source_catalog_path=(source_catalog_path
+                                                    if current_season else None),
+                                                package_manifest_path=(package_manifest_path
+                                                    if current_season and source_catalog_path
+                                                    else None),
+                                                fresh_installed_manifest_sha256=(
+                                                    fresh["source_compilation"][
+                                                        "verified_environment_install"][
+                                                            "manifest_sha256"]
+                                                    if fresh is not None else None))
+                # Session identity binds CACHE CONTENT, not its user-visible
+                # path. If the same bytes are passed via a different path later,
+                # honor the already-sealed manifest path rather than rewriting
+                # immutable generated files or causing a needless new session.
+                prior=folder/"generated"/"manifest.json"
+                if resolved_static and prior.is_file():
+                    previous=json.loads(prior.read_text(encoding="utf8"))
+                    saved=previous.get("static_cache_json")
+                    if (type(saved) is str and saved!=str(
+                            pathlib.Path(resolved_static).resolve())):
+                        old=pathlib.Path(saved)
+                        if (old.is_file() and
+                            sessions.sha(old.read_bytes())==
+                            sessions.sha(pathlib.Path(resolved_static).read_bytes())):
+                            resolved_static=saved
+                with self.profile_stage_lock:
+                    bootstrap_result, profile_stage_receipt = profile_stage.build_or_reuse(
+                        user=user,session_folder=folder,binary=binary,
+                        revision=params.revision,static_cache=resolved_static,
+                        independent_334=independent,
+                        independent_target_level=independent_level,
+                        current_season_product=current_season,
+                        source_catalog_path=source_catalog_path,
+                        verified_fresh_environment_result=fresh)
             plan=bootstrap_result["plan"]
             environment=(self._fresh_environment_summary(folder,fresh)
                          if fresh is not None else
@@ -1774,14 +1828,25 @@ class LocalJobs:
                 source_catalog_path=source_path,
                 package_manifest_path=package_path,
                 fresh_installed_manifest_sha256=fresh_sha)
-            recorded_base={k:v for k,v in recorded.items() if k!="profile_stage"}
+            selected_seal=("v435_selected_source_identity" in recorded)
+            recorded_base={k:v for k,v in recorded.items()
+                           if k not in ("profile_stage",
+                                        "v435_selected_source_identity")}
             current_base={k:v for k,v in check.items() if k!="profile_stage"}
             recorded_key=sessions.sha(
                 sessions.canonical(recorded).encode("utf8"))[:20]
             if recorded_key != folder.name or current_base != recorded_base:
                 raise sessions.SessionBlocked("SESSION_BINARY_REVISION_OR_CACHE_DRIFT")
-            if "profile_stage" in recorded:
+            if "profile_stage" in recorded and not selected_seal:
                 profile_stage.verify_existing(folder,recorded)
+            if selected_seal:
+                # Parent checks binary/cache and complete sealed user key.
+                # The child v096 validates v217 and recomputes v098 before
+                # any Native; this is not an early source authorization.
+                if manifest.get(
+                      bootstrap.entry.SELECTED_FRESH_SEASON_FIELD) is None:
+                    raise sessions.SessionBlocked(
+                        "B8_SELECTED_REPLAY_MANIFEST_REQUIRED")
             return binary,rev,static
         except HTTPException:
             raise

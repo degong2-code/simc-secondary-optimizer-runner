@@ -2057,7 +2057,8 @@ def materialize_selected_verified_environment(*,user,folder,binary,revision,
                                              environment_result,
                                              selected_static_cache_path,
                                              season_controls=None,
-                                             exploration_policy=None):
+                                             exploration_policy=None,
+                                             preview_result=None):
     """v436: write an EXACT independently replayable selected v096 manifest.
 
     This is the internal selected-only counterpart to the original plain
@@ -2068,17 +2069,21 @@ def materialize_selected_verified_environment(*,user,folder,binary,revision,
     """
     folder=pathlib.Path(folder).expanduser().resolve()
     need(folder.name=="generated" and
-         isinstance(selected_static_cache_path,(str,pathlib.Path)),
+         type(selected_static_cache_path) in (str,pathlib.Path),
          "B8_SELECTED_V436_GENERATED_DIR_AND_CACHE_REQUIRED")
     cache=pathlib.Path(selected_static_cache_path).expanduser().resolve()
     need(cache.is_file() and not cache.is_symlink(),
          "B8_SELECTED_V436_STATIC_CACHE_REQUIRED")
-    result=preview_from_environment_build(
-        user,folder,binary,revision,
-        environment_result=environment_result,
-        season_controls=season_controls,
-        selected_static_cache_path=cache,
-        exploration_policy=exploration_policy)
+    # The already-generated web preview can be reused; source() independently
+    # replays the originals after files are written. No second preliminary
+    # source scan is necessary when the caller already has its sealed result.
+    result=(preview_result if preview_result is not None else
+        preview_from_environment_build(
+            user,folder,binary,revision,
+            environment_result=environment_result,
+            season_controls=season_controls,
+            selected_static_cache_path=cache,
+            exploration_policy=exploration_policy))
     future=result.get("v435_future_v106_session_key_unadmitted")
     need(result.get("status")==
              "B8_SELECTED_V096_COMPLETE_PROFILE_BUDGET_NOT_ADMITTED"
