@@ -95,6 +95,9 @@ jobs:
                           receipt["blizzard_index_status"]={
                               k:v["status"] for k,v in
                               doc.get("blizzard",{}).get("endpoints",{}).items()}
+                          receipt["blizzard_original_http_source_bodies"]={
+                              k:v.get("original_http_body") for k,v in
+                              doc.get("blizzard",{}).get("endpoints",{}).items()}
                           receipt["blizzard_direct_current_season_ids"]={
                               k:v.get("data",{}).get("current_season_id")
                               for k,v in doc.get("blizzard",{}).get("endpoints",{}).items()}
