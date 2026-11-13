@@ -6,7 +6,7 @@
     "current_source_acceptance": "actual current game-build provider source + exact SHA + correct consumed scope",
     "product_acceptance": "actual user input through season environment and SimC DPS/SEM/95% output; separate final product E2E",
     "optional_acceptance": "NOT_APPLICABLE only with concrete feature-specific reason and owner evidence; no blanket exemptions",
-    "next_review": "B3",
+    "next_review": "B4",
     "a7_may_be_next_only_after_generic_review_of": [
       "A4",
       "A5",
@@ -339,6 +339,42 @@
       "tested_sha": "4eaa5e2554e695527d96234e6f5236e644134696",
       "supports": [
         "B2"
+      ]
+    },
+    "b3_real_v417": {
+      "kind": "CURRENT_SOURCE_REAL",
+      "note": "docs/development/notes/2026-11-13_p1-v425-b3-ordinary-armor-real-native-json2-proof.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43394408756",
+      "tested_sha": "89d4810baf5e05f1c5c6f355f39a5f35ca9ec4e7",
+      "supports": [
+        "B3"
+      ]
+    },
+    "b3_generic_v212": {
+      "kind": "GENERALIZATION_REGRESSION",
+      "note": "docs/development/notes/2026-11-13_p1-v425-b3-ordinary-armor-real-native-json2-proof.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43388059919",
+      "tested_sha": "0240a1796ba1f0898ec2512e58de8af330571442",
+      "supports": [
+        "B3"
+      ]
+    },
+    "b3_product_v417": {
+      "kind": "PRODUCT_INTEGRATION_REAL",
+      "note": "docs/development/notes/2026-11-13_p1-v425-b3-ordinary-armor-real-native-json2-proof.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43394408756",
+      "tested_sha": "89d4810baf5e05f1c5c6f355f39a5f35ca9ec4e7",
+      "supports": [
+        "B3"
+      ]
+    },
+    "b3_history_v180": {
+      "kind": "HISTORICAL_SCOPED",
+      "note": "docs/development/notes/2026-11-13_p1-v425-b3-ordinary-armor-real-native-json2-proof.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40980268952",
+      "tested_sha": "4eaa5e2554e695527d96234e6f5236e644134696",
+      "supports": [
+        "B3"
       ]
     }
   },
@@ -721,20 +757,29 @@
       "scope": "BASE",
       "acceptance": "대표 방어구 부위별 ID·타입·ilvl",
       "generic": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "b3_real_v417",
+          "b3_generic_v212"
+        ]
       },
       "current_source": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "b3_real_v417"
+        ]
       },
       "product_integration": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "b3_product_v417"
+        ]
       },
       "historical": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "b3_history_v180"
+        ]
       }
     },
     {

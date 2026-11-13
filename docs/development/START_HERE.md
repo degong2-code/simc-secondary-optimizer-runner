@@ -1,3 +1,5 @@
+> **2026-11-13 v425 B3 범위 COMPLETE / B4 다음:** [B3 현재70783 v417 실제 12×15 물리 ID/ilvl/JSON2 SHA 검증](notes/2026-11-13_p1-v425-b3-ordinary-armor-real-native-json2-proof.md), [78 JSON 정본](78_ELEMENT_COMPLETION_CONTRACTS.json): 14/14/6/7 PASS, COMPLETE A8·A9·A10·A11·B2·B3(6/78), B4 무기 형태 다음, 최종 USER-E2E PENDING. 새 Native/DB20, 기존 v424/v423 인계 수치는 역사 시점.
+
 > **2026-11-13 v424 B2 범위 COMPLETE · B3 다음:** [v424 현재/역사 ilvl 검증](notes/2026-11-13_p1-v424-b2-target-ilvl-existing-native-scope.md), [78 JSON 정본](78_ELEMENT_COMPLETION_CONTRACTS.json): 13/13/5/6 네 축 PASS, COMPLETE A8·A9·A10·A11·B2(5/78), 제품 전체 USER-E2E PENDING. 기존 v180 6개 비334 Native과 v417 현재334 제품 재사용, 새 Native0. 이전 v423 기록은 당시 시점.
 
 > **2026-11-13 v423 B1 검토 / B2 다음:** [B1 범용·현재 원본 PASS/제품 통합 보류](notes/2026-11-13_p1-v423-b1-26dps-contract-scoped-evidence.md); [78 JSON 정본](78_ELEMENT_COMPLETION_CONTRACTS.json) generic12/current_source12/product_integration4/historical5, COMPLETE A8·A9·A10·A11(4/78), 다음 B2, 최종 E2E PENDING. 26 물리 SimC 역사 증거와 현재 70783 전체 제품 통합을 혼동하지 않는다.

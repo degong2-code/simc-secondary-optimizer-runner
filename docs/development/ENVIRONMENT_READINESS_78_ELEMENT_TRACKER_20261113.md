@@ -1,3 +1,5 @@
+> **2026-11-13 v425 B3 대표 일반 방어구 범위 COMPLETE:** [기존 v417 원시 SimC input/JSON2 SHA 12×15 직접 대조](notes/2026-11-13_p1-v425-b3-ordinary-armor-real-native-json2-proof.md), [78 JSON 정본](78_ELEMENT_COMPLETION_CONTRACTS.json): generic14/current_source14/product_integration6/historical7, COMPLETE A8·A9·A10·A11·B2·B3(6/78), next B4, 전체 USER-E2E PENDING. 26 DPS 전체/획득성 인증 미승격; 아래 v424 통계는 시점 이력.
+
 > **2026-11-13 v424 B2 목표 ilvl 계약 범위 COMPLETE:** [v424 현재334·과거 비334 실측 범위](notes/2026-11-13_p1-v424-b2-target-ilvl-existing-native-scope.md). [78 JSON 정본](78_ELEMENT_COMPLETION_CONTRACTS.json): generic13/current_source13/product_integration5/historical6, COMPLETE A8·A9·A10·A11·B2(5/78), 다음 B3; 전체 E2E PENDING. v423 이하 수치는 해당 시점 기록.
 
 > **2026-11-13 v423 B1 26 DPS 계약 범위 검토:** [v423 증거](notes/2026-11-13_p1-v423-b1-26dps-contract-scoped-evidence.md), [78 JSON 정본](78_ELEMENT_COMPLETION_CONTRACTS.json): generic12/current_source12/product_integration4/historical5, COMPLETE A8·A9·A10·A11(4/78) 유지, B1 제품통합 PENDING, 다음 B2. 전 제품 E2E PENDING. 아래 v422/v402 통계는 시점별 기록.
@@ -56,7 +58,7 @@
 |---|---|---|---|---|---|---|
 | **B1 26 DPS 계약** | BASE | 증강 제외 26 전문화 및 장비/무기 규칙 | v143 26계약·v169 무기 규칙·v113 양OS 26 입력·v417 70783 한 스펙 소비 | `v143` | 26 전 전문화 현빌드 제품 DPS 통합은 PENDING, B2 다음 | **ENGINE_GENERALIZATION_PASS — CURRENT_KR_70783_B1_CONTRACT_SCOPED** ([v423 범위 검토](notes/2026-11-13_p1-v423-b1-26dps-contract-scoped-evidence.md)); 역사 v176 26 물리 Native는 별도, 제품통합 PENDING |
 | **B2 목표 ilvl** | BASE | 기본334 및 목표 ilvl 일관된 전달 | 현재 v417 70783 기본334 실 환경·DPS, v180 과거 6개 비334 실 Native+26×5 오프라인 | `v098·v113` | B2 ilvl 전달 범위 COMPLETE, B3 일반 방어구 다음; 새 70783 비334 실증 별도 | **ENGINE_GENERALIZATION_PASS — CURRENT_70783_334_AND_HISTORICAL_NON334_B2_SCOPE** ([v424 증거](notes/2026-11-13_p1-v424-b2-target-ilvl-existing-native-scope.md)); 전체 USER-E2E PENDING |
-| **B3 일반 방어구** | BASE | 대표 방어구 부위별 ID·타입·ilvl | 부분 구현/검증 | `v167·v169·v232` | 시즌 소스에서 필요한 부위만 확정 | **PENDING_SCOPE** |
+| **B3 일반 방어구** | BASE | 대표 방어구 부위별 ID·타입·ilvl | v167/v169/v232 슬롯·클래스·타입, v417 실 12×15 ID/ilvl334 및 JSON2 SHA 확인 | `v167·v169·v232` | 현재 1전문화 실 소비, 일반 장비의 시즌 획득 인증·26전문화 전체 별도; B4 무기 다음 | **ENGINE_GENERALIZATION_PASS — B3_CURRENT_70783_REAL_12X15_SLOT_SCOPE** ([v425 실 ZIP 검증](notes/2026-11-13_p1-v425-b3-ordinary-armor-real-native-json2-proof.md)); B4/B1/A7 제품 전수 별도 |
 | **B4 무기 형태** | BASE | 한손/양손/쌍수/원거리/보조·Fury TG | 부분 구현/검증 | `v169·v232` | 대상 전문화별 유효 슬롯 확인 | **PENDING_SCOPE** |
 | **B5 무기 성능** | BASE | 정확한 item·ilvl·무기 피해·공격 형태 | 코드 존재·통합 미판정 | `v169·v232·SimC` | 대표 목표 ilvl에서 정적/비정적 구분 | **PENDING_SCOPE** |
 | **B6 주능력치** | BASE | 전문화별 대표 장비·주능력치 값 | 코드 존재·통합 미판정 | `v098·v232·SimC` | JSON2/프로필에서 목표 값 연결 확인 | **PENDING_SCOPE** |

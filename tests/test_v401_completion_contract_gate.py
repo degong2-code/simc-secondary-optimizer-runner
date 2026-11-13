@@ -209,6 +209,21 @@ class CompletionContractTests(unittest.TestCase):
         self.assertEqual(doc["policy"]["full_product_e2e"],"PENDING")
         self.assertNotEqual(doc["policy"]["next_review"],"B2")
 
+    def test_b3_ordinary_equipment_has_scoped_real_json2_and_regression_proof(self):
+        doc=self.scenario()
+        row=self.row(doc,"B3")
+        self.assertTrue(gate.complete(row))
+        self.assertEqual({doc["evidence"][key]["kind"]
+            for key in row["generic"]["evidence"]},
+            {"CURRENT_SOURCE_REAL","GENERALIZATION_REGRESSION"})
+        self.assertEqual({doc["evidence"][key]["kind"]
+            for key in row["product_integration"]["evidence"]},
+            {"PRODUCT_INTEGRATION_REAL"})
+        self.assertEqual(row["historical"]["state"],"PASS")
+        self.assertFalse(gate.complete(self.row(doc,"B1")))
+        self.assertEqual(doc["policy"]["full_product_e2e"],"PENDING")
+        self.assertNotEqual(doc["policy"]["next_review"],"B3")
+
     def test_a10_cannot_skip_a9_generic_source(self):
         doc=self.scenario()
         self.row(doc,"A9")["generic"]={"state":"PENDING","evidence":[]}
