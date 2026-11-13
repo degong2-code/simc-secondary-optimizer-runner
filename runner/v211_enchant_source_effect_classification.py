@@ -390,21 +390,6 @@ def compile_catalog(candidates,source_dir,proof_8025,proof_7967):
              "V191_CANDIDATE_VS_PINNED_PERMANENT_SOURCE_DRIFT:"+str(row["enchant_id"]))
     dbc=parse_dbc_rows(sources["spell_item_enchantment.inc"],ids)
     enums=parse_enums(sources["data_enums.hh"])
-    # Quality comparison is OPTIONAL evidence. An incomplete lower-rank
-    # source cannot block otherwise validated base season collection.
-    # Selected-row core parsing above remains strict and authoritative.
-    try:
-        quality_source_only=_fresh_static_quality_source_only(
-            season,candidates,permanent,
-            sources["spell_item_enchantment.inc"],enums)
-    except SourceBlocked as exc:
-        quality_source_only={
-            "schema":"v211_static_quality_source_only_v1",
-            "status":"OPTIONAL_SOURCE_QUALITY_COMPARISON_PENDING",
-            "reason_code":str(exc),
-            "observations":[],
-            "policy_A_product_input_verified":False,
-            "ui_selectable":False,"native_calls":0}
     spelltexts=parse_spelltexts(sources["spelltext_data.inc"])
     handlers=parse_custom_handlers(sources["unique_gear_midnight.cpp"])
     enchant_pipeline=sources["enchants.cpp"]
@@ -740,6 +725,21 @@ def compile_fresh_season(season,source_dir,manifest):
              "FRESH_V191_SIMC_PERMANENT_ENCHANT_NOT_EXACT:"+str(eid))
     dbc=parse_dbc_rows(sources["spell_item_enchantment.inc"],ids)
     enums=parse_enums(sources["data_enums.hh"])
+    # Optional static rank comparison never blocks fresh-season base inputs.
+    # The prior code referenced this output without ever computing it in
+    # this function; retain the strict selected-row validation above.
+    try:
+        quality_source_only=_fresh_static_quality_source_only(
+            season,candidates,permanent,
+            sources["spell_item_enchantment.inc"],enums)
+    except SourceBlocked as exc:
+        quality_source_only={
+            "schema":"v211_static_quality_source_only_v1",
+            "status":"OPTIONAL_SOURCE_QUALITY_COMPARISON_PENDING",
+            "reason_code":str(exc),
+            "observations":[],
+            "policy_A_product_input_verified":False,
+            "ui_selectable":False,"native_calls":0}
     spells=parse_spelltexts(sources["spelltext_data.inc"])
     handlers=parse_custom_handlers(sources["unique_gear.cpp"])
     need("case ITEM_ENCHANTMENT_STAT:" in sources["enchants.cpp"] and

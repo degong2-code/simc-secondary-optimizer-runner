@@ -1,0 +1,30 @@
+name: p1 v410 fresh source classification bridge scoped offline
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - runner/v211_enchant_source_effect_classification.py
+      - tests/test_v239_v211_fresh_season_dynamic_classifier.py
+      - tests/test_v240_v211_v213_fresh_catalog_handoff.py
+      - tests/test_v212_environment_manifest.py
+      - .github/workflows/p1_v410_fresh_season_classification_bridge_focused.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  fresh-source-bridge:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Existing source compiler and fresh->catalog->install tests; no Native
+        run: |
+          python -m py_compile runner/v211_enchant_source_effect_classification.py
+          python -m unittest -v \
+            tests.test_v211_enchant_source_effect_classification \
+            tests.test_v239_v211_fresh_season_dynamic_classifier \
+            tests.test_v240_v211_v213_fresh_catalog_handoff \
+            tests.test_v212_environment_manifest
