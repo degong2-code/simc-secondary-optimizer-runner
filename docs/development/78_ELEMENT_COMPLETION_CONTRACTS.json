@@ -6,7 +6,7 @@
     "current_source_acceptance": "actual current game-build provider source + exact SHA + correct consumed scope",
     "product_acceptance": "actual user input through season environment and SimC DPS/SEM/95% output; separate final product E2E",
     "optional_acceptance": "NOT_APPLICABLE only with concrete feature-specific reason and owner evidence; no blanket exemptions",
-    "next_review": "A9",
+    "next_review": "A10",
     "a7_may_be_next_only_after_generic_review_of": [
       "A4",
       "A5",
@@ -186,6 +186,33 @@
       "tested_sha": "89d4810baf5e05f1c5c6f355f39a5f35ca9ec4e7",
       "supports": [
         "A8"
+      ]
+    },
+    "a9_current_v417": {
+      "kind": "CURRENT_SOURCE_REAL",
+      "note": "docs/development/notes/2026-11-13_p1-v420-a9-simc-source-bytes-scope.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43394408756",
+      "tested_sha": "89d4810baf5e05f1c5c6f355f39a5f35ca9ec4e7",
+      "supports": [
+        "A9"
+      ]
+    },
+    "a9_generic_v409": {
+      "kind": "GENERALIZATION_REGRESSION",
+      "note": "docs/development/notes/2026-11-13_p1-v420-a9-simc-source-bytes-scope.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43386905854",
+      "tested_sha": "94150580bbc4745c25c559db2f185d20de009e6d",
+      "supports": [
+        "A9"
+      ]
+    },
+    "a9_product_v417": {
+      "kind": "PRODUCT_INTEGRATION_REAL",
+      "note": "docs/development/notes/2026-11-13_p1-v420-a9-simc-source-bytes-scope.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43394408756",
+      "tested_sha": "89d4810baf5e05f1c5c6f355f39a5ec4e7",
+      "supports": [
+        "A9"
       ]
     }
   },
@@ -416,16 +443,23 @@
       "scope": "BASE",
       "acceptance": "필요 DBC·생성 데이터·효과/마부 입력 원본",
       "generic": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "a9_current_v417",
+          "a9_generic_v409"
+        ]
       },
       "current_source": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "a9_current_v417"
+        ]
       },
       "product_integration": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "a9_product_v417"
+        ]
       },
       "historical": {
         "state": "PENDING",
