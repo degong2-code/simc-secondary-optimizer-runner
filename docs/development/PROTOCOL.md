@@ -4,6 +4,9 @@
 
 ## 매 작업 착수 전
 
+> **2026-11-13 직접 지시·새 후속 일반 채팅 운영:** [78개 요소별 준비 관리 정본](ENVIRONMENT_READINESS_78_ELEMENT_TRACKER_20261113.md)와 [단일 인계](../CHAT_CONTINUITY_HANDOFF_20261113_P1_V382_78_ELEMENT_READINESS.md)가 새로운 순차 개발의 중심이다. 예전 일반 인계 프롬프트보다 이 목표가 우선. A–G 72개의 시즌 공통/개인 선택 환경과 H 6개의 후속 최적화를 구분하고, **각 요소마다 기존 코드/증거 → 실제 필요조건 → 연결/최소 구현 → 검증 결과 → `READY_SCOPED` 범위**를 기록한다. 역사 PASS를 새 PASS로 쓰지 않고 사용자 미선택 항목을 전체 READY Gate로 만들지 않는다. 새 채팅 첫 응답은 읽기 전용 복원 후 STOP, 별도 사용자 '진행' 이후에만 실제 작업.
+
+
 1. 격리 브랜치와 `main`의 실제 HEAD·사용자 최신 승인·주 제품 개발 소유권을 구분한다.
 2. INDEX에서 해당 기능 → FILE_MAP 핵심 소스/실제 호출·테스트 → EVIDENCE_INDEX 원본 SHA·조건·캐시/Native/Actions 선조회. **증거 미확보와 실제 재현 결함을 분리**한다.
 3. `REUSE/CONNECT/EXTEND/REPLACE/NEW/STOP` 중 근거 있는 가장 작은 변경을 선택. 탐색 알고리즘 자체는 고정하지 않으나 결과 품질/신뢰성을 최우선으로 한다.
