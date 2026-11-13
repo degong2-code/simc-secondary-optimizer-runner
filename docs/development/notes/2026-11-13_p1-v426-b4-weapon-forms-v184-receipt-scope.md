@@ -1,0 +1,26 @@
+# v426 — B4 대표 무기 형태: v184 교정 증거, 현재 원본 범위 PASS, 제품 통합 보류
+
+- **Capability:** `GEAR.SEASON`, `CHARACTER.PROFILE`, `ENVIRONMENT.WEB`.
+- **Keywords:** B4, weapons, one-hand, two-hand, dual-wield, ranged, frill, shield, Titan's Grip, Fury, v143, v169, v184, v232, primary stat, session SHA, corrected policy.
+- **Prior evidence:** [v423 B1 26 DPS 범위](2026-11-13_p1-v423-b1-26dps-contract-scoped-evidence.md), [v425 B3 실 무기 ID·ilvl 소비](2026-11-13_p1-v425-b3-ordinary-armor-real-native-json2-proof.md), [v417 실제 Windows](2026-11-13_p1-v417-bounded-post-bridge-product-e2e-once.md), [v184 최종 테스트 #41006525649](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41006525649).
+- **Decision:** `REUSE` — **B4 generic PASS, current_source PASS (관측된 70783 범위), historical PASS (물리 수용 역사 범위), product_integration PENDING.** 요구되는 한손/양손/쌍수/원거리/보조·Fury TG의 일반 선택 규칙은 존재하나, 교정 v184 정책 이후 **모든 형태에 대해 현재 제품의 설치→DPS·SEM·95%**가 확인됐다고 주장하지 않는다. 요소 INCOMPLETE.
+- **Changes:** B4 증거를 78 JSON/자동 생성표·상세 추적표·v401 계약 회귀에 반영하고 상태 안내만 갱신. 무기 선택 코드, optimizer, raw 데이터, 캐시/세션 재작성 없음.
+- **Verification:** [v184 최종 13 PASS #41006525649](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41006525649), tested `8cc259acd61effa1e85cfd547339976b450343c4`; [v212 양 OS #43388059919](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43388059919) 각 **487 tests/4 SKIP/0 FAIL**; [v417 Windows 70783 #43394408756](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43394408756) Survival Hunter, [고양 주술사 70783 #42472633337](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42472633337), [v176 구 26프로필 #40972829357](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40972829357), [v180 과거 비334 #40980268952](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40980268952).
+- **Remaining:** B4 수정된 무기 정책의 제품 전체 무기 형태 E2E 미입증(특히 shield 사용 전문화). B1 26개 전체 제품통합 별도, B5 실제 무기 성능/피해·공격 형태 다음. 최종 ZERO-SOURCE→USER-E2E PENDING.
+- **Efficiency:** 기존 테스트/원본·Native 영수증 재사용, 신규 Native0/원본 HTTP·DB2 0, 장비·캐시 변조0, 별도 직업 무기 숙련 인증 Gate 추가0.
+
+## 1. 구현과 범용성
+
+`v143.WEAPON_FORMS`는 **7가지** 형태 `one_hand_frill`, `one_hand_shield`, `dual_one_hand`, `dual_two_hand`, `single_one_hand`, `single_two_hand`, `ranged`를 열거한다. 지원 26 DPS에는 `single_one_hand` 기본 배정이 없으며 나머지 형태를 사용한다. `v169.shape_weapons`는 v143 직업/전문화 계약, `inventory_type`, 원본 클래스 마스크, 1H/2H/원거리 subclass preference, ItemSparse `stat_modifier_codes`의 주능력치 3/4/5 및 복합 71–74, 방패/마법 보조장비를 검사한다. Fury는 2개 서로 다른 양손 무기 필요. ID 중복·손 불일치·스탯 불명/부적합은 fail-closed. `v232`는 같은 pinned SimC 소스에서 필요한 손 형태를 소비하며 조건부 시즌 출처는 내부 후보로 보존하되 사용자 장비 선택지로 자동 승격하지 않는다.
+
+**GENERALIZATION_REGRESSION:** [v184 최종 #41006525649](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41006525649) **13/13 PASS**, 수정된 v169 정책 `v184_db2_primary_with_hybrid_71_74_v1` 아래 **26 전문화·총44 무기/보조 슬롯**의 ID·주능력치·타입·클래스 마스크·손 정합성 및 부적합 하위형/주능력치/누락 입력 차단을 확인한다. [v212 #43388059919](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43388059919)의 v232 회귀는 Fury Titan's Grip 상이한 2H 두 개, 원본 SHA/무기 하위형/주능력치 조건 차단, 후보 선택과 실제 신시즌 원본 인증 분리를 검사한다. `v169` 자체가 `weapon_subclass_proficiency_native_unverified=True`를 유지한다. 새 시즌의 미출시 숙련/기술 효과 자체를 재구현·추정하지 않는다.
+
+## 2. 현재 KR 원본·실 사용 범위
+
+**CURRENT_SOURCE_REAL:** KR `12.1.5.70783`의 [v417 #43394408756](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43394408756), tested `89d4810baf5e05f1c5c6f355f39a5f35ca9ec4e7`, Survival Hunter 목표334의 **양손 주무기 268215**를 현재 시즌 설치→12회 SimC Native input/JSON2에 소비했음을 [B3 v425](2026-11-13_p1-v425-b3-ordinary-armor-real-native-json2-proof.md)에서 봉인 확인. 별도 [고양 #42472633337](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42472633337), tested `3f18b66c1fdc58185132e0c93edfbad4a719682b`, 현재 70783의 쌍수 사용자 경로가 실제 동일시즌 v216/v212 설치→6회 DPS Native로 이어졌다. [DK 룬 물리 #42574047929](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42574047929)는 냉기 쌍수·부정 양손의 물리 Native 각1 성공이나 전체 적응형 DPS는 아니다. [냉법 제품 #42785318578](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42785318578)은 양손이 아닌 지능 무기/보조장비 source-backed 새로운 사용자 DPS Native2를 수행했지만 95% 우위는 미확정. **현재 실증 2~4개 전문화/형태의 성공을 전체 26 DPS·전 무기 형태의 완성으로 확대하지 않는다.**
+
+## 3. v176 오류 및 역사 Native의 정확한 한계
+
+**HISTORICAL_SCOPED:** [v176 #40972829357](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40972829357) 구 26/26 프로필의 물리 SimC 수용. 그러나 [v184 교정 기록](../../CURRENT_PRODUCT_DEVELOPMENT_STATE.md)의 *기존 실제 JSON2 재감사*에서 **16/26 전문화, 44슬롯 중 16개가 주능력치 불일치**, 실제 변경 무기 ID는 16전문화 18슬롯에 달했다. **과거 물리 수용=적법한 무기/정확한 최적화가 아니다.** [v180 #40980268952](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40980268952) 비334 6전문화 실제 DPS36+캐시36도 v184 교정 **이전** 정책의 영수증이므로 교정된 프로필에 재적용하지 않는다.
+
+`v106`은 v184 이후 `current_season_weapon_selection_policy`를 session identity에 포함하며 이전 세션을 읽기 전용 증거로만 유지하고 구 정책으로 새 Native를 시작하지 못하도록 `OLD_WEAPON_POLICY_SESSION_START_NEW_CORRECTED_SESSION`을 보고한다([회귀 #41006581648](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41006581648), 364 PASS). 제품 통합 전수 범위가 비어 있어도 기존 다른 영역 구현을 중단하거나 전수 Native를 요구하지 않는다. B4와 B5는 독립 계약이며 DPS 우위/성능은 B5와 최적화 판정 영역에서 구별한다.

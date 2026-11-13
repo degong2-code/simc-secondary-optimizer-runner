@@ -1,3 +1,5 @@
+> **2026-11-13 v426 B4 범위 검토 / 다음 B5:** [v426 현재 원본·v184 26×44 무기 검증 및 구형 Native 주능력치 오류](notes/2026-11-13_p1-v426-b4-weapon-forms-v184-receipt-scope.md), [78 JSON 정본](78_ELEMENT_COMPLETION_CONTRACTS.json): 15/15/6/8 PASS, COMPLETE A8·A9·A10·A11·B2·B3(6/78), B4 product_integration PENDING, 전체 E2E PENDING. 코드 수정/새 Native0. 아래 v425 이하는 당시 시점.
+
 > **2026-11-13 v425 B3 범위 COMPLETE / B4 다음:** [B3 현재70783 v417 실제 12×15 물리 ID/ilvl/JSON2 SHA 검증](notes/2026-11-13_p1-v425-b3-ordinary-armor-real-native-json2-proof.md), [78 JSON 정본](78_ELEMENT_COMPLETION_CONTRACTS.json): 14/14/6/7 PASS, COMPLETE A8·A9·A10·A11·B2·B3(6/78), B4 무기 형태 다음, 최종 USER-E2E PENDING. 새 Native/DB20, 기존 v424/v423 인계 수치는 역사 시점.
 
 > **2026-11-13 v424 B2 범위 COMPLETE · B3 다음:** [v424 현재/역사 ilvl 검증](notes/2026-11-13_p1-v424-b2-target-ilvl-existing-native-scope.md), [78 JSON 정본](78_ELEMENT_COMPLETION_CONTRACTS.json): 13/13/5/6 네 축 PASS, COMPLETE A8·A9·A10·A11·B2(5/78), 제품 전체 USER-E2E PENDING. 기존 v180 6개 비334 Native과 v417 현재334 제품 재사용, 새 Native0. 이전 v423 기록은 당시 시점.

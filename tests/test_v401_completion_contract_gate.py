@@ -224,6 +224,24 @@ class CompletionContractTests(unittest.TestCase):
         self.assertEqual(doc["policy"]["full_product_e2e"],"PENDING")
         self.assertNotEqual(doc["policy"]["next_review"],"B3")
 
+    def test_b4_weapon_forms_reject_promotion_from_old_physical_native(self):
+        doc=self.scenario()
+        row=self.row(doc,"B4")
+        self.assertEqual(row["generic"]["state"],"PASS")
+        self.assertEqual(row["current_source"]["state"],"PASS")
+        self.assertEqual(row["historical"]["state"],"PASS")
+        self.assertEqual(row["product_integration"]["state"],"PENDING")
+        self.assertEqual({doc["evidence"][key]["kind"]
+            for key in row["generic"]["evidence"]},
+            {"GENERALIZATION_REGRESSION","CURRENT_SOURCE_REAL"})
+        self.assertEqual({doc["evidence"][key]["kind"]
+            for key in row["historical"]["evidence"]},
+            {"HISTORICAL_SCOPED"})
+        self.assertFalse(gate.complete(row))
+        self.assertFalse(gate.complete(self.row(doc,"B1")))
+        self.assertEqual(doc["policy"]["next_review"],"B5")
+        self.assertEqual(doc["policy"]["full_product_e2e"],"PENDING")
+
     def test_a10_cannot_skip_a9_generic_source(self):
         doc=self.scenario()
         self.row(doc,"A9")["generic"]={"state":"PENDING","evidence":[]}
