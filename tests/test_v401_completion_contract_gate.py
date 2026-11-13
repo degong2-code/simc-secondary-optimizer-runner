@@ -32,12 +32,28 @@ class CompletionContractTests(unittest.TestCase):
         self.assertEqual(gate.render(self.scenario()),
                          (ROOT/gate.GENERATED).read_text(encoding="utf8"))
         self.assertEqual(gate.run(["--check"]),0)
-        self.assertEqual(sum(x["generic"]["state"]=="PASS" for x in rows),3)
+        self.assertEqual(sum(x["generic"]["state"]=="PASS" for x in rows),6)
         self.assertEqual(sum(x["current_source"]["state"]=="PASS"
                              for x in rows),6)
         self.assertEqual(sum(x["historical"]["state"]=="PASS"
                              for x in rows),3)
         self.assertFalse(any(gate.complete(x) for x in rows))
+
+    def test_a4_a6_generic_pass_is_scoped_and_product_unverified(self):
+        data=self.scenario()
+        for eid in ("A4","A5","A6"):
+            row=self.row(data,eid)
+            self.assertEqual(row["generic"]["state"],"PASS")
+            self.assertEqual(row["current_source"]["state"],"PASS")
+            self.assertEqual(row["product_integration"]["state"],"PENDING")
+            self.assertFalse(gate.complete(row))
+            self.assertEqual(gate.legacy_badge(row),
+                             "ENGINE_GENERALIZATION_PASS")
+            kinds={data["evidence"][key]["kind"]
+                   for key in row["generic"]["evidence"]}
+            self.assertIn("CURRENT_SOURCE_REAL",kinds)
+            self.assertIn("GENERALIZATION_REGRESSION",kinds)
+        self.assertEqual(data["policy"]["next_review"],"A7")
 
     def test_a4_cannot_claim_generic_pass_from_current_only_source(self):
         doc=self.scenario()
@@ -56,6 +72,7 @@ class CompletionContractTests(unittest.TestCase):
 
     def test_a7_may_not_be_next_when_a4_a6_generic_pending(self):
         doc=self.scenario()
+        self.row(doc,"A4")["generic"]={"state":"PENDING","evidence":[]}
         doc["policy"]["next_review"]="A7"
         with self.assertRaisesRegex(gate.ContractInvalid,
                                     "NEXT_REVIEW_SKIPPED_GENERIC_VALIDATION:A4"):
@@ -63,13 +80,7 @@ class CompletionContractTests(unittest.TestCase):
 
     def test_next_generic_unreviewed_element_must_be_selected(self):
         doc=self.scenario()
-        self.row(doc,"A4")["generic"]={
-            "state":"PASS","evidence":["a1_source","a1_generic"]}
-        # An alternative v1 source test alone is not a real proof of A4;
-        # this test only exercises progression logic. No evidence is
-        # promoted to actual A4 in the unmodified registry.
-        doc["evidence"]["a1_source"]["supports"].append("A4")
-        doc["evidence"]["a1_generic"]["supports"].append("A4")
+        self.row(doc,"A5")["generic"]={"state":"PENDING","evidence":[]}
         with self.assertRaisesRegex(gate.ContractInvalid,
                                     "NEXT_REVIEW_SKIPPED_GENERIC_VALIDATION:A5"):
             gate.validate(doc)
@@ -84,6 +95,8 @@ class CompletionContractTests(unittest.TestCase):
 
     def test_a7_cannot_be_marked_current_ready_while_a4_unreviewed(self):
         doc=self.scenario()
+        self.row(doc,"A4")["generic"]={"state":"PENDING","evidence":[]}
+        doc["policy"]["next_review"]="A4"
         self.row(doc,"A7")["current_source"]={
             "state":"PASS","evidence":["a1_source"]}
         # Even if the external ref has been incorrectly attached to A7,
@@ -138,8 +151,8 @@ class CompletionContractTests(unittest.TestCase):
                                         "TRACKER_IDENTITIES_OR_ACCEPTANCE_DRIFT:A4"):
                 gate.check_tracker(data,root)
             changed=original.replace(
-                "READY_SCOPED — CURRENT_KR_70783_BLIZZARD_INDEX_BASE_ONLY",
-                "ENGINE_AUTODISCOVERY_PASS — UNSUPPORTED_SCOPE",1)
+                "ENGINE_GENERALIZATION_PASS — CURRENT_KR_70783_BLIZZARD_INDEX_SOURCE_SCOPE",
+                "READY_SCOPED — CURRENT_KR_70783_BLIZZARD_INDEX_BASE_ONLY",1)
             target.write_text(changed,encoding="utf8")
             with self.assertRaisesRegex(gate.ContractInvalid,
                                         "TRACKER_STATUS_CONTRADICTS_CONTRACT:A4"):
