@@ -145,7 +145,11 @@ def complete(row):
                ("generic","current_source","product_integration"))
 
 def legacy_badge(row):
-    if row["generic"]["state"]=="PASS": return "ENGINE_AUTODISCOVERY_PASS"
+    if row["generic"]["state"]=="PASS":
+        # A1–A3 identify the active expansion/season; A4+ are scoped
+        # source/feature generalization, not a second season discovery.
+        return ("ENGINE_AUTODISCOVERY_PASS" if row["id"] in ("A1","A2","A3")
+                else "ENGINE_GENERALIZATION_PASS")
     if row["current_source"]["state"]=="PASS":
         return "READY_SCOPED — CURRENT"
     if row["historical"]["state"]=="PASS": return "READY_SCOPED — HISTORY"
