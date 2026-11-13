@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER · 개발 지식 시작점
 
+> **A1/G10 최신 v388 실제 회귀:** [첫 FAIL/원인/복구/두 번의 PASS·앱 TXT 영수증](notes/2026-11-13_p1-v388-a1-and-app-filelist-real-offline-ci.md) — GitHub Ubuntu Python 3.12 **74 PASS/1 SKIP/0 FAIL**, 실제 272개 배포 후보 파일명을 같은 패키저의 TXT로 추출·SHA 확인. CI 전용 가상 v213 fixture는 ZERO-SOURCE 정답이 아님. **A1은 여전히 PENDING_SCOPE**, 정상 인증 원본 자동 발견·현재 시즌 DB2 JOIN 시험 필요.
+
 > **현재 A1 코드 증분 v387:** [전체 확장팩 WCL 원본/동일 출처 DB2 JOIN, MIDNIGHT 하드코딩 제거](notes/2026-11-13_p1-v387-a1-all-expansion-source-discovery.md). **수정 코드·테스트 추가**, 원본 함수 10 스모크 PASS, 전체 Python CI/실 API ZERO-SOURCE **미실행**, A1 PENDING. 다음 채팅에서 v386 인계 문서의 v385 코드 스냅샷보다 **v387 최신 실제 HEAD/테스트**를 우선 재조회.
 
 > **최종 앱 파일 구성 원칙:** [배포 파일 자동 TXT 목록 + 78개 기능 추적 지침](APP_PACKAGE_FILE_REGISTRY_20261113.md). 소스 파일을 별도 완성 폴더에 복사하거나 수동으로 파일 목록을 중복 유지하지 않는다. 현재 베타 패키저의 단일 `select()`에서 TXT를 생성하고 ZIP `V181_PACKAGE_MANIFEST.json`의 실제 바이트/SHA를 사용한다. 78개 기능은 파일 개수와 1:1이 아니며 파일 수정 시 연결 테스트·영수증 범위 대조.
