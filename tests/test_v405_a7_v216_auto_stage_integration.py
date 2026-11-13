@@ -33,6 +33,7 @@ def origin(kind,season,wse):
     return {
         "source":kind,
         "season_evidence":("DB2_DISPLAY_SEASON_MATCH" if season==83
+                           else "UNKNOWN_UNSCOPED_JOURNAL" if season==0
                            else "UNKNOWN_OTHER_DISPLAY_SEASON"),
         "display_season_id":season,
         "world_state_expression_id":wse,
