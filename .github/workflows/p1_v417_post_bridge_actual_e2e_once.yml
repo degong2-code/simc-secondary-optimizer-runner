@@ -1,0 +1,85 @@
+# One bounded post-v414/v415 product E2E. Reuses v343's already-tested
+# native probe and v344's official Windows SimC package; no new engine.
+name: P1 v417 Actual installed GJFO to v096 DPS and saved snapshot once
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p1_v417_post_bridge_actual_e2e_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v417-post-bridge-e2e-once
+  cancel-in-progress: false
+jobs:
+  one-current-product-e2e:
+    if: contains(github.event.head_commit.message, '[p1-v417-actual-once]')
+    runs-on: windows-2022
+    timeout-minutes: 30
+    env:
+      PYTHONPATH: runner;integration_probes;.
+      SIMC_PINNED_SOURCE_COMMIT: de11f57df75dda668bae6ac7043a43b98831fa96
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - name: Preserve original source bytes on Windows
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse existing official Windows SimC archive
+        uses: actions/download-artifact@v4
+        with:
+          repository: simulationcraft/simc-publish
+          run-id: 42956947906
+          name: simc-nightly-win64-midnight
+          path: .simc-v417
+          github-token: ${{ github.token }}
+      - name: Verify expected test fixture executable bytes before execution
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $archive=Join-Path $PWD '.simc-v417/simc-1210.01.de11f57-win64.7z'
+          if (!(Test-Path $archive -PathType Leaf)) { throw 'V417_OFFICIAL_TEST_ARCHIVE_MISSING' }
+          if ((Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant() -ne 'a4c4d5e7b349172d80897721daa3e849ce25874a82bbdfb96aeab4dbdc560eb0') { throw 'V417_TEST_ARCHIVE_SHA_DRIFT' }
+          $seven='C:\Program Files\7-Zip\7z.exe'
+          if (!(Test-Path $seven)) { throw 'V417_7ZIP_MISSING' }
+          New-Item -ItemType Directory -Force -Path .simc-v417-extracted | Out-Null
+          & $seven x '-o.simc-v417-extracted' -y -bd $archive | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'V417_TEST_ARCHIVE_EXTRACT_FAILED' }
+          $exes=@(Get-ChildItem .simc-v417-extracted -Recurse -Filter simc.exe -File)
+          if ($exes.Count -ne 1) { throw 'V417_SIMC_EXE_COUNT_INVALID' }
+          if ((Get-FileHash -Algorithm SHA256 $exes[0].FullName).Hash.ToLowerInvariant() -ne '1fc927d2be7f1b6064c75f004b5b22245b064a6b3e56e572af4048ba822a986d') { throw 'V417_TEST_EXE_SHA_DRIFT' }
+          "V417_SIMC_EXE=$($exes[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Reuse offline product bridge checks before any Native
+        shell: pwsh
+        run: |
+          python -m pip install -r requirements-web-test.txt
+          if ($LASTEXITCODE -ne 0) { throw 'V417_DEPS_FAILED' }
+          python -m unittest -v tests.test_p3_ho_fresh_v212_user_bridge tests.test_p3_ham_fresh_v212_web_profile_bridge_offline
+          if ($LASTEXITCODE -ne 0) { throw 'V417_SOURCE_BRIDGE_PREFLIGHT_FAILED' }
+      - name: One original v113/v216/v212/v096/v293 SimC real result
+        timeout-minutes: 20
+        shell: pwsh
+        run: |
+          python -u integration_probes/p1_v343_windows_70783_real_native_once.py --simc "$env:V417_SIMC_EXE" --out out/v417
+          if ($LASTEXITCODE -ne 0) { throw 'V417_POST_BRIDGE_REAL_PRODUCT_FAILED' }
+      - name: Keep compact result and existing original Native receipts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v417-post-bridge-e2e-actual-once
+          path: |
+            out/v417/V343_WINDOWS_70783_COMPACT.json
+            out/v417/V343_WEB_NATIVE_RESULT.json
+            out/v417/V343_NATIVE_INPUT_JSON2_RECEIPT.zip
+          retention-days: 7
+          if-no-files-found: warn
