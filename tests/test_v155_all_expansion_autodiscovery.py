@@ -64,6 +64,19 @@ class AllExpansionSourceTests(unittest.TestCase):
         # already uses identity comparison, never a fallback to active.
         self.assertEqual([x["zone_id"] for x in parsed
                           if x["wcl_frozen"] is False],[401])
+        # Real authenticated v389 all-expansion source had a signed
+        # Journal ID sentinel: source schema Int is not guaranteed
+        # to be a positive valid Blizzard encounter ID in old zones.
+        for sentinel in (0,-1):
+            historical=zone(88,"Irrelevant Historical",7,
+                            [(12,"Historical Encounter")],frozen=True)
+            historical["encounters"][0]["journalID"]=sentinel
+            rows=probe.parse_wcl_zones({"data":{"worldData":{
+                "zones":[historical,current]}}},require_expansion=True)
+            self.assertEqual(rows[0]["encounters"][0][
+                "blizzard_journal_encounter_id"],sentinel)
+            self.assertFalse(rows[0]["journal_id_fields_complete"])
+            self.assertTrue(rows[1]["journal_id_fields_complete"])
         invalid=zone(101,"Invalid",7,[(1,"Bad")])
         invalid["encounters"][0]["journalID"]="garbled"
         with self.assertRaisesRegex(
