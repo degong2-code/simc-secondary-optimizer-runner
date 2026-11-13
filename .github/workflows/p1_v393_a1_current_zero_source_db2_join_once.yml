@@ -1,0 +1,187 @@
+name: p1 v393 A1 current zero-source authenticated WCL and raw DB2 join ONCE
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - .github/workflows/p1_v393_a1_current_zero_source_db2_join_once.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  a1-source-join:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 18
+    env:
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Discover source identities and join current season from fresh DB2
+        run: |
+          python - <<'PY'
+          import hashlib, json, os, pathlib, sys, tempfile, traceback
+          runner=pathlib.Path("runner").resolve()
+          sys.path.insert(0,str(runner))
+          import v289_retail_live_build_source as retail
+          import v242_authenticated_season_source_stage as auth
+          import v161_wago_db2_snapshot as wago
+          import v163_zero_seed_db2_join as join
+          receipt={
+              "schema":"p1_v393_a1_zero_source_real_join_receipt_v1",
+              "clean_source_root":True,
+              "preloaded_season_id":False,
+              "preloaded_expansion_id":False,
+              "preloaded_db2_csv":False,
+              "preloaded_catalog_or_budget":False,
+              "runtime_ai_used":False,
+              "native_calls":0,
+              "no_environment_install":True,
+              "source_scope_membership_complete":False,
+              "a1_engine_autodiscovery_pass":False,
+              "status":"STARTED"}
+          try:
+              build=retail.discover(region="KR")
+              receipt["retail"]={
+                  "game_build":build["game_build"],
+                  "region":build["region"],
+                  "bpsv_sha256":build["source_sha256"]}
+              print("A1_PUBLIC_BUILD_OBSERVED",build["game_build"])
+              creds={k:os.environ.get(k,"") for k in auth.FIELDS}
+              if not all(creds.values()):
+                  receipt["status"]="BLOCKED_AUTH_CREDENTIALS_NOT_CONFIGURED"
+              else:
+                  with tempfile.TemporaryDirectory(prefix="a1_v393_cold_") as t:
+                      root=pathlib.Path(t)
+                      src=auth.collect(
+                          stage_root=root,
+                          expected_game_build=build["game_build"],
+                          credentials=creds)
+                      receipt["authenticated_source_status"]=src["status"]
+                      receipt["auth_source_stage_receipt_sha256"]=(
+                          src.get("stage",{}).get("receipt_sha256"))
+                      receipt["auth_network_requests"]=src["network_calls_by_stage"]
+                      source_path=src.get("source_report_path")
+                      if source_path is None or not src.get("season_join_ready"):
+                          receipt["status"]="BLOCKED_AUTH_SOURCE_NOT_READY"
+                          print("A1_SOURCE_PENDING",src["status"])
+                      else:
+                          raw=pathlib.Path(source_path).read_bytes()
+                          report=json.loads(raw)
+                          receipt["auth_source_sha256"]=hashlib.sha256(
+                              raw).hexdigest()
+                          receipt["blizzard_current_keystone_id"]=(
+                              report["blizzard"]["endpoints"]["keystone_season_index"]
+                              ["data"].get("current_season_id"))
+                          receipt["wcl_observed_zones"]=len(
+                              report["wcl"]["zones"])
+                          receipt["wcl_frozen_unscoped_excluded"]=(
+                              report["wcl"].get("frozen_unscoped_excluded",0))
+                          # Ten selected original CSV source tables only;
+                          # no complete game database or SimC evaluation.
+                          folder=root/"fresh-db2"
+                          snapshot=wago.snapshot(folder,build=build["game_build"],
+                                                 make_archive=False)
+                          receipt["db2_snapshot_sha256"]=hashlib.sha256(
+                              (folder/"receipt.json").read_bytes()).hexdigest()
+                          receipt["db2_tables"]=len(snapshot["tables"])
+                          receipt["db2_downloaded_bytes"]=snapshot["total_csv_bytes"]
+                          receipt["db2_table_sha256"]={
+                              k:v["sha256"] for k,v in
+                              sorted(snapshot["tables"].items())}
+                          print("A1_DB2_FRESH_CSV_OBSERVED",
+                                receipt["db2_tables"],
+                                receipt["db2_downloaded_bytes"])
+                          try:
+                              scope=join.discover_unique_live_scope(folder,report)
+                              receipt["selected_scope"]=scope
+                              print("A1_UNIQUE_SOURCE_SCOPE",scope["expansion_id"],
+                                    scope["db2_display_season_id"],
+                                    scope["wcl_expansion_id"])
+                              verified={k:{"sha256":v["sha256"],
+                                            "bytes":v["bytes"]}
+                                        for k,v in snapshot["tables"].items()}
+                              index=join.build_index(
+                                  folder,report,
+                                  raid_zone=scope["raid_zone"],
+                                  mplus_zone=scope["mplus_zone"],
+                                  build=build["game_build"],
+                                  expansion_id=scope["expansion_id"],
+                                  wcl_expansion_id=scope["wcl_expansion_id"],
+                                  verified_tables=verified)
+                              receipt["item_source_join"]={
+                                  "status":index["status"],
+                                  "blizzard_keystone_season_id":index.get(
+                                      "blizzard_keystone_season_id"),
+                                  "db2_display_season_id":index.get(
+                                      "db2_display_season_id"),
+                                  "raid_journal_tier_id":index.get(
+                                      "raid_journal_tier_id"),
+                                  "mapped_raid_bosses":index.get(
+                                      "mapped_raid_bosses"),
+                                  "mapped_mplus_dungeons":index.get(
+                                      "mapped_mplus_dungeons"),
+                                  "unknown_count":len(index.get("unknown",[])),
+                                  "collection_counts":index.get("collection_counts"),
+                                  "full_season_completeness_confirmed":index.get(
+                                      "full_season_completeness_confirmed")}
+                              receipt["status"]="A1_REAL_SOURCE_IDS_AND_DB2_JOIN_OBSERVED"
+                          except (join.JoinBlocked,ValueError,KeyError,TypeError) as exc:
+                              receipt["status"]="BLOCKED_A1_SOURCE_JOIN"
+                              receipt["first_missing_code"]=(
+                                  str(exc) if isinstance(exc,join.JoinBlocked)
+                                  else type(exc).__name__)[:150]
+          except (retail.RetailVersionBlocked,auth.DiscoveryBlocked,ValueError,
+                  OSError,KeyError,TypeError) as exc:
+              receipt["status"]="BLOCKED_SOURCE_OR_FETCH"
+              receipt["first_missing_code"]=(
+                  str(exc) if isinstance(exc,(retail.RetailVersionBlocked,
+                                             auth.DiscoveryBlocked,ValueError))
+                  else type(exc).__name__)[:150]
+          finally:
+              pathlib.Path("a1_v393_zero_source_join_receipt.json").write_text(
+                  json.dumps(receipt,sort_keys=True,ensure_ascii=False,
+                             indent=2,allow_nan=False)+"\n",encoding="utf8")
+              print("A1_V393_SOURCE_JOIN_STATUS",receipt["status"],
+                    "NATIVE_0_NO_INSTALL")
+          PY
+      - name: Preserve only bounded source-owner receipt (no CSV, no credentials)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-v393-a1-zero-source-db2-${{ github.sha }}
+          path: a1_v393_zero_source_join_receipt.json
+          if-no-files-found: warn
+          retention-days: 14
+      - name: Publish Actions diagnostic URL (NOT automatic A1 PASS)
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          python - <<'PY'
+          import json, os, urllib.request
+          repo=os.environ["GITHUB_REPOSITORY"]
+          sha=os.environ["GITHUB_SHA"]
+          payload={
+              "state":"success" if os.environ["JOB_STATUS"]=="success" else "failure",
+              "context":"p1-v393-a1-real-zero-source-db2-join-diagnostic",
+              "description":"Clean-root WCL+Wago join receipt; not final season/product PASS",
+              "target_url":f"https://github.com/{repo}/actions/runs/{os.environ['GITHUB_RUN_ID']}"}
+          req=urllib.request.Request(
+              f"https://api.github.com/repos/{repo}/statuses/{sha}",
+              json.dumps(payload).encode(),method="POST",
+              headers={"Authorization":f"Bearer {os.environ['GH_TOKEN']}",
+                       "Accept":"application/vnd.github+json",
+                       "Content-Type":"application/json"})
+          with urllib.request.urlopen(req,timeout=12) as response:
+              assert response.status==201
+          PY
