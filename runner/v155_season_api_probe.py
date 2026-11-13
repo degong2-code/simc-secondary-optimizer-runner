@@ -10,6 +10,7 @@ Only approved API hosts and fixed bounded requests.
 from __future__ import annotations
 import argparse
 import base64
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -36,7 +37,8 @@ def basic_auth(user,secret):
     need(bool(user) and bool(secret),"CREDENTIAL_PAIR_REQUIRED")
     return "Basic "+base64.b64encode((user+":"+secret).encode("utf8")).decode("ascii")
 
-def request_json(url, *, method="GET", headers=None, data=None, transport=urlopen):
+def request_json(url, *, method="GET", headers=None, data=None,
+                 transport=urlopen, source_proof=None):
     need(url.startswith((BLIZZARD_BASE+"/data/wow/",
                          WCL_BASE+"/api/v2/client",
                          WCL_BASE+"/oauth/token",
@@ -54,6 +56,14 @@ def request_json(url, *, method="GET", headers=None, data=None, transport=urlope
         raise ProbeBlocked("NETWORK_UNAVAILABLE") from None
     need(status==200,"HTTP_UNEXPECTED_STATUS")
     need(len(raw)<=MAX_RESPONSE_BYTES,"RESPONSE_TOO_LARGE")
+    # Opt-in *only* for public game-data source bodies. OAuth token
+    # responses never pass source_proof, so credential-bearing bytes are
+    # not fingerprinted into exported receipts.
+    if source_proof is not None:
+        need(type(source_proof) is dict,"SOURCE_PROOF_DEST_INVALID")
+        source_proof.update({
+            "raw_response_sha256":hashlib.sha256(raw).hexdigest(),
+            "raw_response_bytes":len(raw)})
     result=json.loads(raw)
     need(type(result) is dict,"RESPONSE_NOT_JSON_OBJECT")
     return result
@@ -234,11 +244,14 @@ def run_probe(blizzard_id,blizzard_secret,wcl_id=None,wcl_secret=None,
             "namespace":namespace,"locale":"en_US"})
         report["blizzard"]["requests"]+=1
         try:
+            proof={}
             result=request_json(url,headers={
-                "Authorization":"Bearer "+token},transport=transport)
+                "Authorization":"Bearer "+token},transport=transport,
+                source_proof=proof)
             report["blizzard"]["endpoints"][name]={
                 "status":"HTTP_200",
-                "data":summarize_blizzard(result)}
+                "data":summarize_blizzard(result),
+                **({"original_http_body":proof} if proof else {})}
         except ProbeBlocked as e:
             report["blizzard"]["endpoints"][name]={
                 "status":"NOT_VERIFIED","error_code":str(e)}
