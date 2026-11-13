@@ -206,7 +206,7 @@ class V098SelectedCompositionWiring(unittest.TestCase):
                 class_tier_five=self.fx.fx.tier,
                 original_v191_link=self.fx.fx.link,
                 installed_path=self.fx.install_file,
-                cache_path=self.fx.fx.cache_file,
+                cache_path=self.fx.cache_file,
                 season_profile_inputs=original,
                 weapon_layout="single_two_hand",fillers=[])
         args=serializer.call_args.kwargs
