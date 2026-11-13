@@ -1189,6 +1189,13 @@ class LocalJobs:
                             doc["manifest_sha256"],
                         "native_calls":0,"network_calls":0}
             except (OSError,ValueError,TypeError,KeyError) as exc:
+                # Do not erase selected B8 source/identity fail-closed
+                # reasons while preserving old baseline error semantics.
+                if (isinstance(exc,environment_manifest.EnvironmentBlocked)
+                    and str(exc).startswith((
+                        "WEB_B8_SELECTED_",
+                        "WEB_FRESH_MULTIPLE_INSTALLED_SOURCE_FIELDS"))):
+                    raise
                 raise environment_manifest.EnvironmentBlocked(
                     "WEB_FRESH_ENVIRONMENT_MANIFEST_INVALID") from exc
         try:
