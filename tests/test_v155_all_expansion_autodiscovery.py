@@ -103,6 +103,31 @@ class AllExpansionSourceTests(unittest.TestCase):
         self.assertNotIn("Secret Name Unused",str(shape))
         self.assertNotIn("Unknown New Content",str(shape))
 
+    def test_frozen_nonpositive_expansion_is_excluded_not_promoted(self):
+        """A1 v392 exact live source shape: two frozen historical zones unscoped."""
+        old=zone(13,"Frozen Historical Zone",0,
+                 [(11,"Unrelated Historical")],frozen=True)
+        another=zone(14,"Frozen Earlier Zone",-1,
+                     [(12,"Ancient Encounter")],frozen=True)
+        current=zone(100,"Current Active Zone",47,[(30,"Current Boss")])
+        raw={"data":{"worldData":{"zones":[old,another,current]}}}
+        parsed=probe.parse_wcl_zones(raw,require_expansion=True)
+        self.assertEqual(len(parsed),1)
+        self.assertEqual(parsed[0]["zone_name"],"Current Active Zone")
+        self.assertEqual(parsed[0]["expansion_id"],47)
+        counts=probe.summarize_wcl_zone_shape(raw)["zone_groups"]
+        self.assertEqual(counts["FROZEN_NONPOSITIVE_ID"],2)
+        self.assertEqual(counts["UNFROZEN_POSITIVE_ID"],1)
+        # Unfrozen or unknown-active zones without a positive expansion
+        # identity cannot silently enter the current-season source pool.
+        for flag in (False,None):
+            invalid=zone(14,"Unscoped Candidate",0,[],frozen=False)
+            invalid["frozen"]=flag
+            with self.subTest(frozen=flag),self.assertRaisesRegex(
+                    probe.ProbeBlocked,"WCL_ACTIVE_ZONE_EXPANSION_ID_REQUIRED"):
+                probe.parse_wcl_zones({"data":{"worldData":{
+                    "zones":[invalid,current]}}},require_expansion=True)
+
     def test_authenticated_probe_uses_two_bounded_wcl_requests_not_named_seed(self):
         requests=[]
         exps={"data":{"worldData":{"expansions":[
