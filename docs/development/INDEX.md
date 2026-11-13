@@ -5,6 +5,8 @@
 > **가장 먼저 확인할 현재 개발 기준:** [2026-11-13 v382 새 채팅 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261113_P1_V382_78_ELEMENT_READINESS.md) · [A~G 환경72 + H 최적화6 = **78개 항목별 준비·증거 추적표**](ENVIRONMENT_READINESS_78_ELEMENT_TRACKER_20261113.md). 기존 29개 개요보다 **이 78개를 사용자 지정 우선 실행 계획**으로 삼는다. `REUSE/CONNECT/EXTEND/REPLACE/NEW/STOP`으로 기존 코드·시험·Native 영수증을 재사용, 기능별 완료 범위를 구분. 새 인계 자체는 Native/Actions PASS가 아니다.
 
 
+> **v384 원본 진단 복사 경로:** [사용자 요청별 안전한 소스·G/J/F/O 누락 영수증 복사](notes/2026-11-13_p1-v384-season-evidence-copy-diagnostic.md)는 기존 v113→v216 원본 응답의 **읽기 전용 UI 단축**이다. 사용자 실제 Windows 요청의 `source_compilation.missing` 미관측을 해결할 수 있게 한다. **최신 현장 READY·실 Windows 테스트·추가 Native PASS가 아니라 V8 국소 검증**이며 A10/A11/G2 역사 제한 유지.
+
 ## 먼저 찾을 기존 성과 (신규 연구 전 필수 역방향 확인)
 
 | 주제 | 코드·검증된 과거 성과 | 아직 입증하지 못한 범위 |
