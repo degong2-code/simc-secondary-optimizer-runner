@@ -2,6 +2,8 @@
 
 > **v386 작성 후 A1 코드 증분 (v387):** [WCL 전체 확장팩 원본 기반 탐색·같은 확장팩 raid/M+·DB2 조인 연결](development/notes/2026-11-13_p1-v387-a1-all-expansion-source-discovery.md). `v155.select_midnight_expansion` 제거, `v155 → v242 → v163 → v216` 후보 원본 경로 갱신·새/보강 오프라인 회귀 작성, **선택 순수 함수 10 스모크 PASS**. 아직 전체 Python/Actions/정상 API 키 실제 ZERO-SOURCE 미실행이므로 **A1 PENDING_SCOPE**. 아래의 'v155 Midnight 하드코딩 남음'과 '다음 제거' 문구는 이 증분 **이전 이력**이므로 우선 읽지 말고 최신 실제 GitHub HEAD/이 노트를 따른다. 다음 작업은 **새 회귀 실제 실행 및 권한 있는 현 시즌 실 원본/조인 증거 확보**다.
 
+> **v387 후속 사용자 결정 — 최종 앱 파일 구성/인계:** [배포 파일 후보 자동 TXT·파일별 담당 기능/78요소 추적](development/APP_PACKAGE_FILE_REGISTRY_20261113.md). 완성 소스 복제 폴더를 만들지 말고 `v181_windows_beta_packager.select()`의 기존 ZIP 선정 로직을 그대로 TXT(`--list-files`)로 출력. ZIP `V181_PACKAGE_MANIFEST.json`은 실제 파일명·SHA, `FILE_MAP/FILE_INVENTORY`는 기능·테스트 지도, **78개 원장**은 READY 상태 정본이다. 78개 요소↔Python 파일은 **다대다** 관계이며 한 파일 고친 뒤 연결 회귀 확인. 현재 ZIP은 베타 후보이지 독립 EXE/최종 승인 패키지가 아니다. 이번 `v181` packager+test 증분은 **코드와 새 회귀 테스트 추가만**, 최신 전체 Actions/Windows/Native PASS는 미확인. A1 개발 우선순위 유지.
+
 ## 0. 이 문서를 새 채팅에서 가장 먼저 읽기
 
 **최신 사용자 직접 결정 및 작업 지시:**
