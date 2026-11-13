@@ -425,6 +425,154 @@ def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
         source_catalog_path=source_catalog_path)
     return sha(canonical(identity).encode("utf8"))[:20],identity
 
+
+def preview_selected_fresh_session_identity(user,binary,revision,static_cache,*,
+        selected_source,source_catalog_path,installed_manifest_sha256,
+        package_manifest_path=None):
+    """v435 B8 exact *future* session/cache key; no folder/Native/admission.
+
+    Reuse the existing v106 binary/revision/user/cache/season identity, then
+    add the final v434 profile + typed B/T/L/O physical/source digest. Old
+    v106 keys are not changed and this preview never calls store_session().
+    """
+    proof=selected_source
+    need(type(proof) is dict and
+         proof.get("schema")==
+             "v433_v098_selected_user_physical_budget_preflight_v1"
+         and proof.get("status")==
+             "B8_SELECTED_V096_COMPLETE_PROFILE_BUDGET_NOT_ADMITTED"
+         and proof.get("native_execution_authorized") is False
+         and proof.get("runtime_manifest_created") is False
+         and type(proof.get("final_source_identity")) is dict
+         and type(proof.get("v096_selected_source_only_preflight")) is dict
+         and type(proof.get("budget_preflight")) is dict
+         and type(proof.get("bound_source_identity")) is dict
+         and type(proof.get("profile_simc")) is str,
+         "B8_SELECTED_V434_SOURCE_ONLY_IDENTITY_REQUIRED")
+    final=proof["final_source_identity"]
+    bound=proof["bound_source_identity"]
+    budget=proof["budget_preflight"]
+    verified=proof["v096_selected_source_only_preflight"]
+    need(final.get("schema")==
+             "v434_b8_selected_full_native_profile_source_binding_v1"
+         and proof.get("final_source_identity_sha256")==
+             sha(canonical(final).encode("utf8"))
+         and proof.get("bound_source_identity_sha256")==
+             sha(canonical(bound).encode("utf8"))
+         and verified.get("schema")==
+             "v434_v096_selected_fresh_nonadmitted_preflight_v1"
+         and verified.get("status")==
+             "B8_V096_SOURCE_ONLY_PROFILE_AND_STATIC_BOUNDS_VALIDATED"
+         and verified.get("native_execution_authorized") is False
+         and verified.get("runtime_manifest_created") is False
+         and final.get("verified_v096_preflight_sha256")==
+             sha(canonical(verified).encode("utf8"))
+         and final.get("v433_preconsumable_source_sha256")==
+             proof["bound_source_identity_sha256"]
+         and final.get("final_profile_sha256")==
+             proof.get("source_profile_sha256")==
+             sha(proof["profile_simc"].encode("utf8"))
+         and final.get("final_scenario_digest")==
+             proof.get("v096_typed_input_unadmitted",{}).get(
+                 "scenario_digest")==verified.get("scenario_digest")
+         and final.get("installed_v212_manifest_sha256")==
+             installed_manifest_sha256==
+             verified.get("installed_v212_manifest_sha256")==
+             bound.get("installed_v212_manifest_sha256")
+         and final.get("selected_budget_identity_sha256")==
+             verified.get("selected_budget_identity_sha256")==
+             budget.get("selected_budget_identity_sha256"),
+         "B8_SELECTED_V434_FINAL_PROFILE_OR_SOURCE_SHA_DRIFT")
+    need(type(user) is dict and
+         bool(user.get("special_items") or user.get("embellishments")) and
+         type(user.get("target")) is dict and
+         user["target"].get("ilevel")==budget.get("target_ilevel") and
+         (user["target"].get("final_T") is None or
+          user["target"]["final_T"]==budget.get("final_T")) and
+         budget.get("manual_final_T_authoritative")==
+             (user["target"].get("final_T") is not None),
+         "B8_SELECTED_USER_TARGET_NOT_BOUND_TO_V434")
+    equipment=proof.get("selected_equipment")
+    need(type(equipment) is dict,"B8_SELECTED_EQUIPMENT_REQUIRED")
+    rows=[r for group in ("tier","special","crafted","trinkets")
+          for r in equipment.get(group,[]) if type(r) is dict]
+    actual={r.get("slot"):r.get("item_id") for r in rows}
+    need(len(actual)==len(rows) and
+         all(type(x) is dict and actual.get(x.get("slot"))==
+             x.get("item_id") for group in ("special_items","embellishments")
+             for x in user.get(group,[])),
+         "B8_SELECTED_USER_ITEM_ID_NOT_PHYSICALLY_BOUND")
+    # A digest field copied from a prior result is not the runtime source.
+    # Re-normalize the actual typed scenario and verify the full v061
+    # digest before its iterations or combat settings enter the cache key.
+    typed=proof.get("v096_typed_input_unadmitted")
+    need(type(typed) is dict and type(typed.get("scenario")) is dict,
+         "B8_SELECTED_TYPED_SCENARIO_MISSING")
+    normalized=bootstrap.scenario.normalize(typed["scenario"])
+    need(normalized["scenario_digest"]==
+             verified.get("scenario_digest")==
+             typed.get("scenario_digest") and
+         normalized["scenario"]["target"]["manual_total"]==
+             budget.get("base_B") and
+         normalized["budget"]["external_temporary_rating"]==
+             budget.get("fixed_O") and
+         normalized["scenario"]["equipment"]==
+             proof.get("selected_equipment") and
+         proof.get("scenario_source_only",{}).get("runtime")==
+             normalized["scenario"]["runtime"],
+         "B8_SELECTED_TYPED_SCENARIO_OR_PREVIEW_CACHE_DRIFT")
+    settings=normalized["scenario"]["runtime"]
+    need(type(settings) is dict and
+         all(type(settings.get(k)) is int and settings[k]>0
+             for k in ("scout_iterations","confirm_iterations","threads"))
+         and settings["confirm_iterations"]>=settings["scout_iterations"],
+         "B8_SELECTED_ITERATION_IDENTITY_MISSING")
+    base_key,base_identity=session_key(
+        user,binary,revision,static_cache,
+        current_season_product=True,source_catalog_path=source_catalog_path,
+        package_manifest_path=package_manifest_path,
+        fresh_installed_manifest_sha256=installed_manifest_sha256)
+    need(base_identity["static_cache_sha256"]==
+             bound.get("static_cache_content_sha256")==
+             verified.get("static_cache_content_sha256")
+         and base_identity.get("fresh_v212_installed_manifest_sha256")==
+             installed_manifest_sha256,
+         "B8_SELECTED_STATIC_CACHE_FILE_OR_INSTALLED_IDENTITY_DRIFT")
+    payload={
+        "schema":"v435_selected_fresh_session_key_preview_v1",
+        "v106_original_session_identity_sha256":
+            sha(canonical(base_identity).encode("utf8")),
+        "v434_final_source_identity_sha256":
+            proof["final_source_identity_sha256"],
+        "v434_source_profile_sha256":
+            proof["source_profile_sha256"],
+        "v434_scenario_digest":verified["scenario_digest"],
+        "selected_budget_identity_sha256":
+            budget["selected_budget_identity_sha256"],
+        "selected_static_cache_content_sha256":
+            base_identity["static_cache_sha256"],
+        "installed_v212_manifest_sha256":installed_manifest_sha256,
+        "iterations_identity":{
+            k:settings[k] for k in
+            ("scout_iterations","confirm_iterations","threads")},
+        "native_binary_sha256":base_identity["simc_binary_sha256"],
+        "simc_revision":revision,
+    }
+    final_sha=sha(canonical(payload).encode("utf8"))
+    need(final_sha[:20]!=base_key,
+         "B8_SELECTED_SESSION_KEY_COLLIDES_WITH_LEGACY")
+    return {"schema":payload["schema"],
+            "status":"B8_SELECTED_SESSION_KEY_SOURCE_ONLY_NOT_ADMITTED",
+            "session_key_preview":final_sha[:20],
+            "identity_sha256":final_sha,
+            "identity_components":payload,
+            "old_v106_session_key_not_reused":True,
+            "native_execution_authorized":False,
+            "session_folder_created":False,
+            "runtime_manifest_created":False,
+            "cache_mutations":0,"new_native_calls":0}
+
+
 def session_path(user,root,binary,revision,static_cache=None,*,
                  ordinary_variant=None,independent_334=False,independent_target_level=False,
                  current_season_product=False,source_catalog_path=None,

@@ -286,7 +286,8 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
 
 
 def preflight_selected_fresh_source_only(*, selected, composed, fillers,
-                                         native_cache, installed_document,
+                                         native_cache, native_cache_raw,
+                                         installed_document,
                                          season_profile_inputs, weapon_layout,
                                          oil_hands):
     """v434: reuse v091/v090/v065 on an exact selected v098 profile, Native0.
@@ -338,6 +339,30 @@ def preflight_selected_fresh_source_only(*, selected, composed, fillers,
          type(fillers) is list and type(native_cache) is dict,
          "B8_V096_SELECTED_FULL_SEASON_PROFILE_REQUIRED")
     item_cache.check_cache(native_cache)
+    # v435: verify the EXACT byte stream v433 originally bound, and the
+    # parsed in-memory object supplied to the v090 static evaluator. A
+    # matching season label or valid v046 schema alone is insufficient.
+    need(type(native_cache_raw) is bytes
+         and 0<len(native_cache_raw)<=item_cache.MAX_NATIVE_BYTES,
+         "B8_V096_SELECTED_EXACT_CACHE_RAW_BYTES_REQUIRED")
+    try:
+        restored=json.loads(native_cache_raw.decode("utf8"))
+    except (UnicodeError,ValueError,TypeError) as exc:
+        raise EntryBlocked(
+            "B8_V096_SELECTED_STATIC_CACHE_RAW_JSON_INVALID:"+
+            type(exc).__name__) from exc
+    need(restored==native_cache and
+         hashlib.sha256(native_cache_raw).hexdigest()==
+             bound["static_cache_content_sha256"] and
+         bound.get("original_v191_raw_gear_tier_sha256")==
+             proof.get("original_v191_raw_gear_tier_sha256") and
+         bound.get("selected_profile_sha256")==
+             selected.get("source_profile_sha256")==
+             hashlib.sha256(selected.get("profile_simc","").encode(
+                 "utf8")).hexdigest() and
+         bound.get("physical_equipment_sha256")==
+             item_cache.digest(selected.get("selected_equipment")),
+         "B8_V096_SELECTED_CACHE_OR_ORIGINAL_PROFILE_SOURCE_SHA_DRIFT")
     need(proof.get("static_cache_season")==native_cache["season"]
          and native_cache["season"]==item_cache.SEASON,
          "B8_V096_SELECTED_STATIC_CACHE_SEASON_DRIFT")
@@ -435,6 +460,12 @@ def preflight_selected_fresh_source_only(*, selected, composed, fillers,
             installed_document["manifest_sha256"],
         "source_profile_sha256":composed["source_profile_sha256"],
         "scenario_digest":normalized["scenario_digest"],
+        "static_cache_content_sha256":
+            bound["static_cache_content_sha256"],
+        "v433_preconsumable_profile_sha256":
+            selected["source_profile_sha256"],
+        "v433_bound_source_identity_sha256":
+            selected["bound_source_identity_sha256"],
         "old_season_reference_not_used":True,
         "physical_variant_native_receipts_reused":True,
         "runtime_manifest_created":False,

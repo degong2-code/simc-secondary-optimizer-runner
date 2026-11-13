@@ -437,7 +437,8 @@ def _selected_season_profile_budget_preflight(*, user, profile, cfg, rows,
         simc_revision=doc["simc_revision"],fillers=None)
     verified=entry.preflight_selected_fresh_source_only(
         selected=result,composed=composed,fillers=fillers,
-        native_cache=cached,installed_document=doc,
+        native_cache=cached,native_cache_raw=raw,
+        installed_document=doc,
         season_profile_inputs=adjusted,weapon_layout=weapon_layout,
         oil_hands=user["oil_hands"])
     B=verified["base_B"]

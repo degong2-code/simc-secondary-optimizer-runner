@@ -91,6 +91,7 @@ class V096SelectedNonadmittedPreflight(unittest.TestCase):
             out=entry.preflight_selected_fresh_source_only(
                 selected=self.selected,composed=self.composed,
                 fillers=[],native_cache=self.fx.fx.cache,
+                native_cache_raw=self.fx.cache_file.read_bytes(),
                 installed_document=self.doc,
                 season_profile_inputs=self.season,
                 weapon_layout="single_two_hand",oil_hands=[])
@@ -151,6 +152,33 @@ class V096SelectedNonadmittedPreflight(unittest.TestCase):
             "locked_L_when_all_specials_observed"]=vec()
         self.native["approved_total"]["final_T"]=3200
         with self.assertRaisesRegex(entry.EntryBlocked,"EXACT_L_OR_PREPARED"):
+            self.verify()
+
+
+    def test_exact_raw_cache_reencoding_is_not_same_source_receipt(self):
+        # Equal parsed JSON is not the same cache bytes sealed by v433.
+        new_raw=self.fx.cache_file.read_bytes()+b"\n"
+        with mock.patch.object(pathlib.Path,"read_bytes",return_value=new_raw):
+            with self.assertRaisesRegex(entry.EntryBlocked,
+                                        "CACHE_OR_ORIGINAL_PROFILE_SOURCE_SHA"):
+                self.verify()
+
+    def test_cache_object_swapped_after_v433_is_blocked(self):
+        selected=next(iter(self.fx.fx.cache["variants"].values()))
+        # A still-valid but changed v046 object cannot be paired with old raw.
+        selected["metadata"]["new_note"]="unsealed_change"
+        with self.assertRaisesRegex(entry.EntryBlocked,
+                                    "CACHE_OR_ORIGINAL_PROFILE_SOURCE_SHA"):
+            self.verify()
+
+    def test_rebound_v191_source_claim_without_proof_is_blocked(self):
+        self.selected["bound_source_identity"][
+            "original_v191_raw_gear_tier_sha256"]={
+                "gear":"f"*64,"tier":"e"*64}
+        self.selected["bound_source_identity_sha256"]=entry.item_cache.digest(
+            self.selected["bound_source_identity"])
+        with self.assertRaisesRegex(entry.EntryBlocked,
+                                    "CACHE_OR_ORIGINAL_PROFILE_SOURCE_SHA"):
             self.verify()
 
     def test_unadmitted_v433_cannot_become_runtime_input(self):
