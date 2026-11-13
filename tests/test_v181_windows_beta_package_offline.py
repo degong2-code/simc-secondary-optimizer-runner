@@ -74,6 +74,32 @@ class WindowsBetaPackageOffline(unittest.TestCase):
                 self.assertEqual(ko["status"],"COMPLETE")
                 self.assertEqual(len(ko["items"]),77)
 
+    def test_current_beta_file_list_is_derived_not_a_second_source_of_truth(self):
+        """TXT is a snapshot of the same candidates used by ZIP, not READY."""
+        with tempfile.TemporaryDirectory() as temp:
+            target=pathlib.Path(temp)/"candidate_files.txt"
+            paths=pack.write_file_list(target)
+            source=pack.select()
+            self.assertEqual(paths,sorted(source))
+            lines=target.read_text(encoding="utf8").splitlines()
+            self.assertTrue(lines[0].startswith(
+                "# SIMC Secondary Optimizer: CURRENT_BETA_PACKAGE_CANDIDATES"))
+            self.assertIn("# Not a finished-app readiness certificate; see 78-element tracker.",
+                          lines)
+            self.assertEqual([line for line in lines if not line.startswith("#")],
+                             paths)
+            self.assertEqual(len(paths),len(set(paths)))
+            self.assertIn("runner/v113_local_web_api.py",paths)
+            self.assertIn("runner/v216_environment_build_coordinator.py",paths)
+            self.assertIn("runner/v155_season_api_probe.py",paths)
+            self.assertIn("runner/webui/app.js",paths)
+            self.assertNotIn("tests/test_v181_windows_beta_package_offline.py",paths)
+            self.assertFalse(any(p.startswith("docs/") or p.endswith(".exe")
+                                 for p in paths))
+            with self.assertRaisesRegex(pack.PackageBlocked,
+                                       "FILE_LIST_EXTENSION_REQUIRED"):
+                pack.write_file_list(pathlib.Path(temp)/"bad.zip")
+
     def test_missing_critical_file_fails_closed(self):
         with tempfile.TemporaryDirectory() as temp:
             with self.assertRaisesRegex(pack.PackageBlocked,"REQUIRED_FILE_MISSING"):
