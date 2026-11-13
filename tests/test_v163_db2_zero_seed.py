@@ -14,8 +14,8 @@ v163 = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(v163)
 
 class JoinTests(unittest.TestCase):
-    def test_opaque_world_state_always_unknown(self):
-        self.assertEqual(v163.classify_era(37,52104,37),'UNKNOWN_WORLD_STATE_EXPRESSION')
+    def test_wse_is_diagnostic_not_a_season_membership_gate(self):
+        self.assertEqual(v163.classify_era(37,52104,37),'DB2_DISPLAY_SEASON_MATCH')
         self.assertEqual(v163.classify_era(0,0,37),'UNKNOWN_UNSCOPED_JOURNAL')
         self.assertEqual(v163.classify_era(37,0,37),'DB2_DISPLAY_SEASON_MATCH')
         self.assertEqual(v163.classify_era(34,0,37),'UNKNOWN_OTHER_DISPLAY_SEASON')
@@ -34,17 +34,15 @@ class JoinTests(unittest.TestCase):
                         v163.JoinBlocked,'DB2_DISPLAY_SEASON_SOURCE_INVALID'):
                     v163.exact_display_season_id(invalid)
 
-    def test_world_state_expression_source_must_not_fallback_to_zero(self):
+    def test_world_state_expression_missing_stays_unknown_but_not_blocking(self):
         self.assertEqual(v163.exact_world_state_expression_id('0'),0)
         self.assertEqual(v163.exact_world_state_expression_id('52104'),52104)
         for invalid in ('', ' ', 'not-a-number', '-1', '0.0',
                         '0x0', None, 0, '1'*13):
             with self.subTest(value=invalid):
-                with self.assertRaisesRegex(v163.JoinBlocked,
-                        'JOURNAL_WORLD_STATE_EXPRESSION_SOURCE_INVALID'):
-                    v163.exact_world_state_expression_id(invalid)
+                self.assertIsNone(v163.exact_world_state_expression_id(invalid))
         self.assertEqual(v163.classify_era(37,52104,37),
-                         'UNKNOWN_WORLD_STATE_EXPRESSION')
+                         'DB2_DISPLAY_SEASON_MATCH')
 
     def test_no_ambiguous_prefix_match(self):
         rows=[{'Name_lang':"Nek'zali"},{'Name_lang':'Nek'}]
@@ -160,7 +158,7 @@ class JoinTests(unittest.TestCase):
             self.assertEqual(result['db2_display_season_id'],37)
             self.assertEqual(result['blizzard_keystone_season_id'],18)
             self.assertTrue(result['unverified_world_state_expressions'])
-            self.assertIn('UNKNOWN_WORLD_STATE_EXPRESSION',[x['season_evidence'] for i in result['items'] for x in i['acquisition_sources'] if x['source']=='mplus_journal'])
+            self.assertIn('DB2_DISPLAY_SEASON_MATCH',[x['season_evidence'] for i in result['items'] for x in i['acquisition_sources'] if x['source']=='mplus_journal'])
             self.assertEqual(result['simc_native_calls'],0)
             scope=v163.discover_unique_live_scope(folder,season_report)
             self.assertEqual(scope["raid_zone"],"Test Raid")
@@ -281,11 +279,17 @@ class JoinTests(unittest.TestCase):
             receipt['tables']['JournalEncounterItem']={
                 'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest()}
             (folder/'receipt.json').write_text(json.dumps(receipt))
-            with self.assertRaisesRegex(v163.JoinBlocked,
-                    'JOURNAL_WORLD_STATE_EXPRESSION_SOURCE_INVALID'):
-                v163.build_index(folder,season_report,
-                    raid_zone='Test Raid',mplus_zone='Mythic+ S2',
-                    build='12.1.5.70575',expansion_id=11)
+            diagnostic=v163.build_index(folder,season_report,
+                raid_zone='Test Raid',mplus_zone='Mythic+ S2',
+                build='12.1.5.70575',expansion_id=11)
+            observed=[x for row in diagnostic['items']
+                      for x in row['acquisition_sources']
+                      if x.get('world_state_expression_id') is None]
+            self.assertTrue(observed)
+            self.assertEqual(observed[0]['world_state_expression_raw'],
+                             'not-a-number')
+            self.assertTrue(diagnostic['unverified_world_state_expressions'])
+            self.assertFalse(diagnostic['world_state_expression_membership_gate'])
 
     def test_real_snapshot_when_supplied(self):
         folder=os.environ.get('SIMC_V161_SNAPSHOT_DIR')
@@ -299,8 +303,9 @@ class JoinTests(unittest.TestCase):
             'selectable_stat_craft':106})
         self.assertEqual(result['db2_display_season_id'],37)
         self.assertEqual(result['blizzard_keystone_season_id'],18)
-        self.assertTrue(any(s['season_evidence']=='UNKNOWN_WORLD_STATE_EXPRESSION'
+        self.assertTrue(any(s.get('world_state_expression_id') not in (0,)
              for row in result['items'] for s in row['acquisition_sources']))
+        self.assertFalse(result['world_state_expression_membership_gate'])
         self.assertEqual(result['simc_native_calls'],0)
         self.assertFalse(result['old_item_catalog_imported'])
 
