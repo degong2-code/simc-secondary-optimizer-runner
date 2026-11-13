@@ -68,8 +68,29 @@ class CompletionContractTests(unittest.TestCase):
         # An alternative v1 source test alone is not a real proof of A4;
         # this test only exercises progression logic. No evidence is
         # promoted to actual A4 in the unmodified registry.
+        doc["evidence"]["a1_source"]["supports"].append("A4")
+        doc["evidence"]["a1_generic"]["supports"].append("A4")
         with self.assertRaisesRegex(gate.ContractInvalid,
                                     "NEXT_REVIEW_SKIPPED_GENERIC_VALIDATION:A5"):
+            gate.validate(doc)
+
+    def test_unrelated_evidence_cannot_be_borrowed_to_promote_a4(self):
+        doc=self.scenario()
+        self.row(doc,"A4")["generic"]={
+            "state":"PASS","evidence":["a1_source","a1_generic"]}
+        with self.assertRaisesRegex(gate.ContractInvalid,
+                                    "EVIDENCE_NOT_SCOPED_TO_ELEMENT:A4:generic"):
+            gate.validate(doc)
+
+    def test_a7_cannot_be_marked_current_ready_while_a4_unreviewed(self):
+        doc=self.scenario()
+        self.row(doc,"A7")["current_source"]={
+            "state":"PASS","evidence":["a1_source"]}
+        # Even if the external ref has been incorrectly attached to A7,
+        # completion must not leapfrog the A4-A6 generic review.
+        doc["evidence"]["a1_source"]["supports"].append("A7")
+        with self.assertRaisesRegex(gate.ContractInvalid,
+                "A7_PREMATURE_VERIFIED_CLAIM_BEFORE_A4_A6_GENERIC"):
             gate.validate(doc)
 
     def test_historical_receipt_cannot_replace_current_or_generic_proof(self):
