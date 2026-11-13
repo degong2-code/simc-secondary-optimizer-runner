@@ -32,7 +32,7 @@ class V096SelectedNonadmittedPreflight(unittest.TestCase):
         self.profile='flask=verified_flask_token\ntemporary_enchant=disabled\n'
         self.sha=hashlib.sha256(self.profile.encode("utf8")).hexdigest()
         self.F=vec(haste_rating=165)
-        self.doc=self.fx.doc
+        self.doc=self.fx.fx.doc
         self.doc["official_F_physical_source"]={
             "physical_item_id":987654,
             "simc_input_token":"verified_flask_token",
@@ -90,7 +90,7 @@ class V096SelectedNonadmittedPreflight(unittest.TestCase):
         ):
             out=entry.preflight_selected_fresh_source_only(
                 selected=self.selected,composed=self.composed,
-                fillers=[],native_cache=self.fx.cache,
+                fillers=[],native_cache=self.fx.fx.cache,
                 installed_document=self.doc,
                 season_profile_inputs=self.season,
                 weapon_layout="single_two_hand",oil_hands=[])
@@ -189,7 +189,7 @@ class V098SelectedCompositionWiring(unittest.TestCase):
         # owner; v432 delta, real physical-row and profile binding remain.
         with (
             mock.patch.object(installed,"read_json",
-                              return_value=(self.fx.doc,None)),
+                              return_value=(self.fx.fx.doc,None)),
             mock.patch.object(installed,
                 "verify_fresh_installed_environment",return_value=True),
             mock.patch.object(bootstrap,"season_profile_source_only",
@@ -206,7 +206,7 @@ class V098SelectedCompositionWiring(unittest.TestCase):
                 class_tier_five=self.fx.fx.tier,
                 original_v191_link=self.fx.fx.link,
                 installed_path=self.fx.install_file,
-                cache_path=self.fx.cache_file,
+                cache_path=self.fx.fx.cache_file,
                 season_profile_inputs=original,
                 weapon_layout="single_two_hand",fillers=[])
         args=serializer.call_args.kwargs

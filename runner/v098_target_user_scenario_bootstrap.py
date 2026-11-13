@@ -1808,7 +1808,7 @@ def preview_from_environment_build(user,folder,binary,revision,*,
              and type(installed.get("stage_output_path")) is str,
              "SEASON_V216_READY_WITHOUT_ORIGINAL_FRESH_INSTALL")
         installed_path=installed["stage_output_path"]
-    selected_items=bool(user["special_items"] or user["embellishments"])
+    selected_items=bool(user.get("special_items") or user.get("embellishments"))
     if selected_items and (installed_path is None or
                            selected_static_cache_path is None):
         return {
