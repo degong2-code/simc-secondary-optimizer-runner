@@ -43,6 +43,7 @@ import v163_zero_seed_db2_join as season_join
 import v165_current_season_gear_pool as source_gear_pool
 import v166_compact_product_gear_db as compact_gear_db
 import v167_product_season_gear_adapter as product_gear_db
+import v405_a7_selected_source_contract as a7_source_contract
 import v245_db2_first_tier_discovery as tier_db
 import v250_raid_tier_bonus_corroboration as raid_bonus
 import v251_db2_raid_tier_simc_bridge as tier_simc_bridge
@@ -1802,11 +1803,77 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
                 "network_calls_by_stage":attempted[0],
                 "season_representative_verified":False}
     result=json.loads((root/paths["candidate"]).read_text(encoding="utf8"))
+    # The original v254 source and its public rows must agree item-by-item
+    # before declaring the automatic A7 user-choice source join reviewed.
+    # This is a separate small v217 stage: it NEVER refetches 62MB Wago or
+    # asks an AI to select item IDs. Missing optional sources remain pending
+    # without blocking unrelated G/J/F/O representative construction.
+    a7_path="source/v405_a7_auto_public_choice_provenance.json"
+    a7_target=root/a7_path
+    candidate_bytes=(root/paths["candidate"]).read_bytes()
+    source_sha=digest(raw_source)
+    candidate_sha=digest(candidate_bytes)
+    a7_code=stage_engine.module_dependency_fingerprint([
+        pathlib.Path(a7_source_contract.__file__),
+        pathlib.Path(source_gear_pool.__file__),
+        pathlib.Path(product_gear_db.__file__),
+        pathlib.Path(stage_engine.__file__)])
+    def audit_execute():
+        report=a7_source_contract.assess(
+            source=source,catalog=result,expected_game_build=build,
+            source_report_sha256=source_sha,candidate_sha256=candidate_sha)
+        a7_target.parent.mkdir(parents=True,exist_ok=True)
+        a7_target.write_text(json.dumps(
+            report,sort_keys=True,indent=2,ensure_ascii=False,
+            allow_nan=False)+"\n",encoding="utf8")
+    def audit_validate(outputs):
+        doc=json.loads(outputs["a7_provenance"].read_text(encoding="utf8"))
+        return (doc.get("schema")==a7_source_contract.SCHEMA
+                and doc.get("status")==
+                    "A7_PUBLIC_CANDIDATE_ORIGINS_AUTO_RECONCILED_SOURCE_ONLY"
+                and doc.get("game_build")==build
+                and doc.get("original_v163_sha256")==source_sha
+                and doc.get("v167_candidate_sha256")==candidate_sha
+                and doc.get("item_eligibility_requires_wse") is False
+                and doc.get("manually_selected_item_ids") is False
+                and doc.get("effect_or_simc_certification") is False
+                and doc.get("final_product_e2e") is False
+                and doc.get("additional_api_calls")==0
+                and doc.get("native_calls")==0)
+    try:
+        a7_stage=stage_engine.execute_stage(
+            root=root,stage_id="fresh-a7-auto-public-choice-provenance",
+            stage_version="v405-source-choice-proof-v1",
+            inputs={"game_build":build,"v163_sha256":source_sha,
+                    "v167_sha256":candidate_sha,
+                    "v254_receipt_sha256":stage["receipt_sha256"],
+                    "code_sha256":a7_code["sha256"]},
+            outputs={"a7_provenance":a7_path},
+            execute=audit_execute,validate=audit_validate)
+        a7_info={
+            "status":"A7_AUTO_SOURCE_CHOICE_PROVENANCE_SEALED_ONLY",
+            "candidate_provenance_verified":True,
+            "receipt_path":str(a7_target.resolve()),
+            "source_stage":{k:v for k,v in a7_stage.items() if k!="result"},
+            "additional_network_calls":0,"native_calls":0,
+            "final_user_e2e_verified":False}
+    except (stage_engine.StageExecutionBlocked,
+            a7_source_contract.SourceContractBlocked,
+            product_gear_db.GearBlocked,
+            OSError,ValueError,KeyError,TypeError) as exc:
+        a7_info={
+            "status":"A7_SOURCE_CHOICE_PROVENANCE_PENDING",
+            "candidate_provenance_verified":False,
+            "reason":str(exc).split(":",1)[0],
+            "receipt_path":None,
+            "additional_network_calls":0,"native_calls":0,
+            "final_user_e2e_verified":False}
     plain=[r for r in result["items"]
            if r["category"]=="plain_representative_candidate"]
     internal=result.get("internal_conditional_mplus_plain_candidates",[])
-    # An internal WSE condition candidate remains useful for constructing
-    # a source-only representative, but cannot be installed/published.
+    # The legacy INTERNAL_ONLY plain candidate remains source-only and
+    # never becomes a public option or an installed representative by itself.
+    # Opaque WSE is *not* an admission gate.
     # A source containing only trinkets/special-effect items is not a usable
     # ordinary gear/weapon pool. Preserve its sealed evidence as PENDING.
     return {"status":("FRESH_GEAR_PLAIN_CANDIDATES_SOURCE_ONLY"
@@ -1822,6 +1889,7 @@ def _fresh_ordinary_gear_source_stage(*, stage_root, wago_folder, build,
                 for x in plain+internal),
             "network_calls_by_stage":attempted[0],
             "source_stage":{k:v for k,v in stage.items() if k!="result"},
+            "a7_auto_source_choice_provenance":a7_info,
             "season_representative_verified":False,
             "seasonal_G_verified":False,"native_calls":0}
 
