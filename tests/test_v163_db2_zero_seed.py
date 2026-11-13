@@ -168,6 +168,43 @@ class JoinTests(unittest.TestCase):
             self.assertEqual(scope["expansion_id"],11)
             self.assertEqual(scope["db2_display_season_id"],37)
             self.assertFalse(scope["season_membership_completely_verified"])
+            # A1: source-driven expansion IDs, not a named Midnight pick.
+            # Current and legacy zones may be simultaneously non-frozen.
+            # The raid must belong to the same *WCL* expansion as the
+            # DB2-matched Mythic+ source; that WCL ID is not ItemSparse ID.
+            dynamic=json.loads(json.dumps(season_report))
+            old=dynamic["wcl"].pop("midnight_zones")
+            dynamic["wcl"]["zones"]=[
+                {**row,"expansion_id":807} for row in old]+[
+                {"zone_name":"Test Raid","zone_id":1900,
+                 "wcl_frozen":False,"expansion_id":99,
+                 "encounters":[{"name":"Hydra"}]}]
+            dynamic_scope=v163.discover_unique_live_scope(folder,dynamic)
+            self.assertEqual(dynamic_scope["wcl_expansion_id"],807)
+            self.assertEqual(dynamic_scope["expansion_id"],11)
+            self.assertEqual(dynamic_scope["db2_display_season_id"],37)
+            self.assertFalse(
+                dynamic_scope["season_membership_completely_verified"])
+            current=v163.build_index(folder,dynamic,raid_zone="Test Raid",
+                mplus_zone="Mythic+ S2",build="12.1.5.70575",
+                expansion_id=11,wcl_expansion_id=807)
+            self.assertEqual(current["db2_display_season_id"],37)
+            # Cross-expansion raid cannot complete a current-season pair.
+            cross=json.loads(json.dumps(dynamic))
+            cross["wcl"]["zones"]=[
+                row for row in cross["wcl"]["zones"]
+                if not (row["expansion_id"]==807 and
+                        row["zone_name"]=="Test Raid")]
+            with self.assertRaisesRegex(
+                    v163.JoinBlocked,"LIVE_RAID_ZONE_OR_TIER_AMBIGUOUS"):
+                v163.discover_unique_live_scope(folder,cross)
+            # New all-expansion source MUST preserve expansion IDs; a
+            # malformed provider response cannot be relabelled as legacy.
+            invalid=json.loads(json.dumps(dynamic))
+            del invalid["wcl"]["zones"][0]["expansion_id"]
+            with self.assertRaisesRegex(
+                    v163.JoinBlocked,"WCL_ALL_EXPANSION_SOURCE_INVALID"):
+                v163.discover_unique_live_scope(folder,invalid)
             duplicated=json.loads(json.dumps(season_report))
             duplicated["wcl"]["midnight_zones"].append(
                 dict(duplicated["wcl"]["midnight_zones"][0],zone_id=12))
