@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""v155: bounded, opt-in Blizzard + WCL season discovery probe.
+"""v155: bounded Blizzard + WCL source discovery for the v242 product stage.
 
-Never invoked from product runtime. No Native SimC, DPS engine, loot DB,
-client secret logging, broad crawling, or scheduled background activity.
-Only fixed first-party API hosts, fixed paths, strict request ceilings.
+This is provider evidence, NOT direct approval of current raid/season/loot.
+Queries the published WCL all-expansion zone structure once (bounded); the
+v163 same-build DB2 join owns scope selection. No Native SimC, DPS engine,
+secrets in receipts, schedule or user-driven browsing/crawling.
+Only approved API hosts and fixed bounded requests.
 """
 from __future__ import annotations
 import argparse
