@@ -68,7 +68,7 @@ class Roles(unittest.TestCase):
         self.assertEqual(pool["consumable_budget_reference"]["flasks"]["total_F"],165)
         self.assertFalse(pool["fully_implemented_special_item_list_certified"])
 
-    def test_a7_raid_world_state_and_other_seasons_are_never_current(self):
+    def test_a7_current_source_membership_is_independent_of_wse(self):
         import copy
         with tempfile.TemporaryDirectory() as d:
             sparse,effect=self.make(Path(d))
@@ -76,38 +76,49 @@ class Roles(unittest.TestCase):
             raid=w["items"][0]["acquisition_sources"][0]
             self.assertTrue(gear._journal_origin_current(raid,37,raid=True))
             variants=[
-                ("positive_world_state",{"world_state_expression_id":441,
-                    "season_evidence":"UNKNOWN_WORLD_STATE_EXPRESSION",
-                    "display_season_id":37}),
+                ("wse_positive_current_raid",{"world_state_expression_id":441,
+                 "season_evidence":"UNKNOWN_WORLD_STATE_EXPRESSION",
+                 "display_season_id":37},True),
+                ("wse_missing_current_raid",{"world_state_expression_id":None},True),
+                ("wse_raw_corrupt_not_a_gate",{"world_state_expression_id":"invalid"},True),
+                ("wse_positive_current_mplus",{
+                 "source":"mplus_journal","world_state_expression_id":542,
+                 "season_evidence":"UNKNOWN_WORLD_STATE_EXPRESSION",
+                 "display_season_id":37},True),
                 ("other_display_season",{"world_state_expression_id":0,
-                    "season_evidence":"UNKNOWN_OTHER_DISPLAY_SEASON",
-                    "display_season_id":34}),
-                ("missing_wse",{"world_state_expression_id":None}),
-                ("wrong_journal_origin",{"journal_encounter_id":0}),
+                 "season_evidence":"UNKNOWN_OTHER_DISPLAY_SEASON",
+                 "display_season_id":34},False),
+                ("wrong_journal_origin",{"journal_encounter_id":0},False),
                 ("unscoped_mplus_only",{"source":"mplus_journal",
-                    "season_evidence":"UNKNOWN_UNSCOPED_JOURNAL"})
+                 "season_evidence":"UNKNOWN_UNSCOPED_JOURNAL"},False)
             ]
-            for name,edits in variants:
+            for name,edits,eligible in variants:
                 with self.subTest(name=name):
                     alternate=copy.deepcopy(w)
                     origin=alternate["items"][0]["acquisition_sources"][0]
                     origin.update(edits)
-                    self.assertFalse(gear._journal_origin_current(
-                        origin,37,raid=origin["source"]=="raid_journal"))
-                    pool=gear.compile_pool(
+                    self.assertEqual(gear._journal_origin_current(
+                        origin,37,raid=origin["source"]=="raid_journal"),
+                        eligible)
+                    out=gear.compile_pool(
                         alternate,l,sparse,effect,budget_source=None)
-                    item=next(x for x in pool["items"]
+                    item=next(x for x in out["items"]
                               if x["item_id"]==1001)
                     self.assertEqual(item["season_selection"],
-                        "CONDITIONAL_SEASON_NOT_ESTABLISHED")
-                    self.assertFalse(item["user_selectable_candidate"])
-                    # A different, demonstrably unconditional current-season
-                    # acquisition source may independently admit this ID.
-                    if name=="positive_world_state":
+                        "CURRENT_CANDIDATE" if eligible
+                        else "CONDITIONAL_SEASON_NOT_ESTABLISHED")
+                    self.assertEqual(item["user_selectable_candidate"],eligible)
+                    self.assertEqual(item["acquisition_sources"][0]
+                                     ["world_state_expression_id"],
+                                     origin["world_state_expression_id"])
+                    if name=="other_display_season":
+                        # A different, independently verified current M+
+                        # source may admit an item even if another origin
+                        # is from an earlier season.
                         alternate["items"][0]["acquisition_sources"].append({
                             "source":"mplus_journal",
                             "season_evidence":"DB2_DISPLAY_SEASON_MATCH",
-                            "display_season_id":37,"world_state_expression_id":0,
+                            "display_season_id":37,"world_state_expression_id":741,
                             "journal_encounter_id":23,"journal_instance_id":2})
                         linked=gear.compile_pool(
                             alternate,l,sparse,effect,budget_source=None)
@@ -116,14 +127,9 @@ class Roles(unittest.TestCase):
                         self.assertEqual(chosen["season_selection"],
                                          "CURRENT_CANDIDATE")
                         self.assertTrue(chosen["user_selectable_candidate"])
-            self.assertTrue(gear._journal_origin_current({
-                "source":"raid_journal","season_evidence":"DB2_DISPLAY_SEASON_MATCH",
-                "display_season_id":37,"world_state_expression_id":0,
-                "journal_encounter_id":11,"journal_instance_id":1
-            },37,raid=True))
             future={
                 "source":"raid_journal","season_evidence":"DB2_DISPLAY_SEASON_MATCH",
-                "display_season_id":37,"world_state_expression_id":0,
+                "display_season_id":37,"world_state_expression_id":741,
                 "journal_encounter_id":11,"journal_instance_id":1}
             self.assertFalse(gear._journal_origin_current(
                 future,42,raid=True))
