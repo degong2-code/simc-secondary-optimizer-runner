@@ -5,7 +5,7 @@
 - **Prior evidence:** [v409 A8 범위 간소화](2026-11-13_p1-v409-a8-simc-metadata-and-result-snapshot-policy.md); [기존 v113 오프라인 CI #43386905830](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43386905830)에서 v212 테스트 2건 `NameError: quality_source_only`
 - **Decision:** `CONNECT` existing optional source-only highest-rank comparison to original v211 fresh-season compiler; no new effect verifier, no mandatory quality Gate
 - **Changes:** `compile_fresh_season`에서 `_fresh_static_quality_source_only`를 실제 호출하고 기존 `SourceBlocked` fallback을 보존. 잘못 들어간 이전 시즌 `compile_catalog`의 미사용·정의되지 않은 `season` 참조 제거. v213/v212의 기존 source-only 결과 필드는 유지
-- **Verification:** Existing focused `test_v211`, `test_v239`, `test_v240`, `test_v212` coverage on this commit; new Native 0. CI 결과로 PASS/FAIL 별도 판정
+- **Verification:** [v410 focused #43387395448](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43387395448) **80 PASS / 0 FAIL**, [기존 v211 원본 분류 #43387395480](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43387395480) **SUCCESS**. 신규 Native 0. 이어진 [v212 기존 Linux/Windows #43388059919](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43388059919)는 v411 합성 fixture 정합까지 포함해 각 487 tests / 4 skipped / 0 fail로 PASS; v410 단독 완료와 구분
 - **Remaining:** 실제 시즌 G/J/F/O 데이터 완성 및 사용자 프로필/SimC DPS 통합은 여전히 제품 실행 영수증 필요. 이 소스-only 수정 자체를 완성으로 승격하지 않음
 - **Efficiency:** 중복 Native 0, HTTP/DB2 0 from code; optional raw family quality only when source includes raw ranks, in-memory parse, no new file/cache keys. 기존 stage/cache 재사용
 
