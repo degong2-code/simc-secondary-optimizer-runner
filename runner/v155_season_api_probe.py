@@ -157,9 +157,15 @@ def parse_wcl_zones(doc, *, require_expansion=False):
         expansion=zone.get("expansion")
         expansion_id=(expansion.get("id")
                       if type(expansion) is dict else None)
-        if require_expansion:
-            need(type(expansion_id) is int and expansion_id>0,
-                 "WCL_ZONE_EXPANSION_ID_REQUIRED")
+        if require_expansion and not (type(expansion_id) is int
+                                      and expansion_id>0):
+            # Actual 2026-11-13 WCL evidence: two nonpositive expansion
+            # IDs belong only to permanently frozen historical zones.
+            # They cannot enter today's scope. Fail closed if the same
+            # source ambiguity exists for a non-frozen/unknown zone.
+            need(zone["frozen"] is True,
+                 "WCL_ACTIVE_ZONE_EXPANSION_ID_REQUIRED")
+            continue
         encounters=zone.get("encounters") or []
         need(type(encounters) is list and len(encounters)<=80,
              "WCL_ENCOUNTERS_INVALID")
@@ -268,6 +274,11 @@ def run_probe(blizzard_id,blizzard_secret,wcl_id=None,wcl_secret=None,
             need(all(x["expansion_id"] in valid_ids for x in zone_rows),
                  "WCL_ZONE_EXPANSION_NOT_IN_SOURCE_INDEX")
             report["wcl"]["zones"]=zone_rows
+            report["wcl"]["frozen_unscoped_excluded"]=(
+                report["wcl"]["zone_source_shape"]["zone_groups"].get(
+                    "FROZEN_NONPOSITIVE_ID",0)+
+                report["wcl"]["zone_source_shape"]["zone_groups"].get(
+                    "FROZEN_MISSING_ID",0))
             report["wcl"]["zone_source_scope"]="ALL_WCL_EXPANSIONS"
             report["wcl"]["status"]="ZONES_WITH_JOURNAL_IDS_RETURNED"
         except ProbeBlocked as e:
