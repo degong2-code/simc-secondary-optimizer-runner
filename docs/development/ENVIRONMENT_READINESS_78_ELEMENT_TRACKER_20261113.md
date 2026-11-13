@@ -1,3 +1,5 @@
+> **2026-11-13 v424 B2 목표 ilvl 계약 범위 COMPLETE:** [v424 현재334·과거 비334 실측 범위](notes/2026-11-13_p1-v424-b2-target-ilvl-existing-native-scope.md). [78 JSON 정본](78_ELEMENT_COMPLETION_CONTRACTS.json): generic13/current_source13/product_integration5/historical6, COMPLETE A8·A9·A10·A11·B2(5/78), 다음 B3; 전체 E2E PENDING. v423 이하 수치는 해당 시점 기록.
+
 > **2026-11-13 v423 B1 26 DPS 계약 범위 검토:** [v423 증거](notes/2026-11-13_p1-v423-b1-26dps-contract-scoped-evidence.md), [78 JSON 정본](78_ELEMENT_COMPLETION_CONTRACTS.json): generic12/current_source12/product_integration4/historical5, COMPLETE A8·A9·A10·A11(4/78) 유지, B1 제품통합 PENDING, 다음 B2. 전 제품 E2E PENDING. 아래 v422/v402 통계는 시점별 기록.
 
 > **2026-11-13 v422 A11 범위 완료:** [v422 근거](notes/2026-11-13_p1-v422-a11-source-stage-receipt-reuse-three-axis.md), [78 JSON 정본](78_ELEMENT_COMPLETION_CONTRACTS.json): generic11/current_source11/product_integration4/historical4, COMPLETE A8·A9·A10·A11(4/78), 다음 B1, 전체 E2E PENDING. 앞선 v421/v402 수치는 그 시점 역사 기록.
@@ -53,7 +55,7 @@
 | ID · 요소 | 적용 영역 | 반드시 준비할 정보/수락 조건 | 과거 감사 판정 | 기존 근거 (기능/버전) | 우선 재개 작업 | 이번 인계 준비 판정 |
 |---|---|---|---|---|---|---|
 | **B1 26 DPS 계약** | BASE | 증강 제외 26 전문화 및 장비/무기 규칙 | v143 26계약·v169 무기 규칙·v113 양OS 26 입력·v417 70783 한 스펙 소비 | `v143` | 26 전 전문화 현빌드 제품 DPS 통합은 PENDING, B2 다음 | **ENGINE_GENERALIZATION_PASS — CURRENT_KR_70783_B1_CONTRACT_SCOPED** ([v423 범위 검토](notes/2026-11-13_p1-v423-b1-26dps-contract-scoped-evidence.md)); 역사 v176 26 물리 Native는 별도, 제품통합 PENDING |
-| **B2 목표 ilvl** | BASE | 기본334 및 목표 ilvl 일관된 전달 | 과거 범위한정 실증 | `v098·v113` | UI→원본→프로필→예산 level 동일 확인 | **PENDING_SCOPE** |
+| **B2 목표 ilvl** | BASE | 기본334 및 목표 ilvl 일관된 전달 | 현재 v417 70783 기본334 실 환경·DPS, v180 과거 6개 비334 실 Native+26×5 오프라인 | `v098·v113` | B2 ilvl 전달 범위 COMPLETE, B3 일반 방어구 다음; 새 70783 비334 실증 별도 | **ENGINE_GENERALIZATION_PASS — CURRENT_70783_334_AND_HISTORICAL_NON334_B2_SCOPE** ([v424 증거](notes/2026-11-13_p1-v424-b2-target-ilvl-existing-native-scope.md)); 전체 USER-E2E PENDING |
 | **B3 일반 방어구** | BASE | 대표 방어구 부위별 ID·타입·ilvl | 부분 구현/검증 | `v167·v169·v232` | 시즌 소스에서 필요한 부위만 확정 | **PENDING_SCOPE** |
 | **B4 무기 형태** | BASE | 한손/양손/쌍수/원거리/보조·Fury TG | 부분 구현/검증 | `v169·v232` | 대상 전문화별 유효 슬롯 확인 | **PENDING_SCOPE** |
 | **B5 무기 성능** | BASE | 정확한 item·ilvl·무기 피해·공격 형태 | 코드 존재·통합 미판정 | `v169·v232·SimC` | 대표 목표 ilvl에서 정적/비정적 구분 | **PENDING_SCOPE** |

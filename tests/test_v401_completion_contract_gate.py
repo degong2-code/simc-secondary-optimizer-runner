@@ -191,8 +191,23 @@ class CompletionContractTests(unittest.TestCase):
         self.assertEqual(row["historical"]["state"],"PASS")
         self.assertEqual(row["product_integration"]["state"],"PENDING")
         self.assertFalse(gate.complete(row))
-        self.assertEqual(doc["policy"]["next_review"],"B2")
+        self.assertNotEqual(doc["policy"]["next_review"],"B1")
         self.assertEqual(doc["policy"]["full_product_e2e"],"PENDING")
+
+    def test_b2_ilvl_scoped_full_axes_and_legacy_non334_receipt(self):
+        doc=self.scenario()
+        row=self.row(doc,"B2")
+        self.assertTrue(gate.complete(row))
+        self.assertEqual({doc["evidence"][key]["kind"]
+            for key in row["generic"]["evidence"]},
+            {"CURRENT_SOURCE_REAL","GENERALIZATION_REGRESSION"})
+        self.assertEqual({doc["evidence"][key]["kind"]
+            for key in row["product_integration"]["evidence"]},
+            {"PRODUCT_INTEGRATION_REAL"})
+        self.assertEqual(row["historical"]["state"],"PASS")
+        self.assertFalse(gate.complete(self.row(doc,"B1")))
+        self.assertEqual(doc["policy"]["full_product_e2e"],"PENDING")
+        self.assertNotEqual(doc["policy"]["next_review"],"B2")
 
     def test_a10_cannot_skip_a9_generic_source(self):
         doc=self.scenario()
