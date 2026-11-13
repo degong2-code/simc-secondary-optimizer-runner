@@ -792,12 +792,20 @@ class LocalJobs:
         # Immutable by-build Wago stage cannot be silently replayed to
         # claim new item content at the exact same game build. The existing
         # targeted static correction path must handle a confirmed hotfix.
-        if refresh_reason=="item_content_change":
+        # An explicit season/expansion event must never read a pre-event
+        # same-build v217 Wago source receipt as though freshly observed.
+        # The original stage identity is build-scoped, not season-event-
+        # scoped. Preserve the immutable source/cache and fail closed until
+        # an exact source correction/refresh identity is supplied.
+        if refresh_reason is not None:
             prior=(self.root/"_fresh_season_sources"/("wago_"+game_build)/
                    ".stage_receipts"/"fresh-wago-db2.json")
-            if prior.exists():
+            if prior.exists() or prior.is_symlink():
+                if refresh_reason=="item_content_change":
+                    raise environment_manifest.EnvironmentBlocked(
+                        "SAME_BUILD_CONTENT_CHANGE_EXACT_SOURCE_CORRECTION_REQUIRED")
                 raise environment_manifest.EnvironmentBlocked(
-                    "SAME_BUILD_CONTENT_CHANGE_EXACT_SOURCE_CORRECTION_REQUIRED")
+                    "SAME_BUILD_SEASON_EVENT_EXACT_SOURCE_REFRESH_REQUIRED")
         if auto_initial_core_build:
             # Resolve an executable only on a cache miss. A verified READY
             # install does not need its original SimC binary to be present.
