@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER — 검색 가능한 개발 기능 지도
 
+> **완성 앱 파일 관리 결정:** [실제 ZIP 선정 로직→자동 TXT 파일명 목록→78개 기능·코드 대응](APP_PACKAGE_FILE_REGISTRY_20261113.md). 원본 파일 복제 금지. 기존 `v181_windows_beta_packager.select()`에서 `--list-files APP_BETA_FILE_LIST.txt` 출력, ZIP 안 `V181_PACKAGE_MANIFEST.json` SHA와 기능별 `FILE_MAP`·78개 원장을 각각 재사용. **베타 패키지 포함 ≠ 완성 품질 승인**, 추가 Native0.
+
 > **최신 사용자 직접 결정·독립 인계 v386:** [현재 ZERO-SOURCE의 자동 시즌 발견 PASS로 미래 시즌 대응 ENGINE 완료 인정](POLICY_ZERO_SOURCE_AUTODISCOVERY_GENERALIZATION_20261113.md) · [v386 인계 정본](../CHAT_CONTINUITY_HANDOFF_20261113_P1_V386_ZERO_SOURCE_GENERALIZATION.md). A1 이후 모든 78 ID에 적용. 정상 API 키/원본 접근은 허용하고, 현재 시즌/확장팩 ID·정답·기존 소스/캐시 주입·GPT 런타임 판정은 금지. 실제 코드·원본·관계·SHA와 다른 시즌 변형 회귀로 PASS를 판정한다. 단순 미공개 미래 시즌 자료 부족은 ENGINE 미완료 사유가 아님.
 
 > **개발 운영 고정 기준:** [범용 개발·미래 시즌 검증·READY 판정 운영 헌장](OPERATING_CHARTER_FUTURE_SEASONS_AND_EVIDENCE_20261113.md)을 검색/작업 전에 참조한다. 새 시즌 원본 실증과 미래 시즌 계약 시험을 혼동하지 않고 실제 소비 정보만 READY Gate로 판단한다.
