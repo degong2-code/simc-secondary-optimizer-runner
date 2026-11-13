@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER · 개발 지식 시작점
 
+> **v394 A1 순차 완료 / 다음 A2:** [현재 KR 70783 실제 ZERO-SOURCE 원본 유일 자동 시즌 조인·ENGINE PASS](notes/2026-11-13_p1-v394-a1-current-zero-source-engine-pass.md). WCL all-expansion에서 frozen 과거 2개 비양수 ID만 제외, 현재 활성 WCL 2 zone+공식 Blizzard season 18+Wago 10 DB2(62,280,767바이트)에서 expansion11/DisplaySeason37/tier505, raid10/던전8 정확 발견. **A7 개별 아이템 WSE/전체 시즌 READY는 아님.** 상태 집계는 원장 최신 확인. 다음 채팅은 과거 A1 PENDING 안내 대신 **A2 현재 게임 빌드**부터 진행.
+
 > **A1/G10 최신 v388 실제 회귀:** [첫 FAIL/원인/복구/두 번의 PASS·앱 TXT 영수증](notes/2026-11-13_p1-v388-a1-and-app-filelist-real-offline-ci.md) — GitHub Ubuntu Python 3.12 **74 PASS/1 SKIP/0 FAIL**, 실제 272개 배포 후보 파일명을 같은 패키저의 TXT로 추출·SHA 확인. CI 전용 가상 v213 fixture는 ZERO-SOURCE 정답이 아님. **A1은 여전히 PENDING_SCOPE**, 정상 인증 원본 자동 발견·현재 시즌 DB2 JOIN 시험 필요.
 
 > **현재 A1 코드 증분 v387:** [전체 확장팩 WCL 원본/동일 출처 DB2 JOIN, MIDNIGHT 하드코딩 제거](notes/2026-11-13_p1-v387-a1-all-expansion-source-discovery.md). **수정 코드·테스트 추가**, 원본 함수 10 스모크 PASS, 전체 Python CI/실 API ZERO-SOURCE **미실행**, A1 PENDING. 다음 채팅에서 v386 인계 문서의 v385 코드 스냅샷보다 **v387 최신 실제 HEAD/테스트**를 우선 재조회.
