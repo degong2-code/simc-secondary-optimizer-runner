@@ -78,3 +78,24 @@
 3. **첫 응답 후 STOP.** 사용자가 별도 `진행`을 명시해야만 A8 개발 검토·검증 및 격리 브랜치 수정·커밋을 시작한다. 기존 history가 아닌 실제 코드/검증으로 A8 PASS 여부를 판단한다.
 
 **END — v406 single handoff; not product promotion.**
+
+## 9. 새 채팅에 붙여넣는 **독립 복원 시작 프롬프트** (실제 버전)
+
+> SIMC SECONDARY OPTIMIZER — 78개 요소 검증 프로젝트 **읽기 전용 독립 복원**.
+>
+> 저장소는 `degong2-code/simc-secondary-optimizer-runner`, 격리 개발 브랜치는 `probe/chat-cache-v035-20261024`이다. 가장 먼저 GitHub의 **실제 최신 HEAD 및 main HEAD**를 독립 재조회하라. 과거 문서에 나온 HEAD를 현재 HEAD라고 가정하지 마라.
+>
+> 최신 단일 인계 정본: `docs/CHAT_CONTINUITY_HANDOFF_20261113_P1_V406_A8_78ELEMENT_READONLY_RESTORE.md`.
+>
+> 순서: `docs/development/START_HERE.md` → `INDEX.md` → `FILE_MAP.md` → `78_ELEMENT_COMPLETION_CONTRACTS.json`(유일 상태 정본) → `78_ELEMENT_STATUS_GENERATED.md` → `ENVIRONMENT_READINESS_78_ELEMENT_TRACKER_20261113.md` → `POLICY_78_ELEMENT_COMPLETION_GATE_V401.md` → 필요한 범위의 `PROTOCOL.md`/`DECISIONS.md`/`EVIDENCE_INDEX.md`와 v405 노트·실 Actions 로그. 다른 노트/코드는 관련된 부분만 조회한다.
+>
+> 제품 불변 목적: **26개 DPS 전문화(증강 제외)**, 목표 ilvl 기본334 또는 수동 최종 T에서 치명/가속/특화/유연 **최적 절대 rating을 SimC DPS로 탐색**. `B=G+J+F`, `T=B+O`, `c_final=c_base+o`. 시즌별 G 포함 G/J/F/O 자동 구축, 내부 대표 장비·5티어 중 4pc·무기·프로필, 사용자 특수장비/장신구/장식 선택, SimC 효과/APL/DPS 소유, **95% 통계/SEM/관측1순위·실질 다른 대안/캐시·취소재개/Windows UI**. 현재 장비 재분배/장비 조합·획득 경로/시즌 전체 장비 DB/독자 proc·APL/새 최적화 엔진 금지.
+>
+> 인계 전 확인 기준(2026-11-13 GitHub 검증): 78개 중 **generic 7(A1~A7), current_source 7(A1~A7), historical 3(A10/A11/G2), product_integration 0, 완전 COMPLETE 0, 최종 USER-E2E PENDING**. A7의 `generic+current_source=PASS`, `product_integration=PENDING`; `next_review=A8`. 현 시즌 KR70783 A7 v405 실제 실 원본 [Actions #43375839959](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43375839959)은 434 원본→209 출처 검증→134 사용자 공개 후보, 원본 DB2 62,280,767bytes **한 번 신규 수집**, 재실행 추가 HTTP0·Native0. 합성·캐시 회귀 [#43375459029](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43375459029) **141 PASS/3 SKIP/0 FAIL**, 정책 [#43377017734](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43377017734) **16 PASS/0 FAIL**. 소스 후보 PASS를 제품 SimC 실행/옵션·효과/완전 시즌 DB 인증으로 과장하지 마라. 최신 상황은 GitHub 실제 상태로 교정하라.
+>
+> 최신 사용자 결정: **WSE(WorldStateExpressionID)는 진단 정보이며 시즌 후보 필수 인증/차단 Gate 아님**. 검증된 활성 raid/M+와 같은 빌드 DB2 item·Journal·DisplaySeason·source 관계로 엔진이 자동 분류한다. GPT/사용자가 시즌 ID·개별 아이템/WSE 수동 선정하는 런타임 의존성·미선택 전수 WSE 검증 금지. 미래 미출시 시즌 실측을 범용 엔진 PASS 선행 Gate로 만들지 말고, 현재 실제 ZERO-SOURCE 기능+다른 시즌/빌드/ID 회귀를 정확히 판정하라.
+>
+> **다음 진행 지점 A8 SimC revision**: 수락 조건은 정확 revision·SimC 원본/실행 바이너리·게임 빌드 관계. 기존 `runner/v229_simc_only_source_seed.py`, `v275_pinned_simc_compiler_inputs.py`, `v241_fresh_source_stage_adapter.py`, `v217_stage_execution_engine.py`, `v216_environment_build_coordinator.py`의 정체성 봉인 및 과거 Native 바이너리 SHA 영수증을 재사용한다. 각 축 generic/current_source/product_integration을 독립 평가; 이미 확인한 경우 반복 시험 금지. A9 SimC 소스 이후 새 시즌 환경·사용자 프로필/기존 적응형 SimC까지 계속 연결하되 78개의 독립 Gate/전 Native 반복은 만들지 않는다. 효율 기준 `REUSE/CONNECT/EXTEND/REPLACE/NEW/STOP`.
+>
+> **지금 첫 답변은 읽기 전용 복원 보고만** 작성하라: 실제 브랜치 HEAD, 실제 구현/합성/원본/Native/제품 통합 구분, 78개 정확 상태와 증거 링크, v405 최신 수정 및 폐기된 WSE Gate, 현재 병목과 A8 시작점·단기/장기 로드맵·권한 제한. 보고한 뒤 **STOP**. 사용자가 별도로 **“진행”**이라고 지시하기 전에는 코드·문서 변경, commit/merge, Actions·테스트·Native·API 수집/고비용 실행, main/v003/Project UI/공식 승격을 하지 말라. 이전 주 제품 채팅의 개발 소유권과 격리 원칙을 임의 변경하지 말라.
+
