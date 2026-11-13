@@ -1550,6 +1550,92 @@ async function withBusy(fn) {
   }
   finally{state.busy=false;buttonState(state.running,$("filled-result").hidden===false);}
 }
+
+ // An explicitly copied diagnosis only; never persist raw source, private paths or API credentials.
+let lastSeasonDiagnosticReceipt=null;
+function compactSeasonBuildReceipt(data,forUserVariant=false) {
+  // Read-only, allowlisted evidence projection; not an approval or READY Gate.
+  const scope=data?.web_environment_scope||{};
+  const source=data?.source_compilation||{};
+  const progress=data?.zero_history_build||{};
+  const owner=progress.required_core_source_owner_report||
+    source.required_core_source_owner_report||null;
+  const cleanCode=x=>typeof x==="string"&&/^[A-Z][A-Z0-9_]{0,119}$/.test(x)?
+    x:null;
+  const codes=x=>Array.isArray(x)?x.slice(0,100).map(cleanCode)
+    .filter(Boolean):null;
+  const build=x=>typeof x==="string"&&/^\d+(?:\.\d+){3}$/.test(x)?x:null;
+  const sha=x=>typeof x==="string"&&/^[a-f0-9]{64}$/.test(x)?x:null;
+  const integer=x=>Number.isSafeInteger(x)&&x>=0?x:null;
+  const ready=scope.environment_ready===true&&
+    scope.environment_installed===true;
+  const installed=source.verified_environment_install||
+    progress.versioned_environment_installed||{};
+  const observed=owner?.original_source_owner_numeric_present;
+  const gJFO=observed&&["G","J","F","O"].every(k=>
+    typeof observed[k]==="boolean")?
+    Object.fromEntries(["G","J","F","O"].map(k=>[k,observed[k]])):null;
+  // A missing source_compilation in a verified-install cache hit is NOT
+  // evidence of missing compiler inputs. Null means unobserved, not [].
+  const stats={};
+  if(ready)for(const key of ["G","J","F","B","T"]){
+    stats[key]=integer(data?.[key]);
+  }
+  if(ready){
+    stats.O=["crit_rating","haste_rating","mastery_rating",
+      "versatility_rating"].every(k=>integer(data?.O?.[k])!==null)?
+      Object.fromEntries(["crit_rating","haste_rating","mastery_rating",
+        "versatility_rating"].map(k=>[k,data.O[k]])):null;
+  }
+  return JSON.stringify({
+    schema:"v384_user_copied_season_build_diagnostic_v1",
+    evidence_only_no_ready_authority:true,
+    for_user_variant:forUserVariant===true,
+    outcome:cleanCode(data?.status),
+    game_build:build(scope.game_build||data?.installed_source_game_build),
+    target_ilevel:integer(scope.target_ilevel),
+    source_mode:{
+      auto_initial_core:scope.auto_initial_core_build_requested===true,
+      native_G:scope.local_native_G_requested===true,
+      native_F:scope.auto_native_F_requested===true,
+      native_O:scope.auto_native_O_requested===true,
+      reused_verified_install:scope.reused_verified_installed_season===true
+    },
+    season_discovery_status:cleanCode(data?.season_discovery?.status),
+    season_join_status:cleanCode(data?.season_join?.status),
+    source_stage_status:cleanCode(progress.source_stage_status||
+      data?.source_stage?.status),
+    compiler_status:cleanCode(source.status||progress.source_compilation_status),
+    compiler_missing:codes(source.missing??progress.source_compilation_missing),
+    core_numeric_owner_present:gJFO,
+    core_numeric_owner_missing:codes(
+      owner?.original_source_owner_missing_for_selected_request),
+    oil_selection_status:cleanCode(owner?.oil_selection_status),
+    explicit_no_oil_awaits_v222:
+      typeof owner?.explicit_no_oil_awaits_v222==="boolean"?
+      owner.explicit_no_oil_awaits_v222:null,
+    installed_by_v212:owner?.full_environment_installed_verified_by_v212===true,
+    requires:codes(progress.requires),
+    native_G_status:cleanCode(progress.native_G_status),
+    installed_manifest_sha256:sha(installed.manifest_sha256||
+      data?.installed_manifest_sha256),
+    verified_budget:ready?stats:null,
+    environment_ready:ready,
+    new_native_calls:integer(data?.native_calls),
+    note:"Null means not observed in this response; not zero, false, or failure."
+  },null,2);
+}
+async function copySeasonBuildDiagnostic() {
+  if(lastSeasonDiagnosticReceipt===null)return;
+  try {
+    if(!navigator.clipboard?.writeText)throw Error("CLIPBOARD_UNAVAILABLE");
+    await navigator.clipboard.writeText(lastSeasonDiagnosticReceipt);
+    setNotice("시즌 진단 요약 복사 완료 · 비밀키·원본 파일 경로는 제외");
+  }catch{
+    setNotice("진단 복사를 지원하지 않는 브라우저입니다. localhost에서 다시 시도하세요.",true);
+  }
+}
+
 function diagnoseSeasonBuildEvidence(data) {
   // UI-only, read-only classification. v212/v216 own ALL real admission.
   // A sealed DB2/WCL content-candidate join is NOT evidence that every loot
@@ -1927,6 +2013,8 @@ async function buildSeasonEnvironment(forUserVariant=false) {
   $("season-build-stage").textContent="시즌 환경 요청 처리 중 · 응답을 받으면 원본 단계 결과를 구분해서 표시합니다…";
   if(forUserVariant) $("user-variant-status").textContent=
     "선택한 개별 구성의 시즌 원본·J/F/O 예산 재검증 요청 중…";
+  lastSeasonDiagnosticReceipt=null;
+  $("season-diagnostic-copy-btn").disabled=true;
   $("season-build-pending").hidden=true;
   $("season-build-summary").textContent="검증 진행 중 · 결과 미확정 (READY 아님)";
   const stopSeasonActivity=beginSeasonBuildActivity();
@@ -1943,6 +2031,8 @@ async function buildSeasonEnvironment(forUserVariant=false) {
                               refresh_reason,
                               simc_revision_hint:revision||null}});
     stopSeasonActivity();
+    lastSeasonDiagnosticReceipt=compactSeasonBuildReceipt(report,forUserVariant);
+    $("season-diagnostic-copy-btn").disabled=false;
     showSeasonEnvironmentBuild(report,forUserVariant);
     if(forUserVariant) $("user-variant-status").textContent=(
       report.web_environment_scope?.environment_ready===true?
@@ -1975,6 +2065,20 @@ async function buildSeasonEnvironment(forUserVariant=false) {
       "검증 설치 기름 목록 조회 실패 · 고급 입력 유지";}
     setNotice("시즌 환경 구축 단계 조회 완료 · READY 여부는 별도 검증 · 개별 DPS 최적화는 시작되지 않았습니다.");
   }catch(err){
+    // A failed HTTP response supplies no trusted source/owner report.
+    const safeError=/^[A-Z][A-Z0-9_]{0,119}$/.test(err.message)?
+      err.message:"REQUEST_ERROR_NOT_EXPORTED";
+    lastSeasonDiagnosticReceipt=JSON.stringify({
+      schema:"v384_user_copied_season_build_diagnostic_v1",
+      evidence_only_no_ready_authority:true,
+      for_user_variant:forUserVariant,
+      outcome:"REQUEST_FAILED_NO_SOURCE_REPORT",
+      game_build,target_ilevel,error_code:safeError,
+      compiler_missing:null,core_numeric_owner_present:null,
+      environment_ready:false,
+      note:"Request failed before usable source evidence; missing is not zero."
+    },null,2);
+    $("season-diagnostic-copy-btn").disabled=false;
     $("season-build-summary").textContent="요청 차단 또는 오류 · 실행 완료가 아닙니다. 오류 코드를 확인하세요.";
     $("season-build-stage").textContent="시즌 환경 구축 단계 차단/오류 · "+err.message+
       " · 기존 영수증은 보존됩니다.";
@@ -2593,6 +2697,7 @@ function registerHandlers() {
   $("simc-rollback-btn").addEventListener("click",()=>withBusy(rollbackSimcUpdater));
   $("simc-import-btn").addEventListener("click",()=>withBusy(importSimcCharacter));
   $("season-build-btn").addEventListener("click",()=>withBusy(()=>buildSeasonEnvironment(false)));
+  $("season-diagnostic-copy-btn").addEventListener("click",copySeasonBuildDiagnostic);
   $("user-variant-prepare-btn").addEventListener("click",()=>withBusy(()=>buildSeasonEnvironment(true)));
   $("season-target-socket-count").addEventListener("input",updateSeasonSocketBreakdown);
   $("season-existing-special-gem-id").addEventListener("input",updateSeasonSocketBreakdown);
