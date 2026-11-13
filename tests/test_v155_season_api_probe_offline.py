@@ -20,11 +20,13 @@ class SeasonProbeOffline(unittest.TestCase):
     def test_wcl_journal_bridge_exact_ids(self):
         exps=p.parse_wcl_expansions({"data":{"worldData":{"expansions":[
             {"id":42,"name":"Midnight"},{"id":41,"name":"Dragonflight"}]}}})
-        self.assertEqual(p.select_midnight_expansion(exps),42)
+        self.assertEqual({x["id"] for x in exps},{41,42})
         zones=p.parse_wcl_zones({"data":{"worldData":{"zones":[
             {"id":100,"name":"Example Raid","frozen":False,
+             "expansion":{"id":42},
              "encounters":[{"id":200,"journalID":300,"name":"Example Boss"}]}
-        ]}}})
+        ]}}},require_expansion=True)
+        self.assertEqual(zones[0]["expansion_id"],42)
         self.assertEqual(zones[0]["encounters"][0]
                          ["blizzard_journal_encounter_id"],300)
 
@@ -82,15 +84,20 @@ class SeasonProbeOffline(unittest.TestCase):
                     return Response({"data":{"worldData":{"expansions":[
                         {"id":11,"name":"Midnight"}]}}})
                 return Response({"data":{"worldData":{"zones":[
-                    {"id":1,"name":"Raid","frozen":False,"encounters":[
+                    {"id":1,"name":"Raid","frozen":False,
+                     "expansion":{"id":11},"encounters":[
                         {"id":2,"name":"Boss","journalID":3}]}]}}})
             return Response({"current_season":{"id":14}})
         result=p.run_probe("bid","bsecret","wid","wsecret",
                            transport=transport)
         self.assertEqual(result["wcl"]["requests"],2)
         self.assertEqual(len(queries),2)
-        self.assertEqual(result["wcl"]["midnight_zones"][0]["encounters"][0]
+        self.assertEqual(result["wcl"]["zones"][0]["encounters"][0]
                          ["blizzard_journal_encounter_id"],3)
+        self.assertEqual(result["wcl"]["zones"][0]["expansion_id"],11)
+        self.assertEqual(result["wcl"]["zone_source_scope"],
+                         "ALL_WCL_EXPANSIONS")
+        self.assertNotIn("midnight_zones",result["wcl"])
         self.assertEqual(result["blizzard"]["requests"],4)
 
 if __name__=="__main__":
