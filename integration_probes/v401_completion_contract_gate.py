@@ -123,7 +123,11 @@ def validate(data,root=ROOT):
     need(prefix==["A4","A5","A6"],"GENERIC_REVIEW_GATE_CHANGED")
     unresolved=[key for key in prefix if
                 entries[ALL_IDS.index(key)]["generic"]["state"]=="PENDING"]
-    expected=unresolved[0] if unresolved else "A7"
+    a7=entries[ALL_IDS.index("A7")]
+    a7_source_reviewed=(a7["generic"]["state"]=="PASS" and
+                        a7["current_source"]["state"]=="PASS")
+    expected=(unresolved[0] if unresolved else
+              ("A8" if a7_source_reviewed else "A7"))
     need(policy.get("next_review")==expected,
          "NEXT_REVIEW_SKIPPED_GENERIC_VALIDATION:"+expected)
     if unresolved:
@@ -192,7 +196,9 @@ def render(data):
         f"- 세 축을 모두 완료한 요소: **{done}/78**",
         f"- 최종 제품 E2E: **{data['policy']['full_product_e2e']}**",
         f"- 다음 검토 요소: **{data['policy']['next_review']}** "
-        + ("(A4~A6 범용 검증 완료 후 A7 진입)"
+        + ("(A7 범용·현재 원본 검증 완료; 제품 통합은 별도 PENDING)"
+           if data["policy"]["next_review"]=="A8" else
+           "(A4~A6 범용 검증 완료 후 A7 진입)"
            if data["policy"]["next_review"]=="A7" else
            "(A4~A6 범용성 미검증을 A7로 미루지 않음)"),
         "",
