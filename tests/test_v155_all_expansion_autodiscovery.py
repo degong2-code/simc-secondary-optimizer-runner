@@ -46,6 +46,31 @@ class AllExpansionSourceTests(unittest.TestCase):
             with self.subTest(bad=bad),self.assertRaises(probe.ProbeBlocked):
                 probe.parse_wcl_zones(bad,require_expansion=True)
 
+    def test_unrelated_old_zone_optional_metadata_does_not_block_scope(self):
+        """All-expansion discovery cannot require unused historical fields."""
+        old=zone(101,"Historical Zone",7,[(1,"Old Boss")])
+        old["frozen"]=None
+        old["encounters"][0]["journalID"]=None
+        current=zone(401,"New Current Zone",41,[(77,"New Boss")])
+        raw={"data":{"worldData":{"zones":[old,current]}}}
+        parsed=probe.parse_wcl_zones(raw,require_expansion=True)
+        self.assertIsNone(parsed[0]["wcl_frozen"])
+        self.assertIsNone(parsed[0]["encounters"][0][
+                          "blizzard_journal_encounter_id"])
+        self.assertFalse(parsed[0]["journal_id_fields_complete"])
+        self.assertTrue(parsed[1]["journal_id_fields_complete"])
+        self.assertEqual(parsed[1]["expansion_id"],41)
+        # Unknown frozen does not count as a proven active zone; v163
+        # already uses identity comparison, never a fallback to active.
+        self.assertEqual([x["zone_id"] for x in parsed
+                          if x["wcl_frozen"] is False],[401])
+        invalid=zone(101,"Invalid",7,[(1,"Bad")])
+        invalid["encounters"][0]["journalID"]="garbled"
+        with self.assertRaisesRegex(
+                probe.ProbeBlocked,"WCL_JOURNAL_ID_INVALID"):
+            probe.parse_wcl_zones({"data":{"worldData":{"zones":[invalid]}}},
+                                  require_expansion=True)
+
     def test_authenticated_probe_uses_two_bounded_wcl_requests_not_named_seed(self):
         requests=[]
         exps={"data":{"worldData":{"expansions":[
