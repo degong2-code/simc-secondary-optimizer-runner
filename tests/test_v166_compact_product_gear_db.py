@@ -105,6 +105,12 @@ class Compact(unittest.TestCase):
                     "display_season_id":37,"world_state_expression_id":441,
                     "journal_encounter_id":10,"journal_instance_id":20}]})
             out=db.build(src,item,sparse)
+            src["items"][0]["acquisition_sources"][0][
+                "world_state_expression_id"]=None
+            without_wse=db.build(src,item,sparse)
+        self.assertEqual(without_wse["internal_conditional_mplus_plain_count"],1)
+        self.assertIsNone(without_wse["internal_conditional_mplus_plain_candidates"][0]
+                          ["source_evidence"][0]["world_state_expression_id"])
         self.assertEqual(out["current_candidate_count"],0)
         self.assertEqual(out["conditional_count"],2)
         self.assertEqual(out["internal_conditional_mplus_plain_count"],1)
