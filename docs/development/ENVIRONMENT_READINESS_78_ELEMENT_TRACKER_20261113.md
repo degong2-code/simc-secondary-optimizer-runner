@@ -11,6 +11,8 @@
 >
 > **항목 카운트:** 환경 A–G = 72개, 환경 이후 H = 6개, 합계 **78개**. 기존 29개는 상위 묶음으로만 유효. 마지막 승인 설계는 26 DPS(증강/탱커/힐러 제외), 목표 ilvl 기본334 또는 수동 최종 T, `B=G+J+F`, `T=B+O`.
 
+> **최신 직접 결정 (v386):** [범용 ZERO-SOURCE 검증 완료 기준](POLICY_ZERO_SOURCE_AUTODISCOVERY_GENERALIZATION_20261113.md)에 따라 현재 실제 시즌을 코드가 **시즌/확장팩 이름·ID·기존 DB·G/J/F/O·AI 판단 미주입** 상태에서 정상 API 키/출처 접근으로 자동 식별·필수 자료 수집·원본 관계 검증하는 `ZERO-SOURCE` 실제 시험에 성공하고, 다른 시즌/날짜/ID 변형 회귀도 통과하면 해당 **미래 시즌 대응 엔진 기능은 `ENGINE_AUTODISCOVERY_PASS`**다. *미래 시즌이 미출시라는 이유로 이 코드 기능을 PENDING 유지하지 않는다.* CURRENT SEASON 수치/선택 아이템 READY와 최종 전체 USER-E2E는 다른 판정이다. 새 채팅은 [v386 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261113_P1_V386_ZERO_SOURCE_GENERALIZATION.md)를 정본으로 사용. 정책 반영만으로 원장 기존 상태는 변하지 않는다.
+
 ## 판정 체계와 사용법
 
 > **최종 인수 정책 (2026-11-13 직접 결정):** 78개 항목의 실제 적용 범위별 구현/연결/증거가 닫힌 후 **엄격 ZERO-SOURCE → USER-E2E 최종 필수 시험**을 통과해야만 제품 전체 완료를 선언한다. [운영 헌장 §11](OPERATING_CHARTER_FUTURE_SEASONS_AND_EVIDENCE_20261113.md). `3/78`은 **HISTORICAL_70783 범위만** READY_SCOPED이고, 현재 HEAD 범용 완성 3/78 또는 최종 통합 PASS라는 뜻이 아니다. 기존 실험/테스트 기록·실제 원본 SHA와 통합 실행에서 관측한 stage/missing을 대조해 최초 실패 경계를 찾는다. 지원 범위 밖/선택하지 않은 요소는 적절한 `NOT_APPLICABLE_SCOPE`로 근거를 남기며 78개 독립 Native나 전품목 인증을 요구하지 않는다.
