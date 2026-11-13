@@ -1,0 +1,121 @@
+# v439: one target 70783 crafted MAIL head replaces tier head; chest restores 4pc.
+# Native does NOT run without exact workflow-only opt-in commit marker.
+name: P1 v439 B8 one 70783 crafted-head 4pc actual native once
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/p1_v439_one_selected_70783_native.py
+      - tests/test_v439_selected_70783_native_scope_offline.py
+      - .github/workflows/p1_v439_b8_one_selected_70783_once.yml
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v439-one-70783-selected-b8-native
+  cancel-in-progress: false
+jobs:
+  offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Install already existing bounded HTTP test dependencies
+        shell: bash
+        run: python -m pip install -r requirements-web-test.txt
+      - name: Compile and verify scope with ZERO SimC
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile integration_probes/p1_v439_one_selected_70783_native.py tests/test_v439_selected_70783_native_scope_offline.py
+          python -m unittest -v tests.test_v439_selected_70783_native_scope_offline
+
+  one-real-selected-native:
+    needs: offline
+    if: contains(github.event.head_commit.message, '[p1-v439-70783-selected-one-native]')
+    runs-on: windows-2022
+    timeout-minutes: 38
+    env:
+      PYTHONPATH: runner;integration_probes;.
+      SIMC_PINNED_SOURCE_COMMIT: de11f57df75dda668bae6ac7043a43b98831fa96
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - name: Preserve original SimC source bytes
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Demand exactly one workflow-only opt-in commit
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $changed=@(git diff-tree --no-commit-id --name-only -r $env:GITHUB_SHA)
+          if ($changed.Count -ne 1 -or $changed[0] -ne '.github/workflows/p1_v439_b8_one_selected_70783_once.yml') { throw "V439_ONE_WORKFLOW_ONLY_NATIVE_REQUEST_REQUIRED:$($changed -join ',')" }
+          if ($env:GITHUB_HEAD_REF) { throw 'V439_BRANCH_PUSH_ONLY' }
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Restore official pinned Windows SimC, no rebuild
+        uses: actions/download-artifact@v4
+        with:
+          repository: simulationcraft/simc-publish
+          run-id: 42956947906
+          name: simc-nightly-win64-midnight
+          path: .simc-v439
+          github-token: ${{ github.token }}
+      - name: Verify archived original binary and exact 70783 Windows SHA
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $archive=Join-Path $PWD '.simc-v439/simc-1210.01.de11f57-win64.7z'
+          if (!(Test-Path $archive -PathType Leaf)) { throw 'V439_PINNED_ARCHIVE_MISSING' }
+          if ((Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant() -ne 'a4c4d5e7b349172d80897721daa3e849ce25874a82bbdfb96aeab4dbdc560eb0') { throw 'V439_ARCHIVE_HASH_MISMATCH' }
+          $seven='C:\Program Files\7-Zip\7z.exe'
+          if (!(Test-Path $seven)) { throw 'V439_7ZIP_MISSING' }
+          New-Item -ItemType Directory -Force -Path .simc-v439-extracted | Out-Null
+          & $seven x '-o.simc-v439-extracted' -y -bd $archive | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'V439_EXTRACT_FAILED' }
+          $exes=@(Get-ChildItem .simc-v439-extracted -Recurse -Filter simc.exe -File)
+          if ($exes.Count -ne 1) { throw 'V439_PINNED_EXE_COUNT_NOT_ONE' }
+          if ((Get-FileHash -Algorithm SHA256 $exes[0].FullName).Hash.ToLowerInvariant() -ne '1fc927d2be7f1b6064c75f004b5b22245b064a6b3e56e572af4048ba822a986d') { throw 'V439_EXE_SHA_MISMATCH' }
+          "V439_SIMC_EXE=$($exes[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Install existing bounded web test dependencies, verify scope
+        shell: pwsh
+        run: |
+          python -m pip install -r requirements-web-test.txt
+          if ($LASTEXITCODE -ne 0) { throw 'V439_DEPS_FAILED' }
+          python -m unittest -q tests.test_v439_selected_70783_native_scope_offline
+          if ($LASTEXITCODE -ne 0) { throw 'V439_ONE_SELECTED_SCOPE_FAILED' }
+      - name: One real 4pc selected user, max3 environment + max4 static + 6 DPS
+        shell: pwsh
+        timeout-minutes: 25
+        run: |
+          New-Item -ItemType Directory -Force -Path out/v439 | Out-Null
+          python -u integration_probes/p1_v439_one_selected_70783_native.py --binary "$env:V439_SIMC_EXE" --out out/v439
+          if ($LASTEXITCODE -ne 0) { throw 'V439_SELECTED_REAL_ONE_CASE_NOT_PROVEN' }
+          $receipt=Get-Content out/v439/V439_ONE_SELECTED_70783_B8_RECEIPT.json -Raw | ConvertFrom-Json
+          if ($receipt.status -ne 'PASS_REAL_70783_SELECTED_FOUR_TIER_DPS6_CACHE6') { throw 'V439_NOT_TRUE_E2E' }
+          if ($receipt.static_native_attempts -gt 4 -or $receipt.dps_native_attempts -ne 6 -or $receipt.cache_only_new_native -ne 0) { throw 'V439_NATIVE_CAP_OR_REPLAY_DRIFT' }
+          if (!(Test-Path out/v439/V439_B8_SIX_NATIVE_JSON2_EVIDENCE.zip)) { throw 'V439_ORIGINAL_JSON2_EVIDENCE_MISSING' }
+      - name: Preserve real Native input/JSON2 and failure receipts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v439-b8-one-selected-70783-native-${{ github.run_id }}
+          path: out/v439/
+          retention-days: 7
+          if-no-files-found: warn
