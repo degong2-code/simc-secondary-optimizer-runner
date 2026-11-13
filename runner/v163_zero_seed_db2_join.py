@@ -112,15 +112,14 @@ def uniquely_match(name, candidates, key):
     return prefix[0] if len(prefix) == 1 else None
 
 def exact_world_state_expression_id(value):
-    """A malformed conditional DB2 value is NOT an unconditional 0.
+    """Preserve optional WSE metadata, never use it as a season admission gate.
 
-    The general number() helper defaults to zero for optional fields.
-    WorldStateExpressionID affects season eligibility and must instead be
-    an explicit nonnegative integer in the pinned same-build CSV.
+    Missing/opaque WSE is None, not a falsely inferred unconditional zero.
+    Actual season membership is established by authenticated raid/M+ source,
+    DisplaySeasonID and same-build DB2, independently of this expression.
     """
-    fail_if(type(value) is not str or
-            re.fullmatch(r'[0-9]{1,12}',value) is None,
-            'JOURNAL_WORLD_STATE_EXPRESSION_SOURCE_INVALID')
+    if type(value) is not str or re.fullmatch(r'[0-9]{1,12}',value) is None:
+        return None
     return int(value)
 
 
@@ -137,9 +136,14 @@ def exact_display_season_id(value):
 
 
 def classify_era(display_season, wse, selected):
+    """Item season provenance is independent of optional opaque WSE metadata.
+
+    The WSE argument stays for old callers; its original integer or None
+    remains in each acquisition source for diagnostics. It is never decoded,
+    evaluated, or made a required condition for the optimizer.
+    """
     fail_if(type(selected) is not int or selected<=0,
             'DB2_DISPLAY_SEASON_NOT_POSITIVE')
-    if wse: return 'UNKNOWN_WORLD_STATE_EXPRESSION'
     if display_season == selected: return 'DB2_DISPLAY_SEASON_MATCH'
     if display_season == 0: return 'UNKNOWN_UNSCOPED_JOURNAL'
     return 'UNKNOWN_OTHER_DISPLAY_SEASON'
@@ -354,18 +358,23 @@ def build_index(folder, report, *, raid_zone, mplus_zone, build,
         eid = number(r['JournalEncounterID']); item_id=number(r['ItemID'])
         if item_id<=0 or (eid not in raid_by_enc and eid not in mplus_by_enc):continue
         season=exact_display_season_id(r.get('DisplaySeasonID'))
-        wse=exact_world_state_expression_id(r.get('WorldStateExpressionID'))
+        wse_raw=r.get('WorldStateExpressionID')
+        wse=exact_world_state_expression_id(wse_raw)
         era = classify_era(season,wse,season_id)
+        wse_observation=(
+            {'world_state_expression_raw':wse_raw[:128]}
+            if wse is None and type(wse_raw) is str else {})
         for wcl,iid in raid_by_enc[eid]:
             sources[item_id].append({'source':'raid_journal','name':wcl['name'],
                 'journal_encounter_id':eid,'journal_instance_id':iid,
                 'display_season_id':season,'world_state_expression_id':wse,
-                'season_evidence':era})
+                'season_evidence':era,**wse_observation})
         for wcl,iid,cid in mplus_by_enc[eid]:
             sources[item_id].append({'source':'mplus_journal','name':wcl['name'],
                 'journal_encounter_id':eid,'journal_instance_id':iid,
                 'challenge_mode_id':cid,'display_season_id':season,
-                'world_state_expression_id':wse,'season_evidence':era})
+                'world_state_expression_id':wse,'season_evidence':era,
+                **wse_observation})
     crafted_ids={number(r['CraftedItemID']) for r in read_rows(folder,'CraftingData')
                  if number(r['CraftedItemID'])>0}
     needed=set(sources)|crafted_ids
@@ -429,8 +438,9 @@ def build_index(folder, report, *, raid_zone, mplus_zone, build,
         'raid_non_equipment_in_user_gear_catalog':False,
         'unknown':problems,
         'unverified_world_state_expressions':any(
-            x['season_evidence']=='UNKNOWN_WORLD_STATE_EXPRESSION'
+            x.get('world_state_expression_id') != 0
             for entries in sources.values() for x in entries),
+        'world_state_expression_membership_gate':False,
         'full_season_completeness_confirmed':False,
         'old_item_catalog_imported':False,'simc_native_calls':0}
 
