@@ -10,6 +10,7 @@ on:
       - runner/v216_environment_build_coordinator.py
       - runner/v242_authenticated_season_source_stage.py
       - runner/v113_local_web_api.py
+      - tests/test_v289_retail_live_build_source.py
       - tests/test_v155_all_expansion_autodiscovery.py
       - tests/test_v163_db2_zero_seed.py
       - tests/test_v113_local_web_api_offline.py
@@ -32,6 +33,8 @@ jobs:
           python-version: '3.12'
       - name: Install only existing web test dependencies
         run: python -m pip install --disable-pip-version-check -r requirements-web.txt
+      - name: A2 v289 official Retail build parser (source-only fixtures)
+        run: python -m unittest discover -s tests -p 'test_v289_retail_live_build_source.py' -v
       - name: A1 v155 source discovery (no external API/Native)
         run: python -m unittest discover -s tests -p 'test_v155_all_expansion_autodiscovery.py' -v
       - name: A1 v163 same-build DB2 source join (fixtures only)
