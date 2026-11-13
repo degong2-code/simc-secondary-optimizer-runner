@@ -1,3 +1,5 @@
+> **최신 v405 A7 자동 시즌 소속 판정 완료(해당 소스 범위):** [인증된 새 시즌 원본→내부 후보 209·USER 후보 134 자동 대조 및 봉인](notes/2026-11-13_p1-v405-a7-automated-current-source-selection-verified.md). [실 소스 CI #43375839959](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43375839959) / [합성 회귀 #43375459029](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43375459029). WSE는 진단만, 새 아이템 전수/획득 DB/수동 GPT 검증 아님. **78계약 범용7·실 원본7·역사3·제품통합0, next A8**. 정확 SimC 효과/옵션/프로필/최종 95% 결과는 별도 인수.
+
 > **v404 최신 설계·A7 진행:** [WSE 비차단·현재 raid/M+·DB2 소유권 우선](notes/2026-11-13_p1-v404-a7-wse-diagnostic-only-source-first-membership.md). `v163/v165/v166/v167`가 자동 ID·출처 관계로 현재 장비 후보를 결정하고, WSE는 원문 진단용. [CI #43373512035](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43373512035) 134 PASS/3 SKIP/0 FAIL, API·Native 새 호출0. **A7 아직 PENDING / 제품 전체 E2E PENDING**, 기존 사용자 선택지·표준 일반 장비를 혼동하지 않음.
 
 # SIMC SECONDARY OPTIMIZER — 검색 가능한 개발 기능 지도
