@@ -9,6 +9,7 @@ on:
 
 permissions:
   contents: read
+  statuses: write
 
 jobs:
   first-source:
@@ -120,3 +121,28 @@ jobs:
           path: a1_v389_live_source_receipt.json
           if-no-files-found: warn
           retention-days: 14
+      - name: Publish diagnostic workflow URL (NOT A1 acceptance)
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          python - <<'PY'
+          import json, os, urllib.request
+          repo=os.environ["GITHUB_REPOSITORY"]
+          sha=os.environ["GITHUB_SHA"]
+          state="success" if os.environ["JOB_STATUS"]=="success" else "failure"
+          payload={
+              "state":state,
+              "context":"p1-v389-a1-live-source-diagnostic-only",
+              "description":"Live source boundary diagnostic; not A1 ENGINE PASS",
+              "target_url":f"https://github.com/{repo}/actions/runs/{os.environ['GITHUB_RUN_ID']}"}
+          req=urllib.request.Request(
+              f"https://api.github.com/repos/{repo}/statuses/{sha}",
+              json.dumps(payload).encode(),method="POST",
+              headers={"Authorization":f"Bearer {os.environ['GH_TOKEN']}",
+                       "Accept":"application/vnd.github+json",
+                       "Content-Type":"application/json"})
+          with urllib.request.urlopen(req, timeout=12) as response:
+              assert response.status==201
+          PY
