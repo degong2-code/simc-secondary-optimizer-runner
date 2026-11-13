@@ -3,7 +3,7 @@
 - **Capability:** `SOURCE.SEAL` (A8; 결과·캐시 정체성 vs 시즌 예산 원본)
 - **Keywords:** A8, SimC binary SHA, version metadata, result snapshot, DPS cache, v106, v291, v293
 - **Prior evidence:** [v407 역사 범위](2026-11-13_p1-v407-a8-historical-source-binary-identity-and-alias-guard.md), [v408 경로 확인](2026-11-13_p1-v408-a8-user-plan-session-resume-binary-alias-guard.md), 기존 v106/v291/v293 캐시·결과 저장
-- **Decision:** 최신 사용자 결정: SimC와 게임 빌드 번호 일치, 실행 바이너리의 컴파일 계보 인증 불필요. 실제 사용 SimC 버전/리비전·SHA만 기록해 후보별 DPS 캐시를 구분한다. 결과 재현 실행보다 스냅샷 표시를 기본으로 한다
+- **Decision:** `REUSE` 기존 SimC SHA/결과 스냅샷만 유지, 과잉 인증은 `STOP`. 최신 사용자 결정: SimC와 게임 빌드 번호 일치, 실행 바이너리의 컴파일 계보 인증 불필요. 실제 사용 SimC 버전/리비전·SHA만 기록해 후보별 DPS 캐시를 구분한다. 결과 재현 실행보다 스냅샷 표시를 기본으로 한다
 - **Changes:** v407/v408에서 추가한 v277/v113 심볼릭 링크 별칭 차단 제거. SHA가 동일한 실행 파일의 별칭은 같은 기존 세션/Native 캐시 이용. A8 JSON 수락 조건·상태 추적표/정책 개정. 결과 스냅샷 엔진·데이터 복제 없음
 - **Verification:** 초기 v409 집중 회귀에서 plan 별칭 재사용 PASS, 사후 manifest 수정 회귀는 기존 프로필 불변성 봉인으로 차단(정상). 테스트를 원래 요청 별칭→봉인된 세션→재개로 바로잡아 재실행. 78계약 JSON/추적표 표기도 동기화; 기존 v342/v344 실 영수증은 역사 범위만 재사용
 - **Remaining:** A8 generic/current_source/product_integration PENDING 유지(무증거 승격 금지). 불필요한 계보 인증 작업은 종료하고 시즌 G/J/F/O→대표 프로필→SimC DPS 통합 P1을 진행한다
