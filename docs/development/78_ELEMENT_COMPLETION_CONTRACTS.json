@@ -151,6 +151,15 @@
       "supports": [
         "A7"
       ]
+    },
+    "a8_historical_v342_v344": {
+      "kind": "HISTORICAL_SCOPED",
+      "note": "docs/development/notes/2026-11-13_p1-v407-a8-historical-source-binary-identity-and-alias-guard.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43114134208",
+      "tested_sha": "d8620d733140b148deb534975485f45ee22cf118",
+      "supports": [
+        "A8"
+      ]
     }
   },
   "elements": [
@@ -361,8 +370,10 @@
         "evidence": []
       },
       "historical": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "a8_historical_v342_v344"
+        ]
       }
     },
     {

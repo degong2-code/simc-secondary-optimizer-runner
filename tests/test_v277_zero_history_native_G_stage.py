@@ -134,6 +134,19 @@ class OneGNativeReuse(unittest.TestCase):
         self.assertEqual({x.name for x in self.root.iterdir()},
                          {"_fresh_season_sources","simc_exe"})
 
+    def test_binary_symlink_rejected_before_native_even_with_valid_target(self):
+        alias=self.root/"simc_alias"
+        try:
+            alias.symlink_to(self.binary)
+        except (OSError,NotImplementedError) as exc:
+            self.skipTest("symlinks unavailable: "+str(exc))
+        with mock.patch.object(stage.native.subprocess,"run",
+                               side_effect=AssertionError("NO_NATIVE")) as native:
+            with self.assertRaisesRegex(stage.GNativeStageBlocked,
+                                        "V277_NATIVE_BINARY_FILE_REQUIRED"):
+                self.call(binary=alias)
+        native.assert_not_called()
+
     def test_absent_binary_does_not_generate_or_guess_G(self):
         with mock.patch.object(stage.native.subprocess,"run",
                 side_effect=AssertionError("NATIVE_NOT_ALLOWED")):

@@ -201,7 +201,11 @@ def collect(*, sessions_root, collected, binary, iterations=1,
     native.check(profile.read_bytes(),prepared,
                  expected_source_revision=source_rev,
                  expected_game_build=collected["expected_game_build"])
-    binfile=Path(binary).expanduser().resolve(strict=True)
+    # Check the supplied path before resolve() hides a symlink alias.
+    supplied_binary=Path(binary).expanduser()
+    need(not supplied_binary.is_symlink() and supplied_binary.is_file(),
+         "V277_NATIVE_BINARY_FILE_REQUIRED")
+    binfile=supplied_binary.resolve(strict=True)
     need(binfile.is_file() and not binfile.is_symlink(),
          "V277_NATIVE_BINARY_FILE_REQUIRED")
     bin_sha=sha_file(binfile)
