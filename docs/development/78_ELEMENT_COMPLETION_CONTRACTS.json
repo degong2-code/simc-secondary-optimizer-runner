@@ -210,7 +210,7 @@
       "kind": "PRODUCT_INTEGRATION_REAL",
       "note": "docs/development/notes/2026-11-13_p1-v420-a9-simc-source-bytes-scope.md",
       "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43394408756",
-      "tested_sha": "89d4810baf5e05f1c5c6f355f39a5ec4e7",
+      "tested_sha": "89d4810baf5e05f1c5c6f355f39a5f35ca9ec4e7",
       "supports": [
         "A9"
       ]
