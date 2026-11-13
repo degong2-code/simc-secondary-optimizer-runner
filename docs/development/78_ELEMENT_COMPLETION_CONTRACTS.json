@@ -6,7 +6,7 @@
     "current_source_acceptance": "actual current game-build provider source + exact SHA + correct consumed scope",
     "product_acceptance": "actual user input through season environment and SimC DPS/SEM/95% output; separate final product E2E",
     "optional_acceptance": "NOT_APPLICABLE only with concrete feature-specific reason and owner evidence; no blanket exemptions",
-    "next_review": "A7",
+    "next_review": "A8",
     "a7_may_be_next_only_after_generic_review_of": [
       "A4",
       "A5",
@@ -132,6 +132,24 @@
       "tested_sha": "d21cbed88975f2cb471cf91d4583c9b073f27428",
       "supports": [
         "A6"
+      ]
+    },
+    "a7_source": {
+      "kind": "CURRENT_SOURCE_REAL",
+      "note": "docs/development/notes/2026-11-13_p1-v405-a7-automated-current-source-selection-verified.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43375839959",
+      "tested_sha": "349986e8c816523240816abe51b8497c6882921a",
+      "supports": [
+        "A7"
+      ]
+    },
+    "a7_generic": {
+      "kind": "GENERALIZATION_REGRESSION",
+      "note": "docs/development/notes/2026-11-13_p1-v405-a7-automated-current-source-selection-verified.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43375459029",
+      "tested_sha": "2a2fbc06444a47b160d9ff4f9a43f08b7619248c",
+      "supports": [
+        "A7"
       ]
     }
   },
@@ -304,12 +322,17 @@
       "scope": "BASE",
       "acceptance": "현재 레이드·쐐기/동일 빌드 DB2의 실제 소비 아이템 출처·시즌 관계; WSE는 비차단 진단 정보",
       "generic": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "a7_source",
+          "a7_generic"
+        ]
       },
       "current_source": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "a7_source"
+        ]
       },
       "product_integration": {
         "state": "PENDING",
