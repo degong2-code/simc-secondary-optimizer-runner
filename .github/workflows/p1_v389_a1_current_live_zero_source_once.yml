@@ -80,6 +80,12 @@ jobs:
                           receipt["source_report_sha256"]=hashlib.sha256(
                               raw).hexdigest()
                           receipt["source_report_bytes"]=len(raw)
+                          # A5: the two WCL GraphQL public source
+                          # request/response body SHA values are computed
+                          # during the existing bounded v155 collection.
+                          # No new requests and no bearer/token persistence.
+                          receipt["wcl_source_lineage"]=stage.get(
+                              "wcl_source_lineage")
                           receipt["wcl"]={
                               "status":doc.get("wcl",{}).get("status"),
                               "error_code":doc.get("wcl",{}).get("error_code"),
@@ -110,6 +116,17 @@ jobs:
                           print("A1_AUTHENTICATED_SOURCE_STAGE",stage["status"],
                                 receipt["wcl"]["status"],
                                 "ZONE_COUNT",len(zones))
+                          owner=receipt.get("wcl_source_lineage") or {}
+                          rows=owner.get("queries") or {}
+                          if owner.get("wcl_original_graphql_bodies_verified"):
+                              for key in sorted(rows):
+                                  proof=rows[key]
+                                  print("A5_WCL_GRAPHQL_ORIGINAL",key,
+                                        proof["response_bytes"],
+                                        proof["request_body_sha256"],
+                                        proof["response_sha256"])
+                          else:
+                              print("A5_WCL_ORIGINAL_PENDING_NOT_SEASON_PROOF")
                       else:
                           receipt["status"]="A1_LIVE_SOURCE_PATH_NOT_RETURNED"
           except (build.RetailVersionBlocked,source.DiscoveryBlocked) as exc:
