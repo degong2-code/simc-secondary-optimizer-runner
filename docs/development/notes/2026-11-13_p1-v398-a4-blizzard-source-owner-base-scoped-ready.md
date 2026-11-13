@@ -1,6 +1,6 @@
 # v398 — A4 Blizzard 원본(BASE) **검증 완료(현재 인증 인덱스 소유권 범위)**
 
-> **판정은 원본의 실제 역할에 한정한다.** A4의 **현재 KR Retail 12.1.5.70783 Blender/WCL 정상 자격 증명 조건에서 사용되는 4개 Blizzard 인증 인덱스의 원본·SHA·제품 소비 소유권**은 `READY_SCOPED — CURRENT_KR_70783_BLIZZARD_INDEX_BASE_ONLY`. Blizzard에서 개별 장비의 정적 rating, 레이드 아이템의 계절별 WSE, SimC 효과, 사용자별 선택 장비의 전체 장비 DB를 가져왔다는 뜻이 아니다. A7/B~G·최종 USER-E2E는 별도.
+> **판정은 원본의 실제 역할에 한정한다.** A4의 **현재 KR Retail 12.1.5.70783 Blizzard/WCL 정상 자격 증명 조건에서 사용되는 4개 Blizzard 인증 인덱스의 원본·SHA·제품 소비 소유권**은 `READY_SCOPED — CURRENT_KR_70783_BLIZZARD_INDEX_BASE_ONLY`. Blizzard에서 개별 장비의 정적 rating, 레이드 아이템의 계절별 WSE, SimC 효과, 사용자별 선택 장비의 전체 장비 DB를 가져왔다는 뜻이 아니다. A7/B~G·최종 USER-E2E는 별도.
 
 ## 1. 원본 소유자 → 실제 제품 소비 경로 (새 API·Gate 없음)
 
