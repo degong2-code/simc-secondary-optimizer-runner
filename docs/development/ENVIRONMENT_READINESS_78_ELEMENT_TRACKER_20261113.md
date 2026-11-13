@@ -121,7 +121,7 @@
 | **G4 정적 아이템 캐시** | BASE+USER | 시즌+item exact variant, rev-only 폐기 금지 | 과거 범위한정 실증 | `v046·v058` | 정정은 명시 근거 요청/변경 기록 | **PENDING_SCOPE** |
 | **G5 환경/DPS 캐시 identity** | BASE+RUN | 소스/프로필/바이너리/옵션/후보/iterations | 부분 구현/검증 | `v217·v293` | 변경 의존성만 무효화·충돌 검사 | **PENDING_SCOPE** |
 | **G6 API 인증정보** | BASE | 사용자 Windows WinCred 저장·삭제·비노출 | 과거 범위한정 실증 | `v348` | 실 사용자 비밀키 GitHub/로그 포함 금지 | **PENDING_SCOPE** |
-| **G7 환경 구축 UI** | BASE+USER | 구성·실행·진단·실제 검증 상태 표시 | 부분 구현/검증 | `v113·v379·v381` | 최근 코드의 Windows CI 미실행을 구별 | **PENDING_SCOPE** |
+| **G7 환경 구축 UI** | BASE+USER | 구성·실행·진단·실제 검증 상태 표시 | 부분 구현/검증 | `v113·v379·v381·v384` | v384 진단 복사 국소 V8 PASS; 실제 Windows 현장 응답·전체 CI는 별도 검증 | **PENDING_SCOPE** |
 | **G8 공식 한국어 표시** | BASE+USER | 검증된 직업/아이템 공식 ko_KR 명칭 | 부분 구현/검증 | `v335·v336` | 미확정 명칭은 원문/보류, 임의 번역 금지 | **PENDING_SCOPE** |
 | **G9 시즌·SimC 갱신** | BASE | 시즌 이벤트·필요 원본·바이너리만 증분 갱신 | 부분 구현/검증 | `v193·v289` | 새 시즌 원본 재수집 범위를 최소화 | **PENDING_SCOPE** |
 | **G10 오류·복구·배포** | BASE+RUN | 원문 실패·취소/재개·Windows 배포·재실행 | 부분 구현/검증 | `v212·v293·Windows packager` | 사용자 PC/실 New Build 경로 점검 | **PENDING_SCOPE** |
