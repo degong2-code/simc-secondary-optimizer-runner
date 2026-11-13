@@ -37,7 +37,7 @@ jobs:
         run: |
           python -m unittest -v \
             tests.test_v113_local_web_api_offline.LocalWebAPIOffline.test_a8_binary_alias_reuses_same_sha_bound_plan_without_native \
-            tests.test_v113_local_web_api_offline.LocalWebAPIOffline.test_a8_saved_binary_alias_resumes_with_same_executable_sha \
+            tests.test_v113_local_web_api_offline.LocalWebAPIOffline.test_a8_alias_planned_session_resumes_without_rebuilding \
             tests.test_v113_local_web_api_offline.LocalWebAPIOffline.test_plan_builds_real_pinned_paladin_manifest_without_native \
             tests.test_v113_local_web_api_offline.LocalWebAPIOffline.test_legacy_session_without_stage_receipt_remains_resumable
       - name: Existing 78-element claim consistency

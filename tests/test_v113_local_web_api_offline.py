@@ -1589,20 +1589,22 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(response.json()["native_calls"],0)
         worker.assert_not_called()
 
-    def test_a8_saved_binary_alias_resumes_with_same_executable_sha(self):
-        planned=self.plan()
-        folder=self.root/"runs"/planned["session_id"]
-        original=folder/"generated"/"manifest.json"
-        manifest=json.loads(original.read_text(encoding="utf8"))
+    def test_a8_alias_planned_session_resumes_without_rebuilding(self):
         alias=self.root/"saved_binary_alias.exe"
         try:
             alias.symlink_to(self.binary)
         except (OSError,NotImplementedError) as exc:
             self.skipTest("symlink unavailable: "+str(exc))
-        manifest["native_binary"]=str(alias)
-        original.write_text(json.dumps(manifest),encoding="utf8")
         with mock.patch.object(web.subprocess,"Popen",
                 side_effect=AssertionError("NATIVE_MUST_NOT_START")) as worker:
+            response=self.post("/api/v1/sessions/plan",
+                               {**self.payload,"binary":str(alias)})
+            self.assertEqual(response.status_code,200,response.text)
+            folder=self.root/"runs"/response.json()["session_id"]
+            saved=json.loads((folder/"generated"/"manifest.json")
+                             .read_text(encoding="utf8"))
+            self.assertEqual(pathlib.Path(saved["native_binary"]),
+                             self.binary.resolve())
             recovered=self.app.state.jobs.args_for_existing(folder)
         self.assertEqual(recovered,(self.binary.resolve(),"7bc1071",None))
         worker.assert_not_called()
