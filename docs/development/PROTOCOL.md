@@ -1,5 +1,7 @@
 # SIMC 개발 지속성·지식 유지 프로토콜
 
+> **A7 최신 v403:** [동일 출처에서 WSE 양수 raid item을 현재 시즌 후보로 오승격하던 실제 결함 수정](notes/2026-11-13_p1-v403-a7-selected-season-wse-propagation-gap.md), [focused 실제 CI #43371062757](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43371062757) 134 PASS/3 SKIP. 앞으로 **모든 item 선택 또는 보류 근거가 다음 `v165→v166→v167` 호출 경계에서 유지되는지** 교차 검사한다. 네 증거 축 중 A7은 아직 PASS 아님. 전체 시즌 WSE 자동 해석기 신규 Gate 금지.
+
 > **모든 작업 착수/완료 필수 v401-v402 강제 기준:** [78개 기계 판독 DoD 및 증거 일치 Gate](POLICY_78_ELEMENT_COMPLETION_GATE_V401.md) → [유일한 상태 정본 JSON](78_ELEMENT_COMPLETION_CONTRACTS.json) → [자동 생성 상태표](78_ELEMENT_STATUS_GENERATED.md). **해당 ID의 generic/current_source/product_integration/historical 네 축을 독립 판정**하고 근거는 실제 실행 SHA·Actions·원본 문서와 정확 ID를 결속한다. PASS 근거가 부족하면 보류, 전역/미선택 아이템을 신규 Gate로 만들지 않는다. **A4~A6의 범용성 누락은 [v402](notes/2026-11-13_p1-v402-a4-a6-generic-scope-reassessment.md)에서 실제 원본·변형 회귀로 재판정해 해결, 다음 A7**. 어떤 채팅에서든 상태 변경 전 `python integration_probes/v401_completion_contract_gate.py --check` 및 [자동 Actions](../../.github/workflows/p1_v401_completion_contract_policy_gate.yml) 통과 필요. **CI 정합 통과 ≠ 실제 API/Native/제품 E2E PASS**.
 
 > [START_HERE](START_HERE.md) · [INDEX](INDEX.md) · [FILE_MAP](FILE_MAP.md) · [EVIDENCE_INDEX](EVIDENCE_INDEX.md). 이전 누적 일자별 '최신' 설명·원문은 [역사 PROTOCOL](HISTORICAL_PROTOCOL_20261110_PRE_KNOWLEDGE_LAYER.md)에 보존한다.
