@@ -7,6 +7,12 @@ on:
       - .github/workflows/p1_v388_a1_package_focus_on_change.yml
       - runner/v155_season_api_probe.py
       - runner/v163_zero_seed_db2_join.py
+      - runner/v165_current_season_gear_pool.py
+      - runner/v166_compact_product_gear_db.py
+      - runner/v167_product_season_gear_adapter.py
+      - tests/test_v165_current_season_gear_pool.py
+      - tests/test_v166_compact_product_gear_db.py
+      - tests/test_v167_product_season_gear_adapter.py
       - runner/v216_environment_build_coordinator.py
       - runner/v242_authenticated_season_source_stage.py
       - runner/v113_local_web_api.py
@@ -60,6 +66,11 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_v155_all_expansion_autodiscovery.py' -v
       - name: A1 v163 same-build DB2 source join (fixtures only)
         run: python -m unittest discover -s tests -p 'test_v163_db2_zero_seed.py' -v
+      - name: A7 WSE guarded item source must not become current selectable candidate
+        run: |
+          python -m unittest discover -s tests -p 'test_v165_current_season_gear_pool.py' -v
+          python -m unittest discover -s tests -p 'test_v166_compact_product_gear_db.py' -v
+          python -m unittest discover -s tests -p 'test_v167_product_season_gear_adapter.py' -v
       - name: A6 v161 ten Wago CSV SHA and sealed reuse (synthetic source only)
         run: python -m unittest discover -s tests -p 'test_v161_db2_source_provenance_offline.py' -v
       - name: A6 v216 actual product path reuses DB2 without duplicate fetch
