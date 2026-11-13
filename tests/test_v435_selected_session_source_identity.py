@@ -293,5 +293,48 @@ class SelectedFutureSessionKey(unittest.TestCase):
             self.assertEqual(sessions.worker(
                 folder,self.binary,"c"*40,self.static),3)
 
+
+    def _stub_selected_manifest(self,folder, *, selected_sha=None):
+        seal=__import__("json").loads(
+            (folder/"V106_SESSION_IDENTITY.json").read_text("utf8"))
+        target=folder/"generated"
+        target.mkdir(parents=True,exist_ok=True)
+        record={
+            "installed_selected_fresh_v212_source":{
+                "selected_v435_identity_sha256":
+                   selected_sha if selected_sha is not None
+                   else digest(seal)},
+            "native_binary":str(self.binary),
+            "native_revision":"c"*40,
+            "static_cache_json":str(self.static)}
+        (target/"manifest.json").write_text(
+            sessions.canonical(record)+"\n",encoding="utf8")
+
+    def test_selected_worker_dispatches_only_source_replay_entry(self):
+        folder=self._stored()
+        self._stub_selected_manifest(folder)
+        with (
+            mock.patch.object(sessions.bootstrap.entry,"run_manifest",
+                side_effect=RuntimeError("NO_NATIVE_SENTINEL")) as selected,
+            mock.patch.object(sessions.bootstrap,"run",
+                side_effect=AssertionError("LEGACY_RUN_MUST_NOT_START")) as legacy
+        ):
+            # Stop at the selected v096 call; never perform SimC in tests.
+            self.assertEqual(sessions.worker(
+                folder,self.binary,"c"*40,self.static),3)
+        self.assertEqual(selected.call_count,1)
+        self.assertEqual(selected.call_args.args[0],
+                         folder/"generated"/"manifest.json")
+        self.assertFalse(legacy.called)
+
+    def test_selected_worker_rejects_mismatched_v435_manifest_key(self):
+        folder=self._stored()
+        self._stub_selected_manifest(folder,selected_sha="0"*64)
+        with mock.patch.object(sessions.bootstrap.entry,"run_manifest",
+                               side_effect=AssertionError("NO_NATIVE")) as run:
+            self.assertEqual(sessions.worker(
+                folder,self.binary,"c"*40,self.static),3)
+        run.assert_not_called()
+
 if __name__=="__main__":
     unittest.main()
