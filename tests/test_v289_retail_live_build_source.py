@@ -49,6 +49,28 @@ class RetailBuildDiscovery(unittest.TestCase):
         got=source.discover(
             fetch=lambda req,timeout:Response(RAW))
         self.assertEqual(got,found)
+    def test_generic_new_build_version_and_kr_region_are_source_driven(self):
+        """A2: changing a season/build must not require a new source code ID."""
+        # This synthetic alternative deliberately differs from the actual
+        # current 70783 evidence; the KR row alone sets the build.
+        other=BPSV.replace(
+            b"kr|a|b|c|70783|12.1.5.70783|d",
+            b"kr|a|b|c|88888|13.0.0.88888|d")
+        self.assertNotEqual(other,BPSV)
+        found=source.parse(other,region="KR")
+        self.assertEqual(found["game_build"],"13.0.0.88888")
+        self.assertEqual(found["region"],"KR")
+        self.assertEqual(source.parse(other,region="US")["game_build"],
+                         "12.1.5.70783")
+        self.assertNotEqual(found["source_sha256"],
+                            source.parse(BPSV)["source_sha256"])
+        mismatch=other.replace(
+            b"kr|a|b|c|88888|13.0.0.88888|d",
+            b"kr|a|b|c|70783|13.0.0.88888|d")
+        with self.assertRaisesRegex(
+                source.RetailVersionBlocked,"BUILD_ID_MISMATCH"):
+            source.parse(mismatch,region="KR")
+
     def test_fails_closed_on_absent_or_inconsistent_live_source(self):
         for payload in (
             RAW.replace(b"KR|",b"XX|"),
