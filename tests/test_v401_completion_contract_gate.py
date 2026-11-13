@@ -257,7 +257,25 @@ class CompletionContractTests(unittest.TestCase):
                          {"HISTORICAL_SCOPED"})
         self.assertFalse(gate.complete(row))
         self.assertFalse(gate.complete(self.row(doc,"B4")))
-        self.assertEqual(doc["policy"]["next_review"],"B6")
+        self.assertNotEqual(doc["policy"]["next_review"],"B5")
+        self.assertEqual(doc["policy"]["full_product_e2e"],"PENDING")
+
+    def test_b6_primary_stat_70783_observed_but_not_26_native_proven(self):
+        doc=self.scenario()
+        row=self.row(doc,"B6")
+        self.assertEqual(row["generic"]["state"],"PASS")
+        self.assertEqual(row["current_source"]["state"],"PASS")
+        self.assertEqual(row["historical"]["state"],"PASS")
+        self.assertEqual(row["product_integration"]["state"],"PENDING")
+        self.assertEqual({doc["evidence"][k]["kind"] for k in
+                          row["generic"]["evidence"]},
+                         {"GENERALIZATION_REGRESSION","CURRENT_SOURCE_REAL"})
+        self.assertEqual({doc["evidence"][k]["kind"] for k in
+                          row["historical"]["evidence"]},
+                         {"HISTORICAL_SCOPED"})
+        self.assertFalse(gate.complete(row))
+        self.assertFalse(gate.complete(self.row(doc,"B5")))
+        self.assertEqual(doc["policy"]["next_review"],"B7")
         self.assertEqual(doc["policy"]["full_product_e2e"],"PENDING")
 
     def test_a10_cannot_skip_a9_generic_source(self):
