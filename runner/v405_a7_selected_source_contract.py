@@ -97,6 +97,34 @@ def assess(*, source, catalog, expected_game_build, source_report_sha256,
     need(set(choices)==set(PUBLIC_ROLES),"A7_PUBLIC_ROLES_CHANGED")
     indexed={x["item_id"]:x for x in items}
     need(len(indexed)==len(items),"A7_DUPLICATE_CANDIDATE_ITEM_ID")
+    # Every v167 current candidate, including internal ordinary equipment,
+    # must trace back to an admitted source row. User options are then an
+    # exact subset; no item IDs are selected or supplied by GPT.
+    verified_ids=set()
+    for candidate in items:
+        item_id=candidate["item_id"]
+        original=by_id.get(item_id)
+        need(original is not None,"A7_PUBLIC_ITEM_WITHOUT_AUTHENTICATED_SOURCE")
+        raw_sources=original.get("acquisition_sources")
+        known_sources=candidate.get("source_evidence")
+        # v166 intentionally retains only a small projection of v163
+        # (without WCL names or raw WSE diagnostics).
+        need(type(raw_sources) is list and type(known_sources) is list
+             and all(type(s) is dict for s in raw_sources+known_sources)
+             and all(any(all(k in src and src[k]==v for k,v in obs.items())
+                         for src in raw_sources) for obs in known_sources),
+             "A7_PUBLIC_ITEM_SOURCE_EVIDENCE_DRIFT")
+        eligible=False
+        for src in raw_sources:
+            if not _eligible(src,season_id):
+                continue
+            if src["source"]=="selectable_stat_craft":
+                if src["expansion_id"]!=expansion:
+                    continue
+            eligible=True
+            break
+        need(eligible,"A7_NO_CURRENT_JOURNAL_OR_CRAFT_ORIGIN")
+        verified_ids.add(item_id)
     public_ids=[]
     counts={}
     for role in PUBLIC_ROLES:
@@ -108,33 +136,13 @@ def assess(*, source, catalog, expected_game_build, source_report_sha256,
             need(item_id not in public_ids,"A7_DUPLICATE_PUBLIC_ITEM_ID")
             public_ids.append(item_id)
             candidate=indexed.get(item_id)
-            original=by_id.get(item_id)
-            need(candidate is not None and original is not None
-                 and candidate["category"]==role,
+            need(candidate is not None and candidate["category"]==role
+                 and item_id in verified_ids,
                  "A7_PUBLIC_ITEM_WITHOUT_AUTHENTICATED_SOURCE")
-            raw_sources=original.get("acquisition_sources")
-            known_sources=candidate.get("source_evidence")
-            # v166 intentionally retains only the small consumer-relevant
-            # subset of each original v163 source (not WCL names or WSE
-            # diagnostic raw strings). Compare that exact projection.
-            need(type(raw_sources) is list and type(known_sources) is list
-                 and all(type(s) is dict for s in raw_sources+known_sources)
-                 and all(
-                     any(all(k in original_source and
-                             original_source[k]==value
-                             for k,value in observed.items())
-                         for original_source in raw_sources)
-                     for observed in known_sources),
-                 "A7_PUBLIC_ITEM_SOURCE_EVIDENCE_DRIFT")
-            eligible=[]
-            for src in raw_sources:
-                if not _eligible(src,season_id):
-                    continue
-                if src["source"]=="selectable_stat_craft":
-                    if src["expansion_id"]!=expansion:
-                        continue
-                eligible.append(src)
-            need(bool(eligible),"A7_NO_CURRENT_JOURNAL_OR_CRAFT_ORIGIN")
+    expected_visible={x["item_id"] for x in items
+                      if x["category"] in PUBLIC_ROLES}
+    need(set(public_ids)==expected_visible,
+         "A7_PUBLIC_OPTIONS_DO_NOT_MATCH_CURRENT_CANDIDATES")
     visible_counts=visible.get("count")
     need(type(visible_counts) is int and
          visible_counts==len(items),"A7_PUBLIC_CANDIDATE_COUNT_DRIFT")
@@ -146,6 +154,8 @@ def assess(*, source, catalog, expected_game_build, source_report_sha256,
         "db2_display_season_id":season_id,
         "original_v163_sha256":source_report_sha256,
         "v167_candidate_sha256":candidate_sha256,
+        "source_reconciled_candidate_count":len(verified_ids),
+        "source_reconciled_candidate_ids_sha256":sha(sorted(verified_ids)),
         "public_candidate_count":len(public_ids),
         "public_role_counts":counts,
         "public_item_ids_sha256":sha(sorted(public_ids)),
