@@ -979,7 +979,11 @@ def build(user,folder,binary,revision,static_cache_path=None,
         restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
             key,rows,groups,user,ilvl,need,
             tier_override=tier_data,fifth_override=fifth_data,
-            flexible_current_tier=current_season_product)
+            flexible_current_tier=current_season_product,
+            season_source_gear=(season_source_bundle["gear"]
+                                if season_source_bundle is not None else None),
+            season_source_tier=(season_source_bundle["tier"]
+                                if season_source_bundle is not None else None))
     else:
         restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
             key,rows,groups,user,ilvl,need)

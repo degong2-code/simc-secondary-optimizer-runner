@@ -5,6 +5,7 @@ not an independent proc/catalyst eligibility certification.
 """
 from __future__ import annotations
 import copy,pathlib,sys,tempfile,unittest
+from unittest import mock
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/"runner"))
 import v101_common_representative_equipment as common
@@ -36,6 +37,93 @@ class CurrentSeasonTierReconciliation(unittest.TestCase):
         self.assertTrue(all(rows[s]["item_id"]==self.map[s] for s in tier))
         self.assertEqual(len(set(x["item_id"] for x in rows.values())),
                          len(rows))
+
+    def test_new_build_source_injection_accepts_only_its_own_selected_id(self):
+        import v167_product_season_gear_adapter as product_gear
+        gear=copy.deepcopy(product_gear.read())
+        tier=copy.deepcopy(season.load_tier())
+        # Synthetic alternative build, not a claim of fresh game evidence.
+        gear["season_build"]="12.1.5.79999"
+        tier["retail_build"]="12.1.5.79999"
+        row=next(x for x in gear["items"] if x["item_id"]==239652)
+        row["item_id"]=939652
+        user,rows,groups=self.setup_rows()
+        user["embellishments"]=[{
+            "slot":"head","item_id":939652,
+            "options":{"crafted_stats":"32/36",
+                       "embellishment":"arcanoweave_lining"}}]
+        require=lambda valid,why:self.fail(why) if not valid else None
+        # Legacy packaged IDs must not accept the new source item.
+        with self.assertRaisesRegex(AssertionError,
+                      "CURRENT_SEASON_SELECTED_ITEM_NOT_IN_APPROVED_ROLE"):
+            common.apply_user_equipment(
+                ("mage","frost"),copy.deepcopy(rows),dict(groups),
+                user,334,require,tier_override=self.map,
+                fifth_override=("chest",self.map["chest"],159257),
+                flexible_current_tier=True)
+        with mock.patch.object(product_gear,"read",
+                               side_effect=AssertionError("LEGACY_GEAR_READ")), \
+             mock.patch.object(season,"load_tier",
+                               side_effect=AssertionError("LEGACY_TIER_READ")):
+            restored,origin=common.apply_user_equipment(
+                ("mage","frost"),rows,groups,user,334,require,
+                tier_override=tier["classes"]["mage"]["pieces"],
+                fifth_override=("chest",self.map["chest"],159257),
+                flexible_current_tier=True,season_source_gear=gear,
+                season_source_tier=tier)
+        self.assertEqual(restored,["chest"])
+        self.assertEqual(origin,[])
+        self.assertEqual(rows["head"]["item_id"],939652)
+        self.assert_four(rows,groups)
+
+    def test_new_build_source_pair_and_build_mismatch_fail_closed(self):
+        import v167_product_season_gear_adapter as product_gear
+        gear=copy.deepcopy(product_gear.read())
+        tier=copy.deepcopy(season.load_tier())
+        gear["season_build"]="12.1.5.79999"
+        user,rows,groups=self.setup_rows()
+        user["embellishments"]=[{
+            "slot":"head","item_id":239652,
+            "options":{"crafted_stats":"32/36",
+                       "embellishment":"arcanoweave_lining"}}]
+        require=lambda valid,why:self.fail(why) if not valid else None
+        opts={"tier_override":self.map,
+              "fifth_override":("chest",self.map["chest"],159257),
+              "flexible_current_tier":True,"season_source_gear":gear}
+        with self.assertRaisesRegex(AssertionError,
+                          "CURRENT_SEASON_SELECTED_SOURCE_PAIR_REQUIRED"):
+            common.apply_user_equipment(
+                ("mage","frost"),rows,groups,user,334,require,**opts)
+        opts["season_source_tier"]=tier
+        with self.assertRaisesRegex(AssertionError,
+                     "CURRENT_SEASON_SELECTED_SOURCE_BUILD_OR_TIER_DRIFT"):
+            common.apply_user_equipment(
+                ("mage","frost"),rows,groups,user,334,require,**opts)
+
+    def test_new_build_source_catalyst_overflow_avoids_packaged_read(self):
+        import v167_product_season_gear_adapter as product_gear
+        gear=copy.deepcopy(product_gear.read())
+        tier=copy.deepcopy(season.load_tier())
+        gear["season_build"]="12.1.5.79999"
+        tier["retail_build"]="12.1.5.79999"
+        user,rows,groups=self.setup_rows()
+        user["special_items"]=[{
+            "slot":"chest","item_id":self.map["chest"],
+            "options":{"redirected_base_stats":"159257"}}]
+        require=lambda valid,why:self.fail(why) if not valid else None
+        with mock.patch.object(product_gear,"read",
+                               side_effect=AssertionError("LEGACY_GEAR_READ")), \
+             mock.patch.object(season,"load_tier",
+                               side_effect=AssertionError("LEGACY_TIER_READ")):
+            restored,origin=common.apply_user_equipment(
+                ("mage","frost"),rows,groups,user,334,require,
+                tier_override=tier["classes"]["mage"]["pieces"],
+                fifth_override=("chest",self.map["chest"],159257),
+                flexible_current_tier=True,season_source_gear=gear,
+                season_source_tier=tier)
+        self.assertEqual(restored,[])
+        self.assertEqual(origin[0]["slot"],"chest")
+        self.assert_four(rows,groups)
 
     def test_unselected_baseline_four_and_both_crafted_non_tier(self):
         u,rows,groups=self.setup_rows()

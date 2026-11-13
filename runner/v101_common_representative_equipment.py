@@ -375,8 +375,39 @@ def reconcile_four_tier(key,rows,groups,taken,ilevel,need,*,fifth_override=None)
          "FOUR_TIER_NOT_SATISFIED")
     return added
 
+def _selected_current_season_sources(key,tier_map,need,*,
+                                     season_source_gear=None,
+                                     season_source_tier=None):
+    """Return matched sources; v098 alone authenticates their original SHA.
+
+    A supplied fresh-season document must NEVER silently fall back to the
+    packaged v167/v168 snapshot. This helper does not certify item effects,
+    tier set procs, season loot ownership or numeric G/L budgets.
+    """
+    import v167_product_season_gear_adapter as product_gear
+    import v169_source_first_representative_stage as source_stage
+    need((season_source_gear is None)==(season_source_tier is None),
+         "CURRENT_SEASON_SELECTED_SOURCE_PAIR_REQUIRED")
+    if season_source_gear is None:
+        return product_gear.read(),source_stage.load_tier()
+    db=product_gear.validate(season_source_gear)
+    tier=season_source_tier
+    cls=key[0]
+    need(type(tier) is dict and
+         db.get("season_build")==tier.get("retail_build") and
+         type(tier.get("classes")) is dict and
+         type(tier["classes"].get(cls)) is dict and
+         tier["classes"][cls].get("pieces")==tier_map and
+         type(tier["classes"][cls].get("allowed_class_mask")) is int and
+         tier["classes"][cls]["allowed_class_mask"]>0,
+         "CURRENT_SEASON_SELECTED_SOURCE_BUILD_OR_TIER_DRIFT")
+    return db,tier
+
+
 def reconcile_current_season_five_tier(key,rows,groups,taken,ilevel,
-                                       need,*,tier_map):
+                                       need,*,tier_map,
+                                       season_source_gear=None,
+                                       season_source_tier=None):
     """Deterministic 4-of-5 layout after user items, not gear-combo search.
 
     User-selected occupied slots are immutable. Native/catalyzed tier rows
@@ -412,10 +443,11 @@ def reconcile_current_season_five_tier(key,rows,groups,taken,ilevel,
     if tier_count>4:
         spec=contracts.lookup(*key)
         need(spec is not None,"CURRENT_SEASON_SPEC_UNKNOWN")
-        product=product_gear.read()
+        product,tier=_selected_current_season_sources(
+            key,tier_map,need,season_source_gear=season_source_gear,
+            season_source_tier=season_source_tier)
         family=product_gear.ARMOR_SUBCLASS[spec["family"]]
         codes=source_stage.PRIMARY_STAT_CODES[spec["primary"]]
-        tier=source_stage.load_tier()
         mask=tier["classes"][key[0]]["allowed_class_mask"]
         inventory={"head":(1,),"shoulders":(3,),"chest":(5,20),
                    "hands":(10,),"legs":(7,)}
@@ -450,7 +482,9 @@ def reconcile_current_season_five_tier(key,rows,groups,taken,ilevel,
     return restored
 
 
-def validate_current_season_selected_slots(key,user,tier_map,need):
+def validate_current_season_selected_slots(key,user,tier_map,need,*,
+                                           season_source_gear=None,
+                                           season_source_tier=None):
     """Source catalog item/slot consistency; not proc/effect certification."""
     if not user["special_items"] and not user["embellishments"]:
         return
@@ -458,7 +492,9 @@ def validate_current_season_selected_slots(key,user,tier_map,need):
     import v167_product_season_gear_adapter as product_gear
     import v169_source_first_representative_stage as source_stage
     import v188_user_choice_metadata as choice_metadata
-    db=product_gear.read()
+    db,tier=_selected_current_season_sources(
+        key,tier_map,need,season_source_gear=season_source_gear,
+        season_source_tier=season_source_tier)
     indexed={x["item_id"]:x for x in db["items"]}
     spec=contracts.lookup(*key)
     need(spec is not None,"CURRENT_SEASON_EQUIPMENT_SPEC_REQUIRED")
@@ -478,7 +514,7 @@ def validate_current_season_selected_slots(key,user,tier_map,need):
         "single_two_hand":{"main_hand":(17,)},
         "ranged":{"main_hand":(15,26)}}
     expected_primary=source_stage.PRIMARY_STAT_CODES[spec["primary"]]
-    mask=source_stage.load_tier()["classes"][key[0]]["allowed_class_mask"]
+    mask=tier["classes"][key[0]]["allowed_class_mask"]
     for group,selection in (("special",user["special_items"]),
                              ("crafted",user["embellishments"])):
         for raw in selection:
@@ -522,7 +558,8 @@ def validate_current_season_selected_slots(key,user,tier_map,need):
 
 def apply_user_equipment(key,rows,groups,user,ilevel,need,*,
                          tier_override=None,fifth_override=None,
-                         flexible_current_tier=False):
+                         flexible_current_tier=False,
+                         season_source_gear=None,season_source_tier=None):
     """Overlay selected items and reassign tier 4pc without item-combo search.
 
     Mutates only its private rows/groups objects. Selected catalyst specials
@@ -531,12 +568,17 @@ def apply_user_equipment(key,rows,groups,user,ilevel,need,*,
     need(type(flexible_current_tier) is bool,"FLEXIBLE_TIER_FLAG_BOOL")
     need(not flexible_current_tier or tier_override is not None,
          "CURRENT_SEASON_TIER_SOURCE_REQUIRED")
+    need(flexible_current_tier or
+         (season_source_gear is None and season_source_tier is None),
+         "CURRENT_SEASON_SELECTED_SOURCE_WITHOUT_CURRENT_MODE")
     tier_map=(CLASS_TIER_ITEMS[key[0]] if tier_override is None
               else tier_override)
     fifth_data=(FIFTH_TIER[key] if fifth_override is None
                 else fifth_override)
     if flexible_current_tier:
-        validate_current_season_selected_slots(key,user,tier_map,need)
+        validate_current_season_selected_slots(
+            key,user,tier_map,need,season_source_gear=season_source_gear,
+            season_source_tier=season_source_tier)
     taken=set()
     for group,selection in (("trinkets",user["trinkets"]),
                             ("special",user["special_items"]),
@@ -599,7 +641,9 @@ def apply_user_equipment(key,rows,groups,user,ilevel,need,*,
          "USER_TRINKET_SLOTS_NOT_EXACT")
     if flexible_current_tier:
         restored=reconcile_current_season_five_tier(
-            key,rows,groups,taken,ilevel,need,tier_map=tier_map)
+            key,rows,groups,taken,ilevel,need,tier_map=tier_map,
+            season_source_gear=season_source_gear,
+            season_source_tier=season_source_tier)
     else:
         restored=reconcile_four_tier(key,rows,groups,taken,ilevel,need,
                                      fifth_override=fifth_data)
