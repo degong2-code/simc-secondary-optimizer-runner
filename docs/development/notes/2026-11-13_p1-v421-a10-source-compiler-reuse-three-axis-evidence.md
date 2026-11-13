@@ -1,7 +1,13 @@
 # v421 — A10 원본 통합 컴파일: 기존 3축 증거 재사용
 
 - **Capability:** `SOURCE.SEAL` / `ENVIRONMENT.WEB` / `PRODUCT.E2E`, 요소 **A10**.
-- **Decision:** **REUSE / COMPLETE (요소 범위)**. 새 컴파일러·Native·원본 수집 없이 기존 v274→v241→v191/v211/v213→v216/v212의 필요 입력·검증·카탈로그 결과를 확인했다.
+- **Keywords:** A10, v274, v275, v241, v191, v211, v213, v216, v212, source compiler, SHA, ZERO-SOURCE, catalog, product integration.
+- **Prior evidence:** [v383 역사](2026-11-13_p1-v383-a10-a11-g2-archived-native-receipt-reuse.md), [v409](2026-11-13_p1-v409-a8-simc-metadata-and-result-snapshot-policy.md), [v410](2026-11-13_p1-v410-fresh-season-v211-optional-quality-classifier-unbound.md), [v417](2026-11-13_p1-v417-bounded-post-bridge-product-e2e-once.md), [v420](2026-11-13_p1-v420-a9-simc-source-bytes-scope.md).
+- **Decision:** `REUSE` — COMPLETE (요소 범위). 새 컴파일러·Native·원본 수집 없이 기존 v274→v241→v191/v211/v213→v216/v212의 필요 입력·검증·카탈로그 결과를 확인했다.
+- **Changes:** 78 JSON/자동 생성표·추적표, v401 상태 고정 단언 조정, CURRENT/START_HERE/INDEX 기록. 제품 컴파일·SimC 코드 변경 없음.
+- **Verification:** 현재 v417 실제 Windows #43394408756, v410 가변원본 80 PASS #43387395448, v409 원본 60 PASS #43386905854, v344 역사 #43114134208; 새 계약 CI #43405396556 SUCCESS.
+- **Remaining:** A11 source/build/SHA/봉인·재개 독립 검토, 나머지 요소·전체 USER-E2E PENDING.
+- **Efficiency:** 신규 Native0, 외부 원본 수집0, 컴파일 재실행0; 기존 캐시·영수증 재사용. 개발 장부의 198개 역사 오류는 별도이며 A10 판정과 구분.
 - **수락 범위:** A10의 원본 통합 컴파일이며 각 G/J/F/O 숫자, 선택 품질 승인, 26 DPS 전체 Native, 미래 미출시 시즌 실측, 최종 ZERO-SOURCE→USER-E2E는 아니다.
 
 ## 1. 현재 원본 및 실 소비
