@@ -5,6 +5,8 @@ on:
       - probe/chat-cache-v035-20261024
     paths:
       - .github/workflows/p1_v389_a1_current_live_zero_source_once.yml
+      - runner/v155_season_api_probe.py
+      - runner/v242_authenticated_season_source_stage.py
   workflow_dispatch:
 
 permissions:
