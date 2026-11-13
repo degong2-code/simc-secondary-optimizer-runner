@@ -98,20 +98,16 @@ def build(pool,item_file,sparse_file):
             conditional.append({"item_id":iid,"slot":slot,
                 "category":v["category"],"source_kinds":data["source_kinds"],
                 "reason":v["season_selection"]})
-            # WSE!=0 is not a negative eligibility verdict. Preserve only
-            # same-display-season physical M+ plain items for INTERNAL
-            # representative fallback, never the user catalog or G.
+            # Legacy conditional physical M+ source fallback is INTERNAL
+            # only. Match actual DisplaySeasonID/encounter provenance, not
+            # opaque WSE, which never grants or blocks season membership.
             if (v["category"]=="plain_representative_candidate"
                 and v["direct_item_effect_record"] is False
                 and v["item_set_id"]==0
                 and v.get("expansion_id")==pool["expansion_id"]
                 and any(e.get("source")=="mplus_journal"
-                    and e.get("season_evidence")==
-                        "UNKNOWN_WORLD_STATE_EXPRESSION"
                     and e.get("display_season_id")==
                         pool["db2_display_season_id"]
-                    and type(e.get("world_state_expression_id")) is int
-                    and e["world_state_expression_id"]>0
                     and type(e.get("journal_encounter_id")) is int
                     and e["journal_encounter_id"]>0
                     and type(e.get("journal_instance_id")) is int
