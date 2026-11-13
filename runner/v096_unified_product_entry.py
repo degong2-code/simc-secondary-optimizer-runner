@@ -32,6 +32,8 @@ SEASON_FIELD="admitted_season_budget_source"
 SEASON_SCHEMA="v096_internal_admitted_season_budget_source_v1"
 FRESH_SEASON_FIELD="installed_fresh_season_budget_source"
 FRESH_SEASON_SCHEMA="v096_internal_installed_fresh_v212_source_v1"
+SELECTED_FRESH_SEASON_FIELD="installed_selected_fresh_v212_source"
+SELECTED_FRESH_SEASON_SCHEMA="v096_internal_selected_fresh_v212_replay_v1"
 # Optional internal stage seal: no Native until physical SimC acceptance.
 STAGE_FIELD="unverified_pure_profile_plan_only"
 class EntryBlocked(ValueError):pass
@@ -143,21 +145,8 @@ def _admitted_season_source(*, manifest_path, season, revision,
             "oil_by_hand":by_hand}
 
 
-def _admitted_fresh_season_source(*, manifest_path, season, revision,
-                                  user_scenario, flask_F, oil_hands, profile):
-    """Reuse ORIGINAL exact-build v216/v217/v212 installed source, never a preview.
-
-    The caller does not authenticate source data or SimC effects. The existing
-    v216 reusable installer lookup rechecks catalog bytes, stage hashes and
-    both v217 stage receipts before any v094 runtime source is prepared.
-    This first bridge supports the proven O=0 base; physical oils stay pending.
-    """
-    fields={"schema","installed_environment_path",
-            "installed_manifest_sha256","oil_by_hand"}
-    need(type(season) is dict and set(season) in
-         (fields,fields|{"user_final_T"}) and
-         season.get("schema")==FRESH_SEASON_SCHEMA,
-         "FRESH_SEASON_INTERNAL_SOURCE_FIELDS")
+def _verified_installed_fresh_v217(*,manifest_path,season):
+    """Reuse original v212 and v217 stage-owner authentication once."""
     path=path_for(pathlib.Path(manifest_path).parent,
                   season["installed_environment_path"])
     need(not path.is_symlink() and path.is_file() and len(path.parents)>=4
@@ -195,6 +184,26 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
          and bound.get("environment_installed") is True
          and bound.get("installed_manifest_sha256")==doc["manifest_sha256"],
          "FRESH_SEASON_V217_INSTALLED_PROOF_NOT_FOUND")
+    return doc,bound
+
+
+def _admitted_fresh_season_source(*, manifest_path, season, revision,
+                                  user_scenario, flask_F, oil_hands, profile):
+    """Reuse ORIGINAL exact-build v216/v217/v212 installed source, never a preview.
+
+    The caller does not authenticate source data or SimC effects. The existing
+    v216 reusable installer lookup rechecks catalog bytes, stage hashes and
+    both v217 stage receipts before any v094 runtime source is prepared.
+    This first bridge supports the proven O=0 base; physical oils stay pending.
+    """
+    fields={"schema","installed_environment_path",
+            "installed_manifest_sha256","oil_by_hand"}
+    need(type(season) is dict and set(season) in
+         (fields,fields|{"user_final_T"}) and
+         season.get("schema")==FRESH_SEASON_SCHEMA,
+         "FRESH_SEASON_INTERNAL_SOURCE_FIELDS")
+    doc,bound=_verified_installed_fresh_v217(
+        manifest_path=manifest_path,season=season)
     normalized=contract.normalize(user_scenario)
     oil=doc["official_O"]
     zeros={stat:0 for stat in contract.STATS}
@@ -474,6 +483,139 @@ def preflight_selected_fresh_source_only(*, selected, composed, fillers,
         "native_calls":0,"network_calls":0}
 
 
+
+def _admitted_selected_fresh_source(*, manifest_path, season, revision,
+                                   user_scenario, flask_F, oil_hands,
+                                   profile, fillers, cache_path, binary,
+                                   seed_targets,weapon_layout):
+    """Selected v212 runtime source: re-run actual v098/v432/v434/v435.
+
+    A copied SHA-filled numeric preview is never sufficient. Re-read the
+    original v191/v232 files, current v046 static variants and installed
+    v217/v212 authority before giving the existing v094 engine a budget.
+    """
+    need(type(season) is dict and set(season)=={
+         "schema","installed_environment_path","installed_manifest_sha256",
+         "selected_replay_file","selected_replay_sha256","oil_by_hand",
+         "selected_v435_identity_sha256"} and
+         season.get("schema")==SELECTED_FRESH_SEASON_SCHEMA,
+         "B8_SELECTED_V096_MANIFEST_EXACT_SOURCE_FIELDS")
+    need(type(cache_path) is pathlib.Path and cache_path.is_file()
+         and not cache_path.is_symlink() and
+         type(fillers) is list and type(profile) is str,
+         "B8_SELECTED_V096_EXACT_CACHE_AND_FILLERS_REQUIRED")
+    doc,bound=_verified_installed_fresh_v217(
+        manifest_path=manifest_path,season=season)
+    need(season["selected_replay_file"]=="v436_selected_source_replay.json",
+         "B8_SELECTED_V096_REPLAY_FILENAME_FIXED")
+    replay_path=path_for(pathlib.Path(manifest_path).parent,
+                         season["selected_replay_file"])
+    need(replay_path.is_file() and not replay_path.is_symlink()
+         and 0<replay_path.stat().st_size<=12_000_000,
+         "B8_SELECTED_V096_REPLAY_BYTES_REQUIRED")
+    raw=replay_path.read_bytes()
+    need(hashlib.sha256(raw).hexdigest()==season["selected_replay_sha256"],
+         "B8_SELECTED_V096_REPLAY_BYTES_SHA_CHANGED")
+    try:
+        replay=json.loads(raw)
+    except (ValueError,UnicodeError) as exc:
+        raise EntryBlocked("B8_SELECTED_V096_REPLAY_JSON_INVALID") from exc
+    need(type(replay) is dict and
+         set(replay)=={"schema","user","environment_result",
+                       "season_controls","selected_final_source_sha256",
+                       "selected_v435_identity_sha256"} and
+         replay["schema"]=="v436_selected_fresh_v098_replay_v1" and
+         type(replay["user"]) is dict and
+         type(replay["environment_result"]) is dict and
+         type(replay["selected_final_source_sha256"]) is str and
+         replay["selected_v435_identity_sha256"]==
+             season["selected_v435_identity_sha256"],
+         "B8_SELECTED_V096_REPLAY_FIELDS_OR_IDENTITY")
+    need(type(replay["user"].get("target")) is dict and
+         bool(replay["user"].get("special_items") or
+              replay["user"].get("embellishments")) and
+         replay["user"]["target"].get("ilevel")==doc["target_ilevel"],
+         "B8_SELECTED_V096_USER_LAYOUT_OR_LEVEL_REQUIRED")
+    import v098_target_user_scenario_bootstrap as bootstrap
+    computed=bootstrap.preview_from_environment_build(
+        replay["user"],pathlib.Path(manifest_path).parent,binary,revision,
+        environment_result=replay["environment_result"],
+        season_controls=replay["season_controls"],
+        selected_static_cache_path=cache_path)
+    need(computed.get("status")==
+             "B8_SELECTED_V096_COMPLETE_PROFILE_BUDGET_NOT_ADMITTED"
+         and computed.get("fresh_installed_v212_source_reused") is True
+         and computed.get("final_source_identity_sha256")==
+             replay["selected_final_source_sha256"]
+         and computed.get("source_profile_sha256")==
+             hashlib.sha256(profile.encode("utf8")).hexdigest()
+         and computed.get("profile_simc")==profile
+         and computed.get("selected_fillers_source_only")==fillers
+         and computed.get("v096_typed_input_unadmitted",{}).get("scenario")==
+             contract.normalize(user_scenario)["scenario"]
+         and computed.get("seed_targets_B_unadmitted")==seed_targets
+         and computed.get("selected_weapon_layout_source_only")==
+             weapon_layout
+         and computed["budget_preflight"]["installed_v212_manifest_sha256"]==
+             doc["manifest_sha256"]
+         and computed.get("v435_future_v106_session_key_unadmitted",{}).get(
+             "identity_sha256")==season["selected_v435_identity_sha256"],
+         "B8_SELECTED_V096_RECOMPUTED_PHYSICAL_PROFILE_OR_BUDGET_DRIFT")
+    future=computed["v435_future_v106_session_key_unadmitted"]
+    need(type(future.get("session_key_preview")) is str and
+         pathlib.Path(manifest_path).parent.name=="generated" and
+         pathlib.Path(manifest_path).parent.parent.name==
+             future["session_key_preview"],
+         "B8_SELECTED_V096_SEPARATE_FUTURE_SESSION_FOLDER_REQUIRED")
+    preflight=computed["v096_selected_source_only_preflight"]
+    budget=computed["budget_preflight"]
+    inputs=replay["environment_result"]["source_compilation"][
+        "v098_source_only_profile_inputs_unadmitted"]
+    need(preflight["base_B"]==budget["base_B"] and
+         preflight["final_T"]==budget["final_T"] and
+         preflight["flask_F"]==flask_F and
+         preflight["fixed_O"]==doc["official_O"] and
+         season["oil_by_hand"]==inputs["oil_by_hand"] and
+         set(season["oil_by_hand"])==set(oil_hands),
+         "B8_SELECTED_V096_SAME_INSTALLED_F_O_B_T_REQUIRED")
+    approved={"game_build":doc["game_build"],
+        "simc_revision":doc["simc_revision"],
+        "target_ilevel":doc["target_ilevel"],
+        "base_B":budget["base_B"],"final_T":budget["final_T"],
+        "fixed_O":dict(budget["fixed_O"]),
+        "J":doc["official_J"],"F":doc["official_F"],
+        "source_catalog_manifest_sha256":
+            doc["source_catalog_manifest_sha256"],
+        "source_catalog_artifact_sha256":
+            doc["source_catalog_artifact_sha256"]}
+    identity={
+        "environment_build_receipt_sha256":doc["manifest_sha256"],
+        "environment_manifest_sha256":doc["manifest_sha256"],
+        "source_catalog_artifact_sha256":
+            doc["source_catalog_artifact_sha256"],
+        "source_input_sha256":hashlib.sha256(json.dumps({
+            "original_budget_source_identities":
+                doc["trusted_budget_component_source_identities"],
+            "original_v217_installed_stage_receipt_sha256":
+                bound["stage_receipt_sha256"],
+            "selected_physical_budget_sha256":
+                budget["selected_budget_identity_sha256"],
+            "v434_final_source_identity_sha256":
+                computed["final_source_identity_sha256"],
+            "v435_future_session_identity_sha256":
+                future["identity_sha256"],
+            "v436_exact_replay_sha256":
+                season["selected_replay_sha256"],
+        },sort_keys=True,separators=(",",":")).encode("utf8")).hexdigest()}
+    return {"season_budget":approved,
+            "season_source_identity":identity,
+            "oil_by_hand":dict(season["oil_by_hand"]),
+            "fresh_v212_installed":True,
+            "fresh_selected_v436_admitted":True,
+            "selected_session_identity_sha256":future["identity_sha256"],
+            "user_manual_final_T":replay["user"]["target"]["final_T"]}
+
+
 def source(manifest_path):
     """Build the existing typed and SHA-locked Native context; zero SimC calls."""
     manifest_path=pathlib.Path(manifest_path).resolve()
@@ -484,7 +626,8 @@ def source(manifest_path):
              tuple(x|{NATIVE_ENCHANT_FIELD} for x in base_allowed)+
              tuple(x|{NONCHMV_ENCHANT_FIELD} for x in base_allowed)+
              tuple(x|{SEASON_FIELD} for x in (FIELDS,))+
-             tuple(x|{FRESH_SEASON_FIELD} for x in (FIELDS,)))
+             tuple(x|{FRESH_SEASON_FIELD} for x in (FIELDS,))+
+             tuple(x|{SELECTED_FRESH_SEASON_FIELD} for x in (FIELDS,)))
     # Opt-in exact search ordering is an additional immutable session input.
     # Existing manifests are unchanged and continue to accept old semantics.
     allowed+=tuple(x|{EXPLORATION_FIELD} for x in allowed)
@@ -526,7 +669,29 @@ def source(manifest_path):
     binary_sha=hashlib.sha256(paths["native_binary"].read_bytes()).hexdigest()
     selected_fixed_E=(verified_enchant.read()[0]["static_enchant_E"]
                       if NATIVE_ENCHANT_FIELD in user else None)
+    selected_fresh=(SELECTED_FRESH_SEASON_FIELD in user)
+    need(not selected_fresh or (
+         paths["static_cache_json"] is not None and
+         user["scouts"]==1 and user["material_scouts"]==1 and
+         user["native_limit"]==6 and user["step"]==100 and
+         user.get(EXPLORATION_FIELD,"legacy_v015")=="legacy_v015" and
+         MANUAL_FIELD not in user and
+         NATIVE_ENCHANT_FIELD not in user and
+         NONCHMV_ENCHANT_FIELD not in user and
+         STAGE_FIELD not in user),
+         "B8_SELECTED_NO_LEGACY_OR_UNVERIFIED_ENCHANT_ENTRY")
     season_source=(
+        _admitted_selected_fresh_source(
+            manifest_path=manifest_path,
+            season=user[SELECTED_FRESH_SEASON_FIELD],
+            revision=user["native_revision"],user_scenario=doc,
+            flask_F=user["flask_F"],oil_hands=user["oil_hands"],
+            profile=profile,fillers=fillers,
+            cache_path=paths["static_cache_json"],
+            binary=paths["native_binary"],
+            seed_targets=user["seed_targets_B"],
+            weapon_layout=user["weapon_layout"])
+        if selected_fresh else
         _admitted_season_source(
             manifest_path=manifest_path,season=user[SEASON_FIELD],
             revision=user["native_revision"],user_scenario=doc,
@@ -636,6 +801,12 @@ def source(manifest_path):
                           else ("OPT_IN_ILVL_REFERENCE_PLUS_VERIFIED_FIXED_E"
                                 if NATIVE_ENCHANT_FIELD in user
                                 else "OPT_IN_ILVL_REFERENCE_BASE_B")}
+    if season_source is not None and season_source.get(
+            "fresh_selected_v436_admitted"):
+        plan["budget_source"]="ADMITTED_SELECTED_FRESH_SEASON_B8_V436"
+        plan["selected_source_replay_recomputed_at_native_entry"]=True
+        plan["selected_v435_identity_sha256"]=(
+            season_source["selected_session_identity_sha256"])
     if season_source is not None:
         plan["season_source_receipt_sha256"]=(
             season_source["season_source_identity"][

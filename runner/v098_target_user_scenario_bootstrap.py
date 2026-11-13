@@ -398,6 +398,8 @@ def _selected_season_profile_budget_preflight(*, user, profile, cfg, rows,
         "scenario_source_only":cfg,
         "selected_equipment":selected_equipment,
         "budget_preflight":proof,
+        "selected_fillers_source_only":copy.deepcopy(fillers) if fillers is not None else None,
+        "selected_weapon_layout_source_only":weapon_layout,
         "bound_source_identity":bound,
         "bound_source_identity_sha256":bind_sha,
         "original_v191_gear_tier_source_unadmitted":
@@ -2048,6 +2050,133 @@ def preview_from_environment_build(user,folder,binary,revision,*,
                 is not None,
             "v216_preflight_sha256":compilation.get("preflight_sha256")}
 
+
+
+
+def materialize_selected_verified_environment(*,user,folder,binary,revision,
+                                             environment_result,
+                                             selected_static_cache_path,
+                                             season_controls=None,
+                                             exploration_policy=None):
+    """v436: write an EXACT independently replayable selected v096 manifest.
+
+    This is the internal selected-only counterpart to the original plain
+    season writer, not a new Native engine or public gear recommendation.
+    The caller must use the separate v435 selected-session key as folder.
+    The v096.source() will independently replay all upstream originals and
+    v217 at plan time and before every Native/resume execution.
+    """
+    folder=pathlib.Path(folder).expanduser().resolve()
+    need(folder.name=="generated" and
+         type(selected_static_cache_path) in (str,pathlib.Path),
+         "B8_SELECTED_V436_GENERATED_DIR_AND_CACHE_REQUIRED")
+    cache=pathlib.Path(selected_static_cache_path).expanduser().resolve()
+    need(cache.is_file() and not cache.is_symlink(),
+         "B8_SELECTED_V436_STATIC_CACHE_REQUIRED")
+    result=preview_from_environment_build(
+        user,folder,binary,revision,
+        environment_result=environment_result,
+        season_controls=season_controls,
+        selected_static_cache_path=cache,
+        exploration_policy=exploration_policy)
+    future=result.get("v435_future_v106_session_key_unadmitted")
+    need(result.get("status")==
+             "B8_SELECTED_V096_COMPLETE_PROFILE_BUDGET_NOT_ADMITTED"
+         and type(future) is dict and
+         future.get("native_execution_authorized") is False
+         and folder.parent.name==future.get("session_key_preview")
+         and type(result.get("selected_fillers_source_only")) is list,
+         "B8_SELECTED_V436_SOURCE_REPLAY_OR_SESSION_ID_REQUIRED")
+    installation=environment_result["source_compilation"][
+        "verified_environment_install"]
+    receipt_path=pathlib.Path(installation["stage_output_path"]).resolve()
+    need(receipt_path.is_file() and not receipt_path.is_symlink(),
+         "B8_SELECTED_V436_INSTALLED_FILE_REQUIRED")
+    import v212_environment_manifest as installed_manifest
+    installed_doc,_=installed_manifest.read_json(receipt_path)
+    installed_manifest.verify_fresh_installed_environment(installed_doc)
+    need(installed_doc["manifest_sha256"]==installation["manifest_sha256"]==
+             result["budget_preflight"]["installed_v212_manifest_sha256"],
+         "B8_SELECTED_V436_INSTALLED_AND_G_BUDGET_SHA_DRIFT")
+    selected_inputs=environment_result["source_compilation"][
+        "v098_source_only_profile_inputs_unadmitted"]
+    raw_replay={
+        "schema":"v436_selected_fresh_v098_replay_v1",
+        "user":user,
+        "environment_result":environment_result,
+        "season_controls":season_controls,
+        "selected_final_source_sha256":
+            result["final_source_identity_sha256"],
+        "selected_v435_identity_sha256":future["identity_sha256"]}
+    replay_text=canonical(raw_replay)+"\n"
+    need(len(replay_text.encode("utf8"))<=12_000_000,
+         "B8_SELECTED_V436_REPLAY_MAX_SIZE")
+    manifest_source={
+        "schema":entry.SELECTED_FRESH_SEASON_SCHEMA,
+        "installed_environment_path":str(receipt_path),
+        "installed_manifest_sha256":installed_doc["manifest_sha256"],
+        "selected_replay_file":"v436_selected_source_replay.json",
+        "selected_replay_sha256":hashlib.sha256(
+            replay_text.encode("utf8")).hexdigest(),
+        "oil_by_hand":copy.deepcopy(selected_inputs["oil_by_hand"]),
+        "selected_v435_identity_sha256":future["identity_sha256"]}
+    typed=result["v096_typed_input_unadmitted"]
+    manifest={
+        "schema":entry.SCHEMA,
+        "profile_simc":"profile.simc",
+        "scenario_json":"scenario.json",
+        "fillers_json":"fillers.json",
+        "static_cache_json":str(cache),
+        "weapon_layout":result["selected_weapon_layout_source_only"],
+        "oil_hands":list(user["oil_hands"]),
+        "flask_F":typed["flask_F"],
+        "seed_targets_B":result["seed_targets_B_unadmitted"],
+        "native_binary":str(pathlib.Path(binary).expanduser().resolve()),
+        "native_revision":revision,
+        "output_dir":"simc_results",
+        "scouts":1,"material_scouts":1,
+        "native_limit":6,"step":100,"cancel_file":"CANCEL",
+        entry.SELECTED_FRESH_SEASON_FIELD:manifest_source,
+        **({entry.EXPLORATION_FIELD:exploration_policy}
+           if exploration_policy is not None else {})
+    }
+    file_contents={
+        "v436_selected_source_replay.json":replay_text,
+        "profile.simc":result["profile_simc"],
+        "scenario.json":canonical(typed["scenario"])+"\n",
+        "fillers.json":canonical(
+            result["selected_fillers_source_only"])+"\n",
+        "manifest.json":canonical(manifest)+"\n"}
+    # Match existing v098's no-overwrite discipline before any writes.
+    for name,text_data in file_contents.items():
+        target=folder/name
+        need(not target.is_symlink() and
+             (not target.exists() or
+              target.is_file() and
+              target.read_bytes()==text_data.encode("utf8")),
+             "B8_SELECTED_V436_EXISTING_FILE_CHANGED:"+name)
+    for name,text_data in file_contents.items():
+        put_once(folder/name,text_data)
+    plan=entry.run_manifest(folder/"manifest.json",plan_only=True)
+    need(plan["budget_source"]=="ADMITTED_SELECTED_FRESH_SEASON_B8_V436"
+         and plan["base_B"]==typed["base_B"]
+         and plan["final_T"]==typed["final_T"]
+         and plan["source_profile_sha256"]==
+             result["source_profile_sha256"]
+         and plan["selected_v435_identity_sha256"]==
+             future["identity_sha256"],
+         "B8_SELECTED_V436_NATIVE_PLAN_SOURCE_DRIFT")
+    return {
+        "schema":SCHEMA,
+        "status":"READY_SELECTED_SOURCE_LOCKED_V096_MANIFEST_ZERO_NATIVE",
+        "generated_manifest":str(folder/"manifest.json"),
+        "plan":plan,
+        "v435_selected_session_key":future["session_key_preview"],
+        "v435_selected_session_identity_sha256":future["identity_sha256"],
+        "source_profile_sha256":result["source_profile_sha256"],
+        "runtime_manifest_created":True,
+        "new_native_calls":0,
+        "network_calls":0}
 
 
 def run_from_verified_environment_build(user,folder,binary,revision,*,
