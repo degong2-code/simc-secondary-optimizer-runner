@@ -20,6 +20,10 @@ on:
       - runner/v154_blizzard_season_loot_index.py
       - tests/test_v155_all_expansion_autodiscovery.py
       - tests/test_v163_db2_zero_seed.py
+      - tests/test_v161_db2_source_provenance_offline.py
+      - tests/test_v216_environment_build_coordinator.py
+      - runner/v161_wago_db2_snapshot.py
+      - runner/v217_stage_execution_engine.py
       - tests/test_v113_local_web_api_offline.py
       - integration_probes/v181_windows_beta_packager.py
       - tests/test_v181_windows_beta_package_offline.py
@@ -56,6 +60,10 @@ jobs:
         run: python -m unittest discover -s tests -p 'test_v155_all_expansion_autodiscovery.py' -v
       - name: A1 v163 same-build DB2 source join (fixtures only)
         run: python -m unittest discover -s tests -p 'test_v163_db2_zero_seed.py' -v
+      - name: A6 v161 ten Wago CSV SHA and sealed reuse (synthetic source only)
+        run: python -m unittest discover -s tests -p 'test_v161_db2_source_provenance_offline.py' -v
+      - name: A6 v216 actual product path reuses DB2 without duplicate fetch
+        run: python -m unittest tests.test_v216_environment_build_coordinator.EnvironmentBuildCoordinatorTests.test_live_collector_reuse_by_build_without_old_season_or_native -v
       - name: A1 v113 HTTP boundary (offline fixtures only)
         run: python -m unittest discover -s tests -p 'test_v113_local_web_api_offline.py' -v
       - name: Stage v213 catalog from existing SYNTHETIC test fixture (CI only)
