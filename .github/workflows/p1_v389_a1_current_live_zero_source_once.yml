@@ -89,7 +89,9 @@ jobs:
                                   z.get("wcl_frozen") is False for z in zones),
                               "zone_expansion_id_count":len({
                                   z.get("expansion_id") for z in zones}),
-                              "requests":doc.get("wcl",{}).get("requests")}
+                              "requests":doc.get("wcl",{}).get("requests"),
+                              "zone_source_shape":doc.get("wcl",{}).get(
+                                  "zone_source_shape")}
                           receipt["blizzard_index_status"]={
                               k:v["status"] for k,v in
                               doc.get("blizzard",{}).get("endpoints",{}).items()}
