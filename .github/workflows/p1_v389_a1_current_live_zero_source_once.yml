@@ -1,0 +1,122 @@
+name: p1 v389 A1 zero-source official build and authenticated source once
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - .github/workflows/p1_v389_a1_current_live_zero_source_once.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  first-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    env:
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Discover current KR Retail build and sealed authenticated source in empty root
+        run: |
+          python - <<'PY'
+          import hashlib, json, os, pathlib, sys, tempfile
+          sys.path.insert(0, str(pathlib.Path("runner").resolve()))
+          import v289_retail_live_build_source as build
+          import v242_authenticated_season_source_stage as source
+          output=pathlib.Path("a1_v389_live_source_receipt.json")
+          receipt={"schema":"p1_v389_a1_source_boundary_receipt_v1",
+                   "zero_source_root":True,
+                   "no_preloaded_expansion_or_season_id":True,
+                   "no_preloaded_catalog_or_budget":True,
+                   "no_ai_selection":True,
+                   "native_calls":0,
+                   "product_environment_installed":False,
+                   "season_membership_verified":False}
+          try:
+              live=build.discover(region="KR")
+              receipt["retail"]={"status":live["status"],
+                   "region":live["region"],
+                   "game_build":live["game_build"],
+                   "blizzard_bpsv_sha256":live["source_sha256"]}
+              print("RETAIL_BUILD_DISCOVERED",live["game_build"],
+                    live["source_sha256"])
+              fields=source.FIELDS
+              available={k:bool(os.environ.get(k,"")) for k in fields}
+              # The code itself knows whether it can authenticate. Never
+              # expose the names/values of a user's credential settings.
+              if not all(available.values()):
+                  receipt["status"]="BLOCKED_CREDENTIALS_NOT_CONFIGURED_IN_ACTIONS"
+                  receipt["first_missing_stage"]="A1_AUTHENTICATED_SOURCE"
+                  print("A1_LIVE_AUTHENTICATED_SOURCE_BLOCKED_CREDENTIALS")
+              else:
+                  with tempfile.TemporaryDirectory(prefix="a1_v389_empty_") as td:
+                      stage=source.collect(
+                          stage_root=td,
+                          expected_game_build=live["game_build"],
+                          credentials={k:os.environ[k] for k in fields})
+                      receipt["source_stage_status"]=stage["status"]
+                      receipt["source_network_calls"]=stage["network_calls_by_stage"]
+                      receipt["source_current_season_verified"]=stage[
+                          "current_season_membership_verified"]
+                      receipt["season_join_ready"]=stage.get("season_join_ready",False)
+                      receipt["provider_zone_scope"]=stage.get("provider_zone_scope")
+                      report_path=stage.get("source_report_path")
+                      if report_path:
+                          path=pathlib.Path(report_path)
+                          raw=path.read_bytes()
+                          doc=json.loads(raw)
+                          zones=(doc.get("wcl",{}).get("zones") or [])
+                          receipt["source_report_sha256"]=hashlib.sha256(
+                              raw).hexdigest()
+                          receipt["source_report_bytes"]=len(raw)
+                          receipt["wcl"]={
+                              "status":doc.get("wcl",{}).get("status"),
+                              "error_code":doc.get("wcl",{}).get("error_code"),
+                              "expansion_count":len(doc.get("wcl",{}).get("expansions",[])),
+                              "zone_count":len(zones),
+                              "unfrozen_zone_count":sum(
+                                  z.get("wcl_frozen") is False for z in zones),
+                              "zone_expansion_id_count":len({
+                                  z.get("expansion_id") for z in zones}),
+                              "requests":doc.get("wcl",{}).get("requests")}
+                          receipt["blizzard_index_status"]={
+                              k:v["status"] for k,v in
+                              doc.get("blizzard",{}).get("endpoints",{}).items()}
+                          receipt["blizzard_direct_current_season_ids"]={
+                              k:v.get("data",{}).get("current_season_id")
+                              for k,v in doc.get("blizzard",{}).get("endpoints",{}).items()}
+                          # Any returned provider candidates are not enough
+                          # without v163 same-build raw DB2 and a unique join.
+                          receipt["status"]=(
+                              "A1_LIVE_AUTHENTICATED_CANDIDATES_OBSERVED_JOIN_PENDING"
+                              if stage.get("season_join_ready")
+                              else "A1_LIVE_AUTHENTICATED_SOURCE_JOIN_PENDING")
+                          print("A1_AUTHENTICATED_SOURCE_STAGE",stage["status"],
+                                receipt["wcl"]["status"],
+                                "ZONE_COUNT",len(zones))
+                      else:
+                          receipt["status"]="A1_LIVE_SOURCE_PATH_NOT_RETURNED"
+          except (build.RetailVersionBlocked,source.DiscoveryBlocked) as exc:
+              receipt["status"]="A1_LIVE_SOURCE_BLOCKED"
+              receipt["error_code"]=str(exc)[:180]
+              print("A1_LIVE_SOURCE_BLOCKED",type(exc).__name__)
+          output.write_text(json.dumps(receipt,sort_keys=True,ensure_ascii=False,
+                            indent=2)+"\n",encoding="utf8")
+          print("A1_RECEIPT_STATUS",receipt["status"],"NO_NATIVE")
+          PY
+      - name: Preserve bounded credential-free source boundary receipt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-v389-zero-source-boundary-${{ github.sha }}
+          path: a1_v389_live_source_receipt.json
+          if-no-files-found: warn
+          retention-days: 14
