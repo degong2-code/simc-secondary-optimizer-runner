@@ -32,14 +32,14 @@ class CompletionContractTests(unittest.TestCase):
         self.assertEqual(gate.render(self.scenario()),
                          (ROOT/gate.GENERATED).read_text(encoding="utf8"))
         self.assertEqual(gate.run(["--check"]),0)
-        self.assertEqual(sum(x["generic"]["state"]=="PASS" for x in rows),7)
+        self.assertEqual(sum(x["generic"]["state"]=="PASS" for x in rows),8)
         self.assertEqual(sum(x["current_source"]["state"]=="PASS"
-                             for x in rows),7)
+                             for x in rows),8)
         historical={x["id"] for x in rows
                     if x["historical"]["state"]=="PASS"}
         # New scope-backed history is additive, not a fixed count forever.
         self.assertTrue({"A8","A10","A11","G2"}.issubset(historical))
-        self.assertFalse(any(gate.complete(x) for x in rows))
+        self.assertEqual([x["id"] for x in rows if gate.complete(x)],["A8"])
 
     def test_a4_a6_generic_pass_is_scoped_and_product_unverified(self):
         data=self.scenario()
@@ -55,7 +55,7 @@ class CompletionContractTests(unittest.TestCase):
                    for key in row["generic"]["evidence"]}
             self.assertIn("CURRENT_SOURCE_REAL",kinds)
             self.assertIn("GENERALIZATION_REGRESSION",kinds)
-        self.assertEqual(data["policy"]["next_review"],"A8")
+        self.assertEqual(data["policy"]["next_review"],"A9")
 
     def test_a7_scoped_source_and_generic_complete_without_product_e2e(self):
         data=self.scenario()
@@ -65,7 +65,7 @@ class CompletionContractTests(unittest.TestCase):
         self.assertEqual(row["product_integration"]["state"],"PENDING")
         self.assertFalse(gate.complete(row))
         self.assertEqual(gate.legacy_badge(row),"ENGINE_GENERALIZATION_PASS")
-        self.assertEqual(data["policy"]["next_review"],"A8")
+        self.assertEqual(data["policy"]["next_review"],"A9")
 
     def test_cannot_advance_a8_until_a7_generic_and_current_proven(self):
         for axis in ("generic","current_source"):
@@ -130,6 +130,30 @@ class CompletionContractTests(unittest.TestCase):
         with self.assertRaisesRegex(gate.ContractInvalid,
                 "A7_PREMATURE_VERIFIED_CLAIM_BEFORE_A4_A6_GENERIC"):
             gate.validate(doc)
+
+    def test_a8_scoped_three_axes_are_complete_but_final_e2e_is_pending(self):
+        doc=self.scenario()
+        row=self.row(doc,"A8")
+        self.assertTrue(gate.complete(row))
+        self.assertEqual(doc["policy"]["next_review"],"A9")
+        self.assertEqual(doc["policy"]["full_product_e2e"],"PENDING")
+        self.assertEqual({doc["evidence"][key]["kind"]
+            for key in row["generic"]["evidence"]},
+            {"CURRENT_SOURCE_REAL","GENERALIZATION_REGRESSION"})
+
+    def test_a9_cannot_skip_a8_generic_or_current_source(self):
+        for axis in ("generic","current_source"):
+            with self.subTest(axis=axis):
+                doc=self.scenario()
+                self.row(doc,"A8")["generic"]={"state":"PENDING","evidence":[]}
+                if axis=="current_source":
+                    self.row(doc,"A8")["current_source"]={
+                        "state":"PENDING","evidence":[]}
+                self.row(doc,"A8")["product_integration"]={
+                    "state":"PENDING","evidence":[]}
+                with self.assertRaisesRegex(gate.ContractInvalid,
+                    "NEXT_REVIEW_SKIPPED_GENERIC_VALIDATION:A8"):
+                    gate.validate(doc)
 
     def test_historical_receipt_cannot_replace_current_or_generic_proof(self):
         doc=self.scenario()

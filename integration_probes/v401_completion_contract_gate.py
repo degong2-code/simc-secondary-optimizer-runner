@@ -126,8 +126,22 @@ def validate(data,root=ROOT):
     a7=entries[ALL_IDS.index("A7")]
     a7_source_reviewed=(a7["generic"]["state"]=="PASS" and
                         a7["current_source"]["state"]=="PASS")
-    expected=(unresolved[0] if unresolved else
-              ("A8" if a7_source_reviewed else "A7"))
+    if unresolved:
+        expected=unresolved[0]
+    elif not a7_source_reviewed:
+        expected="A7"
+    else:
+        # Review actual element scope in order, without making the separate
+        # user/product axes an artificial prerequisite for source review.
+        pending=[row["id"] for row in entries[ALL_IDS.index("A8"):]
+                 if (row["generic"]["state"]=="PENDING" or
+                     row["current_source"]["state"]=="PENDING")]
+        if pending:
+            expected=pending[0]
+        else:
+            pending_product=[row["id"] for row in entries
+                if row["product_integration"]["state"]=="PENDING"]
+            expected=pending_product[0] if pending_product else "ALL_REVIEWED"
     need(policy.get("next_review")==expected,
          "NEXT_REVIEW_SKIPPED_GENERIC_VALIDATION:"+expected)
     if unresolved:
@@ -200,7 +214,9 @@ def render(data):
            if data["policy"]["next_review"]=="A8" else
            "(A4~A6 범용 검증 완료 후 A7 진입)"
            if data["policy"]["next_review"]=="A7" else
-           "(A4~A6 범용성 미검증을 A7로 미루지 않음)"),
+           "(순차 범용·현재 원본 검토 진행; 제품 통합은 독립 축)"
+           if data["policy"]["next_review"] in ALL_IDS else
+           "(모든 기능별 검토가 끝난 상태; 전체 제품 E2E 별도)"),
         "",
         "| ID | 기능 | 적용 | 범용성 | 현재 원본 | 제품 통합 | 역사 증거 | 요소 완료 |",
         "|---|---|---|---|---|---|---|---|",

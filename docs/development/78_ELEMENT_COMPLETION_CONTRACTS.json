@@ -6,7 +6,7 @@
     "current_source_acceptance": "actual current game-build provider source + exact SHA + correct consumed scope",
     "product_acceptance": "actual user input through season environment and SimC DPS/SEM/95% output; separate final product E2E",
     "optional_acceptance": "NOT_APPLICABLE only with concrete feature-specific reason and owner evidence; no blanket exemptions",
-    "next_review": "A8",
+    "next_review": "A9",
     "a7_may_be_next_only_after_generic_review_of": [
       "A4",
       "A5",
@@ -157,6 +157,33 @@
       "note": "docs/development/notes/2026-11-13_p1-v407-a8-historical-source-binary-identity-and-alias-guard.md",
       "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43114134208",
       "tested_sha": "d8620d733140b148deb534975485f45ee22cf118",
+      "supports": [
+        "A8"
+      ]
+    },
+    "a8_current_v417": {
+      "kind": "CURRENT_SOURCE_REAL",
+      "note": "docs/development/notes/2026-11-13_p1-v419-a8-runtime-sha-cache-snapshot-evidence.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43394408756",
+      "tested_sha": "89d4810baf5e05f1c5c6f355f39a5f35ca9ec4e7",
+      "supports": [
+        "A8"
+      ]
+    },
+    "a8_generic_v113": {
+      "kind": "GENERALIZATION_REGRESSION",
+      "note": "docs/development/notes/2026-11-13_p1-v419-a8-runtime-sha-cache-snapshot-evidence.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43391249405",
+      "tested_sha": "5732defbeba44db51427e7c1172724365ccca298",
+      "supports": [
+        "A8"
+      ]
+    },
+    "a8_product_v417": {
+      "kind": "PRODUCT_INTEGRATION_REAL",
+      "note": "docs/development/notes/2026-11-13_p1-v419-a8-runtime-sha-cache-snapshot-evidence.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43394408756",
+      "tested_sha": "89d4810baf5e05f1c5c6f355f39a5f35ca9ec4e7",
       "supports": [
         "A8"
       ]
@@ -358,16 +385,23 @@
       "scope": "BASE",
       "acceptance": "SimC 바이너리 SHA·버전 기록, DPS 캐시 구별, 저장된 결과 표시; 게임 빌드 번호 일치/컴파일 계보 인증 불필요",
       "generic": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "a8_current_v417",
+          "a8_generic_v113"
+        ]
       },
       "current_source": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "a8_current_v417"
+        ]
       },
       "product_integration": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "a8_product_v417"
+        ]
       },
       "historical": {
         "state": "PASS",
