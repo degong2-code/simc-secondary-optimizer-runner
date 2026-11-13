@@ -4,6 +4,8 @@
 
 > **최신 사용자 일반화 합격 판정·인계 필수:** [현재 ZERO-SOURCE 범용 발견 PASS 정책](POLICY_ZERO_SOURCE_AUTODISCOVERY_GENERALIZATION_20261113.md)과 [최신 v386 단일 인계](../CHAT_CONTINUITY_HANDOFF_20261113_P1_V386_ZERO_SOURCE_GENERALIZATION.md)를 매번 먼저 읽는다. 정상 승인 API 키/접속 가능 조건에서 **현재 실제 시즌 무정답 ZERO-SOURCE 성공 + 하드코딩 방지 다른 시즌 변형 회귀**는 미래 시즌 대응 **ENGINE 기능**의 PASS; 미공개 미래 시즌 자료 미실측 자체는 미완료 사유 아님. 현재 시즌 아이템/예산 SEASON READY 및 전체 USER-E2E는 별도 증거. A1부터 A~H 78개 누락 없이 처리, 각 ID/원본/SHA/실제 실행 범위/후속 재개 조건을 기록한다.
 
+> **배포 구성 연속성:** [앱 파일/기능 추적 정본](APP_PACKAGE_FILE_REGISTRY_20261113.md)의 단일 소스·패키지 파일 TXT 자동 생성 원칙을 따른다. `v181_windows_beta_packager.select()`가 배포 후보를 선택하고 `--list-files`는 **같은 결과**를 읽기용 TXT로 출력한다. 수동 복제/서로 다른 allowlist 금지. `FILE_MAP`→78개 원장으로 기능 책임과 실제 READY 범위를 관리하고, 패키지 포함 여부를 코드/Native/최종 제품 PASS로 오해하지 않는다.
+
 ## 매 작업 착수 전
 
 > **필수 운영 헌장:** [범용 개발·정합성·검증 운영 헌장](OPERATING_CHARTER_FUTURE_SEASONS_AND_EVIDENCE_20261113.md)의 시즌 독립 ENGINE / 실제 SEASON / USER-RUN 계층, 제로베이스 3수준, 78개 상태·증거 분리, 최초 실패 경계 분석, M0–M4 및 변경 비용 원칙을 개발 전 확인한다. 사용자 '진행' 전 코드/Actions/Native는 시작하지 않는다.
