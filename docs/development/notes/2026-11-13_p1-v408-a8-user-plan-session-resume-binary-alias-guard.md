@@ -5,7 +5,7 @@
 - **Prior evidence:** [A8 v407 scoped historic + source regression](2026-11-13_p1-v407-a8-historical-source-binary-identity-and-alias-guard.md); v342/v344 unchanged Windows evidence
 - **Decision:** `EXTEND` only existing v113 plan and resume binary-path checks; `REUSE` v106 SHA session identity and v291 JSON2/DPS checks
 - **Changes:** Reject direct symlink input before `resolve()` in `LocalJobs.plan` and saved `args_for_existing`; add two zero-Native user-API negative regressions; no identity schema, oil, budget, or cache changes
-- **Verification:** v113 offline existing Linux/Windows CI will decide PASS/FAIL on this commit; no new SimC call; historic v342/v344 scope unchanged
+- **Verification:** first v408 v113 Linux CI exposed one NEW test expectation error (internal SessionBlocked is translated into HTTPException 422 by existing args_for_existing); corrected assertion in following focused commit. The same broad v113 run also reported unrelated existing v212/v216/UI regressions; those are NOT A8 PASS. Focused source/HTTP regressions and 78-contract workflow must be read separately after execution.
 - **Remaining:** A8 generic/current_source/product_integration remain PENDING; a single current real request still needs source revision/engine bytes/compiled build relation checked without treating a CLI banner as independent compiled DB proof
 - **Efficiency:** Native 0; DB2 0; new SimC source downloads 0; SHA computed only by unchanged v106 session path; no separate Gate or duplicated Native run
 

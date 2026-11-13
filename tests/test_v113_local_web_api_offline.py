@@ -1608,9 +1608,11 @@ class LocalWebAPIOffline(unittest.TestCase):
         original.write_text(json.dumps(manifest),encoding="utf8")
         with mock.patch.object(web.subprocess,"Popen",
                 side_effect=AssertionError("NATIVE_MUST_NOT_START")) as worker:
-            with self.assertRaisesRegex(web.sessions.SessionBlocked,
-                         "SESSION_BINARY_SYMLINK_BLOCKED"):
+            with self.assertRaises(web.HTTPException) as caught:
                 self.app.state.jobs.args_for_existing(folder)
+        self.assertEqual(caught.exception.status_code,422)
+        self.assertEqual(caught.exception.detail["code"],
+                         "SESSION_BINARY_SYMLINK_BLOCKED")
         worker.assert_not_called()
 
     def test_plan_builds_real_pinned_paladin_manifest_without_native(self):

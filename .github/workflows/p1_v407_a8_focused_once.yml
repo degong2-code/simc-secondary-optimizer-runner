@@ -29,5 +29,16 @@ jobs:
             tests.test_v275_pinned_simc_compiler_inputs \
             tests.test_v277_zero_history_native_G_stage \
             tests.test_p3_fz_existing_simc_binary_identity
+      - name: Existing HTTP test dependencies (no SimC installation)
+        run: python -m pip install --disable-pip-version-check -r requirements-web-test.txt
+      - name: A8 user plan/resume aliases and intact session reuse (no Native)
+        env:
+          PYTHONPATH: runner:integration_probes:.
+        run: |
+          python -m unittest -v \
+            tests.test_v113_local_web_api_offline.LocalWebAPIOffline.test_a8_binary_symlink_cannot_enter_user_plan_or_spawn_native \
+            tests.test_v113_local_web_api_offline.LocalWebAPIOffline.test_a8_saved_binary_symlink_is_blocked_on_resume_preflight \
+            tests.test_v113_local_web_api_offline.LocalWebAPIOffline.test_plan_builds_real_pinned_paladin_manifest_without_native \
+            tests.test_v113_local_web_api_offline.LocalWebAPIOffline.test_legacy_session_without_stage_receipt_remains_resumable
       - name: Existing 78-element claim consistency
         run: python integration_probes/v401_completion_contract_gate.py --check
