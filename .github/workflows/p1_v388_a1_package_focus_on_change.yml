@@ -13,6 +13,7 @@ on:
       - tests/test_v165_current_season_gear_pool.py
       - tests/test_v403_a7_selected_season_wse_pipeline.py
       - tests/test_v405_a7_selected_source_contract.py
+      - tests/test_v405_a7_v216_auto_stage_integration.py
       - runner/v405_a7_selected_source_contract.py
       - tests/test_v166_compact_product_gear_db.py
       - tests/test_v167_product_season_gear_adapter.py
@@ -76,6 +77,7 @@ jobs:
           python -m unittest discover -s tests -p 'test_v167_product_season_gear_adapter.py' -v
           python -m unittest discover -s tests -p 'test_v403_a7_selected_season_wse_pipeline.py' -v
           python -m unittest discover -s tests -p 'test_v405_a7_selected_source_contract.py' -v
+          python -m unittest discover -s tests -p 'test_v405_a7_v216_auto_stage_integration.py' -v
       - name: A6 v161 ten Wago CSV SHA and sealed reuse (synthetic source only)
         run: python -m unittest discover -s tests -p 'test_v161_db2_source_provenance_offline.py' -v
       - name: A6 v216 actual product path reuses DB2 without duplicate fetch
