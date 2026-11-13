@@ -1,5 +1,6 @@
 # v439: one target 70783 crafted MAIL head replaces tier head; chest restores 4pc.
 # Native does NOT run without exact workflow-only opt-in commit marker.
+# Approved v439 one-case opt-in: only this workflow changed in this commit.
 name: P1 v439 B8 one 70783 crafted-head 4pc actual native once
 on:
   push:
