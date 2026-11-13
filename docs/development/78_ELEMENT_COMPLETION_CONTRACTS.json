@@ -6,7 +6,7 @@
     "current_source_acceptance": "actual current game-build provider source + exact SHA + correct consumed scope",
     "product_acceptance": "actual user input through season environment and SimC DPS/SEM/95% output; separate final product E2E",
     "optional_acceptance": "NOT_APPLICABLE only with concrete feature-specific reason and owner evidence; no blanket exemptions",
-    "next_review": "B1",
+    "next_review": "B2",
     "a7_may_be_next_only_after_generic_review_of": [
       "A4",
       "A5",
@@ -267,6 +267,33 @@
       "tested_sha": "89d4810baf5e05f1c5c6f355f39a5f35ca9ec4e7",
       "supports": [
         "A11"
+      ]
+    },
+    "b1_source_v417": {
+      "kind": "CURRENT_SOURCE_REAL",
+      "note": "docs/development/notes/2026-11-13_p1-v423-b1-26dps-contract-scoped-evidence.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43394408756",
+      "tested_sha": "89d4810baf5e05f1c5c6f355f39a5f35ca9ec4e7",
+      "supports": [
+        "B1"
+      ]
+    },
+    "b1_generic_v113": {
+      "kind": "GENERALIZATION_REGRESSION",
+      "note": "docs/development/notes/2026-11-13_p1-v423-b1-26dps-contract-scoped-evidence.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43391249405",
+      "tested_sha": "5732defbeba44db51427e7c1172724365ccca298",
+      "supports": [
+        "B1"
+      ]
+    },
+    "b1_history_v176": {
+      "kind": "HISTORICAL_SCOPED",
+      "note": "docs/development/notes/2026-11-13_p1-v423-b1-26dps-contract-scoped-evidence.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40972829357",
+      "tested_sha": "5bba261f01da150a3b7cc881ff1cf7969d7c780c",
+      "supports": [
+        "B1"
       ]
     }
   },
@@ -588,20 +615,27 @@
       "scope": "BASE",
       "acceptance": "증강 제외 26 전문화 및 장비/무기 규칙",
       "generic": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "b1_source_v417",
+          "b1_generic_v113"
+        ]
       },
       "current_source": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "b1_source_v417"
+        ]
       },
       "product_integration": {
         "state": "PENDING",
         "evidence": []
       },
       "historical": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "b1_history_v176"
+        ]
       }
     },
     {

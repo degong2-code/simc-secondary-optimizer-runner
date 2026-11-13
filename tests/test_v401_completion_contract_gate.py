@@ -183,6 +183,17 @@ class CompletionContractTests(unittest.TestCase):
         self.assertEqual(row["historical"]["state"],"PASS")
         self.assertEqual(doc["policy"]["full_product_e2e"],"PENDING")
 
+    def test_b1_source_and_generic_scope_do_not_promote_26_product_e2e(self):
+        doc=self.scenario()
+        row=self.row(doc,"B1")
+        self.assertEqual(row["generic"]["state"],"PASS")
+        self.assertEqual(row["current_source"]["state"],"PASS")
+        self.assertEqual(row["historical"]["state"],"PASS")
+        self.assertEqual(row["product_integration"]["state"],"PENDING")
+        self.assertFalse(gate.complete(row))
+        self.assertEqual(doc["policy"]["next_review"],"B2")
+        self.assertEqual(doc["policy"]["full_product_e2e"],"PENDING")
+
     def test_a10_cannot_skip_a9_generic_source(self):
         doc=self.scenario()
         self.row(doc,"A9")["generic"]={"state":"PENDING","evidence":[]}
