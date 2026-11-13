@@ -32,9 +32,9 @@ class CompletionContractTests(unittest.TestCase):
         self.assertEqual(gate.render(self.scenario()),
                          (ROOT/gate.GENERATED).read_text(encoding="utf8"))
         self.assertEqual(gate.run(["--check"]),0)
-        self.assertEqual(sum(x["generic"]["state"]=="PASS" for x in rows),6)
+        self.assertEqual(sum(x["generic"]["state"]=="PASS" for x in rows),7)
         self.assertEqual(sum(x["current_source"]["state"]=="PASS"
-                             for x in rows),6)
+                             for x in rows),7)
         self.assertEqual(sum(x["historical"]["state"]=="PASS"
                              for x in rows),3)
         self.assertFalse(any(gate.complete(x) for x in rows))
@@ -53,7 +53,30 @@ class CompletionContractTests(unittest.TestCase):
                    for key in row["generic"]["evidence"]}
             self.assertIn("CURRENT_SOURCE_REAL",kinds)
             self.assertIn("GENERALIZATION_REGRESSION",kinds)
-        self.assertEqual(data["policy"]["next_review"],"A7")
+        self.assertEqual(data["policy"]["next_review"],"A8")
+
+    def test_a7_scoped_source_and_generic_complete_without_product_e2e(self):
+        data=self.scenario()
+        row=self.row(data,"A7")
+        self.assertEqual(row["generic"]["state"],"PASS")
+        self.assertEqual(row["current_source"]["state"],"PASS")
+        self.assertEqual(row["product_integration"]["state"],"PENDING")
+        self.assertFalse(gate.complete(row))
+        self.assertEqual(gate.legacy_badge(row),"ENGINE_GENERALIZATION_PASS")
+        self.assertEqual(data["policy"]["next_review"],"A8")
+
+    def test_cannot_advance_a8_until_a7_generic_and_current_proven(self):
+        for axis in ("generic","current_source"):
+            with self.subTest(axis=axis):
+                data=self.scenario()
+                self.row(data,"A7")[axis]={"state":"PENDING","evidence":[]}
+                if axis=="current_source":
+                    self.row(data,"A7")["generic"]={
+                        "state":"PENDING","evidence":[]}
+                with self.assertRaisesRegex(
+                      gate.ContractInvalid,
+                      "NEXT_REVIEW_SKIPPED_GENERIC_VALIDATION:A7"):
+                    gate.validate(data)
 
     def test_a4_cannot_claim_generic_pass_from_current_only_source(self):
         doc=self.scenario()
