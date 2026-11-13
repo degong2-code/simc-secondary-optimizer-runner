@@ -3,9 +3,13 @@ import copy
 import json
 import os
 from pathlib import Path
+import sys
 import tempfile
 import unittest
 
+# Standalone unittest discovery does not add runner/ to sys.path;
+# v167's display-only v332 dependency is intentionally runner-local.
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"runner"))
 from runner import v167_product_season_gear_adapter as adapter
 
 
