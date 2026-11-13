@@ -1,3 +1,5 @@
+> **v405 최신 진행 규칙:** [A7 실제 원본 ZERO-SOURCE + 변경 시즌/빌드 regression](notes/2026-11-13_p1-v405-a7-automated-current-source-selection-verified.md)으로 `generic/current_source=PASS`일 때만 `next_review=A8`을 허용하도록 [v401 validator](../../integration_probes/v401_completion_contract_gate.py)와 부정 테스트를 개정. **A7 product_integration=PENDING**은 사라지지 않고 78개 요소 COMPLETE/전체 E2E를 차단한다. A8 검토는 미완료 downstream user→SimC 통합의 승인이나 완료가 아님. [정책 CI #43376626773](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43376626773) **16 PASS**.
+
 # 78개 요소 완료 계약: 정책이 실제 진행을 통제하는 최소 강제 절차 (v401)
 
 > 2026-11-13 사용자 직접 승인: **반복 지적 없이**, 어떤 ChatGPT 채팅에서 개발하더라도 범용성·현재 시즌 원본·사용자 제품 통합을 **누락·혼동·성급히 PASS 선언하지 못하도록** 구조화 데이터/자동 회귀/단일 완료 판정 절차를 유지한다. 78개 Native 재실행, 전 품목 인증, 새 제품 엔진, 미래 미출시 시즌의 실측 선행 Gate를 만들지 않는다.
