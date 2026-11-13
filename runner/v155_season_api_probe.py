@@ -258,18 +258,29 @@ def run_probe(blizzard_id,blizzard_secret,wcl_id=None,wcl_secret=None,
     if wcl_id:
         wcltoken=oauth_token(WCL_BASE+"/oauth/token",wcl_id,wcl_secret,
                             transport=transport)
-        def graphql(query,variables=None):
+        report["wcl"]["original_graphql_http_bodies"]={}
+        def graphql(query,variables=None,*,source_name):
+            # The GraphQL body contains only our fixed query and parameters,
+            # never the OAuth bearer. Fingerprint both request *identity*
+            # and exact public provider response without retaining raw data.
             payload=json.dumps({"query":query,"variables":variables or {}},
                     separators=(",",":")).encode("utf8")
             report["wcl"]["requests"]+=1
-            return request_json(WCL_BASE+"/api/v2/client",
+            proof={}
+            result=request_json(WCL_BASE+"/api/v2/client",
                      method="POST",data=payload,headers={
                          "Authorization":"Bearer "+wcltoken,
                          "Content-Type":"application/json"},
-                     transport=transport)
+                     transport=transport,source_proof=proof)
+            if proof:
+                report["wcl"]["original_graphql_http_bodies"][source_name]={
+                    "request_body_sha256":hashlib.sha256(payload).hexdigest(),
+                    **proof}
+            return result
         try:
             exps=parse_wcl_expansions(graphql(
-                "{ worldData { expansions { id name } } }"))
+                "{ worldData { expansions { id name } } }",
+                source_name="expansion_index"))
             report["wcl"]["expansions"]=exps
             # WCL documents zones(expansion_id: Int) as optional.
             # Fetch all WCL expansions in one bounded request, then let
@@ -279,7 +290,7 @@ def run_probe(blizzard_id,blizzard_secret,wcl_id=None,wcl_secret=None,
               id name frozen expansion { id }
               encounters { id name journalID }
             } } }"""
-            zone_doc=graphql(zone_query)
+            zone_doc=graphql(zone_query,source_name="all_expansion_zones")
             report["wcl"]["zone_source_shape"]=summarize_wcl_zone_shape(
                 zone_doc)
             zone_rows=parse_wcl_zones(zone_doc,require_expansion=True)
