@@ -4,7 +4,7 @@
 
 ## 1. 왜 A4~A6이 뒤로 밀렸는가, 어떻게 차단했는가
 
-A1~A3는 `ENGINE_AUTODISCOVERY_PASS`라고 판정했으나, A4~A6은 실제 원본 SHA·봉인·카탈로그 소유권에 집중해 `READY_SCOPED`까지만 기록하고 **동일 정책의 범용성 판정을 생략**했다. A7 다음으로 넘어간 뒤 사용자가 지적했으며, 이는 테스트 불충분을 먼저 입증한 것이 아니라 **독립 검증 축·다음 단계 검사 부재**라는 운영 구조의 결함이었다.
+A1~A3는 `ENGINE_AUTODISCOVERY_PASS`라고 판정했으나, A4~A6은 실제 원본 SHA·봉인·카탈로그 소유권에 집중해 `READY_SCOPED`까지만 기록하고 **동일 정책의 범용성 판정을 생략**했다. A7을 다음 과제로 지정한 시점에 사용자가 지적했으며, 이는 테스트 불충분을 먼저 입증한 것이 아니라 **독립 검증 축·다음 단계 검사 부재**라는 운영 구조의 결함이었다.
 
 [v401 정책](../POLICY_78_ELEMENT_COMPLETION_GATE_V401.md)과 [단일 JSON 완료 계약](../78_ELEMENT_COMPLETION_CONTRACTS.json)에서 78요소의 `generic/current_source/product_integration/historical`을 분리하고, [자동 검사](../../../integration_probes/v401_completion_contract_gate.py)가 PASS에 **해당 ID 근거·실 커밋·실 Actions URL·노트·범주별 증거**를 요구하도록 추가. A4~A6의 범용성 증거가 아직 없으면 `next_review=A4/A5/A6`, A7 READY 선언 불가. 기존 수작업 상세 원장 마지막 칸과 [생성용 사용자 상태표](../78_ELEMENT_STATUS_GENERATED.md)의 일치도 CI 확인. 검증은 GitHub **코드·주장 정합**이지 외부 네트워크 사실을 다시 증명하는 Native가 아님.
 
