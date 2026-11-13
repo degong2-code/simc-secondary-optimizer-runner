@@ -751,7 +751,7 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         self.assertEqual(count,18) # 2 OAuth, 4 Blizzard, 2 WCL + 10 Wago
         self.assertEqual(first["network_calls_by_stage"],18)
         self.assertEqual(first["season_discovery"]["status"],
-                         "AUTHENTICATED_SOURCE_DISCOVERED_SEASON_JOIN_PENDING")
+                         "AUTHENTICATED_SOURCE_INCOMPLETE_SEASON_JOIN_PENDING")
         self.assertFalse(first["season_discovery"]["current_season_membership_verified"])
         self.assertEqual(first["season_join"]["status"],
                          "LIVE_SEASON_SCOPE_AMBIGUOUS_PENDING")

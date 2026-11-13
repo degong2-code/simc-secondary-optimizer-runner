@@ -1,0 +1,27 @@
+name: p1 v411 source-driven fresh gear smoke offline
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - tests/test_v254_fresh_ordinary_gear_in_build.py
+      - tests/test_v238_fresh_product_gear_chain.py
+      - tests/test_v216_environment_build_coordinator.py
+      - .github/workflows/p1_v411_fresh_gear_source_contract_focused.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  fresh-gear:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Source attribution and fresh gear contracts, no Native
+        run: |
+          python -m unittest -v \
+            tests.test_v238_fresh_product_gear_chain \
+            tests.test_v254_fresh_ordinary_gear_in_build \
+            tests.test_v216_environment_build_coordinator.EnvironmentBuildCoordinatorTests.test_blizzard_wcl_authenticated_stage_runs_before_wago_and_reuses

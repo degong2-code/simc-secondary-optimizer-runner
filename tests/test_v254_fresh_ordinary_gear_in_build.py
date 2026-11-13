@@ -51,7 +51,10 @@ class FreshOrdinaryGearSource(unittest.TestCase):
                        "slot":inventory,
                        "acquisition_sources":[
                            {"source":"raid_journal",
-                            "season_evidence":"UNKNOWN_UNSCOPED_JOURNAL"}]}]}
+                            "season_evidence":"DB2_DISPLAY_SEASON_MATCH",
+                             "display_season_id":47,
+                             "journal_instance_id":301,
+                             "journal_encounter_id":302}]}]}
         path=self.root/"v163_source.json"
         path.write_text(json.dumps(row),encoding="utf8")
         self.write_csv("Item.csv",
