@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER — 검색 가능한 개발 기능 지도
 
+> **A5 WCL 원본 v399 READY (현재 KR70783 source 범위):** [실 WCL GraphQL 2개 요청/응답 body SHA·동일 빌드 DB2 활성 raid/M+ 조인](notes/2026-11-13_p1-v399-a5-wcl-original-graphql-source-ready.md). [실 인증 Actions #43365490208](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43365490208) WCL expansion 296B+전체 zone 23,857B, [오프라인 #43365447503](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43365447503) **104 PASS/1 SKIP**. WCL source만으로 item/WSE 전체를 승인하지 않음. 78원장 **ENGINE 3·현재 READY 2·역사 READY 3·PENDING 70**. 다음 A6 원본 10 DB2 table SHA/캐시 재사용 재검증.
+
 > **A4 기본 Blizzard 원본 역할 검증 완료 v398:** [4개 인증 index HTTP SHA·v242 봉인·실제 장비/아이템 Wago/SimC 소유권·선택 v332 한국어 표시명 격리](notes/2026-11-13_p1-v398-a4-blizzard-source-owner-base-scoped-ready.md). [Actions #43364420119](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43364420119) **101 PASS/1 SKIP/0 FAIL**. **A4 현재 BASE 인덱스 범위만 READY_SCOPED**, A7 아이템 시즌/WSE·수치 인증 별도. 78개 **A1~A3 ENGINE PASS 3 / A4 현 BASE READY 1 / A10·A11·G2 역사 READY 3 / 71 PENDING**, 다음 A5 WCL 원본.
 
 > **A4 진행 v397 (완료 아님):** [Blizzard 네 인증 API 원문 HTTP body SHA/bytes 구현·실 Actions 증거](notes/2026-11-13_p1-v397-a4-blizzard-original-http-body-provenance-progress.md) — [#43359408019](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43359408019) 4개 원본 SHA/응답 길이 확인, 신규 네트워크 엔드포인트/Native0. 선택한 실제 item/contents 원본 소유자·제품 소비 정합은 **A4 PENDING_SCOPE**. A1–A3 범용 ENGINE PASS 유지.
