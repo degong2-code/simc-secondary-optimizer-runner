@@ -92,6 +92,33 @@ def _budget_source(source,build):
     return source,mode
 
 
+def _journal_origin_current(row, display_season, *, raid):
+    """Only a source-backed, unconditional journal occurrence may qualify.
+
+    A currently observed raid zone is not evidence that an item guarded by
+    WorldStateExpressionID is obtainable. An unscoped raid item is allowed
+    only when WCL/DB2 already selected that active raid in v163; unscoped
+    M+ loot must never be inferred current merely from a dungeon's name.
+    Other independent journal origins can still establish eligibility.
+    """
+    if type(row) is not dict or type(display_season) is not int or display_season<=0:
+        return False
+    if row.get("source") != ("raid_journal" if raid else "mplus_journal"):
+        return False
+    if (type(row.get("world_state_expression_id")) is not int or
+            row["world_state_expression_id"]!=0 or
+            type(row.get("display_season_id")) is not int):
+        return False
+    if any(type(row.get(key)) is not int or row[key]<=0
+           for key in ("journal_encounter_id","journal_instance_id")):
+        return False
+    season=row["display_season_id"]
+    evidence=row.get("season_evidence")
+    return (
+        (season==display_season and evidence=="DB2_DISPLAY_SEASON_MATCH") or
+        (raid and season==0 and evidence=="UNKNOWN_UNSCOPED_JOURNAL"))
+
+
 def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALLED):
     need(db2.get("schema")=="v163_zero_seed_db2_join_v1"
          and db2.get("source_provider")=="WAGO_TOOLS_PINNED_DB2_WCL_LIVE",
@@ -158,10 +185,12 @@ def compile_pool(db2,delve,sparse_path,effect_path=None,*,budget_source=_INSTALL
              "SLOT_MISMATCH_OR_NOT_EQUIPMENT")
         source_names={x["source"] for x in row["sources"]}
         craft="selectable_stat_craft" in source_names
-        raid="raid_journal" in source_names
+        raid=any(_journal_origin_current(
+                 x,db2["db2_display_season_id"],raid=True)
+                 for x in row["sources"])
         delve_ok="localbots_delve_pool" in source_names
-        mplus_ok=any(x["source"]=="mplus_journal" and
-                     x.get("season_evidence")=="DB2_DISPLAY_SEASON_MATCH"
+        mplus_ok=any(_journal_origin_current(
+                     x,db2["db2_display_season_id"],raid=False)
                      for x in row["sources"])
         season_eligible=(meta["expansion"]==db2["db2_expansion_id"] and
              (craft or raid or delve_ok or mplus_ok))
