@@ -120,6 +120,28 @@ def select(root=ROOT):
     need(len(choices)>=75,"ABNORMALLY_SMALL_PRODUCT_PACKAGE")
     return choices
 
+def write_file_list(target,root=ROOT):
+    """Export current ZIP candidate paths from the ONE existing selector.
+
+    File inclusion is not 78-element readiness, native verification, or
+    release approval. No files are duplicated or moved. The final built ZIP
+    still seals exact bytes in V181_PACKAGE_MANIFEST.json with SHA-256.
+    """
+    target=pathlib.Path(target).resolve()
+    need(target.suffix.lower()==".txt","FILE_LIST_EXTENSION_REQUIRED")
+    paths=sorted(select(root))
+    target.parent.mkdir(parents=True,exist_ok=True)
+    text=(
+        "# SIMC Secondary Optimizer: CURRENT_BETA_PACKAGE_CANDIDATES\n"
+        "# Generated from v181_windows_beta_packager.select(), not maintained separately.\n"
+        "# Not a finished-app readiness certificate; see 78-element tracker.\n"
+        "# Final ZIP per-file SHA-256: V181_PACKAGE_MANIFEST.json.\n"
+        + "\n".join(paths)+"\n"
+    )
+    target.write_text(text,encoding="utf8",newline="\n")
+    return paths
+
+
 def build(target,root=ROOT):
     target=pathlib.Path(target).resolve()
     root=pathlib.Path(root).resolve()
@@ -160,8 +182,16 @@ def build(target,root=ROOT):
 
 def main(argv=None):
     parser=argparse.ArgumentParser()
-    parser.add_argument("--out",required=True,type=pathlib.Path)
+    output=parser.add_mutually_exclusive_group(required=True)
+    output.add_argument("--out",type=pathlib.Path)
+    output.add_argument("--list-files",type=pathlib.Path,
+                        help="TXT inventory of current beta package inputs, not readiness")
     args=parser.parse_args(argv)
+    if args.list_files is not None:
+        paths=write_file_list(args.list_files)
+        print("V181_BETA_PACKAGE_FILE_LIST_PASS",args.list_files,
+              "files",len(paths),"not_release_ready",flush=True)
+        return
     manifest=build(args.out)
     print("V181_WINDOWS_SOURCE_ZIP_PASS",args.out,
           "files",manifest["file_count"],
