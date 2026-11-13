@@ -294,6 +294,20 @@ class CompletionContractTests(unittest.TestCase):
         self.assertEqual(doc["policy"]["next_review"],"B8")
         self.assertEqual(doc["policy"]["full_product_e2e"],"PENDING")
 
+    def test_b8_history_does_not_overstate_current_selected_tier_variant(self):
+        doc=self.scenario()
+        row=self.row(doc,"B8")
+        self.assertEqual(row["historical"]["state"],"PASS")
+        self.assertEqual({doc["evidence"][key]["kind"] for key
+                          in row["historical"]["evidence"]},
+                         {"HISTORICAL_SCOPED"})
+        self.assertEqual(row["generic"]["state"],"PENDING")
+        self.assertEqual(row["current_source"]["state"],"PENDING")
+        self.assertEqual(row["product_integration"]["state"],"PENDING")
+        self.assertFalse(gate.complete(row))
+        self.assertEqual(doc["policy"]["next_review"],"B8")
+        self.assertEqual(doc["policy"]["full_product_e2e"],"PENDING")
+
     def test_a10_cannot_skip_a9_generic_source(self):
         doc=self.scenario()
         self.row(doc,"A9")["generic"]={"state":"PENDING","evidence":[]}

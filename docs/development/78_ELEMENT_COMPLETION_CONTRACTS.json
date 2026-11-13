@@ -538,6 +538,15 @@
       "supports": [
         "B7"
       ]
+    },
+    "b8_history_v187": {
+      "kind": "HISTORICAL_SCOPED",
+      "note": "docs/development/notes/2026-11-13_p1-v430-b8-four-of-five-new-season-source-bridge-gap.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41009716196",
+      "tested_sha": "5da9c00f4e613bd3d741ab1228f46cd6bb184d98",
+      "supports": [
+        "B8"
+      ]
     }
   },
   "elements": [
@@ -1085,8 +1094,10 @@
         "evidence": []
       },
       "historical": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "b8_history_v187"
+        ]
       }
     },
     {

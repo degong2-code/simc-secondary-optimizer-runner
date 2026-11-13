@@ -1,3 +1,5 @@
+> **2026-11-13 v430 B8 실제 신규 시즌 사용자 티어 충돌 검토 — 현재 통합 PENDING:** [v430 기존 v101/v187 동적 4/5 재사용, fresh v098 제한 및 source-owner 결손](notes/2026-11-13_p1-v430-b8-four-of-five-new-season-source-bridge-gap.md), [78 JSON 정본](78_ELEMENT_COMPLETION_CONTRACTS.json): 18/18/7/12 PASS, COMPLETE7/78(A8·A9·A10·A11·B2·B3·B7), 다음 B8(동일 요소 차단 해결). historical PASS만 신규, 전체 E2E PENDING. 새 Native/원본 재수집/코드 변경0.
+
 > **2026-11-13 v429 B7 티어 5부위 원본 범위 COMPLETE / 다음 B8:** [v429 same-build 13×5·현재 70783 원시 Native 4pc](notes/2026-11-13_p1-v429-b7-tier-five-13x5-source-product-scope.md), [78 JSON 정본](78_ELEMENT_COMPLETION_CONTRACTS.json): generic18/current_source18/product7/historical11, COMPLETE7/78(A8·A9·A10·A11·B2·B3·B7); B8의 사용자별 4-of-5 충돌 규칙 미완료, 전 제품 E2E PENDING. 신규 Native0.
 
 > **2026-11-13 v428 B6 주능력치 범위 검토 · 다음 B7:** [v428 현재70783 생존 12 JSON2 민첩2596 등 실측](notes/2026-11-13_p1-v428-b6-primary-stat-profile-native-scope.md), [78 JSON 정본](78_ELEMENT_COMPLETION_CONTRACTS.json): 17/17/6/10 PASS, COMPLETE 6/78(A8·A9·A10·A11·B2·B3), B6 제품통합 PENDING, USER-E2E PENDING. 신규 Native0. 이전 수치는 당시 역사.
