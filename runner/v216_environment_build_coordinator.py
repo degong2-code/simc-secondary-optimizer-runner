@@ -1650,6 +1650,7 @@ def _join_authenticated_season_source(*,stage_root,output_dir,
             output_dir,report,raid_zone=scope["raid_zone"],
             mplus_zone=scope["mplus_zone"],
             build=expected_game_build,expansion_id=scope["expansion_id"],
+            wcl_expansion_id=scope.get("wcl_expansion_id"),
             verified_tables=verified_tables)
         result["auto_source_scope"]=scope
         path.parent.mkdir(parents=True,exist_ok=True)
