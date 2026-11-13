@@ -1567,6 +1567,7 @@ function compactSeasonBuildReceipt(data,forUserVariant=false) {
   const build=x=>typeof x==="string"&&/^\d+(?:\.\d+){3}$/.test(x)?x:null;
   const sha=x=>typeof x==="string"&&/^[a-f0-9]{64}$/.test(x)?x:null;
   const integer=x=>Number.isSafeInteger(x)&&x>=0?x:null;
+  const seenBoolean=x=>typeof x==="boolean"?x:null;
   const ready=scope.environment_ready===true&&
     scope.environment_installed===true;
   const installed=source.verified_environment_install||
@@ -1595,11 +1596,11 @@ function compactSeasonBuildReceipt(data,forUserVariant=false) {
     game_build:build(scope.game_build||data?.installed_source_game_build),
     target_ilevel:integer(scope.target_ilevel),
     source_mode:{
-      auto_initial_core:scope.auto_initial_core_build_requested===true,
-      native_G:scope.local_native_G_requested===true,
-      native_F:scope.auto_native_F_requested===true,
-      native_O:scope.auto_native_O_requested===true,
-      reused_verified_install:scope.reused_verified_installed_season===true
+      auto_initial_core:seenBoolean(scope.auto_initial_core_build_requested),
+      native_G:seenBoolean(scope.local_native_G_requested),
+      native_F:seenBoolean(scope.auto_native_F_requested),
+      native_O:seenBoolean(scope.auto_native_O_requested),
+      reused_verified_install:seenBoolean(scope.reused_verified_installed_season)
     },
     season_discovery_status:cleanCode(data?.season_discovery?.status),
     season_join_status:cleanCode(data?.season_join?.status),
@@ -1614,7 +1615,7 @@ function compactSeasonBuildReceipt(data,forUserVariant=false) {
     explicit_no_oil_awaits_v222:
       typeof owner?.explicit_no_oil_awaits_v222==="boolean"?
       owner.explicit_no_oil_awaits_v222:null,
-    installed_by_v212:owner?.full_environment_installed_verified_by_v212===true,
+    installed_by_v212:seenBoolean(owner?.full_environment_installed_verified_by_v212),
     requires:codes(progress.requires),
     native_G_status:cleanCode(progress.native_G_status),
     installed_manifest_sha256:sha(installed.manifest_sha256||
