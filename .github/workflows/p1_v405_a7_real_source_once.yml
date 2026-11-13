@@ -1,0 +1,62 @@
+name: p1 v405 A7 current KR real source-to-public-choice diagnostic once
+on:
+  push:
+    branches:
+      - probe/chat-cache-v035-20261024
+    paths:
+      - .github/workflows/p1_v405_a7_real_source_once.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  a7-real-source:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install existing source runner prerequisites
+        run: python -m pip install --disable-pip-version-check -r requirements-web.txt
+      - name: Strict zero-seed A7 real source audit via normal v216/v405 (no Native)
+        run: python integration_probes/v405_a7_real_source_diagnostic_once.py
+      - name: Preserve bounded evidence only, never DB2 CSV, tokens or item names
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-v405-a7-real-source-${{ github.sha }}
+          path: a7_v405_real_source_receipt.json
+          if-no-files-found: error
+          retention-days: 60
+      - name: Post diagnostic status (not source/Native/product acceptance)
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          python - <<'PY'
+          import json,os,urllib.request
+          owner=os.environ["GITHUB_REPOSITORY"]
+          body={
+              "state":"success" if os.environ["JOB_STATUS"]=="success" else "failure",
+              "context":"p1-v405-a7-live-source-diagnostic-only",
+              "description":"Live source diagnostics only; not SimC/Native/product E2E",
+              "target_url":f"https://github.com/{owner}/actions/runs/{os.environ['GITHUB_RUN_ID']}"}
+          req=urllib.request.Request(
+              f"https://api.github.com/repos/{owner}/statuses/{os.environ['GITHUB_SHA']}",
+              json.dumps(body).encode(),method="POST",
+              headers={"Authorization":"Bearer "+os.environ["GH_TOKEN"],
+                       "Accept":"application/vnd.github+json",
+                       "Content-Type":"application/json"})
+          with urllib.request.urlopen(req,timeout=12) as response:
+              assert response.status==201
+          PY
