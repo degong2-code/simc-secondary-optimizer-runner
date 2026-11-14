@@ -2504,6 +2504,41 @@ async function loadRecentSessions() {
     "현재 PC의 기록 "+(list.options.length-1)+"개 · Native 0회 · "+
     "특성·장비·로컬 경로는 목록에 포함되지 않음";
 }
+// A restored new-season session is bound to a specific v212 installation.
+// Refill its candidate dropdowns BEFORE restoring its exact item IDs; do not
+// mislabel supported items as historic because the page loaded old v167 rows.
+async function restoreInstalledSeasonGearChoices(inputs) {
+  if(inputs?.current_season_product!==true)return;
+  // Never offer a previous browser session's choices on this sealed restore.
+  installSeasonGearHints(null);
+  const build=inputs.installed_season_game_build;
+  const sha=inputs.installed_manifest_sha256;
+  const level=inputs.user?.target?.ilevel;
+  const unavailable="저장 세션의 검증 설치 장비 후보를 불러올 수 없습니다. "+
+    "이전 선택은 조회만 가능하며 새 계획에 자동 승인하지 않습니다.";
+  if(typeof build!=="string"||!/^\\d+(?:\\.\\d+){3}$/.test(build) ||
+     typeof sha!=="string"||!/^[a-f0-9]{64}$/.test(sha) ||
+     !Number.isInteger(level)||level<1||level>1000) {
+    $("season-gear-note").textContent=unavailable;
+    return;
+  }
+  try{
+    const gear=await api("/api/v1/season-gear?game_build="+
+      encodeURIComponent(build)+"&target_ilevel="+level+
+      "&installed_manifest_sha256="+sha);
+    if(gear.status!=="CURRENT_SEASON_CANDIDATE_SELECTION_ONLY" ||
+       gear.source_scope!=="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES" ||
+       gear.season_build!==build||gear.installed_manifest_sha256!==sha)
+      throw Error("RESTORED_INSTALLED_SEASON_GEAR_IDENTITY_MISMATCH");
+    installSeasonGearHints(gear);
+    $("season-gear-note").textContent=
+      "저장 세션의 설치 원본 "+build+
+      " · 장비 후보 복원 (현재 Retail 재확인 또는 새 시즌 승인 아님)";
+  }catch(error){
+    installSeasonGearHints(null);
+    $("season-gear-note").textContent=unavailable;
+  }
+}
 async function restore(id) {
   if(!/^[a-f0-9]{20}$/.test(id))
     throw Error("세션 ID는 20자리 해시여야 합니다.");
@@ -2511,6 +2546,7 @@ async function restore(id) {
   const [snapshot,inputs]=await Promise.all([
     readSession(id),api("/api/v1/sessions/"+id+"/inputs")
   ]);
+  await restoreInstalledSeasonGearChoices(inputs);
   fillSessionInputs(inputs);
   markSession(id);
   // The local dropdown scope follows the restored sealed build; avoid

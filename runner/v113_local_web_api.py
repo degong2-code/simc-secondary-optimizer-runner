@@ -1938,6 +1938,7 @@ class LocalJobs:
                 raise sessions.SessionBlocked("SESSION_INPUTS_OR_MANIFEST_DRIFT")
             restored_oils={}
             verified_build=None
+            restored_manifest_sha=None
             verified_user_variant=None
             if recorded.get("fresh_v212_installed_manifest_sha256") is not None:
                 # The existing start/resume proof validates the original
@@ -1956,6 +1957,11 @@ class LocalJobs:
                 # Restore only already-sealed v113/v212 source identity. No
                 # new source acquisition, budget recalculation or Native.
                 digest=recorded["fresh_v212_installed_manifest_sha256"]
+                # The original session/install identity was already checked
+                # against its immutable v212 source; expose only its digest.
+                # No source discovery or new approval on a read-only GET.
+                if type(verified_build) is str and type(digest) is str:
+                    restored_manifest_sha=digest
                 if verified_build and type(digest) is str:
                     directory=(self.root/"_fresh_season_sources"/
                                ("wago_"+verified_build)/"fresh_source")
@@ -2015,6 +2021,7 @@ class LocalJobs:
                         recorded.get("current_season_product",False)),
                     "verified_oil_item_ids_by_hand":restored_oils,
                     "installed_season_game_build":verified_build,
+                    "installed_manifest_sha256":restored_manifest_sha,
                     "verified_user_variant":verified_user_variant,
                     "native_called": False}
         except Exception as exc:

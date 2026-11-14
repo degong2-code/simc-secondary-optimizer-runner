@@ -1344,7 +1344,7 @@ console.log("V459_STALE_SESSION_BUDGET_PREVIEW_PASS");
 
     def test_missing_session_is_not_saved_as_verified_and_polling_backs_off(self):
         js=self.client.get("/assets/app.js").text
-        self.assertIn('fillSessionInputs(inputs);\n  markSession(id);',js)
+        self.assertIn('await restoreInstalledSeasonGearChoices(inputs);\n  fillSessionInputs(inputs);\n  markSession(id);',js)
         self.assertIn('api("/api/v1/sessions/"+id+"/inputs")',js)
         self.assertIn('function fillGearRows(nodeId, entries)',js)
         self.assertIn('fillGearRows("special-rows",u.special_items||[])',js)
@@ -1359,6 +1359,105 @@ console.log("V459_STALE_SESSION_BUDGET_PREVIEW_PASS");
         self.assertIn('state.nextPollAt=Date.now()+Math.min(30000',js)
         self.assertIn('state.pollBusy=true;',js)
         self.assertIn('setNotice("기존 세션·입력 복원 성공',js)
+
+    def test_v462_session_inputs_expose_only_verified_install_sha(self):
+        """Existing signed session metadata is projected read-only, zero Native."""
+        import json,tempfile
+        from unittest import mock
+        with tempfile.TemporaryDirectory() as td:
+            home=pathlib.Path(td)
+            binary=home/"simc.exe"
+            binary.write_bytes(b"no native execution")
+            user=api.sessions.user_scenario(api.sessions.standard_controls(
+                ("paladin","retribution")))
+            folder=api.sessions.store_session(user,home/"runs",binary,"7bc1071")
+            generated=folder/"generated"
+            generated.mkdir()
+            (generated/"manifest.json").write_text(json.dumps({
+                "native_binary":str(binary),"native_revision":"7bc1071",
+                "static_cache_json":None}),encoding="utf8")
+            jobs=api.LocalJobs(home/"runs")
+            old=jobs.inputs(folder)
+            self.assertIsNone(old["installed_manifest_sha256"])
+            digest="a"*64
+            identity=folder/"V106_SESSION_IDENTITY.json"
+            recorded=json.loads(identity.read_text("utf8"))
+            recorded["fresh_v212_installed_manifest_sha256"]=digest
+            identity.write_text(json.dumps(recorded),encoding="utf8")
+            with (mock.patch.object(jobs,"_read_environment_summary",
+                    return_value={"game_build":"12.1.5.70783"}) as read,
+                  mock.patch.object(jobs,"_verify_environment_dependencies",
+                    return_value={}) as verify,
+                  mock.patch.object(api.subprocess,"Popen",
+                    side_effect=AssertionError("NO_NATIVE"))):
+                restored=jobs.inputs(folder)
+            self.assertEqual(restored["installed_manifest_sha256"],digest)
+            self.assertEqual(restored["installed_season_game_build"],
+                             "12.1.5.70783")
+            self.assertIsNone(restored["verified_user_variant"])
+            self.assertFalse(restored["native_called"])
+            read.assert_called_once_with(folder)
+            verify.assert_called_once()
+
+    def test_v462_restore_reloads_sealed_season_gear_before_input_ids(self):
+        """Real JS candidate loader; no latest-build fallback or Native."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:
+            self.skipTest("node is not installed on this runner")
+        source=ROOT/"runner/webui/app.js"
+        code=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const a=raw.indexOf("async function restoreInstalledSeasonGearChoices(inputs) {");
+const b=raw.indexOf("async function restore(id) {",a);
+assert(a>=0&&b>a,"exact restore source loader must exist");
+const calls=[], installed=[],notes={};
+const $=id=>(notes[id]??={textContent:""});
+let reply=null;
+const api=async url=>{calls.push(url);return reply;};
+const installSeasonGearHints=catalog=>installed.push(catalog);
+const load=Function("$","api","installSeasonGearHints",
+   raw.slice(a,b)+"return restoreInstalledSeasonGearChoices;")(
+   $,api,installSeasonGearHints);
+const sha="b".repeat(64),build="12.1.5.70783";
+const inputs={current_season_product:true,
+  installed_season_game_build:build,installed_manifest_sha256:sha,
+  user:{target:{ilevel:334}}};
+(async()=>{
+  await load({current_season_product:false});
+  assert.strictEqual(calls.length,0,"legacy sessions remain unchanged");
+  await load({...inputs,installed_manifest_sha256:null});
+  assert.strictEqual(calls.length,0,"missing seal does not fetch guessed catalog");
+  assert.strictEqual(installed.at(-1),null);
+  reply={status:"CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
+    source_scope:"VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES",
+    season_build:build,installed_manifest_sha256:sha,
+    choices:{trinket:[{item_id:269999}]}};
+  await load(inputs);
+  assert.strictEqual(calls.at(-1),
+    "/api/v1/season-gear?game_build="+build+
+    "&target_ilevel=334&installed_manifest_sha256="+sha);
+  assert.strictEqual(installed.at(-1),reply);
+  assert(notes["season-gear-note"].textContent.includes("현재 Retail 재확인"));
+  reply={...reply,installed_manifest_sha256:"c".repeat(64)};
+  await load(inputs);
+  assert.strictEqual(installed.at(-1),null,"wrong installed SHA cannot populate UI");
+  reply=null;
+  await load(inputs);
+  assert.strictEqual(installed.at(-1),null,"unavailable source fails closed");
+  const restoreBody=raw.slice(raw.indexOf("async function restore(id) {"),
+                         raw.indexOf("function renderSeasonOptionCatalog(",b));
+  assert(restoreBody.indexOf("await restoreInstalledSeasonGearChoices(inputs);")<
+         restoreBody.indexOf("fillSessionInputs(inputs);"),
+         "source choices must precede exact old item selection");
+  console.log("V462_SEALED_SESSION_GEAR_RESTORE_PASS");
+})().catch(err=>{console.error(err);process.exitCode=1;});
+"""
+        result=subprocess.run([node,"-e",code,str(source)],
+            capture_output=True,text=True,timeout=20,check=False)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V462_SEALED_SESSION_GEAR_RESTORE_PASS",result.stdout)
 
     def test_session_inputs_restore_requires_token_and_is_read_only(self):
         import json,tempfile
