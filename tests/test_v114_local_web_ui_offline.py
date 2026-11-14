@@ -1444,6 +1444,48 @@ console.log("V464_HISTORICAL_ENCHANT_READONLY_RESTORE_PASS");
         self.assertIn("V464_HISTORICAL_ENCHANT_READONLY_RESTORE_PASS",
                       result.stdout)
 
+    def test_v473_edit_build_or_ilevel_revokes_rune_enchant_ui_authority(self):
+        """Actual registered browser handlers revoke source-bound approvals."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:
+            self.skipTest("node is not installed on this runner")
+        source=ROOT/"runner/webui/app.js"
+        script=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const buildA=raw.indexOf('  $("season-game-build").addEventListener("input",()=>{');
+const buildB=raw.indexOf('  $("season-game-build").addEventListener("change"',buildA);
+const levelA=raw.indexOf('  $("ilevel").addEventListener("input",()=>{');
+const levelB=raw.indexOf('  $("ilevel").addEventListener("change"',levelA);
+assert(buildA>=0&&buildB>buildA&&levelA>=0&&levelB>levelA);
+const events={},calls=[];
+const $=id=>({addEventListener(name,callback){events[id+":"+name]=callback;}});
+const state={verifiedInstalledBuildFromThisPage:"12.1.5.70783",
+             running:false,longrunResultReady:false};
+const renderSeasonOptionCatalog=v=>calls.push(v);
+const buttonState=()=>{};
+Function("state","$","renderSeasonOptionCatalog","buttonState",
+    raw.slice(buildA,buildB)+"\n"+raw.slice(levelA,levelB))(
+    state,$,renderSeasonOptionCatalog,buttonState);
+events["season-game-build:input"]();
+assert.strictEqual(state.verifiedInstalledBuildFromThisPage,null);
+assert.deepStrictEqual(calls,[null],"build edit revokes prior E and DK");
+state.verifiedInstalledBuildFromThisPage="12.1.5.70783";
+events["ilevel:input"]();
+assert.deepStrictEqual(calls,[null,null],"ilevel edit revokes prior E and DK");
+assert.strictEqual(state.verifiedInstalledBuildFromThisPage,"12.1.5.70783",
+    "ilevel edit does not silently change pinned build identity");
+// v467 executes renderSeasonOptionCatalog(null) and proves it clears
+// both rune IDs and the eagle-enchant selectable state.
+console.log("V473_BUILD_ILEVEL_REVOKE_ENCHANT_RUNE_PASS");
+"""
+        result=subprocess.run([node,"-e",script,str(source)],
+            capture_output=True,text=True,timeout=20,check=False)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V473_BUILD_ILEVEL_REVOKE_ENCHANT_RUNE_PASS",
+                      result.stdout)
+
     def test_v467_fresh_v212_dk_runes_survive_unapproved_v213_enchants(self):
         """Real UI: sealed installed DK runes stay usable; E stays blocked."""
         import shutil,subprocess

@@ -2703,7 +2703,7 @@ function renderSeasonOptionCatalog(catalog) {
   }
   if(catalog?.schema!=="v196_current_season_ui_catalog_v1" ||
      catalog?.status!=="SOURCE_COMBINED_WITH_CLEAR_APPROVAL_BOUNDARY") {
-    status.textContent="이번 시즌 마법부여 출처 자료가 준비되지 않았습니다. 기존 승인 선택은 그대로 유지됩니다.";
+    status.textContent="이번 빌드·ilvl의 룬·마부 검증 목록이 없습니다. 새 실행 선택은 잠금 상태이며 저장 세션 결과는 유지됩니다.";
     return;
   }
   const enchants=catalog.enchant_candidates||{};
@@ -3068,7 +3068,11 @@ function registerHandlers() {
     buttonState(state.running,state.longrunResultReady);
   });
   $("race").addEventListener("change",()=>buttonState(state.running,state.longrunResultReady));
-  $("ilevel").addEventListener("input",()=>buttonState(state.running,state.longrunResultReady));
+  $("ilevel").addEventListener("input",()=>{
+    // Slot masks and enchant source approval also belong to target ilvl.
+    renderSeasonOptionCatalog(null);
+    buttonState(state.running,state.longrunResultReady);
+  });
   $("ilevel").addEventListener("change",showRepresentativeScope);
   $("ilevel").addEventListener("change",()=>withBusy(refreshInstalledOilLoadouts));
   $("season-target-ilevel").addEventListener("change",()=>
@@ -3076,6 +3080,9 @@ function registerHandlers() {
   $("season-game-build").addEventListener("input",()=>{
     // A manual edit supersedes the earlier auto-discovered season binding.
     state.verifiedInstalledBuildFromThisPage=null;
+    // A different build cannot keep an older rune or permanent-enchant
+    // selection approved before the new installed source is restored.
+    renderSeasonOptionCatalog(null);
   });
   $("season-game-build").addEventListener("change",()=>
     withBusy(refreshInstalledOilLoadouts));
