@@ -1344,7 +1344,7 @@ console.log("V459_STALE_SESSION_BUDGET_PREVIEW_PASS");
 
     def test_missing_session_is_not_saved_as_verified_and_polling_backs_off(self):
         js=self.client.get("/assets/app.js").text
-        self.assertIn('await restoreInstalledSeasonGearChoices(inputs);\n  fillSessionInputs(inputs);\n  markSession(id);',js)
+        self.assertIn('await restoreInstalledSeasonGearChoices(inputs);\n  await restoreInstalledSeasonOptionCatalog(inputs);\n  fillSessionInputs(inputs);\n  markSession(id);',js)
         self.assertIn('api("/api/v1/sessions/"+id+"/inputs")',js)
         self.assertIn('function fillGearRows(nodeId, entries)',js)
         self.assertIn('fillGearRows("special-rows",u.special_items||[])',js)
