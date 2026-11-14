@@ -1,0 +1,107 @@
+{
+  "schema": "p1_v454_b10_70783_spell_effect_source_compact_v1",
+  "status": "REAL_70783_SPELL_EFFECT_ROWS_SOURCE_ONLY",
+  "game_build": "12.1.5.70783",
+  "original_workflow_run_id": 43570598535,
+  "original_workflow_artifact_id": 14103993356,
+  "original_workflow_receipt_sha256": "72bcc0287afbee4ae2d1a5d50f763ffa30d51d074f3d96f2dbfa2069870fc1ee",
+  "v452_original_run_id": 43566234553,
+  "v452_original_join_sha256": "bb8c9af44cd67a8cb757961189367ba687cbea60ce0cc34cbe2169d7a85dca92",
+  "spell_effect_raw_sha256": "cd9c42bb86e807f6ce0b680162ec551d75c3a79d28b253e60c61a56267561d73",
+  "spell_effect_raw_bytes": 57345581,
+  "v452_item_use_pairs": {
+    "263897": [
+      1270804
+    ],
+    "275707": [
+      1309820
+    ],
+    "276187": [
+      1309139
+    ]
+  },
+  "public_effect_spell_candidate_separate_from_item_use": {
+    "spell_id": 1297709,
+    "origin": "PUBLIC_TOOLTIP_REFERENCE_NOT_SOURCE_JOIN",
+    "physical_item_link_proved": false
+  },
+  "v281_observed_effects_by_spell_id": {
+    "1270804": [
+      {
+        "difficulty_id": 0,
+        "effect": 314,
+        "effect_index": 0,
+        "effect_misc_value_0": 5523
+      },
+      {
+        "difficulty_id": 0,
+        "effect": 3,
+        "effect_index": 1,
+        "effect_misc_value_0": 0
+      }
+    ],
+    "1297709": [
+      {
+        "difficulty_id": 0,
+        "effect": 314,
+        "effect_index": 0,
+        "effect_misc_value_0": 6007
+      },
+      {
+        "difficulty_id": 0,
+        "effect": 3,
+        "effect_index": 1,
+        "effect_misc_value_0": 0
+      }
+    ],
+    "1309139": [
+      {
+        "difficulty_id": 0,
+        "effect": 359,
+        "effect_index": 0,
+        "effect_misc_value_0": 180
+      },
+      {
+        "difficulty_id": 0,
+        "effect": 3,
+        "effect_index": 1,
+        "effect_misc_value_0": 0
+      }
+    ],
+    "1309820": [
+      {
+        "difficulty_id": 0,
+        "effect": 359,
+        "effect_index": 0,
+        "effect_misc_value_0": 181
+      },
+      {
+        "difficulty_id": 0,
+        "effect": 359,
+        "effect_index": 1,
+        "effect_misc_value_0": 184
+      },
+      {
+        "difficulty_id": 0,
+        "effect": 3,
+        "effect_index": 2,
+        "effect_misc_value_0": 0
+      }
+    ]
+  },
+  "no_effect_mechanism_reimplemented": true,
+  "on_use_to_effect_spell_chain_proved": false,
+  "target_item_season_eligibility_verified": false,
+  "target_item_pvp_eligibility_verified": false,
+  "target_item_zero_socket_verified": false,
+  "added_socket_count_verified": false,
+  "J_approved": false,
+  "environment_ready": false,
+  "ui_selectable": false,
+  "source_only": true,
+  "native_calls": 0,
+  "dps_calls": 0,
+  "new_db2_tables": 1,
+  "source_download_count": 1,
+  "research_receipt_not_runtime_v217": true
+}
