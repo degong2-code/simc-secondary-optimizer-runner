@@ -186,21 +186,32 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
         self.assertEqual(len(set(variants)),len(variants))
 
     def test_exact_oil_id_uses_verified_installed_variant_not_hand_guess(self):
-        """An explicit physical item ID resolves only its signed v212 variant."""
+        """Exact oil IDs require the matching signed v212 variant, not O=0."""
         self.remember()
-        # The preexisting fixture uses a deliberately minimal installed
-        # document; only its v212 authenticity check is mocked here.
-        # The selection lookup under test remains the real v113 path.
         with mock.patch.object(
             web.environment_manifest,"verify_fresh_installed_environment"
         ):
             self.jobs.persist_verified_fresh_profile()
         selected={"main_hand":245678}
+        # An old O=0 install and one selected-O install coexist. The direct
+        # per-receipt path must never take a first-match shortcut.
+        digest="c"*64
+        docs=self.installed.parent
+        chosen=docs/("v212_installed_"+digest[:20]+".json")
+        chosen.write_text(json.dumps({
+            "manifest_sha256":digest,"game_build":self.build,
+            "target_ilevel":334,
+            "official_O_physical_source":{
+                "selected_oil_item_ids_by_hand":selected}}))
+        (docs/("v113_profile_"+digest[:20]+".json")).write_text(
+            json.dumps({"environment_result":{}}))
         with (
+            mock.patch.object(
+                web.environment_manifest,"verify_fresh_installed_environment"),
             mock.patch.object(
                 web.environment_build,
                 "find_verified_installed_season_environment",
-                return_value={"selected_oil_item_ids_by_hand":selected}) as lookup,
+                return_value={"installed_manifest_sha256":digest}) as lookup,
             mock.patch.object(
                 self.jobs,"restore_verified_fresh_profile",
                 return_value={"verified_target_ilevel":334}) as restore
@@ -211,10 +222,13 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
         self.assertEqual(result["verified_target_ilevel"],334)
         lookup.assert_called_once_with(
             self.jobs.root,334,expected_game_build=self.build,
-            selected_oil_item_ids_by_hand=selected)
+            selected_oil_item_ids_by_hand=selected,
+            expected_installed_manifest_sha256=digest)
         restore.assert_called_once_with(
             target_ilevel=334,game_build=self.build,
-            selected_oil_item_ids_by_hand=selected)
+            selected_oil_item_ids_by_hand=selected,
+            expected_installed_manifest_sha256=digest,
+            required_gem_layout=None)
 
     def test_exact_oil_selection_requires_same_hands_and_real_install(self):
         """No O=0 substitution or legacy fallback for a named positive oil."""
