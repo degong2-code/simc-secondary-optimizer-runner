@@ -186,6 +186,88 @@ class CurrentSeasonTierReconciliation(unittest.TestCase):
         self.assertEqual(equipment["catalyst_special_tier_slots"],["chest"])
         self.assertEqual(len([x for x in fillers if x["slot"]=="legs"]),1)
 
+    def test_catalyst_redirect_requires_exact_current_source_slot_family_and_primary(self):
+        import v167_product_season_gear_adapter as product_gear
+        source=product_gear.read()
+        self.assertEqual(source["season_build"],season.load_tier()["retail_build"])
+        u,rows,groups=self.setup_rows()
+        u["special_items"]=[{"slot":"head","item_id":self.map["head"],
+            "options":{"redirected_base_stats":"271874"}}]
+        restored,catalyst=self.apply(u,rows,groups)
+        self.assertEqual(catalyst,[{"slot":"head","tier_item_id":self.map["head"],
+                                    "source_item_id":271874}])
+        # 271876 is a current-season mail chest, not a cloth head.
+        for origin,reason in (
+            ("999999","CURRENT_SEASON_CATALYST_SOURCE_NOT_IN_APPROVED_ROLE:head"),
+            ("271876","CURRENT_SEASON_CATALYST_SOURCE_WRONG_PHYSICAL_SLOT:head"),
+            ("271875","CURRENT_SEASON_CATALYST_SOURCE_WRONG_ARMOR_FAMILY:head"),
+        ):
+            with self.subTest(origin=origin):
+                u,rows,groups=self.setup_rows()
+                u["special_items"]=[{"slot":"head","item_id":self.map["head"],
+                    "options":{"redirected_base_stats":origin}}]
+                with self.assertRaisesRegex(AssertionError,reason):
+                    self.apply(u,rows,groups)
+
+    def test_catalyst_source_identity_generalizes_across_all_26_dps_specs(self):
+        import v143_specialization_contracts as contracts
+        import v167_product_season_gear_adapter as product_gear
+        db=product_gear.read()
+        tier_source=season.load_tier()
+        self.assertEqual(len(contracts.CONTRACTS),26)
+        inv={"head":(1,),"shoulders":(3,),"chest":(5,20),
+             "hands":(10,),"legs":(7,)}
+        for key,contract in sorted(contracts.CONTRACTS.items()):
+            cls,sp=key.split("/")
+            with self.subTest(spec=key):
+                user=sessions.user_scenario(sessions.standard_controls((cls,sp)))
+                scope=season.season_scope()
+                _,_,rows,groups,form,F,tier_map,fifth=pure.v098_inputs(
+                    user["character"],user["trinkets"],target_ilevel=334,
+                    combat=user["combat"],season_override=scope)
+                slot=next(s for s in common.TIER_FIVE if groups.get(s)=="tier")
+                mask=tier_source["classes"][cls]["allowed_class_mask"]
+                family=product_gear.ARMOR_SUBCLASS[contract["family"]]
+                primary=season.PRIMARY_STAT_CODES[contract["primary"]]
+                candidates=sorted((x for x in db["items"]
+                    if x["category"]=="plain_representative_candidate"
+                    and x["class_id"]==4 and x["subclass_id"]==family
+                    and x["inventory_type"] in inv[slot]
+                    and "raid_journal" in x.get("source_kinds",[])
+                    and any(code in primary for code in
+                            x.get("stat_modifier_codes",[]))
+                    and (x.get("allowed_class_mask") is None or
+                         (type(x.get("allowed_class_mask")) is int and
+                          (x["allowed_class_mask"]&mask)==mask))),
+                    key=lambda x:x["item_id"])
+                self.assertTrue(candidates,"NO_SAME_BUILD_ORIGIN:"+key+":"+slot)
+                origin=candidates[0]["item_id"]
+                user["special_items"]=[{"slot":slot,"item_id":tier_map[slot],
+                    "options":{"redirected_base_stats":str(origin)}}]
+                def require(ok,reason):
+                    if not ok:raise AssertionError(reason)
+                restored,catalyst=common.apply_user_equipment(
+                    (cls,sp),rows,groups,user,334,require,
+                    tier_override=tier_map,fifth_override=fifth,
+                    flexible_current_tier=True,season_source_gear=db,
+                    season_source_tier=tier_source)
+                self.assertEqual(catalyst,[{"slot":slot,
+                    "tier_item_id":tier_map[slot],"source_item_id":origin}])
+                self.assertEqual(sum(groups.get(s)=="tier"
+                                     for s in common.TIER_FIVE),4)
+                equipment,_=common.physical_gear_groups(rows,groups,catalyst)
+                self.assertEqual(len(equipment["tier"]),4)
+                self.assertEqual(equipment["catalyst_special_tier_slots"],[slot])
+
+    def test_duplicate_catalyst_and_special_slot_is_rejected(self):
+        u,rows,groups=self.setup_rows()
+        catalyst={"slot":"head","item_id":self.map["head"],
+                  "options":{"redirected_base_stats":"271874"}}
+        u["special_items"]=[copy.deepcopy(catalyst),copy.deepcopy(catalyst)]
+        with self.assertRaisesRegex(AssertionError,
+                                    "SELECTED_SLOT_INVALID_OR_DUPLICATE"):
+            self.apply(u,rows,groups)
+
     def test_catalyst_head_and_crafted_chest_still_four(self):
         u,rows,groups=self.setup_rows()
         u["special_items"]=[{"slot":"head","item_id":self.map["head"],

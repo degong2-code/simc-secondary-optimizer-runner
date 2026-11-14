@@ -528,7 +528,42 @@ def validate_current_season_selected_slots(key,user,tier_map,need,*,
             catalyst=group=="special" and (
                 "redirected_base_stats" in options and slot in tier_map
                 and item_id==tier_map[slot])
-            if catalyst:continue
+            if catalyst:
+                # The tier token proves only the tier-piece identity. The
+                # redirected original must independently exist in this
+                # exact same-build source catalog and match the occupied
+                # physical slot, armor family, class mask and primary.
+                raw_origin=options.get("redirected_base_stats")
+                need(type(raw_origin) in (str,int) and
+                     str(raw_origin).isdigit() and
+                     not str(raw_origin).startswith("0"),
+                     "CURRENT_SEASON_CATALYST_ORIGIN_ID_INVALID:"+slot)
+                origin_id=int(raw_origin)
+                need(origin_id!=item_id,
+                     "CURRENT_SEASON_CATALYST_ORIGIN_EQUALS_TIER_ID:"+slot)
+                origin=indexed.get(origin_id)
+                need(origin is not None and origin.get("category") in {
+                    "plain_representative_candidate",
+                    "special_effect_gear_candidate"},
+                    "CURRENT_SEASON_CATALYST_SOURCE_NOT_IN_APPROVED_ROLE:"+slot)
+                allowed_slots=core if slot in core else weapon_inventory[form]
+                need(slot in allowed_slots and
+                     origin.get("inventory_type") in allowed_slots[slot],
+                     "CURRENT_SEASON_CATALYST_SOURCE_WRONG_PHYSICAL_SLOT:"+slot)
+                if slot in product_gear.ARMOR_SLOTS:
+                    need(origin.get("class_id")==4 and
+                         origin.get("subclass_id")==armor_type,
+                         "CURRENT_SEASON_CATALYST_SOURCE_WRONG_ARMOR_FAMILY:"+slot)
+                origin_mask=origin.get("allowed_class_mask")
+                need(origin_mask is None or (
+                    type(origin_mask) is int and
+                    (origin_mask&mask)==mask),
+                    "CURRENT_SEASON_CATALYST_SOURCE_CLASS_NOT_ALLOWED:"+slot)
+                origin_codes=origin.get("stat_modifier_codes")
+                need(type(origin_codes) is list and
+                     any(code in expected_primary for code in origin_codes),
+                     "CURRENT_SEASON_CATALYST_SOURCE_PRIMARY_MISMATCH:"+slot)
+                continue
             row=indexed.get(item_id)
             expected="special_effect_gear_candidate" if group=="special" else "selectable_stat_craft"
             need(row is not None and row["category"]==expected,
