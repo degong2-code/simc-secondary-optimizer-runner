@@ -2121,6 +2121,13 @@ async function buildSeasonEnvironment(forUserVariant=false) {
         report.zero_history_build?.versioned_environment_installed?.manifest_sha256;
       const build=installedScope.game_build,level=installedScope.target_ilevel;
       const priorTrinkets=[field("trinket1"),field("trinket2")];
+      const priorSpecial=Array.from($("special-rows").querySelectorAll(".gear-row"))
+        .map(row=>{
+          const read=name=>row.querySelector('[data-field="'+name+'"]')?.value||"";
+          return {slot:read("slot"),item_id:Number(read("item_id")),
+            options:{bonus_id:read("bonus_id"),
+                     redirected_base_stats:read("redirected_base_stats")}};
+        }).filter(x=>x.slot&&Number.isSafeInteger(x.item_id)&&x.item_id>0);
       try{
         if(typeof sha!=="string"||!/^[a-f0-9]{64}$/.test(sha) ||
            typeof build!=="string"||!/^\d+(?:\.\d+){3}$/.test(build) ||
@@ -2136,8 +2143,18 @@ async function buildSeasonEnvironment(forUserVariant=false) {
         installSeasonGearHints(gear);
         setTrinketSelection("trinket1",priorTrinkets[0]);
         setTrinketSelection("trinket2",priorTrinkets[1]);
-        // Do not carry optional choices from a different installed source.
-        fillGearRows("special-rows",[]);
+        // Reuse the chosen special item only when the exact new source still
+        // offers the same physical ID in its compatible equipment slot.
+        const retained=priorSpecial.filter(entry=>{
+          const selected=gear.choices.special_effect_gear_candidate.find(
+            item=>item.item_id===entry.item_id);
+          return selected&&specialAllowedSlots(selected).includes(entry.slot);
+        });
+        fillGearRows("special-rows",retained);
+        if(retained.length!==priorSpecial.length ||
+           (priorTrinkets[0]&&!field("trinket1")) ||
+           (priorTrinkets[1]&&!field("trinket2")))
+          updateBudgetPreview();
       }catch(error){
         installSeasonGearHints(null);
         fillGearRows("special-rows",[]);
