@@ -1,0 +1,35 @@
+name: P1 v452 B10 real 70783 existing v280 item/use socket source ONCE
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p1_v452_b10_70783_source_once.yml
+permissions:
+  contents: read
+concurrency:
+  group: p1-v452-b10-70783-source-once
+  cancel-in-progress: false
+jobs:
+  source-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PYTHONPATH: runner:.
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Observe only original 70783 Wago item/use relationship source
+        timeout-minutes: 13
+        run: python -u integration_probes/p1_v452_b10_70783_v280_source_once.py
+      - name: Preserve compact factual item/use source receipt only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-v452-b10-70783-real-v280-source
+          path: p1_v452_b10_70783_socket_source_receipt.json
+          if-no-files-found: error
+          retention-days: 7
