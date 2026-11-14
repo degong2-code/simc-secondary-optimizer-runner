@@ -75,7 +75,7 @@ class SimpleUserInputs(unittest.TestCase):
             self.assertEqual(prepared["plan"]["native_limit"],6)
         self.assertEqual(len(set(keys)),4)
 
-    def test_current_season_craft_base_is_source_derived_and_gui_hides_advanced_fields(self):
+    def test_current_season_craft_base_is_source_derived_and_explicit_id_safe(self):
         options=seasons.public_options(seasons.read())["choices"]
         crafts=options["selectable_stat_craft"]
         self.assertEqual(len(crafts),106)
@@ -99,12 +99,14 @@ class SimpleUserInputs(unittest.TestCase):
         self.assertIn("crafted_stats=32/36",profile)
         js=(ROOT/"runner/webui/app.js").read_text("utf8")
         html=(ROOT/"runner/webui/index.html").read_text("utf8")
-        for marker in ('function oilCompatibility()','function chosenCraft(slot)',
+        for marker in ('function oilCompatibility()','function chosenCraft(slot,exactItemId=null)',
             'function selectedGear(nodeId, group)','row4_crit','row4_vers',
             'refreshSpecialSlots()', 'syncCraftRow(row)'):
 
             self.assertIn(marker,js)
         self.assertIn("label.hidden=isPrivate",js)
+        self.assertIn("정확한 제작장비 ItemID (선택 · 비우면 자동)",js)
+        self.assertIn('input.type="number";input.min="1";input.max="999999999";',js)
         self.assertIn('class="gear-section gear-trinkets"',html)
         self.assertIn('class="gear-section gear-special"',html)
         self.assertIn('class="gear-section gear-embellishments"',html)
