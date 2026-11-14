@@ -17,7 +17,7 @@ def user_controls():
     c=sessions.standard_controls(("shaman","elemental"))
     c["ilevel"]=331
     c["special_items"]=[{"slot":"chest","item_id":271486,
-        "options":{"bonus_id":"13848","redirected_base_stats":"268231"}}]
+        "options":{"bonus_id":"13848","redirected_base_stats":"271876"}}]
     return c
 
 class FakeNativeCompleted:
@@ -45,7 +45,7 @@ class OneExactSpecialHydration(unittest.TestCase):
         self.assertIn("id=271486",line)
         self.assertIn("ilevel=331",line)
         self.assertIn("bonus_id=13848",line)
-        self.assertIn("redirected_base_stats=268231",line)
+        self.assertIn("redirected_base_stats=271876",line)
         result=pathlib.Path(next(x.split("=",1)[1] for x in profile.splitlines()
                                  if x.startswith("json2=")))
         response={"report_version":"2.0.0","git_revision":"710c2408bf",
@@ -255,12 +255,12 @@ class OneExactSpecialHydration(unittest.TestCase):
     def test_forged_native_item_id_or_missing_profile_stats_fail_closed(self):
         fake=hydrate.selected_records
         row={"slot":"chest","item_id":271486,"ilevel":331,
-             "options":{"bonus_id":"13848","redirected_base_stats":"268231"}}
+             "options":{"bonus_id":"13848","redirected_base_stats":"271876"}}
         raw={"report_version":"2.0.0","git_revision":"710c2408bf",
              "sim":{"players":[{"gear":{"chest":{
                "ilevel":331,
                "encoded_item":"chest_bad,id=111111,ilevel=331,source=local,"
-                              "bonus_id=13848,redirected_base_stats=268231"
+                              "bonus_id=13848,redirected_base_stats=271876"
               }}}]}}
         with self.assertRaisesRegex(hydrate.StaticLBlocked,"IDENTITY|MISMATCH"):
             fake(json.dumps(raw).encode(),[row],"710c2408bf")
