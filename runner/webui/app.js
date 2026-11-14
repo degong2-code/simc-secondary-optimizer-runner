@@ -978,10 +978,13 @@ function installedConsumableScopeMatches(data) {
   // Explicit user build overrides any remembered ready season.
   const build=field("season-game-build") ||
     state.verifiedInstalledBuildFromThisPage;
-  return data?.schema==="v113_verified_installed_oil_loadouts_v1" &&
+  // A lone old v212 installation is not evidence of the current Retail build.
+  // No selectable F/O until a build is explicitly pinned or verified here.
+  return Boolean(build) &&
+    data?.schema==="v113_verified_installed_oil_loadouts_v1" &&
     /^\d+(?:\.\d+){3}$/.test(data.game_build||"") &&
     Number(data.target_ilevel)===Number(field("ilevel")) &&
-    (!build||data.game_build===build);
+    data.game_build===build;
 }
 function renderInstalledFlaskChoices(data) {
   const selector=$("season-verified-flask");

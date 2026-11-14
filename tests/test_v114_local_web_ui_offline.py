@@ -277,6 +277,19 @@ const item=(id,ids)=>({
   installed_manifest_sha256:id.repeat(64),display_name:id,
   selected_oil_item_ids_by_hand:ids
 });
+// No explicit or verified build: a sole installed old-season receipt cannot
+// authorize F/O choices, even when game_build and target ilvl look valid.
+const unbound=source([item("z",{main_hand:1999,off_hand:1998})]);
+unbound.verified_flasks=[{physical_item_id:220001,
+  simc_input_token:"unbound_flask",crafting_quality:3,F_rating:180}];
+renderInstalledOilLoadouts(unbound);
+renderInstalledFlaskChoices(unbound);
+assert.strictEqual(state.oilLoadouts.length,0,"unbound build cannot approve O");
+assert.strictEqual($("oil_main").checked,false,"unbound build never auto-selects O");
+assert.strictEqual($("season-verified-flask").options.length,1,
+  "unbound build cannot approve F");
+assert.strictEqual(selectedFullVerifiedOil(),null);
+state.verifiedInstalledBuildFromThisPage="12.2.0.0";
 renderInstalledOilLoadouts(source([item("a",{main_hand:1001,off_hand:1002})]));
 assert.strictEqual($("optimizer-oil-enabled").checked,true);
 assert.strictEqual($("oil_main").checked,true);
