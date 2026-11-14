@@ -43,7 +43,7 @@
 
 1. 시즌 원본·자동 Build: `runner/v216_environment_build_coordinator.py`/`v217_stage_execution_engine.py` → `v222_season_budget_contract.py` → `v212_environment_manifest.py`. 시즌별 G/J/F/O 자동 구축·검증이 승인 정책이며 최종 fresh 설치 통합은 PENDING.
 2. 장비·티어/촉매: `runner/v101_common_representative_equipment.py`(B9 입력 교정), `runner/v432_selected_4pc_budget_bridge.py`(선택 exact 슬롯 delta·G/L), `runner/v046_static_item_cache.py`(정적 캐시), `runner/v098_target_user_scenario_bootstrap.py`(사용자 프로필).
-3. 소켓/보석(다음 B10): `runner/v232_intrinsic_socket_layout.py`와 `runner/v271_user_socket_layout.py`, `runner/v216_environment_build_coordinator.py` 내 `additional_socket_proof_required_by_slot`·`J_ADDITIONAL_SOCKET_SOURCE_PROOF_PENDING`, `v212/v098` 소비 경로. 실제 최신 함수·파일명은 FILE_MAP 또는 GitHub 코드 재조회로 검증한다.
+3. 소켓/보석(다음 B10): `runner/v232_simc_only_ordinary_representative.py`(intrinsic 소켓 수의 source-only 후보)와 `runner/v271_user_socket_gem_layout.py`(선택형 소켓/보석 배치; 실 소켓 허용 인증 아님), `runner/v216_environment_build_coordinator.py` 내 `additional_socket_proof_required_by_slot`·`J_ADDITIONAL_SOCKET_SOURCE_PROOF_PENDING`, `v212/v098` 소비 경로. 실제 최신 함수·파일명은 FILE_MAP 또는 GitHub 코드 재조회로 검증한다.
 4. 내부 SimC: `runner/v096_unified_product_entry.py` → 기존 `v094_durable_inclusive_adaptive_runner.py`/`v065` 통계, `v290/v291` 탐색, `v106_user_session_controller.py`·`v292/v293` 캐시/취소·재개. 사용자 웹 API/Windows 경로 `runner/v113_local_web_api.py`, 패키지 후보 `integration_probes/v181_windows_beta_packager.py`. Windows 최종 설치/실클릭·배포 인수는 별도 미완료.
 5. 원본 v016_SCENARIO_CONTRACT는 사용자 보고상 제품 계보 기준이며 **원본 바이트·영수증 직접 통합 확인 미완료**. 이 때문에 기존 격리 개발/일반 제품 SimC 시험을 중단하지 않는다. 옛 v097 등 역사 기록을 현재 구현 스냅샷으로 덮어쓰지 않는다.
 
