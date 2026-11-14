@@ -389,6 +389,45 @@ class CompletionContractTests(unittest.TestCase):
             gate.ContractInvalid,"NEXT_REVIEW_SKIPPED_GENERIC_VALIDATION:B9"):
             gate.validate(doc)
 
+    def test_v443_h1_h3_h4_h6_shared_native_95_and_user_scopes(self):
+        doc=self.scenario()
+        for eid in ("H1","H3","H4","H6"):
+            with self.subTest(element=eid):
+                row=self.row(doc,eid)
+                self.assertTrue(gate.complete(row))
+                self.assertEqual(
+                    {doc["evidence"][key]["kind"] for key
+                     in row["generic"]["evidence"]},
+                    {"CURRENT_SOURCE_REAL","GENERALIZATION_REGRESSION"})
+                self.assertEqual(
+                    {doc["evidence"][key]["kind"] for key
+                     in row["product_integration"]["evidence"]},
+                    {"PRODUCT_INTEGRATION_REAL"})
+                for axis in ("generic","current_source","product_integration"):
+                    for key in row[axis]["evidence"]:
+                        self.assertIn(eid,doc["evidence"][key]["supports"])
+        self.assertEqual(doc["policy"]["next_review"],"B9")
+        self.assertFalse(gate.complete(self.row(doc,"B9")))
+        self.assertEqual(doc["policy"]["full_product_e2e"],"PENDING")
+
+    def test_v443_h3_h4_cannot_use_offline_95_as_real_native_source(self):
+        doc=self.scenario()
+        row=self.row(doc,"H3")
+        row["current_source"]={
+            "state":"PASS","evidence":["v443_h34_generic_v095"]}
+        with self.assertRaisesRegex(
+            gate.ContractInvalid,
+            "PASS_MISSING_REQUIRED_EVIDENCE_KIND:H3:current_source"):
+            gate.validate(doc)
+        doc=self.scenario()
+        row=self.row(doc,"H4")
+        row["product_integration"]={
+            "state":"PASS","evidence":["v443_h34_current_v440"]}
+        with self.assertRaisesRegex(
+            gate.ContractInvalid,
+            "PASS_MISSING_REQUIRED_EVIDENCE_KIND:H4:product_integration"):
+            gate.validate(doc)
+
     def test_a10_cannot_skip_a9_generic_source(self):
         doc=self.scenario()
         self.row(doc,"A9")["generic"]={"state":"PENDING","evidence":[]}

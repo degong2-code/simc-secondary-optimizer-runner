@@ -592,6 +592,66 @@
         "D6",
         "E1"
       ]
+    },
+    "v443_h1_generic_v094": {
+      "kind": "GENERALIZATION_REGRESSION",
+      "note": "docs/development/notes/2026-11-14_p1-v443-real-native-95-material-user-result-reuse.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40266550555",
+      "tested_sha": "d7459da89bef08ef8124a1ce029efe4f1180f8d6",
+      "supports": [
+        "H1"
+      ]
+    },
+    "v443_h34_generic_v095": {
+      "kind": "GENERALIZATION_REGRESSION",
+      "note": "docs/development/notes/2026-11-14_p1-v443-real-native-95-material-user-result-reuse.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/40268656884",
+      "tested_sha": "27060e9d17eeebac97697804842a2d14ef1ae2cc",
+      "supports": [
+        "H3",
+        "H4"
+      ]
+    },
+    "v443_h6_generic_v113": {
+      "kind": "GENERALIZATION_REGRESSION",
+      "note": "docs/development/notes/2026-11-14_p1-v443-real-native-95-material-user-result-reuse.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43461108968",
+      "tested_sha": "95f8ea9b6060444716d218da49b2691033228262",
+      "supports": [
+        "H6"
+      ]
+    },
+    "v443_h16_current_v439": {
+      "kind": "CURRENT_SOURCE_REAL",
+      "note": "docs/development/notes/2026-11-14_p1-v439-b8-one-real-selected-70783-four-tier-native-e2e.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43466966207",
+      "tested_sha": "bad415de407671898b26001869478bcdb1ab047e",
+      "supports": [
+        "H1",
+        "H6"
+      ]
+    },
+    "v443_h34_current_v440": {
+      "kind": "CURRENT_SOURCE_REAL",
+      "note": "docs/development/notes/2026-11-14_p1-v440-b8-existing-real-json2-95-material-replay.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43534722801",
+      "tested_sha": "2ac4ca9329f5bd8f2d2e34a20d004e5150413fe7",
+      "supports": [
+        "H3",
+        "H4"
+      ]
+    },
+    "v443_h_all_product_v439": {
+      "kind": "PRODUCT_INTEGRATION_REAL",
+      "note": "docs/development/notes/2026-11-14_p1-v439-b8-one-real-selected-70783-four-tier-native-e2e.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43466966207",
+      "tested_sha": "bad415de407671898b26001869478bcdb1ab047e",
+      "supports": [
+        "H1",
+        "H3",
+        "H4",
+        "H6"
+      ]
     }
   },
   "elements": [
@@ -2348,16 +2408,23 @@
       "scope": "RUN",
       "acceptance": "기존 적응형 엔진으로 최종 CHMV 절대 rating 후보를 생성하고 SimC DPS 관측값을 비교한다. 전역 최적해 수학적 증명이나 시즌별/26전문화별 신규 최적화 검증은 요구하지 않는다.",
       "generic": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v443_h16_current_v439",
+          "v443_h1_generic_v094"
+        ]
       },
       "current_source": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v443_h16_current_v439"
+        ]
       },
       "product_integration": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v443_h_all_product_v439"
+        ]
       },
       "historical": {
         "state": "PENDING",
@@ -2392,16 +2459,23 @@
       "scope": "RUN",
       "acceptance": "SimC 실제 DPS·SEM에 기초한 명목 95% 통계와 관측 1순위/확정 여부를 구별한다. 시즌별 통계 공식을 재검증하거나 SEM 미세 정밀화를 위한 Native 반복 실행은 요구하지 않는다.",
       "generic": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v443_h34_current_v440",
+          "v443_h34_generic_v095"
+        ]
       },
       "current_source": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v443_h34_current_v440"
+        ]
       },
       "product_integration": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v443_h_all_product_v439"
+        ]
       },
       "historical": {
         "state": "PENDING",
@@ -2414,16 +2488,23 @@
       "scope": "RUN",
       "acceptance": "관측 DPS가 근접하면서 스탯 분배가 실질적으로 다른 후보만 제시한다. 관측된 적격 대안이 0개면 없음을 표시하며 억지로 추가 Native를 실행해 찾지 않는다.",
       "generic": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v443_h34_current_v440",
+          "v443_h34_generic_v095"
+        ]
       },
       "current_source": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v443_h34_current_v440"
+        ]
       },
       "product_integration": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v443_h_all_product_v439"
+        ]
       },
       "historical": {
         "state": "PENDING",
@@ -2458,16 +2539,23 @@
       "scope": "RUN",
       "acceptance": "최종 절대 rating·비율·DPS·SEM·95% 판정·관측 1순위·근접 대안(없음 허용)·전역 최적 미입증을 실제 사용자 결과에 표시한다. 결과 조회용 Native 재실행은 금지한다.",
       "generic": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v443_h16_current_v439",
+          "v443_h6_generic_v113"
+        ]
       },
       "current_source": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v443_h16_current_v439"
+        ]
       },
       "product_integration": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v443_h_all_product_v439"
+        ]
       },
       "historical": {
         "state": "PENDING",

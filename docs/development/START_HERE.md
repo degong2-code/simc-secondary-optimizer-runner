@@ -1,3 +1,5 @@
+> **2026-11-14 v443 네 요소 H1/H3/H4/H6 실 증거 재귀속:** [감사 기록](notes/2026-11-14_p1-v443-real-native-95-material-user-result-reuse.md) · [정본](78_ELEMENT_COMPLETION_CONTRACTS.json). **26/26/15/12, COMPLETE15/78, next B9, full E2E PENDING**. v439/v440 Native6 원본 재사용, 95% 두 후보 확인·material 대안 관측0·웹 사용자 결과, 신규 Native/API/DB2 0. B9 촉매 선택 현재 Native 미관측으로 PENDING 유지.
+
 > **2026-11-14 v442 공유 실증 재귀속:** [4요소 B8/D4/D6/E1 판정](notes/2026-11-14_p1-v442-existing-proof-shared-attribution-b8-d4-d6-e1.md)과 [기계 정본](78_ELEMENT_COMPLETION_CONTRACTS.json). v439 실 Native와 v187/v432 실패 경계 재사용해 **22/22/11/12, COMPLETE11/78, next B9, 전체 E2E PENDING**. 새 Native/API/DB2 0. v441 인계는 당시 7/78 역사 스냅샷.
 
 > **2026-11-14 최신 단일 인계 정본 (v441·78요소 수락조건 재정비):** [새 채팅 읽기 전용 복원·v439/v440 실제 증거·개발 연속성](../CHAT_CONTINUITY_HANDOFF_20261114_P1_V441_78_REVIEW_PRODUCT_CONTINUITY.md). **현재 판정은 [78개 JSON](78_ELEMENT_COMPLETION_CONTRACTS.json)의 7/78, 18/18/7/12 PASS·B8 다음 검토·전체 E2E PENDING**. v441 54개 과잉 조건 완화·24개 유지, 공통 실측 다중 귀속/필요 최소 검증. 과거 v431 인계는 역사 상태, 사용자 별도 ‘진행’ 전 새 채팅은 READ ONLY+STOP.
