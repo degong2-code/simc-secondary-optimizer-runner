@@ -868,6 +868,24 @@ def _materialize_admitted_season_v096(*, source_only,season_profile_inputs,
         "source_authentication_created_here":False}
 
 
+def _assert_season_gem_tokens_unchanged_by_selected_equipment(expected,
+                                                             rows, need):
+    """Reject user equipment gem overrides after the v216/J snapshot.
+
+    User-crafted and special replacements may inherit the same gem_id, but
+    cannot silently change a source-verified J layout after preflight.
+    Physical socket *eligibility* remains a separate B10 source requirement.
+    """
+    actual={slot:row["options"].get("gem_id","")
+            for slot,row in rows.items()
+            if slot not in ("trinket1","trinket2")}
+    need(type(expected) is dict and
+         set(expected)==set(actual) and
+         all(type(value) is str and actual[slot]==value
+             for slot,value in expected.items()),
+         "SEASON_V271_USER_EQUIPMENT_GEM_IDS_CHANGED_AFTER_J")
+
+
 def build(user,folder,binary,revision,static_cache_path=None,
           imported_profile_text=None,*,ordinary_variant=None,pure_stage=False,
           independent_334=False,independent_target_level=False,
@@ -1162,6 +1180,13 @@ def build(user,folder,binary,revision,static_cache_path=None,
         need(actual_special==season_socket_plan["special_gem_id"] and
              actually_ordinary==season_socket_plan["ordinary_gem_ids"],
              "SEASON_V271_PHYSICAL_GEM_IDS_CHANGED_AFTER_J")
+    # Freeze all nontrinket slot gem tokens, including empty slots, before
+    # user equipment is applied. J is not recalculated from user item options.
+    season_source_gem_tokens=(
+        {slot:row["options"].get("gem_id","")
+         for slot,row in rows.items()
+         if slot not in ("trinket1","trinket2")}
+        if season_socket_plan is not None else None)
     original_selected_baseline_rows=(copy.deepcopy(rows)
         if season_selected_static_cache_path is not None else None)
     if pure_stage or source_free:
@@ -1176,6 +1201,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
     else:
         restored_tier_slots,catalyst_origin_rows=common.apply_user_equipment(
             key,rows,groups,user,ilvl,need)
+    if season_source_gem_tokens is not None:
+        _assert_season_gem_tokens_unchanged_by_selected_equipment(
+            season_source_gem_tokens,rows,need)
     # DK user rune is permanent enchant_id, not temporary oil O.
     # The profile and durable cache identity change only for explicit choice.
     admitted_dk_ids=runeforge_mod.RUNE_IDS  # unchanged older sessions only
