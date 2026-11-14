@@ -1,4 +1,72 @@
-# SIMC SECONDARY OPTIMIZER — 제품 우선·최소 충분 검증 상시 인계 (v456 단일 복원 정본)
+# SIMC SECONDARY OPTIMIZER — 제품 우선·78요소 통합 개발, v470 단일 인계 정본
+
+> **최신 인계 기준: 2026-11-14 v470 실제 구현 HEAD `7ae84cf331cfcb502b29a0fa97a07862c722f60e`.** 이 문서 변경 자체가 HEAD를 이동시키므로 새 채팅은 GitHub 브랜치 최신 SHA부터 재조회한다. 아래에 보존한 **v456 인계 본문은 역사적 스냅샷**이며 현재 날짜의 개발 순서·CI 상태로 사용하지 않는다.
+>
+> **권한:** 읽기 전용 복원 요청을 받은 새 채팅은 아래 정책·증거를 조회해 상태만 보고하고 STOP한다. 별도 사용자 `진행` 이전에는 GitHub 코드/문서/78 JSON 변경, 테스트·Actions 트리거, Native·API·DB2 수집, 커밋·병합·공식 승격을 실행하지 않는다.
+
+## 1. 정체성·승인 정책·권한
+
+- 목적: **26개 DPS 전문화(증강 기원사·탱커·힐러 제외)**에 대해 미래 목표 ilvl(기본334) 또는 사용자가 지정한 **최종** CHMV T를 기준으로 치명·가속·특화·유연 **최적 절대 rating**을 기존 SimC의 DPS 최대화로 탐색. 결과는 비율, DPS/SEM, **95% 통계 판정**, 관측상 1순위, 실질적으로 다른 근접 대안, 불확실성 구분. 전역 최적해 증명 금지.
+- 사용자는 전체 착용 장비를 지정하거나 현재 착용 장비의 CHMV를 기본 예산으로 사용하지 않는다. 직업·전문화·종족·특성, ilvl/T, 장신구2, 선택 특수/제작장비·장식 최대2, 보석·영약·기름·마부·전투조건을 입력. 대표 일반 장비·무기·4pc·주능력치·SimC 프로필은 내부 생성; 선택 업로드 프로필은 주로 캐릭터·특성 편의 기능.
+- 시즌별 **G/J/F/O 전체 자동 구축**, `B=G+J+F`, `T=B+O`, `c_final=c_base+o`. 수동 최종 T 우선. 고정 L은 G/B 내 이미 포함, O는 고정·비자유분배, 정적 마부 E는 승인된 소유권에 따라 **한 번만** 반영한다. 임의의 시즌 이전 수치 전용·미관측=0 추론 금지. SimC가 효과/proc/APL/DPS를 책임지고 우리 코드는 source/ID/옵션·예산·최종 JSON2 rating·캐시·통계·복구를 책임진다.
+- 최상위 직접 결정: [제품 우선·최소 충분 검증](development/POLICY_PRODUCT_FIRST_MINIMUM_SUFFICIENT_VERIFICATION_20261114.md) 및 [승인 v1.4.3 G/J/F/O 정책](SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.3_SEASON_GJFO_AUTO_BUILD_APPROVED_20261102.md), 비충돌 승인 기준. 원본 제품 `v016_SCENARIO_CONTRACT`는 사용자 보고 최신 기준선이지만 바이트/실제 직접 병합 검증 전 공식 통합 완료라 하지 않는다.
+- 저장소 `degong2-code/simc-secondary-optimizer-runner`; 격리 브랜치 `probe/chat-cache-v035-20261024`, v470 구현 HEAD `7ae84cf331cfcb502b29a0fa97a07862c722f60e`; 조회한 `main` HEAD `07133e0aaf738d6e4816a6486057b1cd49c018de`(수정 금지). v003 immutable, 원본 v016, Project Sources/UI, Work OS M0/Shared State 및 공식 승격/MAIN 소유권은 별도 승인 영역. GitHub 기록만으로 Project UI 적용을 주장하지 않는다.
+
+## 2. 78요소의 정확한 역할과 작업 원칙
+
+**78요소는 별도의 완성 후 감사표가 아니라 전체 기능, 설계 고민, 과거 오류·범용성·검증 절제 원칙을 보존한 제품 개발 정본**이다. 각 요소의 [실제 상태·수락조건 JSON](development/78_ELEMENT_COMPLETION_CONTRACTS.json), [v441 78/78 필요성 감사](development/78_ELEMENT_ACCEPTANCE_NECESSITY_AUDIT_V441.md), [v401 완료 정책](development/POLICY_78_ELEMENT_COMPLETION_GATE_V401.md)을 관련 작업마다 확인한다. v441은 **54개 과잉 조건 축소·명료화 / 24개 유지**로 이미 완료; 이를 전수 재감사하지 않는다.
+
+- 구현 단위는 서로 연결된 여러 요소와 **실제 사용자 실행 흐름**이다. 번호순 78회 독립 개발·78회 Native 실행을 요구하지 않는다. 시즌 소스·GJFO(A/B/C/E/G), 대표 장비/프로필(B/D/F), 선택 장비·E/L/O(C/D/E/F/G), SimC 결과/캐시(A/E/F/G/H), UI·복원(F/G)을 필요에 따라 묶는다. 작업군은 새로운 필수 Gate가 아니다.
+- 한 Native/Actions/봉인 영수증이 여러 요소의 수락 조건을 직접 지원하면 **공동 귀속**; 미검증 옵션까지 PASS 처리하지 않는다. `generic/current_source/product_integration/historical` 4축 및 정식 COMPLETE 판정 엄격 유지. `policy.next_review=B10`은 다음 원장 **판정 위치**, 제품 구현 명령이나 전체 선행 Gate가 아니다.
+- 모든 작업에 `STOP → REUSE → CONNECT/FIX → 최소 EXTEND → 필요할 때만 REPLACE/NEW` 적용. 구체적인 사용자 결함, 제품 실제 소비 필드, 기존 실증·캐시, 미선택 옵션 격리, CPU/메모리/파일·I/O/네트워크/Native 비용, STOP 사유를 함께 검토.
+- 단순 PASS 숫자 확대, 전체 DB2·SpellEffect·품목 전수, 26개 전문화 Native 전수, 독립 아이템 효과 인증, 불필요한 SEM 미세 조정, 무한 합성 엣지 케이스 패치 금지. **기본 환경 필수 G/J/F/O·정적 rating 정합은 생략하지 않되, 미선택·미검증 선택 옵션만 보류한다.**
+
+## 3. 공식 실제 상태 (2026-11-14 v470 HEAD에서 조회)
+
+- 78개: **generic 27 PASS, current_source 27 PASS, product_integration 15 PASS, historical 13 PASS, COMPLETE 15/78**. COMPLETE ID `A8,A9,A10,A11,B2,B3,B7,B8,D4,D6,E1,H1,H3,H4,H6`. 78 JSON 불변.
+- 전체 신규 시즌 strict `ZERO-SOURCE → USER-E2E` **PENDING**. 부분 제품 Native 성공, 오프라인 회귀, 모든 26 DPS 일반화, 출시 READY를 혼동하지 않는다.
+- v470 [v113 웹 API Actions #43602175387](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43602175387): Ubuntu/Windows **각 377 PASS / 0 FAIL**. [v182 UI #43602175288](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43602175288): 각 OS 102+161+3 = **266 PASS**. [v401 계약 #43602175281](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43602175281) SUCCESS; [v167 #43602175296](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43602175296), [v177 #43602175284](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43602175284), [v180 #43602175322](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43602175322), [v181 #43602175319](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43602175319) SUCCESS. 워크플로 이름의 과거 "six actual Native"가 새 Native 실행을 뜻하는 것은 아니다.
+- [Reusable Offline #43602175323](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43602175323) FAILURE: 기존 developer ledger 메타데이터 `DEV_LEDGER_FAIL` **198건**, 신규 v470 제품 회귀 실패와 구분. 첨부 기록과 현재 새 Native/API/DB2 수집 **0회**를 분리한다.
+- **실 Native 재사용:** [v439 생존 사냥꾼 선택 제작 장비·4pc·SimC DPS/캐시](development/notes/2026-11-14_p1-v439-b8-one-real-selected-70783-four-tier-native-e2e.md), [v440 실 JSON2 95%·근접 대안](development/notes/2026-11-14_p1-v440-b8-existing-real-json2-95-material-replay.md); [냉기 마법사 수동 T3300 #42785318578](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42785318578), [풍운 수도사 자동 T3107 #42941245130](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42941245130), [조화 드루이드 자동 T3107 #42949922419](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/42949922419). 각 개별 조건의 Native/실제품 일부 범위이고 26 DPS/미래 시즌/전체 엄격 E2E까지 입증하지 않는다.
+
+## 4. 최근 실제 개발과 공통 원인·재발 방지
+
+- v457~v459: 제작장비 정확 ItemID 입력, 시즌 빌드 사용, 저장 세션·편집 중 예산 표시 차단 경계 정리.
+- **v460~v462**: 현재 설치 v212/v213 원본 SHA로 시즌 장비 후보·기름/영약 조회·저장 세션 장비 선택 복원을 묶어 연결. 오래된 패키지 후보를 신규 시즌의 승인 선택지로 오인하지 않는다.
+- **v463~v464**: 저장 세션의 정확한 v212 룬·마부 출처 복원, 역사 미승인 마부 결과 열람과 신규 실행 승인 분리. 과거 값을 자동 승인하지 않는다.
+- **v465~v466**: 같은 기름을 가진 복수 설치 영수증을 정확한 SHA로 검증하고 임의 64개 나열 제한 제거. 동일 시즌 static F/J/O 변형이 같다고 단정하지 않는다.
+- **v467**: 설치 v212로 승인된 죽음의 기사 룬을 불승인 v213 일반 마부 후보 상태와 분리해 사용자 UI 연결. 불승인 일반 마부는 여전히 잠금.
+- **v468**: 정확한 설치 SHA의 정책 A 영구 마부 등록 목록을 읽기 전용 표시. **등록 문서 존재 ≠ 스탯별 정적 E·최종 SimC 프로필 사용자 실행 완료**. 등록만으로 런타임 허용 금지.
+- **v469**: 같은 기름 O라도 서로 다른 영약 F/보석 J 설치본이 가능함을 처리. 사용자 지정 영약·기름·소켓과 맞는 정확한 하나의 v212 설치 SHA를 선택; 모호하면 다른 설치본을 임의 대입하지 않고 차단.
+- **v470 HEAD `7ae84cf3`**: 저장 세션 복원이나 빌드·ilvl 변경 후 오래된 시즌 기름·영약 카탈로그를 새 검증 선택지처럼 재사용하던 UI 결함을 수정. `runner/webui/app.js`의 공통 `installedConsumableScopeMatches`가 **game_build + target_ilevel** 동시 일치를 강제하고 `selectedFullVerifiedOil`, 기름/영약 렌더링이 같은 조건을 사용. 단기 실행과 장기 실행의 공통 `buildRequest()` 소비 경계에서 잘못된 시즌 선택을 막는다. [v470 코드 커밋](https://github.com/degong2-code/simc-secondary-optimizer-runner/commit/7ae84cf331cfcb502b29a0fa97a07862c722f60e), [v470 UI 회귀](https://github.com/degong2-code/simc-secondary-optimizer-runner/blob/7ae84cf331cfcb502b29a0fa97a07862c722f60e/tests/test_v114_local_web_ui_offline.py).
+- 최근 공통 재발 방지: **선택 등록 ≠ RUN 승인**, **기름 손 ItemID만으로 F/J 설치 변형 단정 금지**, **과거 세션 복원 ≠ 현재 시즌 승인**, 정확한 빌드·ilvl·SHA·소켓·F/O를 한 계약에서 다룬다. 이와 동일한 새로운 엔진이나 Gate는 만들지 않는다.
+
+## 5. 실제 개발 자산, 미완성, 현재 병목
+
+- **이미 구현·재사용할 기반:** [FILE_MAP](development/FILE_MAP.md)에서 v191/v211/v213 시즌 소스, v216/v217/v212 환경·봉인 설치, v222 B/T, v098/v096 대표 사용자 시나리오·RUN, v113 FastAPI, v094/v106 세션, v290/v291 기존 적응형 실행, v292/v293 캐시·취소/재개, v295 DK 룬, v196/v220 선택지·정책 A 등록 경로를 확인한다. 모두 새로 개발할 목록이 아니다.
+- **오프라인/제품 실증 완료 범위:** v470 기름·영약 UI 빌드/ilvl 정합, 기존 v469 설치본 F/O/J 구분, v439·v440 및 3개 DPS 실 Native 개별 케이스. **미실증:** 현재 v470 전체 사용자 직접 클릭·신규 시즌 ZERO-SOURCE→USER-E2E, 모든 선택 옵션의 최종 프로필·26개 전문화 전수. 미실증은 재현된 결함이 아니다.
+- **선택 기능의 부분 미연결:** v212 등록된 일반 영구 마부는 v468의 정확한 설치 등록 조회/표시까지 연결; 정적 E의 검증된 스탯 벡터·RUN 프로필 주입은 아직 전체 범용 완료 근거가 없어 **해당 선택 옵션만 잠금**. 미선택 촉매·추가 소켓·확장팩 특수 모듈·음식/물약 등의 미확정 항목도 검증된 BASE 실행을 막는 전역 Gate로 만들지 않는다.
+- **다음 작업 후보(필수 신규 Native 지시 아님):** 기존 v470 후 **검증된 보석 J·영약 F·기름 O의 정확한 설치본 선택이 웹 일반 실행·장기 실행·세션 복원에서 동일한 최종 B/T·SimC 사용자 프로필·캐시 identity로 소비되는지** 현재 코드/기존 테스트·영수증을 교차 확인. 이미 증명되면 REUSE/STOP, 첫 실제 불일치만 CONNECT/FIX. 다른 필요 미완성 사용자 기능이 더 높은 우선순위로 확인되면 그쪽을 택한다. 영구 E 확장은 실제 선택할 정확 항목/소유권/SimC 입력의 증거가 충분할 때만 해당 선택에 한정한다.
+- **초단기:** 최신 HEAD·증거 조회→관련 78요소 원문/기존 실패 범위→첫 실제 사용자 장애 확정. **단기(사용자 `진행` 후):** 기존 공통 경로 최소 수정, 변경점 오프라인 집중 회귀/기존 영수증 재사용. **장기:** 실제 새 시즌·26 DPS·선택 옵션별 필요 범위 증분 검증 후 엄격 전체 ZERO-SOURCE→USER E2E·출시 READY 판정; 이미 완료한 v441 78요소 감사를 반복하지 않는다.
+
+## 6. 권한·중단 기준과 독립 복원 읽기 순서
+
+1. [제품 우선·최소 충분 검증 정책](development/POLICY_PRODUCT_FIRST_MINIMUM_SUFFICIENT_VERIFICATION_20261114.md)
+2. **본 최신 단일 인계 정본** (아래 v456 본문은 역사 스냅샷)
+3. [CURRENT](CURRENT_PRODUCT_DEVELOPMENT_STATE.md)
+4. [START_HERE](development/START_HERE.md) → [INDEX](development/INDEX.md) → [FILE_MAP](development/FILE_MAP.md)
+5. [v1.4.3 승인 시즌 정책](SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.3_SEASON_GJFO_AUTO_BUILD_APPROVED_20261102.md)
+6. [v441 78요소 수락 조건 감사](development/78_ELEMENT_ACCEPTANCE_NECESSITY_AUDIT_V441.md) → [78 JSON](development/78_ELEMENT_COMPLETION_CONTRACTS.json) → [v401 완료 정책](development/POLICY_78_ELEMENT_COMPLETION_GATE_V401.md)
+7. [자동 상태표](development/78_ELEMENT_STATUS_GENERATED.md)·[상세 역사 추적표](development/ENVIRONMENT_READINESS_78_ELEMENT_TRACKER_20261113.md); 현재 관련 요소만 열고 기존 근거 재사용.
+8. v439~v470 관련 코드·Native/Actions 영수증과 검증 경계만 좁게 조회; 브랜치 실제 HEAD와 현재 워크플로 결과를 다시 확인.
+
+**새 일반 채팅 첫 답변은 읽기 전용 복원 결과만 보고·STOP.** 최신 HEAD/목적/현재 사용 가능·차단 범위/78 상태/실 Native 및 오프라인 증거/현재 첫 병목/초단기·단기·장기 로드맵을 구분한다. 사용자가 별도 `진행` 승인하기 전에는 코드·GitHub 문서·78 JSON 수정, 테스트·Actions 시작, Native/DB2/외부 수집, 커밋·병합·정식 승격 금지. 기존 주 제품 개발의 격리 브랜치 권한과 보호 영역은 그대로다.
+
+---
+
+## 보존된 v456 인계 — 역사 스냅샷 (아래 내용은 작성 시점 기준)
+
+# SIMC SECONDARY OPTIMIZER — 제품 우선·최소 충분 검증 상시 인계 (v456 역사 복원 기록)
 
 > **2026-11-14 최신 사용자 직접 결정의 인계 진입점.** 정책 정본은 [제품 우선·최소 충분 검증](development/POLICY_PRODUCT_FIRST_MINIMUM_SUFFICIENT_VERIFICATION_20261114.md)이다. 이 인계는 과거 v445 인계의 날짜별 상태와 독립이며, 실제 개발 HEAD/78요소 증거를 덮어쓰지 않는다.
 >
