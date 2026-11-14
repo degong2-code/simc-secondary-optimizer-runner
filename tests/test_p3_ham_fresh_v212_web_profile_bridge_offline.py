@@ -93,13 +93,16 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
         # request must not be silently assigned this no-oil environment.
         controls["oil_hands"]=[]
         params=web.UserRequest(controls=controls,binary=str(binfile),
-                               revision="abcdef0",current_season_product=True)
+                               revision="abcdef0",current_season_product=True,
+                               installed_season_game_build=self.build)
         folder=self.root/("a"*20)
         folder.mkdir()
         user_result={"plan":{"class":"paladin","spec":"retribution",
                              "base_B":3107,"fixed_O":{},
                              "final_T":3107,"native_limit":6}}
         with (
+            mock.patch.object(self.jobs,"load_fresh_profile_for_user",
+                              return_value=source) as exact_install,
             mock.patch.object(web.sessions,"store_session",return_value=folder)
                 as store,
             mock.patch.object(web.profile_stage,"build_or_reuse",
@@ -110,6 +113,9 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
             response=self.jobs.plan(params)
         self.assertEqual(response["status"],"READY_ZERO_NATIVE")
         self.assertEqual(response["native_calls"],0)
+        exact_install.assert_called_once_with(
+            334,self.build,selected_oil_hands=[],
+            selected_oil_item_ids_by_hand=None)
         self.assertEqual(store.call_args.kwargs[
             "fresh_installed_manifest_sha256"],self.digest)
         self.assertEqual(store.call_args.kwargs[
@@ -359,7 +365,8 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
             controls["oil_hands"]=[]
             form=web.UserRequest(controls=controls,
                 binary=str(fake),revision="abcdef0",
-                current_season_product=True,fresh_season_build=self.build)
+                current_season_product=True,
+                installed_season_game_build=self.build)
             with (
                 mock.patch.object(web.sessions,"store_session",
                                   return_value=folder) as store,

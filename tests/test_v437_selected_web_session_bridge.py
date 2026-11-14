@@ -36,6 +36,7 @@ class SelectedWebSession(unittest.TestCase):
         self.params=web.UserRequest(
             controls=self.controls,binary=str(self.binary),
             revision="abcdef0",current_season_product=True,
+            installed_season_game_build=self.base.build,
             static_cache=str(self.cache))
         self.preview={
             "status":"B8_SELECTED_V096_COMPLETE_PROFILE_BUDGET_NOT_ADMITTED",
