@@ -34,6 +34,7 @@ import v148_local_batch_results as batch_view
 import v167_product_season_gear_adapter as season_gear
 import v208_internal_exact_special_L_hydrator as exact_L
 import v212_environment_manifest as environment_manifest
+import v213_source_to_catalog as source_to_catalog
 import v216_environment_build_coordinator as environment_build
 import v289_retail_live_build_source as retail_build_source
 import v348_windows_user_source_credentials as local_source_keys
@@ -2504,8 +2505,77 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
         return official_ko_env.cache_status(jobs.root,build)
 
     @app.get("/api/v1/season-gear")
-    def current_season_gear():
-        """User-facing seasonal effect choices; plain items stay internal."""
+    def current_season_gear(game_build: str | None = None,
+                            target_ilevel: int = 334,
+                            installed_manifest_sha256: str | None = None):
+        """Read-only source-bound candidate choices, never item approval."""
+        if game_build is not None or installed_manifest_sha256 is not None:
+            if (type(game_build) is not str or
+                    re.fullmatch(r"\d+(?:\.\d+){3}",game_build) is None or
+                    type(installed_manifest_sha256) is not str or
+                    re.fullmatch(r"[a-f0-9]{64}",
+                                 installed_manifest_sha256) is None or
+                    not 1<=target_ilevel<=1000):
+                raise HTTPException(422,detail={
+                    "code":"SEASON_GEAR_EXACT_INSTALLED_SCOPE_REQUIRED"})
+            empty={"schema":season_gear.SCHEMA,
+                   "status":"SEASON_GEAR_INSTALLED_SOURCE_UNAVAILABLE",
+                   "season_build":game_build,
+                   "source_scope":"EXACT_INSTALLED_V212_REQUIRED",
+                   "choices":{k:[] for k in ("trinket",
+                     "special_effect_gear_candidate","selectable_stat_craft")},
+                   "count":0,"native_calls_now":0,
+                   "ordinary_equipment_user_selectable":False,
+                   "full_season_completeness_confirmed":False}
+            try:
+                docs=(jobs.root/"_fresh_season_sources"/
+                      ("wago_"+game_build)/"fresh_source")
+                receipt=docs/("v212_installed_"+
+                              installed_manifest_sha256[:20]+".json")
+                if (docs.is_symlink() or receipt.is_symlink() or
+                        not receipt.is_file()):
+                    return empty
+                installed,_=environment_manifest.read_json(
+                    receipt,environment_build.MAX_RECEIPT_BYTES)
+                environment_manifest.verify_fresh_installed_environment(
+                    installed)
+                if (installed["manifest_sha256"]!=installed_manifest_sha256 or
+                    installed["game_build"]!=game_build or
+                    installed["target_ilevel"]!=target_ilevel):
+                    return empty
+                physical=installed.get("official_O_physical_source")
+                oils=(physical.get("selected_oil_item_ids_by_hand")
+                      if type(physical) is dict else {})
+                matched=environment_build.find_verified_installed_season_environment(
+                    jobs.root,target_ilevel,expected_game_build=game_build,
+                    selected_oil_item_ids_by_hand=oils,
+                    expected_installed_manifest_sha256=installed_manifest_sha256)
+                if (matched is None or
+                    matched["installed_manifest_sha256"]!=installed_manifest_sha256):
+                    return empty
+                source_path=docs/"v213_candidate_catalog.json"
+                if source_path.is_symlink() or not source_path.is_file():
+                    return empty
+                source,raw_sha=environment_manifest.read_json(source_path)
+                source_to_catalog.verify_catalog(source)
+                if (raw_sha!=installed["source_catalog_artifact_sha256"] or
+                    source["manifest_sha256"]!=
+                        installed["source_catalog_manifest_sha256"] or
+                    source["game_build"]!=game_build):
+                    return empty
+                groups=source["catalog"]["gear"]["slot_groups"]
+                ids={item["item_id"] for rows in groups.values()
+                     for item in rows if item.get("category") in (
+                         "trinket","special_effect_gear_candidate",
+                         "selectable_stat_craft")}
+                names=official_ko_env.read_names(jobs.root,game_build,ids)
+                return season_gear.public_installed_v213_candidates(
+                    source,installed_manifest_sha256=installed_manifest_sha256,
+                    official_names=names)
+            except (OSError,ValueError,KeyError,TypeError):
+                return empty
+        # Historical browsing fallback only. It is NOT an installed v212
+        # environment and is never used when an installed SHA was supplied.
         try:
             catalog=season_gear.read()
             ids={row["item_id"] for row in catalog["items"]
@@ -2515,7 +2585,7 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                 jobs.root,catalog["season_build"],ids)
             return season_gear.public_options(catalog,
                                               official_names=names)
-        except (season_gear.GearBlocked, ValueError, OSError, KeyError) as exc:
+        except (season_gear.GearBlocked, ValueError, OSError, KeyError):
             return {"schema":season_gear.SCHEMA,
                     "status":"SEASON_GEAR_CATALOG_UNAVAILABLE",
                     "choices":{k:[] for k in ("trinket","special_effect_gear_candidate","selectable_stat_craft")},

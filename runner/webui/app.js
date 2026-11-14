@@ -2111,6 +2111,43 @@ async function buildSeasonEnvironment(forUserVariant=false) {
     $("season-diagnostic-copy-btn").disabled=false;
     showSeasonEnvironmentBuild(report,forUserVariant);
     rememberVerifiedSeasonBuildForRun(report);
+    // Refresh user equipment options from the exact installed v212/v213
+    // candidate source, never promote this runtime's packaged older build.
+    const installedScope=report.web_environment_scope||{};
+    if(installedScope.environment_ready===true &&
+       installedScope.environment_installed===true) {
+      const sha=report.installed_manifest_sha256 ||
+        report.source_compilation?.verified_environment_install?.manifest_sha256 ||
+        report.zero_history_build?.versioned_environment_installed?.manifest_sha256;
+      const build=installedScope.game_build,level=installedScope.target_ilevel;
+      const priorTrinkets=[field("trinket1"),field("trinket2")];
+      try{
+        if(typeof sha!=="string"||!/^[a-f0-9]{64}$/.test(sha) ||
+           typeof build!=="string"||!/^\d+(?:\.\d+){3}$/.test(build) ||
+           !Number.isInteger(level)||level<1||level>1000)
+          throw Error("SEASON_GEAR_INSTALLED_SOURCE_ID_MISSING");
+        const gear=await api("/api/v1/season-gear?game_build="+
+          encodeURIComponent(build)+"&target_ilevel="+level+
+          "&installed_manifest_sha256="+sha);
+        if(gear.status!=="CURRENT_SEASON_CANDIDATE_SELECTION_ONLY" ||
+           gear.source_scope!=="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES" ||
+           gear.season_build!==build||gear.installed_manifest_sha256!==sha)
+          throw Error("SEASON_GEAR_INSTALLED_SOURCE_UNAVAILABLE");
+        installSeasonGearHints(gear);
+        setTrinketSelection("trinket1",priorTrinkets[0]);
+        setTrinketSelection("trinket2",priorTrinkets[1]);
+        // Do not carry optional choices from a different installed source.
+        fillGearRows("special-rows",[]);
+      }catch(error){
+        installSeasonGearHints(null);
+        fillGearRows("special-rows",[]);
+        $("season-gear-note").textContent=
+          "검증 설치의 장신구·특수장비 후보 연결이 보류되었습니다. "+
+          "다른 시즌 패키지 목록을 대신 사용하지 않습니다.";
+      }
+    }else{
+      installSeasonGearHints(null);
+    }
     if(forUserVariant) $("user-variant-status").textContent=(
       report.web_environment_scope?.environment_ready===true?
         "선택 구성의 J/F/O와 G/B/T 검증 설치 완료 · 최적화 단계에서도 같은 구성·SHA를 재확인합니다.":

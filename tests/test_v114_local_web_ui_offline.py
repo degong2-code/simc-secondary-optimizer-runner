@@ -904,6 +904,21 @@ console.log("V458_VERIFIED_RETAIL_BUILD_RUN_BINDING_PASS");
         self.assertIn("V458_VERIFIED_RETAIL_BUILD_RUN_BINDING_PASS",
                       result.stdout)
 
+    def test_v460_new_installed_season_replaces_packaged_gear_candidates(self):
+        """Build result refreshes verified current source; no older fallback."""
+        js=self.client.get("/assets/app.js").text
+        api=self.client.get("/api/v1/season-gear",headers=self.headers).json()
+        self.assertEqual(api["status"],"CURRENT_SEASON_CANDIDATE_SELECTION_ONLY")
+        self.assertIn("source_scope",js)
+        self.assertIn("VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES",js)
+        self.assertIn("&installed_manifest_sha256=",js)
+        self.assertIn("report.installed_manifest_sha256",js)
+        self.assertIn("installSeasonGearHints(gear)",js)
+        self.assertIn("installSeasonGearHints(null)",js)
+        self.assertIn("다른 시즌 패키지 목록을 대신 사용하지 않습니다.",js)
+        self.assertIn('setTrinketSelection("trinket1",priorTrinkets[0]);',js)
+        self.assertIn('setTrinketSelection("trinket2",priorTrinkets[1]);',js)
+
     def test_environment_build_surface_is_not_optimizer_plan(self):
         page=self.client.get("/").text
         js=self.client.get("/assets/app.js").text

@@ -455,6 +455,79 @@ def public_options(payload, *, official_names=None):
         "verified_ko_item_names": len(korean),
     }
 
+
+def public_installed_v213_candidates(catalog, *, installed_manifest_sha256,
+                                     official_names=None):
+    """Candidate-only projection from a SHA-bound installed v212/v213 source.
+
+    Caller verifies the v212 install, source bytes, and linked stage receipts.
+    An internal v213 'user_selectable=False' is NOT Policy-A approval.
+    """
+    import v213_source_to_catalog as source_bridge
+    import v143_specialization_contracts as specs
+    source_bridge.verify_catalog(catalog)
+    need(type(installed_manifest_sha256) is str and
+         len(installed_manifest_sha256)==64 and
+         all(x in "0123456789abcdef" for x in installed_manifest_sha256),
+         "INSTALLED_V212_GEAR_SHA_INVALID")
+    gear=catalog["catalog"]["gear"]
+    groups=gear["slot_groups"]
+    need(type(groups) is dict,"INSTALLED_V213_GEAR_GROUPS_INVALID")
+    kinds=("trinket","special_effect_gear_candidate","selectable_stat_craft")
+    choices={kind:[] for kind in kinds}
+    ids=set()
+    for group,rows in groups.items():
+        need(type(group) is str and type(rows) is list,
+             "INSTALLED_V213_GEAR_GROUP_INVALID")
+        for entry in rows:
+            iid=entry["item_id"]
+            need(type(iid) is int and iid>0 and iid not in ids and
+                 entry.get("user_selectable") is False,
+                 "INSTALLED_V213_GEAR_CANDIDATE_ID_INVALID")
+            ids.add(iid)
+            kind=entry.get("category")
+            if kind not in choices:
+                continue
+            need(type(entry.get("name")) is str and bool(entry["name"]) and
+                 type(entry.get("inventory_type")) is int and
+                 type(entry.get("class_id")) is int and
+                 type(entry.get("subclass_id")) is int and
+                 ((kind=="trinket")==(entry["inventory_type"]==12)),
+                 "INSTALLED_V213_VISIBLE_GEAR_METADATA_INVALID")
+            choices[kind].append({
+                "item_id":iid,"name":entry["name"],
+                "inventory_type":entry["inventory_type"],
+                "slot_hint":entry.get("slot_hint"),
+                "class_id":entry["class_id"],
+                "subclass_id":entry["subclass_id"],
+                "season_list_basis":entry.get("season_list_basis")})
+    need(len(ids)==gear["count"],"INSTALLED_V213_GEAR_COUNT_DRIFT")
+    official=official_names if official_names is not None else {}
+    need(type(official) is dict and all(
+         type(i) is int and i in ids and type(name) is str and
+         0<len(name)<=200 for i,name in official.items()),
+         "INSTALLED_V213_KOREAN_NAME_OUTSIDE_SOURCE")
+    for kind in kinds:
+        for row in choices[kind]:
+            if row["item_id"] in official:
+                row["name_ko"]=official[row["item_id"]]
+        choices[kind].sort(key=lambda x:(x["name"].casefold(),x["item_id"]))
+    weapon_forms={"/".join(key.split("/")):
+                  specs.lookup(*key.split("/"))["weapon_form"]
+                  for key in sorted(specs.CONTRACTS)}
+    return {
+        "schema":SCHEMA,"status":"CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
+        "source_scope":"VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES",
+        "season_build":catalog["game_build"],
+        "installed_manifest_sha256":installed_manifest_sha256,
+        "source_catalog_manifest_sha256":catalog["manifest_sha256"],
+        "choices":choices,"weapon_forms":weapon_forms,
+        "count":len(ids),"manual_exact_id_allowed":False,
+        "manual_exact_id_exception":"CRAFTED_EQUIPMENT_VARIANTS_ONLY",
+        "ordinary_equipment_user_selectable":False,
+        "full_season_completeness_confirmed":False,
+        "native_calls_now":0,"verified_ko_item_names":len(official)}
+
 def ordinary_candidates(payload, family, *, slots=REPRESENTATIVE_SLOTS):
     """Small class-family-compatible interior candidate preview; no gear swap.
 

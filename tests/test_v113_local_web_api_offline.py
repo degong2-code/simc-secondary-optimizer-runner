@@ -44,6 +44,64 @@ class LocalWebAPIOffline(unittest.TestCase):
 
 
 
+    def test_v460_installed_v212_gear_candidates_source_bound_and_fail_closed(self):
+        """Existing v212/v213 sealed candidate catalogue only, zero Native."""
+        build="12.1.5.70783"
+        digest="b"*64
+        catalog_sha="c"*64
+        docs=self.app.state.jobs.root/"_fresh_season_sources"/("wago_"+build)/"fresh_source"
+        docs.mkdir(parents=True)
+        (docs/("v212_installed_"+digest[:20]+".json")).write_text("{}")
+        (docs/"v213_candidate_catalog.json").write_text("{}")
+        doc={"manifest_sha256":digest,"game_build":build,
+             "target_ilevel":334,
+             "source_catalog_artifact_sha256":catalog_sha,
+             "source_catalog_manifest_sha256":"a"*64,
+             "official_O_physical_source":None}
+        row={"item_id":269999,"name":"Current-season trinket","category":"trinket",
+             "user_selectable":False,"inventory_type":12,"class_id":4,
+             "subclass_id":0,"slot_hint":None}
+        catalog={"manifest_sha256":"a"*64,"game_build":build,
+                 "catalog":{"gear":{"count":1,"slot_groups":{"trinket":[row]}}}}
+        url=("/api/v1/season-gear?game_build="+build+
+             "&target_ilevel=334&installed_manifest_sha256="+digest)
+        with (mock.patch.object(web.environment_manifest,"read_json",
+                 side_effect=[(doc,"source"),(catalog,catalog_sha)]),
+              mock.patch.object(web.environment_manifest,
+                 "verify_fresh_installed_environment",return_value=True),
+              mock.patch.object(web.environment_build,
+                 "find_verified_installed_season_environment",
+                 return_value={"installed_manifest_sha256":digest}) as find,
+              mock.patch.object(web.source_to_catalog,"verify_catalog",
+                 return_value=True),
+              mock.patch.object(web.official_ko_env,"read_names",
+                 return_value={269999:"현 시즌 장신구"}),
+              mock.patch.object(web.season_gear,"read",
+                 side_effect=AssertionError("packaged v167 fallback forbidden"))):
+            result=self.client.get(url,headers=self.headers)
+        self.assertEqual(result.status_code,200,result.text)
+        payload=result.json()
+        self.assertEqual(payload["season_build"],build)
+        self.assertEqual(payload["installed_manifest_sha256"],digest)
+        self.assertEqual(payload["source_scope"],
+                         "VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES")
+        self.assertEqual(payload["choices"]["trinket"][0]["item_id"],269999)
+        self.assertEqual(payload["choices"]["trinket"][0]["name_ko"],
+                         "현 시즌 장신구")
+        self.assertFalse(payload["full_season_completeness_confirmed"])
+        self.assertEqual(payload["native_calls_now"],0)
+        self.assertEqual(find.call_args.kwargs[
+                         "expected_installed_manifest_sha256"],digest)
+        self.assertEqual(self.client.get(url.replace(
+            digest,"9"*64),headers=self.headers).json()["choices"]["trinket"],[])
+        self.assertEqual(self.client.get(url.replace(
+            "target_ilevel=334","target_ilevel=335"),
+            headers=self.headers).json()["choices"]["trinket"],[])
+        self.assertEqual(self.client.get(
+            "/api/v1/season-gear?game_build="+build,
+            headers=self.headers).status_code,422)
+        self.assertEqual(self.client.get(url).status_code,403)
+
     def test_verified_installed_oil_loadouts_are_read_only_and_empty(self):
         got=self.client.get("/api/v1/verified-oil-loadouts?ilevel=334",
                             headers=self.headers)
