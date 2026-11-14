@@ -1792,6 +1792,23 @@ class LocalJobs:
         hydrated=None
         prepared_params=params
         if params.current_season_product and user["special_items"]:
+            # v475 must apply BEFORE optional exact-L Native/cache hydration,
+            # not only in the later plan() call. On a restarted server the
+            # saved v113 snapshot is also evidence that a stale installed
+            # season could be selected by an unpinned special-gear request.
+            # Legacy packaged special-L starts without a saved fresh v113
+            # snapshot retain their original path.
+            if params.installed_season_game_build is None:
+                workspace=self.root/"_fresh_season_sources"
+                saved_fresh=(workspace.is_dir() and not workspace.is_symlink()
+                    and any(p.is_file() and not p.is_symlink() for p in
+                            workspace.glob(
+                                "wago_*/fresh_source/v113_profile_*.json")))
+                if (self._verified_fresh_profile_result is not None or
+                        self._current_fresh_game_build is not None or
+                        saved_fresh):
+                    raise blocked(environment_manifest.EnvironmentBlocked(
+                        "WEB_FRESH_INSTALLED_GAME_BUILD_PIN_REQUIRED"))
             binary=pathlib.Path(params.binary).expanduser().resolve()
             with self.static_lock:
                 source=self.default_static_cache(user,params.static_cache)

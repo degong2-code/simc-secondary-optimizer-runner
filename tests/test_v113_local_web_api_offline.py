@@ -1076,6 +1076,46 @@ class LocalWebAPIOffline(unittest.TestCase):
                          "WEB_SELECTED_INSTALLED_SEASON_BUILD_NOT_FOUND")
         loader.assert_called_once()
 
+    def test_v476_special_L_unpinned_old_install_blocks_before_native(self):
+        """A stale fresh season may not hydrate selected-L before v475."""
+        jobs=self.app.state.jobs
+        controls={**self.controls,"oil_hands":[],"special_items":[{
+            "slot":"head","item_id":290111,"options":{}}]}
+        payload={**self.payload,"controls":controls,
+                 "current_season_product":True}
+        directory=jobs.root/"_fresh_season_sources"/(
+            "wago_12.1.5.70783")/"fresh_source"
+        for variant in ("in_memory","saved_snapshot"):
+            with self.subTest(variant=variant):
+                jobs._verified_fresh_profile_result=(
+                    {"verified_target_ilevel":334} if variant=="in_memory"
+                    else None)
+                jobs._current_fresh_game_build=None
+                if variant=="saved_snapshot":
+                    directory.mkdir(parents=True,exist_ok=True)
+                    (directory/("v113_profile_"+"a"*20+".json")).write_text(
+                        "{\\\"stale\\\":true}\\n",encoding="utf8")
+                with (mock.patch.object(web.exact_L,"hydrate",
+                             side_effect=AssertionError("NO_STATIC_L_NATIVE")),
+                      mock.patch.object(jobs,"default_static_cache",
+                             side_effect=AssertionError("NO_CACHE_LOOKUP")),
+                      mock.patch.object(jobs,"load_fresh_profile_for_user",
+                             side_effect=AssertionError("NO_OLD_PROFILE")),
+                      mock.patch.object(web.sessions,"store_session",
+                             side_effect=AssertionError("NO_SESSION")),
+                      mock.patch.object(web.subprocess,"Popen",
+                             side_effect=AssertionError("NO_DPS_NATIVE"))):
+                    for route,request in (
+                        ("/api/v1/sessions/start",payload),
+                        ("/api/v1/longrun/prepare",
+                         {**payload,"max_native_calls":12})):
+                        response=self.post(route,request)
+                        self.assertEqual(response.status_code,422,response.text)
+                        self.assertEqual(response.json()["detail"]["code"],
+                                         "WEB_FRESH_INSTALLED_GAME_BUILD_PIN_REQUIRED")
+        self.assertFalse(list((jobs.root).glob(
+            "[0-9a-f]"*20)), "No user session may be created")
+
     def test_p1_explicit_installed_build_separate_from_source_collection(self):
         """Exact build is carried through short and long-run plans, no Native.
 
