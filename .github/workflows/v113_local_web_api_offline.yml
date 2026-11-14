@@ -25,6 +25,7 @@ on:
       - tests/test_p3_ham_fresh_v212_web_profile_bridge_offline.py
       - runner/v293_local_longrun_session.py
       - tests/test_v114_local_web_ui_offline.py
+      - tests/test_v456_current_season_optional_consumable_ui_scope.py
       - tests/test_v332_blizzard_ko_item_labels.py
       - runner/v332_blizzard_ko_item_labels.py
       - runner/v335_environment_official_ko_localization.py
@@ -99,7 +100,7 @@ jobs:
       - name: Offline FastAPI HTTP tests, including security and zero Native
         shell: bash
         run: |
-          python -m unittest -q tests.test_v437_selected_web_session_bridge tests.test_p3_hah_local_longrun_product_offline tests.test_p3_ham_fresh_v212_web_profile_bridge_offline tests.test_v217_stage_execution_engine tests.test_v113_local_web_api_offline tests.test_v348_user_source_credentials_offline tests.test_v114_local_web_ui_offline tests.test_v332_blizzard_ko_item_labels tests.test_v335_environment_official_ko_localization tests.test_v336_environment_ko_playable_terms tests.test_v216_environment_build_coordinator tests.test_v106_user_session_controller tests.test_v109_windows_readiness_offline tests.test_v110_windows_exact_simc_input_bytes tests.test_v131_rogue_outlaw_source_candidate tests.test_v147_all_dps_targeted_native_batch_offline tests.test_v148_local_batch_results_offline tests.test_v149_target334_independent_product_offline tests.test_v153_non334_independent_product_offline tests.test_v150_local_saved_session_index_offline tests.test_v151_season_catalog_impact_offline tests.test_v152_windows_local_web_launcher_offline tests.test_v212_environment_manifest tests.test_v213_source_to_catalog
+          python -m unittest -q tests.test_v437_selected_web_session_bridge tests.test_p3_hah_local_longrun_product_offline tests.test_p3_ham_fresh_v212_web_profile_bridge_offline tests.test_v217_stage_execution_engine tests.test_v113_local_web_api_offline tests.test_v348_user_source_credentials_offline tests.test_v114_local_web_ui_offline tests.test_v456_current_season_optional_consumable_ui_scope tests.test_v332_blizzard_ko_item_labels tests.test_v335_environment_official_ko_localization tests.test_v336_environment_ko_playable_terms tests.test_v216_environment_build_coordinator tests.test_v106_user_session_controller tests.test_v109_windows_readiness_offline tests.test_v110_windows_exact_simc_input_bytes tests.test_v131_rogue_outlaw_source_candidate tests.test_v147_all_dps_targeted_native_batch_offline tests.test_v148_local_batch_results_offline tests.test_v149_target334_independent_product_offline tests.test_v153_non334_independent_product_offline tests.test_v150_local_saved_session_index_offline tests.test_v151_season_catalog_impact_offline tests.test_v152_windows_local_web_launcher_offline tests.test_v212_environment_manifest tests.test_v213_source_to_catalog
       - name: Real HTTP/Stage reuse time and Path.read_bytes observation (offline)
         shell: bash
         run: |
