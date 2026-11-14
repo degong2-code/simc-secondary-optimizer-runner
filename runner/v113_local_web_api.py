@@ -1017,9 +1017,13 @@ class LocalJobs:
                                doc["manifest_sha256"][:20]+".json")
                 if (snapshot.is_symlink() or not snapshot.is_file() or
                     not 0<snapshot.stat().st_size<=8_000_000):continue
+                # Every v212 receipt may own a different F/gem/selected-O
+                # variant even when hand IDs match. Verify THIS receipt's SHA,
+                # not an arbitrary first same-oil installation.
                 match=environment_build.find_verified_installed_season_environment(
                     self.root,ilevel,expected_game_build=build,
-                    selected_oil_item_ids_by_hand=ids)
+                    selected_oil_item_ids_by_hand=ids,
+                    expected_installed_manifest_sha256=doc["manifest_sha256"])
                 if (match is None or match["installed_manifest_sha256"]
                     !=doc["manifest_sha256"]):continue
                 flask=doc.get("official_F_physical_source")

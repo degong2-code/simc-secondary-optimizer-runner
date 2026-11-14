@@ -212,7 +212,8 @@ class LocalWebAPIOffline(unittest.TestCase):
         verifier.assert_called_once_with(doc)
         finder.assert_called_once_with(
             self.app.state.jobs.root,334,expected_game_build=build,
-            selected_oil_item_ids_by_hand={})
+            selected_oil_item_ids_by_hand={},
+            expected_installed_manifest_sha256=digest)
         proof["installed_manifest_sha256"]="e"*64
         with (mock.patch.object(web.environment_manifest,"read_json",
                                 return_value=(doc,"sha")),
@@ -268,7 +269,8 @@ class LocalWebAPIOffline(unittest.TestCase):
         verifier.assert_called_once_with(doc)
         finder.assert_called_once_with(
             self.app.state.jobs.root,334,expected_game_build=build,
-            selected_oil_item_ids_by_hand={"main_hand":243734})
+            selected_oil_item_ids_by_hand={"main_hand":243734},
+            expected_installed_manifest_sha256=sha)
         # No source verification, no list. Never turn a raw ID into an option.
         proof["installed_manifest_sha256"]="b"*64
         with (mock.patch.object(web.environment_manifest,"read_json",
@@ -287,6 +289,63 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(self.client.get(
             "/api/v1/verified-oil-loadouts?ilevel=334&game_build="+build,
             headers=self.headers).json()["items"],[])
+
+    def test_v465_same_build_same_oils_distinct_verified_flasks_visible(self):
+        """Each F variant must verify its own v212 SHA, not the newest oil match."""
+        build="12.1.5.70783"
+        directory=(self.app.state.jobs.root/"_fresh_season_sources"/
+                   ("wago_"+build)/"fresh_source")
+        directory.mkdir(parents=True)
+        manifests={}
+        for digest,flask_id in (("a"*64,241326),("b"*64,241327)):
+            (directory/("v212_installed_"+digest[:20]+".json")).write_text("{}")
+            (directory/("v113_profile_"+digest[:20]+".json")).write_text("{}")
+            manifests[digest[:20]]={
+                "manifest_sha256":digest,"game_build":build,
+                "target_ilevel":334,
+                "official_O_physical_source":{
+                    "selected_oil_item_ids_by_hand":{"main_hand":243734},
+                    "oil_by_hand":{"main_hand":{
+                        "physical_item_id":243734,
+                        "simc_input_token":"main_hand:thalassian_phoenix_oil_2"}}},
+                "official_F_physical_source":{
+                    "physical_item_id":flask_id,
+                    "simc_input_token":"flask_example_3",
+                    "crafting_quality":3,"F_rating":165}}
+        calls=[]
+        def installed_read(path,*args):
+            digest=pathlib.Path(path).stem.split("_")[-1]
+            return manifests[digest],"source sha"
+        def exact_find(root,target_ilevel,*,expected_game_build,
+                       selected_oil_item_ids_by_hand,
+                       expected_installed_manifest_sha256=None):
+            calls.append(expected_installed_manifest_sha256)
+            if expected_installed_manifest_sha256 is None:
+                return None  # The previous ambiguous same-oil search fails.
+            return {"installed_manifest_sha256":
+                    expected_installed_manifest_sha256}
+        with (mock.patch.object(web.environment_manifest,"read_json",
+                                side_effect=installed_read),
+              mock.patch.object(web.environment_manifest,
+                                "verify_fresh_installed_environment"),
+              mock.patch.object(web.environment_build,
+                                "find_verified_installed_season_environment",
+                                side_effect=exact_find),
+              mock.patch.object(web.subprocess,"Popen",
+                                side_effect=AssertionError("NO_NATIVE"))):
+            res=self.client.get(
+                "/api/v1/verified-oil-loadouts?ilevel=334&game_build="+build,
+                headers=self.headers)
+        self.assertEqual(res.status_code,200,res.text)
+        data=res.json()
+        self.assertEqual([v["physical_item_id"]
+                          for v in data["verified_flasks"]],[241326,241327])
+        self.assertEqual(len(data["items"]),1,  # same oil hand is one choice
+                         data["items"])
+        self.assertEqual(set(calls),{"a"*64,"b"*64})
+        self.assertEqual(len(calls),2)
+        self.assertEqual(data["native_calls"],0)
+        self.assertEqual(data["network_calls"],0)
 
     def test_controlled_cold_start_web_real_collector_and_rebuild(self):
         """P3-DS T0: web -> original v216/v161/v217 in a virgin workspace.
