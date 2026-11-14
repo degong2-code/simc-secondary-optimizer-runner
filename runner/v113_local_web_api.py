@@ -466,13 +466,11 @@ class LocalJobs:
                     set(selected_oil_hands)!=set(selected_oil_item_ids_by_hand)):
                 raise environment_manifest.EnvironmentBlocked(
                     "WEB_FRESH_EXACT_OIL_HAND_ID_SELECTION_INVALID")
-            selected=environment_build.find_verified_installed_season_environment(
-                self.root,target_ilevel,expected_game_build=game_build,
-                selected_oil_item_ids_by_hand=selected_oil_item_ids_by_hand)
-            if selected is None:
-                raise environment_manifest.EnvironmentBlocked(
-                    "WEB_FRESH_SELECTED_OIL_ITEM_IDS_NOT_INSTALLED")
-            selected_ids=selected["selected_oil_item_ids_by_hand"]
+            # A physical hand-ID map does not identify a unique F/gem
+            # installation. Defer the v216 verification to the per-receipt
+            # SHA selection below; checking the first same-oil receipt here
+            # caused redundant I/O and could choose the wrong F/J variant.
+            selected_ids=dict(selected_oil_item_ids_by_hand)
         elif selected_oil_hands is not None:
             # Old hand-only users can reuse exactly one verified physical
             # combination; ambiguity still blocks instead of guessing.
@@ -483,11 +481,13 @@ class LocalJobs:
                 raise environment_manifest.EnvironmentBlocked(
                     "WEB_FRESH_SELECTED_OIL_HANDS_NOT_INSTALLED")
             selected_ids=selected["selected_oil_item_ids_by_hand"]
-        if required_gem_layout is not None or selected_flask_item_id is not None:
-            # This user's socket/flask selection is not season-wide data.
-            # Select only a v212 installation with an exact matching signed
-            # snapshot; do not accidentally reuse the latest four-gem F/O
-            # budget or turn the requested selection into a different item.
+        if (required_gem_layout is not None or
+                selected_flask_item_id is not None or
+                selected_oil_item_ids_by_hand is not None):
+            # A selected O hand-ID map still permits multiple verified
+            # F/gem installations. Use the exact same one-receipt selection
+            # as user F/socket variants; never choose the newest F/J budget.
+            # Per-receipt v216 SHA verification is the existing admission.
             candidates=[]
             directory=workspace/("wago_"+game_build)/"fresh_source"
             if directory.is_dir() and not directory.is_symlink():
@@ -537,6 +537,11 @@ class LocalJobs:
                     except (OSError,ValueError,TypeError,KeyError,
                             environment_manifest.EnvironmentBlocked):
                         continue
+            if not candidates and selected_oil_item_ids_by_hand and (
+                    selected_flask_item_id is None and
+                    required_gem_layout is None):
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_FRESH_SELECTED_OIL_ITEM_IDS_NOT_INSTALLED")
             if len(candidates)!=1:
                 raise environment_manifest.EnvironmentBlocked(
                     "WEB_USER_VARIANT_NOT_INSTALLED_OR_AMBIGUOUS")

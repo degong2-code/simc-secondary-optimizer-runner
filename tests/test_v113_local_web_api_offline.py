@@ -304,6 +304,81 @@ class LocalWebAPIOffline(unittest.TestCase):
             "/api/v1/verified-oil-loadouts?ilevel=334&game_build="+build,
             headers=self.headers).json()["items"],[])
 
+    def test_v469_exact_oil_and_two_flasks_selects_only_matching_v212(self):
+        """One O map can own two F variants; never pick whichever was newest."""
+        build="12.1.5.70783"
+        ids={"main_hand":243734}
+        directory=(self.app.state.jobs.root/"_fresh_season_sources"/
+                   ("wago_"+build)/"fresh_source")
+        directory.mkdir(parents=True)
+        installed={}
+        for suffix,flask_id in (("a",241326),("b",241327)):
+            digest=suffix*64
+            (directory/("v212_installed_"+digest[:20]+".json")).write_text("{}")
+            (directory/("v113_profile_"+digest[:20]+".json")).write_text(
+                json.dumps({"environment_result":{}}))
+            installed[digest[:20]]={
+                "manifest_sha256":digest,"game_build":build,
+                "target_ilevel":334,
+                "official_O_physical_source":{
+                    "selected_oil_item_ids_by_hand":dict(ids)},
+                "official_F_physical_source":{"physical_item_id":flask_id}}
+        checked=[]
+        def read_installed(path,*_args):
+            digest=pathlib.Path(path).stem.split("_")[-1]
+            return installed[digest],"mock original bytes"
+        def exact_finder(root,ilevel,*,expected_game_build,
+                         selected_oil_item_ids_by_hand,
+                         expected_installed_manifest_sha256=None):
+            self.assertEqual(root,self.app.state.jobs.root)
+            self.assertEqual((ilevel,expected_game_build),(334,build))
+            self.assertEqual(selected_oil_item_ids_by_hand,ids)
+            # No first-match same-oil lookup may bypass the selected F.
+            self.assertIsNotNone(expected_installed_manifest_sha256)
+            checked.append(expected_installed_manifest_sha256)
+            return {"installed_manifest_sha256":
+                    expected_installed_manifest_sha256}
+        jobs=self.app.state.jobs
+        selection={"target_ilevel":334,"explicit_build":build,
+                   "selected_oil_hands":["main_hand"],
+                   "selected_oil_item_ids_by_hand":ids}
+        with (mock.patch.object(web.environment_manifest,"read_json",
+                                side_effect=read_installed),
+              mock.patch.object(web.environment_manifest,
+                                "verify_fresh_installed_environment"),
+              mock.patch.object(web.environment_build,
+                                "find_verified_installed_season_environment",
+                                side_effect=exact_finder),
+              mock.patch.object(jobs,"restore_verified_fresh_profile",
+                                return_value={"status":"EXACT_USER_PROFILE"}) as restore,
+              mock.patch.object(web.subprocess,"Popen",
+                                side_effect=AssertionError("NO_NATIVE"))):
+            result=jobs.load_fresh_profile_for_user(
+                **selection,selected_flask_item_id=241327)
+            self.assertEqual(result["status"],"EXACT_USER_PROFILE")
+            restore.assert_called_once_with(
+                target_ilevel=334,game_build=build,
+                selected_oil_item_ids_by_hand=ids,
+                expected_installed_manifest_sha256="b"*64,
+                required_gem_layout=None)
+            self.assertEqual(checked,["b"*64])
+            restore.reset_mock()
+            checked.clear()
+            with self.assertRaisesRegex(
+                    web.environment_manifest.EnvironmentBlocked,
+                    "WEB_USER_VARIANT_NOT_INSTALLED_OR_AMBIGUOUS"):
+                jobs.load_fresh_profile_for_user(**selection)
+            restore.assert_not_called()
+            self.assertEqual(set(checked),{"a"*64,"b"*64})
+            checked.clear()
+            with self.assertRaisesRegex(
+                    web.environment_manifest.EnvironmentBlocked,
+                    "WEB_USER_VARIANT_NOT_INSTALLED_OR_AMBIGUOUS"):
+                jobs.load_fresh_profile_for_user(
+                    **selection,selected_flask_item_id=999999)
+            restore.assert_not_called()
+            self.assertEqual(checked,[])
+
     def test_v465_same_build_same_oils_distinct_verified_flasks_visible(self):
         """Each F variant must verify its own v212 SHA, not the newest oil match."""
         build="12.1.5.70783"
