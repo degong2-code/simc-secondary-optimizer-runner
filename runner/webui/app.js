@@ -143,7 +143,7 @@ const names = {
   redirected_base_stats:"촉매 원본 ID",crafted_stats:"제작 스탯",
   embellishment:"장식 토큰"
 };
-const state = { token:"", defaults:[], allowedRacesBySpec:{}, seasonGear:null, dkRuneIds:new Set(), oilLoadouts:[], oilCatalog:null, eagleApproved:false, session:"", running:false,
+const state = { token:"", defaults:[], allowedRacesBySpec:{}, seasonGear:null, seasonGearTargetIlevel:null, dkRuneIds:new Set(), oilLoadouts:[], oilCatalog:null, eagleApproved:false, session:"", running:false,
                 longrunEnabled:false, longrunResultReady:false,
                 longrunCompleted:false,
                 busy:false, options:null, verifiedInstalledBuildFromThisPage:null,
@@ -687,6 +687,8 @@ function setTrinketSelection(fieldId,itemId,restored=false) {
 function installSeasonGearHints(catalog) {
   state.seasonGear=catalog?.status==="CURRENT_SEASON_CANDIDATE_SELECTION_ONLY"
     ? catalog : null;
+  // Only an exact v212/SHA gear lookup below can set this run-level seal.
+  state.seasonGearTargetIlevel=null;
   const node=$("season-gear-note");
   const current=state.seasonGear?.choices||{};
   const sortedKorean=items=>[...(items||[])].sort((a,b)=>
@@ -710,7 +712,10 @@ function installSeasonGearHints(catalog) {
     node.textContent="시즌 선택 목록이 없습니다. 새 장신구·특수효과 선택은 보류됩니다. 기존 세션 조회는 가능합니다.";
     return;
   }
-  node.textContent="시즌 장신구와 특수효과 장비를 아래에서 선택하세요.";
+  node.textContent=state.seasonGear.source_scope===
+    "VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES"?
+    "설치 원본에서 확인한 장신구·특수효과 후보입니다. 선택한 실행 조건에서 재검증합니다.":
+    "참고용 시즌 후보 목록 · 새 최적화 전에 시즌 환경을 검증·설치하세요.";
 }
 // Item.InventoryType determines special equipment slot. Ring and dual
 // weapons have equivalent hands, so select the next free valid slot.
@@ -1383,6 +1388,15 @@ function selectedGear(nodeId, group) {
   if(result.length>(isCraft?2:8))throw Error("선택한 장비 수가 제한을 초과했습니다.");
   return result;
 }
+function verifiedInstalledGearScopeMatchesRun(build,ilevel) {
+  const gear=state.seasonGear;
+  return typeof build==="string" && /^\d+(?:\.\d+){3}$/.test(build) &&
+    Number.isInteger(ilevel) && ilevel>0 &&
+    gear?.status==="CURRENT_SEASON_CANDIDATE_SELECTION_ONLY" &&
+    gear.source_scope==="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES" &&
+    gear.season_build===build && state.seasonGearTargetIlevel===ilevel &&
+    /^[a-f0-9]{64}$/.test(gear.installed_manifest_sha256||"");
+}
 function buildRequest() {
   // v356: binary/revision moved into settings and are no longer form descendants.
   // Keep their same required/pattern validation before any session request.
@@ -1507,11 +1521,13 @@ function buildRequest() {
   // ALREADY INSTALLED season. This never asks v216 to collect fresh sources.
   const installedBuild=field("season-game-build") ||
     state.verifiedInstalledBuildFromThisPage;
-  if(installedBuild) {
-    if(!/^\d+(?:\.\d+){3}$/.test(installedBuild))
-      throw Error("설치 시즌 게임 빌드 형식이 올바르지 않습니다.");
-    request.installed_season_game_build=installedBuild;
-  }
+  if(installedBuild && !/^\d+(?:\.\d+){3}$/.test(installedBuild))
+    throw Error("설치 시즌 게임 빌드 형식이 올바르지 않습니다.");
+  // New runs must not use the packaged v167/v196 browsing catalogue as
+  // proof of installed v212/v213 user-selectable physical trinkets.
+  if(!verifiedInstalledGearScopeMatchesRun(installedBuild,controls.ilevel))
+    throw Error("새 최적화에는 현재 선택한 빌드·ilvl의 검증 설치 장비 목록이 필요합니다. 시즌 환경을 확인·구축한 뒤 장신구를 선택해 주세요.");
+  request.installed_season_game_build=installedBuild;
   if(Object.keys(exactOils).length)
     request.selected_oil_item_ids_by_hand=exactOils;
   return request;
@@ -2172,6 +2188,7 @@ async function buildSeasonEnvironment(forUserVariant=false) {
            gear.season_build!==build||gear.installed_manifest_sha256!==sha)
           throw Error("SEASON_GEAR_INSTALLED_SOURCE_UNAVAILABLE");
         installSeasonGearHints(gear);
+        state.seasonGearTargetIlevel=level;
         setTrinketSelection("trinket1",priorTrinkets[0]);
         setTrinketSelection("trinket2",priorTrinkets[1]);
         // Reuse the chosen special item only when the exact new source still
@@ -2570,6 +2587,7 @@ async function restoreInstalledSeasonGearChoices(inputs) {
        gear.season_build!==build||gear.installed_manifest_sha256!==sha)
       throw Error("RESTORED_INSTALLED_SEASON_GEAR_IDENTITY_MISMATCH");
     installSeasonGearHints(gear);
+    state.seasonGearTargetIlevel=level;
     $("season-gear-note").textContent=
       "저장 세션의 설치 원본 "+build+
       " · 장비 후보 복원 (현재 Retail 재확인 또는 새 시즌 승인 아님)";

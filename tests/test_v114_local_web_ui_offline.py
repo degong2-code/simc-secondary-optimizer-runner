@@ -896,30 +896,32 @@ const state={verifiedInstalledBuildFromThisPage:null};
 const field=id=>{assert.strictEqual(id,"season-game-build");return manual;};
 const remember=Function("state","field",raw.slice(a,b)+
   "return rememberVerifiedSeasonBuildForRun;")(state,field);
-const getRunBuild=Function("state","field","request",raw.slice(c,d)+
+const getRunBuild=Function("state","field","request","controls",
+  "verifiedInstalledGearScopeMatchesRun",raw.slice(c,d)+
   "return request.installed_season_game_build ?? null;");
-const run=()=>getRunBuild(state,field,{});
+const run=()=>getRunBuild(state,field,{},{ilevel:334},
+  (build,ilevel)=>Boolean(build)&&ilevel===334);
 const scope={game_build:"12.1.5.70783",environment_ready:true,
   environment_installed:true,active_season_reverified_in_this_lookup:true};
 const ready={web_environment_scope:scope,
   installed_source_game_build:"12.1.5.70783",
   verified_v113_profile_source_restored:true};
-assert.strictEqual(run(),null,"no auto pin before explicit season check");
+assert.throws(run,/새 최적화에는/);
 assert.strictEqual(remember({...ready,web_environment_scope:
   {...scope,environment_ready:false}}),false);
-assert.strictEqual(run(),null);
+assert.throws(run,/새 최적화에는/);
 assert.strictEqual(remember({...ready,web_environment_scope:
   {...scope,environment_installed:false}}),false);
-assert.strictEqual(run(),null);
+assert.throws(run,/새 최적화에는/);
 assert.strictEqual(remember({...ready,web_environment_scope:
   {...scope,active_season_reverified_in_this_lookup:false}}),false);
-assert.strictEqual(run(),null,"past local install is not fresh Retail");
+assert.throws(run,/새 최적화에는/);
 assert.strictEqual(remember({...ready,
   verified_v113_profile_source_restored:false}),false);
-assert.strictEqual(run(),null,"budget READY without saved profile not admitted");
+assert.throws(run,/새 최적화에는/);
 assert.strictEqual(remember({...ready,
   installed_source_game_build:"12.1.5.70782"}),false);
-assert.strictEqual(run(),null,"receipt and resolved build mismatch");
+assert.throws(run,/새 최적화에는/);
 assert.strictEqual(remember({...ready,web_environment_scope:
   {...scope,game_build:"untrusted"}}),false);
 assert.strictEqual(remember(ready),true);
@@ -934,7 +936,7 @@ manual="12.1.5.70781";
 assert.strictEqual(remember(ready),false);
 assert.strictEqual(run(),"12.1.5.70781","explicit user build wins");
 manual="";
-assert.strictEqual(run(),null);
+assert.throws(run,/새 최적화에는/);
 assert(raw.includes("state.verifiedInstalledBuildFromThisPage=null;"));
 assert(raw.includes('    rememberVerifiedSeasonBuildForRun(report);'));
 assert(raw.includes('  const game_build=supplied_build||null;'),
@@ -1006,6 +1008,51 @@ const refresh=Function("state","field","valueInt","api",
         self.assertEqual(completed.returncode,0,completed.stderr)
         self.assertIn("V461_SEASON_SCOPED_OIL_FLASK_LOOKUP_PASS",
                       completed.stdout)
+
+    def test_v477_new_run_requires_exact_v212_gear_sha_build_and_level(self):
+        """Actual browser preflight must refuse packaged or stale trinkets."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:self.skipTest("node is not installed on this runner")
+        source=ROOT/"runner/webui/app.js"
+        script=r"""
+const assert=require("assert"),fs=require("fs");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const a=raw.indexOf("function verifiedInstalledGearScopeMatchesRun(build,ilevel) {");
+const b=raw.indexOf("function buildRequest() {",a);
+assert(a>=0&&b>a,"real new-run gear guard required");
+const state={seasonGear:null,seasonGearTargetIlevel:null};
+const validate=Function("state",raw.slice(a,b)+
+   "return verifiedInstalledGearScopeMatchesRun;")(state);
+const sha="a".repeat(64),build="12.1.5.70783";
+const physical={status:"CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
+  source_scope:"VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES",
+  season_build:build,installed_manifest_sha256:sha};
+const legacy={...physical,source_scope:"PACKAGED_V167_LEGACY"};
+assert.strictEqual(validate(build,334),false,"no gear cannot plan");
+state.seasonGear=legacy;state.seasonGearTargetIlevel=334;
+assert.strictEqual(validate(build,334),false,"old packaged candidates have no v212 authority");
+state.seasonGear=physical;
+assert.strictEqual(validate(build,334),true,"exact installed build/level/SHA admitted");
+assert.strictEqual(validate("",334),false,"no build cannot start");
+assert.strictEqual(validate("12.1.5.70782",334),false,"other build blocked");
+assert.strictEqual(validate(build,340),false,"other ilvl blocked");
+state.seasonGear={...physical,installed_manifest_sha256:"bad"};
+assert.strictEqual(validate(build,334),false,"unsealed gear blocked");
+state.seasonGear=physical;state.seasonGearTargetIlevel=null;
+assert.strictEqual(validate(build,334),false,"source-level not bound");
+const request=raw.slice(raw.indexOf("function buildRequest() {"),
+  raw.indexOf("async function api(",raw.indexOf("function buildRequest() {")));
+assert(request.includes("if(!verifiedInstalledGearScopeMatchesRun(installedBuild,controls.ilevel))"),
+  "normal plan and longrun must use identical source scope");
+assert(request.includes("request.installed_season_game_build=installedBuild"),
+  "no inferred build or free-form budget");
+console.log("V477_PINNED_TRINKET_GEAR_PREFLIGHT_PASS");
+"""
+        done=subprocess.run([node,"-e",script,str(source)],capture_output=True,
+                            text=True,timeout=20,check=False)
+        self.assertEqual(done.returncode,0,done.stderr)
+        self.assertIn("V477_PINNED_TRINKET_GEAR_PREFLIGHT_PASS",done.stdout)
 
     def test_v460_new_installed_season_replaces_packaged_gear_candidates(self):
         """Build result refreshes verified current source; no older fallback."""
