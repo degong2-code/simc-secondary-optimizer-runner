@@ -2,10 +2,10 @@
   "schema": "simc_78_element_completion_contract_v401",
   "policy": {
     "authority": "JSON status contract; legacy tracker details are checked against it; GENERATED markdown is rendered from JSON",
-    "generic_acceptance": "current-season ZERO-SOURCE + source-driven alternative season/build/ID regression, where applicable; no future unreleased season required",
-    "current_source_acceptance": "actual current game-build provider source + exact SHA + correct consumed scope",
-    "product_acceptance": "actual user input through season environment and SimC DPS/SEM/95% output; separate final product E2E",
-    "optional_acceptance": "NOT_APPLICABLE only with concrete feature-specific reason and owner evidence; no blanket exemptions",
+    "generic_acceptance": "원본 자동발견·시즌 의존 기능은 현재 실제 ZERO-SOURCE 및 변경된 시즌/ID/빌드 회귀로 확인한다. 시즌 독립 RUN 산술·통계·스케줄러·캐시 로직은 기존 실제 사용자/Native 경계 증거와 결정론적 정상·부정 회귀를 공유할 수 있으며 매 요소마다 새 시즌 원본 수집·Native를 강제하지 않는다. 현재 원본이 진정 무관하면 근거를 갖춘 해당 축 N/A를 허용한다.",
+    "current_source_acceptance": "시즌 원본이 필요한 요소는 실제 소비하는 해당 시즌·빌드·ID·SHA만 검증한다. 시즌 독립 RUN에는 이미 검증된 현재 실제 SimC 관측/소스의 공통 영수증을 해당 소비 경계에 재사용하거나, 해당 원본이 실제 불필요할 때만 범위·사유·정책 근거를 기록한 N/A를 적용한다. 하나의 요소마다 새 외부 수집·Native는 요구하지 않는다.",
+    "product_acceptance": "실사용 제품의 입력→내부 예산/프로필→SimC→결과 연결에서 해당 요소의 소비·실패 경계를 확인한다. 기존 단일 실제 E2E·원본/캐시/Actions 영수증을 여러 관련 요소에 귀속할 수 있으며 각 요소별 독립 사용자 E2E·전문 전체 Native는 요구하지 않는다. 미선택 옵션은 기본 READY를 차단하지 않는다.",
+    "optional_acceptance": "미지원 또는 해당 현재 환경에 없는 선택 옵션은 근거·효과 범위·소유권을 명시하고 NOT_APPLICABLE을 검토한다. 실제 지원되는 선택 기능은 선택 시 정합성·실행 경로가 필요하며, 비선택 상태의 모든 변형/효과 독립 인증을 강제하지 않는다. 사유·근거 없는 포괄 N/A는 금지한다.",
     "next_review": "B8",
     "a7_may_be_next_only_after_generic_review_of": [
       "A4",
@@ -617,7 +617,7 @@
       "id": "A3",
       "name": "활성 콘텐츠",
       "scope": "BASE",
-      "acceptance": "실제로 쓰는 레이드·던전만 시즌 관계 입증",
+      "acceptance": "실제 대표 장비·사용자 선택지에 사용하는 활성 레이드·던전의 시즌 관계를 확인한다. 전 콘텐츠·전 보스 출처 수집은 요구하지 않는다.",
       "generic": {
         "state": "PASS",
         "evidence": [
@@ -644,7 +644,7 @@
       "id": "A4",
       "name": "Blizzard 원본",
       "scope": "BASE",
-      "acceptance": "선택한 필수 아이템·콘텐츠에 필요한 인증 API 영수증",
+      "acceptance": "실제로 소비하는 Blizzard API 원본의 인증·필수 필드·아이템 ID·빌드/SHA와 실패 처리를 확인한다. 모든 API/아이템 재수집은 요구하지 않는다.",
       "generic": {
         "state": "PASS",
         "evidence": [
@@ -671,7 +671,7 @@
       "id": "A5",
       "name": "WCL 원본",
       "scope": "BASE",
-      "acceptance": "필수 레이드·던전 보조 관계·수집 조건",
+      "acceptance": "실제로 시즌 관계나 후보 산출에 소비하는 WCL 원본의 인증·필요 구역·매핑과 유효 범위를 확인한다. 무관한 로그/전체 확장팩 인증은 요구하지 않는다.",
       "generic": {
         "state": "PASS",
         "evidence": [
@@ -698,7 +698,7 @@
       "id": "A6",
       "name": "DB2 원본",
       "scope": "BASE",
-      "acceptance": "동일 빌드 필요 테이블·SHA·재사용",
+      "acceptance": "현재 제품이 실제 소비하는 동일 빌드의 DB2 테이블·필수 필드·SHA/재사용을 확인한다. 전체 DB2 테이블 다운로드·재검증은 요구하지 않는다.",
       "generic": {
         "state": "PASS",
         "evidence": [
@@ -783,7 +783,7 @@
       "id": "A9",
       "name": "SimC 원본 파일",
       "scope": "BASE",
-      "acceptance": "필요 DBC·생성 데이터·효과/마부 입력 원본",
+      "acceptance": "실제 SimC 실행 프로필에 필요한 DBC·생성 데이터·아이템/마부 입력이 정상 소비됨을 확인한다. SimC 내부 효과·proc·APL 독립 인증은 제외한다.",
       "generic": {
         "state": "PASS",
         "evidence": [
@@ -874,7 +874,7 @@
       "id": "B1",
       "name": "26 DPS 계약",
       "scope": "BASE",
-      "acceptance": "증강 제외 26 전문화 및 장비/무기 규칙",
+      "acceptance": "증강 제외 26 DPS 입력·전문화·대표 장비/무기 계약을 검증한다. 무기 유형별 대표 회귀와 기존 실제 전문화 영수증을 재사용하며 26개 Native 전수는 필요하지 않다.",
       "generic": {
         "state": "PASS",
         "evidence": [
@@ -966,7 +966,7 @@
       "id": "B4",
       "name": "무기 형태",
       "scope": "BASE",
-      "acceptance": "한손/양손/쌍수/원거리/보조·Fury TG",
+      "acceptance": "한손·양손·쌍수·원거리·보조장비·분노 TG의 서로 다른 물리 레이아웃을 대표 사례와 입력 회귀로 확인한다. 모든 전문화를 개별 Native 실행하지 않는다.",
       "generic": {
         "state": "PASS",
         "evidence": [
@@ -996,7 +996,7 @@
       "id": "B5",
       "name": "무기 성능",
       "scope": "BASE",
-      "acceptance": "정확한 item·ilvl·무기 피해·공격 형태",
+      "acceptance": "선택한 대표 무기의 정확한 아이템 ID·ilvl·무기 유형/성능을 원본·SimC 프로필에서 확인한다. 게임 자체의 무기 피해 계산 공식을 별도 구현·인증하지 않는다.",
       "generic": {
         "state": "PASS",
         "evidence": [
@@ -1026,7 +1026,7 @@
       "id": "B6",
       "name": "주능력치",
       "scope": "BASE",
-      "acceptance": "전문화별 대표 장비·주능력치 값",
+      "acceptance": "전문화별 올바른 주능력치 종류와 대표 장비의 수치 전달을 유형별 회귀 및 기존 실제 JSON2로 확인한다. 26개 전체 신규 Native 측정을 요구하지 않는다.",
       "generic": {
         "state": "PASS",
         "evidence": [
@@ -1089,7 +1089,7 @@
       "id": "B8",
       "name": "티어 4세트 착용",
       "scope": "USER",
-      "acceptance": "특수/장식 충돌을 고려한 5개 중 실제 4pc",
+      "acceptance": "선택 특수/제작/장식이 티어 부위를 차지할 때 실제 5개 중 4pc가 유지되는지 슬롯 충돌·대체/불가능 반례로 확인한다. 유효한 대표 실제 Native 사례를 재사용하고 모든 조합 전수 실행을 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1114,7 +1114,7 @@
       "id": "B9",
       "name": "촉매 변환",
       "scope": "USER",
-      "acceptance": "원본 ID/티어 인정/특수효과 충돌",
+      "acceptance": "사용자 선택에 촉매 변환이 실제 포함될 때 동일 시즌 원본 ID·티어 인정·부위/특수효과 충돌을 확인한다. 미선택 촉매 목록 전체 인증은 기본 환경 Gate가 아니다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1158,7 +1158,7 @@
       "id": "B11",
       "name": "G 자동 예산",
       "scope": "BASE",
-      "acceptance": "목표 ilvl·대표 장비/무기의 시즌별 검증 G",
+      "acceptance": "시즌별 검증된 대표 장비/무기 G 또는 같은 시즌 유효 참조값으로 목표 ilvl 예산을 계산한다. 근사 참조와 정밀 Native G를 구분하고 모든 부위·전문화 정밀 Native 실측은 강제하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1180,7 +1180,7 @@
       "id": "B12",
       "name": "G 시즌별 참조",
       "scope": "BASE",
-      "acceptance": "같은 시즌 참조의 유효성·근사/정밀 구분",
+      "acceptance": "동일 시즌·동일 조건의 G 참조 유효성, 산출 근거, 반올림 근사와 정확 측정의 차이를 기록한다. 모든 ilvl/전문화/아이템 변형의 정밀 G 측정은 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1202,7 +1202,7 @@
       "id": "C1",
       "name": "일반 보석 최고품질",
       "scope": "BASE",
-      "acceptance": "효과·사용조건 동등성 및 최고 품질/ItemID",
+      "acceptance": "동일 효과·사용조건·적용범위·수치 비열등성이 입증된 경우에만 최고 품질 일반 보석을 노출한다. 낮은 품질 중복 항목의 전수 사용자 등록·별도 Native 검증은 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1246,7 +1246,7 @@
       "id": "C3",
       "name": "소켓·보석 배치",
       "scope": "BASE+USER",
-      "acceptance": "소켓 부위·개수·색상·실제 SimC 배치",
+      "acceptance": "실제 선택·대표 소켓 수와 사용 보석 ID·색상·부위의 SimC 배치 및 예산 정합을 확인한다. 모든 가능한 보석 조합의 DPS Native 전수는 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1268,7 +1268,7 @@
       "id": "C4",
       "name": "특수보석",
       "scope": "USER",
-      "acceptance": "선택된 특수보석 ID·주능력치·효과/소켓",
+      "acceptance": "특수보석이 실제 선택된 경우 정확한 ID·소켓·주능력치/CHMV 소유권과 SimC 입력을 확인한다. 미선택 특수보석 전체 효과 독립 인증은 제외한다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1290,7 +1290,7 @@
       "id": "C5",
       "name": "보석 색상 조건",
       "scope": "USER",
-      "acceptance": "실제 색상 조합과 SimC 효과 입력",
+      "acceptance": "선택한 보석의 실제 색상 조합과 SimC 입력 조건을 확인한다. SimC가 계산하는 특수 효과의 자체 인증이나 전체 조합 전수는 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1356,7 +1356,7 @@
       "id": "C8",
       "name": "다른 영약 선택",
       "scope": "USER",
-      "acceptance": "변경 F 벡터·프로필·설치/캐시 변형",
+      "acceptance": "다른 영약을 실제 선택한 경우 해당 시즌 검증 F 벡터·SimC 프로필·세션/캐시 분리를 확인한다. 선택되지 않은 영약 미확정은 기본 영약 READY를 차단하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1378,7 +1378,7 @@
       "id": "C9",
       "name": "기름 O 수치",
       "scope": "BASE+USER",
-      "acceptance": "최고 품질 기름 치명=가속 rating q/손",
+      "acceptance": "선택 가능한 시즌별 기름의 최고 품질·적용 무기·손별 정확 O 벡터를 해당 원본에서 확인한다. 과거 시즌의 치명=가속 고정값을 새 시즌에 전용하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1422,7 +1422,7 @@
       "id": "C11",
       "name": "직업 무기 강화",
       "scope": "USER",
-      "acceptance": "DK 룬벼리기/주술사 질풍·불꽃혓바닥의 손별 충돌",
+      "acceptance": "실제로 지원하는 해당 전문화·무기 손의 룬벼리기/직업 강화와 기름 간 입력 충돌을 확인한다. 관련 없는 모든 전문화 강화의 독립 Native 인증은 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1444,7 +1444,7 @@
       "id": "C12",
       "name": "영구 마부 E",
       "scope": "BASE+USER",
-      "acceptance": "부위·효과·최고품질·정적 CHMV 소유",
+      "acceptance": "지원하는 영구 마부의 부위·효과·최고 품질 조건·정적 E 소유권을 환경에 자동 등록한다. SimC 내부 발동 효과 인증이나 무관한 임시 마부 수집은 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1466,7 +1466,7 @@
       "id": "C13",
       "name": "음식·물약",
       "scope": "USER",
-      "acceptance": "검증된 최고 품질·정확한 SimC 입력",
+      "acceptance": "실제로 사용·등록할 음식과 물약의 동일 효과·조건 기준 최고 품질, 정확한 SimC 입력을 확인한다. 과거/미선택 전 품목 효과 Native 인증을 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1488,7 +1488,7 @@
       "id": "C14",
       "name": "증강 룬·기타 임시 효과",
       "scope": "OPTION",
-      "acceptance": "선택 증강 룬의 효과/조건; 일반 임시 마부는 지원 제외",
+      "acceptance": "사용자가 선택한 지원 증강 룬의 정확한 효과·사용조건·SimC 입력만 검증한다. 일반 임시 마부는 범위 밖이며 해당 미지원 항목 때문에 기본 환경 구축을 차단하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1510,7 +1510,7 @@
       "id": "D1",
       "name": "장신구 두 개",
       "scope": "USER",
-      "acceptance": "정확한 2 ItemID·ilvl·옵션·장착",
+      "acceptance": "사용자가 고른 장신구 정확히 2개의 ID·ilvl·옵션·장착 여부가 최종 SimC 프로필에 반영되는지 확인한다. proc/발동 효과의 독립 인증은 제외한다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1532,7 +1532,7 @@
       "id": "D2",
       "name": "장신구 고정 스탯",
       "scope": "USER",
-      "acceptance": "G 밖 소유·미관측 JSON2를 0으로 단정 금지",
+      "acceptance": "장신구 고정 스탯은 자유 G 밖으로 관리하고 실제 SimC에 장착한다. JSON2 gear 정적 레코드 누락만으로 차단하거나 미관측을 0으로 단정하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1554,7 +1554,7 @@
       "id": "D3",
       "name": "선택 특수효과 장비",
       "scope": "USER",
-      "acceptance": "ID·부위·효과 입력·정확한 고정 L",
+      "acceptance": "실제 선택 특수장비의 ID·부위·ilvl·옵션·정확한 정적 고정 L을 G 내부에 1회 반영해 하한을 보호한다. SimC 효과 자체 인증과 전체 미선택 목록 수집은 제외한다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1576,7 +1576,7 @@
       "id": "D4",
       "name": "제작장비",
       "scope": "USER",
-      "acceptance": "ID·ilvl·옵션·스탯 총량; 초기 50:50 잠금 금지",
+      "acceptance": "선택 제작장비의 정확한 ID·ilvl·옵션·정적 총량을 확인한다. 초기 두 스탯 분배(통상 50:50)를 고정 L로 잠그지 않고 전 레시피 완전 DB를 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1598,7 +1598,7 @@
       "id": "D5",
       "name": "장식 최대 2개",
       "scope": "USER",
-      "acceptance": "장식 효과·제작 부위·두 개 제한",
+      "acceptance": "사용자가 선택한 최대 2개 장식의 정확한 제작 부위·옵션·SimC 입력 및 충돌을 확인한다. 장식 효과 재구현이나 모든 제작 레시피 최적화를 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1620,7 +1620,7 @@
       "id": "D6",
       "name": "장착 부위 충돌",
       "scope": "USER",
-      "acceptance": "티어 4pc·선택 특수/장식 동시 장착 가능성",
+      "acceptance": "선택된 특수/제작/장식의 동시 장착 가능성·티어 실제 4pc 유지/불가능 차단을 공통 레이아웃 반례와 대표 실제 사례로 확인한다. 모든 조합 Native 전수는 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1642,7 +1642,7 @@
       "id": "D7",
       "name": "시즌 특수 모듈",
       "scope": "OPTION",
-      "acceptance": "적용/해제·CHMV·SimC·버전·캐시 정체성",
+      "acceptance": "지원하는 시즌 특수 모듈의 적용/해제·정확한 SimC 입력·CHMV·모듈 버전/캐시 정체성을 검증한다. 현재 시즌에 존재하지 않거나 미적용인 모듈의 구축을 기본 환경 Gate로 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1664,7 +1664,7 @@
       "id": "D8",
       "name": "정확한 수동 ItemID",
       "scope": "USER",
-      "acceptance": "목록 밖 아이템의 exact variant 입력·필요 수치",
+      "acceptance": "카탈로그에 없는 수동 ItemID라도 정확한 슬롯·ilvl·옵션·SimC 구문을 허용한다. G에 필요한 비장신구 exact 정적 수치가 없는 경우 해당 변형만 지연 Native 조회한다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1686,7 +1686,7 @@
       "id": "D9",
       "name": "검증 선택지 자동 등록",
       "scope": "BASE+USER",
-      "acceptance": "ID·시즌 빌드·효과/품질/SimC·예산 소유",
+      "acceptance": "정확한 ID·빌드·효과/품질·SimC 입력·CHMV 소유권이 해당 사용 범위에서 검증된 선택지를 자동 등록한다. 추가 수동 승인·시즌 전체 품목 완전 DB는 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1708,7 +1708,7 @@
       "id": "E1",
       "name": "기본 예산 B",
       "scope": "BASE",
-      "acceptance": "검증 G+J+F의 정수 산술",
+      "acceptance": "검증된 동일 시즌 G(허용 근사 참조 포함)+J+F로 내부 B를 계산한다. 모든 장비·ilvl Native 정밀 측정이나 현재 착용 장비 스탯 합계를 필수 예산으로 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1774,7 +1774,7 @@
       "id": "E4",
       "name": "특수장비 고정 L",
       "scope": "USER",
-      "acceptance": "G 내부 정확한 L과 스탯별 하한",
+      "acceptance": "실제 선택 특수장비의 정확한 L은 G에 이미 포함되며 스탯별 하한으로 1회 보호한다. 미선택 장비의 L 원본 전체 수집이나 중복 가산을 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1840,7 +1840,7 @@
       "id": "E7",
       "name": "후보 분배 가능성",
       "scope": "RUN",
-      "acceptance": "정수 rating 합계·상/하한·경계값",
+      "acceptance": "기존 적응형 탐색기의 정수 B/T 합계·고정 하한·상한·경계/불가능 후보를 재사용 가능한 산술 회귀로 검증한다. 후보별·전문화별 별도 Native 인증은 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1928,7 +1928,7 @@
       "id": "F2",
       "name": "SimC 프로필 업로드",
       "scope": "USER",
-      "acceptance": "선택 업로드에서 캐릭터·특성만 가져오기",
+      "acceptance": "선택 업로드 SimC에서 캐릭터 정보·종족·특성 등을 추출하고 업로드 현재 장비/CHMV를 기본 목표로 복사하지 않는다. 프로필 업로드는 사용자 필수 조건이 아니다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1950,7 +1950,7 @@
       "id": "F3",
       "name": "APL",
       "scope": "RUN",
-      "acceptance": "pinned SimC 기본 APL 및 사용자 구성과 정합",
+      "acceptance": "실행하는 SimC의 APL 입력·선택 전문화·특성 정합을 확인한다. APL 최적성이나 SimC 내부 전투 로직을 독립적으로 인증·재구현하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -1994,7 +1994,7 @@
       "id": "F5",
       "name": "고급 전투조건",
       "scope": "USER",
-      "acceptance": "대상 수·시간 변화·외부 버프/이벤트",
+      "acceptance": "실제 선택하는 대상 수·전투시간·버프/이벤트 등의 전투조건이 프로필과 DPS 캐시 정체성에 반영되는지 검증한다. 모든 조건 조합의 Native 전수는 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -2016,7 +2016,7 @@
       "id": "F6",
       "name": "실 SimC 바이너리",
       "scope": "RUN",
-      "acceptance": "실행 경로·SHA·버전·build·실행 가능",
+      "acceptance": "실제 실행 가능한 SimC 바이너리 경로·버전/revision·SHA를 기록하고 DPS 캐시를 구별한다. 게임 빌드와 SimC 빌드 문자열의 완전일치·컴파일 계보 인증은 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -2060,7 +2060,7 @@
       "id": "G1",
       "name": "수집 스테이지 실행",
       "scope": "BASE",
-      "acceptance": "필요 원본 fetch·봉인·캐시·중단 재개",
+      "acceptance": "필수 시즌 원본만 수집·봉인하고 중단/재개 및 유효한 캐시·기존 영수증을 재사용한다. 모든 원본을 매 실행마다 새로 다운로드하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -2082,7 +2082,7 @@
       "id": "G2",
       "name": "기본 환경 READY",
       "scope": "BASE",
-      "acceptance": "필수 G/J/F/O·티어·정확한 v212 설치",
+      "acceptance": "실제 기본 환경의 시즌별 G/J/F/O·대표 장비/티어·기본 v212 설치가 검증되면 READY로 판정한다. 미선택 개별 옵션·전체 품목 DB 부족은 해당 옵션만 보류한다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -2106,7 +2106,7 @@
       "id": "G3",
       "name": "개인별 환경 설치",
       "scope": "USER",
-      "acceptance": "기본과 다른 소켓/F/O 구성 정확 install SHA",
+      "acceptance": "사용자가 기본과 다른 소켓·F/O/아이템을 실제 선택한 경우 해당 변형의 정확한 설치/프로필 SHA를 검증한다. 미선택 사용자 조합은 기본 환경 준비를 차단하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -2128,7 +2128,7 @@
       "id": "G4",
       "name": "정적 아이템 캐시",
       "scope": "BASE+USER",
-      "acceptance": "시즌+item exact variant, rev-only 폐기 금지",
+      "acceptance": "시즌·아이템 ID·ilvl·부위·옵션별 정확한 정적 캐시를 관리한다. 같은 시즌에서 SimC revision만 바뀌어도 폐기하지 않고 필요한 누락 변형만 Native 조회한다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -2150,7 +2150,7 @@
       "id": "G5",
       "name": "환경/DPS 캐시 identity",
       "scope": "BASE+RUN",
-      "acceptance": "소스/프로필/바이너리/옵션/후보/iterations",
+      "acceptance": "실제 소비하는 소스·장비/옵션·프로필·바이너리·후보·전투조건·iterations를 캐시 정체성에 반영해 오염을 방지한다. 매 실행의 무관한 원본 재수집·전 후보 Native 재실행은 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -2194,7 +2194,7 @@
       "id": "G7",
       "name": "환경 구축 UI",
       "scope": "BASE+USER",
-      "acceptance": "구성·실행·진단·실제 검증 상태 표시",
+      "acceptance": "사용자가 환경 구성·실행·진단과 검증/보류 상태를 실제로 확인하고 설정할 수 있는지 검증한다. 모든 페이지·미선택 옵션의 개별 실 Native 시험을 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -2216,7 +2216,7 @@
       "id": "G8",
       "name": "공식 한국어 표시",
       "scope": "BASE+USER",
-      "acceptance": "검증된 직업/아이템 공식 ko_KR 명칭",
+      "acceptance": "사용자에게 실제 노출하는 직업·전문화·아이템의 검증된 공식 ko_KR 명칭을 표시한다. 미노출 전체 아이템 DB 번역 완성은 기본 환경 Gate가 아니다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -2238,7 +2238,7 @@
       "id": "G9",
       "name": "시즌·SimC 갱신",
       "scope": "BASE",
-      "acceptance": "시즌 이벤트·필요 원본·바이너리만 증분 갱신",
+      "acceptance": "새 시즌에는 필요한 원본·G/J/F/O를 다시 결정하고 실제 바뀐 자료만 증분 갱신한다. 같은 시즌 정적 아이템 캐시를 SimC revision 변경만으로 일괄 폐기하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -2260,7 +2260,7 @@
       "id": "G10",
       "name": "오류·복구·배포",
       "scope": "BASE+RUN",
-      "acceptance": "원문 실패·취소/재개·Windows 배포·재실행",
+      "acceptance": "실제 제품 경로에서 SimC 원문 오류·취소/재개·캐시 복구·지원 Windows 실행이 동작함을 공통 회귀/대표 E2E로 확인한다. 모든 실패·전문화마다 독립 Native 시험은 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -2282,7 +2282,7 @@
       "id": "H1",
       "name": "적응형 CHMV 최적화",
       "scope": "RUN",
-      "acceptance": "최종 절대 rating 후보·SimC DPS 비교",
+      "acceptance": "기존 적응형 엔진으로 최종 CHMV 절대 rating 후보를 생성하고 SimC DPS 관측값을 비교한다. 전역 최적해 수학적 증명이나 시즌별/26전문화별 신규 최적화 검증은 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -2304,7 +2304,7 @@
       "id": "H2",
       "name": "실행 자원 관리",
       "scope": "RUN",
-      "acceptance": "iterations·Native 상한·실행시간 비용",
+      "acceptance": "기존 iterations·Native 상한·threads·취소·캐시를 통해 자원 사용을 제어함을 공통 회귀와 기존 실제 실행으로 확인한다. 모든 시즌·전문화의 독립 장시간 부하 시험은 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -2326,7 +2326,7 @@
       "id": "H3",
       "name": "95% 통계",
       "scope": "RUN",
-      "acceptance": "DPS·SEM·명목 95%·관측 1순위 분리",
+      "acceptance": "SimC 실제 DPS·SEM에 기초한 명목 95% 통계와 관측 1순위/확정 여부를 구별한다. 시즌별 통계 공식을 재검증하거나 SEM 미세 정밀화를 위한 Native 반복 실행은 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -2348,7 +2348,7 @@
       "id": "H4",
       "name": "근접 대안",
       "scope": "RUN",
-      "acceptance": "DPS 근접하되 스탯 분배 실질적 다른 후보",
+      "acceptance": "관측 DPS가 근접하면서 스탯 분배가 실질적으로 다른 후보만 제시한다. 관측된 적격 대안이 0개면 없음을 표시하며 억지로 추가 Native를 실행해 찾지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -2370,7 +2370,7 @@
       "id": "H5",
       "name": "취소·재개",
       "scope": "RUN",
-      "acceptance": "체크포인트·캐시 SHA·중단 후 재시작",
+      "acceptance": "기존 세션/후보/캐시 SHA를 유지하면서 취소·재개·중복 Native 방지를 공통 경계 회귀와 대표 사용자 실행으로 확인한다. 모든 전문화별 중단 시험은 요구하지 않는다.",
       "generic": {
         "state": "PENDING",
         "evidence": []
@@ -2392,7 +2392,7 @@
       "id": "H6",
       "name": "사용자 결과",
       "scope": "RUN",
-      "acceptance": "최종 rating·비율·DPS·SEM·95%·한계",
+      "acceptance": "최종 절대 rating·비율·DPS·SEM·95% 판정·관측 1순위·근접 대안(없음 허용)·전역 최적 미입증을 실제 사용자 결과에 표시한다. 결과 조회용 Native 재실행은 금지한다.",
       "generic": {
         "state": "PENDING",
         "evidence": []

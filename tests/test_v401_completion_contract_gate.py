@@ -44,6 +44,49 @@ class CompletionContractTests(unittest.TestCase):
         self.assertTrue({"A8","A9","A10"}.issubset({
             x["id"] for x in rows if gate.complete(x)}))
 
+
+    def _source_independent_h3(self):
+        doc=self.scenario()
+        source=copy.deepcopy(doc["evidence"]["a1_generic"])
+        source["supports"]=["H3"]
+        source["kind"]="GENERALIZATION_REGRESSION"
+        decision=copy.deepcopy(source)
+        decision["kind"]="POLICY_DECISION"
+        doc["evidence"]["v441_h3_regression_fixture"]=source
+        doc["evidence"]["v441_h3_scope_decision_fixture"]=decision
+        row=self.row(doc,"H3")
+        row["current_source"]={
+            "state":"NOT_APPLICABLE",
+            "evidence":["v441_h3_scope_decision_fixture"],
+            "reason":"명목 95% 통계 산술은 게임 시즌 원본을 조회하거나 품목 ID를 해석하지 않는다. 기존 실 Native 결과를 입력으로 사용하며 소스 조회의 독립 인증이 필요 없다."}
+        row["generic"]={"state":"PASS",
+                       "evidence":["v441_h3_regression_fixture"]}
+        return doc
+
+    def test_v441_season_independent_run_may_use_documented_source_na(self):
+        doc=self._source_independent_h3()
+        self.assertTrue(gate.validate(doc))
+        self.assertFalse(gate.complete(self.row(doc,"H3")))
+        self.assertEqual(doc["policy"]["next_review"],"B8")
+
+    def test_v441_cannot_hide_required_season_source_as_na(self):
+        doc=self._source_independent_h3()
+        self.row(doc,"A6")["current_source"]=copy.deepcopy(
+            self.row(doc,"H3")["current_source"])
+        doc["evidence"]["v441_h3_scope_decision_fixture"]["supports"].append("A6")
+        with self.assertRaisesRegex(
+            gate.ContractInvalid,"SOURCE_NA_ONLY_SEASON_INDEPENDENT_RUN:A6"):
+            gate.validate(doc)
+
+    def test_v441_generic_still_requires_regression_not_only_na(self):
+        doc=self._source_independent_h3()
+        self.row(doc,"H3")["generic"]={
+            "state":"PASS",
+            "evidence":["v441_h3_scope_decision_fixture"]}
+        with self.assertRaisesRegex(
+            gate.ContractInvalid,"PASS_MISSING_REQUIRED_EVIDENCE_KIND:H3:generic"):
+            gate.validate(doc)
+
     def test_a4_a6_generic_pass_is_scoped_and_product_unverified(self):
         data=self.scenario()
         for eid in ("A4","A5","A6"):

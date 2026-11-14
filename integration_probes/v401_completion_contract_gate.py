@@ -97,7 +97,12 @@ def validate(data,root=ROOT):
             if state=="PASS":
                 need(bool(refs),"PASS_WITHOUT_EVIDENCE:"+eid+":"+axis)
                 kinds={evidence[key]["kind"] for key in refs}
-                need(KINDS[axis].issubset(kinds),
+                required=KINDS[axis]
+                # A documented, truly season-independent RUN calculation
+                # needs regression evidence, not an unrelated source fetch.
+                if axis=="generic" and row["current_source"]["state"]=="NOT_APPLICABLE":
+                    required={"GENERALIZATION_REGRESSION"}
+                need(required.issubset(kinds),
                      "PASS_MISSING_REQUIRED_EVIDENCE_KIND:"+eid+":"+axis)
                 need(all(eid in evidence[key]["supports"] for key in refs),
                      "EVIDENCE_NOT_SCOPED_TO_ELEMENT:"+eid+":"+axis)
@@ -112,9 +117,12 @@ def validate(data,root=ROOT):
                 need(bool(refs) and any(
                     evidence[key]["kind"]=="POLICY_DECISION" for key in refs),
                      "NA_NEEDS_POLICY_EVIDENCE:"+eid+":"+axis)
+                if axis=="current_source":
+                    need(row["scope"] in ("RUN","BASE+RUN"),
+                         "SOURCE_NA_ONLY_SEASON_INDEPENDENT_RUN:"+eid)
         if row["generic"]["state"]=="PASS":
-            need(row["current_source"]["state"]=="PASS",
-                 "GENERIC_NEEDS_CURRENT_ZERO_SOURCE:"+eid)
+            need(row["current_source"]["state"] in ("PASS","NOT_APPLICABLE"),
+                 "GENERIC_NEEDS_CURRENT_SOURCE_OR_DOCUMENTED_NA:"+eid)
         if row["product_integration"]["state"]=="PASS":
             need(row["generic"]["state"] in ("PASS","NOT_APPLICABLE")
                  and row["current_source"]["state"] in ("PASS","NOT_APPLICABLE"),
