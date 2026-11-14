@@ -1400,6 +1400,79 @@ console.log("V464_HISTORICAL_ENCHANT_READONLY_RESTORE_PASS");
         self.assertIn("V464_HISTORICAL_ENCHANT_READONLY_RESTORE_PASS",
                       result.stdout)
 
+    def test_v467_fresh_v212_dk_runes_survive_unapproved_v213_enchants(self):
+        """Real UI: sealed installed DK runes stay usable; E stays blocked."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:
+            self.skipTest("node is not installed on this runner")
+        source=ROOT/"runner/webui/app.js"
+        script=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const begin=raw.indexOf("function renderSeasonOptionCatalog(catalog) {");
+const end=raw.indexOf("function installOptions(options) {",begin);
+assert(begin>=0&&end>begin);
+const elements={};
+const $=id=>elements[id]??={options:[],textContent:"",disabled:false,
+  replaceChildren(...items){this.options=items;},
+  appendChild(item){this.options.push(item);}};
+const option=(value,label)=>({value:String(value),textContent:label});
+let compatibility=0;
+const runeCompatibility=()=>compatibility++;
+const state={dkRuneIds:new Set([999]),eagleApproved:true};
+const render=Function("state","$","option","runeCompatibility","document",
+ raw.slice(begin,end)+"return renderSeasonOptionCatalog;")(
+ state,$,option,runeCompatibility,{});
+const installed={
+  schema:"v196_current_season_ui_catalog_v1",
+  status:"FRESH_SEASON_CANDIDATES_UNAPPROVED_NOT_ENVIRONMENT_READY",
+  enchant_candidates:{selectable_count:0},
+  verified_weapon_enhancements:{dk_runeforges:{
+    status:"PINNED_DK_RUNES_INSTALLED",
+    items:[{enchant_id:3370,class:"deathknight",display_name:"검증 룬",
+      weapon_hands:["main_hand","off_hand"]}]}}
+};
+render(installed);
+assert(state.dkRuneIds.has(3370));
+assert.strictEqual(state.dkRuneIds.size,1);
+assert($("dk_rune_main").options.some(o=>o.value==="3370"));
+assert($("dk_rune_off").options.some(o=>o.value==="3370"));
+assert.strictEqual(state.eagleApproved,false);
+assert.strictEqual($("season_enchant_finger1").disabled,true);
+assert.strictEqual($("season_enchant_finger1").options.length,1);
+assert($("season-option-catalog-status").textContent.includes("미승인"));
+render(null);
+assert.strictEqual(state.dkRuneIds.size,0);
+assert.strictEqual(state.eagleApproved,false);
+assert.strictEqual($("dk_rune_main").options.length,1);
+assert.strictEqual(compatibility,2);
+console.log("V467_FRESH_DK_RUNES_NO_ENCHANT_APPROVAL_PASS");
+"""
+        result=subprocess.run([node,"-e",script,str(source)],
+            capture_output=True,text=True,timeout=20,check=False)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V467_FRESH_DK_RUNES_NO_ENCHANT_APPROVAL_PASS",
+                      result.stdout)
+
+    def test_v467_build_restores_exact_v212_dk_not_unscoped_v196(self):
+        """Build and saved restore use the same sealed source-bound helper."""
+        js=self.client.get("/assets/app.js").text
+        build=js[js.index("async function buildSeasonEnvironment("):
+                 js.index("async function restoreInstalledSeasonGearChoices(")]
+        self.assertIn("const installedSha=report.installed_manifest_sha256 ||",build)
+        self.assertIn("const installedBuild=installedScope.game_build;",build)
+        self.assertIn("await restoreInstalledSeasonOptionCatalog({",build)
+        self.assertIn("installed_manifest_sha256:installedSha",build)
+        self.assertIn("installed_season_game_build:installedBuild",build)
+        self.assertNotIn('api("/api/v1/season-option-catalog")',build)
+        self.assertIn("else renderSeasonOptionCatalog(null);",build)
+        self.assertIn(
+            'catalog.status==="FRESH_SEASON_CANDIDATES_UNAPPROVED_NOT_ENVIRONMENT_READY"',
+            js)
+        self.assertIn("catalog.automatic_admission?.approved_count===0",js)
+        self.assertIn('catalog.source_scope!=="VERIFIED_INSTALLED_V212_OPTION_CATALOG"',js)
+
     def test_v463_sealed_rune_options_reloaded_before_saved_rune_ids(self):
         """Execute actual JS; never reuse packaged DK rune IDs on restore."""
         import shutil,subprocess
@@ -1439,7 +1512,20 @@ const input={current_season_product:true,
     "/api/v1/season-option-catalog?game_build="+build+
     "&target_ilevel=334&installed_manifest_sha256="+sha);
   assert.strictEqual(events.at(-1),reply);
-  reply={...reply,installed_manifest_sha256:"b".repeat(64)};
+  reply={...reply,
+    status:"FRESH_SEASON_CANDIDATES_UNAPPROVED_NOT_ENVIRONMENT_READY",
+    environment_ready:false,new_approval_granted:false,
+    enchant_candidates:{selectable_count:0},
+    automatic_admission:{approved_count:0}};
+  await load(input);
+  assert.strictEqual(events.at(-1),reply,
+    "signed installed DK runes must survive unapproved v213 enchants");
+  reply={...reply,new_approval_granted:true};
+  await load(input);
+  assert.strictEqual(events.at(-1),null,
+    "candidate-level approval is not an installed user choice");
+  reply={...reply,new_approval_granted:false,
+    installed_manifest_sha256:"b".repeat(64)};
   await load(input);
   assert.strictEqual(events.at(-1),null);
   const restore=raw.slice(raw.indexOf("async function restore(id) {"),

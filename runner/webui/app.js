@@ -2127,12 +2127,16 @@ async function buildSeasonEnvironment(forUserVariant=false) {
     // Refresh user equipment options from the exact installed v212/v213
     // candidate source, never promote this runtime's packaged older build.
     const installedScope=report.web_environment_scope||{};
+    // Use one exact v212 identity for equipment AND installed runeforges.
+    // An unscoped v196 catalogue can reflect an older packaged season.
+    const installedSha=report.installed_manifest_sha256 ||
+      report.source_compilation?.verified_environment_install?.manifest_sha256 ||
+      report.zero_history_build?.versioned_environment_installed?.manifest_sha256;
+    const installedBuild=installedScope.game_build;
+    const installedLevel=installedScope.target_ilevel;
     if(installedScope.environment_ready===true &&
        installedScope.environment_installed===true) {
-      const sha=report.installed_manifest_sha256 ||
-        report.source_compilation?.verified_environment_install?.manifest_sha256 ||
-        report.zero_history_build?.versioned_environment_installed?.manifest_sha256;
-      const build=installedScope.game_build,level=installedScope.target_ilevel;
+      const sha=installedSha,build=installedBuild,level=installedLevel;
       const priorTrinkets=[field("trinket1"),field("trinket2")];
       const priorSpecial=Array.from($("special-rows").querySelectorAll(".gear-row"))
         .map(row=>{
@@ -2199,11 +2203,23 @@ async function buildSeasonEnvironment(forUserVariant=false) {
       catch(error){$("season-terms-status").textContent=
         "공식 한국어 게임 용어 조회 오류 · 기존 표기 유지";}
     }
-    // A verified new installation may supply a different season rune roster.
-    // Refresh read-only options only, never launch optimization on Build.
-    try{renderSeasonOptionCatalog(await api("/api/v1/season-option-catalog"));}
-    catch(error){$("dk-runeforge-status").textContent=
-      "시즌 룬 원본 조회 실패 · 선택 잠금";}
+    // The SAME sealed v212 SHA used for gear owns the DK rune roster.
+    // A v213 source-only enchant candidate cannot be auto-approved.
+    try{
+      if(installedScope.environment_ready===true &&
+         installedScope.environment_installed===true)
+        await restoreInstalledSeasonOptionCatalog({
+          current_season_product:true,
+          installed_season_game_build:installedBuild,
+          installed_manifest_sha256:installedSha,
+          user:{target:{ilevel:installedLevel}}
+        });
+      else renderSeasonOptionCatalog(null);
+    }catch(error){
+      renderSeasonOptionCatalog(null);
+      $("dk-runeforge-status").textContent=
+        "시즌 룬 설치 원본 확인 실패 · 선택 잠금";
+    }
     try{await refreshInstalledOilLoadouts();}
     catch(error){$("optimizer-oil-loadout-status").textContent=
       "검증 설치 기름 목록 조회 실패 · 고급 입력 유지";}
@@ -2564,7 +2580,15 @@ async function restoreInstalledSeasonOptionCatalog(inputs) {
     const catalog=await api("/api/v1/season-option-catalog?game_build="+
       encodeURIComponent(build)+"&target_ilevel="+level+
       "&installed_manifest_sha256="+sha);
-    if(catalog.status!=="SOURCE_COMBINED_WITH_CLEAR_APPROVAL_BOUNDARY" ||
+    const freshUnapproved=
+      catalog.status==="FRESH_SEASON_CANDIDATES_UNAPPROVED_NOT_ENVIRONMENT_READY" &&
+      catalog.new_approval_granted===false &&
+      catalog.environment_ready===false &&
+      catalog.enchant_candidates?.selectable_count===0 &&
+      catalog.automatic_admission?.approved_count===0;
+    if(catalog.schema!=="v196_current_season_ui_catalog_v1" ||
+       !(catalog.status==="SOURCE_COMBINED_WITH_CLEAR_APPROVAL_BOUNDARY" ||
+         freshUnapproved) ||
        catalog.source_scope!=="VERIFIED_INSTALLED_V212_OPTION_CATALOG" ||
        catalog.installed_manifest_sha256!==sha||
        catalog.season_build!==build)
@@ -2626,6 +2650,15 @@ function renderSeasonOptionCatalog(catalog) {
   selector.replaceChildren(option("","마법부여 없음 (기존 설정)"));
   selector.disabled=true;
   host.replaceChildren();
+  if(catalog?.schema==="v196_current_season_ui_catalog_v1" &&
+     catalog.status==="FRESH_SEASON_CANDIDATES_UNAPPROVED_NOT_ENVIRONMENT_READY") {
+    // New-season v213 enchant rows are candidates, not approved options.
+    // The verified DK runes above come from the separate installed v212
+    // source; do not transfer candidate E or historic 7967 privileges.
+    status.textContent="이번 시즌 마법부여 원본 후보는 미승인 상태입니다. "+
+      "검증된 직업 룬만 선택할 수 있으며 일반 마부는 잠금 유지.";
+    return;
+  }
   if(catalog?.schema!=="v196_current_season_ui_catalog_v1" ||
      catalog?.status!=="SOURCE_COMBINED_WITH_CLEAR_APPROVAL_BOUNDARY") {
     status.textContent="이번 시즌 마법부여 출처 자료가 준비되지 않았습니다. 기존 승인 선택은 그대로 유지됩니다.";
