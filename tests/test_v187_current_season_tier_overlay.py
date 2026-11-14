@@ -209,6 +209,31 @@ class CurrentSeasonTierReconciliation(unittest.TestCase):
                 with self.assertRaisesRegex(AssertionError,reason):
                     self.apply(u,rows,groups)
 
+    def test_actual_v098_product_catalyst_profile_binds_current_source_and_tier(self):
+        import json
+        import v098_target_user_scenario_bootstrap as bootstrap
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            fake=root/"simc-not-executed"
+            fake.write_bytes(b"NO_SIMC_EXECUTION")
+            user,_,_=self.setup_rows()
+            user["special_items"]=[{"slot":"head","item_id":self.map["head"],
+                "options":{"redirected_base_stats":"271874"}}]
+            result=bootstrap.build(user,root/"valid",fake,"7bc10711b5",
+                                   current_season_product=True)
+            self.assertEqual(result["native_calls"],0)
+            self.assertEqual(result["catalyst_origin_items"],[{
+                "slot":"head","tier_item_id":self.map["head"],
+                "source_item_id":271874}])
+            self.assertEqual(len(result["effective_four_tier_slots"]),4)
+            scenario=json.loads((root/"valid"/"scenario.json").read_text("utf8"))
+            self.assertEqual(scenario["equipment"]["catalyst_special_tier_slots"],
+                             ["head"])
+            profile=(root/"valid"/"profile.simc").read_text("utf8")
+            head=next(x for x in profile.splitlines() if x.startswith("head="))
+            self.assertIn("id="+str(self.map["head"]),head)
+            self.assertIn("redirected_base_stats=271874",head)
+
     def test_catalyst_source_identity_generalizes_across_all_26_dps_specs(self):
         import v143_specialization_contracts as contracts
         import v167_product_season_gear_adapter as product_gear
