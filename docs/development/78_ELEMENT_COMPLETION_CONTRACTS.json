@@ -6,7 +6,7 @@
     "current_source_acceptance": "시즌 원본이 필요한 요소는 실제 소비하는 해당 시즌·빌드·ID·SHA만 검증한다. 시즌 독립 RUN에는 이미 검증된 현재 실제 SimC 관측/소스의 공통 영수증을 해당 소비 경계에 재사용하거나, 해당 원본이 실제 불필요할 때만 범위·사유·정책 근거를 기록한 N/A를 적용한다. 하나의 요소마다 새 외부 수집·Native는 요구하지 않는다.",
     "product_acceptance": "실사용 제품의 입력→내부 예산/프로필→SimC→결과 연결에서 해당 요소의 소비·실패 경계를 확인한다. 기존 단일 실제 E2E·원본/캐시/Actions 영수증을 여러 관련 요소에 귀속할 수 있으며 각 요소별 독립 사용자 E2E·전문 전체 Native는 요구하지 않는다. 미선택 옵션은 기본 READY를 차단하지 않는다.",
     "optional_acceptance": "미지원 또는 해당 현재 환경에 없는 선택 옵션은 근거·효과 범위·소유권을 명시하고 NOT_APPLICABLE을 검토한다. 실제 지원되는 선택 기능은 선택 시 정합성·실행 경로가 필요하며, 비선택 상태의 모든 변형/효과 독립 인증을 강제하지 않는다. 사유·근거 없는 포괄 N/A는 금지한다.",
-    "next_review": "B8",
+    "next_review": "B9",
     "a7_may_be_next_only_after_generic_review_of": [
       "A4",
       "A5",
@@ -556,6 +556,42 @@
       "supports": [
         "B8"
       ]
+    },
+    "v442_shared_generic_v432_70783_regressions": {
+      "kind": "GENERALIZATION_REGRESSION",
+      "note": "docs/development/notes/2026-11-13_p1-v432-b8-selected-static-budget-preflight-offline.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43440892382",
+      "tested_sha": "8d2a107b682a6fc3beb894fcdc6a16eed11a8883",
+      "supports": [
+        "B8",
+        "D4",
+        "D6",
+        "E1"
+      ]
+    },
+    "v442_shared_source_v439_selected_native": {
+      "kind": "CURRENT_SOURCE_REAL",
+      "note": "docs/development/notes/2026-11-14_p1-v439-b8-one-real-selected-70783-four-tier-native-e2e.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43466966207",
+      "tested_sha": "bad415de407671898b26001869478bcdb1ab047e",
+      "supports": [
+        "B8",
+        "D4",
+        "D6",
+        "E1"
+      ]
+    },
+    "v442_shared_product_v439_selected_native": {
+      "kind": "PRODUCT_INTEGRATION_REAL",
+      "note": "docs/development/notes/2026-11-14_p1-v439-b8-one-real-selected-70783-four-tier-native-e2e.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43466966207",
+      "tested_sha": "bad415de407671898b26001869478bcdb1ab047e",
+      "supports": [
+        "B8",
+        "D4",
+        "D6",
+        "E1"
+      ]
     }
   },
   "elements": [
@@ -1091,16 +1127,23 @@
       "scope": "USER",
       "acceptance": "선택 특수/제작/장식이 티어 부위를 차지할 때 실제 5개 중 4pc가 유지되는지 슬롯 충돌·대체/불가능 반례로 확인한다. 유효한 대표 실제 Native 사례를 재사용하고 모든 조합 전수 실행을 요구하지 않는다.",
       "generic": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v442_shared_source_v439_selected_native",
+          "v442_shared_generic_v432_70783_regressions"
+        ]
       },
       "current_source": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v442_shared_source_v439_selected_native"
+        ]
       },
       "product_integration": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v442_shared_product_v439_selected_native"
+        ]
       },
       "historical": {
         "state": "PASS",
@@ -1578,16 +1621,23 @@
       "scope": "USER",
       "acceptance": "선택 제작장비의 정확한 ID·ilvl·옵션·정적 총량을 확인한다. 초기 두 스탯 분배(통상 50:50)를 고정 L로 잠그지 않고 전 레시피 완전 DB를 요구하지 않는다.",
       "generic": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v442_shared_source_v439_selected_native",
+          "v442_shared_generic_v432_70783_regressions"
+        ]
       },
       "current_source": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v442_shared_source_v439_selected_native"
+        ]
       },
       "product_integration": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v442_shared_product_v439_selected_native"
+        ]
       },
       "historical": {
         "state": "PENDING",
@@ -1622,16 +1672,23 @@
       "scope": "USER",
       "acceptance": "선택된 특수/제작/장식의 동시 장착 가능성·티어 실제 4pc 유지/불가능 차단을 공통 레이아웃 반례와 대표 실제 사례로 확인한다. 모든 조합 Native 전수는 요구하지 않는다.",
       "generic": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v442_shared_source_v439_selected_native",
+          "v442_shared_generic_v432_70783_regressions"
+        ]
       },
       "current_source": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v442_shared_source_v439_selected_native"
+        ]
       },
       "product_integration": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v442_shared_product_v439_selected_native"
+        ]
       },
       "historical": {
         "state": "PENDING",
@@ -1710,16 +1767,23 @@
       "scope": "BASE",
       "acceptance": "검증된 동일 시즌 G(허용 근사 참조 포함)+J+F로 내부 B를 계산한다. 모든 장비·ilvl Native 정밀 측정이나 현재 착용 장비 스탯 합계를 필수 예산으로 요구하지 않는다.",
       "generic": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v442_shared_source_v439_selected_native",
+          "v442_shared_generic_v432_70783_regressions"
+        ]
       },
       "current_source": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v442_shared_source_v439_selected_native"
+        ]
       },
       "product_integration": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v442_shared_product_v439_selected_native"
+        ]
       },
       "historical": {
         "state": "PENDING",
