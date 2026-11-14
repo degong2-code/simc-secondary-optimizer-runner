@@ -209,9 +209,9 @@ class CurrentSeasonTierReconciliation(unittest.TestCase):
                 with self.assertRaisesRegex(AssertionError,reason):
                     self.apply(u,rows,groups)
 
-    def test_actual_v098_product_catalyst_profile_binds_current_source_and_tier(self):
-        import json
+    def test_actual_v098_product_catalyst_profile_binds_current_source_and_blocks_missing_L(self):
         import v098_target_user_scenario_bootstrap as bootstrap
+        import v090_reference_total_native_candidate as reference
         with tempfile.TemporaryDirectory() as td:
             root=pathlib.Path(td)
             fake=root/"simc-not-executed"
@@ -219,21 +219,29 @@ class CurrentSeasonTierReconciliation(unittest.TestCase):
             user,_,_=self.setup_rows()
             user["special_items"]=[{"slot":"head","item_id":self.map["head"],
                 "options":{"redirected_base_stats":"271874"}}]
-            result=bootstrap.build(user,root/"valid",fake,"7bc10711b5",
-                                   current_season_product=True)
+            result=bootstrap.build(user,root/"probe",fake,"7bc10711b5",
+                current_season_product=True,static_special_probe_only=True)
+            self.assertEqual(result["schema"],
+                             "v208_exact_current_special_static_source_v1")
             self.assertEqual(result["native_calls"],0)
-            self.assertEqual(result["catalyst_origin_items"],[{
-                "slot":"head","tier_item_id":self.map["head"],
-                "source_item_id":271874}])
-            self.assertEqual(len(result["effective_four_tier_slots"]),4)
-            scenario=json.loads((root/"valid"/"scenario.json").read_text("utf8"))
-            self.assertEqual(scenario["equipment"]["catalyst_special_tier_slots"],
-                             ["head"])
-            profile=(root/"valid"/"profile.simc").read_text("utf8")
-            head=next(x for x in profile.splitlines() if x.startswith("head="))
+            self.assertTrue(result["no_optimization_or_budget_produced"])
+            self.assertEqual(len(result["special_rows"]),1)
+            self.assertEqual(result["special_rows"][0]["item_id"],self.map["head"])
+            self.assertEqual(
+                result["special_rows"][0]["options"]["redirected_base_stats"],
+                "271874")
+            self.assertEqual(len(result["source_profile_sha256"]),64)
+            head=next(x for x in result["profile"].splitlines()
+                      if x.startswith("head="))
             self.assertIn("id="+str(self.map["head"]),head)
             self.assertIn("redirected_base_stats=271874",head)
-
+            # Full budget/profile execution remains blocked until this exact
+            # redirected tier variant has an original Native JSON2 static L.
+            with self.assertRaisesRegex(
+                    reference.ReferenceNativeBlocked,
+                    "SPECIAL_L_REQUIRES_EXACT_NATIVE_STATIC_VARIANT"):
+                bootstrap.build(user,root/"blocked",fake,"7bc10711b5",
+                                current_season_product=True)
     def test_catalyst_source_identity_generalizes_across_all_26_dps_specs(self):
         import v143_specialization_contracts as contracts
         import v167_product_season_gear_adapter as product_gear
