@@ -962,7 +962,7 @@ function refreshDefaultConsumableSummaries(){
     (fOption?.textContent||"영약 #"+fid+" · 검증 필요"):"시즌 기본값";
   const potion=$("potion"),chosen=field("potion");
   $("env-potion-summary").textContent=!chosen||chosen==="source_default"?
-    "전문화 기본값":potion.selectedOptions?.[0]?.textContent||chosen;
+    "미사용 (이번 시즌 기본)":potion.selectedOptions?.[0]?.textContent||chosen;
 }
 
 function renderInstalledFlaskChoices(data) {
@@ -1256,8 +1256,18 @@ function fillSessionInputs(payload) {
     node.value=value;
   }
   const choices=u.consumable_choices||{};
-  for(const key of ["food","potion","augmentation"])
-    $(key).value=choices[key]??"source_default";
+  for(const key of ["food","potion","augmentation"]) {
+    const node=$(key),value=choices[key]??"source_default";
+    // Preserve old sealed-session choices for inspection. A historical
+    // SimC token alone does not grant a fresh-season user option.
+    for(const previous of Array.from(node.options))
+      if(previous.dataset?.historic==="true")previous.remove();
+    if(!Array.from(node.options).some(o=>o.value===value)) {
+      const old=option(value,"이전 세션 "+key+" · "+value+" (새 시즌 미승인)");
+      old.dataset.historic="true";node.appendChild(old);
+    }
+    node.value=value;
+  }
   const oldOmnium=choices.omnium_talents??"source_default";
   const omni=$("omnium");
   for(const x of Array.from(omni.options))
@@ -1349,6 +1359,12 @@ function buildRequest() {
   if(!seasonChoice("trinket",valueInt("trinket1"))||
      !seasonChoice("trinket",valueInt("trinket2")))
     throw Error("장신구 2개를 이번 시즌 목록에서 선택해 주세요.");
+  const approvedOptional=state.options?.current_season_product_choices;
+  for(const name of ["food","potion","augmentation"]) {
+    const allowed=approvedOptional?.[name];
+    if(!Array.isArray(allowed)||!allowed.includes(field(name)))
+      throw Error("이전 세션 또는 미검증 "+name+" 선택은 이번 시즌 새 최적화에 사용할 수 없습니다.");
+  }
   const controls={
     class:source.class,spec:source.spec,
     race:resolvedRace,talents:field("talents"),
@@ -2496,8 +2512,21 @@ function installOptions(options) {
   state.options=options;
   const label=(key,value)=>options.display_labels?.[key]?.[String(value)]??
     String(value);
-  for(const name of ["food","potion","augmentation"])
-    populateSelect(name,options[name],v=>label(name,v));
+  // /options also contains source-known historical v108 tokens for saved
+  // sessions; the actual product always uses current_season_product=true.
+  // Render ONLY its explicit approved subset. A missing/malformed subset
+  // fails closed to a no-optional-effect source_default (SimC disabled).
+  const approved=options.current_season_product_choices;
+  for(const name of ["food","potion","augmentation"]) {
+    const offered=options[name]||[];
+    const permitted=approved?.schema==="v113_current_season_optional_consumables_v1" &&
+      approved?.source_default_simc_token==="disabled" &&
+      Array.isArray(approved[name])&&approved[name].includes("source_default") &&
+      approved[name].every(token=>offered.includes(token)) ?
+      approved[name]:["source_default"];
+    populateSelect(name,permitted,v=>v==="source_default"?
+      "미사용 (이번 시즌 기본)":label(name,v));
+  }
   populateSelect("diamond",options.diamond_id,v=>label("diamond_id",v));
   populateSelect("omnium",["source_default","row4_crit","row4_haste",
                             "row4_mastery","row4_vers"],v=>({
