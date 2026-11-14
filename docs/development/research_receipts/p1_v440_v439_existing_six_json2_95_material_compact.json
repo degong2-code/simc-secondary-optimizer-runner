@@ -1,0 +1,61 @@
+{
+  "schema": "p1_v440_v439_70783_95_observed_comparison_compact_v1",
+  "status": "PASS_ORIGINAL_V439_SIX_JSON2_OBSERVATIONS_REUSED_NO_NATIVE",
+  "evidence_kind": "DERIVED_FROM_EXISTING_REAL_NATIVE_V439_NOT_NEW_NATIVE",
+  "original_v439_run_id": 43466966207,
+  "original_v439_artifact_id": 14059197320,
+  "original_outer_zip_sha256": "ac5f41298515d22121e635e57531e599164acdd97f3b00193becc7bae5311d76",
+  "original_nested_six_native_sha256": "fcffd42b5f818a0e4fac296cd715afec628ebef35426823f9b737dd50ccceb52",
+  "v440_audit_run_id": 43534722801,
+  "v440_audit_artifact_id": 14088178742,
+  "v440_audit_code_commit": "2ac4ca9329f5bd8f2d2e34a20d004e5150413fe7",
+  "game_build": "12.1.5.70783",
+  "character": "hunter/survival",
+  "target_ilevel": 334,
+  "observed_best": {
+    "absolute_rating_T": {
+      "crit_rating": 736,
+      "haste_rating": 735,
+      "mastery_rating": 735,
+      "versatility_rating": 900
+    },
+    "dps_mean": 173604.779751951,
+    "simc_sem": 310.81209947602576
+  },
+  "confirmation_95": {
+    "method": "V015_FRESH_SELECTED_PAIR_ONLY_NORMAL_APPROX",
+    "first_minus_second_dps": -1091.0567026744247,
+    "approx_ci95_halfwidth": 827.4016145925037,
+    "distinct_simc_seeds_observed": true,
+    "pairwise_direction_supported": true,
+    "first": {
+      "crit_rating": 636,
+      "haste_rating": 735,
+      "mastery_rating": 735,
+      "versatility_rating": 1000
+    },
+    "second": {
+      "crit_rating": 736,
+      "haste_rating": 735,
+      "mastery_rating": 735,
+      "versatility_rating": 900
+    },
+    "global_optimum_proven": false
+  },
+  "observed_unique_targets": 4,
+  "material_near_alternatives": [],
+  "material_near_rule": {
+    "minimum_moved_B_fraction": 0.1,
+    "maximum_observed_dps_loss_fraction": 0.01
+  },
+  "material_near_none_observed_not_nonexistence_proof": true,
+  "source_policies": [
+    "runner/v065_v015_scheduler_adapter.py::fresh_confirmation_judgment",
+    "runner/v094_durable_inclusive_adaptive_runner.py::_candidate_summary"
+  ],
+  "new_native_calls": 0,
+  "new_DPS_simc_calls": 0,
+  "generic_B8_evidence": "NOT_SUFFICIENT_ONE_USER_SCOPED_ONLY",
+  "official_78_element_complete_count_unchanged": 7,
+  "official_B8_status": "PENDING"
+}
