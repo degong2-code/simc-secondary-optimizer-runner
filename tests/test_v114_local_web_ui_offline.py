@@ -1117,6 +1117,84 @@ assert.strictEqual(fn(assert),true);
         self.assertIn('if(result.length>(isCraft?2:8))',js)
         self.assertIn('for (let i=0;i<limit;i++)',js)
 
+    def test_v459_old_session_result_cannot_recertify_edited_budget(self):
+        """Run actual JS render/edit behavior with fake DOM; no Native."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:
+            self.skipTest("node is not installed on this runner")
+        source=ROOT/"runner/webui/app.js"
+        code=r"""
+const fs=require("fs"),vm=require("vm"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const take=(start,end)=>{
+  const a=raw.indexOf(start),b=raw.indexOf(end,a+start.length);
+  assert(a>=0&&b>a,start+" missing");return raw.slice(a,b);
+};
+const update=take("function updateBudgetPreview() {","/* v359:");
+const result=take("function renderResult(payload) {","async function readSession(id)");
+const mark=take("function markSession(id) {","function buttonState(");
+const events=take("  const resultBoundInputIds=new Set([",
+                  '  $("optimizer-oil-enabled").addEventListener');
+const nodes={};
+function n(){
+  return {value:"",checked:false,hidden:false,style:{},textContent:"",
+    listeners:{},append(){},appendChild(){},replaceChildren(){},
+    querySelector(){return n();},
+    addEventListener(name,fn){(this.listeners[name]??=[]).push(fn);}};
+}
+const $=id=>(nodes[id]??=(n()));
+const stats=["crit_rating","haste_rating","mastery_rating","versatility_rating"];
+const vec=Object.fromEntries(stats.map(k=>[k,750]));
+const pct=Object.fromEntries(stats.map(k=>[k,25]));
+const state={session:"0123456789abcdef0123",budgetPreviewDirty:false};
+const context={state,$,field:id=>$(id).value,
+  number:value=>String(value),document:{createElement:n,createTextNode:s=>({textContent:s})},
+  statOrder:stats.map(k=>[k,k,"#abc"]),setNotice(){},
+  switchView(){},refreshResultNavigation(){},localStorage:{setItem(){}},
+  Error,Number,Object,String,Math,Array,Set};
+vm.createContext(context);
+vm.runInContext(update+result+mark+"function attachUserEdits(){"+events+"}",context);
+const payload={user_result:{
+  confidence_level:0.95,global_optimum_proven:false,selected_pair_95_only:false,
+  observed_first_choice:{
+    observed_dps_mean:123456,simc_sem:100,
+    absolute_rating_T:vec,percent_of_final_T:pct},
+  final_T:3000,base_B:3000,fixed_O:Object.fromEntries(stats.map(k=>[k,0])),
+  confirmation_pair_direction_supported_at_95:false,
+  material_near_alternatives:[],observed_unique_candidates:2
+}};
+context.renderResult(payload);
+assert.strictEqual($("budget-preview-total").textContent,"3000 rating · 검증된 세션");
+context.attachUserEdits();
+const fire=(type,id,insideGear=false)=>{
+  for(const fn of $("optimizer-form").listeners[type]||[])
+    fn({target:{id,closest:selector=>insideGear&&selector===".gear-row"?{}:null}});
+};
+fire("input","equipment-search");
+assert.strictEqual(state.budgetPreviewDirty,false,"search is not a user scenario");
+fire("change","spec");
+assert.strictEqual(state.budgetPreviewDirty,true);
+assert.strictEqual($("budget-preview-total").textContent,"시즌 구성 검증 후 표시");
+context.renderResult(payload);
+assert.strictEqual($("budget-preview-total").textContent,
+                   "시즌 구성 검증 후 표시","poll must not certify old T");
+fire("input","",true);
+assert.strictEqual(state.budgetPreviewDirty,true,"crafted gear marks input dirty");
+context.markSession("aaaaabbbbbcccccddddd");
+assert.strictEqual(state.budgetPreviewDirty,false,"new plan owns fresh input");
+context.renderResult(payload);
+assert.strictEqual($("budget-preview-total").textContent,"3000 rating · 검증된 세션");
+assert(raw.includes("!state.budgetPreviewDirty"));
+assert(raw.includes("현재 입력이 변경됨: 이 결과는 이전 세션 기준"));
+assert(raw.includes("updateBudgetPreview();\n  drawClassSpecTiles();"));
+console.log("V459_STALE_SESSION_BUDGET_PREVIEW_PASS");
+"""
+        result=subprocess.run([node,"-e",code,str(source)],
+            capture_output=True,text=True,timeout=20,check=False)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V459_STALE_SESSION_BUDGET_PREVIEW_PASS",result.stdout)
+
     def test_new_plan_does_not_display_previous_specialization_dps(self):
         js=self.client.get("/assets/app.js").text
         self.assertIn("const changed=id!==state.session;",js)

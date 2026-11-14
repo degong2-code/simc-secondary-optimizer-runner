@@ -147,6 +147,7 @@ const state = { token:"", defaults:[], allowedRacesBySpec:{}, seasonGear:null, d
                 longrunEnabled:false, longrunResultReady:false,
                 longrunCompleted:false,
                 busy:false, options:null, verifiedInstalledBuildFromThisPage:null,
+                budgetPreviewDirty:false,
                 pollTimer:null, pollBusy:false,
                 pollFailures:0, nextPollAt:0 };
 const number = (value,decimals=0) =>
@@ -183,6 +184,8 @@ function updateManualTMode() {
   updateBudgetPreview();
 }
 function updateBudgetPreview() {
+  // The sealed result is not evidence for any newly edited user inputs.
+  if(state.session)state.budgetPreviewDirty=true;
   const manual=$("manual-t-mode").checked;
   const t=Number(field("final_T"));
   $("budget-preview-total").textContent=manual?
@@ -648,6 +651,7 @@ async function importSimcCharacter() {
   }
   if(parsed.race)$("race").value=displayRace(parsed.race);
   $("talents").value=parsed.talents;
+  updateBudgetPreview();
   drawClassSpecTiles();
   showCharacterDefaultHint();
   setNotice("SimC 캐릭터 정보만 적용됨 · 미입력 종족/특성은 기본값 사용 · 장비/스탯은 가져오지 않음 · Native 0회");
@@ -1517,6 +1521,8 @@ function markSession(id) {
     state.longrunEnabled=false;state.longrunResultReady=false;
     state.longrunCompleted=false;
   }
+  // This plan/restore is now sealed against its exact visible inputs.
+  state.budgetPreviewDirty=false;
   $("session-id").textContent=id;
   refreshResultNavigation();
   switchView("results");
@@ -2217,7 +2223,7 @@ function showPlan(plan) {
     " · 미해결 "+(environment.unresolved_dependencies||[]).length+
     supplierText:
     "";
-  if(!$("manual-t-mode").checked) {
+  if(!$("manual-t-mode").checked && !state.budgetPreviewDirty) {
     $("budget-preview-total").textContent=number(plan.plan.final_T)+" rating · 검증된 계획";
     $("budget-preview-note").textContent="선택한 조건의 서버 계획 결과입니다. 입력 변경 시 다시 확인해야 합니다.";
   }
@@ -2285,9 +2291,10 @@ function renderProgress(data) {
 function renderResult(payload) {
   const r=payload.user_result;
   const warning=$("result-panel").querySelector(".result-warning");
-  if(warning) warning.textContent=r.selected_pair_95_only
+  if(warning) warning.textContent=(r.selected_pair_95_only
     ?"관측 1순위 · 선택된 확인 쌍만 95% 근사 비교 (다중선택 보정 없음)"
-    :"관측 1순위 · 전역 최적해 입증 아님";
+    :"관측 1순위 · 전역 최적해 입증 아님")+
+    (state.budgetPreviewDirty?" · 현재 입력이 변경됨: 이 결과는 이전 세션 기준":"");
   if(r.confidence_level!==0.95||r.global_optimum_proven!==false)
     throw Error("ONLY_95_RESULT_ALLOWED");
   const best=r.observed_first_choice;
@@ -2295,7 +2302,7 @@ function renderResult(payload) {
   $("dps").textContent=number(best.observed_dps_mean,1);
   $("sem").textContent=number(best.simc_sem,2);
   const oil=Object.values(r.fixed_O).reduce((a,x)=>a+x,0);
-  if(!$("manual-t-mode").checked) {
+  if(!$("manual-t-mode").checked && !state.budgetPreviewDirty) {
     $("budget-preview-total").textContent=number(total)+" rating · 검증된 세션";
     $("budget-preview-note").textContent="현재 표시된 값은 이 세션의 확정된 T입니다. 입력을 변경하면 재검증해야 합니다.";
   }
@@ -2749,6 +2756,29 @@ async function rollbackSimcUpdater() {
   setNotice("SimC 관리 버전 복원 완료 · 사용자 원본 설치는 유지됩니다.");
 }
 function registerHandlers() {
+  // The existing result continues to belong to its sealed session.
+  // Ignore search text and unapplied profile drafts; track actual user choices.
+  const resultBoundInputIds=new Set([
+    "class-choice","spec","race","talents","ilevel","manual-t-mode","final_T",
+    "max-single-stat-percent","trinket1","trinket2","targets","duration",
+    "raid_buffs","food","potion","augmentation","diamond","omnium",
+    "season-target-socket-count","season-existing-special-gem-id",
+    "season-selected-flask-id","season-verified-flask",
+    "optimizer-oil-enabled","optimizer-oil-loadout",
+    "optimizer-oil-main-id","optimizer-oil-off-id","oil_main","oil_off",
+    "season_enchant_finger1","dk_rune_main","dk_rune_off"
+  ]);
+  const editedUserChoice=event=>{
+    const target=event.target;
+    if(state.session && (resultBoundInputIds.has(target?.id) ||
+       target?.closest?.(".gear-row")))updateBudgetPreview();
+  };
+  for(const name of ["input","change"])
+    $("optimizer-form").addEventListener(name,editedUserChoice);
+  for(const id of ["binary","revision","static_cache","season-game-build"])
+    $(id).addEventListener("input",()=>{
+      if(state.session)updateBudgetPreview();
+    });
   $("optimizer-oil-enabled").addEventListener("change",()=>withBusy(applyOilUseToggle));
   $("equipment-trinket-search").addEventListener("input",drawInlineEquipment);
   $("equipment-special-search").addEventListener("input",drawInlineEquipment);
