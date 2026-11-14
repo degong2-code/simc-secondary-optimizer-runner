@@ -69,6 +69,7 @@ on:
       - tests/test_v450_b10_post_selected_socket_item_identity.py
       - tests/test_v451_b10_v232_v271_final_user_socket_source.py
       - tests/test_v453_b10_real_70783_v280_source_receipt.py
+      - tests/test_v455_b10_existing_v281_spell_effect_owner.py
       - runner/v096_unified_product_entry.py
       - runner/v141_verified_pure_native_pilot.py
       - runner/v091_weapon_oil_external_adapter.py
@@ -118,6 +119,7 @@ jobs:
             tests.test_v450_b10_post_selected_socket_item_identity \
             tests.test_v451_b10_v232_v271_final_user_socket_source \
             tests.test_v453_b10_real_70783_v280_source_receipt \
+            tests.test_v455_b10_existing_v281_spell_effect_owner \
             tests.test_v139_pure_target_profile_composer \
             tests.test_v151_season_catalog_impact_offline \
             tests.test_v143_contract_season_compiler_offline \
