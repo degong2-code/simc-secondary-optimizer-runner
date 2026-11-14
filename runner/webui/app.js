@@ -1304,9 +1304,18 @@ function fillSessionInputs(payload) {
   fillGearRows("special-rows",u.special_items||[]);
   fillGearRows("crafted-rows",u.embellishments||[]);
   const restoredEagle=u.selected_season_enchants?.finger1===7967;
-  if(restoredEagle&&!state.eagleApproved)
-    throw Error("SAVED_EAGLE_SEASON_EVIDENCE_UNAVAILABLE");
-  $("season_enchant_finger1").value=restoredEagle?"7967":"";
+  const savedEnchant=$("season_enchant_finger1");
+  for(const previous of Array.from(savedEnchant.options))
+    if(previous.dataset?.historic==="true")previous.remove();
+  if(restoredEagle&&!state.eagleApproved) {
+    // Show the exact historical choice without granting fresh approval.
+    // buildRequest will still reject it until this installed source verifies E.
+    const historical=option("7967",
+      "이전 세션 독수리의 눈 · 새 최적화는 이번 시즌 승인 필요");
+    historical.dataset.historic="true";
+    savedEnchant.appendChild(historical);
+  }
+  savedEnchant.value=restoredEagle?"7967":"";
   // Recover the exact local inputs from this machine's saved session only.
   // No talent strings or OS file paths are stored in browser localStorage.
   $("binary").value=payload.binary;

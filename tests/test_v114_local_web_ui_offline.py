@@ -1360,6 +1360,46 @@ console.log("V459_STALE_SESSION_BUDGET_PREVIEW_PASS");
         self.assertIn('state.pollBusy=true;',js)
         self.assertIn('setNotice("기존 세션·입력 복원 성공',js)
 
+    def test_v464_unapproved_saved_enchant_is_read_only_not_restore_failure(self):
+        """Execute real restored-enchant JS, keep new-plan approval separate."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:
+            self.skipTest("node is not installed on this runner")
+        source=ROOT/"runner/webui/app.js"
+        code=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const a=raw.indexOf("  const restoredEagle=u.selected_season_enchants?.finger1===7967;");
+const b=raw.indexOf("  // Recover the exact local inputs",a);
+assert(a>=0&&b>a,"real saved enchant restore block missing");
+const input={options:[],value:"",appendChild(v){this.options.push(v);}};
+const $=id=>{assert.strictEqual(id,"season_enchant_finger1");return input};
+const option=(v,textContent)=>({value:v,textContent,dataset:{},
+                               remove(){input.options.splice(input.options.indexOf(this),1)}});
+const state={eagleApproved:false};
+const restore=Function("u","state","$","option",raw.slice(a,b));
+const u={selected_season_enchants:{finger1:7967}};
+restore(u,state,$,option);
+assert.strictEqual(input.value,"7967","old selected enchant remains visible");
+assert.strictEqual(input.options.length,1);
+assert.strictEqual(input.options[0].dataset.historic,"true");
+assert(input.options[0].textContent.includes("새 최적화는 이번 시즌 승인 필요"));
+restore({selected_season_enchants:{}},state,$,option);
+assert.strictEqual(input.value,"");
+assert.strictEqual(input.options.length,0,"historical selection must not leak");
+const body=raw.slice(raw.indexOf("function buildRequest() {"),
+                     raw.indexOf("async function api(",raw.indexOf("function buildRequest() {")));
+assert(body.includes('if(!state.eagleApproved||field("season_enchant_finger1")!=="7967")'),
+       "fresh run must still block unapproved enchant");
+console.log("V464_HISTORICAL_ENCHANT_READONLY_RESTORE_PASS");
+"""
+        result=subprocess.run([node,"-e",code,str(source)],
+            capture_output=True,text=True,timeout=20,check=False)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V464_HISTORICAL_ENCHANT_READONLY_RESTORE_PASS",
+                      result.stdout)
+
     def test_v463_sealed_rune_options_reloaded_before_saved_rune_ids(self):
         """Execute actual JS; never reuse packaged DK rune IDs on restore."""
         import shutil,subprocess
