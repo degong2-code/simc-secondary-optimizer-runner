@@ -44,6 +44,70 @@ class LocalWebAPIOffline(unittest.TestCase):
 
 
 
+    def test_v463_sealed_saved_season_options_do_not_use_active_or_packaged(self):
+        """Read-only installed v212 runeforge/enchants bound to exact v213 SHA."""
+        build="12.1.5.70783"
+        digest="b"*64
+        docs=self.app.state.jobs.root/"_fresh_season_sources"/(
+            "wago_"+build)/"fresh_source"
+        docs.mkdir(parents=True)
+        (docs/("v212_installed_"+digest[:20]+".json")).write_text("{}")
+        (docs/"v213_candidate_catalog.json").write_text("{}")
+        doc={"manifest_sha256":digest,"game_build":build,
+             "target_ilevel":334,
+             "source_catalog_artifact_sha256":"c"*64,
+             "source_catalog_manifest_sha256":"a"*64,
+             "official_O_physical_source":None,
+             "verified_DK_runeforges":{
+                 "items":[{"enchant_id":3370,"class":"deathknight",
+                           "weapon_hands":["main_hand"],
+                           "display_name":"룬"}],
+                 "source_sha256":"d"*64,"manifest_sha256":"e"*64,
+                 "game_build":build}}
+        catalog={"manifest_sha256":"a"*64,"game_build":build}
+        published={"schema":web.ui_catalog.SCHEMA,
+                   "status":"SOURCE_COMBINED_WITH_CLEAR_APPROVAL_BOUNDARY",
+                   "season_build":build,
+                   "source_catalog":{"manifest_sha256":"a"*64}}
+        url=("/api/v1/season-option-catalog?game_build="+build+
+             "&target_ilevel=334&installed_manifest_sha256="+digest)
+        with (mock.patch.object(web.environment_manifest,"read_json",
+                 side_effect=[(doc,"ignored"),(catalog,"c"*64)]),
+              mock.patch.object(web.environment_manifest,
+                 "verify_fresh_installed_environment"),
+              mock.patch.object(web.environment_build,
+                 "find_verified_installed_season_environment",
+                 return_value={"installed_manifest_sha256":digest}) as found,
+              mock.patch.object(web.source_to_catalog,"verify_catalog"),
+              mock.patch.object(web.ui_catalog,"public_options",
+                 return_value=published) as options,
+              mock.patch.object(web.subprocess,"Popen",
+                 side_effect=AssertionError("NO_NATIVE"))):
+            response=self.client.get(url,headers=self.headers)
+        self.assertEqual(response.status_code,200,response.text)
+        data=response.json()
+        self.assertEqual(data["source_scope"],
+                         "VERIFIED_INSTALLED_V212_OPTION_CATALOG")
+        self.assertEqual(data["installed_manifest_sha256"],digest)
+        self.assertEqual(data["verified_weapon_enhancements"][
+                         "dk_runeforges"]["items"][0]["enchant_id"],3370)
+        self.assertEqual(found.call_args.kwargs[
+                         "expected_installed_manifest_sha256"],digest)
+        self.assertEqual(options.call_args.args[0],
+                         docs/"v213_candidate_catalog.json")
+        self.assertEqual(self.client.get(
+            "/api/v1/season-option-catalog?game_build="+build,
+            headers=self.headers).status_code,422)
+        mismatch=self.client.get(url.replace(digest,"f"*64),
+                                 headers=self.headers)
+        self.assertEqual(mismatch.status_code,200)
+        self.assertEqual(mismatch.json()["status"],
+                         "SOURCE_OPTION_CATALOG_UNAVAILABLE")
+        self.assertEqual(mismatch.json()[
+            "verified_weapon_enhancements"] if
+            "verified_weapon_enhancements" in mismatch.json() else {},{})
+        self.assertEqual(self.client.get(url).status_code,403)
+
     def test_v460_installed_v212_gear_candidates_source_bound_and_fail_closed(self):
         """Existing v212/v213 sealed candidate catalogue only, zero Native."""
         build="12.1.5.70783"

@@ -2539,6 +2539,32 @@ async function restoreInstalledSeasonGearChoices(inputs) {
     $("season-gear-note").textContent=unavailable;
   }
 }
+// Restore installed-season rune/enchant choices BEFORE the saved rune IDs.
+// Packaged v196 options are not proof that this saved v212 source admitted
+// the same choice. Source failure leaves read-only history and no new approval.
+async function restoreInstalledSeasonOptionCatalog(inputs) {
+  if(inputs?.current_season_product!==true)return;
+  const build=inputs.installed_season_game_build;
+  const sha=inputs.installed_manifest_sha256;
+  const level=inputs.user?.target?.ilevel;
+  renderSeasonOptionCatalog(null);
+  if(typeof build!=="string"||!/^\d+(?:\.\d+){3}$/.test(build) ||
+     typeof sha!=="string"||!/^[a-f0-9]{64}$/.test(sha) ||
+     !Number.isInteger(level)||level<1||level>1000)return;
+  try{
+    const catalog=await api("/api/v1/season-option-catalog?game_build="+
+      encodeURIComponent(build)+"&target_ilevel="+level+
+      "&installed_manifest_sha256="+sha);
+    if(catalog.status!=="SOURCE_COMBINED_WITH_CLEAR_APPROVAL_BOUNDARY" ||
+       catalog.source_scope!=="VERIFIED_INSTALLED_V212_OPTION_CATALOG" ||
+       catalog.installed_manifest_sha256!==sha||
+       catalog.season_build!==build)
+      throw Error("RESTORED_SEASON_OPTION_SOURCE_NOT_VERIFIED");
+    renderSeasonOptionCatalog(catalog);
+  }catch(error){
+    renderSeasonOptionCatalog(null);
+  }
+}
 async function restore(id) {
   if(!/^[a-f0-9]{20}$/.test(id))
     throw Error("세션 ID는 20자리 해시여야 합니다.");
@@ -2547,6 +2573,7 @@ async function restore(id) {
     readSession(id),api("/api/v1/sessions/"+id+"/inputs")
   ]);
   await restoreInstalledSeasonGearChoices(inputs);
+  await restoreInstalledSeasonOptionCatalog(inputs);
   fillSessionInputs(inputs);
   markSession(id);
   // The local dropdown scope follows the restored sealed build; avoid

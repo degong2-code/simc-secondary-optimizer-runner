@@ -1360,6 +1360,61 @@ console.log("V459_STALE_SESSION_BUDGET_PREVIEW_PASS");
         self.assertIn('state.pollBusy=true;',js)
         self.assertIn('setNotice("기존 세션·입력 복원 성공',js)
 
+    def test_v463_sealed_rune_options_reloaded_before_saved_rune_ids(self):
+        """Execute actual JS; never reuse packaged DK rune IDs on restore."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:
+            self.skipTest("node is not installed on this runner")
+        source=ROOT/"runner/webui/app.js"
+        code=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const a=raw.indexOf("async function restoreInstalledSeasonOptionCatalog(inputs) {");
+const b=raw.indexOf("async function restore(id) {",a);
+assert(a>=0&&b>a,"source-bound option restoration code missing");
+let reply=null;
+const events=[], calls=[];
+const api=async url=>{calls.push(url);return reply;};
+const renderSeasonOptionCatalog=data=>events.push(data);
+const load=Function("api","renderSeasonOptionCatalog",
+  raw.slice(a,b)+"return restoreInstalledSeasonOptionCatalog;")(
+  api,renderSeasonOptionCatalog);
+const sha="a".repeat(64),build="12.1.5.70783";
+const input={current_season_product:true,
+  installed_season_game_build:build,
+  installed_manifest_sha256:sha,user:{target:{ilevel:334}}};
+(async()=>{
+  await load({current_season_product:false});
+  assert.strictEqual(events.length,0);
+  await load({...input,installed_manifest_sha256:null});
+  assert.strictEqual(calls.length,0,"missing SHA must not borrow packaged data");
+  assert.strictEqual(events.at(-1),null);
+  reply={status:"SOURCE_COMBINED_WITH_CLEAR_APPROVAL_BOUNDARY",
+    schema:"v196_current_season_ui_catalog_v1",
+    source_scope:"VERIFIED_INSTALLED_V212_OPTION_CATALOG",
+    installed_manifest_sha256:sha,season_build:build};
+  await load(input);
+  assert.strictEqual(calls.at(-1),
+    "/api/v1/season-option-catalog?game_build="+build+
+    "&target_ilevel=334&installed_manifest_sha256="+sha);
+  assert.strictEqual(events.at(-1),reply);
+  reply={...reply,installed_manifest_sha256:"b".repeat(64)};
+  await load(input);
+  assert.strictEqual(events.at(-1),null);
+  const restore=raw.slice(raw.indexOf("async function restore(id) {"),
+    raw.indexOf("function renderSeasonOptionCatalog(",b));
+  assert(restore.indexOf("await restoreInstalledSeasonOptionCatalog(inputs);")<
+         restore.indexOf("fillSessionInputs(inputs);"),
+         "rune list must exist before restoring user's saved exact rune ID");
+  console.log("V463_SEALED_RUNE_OPTION_RESTORE_PASS");
+})().catch(err=>{console.error(err);process.exitCode=1;});
+"""
+        result=subprocess.run([node,"-e",code,str(source)],
+            capture_output=True,text=True,timeout=20,check=False)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V463_SEALED_RUNE_OPTION_RESTORE_PASS",result.stdout)
+
     def test_v462_session_inputs_expose_only_verified_install_sha(self):
         """Existing signed session metadata is projected read-only, zero Native."""
         import json,tempfile
