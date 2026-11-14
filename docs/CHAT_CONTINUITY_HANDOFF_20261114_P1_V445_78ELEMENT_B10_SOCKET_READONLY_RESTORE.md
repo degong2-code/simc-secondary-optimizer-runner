@@ -1,3 +1,5 @@
+> **중요: 이 문서는 v445 시점의 역사 스냅샷입니다. 2026-11-14 이후 최신 사용자 직접 결정으로 인계 진입점이 [제품 우선·최소 충분 검증 상시 인계](CHAT_CONTINUITY_HANDOFF_20261114_PRODUCT_FIRST_SCOPE_CONTROL.md)와 [운영 정책](development/POLICY_PRODUCT_FIRST_MINIMUM_SUFFICIENT_VERIFICATION_20261114.md)으로 바뀌었습니다.** 이 문서 아래의 `next B10`은 78요소 다음 **판정** 위치이며, 제품 개발 채팅이 미선택 B10 추가 소켓의 주문·발동 연쇄를 계속 연구해야 한다는 뜻이 아닙니다. 상태는 현재 JSON·최신 HEAD를 다시 조회해야 하며, 기본 P1 제품 경로 우선입니다.
+
 # SIMC SECONDARY OPTIMIZER — 2026-11-14 v445 / 78요소 B10 인계 단일 정본
 
 > **지위:** 기존 개발을 새 채팅에서 정확히 이어가기 위한 최신 인계 정본. 과거 [v441 인계](CHAT_CONTINUITY_HANDOFF_20261114_P1_V441_78_REVIEW_PRODUCT_CONTINUITY.md)는 당시 7/78의 역사 스냅샷이다. 최신 요소 상태의 **유일한 기계 판독 정본**은 [78_ELEMENT_COMPLETION_CONTRACTS.json](development/78_ELEMENT_COMPLETION_CONTRACTS.json)이며, 인계 문서 자체가 제품 구현·실측·PASS·Project UI 등록을 변경하지 않는다.
