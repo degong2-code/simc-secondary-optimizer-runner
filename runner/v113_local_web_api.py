@@ -472,18 +472,27 @@ class LocalJobs:
             # caused redundant I/O and could choose the wrong F/J variant.
             selected_ids=dict(selected_oil_item_ids_by_hand)
         elif selected_oil_hands is not None:
-            # Old hand-only users can reuse exactly one verified physical
-            # combination; ambiguity still blocks instead of guessing.
-            selected=environment_build.find_verified_installed_season_environment(
-                self.root,target_ilevel,expected_game_build=game_build,
-                selected_oil_hands=selected_oil_hands)
-            if selected is None:
-                raise environment_manifest.EnvironmentBlocked(
-                    "WEB_FRESH_SELECTED_OIL_HANDS_NOT_INSTALLED")
-            selected_ids=selected["selected_oil_item_ids_by_hand"]
+            # Explicit no-oil does not need a prior hand-only search. That
+            # search could pick a newer F/J installation before the exact
+            # per-receipt variant check, doubling local SHA verification.
+            if not selected_oil_hands:
+                selected_ids={}
+            else:
+                # Without physical item IDs, identify only a unique hand map.
+                selected=environment_build.find_verified_installed_season_environment(
+                    self.root,target_ilevel,expected_game_build=game_build,
+                    selected_oil_hands=selected_oil_hands)
+                if selected is None:
+                    raise environment_manifest.EnvironmentBlocked(
+                        "WEB_FRESH_SELECTED_OIL_HANDS_NOT_INSTALLED")
+                selected_ids=selected["selected_oil_item_ids_by_hand"]
         if (required_gem_layout is not None or
                 selected_flask_item_id is not None or
-                selected_oil_item_ids_by_hand is not None):
+                selected_oil_item_ids_by_hand is not None or
+                selected_oil_hands is not None):
+            # A hand-only (including O=0) API request cannot guess the
+            # newest F/J receipt when multiple v212 variants are installed.
+            # Require one authentic manifest SHA, just like explicit F/J/O.
             # A selected O hand-ID map still permits multiple verified
             # F/gem installations. Use the exact same one-receipt selection
             # as user F/socket variants; never choose the newest F/J budget.

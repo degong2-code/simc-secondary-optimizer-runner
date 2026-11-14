@@ -379,6 +379,89 @@ class LocalWebAPIOffline(unittest.TestCase):
             restore.assert_not_called()
             self.assertEqual(checked,[])
 
+    def test_v472_no_oil_unqualified_request_never_picks_newest_fj(self):
+        """An API caller omitting F/J may not guess a saved same-O variant."""
+        build="12.1.5.70783"
+        directory=(self.app.state.jobs.root/"_fresh_season_sources"/
+                   ("wago_"+build)/"fresh_source")
+        directory.mkdir(parents=True)
+        originals={}
+        for suffix,flask_id in (("a",241326),("b",241327)):
+            digest=suffix*64
+            (directory/("v212_installed_"+digest[:20]+".json")).write_text("{}")
+            (directory/("v113_profile_"+digest[:20]+".json")).write_text(
+                json.dumps({"environment_result":{}}))
+            originals[digest[:20]]={
+                "manifest_sha256":digest,"game_build":build,
+                "target_ilevel":334,
+                "official_O_physical_source":None,
+                "official_F_physical_source":{"physical_item_id":flask_id}}
+        inspected=[]
+        def original_read(path,*_args):
+            digest=pathlib.Path(path).stem.split("_")[-1]
+            return originals[digest],"mock original bytes"
+        def exact_source(root,ilevel,*,expected_game_build,
+                         selected_oil_item_ids_by_hand=None,
+                         expected_installed_manifest_sha256=None,
+                         **kwargs):
+            self.assertEqual((ilevel,expected_game_build),(334,build))
+            self.assertEqual(selected_oil_item_ids_by_hand,{})
+            # A physical O=0 map alone cannot choose a unique F/J source.
+            self.assertIsNotNone(expected_installed_manifest_sha256)
+            inspected.append(expected_installed_manifest_sha256)
+            return {"installed_manifest_sha256":
+                    expected_installed_manifest_sha256}
+        jobs=self.app.state.jobs
+        with (mock.patch.object(web.environment_manifest,"read_json",
+                                side_effect=original_read),
+              mock.patch.object(web.environment_manifest,
+                                "verify_fresh_installed_environment"),
+              mock.patch.object(web.environment_build,
+                                "find_verified_installed_season_environment",
+                                side_effect=exact_source),
+              mock.patch.object(jobs,"restore_verified_fresh_profile",
+                                return_value={"status":"ONE_EXACT_SOURCE"}) as restore,
+              mock.patch.object(web.subprocess,"Popen",
+                                side_effect=AssertionError("NO_NATIVE"))):
+            with self.assertRaisesRegex(
+                    web.environment_manifest.EnvironmentBlocked,
+                    "WEB_USER_VARIANT_NOT_INSTALLED_OR_AMBIGUOUS"):
+                jobs.load_fresh_profile_for_user(
+                    334,build,selected_oil_hands=[])
+            restore.assert_not_called()
+            self.assertEqual(set(inspected),{"a"*64,"b"*64})
+            inspected.clear()
+            chosen=jobs.load_fresh_profile_for_user(
+                334,build,selected_oil_hands=[],
+                selected_flask_item_id=241327)
+            self.assertEqual(chosen["status"],"ONE_EXACT_SOURCE")
+            restore.assert_called_once_with(
+                target_ilevel=334,game_build=build,
+                selected_oil_item_ids_by_hand={},
+                expected_installed_manifest_sha256="b"*64,
+                required_gem_layout=None)
+            self.assertEqual(inspected,["b"*64])
+        # One uniquely verified O=0 installation remains usable by default.
+        (directory/("v212_installed_"+("a"*20)+".json")).unlink()
+        (directory/("v113_profile_"+("a"*20)+".json")).unlink()
+        inspected.clear()
+        with (mock.patch.object(web.environment_manifest,"read_json",
+                                side_effect=original_read),
+              mock.patch.object(web.environment_manifest,
+                                "verify_fresh_installed_environment"),
+              mock.patch.object(web.environment_build,
+                                "find_verified_installed_season_environment",
+                                side_effect=exact_source),
+              mock.patch.object(jobs,"restore_verified_fresh_profile",
+                                return_value={"status":"ONE_EXACT_SOURCE"}) as restore,
+              mock.patch.object(web.subprocess,"Popen",
+                                side_effect=AssertionError("NO_NATIVE"))):
+            self.assertEqual(jobs.load_fresh_profile_for_user(
+                334,build,selected_oil_hands=[])["status"],
+                "ONE_EXACT_SOURCE")
+            restore.assert_called_once()
+            self.assertEqual(inspected,["b"*64])
+
     def test_v465_same_build_same_oils_distinct_verified_flasks_visible(self):
         """Each F variant must verify its own v212 SHA, not the newest oil match."""
         build="12.1.5.70783"
