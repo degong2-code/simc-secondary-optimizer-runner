@@ -1263,7 +1263,8 @@ function fillSessionInputs(payload) {
     for(const previous of Array.from(node.options))
       if(previous.dataset?.historic==="true")previous.remove();
     if(!Array.from(node.options).some(o=>o.value===value)) {
-      const old=option(value,"이전 세션 "+key+" · "+value+" (새 시즌 미승인)");
+      const names={food:"음식",potion:"물약",augmentation:"증강 룬"};
+      const old=option(value,"이전 세션 "+names[key]+" · "+value+" (새 시즌 미승인)");
       old.dataset.historic="true";node.appendChild(old);
     }
     node.value=value;
