@@ -4888,6 +4888,25 @@ def _existing_v280_season_socket_item_source(collected, compilation):
         "same_build_source":True}
 
 
+def _fresh_attach_existing_v280_socket_preview(*, collected,
+                                               compilation, progress,
+                                               selected_roles, socket_total):
+    """Attach original same-build item→spell hints only for selected 5+ gems.
+
+    This does not alter the original v232 socket counts, authoritatively
+    grant bonus sockets, or promote a v280 candidate into J/Policy A.
+    """
+    if (selected_roles is None or socket_total<=4 or
+            compilation.get("status")!=
+                "FRESH_V191_V211_V213_COMPILED_UNADMITTED"):
+        return None
+    preview=_existing_v280_season_socket_item_source(
+        collected,compilation)
+    progress["existing_v280_socket_item_source_unadmitted"]=preview
+    compilation["existing_v280_socket_item_source_unadmitted"]=preview
+    return preview
+
+
 def _fresh_default_intrinsic_gem_layout_from_source(*, collected,
                                                     selected_roles,
                                                     target_ilevel,
@@ -5102,7 +5121,19 @@ def _fresh_selected_J_intrinsic_socket_source(*, collected, preflight,
          "V216_J_SIMC_DECLARED_SOCKET_POLICY_INVALID")
     base_compat=_fresh_declared_four_ordinary_base_compatibility(
         layout=layout,extra=extra)
+    hints=compilation.get("existing_v280_socket_item_source_unadmitted")
+    # Connect the existing item→use spell source to the precise J pending
+    # boundary, without treating it as same-season in-game applicability.
+    socket_source=(
+        {"status":hints.get("status"),
+         "v280_stage_receipt_sha256":hints.get(
+             "v280_stage_receipt_sha256"),
+         "candidate_count":hints.get("candidate_count"),
+         "same_build_source":hints.get("same_build_source"),
+         "game_socket_legal_verified":False}
+        if extra and type(hints) is dict else None)
     return {**out,
+            "socket_item_source_only_for_unverified_additions":socket_source,
             "status":("J_ADDITIONAL_SOCKET_SOURCE_PROOF_PENDING"
                       if extra and not base_compat else
                       "J_SIMC_DECLARED_FULL_GEM_PROFILE_SOURCE_ONLY"
@@ -6661,18 +6692,10 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         try:
             source_compilation=source_wiring.compile_collected(
                 collected,compiler=fresh_stage.compile_fresh_candidate)
-            if (source_selected_gem_roles is not None and
-                    target_sockets>4 and source_compilation["status"]==
-                    "FRESH_V191_V211_V213_COMPILED_UNADMITTED"):
-                # The existing v280 stage is already part of the SAME Build.
-                # Read its sealed item/use-spell hints only when extra sockets
-                # are requested; no new item collector or approval Gate.
-                socket_hints=_existing_v280_season_socket_item_source(
-                    collected,source_compilation)
-                source_compilation[
-                    "existing_v280_socket_item_source_unadmitted"]=socket_hints
-                progress[
-                    "existing_v280_socket_item_source_unadmitted"]=socket_hints
+            _fresh_attach_existing_v280_socket_preview(
+                collected=collected,compilation=source_compilation,
+                progress=progress,selected_roles=source_selected_gem_roles,
+                socket_total=target_sockets)
             if source_compilation["status"]==(
                     "FRESH_V191_V211_V213_COMPILED_UNADMITTED"):
                 # Optional one-source-v217 collector. Missing DK source must
