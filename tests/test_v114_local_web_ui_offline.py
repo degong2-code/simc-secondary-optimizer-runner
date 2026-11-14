@@ -970,6 +970,72 @@ eval(context+raw.slice(start,end)+"\n"+test);
         self.assertIn('function fillSessionInputs(payload)',js)
         self.assertNotIn("innerHTML",js)
 
+    def test_v457_exact_crafted_item_id_source_bound_and_restored(self):
+        """Actual JS: manual/saved craft ID never silently falls back."""
+        import shutil,subprocess
+        binary=shutil.which("node")
+        if binary is None:
+            self.skipTest("node is not installed on this runner")
+        source=ROOT/"runner/webui/app.js"
+        code=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const a=raw.indexOf("function craftSlot(item) {");
+const b=raw.indexOf("function gearInputs(",a);
+const c=raw.indexOf("function selectedGear(nodeId, group) {",b);
+const d=raw.indexOf("function buildRequest()",c);
+assert(a>=0&&b>a&&c>b&&d>c,"actual crafted JS required");
+const harness=String.raw`
+const state={
+  options:{embellishments:{arcanoweave_lining:{slots:["head"]}}},
+  seasonGear:{choices:{selectable_stat_craft:[
+    {item_id:246001,class_id:4,subclass_id:1,slot_hint:"head"},
+    {item_id:246002,class_id:4,subclass_id:1,slot_hint:"head"},
+    {item_id:246003,class_id:4,subclass_id:3,slot_hint:"head"},
+    {item_id:246004,class_id:4,subclass_id:1,slot_hint:"shoulders"}
+  ]}}
+};
+const classArmor={mage:1};
+const craftStats={crit:"32",haste:"36",mastery:"49",vers:"40"};
+function field(name){if(name==="spec")return "mage/frost";throw Error(name);}
+let exactId="",bonus="";
+const row={querySelectorAll(){
+  return [["slot","head"],["embellishment","arcanoweave_lining"],
+    ["stat_a","crit"],["stat_b","haste"],["item_id",exactId],
+    ["bonus_id",bonus]].map(([field,value])=>({dataset:{field},value}));
+}};
+function $(name){
+  if(name!=="crafted-rows")throw Error(name);
+  return {querySelectorAll(){return [row]}};
+}
+function check(id,expected,expectBonus){
+  exactId=id;bonus="777";
+  const got=selectedGear("crafted-rows","embellishments");
+  assert.strictEqual(got.length,1);
+  assert.strictEqual(got[0].slot,"head");
+  assert.strictEqual(got[0].item_id,expected);
+  assert.strictEqual(got[0].options.crafted_stats,"32/36");
+  assert.strictEqual(got[0].options.bonus_id,expectBonus);
+}
+check("",246001,undefined);
+check("246002",246002,"777");
+for(const id of ["246003","246004","999999","-1","abc","1000000000"]){
+  exactId=id;
+  assert.throws(()=>selectedGear("crafted-rows","embellishments"));
+}
+console.log("V457_EXACT_CRAFT_ITEM_ID_SOURCE_BOUND_PASS");
+`;
+const fn=Function("assert",harness+raw.slice(a,b)+raw.slice(c,d)+"return true;");
+assert.strictEqual(fn(assert),true);
+"""
+        result=subprocess.run(
+            [binary,"-e",code,str(source)],
+            capture_output=True,text=True,timeout=20,check=False)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V457_EXACT_CRAFT_ITEM_ID_SOURCE_BOUND_PASS",result.stdout)
+        self.assertIn('input.type="number";input.min="1";input.max="999999999";',
+                      source.read_text(encoding="utf8"))
+
     def test_special_effect_gear_has_eight_dynamic_rows_not_two(self):
         js=self.client.get("/assets/app.js").text
         self.assertIn('const limit=isSpecial?8:2;',js)

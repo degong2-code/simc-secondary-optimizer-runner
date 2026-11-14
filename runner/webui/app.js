@@ -1078,7 +1078,7 @@ function craftSlot(item) {
   if(item.inventory_type===20)return "chest";
   return null;
 }
-function chosenCraft(slot) {
+function chosenCraft(slot,exactItemId=null) {
   const family=classArmor[field("spec").split("/")[0]];
   const rows=state.seasonGear?.choices?.selectable_stat_craft||[];
   const valid=rows.filter(item=>{
@@ -1091,7 +1091,8 @@ function chosenCraft(slot) {
       (["back","finger1","finger2","neck"].includes(slot) &&
        (item.subclass_id===0||slot==="back"&&item.subclass_id===1));
   }).sort((a,b)=>a.item_id-b.item_id);
-  return valid[0]||null;
+  return exactItemId===null?(valid[0]||null):
+    (valid.find(item=>item.item_id===exactItemId)||null);
 }
 function gearInputs(nodeId, config) {
   const parent=$(nodeId),isSpecial=nodeId==="special-rows";
@@ -1110,9 +1111,10 @@ function gearInputs(nodeId, config) {
     for(const name of config.fields) {
       const label=document.createElement("label");
       const isPrivate=["bonus_id","redirected_base_stats"].includes(name)||
-                      (!isSpecial&&name==="item_id")||(isSpecial&&name==="slot");
+                  (isSpecial&&name==="slot");
       label.hidden=isPrivate;
-      label.textContent=name==="item_id"?"이번 시즌 장비":
+      label.textContent=name==="item_id"?(isSpecial?"이번 시즌 장비":
+        "정확한 제작장비 ItemID (선택 · 비우면 자동)"):
         name==="stat_a"?"제작 스탯 1":
         name==="stat_b"?"제작 스탯 2":
         name==="embellishment"?"장식 종류":(names[name]||name);
@@ -1134,6 +1136,9 @@ function gearInputs(nodeId, config) {
         input.appendChild(option("","스탯 선택"));
         for(const [value,labelName] of Object.entries(statNames))
           input.appendChild(option(value,labelName));
+      }else if(name==="item_id"&&!isSpecial) {
+        input.type="number";input.min="1";input.max="999999999";
+        input.step="1";input.placeholder="미입력 시 시즌 목록에서 자동 선택";
       }else input.type="hidden";
       input.setAttribute("aria-label",config.title+" "+(i+1)+" "+label.textContent);
       input.autocomplete="off";label.appendChild(input);grid.appendChild(label);
@@ -1316,8 +1321,16 @@ function selectedGear(nodeId, group) {
         throw Error("이 장식은 선택 부위에 사용할 수 없습니다.");
       if(fields.stat_a===fields.stat_b)
         throw Error("제작 스탯은 서로 다른 두 가지를 선택해야 합니다.");
-      const resolved=chosenCraft(fields.slot);
-      if(!resolved)throw Error("이 직업·부위에 사용할 시즌 제작장비가 없습니다.");
+      // Never replace an explicit/restored ID with a different first match.
+      // Source candidate membership is a preflight; the server still owns
+      // final item, build, budget, and profile admission.
+      if(fields.item_id&&!/^[1-9][0-9]{0,8}$/.test(fields.item_id))
+        throw Error("제작장비 ItemID는 1~999999999의 정확한 양의 정수여야 합니다.");
+      const resolved=chosenCraft(fields.slot,
+        fields.item_id?Number(fields.item_id):null);
+      if(!resolved)throw Error(fields.item_id?
+        "지정한 제작장비 ItemID가 이번 시즌의 해당 직업·부위 후보 목록에 없습니다. 다른 장비로 대체하지 않습니다.":
+        "이 직업·부위에 사용할 시즌 제작장비가 없습니다.");
       const raw={"crafted_stats":craftStats[fields.stat_a]+"/"+
                   craftStats[fields.stat_b],"embellishment":fields.embellishment};
       // Existing restored bonus IDs are kept only for the EXACT same item.
