@@ -1,0 +1,35 @@
+name: P1 v454 B10 actual 70783 SpellEffect via original v281 once
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p1_v454_b10_70783_spell_effect_once.yml
+permissions:
+  contents: read
+concurrency:
+  group: p1-v454-b10-same-build-spell-effect-once
+  cancel-in-progress: false
+jobs:
+  source-only:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 14
+    env:
+      PYTHONPATH: runner:.
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Reuse v281 exact SpellEffect DB2 parser for only four spell IDs
+        timeout-minutes: 12
+        run: python -u integration_probes/p1_v454_b10_70783_spell_effect_once.py
+      - name: Preserve bounded research receipt, not full SpellEffect DB
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: p1-v454-b10-70783-spell-effect-source
+          path: p1_v454_b10_70783_spell_effect_receipt.json
+          if-no-files-found: error
+          retention-days: 7
