@@ -1,0 +1,73 @@
+{
+  "schema": "p1_v452_b10_real_70783_original_v280_item_use_source_v1",
+  "status": "REAL_SAME_BUILD_V280_SOURCE_HINTS_UNADMITTED",
+  "game_build": "12.1.5.70783",
+  "pinned_simc_revision": "c20e2ad52e4c33711f74272309a5748125175fe8",
+  "original_workflow_run_id": 43566234553,
+  "original_workflow_artifact_id": 14102746031,
+  "original_workflow_receipt_sha256": "36f068bf4043e3c5dd40e3e511534091d1ac5dcfc42943556d4887c62bc43753",
+  "original_v280_join_sha256": "bb8c9af44cd67a8cb757961189367ba687cbea60ce0cc34cbe2169d7a85dca92",
+  "source_table_sha256": {
+    "Item": "9dc76656a83fa67f036b7748b29c534949f08ca7cdd9d861ee3317378a5ab7b3",
+    "ItemEffect": "ecc4019969c3b739741783c5df76312b3f794a24fd41ff3e567a89cf1491ce92",
+    "ItemSparse": "89910dad9e9a56a4446a0f8ad9c64f79c10267c26ee4f866bd7265db32e433a8",
+    "ItemXItemEffect": "d23309c24fc39f06f6ca3fd9a813980502a209724ade4574a840f4a80327fa98",
+    "simc_pinned_unique_gear": "c1202ca59a660264e3fe7dc7b433d7f35124f9b9fa62cafe2c003acd5eb527f4"
+  },
+  "v280_total_considered": 561,
+  "physical_item_use_candidates_unadmitted": [
+    {
+      "item_id": 263897,
+      "name_enUS": "Radiant Jewelbinder",
+      "expansion_id": 11,
+      "item_class": 0,
+      "item_subclass": 8,
+      "on_use_spell_ids": [
+        1270804
+      ],
+      "same_season_use_applicability_verified": false,
+      "ui_selectable": false
+    },
+    {
+      "item_id": 275707,
+      "name_enUS": "Miasmic Jewelbinder",
+      "expansion_id": 11,
+      "item_class": 0,
+      "item_subclass": 8,
+      "on_use_spell_ids": [
+        1309820
+      ],
+      "same_season_use_applicability_verified": false,
+      "ui_selectable": false
+    },
+    {
+      "item_id": 276187,
+      "name_enUS": "Venomous Jeweler's Setting",
+      "expansion_id": 11,
+      "item_class": 0,
+      "item_subclass": 8,
+      "on_use_spell_ids": [
+        1309139
+      ],
+      "same_season_use_applicability_verified": false,
+      "ui_selectable": false
+    }
+  ],
+  "source_only": true,
+  "user_item_applicability_verified": false,
+  "pvp_exclusion_verified": false,
+  "added_socket_spell_effect_verified": false,
+  "actual_bonus_socket_count_verified": false,
+  "J_approved": false,
+  "ui_selectable": false,
+  "environment_ready": false,
+  "native_calls": 0,
+  "dps_calls": 0,
+  "installed_environment": false,
+  "notes": [
+    "Exact ItemID -> ItemXItemEffect -> ItemEffect TriggerType=0 SpellID observation, NOT usable socket or effect mechanic.",
+    "1309820 is the observed v280 Miasmic on-use SpellID. 1297709 from past public spell/fixture must not be presented as observed on-use SpellID.",
+    "Historical source receipt for SAME build only; not an active runtime v217 stage artifact or environment-install source.",
+    "Physical bonus eligibility remains pending for chosen gear ID, season, PvP, intrinsic zero socket, item option and applied count."
+  ]
+}
