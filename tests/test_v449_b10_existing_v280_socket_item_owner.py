@@ -26,7 +26,7 @@ def item(iid,name,spells,*,kind="item_enhancement",
          on_use=True,selectable=False):
     return {
         "item_id":iid,"name_enUS":name,"kind":kind,
-        "ui_selectable":selectable,"expansion_id":12,
+        "ui_selectable":selectable,"expansion_id":11,
         "item_effect_source":{
             "status":("EXACT_DB2_ITEM_TO_ON_USE_SPELL_SOURCE_ONLY"
                       if on_use else "ITEM_USE_SPELL_RELATION_PENDING"),
@@ -39,9 +39,9 @@ class V449ExistingItemUseOwner(unittest.TestCase):
         self.addCleanup(self.folder.cleanup)
         self.root=pathlib.Path(self.folder.name)
         self.source=[
-            item(275707,"Miasmic Jewelbinder",[1297709]),
+            item(275707,"Miasmic Jewelbinder",[1309820]),
             item(263897,"Radiant Jewelbinder",[1270804]),
-            item(257535,"Galactic Jeweler's Setting",[1261765]),
+            item(276187,"Venomous Jeweler's Setting",[1309139]),
             item(244001,"Ordinary Elixir",[121000]),
             item(244002,"Unresolved Jewelbinder",[],on_use=False)]
 
@@ -87,10 +87,10 @@ class V449ExistingItemUseOwner(unittest.TestCase):
         self.assertEqual(source["candidate_count"],3)
         self.assertEqual([x["physical_item_id"] for x in
                           source["physical_candidates_unadmitted"]],
-                         [257535,263897,275707])
+                         [263897,275707,276187])
         m=next(x for x in source["physical_candidates_unadmitted"]
                if x["physical_item_id"]==275707)
-        self.assertEqual(m["observed_on_use_spell_ids"],[1297709])
+        self.assertEqual(m["observed_on_use_spell_ids"],[1309820])
         self.assertFalse(m["same_season_item_applicability_verified"])
         self.assertFalse(m["game_socket_legal_verified"])
         self.assertFalse(source["slot_application_verified"])
@@ -178,11 +178,11 @@ class V449ExistingItemUseOwner(unittest.TestCase):
 
     def test_non_on_use_or_not_enhancement_or_ui_selected_not_admitted(self):
         collected=self.seal(items=[
-            item(275707,"Miasmic Jewelbinder",[1297709],
+            item(275707,"Miasmic Jewelbinder",[1309820],
                  kind="potion"),
             item(263897,"Radiant Jewelbinder",[1270804],
                  selectable=True),
-            item(257535,"Galactic Jeweler's Setting",[],on_use=False)])
+            item(276187,"Venomous Jeweler's Setting",[],on_use=False)])
         result=v216._existing_v280_season_socket_item_source(
             collected,self.compilation())
         self.assertEqual(result["status"],
