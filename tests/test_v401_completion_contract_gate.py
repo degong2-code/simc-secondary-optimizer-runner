@@ -394,6 +394,21 @@ class CompletionContractTests(unittest.TestCase):
             gate.ContractInvalid,"NEXT_REVIEW_SKIPPED_GENERIC_VALIDATION:B10"):
             gate.validate(doc)
 
+    def test_v445_b10_historical_socket_parser_does_not_prove_current_legal_slots(self):
+        doc=self.scenario()
+        row=self.row(doc,"B10")
+        self.assertEqual(row["historical"]["state"],"PASS")
+        self.assertEqual({doc["evidence"][key]["kind"] for key in row["historical"]["evidence"]},
+                         {"HISTORICAL_SCOPED"})
+        self.assertTrue(all(row[axis]["state"]=="PENDING"
+                            for axis in ("generic","current_source","product_integration")))
+        self.assertFalse(gate.complete(row))
+        row["current_source"]={"state":"PASS",
+            "evidence":["v445_b10_historical_native_parser_contrast"]}
+        with self.assertRaisesRegex(gate.ContractInvalid,
+                "PASS_MISSING_REQUIRED_EVIDENCE_KIND:B10:current_source"):
+            gate.validate(doc)
+
     def test_v444_b9_current_source_and_generic_are_scoped_not_product(self):
         doc=self.scenario()
         row=self.row(doc,"B9")

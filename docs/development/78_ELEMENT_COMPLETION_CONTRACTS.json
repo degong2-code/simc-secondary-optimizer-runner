@@ -670,6 +670,15 @@
       "supports": [
         "B9"
       ]
+    },
+    "v445_b10_historical_native_parser_contrast": {
+      "kind": "HISTORICAL_SCOPED",
+      "note": "docs/development/notes/2026-11-14_p1-v445-b10-socket-native-negative-boundary-audit.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41601140696",
+      "tested_sha": "a35d58431f59afb6247648df8d201a0113415f76",
+      "supports": [
+        "B10"
+      ]
     }
   },
   "elements": [
@@ -1276,8 +1285,10 @@
         "evidence": []
       },
       "historical": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v445_b10_historical_native_parser_contrast"
+        ]
       }
     },
     {
