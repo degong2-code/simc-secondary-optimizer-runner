@@ -111,15 +111,19 @@ for(const name of ["food","potion","augmentation"]){
 assert(options.potion.some(v=>v!=="source_default"),"historical options retained server-side");
 const u={consumable_choices:{food:"royal_roast",
   potion:"potion_of_recklessness_2",augmentation:"void_touched"}};
+{
 `+saved+String.raw`
+}
 for(const name of ["food","potion","augmentation"]){
   assert.strictEqual($(name).value,u.consumable_choices[name]);
   assert.strictEqual($(name).options.at(-1).dataset.historic,"true");
 }
 const u2={consumable_choices:{food:"source_default",
   potion:"source_default",augmentation:"source_default"}};
+{
 `+saved.replaceAll("u.consumable_choices","u2.consumable_choices")+
 String.raw`
+}
 for(const name of ["food","potion","augmentation"]){
   assert.strictEqual($(name).value,"source_default");
   assert.strictEqual($(name).options.length,1);
