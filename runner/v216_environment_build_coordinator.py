@@ -4812,7 +4812,27 @@ def _existing_v280_season_socket_item_source(collected, compilation):
          candidate.resolve().parent==root/"source" and
          0<candidate.stat().st_size<=10_000_000,
          "V216_SOCKET_V280_SEALED_CANDIDATE_REQUIRED")
+    # A stage summary alone is not content authentication: recheck the
+    # original v217 receipt and candidate output SHA before using its
+    # item→on-use spell hints in the selected B10 source preview.
+    stage_id=stage.get("stage_id")
+    need(stage_id in ("fresh-consumable-item-use-spell-source",
+                      "fresh-consumable-item-use-spell-source-other"),
+         "V216_SOCKET_V280_STAGE_ID_DRIFT")
+    receipt=stage_engine._read_receipt(
+        root/".stage_receipts"/(stage_id+".json"))
+    relative=(stage.get("output_paths") or {}).get("candidate")
+    need(type(relative) is str and
+         receipt.get("stage_id")==stage_id and
+         receipt.get("stage_version")==stage.get("stage_version") and
+         receipt.get("receipt_sha256")==stage["receipt_sha256"] and
+         receipt.get("status")=="COMPLETE" and
+         receipt.get("output_paths",{}).get("candidate")==relative and
+         (root/relative).resolve()==candidate.resolve(),
+         "V216_SOCKET_V280_ORIGINAL_RECEIPT_DRIFT")
     raw=candidate.read_bytes()
+    need(receipt.get("outputs",{}).get("candidate",{}).get("sha256")==
+         digest(raw),"V216_SOCKET_V280_ORIGINAL_OUTPUT_SHA_DRIFT")
     doc=json.loads(raw)
     build=collected.get("expected_game_build")
     meta=doc.get("item_use_spell_join") or {}
@@ -4830,7 +4850,14 @@ def _existing_v280_season_socket_item_source(collected, compilation):
             continue
         name=item.get("name_enUS")
         effect=item.get("item_effect_source") or {}
-        if (type(name) is str and name.casefold().endswith("jewelbinder")
+        # Name hints do not establish a socket-adding spell or game-legal
+        # use. Preserve both PvE and PvP items as unadmitted candidates.
+        label=(name.casefold().replace("’","'")
+               if type(name) is str else "")
+        hint=any(token in label for token in
+                 ("jewelbinder","jeweler's setting","jewelers setting"))
+        if (hint and item.get("kind")=="item_enhancement"
+                and item.get("ui_selectable") is False
                 and type(item.get("item_id")) is int and item["item_id"]>0
                 and effect.get("status")==
                     "EXACT_DB2_ITEM_TO_ON_USE_SPELL_SOURCE_ONLY"
@@ -4844,7 +4871,10 @@ def _existing_v280_season_socket_item_source(collected, compilation):
                 "observed_on_use_spell_ids":
                     sorted(set(effect["on_use_spell_ids"])),
                 "expansion_id":item.get("expansion_id"),
-                "source_only":True})
+                "source_only":True,
+                "game_socket_legal_verified":False,
+                "same_season_item_applicability_verified":False,
+                "pvp_or_pve_not_inferred_from_name":True})
     candidates.sort(key=lambda x:(x["physical_item_id"],
                                   x["name_from_same_build"]))
     return {**out,
@@ -6631,6 +6661,18 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         try:
             source_compilation=source_wiring.compile_collected(
                 collected,compiler=fresh_stage.compile_fresh_candidate)
+            if (source_selected_gem_roles is not None and
+                    target_sockets>4 and source_compilation["status"]==
+                    "FRESH_V191_V211_V213_COMPILED_UNADMITTED"):
+                # The existing v280 stage is already part of the SAME Build.
+                # Read its sealed item/use-spell hints only when extra sockets
+                # are requested; no new item collector or approval Gate.
+                socket_hints=_existing_v280_season_socket_item_source(
+                    collected,source_compilation)
+                source_compilation[
+                    "existing_v280_socket_item_source_unadmitted"]=socket_hints
+                progress[
+                    "existing_v280_socket_item_source_unadmitted"]=socket_hints
             if source_compilation["status"]==(
                     "FRESH_V191_V211_V213_COMPILED_UNADMITTED"):
                 # Optional one-source-v217 collector. Missing DK source must
