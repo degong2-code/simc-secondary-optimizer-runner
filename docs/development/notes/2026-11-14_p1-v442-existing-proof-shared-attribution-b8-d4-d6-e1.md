@@ -15,3 +15,5 @@
 **미승격/제약:** E2는 실제 O>0 중복 방지 증거를 더 비교해야 하고, E7은 bounds·정수 불가능 후보, E9는 gear/static과 buffed 분리, F7은 미선택 장신구·기름·특수 입력, G4/G5는 rev-only 정적 캐시/다른 실행 정체성 변화, H1/H3/H4/H6는 v439/v440 통계·사용자 소비의 증거를 각 수락 조건에 별도로 재귀속할 필요가 있다. v440은 JSON2 기존 6건 재사용·두 확인 후보 DPS 차 1091.06>95% 경계827.40·근접 대안 관측0이며 새 Native0이다. 임의로 PASS하지 않는다.
 
 **Result:** 공식 `generic 22/current_source 22/product_integration 11/historical 12`, `COMPLETE 11/78` (기존7 + B8/D4/D6/E1), `next_review=B9`, `full_product_e2e=PENDING`. 오프라인 v401 상태 검사/Actions 결과는 해당 커밋의 CI 영수증으로 따로 판정한다. **이번 변경 신규 Native/API/DB2 0, 제품 실행 코드 0, 원본 v016/main/Project UI/공식 승격 변경 0.**
+
+**v442 CI 교정:** 최초 v442 변경 커밋 `395a83ef344354744069a09e15788c71491ffe14`에서 v401 `--check`는 22/22/11/12·B9 정합 통과했으나 34건 테스트 중 4건은 과거 B8=PENDING/B8 다음 검토 숫자를 하드코딩하여 실패했다. 기능 수락 조건을 약화하지 않고 해당 테스트를 현재 증거의 3축·서로 다른 증거 종류·역사 증거 오용 차단·B9 순서 검사로 대체한다. 별도 전체 Reusable Offline CI의 DEV_LEDGER_FAIL 198건은 이 상태 검사와 별도 기존 문제이며, 본 변경으로 통과했다고 주장하지 않는다.

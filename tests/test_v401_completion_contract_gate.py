@@ -67,7 +67,7 @@ class CompletionContractTests(unittest.TestCase):
         doc=self._source_independent_h3()
         self.assertTrue(gate.validate(doc))
         self.assertFalse(gate.complete(self.row(doc,"H3")))
-        self.assertEqual(doc["policy"]["next_review"],"B8")
+        self.assertEqual(doc["policy"]["next_review"],"B9")
 
     def test_v441_cannot_hide_required_season_source_as_na(self):
         doc=self._source_independent_h3()
@@ -332,38 +332,62 @@ class CompletionContractTests(unittest.TestCase):
                           row["product_integration"]["evidence"]},
                          {"PRODUCT_INTEGRATION_REAL"})
         self.assertEqual(row["historical"]["state"],"PASS")
-        self.assertFalse(gate.complete(self.row(doc,"B8")))
+        self.assertTrue(gate.complete(self.row(doc,"B8")))
         self.assertFalse(gate.complete(self.row(doc,"B1")))
-        self.assertEqual(doc["policy"]["next_review"],"B8")
+        self.assertEqual(doc["policy"]["next_review"],"B9")
         self.assertEqual(doc["policy"]["full_product_e2e"],"PENDING")
 
-    def test_b8_history_does_not_overstate_current_selected_tier_variant(self):
+    def test_b8_v442_shared_proofs_are_scoped_and_three_axes_complete(self):
         doc=self.scenario()
-        row=self.row(doc,"B8")
-        self.assertEqual(row["historical"]["state"],"PASS")
-        self.assertEqual({doc["evidence"][key]["kind"] for key
-                          in row["historical"]["evidence"]},
-                         {"HISTORICAL_SCOPED"})
-        self.assertEqual(row["generic"]["state"],"PENDING")
-        self.assertEqual(row["current_source"]["state"],"PENDING")
-        self.assertEqual(row["product_integration"]["state"],"PENDING")
-        self.assertFalse(gate.complete(row))
-        self.assertEqual(doc["policy"]["next_review"],"B8")
+        for eid in ("B8","D4","D6","E1"):
+            with self.subTest(element=eid):
+                row=self.row(doc,eid)
+                self.assertTrue(gate.complete(row))
+                self.assertEqual(row["current_source"]["state"],"PASS")
+                self.assertEqual(row["product_integration"]["state"],"PASS")
+                self.assertEqual(
+                    {doc["evidence"][key]["kind"]
+                     for key in row["generic"]["evidence"]},
+                    {"CURRENT_SOURCE_REAL","GENERALIZATION_REGRESSION"})
+                self.assertEqual(
+                    {doc["evidence"][key]["kind"]
+                     for key in row["product_integration"]["evidence"]},
+                    {"PRODUCT_INTEGRATION_REAL"})
+                for axis in ("generic","current_source","product_integration"):
+                    for key in row[axis]["evidence"]:
+                        self.assertIn(eid,doc["evidence"][key]["supports"])
+        self.assertEqual(self.row(doc,"B8")["historical"]["state"],"PASS")
+        self.assertEqual(doc["policy"]["next_review"],"B9")
         self.assertEqual(doc["policy"]["full_product_e2e"],"PENDING")
+        self.assertFalse(gate.complete(self.row(doc,"B9")))
 
-    def test_b8_existing_source_injection_cannot_promote_current_real(self):
+    def test_b8_history_or_generic_regression_cannot_fake_current_product(self):
         doc=self.scenario()
         row=self.row(doc,"B8")
         self.assertEqual(len(row["historical"]["evidence"]),2)
-        self.assertEqual({doc["evidence"][key]["kind"] for key
-                          in row["historical"]["evidence"]},
-                         {"HISTORICAL_SCOPED"})
-        self.assertTrue(any("v431" in doc["evidence"][key]["note"]
-                            for key in row["historical"]["evidence"]))
-        for key in ("generic","current_source","product_integration"):
-            self.assertEqual(row[key]["state"],"PENDING")
-        self.assertFalse(gate.complete(row))
-        self.assertEqual(doc["policy"]["next_review"],"B8")
+        row["current_source"]={"state":"PASS",
+                               "evidence":["b8_history_v431"]}
+        with self.assertRaisesRegex(
+            gate.ContractInvalid,
+            "PASS_MISSING_REQUIRED_EVIDENCE_KIND:B8:current_source"):
+            gate.validate(doc)
+        doc=self.scenario()
+        row=self.row(doc,"B8")
+        row["product_integration"]={
+            "state":"PASS",
+            "evidence":["v442_shared_generic_v432_70783_regressions"]}
+        with self.assertRaisesRegex(
+            gate.ContractInvalid,
+            "PASS_MISSING_REQUIRED_EVIDENCE_KIND:B8:product_integration"):
+            gate.validate(doc)
+
+    def test_b9_is_next_generic_source_review_after_v442_b8(self):
+        doc=self.scenario()
+        self.assertEqual(doc["policy"]["next_review"],"B9")
+        doc["policy"]["next_review"]="B10"
+        with self.assertRaisesRegex(
+            gate.ContractInvalid,"NEXT_REVIEW_SKIPPED_GENERIC_VALIDATION:B9"):
+            gate.validate(doc)
 
     def test_a10_cannot_skip_a9_generic_source(self):
         doc=self.scenario()
