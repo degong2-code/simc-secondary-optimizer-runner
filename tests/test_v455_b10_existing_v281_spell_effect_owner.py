@@ -29,10 +29,16 @@ EFFECTS={
     1309139:[(359,180,0),(3,0,1)]}
 
 
-class SealedExistingV281SocketOwner(V449ExistingItemUseOwner):
+class SealedExistingV281SocketOwner(unittest.TestCase):
     def setUp(self):
-        super().setUp()
-        self.collected=self.seal()
+        self.fixture=V449ExistingItemUseOwner()
+        self.fixture.setUp()
+        self.addCleanup(self.fixture.doCleanups)
+        self.root=self.fixture.root
+        self.collected=self.fixture.seal()
+
+    def compilation(self):
+        return self.fixture.compilation()
 
     def seal_v281(self,*,item_mutation=None,build="12.1.5.70783"):
         path=self.root/"source"/"v283_consumable_use_spell_candidates.json"
