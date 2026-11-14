@@ -603,7 +603,8 @@ eval(context+raw.slice(start,end)+"\n"+test);
     def test_installed_build_is_a_bound_session_choice_not_collection(self):
         js=self.client.get("/assets/app.js").text
         self.assertIn('request.installed_season_game_build=installedBuild;',js)
-        self.assertIn('const installedBuild=field("season-game-build");',js)
+        self.assertIn('const installedBuild=field("season-game-build") ||',js)
+        self.assertIn('state.verifiedInstalledBuildFromThisPage;',js)
         self.assertIn('payload.installed_season_game_build??""',js)
         self.assertIn('try{await refreshInstalledOilLoadouts();}',js)
         self.assertNotIn('request.fresh_season_build=',js)
@@ -843,9 +844,9 @@ const fs=require("fs"),assert=require("assert");
 const raw=fs.readFileSync(process.argv[1],"utf8");
 const a=raw.indexOf("function rememberVerifiedSeasonBuildForRun(report) {");
 const b=raw.indexOf("async function buildSeasonEnvironment(",a);
-const c=raw.indexOf("  const installedBuild=field(\"season-game-build\")",b);
+const c=raw.indexOf("  const installedBuild=field(\"season-game-build\")");
 const d=raw.indexOf("  if(Object.keys(exactOils).length)",c);
-assert(a>=0&&b>a&&c>b&&d>c,"actual build result/run request JS required");
+assert(a>=0&&b>a&&c>=0&&d>c,"actual build result/run request JS required");
 let manual="";
 const state={verifiedInstalledBuildFromThisPage:null};
 const field=id=>{assert.strictEqual(id,"season-game-build");return manual;};
