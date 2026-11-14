@@ -313,6 +313,37 @@ renderInstalledOilLoadouts(source([item("d",{main_hand:1005})]));
 assert.strictEqual($("optimizer-oil-enabled").checked,true);
 assert.strictEqual(selectedFullVerifiedOil(),null);
 assert.strictEqual($("oil_main").checked,false);
+
+// v470: same ilvl does NOT authorize an old build's verified oil/flask.
+$("season-game-build").value="12.1.5.70783";
+$("oil_main").checked=false;$("oil_off").checked=false;
+$("optimizer-oil-main-id").value="";
+$("optimizer-oil-off-id").value="";
+$("spec").value="paladin/retribution";
+oilUseIntent=true;
+const oldBuild=source([item("e",{main_hand:5001})]);
+oldBuild.verified_flasks=[{physical_item_id:220001,
+  simc_input_token:"old_season_flask",crafting_quality:3,F_rating:180}];
+renderInstalledOilLoadouts(oldBuild);
+renderInstalledFlaskChoices(oldBuild);
+assert.strictEqual(state.oilLoadouts.length,0,"no stale oil source");
+assert.strictEqual($("oil_main").checked,false,"restore never auto-fills stale oil");
+assert.strictEqual($("optimizer-oil-loadout").options.length,1);
+assert.strictEqual($("season-verified-flask").options.length,1,
+  "old-build F is not a verified current F choice");
+assert.strictEqual(selectedFullVerifiedOil(),null);
+$("season-game-build").value="12.2.0.0";
+renderInstalledOilLoadouts(oldBuild);
+renderInstalledFlaskChoices(oldBuild);
+assert.strictEqual(state.oilLoadouts.length,1);
+assert.strictEqual($("oil_main").checked,true);
+assert.strictEqual($("optimizer-oil-main-id").value,5001);
+assert.strictEqual($("season-verified-flask").options.length,2);
+assert(selectedFullVerifiedOil(),"matching sealed build admits O");
+$("season-game-build").value="12.3.0.0";
+assert.strictEqual(selectedFullVerifiedOil(),null,
+  "editing a build must invalidate old O before async refresh");
+
 `;
 eval(context+raw.slice(start,end)+"\n"+test);
 """

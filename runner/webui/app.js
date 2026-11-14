@@ -891,6 +891,9 @@ function fullVerifiedOilMatch(item) {
     Object.keys(ids).length===(needOff?2:1);
 }
 function selectedFullVerifiedOil() {
+  // A previously loaded season catalogue cannot authorize a new plan after
+  // a build/ilevel edit or restoration of a differently pinned session.
+  if(!installedConsumableScopeMatches(state.oilCatalog))return null;
   if(!$("oil_main").checked ||
       $("oil_off").checked!==oilNeedsOffhand())return null;
   const main=Number(field("optimizer-oil-main-id"));
@@ -970,12 +973,21 @@ function refreshDefaultConsumableSummaries(){
     "미사용 (이번 시즌 기본)":potion.selectedOptions?.[0]?.textContent||chosen;
 }
 
+function installedConsumableScopeMatches(data) {
+  // The same source-bound test serves short plans, long runs, and restore.
+  // Explicit user build overrides any remembered ready season.
+  const build=field("season-game-build") ||
+    state.verifiedInstalledBuildFromThisPage;
+  return data?.schema==="v113_verified_installed_oil_loadouts_v1" &&
+    /^\d+(?:\.\d+){3}$/.test(data.game_build||"") &&
+    Number(data.target_ilevel)===Number(field("ilevel")) &&
+    (!build||data.game_build===build);
+}
 function renderInstalledFlaskChoices(data) {
   const selector=$("season-verified-flask");
   const prior=field("season-selected-flask-id");
   selector.replaceChildren(option("","검증 설치 영약 선택 (선택 · 없으면 고급 ItemID 유지)"));
-  if(data?.schema==="v113_verified_installed_oil_loadouts_v1" &&
-     Number(data.target_ilevel)===Number(field("ilevel"))) {
+  if(installedConsumableScopeMatches(data)) {
     for(const item of data.verified_flasks||[]) {
       if(!Number.isSafeInteger(item.physical_item_id)||
          item.physical_item_id<=0 ||
@@ -1010,9 +1022,8 @@ function renderInstalledOilLoadouts(data) {
   const form=state.seasonGear?.weapon_forms?.[field("spec")];
   const offAllowed=form==="dual_one_hand"||form==="dual_two_hand";
   state.oilLoadouts=[];
-  if(data?.schema==="v113_verified_installed_oil_loadouts_v1" &&
-     data.status==="VERIFIED_INSTALLED_OIL_LOADOUTS" &&
-     Number(data.target_ilevel)===Number(field("ilevel"))) {
+  if(installedConsumableScopeMatches(data) &&
+     data.status==="VERIFIED_INSTALLED_OIL_LOADOUTS") {
     for(const item of data.items||[]) {
       const ids=item.selected_oil_item_ids_by_hand||{};
       if(!/^[a-f0-9]{64}$/.test(item.installed_manifest_sha256||"") ||
