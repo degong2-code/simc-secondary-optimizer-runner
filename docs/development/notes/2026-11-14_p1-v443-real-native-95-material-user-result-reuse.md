@@ -18,3 +18,5 @@
 | **H6** | v113/v106 실제 format/read_result 회귀 + v439 웹 user_result / cache-only | 3축 PASS |
 
 **결과:** 범용 26/78, 원본 26/78, 제품 통합 15/78, 역사 12/78; **COMPLETE 15/78**. `next_review=B9`, `full_product_e2e=PENDING`. 기록된 테스트/CI 판정과 사용자 브라우저 실클릭/전체 제품 완성을 혼동하지 않는다.
+
+**v443 CI 후속 교정:** 최초 커밋 `c323d30dad93b3abe4c7644d74faa8e8a3258feb`의 [정책 CI #43541984984](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43541984984)에서 78 JSON/생성표 검사 PASS, 테스트 37건 중 v441 H3=INCOMPLETE 고정 단언만 1 FAIL. H3는 v443 세 필수축 PASS이므로 N/A 테스트가 실제 product 증거를 요구하도록 수정. [재사용 오프라인 #43541984948](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43541984948)은 이번 노트 신규 오류 없이 기존 개발 ledger 198건으로 중단. 새 Native/API/DB2 0.

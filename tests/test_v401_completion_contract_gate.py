@@ -66,6 +66,11 @@ class CompletionContractTests(unittest.TestCase):
     def test_v441_season_independent_run_may_use_documented_source_na(self):
         doc=self._source_independent_h3()
         self.assertTrue(gate.validate(doc))
+        self.assertTrue(gate.complete(self.row(doc,"H3")))
+        # A documented RUN source N/A is allowed only with the independent
+        # product-integration evidence already present in v443.
+        self.row(doc,"H3")["product_integration"]={
+            "state":"PENDING","evidence":[]}
         self.assertFalse(gate.complete(self.row(doc,"H3")))
         self.assertEqual(doc["policy"]["next_review"],"B9")
 
