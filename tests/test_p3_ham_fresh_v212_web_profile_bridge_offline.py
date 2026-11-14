@@ -191,6 +191,97 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
             variants.append(key)
         self.assertEqual(len(set(variants)),len(variants))
 
+    def test_v479_basic_four_gems_no_oil_manual_T_source_to_result_contract(self):
+        """One P1-A default flow, with synthetic DPS isolated from Native proof.
+
+        Reuse the verified-v212 source-owner fixture. Exercise actual web
+        planning with the same exact source SHA, four-gem/no-oil selection,
+        authoritative manual T, and existing 95%-only result adapter.
+        The staged profile and DPS observations here are synthetic, so this
+        must not be counted as a newly observed Native or full USER-E2E.
+        """
+        import v293_local_longrun_session as longrun
+
+        self.remember()
+        source=self.jobs._verified_fresh_profile_result
+        source["source_compilation"]["physical_gem_layout_unadmitted"]={
+            "schema":"v271_user_socket_gem_layout_stage_v1",
+            "status":"PHYSICAL_GEMS_STAGED_SOURCE_AND_SOCKET_PROOFS_PENDING",
+            "special_gem_id":None,"socket_total":4,
+            "ordinary_gem_ids":[101,102,103,104]}
+        binary=self.root/"simc-v479.bin"
+        binary.write_bytes(b"offline fixture never executed")
+        controls=web.sessions.standard_controls()
+        controls["oil_hands"]=[]
+        controls["final_T"]=3500
+        user=web.sessions.user_scenario(controls)
+        self.assertEqual(user["target"],{"ilevel":334,"final_T":3500})
+        self.assertEqual(len(user["trinkets"]),2)
+        self.assertEqual(user["oil_hands"],[])
+        request=web.UserRequest(
+            controls=controls,binary=str(binary),revision="abcdef0",
+            current_season_product=True,
+            installed_season_game_build=self.build,
+            installed_manifest_sha256=self.digest,
+            user_socket_total=4,user_special_gem_id=None)
+        folder=self.root/("c"*20)
+        folder.mkdir()
+        staged={"plan":{"class":user["character"]["class"],
+                        "spec":user["character"]["spec"],
+                        "base_B":3500,"final_T":3500,
+                        "fixed_O":{},"native_limit":6}}
+        with (mock.patch.object(self.jobs,"load_fresh_profile_for_user",
+                                return_value=source) as exact_source,
+              mock.patch.object(web.sessions,"store_session",
+                                return_value=folder) as seal,
+              mock.patch.object(web.profile_stage,"build_or_reuse",
+                                return_value=(staged,{"native_calls":0})) as profile,
+              mock.patch.object(self.jobs,"_fresh_environment_summary",
+                                return_value={"status":"READY"}) as environment,
+              mock.patch.object(web.subprocess,"Popen",
+                                side_effect=AssertionError("NO_DPS_NATIVE"))):
+            prepared=self.jobs.plan(request)
+        exact_source.assert_called_once_with(
+            334,self.build,selected_oil_hands=[],
+            selected_oil_item_ids_by_hand=None,
+            required_gem_layout={"socket_total":4,"special_gem_id":None},
+            expected_installed_manifest_sha256=self.digest)
+        seal.assert_called_once()
+        self.assertEqual(seal.call_args.kwargs[
+            "fresh_installed_manifest_sha256"],self.digest)
+        self.assertEqual(seal.call_args.args[0]["target"]["final_T"],3500)
+        self.assertEqual(profile.call_args.kwargs[
+            "verified_fresh_environment_result"],source)
+        environment.assert_called_once()
+        self.assertEqual(prepared["status"],"READY_ZERO_NATIVE")
+        self.assertEqual(prepared["native_calls"],0)
+        self.assertEqual(prepared["plan"]["final_T"],3500)
+        self.assertEqual(prepared["plan"]["base_B"],3500)
+        self.assertEqual(prepared["plan"]["fixed_O"],{})
+
+        # Use the actual v293->v113 UI result adapter with synthetic values;
+        # no claim that these numbers were obtained from a SimC run.
+        stats={"crit_rating":875,"haste_rating":1050,
+               "mastery_rating":875,"versatility_rating":700}
+        observed={"confidence_for_display":0.95,
+                  "no_global_optimum_proof":True,
+                  "summary":{"final_T":3500,"underlying_B":3500,
+                             "fixed_O":{},"observed_best_T":stats,
+                             "observed_best_dps":10000.0,
+                             "observed_best_sem":100.0,
+                             "observed_unique_targets":1,
+                             "material_alternatives":[]},
+                  "confirmed_selected_pair_95":None}
+        display=longrun.user_result(observed)
+        self.assertEqual(display["final_T"],prepared["plan"]["final_T"])
+        self.assertEqual(display["base_B"],prepared["plan"]["base_B"])
+        self.assertEqual(display["fixed_O"],prepared["plan"]["fixed_O"])
+        self.assertEqual(sum(display["observed_first_choice"][
+            "absolute_rating_T"].values()),3500)
+        self.assertEqual(display["confidence_level"],0.95)
+        self.assertFalse(display["global_optimum_proven"])
+        self.assertFalse(display["confirmation_pair_direction_supported_at_95"])
+
     def test_exact_oil_id_uses_verified_installed_variant_not_hand_guess(self):
         """Exact oil IDs require the matching signed v212 variant, not O=0."""
         self.remember()
