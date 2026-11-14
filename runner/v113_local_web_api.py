@@ -2447,7 +2447,21 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
 
     @app.get("/api/v1/options")
     def options():
+        # v108 SUPPORTED contains historical SimC-recognized tokens. These
+        # are NOT current-season item/quality/selection approvals. The web
+        # product always requests current_season_product=True. Its normal
+        # v216/v113 Build binds no optional food/potion/augmentation, so only
+        # source_default (resolved to disabled by v218) is newly selectable.
+        # Keep the legacy token catalogue for existing saved-session display,
+        # without silently converting it into a new season registration.
         return {
+            "current_season_product_choices":{
+                "schema":"v113_current_season_optional_consumables_v1",
+                "status":"NONDEFAULT_UNADMITTED_UNTIL_VERIFIED_SEASON_BINDING",
+                "food":["source_default"],"potion":["source_default"],
+                "augmentation":["source_default"],
+                "source_default_simc_token":"disabled",
+                "nondefault_user_selectable":False},
             "food":["source_default",*sorted(consumables.SUPPORTED["food"])],
             "potion":["source_default",*sorted(consumables.SUPPORTED["potion"])],
             "augmentation":["source_default",*sorted(consumables.SUPPORTED["augmentation"])],
