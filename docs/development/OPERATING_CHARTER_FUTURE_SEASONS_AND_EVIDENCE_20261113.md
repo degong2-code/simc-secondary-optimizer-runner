@@ -1,3 +1,5 @@
+> **2026-11-14 최신 사용자 직접 결정 — 운영 헌장 상위 해석:** 모든 후속 작업 전 [제품 우선·최소 충분 검증 상시 정책](POLICY_PRODUCT_FIRST_MINIMUM_SUFFICIENT_VERIFICATION_20261114.md)을 적용한다. 이 헌장의 78개 추적·제로베이스 증거·단계별 검증은 **완료 주장 기준**이지 선택적 기능을 끝까지 파고들어야 하는 **개발 순서**가 아니다. 실제 USER→G/J/F/O→대표 프로필→SimC→결과에서 막힌 첫 부분에만 `REUSE/CONNECT/FIX`를 적용하고, 미선택 옵션은 별도 보류; SimC 내부 효과 인증·전수 자료 수집으로 범위를 확대하지 않는다. 기존 원장/수락 판정은 변경 없음.
+
 > **v405 최신 사례:** WSE는 진단으로만 보존. 동일 시즌 블리자드/WCL/DB2의 원본 아이템을 프로그램이 자동 연결하는 `v216→v405` 원본 소비/봉인 시험 [#43375839959](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43375839959) 성공. [A7 정본 기록](notes/2026-11-13_p1-v405-a7-automated-current-source-selection-verified.md) 참조. A7 generic/current_source=PASS·user profile/SimC 통합=PENDING, 이후 A8 가능. 영구 GPT 수동 확인이나 미선택 WSE·전체 장비 DB 선행 Gate를 만들지 않는다.
 
 # SIMC SECONDARY OPTIMIZER — 범용 개발·정합성·검증 운영 헌장
