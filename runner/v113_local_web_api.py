@@ -986,8 +986,10 @@ class LocalJobs:
         if not docs.is_dir() or docs.is_symlink():
             return result
         candidates=[]
+        # Browse every local install receipt: arbitrary first-64 truncation
+        # hid valid F/O variants. Exact per-receipt SHA and v113 profile
+        # verification below keep this read-only, without fresh Native/HTTP.
         for path in docs.glob("v212_installed_*.json"):
-            if len(candidates)>=64:break
             if (path.is_symlink() or not path.is_file() or
                 re.fullmatch(r"v212_installed_[a-f0-9]{20}\.json",path.name)
                     is None):continue

@@ -347,6 +347,80 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(data["native_calls"],0)
         self.assertEqual(data["network_calls"],0)
 
+    def test_v466_more_than_sixty_four_installs_do_not_hide_verified_choices(self):
+        """All 70 local F/O variants remain visible; zero Native/network."""
+        build="12.1.5.70783"
+        docs=(self.app.state.jobs.root/"_fresh_season_sources"/
+              ("wago_"+build)/"fresh_source")
+        docs.mkdir(parents=True)
+        installed={}
+        for index in range(70):
+            digest=f"{index+1:020x}"+"f"*44
+            oil_id=243734+index
+            flask_id=241326+index
+            path=docs/("v212_installed_"+digest[:20]+".json")
+            path.write_text("{}",encoding="utf8")
+            (docs/("v113_profile_"+digest[:20]+".json")).write_text(
+                "{}",encoding="utf8")
+            installed[path.name]={
+                "manifest_sha256":digest,"game_build":build,
+                "target_ilevel":334,
+                "official_O_physical_source":{
+                    "selected_oil_item_ids_by_hand":{"main_hand":oil_id},
+                    "oil_by_hand":{"main_hand":{
+                        "physical_item_id":oil_id,
+                        "simc_input_token":"main_hand:synthetic_test_oil"}}},
+                "official_F_physical_source":{
+                    "physical_item_id":flask_id,
+                    "simc_input_token":"synthetic_test_flask",
+                    "crafting_quality":3,"F_rating":165}}
+        observed=[]
+        def read_receipt(path,*_args):
+            return installed[pathlib.Path(path).name],"synthetic raw sha"
+        def verify_exact(root,level,*,expected_game_build,
+                         selected_oil_item_ids_by_hand,
+                         expected_installed_manifest_sha256=None):
+            self.assertEqual(root,self.app.state.jobs.root)
+            self.assertEqual(level,334)
+            self.assertEqual(expected_game_build,build)
+            digest=expected_installed_manifest_sha256
+            self.assertIsNotNone(digest)
+            row=installed["v212_installed_"+digest[:20]+".json"]
+            self.assertEqual(
+                row["official_O_physical_source"][
+                    "selected_oil_item_ids_by_hand"],
+                selected_oil_item_ids_by_hand)
+            observed.append(digest)
+            return {"installed_manifest_sha256":digest}
+        with (mock.patch.object(web.environment_manifest,"read_json",
+                  side_effect=read_receipt),
+              mock.patch.object(web.environment_manifest,
+                  "verify_fresh_installed_environment"),
+              mock.patch.object(web.environment_build,
+                  "find_verified_installed_season_environment",
+                  side_effect=verify_exact),
+              mock.patch.object(web.official_ko_env,"read_names",
+                  return_value={}),
+              mock.patch.object(web.subprocess,"Popen",
+                  side_effect=AssertionError("NO_NATIVE"))):
+            response=self.client.get(
+                "/api/v1/verified-oil-loadouts?ilevel=334&game_build="+build,
+                headers=self.headers)
+        self.assertEqual(response.status_code,200,response.text)
+        result=response.json()
+        self.assertEqual(len(result["items"]),70)
+        self.assertEqual(len(result["verified_flasks"]),70)
+        self.assertEqual(len(set(observed)),70)
+        self.assertEqual(
+            {entry["selected_oil_item_ids_by_hand"]["main_hand"]
+             for entry in result["items"]},
+            {243734+i for i in range(70)})
+        self.assertEqual(
+            {row["physical_item_id"] for row in result["verified_flasks"]},
+            {241326+i for i in range(70)})
+        self.assertEqual(result["native_calls"],0)
+        self.assertEqual(result["network_calls"],0)
+
     def test_controlled_cold_start_web_real_collector_and_rebuild(self):
         """P3-DS T0: web -> original v216/v161/v217 in a virgin workspace.
 
