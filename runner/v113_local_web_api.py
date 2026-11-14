@@ -2460,6 +2460,8 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                 "status":"NONDEFAULT_UNADMITTED_UNTIL_VERIFIED_SEASON_BINDING",
                 "food":["source_default"],"potion":["source_default"],
                 "augmentation":["source_default"],
+                # Current v218 admits no new historical diamond or Folio rows.
+                "diamond_id":[0],"omnium_talents":["source_default"],
                 "source_default_simc_token":"disabled",
                 "nondefault_user_selectable":False},
             "food":["source_default",*sorted(consumables.SUPPORTED["food"])],

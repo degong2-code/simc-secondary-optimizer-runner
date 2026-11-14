@@ -1278,7 +1278,15 @@ function fillSessionInputs(payload) {
     historical.dataset.historic="true";omni.appendChild(historical);
   }
   omni.value=oldOmnium;
-  $("diamond").value=String(choices.diamond_id??0);
+  const diamondValue=String(choices.diamond_id??0);
+  const diamond=$("diamond");
+  for(const x of Array.from(diamond.options))
+    if(x.dataset.historic==="true")x.remove();
+  if(!Array.from(diamond.options).some(x=>x.value===diamondValue)) {
+    const historical=option(diamondValue,"이전 세션 다이아몬드 #"+diamondValue+" · 새 시즌 미승인");
+    historical.dataset.historic="true";diamond.appendChild(historical);
+  }
+  diamond.value=diamondValue;
   fillGearRows("special-rows",u.special_items||[]);
   fillGearRows("crafted-rows",u.embellishments||[]);
   const restoredEagle=u.selected_season_enchants?.finger1===7967;
@@ -1366,6 +1374,11 @@ function buildRequest() {
     if(!Array.isArray(allowed)||!allowed.includes(field(name)))
       throw Error("이전 세션 또는 미검증 "+name+" 선택은 이번 시즌 새 최적화에 사용할 수 없습니다.");
   }
+  if(!Array.isArray(approvedOptional?.diamond_id) ||
+     !approvedOptional.diamond_id.includes(Number(field("diamond"))) ||
+     !Array.isArray(approvedOptional?.omnium_talents) ||
+     !approvedOptional.omnium_talents.includes(field("omnium")))
+    throw Error("이번 시즌 미검증 다이아몬드·Omnium 선택은 새 최적화에 사용할 수 없습니다.");
   const controls={
     class:source.class,spec:source.spec,
     race:resolvedRace,talents:field("talents"),
@@ -2528,12 +2541,24 @@ function installOptions(options) {
     populateSelect(name,permitted,v=>v==="source_default"?
       "미사용 (이번 시즌 기본)":label(name,v));
   }
-  populateSelect("diamond",options.diamond_id,v=>label("diamond_id",v));
-  populateSelect("omnium",["source_default","row4_crit","row4_haste",
-                            "row4_mastery","row4_vers"],v=>({
-     source_default:"전문화 기본 Omnium 4열 유지",row4_crit:"치명",
-     row4_haste:"가속",row4_mastery:"특화",row4_vers:"유연"
-  })[v]);
+  // Preserve historical catalogues in /options, but never advertise a
+  // diamond or season module selection that v218 cannot admit at runtime.
+  const seasonScope=approved?.schema==="v113_current_season_optional_consumables_v1";
+  const diamonds=seasonScope && Array.isArray(approved.diamond_id) &&
+    approved.diamond_id.includes(0) &&
+    approved.diamond_id.every(id=>(options.diamond_id||[]).includes(id)) ?
+    approved.diamond_id:[0];
+  populateSelect("diamond",diamonds,v=>v===0?
+    "선택 없음 (이번 시즌 기본)":label("diamond_id",v));
+  const omnium=seasonScope && Array.isArray(approved.omnium_talents) &&
+    approved.omnium_talents.includes("source_default") &&
+    approved.omnium_talents.every(token=>(options.omnium_talents||[]).includes(token)) ?
+    approved.omnium_talents:["source_default"];
+  populateSelect("omnium",omnium,v=>({
+     source_default:"전문화 기본값 유지 (추가 선택 미검증)",
+     row4_crit:"치명",row4_haste:"가속",
+     row4_mastery:"특화",row4_vers:"유연"
+  })[v]||label("omnium_talents",v));
   refreshDefaultConsumableSummaries();
   for(const row of $("crafted-rows").querySelectorAll(".gear-row")){
     const selector=row.querySelector('[data-field="embellishment"]');

@@ -48,6 +48,10 @@ class CurrentSeasonOptionalConsumables(unittest.TestCase):
             self.assertEqual(approved[kind],["source_default"])
             self.assertIn("disabled",data[kind])
             self.assertGreater(len(data[kind]),1)
+        self.assertEqual(approved["diamond_id"],[0])
+        self.assertEqual(approved["omnium_talents"],["source_default"])
+        self.assertGreater(len(data["diamond_id"]),1)
+        self.assertGreater(len(data["omnium_talents"]),1)
 
     def test_existing_user_defaults_resolve_only_to_disabled_simc_effects(self):
         user=sessions.user_scenario(
@@ -55,6 +59,15 @@ class CurrentSeasonOptionalConsumables(unittest.TestCase):
         result=stage._verified_fresh_season_consumables(user)
         self.assertEqual(result,{
             "food":"disabled","potion":"disabled","augmentation":"disabled"})
+
+    def test_nondefault_diamond_and_folio_still_fail_actual_server_admission(self):
+        user=sessions.user_scenario(sessions.standard_controls(("mage","frost")))
+        for key,value in (("diamond_id",240967),("omnium_talents","row4_crit")):
+            other={**user,"consumable_choices":{
+                **user["consumable_choices"],key:value}}
+            with self.subTest(key=key),self.assertRaisesRegex(
+                    Exception,"FRESH_SEASON_FLASK_DIAMOND_OR_MODULE_NOT_ADMITTED"):
+                stage._verified_fresh_season_consumables(other)
 
     def test_actual_javascript_renders_only_current_season_subset(self):
         node=shutil.which("node")
@@ -69,7 +82,7 @@ const a=raw.indexOf("function installOptions(options) {");
 const b=raw.indexOf("// Settings: user-triggered official SimC download",a);
 assert(a>=0&&b>a,"installOptions original source required");
 const rs=raw.indexOf("  const choices=u.consumable_choices||{};");
-const re=raw.indexOf("  const oldOmnium=",rs);
+const re=raw.indexOf('  fillGearRows("special-rows"',rs);
 assert(rs>=0&&re>rs,"saved-session original source required");
 const options=JSON.parse(process.argv[2]);
 const harness=String.raw`
@@ -108,9 +121,12 @@ for(const name of ["food","potion","augmentation"]){
   assert.strictEqual($(name).options[0].textContent,
     "미사용 (이번 시즌 기본)");
 }
+assert.deepStrictEqual($("diamond").options.map(v=>v.value),["0"]);
+assert.deepStrictEqual($("omnium").options.map(v=>v.value),["source_default"]);
 assert(options.potion.some(v=>v!=="source_default"),"historical options retained server-side");
 const u={consumable_choices:{food:"royal_roast",
-  potion:"potion_of_recklessness_2",augmentation:"void_touched"}};
+  potion:"potion_of_recklessness_2",augmentation:"void_touched",
+  diamond_id:240967,omnium_talents:"row4_crit"}};
 {
 `+saved+String.raw`
 }
@@ -118,8 +134,13 @@ for(const name of ["food","potion","augmentation"]){
   assert.strictEqual($(name).value,u.consumable_choices[name]);
   assert.strictEqual($(name).options.at(-1).dataset.historic,"true");
 }
+for(const [name,value] of [["diamond","240967"],["omnium","row4_crit"]]){
+  assert.strictEqual($(name).value,value);
+  assert.strictEqual($(name).options.at(-1).dataset.historic,"true");
+}
 const u2={consumable_choices:{food:"source_default",
-  potion:"source_default",augmentation:"source_default"}};
+  potion:"source_default",augmentation:"source_default",
+  diamond_id:0,omnium_talents:"source_default"}};
 {
 `+saved.replaceAll("u.consumable_choices","u2.consumable_choices")+
 String.raw`
@@ -128,6 +149,8 @@ for(const name of ["food","potion","augmentation"]){
   assert.strictEqual($(name).value,"source_default");
   assert.strictEqual($(name).options.length,1);
 }
+assert.deepStrictEqual($("diamond").options.map(v=>v.value),["0"]);
+assert.deepStrictEqual($("omnium").options.map(v=>v.value),["source_default"]);
 return true;
 `);
 assert.strictEqual(fn(options),true);
@@ -136,6 +159,8 @@ const render=Function("options",harness+inner+String.raw`
 installOptions(options);
 for(const name of ["food","potion","augmentation"])
   assert.deepStrictEqual($(name).options.map(v=>v.value),["source_default"]);
+assert.deepStrictEqual($("diamond").options.map(v=>v.value),["0"]);
+assert.deepStrictEqual($("omnium").options.map(v=>v.value),["source_default"]);
 return true;`);
 assert.strictEqual(render(lost),true);
 console.log("V456_SEASON_OPTION_UI_READONLY_RESTORE_PASS");
@@ -151,6 +176,8 @@ console.log("V456_SEASON_OPTION_UI_READONLY_RESTORE_PASS");
         js=(ROOT/"runner"/"webui"/"app.js").read_text("utf8")
         self.assertIn("const approvedOptional=state.options?.current_season_product_choices;",js)
         self.assertIn("!allowed.includes(field(name))",js)
+        self.assertIn("!approvedOptional.diamond_id.includes(Number(field(\"diamond\")))",js)
+        self.assertIn("!approvedOptional.omnium_talents.includes(field(\"omnium\"))",js)
         self.assertIn("이전 세션 또는 미검증 ",js)
         self.assertIn("current_season_product:true",js)
         self.assertIn('old.dataset.historic="true";node.appendChild(old);',js)
