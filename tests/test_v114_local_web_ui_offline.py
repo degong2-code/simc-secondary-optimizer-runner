@@ -1045,6 +1045,8 @@ const request=raw.slice(raw.indexOf("function buildRequest() {"),
   raw.indexOf("async function api(",raw.indexOf("function buildRequest() {")));
 assert(request.includes("if(!verifiedInstalledGearScopeMatchesRun(installedBuild,controls.ilevel))"),
   "normal plan and longrun must use identical source scope");
+assert(request.includes("request.installed_manifest_sha256=state.seasonGear.installed_manifest_sha256"),
+  "both runs must carry exact gear v212 SHA into backend variant selection");
 assert(request.includes("request.installed_season_game_build=installedBuild"),
   "no inferred build or free-form budget");
 console.log("V477_PINNED_TRINKET_GEAR_PREFLIGHT_PASS");

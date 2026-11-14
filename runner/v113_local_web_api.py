@@ -147,6 +147,9 @@ class LongRunStartRequest(BaseModel):
     # Select an ALREADY INSTALLED/VERIFIED environment, not fresh collection.
     installed_season_game_build: str | None = Field(
         default=None,max_length=32,pattern=r"^\d+(?:\.\d+){3}$")
+    # Exact v212 installation selected by the same UI gear/F/J/O source.
+    installed_manifest_sha256: str | None = Field(
+        default=None,pattern=r"^[a-f0-9]{64}$")
     max_native_calls: int = Field(default=12,ge=12,le=2000)
     max_new_native_this_invocation: int = Field(default=4,ge=1,le=32)
     max_elapsed_seconds: int = Field(default=900,ge=60,le=3600)
@@ -173,6 +176,9 @@ class UserRequest(BaseModel):
     selected_flask_item_id: int | None = Field(default=None,ge=1,le=999999999)
     installed_season_game_build: str | None = Field(
         default=None,max_length=32,pattern=r"^\d+(?:\.\d+){3}$")
+    # Exact v212 installation selected by the same UI gear/F/J/O source.
+    installed_manifest_sha256: str | None = Field(
+        default=None,pattern=r"^[a-f0-9]{64}$")
     # Opt-in normal-source collection only; never grants new environment READY.
     fresh_season_build: str | None = Field(
         default=None,max_length=32,pattern=r"^\d+(?:\.\d+){3}$")
@@ -437,7 +443,8 @@ class LocalJobs:
     def load_fresh_profile_for_user(
             self, target_ilevel, explicit_build=None,
             selected_oil_hands=None, selected_oil_item_ids_by_hand=None,
-            required_gem_layout=None, selected_flask_item_id=None):
+            required_gem_layout=None, selected_flask_item_id=None,
+            expected_installed_manifest_sha256=None):
         """Find the exact verified oil variant, never a newest-file guess."""
         # No installed v113 snapshot means the original packaged/legacy
         # current-season route must remain unchanged. Do not fetch a retail
@@ -448,6 +455,10 @@ class LocalJobs:
         if not any(p.is_file() and not p.is_symlink() for p in
                    workspace.glob("wago_*/fresh_source/v113_profile_*.json")):
             return None
+        if (expected_installed_manifest_sha256 is not None and
+                explicit_build is None):
+            raise environment_manifest.EnvironmentBlocked(
+                "WEB_INSTALLED_SHA_REQUIRES_EXACT_SEASON_BUILD")
         game_build=explicit_build or self._current_fresh_game_build
         if game_build is None:
             # One cheap current-build discovery per first restarted user plan.
@@ -481,7 +492,10 @@ class LocalJobs:
                 # Without physical item IDs, identify only a unique hand map.
                 selected=environment_build.find_verified_installed_season_environment(
                     self.root,target_ilevel,expected_game_build=game_build,
-                    selected_oil_hands=selected_oil_hands)
+                    selected_oil_hands=selected_oil_hands,
+                    **({"expected_installed_manifest_sha256":
+                         expected_installed_manifest_sha256}
+                       if expected_installed_manifest_sha256 is not None else {}))
                 if selected is None:
                     raise environment_manifest.EnvironmentBlocked(
                         "WEB_FRESH_SELECTED_OIL_HANDS_NOT_INSTALLED")
@@ -489,7 +503,8 @@ class LocalJobs:
         if (required_gem_layout is not None or
                 selected_flask_item_id is not None or
                 selected_oil_item_ids_by_hand is not None or
-                selected_oil_hands is not None):
+                selected_oil_hands is not None or
+                expected_installed_manifest_sha256 is not None):
             # A hand-only (including O=0) API request cannot guess the
             # newest F/J receipt when multiple v212 variants are installed.
             # Require one authentic manifest SHA, just like explicit F/J/O.
@@ -502,7 +517,11 @@ class LocalJobs:
             if directory.is_dir() and not directory.is_symlink():
                 # User-selected flask/gem variants are not limited to
                 # the first 64 installation filenames.
-                for path in directory.glob("v212_installed_*.json"):
+                paths=((directory/("v212_installed_"+
+                           expected_installed_manifest_sha256[:20]+".json"),)
+                       if expected_installed_manifest_sha256 is not None
+                       else directory.glob("v212_installed_*.json"))
+                for path in paths:
                     if (path.is_symlink() or not path.is_file() or
                             path.stat().st_size>environment_build.MAX_RECEIPT_BYTES):
                         continue
@@ -513,6 +532,8 @@ class LocalJobs:
                             installed)
                         digest=installed["manifest_sha256"]
                         if (path.name!="v212_installed_"+digest[:20]+".json"
+                                or (expected_installed_manifest_sha256 is not None
+                                    and digest!=expected_installed_manifest_sha256)
                                 or installed["game_build"]!=game_build or
                                 installed["target_ilevel"]!=target_ilevel):
                             continue
@@ -1531,6 +1552,10 @@ class LocalJobs:
             if pinned_build is not None and not current_season:
                 raise environment_manifest.EnvironmentBlocked(
                     "WEB_INSTALLED_SEASON_SELECTION_REQUIRES_CURRENT_PRODUCT")
+            if (params.installed_manifest_sha256 is not None and
+                    (not current_season or pinned_build is None)):
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_INSTALLED_SHA_REQUIRES_EXACT_SEASON_BUILD")
             # A successful previous Build pins a v212 profile in process
             # memory, but does NOT reverify the active Retail version for a
             # later, unpinned plan. The modern UI always sends the exact
@@ -1575,6 +1600,9 @@ class LocalJobs:
                 variant_args["required_gem_layout"]=gem_choice
             if flask_id is not None:
                 variant_args["selected_flask_item_id"]=flask_id
+            if params.installed_manifest_sha256 is not None:
+                variant_args["expected_installed_manifest_sha256"]=(
+                    params.installed_manifest_sha256)
             if current_season and (
                 pinned_build is not None or
                 fresh is None or
@@ -1606,6 +1634,12 @@ class LocalJobs:
             if exact_oils and fresh is None:
                 raise environment_manifest.EnvironmentBlocked(
                     "WEB_FRESH_SELECTED_OIL_ITEM_IDS_NOT_INSTALLED")
+            if params.installed_manifest_sha256 is not None and (
+                    fresh is None or fresh["source_compilation"][
+                        "verified_environment_install"]["manifest_sha256"]!=
+                        params.installed_manifest_sha256):
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_SELECTED_INSTALLED_SEASON_SHA_MISMATCH")
             if fresh is not None and (
                     (gem_choice is not None and
                      not _verified_snapshot_gem_layout_matches(
@@ -1770,7 +1804,16 @@ class LocalJobs:
             selected_oil_item_ids_by_hand=(
                 params.selected_oil_item_ids_by_hand or None),
             required_gem_layout=gems,
-            selected_flask_item_id=params.selected_flask_item_id)
+            selected_flask_item_id=params.selected_flask_item_id,
+            **({"expected_installed_manifest_sha256":
+                 params.installed_manifest_sha256}
+               if params.installed_manifest_sha256 is not None else {}))
+        if verified is not None and params.installed_manifest_sha256 is not None:
+            if verified["source_compilation"][
+                    "verified_environment_install"]["manifest_sha256"]!=(
+                    params.installed_manifest_sha256):
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_SELECTED_INSTALLED_SEASON_SHA_MISMATCH")
         if verified is None:
             if params.installed_season_game_build is not None:
                 raise environment_manifest.EnvironmentBlocked(
@@ -2220,7 +2263,8 @@ class LocalJobs:
             user_socket_total=request.user_socket_total,
             user_special_gem_id=request.user_special_gem_id,
             selected_flask_item_id=request.selected_flask_item_id,
-            installed_season_game_build=request.installed_season_game_build)
+            installed_season_game_build=request.installed_season_game_build,
+            installed_manifest_sha256=request.installed_manifest_sha256)
         folder,hydrated,environment,receipt_info=(
             self.prepare_with_internal_special_L(params))
         with self.lock:

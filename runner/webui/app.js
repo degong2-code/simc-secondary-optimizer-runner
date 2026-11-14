@@ -1528,6 +1528,9 @@ function buildRequest() {
   if(!verifiedInstalledGearScopeMatchesRun(installedBuild,controls.ilevel))
     throw Error("새 최적화에는 현재 선택한 빌드·ilvl의 검증 설치 장비 목록이 필요합니다. 시즌 환경을 확인·구축한 뒤 장신구를 선택해 주세요.");
   request.installed_season_game_build=installedBuild;
+  // Carry the same installed v212 source already used for the trinket list.
+  // The server revalidates this SHA with exact F/gem/O before SimC planning.
+  request.installed_manifest_sha256=state.seasonGear.installed_manifest_sha256;
   if(Object.keys(exactOils).length)
     request.selected_oil_item_ids_by_hand=exactOils;
   return request;

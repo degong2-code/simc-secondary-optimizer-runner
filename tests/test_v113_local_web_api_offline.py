@@ -462,6 +462,97 @@ class LocalWebAPIOffline(unittest.TestCase):
             restore.assert_called_once()
             self.assertEqual(inspected,["b"*64])
 
+    def test_v478_exact_gear_install_sha_selects_fj_variant_without_guess(self):
+        """Two same build/ilvl/O installs: UI v212 SHA pins the exact variant."""
+        jobs=self.app.state.jobs
+        build="12.1.5.70783"
+        directory=jobs.root/"_fresh_season_sources"/(
+            "wago_"+build)/"fresh_source"
+        directory.mkdir(parents=True)
+        docs={}
+        for label,flask_id in (("a",241326),("b",241327)):
+            sha=label*64
+            (directory/("v212_installed_"+sha[:20]+".json")).write_text("{}")
+            (directory/("v113_profile_"+sha[:20]+".json")).write_text(
+                json.dumps({"environment_result":{}}))
+            docs[sha[:20]]={
+                "manifest_sha256":sha,"game_build":build,"target_ilevel":334,
+                "official_O_physical_source":None,
+                "official_F_physical_source":{"physical_item_id":flask_id}}
+        verified=[]
+        def read_exact(path,*_args):
+            return docs[pathlib.Path(path).stem.split("_")[-1]],"source bytes"
+        def source(root,ilevel,*,expected_game_build,
+                   selected_oil_item_ids_by_hand=None,
+                   expected_installed_manifest_sha256=None,**_kwargs):
+            self.assertEqual((ilevel,expected_game_build),(334,build))
+            self.assertEqual(selected_oil_item_ids_by_hand,{})
+            verified.append(expected_installed_manifest_sha256)
+            return {"installed_manifest_sha256":expected_installed_manifest_sha256}
+        with (mock.patch.object(web.environment_manifest,"read_json",
+                                side_effect=read_exact),
+              mock.patch.object(web.environment_manifest,
+                                "verify_fresh_installed_environment"),
+              mock.patch.object(web.environment_build,
+                                "find_verified_installed_season_environment",
+                                side_effect=source),
+              mock.patch.object(jobs,"restore_verified_fresh_profile",
+                                return_value={"status":"EXACT_RESTORED"}) as restore,
+              mock.patch.object(web.subprocess,"Popen",
+                                side_effect=AssertionError("NO_NATIVE"))):
+            result=jobs.load_fresh_profile_for_user(
+                334,build,selected_oil_hands=[],selected_flask_item_id=241327,
+                expected_installed_manifest_sha256="b"*64)
+            self.assertEqual(result["status"],"EXACT_RESTORED")
+            self.assertEqual(verified,["b"*64])
+            self.assertEqual(restore.call_args.kwargs[
+                "expected_installed_manifest_sha256"],"b"*64)
+            verified.clear()
+            with self.assertRaisesRegex(
+                    web.environment_manifest.EnvironmentBlocked,
+                    "WEB_USER_VARIANT_NOT_INSTALLED_OR_AMBIGUOUS"):
+                jobs.load_fresh_profile_for_user(
+                    334,build,selected_oil_hands=[],
+                    selected_flask_item_id=241327,
+                    expected_installed_manifest_sha256="a"*64)
+            self.assertEqual(verified,[],
+                "wrong installed F must fail before any v217/Native lookup")
+            self.assertEqual(restore.call_count,1)
+
+    def test_v478_web_plan_longrun_forward_exact_source_sha(self):
+        """Plan and longrun share the real exact-source selector, no Native."""
+        build="12.1.5.70783"
+        digest="b"*64
+        payload={**self.payload,"current_season_product":True,
+                 "installed_season_game_build":build,
+                 "installed_manifest_sha256":digest}
+        jobs=self.app.state.jobs
+        with (mock.patch.object(jobs,"load_fresh_profile_for_user",
+                                return_value=None) as lookup,
+              mock.patch.object(web.subprocess,"Popen",
+                                side_effect=AssertionError("NO_NATIVE"))):
+            for route,request in (
+                    ("/api/v1/sessions/plan",payload),
+                    ("/api/v1/longrun/prepare",
+                     {**payload,"max_native_calls":12})):
+                response=self.post(route,request)
+                self.assertEqual(response.status_code,422,response.text)
+                self.assertEqual(response.json()["detail"]["code"],
+                                 "WEB_SELECTED_INSTALLED_SEASON_BUILD_NOT_FOUND")
+            for call in lookup.call_args_list:
+                self.assertEqual(call.kwargs[
+                    "expected_installed_manifest_sha256"],digest)
+            self.assertEqual(lookup.call_count,2)
+        for malformed in ("bad","A"*64):
+            response=self.post("/api/v1/sessions/plan",{
+                **payload,"installed_manifest_sha256":malformed})
+            self.assertEqual(response.status_code,422,response.text)
+        no_build=self.post("/api/v1/sessions/plan",{
+            **payload,"installed_season_game_build":None})
+        self.assertEqual(no_build.status_code,422,no_build.text)
+        self.assertEqual(no_build.json()["detail"]["code"],
+                         "WEB_INSTALLED_SHA_REQUIRES_EXACT_SEASON_BUILD")
+
     def test_v465_same_build_same_oils_distinct_verified_flasks_visible(self):
         """Each F variant must verify its own v212 SHA, not the newest oil match."""
         build="12.1.5.70783"
