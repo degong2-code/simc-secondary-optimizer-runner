@@ -886,6 +886,27 @@ def _assert_season_gem_tokens_unchanged_by_selected_equipment(expected,
          "SEASON_V271_USER_EQUIPMENT_GEM_IDS_CHANGED_AFTER_J")
 
 
+def _assert_season_extra_socket_items_unchanged_by_selected_equipment(
+        expected, rows, need):
+    """Preserve the physical item IDs owning a selected 5+ socket J plan.
+
+    v446 checks only gem_id. A selected replacement can retain all gem_id
+    tokens yet no longer have the original intrinsic/bonus sockets. Until
+    independent same-build proof of that replacement is consumed, J cannot
+    transfer from the v232 representative item to a different item_id.
+    The established four-ordinary BASE remains a separate compatibility
+    path, and trinkets are never socket budget owners here.
+    """
+    need(type(expected) is dict and bool(expected) and
+         all(type(slot) is str and type(item_id) is int and item_id>0
+             and slot not in ("trinket1","trinket2")
+             for slot,item_id in expected.items()) and
+         all(slot in rows and type(rows[slot].get("item_id")) is int
+             and rows[slot]["item_id"]==item_id
+             for slot,item_id in expected.items()),
+         "SEASON_V271_USER_EQUIPMENT_SOCKET_ITEM_CHANGED_AFTER_J")
+
+
 def build(user,folder,binary,revision,static_cache_path=None,
           imported_profile_text=None,*,ordinary_variant=None,pure_stage=False,
           independent_334=False,independent_target_level=False,
@@ -1187,6 +1208,15 @@ def build(user,folder,binary,revision,static_cache_path=None,
          for slot,row in rows.items()
          if slot not in ("trinket1","trinket2")}
         if season_socket_plan is not None else None)
+    # A 5+ socket plan depends on the exact physical source item ID at
+    # every gem-bearing slot, not gem tokens alone. Retain only small IDs,
+    # not a new catalog or physical proof mechanism.
+    season_extra_socket_item_ids=(
+        {slot:rows[slot]["item_id"] for slot,n in
+         season_socket_plan["socket_counts"].items() if n>0}
+        if season_socket_plan is not None and
+        sum(season_socket_plan["socket_counts"].values())>4
+        else None)
     original_selected_baseline_rows=(copy.deepcopy(rows)
         if season_selected_static_cache_path is not None else None)
     if pure_stage or source_free:
@@ -1204,6 +1234,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
     if season_source_gem_tokens is not None:
         _assert_season_gem_tokens_unchanged_by_selected_equipment(
             season_source_gem_tokens,rows,need)
+    if season_extra_socket_item_ids is not None:
+        _assert_season_extra_socket_items_unchanged_by_selected_equipment(
+            season_extra_socket_item_ids,rows,need)
     # DK user rune is permanent enchant_id, not temporary oil O.
     # The profile and durable cache identity change only for explicit choice.
     admitted_dk_ids=runeforge_mod.RUNE_IDS  # unchanged older sessions only
