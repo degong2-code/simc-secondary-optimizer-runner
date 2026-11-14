@@ -6,7 +6,7 @@
     "current_source_acceptance": "시즌 원본이 필요한 요소는 실제 소비하는 해당 시즌·빌드·ID·SHA만 검증한다. 시즌 독립 RUN에는 이미 검증된 현재 실제 SimC 관측/소스의 공통 영수증을 해당 소비 경계에 재사용하거나, 해당 원본이 실제 불필요할 때만 범위·사유·정책 근거를 기록한 N/A를 적용한다. 하나의 요소마다 새 외부 수집·Native는 요구하지 않는다.",
     "product_acceptance": "실사용 제품의 입력→내부 예산/프로필→SimC→결과 연결에서 해당 요소의 소비·실패 경계를 확인한다. 기존 단일 실제 E2E·원본/캐시/Actions 영수증을 여러 관련 요소에 귀속할 수 있으며 각 요소별 독립 사용자 E2E·전문 전체 Native는 요구하지 않는다. 미선택 옵션은 기본 READY를 차단하지 않는다.",
     "optional_acceptance": "미지원 또는 해당 현재 환경에 없는 선택 옵션은 근거·효과 범위·소유권을 명시하고 NOT_APPLICABLE을 검토한다. 실제 지원되는 선택 기능은 선택 시 정합성·실행 경로가 필요하며, 비선택 상태의 모든 변형/효과 독립 인증을 강제하지 않는다. 사유·근거 없는 포괄 N/A는 금지한다.",
-    "next_review": "B9",
+    "next_review": "E2",
     "a7_may_be_next_only_after_generic_review_of": [
       "A4",
       "A5",
@@ -652,6 +652,24 @@
         "H4",
         "H6"
       ]
+    },
+    "v444_b9_same_season_source": {
+      "kind": "CURRENT_SOURCE_REAL",
+      "note": "docs/development/notes/2026-11-14_p1-v444-b9-current-catalyst-source-bounded-review.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43550242720",
+      "tested_sha": "64678cf09083142d30ea26dc87b8e66b00c8c3b9",
+      "supports": [
+        "B9"
+      ]
+    },
+    "v444_b9_catalyst_regression": {
+      "kind": "GENERALIZATION_REGRESSION",
+      "note": "docs/development/notes/2026-11-14_p1-v444-b9-current-catalyst-source-bounded-review.md",
+      "actions_run": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43550242720",
+      "tested_sha": "64678cf09083142d30ea26dc87b8e66b00c8c3b9",
+      "supports": [
+        "B9"
+      ]
     }
   },
   "elements": [
@@ -1219,12 +1237,17 @@
       "scope": "USER",
       "acceptance": "사용자 선택에 촉매 변환이 실제 포함될 때 동일 시즌 원본 ID·티어 인정·부위/특수효과 충돌을 확인한다. 미선택 촉매 목록 전체 인증은 기본 환경 Gate가 아니다.",
       "generic": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v444_b9_same_season_source",
+          "v444_b9_catalyst_regression"
+        ]
       },
       "current_source": {
-        "state": "PENDING",
-        "evidence": []
+        "state": "PASS",
+        "evidence": [
+          "v444_b9_same_season_source"
+        ]
       },
       "product_integration": {
         "state": "PENDING",

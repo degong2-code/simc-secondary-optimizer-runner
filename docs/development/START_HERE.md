@@ -1,3 +1,5 @@
+> **2026-11-14 v444 B9 원본/회귀 부분 수락:** [증거 기록](notes/2026-11-14_p1-v444-b9-current-catalyst-source-bounded-review.md) · [78 정본](78_ELEMENT_COMPLETION_CONTRACTS.json): **27/27/15/12, COMPLETE15/78, next E2**. B9 generic/current_source PASS; product_integration PENDING. 정확한 선택 촉매 static L Native 부재로 full budget fail-closed; 전체 E2E PENDING.
+
 > **2026-11-14 v443 네 요소 H1/H3/H4/H6 실 증거 재귀속:** [감사 기록](notes/2026-11-14_p1-v443-real-native-95-material-user-result-reuse.md) · [정본](78_ELEMENT_COMPLETION_CONTRACTS.json). **26/26/15/12, COMPLETE15/78, next B9, full E2E PENDING**. v439/v440 Native6 원본 재사용, 95% 두 후보 확인·material 대안 관측0·웹 사용자 결과, 신규 Native/API/DB2 0. B9 촉매 선택 현재 Native 미관측으로 PENDING 유지.
 
 > **2026-11-14 v442 공유 실증 재귀속:** [4요소 B8/D4/D6/E1 판정](notes/2026-11-14_p1-v442-existing-proof-shared-attribution-b8-d4-d6-e1.md)과 [기계 정본](78_ELEMENT_COMPLETION_CONTRACTS.json). v439 실 Native와 v187/v432 실패 경계 재사용해 **22/22/11/12, COMPLETE11/78, next B9, 전체 E2E PENDING**. 새 Native/API/DB2 0. v441 인계는 당시 7/78 역사 스냅샷.

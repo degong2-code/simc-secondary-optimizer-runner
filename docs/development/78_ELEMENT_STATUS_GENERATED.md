@@ -4,13 +4,13 @@
 
 > 각 축의 PASS는 전체 제품 완료가 아닙니다. 역사 실행은 범용성이나 현재 시즌 검증을 대체하지 않습니다.
 
-- 범용 기능 PASS: **26/78**
-- 현재 원본 검증 PASS: **26/78** (범용 PASS와 중복 집계 가능)
+- 범용 기능 PASS: **27/78**
+- 현재 원본 검증 PASS: **27/78** (범용 PASS와 중복 집계 가능)
 - 개별 제품 통합 PASS: **15/78**
 - 역사적 범위 PASS: **12/78**
 - 세 축을 모두 완료한 요소: **15/78**
 - 최종 제품 E2E: **PENDING**
-- 다음 검토 요소: **B9** (순차 범용·현재 원본 검토 진행; 제품 통합은 독립 축)
+- 다음 검토 요소: **E2** (순차 범용·현재 원본 검토 진행; 제품 통합은 독립 축)
 
 | ID | 기능 | 적용 | 범용성 | 현재 원본 | 제품 통합 | 역사 증거 | 요소 완료 |
 |---|---|---|---|---|---|---|---|
@@ -33,7 +33,7 @@
 | B6 | 주능력치 | BASE | PASS | PASS | PENDING | PASS | INCOMPLETE |
 | B7 | 티어 5부위 원본 | BASE | PASS | PASS | PASS | PASS | COMPLETE |
 | B8 | 티어 4세트 착용 | USER | PASS | PASS | PASS | PASS | COMPLETE |
-| B9 | 촉매 변환 | USER | PENDING | PENDING | PENDING | PENDING | INCOMPLETE |
+| B9 | 촉매 변환 | USER | PASS | PASS | PENDING | PENDING | INCOMPLETE |
 | B10 | 대표 소켓 | BASE+USER | PENDING | PENDING | PENDING | PENDING | INCOMPLETE |
 | B11 | G 자동 예산 | BASE | PENDING | PENDING | PENDING | PENDING | INCOMPLETE |
 | B12 | G 시즌별 참조 | BASE | PENDING | PENDING | PENDING | PENDING | INCOMPLETE |
@@ -114,6 +114,7 @@
 - **B6**: [GENERALIZATION_REGRESSION](notes/2026-11-13_p1-v428-b6-primary-stat-profile-native-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41006525649)), [GENERALIZATION_REGRESSION](notes/2026-11-13_p1-v428-b6-primary-stat-profile-native-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43388059919)), [CURRENT_SOURCE_REAL](notes/2026-11-13_p1-v428-b6-primary-stat-profile-native-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43394408756)), [HISTORICAL_SCOPED](notes/2026-11-13_p1-v428-b6-primary-stat-profile-native-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41007713360)), [HISTORICAL_SCOPED](notes/2026-11-13_p1-v428-b6-primary-stat-profile-native-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41008699490))
 - **B7**: [GENERALIZATION_REGRESSION](notes/2026-11-13_p1-v429-b7-tier-five-13x5-source-product-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41628248531)), [GENERALIZATION_REGRESSION](notes/2026-11-13_p1-v429-b7-tier-five-13x5-source-product-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43388059919)), [CURRENT_SOURCE_REAL](notes/2026-11-13_p1-v429-b7-tier-five-13x5-source-product-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43394408756)), [PRODUCT_INTEGRATION_REAL](notes/2026-11-13_p1-v429-b7-tier-five-13x5-source-product-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43394408756)), [HISTORICAL_SCOPED](notes/2026-11-13_p1-v429-b7-tier-five-13x5-source-product-scope.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41454624275))
 - **B8**: [CURRENT_SOURCE_REAL](notes/2026-11-14_p1-v439-b8-one-real-selected-70783-four-tier-native-e2e.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43466966207)), [GENERALIZATION_REGRESSION](notes/2026-11-13_p1-v432-b8-selected-static-budget-preflight-offline.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43440892382)), [PRODUCT_INTEGRATION_REAL](notes/2026-11-14_p1-v439-b8-one-real-selected-70783-four-tier-native-e2e.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43466966207)), [HISTORICAL_SCOPED](notes/2026-11-13_p1-v430-b8-four-of-five-new-season-source-bridge-gap.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/41009716196)), [HISTORICAL_SCOPED](notes/2026-11-13_p1-v431-b8-sealed-season-injection-code-offline.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43428273777))
+- **B9**: [CURRENT_SOURCE_REAL](notes/2026-11-14_p1-v444-b9-current-catalyst-source-bounded-review.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43550242720)), [GENERALIZATION_REGRESSION](notes/2026-11-14_p1-v444-b9-current-catalyst-source-bounded-review.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43550242720))
 - **D4**: [CURRENT_SOURCE_REAL](notes/2026-11-14_p1-v439-b8-one-real-selected-70783-four-tier-native-e2e.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43466966207)), [GENERALIZATION_REGRESSION](notes/2026-11-13_p1-v432-b8-selected-static-budget-preflight-offline.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43440892382)), [PRODUCT_INTEGRATION_REAL](notes/2026-11-14_p1-v439-b8-one-real-selected-70783-four-tier-native-e2e.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43466966207))
 - **D6**: [CURRENT_SOURCE_REAL](notes/2026-11-14_p1-v439-b8-one-real-selected-70783-four-tier-native-e2e.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43466966207)), [GENERALIZATION_REGRESSION](notes/2026-11-13_p1-v432-b8-selected-static-budget-preflight-offline.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43440892382)), [PRODUCT_INTEGRATION_REAL](notes/2026-11-14_p1-v439-b8-one-real-selected-70783-four-tier-native-e2e.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43466966207))
 - **E1**: [CURRENT_SOURCE_REAL](notes/2026-11-14_p1-v439-b8-one-real-selected-70783-four-tier-native-e2e.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43466966207)), [GENERALIZATION_REGRESSION](notes/2026-11-13_p1-v432-b8-selected-static-budget-preflight-offline.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43440892382)), [PRODUCT_INTEGRATION_REAL](notes/2026-11-14_p1-v439-b8-one-real-selected-70783-four-tier-native-e2e.md) ([실행](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43466966207))
