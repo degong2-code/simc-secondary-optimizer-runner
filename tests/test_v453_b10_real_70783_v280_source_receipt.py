@@ -84,15 +84,20 @@ class Real70783V280SocketSource(unittest.TestCase):
         from tests.test_v449_b10_existing_v280_socket_item_owner import (
             V449ExistingItemUseOwner)
         x=V449ExistingItemUseOwner()
-        fixture={
-            r["item_id"]:r["item_effect_source"]["on_use_spell_ids"]
-            for r in x.source
-            if r["item_id"] in (263897,275707,276187)}
-        observed={
-            r["item_id"]:r["on_use_spell_ids"]
-            for r in self.doc["physical_item_use_candidates_unadmitted"]}
-        self.assertEqual(fixture,observed)
-        self.assertTrue(all(r["ui_selectable"] is False for r in x.source))
+        x.setUp()
+        try:
+            fixture={
+                r["item_id"]:r["item_effect_source"]["on_use_spell_ids"]
+                for r in x.source
+                if r["item_id"] in (263897,275707,276187)}
+            observed={
+                r["item_id"]:r["on_use_spell_ids"]
+                for r in self.doc["physical_item_use_candidates_unadmitted"]}
+            self.assertEqual(fixture,observed)
+            self.assertTrue(all(r["ui_selectable"] is False
+                                for r in x.source))
+        finally:
+            x.doCleanups()
 
 
 if __name__=="__main__":
