@@ -2516,7 +2516,7 @@ async function restoreInstalledSeasonGearChoices(inputs) {
   const level=inputs.user?.target?.ilevel;
   const unavailable="저장 세션의 검증 설치 장비 후보를 불러올 수 없습니다. "+
     "이전 선택은 조회만 가능하며 새 계획에 자동 승인하지 않습니다.";
-  if(typeof build!=="string"||!/^\\d+(?:\\.\\d+){3}$/.test(build) ||
+  if(typeof build!=="string"||!/^\d+(?:\.\d+){3}$/.test(build) ||
      typeof sha!=="string"||!/^[a-f0-9]{64}$/.test(sha) ||
      !Number.isInteger(level)||level<1||level>1000) {
     $("season-gear-note").textContent=unavailable;
