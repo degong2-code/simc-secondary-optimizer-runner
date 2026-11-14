@@ -1466,7 +1466,7 @@ render(null);
 assert.strictEqual(state.dkRuneIds.size,0);
 assert.strictEqual(state.eagleApproved,false);
 assert.strictEqual($("dk_rune_main").options.length,1);
-assert.strictEqual(compatibility,2);
+assert.strictEqual(compatibility,3);
 console.log("V467_FRESH_DK_RUNES_NO_ENCHANT_APPROVAL_PASS");
 """
         result=subprocess.run([node,"-e",script,str(source)],
