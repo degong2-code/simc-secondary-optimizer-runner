@@ -1819,10 +1819,14 @@ const calls=[], installed=[],notes={};
 const $=id=>(notes[id]??={textContent:""});
 let reply=null;
 const api=async url=>{calls.push(url);return reply;};
-const installSeasonGearHints=catalog=>installed.push(catalog);
-const load=Function("$","api","installSeasonGearHints",
+const state={seasonGearTargetIlevel:null};
+const installSeasonGearHints=catalog=>{
+  installed.push(catalog);
+  state.seasonGearTargetIlevel=null;
+};
+const load=Function("state","$","api","installSeasonGearHints",
    raw.slice(a,b)+"return restoreInstalledSeasonGearChoices;")(
-   $,api,installSeasonGearHints);
+   state,$,api,installSeasonGearHints);
 const sha="b".repeat(64),build="12.1.5.70783";
 const inputs={current_season_product:true,
   installed_season_game_build:build,installed_manifest_sha256:sha,
@@ -1842,10 +1846,14 @@ const inputs={current_season_product:true,
     "/api/v1/season-gear?game_build="+build+
     "&target_ilevel=334&installed_manifest_sha256="+sha);
   assert.strictEqual(installed.at(-1),reply);
+  assert.strictEqual(state.seasonGearTargetIlevel,334,
+    "sealed saved user target ilvl is restored with installed SHA");
   assert(notes["season-gear-note"].textContent.includes("현재 Retail 재확인"));
   reply={...reply,installed_manifest_sha256:"c".repeat(64)};
   await load(inputs);
   assert.strictEqual(installed.at(-1),null,"wrong installed SHA cannot populate UI");
+  assert.strictEqual(state.seasonGearTargetIlevel,null,
+    "failed restore cannot keep prior target ilvl approval");
   reply=null;
   await load(inputs);
   assert.strictEqual(installed.at(-1),null,"unavailable source fails closed");
