@@ -72,7 +72,7 @@ class CompletionContractTests(unittest.TestCase):
         self.row(doc,"H3")["product_integration"]={
             "state":"PENDING","evidence":[]}
         self.assertFalse(gate.complete(self.row(doc,"H3")))
-        self.assertEqual(doc["policy"]["next_review"],"E2")
+        self.assertEqual(doc["policy"]["next_review"],"B10")
 
     def test_v441_cannot_hide_required_season_source_as_na(self):
         doc=self._source_independent_h3()
@@ -339,7 +339,7 @@ class CompletionContractTests(unittest.TestCase):
         self.assertEqual(row["historical"]["state"],"PASS")
         self.assertTrue(gate.complete(self.row(doc,"B8")))
         self.assertFalse(gate.complete(self.row(doc,"B1")))
-        self.assertEqual(doc["policy"]["next_review"],"E2")
+        self.assertEqual(doc["policy"]["next_review"],"B10")
         self.assertEqual(doc["policy"]["full_product_e2e"],"PENDING")
 
     def test_b8_v442_shared_proofs_are_scoped_and_three_axes_complete(self):
@@ -362,7 +362,7 @@ class CompletionContractTests(unittest.TestCase):
                     for key in row[axis]["evidence"]:
                         self.assertIn(eid,doc["evidence"][key]["supports"])
         self.assertEqual(self.row(doc,"B8")["historical"]["state"],"PASS")
-        self.assertEqual(doc["policy"]["next_review"],"E2")
+        self.assertEqual(doc["policy"]["next_review"],"B10")
         self.assertEqual(doc["policy"]["full_product_e2e"],"PENDING")
         self.assertFalse(gate.complete(self.row(doc,"B9")))
 
@@ -386,12 +386,12 @@ class CompletionContractTests(unittest.TestCase):
             "PASS_MISSING_REQUIRED_EVIDENCE_KIND:B8:product_integration"):
             gate.validate(doc)
 
-    def test_v444_b9_review_accepted_but_e2_must_be_next(self):
+    def test_v444_b9_review_accepted_but_b10_must_be_next(self):
         doc=self.scenario()
-        self.assertEqual(doc["policy"]["next_review"],"E2")
-        doc["policy"]["next_review"]="E7"
+        self.assertEqual(doc["policy"]["next_review"],"B10")
+        doc["policy"]["next_review"]="B11"
         with self.assertRaisesRegex(
-            gate.ContractInvalid,"NEXT_REVIEW_SKIPPED_GENERIC_VALIDATION:E2"):
+            gate.ContractInvalid,"NEXT_REVIEW_SKIPPED_GENERIC_VALIDATION:B10"):
             gate.validate(doc)
 
     def test_v444_b9_current_source_and_generic_are_scoped_not_product(self):
@@ -423,7 +423,7 @@ class CompletionContractTests(unittest.TestCase):
                 for axis in ("generic","current_source","product_integration"):
                     for key in row[axis]["evidence"]:
                         self.assertIn(eid,doc["evidence"][key]["supports"])
-        self.assertEqual(doc["policy"]["next_review"],"E2")
+        self.assertEqual(doc["policy"]["next_review"],"B10")
         self.assertFalse(gate.complete(self.row(doc,"B9")))
         self.assertEqual(doc["policy"]["full_product_e2e"],"PENDING")
 
