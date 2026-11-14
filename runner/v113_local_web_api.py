@@ -1531,6 +1531,17 @@ class LocalJobs:
             if pinned_build is not None and not current_season:
                 raise environment_manifest.EnvironmentBlocked(
                     "WEB_INSTALLED_SEASON_SELECTION_REQUIRES_CURRENT_PRODUCT")
+            # A successful previous Build pins a v212 profile in process
+            # memory, but does NOT reverify the active Retail version for a
+            # later, unpinned plan. The modern UI always sends the exact
+            # installed build after a successful verified Build. Do not run
+            # an older in-memory G/J/F/O just because its ilvl, F, gems and
+            # O happen to match. Existing source-free legacy plans remain.
+            if (current_season and pinned_build is None and
+                    (self._verified_fresh_profile_result is not None or
+                     self._current_fresh_game_build is not None)):
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_FRESH_INSTALLED_GAME_BUILD_PIN_REQUIRED")
             independent=(not current_season and user["target"]["ilevel"]==334 and
                          key in bootstrap.ARCHETYPES)
             independent_level=(not current_season and user["target"]["ilevel"]!=334 and

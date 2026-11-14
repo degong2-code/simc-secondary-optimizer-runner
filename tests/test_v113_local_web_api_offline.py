@@ -1036,6 +1036,46 @@ class LocalWebAPIOffline(unittest.TestCase):
             self.assertEqual(stray.status_code,422,stray.text)
             stage.assert_not_called()
 
+    def test_v475_unpinned_plan_never_reuses_previous_season_memory(self):
+        """A previously verified build is not the active-build owner forever."""
+        jobs=self.app.state.jobs
+        payload={**self.payload,"current_season_product":True}
+        # The former first-plan in-memory branch skipped both version
+        # discovery and v212 source lookup when ilvl/oils/gems matched.
+        for old_profile,old_build in (
+                ({"verified_target_ilevel":334,
+                  "verified_oil_item_ids_by_hand":{}},None),
+                (None,"12.1.5.70783")):
+            with self.subTest(old_profile=old_profile is not None):
+                jobs._verified_fresh_profile_result=old_profile
+                jobs._current_fresh_game_build=old_build
+                with (mock.patch.object(jobs,"load_fresh_profile_for_user",
+                                        side_effect=AssertionError("NO_OLD_SOURCE")),
+                      mock.patch.object(web.retail_build_source,"discover",
+                                        side_effect=AssertionError("NO_LIVE_LOOKUP")),
+                      mock.patch.object(web.sessions,"store_session",
+                                        side_effect=AssertionError("NO_SESSION")),
+                      mock.patch.object(web.subprocess,"Popen",
+                                        side_effect=AssertionError("NO_NATIVE"))):
+                    for route in ("/api/v1/sessions/plan",
+                                  "/api/v1/sessions/start"):
+                        blocked=self.post(route,payload)
+                        self.assertEqual(blocked.status_code,422,blocked.text)
+                        self.assertEqual(blocked.json()["detail"]["code"],
+                            "WEB_FRESH_INSTALLED_GAME_BUILD_PIN_REQUIRED")
+        # No in-memory installed season: existing legacy mode is unaffected,
+        # and an explicit build still takes the prior exact-install pathway.
+        jobs._verified_fresh_profile_result=None
+        jobs._current_fresh_game_build=None
+        with mock.patch.object(jobs,"load_fresh_profile_for_user",
+                               return_value=None) as loader:
+            response=self.post("/api/v1/sessions/plan",{
+                **payload,"installed_season_game_build":"12.1.5.70783"})
+        self.assertEqual(response.status_code,422,response.text)
+        self.assertEqual(response.json()["detail"]["code"],
+                         "WEB_SELECTED_INSTALLED_SEASON_BUILD_NOT_FOUND")
+        loader.assert_called_once()
+
     def test_p1_explicit_installed_build_separate_from_source_collection(self):
         """Exact build is carried through short and long-run plans, no Native.
 
