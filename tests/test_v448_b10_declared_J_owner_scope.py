@@ -30,6 +30,8 @@ class DeclaredJOwnerScope(unittest.TestCase):
         layout=pre["physical_gem_layout_unadmitted"]
         if mutate_layout is not None:
             mutate_layout(layout)
+            pre["physical_gem_J_arithmetic_unadmitted"][
+                "physical_gem_item_ids"]=list(layout["ordinary_gem_ids"])
         socket=engine._fresh_selected_J_intrinsic_socket_source(
             collected=collected,preflight=pre,compilation=comp)
         return pre,layout,socket
