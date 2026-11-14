@@ -892,7 +892,8 @@ const c=raw.indexOf("  const installedBuild=field(\"season-game-build\")");
 const d=raw.indexOf("  if(Object.keys(exactOils).length)",c);
 assert(a>=0&&b>a&&c>=0&&d>c,"actual build result/run request JS required");
 let manual="";
-const state={verifiedInstalledBuildFromThisPage:null};
+const state={verifiedInstalledBuildFromThisPage:null,
+  seasonGear:{installed_manifest_sha256:"a".repeat(64)}};
 const field=id=>{assert.strictEqual(id,"season-game-build");return manual;};
 const remember=Function("state","field",raw.slice(a,b)+
   "return rememberVerifiedSeasonBuildForRun;")(state,field);
