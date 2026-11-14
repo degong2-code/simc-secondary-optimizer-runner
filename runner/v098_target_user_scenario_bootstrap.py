@@ -907,6 +907,82 @@ def _assert_season_extra_socket_items_unchanged_by_selected_equipment(
          "SEASON_V271_USER_EQUIPMENT_SOCKET_ITEM_CHANGED_AFTER_J")
 
 
+def _v232_final_socket_item_source_comparison(*, candidate, plan,
+                                              rows, game_build, ilevel):
+    """Classify each selected socket against the ORIGINAL source ItemID.
+
+    The representative v232 item/socket counts are a source observation.
+    The final USER item can have the same gem_id but different sockets.
+    Never use this inspection to grant missing bonus sockets or J.
+    """
+    if plan is None:
+        return None
+    out={"schema":"v451_v232_final_user_socket_item_comparison_v1",
+         "status":"ORIGINAL_V232_SOCKET_ITEM_SOURCE_PENDING",
+         "original_same_build_source":False,
+         "by_slot":{},"unverified_extra_by_slot":{},
+         "user_changed_item_by_slot":{},
+         "game_socket_legality_verified":False,
+         "bonus_socket_application_verified":False,
+         "J_approved_here":False,
+         "new_native_calls":0,"network_calls":0}
+    if type(candidate) is not dict:
+        return out
+    source_ids=candidate.get("selected_G_slot_ids")
+    intrinsic=candidate.get(
+        "selected_intrinsic_socket_count_by_slot_source_only")
+    if (candidate.get("schema")!=
+            "v232_simc_only_one_dps_representative_source_candidate_v1"
+        or candidate.get("game_build")!=game_build
+        or candidate.get("target_ilevel")!=ilevel
+        or type(source_ids) is not dict or type(intrinsic) is not dict
+        or set(source_ids)!=set(intrinsic)
+        or not all(type(i) is int and i>0 for i in source_ids.values())
+        or not all(type(n) is int and 0<=n<=3
+                   for n in intrinsic.values())):
+        return out
+    requested=plan.get("socket_counts") if type(plan) is dict else None
+    if (type(requested) is not dict or
+            not set(requested).issubset(source_ids) or
+            not all(type(n) is int and 0<=n<=16
+                    for n in requested.values())):
+        return out
+    by_slot={}
+    changes={}
+    extras={}
+    for slot in sorted(requested):
+        count=requested[slot]
+        original_id=source_ids[slot]
+        current=rows.get(slot) if type(rows) is dict else None
+        actual_id=(current.get("item_id") if type(current) is dict
+                   else None)
+        same=type(actual_id) is int and actual_id==original_id
+        extra=(max(0,count-intrinsic[slot]) if same else None)
+        if not same:
+            changes[slot]={"v232_item_id":original_id,
+                           "final_user_item_id":actual_id}
+        if extra is not None and extra>0:
+            extras[slot]=extra
+        by_slot[slot]={
+            "v232_item_id":original_id,
+            "final_user_item_id":actual_id,
+            "v232_intrinsic_count_source_only":intrinsic[slot],
+            "declared_profile_socket_count":count,
+            "item_id_unchanged_after_user_selection":same,
+            "additional_socket_count_without_game_proof":extra,
+            "status":("FINAL_USER_ITEM_SOCKET_SOURCE_UNVERIFIED"
+                      if not same else
+                      "DECLARED_ADDITIONAL_SOCKET_UNVERIFIED"
+                      if extra else
+                      "V232_INTRINSIC_COUNTS_ONLY")}
+    return {**out,
+            "status":"ORIGINAL_V232_V271_FINAL_USER_ITEMS_COMPARED_SOURCE_ONLY",
+            "original_same_build_source":True,
+            "by_slot":by_slot,
+            "unverified_extra_by_slot":extras,
+            "user_changed_item_by_slot":changes}
+
+
 def build(user,folder,binary,revision,static_cache_path=None,
           imported_profile_text=None,*,ordinary_variant=None,pure_stage=False,
           independent_334=False,independent_target_level=False,
@@ -1237,6 +1313,12 @@ def build(user,folder,binary,revision,static_cache_path=None,
     if season_extra_socket_item_ids is not None:
         _assert_season_extra_socket_items_unchanged_by_selected_equipment(
             season_extra_socket_item_ids,rows,need)
+    season_socket_origin=(
+        _v232_final_socket_item_source_comparison(
+            candidate=season_physical_one_spec_candidate,
+            plan=season_socket_plan,rows=rows,
+            game_build=actual_season_build,ilevel=ilvl)
+        if season_socket_plan is not None else None)
     # DK user rune is permanent enchant_id, not temporary oil O.
     # The profile and durable cache identity change only for explicit choice.
     admitted_dk_ids=runeforge_mod.RUNE_IDS  # unchanged older sessions only
@@ -1355,7 +1437,7 @@ def build(user,folder,binary,revision,static_cache_path=None,
                    "profile_sha256":hashlib.sha256(profile.encode("utf8")).hexdigest()}
     scenario.normalize(cfg)
     if season_selected_static_cache_path is not None:
-        return _selected_season_profile_budget_preflight(
+        selected_result=_selected_season_profile_budget_preflight(
             user=user,profile=profile,cfg=cfg,rows=rows,
             groups=groups,catalyst=catalyst_origin_rows,
             baseline_rows=original_selected_baseline_rows,
@@ -1366,6 +1448,11 @@ def build(user,folder,binary,revision,static_cache_path=None,
             cache_path=season_selected_static_cache_path,
             season_profile_inputs=season_profile_inputs,
             weapon_layout=weapon_layout,fillers=fillers)
+        if season_socket_origin is not None:
+            selected_result[
+                "v232_final_socket_item_source_comparison_unadmitted"]=(
+                    season_socket_origin)
+        return selected_result
     if season_profile_inputs is not None:
         source_only=season_profile_source_only(
             profile=profile,cfg=cfg,weapon_layout=weapon_layout,user=user,
@@ -1382,6 +1469,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
                 "ordinary_gem_ids":list(season_socket_plan["ordinary_gem_ids"]),
                 "game_socket_legality_verified_here":False,
                 "new_native_calls":0}
+            source_only[
+                "v232_final_socket_item_source_comparison_unadmitted"]=(
+                    season_socket_origin)
         if (season_environment_receipt_path is None and
                 fresh_installed_environment_path is None):
             # Unadmitted observations never write a runnable manifest.
