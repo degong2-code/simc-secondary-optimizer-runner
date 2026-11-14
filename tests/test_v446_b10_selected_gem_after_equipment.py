@@ -91,11 +91,11 @@ class B10SelectedGemAfterEquipment(unittest.TestCase):
         rows["trinket1"]["item_id"]=271000
         self.check(rows)
 
-    def test_no_selected_season_uses_existing_legacy_path(self):
-        # The production caller activates this guard only when
-        # season_socket_plan is present; legacy records remain unchanged.
-        self.assertTrue(callable(
-            bootstrap._assert_season_gem_tokens_unchanged_by_selected_equipment))
+    def test_corrupt_j_snapshot_does_not_silently_match_profile(self):
+        expected=self.expected()
+        expected["head"]=240900  # a numeric value is not a gem_id string
+        with self.assertRaises(bootstrap.UserScenarioBlocked):
+            self.check(self.rows(),expected)
 
 
 if __name__=="__main__":
