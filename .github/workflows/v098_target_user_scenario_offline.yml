@@ -64,6 +64,7 @@ on:
       - tests/test_v098_target_user_scenario_bootstrap.py
       - tests/test_v446_b10_selected_gem_after_equipment.py
       - tests/test_v447_b10_v232_intrinsic_socket_owner_boundaries.py
+      - tests/test_v448_b10_declared_J_owner_scope.py
       - runner/v096_unified_product_entry.py
       - runner/v141_verified_pure_native_pilot.py
       - runner/v091_weapon_oil_external_adapter.py
@@ -108,6 +109,7 @@ jobs:
             tests.test_v098_target_user_scenario_bootstrap \
             tests.test_v446_b10_selected_gem_after_equipment \
             tests.test_v447_b10_v232_intrinsic_socket_owner_boundaries \
+            tests.test_v448_b10_declared_J_owner_scope \
             tests.test_v139_pure_target_profile_composer \
             tests.test_v151_season_catalog_impact_offline \
             tests.test_v143_contract_season_compiler_offline \
