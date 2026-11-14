@@ -4888,6 +4888,128 @@ def _existing_v280_season_socket_item_source(collected, compilation):
         "same_build_source":True}
 
 
+def _existing_v281_season_socket_spell_effect_source(
+        collected, compilation, v280_preview):
+    """Join the already-sealed ORIGINAL v281 SpellEffect rows to v280 hints.
+
+    The v281 producer watches exact *on-use* SpellIDs. A separate spell with
+    the same name (e.g. 1297709) is not silently declared to be triggered by
+    Miasmic on-use 1309820. Effects remain source data, not gameplay logic.
+    """
+    out={"schema":"v216_existing_v281_socket_spell_effect_source_v1",
+         "status":"SAME_BUILD_SOCKET_SPELL_EFFECT_SOURCE_PENDING",
+         "spell_effect_candidates_unadmitted":[],"candidate_count":0,
+         "source_sha256":None,"v281_stage_receipt_sha256":None,
+         "same_build_source":False,"effect_chain_verified":False,
+         "slot_application_verified":False,"j_budget_admitted":False,
+         "environment_ready":False,"new_native_calls":0,"network_calls":0}
+    if (type(collected) is not dict or type(compilation) is not dict or
+        type(v280_preview) is not dict or
+        v280_preview.get("same_build_source") is not True or
+        v280_preview.get("candidate_count",0)==0):
+        return out
+    entry=collected.get("fresh_consumable_simc_effect_relation") or {}
+    stage=entry.get("source_stage") or {}
+    if (entry.get("status")!="SIMC_CONSUMABLE_RELATIONS_SOURCE_ONLY"
+        or stage.get("status") not in
+            ("EXECUTED_AND_SEALED","REUSED_VERIFIED","RECOVERED_VERIFIED")
+        or type(stage.get("receipt_sha256")) is not str or
+        season_budget_contract.SHA.fullmatch(
+            stage["receipt_sha256"]) is None):
+        return out
+    root=pathlib.Path(compilation.get("stage_root") or "").resolve()
+    filename=entry.get("candidate_path")
+    need(type(filename) is str and bool(filename) and root.is_dir() and
+         not root.is_symlink(),"V216_SOCKET_V281_STAGE_ROOT_REQUIRED")
+    candidate=pathlib.Path(filename)
+    need(candidate.is_file() and not candidate.is_symlink()
+         and candidate.resolve().is_relative_to(root)
+         and candidate.resolve().parent==root/"source"
+         and 0<candidate.stat().st_size<=5_000_000,
+         "V216_SOCKET_V281_SEALED_CANDIDATE_REQUIRED")
+    stage_id=stage.get("stage_id")
+    need(stage_id in ("fresh-consumable-simc-spell-effect-source",
+                      "fresh-consumable-simc-spell-effect-source-other"),
+         "V216_SOCKET_V281_STAGE_ID_DRIFT")
+    receipt=stage_engine._read_receipt(
+        root/".stage_receipts"/(stage_id+".json"))
+    relative=(stage.get("output_paths") or {}).get("candidate")
+    need(type(relative) is str and
+         receipt.get("stage_id")==stage_id
+         and receipt.get("stage_version")==stage.get("stage_version")
+         and receipt.get("receipt_sha256")==stage["receipt_sha256"]
+         and receipt.get("status")=="COMPLETE"
+         and receipt.get("output_paths",{}).get("candidate")==relative
+         and (root/relative).resolve()==candidate.resolve(),
+         "V216_SOCKET_V281_ORIGINAL_RECEIPT_DRIFT")
+    raw=candidate.read_bytes()
+    need(receipt.get("outputs",{}).get("candidate",{}).get("sha256")==
+         digest(raw),"V216_SOCKET_V281_ORIGINAL_OUTPUT_SHA_DRIFT")
+    doc=json.loads(raw)
+    build=collected.get("expected_game_build")
+    meta=doc.get("simc_relation_source") or {}
+    need(doc.get("schema")==consumable_item_candidates.SCHEMA
+         and doc.get("source",{}).get("wago_snapshot_build")==build
+         and doc.get("item_use_spell_join",{}).get("schema")==
+             item_spell_bridge.SCHEMA
+         and doc.get("item_use_spell_join",{}).get("game_build")==build
+         and meta.get("schema")==consumable_simc_relation.SCHEMA
+         and meta.get("game_build")==build
+         and doc.get("automatic_ui_promotion") is False
+         and type(doc.get("items")) is list
+         and len(doc["items"])<=50000,
+         "V216_SOCKET_V281_SAME_BUILD_RELATION_DRIFT")
+    by_id={row["item_id"]:row for row in doc["items"]
+           if type(row) is dict and type(row.get("item_id")) is int}
+    hints=v280_preview["physical_candidates_unadmitted"]
+    need(len(by_id)==len(doc["items"])
+         and type(hints) is list
+         and len(hints)==v280_preview["candidate_count"],
+         "V216_SOCKET_V281_ITEM_COVERAGE_DRIFT")
+    results=[]
+    for hint in hints:
+        iid=hint["physical_item_id"]
+        item=by_id.get(iid)
+        need(item is not None
+             and item.get("kind")=="item_enhancement"
+             and item.get("ui_selectable") is False
+             and item.get("name_enUS")==hint["name_from_same_build"]
+             and item.get("item_effect_source",{}).get(
+                 "on_use_spell_ids")==hint["observed_on_use_spell_ids"],
+             "V216_SOCKET_V281_V280_ITEM_USE_DRIFT")
+        effect=item.get("spell_effect_source") or {}
+        rows=effect.get("observed_spell_effects")
+        need(type(rows) is list and
+             effect.get("on_use_spell_ids")==hint["observed_on_use_spell_ids"]
+             and all(type(row) is dict
+                     and type(row.get("spell_id")) is int
+                     and row["spell_id"] in hint["observed_on_use_spell_ids"]
+                     and type(row.get("effect")) is int
+                     and type(row.get("enchant_id")) is int
+                     and type(row.get("effect_index")) is int
+                     and type(row.get("difficulty_id")) is int
+                     for row in rows),
+             "V216_SOCKET_V281_SPELL_EFFECT_ROWS_DRIFT")
+        results.append({
+            "physical_item_id":iid,
+            "on_use_spell_ids":list(hint["observed_on_use_spell_ids"]),
+            "observed_source_effect_rows":[{
+                "spell_id":row["spell_id"],"effect":row["effect"],
+                "effect_misc_value_0":row["enchant_id"],
+                "effect_index":row["effect_index"],
+                "difficulty_id":row["difficulty_id"]}
+                for row in rows],
+            "source_only":True,
+            "game_socket_legal_verified":False,
+            "triggered_effect_spell_link_verified":False})
+    return {**out,"status":"SAME_BUILD_V281_SOCKET_SPELL_EFFECTS_UNADMITTED",
+            "spell_effect_candidates_unadmitted":results,
+            "candidate_count":len(results),
+            "source_sha256":digest(raw),
+            "v281_stage_receipt_sha256":stage["receipt_sha256"],
+            "same_build_source":True}
+
+
 def _fresh_attach_existing_v280_socket_preview(*, collected,
                                                compilation, progress,
                                                selected_roles, socket_total):
@@ -4904,6 +5026,13 @@ def _fresh_attach_existing_v280_socket_preview(*, collected,
         collected,compilation)
     progress["existing_v280_socket_item_source_unadmitted"]=preview
     compilation["existing_v280_socket_item_source_unadmitted"]=preview
+    # v281 is already collected as part of the same normal Build for F/O.
+    # Read only its sealed candidate; never start another Wago or Native
+    # job for B10. Missing evidence remains PENDING.
+    effects=_existing_v281_season_socket_spell_effect_source(
+        collected,compilation,preview)
+    progress["existing_v281_socket_spell_source_unadmitted"]=effects
+    compilation["existing_v281_socket_spell_source_unadmitted"]=effects
     return preview
 
 
@@ -5122,6 +5251,7 @@ def _fresh_selected_J_intrinsic_socket_source(*, collected, preflight,
     base_compat=_fresh_declared_four_ordinary_base_compatibility(
         layout=layout,extra=extra)
     hints=compilation.get("existing_v280_socket_item_source_unadmitted")
+    spells=compilation.get("existing_v281_socket_spell_source_unadmitted")
     # Connect the existing item→use spell source to the precise J pending
     # boundary, without treating it as same-season in-game applicability.
     socket_source=(
@@ -5132,8 +5262,19 @@ def _fresh_selected_J_intrinsic_socket_source(*, collected, preflight,
          "same_build_source":hints.get("same_build_source"),
          "game_socket_legal_verified":False}
         if extra and type(hints) is dict else None)
+    spell_source=(
+        {"status":spells.get("status"),
+         "v281_stage_receipt_sha256":spells.get(
+             "v281_stage_receipt_sha256"),
+         "candidate_count":spells.get("candidate_count"),
+         "same_build_source":spells.get("same_build_source"),
+         "effect_chain_verified":False,
+         "game_socket_legal_verified":False}
+        if extra and type(spells) is dict else None)
     return {**out,
             "socket_item_source_only_for_unverified_additions":socket_source,
+            "socket_spell_effect_source_only_for_unverified_additions":
+                spell_source,
             "status":("J_ADDITIONAL_SOCKET_SOURCE_PROOF_PENDING"
                       if extra and not base_compat else
                       "J_SIMC_DECLARED_FULL_GEM_PROFILE_SOURCE_ONLY"
