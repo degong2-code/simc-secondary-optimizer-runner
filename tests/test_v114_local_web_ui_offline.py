@@ -1128,7 +1128,15 @@ eval(context+raw.slice(start,end)+"\n"+test);
         r=self.client.get("/api/v1/options",headers=self.head)
         self.assertEqual(r.status_code,200)
         options=r.json()
-        self.assertEqual(set(options),{"food","potion","augmentation","diamond_id","omnium_talents","display_labels","embellishments"})
+        self.assertEqual(set(options),{"food","potion","augmentation","diamond_id","omnium_talents","display_labels","embellishments","current_season_product_choices"})
+        selected=options["current_season_product_choices"]
+        self.assertEqual(selected["status"],
+                         "NONDEFAULT_UNADMITTED_UNTIL_VERIFIED_SEASON_BINDING")
+        self.assertEqual(selected["source_default_simc_token"],"disabled")
+        self.assertFalse(selected["nondefault_user_selectable"])
+        for kind in ("food","potion","augmentation"):
+            self.assertEqual(selected[kind],["source_default"])
+            self.assertGreater(len(options[kind]),len(selected[kind]))
         self.assertEqual(options["diamond_id"],[0,240967,240983])
         self.assertEqual(len(options["omnium_talents"]),16)
         self.assertIn("136822:1/136823:1/136817:1/136820:1/136814:1",
