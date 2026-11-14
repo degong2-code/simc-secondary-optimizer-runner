@@ -146,7 +146,8 @@ const names = {
 const state = { token:"", defaults:[], allowedRacesBySpec:{}, seasonGear:null, dkRuneIds:new Set(), oilLoadouts:[], oilCatalog:null, eagleApproved:false, session:"", running:false,
                 longrunEnabled:false, longrunResultReady:false,
                 longrunCompleted:false,
-                busy:false, options:null, pollTimer:null, pollBusy:false,
+                busy:false, options:null, verifiedInstalledBuildFromThisPage:null,
+                pollTimer:null, pollBusy:false,
                 pollFailures:0, nextPollAt:0 };
 const number = (value,decimals=0) =>
   typeof value==="number" && Number.isFinite(value) ?
@@ -1473,7 +1474,8 @@ function buildRequest() {
                  current_season_product:true};
   // Explicit Build UI selection binds the following session to that exact
   // ALREADY INSTALLED season. This never asks v216 to collect fresh sources.
-  const installedBuild=field("season-game-build");
+  const installedBuild=field("season-game-build") ||
+    state.verifiedInstalledBuildFromThisPage;
   if(installedBuild) {
     if(!/^\d+(?:\.\d+){3}$/.test(installedBuild))
       throw Error("설치 시즌 게임 빌드 형식이 올바르지 않습니다.");
@@ -1936,6 +1938,27 @@ function beginSeasonBuildActivity() {
   const clock=window.setInterval(redraw,1000);
   return ()=>{window.clearInterval(clock);section.hidden=true;};
 }
+// Bind only a freshly verified, installed current-Retail response to the
+// next user run. A local oil catalogue or last season's folder is not a
+// current-build authority. Keep the optional build input EMPTY so future
+// season builds still discover the latest Retail version.
+function rememberVerifiedSeasonBuildForRun(report) {
+  state.verifiedInstalledBuildFromThisPage=null;
+  const scope=report?.web_environment_scope;
+  const build=scope?.game_build;
+  if(field("season-game-build") ||
+     scope?.environment_ready!==true ||
+     scope?.environment_installed!==true ||
+     scope?.active_season_reverified_in_this_lookup!==true ||
+     report?.verified_v113_profile_source_restored===false ||
+     typeof build!=="string" ||
+     !/^\d+(?:\.\d+){3}$/.test(build) ||
+     (typeof report?.installed_source_game_build==="string" &&
+      report.installed_source_game_build!==build))
+    return false;
+  state.verifiedInstalledBuildFromThisPage=build;
+  return true;
+}
 async function buildSeasonEnvironment(forUserVariant=false) {
   const supplied_build=field("season-game-build");
   if(supplied_build&&!/^\d+(?:\.\d+){3}$/.test(supplied_build))
@@ -2054,6 +2077,9 @@ async function buildSeasonEnvironment(forUserVariant=false) {
         " 선택한 기름의 스케일링 값은 기존 실행 캐시를 먼저 재사용하고, 필요한 손에만 SimC 측정을 수행합니다.":
         " 선택한 기름이 없으므로 SimC 원본 확인만 수행하며 O Native는 실행하지 않습니다."):"")))
     return;
+  // A new build attempt revokes a previous implicit current-build bind.
+  // A failed/PENDING response must never reuse an earlier READY build.
+  state.verifiedInstalledBuildFromThisPage=null;
   $("season-build-stage").textContent="시즌 환경 요청 처리 중 · 응답을 받으면 원본 단계 결과를 구분해서 표시합니다…";
   if(forUserVariant) $("user-variant-status").textContent=
     "선택한 개별 구성의 시즌 원본·J/F/O 예산 재검증 요청 중…";
@@ -2078,6 +2104,7 @@ async function buildSeasonEnvironment(forUserVariant=false) {
     lastSeasonDiagnosticReceipt=compactSeasonBuildReceipt(report,forUserVariant);
     $("season-diagnostic-copy-btn").disabled=false;
     showSeasonEnvironmentBuild(report,forUserVariant);
+    rememberVerifiedSeasonBuildForRun(report);
     if(forUserVariant) $("user-variant-status").textContent=(
       report.web_environment_scope?.environment_ready===true?
         "선택 구성의 J/F/O와 G/B/T 검증 설치 완료 · 최적화 단계에서도 같은 구성·SHA를 재확인합니다.":
@@ -2811,6 +2838,10 @@ function registerHandlers() {
   $("ilevel").addEventListener("change",()=>withBusy(refreshInstalledOilLoadouts));
   $("season-target-ilevel").addEventListener("change",()=>
     withBusy(refreshInstalledOilLoadouts));
+  $("season-game-build").addEventListener("input",()=>{
+    // A manual edit supersedes the earlier auto-discovered season binding.
+    state.verifiedInstalledBuildFromThisPage=null;
+  });
   $("season-game-build").addEventListener("change",()=>
     withBusy(refreshInstalledOilLoadouts));
   $("plan-btn").addEventListener("click",()=>withBusy(async()=>{

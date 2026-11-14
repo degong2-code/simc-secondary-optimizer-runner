@@ -831,6 +831,78 @@ eval(context+raw.slice(start,end)+"\n"+test);
         self.assertIn("WEB_PRIMARY_VERIFIED_SEASON_INSTALL_REQUIRED",js)
         self.assertNotIn("data.environment_ready=true",js)
 
+    def test_v458_verified_retail_build_binds_run_but_not_season_refresh(self):
+        """Execute real JS: READY+fresh Retail only, no stale-build guesses."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:
+            self.skipTest("node is not installed on this runner")
+        source=ROOT/"runner/webui/app.js"
+        code=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const a=raw.indexOf("function rememberVerifiedSeasonBuildForRun(report) {");
+const b=raw.indexOf("async function buildSeasonEnvironment(",a);
+const c=raw.indexOf("  const installedBuild=field(\"season-game-build\")",b);
+const d=raw.indexOf("  if(Object.keys(exactOils).length)",c);
+assert(a>=0&&b>a&&c>b&&d>c,"actual build result/run request JS required");
+let manual="";
+const state={verifiedInstalledBuildFromThisPage:null};
+const field=id=>{assert.strictEqual(id,"season-game-build");return manual;};
+const remember=Function("state","field",raw.slice(a,b)+
+  "return rememberVerifiedSeasonBuildForRun;")(state,field);
+const getRunBuild=Function("state","field","request",raw.slice(c,d)+
+  "return request.installed_season_game_build ?? null;");
+const run=()=>getRunBuild(state,field,{});
+const scope={game_build:"12.1.5.70783",environment_ready:true,
+  environment_installed:true,active_season_reverified_in_this_lookup:true};
+const ready={web_environment_scope:scope,
+  installed_source_game_build:"12.1.5.70783",
+  verified_v113_profile_source_restored:true};
+assert.strictEqual(run(),null,"no auto pin before explicit season check");
+assert.strictEqual(remember({...ready,web_environment_scope:
+  {...scope,environment_ready:false}}),false);
+assert.strictEqual(run(),null);
+assert.strictEqual(remember({...ready,web_environment_scope:
+  {...scope,environment_installed:false}}),false);
+assert.strictEqual(run(),null);
+assert.strictEqual(remember({...ready,web_environment_scope:
+  {...scope,active_season_reverified_in_this_lookup:false}}),false);
+assert.strictEqual(run(),null,"past local install is not fresh Retail");
+assert.strictEqual(remember({...ready,
+  verified_v113_profile_source_restored:false}),false);
+assert.strictEqual(run(),null,"budget READY without saved profile not admitted");
+assert.strictEqual(remember({...ready,
+  installed_source_game_build:"12.1.5.70782"}),false);
+assert.strictEqual(run(),null,"receipt and resolved build mismatch");
+assert.strictEqual(remember({...ready,web_environment_scope:
+  {...scope,game_build:"untrusted"}}),false);
+assert.strictEqual(remember(ready),true);
+assert.strictEqual(run(),"12.1.5.70783");
+assert.strictEqual(manual,"","do not pin the season-build text field");
+// Cold source compile also persists a profile; it need not carry the
+// reuse-specific restored-profile boolean.
+assert.strictEqual(remember({...ready,
+  verified_v113_profile_source_restored:undefined}),true);
+assert.strictEqual(run(),"12.1.5.70783");
+manual="12.1.5.70781";
+assert.strictEqual(remember(ready),false);
+assert.strictEqual(run(),"12.1.5.70781","explicit user build wins");
+manual="";
+assert.strictEqual(run(),null);
+assert(raw.includes("state.verifiedInstalledBuildFromThisPage=null;"));
+assert(raw.includes('    rememberVerifiedSeasonBuildForRun(report);'));
+assert(raw.includes('  const game_build=supplied_build||null;'),
+  "future season-build must still discover current Retail when field blank");
+console.log("V458_VERIFIED_RETAIL_BUILD_RUN_BINDING_PASS");
+"""
+        result=subprocess.run(
+            [node,"-e",code,str(source)],
+            capture_output=True,text=True,timeout=20,check=False)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V458_VERIFIED_RETAIL_BUILD_RUN_BINDING_PASS",
+                      result.stdout)
+
     def test_environment_build_surface_is_not_optimizer_plan(self):
         page=self.client.get("/").text
         js=self.client.get("/assets/app.js").text
