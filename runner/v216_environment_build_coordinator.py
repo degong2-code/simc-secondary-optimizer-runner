@@ -4972,6 +4972,33 @@ def _fresh_default_intrinsic_gem_layout_from_source(*, collected,
     return layout
 
 
+def _fresh_declared_four_ordinary_base_compatibility(*, layout, extra):
+    """Preserve the established four-ordinary BASE, never approve extra USER J.
+
+    The SimC-declared profile is not physical socket legality evidence.
+    Only the existing four distinct ordinary-gem default may reuse this
+    compatibility path when v232 intrinsic sockets are insufficient.
+    Any special gem or fifth+ socket needs an original source proof.
+    """
+    if type(layout) is not dict or type(extra) is not dict:
+        return False
+    ordinary=layout.get("ordinary_gem_ids")
+    counts=layout.get("socket_counts")
+    return (layout.get("simc_declared_full_socket_policy")==
+                "FULL_GEM_ID_PROFILE_SIMC_OWNS"
+            and layout.get("special_gem_id") is None
+            and layout.get("special_slot") is None
+            and layout.get("socket_total")==4
+            and layout.get("ordinary_count")==4
+            and type(ordinary) is list and len(ordinary)==4
+            and len(set(ordinary))==4
+            and all(type(i) is int and i>0 for i in ordinary)
+            and type(counts) is dict
+            and sum(counts.values())==4
+            and bool(extra)
+            and all(type(n) is int and n>0 for n in extra.values()))
+
+
 def _fresh_selected_J_intrinsic_socket_source(*, collected, preflight,
                                                compilation):
     """Join already sealed v232 intrinsic sockets to v271, never approve J."""
@@ -5043,11 +5070,14 @@ def _fresh_selected_J_intrinsic_socket_source(*, collected, preflight,
     declared=layout.get("simc_declared_full_socket_policy")
     need(declared in (None,"FULL_GEM_ID_PROFILE_SIMC_OWNS"),
          "V216_J_SIMC_DECLARED_SOCKET_POLICY_INVALID")
+    base_compat=_fresh_declared_four_ordinary_base_compatibility(
+        layout=layout,extra=extra)
     return {**out,
-            "status":("J_SIMC_DECLARED_FULL_GEM_PROFILE_SOURCE_ONLY"
+            "status":("J_ADDITIONAL_SOCKET_SOURCE_PROOF_PENDING"
+                      if extra and not base_compat else
+                      "J_SIMC_DECLARED_FULL_GEM_PROFILE_SOURCE_ONLY"
                       if declared else
-                      "J_INTRINSIC_COUNTS_BOUND_SOURCE_ONLY" if not extra else
-                      "J_ADDITIONAL_SOCKET_SOURCE_PROOF_PENDING"),
+                      "J_INTRINSIC_COUNTS_BOUND_SOURCE_ONLY"),
             "intrinsic_socket_counts_by_slot":dict(counts),
             "additional_socket_proof_required_by_slot":extra,
             "v232_stage_receipt_sha256":stage["receipt_sha256"],
@@ -5528,9 +5558,11 @@ def _fresh_source_owner_original_J_F_components(*, preflight, compilation,
             and (socket.get("additional_socket_proof_required_by_slot")=={}
                  or (socket.get("status")==
                      "J_SIMC_DECLARED_FULL_GEM_PROFILE_SOURCE_ONLY" and
-                     (compilation.get("physical_gem_layout_unadmitted")
-                      or {}).get("simc_declared_full_socket_policy")==
-                         "FULL_GEM_ID_PROFILE_SIMC_OWNS"))
+                     _fresh_declared_four_ordinary_base_compatibility(
+                         layout=compilation.get(
+                             "physical_gem_layout_unadmitted"),
+                         extra=socket.get(
+                             "additional_socket_proof_required_by_slot"))))
             and socket.get("observed_J_unadmitted")==j.get("rating")
             and type(socket.get("v232_stage_receipt_sha256")) is str and
             season_budget_contract.SHA.fullmatch(
