@@ -1462,7 +1462,7 @@ assert(buildA>=0&&buildB>buildA&&levelA>=0&&levelB>levelA);
 const events={},calls=[];
 const $=id=>({addEventListener(name,callback){events[id+":"+name]=callback;}});
 const state={verifiedInstalledBuildFromThisPage:"12.1.5.70783",
-             running:false,longrunResultReady:false};
+             seasonOptionRequestEpoch:0,running:false,longrunResultReady:false};
 const renderSeasonOptionCatalog=v=>calls.push(v);
 const buttonState=()=>{};
 Function("state","$","renderSeasonOptionCatalog","buttonState",
@@ -1471,9 +1471,13 @@ Function("state","$","renderSeasonOptionCatalog","buttonState",
 events["season-game-build:input"]();
 assert.strictEqual(state.verifiedInstalledBuildFromThisPage,null);
 assert.deepStrictEqual(calls,[null],"build edit revokes prior E and DK");
+assert.strictEqual(state.seasonOptionRequestEpoch,1,
+    "build edit invalidates in-flight option catalogue");
 state.verifiedInstalledBuildFromThisPage="12.1.5.70783";
 events["ilevel:input"]();
 assert.deepStrictEqual(calls,[null,null],"ilevel edit revokes prior E and DK");
+assert.strictEqual(state.seasonOptionRequestEpoch,2,
+    "ilevel edit invalidates in-flight option catalogue");
 assert.strictEqual(state.verifiedInstalledBuildFromThisPage,"12.1.5.70783",
     "ilevel edit does not silently change pinned build identity");
 // v467 executes renderSeasonOptionCatalog(null) and proves it clears
@@ -1579,6 +1583,70 @@ console.log("V467_FRESH_DK_RUNES_NO_ENCHANT_APPROVAL_PASS");
         self.assertIn("catalog.automatic_admission?.approved_count===0",js)
         self.assertIn('catalog.source_scope!=="VERIFIED_INSTALLED_V212_OPTION_CATALOG"',js)
 
+    def test_v474_stale_installed_option_response_cannot_restore_old_approval(self):
+        """Use actual async JS: edits and newer restores supersede stale SHA replies."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:
+            self.skipTest("node is not installed on this runner")
+        source=ROOT/"runner/webui/app.js"
+        code=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const a=raw.indexOf("async function restoreInstalledSeasonOptionCatalog(inputs) {");
+const b=raw.indexOf("async function restore(id) {",a);
+assert(a>=0&&b>a);
+const pending=[],rendered=[];
+const state={seasonOptionRequestEpoch:0};
+const api=url=>new Promise(resolve=>pending.push({url,resolve}));
+const renderSeasonOptionCatalog=v=>rendered.push(v);
+const load=Function("state","api","renderSeasonOptionCatalog",
+  raw.slice(a,b)+"return restoreInstalledSeasonOptionCatalog;")(
+  state,api,renderSeasonOptionCatalog);
+const sha="a".repeat(64),build="12.1.5.70783";
+const base={current_season_product:true,
+  installed_season_game_build:build,
+  installed_manifest_sha256:sha,user:{target:{ilevel:334}}};
+const valid={schema:"v196_current_season_ui_catalog_v1",
+  status:"SOURCE_COMBINED_WITH_CLEAR_APPROVAL_BOUNDARY",
+  source_scope:"VERIFIED_INSTALLED_V212_OPTION_CATALOG",
+  installed_manifest_sha256:sha,season_build:build};
+(async()=>{
+  const older=load(base);
+  assert.strictEqual(pending.length,1);
+  // Mimic the registered v473 build/ilevel input handler: revoke immediately.
+  state.seasonOptionRequestEpoch++;
+  renderSeasonOptionCatalog(null);
+  pending[0].resolve(valid);
+  await older;
+  assert.deepStrictEqual(rendered,[null,null],
+    "stale async reply cannot re-authorize old E or DK choices");
+  const first=load(base), second=load(base);
+  assert.strictEqual(pending.length,3);
+  pending[2].resolve(valid);
+  await second;
+  assert.strictEqual(rendered.at(-1),valid,
+    "latest verified sealed source can populate its own choices");
+  pending[1].resolve({...valid,installed_manifest_sha256:"b".repeat(64)});
+  await first;
+  assert.strictEqual(rendered.at(-1),valid,
+    "older restore cannot revoke the newer valid choice");
+  const third=load(base), fourth=load(base);
+  pending[4].resolve(valid);
+  await fourth;
+  pending[3].resolve(null);
+  await third;
+  assert.strictEqual(rendered.at(-1),valid,
+    "older failed request cannot clear newer verified options");
+  console.log("V474_STALE_OPTIONS_RESPONSE_IGNORED_PASS");
+})().catch(e=>{console.error(e);process.exitCode=1;});
+"""
+        result=subprocess.run([node,"-e",code,str(source)],
+            capture_output=True,text=True,timeout=20,check=False)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V474_STALE_OPTIONS_RESPONSE_IGNORED_PASS",
+                      result.stdout)
+
     def test_v463_sealed_rune_options_reloaded_before_saved_rune_ids(self):
         """Execute actual JS; never reuse packaged DK rune IDs on restore."""
         import shutil,subprocess
@@ -1596,9 +1664,10 @@ let reply=null;
 const events=[], calls=[];
 const api=async url=>{calls.push(url);return reply;};
 const renderSeasonOptionCatalog=data=>events.push(data);
-const load=Function("api","renderSeasonOptionCatalog",
+const state={seasonOptionRequestEpoch:0};
+const load=Function("state","api","renderSeasonOptionCatalog",
   raw.slice(a,b)+"return restoreInstalledSeasonOptionCatalog;")(
-  api,renderSeasonOptionCatalog);
+  state,api,renderSeasonOptionCatalog);
 const sha="a".repeat(64),build="12.1.5.70783";
 const input={current_season_product:true,
   installed_season_game_build:build,

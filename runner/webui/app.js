@@ -147,7 +147,7 @@ const state = { token:"", defaults:[], allowedRacesBySpec:{}, seasonGear:null, d
                 longrunEnabled:false, longrunResultReady:false,
                 longrunCompleted:false,
                 busy:false, options:null, verifiedInstalledBuildFromThisPage:null,
-                budgetPreviewDirty:false,
+                budgetPreviewDirty:false, seasonOptionRequestEpoch:0,
                 pollTimer:null, pollBusy:false,
                 pollFailures:0, nextPollAt:0 };
 const number = (value,decimals=0) =>
@@ -2583,6 +2583,9 @@ async function restoreInstalledSeasonGearChoices(inputs) {
 // the same choice. Source failure leaves read-only history and no new approval.
 async function restoreInstalledSeasonOptionCatalog(inputs) {
   if(inputs?.current_season_product!==true)return;
+  // Only the latest source-bound request can publish option approvals.
+  // A user edit or another restore invalidates all older async replies.
+  const requestEpoch=++state.seasonOptionRequestEpoch;
   const build=inputs.installed_season_game_build;
   const sha=inputs.installed_manifest_sha256;
   const level=inputs.user?.target?.ilevel;
@@ -2594,6 +2597,7 @@ async function restoreInstalledSeasonOptionCatalog(inputs) {
     const catalog=await api("/api/v1/season-option-catalog?game_build="+
       encodeURIComponent(build)+"&target_ilevel="+level+
       "&installed_manifest_sha256="+sha);
+    if(requestEpoch!==state.seasonOptionRequestEpoch)return;
     const freshUnapproved=
       catalog.status==="FRESH_SEASON_CANDIDATES_UNAPPROVED_NOT_ENVIRONMENT_READY" &&
       catalog.new_approval_granted===false &&
@@ -2609,7 +2613,8 @@ async function restoreInstalledSeasonOptionCatalog(inputs) {
       throw Error("RESTORED_SEASON_OPTION_SOURCE_NOT_VERIFIED");
     renderSeasonOptionCatalog(catalog);
   }catch(error){
-    renderSeasonOptionCatalog(null);
+    if(requestEpoch===state.seasonOptionRequestEpoch)
+      renderSeasonOptionCatalog(null);
   }
 }
 async function restore(id) {
@@ -3070,6 +3075,7 @@ function registerHandlers() {
   $("race").addEventListener("change",()=>buttonState(state.running,state.longrunResultReady));
   $("ilevel").addEventListener("input",()=>{
     // Slot masks and enchant source approval also belong to target ilvl.
+    state.seasonOptionRequestEpoch++;
     renderSeasonOptionCatalog(null);
     buttonState(state.running,state.longrunResultReady);
   });
@@ -3080,6 +3086,8 @@ function registerHandlers() {
   $("season-game-build").addEventListener("input",()=>{
     // A manual edit supersedes the earlier auto-discovered season binding.
     state.verifiedInstalledBuildFromThisPage=null;
+    // An in-flight installed option catalogue cannot re-approve the old build.
+    state.seasonOptionRequestEpoch++;
     // A different build cannot keep an older rune or permanent-enchant
     // selection approved before the new installed source is restored.
     renderSeasonOptionCatalog(null);
