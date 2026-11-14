@@ -5023,6 +5023,13 @@ def _fresh_selected_J_intrinsic_socket_source(*, collected, preflight,
          and source.get("added_socket_bonus_and_game_permission_not_proven")
              is True,
          "V216_J_V232_ORIGINAL_SEALED_SOURCE_DRIFT")
+    # A user-declared gem slot must belong to the same sealed representative
+    # inventory. SimC can apply gem_id to an invented slot; that is NOT a
+    # game socket or J source. Existing intrinsic/bonus counts are unchanged.
+    need(set(layout["socket_counts"]).issubset(counts) and
+         all(type(n) is int and 0<=n<=3
+             for n in layout["socket_counts"].values()),
+         "V216_J_V232_SELECTED_SOCKET_SLOT_OUTSIDE_ORIGINAL")
     extra={slot:n-counts.get(slot,0)
            for slot,n in sorted(layout["socket_counts"].items())
            if n>counts.get(slot,0)}
