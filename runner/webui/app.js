@@ -2652,11 +2652,39 @@ function renderSeasonOptionCatalog(catalog) {
   host.replaceChildren();
   if(catalog?.schema==="v196_current_season_ui_catalog_v1" &&
      catalog.status==="FRESH_SEASON_CANDIDATES_UNAPPROVED_NOT_ENVIRONMENT_READY") {
-    // New-season v213 enchant rows are candidates, not approved options.
-    // The verified DK runes above come from the separate installed v212
-    // source; do not transfer candidate E or historic 7967 privileges.
+    // Fresh v213 item rows remain candidates. A verified *installed*
+    // policy-A registry can exist separately, but its v212 publication
+    // does NOT supply the per-stat E vector/runtime profile binding.
+    const registration=catalog.verified_installed_enchant_registrations;
+    const rows=registration?.status===
+      "INSTALLED_POLICY_A_REGISTRATIONS_RUNTIME_BINDING_PENDING" &&
+      registration.runtime_selectable===false &&
+      registration.new_approval_granted===false &&
+      registration.installed_manifest_sha256===catalog.installed_manifest_sha256 &&
+      catalog.source_scope==="VERIFIED_INSTALLED_V212_OPTION_CATALOG" &&
+      Array.isArray(registration.items)?registration.items:[];
     status.textContent="이번 시즌 마법부여 원본 후보는 미승인 상태입니다. "+
-      "검증된 직업 룬만 선택할 수 있으며 일반 마부는 잠금 유지.";
+      "검증된 직업 룬만 선택할 수 있으며 일반 마부는 잠금 유지."+
+      (rows.length?" · 설치에 등록된 영구 마부 "+
+       rows.length+"종은 E·최종 프로필 연결 전까지 실행 선택 불가":"");
+    if(rows.length) {
+      const details=document.createElement("details");
+      details.className="catalog-source-group";
+      const summary=document.createElement("summary");
+      summary.textContent="설치 검증 등록 "+rows.length+
+        "종 · 최종 프로필 적용 대기 (신규 승인 아님)";
+      details.appendChild(summary);
+      const list=document.createElement("ul");
+      for(const item of rows) {
+        const li=document.createElement("li");
+        li.textContent="마부 #"+item.enchant_id+" · "+
+          item.slot+" · 최고 검증 등급 "+item.highest_verified_quality_rank+
+          " · E 벡터·SimC 적용 미연결 (선택 불가)";
+        list.appendChild(li);
+      }
+      details.appendChild(list);
+      host.appendChild(details);
+    }
     return;
   }
   if(catalog?.schema!=="v196_current_season_ui_catalog_v1" ||

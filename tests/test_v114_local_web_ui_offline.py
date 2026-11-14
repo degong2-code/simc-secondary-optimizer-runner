@@ -1414,20 +1414,31 @@ const begin=raw.indexOf("function renderSeasonOptionCatalog(catalog) {");
 const end=raw.indexOf("function installOptions(options) {",begin);
 assert(begin>=0&&end>begin);
 const elements={};
-const $=id=>elements[id]??={options:[],textContent:"",disabled:false,
-  replaceChildren(...items){this.options=items;},
-  appendChild(item){this.options.push(item);}};
+const $=id=>elements[id]??={options:[],children:[],textContent:"",disabled:false,
+  replaceChildren(...items){this.options=items;this.children=[];},
+  appendChild(item){this.children.push(item);this.options.push(item);}};
 const option=(value,label)=>({value:String(value),textContent:label});
 let compatibility=0;
 const runeCompatibility=()=>compatibility++;
 const state={dkRuneIds:new Set([999]),eagleApproved:true};
+const document={createElement(tag){return {tag,children:[],textContent:"",
+   appendChild(item){this.children.push(item);}};}};
 const render=Function("state","$","option","runeCompatibility","document",
  raw.slice(begin,end)+"return renderSeasonOptionCatalog;")(
- state,$,option,runeCompatibility,{});
+ state,$,option,runeCompatibility,document);
 const installed={
   schema:"v196_current_season_ui_catalog_v1",
   status:"FRESH_SEASON_CANDIDATES_UNAPPROVED_NOT_ENVIRONMENT_READY",
   enchant_candidates:{selectable_count:0},
+  source_scope:"VERIFIED_INSTALLED_V212_OPTION_CATALOG",
+  installed_manifest_sha256:"a".repeat(64),
+  verified_installed_enchant_registrations:{
+    status:"INSTALLED_POLICY_A_REGISTRATIONS_RUNTIME_BINDING_PENDING",
+    installed_manifest_sha256:"a".repeat(64),
+    runtime_selectable:false,new_approval_granted:false,
+    items:[{enchant_id:91234,slot:"boots",
+       simc_token:"enchant_boots__example",
+       highest_verified_quality_rank:3}]},
   verified_weapon_enhancements:{dk_runeforges:{
     status:"PINNED_DK_RUNES_INSTALLED",
     items:[{enchant_id:3370,class:"deathknight",display_name:"검증 룬",
@@ -1442,6 +1453,15 @@ assert.strictEqual(state.eagleApproved,false);
 assert.strictEqual($("season_enchant_finger1").disabled,true);
 assert.strictEqual($("season_enchant_finger1").options.length,1);
 assert($("season-option-catalog-status").textContent.includes("미승인"));
+assert($("season-option-catalog-status").textContent.includes("실행 선택 불가"));
+assert.strictEqual($("season-enchant-groups").children.length,1);
+assert($("season-enchant-groups").children[0].children[1].children[0]
+  .textContent.includes("E 벡터"));
+render({...installed,verified_installed_enchant_registrations:{
+  ...installed.verified_installed_enchant_registrations,
+  installed_manifest_sha256:"b".repeat(64)}});
+assert.strictEqual($("season-enchant-groups").children.length,0,
+  "wrong v212 SHA cannot register a new-season option");
 render(null);
 assert.strictEqual(state.dkRuneIds.size,0);
 assert.strictEqual(state.eagleApproved,false);

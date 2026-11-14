@@ -58,6 +58,10 @@ class LocalWebAPIOffline(unittest.TestCase):
              "source_catalog_artifact_sha256":"c"*64,
              "source_catalog_manifest_sha256":"a"*64,
              "official_O_physical_source":None,
+             "published_verified_options":[{
+                 "enchant_id":91234,"slot":"boots",
+                 "simc_token":"enchant_boots__example",
+                 "highest_verified_quality_rank":3,"ui_selectable":True}],
              "verified_DK_runeforges":{
                  "items":[{"enchant_id":3370,"class":"deathknight",
                            "weapon_hands":["main_hand"],
@@ -89,6 +93,16 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(data["source_scope"],
                          "VERIFIED_INSTALLED_V212_OPTION_CATALOG")
         self.assertEqual(data["installed_manifest_sha256"],digest)
+        registered=data["verified_installed_enchant_registrations"]
+        self.assertEqual(registered["installed_manifest_sha256"],digest)
+        self.assertEqual(registered["status"],
+                         "INSTALLED_POLICY_A_REGISTRATIONS_RUNTIME_BINDING_PENDING")
+        self.assertEqual(registered["items"],[{
+            "enchant_id":91234,"slot":"boots",
+            "simc_token":"enchant_boots__example",
+            "highest_verified_quality_rank":3}])
+        self.assertFalse(registered["runtime_selectable"])
+        self.assertFalse(registered["new_approval_granted"])
         self.assertEqual(data["verified_weapon_enhancements"][
                          "dk_runeforges"]["items"][0]["enchant_id"],3370)
         self.assertEqual(found.call_args.kwargs[

@@ -2480,6 +2480,13 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
             # selectable item. Never fall back to hardcoded web IDs.
             choices={"status":"DK_RUNEFORGE_NOT_INSTALLED","items":[]}
             oil={"status":"NO_POSITIVE_O_INSTALLED","items":[]}
+            # v212 may have completed policy-A registration while v196/v098
+            # still lack a general user-selected static E vector and final
+            # SimC profile binding. Publish its EXACT installed identity as
+            # read-only registration, not an executable enchant choice.
+            registered={"status":"NO_VERIFIED_INSTALLED_ENCHANTS",
+                        "items":[],"runtime_selectable":False,
+                        "new_approval_granted":False}
             if exact:
                 doc=sealed
                 installation={"manifest_sha256":installed_manifest_sha256}
@@ -2499,6 +2506,22 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                             published.get("source_catalog",{}).get(
                                 "manifest_sha256"))
             if option_source_verified:
+                if exact:
+                    confirmed=doc["published_verified_options"]
+                    registered={"status":(
+                        "INSTALLED_POLICY_A_REGISTRATIONS_RUNTIME_BINDING_PENDING"
+                        if confirmed else "NO_VERIFIED_INSTALLED_ENCHANTS"),
+                        "items":[{
+                            "enchant_id":entry["enchant_id"],
+                            "slot":entry["slot"],
+                            "simc_token":entry["simc_token"],
+                            "highest_verified_quality_rank":
+                                entry["highest_verified_quality_rank"]}
+                            for entry in confirmed],
+                        "installed_manifest_sha256":doc["manifest_sha256"],
+                        "runtime_selectable":False,
+                        "unresolved":"EXACT_ENCHANT_E_AND_USER_SIMC_PROFILE_BINDING",
+                        "new_approval_granted":False}
                 source=doc.get("verified_DK_runeforges")
                 if type(source) is dict:
                     choices={"status":"PINNED_DK_RUNES_INSTALLED",
@@ -2520,6 +2543,7 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                     **({"source_scope":"VERIFIED_INSTALLED_V212_OPTION_CATALOG",
                         "installed_manifest_sha256":installed_manifest_sha256}
                        if exact else {}),
+                    "verified_installed_enchant_registrations":registered,
                     "verified_weapon_enhancements":{
                 "dk_runeforges":choices,"weapon_oils":oil}}
         except (ui_catalog.CatalogBlocked, OSError, ValueError, KeyError,
