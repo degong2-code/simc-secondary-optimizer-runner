@@ -101,8 +101,12 @@ def run(artifact,compact):
                     proof["DPS_native_json2_sha256"][case+"/result.json"]
                 and saved.get("static_rating_verified")==saved.get("target"),
                 "SAVED_NATIVE_SOURCE_JSON_SHA_OR_STATIC_RATING_DRIFT:"+case)
+            # SimC JSON2 encodes the short revision ("de11f57");
+            # v064's native receipt binds the full 40-character revision.
+            native_rev=result.get("git_revision")
             need(result.get("report_version")=="2.0.0" and
-                 result.get("git_revision")==proof["simc_revision"],
+                 type(native_rev) is str and len(native_rev)>=7 and
+                 proof["simc_revision"].startswith(native_rev),
                  "JSON2_REPORT_OR_REVISION_NOT_PINNED:"+case)
             sim=result["sim"]
             need(type(sim.get("players")) is list and len(sim["players"])==1,
