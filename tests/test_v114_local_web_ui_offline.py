@@ -904,6 +904,65 @@ console.log("V458_VERIFIED_RETAIL_BUILD_RUN_BINDING_PASS");
         self.assertIn("V458_VERIFIED_RETAIL_BUILD_RUN_BINDING_PASS",
                       result.stdout)
 
+    def test_v461_verified_season_build_scopes_oil_and_flask_lookup(self):
+        """Execute actual JS: oil/F list and optimizer share one season build."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:
+            self.skipTest("node is not installed on this runner")
+        source=ROOT/"runner/webui/app.js"
+        code=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const a=raw.indexOf("async function refreshInstalledOilLoadouts() {");
+const b=raw.indexOf("function chooseInstalledOilLoadout()",a);
+assert(a>=0&&b>a,"actual v461 installed choices JS required");
+let userBuild="",ilevel=334;
+const state={verifiedInstalledBuildFromThisPage:null};
+const field=id=>{
+  assert.strictEqual(id,"season-game-build");
+  return userBuild;
+};
+const calls=[],oil=[],flask=[];
+const api=async url=>{
+  calls.push(url);
+  return {schema:"v113_verified_installed_oil_loadouts_v1",items:[]};
+};
+const refresh=Function("state","field","valueInt","api",
+   "renderInstalledOilLoadouts","renderInstalledFlaskChoices",
+   raw.slice(a,b)+"return refreshInstalledOilLoadouts;")(
+   state,field,id=>{assert.strictEqual(id,"ilevel");return ilevel;},
+   api,row=>oil.push(row),row=>flask.push(row));
+(async()=>{
+  await refresh();
+  assert.strictEqual(calls.pop(),"/api/v1/verified-oil-loadouts?ilevel=334",
+    "no implicit historical build is current");
+  state.verifiedInstalledBuildFromThisPage="12.1.5.70783";
+  await refresh();
+  assert.strictEqual(calls.pop(),
+    "/api/v1/verified-oil-loadouts?ilevel=334&game_build=12.1.5.70783",
+    "current verified season must own the oil/F list");
+  userBuild="12.1.5.70782";
+  await refresh();
+  assert.strictEqual(calls.pop(),
+    "/api/v1/verified-oil-loadouts?ilevel=334&game_build=12.1.5.70782",
+    "explicit user build overrides remembered build");
+  userBuild="";ilevel=340;
+  await refresh();
+  assert.strictEqual(calls.pop(),
+    "/api/v1/verified-oil-loadouts?ilevel=340&game_build=12.1.5.70783",
+    "lookup must retain exact optimization level");
+  assert.strictEqual(oil.length,4);
+  assert.strictEqual(flask.length,4);
+  console.log("V461_SEASON_SCOPED_OIL_FLASK_LOOKUP_PASS");
+})().catch(err=>{console.error(err);process.exitCode=1;});
+"""
+        completed=subprocess.run([node,"-e",code,str(source)],
+            capture_output=True,text=True,timeout=20,check=False)
+        self.assertEqual(completed.returncode,0,completed.stderr)
+        self.assertIn("V461_SEASON_SCOPED_OIL_FLASK_LOOKUP_PASS",
+                      completed.stdout)
+
     def test_v460_new_installed_season_replaces_packaged_gear_candidates(self):
         """Build result refreshes verified current source; no older fallback."""
         js=self.client.get("/assets/app.js").text

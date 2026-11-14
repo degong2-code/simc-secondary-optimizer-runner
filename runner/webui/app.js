@@ -1046,7 +1046,11 @@ function renderInstalledOilLoadouts(data) {
 }
 async function refreshInstalledOilLoadouts() {
   const ilevel=valueInt("ilevel");
-  const build=field("season-game-build");
+  // Use the same verified current build as the NEW optimizer request.
+  // An empty manual field must not make the installed oil/F lookup fall
+  // back to a different locally cached season.
+  const build=field("season-game-build") ||
+    state.verifiedInstalledBuildFromThisPage;
   const extra=build?"&game_build="+encodeURIComponent(build):"";
   const data=await api("/api/v1/verified-oil-loadouts?ilevel="+ilevel+extra);
   renderInstalledOilLoadouts(data);
