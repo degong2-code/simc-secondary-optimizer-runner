@@ -1,6 +1,6 @@
 # v440 — 기존 v439 실제 70783 JSON2 6건을 95%·근접 대안 원 정책으로 재평가 (신규 Native 0)
 
-- **Capability:** `TIER.SEASON`, `CHARACTER.PROFILE`, `PRODUCT.E2E`, `STATISTICS.95`.
+- **Capability:** `TIER.SEASON`, `CHARACTER.PROFILE`, `PRODUCT.E2E`.
 - **Keywords:** v440, B8, v439, existing six JSON2, 95% pairwise, unique observed 4, material near zero, independent SimC seeds, no Native repeat, 78-element progress.
 - **Prior evidence:** [v439 실제 Windows 선택 제작 머리·4pc DPS6/cache6](2026-11-14_p1-v439-b8-one-real-selected-70783-four-tier-native-e2e.md); [기존 70783 원본/정적/DPS 영수증](../research_receipts/p1_v439_windows_70783_selected_four_tier_actual_native_compact.json); Native original run [#43466966207](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43466966207), artifact `14059197320` and SHA `ac5f41298515d22121e635e57531e599164acdd97f3b00193becc7bae5311d76`.
 - **Decision:** `CONNECT` — v439에서 이미 실측한 **동일한** Native 입력·JSON2·v064 영수증 6개만 다시 읽어 기존 v065/v094 **95% 판정 정책**으로 검증한다. 95%를 새로 정의하지 않고, 추가 Native/SEM 반복 정밀화/새 후보 탐색을 하지 않는다. B8 및 전체 E2E 완료·전역 최적해는 승격하지 않는다.
