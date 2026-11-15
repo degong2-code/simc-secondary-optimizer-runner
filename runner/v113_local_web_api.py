@@ -1079,9 +1079,10 @@ class LocalJobs:
                     try:
                         profile_doc=json.loads(
                             snapshot.read_text(encoding="utf8"))
-                        compatible=_verified_snapshot_gem_layout_matches(
-                            profile_doc.get("environment_result"),
-                            special_gem_id=None,socket_total=4)
+                        compatible=(type(profile_doc) is dict and
+                            _verified_snapshot_gem_layout_matches(
+                                profile_doc.get("environment_result"),
+                                special_gem_id=None,socket_total=4))
                     except (ValueError,UnicodeError,OSError,TypeError):
                         compatible=False
                     if compatible:

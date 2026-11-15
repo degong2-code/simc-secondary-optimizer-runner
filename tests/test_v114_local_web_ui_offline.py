@@ -645,6 +645,93 @@ eval(context+raw.slice(start,end)+"\n"+test);
         self.assertNotIn("request.G=",js)
         self.assertNotIn("request.F=",js)
 
+    def test_v490_actual_flask_ui_resolves_unique_sha_but_rejects_ambiguous_J(self):
+        """Execute actual JS selection and exact rebind; no environment Build."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:self.skipTest("node missing")
+        harness=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const start=raw.indexOf("function renderInstalledFlaskChoices(data) {");
+const end=raw.indexOf("function renderInstalledOilLoadouts(data) {",start);
+assert(start>=0&&end>start);
+const A="a".repeat(64),B="b".repeat(64),C="c".repeat(64);
+const el={
+  "season-verified-flask":{value:"241327"},
+  "season-selected-flask-id":{value:""},
+  "season-verified-flask-status":{textContent:""},
+  "season-game-build":{value:"12.1.5.70783"},
+  "ilevel":{value:"334"},
+  "season-target-socket-count":{value:"4"},
+  "season-existing-special-gem-id":{value:""},
+  "trinket1":{value:"101"},"trinket2":{value:"102"},
+  "special-rows":{querySelectorAll:()=>[]}
+};
+const $=k=>{if(!el[k])throw Error("MISSING_CONTROL_"+k);return el[k]};
+const field=k=>String($(k).value).trim(),valueInt=k=>Number(field(k));
+const state={
+  oilCatalog:{game_build:"12.1.5.70783",target_ilevel:334},
+  verifiedInstalledBuildFromThisPage:null,seasonOptionRequestEpoch:0,
+  seasonGear:{installed_manifest_sha256:A},seasonGearTargetIlevel:334,
+  verifiedBaseFlaskInstalls:[{installed_manifest_sha256:B,
+    flask_item_id:241327,socket_total:4,J:92,F:165}]
+};
+const calls=[],restored=[];
+const api=async u=>{
+ calls.push(u);
+ return {status:"CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
+   source_scope:"VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES",
+   season_build:"12.1.5.70783",installed_manifest_sha256:B,
+   choices:{special_effect_gear_candidate:[]}};
+};
+const make=(oilUseIntent=false)=>Function(
+ "state","$","field","valueInt","oilUseIntent",
+ "installedConsumableScopeMatches","refreshDefaultConsumableSummaries",
+ "verifiedInstalledGearScopeMatchesRun","api","installSeasonGearHints",
+ "setTrinketSelection","fillGearRows","specialAllowedSlots",
+ "renderSeasonOptionCatalog","restoreInstalledSeasonOptionCatalog",
+ "updateBudgetPreview","setNotice",
+ raw.slice(start,end)+"return chooseInstalledFlask;")(
+ state,$,field,valueInt,oilUseIntent,
+ ()=>true,()=>{},
+ (build,level)=>state.seasonGearTargetIlevel===level,
+ api,gear=>{state.seasonGear=gear;state.seasonGearTargetIlevel=null;},
+ (kind,id)=>{$(kind).value=id},()=>{},()=>["head"],
+ ()=>{},async src=>{restored.push(src)},()=>{},()=>{});
+(async()=>{
+ await make()();
+ assert.strictEqual($("season-selected-flask-id").value,"241327");
+ assert.strictEqual(calls.length,1);
+ assert(calls[0].endsWith("&installed_manifest_sha256="+B));
+ assert.strictEqual(state.seasonGear.installed_manifest_sha256,B);
+ assert.strictEqual(state.seasonGearTargetIlevel,334);
+ assert.deepStrictEqual(
+   restored.map(x=>x.installed_manifest_sha256),[B]);
+ assert.strictEqual($("trinket1").value,"101");
+ assert.strictEqual($("trinket2").value,"102");
+ // Same F ItemID with two distinct J installs: never pick a newest file.
+ state.verifiedBaseFlaskInstalls=[
+   {installed_manifest_sha256:B,flask_item_id:241327,
+    socket_total:4,J:92,F:165},
+   {installed_manifest_sha256:C,flask_item_id:241327,
+    socket_total:4,J:108,F:165}];
+ await make()();
+ assert.strictEqual(calls.length,1,"AMBIGUOUS_NO_HTTP_OR_NATIVE");
+ assert.strictEqual(state.seasonGearTargetIlevel,null,
+    "AMBIGUOUS_CANNOT_REUSE_OLD_GEAR_SHA");
+ assert($("season-verified-flask-status").textContent.includes(
+    "임의 선택하지 않습니다"));
+ console.log("V490_EXACT_F_J_BIND_NO_NATIVE_AND_AMBIGUOUS_BLOCK_PASS");
+})().catch(e=>{console.error(e);process.exitCode=1});
+"""
+        r=subprocess.run([node,"-e",harness,
+            str(ROOT/"runner/webui/app.js")],capture_output=True,
+            text=True,timeout=15,check=False)
+        self.assertEqual(r.returncode,0,r.stderr)
+        self.assertIn("V490_EXACT_F_J_BIND_NO_NATIVE_AND_AMBIGUOUS_BLOCK_PASS",
+                      r.stdout)
+
     def test_verified_oil_dropdown_reuses_exact_id_web_request(self):
         html=self.client.get("/").text
         js=self.client.get("/assets/app.js").text
