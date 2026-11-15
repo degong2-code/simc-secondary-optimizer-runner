@@ -44,11 +44,14 @@ class DevelopmentLedgerGuardTests(unittest.TestCase):
     def test_index_has_distinct_evidence_and_integration_status(self):
         entries, errors = ledger._index(ROOT)
         self.assertFalse(errors, errors)
-        self.assertEqual(entries["TIER.SEASON"][2], "`SOURCE_CORROBORATED`")
-        self.assertEqual(entries["TIER.SEASON"][3], "`NOT_INTEGRATED`")
-        self.assertIn("P3-AQ", entries["TIER.SEASON"][4])
-        self.assertIn("P3-AR", entries["TIER.SEASON"][4])
-        self.assertIn("P3-AT", entries["TIER.SEASON"][4])
+        tier=entries["TIER.SEASON"]
+        # v260's original 2026-11-02 evidence/integration literals are
+        # historical snapshots, not frozen product verdicts. The INDEX
+        # validator already checks both fields' enum syntax and links.
+        self.assertIn(tier[2].strip("`"),ledger.EVIDENCE)
+        self.assertIn(tier[3].strip("`"),ledger.INTEGRATION)
+        self.assertIn("v429 B7",tier[5])
+        self.assertIn("v442",tier[5])
 
     def test_code_change_without_note_must_fail_fast(self):
         self.assertIn("TASK_CHANGE_WITHOUT_DEVELOPMENT_NOTE",

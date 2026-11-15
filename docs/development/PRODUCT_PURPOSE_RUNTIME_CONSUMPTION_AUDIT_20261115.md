@@ -95,3 +95,11 @@
 - **변경 결정: NORMAL=현재 INDEX의 링크·행 형식만 확인; `--audit-history` 또는 명시적 구식 `--since`=이전 전체 역사 원장 감사.** 기존 notes/INDEX 및 78요소 계약 파일의 값은 변경하지 않음. focused 워크플로에 원장 스코프 회귀 테스트를 포함하고 기록 관리 실패를 실제 제품 기능 검증과 구분. 역사 노트를 새 템플릿으로 일괄 수정하지 않음.
 - **유지 범위:** 선택 F/O에 필요한 `v280/v281` 효과/ID, WSE 진단 비차단, v217 캐시 무결성, v212 설치 SHA, 사용자 프로필 JSON2, 95% 결과 및 캐시·취소·재개. 실제 호출자 확인 없이 v216 코드를 대규모 삭제·재작성하지 않음.
 - 이번 범위는 **관리 검사와 그 회귀**에 한정. 새 시즌 Native·대용량 DB2·G/J/F/O 측정·실 사용자 E2E를 새로 수행했다는 주장은 하지 않음. 기존 v441 54 완화/24 유지, 78 JSON 상태, 공식 완료 기준 보존.
+
+### G.1 공통 회귀의 역사 불일치 정리 (v481)
+
+- v480에서 기존 메타데이터 전수 실패가 사라지자 일반 focused suite **682 tests / 4 FAIL·2 ERROR·2 SKIP**가 실제 실행됐다([Actions #43666304243](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43666304243)). 원장 `DEV_LEDGER_PASS CURRENT_INDEX_ONLY` 자체는 확인. 6건은 다음과 같이 원인 분리했다.
+- `test_v260`: 역사 `TIER.SEASON=SOURCE_CORROBORATED/NOT_INTEGRATED`를 현재 고정값으로 가정. 현재 INDEX는 `HISTORICAL/PARTIAL`. 고정 과거 숫자가 아니라 현재 INDEX enum/필수 링크를 검사하도록 수정. **실행 제품 상태 변경 아님**.
+- `test_p1_oil_positive_bridge`: v096 실제 source verifier가 기존부터 전달하는 **정확한 설치 SHA 인자**를 옛 mock 호출 기대값이 누락. 정확 SHA 검사를 약화하지 않고 기대값을 현재 계약에 일치시킴.
+- `test_p3_gt_reuse_existing_socket_item_use_source` 3건: 예전 가짜 v280 stage fixture는 현재 필수 v217 stage id를 충족하지 못함. `test_p3_gw_declared_full_sockets` 1건: 예전 7보석 가정이 현재 추가 소켓 실제 검증 대기 상태와 다름. 둘 다 미선택 5+ 소켓 연구 자료이므로 **공통 기본 CI에서만 분리**, 개별 테스트 코드·역사 FAIL·선택 필요 시 추가 검증은 보존. 실제 선택 5+ 기능을 완료 또는 PASS로 주장하지 않음.
+- 공통 CI는 실사용 핵심 연결+현재 인덱스 검증을 계속 확인하지만, 문서만 변경할 때 매번 600+ 오프라인 테스트를 실행하지 않도록 `docs/development/**` push trigger를 제외. 공식 v401 78 JSON·제품 필수 원본·Native 검증은 그대로 독립 실행/보존.

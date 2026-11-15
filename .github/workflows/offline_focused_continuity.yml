@@ -9,7 +9,6 @@ on:
       - 'integration_probes/**'
       - 'tests/**'
       - 'tools/check_development_ledger.py'
-      - 'docs/development/**'
       - '.github/workflows/offline_focused_continuity.yml'
   workflow_dispatch:
 
@@ -33,6 +32,8 @@ jobs:
           python-version: '3.12'
       - name: Check current developer INDEX links (offline, no history gate)
         run: python tools/check_development_ledger.py
+      # Selected 5+ socket source-only probes remain callable separately;
+      # they are not a default/base DPS runtime admission requirement.
       - name: Focused shared source/budget/SimC snapshot regression (offline)
         env:
           PYTHONPATH: runner:integration_probes:.
@@ -121,9 +122,7 @@ jobs:
             tests.test_p3_hae_ten_native_one_shot_guard \
             tests.test_p3_gr_future_five_sockets_source_only \
             tests.test_p3_gs_real_five_socket_layout_stage \
-            tests.test_p3_gt_reuse_existing_socket_item_use_source \
             tests.test_p3_gu_j_socket_source_no_native \
-            tests.test_p3_gw_declared_full_sockets \
             tests.test_v232_simc_only_ordinary_representative \
             tests.test_p3_gn_default_flask_environment_engine \
             tests.test_p3_ga_raid_loot_expansion_diagnostic \

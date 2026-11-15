@@ -65,6 +65,7 @@ class PositiveInstalledOil(unittest.TestCase):
                     flask_F=flask,oil_hands=["main_hand"],profile=profile)
                 lookup.assert_called_once_with(
                     root,334,expected_game_build="12.1.5.70783",
+                    expected_installed_manifest_sha256=doc["manifest_sha256"],
                     selected_oil_item_ids_by_hand={"main_hand":243734})
                 self.assertEqual(admitted["season_budget"]["fixed_O"],
                                  doc["official_O"])
