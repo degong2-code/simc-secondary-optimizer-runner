@@ -103,3 +103,10 @@
 - `test_p1_oil_positive_bridge`: v096 실제 source verifier가 기존부터 전달하는 **정확한 설치 SHA 인자**를 옛 mock 호출 기대값이 누락. 정확 SHA 검사를 약화하지 않고 기대값을 현재 계약에 일치시킴.
 - `test_p3_gt_reuse_existing_socket_item_use_source` 3건: 예전 가짜 v280 stage fixture는 현재 필수 v217 stage id를 충족하지 못함. `test_p3_gw_declared_full_sockets` 1건: 예전 7보석 가정이 현재 추가 소켓 실제 검증 대기 상태와 다름. 둘 다 미선택 5+ 소켓 연구 자료이므로 **공통 기본 CI에서만 분리**, 개별 테스트 코드·역사 FAIL·선택 필요 시 추가 검증은 보존. 실제 선택 5+ 기능을 완료 또는 PASS로 주장하지 않음.
 - 공통 CI는 실사용 핵심 연결+현재 인덱스 검증을 계속 확인하지만, 문서만 변경할 때 매번 600+ 오프라인 테스트를 실행하지 않도록 `docs/development/**` push trigger를 제외. 공식 v401 78 JSON·제품 필수 원본·Native 검증은 그대로 독립 실행/보존.
+
+### G.2 감사 종료 판정·제품 개발 재개 기준
+
+- **최종 관련 영수증(2026-11-15)**: [기본 Reusable Offline Actions #43666580045](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43666580045): **673 tests / 671 PASS / 2 SKIP / 0 FAIL**, 원장 `DEV_LEDGER_PASS OFFLINE_NO_NATIVE_NO_NETWORK CURRENT_INDEX_ONLY`. [v401 78 계약 #43666580035](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43666580035) SUCCESS. 이 성공은 **오프라인 기존 코드 회귀**이며 새 Native·G/J/F/O 실측·엄격 ZERO-SOURCE→USER-E2E PASS가 아니다.
+- **감사 종료**: WSE 비차단 KEEP, v280/v281 F/O 필수 owner KEEP, v477 UI 선택 근거·v478 서버 SHA 검증 KEEP, 역사 원장 기본 형식 전수 Gate STOP, 오래된 선택 추가 소켓 연구 테스트는 기본 CI에서 분리·선택 시에만 재검토. v216 전체 재작성·미사용 필드 일괄 삭제 없음. 동일 기본 E2E 신규 Native 없이 STOP.
+- **제품 개발 재개 판단**: 정상 기본 사용자 최적화 경로는 기존 실제 증거로 재사용. 실제 신규 시즌 사용자 선택에서 현재 `runner/webui/app.js`는 음식·물약·증강룬을 `source_default` 중심으로 제한하며 `runner/v196_current_season_user_catalog.py`의 영구 마부 E는 `NEW_SEASON_E_NOT_VERIFIED`인 범위가 남아 있다. 이는 **실사용 선택 기능 후보**이며 미검증 값/효과를 UI 승인하지 않는다. 먼저 원본·선택 ID·SimC 토큰·품질/CHMV 소유자·이미 확보된 증거를 확인하고 *실제로 가능한 선택지부터* 최소 연결한다. 단순 전체 소모품/마부 목록 전수 인증이나 별도 SimC 효과 검증 Gate는 도입하지 않는다.
+- 신규 코드/테스트에서 실제 확인한 첫 사용자 장애가 없으면 기능을 억지로 개발하지 않는다. 정확히 검증된 선택지 하나의 연결이 보이면 그것부터 처리하고, 선택이 없다면 STOP 후 다음 사용자 가치 항목을 검토한다.
