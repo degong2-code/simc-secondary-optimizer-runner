@@ -663,10 +663,18 @@ class FreshOptionalConsumableForwarding(unittest.TestCase):
         chosen=self._user(food="royal_roast",
                           potion="potion_of_recklessness_2",
                           augmentation="void_touched")
-        self.assertEqual(serialize(chosen),{
-            "food":"royal_roast",
-            "potion":"potion_of_recklessness_2",
-            "augmentation":"void_touched"})
+        # v108 source-spelling alone is NOT a current-season admission.
+        # Keep this generic serializer proof conditional on a mocked
+        # future source-owner allowlist; do not publish those item choices.
+        allowed={name:["source_default",chosen["consumable_choices"][name]]
+                 for name in ("food","potion","augmentation")}
+        with mock.patch.object(web.profile_stage,
+                "current_season_approved_optional_choices",
+                return_value=allowed):
+            self.assertEqual(serialize(chosen),{
+                "food":"royal_roast",
+                "potion":"potion_of_recklessness_2",
+                "augmentation":"void_touched"})
 
     def test_unadmitted_option_never_silently_changes_profile(self):
         serialize=web.profile_stage._verified_fresh_season_consumables
@@ -674,7 +682,7 @@ class FreshOptionalConsumableForwarding(unittest.TestCase):
                                     "FRESH_SEASON_FLASK_DIAMOND_OR_MODULE_NOT_ADMITTED"):
             serialize(self._user(omnium_talents="row4_crit"))
         with self.assertRaisesRegex(web.bootstrap.UserScenarioBlocked,
-                                    "FRESH_SEASON_SIMC_OPTION_UNSUPPORTED"):
+                                    "FRESH_SEASON_OPTIONAL_CONSUMABLE_NOT_INSTALLED"):
             serialize(self._user(food="unverified_food_item"))
 
     def test_stage_passes_exact_user_choices_to_existing_v098_builder(self):
@@ -702,7 +710,15 @@ class FreshOptionalConsumableForwarding(unittest.TestCase):
                                   "run_from_verified_environment_build",
                                   side_effect=source_plan) as builder,
                 mock.patch.object(web.profile_stage.engine,
-                                  "execute_stage",side_effect=stage)
+                                  "execute_stage",side_effect=stage),
+                # This is a synthetic executable source-owner approval,
+                # not a v212-installed real item or new Native evidence.
+                mock.patch.object(web.profile_stage,
+                    "current_season_approved_optional_choices",
+                    return_value={
+                        "food":["source_default","royal_roast"],
+                        "potion":["source_default"],
+                        "augmentation":["source_default","void_touched"]})
             ):
                 data,receipt=web.profile_stage.build_or_reuse(
                     user=user,session_folder=folder,binary=folder/"simc",
