@@ -106,7 +106,7 @@ class ExactConsumableSourceJoin(unittest.TestCase):
         self.assertEqual(result,self.match()[0])
 
     def test_wrong_kind_missing_or_duplicate_id_rejects_before_simc_read(self):
-        for ids,reason in (((103,),"NOT_IN_SOURCE"),
+        for ids,reason in (((103,),"SCOPE_MISMATCH"),
                            ((999,),"NOT_IN_SOURCE"),
                            ((101,101),"EXACT_ITEM_IDS_REQUIRED"),
                            ((),"EXACT_ITEM_IDS_REQUIRED")):
