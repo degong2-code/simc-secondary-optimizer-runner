@@ -63,14 +63,23 @@ def decide(candidate, receipts=None):
     if set(receipts)-set(PROOF_STATUSES):
         raise ValueError("AUTO_ADMISSION_UNKNOWN_PROOF_FAMILY")
     missing=[]; conflicts=[]
-    # Gem choices are valid for ANY existing socket; there is no separate
-    # per-gem socket color/type compatibility gate. The product_input proof
-    # remains responsible for a real usable socket count and the selected
-    # item/use restrictions. Enchants and oils keep their slot/hand checks.
+    # Gem choices fit ANY existing socket; the product_input receipt owns
+    # physical socket count and selected-item conditions.
     universal_gem=(candidate["kind"]=="gem" and
                    candidate["slot"]=="ANY_EXISTING_SOCKET" and
                    candidate["slot_status"]=="GEM_SOCKET_TYPE_NOT_APPLICABLE")
-    if candidate["slot_status"]!="SOURCE_MASK_RESOLVED" and not universal_gem:
+    # Food, potions and augmentation runes do NOT occupy equipment slots.
+    # Reject invented equipment-slot attestations for consumables, even if
+    # other receipts happen to match. Actual item/use conditions still belong
+    # to the existing exact product_input proof, not a new verifier.
+    slotless_consumable=(candidate["kind"]=="consumable" and
+                         candidate["slot"]=="NO_EQUIPMENT_SLOT" and
+                         candidate["slot_status"]==
+                             "CONSUMABLE_USE_SCOPE_NOT_EQUIPMENT")
+    if candidate["kind"]=="consumable":
+        if not slotless_consumable:
+            missing.append("CONSUMABLE_NO_EQUIPMENT_SLOT_SCOPE_INVALID")
+    elif candidate["slot_status"]!="SOURCE_MASK_RESOLVED" and not universal_gem:
         missing.append("EXACT_PHYSICAL_SLOT_OR_HAND_RELATION_NOT_VERIFIED")
     for family, expected_status in PROOF_STATUSES.items():
         proof=receipts.get(family)

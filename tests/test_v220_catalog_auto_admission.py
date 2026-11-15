@@ -96,6 +96,64 @@ class AutoAdmissionTests(unittest.TestCase):
             proof["identity"]=identity
         self.assertTrue(policy.decide(gem,receipts)["eligible"])
 
+    def test_slotless_consumables_use_existing_four_exact_proofs(self):
+        """Synthetic receipts exercise the generic policy, NOT real item admission."""
+        for item_id,token in ((311001,"food_example"),
+                              (311002,"potion_example"),
+                              (311003,"augmentation_example")):
+            candidate={**self.item,"kind":"consumable","exact_id":item_id,
+                       "simc_token":token,"slot":"NO_EQUIPMENT_SLOT",
+                       "slot_status":"CONSUMABLE_USE_SCOPE_NOT_EQUIPMENT"}
+            identity=policy._identity(candidate)
+            receipts=copy.deepcopy(self.receipts)
+            for proof in receipts.values():
+                proof["identity"]=dict(identity)
+            with self.subTest(token=token):
+                approved=policy.decide(candidate,receipts)
+                self.assertTrue(approved["eligible"])
+                self.assertEqual(approved["missing"],[])
+                self.assertFalse(approved["ui_selection_mutated"])
+                self.assertEqual(approved["native_calls"],0)
+                # A slotless item still requires the original exact item/use
+                # and CHMV ownership proofs. There is no extra effect Gate.
+                lacking=copy.deepcopy(receipts)
+                lacking.pop("product_input")
+                blocked=policy.decide(candidate,lacking)
+                self.assertFalse(blocked["eligible"])
+                self.assertIn("EVIDENCE_MISSING:product_input",blocked["missing"])
+                unknown=copy.deepcopy(receipts)
+                unknown["chmv_budget"]["unknown_static_chmv"]=True
+                self.assertIn("CHMV_BUDGET_OWNERSHIP_NOT_SETTLED",
+                              policy.decide(candidate,unknown)["missing"])
+                changed={**candidate,"exact_id":item_id+100}
+                self.assertIn("EVIDENCE_SCOPE_MISMATCH:source_relation",
+                              policy.decide(changed,receipts)["conflicts"])
+
+    def test_consumable_cannot_forge_equipment_slot_scope(self):
+        """Even matching receipts cannot turn a non-equipped item into gear."""
+        candidate={**self.item,"kind":"consumable","exact_id":311001,
+                   "simc_token":"food_example","slot":"NO_EQUIPMENT_SLOT",
+                   "slot_status":"CONSUMABLE_USE_SCOPE_NOT_EQUIPMENT"}
+        identity=policy._identity(candidate)
+        receipts=copy.deepcopy(self.receipts)
+        for proof in receipts.values():
+            proof["identity"]=dict(identity)
+        for slot,status in (
+                ("NO_EQUIPMENT_SLOT","SOURCE_MASK_RESOLVED"),
+                ("main_hand","SOURCE_MASK_RESOLVED"),
+                ("NO_EQUIPMENT_SLOT","PENDING_USE_CONDITIONS")):
+            with self.subTest(slot=slot,status=status):
+                forged={**candidate,"slot":slot,"slot_status":status}
+                result=policy.decide(forged,receipts)
+                self.assertFalse(result["eligible"])
+                self.assertIn("CONSUMABLE_NO_EQUIPMENT_SLOT_SCOPE_INVALID",
+                              result["missing"])
+        # No source, SimC token or game-use condition may be inferred from
+        # a candidate with the correct syntactic slot marker alone.
+        result=policy.decide(candidate)
+        self.assertFalse(result["eligible"])
+        self.assertEqual(len(result["missing"]),4)
+
     def test_same_build_gem_property_uses_original_v220_source_family_only(self):
         src={"game_build":"12.1.5.70575",
              "simc_revision":"a"*40,
