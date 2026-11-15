@@ -1075,10 +1075,19 @@ async function chooseInstalledFlask() {
   const gear=await api("/api/v1/season-gear?game_build="+
     encodeURIComponent(build)+"&target_ilevel="+level+
     "&installed_manifest_sha256="+sha);
+  // The user may edit sockets/oil while the exact gear GET is in flight.
+  // Never publish the earlier O=0/four-gem SHA for a changed user choice.
   if(field("season-verified-flask")!==flask ||
+     field("season-selected-flask-id")!==flask ||
+     oilUseIntent || valueInt("season-target-socket-count")!==sockets ||
+     field("season-existing-special-gem-id") ||
      Number(field("ilevel"))!==level ||
      (field("season-game-build")||
-       state.verifiedInstalledBuildFromThisPage)!==build)return;
+       state.verifiedInstalledBuildFromThisPage)!==build) {
+    $("season-verified-flask-status").textContent=
+      "조회 중 영약·보석·기름 또는 시즌 조건이 변경되었습니다. 현재 구성을 다시 선택·검증하세요.";
+    return;
+  }
   if(gear.status!=="CURRENT_SEASON_CANDIDATE_SELECTION_ONLY" ||
      gear.source_scope!=="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES" ||
      gear.season_build!==build ||
@@ -1665,6 +1674,8 @@ function markSession(id) {
 function buttonState(active=false,ready=false) {
   state.running=active;
   const busy=state.busy;
+  // Ignore overlapping flask changes while the exact install is rebinding.
+  $("season-verified-flask").disabled=busy;
   $("plan-btn").disabled=busy||active||!state.token;
   $("season-build-btn").disabled=busy||active||!state.token;
   $("user-variant-prepare-btn").disabled=busy||active||!state.token;
