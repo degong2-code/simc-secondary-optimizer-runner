@@ -1031,9 +1031,14 @@ function renderInstalledFlaskChoices(data) {
 }
 async function chooseInstalledFlask() {
   const flask=field("season-verified-flask");
+  // The blank dropdown means "keep the advanced physical ItemID", NOT
+  // "remove F from a sealed v212 installation's verified plan".
+  if(!flask) {
+    refreshDefaultConsumableSummaries();
+    return;
+  }
   $("season-selected-flask-id").value=flask;
   refreshDefaultConsumableSummaries();
-  if(!flask)return;
   // A verified physical F can belong to several installed J/F/O budgets.
   // Only a UNIQUE O=0, ordinary four-gem installation is auto-bound here;
   // other user-selected variants keep the original explicit validation.
