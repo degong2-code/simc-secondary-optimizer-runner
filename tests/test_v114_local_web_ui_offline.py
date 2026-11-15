@@ -713,6 +713,14 @@ const make=(oilUseIntent=false)=>Function(
    restored.map(x=>x.installed_manifest_sha256),[B]);
  assert.strictEqual($("trinket1").value,"101");
  assert.strictEqual($("trinket2").value,"102");
+ // Blank dropdown explicitly preserves the advanced physical Flask ID.
+ // Dropping the ID would bypass the server's exact F-to-v212 check.
+ $("season-verified-flask").value="";
+ await make()();
+ assert.strictEqual($("season-selected-flask-id").value,"241327",
+    "BLANK_UI_OPTION_MUST_KEEP_ADVANCED_EXACT_F");
+ assert.strictEqual(calls.length,1,"BLANK_OPTION_NO_SOURCE_REQUEST");
+ $("season-verified-flask").value="241327";
  // Same F ItemID with two distinct J installs: never pick a newest file.
  state.verifiedBaseFlaskInstalls=[
    {installed_manifest_sha256:B,flask_item_id:241327,
