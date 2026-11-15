@@ -775,7 +775,8 @@ class LocalJobs:
             existing_special_gem_id is None):
             with self.season_source_lock:
                 prior=environment_build.find_verified_installed_season_environment(
-                    self.root,target_ilevel,expected_game_build=game_build)
+                    self.root,target_ilevel,expected_game_build=game_build,
+                    require_unique_unqualified=True)
             if prior is not None:
                 # A true original v212 receipt carries its installed SHA.
                 # Previous API mocks/legacy reuse results retain old behavior.

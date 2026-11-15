@@ -161,6 +161,76 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                 v216.find_verified_installed_season_environment(
                     stage_root,334,expected_game_build=b)
 
+    def test_v488_unqualified_base_multiple_verified_FJ_never_select_newest(self):
+        """Same season/ilevel/O=0 still needs a unique F/J install owner.
+
+        Verify source catalog, staged environment, and original stage
+        receipt through existing contract entry points (mocked receipt
+        cryptography only). This check does not create source/Native.
+        """
+        build="12.2.0.99999"
+        root=self.root/"two-fj-variants"
+        docs=root/"_fresh_season_sources"/("wago_"+build)/"fresh_source"
+        docs.mkdir(parents=True)
+        stage_sha="3"*64
+        (docs/"v213_candidate_catalog.json").write_text(json.dumps({
+            "game_build":build,"simc_revision":"b"*40,
+            "manifest_sha256":"5"*64}),encoding="utf8")
+        (docs/("v212_environment_"+stage_sha[:20]+".json")).write_text(
+            json.dumps({"manifest_sha256":stage_sha,
+                "source_catalog_artifact_sha256":"4"*64,
+                "target_ilevel":334,
+                "original_v216_preflight_sha256":"8"*64}),encoding="utf8")
+        keys=["a"*64,"b"*64]
+        for key,flask,gem in zip(keys,[241326,241327],[92,120]):
+            (docs/("v212_installed_"+key[:20]+".json")).write_text(
+                json.dumps({
+                    "manifest_sha256":key,"game_build":build,
+                    "target_ilevel":334,"simc_revision":"b"*40,
+                    "source_catalog_artifact_sha256":"4"*64,
+                    "source_catalog_manifest_sha256":"5"*64,
+                    "staged_source_environment_sha256":stage_sha,
+                    "trusted_budget_evidence_sha256":"6"*64,
+                    "original_v196_prepared_options_sha256":"7"*64,
+                    "official_G":2850,"official_J":gem,"official_F":165,
+                    "official_O":{},"official_B":2850+gem+165,
+                    "official_T":2850+gem+165,
+                    "official_F_physical_source":{"physical_item_id":flask},
+                    "published_verified_options":[],
+                    "published_verified_option_count":0}),encoding="utf8")
+        def read_json(path,max_bytes=25000000):
+            path=pathlib.Path(path)
+            return json.loads(path.read_text("utf8")),(
+                "4"*64 if path.name=="v213_candidate_catalog.json"
+                else "0"*64)
+        with (mock.patch.object(v216.environment_manifest,"read_json",
+                    side_effect=read_json),
+              mock.patch.object(v216.environment_manifest,
+                    "verify_fresh_installed_environment"),
+              mock.patch.object(v216.environment_manifest,
+                    "verify_fresh_source_environment"),
+              mock.patch.object(v216.source_to_catalog,"verify_catalog"),
+              mock.patch.object(v216.stage_engine,"verify_stage",
+                    return_value={"receipt_sha256":"9"*64})):
+            # Existing explicit-identity/legacy lookups are unchanged.
+            legacy=v216.find_verified_installed_season_environment(
+                root,334,expected_game_build=build)
+            self.assertIn(legacy["installed_manifest_sha256"],keys)
+            with self.assertRaisesRegex(v216.EnvironmentBuildBlocked,
+                    "V216_UNQUALIFIED_MULTIPLE_INSTALLED_FJ_VARIANTS_SELECT_EXACT_SHA"):
+                v216.find_verified_installed_season_environment(
+                    root,334,expected_game_build=build,
+                    require_unique_unqualified=True)
+            selected=v216.find_verified_installed_season_environment(
+                root,334,expected_game_build=build,
+                expected_installed_manifest_sha256=keys[1])
+            self.assertEqual(selected["installed_manifest_sha256"],keys[1])
+            (docs/("v212_installed_"+keys[0][:20]+".json")).unlink()
+            unique=v216.find_verified_installed_season_environment(
+                root,334,expected_game_build=build,
+                require_unique_unqualified=True)
+            self.assertEqual(unique["installed_manifest_sha256"],keys[1])
+
     def test_v413_oil_variant_after_64_is_reused_by_source_and_exact_sha(self):
         build="12.2.0.99999"
         root=self.root/"many-variants"

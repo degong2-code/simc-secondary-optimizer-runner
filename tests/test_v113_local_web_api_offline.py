@@ -1116,6 +1116,31 @@ class LocalWebAPIOffline(unittest.TestCase):
             self.assertTrue(params["fresh_collection_inputs"][
                 "auto_select_observed_F_no_oil"])
 
+    def test_v488_unqualified_web_build_never_picks_latest_FJ_install(self):
+        """Ambiguous verified O=0 F/J variants fail before Build or Native."""
+        jobs=self.app.state.jobs
+        with (mock.patch.object(web.environment_build,
+                "find_verified_installed_season_environment",
+                side_effect=web.environment_build.EnvironmentBuildBlocked(
+                  "V216_UNQUALIFIED_MULTIPLE_INSTALLED_FJ_VARIANTS_SELECT_EXACT_SHA")
+                ) as finder,
+              mock.patch.object(web.environment_build,"build_environment",
+                side_effect=AssertionError("NO_RECOLLECT_OR_NATIVE")) as builder,
+              mock.patch.object(web.subprocess,"Popen",
+                side_effect=AssertionError("NO_DPS_NATIVE"))):
+            response=self.post("/api/v1/environment/season-build",{
+                "game_build":"12.1.5.70783","target_ilevel":334,
+                "auto_initial_core_build":True,
+                "auto_initial_core_simc_binary":str(self.binary)})
+        self.assertEqual(response.status_code,422,response.text)
+        self.assertIn(
+            "V216_UNQUALIFIED_MULTIPLE_INSTALLED_FJ_VARIANTS_SELECT_EXACT_SHA",
+            response.text)
+        finder.assert_called_once_with(
+            jobs.root,334,expected_game_build="12.1.5.70783",
+            require_unique_unqualified=True)
+        builder.assert_not_called()
+
     def test_p1_first_install_core_reuses_original_g_f_stages(self):
         """Automatic cold-start selection calls original Build, not a new engine."""
         payload={"game_build":"12.2.0.99999","target_ilevel":334,
@@ -1344,7 +1369,8 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(response.json()["web_environment_scope"][
             "network_calls"],0)
         reuse.assert_called_once_with(
-            self.app.state.jobs.root,334,expected_game_build="12.1.5.70529")
+            self.app.state.jobs.root,334,expected_game_build="12.1.5.70529",
+            require_unique_unqualified=True)
         # Normal user with no build gets the exact live build identity first.
         live={"game_build":"12.1.5.70529","source_sha256":"a"*64}
         with mock.patch.object(web.retail_build_source,"discover",
@@ -1358,7 +1384,8 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(current.status_code,200,current.text)
         discovery.assert_called_once_with(region="KR")
         reuse.assert_called_once_with(
-            self.app.state.jobs.root,334,expected_game_build="12.1.5.70529")
+            self.app.state.jobs.root,334,expected_game_build="12.1.5.70529",
+            require_unique_unqualified=True)
         current_scope=current.json()["web_environment_scope"]
         self.assertTrue(current_scope["active_season_reverified_in_this_lookup"])
         self.assertEqual(current_scope["retail_version_network_calls"],1)
@@ -1454,7 +1481,8 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(response.status_code,200,response.text)
         discover.assert_called_once_with(region="KR")
         reuse.assert_called_once_with(self.app.state.jobs.root,334,
-            expected_game_build="12.1.5.70783")
+            expected_game_build="12.1.5.70783",
+            require_unique_unqualified=True)
         self.assertEqual(build.call_args.kwargs["fresh_collection_inputs"][
             "expected_game_build"],"12.1.5.70783")
         self.assertFalse(response.json()["environment_ready"])
@@ -1473,7 +1501,8 @@ class LocalWebAPIOffline(unittest.TestCase):
                 "game_build":"12.1.5.70783"})
         self.assertEqual(pinned.status_code,200,pinned.text)
         reuse.assert_called_once_with(self.app.state.jobs.root,334,
-            expected_game_build="12.1.5.70783")
+            expected_game_build="12.1.5.70783",
+            require_unique_unqualified=True)
         self.assertFalse(pinned.json()["environment_ready"])
 
     def test_p3_fr_zero_base_build_auto_retail_version_from_public_source(self):

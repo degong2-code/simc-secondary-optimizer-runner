@@ -216,7 +216,8 @@ def _verified_manifest(path):
 def find_verified_installed_season_environment(
         sessions_root, target_ilevel, *, expected_game_build,
         selected_oil_item_ids_by_hand=None, selected_oil_hands=None,
-        expected_installed_manifest_sha256=None):
+        expected_installed_manifest_sha256=None,
+        require_unique_unqualified=False):
     """Read-only, exact-build v217/v212 reuse across all 26 DPS profiles.
 
     A matching itemlevel alone is NEVER sufficient; even a fully sealed
@@ -226,6 +227,9 @@ def find_verified_installed_season_environment(
     season folder to avoid scanning every historical patch and its files.
     A missing selection means explicit O=0. Multiple O variants of the
     same season/ilevel must NEVER be interchangeable on a cache hit.
+    Ordinary unqualified Environment Build can opt into strict uniqueness:
+    when several authentic same-build/level/O=0 installs exist, never
+    silently pick the newest F/J quality or physical source.
     Hand-only user input is resolved only if EXACTLY ONE physical oil item
     map is verified for that hand set, not by whichever file is newest.
     """
@@ -246,6 +250,11 @@ def find_verified_installed_season_environment(
           season_budget_contract.SHA.fullmatch(
               expected_installed_manifest_sha256) is not None),
          "V216_REUSE_EXPECTED_INSTALL_SHA_INVALID")
+    need(type(require_unique_unqualified) is bool and
+         (not require_unique_unqualified or
+          (selected_oil_hands is None and
+           expected_installed_manifest_sha256 is None)),
+         "V216_UNQUALIFIED_UNIQUE_REUSE_SELECTION_INVALID")
     need(selected_oil_hands is None or
          (selected_oil_item_ids_by_hand is None and
           type(selected_oil_hands) is list and
@@ -377,9 +386,12 @@ def find_verified_installed_season_environment(
             "network_calls":0,"native_calls":0,"cache_mutations":0,
             "dps_optimization_started":False,
         }
-        if requested_hands is None:
+        if requested_hands is None and not require_unique_unqualified:
             return found
-        if matched is not None:
+        if matched is not None and require_unique_unqualified:
+            need(matched["installed_manifest_sha256"]==key,
+                 "V216_UNQUALIFIED_MULTIPLE_INSTALLED_FJ_VARIANTS_SELECT_EXACT_SHA")
+        elif matched is not None:
             # Same hand set with two different physical item maps requires
             # an explicit oil ID choice. Never infer the user-selected oil.
             need(matched["selected_oil_item_ids_by_hand"]==
