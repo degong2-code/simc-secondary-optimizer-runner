@@ -2273,7 +2273,14 @@ async function buildSeasonEnvironment(forUserVariant=false) {
       note:"Request failed before usable source evidence; missing is not zero."
     },null,2);
     $("season-diagnostic-copy-btn").disabled=false;
-    $("season-build-summary").textContent="요청 차단 또는 오류 · 실행 완료가 아닙니다. 오류 코드를 확인하세요.";
+    const multipleInstalledBudgets=
+      err.message==="V216_UNQUALIFIED_MULTIPLE_INSTALLED_FJ_VARIANTS_SELECT_EXACT_SHA";
+    $("season-build-summary").textContent=multipleInstalledBudgets?
+      "같은 시즌·아이템레벨에 검증된 영약/보석 예산이 여러 개 있어 임의로 선택하지 않았습니다. "+
+      "캐릭터 설정의 ‘기타 직접 입력 · 고급 옵션’에서 ‘영약 변경’을 확인하고 "+
+      "‘선택 환경 검증·준비’로 원하는 구성을 검증하세요. "+
+      "구성이 구분되지 않으면 원본 확인이 추가로 필요합니다.":
+      "요청 차단 또는 오류 · 실행 완료가 아닙니다. 오류 코드를 확인하세요.";
     $("season-build-stage").textContent="시즌 환경 구축 단계 차단/오류 · "+err.message+
       " · 기존 영수증은 보존됩니다.";
     throw err;

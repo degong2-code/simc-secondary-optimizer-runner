@@ -1072,6 +1072,24 @@ console.log("V477_PINNED_TRINKET_GEAR_PREFLIGHT_PASS");
         self.assertIn('fillGearRows("special-rows",retained);',js)
         self.assertIn("specialAllowedSlots(selected).includes(entry.slot)",js)
 
+    def test_v489_ambiguous_base_budget_guides_existing_user_variant(self):
+        """Explain the existing user UI path; never choose F/J client-side."""
+        js=self.client.get("/assets/app.js").text
+        page=self.client.get("/").text
+        self.assertIn(
+            'err.message==="V216_UNQUALIFIED_MULTIPLE_INSTALLED_FJ_VARIANTS_SELECT_EXACT_SHA"',
+            js)
+        for label in ("같은 시즌·아이템레벨에 검증된 영약/보석 예산이 여러 개",
+                      "기타 직접 입력 · 고급 옵션","영약 변경",
+                      "선택 환경 검증·준비","구성이 구분되지 않으면"):
+            self.assertIn(label,js)
+        self.assertIn('id="season-verified-flask"',page)
+        self.assertIn('id="user-variant-prepare-btn"',page)
+        self.assertIn('outcome:"REQUEST_FAILED_NO_SOURCE_REPORT"',js)
+        self.assertIn('environment_ready:false,',js)
+        self.assertIn('throw err;',js)
+        self.assertNotIn('require_unique_unqualified=false',js)
+
     def test_environment_build_surface_is_not_optimizer_plan(self):
         page=self.client.get("/").text
         js=self.client.get("/assets/app.js").text
