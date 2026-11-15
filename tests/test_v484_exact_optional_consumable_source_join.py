@@ -155,6 +155,7 @@ class ExactConsumableSourceJoin(unittest.TestCase):
     def test_two_sources_agree_on_nonzero_equipment_slot_still_blocked(self):
         """Exact class/ID match never certifies an equipped item as food."""
         other=self.root/"wrong-inventory"
+        other.mkdir()
         modified=copy.deepcopy(self.original)
         modified["items"][0]["inventory_type"]=20
         def write():
@@ -172,7 +173,7 @@ class ExactConsumableSourceJoin(unittest.TestCase):
         simc=copy.deepcopy(self.doc)
         simc["items"][0]["inventory_type"]=20
         with mock.patch.object(subject.item_metadata,"from_seed",
-                               side_effect=AssertionError("NO_LARGE_READ")):
+                               return_value=simc) as read:
             with self.assertRaisesRegex(
                     subject.OptionalConsumableSourceBlocked,
                     "SELECTED_PHYSICAL_ITEM_SCOPE_MISMATCH"):
@@ -180,6 +181,7 @@ class ExactConsumableSourceJoin(unittest.TestCase):
                     stage_root=other,v190_stage=sealed,
                     simc_seed_dir=self.seed,game_build=BUILD,
                     simc_revision=REV,selected_item_ids=[101])
+            read.assert_not_called()
 
     def test_invalid_ascii_token_remains_unadmitted_without_guessing(self):
         wrong=copy.deepcopy(self.doc)
