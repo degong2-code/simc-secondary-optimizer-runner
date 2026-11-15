@@ -520,6 +520,88 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
             # its previous source-backed browser path (no new Native).
 
 
+    def test_v487_auto_core_recovers_real_v113_snapshot_without_worker(self):
+        """Verify actual v113 seal/restore after the original Build resumes.
+
+        The only mocked producer is the expensive original v216 Build and
+        its authenticated v212 verifier. The v113 snapshot is written via
+        real v217 stage execution and verified after process restart.
+        This is offline source-bound replay, NOT fresh v216/Native E2E.
+        """
+        original={**self.original,"status":"VERIFIED_BASE_REBUILT",
+                  "environment_ready":True,"environment_installed":True,
+                  "installed_manifest_sha256":self.digest,"native_calls":0}
+        original["source_compilation"]={
+            **original["source_compilation"],
+            "physical_gem_layout_unadmitted":{
+                "schema":"v271_user_socket_gem_layout_stage_v1",
+                "status":"PHYSICAL_GEMS_STAGED_SOURCE_AND_SOCKET_PROOFS_PENDING",
+                "special_gem_id":None,"socket_total":4,
+                "ordinary_gem_ids":[101,102,103,104]}}
+        budget={"status":"VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED",
+                "installed_manifest_sha256":self.digest,
+                "environment_ready":True,"environment_installed":True,
+                "G":2850,"J":92,"F":165,"B":3107,"T":3107}
+        binary=self.root/"offline-simc.exe"
+        binary.write_bytes(b"fixture-not-executed")
+        snapshot=self.installed.parent/("v113_profile_"+self.digest[:20]+".json")
+        self.assertFalse(snapshot.exists())
+        with (mock.patch.object(web.environment_manifest,
+                  "verify_fresh_installed_environment"),
+              mock.patch.object(web.environment_build,
+                  "find_verified_installed_season_environment",
+                  return_value=budget),
+              mock.patch.object(web.environment_build,
+                  "build_environment",return_value=original) as build,
+              mock.patch.object(self.jobs.source_credential_store,
+                  "load",return_value=None),
+              mock.patch.object(self.jobs,
+                  "_with_verified_ko_localization",
+                  side_effect=lambda build,level,result,**kwargs:result),
+              mock.patch.object(web.subprocess,"Popen",
+                  side_effect=AssertionError("NO_NATIVE_WORKER"))):
+            recovered=self.jobs.build_season_environment(
+                game_build=self.build,target_ilevel=334,
+                auto_initial_core_build=True,
+                auto_initial_core_simc_binary=str(binary))
+            self.assertTrue(recovered["environment_ready"])
+            self.assertEqual(build.call_count,1)
+            self.assertTrue(snapshot.is_file())
+            stage_receipt=self.installed.parent.parent/".stage_receipts"/(
+                "fresh-v113-profile-"+self.digest[:20]+".json")
+            self.assertTrue(stage_receipt.is_file())
+            self.assertEqual(self.jobs._verified_fresh_profile_result[
+                "verified_target_ilevel"],334)
+            self.assertEqual(self.jobs._verified_fresh_profile_result[
+                "source_compilation"]["verified_environment_install"][
+                    "manifest_sha256"],self.digest)
+            restarted=web.LocalJobs(self.root)
+            again=restarted.restore_verified_fresh_profile(
+                target_ilevel=334,game_build=self.build,
+                selected_oil_item_ids_by_hand={},
+                required_gem_layout={
+                    "special_gem_id":None,"socket_total":4},
+                expected_installed_manifest_sha256=self.digest)
+            self.assertIsNotNone(again)
+            self.assertEqual(again["verified_target_ilevel"],334)
+            self.assertEqual(again["source_compilation"][
+                "verified_environment_install"]["manifest_sha256"],
+                self.digest)
+            # Exact cached base install plus now-sealed profile: no v216,
+            # no need for the previously supplied binary to still exist.
+            binary.unlink()
+            with mock.patch.object(restarted,
+                "_with_verified_ko_localization",
+                side_effect=lambda build,level,result,**kwargs:result):
+                cached=restarted.build_season_environment(
+                    game_build=self.build,target_ilevel=334,
+                    auto_initial_core_build=True,
+                    auto_initial_core_simc_binary=str(binary))
+            self.assertTrue(cached["verified_v113_profile_source_restored"])
+            self.assertTrue(cached["web_environment_scope"][
+                "auto_initial_core_native_skipped_existing_ready"])
+            build.assert_called_once()
+
     def test_v413_fresh_flask_variant_beyond_64_reuses_saved_profile(self):
         root=self.installed.parent
         self.installed_doc["official_F_physical_source"]={
