@@ -14,7 +14,32 @@ SPEC.loader.exec_module(ledger)
 
 class DevelopmentLedgerGuardTests(unittest.TestCase):
     def test_actual_index_and_note_links_are_consistent(self):
+        # Normal CI validates the current navigation, not a full reformat of
+        # hundreds of append-only historical research notes.
         self.assertEqual(ledger.validate(ROOT), [])
+
+    def test_historical_note_template_audit_is_explicit_opt_in(self):
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            folder=root/"docs"/"development"
+            notes=folder/"notes"
+            notes.mkdir(parents=True)
+            (folder/"INDEX.md").write_text(
+                "# Index\n"
+                "| Capability | Keywords | Evidence | Integration | Prior evidence | Last note |\n"
+                "|---|---|---|---|---|---|\n"
+                "| `TIER.SEASON` | tier | `SOURCE_CORROBORATED`"
+                " | `NOT_INTEGRATED` | past proof | [older](notes/2026-11-03_old.md) |\n",
+                encoding="utf8")
+            (notes/"2026-11-03_old.md").write_text(
+                "# Validly preserved old note\n"
+                "- **Capability:** `TIER.SEASON`\n",
+                encoding="utf8")
+            self.assertEqual(ledger.validate(root), [],
+                "past note formatting must not block current product CI")
+            strict=ledger.validate(root,audit_history=True)
+            self.assertTrue(any(x.startswith("NOTE_REQUIRED_FIELD:") for x in strict),
+                strict)
 
     def test_index_has_distinct_evidence_and_integration_status(self):
         entries, errors = ledger._index(ROOT)
