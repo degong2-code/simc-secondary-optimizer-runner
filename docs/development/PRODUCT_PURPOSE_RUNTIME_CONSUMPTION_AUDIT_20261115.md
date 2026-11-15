@@ -118,3 +118,9 @@
 - **수정:** `v218.current_season_approved_optional_choices()`를 현재 실행 허용 선택지의 공통 원천으로 사용, `v113 /options`와 서버 프로필 생성 사전검사에서 공유. 실제 신규 season item proof가 없으므로 일반 현재 시즌은 `source_default` 및 효과 없음 alias `disabled`만 허용. 검증된 신규 아이템이 나타나면 동일 공통 owner를 v212 등록·SimC 입력과 연결할 예정이며, 그 전에는 과거 토큰을 항목별 하드코딩 승인하지 않는다.
 - `v113.plan`은 **세션/프로필/Native 이전**, `prepare_with_internal_special_L`은 정확 L hydration 이전에 검증한다. 사용되지 않는 선택 기능에 새 외부 API, DB2, Native, 대량 파일 검사는 추가하지 않았다. 기존 역사 세션 조회·캐시는 변경하지 않는다.
 - **검증 범위:** 서버 direct API plan/start/longrun prepare에서 원래 v108 토큰·임의 신규 token 선택의 공통 실패와 `disabled` 안전 별칭, 기본 HTML UI 허용 목록의 일치. 신규 시즌 소비품 auto registration 완료, item-level source proof 획득, 실제 Native 실행을 **주장하지 않음**.
+
+### H.1 v482 실제 확인 영수증
+
+- 코드: [v482 공통 승인 경계](https://github.com/degong2-code/simc-secondary-optimizer-runner/commit/95df7f80b07964e32426ff779fdb8890f7d228ec) + [기존 합성 전달 검증 보정](https://github.com/degong2-code/simc-secondary-optimizer-runner/commit/433cb56666e19ee55c98c48a0718444b7e146370). 직접 API 신규 요청이 옛 v108 SimC 문자열만으로 승인되지 않도록 **v113+v218 권한 일치**. 기름·F/J/O·세션 캐시 수정 없음.
+- 이번 실행: [v113 #43668705725](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43668705725) Windows/Linux 각각 **389 tests/388 PASS/1 SKIP**, [Reusable #43668705723](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43668705723) **673 tests/671 PASS/2 SKIP**, [v401 #43668705705](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43668705705) SUCCESS. 모든 언급한 PASS는 **오프라인**이며 신규 Native/HTTP/DB2 0.
+- **현재 P1 범용 엔진 상태:** 원본 후보 자동 수집 및 공통 v220 정책 A·v098 SimC 입력 엔진 **기존 구현**. 그러나 음식/물약/증강 룬의 신규 시즌 *물리 아이템↔SimC 토큰↔최고 품질·사용 조건*의 실제 일치 영수증은 아직 이 코드 경로에서 제공되지 않아 `source_default`만 승인. 본 코드가 범용 등록 엔진 전부를 완성했다거나 개별 아이템을 등록했다고 주장하지 않음.
