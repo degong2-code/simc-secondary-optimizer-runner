@@ -1018,6 +1018,7 @@ class LocalJobs:
                 "status":"NO_VERIFIED_OIL_LOADOUTS",
                 "game_build":build,"target_ilevel":ilevel,
                 "items":[],"verified_flasks":[],
+                "verified_base_flask_installs":[],
                 "native_calls":0,"network_calls":0}
         if build is None:
             result["status"]="SELECT_LOCAL_INSTALLED_BUILD"
@@ -1069,6 +1070,27 @@ class LocalJobs:
                 if (match is None or match["installed_manifest_sha256"]
                     !=doc["manifest_sha256"]):continue
                 flask=doc.get("official_F_physical_source")
+                if type(flask) is dict and not ids:
+                    # A verified base F may have several v212 J variants.
+                    # Offer the exact saved installation SHA only for the
+                    # ordinary 4-gem/no-oil profile; never infer the first
+                    # or newest F/J combination from the F item ID alone.
+                    # Full v113 stage verification still occurs on planning.
+                    try:
+                        profile_doc=json.loads(
+                            snapshot.read_text(encoding="utf8"))
+                        compatible=_verified_snapshot_gem_layout_matches(
+                            profile_doc.get("environment_result"),
+                            special_gem_id=None,socket_total=4)
+                    except (ValueError,UnicodeError,OSError,TypeError):
+                        compatible=False
+                    if compatible:
+                        result["verified_base_flask_installs"].append({
+                            "installed_manifest_sha256":doc["manifest_sha256"],
+                            "flask_item_id":flask["physical_item_id"],
+                            "J":doc["official_J"],
+                            "F":doc["official_F"],
+                            "socket_total":4})
                 if type(flask) is dict:
                     physical=flask["physical_item_id"]
                     if physical not in conflicting_flasks:
@@ -1110,6 +1132,9 @@ class LocalJobs:
                  entry["selected_oil_item_ids_by_hand"].values()}
         official_names=official_ko_env.read_names(
             self.root,build,set(flasks_by_id)|oil_ids)
+        result["verified_base_flask_installs"].sort(
+            key=lambda x:(x["flask_item_id"],x["J"],
+                          x["installed_manifest_sha256"]))
         result["verified_flasks"]=[
             {**flasks_by_id[k],
              **({"official_name_ko":official_names[k]}

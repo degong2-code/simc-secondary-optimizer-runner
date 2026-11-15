@@ -143,7 +143,8 @@ const names = {
   redirected_base_stats:"촉매 원본 ID",crafted_stats:"제작 스탯",
   embellishment:"장식 토큰"
 };
-const state = { token:"", defaults:[], allowedRacesBySpec:{}, seasonGear:null, seasonGearTargetIlevel:null, dkRuneIds:new Set(), oilLoadouts:[], oilCatalog:null, eagleApproved:false, session:"", running:false,
+const state = { token:"", defaults:[], allowedRacesBySpec:{}, seasonGear:null, seasonGearTargetIlevel:null, dkRuneIds:new Set(), oilLoadouts:[], oilCatalog:null,
+                verifiedBaseFlaskInstalls:[], eagleApproved:false, session:"", running:false,
                 longrunEnabled:false, longrunResultReady:false,
                 longrunCompleted:false,
                 busy:false, options:null, verifiedInstalledBuildFromThisPage:null,
@@ -992,6 +993,15 @@ function installedConsumableScopeMatches(data) {
     data.game_build===build;
 }
 function renderInstalledFlaskChoices(data) {
+  // Exact same-build/ilevel v212 source identities; never derive a budget
+  // or installation SHA from the selected flask ItemID in the browser.
+  state.verifiedBaseFlaskInstalls=installedConsumableScopeMatches(data)?
+    (data.verified_base_flask_installs||[]).filter(item=>
+      /^[a-f0-9]{64}$/.test(item.installed_manifest_sha256||"") &&
+      Number.isSafeInteger(item.flask_item_id)&&item.flask_item_id>0 &&
+      Number.isSafeInteger(item.J)&&item.J>=0 &&
+      Number.isSafeInteger(item.F)&&item.F>=0 &&
+      item.socket_total===4):[];
   const selector=$("season-verified-flask");
   const prior=field("season-selected-flask-id");
   selector.replaceChildren(option("","검증 설치 영약 선택 (선택 · 없으면 고급 ItemID 유지)"));
@@ -1019,9 +1029,85 @@ function renderInstalledFlaskChoices(data) {
     "이 빌드/ilvl에서 검증 설치 영약이 없습니다. 원본 수집·검증 후 표시되며 "+
     "미검증 아이템은 자동 등록하지 않습니다.";
 }
-function chooseInstalledFlask() {
-  $("season-selected-flask-id").value=field("season-verified-flask");
+async function chooseInstalledFlask() {
+  const flask=field("season-verified-flask");
+  $("season-selected-flask-id").value=flask;
   refreshDefaultConsumableSummaries();
+  if(!flask)return;
+  // A verified physical F can belong to several installed J/F/O budgets.
+  // Only a UNIQUE O=0, ordinary four-gem installation is auto-bound here;
+  // other user-selected variants keep the original explicit validation.
+  const build=field("season-game-build")||
+    state.verifiedInstalledBuildFromThisPage;
+  const level=valueInt("ilevel");
+  const sockets=valueInt("season-target-socket-count");
+  const eligible=installedConsumableScopeMatches(state.oilCatalog) &&
+    !oilUseIntent && sockets===4 &&
+    !field("season-existing-special-gem-id");
+  const exact=eligible?state.verifiedBaseFlaskInstalls.filter(x=>
+    x.flask_item_id===Number(flask) && x.socket_total===sockets):[];
+  if(exact.length!==1) {
+    state.seasonGearTargetIlevel=null; // never plan with an old F/J SHA
+    $("season-verified-flask-status").textContent=
+      "선택한 영약의 기본 4보석·기름 미사용 설치 구성을 하나로 특정할 수 없습니다. "+
+      "검증된 다른 예산을 임의 선택하지 않습니다. ‘선택 환경 검증·준비’에서 해당 구성을 확인하세요.";
+    return;
+  }
+  const sha=exact[0].installed_manifest_sha256;
+  if(verifiedInstalledGearScopeMatchesRun(build,level) &&
+     state.seasonGear.installed_manifest_sha256===sha) {
+    setNotice("선택한 영약은 현재 검증 설치본과 일치합니다. 바로 최적화를 계획할 수 있습니다.");
+    return;
+  }
+  // Rebind trinket choices and source-owned options to the SAME exact v212
+  // install. This is read-only; it never invokes the G/F Build or Native.
+  const priorTrinkets=[field("trinket1"),field("trinket2")];
+  const priorSpecial=Array.from($("special-rows").querySelectorAll(".gear-row"))
+    .map(row=>{
+      const read=name=>row.querySelector('[data-field="'+name+'"]')?.value||"";
+      return {slot:read("slot"),item_id:Number(read("item_id")),
+              options:{bonus_id:read("bonus_id"),
+                       redirected_base_stats:read("redirected_base_stats")}};
+    }).filter(x=>x.slot&&Number.isSafeInteger(x.item_id)&&x.item_id>0);
+  // Until the replacement source is received, no previous SHA may authorize
+  // a new run. Edits during the async read also cannot reinstate old proof.
+  state.seasonGearTargetIlevel=null;
+  const gear=await api("/api/v1/season-gear?game_build="+
+    encodeURIComponent(build)+"&target_ilevel="+level+
+    "&installed_manifest_sha256="+sha);
+  if(field("season-verified-flask")!==flask ||
+     Number(field("ilevel"))!==level ||
+     (field("season-game-build")||
+       state.verifiedInstalledBuildFromThisPage)!==build)return;
+  if(gear.status!=="CURRENT_SEASON_CANDIDATE_SELECTION_ONLY" ||
+     gear.source_scope!=="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES" ||
+     gear.season_build!==build ||
+     gear.installed_manifest_sha256!==sha)
+    throw Error("VERIFIED_FLASK_EXACT_INSTALLED_GEAR_UNAVAILABLE");
+  installSeasonGearHints(gear);
+  state.seasonGearTargetIlevel=level;
+  setTrinketSelection("trinket1",priorTrinkets[0]);
+  setTrinketSelection("trinket2",priorTrinkets[1]);
+  fillGearRows("special-rows",priorSpecial.filter(entry=>{
+    const item=gear.choices.special_effect_gear_candidate.find(
+      x=>x.item_id===entry.item_id);
+    return item&&specialAllowedSlots(item).includes(entry.slot);
+  }));
+  state.seasonOptionRequestEpoch++;
+  renderSeasonOptionCatalog(null);
+  try {
+    await restoreInstalledSeasonOptionCatalog({
+      current_season_product:true,
+      installed_season_game_build:build,
+      installed_manifest_sha256:sha,
+      user:{target:{ilevel:level}}});
+  }catch{
+    renderSeasonOptionCatalog(null); // optional runes stay unselected
+  }
+  updateBudgetPreview();
+  $("season-verified-flask-status").textContent=
+    "정확한 영약·기본 4보석 설치본으로 연결했습니다. 장신구 선택을 확인한 뒤 "+
+    "새 최적화를 계획할 수 있습니다. G/F 재측정은 하지 않았습니다.";
 }
 function renderInstalledOilLoadouts(data) {
   state.oilCatalog=data;
@@ -3068,7 +3154,8 @@ function registerHandlers() {
   updateSeasonSocketBreakdown();
   $("source-credentials-save-btn").addEventListener("click",()=>withBusy(saveSourceCredentials));
   $("source-credentials-clear-btn").addEventListener("click",()=>withBusy(clearSourceCredentials));
-  $("season-verified-flask").addEventListener("change",chooseInstalledFlask);
+  $("season-verified-flask").addEventListener("change",()=>
+    withBusy(chooseInstalledFlask));
   $("potion").addEventListener("change",refreshDefaultConsumableSummaries);
   $("season-selected-flask-id").addEventListener("input",()=>{
     $("season-verified-flask").value="";

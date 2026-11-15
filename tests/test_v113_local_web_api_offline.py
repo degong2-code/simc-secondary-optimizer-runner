@@ -247,6 +247,67 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(self.client.get(
             "/api/v1/verified-oil-loadouts?ilevel=334").status_code,403)
 
+    def test_v490_verified_F_identity_keeps_multiple_J_base_installs_distinct(self):
+        """Only four-gem O=0 saved profiles expose exact SHA per flask/J.
+
+        Merely observing one F ItemID is not a license to select the most
+        recent J or oil variant. No Native, source collection or new stage.
+        """
+        build="12.1.5.70783"
+        docs=(self.app.state.jobs.root/"_fresh_season_sources"/
+              ("wago_"+build)/"fresh_source")
+        docs.mkdir(parents=True)
+        originals={}
+        for key,j,oil in (("a"*64,92,{}),("b"*64,108,{}),
+                          ("c"*64,92,{"main_hand":243734})):
+            (docs/("v212_installed_"+key[:20]+".json")).write_text("{}")
+            snapshot=docs/("v113_profile_"+key[:20]+".json")
+            snapshot.write_text(json.dumps({"environment_result":{
+                "source_compilation":{"physical_gem_layout_unadmitted":{
+                    "schema":"v271_user_socket_gem_layout_stage_v1",
+                    "status":"PHYSICAL_GEMS_STAGED_SOURCE_AND_SOCKET_PROOFS_PENDING",
+                    "special_gem_id":None,"socket_total":4,
+                    "ordinary_gem_ids":[11,12,13,14]}}}}))
+            originals[key[:20]]={
+                "manifest_sha256":key,"game_build":build,
+                "target_ilevel":334,"official_G":2850,
+                "official_J":j,"official_F":165,
+                "official_F_physical_source":{
+                    "physical_item_id":241326,"simc_input_token":"flask_3",
+                    "crafting_quality":3,"F_rating":165},
+                "official_O_physical_source":(
+                    {"selected_oil_item_ids_by_hand":oil,
+                     "oil_by_hand":{"main_hand":{
+                         "physical_item_id":243734,
+                         "simc_input_token":"main_hand:oil_3"}}}
+                    if oil else None)}
+        def from_file(path,*args):
+            key=pathlib.Path(path).stem.split("_")[-1]
+            return originals[key],"mock source"
+        def exact(*args,expected_installed_manifest_sha256=None,**kwargs):
+            return {"installed_manifest_sha256":
+                    expected_installed_manifest_sha256}
+        with (mock.patch.object(web.environment_manifest,"read_json",
+                   side_effect=from_file),
+              mock.patch.object(web.environment_manifest,
+                   "verify_fresh_installed_environment"),
+              mock.patch.object(web.environment_build,
+                   "find_verified_installed_season_environment",
+                   side_effect=exact),
+              mock.patch.object(web.subprocess,"Popen",
+                   side_effect=AssertionError("NO_NATIVE"))):
+            res=self.client.get(
+                "/api/v1/verified-oil-loadouts?ilevel=334&game_build="+build,
+                headers=self.headers)
+        self.assertEqual(res.status_code,200,res.text)
+        self.assertEqual(res.json()["verified_base_flask_installs"],[
+            {"installed_manifest_sha256":"a"*64,"flask_item_id":241326,
+             "J":92,"F":165,"socket_total":4},
+            {"installed_manifest_sha256":"b"*64,"flask_item_id":241326,
+             "J":108,"F":165,"socket_total":4}])
+        self.assertEqual(len(res.json()["verified_flasks"]),1)
+        self.assertEqual(res.json()["native_calls"],0)
+
     def test_oil_loadout_only_if_exact_installed_and_profile_saved(self):
         build="12.1.5.70783"
         docs=(self.app.state.jobs.root/"_fresh_season_sources"/

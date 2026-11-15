@@ -609,7 +609,7 @@ eval(context+raw.slice(start,end)+"\n"+test);
         for token in ("function renderInstalledFlaskChoices(data)",
                       "function chooseInstalledFlask()",
                       'data.verified_flasks||[]',
-                      '$("season-selected-flask-id").value=field("season-verified-flask")',
+                      '$("season-selected-flask-id").value=flask;',
                       'Number(data.target_ilevel)===Number(field("ilevel"))',
                       '"season-target-ilevel").addEventListener("change"',
                       "renderInstalledFlaskChoices(data)"):
@@ -625,6 +625,25 @@ eval(context+raw.slice(start,end)+"\n"+test);
         self.assertIn('id="season-gem-layout" open',html)
         self.assertNotIn("영약은 검증된 원본 고정치 F=165",html)
         self.assertNotIn("기존 6회 실행과 별개",html)
+
+    def test_v490_verified_base_F_rebinds_exact_v212_without_new_native(self):
+        """The user's flask selector must bind the same installed SHA as gear."""
+        js=self.client.get("/assets/app.js").text
+        for needle in (
+            "verified_base_flask_installs||[]",
+            "async function chooseInstalledFlask()",
+            "exact.length!==1",
+            "state.seasonGearTargetIlevel=null",
+            "verifiedInstalledGearScopeMatchesRun(build,level)",
+            '"/api/v1/season-gear?game_build="+',
+            '"&installed_manifest_sha256="+sha',
+            "gear.installed_manifest_sha256!==sha",
+            "restoreInstalledSeasonOptionCatalog({",
+            "G/F 재측정은 하지 않았습니다.",
+            "withBusy(chooseInstalledFlask)"):
+            self.assertIn(needle,js)
+        self.assertNotIn("request.G=",js)
+        self.assertNotIn("request.F=",js)
 
     def test_verified_oil_dropdown_reuses_exact_id_web_request(self):
         html=self.client.get("/").text
