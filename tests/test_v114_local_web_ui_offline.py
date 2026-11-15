@@ -640,7 +640,8 @@ eval(context+raw.slice(start,end)+"\n"+test);
             "gear.installed_manifest_sha256!==sha",
             "restoreInstalledSeasonOptionCatalog({",
             "G/F 재측정은 하지 않았습니다.",
-            "withBusy(chooseInstalledFlask)"):
+            "withBusy(chooseInstalledFlask)",
+            '$("season-verified-flask").disabled=busy'):
             self.assertIn(needle,js)
         self.assertNotIn("request.G=",js)
         self.assertNotIn("request.F=",js)
@@ -678,8 +679,10 @@ const state={
     flask_item_id:241327,socket_total:4,J:92,F:165}]
 };
 const calls=[],restored=[];
+let changeSocketsDuringFetch=false;
 const api=async u=>{
  calls.push(u);
+ if(changeSocketsDuringFetch)$("season-target-socket-count").value="5";
  return {status:"CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
    source_scope:"VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES",
    season_build:"12.1.5.70783",installed_manifest_sha256:B,
@@ -722,6 +725,25 @@ const make=(oilUseIntent=false)=>Function(
     "AMBIGUOUS_CANNOT_REUSE_OLD_GEAR_SHA");
  assert($("season-verified-flask-status").textContent.includes(
     "임의 선택하지 않습니다"));
+ // A socket edit while the exact SHA source is in flight must not publish
+ // yesterday's O=0/four-gem gear, even though the server would reject it.
+ state.verifiedBaseFlaskInstalls=[
+   {installed_manifest_sha256:B,flask_item_id:241327,
+    socket_total:4,J:92,F:165}];
+ state.seasonGear={installed_manifest_sha256:A};
+ state.seasonGearTargetIlevel=334;
+ $("season-target-socket-count").value="4";
+ changeSocketsDuringFetch=true;
+ await make()();
+ assert.strictEqual(calls.length,2,"STALE_UI_READ_ONLY_SINGLE_GET");
+ assert.strictEqual(state.seasonGear.installed_manifest_sha256,A,
+    "STALE_GEM_SELECTION_CANNOT_INSTALL_OLD_F_SOURCE");
+ assert.strictEqual(state.seasonGearTargetIlevel,null,
+    "STALE_SOURCE_CANNOT_AUTHORIZE_A_NEW_RUN");
+ assert.deepStrictEqual(restored.map(x=>x.installed_manifest_sha256),[B],
+    "STALE_SOURCE_MUST_NOT_APPLY_OPTION_CATALOG");
+ assert($("season-verified-flask-status").textContent.includes(
+    "조회 중 영약"));
  console.log("V490_EXACT_F_J_BIND_NO_NATIVE_AND_AMBIGUOUS_BLOCK_PASS");
 })().catch(e=>{console.error(e);process.exitCode=1});
 """
