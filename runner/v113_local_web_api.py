@@ -789,13 +789,17 @@ class LocalJobs:
                     if type(prior.get("installed_manifest_sha256")) is str
                     else None)
                 # A sealed profile must match its gems. A verified v212
-                # budget with no saved v113 profile remains budget-READY
-                # (no Native), but does NOT prove a usable SimC user profile.
+                # budget without a saved v113 profile is budget-READY only.
+                # A user-requested automatic core Build must not get stuck
+                # returning budget-only READY forever: continue into the
+                # ORIGINAL v216 Build to recover the missing profile using
+                # existing sealed sources/cache where possible.
                 digest=prior.get("installed_manifest_sha256")
                 has_profile=(type(digest) is str and
                     (self.root/"_fresh_season_sources"/("wago_"+game_build)/
                      "fresh_source"/("v113_profile_"+digest[:20]+".json")).exists())
-                if snapshot is not None or not has_profile:
+                if snapshot is not None or (
+                        not has_profile and not auto_initial_core_build):
                     return self._with_verified_ko_localization(
                         game_build,target_ilevel,{**prior,
                     "verified_v113_profile_source_restored":snapshot is not None,

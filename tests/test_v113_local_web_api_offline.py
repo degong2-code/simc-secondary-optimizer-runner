@@ -1060,6 +1060,62 @@ class LocalWebAPIOffline(unittest.TestCase):
             required_gem_layout={"special_gem_id":None,"socket_total":4})
         original_build.assert_called_once()
 
+    def test_p1_missing_v113_profile_auto_core_repairs_via_original_build(self):
+        """Installed v212 budget alone cannot satisfy automatic user setup.
+
+        An explicit auto-core request must re-enter the existing v216 source
+        owner to rebuild the missing profile, not claim a runnable cache hit.
+        Repeated source requests without auto-core remain budget-only READY.
+        No real SimC, network, source collection or worker is used here.
+        """
+        prior={"status":"VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED",
+               "environment_ready":True,"environment_installed":True,
+               "installed_manifest_sha256":"a"*64}
+        pending={"status":"SOURCE_ONLY_PENDING",
+                 "environment_ready":False,"environment_installed":False,
+                 "native_calls":0}
+        build="12.2.0.99999"
+        # No saved v113_profile_<sha>.json for this installed environment.
+        with (mock.patch.object(web.environment_build,
+                  "find_verified_installed_season_environment",
+                  return_value=prior),
+              mock.patch.object(self.app.state.jobs,
+                  "restore_verified_fresh_profile",
+                  return_value=None) as restore,
+              mock.patch.object(web.environment_build,"build_environment",
+                  return_value=pending) as rebuild,
+              mock.patch.object(web.subprocess,"Popen",
+                  side_effect=AssertionError("NO_NATIVE_WORKER"))):
+            # Status/source-only request retains its old budget-READY
+            # semantics and MUST NOT generate a profile.
+            read=self.post("/api/v1/environment/season-build",{
+                "game_build":build,"target_ilevel":334})
+            self.assertEqual(read.status_code,200,read.text)
+            self.assertTrue(read.json()["web_environment_scope"][
+                "environment_ready"])
+            self.assertFalse(read.json()[
+                "verified_v113_profile_source_restored"])
+            rebuild.assert_not_called()
+            # The normal one-click automatic core path must now re-enter
+            # existing v216 rather than return the same unexecutable READY.
+            repaired=self.post("/api/v1/environment/season-build",{
+                "game_build":build,"target_ilevel":334,
+                "auto_initial_core_build":True,
+                "auto_initial_core_simc_binary":str(self.binary)})
+            self.assertEqual(repaired.status_code,200,repaired.text)
+            self.assertFalse(repaired.json()["web_environment_scope"][
+                "environment_ready"])
+            restore.assert_called()
+            rebuild.assert_called_once()
+            params=rebuild.call_args.kwargs
+            self.assertEqual(params["binary"],self.binary.resolve())
+            self.assertTrue(params["fresh_collection_inputs"][
+                "auto_native_G_requested"])
+            self.assertTrue(params["fresh_collection_inputs"][
+                "auto_native_F_requested"])
+            self.assertTrue(params["fresh_collection_inputs"][
+                "auto_select_observed_F_no_oil"])
+
     def test_p1_first_install_core_reuses_original_g_f_stages(self):
         """Automatic cold-start selection calls original Build, not a new engine."""
         payload={"game_build":"12.2.0.99999","target_ilevel":334,
