@@ -152,6 +152,35 @@ class ExactConsumableSourceJoin(unittest.TestCase):
                         "SAME_ID_ITEM_CLASS_OR_QUALITY_DRIFT"):
                     self.match(simc=wrong)
 
+    def test_two_sources_agree_on_nonzero_equipment_slot_still_blocked(self):
+        """Exact class/ID match never certifies an equipped item as food."""
+        other=self.root/"wrong-inventory"
+        modified=copy.deepcopy(self.original)
+        modified["items"][0]["inventory_type"]=20
+        def write():
+            for name,relative in subject.OUTPUTS.items():
+                p=other/relative
+                p.parent.mkdir(parents=True,exist_ok=True)
+                p.write_text(
+                    json.dumps(modified) if name=="candidate"
+                    else "original stage source",encoding="utf8")
+        sealed=stages.execute_stage(
+            root=other,stage_id=subject.STAGE_ID,
+            stage_version=subject.STAGE_VERSION,
+            inputs={"synthetic_source":"not-real-invalid-slot"},
+            outputs=subject.OUTPUTS,execute=write)
+        simc=copy.deepcopy(self.doc)
+        simc["items"][0]["inventory_type"]=20
+        with mock.patch.object(subject.item_metadata,"from_seed",
+                               side_effect=AssertionError("NO_LARGE_READ")):
+            with self.assertRaisesRegex(
+                    subject.OptionalConsumableSourceBlocked,
+                    "SELECTED_PHYSICAL_ITEM_SCOPE_MISMATCH"):
+                subject.match_selected_physical_items(
+                    stage_root=other,v190_stage=sealed,
+                    simc_seed_dir=self.seed,game_build=BUILD,
+                    simc_revision=REV,selected_item_ids=[101])
+
     def test_invalid_ascii_token_remains_unadmitted_without_guessing(self):
         wrong=copy.deepcopy(self.doc)
         wrong["items"][0]["name"]="특별 음식"

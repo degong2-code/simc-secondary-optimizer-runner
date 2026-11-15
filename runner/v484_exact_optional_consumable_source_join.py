@@ -129,7 +129,10 @@ def match_selected_physical_items(*, stage_root, v190_stage,
         need(item_id not in db2 and row.get("kind") in SUBCLASS and
              row.get("item_class")==0 and
              row.get("item_subclass")==SUBCLASS[row["kind"]] and
+             # Food/potion is consumed, never equipped. Two sources
+             # agreeing on the same nonzero inventory slot is still invalid.
              type(row.get("inventory_type")) is int and
+             row["inventory_type"]==0 and
              row.get("source")=="SAME_BUILD_DB2_ITEM_AND_ITEMSPARSE" and
              row.get("ui_selectable") is False and
              row.get("simc_token")=="UNRESOLVED",
@@ -162,7 +165,7 @@ def match_selected_physical_items(*, stage_root, v190_stage,
         need(row.get("source")=="SIMC_GENERATED_ITEM_DATA_EXACT_ROW" and
              row.get("class_id")==0 and
              row.get("subclass_id")==SUBCLASS[origin_row["kind"]] and
-             row.get("inventory_type")==origin_row["inventory_type"] and
+             row.get("inventory_type")==origin_row["inventory_type"]==0 and
              type(row.get("crafting_quality")) is int and
              row["crafting_quality"]>=0,
              "V484_SAME_ID_ITEM_CLASS_OR_QUALITY_DRIFT")
