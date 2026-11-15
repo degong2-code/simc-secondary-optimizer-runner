@@ -96,6 +96,18 @@ def _validate(paths,user):
         return True
     except Exception:return False
 
+def current_season_approved_optional_choices():
+    """One source for *currently* executable optional choices, not v108 history.
+
+    No new season physical ItemID/quality/SimC receipt for food/potion/aug
+    has been installed, so all three controls permit only source_default.
+    Future exact verified installed registrations must be bound here AND in
+    the normal v212 runtime before expanding these lists. This is not a
+    substitute for that source owner or an extra effect certification.
+    """
+    return {name:["source_default"] for name in ("food","potion","augmentation")}
+
+
 def _verified_fresh_season_consumables(user):
     """Forward actual user F/O-safe optional SimC tokens, not old J/F budgets.
 
@@ -114,14 +126,18 @@ def _verified_fresh_season_consumables(user):
                    chosen["diamond_id"]==0 and
                    chosen["omnium_talents"]=="source_default",
                    "FRESH_SEASON_FLASK_DIAMOND_OR_MODULE_NOT_ADMITTED")
+    approved=current_season_approved_optional_choices()
     optional={}
     for name in ("food","potion","augmentation"):
         token=chosen[name]
-        if token=="source_default":
-            token="disabled"
-        bootstrap.need(type(token) is str and
-                       token in bootstrap.consumer.SUPPORTED[name],
-                       "FRESH_SEASON_SIMC_OPTION_UNSUPPORTED:"+name)
+        # v108.SUPPORTED documents historical SimC spelling, NOT
+        # admission of a current-season physical item/effect/use condition.
+        # Both the visible UI and direct API must use the same owner.
+        bootstrap.need(
+            type(token) is str and
+            (token in approved[name] or token=="disabled"),
+            "FRESH_SEASON_OPTIONAL_CONSUMABLE_NOT_INSTALLED:"+name)
+        token="disabled" if token=="source_default" else token
         optional[name]=token
     return optional
 

@@ -1515,6 +1515,11 @@ class LocalJobs:
     def plan(self, params):
         try:
             user = sessions.user_scenario(params.controls)
+            # Reuse the same current-season approval as /options BEFORE
+            # creating sessions or resolving any exact-static-L Native.
+            # A historical v108 SimC token is not a registered item.
+            if params.current_season_product:
+                profile_stage._verified_fresh_season_consumables(user)
             exact_oils=params.selected_oil_item_ids_by_hand
             sockets=params.user_socket_total
             special=params.user_special_gem_id
@@ -1830,6 +1835,10 @@ class LocalJobs:
         """
         try:
             user=sessions.user_scenario(params.controls)
+            if params.current_season_product:
+                # This Start/LongRun preflight happens before exact-L
+                # cache hydration or other possible Native subprocess.
+                profile_stage._verified_fresh_season_consumables(user)
         except Exception as exc:
             raise blocked(exc) from None
         hydrated=None
@@ -2652,12 +2661,12 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
         # source_default (resolved to disabled by v218) is newly selectable.
         # Keep the legacy token catalogue for existing saved-session display,
         # without silently converting it into a new season registration.
+        approved_optional=profile_stage.current_season_approved_optional_choices()
         return {
             "current_season_product_choices":{
                 "schema":"v113_current_season_optional_consumables_v1",
                 "status":"NONDEFAULT_UNADMITTED_UNTIL_VERIFIED_SEASON_BINDING",
-                "food":["source_default"],"potion":["source_default"],
-                "augmentation":["source_default"],
+                **approved_optional,
                 # Current v218 admits no new historical diamond or Folio rows.
                 "diamond_id":[0],"omnium_talents":["source_default"],
                 "source_default_simc_token":"disabled",

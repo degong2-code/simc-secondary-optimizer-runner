@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import unittest
+from unittest import mock
 
 from fastapi.testclient import TestClient
 
@@ -59,6 +60,49 @@ class CurrentSeasonOptionalConsumables(unittest.TestCase):
         result=stage._verified_fresh_season_consumables(user)
         self.assertEqual(result,{
             "food":"disabled","potion":"disabled","augmentation":"disabled"})
+
+    def test_v482_current_season_direct_api_does_not_admit_old_v108_tokens(self):
+        """UI-hidden old SimC tokens cannot bypass season ItemID/quality owner."""
+        initial=sessions.standard_controls(("mage","frost"))
+        original=stage.current_season_approved_optional_choices()
+        self.assertEqual(set(original),{"food","potion","augmentation"})
+        for key,token in (
+                ("food","royal_roast"),
+                ("potion","potion_of_recklessness_2"),
+                ("augmentation","void_touched"),
+                ("food","hypothetical_next_season_feast")):
+            with self.subTest(category=key,token=token):
+                controls={**initial,"consumable_choices":{
+                    **initial["consumable_choices"],key:token}}
+                user=sessions.user_scenario(controls)
+                with self.assertRaisesRegex(Exception,
+                        "FRESH_SEASON_OPTIONAL_CONSUMABLE_NOT_INSTALLED:"+key):
+                    stage._verified_fresh_season_consumables(user)
+                request={"controls":controls,
+                         "binary":"/not/a/real/simc/binary",
+                         "revision":"abcdef0",
+                         "current_season_product":True}
+                with (mock.patch.object(api.exact_L,"hydrate",
+                         side_effect=AssertionError("NO_STATIC_NATIVE")),
+                      mock.patch.object(api.subprocess,"Popen",
+                         side_effect=AssertionError("NO_DPS_NATIVE"))):
+                    for route in ("/api/v1/sessions/plan",
+                                  "/api/v1/sessions/start",
+                                  "/api/v1/longrun/prepare"):
+                        response=self.client.post(
+                            route,json=request,headers=self.headers)
+                        self.assertEqual(response.status_code,422,response.text)
+                        self.assertEqual(response.json()["detail"]["code"],
+                            "FRESH_SEASON_OPTIONAL_CONSUMABLE_NOT_INSTALLED")
+
+    def test_v482_safe_disabled_alias_stays_no_effect(self):
+        controls=sessions.standard_controls(("mage","frost"))
+        controls["consumable_choices"]={
+            **controls["consumable_choices"],"food":"disabled"}
+        user=sessions.user_scenario(controls)
+        self.assertEqual(stage._verified_fresh_season_consumables(user),
+            {"food":"disabled","potion":"disabled",
+             "augmentation":"disabled"})
 
     def test_nondefault_diamond_and_folio_still_fail_actual_server_admission(self):
         user=sessions.user_scenario(sessions.standard_controls(("mage","frost")))

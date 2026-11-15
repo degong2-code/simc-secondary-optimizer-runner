@@ -110,3 +110,11 @@
 - **감사 종료**: WSE 비차단 KEEP, v280/v281 F/O 필수 owner KEEP, v477 UI 선택 근거·v478 서버 SHA 검증 KEEP, 역사 원장 기본 형식 전수 Gate STOP, 오래된 선택 추가 소켓 연구 테스트는 기본 CI에서 분리·선택 시에만 재검토. v216 전체 재작성·미사용 필드 일괄 삭제 없음. 동일 기본 E2E 신규 Native 없이 STOP.
 - **제품 개발 재개 판단**: 정상 기본 사용자 최적화 경로는 기존 실제 증거로 재사용. 실제 신규 시즌 사용자 선택에서 현재 `runner/webui/app.js`는 음식·물약·증강룬을 `source_default` 중심으로 제한하며 `runner/v196_current_season_user_catalog.py`의 영구 마부 E는 `NEW_SEASON_E_NOT_VERIFIED`인 범위가 남아 있다. 이는 **실사용 선택 기능 후보**이며 미검증 값/효과를 UI 승인하지 않는다. 먼저 원본·선택 ID·SimC 토큰·품질/CHMV 소유자·이미 확보된 증거를 확인하고 *실제로 가능한 선택지부터* 최소 연결한다. 단순 전체 소모품/마부 목록 전수 인증이나 별도 SimC 효과 검증 Gate는 도입하지 않는다.
 - 신규 코드/테스트에서 실제 확인한 첫 사용자 장애가 없으면 기능을 억지로 개발하지 않는다. 정확히 검증된 선택지 하나의 연결이 보이면 그것부터 처리하고, 선택이 없다면 STOP 후 다음 사용자 가치 항목을 검토한다.
+
+## H. 2026-11-15 P1 범용 옵션 등록 — 실제 소비 경계 최소 수정 (v482)
+
+- **현재 원본 상황:** `v191` 음식/물약은 DB2 ItemID 후보(`DB2_ID_ONLY`), `v108`의 food/potion/augmentation은 과거 MID2 SimC 프로필에서 본 토큰 문자열. 그 자체로 현재 시즌 물리 ID·최고 품질·사용 조건·프로필 입증이 아니다. `v220` 정책 A는 이미 consumable을 다룰 수 있지만 인증된 현재 item-level receipt가 없어 일반 선택으로 승인할 수 없음. **새 자동 등록·효과 Gate/전수 Native를 만들지 않는다.**
+- **실제 결함:** `/options` 및 UI에서는 source_default만 허용하지만 서버 `v218._verified_fresh_season_consumables`는 v108 historical `SUPPORTED`에 있는 토큰을 *신규 현재 시즌 요청에서 허용*했고, 공개 API가 화면을 우회할 수 있었다.
+- **수정:** `v218.current_season_approved_optional_choices()`를 현재 실행 허용 선택지의 공통 원천으로 사용, `v113 /options`와 서버 프로필 생성 사전검사에서 공유. 실제 신규 season item proof가 없으므로 일반 현재 시즌은 `source_default` 및 효과 없음 alias `disabled`만 허용. 검증된 신규 아이템이 나타나면 동일 공통 owner를 v212 등록·SimC 입력과 연결할 예정이며, 그 전에는 과거 토큰을 항목별 하드코딩 승인하지 않는다.
+- `v113.plan`은 **세션/프로필/Native 이전**, `prepare_with_internal_special_L`은 정확 L hydration 이전에 검증한다. 사용되지 않는 선택 기능에 새 외부 API, DB2, Native, 대량 파일 검사는 추가하지 않았다. 기존 역사 세션 조회·캐시는 변경하지 않는다.
+- **검증 범위:** 서버 direct API plan/start/longrun prepare에서 원래 v108 토큰·임의 신규 token 선택의 공통 실패와 `disabled` 안전 별칭, 기본 HTML UI 허용 목록의 일치. 신규 시즌 소비품 auto registration 완료, item-level source proof 획득, 실제 Native 실행을 **주장하지 않음**.
