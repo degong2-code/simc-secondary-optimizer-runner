@@ -1,3 +1,5 @@
+> **2026-11-15 사용자 직접 결정 — 제품 완성까지 계속 적용:** [실제 런타임 소비·과잉 검증 감사 정본](PRODUCT_PURPOSE_RUNTIME_CONSUMPTION_AUDIT_20261115.md) 및 [동적 GitHub 독립 인계](../CHAT_HANDOFF_DYNAMIC_GITHUB_RECONSTRUCTION_20261115.md). 아래 2026-11-14 정책의 제품 정확성·78 상태·최종 수락 기준은 보존한다. 과거 PASS·실험을 반복하기보다 필드의 실제 소비/사용자 가치/기존 증거·비용/STOP을 매 작업에 적용한다. 이 포인터는 새 Gate나 78 PASS 승격이 아니다.
+
 # SIMC SECONDARY OPTIMIZER — 제품 우선·최소 충분 검증 상시 운영 정책
 
 > **사용자 직접 결정 · 2026-11-14. 모든 제품 개발 채팅·독립 인계 채팅에 적용.**

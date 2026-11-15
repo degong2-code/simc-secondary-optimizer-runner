@@ -1,3 +1,5 @@
+> **2026-11-15 상시 제품 우선 판단:** [제품 소비 범위·과잉 검증 전면 감사](PRODUCT_PURPOSE_RUNTIME_CONSUMPTION_AUDIT_20261115.md) · [동적 GitHub 인계](../CHAT_HANDOFF_DYNAMIC_GITHUB_RECONSTRUCTION_20261115.md). 다음 작업은 이전 'next'나 PASS 숫자가 아니라 실제 사용자 장애, 소비 필드, 기존 증거·비용·STOP으로 선택한다. 하단 과거 '최신' 표기는 당시 스냅샷이다.
+
 > **필수 읽기·개발 판단 기준(2026-11-14 최신 사용자 직접 결정):** [제품 우선·최소 충분 검증 정책](POLICY_PRODUCT_FIRST_MINIMUM_SUFFICIENT_VERIFICATION_20261114.md) · [상시 새 채팅 인계](../CHAT_CONTINUITY_HANDOFF_20261114_PRODUCT_FIRST_SCOPE_CONTROL.md). `next_review`는 원장 판정 순서이지 제품 구현을 B10·선택 아이템 효과 인증에 묶는 지시가 아니다. 기본 USER→G/J/F/O→SimC→결과 첫 장애물 우선, 비선택 기능만 보류, 불필요한 수집 STOP. 아래 이전 '최신' 정보는 작성 당시 이력.
 
 > **2026-11-14 최신 단일 인계 정본 v445/B10 — 읽기 전용 독립 복원:** [78요소 공식 15/78·B10 소켓 다음 검토·v444 촉매 부분 PASS·v439/v440 실 Native·v445 CI](../CHAT_CONTINUITY_HANDOFF_20261114_P1_V445_78ELEMENT_B10_SOCKET_READONLY_RESTORE.md). [78 JSON 정본](78_ELEMENT_COMPLETION_CONTRACTS.json) 기준 generic27/current_source27/product15/historical13, COMPLETE15/78, next B10, full E2E PENDING. v445 계약 #43552516887 SUCCESS, Reusable Offline #43552516848는 기존 ledger 198건 오류; 인계 작업은 제품 코드·Native/API/DB2·PASS 상태 변경 없음. 아래 기존 '최신' 안내는 각 문서 작성 당시의 역사 스냅샷이다.

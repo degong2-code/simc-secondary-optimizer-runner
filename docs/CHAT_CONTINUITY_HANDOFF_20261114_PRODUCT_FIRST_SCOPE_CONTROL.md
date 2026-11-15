@@ -1,3 +1,5 @@
+> **2026-11-15 이후 인계 방법의 최신 결정:** 이 문서는 v470 시점 역사 인계 내용으로 보존한다. 새 인계 시에는 [현재 GitHub HEAD 기반 독립 복원 프롬프트](CHAT_HANDOFF_DYNAMIC_GITHUB_RECONSTRUCTION_20261115.md)와 [제품 소비·과잉 검증 감사](development/PRODUCT_PURPOSE_RUNTIME_CONSUMPTION_AUDIT_20261115.md)를 먼저 적용한다. 이 문서의 v470 HEAD·PASS·다음 항목을 복사하지 않는다.
+
 # SIMC SECONDARY OPTIMIZER — 제품 우선·78요소 통합 개발, v470 단일 인계 정본
 
 > **최신 인계 기준: 2026-11-14 v470 실제 구현 HEAD `7ae84cf331cfcb502b29a0fa97a07862c722f60e`.** 이 문서 변경 자체가 HEAD를 이동시키므로 새 채팅은 GitHub 브랜치 최신 SHA부터 재조회한다. 아래에 보존한 **v456 인계 본문은 역사적 스냅샷**이며 현재 날짜의 개발 순서·CI 상태로 사용하지 않는다.
