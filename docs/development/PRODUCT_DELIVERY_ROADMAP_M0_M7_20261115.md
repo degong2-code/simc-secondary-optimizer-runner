@@ -1,3 +1,5 @@
+> **2026-11-16 최신 개발·인계 우선순위:** [M1 인증 WCL+실 Wago 출처로 기본 Myth ilvl334 확인 / M2 해당 source CSV SHA의 웹→기존 GJFO Build 바인딩 오프라인 PASS / 신규 실제 G/J/F/O·B/T→v212 설치 PENDING / M0~M7·STOP→REUSE·권한](../CHAT_CONTINUITY_HANDOFF_20261116_M2_SOURCE_SHA_PRODUCT_COMPLETION_READONLY_RESTORE.md). 과거 아래 'M1 기본 ilvl 자동 결정 PENDING'은 당시 이력으로 해석하고, **다른 시즌·전체 제품 READY로 과장하지 않는다**. 다음은 동일 시즌 정확 원본 owner/예산/설치 identity의 첫 필수 결손 하나. 기존 78 상태 15/78 COMPLETE·전체 E2E PENDING 불변.
+
 # SIMC SECONDARY OPTIMIZER — 사용자 승인 제품 완성 로드맵 M0~M7
 
 > **사용자 승인: 2026-11-15.** 이 로드맵은 실제 작업 우선순위·완료 상태·STOP/재사용 결정을 **하나의 문서로 관리**하기 위한 운영 기준이다. 새로운 런타임 Gate·증거 서브시스템·개발 티켓 엔진이나 기존 78개 수락 정책의 대체물이 아니다. 로드맵의 마일스톤 순서와 실 개발 우선순위는 유동적이다. 최신 사용자 직접 결정 및 [v1.4.3 승인 설계](../SIMC_SECONDARY_OPTIMIZER_Developer_Notes_v1.4.3_SEASON_GJFO_AUTO_BUILD_APPROVED_20261102.md)·[제품 우선 최소 검증 정책](POLICY_PRODUCT_FIRST_MINIMUM_SUFFICIENT_VERIFICATION_20261114.md)·[실제 소비 감사](PRODUCT_PURPOSE_RUNTIME_CONSUMPTION_AUDIT_20261115.md)·[CURRENT](../CURRENT_PRODUCT_DEVELOPMENT_STATE.md)·[78 기계 정본](78_ELEMENT_COMPLETION_CONTRACTS.json)이 우선한다. GitHub 정본 기록 ≠ Project Sources/UI 등록, 정식 승인·main 병합·v016 원본 바이트 통합이 아니다.

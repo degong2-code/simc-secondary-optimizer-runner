@@ -1,3 +1,5 @@
+> **주의 — 더 최신 M1/M2 인계 정본:** [2026-11-16 실 Wago·WCL 활성 시즌 → Myth 기본 ilvl334, M2 CurrencyTypes source SHA 보호, 다음 실제 v212 설치 필수 작업·중복개발 방지·읽기 전용 STOP](CHAT_CONTINUITY_HANDOFF_20261116_M2_SOURCE_SHA_PRODUCT_COMPLETION_READONLY_RESTORE.md). 이 문서의 `3c358998`/`de951a23` 및 'M1 최초 원본 차단' 설명은 **작성 당시 이력**이다. 새 채팅은 최신 문서와 실제 GitHub HEAD, CURRENT, Actions/Native 우선.
+
 # SIMC SECONDARY OPTIMIZER — M0~M7 제품 우선 최신 인계 (2026-11-16)
 
 > **2026-11-16 최신 재점검 인계 정본.** 확인 당시 실제 격리 브랜치 HEAD `3c358998f698a19903c23592ec31130c4e83b079`; 최신 코드/검증 HEAD는 `de951a23a345d21cd785305e49bee4d293827212`, 그 이후 CURRENT 문서만 갱신됐다. 코드 HEAD 11개 GitHub Actions SUCCESS, 최신 CURRENT HEAD의 78 계약 검사 SUCCESS. 모두 **작성 당시 스냅샷**이며 새 채팅은 브랜치·HEAD·Actions·Native 영수증·78 JSON을 다시 읽는다. 이 인계의 다음 채팅 **첫 응답은 오직 읽기 전용 복원 후 STOP**, 이후 사용자의 별도 '진행' 전에는 코드·문서 수정, 테스트/Actions/Native/DB2/HTTP·공식 승격을 하지 않는다. 본 파일 갱신 자체는 제품 코드/SimC 실행이 아니다.
