@@ -1,5 +1,7 @@
 # SIMC SECONDARY OPTIMIZER — GitHub 현재 상태 기반 동적 인계 프롬프트
 
+> **2026-11-16 최신 단일 인계:** [M0~M7 현재 우선순위·마지막 M3 작업·읽기 전용 새 채팅 시작](CHAT_CONTINUITY_HANDOFF_20261116_M0_M7_PRIORITY_READONLY_RESTORE.md)을 우선 읽는다. 이 문서의 동적 재조회·사용자 가치·STOP 규칙은 계속 유효하지만 2026-11-15 당시 코드와 다음 작업은 역사 상태다. 새 채팅은 최신 브랜치 HEAD, CURRENT, 78 JSON, Actions를 반드시 독립 확인한다. 이 포인터 추가는 코드·실 Native·Project UI·공식 수락 변경이 아니다.
+
 > **상시 인계 문법 (2026-11-15 사용자 직접 결정)**. 이 문서는 과거 v479 또는 현재 채팅의 고정 상태를 옮기는 인계서가 아니다. 새로운 채팅이 **그 시점의 GitHub HEAD, 현재 승인 정책, 실제 코드, 봉인 증거와 테스트**를 독립적으로 읽고 우선순위를 재판정하는 절차다. [제품 소비·과잉검증 감사 정본](development/PRODUCT_PURPOSE_RUNTIME_CONSUMPTION_AUDIT_20261115.md)을 반드시 읽되, 그 문서의 역사 숫자는 절대 현재 진척으로 복사하지 않는다.
 
 ## 새 채팅에 붙여 넣을 프롬프트 (SHA·버전·날짜 고정 금지)
