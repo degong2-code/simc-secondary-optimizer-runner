@@ -2295,6 +2295,7 @@ async function buildSeasonEnvironment(forUserVariant=false) {
     throw Error("게임 빌드는 네 개의 숫자 그룹 형식이어야 합니다.");
   const game_build=supplied_build||null;
   let autoMythTargetSourceBuild=null;
+  let autoMythTargetSourceSha256=null;
   const refresh_reason=forUserVariant?null:
     (field("season-refresh-reason")||null);
   if(refresh_reason!==null&&!["season_change","expansion_change",
@@ -2439,7 +2440,11 @@ async function buildSeasonEnvironment(forUserVariant=false) {
     if(typeof evidence.game_build!=="string" ||
        !/^\d+(?:\.\d+){3}$/.test(evidence.game_build))
       throw Error("MYTH_TARGET_SOURCE_BUILD_INVALID");
+    if(typeof evidence.currency_csv_sha256!=="string" ||
+       !/^[a-f0-9]{64}$/.test(evidence.currency_csv_sha256))
+      throw Error("MYTH_TARGET_SOURCE_SHA_INVALID");
     autoMythTargetSourceBuild=evidence.game_build;
+    autoMythTargetSourceSha256=evidence.currency_csv_sha256;
     state.lastVerifiedSeasonTarget={
       game_build:evidence.game_build,target_ilevel:detected,
       currency_csv_sha256:evidence.currency_csv_sha256
@@ -2481,7 +2486,8 @@ async function buildSeasonEnvironment(forUserVariant=false) {
                               existing_special_gem_id,source_target_socket_count,
                               refresh_reason,
                               ...(autoMythTargetSourceBuild?{
-                                auto_myth_target_source_build:autoMythTargetSourceBuild
+                                auto_myth_target_source_build:autoMythTargetSourceBuild,
+                                auto_myth_target_source_sha256:autoMythTargetSourceSha256
                               }:{}),
                               simc_revision_hint:revision||null}});
     stopSeasonActivity();
