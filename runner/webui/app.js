@@ -3060,8 +3060,14 @@ function exactUserEnchantInputsMatch() {
   const currentRace=simcRace(field("race"));
   const oils=["main_hand","off_hand"].filter(hand=>
     $(hand==="main_hand"?"oil_main":"oil_off").checked);
-  const specials=selectedGear("special-rows","special_items");
-  const crafted=selectedGear("crafted-rows","embellishments");
+  let specials,crafted;
+  try {
+    specials=selectedGear("special-rows","special_items");
+    crafted=selectedGear("crafted-rows","embellishments");
+  } catch {
+    // Partially edited gear rows are not proof of an exact loadout.
+    return false;
+  }
   return selected?.class===scope.class && selected?.spec===scope.spec &&
     currentRace===scope.race && Number(field("ilevel"))===334 &&
     Number(field("trinket1"))===scope.trinket_ids[0] &&
