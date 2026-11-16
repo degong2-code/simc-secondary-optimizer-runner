@@ -1,0 +1,61 @@
+{
+  "schema": "p1_v524_current_70783_m1_m2_real_install_compact_v1",
+  "status": "PASS_ACTUAL_M1_M2_INSTALLED",
+  "evidence_kind": "CURRENT_BUILD_REAL_WINDOWS_SOURCE_AND_NATIVE_SCOPED",
+  "branch": "probe/chat-cache-v035-20261024",
+  "tested_code_sha": "b95e6ea1ff10dc2694a7fb9faa6cee97d37fd82c",
+  "actions_run_id": 43878976233,
+  "actions_url": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43878976233",
+  "artifact_id": 14229649805,
+  "artifact_name": "p1-v524-m1-m2-source-owner-once",
+  "artifact_zip_sha256": "6851711aafe03b5859a8e127263a4a1fe3c0ea0c7fe6c2032ffa907a05a99cde",
+  "inner_diagnostic_json_sha256": "cb006e8da181334ad78c6866157a36f477d2c9b6e04a476f37e4611dc115777b",
+  "game_build": "12.1.5.70783",
+  "target_ilevel": 334,
+  "m1": {
+    "status": "MYTH_TARGET_CANDIDATE_FROM_MATCHED_WAGO_V163_SOURCE",
+    "currency_ids": [
+      3441,
+      3446
+    ],
+    "currency_csv_sha256": "c1e91e4e17b622136d7c9a37c597cd0fe2409a2f5ccb494659014b154a04ef1f",
+    "same_run_original_v161_receipt_sha256": "b017852321a21ddf45d89277a8450efa8fb629047bfdb2969a280e0c6843337a",
+    "same_run_source_identity_matched": true,
+    "currency_csv_matches_previous_v523": true,
+    "note": "The older v523 v161 raw receipt SHA differs; it is a distinct collection receipt. Exact per-table source-byte equality between runs was not separately asserted."
+  },
+  "m2": {
+    "source_compilation_status": "FRESH_V191_V211_V213_COMPILED_UNADMITTED",
+    "source_compilation_missing": [],
+    "required_core_source_owner_missing": [],
+    "numeric_owner_present": {
+      "G": true,
+      "J": true,
+      "F": true,
+      "O": true
+    },
+    "v212_installed": true,
+    "environment_ready": true,
+    "installed_manifest_sha256": "c9bf5b77f278ec28274102d9d798a13b5e8aed33db89ceae5f0dc446c56467c5",
+    "G": 2850,
+    "J": 92,
+    "F": 165,
+    "O": {
+      "crit_rating": 0,
+      "haste_rating": 0,
+      "mastery_rating": 0,
+      "versatility_rating": 0
+    },
+    "B": 3107,
+    "T": 3107,
+    "selected_flask_item_id": 241320,
+    "selected_oil_item_ids_by_hand": {},
+    "four_ordinary_gems": true,
+    "new_environment_native_calls": 3,
+    "new_dps_native_calls": 0
+  },
+  "validation_scope": "One temporary Windows Actions environment, existing M1->v113->v216->v222->v212, default 4 ordinary gems and explicit O=0 only. No user DPS/95% run, no personal PC install, no 26-DPS/full-season generalization.",
+  "full_product_e2e": "PENDING",
+  "official_78_complete_unchanged": "15/78",
+  "no_product_engine_changed": true
+}
