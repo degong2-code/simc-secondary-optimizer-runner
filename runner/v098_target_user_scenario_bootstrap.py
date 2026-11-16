@@ -24,6 +24,7 @@ import v213_source_to_catalog as original_catalog
 import v202_one_enchant_admission as verified_enchant
 import v206_nonchmv_eagle_selection as nonchmv_enchant
 import v529_current_season_eagle_E0_bridge as fresh_eagle
+import v531_current_season_positive_E_bridge as positive_enchant
 import v212_environment_manifest as installed_manifest
 import v222_season_budget_contract as budget_contract
 import v432_selected_4pc_budget_bridge as selected_budget
@@ -657,6 +658,16 @@ def season_profile_source_only(*, profile, cfg, weapon_layout, user,
          and typed_plan["scenario"]["equipment"]==
              scenario.normalize(configured["scenario"])["scenario"]["equipment"],
          "SEASON_PROFILE_TYPED_BASE_B_OR_SOURCE_DRIFT")
+    # Existing v222 E ownership: derived user B contains ONLY a
+    # separately proven increment from the unenchanted reference.
+    positive_E=(positive_enchant.check_choice(user[SEASON_ENCHANT_FIELD])[1]
+                if user.get(SEASON_ENCHANT_FIELD) in
+                   positive_enchant.CHOICES else None)
+    if positive_E is not None:
+        need(budget.get("fixed_E")==positive_E and
+             budget.get("reference_B")==3107+sum(positive_E.values()) and
+             budget.get("base_B")==budget["reference_B"],
+             "FRESH_USER_POSITIVE_E_SOURCE_BUDGET_NOT_PROJECTED")
     # Reuse the actual v062 static-L budget and v065 feasibility floors
     # with the typed B and exact F/O vectors. This is the same deterministic
     # seed planning policy the existing runnable v098/v096 path uses; a
@@ -668,7 +679,9 @@ def season_profile_source_only(*, profile, cfg, weapon_layout, user,
         compiled=static_budget.compile_static_budget(
             typed_plan,fillers,cache_mod.empty_cache())
         feasible=scheduler.budget_with_fixed_components(
-            typed_plan,compiled,native_flask_vector,fixed_o)
+            typed_plan,compiled,native_flask_vector,fixed_o,
+            **({"fixed_enchant_E":positive_E}
+               if positive_E is not None else {}))
         planned_B,lower,upper=scheduler.bounds(typed_plan,feasible)
         need(planned_B==budget["base_B"],
              "SEASON_PROFILE_ADAPTIVE_BASE_B_DRIFT")
@@ -780,7 +793,11 @@ def _materialize_admitted_season_v096(*, source_only,season_profile_inputs,
             "oil_by_hand":copy.deepcopy(
                 season_profile_inputs["oil_by_hand"]),
             **({"user_final_T":user["target"]["final_T"]}
-               if user["target"]["final_T"] is not None else {})}
+               if user["target"]["final_T"] is not None else {}),
+            **({"verified_user_positive_E_enchant_id":
+                   user[SEASON_ENCHANT_FIELD]["finger1"]}
+               if user.get(SEASON_ENCHANT_FIELD) in
+                  positive_enchant.CHOICES else {})}
         source=entry._admitted_fresh_season_source(
             manifest_path=folder/"manifest.json",season=manifest_source,
             revision=revision,user_scenario=draft["scenario"],
@@ -1095,7 +1112,9 @@ def build(user,folder,binary,revision,static_cache_path=None,
           and (SEASON_ENCHANT_FIELD not in user or
                (fresh_installed_environment_path is not None
                 and not selected_season_items
-                and user[SEASON_ENCHANT_FIELD]==fresh_eagle.CHOICE))
+                and (user[SEASON_ENCHANT_FIELD]==fresh_eagle.CHOICE or
+                     user[SEASON_ENCHANT_FIELD] in
+                        positive_enchant.CHOICES)))
           and (not selected_season_items or
                season_selected_static_cache_path is not None)),
          "SEASON_PROFILE_INTERNAL_SOURCE_ONLY_MODE_REQUIRED")
@@ -1402,7 +1421,10 @@ def build(user,folder,binary,revision,static_cache_path=None,
     selected_nonchmv=None
     if SEASON_ENCHANT_FIELD in user:
         if fresh_installed_environment_path is not None:
-            selected_nonchmv=fresh_eagle.apply(
+            bridge=(positive_enchant if
+                    user[SEASON_ENCHANT_FIELD] in positive_enchant.CHOICES
+                    else fresh_eagle)
+            selected_nonchmv=bridge.apply(
                 rows,user[SEASON_ENCHANT_FIELD],user,
                 catalog_path=source_catalog_path)
         else:
@@ -2078,7 +2100,10 @@ def preview_from_environment_build(user,folder,binary,revision,*,
          "SEASON_V216_SOURCE_PATHS_OR_INPUTS_DRIFT")
     # Signed v212 environment remains immutable; only the user session
     # retargets B/T. Original v096 checks source-owner proofs once more.
-    if installed_path is not None and user["target"]["final_T"] is not None:
+    positive_choice=(user.get(SEASON_ENCHANT_FIELD) in
+                     positive_enchant.CHOICES)
+    if installed_path is not None and (
+            user["target"]["final_T"] is not None or positive_choice):
         original=inputs["v216_numeric_preview"]["calculation"]
         p=pathlib.Path(installed_path)
         need(p.is_file() and not p.is_symlink(),
@@ -2098,8 +2123,13 @@ def preview_from_environment_build(user,folder,binary,revision,*,
                  doc["source_catalog_artifact_sha256"],
              "FRESH_USER_T_ORIGINAL_SOURCE_DRIFT")
         try:
-            adjusted=budget_contract.retarget_verified_install(
-                document=doc,manual_final_T=user["target"]["final_T"])
+            adjusted=(
+                positive_enchant.project(
+                    doc,user[SEASON_ENCHANT_FIELD],
+                    manual_final_T=user["target"]["final_T"])
+                if positive_choice else
+                budget_contract.retarget_verified_install(
+                    document=doc,manual_final_T=user["target"]["final_T"]))
         except budget_contract.SeasonBudgetBlocked as exc:
             raise UserScenarioBlocked(
                 "FRESH_USER_T_FIXED_BUDGET_INVALID:"+str(exc)) from exc
@@ -2107,7 +2137,11 @@ def preview_from_environment_build(user,folder,binary,revision,*,
         inputs["v216_numeric_preview"]["calculation"].update({
             "base_B":adjusted["base_B"],
             "final_T":adjusted["final_T"],
-            "manual_final_T_authoritative":True})
+            "manual_final_T_authoritative":
+                user["target"]["final_T"] is not None,
+            **({k:adjusted[k] for k in
+                 ("fixed_E","effective_G","reference_B")}
+               if positive_choice else {})})
     numeric=inputs["v216_numeric_preview"]
     calc=numeric.get("calculation")
     need(numeric.get("schema")==
