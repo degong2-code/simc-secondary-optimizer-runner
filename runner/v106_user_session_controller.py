@@ -838,18 +838,38 @@ def worker(folder,binary,revision,static_cache=None,cache_only=False):
         print("V106_BLOCKED:",str(e),file=sys.stderr,flush=True)
         return 3
 
-def _installed_source_paths(identity):
-    """Locate packaged source used when this session was planned.
+def _installed_source_paths(identity, folder=None):
+    """Resolve the *original* source of an existing user's sealed session.
 
-    No network, no artifact refresh. The exact SHA is checked by session_key.
-    Product sessions never fall back to an arbitrary or missing source file.
+    Packaged sessions keep their historical path. An installed v212 season
+    instead binds the exact build-scoped original v213 artifact in the same
+    session root as v113; no previous-season fallback or source refresh.
+    session_key independently rehashes the catalog and the worker replays
+    the v212 proof before any SimC Native execution.
     """
     if "current_season_source_catalog" not in identity:
         return None,None
-    root=pathlib.Path(__file__).resolve().parents[1]
-    source=root/"data"/"current_season_source_to_catalog.json"
     bound=identity["current_season_source_catalog"]
     need(type(bound) is dict,"V213_SESSION_SOURCE_IDENTITY_INVALID")
+    fresh_sha=identity.get("fresh_v212_installed_manifest_sha256")
+    if fresh_sha is not None:
+        build=bound.get("game_build")
+        need(type(fresh_sha) is str and
+             re.fullmatch(r"[a-f0-9]{64}",fresh_sha) is not None and
+             type(build) is str and
+             re.fullmatch(r"\\d+(?:\\.\\d+){3}",build) is not None and
+             folder is not None and
+             pathlib.Path(folder).name==pathlib.Path(folder).resolve().name,
+             "V106_FRESH_INSTALLED_WORKER_SOURCE_IDENTITY_INVALID")
+        root=pathlib.Path(folder).resolve().parent
+        scope=root/"_fresh_season_sources"/("wago_"+build)/"fresh_source"
+        source=scope/"v213_candidate_catalog.json"
+        need(not scope.is_symlink() and
+             not source.is_symlink() and source.is_file(),
+             "V106_FRESH_INSTALLED_WORKER_CATALOG_MISSING")
+        return source,None
+    root=pathlib.Path(__file__).resolve().parents[1]
+    source=root/"data"/"current_season_source_to_catalog.json"
     package=(root/"V181_PACKAGE_MANIFEST.json"
              if bound.get("package_manifest_sha256") else None)
     return source,package
@@ -910,14 +930,19 @@ def _worker_locked(folder,binary,revision,static_cache,cache_only):
             source_path,package_path=None,None
             actual_key,now=folder.name,identity
         else:
-            source_path,package_path=_installed_source_paths(identity)
+            # v113's original parent checked this installed SHA already;
+            # the child must independently replay the SAME identity rather
+            # than rehash a historical packaged catalog on ordinary sessions.
+            fresh_sha=identity.get("fresh_v212_installed_manifest_sha256")
+            source_path,package_path=_installed_source_paths(identity,folder)
             actual_key,now=session_key(user,binary,revision,static_cache,
                                    ordinary_variant=variant,
                                    independent_334=independent,
                                    independent_target_level=independent_level,
                                    current_season_product=current_season,
                                    source_catalog_path=source_path,
-                                   package_manifest_path=package_path)
+                                   package_manifest_path=package_path,
+                                   fresh_installed_manifest_sha256=fresh_sha)
         need(actual_key==folder.name and identity==now,
              "SESSION_BINARY_REVISION_OR_CACHE_DRIFT")
         # The child worker must independently verify the exact profile.
