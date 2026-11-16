@@ -718,7 +718,7 @@ const apply=Function("state","$","field","valueInt",
         self.assertNotIn("request.verified_flasks=",js)
         # Same v216 takes the physical ID through existing Build input.
         self.assertIn("selected_flask_item_id,",js)
-        self.assertIn('const target_ilevel=forUserVariant?valueInt("ilevel"):',js)
+        self.assertIn('let target_ilevel=forUserVariant?valueInt("ilevel"):',js)
         self.assertIn('valueInt("season-target-ilevel");',js)
         self.assertNotIn("const flaskData=seasonLevel===ilevel?data:",js)
         self.assertIn('id="season-gem-layout" open',html)
