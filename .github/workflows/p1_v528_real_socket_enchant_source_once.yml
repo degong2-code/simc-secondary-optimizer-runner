@@ -30,6 +30,7 @@ jobs:
           python -m unittest -q \
             tests.test_v198_targeted_enchant_native_rating \
             tests.test_p3_gr_future_five_sockets_source_only \
+            tests.test_p3_gw_declared_full_sockets \
             tests.test_v448_b10_declared_J_owner_scope \
             tests.test_v449_b10_existing_v280_socket_item_owner \
             tests.test_v455_b10_existing_v281_spell_effect_owner \
