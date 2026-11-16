@@ -1,4 +1,5 @@
 # Deterministic single Windows operator scenario matrix. No AI in runtime.
+# One bounded retry after observed v525 diagnostic-folder collision; same sources/cases/native caps.
 # Only physical source/profiles/simc JSON2 are verdict authorities.
 name: P1 v525 current season real equipment variants (SimC, no AI)
 on:
