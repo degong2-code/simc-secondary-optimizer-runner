@@ -1189,15 +1189,17 @@ const renderSeasonOptionCatalog=()=>{},updateBudgetPreview=()=>{};
 const run=Function("api","$","field","state","seasonBuildInputScope",
   "renderSeasonOptionCatalog","updateBudgetPreview",
   "return async (autoTarget)=>{let autoMythTargetSourceBuild=null;"+
+  "let autoMythTargetSourceSha256=null;"+
   "let target_ilevel=Number(field('season-target-ilevel'));"+
   "const game_build=null;"+source+
-  "return {target_ilevel,autoMythTargetSourceBuild};};")(
+  "return {target_ilevel,autoMythTargetSourceBuild,autoMythTargetSourceSha256};};")(
     api,$,field,state,seasonBuildInputScope,
     renderSeasonOptionCatalog,updateBudgetPreview);
 (async()=>{
   const got=await run(true);
   assert.strictEqual(got.target_ilevel,365);
   assert.strictEqual(got.autoMythTargetSourceBuild,"13.0.0.99999");
+  assert.strictEqual(got.autoMythTargetSourceSha256,"a".repeat(64));
   assert.strictEqual(nodes.ilevel.value,"365");
   assert.strictEqual(nodes["season-target-ilevel"].value,"365");
   assert.strictEqual(calls,1);
@@ -1206,11 +1208,17 @@ const run=Function("api","$","field","state","seasonBuildInputScope",
   const manual=await run(false);
   assert.strictEqual(manual.target_ilevel,355);
   assert.strictEqual(manual.autoMythTargetSourceBuild,null);
+  assert.strictEqual(manual.autoMythTargetSourceSha256,null);
   assert.strictEqual(calls,1,"MANUAL_MUST_NOT_FETCH");
   state.userTargetIlevelManualOverride=false;
   reply={status:"MYTH_TARGET_SOURCE_PENDING",target_ilevel:null};
   await assert.rejects(run(true),/MYTH_TARGET_SOURCE_PENDING_ENTER_MANUAL_ILEVEL/);
   assert.strictEqual(nodes.ilevel.value,"355","PENDING_MUST_NOT_REPLACE_USER_TARGET");
+  reply={status:"MYTH_TARGET_CANDIDATE_FROM_MATCHED_WAGO_V163_SOURCE",
+    target_ilevel:365,game_build:"13.0.0.99999",
+    currency_csv_sha256:"not-a-sha"};
+  await assert.rejects(run(true),/MYTH_TARGET_SOURCE_SHA_INVALID/);
+  assert.strictEqual(nodes.ilevel.value,"355","INVALID_SHA_MUST_NOT_UPDATE_TARGET");
   reply={status:"MYTH_TARGET_CANDIDATE_FROM_MATCHED_WAGO_V163_SOURCE",
     target_ilevel:366,game_build:"13.0.0.99999",currency_csv_sha256:"b".repeat(64)};
   onFetch=()=>{state.userTargetIlevelManualOverride=true;nodes.ilevel.value="357"};
