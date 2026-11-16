@@ -1,5 +1,6 @@
 # Real 70783 single-scoped E0 current-season end-to-end user selection.
 # Existing M1/M2/v098/v096/v106/v094/SimC; no AI runtime or new solver.
+# One retry: forward verified v213 catalog into the new E0 route and return stable source codes.
 name: P1 v530 real 70783 E0 finger1 enchant user adaptive SimC
 on:
   push:
