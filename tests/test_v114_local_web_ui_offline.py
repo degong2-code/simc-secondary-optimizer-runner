@@ -954,6 +954,48 @@ const make=(oilUseIntent=false)=>Function(
         self.assertIn("미확정 명칭은 원본 이름을 표시합니다.",js)
         self.assertIn('item.official_name_ko',js)
 
+    def test_m1_m2_default_season_build_level_tracks_user_target_without_overriding_advanced(self):
+        """Actual UI level sync: avoid wrong-level native work, preserve manual scope."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:self.skipTest("node missing")
+        js=self.client.get("/assets/app.js").text
+        self.assertIn('syncSeasonTargetIlevel();\n  $("final_T").value=',js)
+        self.assertIn('syncSeasonTargetIlevel();\n  // Exact v212 installation',js)
+        self.assertIn('state.seasonBuildTargetManualOverride=true;',js)
+        harness=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const a=raw.indexOf("function syncSeasonTargetIlevel() {");
+const b=raw.indexOf("function updateBudgetPreview() {",a);
+assert(a>=0&&b>a);
+const nodes={"ilevel":{value:"334"},"season-target-ilevel":{value:"334"}};
+const $=id=>nodes[id], field=id=>String(nodes[id].value).trim();
+const state={seasonBuildTargetManualOverride:false};
+const sync=Function("state","$","field",raw.slice(a,b)+
+  "return syncSeasonTargetIlevel;")(state,$,field);
+sync();
+assert.strictEqual(nodes["season-target-ilevel"].value,"334");
+nodes.ilevel.value="340";sync();
+assert.strictEqual(nodes["season-target-ilevel"].value,"340",
+  "DEFAULT_BUILD_MUST_FOLLOW_USER_TARGET");
+state.seasonBuildTargetManualOverride=true;
+nodes["season-target-ilevel"].value="334";
+nodes.ilevel.value="342";sync();
+assert.strictEqual(nodes["season-target-ilevel"].value,"334",
+  "EXPLICIT_COMMON_LEVEL_IS_INDEPENDENT");
+state.seasonBuildTargetManualOverride=false;
+nodes.ilevel.value="";sync();
+assert.strictEqual(nodes["season-target-ilevel"].value,"334",
+  "INVALID_TARGET_MUST_NOT_REWRITE_COMMON_LEVEL");
+console.log("M1_M2_SEASON_TARGET_USER_SYNC_AND_ADVANCED_OVERRIDE_PASS");
+"""
+        r=subprocess.run([node,"-e",harness,
+            str(ROOT/"runner/webui/app.js")],capture_output=True,
+            text=True,timeout=15,check=False)
+        self.assertEqual(r.returncode,0,r.stderr)
+        self.assertIn("M1_M2_SEASON_TARGET_USER_SYNC_AND_ADVANCED_OVERRIDE_PASS",r.stdout)
+
     def test_v349_season_build_activity_socket_total_and_advanced_ids(self):
         """Activity is indeterminate; user scope is separate from source IDs."""
         html=self.client.get("/").text
