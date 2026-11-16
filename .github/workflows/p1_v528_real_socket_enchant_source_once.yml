@@ -1,0 +1,110 @@
+# 70783 exact-source extra-socket J proof + 3 permanent enchant Native pairs.
+# 0 AI runtime. Existing v198 and v216 own the verdict; no automatic UI admission.
+name: P1 v528 real 70783 socket J owner and enchant static JSON2
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p1_v528_real_socket_enchant_source_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v528-70783-sockets-enchants
+  cancel-in-progress: false
+jobs:
+  offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Original v198 and v216 socket owner offline contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile integration_probes/p1_v528_real_socket_enchant_source_once.py
+          python -m pip install -r requirements-web-test.txt
+          python -m unittest -q \
+            tests.test_v198_targeted_enchant_native_rating \
+            tests.test_p3_gr_future_five_sockets_source_only \
+            tests.test_p3_gw_declared_full_sockets \
+            tests.test_v455_b10_existing_v281_spell_effect_owner \
+            tests.test_v526_v106_installed_worker_source
+  actual-windows-original-once:
+    needs: offline
+    if: ${{ contains(github.event.head_commit.message, '[v528-one-real-options]') }}
+    runs-on: windows-2022
+    timeout-minutes: 32
+    env:
+      PYTHONPATH: runner;integration_probes;.
+      SIMC_PINNED_SOURCE_COMMIT: de11f57df75dda668bae6ac7043a43b98831fa96
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - name: Preserve byte-for-byte repository SimC source
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Require workflow-only user-scoped Native opt-in
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $changed=@(git diff-tree --no-commit-id --name-only -r $env:GITHUB_SHA)
+          if ($changed.Count -ne 1 -or $changed[0] -ne '.github/workflows/p1_v528_real_socket_enchant_source_once.yml') { throw 'V528_ONE_WORKFLOW_ONLY_OPT_IN_REQUIRED' }
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Original official Windows SimC binary, never rebuilt
+        uses: actions/download-artifact@v4
+        with:
+          repository: simulationcraft/simc-publish
+          run-id: 42956947906
+          name: simc-nightly-win64-midnight
+          path: .simc-v528
+          github-token: ${{ github.token }}
+      - name: Check archive and executable SHA, install web dependencies
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $archive=Join-Path $PWD '.simc-v528/simc-1210.01.de11f57-win64.7z'
+          if (!(Test-Path $archive -PathType Leaf)) { throw 'V528_ORIGINAL_SIMC_ARCHIVE_MISSING' }
+          if ((Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant() -ne 'a4c4d5e7b349172d80897721daa3e849ce25874a82bbdfb96aeab4dbdc560eb0') { throw 'V528_SIMC_ARCHIVE_SHA_DRIFT' }
+          $seven='C:\Program Files\7-Zip\7z.exe'
+          New-Item -ItemType Directory -Force -Path .simc-v528-extracted | Out-Null
+          & $seven x '-o.simc-v528-extracted' -y -bd $archive | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'V528_EXTRACT_FAILED' }
+          $exes=@(Get-ChildItem .simc-v528-extracted -Recurse -Filter simc.exe -File)
+          if ($exes.Count -ne 1) { throw 'V528_EXE_COUNT_INVALID' }
+          if ((Get-FileHash -Algorithm SHA256 $exes[0].FullName).Hash.ToLowerInvariant() -ne '1fc927d2be7f1b6064c75f004b5b22245b064a6b3e56e572af4048ba822a986d') { throw 'V528_SIMC_EXECUTABLE_SHA_DRIFT' }
+          "V528_SIMC_EXE=$($exes[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          python -m py_compile integration_probes/p1_v528_real_socket_enchant_source_once.py
+          if ($LASTEXITCODE -ne 0) { throw 'V528_SYNTAX_ERROR' }
+          python -m pip install -r requirements-web-test.txt
+          if ($LASTEXITCODE -ne 0) { throw 'V528_DEPENDENCY_INSTALL_FAILED' }
+      - name: Single season source and physical 5/6 diagnostics + three v198 pairs
+        timeout-minutes: 24
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path out/v528 | Out-Null
+          python -u integration_probes/p1_v528_real_socket_enchant_source_once.py --simc "$env:V528_SIMC_EXE" --out out/v528
+          if ($LASTEXITCODE -ne 0) { throw 'V528_SCOPED_OPTIONS_PARTIAL_SEE_RECEIPT' }
+      - name: Preserve scoped results and original Native inputs and JSON2
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v528-70783-native-sockets-enchants-once
+          path: |
+            out/v528/V528_SOURCE_SOCKET_ENCHANT_REAL_RESULT.json
+            out/v528/V528_ORIGINAL_V198_ENCHANT_INPUT_JSON2.zip
+          retention-days: 7
+          if-no-files-found: warn
