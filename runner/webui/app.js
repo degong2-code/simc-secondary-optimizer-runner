@@ -2294,6 +2294,7 @@ async function buildSeasonEnvironment(forUserVariant=false) {
   if(supplied_build&&!/^\d+(?:\.\d+){3}$/.test(supplied_build))
     throw Error("게임 빌드는 네 개의 숫자 그룹 형식이어야 합니다.");
   const game_build=supplied_build||null;
+  let autoMythTargetSourceBuild=null;
   const refresh_reason=forUserVariant?null:
     (field("season-refresh-reason")||null);
   if(refresh_reason!==null&&!["season_change","expansion_change",
@@ -2322,6 +2323,7 @@ async function buildSeasonEnvironment(forUserVariant=false) {
         "일반 Myth 트랙 최고 ilvl 자동 판정 보류 · 목표 ilvl을 직접 입력하면 계속할 수 있습니다.";
       throw Error("MYTH_TARGET_SOURCE_PENDING_ENTER_MANUAL_ILEVEL");
     }
+    autoMythTargetSourceBuild=evidence.game_build;
     state.lastVerifiedSeasonTarget={
       game_build:evidence.game_build,target_ilevel:detected,
       currency_csv_sha256:evidence.currency_csv_sha256
@@ -2470,6 +2472,9 @@ async function buildSeasonEnvironment(forUserVariant=false) {
                               selected_oil_item_ids_by_hand,
                               existing_special_gem_id,source_target_socket_count,
                               refresh_reason,
+                              ...(autoMythTargetSourceBuild?{
+                                auto_myth_target_source_build:autoMythTargetSourceBuild
+                              }:{}),
                               simc_revision_hint:revision||null}});
     stopSeasonActivity();
     lastSeasonDiagnosticReceipt=compactSeasonBuildReceipt(report,forUserVariant);
