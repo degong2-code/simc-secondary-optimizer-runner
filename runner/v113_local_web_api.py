@@ -38,6 +38,7 @@ import v212_environment_manifest as environment_manifest
 import v213_source_to_catalog as source_to_catalog
 import v216_environment_build_coordinator as environment_build
 import v289_retail_live_build_source as retail_build_source
+import v522_myth_target_currency_source as myth_target_source
 import v348_windows_user_source_credentials as local_source_keys
 import v271_user_socket_gem_layout as physical_gems
 import v218_v098_profile_stage_adapter as profile_stage
@@ -101,6 +102,14 @@ class LocalSourceCredentialsRequest(BaseModel):
     blizzard_client_secret: str = Field(min_length=1,max_length=500)
     wcl_client_id: str = Field(min_length=1,max_length=500)
     wcl_client_secret: str = Field(min_length=1,max_length=500)
+
+class SeasonMythTargetRequest(BaseModel):
+    """A source-only request, never a new DPS/gear optimizer."""
+    model_config = ConfigDict(extra="forbid")
+    game_build: str | None = Field(
+        default=None,pattern=r"^\d+(?:\.\d+){3}$",
+        min_length=7,max_length=32)
+
 
 class SeasonEnvironmentBuildRequest(BaseModel):
     """Season-wide Build, independent of DPS scenario/trinket/target optimization."""
@@ -685,6 +694,88 @@ class LocalJobs:
                 "status":"OFFICIAL_KO_SOURCE_OR_CACHE_REQUIRES_REVIEW",
                 "native_calls_now":0,"network_calls_now":0}
         return {**outcome,"official_ko_localization":localization}
+
+    def discover_season_myth_target(self, game_build=None):
+        """Source-only: existing v216/v163 active raid + ONE optional Wago CSV.
+
+        The returned level is a candidate for the user's *default*, not an
+        installed G/J/F/O/B/T environment. The normal Build must still verify.
+        A missing source requires user ilvl input instead of an old 334 guess.
+        """
+        requested_build=game_build
+        discovered=None
+        if game_build is None:
+            try:
+                discovered=retail_build_source.discover(region="KR")
+                game_build=discovered["game_build"]
+            except retail_build_source.RetailVersionBlocked:
+                return {
+                    "schema":"v113_myth_default_source_discovery_v1",
+                    "status":"MYTH_TARGET_SOURCE_PENDING",
+                    "reason_code":"RETAIL_LIVE_GAME_BUILD_UNAVAILABLE",
+                    "game_build":None,"target_ilevel":None,
+                    "manual_target_ilevel_allowed":True,
+                    "environment_ready":False,"native_calls":0}
+        def pending(reason):
+            return {
+                "schema":"v113_myth_default_source_discovery_v1",
+                "status":"MYTH_TARGET_SOURCE_PENDING",
+                "reason_code":reason,"game_build":game_build,
+                "retail_build_reverified":discovered is not None,
+                "target_ilevel":None,"manual_target_ilevel_allowed":True,
+                "environment_ready":False,"native_calls":0}
+        try:
+            credentials=self.source_credential_store.load()
+        except (local_source_keys.CredentialBlocked,OSError):
+            return pending("MYTH_TARGET_AUTHENTICATED_SOURCE_CREDENTIALS_UNAVAILABLE")
+        # The v163 active raid comes from authenticated source discovery.
+        # Do not collect ten large CSV files when that join cannot be run.
+        if not credentials:
+            return pending("MYTH_TARGET_ACTIVE_RAID_SOURCE_CREDENTIALS_MISSING")
+        try:
+            with self.season_source_lock:
+                collected=environment_build.collect_wago_new_season_source(
+                    sessions_root=self.root,expected_game_build=game_build,
+                    credentials=credentials,representative_request=None,
+                    g_probe_character=None)
+                joined=collected.get("season_join") or {}
+                if (joined.get("status")!=
+                    "DB2_WCL_CANDIDATES_JOINED_SEASON_CONDITIONS_PENDING"
+                    or type(joined.get("source_scope")) is not dict
+                    or not joined.get("candidate_path")):
+                    return pending("MYTH_TARGET_V163_ACTIVE_RAID_JOIN_PENDING")
+                # Original v217 Wago receipt/stage is reused. Do not append
+                # CurrencyTypes to the ten immutable v161 mandatory tables.
+                folder=pathlib.Path(collected["snapshot_receipt_path"]).parent
+                expected=(self.root/"_fresh_season_sources"/
+                          ("wago_"+game_build)/"wago").resolve()
+                if folder.resolve()!=expected or folder.is_symlink():
+                    return pending("MYTH_TARGET_ORIGINAL_WAGO_SCOPE_MISMATCH")
+                source=myth_target_source.collect(folder,game_build)
+                target=myth_target_source.myth_target_candidate(
+                    folder,game_build,
+                    active_season_scope=joined["source_scope"])
+        except (environment_build.EnvironmentBuildBlocked,
+                myth_target_source.TargetSourceBlocked,
+                OSError,ValueError,KeyError,TypeError) as exc:
+            code=str(exc).split(":",1)[0]
+            return pending(code if re.fullmatch(r"[A-Z][A-Z0-9_]{0,100}",code)
+                           else "MYTH_TARGET_SOURCE_COLLECTION_PENDING")
+        return {
+            **target,
+            "schema":"v113_myth_default_source_discovery_v1",
+            "status":(
+                "MYTH_TARGET_CANDIDATE_FROM_MATCHED_WAGO_V163_SOURCE"
+                if target.get("status")==
+                    "MYTH_TRACK_TARGET_SOURCE_MATCH_UNADMITTED"
+                else "MYTH_TARGET_SOURCE_PENDING"),
+            "game_build":game_build,
+            "retail_build_reverified":discovered is not None,
+            "retail_build_source_sha256":(
+                discovered["source_sha256"] if discovered else None),
+            "optional_currency_network_calls_now":source["network_calls_now"],
+            "manual_target_ilevel_allowed":True,
+            "environment_ready":False,"native_calls":0}
 
     def build_season_environment(self, game_build=None, target_ilevel=334,
                                  native_G_binary=None, simc_revision_hint=None,
@@ -2981,6 +3072,11 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
             return jobs.source_credential_store.clear()
         except local_source_keys.CredentialBlocked as exc:
             raise blocked(exc) from None
+
+    @app.post("/api/v1/environment/myth-target")
+    def season_myth_target(request: SeasonMythTargetRequest):
+        # This never invokes the adaptive optimizer or a SimC binary.
+        return jobs.discover_season_myth_target(request.game_build)
 
     @app.post("/api/v1/environment/season-build")
     def season_environment_build(request: SeasonEnvironmentBuildRequest):
