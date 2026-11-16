@@ -1,0 +1,115 @@
+# Real 70783 single-scoped E30 current-season end-to-end user selection.
+# Existing M1/M2/v098/v096/v106/v094/SimC; no AI runtime or new solver.
+# One retry: forward verified v213 catalog into the new E30 route and return stable source codes.
+# Second harness-only retry: inspect sealed v098/v096 manifest field, not safe public projection.
+name: P1 v532 real 70783 E30 finger1 enchant user adaptive SimC
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p1_v532_real_positive_E_once.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v532-current-eagle-one
+  cancel-in-progress: false
+jobs:
+  scoped-offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Current exact-source seal and existing legacy v206/v106 regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile runner/v529_current_season_positive_E_bridge.py runner/v096_unified_product_entry.py runner/v098_target_user_scenario_bootstrap.py integration_probes/p1_v532_real_positive_E_user_dps_once.py
+          python -m pip install -r requirements-web-test.txt
+          python -m unittest -q \
+            tests.test_v529_one_real_season_positive_E \
+            tests.test_v206_nonchmv_eagle_user_path \
+            tests.test_v526_v106_installed_worker_source \
+            tests.test_v449_b10_existing_v280_socket_item_owner
+  one-real-windows-user-enchant:
+    needs: scoped-offline
+    if: ${{ contains(github.event.head_commit.message, '[v532-real-E30-once]') }}
+    runs-on: windows-2022
+    timeout-minutes: 31
+    env:
+      PYTHONPATH: runner;integration_probes;.
+      SIMC_PINNED_SOURCE_COMMIT: de11f57df75dda668bae6ac7043a43b98831fa96
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - name: Preserve exact authored repository source bytes
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 2
+      - name: Require one-bounded-workflow opt-in after code review
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $files=@(git diff-tree --no-commit-id --name-only -r $env:GITHUB_SHA)
+          if ($files.Count -ne 1 -or $files[0] -ne '.github/workflows/p1_v532_real_positive_E_once.yml') { throw 'V532_WORKFLOW_ONLY_OPT_IN_REQUIRED' }
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse exact published SimC binary, no recompile
+        uses: actions/download-artifact@v4
+        with:
+          repository: simulationcraft/simc-publish
+          run-id: 42956947906
+          name: simc-nightly-win64-midnight
+          path: .simc-v532
+          github-token: ${{ github.token }}
+      - name: Verify archive/exe SHA and existing source contracts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $archive=Join-Path $PWD '.simc-v532/simc-1210.01.de11f57-win64.7z'
+          if (!(Test-Path $archive -PathType Leaf)) { throw 'V532_PINNED_ARCHIVE_MISSING' }
+          if ((Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant() -ne 'a4c4d5e7b349172d80897721daa3e849ce25874a82bbdfb96aeab4dbdc560eb0') { throw 'V532_ORIGINAL_ARCHIVE_SHA_DRIFT' }
+          $seven='C:\Program Files\7-Zip\7z.exe'
+          New-Item -ItemType Directory -Force -Path .simc-v532-extracted | Out-Null
+          & $seven x '-o.simc-v532-extracted' -y -bd $archive | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'V532_SIMC_ARCHIVE_EXTRACTION_FAILED' }
+          $exes=@(Get-ChildItem .simc-v532-extracted -Recurse -Filter simc.exe -File)
+          if ($exes.Count -ne 1) { throw 'V532_BINARY_COUNT_INVALID' }
+          if ((Get-FileHash -Algorithm SHA256 $exes[0].FullName).Hash.ToLowerInvariant() -ne '1fc927d2be7f1b6064c75f004b5b22245b064a6b3e56e572af4048ba822a986d') { throw 'V532_OFFICIAL_EXE_SHA_CHANGED' }
+          "V532_SIMC_EXE=$($exes[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          python -m py_compile runner/v529_current_season_positive_E_bridge.py integration_probes/p1_v532_real_positive_E_user_dps_once.py
+          if ($LASTEXITCODE -ne 0) { throw 'V532_PROBE_SYNTAX_INVALID' }
+          python -m pip install -r requirements-web-test.txt
+          if ($LASTEXITCODE -ne 0) { throw 'V532_ORIGINAL_SOURCE_DEPENDENCIES_FAILED' }
+          python -m unittest -q tests.test_v529_one_real_season_positive_E
+          if ($LASTEXITCODE -ne 0) { throw 'V532_SOURCE_SCOPE_TEST_FAILED' }
+      - name: One installed M1-M2 and one E30 current-user real six-case SimC
+        timeout-minutes: 22
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path out/v532 | Out-Null
+          python -u integration_probes/p1_v532_real_positive_E_user_dps_once.py --simc "$env:V532_SIMC_EXE" --out out/v532
+          if ($LASTEXITCODE -ne 0) { throw 'V532_E30_CURRENT_USER_ACTUAL_SIMC_NOT_COMPLETE' }
+      - name: Preserve scoped results and all original six SimC inputs/JSON2
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v532-70783-real-E30-user-native-six
+          path: |
+            out/v532/V532_ACTUAL_FRESH_E30_USER_DPS.json
+            out/v532/V532_ACTUAL_EAGLE_SIX_ORIGINAL_SIMC.zip
+          retention-days: 7
+          if-no-files-found: warn
