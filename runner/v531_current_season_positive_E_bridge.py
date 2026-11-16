@@ -99,7 +99,24 @@ def project(document,choice,*,manual_final_T=None):
             "user_E_added_to_auto_B_once":sum(E.values()) if manual_final_T is None else 0,
             "user_T_manual_unchanged":manual_final_T is not None}
 def user_scope(user):
-    original.user_scope(user) # exact v528 item loadout, and automatic T only
+    """Use v529's exact original item witness, while honoring user final T.
+
+    The rating target changes the v015 Native injection candidates, NOT the
+    original static item, enchant, trinkets or profile bytes. v222 and v065
+    validate numeric fixed minima/feasibility downstream.
+    """
+    need(type(user) is dict and type(user.get("target")) is dict,
+         "ONE_ORIGINAL_USER_TARGET_REQUIRED")
+    t=user["target"].get("final_T")
+    need(t is None or (type(t) is int and t>0),
+         "MANUAL_FINAL_T_POSITIVE_INTEGER_REQUIRED")
+    # v529's exact 70783 Native witness tests the other fields. Rewrite
+    # only the scope-check input; never overwrite the actual user T.
+    if t is None:
+        original.user_scope(user)
+    else:
+        candidate={**user,"target":{**user["target"],"final_T":None}}
+        original.user_scope(candidate)
 def apply(rows,choice,user,*,catalog_path):
     eid,E=source(choice,catalog_path)
     user_scope(user)
