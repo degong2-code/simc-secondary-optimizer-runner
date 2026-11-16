@@ -1,4 +1,5 @@
 # Real 70783 single-scoped E30 current-season end-to-end user selection.
+# Retry one scope: previous Native6 succeeded; only old 7967 assertion blocked raw ZIP/cache check.
 # Existing M1/M2/v098/v096/v106/v094/SimC; no AI runtime or new solver.
 # One retry: forward verified v213 catalog into the new E30 route and return stable source codes.
 # Second harness-only retry: inspect sealed v098/v096 manifest field, not safe public projection.
