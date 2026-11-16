@@ -373,7 +373,7 @@ eval(context+raw.slice(start,end)+"\n"+test);
         harness=r"""
 const fs=require("fs"),assert=require("assert");
 const raw=fs.readFileSync(process.argv[1],"utf8");
-const start=raw.indexOf("function applyOilUseToggle() {");
+const start=raw.indexOf("function applyOilUseToggle(){");
 const end=raw.indexOf("\nfunction oilCompatibility()",start);
 assert(start>=0&&end>start);
 const O="a".repeat(64),ZERO="b".repeat(64),OTHER="c".repeat(64);
