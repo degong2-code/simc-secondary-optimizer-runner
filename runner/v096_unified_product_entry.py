@@ -18,6 +18,7 @@ import v202_one_enchant_admission as verified_enchant
 import v204_selected_enchant_reference_budget as enchant_reference
 import v206_nonchmv_eagle_selection as nonchmv_enchant
 import v529_current_season_eagle_E0_bridge as fresh_eagle
+import v531_current_season_positive_E_bridge as positive_enchant
 import v222_season_budget_contract as budget_contract
 
 SCHEMA="v096_user_scenario_unified_entry_v1"
@@ -200,7 +201,9 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
     fields={"schema","installed_environment_path",
             "installed_manifest_sha256","oil_by_hand"}
     need(type(season) is dict and set(season) in
-         (fields,fields|{"user_final_T"}) and
+         (fields,fields|{"user_final_T"},
+          fields|{"verified_user_positive_E_enchant_id"},
+          fields|{"user_final_T","verified_user_positive_E_enchant_id"}) and
          season.get("schema")==FRESH_SEASON_SCHEMA,
          "FRESH_SEASON_INTERNAL_SOURCE_FIELDS")
     doc,bound=_verified_installed_fresh_v217(
@@ -209,7 +212,18 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
     oil=doc["official_O"]
     zeros={stat:0 for stat in contract.STATS}
     user_final_T=season.get("user_final_T")
-    if user_final_T is not None:
+    positive_id=season.get("verified_user_positive_E_enchant_id")
+    if positive_id is not None:
+        need(type(positive_id) is int and
+             positive_id in positive_enchant.ENCHANTS,
+             "FRESH_POSITIVE_E_ITEM_ID_INVALID")
+        need(user_final_T is None,
+             "FRESH_POSITIVE_E_MANUAL_FINAL_T_NOT_YET_APPROVED")
+        actual=positive_enchant.project(
+            doc,{"finger1":positive_id},manual_final_T=None)
+        approved_B=actual["base_B"]
+        approved_T=actual["final_T"]
+    elif user_final_T is not None:
         try:
             adjusted=budget_contract.retarget_verified_install(
                 document=doc,manual_final_T=user_final_T)
@@ -278,7 +292,14 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
             "original_v217_installed_stage_receipt_sha256":
                 bound["stage_receipt_sha256"],
             **({"user_final_T":user_final_T,"derived_base_B":approved_B}
-                if user_final_T is not None else {})},
+                if user_final_T is not None else {}),
+            **({"verified_user_positive_E_enchant_id":positive_id,
+                "fixed_E":actual["fixed_E"],
+                "original_native_before_json2_sha256":
+                    positive_enchant.ENCHANTS[positive_id]["before"],
+                "original_native_after_json2_sha256":
+                    positive_enchant.ENCHANTS[positive_id]["after"]}
+               if positive_id is not None else {})},
             sort_keys=True,separators=(",",":")).encode("utf8")).hexdigest()}
     budget={"game_build":doc["game_build"],
             "simc_revision":doc["simc_revision"],
@@ -291,7 +312,10 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
                 doc["source_catalog_artifact_sha256"]}
     return {"season_budget":budget,"season_source_identity":identity,
             "oil_by_hand":selected_oil,"fresh_v212_installed":True,
-            "user_manual_final_T":user_final_T}
+            "user_manual_final_T":user_final_T,
+            **({"positive_user_E":actual["fixed_E"],
+                "positive_user_enchant_id":positive_id}
+               if positive_id is not None else {})}
 
 
 
@@ -728,17 +752,28 @@ def source(manifest_path):
         prepared["admitted_season_environment_identity"]=(
             season_source["season_source_identity"])
     if NONCHMV_ENCHANT_FIELD in user:
-        # Source and exact Windows E=0 comparison have separate provenance;
-        # neither creates new B/T nor certifies effect mechanics in every spec.
-        approved_nonchmv=(
-            fresh_eagle.admit(
+        # Positive E is limited to a native-witnessed current user; v529 E0
+        # and the older nonCHMV path retain their exact original rules.
+        if (FRESH_SEASON_FIELD in user and
+                "positive_user_E" in season_source):
+            approved_nonchmv=positive_enchant.admit(
                 user[NONCHMV_ENCHANT_FIELD],prepared["oil"]["profile"],
                 prepared["prepared"]["scenario"],binary_sha,
                 user["native_revision"])
-            if FRESH_SEASON_FIELD in user else
-            nonchmv_enchant.admit(
-                user[NONCHMV_ENCHANT_FIELD],prepared["oil"]["profile"],
-                prepared["prepared"]["scenario"]))
+            need(approved_nonchmv["fixed_E"]==
+                     season_source["positive_user_E"],
+                 "FRESH_POSITIVE_E_V212_SOURCE_AND_NATIVE_PROOF_DRIFT")
+            prepared["oil"]["v531_verified_positive_E"]=approved_nonchmv
+        else:
+            approved_nonchmv=(
+                fresh_eagle.admit(
+                    user[NONCHMV_ENCHANT_FIELD],prepared["oil"]["profile"],
+                    prepared["prepared"]["scenario"],binary_sha,
+                    user["native_revision"])
+                if FRESH_SEASON_FIELD in user else
+                nonchmv_enchant.admit(
+                    user[NONCHMV_ENCHANT_FIELD],prepared["oil"]["profile"],
+                    prepared["prepared"]["scenario"]))
     else:
         approved_nonchmv=None
     if NATIVE_ENCHANT_FIELD in user:
@@ -831,7 +866,14 @@ def source(manifest_path):
     if approved_nonchmv is not None:
         need(enchant_reference.KEY not in provenance,
              "NONCHMV_EFFECT_MUST_NOT_ADD_REFERENCE_B")
-        plan["selected_nonchmv_enchant"]=approved_nonchmv
+        if "positive_user_E" in (season_source or {}):
+            plan["selected_positive_enchant"]=approved_nonchmv
+            plan["selected_fixed_enchant_E"]=dict(
+                season_source["positive_user_E"])
+            plan["selected_enchant_budget_policy"]=(
+                "V212_USER_ONLY_INCREMENTAL_E_ONCE_IN_G_AND_B")
+        else:
+            plan["selected_nonchmv_enchant"]=approved_nonchmv
     if NATIVE_ENCHANT_FIELD in user:
         plan["selected_fixed_enchant_E"]=dict(selected_fixed_E)
         plan["selected_enchant_budget_policy"]=(
