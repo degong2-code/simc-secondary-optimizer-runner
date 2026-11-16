@@ -150,6 +150,8 @@ const state = { token:"", defaults:[], allowedRacesBySpec:{}, seasonGear:null, s
                 busy:false, options:null, verifiedInstalledBuildFromThisPage:null,
                 budgetPreviewDirty:false, seasonOptionRequestEpoch:0,
                 seasonBuildTargetManualOverride:false,
+                userTargetIlevelManualOverride:false,
+                autoSeasonTargetEnabled:true, lastVerifiedSeasonTarget:null,
                 pollTimer:null, pollBusy:false,
                 pollFailures:0, nextPollAt:0 };
 const number = (value,decimals=0) =>
@@ -856,7 +858,13 @@ function fillDefault(item) {
   showCharacterDefaultHint();
   setTrinketSelection("trinket1",item.trinket_ids[0]);
   setTrinketSelection("trinket2",item.trinket_ids[1]);
-  $("ilevel").value=item.ilevel;
+  // A specialization change never reverts a verified new-season target to
+  // historical 334, or overwrites an ilvl typed by the user.
+  const chosen=state.userTargetIlevelManualOverride?
+    Number(field("ilevel")):state.lastVerifiedSeasonTarget?.target_ilevel;
+  if(Number.isSafeInteger(chosen)&&chosen>=1&&chosen<=1000)
+    $("ilevel").value=chosen;
+  else $("ilevel").value=item.ilevel;
   syncSeasonTargetIlevel();
   $("final_T").value=item.final_T??"";
   $("manual-t-mode").checked=Boolean($("final_T").value);
@@ -2291,6 +2299,45 @@ async function buildSeasonEnvironment(forUserVariant=false) {
   if(refresh_reason!==null&&!["season_change","expansion_change",
       "item_content_change"].includes(refresh_reason))
     throw Error("지원하지 않는 시즌 갱신 조건입니다.");
+  // The initial 334 in the old starter catalogue is a DISPLAY placeholder,
+  // not next season's verified default. Before the user's ordinary Build,
+  // inspect the current same-build Myth currency + v163 active raid source.
+  // Manual target ilvl (or advanced common ilvl) always wins.
+  const autoTarget=state.autoSeasonTargetEnabled===true &&
+    !forUserVariant && !state.userTargetIlevelManualOverride &&
+    !state.seasonBuildTargetManualOverride;
+  if(autoTarget) {
+    const before=seasonBuildInputScope(false);
+    $("season-build-stage").textContent=
+      "현재 시즌 일반 Myth 트랙의 최고 ilvl 원본 확인 중 · 기존 시즌 값을 복사하지 않습니다…";
+    const evidence=await api("/api/v1/environment/myth-target",{
+      method:"POST",payload:{game_build}
+    });
+    if(seasonBuildInputScope(false)!==before)
+      throw Error("시즌 목표 ilvl 확인 중 설정이 변경되었습니다. 현재 입력을 다시 확인하세요.");
+    const detected=evidence?.target_ilevel;
+    if(evidence?.status!=="MYTH_TARGET_CANDIDATE_FROM_MATCHED_WAGO_V163_SOURCE" ||
+       !Number.isSafeInteger(detected)||detected<1||detected>1000) {
+      $("season-build-stage").textContent=
+        "일반 Myth 트랙 최고 ilvl 자동 판정 보류 · 목표 ilvl을 직접 입력하면 계속할 수 있습니다.";
+      throw Error("MYTH_TARGET_SOURCE_PENDING_ENTER_MANUAL_ILEVEL");
+    }
+    state.lastVerifiedSeasonTarget={
+      game_build:evidence.game_build,target_ilevel:detected,
+      currency_csv_sha256:evidence.currency_csv_sha256
+    };
+    const wasLevel=Number(field("ilevel"));
+    $("ilevel").value=String(detected);
+    $("season-target-ilevel").value=String(detected);
+    if(wasLevel!==detected) {
+      state.seasonOptionRequestEpoch++;
+      renderSeasonOptionCatalog(null);
+      updateBudgetPreview();
+    }
+    $("season-build-stage").textContent=
+      "시즌 Myth 일반 최고 ilvl "+detected+
+      " 원본 확인 · 기존 G/J/F/O 설치 검증 진행";
+  }
   const target_ilevel=forUserVariant?valueInt("ilevel"):
     valueInt("season-target-ilevel");
   if(target_ilevel<1||target_ilevel>1000)
@@ -3423,6 +3470,7 @@ function registerHandlers() {
   });
   $("race").addEventListener("change",()=>buttonState(state.running,state.longrunResultReady));
   $("ilevel").addEventListener("input",()=>{
+    state.userTargetIlevelManualOverride=true;
     syncSeasonTargetIlevel();
     // Slot masks and enchant source approval also belong to target ilvl.
     state.seasonOptionRequestEpoch++;
@@ -3440,6 +3488,7 @@ function registerHandlers() {
   $("season-game-build").addEventListener("input",()=>{
     // A manual edit supersedes the earlier auto-discovered season binding.
     state.verifiedInstalledBuildFromThisPage=null;
+    state.lastVerifiedSeasonTarget=null;
     // An in-flight installed option catalogue cannot re-approve the old build.
     state.seasonOptionRequestEpoch++;
     // A different build cannot keep an older rune or permanent-enchant
