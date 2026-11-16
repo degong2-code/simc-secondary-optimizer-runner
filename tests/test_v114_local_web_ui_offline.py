@@ -2247,28 +2247,30 @@ const app=Function("state","$","api","showEnvironmentBuild","buttonState","numbe
         code=r"""
 const fs=require("fs"),assert=require("assert");
 const raw=fs.readFileSync(process.argv[1],"utf8");
-const a=raw.indexOf("  const restoredEagle=u.selected_season_enchants?.finger1===7967;");
+const a=raw.indexOf("  const restoredId=u.selected_season_enchants?.finger1;");
 const b=raw.indexOf("  // Recover the exact local inputs",a);
 assert(a>=0&&b>a,"real saved enchant restore block missing");
 const input={options:[],value:"",appendChild(v){this.options.push(v);}};
 const $=id=>{assert.strictEqual(id,"season_enchant_finger1");return input};
 const option=(v,textContent)=>({value:v,textContent,dataset:{},
                                remove(){input.options.splice(input.options.indexOf(this),1)}});
-const state={eagleApproved:false};
+const state={eagleApproved:false,exactUserEnchantIds:new Set()};
 const restore=Function("u","state","$","option",raw.slice(a,b));
 const u={selected_season_enchants:{finger1:7967}};
 restore(u,state,$,option);
 assert.strictEqual(input.value,"7967","old selected enchant remains visible");
 assert.strictEqual(input.options.length,1);
 assert.strictEqual(input.options[0].dataset.historic,"true");
-assert(input.options[0].textContent.includes("새 최적화는 이번 시즌 승인 필요"));
+assert(input.options[0].textContent.includes("새 최적화는 원본 검증 필요"));
 restore({selected_season_enchants:{}},state,$,option);
 assert.strictEqual(input.value,"");
 assert.strictEqual(input.options.length,0,"historical selection must not leak");
 const body=raw.slice(raw.indexOf("function buildRequest() {"),
                      raw.indexOf("async function api(",raw.indexOf("function buildRequest() {")));
-assert(body.includes('if(!state.eagleApproved||field("season_enchant_finger1")!=="7967")'),
-       "fresh run must still block unapproved enchant");
+assert(body.includes('state.exactUserEnchantIds.has(eid)') &&
+       body.includes('exactUserEnchantInputsMatch()') &&
+       body.includes('UNVERIFIED_ENCHANT_SELECTION_BLOCKED'),
+       "fresh run must still block unapproved or out-of-scope enchant");
 console.log("V464_HISTORICAL_ENCHANT_READONLY_RESTORE_PASS");
 """
         result=subprocess.run([node,"-e",code,str(source)],
