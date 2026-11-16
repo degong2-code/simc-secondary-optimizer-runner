@@ -62,6 +62,7 @@ on:
       - tests/test_v055_simc_item_selection.py
       - tests/test_v062_static_budget_bridge.py
       - tests/test_v098_target_user_scenario_bootstrap.py
+      - tests/test_v521_source_verified_target_ilevel_scope.py
       - tests/test_v446_b10_selected_gem_after_equipment.py
       - tests/test_v447_b10_v232_intrinsic_socket_owner_boundaries.py
       - tests/test_v448_b10_declared_J_owner_scope.py
@@ -112,6 +113,7 @@ jobs:
             tests.test_v096_manual_final_inclusive_entry \
             tests.test_v097_user_result_offline \
             tests.test_v098_target_user_scenario_bootstrap \
+            tests.test_v521_source_verified_target_ilevel_scope \
             tests.test_v446_b10_selected_gem_after_equipment \
             tests.test_v447_b10_v232_intrinsic_socket_owner_boundaries \
             tests.test_v448_b10_declared_J_owner_scope \
