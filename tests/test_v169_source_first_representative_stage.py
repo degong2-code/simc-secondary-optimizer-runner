@@ -39,6 +39,22 @@ class SourceFirstRepresentative(unittest.TestCase):
                 self.assertTrue(set(spec["weapons"].values())<=source_ids)
         self.assertTrue(set(plan["common_gear"].values())<=source_ids)
 
+    def test_season_target_preview_follows_selected_scope_not_old_334(self):
+        import v139_pure_target_profile_composer as pure
+        # Synthetic 350 is a contract test, not source admission or Native.
+        original=stage.build_all(self.db,self.tier)
+        self.assertEqual(original["target_ilevel_preview"],334)
+        future=stage.build_all(self.db,self.tier,target_ilevel=350)
+        self.assertEqual(future["target_ilevel_preview"],350)
+        self.assertEqual(future["specializations"],original["specializations"])
+        settings=copy.deepcopy(pure.catalog())
+        settings["target_ilevel"]=350
+        scope=stage.season_scope(db=self.db,tier=self.tier,settings=settings)
+        self.assertEqual(scope["target_ilevel"],350)
+        with self.assertRaisesRegex(stage.RepresentativeBlocked,
+                                    "TARGET_ILEVEL_PREVIEW_SCOPE_INVALID"):
+            stage.build_all(self.db,self.tier,target_ilevel=1001)
+
     def test_new_source_profile_text_only_uses_new_item_ids(self):
         sample={"class":"paladin","spec":"retribution",
                 "race":"human","talents":"abc123456789"}
