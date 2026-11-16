@@ -12,6 +12,7 @@ sys.path.insert(0,str(pathlib.Path(__file__).resolve().parent))
 import v098_target_user_scenario_bootstrap as bootstrap
 import v108_native_consumable_inputs as consumer
 import v206_nonchmv_eagle_selection as nonchmv_enchant
+import v531_current_season_positive_E_bridge as positive_enchant
 import v213_source_to_catalog as source_catalog_bridge
 import v218_v098_profile_stage_adapter as profile_stage
 
@@ -290,8 +291,14 @@ def user_scenario(controls):
     if choice is not None:output["consumable_choices"]=dict(choice)
     if stat_cap is not None:output["max_single_stat_percent"]=stat_cap
     if "enchant_choices" in controls:
-        nonchmv_enchant.check_choice(controls["enchant_choices"])
-        output[nonchmv_enchant.FIELD]=dict(controls["enchant_choices"])
+        choice=controls["enchant_choices"]
+        if choice==nonchmv_enchant.CHOICE:
+            nonchmv_enchant.check_choice(choice)
+        else:
+            # v531 permits exact v528-positive-E candidates only; v098/v096
+            # still independently check v212 source/build/profile before Native.
+            positive_enchant.check_choice(choice)
+        output[nonchmv_enchant.FIELD]=dict(choice)
     if "runeforge_by_hand" in controls:
         output["runeforge_by_hand"]=bootstrap.runeforge_mod.check_input(
             selection=controls["runeforge_by_hand"],class_name=key[0],
