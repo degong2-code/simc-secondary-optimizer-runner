@@ -24,3 +24,47 @@ jobs:
           python-version: '3.12'
       - name: Bounded synthetic source-first join, no API, no Native
         run: python -m unittest -v tests.test_v163_db2_zero_seed tests.test_v163_index_bridge tests.test_v522_myth_target_currency_source
+      - name: Optional one-CSV Wago currency provenance probe (source only, NO Native)
+        if: ${{ contains(github.event.head_commit.message, '[myth-onecsv]') }}
+        shell: bash
+        run: |
+          python - <<'PY'
+          import csv, hashlib, io, sys
+          from urllib.request import Request, urlopen
+          sys.path.insert(0, 'runner')
+          import v522_myth_target_currency_source as cap
+          build='12.1.5.70783'
+          request=Request(cap.url(build),headers={
+              'User-Agent':'SIMC-Secondary-DB2-Research/1.0',
+              'Accept':'text/csv'})
+          with urlopen(request,timeout=60) as response:
+              print('WAGO_SOURCE_HTTP_STATUS',response.status)
+              raw=response.read(cap.MAX_BYTES+1)
+          if not 0<len(raw)<=cap.MAX_BYTES:
+              raise ValueError('MYTH_CURRENCY_RAW_BYTES_LIMIT_OR_EMPTY')
+          print('WAGO_SOURCE_BUILD',build)
+          print('WAGO_SOURCE_BYTES',len(raw))
+          print('WAGO_SOURCE_SHA256',hashlib.sha256(raw).hexdigest())
+          reader=csv.DictReader(io.StringIO(raw.decode('utf-8-sig')))
+          print('WAGO_SOURCE_COLUMNS',reader.fieldnames)
+          if not reader.fieldnames or not {'ID','Name_lang','Description_lang'}<=set(reader.fieldnames):
+              raise ValueError('MYTH_CURRENCY_RAW_COLUMNS_MISSING')
+          matches=[]
+          for i,row in enumerate(reader):
+              if i>=cap.MAX_ROWS: raise ValueError('MYTH_CURRENCY_ROWS_LIMIT')
+              name=row.get('Name_lang','')
+              desc=row.get('Description_lang','')
+              if 'Mistcrest' in str(name) and 'Myth' in str(name):
+                  parsed=cap.UPGRADE.search(str(desc))
+                  matches.append({
+                      'currency_id':row.get('ID'),
+                      'currency_name':name[:100],
+                      'source_description_sample':str(desc)[:800],
+                      'regex_match':bool(parsed),
+                      'range':(parsed.group('low'),parsed.group('high')) if parsed else None,
+                      'raid_in_description':'The Venomous Abyss' in str(desc)})
+          print('WAGO_SOURCE_MYTH_CURRENCY_ROWS',matches)
+          if not matches:
+              raise ValueError('MYTH_MISTCREST_NOT_IN_70783_RAW_SOURCE')
+          print('WAGO_ONE_CSV_70783_SOURCE_ONLY_PROBE_COMPLETE_NOT_ENVIRONMENT_READY')
+          PY
