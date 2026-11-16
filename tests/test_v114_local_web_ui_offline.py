@@ -534,11 +534,12 @@ eval(context+raw.slice(start,end)+"\n"+test);
         page=self.client.get("/").text
         p=PageParser();p.feed(page)
         self.assertEqual(p.forms,1)
-        self.assertEqual(len(p.ids),184)
+        self.assertEqual(len(p.ids),185)
         for ident in ("class-choice","spec","race","ilevel","talents","final_T",
                       "trinket1","trinket2","special-rows","crafted-rows",
                       "season-target-socket-count","season-verified-flask",
-                      "optimizer-oil-loadout","binary","revision","start-btn",
+                      "optimizer-oil-loadout","optimizer-oil-apply-btn",
+                      "binary","revision","start-btn",
                       "run-label","progress-label","dps","sem","conf95",
                       "result-panel","results-nav-btn","equipment-dialog"):
             self.assertIn(ident,p.ids)
