@@ -1100,6 +1100,73 @@ console.log("M1_M2_SEASON_TARGET_USER_SYNC_AND_ADVANCED_OVERRIDE_PASS");
         self.assertEqual(r.returncode,0,r.stderr)
         self.assertIn("M1_M2_SEASON_TARGET_USER_SYNC_AND_ADVANCED_OVERRIDE_PASS",r.stdout)
 
+    def test_m1_m2_auto_core_existing_install_without_binary_reaches_server(self):
+        """Actual Build JS allows an exact cached environment without SimC."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:self.skipTest("node unavailable")
+        code=r"""
+const fs=require("fs"),assert=require("assert");
+const src=fs.readFileSync(process.argv[1],"utf8");
+const start=src.indexOf("async function buildSeasonEnvironment(forUserVariant=false) {");
+const end=src.indexOf("function showEnvironmentBuild(",start);
+assert(start>0&&end>start);
+const nodes={};
+const $=id=>(nodes[id]??={value:"",checked:false,type:"text",
+                              disabled:false,hidden:false,textContent:""});
+const field=id=>String($(id).value).trim();
+const valueInt=id=>Number(field(id));
+$("season-game-build").value="12.2.0.99999";
+$("season-target-ilevel").value="334";
+$("ilevel").value="334";
+$("season-target-socket-count").value="4";
+$("season-auto-core").checked=true;
+let confirmed=0,submitted=[];
+const window={confirm:()=>{confirmed++;return true;}};
+const state={verifiedInstalledBuildFromThisPage:"12.2.0.99999"};
+const api=async (url,args)=>{
+  submitted.push({url,args});
+  throw Error("REQUEST_CAPTURED_BEFORE_NATIVE");
+};
+const run=Function("$","field","valueInt","state","window","api",
+ "beginSeasonBuildActivity","seasonBuildInputScope","oilUseIntent",
+ "let lastSeasonDiagnosticReceipt=null;"+src.slice(start,end)+
+ "return buildSeasonEnvironment;")(
+  $,field,valueInt,state,window,api,()=>()=>{},()=>JSON.stringify(["inputs"]),false);
+(async()=>{
+ await assert.rejects(run(false),/REQUEST_CAPTURED_BEFORE_NATIVE/);
+ assert.strictEqual(submitted.length,1,
+   "NO_BINARY_MUST_NOT_PREVENT_VERIFIED_INSTALL_LOOKUP");
+ const first=submitted[0];
+ assert.strictEqual(first.url,"/api/v1/environment/season-build");
+ assert.strictEqual(first.args.payload.auto_initial_core_build,true);
+ assert.strictEqual(first.args.payload.auto_initial_core_simc_binary,null);
+ assert.strictEqual(first.args.payload.native_G_binary,null);
+ assert.strictEqual(first.args.payload.consumable_native_binary,null);
+ assert.strictEqual(first.args.payload.target_ilevel,334);
+ assert.strictEqual(first.args.payload.game_build,"12.2.0.99999");
+ // Explicit G Native is never allowed without the real executable.
+ $("season-native-g").checked=true;
+ await assert.rejects(run(false),/G\/F .*실행 파일 경로/);
+ assert.strictEqual(submitted.length,1,
+   "EXPLICIT_NATIVE_REQUIRES_BINARY_BEFORE_HTTP");
+ $("season-native-g").checked=false;
+ $("binary").value="C:/simc/simc.exe";
+ await assert.rejects(run(false),/REQUEST_CAPTURED_BEFORE_NATIVE/);
+ assert.strictEqual(submitted.length,2);
+ assert.strictEqual(submitted[1].args.payload.auto_initial_core_simc_binary,
+                    "C:/simc/simc.exe");
+ assert(src.includes("SEASON_INITIAL_CORE_SIMC_BINARY_REQUIRED"));
+ console.log("M1_M2_AUTO_CORE_CACHE_HIT_WITHOUT_SIMC_BINARY_REQUEST_PASS");
+})().catch(e=>{console.error(e);process.exitCode=1});
+"""
+        result=subprocess.run([node,"-e",code,
+             str(ROOT/"runner/webui/app.js")],
+             capture_output=True,text=True,timeout=15,check=False)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("M1_M2_AUTO_CORE_CACHE_HIT_WITHOUT_SIMC_BINARY_REQUEST_PASS",
+                      result.stdout)
+
     def test_m1_m2_completed_build_response_cannot_bind_changed_gjfo_inputs(self):
         """Execute actual JS scope and response guard; no server or Native."""
         import shutil,subprocess
