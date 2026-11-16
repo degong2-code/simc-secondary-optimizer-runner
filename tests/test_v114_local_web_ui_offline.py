@@ -395,14 +395,21 @@ const state={oilLoadouts:[{installed_manifest_sha256:O,
  seasonGearTargetIlevel:334,
  verifiedBaseFlaskInstalls:[{installed_manifest_sha256:ZERO,
  flask_item_id:241327,socket_total:4,J:92,F:165}]};
-const calls=[],notices=[];
+const calls=[],notices=[],positiveRebind=[];
 const apply=Function("state","$","field","valueInt",
  "oilCompatibility","syncOilUseToggle","updateBudgetPreview",
  "installedConsumableScopeMatches","chooseInstalledFlask","setNotice",
+ "tryApplyDefaultOil","fullVerifiedOilMatch","selectedFullVerifiedOil",
+ "bindUniqueInstalledOilVariant",
  "let oilUseIntent=true;\n"+raw.slice(start,end)+
  "\nreturn applyOilUseToggle;")(state,$,field,valueInt,()=>{},()=>{},()=>{},
  ()=>true,()=>{calls.push(field("season-verified-flask"));return Promise.resolve()},
- message=>notices.push(message));
+ message=>notices.push(message),
+ ()=>{$("optimizer-oil-loadout").value=O;
+     $("oil_main").checked=true;
+     $("optimizer-oil-main-id").value="243734";},
+ ()=>true,()=>({installed_manifest_sha256:O}),
+ ()=>{positiveRebind.push(field("optimizer-oil-loadout"));return Promise.resolve();});
 (async()=>{
  await apply();
  assert.deepStrictEqual(calls,["241327"],
@@ -434,14 +441,26 @@ const apply=Function("state","$","field","valueInt",
  $("season-selected-flask-id").value="";
  await apply();
  assert.strictEqual(state.seasonGearTargetIlevel,334);
- console.log("M3_OIL_OFF_EXISTING_ZERO_O_REUSE_NO_NATIVE_PASS");
+ // Reverse flow: verified unique positive O must also rebind the installed
+ // source after the oil toggle is enabled (without new G/F or DPS Native).
+ $("optimizer-oil-enabled").checked=true;
+ await apply();
+ assert.deepStrictEqual(positiveRebind,[O],
+   "OIL_ON_MUST_CALL_EXISTING_EXACT_SHA_BINDER");
+ assert.strictEqual(calls.length,1,"POSITIVE_O_MUST_NOT_REUSE_O_ZERO_FLASK");
+ // Missing/stale installed gear authority does not request a positive rebind.
+ state.seasonGear={};
+ await apply();
+ assert.strictEqual(positiveRebind.length,1,
+   "MISSING_INSTALLED_SHA_CANNOT_REBIND_POSITIVE_O");
+ console.log("M3_OIL_OFF_ON_VERIFIED_INSTALL_REBIND_NO_NATIVE_PASS");
 })().catch(e=>{console.error(e);process.exitCode=1});
 """
         result=subprocess.run([node,"-e",harness,
             str(ROOT/"runner/webui/app.js")],
             capture_output=True,text=True,timeout=15,check=False)
         self.assertEqual(result.returncode,0,result.stderr)
-        self.assertIn("M3_OIL_OFF_EXISTING_ZERO_O_REUSE_NO_NATIVE_PASS",
+        self.assertIn("M3_OIL_OFF_ON_VERIFIED_INSTALL_REBIND_NO_NATIVE_PASS",
                       result.stdout)
 
     def test_v361_linear_layout_and_approved_input_boundaries(self):

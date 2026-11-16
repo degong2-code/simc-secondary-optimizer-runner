@@ -994,6 +994,14 @@ function applyOilUseToggle(){
       "기름 사용 기본값은 켜져 있지만 검증된 조합이 없습니다. 시즌 환경 검증 또는 기름 미사용을 선택하세요.");
   }
   syncOilUseToggle();updateBudgetPreview();
+  // Turning oil back ON must also bind its verified O-positive v212 source.
+  // A unique physical oil match alone is NOT a valid user budget/session.
+  // Existing binder checks selected F/J, 4 sockets, hands and the exact SHA;
+  // on ambiguity it blocks, without a new season Build or Native.
+  const verified=selectedFullVerifiedOil();
+  if(verified&&state.seasonGear?.installed_manifest_sha256&&
+     field("optimizer-oil-loadout")===verified.installed_manifest_sha256)
+    return bindUniqueInstalledOilVariant();
 }
 
 function oilCompatibility() {
