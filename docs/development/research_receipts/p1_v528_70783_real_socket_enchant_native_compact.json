@@ -171,5 +171,69 @@
     "additional_http": 0,
     "additional_native": 0,
     "cannot_promote_5_or_6_J_or_game_legality": true
+  },
+  "same_build_socket_item_candidate_relation_not_admission": {
+    "status": "SOURCE_ONLY_SEASON2_PVE_SOCKET_APPLICATION_PROOF_PENDING",
+    "local_reuse_original": "v523 Wago DB2 70783 10 CSV ZIP, SHA-verified; and prior v452/v454 current same-build item/use/SpellEffect source compact",
+    "no_new_http_or_native": true,
+    "reused_original_csv_sha": {
+      "JournalEncounterItem": "5203576d974e31df9ce4c02d05e8a45902b81a4ae91853834ffb48a25debe787",
+      "JournalEncounter": "a1ea294c56801ee05fc5183f355c91b0fdd92ec93f9b9e41fb304a26d577b954",
+      "JournalInstance": "86fa8069ef8454b90826f27581a2b0ce705295083a1f5374bb733abc051c7840",
+      "JournalTierXInstance": "4c631bda07884f8b36c0d0d50404dc0082d968f7b6a202e393c1b7d6b75e1d88",
+      "ItemSparse": "89910dad9e9a56a4446a0f8ad9c64f79c10267c26ee4f866bd7265db32e433a8"
+    },
+    "source_raid_journal_tier_id": 505,
+    "availability_condition_unverified": 156363,
+    "potential_exact_gear": [
+      {
+        "slot": "wrists",
+        "item_id": 268217,
+        "original_70783_JournalEncounterID": 2849,
+        "original_instance": "The Tidebound Grotto",
+        "raw_intrinsic_socket_types": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "slot": "waist",
+        "item_id": 268216,
+        "original_70783_JournalEncounterID": 2888,
+        "original_instance": "The Venomous Abyss",
+        "raw_intrinsic_socket_types": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "slot": "head",
+        "item_id": 271492,
+        "original_70783_JournalEncounterID": null,
+        "source": "separately verified same-build tier/SimC original, not independently established raid JournalEncounterItem here",
+        "raw_intrinsic_socket_types": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "prior_original_v452_item_use": {
+      "item_id": 275707,
+      "observed_on_use_spell_id": 1309820
+    },
+    "prior_original_v454_spell_rows": {
+      "spell_1309820": "Effect359 Misc181/184 + dummy, v280 exact use item observed",
+      "spell_1297709": "Effect314 Misc6007 seen separately, use-spell chain between 1309820 and 1297709 not observed"
+    },
+    "external_secondary_tooltip": {
+      "wowhead": "https://www.wowhead.com/ptr-2/item=275707/miasmic-jewelbinder",
+      "text_summary": "Season 2, non-PvP item without socket; head/bracers/belt only",
+      "wowhead_pvp_distinction": "https://www.wowhead.com/ptr-2/item=276187/venomous-jewelers-setting"
+    },
+    "limits": "Observed same-build item/raid origin and public item tooltip help identify precise candidates, but server-side item application status, PvP/season flag on final selected item, active raid world-state condition, exact item->socket bonus state and on-use-to-effect-spell chain remain unverified. Do NOT promote game_socket_legal_verified, J or 5/6 session; public text is supporting context, not v217 original receipt.",
+    "automatic_policy_A_admission": false
   }
 }
