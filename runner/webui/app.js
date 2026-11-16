@@ -2290,10 +2290,10 @@ async function buildSeasonEnvironment(forUserVariant=false) {
     stopSeasonActivity();
     lastSeasonDiagnosticReceipt=compactSeasonBuildReceipt(report,forUserVariant);
     $("season-diagnostic-copy-btn").disabled=false;
-    if(seasonBuildInputScope(forUserVariant)!==requestedInputScope) {
+    const rejectStaleBuildResponse=()=>{
       // The original v216 Build may have succeeded for the old selection.
-      // Keep its diagnostic receipt, but do not display its G/J/F/O budget
-      // or bind its v212 SHA/gear as the current user's executable setup.
+      // Keep its diagnostic receipt, but never bind its GJFO/T or v212 SHA
+      // after either the initial POST or the subsequent gear GET completes.
       state.verifiedInstalledBuildFromThisPage=null;
       installSeasonGearHints(null);
       renderSeasonOptionCatalog(null);
@@ -2305,6 +2305,9 @@ async function buildSeasonEnvironment(forUserVariant=false) {
         "변경 전 조건의 환경 구축 응답 수신 · 현재 선택 구성은 다시 검증해야 합니다.";
       if(forUserVariant)$("user-variant-status").textContent=
         "요청 도중 선택 구성이 변경되어 기존 T·설치 SHA를 적용하지 않았습니다.";
+    };
+    if(seasonBuildInputScope(forUserVariant)!==requestedInputScope) {
+      rejectStaleBuildResponse();
       return;
     }
     showSeasonEnvironmentBuild(report,forUserVariant);
@@ -2338,6 +2341,10 @@ async function buildSeasonEnvironment(forUserVariant=false) {
         const gear=await api("/api/v1/season-gear?game_build="+
           encodeURIComponent(build)+"&target_ilevel="+level+
           "&installed_manifest_sha256="+sha);
+        if(seasonBuildInputScope(forUserVariant)!==requestedInputScope) {
+          rejectStaleBuildResponse();
+          return;
+        }
         if(gear.status!=="CURRENT_SEASON_CANDIDATE_SELECTION_ONLY" ||
            gear.source_scope!=="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES" ||
            gear.season_build!==build||gear.installed_manifest_sha256!==sha)
