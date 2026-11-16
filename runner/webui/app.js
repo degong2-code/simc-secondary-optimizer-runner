@@ -946,13 +946,40 @@ function tryApplyDefaultOil(){
   updateBudgetPreview();
 }
 function applyOilUseToggle(){
+  // An installed positive-O SHA cannot authorize a subsequent O=0 run.
+  // Reuse an already verified, UNIQUE O=0/F/four-gem installation via the
+  // existing flask selector. Never invent a new v212 SHA or rerun G/F Native.
+  const boundOil=state.oilLoadouts.find(item=>
+    item.installed_manifest_sha256===state.seasonGear?.installed_manifest_sha256);
   oilUseIntent=$("optimizer-oil-enabled").checked;
   if(!oilUseIntent){
     $("optimizer-oil-loadout").value="";
     $("oil_main").checked=false;$("oil_off").checked=false;
     $("optimizer-oil-main-id").value="";
     $("optimizer-oil-off-id").value="";
-    oilCompatibility();syncOilUseToggle();updateBudgetPreview();return;
+    oilCompatibility();syncOilUseToggle();updateBudgetPreview();
+    if(boundOil){
+      const flask=boundOil.verified_flask_item_id;
+      const selectedF=field("season-selected-flask-id");
+      const available=(state.verifiedBaseFlaskInstalls||[]).filter(item=>
+        item.flask_item_id===flask&&item.socket_total===4);
+      const canRebind=Number.isSafeInteger(flask)&&flask>0&&
+        (!selectedF||Number(selectedF)===flask)&&
+        valueInt("season-target-socket-count")===4&&
+        !field("season-existing-special-gem-id")&&
+        installedConsumableScopeMatches(state.oilCatalog)&&
+        available.length===1&&
+        Array.from($("season-verified-flask").options).some(
+          item=>item.value===String(flask));
+      if(canRebind){
+        $("season-verified-flask").value=String(flask);
+        // withBusy awaits this existing one-read-only-GET binding.
+        return chooseInstalledFlask();
+      }
+      state.seasonGearTargetIlevel=null;
+      setNotice("기름 미사용(O=0)으로 변경했습니다. 기존 기름 포함 설치 SHA는 재사용할 수 없습니다. 동일 F/J의 검증된 O=0 환경을 선택하거나 ‘선택 환경 검증·준비’를 실행하세요.");
+    }
+    return;
   }
   tryApplyDefaultOil();
   const matches=state.oilLoadouts.filter(fullVerifiedOilMatch);

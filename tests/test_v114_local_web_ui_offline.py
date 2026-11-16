@@ -365,6 +365,85 @@ eval(context+raw.slice(start,end)+"\n"+test);
               capture_output=True,text=True,timeout=15,check=False)
         self.assertEqual(result.returncode,0,result.stderr)
 
+    def test_m3_oil_disabled_reuses_exact_existing_zero_o_flask_or_blocks(self):
+        """Only an unambiguous already-installed O=0 SHA may replace a positive O."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:self.skipTest("node missing")
+        harness=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const start=raw.indexOf("function applyOilUseToggle() {");
+const end=raw.indexOf("\nfunction oilCompatibility()",start);
+assert(start>=0&&end>start);
+const O="a".repeat(64),ZERO="b".repeat(64),OTHER="c".repeat(64);
+const elements={
+ "optimizer-oil-enabled":{checked:false},
+ "optimizer-oil-loadout":{value:O},
+ "oil_main":{checked:true},"oil_off":{checked:false},
+ "optimizer-oil-main-id":{value:"243734"},
+ "optimizer-oil-off-id":{value:""},
+ "season-selected-flask-id":{value:""},
+ "season-target-socket-count":{value:"4"},
+ "season-existing-special-gem-id":{value:""},
+ "season-verified-flask":{value:"",options:[{value:"241327"}]}
+};
+const $=id=>(elements[id]??={value:"",checked:false,options:[]});
+const field=id=>String($(id).value).trim(),valueInt=id=>Number(field(id));
+const state={oilLoadouts:[{installed_manifest_sha256:O,
+ verified_flask_item_id:241327}],seasonGear:{installed_manifest_sha256:O},
+ seasonGearTargetIlevel:334,
+ verifiedBaseFlaskInstalls:[{installed_manifest_sha256:ZERO,
+ flask_item_id:241327,socket_total:4,J:92,F:165}]};
+const calls=[],notices=[];
+const apply=Function("state","$","field","valueInt",
+ "oilCompatibility","syncOilUseToggle","updateBudgetPreview",
+ "installedConsumableScopeMatches","chooseInstalledFlask","setNotice",
+ "let oilUseIntent=true;\n"+raw.slice(start,end)+
+ "\nreturn applyOilUseToggle;")(state,$,field,valueInt,()=>{},()=>{},()=>{},
+ ()=>true,()=>{calls.push(field("season-verified-flask"));return Promise.resolve()},
+ message=>notices.push(message));
+(async()=>{
+ await apply();
+ assert.deepStrictEqual(calls,["241327"],
+   "OFF_MUST_REUSE_EXISTING_VERIFIED_F_BINDING");
+ assert.strictEqual($("oil_main").checked,false);
+ assert.strictEqual($("optimizer-oil-main-id").value,"");
+ assert.strictEqual($("season-verified-flask").value,"241327");
+ // A second valid O=0 J budget cannot be guessed from the same flask ID.
+ state.verifiedBaseFlaskInstalls.push({installed_manifest_sha256:OTHER,
+ flask_item_id:241327,socket_total:4,J:108,F:165});
+ state.seasonGearTargetIlevel=334;
+ $("oil_main").checked=true;
+ $("optimizer-oil-enabled").checked=false;
+ await apply();
+ assert.strictEqual(calls.length,1,"AMBIGUOUS_MUST_NOT_BIND_OR_GET");
+ assert.strictEqual(state.seasonGearTargetIlevel,null);
+ assert(notices.at(-1).includes("설치 SHA"));
+ // If the user edited F, do not silently restore the old oil-install F.
+ state.verifiedBaseFlaskInstalls.pop();
+ state.seasonGearTargetIlevel=334;
+ $("season-selected-flask-id").value="241328";
+ $("oil_main").checked=true;
+ await apply();
+ assert.strictEqual(calls.length,1);
+ assert.strictEqual(state.seasonGearTargetIlevel,null);
+ // A previously bound no-oil SHA is not invalidated unnecessarily.
+ state.seasonGear={installed_manifest_sha256:ZERO};
+ state.seasonGearTargetIlevel=334;
+ $("season-selected-flask-id").value="";
+ await apply();
+ assert.strictEqual(state.seasonGearTargetIlevel,334);
+ console.log("M3_OIL_OFF_EXISTING_ZERO_O_REUSE_NO_NATIVE_PASS");
+})().catch(e=>{console.error(e);process.exitCode=1});
+"""
+        result=subprocess.run([node,"-e",harness,
+            str(ROOT/"runner/webui/app.js")],
+            capture_output=True,text=True,timeout=15,check=False)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("M3_OIL_OFF_EXISTING_ZERO_O_REUSE_NO_NATIVE_PASS",
+                      result.stdout)
+
     def test_v361_linear_layout_and_approved_input_boundaries(self):
         page=self.client.get("/").text
         css=self.client.get("/assets/styles.css").text
