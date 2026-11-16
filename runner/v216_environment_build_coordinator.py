@@ -3000,7 +3000,8 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
                                    g_probe_character=None,
                                    gem_enchant_transport=None,
                                    simc_compiler_transport=None,
-                                   auto_four_stat_gems=False):
+                                   auto_four_stat_gems=False,
+                                   myth_target_source_only=False):
     """First real normal-source acquisition inside the SAME Environment Build.
 
     Explicit build is only a request identity, not independent season or tier
@@ -3193,6 +3194,26 @@ def collect_wago_new_season_source(*, sessions_root, expected_game_build,
         discovered=discovered,
         wago_stage_receipt=stage["receipt_sha256"],
         verified_tables=verified_wago_tables)
+    # Season default target discovery only needs the already authenticated
+    # active raid + same-build v161 CSV receipt. Do not spend extra tier,
+    # SimC source, effect, gem, profile or Native work before a target ilvl
+    # can be chosen. A subsequent normal Build REUSES original v217 receipts.
+    need(type(myth_target_source_only) is bool,
+         "V216_MYTH_TARGET_SOURCE_ONLY_FLAG_INVALID")
+    if myth_target_source_only:
+        return {
+            "schema":"v216_myth_target_preprofile_source_v1",
+            "expected_game_build":expected_game_build,
+            "snapshot_receipt_path":str((output_dir/"receipt.json").resolve()),
+            "source_stage":{k:v for k,v in stage.items() if k!="result"},
+            "season_join":linked,
+            "network_calls_by_stage":(
+                (len(wago_snapshot.TABLES) if stage["executed"] else 0)
+                +discovered["network_calls_by_stage"]),
+            "native_calls":0,"environment_ready":False,
+            "environment_installed":False,
+            "G":None,"J":None,"F":None,"O":None,"B":None,"T":None,
+            "no_new_season_target_ilevel_assumed":True}
     # A caller-injected Wago transport cannot be mixed with a LIVE effect
     # relation unless its exact same-build transport is explicitly supplied.
     # Production with the ordinary v161 collector uses the live URL.
