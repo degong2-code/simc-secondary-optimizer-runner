@@ -124,6 +124,10 @@ class SeasonEnvironmentBuildRequest(BaseModel):
     auto_myth_target_source_build: str | None = Field(
         default=None,pattern=r"^\d+(?:\.\d+){3}$",
         min_length=7,max_length=32)
+    # Optional exact source pin ONLY for auto-selected Myth default ilvl.
+    # Does not change the independent G/J/F/O or v212 approval contract.
+    auto_myth_target_source_sha256: str | None = Field(
+        default=None,pattern=r"^[a-f0-9]{64}$")
     # Explicit opt-in to the EXISTING single v277/v236 Native G probe.
     native_G_binary: str | None = Field(default=None,min_length=1,max_length=4096)
     # Same optional SimC executable may measure F/O with no G subprocess.
@@ -795,7 +799,8 @@ class LocalJobs:
                                  existing_special_gem_id=None,
                                  source_target_socket_count=None,
                                  refresh_reason=None,
-                                 auto_myth_target_source_build=None):
+                                 auto_myth_target_source_build=None,
+                                 auto_myth_target_source_sha256=None):
         """Run original v216 with season inputs, never a user DPS scenario.
 
         One deterministic one-spec reference G probe is NOT season-level
@@ -884,6 +889,27 @@ class LocalJobs:
                 auto_myth_target_source_build!=game_build):
             raise environment_manifest.EnvironmentBlocked(
                 "MYTH_TARGET_LIVE_GAME_BUILD_CHANGED_REDISCOVER")
+        # The preflight's observed CSV SHA previously stopped at the browser.
+        # Pin it to the unchanged same-build original BEFORE an installed
+        # v212 cache hit or a new G/J/F/O source collection is considered.
+        # A manual ilvl has no such source pin or new dependency.
+        if auto_myth_target_source_sha256 is not None:
+            if auto_myth_target_source_build is None:
+                raise environment_manifest.EnvironmentBlocked(
+                    "MYTH_TARGET_SOURCE_SHA_REQUIRES_VERIFIED_BUILD")
+            candidate_folder=(self.root/"_fresh_season_sources"/
+                              ("wago_"+game_build)/"wago")
+            try:
+                with self.season_source_lock:
+                    source_doc=myth_target_source.verify(
+                        candidate_folder,game_build)
+            except (myth_target_source.TargetSourceBlocked,
+                    OSError,ValueError,KeyError,TypeError) as exc:
+                raise environment_manifest.EnvironmentBlocked(
+                    "MYTH_TARGET_SOURCE_IDENTITY_CHANGED_REDISCOVER") from exc
+            if source_doc["sha256"]!=auto_myth_target_source_sha256:
+                raise environment_manifest.EnvironmentBlocked(
+                    "MYTH_TARGET_SOURCE_IDENTITY_CHANGED_REDISCOVER")
         if (refresh_reason is None and native_G_binary is None and
             consumable_native_binary is None and
             not auto_native_F_requested and not auto_native_O_requested and
@@ -3114,7 +3140,10 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                 refresh_reason=request.refresh_reason,
                 **({"auto_myth_target_source_build":
                         request.auto_myth_target_source_build}
-                   if request.auto_myth_target_source_build is not None else {}))
+                   if request.auto_myth_target_source_build is not None else {}),
+                **({"auto_myth_target_source_sha256":
+                        request.auto_myth_target_source_sha256}
+                   if request.auto_myth_target_source_sha256 is not None else {}))
         except Exception as exc:
             raise blocked(exc) from None
 
