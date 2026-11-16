@@ -1,0 +1,102 @@
+# Single source-locked three-trinket Native scope, no AI or engine redesign.
+name: P1 v527 real Windows three trinket variants and cache-only after v106 fix
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p1_v527_three_real_trinket_native_once.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v527-three-70783-trinkets
+  cancel-in-progress: false
+jobs:
+  offline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Existing bounded source identity and user session regression
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile runner/v106_user_session_controller.py integration_probes/p1_v527_three_real_trinket_native_once.py
+          python -m pip install -r requirements-web-test.txt
+          python -m unittest -q \
+            tests.test_v526_v106_installed_worker_source \
+            tests.test_v437_selected_web_session_bridge \
+            tests.test_v435_selected_session_source_identity \
+            tests.test_v456_current_season_optional_consumable_ui_scope
+  windows-native-one:
+    needs: offline
+    if: ${{ contains(github.event.head_commit.message, '[v527-trinkets-three-once]') }}
+    runs-on: windows-2022
+    timeout-minutes: 30
+    env:
+      PYTHONPATH: runner;integration_probes;.
+      SIMC_PINNED_SOURCE_COMMIT: de11f57df75dda668bae6ac7043a43b98831fa96
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - name: Keep source bytes LF
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Use previously published pinned official SimC, no rebuild
+        uses: actions/download-artifact@v4
+        with:
+          repository: simulationcraft/simc-publish
+          run-id: 42956947906
+          name: simc-nightly-win64-midnight
+          path: .simc-v527
+          github-token: ${{ github.token }}
+      - name: Verify original archive/exe SHA and install existing dependencies
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $archive=Join-Path $PWD '.simc-v527/simc-1210.01.de11f57-win64.7z'
+          if (!(Test-Path $archive -PathType Leaf)) { throw 'V527_ORIGINAL_ARCHIVE_MISSING' }
+          if ((Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant() -ne 'a4c4d5e7b349172d80897721daa3e849ce25874a82bbdfb96aeab4dbdc560eb0') { throw 'V527_ORIGINAL_ARCHIVE_SHA_DRIFT' }
+          $seven='C:\Program Files\7-Zip\7z.exe'
+          New-Item -ItemType Directory -Force -Path .simc-v527-extracted | Out-Null
+          & $seven x '-o.simc-v527-extracted' -y -bd $archive | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'V527_EXTRACT_FAILED' }
+          $exes=@(Get-ChildItem .simc-v527-extracted -Recurse -Filter simc.exe -File)
+          if ($exes.Count -ne 1) { throw 'V527_SIMC_EXE_COUNT_INVALID' }
+          if ((Get-FileHash -Algorithm SHA256 $exes[0].FullName).Hash.ToLowerInvariant() -ne '1fc927d2be7f1b6064c75f004b5b22245b064a6b3e56e572af4048ba822a986d') { throw 'V527_OFFICIAL_EXE_SHA_DRIFT' }
+          "V527_SIMC_EXE=$($exes[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          python -m py_compile runner/v106_user_session_controller.py integration_probes/p1_v527_three_real_trinket_native_once.py
+          if ($LASTEXITCODE -ne 0) { throw 'V527_SRC_SYNTAX_INVALID' }
+          python -m pip install -r requirements-web-test.txt
+          if ($LASTEXITCODE -ne 0) { throw 'V527_DEPENDENCY_FAILED' }
+          python -m unittest -q tests.test_v526_v106_installed_worker_source
+          if ($LASTEXITCODE -ne 0) { throw 'V527_CHILD_SOURCE_TEST_FAILED' }
+      - name: One M1-M2 source and three disjoint trinket 6-case adaptive SimC workers
+        shell: pwsh
+        timeout-minutes: 18
+        run: |
+          New-Item -ItemType Directory -Force -Path out/v527 | Out-Null
+          python -u integration_probes/p1_v527_three_real_trinket_native_once.py --binary "$env:V527_SIMC_EXE" --out out/v527
+          if ($LASTEXITCODE -ne 0) { throw 'V527_TRINKET_VARIANT_CASES_NOT_ALL_PROVEN' }
+      - name: Retain bounded real SimC SHA/SEM/95/identity receipts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v527-real-70783-three-trinkets
+          path: out/v527/V527_ACTUAL_TRINKET_NATIVE_RESULT.json
+          retention-days: 7
+          if-no-files-found: warn
