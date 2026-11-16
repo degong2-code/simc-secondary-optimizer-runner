@@ -384,10 +384,16 @@ def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
     # exact byte identity must remain unchanged without a full-size allocation.
     with binary.open("rb") as executable:
         binary_sha256=hashlib.file_digest(executable,"sha256").hexdigest()
+    # A selected static-item cache may also grow large. Preserve its exact
+    # session identity without allocating another whole-file byte string.
+    cache_sha256=None
+    if cache_path is not None:
+        with cache_path.open("rb") as cached:
+            cache_sha256=hashlib.file_digest(cached,"sha256").hexdigest()
     identity={"schema":SCHEMA,"user":user,
               "simc_binary_sha256":binary_sha256,
               "simc_revision":revision,
-              "static_cache_sha256":sha(cache_path.read_bytes()) if cache_path else None}
+              "static_cache_sha256":cache_sha256}
     if ordinary_variant is not None:
         identity["ordinary_variant"]=ordinary_variant
     if independent_334:
