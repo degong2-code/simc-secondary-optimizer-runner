@@ -71,8 +71,8 @@ class PositiveSeasonEnchants(unittest.TestCase):
                 self.assertEqual(calculated["effective_G"],2850+delta)
                 self.assertEqual(calculated["user_E_added_to_auto_B_once"],delta)
                 self.assertFalse(calculated["user_T_manual_unchanged"])
-                # Manual T arithmetic is checked but NOT currently admitted
-                # for users; strict witnessed user_scope() rejects manual T.
+                # Manual T is authoritative in the v534 user path: E stays
+                # a fixed floor, NEVER a second addition to explicit T.
                 fixed=e.project(fake_install(),{"finger1":item},
                                 manual_final_T=3200)
                 self.assertEqual(fixed["final_T"],3200)
@@ -84,8 +84,18 @@ class PositiveSeasonEnchants(unittest.TestCase):
         controls.update(race="human",oil_hands=[],trinket_ids=[270175,270173])
         user=sessions.user_scenario(controls)
         e.user_scope(user)
-        for field,value in (("target",{"ilevel":334,"final_T":3107}),
-                            ("target",{"ilevel":335,"final_T":None}),
+        manual=copy.deepcopy(user)
+        manual["target"]["final_T"]=3200
+        e.user_scope(manual)
+        self.assertEqual(manual["target"]["final_T"],3200)
+        for bad in (True,1.5,0,-1,"3200"):
+            changed=copy.deepcopy(manual)
+            changed["target"]["final_T"]=bad
+            with self.subTest(invalid_manual=bad),self.assertRaisesRegex(
+                    e.PositiveEnchantBlocked,
+                    "MANUAL_FINAL_T_POSITIVE_INTEGER_REQUIRED"):
+                e.user_scope(changed)
+        for field,value in (("target",{"ilevel":335,"final_T":None}),
                             ("oil_hands",["main_hand"]),
                             ("trinkets",[{"slot":"trinket1","item_id":270169,"options":{}},
                                          {"slot":"trinket2","item_id":270174,"options":{}}])):
@@ -93,6 +103,24 @@ class PositiveSeasonEnchants(unittest.TestCase):
             with self.subTest(field=field),self.assertRaises(
                  prior.SourceBlocked):
                 e.user_scope(other)
+
+    def test_manual_T_keeps_E_floor_and_rejects_fixed_budget_underflow(self):
+        for item,extra in ((8025,30),(7965,26)):
+            with self.subTest(item=item),patch.object(
+                  e.budget,"retarget_verified_install",
+                  side_effect=lambda **kw:fake_retarget(kw["manual_final_T"])):
+                amount=e.project(fake_install(),{"finger1":item},
+                                 manual_final_T=3200)
+                self.assertEqual(amount["base_B"],3200)
+                self.assertEqual(amount["final_T"],3200)
+                self.assertEqual(amount["reference_B"],3107+extra)
+                self.assertEqual(amount["fixed_E"],e.ENCHANTS[item]["E"])
+                self.assertEqual(amount["user_E_added_to_auto_B_once"],0)
+                with self.assertRaisesRegex(
+                    e.PositiveEnchantBlocked,
+                    "FIXED_E_OR_MANUAL_T_FEASIBILITY_INVALID"):
+                    e.project(fake_install(),{"finger1":item},
+                              manual_final_T=200)
 
     def test_source_pair_cannot_be_wrong_profile_or_binary(self):
         normalized={"scenario":{"character":{"class":"hunter","spec":"survival"},
