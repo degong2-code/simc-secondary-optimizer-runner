@@ -133,13 +133,21 @@ class Source(unittest.TestCase):
                 self.folder,BUILD,active_season_scope=SCOPE)
 
     def test_bad_csv_and_partial_download_do_not_create_authority(self):
-        fetch,_=self.get(b"<!DOCTYPE html>")
-        target.collect(self.folder,BUILD,fetch=fetch)
-        with self.assertRaisesRegex(target.TargetSourceBlocked,
-                                    "TARGET_CURRENCY_REQUIRED_COLUMNS_MISSING"):
-            target.myth_target_candidate(
-                self.folder,BUILD,active_season_scope=SCOPE)
-        # Existing invalid bytes must not be silently overwritten.
+        # An HTTP 200 HTML/error body cannot poison the immutable
+        # optional season cache; the same build may retry a valid CSV.
+        for bad,code in ((b"<!DOCTYPE html>",
+                          "TARGET_CURRENCY_DOWNLOAD_COLUMNS_INVALID"),
+                         (b"\\xff\\xfeinvalid",
+                          "TARGET_CURRENCY_DOWNLOAD_COLUMNS_INVALID")):
+            with self.subTest(bad=bad),self.assertRaisesRegex(
+                    target.TargetSourceBlocked,code):
+                target.collect(self.folder,BUILD,fetch=self.get(bad)[0])
+            self.assertFalse((self.folder/target.FILE).exists())
+            self.assertFalse((self.folder/target.RECEIPT).exists())
+        target.collect(self.folder,BUILD,fetch=self.get()[0])
+        self.assertEqual(target.myth_target_candidate(
+            self.folder,BUILD,active_season_scope=SCOPE)["target_ilevel"],334)
+        # Existing valid, sealed source is immutable and SHA-enforced.
         with self.assertRaisesRegex(target.TargetSourceBlocked,
                                     "TARGET_CURRENCY_SOURCE_SHA_OR_BUILD_MISMATCH"):
             (self.folder/target.FILE).write_bytes(b"tampered")
