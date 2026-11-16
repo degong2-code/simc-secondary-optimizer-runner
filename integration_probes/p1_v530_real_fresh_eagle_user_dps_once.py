@@ -136,11 +136,26 @@ def run(binary,out):
                           "id=268266" in ring[0],
                           "FINGER1_ENCHANT_NOT_EXACTLY_SERIALIZED")
                     r["actual_enchanted_source_sha256"]=digest(actual_input)
-                    r["observed_nonchmv_plan"]=chosen["plan"].get(
+                    # The public v113 plan intentionally projects only
+                    # user-safe class/spec/B/T. Read the already source-sealed
+                    # v218/v098 output and original v096 plan on disk.
+                    original_stage=root/sid/"generated"/"v098_bootstrap_result.json"
+                    check(original_stage.is_file() and
+                          not original_stage.is_symlink(),
+                          "ORIGINAL_V098_SESSION_PROOF_MISSING")
+                    stage=json.loads(original_stage.read_text("utf8"))
+                    internal=stage.get("plan") or {}
+                    r["observed_nonchmv_plan"]=internal.get(
                         "selected_nonchmv_enchant")
+                    original_manifest=json.loads(
+                        (root/sid/"generated"/"manifest.json").read_text("utf8"))
+                    check(original_manifest.get(
+                          "v206_source_classified_nonchmv_enchant_choice")==
+                          eagle.CHOICE,
+                          "ORIGINAL_V096_ENCHANT_MANIFEST_OPTION_MISSING")
                     check(r["observed_nonchmv_plan"] is not None and
                           r["observed_nonchmv_plan"]["static_CHMV_E"]==
-                            eagle.ZERO,"PROVEN_E_ZERO_NOT_IN_V096_PLAN")
+                            eagle.ZERO,"PROVEN_E_ZERO_NOT_IN_ORIGINAL_V096_PLAN")
                     checkpoint()
                     started=http(client,"POST","/api/v1/sessions/start",
                                  payload(enchanted))
