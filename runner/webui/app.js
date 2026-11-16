@@ -2307,40 +2307,7 @@ async function buildSeasonEnvironment(forUserVariant=false) {
   const autoTarget=state.autoSeasonTargetEnabled===true &&
     !forUserVariant && !state.userTargetIlevelManualOverride &&
     !state.seasonBuildTargetManualOverride;
-  if(autoTarget) {
-    const before=seasonBuildInputScope(false);
-    $("season-build-stage").textContent=
-      "현재 시즌 일반 Myth 트랙의 최고 ilvl 원본 확인 중 · 기존 시즌 값을 복사하지 않습니다…";
-    const evidence=await api("/api/v1/environment/myth-target",{
-      method:"POST",payload:{game_build}
-    });
-    if(seasonBuildInputScope(false)!==before)
-      throw Error("시즌 목표 ilvl 확인 중 설정이 변경되었습니다. 현재 입력을 다시 확인하세요.");
-    const detected=evidence?.target_ilevel;
-    if(evidence?.status!=="MYTH_TARGET_CANDIDATE_FROM_MATCHED_WAGO_V163_SOURCE" ||
-       !Number.isSafeInteger(detected)||detected<1||detected>1000) {
-      $("season-build-stage").textContent=
-        "일반 Myth 트랙 최고 ilvl 자동 판정 보류 · 목표 ilvl을 직접 입력하면 계속할 수 있습니다.";
-      throw Error("MYTH_TARGET_SOURCE_PENDING_ENTER_MANUAL_ILEVEL");
-    }
-    autoMythTargetSourceBuild=evidence.game_build;
-    state.lastVerifiedSeasonTarget={
-      game_build:evidence.game_build,target_ilevel:detected,
-      currency_csv_sha256:evidence.currency_csv_sha256
-    };
-    const wasLevel=Number(field("ilevel"));
-    $("ilevel").value=String(detected);
-    $("season-target-ilevel").value=String(detected);
-    if(wasLevel!==detected) {
-      state.seasonOptionRequestEpoch++;
-      renderSeasonOptionCatalog(null);
-      updateBudgetPreview();
-    }
-    $("season-build-stage").textContent=
-      "시즌 Myth 일반 최고 ilvl "+detected+
-      " 원본 확인 · 기존 G/J/F/O 설치 검증 진행";
-  }
-  const target_ilevel=forUserVariant?valueInt("ilevel"):
+  let target_ilevel=forUserVariant?valueInt("ilevel"):
     valueInt("season-target-ilevel");
   if(target_ilevel<1||target_ilevel>1000)
     throw Error("목표 ilvl은 1~1000 범위여야 합니다.");
@@ -2449,6 +2416,47 @@ async function buildSeasonEnvironment(forUserVariant=false) {
         " 선택한 기름의 스케일링 값은 기존 실행 캐시를 먼저 재사용하고, 필요한 손에만 SimC 측정을 수행합니다.":
         " 선택한 기름이 없으므로 SimC 원본 확인만 수행하며 O Native는 실행하지 않습니다."):"")))
     return;
+  // Only after the user's consent may the optional Wago CurrencyTypes
+  // source request execute. This source-only preflight performs no Native.
+  if(autoTarget) {
+    const before=seasonBuildInputScope(false);
+    $("season-build-stage").textContent=
+      "현재 시즌 일반 Myth 트랙의 최고 ilvl 원본 확인 중 · 기존 시즌 값을 복사하지 않습니다…";
+    const evidence=await api("/api/v1/environment/myth-target",{
+      method:"POST",payload:{game_build}
+    });
+    if(seasonBuildInputScope(false)!==before ||
+       state.userTargetIlevelManualOverride ||
+       state.seasonBuildTargetManualOverride)
+      throw Error("시즌 목표 ilvl 확인 중 설정이 변경되었습니다. 현재 입력을 다시 확인하세요.");
+    const detected=evidence?.target_ilevel;
+    if(evidence?.status!=="MYTH_TARGET_CANDIDATE_FROM_MATCHED_WAGO_V163_SOURCE" ||
+       !Number.isSafeInteger(detected)||detected<1||detected>1000) {
+      $("season-build-stage").textContent=
+        "일반 Myth 트랙 최고 ilvl 자동 판정 보류 · 목표 ilvl을 직접 입력하면 계속할 수 있습니다.";
+      throw Error("MYTH_TARGET_SOURCE_PENDING_ENTER_MANUAL_ILEVEL");
+    }
+    if(typeof evidence.game_build!=="string" ||
+       !/^\d+(?:\.\d+){3}$/.test(evidence.game_build))
+      throw Error("MYTH_TARGET_SOURCE_BUILD_INVALID");
+    autoMythTargetSourceBuild=evidence.game_build;
+    state.lastVerifiedSeasonTarget={
+      game_build:evidence.game_build,target_ilevel:detected,
+      currency_csv_sha256:evidence.currency_csv_sha256
+    };
+    const wasLevel=Number(field("ilevel"));
+    $("ilevel").value=String(detected);
+    $("season-target-ilevel").value=String(detected);
+    target_ilevel=detected;
+    if(wasLevel!==detected) {
+      state.seasonOptionRequestEpoch++;
+      renderSeasonOptionCatalog(null);
+      updateBudgetPreview();
+    }
+    $("season-build-stage").textContent=
+      "시즌 Myth 일반 최고 ilvl "+detected+
+      " 원본 확인 · 기존 G/J/F/O 설치 검증 진행";
+  }
   // A new build attempt revokes a previous implicit current-build bind.
   // A failed/PENDING response must never reuse an earlier READY build.
   state.verifiedInstalledBuildFromThisPage=null;
