@@ -1109,8 +1109,28 @@ class LocalJobs:
                             flasks_by_id[physical]=row
                 if not ids:continue
                 key=tuple(sorted(ids.items()))
-                if key in seen:continue
+                if key in seen:
+                    # Same physical oil hands may have different sealed F/J
+                    # budgets. Preserve the legacy one-row oil choice, but
+                    # forbid an auto-bind to whichever receipt was newest.
+                    for existing in result["items"]:
+                        if tuple(sorted(existing[
+                                "selected_oil_item_ids_by_hand"].items()))==key:
+                            existing["verified_variant_count"]+=1
+                            break
+                    continue
                 seen.add(key)
+                # An O>0 install can be connected without another Build only
+                # if it is the unambiguous four-gem/no-special profile.
+                # The selected session still authenticates this snapshot.
+                try:
+                    profile_doc=json.loads(snapshot.read_text(encoding="utf8"))
+                    ordinary_4_gems=(type(profile_doc) is dict and
+                        _verified_snapshot_gem_layout_matches(
+                            profile_doc.get("environment_result"),
+                            special_gem_id=None,socket_total=4))
+                except (ValueError,UnicodeError,OSError,TypeError):
+                    ordinary_4_gems=False
                 description=[]
                 for hand,row in sorted(positive["oil_by_hand"].items()):
                     token=row["simc_input_token"].rsplit(":",1)[-1]
@@ -1122,6 +1142,11 @@ class LocalJobs:
                     "installed_manifest_sha256":doc["manifest_sha256"],
                     "selected_oil_item_ids_by_hand":dict(ids),
                     "display_name":" / ".join(description),
+                    "verified_variant_count":1,
+                    "ordinary_four_gem_profile":ordinary_4_gems,
+                    "verified_flask_item_id":(
+                        flask.get("physical_item_id")
+                        if type(flask) is dict else None),
                     "game_build":build,"target_ilevel":ilevel})
             except (OSError,ValueError,TypeError,KeyError,
                     environment_manifest.EnvironmentBlocked):
