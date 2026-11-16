@@ -17,6 +17,7 @@ import v141_verified_pure_native_pilot as pure_pilot
 import v202_one_enchant_admission as verified_enchant
 import v204_selected_enchant_reference_budget as enchant_reference
 import v206_nonchmv_eagle_selection as nonchmv_enchant
+import v529_current_season_eagle_E0_bridge as fresh_eagle
 import v222_season_budget_contract as budget_contract
 
 SCHEMA="v096_user_scenario_unified_entry_v1"
@@ -627,6 +628,9 @@ def source(manifest_path):
              tuple(x|{NONCHMV_ENCHANT_FIELD} for x in base_allowed)+
              tuple(x|{SEASON_FIELD} for x in (FIELDS,))+
              tuple(x|{FRESH_SEASON_FIELD} for x in (FIELDS,))+
+             # Only one original-v528 scoped E=0 ring proof can coexist
+             # with the unchanged v212 B/T; positive E is not admitted.
+             (FIELDS|{FRESH_SEASON_FIELD,NONCHMV_ENCHANT_FIELD},)+
              tuple(x|{SELECTED_FRESH_SEASON_FIELD} for x in (FIELDS,)))
     # Opt-in exact search ordering is an additional immutable session input.
     # Existing manifests are unchanged and continue to accept old semantics.
@@ -726,9 +730,15 @@ def source(manifest_path):
     if NONCHMV_ENCHANT_FIELD in user:
         # Source and exact Windows E=0 comparison have separate provenance;
         # neither creates new B/T nor certifies effect mechanics in every spec.
-        approved_nonchmv=nonchmv_enchant.admit(
-            user[NONCHMV_ENCHANT_FIELD],prepared["oil"]["profile"],
-            prepared["prepared"]["scenario"])
+        approved_nonchmv=(
+            fresh_eagle.admit(
+                user[NONCHMV_ENCHANT_FIELD],prepared["oil"]["profile"],
+                prepared["prepared"]["scenario"],binary_sha,
+                user["native_revision"])
+            if FRESH_SEASON_FIELD in user else
+            nonchmv_enchant.admit(
+                user[NONCHMV_ENCHANT_FIELD],prepared["oil"]["profile"],
+                prepared["prepared"]["scenario"]))
     else:
         approved_nonchmv=None
     if NATIVE_ENCHANT_FIELD in user:
