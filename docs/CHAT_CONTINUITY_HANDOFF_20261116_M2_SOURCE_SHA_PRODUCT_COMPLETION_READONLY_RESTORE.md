@@ -4,6 +4,16 @@
 >
 > 인계 작성 **시작 시점** 격리 브랜치 HEAD: `23856b7e82b7ac85ed594ebe3a3eb06c2da1a493` (M2 CURRENT/로드맵 문서). 마지막 직접 코드/회귀 수정 HEAD `1d217d0df0777f5354371582b0132c700a0fdb96`(신규 v113 테스트). 이 SHA는 **스냅샷**이다. 새 채팅은 먼저 실제 브랜치/HEAD/최근 커밋/Actions를 재확인한다. 인계 문서 추가로 HEAD가 바뀌면 시작 시점 SHA를 최신 HEAD라고 반복하지 않는다.
 
+## 0-A. 2026-11-16 최신 v524 단일 실제 M1→M2 Windows 설치 SUCCESS (앞의 미실행 기록 갱신)
+
+> **최신 실제 실행:** [Actions #43878976233](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43878976233) **SUCCESS**, 실행 코드 HEAD `b95e6ea1ff10dc2694a7fb9faa6cee97d37fd82c`. [원본 artifact #14229649805](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43878976233) / SHA256(`V524_M1_M2_SOURCE_OWNER_DIAGNOSTIC.json`)=`cb006e8da181334ad78c6866157a36f477d2c9b6e04a476f37e4611dc115777b`. [영구 compact](development/research_receipts/p1_v524_live_70783_m1_m2_real_install_compact.json). **기존 v113→v216→v222→v212 실행 엔진만 사용하고 신규 예산 엔진·제품 코드 변경 없음.**
+
+- 동일 Windows Actions 신규 일회성 작업 공간에서 `v113.discover_season_myth_target(70783)`가 **Myth ilvl334**, CurrencyTypes ID `3441/3446`, CSV SHA `c1e91e4e...`를 실제 재조회하고, 그 SHA를 `v113.build_season_environment`에 전달한 뒤 **원래 v216/v212 시즌 환경 설치 성공**. `source_compilation.status=FRESH_V191_V211_V213_COMPILED_UNADMITTED`, `missing=[]`, `required_core_source_owner_report.original_source_owner_missing_for_selected_request=[]`, G/J/F/O numeric owner 모두 존재, **최종 환경 `READY/INSTALLED`**. 원본 컴파일의 UNADMITTED와 **후속 v212 설치 READY는 다른 차원의 상태**다.
+- 정확한 설치 manifest SHA256 `c9bf5b77f278ec28274102d9d798a13b5e8aed33db89ceae5f0dc446c56467c5`; 해당 기본 4보석·선택 기름 없음·영약 item 241320 조건의 **G2850/J92/F165/O0/B=T3107**. 신규 환경 SimC Native **3회**, 사용자 DPS Native **0회**, 개인 Windows PC/26 DPS/최종 사용자 E2E는 **미실증**. 새 외부 시즌 원본 수집은 있었으나 정확 요청 횟수는 compact에 개별 기록하지 않음.
+- **SHA 비교 주의:** 이번 실제 M1과 동일 실행의 M2가 소비한 원본 `v161 receipt SHA=b017852321a21ddf45d89277a8450efa8fb629047bfdb2969a280e0c6843337a`은 서로 **정확히 일치**. 과거 별개 v523 수집 raw `v161 receipt SHA=f004a82...`와는 다르다. 전체 receipt 바이트 불일치는 개별 CSV 내용 변조의 증거가 아니며, 이번 compact는 새/과거 10개 CSV per-table 바이트 직접 동등성을 별도 입증하지 않는다. 그러나 `CurrencyTypes.csv SHA`는 이전 v523와 일치. 같은 빌드라는 이유로 과거 설치 SHA를 현재 `c9bf...`에 복사하지 않는다.
+- **실제 첫 필수 차단:** 위 검증된 BASE 요청에는 **컴파일 누락/원본 G/J/F/O 소유자 누락 0**. 따라서 현재 동일 요청의 코드 결함을 새로 만들어 고치거나 G/J/F/O 엔진을 새로 작성하지 않고 **STOP/REUSE**. 코드/오프라인 v113-v182 회귀와 이번 실 Native3을 구별. **M2 해당 70783 기본 환경 물리 설치 경로는 실증**, 다른 시즌/선택 특수장비·영약·기름 변형/Windows 개인 설치/전체 ZERO-SOURCE→USER-E2E 수락은 별도. `78_ELEMENT_COMPLETION_CONTRACTS.json` 공식 **15/78 COMPLETE**, `full_product_e2e=PENDING` 불변.
+- **다음 사용자 가치:** 기존 적응형 SimC·DPS·95%·취소/재개는 앞선 Native를 정확 범위에서 재사용한다. 후속 M4~M6는 실제 선택 변형과 Windows 첫 설치·오류/복구의 *확인된* 차단만 최소 수정한다. 전체 시즌 소속 전수, 선택 미확정 아이템 인증, 26 DPS 무조건 Native 반복, 불필요한 M2 재실행은 STOP. 격리 브랜치 이외 권한 변경 없음.
+
 ## 0. 2026-11-16 M2 보존 ZIP 원본 직접 대조 추가 기록 (후속 작업, 신규 Native 0)
 
 - **대조 대상:** 기존 GitHub Actions 원본 artifact v155 **#14219515672**, v523 **#14219371770**, 실제 70783 Native v343 **#13868303468**, v344 **#13897178782**, v417 **#14021859656**를 이 채팅에서 직접 읽음. GitHub branch HEAD 재확인 당시 `d9ed86d7...`이며 제품 코드/캐시는 수정하지 않음.
