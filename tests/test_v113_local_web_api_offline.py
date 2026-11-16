@@ -584,6 +584,52 @@ class LocalWebAPIOffline(unittest.TestCase):
                 "wrong installed F must fail before any v217/Native lookup")
             self.assertEqual(restore.call_count,1)
 
+    def test_m3_explicit_flask_install_does_not_read_previous_season_memory(self):
+        """Pinned v212 F/J/O wins over a vanished older in-memory flask file."""
+        jobs=self.app.state.jobs
+        build="12.2.0.99999"
+        digest="b"*64
+        jobs._verified_fresh_profile_result={
+            "verified_target_ilevel":334,
+            "verified_oil_item_ids_by_hand":{},
+            "source_compilation":{"verified_environment_install":{
+                "stage_output_path":str(self.root/"vanished_old_build_v212.json")}}}
+        jobs._current_fresh_game_build="12.1.5.70783"
+        payload={**self.payload,"current_season_product":True,
+                 "installed_season_game_build":build,
+                 "installed_manifest_sha256":digest,
+                 "selected_flask_item_id":241327,"user_socket_total":4}
+        with (mock.patch.object(jobs,"load_fresh_profile_for_user",
+                                return_value=None) as lookup,
+              mock.patch.object(web.environment_manifest,"read_json",
+                                side_effect=AssertionError(
+                                    "STALE_OLD_SEASON_F_READ_FORBIDDEN")) as read_old,
+              mock.patch.object(web.subprocess,"Popen",
+                                side_effect=AssertionError("NO_NATIVE")),
+              mock.patch.object(web.sessions,"store_session",
+                                side_effect=AssertionError("NO_SESSION"))):
+            for route,request in (
+                    ("/api/v1/sessions/plan",payload),
+                    ("/api/v1/longrun/prepare",
+                     {**payload,"max_native_calls":12})):
+                response=self.post(route,request)
+                self.assertEqual(response.status_code,422,response.text)
+                # The exact new SHA is unavailable in this test. It must
+                # fail on the NEW selector, never on the vanished old F.
+                self.assertEqual(response.json()["detail"]["code"],
+                    "WEB_USER_VARIANT_REQUIRES_VERIFIED_SEASON_INSTALL")
+            self.assertEqual(lookup.call_count,2)
+            for call in lookup.call_args_list:
+                self.assertEqual(call.args,(334,build))
+                self.assertEqual(call.kwargs["selected_flask_item_id"],241327)
+                self.assertEqual(call.kwargs["expected_installed_manifest_sha256"],
+                                 digest)
+                self.assertEqual(call.kwargs["required_gem_layout"],
+                                 {"socket_total":4,"special_gem_id":None})
+            read_old.assert_not_called()
+        self.assertFalse(any(x.is_dir() and len(x.name)==20
+                             for x in jobs.root.glob("*") if jobs.root.is_dir()))
+
     def test_v478_web_plan_longrun_forward_exact_source_sha(self):
         """Plan and longrun share the real exact-source selector, no Native."""
         build="12.1.5.70783"
