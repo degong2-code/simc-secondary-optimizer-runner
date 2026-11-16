@@ -380,8 +380,12 @@ def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
                  ("special_items","embellishments")
                  for r in user.get(group,[])),
              "ORDINARY_VARIANT_CONFLICTS_WITH_SELECTED_GEAR")
+    # Stream the executable SHA. A real SimC binary may be >150 MB; its
+    # exact byte identity must remain unchanged without a full-size allocation.
+    with binary.open("rb") as executable:
+        binary_sha256=hashlib.file_digest(executable,"sha256").hexdigest()
     identity={"schema":SCHEMA,"user":user,
-              "simc_binary_sha256":sha(binary.read_bytes()),
+              "simc_binary_sha256":binary_sha256,
               "simc_revision":revision,
               "static_cache_sha256":sha(cache_path.read_bytes()) if cache_path else None}
     if ordinary_variant is not None:
