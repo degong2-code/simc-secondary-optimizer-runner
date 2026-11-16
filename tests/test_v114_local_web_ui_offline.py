@@ -1006,9 +1006,12 @@ const fs=require("fs"),assert=require("assert");
 const src=fs.readFileSync(process.argv[1],"utf8");
 const a=src.indexOf("function seasonBuildInputScope(forUserVariant=false) {");
 const b=src.indexOf("async function buildSeasonEnvironment(",a);
-const c=src.indexOf("if(seasonBuildInputScope(forUserVariant)!==requestedInputScope) {",b);
-const d=src.indexOf("showSeasonEnvironmentBuild(report,forUserVariant);",c);
-assert(a>=0&&b>a&&c>b&&d>c);
+const c=src.indexOf("const rejectStaleBuildResponse=()=>{",b);
+const first=src.indexOf("if(seasonBuildInputScope(forUserVariant)!==requestedInputScope) {",c);
+const d=src.indexOf("showSeasonEnvironmentBuild(report,forUserVariant);",first);
+const second=src.indexOf("if(seasonBuildInputScope(forUserVariant)!==requestedInputScope) {",d);
+const afterSecond=src.indexOf('if(gear.status!=="CURRENT_SEASON_CANDIDATE_SELECTION_ONLY"',second);
+assert(a>=0&&b>a&&c>b&&first>c&&d>first&&second>d&&afterSecond>second);
 const nodes={};
 const $=id=>{
  if(!nodes[id])nodes[id]={value:"",type:"text",checked:false,textContent:""};
@@ -1027,13 +1030,17 @@ const scope=Function("$","field","oilUseIntent",src.slice(a,b)+
  "return seasonBuildInputScope;")($,field,false);
 let shown=[],revoked=[],budgetResets=0;
 const state={verifiedInstalledBuildFromThisPage:"12.1.5.70783"};
-const apply=Function("state","$","seasonBuildInputScope",
+const args=["state","$","seasonBuildInputScope",
  "installSeasonGearHints","renderSeasonOptionCatalog",
  "updateBudgetPreview","showSeasonEnvironmentBuild",
- "requestedInputScope","forUserVariant","report",
+ "requestedInputScope","forUserVariant","report"];
+const apply=Function(...args,
  src.slice(c,d)+"showSeasonEnvironmentBuild(report,forUserVariant);");
-const check=(saved,variant)=>{
- apply(state,$,scope,
+const afterGear=Function(...args,
+ src.slice(c,first)+src.slice(second,afterSecond)+
+ "showSeasonEnvironmentBuild(report,forUserVariant);");
+const check=(saved,variant,guard=apply)=>{
+ guard(state,$,scope,
   v=>revoked.push(["gear",v]),v=>revoked.push(["options",v]),
   ()=>{budgetResets++},v=>shown.push(v),
   saved,variant,{environment_ready:true,T:3333});
@@ -1053,11 +1060,19 @@ const fresh=scope(true);
 $("season-selected-flask-id").value="241328";
 check(fresh,true);
 assert.strictEqual(shown.length,1,"changed F cannot bind previous v212");
+// Input can also change during the second async GET after the POST guard.
+// Execute that exact second guard with the same stale-result invalidation.
+const afterGetStart=scope(true);
+$("optimizer-oil-main-id").value="241123";
+check(afterGetStart,true,afterGear);
+assert.strictEqual(shown.length,1,"gear GET cannot bind stale O source");
+assert.strictEqual(budgetResets,3);
+$("optimizer-oil-main-id").value="";
 const common=scope(false);
 $("season-target-ilevel").value="340";
 check(common,false);
 assert.strictEqual(shown.length,1,"changed G ilvl cannot show past READY");
-assert.strictEqual(budgetResets,3);
+assert.strictEqual(budgetResets,4);
 $("season-target-ilevel").value="334";
 check(scope(false),false);
 assert.strictEqual(shown.length,2,"stable common build accepted");
