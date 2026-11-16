@@ -1,5 +1,6 @@
 # 70783 exact-source extra-socket J proof + 3 permanent enchant Native pairs.
 # 0 AI runtime. Existing v198 and v216 own the verdict; no automatic UI admission.
+# Historical p3_gw assertion predates the tightened B10 J source gate; use v448/v449 owner tests.
 name: P1 v528 real 70783 socket J owner and enchant static JSON2
 on:
   push:
@@ -29,7 +30,8 @@ jobs:
           python -m unittest -q \
             tests.test_v198_targeted_enchant_native_rating \
             tests.test_p3_gr_future_five_sockets_source_only \
-            tests.test_p3_gw_declared_full_sockets \
+            tests.test_v448_b10_declared_J_owner_scope \
+            tests.test_v449_b10_existing_v280_socket_item_owner \
             tests.test_v455_b10_existing_v281_spell_effect_owner \
             tests.test_v526_v106_installed_worker_source
   actual-windows-original-once:
