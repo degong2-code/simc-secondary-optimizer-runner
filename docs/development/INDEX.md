@@ -96,6 +96,7 @@
 | 주제 | 코드·검증된 과거 성과 | 아직 입증하지 못한 범위 |
 |---|---|---|
 | A10/A11/G2 원본 컴파일·봉인·기본 설치 | [v274/v275 기존 원본 컴파일](../../runner/v274_zero_history_source_compiler_wiring.py) · [v216 기존 원본 소유자 보고](../../runner/v216_environment_build_coordinator.py) · [v383 역사 70783 실제 ZIP SHA 재조회](notes/2026-11-13_p1-v383-a10-a11-g2-archived-native-receipt-reuse.md) · [v343 실제 Windows](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43049564271) · [v344 실제 Chrome](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43114134208) | 70783/ilvl334/기본 4보석/O0 역사 범위에서만 READY_SCOPED. 최신 사용자 Windows `source_compilation.missing`과 G/J/F/O owner/변형, 최신 HEAD 및 미래 시즌 READY는 미확정 |
+| 일반 4보석 J·SimC 장착 (새 엔진 불필요) | [v221 같은 빌드 보석 ItemID](../../runner/v221_gem_item_db2_relation.py) → [v268 보석 후보](../../runner/v268_gem_enchant_existing_source_stage.py) / [v271 2스탯 합계·`gem_id` 배치](../../runner/v271_user_socket_gem_layout.py) → [v216 J/B/T 원본 연결](../../runner/v216_environment_build_coordinator.py) · [P3-GZ 실제 SimC 4일반+1특수](notes/2026-11-08_p3-gz-pinned-simc-gem5-real-native.md) · [v417 설치→사용자 DPS 실제 시험](notes/2026-11-13_p1-v417-bounded-post-bridge-product-e2e-once.md) | 사용자가 필요한 것은 **시즌 최고품질 다중스탯 일반보석 4종의 정확 ItemID·각 2스탯 합계(J)** 및 **그 ID의 SimC `gem_id` 장착**. 70783 예시 `16+7=23` × 일반4 = J92 실증. `v271`의 70783 시즌별 명목 원본 파일은 한 숫자 공급 경로이지 미래 시즌 자동 발견 자체의 유무를 판정하지 않는다. 미래 시즌 새 원본/품질/설치 실증은 별도이며 미관측을 0·구시즌 대체하지 않는다 |
 | 영약 F·하한·gear 0 | [P3-GL: 실제 gear_* 0·최고품질 측정 순서](notes/2026-11-06_p3-gl-flask-highest-quality-first-and-zero-gear.md) · [P3-GN: 시즌 기본 F 1종 자동 선택](notes/2026-11-06_p3-gn-auto-f-environment-source-connection.md) · [P3-GP: ItemID 241324 가속+165 실 Native 2회](notes/2026-11-06_p3-gp-single-flask-only-real-native-attempt.md) · [v350: 개인별 F 변경·정확 설치 변형](notes/2026-11-12_p1-v350-common-season-user-variant-split.md) · [v065 경계 테스트](../../tests/test_v124_fixed_component_candidate_bounds.py) | 대표 기본 F가 전문화별 최적임을 증명하지 않음; 모든 영약 F 변경 비교/실시즌 READY는 별도 |
 | 티어 5→4 유동 장착 | [v101 구현](../../runner/v101_common_representative_equipment.py) · [v098 연결](../../runner/v098_target_user_scenario_bootstrap.py) · [v187 기존 26 DPS 회귀](../../tests/test_v187_current_season_tier_overlay.py) | 신규 시즌 `season_profile_inputs`의 특수/장식 입력 제한 연결은 별도 |
 
@@ -152,7 +153,7 @@
 |---|---|---|
 | A. 원본/봉인 | v161/v229/v191/v213/v217 | 시즌별 정적 소스·SHA 캐시; 미래 시즌 원본은 그 시즌 근거 필요 |
 | B. 일반 장비/티어/G | v167/v230/v232/v251/v277 | 70783 Ret334 G2850 Native 관측; 다른 시즌의 정확 G 미인증 |
-| C. 일반4 보석/소켓/J | v221/v266/v271/v216 | 치가특유 각1·특수 선택; 현 Ret334 J92 READY 실증 |
+| C. 일반4 보석/소켓/J | v221 동일 빌드 물리 ItemID → v268/v266 일반 2스탯 후보 → v271 실제 2스탯 합계·4종 배치(`gem_id`) → v230/v216 선택 품질·J 원본 → v222/v212 B/T 설치; v269 개별 보석 델타는 진단용 | **제품 최소 소비:** 시즌 최고품질 일반보석 4종의 정확 ID·각 2스탯 분포/합계(예: 16+7=23), 대표 SimC 프로필의 해당 `gem_id` 4개. **70783/334 일반4 J92 실제 SimC·설치·DPS 실증**(v343/v344/v417), 새 시즌 전부 READY 증거는 아님. 70783 봉인 명목 원본 파일이 하나라는 이유로 자동 발견 기능 자체를 미구현이라 판단 금지 |
 | D. 영약/기름/선택효과 | v281/v278/v285/v286/v295/v296 | F165/O0 기본 Build, 다른 설정 O32 실 사용자 Native; 타 시즌·선택지는 별도 |
 | E. 예산/정책A/설치 | v222/v220/v196/v212/v216 | 빈 workspace 시즌 소스→GJFO→v212 설치·검증 프로필 성공; 무조건 전수 Native 금지 |
 | F. 프로필/SimC/최적화/웹 | v143/v139/v098/v096/v094/v290/v291/v292/v293/v113 | 기본 26개 SimC 수용·Native10/캐시; **P2 전역 고점 누락·95% 선택편향 미해결** |
