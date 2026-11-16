@@ -1106,7 +1106,10 @@ def build(user,folder,binary,revision,static_cache_path=None,
     need(not current_season_product or
          (not pure_stage and not independent_334 and
           not independent_target_level and ordinary_variant is None and
-          type(ilvl) is int and 266<=ilvl<=344 and
+          type(ilvl) is int and
+          (266<=ilvl<=344 or
+           (fresh_installed_environment_path is not None and
+            1<=ilvl<=1000)) and
           key in (set(ARCHETYPES)|PURE_PRODUCT_SPECS)),
          "CURRENT_SEASON_PRODUCT_SCOPE_TARGET_RANGE")
     # Developer-only v171+v168 representative equipment. Never activate in
@@ -1137,7 +1140,14 @@ def build(user,folder,binary,revision,static_cache_path=None,
          "REPRESENTATIVE_ARCHETYPE_NOT_READY:"+"/".join(key))
     for name in ("race","talents"):
         scenario.text_token(ch[name],"USER_"+name.upper())
-    need(type(ilvl) is int and 266<=ilvl<=344,
+    # Only the exact installed new-season source may expand the historical
+    # 266..344 reference range. v212/gear/tier/source SHA are checked by
+    # the existing fresh writer before any runnable v096 manifest is sealed.
+    need(type(ilvl) is int and
+         (266<=ilvl<=344 or
+          (current_season_product and
+           fresh_installed_environment_path is not None and
+           1<=ilvl<=1000)),
          "TARGET_ILVL_OUTSIDE_VERIFIED_REFERENCE")
     need(final_T is None or
          (type(final_T) is int and 1<=final_T<=100000),"MANUAL_FINAL_T_INVALID")
@@ -1223,7 +1233,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
             pure.v098_inputs(ch,user["trinkets"],target_ilevel=ilvl,
                              combat=combat,
                              level_preview=(independent_target_level or
-                                            (current_season_product and ilvl!=334)),
+                                            (current_season_product and
+                                             ilvl!=season_override["target_ilevel"])),
                              season_override=season_override,
                              source_only_season_consumables=(
                                  season_profile_inputs is not None),

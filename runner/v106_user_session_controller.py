@@ -237,7 +237,10 @@ def user_scenario(controls):
     stat_cap=controls.get("max_single_stat_percent")
     need(stat_cap is None or (type(stat_cap) is int and
          25<=stat_cap<=100),"USER_MAX_SINGLE_STAT_PERCENT_25_TO_100")
-    need(type(ilvl) is int and 266<=ilvl<=344,"ILVL_OUT_OF_REFERENCE")
+    # Input syntax is season-neutral. The legacy/reference scope remains
+    # restricted at session_key/v098; only a verified fresh v212 install can
+    # authorize a different target level.
+    need(type(ilvl) is int and 1<=ilvl<=1000,"ILVL_OUT_OF_REFERENCE")
     need(final is None or type(final) is int and 1<=final<=100000,
          "USER_FINAL_T_INVALID")
     trinkets=controls["trinket_ids"]
@@ -342,7 +345,9 @@ def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
          type(user.get("target")) is dict and
          (user["character"].get("class"),user["character"].get("spec")) in SUPPORTED and
          type(user["target"].get("ilevel")) is int and
-         266<=user["target"]["ilevel"]<=344),
+         (266<=user["target"]["ilevel"]<=344 or
+          (fresh_installed_manifest_sha256 is not None and
+           1<=user["target"]["ilevel"]<=1000))),
          "CURRENT_SEASON_PRODUCT_SCOPE_TARGET_RANGE")
     need(type(independent_334) is bool,"INDEPENDENT_334_MODE_BOOL_REQUIRED")
     need(type(independent_target_level) is bool,"INDEPENDENT_TARGET_LEVEL_MODE_BOOL_REQUIRED")

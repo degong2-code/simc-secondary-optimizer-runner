@@ -191,7 +191,7 @@ function updateManualTMode() {
 function syncSeasonTargetIlevel() {
   if(state.seasonBuildTargetManualOverride)return;
   const level=Number(field("ilevel"));
-  if(Number.isSafeInteger(level)&&level>=266&&level<=344)
+  if(Number.isSafeInteger(level)&&level>=1&&level<=1000)
     $("season-target-ilevel").value=String(level);
 }
 function updateBudgetPreview() {
@@ -1713,8 +1713,10 @@ function buildRequest() {
       throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
     controls.enchant_choices={finger1:7967};
   }
-  if(!Number.isInteger(controls.ilevel)||controls.ilevel<266||controls.ilevel>344)
-    throw Error("최신 시즌 대표장비의 목표 ilvl은 266~344입니다.");
+  if(!Number.isInteger(controls.ilevel)||controls.ilevel<1||controls.ilevel>1000)
+    throw Error("목표 ilvl은 1~1000 범위여야 합니다.");
+  // Beyond historical reference levels, only a matching v212 installation
+  // can authorize the server-side optimizer session.
   // A checked, default-on oil switch cannot silently turn into O=0.
   // Only a fully source-bound manifest for this class, hand count and
   // current ilvl is eligible for a NEW optimizer session.
