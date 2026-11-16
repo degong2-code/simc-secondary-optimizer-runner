@@ -6603,7 +6603,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                    "source_selected_gem_roles",
                    "source_target_socket_count",
                    "auto_four_stat_source_requested",
-                   "source_ordinary_nominal_by_stat"},
+                   "source_ordinary_nominal_by_stat",
+                 "default_auto_core_build_requested"},
              "V216_ZERO_HISTORY_SOURCE_INPUT_FIELDS")
         # A trusted internal source-owner adapter can provide independently
         # verified GJFO/Policy A input. JSON or HTTP cannot supply a callable.
@@ -6612,6 +6613,12 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         need(verified_install_provider is None or
              callable(verified_install_provider),
              "V216_VERIFIED_INSTALL_PROVIDER_INTERNAL_CALLABLE_REQUIRED")
+        # The UI default mode is an efficiency hint, not permission to
+        # suppress a developer's explicit G measurement with F.
+        default_auto_core=fresh_collection_inputs.get(
+            "default_auto_core_build_requested",False)
+        need(type(default_auto_core) is bool,
+             "V216_DEFAULT_AUTO_CORE_MODE_BOOL_REQUIRED")
         # G Native is optional when an existing same-build v222 budget
         # receipt was supplied. Do not spend a Native call merely because
         # the same SimC binary is also available for F/O. The original
@@ -6781,7 +6788,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                          "source_target_socket_count",
                          "auto_four_stat_source_requested",
                          "source_ordinary_nominal_by_stat",
-                         "verified_install_input_provider")}
+                         "verified_install_input_provider",
+                         "default_auto_core_build_requested")}
         if auto_four_stat_default or auto_four_stat_source_requested:
             source_inputs["auto_four_stat_gems"]=True
         collected=collect_wago_new_season_source(
@@ -6817,7 +6825,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         # source filenames before paying for its G Native. Explicit G-only
         # diagnostics keep their historical one-Native behavior.
         skip_default_G_native=False
-        if auto_native_G and auto_select_default_F:
+        if default_auto_core and auto_native_G and auto_select_default_F:
             compiler_plan=source_wiring.discover(collected)
             if compiler_plan.get("inputs") is None:
                 skip_default_G_native=True
