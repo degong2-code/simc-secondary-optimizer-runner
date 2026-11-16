@@ -1,0 +1,82 @@
+# Single opt-in physical M1 -> M2 source-owner diagnosis; no DPS worker.
+name: P1 v524 actual 70783 M1-M2 source owner diagnostic (max G/F native)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p1_v524_m1_m2_source_owner_once.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v524-m2-one-current-season
+  cancel-in-progress: false
+jobs:
+  one-m2-original-build:
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, '[m2-one-source]') }}
+    runs-on: windows-2022
+    timeout-minutes: 27
+    env:
+      PYTHONPATH: runner;integration_probes;.
+      SIMC_PINNED_SOURCE_COMMIT: de11f57df75dda668bae6ac7043a43b98831fa96
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - name: Keep exact repository file bytes
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse exact official Windows SimC binary, no rebuild
+        uses: actions/download-artifact@v4
+        with:
+          repository: simulationcraft/simc-publish
+          run-id: 42956947906
+          name: simc-nightly-win64-midnight
+          path: .simc-v524
+          github-token: ${{ github.token }}
+      - name: Verify unchanged published SimC archive and executable identity
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $archive=Join-Path $PWD '.simc-v524/simc-1210.01.de11f57-win64.7z'
+          if (!(Test-Path $archive -PathType Leaf)) { throw 'V524_OFFICIAL_SOURCE_ARCHIVE_MISSING' }
+          if ((Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant() -ne 'a4c4d5e7b349172d80897721daa3e849ce25874a82bbdfb96aeab4dbdc560eb0') { throw 'V524_ARCHIVE_SHA_DRIFT' }
+          $seven='C:\Program Files\7-Zip\7z.exe'
+          New-Item -ItemType Directory -Force -Path .simc-v524-extracted | Out-Null
+          & $seven x '-o.simc-v524-extracted' -y -bd $archive | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'V524_ARCHIVE_EXTRACTION_FAILED' }
+          $exes=@(Get-ChildItem .simc-v524-extracted -Recurse -Filter simc.exe -File)
+          if ($exes.Count -ne 1) { throw 'V524_EXE_COUNT_INVALID' }
+          if ((Get-FileHash -Algorithm SHA256 $exes[0].FullName).Hash.ToLowerInvariant() -ne '1fc927d2be7f1b6064c75f004b5b22245b064a6b3e56e572af4048ba822a986d') { throw 'V524_EXE_SHA_DRIFT' }
+          "V524_SIMC_EXE=$($exes[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Reuse existing v113 dependencies and syntax check
+        shell: pwsh
+        run: |
+          python -m py_compile integration_probes/p1_v524_m1_m2_source_owner_once.py
+          if ($LASTEXITCODE -ne 0) { throw 'V524_PROBE_SYNTAX_INVALID' }
+          python -m pip install -r requirements-web-test.txt
+          if ($LASTEXITCODE -ne 0) { throw 'V524_WEB_DEPENDENCIES_FAILED' }
+      - name: One authenticated M1 target then M2 v216-v212 build; NO DPS
+        timeout-minutes: 19
+        shell: pwsh
+        run: |
+          python -u integration_probes/p1_v524_m1_m2_source_owner_once.py --simc "$env:V524_SIMC_EXE" --out out/v524
+          if ($LASTEXITCODE -ne 0) { throw 'V524_M2_ACTUAL_SOURCE_PENDING_SEE_RECEIPT' }
+      - name: Preserve bounded result or first blocker, never secrets/source cache
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v524-m1-m2-source-owner-once
+          path: out/v524/V524_M1_M2_SOURCE_OWNER_DIAGNOSTIC.json
+          retention-days: 7
+          if-no-files-found: warn
