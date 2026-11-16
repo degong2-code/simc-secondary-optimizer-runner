@@ -1,0 +1,76 @@
+name: P1 v526 70783 ordinary installed session exact blocker diagnostic
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths: [.github/workflows/p1_v526_ordinary_worker_diagnostic_once.yml]
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v526-one-ordinary-70783
+  cancel-in-progress: false
+jobs:
+  diagnose-one-real-source:
+    if: contains(github.event.head_commit.message, '[v526-worker-reason-once]')
+    runs-on: windows-2022
+    timeout-minutes: 27
+    env:
+      PYTHONPATH: runner;integration_probes;.
+      SIMC_PINNED_SOURCE_COMMIT: de11f57df75dda668bae6ac7043a43b98831fa96
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - name: Keep exact author source
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - uses: actions/download-artifact@v4
+        with:
+          repository: simulationcraft/simc-publish
+          run-id: 42956947906
+          name: simc-nightly-win64-midnight
+          path: .simc-v526
+          github-token: ${{ github.token }}
+      - name: Verify official binary and reuse current web dependencies
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $archive=Join-Path $PWD '.simc-v526/simc-1210.01.de11f57-win64.7z'
+          if (!(Test-Path $archive -PathType Leaf)) { throw 'V526_SIMC_ARCHIVE_MISSING' }
+          if ((Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant() -ne 'a4c4d5e7b349172d80897721daa3e849ce25874a82bbdfb96aeab4dbdc560eb0') { throw 'V526_ARCHIVE_SHA_MISMATCH' }
+          $seven='C:\Program Files\7-Zip\7z.exe'
+          New-Item -ItemType Directory -Force -Path .simc-v526-extracted | Out-Null
+          & $seven x '-o.simc-v526-extracted' -y -bd $archive | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'V526_SIMC_EXTRACTION_FAILED' }
+          $exes=@(Get-ChildItem .simc-v526-extracted -Recurse -Filter simc.exe -File)
+          if ($exes.Count -ne 1) { throw 'V526_BINARY_COUNT_INVALID' }
+          if ((Get-FileHash -Algorithm SHA256 $exes[0].FullName).Hash.ToLowerInvariant() -ne '1fc927d2be7f1b6064c75f004b5b22245b064a6b3e56e572af4048ba822a986d') { throw 'V526_BINARY_SHA_DRIFT' }
+          "V526_SIMC_EXE=$($exes[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          python -m py_compile integration_probes/p1_v526_ordinary_v212_worker_diagnostic_once.py
+          if ($LASTEXITCODE -ne 0) { throw 'V526_SOURCE_SYNTAX_INVALID' }
+          python -m pip install -r requirements-web-test.txt
+          if ($LASTEXITCODE -ne 0) { throw 'V526_SOURCE_DEPENDENCIES_FAILED' }
+      - name: Capture original worker rejection after real source M1 M2, not DPS reruns
+        shell: pwsh
+        timeout-minutes: 19
+        run: |
+          New-Item -ItemType Directory -Force -Path out/v526 | Out-Null
+          python -u integration_probes/p1_v526_ordinary_v212_worker_diagnostic_once.py --binary "$env:V526_SIMC_EXE" --out out/v526
+          if ($LASTEXITCODE -ne 0) { throw 'V526_ORIGINAL_WORKER_REASON_MISSING' }
+      - name: Preserve bounded worker status and stable diagnostic reason only
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v526-original-worker-blocker-once
+          path: out/v526/V526_REAL_BASE_WORKER_REASON.json
+          retention-days: 7
+          if-no-files-found: warn
