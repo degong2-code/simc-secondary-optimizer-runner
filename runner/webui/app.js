@@ -2125,6 +2125,26 @@ function rememberVerifiedSeasonBuildForRun(report) {
   state.verifiedInstalledBuildFromThisPage=build;
   return true;
 }
+// A verified season Build is a completed response for its STARTING controls,
+// not authorization for any subsequent user edits made while HTTP is in flight.
+function seasonBuildInputScope(forUserVariant=false) {
+  const names=forUserVariant?
+    ["season-game-build","ilevel","season-target-socket-count",
+     "season-existing-special-gem-id","season-selected-flask-id",
+     "season-oil-main-id","season-oil-off-id",
+     "optimizer-oil-main-id","optimizer-oil-off-id",
+     "oil_main","oil_off","optimizer-oil-enabled"]:
+    ["season-game-build","season-target-ilevel","season-refresh-reason",
+     "season-auto-core","season-native-g","season-native-f",
+     "season-native-o","season-auto-f-no-oil"];
+  return JSON.stringify([
+    ...names.map(id=>{
+      const node=$(id);
+      return [id,node.type==="checkbox"?node.checked:field(id)];
+    }),
+    ...(forUserVariant?[["oilUseIntent",oilUseIntent]]:[])
+  ]);
+}
 async function buildSeasonEnvironment(forUserVariant=false) {
   const supplied_build=field("season-game-build");
   if(supplied_build&&!/^\d+(?:\.\d+){3}$/.test(supplied_build))
@@ -2253,6 +2273,7 @@ async function buildSeasonEnvironment(forUserVariant=false) {
   $("season-diagnostic-copy-btn").disabled=true;
   $("season-build-pending").hidden=true;
   $("season-build-summary").textContent="검증 진행 중 · 결과 미확정 (READY 아님)";
+  const requestedInputScope=seasonBuildInputScope(forUserVariant);
   const stopSeasonActivity=beginSeasonBuildActivity();
   try {
     const report=await api("/api/v1/environment/season-build",
@@ -2269,6 +2290,23 @@ async function buildSeasonEnvironment(forUserVariant=false) {
     stopSeasonActivity();
     lastSeasonDiagnosticReceipt=compactSeasonBuildReceipt(report,forUserVariant);
     $("season-diagnostic-copy-btn").disabled=false;
+    if(seasonBuildInputScope(forUserVariant)!==requestedInputScope) {
+      // The original v216 Build may have succeeded for the old selection.
+      // Keep its diagnostic receipt, but do not display its G/J/F/O budget
+      // or bind its v212 SHA/gear as the current user's executable setup.
+      state.verifiedInstalledBuildFromThisPage=null;
+      installSeasonGearHints(null);
+      renderSeasonOptionCatalog(null);
+      updateBudgetPreview();
+      $("season-build-summary").textContent=
+        "요청 중 시즌·레벨·보석·영약·기름 설정이 변경되었습니다. "+
+        "이전 조건의 구축 응답은 진단 영수증으로만 보존하며 현재 구성의 준비 완료로 인정하지 않습니다.";
+      $("season-build-stage").textContent=
+        "변경 전 조건의 환경 구축 응답 수신 · 현재 선택 구성은 다시 검증해야 합니다.";
+      if(forUserVariant)$("user-variant-status").textContent=
+        "요청 도중 선택 구성이 변경되어 기존 T·설치 SHA를 적용하지 않았습니다.";
+      return;
+    }
     showSeasonEnvironmentBuild(report,forUserVariant);
     rememberVerifiedSeasonBuildForRun(report);
     // Refresh user equipment options from the exact installed v212/v213
