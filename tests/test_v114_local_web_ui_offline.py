@@ -1156,6 +1156,76 @@ const bind=Function("state","$","field","valueInt",
         self.assertIn("미확정 명칭은 원본 이름을 표시합니다.",js)
         self.assertIn('item.official_name_ko',js)
 
+    def test_m1_myth_currency_source_ui_auto_manual_pending_and_consent(self):
+        """Run actual source branch in JS: never guess the new level or skip consent."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:self.skipTest("node unavailable")
+        script=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const begin=raw.indexOf("async function buildSeasonEnvironment(forUserVariant=false)");
+const consent=raw.indexOf("if(!window.confirm(",begin);
+const auto=raw.indexOf("  if(autoTarget) {",begin);
+const end=raw.indexOf("  // A new build attempt revokes",auto);
+assert(begin>0&&consent>begin&&auto>consent&&end>auto,
+       "SOURCE_HTTP_MUST_FOLLOW_USER_CONFIRMATION");
+const source=raw.slice(auto,end);
+const nodes={"ilevel":{value:"334"},"season-target-ilevel":{value:"334"},
+             "season-build-stage":{textContent:""}};
+const $=id=>nodes[id];
+const field=id=>String(nodes[id]?.value||"").trim();
+const state={userTargetIlevelManualOverride:false,
+             seasonBuildTargetManualOverride:false,
+             seasonOptionRequestEpoch:0,lastVerifiedSeasonTarget:null};
+let calls=0, reply={status:"MYTH_TARGET_CANDIDATE_FROM_MATCHED_WAGO_V163_SOURCE",
+  target_ilevel:365,game_build:"13.0.0.99999",currency_csv_sha256:"a".repeat(64)},
+  onFetch=()=>{};
+const api=async (...args)=>{calls++;onFetch();return reply};
+const seasonBuildInputScope=()=>JSON.stringify([nodes.ilevel.value,
+  nodes["season-target-ilevel"].value,state.userTargetIlevelManualOverride,
+  state.seasonBuildTargetManualOverride]);
+const renderSeasonOptionCatalog=()=>{},updateBudgetPreview=()=>{};
+const run=Function("api","$","field","state","seasonBuildInputScope",
+  "renderSeasonOptionCatalog","updateBudgetPreview",
+  "return async (autoTarget)=>{let autoMythTargetSourceBuild=null;"+
+  "let target_ilevel=Number(field('season-target-ilevel'));"+
+  "const game_build=null;"+source+
+  "return {target_ilevel,autoMythTargetSourceBuild};};")(
+    api,$,field,state,seasonBuildInputScope,
+    renderSeasonOptionCatalog,updateBudgetPreview);
+(async()=>{
+  const got=await run(true);
+  assert.strictEqual(got.target_ilevel,365);
+  assert.strictEqual(got.autoMythTargetSourceBuild,"13.0.0.99999");
+  assert.strictEqual(nodes.ilevel.value,"365");
+  assert.strictEqual(nodes["season-target-ilevel"].value,"365");
+  assert.strictEqual(calls,1);
+  state.userTargetIlevelManualOverride=true;
+  nodes.ilevel.value="355";nodes["season-target-ilevel"].value="355";
+  const manual=await run(false);
+  assert.strictEqual(manual.target_ilevel,355);
+  assert.strictEqual(manual.autoMythTargetSourceBuild,null);
+  assert.strictEqual(calls,1,"MANUAL_MUST_NOT_FETCH");
+  state.userTargetIlevelManualOverride=false;
+  reply={status:"MYTH_TARGET_SOURCE_PENDING",target_ilevel:null};
+  await assert.rejects(run(true),/MYTH_TARGET_SOURCE_PENDING_ENTER_MANUAL_ILEVEL/);
+  assert.strictEqual(nodes.ilevel.value,"355","PENDING_MUST_NOT_REPLACE_USER_TARGET");
+  reply={status:"MYTH_TARGET_CANDIDATE_FROM_MATCHED_WAGO_V163_SOURCE",
+    target_ilevel:366,game_build:"13.0.0.99999",currency_csv_sha256:"b".repeat(64)};
+  onFetch=()=>{state.userTargetIlevelManualOverride=true;nodes.ilevel.value="357"};
+  await assert.rejects(run(true),/시즌 목표 ilvl 확인 중 설정이 변경되었습니다/);
+  assert.strictEqual(nodes.ilevel.value,"357","MIDFLIGHT_MANUAL_EDIT_WINS");
+  console.log("M1_MYTH_DEFAULT_UI_SOURCE_MANUAL_PENDING_AND_CONSENT_PASS");
+})().catch(e=>{console.error(e);process.exitCode=1});
+"""
+        outcome=subprocess.run([node,"-e",script,
+            str(ROOT/"runner/webui/app.js")],capture_output=True,
+            text=True,timeout=15,check=False)
+        self.assertEqual(outcome.returncode,0,outcome.stderr)
+        self.assertIn("M1_MYTH_DEFAULT_UI_SOURCE_MANUAL_PENDING_AND_CONSENT_PASS",
+                      outcome.stdout)
+
     def test_m1_m2_default_season_build_level_tracks_user_target_without_overriding_advanced(self):
         """Actual UI level sync: avoid wrong-level native work, preserve manual scope."""
         import shutil,subprocess
