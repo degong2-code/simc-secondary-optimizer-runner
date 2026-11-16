@@ -180,6 +180,99 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(got.json()["target_ilevel"],365)
         self.assertTrue(got.json()["retail_build_reverified"])
 
+    def test_m2_auto_myth_source_sha_rejects_drift_before_cache_or_native(self):
+        jobs=self.app.state.jobs
+        build="12.1.5.70783"
+        payload={"game_build":build,"target_ilevel":334,
+                 "auto_myth_target_source_build":build,
+                 "auto_myth_target_source_sha256":"a"*64}
+        folder=jobs.root/"_fresh_season_sources"/("wago_"+build)/"wago"
+        # Auto provenance cannot claim success without a source build.
+        missing=self.post("/api/v1/environment/season-build",{
+            "game_build":build,"target_ilevel":334,
+            "auto_myth_target_source_sha256":"a"*64})
+        self.assertEqual(missing.status_code,422,missing.text)
+        self.assertEqual(missing.json()["detail"]["code"],
+                         "MYTH_TARGET_SOURCE_SHA_REQUIRES_VERIFIED_BUILD")
+        with (mock.patch.object(web.myth_target_source,"verify",
+                                return_value={"sha256":"b"*64}) as verified,
+              mock.patch.object(web.environment_build,
+                                "find_verified_installed_season_environment",
+                                side_effect=AssertionError("NO_OLD_BUDGET_REUSE")),
+              mock.patch.object(web.environment_build,"build_environment",
+                                side_effect=AssertionError("NO_GJFO_OR_NATIVE")),
+              mock.patch.object(web.subprocess,"Popen",
+                                side_effect=AssertionError("NO_NATIVE"))):
+            mismatched=self.post("/api/v1/environment/season-build",payload)
+            self.assertEqual(mismatched.status_code,422,mismatched.text)
+            self.assertEqual(mismatched.json()["detail"]["code"],
+                             "MYTH_TARGET_SOURCE_IDENTITY_CHANGED_REDISCOVER")
+            verified.assert_called_once_with(folder,build)
+        with (mock.patch.object(web.myth_target_source,"verify",
+                                side_effect=web.myth_target_source.TargetSourceBlocked(
+                                    "TARGET_CURRENCY_SOURCE_SHA_OR_BUILD_MISMATCH")),
+              mock.patch.object(web.environment_build,
+                                "find_verified_installed_season_environment",
+                                side_effect=AssertionError("NO_OLD_BUDGET_REUSE")),
+              mock.patch.object(web.environment_build,"build_environment",
+                                side_effect=AssertionError("NO_GJFO_OR_NATIVE"))):
+            damaged=self.post("/api/v1/environment/season-build",payload)
+        self.assertEqual(damaged.status_code,422,damaged.text)
+        self.assertEqual(damaged.json()["detail"]["code"],
+                         "MYTH_TARGET_SOURCE_IDENTITY_CHANGED_REDISCOVER")
+        self.assertEqual(self.post("/api/v1/environment/season-build",{
+            **payload,"auto_myth_target_source_sha256":"not-sha"}).status_code,422)
+
+    def test_m2_verified_myth_source_forwards_target_to_original_GJFO_only(self):
+        jobs=self.app.state.jobs
+        # 365 is a synthetic future ilvl; no fabricated future-season GJFO
+        # or physical SimC admission is claimed by this source-only bridge.
+        for build,level in (("12.1.5.70783",334),("13.0.0.99999",365)):
+            with self.subTest(build=build,level=level):
+                sha="a"*64
+                original={
+                    "status":"FRESH_WAGO_DB2_COLLECTED_MORE_SOURCES_PENDING",
+                    "environment_ready":False,"environment_installed":False,
+                    "native_calls":0,"source_compilation":{
+                        "status":"SAME_SEASON_GJFO_SOURCE_PENDING"}}
+                with (mock.patch.object(web.myth_target_source,"verify",
+                              return_value={"sha256":sha}) as verified,
+                      mock.patch.object(web.environment_build,
+                              "find_verified_installed_season_environment",
+                              return_value=None),
+                      mock.patch.object(jobs.source_credential_store,"load",
+                              return_value=None),
+                      mock.patch.object(web.physical_gems,
+                              "load_packaged_season_nominal_source",
+                              return_value=None),
+                      mock.patch.object(web.environment_build,
+                              "build_environment",return_value=original) as builder,
+                      mock.patch.object(jobs,"_with_verified_ko_localization",
+                              side_effect=lambda _build,_level,doc,**kw:doc),
+                      mock.patch.object(web.subprocess,"Popen",
+                              side_effect=AssertionError("NO_NATIVE"))):
+                    response=self.post("/api/v1/environment/season-build",{
+                        "game_build":build,"target_ilevel":level,
+                        "auto_myth_target_source_build":build,
+                        "auto_myth_target_source_sha256":sha})
+                self.assertEqual(response.status_code,200,response.text)
+                doc=response.json()
+                self.assertEqual(doc["web_environment_scope"]["target_ilevel"],level)
+                self.assertEqual(doc["web_environment_scope"][
+                    "auto_myth_target_source_csv_sha256"],sha)
+                self.assertTrue(doc["web_environment_scope"][
+                    "auto_myth_target_source_sha_verified"])
+                self.assertFalse(doc["web_environment_scope"]["environment_ready"])
+                self.assertFalse(doc["environment_ready"])
+                self.assertFalse(doc["environment_installed"])
+                verified.assert_called_once_with(
+                    jobs.root/"_fresh_season_sources"/("wago_"+build)/"wago",
+                    build)
+                self.assertEqual(builder.call_args.kwargs[
+                    "fresh_collection_inputs"]["representative_request"][
+                    "target_ilevel"],level)
+                self.assertIsNone(builder.call_args.kwargs["binary"])
+
     def test_v495_static_cache_alias_byte_identity_streams_without_full_reads(self):
         # The already sealed session path wins only for identical raw bytes.
         # JSON-equivalent but byte-different content MUST NOT be substituted.
