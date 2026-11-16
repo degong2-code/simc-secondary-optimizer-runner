@@ -146,5 +146,30 @@
   "full_product_e2e": "PENDING",
   "official_78_complete": "15/78",
   "new_product_code_changes": 0,
-  "next_first_real_blockers": "Prove game-legal added socket ItemID/placement and final item slot or verified intrinsic socket from same season before J approval; then connect exact v528 E (static-only and highest quality) to correct v212 per-user B/T/E once with source and profile proofs before admitting enchants."
+  "next_first_real_blockers": "Prove game-legal added socket ItemID/placement and final item slot or verified intrinsic socket from same season before J approval; then connect exact v528 E (static-only and highest quality) to correct v212 per-user B/T/E once with source and profile proofs before admitting enchants.",
+  "same_build_historical_ItemSparse_intrinsic_crosscheck": {
+    "source_stage": "v523 historical independent Wago v161 70783 (not falsely claimed same bytes as v528 same-request v217)",
+    "original_v161_receipt_sha256": "f004a82fa9da52646dea49ded14ff6db756d8f903bafd29ce29449d71d9f3c6b",
+    "original_ItemSparse_csv_sha256": "89910dad9e9a56a4446a0f8ad9c64f79c10267c26ee4f866bd7265db32e433a8",
+    "selected_current_source_profile_item_ids": [
+      251136,
+      251142,
+      268216,
+      268217,
+      268223,
+      268233,
+      268248,
+      268266,
+      271490,
+      271491,
+      271492,
+      271493
+    ],
+    "matched_item_ids_count": 12,
+    "matched_ItemSparse_SocketType_0_1_2_all_zero": true,
+    "interpretation": "Intrinsic SocketType observed 0 on the 12 selected representative items in a v523 same-build ItemSparse archive. This agrees with v528 v232 zero intrinsic source, but does not show absence of later item bonus sockets, trade- or game-applied consumable sockets or legal socket application. Same-build historical source bytes are not asserted identical to v528 v217 sources.",
+    "additional_http": 0,
+    "additional_native": 0,
+    "cannot_promote_5_or_6_J_or_game_legality": true
+  }
 }
