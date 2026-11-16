@@ -996,6 +996,80 @@ console.log("M1_M2_SEASON_TARGET_USER_SYNC_AND_ADVANCED_OVERRIDE_PASS");
         self.assertEqual(r.returncode,0,r.stderr)
         self.assertIn("M1_M2_SEASON_TARGET_USER_SYNC_AND_ADVANCED_OVERRIDE_PASS",r.stdout)
 
+    def test_m1_m2_completed_build_response_cannot_bind_changed_gjfo_inputs(self):
+        """Execute actual JS scope and response guard; no server or Native."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:self.skipTest("node missing")
+        script=r"""
+const fs=require("fs"),assert=require("assert");
+const src=fs.readFileSync(process.argv[1],"utf8");
+const a=src.indexOf("function seasonBuildInputScope(forUserVariant=false) {");
+const b=src.indexOf("async function buildSeasonEnvironment(",a);
+const c=src.indexOf("if(seasonBuildInputScope(forUserVariant)!==requestedInputScope) {",b);
+const d=src.indexOf("showSeasonEnvironmentBuild(report,forUserVariant);",c);
+assert(a>=0&&b>a&&c>b&&d>c);
+const nodes={};
+const $=id=>{
+ if(!nodes[id])nodes[id]={value:"",type:"text",checked:false,textContent:""};
+ return nodes[id];
+};
+const field=id=>String($(id).value).trim();
+for(const id of ["oil_main","oil_off","optimizer-oil-enabled",
+ "season-auto-core","season-native-g","season-native-f",
+ "season-native-o","season-auto-f-no-oil"])$(id).type="checkbox";
+$("ilevel").value="334";
+$("season-target-ilevel").value="334";
+$("season-target-socket-count").value="4";
+$("season-game-build").value="12.1.5.70783";
+$("season-selected-flask-id").value="241327";
+const scope=Function("$","field","oilUseIntent",src.slice(a,b)+
+ "return seasonBuildInputScope;")($,field,false);
+let shown=[],revoked=[],budgetResets=0;
+const state={verifiedInstalledBuildFromThisPage:"12.1.5.70783"};
+const apply=Function("state","$","seasonBuildInputScope",
+ "installSeasonGearHints","renderSeasonOptionCatalog",
+ "updateBudgetPreview","showSeasonEnvironmentBuild",
+ "requestedInputScope","forUserVariant","report",
+ src.slice(c,d)+"showSeasonEnvironmentBuild(report,forUserVariant);");
+const check=(saved,variant)=>{
+ apply(state,$,scope,
+  v=>revoked.push(["gear",v]),v=>revoked.push(["options",v]),
+  ()=>{budgetResets++},v=>shown.push(v),
+  saved,variant,{environment_ready:true,T:3333});
+};
+const original=scope(true);
+check(original,true);
+assert.strictEqual(shown.length,1,"unchanged installed result may display");
+$("season-target-socket-count").value="5";
+check(original,true);
+assert.strictEqual(shown.length,1,"changed J cannot display old T");
+assert.deepStrictEqual(revoked.slice(-2),[["gear",null],["options",null]]);
+assert.strictEqual(state.verifiedInstalledBuildFromThisPage,null);
+assert.strictEqual(budgetResets,1);
+assert($("season-build-summary").textContent.includes("현재 구성"));
+$("season-target-socket-count").value="4";
+const fresh=scope(true);
+$("season-selected-flask-id").value="241328";
+check(fresh,true);
+assert.strictEqual(shown.length,1,"changed F cannot bind previous v212");
+const common=scope(false);
+$("season-target-ilevel").value="340";
+check(common,false);
+assert.strictEqual(shown.length,1,"changed G ilvl cannot show past READY");
+assert.strictEqual(budgetResets,3);
+$("season-target-ilevel").value="334";
+check(scope(false),false);
+assert.strictEqual(shown.length,2,"stable common build accepted");
+console.log("M1_M2_BUILD_RESPONSE_GJFO_SCOPE_STALE_REJECT_PASS");
+"""
+        result=subprocess.run([node,"-e",script,
+            str(ROOT/"runner/webui/app.js")],
+            capture_output=True,text=True,timeout=15,check=False)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("M1_M2_BUILD_RESPONSE_GJFO_SCOPE_STALE_REJECT_PASS",
+                      result.stdout)
+
     def test_v349_season_build_activity_socket_total_and_advanced_ids(self):
         """Activity is indeterminate; user scope is separate from source IDs."""
         html=self.client.get("/").text
