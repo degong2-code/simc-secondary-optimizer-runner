@@ -6812,6 +6812,17 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
             progress["requires"]=[
                 requirement for requirement in progress["requires"]
                 if requirement!="WEAPON_OIL_O_EXACT_APPLICATION_AND_RATING_PENDING"]
+        # The default USER auto-G+F path cannot install until the ORIGINAL
+        # v191/v211/v213 inputs are present. Test those already-collected
+        # source filenames before paying for its G Native. Explicit G-only
+        # diagnostics keep their historical one-Native behavior.
+        skip_default_G_native=False
+        if auto_native_G and auto_select_default_F:
+            compiler_plan=source_wiring.discover(collected)
+            if compiler_plan.get("inputs") is None:
+                skip_default_G_native=True
+                progress["default_G_native_skipped_missing_compiler_inputs"]=list(
+                    compiler_plan.get("missing",[]))
         # Reuse the original v236/v234 source-profile Native parser. Only a
         # configured local binary and existing v233 source profile may trigger
         # one real G probe. The content-addressed v236 output folder forbids
@@ -6819,7 +6830,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
         try:
             native_G=zero_history_G_native.collect(
                 sessions_root=sessions_root,collected=collected,
-            binary=binary if auto_native_G else None)
+                binary=(binary if auto_native_G and
+                        not skip_default_G_native else None))
         except (zero_history_G_native.GNativeStageBlocked,
                 OSError,ValueError,KeyError,TypeError) as exc:
             raise EnvironmentBuildBlocked(
