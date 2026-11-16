@@ -221,7 +221,8 @@ class OneGNativeReuse(unittest.TestCase):
                 "g_probe_character":None,"simc_revision_hint":None,
                 "auto_native_G_requested":True,
                 "auto_native_F_requested":True,
-                "auto_select_observed_F_no_oil":True}}
+                "auto_select_observed_F_no_oil":True,
+                "default_auto_core_build_requested":True}}
         with mock.patch.object(build,"collect_wago_new_season_source",
                                return_value=collected),\
              mock.patch.object(build.source_wiring,"discover",
@@ -248,6 +249,28 @@ class OneGNativeReuse(unittest.TestCase):
         self.assertIsNone(result["G"])
         self.assertIsNone(result["B"])
         self.assertIsNone(result["T"])
+        # Independent explicit G+F diagnostics do not set the default
+        # product-mode hint; they retain the original G Native behavior.
+        explicit={**kwargs,"fresh_collection_inputs":{
+            **kwargs["fresh_collection_inputs"],
+            "default_auto_core_build_requested":False}}
+        observed={**native,
+                  "status":"G_NATIVE_NUMERIC_REFERENCE_OBSERVED_JFO_PENDING",
+                  "new_native_calls":1,"standardized_G":3100}
+        with mock.patch.object(build,"collect_wago_new_season_source",
+                               return_value=collected),\
+             mock.patch.object(build.source_wiring,"discover") as inspect,\
+             mock.patch.object(build.zero_history_G_native,"collect",
+                               return_value=observed) as runner,\
+             mock.patch.object(build.source_wiring,"compile_collected",
+                               return_value=pending):
+            independent=build.build_environment(**explicit)
+        inspect.assert_not_called()
+        self.assertEqual(runner.call_count,1)
+        self.assertEqual(runner.call_args.kwargs["binary"],self.binary)
+        self.assertEqual(independent["native_calls"],1)
+        self.assertNotIn("default_G_native_skipped_missing_compiler_inputs",
+                         independent["zero_history_build"])
 
     def test_zero_history_normal_build_uses_single_numeric_G_result(self):
         # Verify same v216 entry, no v191 source/legacy G/J/F/T short-circuit.
