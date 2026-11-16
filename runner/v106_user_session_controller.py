@@ -857,7 +857,7 @@ def _installed_source_paths(identity, folder=None):
         need(type(fresh_sha) is str and
              re.fullmatch(r"[a-f0-9]{64}",fresh_sha) is not None and
              type(build) is str and
-             re.fullmatch(r"\\d+(?:\\.\\d+){3}",build) is not None and
+             re.fullmatch(r"\d+(?:\.\d+){3}",build) is not None and
              folder is not None and
              pathlib.Path(folder).name==pathlib.Path(folder).resolve().name,
              "V106_FRESH_INSTALLED_WORKER_SOURCE_IDENTITY_INVALID")
