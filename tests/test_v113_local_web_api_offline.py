@@ -44,6 +44,117 @@ class LocalWebAPIOffline(unittest.TestCase):
 
 
 
+    def test_m1_myth_default_missing_verified_raid_needs_manual_no_recollect(self):
+        jobs=self.app.state.jobs
+        with mock.patch.object(jobs.source_credential_store,"load",
+                               return_value=None), \
+             mock.patch.object(web.environment_build,
+                               "collect_wago_new_season_source",
+                               side_effect=AssertionError("NO_DB2_WITHOUT_CREDENTIALS")):
+            got=self.post("/api/v1/environment/myth-target",{
+                "game_build":"12.2.0.99999"})
+        self.assertEqual(got.status_code,200,got.text)
+        doc=got.json()
+        self.assertEqual(doc["status"],"MYTH_TARGET_SOURCE_PENDING")
+        self.assertIsNone(doc["target_ilevel"])
+        self.assertTrue(doc["manual_target_ilevel_allowed"])
+        self.assertFalse(doc["environment_ready"])
+        self.assertEqual(doc["native_calls"],0)
+        # User-specified target/legacy endpoint remains available.
+        self.assertEqual(self.post("/api/v1/environment/myth-target",{
+            "game_build":"bad"}).status_code,422)
+
+    def test_m1_myth_default_consumes_v163_raid_and_one_optional_currency(self):
+        jobs=self.app.state.jobs
+        build="12.1.5.70783"
+        folder=jobs.root/"_fresh_season_sources"/("wago_"+build)/"wago"
+        folder.mkdir(parents=True)
+        scope={"raid_zone":"The Venomous Abyss",
+               "db2_display_season_id":37,
+               "source_basis":"LIVE_WCL_ACTIVE_ZONES_AND_SAME_BUILD_DB2"}
+        stage={"season_join":{
+                "status":"DB2_WCL_CANDIDATES_JOINED_SEASON_CONDITIONS_PENDING",
+                "source_scope":scope,"candidate_path":"sealed_v163.json"},
+               "snapshot_receipt_path":str(folder/"receipt.json")}
+        source={"network_calls_now":1}
+        candidate={"status":"MYTH_TRACK_TARGET_SOURCE_MATCH_UNADMITTED",
+                   "target_ilevel":334,"currency_csv_sha256":"a"*64,
+                   "currency_id":3446}
+        with mock.patch.object(jobs.source_credential_store,"load",
+                               return_value={"BLIZZARD_CLIENT_ID":"fixture"}), \
+             mock.patch.object(web.environment_build,
+                               "collect_wago_new_season_source",
+                               return_value=stage) as stage_call, \
+             mock.patch.object(web.myth_target_source,"collect",
+                               return_value=source) as collector, \
+             mock.patch.object(web.myth_target_source,"myth_target_candidate",
+                               return_value=candidate) as resolver, \
+             mock.patch.object(web.subprocess,"Popen",
+                               side_effect=AssertionError("NO_NATIVE")):
+            got=self.post("/api/v1/environment/myth-target",{
+                "game_build":build})
+        self.assertEqual(got.status_code,200,got.text)
+        doc=got.json()
+        self.assertEqual(doc["status"],
+                         "MYTH_TARGET_CANDIDATE_FROM_MATCHED_WAGO_V163_SOURCE")
+        self.assertEqual(doc["target_ilevel"],334)
+        self.assertFalse(doc["environment_ready"])
+        self.assertEqual(doc["optional_currency_network_calls_now"],1)
+        self.assertTrue(doc["manual_target_ilevel_allowed"])
+        stage_call.assert_called_once()
+        self.assertIsNone(stage_call.call_args.kwargs["representative_request"])
+        collector.assert_called_once_with(folder,build)
+        resolver.assert_called_once_with(folder,build,
+                                          active_season_scope=scope)
+
+    def test_m1_myth_default_no_unique_v163_join_does_not_fetch_currency(self):
+        jobs=self.app.state.jobs
+        stage={"season_join":{"status":"AUTHENTICATED_SEASON_JOIN_NOT_READY",
+                              "candidate_path":None}}
+        with mock.patch.object(jobs.source_credential_store,"load",
+                               return_value={"WCL_CLIENT_ID":"fixture"}), \
+             mock.patch.object(web.environment_build,
+                               "collect_wago_new_season_source",
+                               return_value=stage), \
+             mock.patch.object(web.myth_target_source,"collect",
+                               side_effect=AssertionError("NO_CURRENCY_HTTP")):
+            got=self.post("/api/v1/environment/myth-target",{
+                "game_build":"13.0.0.99999"})
+        self.assertEqual(got.status_code,200,got.text)
+        self.assertEqual(got.json()["reason_code"],
+                         "MYTH_TARGET_V163_ACTIVE_RAID_JOIN_PENDING")
+        self.assertIsNone(got.json()["target_ilevel"])
+
+    def test_m1_myth_default_live_build_can_be_other_than_334(self):
+        jobs=self.app.state.jobs
+        build="13.0.0.99999"
+        folder=jobs.root/"_fresh_season_sources"/("wago_"+build)/"wago"
+        folder.mkdir(parents=True)
+        scope={"source_basis":"LIVE_WCL_ACTIVE_ZONES_AND_SAME_BUILD_DB2",
+               "db2_display_season_id":42,"raid_zone":"New Raid"}
+        stage={"season_join":{
+                  "status":"DB2_WCL_CANDIDATES_JOINED_SEASON_CONDITIONS_PENDING",
+                  "source_scope":scope,"candidate_path":"v163.json"},
+               "snapshot_receipt_path":str(folder/"receipt.json")}
+        with mock.patch.object(web.retail_build_source,"discover",
+                return_value={"game_build":build,"source_sha256":"b"*64}), \
+             mock.patch.object(jobs.source_credential_store,"load",
+                               return_value={"BLIZZARD_CLIENT_ID":"fixture"}), \
+             mock.patch.object(web.environment_build,
+                               "collect_wago_new_season_source",
+                               return_value=stage), \
+             mock.patch.object(web.myth_target_source,"collect",
+                               return_value={"network_calls_now":0}), \
+             mock.patch.object(web.myth_target_source,"myth_target_candidate",
+                               return_value={
+                                  "status":"MYTH_TRACK_TARGET_SOURCE_MATCH_UNADMITTED",
+                                  "target_ilevel":365,
+                                  "currency_csv_sha256":"f"*64}):
+            got=self.post("/api/v1/environment/myth-target",{})
+        self.assertEqual(got.status_code,200,got.text)
+        self.assertEqual(got.json()["target_ilevel"],365)
+        self.assertTrue(got.json()["retail_build_reverified"])
+
     def test_v495_static_cache_alias_byte_identity_streams_without_full_reads(self):
         # The already sealed session path wins only for identical raw bytes.
         # JSON-equivalent but byte-different content MUST NOT be substituted.
