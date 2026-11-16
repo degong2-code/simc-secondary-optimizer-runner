@@ -172,26 +172,38 @@ class UserSessionControls(unittest.TestCase):
                       json.loads((folder/"V106_SESSION_IDENTITY.json").read_text()))
         self.assertEqual(len(list((root/"runs").iterdir())),2)
 
-    def test_session_binary_hash_matches_historical_identity_without_full_read(self):
-        # This is the exact existing v106 SHA contract, not a new cache key.
-        # A full-file read would create an unnecessary SimC-sized allocation.
+    def test_session_binary_and_cache_sha_preserve_identity_without_full_reads(self):
+        # The original SHA-256 values and v106 key must remain byte-identical.
+        # Session lookup need not copy large SimC or static-cache files to RAM.
         import hashlib
         root,binary,user=self.fixture()
-        expected=hashlib.sha256(binary.read_bytes()).hexdigest()
+        cache=root/"selected-static-cache.json"
+        cache.write_bytes(b"TEST_CACHE_ONLY_NOT_REAL_ITEM_DATA")
+        binary_sha=hashlib.sha256(binary.read_bytes()).hexdigest()
+        cache_sha=hashlib.sha256(cache.read_bytes()).hexdigest()
         original=pathlib.Path.read_bytes
-        def no_full_executable_read(path):
-            if path==binary:
-                raise AssertionError("FULL_BINARY_READ_FOR_SHA")
+        def no_full_large_file_read(path):
+            if path in (binary,cache):
+                raise AssertionError("FULL_BINARY_OR_CACHE_READ_FOR_SHA")
             return original(path)
-        with mock.patch.object(pathlib.Path,"read_bytes",no_full_executable_read):
-            key,identity=ux.session_key(user,binary,"7bc10711b5")
-        self.assertEqual(identity["simc_binary_sha256"],expected)
+        with mock.patch.object(pathlib.Path,"read_bytes",no_full_large_file_read):
+            key,identity=ux.session_key(
+                user,binary,"7bc10711b5",static_cache=cache)
+        self.assertEqual(identity["simc_binary_sha256"],binary_sha)
+        self.assertEqual(identity["static_cache_sha256"],cache_sha)
         self.assertEqual(
             key,ux.sha(ux.canonical(identity).encode("utf8"))[:20])
         binary.write_bytes(b"CHANGED_BINARY_BYTES")
-        changed_key,changed=ux.session_key(user,binary,"7bc10711b5")
-        self.assertNotEqual(changed["simc_binary_sha256"],expected)
+        changed_key,changed=ux.session_key(
+            user,binary,"7bc10711b5",static_cache=cache)
+        self.assertNotEqual(changed["simc_binary_sha256"],binary_sha)
+        self.assertEqual(changed["static_cache_sha256"],cache_sha)
         self.assertNotEqual(changed_key,key)
+        cache.write_bytes(b"CHANGED_CACHE_BYTES")
+        cache_key,cache_changed=ux.session_key(
+            user,binary,"7bc10711b5",static_cache=cache)
+        self.assertNotEqual(cache_changed["static_cache_sha256"],cache_sha)
+        self.assertNotEqual(cache_key,changed_key)
 
     def test_profile_stage_contract_is_sealed_into_new_session_identity(self):
         root,binary,user=self.fixture()
