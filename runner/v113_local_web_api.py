@@ -3120,7 +3120,7 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
     def season_environment_build(request: SeasonEnvironmentBuildRequest):
         """Web-app Environment Build only: no DPS inputs or optimizer."""
         try:
-            return jobs.build_season_environment(
+            result=jobs.build_season_environment(
                 request.game_build,request.target_ilevel,
                 native_G_binary=request.native_G_binary,
                 consumable_native_binary=request.consumable_native_binary,
@@ -3144,6 +3144,16 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                 **({"auto_myth_target_source_sha256":
                         request.auto_myth_target_source_sha256}
                    if request.auto_myth_target_source_sha256 is not None else {}))
+            # An audit field only: the M1 currency cap is NOT evidence for
+            # G/J/F/O, B/T or v212. Leave source owner admission unchanged.
+            if request.auto_myth_target_source_sha256 is not None:
+                scope=result.get("web_environment_scope")
+                if type(scope) is dict:
+                    result={**result,"web_environment_scope":{
+                        **scope,"auto_myth_target_source_csv_sha256":
+                        request.auto_myth_target_source_sha256,
+                        "auto_myth_target_source_sha_verified":True}}
+            return result
         except Exception as exc:
             raise blocked(exc) from None
 
