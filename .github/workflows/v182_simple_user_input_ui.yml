@@ -44,6 +44,7 @@ on:
       - tests/test_v212_environment_manifest.py
       - tests/test_v216_environment_build_coordinator.py
       - tests/test_v114_local_web_ui_offline.py
+      - tests/test_v535_exact_enchant_ui_scope_offline.py
       - tests/test_v167_local_gear_catalog_api.py
       - .github/workflows/v182_simple_user_input_ui.yml
   workflow_dispatch:
@@ -106,7 +107,7 @@ jobs:
         run: |
           set -euo pipefail
           python -m unittest -v tests.test_v182_simple_user_inputs_offline tests.test_v188_user_choice_labels_and_slots tests.test_v196_current_season_ui_catalog tests.test_v208_special_L_hydration_offline tests.test_v212_environment_manifest tests.test_v197_verified_effect_budget tests.test_v197_enchant_effect_families tests.test_v198_targeted_enchant_native_rating tests.test_v202_one_enchant_admission tests.test_v202_enchant_scheduler_floor tests.test_v187_current_season_tier_overlay
-          python -m unittest -q tests.test_v108_user_consumables tests.test_v114_local_web_ui_offline tests.test_v113_local_web_api_offline tests.test_v177_current_season_product_flow tests.test_v179_current_season_input_paths_offline tests.test_v167_local_gear_catalog_api
+          python -m unittest -q tests.test_v108_user_consumables tests.test_v114_local_web_ui_offline tests.test_v113_local_web_api_offline tests.test_v177_current_season_product_flow tests.test_v179_current_season_input_paths_offline tests.test_v167_local_gear_catalog_api tests.test_v535_exact_enchant_ui_scope_offline
           node --check runner/webui/app.js
       - name: Package updated Windows UX and verify reproducible runtime sources
         shell: bash
