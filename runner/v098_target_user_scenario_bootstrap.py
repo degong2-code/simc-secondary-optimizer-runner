@@ -23,6 +23,7 @@ import v169_source_first_representative_stage as source_first
 import v213_source_to_catalog as original_catalog
 import v202_one_enchant_admission as verified_enchant
 import v206_nonchmv_eagle_selection as nonchmv_enchant
+import v529_current_season_eagle_E0_bridge as fresh_eagle
 import v212_environment_manifest as installed_manifest
 import v222_season_budget_contract as budget_contract
 import v432_selected_4pc_budget_bridge as selected_budget
@@ -821,6 +822,10 @@ def _materialize_admitted_season_v096(*, source_only,season_profile_inputs,
               "native_limit":6,"step":100,
               "cancel_file":"CANCEL",
               source_field:manifest_source,
+              **({entry.NONCHMV_ENCHANT_FIELD:
+                       dict(user[SEASON_ENCHANT_FIELD])}
+                 if fresh_installed_environment_path is not None and
+                    SEASON_ENCHANT_FIELD in user else {}),
               **({entry.EXPLORATION_FIELD:exploration_policy}
                  if exploration_policy is not None else {})}
     files={
@@ -1087,7 +1092,10 @@ def build(user,folder,binary,revision,static_cache_path=None,
           and not source_first_stage and not pure_stage
           and not static_special_probe_only
           and ENCHANT_FIELD not in user
-          and SEASON_ENCHANT_FIELD not in user
+          and (SEASON_ENCHANT_FIELD not in user or
+               (fresh_installed_environment_path is not None
+                and not selected_season_items
+                and user[SEASON_ENCHANT_FIELD]==fresh_eagle.CHOICE))
           and (not selected_season_items or
                season_selected_static_cache_path is not None)),
          "SEASON_PROFILE_INTERNAL_SOURCE_ONLY_MODE_REQUIRED")
@@ -1393,10 +1401,15 @@ def build(user,folder,binary,revision,static_cache_path=None,
                  "SEASON_PROFILE_SELECTED_CONSUMABLES_NOT_SOURCE_BOUND")
     selected_nonchmv=None
     if SEASON_ENCHANT_FIELD in user:
-        selected_nonchmv=nonchmv_enchant.apply(
-            rows,user[SEASON_ENCHANT_FIELD],user,
-            current_season_product=current_season_product,need_user=need,
-            catalog_path=source_catalog_path)
+        if fresh_installed_environment_path is not None:
+            selected_nonchmv=fresh_eagle.apply(
+                rows,user[SEASON_ENCHANT_FIELD],user,
+                catalog_path=source_catalog_path)
+        else:
+            selected_nonchmv=nonchmv_enchant.apply(
+                rows,user[SEASON_ENCHANT_FIELD],user,
+                current_season_product=current_season_product,need_user=need,
+                catalog_path=source_catalog_path)
     selected_fixed_E=None
     if ENCHANT_FIELD in user:
         # The same selected ring cannot be counted both as the exact
