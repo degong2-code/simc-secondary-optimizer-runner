@@ -215,7 +215,11 @@ def select_class_spec(db,tier,cls,spec):
             "tier_id_source":"ACTUAL_CURRENT_DB2_ITEMSET_NOT_PROFILE_COPY",
             "native_calls":0}
 
-def build_all(db,tier):
+def build_all(db,tier,*,target_ilevel=334):
+    # A source-only preview must describe the selected season ilvl, not
+    # silently carry the historical 334 into another season's scope.
+    need(type(target_ilevel) is int and 1<=target_ilevel<=1000,
+         "TARGET_ILEVEL_PREVIEW_SCOPE_INVALID")
     need(gear.validate(db)["season_build"]==tier["retail_build"],
          "GEAR_TIER_BUILD_MISMATCH")
     specs={}
@@ -229,7 +233,7 @@ def build_all(db,tier):
         specs[key]=item
     need(len(specs)==26,"EXPECTED_26_DPS")
     return {"schema":SCHEMA,"status":"SOURCE_FIRST_COMPLETE_PHYSICAL_CANDIDATE_PREVIEW_ONLY",
-       "season_build":db["season_build"],"target_ilevel_preview":334,
+       "season_build":db["season_build"],"target_ilevel_preview":target_ilevel,
        "common_gear":common,"specializations":specs,
        "tier_classes":len(tier["classes"]),"dps_specs":len(specs),
        "four_piece_each":True,"old_profile_item_ids_copied":False,
@@ -247,8 +251,8 @@ def season_scope(*,db=None,tier=None,settings=None,budget=None):
     import v139_pure_target_profile_composer as pure
     db=gear.read() if db is None else gear.validate(db)
     tier=load_tier() if tier is None else tier
-    candidate=build_all(db,tier)
     config=pure.catalog() if settings is None else pure.validate_season(settings)
+    candidate=build_all(db,tier,target_ilevel=config["target_ilevel"])
     budget=(json.loads(BUDGET_PATH.read_text(encoding="utf8"))
             if budget is None else budget)
     need(type(budget) is dict and
