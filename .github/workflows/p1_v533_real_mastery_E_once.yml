@@ -1,4 +1,5 @@
 # Real 70783 single-scoped E26 current-season end-to-end user selection.
+# After v532 exact E30 native/cache success, run only different 7965 E26 once.
 # Retry one scope: previous Native6 succeeded; only old 7967 assertion blocked raw ZIP/cache check.
 # Existing M1/M2/v098/v096/v106/v094/SimC; no AI runtime or new solver.
 # One retry: forward verified v213 catalog into the new E26 route and return stable source codes.
