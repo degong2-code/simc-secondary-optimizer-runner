@@ -138,6 +138,18 @@ def collect(folder,build,*,fetch=urlopen):
                     h.update(chunk)
                     out.write(chunk)
         need(length>0,"TARGET_CURRENCY_CSV_EMPTY")
+        # A 200 response can be an HTML error page. Reject its CSV schema
+        # BEFORE sealing the content-addressed optional source; otherwise
+        # a bad one-time response would poison the same-season cache.
+        try:
+            with temp.open(encoding="utf-8-sig",newline="") as csv_file:
+                header=csv.DictReader(csv_file).fieldnames
+        except (UnicodeError,csv.Error) as exc:
+            raise TargetSourceBlocked(
+                "TARGET_CURRENCY_DOWNLOAD_NOT_UTF8_CSV") from exc
+        need(header is not None and
+             {"ID","Name_lang","Description_lang"}<=set(header),
+             "TARGET_CURRENCY_DOWNLOAD_COLUMNS_INVALID")
         doc={"schema":SCHEMA,"build":build,"locale":"enUS",
              "source_url":endpoint,"original_v161_receipt_sha256":original_sha,
              "bytes":length,"sha256":h.hexdigest(),
