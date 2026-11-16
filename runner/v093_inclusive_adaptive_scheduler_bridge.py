@@ -14,6 +14,7 @@ import v063_numeric_injection as numerical
 import v065_v015_scheduler_adapter as policy
 import v091_weapon_oil_external_adapter as oilpath
 import v092_approved_inclusive_CHMV_policy as totals
+import v531_current_season_positive_E_bridge as positive_enchant
 
 SCHEMA="v093_inclusive_oil_v015_policy_bridge_v1"
 class AdaptiveBridgeBlocked(ValueError):pass
@@ -72,6 +73,21 @@ def identity(bundle,binary_sha,revision,scout_iterations,confirm_iterations):
                                "source_input_sha256")),
              "ADMITTED_SEASON_ENVIRONMENT_IDENTITY_REQUIRED")
         result["admitted_season_environment_identity"]=dict(env)
+    if "v531_verified_positive_E" in o:
+        proof=o["v531_verified_positive_E"]
+        selected=proof.get("choice")
+        eid,E=positive_enchant.check_choice(selected)
+        need(proof.get("schema")==positive_enchant.SCHEMA
+             and proof.get("fixed_E")==E
+             and proof.get("gear_override_does_not_add_E_twice") is True
+             and proof.get("original_profile_sha256")==
+                 positive_enchant.original.BASE_SHA
+             and proof.get("original_before_json2_sha256")==
+                 positive_enchant.ENCHANTS[eid]["before"]
+             and proof.get("original_after_json2_sha256")==
+                 positive_enchant.ENCHANTS[eid]["after"],
+             "FRESH_USER_ENCHANT_STATIC_E_PROOF_NOT_SEALED")
+        result["v531_verified_positive_E"]=proof
     if "v202_verified_enchant" in o:
         proof=o["v202_verified_enchant"]
         need(proof.get("schema")=="v202_one_exact_enchant_source_evidence_v1"
@@ -96,11 +112,17 @@ def feasible_budget(context,flask_vector):
     """Only search constraints change: B+O must cover F on every stat."""
     prepared=context["bundle"]["prepared"]
     bound=context["identity"]
-    if "v202_verified_enchant" in bound:
+    if "v202_verified_enchant" in bound or "v531_verified_positive_E" in bound:
+        need(not ("v202_verified_enchant" in bound and
+                  "v531_verified_positive_E" in bound),
+             "TWO_ENCHANT_E_OWNER_PATHS_NOT_ALLOWED")
+        name=("v531_verified_positive_E" if
+              "v531_verified_positive_E" in bound else
+              "v202_verified_enchant")
         return policy.budget_with_fixed_components(
             prepared["scenario"],prepared["static_budget"],
             flask_vector,bound["oil_vector"],
-            fixed_enchant_E=bound["v202_verified_enchant"]["fixed_E"])
+            fixed_enchant_E=bound[name]["fixed_E"])
     return policy.budget_with_fixed_components(
         prepared["scenario"],prepared["static_budget"],
         flask_vector,bound["oil_vector"])
