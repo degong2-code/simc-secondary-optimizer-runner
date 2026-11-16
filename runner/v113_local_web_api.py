@@ -2238,6 +2238,7 @@ class LocalJobs:
         with self.lock:
             if self.is_active(folder):
                 raise HTTPException(409,detail={"code":"SESSION_ALREADY_RUNNING"})
+            queued_for_spawn=False
             try:
                 environment=self._read_environment_summary(folder)
                 self._verify_environment_dependencies(environment,folder)
@@ -2280,6 +2281,7 @@ class LocalJobs:
                 cancel=longrun_sessions.stage_path(folder,budget)/"CANCEL"
                 if cancel.exists():cancel.unlink()
                 longrun_sessions.state(folder,"QUEUED")
+                queued_for_spawn=True
                 cmd=[sys.executable,
                      str(pathlib.Path(longrun_sessions.__file__).resolve()),
                      "--session",str(folder),
@@ -2302,9 +2304,21 @@ class LocalJobs:
                         creationflags=flags,
                         env={**os.environ,"PYTHONIOENCODING":"utf-8"})
                 self.children[folder.name]=child
+                queued_for_spawn=False
             except HTTPException:
                 raise
             except Exception as exc:
+                # The queued state was written, but no OS worker was
+                # successfully launched. The prior V291_RESULT/journal
+                # remains durable; never leave a phantom QUEUED worker.
+                # Do not expose the local executable/log path in status.
+                if queued_for_spawn:
+                    try:
+                        longrun_sessions.state(
+                            folder,"BLOCKED_OR_PARTIAL",
+                            reason="V293_WORKER_LAUNCH_FAILED_BEFORE_NATIVE")
+                    except (OSError,ValueError):
+                        pass  # Keep the original launch exception.
                 raise blocked(exc) from None
         return {"session_id":folder.name,
                 "status":"LONGRUN_IMPORT_STARTED" if archive is not None
