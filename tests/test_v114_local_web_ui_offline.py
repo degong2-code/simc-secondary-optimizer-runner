@@ -1682,9 +1682,9 @@ const api=async url=>{
  if(url.endsWith("/longrun/result"))return {user_result:{final_T:3000}};
  throw Error("UNEXPECTED_GET_"+url);
 };
-const app=Function("state","$","api","showEnvironmentBuild","buttonState",
+const app=Function("state","$","api","showEnvironmentBuild","buttonState","number",
  raw.slice(p,e)+raw.slice(a,b)+"return {renderProgress,readSession};")(
- state,$,api,()=>{},()=>{});
+ state,$,api,()=>{},()=>{},v=>String(v));
 (async()=>{
  const base={enabled:true,active:false,result_ready:true,
   progress:{status:"PARTIAL_OR_BLOCKED",completed_jobs:7,
