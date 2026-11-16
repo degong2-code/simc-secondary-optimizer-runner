@@ -1,0 +1,150 @@
+{
+  "schema": "p1_v528_20261117_current_70783_socket5_6_enchant3_real_compact_v1",
+  "status": "PASS_SCOPED_SOURCE_AND_NATIVE_WITH_OPTION_ADMISSION_PENDING",
+  "branch": "probe/chat-cache-v035-20261024",
+  "executed_commit_sha": "9c8e1c9bdfa97303d667746d4d4c59f592ff4862",
+  "actions_run_id": 43897717703,
+  "actions_conclusion": "success",
+  "actions_url": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43897717703",
+  "artifact_id": 14240241213,
+  "artifact_name": "p1-v528-70783-native-sockets-enchants-once",
+  "artifact_outer_zip_sha256": "9a0559033708b0c2f78eb661e7b4e6752c2ee20c2f0196865071e063c6536404",
+  "artifact_original_receipt_sha256": "0a1bf3c97dd8c433c192c7b0c788f7108b1688a65937d215c44fcee1ac9aa438",
+  "artifact_nested_original_native_zip_sha256": "f65e9cc8161a19e82118e1f16dc1f35fc44debda8c4eda1c813a13bfde982e87",
+  "nested_original_native_files": 15,
+  "recorded_native_JSON2_hashes_recomputed": true,
+  "simc_binary_revision": "de11f57df75dda668bae6ac7043a43b98831fa96",
+  "simc_binary_sha256": "1fc927d2be7f1b6064c75f004b5b22245b064a6b3e56e572af4048ba822a986d",
+  "game_build": "12.1.5.70783",
+  "target_ilevel": 334,
+  "subject": "hunter/survival, one existing 70783 representative ilvl334 source-backed profile, finger1 same physical ring",
+  "base_v212_sha256": "e13baae30b935562136cd5b89d04685ebfd0785fdd014c718581359528ceeff2",
+  "base_profile_sha256": "a84b57fe25a3b71348e5c0d92c8aa814243c316b01077aca7e1f746f0bd091a8",
+  "M1_currency_csv_sha256": "c1e91e4e17b622136d7c9a37c597cd0fe2409a2f5ccb494659014b154a04ef1f",
+  "base_environment": {
+    "G": 2850,
+    "J": 92,
+    "F": 165,
+    "O": 0,
+    "B": 3107,
+    "T": 3107,
+    "environment_ready": true,
+    "environment_installed": true,
+    "new_environment_native": 3
+  },
+  "enchant_scope": {
+    "method": "existing v198 physical SimC Native before/after; exact same original gear and source profile, only finger1.enchant_id changes, 35 requested iterations per case, original input and JSON2 receipts SHA-bound; source only not current product UI admission",
+    "physical_enchant_Native_calls": 6,
+    "AI_runtime_calls": 0,
+    "AI_stat_effect_DPS_owner": false,
+    "scoped_results": [
+      {
+        "id": 7967,
+        "token": "enchant_ring__eyes_of_the_eagle",
+        "highest_source_quality_rank": 2,
+        "per_profile_E": {
+          "crit_rating": 0,
+          "haste_rating": 0,
+          "mastery_rating": 0,
+          "versatility_rating": 0
+        },
+        "source_ui_selectable": false,
+        "raw_before_SHA": "db764f9bba5cd73174f1b324582185e1e9b35c76a308f35103f21af9f6bd72e6",
+        "raw_after_SHA": "fae7c21baa25d6f2ace6f1a747f4f22a768ff53775f23bd12c1b810eb9069621",
+        "status": "PASS_TWO_REAL_NATIVE_STATIC_ONLY"
+      },
+      {
+        "id": 8025,
+        "token": "enchant_ring__silvermoons_alacrity",
+        "highest_source_quality_rank": 2,
+        "per_profile_E": {
+          "crit_rating": 0,
+          "haste_rating": 30,
+          "mastery_rating": 0,
+          "versatility_rating": 0
+        },
+        "source_ui_selectable": false,
+        "raw_before_SHA": "be004cc6c4a6e1e5977d971ee868f4e6c636f0f59e708a7a43a89de94369a381",
+        "raw_after_SHA": "33cae7989e43e6ca07f45e1e9a1fbe1d9e700ab578be0aa061a0e154db418a80",
+        "status": "PASS_TWO_REAL_NATIVE_STATIC_ONLY"
+      },
+      {
+        "id": 7965,
+        "token": "enchant_ring__amani_mastery",
+        "highest_source_quality_rank": 2,
+        "per_profile_E": {
+          "crit_rating": 0,
+          "haste_rating": 0,
+          "mastery_rating": 26,
+          "versatility_rating": 0
+        },
+        "source_ui_selectable": false,
+        "raw_before_SHA": "225625fb1a407af5ddece149cdae3f9254221a59ea35183697782109b739675d",
+        "raw_after_SHA": "a3c12722b6828260559d67f0f6e8ebb5567472ba97bbd5465b0555eaef1c77b5",
+        "status": "PASS_TWO_REAL_NATIVE_STATIC_ONLY"
+      }
+    ],
+    "native_runs_also_simulated_DPS_at_35_requested_iterations": true,
+    "DPS_optimization_or_95_percent_superiority_tested": false,
+    "not_automatically_admitted": true,
+    "reason": "B/T fixed E ownership in a v212 per-user selected enchant installation and full source-bound user session not yet integrated; single physical profile Native deltas cannot certify all 26 specs"
+  },
+  "additional_socket_scope": {
+    "run_type": "two real v113-to-v216 advanced source-only build requests using same current-season source after base installation, deliberately no new numeric G/F Native for advanced requests",
+    "native_calls_in_advanced_requests": 0,
+    "cases": [
+      {
+        "total": 5,
+        "J_unadmitted_candidate": 115,
+        "source_compiler_missing": [],
+        "game_socket_legal_verified": false,
+        "J_approved": false,
+        "environment_ready": false,
+        "environment_installed": false,
+        "origin_status": "J_ADDITIONAL_SOCKET_SOURCE_PROOF_PENDING",
+        "additional_slots_source_only": {
+          "finger1": 1,
+          "finger2": 1,
+          "head": 1,
+          "neck": 1,
+          "wrists": 1
+        }
+      },
+      {
+        "total": 6,
+        "J_unadmitted_candidate": 138,
+        "source_compiler_missing": [],
+        "game_socket_legal_verified": false,
+        "J_approved": false,
+        "environment_ready": false,
+        "environment_installed": false,
+        "origin_status": "J_ADDITIONAL_SOCKET_SOURCE_PROOF_PENDING",
+        "additional_slots_source_only": {
+          "finger1": 1,
+          "finger2": 1,
+          "head": 1,
+          "neck": 1,
+          "waist": 1,
+          "wrists": 1
+        }
+      }
+    ],
+    "v232_original_intrinsic_source_counts_observed_all_zero": true,
+    "v232_original_stage_receipt_sha256": "586de864a19dded650889fa1cde3dad76b28942c2bfeefe7b8bdd12e6cce31c3",
+    "v280_item_use_source_status": "SAME_BUILD_SOCKET_ITEM_USE_CANDIDATES_UNADMITTED",
+    "v281_spell_source_status": "SAME_BUILD_V281_SOCKET_SPELL_EFFECTS_UNADMITTED",
+    "reported_missing_numeric_owners": [
+      "G",
+      "J",
+      "F",
+      "O"
+    ],
+    "missing_numeric_owner_interpretation": "The 5/6 advanced probes were explicitly SOURCE-ONLY (auto_initial_core_build=false), so the G/F/O missing fields here are not evidence that the previously verified 4-socket BASE G/F/O disappeared. The independently unresolved physical legality/J of extra sockets is the admission blocker.",
+    "no_synthetic_socket_bonus_or_unverified_J_admitted": true
+  },
+  "unchanged_scope": "No product runtime approval, GJFO engine, SimC effects, UI, or optimizer changed",
+  "full_product_e2e": "PENDING",
+  "official_78_complete": "15/78",
+  "new_product_code_changes": 0,
+  "next_first_real_blockers": "Prove game-legal added socket ItemID/placement and final item slot or verified intrinsic socket from same season before J approval; then connect exact v528 E (static-only and highest quality) to correct v212 per-user B/T/E once with source and profile proofs before admitting enchants."
+}
