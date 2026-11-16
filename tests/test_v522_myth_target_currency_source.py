@@ -16,6 +16,7 @@ SCOPE={"source_basis":"LIVE_WCL_ACTIVE_ZONES_AND_SAME_BUILD_DB2",
        "db2_display_season_id":37,"raid_zone":"The Venomous Abyss"}
 CSV=("ID,Name_lang,Description_lang\n"
      '5001,Myth Oldcrest,"Used to upgrade Myth equipment in Midnight Season 1 up to item levels 290-300. Earned from Mythic The Voidspire."\n'
+     '3441,Myth Mistcrest,"Used to upgrade Myth equipment in Midnight Season 2 up to item levels 321-334. Earned from Mythic The Venomous Abyss."\n'
      '3446,Myth Mistcrest,"Used to upgrade Myth equipment in Midnight Season 2 up to item levels 321-334. When used for crafting, sets the item level to 318-331. Earned from Mythic The Venomous Abyss."\n'
      '3445,Hero Mistcrest,"Used to upgrade Hero equipment in Midnight Season 2 up to item levels 308-321. Earned from Mythic The Venomous Abyss."\n').encode()
 
@@ -60,8 +61,11 @@ class Source(unittest.TestCase):
             self.folder,BUILD,active_season_scope=SCOPE)
         self.assertEqual(proof["target_ilevel"],334)
         self.assertEqual(proof["myth_range_low"],321)
-        self.assertEqual(proof["currency_id"],3446)
-        self.assertEqual(proof["candidate_count"],1)
+        self.assertIsNone(proof["currency_id"])
+        self.assertEqual(proof["currency_ids"],[3441,3446])
+        self.assertEqual(proof["candidate_count"],2)
+        self.assertEqual(proof["distinct_season_myth_range_count"],1)
+        self.assertTrue(proof["duplicate_myth_ranges_deduplicated"])
         self.assertFalse(proof["environment_ready"])
         self.assertFalse(proof["needs_user_target_ilevel"])
 
@@ -92,9 +96,22 @@ class Source(unittest.TestCase):
         target.collect(self.folder,BUILD,fetch=self.get(other)[0])
         proof=target.myth_target_candidate(
             self.folder,BUILD,active_season_scope=SCOPE)
-        self.assertEqual(proof["candidate_count"],2)
+        self.assertEqual(proof["candidate_count"],3)
+        self.assertEqual(proof["distinct_season_myth_range_count"],2)
         self.assertTrue(proof["needs_user_target_ilevel"])
         self.assertIsNone(proof["target_ilevel"])
+
+    def test_same_bound_but_different_season_label_is_not_mistaken_for_one_season(self):
+        # Even two matching raid names cannot fuse different season identities.
+        other=CSV+(
+            '3448,Myth Previous,"Used to upgrade Myth equipment in Midnight '
+            'Season 1 up to item levels 321-334. Mythic The Venomous Abyss."\\n').encode()
+        target.collect(self.folder,BUILD,fetch=self.get(other)[0])
+        result=target.myth_target_candidate(
+            self.folder,BUILD,active_season_scope=SCOPE)
+        self.assertEqual(result["distinct_season_myth_range_count"],2)
+        self.assertTrue(result["needs_user_target_ilevel"])
+        self.assertIsNone(result["target_ilevel"])
 
     def test_build_sha_active_join_and_csv_header_fail_closed(self):
         target.collect(self.folder,BUILD,fetch=self.get()[0])
