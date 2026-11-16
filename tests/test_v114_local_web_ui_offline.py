@@ -762,6 +762,105 @@ const make=(oilUseIntent=false)=>Function(
         self.assertIn("V490_EXACT_F_J_BIND_NO_NATIVE_AND_AMBIGUOUS_BLOCK_PASS",
                       r.stdout)
 
+    def test_m3_unique_verified_oil_exact_FJ_gear_rebind_without_native(self):
+        """Actual oil choice JS reuses one exact v212 gear SHA, rejects ambiguity."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:self.skipTest("node missing")
+        script=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const start=raw.indexOf("async function bindUniqueInstalledOilVariant() {");
+const end=raw.indexOf("function runeCompatibility() {",start);
+const a=raw.indexOf("function seasonBuildInputScope(forUserVariant=false) {");
+const b=raw.indexOf("async function buildSeasonEnvironment(",a);
+assert(start>0&&end>start&&a>0&&b>a);
+const nodes={};
+const $=id=>(nodes[id]??={type:"text",value:"",checked:false,
+  querySelectorAll:()=>[]});
+const field=id=>String($(id).value).trim();
+const valueInt=id=>Number(field(id));
+for(const id of ["oil_main","oil_off","optimizer-oil-enabled"])
+  $(id).type="checkbox";
+Object.assign($("optimizer-oil-loadout"),{value:"b".repeat(64)});
+$("ilevel").value="334";
+$("season-game-build").value="12.1.5.70783";
+$("season-target-socket-count").value="4";
+$("season-selected-flask-id").value="241327";
+$("optimizer-oil-main-id").value="243734";
+$("oil_main").checked=true;
+$("optimizer-oil-enabled").checked=true;
+$("trinket1").value="111";$("trinket2").value="222";
+const sha="b".repeat(64);
+const row={installed_manifest_sha256:sha,
+ selected_oil_item_ids_by_hand:{main_hand:243734},
+ verified_flask_item_id:241327,
+ ordinary_four_gem_profile:true,verified_variant_count:1};
+const state={oilLoadouts:[row],seasonGearTargetIlevel:334,
+  seasonOptionRequestEpoch:0,
+  seasonGear:{installed_manifest_sha256:"a".repeat(64),
+    weapon_forms:{"paladin/retribution":"two_hand"}}};
+const scope=Function("$","field","oilUseIntent",raw.slice(a,b)+
+ "return seasonBuildInputScope;")($,field,true);
+const received=[],installed=[],notes=[],restored=[];
+let changing=false;
+const api=async url=>{
+ received.push(url);
+ if(changing)$("season-target-socket-count").value="5";
+ return {status:"CURRENT_SEASON_CANDIDATE_SELECTION_ONLY",
+  source_scope:"VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES",
+  season_build:"12.1.5.70783",installed_manifest_sha256:sha,
+  choices:{special_effect_gear_candidate:[]}};
+};
+const bind=Function("state","$","field","valueInt",
+ "installedConsumableScopeMatches","fullVerifiedOilMatch",
+ "verifiedInstalledGearScopeMatchesRun","seasonBuildInputScope",
+ "api","installSeasonGearHints","setTrinketSelection","fillGearRows",
+ "specialAllowedSlots","renderSeasonOptionCatalog",
+ "restoreInstalledSeasonOptionCatalog","syncOilUseToggle",
+ "updateBudgetPreview","setNotice",
+ raw.slice(start,end)+"return bindUniqueInstalledOilVariant;")(
+ state,$,field,valueInt,()=>true,()=>true,()=>false,scope,api,
+ gear=>{installed.push(gear);state.seasonGear=gear;state.seasonGearTargetIlevel=null},
+ (k,v)=>$(k).value=v,()=>{},()=>["head"],()=>{},
+ async x=>restored.push(x),()=>{},()=>{},x=>notes.push(x));
+(async()=>{
+ await bind();
+ assert.strictEqual(received.length,1,"ONE_LOCAL_INSTALLED_GEAR_GET");
+ assert(received[0].endsWith("&installed_manifest_sha256="+sha));
+ assert.strictEqual(installed.length,1);
+ assert.strictEqual(state.seasonGearTargetIlevel,334);
+ assert.deepStrictEqual(restored.map(x=>x.installed_manifest_sha256),[sha]);
+ assert.strictEqual($("trinket1").value,"111");
+ state.oilLoadouts=[{...row,verified_variant_count:2}];
+ state.seasonGearTargetIlevel=334;
+ await bind();
+ assert.strictEqual(received.length,1,"AMBIGUOUS_FJ_MUST_NOT_AUTO_REBIND");
+ assert.strictEqual(state.seasonGearTargetIlevel,null);
+ assert(notes.at(-1).includes("둘 이상"));
+ state.oilLoadouts=[row];
+ $("season-selected-flask-id").value="241328";
+ await bind();
+ assert.strictEqual(received.length,1,"DIFFERENT_FLASK_MUST_NOT_REBIND");
+ $("season-selected-flask-id").value="241327";
+ changing=true;
+ const oldCount=installed.length;
+ await bind();
+ assert.strictEqual(received.length,2);
+ assert.strictEqual(installed.length,oldCount,
+   "SOCKET_CHANGE_DURING_GET_CANNOT_INSTALL_OLD_SHA");
+ assert.strictEqual(state.seasonGearTargetIlevel,null);
+ assert(notes.at(-1).includes("조회 중"));
+ console.log("M3_EXACT_SINGLE_OIL_FJ_INSTALL_AND_AMBIGUITY_PASS");
+})().catch(e=>{console.error(e);process.exitCode=1});
+"""
+        result=subprocess.run([node,"-e",script,
+            str(ROOT/"runner/webui/app.js")],
+            capture_output=True,text=True,timeout=20,check=False)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("M3_EXACT_SINGLE_OIL_FJ_INSTALL_AND_AMBIGUITY_PASS",
+                      result.stdout)
+
     def test_verified_oil_dropdown_reuses_exact_id_web_request(self):
         html=self.client.get("/").text
         js=self.client.get("/assets/app.js").text
