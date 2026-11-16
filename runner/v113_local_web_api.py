@@ -221,6 +221,7 @@ def blocked(exc):
                          sessions.SessionBlocked, bootstrap.UserScenarioBlocked,
                         sessions.nonchmv_enchant.EnchantChoiceBlocked,
                         bootstrap.fresh_eagle.SourceBlocked,
+                        bootstrap.positive_enchant.PositiveEnchantBlocked,
                         exact_L.StaticLBlocked,
                         environment_manifest.EnvironmentBlocked,
                         local_source_keys.CredentialBlocked)):
