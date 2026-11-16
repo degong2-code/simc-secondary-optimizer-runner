@@ -204,7 +204,7 @@ def run(binary,out):
                         rings=[x for x in text.splitlines()
                                if x.startswith("finger1=")]
                         check(len(rings)==1 and
-                              rings[0].count("enchant_id=7967")==1,
+                              rings[0].count("enchant_id=8025")==1,
                               "POSITIVE_ENCHANT_MISSING_ON_NATIVE_INPUT")
                     r["native_input_sha256"]=[digest(p) for p in rows]
                     r["native_JSON2_sha256"]=[digest(p) for p in raws]
