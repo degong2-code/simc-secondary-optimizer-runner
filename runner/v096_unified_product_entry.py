@@ -871,6 +871,8 @@ def source(manifest_path):
             plan["selected_fixed_enchant_E"]=dict(
                 season_source["positive_user_E"])
             plan["selected_enchant_budget_policy"]=(
+                "V212_MANUAL_FINAL_T_UNCHANGED_E_FIXED_FLOOR" if
+                season_source["user_manual_final_T"] is not None else
                 "V212_USER_ONLY_INCREMENTAL_E_ONCE_IN_G_AND_B")
         else:
             plan["selected_nonchmv_enchant"]=approved_nonchmv
