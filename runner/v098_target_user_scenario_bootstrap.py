@@ -664,9 +664,15 @@ def season_profile_source_only(*, profile, cfg, weapon_layout, user,
                 if user.get(SEASON_ENCHANT_FIELD) in
                    positive_enchant.CHOICES else None)
     if positive_E is not None:
+        user_T=user["target"]["final_T"]
+        expected_B=(3107+sum(positive_E.values()) if user_T is None
+                    else user_T-sum(fixed_o.values()))
         need(budget.get("fixed_E")==positive_E and
              budget.get("reference_B")==3107+sum(positive_E.values()) and
-             budget.get("base_B")==budget["reference_B"],
+             budget.get("base_B")==expected_B and
+             budget.get("final_T")==expected_B+sum(fixed_o.values()) and
+             budget.get("manual_final_T_authoritative")==(
+                 user_T is not None),
              "FRESH_USER_POSITIVE_E_SOURCE_BUDGET_NOT_PROJECTED")
     # Reuse the actual v062 static-L budget and v065 feasibility floors
     # with the typed B and exact F/O vectors. This is the same deterministic
