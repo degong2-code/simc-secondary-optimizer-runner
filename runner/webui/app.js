@@ -2517,13 +2517,24 @@ function showPlan(plan) {
     (plan.static_cache_auto_used?" · 저장된 정적 캐시 자동 적용":"")+
     environmentText);
 }
+// A prior V291_RESULT.json can outlive a failed or interrupted resume.
+// A saved result is still durable, but it is not the current invocation's
+// completed observation when its worker ended blocked or never finished.
+function longrunSavedResultDisplayable(data) {
+  const worker=data?.progress?.worker?.status||
+    data?.progress?.status||"";
+  return !["BLOCKED_OR_PARTIAL","RUNNING","QUEUED","NOT_STARTED",
+           "PARTIAL_OR_BLOCKED"].includes(worker);
+}
 function renderProgress(data) {
   state.longrunEnabled=Boolean(data?.enabled);
   state.longrunResultReady=Boolean(data?.enabled && data?.result_ready);
   const p=data?.progress||{};
   // A resumed v291 run may leave its previous V291_RESULT.json in place.
   // Do not present that older observation as the active run's final result.
-  if(data?.active || !data?.result_ready) {
+  const previousResultOnly=data?.enabled===true &&
+    !longrunSavedResultDisplayable(data);
+  if(data?.active || !data?.result_ready || previousResultOnly) {
     $("filled-result").hidden=true;
     $("empty-result").hidden=false;
   }
@@ -2560,6 +2571,9 @@ function renderProgress(data) {
   $("stage-text").textContent=data.active?"SimC에서 후보를 평가 중입니다. 현재 "+n+"회 완료 / 세션 상한 "+limit+"회 · 확정된 관측만 결과에 표시합니다.":
     interrupted?"작업자가 실행 중이지 않습니다 · 저장된 세션을 재개할 수 있습니다":
     ({BUDGET_EXHAUSTED:"탐색 완료",PAUSED_USER_CANCEL:"중단됨 · 재개 가능",PAUSED_ELAPSED_BUDGET:"시간 제한 도달 · 재개 가능",PAUSED_INVOCATION_NATIVE_BUDGET:"중단된 계산 · 재개 가능",NOT_STARTED:"계산 대기"})[worker]||status;
+  if(previousResultOnly && data.result_ready)
+    $("stage-text").textContent+=
+      " · 이전 관측 파일은 보존되지만 이번 중단·차단 회차의 완료 결과는 아닙니다.";
   $("run-label").textContent=data.active?"진행 중":
     finished?"탐색 상한 완료 · 결과 저장":
     cancelled?"취소됨 · 재개 가능":
@@ -2652,7 +2666,8 @@ async function readSession(id) {
   // GET only: no SimC Native, no session file writes.
   const longrun=await api("/api/v1/sessions/"+id+"/longrun/status");
   if(longrun.enabled===true){
-    const result=longrun.result_ready&&!longrun.active
+    const result=longrun.result_ready&&!longrun.active&&
+      longrunSavedResultDisplayable(longrun)
       ? await api("/api/v1/sessions/"+id+"/longrun/result") : null;
     return {progress:longrun,result,longrun:true};
   }
