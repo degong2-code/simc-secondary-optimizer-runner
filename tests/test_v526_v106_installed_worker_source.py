@@ -38,7 +38,7 @@ class OriginalInstalledWorkerSource(unittest.TestCase):
     def test_exact_installed_v213_catalog_is_replayed_not_old_package(self):
         path, package = sessions._installed_source_paths(
             self.identity,self.folder)
-        self.assertEqual(path,self.catalog)
+        self.assertEqual(path.resolve(),self.catalog.resolve())
         self.assertIsNone(package)
         self.assertNotIn("data/current_season_source_to_catalog.json",
                          str(path))
