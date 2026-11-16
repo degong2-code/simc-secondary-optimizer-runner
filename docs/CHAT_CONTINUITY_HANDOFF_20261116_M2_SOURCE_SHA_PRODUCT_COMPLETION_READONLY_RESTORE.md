@@ -4,6 +4,14 @@
 >
 > 인계 작성 **시작 시점** 격리 브랜치 HEAD: `23856b7e82b7ac85ed594ebe3a3eb06c2da1a493` (M2 CURRENT/로드맵 문서). 마지막 직접 코드/회귀 수정 HEAD `1d217d0df0777f5354371582b0132c700a0fdb96`(신규 v113 테스트). 이 SHA는 **스냅샷**이다. 새 채팅은 먼저 실제 브랜치/HEAD/최근 커밋/Actions를 재확인한다. 인계 문서 추가로 HEAD가 바뀌면 시작 시점 SHA를 최신 HEAD라고 반복하지 않는다.
 
+## 0. 2026-11-16 M2 보존 ZIP 원본 직접 대조 추가 기록 (후속 작업, 신규 Native 0)
+
+- **대조 대상:** 기존 GitHub Actions 원본 artifact v155 **#14219515672**, v523 **#14219371770**, 실제 70783 Native v343 **#13868303468**, v344 **#13897178782**, v417 **#14021859656**를 이 채팅에서 직접 읽음. GitHub branch HEAD 재확인 당시 `d9ed86d7...`이며 제품 코드/캐시는 수정하지 않음.
+- **직접 확인한 무결성:** v155 인증 파일 `v155-live-season-api-evidence.json` SHA256=`d6786340acf1dd79695530103fc5ac7671a8c5d69d5589befc7f344bcc49b2d4` (기존 기록과 일치). v523 ZIP 속 원본 `wago/receipt.json` 실제 바이트 SHA256=`f004a82fa9da52646dea49ded14ff6db756d8f903bafd29ce29449d71d9f3c6b` (compact와 일치), 내부 10개 Wago 원본 CSV 각각의 SHA가 해당 receipt 테이블 SHA와 **10/10 일치**. `v522` CurrencyTypes SHA=`c1e91e4e17b622136d7c9a37c597cd0fe2409a2f5ccb494659014b154a04ef1f`는 별도 원본 identity이며 GJFO 설치 SHA가 아님.
+- **기존 실 Native 설치 구분:** v343 원본 설치 manifest `5d655836c6f69382a1ca81d72346fa5d71dc78eb2ae029843b49dea532693a02`, v344 `278d3c52d4c9c272d8d2c89d7b02cff4abe05db1639bde80b58b14d99f4f4294`, v417 `2c80286fc487be337984abee707ceb8d0187ab266e78e78dc32620ed4b692475`. 이 아카이브의 내장 원본/JSON2/DPS 영수증에는 **각 실행의 원본 v161/v217 Wago 영수증 바이트·SHA와 `source_compilation.missing`이 없음**. 따라서 같은 빌드·ilvl 및 J/F/G 실증은 인정하지만 v523 Wago source와 이들 설치를 **동일한 exact source identity로 승인할 직접 비교 키가 없다**. 서로 다른 설치 SHA 자체는 결함/원본 변조 증거가 아님.
+- **현재 결론:** 신규 코드 결함 또는 새 G/J/F/O 수치 결손을 확정하지 못했으므로 **STOP/REUSE**. 기존 자동 J, G, F/O, B/T, v212를 반복 구현하지 않음. 다음 최소 실증은 실제 사용자 `v113 season-build → v216` 원본 결과에서 `source_inventory`, `source_compilation.status/missing`, `required_core_source_owner_report`, 정확 `v217/v212` 설치/프로필 manifest SHA를 먼저 수집·대조하는 일. 선택형 원본이나 전체 시즌 membership을 새 BASE Gate로 만들지 않음.
+- **이번 작업 비용·신분:** GitHub 보존 아카이브 읽기/로컬 해시만 수행, **신규 Native 0, 신규 Wago/Blizzard/WCL source HTTP 0, 신규 DB2 수집 0, 제품 코드/SimC 캐시 변경 0**. 이 기록은 현 시즌 새 물리 설치 성공·M7 완료·78 원장 PASS 변경이 아님.
+
 ## 1. 프로젝트의 목적과 정책 우선권
 
 - **사용자 실제 목적:** WoW **26개 DPS 전문화만**(증강 기원사·탱커·힐러 제외) 대상으로 해당 시즌 미래 파밍 목표 아이템레벨 또는 수동 **기름 포함 최종 CHMV 총량 T**에서 **SimC DPS 최대화로 관측된 치명·가속·특화·유연의 절대 rating**을 찾는다. DPS, SEM, **95%만**, 관측 1순위와 통계적 우위 확정 여부, 실질적으로 다른 근접 대안 및 비율을 함께 제공한다. 전역 최적임을 주장하지 않는다.
