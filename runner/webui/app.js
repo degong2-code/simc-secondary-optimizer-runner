@@ -1210,18 +1210,34 @@ function renderInstalledOilLoadouts(data) {
     "기름을 사용하지 않으려면 체크를 해제하세요.";
 }
 async function refreshInstalledOilLoadouts() {
-  const ilevel=valueInt("ilevel");
-  // Use the same verified current build as the NEW optimizer request.
-  // An empty manual field must not make the installed oil/F lookup fall
-  // back to a different locally cached season.
-  const build=field("season-game-build") ||
-    state.verifiedInstalledBuildFromThisPage;
-  const extra=build?"&game_build="+encodeURIComponent(build):"";
-  const data=await api("/api/v1/verified-oil-loadouts?ilevel="+ilevel+extra);
-  renderInstalledOilLoadouts(data);
-  // Flask and oil choices use the optimization target ilvl.
-  // A single local verified-install scan is sufficient.
-  renderInstalledFlaskChoices(data);
+  // withBusy skips overlapping change handlers, but the user may still edit
+  // build/ilevel during the local GET. Retry that exact new scope ONCE;
+  // never publish an older F/J/O list for the current controls.
+  for(let attempt=0;attempt<2;attempt++) {
+    const ilevel=valueInt("ilevel");
+    const build=field("season-game-build") ||
+      state.verifiedInstalledBuildFromThisPage;
+    const extra=build?"&game_build="+encodeURIComponent(build):"";
+    let data,readError;
+    try {
+      data=await api("/api/v1/verified-oil-loadouts?ilevel="+ilevel+extra);
+    }catch(error){readError=error;}
+    const currentBuild=field("season-game-build") ||
+      state.verifiedInstalledBuildFromThisPage;
+    if(valueInt("ilevel")!==ilevel || currentBuild!==build) {
+      if(attempt===0)continue;
+      // Repeated edits are not grounds for unbounded HTTP or stale approval.
+      renderInstalledOilLoadouts(null);
+      renderInstalledFlaskChoices(null);
+      setNotice("검증 영약·기름 조회 중 시즌/ilvl이 다시 변경되었습니다. 현재 조건에서 목록을 새로 조회하세요.");
+      return;
+    }
+    if(readError)throw readError;
+    // Both selectors consume the SAME exact local installed receipt list.
+    renderInstalledOilLoadouts(data);
+    renderInstalledFlaskChoices(data);
+    return;
+  }
 }
 function chooseInstalledOilLoadout() {
   const chosen=state.oilLoadouts.find(item=>
