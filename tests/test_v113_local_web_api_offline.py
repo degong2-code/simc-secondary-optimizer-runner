@@ -1127,6 +1127,62 @@ class LocalWebAPIOffline(unittest.TestCase):
             required_gem_layout={"special_gem_id":None,"socket_total":4})
         original_build.assert_called_once()
 
+    def test_m1_m2_cached_auto_core_without_binary_reuses_only_matching_verified_profile(self):
+        """A verified v212+v113 cache hit needs no SimC binary; miss fails closed."""
+        build="12.2.0.99999"
+        sha="a"*64
+        prior={"status":"VERIFIED_INSTALLED_SAME_SEASON_SOURCE_REUSED",
+               "environment_ready":True,"environment_installed":True,
+               "installed_manifest_sha256":sha}
+        saved={"source_compilation":{"status":"ORIGINAL_VERIFIED_SOURCE_REUSED"}}
+        jobs=self.app.state.jobs
+        payload={"game_build":build,"target_ilevel":334,
+                 "auto_initial_core_build":True,
+                 "auto_initial_core_simc_binary":None}
+        with (mock.patch.object(web.environment_build,
+                   "find_verified_installed_season_environment",
+                   return_value=prior) as found,
+              mock.patch.object(jobs,"restore_verified_fresh_profile",
+                   return_value=saved) as restored,
+              mock.patch.object(jobs,"_with_verified_ko_localization",
+                   side_effect=lambda _build,_level,report,**kwargs:report),
+              mock.patch.object(web.environment_build,"build_environment",
+                   side_effect=AssertionError("NO_WAGO_OR_NATIVE")) as builder,
+              mock.patch.object(web.subprocess,"Popen",
+                   side_effect=AssertionError("NO_NATIVE_WORKER"))):
+            response=self.post("/api/v1/environment/season-build",payload)
+            self.assertEqual(response.status_code,200,response.text)
+            body=response.json()
+            self.assertEqual(body["installed_manifest_sha256"],sha)
+            self.assertTrue(body["verified_v113_profile_source_restored"])
+            scope=body["web_environment_scope"]
+            self.assertTrue(scope["environment_ready"])
+            self.assertTrue(scope["environment_installed"])
+            self.assertTrue(scope["reused_verified_installed_season"])
+            self.assertTrue(scope["auto_initial_core_native_skipped_existing_ready"])
+            self.assertEqual(scope["native_calls"],0)
+            self.assertEqual(scope["network_calls"],0)
+            found.assert_called_once_with(
+                jobs.root,334,expected_game_build=build,
+                require_unique_unqualified=True)
+            restored.assert_called_once_with(
+                target_ilevel=334,game_build=build,
+                required_gem_layout={"special_gem_id":None,"socket_total":4})
+            builder.assert_not_called()
+        with (mock.patch.object(web.environment_build,
+                   "find_verified_installed_season_environment",
+                   return_value=None),
+              mock.patch.object(web.environment_build,"build_environment",
+                   side_effect=AssertionError("NO_G_F_NATIVE")) as builder,
+              mock.patch.object(web.subprocess,"Popen",
+                   side_effect=AssertionError("NO_NATIVE_WORKER"))):
+            miss=self.post("/api/v1/environment/season-build",payload)
+            self.assertEqual(miss.status_code,422,miss.text)
+            self.assertEqual(miss.json()["detail"]["code"],
+                             "SEASON_INITIAL_CORE_SIMC_BINARY_REQUIRED")
+            builder.assert_not_called()
+            self.assertFalse((jobs.root/"generated").exists())
+
     def test_p1_missing_v113_profile_auto_core_repairs_via_original_build(self):
         """Installed v212 budget alone cannot satisfy automatic user setup.
 
