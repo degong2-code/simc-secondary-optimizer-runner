@@ -1646,9 +1646,15 @@ class LocalJobs:
                          _verified_snapshot_gem_layout_matches(
                              fresh,**gem_choice))
             flask_matches=True
-            if fresh is not None and flask_id is not None:
-                # User F choice must bind to the verified v212 physical ID,
-                # never merely the default string token in a web control.
+            # An explicitly pinned season always resolves its own exact
+            # v212 SHA/F/J/O via load_fresh_profile_for_user below. Do not
+            # first read an unrelated in-memory *previous* season's flask
+            # receipt: that older file can be absent after a refresh and
+            # must not block a valid new-season selection.
+            if (fresh is not None and flask_id is not None and
+                    pinned_build is None):
+                # An unpinned legacy in-memory selection still checks F
+                # before reusing that installed profile.
                 original=fresh["source_compilation"][
                     "verified_environment_install"]["stage_output_path"]
                 doc,_=environment_manifest.read_json(pathlib.Path(original))
