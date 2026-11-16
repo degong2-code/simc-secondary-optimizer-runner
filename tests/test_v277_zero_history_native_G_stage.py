@@ -191,6 +191,64 @@ class OneGNativeReuse(unittest.TestCase):
                          again["native_log_excerpt"])
         self.assertIsNone(first["standardized_G"])
 
+    def test_default_G_native_skipped_if_original_catalog_inputs_missing(self):
+        # A normal first-season G+F attempt cannot install a budget without
+        # v274's original compiler. Avoid spending even one v277 Native here.
+        # The explicit/diagnostic G-only test below retains its old behavior.
+        collected={
+            "schema":"v216_fresh_source_stage_v1",
+            "source_stage":{"status":"EXECUTED_AND_SEALED","reused":False},
+            "environment_installed":False,"environment_ready":False,
+            "native_calls":0,"G":None,"J":None,"F":None,"O":None,
+            "B":None,"T":None}
+        pending={
+            "schema":build.source_wiring.SCHEMA,
+            "status":"COLLECTED_COMPILER_INPUTS_PENDING",
+            "missing":["GENERATED_PERMANENT"],"network_calls":0}
+        native={
+            "schema":stage.SCHEMA,
+            "status":"G_NATIVE_SOURCE_PROFILE_OR_BINARY_PENDING",
+            "reason":"V277_V233_G_PROBE_PROFILE_PENDING",
+            "new_native_calls":0,"standardized_G":None,
+            "environment_ready":False}
+        kwargs={
+            "sessions_root":self.root,"session_folder":None,"user":None,
+            "binary":self.binary,"revision":None,"static_cache":None,
+            "source_catalog_path":None,"bootstrap_result":None,
+            "fresh_collection_inputs":{
+                "expected_game_build":BUILD,
+                "representative_request":{"target_ilevel":334},
+                "g_probe_character":None,"simc_revision_hint":None,
+                "auto_native_G_requested":True,
+                "auto_native_F_requested":True,
+                "auto_select_observed_F_no_oil":True}}
+        with mock.patch.object(build,"collect_wago_new_season_source",
+                               return_value=collected),\
+             mock.patch.object(build.source_wiring,"discover",
+                               return_value={"inputs":None,
+                                  "missing":["GENERATED_PERMANENT"]}) as inspect,\
+             mock.patch.object(build.zero_history_G_native,"collect",
+                               return_value=native) as runner,\
+             mock.patch.object(build.source_wiring,"compile_collected",
+                               return_value=pending) as compiler:
+            result=build.build_environment(**kwargs)
+        self.assertEqual(inspect.call_count,1)
+        self.assertEqual(compiler.call_count,1)
+        self.assertEqual(runner.call_count,1)
+        self.assertIsNone(runner.call_args.kwargs["binary"])
+        self.assertEqual(result["native_calls"],0)
+        self.assertEqual(result["zero_history_build"]["new_native_calls"],0)
+        self.assertEqual(
+            result["zero_history_build"][
+                "default_G_native_skipped_missing_compiler_inputs"],
+            ["GENERATED_PERMANENT"])
+        self.assertIn("GENERATED_PERMANENT",
+                      result["source_compilation"]["missing"])
+        self.assertFalse(result["zero_history_build"]["environment_ready"])
+        self.assertIsNone(result["G"])
+        self.assertIsNone(result["B"])
+        self.assertIsNone(result["T"])
+
     def test_zero_history_normal_build_uses_single_numeric_G_result(self):
         # Verify same v216 entry, no v191 source/legacy G/J/F/T short-circuit.
         fake={
