@@ -341,6 +341,10 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(len(choices["items"]),1)
         self.assertEqual(choices["items"][0]["selected_oil_item_ids_by_hand"],
                          {"main_hand":243734})
+        self.assertEqual(choices["items"][0]["verified_variant_count"],1)
+        self.assertFalse(choices["items"][0]["ordinary_four_gem_profile"],
+                         "Missing profile gem proof cannot auto-bind G/J/F/O")
+        self.assertIsNone(choices["items"][0]["verified_flask_item_id"])
         verifier.assert_called_once_with(doc)
         finder.assert_called_once_with(
             self.app.state.jobs.root,334,expected_game_build=build,
@@ -666,6 +670,8 @@ class LocalWebAPIOffline(unittest.TestCase):
                           for v in data["verified_flasks"]],[241326,241327])
         self.assertEqual(len(data["items"]),1,  # same oil hand is one choice
                          data["items"])
+        self.assertEqual(data["items"][0]["verified_variant_count"],2,
+                         "Distinct F/J installs cannot use the newest oil SHA")
         self.assertEqual(set(calls),{"a"*64,"b"*64})
         self.assertEqual(len(calls),2)
         self.assertEqual(data["native_calls"],0)
