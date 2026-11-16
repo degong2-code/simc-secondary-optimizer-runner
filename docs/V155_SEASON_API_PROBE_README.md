@@ -78,3 +78,8 @@ GitHub Secrets+허용 변수 등록 후 격리 Actions에서 한 번 실행한�
 실제 Secrets 값/조회 성공 여부는 Actions 결과로만 판정한다.
 실패하거나 live job이 skipped되면 재시도 자동화 없이 멈추어 확인한다.
 기존 제품 최적화 엔진과 Native 사용은 변경하지 않는다.
+
+## 2026-11-16 M1 Myth 기본 ilvl의 실제 시즌 조인 최소 재확인
+
+목표: 이미 검증한 70783 Wago CurrencyTypes 원본(3441/3446 공통 Myth 321~334)을 실제 v155 Blizzard/WCL 현재 시즌 정보와 교차검증할 준비 상태를 판정한다. 중복 DB2/SimC Native/기존 10개 CSV 재수집을 이번 조회에서 수행하지 않는다. 기존 사용자 opt-in 변수와 GitHub Secrets가 있는 경우에만 원래 v155 live job이 실행된다. 비활성·실패·인증 누락은 그대로 PENDING으로 기록하며 우회하거나 값을 추정하지 않는다. 실제 성공 시 공개되는 것은 기존 v155 sanitized artifact뿐이다.
+
