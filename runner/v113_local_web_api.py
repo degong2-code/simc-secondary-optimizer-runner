@@ -220,6 +220,7 @@ def blocked(exc):
     if isinstance(exc, (longrun_sessions.LocalLongRunBlocked,
                          sessions.SessionBlocked, bootstrap.UserScenarioBlocked,
                         sessions.nonchmv_enchant.EnchantChoiceBlocked,
+                        bootstrap.fresh_eagle.SourceBlocked,
                         exact_L.StaticLBlocked,
                         environment_manifest.EnvironmentBlocked,
                         local_source_keys.CredentialBlocked)):
