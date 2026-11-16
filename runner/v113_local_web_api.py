@@ -119,6 +119,11 @@ class SeasonEnvironmentBuildRequest(BaseModel):
         default=None,pattern=r"^\d+(?:\.\d+){3}$",
         min_length=7,max_length=32)
     target_ilevel: int = Field(default=334,ge=1,le=1000)
+    # Guard the live Retail build after the separate Myth source preflight:
+    # a patch between two requests must never carry the old target forward.
+    auto_myth_target_source_build: str | None = Field(
+        default=None,pattern=r"^\d+(?:\.\d+){3}$",
+        min_length=7,max_length=32)
     # Explicit opt-in to the EXISTING single v277/v236 Native G probe.
     native_G_binary: str | None = Field(default=None,min_length=1,max_length=4096)
     # Same optional SimC executable may measure F/O with no G subprocess.
@@ -737,7 +742,7 @@ class LocalJobs:
                 collected=environment_build.collect_wago_new_season_source(
                     sessions_root=self.root,expected_game_build=game_build,
                     credentials=credentials,representative_request=None,
-                    g_probe_character=None)
+                    g_probe_character=None,myth_target_source_only=True)
                 joined=collected.get("season_join") or {}
                 if (joined.get("status")!=
                     "DB2_WCL_CANDIDATES_JOINED_SEASON_CONDITIONS_PENDING"
@@ -789,7 +794,8 @@ class LocalJobs:
                                  auto_initial_core_simc_binary=None,
                                  existing_special_gem_id=None,
                                  source_target_socket_count=None,
-                                 refresh_reason=None):
+                                 refresh_reason=None,
+                                 auto_myth_target_source_build=None):
         """Run original v216 with season inputs, never a user DPS scenario.
 
         One deterministic one-spec reference G probe is NOT season-level
@@ -872,6 +878,12 @@ class LocalJobs:
                 raise environment_manifest.EnvironmentBlocked(str(exc)) from exc
             game_build=discovered_build["game_build"]
         version_network_calls=1 if discovered_build is not None else 0
+        # Validation-only provenance guard; does not authorize G/J/F/O,
+        # install a source or create a new cache key.
+        if (auto_myth_target_source_build is not None and
+                auto_myth_target_source_build!=game_build):
+            raise environment_manifest.EnvironmentBlocked(
+                "MYTH_TARGET_LIVE_GAME_BUILD_CHANGED_REDISCOVER")
         if (refresh_reason is None and native_G_binary is None and
             consumable_native_binary is None and
             not auto_native_F_requested and not auto_native_O_requested and
@@ -3099,7 +3111,10 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                     request.auto_initial_core_simc_binary,
                 existing_special_gem_id=request.existing_special_gem_id,
                 source_target_socket_count=request.source_target_socket_count,
-                refresh_reason=request.refresh_reason)
+                refresh_reason=request.refresh_reason,
+                **({"auto_myth_target_source_build":
+                        request.auto_myth_target_source_build}
+                   if request.auto_myth_target_source_build is not None else {}))
         except Exception as exc:
             raise blocked(exc) from None
 
