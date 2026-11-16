@@ -2030,7 +2030,8 @@ const state={session:"0123456789abcdef0123",budgetPreviewDirty:false};
 const context={state,$,field:id=>$(id).value,
   number:value=>String(value),document:{createElement:n,createTextNode:s=>({textContent:s})},
   statOrder:stats.map(k=>[k,k,"#abc"]),setNotice(){},
-  switchView(){},refreshResultNavigation(){},localStorage:{setItem(){}},
+  switchView(){},refreshResultNavigation(){},
+  refreshExactEnchantAvailability(){},localStorage:{setItem(){}},
   Error,Number,Object,String,Math,Array,Set};
 vm.createContext(context);
 vm.runInContext(update+result+mark+"function attachUserEdits(){"+events+"}",context);
