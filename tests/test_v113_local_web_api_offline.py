@@ -44,6 +44,28 @@ class LocalWebAPIOffline(unittest.TestCase):
 
 
 
+    def test_v495_static_cache_alias_byte_identity_streams_without_full_reads(self):
+        # The already sealed session path wins only for identical raw bytes.
+        # JSON-equivalent but byte-different content MUST NOT be substituted.
+        old=self.root/"original_static_cache.json"
+        alias=self.root/"new_name_same_cache.json"
+        original=b'{"gear_crit_rating":123, "item":456}'*512
+        old.write_bytes(original)
+        alias.write_bytes(original)
+        previous_read=pathlib.Path.read_bytes
+        def forbidden_full_cache_read(path):
+            if path in (old,alias):
+                raise AssertionError("STATIC_CACHE_ALIAS_FULL_READ")
+            return previous_read(path)
+        with mock.patch.object(pathlib.Path,"read_bytes",
+                               forbidden_full_cache_read):
+            self.assertTrue(web._static_cache_bytes_equal(old,alias))
+            alias.write_bytes(original+b"\\n")
+            self.assertFalse(web._static_cache_bytes_equal(old,alias))
+            alias.write_bytes(b'{"gear_crit_rating":124}')
+            self.assertFalse(web._static_cache_bytes_equal(old,alias))
+        self.assertEqual(old.read_bytes(),original)
+
     def test_v463_sealed_saved_season_options_do_not_use_active_or_packaged(self):
         """Read-only installed v212 runeforge/enchants bound to exact v213 SHA."""
         build="12.1.5.70783"
