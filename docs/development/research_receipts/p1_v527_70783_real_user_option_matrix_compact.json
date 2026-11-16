@@ -1,0 +1,192 @@
+{
+  "schema": "p1_v527_20261116_real_70783_selected_equipment_matrix_scoped_v1",
+  "status": "PASS_SCOPED_FIVE_REAL_SIX_DPS_SESSIONS_OPTIONAL_INPUTS_BLOCKED_WITH_EXACT_REASONS",
+  "game_build": "12.1.5.70783",
+  "target_ilevel": 334,
+  "character": "hunter/survival",
+  "simc_revision": "de11f57df75dda668bae6ac7043a43b98831fa96",
+  "simc_exe_sha256": "1fc927d2be7f1b6064c75f004b5b22245b064a6b3e56e572af4048ba822a986d",
+  "M1_auto_myth_currency_sha256": "c1e91e4e17b622136d7c9a37c597cd0fe2409a2f5ccb494659014b154a04ef1f",
+  "base_G": 2850,
+  "base_J": 92,
+  "base_F": 165,
+  "base_O": 0,
+  "base_B": 3107,
+  "base_T": 3107,
+  "no_AI_runtime_or_effect_model": true,
+  "effect_APL_DPS_owner": "SIMC",
+  "cases_positive": [
+    {
+      "kind": "trinkets_default",
+      "item_ids": [
+        270175,
+        270173
+      ],
+      "native_run_id": 43891405224,
+      "native_calls": 6,
+      "observed_dps": 171587.07828074894,
+      "simc_sem": 317.2365320036754
+    },
+    {
+      "kind": "trinkets_alternative_A",
+      "item_ids": [
+        270169,
+        270174
+      ],
+      "native_run_id": 43891405224,
+      "native_calls": 6,
+      "observed_dps": 147239.56663586642,
+      "simc_sem": 260.64937272839455
+    },
+    {
+      "kind": "trinkets_alternative_B",
+      "item_ids": [
+        270166,
+        270170
+      ],
+      "native_run_id": 43891405224,
+      "native_calls": 6,
+      "observed_dps": 161636.4919531784,
+      "simc_sem": 270.6918967304103,
+      "cache_only_verified_hits": 6,
+      "cache_only_new_native": 0
+    },
+    {
+      "kind": "special_neck_only",
+      "item_ids": [
+        268250
+      ],
+      "native_run_id": 43888153268,
+      "native_calls": 6,
+      "observed_dps": 172165.44620805216,
+      "simc_sem": 271.98958375092224,
+      "fixed_L_inside_G_once": {
+        "crit_rating": 95,
+        "haste_rating": 310,
+        "mastery_rating": 0,
+        "versatility_rating": 0
+      }
+    },
+    {
+      "kind": "selected_full_combo",
+      "selected_neck": 268250,
+      "crafted_head": 244579,
+      "crafted_wrists": 244584,
+      "both_crafted_embellishment": "arcanoweave_lining",
+      "tier_four_slots": [
+        "chest",
+        "hands",
+        "legs",
+        "shoulders"
+      ],
+      "trinket_ids": [
+        270169,
+        270174
+      ],
+      "native_run_id": 43888153268,
+      "native_calls": 6,
+      "observed_dps": 150716.19006041985,
+      "simc_sem": 266.9210319191541,
+      "cache_only_verified_hits": 6,
+      "cache_only_new_native": 0
+    }
+  ],
+  "observed_confidence_level": 0.95,
+  "cases_blocked": [
+    {
+      "input": "socket_total=5 vs installed 4",
+      "status": 422,
+      "code": "WEB_USER_VARIANT_NOT_INSTALLED_OR_AMBIGUOUS"
+    },
+    {
+      "input": "socket_total=6 vs installed 4",
+      "status": 422,
+      "code": "WEB_USER_VARIANT_NOT_INSTALLED_OR_AMBIGUOUS"
+    },
+    {
+      "input": "enchant finger1 ID7965",
+      "status": 422,
+      "code": "ONLY_VERIFIED_EAGLE_FINGER1_NONCHMV_SELECTION"
+    },
+    {
+      "input": "enchant finger1 ID8025",
+      "status": 422,
+      "code": "ONLY_VERIFIED_EAGLE_FINGER1_NONCHMV_SELECTION"
+    },
+    {
+      "input": "enchant finger1 ID7967",
+      "status": 422,
+      "code": "SEASON_PROFILE_INTERNAL_SOURCE_ONLY_MODE_REQUIRED"
+    },
+    {
+      "input": "3 simultaneous crafted embellishments",
+      "status": 422,
+      "code": "V106_SELECTED_GEAR_COUNT_OR_TYPE"
+    },
+    {
+      "input": "special/crafted same neck slot",
+      "status": 422,
+      "code": "V106_SELECTED_SPECIAL_AND_CRAFTED_SLOT_CONFLICT"
+    }
+  ],
+  "defect": {
+    "status": "FIXED_AND_REAL_WINDOWS_VERIFIED",
+    "pre_fix_worker_error_code": "V106_SESSION_BINARY_REVISION_OR_CACHE_DRIFT",
+    "original_run_id": 43889917302,
+    "original_artifact_id": 14236557120,
+    "original_artifact_inner_sha256": "1f6eac90655481eec3079b2a0d4be294efae6589b9883c0dfa5c0647df7001ff",
+    "root_cause": "v106 ordinary child worker reconstructed session identity from legacy package and omitted fresh_v212_installed_manifest_sha256, while v113 parent used exact by-build v213 and v212 SHA",
+    "fix_code_commits": [
+      "70cf7d8629b3393cdd0a078a8e8559e2b5e9dd63",
+      "b0fe5e60645e71a6c4d7e648e8848e160641c58f"
+    ],
+    "regression_file": "tests/test_v526_v106_installed_worker_source.py",
+    "windows_test_alias_fix": "9713eca38b6db45a38dc44a580cadc7bdf16a14a",
+    "current_success_run_id": 43891405224
+  },
+  "source_receipts": {
+    "v525_real_selected_partial": {
+      "actions_run_id": 43888153268,
+      "actions_conclusion": "failure_partial",
+      "artifact_id": 14235303732,
+      "original_json_sha256": "78fc6910632bb753640cf6a75f922d6649a118b7364177757ee419dbe954a19d",
+      "original_zip_sha256": "e69847e3296f8e3cb1bd71457065d68e87fbebcad205800b40919de90052b091",
+      "v212_installed_manifest_sha256": "87f141c3c5604793897c8732cd3946806f8334bf26e4f91a563571b4b152474c",
+      "new_environment_native": 3,
+      "new_selected_exact_static_native": 4,
+      "confirmed_successful_selected_DPS_native": 12,
+      "raw_report_dps_native_attempts_is_upper_bound_reserved": 30,
+      "failed_other_workers_actual_native_count_unknown": true,
+      "previous_harness_folder_collision_run_id": 43887229166
+    },
+    "v527_real_trinkets": {
+      "actions_run_id": 43891405224,
+      "actions_conclusion": "success",
+      "artifact_id": 14237605950,
+      "original_json_sha256": "62528f06768988601e2bf9cc6afd2733d40eabe2218b2105e91be7524cbff969",
+      "original_zip_sha256": "895ec851eb39b42a19dca14e3781614a4087f5b52163ad8754bfd6498b713d7b",
+      "v212_installed_manifest_sha256": "4688a007a0d8896fe9bc7626dcd1ed5a2869d7422d772f1b08ab7fe0c079a49c",
+      "new_environment_native": 3,
+      "confirmed_DPS_native": 18,
+      "input_simc_sha_count": 18,
+      "json2_sha_count": 18,
+      "native_receipt_sha_count": 18,
+      "three_distinct_session_keys": true,
+      "direct_SIMC_input_trinket_ID_assertions": true,
+      "cache_only_last_pair_hits": 6,
+      "cache_only_last_pair_new_native": 0
+    }
+  },
+  "exact_scope_limits": [
+    "Five six-case observed first-choice result sets across DISTINCT scenarios, no pairwise 95 statistical superiority established and no global optimum proof.",
+    "B10 extra 5+ socket game application/physical J source remains unverified, 5/6 count requests blocked against four-socket install.",
+    "Current fresh profile does not admit historical non-CHMV enchant7967 and does not register 7965/8025; blocked not tested as equipped DPS.",
+    "Current selected special neck and two specific crafted variants only; no blanket approval for all special gear/embellishments/trinket effects.",
+    "Raw per-case original v527 SimC input/JSON2/native receipts were checked and 18 SHA values stored; v527 artifact preserves SHA lists, not 18 raw files.",
+    "Runs are separate ephemeral GitHub Windows Actions machines, not a single enduring user PC deployment.",
+    "No changes to optimizer, SimC effects/APL, 95% statistics, GJFO calculation, 78 official tracker or product authority."
+  ],
+  "full_product_e2e": "PENDING",
+  "official_78_COMPLETE": "15/78",
+  "current_selected_variant_supported_claim": "SCOPED_ONLY"
+}
