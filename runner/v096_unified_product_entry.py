@@ -217,10 +217,10 @@ def _admitted_fresh_season_source(*, manifest_path, season, revision,
         need(type(positive_id) is int and
              positive_id in positive_enchant.ENCHANTS,
              "FRESH_POSITIVE_E_ITEM_ID_INVALID")
-        need(user_final_T is None,
-             "FRESH_POSITIVE_E_MANUAL_FINAL_T_NOT_YET_APPROVED")
+        # Preserve authoritative final T. v222 converts to internal B
+        # and the E+ source witness supplies a fixed stat floor once.
         actual=positive_enchant.project(
-            doc,{"finger1":positive_id},manual_final_T=None)
+            doc,{"finger1":positive_id},manual_final_T=user_final_T)
         approved_B=actual["base_B"]
         approved_T=actual["final_T"]
     elif user_final_T is not None:
