@@ -144,7 +144,9 @@ const names = {
   embellishment:"장식 토큰"
 };
 const state = { token:"", defaults:[], allowedRacesBySpec:{}, seasonGear:null, seasonGearTargetIlevel:null, dkRuneIds:new Set(), oilLoadouts:[], oilCatalog:null,
-                verifiedBaseFlaskInstalls:[], eagleApproved:false, session:"", running:false,
+                verifiedBaseFlaskInstalls:[], eagleApproved:false,
+                exactUserEnchantIds:new Set(), exactUserEnchantScope:null,
+                session:"", running:false,
                 longrunEnabled:false, longrunResultReady:false,
                 longrunCompleted:false,
                 busy:false, options:null, verifiedInstalledBuildFromThisPage:null,
@@ -1572,19 +1574,21 @@ function fillSessionInputs(payload) {
   diamond.value=diamondValue;
   fillGearRows("special-rows",u.special_items||[]);
   fillGearRows("crafted-rows",u.embellishments||[]);
-  const restoredEagle=u.selected_season_enchants?.finger1===7967;
+  const restoredId=u.selected_season_enchants?.finger1;
+  const restoredEagle=[7967,8025,7965].includes(restoredId);
   const savedEnchant=$("season_enchant_finger1");
   for(const previous of Array.from(savedEnchant.options))
     if(previous.dataset?.historic==="true")previous.remove();
-  if(restoredEagle&&!state.eagleApproved) {
-    // Show the exact historical choice without granting fresh approval.
-    // buildRequest will still reject it until this installed source verifies E.
-    const historical=option("7967",
-      "이전 세션 독수리의 눈 · 새 최적화는 이번 시즌 승인 필요");
+  if(restoredEagle&&!state.exactUserEnchantIds.has(restoredId)&&
+     !(restoredId===7967&&state.eagleApproved)) {
+    // History is display-only until the same original v212 + Native scope
+    // is revalidated. No stored browser choice can approve a new run.
+    const historical=option(String(restoredId),
+      "이전 마부 #"+restoredId+" · 새 최적화는 원본 검증 필요");
     historical.dataset.historic="true";
     savedEnchant.appendChild(historical);
   }
-  savedEnchant.value=restoredEagle?"7967":"";
+  savedEnchant.value=restoredEagle?String(restoredId):"";
   // Recover the exact local inputs from this machine's saved session only.
   // No talent strings or OS file paths are stored in browser localStorage.
   $("binary").value=payload.binary;
@@ -1717,9 +1721,12 @@ function buildRequest() {
     }
   }
   if(field("season_enchant_finger1")) {
-    if(!state.eagleApproved||field("season_enchant_finger1")!=="7967")
+    const eid=Number(field("season_enchant_finger1"));
+    const exact=state.exactUserEnchantIds.has(eid) &&
+      exactUserEnchantInputsMatch();
+    if(!exact&&!(eid===7967&&state.eagleApproved))
       throw Error("UNVERIFIED_ENCHANT_SELECTION_BLOCKED");
-    controls.enchant_choices={finger1:7967};
+    controls.enchant_choices={finger1:eid};
   }
   if(!Number.isInteger(controls.ilevel)||controls.ilevel<1||controls.ilevel>1000)
     throw Error("목표 ilvl은 1~1000 범위여야 합니다.");
@@ -3044,6 +3051,25 @@ async function restore(id) {
   if(snapshot.result)renderResult(snapshot.result);
   setNotice("기존 세션·입력 복원 성공 · "+id+" · 새 Native 계산 0회");
 }
+function exactUserEnchantInputsMatch() {
+  // UI is advisory. Python rechecks full source SHA, actual SimC profile,
+  // fixed-E budget, binary identity, gear and race before ANY Native.
+  const scope=state.exactUserEnchantScope;
+  if(!scope)return false;
+  const selected=state.defaults.find(d=>d.class+"/"+d.spec===field("spec"));
+  const currentRace=simcRace(field("race"));
+  const oils=["main_hand","off_hand"].filter(hand=>
+    $(hand==="main_hand"?"oil_main":"oil_off").checked);
+  const specials=selectedGear("special-rows","special_items");
+  const crafted=selectedGear("crafted-rows","embellishments");
+  return selected?.class===scope.class && selected?.spec===scope.spec &&
+    currentRace===scope.race && Number(field("ilevel"))===334 &&
+    Number(field("trinket1"))===scope.trinket_ids[0] &&
+    Number(field("trinket2"))===scope.trinket_ids[1] &&
+    oils.length===0 && specials.length===0 && crafted.length===0 &&
+    !field("talents") && !field("optimizer-oil-main-id") &&
+    !field("optimizer-oil-off-id");
+}
 function renderSeasonOptionCatalog(catalog) {
   const runeSource=catalog?.verified_weapon_enhancements?.dk_runeforges;
   const runes=(runeSource?.status==="PINNED_DK_RUNES_INSTALLED" &&
@@ -3071,6 +3097,8 @@ function renderSeasonOptionCatalog(catalog) {
   const host=$("season-enchant-groups");
   const selector=$("season_enchant_finger1");
   state.eagleApproved=false;
+  state.exactUserEnchantIds=new Set();
+  state.exactUserEnchantScope=null;
   selector.replaceChildren(option("","마법부여 없음 (기존 설정)"));
   selector.disabled=true;
   host.replaceChildren();
@@ -3091,6 +3119,36 @@ function renderSeasonOptionCatalog(catalog) {
       "검증된 직업 룬만 선택할 수 있으며 일반 마부는 잠금 유지."+
       (rows.length?" · 설치에 등록된 영구 마부 "+
        rows.length+"종은 E·최종 프로필 연결 전까지 실행 선택 불가":"");
+    // This source-only catalogue remains globally unapproved. Exact
+    // v528/v530/v532/v533 Native-witnessed choices live in a separate
+    // read-only installed SHA scope and must also match current user input.
+    const exact=catalog.verified_exact_user_enchant_runtime;
+    if(exact?.status==="EXACT_V528_V530_V532_V533_USER_ONLY" &&
+       exact.general_selectable===false &&
+       exact.installed_manifest_sha256===catalog.installed_manifest_sha256 &&
+       exact.game_build===catalog.season_build &&
+       exact.target_ilevel===334 &&
+       exact.scope?.class==="hunter" &&
+       exact.scope?.spec==="survival" &&
+       exact.scope?.race==="human" &&
+       exact.scope?.finger1_item_id===268266 &&
+       Array.isArray(exact.scope?.trinket_ids) &&
+       exact.scope.trinket_ids.join(",")==="270175,270173" &&
+       Array.isArray(exact.items) && exact.items.length===3 &&
+       exact.items.map(x=>x.enchant_id).sort((a,b)=>a-b).join(",")===
+          "7965,7967,8025" &&
+       exact.items.every(x=>x.status==="EXACT_RUNTIME_NATIVE_WITNESSED")) {
+      state.exactUserEnchantScope=exact.scope;
+      for(const row of exact.items) {
+        state.exactUserEnchantIds.add(row.enchant_id);
+        selector.appendChild(option(String(row.enchant_id),
+          row.name+" · #"+row.enchant_id+" · 실제 Native 검증"));
+      }
+      selector.disabled=false;
+      status.textContent="이번 시즌 원본 마부 후보는 전체 미승인입니다. "+
+        "반지 1의 3종은 생존 사냥꾼 334·검증 장비 조건에서만 사용 가능하며 "+
+        "조건이 다르면 실행 전 차단됩니다.";
+    }
     if(rows.length) {
       const details=document.createElement("details");
       details.className="catalog-source-group";
