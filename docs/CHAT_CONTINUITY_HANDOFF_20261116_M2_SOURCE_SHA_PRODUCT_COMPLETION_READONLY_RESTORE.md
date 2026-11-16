@@ -4,6 +4,15 @@
 >
 > 인계 작성 **시작 시점** 격리 브랜치 HEAD: `23856b7e82b7ac85ed594ebe3a3eb06c2da1a493` (M2 CURRENT/로드맵 문서). 마지막 직접 코드/회귀 수정 HEAD `1d217d0df0777f5354371582b0132c700a0fdb96`(신규 v113 테스트). 이 SHA는 **스냅샷**이다. 새 채팅은 먼저 실제 브랜치/HEAD/최근 커밋/Actions를 재확인한다. 인계 문서 추가로 HEAD가 바뀌면 시작 시점 SHA를 최신 HEAD라고 반복하지 않는다.
 
+## 0-B. 2026-11-16 사용자 옵션 실 Native v525→v526→v527: 5개 긍정 사례, 7개 차단
+
+- [전체 영구 compact](development/research_receipts/p1_v527_70783_real_user_option_matrix_compact.json)와 [CURRENT](CURRENT_PRODUCT_DEVELOPMENT_STATE.md)를 우선 확인. 실행 경로 AI API/AI의 효과·스탯·DPS 판정 0. 정확한 입력 ID/시즌 source/기존 v113/v216/v222/v212/v098/v096/SimC만 사용.
+- [v525 실제 Windows 부분 성공](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43888153268): 특수 목걸이 268250 단독과 특수 목걸이+제작 머리244579/손목244584+장식 arcanoweave_lining 2개+티어4(가슴·손·다리·어깨)+장신구270169/270174의 **서로 다른 6회 DPS Native 두 구성 성공**, 종합 구성 cache-only6/Native0. 두 구성 G내 고정 L 치명95·가속310 한 번, O0/J92/T3107, 95%·SEM 관측. 이 실행의 일반 장신구 3세션은 worker exit3이어서 전체 PARTIAL.
+- [v526 원문 장애 확인](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43889917302): V106_SESSION_BINARY_REVISION_OR_CACHE_DRIFT. 일반 하위 worker가 저장된 v212 설치 SHA를 session_key에 전달하지 않고 구형 패키지 경로를 읽음. 격리 브랜치 [최소 v106 코드 수정](https://github.com/degong2-code/simc-secondary-optimizer-runner/commit/b0fe5e60645e71a6c4d7e648e8848e160641c58f) 후 legacy 패키지 경로 보존. 신규 Gate·캐시 폐기·SimC 효과 변경 없음.
+- [v527 실제 Windows 최종 장신구3쌍 PASS](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43891405224): 270175/270173 DPS171587.08 SEM317.24, 270169/270174 DPS147239.57 SEM260.65, 270166/270170 DPS161636.49 SEM270.69. 각 Native6, 총 DPS Native18, 환경 Native3, 실제 input/JSON2/Native 영수증 각각18 SHA, 3개 세션 키 분리, 마지막 cache-only6/추가 Native0. 회귀 Windows 8.3 임시 경로 비교는 테스트만 정규화한 뒤 PASS. 모든 값은 관측된 개별 시나리오이며 조합 간 95% 우열/전역 최적성은 미입증.
+- **실제 차단도 보존:** 현재 설치 일반4 보석 대비 5/6 소켓은 미설치/추가 J 물리근거 대기, 마부7965·8025 미승인, 마부7967 현재 fresh profile 미연결, 장식3개 및 특수/제작 동일 슬롯 중복 차단. 이들이 실제 장착 DPS로 PASS한 것 아님. v525 보고서의 DPS 30/총37은 실패한 다른 작업자에 예약한 상한 포함이므로 실제 Native 호출로 주장하지 말 것.
+- 범위: 70783 생존 사냥꾼 334 기본 O0, Windows Actions + TestClient + 실제 SimC 작업자. 이번 조합을 Chrome 직접 클릭한 새 E2E가 아니며 개인 Windows PC, 타 시즌, 26 DPS 전수, 옵션 전부 인증은 아직 미완료. 공식 78요소 15/78·full_product_e2e=PENDING, main/Project UI/immutable/공식 승격 불변. **다음은 검증된 5개 사례 Native 반복 STOP, 추가 소켓과 마부의 원본·설치·프로필 연결 중 첫 실제 장애만 최소 확인**.
+
 ## 0-A. 2026-11-16 최신 v524 단일 실제 M1→M2 Windows 설치 SUCCESS (앞의 미실행 기록 갱신)
 
 > **최신 실제 실행:** [Actions #43878976233](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43878976233) **SUCCESS**, 실행 코드 HEAD `b95e6ea1ff10dc2694a7fb9faa6cee97d37fd82c`. [원본 artifact #14229649805](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43878976233) / SHA256(`V524_M1_M2_SOURCE_OWNER_DIAGNOSTIC.json`)=`cb006e8da181334ad78c6866157a36f477d2c9b6e04a476f37e4611dc115777b`. [영구 compact](development/research_receipts/p1_v524_live_70783_m1_m2_real_install_compact.json). **기존 v113→v216→v222→v212 실행 엔진만 사용하고 신규 예산 엔진·제품 코드 변경 없음.**
