@@ -1652,9 +1652,81 @@ console.log("V459_STALE_SESSION_BUDGET_PREVIEW_PASS");
         js=self.client.get("/assets/app.js").text
         self.assertIn("const changed=id!==state.session;",js)
         self.assertIn('if(changed) {\n    // A new plan is not the result',js)
-        self.assertIn('if(data?.active || !data?.result_ready) {\n    $("filled-result").hidden=true;',js)
+        self.assertIn('if(data?.active || !data?.result_ready || previousResultOnly) {\n    $("filled-result").hidden=true;',js)
         self.assertIn('markSession(p.session_id);showPlan(p);await pollOnce();',js)
         self.assertIn('if(snapshot.result)renderResult(snapshot.result);',js)
+
+    def test_m3_blocked_or_interrupted_resume_retains_but_hides_old_v291_result(self):
+        """Real UI JS: prior result cannot masquerade as the failed new run."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:self.skipTest("node unavailable")
+        source=ROOT/"runner/webui/app.js"
+        script=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const p=raw.indexOf("function longrunSavedResultDisplayable(data) {");
+const e=raw.indexOf("function renderResult(payload) {",p);
+const a=raw.indexOf("async function readSession(id) {",e);
+const b=raw.indexOf("async function pollOnce() {",a);
+assert(p>=0&&e>p&&a>e&&b>a);
+const nodes={};
+const $=id=>(nodes[id]??={hidden:false,textContent:"",style:{}});
+const state={longrunEnabled:false,longrunCompleted:false,
+  longrunResultReady:false,busy:false,token:"test",session:"abc"};
+const calls=[];
+let response;
+const api=async url=>{
+ calls.push(url);
+ if(url.endsWith("/longrun/status"))return response;
+ if(url.endsWith("/longrun/result"))return {user_result:{final_T:3000}};
+ throw Error("UNEXPECTED_GET_"+url);
+};
+const app=Function("state","$","api","showEnvironmentBuild","buttonState",
+ raw.slice(p,e)+raw.slice(a,b)+"return {renderProgress,readSession};")(
+ state,$,api,()=>{},()=>{});
+(async()=>{
+ const base={enabled:true,active:false,result_ready:true,
+  progress:{status:"PARTIAL_OR_BLOCKED",completed_jobs:7,
+            planned_jobs:64,progress_percent:10.94,
+            worker:{status:"BLOCKED_OR_PARTIAL",reason:"EXACT_NATIVE_ERROR"}}};
+ response=base;
+ assert.strictEqual((await app.readSession("abc")).result,null);
+ assert.deepStrictEqual(calls,["/api/v1/sessions/abc/longrun/status"],
+   "BLOCKED_NO_OLD_RESULT_GET");
+ $("filled-result").hidden=false;
+ app.renderProgress(base);
+ assert.strictEqual($("filled-result").hidden,true);
+ assert.strictEqual($("empty-result").hidden,false);
+ assert.strictEqual($("run-label").textContent,"실행 차단");
+ assert($("stage-text").textContent.includes("이전 관측 파일은 보존"));
+ response={...base,progress:{...base.progress,
+   worker:{status:"RUNNING"}}};
+ assert.strictEqual((await app.readSession("abc")).result,null,
+   "INTERRUPTED_OLD_RESULT_NOT_CURRENT");
+ app.renderProgress(response);
+ assert.strictEqual($("filled-result").hidden,true);
+ assert($("stage-text").textContent.includes("재개할 수 있습니다"));
+ response={...base,active:true,progress:{...base.progress,
+   worker:{status:"RUNNING"}}};
+ assert.strictEqual((await app.readSession("abc")).result,null,
+   "ACTIVE_OLD_RESULT_NOT_CURRENT");
+ response={...base,progress:{...base.progress,
+   status:"PAUSED_INVOCATION_NATIVE_BUDGET",
+   worker:{status:"PAUSED_INVOCATION_NATIVE_BUDGET"}}};
+ assert.strictEqual((await app.readSession("abc")).result.user_result.final_T,3000,
+   "SUCCESSFUL_PAUSE_KEEPS_SAVED_OBSERVATIONS_READABLE");
+ app.renderProgress(response);
+ assert.strictEqual($("run-label").textContent,"회차 중단 · 재개 가능");
+ assert.strictEqual(calls.filter(x=>x.endsWith("/longrun/result")).length,1);
+ console.log("M3_STALE_BLOCKED_RESUME_RESULT_HIDDEN_WITH_NO_NATIVE_PASS");
+})().catch(e=>{console.error(e);process.exitCode=1});
+"""
+        result=subprocess.run([node,"-e",script,str(source)],
+            capture_output=True,text=True,timeout=20,check=False)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("M3_STALE_BLOCKED_RESUME_RESULT_HIDDEN_WITH_NO_NATIVE_PASS",
+                      result.stdout)
 
     def test_running_resume_never_shows_saved_partial_result_as_current(self):
         # The v293 status endpoint can report result_ready from a prior batch
