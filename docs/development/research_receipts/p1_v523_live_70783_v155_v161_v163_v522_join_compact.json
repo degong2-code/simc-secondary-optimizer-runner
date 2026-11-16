@@ -1,0 +1,73 @@
+{
+  "schema": "p1_v523_live_70783_v155_v161_v163_v522_join_compact_v1",
+  "status": "ACTIVE_SEASON_MYTH_TARGET_SOURCE_PROVEN_NOT_GJFO_INSTALLED",
+  "tested_branch": "probe/chat-cache-v035-20261024",
+  "code_sha": "6da6298e9863a277dd1db9f7ad7d496fc85506c2",
+  "game_build": "12.1.5.70783",
+  "source_evidence": {
+    "blizzard_wcl": {
+      "run_id": 43852847676,
+      "artifact_id": 14219515672,
+      "report_sha256": "d6786340acf1dd79695530103fc5ac7671a8c5d69d5589befc7f344bcc49b2d4",
+      "blizzard_current_keystone_season_id": 18,
+      "blizzard_provider_gets": 4,
+      "wcl_provider_posts": 2,
+      "source_reused_without_new_oauth_in_join": true
+    },
+    "wago_v161": {
+      "join_run_id": 43853612242,
+      "artifact_id": 14219371770,
+      "original_v161_receipt_sha256": "f004a82fa9da52646dea49ded14ff6db756d8f903bafd29ce29449d71d9f3c6b",
+      "ten_table_csv_bytes": 62280767,
+      "ten_table_source_calls": 10,
+      "artifact_expires_at_utc": "2026-11-18T10:59:03Z"
+    },
+    "v163_join": {
+      "source_basis": "LIVE_WCL_ACTIVE_ZONES_AND_SAME_BUILD_DB2",
+      "active_raid": "The Venomous Abyss",
+      "wcl_expansion_id": 7,
+      "db2_equipment_expansion_id": 11,
+      "db2_display_season_id": 37,
+      "raid_journal_tier_id": 505,
+      "active_mplus_dungeons": 8,
+      "raid_bosses": 10,
+      "candidate_counts": {
+        "mplus_journal": 223,
+        "raid_journal": 105,
+        "selectable_stat_craft": 106
+      },
+      "full_season_completeness_confirmed": false
+    },
+    "v522_currency": {
+      "raw_csv_sha256": "c1e91e4e17b622136d7c9a37c597cd0fe2409a2f5ccb494659014b154a04ef1f",
+      "source_calls": 1,
+      "currency_ids": [
+        3441,
+        3446
+      ],
+      "season_label": "Midnight Season 2",
+      "myth_range_low": 321,
+      "myth_range_high": 334,
+      "source_candidate_target_ilevel": 334,
+      "active_raid_description_verified": true,
+      "conflicting_myth_caps": 0
+    }
+  },
+  "source_only": true,
+  "simc_native_calls": 0,
+  "gjfo_computed": false,
+  "b_t_calculated": false,
+  "v212_installed": false,
+  "web_user_actual_e2e": false,
+  "full_product_e2e": "PENDING",
+  "limitations": [
+    "Authenticated source 70783 verified once, not a new-season-general mechanism live-proven",
+    "Currency source cap is target level only, not item/gear/stat budget admission",
+    "v163 full season membership unresolved; selected product source proofs remain separately required",
+    "Next work reuses real 70783 source and previous same-season GJFO Native receipts where valid; do not redo full collection without an actual invalidated scope"
+  ],
+  "source_refs": [
+    "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43852847676",
+    "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43853612242"
+  ]
+}
