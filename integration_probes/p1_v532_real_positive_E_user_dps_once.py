@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """v532: one real v212 USER six-case SimC session wearing 8025 E+30.
 
-Reuses v529 exact v528 source/native proof; v113/v098/v096/v106/v094.
+Reuses v528 positive-E source/native proof and v529 base profile identity; v113/v098/v096/v106/v094.
 Runs NO AI, NO proc emulator, NO new optimizer, and does not generalize
 8025 beyond its v528-witnessed exact build/profile or approve other items.
 """
@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path[:0]=[str(ROOT),str(ROOT/"runner"),str(ROOT/"integration_probes")]
 import v113_local_web_api as web
-import v529_current_season_alacrity_E30_bridge as alacrity
+import v529_current_season_eagle_E0_bridge as baseline
 import v531_current_season_positive_E_bridge as positive
 import p1_v524_m1_m2_source_owner_once as original
 import p1_v525_real_option_matrix_once as fixed
@@ -117,7 +117,7 @@ def run(binary,out):
                     r["original_unenchanted_profile_sha256"]=digest(
                         original_source)
                     check(r["original_unenchanted_profile_sha256"]==
-                          alacrity.BASE_SHA,
+                          baseline.BASE_SHA,
                           "UNENCHANTED_REAL_V528_PROFILE_NOT_IDENTICAL")
                     chosen=http(client,"POST","/api/v1/sessions/plan",
                                 payload(enchanted))
@@ -156,7 +156,7 @@ def run(binary,out):
                           "ORIGINAL_V096_ENCHANT_MANIFEST_OPTION_MISSING")
                     check(r["observed_positive_plan"] is not None and
                           r["observed_positive_plan"]["fixed_E"]==
-                            positive.ENCHANTS[8025]["E"],"PROVEN_E_ZERO_NOT_IN_ORIGINAL_V096_PLAN")
+                            positive.ENCHANTS[8025]["E"],"PROVEN_E30_NOT_IN_ORIGINAL_V096_PLAN")
                     checkpoint()
                     started=http(client,"POST","/api/v1/sessions/start",
                                  payload(enchanted))
