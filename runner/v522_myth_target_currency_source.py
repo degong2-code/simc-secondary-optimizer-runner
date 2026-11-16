@@ -194,6 +194,17 @@ def myth_target_candidate(folder,build,*,active_season_scope):
                 "currency_id":int(item_id),"currency_name":row["Name_lang"],
                 "season_label":parsed["season"].strip(),
                 "myth_range_low":low,"target_ilevel":high})
+    # Actual 12.1.5.70783 Wago CurrencyTypes returns BOTH 3441 and 3446
+    # for Myth Mistcrest. Their normal Myth range is identical (321..334);
+    # one variant additionally names a separate crafting range (318..331).
+    # Duplicate IDs are not conflicting *target levels*. Group only by
+    # independently parsed season label AND normal Myth track bounds.
+    # Different caps/season labels remain ambiguous; never take max(...).
+    groups={}
+    for candidate in matches:
+        key=(season_join.norm(candidate["season_label"]),
+             candidate["myth_range_low"],candidate["target_ilevel"])
+        groups.setdefault(key,[]).append(candidate)
     result={
         "schema":"v522_myth_target_from_active_raid_currency_v1",
         "status":"SOURCE_CANDIDATE_ONLY_NOT_INSTALLED",
@@ -203,11 +214,27 @@ def myth_target_candidate(folder,build,*,active_season_scope):
         "currency_csv_sha256":doc["sha256"],
         "original_v161_receipt_sha256":doc["original_v161_receipt_sha256"],
         "candidate_count":len(matches),
+        "distinct_season_myth_range_count":len(groups),
         "target_ilevel":None,"native_calls":0,"network_calls":0,
         "environment_ready":False,
-        "needs_user_target_ilevel":len(matches)!=1}
-    if len(matches)==1:
-        result.update(matches[0])
+        "needs_user_target_ilevel":len(groups)!=1}
+    if len(groups)==1:
+        unique=sorted(next(iter(groups.values())),
+                      key=lambda row:row["currency_id"])
+        canonical=unique[0]
+        ids=sorted({row["currency_id"] for row in unique})
+        result.update({
+            "season_label":canonical["season_label"],
+            "myth_range_low":canonical["myth_range_low"],
+            "target_ilevel":canonical["target_ilevel"],
+            "currency_ids":ids,
+            "currency_id":ids[0] if len(ids)==1 else None,
+            "currency_name":(
+                canonical["currency_name"]
+                if len({row["currency_name"] for row in unique})==1
+                else None),
+            "equivalent_id_count":len(ids),
+            "duplicate_myth_ranges_deduplicated":len(unique)>1})
         result["status"]="MYTH_TRACK_TARGET_SOURCE_MATCH_UNADMITTED"
     else:
         result["reason"]=(
