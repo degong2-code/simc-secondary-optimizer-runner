@@ -149,6 +149,7 @@ const state = { token:"", defaults:[], allowedRacesBySpec:{}, seasonGear:null, s
                 longrunCompleted:false,
                 busy:false, options:null, verifiedInstalledBuildFromThisPage:null,
                 budgetPreviewDirty:false, seasonOptionRequestEpoch:0,
+                seasonBuildTargetManualOverride:false,
                 pollTimer:null, pollBusy:false,
                 pollFailures:0, nextPollAt:0 };
 const number = (value,decimals=0) =>
@@ -183,6 +184,15 @@ function updateManualTMode() {
   $("final_T").disabled=!manual;
   if(!manual)$("final_T").value="";
   updateBudgetPreview();
+}
+// Follow the user's target ilvl for the ordinary season Build unless the
+// advanced common-environment ilvl was explicitly edited. This avoids
+// costly source/Native setup at a different level by default.
+function syncSeasonTargetIlevel() {
+  if(state.seasonBuildTargetManualOverride)return;
+  const level=Number(field("ilevel"));
+  if(Number.isSafeInteger(level)&&level>=266&&level<=344)
+    $("season-target-ilevel").value=String(level);
 }
 function updateBudgetPreview() {
   // The sealed result is not evidence for any newly edited user inputs.
@@ -847,6 +857,7 @@ function fillDefault(item) {
   setTrinketSelection("trinket1",item.trinket_ids[0]);
   setTrinketSelection("trinket2",item.trinket_ids[1]);
   $("ilevel").value=item.ilevel;
+  syncSeasonTargetIlevel();
   $("final_T").value=item.final_T??"";
   $("manual-t-mode").checked=Boolean($("final_T").value);
   updateManualTMode();
@@ -1344,6 +1355,7 @@ function fillSessionInputs(payload) {
   $("talents").value=c.talents;
   showCharacterDefaultHint();
   $("ilevel").value=t.ilevel;
+  syncSeasonTargetIlevel();
   // Exact v212 installation is recovered from the sealed session, never
   // from whichever build happens to be selected on the current page.
   $("season-game-build").value=payload.installed_season_game_build??"";
@@ -3205,6 +3217,7 @@ function registerHandlers() {
   });
   $("race").addEventListener("change",()=>buttonState(state.running,state.longrunResultReady));
   $("ilevel").addEventListener("input",()=>{
+    syncSeasonTargetIlevel();
     // Slot masks and enchant source approval also belong to target ilvl.
     state.seasonOptionRequestEpoch++;
     renderSeasonOptionCatalog(null);
@@ -3212,6 +3225,10 @@ function registerHandlers() {
   });
   $("ilevel").addEventListener("change",showRepresentativeScope);
   $("ilevel").addEventListener("change",()=>withBusy(refreshInstalledOilLoadouts));
+  $("season-target-ilevel").addEventListener("input",()=>{
+    // An explicit common-level override remains independent of the user run.
+    state.seasonBuildTargetManualOverride=true;
+  });
   $("season-target-ilevel").addEventListener("change",()=>
     withBusy(refreshInstalledOilLoadouts));
   $("season-game-build").addEventListener("input",()=>{
