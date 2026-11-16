@@ -277,9 +277,15 @@ def run(binary, out, archived_cache):
                              x["identity"]["season"] == "midnight_s2"
                              for x in missing), "SELECTED_STATIC_SCOPE_INVALID")
                         if missing:
-                            v439.collect_missing(binary=binary, work=out,
+                            # v439 collector uses static_01 etc. per work root;
+                            # isolate each selected change set. The canonical
+                            # append-only cache remains shared across all cases.
+                            work = out / ("static_" + label)
+                            work.mkdir(exist_ok=False)
+                            v439.collect_missing(binary=binary, work=work,
                                 cache=native_cache, missing=missing,
                                 report=report, checkpoint=checkpoint)
+                            static.write_atomic(cache_file, native_cache)
                         final = preview()
                         details = final.get("budget_preflight") or {}
                         report["cases"][label + "_preflight"] = {
