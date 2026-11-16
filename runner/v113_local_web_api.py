@@ -30,6 +30,8 @@ import v098_target_user_scenario_bootstrap as bootstrap
 import v108_native_consumable_inputs as consumables
 import v188_user_choice_metadata as choice_labels
 import v196_current_season_user_catalog as ui_catalog
+import v529_current_season_eagle_E0_bridge as exact_e0_enchant
+import v531_current_season_positive_E_bridge as exact_positive_enchant
 import v193_simc_local_updater as simc_updates
 import v148_local_batch_results as batch_view
 import v167_product_season_gear_adapter as season_gear
@@ -2859,7 +2861,52 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                          "source_sha256":
                              positive["original_O_source_sha256"],
                          "user_selectable_individually":False}
+            # v535: source-bound per-user runtime *candidates*, separate
+            # from the general unapproved season catalogue. Do not mark
+            # unverified source rows or other character/loadouts selectable.
+            exact_runtime={"status":"EXACT_USER_RUNTIME_SCOPE_UNAVAILABLE",
+                           "items":[],"general_selectable":False}
+            if exact and doc.get("game_build")==exact_e0_enchant.BUILD:
+                try:
+                    projected=exact_positive_enchant.project(
+                        doc,{"finger1":8025},manual_final_T=None)
+                    if (projected["base_B"]==3137 and
+                        doc["target_ilevel"]==334):
+                        exact_e0_enchant.source(
+                            exact_e0_enchant.CHOICE,source_path)
+                        items=[{"enchant_id":7967,
+                                "name":"독수리의 눈",
+                                "fixed_E":dict(exact_e0_enchant.ZERO),
+                                "status":"EXACT_RUNTIME_NATIVE_WITNESSED"}]
+                        for eid,name in ((8025,"실버문의 기민함"),
+                                         (7965,"아마니의 특화")):
+                            _,E=exact_positive_enchant.source(
+                                {"finger1":eid},source_path)
+                            items.append({
+                                "enchant_id":eid,"name":name,
+                                "fixed_E":E,
+                                "status":"EXACT_RUNTIME_NATIVE_WITNESSED"})
+                        exact_runtime={
+                            "status":"EXACT_V528_V530_V532_V533_USER_ONLY",
+                            "items":items,"general_selectable":False,
+                            "game_build":doc["game_build"],
+                            "target_ilevel":334,
+                            "installed_manifest_sha256":
+                                doc["manifest_sha256"],
+                            "scope":{"class":"hunter","spec":"survival",
+                                     "race":"human",
+                                     "finger1_item_id":268266,
+                                     "trinket_ids":[270175,270173],
+                                     "oil_hands":[],"special_items":[],
+                                     "embellishments":[]}}
+                except (exact_e0_enchant.SourceBlocked,
+                        exact_positive_enchant.PositiveEnchantBlocked,
+                        ui_catalog.CatalogBlocked,
+                        environment_manifest.EnvironmentBlocked,
+                        KeyError,ValueError,TypeError):
+                    pass
             return {**published,
+                    "verified_exact_user_enchant_runtime":exact_runtime,
                     **({"source_scope":"VERIFIED_INSTALLED_V212_OPTION_CATALOG",
                         "installed_manifest_sha256":installed_manifest_sha256}
                        if exact else {}),
