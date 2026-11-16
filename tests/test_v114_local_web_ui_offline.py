@@ -864,8 +864,12 @@ const bind=Function("state","$","field","valueInt",
     def test_verified_oil_dropdown_reuses_exact_id_web_request(self):
         html=self.client.get("/").text
         js=self.client.get("/assets/app.js").text
-        for ident in ("optimizer-oil-loadout","optimizer-oil-loadout-status"):
+        for ident in ("optimizer-oil-loadout","optimizer-oil-loadout-status",
+                      "optimizer-oil-apply-btn"):
             self.assertIn('id="'+ident+'"',html)
+        self.assertIn(
+            '$("optimizer-oil-apply-btn").addEventListener("click",()=>withBusy(async()=>{',
+            js)
         for token in ("/api/v1/verified-oil-loadouts?ilevel=",
                       "VERIFIED_INSTALLED_OIL_LOADOUTS",
                       "chooseInstalledOilLoadout",
