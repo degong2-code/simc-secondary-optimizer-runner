@@ -66,7 +66,7 @@ jobs:
         run: |
           $ErrorActionPreference='Stop'
           $files=@(git diff-tree --no-commit-id --name-only -r $env:GITHUB_SHA)
-          if ($files.Count -ne 1 -or $files[0] -ne '.github/workflows/p1_v533_real_positive_E_once.yml') { throw 'V533_WORKFLOW_ONLY_OPT_IN_REQUIRED' }
+          if ($files.Count -ne 1 -or $files[0] -ne '.github/workflows/p1_v533_real_mastery_E_once.yml') { throw 'V533_WORKFLOW_ONLY_OPT_IN_REQUIRED' }
       - uses: actions/setup-python@v6
         with: {python-version: '3.12'}
       - name: Reuse exact published SimC binary, no recompile
@@ -92,7 +92,7 @@ jobs:
           if ($exes.Count -ne 1) { throw 'V533_BINARY_COUNT_INVALID' }
           if ((Get-FileHash -Algorithm SHA256 $exes[0].FullName).Hash.ToLowerInvariant() -ne '1fc927d2be7f1b6064c75f004b5b22245b064a6b3e56e572af4048ba822a986d') { throw 'V533_OFFICIAL_EXE_SHA_CHANGED' }
           "V533_SIMC_EXE=$($exes[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
-          python -m py_compile runner/v531_current_season_positive_E_bridge.py integration_probes/p1_v533_real_positive_E_user_dps_once.py
+          python -m py_compile runner/v531_current_season_positive_E_bridge.py integration_probes/p1_v533_real_mastery_E_user_dps_once.py
           if ($LASTEXITCODE -ne 0) { throw 'V533_PROBE_SYNTAX_INVALID' }
           python -m pip install -r requirements-web-test.txt
           if ($LASTEXITCODE -ne 0) { throw 'V533_ORIGINAL_SOURCE_DEPENDENCIES_FAILED' }
@@ -103,7 +103,7 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path out/v533 | Out-Null
-          python -u integration_probes/p1_v533_real_positive_E_user_dps_once.py --simc "$env:V533_SIMC_EXE" --out out/v533
+          python -u integration_probes/p1_v533_real_mastery_E_user_dps_once.py --simc "$env:V533_SIMC_EXE" --out out/v533
           if ($LASTEXITCODE -ne 0) { throw 'V533_E26_CURRENT_USER_ACTUAL_SIMC_NOT_COMPLETE' }
       - name: Preserve scoped results and all original six SimC inputs/JSON2
         if: always()
