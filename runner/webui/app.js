@@ -3070,6 +3070,13 @@ function exactUserEnchantInputsMatch() {
     !field("talents") && !field("optimizer-oil-main-id") &&
     !field("optimizer-oil-off-id");
 }
+function refreshExactEnchantAvailability() {
+  if(!state.exactUserEnchantIds.size)return;
+  const selector=$("season_enchant_finger1");
+  const permitted=exactUserEnchantInputsMatch();
+  selector.disabled=!permitted;
+  if(!permitted&&selector.value)selector.value="";
+}
 function renderSeasonOptionCatalog(catalog) {
   const runeSource=catalog?.verified_weapon_enhancements?.dk_runeforges;
   const runes=(runeSource?.status==="PINNED_DK_RUNES_INSTALLED" &&
@@ -3144,7 +3151,7 @@ function renderSeasonOptionCatalog(catalog) {
         selector.appendChild(option(String(row.enchant_id),
           row.name+" · #"+row.enchant_id+" · 실제 Native 검증"));
       }
-      selector.disabled=false;
+      refreshExactEnchantAvailability();
       status.textContent="이번 시즌 원본 마부 후보는 전체 미승인입니다. "+
         "반지 1의 3종은 생존 사냥꾼 334·검증 장비 조건에서만 사용 가능하며 "+
         "조건이 다르면 실행 전 차단됩니다.";
@@ -3443,6 +3450,8 @@ function registerHandlers() {
   ]);
   const editedUserChoice=event=>{
     const target=event.target;
+    if(resultBoundInputIds.has(target?.id) ||
+       target?.closest?.(".gear-row"))refreshExactEnchantAvailability();
     if(state.session && (resultBoundInputIds.has(target?.id) ||
        target?.closest?.(".gear-row")))updateBudgetPreview();
   };
