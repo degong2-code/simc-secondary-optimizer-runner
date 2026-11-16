@@ -153,6 +153,62 @@ class LocalLongRunHTTP(unittest.TestCase):
                          {"archive_path":"/tmp/fixture.zip",
                           "archive_sha256":"wrong"}).status_code,422)
 
+    def test_os_spawn_failure_after_queued_marks_blocked_without_losing_cached_result(self):
+        """A failed subprocess creation must not leave a phantom QUEUED run.
+
+        Existing V291 observation/cache bytes remain, and the same sealed
+        session can be explicitly resumed later; NO real Native is launched.
+        """
+        data={"controls":self.valid_controls,"binary":"c:/simc.exe",
+              "revision":"abc1234","current_season_product":True,
+              "max_native_calls":12,"max_new_native_this_invocation":2}
+        output=self.stage/"simc_results"
+        output.mkdir(parents=True,exist_ok=True)
+        previous=output/"V291_RESULT.json"
+        previous.write_bytes(b'{"old_result":"durable_observation"}')
+        cancel=self.stage/"CANCEL"
+        cancel.touch()
+        web.subprocess.Popen.side_effect=OSError(
+            "NO_OS_SPAWN:private-file-path-must-not-leak")
+        response=self.post("/api/v1/longrun/start",data)
+        self.assertEqual(response.status_code,409,response.text)
+        self.assertEqual(response.json()["detail"]["code"],
+                         "LOCAL_SESSION_PRECHECK_BLOCKED")
+        self.assertNotIn("private-file-path",response.text)
+        self.assertEqual(service.config(self.folder)["native_budget"],12)
+        status=self.client.get(
+            "/api/v1/sessions/"+self.folder.name+"/longrun/status",
+            headers=self.auth)
+        self.assertEqual(status.status_code,200,status.text)
+        payload=status.json()
+        self.assertTrue(payload["enabled"])
+        self.assertFalse(payload["active"])
+        self.assertTrue(payload["result_ready"])
+        self.assertEqual(payload["progress"]["worker"]["status"],
+                         "BLOCKED_OR_PARTIAL")
+        self.assertEqual(payload["progress"]["worker"]["reason"],
+                         "V293_WORKER_LAUNCH_FAILED_BEFORE_NATIVE")
+        self.assertFalse(cancel.exists())
+        self.assertEqual(previous.read_bytes(),
+                         b'{"old_result":"durable_observation"}')
+        self.assertNotIn(self.folder.name,self.app.state.jobs.children)
+        self.assertEqual(web.subprocess.Popen.call_count,1)
+
+        # The original session/manifest and sealed longrun budget are reusable.
+        web.subprocess.Popen.side_effect=None
+        retry=self.post(
+            "/api/v1/sessions/"+self.folder.name+"/longrun/resume",
+            {"max_new_native_this_invocation":2})
+        self.assertEqual(retry.status_code,200,retry.text)
+        self.assertEqual(retry.json()["status"],"LONGRUN_WORKER_STARTED")
+        self.assertEqual(service.config(self.folder)["native_budget"],12)
+        self.assertTrue(self.client.get(
+            "/api/v1/sessions/"+self.folder.name+"/longrun/status",
+            headers=self.auth).json()["active"])
+        self.assertEqual(previous.read_bytes(),
+                         b'{"old_result":"durable_observation"}')
+        self.assertEqual(web.subprocess.Popen.call_count,2)
+
     def test_restart_with_stale_running_status_preserves_result_and_resume(self):
         # Windows process restart boundary. Fake worker & synthetic V291
         # report ONLY; never execute SimC or modify a verified Native cache.
