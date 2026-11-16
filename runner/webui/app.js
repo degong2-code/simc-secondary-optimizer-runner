@@ -1830,6 +1830,8 @@ async function withBusy(fn) {
           "현재 최적화 조건에 맞는 검증 설치본이 없거나 둘 이상입니다. 선택한 품목과 시즌·ilvl을 확인하고 해당 구성만 검증·준비하세요.",
         "WEB_PRIMARY_VERIFIED_SEASON_INSTALL_REQUIRED":
           "기본 최적화(64회)를 시작하려면 현재 게임 빌드의 G/J/F/O 검증 시즌 환경이 먼저 설치돼 있어야 합니다. ‘시즌 환경 확인·설치’를 완료한 뒤 시작하세요. ZIP에 들어 있는 과거 카탈로그는 현재 시즌 READY를 증명하지 않습니다.",
+        "SEASON_INITIAL_CORE_SIMC_BINARY_REQUIRED":
+          "현재 게임 빌드·목표 ilvl에 재사용 가능한 검증 프로필이 없습니다. 새 시즌 G/F 측정에는 SimC 실행 파일 경로가 필요합니다. 설정에서 경로를 지정하고 시즌 환경을 다시 확인하세요.",
         "WEB_FRESH_EXACT_OIL_HAND_ID_SELECTION_INVALID":
           "기름 ItemID와 체크한 무기 손이 서로 다릅니다. 선택한 모든 손에 정확한 ItemID를 지정하세요.",
         "V216_REUSE_OIL_HANDS_MULTIPLE_VERIFIED_ITEMS_SELECT_ID":
@@ -2321,10 +2323,11 @@ async function buildSeasonEnvironment(forUserVariant=false) {
       auto_native_O_requested||auto_select_observed_F_no_oil||
       selected_flask_item_id!==null||oilHands.length);
   const auto_initial_core_build=$("season-auto-core").checked&&!explicitAdvanced;
+  // Original v113 reuses a sealed same-build v212+v113 profile before
+  // checking the SimC executable. An empty path must reach that cache-hit
+  // route, while a cache miss still fails closed BEFORE any G/F Native.
   const auto_initial_core_simc_binary=
       auto_initial_core_build?(field("binary")||null):null;
-  if(auto_initial_core_build&&!auto_initial_core_simc_binary)
-    throw Error("최초 G/F 자동 구축에는 SimC 실행파일 경로가 필요합니다. 경로를 지정하거나 자동 구축 선택을 해제하면 원본만 수집할 수 있습니다.");
   const revision=field("revision");
   if(revision&&!/^(?:[a-f0-9]{7,12}|[a-f0-9]{40})$/.test(revision))
     throw Error("SimC revision은 7~12자리 또는 40자리 소문자 16진수여야 합니다.");
@@ -2333,7 +2336,7 @@ async function buildSeasonEnvironment(forUserVariant=false) {
       "기존 검증 시즌 환경을 우선 재사용하고, 없으면 원본 구축을 시작할까요? ")+
       "필요 시 외부 네트워크를 사용할 수 있습니다."+
       (auto_initial_core_build?
-       " 검증 설치 재사용 시 Native 0회; 신규 시즌에는 기존 G 최대 1회와 대표 영약 F 최대 2회만 측정할 수 있습니다. 원본 검증이 부족하면 설치하지 않습니다.":
+       " 동일 시즌·ilvl 검증 프로필이 있으면 SimC 경로 없이 Native 0회로 재사용합니다. 없으면 실행 파일 경로가 필요하며, 신규 시즌 G 최대 1회와 대표 영약 F 최대 2회만 측정할 수 있습니다. 원본 검증이 부족하면 설치하지 않습니다.":
        (nativeRequested?" 기존 G Native 최대 1회 실행될 수 있습니다.":" Native는 기본적으로 실행하지 않습니다."))+
       (auto_native_F_requested?
        (auto_select_observed_F_no_oil?
