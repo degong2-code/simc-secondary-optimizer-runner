@@ -1219,7 +1219,7 @@ async function bindUniqueInstalledOilVariant() {
     !field("season-existing-special-gem-id") &&
     installedConsumableScopeMatches(state.oilCatalog) &&
     fullVerifiedOilMatch(candidate) &&
-    /^\\d+(?:\\.\\d+){3}$/.test(build||"");
+    /^\d+(?:\.\d+){3}$/.test(build||"");
   if(!eligible){
     // Do not select the first same-oil SHA when F or J differs.
     state.seasonGearTargetIlevel=null;
