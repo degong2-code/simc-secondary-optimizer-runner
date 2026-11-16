@@ -1,0 +1,132 @@
+# Deterministic single Windows operator scenario matrix. No AI in runtime.
+# Only physical source/profiles/simc JSON2 are verdict authorities.
+name: P1 v525 current season real equipment variants (SimC, no AI)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - integration_probes/p1_v525_real_option_matrix_once.py
+      - .github/workflows/p1_v525_real_option_matrix_once.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v525-70783-real-option-matrix
+  cancel-in-progress: false
+jobs:
+  offline-contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Existing dependencies, scoped contracts, no Native
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile integration_probes/p1_v525_real_option_matrix_once.py
+          python -m pip install -r requirements-web-test.txt
+          python -m unittest -q \
+            tests.test_v432_selected_4pc_budget_bridge \
+            tests.test_v439_selected_70783_native_scope_offline \
+            tests.test_v446_b10_selected_gem_after_equipment \
+            tests.test_v448_b10_declared_J_owner_scope \
+            tests.test_v450_b10_post_selected_socket_item_identity \
+            tests.test_v451_b10_v232_v271_final_user_socket_source \
+            tests.test_v456_current_season_optional_consumable_ui_scope
+  real-windows-matrix-once:
+    needs: offline-contracts
+    if: ${{ contains(github.event.head_commit.message, '[v525-real-variants-once]') }}
+    runs-on: windows-2022
+    timeout-minutes: 42
+    env:
+      PYTHONPATH: runner;integration_probes;.
+      SIMC_PINNED_SOURCE_COMMIT: de11f57df75dda668bae6ac7043a43b98831fa96
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - name: Preserve exact authored SimC bytes
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Scope-check opt-in workflow-only change
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $changed=@(git diff-tree --no-commit-id --name-only -r $env:GITHUB_SHA)
+          if ($changed.Count -ne 1 -or $changed[0] -ne '.github/workflows/p1_v525_real_option_matrix_once.yml') { throw 'V525_ONE_WORKFLOW_ONLY_SOURCE_PIN_REQUIRED' }
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Reuse pinned official Windows SimC, not rebuilt
+        uses: actions/download-artifact@v4
+        with:
+          repository: simulationcraft/simc-publish
+          run-id: 42956947906
+          name: simc-nightly-win64-midnight
+          path: .simc-v525
+          github-token: ${{ github.token }}
+      - name: Reuse v439 exact original changed-slot Native static cache
+        uses: actions/download-artifact@v4
+        with:
+          repository: degong2-code/simc-secondary-optimizer-runner
+          run-id: 43466966207
+          name: p1-v439-b8-one-selected-70783-native-43466966207
+          path: .v439-source-reuse
+          github-token: ${{ github.token }}
+      - name: Verify binary/season source and archived static cache SHA
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $archive=Join-Path $PWD '.simc-v525/simc-1210.01.de11f57-win64.7z'
+          if (!(Test-Path $archive -PathType Leaf)) { throw 'V525_ORIGINAL_SIMC_ARCHIVE_MISSING' }
+          if ((Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant() -ne 'a4c4d5e7b349172d80897721daa3e849ce25874a82bbdfb96aeab4dbdc560eb0') { throw 'V525_ORIGINAL_ARCHIVE_SHA_DRIFT' }
+          $seven='C:\Program Files\7-Zip\7z.exe'
+          New-Item -ItemType Directory -Force -Path .simc-v525-extracted | Out-Null
+          & $seven x '-o.simc-v525-extracted' -y -bd $archive | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'V525_ARCHIVE_EXTRACTION_FAILED' }
+          $exes=@(Get-ChildItem .simc-v525-extracted -Recurse -Filter simc.exe -File)
+          if ($exes.Count -ne 1) { throw 'V525_EXE_COUNT_INVALID' }
+          if ((Get-FileHash -Algorithm SHA256 $exes[0].FullName).Hash.ToLowerInvariant() -ne '1fc927d2be7f1b6064c75f004b5b22245b064a6b3e56e572af4048ba822a986d') { throw 'V525_SIMC_EXECUTABLE_SHA_DRIFT' }
+          $static=Join-Path $PWD '.v439-source-reuse/selected_v046_snapshot.json'
+          if (!(Test-Path $static -PathType Leaf)) { throw 'V525_EXACT_V439_STATIC_CACHE_NOT_RETAINED' }
+          if ((Get-FileHash -Algorithm SHA256 $static).Hash.ToLowerInvariant() -ne '517cd212fe3d3011593a3fae0b2a2c06ff5865a40145e2279f04eb8820e132e8') { throw 'V525_V439_STATIC_CACHE_SHA_DRIFT' }
+          "V525_SIMC_EXE=$($exes[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "V525_V439_CACHE=$static" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - name: Reuse existing actual web/SimC dependencies
+        shell: pwsh
+        run: |
+          python -m py_compile integration_probes/p1_v525_real_option_matrix_once.py
+          if ($LASTEXITCODE -ne 0) { throw 'V525_PROBE_SYNTAX_INVALID' }
+          python -m pip install -r requirements-web-test.txt
+          if ($LASTEXITCODE -ne 0) { throw 'V525_DEPENDENCY_INSTALL_FAILED' }
+      - name: One physical environment and deterministic option-matrix Native
+        timeout-minutes: 31
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path out/v525 | Out-Null
+          python -u integration_probes/p1_v525_real_option_matrix_once.py --simc "$env:V525_SIMC_EXE" --v439-cache "$env:V525_V439_CACHE" --out out/v525
+          if ($LASTEXITCODE -ne 0) { throw 'V525_ACTUAL_OPTION_MATRIX_PARTIAL_INSPECT_RECEIPT' }
+      - name: Preserve exact case verdicts and static JSON2 SHA only
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v525-actual-70783-real-options
+          path: |
+            out/v525/V525_REAL_OPTION_MATRIX.json
+          retention-days: 7
+          if-no-files-found: warn
