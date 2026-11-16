@@ -1546,6 +1546,85 @@ const refresh=Function("state","field","valueInt","api",
         self.assertIn("V461_SEASON_SCOPED_OIL_FLASK_LOOKUP_PASS",
                       completed.stdout)
 
+    def test_v494_installed_flask_oil_get_discards_stale_scope_and_retries_once(self):
+        """Execute actual UI function: the busy GET cannot overwrite edited F/O."""
+        import shutil,subprocess
+        node=shutil.which("node")
+        if node is None:
+            self.skipTest("node is not installed on this runner")
+        source=ROOT/"runner/webui/app.js"
+        code=r"""
+const fs=require("fs"),assert=require("assert");
+const raw=fs.readFileSync(process.argv[1],"utf8");
+const a=raw.indexOf("async function refreshInstalledOilLoadouts() {");
+const b=raw.indexOf("function chooseInstalledOilLoadout()",a);
+assert(a>=0&&b>a,"actual F/O refresh JS required");
+let build="12.1.5.70783",ilevel=334;
+const state={verifiedInstalledBuildFromThisPage:null};
+const urls=[],pending=[],oil=[],flask=[],notices=[];
+const api=url=>new Promise((resolve,reject)=>{
+  urls.push(url);pending.push({resolve,reject});
+});
+const refresh=Function(
+ "state","field","valueInt","api","renderInstalledOilLoadouts",
+ "renderInstalledFlaskChoices","setNotice",
+ raw.slice(a,b)+"return refreshInstalledOilLoadouts;")(
+ state,id=>{assert.strictEqual(id,"season-game-build");return build;},
+ id=>{assert.strictEqual(id,"ilevel");return ilevel;},api,
+ data=>oil.push(data),data=>flask.push(data),message=>notices.push(message));
+const ticks=async()=>{for(let i=0;i<5;i++)await Promise.resolve();};
+(async()=>{
+  const first=refresh();
+  assert.deepStrictEqual(urls,[
+    "/api/v1/verified-oil-loadouts?ilevel=334&game_build=12.1.5.70783"]);
+  // The change event's withBusy callback is skipped while first is pending.
+  ilevel=340;build="12.1.5.88888";
+  pending[0].resolve({id:"STALE"});
+  await ticks();
+  assert.deepStrictEqual(urls,[
+    "/api/v1/verified-oil-loadouts?ilevel=334&game_build=12.1.5.70783",
+    "/api/v1/verified-oil-loadouts?ilevel=340&game_build=12.1.5.88888"]);
+  assert.strictEqual(oil.length,0,"must not render old F/O");
+  assert.strictEqual(flask.length,0,"must not render old F/J");
+  pending[1].resolve({id:"CURRENT"});
+  await first;
+  assert.deepStrictEqual(oil,[{id:"CURRENT"}]);
+  assert.deepStrictEqual(flask,[{id:"CURRENT"}]);
+  assert.strictEqual(notices.length,0);
+  // Repeated edits cannot generate unbounded local GET or publish stale data.
+  const second=refresh();
+  assert.strictEqual(urls.length,3);
+  ilevel=350;
+  pending[2].resolve({id:"STALE_AGAIN"});
+  await ticks();
+  assert.strictEqual(urls.length,4);
+  build="12.1.5.99999";
+  pending[3].resolve({id:"ALSO_STALE"});
+  await second;
+  assert.strictEqual(urls.length,4,"at most one bounded retry");
+  assert.deepStrictEqual(oil,[{id:"CURRENT"},null]);
+  assert.deepStrictEqual(flask,[{id:"CURRENT"},null]);
+  assert.strictEqual(notices.length,1);
+  // Errors from the discarded request likewise cannot abort the new scope.
+  const third=refresh();
+  assert.strictEqual(urls.length,5);
+  ilevel=355;
+  pending[4].reject(Error("OLD_SCOPE_HTTP_ERROR"));
+  await ticks();
+  assert.strictEqual(urls.length,6);
+  pending[5].resolve({id:"CURRENT_AFTER_ERROR"});
+  await third;
+  assert.deepStrictEqual(oil.at(-1),{id:"CURRENT_AFTER_ERROR"});
+  assert.deepStrictEqual(flask.at(-1),{id:"CURRENT_AFTER_ERROR"});
+  console.log("V494_INSTALLED_FO_ASYNC_SCOPE_RETRY_PASS");
+})().catch(error=>{console.error(error);process.exitCode=1;});
+"""
+        result=subprocess.run([node,"-e",code,str(source)],
+            capture_output=True,text=True,timeout=20,check=False)
+        self.assertEqual(result.returncode,0,result.stderr)
+        self.assertIn("V494_INSTALLED_FO_ASYNC_SCOPE_RETRY_PASS",
+                      result.stdout)
+
     def test_v477_new_run_requires_exact_v212_gear_sha_build_and_level(self):
         """Actual browser preflight must refuse packaged or stale trinkets."""
         import shutil,subprocess
