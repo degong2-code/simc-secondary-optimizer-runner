@@ -2181,6 +2181,12 @@ def preview_from_environment_build(user,folder,binary,revision,*,
         other_spec_general_source=False
     result=build(user,folder,binary,revision,
                  current_season_product=True,
+                 # The v529 selected permanent enchant must read only the
+                 # *installed* exact v213 catalog, not historical 70575.
+                 # Unenchanted existing sessions keep their original args.
+                 source_catalog_path=(
+                     compilation["source_catalog_path"]
+                     if SEASON_ENCHANT_FIELD in user else None),
                  season_source_bundle=bundle,
                  season_original_source_paths=originals,
                  season_profile_inputs=inputs,
