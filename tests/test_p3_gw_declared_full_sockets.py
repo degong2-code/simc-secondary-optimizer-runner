@@ -99,10 +99,14 @@ class DeclaredFullSockets(unittest.TestCase):
             linked=env._fresh_selected_J_intrinsic_socket_source(
                 collected=collected,preflight=preflight,
                 compilation={"simc_revision":"abc1234"})
+            # B10 current policy: SimC can stage full gem_id, but
+            # 5+ physical sockets are NOT established by that declaration.
             self.assertEqual(linked["status"],
-                             "J_SIMC_DECLARED_FULL_GEM_PROFILE_SOURCE_ONLY")
+                             "J_ADDITIONAL_SOCKET_SOURCE_PROOF_PENDING")
             self.assertTrue(linked["additional_socket_proof_required_by_slot"])
+            self.assertFalse(linked["game_socket_legal_verified"])
             self.assertFalse(linked["J_approved"])
+            self.assertFalse(linked["environment_ready"])
             self.assertEqual(linked["new_native_calls"],0)
     def test_unsupported_count_or_slot_does_not_get_fake_bonuses(self):
         for n in (0,3,65,True):
