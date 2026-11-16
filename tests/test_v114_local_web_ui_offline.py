@@ -1706,14 +1706,27 @@ const levelA=raw.indexOf('  $("ilevel").addEventListener("input",()=>{');
 const levelB=raw.indexOf('  $("ilevel").addEventListener("change"',levelA);
 assert(buildA>=0&&buildB>buildA&&levelA>=0&&levelB>levelA);
 const events={},calls=[];
-const $=id=>({addEventListener(name,callback){events[id+":"+name]=callback;}});
+const nodes={ilevel:{value:"340"},"season-target-ilevel":{value:"334"}};
+const $=id=>{
+  if(!nodes[id])nodes[id]={value:""};
+  nodes[id].addEventListener=(name,callback)=>{events[id+":"+name]=callback;};
+  return nodes[id];
+};
+const field=id=>String($(id).value||"").trim();
 const state={verifiedInstalledBuildFromThisPage:"12.1.5.70783",
+             seasonBuildTargetManualOverride:false,
              seasonOptionRequestEpoch:0,running:false,longrunResultReady:false};
+const syncA=raw.indexOf("function syncSeasonTargetIlevel() {");
+const syncB=raw.indexOf("function updateBudgetPreview() {",syncA);
+assert(syncA>=0&&syncB>syncA);
+const syncSeasonTargetIlevel=Function("state","$","field",
+   raw.slice(syncA,syncB)+"return syncSeasonTargetIlevel;")(state,$,field);
 const renderSeasonOptionCatalog=v=>calls.push(v);
 const buttonState=()=>{};
 Function("state","$","renderSeasonOptionCatalog","buttonState",
+         "syncSeasonTargetIlevel",
     raw.slice(buildA,buildB)+"\n"+raw.slice(levelA,levelB))(
-    state,$,renderSeasonOptionCatalog,buttonState);
+    state,$,renderSeasonOptionCatalog,buttonState,syncSeasonTargetIlevel);
 events["season-game-build:input"]();
 assert.strictEqual(state.verifiedInstalledBuildFromThisPage,null);
 assert.deepStrictEqual(calls,[null],"build edit revokes prior E and DK");
@@ -1721,6 +1734,8 @@ assert.strictEqual(state.seasonOptionRequestEpoch,1,
     "build edit invalidates in-flight option catalogue");
 state.verifiedInstalledBuildFromThisPage="12.1.5.70783";
 events["ilevel:input"]();
+assert.strictEqual(nodes["season-target-ilevel"].value,"340",
+    "changing user ilvl also updates the default season Build scope");
 assert.deepStrictEqual(calls,[null,null],"ilevel edit revokes prior E and DK");
 assert.strictEqual(state.seasonOptionRequestEpoch,2,
     "ilevel edit invalidates in-flight option catalogue");
