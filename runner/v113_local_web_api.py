@@ -7,6 +7,7 @@ Server listens on 127.0.0.1 only. File paths are never accepted as session IDs.
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import pathlib
@@ -50,6 +51,19 @@ KEY = re.compile(r"[a-f0-9]{20}\Z")
 LOCAL_HOST = "127.0.0.1"
 WEB_ASSETS = pathlib.Path(__file__).resolve().parent / "webui"
 PUBLIC_STATIC = frozenset(("/", "/assets/app.js", "/assets/styles.css"))
+
+
+def _static_cache_bytes_equal(stored, requested):
+    """Preserve exact cache-alias identity with bounded read memory.
+
+    v106 already hashes the selected cache in chunks for its session key;
+    the existing sealed manifest path needs an independent byte comparison
+    before it can be reused instead of rewriting an immutable session.
+    """
+    with pathlib.Path(stored).open("rb") as source, \
+         pathlib.Path(requested).open("rb") as candidate:
+        return (hashlib.file_digest(source,"sha256").digest()==
+                hashlib.file_digest(candidate,"sha256").digest())
 
 def _verified_snapshot_gem_layout_matches(result, *, special_gem_id,
                                           socket_total):
@@ -1805,9 +1819,8 @@ class LocalJobs:
                     if (type(saved) is str and saved!=str(
                             pathlib.Path(resolved_static).resolve())):
                         old=pathlib.Path(saved)
-                        if (old.is_file() and
-                            sessions.sha(old.read_bytes())==
-                            sessions.sha(pathlib.Path(resolved_static).read_bytes())):
+                        if (old.is_file() and _static_cache_bytes_equal(
+                                old, pathlib.Path(resolved_static))):
                             resolved_static=saved
                 with self.profile_stage_lock:
                     bootstrap_result, profile_stage_receipt = profile_stage.build_or_reuse(
