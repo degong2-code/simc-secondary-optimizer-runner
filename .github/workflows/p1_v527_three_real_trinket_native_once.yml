@@ -1,4 +1,5 @@
 # Single source-locked three-trinket Native scope, no AI or engine redesign.
+# Retry Windows path alias-only assertion; same original binary, cases, native cap.
 name: P1 v527 real Windows three trinket variants and cache-only after v106 fix
 on:
   push:
