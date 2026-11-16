@@ -1772,6 +1772,8 @@ function buttonState(active=false,ready=false) {
   const busy=state.busy;
   // Ignore overlapping flask changes while the exact install is rebinding.
   $("season-verified-flask").disabled=busy;
+  $("optimizer-oil-apply-btn").disabled=busy||active||!state.token||
+    !field("optimizer-oil-loadout");
   $("plan-btn").disabled=busy||active||!state.token;
   $("season-build-btn").disabled=busy||active||!state.token;
   $("user-variant-prepare-btn").disabled=busy||active||!state.token;
@@ -3329,6 +3331,12 @@ function registerHandlers() {
     refreshDefaultConsumableSummaries();
   });
   $("optimizer-oil-loadout").addEventListener("change",()=>withBusy(async()=>{
+    chooseInstalledOilLoadout();
+    await bindUniqueInstalledOilVariant();
+  }));
+  // The one verified oil loadout may already be preselected by the default
+  // oil intent, in which case the SELECT change handler will never fire.
+  $("optimizer-oil-apply-btn").addEventListener("click",()=>withBusy(async()=>{
     chooseInstalledOilLoadout();
     await bindUniqueInstalledOilVariant();
   }));
