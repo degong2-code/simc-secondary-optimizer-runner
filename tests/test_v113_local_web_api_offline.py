@@ -102,6 +102,7 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(doc["optional_currency_network_calls_now"],1)
         self.assertTrue(doc["manual_target_ilevel_allowed"])
         stage_call.assert_called_once()
+        self.assertTrue(stage_call.call_args.kwargs["myth_target_source_only"])
         self.assertIsNone(stage_call.call_args.kwargs["representative_request"])
         collector.assert_called_once_with(folder,build)
         resolver.assert_called_once_with(folder,build,
@@ -124,6 +125,30 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(got.json()["reason_code"],
                          "MYTH_TARGET_V163_ACTIVE_RAID_JOIN_PENDING")
         self.assertIsNone(got.json()["target_ilevel"])
+
+    def test_m1_myth_detected_build_changed_before_environment_reuse_or_native(self):
+        """Blizzard Retail version can change after Myth source preflight."""
+        with mock.patch.object(web.retail_build_source, "discover",
+                               return_value={"game_build":"13.0.0.99999",
+                                             "source_sha256":"b"*64}), \
+             mock.patch.object(web.environment_build,
+                               "find_verified_installed_season_environment",
+                               side_effect=AssertionError("NO_STALE_REUSE")), \
+             mock.patch.object(web.environment_build,"build_environment",
+                               side_effect=AssertionError("NO_SOURCE_OR_NATIVE")):
+            changed=self.post("/api/v1/environment/season-build",{
+                "target_ilevel":365,
+                "auto_myth_target_source_build":"12.1.5.70783"})
+        self.assertEqual(changed.status_code,422,changed.text)
+        self.assertEqual(changed.json()["detail"]["code"],
+                         "MYTH_TARGET_LIVE_GAME_BUILD_CHANGED_REDISCOVER")
+        # An explicit build must never bypass the same provenance comparison.
+        explicit=self.post("/api/v1/environment/season-build",{
+            "game_build":"13.0.0.99999","target_ilevel":365,
+            "auto_myth_target_source_build":"12.1.5.70783"})
+        self.assertEqual(explicit.status_code,422,explicit.text)
+        self.assertEqual(explicit.json()["detail"]["code"],
+                         "MYTH_TARGET_LIVE_GAME_BUILD_CHANGED_REDISCOVER")
 
     def test_m1_myth_default_live_build_can_be_other_than_334(self):
         jobs=self.app.state.jobs
