@@ -1,0 +1,113 @@
+{
+  "schema": "p1_v530_20261117_exact_70783_eagle_E0_user_native_scoped_compact_v1",
+  "status": "PASS_EXACT_ONE_CURRENT_USER_E0_ENCHANT_ADAPTIVE_SIMC_SIX_WITH_CACHE",
+  "actions_run_id": 43905387382,
+  "actions_url": "https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/43905387382",
+  "actions_conclusion": "success",
+  "original_artifact_id": 14244503612,
+  "original_artifact_name": "p1-v530-70783-real-E0-user-native-six",
+  "outer_artifact_zip_sha256": "dfae07d61a31166c3a96f019466efef835069953f6615cb05f5178f944fcceac",
+  "original_receipt_json_sha256": "7f92b5f6c39dd7bcf058fe1450619d41c77e7668bfc0f8fe11110d7c12935af8",
+  "nested_native_zip_sha256": "7893a3d7fe6d98424f4334cad86d8b0a605e7b2f3261b16c80d2276d2906d077",
+  "raw_nested_original_count": 18,
+  "raw_nested_each_SHA_recomputed_matches_original": true,
+  "game_build": "12.1.5.70783",
+  "target_ilevel": 334,
+  "source_simc_revision": "de11f57df75dda668bae6ac7043a43b98831fa96",
+  "simc_executable_sha256": "1fc927d2be7f1b6064c75f004b5b22245b064a6b3e56e572af4048ba822a986d",
+  "character": "hunter/survival",
+  "race": "human",
+  "trinket_ids": [
+    270175,
+    270173
+  ],
+  "physical_finger1_item_id": 268266,
+  "selected_permanent_enchant_id": 7967,
+  "proof_owner": "v528 physical actual pre/post SimC E0 + v529 strict original-profile/binary/revision/source check",
+  "original_v528_unenchanted_profile_sha256": "a84b57fe25a3b71348e5c0d92c8aa814243c316b01077aca7e1f746f0bd091a8",
+  "user_profile_with_enchant_sha256": "1d75d778326504930a79389750b75be16d1a05b239baacf96886bfb43ca353ad",
+  "v212_installed_environment_sha256": "2951f45a41d8f631ce7206cab49ca720cdba6831da079e9229dcff288af0791a",
+  "source_only_current_70783_original_v213": true,
+  "selected_enchant_E": {
+    "crit_rating": 0,
+    "haste_rating": 0,
+    "mastery_rating": 0,
+    "versatility_rating": 0
+  },
+  "G": 2850,
+  "J": 92,
+  "F": 165,
+  "O": 0,
+  "B": 3107,
+  "T": 3107,
+  "enchant_without_pair_different_session_keys": true,
+  "user_facing_plan_no_internals_exposed": true,
+  "actual_v098_v096_original_sealed_enchant_proof": true,
+  "native_environment_calls": 3,
+  "native_user_DPS_calls": 6,
+  "native_input_shas": [
+    "171e58f38a2e00fb965539954d7ddb90a654c69b26b42cacf6e4435bb1f928b6",
+    "e9c9e08d45286255cf6fece49d2bfe1c78056c81caa93b6bc7c42dfa5522a5a7",
+    "e5881e4dc463166f9d494165c45deecae6001f010c880389e7f5bad37785eb87",
+    "b666c3676fa0584806d9d2a09b71a135b62ab2d8bcebf7dad9dda6b87a65b0d4",
+    "efae16feb142407aafa5d594e3f3e2e4e0d3f220b25689554b1c4aed5c21cb6c",
+    "cde2a1cd070c902d19bd56aaee9b6dfa106330ce287d4fe78b72fa87713b3951"
+  ],
+  "native_JSON2_shas": [
+    "72ef3ab50785582ddbce1fe1d701473e0a6a4fcfe83377c6e2327f780ea6c1c2",
+    "363bcbc2bc91623314d00f7676c2df025202ad9c553abc629bd23af282d845b5",
+    "341daa941c05927106232fe65d5d7ea10b0ad10cdf9f606dc2080185d428d1e9",
+    "efd76ed8f4ac7e5152d678215a8a9fd5db05fef465ad126b3d9ce6050ea4c72a",
+    "17a0a1d921951f7afbf28833a41d31a33158ebb83b7bec57af1df4ce90c285c3",
+    "a77a2b2fdfcf0c2e5f586aa2281861e15993d3f91066ba3ec0a7733bf9537cd3"
+  ],
+  "native_receipt_shas": [
+    "0de7135797027a4b71a4f85301c35768f4054cea0c8fcd10bb074cdc6f0cb02e",
+    "d34ce4dd8dcc56d52a78742f435794251560209887850e5ac0a291ee7f92682c",
+    "15f2ebf356a46c51354ffa1a40c9a7a3ccff642ff29422c540a15602934fee64",
+    "80b62ef7cd956a533b880917a5228ede5284d2e57d4bc4a068e7394f23e75d45",
+    "8b96c4e64019f4c8303891473ed834aad95910d6999546b88f64effff320febc",
+    "2d77fd03db368d526453a3734acad06c4c24e2c2d44d7f53cf85a69ddf1c0d1d"
+  ],
+  "observed_first_choice_dps_mean": 174087.87027951103,
+  "observed_first_choice_simc_sem": 314.7019063433381,
+  "observed_first_choice_absolute_rating_T": {
+    "crit_rating": 736,
+    "haste_rating": 736,
+    "mastery_rating": 735,
+    "versatility_rating": 900
+  },
+  "confidence_level": 0.95,
+  "global_optimum_proven": false,
+  "cache_replay_hits": 6,
+  "cache_replay_new_Native": 0,
+  "runtime_AI_calls": 0,
+  "simc_effect_APL_DPS_owner": true,
+  "previous_debug_runs": [
+    {
+      "id": 43903884281,
+      "status": "FAIL_HARNESS_OR_SOURCE_CONTEXT",
+      "native_user_calls": 0,
+      "code": "LOCAL_SESSION_PRECHECK_BLOCKED"
+    },
+    {
+      "id": 43904642135,
+      "status": "FAIL_HARNESS_EXPECTED_INTERNAL_FIELD_ON_PUBLIC_PROJECTION",
+      "native_user_calls": 0,
+      "code": "V530_PROVEN_E_ZERO_NOT_IN_V096_PLAN"
+    }
+  ],
+  "scope_limits": [
+    "Only exact original E=0 v528 profile SHA, binary, revision, item, trinkets and no optional selected gear; not a general 7967 registration for all 26 DPS.",
+    "8025 Haste+30 and 7965 Mastery+26 were observed by v528 two-Native physical deltas but not yet linked to current user's v212 B/T/fixed-E budget or adaptive DPS.",
+    "Socket totals 5 and 6 remain game-socket-legal/J owner PENDING, not simply a native gem_id acceptance issue.",
+    "Only Windows Actions local FastAPI/TestClient + existing v094 worker was exercised, not personal PC hand-driven browser acceptance.",
+    "Observed DPS is first choice within one candidate search; no pairwise 95% superiority established and global optimum remains unproven."
+  ],
+  "new_simc_effect_engine_changes": 0,
+  "new_optimizer_changes": 0,
+  "new_budget_engine_changes": 0,
+  "official_78_complete": "15/78",
+  "full_product_e2e": "PENDING",
+  "authority": "isolated branch only; no main/immutable v003/Project Sources UI/Work OS promotion"
+}
