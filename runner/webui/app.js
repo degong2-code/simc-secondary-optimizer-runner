@@ -1200,6 +1200,85 @@ function chooseInstalledOilLoadout() {
   oilCompatibility();
   syncOilUseToggle();
 }
+// A selected verified oil is an O intent, not authority to guess a
+// different J/F v212 install. Only one already sealed ordinary four-gem
+// combination can be rebound here; other variants use the existing
+// explicit user-variant Environment Build. No G/F Native is started.
+async function bindUniqueInstalledOilVariant() {
+  const sha=field("optimizer-oil-loadout");
+  const candidate=state.oilLoadouts.find(x=>x.installed_manifest_sha256===sha);
+  if(!candidate)return;
+  const build=field("season-game-build")||
+    state.verifiedInstalledBuildFromThisPage;
+  const level=valueInt("ilevel");
+  const flask=field("season-selected-flask-id");
+  const eligible=candidate.verified_variant_count===1 &&
+    candidate.ordinary_four_gem_profile===true &&
+    (!flask||Number(flask)===candidate.verified_flask_item_id) &&
+    valueInt("season-target-socket-count")===4 &&
+    !field("season-existing-special-gem-id") &&
+    installedConsumableScopeMatches(state.oilCatalog) &&
+    fullVerifiedOilMatch(candidate) &&
+    /^\\d+(?:\\.\\d+){3}$/.test(build||"");
+  if(!eligible){
+    // Do not select the first same-oil SHA when F or J differs.
+    state.seasonGearTargetIlevel=null;
+    updateBudgetPreview();
+    setNotice("선택 기름의 F/J·보석 조합이 둘 이상이거나 현재 조건과 다릅니다. "+
+      "‘선택 환경 검증·준비’에서 정확한 구성을 검증한 후 실행하세요.");
+    return;
+  }
+  if(verifiedInstalledGearScopeMatchesRun(build,level)&&
+     state.seasonGear.installed_manifest_sha256===sha){
+    syncOilUseToggle();
+    return;
+  }
+  const scope=seasonBuildInputScope(true);
+  const oldTrinkets=[field("trinket1"),field("trinket2")];
+  const oldSpecial=Array.from($("special-rows").querySelectorAll(".gear-row"))
+    .map(row=>{
+      const read=name=>row.querySelector('[data-field="'+name+'"]')?.value||"";
+      return {slot:read("slot"),item_id:Number(read("item_id")),
+        options:{bonus_id:read("bonus_id"),
+                 redirected_base_stats:read("redirected_base_stats")}};
+    }).filter(x=>x.slot&&Number.isSafeInteger(x.item_id)&&x.item_id>0);
+  state.seasonGearTargetIlevel=null;
+  const gear=await api("/api/v1/season-gear?game_build="+
+    encodeURIComponent(build)+"&target_ilevel="+level+
+    "&installed_manifest_sha256="+sha);
+  if(seasonBuildInputScope(true)!==scope ||
+     field("optimizer-oil-loadout")!==sha){
+    setNotice("설치 장비 조회 중 기름·F/J·보석 또는 시즌 선택이 변경되었습니다. "+
+      "현재 조건으로 다시 검증하세요.");
+    return;
+  }
+  if(gear.status!=="CURRENT_SEASON_CANDIDATE_SELECTION_ONLY"||
+     gear.source_scope!=="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES"||
+     gear.season_build!==build||gear.installed_manifest_sha256!==sha)
+    throw Error("VERIFIED_OIL_EXACT_INSTALLED_GEAR_UNAVAILABLE");
+  installSeasonGearHints(gear);
+  state.seasonGearTargetIlevel=level;
+  setTrinketSelection("trinket1",oldTrinkets[0]);
+  setTrinketSelection("trinket2",oldTrinkets[1]);
+  fillGearRows("special-rows",oldSpecial.filter(entry=>{
+    const item=gear.choices.special_effect_gear_candidate.find(
+      row=>row.item_id===entry.item_id);
+    return item&&specialAllowedSlots(item).includes(entry.slot);
+  }));
+  state.seasonOptionRequestEpoch++;
+  renderSeasonOptionCatalog(null);
+  try{
+    await restoreInstalledSeasonOptionCatalog({
+      current_season_product:true,
+      installed_season_game_build:build,
+      installed_manifest_sha256:sha,
+      user:{target:{ilevel:level}}});
+  }catch(error){renderSeasonOptionCatalog(null);}
+  syncOilUseToggle();
+  updateBudgetPreview();
+  setNotice("검증된 단일 기름·영약·4보석 설치본으로 장비 목록을 연결했습니다. "+
+    "추가 G/F Native는 실행하지 않았습니다.");
+}
 function runeCompatibility() {
   const key=field("spec");
   const isDK=key.startsWith("deathknight/");
@@ -3249,7 +3328,10 @@ function registerHandlers() {
     $("season-verified-flask").value="";
     refreshDefaultConsumableSummaries();
   });
-  $("optimizer-oil-loadout").addEventListener("change",chooseInstalledOilLoadout);
+  $("optimizer-oil-loadout").addEventListener("change",()=>withBusy(async()=>{
+    chooseInstalledOilLoadout();
+    await bindUniqueInstalledOilVariant();
+  }));
   for(const [check,id] of [["oil_main","optimizer-oil-main-id"],
                            ["oil_off","optimizer-oil-off-id"]]) {
     $(check).addEventListener("change",()=>{
