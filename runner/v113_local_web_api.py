@@ -893,6 +893,10 @@ class LocalJobs:
                     "auto_native_F_requested":auto_native_F_requested,
                     "auto_native_O_requested":auto_native_O_requested,
                     "auto_native_G_requested":native_G_binary is not None,
+                    # Only this ordinary USER default mode may defer G
+                    # Native if the original source compiler is incomplete.
+                    # Advanced explicit G+F probes retain their authority.
+                    "default_auto_core_build_requested":auto_initial_core_build,
                     # Cold-start always collects the same-build ordinary
                     # four-stat source, even without an optional special
                     # gem ID. This does not place gems or approve J; the
