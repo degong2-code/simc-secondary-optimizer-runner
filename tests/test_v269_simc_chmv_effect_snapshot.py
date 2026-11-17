@@ -166,4 +166,42 @@ class NativeSnapshotTests(unittest.TestCase):
                          "SIMC_ORDINARY_GEM_EFFECTIVE_RATING_PENDING")
         self.assertIsNone(wrong["simc_effective_two_stat_rating_unadmitted"])
 
+
+    def test_v557_original_v046_gear_static_rating_excludes_buffed_talent_difference(self):
+        """The numeric J source must be resolved SimC gear, not buffed_stats."""
+        profile=("paladin=sample\n"
+                 "head=sample,id=12345,ilevel=334,source=local\n"
+                 "chest=sample2,id=23456,ilevel=334,source=local\n")
+        prepared=v.prepare_ordinary_gem(
+            profile=profile,slot="head",ordinary_gem_id=320123)
+        def report(active):
+            marker=",gem_id=320123" if active else ""
+            return json.dumps({"git_revision":"a"*10,"sim":{"players":[{
+                "name":"sample",
+                "gear":{
+                    "head":{"encoded_item":"sample,id=12345,ilevel=334"+
+                            marker+",source=local",
+                            "crit_rating":116 if active else 100,
+                            "haste_rating":107 if active else 100},
+                    "chest":{"encoded_item":
+                        "sample2,id=23456,ilevel=334,source=local",
+                        "crit_rating":300}},
+                "collected_data":{"buffed_stats":{"stats":{
+                    "crit_rating":1024 if active else 1000,
+                    "haste_rating":820 if active else 810,
+                    "mastery_rating":300,"versatility_rating":400
+                }}}}]}}).encode()
+        result=v.compare_ordinary_gem(
+            prepared=prepared,baseline_json2=report(False),
+            active_json2=report(True),
+            binary_sha256="c"*64,simc_revision="a"*40)
+        self.assertEqual(result["simc_unbuffed_gear_two_stat_rating_unadmitted"],23)
+        self.assertEqual(result["simc_unbuffed_gear_two_stat_vector_unadmitted"],{
+            "crit_rating":16,"haste_rating":7,
+            "mastery_rating":0,"versatility_rating":0})
+        self.assertEqual(result["simc_effective_two_stat_rating_unadmitted"],34)
+        self.assertEqual(result["simc_unbuffed_gear_rating_source"],
+                         "V046_JSON2_RESOLVED_ITEM_STATIC_CHMV")
+        self.assertIsNone(result["official_J"])
+
 if __name__ == "__main__": unittest.main()

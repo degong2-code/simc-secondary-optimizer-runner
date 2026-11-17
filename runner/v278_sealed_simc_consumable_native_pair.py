@@ -333,6 +333,12 @@ def measure_ordinary_gem(*,stage_root,source_profile_path,binary,
                 measured["simc_effective_two_stat_rating_unadmitted"],
             "simc_effective_two_stat_vector_unadmitted":
                 measured["simc_effective_two_stat_vector_unadmitted"],
+            "simc_unbuffed_gear_two_stat_rating_unadmitted":
+                measured["simc_unbuffed_gear_two_stat_rating_unadmitted"],
+            "simc_unbuffed_gear_two_stat_vector_unadmitted":
+                measured["simc_unbuffed_gear_two_stat_vector_unadmitted"],
+            "simc_unbuffed_gear_rating_source":
+                measured["simc_unbuffed_gear_rating_source"],
             "native_case_receipts":[{
                 "variant":variant,
                 "receipt_path":str(case["folder"]/"receipt.json"),

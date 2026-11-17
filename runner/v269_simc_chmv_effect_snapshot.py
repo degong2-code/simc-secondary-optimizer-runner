@@ -13,6 +13,11 @@ import json
 import math
 import re
 
+try:
+    from . import v046_static_item_cache as static_items
+except ImportError:
+    import v046_static_item_cache as static_items
+
 SCHEMA = "v269_simc_native_precombat_chmv_delta_v1"
 STATS = ("crit_rating", "haste_rating", "mastery_rating", "versatility_rating")
 CONSUMABLES = ("flask", "food", "potion", "augmentation", "temporary_enchant")
@@ -258,6 +263,42 @@ def _gem_native_player(raw, revision):
     return player.get("name"),gear,ratings
 
 
+
+def _gem_resolved_native_gear_static_delta(*, baseline_gear, active_gear, slot):
+    """Read SimC JSON2 resolved gear rating using the existing v046 parser.
+
+    Buffed_stats can include talents and are only comparative observations.
+    This source records the exact *item* CHMV delta, as v234 G already does.
+    Missing per-item numeric fields are UNOBSERVED, never assumed to be zero.
+    """
+    before=baseline_gear[slot]
+    after=active_gear[slot]
+    if not any(stat in before or stat in after for stat in STATS):
+        return None
+    try:
+        base={stat:static_items.read_number(before,stat) for stat in STATS}
+        live={stat:static_items.read_number(after,stat) for stat in STATS}
+        for other in baseline_gear:
+            if other==slot:
+                continue
+            left=baseline_gear[other]
+            right=active_gear[other]
+            if any(stat in left or stat in right for stat in STATS):
+                need(all(static_items.read_number(left,stat)==
+                         static_items.read_number(right,stat)
+                         for stat in STATS),
+                     "V269_GEM_OTHER_NATIVE_GEAR_STATIC_CHANGED")
+    except static_items.CacheBlocked as exc:
+        raise SnapshotBlocked(
+            "V269_GEM_RESOLVED_GEAR_STATIC_INVALID") from exc
+    delta={stat:live[stat]-base[stat] for stat in STATS}
+    positive=[stat for stat in STATS if delta[stat]>0]
+    if (len(positive)!=2 or any(n<0 for n in delta.values())
+            or delta[positive[0]]==delta[positive[1]]):
+        return None
+    return delta
+
+
 def compare_ordinary_gem(*, prepared, baseline_json2, active_json2,
                          simc_revision, binary_sha256):
     """Source-only SimC delta. Caller still owns exact quality and official J."""
@@ -301,6 +342,8 @@ def compare_ordinary_gem(*, prepared, baseline_json2, active_json2,
              (a.replace(marker,"",1)==b if key==slot else a==b) and
              (a.count(marker)==1 if key==slot else marker not in a),
              "V269_GEM_ACTUAL_SIMC_GEAR_ITEM_DRIFT")
+    unbuffed_gear=_gem_resolved_native_gear_static_delta(
+        baseline_gear=base_gear,active_gear=active_gear,slot=slot)
     delta={stat:round(active_stats[stat]-base_stats[stat],6)
            for stat in STATS}
     rounded={stat:int(round(value)) for stat,value in delta.items()}
@@ -324,6 +367,12 @@ def compare_ordinary_gem(*, prepared, baseline_json2, active_json2,
             sum(rounded.values()) if clean else None),
         "simc_effective_two_stat_vector_unadmitted":(
             rounded if clean else None),
+        "simc_unbuffed_gear_two_stat_rating_unadmitted":(
+            sum(unbuffed_gear.values()) if unbuffed_gear is not None else None),
+        "simc_unbuffed_gear_two_stat_vector_unadmitted":unbuffed_gear,
+        "simc_unbuffed_gear_rating_source":(
+            "V046_JSON2_RESOLVED_ITEM_STATIC_CHMV"
+            if unbuffed_gear is not None else "PENDING_NOT_OBSERVED"),
         "source":"SIMC_JSON2_ACTUAL_GEM_ID_AND_BUFFED_STATS",
         "native_case_attestation_by_caller_required":True,
         "same_effect_highest_quality_verified_here":False,
