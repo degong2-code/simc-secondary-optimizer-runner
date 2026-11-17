@@ -41,6 +41,8 @@ def need(ok,why):
 
 def validate_season(doc):
     """No stable class/spec contract fields may leak into replaceable data."""
+    default_keys={"flask","food","potion","augmentation","omnium_talents",
+                  "gem_budget_J","flask_budget_F","flask_fixed_stat"}
     need(type(doc) is dict and
          doc.get("schema")=="v144_representative_season_items_v1" and
          type(doc.get("specializations")) is dict and
@@ -54,10 +56,22 @@ def validate_season(doc):
           (doc["character_level"] is None and
            doc.get("simc_item_db_source")=="local")) and
          type(doc.get("default_consumables")) is dict and
-         set(doc["default_consumables"])=={
-            "flask","food","potion","augmentation","omnium_talents",
-            "gem_budget_J","flask_budget_F","flask_fixed_stat"},
+         set(doc["default_consumables"]) in (
+             default_keys,default_keys|{"flask_fixed_vector"}),
          "SEASON_DATA_SCHEMA")
+    defaults=doc["default_consumables"]
+    if "flask_fixed_vector" in defaults:
+        # Future source-only multi-stat F is a *measured vector*, not
+        # a fabricated single-stat allocation. No Policy A admission here.
+        vector=defaults["flask_fixed_vector"]
+        need(doc.get("simc_item_db_source")=="local" and
+             defaults.get("flask_fixed_stat") is None and
+             type(defaults.get("flask_budget_F")) is int and
+             type(vector) is dict and set(vector)==set(FIXED_STATES) and
+             all(type(v) is int and v>=0 for v in vector.values()) and
+             sum(vector.values())==defaults["flask_budget_F"] and
+             sum(v>0 for v in vector.values())>=2,
+             "SOURCE_ONLY_MULTI_STAT_FLASK_EXACT_F_VECTOR_REQUIRED")
     # On future season snapshots, explicitly ask the *same SimC binary*
     # to resolve item ID/ilevel/options from its bundled local item DB.
     # Optional to keep established 334 profile bytes and Native caches stable.
@@ -304,15 +318,22 @@ def v098_inputs(character,trinkets,*,target_ilevel=334,combat=None,
         # Exact previous-season behavior and receipts remain unchanged.
         consumer.default_choice(profile,rows["head"])
     fields=("crit_rating","haste_rating","mastery_rating","versatility_rating")
-    need(defaults["flask_fixed_stat"] in fields and
-         type(defaults["flask_budget_F"]) is int and
+    need(type(defaults["flask_budget_F"]) is int and
          defaults["flask_budget_F"]>=0 and
          type(defaults["gem_budget_J"]) is int and
          defaults["gem_budget_J"]>=0,
          "SEASON_CONSUMABLE_BUDGET_INVALID")
-    flask_F={stat:(defaults["flask_budget_F"]
-                   if stat==defaults["flask_fixed_stat"] else 0)
-             for stat in fields}
+    if "flask_fixed_vector" in defaults:
+        need(source_only_season_consumables,
+             "MULTI_STAT_FLASK_SOURCE_ONLY_REQUIRED")
+        # The original v278 measured F is checked again by v098/v222.
+        flask_F=dict(defaults["flask_fixed_vector"])
+    else:
+        need(defaults["flask_fixed_stat"] in fields,
+             "SEASON_CONSUMABLE_BUDGET_INVALID")
+        flask_F={stat:(defaults["flask_budget_F"]
+                       if stat==defaults["flask_fixed_stat"] else 0)
+                 for stat in fields}
     groups={slot:"tier" for slot in tier}
     groups.update({"trinket1":"trinkets","trinket2":"trinkets"})
     fifth=next(slot for slot in TIER_SLOTS if slot not in tier)
