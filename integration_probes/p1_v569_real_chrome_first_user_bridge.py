@@ -116,9 +116,16 @@ def main():
                       "--window-size=1440,950"):opts.add_argument(a)
             d=webdriver.Chrome(options=opts)
             receipt["browser_real"]=True
-            d.get(URL);idle(d);d.execute_script(INSTALL)
-            need(snap(d)["label"]=="시즌 환경 준비 · 장신구 목록 불러오기"
-              and not snap(d)["disabled"],"COLD_BUTTON_NOT_CLICKABLE")
+            d.get(URL)
+            WebDriverWait(d,35).until(lambda x:x.execute_script(
+                "return !!state.token && state.defaults.length===26 && "+
+                "document.getElementById('start-btn').textContent.includes('시즌 환경 준비') && "+
+                "!state.busy"))
+            d.execute_script(INSTALL)
+            cold=snap(d)
+            print("V569_COLD_SCREEN "+json.dumps(cold,ensure_ascii=False),flush=True)
+            need(cold["label"]=="시즌 환경 준비 · 장신구 목록 불러오기"
+              and not cold["disabled"],"COLD_BUTTON_NOT_CLICKABLE")
             click(d)
             need(snap(d)["builds"]==0 and snap(d)["dps"]==0,"CANCEL_NOT_SAFE")
             d.execute_script("window.__v569.mode='pending'")
