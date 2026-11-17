@@ -477,6 +477,44 @@ class FreshEnvironmentSourceStageTests(unittest.TestCase):
                 target_ilevel=334)
             self.assertTrue(p.verify_fresh_installed_environment(published))
             self.assertEqual(published["official_G"],2800)
+            self.assertNotIn("official_G_reference_track",published)
+            # Fury's extra off-hand 2H G must be its OWN original v277
+            # source-owned component. No new Native, old install unchanged.
+            measured=gjfo.standardize_representative_G(
+                observed_G_total=2998,target_ilevel=334,
+                source_observation_sha256="4"*64)
+            fury_G={**trusted_budget["components"]["G"],
+                    "rating":measured["standardized_G"],
+                    "source_verification":"EXACT_NATIVE",
+                    "standardization":measured,
+                    "reference_G_track":"fury_dual_2h",
+                    "reference_G_profile_receipt_sha256":"f"*64}
+            fury_budget={**trusted_budget,"components":{
+                **trusted_budget["components"],"G":fury_G}}
+            fury=p.compile_fresh_installed_environment(
+                source_catalog=catalog,
+                source_artifact_sha256=artifact_sha,
+                staged_source_environment=staged_data,
+                trusted_budget_evidence=fury_budget,
+                source_ui=ui_catalog.public_options(source_path),
+                trusted_policy_A_receipts_by_id={},target_ilevel=334)
+            self.assertTrue(p.verify_fresh_installed_environment(fury))
+            self.assertEqual(fury["official_G"],3000)
+            self.assertEqual(fury["official_B"],3310)
+            self.assertEqual(fury["official_G_reference_track"],
+                             "fury_dual_2h")
+            self.assertEqual(fury["official_G_profile_receipt_sha256"],"f"*64)
+            self.assertNotEqual(fury["manifest_sha256"],published["manifest_sha256"])
+            with self.assertRaisesRegex(
+                    p.EnvironmentBlocked,"FRESH_INSTALL_FURY_G_SOURCE_TRACK_INVALID"):
+                p.compile_fresh_installed_environment(
+                    source_catalog=catalog,source_artifact_sha256=artifact_sha,
+                    staged_source_environment=staged_data,
+                    trusted_budget_evidence={**fury_budget,"components":{
+                        **fury_budget["components"],"G":{
+                            **fury_G,"reference_G_profile_receipt_sha256":"bad"}}},
+                    source_ui=ui_catalog.public_options(source_path),
+                    trusted_policy_A_receipts_by_id={},target_ilevel=334)
             self.assertEqual(published["official_J"],140)
             self.assertEqual(published["official_F"],170)
             self.assertIsNone(published["official_F_physical_source"])
