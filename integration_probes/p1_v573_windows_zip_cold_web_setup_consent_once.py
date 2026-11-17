@@ -132,7 +132,8 @@ def run(zip_file,out):
             probe=subprocess.run(["cmd","/d","/c",
                 "where python && python -c \"import sys; print(sys.version_info[:2])\""],
                 cwd=root,env=env,capture_output=True,text=True,timeout=20)
-        need(probe.returncode==0 and "3, 12" in probe.stdout,
+        need(probe.returncode==0 and
+             re.search(r"3,\s*(?:1[2-9]|[2-9][0-9])\b",probe.stdout),
              "WINDOWS_RUNNER_PYTHON_312_REQUIRED")
         evidence["existing_system_python_3_12_plus"]=True
         # Run --check on a freshly extracted ZIP. With no venv this is not
