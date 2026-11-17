@@ -777,6 +777,118 @@ def _fresh_same_build_ordinary_gem_metadata_candidates(*, compiled,
         "native_calls":0,"network_calls":0}
 
 
+def _fresh_pinned_dbc_ordinary_gem_j_source(*, candidates, collected,
+                                           stage_root, simc_revision):
+    """Reuse v275/v211/v296's sealed DBC static CHMV before gem Native.
+
+    This is an UNADMITTED J candidate. Identical source conditions and
+    observed crafting quality allow deterministic probing, not approval.
+    Scaling, alternate partner-stat families and incomplete source stay pending.
+    """
+    out={"status":"PINNED_SIMC_DBC_GEM_J_PENDING",
+         "by_stat":None,"rating_by_id":None,"J_candidate_unadmitted":None,
+         "source_sha256":None,"highest_quality_verified":False,
+         "same_effect_use_scope_verified":False,
+         "environment_ready":False,"native_calls":0,"network_calls":0}
+    if type(candidates) is not dict or candidates.get("status")!=(
+            "SAME_BUILD_GEM_ITEM_QUALITY_CANDIDATES_UNADMITTED"):
+        return out
+    build=collected.get("expected_game_build")
+    need(candidates.get("game_build")==build and
+         candidates.get("simc_revision")==simc_revision and
+         all(type(candidates.get(k)) is str and
+             season_budget_contract.SHA.fullmatch(candidates[k]) is not None
+             for k in ("v221_stage_receipt_sha256",
+                       "v230_stage_receipt_sha256",
+                       "v230_original_item_data_sha256")),
+         "V216_GEM_DBC_ORIGINAL_BUILD_AND_SHA_REQUIRED")
+    rows=candidates.get("candidates_unadmitted")
+    need(type(rows) is list and
+         1<=len(rows)<=simc_item_metadata.MAX_REQUEST_IDS and
+         len(rows)==candidates.get("candidate_count"),
+         "V216_GEM_DBC_SOURCE_ROWS_DRIFT")
+    ids=set();enchant_ids=set()
+    for row in rows:
+        need(type(row) is dict and
+             all(type(row.get(k)) is int for k in (
+                 "item_id","gem_property_id","enchant_id","color_mask",
+                 "minimum_ilevel","expansion_id","quality","crafting_quality"))
+             and row["item_id"]>0 and row["gem_property_id"]>0 and
+             row["item_id"] not in ids,
+             "V216_GEM_DBC_PHYSICAL_ITEM_ROW_INVALID")
+        ids.add(row["item_id"])
+        if row["enchant_id"]<=0:
+            return {**out,"reason":"GEM_ENCHANT_ID_UNRESOLVED"}
+        enchant_ids.add(row["enchant_id"])
+    if len(enchant_ids)>128:
+        return {**out,"reason":"GEM_DBC_EXACT_ID_BATCH_TOO_LARGE"}
+    pinned=collected.get("fresh_pinned_v211_source")
+    if not (type(pinned) is dict and pinned.get("status")==
+            "PINNED_V211_AND_GENERATED_SOURCES_SEALED"):
+        return {**out,"reason":"GEM_PINNED_V275_SOURCE_PENDING"}
+    try:
+        raw=oil_raw_source.from_v275(
+            pinned_source=pinned,stage_root=stage_root,
+            game_build=build,simc_revision=simc_revision,
+            enchant_ids=enchant_ids)
+    except (oil_raw_source.OilSourceBlocked,OSError,ValueError,KeyError) as exc:
+        return {**out,"reason":str(exc).split(":",1)[0]}
+    by_enchant={v["enchant_id"]:v for v in raw["items"]}
+    need(raw.get("game_build")==build and
+         raw.get("simc_revision")==simc_revision and
+         set(by_enchant)==enchant_ids and
+         type(raw.get("source_sha256")) is str and
+         season_budget_contract.SHA.fullmatch(raw["source_sha256"]) is not None,
+         "V216_GEM_DBC_SEALED_ENCHANT_SOURCE_DRIFT")
+    groups={stat:{} for stat in physical_gems.ORDINARY_FOUR_STATS}
+    unresolved=0
+    for row in rows:
+        original=by_enchant[row["enchant_id"]]
+        vec=original.get("static_CHMV_vector")
+        stats=physical_gems.ORDINARY_FOUR_STATS
+        if not (original["status"]==oil_raw_source.STATUS and
+                type(vec) is dict and set(vec)==set(stats) and
+                all(type(v) is int and v>=0 for v in vec.values()) and
+                sum(v>0 for v in vec.values())==2):
+            unresolved+=1;continue
+        positive=[stat for stat in stats if vec[stat]>0]
+        if vec[positive[0]]==vec[positive[1]]:
+            unresolved+=1;continue
+        lead=max(positive,key=lambda stat:vec[stat])
+        partner=next(s for s in positive if s!=lead)
+        scope=(partner,row["color_mask"],row["minimum_ilevel"],
+               row["expansion_id"],row["quality"],
+               original["source_min_ilevel"],original["source_max_ilevel"])
+        groups[lead].setdefault(scope,[]).append((row,vec))
+    if any(len(groups[s])!=1 for s in groups):
+        return {**out,"reason":"FOUR_UNAMBIGUOUS_STATIC_EFFECT_FAMILIES_PENDING",
+                "observed_effect_family_count":sum(map(len,groups.values())),
+                "unresolved_item_count":unresolved,
+                "source_sha256":raw["source_sha256"]}
+    chosen={}
+    for lead in groups:
+        rows_with_vector=next(iter(groups[lead].values()))
+        best=max(rows_with_vector,key=lambda x:(
+            x[0]["crafting_quality"],sum(x[1].values()),-x[0]["item_id"]))
+        partner=next(s for s,v in best[1].items() if s!=lead and v>0)
+        if any(best[1][s]<v[s] for _,v in rows_with_vector
+               for s in (lead,partner)):
+            return {**out,"reason":"HIGHER_QUALITY_NUMERIC_DOMINANCE_PENDING",
+                    "source_sha256":raw["source_sha256"]}
+        chosen[lead]={"item_id":best[0]["item_id"],
+                      "raw_nominal_points":sum(best[1].values())}
+    return {**out,
+        "status":"PINNED_SIMC_DBC_FOUR_STAT_J_STATIC_UNADMITTED",
+        "by_stat":chosen,
+        "rating_by_id":{str(r["item_id"]):r["raw_nominal_points"]
+                        for r in chosen.values()},
+        "J_candidate_unadmitted":sum(r["raw_nominal_points"]
+                                    for r in chosen.values()),
+        "source_sha256":raw["source_sha256"],
+        "unresolved_item_count":unresolved,
+        "simc_revision":simc_revision,"game_build":build}
+
+
 def _fresh_four_stat_simc_observed_j_preview(*, candidates, collected,
                                              stage_root, binary, simc_revision,
                                              native_G_status):

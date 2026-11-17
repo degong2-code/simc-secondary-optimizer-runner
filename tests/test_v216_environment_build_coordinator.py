@@ -171,6 +171,81 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             v216._fresh_same_build_ordinary_gem_metadata_candidates(
                 compiled=compiled,gem_source=gem_source,collected=collected)
 
+    def test_v549_reuse_original_v296_dbc_for_static_four_stat_j(self):
+        build="12.2.0.99999"
+        rev="a"*40
+        props=(32,36,49,40)
+        rows=[];cpp=[]
+        for i in range(4):
+            for rank in (2,3):
+                iid=330000+i*10+rank
+                eid=8100+i*10+rank
+                rows.append({"item_id":iid,"enchant_id":eid,
+                   "gem_property_id":eid+100,"color_mask":2,
+                   "minimum_ilevel":320,"expansion_id":13,
+                   "quality":4,"crafting_quality":rank})
+                cpp.append("{ "+str(eid)+", 0, 0, 0, 0, 0, 0, 0, 0, "
+                    "{ 5, 5, 0 }, { "+str(12 if rank==2 else 16)+", 7, 0 }, "
+                    "{ "+str(props[i])+", "+str(props[(i+1)%4])+", 0 }, "
+                    '{ 0, 0, 0 }, 0, "Test" },')
+        raw="// spell item enchantments, wow build "+build+"\\n"+(
+            "\\n".join(cpp))+"\\n"
+        static=v216.oil_raw_source.extract(
+            generated_text=raw,game_build=build,simc_revision=rev,
+            enchant_ids={x["enchant_id"] for x in rows})
+        candidate={"status":"SAME_BUILD_GEM_ITEM_QUALITY_CANDIDATES_UNADMITTED",
+          "game_build":build,"simc_revision":rev,
+          "v221_stage_receipt_sha256":"1"*64,
+          "v230_stage_receipt_sha256":"2"*64,
+          "v230_original_item_data_sha256":"3"*64,
+          "candidate_count":len(rows),"candidates_unadmitted":rows}
+        kwargs=dict(candidates=candidate,stage_root=self.root,
+          simc_revision=rev,collected={"expected_game_build":build,
+           "fresh_pinned_v211_source":{
+              "status":"PINNED_V211_AND_GENERATED_SOURCES_SEALED"}})
+        with mock.patch.object(v216.oil_raw_source,"from_v275",
+                               return_value=static) as fetch:
+            found=v216._fresh_pinned_dbc_ordinary_gem_j_source(**kwargs)
+        self.assertEqual(fetch.call_count,1)
+        self.assertEqual(found["J_candidate_unadmitted"],92)
+        self.assertEqual(len(found["rating_by_id"]),4)
+        self.assertEqual(found["native_calls"],0)
+        self.assertFalse(found["highest_quality_verified"])
+        self.assertFalse(found["environment_ready"])
+        mismatch={**candidate,"game_build":"12.1.5.70783"}
+        with self.assertRaisesRegex(v216.EnvironmentBuildBlocked,
+                    "V216_GEM_DBC_ORIGINAL_BUILD_AND_SHA_REQUIRED"):
+            v216._fresh_pinned_dbc_ordinary_gem_j_source(
+                **{**kwargs,"candidates":mismatch})
+        # Another partner stat for the same leading stat changes the effect.
+        other={**rows[0],"item_id":349991,"enchant_id":8991}
+        alternate=v216.oil_raw_source.extract(
+            generated_text=raw+'{ 8991, 0, 0, 0, 0, 0, 0, 0, 0, '
+                '{ 5, 5, 0 }, { 17, 7, 0 }, { 32, 49, 0 }, '
+                '{ 0, 0, 0 }, 0, "Other" },\\n',
+            game_build=build,simc_revision=rev,
+            enchant_ids={x["enchant_id"] for x in rows}|{8991})
+        with mock.patch.object(v216.oil_raw_source,"from_v275",
+                               return_value=alternate):
+            pending=v216._fresh_pinned_dbc_ordinary_gem_j_source(
+                **{**kwargs,"candidates":{**candidate,
+                   "candidate_count":len(rows)+1,
+                   "candidates_unadmitted":rows+[other]}})
+        self.assertIsNone(pending["J_candidate_unadmitted"])
+        self.assertEqual(pending["native_calls"],0)
+        self.assertFalse(pending["environment_ready"])
+        # Scaling stays unobserved instead of treating base DBC points as J.
+        scaled=raw.replace("{ 8102, 0, 0, 0, 0, 0, 0, 0, 0, ",
+                           "{ 8102, 0, -7, 0, 80, 120, 0, 0, 0, ")
+        unscaled=v216.oil_raw_source.extract(
+            generated_text=scaled,game_build=build,simc_revision=rev,
+            enchant_ids={x["enchant_id"] for x in rows})
+        with mock.patch.object(v216.oil_raw_source,"from_v275",
+                               return_value=unscaled):
+            pending=v216._fresh_pinned_dbc_ordinary_gem_j_source(**kwargs)
+        self.assertIsNone(pending["J_candidate_unadmitted"])
+        self.assertGreater(pending["unresolved_item_count"],0)
+
     def test_v548_four_source_effect_families_measure_once_and_do_not_admit_j(self):
         build="12.2.0.99999"
         rev="a"*40
