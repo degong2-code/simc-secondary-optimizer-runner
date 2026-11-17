@@ -167,6 +167,8 @@ def run(binary,output_dir,*,source_only=False):
                     n_j.get("highest_quality_candidate_count"),
                 "named_tier_directions":
                     len(n_j.get("source_named_tier_structure") or []),
+                "named_tier_source_rank_structure":
+                    n_j.get("source_named_tier_structure"),
                 "native_J_distinct_scale_signatures":
                     n_j.get("numeric_signature_count"),
                 "native_J_real_sample_ids":
