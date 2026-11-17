@@ -790,6 +790,7 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         (simc_dir/source_seed.RECEIPT).write_text(
             json.dumps(receipt),encoding="utf8")
         items=[{"item_id":item_id,"quality":3,"crafting_quality":rank,
+                "name":"Same-Build Gem","ilevel_unscaled":321,
                 "class_id":3,"subclass_id":0}
                for item_id,rank in zip(selected,(1,3,2))]
         parsed={"schema":build.simc_item_metadata.SCHEMA,
@@ -814,7 +815,13 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
             parser.assert_called_once()
         self.assertEqual(first["status"],
                          "PINNED_SIMC_GEM_QUALITY_SOURCE_ONLY_UNADMITTED")
-        self.assertEqual(first["selected_item_quality_unadmitted"],items)
+        self.assertEqual(first["selected_item_quality_unadmitted"],[
+            {"item_id":row["item_id"],"quality":row["quality"],
+             "crafting_quality":row["crafting_quality"],
+             "item_name":row["name"],
+             "item_ilevel_unscaled":row["ilevel_unscaled"],
+             "class_id":row["class_id"],"subclass_id":row["subclass_id"]}
+            for row in items])
         self.assertTrue(first["quality_source_authenticated"])
         self.assertEqual(again["v230_stage_cache_status"],"REUSED_VERIFIED")
         self.assertFalse(first["highest_quality_selection_verified"])

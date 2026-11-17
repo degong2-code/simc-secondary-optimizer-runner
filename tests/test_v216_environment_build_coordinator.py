@@ -123,6 +123,8 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                     "source_receipt_sha256":"b"*64,
                     "source_sha256":"c"*64,
                     "items":[{"item_id":iid,"quality":4,
+                              "name":"Source Gem "+str(iid),
+                              "ilevel_unscaled":300,
                               "crafting_quality":2,"class_id":
                                   v216.gem_item_join.GEM_CLASS,
                               "subclass_id":0} for iid in ids]}
