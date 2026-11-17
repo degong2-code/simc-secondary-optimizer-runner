@@ -906,6 +906,7 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
              "J":None,"environment_ready":False}
         quality_rows=[
             {"item_id":item_id,"quality":3,"crafting_quality":rank,
+             "item_name":"Source Gem","item_ilevel_unscaled":321,
              "class_id":3,"subclass_id":0}
             for item_id,rank in zip(selected,(1,3,2))]
         quality={"status":"PINNED_SIMC_GEM_QUALITY_SOURCE_ONLY_UNADMITTED",
