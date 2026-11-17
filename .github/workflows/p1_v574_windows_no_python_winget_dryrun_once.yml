@@ -1,0 +1,54 @@
+name: P1 v574 Windows ZIP Python Absent + Winget Consent Dry-Run (No Install, Native 0)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p1_v574_windows_no_python_winget_dryrun_once.yml
+      - integration_probes/p1_v574_windows_no_python_winget_dryrun_once.py
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v574-one-winget-dryrun-no-native
+  cancel-in-progress: false
+jobs:
+  isolated-no-python-winget-dryrun:
+    if: ${{ contains(github.event.head_commit.message, '[v574-no-python-dryrun-once]') }}
+    runs-on: windows-2022
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact source without CRLF conversion
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false, fetch-depth: 2}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse original current-head Windows ZIP, do not rebuild
+        uses: actions/download-artifact@v4
+        with:
+          repository: degong2-code/simc-secondary-optimizer-runner
+          run-id: 44083447750
+          name: v181-windows-source-beta-44083447750
+          path: .v574-original-zip
+          github-token: ${{ github.token }}
+      - name: Missing Python and winget consent via isolated harmless command stubs only
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $zip=Join-Path $PWD '.v574-original-zip/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip'
+          if (!(Test-Path $zip)) { throw 'V574_VERIFIED_PRODUCT_ZIP_MISSING' }
+          python -m py_compile integration_probes/p1_v574_windows_no_python_winget_dryrun_once.py
+          if ($LASTEXITCODE -ne 0) { throw 'V574_TEST_SCRIPT_SYNTAX_FAILED' }
+          python -u integration_probes/p1_v574_windows_no_python_winget_dryrun_once.py --zip "$zip" --out out/v574
+          if ($LASTEXITCODE -ne 0) { throw 'V574_SAFE_PYTHON_ABSENT_DRYRUN_FAILED' }
+      - name: Preserve isolated decision receipt, not a Python installer or personal files
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v574-no-python-winget-consent-dryrun-compact
+          path: out/v574/V574_WINDOWS_PYTHON_ABSENT_WINGET_CONSENT_DRYRUN.json
+          retention-days: 9
+          if-no-files-found: warn
