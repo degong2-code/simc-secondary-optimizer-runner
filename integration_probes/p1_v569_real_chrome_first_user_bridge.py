@@ -92,6 +92,18 @@ def idle(d):
 def click(d):
     button=d.find_element(By.ID,"start-btn")
     d.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})",button)
+    geometry=d.execute_script("""
+        const b=document.getElementById('start-btn');
+        const r=b.getBoundingClientRect();
+        const x=r.left+r.width/2,y=r.top+r.height/2;
+        const hit=document.elementFromPoint(x,y);
+        return {top:r.top,bottom:r.bottom,left:r.left,right:r.right,
+          viewport_height:innerHeight,viewport_width:innerWidth,
+          hit_id:hit?.id||null,hit_class:hit?.className||null,
+          hit_tag:hit?.tagName||null,scroll_y:scrollY,
+          disabled:b.disabled};
+    """)
+    print("V569_CLICK_GEOMETRY "+json.dumps(geometry,ensure_ascii=True),flush=True)
     WebDriverWait(d,12).until(lambda x:x.execute_script("""
         const b=document.getElementById('start-btn');
         const r=b.getBoundingClientRect();
@@ -132,7 +144,7 @@ def main():
                 "!state.busy"))
             d.execute_script(INSTALL)
             cold=snap(d)
-            print("V569_COLD_SCREEN "+json.dumps(cold,ensure_ascii=False),flush=True)
+            print("V569_COLD_SCREEN "+json.dumps(cold,ensure_ascii=True),flush=True)
             need(cold["label"]=="시즌 환경 준비 · 장신구 목록 불러오기"
               and not cold["disabled"],"COLD_BUTTON_NOT_CLICKABLE")
             click(d)
@@ -184,5 +196,5 @@ def main():
             (out/"V569_BROWSER_BRIDGE_RECEIPT.json").write_text(
               json.dumps(receipt,ensure_ascii=False,sort_keys=True,
                          indent=2)+"\n",encoding="utf8")
-            print("V569_BROWSER "+json.dumps(receipt,ensure_ascii=False),flush=True)
+            print("V569_BROWSER "+json.dumps(receipt,ensure_ascii=True),flush=True)
 if __name__=="__main__":main()
