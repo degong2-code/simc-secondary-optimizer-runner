@@ -217,7 +217,8 @@ def find_verified_installed_season_environment(
         sessions_root, target_ilevel, *, expected_game_build,
         selected_oil_item_ids_by_hand=None, selected_oil_hands=None,
         expected_installed_manifest_sha256=None,
-        require_unique_unqualified=False):
+        require_unique_unqualified=False,
+        required_reference_G_track=None):
     """Read-only, exact-build v217/v212 reuse across all 26 DPS profiles.
 
     A matching itemlevel alone is NEVER sufficient; even a fully sealed
@@ -250,6 +251,9 @@ def find_verified_installed_season_environment(
           season_budget_contract.SHA.fullmatch(
               expected_installed_manifest_sha256) is not None),
          "V216_REUSE_EXPECTED_INSTALL_SHA_INVALID")
+    need(required_reference_G_track in (
+             None,"general","fury_dual_2h"),
+         "V216_REUSE_G_REFERENCE_TRACK_INVALID")
     need(type(require_unique_unqualified) is bool and
          (not require_unique_unqualified or
           (selected_oil_hands is None and
@@ -303,6 +307,10 @@ def find_verified_installed_season_environment(
             key=doc["manifest_sha256"]
             if (expected_installed_manifest_sha256 is not None and
                     key!=expected_installed_manifest_sha256):
+                continue
+            if (required_reference_G_track is not None and
+                    doc.get("official_G_reference_track","general")!=
+                        required_reference_G_track):
                 continue
             if (file.name!="v212_installed_"+key[:20]+".json" or
                 doc["game_build"]!=expected_game_build or
@@ -373,6 +381,9 @@ def find_verified_installed_season_environment(
             "target_ilevel":target_ilevel,
             "G":doc["official_G"],"J":doc["official_J"],
             "F":doc["official_F"],"O":doc["official_O"],
+            **({"reference_G_track":
+                    doc.get("official_G_reference_track","general")}
+               if required_reference_G_track is not None else {}),
             "selected_oil_item_ids_by_hand":dict(installed_oils),
             "official_O_physical_source":doc.get("official_O_physical_source"),
             "official_F_physical_source":
