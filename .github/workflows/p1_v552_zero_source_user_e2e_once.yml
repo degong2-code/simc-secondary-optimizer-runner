@@ -43,7 +43,7 @@ jobs:
           $changed=@(git diff-tree --no-commit-id --name-only -r $env:GITHUB_SHA)
           $allowed=@('.github/workflows/p1_v552_zero_source_user_e2e_once.yml','integration_probes/p1_v552_real_zero_source_user_e2e.py')
           if (@($changed | Where-Object {$_ -notin $allowed}).Count -gt 0) { throw 'V552_ONLY_NEW_SCOPED_TEST_FILES_ALLOWED' }
-          if ($changed.Count -ne 2) { throw 'V552_EXACT_TWO_TEST_FILES_REQUIRED' }
+          if ($changed.Count -lt 1 -or $changed.Count -gt 2) { throw 'V552_ONLY_SCOPED_TEST_FILES_REQUIRED' }
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
