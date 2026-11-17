@@ -192,6 +192,8 @@ function updateManualTMode() {
   const manual=$("manual-t-mode").checked;
   $("manual-t-field").hidden=!manual;
   $("final_T").disabled=!manual;
+  // A checked manual mode must never submit an empty T as auto-budget.
+  $("final_T").required=manual;
   if(!manual)$("final_T").value="";
   updateBudgetPreview();
 }
@@ -1694,6 +1696,13 @@ function buildRequest() {
     openEquipmentPicker($(!field("trinket1")?"trinket1":"trinket2"));
     throw Error("장신구 두 개를 이번 시즌 목록에서 선택해 주세요.");
   }
+  // v576: manual mode is authoritative; an absent/invalid T cannot
+  // silently fall back to the verified season's automatic total.
+  const manualFinalT=$("manual-t-mode").checked;
+  if(manualFinalT && !field("final_T")){
+    $("final_T").reportValidity();
+    throw Error("수동 최종 T를 입력해야 합니다. 비워 두면 자동 예산으로 실행하지 않습니다.");
+  }
   if(!$("optimizer-form").reportValidity()) throw Error("필수 입력과 수치 범위를 확인해 주세요.");
   const spec=field("spec");
   const source=state.defaults.find(d=>d.class+"/"+d.spec===spec);
@@ -1723,7 +1732,7 @@ function buildRequest() {
   const controls={
     class:source.class,spec:source.spec,
     race:resolvedRace,talents:field("talents"),
-    ilevel:valueInt("ilevel"),final_T:field("final_T") ? valueInt("final_T"):null,
+    ilevel:valueInt("ilevel"),final_T:manualFinalT?valueInt("final_T"):null,
     max_single_stat_percent:valueInt("max-single-stat-percent"),
     trinket_ids:[valueInt("trinket1"),valueInt("trinket2")],
     oil_hands:["main_hand","off_hand"].filter(
