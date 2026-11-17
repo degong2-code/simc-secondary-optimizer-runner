@@ -1,0 +1,72 @@
+name: P1 v571 Windows Extracted ZIP Easy Start + Chrome Session Restore (Native 0)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p1_v571_windows_extracted_easy_start_once.yml
+      - integration_probes/p1_v571_windows_extracted_easy_start_restore_no_native.py
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v571-one-windows-packaged-no-native
+  cancel-in-progress: false
+jobs:
+  extracted-easy-start:
+    if: ${{ contains(github.event.head_commit.message, '[v571-win-zip-once]') }}
+    runs-on: windows-2022
+    timeout-minutes: 19
+    steps:
+      - name: Preserve source bytes across Windows checkout
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false, fetch-depth: 2}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse exact original season source-catalog artifact (not v212 READY)
+        uses: actions/download-artifact@v4
+        with:
+          repository: degong2-code/simc-secondary-optimizer-runner
+          run-id: 41360273361
+          name: v213-source-to-catalog-41360273361
+          path: .v571-source-artifact
+          github-token: ${{ github.token }}
+      - name: Verify v213 original and prepare only source package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $artifact=Join-Path $PWD '.v571-source-artifact/v213_current_season_source_to_catalog.json'
+          if (!(Test-Path $artifact -PathType Leaf)) { throw 'V571_ORIGINAL_V213_ARTIFACT_MISSING' }
+          Copy-Item $artifact data/current_season_source_to_catalog.json -Force
+          python -c "import json,sys;sys.path.insert(0,'runner');import v213_source_to_catalog as v;p=json.load(open('data/current_season_source_to_catalog.json',encoding='utf8'));assert v.verify_catalog(p);assert p['native_calls']==0 and p['network_calls']==0 and p['automatic_ui_promotion'] is False;print('V571_REUSED_UNPROMOTED_SOURCE_CATALOG',p['manifest_sha256'])"
+          if ($LASTEXITCODE -ne 0) { throw 'V571_ORIGINAL_CATALOG_SHA_INVALID' }
+          python -m pip install -r requirements-web-test.txt 'selenium>=4.24,<5'
+          if ($LASTEXITCODE -ne 0) { throw 'V571_WEB_DEPENDENCIES_INVALID' }
+          python -m py_compile integration_probes/p1_v571_windows_extracted_easy_start_restore_no_native.py
+          if ($LASTEXITCODE -ne 0) { throw 'V571_PROBE_SYNTAX_INVALID' }
+          node --check runner/webui/app.js
+          if ($LASTEXITCODE -ne 0) { throw 'V571_PRODUCT_JS_SYNTAX_DRIFT' }
+          python -m unittest -q tests.test_v181_windows_beta_package_offline
+          if ($LASTEXITCODE -ne 0) { throw 'V571_SOURCE_ZIP_CONTRACT_FAIL' }
+          New-Item -ItemType Directory -Force dist | Out-Null
+          python -u integration_probes/v181_windows_beta_packager.py --out dist/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip
+          if ($LASTEXITCODE -ne 0) { throw 'V571_EXACT_SOURCE_ZIP_BUILD_FAIL' }
+      - name: Actual extracted ZIP BAT first start, real Chrome, cancel, restart saved history (no Native)
+        shell: pwsh
+        timeout-minutes: 9
+        run: |
+          python -u integration_probes/p1_v571_windows_extracted_easy_start_restore_no_native.py --zip dist/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip --out out/v571
+          if ($LASTEXITCODE -ne 0) { throw 'V571_REAL_EXTRACTED_WIN_USER_PATH_BLOCKED' }
+      - name: Preserve sealed source-only ZIP and compact receipt; no profiles, caches or binary
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v571-windows-extracted-beta-zip-and-receipt
+          path: |
+            dist/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip
+            out/v571/V571_WINDOWS_ZIP_EASY_START_CHROME_RESTART_RECEIPT.json
+          retention-days: 7
+          if-no-files-found: warn
