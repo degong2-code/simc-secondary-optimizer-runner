@@ -1,4 +1,4 @@
-name: P1 v556 zero-source sealed SimC gem source stat-kind diagnostic Native0
+name: P1 v560 one true zero-source v046 native gem J to actual user SimC E2E
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
@@ -87,7 +87,7 @@ jobs:
         timeout-minutes: 30
         run: |
           New-Item -ItemType Directory -Force out/v552 | Out-Null
-          python -u integration_probes/p1_v552_real_zero_source_user_e2e.py --simc "$env:V552_SIMC_EXE" --out out/v552 --source-only
+          python -u integration_probes/p1_v552_real_zero_source_user_e2e.py --simc "$env:V552_SIMC_EXE" --out out/v552
           if ($LASTEXITCODE -ne 0) { throw 'V552_REAL_ZERO_SOURCE_FIRST_BLOCKER_IN_RECEIPT' }
       - name: Preserve bounded status and original identifiers (no source data or credentials)
         if: always()

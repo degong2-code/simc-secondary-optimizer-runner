@@ -157,8 +157,24 @@ def run(binary,output_dir,*,source_only=False):
             progress=env.get("zero_history_build") or {}
             installed=compilation.get("verified_environment_install") or {}
             jf=compilation.get("selected_J_F_source_owner_numeric_unadmitted") or {}
+            n_j=compilation.get("four_stat_simc_native_j_source_unadmitted") or {}
+            q_j=compilation.get("selected_J_F_source_owner_quality_unadmitted") or {}
             r["M2"]={
                 "source_compilation_status":compilation.get("status"),
+                "native_J_status":n_j.get("status"),
+                "native_J_reason":n_j.get("reason"),
+                "native_J_candidate_count":
+                    n_j.get("highest_quality_candidate_count"),
+                "native_J_measured_candidate_count":
+                    len(n_j.get("native_observations_unadmitted") or []),
+                "native_J_new_calls":n_j.get("new_native_calls"),
+                "native_J_selected_by_stat":n_j.get("by_stat"),
+                "J_source_owner_numeric_status":jf.get("status"),
+                "J_source_owner_quality_status":q_j.get("status"),
+                "original_verified_J_F_components":sorted(
+                    (compilation.get(
+                        "original_J_F_verified_components_not_full_environment")
+                     or {}).keys()),
                 "source_compilation_missing":compilation.get("missing",[]),
                 "first_requires":list(progress.get("requires") or [])[:25],
                 "required_core_source_owner_report":progress.get(
@@ -181,7 +197,7 @@ def run(binary,output_dir,*,source_only=False):
             raw=compilation.get("four_stat_source_owner_diagnostic_unadmitted") or {}
             # Reuse exact v275/v296 source already fetched in THIS run.
             # Stat-kind diagnostics only: never infer numeric J or approve items.
-            if (candidate.get("status")==
+            if (source_only and candidate.get("status")==
                     "SAME_BUILD_GEM_ITEM_QUALITY_CANDIDATES_UNADMITTED"):
                 import v296_pinned_oil_static_rating_source as static_derived
                 from collections import Counter
