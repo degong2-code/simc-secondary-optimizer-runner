@@ -1593,7 +1593,7 @@ const refresh=Function("state","field","valueInt","api",
    "renderInstalledOilLoadouts","renderInstalledFlaskChoices",
    raw.slice(a,b)+"return refreshInstalledOilLoadouts;")(
    state,field,id=>{assert.strictEqual(id,"ilevel");return ilevel;},
-   api,row=>oil.push(row),row=>flask.push(row));
+   api,row=>{oil.push(row);return false;},row=>flask.push(row));
 (async()=>{
   await refresh();
   assert.strictEqual(calls.pop(),"/api/v1/verified-oil-loadouts?ilevel=334",
@@ -1649,7 +1649,7 @@ const refresh=Function(
  raw.slice(a,b)+"return refreshInstalledOilLoadouts;")(
  state,id=>{assert.strictEqual(id,"season-game-build");return build;},
  id=>{assert.strictEqual(id,"ilevel");return ilevel;},api,
- data=>oil.push(data),data=>flask.push(data),message=>notices.push(message));
+ data=>{oil.push(data);return false;},data=>flask.push(data),message=>notices.push(message));
 const ticks=async()=>{for(let i=0;i<5;i++)await Promise.resolve();};
 (async()=>{
   const first=refresh();
