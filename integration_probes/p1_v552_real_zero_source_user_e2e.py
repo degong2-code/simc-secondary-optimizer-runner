@@ -188,13 +188,9 @@ def run(binary,output_dir,*,source_only=False):
                 rows=candidate["candidates_unadmitted"]
                 enchants={row["enchant_id"] for row in rows
                           if row["enchant_id"]>0}
-                pinned=env.get("source_stage",{}).get("fresh_pinned_v211_source")
-                if pinned is None:
-                    # Current coordinator returns these as collected source owners.
-                    pinned=(env.get("zero_history_build") or {}).get(
-                        "fresh_pinned_v211_source")
-                if pinned is None:
-                    pinned=(compilation.get("fresh_pinned_v211_source"))
+                pinned=env.get("fresh_pinned_v211_source")
+                # v216 returns the source owner's collected exact sealed
+                # artifact at top level. Do not guess an unsealed folder.
                 if type(pinned) is dict and len(enchants)<=128:
                     extracted=static_derived.from_v275(
                         pinned_source=pinned,
