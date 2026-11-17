@@ -1154,15 +1154,18 @@ def _fresh_two_stat_gem_named_tier_measurement_plan(*, rows, by_enchant):
     for (lead,partner),by_name in sorted(by_direction.items()):
         ranked=[]
         for name,items in by_name.items():
-            levels={item["item_ilevel_unscaled"] for item in items}
-            quality={item["quality"] for item in items}
-            if len(levels)!=1 or len(quality)!=1:
-                return {"status":"PENDING",
-                        "reason":"GEM_NAMED_TIER_ITEM_LEVEL_INCONSISTENT"}
+            # Inner crafting ranks can legitimately have DIFFERENT
+            # physical ItemIDs AND different item levels under one name.
+            # A name identifies the outer item tier, not a fixed item level.
+            levels=[item["item_ilevel_unscaled"] for item in items]
+            qualities=[item["quality"] for item in items]
             strengths=[item["source_strength"] for item in items]
             ranked.append({
-                "name":name,"items":items,"item_ilevel":next(iter(levels)),
-                "item_quality":next(iter(quality)),
+                "name":name,"items":items,
+                "item_ilevel":max(levels),
+                "minimum_item_ilevel":min(levels),
+                "item_quality":max(qualities),
+                "minimum_item_quality":min(qualities),
                 "minimum_strength":min(strengths),
                 "maximum_strength":max(strengths),
                 "crafting_quality_steps":sorted({
@@ -1180,7 +1183,12 @@ def _fresh_two_stat_gem_named_tier_measurement_plan(*, rows, by_enchant):
                 for other in contenders if other is not winners[0]) else None
         else:
             winner=contenders[0]
-        if winner is None:
+        if winner is None or any(
+                not (winner["minimum_item_ilevel"]>
+                         other["item_ilevel"] or
+                     winner["minimum_strength"]>
+                         other["maximum_strength"])
+                for other in ranked if other is not winner):
             return {"status":"PENDING",
                     "reason":"GEM_NAMED_TIER_STRENGTH_ORDER_UNPROVEN",
                     "ambiguous_direction":[lead,partner]}
@@ -1191,6 +1199,7 @@ def _fresh_two_stat_gem_named_tier_measurement_plan(*, rows, by_enchant):
             "leading_stat":lead,"partner_stat":partner,
             "selected_name":winner["name"],
             "item_ilevel":winner["item_ilevel"],
+            "minimum_item_ilevel":winner["minimum_item_ilevel"],
             "item_quality":winner["item_quality"],
             "internal_crafting_qualities":
                 winner["crafting_quality_steps"],
