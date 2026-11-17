@@ -1820,10 +1820,9 @@ def _season_settings_from_v216(*, compilation, numeric_inputs,
     calc=numeric_inputs["v216_numeric_preview"]["calculation"]
     need(sum(vector.values())==calc["F"],
          "SEASON_SETTINGS_FLASK_NATIVE_V222_DRIFT")
-    if len(chosen)!=1:
-        return {"status":"SEASON_SETTINGS_SOURCE_PENDING",
-                "missing":["V139_MULTI_STAT_FLASK_SOURCE_COMPOSER_PENDING"],
-                "settings":None}
+    # The v278 source already owns the exact per-stat F. Do not reject
+    # a future season merely because a verified flask splits F over stats.
+    # v139 accepts that vector only in its non-executable source-only route.
     build=calc["game_build"]
     settings={
         "schema":"v144_representative_season_items_v1",
@@ -1841,7 +1840,8 @@ def _season_settings_from_v216(*, compilation, numeric_inputs,
             "omnium_talents":folio,
             "gem_budget_J":calc["J"],
             "flask_budget_F":calc["F"],
-            "flask_fixed_stat":chosen[0]}}
+            "flask_fixed_stat":chosen[0] if len(chosen)==1 else None,
+            **({"flask_fixed_vector":dict(vector)} if len(chosen)>1 else {})}}
     pure.validate_season(settings)
     # Old 6+head shape keeps its exact existing serialization. All other
     # source-observed layouts use the existing v271 opt-in compositor.
