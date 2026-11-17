@@ -174,7 +174,9 @@ def run(zip_file,out):
                  first["gear_target"] is None and
                  first["start_label"]==
                    "시즌 환경 준비 · 장신구 목록 불러오기" and
-                 not first["start_disabled"],"COLD_PRODUCT_START_UI_NOT_READY")
+                 not first["start_disabled"] and
+                 browser.find_element(By.ID,"results-nav-btn").get_attribute("hidden") is not None,
+                 "COLD_PRODUCT_START_UI_NOT_READY")
             initial=browser.execute_script("""
                 return performance.getEntriesByType("resource").map(e=>e.name)
                   .filter(u=>u.includes("/environment/season-build") ||
@@ -261,6 +263,14 @@ def run(zip_file,out):
                 x.get_attribute("value")==sid for x in
                 d.find_element(By.ID,"recent-session-id").find_elements(
                     By.TAG_NAME,"option")))
+            # The stored-session index must unlock this view in a new browser.
+            results_nav=browser.find_element(By.ID,"results-nav-btn")
+            need(results_nav.get_attribute("hidden") is None and
+                 results_nav.is_displayed(),
+                 "SAVED_SESSIONS_WITHOUT_ACTIVE_SESSION_HIDE_RESTORE_TAB")
+            results_nav.click()
+            WebDriverWait(browser,15).until(
+                lambda d:d.find_element(By.ID,"view-results").is_displayed())
             picker=browser.find_element(By.CSS_SELECTOR,
                 "details.restore > summary")
             browser.execute_script("arguments[0].scrollIntoView({block:'center'})",
