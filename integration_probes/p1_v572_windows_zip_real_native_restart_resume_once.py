@@ -364,9 +364,22 @@ def run(source_zip,simc,out):
                 d["progress"]["worker"].get("status")==
                    "PAUSED_USER_CANCEL",seconds=180)
         n0=stopped["progress"]["native_attempts"]
+        report["first_paused_state"]={
+            "native_attempts":n0,
+            "completed_jobs":stopped["progress"]["completed_jobs"],
+            "cancel_requested":stopped["cancel_requested"],
+            "result_ready_file_present":stopped["result_ready"],
+            "worker":stopped["progress"]["worker"]["status"],
+            "active":stopped["active"]}
+        report["new_dps_native"]=n0
+        save()
+        # A partial V291_RESULT may be persisted as a durable observation;
+        # presence of that file does NOT turn this cancelled worker into a
+        # completed 64-case search. Check the actual worker disposition.
         need(1<=n0<=MAX_BEFORE_CANCEL and
-             not stopped["result_ready"] and
-             stopped["cancel_requested"] is True,
+             stopped["cancel_requested"] is True and
+             stopped["active"] is False and
+             stopped["progress"]["worker"]["status"]=="PAUSED_USER_CANCEL",
              "PAUSED_SESSION_NOT_BOUNDED_OR_UNCONFIRMED")
         stage=folder/"generated"/"v291_longrun_64"/"simc_results"
         first_triplets=native_sha_summary(stage)
@@ -440,8 +453,15 @@ def run(source_zip,simc,out):
         again=poll_after_state(sid,token,lambda d:not d["active"] and
             d["progress"]["worker"].get("status")=="PAUSED_USER_CANCEL",seconds=160)
         n1=again["progress"]["native_attempts"]
+        report["second_paused_state"]={
+            "native_attempts":n1,
+            "cancel_requested":again["cancel_requested"],
+            "result_ready_file_present":again["result_ready"],
+            "worker":again["progress"]["worker"]["status"]}
+        save()
         need(n0<n1<=n0+MAX_AFTER_RESUME_NEW and
-             n1<LONGRUN_BUDGET and not again["result_ready"],
+             n1<LONGRUN_BUDGET and
+             again["progress"]["worker"]["status"]=="PAUSED_USER_CANCEL",
              "RESUMED_CANDIDATES_NOT_BOUNDED")
         second_triplets=native_sha_summary(stage)
         need(second_triplets["count"]==n1 and
