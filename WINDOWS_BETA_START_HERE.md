@@ -2,9 +2,9 @@
 
 ## 2026-11-17 Windows 최초 설치·동의 검증 (v573–v575)
 
-Python 3.12 이상이 PC에 이미 있으면 **`START_HERE_AUTO_SETUP_AND_RUN.bat`**가 사용자 전용 `%LOCALAPPDATA%\\SIMC_Secondary_Optimizer\\web-python` 웹 라이브러리 환경을 확인합니다. 준비되지 않은 경우 **설치·복구 동의(Y/N)**를 받고, 거절하면 설치하지 않습니다. 승인하면 정확한 ZIP의 `requirements-web.txt`를 `pip`으로 설치합니다. 이후 같은 배치 파일을 다시 실행할 때 정상 웹 환경이라면 다시 설치하지 않습니다.
+Python 3.12 이상이 PC에 이미 있으면 **`START_HERE_AUTO_SETUP_AND_RUN.bat`**가 사용자 전용 `%LOCALAPPDATA%\SIMC_Secondary_Optimizer\web-python` 웹 라이브러리 환경을 확인합니다. 준비되지 않은 경우 **설치·복구 동의(Y/N)**를 받고, 거절하면 설치하지 않습니다. 승인하면 정확한 ZIP의 `requirements-web.txt`를 `pip`으로 설치합니다. 이후 같은 배치 파일을 다시 실행할 때 정상 웹 환경이라면 다시 설치하지 않습니다.
 
-Python 자체가 없으면 **`winget`으로 Python 3.12를 설치할지 별도 동의**를 요청합니다. 거절하거나 설치가 불가능하면 공식 Python 사이트의 수동 설치를 안내하고, READY를 임의로 표시하지 않습니다. v575부터 **설치 직후 현재 CMD 창에서 `python` 명령을 인식하지 못하는 경우**에도 표준 사용자 위치 `%LOCALAPPDATA%\\Programs\\Python\\Python312\\python.exe` 또는 표준 시스템 위치 `%ProgramFiles%\\Python312\\python.exe`에서 **실제 Python 3.12+ 실행을 확인한 경우에만** 계속합니다. 임의 경로나 미검증 명령을 Python이라고 추정하지 않습니다.
+Python 자체가 없으면 **`winget`으로 Python 3.12를 설치할지 별도 동의**를 요청합니다. 거절하거나 설치가 불가능하면 공식 Python 사이트의 수동 설치를 안내하고, READY를 임의로 표시하지 않습니다. v575부터 **설치 직후 현재 CMD 창에서 `python` 명령을 인식하지 못하는 경우**에도 표준 사용자 위치 `%LOCALAPPDATA%\Programs\Python\Python312\python.exe` 또는 표준 시스템 위치 `%ProgramFiles%\Python312\python.exe`에서 **실제 Python 3.12+ 실행을 확인한 경우에만** 계속합니다. 임의 경로나 미검증 명령을 Python이라고 추정하지 않습니다.
 
 **검증의 정확한 한계:** [v573](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44085795034) 실제 Windows 소스 ZIP 압축해제·동의 N/Y·신규 웹 venv 실제 설치·Chrome 26개 DPS 초기화 **PASS, Native0**. [v574](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44087234483) Python/winget 미존재와 설치 동의 경계는 **무해한 대체 명령을 사용한 모의 시험 PASS**, 실제 winget 설치 아님. [v575](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44088065693) Python PATH만 비운 가상 Windows 프로필에서 표준 경로의 **실제 Python 3.12** 인식·동의 후 실제 venv/pip 설치 **PASS, Native0**. 이 결과를 개인 PC의 첫 Python/winget 네트워크 설치 완주, 다양한 Windows 정책·권한·보안 소프트웨어에서의 무조건적 설치 성공으로 확대하지 않습니다. 현재 ZIP에는 SimC 실행 파일이나 개인 데이터가 포함되지 않습니다.
 
