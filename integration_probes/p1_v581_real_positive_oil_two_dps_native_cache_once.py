@@ -98,8 +98,9 @@ def wait_quiet(browser,sid,*,timeout=420):
         time.sleep(.45)
     raise FocusedBlocked("V581_SIMC_NATIVE_BATCH_TIMEOUT")
 
-def continue_one_user(*,browser,root,sha:installed_sha,
+def continue_one_user(*,browser,root,sha,
                       installed_doc,original_plan,report,save):
+    installed_sha=sha
     need(original_plan.get("native_calls")==0 and
          original_plan.get("status")=="READY_ZERO_NATIVE",
          "ORIGINAL_CHROME_PLAN_PRECONDITION_FAILED")
