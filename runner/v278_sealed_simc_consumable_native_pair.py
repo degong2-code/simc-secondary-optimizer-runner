@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""One existing SimC v269 precombat effect delta, at most two Native executions.
+"""Reuse existing v269 CHMV snapshots through sealed SimC native cases.
 
-The original v269.prepare/compare own option isolation and all CHMV rating
-parsing. This thin source-identity runner uses immutable baseline/active
-receipts, shared baseline across options, and preserves original SimC errors.
-It NEVER proves a flask/oil item's quality, actual weapon compatibility,
-game eligibility or v222 budget ownership. No guessed season stat values.
+Existing F/O precombat observations and one physical ordinary-gem observation
+share immutable baseline/active receipts and verified binary/profile identity.
+The original v269 functions own option isolation and CHMV delta parsing.
+Neither output proves quality, socket/weapon eligibility, budget ownership,
+or user admission. No assumed season stats or independent effect engine.
 """
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ import subprocess
 import v269_simc_chmv_effect_snapshot as effect
 
 SCHEMA="v278_original_simc_precombat_native_pair_v1"
+GEM_OBSERVATION_SCHEMA="v278_original_simc_physical_gem_observation_v1"
 MAX_PROFILE=4_000_000
 MAX_RECEIPT=20_000
 MAX_LOG=12_000
@@ -254,7 +255,7 @@ def measure_ordinary_gem(*,stage_root,source_profile_path,binary,
     This measures ONLY its SimC-applied two-stat rating; it does not classify
     a gem family, prove highest quality/socket legality or admit J.
     """
-    pending={"schema":SCHEMA,
+    pending={"schema":GEM_OBSERVATION_SCHEMA,
              "status":"SIMC_ORDINARY_GEM_SOURCE_OR_BINARY_PENDING",
              "ordinary_gem_id":ordinary_gem_id,
              "physical_slot":slot,

@@ -191,6 +191,7 @@ class TwoNativeOptions(unittest.TestCase):
         self.assertEqual((one["new_native_calls"],
                           two["new_native_calls"],
                           repeated["new_native_calls"]),(2,1,0))
+        self.assertEqual(one["schema"],pair.GEM_OBSERVATION_SCHEMA)
         self.assertEqual(one["simc_effective_two_stat_rating_unadmitted"],23)
         self.assertEqual(two["simc_effective_two_stat_rating_unadmitted"],23)
         self.assertEqual(one["simc_effective_two_stat_vector_unadmitted"][
