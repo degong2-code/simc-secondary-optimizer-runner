@@ -1,0 +1,66 @@
+name: P1 v575 Windows Python312 Standard Path After Winget (Fresh Venv, Native 0)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p1_v575_windows_path_stale_real_venv_once.yml
+      - integration_probes/p1_v575_windows_path_stale_real_python_venv_consent_once.py
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v575-one-windows-standard-path-python
+  cancel-in-progress: false
+jobs:
+  one-standard-path-venv:
+    if: ${{ contains(github.event.head_commit.message, '[v575-win-path-once]') }}
+    runs-on: windows-2022
+    timeout-minutes: 23
+    steps:
+      - name: Preserve source bytes for ZIP SHA on Windows
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false, fetch-depth: 2}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse original same-season v213 catalog (not fresh v212 READY)
+        uses: actions/download-artifact@v4
+        with:
+          repository: degong2-code/simc-secondary-optimizer-runner
+          run-id: 41360273361
+          name: v213-source-to-catalog-41360273361
+          path: .v575-original-catalog
+          github-token: ${{ github.token }}
+      - name: Seal current-source Windows ZIP including improved BAT, zero Native
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $src=Join-Path $PWD '.v575-original-catalog/v213_current_season_source_to_catalog.json'
+          if (!(Test-Path $src -PathType Leaf)) { throw 'V575_V213_SOURCE_PROOF_MISSING' }
+          Copy-Item $src data/current_season_source_to_catalog.json -Force
+          python -c "import sys,json;sys.path.insert(0,'runner');import v213_source_to_catalog as v;p=json.load(open('data/current_season_source_to_catalog.json',encoding='utf8'));assert v.verify_catalog(p);assert p['native_calls']==0 and p['network_calls']==0 and p['automatic_ui_promotion'] is False;print('V575_ORIGINAL_SOURCE_CATALOG_REUSED',p['manifest_sha256'])"
+          if ($LASTEXITCODE -ne 0) { throw 'V575_ORIGINAL_SOURCE_CATALOG_INVALID' }
+          python -m py_compile integration_probes/p1_v575_windows_path_stale_real_python_venv_consent_once.py
+          if ($LASTEXITCODE -ne 0) { throw 'V575_TEST_SYNTAX_FAIL' }
+          python -m unittest -q tests.test_v181_windows_beta_package_offline
+          if ($LASTEXITCODE -ne 0) { throw 'V575_ZIP_SOURCE_CONTRACT_FAIL' }
+          New-Item -ItemType Directory -Force dist | Out-Null
+          python -u integration_probes/v181_windows_beta_packager.py --out dist/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip
+          if ($LASTEXITCODE -ne 0) { throw 'V575_ZIP_SOURCE_CREATION_FAIL' }
+      - name: Exact extracted ZIP, no python PATH, real 3.12 per-user standard-path detection and consented web venv
+        shell: pwsh
+        timeout-minutes: 14
+        run: |
+          python -u integration_probes/p1_v575_windows_path_stale_real_python_venv_consent_once.py --zip dist/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip --out out/v575
+          if ($LASTEXITCODE -ne 0) { throw 'V575_REAL_STANDARD_PATH_FIRST_VENV_UNPROVEN' }
+      - name: Preserve compact source ZIP SHA receipt only
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v575-stale-python-path-consent-venv-receipt
+          path: out/v575/V575_WINDOWS_STALE_PATH_PYTHON312_REAL_VENV_COMPACT.json
+          retention-days: 9
+          if-no-files-found: warn
