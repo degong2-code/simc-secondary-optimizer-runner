@@ -179,6 +179,56 @@ def run(binary,output_dir,*,source_only=False):
             dbc=compilation.get(
                 "four_stat_pinned_dbc_j_source_unadmitted") or {}
             raw=compilation.get("four_stat_source_owner_diagnostic_unadmitted") or {}
+            # Reuse exact v275/v296 source already fetched in THIS run.
+            # Stat-kind diagnostics only: never infer numeric J or approve items.
+            if (candidate.get("status")==
+                    "SAME_BUILD_GEM_ITEM_QUALITY_CANDIDATES_UNADMITTED"):
+                import v296_pinned_oil_static_rating_source as static_derived
+                from collections import Counter
+                rows=candidate["candidates_unadmitted"]
+                enchants={row["enchant_id"] for row in rows
+                          if row["enchant_id"]>0}
+                pinned=env.get("source_stage",{}).get("fresh_pinned_v211_source")
+                if pinned is None:
+                    # Current coordinator returns these as collected source owners.
+                    pinned=(env.get("zero_history_build") or {}).get(
+                        "fresh_pinned_v211_source")
+                if pinned is None:
+                    pinned=(compilation.get("fresh_pinned_v211_source"))
+                if type(pinned) is dict and len(enchants)<=128:
+                    extracted=static_derived.from_v275(
+                        pinned_source=pinned,
+                        stage_root=compilation["stage_root"],
+                        game_build=live["game_build"],
+                        simc_revision=rev,enchant_ids=enchants)
+                    by_enchant={e["enchant_id"]:e for e in extracted["items"]}
+                    reasons=Counter()
+                    pairs=Counter()
+                    rankpairs=Counter()
+                    sample=[]
+                    for item in rows:
+                        source=by_enchant[item["enchant_id"]]
+                        for reason in source["source_reason_codes"]:
+                            reasons[reason]+=1
+                        hints=source["unresolved_simc_scaled_static_stats"]
+                        pair="/".join(sorted(hints))
+                        pairs[pair]+=1
+                        rankpairs[pair+"|"+str(item["crafting_quality"])]+=1
+                        if len(sample)<12 and pair:
+                            sample.append({
+                                "item_id":item["item_id"],
+                                "crafting_quality":item["crafting_quality"],
+                                "pair":pair,
+                                "hint":hints,
+                                "reason_codes":source["source_reason_codes"]})
+                    r["J_DBC_source_stat_kind_diagnostic"]={
+                        "source_sha256":extracted["source_sha256"],
+                        "reason_codes":dict(reasons),
+                        "scaled_stat_pairs":dict(pairs),
+                        "pairs_by_crafting_quality":dict(rankpairs),
+                        "example_rows":sample,
+                        "numeric_J_authorized":False,
+                        "new_native":0}
             r["J_first_source_diagnostic"]={
                 "candidate_status":candidate.get("status"),
                 "candidate_reason":candidate.get("reason"),
@@ -320,7 +370,8 @@ def run(binary,output_dir,*,source_only=False):
             k:r.get(k) for k in ("status","live_build","pinned_native_build",
                 "first_blocker","M1","M2","new_environment_native",
                 "installed","official_budget","M3_plan_status",
-                "new_dps_native","DPS_worker_exit","cache_only_hits")},
+                "new_dps_native","DPS_worker_exit","cache_only_hits",
+                "J_DBC_source_stat_kind_diagnostic")},
             ensure_ascii=False,sort_keys=True,default=str),flush=True)
 
 if __name__=="__main__":
