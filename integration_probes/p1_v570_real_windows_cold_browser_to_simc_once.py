@@ -51,6 +51,12 @@ class SourceCredentials:
         values={key:os.environ.get(key,"") for key in REQUIRED_SECRETS}
         return values if all(values.values()) else None
 
+    def status(self):
+        # v570 CI-only environment adapter, not the user's Windows key store.
+        # Product bootstrap queries this read-only route before the Build;
+        # never surface secret values or invoke a network/source operation.
+        return {"supported":True,"configured":self.load() is not None}
+
 def need(ok,code):
     if not ok:raise RuntimeError("V570_"+code)
 
