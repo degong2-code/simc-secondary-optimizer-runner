@@ -2293,7 +2293,9 @@ function seasonBuildInputScope(forUserVariant=false) {
       const node=$(id);
       return [id,node.type==="checkbox"?node.checked:field(id)];
     }),
-    ...(forUserVariant?[["oilUseIntent",oilUseIntent]]:[])
+    ...(forUserVariant?[["oilUseIntent",oilUseIntent]]:[]),
+    // Season G track follows the actual selected spec, not an ilvl guess.
+    ["referenceGSpec",field("spec")],["referenceGManualT",field("final_T")]
   ]);
 }
 async function buildSeasonEnvironment(forUserVariant=false) {
@@ -2322,6 +2324,9 @@ async function buildSeasonEnvironment(forUserVariant=false) {
   // This is a separate explicit per-user numeric/source preparation.
   // A new selectable budget cannot silently borrow G/J/F/O from the
   // canonical four-gem season environment.
+  const reference_G_track=(
+    field("spec")==="warrior/fury"&&!field("final_T"))
+    ?"fury_dual_2h":"general";
   const nativeRequested=$("season-native-g").checked||forUserVariant;
   const auto_native_F_requested=$("season-native-f").checked||forUserVariant;
   const auto_native_O_requested=$("season-native-o").checked||
@@ -2483,7 +2488,8 @@ async function buildSeasonEnvironment(forUserVariant=false) {
   const stopSeasonActivity=beginSeasonBuildActivity();
   try {
     const report=await api("/api/v1/environment/season-build",
-      {method:"POST",payload:{game_build,target_ilevel,native_G_binary,
+      {method:"POST",payload:{game_build,target_ilevel,reference_G_track,
+                              native_G_binary,
                               consumable_native_binary,
                               auto_initial_core_build,auto_initial_core_simc_binary,
                               auto_native_F_requested,auto_native_O_requested,
