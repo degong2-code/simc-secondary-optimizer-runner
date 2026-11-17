@@ -2783,6 +2783,9 @@ class LocalWebAPIOffline(unittest.TestCase):
                 spawn.assert_not_called()
             self.assertEqual(response.status_code,200,response.text)
             body=response.json()
+            # Preserve the prior historical 334 packaged-plan report; only
+            # a newly verified v212 install must suppress that old proof.
+            self.assertTrue(body["plan"]["v176_26_of_26_base_physical_native"])
             environment=body["environment_manifest"]
             self.assertEqual(environment["status"],"READY_WITH_LIMITATIONS")
             self.assertEqual(environment["windows_package_status"],"VERIFIED")
