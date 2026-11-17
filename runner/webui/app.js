@@ -1651,6 +1651,28 @@ function verifiedInstalledGearScopeMatchesRun(build,ilevel) {
     gear.season_build===build && state.seasonGearTargetIlevel===ilevel &&
     /^[a-f0-9]{64}$/.test(gear.installed_manifest_sha256||"");
 }
+
+function optimizerNeedsSeasonPreparation() {
+  const build=field("season-game-build") ||
+    state.verifiedInstalledBuildFromThisPage;
+  return !verifiedInstalledGearScopeMatchesRun(build,valueInt("ilevel"));
+}
+// v568: existing v113/v216/v212 source owners only. This user click does
+// not automatically run DPS; exact installed SHA gear is required first.
+async function prepareSeasonBeforeOptimizerStart() {
+  if(!optimizerNeedsSeasonPreparation())return false;
+  const report=await buildSeasonEnvironment(false);
+  if(report===null)return true; // cancellation or stale response
+  if(report?.web_environment_scope?.environment_ready!==true ||
+     report?.web_environment_scope?.environment_installed!==true ||
+     optimizerNeedsSeasonPreparation()) {
+    switchView("settings");
+    throw Error("SEASON_INITIAL_USER_BUILD_READY_REQUIRED");
+  }
+  switchView("optimizer");
+  setNotice("현재 시즌 환경과 장신구 목록 검증 완료 · 장신구 두 개를 선택한 뒤 최적 스탯 찾기를 다시 눌러주세요.");
+  return true;
+}
 function buildRequest() {
   // v356: binary/revision moved into settings and are no longer form descendants.
   // Keep their same required/pattern validation before any session request.
@@ -1849,7 +1871,11 @@ function buttonState(active=false,ready=false) {
     $("source-credentials-save-btn").disabled=true;
     $("source-credentials-clear-btn").disabled=true;
   }
-  $("start-btn").disabled=busy||active||!hasRequiredSelections();
+  const needsEnvironment=Boolean(state.token)&&optimizerNeedsSeasonPreparation();
+  $("start-btn").textContent=needsEnvironment?
+    "시즌 환경 준비 · 장신구 목록 불러오기":"최적 스탯 찾기";
+  $("start-btn").disabled=busy||active||!state.token||
+    (!needsEnvironment&&!hasRequiredSelections());
   $("resume-btn").disabled=busy||active||!state.session||state.longrunCompleted;
   $("cache-btn").disabled=busy||active||!state.session||!ready;
   $("cancel-btn").disabled=busy||!active;
@@ -2447,7 +2473,7 @@ async function buildSeasonEnvironment(forUserVariant=false) {
        (selectedOilNative?
         " 선택한 기름의 스케일링 값은 기존 실행 캐시를 먼저 재사용하고, 필요한 손에만 SimC 측정을 수행합니다.":
         " 선택한 기름이 없으므로 SimC 원본 확인만 수행하며 O Native는 실행하지 않습니다."):"")))
-    return;
+    return null;
   // Only after the user's consent may the optional Wago CurrencyTypes
   // source request execute. This source-only preflight performs no Native.
   if(autoTarget) {
@@ -2543,7 +2569,7 @@ async function buildSeasonEnvironment(forUserVariant=false) {
     };
     if(seasonBuildInputScope(forUserVariant)!==requestedInputScope) {
       rejectStaleBuildResponse();
-      return;
+      return null;
     }
     showSeasonEnvironmentBuild(report,forUserVariant);
     rememberVerifiedSeasonBuildForRun(report);
@@ -2578,7 +2604,7 @@ async function buildSeasonEnvironment(forUserVariant=false) {
           "&installed_manifest_sha256="+sha);
         if(seasonBuildInputScope(forUserVariant)!==requestedInputScope) {
           rejectStaleBuildResponse();
-          return;
+          return null;
         }
         if(gear.status!=="CURRENT_SEASON_CANDIDATE_SELECTION_ONLY" ||
            gear.source_scope!=="VERIFIED_INSTALLED_V212_SOURCE_V213_CANDIDATES" ||
@@ -2652,6 +2678,7 @@ async function buildSeasonEnvironment(forUserVariant=false) {
     catch(error){$("optimizer-oil-loadout-status").textContent=
       "검증 설치 기름 목록 조회 실패 · 고급 입력 유지";}
     setNotice("시즌 환경 구축 단계 조회 완료 · READY 여부는 별도 검증 · 개별 DPS 최적화는 시작되지 않았습니다.");
+    return report;
   }catch(err){
     // A failed HTTP response supplies no trusted source/owner report.
     const safeError=/^[A-Z][A-Z0-9_]{0,119}$/.test(err.message)?
@@ -3611,6 +3638,7 @@ function registerHandlers() {
     // A different build cannot keep an older rune or permanent-enchant
     // selection approved before the new installed source is restored.
     renderSeasonOptionCatalog(null);
+    buttonState(state.running,state.longrunResultReady);
   });
   $("season-game-build").addEventListener("change",()=>
     withBusy(refreshInstalledOilLoadouts));
@@ -3676,6 +3704,8 @@ function registerHandlers() {
     await pollOnce();
   }));
   $("start-btn").addEventListener("click",()=>withBusy(async()=>{
+    // Missing season: first explicit click builds and seals gear only.
+    if(await prepareSeasonBeforeOptimizerStart())return;
     // This is the only new-job action. Never start SimC on page load or refresh.
     if(!field("binary")||!field("revision")) {
       switchView("settings");
