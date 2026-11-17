@@ -859,7 +859,7 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         derived=boot._season_settings_from_v216(
             compilation=joined,numeric_inputs=inputs,need=boot.need)
         self.assertEqual(derived["selected_v230_gem_item_quality_unadmitted"],
-                         items)
+                         first["selected_item_quality_unadmitted"])
         self.assertFalse(derived["gem_highest_quality_verified_here"])
         bad={**first,"selected_item_ids":[311001,311003]}
         with mock.patch.object(
