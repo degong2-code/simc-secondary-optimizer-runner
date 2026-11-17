@@ -128,6 +128,41 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
         summary.assert_called_once()
         self.assertEqual(response["environment_manifest"]["status"],"READY")
 
+    def test_missing_fury_track_reports_actionable_budget_source_not_generic(self):
+        # Reproduce a real user case: a general v212 install exists,
+        # but the selected Fury dual-2H G track has not been installed.
+        # Do not create a session, call SimC, or silently borrow G.
+        variants=(
+            (("warrior","fury"),None,
+             "WEB_FRESH_FURY_DISTINCT_G_AUTO_BUDGET_SOURCE_REQUIRED"),
+            (("mage","frost"),None,
+             "WEB_SELECTED_INSTALLED_SEASON_BUILD_NOT_FOUND"),
+            (("warrior","fury"),3500,
+             "WEB_SELECTED_INSTALLED_SEASON_BUILD_NOT_FOUND"),
+        )
+        binary=self.root/"not-executed-simc.exe"
+        binary.write_bytes(b"NOT_EXECUTED")
+        with (mock.patch.object(self.jobs,"load_fresh_profile_for_user",
+                                return_value=None) as installed,
+              mock.patch.object(web.sessions,"store_session") as store,
+              mock.patch.object(web.subprocess,"Popen") as native):
+            for pair,manual_T,expected in variants:
+                with self.subTest(spec=pair,manual_T=manual_T):
+                    controls=web.sessions.standard_controls(pair)
+                    controls["oil_hands"]=[]
+                    controls["final_T"]=manual_T
+                    request=web.UserRequest(
+                        controls=controls,binary=str(binary),
+                        revision="abcdef0",current_season_product=True,
+                        installed_season_game_build=self.build)
+                    with self.assertRaises(web.HTTPException) as rejected:
+                        self.jobs.plan(request)
+                    self.assertEqual(rejected.exception.status_code,422)
+                    self.assertEqual(rejected.exception.detail["code"],expected)
+            self.assertEqual(installed.call_count,len(variants))
+            store.assert_not_called()
+            native.assert_not_called()
+
     def test_fury_fresh_auto_G_stops_before_session_manual_T_can_proceed(self):
         # The installed Ret normal G cannot become Fury's dual-2H budget.
         self.remember()
