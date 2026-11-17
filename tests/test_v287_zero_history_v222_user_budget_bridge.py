@@ -3636,6 +3636,28 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 self.assertNotIn("\nlevel=", "\n"+automatic["profile_simc"])
                 self.assertEqual(automatic["new_native_calls"],0)
                 self.assertFalse((root/"optional_off").exists())
+                # A new season's original v278 may observe F split across
+                # stats. Reuse the same v216->v139->v098 path with no
+                # hand-authored season settings or additional Native.
+                original_F=payload["flask"]["static_CHMV_vector"]
+                split_F={"crit_rating":80,"haste_rating":96,
+                         "mastery_rating":0,"versatility_rating":0}
+                try:
+                    payload["flask"]["static_CHMV_vector"]=split_F
+                    multi=boot.preview_from_environment_build(
+                        user,root/"multi_stat_flask",binary,"c"*40,
+                        environment_result=env)
+                    self.assertEqual(multi["status"],
+                        "SEASON_PROFILE_COMPOSED_NOT_ADMITTED_NO_NATIVE")
+                    self.assertEqual(multi["v096_typed_input_unadmitted"][
+                        "flask_F"],split_F)
+                    self.assertEqual(multi["budget_preview_unadmitted"]["F"],176)
+                    self.assertEqual(multi["budget_preview_unadmitted"]["final_T"],
+                                     3400)
+                    self.assertEqual(multi["new_native_calls"],0)
+                    self.assertFalse((root/"multi_stat_flask").exists())
+                finally:
+                    payload["flask"]["static_CHMV_vector"]=original_F
                 self.assertFalse(derived[
                     "optional_omnium_module_active_in_profile"])
                 self.assertEqual(derived["scenario"]["consumables"][
