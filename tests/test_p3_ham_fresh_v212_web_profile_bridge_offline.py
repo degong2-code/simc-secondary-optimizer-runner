@@ -175,6 +175,46 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
         store.assert_called_once()
         stage.assert_called_once()
 
+    def test_fury_scoped_installed_G_reaches_existing_user_stage_no_native(self):
+        # v212's exact Fury tag is produced by the original v216/v277 owner;
+        # this mocked web boundary checks only routing, not its Native proof.
+        self.remember()
+        scoped={**self.installed_doc,
+                "official_G_reference_track":"fury_dual_2h",
+                "official_G_profile_receipt_sha256":"e"*64}
+        self.installed.write_text(json.dumps(scoped))
+        binfile=self.root/"scoped_simc.exe"
+        binfile.write_bytes(b"NOT_EXECUTED")
+        controls=web.sessions.standard_controls(("warrior","fury"))
+        controls["oil_hands"]=[]
+        request=web.UserRequest(
+            controls=controls,binary=str(binfile),revision="abcdef0",
+            current_season_product=True,
+            installed_season_game_build=self.build)
+        source=self.jobs._verified_fresh_profile_result
+        folder=self.root/("c"*20);folder.mkdir()
+        result={"plan":{"class":"warrior","spec":"fury",
+                        "base_B":3350,"fixed_O":{},"final_T":3350,
+                        "native_limit":6}}
+        with (mock.patch.object(web.environment_manifest,
+                                "verify_fresh_installed_environment"),
+              mock.patch.object(self.jobs,"load_fresh_profile_for_user",
+                                return_value=source) as load,
+              mock.patch.object(web.sessions,"store_session",
+                                return_value=folder) as store,
+              mock.patch.object(web.profile_stage,"build_or_reuse",
+                                return_value=(result,{})) as stage,
+              mock.patch.object(self.jobs,"_fresh_environment_summary",
+                                return_value={"status":"READY"})):
+            planned=self.jobs.plan(request)
+        self.assertEqual(planned["plan"]["final_T"],3350)
+        self.assertEqual(planned["native_calls"],0)
+        self.assertFalse(planned["plan"]["v176_26_of_26_base_physical_native"])
+        self.assertEqual(load.call_args.kwargs[
+            "required_reference_G_track"],"fury_dual_2h")
+        store.assert_called_once()
+        stage.assert_called_once()
+
     def test_user_pinned_installed_build_reaches_sealed_v212_profile(self):
         """Positive selection: same exact build to short/long-run core.
 
