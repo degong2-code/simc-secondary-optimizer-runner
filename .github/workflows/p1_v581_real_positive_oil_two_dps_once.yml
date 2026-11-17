@@ -1,0 +1,90 @@
+name: P1 v581 ONE Actual Positive-O Chrome Manual-T 2 DPS Adaptive Native + Cache-only
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p1_v581_real_positive_oil_two_dps_once.yml
+      - integration_probes/p1_v581_real_positive_oil_two_dps_native_cache_once.py
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v581-one-positive-oil-2dps-real
+  cancel-in-progress: false
+jobs:
+  source-and-two-real-candidates:
+    if: ${{ contains(github.event.head_commit.message, '[v581-oil-2dps-once]') }}
+    runs-on: windows-2022
+    timeout-minutes: 32
+    env:
+      PYTHONPATH: runner;integration_probes;.
+      SIMC_PINNED_SOURCE_COMMIT: de11f57df75dda668bae6ac7043a43b98831fa96
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_PINNED_BINARY_SHA256: 1fc927d2be7f1b6064c75f004b5b22245b064a6b3e56e572af4048ba822a986d
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - name: Preserve exact source LF bytes
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false, fetch-depth: 2}
+      - name: "One-shot scope: reject unreviewed bulk/native changes"
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $changed=@(git diff-tree --no-commit-id --name-only -r $env:GITHUB_SHA)
+          $allowed=@('.github/workflows/p1_v581_real_positive_oil_two_dps_once.yml',
+                     'integration_probes/p1_v581_real_positive_oil_two_dps_native_cache_once.py')
+          if (@($changed | Where-Object {$_ -notin $allowed}).Count -gt 0) { throw 'V581_UNSCOPED_NATIVE_RUN_REFUSED' }
+          if ($changed.Count -lt 1 -or $changed.Count -gt 2) { throw 'V581_EXPLICIT_ONE_SHOT_SCOPE_REQUIRED' }
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse official pinned same-build Windows SimC archive
+        uses: actions/download-artifact@v4
+        with:
+          repository: simulationcraft/simc-publish
+          run-id: 42956947906
+          name: simc-nightly-win64-midnight
+          path: .v581-official-simc
+          github-token: ${{ github.token }}
+      - name: Pin original SimC SHA and check real browser probe syntax
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $arc=Join-Path $PWD '.v581-official-simc/simc-1210.01.de11f57-win64.7z'
+          if (!(Test-Path $arc -PathType Leaf)) { throw 'V581_ORIGINAL_SIMC_ARCHIVE_MISSING' }
+          if ((Get-FileHash -Algorithm SHA256 $arc).Hash.ToLowerInvariant() -ne 'a4c4d5e7b349172d80897721daa3e849ce25874a82bbdfb96aeab4dbdc560eb0') { throw 'V581_SIMC_ARCHIVE_SHA_DRIFT' }
+          New-Item -ItemType Directory -Force .v581-external-simc | Out-Null
+          & 'C:\Program Files\7-Zip\7z.exe' x '-o.v581-external-simc' -y -bd $arc | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'V581_SIMC_EXTRACT_FAILURE' }
+          $exe=@(Get-ChildItem .v581-external-simc -Recurse -File -Filter simc.exe)
+          if ($exe.Count -ne 1) { throw 'V581_ONE_PINNED_SIMC_EXE_REQUIRED' }
+          if ((Get-FileHash -Algorithm SHA256 $exe[0].FullName).Hash.ToLowerInvariant() -ne $env:SIMC_PINNED_BINARY_SHA256) { throw 'V581_SIMC_BINARY_SHA_DRIFT' }
+          "V581_EXE=$($exe[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          python -m pip install -r requirements-web-test.txt 'selenium>=4.24,<5'
+          if ($LASTEXITCODE -ne 0) { throw 'V581_WEB_CHROME_DEPS_FAILED' }
+          python -m py_compile integration_probes/p1_v581_real_positive_oil_two_dps_native_cache_once.py integration_probes/p1_v580_windows_real_oil_chrome_manual_t_once.py
+          if ($LASTEXITCODE -ne 0) { throw 'V581_PROBE_SYNTAX_FAILED' }
+          node --check runner/webui/app.js
+          if ($LASTEXITCODE -ne 0) { throw 'V581_ACTUAL_UI_SYNTAX_FAILED' }
+      - name: Actual verified O-positive source one Build, original Chrome manual-T 2 DPS Native and cache-only
+        shell: pwsh
+        timeout-minutes: 22
+        run: |
+          New-Item -ItemType Directory -Force out/v581 | Out-Null
+          python -u integration_probes/p1_v581_real_positive_oil_two_dps_native_cache_once.py --simc "$env:V581_EXE" --out out/v581
+          if ($LASTEXITCODE -ne 0) { throw 'V581_NATIVE_FIRST_BLOCKER_IN_COMPACT_RECEIPT' }
+      - name: Upload only bounded rating/SHA/DPS-SEM receipt; no private profile bytes or executables
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v581-positive-oil-two-native-95-pending
+          path: out/v581/V580_REAL_CHROME_POSITIVE_OIL_MANUAL_T_COMPACT.json
+          retention-days: 10
+          if-no-files-found: warn
