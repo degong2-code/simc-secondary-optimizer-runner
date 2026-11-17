@@ -5974,7 +5974,8 @@ def _fresh_source_owner_merge_original_J_F(*, trusted_budget_evidence,
 
 
 def _fresh_source_owner_native_G_component(*, native_G, preflight,
-                                           compilation, staged, target_ilevel):
+                                           compilation, staged, target_ilevel,
+                                           physical_G_probe=None):
     """Reuse the ORIGINAL v277-verified Native G as one source-owner component.
 
     This is called only after v277.collect and the same v216/v217 source
@@ -6065,13 +6066,46 @@ def _fresh_source_owner_native_G_component(*, native_G, preflight,
          native_G.get("full_G_approved") is False and
          native_G.get("environment_ready") is False,
          "V216_NATIVE_G_OWNER_ORIGINAL_PROOF_OR_PROFILE_DRIFT")
+    # Only the original v233 profile may identify the separate Fury
+    # dual-twohand G track. An unsealed spec label or bare number cannot.
+    track={}
+    if type(physical_G_probe) is dict and physical_G_probe.get(
+            "profile_receipt_path"):
+        p=pathlib.Path(physical_G_probe["profile_receipt_path"]).resolve()
+        need(p.is_file() and not p.is_symlink() and
+             p.is_relative_to(root) and p.stat().st_size<=200_000,
+             "V216_G_REFERENCE_TRACK_SOURCE_RECEIPT_MISSING")
+        try:
+            prepared=json.loads(p.read_text("utf8"))
+        except (OSError,ValueError,TypeError) as exc:
+            raise EnvironmentBuildBlocked(
+                "V216_G_REFERENCE_TRACK_SOURCE_RECEIPT_INVALID") from exc
+        need(prepared.get("schema")==g_probe_profile.SCHEMA and
+             prepared.get("status")==
+                "EXACT_SIMC_SOURCE_PROFILE_PREPARED_NOT_EXECUTED" and
+             prepared.get("receipt_sha256")==
+                native_G["source_profile_receipt_sha256"] and
+             prepared.get("game_build_declared_by_simc_source")==
+                preflight["game_build"] and
+             prepared.get("target_ilevel")==target_ilevel and
+             prepared.get("generic_G_physical_conditions_verified") is True,
+             "V216_G_REFERENCE_TRACK_NATIVE_SOURCE_MISMATCH")
+        if (prepared.get("class"),prepared.get("spec"))==("warrior","fury"):
+            slots=prepared.get("selected_G_slot_ids")
+            need(type(slots) is dict and
+                 set(("main_hand","off_hand"))<=set(slots) and
+                 slots["main_hand"]!=slots["off_hand"],
+                 "V216_FURY_DUAL_TWOHAND_SOURCE_REQUIRED")
+            track={"reference_G_track":"fury_dual_2h",
+                   "reference_G_profile_receipt_sha256":
+                       prepared["receipt_sha256"]}
     return {"rating":expected["standardized_G"],
             "game_build":preflight["game_build"],
             "source_catalog_manifest_sha256":
                 preflight["source_catalog_manifest_sha256"],
             "source_sha256":observed["native_json2_sha256"],
             "source_verification":"EXACT_NATIVE",
-            "standardization":expected}
+            "standardization":expected,**track}
 
 
 def _fresh_source_owner_merge_native_G(*, trusted_budget_evidence,
@@ -7536,7 +7570,8 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                 native_G=native_G,preflight=preflight,
                 compilation=source_compilation,staged=staged,
                 target_ilevel=fresh_collection_inputs[
-                    "representative_request"]["target_ilevel"])
+                    "representative_request"]["target_ilevel"],
+                physical_G_probe=collected.get("fresh_one_spec_physical_G_probe"))
             if owner_G is not None:
                 source_compilation[
                     "native_G_source_owner_component_not_full_environment"]=owner_G
