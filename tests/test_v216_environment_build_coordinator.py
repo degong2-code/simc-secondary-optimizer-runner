@@ -383,14 +383,14 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                 "status":"SIMC_ORDINARY_GEM_TWO_STAT_OBSERVED_UNADMITTED",
                 "binary_sha256":"b"*64,
                 "source_profile_sha256":"c"*64,
-                "simc_unbuffed_gear_rating_source":
-                    "V046_JSON2_RESOLVED_ITEM_STATIC_CHMV",
-                "simc_unbuffed_gear_two_stat_rating_unadmitted":23,
-                "simc_unbuffed_gear_two_stat_vector_unadmitted":vector,
+                "simc_effective_two_stat_rating_unadmitted":23,
+                "simc_effective_two_stat_vector_unadmitted":vector,
+                "observed":{"source":
+                    "SIMC_JSON2_ACTUAL_GEM_ID_AND_BUFFED_STATS"},
                 "native_case_receipts":receipts})
         ratings={str(item):23 for item in ids}
         preview={
-            "status":"FOUR_STAT_SIMC_GEAR_RATINGS_OBSERVED_UNADMITTED",
+            "status":"FOUR_STAT_SIMC_NATIVE_RATINGS_OBSERVED_UNADMITTED",
             "game_build":build,"simc_revision":rev,
             "source_sha256":"d"*64,
             "v221_stage_receipt_sha256":"1"*64,
@@ -423,7 +423,7 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                        "item_id":item,"crafting_quality":2}
                        for item in ids]}
         j={"status":"PHYSICAL_GEM_J_ARITHMETIC_UNADMITTED",
-           "rating_origin":"SIMC_NATIVE_RESOLVED_GEAR_TWO_SECONDARY",
+           "rating_origin":"SIMC_NATIVE_CONTROLLED_TWO_SECONDARY",
            "physical_gem_item_ids":ids,
            "J_candidate_unadmitted":92,
            "J_accounting_policy":"SUM_SELECTED_ORDINARY_GEM_RATINGS",
@@ -447,7 +447,7 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             selected_physical_items=None)
         self.assertEqual(result["J"]["rating"],92)
         self.assertEqual(result["J"]["numeric_source_owner"],
-                         "SIMC_NATIVE_V046_RESOLVED_GEAR_TWO_SECONDARY")
+                         "SIMC_NATIVE_CONTROLLED_GEM_DELTA")
         self.assertEqual(result["J"]["per_item_nominal_rating"],ratings)
         self.assertEqual(result["J"]["observed_quality_rank_by_id"],
                          {str(i):2 for i in ids})
@@ -525,10 +525,10 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             vector[partner]=7
             return {
                "status":"SIMC_ORDINARY_GEM_TWO_STAT_OBSERVED_UNADMITTED",
-               "simc_unbuffed_gear_two_stat_vector_unadmitted":vector,
-               "simc_unbuffed_gear_two_stat_rating_unadmitted":23,
-               "simc_unbuffed_gear_rating_source":
-                   "V046_JSON2_RESOLVED_ITEM_STATIC_CHMV",
+               "simc_effective_two_stat_vector_unadmitted":vector,
+               "simc_effective_two_stat_rating_unadmitted":23,
+               "observed":{"source":
+                   "SIMC_JSON2_ACTUAL_GEM_ID_AND_BUFFED_STATS"},
                "ordinary_gem_id":kwargs["ordinary_gem_id"],
                "native_case_receipts":[],
                "new_native_calls":2 if idx==1 else 1}
@@ -544,7 +544,7 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             self.assertEqual(execution.call_count,4)
             self.assertEqual(called,[1,3,5,7])
             self.assertEqual(actual["status"],
-                "FOUR_STAT_SIMC_GEAR_RATINGS_OBSERVED_UNADMITTED")
+                "FOUR_STAT_SIMC_NATIVE_RATINGS_OBSERVED_UNADMITTED")
             self.assertEqual(actual["J_candidate_unadmitted"],92)
             self.assertEqual(actual["new_native_calls"],5)
             self.assertEqual(actual["source_effect_family_count"],4)
