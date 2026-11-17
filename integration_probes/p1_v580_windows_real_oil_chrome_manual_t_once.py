@@ -116,7 +116,7 @@ def visible(browser):
       };
     """)
 
-def run(binary,out):
+def run(binary,out,*,post_plan_hook=None):
     binary=pathlib.Path(binary).resolve(strict=True)
     out=pathlib.Path(out).resolve();out.mkdir(parents=True,exist_ok=True)
     receipt=out/NAME
@@ -342,7 +342,16 @@ def run(binary,out):
                  oil_line==1,
                  "CHROME_ACTUAL_POSITIVE_O_PLAN_BUDGET_DRIFT")
             data["real_http_user_plan_ready"]=True
-            data["status"]="PASS_ACTUAL_CHROME_POSITIVE_O_V212_SHA_MANUAL_T_HTTP_PLAN_NO_DPS"
+            # Optional v581 focused continuation. Reuse THIS actual installed
+            # source and THIS Chrome-originated sealed request; no second
+            # source Build, no new optimizer implementation.
+            if post_plan_hook is None:
+                data["status"]="PASS_ACTUAL_CHROME_POSITIVE_O_V212_SHA_MANUAL_T_HTTP_PLAN_NO_DPS"
+            else:
+                data["status"]=post_plan_hook(
+                    browser=browser,root=root,sha=sha,
+                    installed_doc=doc,original_plan=response["value"],
+                    report=data,save=save)
             save()
             print("V580_REAL_CHROME_OIL "+json.dumps({
               k:data.get(k) for k in(
