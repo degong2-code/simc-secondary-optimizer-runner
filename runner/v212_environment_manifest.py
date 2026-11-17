@@ -586,6 +586,17 @@ def compile_fresh_installed_environment(*, source_catalog, source_artifact_sha25
     components=trusted_budget_evidence["components"]
     physical_F=_selected_verified_F_source(components["F"],budget["F"])
     physical_O=_selected_verified_O_source(components["O"],oil)
+    # Optional exact source-owner scope: older general v212 installs keep
+    # their ORIGINAL manifest bytes, and only a distinct Fury Native G
+    # gets a separate content-addressed installed identity.
+    g_track=components["G"].get("reference_G_track","general")
+    need(g_track in ("general","fury_dual_2h") and
+         (g_track=="general" or
+          (components["G"].get("source_verification")=="EXACT_NATIVE" and
+           valid_sha(components["G"].get(
+               "reference_G_profile_receipt_sha256")) and
+           type(components["G"].get("standardization")) is dict)),
+         "FRESH_INSTALL_FURY_G_SOURCE_TRACK_INVALID")
     dk_runes=_project_season_dk_runes(
         verified_DK_runeforge_source,
         game_build=source_catalog["game_build"],
@@ -611,6 +622,10 @@ def compile_fresh_installed_environment(*, source_catalog, source_artifact_sha25
                "source_verification":components[k]["source_verification"]}
             for k in ("G","J","F","O")},
         "official_G":budget["reference_G"],
+        **({"official_G_reference_track":"fury_dual_2h",
+            "official_G_profile_receipt_sha256":
+                components["G"]["reference_G_profile_receipt_sha256"]}
+           if g_track=="fury_dual_2h" else {}),
         "official_effective_G":budget["effective_G"],
         "official_J":budget["J"],
         "official_F":budget["F"],
@@ -692,6 +707,21 @@ def verify_fresh_installed_environment(document):
          document.get("dps_optimization_required") is False and
          document.get("native_calls")==0 and document.get("network_calls")==0,
          "FRESH_INSTALL_READY_OR_BUDGET_CONTRACT_DRIFT")
+    # The optional Fury G scope is a source-bound *rating reference*,
+    # not a 26-spec Native or DPS proof. Legacy v212 manifests have no
+    # track field, retaining their original canonical identity.
+    track=document.get("official_G_reference_track","general")
+    need(track=="general" or
+         (track=="fury_dual_2h" and
+          valid_sha(document.get("official_G_profile_receipt_sha256")) and
+          type(document.get("trusted_budget_component_source_identities"))
+              is dict and
+          document["trusted_budget_component_source_identities"].get(
+              "G",{}).get("source_verification")=="EXACT_NATIVE"),
+         "FRESH_INSTALL_FURY_G_TRACK_SCOPE_INVALID")
+    need(track!="general" or
+         "official_G_profile_receipt_sha256" not in document,
+         "FRESH_INSTALL_UNSCOPED_G_PROFILE_RECEIPT_FORBIDDEN")
     payload={k:v for k,v in document.items() if k!="manifest_sha256"}
     need(document.get("manifest_sha256")==sha(canonical(payload).encode("utf8")),
          "FRESH_INSTALL_MANIFEST_DIGEST_INVALID")
