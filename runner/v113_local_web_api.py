@@ -406,12 +406,15 @@ class LocalJobs:
     def restore_verified_fresh_profile(
             self, *, target_ilevel, game_build,
             selected_oil_item_ids_by_hand=None, required_gem_layout=None,
-            expected_installed_manifest_sha256=None):
+            expected_installed_manifest_sha256=None,
+            required_reference_G_track=None):
         """Recover only the exact selected installed environment, no Native."""
         found=environment_build.find_verified_installed_season_environment(
             self.root,target_ilevel,expected_game_build=game_build,
             selected_oil_item_ids_by_hand=selected_oil_item_ids_by_hand,
-            expected_installed_manifest_sha256=expected_installed_manifest_sha256)
+            expected_installed_manifest_sha256=expected_installed_manifest_sha256,
+            **({"required_reference_G_track":required_reference_G_track}
+               if required_reference_G_track is not None else {}))
         if found is None:
             return None
         digest=found["installed_manifest_sha256"]
@@ -485,7 +488,8 @@ class LocalJobs:
             self, target_ilevel, explicit_build=None,
             selected_oil_hands=None, selected_oil_item_ids_by_hand=None,
             required_gem_layout=None, selected_flask_item_id=None,
-            expected_installed_manifest_sha256=None):
+            expected_installed_manifest_sha256=None,
+            required_reference_G_track=None):
         """Find the exact verified oil variant, never a newest-file guess."""
         # No installed v113 snapshot means the original packaged/legacy
         # current-season route must remain unchanged. Do not fetch a retail
@@ -576,7 +580,11 @@ class LocalJobs:
                                 or (expected_installed_manifest_sha256 is not None
                                     and digest!=expected_installed_manifest_sha256)
                                 or installed["game_build"]!=game_build or
-                                installed["target_ilevel"]!=target_ilevel):
+                                installed["target_ilevel"]!=target_ilevel
+                                or (required_reference_G_track is not None
+                                    and installed.get(
+                                        "official_G_reference_track","general")
+                                        !=required_reference_G_track)):
                             continue
                         oils=installed.get("official_O_physical_source")
                         actual_oils=(oils.get("selected_oil_item_ids_by_hand")
@@ -620,11 +628,13 @@ class LocalJobs:
                 target_ilevel=target_ilevel,game_build=game_build,
                 selected_oil_item_ids_by_hand=selected_ids,
                 expected_installed_manifest_sha256=candidates[0],
-                required_gem_layout=required_gem_layout)
+                required_gem_layout=required_gem_layout,
+                required_reference_G_track=required_reference_G_track)
         else:
             restored=self.restore_verified_fresh_profile(
                 target_ilevel=target_ilevel,game_build=game_build,
-                selected_oil_item_ids_by_hand=selected_ids)
+                selected_oil_item_ids_by_hand=selected_ids,
+                required_reference_G_track=required_reference_G_track)
         # When a fresh v113 snapshot exists, do not silently fall back to
         # an old packaged profile for a different current build or target.
         # The no-snapshot legacy path returned early above without network.
