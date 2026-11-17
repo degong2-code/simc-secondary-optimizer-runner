@@ -112,4 +112,68 @@ class SimpleUserInputs(unittest.TestCase):
         self.assertIn('class="gear-section gear-embellishments"',html)
         self.assertIn("Omnium Folio · 4열 스탯",html)
 
+
+    def test_season_source_missing_owner_and_skipped_g_are_diagnostic_only(self):
+        # Execute the existing two pure JS projections, without DOM, HTTP,
+        # source collection, Native, AI or creating an environment manifest.
+        import shutil, subprocess
+        if shutil.which("node") is None:
+            self.skipTest("node unavailable")
+        code=r"""
+const fs=require("fs"),vm=require("vm"),assert=require("assert");
+const src=fs.readFileSync("runner/webui/app.js","utf8");
+function section(start,end,name){
+  const a=src.indexOf(start),b=src.indexOf(end,a);
+  assert(a>=0&&b>a,"source function boundary "+name);
+  return vm.runInNewContext(src.slice(a,b)+"\\n"+name,{});
+}
+const receipt=section("function compactSeasonBuildReceipt(",
+  "async function copySeasonBuildDiagnostic", "compactSeasonBuildReceipt");
+const diagnose=section("function diagnoseSeasonBuildEvidence(",
+  "function showSeasonEnvironmentBuild(", "diagnoseSeasonBuildEvidence");
+const pending={
+  web_environment_scope:{game_build:"13.0.0.70000",target_ilevel:345,
+    environment_ready:false,environment_installed:false},
+  source_compilation:{
+    status:"COLLECTED_COMPILER_INPUTS_PENDING",
+    missing:["GENERATED_PERMANENT"],
+    compiler_input_impact:{catalog_input_missing:[{
+      input:"GENERATED_PERMANENT",existing_producer:"v275",
+      catalog_role:"OPTIONAL_PERMANENT_ENCHANT_CATALOG"}]}},
+  zero_history_build:{
+    default_G_native_skipped_missing_compiler_inputs:["GENERATED_PERMANENT"],
+    native_G_status:"G_NATIVE_PENDING",requires:["G_NATIVE_RATING_OBSERVATION_PENDING"]}
+};
+const report=JSON.parse(receipt(pending));
+assert.deepStrictEqual(Array.from(report.compiler_missing),
+  ["GENERATED_PERMANENT"]);
+assert.deepStrictEqual(JSON.parse(JSON.stringify(report.compiler_missing_existing_producers)),
+  [{input:"GENERATED_PERMANENT",existing_producer:"v275"}]);
+assert.deepStrictEqual(Array.from(report.default_G_native_skipped_missing_compiler_inputs),
+  ["GENERATED_PERMANENT"]);
+assert.strictEqual(report.environment_ready,false);
+assert.strictEqual(report.verified_budget,null);
+assert(diagnose(pending).firstMissing.includes("기존 원본 생산자: v275"));
+const cached=JSON.parse(receipt({
+  web_environment_scope:{game_build:"12.1.5.70783",target_ilevel:334,
+    environment_ready:true,environment_installed:true}
+}));
+assert.strictEqual(cached.compiler_missing,null);
+assert.strictEqual(cached.compiler_missing_existing_producers,null);
+assert.strictEqual(cached.default_G_native_skipped_missing_compiler_inputs,null);
+const malicious=JSON.parse(receipt({
+  source_compilation:{compiler_input_impact:{catalog_input_missing:[
+    {input:"GENERATED_PERMANENT",existing_producer:"/home/secrets/key"}]}}
+}));
+assert.deepStrictEqual(malicious.compiler_missing_existing_producers,[]);
+assert(!diagnose({source_compilation:{missing:["GENERATED_PERMANENT"],
+  compiler_input_impact:{catalog_input_missing:[
+    {input:"GENERATED_PERMANENT",existing_producer:"/home/secrets/key"}]}}}
+  ).firstMissing.includes("/home/"));
+"""
+        completed=subprocess.run(["node","-e",code],cwd=ROOT,
+                                 capture_output=True,text=True)
+        self.assertEqual(completed.returncode,0,
+                         completed.stdout+"\\n"+completed.stderr)
+
 if __name__=="__main__":unittest.main()

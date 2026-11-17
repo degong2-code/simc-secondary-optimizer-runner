@@ -1926,12 +1926,20 @@ function compactSeasonBuildReceipt(data,forUserVariant=false) {
     source.required_core_source_owner_report||null;
   const cleanCode=x=>typeof x==="string"&&/^[A-Z][A-Z0-9_]{0,119}$/.test(x)?
     x:null;
+  const cleanProducer=x=>typeof x==="string"&&/^v\d+(?:\/v\d+)*$/.test(x)?
+    x:null;
   const codes=x=>Array.isArray(x)?x.slice(0,100).map(cleanCode)
     .filter(Boolean):null;
   const build=x=>typeof x==="string"&&/^\d+(?:\.\d+){3}$/.test(x)?x:null;
   const sha=x=>typeof x==="string"&&/^[a-f0-9]{64}$/.test(x)?x:null;
   const integer=x=>Number.isSafeInteger(x)&&x>=0?x:null;
   const seenBoolean=x=>typeof x==="boolean"?x:null;
+  const missingOwners=source.compiler_input_impact?.catalog_input_missing;
+  const compilerMissingOwners=Array.isArray(missingOwners)?
+    missingOwners.slice(0,30).map(row=>({
+      input:cleanCode(row?.input),
+      existing_producer:cleanProducer(row?.existing_producer)
+    })).filter(row=>row.input!==null&&row.existing_producer!==null):null;
   const ready=scope.environment_ready===true&&
     scope.environment_installed===true;
   const installed=source.verified_environment_install||
@@ -1972,6 +1980,9 @@ function compactSeasonBuildReceipt(data,forUserVariant=false) {
       data?.source_stage?.status),
     compiler_status:cleanCode(source.status||progress.source_compilation_status),
     compiler_missing:codes(source.missing??progress.source_compilation_missing),
+    compiler_missing_existing_producers:compilerMissingOwners,
+    default_G_native_skipped_missing_compiler_inputs:codes(
+      progress.default_G_native_skipped_missing_compiler_inputs),
     core_numeric_owner_present:gJFO,
     core_numeric_owner_missing:codes(
       owner?.original_source_owner_missing_for_selected_request),
@@ -2021,10 +2032,16 @@ function diagnoseSeasonBuildEvidence(data) {
     "고급 선택 Native 요청":
     "원본 확인·수집 요청");
   const missing=Array.isArray(compiled.missing)?compiled.missing:[];
+  const missingOwners=Array.isArray(compiled.compiler_input_impact?.catalog_input_missing)?
+    compiled.compiler_input_impact.catalog_input_missing:[];
+  const rawProducer=missingOwners.find(row=>row?.input===missing[0])?.existing_producer;
+  const firstProducer=typeof rawProducer==="string"&&/^v\d+(?:\/v\d+)*$/.test(rawProducer)?
+    rawProducer:null;
   const requires=Array.isArray(step.requires)?
     step.requires.filter(v=>!(sourceSealed&&v==="SOURCE_SEASON_JOIN_PENDING")):[];
   const firstMissing=(missing.length?
-    "소스 컴파일 입력: "+String(missing[0]):
+    "소스 컴파일 입력: "+String(missing[0])+
+      (firstProducer?" · 기존 원본 생산자: "+firstProducer:""):
     requires.length?"후속 검증: "+String(requires[0]):
     "필수 원본의 상세 미완료 항목 미보고");
   const owners=step.required_core_source_owner_report;
