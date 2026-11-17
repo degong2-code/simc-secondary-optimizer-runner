@@ -405,7 +405,23 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             "highest_quality_candidate_count":4,
             "measured_candidate_ids":ids,
             "native_observations_unadmitted":observations,
-            "native_case_receipts_by_id":case_map}
+            "native_case_receipts_by_id":case_map,
+            "source_selected_tier_candidate_ids":ids,
+            "sample_numeric_signatures_by_item_id":{
+                str(item):["SIMC_SCALED",-7,.15+index,.35+index]
+                for index,item in enumerate(ids)},
+            "selected_numeric_source_proofs_by_item_id":{
+                str(item):{
+                    "item_id":item,
+                    "representative_item_id":item,
+                    "numeric_source":"EXACT_CONTROLLED_SIMC_NATIVE_DELTA",
+                    "source_coefficient_signature":[
+                        "SIMC_SCALED",-7,.15+index,.35+index],
+                    "resolved_two_secondary_vector":{
+                        stat:(16 if stat==stats[index]
+                              else 7 if stat==stats[(index+1)%4] else 0)
+                        for stat in stats}}
+                for index,item in enumerate(ids)}}
         layout={"ordinary_gem_ids":ids,
                 "socket_total":4,"special_gem_id":None}
         link={"same_build_gem_item_join_only":True,
@@ -518,22 +534,70 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                 preview=altered,layout=layout,ratings=ratings,
                 link=link,game_build=build,simc_revision=rev)
 
-    def test_v558_native_rating_uses_original_dbc_stat_kinds_not_effect_family_count(self):
-        """8 effect IDs, 4 source types, 2 qualities: measure 4 highest only."""
-        build="12.2.0.99999"
-        rev="a"*40
-        root=self.root/"new-season-j"
-        root.mkdir()
+    def test_v560_dynamic_12_gem_directions_and_named_tier_rank_steps(self):
+        """48/72 source items -> 24/36 higher-name-tier rows -> 2/3 samples."""
+        stats=list(v216.physical_gems.ORDINARY_FOUR_STATS)
+        for inner_rank_count in (2,3):
+            rows=[];source={};ident=600000
+            for lead in stats:
+                for partner in stats:
+                    if lead==partner:continue
+                    for named_tier in (1,2):
+                        for rank in range(1,inner_rank_count+1):
+                            ident+=1
+                            major=(.20 if named_tier==1 else .40)+rank*.01
+                            minor=(.06 if named_tier==1 else .12)+rank*.01
+                            rows.append({
+                                "item_id":ident,"enchant_id":ident+1000,
+                                "gem_property_id":ident+2000,"color_mask":2,
+                                "minimum_ilevel":310,"expansion_id":13,
+                                "quality":4,"crafting_quality":rank,
+                                "item_name":f"Gem tier {named_tier} {lead} {partner}",
+                                # Same item-level forces an original DBC
+                                # strength comparison between named tiers.
+                                "item_ilevel_unscaled":333})
+                            source[ident+1000]={
+                                "enchant_id":ident+1000,
+                                "source_reason_codes":[
+                                    "SIMC_ITEM_ENCHANT_SCALING_REQUIRED"],
+                                "unresolved_simc_scaled_static_stats":{
+                                    lead:{"simc_scaling_id":-7,
+                                          "simc_coefficient":major},
+                                    partner:{"simc_scaling_id":-7,
+                                             "simc_coefficient":minor}},
+                                "static_CHMV_vector":None,
+                                "source_min_ilevel":0,"source_max_ilevel":0}
+            plan=v216._fresh_two_stat_gem_named_tier_measurement_plan(
+                rows=rows,by_enchant=source)
+            self.assertEqual(
+                plan["status"],"NAMED_TIER_AND_INNER_QUALITY_PLAN_UNADMITTED")
+            self.assertEqual(len(rows),12*2*inner_rank_count)
+            self.assertEqual(plan["observed_direction_count"],12)
+            self.assertEqual(
+                plan["selected_tier_candidate_count"],12*inner_rank_count)
+            self.assertEqual(plan["sample_count"],inner_rank_count)
+            self.assertTrue(all(
+                "Gem tier 2 " in row["item_name"]
+                for row in plan["selected_tier_candidates"]))
+            self.assertTrue(all(
+                len(row["internal_crafting_qualities"])==inner_rank_count
+                for row in plan["observed_tier_structure"]))
+
+    def test_v558_native_rating_uses_source_signatures_not_four_effects(self):
+        """8 physical item effects, 2 rank signatures -> only 2 Native pairs."""
+        build="12.2.0.99999";rev="a"*40
+        root=self.root/"new-season-j";root.mkdir()
         profile=root/"source_only_G.simc"
         profile.write_text("paladin=test\nhead=source,id=33221\n",
                            encoding="utf8")
-        binary=root/"simc_fake"
-        binary.write_bytes(b"fake-binary")
+        binary=root/"simc_fake";binary.write_bytes(b"fake-binary")
         stats=list(v216.physical_gems.ORDINARY_FOUR_STATS)
         items=[{"item_id":330001+i,"enchant_id":7001+i,
                 "gem_property_id":9001+i,"color_mask":2,
                 "minimum_ilevel":320,"expansion_id":13,
-                "quality":4,"crafting_quality":(i%2)+1}
+                "quality":4,"crafting_quality":(i%2)+1,
+                "item_name":"Gem "+str(i//2),
+                "item_ilevel_unscaled":333}
                for i in range(8)]
         candidate={"status":"SAME_BUILD_GEM_ITEM_QUALITY_CANDIDATES_UNADMITTED",
             "candidate_count":len(items),"candidates_unadmitted":items,
@@ -550,37 +614,38 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             result=[]
             for i in kwargs["enchant_ids"]:
                 k=(i-7001)//2
-                vector={stats[k]:{"simc_scaling_id":-7,
-                                   "dbc_base_amount":0,
-                                   "simc_coefficient":.35},
-                        stats[(k+1)%4]:{"simc_scaling_id":-7,
-                                        "dbc_base_amount":0,
-                                        "simc_coefficient":.15}}
+                higher=i%2==0
                 result.append({
                     "enchant_id":i,
-                    "source_reason_codes":["SIMC_ITEM_ENCHANT_SCALING_REQUIRED"],
-                    "unresolved_simc_scaled_static_stats":vector,
+                    "source_reason_codes":[
+                        "SIMC_ITEM_ENCHANT_SCALING_REQUIRED"],
+                    "unresolved_simc_scaled_static_stats":{
+                        stats[k]:{"simc_scaling_id":-7,
+                                  "simc_coefficient":.35 if not higher else .25},
+                        stats[(k+1)%4]:{"simc_scaling_id":-7,
+                                        "simc_coefficient":.15 if not higher else .10}},
                     "static_CHMV_vector":None,
                     "source_min_ilevel":0,"source_max_ilevel":0})
-            return {"items":result,"source_sha256":"4"*64}
+            return {"items":result,"source_sha256":"4"*64,
+                    "game_build":build,"simc_revision":rev}
         called=[]
         def one_gem(**kwargs):
             idx=kwargs["ordinary_gem_id"]-330001
             called.append(idx)
             lead=stats[idx//2]
-            partner=stats[((idx//2)+1)%4]
+            partner=stats[(idx//2+1)%4]
             vector={s:0 for s in stats}
-            vector[lead]=16
-            vector[partner]=7
+            vector[lead]=16 if idx%2 else 12
+            vector[partner]=7 if idx%2 else 5
             return {
                "status":"SIMC_ORDINARY_GEM_TWO_STAT_OBSERVED_UNADMITTED",
                "simc_effective_two_stat_vector_unadmitted":vector,
-               "simc_effective_two_stat_rating_unadmitted":23,
+               "simc_effective_two_stat_rating_unadmitted":sum(vector.values()),
                "observed":{"source":
                    "SIMC_JSON2_ACTUAL_GEM_ID_AND_BUFFED_STATS"},
                "ordinary_gem_id":kwargs["ordinary_gem_id"],
                "native_case_receipts":[],
-               "new_native_calls":2 if idx==1 else 1}
+               "new_native_calls":2 if idx==0 else 1}
         args=dict(candidates=candidate,collected=collected,
                   stage_root=root,binary=binary,simc_revision=rev,
                   native_G_status="G_NATIVE_NUMERIC_REFERENCE_OBSERVED_JFO_PENDING")
@@ -590,55 +655,37 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                                "measure_ordinary_gem",
                                side_effect=one_gem) as execution:
             actual=v216._fresh_four_stat_simc_observed_j_preview(**args)
-            self.assertEqual(execution.call_count,4)
-            self.assertEqual(called,[1,3,5,7])
-            self.assertEqual(actual["status"],
-                "FOUR_STAT_SIMC_NATIVE_RATINGS_OBSERVED_UNADMITTED")
-            self.assertEqual(actual["J_candidate_unadmitted"],92)
-            self.assertEqual(actual["new_native_calls"],5)
-            self.assertEqual(actual["source_effect_family_count"],4)
-            self.assertEqual(set(actual["by_stat"]),set(stats))
-            self.assertIsNone(actual.get("J"))
-            self.assertFalse(actual["environment_ready"])
-            # A 75-gem source must not trigger 75 unbounded Native cases.
-            many={**candidate,
-                  "candidate_count":75,
-                  "candidates_unadmitted":[
-                      {**items[0],"item_id":330100+i,
-                       "enchant_id":7100+i,
-                       "crafting_quality":2}
-                      for i in range(75)]}
-            def many_source(**kwargs):
-                doc=original_source(enchant_ids=[7001])
-                return {"source_sha256":"4"*64,
-                    "items":[{**doc["items"][0],"enchant_id":i}
-                             for i in kwargs["enchant_ids"]]}
-            with mock.patch.object(v216.oil_raw_source,"from_v275",
-                                   side_effect=many_source), \
-                 mock.patch.object(v216.native_effect_pair,
-                                   "measure_ordinary_gem",
-                                   side_effect=AssertionError("GEM_NATIVE_FANOUT")):
-                pending=v216._fresh_four_stat_simc_observed_j_preview(
-                    **{**args,"candidates":many})
-            self.assertIsNone(pending["J_candidate_unadmitted"])
-            self.assertEqual(pending["new_native_calls"],0)
-            self.assertEqual(pending["highest_quality_candidate_count"],75)
-            self.assertEqual(pending["source_effect_family_count"],1)
-            # Source build mismatch and mutable stage escape are rejected.
-            with self.assertRaisesRegex(v216.EnvironmentBuildBlocked,
-                    "V216_GEM_FOUR_FAMILY_SOURCE_IDENTITY_DRIFT"):
-                v216._fresh_four_stat_simc_observed_j_preview(
-                    **{**args,"candidates":{**candidate,
-                                           "game_build":"12.1.5.70783"}})
-            with mock.patch.object(v216.oil_raw_source,"from_v275",
-                                   side_effect=original_source), \
-                 self.assertRaisesRegex(v216.EnvironmentBuildBlocked,
-                    "V216_GEM_FOUR_FAMILY_NATIVE_PROFILE_STAGE_DRIFT"):
-                v216._fresh_four_stat_simc_observed_j_preview(
-                    **{**args,"collected":{
-                        **collected,
-                        "fresh_one_spec_physical_G_probe":{
-                            "profile_path":str(self.root/"outside.simc")}}})
+            self.assertEqual(execution.call_count,2)
+        self.assertEqual(called,[0,1])
+        self.assertEqual(actual["status"],
+                         "FOUR_STAT_SIMC_NATIVE_RATINGS_OBSERVED_UNADMITTED")
+        self.assertEqual(actual["J_candidate_unadmitted"],92)
+        self.assertEqual(actual["new_native_calls"],3)
+        self.assertEqual(actual["numeric_signature_count"],2)
+        self.assertEqual(actual["source_effect_family_count"],4)
+        self.assertEqual(set(actual["by_stat"]),set(stats))
+        self.assertEqual(
+            len(actual["selected_numeric_source_proofs_by_item_id"]),4)
+        self.assertTrue(any(
+            proof["same_signature_not_independently_native_measured"]
+            for proof in actual[
+                "selected_numeric_source_proofs_by_item_id"].values()))
+        self.assertIsNone(actual.get("J"))
+        self.assertFalse(actual["environment_ready"])
+        with self.assertRaisesRegex(v216.EnvironmentBuildBlocked,
+                "V216_GEM_FOUR_FAMILY_SOURCE_IDENTITY_DRIFT"):
+            v216._fresh_four_stat_simc_observed_j_preview(
+                **{**args,"candidates":{
+                    **candidate,"game_build":"12.1.5.70783"}})
+        with mock.patch.object(v216.oil_raw_source,"from_v275",
+                               side_effect=original_source), \
+             self.assertRaisesRegex(v216.EnvironmentBuildBlocked,
+                "V216_GEM_FOUR_FAMILY_NATIVE_PROFILE_STAGE_DRIFT"):
+            v216._fresh_four_stat_simc_observed_j_preview(
+                **{**args,"collected":{
+                    **collected,
+                    "fresh_one_spec_physical_G_probe":{
+                        "profile_path":str(self.root/"outside.simc")}}})
 
     def test_p3_hl_reuse_requires_exact_game_build_even_with_verified_manifest(self):
         """Exact build selection is structural, not extra SimC validation."""
