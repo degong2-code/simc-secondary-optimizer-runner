@@ -40,7 +40,11 @@ def profile_data_fingerprints(user,*,independent_334=False,
         data["pure_season_catalog"]=_sha_file(bootstrap.pure.DEFAULT_CATALOG)
     source_free=bool(pure_mode and catalog is not None and
                      "/".join(key) in catalog["specializations"])
-    if source_first_stage or current_season_product:
+    if source_first_stage or (
+            current_season_product and source_catalog_path is None):
+        # Legacy packaged source only. v212-installed profiles are bound to
+        # their EXACT new-season v213 catalog and installed receipt by v106,
+        # so never read old season gear/tier/budget files as dependencies.
         data["season_gear"]=_sha_file(bootstrap.source_first.gear.DEFAULT)
         data["season_tier"]=_sha_file(bootstrap.source_first.TIER_PATH)
         data["season_budget"]=_sha_file(bootstrap.source_first.BUDGET_PATH)

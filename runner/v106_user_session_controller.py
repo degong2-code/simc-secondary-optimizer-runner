@@ -428,9 +428,22 @@ def session_key(user,binary,revision,static_cache=None,*,ordinary_variant=None,
                for group in ("special_items","embellishments")
                for row in user.get(group,[])):
             identity["current_season_tier_layout_policy"]=bootstrap.common.CURRENT_SEASON_TIER_LAYOUT_POLICY
-        identity["current_season_gear_sha256"]=sha(stage.gear.DEFAULT.read_bytes())
-        identity["current_season_tier_sha256"]=sha(stage.TIER_PATH.read_bytes())
-        identity["current_season_budget_sha256"]=sha(stage.BUDGET_PATH.read_bytes())
+        if fresh_installed_manifest_sha256 is not None:
+            # The actual newly installed v212 environment, not old packaged
+            # current_season_* JSON, owns the physical season identity.
+            # Keep historical session keys unchanged for the old package
+            # mode without an exact installed manifest.
+            need(source_catalog_path is not None,
+                 "FRESH_V212_INSTALLED_SOURCE_CATALOG_REQUIRED")
+            identity["current_season_source_authority"]=(
+                "EXACT_V212_INSTALLED_SOURCE_NOT_LEGACY_SEASON_JSON")
+        else:
+            identity["current_season_gear_sha256"]=sha(
+                stage.gear.DEFAULT.read_bytes())
+            identity["current_season_tier_sha256"]=sha(
+                stage.TIER_PATH.read_bytes())
+            identity["current_season_budget_sha256"]=sha(
+                stage.BUDGET_PATH.read_bytes())
         identity["source_first_base_catalog_sha256"]=sha(
             bootstrap.pure.DEFAULT_CATALOG.read_bytes())
         source_identity=source_catalog_identity(

@@ -234,6 +234,46 @@ class UserSessionControls(unittest.TestCase):
         with self.assertRaisesRegex(ux.SessionBlocked,"SIMC_REVISION"):
             ux.store_session(user,root,binary,"not-a-known-revision")
 
+    def test_v562_fresh_installed_v212_session_uses_exact_source_without_old_json(self):
+        """A zero-source season must not load historical 511/65/F seasons."""
+        root,binary,_=self.fixture()
+        user=ux.user_scenario(ux.standard_controls(("mage","frost")))
+        current=root/"actual_new_season_v213.json"
+        current.write_bytes(b"source-supplied-exact-v213-original-test-only")
+        bad=root/"not-present"
+        rev="a"*40
+        digest="c"*64
+        with (mock.patch.object(ux.bootstrap.source_first.gear,
+                                "DEFAULT",bad/"old_gear.json"),
+              mock.patch.object(ux.bootstrap.source_first,
+                                "TIER_PATH",bad/"old_tier.json"),
+              mock.patch.object(ux.bootstrap.source_first,
+                                "BUDGET_PATH",bad/"old_budget.json"),
+              mock.patch.object(ux,"source_catalog_identity",
+                                return_value={"source":"test-only-v213"})):
+            key,identity=ux.session_key(
+                user,binary,rev,current_season_product=True,
+                source_catalog_path=current,
+                fresh_installed_manifest_sha256=digest)
+            self.assertEqual(identity["fresh_v212_installed_manifest_sha256"],
+                             digest)
+            self.assertNotIn("current_season_gear_sha256",identity)
+            self.assertNotIn("current_season_tier_sha256",identity)
+            self.assertNotIn("current_season_budget_sha256",identity)
+            self.assertEqual(identity["current_season_source_authority"],
+                "EXACT_V212_INSTALLED_SOURCE_NOT_LEGACY_SEASON_JSON")
+            fingerprints=identity["profile_stage"]["data_fingerprints"]
+            self.assertNotIn("season_gear",fingerprints)
+            self.assertNotIn("season_tier",fingerprints)
+            self.assertNotIn("season_budget",fingerprints)
+            self.assertIn("v213_source_catalog",fingerprints)
+            other,_=ux.session_key(user,binary,rev,
+                current_season_product=True,source_catalog_path=current,
+                fresh_installed_manifest_sha256="d"*64)
+            self.assertNotEqual(key,other)
+        # Packaged users preserve their original source dependency behavior.
+        self.assertTrue(ux.bootstrap.source_first.gear.DEFAULT.is_file())
+
     def test_v184_weapon_policy_rekeys_current_season_without_touching_legacy(self):
         root,binary,_=self.fixture()
         user=ux.user_scenario(ux.standard_controls(("mage","frost")))
