@@ -1898,6 +1898,8 @@ async function withBusy(fn) {
           "현재 최적화 조건에 맞는 검증 설치본이 없거나 둘 이상입니다. 선택한 품목과 시즌·ilvl을 확인하고 해당 구성만 검증·준비하세요.",
         "WEB_PRIMARY_VERIFIED_SEASON_INSTALL_REQUIRED":
           "기본 최적화(64회)를 시작하려면 현재 게임 빌드의 G/J/F/O 검증 시즌 환경이 먼저 설치돼 있어야 합니다. ‘시즌 환경 확인·설치’를 완료한 뒤 시작하세요. ZIP에 들어 있는 과거 카탈로그는 현재 시즌 READY를 증명하지 않습니다.",
+        "WEB_FRESH_FURY_DISTINCT_G_AUTO_BUDGET_SOURCE_REQUIRED":
+          "분노 전사의 자동 총량은 양손 무기 2개를 반영한 별도 G 측정이 필요합니다. 환경 설정에서 현재 시즌·목표 ilvl로 ‘시즌 환경 확인·설치’를 실행하세요. 기존 일반 전문화 G나 과거 시즌 수치를 대신 적용하지 않습니다. 최종 T를 직접 입력한 경우에는 그 값이 우선하지만, 동일 시즌의 검증된 장비·J/F/O 환경은 필요합니다.",
         "SEASON_INITIAL_CORE_SIMC_BINARY_REQUIRED":
           "현재 게임 빌드·목표 ilvl에 재사용 가능한 검증 프로필이 없습니다. 새 시즌 G/F 측정에는 SimC 실행 파일 경로가 필요합니다. 설정에서 경로를 지정하고 시즌 환경을 다시 확인하세요.",
         "WEB_FRESH_EXACT_OIL_HAND_ID_SELECTION_INVALID":
