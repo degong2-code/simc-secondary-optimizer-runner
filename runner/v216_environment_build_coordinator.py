@@ -1053,6 +1053,138 @@ def _fresh_match_simc_native_ordinary_j(*, preview, layout, ratings,
     return ids
 
 
+
+def _fresh_two_stat_gem_named_tier_measurement_plan(*, rows, by_enchant):
+    """Plan minimal exact-SimC gem measurements from existing v230/v296 data.
+
+    Names distinguish item tiers; crafting_quality ranks the variants INSIDE
+    each name tier. Never freeze the number of tiers or ranks to 2 or 3.
+    Same numeric signature means same SimC scaling ID and BOTH exact source
+    coefficients (modulo stat orientation). This is an inference contract,
+    not an item-mechanics simulator or a fabricated per-item Native receipt.
+    """
+    stats=season_budget_contract.STATS
+    by_direction={}
+    unresolved=[]
+    for row in rows:
+        source=by_enchant.get(row["enchant_id"])
+        if type(source) is not dict:
+            unresolved.append(row["item_id"]);continue
+        reasons=set(source.get("source_reason_codes") or [])
+        if reasons & {"NOT_A_PURE_STATIC_CHMV_COMPONENT",
+                      "NO_STATIC_CHMV_COMPONENT",
+                      "REQUIRED_PROFESSION_CONDITION_PENDING"}:
+            continue
+        name=row.get("item_name")
+        level=row.get("item_ilevel_unscaled")
+        if not (type(name) is str and name.strip() and
+                type(level) is int and level>=0):
+            return {"status":"PENDING",
+                    "reason":"V230_GEM_NAMED_TIER_FIELDS_PENDING"}
+        scaled=source.get("unresolved_simc_scaled_static_stats") or {}
+        static=source.get("static_CHMV_vector") or {}
+        if scaled:
+            if (len(scaled)!=2 or not set(scaled)<=set(stats)
+                    or any(type(v) is not dict or
+                           type(v.get("simc_scaling_id")) is not int or
+                           type(v.get("simc_coefficient")) not in (int,float)
+                           or v["simc_coefficient"]<=0
+                           for v in scaled.values())):
+                continue
+            props={stat:round(float(val["simc_coefficient"]),8)
+                   for stat,val in scaled.items()}
+            ids={val["simc_scaling_id"] for val in scaled.values()}
+            if len(ids)!=1 or len(set(props.values()))!=2:
+                continue
+            kind="SIMC_SCALED"
+            signature=(kind,next(iter(ids)),*sorted(props.values()))
+            main=max(props,key=props.get)
+            partner=next(stat for stat in props if stat!=main)
+            score=sum(props.values())
+        else:
+            positive={stat:value for stat,value in static.items()
+                      if stat in stats and type(value) is int and value>0}
+            if len(positive)!=2 or len(set(positive.values()))!=2:
+                continue
+            kind="SIMC_STATIC"
+            signature=(kind,0,*sorted(positive.values()))
+            main=max(positive,key=positive.get)
+            partner=next(stat for stat in positive if stat!=main)
+            score=sum(positive.values())
+        item={**row,"lead":main,"partner":partner,"source":source,
+              "signature":signature,"numeric_kind":kind,
+              "source_strength":score}
+        by_direction.setdefault((main,partner),{}).setdefault(
+            name,[]).append(item)
+    if not by_direction:
+        return {"status":"PENDING",
+                "reason":"NO_SOURCE_DEFINED_TWO_STAT_NAMED_GEMS",
+                "unresolved_item_ids":unresolved}
+    chosen=[];tier_proofs=[]
+    for (lead,partner),by_name in sorted(by_direction.items()):
+        ranked=[]
+        for name,items in by_name.items():
+            levels={item["item_ilevel_unscaled"] for item in items}
+            quality={item["quality"] for item in items}
+            if len(levels)!=1 or len(quality)!=1:
+                return {"status":"PENDING",
+                        "reason":"GEM_NAMED_TIER_ITEM_LEVEL_INCONSISTENT"}
+            strengths=[item["source_strength"] for item in items]
+            ranked.append({
+                "name":name,"items":items,"item_ilevel":next(iter(levels)),
+                "item_quality":next(iter(quality)),
+                "minimum_strength":min(strengths),
+                "maximum_strength":max(strengths),
+                "crafting_quality_steps":sorted({
+                    item["crafting_quality"] for item in items})})
+        # Item level and rarity are source-owned; when tied, require a
+        # nonoverlapping scaling-strength ordering between named item tiers.
+        top_rank=max((t["item_ilevel"],t["item_quality"]) for t in ranked)
+        contenders=[t for t in ranked if
+                    (t["item_ilevel"],t["item_quality"])==top_rank]
+        if len(contenders)!=1:
+            best=max(t["minimum_strength"] for t in contenders)
+            winners=[t for t in contenders if t["minimum_strength"]==best]
+            winner=winners[0] if len(winners)==1 and all(
+                winners[0]["minimum_strength"]>other["maximum_strength"]
+                for other in contenders if other is not winners[0]) else None
+        else:
+            winner=contenders[0]
+        if winner is None:
+            return {"status":"PENDING",
+                    "reason":"GEM_NAMED_TIER_STRENGTH_ORDER_UNPROVEN",
+                    "ambiguous_direction":[lead,partner]}
+        # Preserve ALL internal quality steps for dynamic calibration:
+        # first/last name tiers are NOT equivalent to inner craft ranks.
+        chosen.extend(winner["items"])
+        tier_proofs.append({
+            "leading_stat":lead,"partner_stat":partner,
+            "selected_name":winner["name"],
+            "item_ilevel":winner["item_ilevel"],
+            "item_quality":winner["item_quality"],
+            "internal_crafting_qualities":
+                winner["crafting_quality_steps"],
+            "other_named_tier_count":len(ranked)-1,
+            "tier_count":len(ranked)})
+    # Each exact source numeric signature needs at most ONE SimC pair. The
+    # two stat types may be permuted without changing the signature.
+    by_signature={}
+    for item in chosen:
+        by_signature.setdefault(item["signature"],[]).append(item)
+    sample=[min(group,key=lambda item:item["item_id"])
+            for _,group in sorted(by_signature.items())]
+    return {
+        "status":"NAMED_TIER_AND_INNER_QUALITY_PLAN_UNADMITTED",
+        "selected_tier_candidate_count":len(chosen),
+        "selected_tier_candidates":sorted(chosen,key=lambda r:r["item_id"]),
+        "sample_items":sorted(sample,key=lambda r:r["item_id"]),
+        "sample_count":len(sample),
+        "numeric_signature_count":len(by_signature),
+        "observed_direction_count":len(by_direction),
+        "observed_tier_structure":tier_proofs,
+        "unresolved_item_ids":unresolved}
+
+
 def _fresh_four_stat_simc_observed_j_preview(*, candidates, collected,
                                              stage_root, binary, simc_revision,
                                              native_G_status):
