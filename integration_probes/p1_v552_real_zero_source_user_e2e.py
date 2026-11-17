@@ -66,7 +66,7 @@ def http(client,method,uri,payload=None):
         raise RuntimeError("V552_HTTP_"+str(response.status_code)+"_"+str(code)[:65])
     return response.json()
 
-def run(binary,output_dir):
+def run(binary,output_dir,*,source_only=False):
     output_dir=pathlib.Path(output_dir).resolve()
     output_dir.mkdir(parents=True,exist_ok=True)
     receipt=output_dir/"V552_TRUE_ZERO_SOURCE_TO_USER.json"
@@ -76,7 +76,8 @@ def run(binary,output_dir):
        "product_runtime_AI_calls":0,"new_environment_native":None,
        "new_dps_native":0,"installed":False,
        "full_product_e2e":"PENDING","global_optimum_proven":False,
-       "test_user_trinkets":list(TRINKETS)}
+       "test_user_trinkets":list(TRINKETS),
+       "diagnostic_source_only":source_only}
     def save():
         receipt.write_text(json.dumps(r,ensure_ascii=False,sort_keys=True,
             allow_nan=False,indent=2,default=str)+"\n",encoding="utf8")
@@ -144,8 +145,9 @@ def run(binary,output_dir):
             # The exact same normal v113 Build, not custom test budget logic.
             env=jobs.build_season_environment(
                 game_build=live["game_build"],target_ilevel=ilvl,
-                auto_initial_core_build=True,
-                auto_initial_core_simc_binary=str(binary),
+                auto_initial_core_build=not source_only,
+                auto_initial_core_simc_binary=(
+                    None if source_only else str(binary)),
                 simc_revision_hint=rev,
                 existing_special_gem_id=None,
                 source_target_socket_count=4,
@@ -172,7 +174,30 @@ def run(binary,output_dir):
                 "installed_manifest_sha256":installed.get("manifest_sha256"),
                 "new_environment_native":env.get("native_calls")}
             r["new_environment_native"]=env.get("native_calls")
+            candidate=compilation.get(
+                "ordinary_gem_v221_v230_source_candidates_unadmitted") or {}
+            dbc=compilation.get(
+                "four_stat_pinned_dbc_j_source_unadmitted") or {}
+            raw=compilation.get("four_stat_source_owner_diagnostic_unadmitted") or {}
+            r["J_first_source_diagnostic"]={
+                "candidate_status":candidate.get("status"),
+                "candidate_reason":candidate.get("reason"),
+                "candidate_quality_source_status":candidate.get(
+                    "quality_source_status"),
+                "candidate_count":candidate.get("candidate_count"),
+                "dbc_status":dbc.get("status"),
+                "dbc_reason":dbc.get("reason"),
+                "dbc_unresolved_count":dbc.get("unresolved_item_count"),
+                "dbc_observed_leading_types":dbc.get("observed_leading_types"),
+                "v221_gem_source_status":raw.get("v221_gem_relation_source_status"),
+                "v221_linked_count":raw.get("v221_linked_gem_item_count"),
+                "v266_unresolved_count":raw.get("v266_unresolved_enchant_count"),
+                "native_calls":env.get("native_calls")}
             save()
+            if source_only:
+                r["status"]="SOURCE_ONLY_J_FIRST_BLOCKER_DIAGNOSTIC"
+                save()
+                return 0
             if not (env.get("environment_ready") is True
                     and env.get("environment_installed") is True):
                 r["status"]="PENDING_ACTUAL_ZERO_SOURCE_ENVIRONMENT_INSTALL"
@@ -302,5 +327,6 @@ if __name__=="__main__":
     p=argparse.ArgumentParser()
     p.add_argument("--simc",required=True,type=pathlib.Path)
     p.add_argument("--out",required=True,type=pathlib.Path)
+    p.add_argument("--source-only",action="store_true")
     a=p.parse_args()
-    raise SystemExit(run(a.simc,a.out))
+    raise SystemExit(run(a.simc,a.out,source_only=a.source_only))
