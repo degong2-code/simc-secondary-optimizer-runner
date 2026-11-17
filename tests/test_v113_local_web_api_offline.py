@@ -2373,6 +2373,60 @@ class LocalWebAPIOffline(unittest.TestCase):
             headers={"content-type":"application/json"})
         self.assertEqual(unauthorized.status_code,403)
 
+    def test_fury_G_explicit_source_probe_reuses_v216_v277_only(self):
+        # An actual Fury user can request ONE original source-measured G;
+        # this remains uninstalled, separate from general G/J/F/O and DPS.
+        fury=sessions.standard_controls(("warrior","fury"))
+        fury["oil_hands"]=[]
+        payload={**self.payload,"controls":fury,
+                 "fresh_season_build":"12.2.0.99999",
+                 "measure_fury_G_source_only":True}
+        observed={"normal_build_entry":True,
+                  "environment_ready":False,
+                  "environment_installed":False,"native_calls":0,
+                  "native_G_numeric_source":{
+                      "status":"G_NATIVE_NUMERIC_REFERENCE_OBSERVED_JFO_PENDING",
+                      "standardized_G":3050}}
+        with (mock.patch.object(web.environment_build,"build_environment",
+                               return_value=observed) as original,
+              mock.patch.object(web.environment_build,
+                               "collect_wago_new_season_source",
+                               side_effect=AssertionError("OLD_SOURCE_ONLY_PATH"))):
+            result=self.post("/api/v1/environment/build",payload)
+        self.assertEqual(result.status_code,200,result.text)
+        body=result.json()
+        self.assertFalse(body["environment_ready"])
+        self.assertFalse(body["environment_installed"])
+        self.assertTrue(body["fury_G_source_only_measured_not_budget_admitted"])
+        self.assertFalse(body["fury_G_user_dps_started"])
+        self.assertEqual(body["fury_G_native_new_calls"],0)
+        self.assertFalse((self.root/"runs"/"generated").exists())
+        args=original.call_args.kwargs
+        self.assertEqual(args["binary"],self.binary.resolve())
+        self.assertIsNone(args["user"])
+        self.assertIsNone(args["source_catalog_path"])
+        picked=args["fresh_collection_inputs"]
+        self.assertEqual(picked["representative_request"],
+                         {"class":"warrior","spec":"fury","target_ilevel":334})
+        self.assertEqual(picked["g_probe_character"],{"race":fury["race"]})
+        self.assertTrue(picked["auto_native_G_requested"])
+        self.assertFalse(picked["auto_native_F_requested"])
+        self.assertFalse(picked["auto_native_O_requested"])
+        self.assertNotIn("selected_budget_items",picked)
+        # No expensive work for non-Fury, manual T or absent source build.
+        cases=[
+            {**payload,"controls":self.controls},
+            {**payload,"controls":{**fury,"final_T":3400}},
+            {**payload,"fresh_season_build":None},
+        ]
+        for user_request in cases:
+            with self.subTest(request=user_request["controls"].get("spec")):
+                with mock.patch.object(web.environment_build,
+                                       "build_environment") as forbidden:
+                    denied=self.post("/api/v1/environment/build",user_request)
+                    self.assertEqual(denied.status_code,422,denied.text)
+                    forbidden.assert_not_called()
+
     def test_web_environment_build_fills_optional_character_defaults(self):
         payload={**self.payload,"current_season_product":False,
                  "fresh_season_build":"12.2.0.99999"}
