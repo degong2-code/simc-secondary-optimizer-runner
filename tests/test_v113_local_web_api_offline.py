@@ -1488,7 +1488,8 @@ class LocalWebAPIOffline(unittest.TestCase):
             self.assertEqual(scope["network_calls"],0)
             found.assert_called_once_with(
                 jobs.root,334,expected_game_build=build,
-                require_unique_unqualified=True)
+                require_unique_unqualified=True,
+            required_reference_G_track="general")
             restored.assert_called_once_with(
                 target_ilevel=334,game_build=build,
                 required_gem_layout={"special_gem_id":None,"socket_total":4})
@@ -1585,7 +1586,8 @@ class LocalWebAPIOffline(unittest.TestCase):
             response.text)
         finder.assert_called_once_with(
             jobs.root,334,expected_game_build="12.1.5.70783",
-            require_unique_unqualified=True)
+            require_unique_unqualified=True,
+            required_reference_G_track="general")
         builder.assert_not_called()
 
     def test_p1_first_install_core_reuses_original_g_f_stages(self):
@@ -1817,7 +1819,8 @@ class LocalWebAPIOffline(unittest.TestCase):
             "network_calls"],0)
         reuse.assert_called_once_with(
             self.app.state.jobs.root,334,expected_game_build="12.1.5.70529",
-            require_unique_unqualified=True)
+            require_unique_unqualified=True,
+            required_reference_G_track="general")
         # Normal user with no build gets the exact live build identity first.
         live={"game_build":"12.1.5.70529","source_sha256":"a"*64}
         with mock.patch.object(web.retail_build_source,"discover",
@@ -1832,7 +1835,8 @@ class LocalWebAPIOffline(unittest.TestCase):
         discovery.assert_called_once_with(region="KR")
         reuse.assert_called_once_with(
             self.app.state.jobs.root,334,expected_game_build="12.1.5.70529",
-            require_unique_unqualified=True)
+            require_unique_unqualified=True,
+            required_reference_G_track="general")
         current_scope=current.json()["web_environment_scope"]
         self.assertTrue(current_scope["active_season_reverified_in_this_lookup"])
         self.assertEqual(current_scope["retail_version_network_calls"],1)
@@ -1929,7 +1933,8 @@ class LocalWebAPIOffline(unittest.TestCase):
         discover.assert_called_once_with(region="KR")
         reuse.assert_called_once_with(self.app.state.jobs.root,334,
             expected_game_build="12.1.5.70783",
-            require_unique_unqualified=True)
+            require_unique_unqualified=True,
+            required_reference_G_track="general")
         self.assertEqual(build.call_args.kwargs["fresh_collection_inputs"][
             "expected_game_build"],"12.1.5.70783")
         self.assertFalse(response.json()["environment_ready"])
@@ -1949,7 +1954,8 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(pinned.status_code,200,pinned.text)
         reuse.assert_called_once_with(self.app.state.jobs.root,334,
             expected_game_build="12.1.5.70783",
-            require_unique_unqualified=True)
+            require_unique_unqualified=True,
+            required_reference_G_track="general")
         self.assertFalse(pinned.json()["environment_ready"])
 
     def test_p3_fr_zero_base_build_auto_retail_version_from_public_source(self):
