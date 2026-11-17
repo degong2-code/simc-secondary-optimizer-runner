@@ -25,6 +25,7 @@ echo.
 
 :check_python
 set "SYS_PY="
+set "SYS_PY_EXE="
 where py >nul 2>&1
 if not errorlevel 1 (
   py -3 -c "import sys; sys.exit(0 if sys.version_info.major == 3 and sys.version_info.minor >= 12 else 1)" >nul 2>&1
@@ -37,7 +38,22 @@ if not defined SYS_PY (
     if not errorlevel 1 set "SYS_PY=python"
   )
 )
-if not defined SYS_PY goto :python_missing
+rem v575: winget Python.Python.3.12 may be installed while this CMD's
+rem PATH remains stale. Verify standard per-user/machine paths directly.
+rem No download, registry write, PATH change, or Native call is performed.
+if not defined SYS_PY (
+  if exist "%LOCALAPPDATA%\Programs\Python\Python312\python.exe" (
+    "%LOCALAPPDATA%\Programs\Python\Python312\python.exe" -c "import sys; sys.exit(0 if sys.version_info.major == 3 and sys.version_info.minor >= 12 else 1)" >nul 2>&1
+    if not errorlevel 1 set "SYS_PY_EXE=%LOCALAPPDATA%\Programs\Python\Python312\python.exe"
+  )
+)
+if not defined SYS_PY if not defined SYS_PY_EXE (
+  if exist "%ProgramFiles%\Python312\python.exe" (
+    "%ProgramFiles%\Python312\python.exe" -c "import sys; sys.exit(0 if sys.version_info.major == 3 and sys.version_info.minor >= 12 else 1)" >nul 2>&1
+    if not errorlevel 1 set "SYS_PY_EXE=%ProgramFiles%\Python312\python.exe"
+  )
+)
+if not defined SYS_PY if not defined SYS_PY_EXE goto :python_missing
 
 set "VENV_DIR=%LOCALAPPDATA%\SIMC_Secondary_Optimizer\web-python"
 set "VENV_PY=%VENV_DIR%\Scripts\python.exe"
@@ -55,8 +71,13 @@ choice /C YN /N /M "Install or repair web libraries now? [Y/N]: "
 if errorlevel 2 goto :cancelled
 echo.
 if not exist "%VENV_PY%" (
-  %SYS_PY% -m venv "%VENV_DIR%"
-  if errorlevel 1 goto :venv_failed
+  if defined SYS_PY_EXE (
+    "%SYS_PY_EXE%" -m venv "%VENV_DIR%"
+    if errorlevel 1 goto :venv_failed
+  ) else (
+    %SYS_PY% -m venv "%VENV_DIR%"
+    if errorlevel 1 goto :venv_failed
+  )
 )
 "%VENV_PY%" -m pip install --disable-pip-version-check --no-input -r "requirements-web.txt"
 if errorlevel 1 goto :pip_failed
