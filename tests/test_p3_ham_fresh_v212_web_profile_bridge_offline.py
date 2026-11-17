@@ -143,10 +143,12 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
                                 return_value=source),
               mock.patch.object(web.sessions,"store_session") as store,
               mock.patch.object(web.profile_stage,"build_or_reuse") as stage):
-            with self.assertRaisesRegex(
-                    web.environment_manifest.EnvironmentBlocked,
-                    "WEB_FRESH_FURY_DISTINCT_G_AUTO_BUDGET_SOURCE_REQUIRED"):
+            from fastapi import HTTPException
+            with self.assertRaises(HTTPException) as rejected:
                 self.jobs.plan(automatic)
+            self.assertEqual(rejected.exception.status_code,422)
+            self.assertEqual(rejected.exception.detail["code"],
+                "WEB_FRESH_FURY_DISTINCT_G_AUTO_BUDGET_SOURCE_REQUIRED")
             store.assert_not_called()
             stage.assert_not_called()
         manual={**controls,"final_T":3400}
