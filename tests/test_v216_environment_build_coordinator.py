@@ -342,89 +342,127 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                                {**j,"J_candidate_unadmitted":137}},
                 compilation=compilation,selected_physical_items=None)
 
-    def test_v548_four_source_effect_families_measure_once_and_do_not_admit_j(self):
+    def test_v558_native_rating_uses_original_dbc_stat_kinds_not_effect_family_count(self):
+        """8 effect IDs, 4 source types, 2 qualities: measure 4 highest only."""
         build="12.2.0.99999"
         rev="a"*40
         root=self.root/"new-season-j"
         root.mkdir()
         profile=root/"source_only_G.simc"
-        profile.write_text("paladin=test\\nhead=source,id=33221\\n",
+        profile.write_text("paladin=test\nhead=source,id=33221\n",
                            encoding="utf8")
         binary=root/"simc_fake"
         binary.write_bytes(b"fake-binary")
+        stats=list(v216.physical_gems.ORDINARY_FOUR_STATS)
         items=[{"item_id":330001+i,"enchant_id":7001+i,
                 "gem_property_id":9001+i,"color_mask":2,
                 "minimum_ilevel":320,"expansion_id":13,
-                "quality":4,"crafting_quality":3}
-               for i in range(4)]
+                "quality":4,"crafting_quality":(i%2)+1}
+               for i in range(8)]
         candidate={"status":"SAME_BUILD_GEM_ITEM_QUALITY_CANDIDATES_UNADMITTED",
-            "candidate_count":4,"candidates_unadmitted":items,
+            "candidate_count":len(items),"candidates_unadmitted":items,
             "game_build":build,"simc_revision":rev,
             "v221_stage_receipt_sha256":"1"*64,
             "v230_stage_receipt_sha256":"2"*64,
             "v230_original_item_data_sha256":"3"*64}
         collected={"expected_game_build":build,
+                   "fresh_pinned_v211_source":{
+                       "status":"PINNED_V211_AND_GENERATED_SOURCES_SEALED"},
                    "fresh_one_spec_physical_G_probe":{
                        "profile_path":str(profile)}}
-        stats=list(v216.physical_gems.ORDINARY_FOUR_STATS)
+        def original_source(**kwargs):
+            result=[]
+            for i in kwargs["enchant_ids"]:
+                k=(i-7001)//2
+                vector={stats[k]:{"simc_scaling_id":-7,
+                                   "dbc_base_amount":0,
+                                   "simc_coefficient":.35},
+                        stats[(k+1)%4]:{"simc_scaling_id":-7,
+                                        "dbc_base_amount":0,
+                                        "simc_coefficient":.15}}
+                result.append({
+                    "enchant_id":i,
+                    "source_reason_codes":["SIMC_ITEM_ENCHANT_SCALING_REQUIRED"],
+                    "unresolved_simc_scaled_static_stats":vector,
+                    "static_CHMV_vector":None,
+                    "source_min_ilevel":0,"source_max_ilevel":0})
+            return {"items":result,"source_sha256":"4"*64}
         called=[]
         def one_gem(**kwargs):
-            i=kwargs["ordinary_gem_id"]-330001
-            called.append(i)
+            idx=kwargs["ordinary_gem_id"]-330001
+            called.append(idx)
+            lead=stats[idx//2]
+            partner=stats[((idx//2)+1)%4]
             vector={s:0 for s in stats}
-            vector[stats[i]]=16
-            vector[stats[(i+1)%4]]=7
+            vector[lead]=16
+            vector[partner]=7
             return {
                "status":"SIMC_ORDINARY_GEM_TWO_STAT_OBSERVED_UNADMITTED",
-               "simc_effective_two_stat_vector_unadmitted":vector,
-               "simc_effective_two_stat_rating_unadmitted":23,
+               "simc_unbuffed_gear_two_stat_vector_unadmitted":vector,
+               "simc_unbuffed_gear_two_stat_rating_unadmitted":23,
+               "simc_unbuffed_gear_rating_source":
+                   "V046_JSON2_RESOLVED_ITEM_STATIC_CHMV",
                "ordinary_gem_id":kwargs["ordinary_gem_id"],
-               "new_native_calls":2 if i==0 else 1}
+               "native_case_receipts":[],
+               "new_native_calls":2 if idx==1 else 1}
         args=dict(candidates=candidate,collected=collected,
                   stage_root=root,binary=binary,simc_revision=rev,
                   native_G_status="G_NATIVE_NUMERIC_REFERENCE_OBSERVED_JFO_PENDING")
-        with mock.patch.object(v216.native_effect_pair,
+        with mock.patch.object(v216.oil_raw_source,"from_v275",
+                               side_effect=original_source), \
+             mock.patch.object(v216.native_effect_pair,
                                "measure_ordinary_gem",
                                side_effect=one_gem) as execution:
             actual=v216._fresh_four_stat_simc_observed_j_preview(**args)
             self.assertEqual(execution.call_count,4)
-        self.assertEqual(called,[0,1,2,3])
-        self.assertEqual(actual["J_candidate_unadmitted"],92)
-        self.assertEqual(actual["new_native_calls"],5)
-        self.assertEqual(actual["status"],
-                         "FOUR_STAT_SIMC_RATINGS_OBSERVED_UNADMITTED")
-        self.assertEqual(set(actual["by_stat"]),set(stats))
-        self.assertIsNone(actual.get("J"))
-        self.assertFalse(actual["highest_quality_verified"])
-        self.assertFalse(actual["game_socket_legality_verified"])
-        self.assertFalse(actual["environment_ready"])
-        # Ambiguous multi-effect season must NEVER launch native over 75 gems.
-        many={**candidate,
-              "candidate_count":75,
-              "candidates_unadmitted":[
-                 {**items[0],"item_id":330100+i,"enchant_id":7100+i}
-                 for i in range(75)]}
-        with mock.patch.object(v216.native_effect_pair,
-                               "measure_ordinary_gem",
-                               side_effect=AssertionError("GEM_NATIVE_FANOUT")):
-            pending=v216._fresh_four_stat_simc_observed_j_preview(
-                **{**args,"candidates":many})
+            self.assertEqual(called,[1,3,5,7])
+            self.assertEqual(actual["status"],
+                "FOUR_STAT_SIMC_GEAR_RATINGS_OBSERVED_UNADMITTED")
+            self.assertEqual(actual["J_candidate_unadmitted"],92)
+            self.assertEqual(actual["new_native_calls"],5)
+            self.assertEqual(actual["source_effect_family_count"],4)
+            self.assertEqual(set(actual["by_stat"]),set(stats))
+            self.assertIsNone(actual.get("J"))
+            self.assertFalse(actual["environment_ready"])
+            # A 75-gem source must not trigger 75 unbounded Native cases.
+            many={**candidate,
+                  "candidate_count":75,
+                  "candidates_unadmitted":[
+                      {**items[0],"item_id":330100+i,
+                       "enchant_id":7100+i,
+                       "crafting_quality":2}
+                      for i in range(75)]}
+            def many_source(**kwargs):
+                doc=original_source(enchant_ids=[7001])
+                return {"source_sha256":"4"*64,
+                    "items":[{**doc["items"][0],"enchant_id":i}
+                             for i in kwargs["enchant_ids"]]}
+            with mock.patch.object(v216.oil_raw_source,"from_v275",
+                                   side_effect=many_source), \
+                 mock.patch.object(v216.native_effect_pair,
+                                   "measure_ordinary_gem",
+                                   side_effect=AssertionError("GEM_NATIVE_FANOUT")):
+                pending=v216._fresh_four_stat_simc_observed_j_preview(
+                    **{**args,"candidates":many})
             self.assertIsNone(pending["J_candidate_unadmitted"])
             self.assertEqual(pending["new_native_calls"],0)
-            self.assertEqual(pending["source_effect_family_count"],75)
-        # Source build mismatch and mutable stage profile escape are rejected.
-        with self.assertRaisesRegex(v216.EnvironmentBuildBlocked,
-                "V216_GEM_FOUR_FAMILY_SOURCE_IDENTITY_DRIFT"):
-            v216._fresh_four_stat_simc_observed_j_preview(
-                **{**args,"candidates":{**candidate,
-                                       "game_build":"12.1.5.70783"}})
-        with self.assertRaisesRegex(v216.EnvironmentBuildBlocked,
-                "V216_GEM_FOUR_FAMILY_NATIVE_PROFILE_STAGE_DRIFT"):
-            v216._fresh_four_stat_simc_observed_j_preview(
-                **{**args,"collected":{
-                    "expected_game_build":build,
-                    "fresh_one_spec_physical_G_probe":{
-                       "profile_path":str(self.root/"outside.simc")}}})
+            self.assertEqual(pending["highest_quality_candidate_count"],75)
+            self.assertEqual(pending["source_effect_family_count"],1)
+            # Source build mismatch and mutable stage escape are rejected.
+            with self.assertRaisesRegex(v216.EnvironmentBuildBlocked,
+                    "V216_GEM_FOUR_FAMILY_SOURCE_IDENTITY_DRIFT"):
+                v216._fresh_four_stat_simc_observed_j_preview(
+                    **{**args,"candidates":{**candidate,
+                                           "game_build":"12.1.5.70783"}})
+            with mock.patch.object(v216.oil_raw_source,"from_v275",
+                                   side_effect=original_source), \
+                 self.assertRaisesRegex(v216.EnvironmentBuildBlocked,
+                    "V216_GEM_FOUR_FAMILY_NATIVE_PROFILE_STAGE_DRIFT"):
+                v216._fresh_four_stat_simc_observed_j_preview(
+                    **{**args,"collected":{
+                        **collected,
+                        "fresh_one_spec_physical_G_probe":{
+                            "profile_path":str(self.root/"outside.simc")}}})
 
     def test_p3_hl_reuse_requires_exact_game_build_even_with_verified_manifest(self):
         """Exact build selection is structural, not extra SimC validation."""
