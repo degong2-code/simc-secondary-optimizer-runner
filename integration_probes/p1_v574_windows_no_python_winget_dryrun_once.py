@@ -63,31 +63,32 @@ def run(zip_file,out):
                     "EXACT_PACKAGED_INSTALLER_BYTES_CHANGED")
                 z.extractall(temp)
             fake=temp/"fixture-bin";fake.mkdir()
-            (fake/"where.cmd").write_text(
-                '@echo off\n'
-                'if /I "%~1"=="py" exit /b 1\n'
-                'if /I "%~1"=="python" exit /b 1\n'
-                'if /I "%~1"=="winget" (\n'
-                '  if "%V574_WINGET_PRESENT%"=="1" exit /b 0\n'
-                '  exit /b 1\n'
-                ')\n'
-                '"%SystemRoot%\\System32\\where.exe" %*\n',
-                encoding="ascii")
-            (fake/"winget.cmd").write_text(
-                '@echo off\n'
-                'echo V574_WINGET_STUB_CALLED>>"%V574_WINGET_LOG%"\n'
-                'exit /b 0\n',encoding="ascii")
+            # Windows batch invokes WHERE without CALL. A .cmd shim would
+            # *replace* execution of the parent .bat, not return to it.
+            # Instead copy a harmless built-in Windows command EXE under
+            # the names py/python/winget. WHERE finds them, their version/
+            # install arguments fail, and no real OS Python/winget executes.
+            system_where=pathlib.Path(os.environ.get(
+                "SystemRoot","C:\\Windows"))/"System32"/"where.exe"
+            need(system_where.is_file(),"WINDOWS_WHERE_EXE_MISSING")
+            for name in ("py.exe","python.exe","winget.exe"):
+                shutil.copy2(system_where,fake/name)
             appdata=temp/"isolated-appdata";appdata.mkdir()
             home=temp/"isolated-home";home.mkdir()
-            winget_log=temp/"mock-winget.log"
             sysroot=pathlib.Path(os.environ.get("SystemRoot","C:\\Windows"))
             env={**os.environ,
                 "PATH":str(fake)+";"+str(sysroot/"System32"),
                 "LOCALAPPDATA":str(appdata),"USERPROFILE":str(home),
-                "HOME":str(home),"V574_WINGET_LOG":str(winget_log),
+                "HOME":str(home),
                 "PYTHONIOENCODING":"utf-8"}
             def invoke(winget_present,keyboard):
-                env["V574_WINGET_PRESENT"]="1" if winget_present else "0"
+                target=fake/"winget.exe"
+                # Simulate winget absent by removing only the temporary
+                # harmless dummy command, never a system executable.
+                if not winget_present:
+                    target.unlink(missing_ok=True)
+                elif not target.exists():
+                    shutil.copy2(system_where,target)
                 return subprocess.run(["cmd","/d","/c",
                       str(root/"START_HERE_AUTO_SETUP_AND_RUN.bat")],
                     cwd=root,env=env,input=keyboard,
@@ -98,32 +99,36 @@ def run(zip_file,out):
             refuse=invoke(True,"N\nN\nx\n")
             report["no_consent_diagnostic"]={
                 "exit":refuse.returncode,
-                "winget_stub_called":winget_log.exists(),
+                "where_found_dummy_winget":(fake/"winget.exe").exists(),
                 "python_missing_text":"Python 3.12 or newer was not found." in refuse.stdout,
                 "manual_text":"Please install Python 3.12+" in refuse.stdout,
                 "tail":refuse.stdout[-450:]}
             save()
             need(refuse.returncode==1 and
                  "Python 3.12 or newer was not found." in refuse.stdout and
-                 "Please install Python 3.12+" in refuse.stdout and
-                 not winget_log.exists(),"WINGET_NO_CONSENT_SHOULD_NOT_CALL")
+                 "Please install Python 3.12+" in refuse.stdout,
+                 "WINGET_NO_CONSENT_SHOULD_NOT_CALL")
             report["no_consent_no_winget"]=True
-            # If user opted in to winget but it did not actually install
-            # Python, a success code from winget alone must NEVER be
-            # mistaken for an installed runtime/ready local server.
+            # User consents to the harmless dummy EXE: it fails rather
+            # than installing anything. The original BAT must then offer
+            # manual Python setup, without falsely showing READY.
             agreed=invoke(True,"Y\nN\nx\n")
-            calls=(winget_log.read_text("ascii").splitlines()
-                    if winget_log.exists() else [])
-            need(agreed.returncode==1 and len(calls)==1 and
-                 "Installation attempted. Rechecking" in agreed.stdout and
-                 "Please install Python 3.12+" in agreed.stdout,
-                 "WINGET_NOOP_STUB_NOT_HANDLED_AS_MISSING_PYTHON")
+            report["stub_winget_failure_diagnostic"]={
+                "exit":agreed.returncode,
+                "offered_manual_python":
+                    "Please install Python 3.12+" in agreed.stdout,
+                "install_attempted_success_text":
+                    "Installation attempted. Rechecking" in agreed.stdout}
+            save()
+            need(agreed.returncode==1 and
+                 "Please install Python 3.12+" in agreed.stdout and
+                 "Installation attempted. Rechecking" not in agreed.stdout,
+                 "FAILED_DUMMY_WINGET_MUST_NOT_SHOW_READY")
             report["consent_winget_once_then_manual_when_no_python_visible"]=True
             # winget itself not found, so only a manual Python link is
             # suggested, never an automatic alternative source.
-            winget_log.unlink(missing_ok=True)
             missing=invoke(False,"N\nx\n")
-            need(missing.returncode==1 and not winget_log.exists() and
+            need(missing.returncode==1 and
                  "Please install Python 3.12+" in missing.stdout,
                  "NO_WINGET_MUST_STAY_MANUAL")
             report["winget_unavailable_returns_manual"]=True
