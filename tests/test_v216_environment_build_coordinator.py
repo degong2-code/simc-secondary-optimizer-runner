@@ -342,6 +342,133 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                                {**j,"J_candidate_unadmitted":137}},
                 compilation=compilation,selected_physical_items=None)
 
+    def test_v559_original_simc_gear_j_owner_source_and_quality_bridge(self):
+        """Use four real-format sealed Native receipts, not buffed or packaged J."""
+        build="12.2.0.99999"
+        rev="a"*40
+        stats=list(v216.physical_gems.ORDINARY_FOUR_STATS)
+        ids=[330011,330021,330031,330041]
+        root=self.root/"native-j-sealed"
+        source=root/"source"
+        source.mkdir(parents=True)
+        observations=[]
+        case_map={}
+        for item in ids:
+            receipts=[]
+            for variant in ("baseline","active"):
+                case=source/("v278_"+variant+"_"+str(item))
+                case.mkdir()
+                native=case/"native.json"
+                native.write_bytes(("{\"gem_id\":"+str(item)+"}").encode())
+                native_sha=v216.native_effect_pair.file_sha(native)
+                original={"status":"NATIVE_JSON2_CAPTURED",
+                          "identity":{"variant":variant,
+                                      "simc_revision":rev,
+                                      "binary_sha256":"b"*64,
+                                      "source_profile_sha256":"c"*64},
+                          "native_json2_sha256":native_sha}
+                receipt=case/"receipt.json"
+                receipt.write_text(json.dumps(original),encoding="utf8")
+                receipts.append({
+                    "variant":variant,"receipt_path":str(receipt),
+                    "receipt_sha256":v216.native_effect_pair.file_sha(receipt),
+                    "cache_reused":variant=="baseline"})
+            case_map[str(item)]=receipts
+            index=ids.index(item)
+            vector={key:0 for key in stats}
+            vector[stats[index]]=16
+            vector[stats[(index+1)%4]]=7
+            observations.append({
+                "ordinary_gem_id":item,
+                "status":"SIMC_ORDINARY_GEM_TWO_STAT_OBSERVED_UNADMITTED",
+                "binary_sha256":"b"*64,
+                "source_profile_sha256":"c"*64,
+                "simc_unbuffed_gear_rating_source":
+                    "V046_JSON2_RESOLVED_ITEM_STATIC_CHMV",
+                "simc_unbuffed_gear_two_stat_rating_unadmitted":23,
+                "simc_unbuffed_gear_two_stat_vector_unadmitted":vector,
+                "native_case_receipts":receipts})
+        ratings={str(item):23 for item in ids}
+        preview={
+            "status":"FOUR_STAT_SIMC_GEAR_RATINGS_OBSERVED_UNADMITTED",
+            "game_build":build,"simc_revision":rev,
+            "source_sha256":"d"*64,
+            "v221_stage_receipt_sha256":"1"*64,
+            "v230_stage_receipt_sha256":"2"*64,
+            "v230_original_item_data_sha256":"3"*64,
+            "by_stat":{
+                stat:{"item_id":item,"raw_nominal_points":23}
+                for stat,item in zip(stats,ids)},
+            "rating_by_id":ratings,"J_candidate_unadmitted":92,
+            "highest_quality_candidate_count":4,
+            "measured_candidate_ids":ids,
+            "native_observations_unadmitted":observations,
+            "native_case_receipts_by_id":case_map}
+        layout={"ordinary_gem_ids":ids,
+                "socket_total":4,"special_gem_id":None}
+        link={"same_build_gem_item_join_only":True,
+              "special_gem_item_id":None,
+              "v221_stage_receipt_sha256":"1"*64,
+              "selected_item_ids":ids}
+        chosen=v216._fresh_match_simc_native_ordinary_j(
+            preview=preview,layout=layout,ratings=ratings,
+            link=link,game_build=build,simc_revision=rev)
+        self.assertEqual(chosen,ids)
+        candidate={"status":"SAME_BUILD_GEM_ITEM_QUALITY_CANDIDATES_UNADMITTED",
+                   "game_build":build,"simc_revision":rev,
+                   "v221_stage_receipt_sha256":"1"*64,
+                   "v230_stage_receipt_sha256":"2"*64,
+                   "v230_original_item_data_sha256":"3"*64,
+                   "candidates_unadmitted":[{
+                       "item_id":item,"crafting_quality":2}
+                       for item in ids]}
+        j={"status":"PHYSICAL_GEM_J_ARITHMETIC_UNADMITTED",
+           "rating_origin":"SIMC_NATIVE_RESOLVED_GEAR_TWO_SECONDARY",
+           "physical_gem_item_ids":ids,
+           "J_candidate_unadmitted":92,
+           "J_accounting_policy":"SUM_SELECTED_ORDINARY_GEM_RATINGS",
+           "special_gem_count_in_J":0,
+           "source_v221_stage_receipt_sha256":"1"*64,
+           "source_v296_static_source_sha256":"d"*64}
+        preflight={"schema":v216.FRESH_SOURCE_PREFLIGHT_SCHEMA,
+                   "environment_ready":False,
+                   "game_build":build,"simc_revision":rev,
+                   "source_catalog_manifest_sha256":"4"*64,
+                   "physical_gem_J_arithmetic_unadmitted":j,
+                   "physical_gem_layout_unadmitted":layout,
+                   "selected_v221_gem_item_relation_unadmitted":link}
+        compilation={"status":"FRESH_V191_V211_V213_COMPILED_UNADMITTED",
+                     "simc_revision":rev,
+                     "four_stat_simc_native_j_source_unadmitted":preview,
+                     "ordinary_gem_v221_v230_source_candidates_unadmitted":
+                         candidate}
+        result=v216._fresh_source_owner_selected_J_F_numeric(
+            preflight=preflight,compilation=compilation,
+            selected_physical_items=None)
+        self.assertEqual(result["J"]["rating"],92)
+        self.assertEqual(result["J"]["numeric_source_owner"],
+                         "SIMC_NATIVE_V046_RESOLVED_GEAR_TWO_SECONDARY")
+        self.assertEqual(result["J"]["per_item_nominal_rating"],ratings)
+        self.assertEqual(result["J"]["observed_quality_rank_by_id"],
+                         {str(i):2 for i in ids})
+        self.assertFalse(result["environment_ready"])
+        with self.assertRaisesRegex(v216.EnvironmentBuildBlocked,
+                                    "V216_NATIVE_J_IDS_RATING_VECTOR_DRIFT"):
+            v216._fresh_match_simc_native_ordinary_j(
+                preview=preview,
+                layout={**layout,"ordinary_gem_ids":list(reversed(ids))},
+                ratings=ratings,link=link,
+                game_build=build,simc_revision=rev)
+        altered={**preview,"native_case_receipts_by_id":{
+            **case_map,str(ids[0]):[
+                {**case_map[str(ids[0])][0],"receipt_sha256":"f"*64},
+                case_map[str(ids[0])][1]]}}
+        with self.assertRaisesRegex(v216.EnvironmentBuildBlocked,
+                                    "V216_NATIVE_J_SEALED_RECEIPT_SHA_DRIFT"):
+            v216._fresh_match_simc_native_ordinary_j(
+                preview=altered,layout=layout,ratings=ratings,
+                link=link,game_build=build,simc_revision=rev)
+
     def test_v558_native_rating_uses_original_dbc_stat_kinds_not_effect_family_count(self):
         """8 effect IDs, 4 source types, 2 qualities: measure 4 highest only."""
         build="12.2.0.99999"
