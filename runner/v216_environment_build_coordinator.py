@@ -941,13 +941,14 @@ def _fresh_match_pinned_dbc_ordinary_j(*, preview, layout, ratings,
 
 def _fresh_match_simc_native_ordinary_j(*, preview, layout, ratings,
                                         link, game_build, simc_revision):
-    """Recheck the existing v278 sealed Native cases + v271 selected J IDs.
+    """Recheck the existing v269/v278 sealed gem delta + v271 J IDs.
 
-    No independent effect certification. Each item has one exact physical
-    native before/after pair and a v046-resolved gear-static numeric delta.
+    SimC applies gem CHMV into player collected_data.buffed_stats, not the
+    gear row. The unchanged v233 baseline + exact one gem_id difference,
+    integer two-stat delta and SHA-sealed JSON2 are the numeric proof.
     """
     need(type(preview) is dict and preview.get("status")==
-         "FOUR_STAT_SIMC_GEAR_RATINGS_OBSERVED_UNADMITTED"
+         "FOUR_STAT_SIMC_NATIVE_RATINGS_OBSERVED_UNADMITTED"
          and preview.get("game_build")==game_build
          and preview.get("simc_revision")==simc_revision
          and type(preview.get("source_sha256")) is str
@@ -998,13 +999,14 @@ def _fresh_match_simc_native_ordinary_j(*, preview, layout, ratings,
         expected=mapping[str(ident)]
         need(item.get("status")==
              "SIMC_ORDINARY_GEM_TWO_STAT_OBSERVED_UNADMITTED"
-             and item.get("simc_unbuffed_gear_rating_source")==
-                 "V046_JSON2_RESOLVED_ITEM_STATIC_CHMV"
-             and item.get("simc_unbuffed_gear_two_stat_rating_unadmitted")==
+             and item.get("simc_effective_two_stat_rating_unadmitted")==
                  expected and
-             type(item.get("simc_unbuffed_gear_two_stat_vector_unadmitted")) is dict
-             and sum(item["simc_unbuffed_gear_two_stat_vector_unadmitted"].values())==
+             type(item.get("simc_effective_two_stat_vector_unadmitted")) is dict
+             and sum(item["simc_effective_two_stat_vector_unadmitted"].values())==
                  expected and
+             type(item.get("observed")) is dict
+             and item["observed"].get("source")==
+                 "SIMC_JSON2_ACTUAL_GEM_ID_AND_BUFFED_STATS" and
              type(item.get("native_case_receipts")) is list
              and len(item["native_case_receipts"])==2,
              "V216_NATIVE_J_V046_RATING_OR_SEALED_CASE_MISSING")
@@ -1045,13 +1047,13 @@ def _fresh_match_simc_native_ordinary_j(*, preview, layout, ratings,
 def _fresh_four_stat_simc_observed_j_preview(*, candidates, collected,
                                              stage_root, binary, simc_revision,
                                              native_G_status):
-    """Reuse the actual v296 stat-kind source and v269/v278 Native gear rating.
+    """Reuse v296 stat-kind source and controlled v269/v278 SimC gem delta.
 
-    The number of different *effects* has no relation to the four desired
-    leading CHMV types. The same-build DBC states stat *kinds*, not scaled
-    numeric points. Measure only the maximal crafting rank of each physical
-    two-secondary source family.  v046-resolved item gear, NOT talent-buffed
-    player totals, owns numeric J. Original v271/v216/v222 still own J.
+    DBC reveals stat kinds but scaling makes its absolute points unknown.
+    SimC has the authoritative gem rating in player collected_data, not
+    gear[] (already shown by P3-GZ real Native). Only the gem_id changes
+    between sealed same-profile Native cases; compare integer two-stat
+    deltas, then let original v271/v216/v222 own J and installation.
     """
     pending={"status":"FOUR_STAT_GEM_NATIVE_SOURCE_PENDING",
              "by_stat":None,"rating_by_id":None,
@@ -1195,12 +1197,14 @@ def _fresh_four_stat_simc_observed_j_preview(*, candidates, collected,
                     "reason":"SIMC_GEM_PHYSICAL_NATIVE_PAIR_PENDING",
                     "new_native_calls":calls,
                     "native_observations_unadmitted":observed}
-        # G's v046-resolved item stats are the only numeric J authority.
-        # v269 buffed_stats are retained as a diagnostic, not summed into B.
+        # Unlike G items, SimC's gem rating is reflected in player stats,
+        # not JSON2 gear[] (actual P3-GZ observation). The existing v269
+        # adapter compares the same v233 profile with exactly one physical
+        # gem_id change; it rejects unclean/non-integer stat deltas.
         vector=measured.get(
-            "simc_unbuffed_gear_two_stat_vector_unadmitted")
+            "simc_effective_two_stat_vector_unadmitted")
         rating=measured.get(
-            "simc_unbuffed_gear_two_stat_rating_unadmitted")
+            "simc_effective_two_stat_rating_unadmitted")
         stats=season_budget_contract.STATS
         if not (type(vector) is dict and set(vector)==set(stats)
                 and all(type(value) is int and value>=0
@@ -1208,10 +1212,11 @@ def _fresh_four_stat_simc_observed_j_preview(*, candidates, collected,
                 and sum(value>0 for value in vector.values())==2
                 and type(rating) is int and 0<rating<=10000
                 and rating==sum(vector.values())
-                and measured.get("simc_unbuffed_gear_rating_source")==
-                    "V046_JSON2_RESOLVED_ITEM_STATIC_CHMV"):
+                and type(measured.get("observed")) is dict
+                and measured["observed"].get("source")==
+                    "SIMC_JSON2_ACTUAL_GEM_ID_AND_BUFFED_STATS"):
             return {**pending,"source_effect_family_count":len(families),
-                    "reason":"SIMC_NATIVE_ITEM_GEAR_GEM_RATING_NOT_RESOLVED",
+                    "reason":"SIMC_NATIVE_CONTROLLED_GEM_CHMV_DELTA_NOT_RESOLVED",
                     "new_native_calls":calls,
                     "native_observations_unadmitted":observed}
         positives=[stat for stat in stats if vector[stat]>0]
@@ -1244,7 +1249,7 @@ def _fresh_four_stat_simc_observed_j_preview(*, candidates, collected,
               for measurement in observed
               if measurement.get("ordinary_gem_id") in chosen_ids}
     return {**pending,
-            "status":"FOUR_STAT_SIMC_GEAR_RATINGS_OBSERVED_UNADMITTED",
+            "status":"FOUR_STAT_SIMC_NATIVE_RATINGS_OBSERVED_UNADMITTED",
             "game_build":build,"simc_revision":simc_revision,
             "source_effect_family_count":len(families),
             "highest_quality_candidate_count":len(eligible),
@@ -2025,7 +2030,7 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                    "highest_quality_verified":False}
         if gem_J is not None and native_gear_gem_source is not None:
             gem_J={**gem_J,
-                   "rating_origin":"SIMC_NATIVE_RESOLVED_GEAR_TWO_SECONDARY",
+                   "rating_origin":"SIMC_NATIVE_CONTROLLED_TWO_SECONDARY",
                    "source_v296_static_source_sha256":
                        native_gear_gem_source["source_sha256"],
                    "source_v221_stage_receipt_sha256":
@@ -6152,7 +6157,7 @@ def _fresh_source_owner_selected_J_F_numeric(*, preflight, compilation,
                   "nominal_J_not_simc_effective_delta":True}
     elif (type(j) is dict and type(layout) is dict and
           type(link) is dict and j.get("rating_origin")==
-              "SIMC_NATIVE_RESOLVED_GEAR_TWO_SECONDARY"):
+              "SIMC_NATIVE_CONTROLLED_TWO_SECONDARY"):
         # Original v269/v278 actual physical gem_id, original v046 JSON2
         # gear-static CHMV; not talent-buffed totals or guessed DBC scaling.
         preview=compilation.get("four_stat_simc_native_j_source_unadmitted")
@@ -6196,7 +6201,7 @@ def _fresh_source_owner_selected_J_F_numeric(*, preflight, compilation,
             for i in sorted(set(ids))}
         source={"kind":"nominal_ordinary_gem_J",
                 "numeric_source_owner":
-                    "SIMC_NATIVE_V046_RESOLVED_GEAR_TWO_SECONDARY",
+                    "SIMC_NATIVE_CONTROLLED_GEM_DELTA",
                 "game_build":preflight["game_build"],
                 "simc_revision":preflight["simc_revision"],
                 "source_catalog_manifest_sha256":
@@ -6367,7 +6372,7 @@ def _fresh_source_owner_observed_J_F_quality(*, preflight, compilation,
             # quality rows and ALL source-ranked highest-quality actual
             # v269/v278 candidate observations instead; no separate Gate.
             native_bound=(j.get("numeric_source_owner")==
-                          "SIMC_NATIVE_V046_RESOLVED_GEAR_TWO_SECONDARY")
+                          "SIMC_NATIVE_CONTROLLED_GEM_DELTA")
             native_preview=compilation.get(
                 "four_stat_simc_native_j_source_unadmitted")
             native_candidate=compilation.get(
@@ -6375,7 +6380,7 @@ def _fresh_source_owner_observed_J_F_quality(*, preflight, compilation,
             if native_bound:
                 need(type(native_preview) is dict and
                      native_preview.get("status")==
-                         "FOUR_STAT_SIMC_GEAR_RATINGS_OBSERVED_UNADMITTED"
+                         "FOUR_STAT_SIMC_NATIVE_RATINGS_OBSERVED_UNADMITTED"
                      and type(native_candidate) is dict
                      and native_candidate.get("status")==
                          "SAME_BUILD_GEM_ITEM_QUALITY_CANDIDATES_UNADMITTED"
@@ -7895,7 +7900,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                                 pinned_dbc_j_preview["rating_by_id"])
                         elif (type(native_j_preview) is dict and
                               native_j_preview.get("status")==
-                              "FOUR_STAT_SIMC_GEAR_RATINGS_OBSERVED_UNADMITTED"):
+                              "FOUR_STAT_SIMC_NATIVE_RATINGS_OBSERVED_UNADMITTED"):
                             # One sealed v269 delta per source-derived item.
                             # v271 computes nominal J arithmetic; v216 still
                             # requires original quality/socket ownership for
@@ -7943,7 +7948,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             else native_j_preview["by_stat"]
                             if type(native_j_preview) is dict and
                             native_j_preview.get("status")==
-                                "FOUR_STAT_SIMC_GEAR_RATINGS_OBSERVED_UNADMITTED"
+                                "FOUR_STAT_SIMC_NATIVE_RATINGS_OBSERVED_UNADMITTED"
                             else observed[
                                 "four_stat_ordinary_best_observed_unadmitted"])
                 preflight=preflight_new_season_source(
@@ -7980,7 +7985,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         zero_history_gem_layout is not None and
                         type(native_j_preview) is dict and
                         native_j_preview.get("status")==
-                            "FOUR_STAT_SIMC_GEAR_RATINGS_OBSERVED_UNADMITTED"
+                            "FOUR_STAT_SIMC_NATIVE_RATINGS_OBSERVED_UNADMITTED"
                         else None),
                     pinned_gem_simc_source_folder=collected.get(
                         "fresh_lazy_full_pinned_simc_item_source",{}).get(
