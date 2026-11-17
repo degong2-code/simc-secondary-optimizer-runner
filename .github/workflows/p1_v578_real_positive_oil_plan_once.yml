@@ -1,0 +1,88 @@
+name: P1 v578 ONE Real Selected Oil Positive O to Manual T Installed Plan (No DPS)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p1_v578_real_positive_oil_plan_once.yml
+      - integration_probes/p1_v578_real_positive_oil_manual_t_plan_once.py
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v578-one-selected-positive-oil-real-source
+  cancel-in-progress: false
+jobs:
+  one-oil-item-one-flask-exact-install:
+    if: ${{ contains(github.event.head_commit.message, '[v578-real-oil-plan-once]') }}
+    runs-on: windows-2022
+    timeout-minutes: 26
+    env:
+      PYTHONPATH: runner;integration_probes;.
+      SIMC_PINNED_SOURCE_COMMIT: de11f57df75dda668bae6ac7043a43b98831fa96
+      SIMC_PINN_GAME_BUILD: 12.1.5.70783
+      SIMC_PINNED_BINARY_SHA256: 1fc927d2be7f1b6064c75f004b5b22245b064a6b3e56e572af4048ba822a986d
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - name: Preserve exact source bytes on Windows
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false, fetch-depth: 2}
+      - name: Explicit one-shot scope: no unreviewed native runtime changes
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $changed=@(git diff-tree --no-commit-id --name-only -r $env:GITHUB_SHA)
+          $allowed=@('.github/workflows/p1_v578_real_positive_oil_plan_once.yml',
+                     'integration_probes/p1_v578_real_positive_oil_manual_t_plan_once.py')
+          if (@($changed | Where-Object {$_ -notin $allowed}).Count -gt 0) { throw 'V578_UNSCOPED_REAL_NATIVE_RUN_REFUSED' }
+          if ($changed.Count -lt 1 -or $changed.Count -gt 2) { throw 'V578_EXPLICIT_SCOPE_REFUSED' }
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse same-build official Windows SimC artifact, SHA-bound
+        uses: actions/download-artifact@v4
+        with:
+          repository: simulationcraft/simc-publish
+          run-id: 42956947906
+          name: simc-nightly-win64-midnight
+          path: .v578-official-simc
+          github-token: ${{ github.token }}
+      - name: Verify no other executable or source assumptions
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $arc=Join-Path $PWD '.v578-official-simc/simc-1210.01.de11f57-win64.7z'
+          if (!(Test-Path $arc -PathType Leaf)) { throw 'V578_OFFICIAL_SIMC_ARCHIVE_MISSING' }
+          if ((Get-FileHash -Algorithm SHA256 $arc).Hash.ToLowerInvariant() -ne 'a4c4d5e7b349172d80897721daa3e849ce25874a82bbdfb96aeab4dbdc560eb0') { throw 'V578_SIMC_ARCHIVE_SHA_DRIFT' }
+          New-Item -ItemType Directory -Force .v578-external-simc | Out-Null
+          & 'C:\Program Files\7-Zip\7z.exe' x '-o.v578-external-simc' -y -bd $arc | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'V578_SIMC_EXTRACT_FAILED' }
+          $exe=@(Get-ChildItem .v578-external-simc -Recurse -File -Filter simc.exe)
+          if ($exe.Count -ne 1) { throw 'V578_ONE_EXECUTABLE_REQUIRED' }
+          if ((Get-FileHash -Algorithm SHA256 $exe[0].FullName).Hash.ToLowerInvariant() -ne $env:SIMC_PINNED_BINARY_SHA256) { throw 'V578_SIMC_SHA_CHANGED' }
+          "V578_EXE=$($exe[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          python -m pip install -r requirements-web-test.txt
+          if ($LASTEXITCODE -ne 0) { throw 'V578_WEB_DEPENDENCY_FAILED' }
+          python -m py_compile integration_probes/p1_v578_real_positive_oil_manual_t_plan_once.py
+          if ($LASTEXITCODE -ne 0) { throw 'V578_PROBE_SYNTAX_FAILED' }
+      - name: One original selected F+O source Build -> exact installed SHA -> manual T session plan (DPS Native 0)
+        shell: pwsh
+        timeout-minutes: 19
+        run: |
+          New-Item -ItemType Directory -Force out/v578 | Out-Null
+          python -u integration_probes/p1_v578_real_positive_oil_manual_t_plan_once.py --simc "$env:V578_EXE" --out out/v578
+          if ($LASTEXITCODE -ne 0) { throw 'V578_FIRST_MISSING_OR_ORIGINAL_BLOCKER_IN_RECEIPT' }
+      - name: Compact original proof only; never archive secrets/exe/sessions/old SimC native bytes
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v578-one-real-positive-oil-manual-T-plan
+          path: out/v578/V578_ACTUAL_POSITIVE_O_INSTALLED_TO_MANUAL_T_PLAN_COMPACT.json
+          retention-days: 10
+          if-no-files-found: warn
