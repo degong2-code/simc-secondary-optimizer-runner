@@ -121,6 +121,8 @@ class SeasonEnvironmentBuildRequest(BaseModel):
         default=None,pattern=r"^\d+(?:\.\d+){3}$",
         min_length=7,max_length=32)
     target_ilevel: int = Field(default=334,ge=1,le=1000)
+    reference_G_track: str = Field(
+        default="general",pattern=r"^(?:general|fury_dual_2h)$")
     # Guard the live Retail build after the separate Myth source preflight:
     # a patch between two requests must never carry the old target forward.
     auto_myth_target_source_build: str | None = Field(
@@ -807,12 +809,16 @@ class LocalJobs:
                                  source_target_socket_count=None,
                                  refresh_reason=None,
                                  auto_myth_target_source_build=None,
-                                 auto_myth_target_source_sha256=None):
+                                 auto_myth_target_source_sha256=None,
+                                 reference_G_track="general"):
         """Run original v216 with season inputs, never a user DPS scenario.
 
         One deterministic one-spec reference G probe is NOT season-level
         validation, Fury-TG proof or a user character/profile input.
         """
+        if reference_G_track not in ("general","fury_dual_2h"):
+            raise environment_manifest.EnvironmentBlocked(
+                "SEASON_G_REFERENCE_TRACK_INVALID")
         # One normal user Build: first try verified v212 reuse; only on a
         # cache miss invoke existing receipt-backed G/F stages. Explicit
         # advanced selections remain separate and require their own proof.
@@ -926,12 +932,14 @@ class LocalJobs:
             with self.season_source_lock:
                 prior=environment_build.find_verified_installed_season_environment(
                     self.root,target_ilevel,expected_game_build=game_build,
-                    require_unique_unqualified=True)
+                    require_unique_unqualified=True,
+                    required_reference_G_track=reference_G_track)
             if prior is not None:
                 # A true original v212 receipt carries its installed SHA.
                 # Previous API mocks/legacy reuse results retain old behavior.
                 snapshot=(self.restore_verified_fresh_profile(
                     target_ilevel=target_ilevel,game_build=game_build,
+                    required_reference_G_track=reference_G_track,
                     required_gem_layout={
                         "special_gem_id":None,
                         "socket_total":(
@@ -971,6 +979,7 @@ class LocalJobs:
                         if discovered_build is not None else None),
                     "retail_version_network_calls":version_network_calls,
                     "target_ilevel":target_ilevel,
+                    "reference_G_track":reference_G_track,
                     "environment_ready":True,"environment_installed":True,
                     "native_calls":0,"network_calls":version_network_calls,
                     "dps_optimization_started":False,
@@ -1034,7 +1043,10 @@ class LocalJobs:
                 fresh_collection_inputs={
                     "expected_game_build":game_build,
                     "representative_request":{
-                        "class":"paladin","spec":"retribution",
+                        "class":("warrior" if reference_G_track=="fury_dual_2h"
+                                 else "paladin"),
+                        "spec":("fury" if reference_G_track=="fury_dual_2h"
+                                else "retribution"),
                         "target_ilevel":target_ilevel},
                     "g_probe_character":{"race":"dwarf"},
                     "simc_revision_hint":simc_revision_hint,
@@ -1091,7 +1103,10 @@ class LocalJobs:
             "retail_version_network_calls":version_network_calls,
             "active_season_reverified_in_this_lookup":
                 discovered_build is not None,
-            "internal_numeric_probe":"paladin/retribution",
+            "internal_numeric_probe":(
+                "warrior/fury" if reference_G_track=="fury_dual_2h"
+                else "paladin/retribution"),
+            "reference_G_track_requested":reference_G_track,
             "numeric_probe_not_whole_season_G_certification":True,
             "local_native_G_requested":native_G_binary is not None,
             "F_O_native_binary_configured":consumable_native_binary is not None,
@@ -3243,6 +3258,7 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
                 auto_initial_core_build=request.auto_initial_core_build,
                 auto_initial_core_simc_binary=
                     request.auto_initial_core_simc_binary,
+                reference_G_track=request.reference_G_track,
                 existing_special_gem_id=request.existing_special_gem_id,
                 source_target_socket_count=request.source_target_socket_count,
                 refresh_reason=request.refresh_reason,
