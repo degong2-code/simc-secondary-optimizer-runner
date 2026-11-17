@@ -783,7 +783,7 @@ def _fresh_pinned_dbc_ordinary_gem_j_source(*, candidates, collected,
 
     This is an UNADMITTED J candidate. Identical source conditions and
     observed crafting quality allow deterministic probing, not approval.
-    Scaling, alternate partner-stat families and incomplete source stay pending.
+    Scaling and incomplete leading-stat source stay pending; multiple partners are allowed.
     """
     out={"status":"PINNED_SIMC_DBC_GEM_J_PENDING",
          "by_stat":None,"rating_by_id":None,"J_candidate_unadmitted":None,
@@ -840,7 +840,7 @@ def _fresh_pinned_dbc_ordinary_gem_j_source(*, candidates, collected,
          type(raw.get("source_sha256")) is str and
          season_budget_contract.SHA.fullmatch(raw["source_sha256"]) is not None,
          "V216_GEM_DBC_SEALED_ENCHANT_SOURCE_DRIFT")
-    groups={stat:{} for stat in physical_gems.ORDINARY_FOUR_STATS}
+    groups={stat:[] for stat in physical_gems.ORDINARY_FOUR_STATS}
     unresolved=0
     for row in rows:
         original=by_enchant[row["enchant_id"]]
@@ -856,27 +856,39 @@ def _fresh_pinned_dbc_ordinary_gem_j_source(*, candidates, collected,
             unresolved+=1;continue
         lead=max(positive,key=lambda stat:vec[stat])
         partner=next(s for s in positive if s!=lead)
+        # C+H and C+M are both C-family if C is their larger stat.
+        # Partner stat is NOT a fifth gem family or an extra admission gate.
+        # Preserve source use metadata for comparable same-effect checks.
         scope=(partner,row["color_mask"],row["minimum_ilevel"],
                row["expansion_id"],row["quality"],
                original["source_min_ilevel"],original["source_max_ilevel"])
-        groups[lead].setdefault(scope,[]).append((row,vec))
-    if any(len(groups[s])!=1 for s in groups):
-        return {**out,"reason":"FOUR_UNAMBIGUOUS_STATIC_EFFECT_FAMILIES_PENDING",
-                "observed_effect_family_count":sum(map(len,groups.values())),
+        groups[lead].append((row,vec,scope))
+    if any(not groups[stat] for stat in groups):
+        return {**out,"reason":"FOUR_LEADING_CHMV_TYPES_INCOMPLETE",
+                "observed_leading_types":[
+                    stat for stat in groups if groups[stat]],
                 "unresolved_item_count":unresolved,
                 "source_sha256":raw["source_sha256"]}
     chosen={}
-    for lead in groups:
-        rows_with_vector=next(iter(groups[lead].values()))
-        best=max(rows_with_vector,key=lambda x:(
+    for lead,observed in groups.items():
+        # Approved rule: highest crafting quality, then highest sum of
+        # both secondary stats, then lowest exact physical ItemID.
+        best=max(observed,key=lambda x:(
             x[0]["crafting_quality"],sum(x[1].values()),-x[0]["item_id"]))
-        partner=next(s for s,v in best[1].items() if s!=lead and v>0)
-        if any(best[1][s]<v[s] for _,v in rows_with_vector
-               for s in (lead,partner)):
+        row,vector,scope=best
+        # Only SAME two-stat effect+conditions can be judged componentwise
+        # for quality dominance. Other partner stats are separate effects
+        # but share the same C/H/M/V leading-type choice.
+        comparable=[v for _,v,source_scope in observed
+                    if source_scope==scope]
+        if any(vector[stat]<other[stat]
+               for other in comparable
+               for stat in physical_gems.ORDINARY_FOUR_STATS):
             return {**out,"reason":"HIGHER_QUALITY_NUMERIC_DOMINANCE_PENDING",
-                    "source_sha256":raw["source_sha256"]}
-        chosen[lead]={"item_id":best[0]["item_id"],
-                      "raw_nominal_points":sum(best[1].values())}
+                    "source_sha256":raw["source_sha256"],
+                    "unresolved_item_count":unresolved}
+        chosen[lead]={"item_id":row["item_id"],
+                      "raw_nominal_points":sum(vector.values())}
     return {**out,
         "status":"PINNED_SIMC_DBC_FOUR_STAT_J_STATIC_UNADMITTED",
         "by_stat":chosen,

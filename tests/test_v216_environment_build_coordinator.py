@@ -218,7 +218,10 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             v216._fresh_pinned_dbc_ordinary_gem_j_source(
                 **{**kwargs,"candidates":mismatch})
         # Another partner stat for the same leading stat changes the effect.
-        other={**rows[0],"item_id":349991,"enchant_id":8991}
+        # Approved selection: same C-leading quality, higher J wins even
+        # if its partner is M instead of H.
+        other={**rows[0],"item_id":349991,"enchant_id":8991,
+               "crafting_quality":3}
         alternate=v216.oil_raw_source.extract(
             generated_text=raw+'{ 8991, 0, 0, 0, 0, 0, 0, 0, 0, '
                 '{ 5, 5, 0 }, { 17, 7, 0 }, { 32, 49, 0 }, '
@@ -227,13 +230,29 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
             enchant_ids={x["enchant_id"] for x in rows}|{8991})
         with mock.patch.object(v216.oil_raw_source,"from_v275",
                                return_value=alternate):
-            pending=v216._fresh_pinned_dbc_ordinary_gem_j_source(
+            chosen=v216._fresh_pinned_dbc_ordinary_gem_j_source(
                 **{**kwargs,"candidates":{**candidate,
                    "candidate_count":len(rows)+1,
                    "candidates_unadmitted":rows+[other]}})
-        self.assertIsNone(pending["J_candidate_unadmitted"])
-        self.assertEqual(pending["native_calls"],0)
-        self.assertFalse(pending["environment_ready"])
+        self.assertEqual(chosen["J_candidate_unadmitted"],93)
+        self.assertEqual(chosen["by_stat"]["crit_rating"]["item_id"],349991)
+        self.assertEqual(chosen["native_calls"],0)
+        self.assertFalse(chosen["environment_ready"])
+        # Same quality and same J: smallest physical ID wins.
+        tied=v216.oil_raw_source.extract(
+            generated_text=raw+'{ 8991, 0, 0, 0, 0, 0, 0, 0, 0, '
+                '{ 5, 5, 0 }, { 16, 7, 0 }, { 32, 49, 0 }, '
+                '{ 0, 0, 0 }, 0, "Other" },\n',
+            game_build=build,simc_revision=rev,
+            enchant_ids={x["enchant_id"] for x in rows}|{8991})
+        with mock.patch.object(v216.oil_raw_source,"from_v275",
+                               return_value=tied):
+            same=v216._fresh_pinned_dbc_ordinary_gem_j_source(
+                **{**kwargs,"candidates":{**candidate,
+                   "candidate_count":len(rows)+1,
+                   "candidates_unadmitted":rows+[other]}})
+        self.assertEqual(same["by_stat"]["crit_rating"]["item_id"],330003)
+        self.assertEqual(same["J_candidate_unadmitted"],92)
         # Scaling stays unobserved instead of treating base DBC points as J.
         scaled=raw.replace("{ 8102, 0, 0, 0, 0, 0, 0, 0, 0, ",
                            "{ 8102, 0, -7, 0, 80, 120, 0, 0, 0, ")
