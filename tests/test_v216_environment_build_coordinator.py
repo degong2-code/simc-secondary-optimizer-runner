@@ -243,8 +243,10 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         with mock.patch.object(v216.oil_raw_source,"from_v275",
                                return_value=unscaled):
             pending=v216._fresh_pinned_dbc_ordinary_gem_j_source(**kwargs)
-        self.assertIsNone(pending["J_candidate_unadmitted"])
+        self.assertEqual(pending["J_candidate_unadmitted"],92)
         self.assertGreater(pending["unresolved_item_count"],0)
+        self.assertFalse(pending["highest_quality_verified"])
+        self.assertFalse(pending["environment_ready"])
 
     def test_v548_four_source_effect_families_measure_once_and_do_not_admit_j(self):
         build="12.2.0.99999"
