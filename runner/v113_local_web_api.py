@@ -1994,8 +1994,12 @@ class LocalJobs:
                           independent_level or
                           (current_season and user["target"]["ilevel"]!=334)),
                       "current_season_product":current_season,
+                      # v176 is a historical BASE physical-acceptance
+                      # receipt, not a certification of every DPS profile
+                      # in a newly installed v212 season at the same ilvl.
                       "v176_26_of_26_base_physical_native":(
-                          current_season and user["target"]["ilevel"]==334)}}
+                          current_season and fresh is None and
+                          user["target"]["ilevel"]==334)}}
         except Exception as exc:
             raise blocked(exc) from None
 
