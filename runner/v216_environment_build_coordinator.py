@@ -974,8 +974,6 @@ def _fresh_match_simc_native_ordinary_j(*, preview, layout, ratings,
     need(ids==layout.get("ordinary_gem_ids")
          and link.get("selected_item_ids")==sorted(set(ids))
          and ratings==mapping and preview["rating_by_id"]==mapping
-         and sum(mapping[str(i)] for i in ids)==
-             sum(mapping[str(i)] for i in ids)
          and preview["J_candidate_unadmitted"]==
              sum(mapping[str(i)] for i in ids[:4]),
          "V216_NATIVE_J_IDS_RATING_VECTOR_DRIFT")
@@ -6149,6 +6147,79 @@ def _fresh_source_owner_selected_J_F_numeric(*, preflight, compilation,
                   "highest_available_quality_verified":False,
                   "real_socket_source_verified":False,
                   "nominal_J_not_simc_effective_delta":True}
+    elif (type(j) is dict and type(layout) is dict and
+          type(link) is dict and j.get("rating_origin")==
+              "SIMC_NATIVE_RESOLVED_GEAR_TWO_SECONDARY"):
+        # Original v269/v278 actual physical gem_id, original v046 JSON2
+        # gear-static CHMV; not talent-buffed totals or guessed DBC scaling.
+        preview=compilation.get("four_stat_simc_native_j_source_unadmitted")
+        candidate=compilation.get(
+            "ordinary_gem_v221_v230_source_candidates_unadmitted")
+        ids=_fresh_match_simc_native_ordinary_j(
+            preview=preview,layout=layout,
+            ratings=(preview.get("rating_by_id")
+                     if type(preview) is dict else None),
+            link=link,game_build=preflight["game_build"],
+            simc_revision=preflight["simc_revision"])
+        need(type(candidate) is dict and candidate.get("status")==
+             "SAME_BUILD_GEM_ITEM_QUALITY_CANDIDATES_UNADMITTED"
+             and candidate.get("game_build")==preflight["game_build"]
+             and candidate.get("simc_revision")==preflight["simc_revision"]
+             and candidate.get("v221_stage_receipt_sha256")==
+                 link["v221_stage_receipt_sha256"]
+             and candidate.get("v230_stage_receipt_sha256")==
+                 preview["v230_stage_receipt_sha256"]
+             and candidate.get("v230_original_item_data_sha256")==
+                 preview["v230_original_item_data_sha256"]
+             and j.get("source_v296_static_source_sha256")==
+                 preview["source_sha256"]
+             and j.get("source_v221_stage_receipt_sha256")==
+                 link["v221_stage_receipt_sha256"]
+             and j.get("physical_gem_item_ids")==ids
+             and j.get("status")=="PHYSICAL_GEM_J_ARITHMETIC_UNADMITTED"
+             and j.get("J_accounting_policy")==
+                 "SUM_SELECTED_ORDINARY_GEM_RATINGS"
+             and j.get("special_gem_count_in_J")==0
+             and j.get("J_candidate_unadmitted")==
+                 sum(preview["rating_by_id"][str(i)] for i in ids),
+             "V216_JF_OWNER_PINNED_SIMC_NATIVE_GEM_J_DRIFT")
+        original_quality={row["item_id"]:row["crafting_quality"]
+                          for row in candidate["candidates_unadmitted"]}
+        selected_quality={
+            str(i):original_quality[i] for i in sorted(set(ids))}
+        receipts={str(i):[
+            row["receipt_sha256"] for row in
+            preview["native_case_receipts_by_id"][str(i)]]
+            for i in sorted(set(ids))}
+        source={"kind":"nominal_ordinary_gem_J",
+                "numeric_source_owner":
+                    "SIMC_NATIVE_V046_RESOLVED_GEAR_TWO_SECONDARY",
+                "game_build":preflight["game_build"],
+                "simc_revision":preflight["simc_revision"],
+                "source_catalog_manifest_sha256":
+                    preflight["source_catalog_manifest_sha256"],
+                "v221_stage_receipt_sha256":
+                    link["v221_stage_receipt_sha256"],
+                "v230_stage_receipt_sha256":
+                    candidate["v230_stage_receipt_sha256"],
+                "v230_original_item_data_sha256":
+                    candidate["v230_original_item_data_sha256"],
+                "v296_sealed_dbc_source_sha256":preview["source_sha256"],
+                "source_measured_highest_quality_candidate_ids":
+                    list(preview["measured_candidate_ids"]),
+                "native_case_receipt_sha256_by_item_id":receipts,
+                "ordinary_gem_item_ids":list(ids),
+                "special_gem_item_id":None,
+                "per_item_nominal_rating":dict(preview["rating_by_id"])}
+        out["J"]={"rating":j["J_candidate_unadmitted"],
+                  "source_identity_sha256":
+                      digest(canonical(source).encode("utf8")),
+                  **source,
+                  "observed_quality_rank_by_id":selected_quality,
+                  "special_gem_contributes_to_J":False,
+                  "highest_available_quality_verified":False,
+                  "real_socket_source_verified":False,
+                  "nominal_J_not_simc_effective_delta":True}
     else:
         out["missing"].append(
             "J_ORIGINAL_NOMINAL_NUMERIC_OR_HIGHEST_QUALITY_SOURCE_PENDING")
@@ -6288,6 +6359,55 @@ def _fresh_source_owner_observed_J_F_quality(*, preflight, compilation,
                         "comparable_effect_source_only":
                             group.get("observed_effect_vectors_comparable_source_only")
                                 is True})
+            # When v266 EffectPointsMin is scaled, v220 can have no
+            # comparable raw vectors. Reuse the same original selected v230
+            # quality rows and ALL source-ranked highest-quality actual
+            # v269/v278 candidate observations instead; no separate Gate.
+            native_bound=(j.get("numeric_source_owner")==
+                          "SIMC_NATIVE_V046_RESOLVED_GEAR_TWO_SECONDARY")
+            native_preview=compilation.get(
+                "four_stat_simc_native_j_source_unadmitted")
+            native_candidate=compilation.get(
+                "ordinary_gem_v221_v230_source_candidates_unadmitted")
+            if native_bound:
+                need(type(native_preview) is dict and
+                     native_preview.get("status")==
+                         "FOUR_STAT_SIMC_GEAR_RATINGS_OBSERVED_UNADMITTED"
+                     and type(native_candidate) is dict
+                     and native_candidate.get("status")==
+                         "SAME_BUILD_GEM_ITEM_QUALITY_CANDIDATES_UNADMITTED"
+                     and native_preview.get("game_build")==
+                         preflight["game_build"]
+                     and native_preview.get("simc_revision")==
+                         preflight["simc_revision"]
+                     and native_preview.get("v221_stage_receipt_sha256")==
+                         link["v221_stage_receipt_sha256"]
+                     and native_preview.get("v230_stage_receipt_sha256")==
+                         original["v230_stage_receipt_sha256"]
+                     and native_preview.get("measured_candidate_ids")==
+                         sorted(set(native_preview["measured_candidate_ids"]))
+                     and len(native_preview["measured_candidate_ids"])==
+                         native_preview["highest_quality_candidate_count"]
+                     and set(ordinary)<=set(
+                         native_preview["measured_candidate_ids"])
+                     and all(j["per_item_nominal_rating"][str(i)]==
+                             native_preview["rating_by_id"][str(i)]
+                             for i in ordinary),
+                     "V216_NATIVE_GEM_QUALITY_ORIGINAL_FULL_SOURCE_REQUIRED")
+                # These are winning measured candidates, not a claim that
+                # a different partner effect is numerically equivalent.
+                # All higher-quality-source competitors were already
+                # measured under the original v230/scaled-DBC shortlist.
+                bounded=[{
+                    "observed_item_ids":[item],
+                    "observed_crafting_quality_ranks":[by_id[item]],
+                    "highest_observed_item_id_source_only":item,
+                    "same_raw_four_stat_vector_source_only":False,
+                    "best_discovered_effect_item_id_source_only":item,
+                    "comparable_effect_source_only":True,
+                    "comparison_basis":
+                        "SAME_SOURCE_RANK_ACTUAL_SIMC_GEAR_WINNER"
+                } for item in sorted(set(ordinary))]
             nominal_ranks=j.get("observed_quality_rank_by_id")
             nominal_bound=(j.get("numeric_source_owner")==
                            "PACKAGED_SEASON_NOMINAL_PER_ITEM")
