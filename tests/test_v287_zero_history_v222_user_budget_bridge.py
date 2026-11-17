@@ -842,7 +842,8 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         bound=pre["selected_v221_gem_item_relation_unadmitted"]
         self.assertEqual(
             bound["selected_simc_gem_quality_source_unadmitted"][
-                "selected_item_quality_unadmitted"],items)
+                "selected_item_quality_unadmitted"],
+            first["selected_item_quality_unadmitted"])
         self.assertFalse(bound["special_class_and_quality_verified"])
         self.assertIsNone(pre["J"])
         joined={"physical_gem_layout_unadmitted":layout,
