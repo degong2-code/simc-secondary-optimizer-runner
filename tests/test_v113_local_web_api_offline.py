@@ -1377,6 +1377,33 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertFalse((self.root/"runs").exists())
 
 
+    def test_fury_season_build_routes_only_distinct_G_rep_to_v216(self):
+        # The 25-spec default remains Ret; explicit Fury auto budget
+        # selects the sealed dual-twohand G profile before any Numeric READY.
+        source={"status":"FRESH_WAGO_DB2_COLLECTED_MORE_SOURCES_PENDING",
+                "environment_ready":False,"environment_installed":False,
+                "native_calls":0,"source_compilation":{},
+                "zero_history_build":{"requires":["G_SOURCE_PENDING"],
+                                      "environment_ready":False}}
+        with mock.patch.object(web.environment_build,"build_environment",
+                               return_value=source) as build:
+            got=self.post("/api/v1/environment/season-build",{
+                "game_build":"12.2.0.99999","target_ilevel":334,
+                "reference_G_track":"fury_dual_2h"})
+        self.assertEqual(got.status_code,200,got.text)
+        self.assertFalse(got.json()["web_environment_scope"]["environment_ready"])
+        self.assertEqual(got.json()["web_environment_scope"]["reference_G_track_requested"],
+                         "fury_dual_2h")
+        self.assertEqual(build.call_args.kwargs["fresh_collection_inputs"][
+            "representative_request"],{"class":"warrior","spec":"fury",
+                                      "target_ilevel":334})
+        self.assertEqual(build.call_args.kwargs["fresh_collection_inputs"][
+            "g_probe_character"],{"race":"dwarf"})
+        self.assertFalse(build.call_args.kwargs["fresh_collection_inputs"][
+            "auto_native_G_requested"])
+        self.assertEqual(self.post("/api/v1/environment/season-build",{
+            "game_build":"12.2.0.99999","reference_G_track":"fury"}).status_code,422)
+
     def test_normal_four_gems_refuse_old_special_profile_reuse(self):
         """A matching build/ilevel/O does not prove a matching gem layout."""
         def snapshot(special, count, ids):
