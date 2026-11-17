@@ -777,6 +777,136 @@ def _fresh_same_build_ordinary_gem_metadata_candidates(*, compiled,
         "native_calls":0,"network_calls":0}
 
 
+def _fresh_four_stat_simc_observed_j_preview(*, candidates, collected,
+                                             stage_root, binary, simc_revision,
+                                             native_G_status):
+    """Measure ONLY an unambiguous four-family same-build subset via v269/v278.
+
+    The original v221/v230 source makes an effect-family shortlist; source
+    family identity cannot establish numeric effects, quality monotonicity or
+    user admission. No fanout Native across ambiguous season candidates.
+    """
+    pending={"status":"FOUR_STAT_GEM_SOURCE_FAMILIES_PENDING",
+             "by_stat":None,"rating_by_id":None,
+             "J_candidate_unadmitted":None,"native_observations_unadmitted":[],
+             "source_effect_family_count":None,
+             "native_measurement_automatically_allowed":False,
+             "highest_quality_verified":False,
+             "same_effect_use_scope_verified":False,
+             "game_socket_legality_verified":False,
+             "environment_ready":False,"new_native_calls":0,"network_calls":0}
+    if (type(candidates) is not dict or candidates.get("status")!=
+            "SAME_BUILD_GEM_ITEM_QUALITY_CANDIDATES_UNADMITTED"):
+        return pending
+    build=collected.get("expected_game_build")
+    need(candidates.get("game_build")==build and
+         candidates.get("simc_revision")==simc_revision and
+         all(type(candidates.get(key)) is str and
+             season_budget_contract.SHA.fullmatch(candidates[key]) is not None
+             for key in ("v221_stage_receipt_sha256",
+                         "v230_stage_receipt_sha256",
+                         "v230_original_item_data_sha256")),
+         "V216_GEM_FOUR_FAMILY_SOURCE_IDENTITY_DRIFT")
+    rows=candidates.get("candidates_unadmitted")
+    need(type(rows) is list and
+         1<=len(rows)<=simc_item_metadata.MAX_REQUEST_IDS and
+         len(rows)==candidates.get("candidate_count"),
+         "V216_GEM_FOUR_FAMILY_SOURCE_ROWS_DRIFT")
+    families={}
+    ids=set()
+    for row in rows:
+        need(type(row) is dict and
+             all(type(row.get(key)) is int for key in (
+                "item_id","enchant_id","gem_property_id","color_mask",
+                "minimum_ilevel","expansion_id","quality","crafting_quality"))
+             and row["item_id"]>0 and row["gem_property_id"]>0
+             and row["item_id"] not in ids,
+             "V216_GEM_FOUR_FAMILY_ITEM_SOURCE_DRIFT")
+        ids.add(row["item_id"])
+        if row["enchant_id"]<=0 or row["color_mask"]<=0:
+            # Source cannot identify a comparable effect family.
+            return {**pending,"reason":"GEM_EFFECT_ID_OR_COLOR_UNRESOLVED"}
+        key=(row["enchant_id"],row["color_mask"],
+             row["minimum_ilevel"],row["expansion_id"],row["quality"])
+        families.setdefault(key,[]).append(row)
+    if len(families)!=4:
+        return {**pending,
+                "reason":"EXACTLY_FOUR_EFFECT_FAMILIES_NOT_DEMONSTRATED",
+                "source_effect_family_count":len(families)}
+    # This is a probe ordering only, NOT a highest-quality admission.
+    best=[sorted(group,key=lambda row:(
+             -row["crafting_quality"],row["item_id"]))[0]
+          for _,group in sorted(families.items())]
+    profile=collected.get("fresh_one_spec_physical_G_probe") or {}
+    path=profile.get("profile_path")
+    if (binary is None or path is None or native_G_status!=
+            "G_NATIVE_NUMERIC_REFERENCE_OBSERVED_JFO_PENDING"):
+        return {**pending,"source_effect_family_count":4,
+                "reason":"VERIFIED_G_PROBE_PROFILE_AND_NATIVE_REQUIRED"}
+    need(pathlib.Path(path).resolve().is_relative_to(
+             pathlib.Path(stage_root).resolve()),
+         "V216_GEM_FOUR_FAMILY_NATIVE_PROFILE_STAGE_DRIFT")
+    seen={}
+    observed=[]
+    calls=0
+    for row in best:
+        try:
+            measured=native_effect_pair.measure_ordinary_gem(
+                stage_root=stage_root,source_profile_path=path,
+                binary=binary,simc_revision=simc_revision,
+                ordinary_gem_id=row["item_id"],slot="head")
+        except (native_effect_pair.NativePairBlocked,
+                simc_snapshot_delta.SnapshotBlocked,OSError,ValueError) as exc:
+            return {**pending,"source_effect_family_count":4,
+                    "reason":str(exc).split(":",1)[0],
+                    "new_native_calls":calls,
+                    "native_observations_unadmitted":observed}
+        calls+=measured["new_native_calls"]
+        observed.append(measured)
+        if measured["status"]!=(
+                "SIMC_ORDINARY_GEM_TWO_STAT_OBSERVED_UNADMITTED"):
+            return {**pending,"source_effect_family_count":4,
+                    "reason":"SIMC_GEM_TWO_STAT_EFFECTIVE_RATING_NOT_OBSERVED",
+                    "new_native_calls":calls,
+                    "native_observations_unadmitted":observed}
+        vector=measured["simc_effective_two_stat_vector_unadmitted"]
+        rating=measured["simc_effective_two_stat_rating_unadmitted"]
+        stats=season_budget_contract.STATS
+        need(type(vector) is dict and set(vector)==set(stats)
+             and all(type(v) is int and v>=0 for v in vector.values())
+             and sum(v>0 for v in vector.values())==2
+             and type(rating) is int and 0<rating<=10000
+             and rating==sum(vector.values())
+             and measured.get("ordinary_gem_id")==row["item_id"],
+             "V216_GEM_FOUR_FAMILY_NATIVE_VECTOR_DRIFT")
+        peaks=sorted(stats,key=lambda s:-vector[s])
+        if vector[peaks[0]]==vector[peaks[1]] or peaks[0] in seen:
+            return {**pending,"source_effect_family_count":4,
+                    "reason":"GEM_FOUR_DISTINCT_LEADING_STATS_NOT_OBSERVED",
+                    "new_native_calls":calls,
+                    "native_observations_unadmitted":observed}
+        seen[peaks[0]]={"item_id":row["item_id"],
+                        "raw_nominal_points":rating}
+    if set(seen)!=set(physical_gems.ORDINARY_FOUR_STATS):
+        return {**pending,"source_effect_family_count":4,
+                "reason":"GEM_FOUR_STATS_INCOMPLETE",
+                "new_native_calls":calls,
+                "native_observations_unadmitted":observed}
+    return {**pending,
+            "status":"FOUR_STAT_SIMC_RATINGS_OBSERVED_UNADMITTED",
+            "source_effect_family_count":4,
+            "by_stat":seen,
+            "rating_by_id":{str(row["item_id"]):
+                 next(item["raw_nominal_points"]
+                      for item in seen.values()
+                      if item["item_id"]==row["item_id"]) for row in best},
+            "J_candidate_unadmitted":sum(row["raw_nominal_points"]
+                                         for row in seen.values()),
+            "native_observations_unadmitted":observed,
+            "native_measurement_automatically_allowed":True,
+            "new_native_calls":calls}
+
+
 def _selected_gem_quality_policy_A_preview(*, source_catalog,
                                            source_item_link, gem_enchant,
                                            ordinary_gem_ids):
@@ -7089,6 +7219,27 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             gem_candidates["candidate_count"])
                         progress["ordinary_gem_source_candidate_status_unadmitted"]=(
                             gem_candidates["status"])
+                    native_j_preview=None
+                    if (nominal_four_stat_source is None and
+                            observed.get(
+                                "four_stat_ordinary_source_complete_unadmitted"
+                            ) is not True and
+                            source_selected_gem_roles["special_gem_id"] is None):
+                        native_j_preview=_fresh_four_stat_simc_observed_j_preview(
+                            candidates=source_compilation.get(
+                                "ordinary_gem_v221_v230_source_candidates_unadmitted"),
+                            collected=collected,
+                            stage_root=source_compilation["stage_root"],
+                            binary=binary,
+                            simc_revision=source_compilation["simc_revision"],
+                            native_G_status=native_G["status"])
+                        progress["new_native_calls"]+=native_j_preview[
+                            "new_native_calls"]
+                        progress["four_stat_native_j_status_unadmitted"]=(
+                            native_j_preview["status"])
+                        source_compilation[
+                            "four_stat_simc_native_j_source_unadmitted"
+                        ]=native_j_preview
                     # Declarative SimC gem_id layout, not game socket unlock.
                     # Uses the same v232 sealed gear IDs. No v280 item/spell
                     # lookup and no separate bonus socket eligibility Gate.
@@ -7131,6 +7282,19 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             j_owner_diagnostic["original_v266_raw_gate_bypassed"]=True
                             j_owner_diagnostic["J_numeric_next_owner"]=(
                                 "SEASON_NOMINAL_PER_ITEM_TOTAL_SUPPLIED_UNADMITTED")
+                        elif (type(native_j_preview) is dict and
+                              native_j_preview.get("status")==
+                              "FOUR_STAT_SIMC_RATINGS_OBSERVED_UNADMITTED"):
+                            # One sealed v269 delta per source-derived item.
+                            # v271 computes nominal J arithmetic; v216 still
+                            # requires original quality/socket ownership for
+                            # any official J or v212 installation.
+                            ordinary=physical_gems.ordinary_four_stat_default(
+                                observed_by_stat=native_j_preview["by_stat"],
+                                socket_total=target_sockets,
+                                special_gem_id=None,need=need)
+                            zero_history_gem_ratings=dict(
+                                native_j_preview["rating_by_id"])
                         elif observed.get(
                                 "four_stat_ordinary_source_complete_unadmitted"
                                 ) is True:
@@ -7161,7 +7325,11 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         progress["four_stat_ordinary_source_selection_unadmitted"]=(
                             nominal_four_stat_source["by_stat"]
                             if nominal_four_stat_source is not None else
-                            observed[
+                            native_j_preview["by_stat"]
+                            if type(native_j_preview) is dict and
+                            native_j_preview.get("status")==
+                                "FOUR_STAT_SIMC_RATINGS_OBSERVED_UNADMITTED"
+                            else observed[
                                 "four_stat_ordinary_best_observed_unadmitted"])
                 preflight=preflight_new_season_source(
                     source_catalog_path=source_compilation["source_catalog_path"],
