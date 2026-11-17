@@ -29,6 +29,7 @@ from selenium.webdriver.common.keys import Keys
 ROOT=pathlib.Path(__file__).resolve().parents[1]
 sys.path[:0]=[str(ROOT),str(ROOT/"runner"),str(ROOT/"integration_probes")]
 import v289_retail_live_build_source as retail
+import v348_windows_user_source_credentials as credential_owner
 from p1_v345_windows_extracted_zip_cmd_browser_restore import (
     PREFIX, REV, BUILD, SIMC_SHA, URL, wait_for_http,
     stop_cmd, actual_chrome, http_json, digest)
@@ -463,20 +464,16 @@ def run(source_zip,simc,out):
         return 2
     finally:
         if creds_saved:
-            # Always revoke the ephemeral Windows credential, even if
-            # an earlier source Build or browser action failed.
+            # Use the same original Windows Cred Manager owner directly,
+            # including if the packaged server already exited unexpectedly.
+            # This target was verified empty before the test wrote to it.
             try:
-                if proc is not None and proc.poll() is None:
-                    active_token=(browser.execute_script(
-                        "return state.token") if browser else token)
-                    rc,cleared=http_json("/api/v1/source-credentials/clear",
-                                           token=active_token,body={})
-                    if rc==200 and cleared.get("configured") is False:
-                        report["source_credentials_clear_status"]="CLEARED"
-                    else:
-                        report["source_credentials_clear_status"]="CLEANUP_FAILED"
-                else:
-                    report["source_credentials_clear_status"]="CLEANUP_SERVER_UNAVAILABLE"
+                store=credential_owner.WindowsSourceCredentialStore()
+                cleared=store.clear()
+                report["source_credentials_clear_status"]=(
+                    "CLEARED" if cleared.get("deleted") is True and
+                    store.status().get("configured") is False
+                    else "CLEANUP_FAILED")
             except Exception:
                 report["source_credentials_clear_status"]="CLEANUP_FAILED"
             save()
