@@ -50,8 +50,17 @@ FIFTH_TIER=common.FIFTH_TIER
 
 @functools.lru_cache(maxsize=1)
 def _profile_supplier_registry():
-    # Resolve all 26 user-input routes once per process. Contract discovery
-    # only: no Native, no network, and no legacy profile text read.
+    """Historical packaged source path: preserve old receipts/identity."""
+    return _profile_supplier_registry_from_source_bytes(
+        source_first.gear.DEFAULT.read_bytes(),
+        source_first.TIER_PATH.read_bytes(),
+        source_first.BUDGET_PATH.read_bytes())
+
+
+def _profile_supplier_registry_from_source_bytes(gear_raw,tier_raw,budget_raw):
+    """Same exact 26-spec contract for either real v191 bundle or package."""
+    # Resolve all 26 user-input routes from explicit source bytes; never
+    # substitute a prior-season package for fresh v212 source.
     import v106_user_session_controller as sessions
     contracts=tuple(sorted(source_first.contracts.CONTRACTS))
     legacy=tuple(sorted("/".join(x) for x in ARCHETYPES))
@@ -61,9 +70,6 @@ def _profile_supplier_registry():
         set(sessions.starter_examples()) |
         {"/".join(x) for x in sessions.PURE_STARTERS}))
     season_catalog=tuple(sorted(pure.catalog()["specializations"]))
-    gear_raw=source_first.gear.DEFAULT.read_bytes()
-    tier_raw=source_first.TIER_PATH.read_bytes()
-    budget_raw=source_first.BUDGET_PATH.read_bytes()
     gear_doc=json.loads(gear_raw.decode("utf8"))
     tier_doc=json.loads(tier_raw.decode("utf8"))
     digest=lambda raw:hashlib.sha256(raw).hexdigest()
@@ -85,11 +91,25 @@ def _profile_supplier_registry():
 
 
 def _current_season_profile_supplier_coverage(season_override, selected_key, *,
-                                              one_spec_only=False):
+                                              one_spec_only=False,
+                                              original_source_bundle=None):
     need(type(season_override) is dict and
          type(season_override.get("specializations")) is dict,
          "CURRENT_SEASON_PROFILE_SUPPLIER_CATALOG_MISSING")
-    registry=_profile_supplier_registry()
+    if original_source_bundle is None:
+        registry=_profile_supplier_registry()
+    else:
+        need(type(original_source_bundle) is dict
+             and all(type(original_source_bundle.get(k)) is dict
+                     for k in ("gear","tier","budget"))
+             and type(original_source_bundle["gear"].get("season_build")) is str
+             and original_source_bundle["tier"].get("retail_build")==
+                 original_source_bundle["gear"]["season_build"],
+             "CURRENT_SEASON_SUPPLIER_ORIGINAL_BUILD_SOURCE_REQUIRED")
+        registry=_profile_supplier_registry_from_source_bytes(
+            canonical(original_source_bundle["gear"]).encode("utf8"),
+            canonical(original_source_bundle["tier"]).encode("utf8"),
+            canonical(original_source_bundle["budget"]).encode("utf8"))
     expected=registry["contracts"]
     supplied=tuple(sorted(season_override["specializations"]))
     need(set(registry["legacy_source_backed"]) |
@@ -1272,7 +1292,8 @@ def build(user,folder,binary,revision,static_cache_path=None,
         if current_season_product:
             profile_supplier_coverage=_current_season_profile_supplier_coverage(
                 season_override,"/".join(key),
-                one_spec_only=season_physical_one_spec_candidate is not None)
+                one_spec_only=season_physical_one_spec_candidate is not None,
+                original_source_bundle=season_source_bundle)
             if season_source_bundle is not None:
                 profile_supplier_coverage={
                     **profile_supplier_coverage,

@@ -234,6 +234,34 @@ class UserSessionControls(unittest.TestCase):
         with self.assertRaisesRegex(ux.SessionBlocked,"SIMC_REVISION"):
             ux.store_session(user,root,binary,"not-a-known-revision")
 
+    def test_v564_fresh_v191_26_supplier_uses_new_bundle_not_old_package(self):
+        """No old-season inventory JSON is needed for fresh 26 spec coverage."""
+        bootstrap=ux.bootstrap
+        source=bootstrap.source_first
+        key="mage/frost"
+        bundle={
+            "gear":{"season_build":"12.2.0.99999"},
+            "tier":{"retail_build":"12.2.0.99999"},
+            "budget":{"schema":"unit-test-source-not-numeric-authority"},
+        }
+        bad=pathlib.Path(self.fixture()[0])/"old-season-missing"
+        with (mock.patch.object(source.gear,"DEFAULT",bad/"gear.json"),
+              mock.patch.object(source,"TIER_PATH",bad/"tier.json"),
+              mock.patch.object(source,"BUDGET_PATH",bad/"budget.json"),
+              mock.patch.object(bootstrap,
+                                "_profile_supplier_registry",
+                                side_effect=AssertionError(
+                                    "HISTORICAL_PACKAGE_NOT_ALLOWED"))):
+            coverage=bootstrap._current_season_profile_supplier_coverage(
+                {"specializations":{key:{}}},key,one_spec_only=True,
+                original_source_bundle=bundle)
+        self.assertEqual(coverage["selected_specialization"],key)
+        self.assertEqual(coverage["season_build"],"12.2.0.99999")
+        self.assertEqual(coverage["current_season_profile_supplier_count"],1)
+        self.assertEqual(coverage["contract_count"],26)
+        self.assertFalse(coverage["all_specs_ready"])
+        self.assertFalse(coverage["adaptive_native_evidence_complete"])
+
     def test_v562_fresh_installed_v212_session_uses_exact_source_without_old_json(self):
         """A zero-source season must not load historical 511/65/F seasons."""
         root,binary,_=self.fixture()
