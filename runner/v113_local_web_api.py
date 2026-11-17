@@ -1164,8 +1164,14 @@ class LocalJobs:
                     result.get("environment_installed") is True):
                 raise environment_manifest.EnvironmentBlocked(
                     "FRESH_FURY_G_PROBE_MUST_NOT_INSTALL_ENVIRONMENT")
+            observed_G=result.get("native_G_numeric_source")
             return {**result,
-                    "fury_G_source_only_measured_not_budget_admitted":True,
+                    "fury_G_source_only_requested":True,
+                    "fury_G_numeric_observed_source_only":(
+                        type(observed_G) is dict and
+                        observed_G.get("status")==
+                            "G_NATIVE_NUMERIC_REFERENCE_OBSERVED_JFO_PENDING"),
+                    "fury_G_budget_admitted":False,
                     "fury_G_native_new_calls":result.get("native_calls",0),
                     "fury_G_user_dps_started":False}
         if binary is not None:
