@@ -126,25 +126,31 @@ def run(zip_file,out):
         env={**os.environ,"HOME":str(home),"USERPROFILE":str(home),
              "LOCALAPPDATA":str(appdata),"PYTHONIOENCODING":"utf-8",
              "PYTHONDONTWRITEBYTECODE":"1"}
-        probe=subprocess.run(["cmd","/d","/c","where py && py -3 -c \"import sys; print(sys.version_info[:2])\""],
-            cwd=root,env=env,capture_output=True,text=True,timeout=20)
-        py_probe={"available":probe.returncode==0,
-                  "version":re.search(r"\(3,\s*(\d+)\)",probe.stdout).group(1)
-                     if re.search(r"\(3,\s*(\d+)\)",probe.stdout) else None}
-        if not (probe.returncode==0 and re.search(
-                    r"\(3,\s*(?:1[2-9]|[2-9][0-9])\)",probe.stdout)):
-            probe=subprocess.run(["cmd","/d","/c",
-                "where python && python -c \"import sys; print(sys.version_info[:2])\""],
-                cwd=root,env=env,capture_output=True,text=True,timeout=20)
-        evidence["windows_python_detection"]={
-            "py_launcher":py_probe,
-            "selected_ok":probe.returncode==0,
-            "selected_version":re.search(r"\(3,\s*(\d+)\)",probe.stdout).group(1)
-                if re.search(r"\(3,\s*(\d+)\)",probe.stdout) else None}
+        # Avoid quoting a nested 'cmd /c ... && python -c' expression:
+        # subprocess/Win32 quoting is not the semantics of the BAT's WHERE.
+        # Verify the same PATH-exposed candidates directly, with each actual
+        # interpreter's Python version and no accidental SimC execution.
+        found={}
+        selected=None
+        for name,base_args in (("py",["-3"]),("python",[])):
+            executable=shutil.which(name)
+            record={"on_path":bool(executable),"supported":False}
+            if executable:
+                checked=subprocess.run([executable,*base_args,"-c",
+                     "import sys; print(sys.version_info.major, sys.version_info.minor)"],
+                     cwd=root,env=env,capture_output=True,text=True,timeout=20)
+                match=re.fullmatch(r"3\s+(\d+)\s*",checked.stdout)
+                record["version_minor"]=(int(match.group(1)) if match else None)
+                record["supported"]=bool(checked.returncode==0 and match and
+                                         int(match.group(1))>=12)
+                if record["supported"]:
+                    selected=name
+                    found[name]=record
+                    break
+            found[name]=record
+        evidence["windows_python_detection"]=found
         save()
-        need(probe.returncode==0 and
-             re.search(r"\(3,\s*(?:1[2-9]|[2-9][0-9])\)",probe.stdout),
-             "WINDOWS_RUNNER_PYTHON_312_REQUIRED")
+        need(selected is not None,"WINDOWS_RUNNER_PYTHON_312_REQUIRED")
         evidence["existing_system_python_3_12_plus"]=True
         # Run --check on a freshly extracted ZIP. With no venv this is not
         # permitted to trigger pip without explicit interactive Y consent.
