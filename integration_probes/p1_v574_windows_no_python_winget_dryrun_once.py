@@ -109,9 +109,9 @@ def run(zip_file,out):
                  "Please install Python 3.12+" in refuse.stdout,
                  "WINGET_NO_CONSENT_SHOULD_NOT_CALL")
             report["no_consent_no_winget"]=True
-            # User consents to the harmless dummy EXE: it fails rather
-            # than installing anything. The original BAT must then offer
-            # manual Python setup, without falsely showing READY.
+            # User consents to a harmless dummy EXE. It can report a zero
+            # exit code while NOT installing Python. The original BAT must
+            # recheck, find no Python, and offer manual setup, never READY.
             agreed=invoke(True,"Y\nN\nx\n")
             report["stub_winget_failure_diagnostic"]={
                 "exit":agreed.returncode,
@@ -122,8 +122,9 @@ def run(zip_file,out):
             save()
             need(agreed.returncode==1 and
                  "Please install Python 3.12+" in agreed.stdout and
-                 "Installation attempted. Rechecking" not in agreed.stdout,
-                 "FAILED_DUMMY_WINGET_MUST_NOT_SHOW_READY")
+                 "Installation attempted. Rechecking" in agreed.stdout and
+                 "[READY]" not in agreed.stdout,
+                 "DUMMY_WINGET_SUCCESS_NOT_MISLABELLED_PYTHON_READY")
             report["consent_winget_once_then_manual_when_no_python_visible"]=True
             # winget itself not found, so only a manual Python link is
             # suggested, never an automatic alternative source.
