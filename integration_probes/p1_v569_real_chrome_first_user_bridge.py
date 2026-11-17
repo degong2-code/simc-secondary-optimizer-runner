@@ -90,6 +90,11 @@ def snap(d):
 def idle(d):
     WebDriverWait(d,30).until(lambda x:x.execute_script("return !!state.token&&!state.busy"))
 def click(d):
+    if d.execute_script("return currentView")!="optimizer":
+        d.find_element(By.CSS_SELECTOR,
+          'header.topbar button[data-view="optimizer"]').click()
+        WebDriverWait(d,12).until(lambda x:x.execute_script(
+            "return currentView==='optimizer'"))
     button=d.find_element(By.ID,"start-btn")
     d.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})",button)
     geometry=d.execute_script("""
