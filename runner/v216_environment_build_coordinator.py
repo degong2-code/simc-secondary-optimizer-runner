@@ -1008,6 +1008,9 @@ def _fresh_match_simc_native_ordinary_j(*, preview, layout, ratings,
              type(item.get("native_case_receipts")) is list
              and len(item["native_case_receipts"])==2,
              "V216_NATIVE_J_V046_RATING_OR_SEALED_CASE_MISSING")
+        need((preview.get("native_case_receipts_by_id") or {}).get(
+                 str(ident))==item["native_case_receipts"],
+             "V216_NATIVE_J_SEALED_RECEIPT_SHA_DRIFT")
         for variant,receipt in zip(("baseline","active"),
                                     item["native_case_receipts"]):
             file=pathlib.Path(receipt.get("receipt_path","")).resolve()
