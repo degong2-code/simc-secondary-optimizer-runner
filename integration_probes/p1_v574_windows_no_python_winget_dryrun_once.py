@@ -96,6 +96,13 @@ def run(zip_file,out):
             # Simulated 'py/python' missing, winget available, user declines
             # both winget and opening a browser. No winget command invocation.
             refuse=invoke(True,"N\nN\nx\n")
+            report["no_consent_diagnostic"]={
+                "exit":refuse.returncode,
+                "winget_stub_called":winget_log.exists(),
+                "python_missing_text":"Python 3.12 or newer was not found." in refuse.stdout,
+                "manual_text":"Please install Python 3.12+" in refuse.stdout,
+                "tail":refuse.stdout[-450:]}
+            save()
             need(refuse.returncode==1 and
                  "Python 3.12 or newer was not found." in refuse.stdout and
                  "Please install Python 3.12+" in refuse.stdout and
