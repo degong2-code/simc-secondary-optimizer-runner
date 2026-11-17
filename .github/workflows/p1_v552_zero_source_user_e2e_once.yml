@@ -1,4 +1,4 @@
-name: P1 v560 one true zero-source v046 native gem J to actual user SimC E2E
+name: P1 v561 actual zero-source SimC-controlled gem J to user DPS E2E
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
