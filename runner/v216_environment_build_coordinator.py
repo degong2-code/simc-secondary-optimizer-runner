@@ -901,6 +901,44 @@ def _fresh_pinned_dbc_ordinary_gem_j_source(*, candidates, collected,
         "simc_revision":simc_revision,"game_build":build}
 
 
+def _fresh_match_pinned_dbc_ordinary_j(*, preview, layout, ratings,
+                                        link, game_build, simc_revision):
+    """Bind v275 static CHMV to the original v221/v271 physical layout.
+
+    This is numeric identity only. Original v230/v232 quality/socket
+    ownership and v220/v222 admission remain unchanged.
+    """
+    need(type(preview) is dict and preview.get("status")==
+         "PINNED_SIMC_DBC_FOUR_STAT_J_STATIC_UNADMITTED"
+         and preview.get("game_build")==game_build
+         and preview.get("simc_revision")==simc_revision
+         and type(preview.get("source_sha256")) is str
+         and season_budget_contract.SHA.fullmatch(
+             preview["source_sha256"]) is not None
+         and type(layout) is dict
+         and layout.get("special_gem_id") is None
+         and type(link) is dict
+         and link.get("same_build_gem_item_join_only") is True
+         and link.get("special_gem_item_id") is None
+         and type(link.get("v221_stage_receipt_sha256")) is str
+         and season_budget_contract.SHA.fullmatch(
+             link["v221_stage_receipt_sha256"]) is not None,
+         "V216_PINNED_DBC_J_ORIGINAL_SOURCE_REQUIRED")
+    ids=physical_gems.ordinary_four_stat_default(
+        observed_by_stat=preview["by_stat"],
+        socket_total=layout["socket_total"],special_gem_id=None,need=need)
+    four={str(row["item_id"]):row["raw_nominal_points"]
+          for row in preview["by_stat"].values()}
+    need(ids==layout.get("ordinary_gem_ids") and
+         type(ratings) is dict and ratings==four
+         and preview.get("rating_by_id")==four
+         and preview.get("J_candidate_unadmitted")==
+             sum(four[str(item)] for item in ids[:4])
+         and link.get("selected_item_ids")==sorted(set(ids)),
+         "V216_PINNED_DBC_J_SELECTED_IDS_OR_RATINGS_DRIFT")
+    return ids
+
+
 def _fresh_four_stat_simc_observed_j_preview(*, candidates, collected,
                                              stage_root, binary, simc_revision,
                                              native_G_status):
@@ -1489,6 +1527,7 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                                 gem_rating_by_id=None,
                                 nominal_gem_source=None,
                                 zero_history_native_G=None,
+                                pinned_dbc_gem_source=None,
                                 policy_A_v217_stages=None,
                                 pinned_gem_simc_source_folder=None):
     """Inspect a freshly assembled v213 artifact in the NORMAL Build path.
@@ -1739,6 +1778,15 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                 nominal["ordinary_gem_ids"],
              "V216_NOMINAL_J_PHYSICAL_IDS_OR_TOTALS_DRIFT")
         one_stat_or_ambiguous_J=False
+    if pinned_dbc_gem_source is not None:
+        # Raw v266 points can be absent while the same-build v275 static
+        # two-stat values are present. Preserve exact numeric J separately.
+        _fresh_match_pinned_dbc_ordinary_j(
+            preview=pinned_dbc_gem_source,layout=gem_layout_receipt,
+            ratings=gem_rating_by_id,link=source_item_link,
+            game_build=expected_game_build,
+            simc_revision=expected_simc_revision)
+        one_stat_or_ambiguous_J=False
     if gem_layout_receipt is not None:
         if (not one_stat_or_ambiguous_J and gem_enchant is not None
                 and gem_enchant.get(
@@ -1760,6 +1808,14 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                    "source_v221_stage_receipt_sha256":
                        (gem_source.get("source_stage") or {}).get(
                            "receipt_sha256")}
+        if gem_J is not None and pinned_dbc_gem_source is not None:
+            gem_J={**gem_J,
+                   "rating_origin":"PINNED_SIMC_DBC_STATIC_TWO_SECONDARY",
+                   "source_v275_enchant_sha256":
+                       pinned_dbc_gem_source["source_sha256"],
+                   "source_v221_stage_receipt_sha256":
+                       source_item_link["v221_stage_receipt_sha256"],
+                   "highest_quality_verified":False}
         if gem_J is not None and nominal_gem_source is not None:
             gem_J={**gem_J,
                    "rating_origin":"SEASON_NOMINAL_PER_ITEM_TOTAL_SOURCE",
@@ -5821,6 +5877,64 @@ def _fresh_source_owner_selected_J_F_numeric(*, preflight, compilation,
                 "J_PACKAGED_SAME_BUILD_NOMINAL_SOURCE_PENDING")
         else:
             out["J"]=nominal
+    elif (type(j) is dict and type(layout) is dict and
+          type(link) is dict and j.get("rating_origin")==
+              "PINNED_SIMC_DBC_STATIC_TWO_SECONDARY"):
+        preview=compilation.get("four_stat_pinned_dbc_j_source_unadmitted")
+        candidate=compilation.get(
+            "ordinary_gem_v221_v230_source_candidates_unadmitted")
+        ids=_fresh_match_pinned_dbc_ordinary_j(
+            preview=preview,layout=layout,
+            ratings=(preview.get("rating_by_id")
+                     if type(preview) is dict else None),
+            link=link,game_build=preflight["game_build"],
+            simc_revision=preflight["simc_revision"])
+        need(type(candidate) is dict and candidate.get("status")==
+             "SAME_BUILD_GEM_ITEM_QUALITY_CANDIDATES_UNADMITTED"
+             and candidate.get("game_build")==preflight["game_build"]
+             and candidate.get("simc_revision")==preflight["simc_revision"]
+             and candidate.get("v221_stage_receipt_sha256")==
+                 link["v221_stage_receipt_sha256"]
+             and type(candidate.get("v230_stage_receipt_sha256")) is str
+             and season_budget_contract.SHA.fullmatch(
+                 candidate["v230_stage_receipt_sha256"]) is not None
+             and type(candidate.get("v230_original_item_data_sha256")) is str
+             and season_budget_contract.SHA.fullmatch(
+                 candidate["v230_original_item_data_sha256"]) is not None
+             and j.get("source_v275_enchant_sha256")==
+                 preview["source_sha256"]
+             and j.get("source_v221_stage_receipt_sha256")==
+                 link["v221_stage_receipt_sha256"]
+             and j.get("physical_gem_item_ids")==ids
+             and j.get("J_accounting_policy")==
+                 "SUM_SELECTED_ORDINARY_GEM_RATINGS"
+             and j.get("special_gem_count_in_J")==0
+             and j.get("status")=="PHYSICAL_GEM_J_ARITHMETIC_UNADMITTED"
+             and j.get("J_candidate_unadmitted")==
+                 sum(preview["rating_by_id"][str(i)] for i in ids),
+             "V216_JF_OWNER_PINNED_DBC_SAME_BUILD_J_DRIFT")
+        source={"kind":"nominal_ordinary_gem_J",
+                "numeric_source_owner":"PINNED_SIMC_DBC_STATIC_TWO_SECONDARY",
+                "game_build":preflight["game_build"],
+                "source_catalog_manifest_sha256":
+                    preflight["source_catalog_manifest_sha256"],
+                "v221_stage_receipt_sha256":
+                    link["v221_stage_receipt_sha256"],
+                "v230_stage_receipt_sha256":
+                    candidate["v230_stage_receipt_sha256"],
+                "v230_original_item_data_sha256":
+                    candidate["v230_original_item_data_sha256"],
+                "v275_static_enchant_source_sha256":preview["source_sha256"],
+                "ordinary_gem_item_ids":list(ids),
+                "special_gem_item_id":None,
+                "per_item_nominal_rating":dict(preview["rating_by_id"])}
+        out["J"]={"rating":j["J_candidate_unadmitted"],
+                  "source_identity_sha256":
+                      digest(canonical(source).encode("utf8")),
+                  **source,"special_gem_contributes_to_J":False,
+                  "highest_available_quality_verified":False,
+                  "real_socket_source_verified":False,
+                  "nominal_J_not_simc_effective_delta":True}
     else:
         out["missing"].append(
             "J_ORIGINAL_NOMINAL_NUMERIC_OR_HIGHEST_QUALITY_SOURCE_PENDING")
@@ -7514,6 +7628,14 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         nominal_four_stat_source if
                         auto_four_stat_default and
                         zero_history_gem_layout is not None else None),
+                    pinned_dbc_gem_source=(
+                        pinned_dbc_j_preview if
+                        auto_four_stat_default and
+                        zero_history_gem_layout is not None and
+                        type(pinned_dbc_j_preview) is dict and
+                        pinned_dbc_j_preview.get("status")==
+                            "PINNED_SIMC_DBC_FOUR_STAT_J_STATIC_UNADMITTED"
+                        else None),
                     zero_history_native_G=native_G,
                     pinned_gem_simc_source_folder=collected.get(
                         "fresh_lazy_full_pinned_simc_item_source",{}).get(

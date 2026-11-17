@@ -267,6 +267,81 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         self.assertFalse(pending["highest_quality_verified"])
         self.assertFalse(pending["environment_ready"])
 
+    def test_v551_static_j_original_owner_repeats_and_rejects_drift(self):
+        """Existing v271 repeated J is preserved without quality admission."""
+        build="12.2.0.99999"
+        rev="a"*40
+        stats=list(v216.physical_gems.ORDINARY_FOUR_STATS)
+        ids=[330003,330013,330023,330033]
+        four={str(i):23 for i in ids}
+        preview={"status":"PINNED_SIMC_DBC_FOUR_STAT_J_STATIC_UNADMITTED",
+                 "game_build":build,"simc_revision":rev,
+                 "source_sha256":"d"*64,
+                 "by_stat":{s:{"item_id":i,"raw_nominal_points":23}
+                            for s,i in zip(stats,ids)},
+                 "rating_by_id":four,"J_candidate_unadmitted":92}
+        ordinary=ids+ids[:2]
+        layout={"ordinary_gem_ids":ordinary,
+                "socket_total":6,"special_gem_id":None}
+        link={"same_build_gem_item_join_only":True,
+              "special_gem_item_id":None,
+              "v221_stage_receipt_sha256":"1"*64,
+              "selected_item_ids":sorted(ids)}
+        self.assertEqual(v216._fresh_match_pinned_dbc_ordinary_j(
+            preview=preview,layout=layout,ratings=four,link=link,
+            game_build=build,simc_revision=rev),ordinary)
+        j={"status":"PHYSICAL_GEM_J_ARITHMETIC_UNADMITTED",
+           "rating_origin":"PINNED_SIMC_DBC_STATIC_TWO_SECONDARY",
+           "physical_gem_item_ids":ordinary,
+           "J_candidate_unadmitted":138,
+           "J_accounting_policy":"SUM_SELECTED_ORDINARY_GEM_RATINGS",
+           "special_gem_count_in_J":0,
+           "source_v221_stage_receipt_sha256":"1"*64,
+           "source_v275_enchant_sha256":"d"*64}
+        preflight={"schema":v216.FRESH_SOURCE_PREFLIGHT_SCHEMA,
+                   "environment_ready":False,
+                   "game_build":build,"simc_revision":rev,
+                   "source_catalog_manifest_sha256":"4"*64,
+                   "physical_gem_J_arithmetic_unadmitted":j,
+                   "physical_gem_layout_unadmitted":layout,
+                   "selected_v221_gem_item_relation_unadmitted":link}
+        candidate={"status":"SAME_BUILD_GEM_ITEM_QUALITY_CANDIDATES_UNADMITTED",
+                   "game_build":build,"simc_revision":rev,
+                   "v221_stage_receipt_sha256":"1"*64,
+                   "v230_stage_receipt_sha256":"2"*64,
+                   "v230_original_item_data_sha256":"3"*64}
+        compilation={"status":"FRESH_V191_V211_V213_COMPILED_UNADMITTED",
+                     "simc_revision":rev,
+                     "four_stat_pinned_dbc_j_source_unadmitted":preview,
+                     "ordinary_gem_v221_v230_source_candidates_unadmitted":
+                         candidate}
+        numeric=v216._fresh_source_owner_selected_J_F_numeric(
+            preflight=preflight,compilation=compilation,
+            selected_physical_items=None)
+        self.assertEqual(numeric["J"]["rating"],138)
+        self.assertEqual(numeric["J"]["ordinary_gem_item_ids"],ordinary)
+        self.assertEqual(numeric["J"]["per_item_nominal_rating"],four)
+        self.assertEqual(numeric["J"]["numeric_source_owner"],
+                         "PINNED_SIMC_DBC_STATIC_TWO_SECONDARY")
+        self.assertFalse(numeric["J"]["highest_available_quality_verified"])
+        self.assertFalse(numeric["environment_ready"])
+        self.assertIsNone(numeric["F"])
+        self.assertEqual(numeric["new_native_calls"],0)
+        with self.assertRaisesRegex(v216.EnvironmentBuildBlocked,
+                                    "V216_PINNED_DBC_J_SELECTED_IDS_OR_RATINGS_DRIFT"):
+            v216._fresh_match_pinned_dbc_ordinary_j(
+                preview=preview,
+                layout={**layout,"ordinary_gem_ids":ordinary[::-1]},
+                ratings=four,link=link,
+                game_build=build,simc_revision=rev)
+        with self.assertRaisesRegex(v216.EnvironmentBuildBlocked,
+                                    "V216_JF_OWNER_PINNED_DBC_SAME_BUILD_J_DRIFT"):
+            v216._fresh_source_owner_selected_J_F_numeric(
+                preflight={**preflight,
+                           "physical_gem_J_arithmetic_unadmitted":
+                               {**j,"J_candidate_unadmitted":137}},
+                compilation=compilation,selected_physical_items=None)
+
     def test_v548_four_source_effect_families_measure_once_and_do_not_admit_j(self):
         build="12.2.0.99999"
         rev="a"*40
