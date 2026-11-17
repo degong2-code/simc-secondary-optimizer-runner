@@ -216,6 +216,9 @@ class UserRequest(BaseModel):
     # Opt-in normal-source collection only; never grants new environment READY.
     fresh_season_build: str | None = Field(
         default=None,max_length=32,pattern=r"^\d+(?:\.\d+){3}$")
+    # Explicit user-scoped source-only Fury G observation. Never a GJFO
+    # install, DPS admission or ordinary season Build default.
+    measure_fury_G_source_only: bool = False
 
 def blocked(exc):
     """Return stable codes, not private absolute paths, talent strings, or tracebacks."""
@@ -1121,7 +1124,8 @@ class LocalJobs:
             "environment_installed":observed.get("environment_installed") is True,
             "environment_ready":observed.get("environment_ready") is True}})
 
-    def collect_fresh_source(self, build, controls, revision_hint=None):
+    def collect_fresh_source(self, build, controls, revision_hint=None, *,
+                             measure_fury_G_source_only=False, binary=None):
         # Reuse the product's existing user validator; never ask users for
         # internal source filenames, SHA, tier IDs or G seed vectors.
         # Prevalidate the requested DPS/ilvl BEFORE expensive HTTP.
@@ -1129,6 +1133,44 @@ class LocalJobs:
         character=user["character"]
         requested={"class":character["class"],"spec":character["spec"],
                    "target_ilevel":user["target"]["ilevel"]}
+        if measure_fury_G_source_only:
+            # One *explicit* existing v277/v236 measurement for the
+            # different dual-twohand G track, never F/O or user DPS.
+            # Its numerical receipt is not a v212 user budget/install.
+            if ((character["class"],character["spec"])!=("warrior","fury")
+                    or user["target"]["final_T"] is not None or
+                    type(binary) is not str or not binary):
+                raise environment_manifest.EnvironmentBlocked(
+                    "FRESH_FURY_G_SOURCE_ONLY_EXACT_USER_BINARY_REQUIRED")
+            source_binary=pathlib.Path(binary).expanduser()
+            if source_binary.is_symlink() or not source_binary.is_file():
+                raise environment_manifest.EnvironmentBlocked(
+                    "FRESH_FURY_G_SOURCE_ONLY_SIMC_BINARY_INVALID")
+            source_binary=source_binary.resolve()
+            with self.season_source_lock:
+                result=environment_build.build_environment(
+                    sessions_root=self.root,session_folder=None,user=None,
+                    binary=source_binary,revision=None,static_cache=None,
+                    source_catalog_path=None,bootstrap_result=None,
+                    fresh_collection_inputs={
+                        "expected_game_build":build,
+                        "representative_request":requested,
+                        "g_probe_character":{"race":character["race"]},
+                        "simc_revision_hint":revision_hint,
+                        "auto_native_G_requested":True,
+                        "auto_native_F_requested":False,
+                        "auto_native_O_requested":False})
+            if (result.get("environment_ready") is True or
+                    result.get("environment_installed") is True):
+                raise environment_manifest.EnvironmentBlocked(
+                    "FRESH_FURY_G_PROBE_MUST_NOT_INSTALL_ENVIRONMENT")
+            return {**result,
+                    "fury_G_source_only_measured_not_budget_admitted":True,
+                    "fury_G_native_new_calls":result.get("native_calls",0),
+                    "fury_G_user_dps_started":False}
+        if binary is not None:
+            raise environment_manifest.EnvironmentBlocked(
+                "FRESH_SOURCE_NATIVE_NOT_EXPLICITLY_REQUESTED")
         # One request per exact build at a time. v217 reuses source bytes.
         # With no full pinned SimC item_data, one-spec stays PENDING/Native0.
         with self.season_source_lock:
@@ -3226,9 +3268,15 @@ def create_app(*,root=None, token=None, batch_root=None, update_root=None,
             try:
                 return jobs.collect_fresh_source(
                     request.fresh_season_build,request.controls,
-                    request.revision)
+                    request.revision,
+                    **({"measure_fury_G_source_only":True,
+                        "binary":request.binary}
+                       if request.measure_fury_G_source_only else {}))
             except Exception as exc:
                 raise blocked(exc) from None
+        if request.measure_fury_G_source_only:
+            raise HTTPException(422,detail={
+                "code":"FURY_G_SOURCE_PROBE_REQUIRES_FRESH_SEASON_BUILD"})
         if not request.current_season_product:
             raise HTTPException(422,detail={"code":"ENVIRONMENT_BUILD_CURRENT_SEASON_ONLY"})
         return jobs.plan(request)
