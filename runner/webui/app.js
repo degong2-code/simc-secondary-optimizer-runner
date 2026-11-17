@@ -966,17 +966,20 @@ function syncOilUseToggle(){
       "기름 검증·선택 필요";
 }
 function tryApplyDefaultOil(){
-  if(!oilUseIntent){syncOilUseToggle();return;}
+  if(!oilUseIntent){syncOilUseToggle();return false;}
   // A restored or deliberately configured selection must not be overwritten
   // by another season installation, even if the latest catalog differs.
   if($("oil_main").checked||$("oil_off").checked){
-    syncOilUseToggle();return;
+    syncOilUseToggle();return false;
   }
   const matches=state.oilLoadouts.filter(fullVerifiedOilMatch);
-  if(matches.length!==1){syncOilUseToggle();return;}
+  if(matches.length!==1){syncOilUseToggle();return false;}
   $("optimizer-oil-loadout").value=matches[0].installed_manifest_sha256;
   chooseInstalledOilLoadout();
   updateBudgetPreview();
+  // v579: choosing a unique physical oil does not, by itself, transfer
+  // the installed F/J/O SHA. The caller must finish the exact v212 GET.
+  return true;
 }
 function applyOilUseToggle(){
   // An installed positive-O SHA cannot authorize a subsequent O=0 run.
@@ -1234,13 +1237,14 @@ function renderInstalledOilLoadouts(data) {
   });
   selector.value=exact?.installed_manifest_sha256||"";
   const count=state.oilLoadouts.length;
-  tryApplyDefaultOil();
+  const defaultOilChosen=tryApplyDefaultOil();
   $("optimizer-oil-loadout-status").textContent=count?
     "이 PC에 봉인된 "+count+"개 기름 조합 · 저장된 게임 빌드 "+
     data.game_build+" / ilvl "+data.target_ilevel+
     " · 실제 시즌·무기 적용은 실행 때 재검증":
     "현재 조건에 검증된 기름 조합이 없습니다. 기름 사용이 선택된 동안은 실행 전에 검증이 필요합니다. "+
     "기름을 사용하지 않으려면 체크를 해제하세요.";
+  return defaultOilChosen;
 }
 async function refreshInstalledOilLoadouts() {
   // withBusy skips overlapping change handlers, but the user may still edit
@@ -1267,8 +1271,11 @@ async function refreshInstalledOilLoadouts() {
     }
     if(readError)throw readError;
     // Both selectors consume the SAME exact local installed receipt list.
-    renderInstalledOilLoadouts(data);
+    // v579: a unique default-on oil must bind its exact verified F/J/O
+    // install SHA, not just fill the visible physical ItemID boxes.
+    const defaultOilChosen=renderInstalledOilLoadouts(data);
     renderInstalledFlaskChoices(data);
+    if(defaultOilChosen)await bindUniqueInstalledOilVariant();
     return;
   }
 }
