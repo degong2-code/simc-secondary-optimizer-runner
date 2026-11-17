@@ -1591,6 +1591,24 @@ class LocalJobs:
                 summary["fresh_v212_installed_manifest_sha256"]):
                 raise environment_manifest.EnvironmentBlocked(
                     "WEB_FRESH_SESSION_INSTALL_SHA_DRIFT")
+            # Pre-spawn/resume: the exact installed v212 may be authentic
+            # yet belong to a DIFFERENT representative G track. Reuse
+            # existing sealed session user/manifest; no second source read,
+            # Native, profile recomposition or new runtime approval gate.
+            bound_user=identity.get("user")
+            if type(bound_user) is dict:
+                character=bound_user.get("character")
+                target=bound_user.get("target")
+                if type(character) is dict and type(target) is dict:
+                    fury=(character.get("class"),character.get("spec"))==(
+                        "warrior","fury")
+                    track=selected_doc.get(
+                        "official_G_reference_track","general")
+                    if ((track=="fury_dual_2h" and not fury) or
+                            (fury and target.get("final_T") is None
+                             and track!="fury_dual_2h")):
+                        raise environment_manifest.EnvironmentBlocked(
+                            "WEB_FRESH_SESSION_G_REFERENCE_TRACK_MISMATCH")
             # Reuse the already authenticated source identity when a
             # saved user form is restored. No additional SimC or collection.
             return dict(selected_oils)
