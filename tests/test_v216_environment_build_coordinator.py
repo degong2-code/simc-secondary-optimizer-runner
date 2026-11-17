@@ -553,9 +553,10 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                                 "minimum_ilevel":310,"expansion_id":13,
                                 "quality":4,"crafting_quality":rank,
                                 "item_name":f"Gem tier {named_tier} {lead} {partner}",
-                                # Same item-level forces an original DBC
-                                # strength comparison between named tiers.
-                                "item_ilevel_unscaled":333})
+                                # Inner crafting ranks change item level;
+                                # the named-tier ordering still uses the
+                                # original exact scaling-strength comparison.
+                                "item_ilevel_unscaled":333+rank})
                             source[ident+1000]={
                                 "enchant_id":ident+1000,
                                 "source_reason_codes":[
