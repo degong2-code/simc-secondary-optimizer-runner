@@ -3780,7 +3780,7 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                     {},root/"invalid",root/"no_binary","c"*40,
                     environment_result={"normal_build_entry":False})
 
-    def test_p3_di_unsupported_layout_and_multi_stat_flask_stay_pending(self):
+    def test_p3_di_unsupported_layout_and_multi_stat_flask_source_only(self):
         import v098_target_user_scenario_bootstrap as boot
         layout,_=self.physical_layout()
         numeric=self.dynamic_season_profile_inputs()
@@ -3838,8 +3838,16 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
         result=boot._season_settings_from_v216(
             compilation=joined,numeric_inputs=different,
             controls=controls,need=boot.need)
-        self.assertIn("V139_MULTI_STAT_FLASK_SOURCE_COMPOSER_PENDING",
-                      result["missing"])
+        self.assertEqual(result["status"],
+            "SEASON_SETTINGS_PHYSICAL_GEMS_FLASK_COMPOSED_UNADMITTED")
+        defaults=result["settings"]["default_consumables"]
+        self.assertIsNone(defaults["flask_fixed_stat"])
+        self.assertEqual(defaults["flask_fixed_vector"],{
+            "crit_rating":80,"haste_rating":96,
+            "mastery_rating":0,"versatility_rating":0})
+        self.assertEqual(sum(defaults["flask_fixed_vector"].values()),176)
+        self.assertFalse(result["game_socket_legality_authenticated_here"])
+        self.assertFalse(result["gem_highest_quality_verified_here"])
 
     def test_automatic_target_goes_through_existing_v222_once(self):
         result=self.run_build()
