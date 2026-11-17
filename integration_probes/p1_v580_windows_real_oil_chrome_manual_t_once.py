@@ -48,6 +48,15 @@ NAME="V580_REAL_CHROME_POSITIVE_OIL_MANUAL_T_COMPACT.json"
 TRINKETS=(270175,270173)
 ENV_NATIVE_LIMIT=12
 
+class BrowserSourceCredentials(Credentials):
+    """CI-only status view for the original web UI, no secret exposure.
+
+    The real positive-O source Build reads ephemeral Actions credentials.
+    A live browser's read-only status route additionally requires status().
+    """
+    def status(self):
+        return {"supported":True,"configured":self.load() is not None}
+
 def need(ok,reason):
     if not ok:raise RuntimeError("V580_"+reason)
 
@@ -202,7 +211,7 @@ def run(binary,out):
                  "REAL_V217_EXACT_POSITIVE_O_RECEIPT_UNAVAILABLE")
             data["original_v212_manifest_sha256"]=sha
             app=web.create_app(root=root,
-                source_credential_store=Credentials())
+                source_credential_store=BrowserSourceCredentials())
             app.state.jobs.remember_verified_fresh_environment(env)
             # Exact restored v113 profile and installed O loadout must exist
             # before a real browser can offer any selection.
