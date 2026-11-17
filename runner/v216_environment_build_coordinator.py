@@ -939,6 +939,108 @@ def _fresh_match_pinned_dbc_ordinary_j(*, preview, layout, ratings,
     return ids
 
 
+def _fresh_match_simc_native_ordinary_j(*, preview, layout, ratings,
+                                        link, game_build, simc_revision):
+    """Recheck the existing v278 sealed Native cases + v271 selected J IDs.
+
+    No independent effect certification. Each item has one exact physical
+    native before/after pair and a v046-resolved gear-static numeric delta.
+    """
+    need(type(preview) is dict and preview.get("status")==
+         "FOUR_STAT_SIMC_GEAR_RATINGS_OBSERVED_UNADMITTED"
+         and preview.get("game_build")==game_build
+         and preview.get("simc_revision")==simc_revision
+         and type(preview.get("source_sha256")) is str
+         and season_budget_contract.SHA.fullmatch(
+             preview["source_sha256"]) is not None
+         and type(layout) is dict and layout.get("special_gem_id") is None
+         and type(link) is dict and
+         link.get("same_build_gem_item_join_only") is True
+         and link.get("special_gem_item_id") is None
+         and preview.get("v221_stage_receipt_sha256")==
+             link.get("v221_stage_receipt_sha256")
+         and type(preview.get("v230_stage_receipt_sha256")) is str
+         and season_budget_contract.SHA.fullmatch(
+             preview["v230_stage_receipt_sha256"]) is not None
+         and type(preview.get("v230_original_item_data_sha256")) is str
+         and season_budget_contract.SHA.fullmatch(
+             preview["v230_original_item_data_sha256"]) is not None,
+         "V216_NATIVE_J_SOURCE_BUILD_SHA_OR_QUALITY_REQUIRED")
+    ids=physical_gems.ordinary_four_stat_default(
+        observed_by_stat=preview["by_stat"],socket_total=layout["socket_total"],
+        special_gem_id=None,need=need)
+    mapping={str(row["item_id"]):row["raw_nominal_points"]
+             for row in preview["by_stat"].values()}
+    need(ids==layout.get("ordinary_gem_ids")
+         and link.get("selected_item_ids")==sorted(set(ids))
+         and ratings==mapping and preview["rating_by_id"]==mapping
+         and sum(mapping[str(i)] for i in ids)==
+             sum(mapping[str(i)] for i in ids)
+         and preview["J_candidate_unadmitted"]==
+             sum(mapping[str(i)] for i in ids[:4]),
+         "V216_NATIVE_J_IDS_RATING_VECTOR_DRIFT")
+    observed=preview.get("native_observations_unadmitted")
+    need(type(observed) is list and
+         len(observed)==preview.get("highest_quality_candidate_count")
+         and set(ids)<={
+             row.get("ordinary_gem_id") for row in observed
+             if type(row) is dict},
+         "V216_NATIVE_J_ORIGINAL_MEASUREMENT_COVERAGE_DRIFT")
+    by_id={row["ordinary_gem_id"]:row for row in observed}
+    need(len(by_id)==len(observed),
+         "V216_NATIVE_J_DUPLICATE_GEM_MEASUREMENT")
+    # The original v278 Native stage owns the identity/cache. We rehash
+    # only the four selected actual cases; no Native execution or new cache.
+    root=pathlib.Path(preview["native_case_receipts_by_id"][
+        str(ids[0])][0]["receipt_path"]).resolve().parent.parent
+    need(root.name=="source" and root.is_dir() and not root.is_symlink(),
+         "V216_NATIVE_J_SEALED_STAGE_ROOT_INVALID")
+    for ident in sorted(set(ids)):
+        item=by_id[ident]
+        expected=mapping[str(ident)]
+        need(item.get("status")==
+             "SIMC_ORDINARY_GEM_TWO_STAT_OBSERVED_UNADMITTED"
+             and item.get("simc_unbuffed_gear_rating_source")==
+                 "V046_JSON2_RESOLVED_ITEM_STATIC_CHMV"
+             and item.get("simc_unbuffed_gear_two_stat_rating_unadmitted")==
+                 expected and
+             type(item.get("simc_unbuffed_gear_two_stat_vector_unadmitted")) is dict
+             and sum(item["simc_unbuffed_gear_two_stat_vector_unadmitted"].values())==
+                 expected and
+             type(item.get("native_case_receipts")) is list
+             and len(item["native_case_receipts"])==2,
+             "V216_NATIVE_J_V046_RATING_OR_SEALED_CASE_MISSING")
+        for variant,receipt in zip(("baseline","active"),
+                                    item["native_case_receipts"]):
+            file=pathlib.Path(receipt.get("receipt_path","")).resolve()
+            need(file.name=="receipt.json" and
+                 file.is_file() and not file.is_symlink() and
+                 file.parent.parent==root and
+                 file.parent.name.startswith("v278_"+variant+"_") and
+                 type(receipt.get("receipt_sha256")) is str and
+                 season_budget_contract.SHA.fullmatch(
+                     receipt["receipt_sha256"]) is not None and
+                 native_effect_pair.file_sha(file)==receipt["receipt_sha256"],
+                 "V216_NATIVE_J_SEALED_RECEIPT_SHA_DRIFT")
+            sealed=json.loads(file.read_text("utf8"))
+            native=file.parent/"native.json"
+            identity=sealed.get("identity") or {}
+            need(sealed.get("status")=="NATIVE_JSON2_CAPTURED"
+                 and identity.get("variant")==variant
+                 and identity.get("simc_revision")==simc_revision
+                 and identity.get("binary_sha256")==item.get("binary_sha256")
+                 and identity.get("source_profile_sha256")==
+                     item.get("source_profile_sha256")
+                 and type(sealed.get("native_json2_sha256")) is str
+                 and season_budget_contract.SHA.fullmatch(
+                     sealed["native_json2_sha256"]) is not None
+                 and native.is_file() and not native.is_symlink()
+                 and native_effect_pair.file_sha(native)==
+                     sealed["native_json2_sha256"],
+                 "V216_NATIVE_J_EXACT_SIMC_JSON2_SOURCE_DRIFT")
+    return ids
+
+
 def _fresh_four_stat_simc_observed_j_preview(*, candidates, collected,
                                              stage_root, binary, simc_revision,
                                              native_G_status):
@@ -1624,6 +1726,7 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                                 nominal_gem_source=None,
                                 zero_history_native_G=None,
                                 pinned_dbc_gem_source=None,
+                                native_gear_gem_source=None,
                                 policy_A_v217_stages=None,
                                 pinned_gem_simc_source_folder=None):
     """Inspect a freshly assembled v213 artifact in the NORMAL Build path.
@@ -1883,6 +1986,13 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
             game_build=expected_game_build,
             simc_revision=expected_simc_revision)
         one_stat_or_ambiguous_J=False
+    if native_gear_gem_source is not None:
+        _fresh_match_simc_native_ordinary_j(
+            preview=native_gear_gem_source,layout=gem_layout_receipt,
+            ratings=gem_rating_by_id,link=source_item_link,
+            game_build=expected_game_build,
+            simc_revision=expected_simc_revision)
+        one_stat_or_ambiguous_J=False
     if gem_layout_receipt is not None:
         if (not one_stat_or_ambiguous_J and gem_enchant is not None
                 and gem_enchant.get(
@@ -1909,6 +2019,14 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                    "rating_origin":"PINNED_SIMC_DBC_STATIC_TWO_SECONDARY",
                    "source_v275_enchant_sha256":
                        pinned_dbc_gem_source["source_sha256"],
+                   "source_v221_stage_receipt_sha256":
+                       source_item_link["v221_stage_receipt_sha256"],
+                   "highest_quality_verified":False}
+        if gem_J is not None and native_gear_gem_source is not None:
+            gem_J={**gem_J,
+                   "rating_origin":"SIMC_NATIVE_RESOLVED_GEAR_TWO_SECONDARY",
+                   "source_v296_static_source_sha256":
+                       native_gear_gem_source["source_sha256"],
                    "source_v221_stage_receipt_sha256":
                        source_item_link["v221_stage_receipt_sha256"],
                    "highest_quality_verified":False}
@@ -7654,7 +7772,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                                 pinned_dbc_j_preview["rating_by_id"])
                         elif (type(native_j_preview) is dict and
                               native_j_preview.get("status")==
-                              "FOUR_STAT_SIMC_RATINGS_OBSERVED_UNADMITTED"):
+                              "FOUR_STAT_SIMC_GEAR_RATINGS_OBSERVED_UNADMITTED"):
                             # One sealed v269 delta per source-derived item.
                             # v271 computes nominal J arithmetic; v216 still
                             # requires original quality/socket ownership for
@@ -7702,7 +7820,7 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             else native_j_preview["by_stat"]
                             if type(native_j_preview) is dict and
                             native_j_preview.get("status")==
-                                "FOUR_STAT_SIMC_RATINGS_OBSERVED_UNADMITTED"
+                                "FOUR_STAT_SIMC_GEAR_RATINGS_OBSERVED_UNADMITTED"
                             else observed[
                                 "four_stat_ordinary_best_observed_unadmitted"])
                 preflight=preflight_new_season_source(
@@ -7733,6 +7851,14 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             "PINNED_SIMC_DBC_FOUR_STAT_J_STATIC_UNADMITTED"
                         else None),
                     zero_history_native_G=native_G,
+                    native_gear_gem_source=(
+                        native_j_preview if
+                        auto_four_stat_default and
+                        zero_history_gem_layout is not None and
+                        type(native_j_preview) is dict and
+                        native_j_preview.get("status")==
+                            "FOUR_STAT_SIMC_GEAR_RATINGS_OBSERVED_UNADMITTED"
+                        else None),
                     pinned_gem_simc_source_folder=collected.get(
                         "fresh_lazy_full_pinned_simc_item_source",{}).get(
                             "source_dir"),

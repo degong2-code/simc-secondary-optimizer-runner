@@ -354,8 +354,9 @@ def compare_ordinary_gem(*, prepared, baseline_json2, active_json2,
            all(rounded[stat]==0 for stat in STATS if stat not in positives))
     return {
         "schema":"v269_one_physical_ordinary_gem_native_delta_v1",
-        "status":("SIMC_ORDINARY_GEM_TWO_STAT_OBSERVED_UNADMITTED" if clean
-                  else "SIMC_ORDINARY_GEM_EFFECTIVE_RATING_PENDING"),
+        "status":("SIMC_ORDINARY_GEM_TWO_STAT_OBSERVED_UNADMITTED"
+                  if clean or unbuffed_gear is not None else
+                  "SIMC_ORDINARY_GEM_EFFECTIVE_RATING_PENDING"),
         "ordinary_gem_id":item,"physical_slot":slot,
         "baseline_profile_sha256":prepared["baseline_profile_sha256"],
         "active_profile_sha256":prepared["active_profile_sha256"],
