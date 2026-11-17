@@ -332,6 +332,41 @@ class PureProfileComposer(unittest.TestCase):
         # exists or that two slots accept the same model in real SimC.
         self.assertFalse(meta["user_optimizer_ready"])
 
+    def test_exact_multi_stat_F_is_source_only_and_old_catalog_unmodified(self):
+        original=pure.catalog()
+        season=copy.deepcopy(original)
+        season["simc_item_db_source"]="local"
+        vector={"crit_rating":90,"haste_rating":75,
+                "mastery_rating":0,"versatility_rating":0}
+        season["default_consumables"]["flask_fixed_stat"]=None
+        season["default_consumables"]["flask_fixed_vector"]=dict(vector)
+        character={"class":"mage","spec":"frost","race":"human",
+                   "talents":"CAAAABBB11122"}
+        stage=pure.v098_inputs(
+            character,copy.deepcopy(TRINKETS),season_override=season,
+            source_only_season_consumables=True)
+        self.assertEqual(stage[5],vector)
+        self.assertEqual(sum(stage[5].values()),
+                         season["default_consumables"]["flask_budget_F"])
+        self.assertEqual(stage[1]["consumables"]["flask_budget_F"],165)
+        self.assertEqual(stage[1]["consumables"]["gem_budget_J"],
+                         original["default_consumables"]["gem_budget_J"])
+        self.assertEqual(stage[0].count("flask="),1)
+        self.assertNotIn("flask_fixed_vector",
+                         pure.catalog()["default_consumables"])
+        with self.assertRaisesRegex(
+                pure.ProfileStageBlocked,
+                "MULTI_STAT_FLASK_SOURCE_ONLY_REQUIRED"):
+            pure.v098_inputs(
+                character,copy.deepcopy(TRINKETS),season_override=season)
+        tampered=copy.deepcopy(season)
+        tampered["default_consumables"]["flask_fixed_vector"][
+            "haste_rating"]=76
+        with self.assertRaisesRegex(
+                pure.ProfileStageBlocked,
+                "SOURCE_ONLY_MULTI_STAT_FLASK_EXACT_F_VECTOR_REQUIRED"):
+            pure.validate_season(tampered)
+
     def test_aug_not_exposed_and_invalid_input_cannot_inject_simc_lines(self):
         actor={"class":"evoker","spec":"augmentation","race":"dracthyr",
                "talents":"CAAAABBB11122"}
