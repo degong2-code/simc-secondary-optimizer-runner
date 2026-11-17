@@ -413,7 +413,7 @@ class LocalJobs:
             self, *, target_ilevel, game_build,
             selected_oil_item_ids_by_hand=None, required_gem_layout=None,
             expected_installed_manifest_sha256=None,
-            required_reference_G_track=None):
+            required_reference_G_track="general"):
         """Recover only the exact selected installed environment, no Native."""
         found=environment_build.find_verified_installed_season_environment(
             self.root,target_ilevel,expected_game_build=game_build,
@@ -495,7 +495,7 @@ class LocalJobs:
             selected_oil_hands=None, selected_oil_item_ids_by_hand=None,
             required_gem_layout=None, selected_flask_item_id=None,
             expected_installed_manifest_sha256=None,
-            required_reference_G_track=None):
+            required_reference_G_track="general"):
         """Find the exact verified oil variant, never a newest-file guess."""
         # No installed v113 snapshot means the original packaged/legacy
         # current-season route must remain unchanged. Do not fetch a retail
@@ -635,12 +635,14 @@ class LocalJobs:
                 selected_oil_item_ids_by_hand=selected_ids,
                 expected_installed_manifest_sha256=candidates[0],
                 required_gem_layout=required_gem_layout,
-                required_reference_G_track=required_reference_G_track)
+                **({"required_reference_G_track":required_reference_G_track}
+                   if required_reference_G_track!="general" else {}))
         else:
             restored=self.restore_verified_fresh_profile(
                 target_ilevel=target_ilevel,game_build=game_build,
                 selected_oil_item_ids_by_hand=selected_ids,
-                required_reference_G_track=required_reference_G_track)
+                **({"required_reference_G_track":required_reference_G_track}
+                   if required_reference_G_track!="general" else {}))
         # When a fresh v113 snapshot exists, do not silently fall back to
         # an old packaged profile for a different current build or target.
         # The no-snapshot legacy path returned early above without network.
@@ -955,7 +957,8 @@ class LocalJobs:
                 # Previous API mocks/legacy reuse results retain old behavior.
                 snapshot=(self.restore_verified_fresh_profile(
                     target_ilevel=target_ilevel,game_build=game_build,
-                    required_reference_G_track=reference_G_track,
+                    **({"required_reference_G_track":reference_G_track}
+                       if reference_G_track=="fury_dual_2h" else {}),
                     required_gem_layout={
                         "special_gem_id":None,
                         "socket_total":(
@@ -1906,7 +1909,7 @@ class LocalJobs:
             if params.installed_manifest_sha256 is not None:
                 variant_args["expected_installed_manifest_sha256"]=(
                     params.installed_manifest_sha256)
-            if requested_G_track is not None:
+            if requested_G_track!="general":
                 variant_args["required_reference_G_track"]=requested_G_track
             if current_season and (
                 pinned_build is not None or
