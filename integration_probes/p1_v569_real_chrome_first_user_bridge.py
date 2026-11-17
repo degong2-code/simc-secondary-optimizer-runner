@@ -118,6 +118,16 @@ def click(d):
     """))
     button.click()
     idle(d)
+def visible_click(d,element):
+    d.execute_script(
+      "arguments[0].scrollIntoView({block:'center',behavior:'instant'})",element)
+    WebDriverWait(d,12).until(lambda x:x.execute_script("""
+       const e=arguments[0],r=e.getBoundingClientRect();
+       const hit=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+       return !e.disabled&&r.top>=0&&r.bottom<=innerHeight&&
+         (hit===e||e.contains(hit));
+    """,element))
+    element.click()
 def main():
     out=ROOT/"out"/"v569";out.mkdir(parents=True,exist_ok=True)
     receipt={"schema":"v569_chrome_first_user_synthetic_http_v1","status":"NOT_RUN",
@@ -174,10 +184,9 @@ def main():
             for item in ("910001","910002"):
                 el=d.find_element(By.CSS_SELECTOR,
                   "#equipment-trinket-grid button[data-item-id='"+item+"']")
-                d.execute_script("arguments[0].scrollIntoView()",el)
-                el.click()
+                visible_click(d,el)
             oil=d.find_element(By.ID,"optimizer-oil-enabled")
-            if oil.is_selected():oil.click()
+            if oil.is_selected():visible_click(d,oil)
             d.execute_script("""
               document.getElementById("binary").value="C:\\\\simc\\\\simc.exe";
               document.getElementById("revision").value="710c2408bf";
