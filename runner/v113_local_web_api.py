@@ -1865,6 +1865,13 @@ class LocalJobs:
                          fresh,**gem_choice))):
                 raise environment_manifest.EnvironmentBlocked(
                     "WEB_USER_GEM_LAYOUT_NOT_VERIFIED")
+            # A generic v212 G reference cannot be silently reused as
+            # Fury Titan's Grip dual-2H automatic B/T. User manual final T
+            # remains authoritative; avoid creating a wrong DPS session.
+            if (fresh is not None and key==("warrior","fury") and
+                    user["target"]["final_T"] is None):
+                raise environment_manifest.EnvironmentBlocked(
+                    "WEB_FRESH_FURY_DISTINCT_G_AUTO_BUDGET_SOURCE_REQUIRED")
             # A legacy/packaged product with no installed v113 snapshot
             # retains its historical v098 oil path. A *verified fresh*
             # snapshot already rejects missing or ambiguous physical O
