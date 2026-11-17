@@ -603,6 +603,7 @@ def _fresh_selected_gem_simc_quality_stage(*, stage_root, seed_directory,
         "game_build":game_build,"simc_revision":simc_revision,
         "seed_receipt_sha256":digest(receipt_file.read_bytes()),
         "selected_gem_item_ids":selected,
+        "quality_source_projection":"ITEM_NAME_TIER_AND_INNER_CRAFTING_QUALITY_V2",
         "v230_parser_code_sha256":stage_engine.module_dependency_fingerprint(
             [pathlib.Path(simc_item_metadata.__file__),
              pathlib.Path(stage_engine.__file__)])["sha256"]}
@@ -625,7 +626,7 @@ def _fresh_selected_gem_simc_quality_stage(*, stage_root, seed_directory,
                  for row in original["items"]),
              "V216_SELECTED_GEM_V230_EXACT_GEM_METADATA_REQUIRED")
         payload={
-            "schema":"v216_selected_gem_source_quality_observation_v1",
+            "schema":"v216_selected_gem_source_quality_observation_v2",
             "status":"PINNED_SIMC_GEM_QUALITY_SOURCE_ONLY_UNADMITTED",
             "game_build":game_build,"simc_revision":simc_revision,
             "seed_receipt_sha256":original["source_receipt_sha256"],
@@ -633,6 +634,8 @@ def _fresh_selected_gem_simc_quality_stage(*, stage_root, seed_directory,
             "selected_item_ids":selected,
             "selected_item_quality_unadmitted":[{
                 "item_id":row["item_id"],
+                "item_name":row["name"],
+                "item_ilevel_unscaled":row["ilevel_unscaled"],
                 "quality":row["quality"],
                 "crafting_quality":row["crafting_quality"],
                 "class_id":row["class_id"],
@@ -651,7 +654,7 @@ def _fresh_selected_gem_simc_quality_stage(*, stage_root, seed_directory,
             doc=json.loads(files["quality"].read_text("utf8"))
             qualities=doc["selected_item_quality_unadmitted"]
             return (doc.get("schema")==
-                    "v216_selected_gem_source_quality_observation_v1" and
+                    "v216_selected_gem_source_quality_observation_v2" and
                     doc.get("status")==
                     "PINNED_SIMC_GEM_QUALITY_SOURCE_ONLY_UNADMITTED" and
                     doc.get("game_build")==game_build and
@@ -666,8 +669,11 @@ def _fresh_selected_gem_simc_quality_stage(*, stage_root, seed_directory,
                     [row.get("item_id") for row in qualities]==selected and
                     all(type(row.get(k)) is int and row[k]>=0
                         for row in qualities
-                        for k in ("quality","crafting_quality",
-                                  "class_id","subclass_id")) and
+                        for k in ("item_ilevel_unscaled","quality",
+                                  "crafting_quality","class_id","subclass_id"))
+                    and all(type(row.get("item_name")) is str and
+                            bool(row["item_name"]) and
+                            len(row["item_name"])<=300 for row in qualities) and
                     all(row["class_id"]==gem_item_join.GEM_CLASS
                         for row in qualities) and
                     doc.get("highest_quality_selection_verified") is False and
@@ -680,7 +686,7 @@ def _fresh_selected_gem_simc_quality_stage(*, stage_root, seed_directory,
     try:
         stage=stage_engine.execute_stage(
             root=root,stage_id="fresh-v230-selected-gem-"+key,
-            stage_version="selected-gem-existing-v230-quality-source-v1",
+            stage_version="selected-gem-existing-v230-quality-source-v2",
             inputs=input_seed,outputs={"quality":output},
             execute=execute,validate=validate)
     except (simc_item_metadata.ItemMetadataBlocked,
@@ -769,6 +775,9 @@ def _fresh_same_build_ordinary_gem_metadata_candidates(*, compiled,
             "expansion_id":row["expansion_id"],
             "quality":metadata[row["item_id"]]["quality"],
             "crafting_quality":metadata[row["item_id"]]["crafting_quality"],
+            "item_name":metadata[row["item_id"]]["item_name"],
+            "item_ilevel_unscaled":
+                metadata[row["item_id"]]["item_ilevel_unscaled"],
         } for row in rows],
         "numeric_four_stat_rating_measured":False,
         "same_effect_and_conditions_verified":False,
