@@ -942,13 +942,15 @@ def _fresh_match_pinned_dbc_ordinary_j(*, preview, layout, ratings,
 def _fresh_four_stat_simc_observed_j_preview(*, candidates, collected,
                                              stage_root, binary, simc_revision,
                                              native_G_status):
-    """Measure ONLY an unambiguous four-family same-build subset via v269/v278.
+    """Reuse the actual v296 stat-kind source and v269/v278 Native gear rating.
 
-    The original v221/v230 source makes an effect-family shortlist; source
-    family identity cannot establish numeric effects, quality monotonicity or
-    user admission. No fanout Native across ambiguous season candidates.
+    The number of different *effects* has no relation to the four desired
+    leading CHMV types. The same-build DBC states stat *kinds*, not scaled
+    numeric points. Measure only the maximal crafting rank of each physical
+    two-secondary source family.  v046-resolved item gear, NOT talent-buffed
+    player totals, owns numeric J. Original v271/v216/v222 still own J.
     """
-    pending={"status":"FOUR_STAT_GEM_SOURCE_FAMILIES_PENDING",
+    pending={"status":"FOUR_STAT_GEM_NATIVE_SOURCE_PENDING",
              "by_stat":None,"rating_by_id":None,
              "J_candidate_unadmitted":None,"native_observations_unadmitted":[],
              "source_effect_family_count":None,
@@ -974,8 +976,7 @@ def _fresh_four_stat_simc_observed_j_preview(*, candidates, collected,
          1<=len(rows)<=simc_item_metadata.MAX_REQUEST_IDS and
          len(rows)==candidates.get("candidate_count"),
          "V216_GEM_FOUR_FAMILY_SOURCE_ROWS_DRIFT")
-    families={}
-    ids=set()
+    ids=set();enchant_ids=set()
     for row in rows:
         need(type(row) is dict and
              all(type(row.get(key)) is int for key in (
@@ -985,85 +986,180 @@ def _fresh_four_stat_simc_observed_j_preview(*, candidates, collected,
              and row["item_id"] not in ids,
              "V216_GEM_FOUR_FAMILY_ITEM_SOURCE_DRIFT")
         ids.add(row["item_id"])
-        if row["enchant_id"]<=0 or row["color_mask"]<=0:
-            # Source cannot identify a comparable effect family.
-            return {**pending,"reason":"GEM_EFFECT_ID_OR_COLOR_UNRESOLVED"}
-        key=(row["enchant_id"],row["color_mask"],
-             row["minimum_ilevel"],row["expansion_id"],row["quality"])
-        families.setdefault(key,[]).append(row)
-    if len(families)!=4:
+        if row["enchant_id"]>0:
+            enchant_ids.add(row["enchant_id"])
+    if not enchant_ids or len(enchant_ids)>128:
+        return {**pending,"reason":"GEM_NATIVE_DBC_EXACT_ENCHANT_IDS_PENDING"}
+    pinned=collected.get("fresh_pinned_v211_source")
+    if not (type(pinned) is dict and pinned.get("status")==
+            "PINNED_V211_AND_GENERATED_SOURCES_SEALED"):
+        return {**pending,"reason":"GEM_NATIVE_EXACT_PINNED_DBC_PENDING"}
+    try:
+        raw=oil_raw_source.from_v275(
+            pinned_source=pinned,stage_root=stage_root,
+            game_build=build,simc_revision=simc_revision,
+            enchant_ids=enchant_ids)
+    except (oil_raw_source.OilSourceBlocked,OSError,ValueError,KeyError) as exc:
+        return {**pending,"reason":str(exc).split(":",1)[0]}
+    by_enchant={item["enchant_id"]:item for item in raw["items"]}
+    # Group only by *effect conditions and stat kinds*. Quality is not part
+    # of the source-family key, and no stat POINTS are computed from DBC.
+    # Every maximal-quality competing option is then measured in real SimC.
+    families={}
+    for row in rows:
+        source=by_enchant.get(row["enchant_id"])
+        if source is None:
+            continue
+        reasons=set(source.get("source_reason_codes") or [])
+        if reasons & {"NOT_A_PURE_STATIC_CHMV_COMPONENT",
+                      "NO_STATIC_CHMV_COMPONENT",
+                      "REQUIRED_PROFESSION_CONDITION_PENDING"}:
+            continue
+        scaled=source.get("unresolved_simc_scaled_static_stats") or {}
+        static=source.get("static_CHMV_vector") or {}
+        stat_keys=(
+            sorted(s for s in season_budget_contract.STATS
+                   if type(scaled.get(s)) is dict)
+            if scaled else
+            sorted(s for s in season_budget_contract.STATS
+                   if type(static.get(s)) is int and static[s]>0))
+        if len(stat_keys)!=2:
+            # Single-stat and non-CHMV gems are not ordinary J candidates.
+            continue
+        scope=(tuple(stat_keys),row["color_mask"],row["minimum_ilevel"],
+               row["expansion_id"],row["quality"],
+               source["source_min_ilevel"],source["source_max_ilevel"],
+               tuple(sorted(
+                   (stat,scaled[stat]["simc_scaling_id"])
+                   for stat in stat_keys)) if scaled else ())
+        families.setdefault(scope,[]).append((row,source))
+    eligible=[]
+    for group in families.values():
+        highest=max(row["crafting_quality"] for row,_ in group)
+        eligible.extend((row,source)
+                        for row,source in group
+                        if row["crafting_quality"]==highest)
+    # A bounded one-season discovery: never enumerate all 75+ items through
+    # Native, and never pretend an unmeasured candidate has rating 0.
+    max_candidates=32
+    if not eligible or len(eligible)>max_candidates:
         return {**pending,
-                "reason":"EXACTLY_FOUR_EFFECT_FAMILIES_NOT_DEMONSTRATED",
-                "source_effect_family_count":len(families)}
-    # This is a probe ordering only, NOT a highest-quality admission.
-    best=[sorted(group,key=lambda row:(
-             -row["crafting_quality"],row["item_id"]))[0]
-          for _,group in sorted(families.items())]
+                "reason":("GEM_NATIVE_HIGHEST_QUALITY_TWO_STAT_SOURCE_PENDING"
+                          if not eligible else
+                          "GEM_NATIVE_SCOPED_MAX_QUALITY_CANDIDATES_EXCEED_BUDGET"),
+                "source_effect_family_count":len(families),
+                "highest_quality_candidate_count":len(eligible),
+                "native_budget_limit":max_candidates,
+                "source_sha256":raw["source_sha256"]}
     profile=collected.get("fresh_one_spec_physical_G_probe") or {}
     path=profile.get("profile_path")
-    if (binary is None or path is None or native_G_status!=
+    if binary is None or path is None or native_G_status!=(
             "G_NATIVE_NUMERIC_REFERENCE_OBSERVED_JFO_PENDING"):
-        return {**pending,"source_effect_family_count":4,
-                "reason":"VERIFIED_G_PROBE_PROFILE_AND_NATIVE_REQUIRED"}
-    need(pathlib.Path(path).resolve().is_relative_to(
-             pathlib.Path(stage_root).resolve()),
+        return {**pending,
+                "reason":"VERIFIED_G_PROBE_PROFILE_AND_NATIVE_REQUIRED",
+                "source_effect_family_count":len(families),
+                "highest_quality_candidate_count":len(eligible),
+                "source_sha256":raw["source_sha256"]}
+    source_profile=pathlib.Path(path).resolve()
+    root=pathlib.Path(stage_root).resolve()
+    need(source_profile.is_relative_to(root) and
+         source_profile.is_file() and not source_profile.is_symlink(),
          "V216_GEM_FOUR_FAMILY_NATIVE_PROFILE_STAGE_DRIFT")
-    seen={}
-    observed=[]
+    # Prefer an already selected physical neck, but never invent a socket
+    # unlock or a substitute user-selected item.
+    profile_text=source_profile.read_text(encoding="utf8")
+    slot=("neck" if any(line.startswith("neck=")
+                      for line in profile_text.splitlines()) else "head")
+    observed=[];by_lead={stat:[] for stat in season_budget_contract.STATS}
     calls=0
-    for row in best:
+    for row,source in sorted(eligible,key=lambda item:item[0]["item_id"]):
         try:
             measured=native_effect_pair.measure_ordinary_gem(
-                stage_root=stage_root,source_profile_path=path,
+                stage_root=stage_root,source_profile_path=source_profile,
                 binary=binary,simc_revision=simc_revision,
-                ordinary_gem_id=row["item_id"],slot="head")
+                ordinary_gem_id=row["item_id"],slot=slot)
         except (native_effect_pair.NativePairBlocked,
                 simc_snapshot_delta.SnapshotBlocked,OSError,ValueError) as exc:
-            return {**pending,"source_effect_family_count":4,
+            return {**pending,"source_effect_family_count":len(families),
                     "reason":str(exc).split(":",1)[0],
                     "new_native_calls":calls,
                     "native_observations_unadmitted":observed}
         calls+=measured["new_native_calls"]
         observed.append(measured)
-        if measured["status"]!=(
+        if measured.get("status")!=(
                 "SIMC_ORDINARY_GEM_TWO_STAT_OBSERVED_UNADMITTED"):
-            return {**pending,"source_effect_family_count":4,
-                    "reason":"SIMC_GEM_TWO_STAT_EFFECTIVE_RATING_NOT_OBSERVED",
+            return {**pending,"source_effect_family_count":len(families),
+                    "reason":"SIMC_GEM_PHYSICAL_NATIVE_PAIR_PENDING",
                     "new_native_calls":calls,
                     "native_observations_unadmitted":observed}
-        vector=measured["simc_effective_two_stat_vector_unadmitted"]
-        rating=measured["simc_effective_two_stat_rating_unadmitted"]
+        # G's v046-resolved item stats are the only numeric J authority.
+        # v269 buffed_stats are retained as a diagnostic, not summed into B.
+        vector=measured.get(
+            "simc_unbuffed_gear_two_stat_vector_unadmitted")
+        rating=measured.get(
+            "simc_unbuffed_gear_two_stat_rating_unadmitted")
         stats=season_budget_contract.STATS
-        need(type(vector) is dict and set(vector)==set(stats)
-             and all(type(v) is int and v>=0 for v in vector.values())
-             and sum(v>0 for v in vector.values())==2
-             and type(rating) is int and 0<rating<=10000
-             and rating==sum(vector.values())
-             and measured.get("ordinary_gem_id")==row["item_id"],
-             "V216_GEM_FOUR_FAMILY_NATIVE_VECTOR_DRIFT")
-        peaks=sorted(stats,key=lambda s:-vector[s])
-        if vector[peaks[0]]==vector[peaks[1]] or peaks[0] in seen:
-            return {**pending,"source_effect_family_count":4,
-                    "reason":"GEM_FOUR_DISTINCT_LEADING_STATS_NOT_OBSERVED",
+        if not (type(vector) is dict and set(vector)==set(stats)
+                and all(type(value) is int and value>=0
+                        for value in vector.values())
+                and sum(value>0 for value in vector.values())==2
+                and type(rating) is int and 0<rating<=10000
+                and rating==sum(vector.values())
+                and measured.get("simc_unbuffed_gear_rating_source")==
+                    "V046_JSON2_RESOLVED_ITEM_STATIC_CHMV"):
+            return {**pending,"source_effect_family_count":len(families),
+                    "reason":"SIMC_NATIVE_ITEM_GEAR_GEM_RATING_NOT_RESOLVED",
                     "new_native_calls":calls,
                     "native_observations_unadmitted":observed}
-        seen[peaks[0]]={"item_id":row["item_id"],
-                        "raw_nominal_points":rating}
-    if set(seen)!=set(physical_gems.ORDINARY_FOUR_STATS):
-        return {**pending,"source_effect_family_count":4,
-                "reason":"GEM_FOUR_STATS_INCOMPLETE",
+        positives=[stat for stat in stats if vector[stat]>0]
+        hint=(source.get("unresolved_simc_scaled_static_stats") or {})
+        if (hint and set(hint)!=set(positives)):
+            return {**pending,"source_effect_family_count":len(families),
+                    "reason":"SIMC_SOURCE_AND_NATIVE_GEM_STAT_KINDS_MISMATCH",
+                    "new_native_calls":calls,
+                    "native_observations_unadmitted":observed}
+        if vector[positives[0]]==vector[positives[1]]:
+            # User has not selected a classification for equal-main gems.
+            continue
+        lead=max(positives,key=lambda stat:vector[stat])
+        by_lead[lead].append((row,vector,measured))
+    if any(not entries for entries in by_lead.values()):
+        return {**pending,"source_effect_family_count":len(families),
+                "reason":"GEM_NATIVE_FOUR_DISTINCT_LEADING_STATS_PENDING",
                 "new_native_calls":calls,
                 "native_observations_unadmitted":observed}
+    selected={}
+    for lead,entries in by_lead.items():
+        row,vector,measured=max(entries,key=lambda entry:(
+            entry[0]["crafting_quality"],sum(entry[1].values()),
+            -entry[0]["item_id"]))
+        selected[lead]={"item_id":row["item_id"],
+                        "raw_nominal_points":sum(vector.values())}
+    chosen_ids={row["item_id"] for row in selected.values()}
+    receipts={str(measurement["ordinary_gem_id"]):
+              list(measurement["native_case_receipts"])
+              for measurement in observed
+              if measurement.get("ordinary_gem_id") in chosen_ids}
     return {**pending,
-            "status":"FOUR_STAT_SIMC_RATINGS_OBSERVED_UNADMITTED",
-            "source_effect_family_count":4,
-            "by_stat":seen,
-            "rating_by_id":{str(row["item_id"]):
-                 next(item["raw_nominal_points"]
-                      for item in seen.values()
-                      if item["item_id"]==row["item_id"]) for row in best},
+            "status":"FOUR_STAT_SIMC_GEAR_RATINGS_OBSERVED_UNADMITTED",
+            "game_build":build,"simc_revision":simc_revision,
+            "source_effect_family_count":len(families),
+            "highest_quality_candidate_count":len(eligible),
+            "measured_candidate_ids":[row["item_id"] for row,_ in
+                                      sorted(eligible,key=lambda r:r[0]["item_id"])],
+            "source_sha256":raw["source_sha256"],
+            "v221_stage_receipt_sha256":
+                candidates["v221_stage_receipt_sha256"],
+            "v230_stage_receipt_sha256":
+                candidates["v230_stage_receipt_sha256"],
+            "v230_original_item_data_sha256":
+                candidates["v230_original_item_data_sha256"],
+            "by_stat":selected,
+            "rating_by_id":{str(row["item_id"]):row["raw_nominal_points"]
+                            for row in selected.values()},
             "J_candidate_unadmitted":sum(row["raw_nominal_points"]
-                                         for row in seen.values()),
+                                        for row in selected.values()),
+            "native_case_receipts_by_id":receipts,
             "native_observations_unadmitted":observed,
             "native_measurement_automatically_allowed":True,
             "new_native_calls":calls}
