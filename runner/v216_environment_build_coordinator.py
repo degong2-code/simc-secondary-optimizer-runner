@@ -580,7 +580,7 @@ def _fresh_selected_gem_simc_quality_stage(*, stage_root, seed_directory,
     need(seed==root/"source"/"v256_full_pinned_simc" and
          seed.is_dir() and not seed.is_symlink() and
          type(selected_item_ids) is list and
-         1<=len(selected_item_ids)<=64 and
+         1<=len(selected_item_ids)<=simc_item_metadata.MAX_REQUEST_IDS and
          all(type(item) is int and item>0 for item in selected_item_ids) and
          len(set(selected_item_ids))==len(selected_item_ids) and
          type(game_build) is str and bool(game_build) and
@@ -694,6 +694,87 @@ def _fresh_selected_gem_simc_quality_stage(*, stage_root, seed_directory,
     return {**doc,"v230_stage_receipt_sha256":stage["receipt_sha256"],
             "v230_stage_cache_status":stage["status"],
             "quality_source_authenticated":True}
+
+
+def _fresh_same_build_ordinary_gem_metadata_candidates(*, compiled,
+                                                      gem_source, collected):
+    """Reuse sealed v221 IDs and original v230 item quality for numeric J work.
+
+    A bounded, source-only candidate producer. The original v269 SimC pair
+    remains the owner of effective numbers, and v220/v216 own admission.
+    No tooltip/name guess, historical gem IDs, Native, or extra source fetch.
+    """
+    pending={"status":"SAME_BUILD_ORDINARY_GEM_METADATA_SOURCE_PENDING",
+             "candidate_count":0,"candidates_unadmitted":[],
+             "highest_quality_verified":False,"J":None,
+             "environment_ready":False,"native_calls":0,"network_calls":0}
+    seed=(collected.get("fresh_lazy_full_pinned_simc_item_source") or {}).get(
+        "source_dir")
+    candidate_path=gem_source.get("candidate_path")
+    source_receipt=(gem_source.get("source_stage") or {}).get("receipt_sha256")
+    if not (seed and candidate_path and type(source_receipt) is str and
+            re.fullmatch(r"[a-f0-9]{64}",source_receipt)):
+        return pending
+    root=pathlib.Path(compiled["stage_root"]).resolve()
+    candidate=pathlib.Path(candidate_path).resolve()
+    need(candidate==root/"fresh_source"/
+         "v221_new_season_gem_item_candidates.json",
+         "V216_GEM_SOURCE_METADATA_V221_STAGE_PATH_DRIFT")
+    original,_=environment_manifest.read_json(candidate)
+    game_build=collected["expected_game_build"]
+    revision=compiled["simc_revision"]
+    need(original.get("schema")==gem_item_join.SCHEMA and
+         original.get("status")==
+             "SOURCE_ITEM_PROPERTY_LINKS_ONLY_NOT_USER_ADMITTED" and
+         original.get("game_build")==game_build and
+         original.get("simc_revision")==revision and
+         original.get("simc_generated_gem_source_build")==game_build and
+         original.get("exact_link_count")==len(original.get("joins",[])),
+         "V216_GEM_SOURCE_METADATA_V221_SAME_BUILD_REQUIRED")
+    rows=original["joins"]
+    if not 1<=len(rows)<=simc_item_metadata.MAX_REQUEST_IDS:
+        return pending
+    ids=[r.get("item_id") for r in rows]
+    need(all(type(item) is int and item>0 and
+             r.get("status")=="EXACT_DB2_ITEMSPARSE_GEM_PROPERTY_RELATION"
+             and r.get("ui_selectable") is False
+             for item,r in zip(ids,rows)) and
+         len(set(ids))==len(ids) and ids==sorted(ids),
+         "V216_GEM_SOURCE_METADATA_V221_IDS_OR_SCOPE_DRIFT")
+    quality=_fresh_selected_gem_simc_quality_stage(
+        stage_root=root,seed_directory=seed,
+        game_build=game_build,simc_revision=revision,
+        selected_item_ids=ids)
+    if quality.get("quality_source_authenticated") is not True:
+        return {**pending,"reason":quality.get("reason"),
+                "quality_source_status":quality.get("status")}
+    metadata={r["item_id"]:r for r in
+              quality["selected_item_quality_unadmitted"]}
+    need(set(metadata)==set(ids),
+         "V216_GEM_SOURCE_METADATA_V230_IDS_DRIFT")
+    return {
+        "schema":"v216_original_v221_v230_ordinary_gem_candidates_v1",
+        "status":"SAME_BUILD_GEM_ITEM_QUALITY_CANDIDATES_UNADMITTED",
+        "game_build":game_build,"simc_revision":revision,
+        "v221_stage_receipt_sha256":source_receipt,
+        "v230_stage_receipt_sha256":
+            quality["v230_stage_receipt_sha256"],
+        "v230_original_item_data_sha256":quality["item_data_sha256"],
+        "candidate_count":len(ids),
+        "candidates_unadmitted":[{
+            "item_id":row["item_id"],"enchant_id":row["enchant_id"],
+            "gem_property_id":row["gem_property_id"],
+            "color_mask":row["color_mask"],
+            "minimum_ilevel":row["minimum_ilevel"],
+            "expansion_id":row["expansion_id"],
+            "quality":metadata[row["item_id"]]["quality"],
+            "crafting_quality":metadata[row["item_id"]]["crafting_quality"],
+        } for row in rows],
+        "numeric_four_stat_rating_measured":False,
+        "same_effect_and_conditions_verified":False,
+        "highest_quality_verified":False,
+        "J":None,"environment_ready":False,
+        "native_calls":0,"network_calls":0}
 
 
 def _selected_gem_quality_policy_A_preview(*, source_catalog,
@@ -6990,6 +7071,24 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                     source_compilation[
                         "four_stat_source_owner_diagnostic_unadmitted"]=(
                             j_owner_diagnostic)
+                    if (nominal_four_stat_source is None and
+                            observed.get(
+                                "four_stat_ordinary_source_complete_unadmitted"
+                                ) is not True):
+                        # Raw EffectPointsMin may be unobserved (70783: 0/75).
+                        # Reuse the exact v221 IDs and already collected v230
+                        # item_data once, without attempting gem Native/DPS.
+                        gem_candidates=(
+                            _fresh_same_build_ordinary_gem_metadata_candidates(
+                                compiled=source_compilation,gem_source=src,
+                                collected=collected))
+                        source_compilation[
+                            "ordinary_gem_v221_v230_source_candidates_unadmitted"
+                        ]=gem_candidates
+                        progress["ordinary_gem_source_candidate_count_unadmitted"]=(
+                            gem_candidates["candidate_count"])
+                        progress["ordinary_gem_source_candidate_status_unadmitted"]=(
+                            gem_candidates["status"])
                     # Declarative SimC gem_id layout, not game socket unlock.
                     # Uses the same v232 sealed gear IDs. No v280 item/spell
                     # lookup and no separate bonus socket eligibility Gate.

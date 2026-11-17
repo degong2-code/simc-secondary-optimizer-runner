@@ -81,6 +81,95 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
 
 
 
+    def test_auto_j_source_candidates_reuse_v221_and_v230_without_native(self):
+        """75 same-build raw-unresolved gems yield bounded metadata, not J."""
+        build="12.2.0.99999"
+        rev="a"*40
+        root=self.root/"fresh-j"
+        item_folder=root/"source"/"v256_full_pinned_simc"
+        items=root/"fresh_source"
+        items.mkdir(parents=True)
+        item_folder.mkdir(parents=True)
+        ids=list(range(300001,300076))  # above former 64 selected-item cap
+        rows=[{"item_id":iid,"gem_property_id":iid-200000,
+               "enchant_id":iid+1000,"color_mask":2,
+               "minimum_ilevel":300,"expansion_id":12,
+               "status":"EXACT_DB2_ITEMSPARSE_GEM_PROPERTY_RELATION",
+               "ui_selectable":False} for iid in ids]
+        v221={
+            "schema":v216.gem_item_join.SCHEMA,
+            "status":"SOURCE_ITEM_PROPERTY_LINKS_ONLY_NOT_USER_ADMITTED",
+            "game_build":build,"simc_revision":rev,
+            "simc_generated_gem_source_build":build,
+            "exact_link_count":len(rows),"joins":rows}
+        source_file=items/"v221_new_season_gem_item_candidates.json"
+        source_file.write_text(json.dumps(v221),encoding="utf8")
+        receipt={
+            "schema":v216.simc_source.SCHEMA,
+            "provenance_tree_blob_authenticated":True,
+            "item_data_present":True,
+            "simc_generated_build":build,"simc_revision":rev,
+            "source_files":{"item_data.inc":{"sha256":"c"*64}},
+            "receipt_sha256":"b"*64}
+        (item_folder/v216.simc_source.RECEIPT).write_text(
+            json.dumps(receipt),encoding="utf8")
+        def original_metadata(*,directory,item_ids):
+            self.assertEqual(pathlib.Path(directory),item_folder)
+            self.assertEqual(item_ids,ids)
+            return {"schema":v216.simc_item_metadata.SCHEMA,
+                    "game_build":build,"simc_revision":rev,
+                    "requested_item_count":len(ids),
+                    "source_receipt_sha256":"b"*64,
+                    "source_sha256":"c"*64,
+                    "items":[{"item_id":iid,"quality":4,
+                              "crafting_quality":2,"class_id":
+                                  v216.gem_item_join.GEM_CLASS,
+                              "subclass_id":0} for iid in ids]}
+        runs=[]
+        def stage_once(**kw):
+            runs.append(kw["stage_id"])
+            kw["execute"]()
+            output=root/kw["outputs"]["quality"]
+            self.assertTrue(kw["validate"]({"quality":output}))
+            return {"receipt_sha256":"d"*64,"status":"EXECUTED_AND_SEALED"}
+        compiled={"stage_root":str(root),"simc_revision":rev}
+        gem_source={"candidate_path":str(source_file),
+                    "source_stage":{"receipt_sha256":"e"*64}}
+        collected={"expected_game_build":build,
+                   "fresh_lazy_full_pinned_simc_item_source":{
+                       "source_dir":str(item_folder)}}
+        with mock.patch.object(v216.simc_item_metadata,"from_seed",
+                               side_effect=original_metadata), \
+             mock.patch.object(v216.stage_engine,"execute_stage",
+                               side_effect=stage_once):
+            found=v216._fresh_same_build_ordinary_gem_metadata_candidates(
+                compiled=compiled,gem_source=gem_source,collected=collected)
+        self.assertEqual(len(runs),1)
+        self.assertEqual(found["candidate_count"],75)
+        self.assertEqual(found["candidates_unadmitted"][0]["item_id"],ids[0])
+        self.assertEqual(found["candidates_unadmitted"][-1]["crafting_quality"],2)
+        self.assertEqual(found["v221_stage_receipt_sha256"],"e"*64)
+        self.assertFalse(found["highest_quality_verified"])
+        self.assertFalse(found["numeric_four_stat_rating_measured"])
+        self.assertIsNone(found["J"])
+        self.assertFalse(found["environment_ready"])
+        self.assertEqual((found["native_calls"],found["network_calls"]),(0,0))
+        absent=v216._fresh_same_build_ordinary_gem_metadata_candidates(
+            compiled=compiled,gem_source=gem_source,
+            collected={"expected_game_build":build,
+                       "fresh_lazy_full_pinned_simc_item_source":{
+                           "source_dir":None}})
+        self.assertEqual(absent["status"],
+            "SAME_BUILD_ORDINARY_GEM_METADATA_SOURCE_PENDING")
+        self.assertIsNone(absent["J"])
+        v221["simc_revision"]="f"*40
+        source_file.write_text(json.dumps(v221),encoding="utf8")
+        with self.assertRaisesRegex(
+                v216.EnvironmentBuildBlocked,
+                "V216_GEM_SOURCE_METADATA_V221_SAME_BUILD_REQUIRED"):
+            v216._fresh_same_build_ordinary_gem_metadata_candidates(
+                compiled=compiled,gem_source=gem_source,collected=collected)
+
     def test_p3_hl_reuse_requires_exact_game_build_even_with_verified_manifest(self):
         """Exact build selection is structural, not extra SimC validation."""
         stage_root=self.root/"season-cache"
