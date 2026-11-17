@@ -1091,13 +1091,31 @@ def build(user,folder,binary,revision,static_cache_path=None,
          season_environment_receipt_path is None and
          current_season_product and static_cache_path is None),
          "FRESH_SEASON_INSTALLED_REQUIRES_ORIGINAL_SOURCE_LINKS")
-    # The installed generic G (one Ret representative) does not carry a
-    # verified Fury dual-twohand G budget. The user's manual final T is an
-    # independent authoritative budget and remains usable. Do not invent
-    # a Fury amount from another season's 79x2 reference table.
-    need(not (fresh_installed_environment_path is not None and
-              key==("warrior","fury") and final_T is None),
-         "FRESH_FURY_DISTINCT_G_AUTO_BUDGET_SOURCE_REQUIRED")
+    # The ordinary reference G cannot fund Fury's dual-twohand automatic
+    # B/T. Only a v216 source-owned Fury v277 Native G, bound into the
+    # exact installed v212 and same spec physical candidate, may do that.
+    # A user-authoritative manual final T remains independently supported.
+    if (fresh_installed_environment_path is not None and
+            key==("warrior","fury") and final_T is None):
+        candidate=season_physical_one_spec_candidate
+        target=pathlib.Path(fresh_installed_environment_path).resolve()
+        need(type(candidate) is dict and
+             candidate.get("character",{}).get("class")=="warrior" and
+             candidate.get("character",{}).get("spec")=="fury" and
+             candidate.get("character",{}).get("weapon_form")==
+                 "dual_two_hand" and target.is_file() and
+             not target.is_symlink(),
+             "FRESH_FURY_DISTINCT_G_AUTO_BUDGET_SOURCE_REQUIRED")
+        doc,_=installed_manifest.read_json(target)
+        installed_manifest.verify_fresh_installed_environment(doc)
+        need(doc.get("official_G_reference_track")=="fury_dual_2h"
+             and doc.get("target_ilevel")==ilvl
+             and type(doc.get("official_G_profile_receipt_sha256")) is str
+             and type(season_profile_inputs) is dict
+             and season_profile_inputs.get(
+                 "v216_numeric_preview",{}).get(
+                     "calculation",{}).get("reference_G")==doc["official_G"],
+             "FRESH_FURY_DISTINCT_G_AUTO_BUDGET_SOURCE_REQUIRED")
     need(season_physical_one_spec_candidate is None or (
          fresh_installed_environment_path is not None and
          type(season_physical_one_spec_candidate) is dict and
