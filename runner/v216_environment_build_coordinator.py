@@ -950,11 +950,11 @@ def _fresh_match_pinned_dbc_ordinary_j(*, preview, layout, ratings,
 
 def _fresh_match_simc_native_ordinary_j(*, preview, layout, ratings,
                                         link, game_build, simc_revision):
-    """Recheck the existing v269/v278 sealed gem delta + v271 J IDs.
+    """Bind source-equivalent selected gem IDs to actual sealed SimC samples.
 
-    SimC applies gem CHMV into player collected_data.buffed_stats, not the
-    gear row. The unchanged v233 baseline + exact one gem_id difference,
-    integer two-stat delta and SHA-sealed JSON2 are the numeric proof.
+    A selected unmeasured gem NEVER owns another physical item's Native
+    receipt. Every inferred stat vector instead records its exact source
+    coefficient signature and the item ID of its REAL Native representative.
     """
     need(type(preview) is dict and preview.get("status")==
          "FOUR_STAT_SIMC_NATIVE_RATINGS_OBSERVED_UNADMITTED"
@@ -977,8 +977,8 @@ def _fresh_match_simc_native_ordinary_j(*, preview, layout, ratings,
              preview["v230_original_item_data_sha256"]) is not None,
          "V216_NATIVE_J_SOURCE_BUILD_SHA_OR_QUALITY_REQUIRED")
     ids=physical_gems.ordinary_four_stat_default(
-        observed_by_stat=preview["by_stat"],socket_total=layout["socket_total"],
-        special_gem_id=None,need=need)
+        observed_by_stat=preview["by_stat"],
+        socket_total=layout["socket_total"],special_gem_id=None,need=need)
     mapping={str(row["item_id"]):row["raw_nominal_points"]
              for row in preview["by_stat"].values()}
     need(ids==layout.get("ordinary_gem_ids")
@@ -988,51 +988,82 @@ def _fresh_match_simc_native_ordinary_j(*, preview, layout, ratings,
              sum(mapping[str(i)] for i in ids[:4]),
          "V216_NATIVE_J_IDS_RATING_VECTOR_DRIFT")
     observed=preview.get("native_observations_unadmitted")
-    need(type(observed) is list and
-         len(observed)==preview.get("highest_quality_candidate_count")
-         and set(ids)<={
-             row.get("ordinary_gem_id") for row in observed
-             if type(row) is dict},
-         "V216_NATIVE_J_ORIGINAL_MEASUREMENT_COVERAGE_DRIFT")
-    by_id={row["ordinary_gem_id"]:row for row in observed}
-    need(len(by_id)==len(observed),
-         "V216_NATIVE_J_DUPLICATE_GEM_MEASUREMENT")
-    # The original v278 Native stage owns the identity/cache. We rehash
-    # only the four selected actual cases; no Native execution or new cache.
-    root=pathlib.Path(preview["native_case_receipts_by_id"][
-        str(ids[0])][0]["receipt_path"]).resolve().parent.parent
-    need(root.name=="source" and root.is_dir() and not root.is_symlink(),
-         "V216_NATIVE_J_SEALED_STAGE_ROOT_INVALID")
+    by_id={row["ordinary_gem_id"]:row for row in (observed or [])
+           if type(row) is dict and
+           type(row.get("ordinary_gem_id")) is int}
+    measured=preview.get("measured_candidate_ids")
+    receipts=preview.get("native_case_receipts_by_id")
+    samples=preview.get("sample_numeric_signatures_by_item_id")
+    proofs=preview.get("selected_numeric_source_proofs_by_item_id")
+    need(type(observed) is list and type(measured) is list and
+         type(receipts) is dict and type(samples) is dict
+         and type(proofs) is dict and
+         len(by_id)==len(observed)==len(measured) and
+         set(measured)==set(by_id) and measured==sorted(measured)
+         and set(receipts)==set(str(i) for i in measured)
+         and len(preview.get("source_selected_tier_candidate_ids",[]))==
+             preview.get("highest_quality_candidate_count")
+         and set(ids)<=set(preview["source_selected_tier_candidate_ids"])
+         and set(proofs)==set(str(i) for i in set(ids))
+         and all(type(item) is dict for item in proofs.values()),
+         "V216_NATIVE_J_SOURCE_SAMPLE_AND_SELECTED_PROOFS_DRIFT")
+    root=None
     for ident in sorted(set(ids)):
-        item=by_id[ident]
-        expected=mapping[str(ident)]
-        need(item.get("status")==
+        proof=proofs[str(ident)]
+        vector=proof.get("resolved_two_secondary_vector")
+        sample_id=proof.get("representative_item_id")
+        signature=proof.get("source_coefficient_signature")
+        numeric_origin=proof.get("numeric_source")
+        need(proof.get("item_id")==ident
+             and type(vector) is dict
+             and set(vector)==set(season_budget_contract.STATS)
+             and all(type(v) is int and v>=0 for v in vector.values())
+             and sum(v>0 for v in vector.values())==2
+             and sum(vector.values())==mapping[str(ident)]
+             and type(sample_id) is int and sample_id>0
+             and type(signature) is list and len(signature)==4
+             and samples.get(str(sample_id))==signature
+             and numeric_origin in (
+                 "EXACT_CONTROLLED_SIMC_NATIVE_DELTA",
+                 "EXACT_SAME_BUILD_DBC_STATIC"),
+             "V216_NATIVE_J_INFERRED_ITEM_AND_SOURCE_SIGNATURE_DRIFT")
+        if numeric_origin=="EXACT_SAME_BUILD_DBC_STATIC":
+            # The source DBC was already authenticated by the coordinator.
+            # No Native receipts are fabricated for its unscaled fields.
+            need(str(sample_id) not in receipts,
+                 "V216_NATIVE_J_STATIC_SOURCE_CANNOT_CLAIM_NATIVE")
+            continue
+        item=by_id.get(sample_id)
+        need(type(item) is dict and item.get("status")==
              "SIMC_ORDINARY_GEM_TWO_STAT_OBSERVED_UNADMITTED"
-             and item.get("simc_effective_two_stat_rating_unadmitted")==
-                 expected and
-             type(item.get("simc_effective_two_stat_vector_unadmitted")) is dict
-             and sum(item["simc_effective_two_stat_vector_unadmitted"].values())==
-                 expected and
-             type(item.get("observed")) is dict
+             and type(item.get("simc_effective_two_stat_vector_unadmitted"))
+                 is dict
+             and sorted(v for v in
+                 item["simc_effective_two_stat_vector_unadmitted"].values()
+                 if v>0)==sorted(v for v in vector.values() if v>0)
+             and type(item.get("observed")) is dict
              and item["observed"].get("source")==
-                 "SIMC_JSON2_ACTUAL_GEM_ID_AND_BUFFED_STATS" and
-             type(item.get("native_case_receipts")) is list
-             and len(item["native_case_receipts"])==2,
-             "V216_NATIVE_J_V046_RATING_OR_SEALED_CASE_MISSING")
-        need((preview.get("native_case_receipts_by_id") or {}).get(
-                 str(ident))==item["native_case_receipts"],
-             "V216_NATIVE_J_SEALED_RECEIPT_SHA_DRIFT")
+                 "SIMC_JSON2_ACTUAL_GEM_ID_AND_BUFFED_STATS"
+             and type(item.get("native_case_receipts")) is list
+             and len(item["native_case_receipts"])==2
+             and receipts.get(str(sample_id))==
+                 item["native_case_receipts"],
+             "V216_NATIVE_J_SOURCE_REPRESENTATIVE_RATING_OR_ID_DRIFT")
         for variant,receipt in zip(("baseline","active"),
                                     item["native_case_receipts"]):
             file=pathlib.Path(receipt.get("receipt_path","")).resolve()
-            need(file.name=="receipt.json" and
-                 file.is_file() and not file.is_symlink() and
-                 file.parent.parent==root and
-                 file.parent.name.startswith("v278_"+variant+"_") and
-                 type(receipt.get("receipt_sha256")) is str and
-                 season_budget_contract.SHA.fullmatch(
-                     receipt["receipt_sha256"]) is not None and
-                 native_effect_pair.file_sha(file)==receipt["receipt_sha256"],
+            parent=file.parent.parent
+            if root is None:root=parent
+            need(file.name=="receipt.json" and file.is_file()
+                 and not file.is_symlink() and
+                 root.name=="source" and root.is_dir()
+                 and not root.is_symlink() and parent==root
+                 and file.parent.name.startswith("v278_"+variant+"_")
+                 and type(receipt.get("receipt_sha256")) is str
+                 and season_budget_contract.SHA.fullmatch(
+                     receipt["receipt_sha256"]) is not None
+                 and native_effect_pair.file_sha(file)==
+                     receipt["receipt_sha256"],
                  "V216_NATIVE_J_SEALED_RECEIPT_SHA_DRIFT")
             sealed=json.loads(file.read_text("utf8"))
             native=file.parent/"native.json"
@@ -1051,7 +1082,6 @@ def _fresh_match_simc_native_ordinary_j(*, preview, layout, ratings,
                      sealed["native_json2_sha256"],
                  "V216_NATIVE_J_EXACT_SIMC_JSON2_SOURCE_DRIFT")
     return ids
-
 
 
 def _fresh_two_stat_gem_named_tier_measurement_plan(*, rows, by_enchant):
@@ -1403,6 +1433,9 @@ def _fresh_four_stat_simc_observed_j_preview(*, candidates, collected,
             item["item_id"] for item in plan["sample_items"]
             if item["numeric_kind"]=="SIMC_SCALED"),
         "native_case_receipts_by_id":receipts,
+        "sample_numeric_signatures_by_item_id":{
+            str(row["item_id"]):list(row["signature"])
+            for row in plan["sample_items"]},
         "selected_numeric_source_proofs_by_item_id":selected_proofs,
         "by_stat":selected,
         "rating_by_id":{str(v["item_id"]):v["raw_nominal_points"]
