@@ -90,7 +90,16 @@ def snap(d):
 def idle(d):
     WebDriverWait(d,30).until(lambda x:x.execute_script("return !!state.token&&!state.busy"))
 def click(d):
-    d.find_element(By.ID,"start-btn").click()
+    button=d.find_element(By.ID,"start-btn")
+    d.execute_script("arguments[0].scrollIntoView({block:'center',behavior:'instant'})",button)
+    WebDriverWait(d,12).until(lambda x:x.execute_script("""
+        const b=document.getElementById('start-btn');
+        const r=b.getBoundingClientRect();
+        const top=document.elementFromPoint(r.left+r.width/2,r.top+r.height/2);
+        return !b.disabled && r.top>=0 && r.bottom<=innerHeight &&
+          (top===b || b.contains(top));
+    """))
+    button.click()
     idle(d)
 def main():
     out=ROOT/"out"/"v569";out.mkdir(parents=True,exist_ok=True)
