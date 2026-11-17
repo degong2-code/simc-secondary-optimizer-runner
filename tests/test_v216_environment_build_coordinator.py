@@ -188,8 +188,8 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                     "{ 5, 5, 0 }, { "+str(12 if rank==2 else 16)+", 7, 0 }, "
                     "{ "+str(props[i])+", "+str(props[(i+1)%4])+", 0 }, "
                     '{ 0, 0, 0 }, 0, "Test" },')
-        raw="// spell item enchantments, wow build "+build+"\\n"+(
-            "\\n".join(cpp))+"\\n"
+        raw="// spell item enchantments, wow build "+build+"\n"+(
+            "\n".join(cpp))+"\n"
         static=v216.oil_raw_source.extract(
             generated_text=raw,game_build=build,simc_revision=rev,
             enchant_ids={x["enchant_id"] for x in rows})
@@ -222,7 +222,7 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         alternate=v216.oil_raw_source.extract(
             generated_text=raw+'{ 8991, 0, 0, 0, 0, 0, 0, 0, 0, '
                 '{ 5, 5, 0 }, { 17, 7, 0 }, { 32, 49, 0 }, '
-                '{ 0, 0, 0 }, 0, "Other" },\\n',
+                '{ 0, 0, 0 }, 0, "Other" },\n',
             game_build=build,simc_revision=rev,
             enchant_ids={x["enchant_id"] for x in rows}|{8991})
         with mock.patch.object(v216.oil_raw_source,"from_v275",
