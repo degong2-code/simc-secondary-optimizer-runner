@@ -171,6 +171,15 @@ const funcs=Function(
         self.assertIn("if(seasonBuildInputScope(true)!==scope ||",text)
         self.assertIn("if(gear.status!==\"CURRENT_SEASON_CANDIDATE_SELECTION_ONLY\"",text)
         self.assertNotIn("automatic_O_approved_by_ui",text)
+        initialized=text[text.index("async function initialize() {"):]
+        self.assertLess(initialized.index("fillDefault(first);"),
+                        initialized.index("try{await refreshInstalledOilLoadouts();}"),
+                        "The first verified oil source read must follow default spec")
+        handlers=text[text.index("function registerHandlers() {"):
+                      text.index("async function initialize() {")]
+        self.assertEqual(handlers.count(
+            "if(state.oilCatalog)void withBusy(refreshInstalledOilLoadouts);"),2,
+            "Both class and spec edits must recheck weapon hands/source scope")
 
 if __name__=="__main__":
     unittest.main()
