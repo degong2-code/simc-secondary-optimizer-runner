@@ -152,6 +152,89 @@ class TwoNativeOptions(unittest.TestCase):
         self.assertEqual(pending["new_native_calls"],0)
         self.assertIsNone(pending["static_CHMV_candidate"])
 
+    def test_one_gem_native_delta_is_sealed_cached_and_never_admitted_as_J(self):
+        """Two first cases, one new active case for another gem, then zero."""
+        gem_ids=(320001,320002)
+        def execute_gem(cmd,*,cwd,stdout,stderr,check,timeout):
+            raw=pathlib.Path(cmd[1]).read_text(encoding="utf8")
+            present=[i for i in gem_ids if ",gem_id="+str(i) in raw]
+            self.assertLessEqual(len(present),1)
+            gem_id=present[0] if present else None
+            # A real JSON2 pair must confirm the exact applied physical item.
+            gear={"head":{"encoded_item":
+                        "sample,id=12345,ilevel=334"+
+                        (",gem_id="+str(gem_id) if gem_id else "")},
+                  "main_hand":{"encoded_item":
+                               "sword,id=23456,ilevel=334"}}
+            stats={"crit_rating":2500+(16 if gem_id==320001 else 0),
+                   "haste_rating":1300+(7 if gem_id==320001 else 0),
+                   "mastery_rating":1100+(16 if gem_id==320002 else 0),
+                   "versatility_rating":700+(7 if gem_id==320002 else 0)}
+            document={"git_revision":REV[:10],"sim":{"players":[{
+                "name":"sample","gear":gear,
+                "collected_data":{"buffed_stats":{"stats":stats}}}]}}
+            (pathlib.Path(cwd)/"native.json").write_text(
+                json.dumps(document),encoding="utf8")
+            stdout.write(b"original SimC gem test\n")
+            return SimpleNamespace(returncode=0)
+        def measure(gem_id):
+            return pair.measure_ordinary_gem(
+                stage_root=self.root,source_profile_path=self.profile,
+                binary=self.binary,simc_revision=REV,
+                slot="head",ordinary_gem_id=gem_id)
+        with mock.patch.object(pair.subprocess,"run",
+                               side_effect=execute_gem) as proc:
+            one=measure(320001)
+            two=measure(320002)
+            repeated=measure(320002)
+        self.assertEqual(proc.call_count,3)
+        self.assertEqual((one["new_native_calls"],
+                          two["new_native_calls"],
+                          repeated["new_native_calls"]),(2,1,0))
+        self.assertEqual(one["simc_effective_two_stat_rating_unadmitted"],23)
+        self.assertEqual(two["simc_effective_two_stat_rating_unadmitted"],23)
+        self.assertEqual(one["simc_effective_two_stat_vector_unadmitted"][
+                          "crit_rating"],16)
+        self.assertTrue(two["native_case_receipts"][0]["cache_reused"])
+        self.assertTrue(all(r["cache_reused"] for r in
+                            repeated["native_case_receipts"]))
+        for value in (one,two,repeated):
+            self.assertIsNone(value["J"])
+            self.assertFalse(value["environment_ready"])
+            self.assertFalse(value["highest_quality_verified"])
+            self.assertFalse(value["game_socket_legality_verified"])
+            self.assertFalse(value["same_effect_conditions_verified"])
+            self.assertEqual(value["network_calls"],0)
+
+    def test_one_gem_absent_source_failure_does_not_forge_rating_or_retry(self):
+        def fail(cmd,*,cwd,stdout,stderr,check,timeout):
+            stdout.write(b"SimC source item not found\n")
+            return SimpleNamespace(returncode=8)
+        kw={"stage_root":self.root,
+            "source_profile_path":self.profile,"binary":self.binary,
+            "simc_revision":REV,"slot":"head","ordinary_gem_id":320003}
+        with mock.patch.object(pair.subprocess,"run",side_effect=fail) as proc:
+            bad=pair.measure_ordinary_gem(**kw)
+            repeat=pair.measure_ordinary_gem(**kw)
+        self.assertEqual(proc.call_count,1)
+        self.assertEqual(bad["status"],
+            "SIMC_ORDINARY_GEM_NATIVE_FAILED_NO_AUTO_RETRY")
+        self.assertEqual(bad["new_native_calls"],1)
+        self.assertEqual(repeat["new_native_calls"],0)
+        self.assertIn("source item not found",repeat["native_log_excerpt"])
+        self.assertIsNone(bad["J"])
+        with mock.patch.object(pair.subprocess,"run",
+                  side_effect=AssertionError("NATIVE_NOT_ALLOWED")):
+            missing=pair.measure_ordinary_gem(
+                **{**kw,"binary":None})
+            self.assertEqual(missing["new_native_calls"],0)
+            self.assertIsNone(missing["simc_effective_two_stat_rating_unadmitted"])
+            self.profile.write_text(PROFILE.replace(
+                "head=sample,id=12345,ilevel=334\n",""),encoding="utf8")
+            with self.assertRaisesRegex(pair.NativePairBlocked,
+                    "V269_GEM_SOURCE_PHYSICAL_SLOT_REQUIRED"):
+                pair.measure_ordinary_gem(**kw)
+
     def test_original_v216_normal_build_reaches_measured_F_O_without_ready(self):
         source={"schema":"v216_fresh_source_stage_v1",
             "source_stage":{"status":"EXECUTED_AND_SEALED","reused":False},

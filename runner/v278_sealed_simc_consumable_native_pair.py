@@ -244,3 +244,99 @@ def measure(*,stage_root,source_profile_path,binary,simc_revision,
             observed["static_CHMV_candidate"]
             if kind=="temporary_enchant" else None),
         "source_only_numeric_observation":True}
+
+def measure_ordinary_gem(*,stage_root,source_profile_path,binary,
+                         simc_revision,ordinary_gem_id,slot,
+                         timeout_seconds=180):
+    """Use the original v269 gem delta over v278's immutable native cases.
+
+    The caller must first select a same-build, source-owned ordinary gem ID.
+    This measures ONLY its SimC-applied two-stat rating; it does not classify
+    a gem family, prove highest quality/socket legality or admit J.
+    """
+    pending={"schema":SCHEMA,
+             "status":"SIMC_ORDINARY_GEM_SOURCE_OR_BINARY_PENDING",
+             "ordinary_gem_id":ordinary_gem_id,
+             "physical_slot":slot,
+             "simc_effective_two_stat_rating_unadmitted":None,
+             "simc_effective_two_stat_vector_unadmitted":None,
+             "highest_quality_verified":False,
+             "same_effect_conditions_verified":False,
+             "game_socket_legality_verified":False,
+             "J":None,"environment_ready":False,
+             "new_native_calls":0,"network_calls":0}
+    if binary is None or source_profile_path is None:
+        return {**pending,"reason":"V278_GEM_PROFILE_OR_BINARY_NOT_CONFIGURED"}
+    root=Path(stage_root).resolve(strict=True)
+    source=Path(source_profile_path)
+    need(root.is_dir() and not root.is_symlink() and
+         source.is_file() and not source.is_symlink() and
+         source.resolve().is_relative_to(root) and
+         0<source.stat().st_size<=MAX_PROFILE,
+         "V278_SOURCE_PROFILE_NOT_FROM_THIS_STAGE")
+    binfile=Path(binary).expanduser().resolve(strict=True)
+    need(binfile.is_file() and not binfile.is_symlink(),
+         "V278_NATIVE_BINARY_NOT_A_FILE")
+    need(type(simc_revision) is str and
+         effect.REV.fullmatch(simc_revision) is not None,
+         "V278_PINNED_SIMC_REVISION_REQUIRED")
+    try:
+        prepared=effect.prepare_ordinary_gem(
+            profile=source.read_bytes().decode("utf8"),
+            slot=slot,ordinary_gem_id=ordinary_gem_id)
+    except (UnicodeError,effect.SnapshotBlocked) as exc:
+        raise NativePairBlocked(str(exc).split(":",1)[0]) from exc
+    binary_sha=file_sha(binfile)
+    calls=0
+    cases=[]
+    for variant in ("baseline","active"):
+        case=run_case(
+            stage_root=root,profile=prepared[variant+"_profile"],
+            source_identity=prepared["source_profile_sha256"],
+            binary=binfile,binary_sha256=binary_sha,
+            revision=simc_revision,variant=variant,
+            timeout_seconds=timeout_seconds)
+        calls+=case["new_native_calls"]
+        cases.append(case)
+        if case["receipt"]["status"]!="NATIVE_JSON2_CAPTURED":
+            return {**pending,
+                "status":"SIMC_ORDINARY_GEM_NATIVE_FAILED_NO_AUTO_RETRY",
+                "failed_variant":variant,
+                "native_status":case["receipt"]["status"],
+                "native_returncode":case["receipt"]["native_returncode"],
+                "native_error":case["receipt"]["error"],
+                "native_log_excerpt":log_excerpt(case["folder"]),
+                "new_native_calls":calls}
+    try:
+        measured=effect.compare_ordinary_gem(
+            prepared=prepared,
+            baseline_json2=(cases[0]["folder"]/"native.json").read_bytes(),
+            active_json2=(cases[1]["folder"]/"native.json").read_bytes(),
+            simc_revision=simc_revision,binary_sha256=binary_sha)
+    except (effect.SnapshotBlocked,ValueError) as exc:
+        raise NativePairBlocked(
+            "V278_ORIGINAL_V269_GEM_COMPARISON_FAILED:"
+            +str(exc).split(":",1)[0]) from exc
+    need(measured["baseline_profile_sha256"]==
+              prepared["baseline_profile_sha256"] and
+         measured["active_profile_sha256"]==
+              prepared["active_profile_sha256"],
+         "V278_V269_GEM_PROFILE_IDENTITY_DRIFT")
+    return {**pending,
+            "status":measured["status"],
+            "simc_revision":simc_revision,
+            "binary_sha256":binary_sha,
+            "source_profile_sha256":prepared["source_profile_sha256"],
+            "observed":measured,
+            "simc_effective_two_stat_rating_unadmitted":
+                measured["simc_effective_two_stat_rating_unadmitted"],
+            "simc_effective_two_stat_vector_unadmitted":
+                measured["simc_effective_two_stat_vector_unadmitted"],
+            "native_case_receipts":[{
+                "variant":variant,
+                "receipt_path":str(case["folder"]/"receipt.json"),
+                "receipt_sha256":file_sha(case["folder"]/"receipt.json"),
+                "cache_reused":case["cache_reused"]}
+                for variant,case in zip(("baseline","active"),cases)],
+            "new_native_calls":calls}
+
