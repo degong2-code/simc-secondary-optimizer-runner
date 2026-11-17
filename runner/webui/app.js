@@ -162,11 +162,16 @@ const number = (value,decimals=0) =>
       maximumFractionDigits:decimals}) : "–";
 
 
-/* v353: task-first views. A tab switch never changes a SimC session. */
+/* v353 task-first views. A tab switch never changes a SimC session.
+   v571: a new browser may have no active session but saved local sessions.
+   The results view owns the visible saved-session picker. */
 let currentView="optimizer";
+function resultsAvailable(){
+  return Boolean(state.session)||$("recent-session-id").options.length>1;
+}
 function switchView(view) {
   if(!["optimizer","settings","results"].includes(view))return;
-  if(view==="results"&&!state.session)return;
+  if(view==="results"&&!resultsAvailable())return;
   currentView=view;
   for(const panel of document.querySelectorAll("[data-view-panel]"))
     panel.hidden=panel.dataset.viewPanel!==view;
@@ -180,7 +185,8 @@ function switchView(view) {
   window.scrollTo({top:0,behavior:"auto"});
 }
 function refreshResultNavigation() {
-  $("results-nav-btn").hidden=!state.session;
+  // Read-only local index can unlock the restore page, NOT a new SimC run.
+  $("results-nav-btn").hidden=!resultsAvailable();
 }
 function updateManualTMode() {
   const manual=$("manual-t-mode").checked;
@@ -3002,6 +3008,7 @@ async function loadRecentSessions() {
   }
   if(Array.from(list.options).some(x=>x.value===selected))list.value=selected;
   $("recent-open-btn").disabled=!list.value;
+  refreshResultNavigation();
   $("recent-session-note").textContent=
     "현재 PC의 기록 "+(list.options.length-1)+"개 · Native 0회 · "+
     "특성·장비·로컬 경로는 목록에 포함되지 않음";
