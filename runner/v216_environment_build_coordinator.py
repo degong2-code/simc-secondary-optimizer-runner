@@ -7331,12 +7331,36 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             gem_candidates["candidate_count"])
                         progress["ordinary_gem_source_candidate_status_unadmitted"]=(
                             gem_candidates["status"])
+                    unresolved_j_source=(
+                        nominal_four_stat_source is None and
+                        observed.get(
+                            "four_stat_ordinary_source_complete_unadmitted"
+                        ) is not True and
+                        source_selected_gem_roles["special_gem_id"] is None)
+                    pinned_dbc_j_preview=None
+                    if unresolved_j_source:
+                        # The ORIGINAL v275/v211/v296 generated DBC is
+                        # already sealed and includes unbuffed static effects.
+                        # Try exact source points before any new v269 Native.
+                        pinned_dbc_j_preview=(
+                            _fresh_pinned_dbc_ordinary_gem_j_source(
+                                candidates=source_compilation.get(
+                                    "ordinary_gem_v221_v230_source_candidates_unadmitted"),
+                                collected=collected,
+                                stage_root=source_compilation["stage_root"],
+                                simc_revision=source_compilation["simc_revision"]))
+                        progress["four_stat_pinned_dbc_j_status_unadmitted"]=(
+                            pinned_dbc_j_preview["status"])
+                        source_compilation[
+                            "four_stat_pinned_dbc_j_source_unadmitted"
+                        ]=pinned_dbc_j_preview
                     native_j_preview=None
-                    if (nominal_four_stat_source is None and
-                            observed.get(
-                                "four_stat_ordinary_source_complete_unadmitted"
-                            ) is not True and
-                            source_selected_gem_roles["special_gem_id"] is None):
+                    if (unresolved_j_source and
+                            (pinned_dbc_j_preview is None or
+                             pinned_dbc_j_preview["status"]!=
+                              "PINNED_SIMC_DBC_FOUR_STAT_J_STATIC_UNADMITTED")):
+                        # v548 remains a bounded fallback, never all-gem
+                        # Native fanout when stat families are ambiguous.
                         native_j_preview=_fresh_four_stat_simc_observed_j_preview(
                             candidates=source_compilation.get(
                                 "ordinary_gem_v221_v230_source_candidates_unadmitted"),
@@ -7394,6 +7418,18 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                             j_owner_diagnostic["original_v266_raw_gate_bypassed"]=True
                             j_owner_diagnostic["J_numeric_next_owner"]=(
                                 "SEASON_NOMINAL_PER_ITEM_TOTAL_SUPPLIED_UNADMITTED")
+                        elif (type(pinned_dbc_j_preview) is dict and
+                              pinned_dbc_j_preview.get("status")==
+                              "PINNED_SIMC_DBC_FOUR_STAT_J_STATIC_UNADMITTED"):
+                            # Source-only J from authenticated v275/v296 raw
+                            # stat points. Quality, same-effect applicability,
+                            # user READY and official v222/v212 remain distinct.
+                            ordinary=physical_gems.ordinary_four_stat_default(
+                                observed_by_stat=pinned_dbc_j_preview["by_stat"],
+                                socket_total=target_sockets,
+                                special_gem_id=None,need=need)
+                            zero_history_gem_ratings=dict(
+                                pinned_dbc_j_preview["rating_by_id"])
                         elif (type(native_j_preview) is dict and
                               native_j_preview.get("status")==
                               "FOUR_STAT_SIMC_RATINGS_OBSERVED_UNADMITTED"):
@@ -7437,7 +7473,11 @@ def build_environment(*, sessions_root, session_folder, user, binary, revision,
                         progress["four_stat_ordinary_source_selection_unadmitted"]=(
                             nominal_four_stat_source["by_stat"]
                             if nominal_four_stat_source is not None else
-                            native_j_preview["by_stat"]
+                            pinned_dbc_j_preview["by_stat"]
+                            if type(pinned_dbc_j_preview) is dict and
+                            pinned_dbc_j_preview.get("status")==
+                                "PINNED_SIMC_DBC_FOUR_STAT_J_STATIC_UNADMITTED"
+                            else native_j_preview["by_stat"]
                             if type(native_j_preview) is dict and
                             native_j_preview.get("status")==
                                 "FOUR_STAT_SIMC_RATINGS_OBSERVED_UNADMITTED"
