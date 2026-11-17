@@ -41,6 +41,30 @@ class SelectedOneSpecNativeZero(unittest.TestCase):
         user={"character":{"class":"mage","spec":"frost"}}
         return source,calc,user,selected
 
+    def test_fury_fresh_installed_auto_budget_never_borrows_general_G(self):
+        import v106_user_session_controller as sessions
+        with tempfile.TemporaryDirectory() as td:
+            root=pathlib.Path(td)
+            binary=root/"fake_simc"
+            binary.write_bytes(b"NO_NATIVE")
+            user=sessions.user_scenario(
+                sessions.standard_controls(("warrior","fury")))
+            user["oil_hands"]=[]
+            target=root/"not_created"
+            with self.assertRaisesRegex(
+                    user_product.UserScenarioBlocked,
+                    "FRESH_FURY_DISTINCT_G_AUTO_BUDGET_SOURCE_REQUIRED"):
+                user_product.build(
+                    user,target,binary,"abcdef0",
+                    current_season_product=True,
+                    fresh_installed_environment_path=root/"not_an_install.json",
+                    season_source_bundle={
+                        "schema":"v098_internal_season_source_bundle_v1",
+                        "gear":{},"tier":{},"budget":{},"settings":{}},
+                    season_original_source_paths={},
+                    season_profile_inputs={})
+            self.assertFalse(target.exists())
+
     def test_valid_new_mage_source_is_reused_without_native(self):
         with tempfile.TemporaryDirectory() as td:
             source,calc,user,selected=self.example(td)
