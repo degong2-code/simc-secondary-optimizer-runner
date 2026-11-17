@@ -6091,7 +6091,10 @@ def _fresh_source_owner_native_G_component(*, native_G, preflight,
         except (OSError,ValueError,TypeError) as exc:
             raise EnvironmentBuildBlocked(
                 "V216_G_REFERENCE_TRACK_SOURCE_RECEIPT_INVALID") from exc
-        need(prepared.get("schema")==g_probe_profile.SCHEMA and
+        need(prepared.get("receipt_sha256")==simc_source.digest(
+                simc_source.canonical({k:v for k,v in prepared.items()
+                    if k!="receipt_sha256"}).encode("utf8")) and
+             prepared.get("schema")==g_probe_profile.SCHEMA and
              prepared.get("status")==
                 "EXACT_SIMC_SOURCE_PROFILE_PREPARED_NOT_EXECUTED" and
              prepared.get("receipt_sha256")==
