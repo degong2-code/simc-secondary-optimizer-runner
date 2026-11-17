@@ -3638,12 +3638,14 @@ function registerHandlers() {
     if(selected)fillDefault(selected);
     drawClassSpecTiles();
     buttonState(state.running,state.longrunResultReady);
+    if(state.oilCatalog)void withBusy(refreshInstalledOilLoadouts);
   });
   $("spec").addEventListener("change",()=>{
     const selected=state.defaults.find(d=>d.class+"/"+d.spec===field("spec"));
     if(selected)fillDefault(selected);
     drawClassSpecTiles();
     buttonState(state.running,state.longrunResultReady);
+    if(state.oilCatalog)void withBusy(refreshInstalledOilLoadouts);
   });
   $("race").addEventListener("change",()=>buttonState(state.running,state.longrunResultReady));
   $("ilevel").addEventListener("input",()=>{
@@ -3804,16 +3806,6 @@ async function initialize() {
       $("season-option-catalog-status").textContent=
         "시즌 마법부여 데이터 조회 실패 · 기존 승인 선택을 유지합니다: "+err.message;
     }
-    // Read-only local choices. No SimC, new approval or source downloads.
-    try{await refreshInstalledOilLoadouts();}
-    catch(err){$("optimizer-oil-loadout-status").textContent=
-      "검증 설치 기름 목록 조회 실패: "+err.message;}
-    // Local verified season only: zero external API calls on web startup.
-    if(state.oilCatalog?.game_build) {
-      try{await refreshOfficialGameTerms(state.oilCatalog.game_build);}
-      catch(err){$("season-terms-status").textContent=
-        "공식 한국어 용어 조회 오류 · 기존 표기 유지";}
-    }
     // Read-only local status. No remote release lookup on page load.
     try{await refreshSimcUpdater(false);}catch(err){
       $("simc-update-status").textContent="SimC 관리 상태 조회 오류: "+err.message;
@@ -3831,6 +3823,20 @@ async function initialize() {
       $("class-choice").value=first.class;
       populateSpecializationsForClass(first.class,first.class+"/"+first.spec);
       fillDefault(first);
+    }
+    // v579: select the real specialization/weapon form BEFORE the local
+    // verified-O lookup. The sole default-on oil can then bind one exact
+    // installed F/J/O SHA, not just populate the physical ItemID fields.
+    // One existing read-only HTTP GET; no Build or additional Native.
+    // Read-only local choices. No SimC, new approval or source downloads.
+    try{await refreshInstalledOilLoadouts();}
+    catch(err){$("optimizer-oil-loadout-status").textContent=
+      "검증 설치 기름 목록 조회 실패: "+err.message;}
+    // Local verified season only: zero external API calls on web startup.
+    if(state.oilCatalog?.game_build) {
+      try{await refreshOfficialGameTerms(state.oilCatalog.game_build);}
+      catch(err){$("season-terms-status").textContent=
+        "공식 한국어 용어 조회 오류 · 기존 표기 유지";}
     }
     buttonState();
     beginPolling();
