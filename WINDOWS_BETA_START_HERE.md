@@ -1,12 +1,12 @@
 # SIMC Secondary Optimizer — Windows 로컬 베타 시작
 
-## 2026-11-17 최신 일반 사용자 흐름 및 배포 ZIP 검증 (v570/v571)
+## 2026-11-17 최신 일반 사용자 흐름 및 배포 ZIP 검증 (v570–v572)
 
 **시즌 G/J/F/O·장신구 원본을 아직 확인하지 않은 첫 실행**에서는 ‘최적 스탯 찾기’ 대신 **‘시즌 환경 준비 · 장신구 목록 불러오기’** 버튼이 나타납니다. 사용자가 동의하면 검증된 동일 시즌 설치를 우선 재사용하고, 없으면 기존 시즌 Build를 실행합니다. READY + **같은 게임 빌드·목표 ilvl·정확한 설치 SHA**의 장신구 목록을 확인한 다음 장신구 2개를 선택하고 **두 번째로 명시적으로 ‘최적 스탯 찾기’를 클릭**해야 적응형 SimC가 실행됩니다. PENDING·취소·SHA 불일치에서는 DPS를 시작하지 않습니다.
 
 **이전 세션 열기:** 상단 ‘결과 확인’ → ‘이 PC의 이전 세션 불러오기’. v571에서는 새 브라우저에 현재 세션이 없더라도 **Windows에 실제 저장된 로컬 세션 목록이 존재할 때** 결과 탭이 보이도록 수정했습니다. 열람 자체는 Native 0회이며 과거 계획을 최신 시즌 승인으로 승격하지 않습니다.
 
-[실제 v570 Windows 최초 Chrome→실 G/J/F/O Build→v212 설치→장신구→SimC DPS·SEM·95%](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44074372451)는 **한 시즌·전문화·ilvl에서 PASS(환경 Native6 + DPS64)**. [v571 Windows ZIP 압축 해제·간편 BAT 실행·브라우저 재시작/저장 세션 복원](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44077852565)은 **279파일 SHA 검증, Native0 PASS**입니다. 단 v571의 Windows CI에는 Python 웹 라이브러리가 미리 갖춰져 있어 신규 Python/pip 최초 설치나 ZIP 안에서 실제 64 Native 취소·재개까지 확인한 것은 아닙니다. ZIP에는 SimC 실행 파일·개인 비밀키·세션·Native 데이터가 포함되지 않으며, 기존에 받은 ZIP은 새 코드로 자동 교체되지 않습니다.
+[실제 v570 Windows 최초 Chrome→실 G/J/F/O Build→v212 설치→장신구→SimC DPS·SEM·95%](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44074372451)는 **한 시즌·전문화·ilvl에서 PASS(환경 Native6 + DPS64)**. [v571 Windows ZIP 압축 해제·간편 BAT 실행·브라우저 재시작/저장 세션 복원](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44077852565)은 **279파일 SHA 검증, Native0 PASS**입니다. **추가 [v572 실제 Windows ZIP 중단·재시작·재개 시험](https://github.com/degong2-code/simc-secondary-optimizer-runner/actions/runs/44082378854)도 PASS**: 같은 시즌 빌드의 v216/v212 환경 Native3, 실제 적응형 세션(누적 상한64)의 DPS Native **2회 후 중단 → BAT·Chrome 재시작/저장 세션 복원 → 기존 Native SHA 보존 → 신규 DPS Native2회 추가 후 중단**, 누적 DPS4회입니다. **부분 탐색이 안전하게 이어진 증거이며 64회 완료/95% 통계 확정은 아닙니다.** Windows CI에는 Python 웹 라이브러리가 미리 갖춰져 있으므로 사용자 PC의 Python/pip/winget 신규 설치와 개인 PC 실사용은 여전히 별도 검증입니다. ZIP에는 SimC 실행 파일·개인 비밀키·세션·Native 데이터가 포함되지 않으며, 기존에 받은 ZIP은 새 코드로 자동 교체되지 않습니다.
 
 ---
 
