@@ -197,6 +197,21 @@ function updateManualTMode() {
   if(!manual)$("final_T").value="";
   updateBudgetPreview();
 }
+// Used by BOTH first-click season setup and the final request builder.
+// The mode checkbox owns authority, not a stale/empty hidden text input.
+function manualFinalTOrNull() {
+  if(!$("manual-t-mode").checked)return null;
+  const input=$("final_T");
+  if(!field("final_T")){
+    input.reportValidity();
+    throw Error("수동 최종 T를 입력해야 합니다. 비워 두면 자동 예산으로 실행하지 않습니다.");
+  }
+  if(!input.checkValidity()){
+    input.reportValidity();
+    throw Error("수동 최종 T는 1~100000 범위의 정수로 입력해야 합니다.");
+  }
+  return valueInt("final_T");
+}
 // Follow the user's target ilvl for the ordinary season Build unless the
 // advanced common-environment ilvl was explicitly edited. This avoids
 // costly source/Native setup at a different level by default.
@@ -1696,13 +1711,8 @@ function buildRequest() {
     openEquipmentPicker($(!field("trinket1")?"trinket1":"trinket2"));
     throw Error("장신구 두 개를 이번 시즌 목록에서 선택해 주세요.");
   }
-  // v576: manual mode is authoritative; an absent/invalid T cannot
-  // silently fall back to the verified season's automatic total.
-  const manualFinalT=$("manual-t-mode").checked;
-  if(manualFinalT && !field("final_T")){
-    $("final_T").reportValidity();
-    throw Error("수동 최종 T를 입력해야 합니다. 비워 두면 자동 예산으로 실행하지 않습니다.");
-  }
+  // v576: manual total is authoritative. Validate before planning.
+  const manualFinalT=manualFinalTOrNull();
   if(!$("optimizer-form").reportValidity()) throw Error("필수 입력과 수치 범위를 확인해 주세요.");
   const spec=field("spec");
   const source=state.defaults.find(d=>d.class+"/"+d.spec===spec);
@@ -1732,7 +1742,7 @@ function buildRequest() {
   const controls={
     class:source.class,spec:source.spec,
     race:resolvedRace,talents:field("talents"),
-    ilevel:valueInt("ilevel"),final_T:manualFinalT?valueInt("final_T"):null,
+    ilevel:valueInt("ilevel"),final_T:manualFinalT,
     max_single_stat_percent:valueInt("max-single-stat-percent"),
     trinket_ids:[valueInt("trinket1"),valueInt("trinket2")],
     oil_hands:["main_hand","off_hand"].filter(
@@ -3720,6 +3730,8 @@ function registerHandlers() {
     await pollOnce();
   }));
   $("start-btn").addEventListener("click",()=>withBusy(async()=>{
+    // Missing manual T cannot trigger expensive season/native preparation.
+    manualFinalTOrNull();
     // Missing season: first explicit click builds and seals gear only.
     if(await prepareSeasonBeforeOptimizerStart())return;
     // This is the only new-job action. Never start SimC on page load or refresh.
