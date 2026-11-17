@@ -1953,8 +1953,12 @@ class LocalJobs:
                 raise environment_manifest.EnvironmentBlocked(
                     "WEB_USER_VARIANT_REQUIRES_VERIFIED_SEASON_INSTALL")
             if pinned_build is not None and fresh is None:
-                # An explicit installed build must NEVER silently fall back
-                # to a packaged/default/current or earlier season profile.
+                # An explicit installed build never falls back to another
+                # season or G track. Tell an automatic Fury user which
+                # missing representative budget actually prevents planning.
+                if requested_G_track=="fury_dual_2h":
+                    raise environment_manifest.EnvironmentBlocked(
+                        "WEB_FRESH_FURY_DISTINCT_G_AUTO_BUDGET_SOURCE_REQUIRED")
                 raise environment_manifest.EnvironmentBlocked(
                     "WEB_SELECTED_INSTALLED_SEASON_BUILD_NOT_FOUND")
             if exact_oils and fresh is None:
