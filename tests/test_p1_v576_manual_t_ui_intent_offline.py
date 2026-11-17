@@ -67,8 +67,8 @@ const factory=Function("state","$","field","valueInt",
   "simcRace","seasonChoice","selectedGear",
   "exactUserEnchantInputsMatch","selectedFullVerifiedOil",
   "verifiedInstalledGearScopeMatchesRun","oilUseIntent",
-  source+"\nreturn {updateManualTMode,buildRequest};");
-const {updateManualTMode,buildRequest}=factory(state,$,field,valueInt,
+  source+"\nreturn {updateManualTMode,manualFinalTOrNull,buildRequest};");
+const {updateManualTMode,manualFinalTOrNull,buildRequest}=factory(state,$,field,valueInt,
   updateBudgetPreview,switchView,openEquipmentPicker,
   simcRace,seasonChoice,selectedGear,exactUserEnchantInputsMatch,
   selectedFullVerifiedOil,verifiedInstalledGearScopeMatchesRun,false);
@@ -87,6 +87,10 @@ $("augmentation").value="none";$("diamond").value="0";
 $("omnium").value="";
 $("optimizer-form").reportValidity=()=>{
   const t=$("final_T");
+  return t.checkValidity();
+};
+$("final_T").checkValidity=()=>{
+  const t=$("final_T");
   return !t.required||(/^[0-9]+$/.test(t.value)&&
     Number(t.value)>=1&&Number(t.value)<=100000);
 };
@@ -98,11 +102,13 @@ assert.strictEqual($("manual-t-field").hidden,false);
 assert.throws(()=>buildRequest(),/수동 최종 T를 입력해야 합니다/);
 for(const bad of ["0","100001","-1","1.5","garbage"]){
   $("final_T").value=bad;
-  assert.throws(()=>buildRequest(),/필수 입력과 수치 범위를 확인/);
+  assert.throws(()=>buildRequest(),/수동 최종 T는 1~100000/);
+  assert.throws(()=>manualFinalTOrNull(),/수동 최종 T는 1~100000/);
 }
 // Manual final T deliberately differs from verified installed automatic 3107.
 $("final_T").value="3414";
 const manual=buildRequest();
+assert.strictEqual(manualFinalTOrNull(),3414);
 assert.strictEqual(manual.controls.final_T,3414);
 assert.strictEqual(manual.controls.ilevel,334);
 assert.deepStrictEqual(manual.controls.trinket_ids,[270175,270173]);
@@ -115,9 +121,11 @@ updateManualTMode();
 assert.strictEqual($("final_T").required,false);
 assert.strictEqual($("final_T").disabled,true);
 assert.strictEqual($("final_T").value,"");
+assert.strictEqual(manualFinalTOrNull(),null);
 assert.strictEqual(buildRequest().controls.final_T,null);
 // A stale disabled value must not override an explicitly selected auto mode.
 $("final_T").value="3414";
+assert.strictEqual(manualFinalTOrNull(),null);
 assert.strictEqual(buildRequest().controls.final_T,null);
 $("manual-t-mode").checked=true;updateManualTMode();
 assert.strictEqual(buildRequest().controls.final_T,3414);
@@ -132,8 +140,12 @@ assert.strictEqual(buildRequest().controls.final_T,3414);
         self.assertIn('id="manual-t-mode" type="checkbox"',html)
         self.assertIn('id="final_T" type="number" min="1" max="100000"',html)
         self.assertIn('$("final_T").required=manual;',js)
-        self.assertIn('final_T:manualFinalT?valueInt("final_T"):null',js)
-        self.assertIn('if(manualFinalT && !field("final_T"))',js)
+        self.assertIn('final_T:manualFinalT,',js)
+        self.assertIn('if(!field("final_T"))',js)
+        self.assertIn('const manualFinalT=manualFinalTOrNull();',js)
+        first=js.index('$("start-btn").addEventListener("click",')
+        self.assertLess(js.index('manualFinalTOrNull();',first),
+                        js.index('if(await prepareSeasonBeforeOptimizerStart())return;',first))
         self.assertNotIn('final_T:field("final_T") ? valueInt("final_T"):null',js)
 
 if __name__=="__main__":unittest.main()
