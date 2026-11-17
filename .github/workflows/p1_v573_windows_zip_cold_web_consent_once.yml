@@ -1,0 +1,63 @@
+name: P1 v573 Windows ZIP Cold Web Dependency Consent and First Chrome (Native 0)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p1_v573_windows_zip_cold_web_consent_once.yml
+      - integration_probes/p1_v573_windows_zip_cold_web_setup_consent_once.py
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v573-one-win-zip-setup-native-zero
+  cancel-in-progress: false
+jobs:
+  one-actual-extracted-zip-setup:
+    if: ${{ contains(github.event.head_commit.message, '[v573-win-setup-once]') }}
+    runs-on: windows-2022
+    timeout-minutes: 24
+    steps:
+      - name: Preserve original source bytes on Windows
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false, fetch-depth: 2}
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Use original already-verified current source-only Windows ZIP
+        uses: actions/download-artifact@v4
+        with:
+          repository: degong2-code/simc-secondary-optimizer-runner
+          run-id: 44083447750
+          name: v181-windows-source-beta-44083447750
+          path: .v573-original-zip
+          github-token: ${{ github.token }}
+      - name: Setup CI-only Selenium; no product python or SimC changed
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $zip=Join-Path $PWD '.v573-original-zip/SIMC_SECONDARY_OPTIMIZER_WINDOWS_BETA.zip'
+          if (!(Test-Path $zip -PathType Leaf)) { throw 'V573_VERIFIED_BETA_ZIP_MISSING' }
+          "V573_ZIP=$zip" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          python -m pip install -r requirements-web-test.txt 'selenium>=4.24,<5'
+          if ($LASTEXITCODE -ne 0) { throw 'V573_CI_HARNESS_DEPENDENCY_FAILED' }
+          python -m py_compile integration_probes/p1_v573_windows_zip_cold_web_setup_consent_once.py
+          if ($LASTEXITCODE -ne 0) { throw 'V573_SCRIPT_SYNTAX_DRIFT' }
+          node --check runner/webui/app.js
+          if ($LASTEXITCODE -ne 0) { throw 'V573_JS_SYNTAX_DRIFT' }
+      - name: Real extracted BAT no-consent, then yes-install clean venv, then real Chrome (Native 0)
+        shell: pwsh
+        timeout-minutes: 15
+        run: |
+          python -u integration_probes/p1_v573_windows_zip_cold_web_setup_consent_once.py --zip "$env:V573_ZIP" --out out/v573
+          if ($LASTEXITCODE -ne 0) { throw 'V573_FIRST_WEB_SETUP_UNVERIFIED' }
+      - name: Save compact no-secret receipt only; exclude user venv/cache/files
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v573-windows-zip-first-web-setup-receipt
+          path: out/v573/V573_WINDOWS_COLD_SETUP_EXPLICIT_CONSENT_COMPACT.json
+          retention-days: 9
+          if-no-files-found: warn
