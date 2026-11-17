@@ -511,6 +511,52 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
                 self.jobs._verify_environment_dependencies(summary,folder)
 
 
+    def test_fresh_restart_enforces_source_G_track_before_worker(self):
+        # A saved plan may be resumed after the original in-memory Build
+        # is gone. The same sealed v212 SHA cannot fund a different spec G.
+        folder=self.root/("f"*20)
+        folder.mkdir()
+        identity=folder/"V106_SESSION_IDENTITY.json"
+        summary={"fresh_v212_installed_manifest_sha256":self.digest,
+                 "target_ilevel":334,"game_build":self.build}
+        cases=(
+            (("warrior","fury"),None,"general",False),
+            (("warrior","fury"),None,"fury_dual_2h",True),
+            (("warrior","fury"),3500,"general",True),
+            (("mage","frost"),None,"fury_dual_2h",False),
+            (("mage","frost"),None,"general",True),
+        )
+        with (mock.patch.object(web.environment_manifest,
+                                "verify_fresh_installed_environment"),
+              mock.patch.object(
+                  web.environment_build,
+                  "find_verified_installed_season_environment",
+                  return_value={"installed_manifest_sha256":self.digest}),
+              mock.patch.object(web.subprocess,"Popen") as native):
+            for pair,manual_T,track,accepted in cases:
+                with self.subTest(spec=pair,manual_T=manual_T,track=track):
+                    controls=web.sessions.standard_controls(pair)
+                    controls["final_T"]=manual_T
+                    user=web.sessions.user_scenario(controls)
+                    identity.write_text(json.dumps({
+                        "user":user,
+                        "fresh_v212_installed_manifest_sha256":self.digest}))
+                    installed={**self.installed_doc}
+                    if track=="fury_dual_2h":
+                        installed["official_G_reference_track"]=track
+                    self.installed.write_text(json.dumps(installed))
+                    if accepted:
+                        self.assertEqual(
+                            self.jobs._verify_environment_dependencies(
+                                summary,folder),{})
+                    else:
+                        with self.assertRaisesRegex(
+                            web.environment_manifest.EnvironmentBlocked,
+                            "WEB_FRESH_SESSION_G_REFERENCE_TRACK_MISMATCH"):
+                            self.jobs._verify_environment_dependencies(
+                                summary,folder)
+                    native.assert_not_called()
+
     def test_v217_source_snapshot_recovers_fresh_new_session_after_restart(self):
         with (
             mock.patch.object(web.environment_manifest,
