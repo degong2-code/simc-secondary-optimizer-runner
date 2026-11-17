@@ -113,6 +113,9 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
             response=self.jobs.plan(params)
         self.assertEqual(response["status"],"READY_ZERO_NATIVE")
         self.assertEqual(response["native_calls"],0)
+        # New-season v212 proof does not certify all 26 DPS with the
+        # unrelated historical v176 physical-Native receipt.
+        self.assertFalse(response["plan"]["v176_26_of_26_base_physical_native"])
         exact_install.assert_called_once_with(
             334,self.build,selected_oil_hands=[],
             selected_oil_item_ids_by_hand=None)
