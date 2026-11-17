@@ -1,0 +1,90 @@
+name: P1 v580 ONE Genuine Windows Chrome O-Positive Verified SHA + Manual T Plan (DPS Native 0)
+on:
+  push:
+    branches: [probe/chat-cache-v035-20261024]
+    paths:
+      - .github/workflows/p1_v580_windows_real_oil_chrome_manual_t_once.yml
+      - integration_probes/p1_v580_windows_real_oil_chrome_manual_t_once.py
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: p1-v580-once-real-oil-chrome-no-dps
+  cancel-in-progress: false
+jobs:
+  real-source-to-actual-chrome-user-form:
+    if: ${{ contains(github.event.head_commit.message, '[v580-real-oil-chrome-once]') }}
+    runs-on: windows-2022
+    timeout-minutes: 35
+    env:
+      PYTHONPATH: runner;integration_probes;.
+      SIMC_PINNED_SOURCE_COMMIT: de11f57df75dda668bae6ac7043a43b98831fa96
+      SIMC_PINNED_GAME_BUILD: 12.1.5.70783
+      SIMC_PINNED_BINARY_SHA256: 1fc927d2be7f1b6064c75f004b5b22245b064a6b3e56e572af4048ba822a986d
+      SIMC_SOURCE_GITHUB_API_TOKEN: ${{ github.token }}
+      BLIZZARD_CLIENT_ID: ${{ secrets.BLIZZARD_CLIENT_ID }}
+      BLIZZARD_CLIENT_SECRET: ${{ secrets.BLIZZARD_CLIENT_SECRET }}
+      WCL_CLIENT_ID: ${{ secrets.WCL_CLIENT_ID }}
+      WCL_CLIENT_SECRET: ${{ secrets.WCL_CLIENT_SECRET }}
+    steps:
+      - name: Disable source CRLF conversion
+        shell: pwsh
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+      - uses: actions/checkout@v5
+        with: {persist-credentials: false, fetch-depth: 2}
+      - name: "Explicitly scoped one-shot: no broader new Native experiments"
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $changed=@(git diff-tree --no-commit-id --name-only -r $env:GITHUB_SHA)
+          $allowed=@('.github/workflows/p1_v580_windows_real_oil_chrome_manual_t_once.yml',
+                     'integration_probes/p1_v580_windows_real_oil_chrome_manual_t_once.py')
+          if (@($changed | Where-Object {$_ -notin $allowed}).Count -gt 0) { throw 'V580_UNSCOPED_NATIVE_RUN_REFUSED' }
+          if ($changed.Count -lt 1 -or $changed.Count -gt 2) { throw 'V580_ONESHOT_OPTIN_REQUIRED' }
+      - uses: actions/setup-python@v6
+        with: {python-version: '3.12'}
+      - name: Reuse official pinned same-build SimC Windows binary
+        uses: actions/download-artifact@v4
+        with:
+          repository: simulationcraft/simc-publish
+          run-id: 42956947906
+          name: simc-nightly-win64-midnight
+          path: .v580-official-simc
+          github-token: ${{ github.token }}
+      - name: SHA verify original standalone SimC and install CI-only Chrome driver
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $arc=Join-Path $PWD '.v580-official-simc/simc-1210.01.de11f57-win64.7z'
+          if (!(Test-Path $arc -PathType Leaf)) { throw 'V580_ORIGINAL_OFFICIAL_ARCHIVE_MISSING' }
+          if ((Get-FileHash -Algorithm SHA256 $arc).Hash.ToLowerInvariant() -ne 'a4c4d5e7b349172d80897721daa3e849ce25874a82bbdfb96aeab4dbdc560eb0') { throw 'V580_SIMC_ARCHIVE_SHA_MISMATCH' }
+          New-Item -ItemType Directory -Force .v580-external-simc | Out-Null
+          & 'C:\Program Files\7-Zip\7z.exe' x '-o.v580-external-simc' -y -bd $arc | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'V580_ARCHIVE_EXTRACT_FAILED' }
+          $exe=@(Get-ChildItem .v580-external-simc -Recurse -File -Filter simc.exe)
+          if ($exe.Count -ne 1) { throw 'V580_EXACT_ONE_SIMC_EXE_REQUIRED' }
+          if ((Get-FileHash -Algorithm SHA256 $exe[0].FullName).Hash.ToLowerInvariant() -ne $env:SIMC_PINNED_BINARY_SHA256) { throw 'V580_ORIGINAL_SIMC_BINARY_SHA_CHANGED' }
+          "V580_EXE=$($exe[0].FullName)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          python -m pip install -r requirements-web-test.txt 'selenium>=4.24,<5'
+          if ($LASTEXITCODE -ne 0) { throw 'V580_CI_CHROME_DEPENDENCIES_FAILED' }
+          python -m py_compile integration_probes/p1_v580_windows_real_oil_chrome_manual_t_once.py
+          if ($LASTEXITCODE -ne 0) { throw 'V580_PROBE_SYNTAX_INVALID' }
+          node --check runner/webui/app.js
+          if ($LASTEXITCODE -ne 0) { throw 'V580_PRODUCT_JS_SYNTAX_INVALID' }
+      - name: Original source build selected F/O -> actual Chrome form/auto SHA -> original HTTP plan, no DPS
+        shell: pwsh
+        timeout-minutes: 25
+        run: |
+          New-Item -ItemType Directory -Force out/v580 | Out-Null
+          python -u integration_probes/p1_v580_windows_real_oil_chrome_manual_t_once.py --simc "$env:V580_EXE" --out out/v580
+          if ($LASTEXITCODE -ne 0) { throw 'V580_ACTUAL_CHROME_FIRST_BLOCKER_IN_COMPACT_RECEIPT' }
+      - name: Retain only bounded SHA/budget/count receipt; never upload credentials or user files
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: p1-v580-one-actual-chrome-physical-oil-manual-T
+          path: out/v580/V580_REAL_CHROME_POSITIVE_OIL_MANUAL_T_COMPACT.json
+          retention-days: 10
+          if-no-files-found: warn
