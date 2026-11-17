@@ -529,7 +529,7 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
                 {**case_map[str(ids[0])][0],"receipt_sha256":"f"*64},
                 case_map[str(ids[0])][1]]}}
         with self.assertRaisesRegex(v216.EnvironmentBuildBlocked,
-                                    "V216_NATIVE_J_SEALED_RECEIPT_SHA_DRIFT"):
+                                    "V216_NATIVE_J_SOURCE_REPRESENTATIVE_RATING_OR_ID_DRIFT"):
             v216._fresh_match_simc_native_ordinary_j(
                 preview=altered,layout=layout,ratings=ratings,
                 link=link,game_build=build,simc_revision=rev)
