@@ -165,6 +165,14 @@ def run(binary,output_dir,*,source_only=False):
                 "native_J_reason":n_j.get("reason"),
                 "native_J_candidate_count":
                     n_j.get("highest_quality_candidate_count"),
+                "named_tier_directions":
+                    len(n_j.get("source_named_tier_structure") or []),
+                "native_J_distinct_scale_signatures":
+                    n_j.get("numeric_signature_count"),
+                "native_J_real_sample_ids":
+                    n_j.get("measured_candidate_ids"),
+                "native_J_selected_item_source_proofs":
+                    n_j.get("selected_numeric_source_proofs_by_item_id"),
                 "native_J_measured_candidate_count":
                     len(n_j.get("native_observations_unadmitted") or []),
                 "native_J_new_calls":n_j.get("new_native_calls"),
