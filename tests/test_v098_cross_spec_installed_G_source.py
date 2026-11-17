@@ -41,13 +41,17 @@ class CrossSpecInstalledPhysicalReference(unittest.TestCase):
         self.assertIs(actual,candidate)
         self.assertFalse(fallback)
 
-    def test_new_mage_must_not_inherit_paladin_physical_G_items(self):
+    def test_other_specs_do_not_inherit_paladin_physical_G_items(self):
         candidate,calculation=self.fixture()
-        actual,fallback=user_product._choose_user_specific_fresh_G_source(
-            candidate,user={"character":{"class":"mage","spec":"frost"}},
-            calculation=calculation)
-        self.assertIsNone(actual)
-        self.assertTrue(fallback)
+        # Historical Native physical acceptance is not a season-neutral
+        # per-spec G receipt. Fury's dual-2H budget has a separate track.
+        for cls,spec in (("mage","frost"),("warrior","fury")):
+            with self.subTest(cls=cls,spec=spec):
+                actual,fallback=user_product._choose_user_specific_fresh_G_source(
+                    candidate,user={"character":{"class":cls,"spec":spec}},
+                    calculation=calculation)
+                self.assertIsNone(actual)
+                self.assertTrue(fallback)
 
     def test_original_source_sha_build_revision_or_ilvl_drift_fails(self):
         candidate,calculation=self.fixture()
