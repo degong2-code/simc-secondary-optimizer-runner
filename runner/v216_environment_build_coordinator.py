@@ -6337,8 +6337,9 @@ def _fresh_source_owner_selected_J_F_numeric(*, preflight, compilation,
     elif (type(j) is dict and type(layout) is dict and
           type(link) is dict and j.get("rating_origin")==
               "SIMC_NATIVE_CONTROLLED_TWO_SECONDARY"):
-        # Original v269/v278 actual physical gem_id, original v046 JSON2
-        # gear-static CHMV; not talent-buffed totals or guessed DBC scaling.
+        # Original v269/v278 controlled physical gem_id stat deltas, and
+        # v230/v296 identical scaling signatures for source-equivalent
+        # unmeasured selected IDs. Do not forge per-item Native receipts.
         preview=compilation.get("four_stat_simc_native_j_source_unadmitted")
         candidate=compilation.get(
             "ordinary_gem_v221_v230_source_candidates_unadmitted")
@@ -6374,10 +6375,21 @@ def _fresh_source_owner_selected_J_F_numeric(*, preflight, compilation,
                           for row in candidate["candidates_unadmitted"]}
         selected_quality={
             str(i):original_quality[i] for i in sorted(set(ids))}
-        receipts={str(i):[
-            row["receipt_sha256"] for row in
-            preview["native_case_receipts_by_id"][str(i)]]
-            for i in sorted(set(ids))}
+        source_proofs=preview["selected_numeric_source_proofs_by_item_id"]
+        # Receipts refer ONLY to the actual representative Native sample.
+        # Each selected ID keeps its own source-equivalence proof separately.
+        receipts={str(i):{
+            "physical_item_id":i,
+            "actual_native_representative_item_id":
+                source_proofs[str(i)]["representative_item_id"],
+            "source_coefficient_signature":
+                source_proofs[str(i)]["source_coefficient_signature"],
+            "numeric_origin":source_proofs[str(i)]["numeric_source"],
+            "actual_representative_receipt_sha256":[
+                receipt["receipt_sha256"] for receipt in
+                preview["native_case_receipts_by_id"].get(
+                    str(source_proofs[str(i)]["representative_item_id"]),[])]
+            } for i in sorted(set(ids))}
         source={"kind":"nominal_ordinary_gem_J",
                 "numeric_source_owner":
                     "SIMC_NATIVE_CONTROLLED_GEM_DELTA",
@@ -6394,7 +6406,7 @@ def _fresh_source_owner_selected_J_F_numeric(*, preflight, compilation,
                 "v296_sealed_dbc_source_sha256":preview["source_sha256"],
                 "source_measured_highest_quality_candidate_ids":
                     list(preview["measured_candidate_ids"]),
-                "native_case_receipt_sha256_by_item_id":receipts,
+                "sample_and_source_equivalence_by_selected_item_id":receipts,
                 "ordinary_gem_item_ids":list(ids),
                 "special_gem_item_id":None,
                 "per_item_nominal_rating":dict(preview["rating_by_id"])}
@@ -6574,9 +6586,15 @@ def _fresh_source_owner_observed_J_F_quality(*, preflight, compilation,
                      and native_preview.get("measured_candidate_ids")==
                          sorted(set(native_preview["measured_candidate_ids"]))
                      and len(native_preview["measured_candidate_ids"])==
+                         len(native_preview["native_observations_unadmitted"])
+                     and len(native_preview[
+                         "source_selected_tier_candidate_ids"])==
                          native_preview["highest_quality_candidate_count"]
                      and set(ordinary)<=set(
-                         native_preview["measured_candidate_ids"])
+                         native_preview["source_selected_tier_candidate_ids"])
+                     and set(str(i) for i in ordinary)<=set(
+                         native_preview[
+                         "selected_numeric_source_proofs_by_item_id"])
                      and all(j["per_item_nominal_rating"][str(i)]==
                              native_preview["rating_by_id"][str(i)]
                              for i in ordinary),
@@ -6593,7 +6611,7 @@ def _fresh_source_owner_observed_J_F_quality(*, preflight, compilation,
                     "best_discovered_effect_item_id_source_only":item,
                     "comparable_effect_source_only":True,
                     "comparison_basis":
-                        "SAME_SOURCE_RANK_ACTUAL_SIMC_GEM_DELTA_WINNER"
+                        "TOP_NAMED_TIER_AND_INNER_CRAFT_RANK_FROM_SOURCE_WITH_SAMPLED_SIMC_SIGNATURE"
                 } for item in sorted(set(ordinary))]
             nominal_ranks=j.get("observed_quality_rank_by_id")
             nominal_bound=(j.get("numeric_source_owner")==
