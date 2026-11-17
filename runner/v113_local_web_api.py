@@ -263,7 +263,8 @@ class LocalJobs:
         self._verified_fresh_profile_result = None
         self._current_fresh_game_build = None
 
-    def remember_verified_fresh_environment(self, result):
+    def remember_verified_fresh_environment(self, result, *,
+                                           required_reference_G_track=None):
         """Reuse only original v216/v212 installed READY, never user-supplied JSON."""
         compilation=(result.get("source_compilation")
                      if type(result) is dict else None)
@@ -285,6 +286,11 @@ class LocalJobs:
                 "WEB_FRESH_V212_INSTALLED_FILE_MISSING")
         doc,_=environment_manifest.read_json(path)
         environment_manifest.verify_fresh_installed_environment(doc)
+        if (required_reference_G_track is not None and
+                doc.get("official_G_reference_track","general")!=
+                    required_reference_G_track):
+            raise environment_manifest.EnvironmentBlocked(
+                "WEB_FRESH_INSTALLED_G_REFERENCE_TRACK_CHANGED")
         physical_O=doc.get("official_O_physical_source")
         installed_oils=(physical_O.get("selected_oil_item_ids_by_hand")
                         if type(physical_O) is dict else {})
@@ -1098,7 +1104,8 @@ class LocalJobs:
                     **({"source_ordinary_nominal_by_stat":nominal_source}
                        if nominal_source is not None else {})})
         if observed.get("environment_ready") is True:
-            self.remember_verified_fresh_environment(observed)
+            self.remember_verified_fresh_environment(
+                observed,required_reference_G_track=reference_G_track)
             self.persist_verified_fresh_profile()
         return self._with_verified_ko_localization(
             game_build,target_ilevel,{**observed,"web_environment_scope":{
@@ -1867,6 +1874,10 @@ class LocalJobs:
             remembered_hands=(
                 sorted(fresh.get("verified_oil_item_ids_by_hand",{}))
                 if type(fresh) is dict else [])
+            requested_G_track=(
+                "fury_dual_2h" if key==("warrior","fury") and
+                user["target"]["final_T"] is None else
+                None if key==("warrior","fury") else "general")
             gem_matches=(gem_choice is None or
                          _verified_snapshot_gem_layout_matches(
                              fresh,**gem_choice))
@@ -1895,6 +1906,8 @@ class LocalJobs:
             if params.installed_manifest_sha256 is not None:
                 variant_args["expected_installed_manifest_sha256"]=(
                     params.installed_manifest_sha256)
+            if requested_G_track is not None:
+                variant_args["required_reference_G_track"]=requested_G_track
             if current_season and (
                 pinned_build is not None or
                 fresh is None or
@@ -1943,8 +1956,16 @@ class LocalJobs:
             # remains authoritative; avoid creating a wrong DPS session.
             if (fresh is not None and key==("warrior","fury") and
                     user["target"]["final_T"] is None):
-                raise environment_manifest.EnvironmentBlocked(
-                    "WEB_FRESH_FURY_DISTINCT_G_AUTO_BUDGET_SOURCE_REQUIRED")
+                installed_path=pathlib.Path(
+                    fresh["source_compilation"][
+                        "verified_environment_install"]["stage_output_path"])
+                installed_doc,_=environment_manifest.read_json(installed_path)
+                environment_manifest.verify_fresh_installed_environment(
+                    installed_doc)
+                if installed_doc.get("official_G_reference_track")!=(
+                        "fury_dual_2h"):
+                    raise environment_manifest.EnvironmentBlocked(
+                        "WEB_FRESH_FURY_DISTINCT_G_AUTO_BUDGET_SOURCE_REQUIRED")
             # A legacy/packaged product with no installed v113 snapshot
             # retains its historical v098 oil path. A *verified fresh*
             # snapshot already rejects missing or ambiguous physical O
