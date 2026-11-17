@@ -154,9 +154,11 @@ class ManualPositiveOilInstalledBridge(unittest.TestCase):
                 accounting.retarget_verified_install(
                     document=doc,manual_final_T=SYNTHETIC_O)
             bad=copy.deepcopy(selection)
-            bad["user_final_T"]=SYNTHETIC_O
+            # Legacy v061 requires positive internal B; give it B=1,
+            # which is validly typed but still far below fixed J/F minima.
+            bad["user_final_T"]=SYNTHETIC_O+1
             cfg_bad=copy.deepcopy(cfg)
-            cfg_bad["target"]["manual_total"]=0
+            cfg_bad["target"]["manual_total"]=1
             with self.assertRaisesRegex(
                 entry.EntryBlocked,
                 "FRESH_SEASON_USER_BUDGET_INVALID:GJFO_FIXED_MINIMA_EXCEED_TOTAL"):
