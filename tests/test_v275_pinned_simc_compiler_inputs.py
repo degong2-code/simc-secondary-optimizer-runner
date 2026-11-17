@@ -249,6 +249,25 @@ class PinnedSimcInputs(unittest.TestCase):
         self.assertEqual(second["network_calls_by_stage"],0)
         self.assertEqual(self.calls,{"tree":6,"raw":5})
 
+    def test_other_consumable_source_scope_change_reuses_exact_pinned_bytes(self):
+        # Different sealed v190 physical scope, same exact SimC revision and
+        # unique_gear source. No second Git tree/blob fetch or v217 overwrite.
+        self.consumables["source_stage"]["stage_id"]=(
+            "fresh-v189-v190-consumable-physical-other")
+        self.consumables["source_stage"]["receipt_sha256"]="e"*64
+        first=self.collect()
+        self.assertEqual(first["source_stage"]["status"],"EXECUTED_AND_SEALED")
+        before=dict(self.calls)
+        self.consumables["source_stage"]["receipt_sha256"]="f"*64
+        second=self.collect()
+        self.assertEqual(second["source_stage"]["status"],"REUSED_VERIFIED")
+        self.assertEqual(second["source_stage"]["stage_id"],
+                         first["source_stage"]["stage_id"])
+        self.assertEqual(second["source_dir"],first["source_dir"])
+        self.assertEqual(second["network_calls_by_stage"],0)
+        self.assertEqual(self.calls,before)
+        self.assertFalse(second["environment_ready"])
+
     def test_tamper_sealed_source_blocks_without_http_retry(self):
         one=self.collect()
         pathlib.Path(one["source_dir"],"permanent_enchant.inc").write_bytes(

@@ -158,6 +158,8 @@ def reuse_verified_first_party_bytes(*,root,revision,build,reused,unique):
          "v275-git-tree-reuse-v1"),
         ("fresh-pinned-v211-from-four-subclass-consumables",
          "v275-git-tree-reuse-four-class-v1"),
+        ("fresh-pinned-v211-from-other-consumables",
+         "v275-git-tree-reuse-real-other-v1"),
     )
     available=[(name,version) for name,version in candidates
                if (root/".stage_receipts"/(name+".json")).is_file()]
