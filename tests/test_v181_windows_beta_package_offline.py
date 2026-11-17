@@ -100,6 +100,36 @@ class WindowsBetaPackageOffline(unittest.TestCase):
                                        "FILE_LIST_EXTENSION_REQUIRED"):
                 pack.write_file_list(pathlib.Path(temp)/"bad.zip")
 
+    def test_easy_start_stale_python_path_recovery_is_version_checked_and_opt_in(self):
+        """v575: harmless absolute-path discovery after winget's stale CMD PATH."""
+        batch=(ROOT/"START_HERE_AUTO_SETUP_AND_RUN.bat").read_text("utf8")
+        self.assertIn('set "SYS_PY_EXE="',batch)
+        for path in (
+            r'%LOCALAPPDATA%\Programs\Python\Python312\python.exe',
+            r'%ProgramFiles%\Python312\python.exe'
+        ):
+            self.assertIn('if exist "'+path+'"',batch)
+            self.assertIn('if not errorlevel 1 set "SYS_PY_EXE='+path+'"',
+                          batch)
+        self.assertIn(
+            'if not defined SYS_PY if not defined SYS_PY_EXE goto :python_missing',
+            batch)
+        self.assertIn('if defined SYS_PY_EXE (',batch)
+        self.assertIn('"%SYS_PY_EXE%" -m venv "%VENV_DIR%"',batch)
+        self.assertIn('if errorlevel 1 goto :venv_failed',batch)
+        self.assertIn('sys.version_info.major == 3 and sys.version_info.minor >= 12',
+                      batch)
+        self.assertLess(
+            batch.index('choice /C YN /N /M "Install or repair web libraries now?'),
+            batch.index('"%SYS_PY_EXE%" -m venv "%VENV_DIR%"'))
+        self.assertLess(
+            batch.index('choice /C YN /N /M "Install official Python 3.12'),
+            batch.index('winget install --id Python.Python.3.12'))
+        self.assertIn('if errorlevel 2 goto :cancelled',batch)
+        self.assertIn('if "%PYTHON_INSTALL_ATTEMPTED%"=="1" goto :manual_python',
+                      batch)
+        self.assertIn('if /I "%~1"=="--check" (',batch)
+
     def test_missing_critical_file_fails_closed(self):
         with tempfile.TemporaryDirectory() as temp:
             with self.assertRaisesRegex(pack.PackageBlocked,"REQUIRED_FILE_MISSING"):
