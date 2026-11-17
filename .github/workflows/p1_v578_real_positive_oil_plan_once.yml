@@ -34,7 +34,7 @@ jobs:
           git config --global core.eol lf
       - uses: actions/checkout@v5
         with: {persist-credentials: false, fetch-depth: 2}
-      - name: Explicit one-shot scope: no unreviewed native runtime changes
+      - name: "Explicit one-shot scope: no unreviewed native runtime changes"
         shell: pwsh
         run: |
           $ErrorActionPreference='Stop'
