@@ -128,6 +128,51 @@ class VerifiedFreshWebProfileBridge(unittest.TestCase):
         summary.assert_called_once()
         self.assertEqual(response["environment_manifest"]["status"],"READY")
 
+    def test_fury_fresh_auto_G_stops_before_session_manual_T_can_proceed(self):
+        # The installed Ret normal G cannot become Fury's dual-2H budget.
+        self.remember()
+        source=self.jobs._verified_fresh_profile_result
+        binary=self.root/"simc-fury.exe"
+        binary.write_bytes(b"FAKE_BINARY_NO_NATIVE")
+        controls=web.sessions.standard_controls(("warrior","fury"))
+        controls["oil_hands"]=[]
+        automatic=web.UserRequest(controls=controls,binary=str(binary),
+            revision="abcdef0",current_season_product=True,
+            installed_season_game_build=self.build)
+        with (mock.patch.object(self.jobs,"load_fresh_profile_for_user",
+                                return_value=source),
+              mock.patch.object(web.sessions,"store_session") as store,
+              mock.patch.object(web.profile_stage,"build_or_reuse") as stage):
+            with self.assertRaisesRegex(
+                    web.environment_manifest.EnvironmentBlocked,
+                    "WEB_FRESH_FURY_DISTINCT_G_AUTO_BUDGET_SOURCE_REQUIRED"):
+                self.jobs.plan(automatic)
+            store.assert_not_called()
+            stage.assert_not_called()
+        manual={**controls,"final_T":3400}
+        chosen=web.UserRequest(controls=manual,binary=str(binary),
+            revision="abcdef0",current_season_product=True,
+            installed_season_game_build=self.build)
+        folder=self.root/("b"*20)
+        folder.mkdir()
+        result={"plan":{"class":"warrior","spec":"fury",
+                        "base_B":3400,"fixed_O":{},"final_T":3400,
+                        "native_limit":6}}
+        with (mock.patch.object(self.jobs,"load_fresh_profile_for_user",
+                                return_value=source),
+              mock.patch.object(web.sessions,"store_session",
+                                return_value=folder) as store,
+              mock.patch.object(web.profile_stage,"build_or_reuse",
+                                return_value=(result,{})) as stage,
+              mock.patch.object(self.jobs,"_fresh_environment_summary",
+                                return_value={"status":"READY"})):
+            planned=self.jobs.plan(chosen)
+        self.assertEqual(planned["plan"]["base_B"],3400)
+        self.assertEqual(planned["plan"]["final_T"],3400)
+        self.assertEqual(planned["native_calls"],0)
+        store.assert_called_once()
+        stage.assert_called_once()
+
     def test_user_pinned_installed_build_reaches_sealed_v212_profile(self):
         """Positive selection: same exact build to short/long-run core.
 
