@@ -293,8 +293,20 @@ def run(binary,output_dir,*,source_only=False):
                     "installed_season_game_build":live["game_build"],
                     "installed_manifest_sha256":install_sha,
                     "user_socket_total":4}
+                # Preserve only one stable preflight error code from the
+                # original v113 owner, never a path, profile or credential.
+                from unittest import mock
+                original_blocked=web.blocked
+                def capture_blocked(exc):
+                    r["user_precheck"]={
+                        "kind":type(exc).__name__,
+                        "code":safe_error(exc)}
+                    save()
+                    return original_blocked(exc)
                 with TestClient(app,base_url="http://127.0.0.1:8765") as client:
-                    planned=http(client,"POST","/api/v1/sessions/plan",payload)
+                    with mock.patch.object(
+                            web,"blocked",side_effect=capture_blocked):
+                        planned=http(client,"POST","/api/v1/sessions/plan",payload)
                     fail(planned.get("status")=="READY_ZERO_NATIVE",
                          "USER_PLAN_NOT_READY")
                     sid=planned["session_id"]
