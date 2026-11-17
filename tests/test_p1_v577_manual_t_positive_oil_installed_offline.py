@@ -20,7 +20,7 @@ import v096_unified_product_entry as entry
 import v216_environment_build_coordinator as coordinator
 import v212_environment_manifest as installed
 import v222_season_budget_contract as accounting
-from test_p1_oil_positive_bridge_offline import PositiveInstalledOil
+import test_p1_oil_positive_bridge_offline as positive_fixture
 
 # This is deliberately NOT a new-season O=16/16 physical observation.
 # Existing v577 fixture contains synthetic 16+17 for boundary testing only.
@@ -30,7 +30,7 @@ SYNTHETIC_O=33
 class ManualPositiveOilInstalledBridge(unittest.TestCase):
     def case(self,root):
         doc,cfg,profile,flask,selection,attested=(
-            PositiveInstalledOil().case(root))
+            positive_fixture.PositiveInstalledOil().case(root))
         # The historical positive-O fixture tests source-id/hand binding
         # but intentionally uses an empty v222 receipt. Construct an
         # internally consistent synthetic v222 arithmetic receipt so the
