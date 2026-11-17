@@ -1898,9 +1898,14 @@ def preflight_new_season_source(*, source_catalog_path, expected_game_build,
                           if type(row) is dict]==sorted(selected_source_ids)
                      and all(type(row) is dict and
                          set(row)=={"item_id","quality","crafting_quality",
-                                    "class_id","subclass_id"}
-                         and all(type(v) is int and v>=0
-                                 for v in row.values())
+                                    "class_id","subclass_id","item_name",
+                                    "item_ilevel_unscaled"}
+                         and type(row["item_name"]) is str
+                         and bool(row["item_name"])
+                         and all(type(row[k]) is int and row[k]>=0
+                                 for k in ("item_id","quality",
+                                           "crafting_quality","class_id",
+                                           "subclass_id","item_ilevel_unscaled"))
                          and row["class_id"]==gem_item_join.GEM_CLASS
                          for row in rows),
                      "V216_V230_SELECTED_GEM_QUALITY_SOURCE_SCOPE_DRIFT")
