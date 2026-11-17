@@ -1091,6 +1091,13 @@ def build(user,folder,binary,revision,static_cache_path=None,
          season_environment_receipt_path is None and
          current_season_product and static_cache_path is None),
          "FRESH_SEASON_INSTALLED_REQUIRES_ORIGINAL_SOURCE_LINKS")
+    # The installed generic G (one Ret representative) does not carry a
+    # verified Fury dual-twohand G budget. The user's manual final T is an
+    # independent authoritative budget and remains usable. Do not invent
+    # a Fury amount from another season's 79x2 reference table.
+    need(not (fresh_installed_environment_path is not None and
+              key==("warrior","fury") and final_T is None),
+         "FRESH_FURY_DISTINCT_G_AUTO_BUDGET_SOURCE_REQUIRED")
     need(season_physical_one_spec_candidate is None or (
          fresh_installed_environment_path is not None and
          type(season_physical_one_spec_candidate) is dict and
