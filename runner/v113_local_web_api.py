@@ -1963,12 +1963,12 @@ class LocalJobs:
                     fresh["source_compilation"][
                         "verified_environment_install"]["stage_output_path"])
                 installed_doc,_=environment_manifest.read_json(installed_path)
-                environment_manifest.verify_fresh_installed_environment(
-                    installed_doc)
                 if installed_doc.get("official_G_reference_track")!=(
                         "fury_dual_2h"):
                     raise environment_manifest.EnvironmentBlocked(
                         "WEB_FRESH_FURY_DISTINCT_G_AUTO_BUDGET_SOURCE_REQUIRED")
+                environment_manifest.verify_fresh_installed_environment(
+                    installed_doc)
             # A legacy/packaged product with no installed v113 snapshot
             # retains its historical v098 oil path. A *verified fresh*
             # snapshot already rejects missing or ambiguous physical O
