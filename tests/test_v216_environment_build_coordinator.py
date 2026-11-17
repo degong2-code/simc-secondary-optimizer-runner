@@ -114,7 +114,8 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         (item_folder/v216.simc_source.RECEIPT).write_text(
             json.dumps(receipt),encoding="utf8")
         def original_metadata(*,directory,item_ids):
-            self.assertEqual(pathlib.Path(directory),item_folder)
+            self.assertEqual(pathlib.Path(directory).resolve(),
+                             item_folder.resolve())
             self.assertEqual(item_ids,ids)
             return {"schema":v216.simc_item_metadata.SCHEMA,
                     "game_build":build,"simc_revision":rev,
