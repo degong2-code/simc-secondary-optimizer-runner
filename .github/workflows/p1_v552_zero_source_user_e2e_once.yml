@@ -1,9 +1,10 @@
-name: P1 v555 zero-source gem SimC source stat-kind reason diagnostic Native0
+name: P1 v556 zero-source sealed SimC gem source stat-kind diagnostic Native0
 on:
   push:
     branches: [probe/chat-cache-v035-20261024]
     paths:
       - .github/workflows/p1_v552_zero_source_user_e2e_once.yml
+      - integration_probes/p1_v552_real_zero_source_user_e2e.py
 permissions:
   contents: read
   actions: read
