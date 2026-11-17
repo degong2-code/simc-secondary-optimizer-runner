@@ -1459,6 +1459,50 @@ class ZeroHistoryPreprofileUserBudget(unittest.TestCase):
                 "V216_NATIVE_G_OWNER_ORIGINAL_SOURCE_SCOPE_REQUIRED"):
             owner(stage_row={**staged,
                             "original_v216_preflight_sha256":"e"*64})
+        # Verify the original v233 source PROFILE (not an HTTP Fury label)
+        # is what distinguishes the dual-twohand native G track.
+        import v229_simc_only_source_seed as simc_seed
+        import v233_source_only_G_probe_profile as v233
+        prepared={"schema":v233.SCHEMA,
+                  "status":"EXACT_SIMC_SOURCE_PROFILE_PREPARED_NOT_EXECUTED",
+                  "class":"warrior","spec":"fury",
+                  "game_build_declared_by_simc_source":
+                      self.catalog["game_build"],
+                  "target_ilevel":level,
+                  "generic_G_physical_conditions_verified":True,
+                  "selected_G_slot_ids":{
+                      "main_hand":111,"off_hand":222}}
+        prepared["receipt_sha256"]=simc_seed.digest(
+            simc_seed.canonical(prepared).encode("utf8"))
+        profile_receipt=stage/"original_v233_fury_receipt.json"
+        profile_receipt.write_text(json.dumps(prepared))
+        native["source_profile_receipt_sha256"]=prepared["receipt_sha256"]
+        identity["source_receipt_sha256"]=prepared["receipt_sha256"]
+        observed["source_profile_receipt_sha256"]=prepared["receipt_sha256"]
+        raw=json.dumps(receipt).encode("utf8")
+        (folder/"receipt.json").write_bytes(raw)
+        native["native_receipt_sha256"]=hashlib.sha256(raw).hexdigest()
+        preflight["v277_native_G_preprofile_unadmitted"],_=(
+            build._reuse_v277_G_in_preprofile(
+                catalog=self.catalog,target_ilevel=level,
+                native_G=native,budget_evidence=None))
+        fury_G=build._fresh_source_owner_native_G_component(
+            native_G=native,preflight=preflight,
+            compilation=compilation,staged=staged,target_ilevel=level,
+            physical_G_probe={"profile_receipt_path":str(profile_receipt)})
+        self.assertEqual(fury_G["reference_G_track"],"fury_dual_2h")
+        self.assertEqual(fury_G["reference_G_profile_receipt_sha256"],
+                         prepared["receipt_sha256"])
+        self.assertEqual(fury_G["rating"],g["rating"])
+        spoof={**prepared,"class":"paladin","spec":"retribution"}
+        profile_receipt.write_text(json.dumps(spoof))
+        with self.assertRaisesRegex(
+                build.EnvironmentBuildBlocked,"G_REFERENCE_TRACK_NATIVE_SOURCE_MISMATCH"):
+            build._fresh_source_owner_native_G_component(
+                native_G=native,preflight=preflight,
+                compilation=compilation,staged=staged,target_ilevel=level,
+                physical_G_probe={"profile_receipt_path":str(profile_receipt)})
+        profile_receipt.write_text(json.dumps(prepared))
         (folder/"receipt.json").write_bytes(raw+b" ")
         with self.assertRaisesRegex(
                 build.EnvironmentBuildBlocked,
