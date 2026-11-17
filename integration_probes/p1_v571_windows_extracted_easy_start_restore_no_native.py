@@ -193,7 +193,17 @@ def run(zip_file,out):
             WebDriverWait(browser,15).until(
                lambda d:d.execute_script("return !state.busy"))
             snapshot=browser_state(browser)
-            need(snapshot["session"] is None and
+            report["cancel_snapshot_flags"]={
+                "session_type":type(snapshot["session"]).__name__,
+                "session_present":bool(snapshot["session"]),
+                "verified_build_present":bool(snapshot["verified_build"]),
+                "gear_target":snapshot["gear_target"],
+                "start_label":snapshot["start_label"],
+                "notice":snapshot["notice"][:180]}
+            print("V571_CANCEL_SNAPSHOT "+
+                json.dumps(report["cancel_snapshot_flags"],
+                           ensure_ascii=True,sort_keys=True),flush=True)
+            need(not snapshot["session"] and
                  snapshot["verified_build"] is None and
                  snapshot["gear_target"] is None,
                  "CANCELLED_BUILD_MUTATED_STATE")
