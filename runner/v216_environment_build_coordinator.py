@@ -6391,7 +6391,7 @@ def _fresh_source_owner_observed_J_F_quality(*, preflight, compilation,
                      and native_preview.get("v221_stage_receipt_sha256")==
                          link["v221_stage_receipt_sha256"]
                      and native_preview.get("v230_stage_receipt_sha256")==
-                         original["v230_stage_receipt_sha256"]
+                         native_candidate.get("v230_stage_receipt_sha256")
                      and native_preview.get("measured_candidate_ids")==
                          sorted(set(native_preview["measured_candidate_ids"]))
                      and len(native_preview["measured_candidate_ids"])==
@@ -6414,7 +6414,7 @@ def _fresh_source_owner_observed_J_F_quality(*, preflight, compilation,
                     "best_discovered_effect_item_id_source_only":item,
                     "comparable_effect_source_only":True,
                     "comparison_basis":
-                        "SAME_SOURCE_RANK_ACTUAL_SIMC_GEAR_WINNER"
+                        "SAME_SOURCE_RANK_ACTUAL_SIMC_GEM_DELTA_WINNER"
                 } for item in sorted(set(ordinary))]
             nominal_ranks=j.get("observed_quality_rank_by_id")
             nominal_bound=(j.get("numeric_source_owner")==

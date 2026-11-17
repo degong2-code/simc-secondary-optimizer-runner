@@ -452,6 +452,53 @@ class EnvironmentBuildCoordinatorTests(unittest.TestCase):
         self.assertEqual(result["J"]["observed_quality_rank_by_id"],
                          {str(i):2 for i in ids})
         self.assertFalse(result["environment_ready"])
+        # Full 75-source and selected-4 v230 receipts have DIFFERENT SHAs:
+        # both are sealed for their own IDs, never incorrectly equate them.
+        selected_original={
+            "quality_source_authenticated":True,
+            "v230_stage_receipt_sha256":"9"*64,
+            "game_build":build,"simc_revision":rev,
+            "selected_item_ids":ids,
+            "selected_item_quality_unadmitted":[
+                {"item_id":item,"crafting_quality":2}
+                for item in ids]}
+        selected_comparison={
+            "schema":"v216_selected_gem_quality_policy_A_preview_v1",
+            "game_build":build,"simc_revision":rev,
+            "quality_source_groups_unadmitted":[]}
+        source_preflight={**preflight,
+            "selected_v221_gem_item_relation_unadmitted":{
+                **link,
+                "selected_simc_gem_quality_source_unadmitted":
+                    selected_original,
+                "gem_policy_A_source_and_quality_unadmitted":
+                    selected_comparison}}
+        quality=v216._fresh_source_owner_observed_J_F_quality(
+            preflight=source_preflight,compilation=compilation,
+            owner_numeric=result)
+        self.assertIsNotNone(quality["J"])
+        self.assertEqual(len(quality["J"][
+            "same_enchant_quality_groups_source_only"]),4)
+        self.assertFalse(quality["environment_ready"])
+        socket={
+            "status":"J_INTRINSIC_COUNTS_BOUND_SOURCE_ONLY",
+            "additional_socket_proof_required_by_slot":{},
+            "observed_J_unadmitted":92,
+            "v232_stage_receipt_sha256":"5"*64,
+            "selected_socket_counts":{"neck":3,"finger1":1}}
+        components=v216._fresh_source_owner_original_J_F_components(
+            preflight=source_preflight,
+            compilation={**compilation,
+                "selected_J_intrinsic_socket_origin_unadmitted":socket,
+                "physical_gem_layout_unadmitted":layout},
+            staged={"status":"FRESH_SEASON_ENVIRONMENT_STAGED_NOT_INSTALLED",
+                    "stage_status":"EXECUTED_AND_SEALED",
+                    "stage_receipt_sha256":"7"*64},
+            owner_numeric=result,quality_scope=quality,
+            effect_observations=[])
+        self.assertEqual(components["J"]["rating"],92)
+        self.assertEqual(components["J"]["effect_quality_policy"],
+                         "BEST_DISCOVERED_COMPARABLE")
         with self.assertRaisesRegex(v216.EnvironmentBuildBlocked,
                                     "V216_NATIVE_J_IDS_RATING_VECTOR_DRIFT"):
             v216._fresh_match_simc_native_ordinary_j(
