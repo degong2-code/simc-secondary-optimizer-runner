@@ -399,7 +399,14 @@ class LocalWebAPIOffline(unittest.TestCase):
                  "verified_fixed_E":{
                      "crit_rating":0,"haste_rating":30,
                      "mastery_rating":0,"versatility_rating":0},
-                 "chmv_budget_receipt_sha256":"f"*64}],
+                 "chmv_budget_receipt_sha256":"f"*64},
+                {"enchant_id":89999,"slot":"finger1/finger2",
+                 "simc_token":"enchant_ring__synthetic_e0",
+                 "highest_verified_quality_rank":2,"ui_selectable":True,
+                 "verified_fixed_E":{
+                     "crit_rating":0,"haste_rating":0,
+                     "mastery_rating":0,"versatility_rating":0},
+                 "chmv_budget_receipt_sha256":"e"*64}],
              "verified_DK_runeforges":{
                  "items":[{"enchant_id":3370,"class":"deathknight",
                            "weapon_hands":["main_hand"],
@@ -445,7 +452,21 @@ class LocalWebAPIOffline(unittest.TestCase):
             "verified_fixed_E":{
                 "crit_rating":0,"haste_rating":30,
                 "mastery_rating":0,"versatility_rating":0},
-            "chmv_budget_receipt_sha256":"f"*64}])
+            "chmv_budget_receipt_sha256":"f"*64},{
+            "enchant_id":89999,"slot":"finger1/finger2",
+            "simc_token":"enchant_ring__synthetic_e0",
+            "highest_verified_quality_rank":2,
+            "verified_fixed_E":{
+                "crit_rating":0,"haste_rating":0,
+                "mastery_rating":0,"versatility_rating":0},
+            "chmv_budget_receipt_sha256":"e"*64}])
+        self.assertEqual(
+            registered["installed_E0_final_finger_candidates"],[{
+                "enchant_id":89999,
+                "simc_token":"enchant_ring__synthetic_e0",
+                "slot":"finger1/finger2",
+                "highest_verified_quality_rank":2,
+                "chmv_budget_receipt_sha256":"e"*64}])
         self.assertFalse(registered["runtime_selectable"])
         self.assertFalse(registered["new_approval_granted"])
         self.assertEqual(data["verified_weapon_enhancements"][
