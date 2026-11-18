@@ -141,7 +141,7 @@ class TestV583(unittest.TestCase):
         self.assertFalse(doc["automatic_ui_promotion"])
 
     def test_unchanged_build_reuses_quality_and_projection_with_no_network(self):
-        first=v583.collect(**self.args,transport=lambda *_:Resp(self.quality))
+        first=v583.collect(**self.args,transport=lambda *_, **__:Resp(self.quality))
         self.assertIsNotNone(first["candidate_path"])
         def never(*args,**kwargs):
             raise AssertionError("unexpected second Wago download")
@@ -160,7 +160,7 @@ class TestV583(unittest.TestCase):
         self.assertFalse(result["environment_ready"])
 
     def test_new_simc_revision_reuses_static_wago_quality(self):
-        first=v583.collect(**self.args,transport=lambda *_:Resp(self.quality))
+        first=v583.collect(**self.args,transport=lambda *_, **__:Resp(self.quality))
         self.assertIsNotNone(first["candidate_path"])
         second_stage=fake_stage(self.root,"fake-simc-new",{
             "permanent_enchant.inc":("source/fake_permanent_new.inc",b"fixture")})
@@ -177,7 +177,7 @@ class TestV583(unittest.TestCase):
                          "CraftingDataID"),[
             {"ID":1,"Rank":14,"SpellItemEnchantmentID":8025,
              "ItemID":244014,"CraftingDataID":3829}])
-        result=v583.collect(**self.args,transport=lambda *_:Resp(wrong))
+        result=v583.collect(**self.args,transport=lambda *_, **__:Resp(wrong))
         self.assertEqual(result["counts"]["highest_simc_candidate_linked"],0,result)
         self.assertEqual(result["counts"]["highest_simc_candidate_missing_ids"],[8025])
 
