@@ -985,4 +985,65 @@ class UserTargetBootstrap(unittest.TestCase):
                          result["plan"]["scenario_digest"])
         self.assertFalse((root/"generated"/"simc_results").exists())
 
+class FinalUserEnchantMaskSourceTests(unittest.TestCase):
+    """Only final user slot+item, never the season G reference item."""
+
+    def setUp(self):
+        self.user={boot.SEASON_ENCHANT_FIELD:{"finger1":8025}}
+        self.rows={"finger1":{"item_id":268266,"options":{}}}
+
+    def test_no_selected_source_injection_is_noop(self):
+        self.assertIsNone(boot._final_user_enchant_source_mask(
+            user=self.user,rows=self.rows,consumer=None))
+
+    def test_final_user_item_and_enchant_are_read_after_gear_replacement(self):
+        calls=[]
+        def consumer(slot,item_id,eid):
+            calls.append((slot,item_id,eid))
+            return {"status":"EXACT_SELECTED_ITEM_SOURCE_MASK_MATCH_UNADMITTED",
+                    "matched":True,"selected_slot":slot,
+                    "selected_representative_item_id":item_id,
+                    "enchant_id":eid,
+                    "actual_user_item_from_v098_final_rows":True,
+                    "ui_selectable":False,
+                    "policy_A_product_input_verified":False,
+                    "native_calls":0,"network_calls":0}
+        out=boot._final_user_enchant_source_mask(
+            user=self.user,rows=self.rows,consumer=consumer)
+        self.assertEqual(calls,[("finger1",268266,8025)])
+        self.assertFalse(out["ui_selectable"])
+        self.assertFalse(out["policy_A_product_input_verified"])
+
+    def test_mismatch_and_fake_approval_fail_before_native(self):
+        def mismatched(slot,item_id,eid):
+            return {"status":"SOURCE_MASK_OR_HAND_NOT_MATCHED",
+                    "ui_selectable":False,
+                    "policy_A_product_input_verified":False,
+                    "native_calls":0,"network_calls":0}
+        with self.assertRaisesRegex(boot.UserScenarioBlocked,
+                                    "SOURCE_MASK_AND_HAND_MISMATCH"):
+            boot._final_user_enchant_source_mask(
+                user=self.user,rows=self.rows,consumer=mismatched)
+        def forged(slot,item_id,eid):
+            return {"status":"EXACT_SELECTED_ITEM_SOURCE_MASK_MATCH_UNADMITTED",
+                    "ui_selectable":True,
+                    "policy_A_product_input_verified":True,
+                    "native_calls":0,"network_calls":0}
+        with self.assertRaisesRegex(boot.UserScenarioBlocked,
+                                    "SOURCE_MUST_NOT_ADMIT"):
+            boot._final_user_enchant_source_mask(
+                user=self.user,rows=self.rows,consumer=forged)
+
+    def test_optional_original_pending_does_not_revoke_prior_native_scope(self):
+        out=boot._final_user_enchant_source_mask(
+            user=self.user,rows=self.rows,
+            consumer=lambda *_:{"status":
+                    "SEALED_REPRESENTATIVE_ENCHANT_SCOPE_PENDING",
+                "ui_selectable":False,"policy_A_product_input_verified":False,
+                "native_calls":0,"network_calls":0})
+        self.assertEqual(out["status"],
+                         "SEALED_REPRESENTATIVE_ENCHANT_SCOPE_PENDING")
+        self.assertFalse(out["ui_selectable"])
+
+
 if __name__=="__main__":unittest.main()
