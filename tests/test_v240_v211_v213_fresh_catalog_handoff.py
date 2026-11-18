@@ -168,6 +168,18 @@ class SameFreshCatalogChain(unittest.TestCase):
             receipts["chmv_budget"].update({
                 "no_double_count":True,"unknown_static_chmv":False})
             proofs={91001:receipts}
+            # A settled ownership declaration without four precise E
+            # amounts is not usable by v212/v098 and MUST remain pending.
+            unbound=ui.prepare_verified_fresh_choices(artifact,fresh,proofs)
+            self.assertEqual(unbound["verified_option_inputs_unpublished"],[])
+            self.assertEqual(unbound["v220_exact_proof_eligible_count"],0)
+            self.assertIn(
+                "CHMV_EXACT_FIXED_E_VECTOR_REQUIRED",
+                unbound["other_proofs_pending_by_item_id"]["91001"])
+            # This is a synthetic test-only E0 proof, NOT a same-season
+            # Native rating inference or a real Policy A certification.
+            receipts["chmv_budget"]["fixed_E"]={
+                stat:0 for stat in policy.CHMV_STATS}
             # v220 eligibility alone is not a highest-quality proof.
             # The SAME product_input receipt must also attest comparable
             # effect/use scope, non-inferior numeric effects and real slot.
