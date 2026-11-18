@@ -16,6 +16,7 @@ on:
       - tests/test_v220_catalog_auto_admission.py
       - tests/test_v098_target_user_scenario_bootstrap.py
       - tests/test_v216_environment_build_coordinator.py
+      - tests/test_v607_sealed_crafting_enchant_quality.py
       - tests/test_v584_supplemental_permanent_enchant_classification.py
       - tests/test_v585_historical_70783_enchant_quality.py
       - tests/test_v586_pinned_dk_runeforge_environment_integration.py
@@ -44,6 +45,7 @@ jobs:
           python -m unittest discover -s tests -p test_v295_season_runeforge_source.py -q
           python -m unittest discover -s tests -p test_v240_v211_v213_fresh_catalog_handoff.py -q
           python -m unittest discover -s tests -p test_v216_environment_build_coordinator.py -q
+          python -m unittest discover -s tests -p test_v607_sealed_crafting_enchant_quality.py -v
           python -c "import sys,unittest;sys.path.insert(0,'tests');from test_v098_target_user_scenario_bootstrap import FinalUserEnchantMaskSourceTests as C;s=unittest.defaultTestLoader.loadTestsFromTestCase(C);r=unittest.TextTestRunner(verbosity=2).run(s);sys.exit(0 if r.wasSuccessful() else 1)"
       - name: Source join only (no Native / external collection)
         run: echo "Focused offline v583 tests only; historical real 70783 v582 Wago exact join remains separate evidence."
