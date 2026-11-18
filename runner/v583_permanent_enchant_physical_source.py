@@ -75,14 +75,14 @@ def _identity(root, stage):
     return stage["receipt_sha256"]
 
 
-def _quality_table(*, root, build, transport=None):
+def _quality_table(*, root, build, transport=None, attempted=None):
     outputs = {"csv": QUALITY_CSV}
     source_url = "https://wago.tools/db2/CraftingDataEnchantQuality/csv?" + urlencode(
         {"build": build, "locale": "enUS"})
     # Do not key this immutable game-build snapshot by the SimC revision.
     code = stages.module_dependency_fingerprint([Path(__file__),
                                                    Path(stages.__file__)])
-    calls = [0]
+    calls = attempted if attempted is not None else [0]
 
     def execute():
         request = Request(source_url, headers={
@@ -254,6 +254,7 @@ def collect(*, stage_root, build, expansion_id, wago_stage, fresh_gear,
             expansion_id<=0 or any(type(s) is not dict or
             s.get("status") not in SEALS for s in deps.values())):
         return pending("V583_EXISTING_SEALED_SOURCES_OR_EXPANSION_PENDING")
+    calls=[0]
     try:
         identity={k:_identity(root,s) for k,s in deps.items()}
         wago=root/"wago"
@@ -279,7 +280,8 @@ def collect(*, stage_root, build, expansion_id, wago_stage, fresh_gear,
             need(meta.get("bytes")==path.stat().st_size and
                  type(meta.get("sha256")) is str,
                  "V583_ORIGINAL_WAGO_TABLE_IDENTITY_MISSING:"+kind)
-        quality_stage,calls=_quality_table(root=root,build=build,transport=transport)
+        quality_stage,network_calls=_quality_table(
+            root=root,build=build,transport=transport,attempted=calls)
         original["quality"]=root/QUALITY_CSV
         quality_sha=quality_stage["receipt_sha256"]
         projection_identity=sha(json.dumps({
@@ -331,9 +333,8 @@ def collect(*, stage_root, build, expansion_id, wago_stage, fresh_gear,
                                         if k!="result"},
                 "source_stage":{k:v for k,v in projection.items()
                                 if k!="result"},
-                "network_calls_by_stage":calls,"native_calls":0,
+                "network_calls_by_stage":network_calls,"native_calls":0,
                 "environment_ready":False,"automatic_ui_promotion":False}
     except (OSError, ValueError, TypeError, KeyError,
             stages.StageExecutionBlocked) as exc:
-        return pending(str(exc).split(":",1)[0],
-                       calls if "calls" in locals() else 0)
+        return pending(str(exc).split(":",1)[0],calls[0])
