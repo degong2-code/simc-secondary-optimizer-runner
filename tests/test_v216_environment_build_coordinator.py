@@ -2101,7 +2101,39 @@ class FirstSealedEnchantScopeBridgeTests(unittest.TestCase):
                               "simc_rank_rows":[{
                                   "enchant_id":8025,"item_class":4,
                                   "inventory_type_mask":1<<11,
-                                  "item_subclass_mask":0}]}]}
+                                  "item_subclass_mask":0}]}],
+                  "additional_enchants_unadmitted":[{
+                      "enchant_id":7939,
+                      "scope":"DPS_EQUIPMENT_PERMANENT_CANDIDATE_UNADMITTED",
+                      "simc_source_rows":[{
+                          "enchant_id":7939,
+                          "simc_token":"bright_linen_spellthread",
+                          "quality_rank":2,"item_class":4,
+                          "inventory_type_mask":1<<7,
+                          "item_subclass_mask":0x1e}],
+                      "physical_items":[{"item_id":240133}]}],
+                  "supplemental_gear_effects_source_only":{
+                      "status":"SUPPLEMENTAL_DPS_ENCHANT_EFFECTS_CLASSIFIED_UNADMITTED",
+                      "source_only":True,"ui_selectable":False,
+                      "rows":[{
+                          "enchant_id":7939,
+                          "simc_token":"bright_linen_spellthread",
+                          "quality_rank_simc":2,
+                          "source_class_and_masks":{
+                              "item_class":4,
+                              "inventory_type_mask":1<<7,
+                              "item_subclass_mask":0x1e},
+                          "physical_item_ids":[240133],
+                          "source_slot":{"status":"SOURCE_MASK_RESOLVED"},
+                          "selection_status":
+                              "SUPPLEMENTAL_SOURCE_ONLY_NOT_USER_PUBLISHED",
+                          "ui_selectable":False,
+                          "static_E_source_status":
+                              "NO_STATIC_CHMV_COMPONENT_IN_SIMC_DBC",
+                          "raw_rank_component_evidence":{
+                              "same_effect_and_use_conditions_verified":False,
+                              "quality_noninferiority_runtime_verified":False}
+                      }]}}
             wago,join_raw=staged("fresh_source","v583",join,"f"*64)
             def read_receipt(path):
                 name=path.stem
@@ -2142,7 +2174,12 @@ class FirstSealedEnchantScopeBridgeTests(unittest.TestCase):
                                     side_effect=lambda directory,item_ids:{
                                         **metadata,"items":[{
                                             **metadata["items"][0],
-                                            "item_id":item_ids[0]}]}) as parsed,
+                                            "item_id":item_ids[0],
+                                            "inventory_type":(
+                                                7 if item_ids[0]==268268 else 11),
+                                            "subclass_id":(
+                                                4 if item_ids[0]==268268 else 0)
+                                        }]}) as parsed,
                   mock.patch.object(v216.environment_manifest,"read_json",
                                     return_value=(source,"hash")),
                   mock.patch.object(v216.user_catalog.source_bridge,
@@ -2163,8 +2200,21 @@ class FirstSealedEnchantScopeBridgeTests(unittest.TestCase):
                     collected=collected,compilation=compiled,
                     selected_user_item={"slot":"finger1","item_id":268267},
                     selected_enchant_id=999999)
-            # Missing physical enchant cannot trigger another large v230 scan.
-            self.assertEqual(parsed.call_count,3)
+                supplemental=v216._fresh_first_sealed_representative_enchant_mask_preview(
+                    collected=collected,compilation=compiled,
+                    selected_user_item={"slot":"legs","item_id":268268},
+                    selected_enchant_id=7939)
+            # Missing physical enchant never triggers an extra v230 scan.
+            self.assertEqual(parsed.call_count,4)
+            self.assertTrue(supplemental["matched"],supplemental)
+            self.assertTrue(supplemental["supplemental_v583_v584_source_only"])
+            self.assertEqual(supplemental["selected_slot"],"legs")
+            self.assertEqual(supplemental["enchant_id"],7939)
+            self.assertEqual(supplemental["source_observed_static_E_status"],
+                             "NO_STATIC_CHMV_COMPONENT_IN_SIMC_DBC")
+            self.assertFalse(supplemental["fixed_E_or_no_E_verified"])
+            self.assertFalse(supplemental["same_effect_and_highest_quality_verified"])
+            self.assertFalse(supplemental["ui_selectable"])
             self.assertEqual(missing["status"],
                              "SEALED_REPRESENTATIVE_ENCHANT_SCOPE_PENDING")
             self.assertTrue(actual["matched"],actual)
