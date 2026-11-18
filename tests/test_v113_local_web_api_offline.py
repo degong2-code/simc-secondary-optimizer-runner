@@ -392,7 +392,14 @@ class LocalWebAPIOffline(unittest.TestCase):
              "published_verified_options":[{
                  "enchant_id":91234,"slot":"boots",
                  "simc_token":"enchant_boots__example",
-                 "highest_verified_quality_rank":3,"ui_selectable":True}],
+                 "highest_verified_quality_rank":3,"ui_selectable":True},
+                {"enchant_id":8025,"slot":"finger1/finger2",
+                 "simc_token":"enchant_ring__silvermoons_alacrity",
+                 "highest_verified_quality_rank":2,"ui_selectable":True,
+                 "verified_fixed_E":{
+                     "crit_rating":0,"haste_rating":30,
+                     "mastery_rating":0,"versatility_rating":0},
+                 "chmv_budget_receipt_sha256":"f"*64}],
              "verified_DK_runeforges":{
                  "items":[{"enchant_id":3370,"class":"deathknight",
                            "weapon_hands":["main_hand"],
@@ -431,7 +438,14 @@ class LocalWebAPIOffline(unittest.TestCase):
         self.assertEqual(registered["items"],[{
             "enchant_id":91234,"slot":"boots",
             "simc_token":"enchant_boots__example",
-            "highest_verified_quality_rank":3}])
+            "highest_verified_quality_rank":3},{
+            "enchant_id":8025,"slot":"finger1/finger2",
+            "simc_token":"enchant_ring__silvermoons_alacrity",
+            "highest_verified_quality_rank":2,
+            "verified_fixed_E":{
+                "crit_rating":0,"haste_rating":30,
+                "mastery_rating":0,"versatility_rating":0},
+            "chmv_budget_receipt_sha256":"f"*64}])
         self.assertFalse(registered["runtime_selectable"])
         self.assertFalse(registered["new_approval_granted"])
         self.assertEqual(data["verified_weapon_enhancements"][
