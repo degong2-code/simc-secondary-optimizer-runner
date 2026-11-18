@@ -1,0 +1,67 @@
+{
+  "schema": "p1_v585_historical_70783_wago_linked_supplemental_simc_quality_excerpt_v1",
+  "game_build": "12.1.5.70783",
+  "simc_revision": "de11f57df75dda668bae6ac7043a43b98831fa96",
+  "basis": "Exact existing 70783 Wago→SimC physical ID provenance Actions 44217110154; raw pinned SimC source rows from github. Test-only fixture, NOT product whitelist.",
+  "high_rank_enchant_ids": [
+    7935,
+    7937,
+    7939,
+    8159,
+    8161,
+    8163,
+    8613,
+    8615
+  ],
+  "source_paths": [
+    "engine/dbc/generated/permanent_enchant.inc",
+    "engine/dbc/generated/spell_item_enchantment.inc"
+  ],
+  "source_file_metadata": [
+    {
+      "path": "engine/dbc/generated/permanent_enchant.inc",
+      "total_bytes": 86347
+    },
+    {
+      "path": "engine/dbc/generated/spell_item_enchantment.inc",
+      "total_bytes": 1093702
+    }
+  ],
+  "permanent_enchant_rows": [
+    "  { 7936,  1,  4, 0x00000080, 0x0000001e, \"arcanoweave_spellthread\"           },",
+    "  { 7937,  2,  4, 0x00000080, 0x0000001e, \"arcanoweave_spellthread\"           },",
+    "  { 8162,  1,  4, 0x00000080, 0x0000001e, \"blood_knights_armor_kit\"           },",
+    "  { 8163,  2,  4, 0x00000080, 0x0000001e, \"blood_knights_armor_kit\"           },",
+    "  { 7938,  1,  4, 0x00000080, 0x0000001e, \"bright_linen_spellthread\"          },",
+    "  { 7939,  2,  4, 0x00000080, 0x0000001e, \"bright_linen_spellthread\"          },",
+    "  { 8614,  1,  2, 0x00000000, 0x0004000c, \"farstriders_hawkeye\"               },",
+    "  { 8615,  2,  2, 0x00000000, 0x0004000c, \"farstriders_hawkeye\"               },",
+    "  { 8158,  1,  4, 0x00000080, 0x0000001e, \"forest_hunters_armor_kit\"          },",
+    "  { 8159,  2,  4, 0x00000080, 0x0000001e, \"forest_hunters_armor_kit\"          },",
+    "  { 8612,  1,  2, 0x00000000, 0x0004000c, \"smugglers_lynxeye\"                 },",
+    "  { 8613,  2,  2, 0x00000000, 0x0004000c, \"smugglers_lynxeye\"                 },",
+    "  { 7934,  1,  4, 0x00000080, 0x0000001e, \"sunfire_silk_spellthread\"          },",
+    "  { 7935,  2,  4, 0x00000080, 0x0000001e, \"sunfire_silk_spellthread\"          },",
+    "  { 8160,  1,  4, 0x00000080, 0x0000001e, \"thalassian_scout_armor_kit\"        },",
+    "  { 8161,  2,  4, 0x00000080, 0x0000001e, \"thalassian_scout_armor_kit\"        },"
+  ],
+  "spell_item_enchantment_rows": [
+    "  { 7934,      0, -7,   0,  80, 120, 0,   0,   0, {   5,   5,   0 }, {    0,    0,    0 }, {      5,      7,      0 }, {  0.9515f,  2.0814f,  0.0000f }, 1229437, \"+$k1 Intellect & +$k2 Stamina |A:Professions-ChatIcon-Quality-12-Tier1:20:20|a\" },",
+    "  { 7935,      0, -7,   0,  80, 120, 0,   0,   0, {   5,   5,   0 }, {    0,    0,    0 }, {      5,      7,      0 }, {  1.2191f,  3.4194f,  0.0000f }, 1229442, \"+$k1 Intellect & +$k2 Stamina |A:Professions-ChatIcon-Quality-12-Tier2:20:20|a\" },",
+    "  { 7936,      0, -7,   0,  80, 120, 0,   0,   0, {   5,   3,   0 }, {    0,    0,    0 }, {      5, 1229450,      0 }, {  0.9515f,  0.0000f,  0.0000f }, 1229453, \"+$k1 Intellect & +$457615s1% Mana |A:Professions-ChatIcon-Quality-12-Tier1:20:20|a\" },",
+    "  { 7937,      0, -7,   0,  80, 120, 0,   0,   0, {   5,   3,   0 }, {    0,    0,    0 }, {      5, 1229452,      0 }, {  1.2191f,  0.0000f,  0.0000f }, 1229454, \"+$k1 Intellect & +$457616s1% Mana |A:Professions-ChatIcon-Quality-12-Tier2:20:20|a\" },",
+    "  { 7938,      0, -7,   0,  80, 120, 0,   0,   0, {   5,   0,   0 }, {    0,    0,    0 }, {      5,      0,      0 }, {  0.4757f,  0.0000f,  0.0000f }, 1229456, \"+$k1 Intellect |A:Professions-ChatIcon-Quality-12-Tier1:20:20|a\" },",
+    "  { 7939,      0, -7,   0,  80, 120, 0,   0,   0, {   5,   0,   0 }, {    0,    0,    0 }, {      5,      0,      0 }, {  0.7136f,  0.0000f,  0.0000f }, 1229457, \"+$k1 Intellect |A:Professions-ChatIcon-Quality-12-Tier2:20:20|a\" },",
+    "  { 8158,      0, -7,   0,  80, 120, 0,   0,   0, {   5,   5,   0 }, {    0,    0,    0 }, {      7,     72,      0 }, {  2.0814f,  0.9515f,  0.0000f }, 1243975, \"+$k2 Agility/Strength & +$k1 Stamina |A:Professions-ChatIcon-Quality-12-Tier1:20:20|a\" },",
+    "  { 8159,      0, -7,   0,  80, 120, 0,   0,   0, {   5,   5,   0 }, {    0,    0,    0 }, {      7,     72,      0 }, {  3.4194f,  1.2191f,  0.0000f }, 1243976, \"+$k2 Agility/Strength & +$k1 Stamina |A:Professions-ChatIcon-Quality-12-Tier2:20:20|a\" },",
+    "  { 8160,      0, -7,   0,  80, 120, 0,   0,   0, {   5,   0,   0 }, {    0,    0,    0 }, {     72,      0,      0 }, {  0.4757f,  0.0000f,  0.0000f }, 1243977, \"+$k1 Agility/Strength |A:Professions-ChatIcon-Quality-12-Tier1:20:20|a\" },",
+    "  { 8161,      0, -7,   0,  80, 120, 0,   0,   0, {   5,   0,   0 }, {    0,    0,    0 }, {     72,      0,      0 }, {  0.7136f,  0.0000f,  0.0000f }, 1243978, \"+$k1 Agility/Strength |A:Professions-ChatIcon-Quality-12-Tier2:20:20|a\" },",
+    "  { 8162,      0, -7,   0,  80, 120, 0,   0,   0, {   4,   5,   0 }, {    0,    0,    0 }, {      0,     72,      0 }, {  0.4757f,  0.9515f,  0.0000f }, 1243979, \"+$k2 Agility/Strength & +$k1 Armor |A:Professions-ChatIcon-Quality-12-Tier1:20:20|a\" },",
+    "  { 8163,      0, -7,   0,  80, 120, 0,   0,   0, {   4,   5,   0 }, {    0,    0,    0 }, {      0,     72,      0 }, {  0.8028f,  1.2191f,  0.0000f }, 1243980, \"+$k2 Agility/Strength & +$k1 Armor |A:Professions-ChatIcon-Quality-12-Tier2:20:20|a\" },",
+    "  { 8612,      0,  0,   0,  80, 120, 0,   0,   0, {   3,   0,   0 }, {    0,    0,    0 }, { 1262295,      0,      0 }, {  0.0000f,  0.0000f,  0.0000f }, 1262297, \"Smuggler's Lynxeye |A:Professions-ChatIcon-Quality-12-Tier1:20:20|a\" },",
+    "  { 8613,      0,  0,   0,  80, 120, 0,   0,   0, {   3,   0,   0 }, {    0,    0,    0 }, { 1262298,      0,      0 }, {  0.0000f,  0.0000f,  0.0000f }, 1262300, \"Smuggler's Lynxeye |A:Professions-ChatIcon-Quality-12-Tier2:20:20|a\" },",
+    "  { 8614,      0,  0,   0,  80, 120, 0,   0,   0, {   3,   0,   0 }, {    0,    0,    0 }, { 1262337,      0,      0 }, {  0.0000f,  0.0000f,  0.0000f }, 1262341, \"Farstrider's Hawkeye |A:Professions-ChatIcon-Quality-12-Tier1:20:20|a\" },",
+    "  { 8615,      0,  0,   0,  80, 120, 0,   0,   0, {   3,   0,   0 }, {    0,    0,    0 }, { 1262339,      0,      0 }, {  0.0000f,  0.0000f,  0.0000f }, 1262344, \"Farstrider's Hawkeye |A:Professions-ChatIcon-Quality-12-Tier2:20:20|a\" },"
+  ],
+  "strict_scope": "PINNED_SOURCE_EXCERPT_TEST_ONLY_NO_USER_ADMISSION_NO_NATIVE"
+}
