@@ -44,7 +44,9 @@ def _slot(row):
     if cls==2 and sub>0:
         return {"slot_group":"WEAPON_SUBCLASS_NOT_YET_USER_SLOT_CERTIFIED",
                 "status":"WEAPON_SUBCLASS_PENDING_EXACT_HAND_APPLICABILITY",
-                "inventory_type_options":simc_season.inventory_options(row)}
+                "inventory_type_options":simc_season.inventory_options(row),
+                "weapon_subclass_ids_from_source_mask":
+                    [i for i in range(32) if sub & (1<<i)]}
     return {"slot_group":None,"status":"SIMC_GEAR_MASK_INVALID",
             "inventory_type_options":[]}
 
@@ -153,6 +155,12 @@ def classify(*, relation, source_dir, manifest_path, game_build, simc_revision):
                 "static_chmv_present":classified[
                     "static_chmv_rating_present_in_dbc"],
                 "static_E":"NOT_MEASURED_IF_CHMV",
+                "static_E_source_status":(
+                    "STATIC_CHMV_NUMERIC_MEASUREMENT_PENDING"
+                    if classified["static_chmv_rating_present_in_dbc"] else
+                    "UNKNOWN_STATIC_COMPONENT_REVIEW_PENDING"
+                    if classified["unknown_components"] else
+                    "NO_STATIC_CHMV_COMPONENT_IN_SIMC_DBC"),
                 "selection_status":"SUPPLEMENTAL_SOURCE_ONLY_NOT_USER_PUBLISHED",
                 "ui_selectable":False,
                 "simc_effect_owner":"SimC"})
