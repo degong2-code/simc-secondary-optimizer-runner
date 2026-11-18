@@ -3356,12 +3356,17 @@ function renderSeasonOptionCatalog(catalog) {
         " · 정적 E=0 검증 (실물/SimC 재확인)"));
     }
     other.disabled=state.installedOtherE0Choices.size===0;
-    if(state.installedE0Ids.size) {
-      refreshExactEnchantAvailability();
-      status.textContent="설치 원본으로 정적 CHMV E=0이 확인된 반지 마부 "+
-        state.installedE0Ids.size+
-        "종 선택 가능 · 반지 1 또는 반지 2 한 곳만 선택 · 실제 반지 ID와 SimC 입력은 실행 전에 다시 검증."+
-        " 다른 마부는 계속 잠금.";
+    const signedRingCount=state.installedE0Ids.size;
+    const signedOrdinaryCount=state.installedOtherE0Choices.size;
+    if(signedRingCount||signedOrdinaryCount) {
+      if(signedRingCount)refreshExactEnchantAvailability();
+      status.textContent="설치 검증 원본에서 정적 CHMV E=0 확인 · "+
+        (signedRingCount?"반지 마부 "+signedRingCount+"종":"")+
+        (signedRingCount&&signedOrdinaryCount?" · ":"")+
+        (signedOrdinaryCount?"기타 일반 장비 마부 "+signedOrdinaryCount+"종":"")+
+        " 선택 가능 · 한 번에 장비 한 부위만 선택 · "+
+        "최종 실물 ID와 SimC 입력은 실행 전에 다시 검증. "+
+        "원본 미승인·고정 E 미확정·E>0 마부는 잠금 유지.";
     }
     const exact=catalog.verified_exact_user_enchant_runtime;
     if(exact?.status==="EXACT_V528_V530_V532_V533_USER_ONLY" &&
@@ -3387,9 +3392,12 @@ function renderSeasonOptionCatalog(catalog) {
             row.name+" · #"+row.enchant_id+" · 특정 사용자 Native 검증"));
       }
       refreshExactEnchantAvailability();
-      status.textContent="이번 시즌 원본 마부 후보는 전체 미승인입니다. "+
-        "반지 1의 3종은 생존 사냥꾼 334·검증 장비 조건에서만 사용 가능하며 "+
+      const oldScope="반지 1의 기존 3종은 생존 사냥꾼 334·검증 장비 조건에서만 사용 가능하며 "+
         "조건이 다르면 실행 전 차단됩니다.";
+      if(signedRingCount||signedOrdinaryCount)
+        status.textContent+=" "+oldScope;
+      else
+        status.textContent="이번 시즌 일반 원본 마부 후보는 미승인입니다. "+oldScope;
     }
     if(rows.length) {
       const details=document.createElement("details");
@@ -3412,8 +3420,12 @@ function renderSeasonOptionCatalog(catalog) {
           (hasE?(stats.every(k=>item.verified_fixed_E[k]===0)
             ?" · 정적 CHMV E=0 (정상, 효과는 SimC 처리)"
             :" · 고정 E 원본 확인"):" · 고정 E 미확정")+
-          (state.installedE0Ids.has(item.enchant_id)
+          (state.installedE0Ids.has(item.enchant_id) &&
+             item.slot==="finger1/finger2"
             ?" · 반지 1·2 중 한 곳 선택 가능, 실행 전 장비/SimC 확인"
+            :state.installedOtherE0Choices.has(
+                item.slot+":"+item.enchant_id)
+            ?" · 기타 일반 장비 선택 가능, 실행 전 장비/SimC 확인"
             :" · 최종 SimC 프로필 연결 대기 (선택 불가)");
         list.appendChild(li);
       }

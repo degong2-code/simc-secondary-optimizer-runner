@@ -2542,6 +2542,12 @@ assert.strictEqual($("season_enchant_finger1").disabled,true,
   "other-gear E0 does not unlock finger1");
 assert.strictEqual($("season_enchant_other").disabled,false);
 assert($("season_enchant_other").options.some(x=>x.value==="feet:91234"));
+assert($("season-option-catalog-status").textContent.includes(
+  "기타 일반 장비 마부 1종 선택 가능"));
+assert(!$("season-option-catalog-status").textContent.includes(
+  "일반 마부는 잠금 유지"));
+assert($("season-enchant-groups").children[0].children[1].children[0]
+  .textContent.includes("기타 일반 장비 선택 가능"));
 const ready={
   enchant_id:89999,slot:"finger1/finger2",
   simc_token:"enchant_ring__synthetic_e0",
@@ -2567,6 +2573,17 @@ assert($("season_enchant_finger2").options.some(x=>x.value==="89999"),
 assert(state.installedE0Ids.has(89999));
 assert($("season-option-catalog-status").textContent.includes("E=0"));
 assert.strictEqual(state.eagleApproved,false);
+const both={...signedE0,verified_installed_enchant_registrations:{
+  ...signedE0.verified_installed_enchant_registrations,
+  items:[ready,...provenZero.verified_installed_enchant_registrations.items]}};
+render(both);
+assert.strictEqual($("season_enchant_finger1").disabled,false);
+assert.strictEqual($("season_enchant_other").disabled,false);
+assert($("season-option-catalog-status").textContent.includes("반지 마부 1종"));
+assert($("season-option-catalog-status").textContent.includes(
+  "기타 일반 장비 마부 1종"));
+assert($("season-enchant-groups").children[0].children[1].children[1]
+  .textContent.includes("기타 일반 장비 선택 가능"));
 render({...installed,verified_installed_enchant_registrations:{
   ...installed.verified_installed_enchant_registrations,
   installed_manifest_sha256:"b".repeat(64)}});
@@ -2580,7 +2597,7 @@ assert.strictEqual($("season_enchant_finger2").options.length,1);
 assert.strictEqual($("season_enchant_other").disabled,true);
 assert.strictEqual($("season_enchant_other").options.length,1);
 assert.strictEqual($("dk_rune_main").options.length,1);
-assert.strictEqual(compatibility,6,
+assert.strictEqual(compatibility,7,
   "signed E0 option render also recomputes DK rune compatibility");
 console.log("V467_FRESH_DK_RUNES_NO_ENCHANT_APPROVAL_PASS");
 """
