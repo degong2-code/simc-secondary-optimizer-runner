@@ -55,6 +55,9 @@ class HistoricalPinnedSourceQuality(unittest.TestCase):
             self.assertFalse(comparison["ui_selectable"])
             self.assertFalse(comparison["policy_A_product_input_verified"])
             self.assertFalse(comparison["source_id_spell_identical"])
+            self.assertTrue(comparison["simc_spell_value_may_override_raw_coefficient"])
+            self.assertEqual(comparison["stat_value_precedence_source"],
+                "SIMC_ENCHANT_SPELL_AVERAGE_FIRST_THEN_DBC_COEFFICIENT_FALLBACK")
             observed.append((top["enchant_id"],comparison))
         self.assertEqual(seen,set(data["high_rank_enchant_ids"]))
         raw_static={eid for eid,row in observed if row[
