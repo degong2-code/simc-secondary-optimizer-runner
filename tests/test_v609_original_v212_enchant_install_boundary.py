@@ -195,7 +195,7 @@ class OriginalInstallerOneVerifiedE0Choice(unittest.TestCase):
                              preview["selected_identity_sha256"])
             self.assertEqual(consumed["fixed_E"],zero)
             with self.assertRaisesRegex(
-                    product.ProductBlocked,
+                    product.EntryBlocked,
                     "FRESH_SELECTED_E0_EXACT_ONCE_SIMC_INPUT_REQUIRED"):
                 product._signed_installed_user_E0_profile(
                     doc=installed,selected=selected,
